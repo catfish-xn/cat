@@ -35,6 +35,7 @@ import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
 import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
+import { traitSummary, traitTierText } from '../presentation/trait-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
 import { TraitColumn, boardTraitRows, g23TraitRuntime, traitIconHtml } from './trait-column';
@@ -182,6 +183,9 @@ export class StrategyPanel {
   private readonly disposers: (() => void)[] = [];
   /** G2: always-visible trait column above the panel (its own mount, so render() replacing the panel keeps it). */
   private readonly traitColumn: TraitColumn;
+  /** TFT HUD: the owned augments as a row of icons over the trait column (hover for the text). */
+  private readonly augmentStrip = element('div', '', 'augment-strip');
+  private augmentKey: string | null = null;
   private selectedItems: string[] = [];
   /** C18-B: the consumable picked for targeting (use not wired yet, contract §18.1). */
   private selectedConsumable: string | null = null;
@@ -232,7 +236,8 @@ export class StrategyPanel {
     document.body.append(this.modal);
     this.disposers.push(attachItemPopover(this.root));
     this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
-    this.disposers.push(() => this.traitColumn.dispose(), attachUnitCards(this.root));
+    this.augmentStrip.dataset.debug = 'augment-strip'; this.traitColumn.root.before(this.augmentStrip);
+    this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root));
     if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock));
     const choiceVisible = () => !this.modal.hidden && getComputedStyle(this.modal).display !== 'none';
     // The help dialog sits above every game layer: while it is open the choice is inert and never takes focus.
@@ -482,6 +487,8 @@ export class StrategyPanel {
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.eventList = null;
     this.traitColumn.render(state.preparation, g23TraitRuntime(state));
+    const augmentKey = state.augments.map(augment => augment.definitionId).join();
+    if (augmentKey !== this.augmentKey) { this.augmentKey = augmentKey; this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId))); }
     this.syncAwayChip(state);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level);
@@ -683,7 +690,9 @@ export class StrategyPanel {
       title.insertAdjacentHTML('afterbegin', s13IconHtml('trait', snapshot.traitId, 20, 'trait-icon'));
       row.append(title);
       row.append(element('p', `上阵不同单位：${snapshot.memberDefinitionIds.map(id => displayUnitName(id)).join('、') || '无'}`));
-      row.append(element('p', definition.tiers.map(tier => describeTraitTier(definition, tier)).join(' / ')));
+      const summary = traitSummary(snapshot.traitId, snapshot.tier);
+      if (summary) row.append(element('p', summary));
+      row.append(element('p', definition.tiers.map(tier => traitTierText(definition, tier)).join(' / ')));
       list.append(row);
     }
     this.root.append(list);

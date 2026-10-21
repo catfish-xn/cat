@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 
 // Phaser's source tree is written for its webpack DefinePlugin: `typeof FLAG`
 // must become a literal, otherwise every optional branch (WebGL debug, FB
@@ -34,12 +34,24 @@ const stripAssetChecks: Plugin = {
 // scripts/m7-budget.cjs 只统计 assets/ 顶层的 JS 作为 2D 体积，assets/3d/ 单列报告。
 const THREE_D_MODULE = /[\\/](?:node_modules[\\/]three[\\/]|src[\\/]rendering3d[\\/]|src[\\/]rendering[\\/]three-mode[\\/](?!three-loader\.ts$|contract\.ts$))/;
 
+// 正式构建不带浏览器内本地房间（`?mode=online` 不加 server=ws 时，在页面里跑 src/server/room 整个房间）：
+// local-room-client 换成 local-room-unavailable.ts，只在匹配页提示本站没有联机服务器。dev 服务器和 VITE_LOCAL_ROOM=1 的构建照旧带上。
+const LOCAL_ROOM_CLIENT = /[\\/]src[\\/]rendering[\\/]online[\\/]local-room-client\.ts$/;
+const localRoomOff: Plugin = {
+  name: 'local-room-off', apply: 'build', enforce: 'pre',
+  async resolveId(source, importer, options) {
+    if (!source.endsWith('/local-room-client')) return null;
+    const resolved = await this.resolve(source, importer, { ...options, skipSelf: true });
+    return resolved && LOCAL_ROOM_CLIENT.test(resolved.id) ? fileURLToPath(new URL('./src/rendering/online/local-room-unavailable.ts', import.meta.url)) : null;
+  },
+};
+
 export default defineConfig(({ mode }) => ({
   // Pages has a fixed repository path; other builds remain portable to subpaths.
   // Runtime S13 icons use import.meta.env.BASE_URL in both modes.
   base: mode === 'pages' ? '/cat/' : './',
   // `import Phaser from 'phaser'` resolves to the trimmed build in dev and production alike.
-  plugins: [phaserFlags, stripAssetChecks],
+  plugins: [phaserFlags, stripAssetChecks, ...(loadEnv(mode, process.cwd(), 'VITE_').VITE_LOCAL_ROOM === '1' ? [] : [localRoomOff])],
   resolve: { alias: [{ find: /^phaser$/, replacement: fileURLToPath(new URL('./src/rendering/phaser-slim.js', import.meta.url)) }] },
   optimizeDeps: {
     // phaser-core.js ends with `global.Phaser = Phaser`; the production CommonJS transform maps it already.

@@ -8,6 +8,10 @@
  * precache.json（素材管线 merge-manifests 生成）：
  *   { "schemaVersion": 1, "files": [{ "path": "models/jinx/model.glb", "bytes": 1834221, "sha256": "<64 位小写十六进制>" }] }
  * 没有 precache.json 时退回只预下载 manifest.json 里列出的模型和特效文件，且不做版本控制（已缓存的一直用）。
+ *
+ * packs.json（素材管线 pack-root 生成，可选）：把 precache 里的文件按模块拼成几个 5–16 MB 的大包，每个文件按
+ * offset/bytes 切出后照常校验、入库。经隧道或远端服务器时每个请求约有 1 秒往返，大包省掉大部分往返。
+ * 包下载或校验失败、或某个切片不符时，相应文件退回逐文件下载；渲染马上要用的文件不等整包，单独先下。
  */
 import { assetUrl, type AssetManifest } from '../../rendering3d';
 
@@ -65,6 +69,35 @@ export function readPrecacheList(value: unknown, manifest: AssetManifest): Preca
   return { files: [...new Set(paths)].map(path => ({ path, bytes: 0, sha256: null })), versioned: false };
 }
 
+export interface PackFile { readonly path: string; readonly offset: number; readonly bytes: number; readonly sha256: string }
+export interface AssetPack { readonly name: string; readonly path: string; readonly bytes: number; readonly sha256: string; readonly files: readonly PackFile[] }
+const MAX_PACKS = 256;
+
+/** Validates packs.json against the (versioned) precache list; anything inconsistent means no packs (per-file download). */
+export function readPackList(value: unknown, list: PrecacheList): AssetPack[] {
+  const raw = value as { schemaVersion?: unknown; packs?: unknown } | null;
+  if (!list.versioned || !raw || raw.schemaVersion !== 1 || !Array.isArray(raw.packs) || raw.packs.length > MAX_PACKS) return [];
+  const precache = new Map(list.files.map(file => [file.path, file]));
+  const packed = new Set<string>(), packs: AssetPack[] = [];
+  for (const entry of raw.packs as { name?: unknown; path?: unknown; bytes?: unknown; sha256?: unknown; files?: unknown }[]) {
+    const { name, path, bytes, sha256, files } = entry ?? {};
+    if (typeof name !== 'string' || typeof path !== 'string' || !Number.isSafeInteger(bytes) || typeof sha256 !== 'string'
+      || !SHA256.test(sha256) || !Array.isArray(files) || precache.has(path)) return [];
+    try { assetUrl('', path); } catch { return []; }
+    const parts: PackFile[] = [];
+    for (const file of files as { path?: unknown; offset?: unknown; bytes?: unknown; sha256?: unknown }[]) {
+      const known = typeof file?.path === 'string' ? precache.get(file.path) : undefined;
+      if (!known || known.sha256 === null || packed.has(known.path) || file.bytes !== known.bytes || file.sha256 !== known.sha256
+        || !Number.isSafeInteger(file.offset) || (file.offset as number) < 0
+        || (file.offset as number) + known.bytes > (bytes as number)) return [];
+      packed.add(known.path);
+      parts.push({ path: known.path, offset: file.offset as number, bytes: known.bytes, sha256: known.sha256 });
+    }
+    packs.push({ name, path, bytes: bytes as number, sha256, files: parts });
+  }
+  return packs;
+}
+
 export interface PreloaderOptions {
   fetch?: typeof fetch;
   concurrency?: number;
@@ -76,6 +109,10 @@ export interface PreloaderOptions {
   digest?: (blob: Blob) => Promise<string | null>;
   /** Millisecond clock for elapsedMs; defaults to performance.now. */
   now?: () => number;
+  /** Large packs from packs.json (readPackList); files they do not cover, or that fail, download one by one. */
+  packs?: readonly AssetPack[];
+  /** Packs downloading at once; defaults to 3. */
+  packConcurrency?: number;
 }
 
 interface Job { file: PrecacheFile; promise: Promise<Blob>; resolve(blob: Blob): void; reject(error: unknown): void; started: boolean }
@@ -98,6 +135,10 @@ export class AssetPreloader {
   private readonly digest: (blob: Blob) => Promise<string | null>;
   private state: PreloadState = 'checking';
   private failed = 0; private readyBytes = 0; private persistent: boolean;
+  /** Files counted in `failed`; a later successful read takes them back out. */
+  private readonly failedPaths = new Set<string>();
+  /** True while packs download: a read then starts its own file at once instead of waiting for a pack. */
+  private packing = false;
   private downloadedFiles = 0; private downloadedBytes = 0; private retried = 0; private startedAt = 0; private elapsedMs: number | null = null;
   private disposed = false;
 
@@ -145,6 +186,11 @@ export class AssetPreloader {
     this.state = this.queue.length ? 'downloading' : 'done';
     if (this.state === 'done') this.elapsedMs = now() - this.startedAt;
     this.emit();
+    if (this.queue.length && this.options.packs?.length) {
+      this.packing = true;
+      await this.loadPacks(this.options.packs);
+      this.packing = false;
+    }
     const workers = Array.from({ length: Math.max(1, this.options.concurrency ?? PRELOAD_CONCURRENCY) }, () => this.work());
     await Promise.all(workers);
     if (!this.disposed) { this.state = this.failed ? 'partial' : 'done'; this.elapsedMs ??= now() - this.startedAt; this.emit(); }
@@ -163,8 +209,12 @@ export class AssetPreloader {
     }
     const job = this.jobs.get(path) ?? (file ? this.enqueue(file) : undefined);
     if (job) {
-      if (!job.started) { this.queue.splice(this.queue.indexOf(job), 1); this.queue.unshift(job); }
-      if (this.state === 'done' || this.state === 'partial') void this.work();
+      if (!job.started) {
+        this.queue.splice(this.queue.indexOf(job), 1);
+        // The board needs it now: during packs (or once the queue has drained) fetch it alone rather than wait.
+        if (this.packing || this.state === 'done' || this.state === 'partial') void this.runJob(job);
+        else this.queue.unshift(job);
+      }
       try { return await job.promise; } catch { /* fall through to one plain network read */ }
     }
     return this.download(path);
@@ -186,39 +236,90 @@ export class AssetPreloader {
   }
 
   private async work(): Promise<void> {
-    for (let job = this.queue.shift(); job && !this.disposed; job = this.queue.shift()) {
-      job.started = true;
-      const file = job.file;
-      let lastError: unknown = null;
-      for (let attempt = 0; attempt <= (this.options.retries ?? PRELOAD_RETRIES) && !this.disposed; attempt++) {
-        if (attempt > 0) {
-          this.retried++; this.emit();
-          await this.pause((this.options.retryDelayMs ?? (n => 400 * n))(attempt));
-          if (this.disposed) break;
-        }
-        try {
-          const blob = await this.download(file.path);
-          if (file.sha256 !== null && file.bytes !== blob.size) throw new Error(`size-mismatch:${file.path}`);
-          const sha256 = file.sha256 === null ? null : await this.digest(blob);
-          if (sha256 !== null && sha256 !== file.sha256) throw new Error(`hash-mismatch:${file.path}`);
-          let kept: Blob | null = null;
-          try { await this.store.put({ key: this.key(file.path), sha256: file.sha256, blob }); }
-          catch { kept = blob; this.persistent = false; }
-          this.markReady(file, kept);
-          this.downloadedFiles++; this.downloadedBytes += blob.size;
-          this.jobs.delete(file.path);
-          job.resolve(blob);
-          lastError = null;
-          break;
-        } catch (error) { lastError = error; }
+    for (let job = this.queue.shift(); job && !this.disposed; job = this.queue.shift()) await this.runJob(job);
+  }
+  private async runJob(job: Job): Promise<void> {
+    job.started = true;
+    const file = job.file;
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt <= (this.options.retries ?? PRELOAD_RETRIES) && !this.disposed; attempt++) {
+      if (attempt > 0) {
+        this.retried++; this.emit();
+        await this.pause((this.options.retryDelayMs ?? (n => 400 * n))(attempt));
+        if (this.disposed) break;
       }
-      if (lastError !== null || this.disposed) {
-        this.jobs.delete(file.path);
-        if (!this.disposed) this.failed++;
-        job.reject(lastError ?? new Error('preload-disposed'));
-      }
-      this.emit();
+      try {
+        const blob = await this.download(file.path);
+        await this.verify(file, blob);
+        await this.keep(job, blob);
+        this.downloadedBytes += blob.size;
+        lastError = null;
+        break;
+      } catch (error) { lastError = error; }
     }
+    if (lastError !== null || this.disposed) {
+      this.jobs.delete(file.path);
+      if (!this.disposed) { this.failed++; this.failedPaths.add(file.path); }
+      job.reject(lastError ?? new Error('preload-disposed'));
+    }
+    this.emit();
+  }
+  private async verify(file: PrecacheFile, blob: Blob): Promise<void> {
+    if (file.sha256 !== null && file.bytes !== blob.size) throw new Error(`size-mismatch:${file.path}`);
+    const sha256 = file.sha256 === null ? null : await this.digest(blob);
+    if (sha256 !== null && sha256 !== file.sha256) throw new Error(`hash-mismatch:${file.path}`);
+  }
+  /** Stores a verified file and settles its job; bytes are counted by the caller (per file, or once per pack). */
+  private async keep(job: Job, blob: Blob): Promise<void> {
+    let kept: Blob | null = null;
+    try { await this.store.put({ key: this.key(job.file.path), sha256: job.file.sha256, blob }); }
+    catch { kept = blob; this.persistent = false; }
+    this.markReady(job.file, kept);
+    this.downloadedFiles++;
+    this.jobs.delete(job.file.path);
+    // A read retried a file the background gave up on: it no longer counts as failed.
+    if (this.failedPaths.delete(job.file.path)) {
+      this.failed--;
+      if (this.state === 'partial' && this.failed === 0) this.state = 'done';
+    }
+    job.resolve(blob);
+  }
+  /** Downloads the packs that still hold queued files, a few at a time; whatever a pack cannot deliver stays queued. */
+  private async loadPacks(packs: readonly AssetPack[]): Promise<void> {
+    const pending = packs.filter(pack => pack.files.some(part => this.jobs.get(part.path)?.started === false));
+    const next = async (): Promise<void> => {
+      for (let pack = pending.shift(); pack && !this.disposed; pack = pending.shift()) await this.loadPack(pack);
+    };
+    await Promise.all(Array.from({ length: Math.max(1, this.options.packConcurrency ?? 3) }, next));
+  }
+  private async loadPack(pack: AssetPack): Promise<void> {
+    let blob: Blob | null = null;
+    for (let attempt = 0; attempt <= (this.options.retries ?? PRELOAD_RETRIES) && !this.disposed && !blob; attempt++) {
+      if (attempt > 0) {
+        this.retried++; this.emit();
+        await this.pause((this.options.retryDelayMs ?? (n => 400 * n))(attempt));
+        if (this.disposed) return;
+      }
+      try {
+        const body = await this.download(pack.path);
+        if (body.size !== pack.bytes) throw new Error(`pack-size-mismatch:${pack.name}`);
+        const sha256 = await this.digest(body);
+        if (sha256 !== null && sha256 !== pack.sha256) throw new Error(`pack-hash-mismatch:${pack.name}`);
+        blob = body;
+      } catch { /* retry; after the budget its files stay on the per-file queue */ }
+    }
+    if (!blob || this.disposed) return;
+    this.downloadedBytes += blob.size;
+    for (const part of pack.files) {
+      const job = this.jobs.get(part.path);
+      if (!job || job.started || this.disposed) continue;
+      job.started = true;
+      this.queue.splice(this.queue.indexOf(job), 1);
+      const slice = blob.slice(part.offset, part.offset + part.bytes);
+      try { await this.verify(job.file, slice); await this.keep(job, slice); }
+      catch { job.started = false; this.queue.push(job); }
+    }
+    this.emit();
   }
   private pause(ms: number): Promise<void> {
     if (ms <= 0) return Promise.resolve();

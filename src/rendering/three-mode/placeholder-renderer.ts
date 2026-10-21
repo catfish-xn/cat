@@ -21,14 +21,18 @@ import {
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
-import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } from './asset-preload';
+import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
 import { createTraitProps } from './trait-props';
+import { DEFAULT_BOARD, createBoardArena, type BoardArena } from './board-arena';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 
 const MANIFEST_TIMEOUT_MS = 4000;
+/** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
+ * drop to the unversioned, unpacked per-file path, so they get longer and one more try. */
+const INDEX_TIMEOUT_MS = 20000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
 const PAWN_HEIGHT = 56, PAWN_WIDTH = 40;
 /**
@@ -94,14 +98,21 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
 
-const fetchJson = async (url: string): Promise<unknown> => {
+const fetchJson = async (url: string, timeoutMs = MANIFEST_TIMEOUT_MS): Promise<unknown> => {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), MANIFEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { signal: controller.signal, cache: 'no-cache' });
     if (!response.ok) throw new Error(`http-${response.status}`);
     return await response.json();
   } finally { clearTimeout(timer); }
+};
+/** An index file, or null when the root has none (HTTP error); a timeout or dropped link gets one more try. */
+const fetchIndex = async (url: string): Promise<unknown> => {
+  for (let attempt = 0; ; attempt++) {
+    try { return await fetchJson(url, INDEX_TIMEOUT_MS); }
+    catch (error) { if (attempt >= 1 || /^http-\d+$/.test((error as Error)?.message ?? '')) return null; }
+  }
 };
 
 async function openModels(assetBase: string | null, renderer: WebGLRenderer, onProgress?: (text: string) => void): Promise<Models> {
@@ -118,9 +129,11 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
     let preloader: AssetPreloader | null = null;
     const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)));
     const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url));
-    const list = readPrecacheList(await fetchJson(`${assetBase}precache.json`).catch(() => null), cache.manifest);
+    const list = readPrecacheList(await fetchIndex(`${assetBase}precache.json`), cache.manifest);
+    // Optional: a root without packs.json (or with one that disagrees with precache) downloads file by file.
+    const packs = readPackList(await fetchIndex(`${assetBase}packs.json`), list);
     const store = await openAssetStore();
-    preloader = new AssetPreloader(assetBase, list, store);
+    preloader = new AssetPreloader(assetBase, list, store, { packs });
     if (onProgress) preloader.onProgress(progress => onProgress(describePreload(progress)));
     void navigator.storage?.persist?.().catch(() => false);
     void preloader.start();
@@ -246,33 +259,50 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (boardBox.isEmpty()) return;
     const center = boardBox.getCenter(new Vector3()), size = boardBox.getSize(new Vector3());
     const tan = Math.tan(camera.fov * Math.PI / 360);
-    const distance = Math.max(size.x * 0.54 / (tan * camera.aspect), size.z * 0.66 * VIEW.y / tan + size.z * 0.5 * VIEW.z);
+    const distance = Math.max(size.x * 0.54 / (tan * camera.aspect), size.z * 0.5 * VIEW.y / tan + size.z * 0.5 * VIEW.z);
     camera.position.copy(center).addScaledVector(VIEW, distance);
     camera.lookAt(center);
   };
   scene.add(boardGroup);
+  // The original arena under the grid (manifest `boards`); the procedural tiles then become a faint cell overlay.
+  const arenaGroup = new Group();
+  scene.add(arenaGroup);
+  let lastFrame: BoardFrame | null = null;
+  const boardEntry = models.cache?.manifest.boards?.[DEFAULT_BOARD];
+  const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
+    () => models.cache!.load(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
   let boardKey = '';
   const buildBoard = (frame: BoardFrame) => {
-    const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}`;
+    lastFrame = frame;
+    arena?.place(frame);
+    const overlay = !!arena?.ready;
+    const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}|${overlay}`;
     if (key === boardKey) return;
     boardKey = key;
     boardGroup.clear();
     const tile = own(new CylinderGeometry(frame.hexRadius * 0.95, frame.hexRadius * 0.95, 6, 6)); // six segments start at +z: pointy-top
-    const own0 = own(new MeshStandardMaterial({ color: '#2d5c7a', roughness: 0.85 }));
-    const foe = own(new MeshStandardMaterial({ color: '#5a3a48', roughness: 0.85 }));
+    // Over the arena the tiles only mark the cells (thin, translucent, above its floor); without it they are the board.
+    const tileLook = (color: string) => overlay
+      ? { color, roughness: 0.85, transparent: true, opacity: 0.22, depthWrite: false } : { color, roughness: 0.85 };
+    const own0 = own(new MeshStandardMaterial(tileLook('#2d5c7a')));
+    const foe = own(new MeshStandardMaterial(tileLook('#5a3a48')));
     const grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     for (let row = 0; row < frame.rows; row++) for (let col = 0; col < frame.columns; col++) {
       const mesh = new Mesh(tile, row < frame.rows / 2 ? foe : own0);
-      mesh.position.copy(hexCenter({ col, row }, grid)).setY(-3);
+      mesh.position.copy(hexCenter({ col, row }, grid)).setY(overlay ? 1 : -3);
+      if (overlay) mesh.scale.y = 0.2;
       boardGroup.add(mesh);
     }
+    // The arena has its own bench strip; the slot boxes are only drawn on the procedural board.
     const slot = own(new BoxGeometry(48, 4, 56)), slotMaterial = own(new MeshStandardMaterial({ color: '#25313d', roughness: 0.9 }));
-    for (const point of frame.bench) {
+    for (const point of overlay ? [] : frame.bench) {
       const mesh = new Mesh(slot, slotMaterial);
       mesh.position.set(point.x, -2, point.y);
       boardGroup.add(mesh);
     }
     boardBox.setFromObject(boardGroup);
+    // Same camera framing with or without the arena: the bench still counts when its boxes are not drawn.
+    for (const point of overlay ? frame.bench : []) boardBox.expandByPoint(new Vector3(point.x, 0, point.y));
     for (const point of [...tabletop.layout(frame), ...traitProps.layout(frame)]) boardBox.expandByPoint(point);
     frameCamera();
   };
@@ -713,7 +743,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave], ['contextmenu', onContextMenu]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

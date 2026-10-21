@@ -9,7 +9,7 @@
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
-import { catalogEntry, itemDescriptions } from './item-codex';
+import { baseCatalogEntry, catalogEntry, itemDescriptions } from './item-codex';
 import { itemDisplayName, lootEntry } from './g23-display';
 import { G23_LOOT } from './s13-g23-manifest';
 import { G24_FORGE_POOLS } from '../simulation/content/g2-4-forges';
@@ -46,7 +46,7 @@ const FORGE_NAMES: Readonly<Record<string, string>> = { completed: '成装锻造
 function forgeName(offers: readonly unknown[]): string {
   const pooled = FORGE_POOL_NAMES.find(([pool]) => offers.length > 0 && offers.every(id => typeof id === 'string' && pool.includes(id)));
   if (pooled) return pooled[1];
-  const kinds = new Set(offers.map(id => (typeof id === 'string' ? catalogEntry(id)?.kind : undefined)));
+  const kinds = new Set(offers.map(id => (typeof id === 'string' ? baseCatalogEntry(id)?.kind : undefined)));
   const [kind] = kinds;
   return kinds.size === 1 && typeof kind === 'string' && Object.hasOwn(FORGE_NAMES, kind) ? FORGE_NAMES[kind] : '锻造器';
 }
