@@ -1817,7 +1817,9 @@
       "TailFX": "tft8_tft13_warwick_base_tx_cm.tft_set13_evolved.tex",
       "HandR": "tft8_tft13_warwick_base_tx_cm.tft_set13_evolved.tex"
     },
-    "animations": {},
+    "animations": {
+      "hit": null
+    },
     "effectPatterns": {},
     "animationFiles": {
       "atk1.tft_set13_evolved": "animations/atk1.tft_set13_evolved.anm",
@@ -1837,7 +1839,7 @@
       "tft13_warwick_spell_dash.tft_set13_evolved": "animations/tft13_warwick_spell_dash.tft_set13_evolved.anm",
       "warwick_death.tft_set13_evolved": "animations/warwick_death.tft_set13_evolved.anm"
     },
-    "animationNotes": "Medium confidence: common audit selects the bound spell dash; one display segment, no hunt/form transition. Source hit alias points to death; no independent flinch is claimed."
+    "animationNotes": "Medium confidence: common audit selects the bound spell dash; one display segment, no hunt/form transition. Source hit alias points to death; no independent flinch is claimed. Hit playback intentionally disabled: source Hit/Knockup aliases resolve to the death animation."
   },
   "viktor": {
     "sourceName": "tft13_viktor",
@@ -1850,7 +1852,8 @@
       "Weapon": "tft13_viktor_base_weapon.tft_set13_evolved.tex"
     },
     "animations": {
-      "cast": "tft13_viktor_spell_intro.tft_set13_evolved"
+      "cast": "tft13_viktor_spell_intro.tft_set13_evolved",
+      "hit": null
     },
     "effectPatterns": {},
     "animationFiles": {
@@ -1878,7 +1881,7 @@
       "tft13_viktor_spell_intro.tft_set13_evolved": "animations/tft13_viktor_spell_intro.tft_set13_evolved.anm",
       "tft13_viktor_spell_outro.tft_set13_evolved": "animations/tft13_viktor_spell_outro.tft_set13_evolved.anm"
     },
-    "animationNotes": "Medium confidence: bound atomic spell intro, one display segment; hold/outro and avatar transition omitted."
+    "animationNotes": "Medium confidence: bound atomic spell intro, one display segment; hold/outro and avatar transition omitted. Hit playback intentionally disabled: source Hit/Knockup aliases resolve to the death animation."
   },
   "mel": {
     "sourceName": "tft13_missmage",
@@ -1908,6 +1911,6 @@
       "spell2_new.tft_set13_evolved": "animations/spell2_new.tft_set13_evolved.anm",
       "tft13_missmage_damage_block.tft_set13_evolved": "animations/tft13_missmage_damage_block.tft_set13_evolved.anm"
     },
-    "animationNotes": "Medium confidence: bound atomic spell1 blast, one display segment; dash/empowered transitions omitted. Hit uses the bound damage-block clip. Local-only converter recipe skips the source-hidden empowered cape and approximates the visible procedural cape with its DiffuseHold_Texture; no scrolling shader reconstruction."
+    "animationNotes": "Medium confidence: bound atomic spell1 blast, one display segment; dash/empowered transitions omitted. Hit uses the bound damage-block clip. Repository converter skips the source-hidden empowered cape and approximates the visible procedural cape with its DiffuseHold_Texture; no scrolling shader reconstruction."
   }
 }
