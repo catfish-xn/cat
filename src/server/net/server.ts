@@ -14,6 +14,7 @@
  * commandId dedupe → room / round / seatRevision → rules (Room.handle) → record receipt → push.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { monitorEventLoopDelay } from 'node:perf_hooks';
 import { WebSocketServer, type WebSocket, type RawData } from 'ws';
 import { textLogger, type Logger } from '../log';
 import { PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from '../room/battle-resolver';
@@ -24,7 +25,7 @@ import type { Clock, ClockHandle } from '../room/clock';
 import type { CarouselRules } from '../room/carousel';
 import { Lobby, type LobbyWatchdog } from '../room/lobby';
 import { consumableReceiptEvents, mirrorReplayTick, seatPushEvents, startReplaySpotCheck, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
-import type { Room, RoomRetained, RoomTimings } from '../room/room';
+import { SLICE_STEP_TICKS, type Room, type RoomRetained, type RoomTimings } from '../room/room';
 import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type BattleResult, type RoomPhase, type RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
@@ -66,6 +67,11 @@ export interface GameServerOptions {
   readonly spotCheckEveryRounds?: number;
   /** Wall budget of one resolution slice in ms (RoomOptions.sliceMs); default DEFAULT_SLICE_MS, `null` slices by ticks only. */
   readonly sliceMs?: number | null;
+  /**
+   * Event-loop delay report every this many ms (`loop.lag`: max and p99 since the last report); off when omitted or
+   * null. main.ts turns it on; it reads Node's event-loop histogram, so tests on a manual clock leave it off.
+   */
+  readonly loopLagReportMs?: number | null;
   /** Structured log sink (G3); main.ts writes JSON lines. Takes precedence over `log`. */
   readonly logger?: Logger;
   /** Older one-line text sink, still accepted (scripts/loadtest-room.cjs). */
@@ -150,6 +156,10 @@ export const SPOT_CHECK_EVERY_ROUNDS = 4;
  * single writer for hundreds of milliseconds and every command queued behind them waited as long.
  */
 export const DEFAULT_SLICE_MS = 20;
+/** A write-queue task (room slice, deadline, push) taking longer than this is logged as `task.slow`. */
+export const SLOW_TASK_MS = 50;
+/** A `loop.lag` report whose largest delay reaches this is a warning; below it the report is debug. */
+export const LOOP_LAG_WARN_MS = 100;
 
 /**
  * Resolver wrapper (B8, §19): once a battle's job finished, the following slices build the replays its attended seats
@@ -223,9 +233,17 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   // is explicit, and messages that arrived during a slice run before the next slice (B8).
   const roomClock: Clock = {
     now: () => clock.now(),
-    schedule: (at, fn) => clock.schedule(at, () => queue.push(fn)),
+    schedule: (at, fn) => clock.schedule(at, () => queue.push(() => timed('room', fn))),
     cancel: handle => clock.cancel(handle),
   };
+  /** Runs one write-queue task and logs it when it held the single writer (and the event loop) past SLOW_TASK_MS. */
+  function timed(task: string, fn: () => void): void {
+    const started = clock.now();
+    try { fn(); } finally {
+      const ms = clock.now() - started;
+      if (ms >= SLOW_TASK_MS) log('warn', 'task.slow', { task, ms: Math.round(ms), roomId: room?.state.roomId, round: room?.state.round, phase: room?.state.phase });
+    }
+  }
   // First-pass capture (MULTIPLAYER_CONTRACT): a battle with a human or connected seat records its replay frames while it
   // is computed, so no push re-runs it. Bot-only battles are never pushed and record nothing. An injected resolver
   // (tests, fault injection) captures nothing; its replays are still built by the warm-up below, as before.
@@ -235,10 +253,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   };
   const resolver = options.resolver ?? new TwoSidedBattleResolver(new PlaceholderBattleResolver({ captureReplay }), { captureReplay });
   const sliceTicks = options.sliceTicks ?? DEFAULT_SLICE_TICKS;
+  const sliceMs = options.sliceMs === null ? null : options.sliceMs ?? DEFAULT_SLICE_MS;
   const spotCheckEvery = options.spotCheckEveryRounds ?? SPOT_CHECK_EVERY_ROUNDS;
   const lobby = new Lobby({
     clock: roomClock, sliceTicks,
-    ...(options.sliceMs === null ? {} : { sliceMs: options.sliceMs ?? DEFAULT_SLICE_MS }), seed: options.seed,
+    ...(sliceMs === null ? {} : { sliceMs }), seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
     ...(options.carousel ? { carousel: options.carousel } : {}),
@@ -352,7 +371,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const phaseKey = `${state.round}:${state.phase}`;
       if (phaseKey !== lastPhase) { lastPhase = phaseKey; log('info', 'room.phase', { roomId: state.roomId, round: state.round, roundName: state.roundName, phase: state.phase }); }
     };
-    const unsubscribeState = opened.subscribe(state => { logPhase(state); scheduleSpotCheck(opened, state); queue.push(() => pushAll(state)); });
+    const unsubscribeState = opened.subscribe(state => { logPhase(state); scheduleSpotCheck(opened, state); queue.push(() => timed('push', () => pushAll(state))); });
     const unsubscribeLive = opened.subscribeLive(battleId => queue.push(() => pushLive(opened, battleId)));
     const unsubscribeNotices = opened.subscribeNotices(notice => {
       log('warn', 'orb.claim-refused', { roomId, seatId: notice.seatId, round: notice.round, orbId: notice.orbId, reason: notice.reason });
@@ -394,11 +413,19 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     if (!check) return;
     // Rounds that captured a battle count; the 1st, 5th, 9th … of them are checked (all of them after a mismatch).
     if (audit.eligible++ % spotCheckEvery !== 0 && !audit.all) return;
+    let slices = 0, longestMs = 0;
     const slice = () => {
       // A replaced room or a closing server drops the check; an ended room still finishes its last round's check.
       if (room !== owner || closing) return;
-      const results = check.advance(sliceTicks);
+      // Like a resolution slice (Room.advanceSlice): `sliceTicks` at once, or, with `sliceMs`, steps of
+      // SLICE_STEP_TICKS until the wall budget runs out, so late-round re-runs and comparisons never hold the writer long.
+      const started = clock.now();
+      let results: ReturnType<typeof check.advance> = null;
+      if (sliceMs === null) results = check.advance(sliceTicks);
+      else for (let spent = 0, deadline = started + sliceMs; !results && spent < sliceTicks && clock.now() < deadline; spent += SLICE_STEP_TICKS) results = check.advance(SLICE_STEP_TICKS);
+      slices++; longestMs = Math.max(longestMs, clock.now() - started);
       if (!results) { roomClock.schedule(clock.now(), slice); return; }
+      log('debug', 'replay.spot-check-slices', { roomId: state.roomId, round: state.round, slices, longestMs: Math.round(longestMs) });
       for (const result of results) {
         if (result.firstDifference === null) { log('debug', 'replay.spot-check', { roomId: state.roomId, round: state.round, battleId: result.battleId }); continue; }
         audit.all = true;
@@ -659,6 +686,25 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     scheduleHeartbeat();
   }
 
+  /* ---------------- event-loop delay ---------------- */
+
+  // Node's own histogram of how late the event loop ran its timers: a long synchronous block between two slices shows
+  // up here even when no single write-queue task was slow (pushes and heartbeats wait behind it all the same).
+  const loopLagMs = options.loopLagReportMs ?? null;
+  const loopDelay = loopLagMs === null ? null : monitorEventLoopDelay({ resolution: 10 });
+  let loopLagHandle: ClockHandle | null = null;
+  function scheduleLoopLag(): void {
+    if (loopDelay === null || loopLagMs === null || closing) return;
+    loopLagHandle = clock.schedule(clock.now() + loopLagMs, () => {
+      loopLagHandle = null;
+      const maxMs = loopDelay.max / 1e6, p99Ms = loopDelay.percentile(99) / 1e6;
+      loopDelay.reset();
+      log(maxMs >= LOOP_LAG_WARN_MS ? 'warn' : 'debug', 'loop.lag', { maxMs: Math.round(maxMs), p99Ms: Math.round(p99Ms), queueDepth: queue.depth,
+        roomId: room?.state.roomId, round: room?.state.round, phase: room?.state.phase });
+      scheduleLoopLag();
+    });
+  }
+
   /* ---------------- health (G3) ---------------- */
 
   const build: BuildInfo = options.build ?? { sha: 'unknown', contentDigest: 'unknown', lootReplayDigest: 'unknown' };
@@ -712,6 +758,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const port = typeof address === 'object' && address !== null ? address.port : options.port;
       http.off('error', failed);
       scheduleHeartbeat(); // only once listening: a failed listen leaves no timer behind
+      loopDelay?.enable(); scheduleLoopLag();
       http.on('error', error => log('error', 'server.error', { error: error.message }));
       resolve({
         get port() { return port; },
@@ -728,6 +775,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         close: () => new Promise<void>(resolveClose => {
           closing = true;
           if (heartbeatHandle !== null) { clock.cancel(heartbeatHandle); heartbeatHandle = null; }
+          if (loopLagHandle !== null) { clock.cancel(loopLagHandle); loopLagHandle = null; }
+          loopDelay?.disable();
           for (const conn of connections.values()) {
             // onClose skips a connection marked closed, so a pending superseded close is cancelled here.
             if (conn.closeHandle !== null) { clock.cancel(conn.closeHandle); conn.closeHandle = null; }
