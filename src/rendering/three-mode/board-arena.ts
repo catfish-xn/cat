@@ -25,6 +25,19 @@ export function arenaTransform(alignment: BoardAlignment, frame: HexFrame): { po
   };
 }
 
+/**
+ * The arena's nine bench cells on a live grid (world = position + scale × source), or null without usable ones: the
+ * manifest is JSON from an asset root, so anything but nine arrays of three finite numbers leaves the 2D bench places.
+ */
+export function arenaBench(alignment: BoardAlignment, frame: HexFrame): Vector3[] | null {
+  const bench: unknown = alignment.bench;
+  const cell = (point: unknown): point is readonly [number, number, number] =>
+    Array.isArray(point) && point.length === 3 && point.every(value => typeof value === 'number' && Number.isFinite(value));
+  if (!Array.isArray(bench) || bench.length !== 9 || !bench.every(cell)) return null;
+  const { position, scale } = arenaTransform(alignment, frame);
+  return bench.map(([x, y, z]) => new Vector3(position.x + scale.x * x, position.y + scale.y * y, position.z + scale.z * z));
+}
+
 export interface BoardArena {
   /** True once the arena model is loaded and compatible with the current grid. */
   readonly ready: boolean;

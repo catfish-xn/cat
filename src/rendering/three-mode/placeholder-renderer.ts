@@ -27,7 +27,7 @@ import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
 import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
-import { DEFAULT_BOARD, createBoardArena, type BoardArena } from './board-arena';
+import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
@@ -311,6 +311,37 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
     () => models.cache!.load(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
   let boardKey = '';
+  /**
+   * The arena's own bench cells (alignment.bench) while the arena is drawn, else null: bench pieces stand there instead
+   * of on the 2D bench coordinates, and points over them are handed back to BoardScene as its own bench slots.
+   */
+  let benchSlots: Vector3[] | null = null;
+  /** Index of the slot within half a slot spacing of (x, z), or -1. */
+  const nearestSlot = (slots: readonly { x: number; z: number }[], x: number, z: number): number => {
+    let best = -1, bestDistance = Infinity, spacing = Infinity;
+    for (let i = 1; i < slots.length; i++) spacing = Math.min(spacing, Math.hypot(slots[i]!.x - slots[i - 1]!.x, slots[i]!.z - slots[i - 1]!.z));
+    const reach = Number.isFinite(spacing) && spacing > 0 ? spacing / 2 : (lastFrame?.hexRadius ?? 34);
+    slots.forEach((slot, i) => { const d = Math.hypot(slot.x - x, slot.z - z); if (d < reach && d < bestDistance) { best = i; bestDistance = d; } });
+    return best;
+  };
+  const benchOf2d = (frame: BoardFrame, x: number, y: number) => nearestSlot(frame.bench.map(point => ({ x: point.x, z: point.y })), x, y);
+  /**
+   * The arena bench cell under the current ray (`ray` already set from the pointer), or -1: each cell is met on its
+   * own floor height, so a raised strip is not read through the y=0 board plane (off by its height × the view slope).
+   */
+  const benchCellPlane = new Plane(new Vector3(0, 1, 0), 0), benchCellPoint = new Vector3();
+  const arenaBenchAtRay = (): number => {
+    if (!benchSlots) return -1;
+    let best = -1, bestDistance = Infinity;
+    benchSlots.forEach((slot, i) => {
+      benchCellPlane.constant = -slot.y;
+      if (!ray.ray.intersectPlane(benchCellPlane, benchCellPoint)) return;
+      if (nearestSlot(benchSlots!, benchCellPoint.x, benchCellPoint.z) !== i) return;
+      const d = Math.hypot(benchCellPoint.x - slot.x, benchCellPoint.z - slot.z);
+      if (d < bestDistance) { best = i; bestDistance = d; }
+    });
+    return best;
+  };
   const buildBoard = (frame: BoardFrame) => {
     lastFrame = frame;
     arena?.place(frame);
@@ -318,6 +349,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}|${frame.bench.length}|${overlay}`;
     if (key === boardKey) return;
     boardKey = key;
+    benchSlots = overlay && boardEntry ? arenaBench(boardEntry.alignment, frame) : null;
     boardGroup.clear();
     const tile = own(new CylinderGeometry(frame.hexRadius * 0.95, frame.hexRadius * 0.95, 6, 6)); // six segments start at +z: pointy-top
     // Over the arena the tiles only mark the cells (thin, translucent, above its floor); without it they are the board.
@@ -342,6 +374,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     boardBox.setFromObject(boardGroup);
     // Same camera framing with or without the arena: the bench still counts when its boxes are not drawn.
     for (const point of overlay ? frame.bench : []) boardBox.expandByPoint(new Vector3(point.x, 0, point.y));
+    for (const point of benchSlots ?? []) boardBox.expandByPoint(point);
     for (const point of [...tabletop.layout(frame), ...traitProps.layout(frame)]) boardBox.expandByPoint(point);
     frameCamera();
   };
@@ -569,7 +602,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const shown = piece.visible && (view.dyingFor === null || view.dyingFor === 'loading' || view.dyingFor > 0);
       if (shown && !view.root.visible) resetAction(view, piece.id);
       view.root.visible = shown;
-      view.target.set(piece.x, 0, piece.y);
+      const slot = benchSlots ? benchOf2d(frame, piece.x, piece.y) : -1;
+      if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
@@ -689,10 +723,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const point = ray.ray.intersectPlane(groundPlane, new Vector3());
     return point ? { x: point.x, y: point.z } : null;
   };
+  /** The drag point as BoardScene reads it (move preview and release alike): over an arena bench cell, its 2D slot. */
+  const dragPoint = (event: PointerEvent): { x: number; y: number } | null => {
+    const point = boardPoint(event);
+    const slot = point ? arenaBenchAtRay() : -1, bench = slot >= 0 ? lastFrame?.bench[slot] : undefined;
+    return bench ? { x: bench.x, y: bench.y } : point;
+  };
   const showHint = (hint: BoardDropHint) => {
     marker.visible = !!hint.target;
     if (!hint.target) return;
-    marker.position.set(hint.target.x, 1, hint.target.y);
+    const slot = hint.target.kind === 'bench' && benchSlots && lastFrame ? benchOf2d(lastFrame, hint.target.x, hint.target.y) : -1;
+    if (slot >= 0 && benchSlots?.[slot]) marker.position.copy(benchSlots[slot]!).setY(benchSlots[slot]!.y + 1);
+    else marker.position.set(hint.target.x, 1, hint.target.y);
     const color = hint.allowed ? DROP_COLOR.allowed : DROP_COLOR.refused;
     const material = marker.material as MeshStandardMaterial;
     material.color.set(color); material.emissive.set(color);
@@ -761,13 +803,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!controls?.dragStart(press.id)) { endDrag(); return; }
       dragging = press.id; canvas.style.cursor = 'grabbing';
     }
-    const point = boardPoint(event);
-    if (point && controls) showHint(controls.dragMove(point));
+    const target = dragPoint(event);
+    if (target && controls) showHint(controls.dragMove(target));
   };
   const onPointerUp = (event: PointerEvent) => {
     if (!press || event.pointerId !== press.pointerId) return;
     const controls = feed?.controls();
-    if (dragging) controls?.dragEnd(boardPoint(event), { x: event.clientX, y: event.clientY });
+    if (dragging) controls?.dragEnd(dragPoint(event), { x: event.clientX, y: event.clientY });
     else controls?.select(press.id);
     endDrag();
   };
@@ -846,9 +888,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     last = now;
     const follow = 1 - Math.exp(-seconds / FOLLOW_SECONDS);
     for (const [id, view] of pieces) {
-      if (id === dragging) view.root.position.copy(view.target).setY(DRAG_LIFT); // follows the pointer exactly
+      if (id === dragging) view.root.position.copy(view.target).setY(view.target.y + DRAG_LIFT); // follows the pointer exactly
       else {
-        view.root.position.y = 0;
+        view.root.position.y = view.target.y; // the floor it stands on: 0, or an arena bench cell's own height
         const step = view.target.clone().sub(view.root.position), aim = view.facing ? pieces.get(view.facing) : undefined;
         const target = aim?.alive && aim.root.visible ? { x: aim.root.position.x, z: aim.root.position.z } : null;
         view.root.rotation.y = view.turn.update(desiredHeading({ team: view.team,
