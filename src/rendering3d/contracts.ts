@@ -1,9 +1,12 @@
 /** D7 -> D8 contract v1. Seconds, three world axes, normalized curve time [0,1]. */
 export type ActionState = 'idle' | 'move' | 'attack' | 'cast' | 'hit' | 'death';
+/** Clips a model may name beyond the combat states: little legends also celebrate, run and grab (carousel). */
+export type ModelAction = ActionState | 'celebrate' | 'run' | 'grab';
+export const MODEL_ACTIONS: readonly ModelAction[] = ['idle', 'move', 'attack', 'cast', 'hit', 'death', 'celebrate', 'run', 'grab'];
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface AssetManifest {
   schemaVersion: 1;
-  models: Record<string, { path: string; animations?: Partial<Record<ActionState, string>> }>;
+  models: Record<string, { path: string; animations?: Partial<Record<ModelAction, string>> }>;
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
   actionEffects?: ActionEffects;
@@ -82,7 +85,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (!entry || typeof entry.path !== 'string' || !/\.glb$/i.test(entry.path)) throw new Error('invalid-model');
     assetUrl('', entry.path);
     if (entry.animations && Object.entries(entry.animations).some(([key, name]) =>
-      !['idle', 'move', 'attack', 'cast', 'hit', 'death'].includes(key) || typeof name !== 'string')) throw new Error('invalid-animation-map');
+      !(MODEL_ACTIONS as readonly string[]).includes(key) || typeof name !== 'string' || !name)) throw new Error('invalid-animation-map');
   }
   if (m.effects !== undefined) {
     if (!m.effects || typeof m.effects !== 'object' || Array.isArray(m.effects)) throw new Error('invalid-effects');

@@ -47,7 +47,7 @@ export function neutralManifest(rows, validate) {
 
 /** Shared BIN-bound model conversion for non-champions; unavailable actions stay absent. */
 export async function buildNonChampionModel(config, { load, assertManifest, initial,
-  rules = NEUTRAL_ACTION_RULES, requiredActions = Object.keys(rules) }) {
+  rules = NEUTRAL_ACTION_RULES, requiredActions = Object.keys(rules), keepAllClips = true }) {
   const docs = await animationGraphClosure(initial, async p => parseBin(await load(p)));
   const preliminary = skinBindings(docs, []), mesh = await load(preliminary.mesh);
   const binding = skinBindings(docs, inspectSkn(mesh).submeshes.map(s => s.name));
@@ -58,7 +58,7 @@ export async function buildNonChampionModel(config, { load, assertManifest, init
   for (const action of requiredActions) if (!animation.mapped[action]) throw new Error(`missing-neutral-action:${config.sourceName}:${action}`);
   // Keep all atomic graph clips, including spawn/secondary attack/shared dragon clips.
   const files = { ...animation.files };
-  for (const clip of clips.filter(c => c.atomic && c.path)) {
+  for (const clip of clips.filter(c => keepAllClips && c.atomic && c.path)) {
     const name = canonicalAsset(clip.path).split('/').at(-1).replace(/\.anm$/, '');
     if (files[name] && canonicalAsset(files[name]) !== canonicalAsset(clip.path)) throw new Error('animation-name-collision');
     files[name] = clip.path;
