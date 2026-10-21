@@ -1,6 +1,8 @@
 /** Online mode is opt-in via `?mode=online`; the single-player path stays the default. */
 import { SHOP_CATALOG } from '../../simulation/match-rules';
-import { LOCAL_ROOM_DEFAULTS, LocalRoomClient, type LocalRoomOptions } from './local-room-client';
+// Production builds resolve this import to local-room-unavailable.ts (vite.config.ts `localRoomOff`).
+import { LocalRoomClient } from './local-room-client';
+import { LOCAL_ROOM_DEFAULTS, type LocalRoomOptions } from './local-room-options';
 import type { GameClient } from './protocol';
 import { defaultWsUrl, WsGameClient, type WsClientOptions } from './ws-client';
 

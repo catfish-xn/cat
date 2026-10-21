@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AssetPreloader, describePreload, memoryStore, openAssetStore, readPrecacheList, type AssetStore } from '../src/rendering/three-mode/asset-preload';
+import { AssetPreloader, PRELOAD_CONCURRENCY, describePreload, memoryStore, openAssetStore, readPrecacheList, type AssetStore } from '../src/rendering/three-mode/asset-preload';
 import type { AssetManifest } from '../src/rendering3d';
 
 /** Synthetic bytes only: no real assets, IndexedDB or network. */
@@ -123,6 +123,46 @@ describe('3D asset preloader', () => {
     expect(result).toMatchObject({ state: 'partial', failedFiles: 1, readyFiles: 0 });
     expect(calls).toEqual(['a.glb', 'a.glb']);
     expect(describePreload(result)).toContain('1 个文件失败');
+  });
+
+  it('downloads twelve files at a time by default', async () => {
+    let inFlight = 0, peak = 0;
+    const fetch = vi.fn(async () => {
+      inFlight++; peak = Math.max(peak, inFlight);
+      await new Promise(done => setTimeout(done, 5));
+      inFlight--; return new Response('x');
+    }) as unknown as typeof globalThis.fetch;
+    const files = Array.from({ length: 30 }, (_, i): [string, number, number] => [`f${i}`, 1, 1]);
+    const result = await new AssetPreloader(ROOT, list(files), memoryStore(), { fetch, digest: digestOf({ 1: 1 }) }).start();
+    expect(PRELOAD_CONCURRENCY).toBe(12);
+    expect(peak).toBe(12);
+    expect(result).toMatchObject({ state: 'done', readyFiles: 30, retriedRequests: 0 });
+  });
+
+  it('retries a dropped request after a pause, shows the retries while downloading, and still completes', async () => {
+    let first = true;
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input).slice(ROOT.length);
+      if (path === 'a.glb' && first) { first = false; throw new TypeError('synthetic-network-drop'); }
+      return new Response('x'.repeat(path === 'a.glb' ? 3 : 1));
+    }) as unknown as typeof globalThis.fetch;
+    const delays: number[] = [], texts: string[] = [];
+    const preloader = new AssetPreloader(ROOT, list([['a.glb', 3, 1], ['b', 1, 2]]), memoryStore(),
+      { fetch, concurrency: 1, digest: digestOf({ 3: 1, 1: 2 }), retryDelayMs: n => { delays.push(n); return 0; } });
+    preloader.onProgress(progress => texts.push(describePreload(progress)));
+    const result = await preloader.start();
+    expect(delays).toEqual([1]);
+    expect(result).toMatchObject({ state: 'done', readyFiles: 2, failedFiles: 0, retriedRequests: 1 });
+    expect(texts.some(text => text.startsWith('素材预下载') && text.includes('已重试 1 次'))).toBe(true);
+    expect(describePreload(result)).toContain('其间重试 1 次');
+  });
+
+  it('gives up after the retry budget and says so, counting every retry', async () => {
+    const { fetch, calls } = server({}, new Set(['a.glb']));
+    const result = await new AssetPreloader(ROOT, list([['a.glb', 3, 1]]), memoryStore(), { fetch, retryDelayMs: () => 0 }).start();
+    expect(calls).toHaveLength(4);
+    expect(result).toMatchObject({ state: 'partial', failedFiles: 1, retriedRequests: 3 });
+    expect(describePreload(result)).toContain('1 个文件失败（重试 3 次后仍失败');
   });
 
   it('moves a file the board needs to the front of the queue', async () => {

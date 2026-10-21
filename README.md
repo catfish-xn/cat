@@ -5,7 +5,7 @@
 这是免费、非商业的粉丝项目，与 Riot Games 无关。代码以 [MIT](LICENSE) 发布，Riot 的素材和数据除外，见下方「免责声明」和 [NOTICE.md](NOTICE.md)。
 
 - 在线试玩（GitHub Pages，跟随 `main`）：<https://catfish-xn.github.io/cat/>
-  公开站点没有联机服务器；`?mode=online` 会在浏览器里跑一局完整房间（另外七席是机器人），用来体验联机流程。
+  公开站点没有联机服务器，只能玩单机；正式构建不带浏览器内房间，打开 `?mode=online` 只会提示连接联机服务器。
 
 ## 现在做到哪了
 
@@ -33,7 +33,7 @@ npm run dev          # 开发服务器，默认 http://localhost:5173/
 | 地址 | 玩法 |
 | --- | --- |
 | `/` | 单人模式 |
-| `/?mode=online` | 联机界面，房间在浏览器里运行（不需要服务器） |
+| `/?mode=online` | 联机界面，房间在浏览器里运行（不需要服务器）；只有 `npm run dev` 和 `VITE_LOCAL_ROOM=1` 构建带它，正式构建只显示提示 |
 | `/?mode=online&server=ws` | 联机界面，连接真正的游戏服务器 |
 
 连本机服务器时，用一条命令同时启动服务器（端口 8787）和开发服务器，开发服务器会把 `/ws` 转发给游戏服务器：

@@ -1037,3 +1037,58 @@ body[data-online]:not([data-online-left="collapsed"]) #strategy-root { animation
 /* The level chip carries "5 · 10/20": a size smaller so it never ellipsizes in the narrower stats column. */
 .shop-dock .hud-level strong { font-size: 15px; white-space: nowrap; }
 .shop-dock .mobile-controls button { font-size: 12px; white-space: nowrap; }
+
+/* TFT layout pass L1–L3 (online). Top: a compact round capsule (round, stage icons, a smaller timer) instead of a full-width
+   strip. Bottom: the shop bar as in TFT — level and XP over the two buttons on the left (buy XP above refresh), the five
+   cards in the middle with the odds over them and gold top right, lock, sell and the board count as small pills at the
+   right end; HP lives in the player list. Layout only: the same elements, re-placed through display: contents. */
+body[data-online] .online-countdown { justify-self: center; gap: 10px; padding: 0 18px; border: 1px solid #1d2f3d; border-radius: 0 0 14px 14px;
+  background: linear-gradient(180deg, #0b151fe6, #14212ce6); box-shadow: 0 4px 14px #0007; }
+body[data-online] .online-countdown .online-timer { font-size: 24px; color: #f0e6d2; }
+body[data-online] .online-countdown .online-timer.urgent { color: #f08080; }
+body[data-online] .online-countdown .countdown-round { font-size: 14px; }
+body[data-online] .online-countdown .economy-chip { font-size: 11px; padding: 1px 7px; }
+body[data-online] .shop-dock { grid-template-columns: 128px minmax(0, 1fr) 64px; grid-template-rows: 24px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "level top top" "xp cards side" "reroll cards side"; column-gap: 8px; row-gap: 4px; padding: 5px 8px 6px; border: 1px solid #1d2f3d;
+  background: linear-gradient(180deg, #0b151fee, #14212cee); }
+body[data-online] .shop-dock :is(.hud-stats, .mobile-controls, .shop-panel) { display: contents; }
+body[data-online] .shop-dock .hud-chip { display: flex; align-items: center; gap: 5px; height: 24px; padding: 0 7px; border-radius: 12px; box-sizing: border-box; }
+body[data-online] .shop-dock .hud-chip strong { font-size: 14px; }
+body[data-online] .shop-dock .hud-hp { display: none; }
+body[data-online] .shop-dock .hud-level { grid-area: level; }
+body[data-online] .shop-dock .hud-level .hud-label { display: none; }
+body[data-online] .shop-dock .hud-level strong { font-size: 13px; }
+body[data-online] .shop-dock .hud-level strong::before { content: "Lv."; font-size: 11px; color: #9aaeb9; margin-right: 1px; }
+body[data-online] .shop-dock .hud-xp-bar { flex: 1; min-width: 18px; }
+body[data-online] .shop-dock .hud-gold { grid-area: top; justify-self: end; min-width: 84px; justify-content: center; border-color: #785a28; }
+body[data-online] .shop-dock .hud-gold .hud-label { width: 13px; height: 13px; overflow: hidden; color: transparent; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff2b8, #f2c24f 55%, #a8781e); box-shadow: 0 0 4px #ffd36a99; }
+body[data-online] .shop-dock .hud-gold strong { font-size: 16px; }
+body[data-online] .shop-dock :is(.hud-pop, [data-debug="mobile:sell"], [data-debug="shop-lock"]) { grid-area: side; }
+body[data-online] .shop-dock [data-debug="shop-lock"] { align-self: start; }
+body[data-online] .shop-dock [data-debug="mobile:sell"] { align-self: center; }
+body[data-online] .shop-dock .hud-pop { align-self: end; justify-content: center; padding: 0 4px; }
+body[data-online] .shop-dock .hud-pop .hud-label { font-size: 10px; }
+body[data-online] .shop-dock :is([data-debug="mobile:sell"], [data-debug="shop-lock"]) { width: 100%; min-height: 0; height: 24px; padding: 0 4px; font-size: 11px; border-radius: 12px; }
+body[data-online] .shop-dock [data-debug="mobile:buy-xp"] { grid-area: xp; }
+body[data-online] .shop-dock [data-debug="mobile:reroll"] { grid-area: reroll; }
+body[data-online] .shop-dock :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"]) { min-height: 0; font-size: 13px; }
+body[data-online] .shop-dock .touch-shop { grid-area: cards; min-height: 0; }
+body[data-online] .shop-dock .shop-odds { grid-area: top; justify-self: start; align-self: center; margin: 0 !important; font-size: 11px !important; white-space: nowrap; }
+body[data-online] .shop-dock[data-sell-hint]::after { border-radius: 8px; }
+
+/* L12 online 3D: the scene fills the window behind the panels, as in TFT. placeholder-renderer moves the layer to <body>
+   (#board-frame is a size container, which would clip a fixed layer) and keeps the board framed in #board-root's box, so
+   the item and orb docks, hover cards and combat floats still line up. */
+body[data-online]:has(.render3d-layer) { --c-surface: #14212cd9; }
+body[data-online] > .render3d-layer { position: fixed; inset: 0; z-index: 0; }
+/* #board-frame is sticky, so it stacks as one: it goes above the layer, and the 2D board inside it steps aside (hidden,
+   letting pointers through to the 3D canvas, which handles them). The frame's own gaps let pointers through as well (the
+   legend and orbs are drawn there); its panels take them back, and the overlays that never take them keep none. */
+body[data-online]:has(> .render3d-layer) #board-frame { z-index: 1; pointer-events: none; }
+body[data-online]:has(> .render3d-layer) #board-frame > :not(#board-root, #feedback-root, #item-dock, #orb-dock, .left-panel-toast, .battle-outcome, .d14-away-chip) { pointer-events: auto; }
+body[data-online]:has(> .render3d-layer) #board-root { visibility: hidden; }
+body[data-online]:has(.render3d-layer) :is(#panels-root, #online-countdown, #shop-dock, #lobby-root) { position: relative; z-index: 1; }
+body[data-online]:has(.render3d-layer) #online-sidebar { z-index: 1; }
+/* The status and 切回 2D sit in the free corner right of the shop bar; the label wraps rather than run under the bar. */
+body[data-online] > .render3d-layer .render3d-bar { top: auto; left: auto; right: 8px; bottom: 26px; max-width: 220px; flex-wrap: wrap; justify-content: flex-end; }
