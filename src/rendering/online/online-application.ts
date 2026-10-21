@@ -388,7 +388,7 @@ export class OnlineApplication implements SceneApplication {
     this.scoutFeedGeneration = boardFeedGeneration();
     const view = this.view, seatId = this.opponentBoard.openSeatId;
     const seat = seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;
-    const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs } : null) && !!seat;
+    const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs, ...(seat.legend ? { legend: seat.legend } : {}) } : null) && !!seat;
     this.opponentBoard.drawnIn3d = drawn;
     this.opponentBoard.root.toggleAttribute('data-combat', view?.phase.kind === 'combat');
     this.minimap.render(this.view, seatId);

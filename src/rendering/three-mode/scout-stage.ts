@@ -11,7 +11,8 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { LEGEND_MODEL, legendSpot } from './tabletop';
+import { legendSpot } from './tabletop';
+import { loadLegendLease } from './legend-load';
 
 type OrbTier = 'gray' | 'blue' | 'gold' | 'prismatic';
 const TIERS: readonly OrbTier[] = ['gray', 'blue', 'gold', 'prismatic'];
@@ -33,6 +34,8 @@ export interface ScoutView {
   readonly augments: readonly string[];
   /** Unclaimed orbs: how many and which tiers, never ids or contents. */
   readonly orbs: { readonly count: number; readonly tiers: readonly OrbTier[] };
+  /** The seat's little legend code name (cosmetic), null for the default. */
+  readonly legend: string | null;
 }
 
 const strings = (value: unknown): string[] => Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
@@ -63,8 +66,10 @@ export function readScout(scout: BoardScout): ScoutView {
   const count = int(scout.orbs?.count) ?? 0;
   const tiers = strings(scout.orbs?.tiers).filter((tier): tier is OrbTier => (TIERS as readonly string[]).includes(tier));
   return { seatId: String(scout.seatId), name: String(scout.name), units, bench, looseItems: strings(board.looseItems), augments: strings(board.augments),
-    orbs: { count: Math.max(0, count), tiers } };
+    orbs: { count: Math.max(0, count), tiers }, legend: typeof scout.legend === 'string' && LEGEND_ID.test(scout.legend) ? scout.legend : null };
 }
+/** A little legend's short code name (protocol LittleLegendId); anything else is drawn as the default. */
+const LEGEND_ID = /^[a-z0-9-]{1,40}$/;
 
 export interface ScoutStageContext {
   readonly scene: Scene;
@@ -72,7 +77,8 @@ export interface ScoutStageContext {
   /** Stand-in pawn size when no model is available. */
   readonly pawnHeight: number; readonly pawnWidth: number;
   readonly loadModel: ((id: string) => Promise<ModelLease>) | null;
-  readonly hasLegend: boolean;
+  /** Legend model to load for a seat's legend (falls back to the default, see legend-load), null without legend assets. */
+  readonly legendModel: (legend: string | null) => string | null;
   readonly starColor: (level: number) => string;
   readonly overhead: OverheadContext;
   /** Item icon URL (the 2D bundle's) for an item definition id; null when there is none. */
@@ -116,13 +122,14 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   const pieces: Piece[] = [], orbs: Mesh[] = [];
   let legend: Piece | null = null;
 
-  const createPiece = (key: string, model: string | null, height: number, width: number, stand: () => Object3D): Piece => {
+  const createPiece = (key: string, model: string | null, height: number, width: number, stand: () => Object3D,
+    load: ((id: string) => Promise<ModelLease>) | null = ctx.loadModel): Piece => {
     const root = new Group(); root.name = 'render3d-scout-piece';
     const body = stand(); root.add(body);
     const piece: Piece = { root, lease: null, mixer: null, state: new UnitActionState(`scout:${key}`), stars: null,
       overhead: createUnitOverhead(ctx.overhead), height, disposed: false, key };
     group.add(root, piece.overhead.object);
-    if (ctx.loadModel && model) void ctx.loadModel(model).then(lease => {
+    if (load && model) void load(model).then(lease => {
       if (piece.disposed || lease.placeholder) { lease.release(); return; }
       body.removeFromParent(); piece.lease = lease;
       root.add(fit(lease.scene, height, width));
@@ -180,11 +187,12 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     }
     // The owner's 河灵 where mine stands, facing the board; its orbs in two columns beside it, by tier only.
     const spot = legendSpot(frame), legendHeight = ctx.championHeight * 0.5;
-    legend = createPiece('legend', ctx.hasLegend ? LEGEND_MODEL : null, legendHeight, Infinity, () => {
+    const legendModel = ctx.legendModel(view.legend), loadModel = ctx.loadModel;
+    legend = createPiece(`legend:${legendModel ?? 'none'}`, legendModel, legendHeight, Infinity, () => {
       const body = new Mesh(legendGeometry, legendMaterial); body.scale.set(1, 0.82, 1); body.position.y = 12;
       const stand = new Group(); stand.name = 'render3d-scout-legend-standin'; stand.add(body);
       return fit(stand, legendHeight);
-    });
+    }, loadModel ? id => loadLegendLease(loadModel, id) : null);
     legend.root.position.copy(spot);
     const width = Math.sqrt(3) * frame.hexRadius, step = frame.hexRadius * 1.5;
     const center = new Vector3(frame.origin.x + width * (frame.columns - 0.5) / 2, 0, frame.origin.y + step * (frame.rows - 1) / 2);
@@ -223,7 +231,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       units: pieces.filter(piece => piece.key.startsWith('board:')).map(piece => `${piece.key}:${piece.lease ? 'model' : 'standin'}`),
       bench: pieces.filter(piece => piece.key.startsWith('bench:')).map(piece => piece.key),
       orbs: orbs.map(orb => orb.name.replace('render3d-scout-orb-', '')),
-      legend: legend ? legend.lease ? 'model' : 'standin' : 'none',
+      legend: legend ? legend.lease ? `model:${legend.key.slice('legend:'.length)}` : 'standin' : 'none',
     }),
     dispose() { clear(); current = null; group.removeFromParent(); },
   };

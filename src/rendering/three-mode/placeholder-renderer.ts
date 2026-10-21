@@ -347,7 +347,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // 3D 看对手 (scout-stage.ts): another seat's public build on this board while board-feed carries one; my pieces,
   // surroundings and effects are hidden meanwhile and the board takes no input.
   const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
-    loadModel: models.cache ? id => models.cache!.load(id) : null, hasLegend: !!models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL),
+    loadModel: models.cache ? id => models.cache!.load(id) : null, legendModel: legend => {
+      if (!models.cache || !Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL)) return null;
+      const id = legend ? `little-legend-${legend}` : LEGEND_MODEL;
+      return Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
+    },
     starColor: level => starColorFor(level), overhead: overheadContext, itemIcon: id => itemIconFor(id), own });
   let scoutView: Parameters<typeof scout.show>[0] = null;
   const pawnFor = (team: BoardPiece['team']): Object3D => {

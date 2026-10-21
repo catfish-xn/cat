@@ -46,7 +46,7 @@ describe('3D scouting: what is read (S2)', () => {
     const seen = keys(view);
     for (const secret of ['gold', 'xp', 'streak', 'shop', 'hp', 'level', 'pendingChoices', 'sellValue', 'poolCopies', 'ids', 'contents', 'queued', 'orbId', 'id'])
       expect(seen.has(secret), secret).toBe(false);
-    expect(Object.keys(view).sort()).toEqual(['augments', 'bench', 'looseItems', 'name', 'orbs', 'seatId', 'units']);
+    expect(Object.keys(view).sort()).toEqual(['augments', 'bench', 'legend', 'looseItems', 'name', 'orbs', 'seatId', 'units']);
     expect(Object.keys(view.orbs).sort()).toEqual(['count', 'tiers']);
   });
 
@@ -74,7 +74,7 @@ describe('3D scouting stage', () => {
   const setup = (loadModel: ((id: string) => Promise<ModelLease>) | null = null) => {
     const scene = new Scene(), owned: { dispose(): void }[] = [];
     const icons: string[] = [];
-    const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40, loadModel, hasLegend: false,
+    const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40, loadModel, legendModel: () => null,
       starColor: () => '#ffd34d', itemIcon: id => { icons.push(id); return `/icons/${id}.png`; },
       overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
       own: <T extends { dispose(): void }>(resource: T) => { owned.push(resource); return resource; } });
@@ -116,6 +116,27 @@ describe('3D scouting stage', () => {
     expect(stage.debug().units.every(entry => entry.endsWith(':model'))).toBe(true);
     stage.show(null, null);
     expect(leases.every(lease => lease.released)).toBe(true);
+  });
+});
+
+describe('3D scouting: the seat\'s little legend', () => {
+  it('keeps a short legend code name only, and loads that legend, falling back to the default when it cannot be drawn', async () => {
+    expect(readScout(scoutOf({ legend: 'ao-shin' })).legend).toBe('ao-shin');
+    expect(readScout(scoutOf({ legend: '../x' })).legend).toBeNull();
+    expect(readScout(scoutOf()).legend).toBeNull();
+    const loads: string[] = [];
+    const scene = new Scene();
+    const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40,
+      loadModel: id => { loads.push(id); return id === 'little-legend-default' ? Promise.resolve({ scene: new Group(), animations: [], animationNames: {}, placeholder: false, release() {} } as unknown as ModelLease) : Promise.reject(new Error('missing')); },
+      legendModel: legend => legend ? `little-legend-${legend}` : 'little-legend-default',
+      starColor: () => '#ffd34d', itemIcon: () => null,
+      overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
+      own: <T extends { dispose(): void }>(resource: T) => resource });
+    stage.show(scoutOf({ legend: 'ao-shin', board: { units: [] } }), frame);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(loads).toEqual(['little-legend-ao-shin', 'little-legend-default']);
+    expect(stage.debug().legend).toBe('model:little-legend-ao-shin');
+    stage.show(null, null);
   });
 });
 
