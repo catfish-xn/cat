@@ -88,7 +88,7 @@ describe('3D scouting shop availability', () => {
     const { OnlineApplication } = await import('../src/rendering/online/online-application');
     const client = { transport: 'websocket', listen(next: ClientListeners) { listeners = next; return () => {}; }, dispose() {} } as unknown as GameClient;
     const session = { state: { phase: 'preparation', preparation: { board: { columns: 7, rows: 8, deploymentZones: { player: { firstRow: 4, lastRow: 7 } } } } },
-      pause() {}, resume() {}, subscribe: () => () => {}, dispose() {} } as unknown as RemoteSession;
+      watchedSeat: null, stopWatching() {}, pause() {}, resume() {}, subscribe: () => () => {}, dispose() {} } as unknown as RemoteSession;
     app = new OnlineApplication(session, client, { refresh() {}, clearInput() {}, status() {} },
       { shopDock: shop, countdown: new Node() } as unknown as OnlineBoardMounts);
     listeners.view(view);
