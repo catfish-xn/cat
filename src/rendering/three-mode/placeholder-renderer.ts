@@ -215,6 +215,11 @@ interface PieceView {
   starLevel: number; form: 'front' | 'back';
   /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
   dyingFor: number | 'loading' | null;
+  /**
+   * The model's world scale when it is drawn at its official unitScale (model-fit.ts), else null. The caster's own
+   * effects (on its bones or launched from them) then share it, as the skin scale sizes the whole character.
+   */
+  modelScale: number | null;
   /** The unit it last attacked or cast on in the shown combat (null: none, itself, or gone): it turns to look at it. */
   facing: string | null;
   /** Its root's rotation.y, turned smoothly (unit-facing.ts). */
@@ -474,7 +479,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const attachBody = (view: PieceView) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
-    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null;
+    view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null;
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     if (!models.cache) return;
@@ -493,10 +498,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       } else {
         // Official scale when the asset root has it (short champions stay short); the stars and bars follow the drawn height.
         const unitScale = readUnitScale(models.cache?.manifest.models, definitionId);
+        const before = Math.abs(lease.scene.scale.x) || 1;
         const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale });
         view.body = lease.scene;
         // Without an official scale the stars, bars and hit volume keep the old fixed baseline (older roots unchanged).
         view.starHeight = (unitScale ? drawn : MODEL_HEIGHT) + STAR_GAP;
+        // The factor fitModel applied (League source units → board units, caps included), not the GLB root's own scale.
+        view.modelScale = unitScale ? Math.abs(lease.scene.scale.x) / before : null;
       }
       if (lease.placeholder) view.starHeight = PAWN_HEIGHT + STAR_GAP;
       view.root.add(lease.scene);
@@ -525,7 +533,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
-      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null,
+      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)) };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
@@ -566,9 +574,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.root.getWorldPosition(out).setY(IMPACT_HEIGHT);
     return true;
   };
-  /** Local scale that gives an effect FX_SCALE in world space under `parent`. */
+  /** Local scale that gives an effect `world` scale (FX_SCALE unless the caster has an official scale) under `parent`. */
   // abs: a mirrored parent decomposes with a negative X, which would flip the effect on every axis.
-  const effectScale = (parent: Object3D): number => FX_SCALE / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
+  const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
   const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !models.cache || !options.assetBase) return;
@@ -582,12 +590,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (spec.anchor === 'source') {
         const node = spec.bone ? source.body.getObjectByName(spec.bone) : source.root;
         if (!node) { fx.dispose(); return; }
-        fx.object.scale.setScalar(effectScale(node));
+        fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE));
         node.add(fx.object);
       } else {
         const from = new Vector3();
         if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
-        fx.object.scale.setScalar(FX_SCALE);
+        // A projectile is the caster's (its scale); an effect on the target stays in world units (FX_SCALE).
+        fx.object.scale.setScalar(spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE);
         fx.object.position.copy(from);
         scene.add(fx.object);
         if (spec.anchor === 'projectile') {
