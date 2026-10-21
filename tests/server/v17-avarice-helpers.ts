@@ -65,10 +65,14 @@ export function chooseAvarice(room: Room, seatId: string): MatchState {
   return chosen;
 }
 
-/** Spends gold in battle through the room: XP when affordable, else a shop reroll. Returns the new gold. */
+/**
+ * Spends gold in battle through the room: XP when affordable and the seat can still level (a max-level refusal changes
+ * nothing), else a shop reroll. Returns the new gold.
+ */
 export function spendGold(room: Room, seatId: string): number {
   const match = seatOf(room.state, seatId).match;
-  const result = match.gold >= 4 && match.level < 10 ? room.handle(seatId, { type: 'buyXp' }) : room.handle(seatId, { type: 'reroll' });
+  let result = match.gold >= 4 && match.level < 10 ? room.handle(seatId, { type: 'buyXp' }) : undefined;
+  if (!result || (!result.ok && result.reason === 'max-level')) result = room.handle(seatId, { type: 'reroll' });
   expect(result).toMatchObject({ ok: true });
   expect(seatOf(room.state, seatId).match.gold).toBeLessThan(match.gold);
   return seatOf(room.state, seatId).match.gold;
@@ -95,20 +99,24 @@ export function earnGold(room: Room, seatId: string): number[] {
   return golds;
 }
 
+/** The four human seats; each takes avarice in avariceRoom. */
+export const HUMANS = ['s0', 's1', 's2', 's3'] as const;
+const isHuman = (seatId: string) => (HUMANS as readonly string[]).includes(seatId);
 /**
- * Seed 42 with the real resolver: the four human seats s0-s3 take avarice at 4-6 through paid rerolls, then spend down
- * to DRAINED_GOLD (with the idle seats' 200-odd gold the bonus sits at its cap and no gold change would show). That round's
- * battles pair s1 (A) with s2 (B), and s0 with bot s5; 4-7 is PvE; 5-3 pairs s2 with the frozen copy of s3. These
- * pairings hold as long as nothing before the round in question changes the seats.
+ * Seed 42 with the real resolver: the four human seats take avarice at 4-6 through paid rerolls, then spend down to
+ * DRAINED_GOLD (with the idle seats' 200-odd gold the bonus sits at its cap and no gold change would show). Which seats
+ * meet is the room's own pairing; the tests read it from the battle phase (humanPair, humanVsBot, nextMirrorBattle)
+ * instead of assuming seat ids. Under the v17 orb combinations 4-6 pairs s0 (A) with s1 (B), s2 and s3 each with a bot;
+ * 4-7 is PvE; 5-1 pairs s1 with the frozen copy of s2.
  */
 export function avariceRoom(onDispose: (dispose: () => void) => void, beforeDrain?: (room: Room) => void) {
   const { room, clock } = makeRoom(new TwoSidedBattleResolver());
   onDispose(() => room.dispose());
   room.start();
   runToAnomalyWindow(room, clock);
-  for (const seatId of ['s0', 's1', 's2', 's3']) { offerAvarice(room, seatId, 'reroll'); chooseAvarice(room, seatId); }
+  for (const seatId of HUMANS) { offerAvarice(room, seatId, 'reroll'); chooseAvarice(room, seatId); }
   beforeDrain?.(room);
-  for (const seatId of ['s0', 's1', 's2', 's3']) drainGold(room, seatId);
+  for (const seatId of HUMANS) drainGold(room, seatId);
   return { room, clock };
 }
 /** Runs (claiming orbs) to the battle phase of the named round. */
@@ -121,4 +129,32 @@ export const DRAINED_GOLD = 20;
 /** Spends the seat's gold on shop rerolls (through the room) down to DRAINED_GOLD or one below. */
 export function drainGold(room: Room, seatId: string): void {
   while (seatOf(room.state, seatId).match.gold > DRAINED_GOLD) expect(room.handle(seatId, { type: 'reroll' })).toMatchObject({ ok: true });
+}
+
+/** This battle phase's two-sided battle between two human seats (both with avarice), as its A and B seat. */
+export function humanPair(state: RoomState): { readonly a: string; readonly b: string; readonly battle: TwoSidedBattleResult } {
+  const battle = state.battles.find((entry): entry is TwoSidedBattleResult => entry.kind === 'two-sided' && entry.participants.length === 2 && entry.participants.every(isHuman));
+  if (!battle) throw new Error(`${state.roundName}: no battle between two human seats`);
+  return { a: battle.battle.a.seatId, b: battle.battle.b.seatId, battle };
+}
+/** This battle phase's two-sided battle of a human seat (side A, with avarice) against a bot. */
+export function humanVsBot(state: RoomState): { readonly a: string; readonly battle: TwoSidedBattleResult } {
+  const battle = state.battles.find((entry): entry is TwoSidedBattleResult => entry.kind === 'two-sided' && entry.participants.length === 2 && isHuman(entry.battle.a.seatId) && !isHuman(entry.battle.b.seatId));
+  if (!battle) throw new Error(`${state.roundName}: no human seat on side A against a bot`);
+  return { a: battle.battle.a.seatId, battle };
+}
+/**
+ * Runs (claiming orbs) through the battle phases until one holds a mirror battle: a human seat A against the frozen copy
+ * of a human seat B who fights its own battle that round. Stays in that battle phase.
+ */
+export function nextMirrorBattle(room: Room, clock: ManualClock): { readonly a: string; readonly copy: string; readonly battle: TwoSidedBattleResult } {
+  let last = room.state.phase === 'battle' ? room.state.roundName : '';
+  for (let rounds = 0; rounds < 12; rounds++) {
+    const state = runUntil(room, clock, current => { claimAllOrbs(room); return current.phase === 'battle' && current.roundName !== last; });
+    last = state.roundName;
+    const battle = state.battles.find((entry): entry is TwoSidedBattleResult => entry.kind === 'two-sided' && entry.participants.length === 1
+      && isHuman(entry.battle.a.seatId) && isHuman(entry.battle.b.seatId) && pvpBattleOf(state, entry.battle.b.seatId) !== undefined && pvpBattleOf(state, entry.battle.b.seatId) !== entry);
+    if (battle) return { a: battle.battle.a.seatId, copy: battle.battle.b.seatId, battle };
+  }
+  throw new Error('no mirror battle between human seats');
 }

@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { toCombatReplayFor } from '../../src/server/room/projection';
 import { proposeSettlement, toCombatReplay } from '../../src/server-entry';
 import { runUntil } from './helpers';
-import { avariceRoom, earnGold, nextBattle, pvpBattleOf, seatOf, spendGold } from './v17-avarice-helpers';
+import { avariceRoom, earnGold, humanPair, nextBattle, pvpBattleOf, seatOf, spendGold } from './v17-avarice-helpers';
 
 const disposers: (() => void)[] = [];
 afterEach(() => { for (const dispose of disposers.splice(0)) dispose(); });
@@ -17,25 +17,26 @@ describe('v17 avarice: consecutive gold changes at one tick', () => {
   it('samples each accepted change in commit order at one tick; refused and gold-neutral commands add nothing', () => {
     const { room, clock } = avariceRoom(dispose => disposers.push(dispose));
     nextBattle(room, clock, '4-6');
-    const frozen = pvpBattleOf(room.state, 's1')!;
+    // Side A (player) of the room's 4-6 battle of two avarice seats (s0 under seed 42).
+    const { a: seatA, battle: frozen } = humanPair(room.state);
     clock.advance(400);
     const golds: number[] = [];
-    golds.push(...earnGold(room, 's1'));
-    golds.push(spendGold(room, 's1'));
+    golds.push(...earnGold(room, seatA));
+    golds.push(spendGold(room, seatA));
     // A refused command: same published state, same seat revision, pool, gold and RNG.
-    const published = room.state, seat = seatOf(published, 's1');
-    expect(room.handle('s1', { type: 'sell', unitId: 'no-such-unit' })).toMatchObject({ ok: false });
-    expect(room.handle('s1', { type: 'buy', slot: 0, generation: seat.match.shop.generation + 1 })).toMatchObject({ ok: false });
+    const published = room.state, seat = seatOf(published, seatA);
+    expect(room.handle(seatA, { type: 'sell', unitId: 'no-such-unit' })).toMatchObject({ ok: false });
+    expect(room.handle(seatA, { type: 'buy', slot: 0, generation: seat.match.shop.generation + 1 })).toMatchObject({ ok: false });
     expect(room.state).toBe(published);
     // A gold-neutral command is accepted but is no sample.
-    expect(room.handle('s1', { type: 'shopLock', locked: !seat.match.shop.locked, generation: seat.match.shop.generation })).toMatchObject({ ok: true });
-    expect(seatOf(room.state, 's1').match.gold).toBe(seat.match.gold);
-    golds.push(spendGold(room, 's1'));
-    golds.push(...earnGold(room, 's1'));
+    expect(room.handle(seatA, { type: 'shopLock', locked: !seat.match.shop.locked, generation: seat.match.shop.generation })).toMatchObject({ ok: true });
+    expect(seatOf(room.state, seatA).match.gold).toBe(seat.match.gold);
+    golds.push(spendGold(room, seatA));
+    golds.push(...earnGold(room, seatA));
     expect(golds.length).toBeGreaterThanOrEqual(4);
     runUntil(room, clock, state => state.roundName === '4-6' && state.phase !== 'battle');
     expect(room.state.fault).toBeNull();
-    const live = pvpBattleOf(room.state, 's1')!;
+    const live = pvpBattleOf(room.state, seatA)!;
     expect(live).not.toBe(frozen);
     const samples = live.battle.bankSamples!.filter(sample => sample.team === 'player');
     expect(samples.map(sample => sample.liveGold)).toEqual(golds);
@@ -44,7 +45,7 @@ describe('v17 avarice: consecutive gold changes at one tick', () => {
     expect(samples[0]!.tick).toBeGreaterThanOrEqual(16);
     // The rules re-run the private samples to the same replay and settlement the room published (after transport).
     const transported = JSON.parse(JSON.stringify(live.battle));
-    expect(toCombatReplay(transported)).toEqual(toCombatReplayFor(room.state, 's1')!.replay);
+    expect(toCombatReplay(transported)).toEqual(toCombatReplayFor(room.state, seatA)!.replay);
     expect(proposeSettlement(transported)).toEqual(proposeSettlement(live.battle));
     expect([live.proposals.a.damage, live.proposals.b.damage]).toEqual([proposeSettlement(transported).a.damage, proposeSettlement(transported).b.damage]);
     // The frozen run without the samples differs from tick samples[0].tick + 1 on, never before.
