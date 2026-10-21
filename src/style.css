@@ -564,6 +564,25 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .opponent-board .opponent-bench .opponent-cell { height: 34px; }
 .opponent-board .opponent-unit { width: 34px; height: 34px; }
 .opponent-board .opponent-portrait, .opponent-board .opponent-portrait img, .opponent-board .opponent-portrait svg { width: 30px; height: 30px; }
+/* ?render=3d 看对手: the 3D board shows the seat; the panel is one strip under the stage bar (layout thread: same anchor and
+   layer as the panel), its augments as icons with their names on hover, and the way back. The trait column shows the seat's traits. */
+.opponent-board[data-scout-3d] { width: max-content; max-width: calc(100% - 16px); display: flex; align-items: center; gap: 10px; padding: 4px 6px 4px 14px;
+  border-radius: 999px; background: rgba(14, 24, 33, .82); }
+.opponent-board[data-scout-3d] > :is(.opponent-grid, .opponent-bench, .opponent-loose-items, .opponent-traits) { display: none; }
+.opponent-board[data-scout-3d] .opponent-head { display: contents; }
+.opponent-board[data-scout-3d] .opponent-name { order: 0; white-space: nowrap; }
+.opponent-board[data-scout-3d] .opponent-name::before { content: '正在看 '; color: #9aaeb9; font-weight: 400; }
+.opponent-board[data-scout-3d] .opponent-meta { order: 1; flex: none; white-space: nowrap; }
+.opponent-board[data-scout-3d][data-combat] .opponent-meta::after { content: ' · 战斗进行中 · 仅显示阵容'; color: #e6bc76; }
+.opponent-board[data-scout-3d] .public-orbs { order: 2; }
+.opponent-board[data-scout-3d] .opponent-augments { order: 3; flex-wrap: nowrap; }
+.opponent-board[data-scout-3d] .opponent-augment { font-size: 0; padding: 0; background: none; }
+.opponent-board[data-scout-3d] .opponent-empty { display: none; }
+.opponent-anomalies { display: none; }
+.opponent-board[data-scout-3d] .opponent-anomalies { display: inline; order: 3; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #3a2f4a; color: #d9c4ff; cursor: help; white-space: nowrap; }
+.opponent-board[data-scout-3d] .opponent-close { order: 4; }
+.opponent-board[data-scout-3d] .opponent-close::after { content: ' · 空格'; color: #9fb4c2; }
+.trait-column[data-scout] .trait-column-title { color: #e3a08f; }
 /* G1-P7 carousel: a ring over the enemy half of the board; the bench rows below stay visible. */
 .carousel-panel { position: absolute; z-index: 31; top: calc(var(--online-countdown-h, 48px) + var(--online-gap, 8px)); left: 50%; transform: translateX(-50%);
   width: min(640px, calc(100% - 16px)); display: grid; gap: 8px; padding: 10px 14px; border-radius: 12px; border: 1px solid #b4a1f5;

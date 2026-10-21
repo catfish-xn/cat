@@ -71,6 +71,9 @@ export class OpponentBoardPanel {
       attachUnitCards(this.root), attachItemPopover(this.root, 'item-popover-scout'));
   }
   get openSeatId(): string | null { return this.seatId; }
+  /** True while the 3D layer draws the open seat: the panel is a strip, and Space (like Esc) goes back to my board. */
+  get drawnIn3d(): boolean { return this.root.hasAttribute('data-scout-3d'); }
+  set drawnIn3d(on: boolean) { this.root.toggleAttribute('data-scout-3d', on); }
   /** Opens this seat, or closes the panel when it is already showing it. */
   toggle(seat: SeatPublic, mine: boolean): void {
     if (this.seatId === seat.seatId) { this.close(); return; }
@@ -88,7 +91,12 @@ export class OpponentBoardPanel {
     this.seatId = null; this.root.hidden = true; this.root.replaceChildren(); this.onClose();
   }
   dispose(): void { document.removeEventListener('keydown', this.onKey); this.detach.forEach(dispose => dispose()); this.root.remove(); }
-  private onKey = (event: KeyboardEvent) => { if (event.key === 'Escape' && this.seatId !== null) { event.stopPropagation(); this.close(); } };
+  private onKey = (event: KeyboardEvent) => {
+    if (this.seatId === null) return;
+    const target = event.target as HTMLElement | null;
+    const space = event.code === 'Space' && this.drawnIn3d && !event.repeat && !target?.closest?.('input, textarea, select, button, [contenteditable]');
+    if (event.key === 'Escape' || space) { event.stopPropagation(); event.preventDefault(); this.close(); }
+  };
 
   private render(seat: SeatPublic, mine: boolean): void {
     const board = seat.publicBoard ?? { units: [] }, layout = this.layout();
@@ -99,6 +107,12 @@ export class OpponentBoardPanel {
     // v15: the seat's unclaimed orbs, count and tiers only (SeatPublic.orbs).
     const orbs = publicOrbsElement(readPublicOrbs(seat));
     if (orbs) head.append(orbs);
+    // 3D strip only (CSS): the seat's anomalies in one chip, unit by unit on hover (the grid with their marks is hidden there).
+    const marked = [...board.units, ...board.bench ?? []].filter(unit => unit.anomaly);
+    if (marked.length) {
+      const chip = element('span', `异常 ${marked.length}`, 'opponent-anomalies');
+      chip.title = marked.map(unit => `${getHeroIdentity(unit.definitionId).name}：${anomalyDisplayName(unit.anomaly!)}`).join('\n'); head.append(chip);
+    }
     const close = element('button', '关闭', 'opponent-close'); close.type = 'button'; close.dataset.debug = 'online:opponent-close';
     close.setAttribute('aria-label', '关闭对方阵容（Esc）'); close.addEventListener('click', () => this.close()); head.append(close);
 

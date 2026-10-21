@@ -4,6 +4,7 @@
  * only through BoardControls, which BoardScene implements with its own 2D gesture code and the same session commands.
  */
 import type { DisplayCombatEvent } from '../presentation/combat-display';
+import type { PublicBoard, PublicOrbSummary } from '../server/protocol';
 
 export interface BoardPiece {
   readonly id: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly starLevel: number;
@@ -74,6 +75,8 @@ export interface BoardFeedListener {
   screenBox?(id: string): BoardScreenBox | undefined;
   /** Online 选秀 to draw instead of the board, or null to show the board again (and release the stage). */
   carousel?(view: BoardCarousel | null): void;
+  /** Another seat's public build to draw instead of my board (3D 看对手), or null to show mine again. */
+  scout?(view: BoardScout | null): void;
 }
 export interface BoardScreenBox { readonly left: number; readonly top: number; readonly right: number; readonly bottom: number }
 /**
@@ -106,6 +109,12 @@ export interface BoardCarouselSlot {
   /** My click on it is still waiting for the server's answer. */
   readonly pending: boolean;
 }
+/**
+ * 3D 看对手: the seat the scout panel shows, as published to every seat (SeatPublic.publicBoard and .orbs, passed as
+ * received). The server never sends another seat's gold, XP, streak or shop; the 3D layer still copies only the fields
+ * it draws (scout-stage.ts readScout).
+ */
+export interface BoardScout { readonly seatId: string; readonly name: string; readonly board?: PublicBoard; readonly orbs?: PublicOrbSummary | null }
 /** The 3D carousel's pointer, replayed as the 2D carousel panel's own slot click and hover. */
 export interface CarouselControls { pick(slot: number): void; hover(slot: number | null): void }
 
@@ -132,6 +141,12 @@ export function publishCombatEvents(build: () => readonly DisplayCombatEvent[]):
 export function publishCarousel(build: () => BoardCarousel | null): boolean {
   if (!listener?.carousel) return false;
   listener.carousel(build());
+  return true;
+}
+/** Only a layer that draws scouting gets the build called; true when one does (the 2D panel then shrinks to its strip). */
+export function publishScout(build: () => BoardScout | null): boolean {
+  if (!listener?.scout) return false;
+  listener.scout(build());
   return true;
 }
 /** One 3D layer at a time; the returned function detaches it. */

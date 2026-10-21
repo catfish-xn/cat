@@ -25,6 +25,7 @@ import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } fro
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
+import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 
 const MANIFEST_TIMEOUT_MS = 4000;
@@ -89,6 +90,9 @@ export function useStarColor(next: (level: number) => string): void { starColorF
 // Injected the same way: the 2D theme's meter colors (presentation/theme.ts THEME.color), so 2D and 3D bars match.
 let meterColors: MeterColors = DEFAULT_METER_COLORS;
 export function useMeterColors(next: MeterColors): void { meterColors = next; }
+// Injected the same way: the 2D bundle's item icon URL (presentation/s13-assets.ts), for a scouted seat's items.
+let itemIconFor: (id: string) => string | null = () => null;
+export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
@@ -293,6 +297,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return texture;
     },
   };
+  // 3D 看对手 (scout-stage.ts): another seat's public build on this board while board-feed carries one; my pieces,
+  // surroundings and effects are hidden meanwhile and the board takes no input.
+  const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
+    loadModel: models.cache ? id => models.cache!.load(id) : null, hasLegend: !!models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL),
+    starColor: level => starColorFor(level), overhead: overheadContext, itemIcon: id => itemIconFor(id), own });
+  let lastFrame: BoardFrame | null = null, scoutView: Parameters<typeof scout.show>[0] = null;
   const pawnFor = (team: BoardPiece['team']): Object3D => {
     const pawn = new Group();
     pawn.name = 'render3d-pawn';
@@ -439,6 +449,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let fighting: boolean | null = null;
   const onFrame = (frame: BoardFrame) => {
     buildBoard(frame);
+    lastFrame = frame;
+    if (scoutView) scout.show(scoutView, frame); // a new board size relays it; the same one is kept
     grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     // BoardScene cancelled the drag itself (blur, resize, D/F, phase change, a command): let go of the pointer too.
     if (dragging && frame.dragging !== dragging) endDrag();
@@ -515,8 +527,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!view && stage.active) { feed?.carouselControls?.()?.hover(null); canvas.style.cursor = ''; }
     stage.show(view);
   };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel,
-    unitAt: client => stage.active ? undefined : pickUnit(client, true) ?? undefined, screenBox: id => stage.active ? undefined : screenBox(id) }) ?? (() => {});
+  // Scouting replaces my board the same way: let go of a press or drag first.
+  const onScout = (view: Parameters<typeof scout.show>[0]) => {
+    if (view && !scout.active) {
+      if (dragging) feed?.controls()?.dragCancel();
+      feed?.controls()?.hover(null); endDrag(); canvas.style.cursor = '';
+    }
+    scoutView = view; scout.show(view, lastFrame);
+  };
+  const mine = () => !stage.active && !scout.active;
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout,
+    unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.
@@ -568,7 +589,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (stage.walkTo(client, viewport())) event.preventDefault();
       return;
     }
-    if (event.button !== 0 || press) return;
+    if (event.button !== 0 || press || scout.active) return;
     // My orb: the orb dock's own click (it decides whether the rules can be asked now).
     const orb = tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport());
     if (orb) { feed?.controls()?.claimOrb?.(orb); event.preventDefault(); return; }
@@ -585,6 +606,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       canvas.style.cursor = hit?.takable ? 'pointer' : '';
       return;
     }
+    if (scout.active) return;
     const controls = feed?.controls();
     if (!press || event.pointerId !== press.pointerId) {
       if (press) return;
@@ -666,15 +688,24 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);
-    tabletop.update(seconds); stage.update(seconds);
-    if (width > 0) { if (stage.active) renderer.render(stage.scene, stage.camera); else renderer.render(scene, camera); }
+    tabletop.update(seconds); stage.update(seconds); scout.update(seconds);
+    if (width > 0) {
+      if (stage.active) renderer.render(stage.scene, stage.camera);
+      else if (scout.active) {
+        // Only the board, the lights and the scouted seat: my pieces, legend, orbs and effects stay out of the picture.
+        const hidden = scene.children.filter(child => child !== boardGroup && child !== scout.group && !(child as { isLight?: boolean }).isLight && child.visible);
+        for (const child of hidden) child.visible = false;
+        renderer.render(scene, camera);
+        for (const child of hidden) child.visible = true;
+      } else renderer.render(scene, camera);
+    }
   };
   resize(host.clientWidth, host.clientHeight);
   frameId = requestAnimationFrame(tick);
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, stage };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, stage, scout };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
@@ -684,7 +715,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave], ['contextmenu', onContextMenu]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      clearEffects(); tabletop.dispose(); stage.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      clearEffects(); tabletop.dispose(); stage.dispose(); scout.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

@@ -145,25 +145,41 @@ export function attachTraitCards(scope: HTMLElement, card: HoverCard, membersOf:
 }
 
 /** The always-visible column at the top of the left panels; re-rendered with the panel. */
+/** Columns on the page, for traitColumnShowRows (online scouting does not hold the strategy panel's column). */
+const columns = new Set<TraitColumn>();
+/** 3D 看对手: every column shows these rows (another seat's, publicTraitRows) instead of my board's; null restores mine. */
+export function traitColumnShowRows(rows: readonly TraitRow[] | null): void { for (const column of columns) column.showRows(rows); }
 export class TraitColumn {
   readonly root: HTMLElement;
   private rows: readonly TraitRow[] = [];
   private runtime: TraitRuntime | undefined;
   private key = '';
   private readonly detach: () => void;
+  private own: [GameState, TraitRuntime | undefined] | null = null;
+  private shown: readonly TraitRow[] | null = null;
   constructor(host: HTMLElement, before: HTMLElement | null, card: HoverCard) {
     this.root = el('section', '', 'trait-column'); this.root.id = 'trait-column'; this.root.setAttribute('aria-label', '羁绊');
     this.root.dataset.debug = 'trait-column';
     if (before && before.parentElement === host) host.insertBefore(this.root, before); else host.prepend(this.root);
     this.detach = attachTraitCards(this.root, card, traitId => this.rows.find(row => row.traitId === traitId)?.members ?? [], traitId => this.runtime?.get(traitId));
+    columns.add(this);
   }
   /** `runtime`: optional counter lines per trait (G2-3 prep); omitted, the column renders exactly as before. */
   render(preparation: GameState, runtime?: TraitRuntime): void {
-    const rows = boardTraitRows(preparation);
-    const key = rows.map(row => `${row.traitId}:${row.count}:${row.tier}:${runtimeText(runtime?.get(row.traitId))}`).join('|');
+    this.own = [preparation, runtime];
+    if (!this.shown) this.draw(boardTraitRows(preparation), runtime);
+  }
+  /** Rows to show instead of my board's (another seat's while scouting, no counter lines); null goes back to mine. */
+  showRows(rows: readonly TraitRow[] | null): void {
+    this.shown = rows;
+    if (rows) { this.root.dataset.scout = ''; this.draw(rows, undefined); }
+    else { delete this.root.dataset.scout; if (this.own) this.draw(boardTraitRows(this.own[0]), this.own[1]); }
+  }
+  private draw(rows: readonly TraitRow[], runtime: TraitRuntime | undefined): void {
+    const key = `${this.shown ? 's' : ''}${rows.map(row => `${row.traitId}:${row.count}:${row.tier}:${runtimeText(runtime?.get(row.traitId))}`).join('|')}`;
     if (key === this.key && this.root.childElementCount) return;
     this.rows = rows; this.runtime = runtime; this.key = key;
-    this.root.replaceChildren(el('h3', '羁绊', 'trait-column-title'), renderTraitRows(rows, 'trait-column:rows', '场上暂无单位', runtime));
+    this.root.replaceChildren(el('h3', this.shown ? '对方羁绊' : '羁绊', 'trait-column-title'), renderTraitRows(rows, 'trait-column:rows', '场上暂无单位', runtime));
   }
-  dispose(): void { this.detach(); this.root.remove(); }
+  dispose(): void { columns.delete(this); this.detach(); this.root.remove(); }
 }
