@@ -174,7 +174,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(useConsumable(full,full.consumables.at(-1)!.consumableId,{kind:'unit',unitId:'unit-1'})).toEqual({ok:false,state:full,reason:'bench-full'});
  });
  it('a real 5-7 command path restores new forge receipts and never repeats the rewards',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v17-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v18-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='5-7'&&s.phase==='preparation'));
   let state:MatchState=battle(initial).ended;
   while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
@@ -182,7 +182,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(stepMatch(state)).toEqual({state,events:[]});expect(new Set(state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(state.m8.loot.receipts.length);
  });
  it('authenticates neutral opening HP after earned radiant health auras and rejects altered frozen HP',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v17-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v18-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   let state=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='6-7'&&s.phase==='preparation'));
   const target=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board'&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
   state=accepted(grantMechanicItem(state,{receiptId:'test:radiant-opening',source:'test',definitionId:'TFT5_Item_SunfireCapeRadiant'}));
@@ -193,7 +193,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
  });
  it('the real 6-7 terminal keeps full-bench heroes retained-terminal while completing forge fallback once',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v17-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v18-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='6-7'&&s.phase==='preparation'));
   const heroes=initial.m8.loot.frozen.rounds.at(-1)!.encounterPlan.drops.flatMap(d=>d.payload.kind==='unit'?[d.payload.definitionId]:[]);expect(heroes.length).toBeGreaterThan(0);
   const state=battle(fillBench(initial,heroes)).ended;expect(state.phase).toBe('gameOver');

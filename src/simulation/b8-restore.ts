@@ -91,7 +91,7 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
       if(evidence.resourcePrefixLength!==prefixLength||!evidence.receiptId.startsWith('g23:academy:'))continue;
       const tier=Number(evidence.receiptId.split(':').at(-1));
       const actual=deriveTraits({...preparation,units:evidence.units},'player',undefined,undefined,items).find(t=>t.traitId==='academy')?.tier??0;
-      check(actual>=tier,'historical Academy equipment qualification');
+      check(actual>=tier,'academy qualification (historical equipment)');
     }
     const basis = next.combatInputBasis;
     if (basis?.provenancePrefixLength === prefixLength) {
@@ -287,7 +287,11 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   check(equal(current,{units:sorted([...d14OwnedUnits(state).filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),...(state.carousel?.pendingUnits.map(u=>({id:u.unitId,definitionId:u.definitionId,starLevel:1}))??[])]),
     items:sorted(d14OwnedItems(state).map(({id,definitionId}) => ({id,definitionId}))),persistentGrowth:state.persistentGrowth,
     nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial}), 'current resource fold');
-  if (state.d14 || !state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
+  // Academy grants must authenticate their historical deployment/equipment even
+  // for ordinary saves with completed battles and no externally supplied replay.
+  const hasAcademyEvidence = ((state.seatMechanics?.hidden.grantEvidence ?? []) as readonly G23GrantEvidence[])
+    .some(evidence => evidence.receiptId.startsWith('g23:academy:'));
+  if (state.d14 || hasAcademyEvidence || !state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
   if (state.combat === null) { check(state.combatInputBasis === null, 'inactive input basis'); return {basis:null,saleGold:0}; }
   const entries = state.resourceProvenance.entries, combat = state.combat;
   const commits = entries.filter(entry => entry.kind === 'combat-growth-committed' && entry.combatId === combat.combatId);

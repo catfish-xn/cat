@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCombat } from '../src/simulation/combat';
 import type { CombatState } from '../src/simulation/combat-types';
-import { lootPlan, COMPONENTS } from './fixtures/m5/oracle.g2.cjs';
+import { lootPlan, COMPONENTS, validateLoot } from './fixtures/m5/oracle.g2.cjs';
 import { createMatch, type MatchState } from '../src/simulation/match';
 import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity } from '../src/simulation/loot-runtime';
 import { createRoundEnemies } from '../src/simulation/round-enemies';
@@ -44,6 +44,17 @@ function fillBench(state: MatchState): MatchState {
 }
 
 describe('B8 real loot preparation and earned-only transitions', () => {
+  it.each([[4,'frying-pan',['vest','cloak','frying-pan']],[730,'spatula',['rod','gloves','spatula']]] as const)(
+    '3-7 seed %i counts %s as one crafting component in the independent oracle', (seed,crafting,items) => {
+      const state=grantDirectLoot(observed(fixture(17,seed)),false).state;
+      const payloads=lootPlan(seed,17).rounds.at(-1)!.encounterPlan.drops.filter(d=>d.payload.kind==='item').map(d=>d.payload);
+      expect(payloads.map(p=>'definitionId' in p?p.definitionId:null)).toEqual(items);
+      expect(state.m8.loot.guaranteeCounters[key('3-7')]).toBe(3);
+      expect(state.items.some(i=>i.definitionId===crafting)).toBe(true);
+      expect(()=>validateLoot(state)).not.toThrow();
+      const invalid={...state,m8:{...state.m8,loot:{...state.m8.loot,guaranteeCounters:{...state.m8.loot.guaranteeCounters,[key('3-7')]:4}}}};
+      expect(()=>validateLoot(invalid)).toThrow('actual-only component counters');
+    });
   it('initializes all eight counters, preserves frozen authority, and appends each preparation exactly once', () => {
     const first = prepareMatchLoot(5, 1);
     expect(first.guaranteeCounters).toEqual(Object.fromEntries(['1-2', '1-3', '1-4', '2-7', '3-7', '4-7', '5-7', '6-7'].map(id => [key(id), 0])));
@@ -178,7 +189,7 @@ describe('B8 atomic direct awards, capacity and actual purchase lineage', () => 
       for (const descriptor of unresolvedLootChoices(state)) state = grantLootChoice(state, descriptor, 'tear', 'player-choice').state;
     }
     const expected=lootPlan(5,38),drops=expected.rounds.flatMap(r=>r.encounterPlan.drops);
-    expect(Object.values(state.m8.loot.guaranteeCounters)).toEqual(expected.rounds.map(r=>r.encounterPlan.drops.reduce((n,d)=>n+(d.payload.kind==='item'?(COMPONENTS.includes(d.payload.definitionId)?1:2):0),0)));
+    expect(Object.values(state.m8.loot.guaranteeCounters)).toEqual(expected.rounds.map(r=>r.encounterPlan.drops.reduce((n,d)=>n+(d.payload.kind==='item'?([...COMPONENTS,'spatula','frying-pan'].includes(d.payload.definitionId)?1:2):0),0)));
     const items=drops.filter(d=>d.payload.kind==='item').length;
     expect(state.items).toHaveLength(items);expect(state.nextItemSerial).toBe(items+1);
     expect(state.m8.loot.receipts).toHaveLength(drops.length);expect(state.m8.loot.earnedEvidence).toHaveLength(drops.length);

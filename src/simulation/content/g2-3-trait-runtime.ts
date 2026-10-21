@@ -142,7 +142,8 @@ export const G23_TRAIT_SOURCE = freezeContent({
       {
         "threshold": 6,
         "values": {
-          "AD": 0.6,
+          // 12/17 B patch (M9_DATA_LEDGER); original archive remains unchanged.
+          "AD": 0.7,
           "NumOfAttacks": 4,
           "PercentDamage": 2.5
         }

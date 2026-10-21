@@ -1,0 +1,28 @@
+{
+  "baseCommit": "5f33119a68e2ba9e6de45d2eba89b0a0d228c044",
+  "source": "local origin/multiplayer; offline Git object reads only",
+  "restoredFiles": [
+    "docs/evidence/v17/epoch-verification.json",
+    "docs/evidence/v17/input-fixture-audit.json",
+    "docs/evidence/v17/live-reveal-audit.json",
+    "docs/evidence/v17/release-audit.json",
+    "scripts/record-v17-release.cjs",
+    "tests/fixtures/m5/full-match-golden.v17.json",
+    "tests/fixtures/v17-c19-seed-9-minimal.json",
+    "tests/fixtures/v17-herald-raw/edge-of-night.json",
+    "tests/fixtures/v17-herald-raw/evenshroud.json",
+    "tests/fixtures/v17-herald-raw/ionic-spark--evenshroud.json",
+    "tests/fixtures/v17-herald-raw/ionic-spark.json",
+    "tests/fixtures/v17-herald-raw/manifest.json",
+    "tests/fixtures/v17-herald-raw/quicksilver.json",
+    "tests/fixtures/v17-herald-raw/trajectory.json",
+    "tests/fixtures/v17-recorded-states/cannon.json.gz",
+    "tests/fixtures/v17-recorded-states/sniper.json.gz",
+    "tests/v17-content-baseline.json"
+  ],
+  "allRestoredBytesEqualGitBlobs": true,
+  "protectedManifest": {
+    "file": "tests/fixtures/g2-4b-herald-raw/manifest.json",
+    "sha256": "b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22"
+  }
+}

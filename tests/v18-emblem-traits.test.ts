@@ -50,6 +50,11 @@ describe('v18 archive-backed emblem acquisition',()=>{
   it('matches all 22 source identities, native exclusions, stats and all 16 compositions',()=>{
     const archive=JSON.parse(gunzipSync(readFileSync(new URL('../src/simulation/content/source/s13-14.24b/raw/en_us.json.gz',import.meta.url))).toString());
     const rows=archive.items.filter((i:any)=>/^TFT13_Item_.*EmblemItem$/.test(i.apiName));
+    for(const [id,apiName] of [['spatula','TFT_Item_Spatula'],['frying-pan','TFT_Item_FryingPan']]){
+      expect(archive.items.find((i:any)=>i.apiName===apiName).composition).toEqual([]);
+      expect(rows.some((i:any)=>i.composition.length===2&&i.composition.includes(apiName))).toBe(true);
+      expect(ITEM_DEFINITIONS[id]).toMatchObject({kind:'component',craftingOnly:true});
+    }
     expect(rows).toHaveLength(22);expect(Object.keys(EMBLEM_ITEMS).sort()).toEqual(rows.map((i:any)=>i.apiName).sort());
     expect(Object.values(EMBLEM_ITEMS).filter(i=>i.recipe)).toHaveLength(16);
     for(const row of rows){
@@ -131,6 +136,11 @@ it('pins independently transcribed top-tier numbers in live strategy and opening
   expect(mechanic(tierArmy('sniper',6),'sniper','damageBpsPerHex')).toBe(3600);
   expect(mechanic(tierArmy('firelight',4),'firelight','healBps')).toBe(4000);
   expect(mechanic(tierArmy('scrap',9),'scrap','shieldPerComponent')).toBe(60);
+  // Independently transcribed 12/17 B patch: Cannoneer 6 grants 70% AD.
+  const cannon=buildStrategySnapshot(tierArmy('artillerist',6)).units.find(u=>u.unitId==='tristana')!;
+  expect(cannon.stats.attack).toBe(Math.floor(M5_UNIT_DEFINITIONS.tristana.baseStats.attack*17000/10000));
+  expect(TRAIT_DEFINITIONS.artillerist.tiers.find(t=>t.threshold===6)!.effects)
+    .toContainEqual({kind:'statPercentBps',stat:'attackDamage',bps:7000});
   expect(mechanic(tierArmy('artillerist',6),'artillery','everyN')).toBe(4);
   expect(mechanic(tierArmy('artillerist',6),'artillery','adBps')).toBe(25000);
   for(const [tier,shield,amp,wanted] of [[8,4000,5000,5],[10,10000,15000,99]]){
