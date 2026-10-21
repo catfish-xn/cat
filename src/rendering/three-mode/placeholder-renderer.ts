@@ -21,13 +21,16 @@ import {
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
-import { AssetPreloader, describePreload, openAssetStore, readPrecacheList } from './asset-preload';
+import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 
 const MANIFEST_TIMEOUT_MS = 4000;
+/** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
+ * drop to the unversioned, unpacked per-file path, so they get longer and one more try. */
+const INDEX_TIMEOUT_MS = 20000;
 /** Placeholder pawn size in board units (2D logical pixels); a hex is 2 × hexRadius (68) tall and √3 × 68 wide. */
 const PAWN_HEIGHT = 56, PAWN_WIDTH = 40;
 /**
@@ -93,14 +96,21 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
 
-const fetchJson = async (url: string): Promise<unknown> => {
+const fetchJson = async (url: string, timeoutMs = MANIFEST_TIMEOUT_MS): Promise<unknown> => {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), MANIFEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { signal: controller.signal, cache: 'no-cache' });
     if (!response.ok) throw new Error(`http-${response.status}`);
     return await response.json();
   } finally { clearTimeout(timer); }
+};
+/** An index file, or null when the root has none (HTTP error); a timeout or dropped link gets one more try. */
+const fetchIndex = async (url: string): Promise<unknown> => {
+  for (let attempt = 0; ; attempt++) {
+    try { return await fetchJson(url, INDEX_TIMEOUT_MS); }
+    catch (error) { if (attempt >= 1 || /^http-\d+$/.test((error as Error)?.message ?? '')) return null; }
+  }
 };
 
 async function openModels(assetBase: string | null, renderer: WebGLRenderer, onProgress?: (text: string) => void): Promise<Models> {
@@ -117,9 +127,11 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
     let preloader: AssetPreloader | null = null;
     const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)));
     const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url));
-    const list = readPrecacheList(await fetchJson(`${assetBase}precache.json`).catch(() => null), cache.manifest);
+    const list = readPrecacheList(await fetchIndex(`${assetBase}precache.json`), cache.manifest);
+    // Optional: a root without packs.json (or with one that disagrees with precache) downloads file by file.
+    const packs = readPackList(await fetchIndex(`${assetBase}packs.json`), list);
     const store = await openAssetStore();
-    preloader = new AssetPreloader(assetBase, list, store);
+    preloader = new AssetPreloader(assetBase, list, store, { packs });
     if (onProgress) preloader.onProgress(progress => onProgress(describePreload(progress)));
     void navigator.storage?.persist?.().catch(() => false);
     void preloader.start();
