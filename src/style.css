@@ -1045,12 +1045,18 @@ body[data-online] .shop-dock .touch-shop { grid-area: cards; min-height: 0; }
 body[data-online] .shop-dock .shop-odds { grid-area: top; justify-self: start; align-self: center; margin: 0 !important; font-size: 11px !important; white-space: nowrap; }
 body[data-online] .shop-dock[data-sell-hint]::after { border-radius: 8px; }
 
-/* L12 online 3D: the scene fills the window behind the panels, as in TFT. The board stays framed in #board-root's box
-   (placeholder-renderer offsets its camera to it), so the item and orb docks, hover cards and combat floats still line up.
-   #board-frame's container query would otherwise contain the fixed layer. */
+/* L12 online 3D: the scene fills the window behind the panels, as in TFT. placeholder-renderer moves the layer to <body>
+   (#board-frame is a size container, which would clip a fixed layer) and keeps the board framed in #board-root's box, so
+   the item and orb docks, hover cards and combat floats still line up. */
 body[data-online]:has(.render3d-layer) { --c-surface: #14212cd9; }
-body[data-online]:has(.render3d-layer) #board-frame { container-type: normal; }
-body[data-online] .render3d-layer { position: fixed; inset: 0; z-index: 0; }
+body[data-online] > .render3d-layer { position: fixed; inset: 0; z-index: 0; }
+/* #board-frame is sticky, so it stacks as one: it goes above the layer, and the 2D board inside it steps aside (hidden,
+   letting pointers through to the 3D canvas, which handles them). The frame's own gaps let pointers through as well (the
+   legend and orbs are drawn there); its panels take them back, and the overlays that never take them keep none. */
+body[data-online]:has(> .render3d-layer) #board-frame { z-index: 1; pointer-events: none; }
+body[data-online]:has(> .render3d-layer) #board-frame > :not(#board-root, #feedback-root, #item-dock, #orb-dock, .left-panel-toast, .battle-outcome, .d14-away-chip) { pointer-events: auto; }
+body[data-online]:has(> .render3d-layer) #board-root { visibility: hidden; }
 body[data-online]:has(.render3d-layer) :is(#panels-root, #online-countdown, #shop-dock, #lobby-root) { position: relative; z-index: 1; }
 body[data-online]:has(.render3d-layer) #online-sidebar { z-index: 1; }
-body[data-online] .render3d-bar { top: auto; left: auto; right: 8px; bottom: 26px; }
+/* The status and 切回 2D sit in the free corner right of the shop bar; the label wraps rather than run under the bar. */
+body[data-online] > .render3d-layer .render3d-bar { top: auto; left: auto; right: 8px; bottom: 26px; max-width: 220px; flex-wrap: wrap; justify-content: flex-end; }
