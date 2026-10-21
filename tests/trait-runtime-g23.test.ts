@@ -18,10 +18,12 @@ it('shows Conqueror stacks against the next chest and Shimmer out of 100', () =>
   expect(g23TraitRuntime(createMatch(7))!.get('conqueror')).toEqual([{ label: '征服层数', value: `0/${G23_CONQUEROR_CHESTS[0]!.threshold}` }]);
 });
 
-it('drops the breakpoint once every chest is open and the /100 once Shimmer passes it', () => {
+it('moves Shimmer to the next hundred and drops the breakpoint past the last chest and the eighth market', () => {
   const runtime = g23TraitRuntime(withProgress(900, 15, 230))!;
   expect(runtime.get('conqueror')).toEqual([{ label: '征服层数', value: '900' }]);
-  expect(runtime.get('chem-baron')).toEqual([{ label: '微光', value: '230' }]);
+  expect(runtime.get('chem-baron')).toEqual([{ label: '微光', value: '230/300' }]);
+  expect(g23TraitRuntime(withProgress(0, 0, 799))!.get('chem-baron')).toEqual([{ label: '微光', value: '799/800' }]);
+  expect(g23TraitRuntime(withProgress(0, 0, 800))!.get('chem-baron')).toEqual([{ label: '微光', value: '800' }]);
 });
 
 it('reads the same counters from my private seat view online', () => {

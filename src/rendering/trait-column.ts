@@ -46,16 +46,18 @@ const runtimeText = (lines: readonly TraitRuntimeLine[] | undefined) => (lines ?
 
 /**
  * My own Conqueror and Chem-Baron counters, read from the rules' G2-3 progress (offline state or my private seat view):
- * 征服层数 with the next chest breakpoint (all 15 opened shows the total only), and 微光 out of 100. Owner-only data:
+ * 征服层数 with the next chest breakpoint (all 15 opened shows the total only), and 微光 with the next black-market
+ * breakpoint (every 100, eighth market at 800; past it the total only). Labels follow the 14.24 zh_cn trait text. Owner-only data:
  * never pass it for a scouted board. No progress (older saves, content without G2-3) renders no counters.
  */
 export function g23TraitRuntime(state: MatchState): TraitRuntime | undefined {
   let progress; try { progress = readG23Progress(state); } catch { return undefined; }
   if (!progress) return undefined;
   const { stacks, chestsOpened } = progress.conquest, next = G23_CONQUEROR_CHESTS[chestsOpened]?.threshold, shimmer = progress.chem.shimmer;
+  const market = (Math.floor(shimmer / 100) + 1) * 100;
   return new Map([
     ['conqueror', [{ label: '征服层数', value: next === undefined ? String(stacks) : `${stacks}/${next}` }]],
-    ['chem-baron', [{ label: '微光', value: shimmer < 100 ? `${shimmer}/100` : String(shimmer) }]],
+    ['chem-baron', [{ label: '微光', value: market <= 800 ? `${shimmer}/${market}` : String(shimmer) }]],
   ]);
 }
 
