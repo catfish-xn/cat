@@ -1,0 +1,105 @@
+{
+  "baseCommit": "0484e4072ca390de37e16d25b8f3b2b19f94f5cf",
+  "steps": [
+    {
+      "name": "record-release",
+      "args": [
+        "scripts/record-v20-chem-baron-release.cjs",
+        "--baseline-commit=0484e4072ca390de37e16d25b8f3b2b19f94f5cf"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 128115,
+      "log": "artifacts/v20-chem-baron-recording/record-release.log"
+    },
+    {
+      "name": "record-herald",
+      "args": [
+        "tests/fixtures/record-v20-chem-baron-herald.cjs",
+        "--write"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 114830,
+      "log": "artifacts/v20-chem-baron-recording/record-herald.log"
+    },
+    {
+      "name": "record-inputs",
+      "args": [
+        "scripts/record-v20-chem-baron-inputs.cjs",
+        "--baseline-commit=0484e4072ca390de37e16d25b8f3b2b19f94f5cf"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 7407,
+      "log": "artifacts/v20-chem-baron-recording/record-inputs.log"
+    },
+    {
+      "name": "record-live-reveal",
+      "args": [
+        "scripts/record-v20-chem-baron-live-reveal.cjs",
+        "--baseline-commit=0484e4072ca390de37e16d25b8f3b2b19f94f5cf"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 36606,
+      "log": "artifacts/v20-chem-baron-recording/record-live-reveal.log"
+    },
+    {
+      "name": "check-inputs",
+      "args": [
+        "scripts/record-v20-chem-baron-inputs.cjs",
+        "--baseline-commit=0484e4072ca390de37e16d25b8f3b2b19f94f5cf",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 7190,
+      "log": "artifacts/v20-chem-baron-recording/check-inputs.log"
+    },
+    {
+      "name": "check-herald",
+      "args": [
+        "scripts/verify-m8-herald-fixtures.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 127114,
+      "log": "artifacts/v20-chem-baron-recording/check-herald.log"
+    },
+    {
+      "name": "check-history",
+      "args": [
+        "scripts/v20-chem-baron-fixture-audit.cjs",
+        "--baseline-commit=0484e4072ca390de37e16d25b8f3b2b19f94f5cf"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2189,
+      "log": "artifacts/v20-chem-baron-recording/check-history.log"
+    },
+    {
+      "name": "check-live-reveal",
+      "args": [
+        "scripts/record-v20-chem-baron-live-reveal.cjs",
+        "--baseline-commit=0484e4072ca390de37e16d25b8f3b2b19f94f5cf",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 37552,
+      "log": "artifacts/v20-chem-baron-recording/check-live-reveal.log"
+    },
+    {
+      "name": "compare-digests",
+      "args": [
+        "scripts/compare-v20-chem-baron-digests.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4520,
+      "log": "artifacts/v20-chem-baron-recording/compare-digests.log"
+    }
+  ],
+  "complete": true
+}

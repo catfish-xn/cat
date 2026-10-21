@@ -35,7 +35,7 @@ export const G23_BLACK_MARKETS = freezeContent(Array.from({length:8}, (_, i) => 
   return {tier:i+1,table,options:Object.entries(objects[table].values).map(([id,weight]) => ({id,weightBps:Math.round((weight as number)*10000),reward:objects[id].values}))};
 }));
 export const G23_POLICY = freezeContent({
-  revision:'g2-4b-ten-levels-v18', rngAlgorithm:'lcg32-v1', seedXor:0x67323370, forges:G24_FORGE_POLICY,
+  revision:'g2-4b-v20-chem-baron', rngAlgorithm:'lcg32-v1', seedXor:0x67323370, forges:G24_FORGE_POLICY,
   // User2026-10-17: retain source identity; only the black-market duplicator requires Chem-Baron.
   duplicators:{
     TFT_Consumable_NeekosHelp:{name:'英雄复制器',maxCost:null,traitId:null},
@@ -49,6 +49,8 @@ export const G23_POLICY = freezeContent({
     rockets:8,rocketPhysicalDamage:100,shield:500,shieldTicks:80,gold:3,durabilityBps:8000,durabilityTicks:30},
   rumble:{selfDestructResistBps:[16000,24000,2000000]},
   academy:{memberBaseBps:500,stacking:'per-matching-copy-base-once',grantsAtDistinctTier:[3,4,5]},
+  // Project convention (user 2026-10-21): no candidate-count constant in the 14.24 archive.
+  chemBaron:{candidateCount:3,sampling:'weighted-without-replacement',shimmerRounds:'pvp-only',keep:'skip-retains-shimmer'},
   blackMarkets:G23_BLACK_MARKETS,
   /** Source PercentGoldChance per crown; 约定值 G24-CROWN-GOLD-01..05 (deployed holder, PvE and PvP wins, one roll per crown). */
   crownGold:{chanceBps:G23_SPECIAL_ITEM_SOURCE.TFT_Item_ForceOfNature.values.PercentGoldChance*100,gold:1,holders:'equipped-on-deployed-unit-at-combat-start',results:['win'],roundKinds:['pve','pvp'],rolls:'one-per-crown-after-black-market'},

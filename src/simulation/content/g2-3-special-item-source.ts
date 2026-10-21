@@ -1,7 +1,7 @@
 // Offline archive/provenance columns; never imported by runtime modules.
 import { freezeContent } from './freeze';
 import { restoreArchiveColumns } from './archive-source';
-import { G23_SPECIAL_ITEM_SOURCE as runtime } from './g2-3-special-item-runtime';
+import { G23_ARCHIVED_SPECIAL_ITEM_SOURCE as runtime } from './g2-3-special-item-runtime';
 export { G23_SPECIAL_ITEM_POOLS, G23_RADIANT_MAPPING } from './g2-3-special-item-runtime';
 export const G23_SPECIAL_ITEM_SOURCE_NOTES = freezeContent({
   "TFT13_Crime_Bronze_ChemGrips": {

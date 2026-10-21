@@ -24,9 +24,8 @@ export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatM
  for(const r of m.receipts)for(const {b,atoms} of bundles){
   for(const atom of atoms){
    const prefix=atom.id+':copy:';
-   const marketFirst=r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.receiptId===b.id&&!r.skipped&&atom===atoms.find(a=>a.kind==='item');
-   if(!r.receiptId.startsWith(prefix)&&!marketFirst)continue;
-   const copy=marketFirst?0:Number(r.receiptId.slice(prefix.length));
+   if(!r.receiptId.startsWith(prefix))continue;
+   const copy=Number(r.receiptId.slice(prefix.length));
    const definitionId=r.kind==='item'||r.kind==='unit'||r.kind==='consumable'?r.definitionId:r.kind==='choice'?r.optionId:'';
    const instanceId=r.kind==='item'||r.kind==='choice'?r.itemId:r.kind==='unit'?r.unitId:r.kind==='consumable'?r.consumableId:null;
    rewardClaims.push({id:r.receiptId,bundleId:b.id,atomId:atom.id,copy,round:r.round,kind:atom.kind,definitionId,instanceId,gold:atom.gold});
@@ -71,12 +70,16 @@ export function validateG23MechanicLinks(state:MatchState):void{
   if(claim.kind==='item'){
    if(atom.options.length>1)check(r.kind==='choice'&&r.choiceKind==='forge'&&r.optionId===claim.definitionId&&r.itemId!==null&&r.itemId===claim.instanceId
     &&!r.skipped&&r.price===0&&(!r.timedOut||r.optionId===atom.options[0]));
-   else check((r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId)
-    ||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.receiptId===bundle.id&&!r.skipped&&r.price===0&&r.optionId===claim.definitionId&&r.itemId===claim.instanceId));
+   else check(r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId);
   }
   else if(claim.kind==='unit'||claim.kind==='duplicator')check(r.kind==='unit'&&r.definitionId===claim.definitionId&&r.unitId===claim.instanceId&&(r.resolution!=='gold'||r.gold===UNIT_DEFINITIONS[r.definitionId]?.cost));
   else if(claim.kind==='tool')check(r.kind==='consumable'&&r.definitionId===claim.definitionId&&r.consumableId===claim.instanceId);
   else check(r.kind==='gold'&&r.amount===claim.gold);
+ }
+ for(const decision of p.economyReceipts)if(decision.kind==='market'){
+  const r=receipts.find(r=>r.receiptId===decision.offerId);
+  check(r?.kind==='choice'&&r.choiceKind==='blackMarket'&&r.source==='black-market'&&r.round===decision.round
+   &&r.skipped===!decision.take&&r.optionId===(decision.take?decision.optionId:'@skip')&&r.itemId===null&&r.price===0);
  }
  for(const purchase of p.junkerPurchases){const r=receipts.find(r=>r.receiptId===purchase.id);check(r?.kind==='choice'&&r.choiceKind==='armory'&&r.optionId===purchase.upgrade&&r.price===purchase.cost&&r.round===purchase.round);}
  for(const r of receipts){

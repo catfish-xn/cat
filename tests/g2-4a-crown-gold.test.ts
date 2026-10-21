@@ -172,7 +172,7 @@ it('real combat saves restore crown receipts and Continue never pays the complet
 it('G24-CROWN-GOLD-05 consumes the black-market draw before each independent crown draw',()=>{
  let p=createG23Progress(42);
  for(let round=1;round<=20;round++){
-  const base={...facts(round),conquerorTier:0,conquestTakedowns:[],chemBaronTier:3};
+  const base={...facts(round),roundKind:'pvp' as const,conquerorTier:0,conquestTakedowns:[],chemBaronTier:3};
   const without=advanceG23Economy(p,base);
   if(without.progress.chem.offer){
    const market=rollG23BlackMarket(without.progress.chem.offer.tier,p.rngState);
@@ -180,7 +180,7 @@ it('G24-CROWN-GOLD-05 consumes the black-market draw before each independent cro
    const won=advanceG23Economy(p,{...base,crowns:3});
    expect(won.progress.chem.offer).toEqual(without.progress.chem.offer);
    expect(won.progress.rngState).toBe(roll.rngState);
-   expect(won.progress.rngDraws).toBe(p.rngDraws+4);
+   expect(market.draws).toBe(3);expect(won.progress.rngDraws).toBe(p.rngDraws+6);
    expect((won.progress.economyReceipts.at(-1) as G23EconomyAction).crownGold).toBe(roll.gold);
    expect(()=>validateG23Progress(won.progress,42,round)).not.toThrow();
    return;

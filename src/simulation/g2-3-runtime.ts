@@ -7,7 +7,6 @@ import type {UnitLootPolicy} from './loot-runtime';
 import {readG23Progress,writeG23Progress} from './g2-3-state';
 import {g23RewardAtoms} from './g2-3-rewards';
 import {decideG23Market} from './g2-3-economy';
-import {G23_BLACK_MARKETS} from './content/g2-3-policy';
 import {g23JunkerMenu,G23_JUNKER_PAID,type G23JunkerUpgrade} from './g2-3-junker';
 import {grantMechanicGold,grantMechanicItem,grantMechanicUnit,appendMechanicReceipt,openMechanicChoice} from './seat-mechanics';
 export function mechanicGrantEvents(before:MatchState,after:MatchState):MatchEvent[]{
@@ -55,12 +54,13 @@ export function openG23Choice(state:MatchState):{state:MatchState;events:readonl
  const epic=openEpicForge(state);if(epic.state!==state)return epic;
  const p=readG23Progress(state);if(!p||state.pendingChoice||!['preparation','settlement'].includes(state.phase)||state.m8.round.kind==='supply')return {state,events:[]};
  const returnPhase=state.phase as 'preparation'|'settlement';
- // Black market is one weighted source bundle: the first item identifies accepting that bundle.
+ // Each option identifies a complete source reward bundle; grants run only after selection.
  const offer=p.chem.offer;
  if(offer){
-  const reward=G23_BLACK_MARKETS[offer.tier-1].options.find(o=>o.id===offer.optionId)!.reward;
-  const atom=g23RewardAtoms({id:offer.id,round:offer.round,source:'black-market',tier:offer.tier,reward},p.seed,!!state.multiplayer).find(a=>a.kind==='item');
-  {const opened=openMechanicChoice(state,{choiceId:offer.id,returnPhase,offers:atom?.options??[offer.optionId],payload:{kind:'blackMarket',...(atom?{}:{grantItem:false}),source:'black-market',skippable:true,skipReward:{kind:'health-per-skip',amount:1},timeoutOption:'@skip'}});if(!opened.ok)return {state,events:[{type:'mechanicFailed',hook:'choice',reason:opened.reason}]};return opened;}
+  const opened=openMechanicChoice(state,{choiceId:offer.id,returnPhase,offers:offer.optionIds,
+   payload:{kind:'blackMarket',grantItem:false,source:'black-market',skippable:true,
+    skipReward:{kind:'health-per-skip',amount:1},timeoutOption:'@skip'}});
+  if(!opened.ok)return {state,events:[{type:'mechanicFailed',hook:'choice',reason:opened.reason}]};return opened;
  }
  const menu=returnPhase==='preparation'?g23JunkerMenu(state):null;
  if(menu){
@@ -86,7 +86,7 @@ export function finishG23Choice(before:MatchState,after:MatchState,optionId:stri
   return recordG23GrantEvidence(before,writeG23Progress(after,{...p,junkerPurchases:[...p.junkerPurchases,{id:menu.id,round:before.round,unitId:menu.unitId,upgrade:optionId as G23JunkerUpgrade,cost:receipt.price}]}),menu.id);
  }
  if(choice.kind==='blackMarket'&&p.chem.offer?.id===choice.choiceId){
-  const next=writeG23Progress(after,decideG23Market(p,choice.choiceId,optionId!=='@skip',before.round));
+  const next=writeG23Progress(after,decideG23Market(p,choice.choiceId,optionId!=='@skip',before.round,optionId));
   return next;
  }
  return after;

@@ -1,0 +1,74 @@
+{
+  "baseCommit": "0484e4072ca390de37e16d25b8f3b2b19f94f5cf",
+  "rulesVersion": "s13-g2-3-v20-chem-baron",
+  "contentVersion": "s13-14.24b-g2-3-v20-chem-baron",
+  "contentDigest": "fnv1a32-utf16:c1084e68",
+  "lootReplayDigest": "fnv1a32-utf16:e4289c1d",
+  "relatedVitestDistinctFiles": 23,
+  "relatedVitestDistinctCases": 662,
+  "relatedVitestFinalResult": "passed",
+  "testGroups": [
+    {
+      "files": [
+        "chem-baron-fix",
+        "g2-3-traits",
+        "g2-3-content",
+        "g2-3-hook-failures",
+        "g2-3-integration",
+        "g2-3-lesser-shimmer-duplicator",
+        "g2-3-netcode-hooks",
+        "content-identity-constants"
+      ],
+      "passed": 141
+    },
+    {
+      "files": [
+        "g2-3-followup",
+        "g2-4a-crown-history",
+        "g2-4b-artifacts",
+        "match-contract",
+        "m8-contracts",
+        "d14-anomalies-source"
+      ],
+      "passed": 138
+    },
+    {
+      "files": [
+        "g2-4a-crown-gold"
+      ],
+      "passed": 9
+    },
+    {
+      "files": [
+        "m8-content-equivalence",
+        "epic-loot-reforger",
+        "d11-wiring-bank",
+        "ur-i3-combat-statuses"
+      ],
+      "passed": 174
+    },
+    {
+      "files": [
+        "opening-random-identity",
+        "c19-missed-pulse",
+        "m8-b7-match-wiring",
+        "b8-resumable-battle"
+      ],
+      "passed": 200
+    }
+  ],
+  "testCommand": "npm test -- <listed files with tests/ prefix and .test.ts suffix> --maxWorkers=1",
+  "typecheck": "npm run typecheck: passed",
+  "identities": "node scripts/update-content-identities.cjs --write and --check: passed",
+  "epochVerification": "epoch-verification.json records the nine sequential offline steps",
+  "scope": "Only related test files, typecheck, identity checks and epoch record/verification; no full test suite or browser acceptance",
+  "protectedManifestSha256": "b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22",
+  "genericRoutes": "cannon/sniper/mage/sniper-caitlyn commands and battle events unchanged against v18; new identity in full state recordings",
+  "initialFailuresResolved": [
+    "Chem-Baron public route assertions updated from round 8 to round 12 after removing standard PvE shimmer; independent three-word RNG oracle replaces the old single-word checkpoints",
+    "Crown ordering vector now uses player combat and expects three market plus three crown draws",
+    "C19 consumer initially ran before the final epoch input was regenerated; the final current input and all four identity/restore suites passed"
+  ],
+  "networkUsed": false,
+  "pushed": false
+}

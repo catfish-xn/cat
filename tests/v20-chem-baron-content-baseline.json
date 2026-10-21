@@ -1,0 +1,23 @@
+{
+  "contentDigest": "fnv1a32-utf16:c1084e68",
+  "lootReplayDigest": "fnv1a32-utf16:e4289c1d",
+  "rulesVersion": "s13-g2-3-v20-chem-baron",
+  "contentVersion": "s13-14.24b-g2-3-v20-chem-baron",
+  "schemaVersion": 8,
+  "previousContentDigest": "fnv1a32-utf16:213ae9e4",
+  "previousLootReplayDigest": "fnv1a32-utf16:ffebff3f",
+  "traceHashes": {
+    "state": "9ae589021dde3ad80212f31d0a6b99a76c33bcee2ec95171d84b9208076f92b8",
+    "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
+    "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:1db5b9e9",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "Chem-Baron: adopt 16 named B-patch fields; standard PvP-only shimmer; up to three weighted distinct market bundles and keep via skip. Schema/save/replay/command unchanged; old identities rejected without migration."
+}

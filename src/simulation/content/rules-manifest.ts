@@ -1,3 +1,4 @@
+import { CHEM_BARON_B_OVERRIDES } from './chem-baron-b-overrides';
 import {G23_POLICY} from './g2-3-policy';
 import {G23_SUMMON_POLICY} from './g2-3-summons';
 import {G23_ACADEMY_LISTS} from './g2-3-academy';
@@ -13,7 +14,7 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 
 /** One release manifest is included in both content and loot replay identities. */
 export const RULES_GAP_MANIFEST = freezeContent({
-  release: 'g2-3-v1',g23:{policy:G23_POLICY,summons:G23_SUMMON_POLICY,academyLists:G23_ACADEMY_LISTS,forms:'frozen-starting-two-rows-v1',laboratories:'lcg-seed-xor-6c616273-uniform-without-replacement-v1',rewards:'conqueror-g2-4b-artifact-forge-tiers-10-14-v5',anvilChoices:4,crown:'permanent-team-size-per-granted-crown-v1',crownGold:'deployed-holder-win-roll-per-crown-v1',specialItems:'source-base-stats-finite-program-subset-v1',progress:'seat-mechanics-disjoint-v1',mechanicGold:'post-settlement-receipt-prefix-v1',unitRewards:'transaction-policy-empty-to-cost-v1',armoryTimeout:'zero-price-option-v1'},
+  release: 'g2-3-v1',chemBaronBOverrides:CHEM_BARON_B_OVERRIDES,g23:{policy:G23_POLICY,summons:G23_SUMMON_POLICY,academyLists:G23_ACADEMY_LISTS,forms:'frozen-starting-two-rows-v1',laboratories:'lcg-seed-xor-6c616273-uniform-without-replacement-v1',rewards:'conqueror-g2-4b-artifact-forge-tiers-10-14-v5',anvilChoices:4,crown:'permanent-team-size-per-granted-crown-v1',crownGold:'deployed-holder-win-roll-per-crown-v1',specialItems:'source-base-stats-finite-program-subset-b-overrides-v20-chem-baron',progress:'seat-mechanics-disjoint-v1',mechanicGold:'post-settlement-receipt-prefix-v1',unitRewards:'transaction-policy-empty-to-cost-v1',armoryTimeout:'zero-price-option-v1'},
   finiteExpansion: G22_CONVENTIONS,
   expansion: { inventory: '60-units-25-enabled-traits-30-anomalies-44-ordinary-items-36-radiant-28-chemtech-reward-items',
     blocked: ['form-swapper-trait','seven-teamups','cosmic-rhythm'], source: 'c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3',
