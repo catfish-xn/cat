@@ -1026,7 +1026,13 @@ export class BoardScene extends Phaser.Scene {
     // Cheap motion (idle bob, lunge, hit flash) offsets each piece's drawing only; tokens keep their positions.
     const now = performance.now();
     for (const view of this.views.values()) view.animate?.(now);
-    if (boardFeedActive()) publishBoardFrame(() => this.boardFrame());
+    // With a 3D layer drawing the board, the 2D one is covered or hidden: Phaser keeps updating it (tweens feed the
+    // frame) but no longer draws it, which was about a fifth of the main thread during a 3D match (2026-10-21).
+    const feeding = boardFeedActive();
+    // No camera (a scene that never booted its camera manager) leaves nothing to stop.
+    const camera = this.cameras?.main;
+    if (camera && camera.visible === feeding) camera.setVisible(!feeding);
+    if (feeding) publishBoardFrame(() => this.boardFrame());
     if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
     this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();

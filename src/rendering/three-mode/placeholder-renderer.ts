@@ -6,7 +6,7 @@
  * 2D token at the same logical position (x→x, y→z), ModelCache leases with UnitActionState/UnitAnimationMixer
  * driven by display combat events. Without an asset root, or when the manifest cannot be read, pieces are
  * team-coloured pawns; a unit missing from a readable manifest shows the core's magenta placeholder box.
- * Pointer input on the 3D board is replayed through BoardControls (pick() for units, the board plane for drop points):
+ * Pointer input on the 3D board is replayed through BoardControls (hit volumes for units, the board plane for drop points):
  * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
 import {
@@ -15,7 +15,7 @@ import {
   type Object3D, type Texture,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, pick, readParticleMesh,
+  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter, loadParticleEffect, readParticleMesh,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
@@ -83,6 +83,27 @@ const monsterFit = (definitionId: string) => MONSTER_FIT[definitionId] ?? MONSTE
 const STAR_SIZE = 12, STAR_GAP = 12;
 /** Target-anchored effects sit this high on the target (board units), roughly its chest. */
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
+/** A piece's hit cylinder radius as a fraction of hexRadius: neighbouring cells (√3 × r apart) and bench slots stay apart. */
+const PICK_RADIUS = 0.8;
+
+/**
+ * How close a ray (unit direction) passes to a piece's upright axis, the segment from `base` up `height`. A piece is under the pointer when the distance is within its pick
+ * radius (a capsule around the axis, so the star row on top counts too).
+ */
+function axisDistance(origin: Vector3, direction: Vector3, base: Vector3, height: number): number {
+  const ox = origin.x - base.x, oz = origin.z - base.z;
+  const a = direction.x * direction.x + direction.z * direction.z;
+  // Where the ray passes the vertical line closest (seen from above), then clamped onto the segment.
+  let t = a > 1e-12 ? Math.max(0, -(ox * direction.x + oz * direction.z) / a) : 0;
+  const y = origin.y + direction.y * t, clamped = Math.min(base.y + height, Math.max(base.y, y));
+  if (clamped !== y) {
+    // Above or below the segment: the ray's closest point to that end instead.
+    const ex = base.x - origin.x, ey = clamped - origin.y, ez = base.z - origin.z;
+    t = Math.max(0, ex * direction.x + ey * direction.y + ez * direction.z);
+    return Math.hypot(origin.x + direction.x * t - base.x, origin.y + direction.y * t - clamped, origin.z + direction.z * t - base.z);
+  }
+  return Math.hypot(ox + direction.x * t, oz + direction.z * t);
+}
 
 // Injected by three-loader.ts: a static import would make Rollup move board-feed.ts (also used by BoardScene)
 // into this chunk and the 2D entry would then load the whole 3D chunk.
@@ -604,13 +625,43 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let grid: HexGrid | null = null;
   let press: { id: string; pointerId: number; x: number; y: number } | null = null, dragging: string | null = null;
   const viewport = () => { const rect = canvas.getBoundingClientRect(); return { left: rect.left, top: rect.top, width: rect.width, height: rect.height }; };
-  /** pick() over the drawn pieces: my units for board gestures, any team for item drops (BoardScene judges the target). */
+  /**
+   * The drawn piece under a point: my units for board gestures, any team for item drops (BoardScene judges the target).
+   * Each piece is a hit volume, as in TFT: a capsule (PICK_RADIUS of a hex) around its upright axis from the floor to
+   * its star row. Where volumes overlap the piece whose axis is drawn closest to the pointer wins, not the
+   * nearest surface: a short unit in the cell in front no longer takes an item aimed at the body behind it.
+   * Not the model's triangles: a skinned ray test transforms every vertex by its bones on each pointer move (15–35 ms
+   * with 13 units, 2026-10-21) and only counts the model's own pixels, so gaps between limbs, the cell under the feet,
+   * the star row and a body whose cached bounds went stale after it moved could not be clicked.
+   */
   const pickUnit = (client: { x: number; y: number }, anyTeam: boolean): string | null => {
     const area = viewport();
     if (!grid || area.width <= 0 || area.height <= 0) return null;
-    const units = [...pieces].filter(([, view]) => view.alive && (anyTeam || view.team === 'player')).map(([unitId, view]) => ({ unitId, object: view.root }));
-    const hit = pick(client, area, camera, grid, units);
-    return hit?.kind === 'unit' ? hit.unitId : null;
+    const x = (client.x - area.left) / area.width, y = (client.y - area.top) / area.height;
+    if (!(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return null;
+    camera.updateMatrixWorld();
+    ray.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
+    const radius = (grid.radius ?? 36) * PICK_RADIUS;
+    // The capsule decides what is under the pointer; among those, the closest axis on screen wins (in world units a
+    // piece farther from the camera would win a perspective tie it loses on screen).
+    let best: string | null = null, bestDistance = Infinity;
+    for (const [unitId, view] of pieces) {
+      if (!view.alive || !view.root.visible || (!anyTeam && view.team !== 'player')) continue;
+      if (axisDistance(ray.ray.origin, ray.ray.direction, view.root.position, view.starHeight) > radius) continue;
+      const distance = screenAxisDistance(client, area, view.root.position, view.starHeight);
+      if (distance < bestDistance) { best = unitId; bestDistance = distance; }
+    }
+    return best;
+  };
+  const axisFoot = new Vector3(), axisHead = new Vector3();
+  /** CSS-pixel distance from a point to a piece's axis as drawn (both ends projected). */
+  const screenAxisDistance = (client: { x: number; y: number }, area: { left: number; top: number; width: number; height: number },
+    base: Vector3, height: number): number => {
+    const toScreen = (point: Vector3) => ({ x: area.left + (point.x + 1) / 2 * area.width, y: area.top + (1 - point.y) / 2 * area.height });
+    const a = toScreen(axisFoot.copy(base).project(camera)), b = toScreen(axisHead.copy(base).setY(base.y + height).project(camera));
+    const dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy;
+    const t = length > 0 ? Math.min(1, Math.max(0, ((client.x - a.x) * dx + (client.y - a.y) * dy) / length)) : 0;
+    return Math.hypot(client.x - (a.x + dx * t), client.y - (a.y + dy * t));
   };
   const unitAt = (event: PointerEvent) => pickUnit({ x: event.clientX, y: event.clientY }, false);
   const boardPoint = (event: PointerEvent): { x: number; y: number } | null => {
