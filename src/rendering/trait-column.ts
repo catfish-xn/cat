@@ -91,7 +91,7 @@ export function renderTraitRows(rows: readonly TraitRow[], debug: string, empty:
     item.dataset.debug = `${debug}:${row.traitId}`;
     item.insertAdjacentHTML('afterbegin', traitIconHtml(row.traitId, 22));
     item.append(el('span', String(row.count), 'trait-count'), el('span', row.name, 'trait-name'));
-    const steps = el('span', '', 'trait-steps');
+    const steps = el('span', '', 'trait-steps'); steps.dataset.count = String(row.count);
     row.thresholds.forEach((threshold, index) => {
       if (index) steps.append(el('span', '/', 'trait-sep'));
       const step = el('span', String(threshold), `trait-step${threshold === row.tier ? ' current' : threshold <= row.count ? ' reached' : ''}`);

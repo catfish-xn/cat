@@ -25,6 +25,7 @@ export class PlayersSidebar {
   /** TFT stage tracker between the round name and the countdown; only with a countdown host. */
   private stageTrack: StageTrack | null = null;
   private list: HTMLElement;
+  private tabs!: HTMLElement;
   private view: PlayerView | null = null;
   private viewing: string | null = null;
   private spectateBanner: HTMLElement;
@@ -48,6 +49,13 @@ export class PlayersSidebar {
     this.connectionBadge.setAttribute('role', 'status'); top.append(this.connectionBadge);
     this.spectateBanner = element('span', '', 'online-spectate'); this.spectateBanner.dataset.debug = 'online:spectate'; this.spectateBanner.hidden = true;
     top.append(this.spectateBanner);
+    // TFT's player list / stats tabs at the top of the column (shown in 3D; the other view is hidden by CSS).
+    const tabs = element('div', '', 'online-tabs'); tabs.setAttribute('role', 'tablist');
+    for (const [key, label] of [['players', '玩家'], ['stats', '统计']] as const) {
+      const tab = element('button', label, 'online-tab'); tab.type = 'button'; tab.dataset.tab = key; tab.dataset.debug = `online:tab:${key}`; tab.setAttribute('role', 'tab');
+      tab.addEventListener('click', () => this.setTab(key)); tabs.append(tab);
+    }
+    top.append(tabs); this.tabs = tabs; this.setTab('players');
     this.root.append(top);
     this.list = element('ol', '', 'online-seats'); this.list.dataset.debug = 'online:seats'; this.root.append(this.list);
     host.append(this.root);
@@ -123,6 +131,11 @@ export class PlayersSidebar {
     // TFT player list: round portrait on the left, name and bar in the middle, HP and level on the right.
     const main = element('div', '', 'seat-main'); main.append(head, bar);
     row.append(avatar, main, foot); return row;
+  }
+  /** Shows the player list or the battle stats in the column (3D; 2D keeps both). */
+  setTab(key: 'players' | 'stats'): void {
+    this.root.dataset.tab = key;
+    for (const tab of Array.from(this.tabs.children) as HTMLElement[]) tab.setAttribute('aria-selected', String(tab.dataset.tab === key));
   }
   /** Whole seconds left on the phase countdown, or null when the phase has none. */
   secondsLeft(): number | null {
