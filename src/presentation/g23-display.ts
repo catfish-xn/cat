@@ -107,6 +107,8 @@ export function g23AnomalyApiName(id: string): string | undefined {
 }
 
 /** zh_CN client name of a G2-3 hero/summon content id; undefined when not a G2-3 unit or the client has no string. */
+/** zh_cn name of a 14.24 champion apiName (reward tables name champions by apiName). */
+export const g23ChampionNameByApi = (api: string): string | undefined => CHAMPION_BY_API.get(api)?.zh ?? undefined;
 export const g23UnitName = (id: string): string | undefined => CHAMPION_BY_API.get(g23ChampionApiName(id) ?? '')?.zh ?? undefined;
 export const g23TraitName = (id: string): string | undefined => {
   const api = g23TraitApiName(id);

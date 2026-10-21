@@ -27,7 +27,7 @@ function publicAnomalyPrefix(seed = 42) {
   return prefixPromise;
 }
 // The existing public-neutral fixture also builds its public route at module setup.
-// Test bodies retain Vitest's unchanged 5s limit; no workload or assertion is skipped.
+// Test bodies retain Vitest's unchanged 5s limit (the raw-data check below: 10 s, temporary); no workload or assertion is skipped.
 const publicPrefix = await publicAnomalyPrefix();
 // Keep five routes on seed 42; seed 44 publicly affords both nothing-wasted
 // and dragonsoul within the existing 100-reroll budget in the expanded pool.
@@ -47,7 +47,8 @@ it('independently checks every new coefficient and Chinese label against compres
     }
     expect(Object.values(zh)).toContain(d.name);
   }
-});
+  // 临时、用户 10-20 批准：只因 CI 机器计时贴着上限（断言都过），本用例 5 秒 → 10 秒（本机满负载约 3.3 秒）；断言不变。
+}, 10_000);
 it.each(Object.entries(P3_AUGMENT_ITEMS))('%s grants exactly one %s using the existing schedule transaction; forged/missing births reject', (id, item) => {
   let seed = 0;
   while (seed < 300 && !reachRound('2-1', false, seed).pendingChoice?.offers.includes(id)) seed++;
