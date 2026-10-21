@@ -85,6 +85,8 @@ const STAR_SIZE = 12, STAR_GAP = 12;
 const IMPACT_HEIGHT = MODEL_HEIGHT * 0.45;
 /** A piece's hit cylinder radius as a fraction of hexRadius: neighbouring cells (√3 × r apart) and bench slots stay apart. */
 const PICK_RADIUS = 0.8;
+/** Board units the camera fit adds beyond the near (bench) edge: a piece ring's outer radius (33) and a little. */
+const FRAME_NEAR_PAD = 36;
 
 /**
  * How close a ray (unit direction) passes to a piece's upright axis, the segment from `base` up `height`. A piece is under the pointer when the distance is within its pick
@@ -294,13 +296,33 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
+  // The estimate below can leave the near (bench) edge under the bottom of the board box once the bench reaches the
+  // arena's own strip, where the online shop sits right below it: the camera then backs off until the box's corners,
+  // the near edge padded for the rings under the bench pieces, project inside the frame. It never moves closer than the estimate.
+  const fitCorners = Array.from({ length: 8 }, () => new Vector3()), cameraSpace = new Vector3();
   const frameCamera = () => {
     if (boardBox.isEmpty()) return;
     const center = boardBox.getCenter(new Vector3()), size = boardBox.getSize(new Vector3());
     const tan = Math.tan(camera.fov * Math.PI / 360);
-    const distance = Math.max(size.x * 0.54 / (tan * camera.aspect), size.z * 0.5 * VIEW.y / tan + size.z * 0.5 * VIEW.z);
-    camera.position.copy(center).addScaledVector(VIEW, distance);
-    camera.lookAt(center);
+    const place = (distance: number) => { camera.position.copy(center).addScaledVector(VIEW, distance); camera.lookAt(center); camera.updateMatrixWorld(); };
+    const { min, max } = boardBox, near = max.z + FRAME_NEAR_PAD;
+    fitCorners.forEach((corner, i) => corner.set(i & 1 ? max.x : min.x, i & 2 ? max.y : min.y, i & 4 ? near : min.z));
+    const fits = (distance: number) => {
+      place(distance);
+      return fitCorners.every(corner => {
+        cameraSpace.copy(corner).applyMatrix4(camera.matrixWorldInverse);
+        const depth = -cameraSpace.z;
+        return depth > 0 && Math.abs(cameraSpace.x) <= depth * tan * camera.aspect && Math.abs(cameraSpace.y) <= depth * tan;
+      });
+    };
+    let distance = Math.max(size.x * 0.54 / (tan * camera.aspect), size.z * 0.5 * VIEW.y / tan + size.z * 0.5 * VIEW.z);
+    if (!fits(distance)) {
+      let low = distance, high = distance * 1.25;
+      for (let i = 0; i < 16 && !fits(high); i++) { low = high; high *= 1.25; }
+      for (let i = 0; i < 20; i++) { const mid = (low + high) / 2; if (fits(mid)) high = mid; else low = mid; }
+      distance = high;
+    }
+    place(distance);
   };
   scene.add(boardGroup);
   // The original arena under the grid (manifest `boards`); the procedural tiles then become a faint cell overlay.
