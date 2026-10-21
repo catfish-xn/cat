@@ -75,6 +75,11 @@ function releaseClient(pointer: Phaser.Input.Pointer): { x: number; y: number } 
   return 'clientX' in event ? { x: event.clientX, y: event.clientY } : null;
 }
 
+/** True when a page element other than the board (canvas or 3D layer) is topmost at a client point. */
+function coveredBoardPoint(x: number, y: number): boolean {
+  const hit = typeof document === 'undefined' ? null : document.elementFromPoint?.(x, y);
+  return !!hit && !hit.closest('#board-root, .render3d-layer');
+}
 export class BoardScene extends Phaser.Scene {
   private session: MatchSession = new MatchSession();
   private application: SceneApplication | null = null;
@@ -482,6 +487,8 @@ export class BoardScene extends Phaser.Scene {
    * C17: a battle on the board may name my pieces by battle id (PvP replay, C15); the drop targets the unit it stands for.
    */
   private boardUnitAt(x: number, y: number): string | undefined {
+    // A panel floating over the board (3D HUD, an open drawer) takes the point: nothing behind it is hit.
+    if (coveredBoardPoint(x, y)) return undefined;
     const session = this.session, ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
     // ?render=3d covers this canvas: the 3D layer picks the model under the pointer (perspective, not 2D boxes).
     const picked = boardFeedUnitAt({ x, y });
@@ -611,6 +618,8 @@ export class BoardScene extends Phaser.Scene {
         this.gesture3d = null;
         if (!id || !dragged || !gesture || !this.dragPhase() || !this.inputRouter.release(gesture)) { this.clearDrag(); this.sync(); return; }
         if (!this.summonOf(id) && this.sellZoneAt(client)) { this.clearDrag(); this.sell(id); this.sync(); return; }
+        // Released over a floating panel rather than the board: cancel, never drop on the cell behind it.
+        if (coveredBoardPoint(client.x, client.y)) { this.clearDrag(); this.sync(); return; }
         this.dropAt(dragged, point);
         this.clearDrag(); this.sync();
       },

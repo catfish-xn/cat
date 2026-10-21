@@ -146,7 +146,12 @@ export async function compressAssets({ from, out, onProgress = () => {} } = {}) 
         }
         report.modelTextureBytes.after += texture.getImage().length;
       }
-      await doc.transform(resample(), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
+      await doc.transform(resample());
+      // Board props may contain only an animated rig, with no vertex geometry.
+      const hasVertices = doc.getRoot().listMeshes().some(mesh =>
+        mesh.listPrimitives().some(primitive => (primitive.getAttribute('POSITION')?.getCount() ?? 0) > 0));
+      if (hasVertices) await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
+      else report.fallbacks.push({ path, reason: 'empty-geometry-rig-preserved-without-meshopt' });
       result = Buffer.from(await io.writeBinary(doc));
       // Decoding validates meshopt output and glTF references before it is published.
       await io.readBinary(result);

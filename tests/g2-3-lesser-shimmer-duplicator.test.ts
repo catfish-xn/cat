@@ -220,7 +220,8 @@ it.each([12,15])('restores historical duplicator births at round %s and the next
  }
  expect(state.round).toBe(round);
  expectRoundTripAndNextBattle(state);
-});
+ // 临时、用户 10-20 批准：只因 CI 机器计时超时（断言都过），按约 2 倍放宽；断言不变。5 秒 → 10 秒（CI 上本文件超时 1 次，round 15 满负载用掉约 62%）。
+},10_000);
 
 it.each(['settlement','next preparation'])('rejects a reward package changed to the ordinary lesser duplicator in %s',phase=>{
  const used=usedMarket(),forged=structuredClone(phase==='settlement'?used:preparation(used));

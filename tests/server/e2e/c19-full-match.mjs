@@ -81,7 +81,8 @@ const screen = page => page.evaluate(() => {
     gold: chip('gold'), level: chip('level'),
     shop: all('[data-debug^="mobile:buy-"]').filter(node => /^mobile:buy-\d+$/.test(node.dataset.debug)).map(node => ({ slot: Number(node.dataset.debug.slice('mobile:buy-'.length)), name: node.querySelector('.shop-name')?.textContent ?? '', cost: node.dataset.cost ?? null })),
     inventory: all('.item-inventory [data-item-id]').map(node => ({ id: node.dataset.itemId, definitionId: node.dataset.itemDef })),
-    tools: all('[data-debug^="consumable:"]').map(node => ({ id: node.dataset.debug.slice('consumable:'.length), definitionId: node.dataset.consumableDef })),
+    // A stacked card (×N) lists every copy it holds.
+    tools: all('[data-debug^="consumable:"]').flatMap(node => node.dataset.consumableIds.split(' ').map(id => ({ id, definitionId: node.dataset.consumableDef }))),
     slots: all('[data-equip-unit]').map(node => ({ unit: node.dataset.equipUnit, slot: Number(node.dataset.equipSlot), itemId: node.dataset.itemId ?? null, definitionId: node.dataset.itemDef ?? null, pending: node.dataset.pending ?? null, text: node.textContent, title: node.title })),
     orbs: (() => {
       const panel = document.querySelector('[data-debug="orb-loot"]');

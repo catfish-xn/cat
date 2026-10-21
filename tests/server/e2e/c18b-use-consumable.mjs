@@ -220,7 +220,9 @@ async function ui() {
       // Combat: a board unit that fights in the shown battle. Settlement: a bench unit first, else a board unit.
       const fighting = new Set(s.combatView?.units.map(unit => unit.id));
       const candidates = branch === 'combat' ? mine.filter(unit => unit.location.kind === 'board') : [...mine.filter(unit => unit.location.kind === 'bench'), ...mine.filter(unit => unit.location.kind === 'board')];
-      const pick = s.state.consumables.flatMap(tool => candidates.map(unit => ({ tool, unit, target: allowedOn(s.state, tool, unit) })))
+      // Same-kind tools stack on one card that drags its first copy: pick among those first copies.
+      const heads = s.state.consumables.filter((tool, index, all) => all.findIndex(other => other.definitionId === tool.definitionId) === index);
+      const pick = heads.flatMap(tool => candidates.map(unit => ({ tool, unit, target: allowedOn(s.state, tool, unit) })))
         .find(({ unit, target }) => target && s.tokens.some(token => token.owner === unit.id && token.visible && (branch !== 'combat' || fighting.has(token.id))));
       if (!pick) { await sleep(100); continue; }
       await click(page, 'panel:items'); await sleep(120);
