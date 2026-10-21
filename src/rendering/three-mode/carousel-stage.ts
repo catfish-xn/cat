@@ -41,11 +41,12 @@ export const LEGEND_RADIUS = 7.1, UNIT_RADIUS = 2.5, FEET = 0.25;
 /** One turn of the unit ring takes this long; the angle runs from the carousel's own start. */
 export const ORBIT_SECONDS = 48;
 /**
- * Camera keeps the cradles' outer edge (17.2 cells across) in view across, from my seat's side. Up and down the tilted
- * ring is foreshortened, so it fits that way at VERTICAL_FILL of the radius: the near and far cradles reach the top and
- * bottom edges and the arena fills the screen as in TFT (playtest 10-21: it looked too small framed as a full circle).
+ * Camera, from my seat's side: as near as keeps the whole pedestal ring (its outer edge STAGE_RADIUS cells out, from the
+ * platform's lowest point up) and the legends' heads on the cradles inside FRAME_FILL of the view, so the near pedestal
+ * reaches the bottom edge and the arena fills the screen as in TFT (playtest 10-21: it looked too small framed as a full
+ * circle). Fitted by projecting that rim, never estimated from the ring's center (that cropped the near pedestal).
  */
-const STAGE_RADIUS = 8.9, VERTICAL_FILL = 0.78, VIEW = new Vector3(0, 1.05, 1).normalize();
+const STAGE_RADIUS = 8.6, FRAME_FILL = 0.98, RIM_POINTS = 48, VIEW = new Vector3(0, 1.05, 1).normalize();
 /**
  * Effects (manifest keys). One variant of each is chosen explicitly: the plain restraint for my seat and the enemy one for
  * others, the Galaxy first-draft wall. The restraint plays only its reviewed early part (the later part shows a grey band),
@@ -271,19 +272,57 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     for (const view of seatViews.values()) { view.anchor.y = surfaceAt(view.anchor.x, view.anchor.z, LEGEND_SURFACE); view.root.position.copy(view.anchor); }
     unitFeet = surfaceAt(0, UNIT_RADIUS * cell, UNIT_SURFACE);
     for (const view of unitViews.values()) view.holder.position.y = unitFeet;
+    measureRim(); frameCamera();
   };
-  let azimuth = 0, aspect = 1, intro = 0;
+  let azimuth = 0, intro = 0;
+  // The rim the camera keeps in view: the ring's outer edge from the platform's lowest to its highest point, and the
+  // heads of legends standing on the cradles.
+  const rim: Vector3[] = [];
+  let fitted = { key: '', distance: 0 };
+  const measureRim = () => {
+    fitted = { key: '', distance: 0 };
+    const radius = STAGE_RADIUS * cell;
+    const drawn = pieces.size ? platform : standIn, box = new Box3();
+    drawn.updateWorldMatrix(true, true); box.setFromObject(drawn);
+    const bottom = box.isEmpty() ? 0 : Math.min(0, box.min.y), top = box.isEmpty() ? 0 : Math.max(0, box.max.y);
+    const head = surfaceAt(0, LEGEND_RADIUS * cell, LEGEND_SURFACE) + legendHeight;
+    rim.length = 0;
+    for (let i = 0; i < RIM_POINTS; i++) {
+      const angle = i / RIM_POINTS * Math.PI * 2, x = Math.sin(angle), z = Math.cos(angle);
+      rim.push(new Vector3(x * radius, bottom, z * radius), new Vector3(x * radius, top, z * radius),
+        new Vector3(x * LEGEND_RADIUS * cell, head, z * LEGEND_RADIUS * cell));
+    }
+  };
+  const place = (direction: Vector3, target: Vector3, distance: number) => {
+    camera.position.copy(target).addScaledVector(direction, distance);
+    camera.lookAt(target);
+    camera.updateMatrixWorld();
+  };
+  const fits = () => rim.every(point => {
+    const ndc = point.clone().project(camera);
+    return ndc.z < 1 && Math.abs(ndc.x) <= FRAME_FILL && Math.abs(ndc.y) <= FRAME_FILL;
+  });
   const frameCamera = () => {
-    const tan = Math.tan(camera.fov * Math.PI / 360), radius = STAGE_RADIUS * cell;
-    const distance = Math.max(radius * VERTICAL_FILL / tan, radius / (tan * aspect)) * 1.02;
+    if (!rim.length) measureRim();
     const direction = VIEW.clone().applyAxisAngle(new Vector3(0, 1, 0), azimuth);
     const target = new Vector3(0, legendHeight * 0.5, 0);
+    // The nearest distance that still fits the rim, by bisection (the fit only gets easier farther out); kept until the
+    // view's shape, its side or the platform changes.
+    const key = `${camera.aspect}/${azimuth}`;
+    if (fitted.key !== key) {
+      let near = STAGE_RADIUS * cell * 0.5, far = STAGE_RADIUS * cell * 20;
+      for (let step = 0; step < 24; step++) {
+        const middle = (near + far) / 2;
+        place(direction, target, middle);
+        if (fits()) far = middle; else near = middle;
+      }
+      fitted = { key, distance: far };
+    }
+    const far = fitted.distance;
     // Opening push-in, eased out: farther and higher at the start.
     const t = intro / INTRO_SECONDS, ease = t * t * (3 - 2 * t);
     direction.y += INTRO_LIFT * ease; direction.normalize();
-    camera.position.copy(target).addScaledVector(direction, distance * (1 + INTRO_PULL * ease));
-    camera.lookAt(target);
-    camera.updateMatrixWorld();
+    place(direction, target, far * (1 + INTRO_PULL * ease));
   };
 
   // --- bodies ----------------------------------------------------------------------------------------------------
@@ -758,7 +797,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     scene, camera,
     get active() { return current !== null; },
     show, update, slotAt, walkTo, runTo, walk: applyWalk,
-    resize(next) { if (next > 0) { aspect = next; camera.aspect = next; camera.updateProjectionMatrix(); frameCamera(); } },
+    resize(next) { if (next > 0) { camera.aspect = next; camera.updateProjectionMatrix(); frameCamera(); } },
     hover(slot) {
       if (hovered === slot) return;
       hovered = slot;
