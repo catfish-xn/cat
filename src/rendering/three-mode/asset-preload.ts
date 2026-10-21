@@ -31,6 +31,10 @@ export interface PreloadProgress {
   /** False when the browser refused IndexedDB (private window, quota): files download but are not kept. */
   readonly persistent: boolean;
   readonly versioned: boolean;
+  /** Files and bytes fetched from the server during this visit (0 when everything came from the store). */
+  readonly downloadedFiles: number; readonly downloadedBytes: number;
+  /** Milliseconds from start() to done/partial; null until then. Used to check the first-visit download time. */
+  readonly elapsedMs: number | null;
 }
 
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -62,6 +66,8 @@ export interface PreloaderOptions {
   retries?: number;
   /** sha256 hex of a blob, or null when the page cannot hash (crypto.subtle needs HTTPS or localhost). */
   digest?: (blob: Blob) => Promise<string | null>;
+  /** Millisecond clock for elapsedMs; defaults to performance.now. */
+  now?: () => number;
 }
 
 interface Job { file: PrecacheFile; promise: Promise<Blob>; resolve(blob: Blob): void; reject(error: unknown): void; started: boolean }
@@ -84,6 +90,7 @@ export class AssetPreloader {
   private readonly digest: (blob: Blob) => Promise<string | null>;
   private state: PreloadState = 'checking';
   private failed = 0; private readyBytes = 0; private persistent: boolean;
+  private downloadedFiles = 0; private downloadedBytes = 0; private startedAt = 0; private elapsedMs: number | null = null;
   private disposed = false;
 
   constructor(private readonly root: string, private readonly list: PrecacheList, private readonly store: AssetStore,
@@ -98,7 +105,8 @@ export class AssetPreloader {
     let totalBytes = 0;
     for (const file of this.files.values()) totalBytes += file.bytes;
     return { state: this.state, totalFiles: this.files.size, readyFiles: this.ready.size, failedFiles: this.failed,
-      totalBytes, readyBytes: this.readyBytes, persistent: this.persistent, versioned: this.list.versioned };
+      totalBytes, readyBytes: this.readyBytes, persistent: this.persistent, versioned: this.list.versioned,
+      downloadedFiles: this.downloadedFiles, downloadedBytes: this.downloadedBytes, elapsedMs: this.elapsedMs };
   }
   onProgress(listener: (progress: PreloadProgress) => void): () => void {
     this.listeners.add(listener); listener(this.progress);
@@ -109,6 +117,8 @@ export class AssetPreloader {
 
   /** Checks what the store already has, drops stale files of this root, then downloads the rest in the background. */
   async start(): Promise<PreloadProgress> {
+    const now = this.options.now ?? (() => performance.now());
+    this.startedAt = now();
     const keep = new Set<string>();
     for (const file of this.files.values()) {
       const key = this.key(file.path);
@@ -124,10 +134,11 @@ export class AssetPreloader {
     }
     if (this.disposed) return this.progress;
     this.state = this.queue.length ? 'downloading' : 'done';
+    if (this.state === 'done') this.elapsedMs = now() - this.startedAt;
     this.emit();
     const workers = Array.from({ length: Math.max(1, this.options.concurrency ?? 4) }, () => this.work());
     await Promise.all(workers);
-    if (!this.disposed) { this.state = this.failed ? 'partial' : 'done'; this.emit(); }
+    if (!this.disposed) { this.state = this.failed ? 'partial' : 'done'; this.elapsedMs ??= now() - this.startedAt; this.emit(); }
     return this.progress;
   }
 
@@ -180,6 +191,7 @@ export class AssetPreloader {
           try { await this.store.put({ key: this.key(file.path), sha256: file.sha256, blob }); }
           catch { kept = blob; this.persistent = false; }
           this.markReady(file, kept);
+          this.downloadedFiles++; this.downloadedBytes += blob.size;
           this.jobs.delete(file.path);
           job.resolve(blob);
           lastError = null;
@@ -252,10 +264,14 @@ export function describePreload(progress: PreloadProgress): string {
     ? `${mb(progress.readyBytes)}/${mb(progress.totalBytes)} MB（${Math.floor(progress.readyBytes * 100 / progress.totalBytes)}%）`
     : `${progress.readyFiles}/${progress.totalFiles} 个文件`;
   const keep = progress.persistent ? '' : '，浏览器不允许本地保存，下次需重下';
+  // First visit: how much came over the network and how long it took; a later visit reads everything locally.
+  const timing = progress.elapsedMs === null ? ''
+    : progress.downloadedFiles > 0 ? `，本次下载 ${mb(progress.downloadedBytes)} MB 用时 ${(progress.elapsedMs / 1000).toFixed(1)} 秒`
+    : '，全部来自本地';
   switch (progress.state) {
     case 'checking': return '检查本地素材缓存…';
     case 'downloading': return `素材预下载 ${counted}${keep}`;
-    case 'done': return `素材已全部${progress.persistent ? '缓存到本地' : '下载'}（${progress.totalFiles} 个文件）`;
-    case 'partial': return `素材预下载完成，${progress.failedFiles} 个文件失败（用到时再从网络读）${keep}`;
+    case 'done': return `素材已全部${progress.persistent ? '缓存到本地' : '下载'}（${progress.totalFiles} 个文件${timing}）`;
+    case 'partial': return `素材预下载完成，${progress.failedFiles} 个文件失败（用到时再从网络读）${timing}${keep}`;
   }
 }
