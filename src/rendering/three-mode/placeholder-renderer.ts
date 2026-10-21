@@ -253,7 +253,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const renderer = new WebGLRenderer({ antialias: true });
   // First-batch load report (model-warmup.ts): model reads are keyed back to their manifest id by path.
   // One report per match: a new match (body[data-m6-mode] turning active) starts it again.
-  let loadReport = createLoadReport();
+  let loadReport = createLoadReport(), timeUpload = false, reported = false;
   const modelByUrl = new Map<string, string>();
   delete (globalThis as { __render3dLoad?: unknown }).__render3dLoad;
   const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined,
@@ -656,6 +656,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   let fighting: boolean | null = null;
   const onFrame = (frame: BoardFrame) => {
+    followMatch(); // a new match's first board can arrive before this renderer's next animation frame
     buildBoard(frame);
     lastFrame = frame;
     if (scoutView) scout.show(scoutView, frame); // a new board size relays it; the same one is kept
@@ -985,7 +986,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // TFT's FPS readout in the top-right corner, refreshed once a second.
   const fpsLabel = typeof document === 'undefined' ? null : document.createElement('span');
   if (fpsLabel) { fpsLabel.className = 'render3d-fps'; fpsLabel.dataset.debug = 'render3d-fps'; host.append(fpsLabel); }
-  let fpsFrames = 0, fpsSince = 0, timeUpload = false, reported = false;
+  let fpsFrames = 0, fpsSince = 0;
   // Pieces the board camera cannot see this frame: their skeletons are not posed (the mixer holds the time and catches
   // up when they are seen again). Hidden, off the view, or the board not drawn at all (carousel, scouting).
   const frustum = new Frustum(), viewMatrix = new Matrix4(), bounds = new Sphere();

@@ -56,7 +56,9 @@ const defaultIdle = (step: () => void) => {
 export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
   const queue: string[] = [], asked = new Set<string>(), done = new Set<string>();
   const idle = ctx.idle ?? defaultIdle;
-  let running = false, closed = false;
+  let running = false, closed = false, retry: ReturnType<typeof setTimeout> | undefined;
+  // While a combat is shown the queue waits and looks again in half a second; cancel and dispose stop that at once.
+  const later = () => { clearTimeout(retry); retry = setTimeout(() => { retry = undefined; schedule(); }, 500); };
   const schedule = () => {
     if (running || closed || !queue.length) return;
     running = true;
@@ -64,7 +66,9 @@ export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
   };
   const step = async () => {
     if (closed) return;
-    if (ctx.busy()) { running = false; setTimeout(schedule, 500); return; }
+    // Cancelled since this step was scheduled: nothing to warm, and a later want() schedules its own step.
+    if (!queue.length) { running = false; return; }
+    if (ctx.busy()) { running = false; later(); return; }
     const id = queue.shift()!;
     try {
       const lease = await ctx.load(id);
@@ -79,7 +83,7 @@ export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
     finally {
       running = false;
       ctx.onProgress?.(asked.size - queue.length, asked.size);
-      if (ctx.busy()) setTimeout(schedule, 500); else schedule();
+      if (ctx.busy()) later(); else schedule();
     }
   };
   return {
@@ -87,10 +91,10 @@ export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
       for (const id of ids) if (!done.has(id) && !queue.includes(id) && ctx.has(id)) { asked.add(id); queue.push(id); }
       schedule();
     },
-    cancel() { queue.length = 0; },
+    cancel() { queue.length = 0; clearTimeout(retry); retry = undefined; },
     warmed: id => done.has(id),
     get size() { return asked.size; },
-    dispose() { closed = true; queue.length = 0; },
+    dispose() { closed = true; queue.length = 0; clearTimeout(retry); retry = undefined; },
   };
 }
 
