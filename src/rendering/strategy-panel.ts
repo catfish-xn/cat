@@ -8,6 +8,7 @@ import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 import type { ConsumableDefinitionId } from '../simulation/consumable-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { readEconomyPreview, readRevealedLoot } from './online/seat-view-adapter';
+import { economyIncomeText } from './online/economy-hint';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
@@ -503,7 +504,7 @@ export class StrategyPanel {
     const help = this.button('help-open', '？帮助', () => this.actions.help()); help.classList.add('help-button'); title.append(help);
     head.append(title);
     const stats = element('div', '', 'hud-stats panel-hud');
-    const chip = (label: string, value: string, kind: string, extra?: HTMLElement) => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); if (extra) node.append(extra); stats.append(node); };
+    const chip = (label: string, value: string, kind: string, extra?: HTMLElement, tip = '') => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); if (extra) node.append(extra); if (tip) node.title = tip; stats.append(node); };
     // TFT's interest pips: one per 10 banked gold, five at most. Display only; the payout itself is the economy preview's.
     const pipCount = Math.min(ECONOMY_RULES.interestCap, Math.floor(state.gold / ECONOMY_RULES.interestDivisor));
     const pips = element('span', '', 'hud-interest-pips'); pips.dataset.count = String(pipCount); pips.title = `利息档 ${pipCount}/${ECONOMY_RULES.interestCap}（每 ${ECONOMY_RULES.interestDivisor} 金一档）`;
@@ -511,8 +512,10 @@ export class StrategyPanel {
     const xpBar = element('span', '', 'hud-xp-bar'); xpBar.title = xp === null ? '已满级' : `经验 ${state.xp}/${xp}`;
     const xpFill = element('i', '', 'hud-xp-fill'); xpFill.style.width = `${xp === null ? 100 : Math.min(100, Math.round(state.xp * 100 / xp))}%`; xpBar.append(xpFill);
     // Docked (online): gold and level lead, as at the bottom-left of a TFT screen. Offline keeps the original order.
-    if (dock) chip('金币', `${state.gold}`, 'gold', pips); else chip('生命', String(state.playerHp), 'hp');
-    if (!dock) chip('金币', `${state.gold}`, 'gold', pips);
+    // As in TFT, hovering gold shows next round's income: base, interest, victory and streak gold, from the same preview.
+    const incomeTip = economy ? `本回合结算预计收入\n${economyIncomeText('胜', economy.ifWin)}\n${economyIncomeText('败/平', economy.ifLoss)}` : '';
+    if (dock) chip('金币', `${state.gold}`, 'gold', pips, incomeTip); else chip('生命', String(state.playerHp), 'hp');
+    if (!dock) chip('金币', `${state.gold}`, 'gold', pips, incomeTip);
     chip('等级', `${state.level}${xp === null ? ' · 满' : ` · ${state.xp}/${xp}`}`, 'level', xpBar);
     chip('人口', `${getPlayerDeploymentCount(state.preparation)}/${getDeploymentCap(state)}`, 'pop');
     if (dock) chip('生命', String(state.playerHp), 'hp');
@@ -546,7 +549,7 @@ export class StrategyPanel {
         button.disabled = true; button.dataset.blockedReason = lootView.reason ?? 'unsettled-round';
         button.title = continueBlockText(lootView.reason ?? 'unsettled-round'); button.setAttribute('aria-disabled', 'true');
       }
-      if (spectating) { button.disabled = true; button.setAttribute('aria-disabled', 'true'); }
+      if (spectating || (name === 'buy-xp' && xp === null)) { button.disabled = true; button.setAttribute('aria-disabled', 'true'); if (!spectating) button.title = '已满级'; }
       return button;
     };
     actions.append(controlButton(primary, 'primary-action'));

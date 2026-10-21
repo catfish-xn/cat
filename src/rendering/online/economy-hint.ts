@@ -31,8 +31,9 @@ export interface EconomyHintRead {
   readonly ifLoss: RoundEconomyPreview['ifLoss'];
 }
 
-const outcomeText = (label: string, outcome: RoundEconomyPreview['ifWin']) =>
-  `${label}：利息 +${outcome.interest}${outcome.win ? ` · 胜利 +${outcome.win}` : ''} · 连胜败 +${outcome.streakGold}`;
+/** One outcome of the preview as an income line: base, interest, victory and streak gold, then their sum. */
+export const economyIncomeText = (label: string, outcome: RoundEconomyPreview['ifWin']) =>
+  `${label}：基础 +${outcome.base} · 利息 +${outcome.interest}${outcome.win ? ` · 胜利 +${outcome.win}` : ''} · 连胜败 +${outcome.streakGold} = +${outcome.base + outcome.interest + outcome.win + outcome.streakGold}`;
 
 export class EconomyHint {
   readonly root: HTMLElement;
@@ -58,7 +59,7 @@ export class EconomyHint {
       ifWin: preview.ifWin, ifLoss: preview.ifLoss };
     this.shown = read;
     this.interest.textContent = `利息 +${read.interest}（胜 +${read.winInterest}）`;
-    this.interest.title = `按当前 ${read.gold} 金币，本回合结算时（金币不再变化）\n${outcomeText('胜', read.ifWin)}\n${outcomeText('败/平', read.ifLoss)}`;
+    this.interest.title = `按当前 ${read.gold} 金币，本回合结算时（金币不再变化）\n${economyIncomeText('胜', read.ifWin)}\n${economyIncomeText('败/平', read.ifLoss)}`;
     // 3D shows only the streak beside the gold (TFT); hovering it gives the same income lines.
     this.root.title = this.interest.title;
     const label = kind === 'win' ? '连胜' : kind === 'loss' ? '连败' : null;
