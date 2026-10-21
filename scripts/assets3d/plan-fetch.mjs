@@ -7,7 +7,7 @@ import { createInterface } from 'node:readline';
 import { readRman, readCachedRange, chunksForRange } from './rman.mjs';
 import { readWadIndex } from './wad.mjs';
 import { safeInputPath, safeOutputPath, writeOutputFile } from './safe-path.mjs';
-import { unitDefinitions } from './runtime.mjs';
+import { unitDefinitions, selectUnits } from './runtime.mjs';
 import { parseBin } from './bin.mjs';
 export function propertyReferences(bytes) {
     const stack = [parseBin(bytes)], references = new Set();
@@ -28,7 +28,7 @@ export function summarizeRanges(file, entries) {
             unique.set(c.id, c);
     return { entries: entries.length, entryCompressedBytes: entries.reduce((s, e) => s + e.compressedSize, 0), uncompressedBytes: entries.reduce((s, e) => s + e.size, 0), chunks: unique.size, downloadBytes: [...unique.values()].reduce((s, c) => s + c.size, 0), chunkIds: [...unique.keys()].sort() };
 }
-export async function planFetch({ source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, write = true } = {}) {
+export async function planFetch({ units: requestedUnits = 'all', cost, source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, write = true } = {}) {
     const output = await safeOutputPath(out, { directory: true });
     const root = resolve(source), input = async (path) => readFile(await safeInputPath(root, join(root, path)));
     const raw = await input('14.24.manifest'), manifest = readRman(raw), definitions = await unitDefinitions(), map = JSON.parse(await readFile(new URL('./unit-map.json', import.meta.url), 'utf8'));
@@ -39,7 +39,7 @@ export async function planFetch({ source = 'assets3d-local/trial/local', out = '
             throw new Error('invalid-hash-index');
         return [match[1].toLowerCase(), match[2]];
     })));
-    const units = Object.fromEntries(Object.keys(definitions).sort().map(id => [id, { sourceName: map[id]?.sourceName ?? `tft13_${id}`, cost: definitions[id].cost, entries: [], byWad: {} }]));
+    const units = Object.fromEntries(selectUnits(definitions, requestedUnits, cost).sort().map(id => [id, { sourceName: map[id]?.sourceName ?? `tft13_${id}`, cost: definitions[id].cost, entries: [], byWad: {} }]));
     const wads = [], allChunks = new Map(), missingCache = new Set(), ownership = new Map(Object.entries(units).map(([id, u]) => [u.sourceName, id])), archives = [];
     for (const name of ['DATA/FINAL/TFTSet13.wad.client', 'DATA/FINAL/TFTCommon.wad.client']) {
         const file = manifest.files.find(f => f.name.toLowerCase() === name.toLowerCase());
@@ -145,7 +145,7 @@ export async function planFetch({ source = 'assets3d-local/trial/local', out = '
         if (!u.entries.length)
             throw new Error(`unit-missing-index:${u.sourceName}`);
     }
-    const report = { schemaVersion: 1, sourceManifest: { path: '14.24.manifest', sha256: createHash('sha256').update(raw).digest('hex') }, unitIds: Object.keys(units), costCounts: [1, 2, 3, 4, 5].map(cost => Object.values(units).filter(u => u.cost === cost).length),
+    const report = { schemaVersion: 1, sourceManifest: { path: '14.24.manifest', sha256: createHash('sha256').update(raw).digest('hex') }, unitIds: Object.keys(units), costCounts: (Object.values(units).some(u => u.cost === 6) ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5]).map(cost => Object.values(units).filter(u => u.cost === cost).length),
         policy: 'Offline conservative plan: every entry in the two TFT WADs is included, partitioned into unit-owned paths and shared candidates. Available unit PROP BINs and source JSON add directly referenced entries to that unit summary; unresolved references remain listed. No form-variant unit IDs. Per-unit sizes exclude remaining shared candidates and may overlap; use global deduplicated chunk total for downloads.',
         limitations: ['Cross-WAD references cannot be proven complete for units without their source BIN/JSON. unresolvedReferences lists dependencies outside the two planned WADs or absent from the dictionaries; these have no invented byte estimate. Shared candidates include unused content; this is a conservative candidate plan, not an exact transitive dependency closure.'],
         units, wads, chunks, totals: { units: Object.keys(units).length, entries: wads.reduce((s, w) => s + w.entries.length, 0), chunks: chunks.length, downloadBytes: chunks.reduce((s, c) => s + c.size, 0), missingCachedChunks: missingCache.size, additionalCachedDownloadBytes: chunks.filter(c => missingCache.has(c.id)).reduce((s, c) => s + c.size, 0) } };
@@ -171,6 +171,6 @@ export function argumentsFor(argv, allowed) {
     return options;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const result = await planFetch(argumentsFor(process.argv.slice(2), ['--source', '--out']));
+    const result = await planFetch(argumentsFor(process.argv.slice(2), ['--units', '--cost', '--source', '--out']));
     console.log(JSON.stringify(result.totals));
 }
