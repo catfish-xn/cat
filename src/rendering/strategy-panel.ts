@@ -35,6 +35,7 @@ import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
 import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
+import { traitSummary, traitTierText } from '../presentation/trait-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
 import { TraitColumn, g23TraitRuntime, traitIconHtml } from './trait-column';
@@ -678,7 +679,9 @@ export class StrategyPanel {
       title.insertAdjacentHTML('afterbegin', s13IconHtml('trait', snapshot.traitId, 20, 'trait-icon'));
       row.append(title);
       row.append(element('p', `上阵不同单位：${snapshot.memberDefinitionIds.map(id => displayUnitName(id)).join('、') || '无'}`));
-      row.append(element('p', definition.tiers.map(tier => describeTraitTier(definition, tier)).join(' / ')));
+      const summary = traitSummary(snapshot.traitId, snapshot.tier);
+      if (summary) row.append(element('p', summary));
+      row.append(element('p', definition.tiers.map(tier => traitTierText(definition, tier)).join(' / ')));
       list.append(row);
     }
     this.root.append(list);
