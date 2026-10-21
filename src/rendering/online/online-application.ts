@@ -11,6 +11,7 @@ import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
 import { boardFeedGeneration, provideCarouselControls, publishCarousel } from '../board-feed';
 import { s13AssetUrl } from '../../presentation/s13-assets';
+import { getHeroIdentity } from '../../presentation/hero-identity';
 import { BattleOutcome } from './battle-outcome';
 import { BattleSummaryPanel } from './battle-summary';
 import { EconomyHint } from './economy-hint';
@@ -317,6 +318,7 @@ export class OnlineApplication implements SceneApplication {
         seats: seats.map(seat => ({ seatId: seat.seatId, me: seat.seatId === mySeatId, picked: taken.has(seat.seatId),
           locked: (view.releaseAtMs[seat.seatId] ?? Infinity) > elapsedMs })),
         slots: view.slots.map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, starLevel: slot.starLevel,
+          cost: getHeroIdentity(slot.definitionId).cost,
           items: slot.items.map(id => ({ id, icon: s13AssetUrl('item', id) })), picked: slot.pickedBy !== null,
           takable: view.eligible && slot.pickedBy === null && pending === null, pending: pending === slot.slot })) };
     });
