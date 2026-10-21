@@ -1308,7 +1308,7 @@ body[data-online]:has(> .render3d-layer) .shop-odds .odds-cost { color: var(--od
    The 3D status bar moves up over it. */
 .scout-minimap { display: none; }
 body[data-online]:has(> .render3d-layer) .scout-minimap:not([hidden]) { position: fixed; z-index: 30; right: 8px; bottom: 8px;
-  width: calc(100vw - max(11.6vw - 8px, 0px) - min(67vw, 100vw - 220px) - 24px); height: var(--online-dock-h, 180px);
+  width: calc(100vw - 8px - var(--online-shop-left, max(11.6vw - 8px, 0px)) - var(--online-shop-w, min(67vw, 100vw - 236px)) - 16px); height: var(--online-dock-h, 180px);
   display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 4px; padding: 4px; border-radius: 6px; background: #0b151fcc; }
 body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar { bottom: calc(var(--online-dock-h, 180px) + 16px); }
 .minimap-seat { position: relative; min-width: 0; padding: 0; border: 1px solid #1d2f3d; border-radius: 4px; background: #13202b; color: #c9d6e2; cursor: pointer; overflow: hidden; }
