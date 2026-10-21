@@ -13,7 +13,8 @@ import { deriveTraits } from '../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import type { MatchState } from '../simulation/match-types';
 import { readG23Progress } from '../simulation/g2-3-state';
-import { G23_CONQUEROR_CHESTS } from '../simulation/content/g2-3-policy';
+import { G23_CONQUEROR_CHESTS, G23_POLICY } from '../simulation/content/g2-3-policy';
+import { g23RewardLines } from '../presentation/g23-reward-text';
 import { describeTraitTier } from '../presentation/effect-text';
 import { getHeroIdentity, traitDisplayName } from '../presentation/hero-identity';
 import { attachHoverCards, type HoverCard } from '../presentation/hover-card';
@@ -41,7 +42,11 @@ export interface TraitRow {
  * G2-3 prep: optional runtime counter lines per trait (stacks, opened chests and the like), supplied by the rules
  * through a later contract. The column only shows them verbatim; with no entry for a trait nothing extra renders.
  */
-export interface TraitRuntimeLine { readonly label: string; readonly value: string }
+export interface TraitRuntimeLine {
+  readonly label: string; readonly value: string;
+  /** 征服层数 only: the hover card draws the 15-chest ladder from these counters. */
+  readonly ladder?: { readonly stacks: number; readonly opened: number };
+}
 export type TraitRuntime = ReadonlyMap<string, readonly TraitRuntimeLine[]>;
 const runtimeText = (lines: readonly TraitRuntimeLine[] | undefined) => (lines ?? []).map(line => `${line.label} ${line.value}`).join(' · ');
 
@@ -57,9 +62,16 @@ export function g23TraitRuntime(state: MatchState): TraitRuntime | undefined {
   const { stacks, chestsOpened } = progress.conquest, next = G23_CONQUEROR_CHESTS[chestsOpened]?.threshold, shimmer = progress.chem.shimmer;
   const market = nextMarket(shimmer);
   return new Map([
-    ['conqueror', [{ label: '征服层数', value: next === undefined ? String(stacks) : `${stacks}/${next}` }]],
+    ['conqueror', [{ label: '征服层数', value: next === undefined ? String(stacks) : `${stacks}/${next}`, ladder: { stacks, opened: chestsOpened } }]],
     ['chem-baron', [{ label: '微光', value: market ? `${shimmer}/${market}` : String(shimmer) }]],
   ]);
+}
+/** One chest of the 征服层数 ladder: opened, the next one (with the stacks still missing) or later. */
+export interface ConquestStep { readonly threshold: number; readonly reward: string; readonly state: 'done' | 'next' | 'later'; readonly left?: number }
+/** The rules' 15 chests in order, each reward named from the table the rules grant from (no number is written here). */
+export function conquestLadder(stacks: number, opened: number): ConquestStep[] {
+  return G23_CONQUEROR_CHESTS.map((chest, index) => ({ threshold: chest.threshold, reward: g23RewardLines(G23_POLICY.conqueror.transitionalRewards[index] ?? chest.reward).join(' · '),
+    state: index < opened ? 'done' : index === opened ? 'next' : 'later', ...(index === opened ? { left: Math.max(0, chest.threshold - stacks) } : {}) }));
 }
 const nextMarket = (shimmer: number) => { const market = (Math.floor(shimmer / 100) + 1) * 100; return market <= 800 ? market : null; };
 
@@ -142,6 +154,17 @@ export function traitCardBody(traitId: string, count: number, onBoard: readonly 
     const counters = el('ul', '', 'trait-card-runtime'); counters.dataset.debug = 'trait-card:runtime';
     for (const line of runtime) counters.append(el('li', `${line.label}：${line.value}`));
     body.append(counters);
+    const ladder = runtime.find(line => line.ladder)?.ladder;
+    if (ladder) {
+      const list = el('ol', '', 'conquest-ladder'); list.dataset.debug = 'trait-card:ladder';
+      for (const step of conquestLadder(ladder.stacks, ladder.opened)) {
+        const row = el('li', '', step.state);
+        row.append(el('span', String(step.threshold), 'ladder-at'), el('span', step.reward, 'ladder-reward'));
+        if (step.left !== undefined) row.append(el('span', `还差 ${step.left} 层`, 'ladder-left'));
+        list.append(row);
+      }
+      body.append(list);
+    }
   }
   const members = el('div', '', 'trait-card-members'); members.dataset.debug = 'trait-card:members';
   for (const id of SHOP_CATALOG.filter(id => UNIT_DEFINITIONS[id]?.traits.includes(traitId))) {
