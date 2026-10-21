@@ -15,14 +15,14 @@ import {
   type Object3D, type Texture,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, createActionEffectResolver, createStarMark, hexCenter,
+  ModelCache, UnitActionState, UnitAnimationMixer, assetUrl, createActionEffectResolver, createStarMark, hexCenter,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import type { MountRenderer3d, Renderer3d } from './contract';
 import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrecacheList } from './asset-preload';
-import { createAssetReader, type AssetReader } from './asset-reader';
+import { createAssetReader, type AssetReader, type ModelTiming } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
 import { offerLegendPicker } from './legend-picker';
@@ -32,6 +32,7 @@ import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { createEffectLibrary } from './effect-library';
+import { createLoadReport, createModelWarmup } from './model-warmup';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -120,8 +121,12 @@ function axisDistance(origin: Vector3, direction: Vector3, base: Vector3, height
 let feed: BoardFeed | null = null;
 export function useBoardFeed(next: BoardFeed): void { feed = next; }
 // Injected the same way: the shell's one-line preload status (asset-preload.ts describePreload).
-let assetProgress: ((text: string) => void) | null = null;
-export function useAssetProgress(next: (text: string) => void): void { assetProgress = next; }
+// `fraction` is the share downloaded while a download runs (the shell's progress bar), null once there is none.
+let assetProgress: ((text: string, fraction: number | null) => void) | null = null;
+export function useAssetProgress(next: (text: string, fraction: number | null) => void): void { assetProgress = next; }
+// Injected the same way: models a game is likely to show first (the cheapest shop tiers), warmed while idle.
+let warmModels: readonly string[] = [];
+export function useWarmModels(next: readonly string[]): void { warmModels = next; }
 // Injected the same way: the 2D theme's star color (presentation/theme.ts starColor), so 2D and 3D stars match.
 let starColorFor: (level: number) => string = () => '#ffd34d';
 export function useStarColor(next: (level: number) => string): void { starColorFor = next; }
@@ -135,8 +140,8 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
 
-type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader }
-  | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null };
+type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }
+  | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null; preloaded: null };
 
 const fetchJson = async (url: string, timeoutMs = MANIFEST_TIMEOUT_MS): Promise<unknown> => {
   const controller = new AbortController();
@@ -155,8 +160,9 @@ const fetchIndex = async (url: string): Promise<unknown> => {
   }
 };
 
-async function openModels(assetBase: string | null, renderer: WebGLRenderer, onProgress?: (text: string) => void): Promise<Models> {
-  const none = (detail: string): Models => ({ cache: null, status: 'placeholder', detail, preloader: null, reader: null });
+async function openModels(assetBase: string | null, renderer: WebGLRenderer, onProgress?: (text: string, fraction: number | null) => void,
+  onModel?: ModelTiming): Promise<Models> {
+  const none = (detail: string): Models => ({ cache: null, status: 'placeholder', detail, preloader: null, reader: null, preloaded: null });
   if (!assetBase) return none('未配置 3D 素材，显示占位棋子');
   let manifest: unknown;
   try { manifest = await fetchJson(`${assetBase}manifest.json`); }
@@ -167,17 +173,18 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
   try {
     // Everything under the root goes through the preloader; the cache keeps models it has already decoded.
     let preloader: AssetPreloader | null = null;
-    const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)));
+    const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)), onModel);
     const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url));
     const list = readPrecacheList(await fetchIndex(`${assetBase}precache.json`), cache.manifest);
     // Optional: a root without packs.json (or with one that disagrees with precache) downloads file by file.
     const packs = readPackList(await fetchIndex(`${assetBase}packs.json`), list);
     const store = await openAssetStore();
     preloader = new AssetPreloader(assetBase, list, store, { packs });
-    if (onProgress) preloader.onProgress(progress => onProgress(describePreload(progress)));
+    if (onProgress) preloader.onProgress(progress => onProgress(describePreload(progress), progress.state !== 'downloading' ? null
+      : progress.totalBytes > 0 ? progress.readyBytes / progress.totalBytes : progress.readyFiles / Math.max(1, progress.totalFiles)));
     void navigator.storage?.persist?.().catch(() => false);
-    void preloader.start();
-    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader };
+    const preloaded = preloader.start().catch(() => null);
+    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader, preloaded };
   } catch {
     return none('素材地址无法访问或清单格式不符，显示占位棋子');
   }
@@ -244,7 +251,11 @@ function fit(body: Object3D, height: number, width = Infinity): Object3D {
 
 export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const renderer = new WebGLRenderer({ antialias: true });
-  const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined);
+  // First-batch load report (model-warmup.ts): model reads are keyed back to their manifest id by path.
+  const loadReport = createLoadReport(), modelByUrl = new Map<string, string>();
+  const models = await openModels(options.assetBase, renderer, assetProgress ?? undefined,
+    (url, readMs, parseMs) => loadReport.read(modelByUrl.get(url) ?? url, readMs, parseMs));
+  if (models.cache) for (const [id, entry] of Object.entries(models.cache.manifest.models)) modelByUrl.set(assetUrl(models.cache.root, entry.path), id);
   const actionEffects = await openActionEffects(models, options.assetBase);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.domElement.className = 'render3d-canvas';
@@ -275,6 +286,26 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // Online 选秀 (carousel-stage.ts): its own scene and camera, drawn instead of the board while board-feed carries one.
   // Every effect on this renderer (combat, carousel, tabletop, trait props) reads its files once (effect-library.ts).
   const effects = models.cache && options.assetBase ? createEffectLibrary(models.cache.manifest, options.assetBase, models.reader) : null;
+  // Models warmed while idle (model-warmup.ts): little legends first, then the cheapest shop tiers, once the preload has
+  // finished (on a first visit the reads would compete with the download). Its textures and programs go to the GPU here.
+  const uploadModel = async (lease: ModelLease) => {
+    const started = performance.now();
+    lease.scene.traverse(object => {
+      const mesh = object as Mesh;
+      if (!mesh.isMesh) return;
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+        for (const value of Object.values(material)) if ((value as Texture | null)?.isTexture) renderer.initTexture(value as Texture);
+    });
+    await renderer.compileAsync(lease.scene, camera, scene);
+    return performance.now() - started;
+  };
+  const warmup = models.cache ? createModelWarmup({ load: id => models.cache!.load(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
+    upload: uploadModel, busy: () => !!fighting }) : null;
+  void models.preloaded?.then(() => {
+    if (closed || !warmup) return;
+    const legends = feed?.legends?.();
+    warmup.want([LEGEND_MODEL, ...[legends?.me, legends?.opponent].filter((id): id is string => !!id).map(id => `little-legend-${id}`), ...warmModels]);
+  });
   const loadEffect = effects && models.cache!.manifest.effects ? (id: string, maxDuration: number) => {
     if (!models.cache!.manifest.effects?.[id]) return Promise.reject(new Error('unknown-effect'));
     return effects.load(id, maxDuration);
@@ -475,6 +506,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
+      if (loadReport.waiting) for (const [id, other] of pieces) if (other === view) { loadReport.attached(id, definitionId); timeUpload = true; }
     }).catch(() => {
       // A disposed cache rejects late loads; the piece keeps its pawn (and a dying one hides).
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
@@ -641,7 +673,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
-    for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
+    for (const [id, view] of pieces) if (!seen.has(id)) { loadReport.dropped(id); removePiece(view); pieces.delete(id); }
+    if (models.cache && !loadReport.began) loadReport.frame([...pieces].filter(([, view]) => !view.lease).map(([id]) => id),
+      [...pieces.values()].filter(view => warmup?.warmed(view.definitionId)).length);
     tabletop.frame(frame); traitProps.frame(frame);
   };
   const face = (sourceId: string, targetId: string | undefined) => {
@@ -923,7 +957,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // TFT's FPS readout in the top-right corner, refreshed once a second.
   const fpsLabel = typeof document === 'undefined' ? null : document.createElement('span');
   if (fpsLabel) { fpsLabel.className = 'render3d-fps'; fpsLabel.dataset.debug = 'render3d-fps'; host.append(fpsLabel); }
-  let fpsFrames = 0, fpsSince = 0;
+  let fpsFrames = 0, fpsSince = 0, timeUpload = false, reported = false;
   // Pieces the board camera cannot see this frame: their skeletons are not posed (the mixer holds the time and catches
   // up when they are seen again). Hidden, off the view, or the board not drawn at all (carousel, scouting).
   const frustum = new Frustum(), viewMatrix = new Matrix4(), bounds = new Sphere(), held = new Map<PieceView, number>();
@@ -978,7 +1012,19 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         for (const child of hidden) child.visible = false;
         renderer.render(scene, camera);
         for (const child of hidden) child.visible = true;
+      } else if (timeUpload) {
+        // A first-batch model was just attached: this frame uploads its geometry, textures and programs.
+        const started = performance.now();
+        renderer.render(scene, camera);
+        loadReport.uploaded(performance.now() - started); timeUpload = false;
       } else renderer.render(scene, camera);
+    }
+    if (!reported && loadReport.report.wallMs !== null && !timeUpload) {
+      reported = true;
+      const r = loadReport.report, ms = (n: number) => Math.round(n);
+      (globalThis as { __render3dLoad?: unknown }).__render3dLoad = r;
+      console.info(`[3D] 首批 ${r.shown}/${r.pieces} 个棋子模型 ${ms(r.wallMs!)} ms 后出现；各模型合计：读取 ${ms(r.readMs)} ms，解析 ${ms(r.parseMs)} ms，`
+        + `首帧上传与编译 ${ms(r.uploadMs)} ms；其中 ${r.warmed} 个已预热`);
     }
   };
   resize(host.clientWidth, host.clientHeight);
@@ -1000,7 +1046,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       withdrawPicker(); clearEffects(); held.clear(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
-      effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
+      warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
       for (const resource of owned) resource.dispose();
       renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
     },
