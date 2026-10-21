@@ -143,7 +143,8 @@ describe('game server: spot check', () => {
     expect(failed[0]!.fields).toHaveProperty('seats');
     const roundTwo = records.filter(record => record.event === 'replay.spot-check' && record.fields.round === 2);
     expect(roundTwo.length).toBeGreaterThan(1);
-  });
+    // 临时、用户 10-20 批准：只因 CI 机器计时超时（断言都过），按约 2 倍放宽；断言不变。5 秒 → 10 秒（CI 上超时 2 次）。
+  }, 10_000);
 
   it('checks every Nth round that captured a battle (the 1st, N+1th …), one battle each, and nothing in between', async () => {
     // The production cadence is SPOT_CHECK_EVERY_ROUNDS; a cadence of 2 shows the same counting in fewer rounds.

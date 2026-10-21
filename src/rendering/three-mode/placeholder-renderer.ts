@@ -25,6 +25,7 @@ import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrec
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
+import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 
@@ -269,6 +270,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own,
     loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
     loadEffect });
+  // 铁血征服者 chest and 微光 flask on the left of my half (trait-props.ts), from my own counters only.
+  const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
+    loadModel: models.cache ? id => Object.hasOwn(models.cache!.manifest.models, id) ? models.cache!.load(id) : Promise.reject(new Error('unknown-model')) : null });
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
@@ -287,7 +291,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let lastFrame: BoardFrame | null = null;
   const boardEntry = models.cache?.manifest.boards?.[DEFAULT_BOARD];
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
-    () => models.cache!.load(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }) : null;
+    () => models.cache!.load(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
   let boardKey = '';
   /**
    * The arena's own bench cells (alignment.bench) while the arena is drawn, else null: bench pieces stand there instead
@@ -303,11 +307,22 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return best;
   };
   const benchOf2d = (frame: BoardFrame, x: number, y: number) => nearestSlot(frame.bench.map(point => ({ x: point.x, z: point.y })), x, y);
-  /** A 3D board point as BoardScene reads it: over an arena bench cell, that cell's 2D bench slot. */
-  const toBoard = (point: { x: number; y: number } | null): { x: number; y: number } | null => {
-    if (!point || !benchSlots || !lastFrame) return point;
-    const slot = nearestSlot(benchSlots, point.x, point.y);
-    return slot >= 0 && lastFrame.bench[slot] ? { x: lastFrame.bench[slot]!.x, y: lastFrame.bench[slot]!.y } : point;
+  /**
+   * The arena bench cell under the current ray (`ray` already set from the pointer), or -1: each cell is met on its
+   * own floor height, so a raised strip is not read through the y=0 board plane (off by its height × the view slope).
+   */
+  const benchCellPlane = new Plane(new Vector3(0, 1, 0), 0), benchCellPoint = new Vector3();
+  const arenaBenchAtRay = (): number => {
+    if (!benchSlots) return -1;
+    let best = -1, bestDistance = Infinity;
+    benchSlots.forEach((slot, i) => {
+      benchCellPlane.constant = -slot.y;
+      if (!ray.ray.intersectPlane(benchCellPlane, benchCellPoint)) return;
+      if (nearestSlot(benchSlots!, benchCellPoint.x, benchCellPoint.z) !== i) return;
+      const d = Math.hypot(benchCellPoint.x - slot.x, benchCellPoint.z - slot.z);
+      if (d < bestDistance) { best = i; bestDistance = d; }
+    });
+    return best;
   };
   const buildBoard = (frame: BoardFrame) => {
     lastFrame = frame;
@@ -342,7 +357,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Same camera framing with or without the arena: the bench still counts when its boxes are not drawn.
     for (const point of overlay ? frame.bench : []) boardBox.expandByPoint(new Vector3(point.x, 0, point.y));
     for (const point of benchSlots ?? []) boardBox.expandByPoint(point);
-    for (const point of tabletop.layout(frame)) boardBox.expandByPoint(point);
+    for (const point of [...tabletop.layout(frame), ...traitProps.layout(frame)]) boardBox.expandByPoint(point);
     frameCamera();
   };
 
@@ -548,7 +563,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
-    tabletop.frame(frame);
+    tabletop.frame(frame); traitProps.frame(frame);
   };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
     for (const event of events) {
@@ -649,6 +664,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const point = ray.ray.intersectPlane(groundPlane, new Vector3());
     return point ? { x: point.x, y: point.z } : null;
   };
+  /** The drag point as BoardScene reads it (move preview and release alike): over an arena bench cell, its 2D slot. */
+  const dragPoint = (event: PointerEvent): { x: number; y: number } | null => {
+    const point = boardPoint(event);
+    const slot = point ? arenaBenchAtRay() : -1, bench = slot >= 0 ? lastFrame?.bench[slot] : undefined;
+    return bench ? { x: bench.x, y: bench.y } : point;
+  };
   const showHint = (hint: BoardDropHint) => {
     marker.visible = !!hint.target;
     if (!hint.target) return;
@@ -707,14 +728,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!controls?.dragStart(press.id)) { endDrag(); return; }
       dragging = press.id; canvas.style.cursor = 'grabbing';
     }
-    const point = boardPoint(event);
-    const target = toBoard(point);
+    const target = dragPoint(event);
     if (target && controls) showHint(controls.dragMove(target));
   };
   const onPointerUp = (event: PointerEvent) => {
     if (!press || event.pointerId !== press.pointerId) return;
     const controls = feed?.controls();
-    if (dragging) controls?.dragEnd(toBoard(boardPoint(event)), { x: event.clientX, y: event.clientY });
+    if (dragging) controls?.dragEnd(dragPoint(event), { x: event.clientX, y: event.clientY });
     else controls?.select(press.id);
     endDrag();
   };
@@ -798,7 +818,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);
-    tabletop.update(seconds); stage.update(seconds); followBox();
+    tabletop.update(seconds); traitProps.update(seconds); stage.update(seconds); followBox();
     if (width > 0) { if (stage.active) renderer.render(stage.scene, stage.camera); else renderer.render(scene, camera); }
   };
   resize(host.clientWidth, host.clientHeight);
@@ -806,7 +826,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, stage };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, stage };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
@@ -816,7 +836,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave], ['contextmenu', onContextMenu]] as const)
         canvas.removeEventListener(type, handler as EventListener);
-      clearEffects(); tabletop.dispose(); stage.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
