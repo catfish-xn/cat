@@ -6,7 +6,7 @@
  * circumscribed circle about its upright axis), never stretched up. Without a unitScale (older asset roots) every
  * model is fitted to `height` and its x/z box to `width` exactly as before.
  */
-import { AnimationMixer, Box3, SkinnedMesh, Vector3, type AnimationClip, type Object3D } from 'three';
+import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Vector3, type AnimationClip, type Object3D } from 'three';
 
 /** A drawn champion may be at most this many times the reference height (the plan's 1.6 × 92). */
 export const MAX_HEIGHT_RATIO = 1.6;
@@ -24,31 +24,47 @@ const ENVELOPE_SAMPLES = 8, ENVELOPE_STRIDE = 7;
 const ENVELOPE_QUANTILE = 0.98;
 /** The clips a board piece stands, walks and fights in; death, dances and the like do not size its cell. */
 export const ENVELOPE_ACTIONS = ['idle', 'move', 'attack', 'hit'] as const;
+/** Of those, the ones that loop (sampled at distinct times; the others play once and keep their last frame). */
+export const LOOPING_ACTIONS: ReadonlySet<string> = new Set(['idle', 'move']);
+export interface EnvelopeClip { readonly clip: AnimationClip; readonly loop: boolean }
 
 /**
  * How far from the body's upright axis its skinned vertices reach (ENVELOPE_QUANTILE of the samples) over the given
  * clips, in the world units fitModel's box reads (the unattached body's own transform, before fitting); 0 without
  * skinned meshes or clips. A one-frame box misses an idle that spreads its arms (Nami, Trundle) or an attack that
- * swings wide (Garen). Leaves the skeleton in its bind pose.
+ * swings wide (Garen). Distances are taken from the skeleton root's own horizontal place in each sample, so a clip
+ * that carries the whole body sideways (Vi, Zoe) does not count as reach. Leaves the skeleton in its bind pose.
  */
-export function animationEnvelopeRadius(body: Object3D, clips: readonly AnimationClip[]): number {
+export function animationEnvelopeRadius(body: Object3D, clips: readonly EnvelopeClip[]): number {
   const meshes: SkinnedMesh[] = [];
   body.traverse(node => { if (node instanceof SkinnedMesh) meshes.push(node); });
   if (!meshes.length || !clips.length) return 0;
-  const mixer = new AnimationMixer(body), point = new Vector3(), radii: number[] = [];
-  for (const clip of clips) {
-    const action = mixer.clipAction(clip); action.play();
+  const mixer = new AnimationMixer(body), point = new Vector3(), rootAt = new Vector3(), radii: number[] = [];
+  // Each mesh's skeleton root: its first bone whose parent is not a bone.
+  const roots = meshes.map(mesh => mesh.skeleton.bones.find(bone => !(bone.parent instanceof Bone)) ?? null);
+  // Where each root stands in the bind pose: the reach is measured from there plus the root's drift in that sample.
+  for (const mesh of meshes) mesh.skeleton.pose();
+  body.updateMatrixWorld(true);
+  const homes = roots.map(root => root ? root.getWorldPosition(new Vector3()) : new Vector3());
+  for (const { clip, loop } of clips) {
+    const action = mixer.clipAction(clip);
+    // Looping clips: ENVELOPE_SAMPLES distinct times (duration itself wraps to 0); once-only clips end on their last frame.
+    if (!loop) { action.setLoop(LoopOnce, 1); action.clampWhenFinished = true; }
+    action.play();
     for (let i = 0; i < ENVELOPE_SAMPLES; i++) {
-      mixer.setTime(clip.duration * i / Math.max(1, ENVELOPE_SAMPLES - 1));
+      mixer.setTime(clip.duration * i / (loop ? ENVELOPE_SAMPLES : Math.max(1, ENVELOPE_SAMPLES - 1)));
       body.updateMatrixWorld(true);
-      for (const mesh of meshes) {
+      meshes.forEach((mesh, index) => {
         mesh.skeleton.update();
+        const root = roots[index];
+        // The axis moved by the root's horizontal drift from its bind place (0 when the skeleton has no root bone).
+        if (root) root.getWorldPosition(rootAt).sub(homes[index]!); else rootAt.set(0, 0, 0);
         const count = mesh.geometry.attributes.position?.count ?? 0;
         for (let v = 0; v < count; v += ENVELOPE_STRIDE) {
           mesh.getVertexPosition(v, point).applyMatrix4(mesh.matrixWorld);
-          radii.push(Math.hypot(point.x, point.z));
+          radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
         }
-      }
+      });
     }
     action.stop();
   }
@@ -73,7 +89,7 @@ export function fitModel(body: Object3D, options: { height: number; width?: numb
   const across = official ? 2 * Math.max(bind, options.envelopeRadius ?? 0) : Math.max(size.x, size.z);
   const cap = Math.min(size.y > 0 ? options.height * (official ? MAX_HEIGHT_RATIO : 1) / size.y : Infinity, across > 0 ? width / across : Infinity);
   const scale = official ? Math.min(options.sourceScale * options.unitScale!, cap) : cap;
-  if (!Number.isFinite(scale) || scale <= 0) return options.height;
+  if (!Number.isFinite(scale) || scale <= 0) return Number.isFinite(options.height) ? options.height : size.y;
   body.scale.multiplyScalar(scale);
   body.position.y -= box.min.y * scale;
   return size.y * scale;
