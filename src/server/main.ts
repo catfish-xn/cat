@@ -18,6 +18,8 @@
  *   CAT_ABANDON_SEC          G3 watchdog: end a match whose human seats are all disconnected this long (default 90, 0 = off)
 " *   CAT_HEARTBEAT_SEC        ping + heartbeat message every this many seconds (default 10, 0 = off); a connection silent for
  *                            2.5 intervals is dropped (its seat is kept and resumes as after any disconnect)
+ *   CAT_LOOP_LAG_SEC         event-loop delay report (`loop.lag`, max and p99) every this many seconds (default 10, 0 = off);
+ *                            a warning when the loop was held 100 ms or more, debug otherwise
  *   CAT_LOG_LEVEL            debug / info (default) / warn / error; one JSON object per line on stdout
  *   CAT_GIT_SHA              commit the bundle was built from, reported by GET /healthz (deploy/deploy.sh sets it)
  *   CAT_FAULT_INJECT_ROUND   TEST ONLY (G3 e2e): the first battle of this round number throws once, so the room ends
@@ -61,6 +63,7 @@ const queueTimeout = env.CAT_QUEUE_TIMEOUT_SEC ? seconds('CAT_QUEUE_TIMEOUT_SEC'
 const sha = (env.CAT_GIT_SHA ?? '').trim() || 'unknown';
 const heartbeatMs = seconds('CAT_HEARTBEAT_SEC', HEARTBEAT_DEFAULTS.intervalMs);
 const heartbeat = heartbeatMs > 0 ? { intervalMs: heartbeatMs, timeoutMs: Math.round(heartbeatMs * 2.5) } : null;
+const loopLagMs = seconds('CAT_LOOP_LAG_SEC', 10_000);
 const watchdog = { stallMs: seconds('CAT_STALL_SEC', 120_000), abandonMs: seconds('CAT_ABANDON_SEC', 90_000) };
 const faultRound = integer('CAT_FAULT_INJECT_ROUND', 0);
 const carousel = flag('CAT_CAROUSEL', true);
@@ -97,7 +100,7 @@ createGameServer({
   },
   queueTimeoutMs: queueTimeout,
   bots: { stepMs: integer('CAT_BOT_STEP_MS', BOT_DRIVER_DEFAULTS.stepMs) || BOT_DRIVER_DEFAULTS.stepMs, takeover, takeoverMs: seconds('CAT_TAKEOVER_SEC', BOT_DRIVER_DEFAULTS.takeoverMs) },
-  logger: log, watchdog, heartbeat,
+  logger: log, watchdog, heartbeat, loopLagReportMs: loopLagMs > 0 ? loopLagMs : null,
   ...(carousel ? { carousel: CAROUSEL_RULES_BINDING } : {}),
   build: { sha, contentDigest: CONTENT_DIGEST, lootReplayDigest: LOOT_REPLAY_DIGEST },
   processStats: () => ({ uptimeSec: Math.round(process.uptime()), rssBytes: process.memoryUsage.rss() }),
