@@ -37,10 +37,31 @@ try {
   await page.route('**/*', r => new URL(r.request().url()).hostname === '127.0.0.1' ? r.continue() : r.abort());
   await page.route('http://127.0.0.1:5198/review', r => r.fulfill({ contentType: 'text/html',
     body: '<!doctype html><link rel="icon" href="data:,"><script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script><body></body>' }));
-  const targets = ['scene-stage', 'scene-layout', 'scene-full', ...Object.keys(manifest.models), ...Object.keys(manifest.effects)];
+  await page.goto('http://127.0.0.1:5198/review');
+  const vertexColorProbe = await page.evaluate(async () => {
+    const T = await import('/node_modules/three/build/three.module.js');
+    const { ParticleEffectV2 } = await import('/src/rendering3d/particles-v2.ts');
+    const geometry = new T.PlaneGeometry(2, 2);
+    geometry.setAttribute('color', new T.Float32BufferAttribute(Array(4).fill([1, 0, 0, .5]).flat(), 4));
+    const fx = new ParticleEffectV2({ schemaVersion: 2, limits: { maxParticles: 1, maxDuration: 1 }, emitters: [{
+      kind: 'mesh', mesh: 'synthetic.glb', emission: { mode: 'burst', count: 1 }, lifetime: 1,
+    }] }, { scale: 1, mesh: () => geometry });
+    const scene = new T.Scene(); scene.background = new T.Color(0, 0, 1); scene.add(fx.object);
+    const camera = new T.OrthographicCamera(-1, 1, 1, -1, .1, 10); camera.position.z = 2;
+    const renderer = new T.WebGLRenderer({ preserveDrawingBuffer: true }); renderer.setSize(16, 16);
+    renderer.outputColorSpace = T.LinearSRGBColorSpace; renderer.render(scene, camera);
+    const gl = renderer.getContext(), pixel = new Uint8Array(4); gl.readPixels(8, 8, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    const error = gl.getError(); fx.dispose(); geometry.dispose(); renderer.dispose(); renderer.forceContextLoss();
+    if (error || Math.abs(pixel[0] - 128) > 3 || pixel[1] > 3 || Math.abs(pixel[2] - 128) > 3)
+      throw new Error('carousel-vertex-RGBA-probe-failed:' + [...pixel]);
+    return { synthetic: true, pixel: [...pixel], expected: 'half red vertex alpha over blue, in linear output' };
+  });
+  const meshTargets = Object.fromEntries((build.particleMeshes ?? []).filter(m => m.status === 'converted')
+    .map(m => ['mesh-' + m.path.split('/').at(-1).replace('.glb', ''), m]));
+  const targets = ['scene-stage', 'scene-layout', 'scene-full', ...Object.keys(manifest.models), ...Object.keys(manifest.effects), ...Object.keys(meshTargets)];
   for (const id of targets) {
     await page.goto('http://127.0.0.1:5198/review');
-    const result = await page.evaluate(async ({ id, manifest, build }) => {
+    const result = await page.evaluate(async ({ id, manifest, build, meshTarget }) => {
       const T = await import('/node_modules/three/build/three.module.js');
       const { GLTFLoader } = await import('/node_modules/three/examples/jsm/loaders/GLTFLoader.js');
       const { ParticleEffectV2 } = await import('/src/rendering3d/particles-v2.ts');
@@ -51,8 +72,11 @@ try {
       const textures = new Map(), meshes = new Map(), models = new T.Group(), samples = [];
       const loader = new GLTFLoader();
       let doc;
-      if (manifest.effects[id]) {
-        doc = await (await fetch(base + manifest.effects[id].path)).json();
+      if (manifest.effects[id] || meshTarget) {
+        doc = meshTarget ? { schemaVersion: 2, limits: { maxParticles: 1, maxDuration: 30 }, emitters: [{
+          // Unreferenced converted meshes intentionally are not in precache.
+          kind: 'mesh', mesh: 'build/units/carousel/' + meshTarget.path, emission: { mode: 'burst', count: 1 }, lifetime: 30,
+        }] } : await (await fetch(base + manifest.effects[id].path)).json();
         for (const e of doc.emitters) {
           if (e.texture && !textures.has(e.texture)) textures.set(e.texture, await new T.TextureLoader().loadAsync(base + e.texture));
           if (e.mesh && !meshes.has(e.mesh)) {
@@ -97,13 +121,13 @@ try {
       }
       const fitBox = doc ? effectBox : modelBox;
       const center = fitBox.getCenter(new T.Vector3());
-      const extent = Math.max(...fitBox.getSize(new T.Vector3()).toArray(), cell * 2);
+      const extent = Math.max(...fitBox.getSize(new T.Vector3()).toArray(), meshTarget ? .0001 : cell * 2);
       for (const top of [false, true]) for (const time of times) {
         const box = document.createElement('div');
-        box.textContent = `${id} | ${top ? 'top' : 'oblique'} | ${time}s | grid = 1 cell${id === 'scene-layout' ? ' | proposed anchors' : ''}`;
+        box.textContent = `${id} | ${top ? 'top' : 'oblique'} | ${time}s | grid = 1 cell${id === 'scene-layout' ? ' | proposed anchors' : ''}${meshTarget ? ' | geometry + vertex color only' : ''}`;
         document.body.append(box);
         const scene = new T.Scene(); scene.background = new T.Color('#182936'); scene.add(models);
-        const camera = new T.PerspectiveCamera(40, 480 / 460, .1, 50000);
+        const camera = new T.PerspectiveCamera(40, 480 / 460, meshTarget ? Math.max(extent / 1000, .000001) : .1, 50000);
         camera.position.copy(center).add(new T.Vector3(top ? 0 : .7, top ? 1.75 : 1.2, top ? .0001 : 1.65).multiplyScalar(extent));
         camera.lookAt(center);
         const grid = new T.GridHelper(cell * 24, 24, 0x9ab5c4, 0x354c59);
@@ -137,15 +161,28 @@ try {
         for (const m of ms) { m.map?.dispose(); m.dispose(); } } });
       renderer.dispose(); renderer.forceContextLoss();
       textures.forEach(t => t.dispose()); meshes.forEach(m => m.dispose());
-      return { id, samples, emitters: doc?.emitters.length, textures: textures.size,
+      return { id, samples, emitters: doc?.emitters.length, textures: textures.size, meshSource: meshTarget?.source,
         proposedLayout: id === 'scene-layout' ? { unitCountExample: 9, unitRadiusCells: 2.5, playerRadiusCells: 7.1,
           unitHeightCells: 1.5, playerHeightCells: .75, feetCells: .25, note: 'Display proposal, not recovered source animation or authoritative slots.' } : undefined,
         materialApproximation: doc ? undefined : build.models.filter(m => id.startsWith('scene-') || m.id === id).map(m => ({ id: m.id, approximation: m.approximation })) };
-    }, { id, manifest, build });
+    }, { id, manifest, build, meshTarget: meshTargets[id] });
     await page.screenshot({ path: await safeOutputPath(join(review, id + '.png'), { force: true }), fullPage: true });
     results.push(result); console.log('review:', id);
   }
+  for (const [group, ids] of [['effects', Object.keys(manifest.effects)], ['meshes', Object.keys(meshTargets)]]) {
+    for (let start = 0; start < ids.length; start += 6) {
+      await page.goto('http://127.0.0.1:5198/review');
+      await page.evaluate(async ids => {
+        document.body.style.cssText = 'margin:0;background:#182936;display:grid;grid-template-columns:repeat(2,720px)';
+        await Promise.all(ids.map(async id => {
+          const img = document.createElement('img'); img.style.width = '720px';
+          img.src = '/assets3d-local/carousel/review/' + id + '.png'; document.body.append(img); await img.decode();
+        }));
+      }, ids.slice(start, start + 6));
+      await page.screenshot({ path: await safeOutputPath(join(review, `contact-${group}-${start / 6 + 1}.png`), { force: true }), fullPage: true });
+    }
+  }
   await writeOutputFileAtomic(join(review, 'review-report.json'), JSON.stringify({ offline: true, errors, results,
-    precacheVerified: precache.files.length, cellPolicy: 'One grid interval is one board cell; model and particle scale .44.' }, null, 2), { force: true });
+    vertexColorProbe, precacheVerified: precache.files.length, cellPolicy: 'One grid interval is one board cell; model and particle scale .44.' }, null, 2), { force: true });
   if (errors.length) throw new Error(errors.join('\n'));
 } finally { await browser?.close(); await server.close(); }

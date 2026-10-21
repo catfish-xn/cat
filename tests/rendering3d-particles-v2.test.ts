@@ -9,6 +9,23 @@ const doc = (...emitters: unknown[]) => ({ schemaVersion: 2, limits: { maxPartic
 const mesh = (e: ParticleEffect, i = 0) => e.object.children[i] as Mesh<import('three').BufferGeometry, ShaderMaterial>;
 const manifest = { schemaVersion: 1 as const, models: {}, effects: { effect: { path: 'fx/effect.json' } } };
 
+describe('particle mesh vertex color runtime', () => {
+  it.each([3, 4])('uses borrowed %i-channel vertex colors without mutating or disposing geometry', channels => {
+    const geometry = new BoxGeometry(1, 1, 1);
+    const values = new Float32Array(geometry.getAttribute('position').count * channels).fill(.5);
+    geometry.setAttribute('color', new Float32BufferAttribute(values, channels));
+    const before = values.slice(), disposed = vi.fn(); geometry.addEventListener('dispose', disposed);
+    const fx = new ParticleEffect(parseParticleDocument(doc(quad({ kind: 'mesh', mesh: 'generated.glb' }), quad())),
+      { scale: 1, mesh: () => geometry });
+    expect(mesh(fx).material.vertexColors).toBe(true);
+    expect(mesh(fx, 1).material.vertexColors).toBe(false);
+    expect(mesh(fx).material.vertexShader).toContain('vParticleColor=color;');
+    expect(mesh(fx).material.fragmentShader).toContain('texel.a*opacity*vParticleColor.a');
+    fx.update(.5); fx.dispose();
+    expect(values).toEqual(before); expect(disposed).not.toHaveBeenCalled(); geometry.dispose();
+  });
+});
+
 describe('strict particle v2 contract', () => {
   it('exports a discriminated document, clones inputs and accepts an explicitly bounded empty v2', () => {
     const input = doc(quad());
