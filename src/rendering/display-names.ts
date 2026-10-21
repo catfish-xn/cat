@@ -12,5 +12,7 @@ const UNIT_ZH: Readonly<Record<string,string>> = {
   sett:'瑟提', steb:'斯特卜', trundle:'特朗德尔', twistedfate:'崔斯特', vex:'薇古丝', vi:'蔚', ziggs:'吉格斯',
   // v19 six-costs (same ids as the rules layer).
   warwick:'沃里克', viktor:'维克托', mel:'梅尔',
+  // v20 危险人物: the monkey's 畸变体 (Silco's summon; the client has no unit string, the zh ability text names them 畸变体).
+  'v20-silco-minion':'畸变体',
 };
 export const displayUnitName = (id: string) => UNIT_ZH[id] ?? g23UnitName(id) ?? (Object.hasOwn(NEUTRAL_DEFINITIONS, id) ? NEUTRAL_DEFINITIONS[id].name : undefined) ?? UNIT_DEFINITIONS[id]?.name ?? '未知单位';
