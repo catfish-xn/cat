@@ -140,9 +140,10 @@ describe('strict particle conversion and public contract integration', () => {
         expect(() => makeManifest({ jinx: { path } }, {}, assertManifest)).toThrow();
         expect(() => assetUrl('', path)).toThrow();
     });
-    it('uses the sixty simulation definitions and the required cost split', async () => {
+    it('retains the sixty original definitions and adds the three six-cost assets', async () => {
         const d = await unitDefinitions();
-        expect(Object.keys(d)).toHaveLength(60);
+        expect(Object.keys(d)).toHaveLength(63);
+        expect(Object.keys(d).filter(id => d[id].cost === 6).sort()).toEqual(['mel', 'viktor', 'warwick']);
         expect(Object.keys(d).some(id => id.includes('-ranged'))).toBe(false);
         expect([1, 2, 3, 4, 5].map(cost => Object.values(d).filter((v) => (v as {
             cost: number;

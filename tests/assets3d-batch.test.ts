@@ -174,10 +174,10 @@ describe('isolated per-unit batch build', () => {
     expect(() => selectUnits(definitions, 'all', '1,0')).toThrow('invalid-cost-filter');
     expect(() => selectUnits(definitions, 'guessed')).toThrow('invalid-unit-selection');
   });
-  it('uses exactly the 60 domain keys, and checked-in mapping only contains names/path rules', async () => {
+  it('keeps the 60 default units and maps every asset definition with names/path rules', async () => {
     const definitions = await unitDefinitions();
     const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.json', import.meta.url), 'utf8'));
-    expect(Object.keys(definitions)).toHaveLength(60);
+    expect(selectUnits(definitions)).toHaveLength(60);
     const { $animationRules: rules, ...unitMap } = map;
     expect(Object.keys(unitMap).sort()).toEqual(Object.keys(definitions).sort());
     expect(Object.keys(rules)).toEqual(['idle', 'move', 'attack', 'cast', 'hit', 'death']);

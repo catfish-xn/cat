@@ -2,7 +2,8 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, resolve, relative, sep, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from './build.mjs';
-import { unitDefinitions } from './runtime.mjs';
+import { unitDefinitions, selectUnits } from './runtime.mjs';
+export { selectUnits } from './runtime.mjs';
 import { argumentsFor } from './plan-fetch.mjs';
 import { safeInputPath, safeOutputPath, writeOutputFileAtomic } from './safe-path.mjs';
 
@@ -19,16 +20,6 @@ async function artifactBytes(root, directory = root) {
   }
   return bytes;
 }
-export function selectUnits(definitions, units = 'all', cost) {
-  const costs = cost === undefined ? [1, 2, 3, 4, 5] : String(cost).split(',').map(Number);
-  if (!costs.length || costs.some(n => !Number.isInteger(n) || n < 1 || n > 5) || new Set(costs).size !== costs.length)
-    throw new Error('invalid-cost-filter');
-  const selected = units === 'all' ? Object.keys(definitions) : units.split(',');
-  if (new Set(selected).size !== selected.length || selected.some(id => !Object.hasOwn(definitions, id)))
-    throw new Error('invalid-unit-selection');
-  return selected.filter(id => costs.includes(definitions[id].cost))
-    .sort((a, b) => definitions[a].cost - definitions[b].cost || a.localeCompare(b));
-}
 /** Sequential units have isolated output roots and failures. No network or subprocess. */
 export async function buildAll({ units = 'all', cost, source = 'assets3d-local/trial/local',
   out = 'assets3d-local/out/batch', force = false, definitions, map, buildUnit = build } = {}) {
@@ -39,7 +30,7 @@ export async function buildAll({ units = 'all', cost, source = 'assets3d-local/t
   if (!rel || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`))) throw new Error('output-overlaps-source');
   const path = join(output, 'build-report.json');
   await safeOutputPath(path, { force });
-  const report = { schemaVersion: 1, ready: false, phase: 'building', cost: cost ?? '1,2,3,4,5',
+  const report = { schemaVersion: 1, ready: false, phase: 'building', cost: cost ?? (units === 'all' ? '1,2,3,4,5' : '1,2,3,4,5,6'),
     policy: 'Success means conversion/structural checks passed; source BIN action mapping and initial materials are resolved; source JSON and independent reference coverage remain explicit. Each units/<id>/manifest.json uses that unit directory as its asset root.',
     mapping: { mapped: 0, missing: [] }, units: {}, totals: { success: 0, failed: 0, missing: 0, artifactBytes: 0 } };
   const writeReport = () => writeOutputFileAtomic(path, `${JSON.stringify(report, null, 2)}\n`, { force: true });
