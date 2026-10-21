@@ -58,14 +58,14 @@ while(probe.phase==='combat'){const next=stepMatch(probe);currentFacts.push(...b
 const DELTA=currentFacts.length*GAIN,TOTAL=STOCK+DELTA;
 expect(priorBySource.every(g=>g.attackDamageBps>0),JSON.stringify({priorBySource,currentFacts})).toBe(true);
 expect(DELTA).toBeGreaterThan(0);
-expect(currentFacts).toHaveLength(2);
+expect(currentFacts).toHaveLength(3);
 const result = battle(prepared);
 if(!result.revealed)throw Error('Expected live reveal before natural final tick');
 const live = {...result,revealed:result.revealed,selected:result.ended};
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 const currentCommit=(s:MatchState)=>s.resourceProvenance.entries.find((e):e is Extract<ResourceProvenanceEntry,{kind:'combat-growth-committed'}>=>e.kind==='combat-growth-committed'&&e.combatId==='round-17')!;
 describe('B8 live growth plus immediate randomized loot merge',()=>{
- it('pins real v17 seed49 prior stock and original-source current delta independently',()=>{
+ it('pins real v19 seed49 prior stock and original-source current delta independently',()=>{
   expect(prepared.persistentGrowth).toEqual(priorBySource);
   const totals=new Map<string,number>();
   expect(live.events.filter(e=>e.type==='growth')).toEqual(currentFacts.map(f=>{const total=(totals.get(f.unitId)??0)+GAIN;totals.set(f.unitId,total);return {...f,totalBps:total};}));

@@ -8,7 +8,8 @@ import { accepted, battle, transferPreparation, players, plan } from './fixtures
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-const SURVIVOR='unit-21',DONOR='unit-11',REWARD='unit-27',TG='item-10';
+import anchor from './fixtures/v19-transfer-route.json';
+const {survivor:SURVIVOR,donor:DONOR,reward:REWARD,tg:TG}=anchor;
 const prepared=await transferPreparation();
 const make=(s:MatchState)=>{const l=battle(s);if(!l.revealed)throw Error('Missing live reveal');return {...l,revealed:l.revealed,selected:l.ended};};
 const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-13',SURVIVOR,0)));
@@ -18,10 +19,7 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
  it('pins the real two paid Tristanas, glove recipe, anomaly target and reward identity',()=>{
   expect(players(prepared).filter(u=>u.definitionId==='tristana').map(u=>[u.id,u.starLevel])).toEqual([[DONOR,1],[SURVIVOR,1]]);
   expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[SURVIVOR,DONOR].includes(e.unitId)).every(e=>e.kind==='unit-acquired'&&e.source.kind==='shop')).toBe(true);
-  expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[DONOR,SURVIVOR].includes(e.unitId))).toEqual([
-   {kind:'unit-acquired',unitId:DONOR,source:{kind:'shop',generation:16,slotIndex:2,definitionId:'tristana'},sequence:35,roundId:'3-3'},
-   {kind:'unit-acquired',unitId:SURVIVOR,source:{kind:'shop',generation:39,slotIndex:2,definitionId:'tristana'},sequence:53,roundId:'3-7'},
-  ]);
+  expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[DONOR,SURVIVOR].includes(e.unitId))).toEqual(anchor.acquisitions);
   // v18 restores the archived 3-7 Pan atom: 10 direct items + 2 forges + 3 supply items = 15 births.
   const priorDrops=independentLootPlan(4,17).rounds.flatMap(r=>r.encounterPlan.drops);
   expect(priorDrops.filter(d=>d.payload.kind==='item')).toHaveLength(10);
@@ -31,13 +29,13 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   const receipt=prepared.m8.loot.receipts.find(r=>r.dropId===pan.dropId)!;
   expect(prepared.items.find(i=>i.id===receipt.grantedItemIds[0])?.definitionId).toBe('frying-pan');
   expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='item-acquired'&&e.source.kind==='loot'&&e.source.receiptId===receipt.receiptId)).toHaveLength(1);
-  expect(['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'].map(kind=>prepared.resourceProvenance.entries.filter(e=>e.kind===kind).length)).toEqual([26,20,15,6,4,5,1]);
+  expect(['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'].map(kind=>prepared.resourceProvenance.entries.filter(e=>e.kind===kind).length)).toEqual(anchor.provenanceCounts);
   expect(prepared.items.find(i=>i.id===TG)).toEqual({id:TG,definitionId:'thiefs-gloves',location:{kind:'unit',unitId:DONOR,slot:0}});
   // The paid v17 route explicitly acquires slime-time for the donor.
   expect(prepared.anomalyBinding).toEqual({definitionId:'slime-time',unitId:DONOR,choiceId:'round:4-6:anomaly',boundRound:23});
   expect(prepared.equipmentState.rolls).toHaveLength(1);
-  expect(prepared.resourceProvenance.entries).toHaveLength(77);
-  expect(prepared.nextUnitSerial).toBe(27);
+  expect(prepared.resourceProvenance.entries).toHaveLength(anchor.provenanceLength);
+  expect(prepared.nextUnitSerial).toBe(anchor.nextUnitSerial);
   expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual(independentLootPlan(4,24).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
  });
  it.each(scenarios)('$name: preserves original Combat and atomically migrates the current projection',({live,returned})=>{

@@ -8,8 +8,8 @@ import {createMatch} from '../src/simulation/match';
 import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
 import {createCombatWithEvents} from '../src/simulation/combat';
 import {validateMechanisms} from '../src/simulation/m8/restore';
-it('sixty canonical identities, twenty-five enabled traits and four non-acquirable fixed ranged forms',()=>{
- expect(Object.keys(M5_UNIT_DEFINITIONS)).toHaveLength(60);expect(SHOP_CATALOG).toHaveLength(60);expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(25);expect(TRAIT_DEFINITIONS['form-swapper']).toBeUndefined();
+it('v19: 63 canonical identities, 30 enabled traits and four non-acquirable fixed ranged forms',()=>{
+ expect(Object.keys(M5_UNIT_DEFINITIONS)).toHaveLength(63);expect(SHOP_CATALOG).toHaveLength(63);expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(30);expect(TRAIT_DEFINITIONS['form-swapper']).toBeDefined();
  for(const id of ['elise','swain','gangplank','jayce']){expect(SHOP_CATALOG).toContain(id);expect(SHOP_CATALOG).not.toContain(id+'-ranged');}
 });
 it.each([['swain',950,45,650,40],['elise',1100,60,750,45],['gangplank',800,65,700,50],['jayce',1200,90,900,60]] as const)('%s form HP/AD come from the source table and retain canonical identity',(id,hp,ad,rangedHp,rangedAd)=>{

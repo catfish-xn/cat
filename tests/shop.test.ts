@@ -29,8 +29,9 @@ function oracle(seed: number, generation: number, level: number) {
 describe('versioned level-dependent deterministic shop', () => {
   it('fixes five slots and the ordered G2-definition catalog', () => {
     expect(MATCH_RULES.shopSize).toBe(5);
-    expect(SHOP_CATALOG).toEqual([...CATALOG.flat(),'mel','viktor','warwick']);
-    expect(Object.values(SHOP_CATALOG_BY_COST)).toEqual([...CATALOG,['mel','viktor','warwick']]);
+    // v19's independent admission fixture now includes the six-cost tier once.
+    expect(SHOP_CATALOG).toEqual(CATALOG.flat());
+    expect(Object.values(SHOP_CATALOG_BY_COST)).toEqual(CATALOG);
     for (const [tier, names] of CATALOG.entries()) {
       expect(names.length).toBeGreaterThan(0);
       for (const name of names) expect(UNIT_DEFINITIONS[name].cost).toBe(tier + 1);

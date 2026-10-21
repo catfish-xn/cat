@@ -97,7 +97,7 @@ describe('content id bridge', () => {
     }
     // #136 ships both traits, so they show as active; 双形战士 is listed by the client but not implemented.
     expect(heroTraitTags('renata')).toEqual([{ name: '炼金男爵', open: true }, { name: '先知', open: true }]);
-    expect(heroTraitTags('elise')).toEqual([{ name: '黑色玫瑰', open: true }, { name: '双形战士', open: false }, { name: '格斗家', open: true }]);
+    expect(heroTraitTags('elise')).toEqual([{ name: '黑色玫瑰', open: true }, { name: '双形战士', open: true }, { name: '格斗家', open: true }]);
     for (const id of ['elise', 'jayce', 'gangplank', 'swain']) expect(displayUnitName(`${id}-ranged`)).toBe(expected[id]);
     expect(G23_HERO_TRAITS.TFT13_Lieutenant).toEqual(['High Roller', 'Chem-Baron', 'Pit Fighter']);
   });
@@ -126,7 +126,7 @@ describe('content id bridge', () => {
     const g23Units = new Set([...Object.keys(G23_UNITS), ...Object.keys(G23_SUMMON_UNITS)]);
     for (const id of Object.keys(UNIT_DEFINITIONS)) if (!g23Units.has(id)) expect(g23ChampionApiName(id), id).toBeUndefined();
     // Traits that predate G2-3 keep their content names; only the G2-3 traits resolve through the client table.
-    const bridged = new Set(['ambusher', 'visionary', 'high-roller', 'chem-baron', 'dominator', 'pit-fighter', 'experiment', 'bruiser', 'junker-king', 'black-rose', 'quickstriker']);
+    const bridged = new Set(['ambusher', 'visionary', 'high-roller', 'chem-baron', 'dominator', 'pit-fighter', 'experiment', 'bruiser', 'junker-king', 'black-rose', 'quickstriker', 'form-swapper']);
     for (const id of Object.keys(TRAIT_DEFINITIONS)) if (!bridged.has(id)) expect(g23TraitApiName(id), id).toBeUndefined();
     for (const id of Object.keys(ITEM_DEFINITIONS)) expect(itemDisplayName(id)).toBe(ITEM_DEFINITIONS[id].name);
     for (const id of Object.keys(ANOMALY_DEFINITIONS)) expect(g23AnomalyApiName(id)).toBeDefined();

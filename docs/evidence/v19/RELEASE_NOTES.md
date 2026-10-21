@@ -12,7 +12,7 @@
 
 ## 独立epoch与验证
 
-CONTENT=fnv1a32-utf16:ff78c2b0；LOOT_REPLAY=fnv1a32-utf16:df0d757c。最终epoch为 **complete:true，9/9步exitCode=0**，各录制源哈希与当前工作区一致。录制入口 scripts/verify-v19-epoch.cjs（9个顺序步骤），仅重录v19；v18及更早历史文件原字节保留。受保护manifest SHA256必须保持 b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22。
+CONTENT=fnv1a32-utf16:242e7562；LOOT_REPLAY=fnv1a32-utf16:df0d757c。最终epoch为 **complete:true，9/9步exitCode=0**，各录制源哈希与当前工作区一致。录制入口 scripts/verify-v19-epoch.cjs（9个顺序步骤），仅重录v19；v18及更早历史文件原字节保留。受保护manifest SHA256必须保持 b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22。
 
 独立商店oracle已同步六费费用区间、批准概率、卖价与进入回合参数，并以全等级/解锁前后/整数边界逐项对照生产抽店。旧录制轨迹和受保护manifest没有改写；所有过程离线，不执行Git写操作。
 
@@ -22,4 +22,10 @@ CONTENT=fnv1a32-utf16:ff78c2b0；LOOT_REPLAY=fnv1a32-utf16:df0d757c。最终epoc
 
 界面交接：家人说明底部动态进度/奖励/目标与准备跳舞资格已提供领域查询，Claude接入既有渲染器；本任务没有修改渲染目录。纹章卡片已读取新属性/配方，六件不可合成明确标注。3D素材仍由另一条线提取。
 
-PR #364 must-fix 修复验证：启用首个成员真实阵亡后其余成员撤销额外一星；新增三档合成测试及认证检查点恢复/显示回放一致性测试。当前 schema/save/replay 断言统一为9/5/4。本次相关测试 **12文件、173项通过、0失败**（身份文件另有142项未选择），tsc通过；v19 epoch重新执行9/9成功，录制源哈希与当前代码一致，历史文件及受保护manifest原字节不动。详见 [must-fix-verification.json](must-fix-verification.json)。
+PR #364 上一轮 must-fix 验证（历史记录）：启用首个成员真实阵亡后其余成员撤销额外一星；新增三档合成测试及认证检查点恢复/显示回放一致性测试。schema/save/replay 断言统一为9/5/4。当轮相关测试 **12文件、173项通过、0失败**（身份文件另有142项未选择），tsc通过；当轮v19 epoch重新执行9/9成功，历史文件及受保护manifest原字节不动。详见 [must-fix-verification.json](must-fix-verification.json)。
+
+## PR #364 全部 CI 收尾
+
+逐条根因及只读投影合同见 [PR364_CI_REPAIR](../../PR364_CI_REPAIR.md)。bracer 保留原数值断言，通过公开重掷消除灵魂链接引起的 fixture 漂移；宝箱发装备修复盖伦共享生命丢失；召唤物禁装备、击杀/助攻归属及黑玫瑰伪造拒绝均保留。补三名六费双持角色、63/30/61 内容清单、目录/预览/冻结回归，并重录最终 v19 golden、Herald、存档/回放检查点及转装锚点。
+
+最终 CONTENT/LOOT_REPLAY 为 `fnv1a32-utf16:242e7562` / `fnv1a32-utf16:df0d757c`；最新 epoch 9/9 成功，录制源哈希匹配最终工作区，125 份历史文件及受保护 manifest 原字节不变。四分片完整执行：1/4 **1371通过/10失败**，2/4 **1526通过/12失败/1原有跳过**，3/4 **1704通过/2失败**，4/4 **1488通过/4失败**；共6089通过。28项残余为26项沙箱权限/构建限制及2项默认5秒超时，不宣称CI全绿；超时文件以单worker/命令行20秒预算复核15项通过。tsc退出0。完整机器证据和失败名称见 [ci-repair-verification.json](ci-repair-verification.json)。

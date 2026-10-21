@@ -122,7 +122,7 @@ describe('T5R private own-seat whitelist',()=>{
     expect(Object.keys(view).sort()).toEqual(['schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
       'round','roundDefinitionId','phase','gold','level','xp','playerHp','streak','shop','preparation','items','temporaryEquipment','augments',
       'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics',
-      'unclaimedOrbs','orbClaimReceipts'].sort());
+      'unclaimedOrbs','orbClaimReceipts','familyReunion','shopOdds'].sort());
     expect(view.unclaimedOrbs).toEqual([]);expect(view.orbClaimReceipts).toEqual([]);
   });
   it('hidden RNG/future plans never affect output; nested sentinel additions never leak',()=>{

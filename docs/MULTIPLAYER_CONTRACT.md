@@ -5,7 +5,9 @@
 同一v19包含家人5随机任务法球、13.4六人彩蛋回移、六费 warwick / viktor / mel 与22种纹章总基础属性替换。schema/save/replay/command＝**9/5/4/4**；旧身份拒绝，无迁移，50ms和lcg32-v1不变。数值、魔改/未验证清单、导出签名、RNG、失败/恢复、说明底部显示字段及表现层交接以 [V19_PART2](V19_PART2.md) 为准；下文旧“家人预留/六费延期/纹章未改/8-4-3”描述已被本节覆盖。
 
 
-## v19 领域合同增补（2026-10-21）
+PR #364 收尾的最终 CONTENT/LOOT_REPLAY 为 `fnv1a32-utf16:242e7562` / `fnv1a32-utf16:df0d757c`。本人座位的 `toPrivateSeatView(state:MatchState)` 提供 `familyReunion.{eligible,participantIds,downgraded,downgradedAtTick}`（准备资格/冻结开场成员及本战实际退星），及 `shopOdds.sixCostBps`（整数基点，10000=100%，按当前回合与等级由规则提供）。只读，不发事件/消耗 RNG；显示端不得重算触发或概率。具体输入输出见 [PR364_CI_REPAIR](PR364_CI_REPAIR.md)。
+
+## v19 第一部分领域合同增补（历史阶段，已被上节覆盖）
 
 当前rules/content=`s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，schema/save/replay/command=8/4/3/4，领域NET4/网络NET5不变。CONTENT=`fnv1a32-utf16:9ba56127`、LOOT_REPLAY=`fnv1a32-utf16:8d45a042`；旧身份拒绝，无迁移。完整规则、推断/约定/魔改与字段见 [V19_MECHANICS](V19_MECHANICS.md)。当前61强化/27羁绊；姐妹对应强化及伙伴门槛由领域快照冻结，服务器不自行补羁绊或计算增益。
 

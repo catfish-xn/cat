@@ -30,7 +30,11 @@ export function familyCombatBase(unit:Pick<Unit,'definitionId'|'starLevel'>,effe
   }
   return {base,ability};
 }
-export function familyReunionView(state:Pick<CombatStrategyInputs,'preparation'|'items'>){
-  const ids=familyReunionParticipants(state);
-  return {eligible:ids.length===6,participantIds:[...ids],backport:'13.4 → 14.24b',deathDowngrade:'已启用；未验证（PBE 观察）：首个成员阵亡后，其余成员失去额外的一星',participants:ids.map(id=>{const u=state.preparation.units.find(u=>u.id===id)!;return {unitId:id,originalStarLevel:u.starLevel,combatStarLevel:Math.min(4,u.starLevel+1)};})};
+export function familyReunionView(state:Pick<CombatStrategyInputs,'preparation'|'items'>&{readonly combat?:import('./combat-types').CombatState|null;readonly combatInputBasis?:import('./combat-input').CombatInputBasis|null}){
+  // During combat the frozen opening owns activation, even after a public sale
+  // or equipment transfer changes the current preparation projection.
+  const source=state.combat&&state.combatInputBasis?state.combatInputBasis.inputs:state;
+  const ids=familyReunionParticipants(source);
+  const downgradedAtTick=state.combat?.units.find(u=>u.team==='player'&&u.familyReunion?.downgradedAtTick!==undefined)?.familyReunion?.downgradedAtTick??null;
+  return {eligible:ids.length===6,participantIds:[...ids],downgraded:downgradedAtTick!==null,downgradedAtTick,backport:'13.4 → 14.24b',deathDowngrade:'已启用；未验证（PBE 观察）：首个成员阵亡后，其余成员失去额外的一星',participants:ids.map(id=>{const u=source.preparation.units.find(u=>u.id===id)!;return {unitId:id,originalStarLevel:u.starLevel,combatStarLevel:Math.min(4,u.starLevel+1)};})};
 }

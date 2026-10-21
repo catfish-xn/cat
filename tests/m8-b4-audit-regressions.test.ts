@@ -1,3 +1,5 @@
+// v19: ordinary catalogue + 2 crafting inputs + 22 approved custom emblems.
+import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { describe, expect, it } from 'vitest';
 import { wearing, enemy, run, packets } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
@@ -141,7 +143,7 @@ describe('B4 audit R3: projection semantics and active-effect receipt references
 describe('B4 audit R4: declaration-owned evidence and mechanism descriptions', () => {
   it('only B-07/B-10 are approved-provisional; Titan describes actual stack and cap rules', () => {
     const catalog = readItemCatalog();
-    expect(catalog.filter(i => i.evidenceStatus === 'approved-provisional').map(i => i.id).sort()).toEqual(['red-buff', 'runaans-hurricane']);
+    expect(catalog.filter(i => i.evidenceStatus === 'approved-provisional').map(i => i.id).sort()).toEqual(['red-buff', 'runaans-hurricane', ...Object.keys(EMBLEM_ITEMS)].sort());
     expect(catalog.find(i => i.id === 'runaans-hurricane')!.conventionIds).toContain('B-10');
     const titan = catalog.find(i => i.id === 'titans-resolve')!.effectDescriptions.join('；');
     for (const fragment of ['完成普攻', '每个正实际承伤包', '护盾承伤', '下一tick', '持续本场', '最多25层', '只授予一次', '零伤害']) expect(titan).toContain(fragment);

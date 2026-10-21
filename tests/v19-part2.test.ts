@@ -59,6 +59,8 @@ describe('v19 six costs',()=>{
     for(let level=1;level<=10;level++){
       expect(sixCostOddsBps(unlock-1,level)).toBe(0);expect(sixCostOddsBps(unlock,level)).toBe(level===10?180:20);
       expect(sixCostOddsBps(unlock+1,level)).toBe(level===10?184:24);
+      const projected=toPrivateSeatView({...army(['lux']),level});
+      expect(projected.shopOdds).toEqual({sixCostBps:level===10?180:20});
     }
     const before=generateShop(42,1,10,unlock-1),after=generateShop(42,1,10,unlock);
     expect(after.rngState).toBe(before.rngState);
@@ -212,6 +214,10 @@ describe('v19 Family heist and reunion',()=>{
   it.each([1,2,3] as const)('reunion boosts six real heroes at star %i, affects numeric stats, and never changes permanent ownership',star=>{
     const ids=['violet','vander','powder','warwick','jinx','vi'];let s=army(ids,star);s={...s,items:['warwick','jinx','vi'].map((id,i)=>({id:'item-'+(i+1),definitionId:'TFT13_Item_FamilyEmblemItem',location:{kind:'unit',unitId:id,slot:0}}))};
     expect(familyReunionParticipants(s)).toEqual(ids);const original=JSON.stringify(s),c=start(s).state;
+    expect(toPrivateSeatView({...s,combat:c} as MatchState).familyReunion).toMatchObject({eligible:true,participantIds:ids,downgraded:false,downgradedAtTick:null});
+    const basis=freezeCombatInput(s,42,s.resourceProvenance.entries.length);
+    const moved={...s,combat:c,combatInputBasis:basis,preparation:{...s.preparation,units:s.preparation.units.filter(u=>u.id!=='vi')}} as MatchState;
+    expect(toPrivateSeatView(moved).familyReunion).toMatchObject({eligible:true,participantIds:ids});
     for(const id of ids){expect(unit(c,id).effectiveStarLevel).toBe(star+1);expect(unit(c,id).maxHp).toBeGreaterThan(getUnitStats(id,star).health);expect(unit(c,id).ability).not.toEqual(buildStrategySnapshot({...s,items:[]}).units.find(u=>u.unitId===id)!.ability);}
     expect(JSON.stringify(s)).toBe(original);expect(start(s).state).toEqual(c);
     for(const missing of ids)expect(familyReunionParticipants({...s,preparation:{...s.preparation,units:s.preparation.units.filter(u=>u.id!==missing)}})).toEqual([]);
@@ -251,6 +257,9 @@ describe('v19 Family heist and reunion',()=>{
     while(c.status==='running'){
       const r=stepCombat(c);c=r.state;events.push(...r.events);
       if(!checkpoint&&c.units.some(u=>u.familyReunion?.downgradedAtTick!==undefined)){
+        const view=toPrivateSeatView({...s,combat:c} as MatchState).familyReunion;
+        expect(view).toMatchObject({eligible:true,participantIds:ids,downgraded:true,downgradedAtTick:c.tick});
+        expect(readG23MechanismState({...s,combat:c} as MatchState)!.familyReunion).toEqual(view);
         checkpoint=JSON.parse(JSON.stringify(c));expect(validateDynamicCombat(checkpoint!,basis,strategy)).toBe(true);
         const forged=structuredClone(c),u=forged.units.find(u=>u.alive&&u.familyReunion)!;
         (u as S13Unit).effectiveStarLevel=2;expect(()=>validateDynamicCombat(forged,basis,strategy)).toThrow();

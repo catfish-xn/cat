@@ -7,5 +7,8 @@ export async function contracts() {
     return { assertManifest, assetUrl, parseParticleDocument };
 }
 export async function unitDefinitions() {
-    return (await import('../../src/simulation/units.ts')).M5_UNIT_DEFINITIONS;
+    // The checked-in 3D map covers the original 1–5-cost roster only.
+    // v19 six-cost visuals are a separate integration task; never guess asset paths.
+    const all = (await import('../../src/simulation/units.ts')).M5_UNIT_DEFINITIONS;
+    return Object.fromEntries(Object.entries(all).filter(([, unit]) => unit.cost <= 5));
 }

@@ -53,7 +53,7 @@ describe('M1 crown history authority', () => {
   it('rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history', () => {
     const { forged, live } = forgedHistory();
     for (const input of [forged, JSON.stringify(forged)]) {
-      expect(() => restoreMatch(input)).toThrow('Invalid Match save: missing historical evidence / 缺少冠冕或猎头者历史证据，请提供完整 battles 回放');
+      expect(() => restoreMatch(input)).toThrow('Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人或梅尔历史证据，请提供完整 battles 回放');
       expect(() => restoreMatch(input, live.battles)).toThrow(/历史经济收据/);
     }
   });
@@ -70,7 +70,7 @@ describe('M1 crown history authority', () => {
     const { forged, live } = forgedHistory();
     const second = recordedCrownBattle(forged, live.history);
     expect(() => restoreMatch(second.state, second.battles)).toThrow(/历史经济收据/);
-    expect(() => validateBattleRecord(second.battles[1])).toThrow('Invalid Match save: missing historical evidence / 缺少冠冕或猎头者历史证据，请提供完整 battles 回放');
+    expect(() => validateBattleRecord(second.battles[1])).toThrow('Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人或梅尔历史证据，请提供完整 battles 回放');
     expect(() => validateBattleRecord(second.battles[1], [second.battles[0]])).toThrow(/历史经济收据/);
   });
   it('accepts the public-command no-crown control and resumes identically', () => {
@@ -87,7 +87,7 @@ describe('M1 crown history authority', () => {
       opening = accepted(equipItem(opening, opening.items.at(-1)!.id, holder.id, slot));
     }
     const first = recordedCrownBattle(opening), state = advance(first.state);
-    expect(() => restoreMatch(state)).toThrow('Invalid Match save: missing historical evidence / 缺少冠冕或猎头者历史证据，请提供完整 battles 回放');
+    expect(() => restoreMatch(state)).toThrow('Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人或梅尔历史证据，请提供完整 battles 回放');
     expect(() => restoreMatch(state, [])).toThrow(/缺少历史证据/);
     const text = serializeMatch(state, first.battles);
     const restored = restoreMatch(text, first.battles);

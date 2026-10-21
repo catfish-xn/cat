@@ -53,22 +53,22 @@ describe('M7 hero identity (G01)', () => {
       expect(archive[hero.id].cost, hero.id).toBe(hero.cost);
       for (const trait of archive[hero.id].traits) expect(S13_TRAIT_ZH[trait], trait).toBeTruthy();
       const open = heroTraitTags(hero.id).filter(label => label.open).map(label => label.name);
-      const names = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]]))};
-      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(25);
+      const names:Record<string,string> = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]])), 'form-swapper':'双形战士'};
+      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(30);
       expect(open.sort()).toEqual(hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id)).map(id => names[id]).sort());
     }
   });
-  it('opens all twenty-five enabled traits for all sixty G2-3 heroes', () => {
-    const names = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]]))};
+  it('v19: opens every native trait for all 63 heroes; Sisters requires the augment', () => {
+    const names:Record<string,string> = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]])), 'form-swapper':'双形战士'};
     const observed = new Set<string>();
-    expect(Object.values(M5_UNIT_DEFINITIONS)).toHaveLength(60);
+    expect(Object.values(M5_UNIT_DEFINITIONS)).toHaveLength(63);
     for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {
       const expected = hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id));
       expected.forEach(id => observed.add(id));
       expect(heroTraitTags(hero.id).filter(tag => tag.open).map(tag => tag.name).sort(), hero.id)
         .toEqual(expected.map(id => names[id]).sort());
     }
-    expect([...observed].sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).sort());
+    expect([...observed].sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).filter(id=>id!=='sisters').sort()); // v19 Sisters is augment-gated, not a native hero trait.
   });
   it('falls back to the code-drawn emblem for any hero without a bundled official icon', () => {
     for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {

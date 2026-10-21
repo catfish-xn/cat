@@ -10,7 +10,7 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 20_000 });
 // v15 seed selected by the independent loot/augment oracle, then verified via
 // public commands: same 65G/73HP/128 investment base and exact 2-7 loot vector.
-let preparation=api.createMatch(37354);
+let preparation=api.createMatch(51534); // v19 independent oracle: Investment I + the same 2-7 gold/item shape.
 while(preparation.roundDefinitionId!=='2-7'){
  if(preparation.phase==='choice'){const c=preparation.pendingChoice!;preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}
  else if(preparation.phase==='settlement')preparation=accepted(api.nextRound(preparation,preparation.round));
@@ -39,7 +39,7 @@ describe('B8 live gold before interest, randomized direct loot',()=>{
   expect(s.gold).toBe(v.after);expect(s.augmentProgress.investmentHp).toBe(v.hp);
   expect(s.augmentProgress.investmentHp).toBe(before.augmentProgress.investmentHp+8*v.interest);
   const drops=plan(before).encounterPlan.drops,ids=new Set(drops.map(d=>d.dropId));
-  expect(drops.map(d=>d.payload)).toEqual(independentLootPlan(37354,10).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
+  expect(drops.map(d=>d.payload)).toEqual(independentLootPlan(51534,10).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
   const receipts=s.m8.loot.receipts.filter(r=>ids.has(r.dropId));expect(receipts.map(r=>r.payload)).toEqual(drops.map(d=>d.payload));
   expect(receipts.slice(0,2).map(r=>r.grantedItemIds)).toEqual([[`item-${before.nextItemSerial}`],[`item-${before.nextItemSerial+1}`]]);
   expect(s.nextUnitSerial).toBe(before.nextUnitSerial);expect(s.nextItemSerial).toBe(before.nextItemSerial+3);
