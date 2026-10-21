@@ -18,6 +18,11 @@ import type { CellPoint } from '../../server/legend-motion';
 
 import { LEGEND_MODEL, loadLegendLease } from './legend-load';
 export { LEGEND_MODEL };
+/** Where the board owner's 河灵 stands: about one and a half cells outside the nearest deployable cell, never on one. */
+export function legendSpot(frame: Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'>): Vector3 {
+  const width = Math.sqrt(3) * frame.hexRadius;
+  return new Vector3(frame.origin.x + width * (frame.columns - 0.5) + width * 1.6, 0, frame.origin.y + frame.hexRadius * 1.5 * (frame.rows - 1));
+}
 /** Orb effects by tier (parent systems that already contain their static child; never both). The prismatic orb uses the
  * bounded Idle system, and opens with the gold RewardBoxOpen: no dedicated prismatic opening was extracted, so this is an
  * explicit display convention, not a name match. */
@@ -111,10 +116,9 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}`;
     if (key !== layoutKey) {
       layoutKey = key;
-      const right = frame.origin.x + width * (frame.columns - 0.5), left = frame.origin.x;
+      const left = frame.origin.x;
       const bottom = frame.origin.y + step * (frame.rows - 1), top = frame.origin.y;
-      // About one and a half cells outside the nearest deployable cell, never on one.
-      anchors.me.set(right + width * 1.6, 0, bottom);
+      anchors.me.copy(legendSpot(frame));
       anchors.opponent.set(left - width * 1.6, 0, top);
       anchors.enemySide.set(frame.origin.x + width * (frame.columns - 1) / 2, 0, top);
       anchors.center.set(frame.origin.x + width * (frame.columns - 0.5) / 2, 0, (top + bottom) / 2);

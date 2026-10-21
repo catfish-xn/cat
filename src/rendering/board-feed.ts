@@ -4,6 +4,7 @@
  * only through BoardControls, which BoardScene implements with its own 2D gesture code and the same session commands.
  */
 import type { DisplayCombatEvent } from '../presentation/combat-display';
+import type { PublicBoard, PublicOrbSummary } from '../server/protocol';
 import type { LegendWalk, LegendWalkRequest } from '../server/legend-motion';
 import { readLegendChoice } from './legend-choice';
 
@@ -87,6 +88,8 @@ export interface BoardFeedListener {
   screenBox?(id: string): BoardScreenBox | undefined;
   /** Online 选秀 to draw instead of the board, or null to show the board again (and release the stage). */
   carousel?(view: BoardCarousel | null): void;
+  /** Another seat's public build to draw instead of my board (3D 看对手), or null to show mine again. */
+  scout?(view: BoardScout | null): void;
   /** A little-legend walk the room took (any seat, either scene). */
   legendWalk?(walk: BoardLegendWalk): void;
 }
@@ -128,6 +131,12 @@ export interface BoardCarouselSlot {
   /** My click on it is still waiting for the server's answer. */
   readonly pending: boolean;
 }
+/**
+ * 3D 看对手: the seat the scout panel shows, as published to every seat (SeatPublic.publicBoard and .orbs, passed as
+ * received). The server never sends another seat's gold, XP, streak or shop; the 3D layer still copies only the fields
+ * it draws (scout-stage.ts readScout).
+ */
+export interface BoardScout { readonly seatId: string; readonly name: string; readonly board?: PublicBoard; readonly orbs?: PublicOrbSummary | null }
 /** The 3D carousel's pointer, replayed as the 2D carousel panel's own slot click and hover. */
 export interface CarouselControls { pick(slot: number): void; hover(slot: number | null): void }
 
@@ -157,11 +166,18 @@ export function publishCarousel(build: () => BoardCarousel | null): boolean {
   listener.carousel(build());
   return true;
 }
+/** Only a layer that draws scouting gets the build called; true when one does (the 2D panel then shrinks to its strip). */
+export function publishScout(build: () => BoardScout | null): boolean {
+  if (!listener?.scout) return false;
+  listener.scout(build());
+  return true;
+}
 export function publishLegendWalk(walk: BoardLegendWalk): void { listener?.legendWalk?.(walk); }
 /** One 3D layer at a time; the returned function detaches it. */
 export function subscribeBoardFeed(next: BoardFeedListener): () => void {
   listener = next; listenerGeneration++;
-  return () => { if (listener === next) listener = null; };
+  // Detaching also moves the generation on, so whatever a 3D layer drew (carousel, scout) goes back to 2D on the next frame.
+  return () => { if (listener === next) { listener = null; listenerGeneration++; } };
 }
 /** BoardScene registers its controls while it runs; the returned function withdraws them. */
 export function provideBoardControls(next: BoardControls): () => void {

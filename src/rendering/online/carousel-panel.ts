@@ -128,7 +128,7 @@ export class CarouselPanel {
     this.bar.hidden = !open || this.side !== 'board';
   }
   private onKey = (event: KeyboardEvent) => {
-    if (event.code !== SWITCH_KEY || !this.view || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+    if (event.code !== SWITCH_KEY || event.defaultPrevented || !this.view || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
     const target = event.target;
     if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, button, [role="button"]'))) return;
     event.preventDefault(); this.toggleSide();

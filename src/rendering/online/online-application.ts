@@ -9,7 +9,7 @@ import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/matc
 import { displayUnitName } from '../display-names';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
-import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, setBoardLegends } from '../board-feed';
+import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, publishScout, setBoardLegends } from '../board-feed';
 import { readLegendChoice } from '../legend-choice';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { getHeroIdentity } from '../../presentation/hero-identity';
@@ -19,7 +19,8 @@ import { EconomyHint } from './economy-hint';
 import { LeftPanelToggle } from './left-panel-toggle';
 import { OnlineSound, type SoundCue } from './sound';
 import { Lobby } from './lobby';
-import { OpponentBoardPanel } from './opponent-board';
+import { OpponentBoardPanel, publicTraitRows } from './opponent-board';
+import { traitColumnShowRows } from '../trait-column';
 import { PlayersSidebar } from './players-sidebar';
 import type { CarouselView, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
 import { EliminationCard, RankingOverlay } from './ranking';
@@ -97,6 +98,7 @@ export class OnlineApplication implements SceneApplication {
   /** board-feed subscription the 3D carousel was last sent to, and the next seat release that changes what it draws. */
   private carouselFeedGeneration = -1;
   private carouselNextRelease = Infinity;
+  private scoutFeedGeneration = -1;
   private withdrawCarouselControls: () => void;
   private withdrawLegendControls: () => void;
   /** The room's combat phase (frozen roster or battle), also before my seat's own state shows the battle (v15 orb claims). */
@@ -114,7 +116,7 @@ export class OnlineApplication implements SceneApplication {
     app.prepend(this.lobby.root);
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
     const frame = document.getElementById('board-frame') ?? app;
-    this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => this.sidebar.setViewing(null));
+    this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => { this.sidebar.setViewing(null); this.syncScout(); });
     this.carousel = new CarouselPanel(frame, (slot, view) => this.pickCarousel(slot, view), () => this.syncCarouselMode());
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
@@ -243,10 +245,13 @@ export class OnlineApplication implements SceneApplication {
   private onView(view: PlayerView) {
     if (this.mode !== 'online-lobby') this.viewSound(view);
     if (this.mode === 'active') this.noteOutcome(view);
+    // 3D 看对手: my battle starting brings my board back (another seat's battle is not sent to me).
+    if (view.phase.kind === 'combat' && this.view?.phase.kind !== 'combat' && this.opponentBoard.drawnIn3d) this.opponentBoard.close();
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
     // Cosmetic: the little legends the 3D layer stands beside the board (a seat from an older server names none).
     const legendOf = (seatId: string | null) => view.seats.find(seat => seat.seatId === seatId)?.legend ?? null;
     setBoardLegends({ me: legendOf(view.mySeatId) ?? readLegendChoice(), opponent: view.opponentSeatId ? legendOf(view.opponentSeatId) ?? 'default' : null });
+    this.syncScout();
     this.syncSpectating(view);
     this.syncCarousel(view);
     this.syncBattleViews();
@@ -367,8 +372,23 @@ export class OnlineApplication implements SceneApplication {
     const view = this.view, seat = view?.seats.find(candidate => candidate.seatId === seatId);
     if (!view || !seat) return;
     this.elimination.hide(); // opening a board means watching on
-    this.opponentBoard.toggle(seat, seatId === view.mySeatId);
-    this.sidebar.setViewing(this.opponentBoard.openSeatId);
+    // In 3D my own avatar is the way back to my board.
+    if (seatId === view.mySeatId && this.opponentBoard.drawnIn3d) this.opponentBoard.close();
+    else this.opponentBoard.toggle(seat, seatId === view.mySeatId);
+    this.sidebar.setViewing(this.opponentBoard.openSeatId); this.syncScout();
+  }
+  /**
+   * ?render=3d: the open seat (never mine) is drawn on the 3D board from its public build only; the panel shrinks to its
+   * strip and the trait column shows that seat's traits. Without a 3D layer nothing changes.
+   */
+  private syncScout() {
+    this.scoutFeedGeneration = boardFeedGeneration();
+    const view = this.view, seatId = this.opponentBoard.openSeatId;
+    const seat = seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;
+    const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs } : null) && !!seat;
+    this.opponentBoard.drawnIn3d = drawn;
+    this.opponentBoard.root.toggleAttribute('data-combat', view?.phase.kind === 'combat');
+    traitColumnShowRows(drawn ? publicTraitRows(seat.publicBoard ?? { units: [] }, this.session.state.preparation.board) : null);
   }
   private syncSpectating(view: PlayerView) {
     const me = view.seats.find(seat => seat.seatId === view.mySeatId);
@@ -413,6 +433,7 @@ export class OnlineApplication implements SceneApplication {
     this.sidebar.tick(); this.carousel.tick(); this.syncSummary(); this.flushOutcome();
     // A 3D layer that subscribed after the last view (or a release time that passed) gets the carousel again.
     if (this.carousel.showing && (this.carouselFeedGeneration !== boardFeedGeneration() || this.carouselReleaseDue())) this.publishCarousel3d();
+    if (this.opponentBoard.openSeatId && this.scoutFeedGeneration !== boardFeedGeneration()) this.syncScout();
     // Last three seconds of a preparation: one tick per second.
     const seconds = this.mode === 'active' && !this.spectating && this.view?.phase.kind === 'preparation' ? this.sidebar.secondsLeft() : null;
     if (seconds !== this.lastTick) { this.lastTick = seconds; if (seconds !== null && seconds >= 1 && seconds <= 3) this.sound.play('tick'); }
