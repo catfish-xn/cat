@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AdditiveBlending, BoxGeometry, BufferGeometry, Float32BufferAttribute, Group, Mesh, PerspectiveCamera, Quaternion, ShaderMaterial, Texture, Vector3 } from 'three';
+import { AdditiveBlending, BoxGeometry, BufferGeometry, Float32BufferAttribute, Group, Mesh, PerspectiveCamera, Quaternion, ShaderMaterial, Texture, Uint8BufferAttribute, Vector3 } from 'three';
 import { loadParticleEffect, parseParticleDocument, ParticleEffect, type ParticleDocumentV2,
   type ParticleEmitterV2 } from '../src/rendering3d';
 
@@ -20,9 +20,32 @@ describe('particle mesh vertex color runtime', () => {
     expect(mesh(fx).material.vertexColors).toBe(true);
     expect(mesh(fx, 1).material.vertexColors).toBe(false);
     expect(mesh(fx).material.vertexShader).toContain('vParticleColor=color;');
+    expect(mesh(fx).material.vertexShader).toContain('vParticleColor=vec4(color,1.0);');
+    expect(mesh(fx).material.vertexShader).toContain('vParticleColor=vec4(1.0);');
     expect(mesh(fx).material.fragmentShader).toContain('texel.a*opacity*vParticleColor.a');
+    expect(mesh(fx).geometry).toBe(geometry);
+    expect(mesh(fx).material.defines.PARTICLE_MESH_RGBA).toBeUndefined();
+    expect(mesh(fx).material.vertexShader).not.toMatch(/attribute\s+vec[34]\s+color\s*;/);
+    for (const shader of [mesh(fx).material.vertexShader, mesh(fx).material.fragmentShader]) {
+      expect(shader.match(/varying vec4 vParticleColor;/g)).toHaveLength(1);
+      expect(shader).not.toContain('vMeshColor');
+    }
     fx.update(.5); fx.dispose();
     expect(values).toEqual(before); expect(disposed).not.toHaveBeenCalled(); geometry.dispose();
+  });
+  it('borrows normalized U8 RGBA including alpha with a white fallback for ordinary particles', () => {
+    const geometry = new BoxGeometry();
+    const values = new Uint8Array(geometry.getAttribute('position').count * 4).fill(128);
+    const color = new Uint8BufferAttribute(values, 4, true);
+    geometry.setAttribute('color', color);
+    const fx = new ParticleEffect(doc(quad({ kind: 'mesh', mesh: 'synthetic.glb' }), quad()), { mesh: () => geometry });
+    expect(mesh(fx).geometry).toBe(geometry); expect(mesh(fx).geometry.getAttribute('color')).toBe(color);
+    expect(color.normalized).toBe(true); expect(color.getW(0)).toBe(128 / 255);
+    expect(mesh(fx).material.vertexColors).toBe(true); expect(mesh(fx, 1).material.vertexColors).toBe(false);
+    expect(mesh(fx).material.vertexShader).toContain('vParticleColor=vec4(1.0);');
+    expect(mesh(fx).material.fragmentShader).toContain('texel.rgb*tint*vParticleColor.rgb');
+    expect(mesh(fx).material.fragmentShader).toContain('texel.a*opacity*vParticleColor.a');
+    fx.dispose(); geometry.dispose();
   });
 });
 

@@ -45,6 +45,8 @@ export function orbPayloadName(payload: LootPayload): string {
   if (payload.kind === 'gold') return `${payload.quantity} 金币`;
   if (payload.kind === 'consumable') return `${consumableName(payload.definitionId)}${count}`;
   if (payload.kind === 'item') return `${itemDisplayName(payload.definitionId)}${count}`;
+  // v16 epic rewards (成装锻造器, 神器装备锻造器): the forge's own name, never the unit fallback ("未知单位").
+  if (payload.kind === 'forge') return payloadLabel(payload).text;
   return `${displayUnitName(payload.definitionId)}${stars(payload)}${count}`;
 }
 /**
@@ -70,6 +72,8 @@ export function orbReceiptText(receipt: LootReceipt): string | null {
   if (receipt.resolution === 'capacity-sold') return `备战席已满，${name} 自动出售 +${receipt.gold ?? 0} 金币`;
   if (receipt.resolution === 'gold') return `${name} 卡池缺货，补偿 +${receipt.gold ?? 0} 金币`;
   if (payload.kind === 'unit') return `${name} 已进入备战席`;
+  // A forge is not an item: claiming it opens the four-way choice of what to forge.
+  if (payload.kind === 'forge') return `${name} · 进入四选一`;
   return `${name} 已放入物品栏`;
 }
 

@@ -28,7 +28,11 @@ const sco = (metadata = 'PivotPoint=4 5 6\nVertexColors=1\n') => Buffer.from(
 const inspect = (bytes: Buffer, extension: string) => {
   const result = convertParticleMesh(bytes, extension), glb = readGlb(result.glb);
   const attrs = glb.document.meshes[0].primitives[0].attributes;
-  return { result, glb, positions: readAccessor(glb, attrs.POSITION), colors: attrs.COLOR_0 === undefined ? undefined : readAccessor(glb, attrs.COLOR_0) };
+  const colorAccessor = glb.document.accessors[attrs.COLOR_0];
+  // readAccessor returns raw integers; mirror GPU normalization for U8 colors.
+  const colors = attrs.COLOR_0 === undefined ? undefined : readAccessor(glb, attrs.COLOR_0)
+    .map((rgba: number[]) => rgba.map(n => colorAccessor.componentType === 5121 && colorAccessor.normalized ? Math.fround(n / 255) : n));
+  return { result, glb, positions: readAccessor(glb, attrs.POSITION), colors };
 };
 const c = (constantValue: unknown) => ({ constantValue });
 const emitter = (fields = {}) => ({ isSingleParticle: true, particleLifetime: c(2), ...fields });
@@ -38,15 +42,23 @@ const convert = (emitters: unknown[], system = {}, options = {}) => convertParti
 
 describe('carousel remainder uses generic static mesh formats', () => {
   it.each(['.scb', '.sco'])('preserves reflected winding, RGBA seams and authored vertices in %s', ext => {
-    const { result, positions, colors } = inspect(ext === '.scb' ? scb() : sco(), ext);
+    const { result, glb, positions, colors } = inspect(ext === '.scb' ? scb() : sco(), ext);
+    const colorAccessor = glb.document.accessors[glb.document.meshes[0].primitives[0].attributes.COLOR_0];
+    expect(colorAccessor).toMatchObject({ componentType: 5121, normalized: true, type: 'VEC4', count: 3 });
     expect(positions).toEqual([[-1, 0, 0], [-0, 0, 3], [-0, 2, 0]]);
     expect(colors).toEqual([[1, 0, 0, 1], [0, 0, 1, Math.fround(128 / 255)], [0, 1, 0, 0]]);
     expect(result.report).toMatchObject({ vertexColors: true, locatorPolicy: 'metadata-only-preserve-authored-vertices' });
+    expect(result.report.center).toEqual(ext === '.scb' ? [4, 5, 6] : [7, 8, 9]);
+    expect(result.report.centralPoint).toEqual(result.report.center);
+    if (ext === '.sco') {
+      expect(result.report.pivot).toEqual([4, 5, 6]); expect(result.report.pivotPoint).toEqual([4, 5, 6]);
+    }
   });
   it('reads SCO center-only and pivot-only variants without recentering', () => {
     for (const metadata of ['', 'PivotPoint=4 5 6\n', 'VertexColors=0\n', 'PivotPoint=4 5 6\nVertexColors=0\n']) {
-      const { positions, colors } = inspect(sco(metadata), '.sco');
+      const { result, positions, colors } = inspect(sco(metadata), '.sco');
       expect(positions).toEqual([[-1, 0, 0], [-0, 0, 3], [-0, 2, 0]]); expect(colors).toBeUndefined();
+      expect(result.report.pivot).toEqual(metadata.includes('PivotPoint') ? [4, 5, 6] : [7, 8, 9]);
     }
   });
   it('keeps malformed layouts and colors fail-closed with stable codes', () => {
