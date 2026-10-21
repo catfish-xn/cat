@@ -283,6 +283,7 @@ export class StrategyPanel {
       if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 6) drag.moved = true;
       if (!drag.moved) return;
       drag.element.classList.add('dragging');
+      this.moveDragGhost(drag.element, event.clientX, event.clientY);
       if (drag.tool) {
         const target = this.toolTarget(drag.tool, event.clientX, event.clientY), key = target ? JSON.stringify(target.target) : '';
         if (key === drag.target) return;
@@ -299,7 +300,7 @@ export class StrategyPanel {
     const release = (event: PointerEvent) => {
       const drag = this.itemDrag;
       if (!drag || event.pointerId !== drag.gesture.pointerId) return;
-      this.itemDrag = null; drag.element.classList.remove('dragging');
+      this.itemDrag = null; drag.element.classList.remove('dragging'); this.dropDragGhost();
       if (!this.router.release(drag.gesture)) return;
       if (drag.element.hasPointerCapture(event.pointerId)) drag.element.releasePointerCapture(event.pointerId);
       if (drag.tool) {
@@ -369,7 +370,23 @@ export class StrategyPanel {
       if (target.hasPointerCapture(gesture.pointerId)) target.releasePointerCapture(gesture.pointerId);
       this.itemDrag = null;
     }
+    this.dropDragGhost();
   }
+  /**
+   * The dragged item's icon under the pointer, as TFT carries an item to a unit: a copy of the card's icon at the
+   * cursor (the card itself stays in its slot, dimmed). It takes no pointer events, so drop targets read as before.
+   */
+  private dragGhost: HTMLElement | null = null;
+  private moveDragGhost(card: HTMLElement, x: number, y: number): void {
+    if (!this.dragGhost) {
+      const ghost = element('div', '', 'item-drag-ghost'), icon = card.firstElementChild;
+      ghost.append(icon ? icon.cloneNode(true) : element('span', card.textContent ?? ''));
+      document.body.append(ghost);
+      this.dragGhost = ghost;
+    }
+    this.dragGhost.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+  }
+  private dropDragGhost(): void { this.dragGhost?.remove(); this.dragGhost = null; }
   reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
   destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.awayChip?.remove(); this.awayChip = null; this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void {
