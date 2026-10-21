@@ -162,7 +162,8 @@ it('restores the naturally obtained pending black-market reward and the next bat
  const state=publicMarket();
  expect(state.pendingChoice).toMatchObject({kind:'blackMarket',payload:{source:'black-market',grantItem:false}});
  expectRoundTripAndNextBattle(state);
-});
+ // 临时、用户 10-21 批准：只因 CI 机器计时超时（断言都过），按约 2 倍放宽；断言不变。5 秒 → 11 秒（原因：首个黑市移到第 12 回合，路线变长；按 CI 实测 5.19 秒取约 2 倍，本机 2.611 秒）。
+},11_000);
 
 it('restores each naturally offered bundle independently, including non-first candidates, without duplicate grants',()=>{
  const pending=publicMarket(),choice=pending.pendingChoice!;
