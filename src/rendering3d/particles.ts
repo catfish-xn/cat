@@ -1,14 +1,15 @@
 import { AdditiveBlending, BufferGeometry, Color, DoubleSide, Group, Mesh, MultiplyBlending, NormalBlending,
-  PlaneGeometry, ShaderMaterial, TextureLoader, Vector3, type Camera, type Texture } from 'three';
+  PlaneGeometry, Quaternion, ShaderMaterial, TextureLoader, Vector3, type Camera, type Texture } from 'three';
 import { assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type ParticleEmitter } from './contracts';
 
 import { parseParticleDocument, parseParticleDocumentV1 } from './particle-validation';
-import { fragmentShader, vertexShader, sampleCurve } from './particle-common';
+import { colorChannels, fragmentShader, vertexShader, sampleCurve, type ParticleBudget, type ParticleMaterialPool } from './particle-common';
 import { ParticleEffectV2 } from './particles-v2';
 export { parseParticleDocument } from './particle-validation';
-export { sampleCurve } from './particle-common';
+export { sampleCurve, ParticleMaterialPool, type ParticleBudget } from './particle-common';
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
-interface Particle { emitter: ParticleEmitter; mesh: Mesh<PlaneGeometry, ShaderMaterial>; origin: Vector3 }
+const ZERO = [0, 0, 0] as const, scratch = new Vector3();
+interface Particle { emitter: ParticleEmitter; mesh: Mesh<PlaneGeometry, ShaderMaterial>; origin: Vector3; key: string }
 export interface ParticleOptions {
   scale?: number;
   maxParticles?: number;
@@ -19,6 +20,10 @@ export interface ParticleOptions {
   texture?: (path: string) => Texture | undefined;
   /** Static, UV-mapped geometry in League units. Borrowed; effect owns its materials. */
   mesh?: (path: string) => BufferGeometry | undefined;
+  /** Materials are taken from and handed back to this pool instead of built and disposed per particle. */
+  materials?: ParticleMaterialPool;
+  /** Shared live-particle cap across effects; particles past it are not born. */
+  budget?: ParticleBudget;
 }
 export interface ParticleSkip { emitterIndex: number; kind: string; reason: string }
 /** Short, stable code for a failed mesh read: HTTP status, the adapter's own code, or `read-failed`. */
@@ -39,8 +44,11 @@ class ParticleEffectV1 {
   private elapsed = 0;
   private geometry: PlaneGeometry;
   private closed = false;
+  private materials?: ParticleMaterialPool;
+  private budget?: ParticleBudget;
   constructor(document: unknown, options: ParticleOptions = {}) {
     const doc = parseParticleDocumentV1(document);
+    this.materials = options.materials; this.budget = options.budget;
     const scale = options.scale ?? 0.6, limit = options.maxParticles ?? 10000;
     if (!finite(scale) || scale <= 0 || !Number.isInteger(limit) || limit < 0) throw new Error('invalid-particle-options');
     if (doc.emitters.reduce((sum, e) => sum + (e.kind === 'sprite' ? e.count : 0), 0) > limit) {
@@ -63,13 +71,17 @@ class ParticleEffectV1 {
             const z = draw() * 2 - 1, phi = draw() * Math.PI * 2, r = Math.cbrt(draw()) * shape.radius;
             origin.set(Math.sqrt(1 - z * z) * Math.cos(phi), Math.sqrt(1 - z * z) * Math.sin(phi), z).multiplyScalar(r);
           }
-          const material = new ShaderMaterial({ vertexShader, fragmentShader, transparent: true, depthWrite: false, side: DoubleSide,
-            blending: emitter.blend === 'additive' ? AdditiveBlending : emitter.blend === 'multiply' ? MultiplyBlending : NormalBlending,
-            uniforms: { map: { value: texture ?? null }, hasMap: { value: !!texture }, tint: { value: new Color(1, 1, 1) },
-              opacity: { value: 1 }, dissolve: { value: 0 }, tiles: { value: [frames?.columns ?? 1, frames?.rows ?? 1] }, frame: { value: 0 } } });
+          if (this.budget && this.budget.live >= this.budget.max) continue;
+          const blending = emitter.blend === 'additive' ? AdditiveBlending : emitter.blend === 'multiply' ? MultiplyBlending : NormalBlending;
+          const uniforms = { map: { value: texture ?? null }, hasMap: { value: !!texture }, tint: { value: new Color(1, 1, 1) },
+            opacity: { value: 1 }, dissolve: { value: 0 }, tiles: { value: [frames?.columns ?? 1, frames?.rows ?? 1] }, frame: { value: 0 } };
+          const key = `v1/${blending}`;
+          const material = options.materials?.take(key, uniforms) ?? new ShaderMaterial({ vertexShader, fragmentShader, transparent: true,
+            depthWrite: false, side: DoubleSide, blending, uniforms });
           const mesh = new Mesh(this.geometry, material);
           this.object.add(mesh);
-          this.particles.push({ emitter, mesh, origin });
+          this.particles.push({ emitter, mesh, origin, key });
+          if (this.budget) this.budget.live++;
         }
       }
       this.update(0);
@@ -81,6 +93,8 @@ class ParticleEffectV1 {
     if (this.closed) return;
     if (!finite(seconds) || seconds < 0) throw new Error('invalid-delta');
     this.elapsed += seconds;
+    // Camera-facing in the effect parent's space, the same for every particle this frame.
+    const facing = camera ? this.object.getWorldQuaternion(new Quaternion()).invert().multiply(camera.getWorldQuaternion(new Quaternion())) : null;
     for (const { emitter: e, mesh, origin } of this.particles) {
       const age = this.elapsed - (e.delay ?? 0);
       mesh.visible = age >= 0 && age < e.lifetime;
@@ -88,20 +102,16 @@ class ParticleEffectV1 {
       const t = age / e.lifetime, drag = e.drag ?? 0;
       const velocityFactor = drag === 0 ? age : -Math.expm1(-drag * age) / drag;
       const gravityFactor = drag === 0 ? age * age / 2 : (age - velocityFactor) / drag;
-      mesh.position.copy(origin).addScaledVector(new Vector3(...(e.velocity ?? [0, 0, 0])), velocityFactor)
-        .addScaledVector(new Vector3(...(e.gravity ?? [0, 0, 0])), gravityFactor);
+      mesh.position.copy(origin).addScaledVector(scratch.set(...(e.velocity ?? ZERO)), velocityFactor)
+        .addScaledVector(scratch.set(...(e.gravity ?? ZERO)), gravityFactor);
       mesh.scale.setScalar(sampleCurve(e.size, t, 1));
-      if (camera) {
-        camera.getWorldQuaternion(mesh.quaternion);
-        // Convert world-facing orientation into the effect parent's local space.
-        mesh.quaternion.premultiply(this.object.getWorldQuaternion(this.object.quaternion.clone()).invert());
-      }
+      if (facing) mesh.quaternion.copy(facing);
       const u = mesh.material.uniforms;
       u.opacity.value = sampleCurve(e.opacity, t, 1);
       u.dissolve.value = sampleCurve(e.dissolve, t, 0);
       if (e.color) {
-        const channels = [0, 1, 2].map(channel => sampleCurve(e.color!.map(k => ({ time: k.time, value: k.value[channel] })), t, 1));
-        (u.tint.value as Color).setRGB(channels[0], channels[1], channels[2]);
+        const [r, g, b] = colorChannels(e.color);
+        (u.tint.value as Color).setRGB(sampleCurve(r, t, 1), sampleCurve(g, t, 1), sampleCurve(b, t, 1));
       }
       if (e.frames) {
         const count = e.frames.columns * e.frames.rows, frame = Math.floor(age * e.frames.fps);
@@ -112,7 +122,8 @@ class ParticleEffectV1 {
   dispose(): void {
     if (this.closed) return;
     this.closed = true;
-    this.particles.forEach(p => p.mesh.material.dispose());
+    this.particles.forEach(p => this.materials ? this.materials.give(p.key, p.mesh.material) : p.mesh.material.dispose());
+    if (this.budget) this.budget.live -= this.particles.length;
     this.geometry.dispose(); this.object.clear(); this.object.removeFromParent(); this.particles = [];
   }
 }
@@ -142,7 +153,9 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
     /** Receives an asset-root URL; the returned value is validated before any resource loads. */
     readJson?: (url: string) => Promise<unknown>;
     /** Adapter supplies geometry from one static mesh (or rejects); unavailable emitters are skipped. */
-    readMesh?: (url: string) => Promise<BufferGeometry> } = {}): Promise<ParticleEffect> {
+    readMesh?: (url: string) => Promise<BufferGeometry>;
+    /** The readers' textures and geometry stay theirs (a caching reader): the effect never disposes them. */
+    borrowed?: boolean } = {}): Promise<ParticleEffect> {
   const entry = Object.hasOwn(manifest.effects ?? {}, id) ? manifest.effects![id] : undefined;
   if (manifest.schemaVersion !== 1 || !entry) throw new Error('unknown-effect');
   const root = options.root ?? DEFAULT_ASSET_ROOT;
@@ -157,8 +170,10 @@ export async function loadParticleEffect(manifest: AssetManifest, id: string,
   const loadedGeometry = new Set<BufferGeometry>();
   /** Why each unusable mesh was dropped; appended to its skip reason. */
   const meshFailures = new Map<string, string>();
-  const cleanup = () => { new Set(textures.values()).forEach(t => t.dispose()); textures.clear();
-    loadedGeometry.forEach(g => g.dispose()); loadedGeometry.clear(); meshes.clear(); };
+  const cleanup = () => {
+    if (!options.borrowed) { new Set(textures.values()).forEach(t => t.dispose()); loadedGeometry.forEach(g => g.dispose()); }
+    textures.clear(); loadedGeometry.clear(); meshes.clear();
+  };
   try {
     if (doc.schemaVersion === 2 && options.readMesh) {
       const attempted = new Set<string>();

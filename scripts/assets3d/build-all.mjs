@@ -1,3 +1,4 @@
+import { loadUnitMap } from './local-config.mjs';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, resolve, relative, sep, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,7 +25,7 @@ async function artifactBytes(root, directory = root) {
 export async function buildAll({ units = 'all', cost, source = 'assets3d-local/trial/local',
   out = 'assets3d-local/out/batch', force = false, definitions, map, buildUnit = build } = {}) {
   definitions ??= await unitDefinitions();
-  map ??= JSON.parse(await readFile(new URL('./unit-map.json', import.meta.url), 'utf8'));
+  map ??= await loadUnitMap();
   const selected = selectUnits(definitions, units, cost), output = await safeOutputPath(out, { directory: true });
   const rel = relative(resolve(source), output);
   if (!rel || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`))) throw new Error('output-overlaps-source');
@@ -48,7 +49,7 @@ export async function buildAll({ units = 'all', cost, source = 'assets3d-local/t
     }
     report.mapping.mapped++;
     try {
-      const result = await buildUnit({ units: id, source, out: join(output, 'units', id), force, batch: true });
+      const result = await buildUnit({ units: id, source, out: join(output, 'units', id), force, batch: true, map });
       const unit = result.units[id];
       entry.vertices = unit.vertices; entry.bones = unit.bones;
       const clips = unit.animations.map(a => a.name);

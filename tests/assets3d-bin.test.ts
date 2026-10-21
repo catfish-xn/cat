@@ -68,14 +68,14 @@ describe('bounded PROP/PTCH parser', () => {
 });
 
 describe('initial material and action binding', () => {
-  it('replays the names/path-only real BIN fixture against step2, exposing the Vi initial/dynamic material difference', async () => {
+  it('checks initial/dynamic material differences using invented names and paths', async () => {
     const fixture = JSON.parse(await readFile(new URL('../scripts/assets3d/fixtures/step2-bindings.json', import.meta.url), 'utf8')) as Record<string, {
       mesh: string; skeleton: string; texture: string; material: string; hidden: string;
       overrides: { submesh: string; texture?: string; material?: string }[];
       materials: { name: string; samplers: { name: string; texture: string }[] }[];
       animations: Record<string, string>;
     }>;
-    const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.json', import.meta.url), 'utf8'));
+    const map = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.example.json', import.meta.url), 'utf8'));
     for (const id of ['jinx', 'vi']) {
       const f = fixture[id], config = map[id];
       const materials = f.materials.map(m => ({ ...obj('StaticMaterialDef', { name: m.name,
@@ -89,7 +89,7 @@ describe('initial material and action binding', () => {
         if (binding.hidden.includes(name)) { expect(binding.textures).not.toHaveProperty(name); continue; }
         const expected = canonicalAsset(config.base + '/' + path), actual = canonicalAsset(binding.textures[name]);
         if (id === 'vi') {
-          expect(actual).toBe('assets/characters/tft13_vi/skins/base/tft13_vi_base_tx_cm.tex');
+          expect(actual).toBe('synthetic/initial.tex');
           expect(actual).not.toBe(expected);
           expect(f.materials.find(m => m.name.endsWith('/RebelStatus'))?.samplers.some(s => canonicalAsset(s.texture) === expected)).toBe(true);
         } else expect(actual).toBe(expected);
@@ -119,7 +119,7 @@ describe('initial material and action binding', () => {
     expect(() => skinBindings([document(skin, material)], ['Body'])).toThrow('missing-material-diffuse');
   });
   it('uses graph aliases, skips non-atomic sequences, reports ambiguous or missing actions, and avoids spell hit as hit', async () => {
-    const rules = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.json', import.meta.url), 'utf8')).$animationRules;
+    const rules = JSON.parse(await readFile(new URL('../scripts/assets3d/unit-map.example.json', import.meta.url), 'utf8')).$animationRules;
     const atomic = (name: string, path: string) => [{ hash: fnv1a(name) }, obj('AtomicClipData', { mFlags: 2,
       mAnimationResourceData: obj('Resource', { mAnimationFilePath: path }) })];
     const graph = obj('AnimationGraphData', { mClipDataMap: { entries: [atomic('Idle1', 'unit_idle1.anm'),
@@ -133,12 +133,12 @@ describe('initial material and action binding', () => {
     expect(selectAnimations(clips, rules, { idle: 'unit_idle2' }).mapped.idle).toBe('unit_idle2');
   });
   it('owns extensionless character PROP dependencies in cost-filtered extraction plans', () => {
-    expect(characterForPath('characters/tft13_vi')).toBe('tft13_vi');
+    expect(characterForPath('characters/demo_unit')).toBe('demo_unit');
     expect(propertyReferences(prop('Example', field('texture', 16, str('assets/shared/body.tex'))))).toEqual(['assets/shared/body.tex']);
     expect(propertyReferences(prop('Example', field('mesh', 16, str('assets/shared/triangle.sco'))))).toEqual(['assets/shared/triangle.sco']);
-    expect(characterForPath('data/characters/tft13_vi/skins/skin0.bin')).toBe('tft13_vi');
-    expect(characterForPath('assets/characters/tft13_vi/skins/base/vi.tex')).toBe('tft13_vi');
-    expect(characterForPath('characters/tft13_vi_extra')).toBe('tft13_vi_extra');
+    expect(characterForPath('data/characters/demo_unit/skins/skin0.bin')).toBe('demo_unit');
+    expect(characterForPath('assets/characters/demo_unit/skins/base/vi.tex')).toBe('demo_unit');
+    expect(characterForPath('characters/demo_unit_extra')).toBe('demo_unit_extra');
     expect(canonicalAsset('ASSETS/Test.TFT_Set13.tex')).toBe('assets/test.tex');
   });
 });

@@ -51,6 +51,54 @@ beforeAll(() => { cache = prepareInput(buildBattles()); });
 const battles = () => copyInput(cache!);
 
 describe('C6 replay playback in RemoteSession', () => {
+  it('changes the state identity on watch entry and exit and restores my own combat view', () => {
+    const { state, pvp } = battles();
+    const own = toCombatReplayFor(state, pvp.battle.a.seatId)!.replay;
+    const other = toCombatReplayFor(state, pvp.battle.b.seatId)!.replay;
+    const session = new RemoteSession(client, undefined, frozen);
+    session.receiveReplay(own);
+    const before = session.state;
+    session.watchReplay(pvp.battle.b.seatId, other);
+    expect(session.state).not.toBe(before);
+    expect(session.combatView).toBe(other.initial);
+    const watching = session.state;
+    session.stopWatching();
+    expect(session.state).not.toBe(watching);
+    expect(session.state.phase).toBe('combat');
+    expect(session.watchedSeat).toBeNull();
+    expect(session.combatView).toBe(own.initial);
+    expect(session.playingBack).toBe(true);
+  });
+
+  it('plays a watched battle in combat phase without my own replay, including after elimination', () => {
+    const { state, pvp } = battles();
+    const replay = toCombatReplayFor(state, pvp.battle.b.seatId)!.replay;
+    for (const spectating of [false, true]) {
+      const session = new RemoteSession(client, undefined, frozen);
+      session.spectating = spectating;
+      const before = session.state;
+      expect(session.inBattle).toBe(false);
+      session.watchReplay(pvp.battle.b.seatId, replay);
+      expect(session.state).not.toBe(before);
+      expect(session.state.phase).toBe('combat');
+      expect(session.combatView).toBe(replay.initial);
+      expect(session.holdsBattle(before)).toBe(true);
+      // A same-round authoritative update must keep the watched battle playing.
+      const updated = { ...before, gold: before.gold + 1 };
+      session.receiveState(updated);
+      expect(session.state.phase).toBe('combat');
+      expect(session.watchedSeat).toBe(pvp.battle.b.seatId);
+      for (let index = 0; index < replay.ticks.length; index++) session.advanceDisplay(COMBAT_TICK_MS);
+      expect(session.combatView).toEqual(replay.terminal);
+      const watching = session.state;
+      session.stopWatching();
+      expect(session.state).not.toBe(watching);
+      expect(session.state).toBe(updated);
+      expect(session.combatView).toBeNull();
+      expect(session.holdsBattle(updated)).toBe(false);
+    }
+  });
+
   it('applies every tick record in order and ends exactly on the terminal view (A and mirrored B)', () => {
     const { state, pvp } = battles();
     for (const seatId of [pvp.battle.a.seatId, pvp.battle.b.seatId]) {

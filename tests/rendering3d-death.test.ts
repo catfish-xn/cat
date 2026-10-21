@@ -222,6 +222,59 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it.each([[null, 'other'], ['other', 'third'], ['other', null]] as const)(
+    'clears live, loading and queued effects and resets actions on battle switch %s -> %s', async (from, to) => {
+      const manifest = { schemaVersion: 1, models: { model: { path: 'model.glb' } },
+        effects: Object.fromEntries(['live', 'loading', 'delayed'].map(id => [id, { path: `${id}.json` }])),
+        actionEffects: { model: { attack: ['live', 'loading', 'delayed'] } } };
+      vi.mocked(fetch).mockImplementation(async input => {
+        const url = String(input);
+        if (url.endsWith('manifest.json')) return Response.json(manifest);
+        if (url.endsWith('action-bindings.json')) return Response.json({ playback: {
+          live: { anchor: 'source', delay: 0, maxDuration: 10 },
+          loading: { anchor: 'source', delay: 0, maxDuration: 10 },
+          delayed: { anchor: 'source', delay: 2, maxDuration: 10 },
+        } });
+        return new Response('missing', { status: 404 });
+      });
+      const lease = model();
+      lease.animations.push(new three.AnimationClip('swing', 4, []));
+      lease.animationNames.attack = 'swing';
+      vi.spyOn(core.ModelCache.prototype, 'load').mockResolvedValue(lease);
+      const makeEffect = () => new core.ParticleEffect({ schemaVersion: 1, emitters: [{ kind: 'sprite', count: 1, lifetime: 10 }] });
+      const live = makeEffect(), loading = makeEffect();
+      const disposedLive = vi.spyOn(live, 'dispose'), disposedLoading = vi.spyOn(loading, 'dispose');
+      let resolveLoading!: (effect: typeof loading) => void;
+      const pending = new Promise<typeof loading>(resolve => { resolveLoading = resolve; });
+      const load = vi.spyOn(core, 'loadParticleEffect').mockImplementation(async (_manifest, id) => {
+        if (id === 'live') return live;
+        if (id === 'loading') return pending;
+        throw new Error('queued effect should have been cancelled');
+      });
+      await mount(); await publish([piece()]);
+      const scout = (seatId: string | null) => listener.scout!(seatId ? { seatId, name: seatId, board: { units: [] }, watching: true } : null);
+      scout(from);
+      listener.events([{ type: 'attack', attackerId: 'unit', targetId: 'unit', tick: 1, eventSeq: 1 }]);
+      const oldMixer = latestMixer();
+      expect(latestState()).toBe('attack');
+      advance(50);
+      await vi.waitFor(() => expect(live.object.parent).toBe(root(lease)));
+      expect(load.mock.calls.map(([, id]) => id).sort()).toEqual(['live', 'loading']);
+      expect(disposedLive).not.toHaveBeenCalled(); expect(disposedLoading).not.toHaveBeenCalled();
+
+      scout(to);
+      expect(disposedLive).toHaveBeenCalledOnce();
+      expect(live.object.parent).toBeNull();
+      expect(latestState()).toBe('idle');
+      expect(latestMixer()).not.toBe(oldMixer);
+      resolveLoading(loading);
+      await vi.waitFor(() => expect(disposedLoading).toHaveBeenCalledOnce());
+      expect(loading.object.parent).toBeNull();
+      advance(2500);
+      expect(load.mock.calls.map(([, id]) => id).sort()).toEqual(['live', 'loading']);
+      expect(latestState()).toBe('idle');
+    });
+
   it.each(['player', 'enemy'] as const)('excludes a visible dead %s from select, hover and feed picking without blocking a live unit behind it', async team => {
     const front = model('front'), back = model('back');
     vi.spyOn(core.ModelCache.prototype, 'load').mockImplementation(async id => id === 'front' ? front : back);

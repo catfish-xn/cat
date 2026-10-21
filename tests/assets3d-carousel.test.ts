@@ -152,7 +152,7 @@ describe('offline carousel discovery', () => {
     expect(carouselSceneCandidate('data/maps/mapgeometry/map22/carousel_set13.mapgeo')).toBe(true);
     expect(carouselSceneCandidate('assets/maps/kitpieces/tft/set13_carousel/textures/sample_a.tex')).toBe(true);
     expect(carouselSceneCandidate('assets/maps/kitpieces/tft/set13_carousel/textures/carousel_sample_b.tex')).toBe(true);
-    expect(carouselSceneCandidate('assets/characters/petchibiahri/particles/carousel.tex')).toBe(false);
+    expect(carouselSceneCandidate('assets/characters/petdemo/particles/carousel.tex')).toBe(false);
     expect(carouselSceneCandidate('assets/sounds/carousel_audio.bnk')).toBe(false);
   });
   it('lists every overlapping missing block once and keeps CDN offsets distinct from WAD offsets', () => {

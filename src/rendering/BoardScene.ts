@@ -28,14 +28,15 @@ import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../st
 import type { SessionChange } from '../m6/contracts';
 import { PIECE_RADIUS, UnitView, type RingState } from '../presentation/unit-view';
 import { getHeroIdentity } from '../presentation/hero-identity';
-import { g23BoardMechanics } from './trait-column';
+import { familyReunionDancers, g23BoardMechanics } from './trait-column';
 import { unitHoverCard, type HoverBox } from '../presentation/hover-card';
 import { unitBattleStatsKey, unitCardBody } from '../presentation/unit-card';
 import { unitBattleStats } from '../presentation/battle-ranking';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
-import { buildPortraitTextures, loadS13Portraits, s13AssetUrl } from '../presentation/s13-assets';
+import { buildPortraitTextures, loadRootUiAssets, loadS13Portraits, s13AssetUrl } from '../presentation/s13-assets';
+import { readAssetBase3d } from './render-mode';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
 import { playMerge } from '../presentation/merge-fx';
@@ -307,7 +308,8 @@ export class BoardScene extends Phaser.Scene {
       }, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message),
     });
     // Portraits load once the page is idle so they never delay the first usable controls.
-    const loadPortraits = () => { if (this.sys.isActive()) loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); };
+    // The asset root's side manifest (v19 six-cost portraits) is read first, so its portraits load in the same pass.
+    const loadPortraits = () => void loadRootUiAssets(readAssetBase3d()).then(() => { if (this.sys.isActive()) loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); });
     const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
     if (idle) idle(loadPortraits, { timeout: 1500 }); else window.setTimeout(loadPortraits, 300);
     const debug = Object.freeze({ read: () => this.debugSnapshot() });
@@ -820,7 +822,9 @@ export class BoardScene extends Phaser.Scene {
     // While a battle is shown it stands in for the board. A two-sided (PvP) replay names my units by their
     // battle ids (contract §10.2; only my own unit mapping reaches the client, C15), so a board unit it does not name is shown
     // by its combat unit only, never as a second token at its preparation cell (C10).
-    const units = this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
+    // Another seat's battle on the board (online, visiting its board): none of my units, its ids are not mine.
+    const watching = this.session instanceof RemoteSession && this.session.watchedSeat !== null;
+    const units = watching ? [] : this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
     for (const summon of this.shownSummons()) units.push(summon.unit as Unit);
     const ids = new Set(units.map(unit => unit.id));
     this.departed.clear();
@@ -1180,6 +1184,8 @@ export class BoardScene extends Phaser.Scene {
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
     const casts = this.fx.casts;
     // The engine state, when there is one, adds ability colors; positions and teams are the same as the view's.
+    // Under the 3D layer the 2D canvas is not drawn: its pieces still react, but no effect objects are built.
+    this.fx.drawn = !boardFeedActive();
     this.fx.show(events, this.session.combatRuntime ?? combat);
     this.renderedCastCount += this.fx.casts - casts;
     this.feedback?.push(events, performance.now());
@@ -1217,10 +1223,14 @@ export class BoardScene extends Phaser.Scene {
     });
   }
   private mechanicsOf: unknown = null; private mechanics: { mechanics?: BoardMechanics } = {};
-  /** ?render=3d: my 征服层数 and 微光, recomputed only when the session state object changes (frames publish every tick). */
+  /** ?render=3d: my 征服层数, 微光 and 家人团聚 dancers, recomputed only when the session state object changes (frames publish every tick). */
   private feedMechanics(): { mechanics?: BoardMechanics } {
     const state = this.session.state;
-    if (state !== this.mechanicsOf) { this.mechanicsOf = state; const mechanics = g23BoardMechanics(state); this.mechanics = mechanics ? { mechanics } : {}; }
+    if (state !== this.mechanicsOf) {
+      this.mechanicsOf = state;
+      const reunion = familyReunionDancers(state), mechanics = { ...g23BoardMechanics(state), ...(reunion.length ? { reunion } : {}) };
+      this.mechanics = Object.keys(mechanics).length ? { mechanics } : {};
+    }
     return this.mechanics;
   }
   private orbRefusalsOf(): Readonly<Record<string, number>> {

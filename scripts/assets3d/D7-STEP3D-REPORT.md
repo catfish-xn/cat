@@ -13,7 +13,7 @@
 
 ## 动作覆盖
 
-通用优先级在 unit-map.json 的 `$animationRules`；先匹配图别名，再匹配文件名 token。同优先级存在多个不同路径时省略并报告候选。不拼接 Sequencer/Selector。原有 jinx/vi 五段选择保留作第 2 步兼容基线，仍须在真实动画图中找到文件；其余单位没有新增硬编码。
+通用优先级在 assets3d-local/unit-map.local.json 的 `$animationRules`；先匹配图别名，再匹配文件名 token。同优先级存在多个不同路径时省略并报告候选。不拼接 Sequencer/Selector。原有 jinx/vi 五段选择保留作第 2 步兼容基线，仍须在真实动画图中找到文件；其余单位没有新增硬编码。
 
 | 动作 | 覆盖 | 缺少或无法唯一判定的单位 |
 | --- | ---: | --- |
@@ -47,7 +47,7 @@ hit 缺项：amumu、darius、draven、irelia、lux、maddie、morgana、powder�
 - Jinx：Body/Torch 贴图路径均与旧手工表一致；按 initialSubmeshToHide 删除 Torch primitive、材质及嵌入图片，所以 GLB 哈希不同。顶点属性、五段完整动画曲线和节点逐项相同。
 - Vi：初始 Material 链接 TierUpgrade，Diffuse_Texture 使用 `tft13_vi_base_tx_cm`（512×512）；旧表 `tft13_vi_skin0_tx_cm`（1024×1024）属于 RebelStatus 动态材质。两个路径和像素不同，不能声称映射等同。当前候选遵循 bin 初始材质；旧表保留作比较，不参与绑定。顶点属性、五段完整动画曲线和节点逐项相同。
 
-Vi 的结果推翻了“解析结果应与手工表一致”的原假设。夹具测试明确验证这一差异，没有伪造相等断言。若要求旧外观，需用户选择显式兼容覆盖；建议以 bin 初始材质为准。夹具 fixtures/step2-bindings.json 只含名字与路径字符串，无素材二进制。
+Vi 的结果推翻了“解析结果应与手工表一致”的原假设。夹具测试明确验证这一差异，没有伪造相等断言。若要求旧外观，需用户选择显式兼容覆盖；建议以 bin 初始材质为准。真实夹具已迁至 assets3d-local/step2-bindings.local.json；fixtures/step2-bindings.json 现为合成回归，只验证同类绑定差异。
 
 ## 兼容处理与限制
 

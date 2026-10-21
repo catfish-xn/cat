@@ -1,3 +1,4 @@
+import { loadUnitMap } from './local-config.mjs';
 import { readFile, readdir, stat, unlink } from 'node:fs/promises';
 import { resolve, join, relative, isAbsolute, sep, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -64,11 +65,12 @@ export async function writeParticleEffects(id, converted, patterns, { write, rem
     }
     return { effects, systems, actionEffects };
 }
-export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false, approximateLinger = false, particleMode = 'strict', 'particle-mode': cliParticleMode } = {}) {
+export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false, approximateLinger = false, particleMode = 'strict', 'particle-mode': cliParticleMode, map } = {}) {
     const root = resolve(source), output = await safeOutputPath(out, { directory: true }), rel = relative(root, output);
     if (!rel || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`)))
         throw new Error('output-overlaps-source');
-    const selected = units.split(','), map = JSON.parse(await readFile(new URL('./unit-map.json', import.meta.url), 'utf8')), definitions = await unitDefinitions();
+    map ??= await loadUnitMap();
+    const selected = units.split(','), definitions = await unitDefinitions();
     if (new Set(selected).size !== selected.length || selected.some(id => !Object.hasOwn(definitions, id) || !map[id]?.mesh))
         throw new Error('unsupported-build-units');
     const { assertManifest, assetUrl, parseParticleDocument } = await contracts(), rawRoot = await safeInputPath(root, join(root, 'extracted'));
@@ -273,7 +275,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
     }
     const manifest = makeManifest(models, effects, assertManifest);
     await write('manifest.json', json(manifest));
-    const fetchPlan = batch ? null : await planFetch({ source: root, out: output, force });
+    const fetchPlan = batch ? null : await planFetch({ source: root, out: output, force, map });
     if (!batch) {
         const fetchBytes = await readFile(join(output, 'fetch-plan.json'));
         files.push({ path: 'fetch-plan.json', bytes: fetchBytes.length, sha256: sha256(fetchBytes) });
