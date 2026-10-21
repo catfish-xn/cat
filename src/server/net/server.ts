@@ -397,7 +397,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;
-      conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null;
+      conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null; conn.watchSeatId = null; conn.sentWatch = null;
       if (!conn.open) opened.setConnected(session.seatId, false);
     }
     // Queued behind the current task (the "start" receipt) when a player started it; immediate on a queue timeout.
@@ -626,7 +626,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     conn.session = session;
     conn.epoch = session.connectionEpoch;
     session.connection = conn;
-    conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null;
+    conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null; conn.watchSeatId = null; conn.sentWatch = null;
   }
 
   /** The connection loses its seat but may stay open: `superseded` tells it why and closes it after a grace period. */
