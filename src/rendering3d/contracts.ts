@@ -3,10 +3,18 @@ export type ActionState = 'idle' | 'move' | 'attack' | 'cast' | 'hit' | 'death';
 /** Clips a model may name beyond the combat states: little legends also celebrate, run and grab (carousel). */
 export type ModelAction = ActionState | 'celebrate' | 'run' | 'grab';
 export const MODEL_ACTIONS: readonly ModelAction[] = ['idle', 'move', 'attack', 'cast', 'hit', 'death', 'celebrate', 'run', 'grab'];
+export type AnimationNames = Partial<Record<Exclude<ModelAction, 'cast'>, string>> & { cast?: string | null };
+/** Array main rotates between casts; the other stages each play once. */
+export interface CastSequence { in?: string; main: string | readonly string[]; hold?: string; out?: string }
+export interface CastVariants {
+  star3?: CastSequence; hero?: CastSequence; front?: CastSequence; back?: CastSequence;
+  rotate?: readonly string[]; branch?: Record<string, CastSequence>;
+}
+export interface CastMetadata { castSequence?: CastSequence; castVariants?: CastVariants }
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface AssetManifest {
   schemaVersion: 1;
-  models: Record<string, { path: string; animations?: Partial<Record<ModelAction, string>> }>;
+  models: Record<string, { path: string; animations?: AnimationNames } & CastMetadata>;
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
   actionEffects?: ActionEffects;
@@ -96,7 +104,24 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (!entry || typeof entry.path !== 'string' || !/\.glb$/i.test(entry.path)) throw new Error('invalid-model');
     assetUrl('', entry.path);
     if (entry.animations && Object.entries(entry.animations).some(([key, name]) =>
-      !(MODEL_ACTIONS as readonly string[]).includes(key) || typeof name !== 'string' || !name)) throw new Error('invalid-animation-map');
+      !(MODEL_ACTIONS as readonly string[]).includes(key) || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
+    if (entry.castSequence !== undefined) assertCastSequence(entry.castSequence);
+    if (entry.castVariants !== undefined) {
+      const variants = entry.castVariants;
+      if (!variants || typeof variants !== 'object' || Array.isArray(variants)) throw new Error('invalid-cast-variants');
+      for (const [key, sequence] of Object.entries(variants)) {
+        if (['star3', 'hero', 'front', 'back'].includes(key)) assertCastSequence(sequence);
+        else if (key === 'rotate') assertClipList(sequence);
+        else if (key === 'branch') {
+          if (!sequence || typeof sequence !== 'object' || Array.isArray(sequence) || !Object.keys(sequence).length) throw new Error('invalid-cast-branch');
+          for (const [branch, value] of Object.entries(sequence)) {
+            if (!/^[a-zA-Z0-9_-]+$/.test(branch)) throw new Error('invalid-cast-branch');
+            assertCastSequence(value);
+          }
+        } else throw new Error('invalid-cast-variants');
+      }
+    }
+    if (entry.animations?.cast === null && (entry.castSequence || entry.castVariants)) throw new Error('disabled-cast-sequence');
   }
   if (m.effects !== undefined) {
     if (!m.effects || typeof m.effects !== 'object' || Array.isArray(m.effects)) throw new Error('invalid-effects');
@@ -107,6 +132,18 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
   }
   if (m.actionEffects !== undefined) parseActionEffects(m.actionEffects, m);
   if (m.boards !== undefined) assertBoards(m.boards, m);
+}
+
+function assertClipList(value: unknown): void {
+  if (!Array.isArray(value) || !value.length || value.length > 64 || Array.from(value).some(v => typeof v !== 'string' || !v.trim())) throw new Error('invalid-cast-clips');
+}
+function assertCastSequence(value: unknown): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid-cast-sequence');
+  const sequence = value as CastSequence;
+  for (const key of Object.keys(sequence)) if (!['in', 'main', 'hold', 'out'].includes(key)) throw new Error('invalid-cast-sequence');
+  if (typeof sequence.main === 'string') { if (!sequence.main.trim()) throw new Error('invalid-cast-sequence'); }
+  else assertClipList(sequence.main);
+  for (const key of ['in', 'hold', 'out'] as const) if (sequence[key] !== undefined && (typeof sequence[key] !== 'string' || !sequence[key]!.trim())) throw new Error('invalid-cast-sequence');
 }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);

@@ -7,9 +7,11 @@ export type AnimationEvent =
   | { type: 'cast'; sourceId: string }
   | { type: 'heal'; targetId: string }
   | { type: 'packetDamage'; sourceId: string; targetId: string; hit: boolean; hpDamage: number; absorbed: number };
-export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number }
-export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>> }
-const defaults = { move: 0.2, attack: 0.45, cast: 0.7, hit: 0.15 };
+export interface ActionPlayback { clips: readonly string[]; durationSeconds: number }
+export type ResolveActionPlayback = (state: 'cast' | 'attack', castIndex: number) => ActionPlayback | null;
+export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }
+export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>>; resolvePlayback?: ResolveActionPlayback }
+const defaults = { move: 0.2, attack: 0.45, cast: 0.3, hit: 0.15 };
 /** Pure visual clock, independent of rules, AnimationMixer, Phaser and DOM. */
 export class UnitActionState {
   private state: ActionState = 'idle';
@@ -18,18 +20,33 @@ export class UnitActionState {
   private revision = 0;
   private blend: number;
   private durations: typeof defaults;
+  private resolvePlayback?: ResolveActionPlayback;
+  private playback?: ActionPlayback;
+  private castIndex = 0;
   constructor(readonly unitId: string, config: ActionConfig = {}) {
     this.blend = config.blendSeconds ?? 0.12;
     this.durations = { ...defaults, ...config.durations };
+    this.resolvePlayback = config.resolvePlayback;
     if (![this.blend, ...Object.values(this.durations)].every(n => Number.isFinite(n) && n >= 0)) throw new Error('invalid-action-config');
   }
   get output(): ActionOutput {
     return { state: this.state, previous: this.previous, blendSeconds: this.blend,
-      loop: this.state === 'idle' || this.state === 'move', revision: this.revision };
+      loop: this.state === 'idle' || this.state === 'move', revision: this.revision,
+      ...(this.playback ? { playback: this.playback } : {}) };
   }
+  setPlaybackResolver(resolve: ResolveActionPlayback): void { this.resolvePlayback = resolve; }
   private enter(state: ActionState): void {
+    let playback: ActionPlayback | undefined;
+    if (state === 'cast' || state === 'attack') {
+      const resolved = this.resolvePlayback?.(state, this.castIndex);
+      if (state === 'cast') this.castIndex++;
+      if (resolved === null) return;
+      playback = resolved;
+      if (playback && (!playback.clips.length || !Number.isFinite(playback.durationSeconds) || playback.durationSeconds <= 0)) throw new Error('invalid-playback');
+    }
+    this.playback = playback;
     this.previous = this.state; this.state = state; this.revision++;
-    this.remaining = state === 'death' ? Infinity : state === 'idle' ? 0 : this.durations[state];
+    this.remaining = state === 'death' ? Infinity : state === 'idle' ? 0 : playback?.durationSeconds ?? this.durations[state];
   }
   consume(event: AnimationEvent): ActionOutput {
     // Ownership follows replay event semantics, not the presence of sourceId.
@@ -43,6 +60,8 @@ export class UnitActionState {
     if (id !== this.unitId) return this.output;
     if (event.type === 'unitRevived') { if (this.state === 'death') this.enter('idle'); return this.output; }
     if (this.state === 'death') return this.output;
+    // Resolved casts own their visual window, so incidental hits cannot cut off the ending.
+    if (this.state === 'cast' && this.playback && ['movement', 'attack', 'packetDamage'].includes(event.type)) return this.output;
     switch (event.type) {
       case 'death': this.enter('death'); break;
       case 'movement': this.enter('move'); break;
