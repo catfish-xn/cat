@@ -29,6 +29,7 @@ import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, createBoardArena, type BoardArena } from './board-arena';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
+import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -181,6 +182,10 @@ interface PieceView {
   alive: boolean;
   /** Seconds the death action still has to play while dead (0 = hidden); 'loading' until its model can play it. */
   dyingFor: number | 'loading' | null;
+  /** The unit it last attacked or cast on in the shown combat (null: none, itself, or gone): it turns to look at it. */
+  facing: string | null;
+  /** Its root's rotation.y, turned smoothly (unit-facing.ts). */
+  readonly turn: HeadingTurn;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -387,14 +392,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
-      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null };
+      definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, facing: null, turn: new HeadingTurn(restHeading(piece.team)) };
+    root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
   };
   // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
-    view.state = new UnitActionState(id);
+    view.state = new UnitActionState(id); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease) { view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames); view.mixer.apply(view.state.output); }
   };
@@ -518,13 +524,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
     tabletop.frame(frame); traitProps.frame(frame);
   };
+  const face = (sourceId: string, targetId: string | undefined) => {
+    const source = pieces.get(sourceId);
+    // Every attack or cast replaces the target: one on itself, on nobody or on a unit not drawn leaves none to follow.
+    if (source) source.facing = targetId && targetId !== sourceId && pieces.has(targetId) ? targetId : null;
+  };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
     for (const event of events) {
       if (!ANIMATION_EVENTS.has(event.type)) continue;
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       for (const view of pieces.values()) { const output = view.state.consume(event as unknown as AnimationEvent); view.mixer?.apply(output); }
-      if (event.type === 'attack') playAction('attack', event.attackerId, event.targetId);
-      else if (event.type === 'cast') playAction('cast', event.sourceId, event.targetIds[0]);
+      if (event.type === 'attack') { face(event.attackerId, event.targetId); playAction('attack', event.attackerId, event.targetId); }
+      else if (event.type === 'cast') { face(event.sourceId, event.targetIds[0]); playAction('cast', event.sourceId, event.targetIds[0]); }
     }
   };
   // Hover cards and combat floats: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels, asked
@@ -745,9 +756,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (id === dragging) view.root.position.copy(view.target).setY(DRAG_LIFT); // follows the pointer exactly
       else {
         view.root.position.y = 0;
-        const step = view.target.clone().sub(view.root.position);
-        if (step.lengthSq() > 0.25) view.root.rotation.y = Math.atan2(step.x, step.z);
-        else view.root.rotation.y = view.team === 'player' ? Math.PI : 0; // models face +z; the player's side looks up the board
+        const step = view.target.clone().sub(view.root.position), aim = view.facing ? pieces.get(view.facing) : undefined;
+        const target = aim?.alive && aim.root.visible ? { x: aim.root.position.x, z: aim.root.position.z } : null;
+        view.root.rotation.y = view.turn.update(desiredHeading({ team: view.team,
+          alive: view.alive, fighting: !!fighting, position: { x: view.root.position.x, z: view.root.position.z },
+          destination: { x: view.target.x, z: view.target.z }, target }), seconds);
         view.root.position.addScaledVector(step, follow);
       }
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
