@@ -59,23 +59,25 @@ export class RemoteSession extends MatchSession {
   takeNotice(): IntentNotice | null { const notice = this.notice; this.notice = null; return notice; }
   /** True once per received replay: the scene shows its opening transition. */
   takeOpening(): boolean { const opening = this.openingPending; this.openingPending = false; return opening; }
-  override get combatView(): CombatViewState | null { return this.view; }
+  /** While I watch another seat's battle (TFT: visiting its board), that battle is the one on the board; mine plays on underneath. */
+  override get combatView(): CombatViewState | null { return this.watched?.view ?? this.view; }
   override get combatRuntime(): null { return null; }
   override get displayLog(): readonly DisplayCombatEvent[] { return this.played; }
   /**
    * True while my battle of this round is on the board and `state` is my live seat of that same round, still before
    * its settlement (T10: a PvP seat stays in preparation under the server's roster lock, a PvE seat in combat). Such a
    * state only refreshes what the battle is shown on: gold, shop, level and bench move, the battle keeps playing.
+   * A watched battle (another seat's, on my board) is held the same way, with or without one of mine.
    */
   holdsBattle(state: MatchState): boolean {
     const base = this.playbackBase;
-    return base !== null && this.replay !== null && state.round === base.round && (state.phase === 'preparation' || state.phase === 'combat');
+    return base !== null && (this.replay !== null || this.watched !== null) && state.round === base.round && (state.phase === 'preparation' || state.phase === 'combat');
   }
   /**
    * The unit whose equipment a shown unit carries (C15): a battle id of mine in the replay on the board maps to my
    * original unit id; any other id (preparation, PvE replay, an opponent's unit) is returned as it is and simply holds nothing.
    */
-  equipmentOwnerId(id: string): string { return this.replayUnitIds.get(id) ?? id; }
+  equipmentOwnerId(id: string): string { return this.watched ? `watch:${id}` : this.replayUnitIds.get(id) ?? id; }
   /** G5: the latest battle a replay was received for, until a newer replay or a reset; `round`/`roundId` say which round it was fought in. */
   get lastBattle(): FinishedBattle | null { return this.finished.at(-1) ?? null; }
   /** G5: every battle of this match a replay was received for, one per round, oldest first. */
@@ -85,7 +87,37 @@ export class RemoteSession extends MatchSession {
     return this.replay && this.view && this.playingBack ? { replay: this.replay, played: this.nextTick, view: this.view } : null;
   }
   /** Forgets the match's battles (back to the lobby). */
-  forgetBattles(): void { this.finished = []; }
+  forgetBattles(): void { this.finished = []; this.watched = null; }
+  /** Another seat's battle shown in place of mine (its own point of view): unit ids stay its battle's, nothing of mine maps onto them. */
+  private watched: { readonly seatId: string; readonly replay: CombatReplay; nextTick: number; view: CombatViewState; accumulator: number } | null = null;
+  get watchedSeat(): string | null { return this.watched?.seatId ?? null; }
+  /**
+   * The battle of the seat I visit, or its revision: it joins at the tick my own battle is at (every battle of a round starts
+   * together; without mine of my own, at its start), a revision keeps the records already shown and goes on from there.
+   */
+  watchReplay(seatId: string, replay: CombatReplay): void {
+    if (!replay.ticks.length) return;
+    const current = this.watched?.seatId === seatId && this.watched.replay.initial.combatId === replay.initial.combatId ? this.watched : null;
+    const at = Math.min(replay.ticks.length, current ? current.nextTick : this.replay ? this.nextTick : 0);
+    let view: CombatViewState = replay.initial;
+    for (let index = 0; index < at; index++) view = applyCombatReplayTick(view, replay.ticks[index]!);
+    this.watched = { seatId, replay, nextTick: at, view: at === replay.ticks.length ? replay.terminal : view, accumulator: current?.accumulator ?? (this.replay ? this.accumulator : 0) };
+    // The board shows a battle even without one of mine (eliminated, or my battle already settled): the combat overlay.
+    // A fresh overlay also tells the scene its board changed, so it rebuilds its tokens from the watched battle.
+    const before = this.matchState; this.playbackBase = this.playbackBase ?? before; this.matchState = this.overlay();
+    this.notify(before, [], 'command');
+  }
+  /** Back to my own board (and my battle, where it has got to). */
+  stopWatching(): void {
+    if (!this.watched) return;
+    this.watched = null;
+    // My own battle keeps its overlay; without one, my last authoritative state is back. Either way a new state object,
+    // so the scene rebuilds its tokens from my board instead of the watched battle's units.
+    const before = this.matchState;
+    if (this.replay) this.matchState = this.overlay(); else { this.matchState = this.playbackBase ?? before; this.playbackBase = null; }
+    if (this.matchState === before) this.matchState = { ...before };
+    this.notify(before, [], 'command');
+  }
   /** My battle of this round is on the board (playing or held on its terminal view until the settlement arrives). */
   get inBattle(): boolean { return this.replay !== null; }
   /** Server pushed my authoritative state; `events` are those of my commands it confirms and of its own deadline/settlement transactions. */
@@ -96,7 +128,7 @@ export class RemoteSession extends MatchSession {
       return;
     }
     if (this.playingBack) { this.superseded++; this.skipPlayback(); } // a newer state supersedes the battle still being played
-    this.replay = null; this.view = null; this.played = []; this.playbackBase = null; this.openingPending = false; this.replayUnitIds = new Map();
+    this.replay = null; this.view = null; this.played = []; this.playbackBase = null; this.openingPending = false; this.replayUnitIds = new Map(); this.watched = null;
     if (state === this.matchState) return;
     const before = this.matchState;
     if (state.round !== before.round) this.combatLedger = [];
@@ -149,7 +181,26 @@ export class RemoteSession extends MatchSession {
   }
   /** Offline stepping never runs here: the server owns the battle. */
   override advance(_delta: number): readonly LedgerCombatEvent[] { return []; }
+  /** My battle always advances (it is the one the server settles); the events shown are those of the battle on the board. */
   override advanceDisplay(delta: number): readonly DisplayCombatEvent[] {
+    const own = this.advanceOwn(delta), watched = this.advanceWatched(delta);
+    return this.watched ? watched : own;
+  }
+  private advanceWatched(delta: number): readonly DisplayCombatEvent[] {
+    const watched = this.watched;
+    if (this.paused || !watched || !Number.isFinite(delta) || delta < 0) return [];
+    watched.accumulator += delta;
+    const events: DisplayCombatEvent[] = [];
+    // Never behind my own battle: both started together, so a stalled watch catches up with it.
+    while (watched.nextTick < watched.replay.ticks.length && (watched.accumulator >= COMBAT_TICK_MS || (this.replay !== null && watched.nextTick < this.nextTick))) {
+      if (watched.accumulator >= COMBAT_TICK_MS) watched.accumulator -= COMBAT_TICK_MS;
+      const frame = watched.replay.ticks[watched.nextTick++]!;
+      watched.view = applyCombatReplayTick(watched.view, frame); events.push(...frame.events);
+    }
+    if (watched.nextTick >= watched.replay.ticks.length) watched.accumulator = 0;
+    return events;
+  }
+  private advanceOwn(delta: number): readonly DisplayCombatEvent[] {
     const replay = this.replay;
     if (this.paused || !replay || !this.playingBack || !Number.isFinite(delta) || delta < 0) return [];
     this.accumulator += delta; this.replayElapsed += delta;
