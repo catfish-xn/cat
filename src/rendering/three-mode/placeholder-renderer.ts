@@ -31,7 +31,7 @@ import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { fitModel, readUnitScale } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelopeRadius, fitModel, readUnitScale } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 
 const MANIFEST_TIMEOUT_MS = 4000;
@@ -480,6 +480,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     pawn.add(body, head);
     return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
   };
+  /** Animation envelope radius per model id (unscaled source units), measured on its first lease. */
+  const envelopes = new Map<string, number>();
+  /** Models first seen during a shown combat: drawn from their bind box, measured and re-attached at the next preparation. */
+  const envelopePending = new Set<string>();
+  const envelopeOf = (id: string, lease: ModelLease): number | undefined => {
+    let radius = envelopes.get(id);
+    if (radius === undefined && fighting) { envelopePending.add(id); return undefined; } // no long task mid-combat
+    if (radius === undefined) {
+      const names = new Set(ENVELOPE_ACTIONS.map(action => lease.animationNames[action] ?? action));
+      radius = animationEnvelopeRadius(lease.scene, lease.animations.filter(clip => names.has(clip.name))
+        .map(clip => ({ clip, loop: ENVELOPE_ACTIONS.some(action => LOOPING_ACTIONS.has(action) && (lease.animationNames[action] ?? action) === clip.name) })));
+      envelopes.set(id, radius);
+    }
+    return radius;
+  };
   const attachBody = (view: PieceView) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null;
@@ -493,16 +508,27 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.body) view.root.remove(view.body);
       // A unit missing from the manifest gets ModelCache's unit-cube placeholder: keep it pawn sized.
       const monster = lease.placeholder ? undefined : monsterFit(definitionId);
+      const unitScale = lease.placeholder ? null : readUnitScale(models.cache?.manifest.models, definitionId);
       if (lease.placeholder) view.body = fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH);
-      else if (monster) {
+      else if (monster && unitScale) {
+        // A monster at its official scale like a champion, no width cap (wolves' tails and the dragon's wings span cells);
+        // its lift stays the same share of its drawn height, and its bar sits on what is drawn.
+        const before = Math.abs(lease.scene.scale.x) || 1;
+        // No height cap either: the official scale is the monster's size (the dragon is 0.44 × 1.75).
+        const drawn = fitModel(lease.scene, { height: Infinity, sourceScale: FX_SCALE, unitScale });
+        view.body = lease.scene; lease.scene.position.y += drawn * monster.lift / monster.height;
+        view.starHeight = drawn + STAR_GAP;
+        view.modelScale = Math.abs(lease.scene.scale.x) / before;
+      } else if (monster) {
         // The offset goes on the GLB root, which the mixer never animates (clips drive its bones).
         view.body = fit(lease.scene, MODEL_HEIGHT * monster.height); lease.scene.position.y += MODEL_HEIGHT * monster.lift;
         view.starHeight = MODEL_HEIGHT * monster.height + STAR_GAP;
       } else {
         // Official scale when the asset root has it (short champions stay short); the stars and bars follow the drawn height.
-        const unitScale = readUnitScale(models.cache?.manifest.models, definitionId);
         const before = Math.abs(lease.scene.scale.x) || 1;
-        const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale });
+        // With an official scale the width cap covers everything the clips reach (measured once per model).
+        const envelopeRadius = unitScale ? envelopeOf(definitionId, lease) : undefined;
+        const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale, envelopeRadius });
         view.body = lease.scene;
         // Without an official scale the stars, bars and hit volume keep the old fixed baseline (older roots unchanged).
         view.starHeight = (unitScale ? drawn : MODEL_HEIGHT) + STAR_GAP;
@@ -645,6 +671,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const combatStarted = fighting !== true && frame.fighting;
     if (fighting !== null && fighting !== frame.fighting) { clearEffects(); for (const [id, view] of pieces) resetAction(view, id); }
     fighting = frame.fighting;
+    // Back in preparation: measure what a combat skipped and re-attach those pieces at their full envelope.
+    if (!fighting && envelopePending.size) {
+      const ids = new Set(envelopePending); envelopePending.clear();
+      for (const view of pieces.values()) if (ids.has(view.definitionId) && view.lease && !view.lease.placeholder) attachBody(view);
+    }
     const seen = new Set<string>();
     for (const piece of frame.pieces) {
       if (!piece.definitionId || (piece.team !== 'player' && piece.team !== 'enemy')) continue;
