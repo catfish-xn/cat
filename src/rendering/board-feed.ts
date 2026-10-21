@@ -22,7 +22,7 @@ export interface BoardPiece {
   readonly alive: boolean;
   /** The 2D combat meters while BoardScene draws them (a shown combat, alive); absent otherwise. */
   readonly meters?: BoardMeters;
-  /** Worn items in slot order with the 2D icon URL (null when there is none); absent when it wears none. */
+  /** Worn items in slot order, then this round's temporary (窃贼手套) items, with the 2D icon URL (null when there is none); absent when it has none. */
   readonly items?: readonly { readonly id: string; readonly icon: string | null }[];
 }
 export interface BoardMeters { readonly hp: number; readonly maxHp: number; readonly mana: number; readonly maxMana: number; readonly shield: number }
@@ -56,6 +56,8 @@ export interface BoardOrb {
   readonly orbId: string; readonly tier: 'gray' | 'blue' | 'gold' | 'prismatic'; readonly queued: boolean;
   /** S13 trait orb skin, only when this seat's own mechanic receipt names it (see orbVariant); absent → the generic tier. */
   readonly variant?: 'warband' | 'crime';
+  /** The PvE monster (its combat unit id, the drop's sourceUnitId) that dropped it, while this round's loot names one. */
+  readonly source?: string;
 }
 /** `key` names the round, so the layer plays each loss once and skips the one already settled when it mounts. */
 export interface BoardHit { readonly key: string; readonly damage: number }

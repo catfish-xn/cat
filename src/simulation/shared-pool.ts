@@ -1,3 +1,4 @@
+import { sixCostOddsBps } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
 import { validateConsumableState } from './consumables';
 import { selectOpeningUnit } from './opening-unit';
@@ -114,11 +115,13 @@ function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):
   const seatId=state.sharedPool!.seatId,generation=state.shop.generation+1,odds=getShopOdds(state.level);
   const slots:ShopSlot[]=[];let rngState=state.rngState,rngDraws=0;
   for(let slot=0;slot<MATCH_RULES.shopSize;slot++) {
-    const stocked=([1,2,3,4,5] as CostTier[]).filter(t=>odds[t-1]>0&&SHOP_CATALOG_BY_COST[t].some(id=>pool.available[id]>0));
+    const sixBps=sixCostOddsBps(state.round,state.level);
+    const weights=[...odds.map(w=>w*(10000-sixBps)),100*sixBps];
+    const stocked=([1,2,3,4,5,6] as CostTier[]).filter(t=>weights[t-1]>0&&SHOP_CATALOG_BY_COST[t].some(id=>pool.available[id]>0));
     if(!stocked.length) {slots.push({status:'purchased',empty:true});continue;}
-    const tierWord=nextRandom(rngState),weight=stocked.reduce((sum,t)=>sum+odds[t-1],0);
+    const tierWord=nextRandom(rngState),weight=stocked.reduce((sum,t)=>sum+weights[t-1],0);
     let roll=Math.floor(tierWord.word*weight/4294967296),tier=stocked[0];
-    for(const candidate of stocked) {tier=candidate;if(roll<odds[tier-1])break;roll-=odds[tier-1];}
+    for(const candidate of stocked) {tier=candidate;if(roll<weights[tier-1])break;roll-=weights[tier-1];}
     const memberWord=nextRandom(tierWord.state),catalog=SHOP_CATALOG_BY_COST[tier];
     let copy=Math.floor(memberWord.word*catalog.reduce((sum,id)=>sum+pool.available[id],0)/4294967296);
     const definitionId=catalog.find(id=>{if(copy<pool.available[id])return true;copy-=pool.available[id];return false;})!;
@@ -178,7 +181,11 @@ export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,comm
   return transact(pool,state,(_draft,policy)=>{
     switch(command.type) {
       case 'rerollAugment': return rerollAugment(state,command.choiceId,command.generation,command.optionIndex);
-      case 'useConsumable': return useConsumable(state,command.consumableId,command.target);
+      case 'useConsumable': {
+        const tool=state.consumables.find(c=>c.consumableId===command.consumableId),target=command.target,u=target.kind==='unit'?state.preparation.units.find(u=>u.id===target.unitId):undefined;
+        if(tool?.definitionId==='TFT_Consumable_NeekosHelp'&&u&&UNIT_DEFINITIONS[u.definitionId]?.cost===6)requirePool(_draft.available[u.definitionId]>0,'pool-empty');
+        return useConsumable(state,command.consumableId,command.target);
+      }
       case 'settleRound': return applyRoundSettlement(state,command.receipt,policy);
       case 'startCombat': return startMatchCombat(state,policy);
       case 'step': {const next=stepMatch(state,policy);return {ok:true,...next};}

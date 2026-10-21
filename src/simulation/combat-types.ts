@@ -14,6 +14,7 @@ export interface CombatStatus { readonly contributionKeys?: readonly string[]; r
 export interface CombatTask { readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse' | 'g23Heal' | 'g23Magic' | 'g23Physical' | 'g23True' | 'g23Smeech' | 'g24Heal' | 'g24Mana'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
   readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited']; }
 export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
+export interface V19CombatFacts { readonly garenSample?:number; readonly sharedHealth?:number; readonly smokePermanent?:boolean; readonly smokeOrdinal?:number; readonly roseTeams?:readonly Team[] }
 export type CombatMechanics = readonly CombatMechanic[];
 export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
 /** Finite G2 state; absent in battles without G2 mechanics. No hidden counters outside the snapshot. */
@@ -36,6 +37,8 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  readonly familyReunion?:{readonly originalStarLevel:1|2|3;readonly combatStarLevel:1|2|3|4;readonly unboostedStarLevel:1|2|3|4;readonly downgradedAtTick?:number};
+  readonly sixCost?:import('./combat-six-cost').SixCostState;
   readonly d11Kills?:readonly {readonly eventSeq:number;readonly victimId:string}[];
   readonly s13P2Opening?: import('./s13-augments-p2-combat').P2Opening;
   readonly anomalyState?: import('./anomalies/contracts').AnomalyRuntime;
@@ -53,6 +56,7 @@ export interface CombatUnit {
   readonly form?: import('./seat-mechanics/types').UnitForm;
   readonly g23?: G23State;
   readonly g22?: G22State;
+  readonly v19?: V19CombatFacts;
   readonly expansion?: ExpansionState;
   readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[];
   /** G2-4b: temporary items gained during this combat (Unstable Treasure Chest); their programs are bound from the frozen pool. */
@@ -109,7 +113,7 @@ export type CombatEvent = CombatEventData & { readonly domain?: 'combat'; readon
 /** B9 replay2: the frozen M8 ledger event (contracts.ts M8CombatEvent). Match, saves, replay, stats and UI use only this. */
 export type LedgerCombatEvent = import('./m8/contracts').M8CombatEvent;
 /** Events that M8_RULES §10 keeps with their existing fields. */
-export type UnchangedCombatEventData =
+export type UnchangedCombatEventData = import('./combat-six-cost').SixCostEvent
   | { readonly type: 'targetChanged'; readonly tick: number; readonly unitId: string; readonly before: string | null; readonly after: string | null }
   | { readonly type: 'kill'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin }
   | { readonly type: 'growth'; readonly tick: number; readonly unitId: string; readonly amountBps: number; readonly totalBps: number }

@@ -157,7 +157,7 @@ it('pins independently transcribed top-tier numbers in live strategy and opening
   const conqueror=buildStrategySnapshot(tierArmy('conqueror',9)).units[0];expect(conqueror.abilityPower).toBe(210); // 100 base + 100 Conqueror + 10 team Sorcerer;
   const rebel=combat(tierArmy('rebel',10));
   const triggered=stepCombat({...rebel,units:rebel.units.map(u=>({...u,hp:Math.floor(u.maxHp/2),cooldownTicks:1000,moveCooldownTicks:1000}))}).state;
-  const r=triggered.units.find(u=>u.team==='player')!;expect(r.g22?.rebelTriggered).toBe(true);expect(r.maxHpBasis?.bonusBps).toBe(3000);
+  const r=triggered.units.find(u=>u.team==='player')!;expect(r.v19?.smokePermanent).toBe(true);expect(r.maxHpBasis?.bonusBps).toBe(3000);
 });
 
 it('Experiment 7 doubles donor bonuses on Laboratory hexes',()=>{

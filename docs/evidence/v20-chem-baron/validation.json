@@ -1,74 +1,787 @@
 {
-  "baseCommit": "0484e4072ca390de37e16d25b8f3b2b19f94f5cf",
+  "baseCommit": "14006984600a08f8dd96fa776bf9ba1d1048ff24",
+  "parentEpoch": "v19",
   "rulesVersion": "s13-g2-3-v20-chem-baron",
   "contentVersion": "s13-14.24b-g2-3-v20-chem-baron",
-  "contentDigest": "fnv1a32-utf16:c1084e68",
-  "lootReplayDigest": "fnv1a32-utf16:e4289c1d",
+  "contentDigest": "fnv1a32-utf16:31c27e0d",
+  "lootReplayDigest": "fnv1a32-utf16:53b885c7",
+  "schemaVersion": 9,
+  "saveFormatVersion": 5,
+  "replayFormatVersion": 4,
+  "commandProtocolVersion": 4,
+  "requestedRelatedFiles": [
+    "tests/chem-baron-fix.test.ts",
+    "tests/g2-3-traits.test.ts",
+    "tests/g2-3-content.test.ts",
+    "tests/g2-3-hook-failures.test.ts",
+    "tests/g2-3-integration.test.ts",
+    "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+    "tests/g2-3-netcode-hooks.test.ts",
+    "tests/content-identity-constants.test.ts",
+    "tests/g2-3-followup.test.ts",
+    "tests/g2-4a-crown-history.test.ts",
+    "tests/g2-4b-artifacts.test.ts",
+    "tests/match-contract.test.ts",
+    "tests/m8-contracts.test.ts",
+    "tests/d14-anomalies-source.test.ts",
+    "tests/g2-4a-crown-gold.test.ts",
+    "tests/m8-content-equivalence.test.ts",
+    "tests/epic-loot-reforger.test.ts",
+    "tests/d11-wiring-bank.test.ts",
+    "tests/ur-i3-combat-statuses.test.ts",
+    "tests/opening-random-identity.test.ts",
+    "tests/c19-missed-pulse.test.ts",
+    "tests/m8-b7-match-wiring.test.ts",
+    "tests/b8-resumable-battle.test.ts"
+  ],
   "relatedVitestDistinctFiles": 23,
-  "relatedVitestDistinctCases": 662,
+  "relatedVitestDistinctCases": 665,
   "relatedVitestFinalResult": "passed",
+  "includingV19DistinctFiles": 44,
+  "includingV19DistinctCases": 1095,
   "testGroups": [
     {
+      "name": "targeted-core",
       "files": [
-        "chem-baron-fix",
-        "g2-3-traits",
-        "g2-3-content",
-        "g2-3-hook-failures",
-        "g2-3-integration",
-        "g2-3-lesser-shimmer-duplicator",
-        "g2-3-netcode-hooks",
-        "content-identity-constants"
+        "tests/chem-baron-fix.test.ts",
+        "tests/g2-3-traits.test.ts",
+        "tests/g2-3-content.test.ts",
+        "tests/g2-3-hook-failures.test.ts",
+        "tests/g2-3-integration.test.ts",
+        "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+        "tests/g2-3-netcode-hooks.test.ts",
+        "tests/content-identity-constants.test.ts",
+        "tests/v19-mechanics.test.ts",
+        "tests/v19-part2.test.ts",
+        "tests/v19-shop-oracle.test.ts"
       ],
-      "passed": 141
+      "passed": 202,
+      "failed": 0,
+      "log": "artifacts/v20-chem-baron-sync/targeted-core.log"
     },
     {
+      "name": "targeted-mechanics",
       "files": [
-        "g2-3-followup",
-        "g2-4a-crown-history",
-        "g2-4b-artifacts",
-        "match-contract",
-        "m8-contracts",
-        "d14-anomalies-source"
+        "tests/chem-baron-fix.test.ts",
+        "tests/g2-3-followup.test.ts",
+        "tests/g2-4a-crown-history.test.ts",
+        "tests/g2-4b-artifacts.test.ts",
+        "tests/match-contract.test.ts",
+        "tests/m8-contracts.test.ts",
+        "tests/d14-anomalies-source.test.ts",
+        "tests/g2-4a-crown-gold.test.ts"
       ],
-      "passed": 138
+      "passed": 177,
+      "failed": 0,
+      "log": "artifacts/v20-chem-baron-sync/targeted-mechanics.log"
     },
     {
+      "name": "targeted-restore",
       "files": [
-        "g2-4a-crown-gold"
+        "tests/m8-content-equivalence.test.ts",
+        "tests/epic-loot-reforger.test.ts",
+        "tests/d11-wiring-bank.test.ts",
+        "tests/ur-i3-combat-statuses.test.ts"
       ],
-      "passed": 9
+      "passed": 174,
+      "failed": 0,
+      "log": "artifacts/v20-chem-baron-sync/targeted-restore.log"
     },
     {
+      "name": "targeted-inputs",
       "files": [
-        "m8-content-equivalence",
-        "epic-loot-reforger",
-        "d11-wiring-bank",
-        "ur-i3-combat-statuses"
+        "tests/opening-random-identity.test.ts",
+        "tests/c19-missed-pulse.test.ts",
+        "tests/m8-b7-match-wiring.test.ts",
+        "tests/b8-resumable-battle.test.ts",
+        "tests/t13-identity.test.ts",
+        "tests/v17-orb-combo.test.ts"
       ],
-      "passed": 174
+      "passed": 215,
+      "failed": 0,
+      "log": "artifacts/v20-chem-baron-sync/targeted-inputs.log"
     },
     {
+      "name": "targeted-v19",
       "files": [
-        "opening-random-identity",
-        "c19-missed-pulse",
-        "m8-b7-match-wiring",
-        "b8-resumable-battle"
+        "tests/g2-3-skills.test.ts",
+        "tests/g2-4b-replay.test.ts",
+        "tests/m6-persistence.test.ts",
+        "tests/m6-replay.test.ts",
+        "tests/m8-b10-item-save-replay.test.ts",
+        "tests/m8-b9-compatibility.test.ts",
+        "tests/r3r4-consumable-targets.test.ts",
+        "tests/r3r4-consumables.test.ts",
+        "tests/shared-pool-cache.test.ts",
+        "tests/shop.test.ts",
+        "tests/t2-two-sided-battle.test.ts",
+        "tests/t3-round-settlement.test.ts",
+        "tests/tp-shared-pool.test.ts",
+        "tests/trait-runtime-g23.test.ts",
+        "tests/v18-emblem-traits.test.ts",
+        "tests/trait-text.test.ts"
       ],
-      "passed": 200
+      "passed": 355,
+      "failed": 0,
+      "log": "artifacts/v20-chem-baron-sync/targeted-v19.log"
     }
   ],
-  "testCommand": "npm test -- <listed files with tests/ prefix and .test.ts suffix> --maxWorkers=1",
-  "typecheck": "npm run typecheck: passed",
-  "identities": "node scripts/update-content-identities.cjs --write and --check: passed",
-  "epochVerification": "epoch-verification.json records the nine sequential offline steps",
-  "scope": "Only related test files, typecheck, identity checks and epoch record/verification; no full test suite or browser acceptance",
+  "caseCountNote": "Two new Chem-Baron assertions and the v19 historical identity check raise the original 662 requested cases to 665; core Chem-Baron is superseded by the final mechanics group, without double counting.",
+  "epoch": {
+    "steps": 11,
+    "complete": true,
+    "recordedSourceHashesMatchCurrent": true,
+    "sourceHashCountPerAudit": 357,
+    "historicalFilesByteIdentical": 190
+  },
   "protectedManifestSha256": "b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22",
-  "genericRoutes": "cannon/sniper/mage/sniper-caitlyn commands and battle events unchanged against v18; new identity in full state recordings",
-  "initialFailuresResolved": [
-    "Chem-Baron public route assertions updated from round 8 to round 12 after removing standard PvE shimmer; independent three-word RNG oracle replaces the old single-word checkpoints",
-    "Crown ordering vector now uses player combat and expects three market plus three crown draws",
-    "C19 consumer initially ran before the final epoch input was regenerated; the final current input and all four identity/restore suites passed"
-  ],
+  "currentHerald": "tests/fixtures/record-v20-chem-baron-herald.cjs",
+  "identitiesCheck": "passed",
+  "typecheck": {
+    "exitCode": 0,
+    "log": "artifacts/v20-chem-baron-sync/typecheck.log"
+  },
+  "genericRoutes": "cannon/sniper/mage/sniper-caitlyn commands and battle events identical to v19; new current identities recorded without modifying history",
+  "oracle": "Independent literal PvP shimmer/market source weights, BigInt LCG, keep/non-first choice and crown ordering; no production imports",
+  "u6": {
+    "command": "node scripts/verify-m8-u6-loot.cjs",
+    "exitCode": 1,
+    "category": "environment",
+    "reason": "Sandbox denies listen on 127.0.0.1 with EPERM; browser/DOM checks did not run",
+    "log": "artifacts/v20-chem-baron-sync/u6.log",
+    "headlessRoutes": {
+      "passed": true,
+      "scope": "Original U6 capacity seed36 and terminal seed38 routes plus save-envelope validation, extracted unchanged before browser section; not a DOM acceptance substitute",
+      "report": "artifacts/v20-chem-baron-sync/u6-headless-final/report.json"
+    }
+  },
+  "fastShards": {
+    "complete": true,
+    "allPassed": false,
+    "command": "npm test -- --shard=i/4 --maxWorkers=2 --reporter=default --reporter=json --outputFile=artifacts/v20-chem-baron-sync/shard-i.json (i=1..4)",
+    "note": "Every shard ran once, sequentially, with default test/hook timeouts and no preload; all four exit codes are 1. Isolated rechecks do not replace original failures. The 4 timing records are 3 assertions plus 1 hook blocking 38 assertions.",
+    "totals": {
+      "passed": 6112,
+      "failed": 49,
+      "pending": 38,
+      "files": 473,
+      "failedFiles": 21
+    },
+    "failureRecordsByCategory": {
+      "timing": 4,
+      "environment": 46
+    },
+    "runs": [
+      {
+        "shard": 1,
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "--shard=1/4",
+          "--maxWorkers=2",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile=artifacts/v20-chem-baron-sync/shard-1.json"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 572.15
+      },
+      {
+        "shard": 2,
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "--shard=2/4",
+          "--maxWorkers=2",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile=artifacts/v20-chem-baron-sync/shard-2.json"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 620.53
+      },
+      {
+        "shard": 3,
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "--shard=3/4",
+          "--maxWorkers=2",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile=artifacts/v20-chem-baron-sync/shard-3.json"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 1202.38
+      },
+      {
+        "shard": 4,
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "--shard=4/4",
+          "--maxWorkers=2",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile=artifacts/v20-chem-baron-sync/shard-4.json"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 487.08
+      }
+    ],
+    "results": [
+      {
+        "shard": 1,
+        "passed": 1355,
+        "failed": 15,
+        "pending": 38,
+        "files": 119,
+        "failedFiles": 8,
+        "failures": [
+          {
+            "file": "tests/g2-4a-crown-history.test.ts",
+            "cases": [
+              {
+                "test": "suite/hook",
+                "category": "timing",
+                "message": "Error: Hook timed out in 10000ms.\nIf this is a long-running hook, pass a timeout value as the last argument or configure it globally with \"hookTimeout\".\n ❯ tests/g2-4a-crown-history.test.ts:472:3\n    470|   // The shared opening is recorded and its battle history verified on…\n    471|   // each reforger case still validates its own prefix and full histor…\n    472|   beforeAll(() => { const opening = recordedReforgerOpening(); validat…\n       |   ^\n    473|   let removerOpening: { state: MatchState; battles: readonly BattleRec…\n    474|   beforeAll(() => {"
+              }
+            ],
+            "blockedTests": [
+              "M7/S7 combat equipment command replay records combat consumable use with remove at all three entries and resumes tick for tick (M10)",
+              "M7/S7 combat equipment command replay records combat consumable use with reequip at all three entries and resumes tick for tick (M10)",
+              "M7/S7 combat equipment command replay records combat consumable use with combine at all three entries and resumes tick for tick (M10)",
+              "M7/S7 combat equipment command replay records combat consumable use with component at all three entries and resumes tick for tick (M10)",
+              "M7/S7 combat equipment command replay records combat consumable use with completed at all three entries and resumes tick for tick (M10)",
+              "M7/S7 combat equipment command replay rejects changing the remove command tick at all three entries (M10)",
+              "M7/S7 combat equipment command replay rejects changing the component command tick at all three entries (M10)",
+              "M7/S7 combat equipment command replay rejects changing the completed command tick at all three entries (M10)",
+              "M7/S7 combat equipment command replay rejects changing the remove resource tick at all three entries (M10)",
+              "M7/S7 combat equipment command replay rejects changing the component resource tick at all three entries (M10)",
+              "M7/S7 combat equipment command replay rejects changing the completed resource tick at all three entries (M10)",
+              "M7/S7 combat equipment command replay records inventory combination followed by equip=false and resumes the next battle tick for tick (M8)",
+              "M7/S7 combat equipment command replay records inventory combination followed by equip=true and resumes the next battle tick for tick (M8)",
+              "M7/S7 combat equipment command replay rejects changing only the command tick to 0, 2 or 69 for ordinary (M9)",
+              "M7/S7 combat equipment command replay rejects changing only the command tick to 0, 2 or 69 for in-place (M9)",
+              "M7/S7 combat equipment command replay rejects changing only the command tick to 0, 2 or 69 for inventory (M9)",
+              "M7/S7 combat equipment command replay certifies the same ordered result when both tick claims move to 0 (M9 boundary)",
+              "M7/S7 combat equipment command replay certifies the same ordered result when both tick claims move to 2 (M9 boundary)",
+              "M7/S7 combat equipment command replay certifies the same ordered result when both tick claims move to 69 (M9 boundary)",
+              "M7/S7 combat equipment command replay rejects existing-target in-place combination tampering at all three entries",
+              "M7/S7 combat equipment command replay rejects missing-first in-place combination tampering at all three entries",
+              "M7/S7 combat equipment command replay rejects missing-second in-place combination tampering at all three entries",
+              "M7/S7 combat equipment command replay rejects ordinary-equip in-place combination tampering at all three entries",
+              "M7/S7 combat equipment command replay rejects missing-first inventory combination commands at all three entries",
+              "M7/S7 combat equipment command replay rejects missing-second inventory combination commands at all three entries",
+              "M7/S7 combat equipment command replay rejects ordinary-equip inventory combination commands at all three entries",
+              "M7/S7 combat equipment command replay rejects a structurally valid command with an invalid recipe through production replay",
+              "M7/S7 combat equipment command replay binds combat equip order to the temporary item roll prefix (M9)",
+              "M7/S7 combat equipment command replay keeps combat equips before terminal resources and crown gold (M9)",
+              "M7/S7 combat equipment command replay records in-place sword combination at tick 1 (requested slot 0) and resumes the next battle tick for tick",
+              "M7/S7 combat equipment command replay records in-place sword combination at tick 1 (requested slot 2) and resumes the next battle tick for tick",
+              "M7/S7 combat equipment command replay rejects reordered commands at all three save/restore entries",
+              "M7/S7 combat equipment command replay rejects duplicated commands at all three save/restore entries",
+              "M7/S7 combat equipment command replay rejects extra commands at all three save/restore entries",
+              "M7/S7 combat equipment command replay rejects missing commands at all three save/restore entries",
+              "M7/S7 combat equipment command replay rejects unknown-target commands at all three save/restore entries",
+              "M7/S7 combat equipment command replay accepts combat equipment targeting a bench unit at all three entries",
+              "M7/S7 combat equipment command replay accepts combat equipment targeting a dead unit at all three entries"
+            ]
+          },
+          {
+            "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+            "cases": [
+              {
+                "test": "G2-4b: the artifact anvil across a reconnect a resumed seat gets the same artifact popup and the unchanged deadline, and can still pick",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/lifecycle.test.ts",
+            "cases": [
+              {
+                "test": "B8 lifecycle: the network server across matches keeps connections, credentials, dedupe windows and timers at the same baseline after each of five matches",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/replay-first-pass.test.ts",
+            "cases": [
+              {
+                "test": "game server: spot check logs a mismatch with its battle, seed and first difference, keeps settling, and checks every later battle",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: spot check checks every Nth round that captured a battle (the 1st, N+1th …), one battle each, and nothing in between",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/net/heartbeat.test.ts",
+            "cases": [
+              {
+                "test": "server heartbeat options starts no heartbeat timer when listening fails",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "server heartbeat sends nothing extra when the option is off",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "server heartbeat keeps answering peers connected and sends them a heartbeat every interval",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "server heartbeat drops a seated peer that went silent, keeps its seat, and lets the token resume it",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/net/live-bank-wire.test.ts",
+            "cases": [
+              {
+                "test": "D11 live bank: replay-tail on the wire streams the changed records of a live battle to its seat and ends on the settled battle",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/net/server-close.test.ts",
+            "cases": [
+              {
+                "test": "server close and failed start cancels the delayed close of a superseded connection when the server closes",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "server close and failed start rejects a start on a taken port after releasing its lobby and WebSocketServer",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/net/slow-task.test.ts",
+            "cases": [
+              {
+                "test": "task.slow pending-window reports logs the first slow task immediately and ignores a fast task before expiry",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "task.slow pending-window reports flushes count, maximum and latest slow duration on a fast task at window expiry, only once",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "task.slow pending-window reports flushes an idle pending batch using only the loop.lag timer",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "task.slow pending-window reports flushes the unexpired pending batch on close and cancels all timers",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          }
+        ]
+      },
+      {
+        "shard": 2,
+        "passed": 1542,
+        "failed": 5,
+        "pending": 0,
+        "files": 118,
+        "failedFiles": 2,
+        "failures": [
+          {
+            "file": "tests/server/e2e-replay-errors.test.ts",
+            "cases": [
+              {
+                "test": "Server replay errors fail acceptance scripts replay.failed after readiness cannot be hidden by an explicit success exit",
+                "category": "environment",
+                "message": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/server/e2e-replay-errors.test.ts:22:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+              },
+              {
+                "test": "Server replay errors fail acceptance scripts split replay-divergence after readiness cannot be hidden by an explicit success exit",
+                "category": "environment",
+                "message": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/server/e2e-replay-errors.test.ts:22:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+              },
+              {
+                "test": "Server replay errors fail acceptance scripts replay.failed before readiness cannot be hidden by an explicit success exit",
+                "category": "environment",
+                "message": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/server/e2e-replay-errors.test.ts:22:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+              },
+              {
+                "test": "Server replay errors fail acceptance scripts unrelated server output cannot be hidden by an explicit success exit",
+                "category": "environment",
+                "message": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/server/e2e-replay-errors.test.ts:22:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2868:91\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3259:10)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/legend-walk.test.ts",
+            "cases": [
+              {
+                "test": "walk message (wire) reaches every seat of the room as `legend`, with no receipt, and a refused walk sends nothing",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          }
+        ]
+      },
+      {
+        "shard": 3,
+        "passed": 1726,
+        "failed": 12,
+        "pending": 0,
+        "files": 118,
+        "failedFiles": 8,
+        "failures": [
+          {
+            "file": "tests/explorer-bracer-restore-pressure.test.ts",
+            "cases": [
+              {
+                "test": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+                "category": "environment",
+                "message": "Error: spawnSync python3 EPERM\n    at Object.spawnSync (node:internal/child_process:1160:20)\n    at spawnSync (node:child_process:928:24)\n    at profile (<repo>/scripts/profile-explorer-bracer-restore.cjs:45:22)\n    at <repo>/tests/explorer-bracer-restore-pressure.test.ts:7:18\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+              },
+              {
+                "test": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+                "category": "environment",
+                "message": "Error: spawnSync python3 EPERM\n    at Object.spawnSync (node:internal/child_process:1160:20)\n    at spawnSync (node:child_process:928:24)\n    at profile (<repo>/scripts/profile-explorer-bracer-restore.cjs:45:22)\n    at <repo>/tests/explorer-bracer-restore-pressure.test.ts:17:18\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1628:35\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:26\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3321:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3316:10)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3301:20"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/opening-random-identity.test.ts",
+            "cases": [
+              {
+                "test": "cannon: checkpoint 23 survives strict text/object restore",
+                "category": "timing",
+                "message": "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at Object.chain (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:10\n    at Array.forEach (<anonymous>)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2866:10\n    at <repo>/tests/opening-random-identity.test.ts:419:63\n    at VitestModuleEvaluator._runInlinedModule (file://<repo>/node_modules/vitest/dist/module-evaluator.js:261:4)\n    at VitestModuleRunner.directRequest (file://<repo>/node_modules/vite/dist/node/module-runner.js:1146:59)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/t5r-combat-replay.test.ts",
+            "cases": [
+              {
+                "test": "T5R compact combat replay every tick matches authoritative view (six-per-side=true), terminal exact, input untouched",
+                "category": "timing",
+                "message": "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at Object.chain (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2869:10\n    at Array.forEach (<anonymous>)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2866:10\n    at <repo>/tests/t5r-combat-replay.test.ts:72:23\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:52\n    at runWithSuite (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3250:8)"
+              },
+              {
+                "test": "T5R compact combat replay PvE accepts the same initial/terminal/ledger shape and rejects inconsistent inputs",
+                "category": "timing",
+                "message": "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at chain (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)\n    at <repo>/tests/t5r-combat-replay.test.ts:94:3\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:52\n    at runWithSuite (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3250:8)\n    at Object.collect (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2763:22)\n    at Object.collect (file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2768:51)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:3451:26"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/g2-4a-forge-timeout.test.ts",
+            "cases": [
+              {
+                "test": "G2-4a: the forge popup across a reconnect a resumed seat gets the same forge popup and the unchanged deadline, and can still pick",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/g2-4b-support-forge-room.test.ts",
+            "cases": [
+              {
+                "test": "G2-4b: the support anvil across a reconnect a resumed seat gets the same support popup and the unchanged deadline, and can still pick",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/little-legends.test.ts",
+            "cases": [
+              {
+                "test": "little legends: over the wire shows every seat the legend another player picked",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/projection-wire.test.ts",
+            "cases": [
+              {
+                "test": "B7 private seat view on every state path sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "B7 private seat view on every state path keeps the fault snapshot projected",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "B7 compact replay sends each battle once as the room's own replay and never as combat frames (C6)",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/net/v17-avarice-reconnect.test.ts",
+            "cases": [
+              {
+                "test": "v17 avarice: reconnect during and after a live battle a seat that left and came back is shown the settled live replay and settles once",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          }
+        ]
+      },
+      {
+        "shard": 4,
+        "passed": 1489,
+        "failed": 17,
+        "pending": 0,
+        "files": 118,
+        "failedFiles": 3,
+        "failures": [
+          {
+            "file": "tests/g2-4b-pr161-restore.test.ts",
+            "cases": [
+              {
+                "test": "cold Node processes restore actual canonical saves for tiers4/10/14 with the same claims and pending choice",
+                "category": "environment",
+                "message": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined\n    at <repo>/tests/g2-4b-pr161-restore.test.ts:390:26\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at file://<repo>/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/net/server.test.ts",
+            "cases": [
+              {
+                "test": "game server: visibility shows the other seat its level and HP changes but never its shop or private state",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: rejections leave the room untouched refuses forged seats, uploaded gold, wrong protocol, wrong types and stale versions",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: commandId dedupe executes a repeated commandId once and refuses the same id with other content",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: commandId dedupe refuses an id that fell out of the retention window and demands a resync",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: disconnect and resume returns a dropped seat to its owner by token, snapshot before increments, and disarms the old socket",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: disconnect and resume G1-P6: a resumed seat gets the same opponent candidates in preparation and fights one of them",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: disconnect and resume drops a queued player that disconnects before the match and frees the seat",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: queue refuses the ninth join with \"full\" and leaves the queue at eight",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: queue refuses a join while a match runs and lets a new queue form after it ends",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: single writer runs 50 pipelined commands strictly in arrival order with no interleaving",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: connection limits closes a connection that sends an oversized frame",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: connection limits rate-limits a connection on the room clock and accepts again in the next window",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: whole match over the wire drives two clients from the queue to a full ranking with replays on the manual clock",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          },
+          {
+            "file": "tests/server/net/takeover.test.ts",
+            "cases": [
+              {
+                "test": "game server: no takeover by default (P2) keeps a disconnected seat human-controlled long after the old takeover delay; resume is a plain reconnect",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: bot takeover of a disconnected seat when switched on (B6) shows the takeover to everyone after takeoverMs and hands the seat back on resume with reclaimed=true",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              },
+              {
+                "test": "game server: bot takeover of a disconnected seat when switched on (B6) a resume before takeoverMs is a plain reconnect: no takeover, no reclaimed flag",
+                "category": "environment",
+                "message": "Error: listen EPERM: operation not permitted 127.0.0.1\n    at Server.setupListenHandle [as _listen2] (node:net:2306:21)\n    at listenInCluster (node:net:2437:12)\n    at node:net:2666:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)"
+              }
+            ],
+            "blockedTests": []
+          }
+        ]
+      }
+    ],
+    "durableFailureReport": "docs/evidence/v20-chem-baron/FAST_TEST_RESULTS.md"
+  },
+  "crownHookRecheck": {
+    "command": "npm test -- tests/g2-4a-crown-history.test.ts --maxWorkers=1",
+    "passed": 56,
+    "failed": 0,
+    "timeoutsChanged": false,
+    "report": "artifacts/v20-chem-baron-sync/crown-isolated.json"
+  },
+  "sandboxSyncProcessWorkaround": "Node24 synchronous pipe polling reports EPERM despite child status0; ignored artifact preload captures stdout/stderr using ordinary file descriptors and preserves actual exit/error status. Used for epoch/U6 and explicitly labelled supplemental rechecks, never for the original four Vitest shards.",
+  "git": {
+    "head": "b5dc88ef64051f4250e8a4d526eea112c33b6408",
+    "conflictFiles": 23,
+    "conflictMarkersRemaining": 0,
+    "indexResolved": false,
+    "reason": "git add failed: read-only <repo>/.git/worktrees/chem-wt/index.lock; user must stage resolved workspace and new files"
+  },
   "networkUsed": false,
-  "pushed": false
+  "pushed": false,
+  "synchronousAndAsyncChildPipeDiagnostic": {
+    "report": "artifacts/v20-chem-baron-sync/pipe-diagnostic.json",
+    "observed": "Node child writes READY/stdout and warning/stderr, exits 0; parent gets exit/close only, no data events",
+    "e2eReplayRecheck": "File-descriptor workaround removes synchronous spawn EPERM but child readiness still fails because async pipe output is absent; original shard failures retained"
+  },
+  "checkpointRecheck": {
+    "command": "npm test -- tests/opening-random-identity.test.ts --maxWorkers=1 -t 'cannon: checkpoint 23 survives strict text/object restore'",
+    "passed": 1,
+    "failed": 0,
+    "notSelected": 145,
+    "durationMs": 1713,
+    "timeoutsChanged": false,
+    "report": "artifacts/v20-chem-baron-sync/checkpoint-isolated.json"
+  },
+  "t5rRecheck": {
+    "command": "npm test -- tests/t5r-combat-replay.test.ts --maxWorkers=1 -t 'six-per-side=true|PvE accepts the same'",
+    "passed": 2,
+    "failed": 0,
+    "notSelected": 44,
+    "timeoutsChanged": false,
+    "report": "artifacts/v20-chem-baron-sync/t5r-isolated.json"
+  },
+  "bracerSupplementalRecheck": {
+    "passed": 1,
+    "failed": 1,
+    "reason": "After synchronous-pipe workaround, correctness and timing pass, but dedup-titan exceeds the 256 MiB RSS assertion",
+    "report": "artifacts/v20-chem-baron-sync/bracer-env-recheck.json",
+    "baselineComparison": {
+      "baseCommit": "14006984600a08f8dd96fa776bf9ba1d1048ff24",
+      "workersExcludePreload": true,
+      "reports": [
+        {
+          "label": "v19",
+          "exitCode": 0,
+          "peakRssKiB": 290016,
+          "stdout": "{\"scenario\":\"dedup-titan\",\"outcome\":\"enumerated\",\"apCount\":301,\"apMin\":100,\"apMax\":700,\"adCount\":271,\"elapsedMs\":24.001242999999704}\n",
+          "stderr": ""
+        },
+        {
+          "label": "current",
+          "exitCode": 0,
+          "peakRssKiB": 290512,
+          "stdout": "{\"scenario\":\"dedup-titan\",\"outcome\":\"enumerated\",\"apCount\":301,\"apMin\":100,\"apMax\":700,\"adCount\":271,\"elapsedMs\":44.09106900000006}\n",
+          "stderr": ""
+        }
+      ]
+    },
+    "classification": "inherited-performance-failure; both immutable v19 and current source exceed the same RSS threshold under identical Node24 sandbox settings; no gameplay mismatch"
+  },
+  "coldProcessRecheck": {
+    "command": "NODE_OPTIONS=--require=<ignored-file-stdio-preload> npm test -- tests/g2-4b-pr161-restore.test.ts --maxWorkers=1 -t 'cold Node processes'",
+    "passed": 1,
+    "failed": 0,
+    "notSelected": 10,
+    "durationMs": 17203,
+    "timeoutsChanged": false,
+    "report": "artifacts/v20-chem-baron-sync/cold-process-recheck.json",
+    "classification": "environment; original synchronous child-pipe failure removed by ordinary-file descriptors"
+  },
+  "finalChecks": {
+    "historicalFixtureAudit": {
+      "exitCode": 0,
+      "historicalFiles": 190,
+      "protectedManifestByteIdentical": true,
+      "log": "artifacts/v20-chem-baron-sync/final-history-check.log"
+    },
+    "gitDiffCheck": "passed",
+    "conflictMarkers": 0,
+    "unstagedChangesInRestrictedDirectories": [],
+    "sourceAuditHashes": {
+      "audits": 3,
+      "hashesPerAudit": 357,
+      "allMatch": true
+    }
+  }
 }

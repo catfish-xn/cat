@@ -74,10 +74,10 @@ describe('G2-3 staged source data (runtime admission is a separate gate)', () =>
     expect(G23_ABILITIES['drmundo-ability'].variables.BaseExperimentHealthGain).toEqual([120, 120, 120]);
     expect(G23_ABILITIES['drmundo-ability'].variables.ExperimentHealthGain).toEqual([60, 60, 60]);
   });
-  it('preserves all 26 non-Teamup source traits and explicitly excludes Form Swapper admission', () => {
+  it('preserves all 26 non-Teamup source traits and admits Form Swapper in v19', () => {
     const traits = set.traits.filter((t: Raw) => !t.apiName.includes('Teamup'));
     expect(Object.values(G23_TRAIT_SOURCE).map(t => t.apiName).sort()).toEqual(traits.map((t: Raw) => t.apiName).sort());
-    expect(G23_TRAIT_SOURCE['form-swapper'].enabled).toBe(false);
+    expect(G23_TRAIT_SOURCE['form-swapper'].enabled).toBe(true);
     for (const trait of Object.values(G23_TRAIT_SOURCE)) {
       const source = traits.find((t: Raw) => t.apiName === trait.apiName);
       expect(trait.tiers).toEqual(source.effects.map((t: Raw) => ({ threshold: t.minUnits, values: Object.fromEntries(Object.entries(t.variables).map(([k, v]) => [k, v === null ? null : quantize(v as number)])) })));

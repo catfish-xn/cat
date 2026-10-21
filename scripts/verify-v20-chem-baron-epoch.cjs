@@ -1,12 +1,14 @@
-/* Run the nine recording/verification steps sequentially, offline, without Git writes. */
+/* Run the eleven recording/verification steps sequentially, offline, without Git writes. */
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
 process.env.GIT_OPTIONAL_LOCKS='0';
-const base='0484e4072ca390de37e16d25b8f3b2b19f94f5cf',arg='--baseline-commit='+base;
+const base='14006984600a08f8dd96fa776bf9ba1d1048ff24',arg='--baseline-commit='+base;
 const steps=[
  ['record-release','scripts/record-v20-chem-baron-release.cjs',arg],
  ['record-herald','tests/fixtures/record-v20-chem-baron-herald.cjs','--write'],
  ['record-inputs','scripts/record-v20-chem-baron-inputs.cjs',arg],
  ['record-live-reveal','scripts/record-v20-chem-baron-live-reveal.cjs',arg],
+ ['record-transfer','scripts/record-v20-chem-baron-transfer.cjs'],
+ ['check-transfer','scripts/record-v20-chem-baron-transfer.cjs','--check'],
  ['check-inputs','scripts/record-v20-chem-baron-inputs.cjs',arg,'--check'],
  ['check-herald','scripts/verify-m8-herald-fixtures.cjs'],
  ['check-history','scripts/v20-chem-baron-fixture-audit.cjs',arg],

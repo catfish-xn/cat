@@ -1,7 +1,7 @@
 /* Independent Chem-Baron epoch. Previous evidence, raw archives and archive mirrors stay immutable. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {execFileSync}=require('node:child_process'),{createHash}=require('node:crypto');
-const BASELINE='0484e4072ca390de37e16d25b8f3b2b19f94f5cf';
+const BASELINE='14006984600a08f8dd96fa776bf9ba1d1048ff24';
 const git=(...args)=>execFileSync('git',args,{maxBuffer:128*1024*1024,env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}});
 const sha=b=>createHash('sha256').update(b).digest('hex');
 exports.baselineCommit=()=>{
@@ -17,7 +17,7 @@ exports.archivedBytes=(commit,file)=>{
 exports.sourceDigests=()=>{
  const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(dir+'/'+e.name):[dir+'/'+e.name]);
  const files=[...walk('src/simulation'),...fs.readdirSync('scripts').filter(p=>p.includes('v20-chem-baron')&&p.endsWith('.cjs')).map(p=>'scripts/'+p),
- 'scripts/content-digest.ts','scripts/loot-replay-digest.ts','scripts/generate-m5-route.cjs','scripts/verify-m8-herald-fixtures.cjs',
+ 'tests/fixtures/m5/oracle.g2.cjs','scripts/content-digest.ts','scripts/loot-replay-digest.ts','scripts/generate-m5-route.cjs','scripts/verify-m8-herald-fixtures.cjs',
  'tests/fixtures/record-v20-chem-baron-herald.cjs','tests/fixtures/v20-chem-baron-herald-support/generate.ts'];
  return Object.fromEntries([...new Set(files)].sort().map(p=>[p,sha(fs.readFileSync(p))]));
 };

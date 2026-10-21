@@ -16,6 +16,7 @@ export const G23_SPECIAL_ITEMS:Readonly<Record<string,ItemDefinition>>=freezeCon
  if(id==='TFT5_Item_GargoyleStoneplateRadiant')effects.push({kind:'mechanic',mechanic:'gargoyle',values:{resistPerEnemy:n('ArmorPerEnemy')}});
  if(n('AD'))effects.push({kind:'statPercentBps',stat:'attackDamage',bps:Math.round(n('AD')*10000)});
  if(n('AS'))effects.push({kind:'attackSpeedBps',bps:Math.round(n('AS')*100)});
+ if(id==='TFT13_Crime_Prismatic_ExecutionersVorpalblade')effects.push({kind:'mechanic',mechanic:'v19Chainblade',values:{executeBps:2000,pvp:0}});
  const health=n('BonusPercentHP')||n('PercentMaxHP');if(health)effects.push({kind:'statPercentBps',stat:'maxHp',bps:Math.round(health*10000)});
  program.modifiers=[...(n('CritChance')?[modifier('critChance',Math.round(n('CritChance')*100),'bps')]:[]),...(n('BonusDamage')||n('DamageAmp')?[modifier('damageAmp',Math.round((n('BonusDamage')||n('DamageAmp'))*10000),'bps')]:[])];
  const isRadiant=id.startsWith('TFT5_Item_');

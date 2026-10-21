@@ -1,3 +1,4 @@
+import { melCanSave, commitMelSave } from './mel-save';
 import { reconcileD14 } from './d14-runtime';
 import type {TraitProjectionContext} from './traits/effective-membership';
 import { forfeitUnclaimedOrbs, settleQueuedOrbClaims } from './orb-claim';
@@ -98,6 +99,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       // reject removals/reforges or grant a newly equipped emblem retroactively.
       // Unlocked callers and explicit projections retain the exact tier check.
       const frozenTiers=multiplayer.combatRosterLocked===true&&traitContext===undefined;
+      if(facts.family&&(facts.family.stage!==round.stage||!frozenTiers&&facts.family.eligible!==((traits.find(t=>t.traitId==='family')?.tier??0)>=5)))return fail(state,'invalid-receipt');
       if(facts.battleId!==r.battleId||facts.round!==r.round||facts.roundKind!=='pvp'||facts.result!==r.result
        ||!frozenTiers&&(facts.conquerorTier!==(traits.find(t=>t.traitId==='conqueror')?.tier??0)||facts.chemBaronTier!==(traits.find(t=>t.traitId==='chem-baron')?.tier??0))
        // Equipment stays editable under a locked roster, so the frozen crown count is bounded by crowns owned (never destroyed).
@@ -135,7 +137,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       'baseDamage','opposingSurvivors','growth','combatTicks','combatEventCount'];
     if(r.g23Facts)fields.push('g23Facts');
     if (Object.keys(r).length !== fields.length || Object.keys(r).some(key => !fields.includes(key))) return fail(state,'invalid-receipt');
-    const hpAfter = Math.max(0,state.playerHp-r.damage);
+    const saved=melCanSave(state,r.g23Facts,Math.max(0,state.playerHp-r.damage)),hpAfter=saved?1:Math.max(0,state.playerHp-r.damage);
     const record: RoundResult = {
       round:r.round,roundId:r.roundId,settlementId:r.settlementId,roundKind:'pvp',result,
       combatTicks:r.combatTicks,combatEventCount:r.combatEventCount,income:plan.income,incomeBreakdown:plan.incomeBreakdown,
@@ -157,7 +159,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       augmentProgress,roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
     const hookEvents:MatchEvent[]=[];
-    const merged = resolveDeferredUpgrades(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
+    let settled=r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next;
+    if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
+    const merged = resolveDeferredUpgrades(settled);
     const d14State=reconcileD14(merged.state,hookEvents);
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
     const opened=openG23Choice(forfeited.state);

@@ -43,9 +43,10 @@ function expectContinuation(from: MatchState, copies: MatchState[]) {
     });
   }
 }
-// Seed 3151248's v14 fallback is High Voltage; its gifted Spark stays in inventory.
-// v15 seed 5 offers Manaflow I, which the back-row contribution=false board needs.
-const frontRowRod = () => {let s=acquireEquipment(['rod'],{seed:3151248,augmentPriorities:['glass-cannon-ii']});for(const u of s.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))s=accepted(sellUnit(s,u.id));if(!s.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))s=accepted(grantMechanicUnit(s,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));return s;};
+// v19 Sisters shifts seed 3151248's gold offers to Spirit Link. Public card
+// rerolls recover the inert front-row Glass Cannon II control without changing any combat assertions.
+// Seed 5 still offers Manaflow I for the contribution=false board.
+const frontRowRod = () => {let s=acquireEquipment(['rod'],{seed:3151248,augmentPriorities:['glass-cannon-ii'],rerollForAugment:true});for(const u of s.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))s=accepted(sellUnit(s,u.id));if(!s.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))s=accepted(grantMechanicUnit(s,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));return s;};
 let initial: MatchState, before: MatchState, after: MatchState, doubleKill: MatchEvent[];
 let luxFixture: { initial: MatchState; before: MatchState; after: MatchState; doubleKill: MatchEvent[] };
 beforeAll(() => {
@@ -100,7 +101,7 @@ it.each(['object', 'json'] as const)('restores the real double kill and continue
 describe('Renata public acquisition fixture', () => {
   let acquired: MatchState, granted: MatchState, deployed: MatchState;
   beforeAll(() => {
-    let preparation = acquireEquipment(['rod'],{seed:3151248,augmentPriorities:['glass-cannon-ii']});
+    let preparation = acquireEquipment(['rod'],{seed:3151248,augmentPriorities:['glass-cannon-ii'],rerollForAugment:true});
     for(const u of preparation.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))preparation=accepted(sellUnit(preparation,u.id));
     acquired = freezeContent(structuredClone(preparation));
     for (let i = 0; i < 9; i++) preparation = accepted(grantMechanicUnit(preparation, { receiptId: `renata-${i}`, source: 'test', definitionId: 'renata' }));

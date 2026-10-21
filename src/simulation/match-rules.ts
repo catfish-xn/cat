@@ -22,7 +22,8 @@ export const SHOP_CATALOG_BY_COST: Readonly<Record<CostTier, readonly string[]>>
   2: Object.freeze(["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"]),
   3: Object.freeze(["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"]),
   4: Object.freeze(["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"]),
-  5: Object.freeze(["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"])
+  5: Object.freeze(["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]),
+  6: Object.freeze(["mel", "viktor", "warwick"])
 });
 export const SHOP_CATALOG: readonly string[] = Object.freeze(Object.values(SHOP_CATALOG_BY_COST).flat());
 /** Standard stage damage in the frozen 14.24b reference; M5 supports stages 2–6. */

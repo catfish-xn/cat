@@ -22,10 +22,10 @@ import type { Effect } from '../src/simulation/strategy-types';
 // Explicit reference answers below were transcribed from the frozen RULES and
 // historical source; they never call production calculators to derive expectations.
 describe('M5 frozen S13 slice',()=>{
-  it('keeps exactly 60 buyable heroes, all five costs populated, and neutrals/legacy isolated',()=>{
+  it('keeps exactly 63 buyable heroes, all six costs populated (v19), and neutrals/legacy isolated',()=>{
     expect(M5_UNIT_IDS).toEqual(G23_HERO_IDS);
     expect(Object.values(SHOP_CATALOG_BY_COST).flat().sort()).toEqual(M5_UNIT_IDS);
-    expect(Object.values(SHOP_CATALOG_BY_COST).map(row=>row.length)).toEqual([14,13,13,12,8]);
+    expect(Object.values(SHOP_CATALOG_BY_COST).map(row=>row.length)).toEqual([14,13,13,12,8,3]);
     expect(Object.keys(NEUTRAL_UNIT_DEFINITIONS)).toHaveLength(5);
     expect(UNIT_DEFINITIONS.sentinel).toBeDefined();
     expect(M5_UNIT_DEFINITIONS.sentinel).toBeUndefined();
@@ -62,8 +62,8 @@ describe('M5 frozen S13 slice',()=>{
     }
   });
   // Augments: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  it('freezes exactly 25 supported traits, 8 components, 36 recipes, 60 augments and 56 anomalies',()=>{
-    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([25,44,60,56]);
+  it('freezes v19: 30 supported traits, 8 components, 36 recipes, 61 augments and 56 anomalies',()=>{
+    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([30,44,61,56]);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);

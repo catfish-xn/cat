@@ -2,10 +2,24 @@
 
 ## v20-chem-baron 当前炼金男爵规则（2026-10-21）
 
-本节覆盖下文历史版本/黑市单候选/每 offer 一词及标准 PvE 微光描述。规则/内容为 `s13-g2-3-v20-chem-baron` / `s13-14.24b-g2-3-v20-chem-baron`；CONTENT `fnv1a32-utf16:c1084e68`，LOOT_REPLAY `fnv1a32-utf16:e4289c1d`；schema/save/replay/command 仍 8/4/3/4，旧身份拒绝、无迁移。独立 epoch、来源、导出签名与失败语义见 [CHEM_BARON_FIX](CHEM_BARON_FIX.md)，保持项见 [S13_RULES_GAP](S13_RULES_GAP.md)。
+本 epoch 的父版本为 v19（multiplayer `14006984`），完整保留 v19 内容、规则和账本。本节覆盖下文历史版本/黑市单候选/每 offer 一词及标准 PvE 微光描述。规则/内容为 `s13-g2-3-v20-chem-baron` / `s13-14.24b-g2-3-v20-chem-baron`；CONTENT `fnv1a32-utf16:31c27e0d`，LOOT_REPLAY `fnv1a32-utf16:53b885c7`；schema/save/replay/command 沿用 v19 的 9/5/4/4，旧身份拒绝、无迁移。独立 epoch、来源、导出签名与失败语义见 [CHEM_BARON_FIX](CHEM_BARON_FIX.md)，保持项见 [S13_RULES_GAP](S13_RULES_GAP.md)。
 
 12/17 B 公告 15 条（16 具名字段）在规则内容层采纳覆盖，raw/archive mirror 不变。标准模式只在玩家对战后获取微光，野怪不增加且不触发新 offer。黑市 N=3 为项目自定（用户要求多选一），按该档源权重无放回抽取，不足三包时全部列出，每候选一词 lcg32-v1。`choiceId/generation/options` 投影与 choose 命令不变，optionId 为完整奖励包 apiName；只发选中包，`@skip`/超时即“保留”，本轮不领且微光不清空。既有跨档/领取清空/跳过生命规则保持。
 
+## v19 第二部分（继承合同，2026-10-21）
+
+同一v19包含家人5随机任务法球、13.4六人彩蛋回移、六费 warwick / viktor / mel 与22种纹章总基础属性替换。schema/save/replay/command＝**9/5/4/4**；旧身份拒绝，无迁移，50ms和lcg32-v1不变。数值、魔改/未验证清单、导出签名、RNG、失败/恢复、说明底部显示字段及表现层交接以 [V19_PART2](V19_PART2.md) 为准；下文旧“家人预留/六费延期/纹章未改/8-4-3”描述已被本节覆盖。
+
+
+## v19 规则与数据合同（历史身份）（2026-10-21）
+
+当前 rules/content 为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，CONTENT=`fnv1a32-utf16:242e7562`、LOOT_REPLAY=`fnv1a32-utf16:df0d757c`；schema/save/replay/command 为9/5/4/4。旧身份拒绝，无迁移。该 epoch 的录制入口为 `scripts/verify-v19-epoch.cjs` 与 `record-v19-*.cjs`；当前入口与 CURRENT Herald 已推进至 v20-chem-baron，v19 及更早保持历史字节。
+
+实际耗蓝统领、完整生命盖伦、双形、强化/伙伴门槛的姐妹、蓝发10循环、黑玫伤害标记、链锯刃唯一收益及全部明确约定见 [V19_MECHANICS](V19_MECHANICS.md)。姐妹内部强化ID=`sisters`，归档API=`TFT13_TeamupAugment_Sisters`；当前61强化/30羁绊。公开命令签名、失败枚举和失败原state/零资源零RNG语义不变。
+
+`g23Facts.itemGoldPayouts[].amount` 扩为 `1|3`；`perfected-chainblade` 必须为3，其他kind必须为1。服务器原样透传，不自行拆分或即时发金。真实结算按amount求和，通过既有唯一mechanic收据一次到账。单人相关新动态战斗从认证输入完整重演验证，不信任候选标记/采样/收据。
+
+`seatMechanics.seat.familyHeist` 为本人显示投影，权威任务/RNG在hidden.progress.family；第二部分已接入随机任务、奖励法球和唯一收据，详见V19_PART2。赛薇卡投影合同见 [COMBAT_CONTRACT](COMBAT_CONTRACT.md) 和v19说明。
 
 ## v18 当前等级规则（2026-10-21，覆盖下文历史等级/身份）
 
@@ -758,3 +772,7 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 ## v18 纹章与高档位扩展（2026-10-21）
 
 实现、导出签名、输入输出/失败语义、来源覆盖与明确延期项见 [V18_TRAIT_EXPANSION](V18_TRAIT_EXPANSION.md)。沿用v18身份，等级与固定拆卸器规则保持。`deriveTraits` 第五参数可传当前 `items`；`buildStrategySnapshot` 自动编译冻结装备身份。公开合成/装备/重铸命令签名和失败枚举不变。
+
+## v19 座位只读字段（PR #364 收尾）
+
+`toPrivateSeatView(state:MatchState)` 返回 `familyReunion.{eligible,participantIds,downgraded,downgradedAtTick}` 和 `shopOdds.sixCostBps`；`readG23MechanismState(state).familyReunion` 同退星事实。它们只投影规则，不发事件或消耗资源/RNG；精确类型、基点口径和逐项回归见 [PR364_CI_REPAIR](PR364_CI_REPAIR.md)。六费加入可购买英雄集合（63），常规赠卡/素材渠道的费用限制仍由各自合同约束。

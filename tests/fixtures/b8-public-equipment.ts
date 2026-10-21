@@ -1,7 +1,7 @@
 import { readRunFixture, writeRunFixture } from './g4-run-cache';
 import { freezeContent } from '../../src/simulation/content/freeze';
 import {
-  createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, rerollShop, selectAnomalyTarget, sellUnit,
+  createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, rerollShop, rerollAugment, selectAnomalyTarget, sellUnit,
 } from '../../src/simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../src/simulation/match-types';
 import type { LedgerCombatEvent as CombatEvent } from '../../src/simulation/combat-types';
@@ -89,11 +89,11 @@ const preparations = new Map<string, MatchState>();
  * Original Irelia/Lux stay one star for independent equipment stat assertions.
  */
 export function publicEquipmentPreparation(components: readonly string[],
-  options: { seed?: number; history?: BattleHistory; augmentPriorities?: readonly string[]; earliestRound?: number } = {}): MatchState {
+  options: { seed?: number; history?: BattleHistory; augmentPriorities?: readonly string[]; rerollForAugment?: boolean; earliestRound?: number } = {}): MatchState {
   if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
   // Seed 38 supplies gloves in the opening and 3-7. Use it for multi-item
   // glove recipes, leaving real supply choices for their other ingredients.
-  const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42),key=JSON.stringify([seed,components,options.augmentPriorities??[],options.earliestRound??4]);
+  const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42),key=JSON.stringify([seed,components,options.augmentPriorities??[],options.earliestRound??4,options.rerollForAugment??false]);
   if (!options.history) {
     const cached = preparations.get(key) ?? readRunFixture<MatchState>('preparation', key);
     if (cached) { preparations.set(key, cached); return copyFixture(cached); }
@@ -106,6 +106,10 @@ export function publicEquipmentPreparation(components: readonly string[],
   for(let budget=0;budget<80;budget++){
     while(state.phase==='choice'){
       const choice=state.pendingChoice!;
+      if(choice.kind==='augment'&&options.rerollForAugment&&!options.augmentPriorities?.some(id=>choice.offers.includes(id))){
+        const slot=choice.rerolledSlots?.findIndex(used=>!used)??-1;
+        if(slot>=0){state=accepted(rerollAugment(state,choice.choiceId,choice.generation,slot));continue;}
+      }
       if(choice.kind==='anomaly'&&choice.step==='target'){
         const unit=state.preparation.units.find(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId))!;
         state=accepted(selectAnomalyTarget(state,choice.choiceId,choice.generation,unit.id));continue;

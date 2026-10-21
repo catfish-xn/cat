@@ -486,12 +486,12 @@ export interface M8CombatExtension {
 /** Frozen target identifiers. Current M7 constants deliberately remain unchanged. */
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
-  readonly schemaVersion: 8;
+  readonly schemaVersion: 9;
   readonly rulesVersion: 's13-g2-3-v20-chem-baron';
   readonly contentVersion: 's13-14.24b-g2-3-v20-chem-baron';
   readonly contentDigest: string;
-  readonly saveFormatVersion: 4;
-  readonly replayFormatVersion: 3;
+  readonly saveFormatVersion: 5;
+  readonly replayFormatVersion: 4;
   readonly commandProtocolVersion: 4;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
@@ -508,6 +508,7 @@ export type M8CombatEvent = { readonly domain: 'combat'; readonly combatId: stri
   | { readonly type: 'shieldLayerChanged'; readonly layer: ShieldState; readonly reason: 'granted' | 'absorbed' | 'decayed' | ShieldEndReason }
   | { readonly type: 'statChanged'; readonly unitId: string; readonly source: Source; readonly stat: Stat; readonly before: number; readonly after: number }
   | { readonly type: 'maxHpChanged'; readonly unitId: string; readonly source: Source; readonly beforeMax: number; readonly afterMax: number; readonly beforeHp: number; readonly afterHp: number; readonly countsAsHeal: false }
+  | import('../combat-six-cost').SixCostEvent
   | import('../seat-mechanics/combat-events').G23CombatEventData
 );
 

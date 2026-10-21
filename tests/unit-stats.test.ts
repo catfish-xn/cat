@@ -85,7 +85,7 @@ describe('authored unit catalog and star stat resolution', () => {
   it.each([
     { baseStats: { health: 0 } }, { baseStats: { attack: -1 } }, { baseStats: { armor: NaN } },
     { baseStats: { magicResist: Infinity } }, { baseStats: { health: 1.5 } },
-    { cost: 6 }, { attackRange: 0 }, { attackIntervalTicks: 0 }, { maxMana: 0 }, { initialMana: 81 },
+    { cost: 7 }, { attackRange: 0 }, { attackIntervalTicks: 0 }, { maxMana: 0 }, { initialMana: 81 },
     { abilityId: '' }, { id: 'duplicate' },
   ])('rejects incomplete or invalid definition data %j', patch => {
     const sentinel = UNIT_DEFINITIONS.sentinel;

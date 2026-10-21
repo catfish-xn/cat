@@ -5,7 +5,7 @@
   "mirrorOfSeatId": null,
   "a": {
     "version": "two-sided-snapshot-v1",
-    "contentDigest": "fnv1a32-utf16:c1084e68",
+    "contentDigest": "fnv1a32-utf16:31c27e0d",
     "seatId": "s3",
     "roundId": "6-1",
     "level": 9,
@@ -49,7 +49,7 @@
   },
   "b": {
     "version": "two-sided-snapshot-v1",
-    "contentDigest": "fnv1a32-utf16:c1084e68",
+    "contentDigest": "fnv1a32-utf16:31c27e0d",
     "seatId": "s4",
     "roundId": "6-1",
     "level": 9,
@@ -259,7 +259,23 @@
       },
       {
         "team": "player",
+        "traitId": "banished-mage",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
         "traitId": "black-rose",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "blood-hunter",
         "count": 0,
         "tier": 0,
         "memberDefinitionIds": [],
@@ -344,6 +360,14 @@
       },
       {
         "team": "player",
+        "traitId": "form-swapper",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
         "traitId": "high-roller",
         "count": 0,
         "tier": 0,
@@ -353,6 +377,14 @@
       {
         "team": "player",
         "traitId": "junker-king",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "machine-herald",
         "count": 0,
         "tier": 0,
         "memberDefinitionIds": [],
@@ -395,6 +427,14 @@
       {
         "team": "player",
         "traitId": "sentinel",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "sisters",
         "count": 0,
         "tier": 0,
         "memberDefinitionIds": [],
@@ -470,7 +510,23 @@
       },
       {
         "team": "enemy",
+        "traitId": "banished-mage",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
         "traitId": "black-rose",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "blood-hunter",
         "count": 0,
         "tier": 0,
         "memberDefinitionIds": [],
@@ -554,6 +610,14 @@
       },
       {
         "team": "enemy",
+        "traitId": "form-swapper",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
         "traitId": "high-roller",
         "count": 0,
         "tier": 0,
@@ -563,6 +627,14 @@
       {
         "team": "enemy",
         "traitId": "junker-king",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "machine-herald",
         "count": 0,
         "tier": 0,
         "memberDefinitionIds": [],
@@ -605,6 +677,14 @@
       {
         "team": "enemy",
         "traitId": "sentinel",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "sisters",
         "count": 0,
         "tier": 0,
         "memberDefinitionIds": [],
@@ -682,7 +762,7 @@
       {
         "unitId": "[\"t2\",\"s3\",\"unit\",\"unit-48\"]",
         "stats": {
-          "health": 2016,
+          "health": 1800,
           "attack": 117,
           "armor": 60,
           "magicResist": 60,
@@ -719,15 +799,31 @@
               "effectIndex": 0
             },
             "effect": {
-              "kind": "statFlat",
-              "stat": "maxHp",
-              "amount": 216
+              "kind": "mechanic",
+              "mechanic": "v19Garen",
+              "values": {
+                "healthBps": 1200
+              }
             }
           }
         ],
         "triggers": [],
         "abilityPower": 100,
-        "mechanics": [],
+        "mechanics": [
+          {
+            "source": {
+              "ownerId": "[\"t2\",\"s3\",\"unit\",\"unit-48\"]",
+              "sourceKind": "trait",
+              "definitionId": "emissary",
+              "instanceId": "[\"t2\",\"s3\",\"trait\",\"player:1\"]",
+              "effectIndex": 0
+            },
+            "mechanic": "v19Garen",
+            "values": {
+              "healthBps": 1200
+            }
+          }
+        ],
         "attackDamageBase": 117,
         "attackDamagePercentBps": 0
       },

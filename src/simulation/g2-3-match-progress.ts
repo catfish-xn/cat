@@ -1,3 +1,4 @@
+import { activateFamily, type FamilyTask } from './family-heist';
 import {recordG23GrantEvidence} from './g2-3-grant-evidence';
 import {findMechanicReceipt,grantMechanicItem} from './seat-mechanics';
 import {readG23Progress} from './g2-3-state';
@@ -14,7 +15,7 @@ import { EMPTY_G23_CONQUEST,validateG23Conquest,type G23ConquestProgress } from 
 import { freezeContent } from './content/freeze';
 import { deriveTraits } from './trait-snapshot';
 export interface G23ItemReceipt {readonly id:string;readonly kind:'academy';readonly tier:number;readonly round:number;readonly itemId:string;readonly definitionId:string}
-export interface G23MatchProgress {readonly epicCrowns?:readonly {readonly receiptId:string;readonly round:number}[];readonly version:'g2-3-progress-v1';readonly seed:number;readonly rngState:number;readonly rngDraws:number;readonly sponsored:readonly string[];readonly conquest:G23ConquestProgress;readonly chem:G23ChemProgress;readonly junkerRounds:number;readonly junkerPurchases:readonly G23JunkerPurchase[];readonly rewards:readonly G23RewardBundle[];readonly economyReceipts:readonly G23EconomyReceipt[];readonly rewardClaims:readonly G23RewardClaim[];readonly itemReceipts:readonly G23ItemReceipt[]}
+export interface G23MatchProgress {readonly family?:FamilyTask;readonly mel?:{readonly pvpCasts:number;readonly savedBattleId:string|null};readonly epicCrowns?:readonly {readonly receiptId:string;readonly round:number}[];readonly version:'g2-3-progress-v1';readonly seed:number;readonly rngState:number;readonly rngDraws:number;readonly sponsored:readonly string[];readonly conquest:G23ConquestProgress;readonly chem:G23ChemProgress;readonly junkerRounds:number;readonly junkerPurchases:readonly G23JunkerPurchase[];readonly rewards:readonly G23RewardBundle[];readonly economyReceipts:readonly G23EconomyReceipt[];readonly rewardClaims:readonly G23RewardClaim[];readonly itemReceipts:readonly G23ItemReceipt[]}
 export function createG23Progress(seed:number):G23MatchProgress{
  const draw=nextRandom((seed^G23_POLICY.seedXor)>>>0),sponsored=G23_ACADEMY_LISTS[Math.floor(draw.word*G23_ACADEMY_LISTS.length/2**32)];
  return {version:'g2-3-progress-v1',seed,rngState:draw.state,rngDraws:1,sponsored,conquest:EMPTY_G23_CONQUEST,chem:EMPTY_G23_CHEM,junkerRounds:0,junkerPurchases:[],rewards:[],economyReceipts:[],rewardClaims:[],itemReceipts:[]};
@@ -34,13 +35,13 @@ export function grantG23Academy(initial:MatchState):{state:MatchState;events:Mat
 }
 export function validateG23Progress(progress:G23MatchProgress,seed:number,round:number):void{
  const fail=(v:unknown)=>{if(!v)throw new RangeError('Invalid G2-3 match progression');};
- fail(progress&&Object.keys(progress).length===(progress.epicCrowns?14:13)&&progress.version==='g2-3-progress-v1'&&progress.seed===seed);
+ fail(progress&&Object.keys(progress).length===(13+(progress.epicCrowns?1:0)+(progress.family?1:0)+(progress.mel?1:0))&&progress.version==='g2-3-progress-v1'&&progress.seed===seed);
  if(progress.epicCrowns)fail(Array.isArray(progress.epicCrowns)&&progress.epicCrowns.length>0&&new Set(progress.epicCrowns.map(r=>r.receiptId)).size===progress.epicCrowns.length&&progress.epicCrowns.every(r=>typeof r.receiptId==='string'&&Number.isSafeInteger(r.round)&&r.round>=1&&r.round<=round));
  const initial=createG23Progress(seed);fail(JSON.stringify(progress.sponsored)===JSON.stringify(initial.sponsored));
  fail(Array.isArray(progress.economyReceipts));
- for(const r of progress.economyReceipts)fail(r.kind==='battle'?r.facts.round<=round:r.kind==='market'&&r.round<=round);
+ for(const r of progress.economyReceipts)fail(r.kind==='battle'?r.facts.round<=round:['market','family-start','mel-save'].includes(r.kind)&&r.round<=round);
  const replay=replayG23Economy(seed,progress.economyReceipts);
- for(const k of ['rngState','rngDraws','chem','junkerRounds','rewards','economyReceipts','conquest'] as const)fail(canonicalContent(progress[k])===canonicalContent(replay[k]));
+ for(const k of ['rngState','rngDraws','chem','junkerRounds','rewards','economyReceipts','conquest','family','mel'] as const)fail(canonicalContent(progress[k]??null)===canonicalContent(replay[k]??null));
  fail(Array.isArray(progress.junkerPurchases)&&progress.junkerPurchases.length<=Math.floor(progress.junkerRounds/3));
  const paid=new Set<string>();
  for(let i=0;i<progress.junkerPurchases.length;i++){
@@ -77,6 +78,8 @@ export function replayG23Economy(seed:number,receipts:readonly G23EconomyReceipt
  }
  for(const r of receipts.slice(start)){
   if(r.kind==='battle')replay=advanceG23Economy(replay,r.facts).progress;
+  else if(r.kind==='family-start'){if(replay.family||Object.keys(r).length!==2||!Number.isSafeInteger(r.round)||r.round<1)throw new RangeError('Invalid family activation');replay=activateFamily(replay,r.round);}
+  else if(r.kind==='mel-save'){const battle=replay.economyReceipts.at(-1);if(Object.keys(r).length!==3||battle?.kind!=='battle'||battle.facts.round!==r.round||battle.facts.battleId!==r.battleId||battle.facts.roundKind!=='pvp'||battle.facts.result==='win'||!replay.mel||replay.mel.pvpCasts<12||replay.mel.savedBattleId)throw new RangeError('Invalid Mel save');replay={...replay,mel:{...replay.mel,savedBattleId:r.battleId},economyReceipts:[...replay.economyReceipts,r]};}
   else if(r.kind==='market')replay=decideG23Market(replay,r.offerId,r.take,r.round,r.optionId);
   else throw new RangeError('Invalid G2-3 match progression');
  }

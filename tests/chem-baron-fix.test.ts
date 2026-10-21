@@ -1,4 +1,7 @@
 import {expect,it} from 'vitest';
+import {blackMarket,validateChemTransition} from './fixtures/m5/oracle.g2.cjs';
+import {activateFamily} from '../src/simulation/family-heist';
+import {replayG23Economy} from '../src/simulation/g2-3-match-progress';
 import {G23_SPECIAL_ITEM_SOURCE as runtime} from '../src/simulation/content/g2-3-special-item-runtime';
 import {G23_SPECIAL_ITEM_SOURCE as archive} from '../src/simulation/content/g2-3-special-item-source';
 import {G23_SPECIAL_ITEMS} from '../src/simulation/content/g2-3-item-registry';
@@ -95,7 +98,7 @@ it('samples up to three distinct source bundles, renormalizing weights after eve
  for(let tier=1;tier<=8;tier++)for(const seed of [0,1,42,0xffffffff]){
   const expected=oracle(tier,seed),actual=rollG23BlackMarket(tier,seed);
   expect(actual.options.map(o=>o.id)).toEqual(expected.ids);expect(actual.rngState).toBe(expected.state);
-  expect(actual.draws).toBe(expected.ids.length);expect(new Set(expected.ids).size).toBe(expected.ids.length);
+  expect(blackMarket(tier,seed)).toEqual({offers:expected.ids,rng:expected.state,draws:expected.ids.length});expect(actual.draws).toBe(expected.ids.length);expect(new Set(expected.ids).size).toBe(expected.ids.length);
  }
  expect(rollG23BlackMarket(8,42).draws).toBe(1);
 });
@@ -129,4 +132,45 @@ it.each([false,true])('public choose/keep and timeout preserve choice projection
  const accepted=selectChoice(opened,choice.choiceId,0,choice.offers[1]);expect(accepted.ok).toBe(true);
  expect(readG23Progress(accepted.state)!.rewards).toHaveLength(1);
  const duplicate=selectChoice(accepted.state,choice.choiceId,0,choice.offers[1]);expect(duplicate.ok).toBe(false);expect(duplicate.state).toBe(accepted.state);
+});
+
+it('replays Family, Mel and a non-first black-market choice together without losing v19 receipts',()=>{
+ let p=activateFamily(createG23Progress(42),1);
+ const familyRng=p.family!.rngState;
+ for(let round=1;round<=3;round++)p=advanceG23Economy(p,facts(round,{
+  melCasts:4,family:{stage:4,eligible:true,openingIds:Array.from({length:9},(_,i)=>'f'+i),survivorIds:Array.from({length:9},(_,i)=>'f'+i)},
+ })).progress;
+ expect(p.mel).toEqual({pvpCasts:12,savedBattleId:null});
+ expect(p.rewards.some(r=>r.source==='family')).toBe(true);
+ expect(p.family!.rngState).not.toBe(familyRng);
+ const saved={kind:'mel-save' as const,battleId:'synthetic-3',round:3};
+ p={...p,mel:{...p.mel!,savedBattleId:saved.battleId},economyReceipts:[...p.economyReceipts,saved]};
+ const offer=p.chem.offer!,optionId=offer.optionIds[1];
+ p=decideG23Market(p,offer.id,true,3,optionId);
+ const restored=replayG23Economy(42,JSON.parse(JSON.stringify(p.economyReceipts)));
+ expect(restored).toEqual(p);validateG23Progress(restored,42,3);
+ expect(restored.rewards.filter(r=>r.source==='black-market')).toEqual([{id:offer.id,round:3,source:'black-market',tier:offer.tier,reward:G23_BLACK_MARKETS[offer.tier-1].options.find(o=>o.id===optionId)!.reward}]);
+ expect(restored.mel!.savedBattleId).toBe('synthetic-3');
+ const pve=advanceG23Economy(restored,facts(4,{roundKind:'pve',melCasts:99,family:{stage:4,eligible:true,openingIds:['a'],survivorIds:['a']}})).progress;
+ expect(pve.chem).toEqual(restored.chem);expect(pve.family).toEqual(restored.family);expect(pve.mel).toEqual(restored.mel);
+ validateG23Progress(pve,42,4);
+});
+
+it('independently audits standard PvE, three bundle offers and keep in the route oracle',()=>{
+ let p=createG23Progress(42);
+ for(let round=1;round<=4;round++){
+  const before=writeG23Progress(createMatch(42),p);
+  p=advanceG23Economy(p,facts(round,{roundKind:round===2?'pve':'pvp'})).progress;
+  const after=writeG23Progress(createMatch(42),p);
+  validateChemTransition(before,after);
+  expect(()=>validateChemTransition(before,writeG23Progress(after,{...p,chem:{...p.chem,shimmer:p.chem.shimmer+1}}))).toThrow();
+ }
+ const before=writeG23Progress(createMatch(42),p),offer=p.chem.offer!;
+ for(const take of [false,true]){
+  const selected=offer.optionIds[1],next=decideG23Market(p,offer.id,take,4,selected);
+  const after=writeG23Progress({...before,seatMechanics:{...before.seatMechanics!,receipts:[...before.seatMechanics!.receipts,{
+   kind:'choice' as const,choiceKind:'blackMarket' as const,receiptId:offer.id,round:4,roundId:'2-1',source:'black-market',optionId:take?selected:'@skip',skipped:!take,itemId:null,price:0,timedOut:!take,
+  }]}},next);
+  validateChemTransition(before,after);
+ }
 });

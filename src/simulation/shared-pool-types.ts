@@ -6,7 +6,7 @@ export const SHARED_POOL_VERSION = 'shared-pool-v3';
  * https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-15-notes/
  * Explicitly adopted by the project for its 19-hero S13 slice on 2026-10-12.
  * This does not claim every historical S13 reward rule was specified on that page. */
-export const POOL_CAPACITY_BY_COST = Object.freeze({1:30,2:25,3:18,4:10,5:9} as const);
+export const POOL_CAPACITY_BY_COST = Object.freeze({1:30,2:25,3:18,4:10,5:9,6:9} as const);
 export interface SharedPoolBinding { readonly poolId:string; readonly seatId:string; readonly revision:number }
 export interface PoolSeat {
   readonly seatId:string; readonly seatIndex:number; readonly revision:number;

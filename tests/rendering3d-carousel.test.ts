@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Texture, Vector3, type Object3D } from 'three';
+import { BoxGeometry, CylinderGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Texture, Vector3, type Object3D } from 'three';
 import { CAROUSEL_CELL, LEGEND_RADIUS, ORBIT_SECONDS, RUN_CELLS, UNIT_RADIUS, createCarouselStage, type CarouselStageContext } from '../src/rendering/three-mode/carousel-stage';
 import {
   boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, subscribeBoardFeed, boardFeed,
@@ -187,21 +187,136 @@ describe('3D carousel stage', () => {
     }
   });
 
-  it("sends another seat's legend dashing for the unit it took, then home with it on the tether", async () => {
+  it.each(['standin', 'loaded'] as const)('frames every pedestal vertex and legend head without making the %s arena too small', async mode => {
+    // Synthetic outer pedestal: no copyrighted assets. Loading it also exercises refitting after async model arrival.
+    const { stage } = setup(mode === 'loaded' ? {
+      sourceScale: 1,
+      hasModel: id => id === 'carousel-llplatforms',
+      loadModel: async () => {
+        const scene = new Group();
+        const pedestal = new Mesh(new CylinderGeometry(8.6 * CAROUSEL_CELL, 8.6 * CAROUSEL_CELL, 0.2 * CAROUSEL_CELL, 96), new MeshBasicMaterial());
+        pedestal.position.y = -0.1 * CAROUSEL_CELL;
+        scene.add(pedestal);
+        return { scene, animations: [], animationNames: {}, placeholder: false, release() {} } as unknown as ModelLease;
+      },
+    } : {});
+    try {
+      stage.show(carousel({ seats: seats(false) }));
+      await flush();
+      stage.update(5); // past the opening push-in
+      expect(stage.debug().platform).toEqual([mode === 'loaded' ? 'carousel-llplatforms' : 'standin']);
+      // Keep the old offset alive during resize, then install the new one before update, as the host does.
+      for (const withOffset of [false, true]) for (const aspect of [4 / 3, 16 / 9, 4 / 3, 21 / 9, 1]) {
+        stage.resize(aspect);
+        if (withOffset) stage.camera.setViewOffset(aspect * 900, 900, -180, -60, aspect * 900 + 360, 1020);
+        else stage.camera.clearViewOffset();
+        stage.update(0);
+        stage.scene.updateMatrixWorld(true);
+        const assertVisibleVertices = (root: Object3D) => {
+          let count = 0;
+          root.traverse(object => {
+            if (!(object instanceof Mesh)) return;
+            const vertices = object.geometry.getAttribute('position');
+            for (let i = 0; i < vertices.count; i++) {
+              const p = new Vector3().fromBufferAttribute(vertices, i).applyMatrix4(object.matrixWorld).project(stage.camera);
+              expect(Math.abs(p.x), `${mode}, aspect ${aspect}, offset ${withOffset}, ${object.name}: x`).toBeLessThanOrEqual(0.975);
+              expect(Math.abs(p.y), `${mode}, aspect ${aspect}, offset ${withOffset}, ${object.name}: y`).toBeLessThanOrEqual(0.975);
+              expect(Math.abs(p.z), 'inside the camera clipping planes').toBeLessThanOrEqual(1);
+              count++;
+            }
+          });
+          expect(count).toBeGreaterThan(0); // never pass on an empty fixture
+        };
+        assertVisibleVertices(stage.scene.getObjectByName(mode === 'loaded' ? 'render3d-carousel-platform' : 'render3d-carousel-standin')!);
+        const legends = stage.scene.getObjectByName('render3d-carousel-seats')!;
+        assertVisibleVertices(legends); // includes the actual stand-in head geometry, not just its feet
+        assertVisibleVertices(stage.scene.getObjectByName('render3d-carousel-units')!);
+        const ys = legends.children.map(legend => legend.getWorldPosition(new Vector3()).project(stage.camera).y);
+        // Cradle/legend feet span about 1.25 NDC vertically; 1.2 leaves rounding/fixture margin while rejecting a distant, tiny arena.
+        // A square viewport is width-limited (about 1.184 vertically); mainstream ratios must still span 1.2.
+        // Span is measured in the un-offset board viewport; the host's larger canvas adds surrounding UI space.
+        if (!withOffset) expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(aspect === 1 ? 1.15 : 1.2);
+      }
+    } finally {
+      stage.dispose();
+    }
+  });
+
+  it('reuses the fitted distance on stable frames and refits only when the projection key changes', () => {
+    const { stage } = setup();
+    stage.show(carousel({ seats: seats(false) }));
+    stage.update(5); // settle the intro before comparing camera positions
+    // The fit projects rim samples during bisection; ordinary stand-in updates do not project anything.
+    const project = vi.spyOn(Vector3.prototype, 'project');
+    const projection = vi.spyOn(stage.camera, 'updateProjectionMatrix');
+    const stableFrames = () => {
+      const position = stage.camera.position.clone();
+      project.mockClear(); projection.mockClear();
+      for (let frame = 0; frame < 60; frame++) stage.update(1 / 60);
+      expect(project).not.toHaveBeenCalled();
+      expect(projection).not.toHaveBeenCalled();
+      expect(stage.camera.position.equals(position)).toBe(true);
+    };
+    const refits = (change: () => void) => {
+      project.mockClear();
+      change();
+      stage.update(0);
+      expect(project).toHaveBeenCalled();
+      stableFrames();
+    };
+    try {
+      stableFrames();
+      refits(() => stage.resize(4 / 3));
+      refits(() => stage.camera.setViewOffset(1200, 900, -180, -60, 1560, 1020));
+      // Reinstalling identical values must hit the cache even though Three updates its projection matrix.
+      stage.camera.setViewOffset(1200, 900, -180, -60, 1560, 1020);
+      stableFrames();
+      refits(() => stage.camera.setViewOffset(1200, 900, -200, -60, 1560, 1020));
+      refits(() => stage.camera.setViewOffset(1200, 900, -200, -80, 1560, 1020));
+      refits(() => stage.camera.setViewOffset(1200, 900, -200, -80, 1600, 1020));
+      refits(() => stage.camera.setViewOffset(1200, 900, -200, -80, 1600, 1080));
+      // Same aspect, different CSS dimensions still change the full view box key.
+      refits(() => stage.camera.setViewOffset(1600, 1200, -200, -80, 1600, 1080));
+      refits(() => stage.camera.clearViewOffset());
+    } finally {
+      project.mockRestore(); projection.mockRestore(); stage.dispose();
+    }
+  });
+
+  it('rings each unit in its cost color, whether or not the tier effect loads, and drops the ring once the unit is taken', () => {
+    const colors: Record<number, string> = { 1: '#808080', 2: '#11aa44', 3: '#2277ee', 4: '#aa33cc', 5: '#ffbb22' };
+    const { stage } = setup({ costColor: cost => colors[cost]! });
+    stage.show(carousel({ slots: Array.from({ length: 9 }, (_, index) => slot(index, { cost: index % 5 + 1 })) }));
+    const rings = () => stage.scene.getObjectByName('render3d-carousel-units')!.children
+      .map(unit => unit.getObjectByName('render3d-carousel-cost') as Mesh | undefined);
+    const hex = (mesh: Mesh | undefined) => `#${(mesh!.material as MeshStandardMaterial).color.getHexString()}`;
+    expect(rings().map(hex)).toEqual(Array.from({ length: 9 }, (_, index) => colors[index % 5 + 1]));
+    expect(rings().every(mesh => mesh!.visible)).toBe(true);
+    // No cost known: no ring (no guess).
+    const { stage: bare } = setup();
+    bare.show(carousel());
+    expect(bare.scene.getObjectByName('render3d-carousel-cost')).toBeUndefined();
+    stage.show(carousel({ slots: Array.from({ length: 9 }, (_, index) => slot(index, { cost: index % 5 + 1, pickedBy: index === 4 ? 's5' : null })) }));
+    const taken = stage.scene.getObjectByName('render3d-carousel-taken')!.getObjectByName('render3d-carousel-cost')!;
+    expect(taken.visible).toBe(false);
+    stage.dispose(); bare.dispose();
+  });
+
+  it("sends another seat's legend running for the unit it took at the legend pace, then home with it on the tether", async () => {
     const { stage } = setup();
     stage.show(carousel({ seats: seats(false) }));
     stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 4 ? 's5' : null })) }));
     const legend = stage.scene.getObjectByName('render3d-carousel-seats')!.children[5]!;
     const home = legend.position.clone();
     expect(stage.debug().legends[5]).toMatch(/:chase$/);
-    // The dash takes about 0.8 s from the cradle to the ring, then the grab burst.
-    for (let frame = 0; frame < 30; frame++) stage.update(1 / 60);
+    // Cradle to ring (about 3.9 cells) at RUN_CELLS takes about 1.6 s, not a near-instant dash, then the grab burst.
+    for (let frame = 0; frame < 80; frame++) stage.update(1 / 60);
     expect(stage.debug().fetched).toEqual({});
-    for (let frame = 0; frame < 30; frame++) stage.update(1 / 60);
+    for (let frame = 0; frame < 60; frame++) stage.update(1 / 60);
     expect(stage.debug().fetched).toEqual({ s5: 4 });
     expect(stage.debug().legends[5]).toMatch(/:carry$/);
     expect(stage.debug().effects).toContain('burst:standin');
-    for (let frame = 0; frame < 240; frame++) stage.update(1 / 60);
+    for (let frame = 0; frame < 360; frame++) stage.update(1 / 60);
     expect(legend.position.distanceTo(home)).toBeLessThan(1);
     const unit = stage.scene.getObjectByName('render3d-carousel-taken')!.children.find(child => child.name === 'render3d-carousel-unit')!;
     expect(unit.position.distanceTo(home) / CAROUSEL_CELL).toBeCloseTo(1.1, 0);
@@ -233,7 +348,7 @@ describe('3D carousel stage', () => {
     // Mine is taken: it carries it home and walks no more.
     stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 3 ? 's6' : index === 5 ? 's2' : null })) }));
     expect(stage.debug().legends[2]).toMatch(/:chase$/);
-    for (let frame = 0; frame < 180; frame++) stage.update(1 / 60);
+    for (let frame = 0; frame < 360; frame++) stage.update(1 / 60);
     expect(stage.debug().fetched).toMatchObject({ s2: 5, s6: 3 });
     expect(stage.walkTo(middle, area)).toBeNull();
   });

@@ -171,7 +171,7 @@ describe('finite sampled bracer AP candidates', () => {
 
   it('respects a declared stack cap even when more triggers have settled', () => {
     const unit = counted(3, 0);
-    const itemPrograms = unit.itemPrograms!.map(p => ({ ...p, program: { ...p.program, triggers: p.program.triggers!.map(t => ({ ...t,
+    const itemPrograms = unit.itemPrograms!.map(p => ({ ...p, program: { ...p.program, triggers: p.program.triggers?.map(t => ({ ...t,
       effects: t.effects.map(e => e.kind === 'modify-stat' ? { ...e, stackPolicy: { kind: 'add-stacks' as const, cap: 2 } } : e) })) } }));
     expect(abilityPowerCandidates({ ...unit, itemPrograms }, 0, initial.combat!.combatId!)).toEqual(new Set([unit.abilityPower!, unit.abilityPower! + 20, unit.abilityPower! + 40]));
   });

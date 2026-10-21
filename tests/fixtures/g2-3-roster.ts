@@ -1,4 +1,4 @@
-// Independent admission list audited against the archived standard Set13 roster.
+// Independent admission list: original Set13 roster plus the three approved v19 six costs.
 export const G23_CATALOG = {
   "1": [
     "amumu",
@@ -69,7 +69,8 @@ export const G23_CATALOG = {
     "mordekaiser",
     "rumble",
     "sevika"
-  ]
+  ],
+  "6": ["mel", "viktor", "warwick"]
 } as const;
 
 export const G23_HERO_IDS=Object.values(G23_CATALOG).flat().sort();

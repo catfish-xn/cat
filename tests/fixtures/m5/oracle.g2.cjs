@@ -3,6 +3,7 @@
  * docs/MATCH_CONTRACT.md. Independently implemented; never imports tested code. */
 const assert = require('node:assert/strict');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
+CATALOG.push(['mel','viktor','warwick']); // Approved v19 six-cost identities; raw historical recordings stay immutable.
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
 const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10],10:[5,10,20,40,25]};
 const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76,9:84};
@@ -15,6 +16,9 @@ const ANOMALIES=["TFT13_GoopBuff_CenteroftheUniverse","TFT13_GoopBuff_CertainDea
 // Independent gift identities and lcg32 arithmetic: no production planner imports.
 const P2_ITEMS={'crown-guarded':['crownguard',1],'not-today':['edge-of-night',1],'belt-overflow':['belt',4],'sword-overflow':['sword',5],'wand-overflow':['rod',5],'crownguard-spirit':['rod',1],'guardbreaker-spirit':['gloves',1],'shojin-spirit':['sword',1],'flurry-of-blows':['TFT_Item_ZekesHerald',1],'immovable-object':['TFT4_Item_OrnnRanduinsSanctum',1]};
 function p2Gifts(state){const gifts=new Map();for(const a of state.augments){
+ // V19_MECHANICS: sisters grants one Vi then one Jinx, with P2 unit indices 0/1.
+ // Plan from owned augments so capacity-delayed grants keep the same identities.
+ if(a.definitionId==='sisters')for(const [i,id] of ['vi','jinx'].entries())gifts.set(JSON.stringify(['s13-augments-p2',a.choiceId,'unit',i]),{kind:'unit',definitionId:id});
  const item=P2_ITEMS[a.definitionId];if(item)for(let i=0;i<item[1];i++)gifts.set(JSON.stringify(['s13-augments-p2',a.choiceId,'item',i]),{kind:'item',definitionId:item[0]});
  const units={'all-for-one-ii':[1,3],'pair-of-fours':[4,1],'trifecta-ii':[3,3]}[a.definitionId];if(!units)continue;
  const namespace=`s13-augments-p2/${state.multiplayer?.seatId??'solo'}/${a.choiceId}`;let hash=2166136261n;
@@ -33,7 +37,7 @@ ANOMALIES.push('the-finisher','touch-of-frost','fireball','dragonsoul','nothing-
 AUGMENTS.push('blinding-speed','portable-forge','radiant-relics','going-long','hedge-fund','investment-strategy-ii');AUGMENTS.sort();
 ANOMALIES.push('dual-wielding');ANOMALIES.sort();
 // D11 raw identities/tags, independently transcribed from the retained archive.
-AUGMENTS.push('all-for-one-i','trifecta-i','spirit-link');AUGMENTS.sort();
+AUGMENTS.push('all-for-one-i','trifecta-i','spirit-link','sisters');AUGMENTS.sort();
 ANOMALIES.push('ultimate-hero','into-the-unknown');
 ANOMALIES.push('avarice-incarnate','headhunter');ANOMALIES.sort();
 // Literal tier identities, transcribed independently; no runtime content imports.
@@ -42,7 +46,7 @@ const AUGMENT_POOLS={
  gold:['all-for-one-ii','bronze-for-life-i','built-different','bulky-buddies-ii','climb-the-ladder-ii','clockwork-accelerator','crown-guarded','crownguard-spirit','defense-call','glass-cannon-ii','guardbreaker-spirit','high-voltage','inspiring-epitaph','investment-strategy-i','item-collector-ii','little-buddies','manaflow-ii','mentorship-ii','not-today','pair-of-fours','piercing-lotus-i','portable-forge','pumping-up-ii','pyromaniac','shojin-spirit','thorn-plated-armor','unleash-the-beast'],
  prismatic:['belt-overflow','blinding-speed','bronze-for-life-ii','bulky-buddies-iii','calculated-enhancement','flurry-of-blows','going-long','hedge-fund','immovable-object','investment-strategy-ii','piercing-lotus-ii','pumping-up-iii','radiant-relics','sword-overflow','trifecta-ii','wand-overflow']
 };
-AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link');
+AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link','sisters');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 function augmentTier(seed,node){
  let hash=2166136261n;
@@ -87,9 +91,19 @@ function validateAugmentReroll(before,result,command){
  assert.deepEqual(result.events,[{domain:'match',eventSeq:before.nextMatchEventSeq,type:'choiceOpened',choice:next}],'independent reroll event');
 }
 const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
-const SELL = {1:[1,3,9],2:[2,5,17],3:[3,8,26],4:[4,11,35],5:[5,14,44]};
+const SELL = {1:[1,3,9],2:[2,5,17],3:[3,8,26],4:[4,11,35],5:[5,14,44],6:[6,17,53]};
 function word(value){return Number((BigInt(value)*1664525n+1013904223n)%4294967296n);}
-function shop(rng,generation,level,locked=false){const slots=[];for(let i=0;i<5;i++){rng=word(rng);const roll=Number(BigInt(rng)*100n/4294967296n);let total=0,cost=0;for(let j=0;j<5;j++){total+=ODDS[level][j];if(roll<total){cost=j+1;break;}}rng=word(rng);const bucket=CATALOG[cost];slots.push({status:'available',definitionId:bucket[Number(BigInt(rng)*BigInt(bucket.length)/4294967296n)]});}return {rngState:rng,shop:{generation,slots,locked}};}
+// Independent approved v19 odds, hand-transcribed: unlock ordinal23 (4-6), 20 Bps +4/round, +160 at level10.
+function shop(rng,generation,level,locked=false,round=1){
+ const six=round<23?0:Math.min(10000,20+(round-23)*4+(level===10?160:0));
+ const weights=[six*100,...ODDS[level].map(p=>p*(10000-six))],slots=[];
+ for(let i=0;i<5;i++){
+  rng=word(rng);let roll=Number(BigInt(rng)*1000000n/4294967296n),cost=1;
+  for(let j=0;j<weights.length;j++){if(roll<weights[j]){cost=j===0?6:j;break;}roll-=weights[j];}
+  rng=word(rng);const bucket=CATALOG[cost];slots.push({status:'available',definitionId:bucket[Number(BigInt(rng)*BigInt(bucket.length)/4294967296n)]});
+ }
+ return {rngState:rng,shop:{generation,slots,locked}};
+}
 function xp(level,value,amount){let applied=0;while(amount>0&&level<10){const take=Math.min(amount,XP[level]-value);amount-=take;applied+=take;value+=take;if(value===XP[level]){value=0;level++;}}return {level,xp:value,xpApplied:applied};}
 // Hand-transcribed 38-round identity list from approved OPENING; no production imports.
 const ROUND_IDS=['1-2','1-3','1-4','2-1','2-2','2-3','2-4','2-5','2-6','2-7',
@@ -239,9 +253,50 @@ function heldResources(state){
 }
 const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'),...heldResources(state).units];
 const ownedItems=state=>[...state.items,...heldResources(state).items];
+// CHEM_BARON_FIX: independent standard 14.24b PvP values and archive map22 source-order weights.
+// N=3 is the approved project convention; no production content/planner/RNG imports.
+const CHEM_GAIN={3:[15,35],4:[20,45],5:[20,55],6:[25,70],7:[30,100]};
+const MARKET_WEIGHTS=[[25,20,20,20,10,5],[35,20,20,10,10,5],[55,15,15,5,5,5],[40,30,20,9,1],[30,25,25,15,5],[70,10,10,5,5],[100],[100]];
+function blackMarket(tier,rng){
+ const remaining=MARKET_WEIGHTS[tier-1].map((weight,index)=>({weight,id:'TFT13_Crime_Loot'+'ABCDEFGH'[tier-1]+(index||'')})),offers=[];
+ while(offers.length<3&&remaining.length){rng=word(rng);let ticket=BigInt(rng)*BigInt(remaining.reduce((n,x)=>n+x.weight,0))/4294967296n;
+  const index=remaining.findIndex(x=>{ticket-=BigInt(x.weight);return ticket<0n;});offers.push(remaining.splice(index,1)[0].id);
+ }
+ return {offers,rng,draws:offers.length};
+}
+function validateChemTransition(before,after){
+ const prior=before.seatMechanics?.hidden.progress,next=after.seatMechanics?.hidden.progress;
+ if(!prior||!next)return;
+ assert.deepEqual(next.economyReceipts.slice(0,prior.economyReceipts.length),prior.economyReceipts,'chem economy append-only');
+ const receipts=next.economyReceipts.slice(prior.economyReceipts.length);
+ let chem=structuredClone(before.seatMechanics.seat.alchemist),rng=prior.rngState,draws=prior.rngDraws;
+ for(const r of receipts){
+  if(r.kind==='battle'){
+   const f=r.facts;chem.losses=f.roundKind==='pvp'?(f.result==='loss'?chem.losses+1:0):chem.losses;
+   if(f.roundKind==='pvp'&&f.chemBaronTier){chem.shimmer+=CHEM_GAIN[f.chemBaronTier][chem.losses>=3?1:0];
+    const tier=Math.min(8,Math.floor(chem.shimmer/100));
+    if(!chem.offer&&tier>chem.offeredThrough){const roll=blackMarket(tier,rng);rng=roll.rng;draws+=roll.draws;chem.offeredThrough=tier;
+     chem.offer={id:`g23:market:${f.battleId}:${tier}`,tier,optionId:roll.offers[0],optionIds:roll.offers,round:f.round};
+    }
+   }
+   if(f.result==='win')for(let i=0;i<(f.crowns??0);i++){rng=word(rng);draws++;}
+  }else if(r.kind==='market'){
+   assert.equal(r.offerId,chem.offer?.id,'independent market decision identity');
+   if(r.take)assert(chem.offer.optionIds.includes(r.optionId),'selected complete bundle was offered');
+   const choice=after.seatMechanics.receipts.find(x=>x.receiptId===r.offerId);
+   assert(choice&&choice.kind==='choice'&&choice.choiceKind==='blackMarket'&&choice.itemId===null&&choice.price===0,'market choice grants no item directly');
+   assert.equal(choice.optionId,r.take?r.optionId:'@skip');assert.equal(choice.skipped,!r.take);
+   chem={...chem,offer:null,shimmer:r.take?0:chem.shimmer,offeredThrough:r.take?0:chem.offeredThrough,skips:chem.skips+(r.take?0:1)};
+  }
+ }
+ assert.deepEqual(after.seatMechanics.seat.alchemist,chem,'independent PvP shimmer, distinct bundles and keep');
+ assert.equal(next.rngState,rng,'independent market then crown stream');assert.equal(next.rngDraws,draws,'one explicit word per candidate/crown');
+ if(after.pendingChoice?.kind==='blackMarket')assert.deepEqual(after.pendingChoice.offers,chem.offer.optionIds,'pending choice offers complete bundles');
+}
 class Ledger {
  constructor(initial){this.gold=0;this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
+  validateChemTransition(before,after);
   if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
   if(!events.some(e=>e.type==='choiceOpened'&&e.choice.kind==='augment'))assert.deepEqual(after.augmentOffers,before.augmentOffers,'augment history retained without draw');
   const lootReceipts=validateLootTransition(before,after,command,events);
@@ -310,4 +365,4 @@ class Ledger {
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
   assert.equal(items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
-module.exports={ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
+module.exports={blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};

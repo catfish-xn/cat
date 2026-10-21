@@ -12,6 +12,7 @@ interface Gift { readonly receiptId: string; readonly definitionId: string; read
 export function p2GiftPlan(state: Pick<MatchState,'seed'|'augments'|'multiplayer'>): Gift[] {
   const gifts: Gift[]=[];
   for(const augment of state.augments){
+    if(augment.definitionId==='sisters')for(const [i,id] of ['vi','jinx'].entries())gifts.push({receiptId:JSON.stringify([SOURCE,augment.choiceId,'unit',i]),definitionId:id,kind:'unit',acquiredRound:augment.acquiredRound});
     const item=P2_ITEM_GRANTS[augment.definitionId];
     if(item)for(let i=0;i<item.count;i++)gifts.push({receiptId:JSON.stringify([SOURCE,augment.choiceId,'item',i]),definitionId:item.id,kind:'item',acquiredRound:augment.acquiredRound});
     const id=augment.definitionId,v=p2Values(id);

@@ -55,6 +55,9 @@ export type CombatViewUnit = CombatViewState['units'][number];
 function animationEvent(event: LedgerCombatEvent) {
   const envelope = pick(event, ['tick', 'eventSeq']);
   switch (event.type) {
+    case 'chaosEnergyChanged':case 'melEnergyChanged':return {...envelope,...pick(event,['type','unitId','before','after'])};
+    case 'bloodFrenzyChanged':return {...envelope,...pick(event,['type','unitId','active','permanent'])};
+    case 'devoured':return {...envelope,...pick(event,['type','unitId','targetId'])};
     case 'movement': return { ...envelope, type: event.type, unitId: event.unitId, from: cellView(event.from), to: cellView(event.to) };
     case 'attack': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId']) };
     case 'targetChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'before', 'after']) };
@@ -84,7 +87,8 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'unitSpawned': return { ...envelope, type: event.type, sourceId: event.source.ownerId,
       ...pick(event, ['unitId', 'definitionId', 'team']), cell: cellView(event.cell) };
     case 'unitRemoved': return { ...envelope, ...pick(event, ['type', 'unitId', 'reason']) };
-    case 'castOutcome': return { ...envelope, ...pick(event, ['type', 'unitId', 'abilityKey', 'outcome']), subOutcomes: [...event.subOutcomes] };
+    case 'castOutcome': return { ...envelope, ...pick(event, ['type', 'unitId', 'abilityKey', 'outcome']), subOutcomes: [...event.subOutcomes],
+      ...(event.castVariant?{castVariant:{...pick(event.castVariant,['actionSeq','move','channelTicks','enhanced']),heroAugmentIds:[...event.castVariant.heroAugmentIds]}}:{}) };
     case 'bindingChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'bound', 'reason']) };
     case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
   }

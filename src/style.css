@@ -653,7 +653,9 @@ body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
   background: rgba(14, 24, 33, .94); box-shadow: 0 10px 24px rgba(0, 0, 0, .45); display: none; }
 .carousel-panel[data-ring-3d]:is(:hover, :focus-within) .carousel-order { display: grid; }
 /* TFT hides the shop on the carousel (nothing can be bought there): in 3D it slides away while the carousel side is shown. */
-body[data-online-carousel="carousel"]:has(.render3d-layer) .shop-dock { transform: translateY(calc(100% + 16px)); opacity: 0; pointer-events: none; }
+body[data-online-carousel="carousel"]:has(.render3d-layer) .shop-dock,
+/* TFT: on another player's board my shop is closed (it comes back with my board). */
+body:has(.opponent-board[data-scout-3d]:not([hidden])) .shop-dock { transform: translateY(calc(100% + 16px)); opacity: 0; pointer-events: none; }
 .shop-dock { transition: transform .25s ease, opacity .25s ease; }
 .carousel-seat.auto { font-style: italic; }
 /* P7-1 holding slot (临时位): a narrow extra slot in the margin right of the bench; a kept unit does not fight. */
@@ -712,6 +714,9 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .consumable-card { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
 .consumable-count { color: #ffe6a8; font-weight: 700; }
 .consumable-card.dragging { outline: 3px solid #ffd782; opacity: .65; }
+/* The item icon follows the pointer while it is dragged (the card stays dimmed in its slot). */
+.item-drag-ghost { position: fixed; left: 0; top: 0; z-index: 95; width: 44px; height: 44px; pointer-events: none; filter: drop-shadow(0 2px 6px #000a); }
+.item-drag-ghost > * { width: 100%; height: 100%; }
 .consumable-card[aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: -2px; }
 .consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
 img.consumable-icon { display: inline-block; object-fit: cover; background: #0b151f; flex: none; }
@@ -1327,3 +1332,4 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .minimap-board i { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; box-shadow: 0 0 0 1px #0b151f; }
 .minimap-name { position: absolute; left: 3px; right: 22px; bottom: 1px; font-size: 10px; line-height: 13px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .minimap-hp { position: absolute; right: 3px; bottom: 1px; font-size: 10px; line-height: 13px; color: #8fe08a; }
+.choice-cards .augment-name { font-weight: 700; }

@@ -86,12 +86,13 @@ export function hasMechanic(unit: CombatUnit, name: string): boolean { return (u
 export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind']): CombatStatus[] {
   return (unit.statuses ?? []).filter(s => s.kind === kind && s.startsAtTick <= tick && s.expiresAtTick > tick);
 }
-export function ap(unit: S13Unit, tick: number): number {
-  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat+p2Bonus(unit,'abilityPower')),
+export function ap(unit: S13Unit, tick: number, units:readonly CombatUnit[]=[]): number {
+  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat+(unit.definitionId==='viktor'?Math.max(0,ad(unit,true)-({1:100,2:180,3:360} as const)[unit.starLevel])+Math.floor(Math.max(0,attackSpeedBonus(unit,tick,units))/100)+(unit.sixCost?.convertedMana??0):0)+p2Bonus(unit,'abilityPower')),
     ...active(unit, tick, 'abilityPower').filter(s => !s.contributionKeys).map(s => constantModifier('abilityPower', s.amount)), ...statusModifiers(unit, 'abilityPower', tick)], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='magic-expert')?14000:10000)/10000);
 }
-export function ad(unit: S13Unit): number {
+export function ad(unit: S13Unit, raw=false): number {
+  if(unit.definitionId==='viktor'&&!raw)return ({1:100,2:180,3:360} as const)[unit.starLevel];
   const result = resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
     [constantModifier('attackDamage', (unit.attackDamagePercentBps ?? 0)+p2Bonus(unit,'attackDamageBps'), 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0)+(unit.anomalyState?.consumed?.attackDamage??0)+p2Bonus(unit,'attackDamageFlat');
@@ -109,13 +110,7 @@ export function amount(unit: S13Unit, tick: number, coefficients: { flat?: numbe
     missingHpBps: 0, actualManaSpentBps: 0, actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'holder', sample: 'application', cap: null },
     { holder: hpSample(unit), attackDamage: ad(unit), abilityPower: ap(unit, tick) });
 }
-export function interval(unit: S13Unit, tick: number, units: readonly CombatUnit[] = []): number {
-  // R7 neutral definitions author exact integer periods; they have no speed
-  // modifiers in this slice. Inverting a rounded speed adds a spurious tick.
-  if (champion(unit) === 'neutral' && unit.unitKind !== 'neutral') return unit.attackIntervalTicks;
-  // G2-4b Silvermere Dawn: a lock replaces every speed term; two locks keep the slower one.
-  const locks = statusModifiers(unit, 'attackSpeedLock', tick).flatMap(m => m.value.kind === 'constant' ? [m.value.amount] : []);
-  if (locks.length) return attackInterval(Math.min(...locks), 0);
+export function attackSpeedBonus(unit:S13Unit,tick:number,units:readonly CombatUnit[]=[]):number {
   const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
   const bankSpeed=(gambler?Math.min(unit.currentItemBankGold??0,gambler.values.goldLimit)*gambler.values.speedPerGoldBps:0)
     + (unit.d11Kills?d11HeadhunterAttackSpeedBps(mechanic(unit,'d11Anomaly','priorKills')+unit.d11Kills.length):0)
@@ -125,6 +120,17 @@ export function interval(unit: S13Unit, tick: number, units: readonly CombatUnit
   const quick = unit.mechanics?.find(m=>m.mechanic==='quickstriker'), target=units.find(u=>u.id===unit.targetId);
   const quickBps=quick ? quick.values.minBps+(target ? Math.floor((quick.values.maxBps-quick.values.minBps)*(target.maxHp-target.hp)/target.maxHp) : 0) : 0;
   const speedBps = quickBps + bankSpeed + p2Bonus(unit,'attackSpeedBps') + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + signedSpeed.flat + signedSpeed.bps;
+  return speedBps;
+}
+export function interval(unit: S13Unit, tick: number, units: readonly CombatUnit[] = []): number {
+  if(unit.definitionId==='viktor')return attackInterval(5500,0);
+  // R7 neutral definitions author exact integer periods; they have no speed
+  // modifiers in this slice. Inverting a rounded speed adds a spurious tick.
+  if (champion(unit) === 'neutral' && unit.unitKind !== 'neutral') return unit.attackIntervalTicks;
+  // G2-4b Silvermere Dawn: a lock replaces every speed term; two locks keep the slower one.
+  const locks = statusModifiers(unit, 'attackSpeedLock', tick).flatMap(m => m.value.kind === 'constant' ? [m.value.amount] : []);
+  if (locks.length) return attackInterval(Math.min(...locks), 0);
+  const speedBps=attackSpeedBonus(unit,tick,units);
   const base = unit.baseAttackSpeedBps ?? Math.round(200000 / unit.attackIntervalTicks);
   return attackInterval(base, speedBps);
 }

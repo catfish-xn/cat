@@ -34,6 +34,7 @@ export interface CombatReplayFacts {
 }
 export interface RestoreCombatReplay {
   opening(): CombatState;
+  stateAtSaveTick(): CombatState;
   p2Opening(): readonly Pick<CombatUnit, 'id' | 's13P2Opening'>[];
   atSaveTick(): CombatReplayFacts;
 }
@@ -108,30 +109,36 @@ export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: Str
     return initial ??= cached?.opening
       ?? createCombatWithEvents(basis.inputs.preparation, strategy, basis.combatId, basis.battleSeed).state;
   };
+  let latest: CombatState | undefined;
+  const privateCursor = () => {
+    if (latest) return latest;
+    lookup();
+    let cursor = cached && cached.latest.tick <= tick ? cached.latest : privateOpening();
+    while (cursor.tick < tick && cursor.status === 'running') cursor = stepCombat(cursor).state;
+    if (key && cursor.tick === tick) {
+      if (cached) cached.latest = cursor;
+      else {
+        if (evidence.size >= MAX_BATTLES) evidence.delete(evidence.keys().next().value!);
+        evidence.set(key, { identity: identity!, opening: privateOpening(), latest: cursor });
+      }
+    }
+    return latest = cursor;
+  };
   return {
     opening: () => openingCopy ??= structuredClone(privateOpening()),
+    stateAtSaveTick: () => structuredClone(privateCursor()),
     // P2 reads only these facts. Copying the complete opening also copied all
     // declarations, histories and runtime containers on every restored tick.
     p2Opening: () => p2Copy ??= structuredClone(privateOpening().units.map(({ id, s13P2Opening }) => ({ id, s13P2Opening }))),
     atSaveTick() {
       if (result) return result;
-      lookup();
       // stepCombat is pure: it detaches dynamic fields and shares only immutable
       // declarations. The private cursor never escapes. Cloning it before each
       // step would thaw and re-intern every declaration on every restored tick.
-      let cursor = cached && cached.latest.tick <= tick ? cached.latest : privateOpening();
-      while (cursor.tick < tick && cursor.status === 'running') cursor = stepCombat(cursor).state;
-      if (key && cursor.tick === tick) {
-        if (cached) cached.latest = cursor;
-        else {
-          if (evidence.size >= MAX_BATTLES) evidence.delete(evidence.keys().next().value!);
-          evidence.set(key, { identity: identity!, opening: privateOpening(), latest: cursor });
-        }
-      }
       // All outward paths deep-copy, including cold computations. Mutating a
       // returned opening/facts can never alter a later invocation's evidence.
       // Copy the compared facts, avoiding an unused clone of all declarations.
-      return result = facts(cursor);
+      return result = facts(privateCursor());
     },
   };
 }
