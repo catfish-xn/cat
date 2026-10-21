@@ -24,6 +24,14 @@ export function arenaTransform(alignment: BoardAlignment, frame: HexFrame): { po
   };
 }
 
+/** The arena's nine bench cells on a live grid (world = position + scale × source), or null without usable ones. */
+export function arenaBench(alignment: BoardAlignment, frame: HexFrame): Vector3[] | null {
+  const bench = alignment.bench;
+  if (!bench || bench.length !== 9 || !bench.every(point => point.length === 3 && point.every(Number.isFinite))) return null;
+  const { position, scale } = arenaTransform(alignment, frame);
+  return bench.map(([x, y, z]) => new Vector3(position.x + scale.x * x, position.y + scale.y * y, position.z + scale.z * z));
+}
+
 export interface BoardArena {
   /** True once the arena model is in the scene (the procedural tiles can then fade back to a grid overlay). */
   readonly ready: boolean;

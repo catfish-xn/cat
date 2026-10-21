@@ -20,6 +20,12 @@ export interface AssetManifest {
 export interface BoardAlignment {
   scale: Vec3; offset: Vec3;
   target: { radius: number; origin: { x: number; y: number } };
+  /**
+   * Optional: the arena's own bench cells, nine floor centers in the board model's source space (placed like its
+   * vertices), left to right as the player sees them; entry i is BoardFrame.bench[i]. Without nine finite entries
+   * the 3D bench stays on the 2D bench coordinates.
+   */
+  bench?: readonly Vec3[];
 }
 export interface BoardEntry { alignment: BoardAlignment; grid?: { columns: number; rows: number } }
 export type Vec3 = readonly [number, number, number];
