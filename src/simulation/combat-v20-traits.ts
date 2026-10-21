@@ -5,6 +5,7 @@ import { hexDistance } from './board';
 import { occupiesCell, isAbsent } from './anomalies/availability';
 import { asSource } from './m8/s13-definitions';
 import { initializeMechanisms } from './m8/s13-mechanisms';
+import { canMove } from './combat-movement';
 
 export interface V20TraitsState {
   moveTenths?:number;
@@ -73,6 +74,7 @@ export function executeV20Teamup(ctx:AbilityContext,u:S13Unit,task:CombatTask):v
 export function quickDashV20(ctx:AbilityContext,u:S13Unit):void {
   if(u.v20Traits?.quickDashAtTick!==ctx.tick)return;
   const {quickDashAtTick,...rest}=u.v20Traits;u.v20Traits=rest;
+  if(!canMove(u,ctx.tick))return;
   const target=byDistance(u,enemies(u,ctx.units))[0];if(!target)return;
   const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat()
     .filter(c=>hexDistance(c,target.cell)===1&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(c,t.cell)===0))

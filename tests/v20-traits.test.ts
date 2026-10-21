@@ -4,7 +4,9 @@ import type { MatchState } from '../src/simulation/match-types';
 import type { Unit } from '../src/simulation/unit-types';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat, type CombatState } from '../src/simulation/combat';
-import { ad, ap, attackSpeedBonus, range, grantShield, type S13Unit } from '../src/simulation/combat-s13-state';
+import { ad, ap, attackSpeedBonus, range, grantShield, applyStatus, origin, type S13Unit } from '../src/simulation/combat-s13-state';
+import { settleFamilyReunionDeaths } from '../src/simulation/combat-family-reunion';
+import { familyReunionParticipants } from '../src/simulation/family-reunion';
 import { TEAMUP_IDS, V20_TRAITS } from '../src/simulation/content/v20-traits';
 import { p2GiftPlan, drainP2Gifts } from '../src/simulation/s13-augments-p2-grants';
 import { validateContent } from '../src/simulation/validate-content';
@@ -31,6 +33,10 @@ const unit=(s:CombatState,id:string)=>s.units.find(u=>u.id===id)! as S13Unit;
 const idle=(s:CombatState,actors:string[]=[])=>({...s,units:s.units.map(u=>u.team==='enemy'?{...u,maxHp:1000000,hp:1000000,magicResist:0,armor:0,cooldownTicks:1200,moveCooldownTicks:1200,mana:0,maxMana:0}:actors.includes(u.id)?{...u,attackRange:100,cooldownTicks:0,mana:u.maxMana}: {...u,cooldownTicks:1200,moveCooldownTicks:1200,mana:0,maxMana:0})});
 function ticks(s:CombatState,n:number){let state=s;const events=[];for(let i=0;i<n&&state.status==='running';i++){const r=stepCombat(state);state=r.state;events.push(...r.events);}return {state,events};}
 const context=(s:CombatState):AbilityContext=>({tick:s.tick,combatId:s.combatId,board:s.board,units:structuredClone(s.units) as S13Unit[],events:[],packets:[],heals:[],draw:()=>0});
+function blockMovement(u:S13Unit,kind:'stun'|'channel'|'deep-roots',at=0,duration=121):void {
+  if(kind==='deep-roots')u.mechanics=[...u.mechanics??[],{mechanic:'g23Anomaly',source:{...origin(u),sourceKind:'anomaly',definitionId:'deep-roots'},values:{enabled:1}}];
+  else applyStatus(u,origin(u),kind,0,duration,at,[],true);
+}
 
 describe('v20-traits approved custom rules',()=>{
   it('validates the expanded catalogue',()=>expect(()=>validateContent()).not.toThrow());
@@ -120,6 +126,79 @@ describe('v20-traits approved custom rules',()=>{
     const run=ticks(b.state,240);expect(run.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.definitionId==='menaces')).toHaveLength(15);
     expect(run.state.units.filter(u=>u.definitionId==='v20-silco-minion'&&u.alive)).toHaveLength(0);
     expect(stepCombat({...run.state,status:'finished',result:'playerWin'}).events).toEqual([]);
+  });
+  it.each([1,2,3] as const)('Menaces suppresses only Powder reunion promotion at star %i, preserving count, other heroes and death linkage',star=>{
+    const names=['violet','vander','powder','warwick','jinx','vi','silco'],base=army(names,['menaces']);
+    const s={...base,preparation:{...base.preparation,units:base.preparation.units.map(u=>u.id==='powder'?{...u,starLevel:star}:u)},
+      items:['warwick','jinx','vi'].map((id,n)=>({id:`item-${n+1}`,definitionId:'TFT13_Item_FamilyEmblemItem',location:{kind:'unit' as const,unitId:id,slot:0}}))};
+    const original=JSON.stringify(s),strategy=buildStrategySnapshot(s),c=start(s),p=unit(c,'powder');
+    expect(familyReunionParticipants(s)).toEqual(names.slice(0,6));
+    expect(strategy.traits.find(t=>t.traitId==='family'&&t.team==='player')?.count).toBe(6);
+    const noReunion=start({...s,items:[]}),normal=start({...s,augments:[]});
+    expect(p.effectiveStarLevel).toBe(star);expect(p.familyReunion).toMatchObject({combatStarLevel:star,unboostedStarLevel:star});
+    expect(p.maxHp).toBe(unit(noReunion,'powder').maxHp);expect(ad(p)).toBe(ad(unit(noReunion,'powder')));expect(p.ability).toEqual(unit(noReunion,'powder').ability);
+    expect(p.mechanics!.some(m=>m.mechanic==='family')).toBe(false);
+    expect(unit(normal,'powder').effectiveStarLevel).toBe(star+1);expect(p.ability).not.toEqual(unit(normal,'powder').ability);
+    for(const id of names.slice(0,6).filter(id=>id!=='powder')){
+      expect(unit(c,id).effectiveStarLevel).toBe(2);expect(unit(c,id).ability).toEqual(unit(normal,id).ability);
+      expect(unit(c,id).maxHp).toBe(unit(normal,id).maxHp);expect(unit(c,id).mechanics!.some(m=>m.mechanic==='family')).toBe(true);
+    }
+    const ctx=context(c);ctx.tick=1;const dead=ctx.units.find(u=>u.id==='powder')!;dead.hp=0;dead.alive=false;
+    settleFamilyReunionDeaths(ctx,ctx.units);
+    for(const id of names.slice(0,6).filter(id=>id!=='powder'))expect(ctx.units.find(u=>u.id===id)?.effectiveStarLevel).toBe(1);
+    expect(JSON.stringify(s)).toBe(original);
+  });
+  it.each(['stun','deep-roots','channel'] as const)('Firelight under %s through t120 cannot move but still opens the window and heals once',kind=>{
+    const s=army(['zeri','scar','ekko','lux']),c=idle(start({...s,items:[{id:'item-1',definitionId:'TFT13_Item_HoverboardEmblemItem',location:{kind:'unit',unitId:'lux',slot:0}}]})),z=unit(c,'zeri');
+    blockMovement(z,kind);
+    const before=ticks(c,119),ready=unit(before.state,'zeri');ready.hp=ready.maxHp-200;ready.expansion!.damageTaken=200;
+    expect(before.events.some(e=>e.type==='movement'&&e.unitId==='zeri')).toBe(false);
+    const r=stepCombat(before.state),after=unit(r.state,'zeri');
+    expect(after.cell).toEqual(z.cell);expect(r.events.some(e=>e.type==='movement'&&e.unitId==='zeri')).toBe(false);
+    expect(after.v20Traits).toMatchObject({nextDashTick:240,dashUntilTick:140});expect(range(after)).toBe(100);
+    expect(attackSpeedBonus(after,120,r.state.units)-attackSpeedBonus(ready,119,before.state.units)).toBe(35000);
+    expect(r.events.find(e=>e.type==='heal'&&e.outcome.targetId==='zeri')).toMatchObject({outcome:{requested:80,actual:80}});
+    expect(after.hp).toBe(ready.hp+80);expect(after.expansion!.damageTaken).toBe(0);
+    expect(ticks(r.state,120).events.some(e=>e.type==='heal'&&e.outcome.targetId==='zeri'&&e.outcome.actual>0)).toBe(false);
+  });
+  it.each(['v20-silco-minion','g23-sion','g23-forge'])('Firelight does not move excluded body %s',definitionId=>{
+    const c=idle(start(army(['zeri','scar']))),ctx=context(c),z=ctx.units.find(u=>u.id==='zeri')!;ctx.tick=120;
+    z.definitionId=definitionId;z.runtime.buddyTriggered=false;const before={...z.cell};
+    advanceG2Passives(ctx,()=>0);expect(z.cell).toEqual(before);expect(ctx.events.some(e=>e.type==='movement'&&e.unitId==='zeri')).toBe(false);
+    expect(z.v20Traits).toMatchObject({nextDashTick:240,dashUntilTick:140});
+  });
+  it.each(['stun','channel'] as const)('Firelight resumes movement when %s expires exactly at t120',kind=>{
+    const c=idle(start(army(['zeri','scar'])));blockMovement(unit(c,'zeri'),kind,0,120);
+    const r=ticks(c,120);expect(r.events.filter(e=>e.type==='movement'&&e.unitId==='zeri').map(e=>e.tick)).toEqual([120]);
+  });
+  it('Firelight sees control starting this tick, but not a contribution that starts next tick',()=>{
+    for(const startsAt of [120,121]){
+      const c=idle(start(army(['zeri','scar']))),z=unit(c,'zeri');blockMovement(z,'stun',startsAt,20);
+      // Cover mechanism-only control as well as the legacy status projection.
+      z.statuses=[];
+      const r=stepCombat({...c,tick:119});
+      expect(r.events.some(e=>e.type==='movement'&&e.unitId==='zeri')).toBe(startsAt===121);
+      expect(unit(r.state,'zeri').v20Traits?.dashUntilTick).toBe(140);
+    }
+  });
+  it.each(['self','target','both'] as const)('Quickstriker respects deep roots on %s without moving the target',rooted=>{
+    const c=idle(start(army(['akali','nocturne','ambessa','twistedfate']))),a=unit(c,'akali'),enemy=unit(c,'enemy');
+    a.cell={col:6,row:7};a.v20Traits={quickDashAtTick:1};
+    if(rooted!=='target')blockMovement(a,'deep-roots');if(rooted!=='self')blockMovement(enemy,'deep-roots');
+    const r=stepCombat(c);
+    // A rooted actor still pulls an unrooted enemy; a rooted target must never be pulled.
+    if(rooted!=='self')expect(unit(r.state,'enemy').cell).toEqual(enemy.cell);
+    expect(r.events.some(e=>e.type==='movement'&&e.unitId==='enemy')).toBe(rooted==='self');
+    expect(r.events.some(e=>e.type==='movement'&&e.unitId==='akali')).toBe(rooted==='target');
+    if(rooted!=='target')expect(unit(r.state,'akali').cell).toEqual(a.cell);
+    else expect(hexDistance(unit(r.state,'akali').cell,enemy.cell)).toBe(1);
+    expect(unit(r.state,'akali').v20Traits?.quickDashAtTick).toBeUndefined();
+  });
+  it.each(['stun','channel','v20-silco-minion','g23-sion','g23-forge'] as const)('Quickstriker rejects %s through its own shared movement gate',kind=>{
+    const ctx=context(start(army(['akali','nocturne']))),a=ctx.units.find(u=>u.id==='akali')!;
+    ctx.tick=1;a.cell={col:6,row:7};a.v20Traits={quickDashAtTick:1};
+    if(kind==='stun'||kind==='channel')blockMovement(a,kind);else{a.definitionId=kind;a.runtime.buddyTriggered=false;}
+    quickDashV20(ctx,a);expect(a.cell).toEqual({col:6,row:7});expect(ctx.events).toEqual([]);expect(a.v20Traits.quickDashAtTick).toBeUndefined();
   });
   it('Firelight first dash at 120, 20-tick range/AS window, only actual HP heals and consumes the bucket',()=>{
     const s=army(['zeri','scar','lux','ekko']);const c=idle(start({...s,items:[{id:'item-1',definitionId:'TFT13_Item_HoverboardEmblemItem',location:{kind:'unit',unitId:'lux',slot:0}}]})),z=unit(c,'zeri');

@@ -10,7 +10,7 @@
 
 ## 验收（2026-10-22）
 
-- 新增35项合成测试通过；相关18文件共345项均有通过证据。批跑其中2项触及原5000ms时限，录制结束后以原时限串行复跑对应两文件39项全部通过，未放宽时限。
-- 身份/134个文本与对象恢复检查点、四路线golden及C19输入回归共164项通过；最终v20-traits身份与各审计字节绑定再次通过。`tsc --noEmit`、`git diff --check`通过。
-- epoch 12项全部退出0；157个v15–v19历史文件与g2-4b manifest字节不变。完整记录见 [validation.json](validation.json) 和 [epoch-verification.json](epoch-verification.json)。
-- CONTENT=`fnv1a32-utf16:f9581e38`，LOOT_REPLAY=`fnv1a32-utf16:3332bffa`；完整根从基线源码与当前源码离线独立重算吻合。未联网、未执行Git写操作、未部署；表现层名称/说明交接见V20_TRAITS末节。
+- PR #379 修复：危险人物屏蔽爆爆的家人彩蛋额外星级，同时保留家人计数、其他成员升星与阵亡降星联系。普通移动、迅击与野火复用同一禁止移动判定；野火在当 tick 控制/引导维护后执行，受阻仍开窗、回血并清空承伤桶。
+- 新增20项组合回归，v20合成测试共55项；规则相关11文件共287项通过。身份/134个文本与对象恢复检查点、四路线golden及C19输入回归另164项通过。`npm.cmd run typecheck`、`git diff --check`通过。
+- 同一次修复只调用一次 epoch 入口，统一重录release、Herald、输入、转移与live reveal，12项全部退出0；157个v15–v19历史文件及g2-4b manifest字节不变，两个digest根离线独立重算吻合。结果见 [epoch-verification.json](epoch-verification.json)，测试与范围证据见 [validation.json](validation.json)。
+- CONTENT=`fnv1a32-utf16:8bbf3521`，LOOT_REPLAY=`fnv1a32-utf16:77e577f1`。旧digest存档按既有规则拒绝恢复。未联网、未执行Git写操作、未部署、未修改表现层。

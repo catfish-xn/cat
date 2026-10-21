@@ -46,6 +46,13 @@ Match客户端命令和失败reason全集不增加。强化赠卡复用 `p2GiftP
 
 `CombatUnit.v20Traits` 保存移动余量、冲刺时钟、AD采样与实际授予、希尔科快照、已爆炸根ID及攻击代理任务。实际HP承伤桶仍为 `expansion.damageTaken`。所有字段进入JSON，逐tick从认证冻结输入重建并比较完整候选状态；伪造余量、伙伴、任务、快照或RNG均拒绝。无新隐藏闭包或候选自证。旧身份保留原字节供导出。
 
+### PR #379 评审修复（2026-10-22）
+
+- 危险人物也屏蔽绑定爆爆的家人彩蛋额外星级（属性和技能均用原星级）。仍保留家人计数、六人成员身份及其阵亡触发其他成员降星的关系；其他成员照常升星，未绑定的副本不受本项屏蔽。
+- 普通移动、迅击和野火统一调用 `canMove(unit:S13Unit,tick:number):boolean`（`combat-movement.ts`）：死亡/零血、攻击代理、熔炉、受缚塞恩、有效眩晕、引导、根深蒂固均禁止自主移动；沿用普通移动原有的永久狂暴免控例外。冷却、射程和落点仍由各调用者处理。`isControlled(unit,tick):boolean` 读取同一 tick 的普通及机制眩晕贡献，无副作用、无失败 reason 或 RNG。
+- 野火在本 tick 控制与引导维护之后执行；禁止移动仅取消位移，120 tick 周期、20 tick 射程/攻速窗口和回血清桶照常。到期控制不延长一 tick，下一 tick 才开始的控制不会提前生效。迅击消费本次待冲刺时刻后，受阻时不保留延后补冲。
+- 根深蒂固的既有拉近规则保留：能拉近未扎根敌人，不能拉近扎根目标；迅击只移动自身。修订号为 `v20-traits-review-fixes-1`，沿用当前 v20-traits epoch，由既有入口一次统一重录。
+
 ## 录制、核验与交接
 
 `node scripts/update-content-identities.cjs --write` 先生成两个完整根digest；`node scripts/verify-v20-traits-epoch.cjs` 顺序录制/核验release、Herald、输入夹具、转移锚点与live reveal，再核验历史LF字节和独立digest根。生成目录仅 `tests/fixtures/v20-traits-*`、`full-match-golden.v20-traits.json`、`tests/v20-traits-content-baseline.json`、`docs/evidence/v20-traits/`。`verify-m8-herald-fixtures.cjs` CURRENT指向新录制器。v19及更早epoch不改写，g2-4b manifest字节不动；并行v20-chem-baron谁后合谁重录。

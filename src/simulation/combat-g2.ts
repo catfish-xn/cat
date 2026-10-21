@@ -1,4 +1,5 @@
 import { detonateMenaces, teamup } from './combat-v20-traits';
+import { canMove } from './combat-movement';
 import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
 import { planG23Cast, executeG23Task } from './combat-g2-3';
@@ -185,7 +186,7 @@ export function advanceG2Passives(ctx: AbilityContext, nextSeq: () => number): v
       const m = unit.mechanics!.find(m => m.mechanic === 'firelight')!, state = expansion(unit);
       ctx.heals.push({ source: m.source, targetId: unit.id, amount: Math.floor(state.damageTaken * m.values.healBps / 10000) }); state.damageTaken = 0;
       const target = byDistance(unit, enemies(unit, ctx.units))[0];
-      const destination = target && Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(unit.cell,c)<=2&&hexDistance(unit.cell,c)>0).filter(c => !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.cell.col === c.col && u.cell.row === c.row))
+      const destination = canMove(unit, ctx.tick) && target && Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(unit.cell,c)<=2&&hexDistance(unit.cell,c)>0).filter(c => !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.cell.col === c.col && u.cell.row === c.row))
         .sort((a, b) => hexDistance(target.cell, b) - hexDistance(target.cell, a) || a.row - b.row || a.col - b.col)[0];
       if (destination) { ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: unit.id, from: unit.cell, to: destination }); unit.cell = destination; }
       if (m.values.attackSpeedBps) applyStatus(unit, m.source, 'attackSpeed', m.values.attackSpeedBps, m.values.dashTicks, ctx.tick, ctx.events, true);

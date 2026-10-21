@@ -103,6 +103,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   const d11=new Map(state.augments.filter(a=>Object.hasOwn(D11_FILL_TIERS,a.definitionId)).map(a=>[a.choiceId,
     compileD11Augment(a.definitionId as D11AugmentId,boardUnits,state.playerHp??100,d11OpeningSeed(state.g23?.seed??0,state.round,a.choiceId))]));
   const units = boardUnits.map(unit => {
+    const suppressFamily=teamups.get('menaces')?.[0]===unit.id;
     const itemSummon=voidspawn.origins.find(o=>o.unit.id===unit.id);
     const sources: SourcedEffect[] = [];
     if(itemSummon){
@@ -125,7 +126,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const itemEffects = (definition: ItemDefinition): readonly Effect[] => (isolated && definition.isolatedEffects ? [...definition.effects, ...definition.isolatedEffects] : definition.effects).map(effect=>
       effect.kind==='mechanic'&&effect.mechanic==='v19Chainblade'?{...effect,values:{...effect.values,pvp:!ROUND_CATALOG.find(r=>r.ordinal===state.round)||ROUND_CATALOG.find(r=>r.ordinal===state.round)?.kind==='pvp'?1:0}}:effect);
     for (const trait of traits) {
-      if (trait.traitId==='family'&&teamups.get('menaces')?.[0]===unit.id)continue;
+      if (trait.traitId==='family'&&suppressFamily)continue;
       if (trait.team !== unit.team || trait.tier === 0 || !trait.targetUnitIds.includes(unit.id)) continue;
       const definition = lookup(catalog.traits, trait.traitId);
       const tier = definition.tiers.find(candidate => candidate.threshold === trait.tier);
@@ -202,7 +203,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const base = unit.location.kind==='board'?g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row):getUnitStats(unit.definitionId,unit.starLevel);
     const promoted=state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='promoted';
     if(state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='returned')sources.push(...makeSourcedEffects(unit.id,'anomaly','into-the-unknown',state.anomalyBinding!.choiceId+':return',[{kind:'statPercentBps',stat:'attackDamage',bps:5000},{kind:'statFlat',stat:'abilityPower',amount:50}]));
-    const reunionStar=reunion.has(unit.id)?Math.min(4,(promoted?4:unit.starLevel)+1) as 1|2|3|4:undefined;
+    // Keep the death-linked reunion membership even when Menaces suppresses the extra star.
+    const reunionStar=reunion.has(unit.id)?Math.min(4,(promoted?4:unit.starLevel)+(suppressFamily?0:1)) as 1|2|3|4:undefined;
     const certified=reunionStar?familyCombatBase(unit,reunionStar):promoted?d14UnitBase(unit,true):null;
     let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
     const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');

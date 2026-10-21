@@ -1,13 +1,13 @@
 {
-  "contentDigest": "fnv1a32-utf16:f9581e38",
-  "lootReplayDigest": "fnv1a32-utf16:3332bffa",
+  "contentDigest": "fnv1a32-utf16:8bbf3521",
+  "lootReplayDigest": "fnv1a32-utf16:77e577f1",
   "rulesVersion": "s13-g2-3-v20-traits",
   "contentVersion": "s13-14.24b-g2-3-v20-traits",
   "schemaVersion": 10,
   "previousContentDigest": "fnv1a32-utf16:242e7562",
   "previousLootReplayDigest": "fnv1a32-utf16:df0d757c",
   "traceHashes": {
-    "state": "a7b302403543fa4d3438927cde9db1f7b0400adf3dceb5c86c1be59ac9d352d4",
+    "state": "c31c3fc3f849c7f599552ada54b64c182b88b2a0026e212f70086e08e6c89e17",
     "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
     "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
   },

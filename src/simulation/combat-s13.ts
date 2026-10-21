@@ -1,4 +1,5 @@
 import { castV20Teamups, quickDashV20, advanceV20Minions } from './combat-v20-traits';
+import { canMove, isControlled } from './combat-movement';
 import { settleFamilyReunionDeaths } from './combat-family-reunion';
 import { advanceSixCost, settleSixCostDeaths, recordMelAbsorption, convertViktorMana } from './combat-six-cost';
 import { p2Bonus, p2Stoneskin, p2Target, p2PacketCrit } from './s13-augments-p2-combat';
@@ -257,26 +258,25 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   advanceAugmentCombat(ctx);
   smokeV19(ctx);
   advanceG22Traits(ctx); advanceG23Anomalies(ctx); advanceG23Summons(ctx); advanceG23Skills(ctx); advanceG23Junker(ctx,()=>actionSeq++);
-  advanceG2Passives(ctx, () => actionSeq++);
-  advanceV20Minions(ctx);
   const blocked = new Set<string>();
   for (const unit of units) {
     // B9 replay2: every S13 status is anchored by frozen contributions or an activity.
     if (unit.statuses.some(s => !s.contributionKeys && !s.activity)) throw new RangeError('S13 status without a frozen contribution or activity');
     unit.statuses = unit.statuses.filter(s => s.activity || s.expiresAtTick > tick);
-    const controlled = active(unit, tick, 'stun').length > 0 || effectiveStatuses(unit.mechanismState!.statuses, tick).some(g => g.kind === 'stun');
+    const controlled = isControlled(unit, tick);
     maintainActivities(ctx, unit, controlled);
     if (controlled && !unit.sixCost?.permanentFrenzy) { blocked.add(unit.id); unit.tasks = unit.tasks.filter(t => !t.cancellable); }
   }
-  for(const unit of units)if(unit.alive&&unit.hp>0&&!blocked.has(unit.id)&&!active(unit,tick,'channel').length)quickDashV20(ctx,unit);
+  advanceG2Passives(ctx, () => actionSeq++);
+  advanceV20Minions(ctx);
+  for(const unit of units)quickDashV20(ctx,unit);
   for(const unit of units)if(unit.mechanics?.some(m=>m.mechanic==='quickstriker')&&unit.alive){
     unit.v20Traits={...unit.v20Traits,moveTenths:Math.min(13,(unit.v20Traits?.moveTenths??7)+3)};
   }
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
   const intents = units.map(unit => {
-    if (isAttackProxy(unit)||unit.definitionId==='g23-forge'||g23Bound(unit)||!unit.alive || unit.hp<=0 || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) return undefined;
+    if (!canMove(unit, tick)) return undefined;
     const target = p2Target(unit,units,tick);
-    if (g23Anomaly(unit,'deep-roots')) return undefined;
     if (!target || (unit.mechanics?.some(m=>m.mechanic==='quickstriker')?unit.moveCooldownTicks>5||(unit.v20Traits?.moveTenths??0)<10:unit.moveCooldownTicks>0) || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
     return move(state, unit, target, occupied);
   });
