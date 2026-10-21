@@ -313,13 +313,11 @@ export class OnlineApplication implements SceneApplication {
       if (!shown || !view) return null;
       const elapsedMs = this.carousel.elapsedNow() ?? view.elapsedMs, pending = this.carousel.pendingSlot;
       this.carouselNextRelease = Math.min(Infinity, ...Object.values(view.releaseAtMs).filter(at => at > elapsedMs));
-      const taken = new Set(view.slots.flatMap(slot => slot.pickedBy ? [slot.pickedBy] : []));
       return { id: view.id, elapsedMs, at: performance.now(),
-        seats: seats.map(seat => ({ seatId: seat.seatId, me: seat.seatId === mySeatId, picked: taken.has(seat.seatId),
-          locked: (view.releaseAtMs[seat.seatId] ?? Infinity) > elapsedMs })),
+        seats: seats.map(seat => ({ seatId: seat.seatId, me: seat.seatId === mySeatId, releaseAtMs: view.releaseAtMs[seat.seatId] ?? Infinity })),
         slots: view.slots.map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, starLevel: slot.starLevel,
           cost: getHeroIdentity(slot.definitionId).cost,
-          items: slot.items.map(id => ({ id, icon: s13AssetUrl('item', id) })), picked: slot.pickedBy !== null,
+          items: slot.items.map(id => ({ id, icon: s13AssetUrl('item', id) })), pickedBy: slot.pickedBy,
           takable: view.eligible && slot.pickedBy === null && pending === null, pending: pending === slot.slot })) };
     });
     this.carousel.drawnIn3d = drawn && shown;
