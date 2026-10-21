@@ -583,7 +583,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /**
    * The drawn piece under a point: my units for board gestures, any team for item drops (BoardScene judges the target).
    * Each piece is a hit volume, as in TFT: a capsule (PICK_RADIUS of a hex) around its upright axis from the floor to
-   * its star row. Where volumes overlap on screen the piece whose axis passes closest to the pointer wins, not the
+   * its star row. Where volumes overlap the piece whose axis is drawn closest to the pointer wins, not the
    * nearest surface: a short unit in the cell in front no longer takes an item aimed at the body behind it.
    * Not the model's triangles: a skinned ray test transforms every vertex by its bones on each pointer move (15–35 ms
    * with 13 units, 2026-10-21) and only counts the model's own pixels, so gaps between limbs, the cell under the feet,
@@ -597,13 +597,26 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     camera.updateMatrixWorld();
     ray.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
     const radius = (grid.radius ?? 36) * PICK_RADIUS;
-    let best: string | null = null, bestDistance = radius;
+    // The capsule decides what is under the pointer; among those, the closest axis on screen wins (in world units a
+    // piece farther from the camera would win a perspective tie it loses on screen).
+    let best: string | null = null, bestDistance = Infinity;
     for (const [unitId, view] of pieces) {
       if (!view.alive || !view.root.visible || (!anyTeam && view.team !== 'player')) continue;
-      const distance = axisDistance(ray.ray.origin, ray.ray.direction, view.root.position, view.starHeight);
-      if (distance <= bestDistance) { best = unitId; bestDistance = distance; }
+      if (axisDistance(ray.ray.origin, ray.ray.direction, view.root.position, view.starHeight) > radius) continue;
+      const distance = screenAxisDistance(client, area, view.root.position, view.starHeight);
+      if (distance < bestDistance) { best = unitId; bestDistance = distance; }
     }
     return best;
+  };
+  const axisFoot = new Vector3(), axisHead = new Vector3();
+  /** CSS-pixel distance from a point to a piece's axis as drawn (both ends projected). */
+  const screenAxisDistance = (client: { x: number; y: number }, area: { left: number; top: number; width: number; height: number },
+    base: Vector3, height: number): number => {
+    const toScreen = (point: Vector3) => ({ x: area.left + (point.x + 1) / 2 * area.width, y: area.top + (1 - point.y) / 2 * area.height });
+    const a = toScreen(axisFoot.copy(base).project(camera)), b = toScreen(axisHead.copy(base).setY(base.y + height).project(camera));
+    const dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy;
+    const t = length > 0 ? Math.min(1, Math.max(0, ((client.x - a.x) * dx + (client.y - a.y) * dy) / length)) : 0;
+    return Math.hypot(client.x - (a.x + dx * t), client.y - (a.y + dy * t));
   };
   const unitAt = (event: PointerEvent) => pickUnit({ x: event.clientX, y: event.clientY }, false);
   const boardPoint = (event: PointerEvent): { x: number; y: number } | null => {
