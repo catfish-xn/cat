@@ -8,7 +8,7 @@ import { accepted,reachRound,resolveM5Choices,emptyBoard,freeze } from './match-
 
 describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
  it.each([0,1,42,123456789,4294967295])('seed %i consumes exactly three independently calculated LCG words',seed=>{
-  const ids=['silver','gold','prismatic'].flatMap(tier=>augmentPool(tier,[])).sort(),pool=[...ids];
+  const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[])).sort(),pool=[...ids];
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(ids);let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
   expect(ids).toHaveLength(66);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
