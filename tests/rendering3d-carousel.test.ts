@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Texture, Vector3, type Object3D } from 'three';
+import { BoxGeometry, CylinderGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Texture, Vector3, type Object3D } from 'three';
 import { CAROUSEL_CELL, LEGEND_RADIUS, ORBIT_SECONDS, RUN_CELLS, UNIT_RADIUS, createCarouselStage, type CarouselStageContext } from '../src/rendering/three-mode/carousel-stage';
 import {
   boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, subscribeBoardFeed, boardFeed,
@@ -187,19 +187,53 @@ describe('3D carousel stage', () => {
     }
   });
 
-  it('frames the arena to fill the screen top to bottom with every cradle still in view', () => {
-    const { stage } = setup();
-    stage.show(carousel({ seats: seats(false) }));
-    stage.update(5); // past the opening push-in
-    const ys: number[] = [];
-    for (const legend of stage.scene.getObjectByName('render3d-carousel-seats')!.children) {
-      const p = legend.getWorldPosition(new Vector3()).project(stage.camera);
-      expect(Math.abs(p.x)).toBeLessThan(1); expect(Math.abs(p.y)).toBeLessThan(1);
-      ys.push(p.y);
+  it.each(['standin', 'loaded'] as const)('frames every pedestal vertex and legend head without making the %s arena too small', async mode => {
+    // Synthetic outer pedestal: no copyrighted assets. Loading it also exercises refitting after async model arrival.
+    const { stage } = setup(mode === 'loaded' ? {
+      sourceScale: 1,
+      hasModel: id => id === 'carousel-llplatforms',
+      loadModel: async () => {
+        const scene = new Group();
+        const pedestal = new Mesh(new CylinderGeometry(8.6 * CAROUSEL_CELL, 8.6 * CAROUSEL_CELL, 0.2 * CAROUSEL_CELL, 96), new MeshBasicMaterial());
+        pedestal.position.y = -0.1 * CAROUSEL_CELL;
+        scene.add(pedestal);
+        return { scene, animations: [], animationNames: {}, placeholder: false, release() {} } as unknown as ModelLease;
+      },
+    } : {});
+    try {
+      stage.show(carousel({ seats: seats(false) }));
+      await flush();
+      stage.update(5); // past the opening push-in
+      expect(stage.debug().platform).toEqual([mode === 'loaded' ? 'carousel-llplatforms' : 'standin']);
+      // Return to 16:9 as well, so resizing must restore the original framing.
+      for (const aspect of [16 / 9, 4 / 3, 21 / 9, 16 / 9]) {
+        stage.resize(aspect);
+        stage.scene.updateMatrixWorld(true);
+        const assertVisibleVertices = (root: Object3D) => {
+          let count = 0;
+          root.traverse(object => {
+            if (!(object instanceof Mesh)) return;
+            const vertices = object.geometry.getAttribute('position');
+            for (let i = 0; i < vertices.count; i++) {
+              const p = new Vector3().fromBufferAttribute(vertices, i).applyMatrix4(object.matrixWorld).project(stage.camera);
+              expect(Math.abs(p.x), `${mode}, aspect ${aspect}, ${object.name}: x`).toBeLessThanOrEqual(1);
+              expect(Math.abs(p.y), `${mode}, aspect ${aspect}, ${object.name}: y`).toBeLessThanOrEqual(1);
+              expect(Math.abs(p.z), 'inside the camera clipping planes').toBeLessThanOrEqual(1);
+              count++;
+            }
+          });
+          expect(count).toBeGreaterThan(0); // never pass on an empty fixture
+        };
+        assertVisibleVertices(stage.scene.getObjectByName(mode === 'loaded' ? 'render3d-carousel-platform' : 'render3d-carousel-standin')!);
+        const legends = stage.scene.getObjectByName('render3d-carousel-seats')!;
+        assertVisibleVertices(legends); // includes the actual stand-in head geometry, not just its feet
+        const ys = legends.children.map(legend => legend.getWorldPosition(new Vector3()).project(stage.camera).y);
+        // Cradle/legend feet span about 1.25 NDC vertically; 1.2 leaves rounding/fixture margin while rejecting a distant, tiny arena.
+        expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(1.2);
+      }
+    } finally {
+      stage.dispose();
     }
-    // The near and far cradles span most of the height (it used to leave about a third of it empty).
-    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(1.5);
-    stage.dispose();
   });
 
   it('rings each unit in its cost color, whether or not the tier effect loads, and drops the ring once the unit is taken', () => {

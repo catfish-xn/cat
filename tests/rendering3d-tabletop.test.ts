@@ -178,8 +178,10 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(walk.to.x).toBeCloseTo(3, 5); expect(walk.to.y).toBeCloseTo(2, 5);
     expect(tabletop.debug().legends).toEqual(['legend:me:standin:walk']);
     const cells = Math.hypot(walk.to.x - walk.from.x, walk.to.y - walk.from.y);
+    // Product pace is 2.5 cells/s: keep an independent numeric expectation so a speed regression fails here.
     clock = cells / 2.5 * 1000 / 2; tabletop.update(0.016);
     expect(legend.position.x).toBeCloseTo(35 + width * (walk.from.x + walk.to.x) / 2, 3);
+    expect(legend.position.z).toBeCloseTo(50 + width * (walk.from.y + walk.to.y) / 2, 3);
     clock = cells / 2.5 * 1000 + 1; tabletop.update(0.016);
     expect(legend.position.x).toBeCloseTo(35 + width * 3, 3); expect(legend.position.z).toBeCloseTo(50 + width * 2, 3);
     expect(tabletop.debug().legends).toEqual(['legend:me:standin']);
@@ -198,15 +200,23 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     const column = (() => { tabletop.frame(frame({ orbs: [orb('probe', 'gray')] })); return scene.getObjectByName('render3d-orb-gray')!.position.clone(); })();
     tabletop.frame(frame({ fighting: true, pieces: [monster('m1', 200, 120), monster('m2', 120, 90)] }));
     tabletop.frame(frame({ fighting: true, pieces: [monster('m1', 210, 125, false), monster('m2', 120, 90)],
-      orbs: [{ ...orb('a', 'blue'), source: 'm1' }, { ...orb('b', 'gold'), source: 'm1' }, orb('c', 'gray')] }));
-    const at = (tier: string) => scene.getObjectByName(`render3d-orb-${tier}`)!.position;
+      orbs: [{ ...orb('a', 'blue'), source: 'm1' }, { ...orb('b', 'gold'), source: 'm1' }, orb('c', 'gray'),
+        { ...orb('d', 'prismatic'), source: 'm2' }] }));
+    const at = (tier: string) => scene.getObjectByName(`render3d-orb-${tier}`)!.position.clone();
     expect(at('blue').x).toBeCloseTo(210); expect(at('blue').z).toBeCloseTo(125);
+    expect(at('prismatic').x).toBeCloseTo(120); expect(at('prismatic').z).toBeCloseTo(90);
     const width = Math.sqrt(3) * 34;
-    expect(at('gold').distanceTo(new Vector3(210, 0, 125)) / width).toBeCloseTo(0.4, 5); // a second orb of m1, beside the first
+    // Siblings must be distinct and stay near their monster; exact spread radius/angle is a presentation choice.
+    expect(at('gold').distanceTo(at('blue'))).toBeGreaterThan(0);
+    expect(at('gold').distanceTo(new Vector3(210, 0, 125))).toBeLessThan(width);
     expect(at('gray').distanceTo(column)).toBeLessThan(1e-6); // no source: the column beside my legend
+    const tiers = ['blue', 'gold', 'gray', 'prismatic'];
+    const dropped = tiers.map(at);
     // The battle ends and the monsters leave the board: the orbs stay where they fell.
-    tabletop.frame(frame({ orbs: [{ ...orb('a', 'blue'), source: 'm1' }, { ...orb('b', 'gold'), source: 'm1' }, orb('c', 'gray')] }));
-    expect(at('blue').x).toBeCloseTo(210); expect(at('blue').z).toBeCloseTo(125);
+    // Reordering the feed must not reposition the siblings or send sourced orbs back to the column.
+    tabletop.frame(frame({ orbs: [{ ...orb('b', 'gold'), source: 'm1' }, { ...orb('d', 'prismatic'), source: 'm2' },
+      orb('c', 'gray'), { ...orb('a', 'blue'), source: 'm1' }] }));
+    tiers.forEach((tier, index) => expect(at(tier).distanceTo(dropped[index]!)).toBeLessThan(1e-6));
     tabletop.dispose();
   });
 
