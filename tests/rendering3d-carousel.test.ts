@@ -108,6 +108,25 @@ describe('3D carousel stage', () => {
     expect(stage.debug().legends.filter(entry => entry.endsWith(':locked'))).toHaveLength(7);
   });
 
+  it('rings each unit with the quality effect of its cost, carried by the unit on the turning ring, and drops it with the unit', async () => {
+    const effects: { id: string; fx: ReturnType<typeof fakeEffect> }[] = [];
+    const { stage } = setup({ loadEffect: id => { const fx = fakeEffect(); effects.push({ id, fx }); return Promise.resolve(fx); } });
+    const costs = [1, 2, 3, 4, 5, 9, 0];
+    const slots = costs.map((cost, index) => slot(index, cost ? { cost } : {}));
+    stage.show(carousel({ slots }));
+    await flush();
+    const tiers = effects.filter(entry => entry.id.startsWith('carousel-shareddraft-unittier'));
+    // cost 9 is capped at tier 6; a slot without a cost gets no ring rather than a guessed one.
+    expect(tiers.map(entry => entry.id).sort()).toEqual([1, 2, 3, 4, 5, 6].map(tier => `carousel-shareddraft-unittier${tier}`));
+    for (const entry of tiers) expect(entry.fx.object.parent?.name).toBe('render3d-carousel-unit');
+    // Taking a unit removes its ring with it.
+    stage.show(carousel({ slots: slots.map(entry => entry.slot === 2 ? { ...entry, picked: true } : entry) }));
+    await flush();
+    expect(tiers.find(entry => entry.id === 'carousel-shareddraft-unittier3')!.fx.disposed).toBe(true);
+    expect(tiers.filter(entry => entry.fx.disposed)).toHaveLength(1);
+    stage.dispose();
+    expect(tiers.every(entry => entry.fx.disposed)).toBe(true);
+  });
   it('loads the platform as one group at the shared scale, keeps the skybox as scenery, and stands legends on the cradle surface', async () => {
     const leases = new Map<string, ReturnType<typeof fakeLease>>();
     const platform = ['carousel-center', 'carousel-llplatforms', 'carousel-glassdome-a', 'carousel-skybox'];

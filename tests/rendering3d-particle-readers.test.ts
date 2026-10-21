@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, Group, Mesh, MeshBasicMaterial, SkinnedMesh, Texture } from 'three';
+import { BoxGeometry, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, SkinnedMesh, Texture } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadParticleEffect, readParticleMesh } from '../src/rendering3d';
 
@@ -52,6 +52,16 @@ describe('particle cached readers', () => {
     const effect = await loadParticleEffect(manifest, 'sample', { root: '/synthetic/', readTexture });
     expect(fetch).toHaveBeenCalledTimes(2); expect(fetch).toHaveBeenLastCalledWith('/synthetic/effects/sample.json');
     expect(effect.skipped.mesh).toBe(1); expect(readTexture).not.toHaveBeenCalled(); effect.dispose();
+  });
+  it('keeps a particle mesh\'s vertex colours when the adapter reads it from a model', async () => {
+    const source = model();
+    const count = source.geometry.getAttribute('position').count;
+    source.geometry.setAttribute('color', new Float32BufferAttribute(new Array(count * 3).fill(0.5), 3));
+    const geometry = await readParticleMesh('/synthetic/meshes/coloured.glb', async () => source);
+    try {
+      expect(geometry.getAttribute('color')?.count).toBe(count);
+      expect(geometry.getAttribute('color')?.getX(0)).toBeCloseTo(0.5);
+    } finally { geometry.dispose(); }
   });
   it('defaults the static mesh adapter to the existing GLB reader', async () => {
     const source = model();
