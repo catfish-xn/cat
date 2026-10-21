@@ -70,6 +70,8 @@ export function readScout(scout: BoardScout): ScoutView {
 }
 /** A little legend's short code name (protocol LittleLegendId); anything else is drawn as the default. */
 const LEGEND_ID = /^[a-z0-9-]{1,40}$/;
+/** My visiting legend's walk, board widths (hex widths) a second, as on my own board. */
+const VISITOR_WIDTHS = 5;
 
 export interface ScoutStageContext {
   readonly scene: Scene;
@@ -92,12 +94,16 @@ export interface ScoutStage {
   readonly active: boolean;
   /** The seat to draw on this board layout, or null to stop (everything is released). */
   show(scout: BoardScout | null, frame: BoardFrame | null): void;
+  /** My legend, which came along, walks toward a board-space point on this board (display only: nothing is sent). */
+  walkVisitor(point: { x: number; y: number }): boolean;
   update(seconds: number): void;
   debug(): { seatId: string | null; units: string[]; bench: string[]; orbs: string[]; legend: string; visitor: string };
   dispose(): void;
 }
 
-interface Piece { root: Group; lease: ModelLease | null; mixer: UnitAnimationMixer | null; state: UnitActionState; stars: StarMark | null; overhead: UnitOverhead; height: number; disposed: boolean; key: string }
+interface Piece { root: Group; lease: ModelLease | null; mixer: UnitAnimationMixer | null; state: UnitActionState; stars: StarMark | null; overhead: UnitOverhead; height: number; disposed: boolean; key: string;
+  /** Visitor only: the walk it is on (seconds of the stage clock). */
+  path?: { from: Vector3; to: Vector3; start: number; end: number } | null }
 
 function fit(body: Object3D, height: number, width = Infinity): Object3D {
   const box = new Box3().setFromObject(body), size = box.getSize(new Vector3());
@@ -123,6 +129,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
   let current: ScoutView | null = null, layoutKey = '';
   const pieces: Piece[] = [], orbs: Mesh[] = [];
   let legend: Piece | null = null, visitor: Piece | null = null;
+  let roam: { minX: number; maxX: number; minZ: number; maxZ: number; speed: number } | null = null;
 
   const createPiece = (key: string, model: string | null, height: number, width: number, stand: () => Object3D,
     load: ((id: string) => Promise<ModelLease>) | null = ctx.loadModel): Piece => {
@@ -207,6 +214,8 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     legend = legendPiece('legend', view.legend, spot);
     // Mine came along: the visitor's corner, across the board from the owner's (where a PvP opponent's legend stands).
     visitor = legendPiece('visitor', ctx.myLegend(), new Vector3(frame.origin.x - width * 1.6, 0, frame.origin.y));
+    // Where it may walk: the board and its rim out to both legends' corners (as on my own board).
+    roam = { minX: frame.origin.x - width * 2, maxX: spot.x + width * 0.5, minZ: frame.origin.y - width, maxZ: spot.z + width, speed: VISITOR_WIDTHS * width };
     view.orbs.tiers.slice(0, MAX_ORBS).forEach((tier, index) => {
       const orb = new Mesh(orbGeometry, orbMaterial[tier]); orb.name = `render3d-scout-orb-${tier}`;
       orb.position.set(spot.x + (index % 2 ? 0.42 : -0.42) * width, ORB_FLOAT, spot.z - (1 + Math.floor(index / 2)) * step * 0.9);
@@ -231,12 +240,27 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
     update(seconds) {
       if (!current) return;
       clock += seconds;
+      const path = visitor?.path;
+      if (visitor && path) {
+        const span = path.end - path.start, t = span <= 0 ? 1 : Math.min(1, (clock - path.start) / span);
+        visitor.root.position.lerpVectors(path.from, path.to, t);
+        if (t >= 1) visitor.path = null;
+      }
       for (const piece of [...pieces, legend, visitor]) {
         if (!piece) continue;
-        const output = piece.state.update(seconds);
+        const base = piece.state.update(seconds), walking = !!piece.path && (base.state === 'idle' || base.state === 'move');
+        const output = walking || piece === visitor ? { ...base, ...(walking ? { state: 'move' as const, loop: true } : {}), revision: base.revision * 2 + (walking ? 1 : 0) } : base;
         if (piece.mixer) { piece.mixer.apply(output); piece.mixer.update(seconds); }
       }
       orbs.forEach((orb, index) => { orb.position.y = ORB_FLOAT + Math.sin(clock * 2 + index) * 2; });
+    },
+    walkVisitor(point) {
+      if (!current || !visitor || !roam) return false;
+      const to = new Vector3(Math.min(roam.maxX, Math.max(roam.minX, point.x)), 0, Math.min(roam.maxZ, Math.max(roam.minZ, point.y)));
+      const from = visitor.root.position.clone().setY(0);
+      if (from.distanceToSquared(to) > 1) visitor.root.rotation.y = Math.atan2(to.x - from.x, to.z - from.z);
+      visitor.path = { from, to, start: clock, end: clock + from.distanceTo(to) / roam.speed };
+      return true;
     },
     debug: () => ({
       seatId: current?.seatId ?? null,

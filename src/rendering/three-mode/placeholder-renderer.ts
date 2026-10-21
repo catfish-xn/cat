@@ -683,6 +683,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       feed?.controls()?.hover(null); endDrag(); canvas.style.cursor = '';
     }
     scoutView = view; scout.show(view, lastFrame);
+    // My legend goes along: it leaves my board (no walk, no orb claims) and comes back to its own spot.
+    tabletop.away(scout.active);
   };
   const mine = () => !stage.active && !scout.active;
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
@@ -783,8 +785,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (to) { event.preventDefault(); legend()?.walk({ scene: 'carousel', to }); }
       return;
     }
-    // While scouting the board is the other seat's and takes no input.
-    if (scout.active) return;
+    // While scouting the board is the other seat's: only a right click, which walks my visiting legend there.
+    if (scout.active) {
+      if (event.button === 2) { const point = boardPoint(event); if (point && scout.walkVisitor(point)) event.preventDefault(); }
+      return;
+    }
     // Right click: my legend walks there (onto my orb when it is under the pointer, which it then claims).
     if (event.button === 2) {
       const point = boardPoint(event);
