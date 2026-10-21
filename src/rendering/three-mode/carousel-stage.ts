@@ -23,6 +23,7 @@ import { UnitAnimationMixer, createStarMark, type ActionOutput, type ModelLease,
 import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot, BoardLegendWalk } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
+import { fitModel } from './model-fit';
 
 /** Board units per carousel cell, as the asset review lays out the stage (one grid interval; models and effects at .44). */
 export const CAROUSEL_CELL = 62.4;
@@ -87,6 +88,8 @@ export interface CarouselStageContext {
   /** A lease when the manifest names that model; null without an asset root (stand-ins only). */
   readonly loadModel: ((id: string) => Promise<ModelLease>) | null;
   readonly hasModel: (id: string) => boolean;
+  /** The asset root's official scale for a champion model (model-fit.ts), null when it has none. */
+  readonly unitScale?: (id: string) => number | null;
   readonly loadEffect: ((id: string, maxDuration: number) => Promise<ParticleEffect>) | null;
   /** The default little legend's model; a seat whose own legend (`little-legend-<legend>`) the manifest lacks shows it. */
   readonly legendModel: string;
@@ -340,7 +343,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     void load(id).then(lease => {
       if (view.disposed || lease.placeholder) { lease.release(); return; }
       view.root.clear(); view.lease = lease;
-      view.root.add(fit(lease.scene, height, width));
+      // A champion at the asset root's official scale (model-fit.ts) when it has one; legends and older roots are fitted.
+      const unitScale = ctx.unitScale?.(id) ?? null;
+      if (unitScale) { fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale }); view.root.add(lease.scene); }
+      else view.root.add(fit(lease.scene, height, width));
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       view.mixer.apply(view.state.output);
     }).catch(() => { /* keeps the stand-in */ });

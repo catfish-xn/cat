@@ -20,13 +20,21 @@ function setup(overrides: Partial<TraitPropsContext> = {}) {
 }
 
 describe('3D trait props: Conqueror chest and Shimmer flask', () => {
-  it('stays hidden without counters and sits left of the board, off every cell', () => {
-    const { props } = setup();
-    const points = props.layout(frame());
-    props.frame(frame());
+  it('stays hidden without counters, with the banner right of the board and the flask left, off every cell', () => {
+    const { scene, props } = setup();
+    const board = frame();
+    const [chestPoint, flaskPoint] = props.layout(board);
+    props.frame(board);
     expect(props.debug().chest.shown).toBe(false);
     expect(props.debug().flask.shown).toBe(false);
-    for (const point of points) expect(point.x).toBeLessThan(35 - 34);
+    // Odd rows extend half a hex width beyond even rows; include each cell's half-width at the edges.
+    const width = Math.sqrt(3) * board.hexRadius;
+    const leftEdge = board.origin.x - width / 2;
+    const rightEdge = board.origin.x + width * board.columns;
+    expect(chestPoint!.x).toBeGreaterThan(rightEdge);
+    expect(scene.getObjectByName('render3d-conqueror-chest')!.position.x).toBeGreaterThan(rightEdge);
+    expect(flaskPoint!.x).toBeLessThan(leftEdge);
+    expect(scene.getObjectByName('render3d-shimmer-flask')!.position.x).toBeLessThan(leftEdge);
   });
 
   it('glows toward the next chest and opens only when the opened count grows after mount', () => {

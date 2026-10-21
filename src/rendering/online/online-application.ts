@@ -390,6 +390,7 @@ export class OnlineApplication implements SceneApplication {
     const seat = seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;
     const drawn = publishScout(() => seat ? { seatId: seat.seatId, name: seat.name, board: seat.publicBoard, orbs: seat.orbs, ...(seat.legend ? { legend: seat.legend } : {}) } : null) && !!seat;
     this.opponentBoard.drawnIn3d = drawn;
+    this.syncShopInert();
     this.opponentBoard.root.toggleAttribute('data-combat', view?.phase.kind === 'combat');
     this.minimap.render(this.view, seatId);
     traitColumnShowRows(drawn ? publicTraitRows(seat.publicBoard ?? { units: [] }, this.session.state.preparation.board) : null);
@@ -450,6 +451,10 @@ export class OnlineApplication implements SceneApplication {
     // The server keeps running while the tab is hidden; on return, show the latest state at once.
     if (!document.hidden && this.session.playingBack) { this.session.skipPlayback(); this.hooks.clearInput(); this.hooks.refresh(); }
   };
+  /** The shop is out of reach while not playing, and while the 3D layer shows another seat's board (CSS slides it away). */
+  private syncShopInert() {
+    if (this.mounts) this.mounts.shopDock.inert = !(this.mode === 'active' && !this.spectating) || this.opponentBoard.drawnIn3d;
+  }
   private syncMode() {
     document.body.dataset.m6Mode = this.mode === 'active' ? 'active' : this.mode === 'online-ended' ? 'active' : 'startup';
     document.body.dataset.onlineMode = this.mode;
@@ -458,7 +463,8 @@ export class OnlineApplication implements SceneApplication {
     this.lobby.show(!inGame); this.sidebar.show(inGame); this.minimap.root.hidden = !inGame;
     if (!inGame) this.opponentBoard.close();
     const strategy = document.getElementById('strategy-root'); if (strategy) strategy.inert = !playing;
-    if (this.mounts) { this.mounts.shopDock.inert = !playing; this.mounts.countdown.hidden = !inGame; }
+    if (this.mounts) this.mounts.countdown.hidden = !inGame;
+    this.syncShopInert();
     const stats = document.getElementById('stats-root'); if (stats) stats.inert = !inGame;
     const canvas = document.querySelector<HTMLCanvasElement>('#board-root canvas'); if (canvas) canvas.style.pointerEvents = playing ? '' : 'none';
     this.syncBattleViews();

@@ -354,6 +354,8 @@ export class BoardScene extends Phaser.Scene {
       if (this.help?.open) return;
       const target = event.target;
       if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select'))) return;
+      // Online, an inert shop dock (not playing, or another seat's board shown in 3D) closes the shop and its shortcuts.
+      if (document.getElementById('shop-dock')?.inert && ['KeyD', 'KeyF', 'KeyW', 'KeyE'].includes(event.code)) return;
       if (event.code === 'KeyD') {
         event.preventDefault();
         this.command(this.session.reroll(), '商店已刷新');
@@ -1234,7 +1236,9 @@ export class BoardScene extends Phaser.Scene {
     if (!view) return {};
     const hp = view.meter('hp'), mana = view.meter('mana');
     return { ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
-      ...(view.equipped.length ? { items: view.equipped.map(item => ({ id: item, icon: s13AssetUrl('item', item) })) } : {}) };
+      // 窃贼手套: the round's stolen items follow the worn ones, as the original shows them over the unit.
+      ...(view.equipped.length || view.extras.temporary.length
+        ? { items: [...view.equipped, ...view.extras.temporary].map(item => ({ id: item, icon: s13AssetUrl('item', item) })) } : {}) };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
   debugSnapshot() {

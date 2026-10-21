@@ -205,9 +205,12 @@ describe('3D carousel stage', () => {
       await flush();
       stage.update(5); // past the opening push-in
       expect(stage.debug().platform).toEqual([mode === 'loaded' ? 'carousel-llplatforms' : 'standin']);
-      // Return to 16:9 as well, so resizing must restore the original framing.
-      for (const aspect of [16 / 9, 4 / 3, 21 / 9, 16 / 9]) {
+      // Keep the old offset alive during resize, then install the new one before update, as the host does.
+      for (const withOffset of [false, true]) for (const aspect of [4 / 3, 16 / 9, 4 / 3, 21 / 9, 1]) {
         stage.resize(aspect);
+        if (withOffset) stage.camera.setViewOffset(aspect * 900, 900, -180, -60, aspect * 900 + 360, 1020);
+        else stage.camera.clearViewOffset();
+        stage.update(0);
         stage.scene.updateMatrixWorld(true);
         const assertVisibleVertices = (root: Object3D) => {
           let count = 0;
@@ -216,8 +219,8 @@ describe('3D carousel stage', () => {
             const vertices = object.geometry.getAttribute('position');
             for (let i = 0; i < vertices.count; i++) {
               const p = new Vector3().fromBufferAttribute(vertices, i).applyMatrix4(object.matrixWorld).project(stage.camera);
-              expect(Math.abs(p.x), `${mode}, aspect ${aspect}, ${object.name}: x`).toBeLessThanOrEqual(1);
-              expect(Math.abs(p.y), `${mode}, aspect ${aspect}, ${object.name}: y`).toBeLessThanOrEqual(1);
+              expect(Math.abs(p.x), `${mode}, aspect ${aspect}, offset ${withOffset}, ${object.name}: x`).toBeLessThanOrEqual(0.975);
+              expect(Math.abs(p.y), `${mode}, aspect ${aspect}, offset ${withOffset}, ${object.name}: y`).toBeLessThanOrEqual(0.975);
               expect(Math.abs(p.z), 'inside the camera clipping planes').toBeLessThanOrEqual(1);
               count++;
             }
@@ -227,12 +230,56 @@ describe('3D carousel stage', () => {
         assertVisibleVertices(stage.scene.getObjectByName(mode === 'loaded' ? 'render3d-carousel-platform' : 'render3d-carousel-standin')!);
         const legends = stage.scene.getObjectByName('render3d-carousel-seats')!;
         assertVisibleVertices(legends); // includes the actual stand-in head geometry, not just its feet
+        assertVisibleVertices(stage.scene.getObjectByName('render3d-carousel-units')!);
         const ys = legends.children.map(legend => legend.getWorldPosition(new Vector3()).project(stage.camera).y);
         // Cradle/legend feet span about 1.25 NDC vertically; 1.2 leaves rounding/fixture margin while rejecting a distant, tiny arena.
-        expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(1.2);
+        // A square viewport is width-limited (about 1.184 vertically); mainstream ratios must still span 1.2.
+        // Span is measured in the un-offset board viewport; the host's larger canvas adds surrounding UI space.
+        if (!withOffset) expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(aspect === 1 ? 1.15 : 1.2);
       }
     } finally {
       stage.dispose();
+    }
+  });
+
+  it('reuses the fitted distance on stable frames and refits only when the projection key changes', () => {
+    const { stage } = setup();
+    stage.show(carousel({ seats: seats(false) }));
+    stage.update(5); // settle the intro before comparing camera positions
+    // The fit projects rim samples during bisection; ordinary stand-in updates do not project anything.
+    const project = vi.spyOn(Vector3.prototype, 'project');
+    const projection = vi.spyOn(stage.camera, 'updateProjectionMatrix');
+    const stableFrames = () => {
+      const position = stage.camera.position.clone();
+      project.mockClear(); projection.mockClear();
+      for (let frame = 0; frame < 60; frame++) stage.update(1 / 60);
+      expect(project).not.toHaveBeenCalled();
+      expect(projection).not.toHaveBeenCalled();
+      expect(stage.camera.position.equals(position)).toBe(true);
+    };
+    const refits = (change: () => void) => {
+      project.mockClear();
+      change();
+      stage.update(0);
+      expect(project).toHaveBeenCalled();
+      stableFrames();
+    };
+    try {
+      stableFrames();
+      refits(() => stage.resize(4 / 3));
+      refits(() => stage.camera.setViewOffset(1200, 900, -180, -60, 1560, 1020));
+      // Reinstalling identical values must hit the cache even though Three updates its projection matrix.
+      stage.camera.setViewOffset(1200, 900, -180, -60, 1560, 1020);
+      stableFrames();
+      refits(() => stage.camera.setViewOffset(1200, 900, -200, -60, 1560, 1020));
+      refits(() => stage.camera.setViewOffset(1200, 900, -200, -80, 1560, 1020));
+      refits(() => stage.camera.setViewOffset(1200, 900, -200, -80, 1600, 1020));
+      refits(() => stage.camera.setViewOffset(1200, 900, -200, -80, 1600, 1080));
+      // Same aspect, different CSS dimensions still change the full view box key.
+      refits(() => stage.camera.setViewOffset(1600, 1200, -200, -80, 1600, 1080));
+      refits(() => stage.camera.clearViewOffset());
+    } finally {
+      project.mockRestore(); projection.mockRestore(); stage.dispose();
     }
   });
 

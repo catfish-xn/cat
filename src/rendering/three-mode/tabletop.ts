@@ -83,6 +83,11 @@ export interface Tabletop {
   walkTo(point: { x: number; y: number }, orbId?: string | null): { from: CellPoint; to: CellPoint } | null;
   /** An opponent's walk as the room relayed it (its own board cells): drawn mirrored on the far side. */
   walk(walk: BoardLegendWalk): void;
+  /**
+   * Visiting another board (TFT: my legend goes there): mine leaves this one, its walk dropped and no orb claimed meanwhile;
+   * back home it stands at its own spot again.
+   */
+  away(on: boolean): void;
   /** Acceptance read (?debug3d). */
   debug(): { legends: string[]; orbs: { orbId: string; tier: string; effect: boolean }[]; hits: string[]; opening: number; bolt: boolean };
   dispose(): void;
@@ -160,6 +165,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     // Models face +z; turn toward the board.
     view.root.rotation.y = Math.atan2(anchors.center.x - side.x, anchors.center.z - side.z);
   };
+  /** Set while I visit another board (`away`). */
+  let away = false;
   const legend = (side: 'me' | 'opponent'): LegendView => {
     const model = ctx.legendModel?.(side) ?? LEGEND_MODEL;
     let view = legends.get(side);
@@ -170,7 +177,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const root = new Group(); root.name = `render3d-legend-${side}`;
     view = { id: `legend:${side}`, model, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false, path: null, walked: false };
     legends.set(side, view);
-    root.add(standIn(side));
+    root.add(standIn(side)); root.visible = !(away && side === 'me');
     placeLegend(view); scene.add(root);
     if (before?.walked) { root.position.copy(before.position); root.rotation.y = before.rotation; view.path = before.path; view.walked = true; }
     if (side === 'opponent' && before) opponentWalk = before.walk;
@@ -224,7 +231,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   let orbTarget: string | null = null, refusals: Readonly<Record<string, number>> = {};
   const sent = new Map<string, number>();
   const walkTo = (point: { x: number; y: number }, orbId: string | null = null) => {
-    if (!layoutKey) return null;
+    if (!layoutKey || away) return null;
     const view = legend('me');
     const orb = orbId ? orbs.get(orbId) : undefined;
     const { minX, maxX, minZ, maxZ } = board.bounds;
@@ -244,7 +251,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     view.root.position.lerpVectors(path.from, path.to, t);
     if (path.from.distanceToSquared(path.to) > 1) view.root.rotation.y = Math.atan2(path.to.x - path.from.x, path.to.z - path.from.z);
     if (t >= 1) view.path = null;
-    if (view.id !== 'legend:me') return;
+    if (view.id !== 'legend:me' || away) return;
     // An orb it walked over since the last frame (the whole stretch, so a long frame skips none), or the one it was sent
     // to on arrival, is claimed as the dock's click; once, unless that claim was refused.
     for (const orb of orbs.values()) {
@@ -473,6 +480,14 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
 
   return {
     layout, frame: onFrame, update, orbAt, walkTo,
+    away(on) {
+      if (on === away) return;
+      away = on; orbTarget = null;
+      const view = legends.get('me');
+      if (!view) return;
+      view.path = null; view.root.visible = !on;
+      if (!on) { view.walked = false; placeLegend(view); }
+    },
     walk(walk) {
       if (walk.scene !== 'board' || walk.who !== 'opponent') return;
       opponentWalk = walk;
