@@ -16,7 +16,7 @@
  * Missing models or effects draw stand-ins; the timer ring is not drawn (its extracted effect is incomplete).
  */
 import {
-  AmbientLight, Box3, CanvasTexture, Color, CylinderGeometry, DoubleSide, DirectionalLight, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial,
+  AmbientLight, Box3, CanvasTexture, Color, CylinderGeometry, DoubleSide, DirectionalLight, Group, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Sprite, SpriteMaterial, Texture, TextureLoader, Vector2, Vector3, type Object3D,
 } from 'three';
 import { UnitAnimationMixer, createStarMark, type ActionOutput, type ModelLease, type ParticleEffect, type StarMark } from '../../rendering3d';
@@ -59,6 +59,8 @@ const RESTRAINT_EARLY_SECONDS = 1.2, WALL_SECONDS = 10, WALL_END_SECONDS = 2, SE
 /** Stand-in feedback when an effect is missing: a ring that swells and fades this long. */
 const POP_SECONDS = 0.5;
 const ITEM_SIZE = 18, STAR_SIZE = 12, STAR_GAP = 12;
+/** Half the width of a ring unit's click box, in cells (a full cell is 0.5). */
+const PICK_HALF_WIDTH = 0.65;
 /**
  * Legend motion, display only (cells, seconds): my legend runs at RUN_CELLS a second; another seat's dashes to the unit
  * it took in DASH_SECONDS (TFT's grab is near instant to watch); a legend with its unit walks home at WALK_CELLS. It grabs
@@ -126,7 +128,7 @@ class Stride {
 }
 interface Body { root: Group; lease: ModelLease | null; mixer: UnitAnimationMixer | null; state: Stride; disposed: boolean }
 interface UnitView extends Body {
-  readonly slot: number; readonly definitionId: string; readonly holder: Group; readonly ring: Mesh; readonly proxy: Mesh;
+  readonly slot: number; readonly definitionId: string; readonly holder: Group; readonly ring: Mesh;
   stars: StarMark; items: Sprite[]; data: BoardCarouselSlot; tier: Loop | null;
   /** Seat named by the view as having taken it: the unit has left the turning ring for that seat's legend. */
   takenBy: string | null;
@@ -166,7 +168,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     disc: own(new CylinderGeometry(7.55 * cell, 7.55 * cell, 0.2 * cell, 64)), glass: own(new CylinderGeometry(3.37 * cell, 3.37 * cell, 0.06 * cell, 48)),
     cradle: own(new CylinderGeometry(0.62 * cell, 0.7 * cell, 0.2 * cell, 24)), wall: own(new CylinderGeometry(4.2 * cell, 4.2 * cell, 0.6 * cell, 48, 1, true)),
     pawn: own(new CylinderGeometry(9, 13, 34, 16)), head: own(new SphereGeometry(10, 16, 12)), legend: own(new SphereGeometry(14, 20, 14)),
-    ring: own(new RingGeometry(20, 26, 32)), lock: own(new RingGeometry(0.5 * cell, 0.62 * cell, 40)), proxy: own(new CylinderGeometry(0.42 * cell, 0.42 * cell, 1.6 * cell, 12)),
+    ring: own(new RingGeometry(20, 26, 32)), lock: own(new RingGeometry(0.5 * cell, 0.62 * cell, 40)),
     marker: own(new SphereGeometry(5, 12, 8)),
     // Unit-length tether along +y, stretched and turned between legend and unit each frame.
     tether: own(new CylinderGeometry(1.4, 1.4, 1, 6, 1, true).translate(0, 0.5, 0)),
@@ -179,7 +181,6 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     tether: { me: material(COLOR.me, { emissive: COLOR.me, emissiveIntensity: 0.9 }), seat: material(COLOR.seat, { emissive: COLOR.seat, emissiveIntensity: 0.9 }) },
     ring: Object.fromEntries((['takable', 'pending', 'hover'] as const).map(key => [key,
       material(COLOR[key], { emissive: COLOR[key], emissiveIntensity: 0.6 })])) as Record<'takable' | 'pending' | 'hover', MeshStandardMaterial>,
-    proxy: own(new MeshBasicMaterial({ visible: false })),
   };
   const textures = new Map<string, Promise<Texture | null>>();
   const loadTexture = ctx.loadTexture ?? (url => new TextureLoader().loadAsync(url));
@@ -408,11 +409,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const head = new Mesh(geometry.head, materials.pawn); head.position.y = 42;
     pawn.add(body, head); root.add(fit(pawn, ctx.championHeight * 0.6));
     const ring = new Mesh(geometry.ring, materials.ring.takable); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5; ring.visible = false;
-    const proxy = new Mesh(geometry.proxy, materials.proxy); proxy.position.y = 0.8 * cell; proxy.name = 'render3d-carousel-pick';
     const stars = createStarMark({ effectiveStarLevel: data.starLevel, colorFor: ctx.starColor });
     stars.object.scale.setScalar(STAR_SIZE); stars.object.position.y = ctx.championHeight + STAR_GAP;
-    holder.add(root, ring, proxy, stars.object);
-    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, ring, proxy, stars, items: [], data, tier: null, takenBy: null,
+    holder.add(root, ring, stars.object);
+    const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, ring, stars, items: [], data, tier: null, takenBy: null,
       lease: null, mixer: null, state: new Stride(), disposed: false };
     // Item marks bound to the same slot, above the stars.
     data.items.forEach((item, at) => {
@@ -711,16 +711,30 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   };
 
   const pointer = new Raycaster();
+  /**
+   * Same rule as the board pick (#349): each unit still on the turning ring has a fixed box at its live position, a bit
+   * over a cell wide and from its feet to its star, with some slack for a moving target; where boxes overlap, the unit
+   * nearest the pointer wins. No mesh test, so a thin model or a legend in front never swallows the click.
+   */
   const slotAt = (client: { x: number; y: number }, area: { left: number; top: number; width: number; height: number }) => {
     if (!current || area.width <= 0 || area.height <= 0) return null;
-    const x = (client.x - area.left) / area.width, y = (client.y - area.top) / area.height;
-    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+    const px = client.x - area.left, py = client.y - area.top;
+    if (px < 0 || px > area.width || py < 0 || py > area.height) return null;
     units.updateWorldMatrix(true, true); camera.updateMatrixWorld();
-    pointer.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera);
-    const onRing = [...unitViews.values()].filter(view => !view.takenBy);
-    const hit = pointer.intersectObjects(onRing.map(view => view.proxy), false)[0];
-    const view = hit && onRing.find(candidate => candidate.proxy === hit.object);
-    return view ? { slot: view.slot, takable: view.data.takable } : null;
+    const right = new Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize(), scale = new Vector3();
+    const screen = (at: Vector3) => { at.project(camera); return { x: (at.x + 1) / 2 * area.width, y: (1 - at.y) / 2 * area.height }; };
+    let best: UnitView | null = null, bestDistance = Infinity;
+    for (const view of unitViews.values()) {
+      if (view.takenBy) continue;
+      const base = view.holder.getWorldPosition(new Vector3()), size = view.holder.getWorldScale(scale).x;
+      const feet = screen(base.clone()), star = screen(view.stars.object.getWorldPosition(new Vector3()));
+      const side = screen(base.clone().addScaledVector(right, PICK_HALF_WIDTH * cell * size));
+      const half = Math.hypot(side.x - feet.x, side.y - feet.y), slack = half * 0.4;
+      if (Math.abs(px - feet.x) > half || py < star.y - slack || py > feet.y + slack) continue;
+      const distance = Math.hypot(px - feet.x, py - (feet.y + star.y) / 2);
+      if (distance < bestDistance) { best = view; bestDistance = distance; }
+    }
+    return best ? { slot: best.slot, takable: best.data.takable } : null;
   };
 
   return {

@@ -136,7 +136,11 @@ export interface BoardCarouselSlot {
  * received). The server never sends another seat's gold, XP, streak or shop; the 3D layer still copies only the fields
  * it draws (scout-stage.ts readScout).
  */
-export interface BoardScout { readonly seatId: string; readonly name: string; readonly board?: PublicBoard; readonly orbs?: PublicOrbSummary | null }
+export interface BoardScout {
+  readonly seatId: string; readonly name: string; readonly board?: PublicBoard; readonly orbs?: PublicOrbSummary | null;
+  /** The seat's little legend (SeatPublic.legend, cosmetic); absent means the default. */
+  readonly legend?: string;
+}
 /** The 3D carousel's pointer, replayed as the 2D carousel panel's own slot click and hover. */
 export interface CarouselControls { pick(slot: number): void; hover(slot: number | null): void }
 
