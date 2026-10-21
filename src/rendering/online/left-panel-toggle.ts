@@ -4,15 +4,17 @@
  * Presentation only; the choice is a per-viewer convenience kept in localStorage when the browser allows it.
  */
 import { PANEL_STATUS_EVENT } from '../strategy-panel';
+import { readRenderMode } from '../render-mode';
 
 const STORAGE_KEY = 'hex-online-left-collapsed';
 const TOAST_MS = 4_000;
 
-function readStored(): boolean {
-  try { return typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
+/** Stored choice, or null when none: 3D (board fills the window) then starts folded, 2D open. */
+function readStored(): boolean | null {
+  try { const value = typeof localStorage === 'undefined' ? null : localStorage.getItem(STORAGE_KEY); return value === null ? null : value === '1'; } catch { return null; }
 }
 function writeStored(collapsed: boolean): void {
-  try { if (collapsed) localStorage.setItem(STORAGE_KEY, '1'); else localStorage.removeItem(STORAGE_KEY); } catch { /* storage blocked */ }
+  try { localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0'); } catch { /* storage blocked */ }
 }
 
 export class LeftPanelToggle {
@@ -37,7 +39,7 @@ export class LeftPanelToggle {
     this.button.dataset.debug = 'online:left-toggle'; this.button.setAttribute('aria-controls', 'strategy-root');
     this.button.addEventListener('click', () => this.set(!this.collapsed));
     host?.prepend(this.button);
-    this.collapsed = readStored(); this.apply();
+    this.collapsed = readStored() ?? readRenderMode(window.location.search) === '3d'; this.apply();
   }
   get isCollapsed(): boolean { return this.collapsed; }
   set(collapsed: boolean): void { if (collapsed === this.collapsed) return; this.collapsed = collapsed; writeStored(collapsed); this.apply(); }
