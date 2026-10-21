@@ -1,6 +1,6 @@
 /**
- * The 3D board's S13 trait props (planning W5/W6): the 铁血征服者 chest and the 炼金男爵 微光 flask on the left of my
- * half. Both read only BoardFrame.mechanics, my own counters as the trait column shows them (never another seat's),
+ * The 3D board's S13 trait props (planning W5/W6): the 铁血征服者 banner/chest on the right of my half (outside my
+ * legend's orb columns, where TFT plants it) and the 炼金男爵 微光 flask on the left. Both read only BoardFrame.mechanics, my own counters as the trait column shows them (never another seat's),
  * and decide nothing: the chest glows brighter as 征服层数 nears the next chest and opens when the opened count grows
  * (its reward orb is the tabletop's Warband orb); the flask fills to 微光 / next black market, bubbles while a black
  * market waits, and drains when an accepted offer clears it. Like the tabletop, the first frame only records what is
@@ -21,8 +21,8 @@ export const CHEST_OPEN_EFFECT = 'conqueror-chest-open', FLASK_OFFER_EFFECT = 's
 const EFFECT_SECONDS = 3;
 /** Stand-in sizes in board units (a champion is 92 tall): chest 34 × 18 × 24, flask 36 tall. */
 const CHEST = { width: 34, height: 18, depth: 24, lid: 7 }, FLASK_HEIGHT = 36, LIQUID_BOTTOM = 1.5, LIQUID_TOP = 22;
-/** Extracted models stand this tall (the Conqueror banner is a standard, half a champion); the ground aura's radius. */
-const CHEST_MODEL_HEIGHT = 46, AURA_RADIUS = 22;
+/** Extracted models stand this tall (the Conqueror banner is a standard, most of a champion's 92); the ground aura's radius. */
+const CHEST_MODEL_HEIGHT = 76, AURA_RADIUS = 22;
 /** A model's opening motion: rises this far and sways (radians) while the open effect plays. */
 const RISE = 9, SWAY = 0.16;
 /** Lid angles (radians, opening backward): shut, fully open while a chest pays out, and resting ajar once all are open. */
@@ -141,16 +141,18 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     const key = `${frame.rows}x${frame.columns}@${frame.hexRadius},${frame.origin.x},${frame.origin.y}`;
     if (key !== layoutKey) {
       layoutKey = key;
-      // Left of my half (the tabletop keeps my legend and orbs on the right, the opponent's legend top left).
+      // The banner right of my half, one cell beyond my legend's orb columns (the tabletop's legend spot); the flask on
+      // the left (the opponent's legend stands top left).
       const left = frame.origin.x - width * 1.25, bottom = frame.origin.y + step * (frame.rows - 1);
-      spots.chest.set(left, 0, bottom - step * 0.35);
+      const right = frame.origin.x + width * (frame.columns - 0.5) + width * 2.65;
+      spots.chest.set(right, 0, bottom - step * 1.4);
       spots.flask.set(left, 0, bottom - step * 2.1);
       chestRoot.position.copy(spots.chest); flaskRoot.position.copy(spots.flask);
-      // Turned a little toward the board so the front (lock, label side) faces the player's camera.
-      chestRoot.rotation.y = flaskRoot.rotation.y = 0.45;
+      // Each turned a little toward the board so its front (lock, label side) faces the player's camera.
+      chestRoot.rotation.y = -0.45; flaskRoot.rotation.y = 0.45;
     }
     const pad = CHEST.width;
-    return [spots.chest.clone().add(new Vector3(-pad, 0, pad)), spots.flask.clone().add(new Vector3(-pad, FLASK_HEIGHT, 0))];
+    return [spots.chest.clone().add(new Vector3(pad, CHEST_MODEL_HEIGHT, pad)), spots.flask.clone().add(new Vector3(-pad, FLASK_HEIGHT, 0))];
   };
 
   // --- bursts ------------------------------------------------------------------------------------------------------

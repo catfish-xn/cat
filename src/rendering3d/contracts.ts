@@ -14,7 +14,11 @@ export interface CastMetadata { castSequence?: CastSequence; castVariants?: Cast
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface AssetManifest {
   schemaVersion: 1;
-  models: Record<string, { path: string; animations?: AnimationNames } & CastMetadata>;
+  /**
+   * `unitScale` (optional): the unit's official model scale from the client's skin data (1 = its mesh as authored);
+   * the 3D layer draws a champion at that scale instead of fitting every one to the same height.
+   */
+  models: Record<string, { path: string; animations?: AnimationNames; unitScale?: number } & CastMetadata>;
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
   actionEffects?: ActionEffects;

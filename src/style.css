@@ -712,6 +712,9 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .consumable-card { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
 .consumable-count { color: #ffe6a8; font-weight: 700; }
 .consumable-card.dragging { outline: 3px solid #ffd782; opacity: .65; }
+/* The item icon follows the pointer while it is dragged (the card stays dimmed in its slot). */
+.item-drag-ghost { position: fixed; left: 0; top: 0; z-index: 95; width: 44px; height: 44px; pointer-events: none; filter: drop-shadow(0 2px 6px #000a); }
+.item-drag-ghost > * { width: 100%; height: 100%; }
 .consumable-card[aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: -2px; }
 .consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
 img.consumable-icon { display: inline-block; object-fit: cover; background: #0b151f; flex: none; }
