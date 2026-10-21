@@ -90,7 +90,7 @@ export function commitReceipt(state: MatchState, receipt: LootReceipt): MatchSta
   const loot = state.m8.loot;
   if (loot.receipts.some(value => value.receiptId === receipt.receiptId || value.dropId === receipt.dropId)) throw new RangeError('Duplicate loot receipt');
   let guaranteeCounters = loot.guaranteeCounters;
-  if (receipt.resolution !== 'forfeited' && receipt.payload.kind === 'item' && ITEM_DEFINITIONS[receipt.payload.definitionId]) {
+  if (!receipt.dropId.startsWith('family:') && receipt.resolution !== 'forfeited' && receipt.payload.kind === 'item' && ITEM_DEFINITIONS[receipt.payload.definitionId]) {
     const key = counterKey(receipt.claimedRoundId ? JSON.parse(JSON.parse(receipt.dropId)[0])[1] : state.roundDefinitionId);
     const count = guaranteeCounters[key] + receipt.payload.quantity * (ITEM_DEFINITIONS[receipt.payload.definitionId].kind==='completed'?2:1);
     if (!Number.isSafeInteger(count) || count < 1) throw new RangeError('Invalid loot counter');

@@ -56,29 +56,29 @@ export function grantMechanicItem(state: MatchState, request: MechanicGrantReque
 
 /** Online heroes enqueue an exactly-once reward orb without inventory or pool allocation.
  * Offline grants retain their original capacity retry/policy behavior. Summons remain direct, unpooled births. */
-export function grantMechanicUnit(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string; readonly starLevel?:1|2|3 }, unitLootPolicy?: UnitLootPolicy): MechanicGrantResult {
+export function grantMechanicUnit(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string; readonly starLevel?:1|2|3; readonly immediate?:boolean }, unitLootPolicy?: UnitLootPolicy): MechanicGrantResult {
   const bad = badRequest(state, request); if (bad) return bad;
   // Pooled shop heroes, or summons (UnitDefinition.summon), which never touch the shared pool.
   const summon = !!UNIT_DEFINITIONS[request.definitionId]?.summon;
   if (!summon && !SHOP_CATALOG.includes(request.definitionId)) return refuse(state, 'invalid-mechanic-state');
-  if (state.multiplayer && !summon) {
+  if (state.multiplayer && !summon && !request.immediate) {
     if (![1,2,3].includes(request.starLevel??1)) return refuse(state,'invalid-mechanic-state');
     const queued=enqueueRewardOrb(state,request.receiptId,request.definitionId,request.starLevel??1);
     return commit(queued.state,{...identity(state,request),kind:'unit',definitionId:request.definitionId,
       starLevel:request.starLevel??1,resolution:'orb',orbId:queued.orbId,unitId:null,gold:0});
   }
-  const plan = planUnitAcquisition(state, request.definitionId, { kind: 'mechanic', receiptId: request.receiptId }, state.resourceProvenance.entries.length);
+  const plan = planUnitAcquisition(state, request.definitionId, { kind: 'mechanic', receiptId: request.receiptId }, state.resourceProvenance.entries.length,false,request.starLevel??1);
   if (!plan.ok) return refuse(state, 'bench-full');
-  const drop = { dropId: mechanicDropId(request.receiptId), payload: { kind: 'unit', definitionId: request.definitionId, quantity: 1 } } as unknown as FrozenDirectDrop;
+  const drop = { dropId: mechanicDropId(request.receiptId), payload: { kind: 'unit', definitionId: request.definitionId, quantity: 1,...(request.starLevel?{starLevel:request.starLevel}:{}) } } as unknown as FrozenDirectDrop;
   const payload = unitLootPolicy && !summon ? unitLootPolicy(drop) : drop.payload;
   if (payload.kind === 'gold') {
     if (!Number.isSafeInteger(state.gold + payload.quantity)) return refuse(state, 'invalid-mechanic-state');
     return commit({ ...state, gold: state.gold + payload.quantity }, { ...identity(state, request), kind: 'unit',
-      definitionId: request.definitionId, resolution: 'gold', unitId: null, gold: payload.quantity });
+      definitionId: request.definitionId,...(request.starLevel?{starLevel:request.starLevel}:{}), resolution: 'gold', unitId: null, gold: payload.quantity });
   }
   const born: MatchState = { ...state, preparation: plan.preparation, nextUnitSerial: plan.nextUnitSerial, items: plan.items,
     anomalyBinding: plan.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, plan.upgradeEvents),
     resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, plan.facts) };
-  return commit(born, { ...identity(state, request), kind: 'unit', definitionId: request.definitionId, resolution: 'held', unitId: plan.unitId, gold: 0 },
+  return commit(born, { ...identity(state, request), kind: 'unit', definitionId: request.definitionId,...(request.starLevel?{starLevel:request.starLevel}:{}), resolution: 'held', unitId: plan.unitId, gold: 0 },
     plan.events, plan.upgradeEvents);
 }

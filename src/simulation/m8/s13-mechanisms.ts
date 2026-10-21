@@ -9,7 +9,7 @@ import { selectTargets, startingRows, type TargetEnvironment } from './targeting
 import { targetingEnvironment } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference, S13Packet } from '../combat-s13-abilities';
-import { ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
+import { origin, ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
 import type { AmountSample } from './stats';
 import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safeNumber } from './stats';
 import type { AbilityTargeting, Effect, PeriodicTask, Source, StatusApplication, StatusContribution, SurvivalSample, TargetSelector } from './contracts';
@@ -37,9 +37,9 @@ function endTargets(holder: S13Unit, ctx: AbilityContext, targeting: AbilityTarg
   }
   throw new RangeError('Unsupported G07 end targeting for this batch');
 }
-function effectSample(holder: S13Unit, target: S13Unit, tick: number, frozen?: SurvivalSample, absorbed?: number): AmountSample & Pick<import('./stats').StatSample, 'startingRows'> {
+function effectSample(holder: S13Unit, target: S13Unit, tick: number, frozen?: SurvivalSample, absorbed?: number, units:readonly S13Unit[]=[]): AmountSample & Pick<import('./stats').StatSample, 'startingRows'> {
   const before = frozen ? { id: frozen.unitId, hp: frozen.hpAfterDamage, maxHp: frozen.maxHpBeforeThresholdEffects } : undefined;
-  return { startingRows: startingRows(holder.team, holder.startingCell?.row ?? holder.cell.row) ?? undefined, holder: before?.id === holder.id ? before : hpSample(holder), target: before?.id === target.id ? before : hpSample(target), attackDamage: ad(holder), abilityPower: ap(holder, tick), ...(absorbed !== undefined ? { shieldAbsorbed: absorbed } : {}) };
+  return { startingRows: startingRows(holder.team, holder.startingCell?.row ?? holder.cell.row) ?? undefined, holder: before?.id === holder.id ? before : hpSample(holder), target: before?.id === target.id ? before : hpSample(target), attackDamage: ad(holder), abilityPower: ap(holder, tick,units), ...(absorbed !== undefined ? { shieldAbsorbed: absorbed } : {}) };
 }
 function resistsSample(ctx: AbilityContext, holder: S13Unit): Pick<AmountSample, 'resistsOf'> {
   return ctx.defenses ? { resistsOf: () => ctx.defenses!(holder, true) + ctx.defenses!(holder, false) } : {};
@@ -124,7 +124,7 @@ export function executeDamageControlSequence(ctx: AbilityContext, holder: S13Uni
 }
 export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, source: Source, target: S13Unit, effect: Effect, seq: number, ordinal = 0,
   frozen?: SurvivalSample, periodic?: PeriodicReference, amountOverride?: number, absorbed?: number, damageContext?: DamageExecutionContext): void {
-  const sample = { ...effectSample(holder, target, ctx.tick, frozen, absorbed), ...resistsSample(ctx, holder), ...(damageContext?.cast ? { cast: damageContext.cast } : {}), ...(damageContext?.facts?.damage.length ? { damageOutcomes: damageContext.facts.damage } : {}) };
+  const sample = { ...effectSample(holder, target, ctx.tick, frozen, absorbed,ctx.units), ...resistsSample(ctx, holder), ...(damageContext?.cast ? { cast: damageContext.cast } : {}), ...(damageContext?.facts?.damage.length ? { damageOutcomes: damageContext.facts.damage } : {}) };
   const value = 'amount' in effect && typeof effect.amount !== 'number' ? amountOverride ?? evaluateAmount(effect.amount, sample) : 0;
   switch (effect.kind) {
     case 'grant-mana': {
@@ -234,7 +234,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     if (payable) {
       emitMechanismSignal(ctx, { event: 'periodic', tick: ctx.tick, actionSeq: seq, actorId: holder.id, targetId: task.targetId, cast: null });
       const targets = selectMechanismTargets(holder, ctx.units, task.program.selector, task.targetId, task.source, { board: ctx.board, tick: ctx.tick });
-      const samples = new Map(targets.map(t => [t.id, { ...effectSample(holder, t, ctx.tick), ...resistsSample(ctx, holder) }]));
+      const samples = new Map(targets.map(t => [t.id, { ...effectSample(holder, t, ctx.tick,undefined,undefined,ctx.units), ...resistsSample(ctx, holder) }]));
       for (const target of targets) for (const [effectIndex, effect] of task.program.effects.entries()) {
         let value: number | undefined;
         if (effect.kind === 'damage' || effect.kind === 'heal' || effect.kind === 'grant-shield') { const computed = periodicAmount(current, effectIndex, target.id, samples.get(target.id)!); current = computed.task; value = computed.requested; }
@@ -319,14 +319,14 @@ export function settleSurvival(ctx: AbilityContext, before: readonly { id: strin
     executeMechanismEffect(ctx, holder, { ...definition.source, effectIndex: definition.source.effectIndex + index }, holder, effect, 0, index, sample);
 }
 export function vampRates(unit: S13Unit, hp: number): VampRate[] {
-  return [...anomalyVamp(unit), ...unit.mechanismDefinitions!.vamp.map(def => {
+  return [...(unit.definitionId==='warwick'&&(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>0&&(unit.sixCost?.frenzyUntil??0)>=(unit.mechanismState?.sampledAtTick??0))?[{source:asSource(origin(unit)),bps:1000+Math.floor((unit.ability.kind==='s13'?unit.ability.variables.Vamp:0)*ap(unit,unit.mechanismState?.sampledAtTick??0)/100),allyBps:0}]:[]),...anomalyVamp(unit), ...unit.mechanismDefinitions!.vamp.map(def => {
     const sample = { holder: { id: unit.id, hp, maxHp: unit.maxHp } };
     return { source: def.source, bps: resolveStat('omnivamp', 0, [def.modifier], sample), allyBps: conditionHolds(def.allyCondition, sample) ? def.allyBps : 0, ...(def.damageTypes ? { damageTypes: def.damageTypes } : {}) };
   })];
 }
 export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['heals'][number]): void {
   const target = ctx.units.find(u => u.id === entry.targetId); if (!target || target.hp <= 0 || !target.alive) return;
-  const late = entry.lateAmount ? evaluateAmount(entry.lateAmount, { holder: hpSample(target), target: hpSample(target), attackDamage: ad(target), abilityPower: ap(target, ctx.tick) }) : entry.amount;
+  const late = entry.lateAmount ? evaluateAmount(entry.lateAmount, { holder: hpSample(target), target: hpSample(target), attackDamage: ad(target), abilityPower: ap(target, ctx.tick,ctx.units) }) : entry.amount;
   const request = entry.request ?? makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(entry.source)), entry.targetId, 'direct', ctx.heals.indexOf(entry)]), entry.targetId, 'direct', null,
     [{ source: asSource(entry.source), numerator: late, denominator: 1 }]);
   const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick)); target.hp += outcome.actual;

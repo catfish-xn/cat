@@ -1,3 +1,4 @@
+import { familyOrbs } from './family-orbs';
 import { deriveTraits } from './trait-snapshot';
 import type { G23GrantEvidence } from './g2-3-grant-evidence';
 import { ROUND_CATALOG } from './content/round-catalog';
@@ -182,7 +183,8 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     return unresolved.length>0;
   }
   const loot = state.m8.loot;
-  keys(loot, ['layoutBinding','frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters']);
+  keys(loot, ['layoutBinding','frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters',...(loot.queuedOrbClaims?['queuedOrbClaims']:[])]);
+  if(loot.queuedOrbClaims){check(Array.isArray(loot.queuedOrbClaims)&&new Set(loot.queuedOrbClaims).size===loot.queuedOrbClaims.length&&(!loot.queuedOrbClaims.length||state.phase==='combat'&&state.combat?.status==='running'),'family claim queue');for(const id of loot.queuedOrbClaims)check(familyOrbs(state).some(o=>o.orbId===id),'family queued identity');}
   check(loot.layoutBinding.mode==='solo'&&loot.layoutBinding.layout.seed===state.seed&&loot.layoutBinding.layout.throughRoundOrdinal===state.round,'solo layout binding');
   const frozen = restoreFrozenLootLedger(loot.frozen, {seed:state.seed, throughRoundOrdinal:state.round,layout:loot.layoutBinding.layout}, parsedJsonInput);
   for (const value of [loot.direct,loot.choiceEligibility,loot.choiceResolutions,loot.earnedEvidence,loot.receipts]) check(Array.isArray(value), 'ledger array');
@@ -437,7 +439,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
         const target = atom.options.find(id => preparation.units.some(unit => unit.team === 'player' && unit.definitionId === id));
         check(target !== undefined && receipt.definitionId === target, 'mechanic duplicator target');
       }
-      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},receipt.definitionId,source,cursor);
+      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},receipt.definitionId,source,cursor,false,receipt.starLevel??1);
       check(plan.ok && receipt.unitId === plan.unitId, 'mechanic unit transaction');
       for (const fact of plan.facts) take(fact);
       preparation = plan.preparation; items = plan.items; binding = plan.anomalyBinding; nextUnit = plan.nextUnitSerial;

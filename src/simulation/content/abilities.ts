@@ -1,3 +1,4 @@
+import { SIX_COST_ABILITIES } from './v19-six-cost';
 import {G24_VOIDSPAWN_ABILITIES} from './g2-4b-voidspawn';
 import { S13_ANOMALY_SUMMON_ABILITIES } from './s13-anomaly-summons';
 import { G23_SUMMON_ABILITIES } from './g2-3-summons';
@@ -564,4 +565,4 @@ const ORIGINAL_ABILITY_DATA: Readonly<Record<string,Omit<S13AbilityData, 'name'>
   }
 });
 
-export const S13_ABILITY_DATA: Readonly<Record<string,S13AbilityData>> = freezeContent(Object.fromEntries(Object.entries({...S13_ANOMALY_SUMMON_ABILITIES,...ORIGINAL_ABILITY_DATA,...G22_ABILITIES,...G23_ABILITIES,...G23_SUMMON_ABILITIES,...G24_VOIDSPAWN_ABILITIES}).map(([id,a])=>[id,{...a,name:G22_ABILITY_NAMES[id] ?? ('name' in a ? a.name : id)}])));
+export const S13_ABILITY_DATA: Readonly<Record<string,S13AbilityData>> = freezeContent(Object.fromEntries(Object.entries({...S13_ANOMALY_SUMMON_ABILITIES,...ORIGINAL_ABILITY_DATA,...G22_ABILITIES,...G23_ABILITIES,...G23_SUMMON_ABILITIES,...G24_VOIDSPAWN_ABILITIES,...SIX_COST_ABILITIES}).map(([id,a])=>[id,{...a,name:G22_ABILITY_NAMES[id] ?? ('name' in a ? a.name : id)}])));

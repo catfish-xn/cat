@@ -65,7 +65,7 @@ export interface UnclaimedOrbView {
   readonly roundId:string;
   readonly tier:import('../orb-layout').OrbTier;
   readonly entries:readonly LootPayload[];
-  readonly source:'pve'|'mechanic';
+  readonly source:'pve'|'mechanic'|'family';
 }
 export type CompatibilityView =
   | { readonly status: 'current'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: M8Version['rulesVersion']; readonly canResume: true; readonly canReplay: true; readonly canExportOriginal: true; readonly reason: null }

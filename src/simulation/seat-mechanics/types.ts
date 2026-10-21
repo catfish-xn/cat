@@ -13,7 +13,7 @@ export type MechanicValue = unknown;
 
 /** Reserved `seat` keys for G2-3. Other keys are allowed; each key belongs to one mechanic. */
 export const SEAT_MECHANIC_KEYS = ['conqueror', 'academy', 'alchemist', 'junkerKing', 'experimentCells', 'radiantConversion', 'familyHeist'] as const;
-/** Reserved only. v19 never initializes, advances or pays this field. No reward table/formula is approved. */
+/** v19 owner-visible heist progress projection; authoritative task/RNG live in hidden.progress.family. */
 export interface FamilyHeistReserved {
   readonly CurrentReward:string|null;
   readonly CurrentProgress:number;

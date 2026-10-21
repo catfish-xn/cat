@@ -25,9 +25,9 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
   const anomaly=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='s13Anomaly'));
   const d11=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'));
-  const v19=strategy.units.some(u=>u.mechanics?.some(m=>['v19Garen','v19Chainblade','sisters'].includes(m.mechanic)||m.mechanic==='rebel'&&m.values.forcedPeriodTicks>0||m.mechanic==='g23Trait'&&['dominator','black-rose'].includes(m.source.definitionId)));
+  const v19=strategy.units.some(u=>u.familyReunion||['warwick','viktor','mel'].includes(u.ability.kind==='s13'?u.ability.championId:'')||u.mechanics?.some(m=>['v19Garen','v19Chainblade','sisters'].includes(m.mechanic)||m.mechanic==='rebel'&&m.values.forcedPeriodTicks>0||m.mechanic==='g23Trait'&&['dominator','black-rose'].includes(m.source.definitionId)));
   if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19){
-    if(candidate.units.some(u=>u.v19!==undefined))throw new RangeError('Unexpected V19 runtime');
+    if(candidate.units.some(u=>u.v19!==undefined||u.sixCost!==undefined||u.familyReunion!==undefined))throw new RangeError('Unexpected V19 runtime');
     if(candidate.units.some(u=>u.d11Kills!==undefined))throw new RangeError('Unexpected D11 kill runtime');
     if(candidate.units.some(u=>u.anomalyState!==undefined||u.anomalySummon!==undefined))throw new RangeError('Unexpected anomaly runtime');
     if(candidate.trenchSplits!==undefined)throw new RangeError('Unexpected Trench splits');

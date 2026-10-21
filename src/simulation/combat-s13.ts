@@ -1,3 +1,4 @@
+import { advanceSixCost, settleSixCostDeaths, recordMelAbsorption, convertViktorMana } from './combat-six-cost';
 import { p2Bonus, p2Stoneskin, p2Target, p2PacketCrit } from './s13-augments-p2-combat';
 import { v19DominatorCast, smokeV19, sistersV19, markRoseV19, roseAmpV19, chainblade, chainbladeGoldTarget, chainbladeKill } from './combat-v19';
 import { V19_MECHANICS } from './content/v19-mechanics';
@@ -86,7 +87,7 @@ export function readCombatStats(unit: CombatState['units'][number], state: Pick<
   // defenses only reads identity/alive/target fields of other units.
   // It needs no detached runtime for those read-only samples.
   const current = working(unit), units = state.units;
-  return { attackDamage: ad(current), abilityPower: ap(current, state.tick), attackIntervalTicks: interval(current, state.tick, state.units),
+  return { attackDamage: ad(current), abilityPower: ap(current, state.tick, state.units), attackIntervalTicks: interval(current, state.tick, state.units),
     attackRange: range(current), armor: defenses(current, true, state.tick, units), magicResist: defenses(current, false, state.tick, units) };
 }
 function damageRequest(packet: S13Packet, combatId: string, tick: number): DamageRequest {
@@ -262,7 +263,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     unit.statuses = unit.statuses.filter(s => s.activity || s.expiresAtTick > tick);
     const controlled = active(unit, tick, 'stun').length > 0 || effectiveStatuses(unit.mechanismState!.statuses, tick).some(g => g.kind === 'stun');
     maintainActivities(ctx, unit, controlled);
-    if (controlled) { blocked.add(unit.id); unit.tasks = unit.tasks.filter(t => !t.cancellable); }
+    if (controlled && !unit.sixCost?.permanentFrenzy) { blocked.add(unit.id); unit.tasks = unit.tasks.filter(t => !t.cancellable); }
   }
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
   const intents = units.map(unit => {
@@ -275,7 +276,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   units.forEach((unit, n) => {
     const destination = intents[n]; if (!destination || reserved.has(key(destination))) return;
     reserved.add(key(destination)); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination });
-    unit.cell = destination; unit.moveCooldownTicks = MOVE_INTERVAL_TICKS;
+    unit.cell = destination; unit.moveCooldownTicks = unit.definitionId==='warwick'&&(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>=tick)?Math.ceil(MOVE_INTERVAL_TICKS*10000/15000):MOVE_INTERVAL_TICKS;
   });
   refreshMechanismAuras(ctx);
   if (openingState) {
@@ -288,6 +289,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       }
     }
   }
+  advanceSixCost(ctx,()=>actionSeq++);
   advanceP3(ctx);
   const p3ChargedAttacks = new Set<number>();
   // Every action reads pre-damage HP/life. New control has startsAtTick=tick+1.
@@ -317,13 +319,13 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     };
     if (unit.definitionId==='g23-forge'||unit.anomalySummon?.kind==='crab'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(); continue; }
     const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
-    const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie'].includes(champion(unit));
+    const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie','warwick','viktor','mel'].includes(champion(unit));
     const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
     if ((unit.g23?.ascension?.untilTick??0)<tick && !['neutral', 'amumu', 'zeri'].includes(champion(unit)) && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (inRange || selfCast)) {
       const seq = actionSeq++, beforeCount = events.length;
       const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.mana)!;
       spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
-      if(unit.unreavedMaxMana!==undefined)unit.maxMana=unit.unreavedMaxMana;
+      if(unit.unreavedMaxMana!==undefined&&unit.definitionId!=='viktor')unit.maxMana=unit.unreavedMaxMana;
       const oldInterval = interval(unit, tick, units);
       castAnomaly(ctx,unit,target);
       const targets = planS13Cast(ctx, unit, target, seq);
@@ -428,6 +430,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     target.shieldLayers = result.shields.map(layer => {
       const old = target.shieldLayers.find(s => s.key === layer.key)!;
       const taken = old.remaining - layer.remaining;
+      recordMelAbsorption(ctx,old,taken);
       if (taken > 0 && layer.remaining === 0) broken.push(old.granted);
       const next = shieldProjection(recordShieldAbsorption(frozenShield(old, target), layer.remaining), old.key, old.m8Grant, taken > 0 && layer.remaining === 0 ? 'depleted' : old.endedReason);
       if (taken > 0) {
@@ -538,6 +541,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const prepared = roseAmpV19(owner,target)&&!packet.inherited ? {...basePrepared,mitigated:Math.floor(basePrepared.mitigated*10800/10000)} : basePrepared;
     if ((virtualHp.get(target.id) ?? 0) > 0 && !sample.prevention) p3Reflect(ctx, target, packet, prepared.blockedByMitigation);
     if (packet.periodic && (sample.prevention || sample.burnCap !== undefined && prepared.mitigated >= sample.burnCap)) clearPeriodicAccount(ctx, packet.periodic, target.id);
+    if(packet.devour){
+      if(!sample.prevention&&(virtualHp.get(target.id)??0)>0){const hp=virtualHp.get(target.id)!;const execution=allocateDamage(request.context,{...prepared,raw:hp,mitigated:hp,critical:false},hp,[]);commitOutcome(target,{...execution,shields:target.shieldLayers},packet);}continue;
+    }
     const protector = units.filter(u => u.alive && u.id !== target.id && u.team === target.team && hexDistance(u.cell, target.cell) <= 1
       && active(u, tick, 'redirect').length > 0).sort(compareIds)[0];
     const transfer = protector ? safeNumber(BigInt(prepared.mitigated) * BigInt(Math.max(...active(protector, tick, 'redirect').map(s => s.amount))) / 10000n) : 0;
@@ -626,6 +632,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   for (let request of ctx.manaRequests ?? []) {
     const target = units.find(u => u.id === request.targetId); if (!target?.alive || target.hp <= 0) continue;
+    if(target.definitionId==='viktor'){convertViktorMana(ctx,target,request.amount);continue;}
     request={...request,amount:Math.floor(request.amount*(10000+mechanic(target,'visionary','manaBps'))/10000)};
     const mana = { unitId: target.id, current: target.mana, maximum: target.maxMana, lockedUntilTick: target.manaLockedUntilTick ?? 0 };
     const receipt = ctx.castReceipts?.find(c => c.source.ownerId === target.id && c.actionSeq === request.castActionSeq);
@@ -642,6 +649,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const attackGain = attackMana.get(unit.id) ?? 0, damageGain = damageMana(hpLost.get(unit.id) ?? 0), killGain = killMana.get(unit.id) ?? 0;
     // replay2: one ManaOutcome event per non-zero request, resolved in the same order as before.
     for (const [reason, gain] of [['attack', attackGain], ['damage', damageGain], ['kill', killGain]] as const) {
+      if(unit.definitionId==='viktor'){if(reason!=='attack'&&reason!=='damage')convertViktorMana(ctx,unit,gain);else if(reason==='attack')convertViktorMana(ctx,unit,Math.max(0,Math.floor(gain*(10000+mechanic(unit,'visionary','manaBps'))/10000)-10));continue;}
       const outcome = resolveMana({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 },
         { source: asSource(origin(unit)), targetId: unit.id, amount: Math.floor(gain*(10000+mechanic(unit,'visionary','manaBps'))/10000), reason, bypassLock: 'none', castActionSeq: null }, tick);
       unit.mana = outcome.after;
@@ -655,6 +663,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const trenchMembership=splitTrenchHolders(ctx,state,trenchEligible);
   deathAnomalies(ctx);
+  settleSixCostDeaths(ctx,killed);
   if(hasBanish){const suspended=fullRoster.filter(u=>isAbsent(u,tick));fullRoster.splice(0,fullRoster.length,...units,...suspended);}
   // G2-4b: only true zero-HP deaths notify item declarations before cleanup.
   // Trench replacement removes a surviving holder and must not emit holder-death.

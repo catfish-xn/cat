@@ -1,3 +1,4 @@
+import { SIX_COST_UNITS } from './content/v19-six-cost';
 import {G24_VOIDSPAWN_UNITS} from './content/g2-4b-voidspawn';
 import { S13_ANOMALY_SUMMON_UNITS } from './content/s13-anomaly-summons';
 import { G23_SUMMON_UNITS } from './content/g2-3-summons';
@@ -497,7 +498,7 @@ const G21_AND_G22_UNITS: Readonly<Record<string, UnitDefinition>> = freezeConten
   ...G22_UNITS,
   ...Object.fromEntries(Object.entries(G23_UNITS).filter(([id])=>!id.endsWith('-ranged'))),
 });
-export const M5_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = Object.freeze(Object.fromEntries(Object.entries(G21_AND_G22_UNITS).map(([id,u])=>[id, Object.freeze({...u, traits:[...(G23_MEMBERSHIP[id] ?? G22_MEMBERSHIP[id] ?? u.traits),...(u.formSwap?['form-swapper']:[])]})])));
+export const M5_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = Object.freeze(Object.fromEntries(Object.entries({...G21_AND_G22_UNITS,...SIX_COST_UNITS}).map(([id,u])=>[id, Object.freeze({...u, traits:[...(G23_MEMBERSHIP[id] ?? G22_MEMBERSHIP[id] ?? u.traits),...(u.formSwap?['form-swapper']:[])]})])));
 
 export const NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = freezeContent({
   "neutral-stage-2": {
@@ -616,7 +617,7 @@ export function validateUnitDefinitions(definitions: Readonly<Record<string,Unit
     validateNeutralInputs(definition);
     const s=definition.baseStats;
     if (definition.id !== id || !/^[a-z][a-z0-9-]*$/.test(id) || !definition.name || !definition.symbol || !definition.abilityId
-      || !integerAtLeast(definition.color,0) || definition.color>0xffffff || !integerAtLeast(definition.cost,1) || definition.cost>5
+      || !integerAtLeast(definition.color,0) || definition.color>0xffffff || !integerAtLeast(definition.cost,1) || definition.cost>6
       || !integerAtLeast(s.health,1) || !integerAtLeast(s.attack,0) || !integerAtLeast(s.armor,0) || !integerAtLeast(s.magicResist,0)
       || !integerAtLeast(definition.attackRange,1) || !integerAtLeast(definition.attackIntervalTicks,1)
       || !integerAtLeast(definition.maxMana,0) || !integerAtLeast(definition.initialMana,0) || definition.initialMana>definition.maxMana
@@ -624,7 +625,7 @@ export function validateUnitDefinitions(definitions: Readonly<Record<string,Unit
       || definition.traits.some(trait=>typeof trait!=='string'||!trait)) throw new RangeError(`Invalid unit definition: ${id}`);
   }
   const seen=new Set<string>();
-  for (const cost of [1,2,3,4,5] as const) {
+  for (const cost of [1,2,3,4,5,6] as const) {
     const catalog=catalogByCost[cost];
     if (!catalog.length) throw new RangeError(`Empty shop tier: ${cost}`);
     for (const id of catalog) {

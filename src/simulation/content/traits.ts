@@ -1,3 +1,4 @@
+import { SIX_COST_TRAITS } from './v19-six-cost';
 import { G23_TRAITS } from './g2-3-traits';
 import { G22_TRAITS } from './g2-2-traits';
 import { G2_TRAIT_DEFINITIONS } from './g2-traits';
@@ -208,5 +209,5 @@ export const TRAIT_DEFINITIONS: Readonly<Record<string,TraitDefinition>> = freez
       }
     ]
   },
-  ...G23_TRAITS,
+  ...G23_TRAITS,...SIX_COST_TRAITS,
 });

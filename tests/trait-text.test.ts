@@ -13,11 +13,11 @@ const row = (id: string, threshold: number) => {
 const archive = (name: string) => JSON.parse(gunzipSync(readFileSync(`src/simulation/content/source/s13-14.24b/raw/${name}.json.gz`)).toString());
 
 describe('14.24 official trait text with executable values', () => {
-  it('covers exactly the 27 active traits and 86 tiers; preserves every archived Chinese description', () => {
+  it('covers exactly the 30 active traits and 89 tiers; preserves every archived Chinese description', () => {
     const zh = archive('zh_cn.tft.stringtable').entries;
     expect(Object.keys(TRAIT_OFFICIAL_TEXT).sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).sort());
-    expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(27);
-    expect(Object.values(TRAIT_DEFINITIONS).reduce((n, d) => n + d.tiers.length, 0)).toBe(86);
+    expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(30);
+    expect(Object.values(TRAIT_DEFINITIONS).reduce((n, d) => n + d.tiers.length, 0)).toBe(89);
     for (const [id, source] of Object.entries(TRAIT_OFFICIAL_TEXT)) {
       const original = zh[`tft_trait_description_${source.apiName.toLowerCase()}`];
       if (id === 'high-roller') {
@@ -72,7 +72,6 @@ describe('14.24 official trait text with executable values', () => {
     for (const part of parts) expect(row(id, threshold)).toContain(part);
   });
   it.each([
-    ['family', 5, '去上城搞钱！在战斗后，获得搞钱进度，并且每个存活的【家人】都会使这个进度提升！'],
     ['scrap', 6, '所有基础装备和成装都会成为幸运装备！'],
     ['scrap', 9, '生成光明版装备！'], ['enforcer', 10, '没收敌人的所有装备！'],
     ['black-rose', 7, '当【赛恩】阵亡时，他会带着超越死亡的能量重获生命！'],

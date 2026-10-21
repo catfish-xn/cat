@@ -1,14 +1,19 @@
 # M5 Match contract v5
 
+## v19 第二部分（当前合同，2026-10-21）
+
+同一v19包含家人5随机任务法球、13.4六人彩蛋回移、六费 warwick / viktor / mel 与22种纹章总基础属性替换。schema/save/replay/command＝**9/5/4/4**；旧身份拒绝，无迁移，50ms和lcg32-v1不变。数值、魔改/未验证清单、导出签名、RNG、失败/恢复、说明底部显示字段及表现层交接以 [V19_PART2](V19_PART2.md) 为准；下文旧“家人预留/六费延期/纹章未改/8-4-3”描述已被本节覆盖。
+
+
 ## v19 当前规则与数据合同（2026-10-21）
 
-当前 rules/content 为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，CONTENT=`fnv1a32-utf16:9ba56127`、LOOT_REPLAY=`fnv1a32-utf16:8d45a042`；schema/save/replay/command 仍8/4/3/4。旧身份拒绝，无迁移。当前录制入口为 `scripts/verify-v19-epoch.cjs` 与 `record-v19-*.cjs`，CURRENT Herald 指向v19；v18及更早保持历史字节。
+当前 rules/content 为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`，CONTENT=`fnv1a32-utf16:3dad5abd`、LOOT_REPLAY=`fnv1a32-utf16:e83f0193`；schema/save/replay/command 为9/5/4/4。旧身份拒绝，无迁移。当前录制入口为 `scripts/verify-v19-epoch.cjs` 与 `record-v19-*.cjs`，CURRENT Herald 指向v19；v18及更早保持历史字节。
 
-实际耗蓝统领、完整生命盖伦、双形、强化/伙伴门槛的姐妹、蓝发10循环、黑玫伤害标记、链锯刃唯一收益及全部明确约定见 [V19_MECHANICS](V19_MECHANICS.md)。姐妹内部强化ID=`sisters`，归档API=`TFT13_TeamupAugment_Sisters`；当前61强化/27羁绊。公开命令签名、失败枚举和失败原state/零资源零RNG语义不变。
+实际耗蓝统领、完整生命盖伦、双形、强化/伙伴门槛的姐妹、蓝发10循环、黑玫伤害标记、链锯刃唯一收益及全部明确约定见 [V19_MECHANICS](V19_MECHANICS.md)。姐妹内部强化ID=`sisters`，归档API=`TFT13_TeamupAugment_Sisters`；当前61强化/30羁绊。公开命令签名、失败枚举和失败原state/零资源零RNG语义不变。
 
 `g23Facts.itemGoldPayouts[].amount` 扩为 `1|3`；`perfected-chainblade` 必须为3，其他kind必须为1。服务器原样透传，不自行拆分或即时发金。真实结算按amount求和，通过既有唯一mechanic收据一次到账。单人相关新动态战斗从认证输入完整重演验证，不信任候选标记/采样/收据。
 
-`seatMechanics.seat.familyHeist` 只预留 `FamilyHeistReserved {CurrentReward,CurrentProgress,CurrentRewardValue,rewardReceiptIds}` 的存档/owner-only显示位置；v19不初始化、不推进、不支付。公式、奖励与结算资格仍待用户确认。赛薇卡投影合同见 [COMBAT_CONTRACT](COMBAT_CONTRACT.md) 和v19说明。
+`seatMechanics.seat.familyHeist` 为本人显示投影，权威任务/RNG在hidden.progress.family；第二部分已接入随机任务、奖励法球和唯一收据，详见V19_PART2。赛薇卡投影合同见 [COMBAT_CONTRACT](COMBAT_CONTRACT.md) 和v19说明。
 
 ## v18 当前等级规则（2026-10-21，覆盖下文历史等级/身份）
 

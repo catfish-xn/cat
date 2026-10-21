@@ -1,6 +1,11 @@
 # v19 规则与数据合同（2026-10-21）
 
-本轮以 `codex/v19` 的本地集成基线 `9fb94704c5f0c59ec975c6f0de4dd188207129fa` 为起点。仅离线读取归档与 Git 对象，不执行 Git 写操作。规则/内容为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`；schema/save/replay/command 仍为 8/4/3/4。整数、基点、50ms tick、显式 lcg32-v1 和既有命令失败原子性保持。
+## v19 第二部分（当前合同，2026-10-21）
+
+同一v19包含家人5随机任务法球、13.4六人彩蛋回移、六费 warwick / viktor / mel 与22种纹章总基础属性替换。schema/save/replay/command＝**9/5/4/4**；旧身份拒绝，无迁移，50ms和lcg32-v1不变。数值、魔改/未验证清单、导出签名、RNG、失败/恢复、说明底部显示字段及表现层交接以 [V19_PART2](V19_PART2.md) 为准；下文旧“家人预留/六费延期/纹章未改/8-4-3”描述已被本节覆盖。
+
+
+本轮以 `codex/v19` 的本地集成基线 `9fb94704c5f0c59ec975c6f0de4dd188207129fa` 为起点。仅离线读取归档与 Git 对象，不执行 Git 写操作。规则/内容为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`；schema/save/replay/command 为 9/5/4/4。整数、基点、50ms tick、显式 lcg32-v1 和既有命令失败原子性保持。
 
 ## 来源与证据边界
 
@@ -30,7 +35,7 @@
 
 ## 公共边界、收益与恢复
 
-Match/服务器公开命令签名和失败原因枚举不变，失败继续返回原 state、无资源/事件/RNG变化。`buildStrategySnapshot(state, catalog?, context?):StrategySnapshot` 冻结姐妹准入与链锯刃 PvP 资格，不要求服务器另算规则。姐妹新增1项金级强化，当前61强化/27羁绊；其余关系羁绊及六费英雄没有加入。
+Match/服务器公开命令签名和失败原因枚举不变，失败继续返回原 state、无资源/事件/RNG变化。`buildStrategySnapshot(state, catalog?, context?):StrategySnapshot` 冻结姐妹准入与链锯刃 PvP 资格，不要求服务器另算规则。姐妹新增1项金级强化，当前61强化/30羁绊；第二部分另加入三名六费，见V19_PART2；其余关系羁绊仍延期。
 
 新增可选战斗事实 `CombatUnit.v19?: V19CombatFacts`：`garenSample?:number`、`sharedHealth?:number`、`smokePermanent?:boolean`、`smokeOrdinal?:number`、`roseTeams?:readonly Team[]`。它们属于战斗权威 JSON，不由显示层提交，不写回永久英雄。相关战斗恢复从已验证 CombatInputBasis 独立逐tick重建，比较完整战斗，拒绝伪造采样/标记/时钟/收益；无新机制时拒绝多余 v19 字段。恢复只验证，不发奖或推进活跃 RNG。
 
@@ -54,19 +59,6 @@ castVariant?: {
 
 3D消费已有 replay/首遍帧中的 `castOutcome.castVariant`，按 `unitId + actionSeq` 关联本次 cast，按 move 选择动画、channelTicks 设引导时长、enhanced/heroAugmentIds 选变体。继续消费权威生命、控制、活动状态更新处理打断，不能自行抽招、掷骰或从 outcome 文案推演规则。投影数组/对象脱离领域引用，首遍与重放使用同一投影，不增加随机抽取。
 
-## 为家人5预留（未实现）
+## 家人5：第二部分已实现
 
-只在 `seat-mechanics/types.ts` 预留键 `seatMechanics.seat.familyHeist` 和类型 `FamilyHeistReserved`：
-
-```ts
-interface FamilyHeistReserved {
-  CurrentReward:string|null;
-  CurrentProgress:number;
-  CurrentRewardValue:number;
-  rewardReceiptIds:readonly string[];
-}
-```
-
-命名对应归档显示属性；单位/进度公式、奖励表、阶段阈值、存活统计口径和领奖时点均待用户确认。v19不初始化这个键、不推进进度、不产生奖励/收据，不接受它作为任何发奖依据。未来只允许经认证结算和唯一收据写入；现有 owner-only seat JSON 是预留存档/显示位置，隐藏未来奖励不得放入其中。家人5原有减费/减伤/攻速保持，搞钱说明继续标“暂未实装”。
-
-纹章属性和六费英雄不在本轮范围。独立录制、digest和验证结果见 [v19 RELEASE_NOTES](evidence/v19/RELEASE_NOTES.md)；v18及更早历史证据不覆盖。
+当前任务、独立RNG、16项载荷、进度、法球/原子领取收据、显示字段、彩蛋回移及存档验证以 [V19_PART2](V19_PART2.md) 为准。旧预留接口不再代表当前实现。

@@ -31,7 +31,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   v19Chainblade:['executeBps','pvp'],v19Garen:['healthBps'],formSwapper:['frontReductionBps','backAmpBps'],sisters:['adBps','speedBps','adTicks','speedTicks'],sistersUnlock:['enabled'],
   g24Gambler:['goldLimit','speedPerGoldBps'],
   g24Mogul:['stackCap','healthPerStack','resistPerStack','goldIntervalTicks'],
-  quickstriker:['minBps','maxBps','shield','durationTicks'],g23Experiment:['mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps','allyHealingBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
+  quickstriker:['minBps','maxBps','shield','durationTicks'],g23Experiment:['warwick','mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps','allyHealingBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
   mentorship:['health', 'attackSpeedBps'],
   itemCollector:['baseHealth', 'healthPerItem', 'adBpsPerItem', 'apCentiPerItem'],
   backup:['minimum', 'attackSpeedBps'],
@@ -105,7 +105,7 @@ export function cloneEffect(effect: Effect): Effect {
     case 'mechanic': {
       if (!MECHANICS.has(effect.mechanic)) throw new RangeError('Unknown finite mechanic');
       const fields = MECHANIC_FIELDS[effect.mechanic];
-      if (fields.some(key => key!=='forcedPeriodTicks' && !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
+      if (fields.some(key => key!=='forcedPeriodTicks' && key!=='warwick' && !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
       if (Object.keys(effect.values).some(key => !fields.includes(key) && !['backRowOnly', 'buddyIndex'].includes(key))) throw new RangeError('Unknown mechanic parameter');
       for (const value of Object.values(effect.values)) integer(value);
       for (const key of ['everyN', 'periodTicks', 'durationTicks']) if (Object.hasOwn(effect.values, key)) integer(effect.values[key], 1);

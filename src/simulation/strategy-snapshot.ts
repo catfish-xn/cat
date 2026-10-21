@@ -1,3 +1,4 @@
+import { familyReunionParticipants, familyCombatBase } from './family-reunion';
 import { d14UnitBase } from './d14-anomalies/projection';
 import { p3Program, p3ItemProgram } from './s13-p3-programs';
 import { compileD11Augment, d11OpeningSeed, d11PriorKills } from './d11-fill';
@@ -76,6 +77,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   state={...state,preparation:voidspawn.preparation};
   const projected={...projection,preparation:state.preparation};
   const traits = [...deriveEffectiveTraits(projected,'player',catalog.traits),...deriveEffectiveTraits(projected,'enemy',catalog.traits)];
+  const reunion=new Set([...familyReunionParticipants(state,'player'),...familyReunionParticipants(state,'enemy')]);
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
@@ -193,10 +195,12 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       :anomaly==='force-of-friendship'?boardUnits.filter(x=>x.team===unit.team).reduce((n,x)=>n+((state.d14Combat?.unitId===x.id&&state.d14Combat.phase==='promoted')?400:x.starLevel===3?800:x.starLevel*100),0)
       :anomaly==='comeback-story'?Math.floor((100-(state.playerHp??100))/10)*500:0;
     if(bonus&&state.anomalyBinding)sources.push(...makeSourcedEffects(unit.id,'anomaly',anomaly!,state.anomalyBinding.choiceId+':scaling',[{kind:'mechanic',mechanic:'damageAmp',values:{bps:bonus}}]));
+    if(unit.definitionId==='mel'&&state.g23?.mel?.savedBattleId)sources.push(...makeSourcedEffects(unit.id,'trait','banished-mage',unit.id,[{kind:'mechanic',mechanic:'damageAmp',values:{bps:1000}}]));
     const base = unit.location.kind==='board'?g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row):getUnitStats(unit.definitionId,unit.starLevel);
     const promoted=state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='promoted';
     if(state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='returned')sources.push(...makeSourcedEffects(unit.id,'anomaly','into-the-unknown',state.anomalyBinding!.choiceId+':return',[{kind:'statPercentBps',stat:'attackDamage',bps:5000},{kind:'statFlat',stat:'abilityPower',amount:50}]));
-    const certified=promoted?d14UnitBase(unit,true):null;
+    const reunionStar=reunion.has(unit.id)?Math.min(4,(promoted?4:unit.starLevel)+1) as 1|2|3|4:undefined;
+    const certified=reunionStar?familyCombatBase(unit,reunionStar):promoted?d14UnitBase(unit,true):null;
     let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
     const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');
     if (family) {
@@ -221,7 +225,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
     const gambler=mechanics.find(m=>m.mechanic==='g24Gambler'),avarice=anomaly==='avarice-incarnate';
     if((gambler||avarice)&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative combat bank');
-    return { unitId: unit.id, ...resolved, ...(promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
+    return { unitId: unit.id, ...resolved, ...(reunionStar?{effectiveStarLevel:reunionStar,familyReunion:{originalStarLevel:unit.starLevel,combatStarLevel:reunionStar}}:promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
   return appendMirrorSummons(state.preparation,{ traits, units });
 }

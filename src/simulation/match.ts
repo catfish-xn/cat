@@ -1,3 +1,4 @@
+import { melCanSave, commitMelSave } from './mel-save';
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
 import { settleTerminalEpicForges } from './epic-forges';
 import { grantConsumableCopy } from './consumables';
@@ -312,7 +313,7 @@ export function setShopLock(state: MatchState, locked: boolean, expectedGenerati
 export function rerollShop(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.gold < MATCH_RULES.rerollCost) return fail(state, 'insufficient-gold');
-  const generated = generateShop(state.rngState, state.shop.generation + 1, state.level);
+  const generated = generateShop(state.rngState, state.shop.generation + 1, state.level, state.round);
   if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - MATCH_RULES.rerollCost)) return fail(state, 'insufficient-gold');
   return accept({ ...state, gold: state.gold - MATCH_RULES.rerollCost, ...generated,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
@@ -341,8 +342,10 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   if (state.roundResults.some(record => record.round >= state.round)) throw new Error('Duplicate settlement');
   const {kind:roundKind,isFinal,roundId} = state.m8.round;
   const survivingEnemyCount = combat?.units.filter(unit => countsG23SurvivorDamage(unit) && unit.team === 'enemy').length ?? 0;
-  const plan = resolveRoundEconomy({ augments:state.augments, roundId, result: combat?.result ?? null, gold: state.gold,
+  let plan = resolveRoundEconomy({ augments:state.augments, roundId, result: combat?.result ?? null, gold: state.gold,
     streak: state.streak, level: state.level, xp: state.xp, hp: state.playerHp, enemySurvivors: survivingEnemyCount });
+  const facts=combat?g23SoloFacts(state,combat):undefined,saved=melCanSave(state,facts,plan.hpAfter);
+  if(saved)plan={...plan,hpAfter:1,hpLost:state.playerHp-1};
   const growth = new Map(state.persistentGrowth.map(entry => [entry.unitId, entry.attackDamageBps]));
   for (const delta of pendingDelta) growth.set(delta.unitId,(growth.get(delta.unitId)??0)+delta.attackDamageBps);
   const resourceProvenance = combat ? appendResourceProvenance(state.resourceProvenance,roundId,{
@@ -370,7 +373,8 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       levelBefore: state.level, levelAfter: plan.progression.level, xpBefore: state.xp, xpAfter: plan.progression.xp,
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
-  return combat?grantPveRemover(commitG23Settlement(settled,g23SoloFacts(state,combat),unitLootPolicy,hookEvents)):settled;
+  const committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
+  return saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed;
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)
@@ -390,9 +394,10 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   if (combat.status === 'running') return { state: { ...revealed.state, phase:'combat',combat:combat as RunningCombat },events };
   if (combat.result === null) throw new Error('Invalid combat result');
   const before:MatchState={...revealed.state,phase:'settlement',combat:combat as FinishedCombat,pendingChoice:null};
-  const terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({augments:before.augments,roundId:before.roundDefinitionId,result:combat.result,
+  let terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({augments:before.augments,roundId:before.roundDefinitionId,result:combat.result,
     gold:before.gold,streak:before.streak,level:before.level,xp:before.xp,hp:before.playerHp,
     enemySurvivors:combat.units.filter(unit=>unit.team==='enemy'&&countsG23SurvivorDamage(unit)).length}).hpAfter===0;
+  if(terminal&&melCanSave(before,g23SoloFacts(before,combat),0)&&!before.m8.round.isFinal)terminal=false;
   const granted=grantDirectLoot(before,terminal,unitLootPolicy); let state=granted.state; events.push(...granted.events);
   if (terminal) for (const descriptor of unresolvedLootChoices(state)) {
     const fallback=grantLootChoice(state,descriptor,descriptor.terminalFallbackDefinitionId,'terminal-fallback');
@@ -451,7 +456,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   state={...state,level:progression.level,xp:progression.xp};
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
-  const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level);
+  const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round);
   const carousel = resolveCarouselPreparation({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
   const entered = enterScheduledEvents(carousel.state);
@@ -480,7 +485,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
     state={...state,level:progression.level,xp:progression.xp};
     const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
-      : generateShop(state.rngState, state.shop.generation + 1, state.level);
+      : generateShop(state.rngState, state.shop.generation + 1, state.level, definition.ordinal);
     return acceptEquipment({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } }, []);

@@ -91,6 +91,7 @@ function describe(entry: Entry): HTMLElement {
   const title = el('div'); title.append(nameNode(entry), ...tagNodes(entry));
   title.append(el('div', `${itemKindName(entry.kind)} · ${entry.apiName}`, 'item-pop-meta')); head.append(title); body.append(head);
   if (entry.recipe) body.append(el('p', `配方：${entry.recipe.map(id => catalogEntry(id) ? itemDisplayName(id) : id).join(' + ')}`, 'item-pop-recipe'));
+  else if (ITEM_DEFINITIONS[entry.id]?.emblemTrait) body.append(el('p', '配方：不可合成', 'item-pop-recipe'));
   else { const uses = usedIn(entry.id); if (uses.length) body.append(el('p', `可用于配方：${uses.map(item => itemDisplayName(item.id)).join('、')}`, 'item-pop-recipe')); }
   const effects = el('ul', '', 'item-pop-effects');
   for (const line of entry.effectDescriptions) effects.append(el('li', line));

@@ -1095,3 +1095,12 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 2. 晋升单位卖掉或离开棋盘和备战席后返回 null；读档、重连后结果相同。
 3. 结果与 `toPrivateSeatView(state)` 中该单位的 `effectiveStarLevel` 一致（有 4 就是 4，没有就是 null）。
 4. 其它席的投影里只多出 `effectiveStarLevel`，不出现卖价、卡池份数和倒数。
+
+## v19 第二部分领域交付（2026-10-21）
+
+- 本人羁绊说明底部：seatMechanics.seat.familyHeist 为 CurrentReward / CurrentProgress / CurrentRewardValue / currentRewardName / progressText / policy；readG23MechanismState 返回同一显示投影。presentation/trait-text 导出 familyTraitFooter(display)，只格式化领域字段。Claude把这些行接到现有说明底部，界面不累计/抽奖。
+- 准备跳舞：familyReunionView 返回六实例ID、原星级/战斗星级、eligible、回移标记及未验证阵亡政策；单位战斗 effectiveStarLevel 与 familyReunion 由领域冻结，动画只消费。4星缺证参数明确占位，PBE退星分支未启用。
+- 奖励：现有 claimOrb 支持 source=family 的可部分领取法球；readLootView().unclaimedOrbs / 本人私有视图给出剩余原子。联机战斗点击仍排队，结算后统一领取；不额外执行claimG23Reward自动发放。
+- 六费id严格 warwick/viktor/mel。三人的模型/骨骼/动作/特效素材由另一任务提取，当前任务未包含素材，也未修改3D或渲染器。
+- 纹章：readItemCatalog 已提供22种批准属性、16配方和不可合成信息；现有物品说明消费该查询。
+- 服务端原样透传 g23Facts.family 和 melCasts，规则自行进度/保命；schema/save/replay升9/5/4。公开命令封套版本不变，发布前排空旧对局。详见 V19_PART2.md。

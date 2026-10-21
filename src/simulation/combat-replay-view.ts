@@ -55,6 +55,9 @@ export type CombatViewUnit = CombatViewState['units'][number];
 function animationEvent(event: LedgerCombatEvent) {
   const envelope = pick(event, ['tick', 'eventSeq']);
   switch (event.type) {
+    case 'chaosEnergyChanged':case 'melEnergyChanged':return {...envelope,...pick(event,['type','unitId','before','after'])};
+    case 'bloodFrenzyChanged':return {...envelope,...pick(event,['type','unitId','active','permanent'])};
+    case 'devoured':return {...envelope,...pick(event,['type','unitId','targetId'])};
     case 'movement': return { ...envelope, type: event.type, unitId: event.unitId, from: cellView(event.from), to: cellView(event.to) };
     case 'attack': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId']) };
     case 'targetChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'before', 'after']) };

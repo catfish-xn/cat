@@ -1,35 +1,23 @@
-# v19：实际耗蓝、开场生命、双形与关系羁绊
+# v19：规则第一部分＋家人、六费与纹章
 
-规则/内容为 `s13-g2-3-v19` / `s13-14.24b-g2-3-v19`；schema/save/replay/command 保持8/4/3/4，50ms tick、lcg32-v1不变。旧身份/摘要明确拒绝，无迁移。
+本版同时包含第一部分全部机制，以及第二部分 A/B/C。规则/content仍为 s13-g2-3-v19 / s13-14.24b-g2-3-v19；schema/save/replay/command＝**9/5/4/4**，50ms tick与lcg32-v1不变。旧身份/摘要/封套严格拒绝，无迁移；发布前排空旧对局。
 
-CONTENT=`fnv1a32-utf16:9ba56127`；LOOT_REPLAY=`fnv1a32-utf16:8d45a042`。后者因共同规则 manifest 变更，箱子、法球数值及抽样算法未修改。
+- A：家人5的16项等权随机任务，阶段2/3/4+分别2、2+S、3+S；PvE不计，每战最多完成一次、余量结转、暂停保留。金币也需领取奖励法球，支持部分领取和唯一原子收据。训练假人明确替代10金。六人13.4回移彩蛋只影响本场战斗星级，最高4星，无永久卡池变化；领域提供准备期跳舞资格。
+- B：六费warwick/viktor/mel，三人各9份共享；3合1；完整战斗技能、混沌能量、嗜血/吞噬、梅尔盾吸收/储能/第三次、玩家12次PvP施法后的唯一保命。六费空池回退1–5费；锁店和失败命令不抽数。六费复制器池空在共享入口拒绝。
+- C：22种纹章按批准表替换总基础属性；水滴配方3/2法力每秒，原初始法力移除；6件不可合成按表，狙神+2格保留。item-catalog提供属性和配方，原S13羁绊及学院身份保留。
 
-本版实现统领实际耗蓝叠AP、盖伦实际完整最大生命冻结共享、双形2/4前排减伤/后排增伤、对应强化与伙伴门槛的姐妹2、蓝发10开场及12秒循环、赛恩伤害目标上的黑玫×1.08、完美行刑官链锯刃的处决/治疗/刷新增益/战后唯一金币收据，以及赛薇卡最终招式/引导时长/强化标记显示数据。姐妹新增一项金级强化及各一名伙伴的唯一赠品，当前61强化/27羁绊。
+魔改/未验证：六费概率采用**非官方数值**（4-6每格0.20%，每轮+0.04个百分点，10级+1.6个百分点）；维克托1:1额外AD/AS/法力转AP、狼人+50%移速及吞噬选人、梅尔4秒盾/2格冲刺/同tick十包与第三次替代弹幕、六费三星3.6、22纹章定值均为批准的魔改。家人等权、首次抽取、结转/暂停/阶段保留和资格/幸存计数是未验证/魔改执行约定。13.4彩蛋回移、缺证四星占位明确标注；PBE阵亡退星未验证且不启用。第一部分黑玫档位推断、链锯刃金币魔改等边界仍见V19_MECHANICS。
 
-为家人5只预留 `familyHeist` 契约/类型位置，未初始化或实现规则。纹章属性、六费、其余关系羁绊、黑玫7复活及其他延期机制不在本轮。
+详见 [V19_PART2](../../V19_PART2.md)、MATCH/COMBAT/SAVE/REPLAY/MULTIPLAYER合同及S13_RULES_GAP。当前61强化/30羁绊；3D素材提取、渲染接线和准备舞蹈动画由另一条线负责，本任务未提交素材或修改渲染目录。
 
-来源、数值、导出字段、失败与恢复边界、3D消费说明见 [V19_MECHANICS](../../V19_MECHANICS.md)。黑玫4档绑定为**推断**；黑玫重复标记不叠加、蓝发永久属性一次/攻速与眩晕刷新、盖伦共享顺序、姐妹刷新均为缺执行证据下的明确项目约定。链锯刃仅PvP真实敌方英雄掉金是用户要求的**魔改**；不得称为完整原版行为。
+## 独立epoch与验证
 
-## 独立 epoch
+CONTENT=fnv1a32-utf16:3dad5abd；LOOT_REPLAY=fnv1a32-utf16:e83f0193。最终epoch为 **complete:true，9/9步exitCode=0**，各录制源哈希与当前工作区一致。录制入口 scripts/verify-v19-epoch.cjs（9个顺序步骤），仅重录v19；v18及更早历史文件原字节保留。受保护manifest SHA256必须保持 b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22。
 
-本地基线 `9fb94704c5f0c59ec975c6f0de4dd188207129fa`。仅离线只读 Git 对象，不做 Git 写操作。入口为 `scripts/verify-v19-epoch.cjs`、`record-v19-{release,inputs,live-reveal}.cjs`、`v19-fixture-audit.cjs`、`compare-v19-digests.cjs`；CURRENT Herald 指向 `tests/fixtures/record-v19-herald.cjs`。
+独立商店oracle已同步六费费用区间、批准概率、卖价与进入回合参数，并以全等级/解锁前后/整数边界逐项对照生产抽店。旧录制轨迹和受保护manifest没有改写；所有过程离线，不执行Git写操作。
 
-只生成 `tests/v19-content-baseline.json`、`tests/fixtures/v19-*`、`tests/fixtures/m5/full-match-golden.v19.json` 与本目录审计；v18及更早录制文件/入口原字节保留。`g2-4b-herald-raw/manifest.json` SHA-256 应保持 `b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22`。
+最终相关Vitest按文件去重：**28文件、538项通过、0失败**，见part2-test-summary.json。第二部分36项包括六费数值/动态转换/吞噬/护盾储能/两席回放/玩家保命、家人任务/共享领取/彩蛋、纹章与schema；第一部分20项同时回归。tsc --noEmit、完整digest重算--check、git只读diff --check通过。身份测试只选3项，142项未选择，没有将它们记为通过。
 
-```powershell
-node scripts/update-content-identities.cjs --write
-node scripts/update-content-identities.cjs --check
-node scripts/verify-v19-epoch.cjs
-node node_modules/vitest/vitest.mjs run --configLoader runner --project fast <相关测试文件>
-node node_modules/typescript/bin/tsc --noEmit
-```
+四条公共路线均胜利完成33场；cannon/sniper各67检查点，共134份text/object恢复与序列化字节核验。五组Herald均完成原始输入导出、生产恢复及开场/15tick复核；inputs/live-reveal重录与--check一致。125份v15–v18历史文件、历史断言前缀和受保护manifest原字节一致。
 
-## 最终录制与验证
-
-`epoch-verification.json` 为 **complete:true，9/9步exitCode=0**。四条公共路线均胜利完成33场；cannon/sniper各67个检查点，共134个完整text/object恢复及序列化字节核验。五组Herald在导入生产恢复器前导出原始输入，完整恢复、开场及后续15tick验证通过；inputs/live-reveal复录与`--check`一致。live-reveal局部路线因新增姐妹金级候选改变公共强化前缀，洛里斯/婕拉死亡时刻为437/176tick，均只揭示一份；同tick双死亡44及未挂奖载体106的断言保持。
-
-125个v15–v18历史录制/基线/脚本文件、历史身份断言前缀及受保护manifest原字节一致。完整根从Git基线源码与当前源码分别重算：v18为CONTENT `213ae9e4` / LOOT_REPLAY `ffebff3f`，v19为`9ba56127` / `8d45a042`（均带`fnv1a32-utf16:`前缀）。旧录制入口没有执行，没有改写v18证据。
-
-最终定向Vitest按文件去重：**33文件、485项通过、0失败**。其中新规则20项使用合成场景，覆盖数值、成本变动、行位置、强化/伙伴门槛、助攻、0/240/480信号、生命不复利、黑玫目标倍率、处决严格阈值/自然致死/召唤与分身排除/重复装备/刷新到期/唯一战后3金、复制来源冻结、变体投影、认证重演与伪造拒绝。当前夹具消费者、回放、收益、旧机制回归及源锁定同时通过；身份文件另外270项未选择，未将其记为通过。完整134检查点另由epoch真实执行，不靠跳过测试替代。
-
-最终日志：`artifacts/v19-related-final.json`（28文件463项）、`v19-identity-final.json`（2文件13项）、`v19-source-final.json`（3文件9项）。`tsc --noEmit`、`update-content-identities --check`、LF检查及只读`git diff --check`通过。只运行相关测试和授权录制，未运行全套、浏览器或联网验收；没有Git写操作。3D渲染接线由显示侧按新增合同消费，本轮不修改渲染器。
+界面交接：家人说明底部动态进度/奖励/目标与准备跳舞资格已提供领域查询，Claude接入既有渲染器；本任务没有修改渲染目录。纹章卡片已读取新属性/配方，六件不可合成明确标注。3D素材仍由另一条线提取。

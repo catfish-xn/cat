@@ -1,3 +1,4 @@
+import { familyOrbs } from './family-orbs';
 import { canonicalContent } from './content';
 import { lootEntryId, lootOrbId, lootReceiptId } from './loot-identity';
 import { allClaimableOrbPlans } from './orb-claim';
@@ -21,6 +22,7 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
       || state.phase==='preparation' && state.m8.round.kind==='pvp')
     && !state.roundResults.some(r=>r.round===state.round),'claim queue lifecycle');
   for (const orbId of queue) {
+    if(familyOrbs(state).some(o=>o.orbId===orbId))continue;
     const orb=plans.find(o=>o.orbId===orbId);
     check(typeof orbId==='string' && orb && getMultiplayerRoundById(orb.roundId).ordinal<=state.round
       && orb.entries.length && orb.entries.every(e=>loot.direct.some(d=>d.dropId===e.dropId&&d.status==='revealed')

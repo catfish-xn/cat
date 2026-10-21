@@ -175,7 +175,7 @@ function mechanicBirths(receipts: readonly import('./seat-mechanics/types').Mech
     const key = `mechanic:${receipt.receiptId}`;
     if (receipt.kind === 'unit' && receipt.resolution === 'held' && receipt.unitId) {
       requireValue(SHOP_CATALOG.includes(receipt.definitionId) || !!UNIT_DEFINITIONS[receipt.definitionId]?.summon, 'mechanic unit definition');
-      return [{ key, kind: 'unit' as const, id: receipt.unitId, definitionId: receipt.definitionId, roundId: receipt.roundId }];
+      return [{ key, kind: 'unit' as const, id: receipt.unitId, definitionId: receipt.definitionId, roundId: receipt.roundId,...(receipt.starLevel?{starLevel:receipt.starLevel}:{}) }];
     }
     const itemId = receipt.kind === 'item' || receipt.kind === 'choice' ? receipt.itemId : null;
     if (!itemId) return [];
@@ -350,7 +350,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const rewardBoundaries = new Map(context.g23?.rewardClaims.map(claim => {
     const bundle = context.g23!.rewards.find(bundle => bundle.id === claim.bundleId)!;
     const battle = context.g23!.economyReceipts.find(receipt => receipt.kind === 'battle'
-      && (bundle.source === 'conqueror' ? receipt.bundles.includes(bundle.id)
+      && (bundle.source === 'conqueror' || bundle.source === 'family' ? receipt.bundles.includes(bundle.id)
         : bundle.id === `g23:market:${receipt.facts.battleId}:${bundle.tier}`));
     requireValue(battle?.kind === 'battle', 'mechanic reward battle');
     const roundId = getCatalogRoundByOrdinal(battle.facts.round).roundId;
@@ -467,7 +467,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         definitionId = takeBirth(`${entry.source.kind}:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
       }
       requireValue(index !== 0 || (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
-      const starLevel=entry.source.kind==='loot'?births.get(`loot:${entry.source.receiptId}`)?.starLevel??1:1;
+      const starLevel=entry.source.kind==='loot'?births.get(`loot:${entry.source.receiptId}`)?.starLevel??1:entry.source.kind==='mechanic'?births.get(`mechanic:${entry.source.receiptId}`)?.starLevel??1:1;
       units.set(entry.unitId, { id: entry.unitId, definitionId, starLevel }); nextUnitSerial++;
       if(entry.source.kind==='carousel')deferredCarouselIds.add(entry.unitId);
       acquisition = { sequence: index, unitId: entry.unitId, definitionId, roundId: entry.roundId, survivorId: entry.unitId, star: starLevel };

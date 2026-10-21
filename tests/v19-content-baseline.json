@@ -1,13 +1,13 @@
 {
-  "contentDigest": "fnv1a32-utf16:9ba56127",
-  "lootReplayDigest": "fnv1a32-utf16:8d45a042",
+  "contentDigest": "fnv1a32-utf16:3dad5abd",
+  "lootReplayDigest": "fnv1a32-utf16:e83f0193",
   "rulesVersion": "s13-g2-3-v19",
   "contentVersion": "s13-14.24b-g2-3-v19",
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "previousContentDigest": "fnv1a32-utf16:213ae9e4",
   "previousLootReplayDigest": "fnv1a32-utf16:ffebff3f",
   "traceHashes": {
-    "state": "ab4793a7e0a20a5f574d97a2ded416cc020b4d7c7a70ae79a1701bdd9774867b",
+    "state": "8d5a0a156662519e43096bac284cb740c528baca715682b1c0f68fe235c5444e",
     "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
     "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
   },
@@ -16,8 +16,8 @@
     "ticks": 164,
     "events": 106,
     "result": "playerWin",
-    "stateHash": "fnv1a32-utf16:b77d771b",
+    "stateHash": "fnv1a32-utf16:df764a44",
     "eventHash": "fnv1a32-utf16:cf452d32"
   },
-  "reason": "S13 v19: actual-Mana Dominators, frozen actual-HP Garen, Form Swapper 2/4, augment-gated Sisters, forced Rebel 10 smoke, target-bound Black Rose 8 percent, Perfected Chainblade receipts, Sevika animation facts; Family heist contract reserved only; schema 8/save 4 unchanged; no migration."
+  "reason": "S13 v19: actual-Mana Dominators, frozen actual-HP Garen, Form Swapper 2/4, augment-gated Sisters, forced Rebel 10 smoke, target-bound Black Rose 8 percent, Perfected Chainblade receipts, Sevika animation facts; Family5 randomized heist orbs and 13.4 reunion backport, Warwick/Viktor/Mel six costs with approved custom execution/odds, 22 replacement emblem bases; schema9/save5/replay4; no migration."
 }
