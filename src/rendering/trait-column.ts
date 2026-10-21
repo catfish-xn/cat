@@ -15,6 +15,7 @@ import type { MatchState } from '../simulation/match-types';
 import { readG23Progress } from '../simulation/g2-3-state';
 import { familyReunionView } from '../simulation/family-reunion';
 import { readFamilyReunion } from './online/seat-view-adapter';
+import { isOnlineMode } from './online/mode';
 import { readSeatMechanic } from '../simulation/seat-mechanics/state';
 import { G23_CONQUEROR_CHESTS, G23_POLICY } from '../simulation/content/g2-3-policy';
 import { g23RewardLines } from '../presentation/g23-reward-text';
@@ -77,11 +78,14 @@ export function g23TraitRuntime(state: MatchState): TraitRuntime | undefined {
   if (family.length) lines.set('family', family);
   return lines;
 }
-/** The six 家人团聚 units in planning while the rules' view says the reunion is on (the seat view's, else the rules' own); empty otherwise. */
+/**
+ * The six 家人团聚 units in planning while the rules' view says the reunion is on: online only the seat view's (none when the
+ * server sent none), offline the rules' own familyReunionView; empty otherwise.
+ */
 export function familyReunionDancers(state: MatchState): readonly string[] {
   if (state.phase !== 'preparation') return [];
-  let view; try { view = readFamilyReunion(state) ?? familyReunionView(state); } catch { return []; }
-  return view.eligible ? view.participantIds : [];
+  let view; try { view = isOnlineMode() ? readFamilyReunion(state) : familyReunionView(state); } catch { return []; }
+  return view?.eligible ? view.participantIds : [];
 }
 /** One chest of the 征服层数 ladder: opened, the next one (with the stacks still missing) or later. */
 export interface ConquestStep { readonly threshold: number; readonly reward: string; readonly state: 'done' | 'next' | 'later'; readonly left?: number }
