@@ -32,6 +32,6 @@ ANM 不含独立参考绑定骨架，不能宣称两套绑定骨长完全相等�
 
 ## 工具与验证
 
-`node scripts/assets3d/unit-scale.mjs <local-job.json>` 接受本地作业：`manifestPath`、全新 `outputManifest`、`selections: [{ ids, skinBin, skinEntryHash?, meshPath?, multipliers? }]`。输出只允许在 `assets3d-local/`；不会覆盖已有文件。调用方先核实素材版本和摘要；输入缺失或皮肤歧义直接停止，不能伪装成官方缺省。字段真实缺省才取单位值。额外乘数必须先明确其模型缩放语义，再显式提供字段名和值。
+`node scripts/assets3d/unit-scale.mjs <local-job.json>` 接受本地作业：`manifestPath`、全新 `outputManifest`、`selections: [{ ids, skinBin, skinEntryHash?, meshPath?, multipliers? }]`。输出只允许在 `assets3d-local/`；完整临时文件通过排他硬链接发布，再清理临时文件，即使检查后目标才出现也不会覆盖。调用方先核实素材版本和摘要；输入缺失或皮肤歧义直接停止，不能伪装成官方缺省。只有结构与字段类型有效的 `SkinMeshDataProperties` 确实缺少 `skinScale` 才取单位值；整数、未解析链接、错误类型或显式无效值均报错。额外乘数必须先明确其模型缩放语义，再显式提供字段名和值。
 
-5 项纯合成测试覆盖二进制读取、缺省与读取失败的区别、皮肤歧义、无效值、显式乘数以及 #369 的真实 schema 边界；`tsc --noEmit` 通过。当前环境默认 esbuild 配置加载受限，测试使用 `node node_modules/vitest/vitest.mjs run --configLoader runner --project fast tests/assets3d-unit-scale.test.ts`。实际素材另核实 CLI 输出一致、原 manifest 其他字段保留、载荷摘要一致和真实渲染器缩放一致。
+10 项纯合成测试覆盖二进制读取、缺省与读取失败的区别、错误 mesh/字段类型、重复字段哈希、内部块长度越界、皮肤歧义、无效值、显式乘数、#369 的真实 schema 边界，以及实际调用作业的输出目录限制、拒绝覆盖和并发排他发布。命令为 `node node_modules/vitest/vitest.mjs run --configLoader runner tests/assets3d-unit-scale.test.ts` 与 `npx tsc --noEmit`（PowerShell 禁止运行 `npx.ps1` 时改用 `npx.cmd tsc --noEmit`）。测试文件自行在被忽略的 `assets3d-local/` 下生成并清理合成夹具，不读取原始素材；本次 Vitest 无需调整临时目录环境变量。修复后的 CLI 使用现有本地作业输出到新文件，75 个缩放值与原 `root/manifest.json` 逐项相同，完整 manifest 也相同。实际素材此前另核实载荷摘要一致和真实渲染器缩放一致。
