@@ -614,15 +614,34 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   canvas.addEventListener('lostpointercapture', onPointerCancel);
   canvas.addEventListener('pointerleave', onPointerLeave);
 
-  let width = 0, frameId = 0, last = performance.now();
+  let width = 0, height = 0, frameId = 0, last = performance.now();
+  // Online the layer fills the window behind the panels (style.css L12) while the board keeps #board-root's box: both
+  // cameras are framed for that box and offset so it lands where the box is, the rest of the window showing more scene.
+  // When the canvas is the box (offline), there is no offset.
+  const frameBox = () => {
+    const view = canvas.getBoundingClientRect?.(), box = host.parentElement?.getBoundingClientRect?.();
+    if (!view) return null;
+    if (!box || box.width <= 0 || box.height <= 0 || (Math.abs(box.left - view.left) < 1 && Math.abs(box.top - view.top) < 1
+      && Math.abs(box.width - view.width) < 1 && Math.abs(box.height - view.height) < 1)) return null;
+    return { width: box.width, height: box.height, x: view.left - box.left, y: view.top - box.top };
+  };
   const resize = (w: number, h: number) => {
     if (w <= 0 || h <= 0) return;
-    width = w;
+    width = w; height = h;
     renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    frameCamera(); stage.resize(w / h);
+    const box = frameBox();
+    camera.aspect = box ? box.width / box.height : w / h;
+    if (box) camera.setViewOffset(box.width, box.height, box.x, box.y, w, h); else camera.clearViewOffset();
+    frameCamera(); stage.resize(camera.aspect);
+    if (box) stage.camera.setViewOffset(box.width, box.height, box.x, box.y, w, h); else stage.camera.clearViewOffset();
   };
+  // The box moves without the layer resizing (the left panel folding, a scrolled page): reframe then too.
+  const reframe = () => resize(width, height);
+  const boxObserver = typeof ResizeObserver === 'undefined' || !host.parentElement ? null : new ResizeObserver(reframe);
+  if (host.parentElement) boxObserver?.observe(host.parentElement);
+  // Guarded like ResizeObserver: unit tests mount this renderer with no window, or a stub one.
+  const scroller = typeof window !== 'undefined' && typeof window.addEventListener === 'function' ? window : null;
+  scroller?.addEventListener('scroll', reframe, { passive: true });
   const tick = (now: number) => {
     frameId = requestAnimationFrame(tick);
     const seconds = Math.min(Math.max((now - last) / 1000, 0), 0.25);
@@ -662,7 +681,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
-      closed = true; cancelAnimationFrame(frameId); unsubscribe();
+      closed = true; cancelAnimationFrame(frameId); unsubscribe(); boxObserver?.disconnect();
+      scroller?.removeEventListener('scroll', reframe);
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],

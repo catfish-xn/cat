@@ -313,12 +313,14 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     // Layout/rotation gates are read against actual CSS bounds, not game pixels.
     for (const viewport of [{ width: 1440, height: 600 }, { width: 390, height: 650 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 360, height: 640 }]) {
       await resizeViewport(page, viewport); await reset(); const before = await state(), start = await offset();
+      await click('panel:traits', true);
+      assert.equal(await page.locator('[data-debug="panel:traits"]').getAttribute('aria-pressed'), 'true', 'traits tab pressed before the lock');
       await click('shop-lock', true);
       const expected = accepted(api.setShopLock(before, true, before.shop.generation));
       const geometry = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth,
         targets: [...document.querySelectorAll('#strategy-root button')].filter(node => node.getBoundingClientRect().width).map(node => ({ id: node.dataset.debug, width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height })) }));
       assert(geometry.document <= geometry.viewport, 'no horizontal overflow'); assert(geometry.targets.every(node => node.width >= 43.9 && node.height >= 43.9), '44 CSS px controls');
-      await record('layout-touch-lock-and-build-guide', before, expected, start, { geometry }); await page.screenshot({ path: path.join(output, `layout-${viewport.width}-${viewport.height}.png`) });
+      await record('layout-touch-tab-and-lock', before, expected, start, { geometry }); await page.screenshot({ path: path.join(output, `layout-${viewport.width}-${viewport.height}.png`) });
     }
     await resizeViewport(page, { width: 390, height: 844 });
     {
