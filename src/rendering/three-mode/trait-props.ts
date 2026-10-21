@@ -5,9 +5,12 @@
  * (its reward orb is the tabletop's Warband orb); the flask fills to 微光 / next black market, bubbles while a black
  * market waits, and drains when an accepted offer clears it. Like the tabletop, the first frame only records what is
  * there, so a reload never replays an opening. Asset ids are optional manifest entries; without them stand-ins draw.
+ * An extracted model replaces the stand-in body and plays its own idle clip (14.24 has no chest-opening clip: the
+ * Conqueror prop is a war banner), so a chest opening on a model is the open effect plus a procedural rise and sway;
+ * the lid only exists on the stand-in. A ground aura carries the progress glow / fill level for either body.
  */
 import {
-  Box3, BoxGeometry, CylinderGeometry, Group, LatheGeometry, Mesh, MeshStandardMaterial, SphereGeometry, Vector2, Vector3,
+  AnimationMixer, Box3, BoxGeometry, CircleGeometry, CylinderGeometry, Group, LatheGeometry, Mesh, MeshStandardMaterial, SphereGeometry, Vector2, Vector3,
   type Camera, type Object3D, type Scene,
 } from 'three';
 import type { ModelLease, ParticleEffect } from '../../rendering3d';
@@ -18,6 +21,10 @@ export const CHEST_OPEN_EFFECT = 'conqueror-chest-open', FLASK_OFFER_EFFECT = 's
 const EFFECT_SECONDS = 3;
 /** Stand-in sizes in board units (a champion is 92 tall): chest 34 × 18 × 24, flask 36 tall. */
 const CHEST = { width: 34, height: 18, depth: 24, lid: 7 }, FLASK_HEIGHT = 36, LIQUID_BOTTOM = 1.5, LIQUID_TOP = 22;
+/** Extracted models stand this tall (the Conqueror banner is a standard, half a champion); the ground aura's radius. */
+const CHEST_MODEL_HEIGHT = 46, AURA_RADIUS = 22;
+/** A model's opening motion: rises this far and sways (radians) while the open effect plays. */
+const RISE = 9, SWAY = 0.16;
 /** Lid angles (radians, opening backward): shut, fully open while a chest pays out, and resting ajar once all are open. */
 const LID_OPEN = -1.95, LID_DONE = -0.55;
 const OPEN_HOLD_SECONDS = 1.6, POP_SECONDS = 0.5, FILL_RATE = 1.6, BUBBLES = 6;
@@ -39,7 +46,7 @@ export interface TraitProps {
   update(seconds: number): void;
   /** Acceptance read (?debug3d). */
   debug(): {
-    chest: { shown: boolean; glow: number; lid: number; opening: boolean; model: boolean };
+    chest: { shown: boolean; glow: number; lid: number; opening: boolean; model: boolean; rise: number };
     flask: { shown: boolean; fill: number; target: number; offer: boolean; model: boolean };
     bursts: number;
   };
@@ -47,7 +54,7 @@ export interface TraitProps {
 }
 
 interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number }
-interface Prop { readonly root: Group; readonly stand: Group; lease: ModelLease | null; loading: boolean; disposed: boolean }
+interface Prop { readonly root: Group; readonly stand: Group; lease: ModelLease | null; motion: Group | null; mixer: AnimationMixer | null; loading: boolean; disposed: boolean }
 
 export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const { scene, own } = ctx;
@@ -80,7 +87,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     chestStand.add(body, lock, lid, glow);
   }
   chestRoot.add(chestStand); scene.add(chestRoot);
-  const chest: Prop = { root: chestRoot, stand: chestStand, lease: null, loading: false, disposed: false };
+  const chest: Prop = { root: chestRoot, stand: chestStand, lease: null, motion: null, mixer: null, loading: false, disposed: false };
 
   // --- flask -------------------------------------------------------------------------------------------------------
   const flaskRoot = new Group(); flaskRoot.name = 'render3d-shimmer-flask'; flaskRoot.visible = false;
@@ -102,7 +109,14 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     flaskStand.add(level, stopper, shell);
   }
   flaskRoot.add(flaskStand); scene.add(flaskRoot);
-  const flask: Prop = { root: flaskRoot, stand: flaskStand, lease: null, loading: false, disposed: false };
+  const flask: Prop = { root: flaskRoot, stand: flaskStand, lease: null, motion: null, mixer: null, loading: false, disposed: false };
+  // Ground auras (outside the stand-ins, so a model keeps them): gold toward the next chest, violet with the 微光 level.
+  const auraGeometry = own(new CircleGeometry(AURA_RADIUS, 32).rotateX(-Math.PI / 2));
+  const flaskAuraMaterial = own(new MeshStandardMaterial({ color: SHIMMER, emissive: SHIMMER, emissiveIntensity: 0, transparent: true, opacity: 0, depthWrite: false }));
+  const chestAuraMaterial = own(new MeshStandardMaterial({ color: GOLD, emissive: GOLD, emissiveIntensity: 0, transparent: true, opacity: 0, depthWrite: false }));
+  const chestAura = new Mesh(auraGeometry, chestAuraMaterial), flaskAura = new Mesh(auraGeometry, flaskAuraMaterial);
+  chestAura.position.y = flaskAura.position.y = 0.4;
+  chestRoot.add(chestAura); flaskRoot.add(flaskAura);
 
   /** Swaps a stand-in for its manifest model once (scaled to the stand-in's height); the stand-in stays on any failure. */
   const tryModel = (prop: Prop, id: string, height: number) => {
@@ -111,7 +125,10 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     void ctx.loadModel(id).then(lease => {
       if (prop.disposed || lease.placeholder) { lease.release(); return; }
       prop.lease = lease; prop.stand.visible = false;
-      prop.root.add(fitHeight(lease.scene, height));
+      // A wrapper takes the procedural motion, so the fitted model keeps its own scale and foot offset.
+      prop.motion = new Group(); prop.motion.add(fitHeight(lease.scene, height)); prop.root.add(prop.motion);
+      const idle = lease.animations.find(clip => /idle/i.test(clip.name)) ?? lease.animations[0];
+      if (idle) { prop.mixer = new AnimationMixer(lease.scene); prop.mixer.clipAction(idle).play(); }
     }).catch(() => { /* keeps the stand-in */ });
   };
 
@@ -167,7 +184,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     const conquest = next?.conquest, shimmer = next?.shimmer;
     chestRoot.visible = !!conquest;
     if (conquest) {
-      tryModel(chest, CHEST_MODEL, CHEST.height + CHEST.lid);
+      tryModel(chest, CHEST_MODEL, CHEST_MODEL_HEIGHT);
       done = conquest.next === null;
       glow = done ? 0 : Math.min(1, Math.max(0, (conquest.stacks - conquest.from) / Math.max(1, conquest.next! - conquest.from)));
       if (seeded && conquest.opened > (last?.conquest?.opened ?? conquest.opened)) {
@@ -200,11 +217,24 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       const breath = glow > 0.75 ? 0.15 * Math.sin(clock * 4) : 0, shine = openHold > 0 ? 1 : glow * 0.85 + breath;
       glowMaterial.opacity = Math.max(0, Math.min(1, shine)); glowMaterial.emissiveIntensity = 1.6 * Math.max(0, shine);
       metal.emissiveIntensity = 0.15 + 0.6 * Math.max(0, shine);
+      chestAuraMaterial.opacity = 0.55 * Math.max(0, Math.min(1, shine)); chestAuraMaterial.emissiveIntensity = Math.max(0, shine);
+      chest.mixer?.update(seconds);
+      if (chest.motion) {
+        // No opening clip on the model: it rises and sways while the open effect plays, then settles.
+        const t = openHold > 0 ? 1 - openHold / OPEN_HOLD_SECONDS : 1, live = openHold > 0 ? 1 : 0;
+        chest.motion.position.y = live * Math.sin(Math.PI * t) * RISE;
+        chest.motion.rotation.z = live * Math.sin(t * Math.PI * 6) * SWAY * (1 - t);
+      }
     }
     if (flaskRoot.visible) {
       fill += (fillTarget - fill) * Math.min(1, seconds * FILL_RATE);
       level.scale.y = Math.max(0.001, fill * (LIQUID_TOP - LIQUID_BOTTOM));
       liquid.emissiveIntensity = offer ? 0.9 + 0.4 * Math.sin(clock * 6) : 0.5;
+      flaskAuraMaterial.opacity = Math.min(0.8, fill * 0.55 + (offer ? 0.2 + 0.1 * Math.sin(clock * 6) : 0));
+      flaskAuraMaterial.emissiveIntensity = 0.4 + fill;
+      flask.mixer?.update(seconds);
+      // A model has no liquid to bubble: it bobs while a black market waits.
+      if (flask.motion) flask.motion.position.y = offer ? Math.abs(Math.sin(clock * 3)) * 3 : 0;
       const surface = LIQUID_BOTTOM + fill * (LIQUID_TOP - LIQUID_BOTTOM);
       for (const bubble of bubbles) {
         bubble.mesh.visible = offer && fill > 0.05;
@@ -225,11 +255,14 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     }
   };
 
-  const dropProp = (prop: Prop) => { prop.disposed = true; prop.lease?.release(); prop.lease = null; prop.root.removeFromParent(); };
+  const dropProp = (prop: Prop) => {
+    prop.disposed = true; prop.mixer?.stopAllAction(); prop.mixer = null;
+    prop.lease?.release(); prop.lease = null; prop.root.removeFromParent();
+  };
   return {
     layout, frame: onFrame, update,
     debug: () => ({
-      chest: { shown: chestRoot.visible, glow, lid: lidAngle, opening: openHold > 0, model: !!chest.lease },
+      chest: { shown: chestRoot.visible, glow, lid: lidAngle, opening: openHold > 0, model: !!chest.lease, rise: chest.motion?.position.y ?? 0 },
       flask: { shown: flaskRoot.visible, fill, target: fillTarget, offer, model: !!flask.lease },
       bursts: bursts.size,
     }),

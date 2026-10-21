@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { Group, PerspectiveCamera, Scene } from 'three';
-import { createTraitProps, CHEST_OPEN_EFFECT, FLASK_TAKE_EFFECT, type TraitPropsContext } from '../src/rendering/three-mode/trait-props';
+import { AnimationClip, BoxGeometry, Group, Mesh, NumberKeyframeTrack, PerspectiveCamera, Scene } from 'three';
+import { createTraitProps, CHEST_MODEL, CHEST_OPEN_EFFECT, FLASK_TAKE_EFFECT, type TraitPropsContext } from '../src/rendering/three-mode/trait-props';
 import type { BoardFrame, BoardMechanics } from '../src/rendering/board-feed';
-import type { ParticleEffect } from '../src/rendering3d';
+import type { ModelLease, ParticleEffect } from '../src/rendering3d';
 
 /** Synthetic counters only (no asset files, no source thresholds): the props read whatever the feed carries. */
 const frame = (mechanics?: BoardMechanics): BoardFrame => ({
@@ -80,5 +80,45 @@ describe('3D trait props: Conqueror chest and Shimmer flask', () => {
     props.dispose();
     expect(scene.getObjectByName('render3d-conqueror-chest')).toBeUndefined();
     expect(scene.getObjectByName('render3d-shimmer-flask')).toBeUndefined();
+  });
+});
+
+describe('3D trait props with extracted models (idle only, no opening clip)', () => {
+  const lease = (clips: AnimationClip[]) => {
+    const scene = new Group(); scene.add(new Mesh(new BoxGeometry(10, 40, 10)));
+    let released = 0;
+    return { lease: { scene, animations: clips, placeholder: false, animationNames: {}, release() { released++; } } as unknown as ModelLease, released: () => released };
+  };
+
+  it('opens a banner model with the open effect and a rise, never a lid, and settles without errors', async () => {
+    const idle = new AnimationClip('Idle', 1, [new NumberKeyframeTrack('.position[y]', [0, 1], [0, 1])]);
+    const chest = lease([idle]), flask = lease([]);
+    const loaded: string[] = [];
+    const loadModel = (id: string) => Promise.resolve(id === CHEST_MODEL ? chest.lease : flask.lease);
+    const loadEffect = (id: string) => { loaded.push(id); return Promise.resolve({ object: new Group(), finished: false, update() {}, dispose() {} } as unknown as ParticleEffect); };
+    const { props, step } = setup({ loadModel, loadEffect });
+    props.frame(frame({ conquest: conquest(5, 1), shimmer: shimmer(40, 100) }));
+    await flush();
+    expect(props.debug().chest.model).toBe(true);
+    expect(props.debug().flask.model).toBe(true);
+    step(1);
+    props.frame(frame({ conquest: conquest(12, 2, 10, 20), shimmer: shimmer(100, 200, true) }));
+    await flush();
+    expect(loaded).toContain(CHEST_OPEN_EFFECT);
+    step(0.8);
+    expect(props.debug().chest.rise).toBeGreaterThan(1);
+    step(3);
+    expect(props.debug().chest.rise).toBe(0);
+    expect(props.debug().chest.opening).toBe(false);
+    props.dispose();
+    expect(chest.released()).toBe(1);
+    expect(flask.released()).toBe(1);
+  });
+
+  it('keeps the stand-in when the manifest has no model', async () => {
+    const { props } = setup({ loadModel: () => Promise.reject(new Error('unknown-model')) });
+    props.frame(frame({ conquest: conquest(5, 1) }));
+    await flush();
+    expect(props.debug().chest.model).toBe(false);
   });
 });
