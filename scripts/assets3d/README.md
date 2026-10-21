@@ -1,3 +1,11 @@
+# 本地配置
+
+真实素材路径、动画原名及证据摘录仅放在被 Git 忽略的 `assets3d-local/` 内。默认映射为 `assets3d-local/unit-map.local.json`，也可用环境变量 `ASSETS3D_UNIT_MAP` 指定私有 JSON（相对路径以工作目录为准；默认路径相对仓库）。缺失或 JSON/schema 不合法会明确报错；不会退回示例。
+
+`unit-map.example.json` 只含虚构资源，供格式说明和离线测试使用，不能代替真实构建配置。每个单位包含 sourceName、base、mesh、skeleton、textures、animations、effectPatterns 和 animationFiles；`$animationRules` 为公共选择规则。迁移前已有配置已逐字节导出；新工作区须从私有备份恢复映射和所需缓存，无需联网。
+
+真实动画图附录、Cast 选择报告及源证据也仅写本地。具体迁出/保留清单见 [迁移记录](../../docs/ASSET_PATH_MIGRATION.md)。
+
 # D7 素材管线
 
 `fx-batch.mjs` / `fx-trial.mjs` 重建时通过 `refreshMeshes` 校验缓存记录的大小和 SHA-256，并重新转换此前因 `unsupported-scb-vertex-colors` 跳过的 SCB/SCO 顶点色网格；缺记录或校验不符即报错。
@@ -6,7 +14,7 @@
 当前包括**第 2 步：Jinx/Vi 原始资源离线转换**和**第 3 步（a）：定向下载器与 60 单位批量构建代码**，后者用法和前置条件见文末。
 第一阶段的整理、核验和盘点工具保留可用，历史说明见下方。
 
-本目录只放代码。输入、输出、manifest、截图与真实素材全部放在被 Git 忽略的
+本目录只放代码和合成示例。输入、输出、manifest、截图与真实素材全部放在被 Git 忽略的
 `assets3d-local/` 下，不提交素材或生成产物。禁止把真实样本加进测试夹具。
 
 ## 当前：粒子 v2 第 2 段
@@ -130,7 +138,7 @@ node scripts/assets3d/prepare-existing.mjs --source assets3d-local/3d-trial --ou
 输入根目录 `assets3d-local/3d-trial/` 内采用 2026-10-18 试验的目录结构：
 
 - `.local/extraction.json`：14.24.6442327 提取记录。
-- `.local/extracted/assets/characters/tft13_jinx/`、`tft13_vi/`：对应记录中的原始文件。
+- `.local/extracted/<源目录>/`：对应本地提取记录中的原始文件。
 - `public/assets/{jinx,vi}/rigged.glb`、`diffuse.png`：旧试验已生成的 GLB 和 PNG。
 
 先逐个核对指定英雄原始文件的大小和 SHA256，再检查现代 SKL、SKN v4 和动画格式。
@@ -253,7 +261,7 @@ node scripts/assets3d/build-all.mjs --units all --cost 3,4,5 --out assets3d-loca
 **构建前置条件和目前覆盖范围：**
 
 - 缓存下载不会自动生成 `source/extracted/` 和 `source/extraction.json`；下载后须执行下述第 3 步（c）解包器。批量构建直接使用它生成/合并的原始资源及 SHA-256 提取记录，无须改接口。缺少这些输入会逐单位报告失败，不能据此声称已完成真实 60 英雄构建。
-- `unit-map.json` 仅有名字、路径及绑定规则，无素材。资源名、模型/骨架路径和动作文件目录均从已有 fetch-plan 的实际 `entries.path` 推导；特殊代号沿用已有对应关系。60/60 单位资源映射成功，missing 列表为空。Corki 的 mesh/skeleton 分别是 `tft13_corkifixedskin` / `tft13_corkifixedskeleton`，Illaoi 的 mesh 使用 `_13` 后缀；不套用臆测的文件名。找不到配置或显式 missing 的单位进入报告的 mapping.missing，不调用构建器。
+- `assets3d-local/unit-map.local.json` 仅有名字、路径及绑定规则，无素材。资源名、模型/骨架路径和动作文件目录均从已有 fetch-plan 的实际 `entries.path` 推导；特殊代号沿用已有对应关系。60/60 单位资源映射成功，missing 列表为空。特殊资源名以本地映射为准；不根据领域单位 ID 猜测文件名。
 - 其余 58 单位的材质与运行时动作绑定尚无确认依据，配置保持空，不凭文件名猜测材质或把任意 spell 绑定成 cast。原始动作目录已列出，batch 模式尝试按原名转换全部列出的 ANM；未确认的动作按 idle/move/attack/cast/hit/death 六项报告缺失。严格模型转换仍拒绝 `missing-material-texture:<材质>`，需要后续源材料信息补齐绑定；仅下载缓存不会消除这类失败。
 - Jinx/Vi 保留第 2 步确认的贴图和动作绑定。普通 `build.mjs` 的双单位入口保留独立参考对照和离线 fetch-plan 行为；batch 模式不为每个单位重复生成 fetch-plan，没有独立参考 GLB 时明确报告 unavailable，结构检查仍执行。有参考时照常比较。缺少源 JSON 的单位明确报告粒子不可用，不伪造效果或动作语义。
 
@@ -358,7 +366,7 @@ initialSubmeshToHide 对应 primitive 不输出，隐藏部件贴图不构成构
 
 ### 动作和报告
 
-unit-map.json 包含保留键 `$animationRules`，其余键是 60 个领域单位。animationClips(documents) 从 mClipDataMap 读取 clip key hash、类 hash、mFlags 和 mAnimationResourceData.mAnimationFilePath。selectAnimations(clips, rules, explicit) 返回 mapped/files/decisions；显式单位覆盖优先，随后按公共图别名、文件名 token 优先级匹配。同优先级若有多个不同文件则省略，不把序列或 selector 当作 AtomicClipData。原 jinx/vi 五段选择保留；新增 Draven 的显式 cast 覆盖及 animationNotes 依据，不在代码中分支判断英雄。
+unit-map.local.json 包含保留键 `$animationRules`，其余键是 60 个领域单位。animationClips(documents) 从 mClipDataMap 读取 clip key hash、类 hash、mFlags 和 mAnimationResourceData.mAnimationFilePath。selectAnimations(clips, rules, explicit) 返回 mapped/files/decisions；显式单位覆盖优先，随后按公共图别名、文件名 token 优先级匹配。同优先级若有多个不同文件则省略，不把序列或 selector 当作 AtomicClipData。原 jinx/vi 五段选择保留；新增 Draven 的显式 cast 覆盖及 animationNotes 依据，不在代码中分支判断英雄。
 
 批量和单体导出相同的选定动作集，manifest 与 GLB 一致。汇总报告 animations.missing/actionDecisions 解释缺项；每单位还保留 graphClips、bindings、step2Mapping、normalRepair、omittedUnboundTracks、bindPoseLocatorHashes。cast/hit 缺项不冒充其他动作，也不构成结构转换失败。粒子沿用现有转换实现，本轮不改粒子语义。
 

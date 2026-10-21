@@ -95,9 +95,10 @@ export function ad(unit: S13Unit, raw=false): number {
   if(unit.definitionId==='viktor'&&!raw)return ({1:100,2:180,3:360} as const)[unit.starLevel];
   const result = resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
     [constantModifier('attackDamage', (unit.attackDamagePercentBps ?? 0)+p2Bonus(unit,'attackDamageBps'), 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
-  return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0)+(unit.anomalyState?.consumed?.attackDamage??0)+p2Bonus(unit,'attackDamageFlat');
+  return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0)+(unit.anomalyState?.consumed?.attackDamage??0)+p2Bonus(unit,'attackDamageFlat')+(unit.v20Traits?.mentorshipGranted??0);
 }
-export function range(unit: S13Unit): number {
+export function range(unit: S13Unit, firelightWindow = true): number {
+  if(firelightWindow&&(unit.v20Traits?.dashUntilTick??0)>(unit.mechanismState?.sampledAtTick??0))return 100;
   const resolved = resolveStat('range', champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? 100 : unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus + (champion(unit) === 'ambessa' && (unit.runtime.castCount === 0 || unit.runtime.castCount % 2 === 1) || champion(unit) === 'mordekaiser' && (unit.g22?.mordeUntilTick ?? 0) > (unit.mechanismState?.sampledAtTick ?? 0) ? 1 : 0), 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   return resolved * (unit.mechanics?.some(m=>m.mechanic==='g24Fishbones') ? 2 : 1);
 }

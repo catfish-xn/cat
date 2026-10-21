@@ -95,16 +95,9 @@ it('later gift triple revisits a previously blocked gift in the same drain',()=>
 });
 
 it('public Crown + Trifecta acquisition serializes and restores both entrances with historical shields',()=>{
-  // Catalog growth changes offers, so find a genuine two-node public route.
-  let seed=0,attempt=0;
-  for(;attempt<10000;attempt++){
-    seed=Math.imul(attempt,0x9e3779b1)>>>0;
-    const owned=[{definitionId:'crown-guarded',choiceId:'round:2-1:augment',acquiredRound:4}];
-    const first=generateChoices(augmentCandidates(deriveAugmentTier(seed,'round:2-1:augment'),[]),(seed^0x9e3779b9)>>>0);
-    if(first.offers.includes('crown-guarded')&&generateChoices(augmentCandidates(deriveAugmentTier(seed,'round:3-2:augment'),owned),first.choiceRngState).offers.includes('trifecta-ii')
-      &&p2GiftPlan({seed,augments:[{definitionId:'trifecta-ii',choiceId:'round:3-2:augment',acquiredRound:12}]})[0].definitionId==='kogmaw')break;
-  }
-  expect(attempt).toBeLessThan(10000);
+  // v20-traits adds five gold cards. Deterministic search found this unchanged
+  // Crown -> Trifecta -> Kog'Maw scenario at attempt 16003, beyond the old 10000 budget.
+  const seed=1708925843;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){

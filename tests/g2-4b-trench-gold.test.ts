@@ -5,14 +5,16 @@ import {readG23Progress} from '../src/simulation/g2-3-state';
 import type {CombatEvent} from '../src/simulation/combat-types';
 import {expect,it} from 'vitest';
 import {reachRound,accepted} from './match-helpers';
-import {deployMatchUnit,equipItem,startMatchCombat,stepMatch} from '../src/simulation/match';
+import {deployMatchUnit,equipItem,startMatchCombat,stepMatch,selectChoice} from '../src/simulation/match';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 const items=['TFT_Item_Artifact_SuspiciousTrenchCoat','TFT7_Item_ShimmerscaleGamblersBlade','TFT4_Item_OrnnTheCollector'];
 function prepare(seed:number){
- let state=reachRound('2-1',true,seed);
+ let state=reachRound('2-1',false,seed);
+ const choice=state.pendingChoice!;expect(choice.offers).toContain('manaflow-i');
+ state=accepted(selectChoice(state,choice.choiceId,choice.generation,'manaflow-i'));
  const owner=state.preparation.units.find(u=>u.team==='player')!;
  state=accepted(deployMatchUnit(state,owner.id,{kind:'board',cell:{col:3,row:4}}));
  for(const [slot,definitionId] of items.entries()){
@@ -23,10 +25,10 @@ function prepare(seed:number){
 }
 
 it('real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts',()=>{
- // v15 seed 1 is a real public-command route: the original Irelia and copies all
- // attack, with positive Gambler payouts on both sides of the split and an
- // actual successful Collector execution by a copy. No combat state is edited.
- const {state,ownerId}=prepare(1);
+ // v20 seed 307 selects inert front-row Manaflow I: the original Darius and copies all
+ // attack, with positive Gambler payouts on both sides of the split and
+ // two successful Collector executions by copies. No combat state is edited.
+ const {state,ownerId}=prepare(307);
  const equippedItems=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===ownerId);
  const gamblerId=equippedItems.find(i=>i.definitionId===items[1])!.id;
  const collectorId=equippedItems.find(i=>i.definitionId===items[2])!.id;
@@ -62,7 +64,7 @@ it('real Trench copies inherit the same gold items but earn independent owner-sc
  const originalWins=receipts.filter(r=>r.ownerId===ownerId&&r.kind==='gamblers-blade'&&r.gold===1);
  const copyWins=receipts.filter(r=>split.copyIds.includes(r.ownerId)&&r.kind==='gamblers-blade'&&r.gold===1);
  const executions=receipts.filter(r=>split.copyIds.includes(r.ownerId)&&r.kind==='collector'&&r.gold===1);
- expect(originalWins).toHaveLength(1);expect(copyWins).toHaveLength(1);expect(executions).toHaveLength(2);
+ expect(originalWins).toHaveLength(2);expect(copyWins).toHaveLength(1);expect(executions).toHaveLength(2);
  expect(originalWins.every(r=>r.tick<=split.tick)).toBe(true);
  expect(copyWins.concat(executions).every(r=>r.tick>split.tick)).toBe(true);
  expect(executions.every(r=>r.itemInstanceId===collectorId)).toBe(true);
@@ -76,7 +78,7 @@ it('real Trench copies inherit the same gold items but earn independent owner-sc
  }
  expect(current.combat!.itemRandomStreams).toEqual(streams);
  const positive=receipts.filter(r=>r.gold===1),payouts=current.seatMechanics!.receipts.filter(r=>r.source==='g24-item-gold');
- expect(positive).toHaveLength(4);expect(payouts).toHaveLength(4);
+ expect(positive).toHaveLength(5);expect(payouts).toHaveLength(5);
  const fact=readG23Progress(current)!.economyReceipts.find(r=>r.kind==='battle'&&r.facts.battleId===current.combat!.combatId)!;
  expect(fact.kind).toBe('battle');if(fact.kind!=='battle')throw Error('Missing battle settlement');
  expect(fact.facts.itemGoldPayouts!.map(p=>p.receiptId)).toEqual(positive.map(r=>r.id));
@@ -87,5 +89,5 @@ it('real Trench copies inherit the same gold items but earn independent owner-sc
  const facts=g23SoloFacts(current,current.combat!);
  expect(commitG23Settlement(current,facts)).toBe(current);
  expect(commitG23Settlement(restored,facts)).toEqual(current);
- expect(current.seatMechanics!.receipts.filter(r=>r.source==='g24-item-gold')).toHaveLength(4);
+ expect(current.seatMechanics!.receipts.filter(r=>r.source==='g24-item-gold')).toHaveLength(5);
 });

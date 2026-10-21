@@ -3,12 +3,13 @@ import {reachRound,accepted,emptyBoard,resolveM5Choices} from './match-helpers';
 import {selectChoice,equipItem,useConsumable,startMatchCombat,nextRound} from '../src/simulation/match';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {augmentForgeOffers,grantAugmentAcquisition} from '../src/simulation/augment-acquisition';
+// Fixed public first-node seeds under the v20 same-tier pool. Portable Forge
+// first appears at 236, outside the previous 200-seed combat replay search.
+const acquisitionSeeds:Record<string,number>={'blinding-speed':3,'portable-forge':236,'radiant-relics':10};
 function select(id:string){
- for(let seed=0;seed<200;seed++){
-  const s=reachRound('2-1',false,seed),c=s.pendingChoice!;
-  if(c.offers.includes(id))return accepted(selectChoice(s,c.choiceId,c.generation,id));
- }
- throw Error('No seed');
+ const s=reachRound('2-1',false,acquisitionSeeds[id]),c=s.pendingChoice!;
+ expect(c.offers).toContain(id);
+ return accepted(selectChoice(s,c.choiceId,c.generation,id));
 }
 it('Blinding Speed grants exactly red buff, rageblade, bow and removable-tool once, all restorable',()=>{
  let state=select('blinding-speed');

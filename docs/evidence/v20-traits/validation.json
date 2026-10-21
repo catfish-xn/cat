@@ -1,0 +1,78 @@
+{
+  "baseCommit": "14006984600a08f8dd96fa776bf9ba1d1048ff24",
+  "reviewFixes": {
+    "pr": 379,
+    "requestedHead": "f156c020",
+    "revision": "v20-traits-review-fixes-1"
+  },
+  "identity": {
+    "contentDigest": "fnv1a32-utf16:8bbf3521",
+    "lootReplayDigest": "fnv1a32-utf16:77e577f1",
+    "rulesManifestDigest": "fnv1a32-utf16:c21e5955"
+  },
+  "newSyntheticTests": 20,
+  "totalV20SyntheticTests": 55,
+  "relatedTests": {
+    "files": [
+      "g2-1-skills.test.ts",
+      "g2-2-traits.test.ts",
+      "g2-3-anomalies.test.ts",
+      "g2-3-followup.test.ts",
+      "g2-3-integration.test.ts",
+      "g2-3-traits.test.ts",
+      "s13-augments-p2-combat.test.ts",
+      "trait-runtime-g23.test.ts",
+      "v19-mechanics.test.ts",
+      "v19-part2.test.ts",
+      "v20-traits.test.ts"
+    ],
+    "passed": 287,
+    "failed": 0
+  },
+  "fixtureRegression": {
+    "files": [
+      "c19-missed-pulse.test.ts",
+      "opening-random-identity.test.ts",
+      "m5-route.test.ts"
+    ],
+    "passed": 164,
+    "failed": 0
+  },
+  "totalUniqueTestsPassed": 451,
+  "testRunner": {
+    "command": "npm.cmd test -- <files> --configLoader runner --no-file-parallelism",
+    "configLoaderReason": "The sandbox denies esbuild ancestor-directory access when bundling vitest.config.ts; the Vite runner loads the unchanged project configuration.",
+    "timeoutChanged": false
+  },
+  "typecheck": {
+    "command": "npm.cmd run typecheck",
+    "exitCode": 0
+  },
+  "epoch": {
+    "command": "node scripts/verify-v20-traits-epoch.cjs",
+    "recordingRuns": 1,
+    "steps": 12,
+    "allPassed": true
+  },
+  "historicalBytes": {
+    "epoch": "v20-traits",
+    "baseCommit": "14006984600a08f8dd96fa776bf9ba1d1048ff24",
+    "historicalV15ThroughV19Files": 157,
+    "byteIdentical": true,
+    "commitComparison": "git-show-LF-blobs",
+    "historicalAssertionsByteIdentical": true,
+    "protectedManifestByteIdentical": true
+  },
+  "protectedManifest": {
+    "path": "tests/fixtures/g2-4b-herald-raw/manifest.json",
+    "sha256": "b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22"
+  },
+  "syntheticTestSha256": "e1db4b9b38027a7ead173ce7772a5f7397ce74b7f8637690cd0a815bc0f28ddc",
+  "scope": {
+    "network": false,
+    "gitWrites": false,
+    "presentationWrites": false,
+    "renderingWrites": false,
+    "scriptWrites": false
+  }
+}

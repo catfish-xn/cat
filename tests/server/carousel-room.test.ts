@@ -471,7 +471,11 @@ describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a lat
   });
 
   it('no carousel participant is eliminated while its carousel is open, and every closed carousel leaves no reservation', () => {
-    expect(opened).toEqual(['2-4', '3-4', '4-4', '5-4', '6-4']);
+    // The expanded augment pool can end the match before 6-4. Verify every
+    // scheduled carousel reached by this match, without fixing its survival length.
+    const scheduled = ['2-4', '3-4', '4-4', '5-4', '6-4'];
+    expect(opened.length).toBeGreaterThanOrEqual(2);
+    expect(opened).toEqual(scheduled.filter(round => round <= room.state.roundId));
     expect(overlaps).toEqual([]);
     expect(reservationsAfterClose).toEqual(opened.map(() => 0));
     // Not vacuous: seats did die over the match, every one of them at a settlement after some carousel.

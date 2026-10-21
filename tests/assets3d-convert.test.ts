@@ -11,6 +11,7 @@ import { contracts, unitDefinitions } from '../scripts/assets3d/runtime.mjs';
 import { argumentsFor, summarizeRanges } from '../scripts/assets3d/plan-fetch.mjs';
 // @ts-expect-error Pure Node build utility.
 import { chunksForRange, readRman } from '../scripts/assets3d/rman.mjs';
+const syntheticMap = { jinx: { mesh: 'demo.skn' } };
 const constant = (constantValue: unknown) => ({ constantValue });
 const sprite = () => ({ __type: 'VfxEmitterDefinitionData', isSingleParticle: true, particleLifetime: constant(2), texture: 'ASSETS/spark.tex', birthVelocity: constant([1, 2, 3]), color: constant([0.25, 0.5, 1, 0.75]) });
 const source = (emitters: unknown[]) => ({ system: { __type: 'VfxSystemDefinitionData', complexEmitterDefinitionData: emitters } });
@@ -153,8 +154,8 @@ describe('strict particle conversion and public contract integration', () => {
         expect(() => argumentsFor(['--url', 'x'], ['--source'])).toThrow('invalid-argument');
         expect(() => argumentsFor(['--source', 'a', '--source', 'b'], ['--source'])).toThrow('duplicate-argument');
         expect(() => argumentsFor(['--source'], ['--source'])).toThrow('invalid-argument');
-        await expect(build({ units: 'jinx,jinx', out: 'assets3d-local/test-no-write' })).rejects.toThrow('unsupported-build-units');
-        await expect(build({ units: 'gangplank-ranged', out: 'assets3d-local/test-no-write' })).rejects.toThrow('unsupported-build-units');
+        await expect(build({ units: 'jinx,jinx', map: syntheticMap, out: 'assets3d-local/test-no-write' })).rejects.toThrow('unsupported-build-units');
+        await expect(build({ units: 'gangplank-ranged', map: syntheticMap, out: 'assets3d-local/test-no-write' })).rejects.toThrow('unsupported-build-units');
         await expect(build({ out: '../bad' })).rejects.toThrow('unsafe-output-path');
     });
     it('deduplicates download chunks across adjacent entry ranges and honors exact end boundaries', () => {

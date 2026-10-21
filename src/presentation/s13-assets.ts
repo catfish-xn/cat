@@ -12,16 +12,47 @@ import { neutralPortrait, neutralPortraitAssets, neutralPortraitPath } from './s
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const index = new Map<string, S13Asset>(S13_ASSETS.map(asset => [`${asset.kind}:${asset.id}`, asset]));
 
+/**
+ * Portraits and trait icons the 3D asset root carries beside its models (`<root>/ui-assets.json`, v19 six-costs), by
+ * `kind:id` → absolute URL. Read once when a root is configured; anything it lacks keeps the bundled file or the fallback.
+ */
+const rootAssets = new Map<string, string>();
+let rootManifest: Promise<void> | null = null;
+export function loadRootUiAssets(base: string | null, fetcher: typeof fetch = (...args) => fetch(...args)): Promise<void> {
+  if (!base) return Promise.resolve();
+  // Optional: a request or body that hangs is aborted after 3 s (and given up on even if the fetcher ignores the signal),
+  // so the bundled portraits still load.
+  return rootManifest ??= new Promise<void>(resolve => {
+    const abort = new AbortController(), timer = setTimeout(() => { abort.abort(); resolve(); }, 3000);
+    fetcher(new URL('ui-assets.json', base).href, { signal: abort.signal }).then(response => response.ok ? response.json() : null)
+      .then(manifest => { if (!abort.signal.aborted) registerRootUiAssets(base, manifest); }, () => undefined)
+      .finally(() => { clearTimeout(timer); resolve(); });
+  });
+}
+/** Registers the manifest's champion/trait entries whose path stays inside the root; anything else is ignored. */
+export function registerRootUiAssets(base: string, manifest: unknown): void {
+  const assets = (manifest as { assets?: unknown } | null)?.assets;
+  if (!Array.isArray(assets)) return;
+  for (const entry of assets as { kind?: unknown; id?: unknown; path?: unknown }[]) {
+    if ((entry?.kind !== 'champion' && entry?.kind !== 'trait') || typeof entry.id !== 'string' || typeof entry.path !== 'string'
+      || !/^[\w-]+(\/[\w.-]+)*$/.test(entry.path) || entry.path.split('/').includes('..')) continue;
+    rootAssets.set(`${entry.kind}:${entry.id}`, new URL(entry.path, base).href);
+  }
+}
+
 export function s13AssetUrl(kind: S13Asset['kind'], id: string): string | null {
   const asset = index.get(`${kind}:${id}`);
   if (asset) return `${BASE}${asset.path}`;
+  const root = rootAssets.get(`${kind}:${id}`);
+  if (root) return root;
   const neutral = kind === 'champion' ? neutralPortrait(id) : undefined;
   // G2-3 icons live in their own manifest keyed by apiName (s13-g23-manifest.ts); monsters in s13-neutral-assets.ts.
   return neutral ? `${BASE}${neutralPortraitPath(neutral)}` : g23IconUrl(kind, id);
 }
-/** Every bundled portrait by content id: the generated manifest, G2-3 heroes/summons present in content, and neutral monsters. */
-const championAssets = (): readonly { readonly id: string; readonly path: string }[] => [
-  ...S13_ASSETS.filter(asset => asset.kind === 'champion'), ...g23ChampionAssets(), ...neutralPortraitAssets(),
+/** Every portrait by content id: the generated manifest, G2-3 heroes/summons present in content, neutral monsters, then the asset root's. */
+const championAssets = (): readonly { readonly id: string; readonly url: string }[] => [
+  ...[...S13_ASSETS.filter(asset => asset.kind === 'champion'), ...g23ChampionAssets(), ...neutralPortraitAssets()].map(asset => ({ id: asset.id, url: `${BASE}${asset.path}` })),
+  ...[...rootAssets].filter(([key]) => key.startsWith('champion:')).map(([key, url]) => ({ id: key.slice('champion:'.length), url })),
 ];
 export const championTextureKey = (id: string) => `s13-champion-${id}`;
 export const championPortraitKey = (id: string) => `s13-champion-round-${id}`;
@@ -33,7 +64,7 @@ export const championPortraitKey = (id: string) => `s13-champion-round-${id}`;
 export function loadS13Portraits(scene: Phaser.Scene, ready: () => void): void {
   let queued = 0;
   for (const asset of championAssets()) if (!scene.textures.exists(championTextureKey(asset.id))) {
-    scene.load.image(championTextureKey(asset.id), `${BASE}${asset.path}`); queued++;
+    scene.load.image(championTextureKey(asset.id), asset.url); queued++;
   }
   if (!queued) { ready(); return; }
   scene.load.once('complete', () => { if (scene.sys.isActive()) ready(); });
@@ -58,9 +89,9 @@ export function buildPortraitTextures(scene: Phaser.Scene, size = 108): void {
 
 /** DOM portrait chip: official icon when bundled, else the given fallback markup. */
 /**
- * Rules id → 14.24 client character key where the two differ or the portrait is not bundled yet (v19 six-costs; Mel's
- * client name is MissMage). The square portrait is `characters/<key>/hud/<key>_square.tft_set13.png`; until the manifest
- * lists it under the rules id, heroPortraitHtml draws the code emblem in its place.
+ * Rules id → 14.24 client character key where the two differ or the portrait is not bundled (v19 six-costs; Mel's client
+ * name is MissMage). Their portraits come from the asset root's ui-assets.json under the rules id; without one,
+ * heroPortraitHtml draws the code emblem in their place.
  */
 export const CHAMPION_PORTRAIT_KEYS: Readonly<Record<string, string>> = Object.freeze({ warwick: 'tft13_warwick', viktor: 'tft13_viktor', mel: 'tft13_missmage' });
 export function heroPortraitHtml(definitionId: string, size: number, fallback: string): string {

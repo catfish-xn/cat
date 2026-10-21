@@ -102,7 +102,7 @@ describe('3D scouting shop availability', () => {
    * The real OnlineApplication, RemoteSession and BoardScene choose whether any intent reaches send.
    * No private scene fields/methods are accessed, and no server or asset requests are made.
    */
-  async function mountKeyboard() {
+  async function mountKeyboard(assetRoot?: string | null) {
     const { createMatch } = await import('../src/simulation/match');
     const { createCombat } = await import('../src/simulation/combat');
     const { toCombatViewState } = await import('../src/simulation/combat-replay-view');
@@ -119,10 +119,17 @@ describe('3D scouting shop availability', () => {
     const client = { transport: 'websocket', send, watch, listen(next: ClientListeners) { listeners = next; return () => {}; }, dispose() {} } as unknown as GameClient;
     const keyEvents = new EventTarget();
     const stops: (() => void)[] = [];
+    const idleCallbacks: (() => void)[] = [];
+    const portraitPreload = vi.fn();
     vi.stubGlobal('HTMLElement', Node);
     vi.stubGlobal('window', { addEventListener: keyEvents.addEventListener.bind(keyEvents),
-      removeEventListener: keyEvents.removeEventListener.bind(keyEvents), requestIdleCallback() {} });
-    vi.stubGlobal('fetch', vi.fn(() => { throw Error('unexpected network request'); }));
+      removeEventListener: keyEvents.removeEventListener.bind(keyEvents),
+      location: { search: assetRoot ? `?assets3d=${encodeURIComponent(assetRoot)}` : '', href: 'https://page.invalid/synthetic/' },
+      requestIdleCallback(callback: () => void) { idleCallbacks.push(callback); } });
+    vi.stubGlobal('fetch', vi.fn(() => {
+      if (assetRoot === undefined) throw Error('unexpected network request');
+      return new Promise<Response>(() => {}); // Synthetic hung request; never touches the network.
+    }));
 
     // Chainable Phaser drawing doubles. They never decide input availability or issue commands.
     class Drawing {
@@ -148,6 +155,7 @@ describe('3D scouting shop availability', () => {
       input = { on() {}, setDraggable() {}, setDragState() {}, manager: { pointers: [] } };
       events = { once: (_event: string, callback: () => void) => stops.push(callback) };
       scene = { isActive: () => true }; tweens = { killAll() {}, killTweensOf() {} };
+      sys = { isActive: () => true };
     }
     vi.doMock('phaser', () => ({ default: { Scene, Scenes: { Events: { SHUTDOWN: 'shutdown' } } } }));
     vi.doMock('../src/rendering/online/mode', () => ({ isOnlineMode: () => true, createGameClient: () => client }));
@@ -161,7 +169,9 @@ describe('3D scouting shop availability', () => {
     vi.doMock('../src/presentation/help-panel', () => ({ HelpPanel: class { open = false; destroy() {} } }));
     vi.doMock('../src/presentation/s13-assets', async importOriginal => ({
       ...await importOriginal<typeof import('../src/presentation/s13-assets')>(),
-      buildPortraitTextures() {}, loadS13Portraits() {}, s13AssetUrl: () => '', heroPortraitHtml: () => '', s13IconHtml: () => '',
+      buildPortraitTextures() {}, loadS13Portraits: portraitPreload, s13AssetUrl: () => '',
+      heroPortraitHtml: () => '', s13IconHtml: () => '',
+      loadRootUiAssets: assetRoot === undefined ? async () => {} : (await importOriginal<typeof import('../src/presentation/s13-assets')>()).loadRootUiAssets,
     }));
     const drawn = new Set<string>();
     vi.doMock('../src/presentation/unit-view', () => ({ UnitView: class {
@@ -217,8 +227,27 @@ describe('3D scouting shop availability', () => {
         expect(send.mock.calls.filter(([command]) => command.type === type)).toHaveLength(1);
       send.mockClear();
     };
-    return { press, send, watch, session: session!, replayFor, drawn, initial, expectBlocked, expectEnabled };
+    return { press, send, watch, session: session!, replayFor, drawn, initial, expectBlocked, expectEnabled,
+      loadIdlePortraits: () => { for (const callback of idleCallbacks) callback(); }, portraitPreload };
   }
+
+  it.each([null, 'https://ui-assets.invalid/synthetic/root/'])('starts and accepts controls while optional portraits load (root %s)', async assetRoot => {
+    const keyboard = await mountKeyboard(assetRoot);
+    expect(app!.debug().mode).toBe('online-lobby');
+    expect(keyboard.loadIdlePortraits).not.toThrow();
+    await Promise.resolve();
+    if (assetRoot) {
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(vi.mocked(fetch).mock.calls[0][0]).toBe(`${assetRoot}ui-assets.json`);
+      expect(keyboard.portraitPreload).not.toHaveBeenCalled();
+    } else {
+      expect(fetch).not.toHaveBeenCalled();
+      expect(keyboard.portraitPreload).toHaveBeenCalledOnce();
+    }
+    listeners.view(view);
+    expect(app!.debug().mode).toBe('active');
+    keyboard.expectEnabled();
+  }, 20_000);
 
   it('blocks all D/F/W/E intents and preserves gold while scouting, then restores each shortcut once', async () => {
     const { subscribeBoardFeed } = await import('../src/rendering/board-feed');

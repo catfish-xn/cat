@@ -1,5 +1,7 @@
 # Swain 形态准入证据
 
+> 本文为脱敏阅读副本；原始字段表在 `assets3d-local/path-migration-backup/docs/evidence/g2-2/SWAIN.md`。记录 canonical SHA256 指向原始记录，不用于对下表重算。
+
 来源：`src/simulation/content/source/s13-14.24b/raw/en_us.json.gz`。
 
 解压后 SHA256：`c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3`。仅使用 `mutator=TFTSet13` 标准模式。
@@ -13,7 +15,7 @@ JSON pointer: `/setData/1/champions/73`；记录 canonical SHA256: `fd082e4bb8b2
 | 字段（相对 pointer） | 源值 |
 |---|---|
 | `/ability/desc` | "Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> and ascend for @Duration@ seconds. While ascended, heal <scaleHealth>@ModifiedHealPerSecond@&nbsp;(%i:scaleAP%)</scaleHealth> and deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent enemies every second. On takedown, the ascension's duration is extended by @BonusDuration@&nbsp;seconds." |
-| `/ability/icon` | "ASSETS/Characters/TFT13_Swain/HUD/Swain_Melee.TFT_Set13.tex" |
+| `/ability/icon` | 素材引用已迁至本地备份 |
 | `/ability/name` | "Demonic Ascension" |
 | `/ability/variables/0/name` | "Heal" |
 | `/ability/variables/0/value/0` | 0.0 |
@@ -58,10 +60,10 @@ JSON pointer: `/setData/1/champions/73`；记录 canonical SHA256: `fd082e4bb8b2
 | `/apiName` | "TFT13_Swain" |
 | `/characterName` | "TFT13_Swain" |
 | `/cost` | 3 |
-| `/icon` | "ASSETS/Characters/TFT13_Swain/Skins/Base/Images/TFT13_Swain.TFT_Set13.tex" |
+| `/icon` | 素材引用已迁至本地备份 |
 | `/name` | "Swain" |
 | `/role` | "APTank" |
-| `/squareIcon` | "ASSETS/Characters/TFT13_Swain/Skins/Base/Images/TFT13_Swain_Mobile.TFT_Set13.tex" |
+| `/squareIcon` | 素材引用已迁至本地备份 |
 | `/stats/armor` | 0.0 |
 | `/stats/attackSpeed` | 0.5 |
 | `/stats/critChance` | 0.25 |
@@ -72,7 +74,7 @@ JSON pointer: `/setData/1/champions/73`；记录 canonical SHA256: `fd082e4bb8b2
 | `/stats/magicResist` | 缺 |
 | `/stats/mana` | 10.0 |
 | `/stats/range` | 1.0 |
-| `/tileIcon` | "ASSETS/Characters/TFT13_Swain/HUD/TFT13_Swain_Square.TFT_Set13.tex" |
+| `/tileIcon` | 素材引用已迁至本地备份 |
 | `/traits/0` | "Conqueror" |
 | `/traits/1` | "Form Swapper" |
 | `/traits/2` | "Sorcerer" |
@@ -104,7 +106,7 @@ JSON pointer: `/setData/1/champions/74`；记录 canonical SHA256: `b24674963ba8
 | `/stats/magicResist` | 20.0 |
 | `/stats/mana` | 100 |
 | `/stats/range` | 1.0 |
-| `/tileIcon` | "ASSETS/Characters/TFT13_SwainDemonForm/HUD/TFT13_SwainDemonForm_Square.TFT_Set13.tex" |
+| `/tileIcon` | 素材引用已迁至本地备份 |
 | `/traits` | [] |
 
 ## 源中未提供的形态合同

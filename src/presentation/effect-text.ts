@@ -76,8 +76,6 @@ export function describeEffect(effect: Effect): string {
 /** Delayed mechanics must remain visible alongside the executable tier benefits. */
 export function traitTierLimitations(traitId: string, threshold: number): string {
   const notes: string[] = [];
-  if (traitId === 'quickstriker') notes.push('移速与冲刺暂未实装');
-  if (traitId === 'firelight') notes.push('冲刺、无限射程与攻速爆发暂未实装');
   if (traitId === 'family' && threshold >= 5) notes.push('随机劫掠任务：PvP进度按阶段累计；每战最多完成一次，余量结转，奖励法球可部分领取（未验证/魔改执行约定）');
   if (traitId === 'scrap' && threshold >= 6) notes.push(`幸运装备${threshold >= 9 ? '与光明转换' : ''}暂未实装`);
   if (traitId === 'enforcer' && threshold >= 10) notes.push('没收装备暂未实装');

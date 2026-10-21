@@ -10,6 +10,7 @@ import { safeInputPath, safeOutputPath, withinRoot, writeOutputFile } from '../s
 // @ts-expect-error Build-time JavaScript utility.
 import { verifySource } from '../scripts/assets3d/verify-source.mjs';
 
+const sourceMap = { jinx: { base: 'assets/characters/demo_jinx/skins/base' }, vi: { base: 'assets/characters/demo_vi/skins/base' } };
 const cleanup: string[] = [];
 async function temporary(local = false) {
   const base = local ? resolve('assets3d-local') : tmpdir();
@@ -93,30 +94,30 @@ describe('assets3d filesystem boundaries', () => {
     expect(JSON.parse(await readFile(output, 'utf8')).format).toBe('d7-lossless-particle-inventory-v1');
   });
   it('verifies normal source paths and rejects escaping manifest paths without links', async () => {
-    const root = await temporary(), path = 'assets/characters/tft13_jinx/texture.png';
+    const root = await temporary(), path = 'assets/characters/demo_jinx/texture.png';
     const bytes = await record(root, [path]);
-    await mkdir(join(root, '.local/extracted/assets/characters/tft13_jinx'), { recursive: true });
+    await mkdir(join(root, '.local/extracted/assets/characters/demo_jinx'), { recursive: true });
     await writeFile(join(root, '.local/extracted', path), bytes);
-    expect((await verifySource(root, ['jinx'])).units.jinx.files).toBe(1);
+    expect((await verifySource(root, ['jinx'], sourceMap)).units.jinx.files).toBe(1);
     // Even unselected entries must be checked; traversal cannot hide behind hero filtering.
     for (const escape of ['../../../outside', resolve(root, '../outside')]) {
       await record(root, [path, escape]);
-      await expect(verifySource(root, ['jinx'])).rejects.toThrow('unsafe-source-path');
+      await expect(verifySource(root, ['jinx'], sourceMap)).rejects.toThrow('unsafe-source-path');
     }
   });
   it('rejects an extracted source root pointing outside the input root', async () => {
     const root = await temporary(), external = await temporary();
     await record(root, []);
     await linkDirectory(external, join(root, '.local/extracted'));
-    await expect(verifySource(root, [])).rejects.toThrow('unsafe-source-path');
+    await expect(verifySource(root, [], sourceMap)).rejects.toThrow('unsafe-source-path');
   });
   it('checks actual manifest entry paths, including entries for unselected heroes', async () => {
-    const root = await temporary(), external = await temporary(), path = 'assets/characters/tft13_vi/texture.png';
+    const root = await temporary(), external = await temporary(), path = 'assets/characters/demo_vi/texture.png';
     const bytes = await record(root, [path]);
     const parent = join(root, '.local/extracted/assets/characters'); await mkdir(parent, { recursive: true });
     await writeFile(join(external, 'texture.png'), bytes);
-    await linkDirectory(external, join(parent, 'tft13_vi'));
-    await expect(verifySource(root, [])).rejects.toThrow('unsafe-source-path');
+    await linkDirectory(external, join(parent, 'demo_vi'));
+    await expect(verifySource(root, [], sourceMap)).rejects.toThrow('unsafe-source-path');
   });
   it('checks the extraction record file itself before reading it', async context => {
     const root = await temporary(), external = await temporary();
@@ -130,6 +131,6 @@ describe('assets3d filesystem boundaries', () => {
       }
       throw error;
     }
-    await expect(verifySource(root, [])).rejects.toThrow('unsafe-source-path');
+    await expect(verifySource(root, [], sourceMap)).rejects.toThrow('unsafe-source-path');
   });
 });

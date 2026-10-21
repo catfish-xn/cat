@@ -1,5 +1,7 @@
 # M9 S13 英雄与羁绊数据台账
 
+> 素材路径与原始 JSON 摘录仅保存在本地备份；下文保留规则分析与来源定位。参见 [迁移清单](ASSET_PATH_MIGRATION.md)。
+
 状态：**数据整理完成，历史证据缺口保留；未冻结为可运行目录。** 本分支仅新增、修订本文，不修改游戏代码、内容版本、digest、规则、测试、CI或部署。英文身份和描述来自已归档原件；未取得同版本中文原件，不把临时译名当官方名称。
 
 ## 1. 基线、证据与范围
@@ -413,49 +415,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":35,"attackSpeed":0.6,"critChance":0.25,"critMultiplier":1.4,"damage":45,"hp":600,"initialMana":0,"magicResist":35,"mana":0,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Amumu",
-  "name": "Amumu",
-  "cost": 1,
-  "traits": ["Automata","Watcher"],
-  "stats": {
-    "armor": 35.0,
-    "attackSpeed": 0.6000000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 45.0,
-    "hp": 600.0,
-    "initialMana": 0,
-    "magicResist": 35.0,
-    "mana": 0.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> Reduce all incoming damage by <scaleLevel>@FlatDamageReduction@</scaleLevel>. Every second, emit sparks that deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent&nbsp;enemies.",
-    "icon": "ASSETS/Characters/TFT13_Amumu/HUD/Icons2D/Amumu_W.TFT_Set13.tex",
-    "name": "Obsolete Technology",
-    "variables": [
-      {
-        "name": "FlatDamageReduction",
-        "value": [7.0,12.0,15.0,25.0,35.0,10.0,10.0]
-      },
-      {
-        "name": "Damage",
-        "value": [20.0,10.0,15.0,25.0,35.0,0.0,0.0]
-      },
-      {
-        "name": "DamageRefreshDuration",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "FlatDRCooldownPerAttacker",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 1 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -474,61 +434,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":15,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":35,"hp":500,"initialMana":40,"magicResist":15,"mana":120,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Blue",
-  "name": "Powder",
-  "cost": 1,
-  "traits": ["Family","Scrap","Ambusher"],
-  "stats": {
-    "armor": 15.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 35.0,
-    "hp": 500.0,
-    "initialMana": 40.0,
-    "magicResist": 15.0,
-    "mana": 120.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Send a monkey towards the largest group of enemies, causing a 2-hex radius explosion on impact. Enemies hit take <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage, reduced by @FalloffPercent*100@% for each hex they are away from the epicenter. <TFTKeyword>Wound</TFTKeyword> and 1% <TFTKeyword>Burn</TFTKeyword> applied for @IgniteDuration@&nbsp;seconds to all enemies hit.<br><br><rules>Burn: Deal a percent of the target's max Health as true damage every second<br>Wound: Reduce healing received by 33%<br></rules>",
-    "icon": "ASSETS/Characters/TFT13_Blue/HUD/Icons2D/Blue_Spell.TFT_Set13.tex",
-    "name": "Misfit Toy",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,350.0,500.0,700.0,900.0,0.0,0.0]
-      },
-      {
-        "name": "IgniteDuration",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "FalloffPercent",
-        "value": [0.33000001311302185,0.30000001192092896,0.30000001192092896,0.25,0.25,0.33000001311302185,0.33000001311302185]
-      },
-      {
-        "name": "HERODamage",
-        "value": [240.0,350.0,500.0,700.0,900.0,240.0,240.0]
-      },
-      {
-        "name": "HEROFalloffPercent",
-        "value": [0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224]
-      },
-      {
-        "name": "HEROFriendlyFire",
-        "value": [0.6000000238418579,0.6000000238418579,0.6000000238418579,0.6000000238418579,0.6000000238418579,0.6000000238418579,0.6000000238418579]
-      },
-      {
-        "name": "HeroBigFalloffPerc",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 2 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -550,49 +456,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":55,"hp":600,"initialMana":30,"magicResist":40,"mana":70,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Darius",
-  "name": "Darius",
-  "cost": 1,
-  "traits": ["Conqueror","Watcher"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 55.0,
-    "hp": 600.0,
-    "initialMana": 30.0,
-    "magicResist": 40.0,
-    "mana": 70.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Spin, dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to adjacent enemies and healing <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth>. Apply a <physicalDamage>@ModifiedBleedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage bleed to target over @BleedDuration@&nbsp;seconds.",
-    "icon": "ASSETS/Characters/TFT13_Darius/HUD/Darius_Icon_Decimate.TFT_Set13.tex",
-    "name": "Decimate",
-    "variables": [
-      {
-        "name": "BleedDuration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "PercentAttackDamage",
-        "value": [2.4000000953674316,2.4000000953674316,2.4000000953674316,2.4000000953674316,2.4000000953674316,2.4000000953674316,2.4000000953674316]
-      },
-      {
-        "name": "Heal",
-        "value": [0.0,150.0,175.0,200.0,225.0,0.0,0.0]
-      },
-      {
-        "name": "BleedPercentAttackDamage",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 3 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -611,41 +475,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":15,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":55,"hp":500,"initialMana":30,"magicResist":15,"mana":60,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Draven",
-  "name": "Draven",
-  "cost": 1,
-  "traits": ["Conqueror","Pit Fighter"],
-  "stats": {
-    "armor": 15.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 55.0,
-    "hp": 500.0,
-    "initialMana": 30.0,
-    "magicResist": 15.0,
-    "mana": 60.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> If Draven has an empowered axe in hand, his next attack will throw it, dealing a total of <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage. Empowered axes return to Draven after hitting an&nbsp;enemy.<br><br><spellActive>Active:</spellActive> Spin an empowered&nbsp;axe.",
-    "icon": "ASSETS/Characters/TFT13_Draven/HUD/Icons2D/Draven_SpinningAxe.TFT_Set13.tex",
-    "name": "Spinning Axes",
-    "variables": [
-      {
-        "name": "PercentAD",
-        "value": [1.399999976158142,1.399999976158142,1.399999976158142,1.399999976158142,1.399999976158142,1.399999976158142,1.399999976158142]
-      },
-      {
-        "name": "BaseDamage",
-        "value": [20.0,10.0,15.0,25.0,35.0,20.0,20.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 4 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -662,61 +492,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":45,"attackSpeed":0.55,"critChance":0.25,"critMultiplier":1.4,"damage":55,"hp":650,"initialMana":30,"magicResist":45,"mana":90,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Fish",
-  "name": "Steb",
-  "cost": 1,
-  "traits": ["Enforcer","Bruiser"],
-  "stats": {
-    "armor": 45.0,
-    "attackSpeed": 0.550000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 55.0,
-    "hp": 650.0,
-    "initialMana": 30.0,
-    "magicResist": 45.0,
-    "mana": 90.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> On heal, heal the @NumAlliesToShare@ closest allies for <TFTBonus>@PercentAlliedHealShare*100@%</TFTBonus> of the&nbsp;amount.<br><br><spellActive>Active:</spellActive> Heal for <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> and strike target for <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic&nbsp;damage.",
-    "icon": "ASSETS/Characters/TFT13_Fish/HUD/Icons2D/Fish_Spell.TFT_Set13.tex",
-    "name": "Field Medicine",
-    "variables": [
-      {
-        "name": "PercentAlliedHealShare",
-        "value": [0.25,0.25,0.25,0.25,0.25,0.25,0.25]
-      },
-      {
-        "name": "NumAlliesToShare",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "Damage",
-        "value": [0.0,260.0,390.0,585.0,780.0,0.0,0.0]
-      },
-      {
-        "name": "Heal",
-        "value": [0.0,270.0,310.0,360.0,410.0,0.0,0.0]
-      },
-      {
-        "name": "HEROOmnivamp",
-        "value": [0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896]
-      },
-      {
-        "name": "HEROSpellDamageMod",
-        "value": [0.6499999761581421,0.6499999761581421,0.6499999761581421,0.6499999761581421,0.6499999761581421,0.6499999761581421,0.6499999761581421]
-      },
-      {
-        "name": "HEROMaxHits",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 5 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -738,65 +514,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.6,"critChance":0.25,"critMultiplier":1.4,"damage":45,"hp":700,"initialMana":30,"magicResist":40,"mana":70,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Irelia",
-  "name": "Irelia",
-  "cost": 1,
-  "traits": ["Rebel","Sentinel"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.6000000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 45.0,
-    "hp": 700.0,
-    "initialMana": 30.0,
-    "magicResist": 40.0,
-    "mana": 70.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Enter a defensive stance and gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield that rapidly decays over @ShieldDuration@ seconds. When it expires, deal <magicDamage>@ModifiedBaseStrikeDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage + <magicDamage>@PercentShieldDamage*100@%</magicDamage> of the damage absorbed to enemies around and in front of&nbsp;Irelia.",
-    "icon": "ASSETS/Characters/TFT13_Irelia/HUD/Icons2D/IreliaSpell.TFT_Set13.tex",
-    "name": "Defiant Dance",
-    "variables": [
-      {
-        "name": "ShieldDuration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "ShieldHealth",
-        "value": [200.0,400.0,475.0,575.0,675.0,1200.0,1400.0]
-      },
-      {
-        "name": "StrikeBaseDamage",
-        "value": [50.0,70.0,100.0,150.0,200.0,300.0,350.0]
-      },
-      {
-        "name": "PercentShieldDamage",
-        "value": [0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896]
-      },
-      {
-        "name": "HERODashNum",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "HEROBaseDashDamage",
-        "value": [0.0,3.3499999046325684,3.3499999046325684,3.450000047683716,3.450000047683716,0.0,0.0]
-      },
-      {
-        "name": "HEROAttackSpeed",
-        "value": [0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645]
-      },
-      {
-        "name": "HEROSpellAPBase",
-        "value": [0.0,40.0,60.0,90.0,120.0,0.0,0.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 6 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -819,49 +537,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":20,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":30,"hp":500,"initialMana":0,"magicResist":20,"mana":50,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Lux",
-  "name": "Lux",
-  "cost": 1,
-  "traits": ["Academy","Sorcerer"],
-  "stats": {
-    "armor": 20.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 30.0,
-    "hp": 500.0,
-    "initialMana": 0,
-    "magicResist": 20.0,
-    "mana": 50.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Grant <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield to the lowest current Health ally. Lux's next attack deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> bonus magic&nbsp;damage.",
-    "icon": "ASSETS/Characters/TFT13_Lux/HUD/Icons2D/TFT13_LuxPrismaWrap.TFT_Set13.tex",
-    "name": "Prismatic Barrier",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,360.0,540.0,900.0,1260.0,0.0,0.0]
-      },
-      {
-        "name": "Shield",
-        "value": [0.0,160.0,180.0,240.0,300.0,0.0,0.0]
-      },
-      {
-        "name": "ShieldDuration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "DamageReduction",
-        "value": [0.3499999940395355,0.3499999940395355,0.3499999940395355,0.3499999940395355,0.3499999940395355,0.3499999940395355,0.3499999940395355]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 7 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -880,45 +556,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":20,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":30,"hp":500,"initialMana":0,"magicResist":20,"mana":40,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Morgana",
-  "name": "Morgana",
-  "cost": 1,
-  "traits": ["Black Rose","Visionary"],
-  "stats": {
-    "armor": 20.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 30.0,
-    "hp": 500.0,
-    "initialMana": 0,
-    "magicResist": 20.0,
-    "mana": 40.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Curse the nearest non-cursed enemy, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage over @Duration@ seconds and reducing the effectiveness of shields used on them by&nbsp;@ShieldReavePercent*100@%.",
-    "icon": "ASSETS/Characters/TFT13_Morgana/HUD/Icons2D/FallenAngel_Empathize.TFT_Set13.tex",
-    "name": "Tormented Soul",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,525.0,780.0,1300.0,1550.0,200.0,240.0]
-      },
-      {
-        "name": "ShieldReavePercent",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "Duration",
-        "value": [10.0,10.0,10.0,10.0,10.0,10.0,10.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 8 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -936,53 +574,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.8,"critChance":0.25,"critMultiplier":1.4,"damage":46,"hp":650,"initialMana":20,"magicResist":40,"mana":65,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Red",
-  "name": "Violet",
-  "cost": 1,
-  "traits": ["Family","Pit Fighter"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 650.0,
-    "initialMana": 20.0,
-    "magicResist": 40.0,
-    "mana": 65.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Jab target @NumStrikes@ times for <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage each. Then uppercut them, dealing <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%%i:scaleAP%)</physicalDamage> physical damage and briefly knocking them&nbsp;up.",
-    "icon": "ASSETS/Characters/TFT13_Red/HUD/TFT13_Red_Ability.TFT_Set13.tex",
-    "name": "1-2-3 Combo",
-    "variables": [
-      {
-        "name": "PercentAttackDamage",
-        "value": [1.350000023841858,1.350000023841858,1.350000023841858,1.350000023841858,1.350000023841858,1.350000023841858,1.350000023841858]
-      },
-      {
-        "name": "StunDuration",
-        "value": [0.25,0.25,0.25,0.25,0.25,0.25,0.25]
-      },
-      {
-        "name": "APDamage",
-        "value": [0.0,20.0,30.0,45.0,60.0,0.0,0.0]
-      },
-      {
-        "name": "PercentIncreasedAttackDamage",
-        "value": [3.299999952316284,3.299999952316284,3.299999952316284,3.299999952316284,3.299999952316284,3.299999952316284,3.299999952316284]
-      },
-      {
-        "name": "NumStrikes",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 9 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1002,53 +594,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":15,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":500,"initialMana":20,"magicResist":15,"mana":120,"range":6}`。
 
-```json
-{
-  "apiName": "TFT13_Shooter",
-  "name": "Maddie",
-  "cost": 1,
-  "traits": ["Enforcer","Sniper"],
-  "stats": {
-    "armor": 15.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 500.0,
-    "initialMana": 20.0,
-    "magicResist": 15.0,
-    "mana": 120.0,
-    "range": 6.0
-  },
-  "ability": {
-    "desc": "Fire @NumOfShots@ shots towards the farthest enemy that deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to the first enemy they&nbsp;hit.",
-    "icon": "ASSETS/Characters/TFT13_Shooter/HUD/Icons2D/ShooterSpellIcon.TFT_Set13.tex",
-    "name": "Fan the Hammer",
-    "variables": [
-      {
-        "name": "PercentAttackDamage",
-        "value": [1.350000023841858,1.25,1.25,1.399999976158142,1.399999976158142,1.350000023841858,1.350000023841858]
-      },
-      {
-        "name": "APDamage",
-        "value": [0.0,10.0,15.0,25.0,35.0,0.0,0.0]
-      },
-      {
-        "name": "NumOfShots",
-        "value": [6.0,6.0,6.0,6.0,6.0,6.0,6.0]
-      },
-      {
-        "name": "TotalSpellTime",
-        "value": [1.149999976158142,1.149999976158142,1.149999976158142,1.149999976158142,1.149999976158142,1.149999976158142,1.149999976158142]
-      },
-      {
-        "name": "ShotsPerSimulatedLaunchAttack",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 10 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1068,65 +614,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.6,"critChance":0.25,"critMultiplier":1.4,"damage":55,"hp":650,"initialMana":0,"magicResist":40,"mana":50,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Singed",
-  "name": "Singed",
-  "cost": 1,
-  "traits": ["Chem-Baron","Sentinel"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.6000000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 55.0,
-    "hp": 650.0,
-    "initialMana": 0,
-    "magicResist": 40.0,
-    "mana": 50.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Gain <TFTBonus>@ModifiedDurability@&nbsp;(%i:scaleAP%)</TFTBonus>&nbsp;Durability and grant the ally who has dealt the most damage this round <scaleLevel>@AttackSpeed@%</scaleLevel> Attack Speed, decaying over @Duration@&nbsp;seconds. ",
-    "icon": "ASSETS/Characters/TFT13_Singed/HUD/Icons2D/Singed_R.TFT_Set13.tex",
-    "name": "Dangerous Mutations",
-    "variables": [
-      {
-        "name": "AttackSpeed",
-        "value": [1.0,100.0,120.0,160.0,200.0,1.0,1.0]
-      },
-      {
-        "name": "Duration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "DR",
-        "value": [0.5,0.5,0.5,0.6000000238418579,0.699999988079071,0.5,0.5]
-      },
-      {
-        "name": "HEROSpellBaseDamage",
-        "value": [0.0,140.0,210.0,315.0,420.0,0.0,0.0]
-      },
-      {
-        "name": "HEROOmnivamp",
-        "value": [0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224]
-      },
-      {
-        "name": "HERODuration",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "HEROCloudDuration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "HEROMoveSpeed",
-        "value": [250.0,250.0,250.0,250.0,250.0,250.0,250.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 11 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1149,45 +637,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.65,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":650,"initialMana":30,"magicResist":40,"mana":90,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Trundle",
-  "name": "Trundle",
-  "cost": 1,
-  "traits": ["Scrap","Bruiser"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.6499999761581421,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 650.0,
-    "initialMana": 30.0,
-    "magicResist": 40.0,
-    "mana": 90.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> and chomp target for <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage. Both effects are increased by up to @AmountIncreaseMax*100@% based on Trundle's missing&nbsp;Health.",
-    "icon": "ASSETS/Characters/TFT13_Trundle/HUD/Icons2D/Trundle_Q.TFT_Set13.tex",
-    "name": "Desperate Chomp",
-    "variables": [
-      {
-        "name": "PercentAttackDamage",
-        "value": [2.799999952316284,2.799999952316284,2.799999952316284,2.799999952316284,2.799999952316284,2.799999952316284,2.799999952316284]
-      },
-      {
-        "name": "GainHealth",
-        "value": [0.0,200.0,220.0,250.0,270.0,0.0,0.0]
-      },
-      {
-        "name": "AmountIncreaseMax",
-        "value": [0.75,0.75,0.75,0.75,0.75,0.75,0.75]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 12 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1205,45 +655,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":15,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":30,"hp":450,"initialMana":0,"magicResist":15,"mana":60,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Vex",
-  "name": "Vex",
-  "cost": 1,
-  "traits": ["Rebel","Visionary"],
-  "stats": {
-    "armor": 15.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 30.0,
-    "hp": 450.0,
-    "initialMana": 0,
-    "magicResist": 15.0,
-    "mana": 60.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to target and create a one-hex radius zone of darkness around them. After a brief delay, deal <magicDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to enemies still in the&nbsp;zone.",
-    "icon": "ASSETS/Characters/TFT13_Vex/HUD/Icons2D/Icons_TFT13_Vex_Spell.TFT_Set13.tex",
-    "name": "Looming Darkness",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,220.0,330.0,550.0,770.0,0.0,0.0]
-      },
-      {
-        "name": "SecondaryDamage",
-        "value": [0.0,110.0,165.0,275.0,385.0,0.0,0.0]
-      },
-      {
-        "name": "DOTDuration",
-        "value": [0.800000011920929,0.800000011920929,0.800000011920929,0.800000011920929,0.800000011920929,0.800000011920929,0.800000011920929]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 13 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1261,57 +673,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":20,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":30,"hp":500,"initialMana":10,"magicResist":20,"mana":60,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Zyra",
-  "name": "Zyra",
-  "cost": 1,
-  "traits": ["Experiment","Sorcerer"],
-  "stats": {
-    "armor": 20.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 30.0,
-    "hp": 500.0,
-    "initialMana": 10.0,
-    "magicResist": 20.0,
-    "mana": 60.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Send vines towards the current target, Stunning them for @StunDuration@ second and dealing <magicDamage>@ModifiedTargetDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic&nbsp;damage. Then smaller vines seek out the @NumSmallerVines@ nearest enemies and deal <magicDamage>@ModifiedAOEDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to them.<br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus:<TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus> Ability damage bleeds enemies for <trueDamage enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_ZyraCurrentExperimentBonus@%</trueDamage> bonus true damage over @ExperimentDuration@&nbsp;seconds.</spellActive>",
-    "icon": "ASSETS/Characters/TFT13_Zyra/HUD/Icons2D/TFT13_ZyraSpellIcon.TFT_Set13.tex",
-    "name": "Grasping Roots",
-    "variables": [
-      {
-        "name": "TargetDamage",
-        "value": [0.0,260.0,390.0,585.0,780.0,0.0,0.0]
-      },
-      {
-        "name": "StunDuration",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "AOEDamage",
-        "value": [0.0,95.0,140.0,215.0,290.0,0.0,0.0]
-      },
-      {
-        "name": "ExperimentTrueDamage",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "ExperimentDuration",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "NumSmallerVines",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 14 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1332,57 +694,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":45,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":45,"hp":700,"initialMana":0,"magicResist":45,"mana":60,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Akali",
-  "name": "Akali",
-  "cost": 2,
-  "traits": ["Rebel","Quickstriker"],
-  "stats": {
-    "armor": 45.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 45.0,
-    "hp": 700.0,
-    "initialMana": 0,
-    "magicResist": 45.0,
-    "mana": 60.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Throw a shuriken at target, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage and marking them to take <TFTBonus>@TargetDamageAmp*100@%</TFTBonus> more damage for @Duration@ seconds. Then dash away from target. After a brief delay, dash towards them and deal <magicDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic&nbsp;damage.",
-    "icon": "ASSETS/Characters/TFT13_Akali/HUD/Icons2D/Akali_Spell.TFT_Set13.tex",
-    "name": "Shuriken Flip",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,80.0,120.0,185.0,250.0,0.0,0.0]
-      },
-      {
-        "name": "SecondaryDamage",
-        "value": [0.0,240.0,360.0,550.0,740.0,0.0,0.0]
-      },
-      {
-        "name": "TargetDamageAmp",
-        "value": [0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448]
-      },
-      {
-        "name": "Duration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "FlipBackwardsSpeed",
-        "value": [1300.0,1300.0,1300.0,1300.0,1300.0,1300.0,1300.0]
-      },
-      {
-        "name": "SpeedDuringFinalKick",
-        "value": [1700.0,1700.0,1700.0,1700.0,1700.0,1700.0,1700.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 15 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1403,45 +715,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":45,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":52,"hp":700,"initialMana":0,"magicResist":45,"mana":25,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Camille",
-  "name": "Camille",
-  "cost": 2,
-  "traits": ["Enforcer","Ambusher"],
-  "stats": {
-    "armor": 45.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 700.0,
-    "initialMana": 0,
-    "magicResist": 45.0,
-    "mana": 25.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Kick the target, dealing <trueDamage>@TotalDamage@&nbsp;(%i:scaleAD%%i:scaleAP%)</trueDamage> <TFTKeyword>Adaptive Damage</TFTKeyword>. Heal for @HealPercent*100@% of the damage&nbsp;dealt.<br><br><rules><tftbold>Adaptive Damage:</tftbold> Uses the damage type the target resists less</rules><br>",
-    "icon": "ASSETS/Characters/TFT13_Camille/HUD/Icons2D/Camille_Spell.TFT_Set13.tex",
-    "name": "Adaptive Strike",
-    "variables": [
-      {
-        "name": "PercentAttackDamage",
-        "value": [2.75,2.299999952316284,2.299999952316284,2.5999999046325684,2.5999999046325684,2.75,2.75]
-      },
-      {
-        "name": "APDamage",
-        "value": [0.0,30.0,45.0,70.0,95.0,0.0,0.0]
-      },
-      {
-        "name": "HealPercent",
-        "value": [0.33000001311302185,0.33000001311302185,0.33000001311302185,0.33000001311302185,0.33000001311302185,0.33000001311302185,0.33000001311302185]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 16 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1459,45 +733,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.6,"critChance":0.25,"critMultiplier":1.4,"damage":55,"hp":800,"initialMana":50,"magicResist":50,"mana":90,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Leona",
-  "name": "Leona",
-  "cost": 2,
-  "traits": ["Academy","Sentinel"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.6000000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 55.0,
-    "hp": 800.0,
-    "initialMana": 50.0,
-    "magicResist": 50.0,
-    "mana": 90.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Fortify for @Duration@ seconds, gaining <TFTBonus>@ModifiedDurability@&nbsp;(%i:scaleAP%)</TFTBonus> Durability. Afterwards, deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent enemies.",
-    "icon": "ASSETS/Characters/TFT13_Leona/HUD/Icons2D/TFT13_LeonaSolarBarrier.TFT_Set13.tex",
-    "name": "Eclipse",
-    "variables": [
-      {
-        "name": "Duration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "Damage",
-        "value": [0.0,115.0,175.0,270.0,365.0,0.0,0.0]
-      },
-      {
-        "name": "DR",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 17 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1515,53 +751,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":45,"attackSpeed":0.8,"critChance":0.25,"critMultiplier":1.4,"damage":63,"hp":700,"initialMana":0,"magicResist":45,"mana":40,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Nocturne",
-  "name": "Nocturne",
-  "cost": 2,
-  "traits": ["Automata","Quickstriker"],
-  "stats": {
-    "armor": 45.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 65.0,
-    "hp": 700.0,
-    "initialMana": 0,
-    "magicResist": 45.0,
-    "mana": 40.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "For @Duration@ seconds, attacks also cause adjacent enemies to bleed for <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage over @BleedDuration@&nbsp;second.",
-    "icon": "ASSETS/Characters/TFT13_Nocturne/HUD/Icons2D/TFT13_Nocturne_EyeOfTheStorm.TFT_Set13.tex",
-    "name": "Overdrive Blades",
-    "variables": [
-      {
-        "name": "ADPercent",
-        "value": [0.0,1.2000000476837158,1.2000000476837158,1.399999976158142,1.399999976158142,0.0,0.0]
-      },
-      {
-        "name": "Duration",
-        "value": [6.0,6.0,6.0,6.0,6.0,6.0,6.0]
-      },
-      {
-        "name": "BaseDamage",
-        "value": [0.0,15.0,25.0,40.0,55.0,0.0,0.0]
-      },
-      {
-        "name": "BleedDuration",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "BleedTicksRate",
-        "value": [0.25,0.25,0.25,0.25,0.25,0.25,0.25]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 18 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1581,69 +771,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":45,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":800,"initialMana":0,"magicResist":45,"mana":50,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Prime",
-  "name": "Vander",
-  "cost": 2,
-  "traits": ["Family","Watcher"],
-  "stats": {
-    "armor": 45.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 800.0,
-    "initialMana": 0,
-    "magicResist": 45.0,
-    "mana": 50.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Stop attacking and brace for @TauntDuration@ seconds, gaining <TFTBonus>@ModifiedDefenses@&nbsp;(%i:scaleAP%)</TFTBonus> Armor and Magic Resist. Vander's next attack is replaced with a strike that deals <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage, increased by <physicalDamage>@ModifiedBonusDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage for each 1 or 2 cost champion on your&nbsp;team. ",
-    "icon": "ASSETS/Characters/TFT13_Prime/HUD/Icons2D/PrimeSpell.TFT_Set13.tex",
-    "name": "Hound of the Underground",
-    "variables": [
-      {
-        "name": "TauntDuration",
-        "value": [2.5,2.5,2.5,2.5,2.5,2.5,2.5]
-      },
-      {
-        "name": "Resists",
-        "value": [90.0,100.0,125.0,150.0,175.0,90.0,90.0]
-      },
-      {
-        "name": "PercentAttackDamage",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "BonusDamageADRatio",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "HEROSpellDuration",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "HEROBonusDamage",
-        "value": [1.850000023841858,1.850000023841858,1.850000023841858,1.850000023841858,1.850000023841858,1.850000023841858,1.850000023841858]
-      },
-      {
-        "name": "HEROSplashPerc",
-        "value": [0.25,0.25,0.25,0.25,0.25,0.25,0.25]
-      },
-      {
-        "name": "HEROStunDuration",
-        "value": [0.75,0.75,0.75,0.75,0.75,0.75,0.75]
-      },
-      {
-        "name": "HEROManaIncrease",
-        "value": [60.0,60.0,60.0,60.0,60.0,60.0,60.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 19 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1667,53 +795,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":45,"attackSpeed":0.6,"critChance":0.25,"critMultiplier":1.4,"damage":60,"hp":800,"initialMana":40,"magicResist":45,"mana":90,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Rell",
-  "name": "Rell",
-  "cost": 2,
-  "traits": ["Conqueror","Sentinel","Visionary"],
-  "stats": {
-    "armor": 45.0,
-    "attackSpeed": 0.6000000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 60.0,
-    "hp": 800.0,
-    "initialMana": 40.0,
-    "magicResist": 45.0,
-    "mana": 90.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Lance enemies in a line for <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage and steal <TFTBonus>@DefensesSteal@</TFTBonus> Armor and Magic Resist from enemies&nbsp;hit.",
-    "icon": "ASSETS/Characters/TFT13_Rell/HUD/Icons2D/RellSpell.TFT_Set13.tex",
-    "name": "Shattering Strike",
-    "variables": [
-      {
-        "name": "StabDamage",
-        "value": [0.0,120.0,180.0,270.0,360.0,0.0,0.0]
-      },
-      {
-        "name": "DefenseStealDuration",
-        "value": [60.0,60.0,60.0,60.0,60.0,60.0,60.0]
-      },
-      {
-        "name": "DefensesSteal",
-        "value": [10.0,10.0,12.0,15.0,18.0,10.0,10.0]
-      },
-      {
-        "name": "ShieldDuration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "Shield",
-        "value": [0.0,300.0,350.0,400.0,540.0,0.0,0.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 20 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1733,53 +815,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":20,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":35,"hp":600,"initialMana":20,"magicResist":20,"mana":80,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_RenataGlasc",
-  "name": "Renata Glasc",
-  "cost": 2,
-  "traits": ["Chem-Baron","Visionary"],
-  "stats": {
-    "armor": 20.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 35.0,
-    "hp": 600.0,
-    "initialMana": 20.0,
-    "magicResist": 20.0,
-    "mana": 80.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Fire a pair of missiles at target. Allies they pass through gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. When they collide, they deal <magicDamage>@ModifiedTargetDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to target and <magicDamage>@ModifiedExplosionDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent&nbsp;enemies.  ",
-    "icon": "ASSETS/Characters/TFT13_RenataGlasc/HUD/Icons2D/Renata_E.TFT_Set13.tex",
-    "name": "Loyalty Program",
-    "variables": [
-      {
-        "name": "Shield",
-        "value": [100.0,95.0,120.0,150.0,180.0,100.0,100.0]
-      },
-      {
-        "name": "ShieldDuration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "TargetDamage",
-        "value": [0.0,310.0,465.0,700.0,935.0,0.0,0.0]
-      },
-      {
-        "name": "ExplosionDamage",
-        "value": [0.0,155.0,230.0,350.0,465.0,0.0,0.0]
-      },
-      {
-        "name": "AdditionalSearchDistance",
-        "value": [150.0,150.0,150.0,150.0,150.0,150.0,150.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 21 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1799,45 +835,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.6,"critChance":0.25,"critMultiplier":1.4,"damage":60,"hp":850,"initialMana":50,"magicResist":50,"mana":100,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Sett",
-  "name": "Sett",
-  "cost": 2,
-  "traits": ["Rebel","Bruiser"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.6000000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 60.0,
-    "hp": 850.0,
-    "initialMana": 50.0,
-    "magicResist": 50.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Pull in an enemy on either side and slam them together, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage and Stunning them for <scaleLevel>@StunDuration@</scaleLevel>&nbsp;seconds.<br><br>If only one enemy is grabbed, the damage and Stun duration are increased by <TFTBonus>50%.</TFTBonus>",
-    "icon": "ASSETS/Characters/TFT13_Sett/HUD/Icons2D/Sett_Spell.TFT_Set13.tex",
-    "name": "Facebreaker",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,180.0,270.0,420.0,570.0,2.0,2.0]
-      },
-      {
-        "name": "StunDuration",
-        "value": [1.0,1.5,1.5,2.0,2.5,3.5,4.0]
-      },
-      {
-        "name": "SoloBonus",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 22 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1855,49 +853,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":20,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":42,"hp":550,"initialMana":20,"magicResist":20,"mana":60,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Tristana",
-  "name": "Tristana",
-  "cost": 2,
-  "traits": ["Emissary","Artillerist"],
-  "stats": {
-    "armor": 20.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 42.0,
-    "hp": 550.0,
-    "initialMana": 20.0,
-    "magicResist": 20.0,
-    "mana": 60.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Fire a cannonball at target, dealing <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage. If they die, the cannonball ricochets to the nearest enemy, dealing the overkill damage. When it does, permanently gain <TFTBonus>@TFTUnitProperty.:TFT13_TristanaASPerStack@%</TFTBonus>&nbsp;Attack Damage.<br><br><TFTTrackerLabel>(Current Bonus:&nbsp;@TFTUnitProperty.:TFT13_TristanaASGain@% %i:scaleAD%) </TFTTrackerLabel> ",
-    "icon": "ASSETS/Characters/TFT13_Tristana/HUD/Icons2D/TFT13_Tristana_Passive.TFT_Set13.tex",
-    "name": "Draw a Bead",
-    "variables": [
-      {
-        "name": "PercentAttackDamage",
-        "value": [5.25,5.25,5.25,5.25,5.25,5.25,5.25]
-      },
-      {
-        "name": "APDamage",
-        "value": [0.0,50.0,75.0,115.0,155.0,0.0,0.0]
-      },
-      {
-        "name": "ASKillGain",
-        "value": [1.25,1.25,1.25,1.25,1.25,1.25,1.25]
-      },
-      {
-        "name": "ASKillGainHyperroll",
-        "value": [2.5,2.5,2.5,2.5,2.5,2.5,2.5]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 23 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1916,61 +872,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":45,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":700,"initialMana":20,"magicResist":45,"mana":70,"range":2}`。
 
-```json
-{
-  "apiName": "TFT13_Urgot",
-  "name": "Urgot",
-  "cost": 2,
-  "traits": ["Experiment","Pit Fighter","Artillerist"],
-  "stats": {
-    "armor": 45.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 700.0,
-    "initialMana": 20.0,
-    "magicResist": 45.0,
-    "mana": 70.0,
-    "range": 2.0
-  },
-  "ability": {
-    "desc": "Fire an explosive charge, dealing <physicalDamage>@ModifiedPrimaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to target and <physicalDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to adjacent enemies. 20% <TFTKeyword>Sunder</TFTKeyword> all enemies hit for @Duration@&nbsp;seconds.<br><br><rules><tftbold>Sunder:</tftbold> Reduce Armor</rules><br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus:<TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus> Dash to targets. On cast, gain <TFTBonus enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusShield@%</TFTBonus> max Health Shield and <TFTBonus enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusAS@%</TFTBonus>&nbsp;Attack Speed for @ExperimentDuration@&nbsp;seconds.</spellActive>",
-    "icon": "ASSETS/Characters/TFT13_Urgot/HUD/Icons2D/TFT13_Urgot_Q.TFT_Set13.tex",
-    "name": "Corrosive Charge",
-    "variables": [
-      {
-        "name": "PrimaryDamage",
-        "value": [3.0,3.0,3.0,3.299999952316284,3.299999952316284,3.0,3.0]
-      },
-      {
-        "name": "SecondaryDamage",
-        "value": [1.5,1.5,1.5,1.649999976158142,1.649999976158142,1.5,1.5]
-      },
-      {
-        "name": "Duration",
-        "value": [6.0,6.0,6.0,6.0,6.0,6.0,6.0]
-      },
-      {
-        "name": "APDamage",
-        "value": [0.0,35.0,50.0,75.0,100.0,0.0,0.0]
-      },
-      {
-        "name": "ExperimentPercentHealthShield",
-        "value": [0.07999999821186066,0.07999999821186066,0.07999999821186066,0.07999999821186066,0.07999999821186066,0.07999999821186066,0.07999999821186066]
-      },
-      {
-        "name": "ExperimentAttackSpeed",
-        "value": [0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224]
-      },
-      {
-        "name": "ExperimentDuration",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 24 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -1992,65 +894,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":45,"attackSpeed":0.65,"critChance":0.25,"critMultiplier":1.4,"damage":45,"hp":800,"initialMana":0,"magicResist":45,"mana":65,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Vladimir",
-  "name": "Vladimir",
-  "cost": 2,
-  "traits": ["Black Rose","Watcher","Sorcerer"],
-  "stats": {
-    "armor": 45.0,
-    "attackSpeed": 0.6499999761581421,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 45.0,
-    "hp": 800.0,
-    "initialMana": 0,
-    "magicResist": 45.0,
-    "mana": 65.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> and deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to the&nbsp;target.",
-    "icon": "ASSETS/Characters/TFT13_Vladimir/HUD/VladimirQ.tex",
-    "name": "Transfusion",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,140.0,210.0,325.0,380.0,0.0,0.0]
-      },
-      {
-        "name": "Heal",
-        "value": [0.10000000149011612,200.0,240.0,300.0,330.0,0.10000000149011612,0.10000000149011612]
-      },
-      {
-        "name": "HEROBonusDamage",
-        "value": [1.7999999523162842,1.7999999523162842,1.7999999523162842,1.7999999523162842,1.7999999523162842,1.7999999523162842,1.7999999523162842]
-      },
-      {
-        "name": "HEROOverkillPerc",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "HEROOverkillNum",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "HEROOverkillBaseDamage",
-        "value": [0.0,90.0,135.0,205.0,275.0,0.0,0.0]
-      },
-      {
-        "name": "TOOLTIPONLYMana",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "HEROAmpPerCast",
-        "value": [0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 25 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2073,53 +917,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":20,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":48,"hp":600,"initialMana":0,"magicResist":20,"mana":3,"range":6}`。
 
-```json
-{
-  "apiName": "TFT13_Zeri",
-  "name": "Zeri",
-  "cost": 2,
-  "traits": ["Firelight","Sniper"],
-  "stats": {
-    "armor": 20.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 45.0,
-    "hp": 600.0,
-    "initialMana": 0,
-    "magicResist": 20.0,
-    "mana": 3.0,
-    "range": 6.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> Every @NumOfAttacks@rd attack is replaced with a spark that deals <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to target and <physicalDamage>@SecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to @NumOfBounces@ nearby enemies.",
-    "icon": "ASSETS/Characters/TFT13_Zeri/HUD/Icons2D/Zeri_P.TFT_Set13.tex",
-    "name": "Living Battery",
-    "variables": [
-      {
-        "name": "NumOfAttacks",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "NumOfBounces",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "PercentAttackDamage",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "APDamage",
-        "value": [0.0,10.0,15.0,20.0,25.0,0.0,0.0]
-      },
-      {
-        "name": "PercentDealtToBouncedEnemies",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 26 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2139,45 +937,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":20,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":35,"hp":600,"initialMana":15,"magicResist":20,"mana":60,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Ziggs",
-  "name": "Ziggs",
-  "cost": 2,
-  "traits": ["Scrap","Dominator"],
-  "stats": {
-    "armor": 20.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 35.0,
-    "hp": 600.0,
-    "initialMana": 15.0,
-    "magicResist": 20.0,
-    "mana": 60.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Toss a bomb at target, dealing <magicDamage>@ModifiedInitialDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage. @NumBombs@ mini-bombs fly out, dealing <magicDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to random&nbsp;enemies. ",
-    "icon": "ASSETS/Characters/TFT13_Ziggs/HUD/Icons2D/ZiggsSpell.TFT_Set13.tex",
-    "name": "Bomb Full of Bombs",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,180.0,270.0,450.0,535.0,0.0,0.0]
-      },
-      {
-        "name": "MinibombDamage",
-        "value": [1.0,90.0,135.0,200.0,240.0,1.0,1.0]
-      },
-      {
-        "name": "NumBombs",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 27 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2195,49 +955,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.65,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":850,"initialMana":40,"magicResist":50,"mana":80,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Beardy",
-  "name": "Loris",
-  "cost": 3,
-  "traits": ["Enforcer","Sentinel"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.6499999761581421,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 850.0,
-    "initialMana": 50.0,
-    "magicResist": 50.0,
-    "mana": 90.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @Duration@ seconds. It redirects <TFTBonus>@PercentDamageRedirect*100@%</TFTBonus> of damage taken by adjacent allies. When it expires, deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage in a&nbsp;cone.",
-    "icon": "ASSETS/Characters/TFT13_Beardy/HUD/Icons2D/Beardy_Spell.TFT_Set13.tex",
-    "name": "Piltover Bulwark",
-    "variables": [
-      {
-        "name": "Shield",
-        "value": [0.0,525.0,600.0,700.0,800.0,0.0,0.0]
-      },
-      {
-        "name": "Damage",
-        "value": [0.0,150.0,225.0,360.0,495.0,0.0,0.0]
-      },
-      {
-        "name": "PercentDamageRedirect",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "Duration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 28 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2256,61 +974,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.6,"critChance":0.25,"critMultiplier":1.4,"damage":60,"hp":850,"initialMana":20,"magicResist":50,"mana":70,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Blitzcrank",
-  "name": "Blitzcrank",
-  "cost": 3,
-  "traits": ["Automata","Dominator"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.6000000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 60.0,
-    "hp": 850.0,
-    "initialMana": 20.0,
-    "magicResist": 50.0,
-    "mana": 70.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> After surviving damage, deal <magicDamage>@PassiveDamagePercent*100@%</magicDamage> of the damage absorbed as magic damage to&nbsp;target.<br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Shock the nearest @NumEnemies@ enemies for <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage and reduce their damage by @DamageReduction*100@% for @ShieldDuration@&nbsp;seconds.",
-    "icon": "ASSETS/Characters/TFT13_Blitzcrank/HUD/Icons2D/BlitzcrankQ.TFT_Set13.tex",
-    "name": "Static Field",
-    "variables": [
-      {
-        "name": "Shield",
-        "value": [400.0,470.0,500.0,550.0,600.0,400.0,400.0]
-      },
-      {
-        "name": "ShieldDuration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "BaseDamage",
-        "value": [80.0,40.0,60.0,100.0,200.0,80.0,80.0]
-      },
-      {
-        "name": "PassiveDamagePercent",
-        "value": [0.029999999329447746,0.029999999329447746,0.029999999329447746,0.029999999329447746,0.029999999329447746,0.029999999329447746,0.029999999329447746]
-      },
-      {
-        "name": "PassiveCooldownSeconds",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "DamageReduction",
-        "value": [0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612]
-      },
-      {
-        "name": "NumEnemies",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 29 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2332,53 +996,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":25,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":40,"hp":700,"initialMana":10,"magicResist":25,"mana":40,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Cassiopeia",
-  "name": "Cassiopeia",
-  "cost": 3,
-  "traits": ["Black Rose","Dominator"],
-  "stats": {
-    "armor": 25.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 40.0,
-    "hp": 700.0,
-    "initialMana": 10.0,
-    "magicResist": 25.0,
-    "mana": 40.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Blast target for <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage. Every third cast, splash miasma to @BonusNumEnemies@ enemies within @HexRadius@ hexes, dealing <magicDamage>@ModifiedMiasmaDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to&nbsp;each.",
-    "icon": "ASSETS/Characters/TFT13_Cassiopeia/HUD/Cassiopeia_W.TFT_Set13.tex",
-    "name": "Thorned Miasma",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [200.0,230.0,345.0,550.0,755.0,450.0,450.0]
-      },
-      {
-        "name": "MiasmaDamage",
-        "value": [40.0,160.0,240.0,385.0,530.0,40.0,40.0]
-      },
-      {
-        "name": "BonusNumEnemies",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "NumCasts",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "HexRadius",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 30 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2398,77 +1016,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.65,"critChance":0.25,"critMultiplier":1.4,"damage":55,"hp":850,"initialMana":40,"magicResist":50,"mana":100,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Chainsaw",
-  "name": "Renni",
-  "cost": 3,
-  "traits": ["Chem-Baron","Bruiser"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.6499999761581421,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 55.0,
-    "hp": 850.0,
-    "initialMana": 40.0,
-    "magicResist": 50.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Heal <scaleHealth>@ModifiedHealing@&nbsp;(%i:scaleHealth%%i:scaleAP%)</scaleHealth> over @StunDuration@ seconds. For the duration, raise target into the air, Stunning them, and dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage. Afterwards, slam them down, dealing <physicalDamage>@FinalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to all adjacent&nbsp;enemies.<br><br>",
-    "icon": "ASSETS/Characters/TFT13_Chainsaw/HUD/Icons2D/ChainsawSpell.TFT_Set13.tex",
-    "name": "Sludgerunner's Smash",
-    "variables": [
-      {
-        "name": "APHeal",
-        "value": [5.75,300.0,325.0,375.0,425.0,100.0,100.0]
-      },
-      {
-        "name": "MaxHealthHealingPercent",
-        "value": [0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448]
-      },
-      {
-        "name": "StunDuration",
-        "value": [1.5,1.5,1.5,1.5,1.5,1.5,1.5]
-      },
-      {
-        "name": "ADPercent",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "FinalADPercent",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "HeroAbilityDamage",
-        "value": [1.100000023841858,1.100000023841858,1.100000023841858,1.100000023841858,1.100000023841858,1.100000023841858,1.100000023841858]
-      },
-      {
-        "name": "HeroManaReduction",
-        "value": [10.0,10.0,10.0,10.0,10.0,10.0,10.0]
-      },
-      {
-        "name": "HeroHexDistance",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "HeroChargePercent",
-        "value": [0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896]
-      },
-      {
-        "name": "HeroStunDuration",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "HEROMaxHealthHealingPercent",
-        "value": [0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 31 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2494,45 +1042,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":25,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":60,"hp":700,"initialMana":0,"magicResist":25,"mana":60,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Ezreal",
-  "name": "Ezreal",
-  "cost": 3,
-  "traits": ["Academy","Rebel","Artillerist"],
-  "stats": {
-    "armor": 25.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 60.0,
-    "hp": 700.0,
-    "initialMana": 0,
-    "magicResist": 25.0,
-    "mana": 60.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Fire a shot towards current target that deals <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to all enemies within 1 hex. Then, deal <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to the unit in the center of the&nbsp;blast.<br><br><br>",
-    "icon": "ASSETS/Characters/TFT13_Ezreal/HUD/Icons2D/Ezreal_Spell.TFT_Set13.tex",
-    "name": "Essence Flux",
-    "variables": [
-      {
-        "name": "PercentAttackDamage",
-        "value": [1.350000023841858,1.350000023841858,1.350000023841858,1.350000023841858,1.350000023841858,1.350000023841858,1.350000023841858]
-      },
-      {
-        "name": "APDamage",
-        "value": [0.0,20.0,30.0,50.0,70.0,0.0,0.0]
-      },
-      {
-        "name": "PercentCenterDamage",
-        "value": [2.700000047683716,2.700000047683716,2.700000047683716,2.700000047683716,2.700000047683716,2.700000047683716,2.700000047683716]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 32 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2550,49 +1060,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.65,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":800,"initialMana":80,"magicResist":50,"mana":170,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_FlyGuy",
-  "name": "Scar",
-  "cost": 3,
-  "traits": ["Firelight","Watcher"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.6499999761581421,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 800.0,
-    "initialMana": 80.0,
-    "magicResist": 50.0,
-    "mana": 170.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Lob bombs at the nearest @NumEnemies@ enemies, Stunning them for <scaleLevel>@StunDuration@</scaleLevel> seconds and dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to each. Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth>.",
-    "icon": "ASSETS/Characters/TFT13_FlyGuy/HUD/Icons2D/FlyGuy_Spell.TFT_Set13.tex",
-    "name": "Sumpsnipe Surprise",
-    "variables": [
-      {
-        "name": "Heal",
-        "value": [0.029999999329447746,220.0,240.0,270.0,330.0,0.029999999329447746,0.029999999329447746]
-      },
-      {
-        "name": "NumEnemies",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "StunDuration",
-        "value": [1.5,1.5,1.5,1.75,1.75,1.5,1.5]
-      },
-      {
-        "name": "Damage",
-        "value": [0.0,80.0,120.0,180.0,240.0,0.0,0.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 33 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2611,49 +1079,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":0,"attackSpeed":0.5,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":700,"initialMana":0,"magicResist":null,"mana":10,"range":1}`。 **Q02：换形载体，MR和双形态实际属性待确认。**
 
-```json
-{
-  "apiName": "TFT13_Gangplank",
-  "name": "Gangplank",
-  "cost": 3,
-  "traits": ["Scrap","Form Swapper","Pit Fighter"],
-  "stats": {
-    "armor": 0.0,
-    "attackSpeed": 0.5,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 700.0,
-    "initialMana": 0,
-    "magicResist": null,
-    "mana": 10.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Restore <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> Health. Then slash, dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to enemies in a line. If only one enemy is hit, the damage is&nbsp;doubled.",
-    "icon": "ASSETS/Characters/TFT13_Gangplank/HUD/Icons2D/TFT13_Gangplank_Passive.TFT_Set13.tex",
-    "name": "Harvest from Flames",
-    "variables": [
-      {
-        "name": "PercentAttackDamage",
-        "value": [3.4000000953674316,3.4000000953674316,3.4000000953674316,3.4000000953674316,3.4000000953674316,3.4000000953674316,3.4000000953674316]
-      },
-      {
-        "name": "Heal",
-        "value": [100.0,100.0,125.0,150.0,175.0,220.0,220.0]
-      },
-      {
-        "name": "NumBarrels",
-        "value": null
-      },
-      {
-        "name": "SingleTargetDamageIncrease",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 34 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2674,53 +1100,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.8,"critChance":0.25,"critMultiplier":1.4,"damage":70,"hp":800,"initialMana":20,"magicResist":50,"mana":80,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Gremlin",
-  "name": "Smeech",
-  "cost": 3,
-  "traits": ["Chem-Baron","Ambusher"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 70.0,
-    "hp": 800.0,
-    "initialMana": 20.0,
-    "magicResist": 50.0,
-    "mana": 80.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Leap towards the enemy with the fewest items within @LeapHexRange@ hexes. Slash @BaseNumStabs@ times, dealing a total of <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage. If they die, leap again, dealing @DamageReductionOnLeap*100@% less&nbsp;damage.",
-    "icon": "ASSETS/Characters/TFT13_Gremlin/HUD/Icons2D/GremlinSpell.TFT_Set13.tex",
-    "name": "Scrap Hacker",
-    "variables": [
-      {
-        "name": "PercentAttackDamage",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "APDamage",
-        "value": [0.0,70.0,105.0,170.0,235.0,0.0,0.0]
-      },
-      {
-        "name": "LeapHexRange",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "BaseNumStabs",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "DamageReductionOnLeap",
-        "value": [0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 35 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2740,53 +1120,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":25,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":15,"hp":650,"initialMana":0,"magicResist":25,"mana":40,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_KogMaw",
-  "name": "Kog'Maw",
-  "cost": 3,
-  "traits": ["Automata","Sniper"],
-  "stats": {
-    "armor": 25.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 15.0,
-    "hp": 650.0,
-    "initialMana": 0,
-    "magicResist": 25.0,
-    "mana": 40.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> Attacks deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> bonus magic&nbsp;damage.<br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@AttackSpeed*100@%</TFTBonus> stacking Attack Speed for the rest of combat. After every @RangeIncreaseNumAttacks@ casts, gain&nbsp;+1&nbsp;Range.",
-    "icon": "ASSETS/Characters/TFT13_KogMaw/HUD/Icons2D/TFT13_KogMaw_BioArcaneBarrage.TFT_Set13.tex",
-    "name": "Upgrading Barrage Module",
-    "variables": [
-      {
-        "name": "MaxAS",
-        "value": [20.0,20.0,20.0,20.0,20.0,20.0,20.0]
-      },
-      {
-        "name": "AttackSpeed",
-        "value": [0.25,0.25,0.25,0.25,0.25,0.25,0.25]
-      },
-      {
-        "name": "Duration",
-        "value": [60.0,60.0,60.0,60.0,60.0,60.0,60.0]
-      },
-      {
-        "name": "DamageOnAttack",
-        "value": [0.0,48.0,72.0,120.0,210.0,0.0,0.0]
-      },
-      {
-        "name": "RangeIncreaseNumAttacks",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 36 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2806,49 +1140,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":25,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":40,"hp":700,"initialMana":0,"magicResist":25,"mana":60,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Nami",
-  "name": "Nami",
-  "cost": 3,
-  "traits": ["Emissary","Sorcerer"],
-  "stats": {
-    "armor": 25.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 40.0,
-    "hp": 700.0,
-    "initialMana": 0,
-    "magicResist": 25.0,
-    "mana": 60.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Launch a wave at target that bounces @NumBounces@ times to enemies within @SearchRange@ hexes and deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic&nbsp;damage.",
-    "icon": "ASSETS/Characters/TFT13_Nami/HUD/Icons2D/NamiW.TFT_Set13.tex",
-    "name": "Ocean's Ebb",
-    "variables": [
-      {
-        "name": "NumBounces",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "Damage",
-        "value": [75.0,120.0,180.0,290.0,400.0,150.0,150.0]
-      },
-      {
-        "name": "SearchRange",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "TimesHitTarget",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 37 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2867,65 +1159,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.6,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":800,"initialMana":60,"magicResist":50,"mana":125,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_NunuWillump",
-  "name": "Nunu & Willump",
-  "cost": 3,
-  "traits": ["Experiment","Bruiser","Visionary"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.6000000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 800.0,
-    "initialMana": 60.0,
-    "magicResist": 50.0,
-    "mana": 125.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "For @DamageDuration@ seconds, gain <TFTBonus>@ModifiedDurability@&nbsp;(%i:scaleAP%)</TFTBonus> Durability and create a 2-hex cloud of noxious fumes that deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to enemies within. Afterwards, detonate the cloud and deal <magicDamage>@ModifiedSecondDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to all enemies&nbsp;within.<br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus: <TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus>After dealing damage, deal <magicDamage enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_NunuCurrentExperimentBonus@%&nbsp;</magicDamage>max&nbsp;%i:scaleHealth% bonus magic&nbsp;damage (@ExperimentICD@s&nbsp;cooldown).</spellActive>",
-    "icon": "ASSETS/Characters/TFT13_NunuWillump/HUD/Icons2D/NunuSpell.TFT_Set13.tex",
-    "name": "ZOMBIE POWER!!\t\t\t\t\t\t",
-    "variables": [
-      {
-        "name": "Durability",
-        "value": [0.5,0.5,0.5,0.550000011920929,0.5,0.5,0.5]
-      },
-      {
-        "name": "Damage",
-        "value": [0.0,30.0,45.0,65.0,85.0,0.0,0.0]
-      },
-      {
-        "name": "DamageTicksPerSecond",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "SecondDamage",
-        "value": [0.0,150.0,225.0,340.0,455.0,0.0,0.0]
-      },
-      {
-        "name": "DamageDuration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "HexRadius",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "ExperimentMaxHealthDamage",
-        "value": [0.029999999329447746,0.029999999329447746,0.029999999329447746,0.029999999329447746,0.029999999329447746,0.029999999329447746,0.029999999329447746]
-      },
-      {
-        "name": "ExperimentICD",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 38 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -2948,53 +1182,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":0,"attackSpeed":0.5,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":650,"initialMana":0,"magicResist":null,"mana":10,"range":1}`。 **Q02：换形载体，MR和双形态实际属性待确认。**
 
-```json
-{
-  "apiName": "TFT13_Swain",
-  "name": "Swain",
-  "cost": 3,
-  "traits": ["Conqueror","Form Swapper","Sorcerer"],
-  "stats": {
-    "armor": 0.0,
-    "attackSpeed": 0.5,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 650.0,
-    "initialMana": 0,
-    "magicResist": null,
-    "mana": 10.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> and ascend for @Duration@ seconds. While ascended, heal <scaleHealth>@ModifiedHealPerSecond@&nbsp;(%i:scaleAP%)</scaleHealth> and deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent enemies every second. On takedown, the ascension's duration is extended by @BonusDuration@&nbsp;seconds.",
-    "icon": "ASSETS/Characters/TFT13_Swain/HUD/Swain_Melee.TFT_Set13.tex",
-    "name": "Demonic Ascension",
-    "variables": [
-      {
-        "name": "Heal",
-        "value": [0.0,240.0,300.0,380.0,460.0,0.0,0.0]
-      },
-      {
-        "name": "HealPerSecond",
-        "value": [0.0,70.0,90.0,125.0,130.0,0.0,0.0]
-      },
-      {
-        "name": "DamagePerSecond",
-        "value": [0.0,40.0,60.0,95.0,130.0,0.0,0.0]
-      },
-      {
-        "name": "Duration",
-        "value": [6.0,6.0,6.0,6.0,6.0,6.0,6.0]
-      },
-      {
-        "name": "BonusDuration",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 39 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3014,49 +1202,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":25,"attackSpeed":0.7,"critChance":0.25,"critMultiplier":1.4,"damage":35,"hp":700,"initialMana":25,"magicResist":25,"mana":75,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_TwistedFate",
-  "name": "Twisted Fate",
-  "cost": 3,
-  "traits": ["Enforcer","Quickstriker"],
-  "stats": {
-    "armor": 25.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 35.0,
-    "hp": 700.0,
-    "initialMana": 25.0,
-    "magicResist": 25.0,
-    "mana": 75.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Throw 3 cards at different targets.<br><br><spellActive>Blue Card:</spellActive> Restore <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> Health to the lowest Health ally.<br><spellActive>Red Card:</spellActive> Deal <magicDamage>@ModifiedRedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to the largest circle of&nbsp;enemies.<br><spellActive>Yellow Card:</spellActive> Deal <magicDamage>@ModifiedYellowDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to target and Stun them for @StunDuration@&nbsp;second.",
-    "icon": "ASSETS/Characters/TFT13_TwistedFate/HUD/Icons2D/Cardmaster_PowerCard.TFT_Set13.tex",
-    "name": "Wild Cards",
-    "variables": [
-      {
-        "name": "BlueHeal",
-        "value": [0.0,90.0,110.0,140.0,170.0,0.0,0.0]
-      },
-      {
-        "name": "RedDamage",
-        "value": [0.0,110.0,165.0,255.0,345.0,0.0,0.0]
-      },
-      {
-        "name": "YellowDamage",
-        "value": [0.0,230.0,345.0,535.0,725.0,0.0,0.0]
-      },
-      {
-        "name": "StunDuration",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 40 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3075,53 +1221,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.8,"critChance":0.25,"critMultiplier":1.4,"damage":65,"hp":1100,"initialMana":40,"magicResist":50,"mana":90,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Ambessa",
-  "name": "Ambessa",
-  "cost": 4,
-  "traits": ["Emissary","Conqueror","Quickstriker"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 65.0,
-    "hp": 1100.0,
-    "initialMana": 40.0,
-    "magicResist": 50.0,
-    "mana": 90.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Ambessa switches between two stances on cast:<br><br><spellPassive>Chains:</spellPassive> Gain +1 Range. Attacks deal <physicalDamage>@ModifiedChainDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical&nbsp;damage.<br>On cast, dash to target and strike in a half-circle, dealing <physicalDamage>@ModifiedStrikeDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to enemies&nbsp;hit.<br><br><spellPassive>Fists:</spellPassive> Gain <TFTBonus>@ModifiedOmnivamp@&nbsp;(%i:scaleAP%)</TFTBonus> Omnivamp and attack twice as&nbsp;fast.<br>On cast, briefly Stun target before slamming them into the ground, dealing <physicalDamage>@ModifiedSlamDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage, then dash&nbsp;away.<br>",
-    "icon": "ASSETS/Characters/TFT13_Ambessa/HUD/Icons2D/Ambessa_Spell.TFT_Set13.tex",
-    "name": "Unrelenting Huntress",
-    "variables": [
-      {
-        "name": "PercentChainAttackAD",
-        "value": [1.5,1.5,1.5,3.5,4.0,1.5,1.5]
-      },
-      {
-        "name": "PercentStrikeAD",
-        "value": [2.0999999046325684,2.5,2.5,5.0,6.0,2.5,2.5]
-      },
-      {
-        "name": "PercentOmnivamp",
-        "value": [0.15000000596046448,0.25,0.25,0.44999998807907104,0.6000000238418579,0.15000000596046448,0.15000000596046448]
-      },
-      {
-        "name": "AttackSpeed",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "SlamDamageAD",
-        "value": [5.0,5.0,5.0,12.0,15.0,6.0,6.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 41 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3141,61 +1241,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":30,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":65,"hp":850,"initialMana":0,"magicResist":30,"mana":60,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Corki",
-  "name": "Corki",
-  "cost": 4,
-  "traits": ["Scrap","Artillerist"],
-  "stats": {
-    "armor": 30.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 65.0,
-    "hp": 850.0,
-    "initialMana": 0,
-    "magicResist": 30.0,
-    "mana": 60.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Lock onto target and strafe to a nearby position, unleashing <scaleLevel>@BaseMissiles@</scaleLevel> missiles split between the target and all enemies within two hexes. Each missile deals <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage and reduces Armor by&nbsp;@FlatArmorShred@.<br><br>Every @SpecialMissileNum@th missile deals <physicalDamage>@ModifiedSpecialDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage and reduces Armor by&nbsp;@SpecialMissileArmorReduction@.",
-    "icon": "ASSETS/Characters/TFT13_Corki/HUD/Icons2D/Corki_RapidReload.TFT_Set13.tex",
-    "name": "Broadside Barrage",
-    "variables": [
-      {
-        "name": "BaseMissiles",
-        "value": [21.0,21.0,21.0,35.0,35.0,21.0,21.0]
-      },
-      {
-        "name": "PercentAD",
-        "value": [0.4000000059604645,0.3499999940395355,0.3499999940395355,0.6000000238418579,0.699999988079071,0.5,0.5]
-      },
-      {
-        "name": "FlatArmorShred",
-        "value": [2.0,1.0,1.0,1.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "SpecialMissileNum",
-        "value": [7.0,7.0,7.0,7.0,7.0,7.0,7.0]
-      },
-      {
-        "name": "SpecialMissileMult",
-        "value": [7.0,7.0,7.0,7.0,7.0,7.0,7.0]
-      },
-      {
-        "name": "MissilesPerLaunchAttack",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "FlatDamagePerMissile",
-        "value": [0.0,6.0,9.0,36.0,0.0,0.0,0.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 42 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3217,65 +1263,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":60,"attackSpeed":0.65,"critChance":0.25,"critMultiplier":1.4,"damage":60,"hp":1100,"initialMana":30,"magicResist":60,"mana":100,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_DrMundo",
-  "name": "Dr. Mundo",
-  "cost": 4,
-  "traits": ["Experiment","Dominator"],
-  "stats": {
-    "armor": 60.0,
-    "attackSpeed": 0.6499999761581421,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 60.0,
-    "hp": 1100.0,
-    "initialMana": 30.0,
-    "magicResist": 60.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Become energized and heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleHealth%%i:scaleAP%)</scaleHealth> over @Duration@ seconds. While energized, deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to a nearby enemy each second. Afterwards, deal <magicDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleHealth%)</magicDamage> magic damage to all enemies within 2&nbsp;hexes.<br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus: <TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus>Gain <scaleHealth enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_DrMundoBaseHealthExperimentBonus@</scaleHealth> max Health. On each takedown, gain <scaleHealth enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_DrMundoCurrentExperimentBonus@</scaleHealth> more max&nbsp;Health.</spellActive>",
-    "icon": "ASSETS/Characters/TFT13_DrMundo/HUD/Icons2D/DrMundo_E.TFT_Set13.tex",
-    "name": "Maximum Dosage",
-    "variables": [
-      {
-        "name": "PercentHealthHeal",
-        "value": [0.18000000715255737,0.18000000715255737,0.18000000715255737,0.18000000715255737,0.18000000715255737,0.18000000715255737,0.18000000715255737]
-      },
-      {
-        "name": "APHeal",
-        "value": [0.0,650.0,750.0,2500.0,3500.0,0.0,0.0]
-      },
-      {
-        "name": "PercentofHealImmediately",
-        "value": [0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645]
-      },
-      {
-        "name": "Duration",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "APDamage",
-        "value": [0.0,120.0,180.0,1000.0,1200.0,0.0,0.0]
-      },
-      {
-        "name": "PercentHealthDamage",
-        "value": [0.15000000596046448,0.07000000029802322,0.07000000029802322,0.3499999940395355,0.5,0.25,0.25]
-      },
-      {
-        "name": "ExperimentHealthGain",
-        "value": [60.0,60.0,60.0,60.0,60.0,60.0,60.0]
-      },
-      {
-        "name": "BaseExperimentHealthGain",
-        "value": [120.0,120.0,120.0,120.0,120.0,120.0,120.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 43 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3298,57 +1286,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":60,"attackSpeed":0.85,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":1100,"initialMana":0,"magicResist":60,"mana":60,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Ekko",
-  "name": "Ekko",
-  "cost": 4,
-  "traits": ["Firelight","Scrap","Ambusher"],
-  "stats": {
-    "armor": 60.0,
-    "attackSpeed": 0.8500000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 1100.0,
-    "initialMana": 0,
-    "magicResist": 60.0,
-    "mana": 60.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Summon an assault of afterimages that deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to the target and <magicDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to <scaleLevel>@NumBonusEnemies@</scaleLevel> other nearby&nbsp;enemies. Afterimages reduce their target's Magic Resist by @ShredAmount@ for the rest of combat.",
-    "icon": "ASSETS/Characters/TFT13_Ekko/HUD/Icons2D/EkkoSpell.TFT_Set13.tex",
-    "name": "Splitting Seconds",
-    "variables": [
-      {
-        "name": "NumAfterimages",
-        "value": [12.0,12.0,12.0,25.0,25.0,12.0,12.0]
-      },
-      {
-        "name": "NumBonusEnemies",
-        "value": [2.0,2.0,2.0,4.0,4.0,3.0,3.0]
-      },
-      {
-        "name": "TargetDamage",
-        "value": [0.0,290.0,435.0,1200.0,2000.0,0.0,0.0]
-      },
-      {
-        "name": "SecondaryDamage",
-        "value": [0.0,145.0,215.0,450.0,600.0,0.0,0.0]
-      },
-      {
-        "name": "SpellTime",
-        "value": [1.5,1.5,1.5,1.5,1.5,1.5,1.5]
-      },
-      {
-        "name": "ShredAmount",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 44 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3369,53 +1307,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":0,"attackSpeed":0.5,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":750,"initialMana":0,"magicResist":null,"mana":10,"range":1}`。 **Q02：换形载体，MR和双形态实际属性待确认。**
 
-```json
-{
-  "apiName": "TFT13_Elise",
-  "name": "Elise",
-  "cost": 4,
-  "traits": ["Black Rose","Form Swapper","Bruiser"],
-  "stats": {
-    "armor": 0.0,
-    "attackSpeed": 0.5,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 750.0,
-    "initialMana": 0,
-    "magicResist": null,
-    "mana": 10.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Jump to a nearby hex and web all enemies within @HexRadius@ hexes, Stunning them for @StunDuration@ seconds and dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage. Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth>.",
-    "icon": "ASSETS/Characters/TFT13_Elise/HUD/Icons2D/Elise_Melee.TFT_Set13.tex",
-    "name": "Cocoon",
-    "variables": [
-      {
-        "name": "StunDuration",
-        "value": [1.5,1.75,2.0,8.0,12.0,2.5,2.5]
-      },
-      {
-        "name": "SearchRange",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "Damage",
-        "value": [0.0,120.0,180.0,1200.0,2000.0,0.0,0.0]
-      },
-      {
-        "name": "HexRadius",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "FlatHealth",
-        "value": [0.0,400.0,450.0,2000.0,2500.0,0.0,0.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 45 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3435,61 +1327,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":60,"attackSpeed":0.6,"critChance":0.25,"critMultiplier":1.4,"damage":65,"hp":1000,"initialMana":60,"magicResist":60,"mana":125,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Garen",
-  "name": "Garen",
-  "cost": 4,
-  "traits": ["Emissary","Watcher"],
-  "stats": {
-    "armor": 60.0,
-    "attackSpeed": 0.6000000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 65.0,
-    "hp": 1000.0,
-    "initialMana": 60.0,
-    "magicResist": 60.0,
-    "mana": 125.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> After dealing damage, heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleHealth%).</scaleHealth><br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleHealth%%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Slam a massive sword on target, dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to them and <physicalDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to enemies within 2&nbsp;hexes. ",
-    "icon": "ASSETS/Characters/TFT13_Garen/HUD/Icons2D/TFT13_Garen_SpellIcon.TFT_Set13.tex",
-    "name": "Demacian Justice",
-    "variables": [
-      {
-        "name": "APShield",
-        "value": [100.0,200.0,220.0,1500.0,2000.0,100.0,100.0]
-      },
-      {
-        "name": "PercentHealthShield",
-        "value": [0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448]
-      },
-      {
-        "name": "ShieldDuration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "ADRatio",
-        "value": [6.0,2.5,2.5,15.0,25.0,6.0,6.0]
-      },
-      {
-        "name": "SecondaryADRatio",
-        "value": [3.0,1.25,1.25,7.5,12.5,3.0,3.0]
-      },
-      {
-        "name": "HealPercentHealth",
-        "value": [0.014999999664723873,0.014999999664723873,0.014999999664723873,0.05000000074505806,0.07999999821186066,0.014999999664723873,0.014999999664723873]
-      },
-      {
-        "name": "PassiveDamagePercent",
-        "value": null
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 46 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3513,57 +1351,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":30,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":40,"hp":800,"initialMana":0,"magicResist":30,"mana":40,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Heimerdinger",
-  "name": "Heimerdinger",
-  "cost": 4,
-  "traits": ["Academy","Visionary"],
-  "stats": {
-    "armor": 30.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 40.0,
-    "hp": 800.0,
-    "initialMana": 0,
-    "magicResist": 30.0,
-    "mana": 40.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Fire <scaleLevel>@StartingRockets@</scaleLevel> missiles at random enemies that deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage. Each cast fires @MissileIncreasePerCast@ more missile than the&nbsp;last.",
-    "icon": "ASSETS/Characters/TFT13_Heimerdinger/HUD/Icons2D/Heimerdinger_Spell.TFT_Set13.tex",
-    "name": "PROGRESSSSS!",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [50.0,50.0,75.0,225.0,400.0,325.0,325.0]
-      },
-      {
-        "name": "StartingRockets",
-        "value": [9.0,5.0,5.0,7.0,7.0,9.0,9.0]
-      },
-      {
-        "name": "NumOfCastsToIncreaseMissiles",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "MissileIncreasePerCast",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "PercentOfMissileToFocusOnTarget",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "AdditionalTargetRowDifferential",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 47 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3584,57 +1372,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":60,"attackSpeed":0.65,"critChance":0.25,"critMultiplier":1.4,"damage":70,"hp":1100,"initialMana":65,"magicResist":60,"mana":125,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Illaoi",
-  "name": "Illaoi",
-  "cost": 4,
-  "traits": ["Rebel","Sentinel"],
-  "stats": {
-    "armor": 60.0,
-    "attackSpeed": 0.6499999761581421,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 70.0,
-    "hp": 1100.0,
-    "initialMana": 65.0,
-    "magicResist": 60.0,
-    "mana": 125.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Gain <TFTBonus>@DR*100@%</TFTBonus> Durability for @SpellDuration@ seconds. Over the duration, drain <trueDamage>@ModifiedHealthSteal@&nbsp;(%i:scaleAP%)</trueDamage> Health from the nearest <scaleLevel>@NumEnemies@</scaleLevel> enemies. Then slam down, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleArmor%%i:scaleMR%)</magicDamage> magic damage to all enemies within 2&nbsp;hexes.",
-    "icon": "ASSETS/Characters/TFT13_Illaoi/HUD/Icons2D/Illaoi_E_Debuff.TFT_Set13.tex",
-    "name": "Test of Spirit",
-    "variables": [
-      {
-        "name": "SpellDuration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "HealthSteal",
-        "value": [200.0,50.0,75.0,225.0,225.0,200.0,200.0]
-      },
-      {
-        "name": "NumEnemies",
-        "value": [4.0,4.0,4.0,10.0,10.0,4.0,4.0]
-      },
-      {
-        "name": "PercentBonusHealthSteal",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "DR",
-        "value": [0.4000000059604645,0.5,0.5,0.8999999761581421,0.8999999761581421,0.4000000059604645,0.4000000059604645]
-      },
-      {
-        "name": "DamageResistRatio",
-        "value": [0.0,0.6000000238418579,0.8999999761581421,7.0,10.0,0.0,0.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 48 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3655,57 +1393,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":30,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":40,"hp":800,"initialMana":30,"magicResist":30,"mana":80,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Silco",
-  "name": "Silco",
-  "cost": 4,
-  "traits": ["Chem-Baron","Dominator"],
-  "stats": {
-    "armor": 30.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 40.0,
-    "hp": 800.0,
-    "initialMana": 30.0,
-    "magicResist": 30.0,
-    "mana": 80.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Throw a canister at target, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to them and releasing <scaleLevel>@MinionsSpawned@</scaleLevel> monstrosities. Monstrosities attack @MinionNumAttacks@ times and deal <magicDamage>@ModifiedMinionDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage per&nbsp;attack.",
-    "icon": "ASSETS/Characters/TFT13_Silco/HUD/Icons2D/TFT6_Silco_EyeOfTheStorm.TFT_Set13.tex",
-    "name": "Canned Monstrosity",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,100.0,200.0,1000.0,2000.0,5.0,6.0]
-      },
-      {
-        "name": "MinionsSpawned",
-        "value": [4.0,4.0,4.0,8.0,8.0,8.0,8.0]
-      },
-      {
-        "name": "MinionsThatAttackCurrentTarget",
-        "value": [0.0,2.0,2.0,4.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "MinionDamage",
-        "value": [30.0,38.0,57.0,100.0,120.0,6.0,6.0]
-      },
-      {
-        "name": "MinionDuration",
-        "value": [12.0,12.0,12.0,12.0,12.0,12.0,12.0]
-      },
-      {
-        "name": "MinionNumAttacks",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 49 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3726,61 +1414,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":30,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":70,"hp":800,"initialMana":0,"magicResist":30,"mana":60,"range":6}`。
 
-```json
-{
-  "apiName": "TFT13_Twitch",
-  "name": "Twitch",
-  "cost": 4,
-  "traits": ["Experiment","Sniper"],
-  "stats": {
-    "armor": 30.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 70.0,
-    "hp": 800.0,
-    "initialMana": 0,
-    "magicResist": 30.0,
-    "mana": 60.0,
-    "range": 6.0
-  },
-  "ability": {
-    "desc": "For the next @TotalAttacks@ attacks, gain <TFTBonus>@AttackSpeed*100@%</TFTBonus> Attack Speed, infinite range, and replace attacks with a piercing bolt that targets random enemies. Bolts deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage, reduced by @DamageReduction*100@% for each enemy they pass&nbsp;through.<br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus: <TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus>After every <TFTBonus enabled=TFT13_ExperimentActive alternate=rules>@ExperimentDamageTicks@</TFTBonus> attacks, deal physical damage to the nearest enemy equal to <physicalDamage enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_TwitchCurrentExperimentBonus@%</physicalDamage> of their max&nbsp;Health.</spellActive>",
-    "icon": "ASSETS/Characters/TFT13_Twitch/HUD/Icons_2D/Twitch_R.TFT_Set13.tex",
-    "name": "Spray and Pray",
-    "variables": [
-      {
-        "name": "TotalAttacks",
-        "value": [8.0,8.0,8.0,8.0,8.0,8.0,8.0]
-      },
-      {
-        "name": "AttackSpeed",
-        "value": [0.8500000238418579,0.8500000238418579,0.8500000238418579,0.8500000238418579,0.8500000238418579,0.8500000238418579,0.8500000238418579]
-      },
-      {
-        "name": "APDamage",
-        "value": [4.0,18.0,25.0,120.0,200.0,4.0,4.0]
-      },
-      {
-        "name": "PercentAttackDamage",
-        "value": [1.5,1.399999976158142,1.399999976158142,3.0,4.0,1.5,1.5]
-      },
-      {
-        "name": "DamageReduction",
-        "value": [0.6000000238418579,0.4000000059604645,0.4000000059604645,0.20000000298023224,0.10000000149011612,0.6000000238418579,0.6000000238418579]
-      },
-      {
-        "name": "ExperimentDamageTicks",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "ExperimentMaxHealthDamage",
-        "value": [0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448,0.15000000596046448]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 50 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3802,53 +1436,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":50,"attackSpeed":0.85,"critChance":0.25,"critMultiplier":1.4,"damage":75,"hp":1100,"initialMana":40,"magicResist":50,"mana":100,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Vi",
-  "name": "Vi",
-  "cost": 4,
-  "traits": ["Enforcer","Pit Fighter"],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.8500000238418579,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 75.0,
-    "hp": 1100.0,
-    "initialMana": 40.0,
-    "magicResist": 50.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds, then Stun target for @StunDuration@ seconds. Slam them down, dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to them and causing a shockwave in their row. Enemies hit take <physicalDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage and are briefly knocked&nbsp;up.",
-    "icon": "ASSETS/Characters/TFT13_Vi/HUD/ViR.TFT_Set13.tex",
-    "name": "Wrecking Crew",
-    "variables": [
-      {
-        "name": "Shield",
-        "value": [2.0,280.0,325.0,1200.0,1200.0,2.0,2.0]
-      },
-      {
-        "name": "PercentAttackDamage",
-        "value": [0.0,6.0,6.0,12.0,15.0,3.299999952316284,3.299999952316284]
-      },
-      {
-        "name": "PercentAttackDamage_SecondaryDamage",
-        "value": [1.5,1.7999999523162842,1.7999999523162842,5.0,7.0,4.0,4.0]
-      },
-      {
-        "name": "ShieldDuration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "StunDuration",
-        "value": [1.5,1.5,1.5,1.5,1.5,1.5,1.5]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 51 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3868,45 +1456,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":30,"attackSpeed":0.75,"critChance":0.25,"critMultiplier":1.4,"damage":40,"hp":800,"initialMana":20,"magicResist":30,"mana":80,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Zoe",
-  "name": "Zoe",
-  "cost": 4,
-  "traits": ["Rebel","Sorcerer"],
-  "stats": {
-    "armor": 30.0,
-    "attackSpeed": 0.75,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 40.0,
-    "hp": 800.0,
-    "initialMana": 20.0,
-    "magicResist": 30.0,
-    "mana": 80.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Launch a star at target that deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage. It bounces to the farthest enemy within @HexLimiter@ hexes, then bounces back to the target. This effect repeats @NumRepeats@ times, hitting a different enemy each&nbsp;time.",
-    "icon": "ASSETS/Characters/TFT13_Zoe/HUD/Icons2D/TFT13_Zoe_Q2.TFT_Set13.tex",
-    "name": "Paddle Star!",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,140.0,210.0,450.0,700.0,0.0,0.0]
-      },
-      {
-        "name": "NumRepeats",
-        "value": [2.0,2.0,2.0,4.0,4.0,2.0,2.0]
-      },
-      {
-        "name": "HexLimiter",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 52 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -3924,65 +1474,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.55,"critChance":0.25,"critMultiplier":1.4,"damage":82,"hp":900,"initialMana":0,"magicResist":40,"mana":50,"range":13}`。
 
-```json
-{
-  "apiName": "TFT13_Caitlyn",
-  "name": "Caitlyn",
-  "cost": 5,
-  "traits": ["Enforcer","Sniper"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.550000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 82.0,
-    "hp": 900.0,
-    "initialMana": 0,
-    "magicResist": 40.0,
-    "mana": 50.0,
-    "range": 13.0
-  },
-  "ability": {
-    "desc": "Enter a sniper's stance and call in an airship that circles the battlefield for @RaidDuration@ seconds, dropping @TotalShots@ bombs at a random cluster of enemies over the duration. Bombs deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%&nbsp;%i:scaleAP%)</physicalDamage> physical damage in a one-hex&nbsp;circle.<br><br>Whenever an enemy is caught in the epicenter of an Air Raid blast, reduce their Armor and Magic Resist by @ResistReduction@ and fire a shot towards them, dealing <physicalDamage>@HeadshotDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical&nbsp;damage.",
-    "icon": "ASSETS/Characters/TFT13_Caitlyn/HUD/Icons2D/Caitlyn_Headshot.TFT_Set13.tex",
-    "name": "Air Raid",
-    "variables": [
-      {
-        "name": "RaidDuration",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "TotalShots",
-        "value": [4.0,4.0,4.0,20.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "PercentAttackDamage",
-        "value": [2.0,1.7999999523162842,1.7999999523162842,7.5,2.0,2.0,2.0]
-      },
-      {
-        "name": "APDamage",
-        "value": [80.0,20.0,30.0,100.0,200.0,80.0,80.0]
-      },
-      {
-        "name": "HeadshotPercentAD",
-        "value": [2.0,2.799999952316284,2.799999952316284,13.5,13.5,2.4000000953674316,2.4000000953674316]
-      },
-      {
-        "name": "BonusSearchRange",
-        "value": [630.0,630.0,630.0,630.0,630.0,630.0,630.0]
-      },
-      {
-        "name": "PercentShotsFocusedOnFrontline",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "ResistReduction",
-        "value": [20.0,20.0,20.0,20.0,20.0,20.0,20.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 53 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4005,77 +1497,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":0,"attackSpeed":0.5,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":900,"initialMana":0,"magicResist":null,"mana":10,"range":1}`。 **Q02：换形载体，MR和双形态实际属性待确认。**
 
-```json
-{
-  "apiName": "TFT13_Jayce",
-  "name": "Jayce",
-  "cost": 5,
-  "traits": ["Academy","Form Swapper"],
-  "stats": {
-    "armor": 0.0,
-    "attackSpeed": 0.5,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 900.0,
-    "initialMana": 0,
-    "magicResist": null,
-    "mana": 10.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> Summon a placeable Hextech Forge. On cast, the @NumAlliesShield@ allies closest to it gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. If it's dead, revive it with <TFTBonus>@ReducedSummonHealth*100@%</TFTBonus>&nbsp;Health.<br><br><spellActive>Active:</spellActive> Summon 2 Hexgates and knock target into one of them, dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage and sending them flying back to their original position. While flying, they deal <physicalDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to all other enemies in the&nbsp;path.",
-    "icon": "ASSETS/Characters/TFT13_Jayce/HUD/Icons2D/Jayce_Melee.TFT_Set13.tex",
-    "name": "Special Delivery",
-    "variables": [
-      {
-        "name": "PercentAttackDamage",
-        "value": [0.0,5.0,5.0,20.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "PercentADSecondaryDamage",
-        "value": [0.0,2.25,2.25,15.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "NumAlliesShield",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "Shield",
-        "value": [0.0,200.0,275.0,1800.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "ShieldDuration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "InitialGateDistanceBehindTheTarget",
-        "value": [480.0,480.0,480.0,480.0,480.0,480.0,480.0]
-      },
-      {
-        "name": "EnemyFlightDuration",
-        "value": [0.75,0.75,0.75,0.75,0.75,0.75,0.75]
-      },
-      {
-        "name": "FlyingEnemyDamageRadius",
-        "value": [290.0,290.0,290.0,290.0,290.0,290.0,290.0]
-      },
-      {
-        "name": "MaxEnemySpeed",
-        "value": [2300.0,2300.0,2300.0,2300.0,2300.0,2300.0,2300.0]
-      },
-      {
-        "name": "MinEnemySpeed",
-        "value": [1650.0,1650.0,1650.0,1650.0,1650.0,1650.0,1650.0]
-      },
-      {
-        "name": "ReducedSummonHealth",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 54 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4101,73 +1523,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.8,"critChance":0.25,"critMultiplier":1.4,"damage":60,"hp":900,"initialMana":0,"magicResist":40,"mana":60,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Jinx",
-  "name": "Jinx",
-  "cost": 5,
-  "traits": ["Rebel","Ambusher"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 60.0,
-    "hp": 900.0,
-    "initialMana": 0,
-    "magicResist": 40.0,
-    "mana": 60.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "<tftrules>Jinx alternates between Zap, Flame Chompers, and Death Rocket for her&nbsp;ability.</tftrules><br><br><spellActive>Zap:</spellActive> Deal <physicalDamage>@ZapModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to enemies in a line and Stun them for <scaleLevel>@ZapStunDuration@</scaleLevel>&nbsp;seconds.<br><spellActive>Flame Chompers:</spellActive> Deal <physicalDamage>@FlameChompersModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to @NumOfFlameChompers@ 1-hex circles of&nbsp;enemies.<br><spellActive>Death Rocket:</spellActive> Fire a rocket at the center of the board that <physicalDamage>@DeathRocketModifiedDamage@&nbsp;(%i:scaleAD%%i:scaleAP%)</physicalDamage> physical damage to ALL enemies, reduced by @FalloffPercent*100@% for each hex they are away from the epicenter.",
-    "icon": "ASSETS/Characters/TFT13_Jinx/HUD/Icons2D/Jinx_P.TFT_Set13.tex",
-    "name": "Ruin Everything",
-    "variables": [
-      {
-        "name": "NumOfFlameChompers",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "FlameChompersPercentAD",
-        "value": [0.0,2.6500000953674316,2.6500000953674316,20.0,30.0,0.0,0.0]
-      },
-      {
-        "name": "ZapPercentAD",
-        "value": [0.0,2.6500000953674316,2.6500000953674316,20.0,30.0,0.0,0.0]
-      },
-      {
-        "name": "ZapStunDuration",
-        "value": [1.5,1.25,1.5,10.0,10.0,1.5,1.5]
-      },
-      {
-        "name": "ZapLength",
-        "value": [2500.0,2500.0,2500.0,2500.0,2500.0,2500.0,2500.0]
-      },
-      {
-        "name": "ZapWidth",
-        "value": [180.0,180.0,180.0,180.0,180.0,180.0,180.0]
-      },
-      {
-        "name": "DeathRocketPercentAD",
-        "value": [0.0,7.0,7.0,90.01000213623047,90.0199966430664,0.0,0.0]
-      },
-      {
-        "name": "DeathRocketAP",
-        "value": [0.0,60.0,90.0,300.0,600.0,0.0,0.0]
-      },
-      {
-        "name": "DeathRocketHexes",
-        "value": [6.0,6.0,6.0,6.0,6.0,6.0,6.0]
-      },
-      {
-        "name": "FalloffPercent",
-        "value": [0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 55 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4192,61 +1548,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.8,"critChance":0.25,"critMultiplier":1.4,"damage":50,"hp":900,"initialMana":45,"magicResist":40,"mana":90,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_LeBlanc",
-  "name": "LeBlanc",
-  "cost": 5,
-  "traits": ["Black Rose","Sorcerer"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 900.0,
-    "initialMana": 45.0,
-    "magicResist": 40.0,
-    "mana": 90.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Chain together the nearest @ChainTargets@ enemies for @ChainDuration@ seconds, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage split between them. When one takes damage, <TFTBonus>@DamageShare*100@%</TFTBonus> of the amount is split as bonus true damage to the&nbsp;others.<br><br>LeBlanc's next @NumAttacks@ attacks deal <magicDamage>@ModifiedAutoDamage@&nbsp;(%i:scaleAP%)</magicDamage> bonus magic damage, increased by <TFTBonus>@AutoKillBonus*100@%</TFTBonus> for each enemy killed by the initial damage.",
-    "icon": "ASSETS/Characters/TFT13_LeBlanc/HUD/Icons2D/LeBlancE.TFT_Set13.tex",
-    "name": "The Chains of Fate",
-    "variables": [
-      {
-        "name": "ChainTargets",
-        "value": [4.0,4.0,4.0,20.0,20.0,4.0,4.0]
-      },
-      {
-        "name": "ChainDuration",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "Damage",
-        "value": [500.0,650.0,975.0,5000.0,9002.0,200.0,200.0]
-      },
-      {
-        "name": "AutoDamage",
-        "value": [250.0,160.0,240.0,900.0,900.0,0.0,0.0]
-      },
-      {
-        "name": "DamageShare",
-        "value": [0.15000000596046448,0.18000000715255737,0.25,1.0,1.0,0.20000000298023224,0.20000000298023224]
-      },
-      {
-        "name": "NumAttacks",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "AutoKillBonus",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 56 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4268,133 +1570,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":60,"attackSpeed":0.9,"critChance":0.25,"critMultiplier":1.4,"damage":80,"hp":1200,"initialMana":0,"magicResist":60,"mana":60,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Lieutenant",
-  "name": "Sevika",
-  "cost": 5,
-  "traits": ["High Roller","Chem-Baron","Pit Fighter"],
-  "stats": {
-    "armor": 60.0,
-    "attackSpeed": 0.8999999761581421,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 80.0,
-    "hp": 1200.0,
-    "initialMana": 0,
-    "magicResist": 60.0,
-    "mana": 60.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Randomly cast 1 of 3 spells, with a chance of a Jackpot!<br><br><spellPassive>Flamethrower:</spellPassive> {{Spell_TFT13_LieutenantSpell1_Tooltip}}<br><br><spellPassive>Extendo-Punch:</spellPassive> {{Spell_TFT13_LieutenantSpell2_Tooltip}}<br><br><spellPassive>Chomp:</spellPassive> {{Spell_TFT13_LieutenantSpell3_Tooltip}}",
-    "icon": "ASSETS/Characters/TFT13_Lieutenant/HUD/Icons2D/TFT13_Lieutenant_AbilityIcon.TFT_Set13.tex",
-    "name": "Beat the Odds",
-    "variables": [
-      {
-        "name": "Spell1_ADPercent",
-        "value": [2.5,2.4000000953674316,2.4000000953674316,15.0,20.0,1.7999999523162842,1.7999999523162842]
-      },
-      {
-        "name": "Spell1_ReducedDamagePercent",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "Spell1_MinDuration",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "Spell1_Bonus_DamagePercentPerSecond",
-        "value": [0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224]
-      },
-      {
-        "name": "Spell1_HighrollBonus",
-        "value": [20.0,20.0,20.0,20.0,20.0,20.0,20.0]
-      },
-      {
-        "name": "APBonusDamage",
-        "value": [0.0,20.0,30.0,500.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "Spell2_HexRadius",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "Spell2_Modifier",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "Spell2_SecondaryModifier",
-        "value": [1.2999999523162842,1.2999999523162842,1.2999999523162842,1.2999999523162842,1.2999999523162842,1.2999999523162842,1.2999999523162842]
-      },
-      {
-        "name": "Spell2_HexKnockback",
-        "value": [10.0,10.0,10.0,10.0,10.0,10.0,10.0]
-      },
-      {
-        "name": "Spell2_StunDuration",
-        "value": [1.5,1.5,1.5,1.5,1.5,1.5,1.5]
-      },
-      {
-        "name": "Spell2_Bonus_KnockbackDamage",
-        "value": [0.0,4.0,4.0,10.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "Spell3_Modifier",
-        "value": [3.200000047683716,3.200000047683716,3.200000047683716,3.200000047683716,3.200000047683716,3.200000047683716,3.200000047683716]
-      },
-      {
-        "name": "Spell3_BleedModifier",
-        "value": [0.75,0.75,0.75,0.75,0.75,0.75,0.75]
-      },
-      {
-        "name": "Spell3_StunDuration",
-        "value": [1.25,1.25,1.25,1.25,1.25,1.25,1.25]
-      },
-      {
-        "name": "Spell3_NumSlams",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "Spell3_BleedDuration",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "Spell3_TargetPercentHealthDamage",
-        "value": [0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224]
-      },
-      {
-        "name": "Spell3_HexRadius",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "Spell3_Bonus_BleedADPercent",
-        "value": [0.0,4.0,4.0,10.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "Spell3_Bonus_BleedDuration",
-        "value": [20.0,20.0,20.0,20.0,20.0,20.0,20.0]
-      },
-      {
-        "name": "Spell3_ExecutePercentage",
-        "value": [0.15000000596046448,0.15000000596046448,0.15000000596046448,1.0,1.0,0.15000000596046448,0.15000000596046448]
-      },
-      {
-        "name": "Spell3_ResetDashRange",
-        "value": [2.0,2.0,2.0,10.0,10.0,2.0,2.0]
-      },
-      {
-        "name": "Spell3_ResetDamageFalloff",
-        "value": [0.800000011920929,0.800000011920929,0.800000011920929,0.800000011920929,0.800000011920929,0.800000011920929,0.800000011920929]
-      },
-      {
-        "name": "Spell3_BonusNumChomps",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 57 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4434,49 +1610,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.8,"critChance":0.25,"critMultiplier":1.4,"damage":45,"hp":950,"initialMana":30,"magicResist":40,"mana":95,"range":4}`。
 
-```json
-{
-  "apiName": "TFT13_Malzahar",
-  "name": "Malzahar",
-  "cost": 5,
-  "traits": ["Automata","Visionary"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 45.0,
-    "hp": 950.0,
-    "initialMana": 30.0,
-    "magicResist": 40.0,
-    "mana": 95.0,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "Summon a gate in a 5-hex line across target. Enemies hit take <magicDamage>@ModifiedDamage@ (%i:scaleAP%)</magicDamage> magic damage and are 20% <TFTKeyword>Shredded</TFTKeyword> for @ShredDuration@ seconds. Malzahar spreads 5 stacks of infection between enemies hit.<br><br>Infection deals <magicDamage>@ModifiedInfectionDamage@ (%i:scaleAP%)</magicDamage> magic damage per second for the rest of combat. This effect can stack infinitely. When an infected target dies, they spread their stacks to nearby enemies.<br><br><rules><tftbold>Shred:</tftbold> Reduce Magic Resist</rules>",
-    "icon": "ASSETS/Characters/TFT13_Malzahar/HUD/Icons2D/TFT13_MalzaharSpellIcon.TFT_Set13.tex",
-    "name": "Call of the Machine",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,80.0,120.0,1000.0,1500.0,2.0,2.0]
-      },
-      {
-        "name": "InfectionDamage",
-        "value": [0.0,14.0,21.0,400.0,1000.0,2.5,2.5]
-      },
-      {
-        "name": "DamageTicksPerSecond",
-        "value": [0.75,0.75,0.75,0.75,0.75,0.75,0.75]
-      },
-      {
-        "name": "ShredDuration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 58 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4495,85 +1629,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":70,"attackSpeed":0.55,"critChance":0.25,"critMultiplier":1.4,"damage":75,"hp":1200,"initialMana":25,"magicResist":70,"mana":100,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Mordekaiser",
-  "name": "Mordekaiser",
-  "cost": 5,
-  "traits": ["Conqueror","Dominator"],
-  "stats": {
-    "armor": 70.0,
-    "attackSpeed": 0.550000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 75.0,
-    "hp": 1200.0,
-    "initialMana": 25.0,
-    "magicResist": 70.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Briefly gain <TFTBonus>@DR*100@%</TFTBonus> Durability and summon a massive claw, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to the most enemies in a line. The @NearestEnemies@ closest enemies take <TFTBonus>@DamageBonus*100@%</TFTBonus> more damage and are pulled towards&nbsp;Mordekaiser.<br><br>For the next @EmpowerDuration@ seconds, gain <TFTBonus>@OmnivampPercent*100@%</TFTBonus> Omnivamp, +1 Attack Range, and replace every attack with a slam that deals <magicDamage>@ModifiedTargetDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to target and <magicDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to all other enemies within @AttackHexRadius@&nbsp;hexes.",
-    "icon": "ASSETS/Characters/TFT13_Mordekaiser/HUD/Icons2D/MordekaiserE.TFT_Set13.tex",
-    "name": "Grasp of the Iron Revenant",
-    "variables": [
-      {
-        "name": "DR",
-        "value": [0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645]
-      },
-      {
-        "name": "Damage",
-        "value": [0.0,160.0,240.0,800.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "DamageBonus",
-        "value": [0.25,0.25,0.25,0.25,0.25,0.25,0.25]
-      },
-      {
-        "name": "NearestEnemies",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "Displacement",
-        "value": [240.0,240.0,240.0,240.0,240.0,240.0,240.0]
-      },
-      {
-        "name": "OmnivampPercent",
-        "value": [0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896,0.30000001192092896]
-      },
-      {
-        "name": "TargetDamage",
-        "value": [0.0,330.0,500.0,3000.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "SlamDamage",
-        "value": [0.0,85.0,125.0,1500.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "AttackHexRadius",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "LineRange",
-        "value": [1470.0,1470.0,1470.0,1470.0,1470.0,1470.0,1470.0]
-      },
-      {
-        "name": "LineWidth",
-        "value": [615.0,615.0,615.0,615.0,615.0,615.0,615.0]
-      },
-      {
-        "name": "NumAttacks",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "EmpowerDuration",
-        "value": [10.0,10.0,10.0,10.0,10.0,10.0,10.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 59 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4601,137 +1657,7 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 
 基础属性审阅值：`{"armor":70,"attackSpeed":0.8,"critChance":0.25,"critMultiplier":1.4,"damage":60,"hp":1200,"initialMana":40,"magicResist":70,"mana":120,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Rumble",
-  "name": "Rumble",
-  "cost": 5,
-  "traits": ["Junker King","Scrap","Sentinel"],
-  "stats": {
-    "armor": 70.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 60.0,
-    "hp": 1200.0,
-    "initialMana": 40.0,
-    "magicResist": 70.0,
-    "mana": 120.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Call down a rain of @NumMissile@ missiles on target's row that each deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage, <TFTKeyword>Wound</TFTKeyword>, and 1% <TFTKeyword>Burn</TFTKeyword> units hit for @WoundDuration@ seconds. For each missile that doesn't hit an enemy, restore @ManaPerMissile@&nbsp;Mana.<br><br>If there's only 1 enemy left, fire all of the missiles at&nbsp;them.<br><br><rules>Burn: Deal a percent of the target's max Health as true damage every second<br>Wound: Reduce healing received by 33%</rules><br><br>@TFTUnitProperty.:TFT13_JunkerKing_UpgradeTRAKeyWrapper@<br>",
-    "icon": "ASSETS/Characters/TFT13_Rumble/HUD/Icons2D/Rumble_R.TFT_Set13.tex",
-    "name": "The Equalizer",
-    "variables": [
-      {
-        "name": "Damage",
-        "value": [0.0,500.0,750.0,4000.0,9999.0,0.0,0.0]
-      },
-      {
-        "name": "NumMissile",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "WoundDuration",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "ManaPerMissile",
-        "value": [20.0,20.0,20.0,20.0,20.0,20.0,20.0]
-      },
-      {
-        "name": "Tankbuster_RefreshDuration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "Tankbuster_APDamage_Level1",
-        "value": [100.0,100.0,100.0,100.0,100.0,100.0,100.0]
-      },
-      {
-        "name": "Tankbuster_APDamage_Level2",
-        "value": [150.0,150.0,150.0,150.0,150.0,150.0,150.0]
-      },
-      {
-        "name": "Tankbuster_APDamage_Level3",
-        "value": [1600.0,1600.0,1600.0,1600.0,1600.0,1600.0,1600.0]
-      },
-      {
-        "name": "SelfDestruct_ResistGainIncrease",
-        "value": [0.25,0.25,0.25,0.25,0.25,0.25,0.25]
-      },
-      {
-        "name": "SelfDestruct_ResistDamage_Level1",
-        "value": [1.600000023841858,1.600000023841858,1.600000023841858,1.600000023841858,1.600000023841858,1.600000023841858,1.600000023841858]
-      },
-      {
-        "name": "SelfDestruct_ResistDamage_Level2",
-        "value": [2.4000000953674316,2.4000000953674316,2.4000000953674316,2.4000000953674316,2.4000000953674316,2.4000000953674316,2.4000000953674316]
-      },
-      {
-        "name": "SelfDestruct_ResistDamage_Level3",
-        "value": [20.0,20.0,20.0,20.0,20.0,20.0,20.0]
-      },
-      {
-        "name": "SelfDestruct_HexRadius",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "Flamethrower_Damage_Level1",
-        "value": [30.0,30.0,30.0,30.0,30.0,30.0,30.0]
-      },
-      {
-        "name": "Flamethrower_Damage_Level2",
-        "value": [45.0,45.0,45.0,45.0,45.0,45.0,45.0]
-      },
-      {
-        "name": "Flamethrower_Damage_Level3",
-        "value": [600.0,600.0,600.0,600.0,600.0,600.0,600.0]
-      },
-      {
-        "name": "Flamethrower_TicksPerSecond",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "RepairingMicrobots_RefreshDuration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "ReparingMicrobots_MaxHealthHeal_Level1",
-        "value": [0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549]
-      },
-      {
-        "name": "ReparingMicrobots_MaxHealthHeal_Level2",
-        "value": [0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549,0.05999999865889549]
-      },
-      {
-        "name": "ReparingMicrobots_MaxHealthHeal_Level3",
-        "value": [0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645]
-      },
-      {
-        "name": "PetriciteRod_RefreshDuration",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "PetriciteRod_APDamage_Level1",
-        "value": [350.0,350.0,350.0,350.0,350.0,350.0,350.0]
-      },
-      {
-        "name": "PetriciteRod_APDamage_Level2",
-        "value": [525.0,525.0,525.0,525.0,525.0,525.0,525.0]
-      },
-      {
-        "name": "PetriciteRod_APDamage_Level3",
-        "value": [6000.0,6000.0,6000.0,6000.0,6000.0,6000.0,6000.0]
-      },
-      {
-        "name": "PetriciteRod_DOTDuration",
-        "value": [15.0,15.0,15.0,15.0,15.0,15.0,15.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 60 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4792,89 +1718,7 @@ Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以�
 
 基础属性审阅值：`{"armor":60,"attackSpeed":0.8,"critChance":0.25,"critMultiplier":1.4,"damage":80,"hp":1800,"initialMana":0,"magicResist":60,"mana":40,"range":3}`。
 
-```json
-{
-  "apiName": "TFT13_MissMage",
-  "name": "Mel",
-  "cost": 6,
-  "traits": ["Banished Mage"],
-  "stats": {
-    "armor": 60.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 80.0,
-    "hp": 1800.0,
-    "initialMana": 0,
-    "magicResist": 60.0,
-    "mana": 40.0,
-    "range": 3.0
-  },
-  "ability": {
-    "desc": "Dash to a nearby hex, then gain <TFTBonus>@ShieldAmount@</TFTBonus> Shield and grant the same Shield to @ShieldCount@ nearby allies. @DRConvertToUnstableEnergy*100@% of the damage blocked by the Shields is stored as unstable energy. After dashing, deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to @NormalCastNumEnemies@ nearby&nbsp;enemies. <br><br>Every 3rd cast, unleash the unstable energy + <magicDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAP%)</magicDamage> as magic damage split between the @ThirdCastNumEnemies@ nearest&nbsp;enemies.",
-    "icon": "ASSETS/Characters/TFT13_MissMage/HUD/Icons2D/TFT13_MissMage_Spell.TFT_Set13_Evolved.tex",
-    "name": "Conduit of Magic",
-    "variables": [
-      {
-        "name": "NormalCastDamage",
-        "value": [0.0,180.0,450.0,2700.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "NormalCastNumEnemies",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "NormalCastNumMissilesPerEnemy",
-        "value": [10.0,10.0,10.0,10.0,10.0,10.0,10.0]
-      },
-      {
-        "name": "AuraDuration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "AuraDR",
-        "value": [0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224,0.20000000298023224]
-      },
-      {
-        "name": "DRConvertToUnstableEnergy",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "SpecialCastDamage",
-        "value": [0.0,1390.0,3475.0,99999.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "ThirdCastNumEnemies",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "DashLogic_DashRange",
-        "value": [9000.0,9000.0,9000.0,9000.0,9000.0,9000.0,9000.0]
-      },
-      {
-        "name": "DashLogic_LineWidth",
-        "value": null
-      },
-      {
-        "name": "DashLogic_DashSpeed",
-        "value": [1600.0,1600.0,1600.0,1600.0,1600.0,1600.0,1600.0]
-      },
-      {
-        "name": "DashLogic_MaxDashTime",
-        "value": [1.5,1.5,1.5,1.5,1.5,1.5,1.5]
-      },
-      {
-        "name": "ShieldAmount",
-        "value": [0.0,300.0,600.0,10000.0,10000.0,0.0,0.0]
-      },
-      {
-        "name": "ShieldCount",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 61 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4905,61 +1749,7 @@ Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以�
 
 基础属性审阅值：`{"armor":40,"attackSpeed":0.55,"critChance":0.25,"critMultiplier":1.4,"damage":100,"hp":1600,"initialMana":0,"magicResist":40,"mana":100,"range":4}`。 **Q11：Viktor实际能量按Machine Herald的3/8；此处是原始mana载体。**
 
-```json
-{
-  "apiName": "TFT13_Viktor",
-  "name": "Viktor",
-  "cost": 6,
-  "traits": ["Machine Herald"],
-  "stats": {
-    "armor": 40.0,
-    "attackSpeed": 0.550000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 100.0,
-    "hp": 1600.0,
-    "initialMana": 0,
-    "magicResist": 40.0,
-    "mana": 100,
-    "range": 4.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> Attacks are replaced with a Death Ray that deals <magicDamage>@ModifiedDeathRayDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage and <trueDamage>@LaserTrueDamage@</trueDamage> true damage in a @LaserHexLength@-hex line. Enemies hit are 30% <TFTKeyword>Sundered</TFTKeyword> and <TFTKeyword>Shredded</TFTKeyword> for @ShredDuration@&nbsp;seconds.<br><br><spellActive>Active:</spellActive> Summon a chaos storm that engulfs the battlefield, knocking up ALL enemies into the air for @StunDuration@ seconds. At the end of the duration, slam them to the ground, dealing <magicDamage>@ModifiedSpellDamage@&nbsp;(%i:scaleAP%)</magicDamage> plus <magicDamage>@PercentMaxHealthDamage*100@%</magicDamage> of their max Health as magic&nbsp;damage.<br><br><rules><tftbold>Sunder:</tftbold> Reduce Armor,</rules> <rules><tftbold>Shred:</tftbold> Reduce Magic Resist</rules>",
-    "icon": "ASSETS/Characters/TFT13_Viktor/HUD/Icons2D/Viktor_Passive.TFT_Set13_Evolved.tex",
-    "name": "Chaos Storm",
-    "variables": [
-      {
-        "name": "LaserHexLength",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "LaserMagicDamage",
-        "value": [40.0,70.0,175.0,2000.0,9001.0,20.0,20.0]
-      },
-      {
-        "name": "LaserTrueDamage",
-        "value": [0.0,35.0,90.0,1000.0,9001.0,0.0,0.0]
-      },
-      {
-        "name": "ShredDuration",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      },
-      {
-        "name": "StunDuration",
-        "value": [2.0,2.0,3.0,30.0,30.0,2.0,2.0]
-      },
-      {
-        "name": "SpellDamage",
-        "value": [150.0,120.0,300.0,9999.0,9999.0,100.0,100.0]
-      },
-      {
-        "name": "PercentMaxHealthDamage",
-        "value": [0.10000000149011612,0.07999999821186066,0.20000000298023224,1.0,1.0,0.15000000596046448,0.15000000596046448]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 62 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -4981,65 +1771,7 @@ Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以�
 
 基础属性审阅值：`{"armor":70,"attackSpeed":0.9,"critChance":0.25,"critMultiplier":1.4,"damage":110,"hp":2100,"initialMana":60,"magicResist":70,"mana":100,"range":1}`。
 
-```json
-{
-  "apiName": "TFT13_Warwick",
-  "name": "Warwick",
-  "cost": 6,
-  "traits": ["Experiment","Blood Hunter"],
-  "stats": {
-    "armor": 70.0,
-    "attackSpeed": 0.8999999761581421,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 110.0,
-    "hp": 2100.0,
-    "initialMana": 60.0,
-    "magicResist": 70.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Passive:</spellPassive> While <omnivamp>Bloodfrenzied</omnivamp>, move faster, gain <TFTBonus>@PercentOmnivamp@%&nbsp;(%i:scaleAP%)</TFTBonus> Omnivamp, <TFTBonus>@BloodfrenzyAS*100@%</TFTBonus> Attack Speed, and deal <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%%i:scaleAS%)</physicalDamage> physical damage each second to target. After killing @ChampsToDevourTooltipOnly@ enemies, become Unstoppable and <omnivamp>Bloodfrenzied</omnivamp> for the rest of&nbsp;combat.<br><br><spellActive>Active</spellActive>: Become <omnivamp>Bloodfrenzied</omnivamp> for @BloodfrenzyDuration@&nbsp;seconds.<br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus:<TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus> On kill, Stun enemies adjacent to the dead target for @TFTUnitProperty.:TFT13_WarwickCurrentExperimentBonus@&nbsp;second.</spellActive>",
-    "icon": "ASSETS/Characters/TFT13_Warwick/Skins/Base/Images/TFT13_Warwick_AbilityIcon.TFT_Set13_Evolved.tex",
-    "name": "Blood Hunt",
-    "variables": [
-      {
-        "name": "BaseOmnivamp",
-        "value": [0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612,0.10000000149011612]
-      },
-      {
-        "name": "APOmnivamp",
-        "value": [1.0,0.10000000149011612,0.15000000596046448,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "BloodfrenzyAS",
-        "value": [0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645]
-      },
-      {
-        "name": "BloodfrenzyDuration",
-        "value": [4.0,4.0,4.0,4.0,4.0,4.0,4.0]
-      },
-      {
-        "name": "DamagePercent",
-        "value": [3.0,2.0,3.75,25.0,50.0,3.0,3.0]
-      },
-      {
-        "name": "BaseDamage",
-        "value": [0.0,180.0,300.0,1088.0,0.0,0.0,0.0]
-      },
-      {
-        "name": "ExperimentStunDuration",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "ChampsToDevourTooltipOnly",
-        "value": [5.0,5.0,5.0,5.0,5.0,5.0,5.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 63 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 技能数值审阅（1/2/3星；完整七槽原值见上）：
 
@@ -5073,55 +1805,7 @@ Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以�
 
 来源：`/setData/1/traits/17`；完整记录SHA-256 `4092b745bafe109288b183140999eacd5072d308148d0854c7cb58ce9ba24421`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Academy",
-  "name": "Academy",
-  "desc": "The Academy sponsors 3 items each game.<br><br>Copies of sponsored items grant bonus max Health and Damage Amp. Academy units holding sponsored items gain double the amount, plus an additional @BaseValues*100@% Health and Damage Amp.<br><br><row>(@MinUnits@) @PercentIncreaseSponsored*100@% %i:scaleHealth% %i:scaleDA%;<br>gain 1 sponsored item.</row><br><row>(@MinUnits@) @PercentIncreaseSponsored*100@% %i:scaleHealth% %i:scaleDA%;<br>gain 1 sponsored item.</row><br><row>(@MinUnits@) @PercentIncreaseSponsored*100@% %i:scaleHealth% %i:scaleDA%;<br>gain 1 sponsored item.</row><br><row>(@MinUnits@) @PercentIncreaseSponsored*100@% %i:scaleHealth% %i:scaleDA%</row>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 3,
-      "style": 1,
-      "variables": {
-        "BaseValues": 0.05000000074505806,
-        "NumOfItems": 1.0,
-        "PercentIncreaseSponsored": 0.019999999552965164
-      }
-    },
-    {
-      "maxUnits": 4,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "BaseValues": 0.05000000074505806,
-        "NumOfItems": 2.0,
-        "PercentIncreaseSponsored": 0.029999999329447746
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 5,
-      "style": 5,
-      "variables": {
-        "BaseValues": 0.05000000074505806,
-        "NumOfItems": 3.0,
-        "PercentIncreaseSponsored": 0.05000000074505806
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "BaseValues": 0.05000000074505806,
-        "NumOfItems": 3.0,
-        "PercentIncreaseSponsored": 0.09000000357627869
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 64 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5138,53 +1822,7 @@ Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以�
 
 来源：`/setData/1/traits/6`；完整记录SHA-256 `41cfa4eaa2dc19627d9337e03e9ebc37b740ff1d3f12e9667959b2b6ed4aae02`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Ambassador",
-  "name": "Emissary",
-  "desc": "This trait is active only when you have exactly 1 or 4 unique Emissaries. <br><br><row>(@MinUnits@) Gain that Emissary's bonus</row><br><row>(@MinUnits@) Gain all bonuses. Emissaries gain @BonusHealth@&nbsp;%i:scaleHealth% and @SelfishDamageAmp*100@%&nbsp;%i:scaleDA%</row><br><br><TFTGuildActive enabled=TFT13_Trait_Ambassador_ActiveDomina alternate=TFTGuildInactive>Ambessa: Allies gain @AmbessaArmor@ Armor and Magic Resist for each opponent defeated. (@TFTUnitProperty.trait:TFT13_Ambassador_PlayersDefeated@/7)</TFTGuildActive><br><br><TFTGuildActive enabled=TFT13_Trait_Ambassador_ActiveJarvan alternate=TFTGuildInactive>Garen: On Combat Start, Garen and allies to his left and right gain @GarenHealthPercent*100@% of his max Health.</TFTGuildActive><br><br><TFTGuildActive enabled=TFT13_Trait_Ambassador_ActiveNami alternate=TFTGuildInactive>Nami: Allies' attacks grant @NamiMana@ bonus Mana.</TFTGuildActive><br><br><TFTGuildActive enabled=TFT13_Trait_Ambassador_ActiveTristana alternate=TFTGuildInactive>Tristana: Allies gain @StarAS*100@% Attack Speed per star level.</TFTGuildActive>",
-  "effects": [
-    {
-      "maxUnits": 1,
-      "minUnits": 1,
-      "style": 1,
-      "variables": {
-        "AmbessaArmor": 2.0,
-        "AmbessaArmor_PVE": 4.0,
-        "BonusAS": null,
-        "BonusHealth": 200.0,
-        "CCImmuneDuration": 8.0,
-        "GarenHealthPercent": 0.11999999731779099,
-        "NamiMana": 2.0,
-        "SelfishDamageAmp": 0.20000000298023224,
-        "StarAS": 0.05999999865889549,
-        "{3854f478}": 2.0,
-        "{4b20f990}": null,
-        "{845be53a}": 4.0
-      }
-    },
-    {
-      "maxUnits": 4,
-      "minUnits": 4,
-      "style": 5,
-      "variables": {
-        "AmbessaArmor": 2.0,
-        "AmbessaArmor_PVE": 4.0,
-        "BonusAS": null,
-        "BonusHealth": 200.0,
-        "CCImmuneDuration": 8.0,
-        "GarenHealthPercent": 0.11999999731779099,
-        "NamiMana": 2.0,
-        "SelfishDamageAmp": 0.20000000298023224,
-        "StarAS": 0.05999999865889549,
-        "{3854f478}": 2.0,
-        "{4b20f990}": null,
-        "{845be53a}": 4.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 65 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5197,52 +1835,7 @@ Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以�
 
 来源：`/setData/1/traits/11`；完整记录SHA-256 `2033dfad41a14a3c3e94d012799a30b4df65b01fe9381ff44d257347533a7488`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Ambusher",
-  "name": "Ambusher",
-  "desc": "Damage from Ambushers' Abilities can critically strike. They also gain bonus Critical Strike Chance and Critical Strike Damage.<br><br><row>(@MinUnits@) @CritChance*100@%&nbsp;%i:scaleCrit%, @CritDamage*100@%&nbsp;%i:scaleCritMult%</row><br><row>(@MinUnits@) @CritChance*100@%&nbsp;%i:scaleCrit%, @CritDamage*100@%&nbsp;%i:scaleCritMult%</row><br><row>(@MinUnits@) @CritChance*100@%&nbsp;%i:scaleCrit%, @CritDamage*100@%&nbsp;%i:scaleCritMult%</row><br><row>(@MinUnits@) @CritChance*100@%&nbsp;%i:scaleCrit%, @CritDamage*100@%&nbsp;%i:scaleCritMult%; also gain @DamageReductionPct*100@% Durability</row>",
-  "effects": [
-    {
-      "maxUnits": 2,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "CritChance": 0.25,
-        "CritDamage": 0.10000000149011612
-      }
-    },
-    {
-      "maxUnits": 3,
-      "minUnits": 3,
-      "style": 3,
-      "variables": {
-        "CritChance": 0.3499999940395355,
-        "CritDamage": 0.20000000298023224
-      }
-    },
-    {
-      "maxUnits": 4,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "CritChance": 0.44999998807907104,
-        "CritDamage": 0.25
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 5,
-      "style": 5,
-      "variables": {
-        "CritChance": 0.550000011920929,
-        "CritDamage": 0.25,
-        "DamageReductionPct": 0.15000000596046448
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 66 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5257,26 +1850,7 @@ Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以�
 
 来源：`/setData/8/traits/32`；完整记录SHA-256 `f7a387fe070893f37152bdf657b54ea229848687a91d21a62a05f47f71b4cb4e`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_BloodHunter",
-  "name": "Blood Hunter",
-  "desc": "Warwick devours enemies that drop below @EnemyHealthPercentThreshold*100@%&nbsp;Health, healing him for @DevourHealing@ and granting him @ManaPerKill@&nbsp;Mana.",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 1,
-      "style": 4,
-      "variables": {
-        "DevourHealing": 400.0,
-        "EnemyHealthPercentThreshold": 0.15000000596046448,
-        "ManaPerKill": 50.0,
-        "{84534a47}": 5.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 67 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5288,42 +1862,7 @@ Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以�
 
 来源：`/setData/1/traits/27`；完整记录SHA-256 `43b4d03516def2c95dfd7e4c6581abff28ca691636279eb2339bfea6b79cc201`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Bruiser",
-  "name": "Bruiser",
-  "desc": "Your team gains @TeamFlatHealth@ max Health. Bruisers gain more.<br><br><expandRow>(@MinUnits@) @BonusPercentHealth*100@%&nbsp;%i:scaleHealth%</expandRow>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "BonusPercentHealth": 0.20000000298023224,
-        "TeamFlatHealth": 100.0
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "BonusPercentHealth": 0.44999998807907104,
-        "TeamFlatHealth": 100.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "BonusPercentHealth": 0.800000011920929,
-        "TeamFlatHealth": 100.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 68 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5337,71 +1876,7 @@ Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以�
 
 来源：`/setData/1/traits/29`；完整记录SHA-256 `fa787b13cac1a502e0e84f743a3a590b4b1a21a8876d063a3eb591015e68f09e`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Cabal",
-  "name": "Black Rose",
-  "desc": "<row>(@MinUnits@) Summon a chained Sion. He is freed after @NumCastsToUnlock@ casts from Black Rose units or when he drops below @PercentHealthUnlock*100@% health.</row><br><row>(@MinUnits@) Sion grows stronger and his enemies take more damage from Black Rose units.</row><br><row>(@MinUnits@) Sion unleashes dark magic and heals to full Health when freed.</row><br><row>(@MinUnits@) When Sion dies, he restores to life with power beyond death!</row><br><br><rules>Each Black Rose champion's star level increases Sion's power</rules>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 3,
-      "style": 1,
-      "variables": {
-        "NumCastsToUnlock": 5.0,
-        "PercentHealthPerStarLevel": 0.15000000596046448,
-        "PercentHealthUnlock": 0.6499999761581421,
-        "{2c6be05c}": 0.11999999731779099,
-        "{2e45fc86}": 40.0,
-        "{85b293ec}": 0.3499999940395355,
-        "{92ef9cd7}": 4.0
-      }
-    },
-    {
-      "maxUnits": 4,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "NumCastsToUnlock": 5.0,
-        "PercentHealthPerStarLevel": 0.15000000596046448,
-        "PercentHealthUnlock": 0.6499999761581421,
-        "{2c6be05c}": 0.11999999731779099,
-        "{2e45fc86}": 45.0,
-        "{85b293ec}": 0.3499999940395355,
-        "{92ef9cd7}": 4.0
-      }
-    },
-    {
-      "maxUnits": 6,
-      "minUnits": 5,
-      "style": 5,
-      "variables": {
-        "NumCastsToUnlock": 5.0,
-        "PercentHealthPerStarLevel": 0.15000000596046448,
-        "PercentHealthUnlock": 0.6499999761581421,
-        "{2c6be05c}": 0.11999999731779099,
-        "{2e45fc86}": 50.0,
-        "{85b293ec}": 0.3499999940395355,
-        "{92ef9cd7}": 4.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 7,
-      "style": 5,
-      "variables": {
-        "NumCastsToUnlock": 5.0,
-        "PercentHealthPerStarLevel": 0.15000000596046448,
-        "PercentHealthUnlock": 0.6499999761581421,
-        "{2c6be05c}": 0.11999999731779099,
-        "{2e45fc86}": 100.0,
-        "{85b293ec}": 0.3499999940395355,
-        "{92ef9cd7}": 4.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 69 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5418,50 +1893,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/30`；完整记录SHA-256 `7cb5b27f1e2db73783900c19e9f8be901c87671ab9cea0daf63c20c237e7fcd3`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Challenger",
-  "name": "Quickstriker",
-  "desc": "Quickstrikers move faster and gain Attack Speed, based on their target's missing Health.<br><br><row>(@MinUnits@) @MinBonusAS*100@-@MaxBonusAS*100@%&nbsp;%i:scaleAS%</row><br><row>(@MinUnits@) @MinBonusAS*100@-@MaxBonusAS*100@%&nbsp;%i:scaleAS%</row><br><row>(@MinUnits@) @MinBonusAS*100@-@MaxBonusAS*100@%&nbsp;%i:scaleAS%. On target death, Quickstrikers dash to a new target and gain @ShieldAmount@ shield for @ShieldDuration@&nbsp;seconds. </row>",
-  "effects": [
-    {
-      "maxUnits": 2,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "MaxBonusAS": 0.6000000238418579,
-        "MinBonusAS": 0.20000000298023224,
-        "{0e9453af}": null,
-        "{bdb9953b}": 200.0
-      }
-    },
-    {
-      "maxUnits": 3,
-      "minUnits": 3,
-      "style": 3,
-      "variables": {
-        "MaxBonusAS": 0.800000011920929,
-        "MinBonusAS": 0.30000001192092896,
-        "{0e9453af}": null,
-        "{bdb9953b}": 200.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 4,
-      "style": 5,
-      "variables": {
-        "MaxBonusAS": 1.0,
-        "MinBonusAS": 0.4000000059604645,
-        "ShieldAmount": 200.0,
-        "ShieldDuration": 3.0,
-        "{0e9453af}": null,
-        "{bdb9953b}": 200.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 70 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5475,100 +1907,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/18`；完整记录SHA-256 `0fca89eb05a172271b7003ae6b2950139f3442810d5ad0fc652ba35c853b75b9`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Crime",
-  "name": "Chem-Baron",
-  "desc": "Gain Shimmer after each player combat. If your loss streak is at least @MinStreakLength@, gain more.<br><br>At each stack of @ShimmerBreakpoint@ Shimmer, the Black Market offers you contraband that only Chem-Barons can use. Chem-Barons gain max Health for each Black Market you pass on.<br><br><expandRow>(@MinUnits@) @ShimmerPerCombat@ or @ShimmerPerCombatStreaking@; @HealthPerSkip@&nbsp;%i:scaleHealth%</expandRow><br><br><rules>Markets Skipped: @TFTUnitProperty.trait:TFT13_Crime_PassedMarkets@</rules><br><rules>Current Health: @TFTUnitProperty.trait:TFT13_Crime_CurrentHealth@&nbsp;%i:scaleHealth%</rules>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 3,
-      "style": 1,
-      "variables": {
-        "HealthPerSkip": 20.0,
-        "MinStreakLength": 3.0,
-        "ShimmerBreakpoint": 100.0,
-        "ShimmerPerCombat": 15.0,
-        "ShimmerPerCombatStreaking": 35.0,
-        "ShimmerPerCombatStreaking_HR": 50.0,
-        "ShimmerPerCombat_HR": 25.0,
-        "ShimmerPerDeath_PVE": 1.0,
-        "ShimmerPerRound_PVE": 15.0,
-        "{ecbc38fd}": 1.0
-      }
-    },
-    {
-      "maxUnits": 4,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "HealthPerSkip": 60.0,
-        "MinStreakLength": 3.0,
-        "ShimmerBreakpoint": 100.0,
-        "ShimmerPerCombat": 20.0,
-        "ShimmerPerCombatStreaking": 45.0,
-        "ShimmerPerCombatStreaking_HR": 60.0,
-        "ShimmerPerCombat_HR": 30.0,
-        "ShimmerPerDeath_PVE": 1.0,
-        "ShimmerPerRound_PVE": 20.0,
-        "{ecbc38fd}": 1.0
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 5,
-      "style": 5,
-      "variables": {
-        "HealthPerSkip": 110.0,
-        "MinStreakLength": 3.0,
-        "ShimmerBreakpoint": 100.0,
-        "ShimmerPerCombat": 20.0,
-        "ShimmerPerCombatStreaking": 55.0,
-        "ShimmerPerCombatStreaking_HR": 70.0,
-        "ShimmerPerCombat_HR": 35.0,
-        "ShimmerPerDeath_PVE": 2.0,
-        "ShimmerPerRound_PVE": 30.0,
-        "{ecbc38fd}": 1.0
-      }
-    },
-    {
-      "maxUnits": 6,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "HealthPerSkip": 160.0,
-        "MinStreakLength": 3.0,
-        "ShimmerBreakpoint": 100.0,
-        "ShimmerPerCombat": 25.0,
-        "ShimmerPerCombatStreaking": 70.0,
-        "ShimmerPerCombatStreaking_HR": 90.0,
-        "ShimmerPerCombat_HR": 45.0,
-        "ShimmerPerDeath_PVE": 3.0,
-        "ShimmerPerRound_PVE": 40.0,
-        "{ecbc38fd}": 1.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 7,
-      "style": 5,
-      "variables": {
-        "HealthPerSkip": 220.0,
-        "MinStreakLength": 3.0,
-        "ShimmerBreakpoint": 100.0,
-        "ShimmerPerCombat": 30.0,
-        "ShimmerPerCombatStreaking": 100.0,
-        "ShimmerPerCombatStreaking_HR": 125.0,
-        "ShimmerPerCombat_HR": 60.0,
-        "ShimmerPerDeath_PVE": 15.0,
-        "ShimmerPerRound_PVE": 65.0,
-        "{ecbc38fd}": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 71 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5584,48 +1923,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/26`；完整记录SHA-256 `dd37b2a8e576618d596c4ce1122fa3a4cda2da1c9ceac1cebf00a591a2972c5e`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Experiment",
-  "name": "Experiment",
-  "desc": "Gain Laboratory hexes on your board.<br><br>Combat start: Experiments standing on Laboratory hexes gain the Experiment bonuses of all Experiments on Laboratory hexes, plus max Health.<br><br><row>(@MinUnits@) @NumLaboratory@ Laboratories, @MaxHealth@&nbsp;%i:scaleHealth%</row><br><row>(@MinUnits@) @NumLaboratory@ Laboratories, @MaxHealth@&nbsp;%i:scaleHealth%</row><br><row>(@MinUnits@) Experiment bonuses increase by @ExperimentBonusIncrease*100@%!</row>",
-  "effects": [
-    {
-      "maxUnits": 4,
-      "minUnits": 3,
-      "style": 1,
-      "variables": {
-        "ExperimentBonusIncrease": null,
-        "MaxHealth": 100.0,
-        "NumLaboratory": 2.0,
-        "{a02e81c2}": 1.149999976158142
-      }
-    },
-    {
-      "maxUnits": 6,
-      "minUnits": 5,
-      "style": 5,
-      "variables": {
-        "ExperimentBonusIncrease": null,
-        "MaxHealth": 300.0,
-        "NumLaboratory": 3.0,
-        "{a02e81c2}": 1.2999999523162842
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 7,
-      "style": 5,
-      "variables": {
-        "ExperimentBonusIncrease": 1.0,
-        "MaxHealth": 300.0,
-        "NumLaboratory": 3.0,
-        "{a02e81c2}": 1.5
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 72 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5639,53 +1937,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/10`；完整记录SHA-256 `3e90d83f47746fe473edadb9b826a0e7aaf66046e786fab5339f47001470ada2`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Family",
-  "name": "Family",
-  "desc": "Family members support each other, reducing their max Mana and gaining extra bonuses.<br><br><row>(@MinUnits@) @ManaReduction*100@% reduction, @DamageReduction*100@%&nbsp;%i:scaleDR%</row><br><row>(@MinUnits@) @ManaReduction*100@% reduction, @AttackSpeed*100@%&nbsp;%i:scaleAS%</row><br><row>(@MinUnits@) @ManaReduction*100@% reduction, heist on topside! After combat, progress the heist, increased for each surviving Family&nbsp;member!</row><br><br><rules>@TFTUnitProperty.trait:TFT13_JunkerKing_SelfDestructTRA@</rules>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 3,
-      "style": 5,
-      "variables": {
-        "AttackSpeed": 0.20000000298023224,
-        "DamageReduction": 0.20000000298023224,
-        "ManaReduction": 0.25
-      }
-    },
-    {
-      "maxUnits": 4,
-      "minUnits": 4,
-      "style": 5,
-      "variables": {
-        "AttackSpeed": 0.20000000298023224,
-        "DamageReduction": 0.20000000298023224,
-        "ManaReduction": 0.30000001192092896
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 5,
-      "style": 5,
-      "variables": {
-        "AttackSpeed": 0.20000000298023224,
-        "DamageReduction": 0.20000000298023224,
-        "ManaReduction": 0.4000000059604645,
-        "{01fcc30b}": 0.75,
-        "{217874f1}": 2.5,
-        "{43cb93dd}": 1.25,
-        "{46c3fc24}": 1.5,
-        "{6fc9f267}": 17.0,
-        "{8173be81}": 2.0,
-        "{9000fe5b}": 2.0,
-        "{92029cea}": 0.5
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 73 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5699,33 +1951,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/5`；完整记录SHA-256 `a08c37d550d03dc3af6780ec3c621373e092fb0830f837b9c7bc652e3ae46bd2`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_FormSwapper",
-  "name": "Form Swapper",
-  "desc": "Innate: Form Swappers change their stats and ability based on if they're placed in the front 2 rows or back 2&nbsp;rows.<br><br>Frontline Form Swappers gain Durability. Backline Form Swappers gain Damage&nbsp;Amp.<br><br><expandRow>(@MinUnits@) @DR*100@%&nbsp;%i:scaleDR% or @DA*100@%&nbsp;%i:scaleDA%</expandRow>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "DA": 0.20000000298023224,
-        "DR": 0.15000000596046448
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 4,
-      "style": 5,
-      "variables": {
-        "DA": 0.4000000059604645,
-        "DR": 0.30000001192092896
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 74 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5738,51 +1964,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/0`；完整记录SHA-256 `c2c700bbea168f5cd379e7171646e39d682ffd15b3e7361936ca30e467d070e8`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Hextech",
-  "name": "Automata",
-  "desc": "Automata gain a crystal when they deal damage. At @TriggerNumCrystals@&nbsp;crystals, they blast their current target, dealing magic damage + <magicDamage>@ConversionDamagePct*100@%</magicDamage> of damage dealt since the previous blast and reset. They also gain Armor and Magic&nbsp;Resist.<br><br><expandRow>(@MinUnits@) <magicDamage>@MagicDamage@</magicDamage> damage, @Resists@&nbsp;%i:scaleArmor%%i:scaleMR%</expandRow>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "ConversionDamagePct": 0.25,
-        "MagicDamage": 150.0,
-        "Resists": 25.0,
-        "TriggerNumCrystals": 20.0,
-        "{a142f31c}": 1.0
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "ConversionDamagePct": 0.25,
-        "MagicDamage": 400.0,
-        "Resists": 60.0,
-        "TriggerNumCrystals": 20.0,
-        "{a142f31c}": 1.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "ConversionDamagePct": 0.25,
-        "MagicDamage": 1100.0,
-        "Resists": 140.0,
-        "TriggerNumCrystals": 20.0,
-        "{a142f31c}": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 75 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5796,39 +1978,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/16`；完整记录SHA-256 `dffe810bca6397d154fcc8f6e4e2f0b8dd85280e656200f4dfeafe8335600dac`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_HighRoller",
-  "name": "High Roller",
-  "desc": "When casting, Sevika rolls a random Jinx modification to her Ability and gains @Durability*100@% Durability for @Duration@ seconds.<br><br>Mods:<br>-Rocket: Launch @Bonus1NumRockets@ rockets that deal @Bonus1RocketDamage@ physical damage each<br>-Shield: Gain @Bonus2ShieldAmount@ Shield for @Bonus2ShieldDuration@ seconds<br>-Coin: Gain @Bonus4Gold@ gold<br>-Triple: Enhance her rolled ability!",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 1,
-      "style": 4,
-      "variables": {
-        "Bonus1NumRockets": 8.0,
-        "Bonus1RocketDamage": 100.0,
-        "Bonus2ShieldAmount": 500.0,
-        "Bonus2ShieldDuration": 4.0,
-        "Bonus4Gold": 3.0,
-        "Durability": 0.800000011920929,
-        "Duration": 1.5,
-        "{01148678}": 0.3499999940395355,
-        "{267deafa}": 0.3499999940395355,
-        "{52aec87f}": 0.10000000149011612,
-        "{592d23e5}": 0.3499999940395355,
-        "{699f6a87}": 0.20000000298023224,
-        "{9ad9e572}": 0.004999999888241291,
-        "{9b22c5ec}": null,
-        "{bcedb441}": 1.5,
-        "{e1fc0fa1}": 0.24500000476837158,
-        "{e640e05f}": 0.4000000059604645
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 76 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5842,48 +1992,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/24`；完整记录SHA-256 `ba5464a542595503ad156eed412037d609ec7e2173b28d9f00b3f6a402340a8a`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Hoverboard",
-  "name": "Firelight",
-  "desc": "Every @Duration@ seconds, Firelights dash. While dashing, they attack with infinite range and heal a percentage of the damage taken since their last dash.<br><br><row>(@MinUnits@) @PercentDamageTakenHeal*100@% of damage taken</row><br><row>(@MinUnits@) @PercentDamageTakenHeal*100@% of damage taken</row><br><row>(@MinUnits@) @PercentDamageTakenHeal*100@% of damage taken. While dashing, gain a massive burst of Attack Speed.</row>",
-  "effects": [
-    {
-      "maxUnits": 2,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "Duration": 6.0,
-        "PercentDamageTakenHeal": 0.20000000298023224,
-        "{0a9a9714}": null,
-        "{3c0d594a}": 1.0
-      }
-    },
-    {
-      "maxUnits": 3,
-      "minUnits": 3,
-      "style": 5,
-      "variables": {
-        "Duration": 6.0,
-        "PercentDamageTakenHeal": 0.33000001311302185,
-        "{0a9a9714}": null,
-        "{3c0d594a}": 1.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 4,
-      "style": 5,
-      "variables": {
-        "Duration": 6.0,
-        "PercentDamageTakenHeal": 0.4000000059604645,
-        "{0a9a9714}": 3.5,
-        "{3c0d594a}": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 77 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5897,45 +2006,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/20`；完整记录SHA-256 `a7c3345afd4354519c69186abf05306aa87b4bd9d6cdb25768ce803001283e4c`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Infused",
-  "name": "Dominator",
-  "desc": "Combat start: Dominators gain a Shield for @ShieldDuration@ seconds.<br><br>When Dominators cast, they gain stacking Ability Power based on the Mana spent.<br><br><expandRow>(@MinUnits@) @ShieldAmount@ Shield, @APPercent*100@%&nbsp;%i:scaleAP%</expandRow>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "APPercent": 0.25,
-        "ShieldAmount": 350.0,
-        "ShieldDuration": 15.0
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "APPercent": 0.44999998807907104,
-        "ShieldAmount": 500.0,
-        "ShieldDuration": 15.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "APPercent": 0.6499999761581421,
-        "ShieldAmount": 700.0,
-        "ShieldDuration": 15.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 78 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -5949,48 +2020,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/13`；完整记录SHA-256 `2c26ad80e12ef92fcd300cc82b78bc4d8b2d4a3fb96115a9e65fc9a3d15b8cd4`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Invoker",
-  "name": "Visionary",
-  "desc": "Whenever Visionaries gain Mana, they gain more.<br><br><row>(@MinUnits@) @EnlightenedBonusMana*100@% %i:scaleMana%</row><br><row>(@MinUnits@) @EnlightenedBonusMana*100@%&nbsp;%i:scaleMana%</row><br><row>(@MinUnits@) @EnlightenedBonusMana*100@%&nbsp;%i:scaleMana%</row><br><row>(@MinUnits@) @EnlightenedBonusMana*100@%&nbsp;%i:scaleMana%, Abilities heal an ally for @AllyHealing*100@% of damage dealt</row><br>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "EnlightenedBonusMana": 0.25
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "EnlightenedBonusMana": 0.5
-      }
-    },
-    {
-      "maxUnits": 7,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "EnlightenedBonusMana": 0.800000011920929
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 8,
-      "style": 5,
-      "variables": {
-        "AllyHealing": 0.20000000298023224,
-        "EnlightenedBonusMana": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 79 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6005,28 +2035,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/28`；完整记录SHA-256 `e800f66a9e3f0fe2cf6caeb3af74e4eb7b52c9c6fc44a5c55c61959e0a243595`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_JunkerKing",
-  "name": "Junker King",
-  "desc": "Every @NumRounds1Star@ rounds, open an armory to purchase permanent upgrades to your strongest Rumble's&nbsp;mech.<br><br><rules>Rounds Until Upgrade: @TFTUnitProperty.trait:TFT13_JunkerKing_RoundsUntilOpening@</rules>",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 1,
-      "style": 4,
-      "variables": {
-        "NumRounds1Star": 3.0,
-        "NumRounds1Star_HR": 2.0,
-        "{7b91cfd3}": 2.0,
-        "{da177dfb}": 1.0,
-        "{ea33712c}": 3.0,
-        "{ed4fa85a}": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 80 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6038,26 +2047,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/8/traits/30`；完整记录SHA-256 `eb24196e4b887f1844c06f3227455342de17ec05ca5ef0138eb6dd79e230948c`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_MachineHerald",
-  "name": "Machine Herald",
-  "desc": "Viktor has a fixed Attack Speed of @AS@ attacks per second and converts ALL bonus Attack Damage, Attack Speed, and Mana into Ability Power. <br><br>Instead of Mana, Viktor gains 1 Chaos Energy every attack and casts when he has @MaxMana@.",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 1,
-      "style": 4,
-      "variables": {
-        "AS": 0.550000011920929,
-        "MaxMana": 8.0,
-        "startingmana": 4.0,
-        "{80af2f77}": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 81 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6071,45 +2061,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/4`；完整记录SHA-256 `d081ea2fab85f4036e281f1b878aa15a3d9bf688a1c7b81005c86eacf62c64b0`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Martialist",
-  "name": "Artillerist",
-  "desc": "Every @NumOfAttacks@ attacks, Artillerists launch a rocket that deals @PercentDamage*100@% Attack Damage around the target. They also gain Attack Damage.<br><br><row>(@MinUnits@) @AD*100@% %i:scaleAD%</row><br><row>(@MinUnits@) @AD*100@%&nbsp;%i:scaleAD%</row><br><row>(@MinUnits@) @AD*100@%&nbsp;%i:scaleAD%, Launch a rocket every @NumOfAttacks@ attacks that deals double&nbsp;damage.</row>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "AD": 0.10000000149011612,
-        "NumOfAttacks": 5.0,
-        "PercentDamage": 1.25
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 5,
-      "variables": {
-        "AD": 0.44999998807907104,
-        "NumOfAttacks": 5.0,
-        "PercentDamage": 1.25
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "AD": 0.6000000238418579,
-        "NumOfAttacks": 4.0,
-        "PercentDamage": 2.5
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 82 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6123,30 +2075,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/8/traits/4`；完整记录SHA-256 `e2f7addd99ba432b9bab065d27f3577cd663c0df513897b814e23479738cae66`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_MissMageTrait",
-  "name": "Banished Mage",
-  "desc": "The first time you would be eliminated, if Mel has cast @MinimumCasts@ times during player combat this game, she saves you and you remain alive. <br><br>Afterwards, Mel permanently gains @ProcDamageAmp*100@% Damage Amp.<br><br>@TFTUnitProperty.:TFT13_MissMageTrait_TrackerTRA@",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 1,
-      "style": 4,
-      "variables": {
-        "MinimumCasts": 12.0,
-        "MinimumCastsDU": 12.0,
-        "MinimumCastsHR": 6.0,
-        "MissMageHealDU": 15.0,
-        "ProcDamageAmp": 0.10000000149011612,
-        "ProcDamageAmpDU": 0.10000000149011612,
-        "ProcDamageAmpHR": 0.10000000149011612,
-        "{00885e86}": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 83 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6160,63 +2089,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/21`；完整记录SHA-256 `eb89ea48f9c54c0565d6afce7b37ada81e5a71a6dfe3505710ae069b7ecb630d`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Pugilist",
-  "name": "Pit Fighter",
-  "desc": "Pit Fighters gain @OmnivampPercent*100@% Omnivamp and deal bonus true damage. Once per combat at @HealthThreshold*100@% Health, they heal a percentage of their max Health over @Duration@ seconds.<br><br><expandRow>(@MinUnits@) @TrueDamagePercent*100@%&nbsp;true damage, @HealPercent*100@%&nbsp;%i:scaleHealth%</expandRow>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "Duration": 2.0,
-        "HealPercent": 0.10000000149011612,
-        "HealthThreshold": 0.5,
-        "OmnivampPercent": 0.15000000596046448,
-        "TrueDamagePercent": 0.05999999865889549
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "Duration": 2.0,
-        "HealPercent": 0.25,
-        "HealthThreshold": 0.5,
-        "OmnivampPercent": 0.15000000596046448,
-        "TrueDamagePercent": 0.11999999731779099
-      }
-    },
-    {
-      "maxUnits": 7,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "Duration": 2.0,
-        "HealPercent": 0.4000000059604645,
-        "HealthThreshold": 0.5,
-        "OmnivampPercent": 0.15000000596046448,
-        "TrueDamagePercent": 0.20000000298023224
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 8,
-      "style": 5,
-      "variables": {
-        "Duration": 2.0,
-        "HealPercent": 0.800000011920929,
-        "HealthThreshold": 0.5,
-        "OmnivampPercent": 0.15000000596046448,
-        "TrueDamagePercent": 0.4000000059604645
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 84 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6231,79 +2104,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/19`；完整记录SHA-256 `897d8f5748f0214b5dff96cd8f0e10ecd27debe636d4b59f924d60f86741fad9`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Rebel",
-  "name": "Rebel",
-  "desc": "Rebels gain @MaxHealthIncrease*100@% max Health.<br><br>After your team loses @PercentHealthTrigger*100@% of their Health, a smoke signal appears, granting Rebels @BurstAS*100@% Attack Speed for @BurstDuration@ seconds and extra power for the rest of&nbsp;combat.<br><br><row>(@MinUnits@) @ADAP*100@%&nbsp;%i:scaleAD%%i:scaleAP%</row><br><row>(@MinUnits@) @ADAP*100@%&nbsp;%i:scaleAD%%i:scaleAP%, @PercentMaxHealthBonus*100@%&nbsp;%i:scaleHealth%</row><br><row>(@MinUnits@) @ADAP*100@%&nbsp;%i:scaleAD%%i:scaleAP%, @PercentMaxHealthBonus*100@%&nbsp;%i:scaleHealth%, and Stun all enemies for @StunDuration@&nbsp;seconds</row><br><row>(@MinUnits@) The smoke signal triggers at Combat Start and every @ForceDuration@&nbsp;seconds.</row>",
-  "effects": [
-    {
-      "maxUnits": 4,
-      "minUnits": 3,
-      "style": 1,
-      "variables": {
-        "ADAP": 0.20000000298023224,
-        "BurstAS": 0.6000000238418579,
-        "BurstDuration": 5.0,
-        "ForceDuration": null,
-        "MaxHealthIncrease": 0.11999999731779099,
-        "PercentHealthTrigger": 0.25,
-        "PercentMaxHealthBonus": null,
-        "StunDuration": null,
-        "{1ec59053}": null
-      }
-    },
-    {
-      "maxUnits": 6,
-      "minUnits": 5,
-      "style": 3,
-      "variables": {
-        "ADAP": 0.4000000059604645,
-        "BurstAS": 0.6000000238418579,
-        "BurstDuration": 5.0,
-        "ForceDuration": null,
-        "MaxHealthIncrease": 0.11999999731779099,
-        "PercentHealthTrigger": 0.25,
-        "PercentMaxHealthBonus": 0.11999999731779099,
-        "StunDuration": null,
-        "{1ec59053}": null
-      }
-    },
-    {
-      "maxUnits": 9,
-      "minUnits": 7,
-      "style": 5,
-      "variables": {
-        "ADAP": 0.44999998807907104,
-        "BurstAS": 0.6000000238418579,
-        "BurstDuration": 5.0,
-        "ForceDuration": null,
-        "MaxHealthIncrease": 0.11999999731779099,
-        "PercentHealthTrigger": 0.25,
-        "PercentMaxHealthBonus": 0.15000000596046448,
-        "StunDuration": 2.0,
-        "{1ec59053}": null
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 10,
-      "style": 6,
-      "variables": {
-        "ADAP": 0.5,
-        "BurstAS": 0.6000000238418579,
-        "BurstDuration": 5.0,
-        "ForceDuration": 12.0,
-        "MaxHealthIncrease": 0.11999999731779099,
-        "PercentHealthTrigger": 0.25,
-        "PercentMaxHealthBonus": 0.30000001192092896,
-        "StunDuration": 2.0,
-        "{1ec59053}": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 85 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6318,63 +2119,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/3`；完整记录SHA-256 `90d73c499e7b86decdb4712c3f2842c1a30605a0e46a23b74d1638692c479c47`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Scrap",
-  "name": "Scrap",
-  "desc": "Combat start: Components held by Scrap units temporarily turn into full items. Scrap units gain Shield for @ShieldDuration@ seconds for each component held by your team, including those that make up a full item.<br><br><row>(@MinUnits@) @NumComponents@ component, @HPShieldAmount@ Shield</row><br><row>(@MinUnits@) @NumComponents@ components, @HPShieldAmount@ Shield</row><br><row>(@MinUnits@) All components, and full items become lucky! @HPShieldAmount@ Shield</row><br><row>(@MinUnits@) Generate Radiant items! @HPShieldAmount@ Shield</row><br><br><rules>Shield Amount:&nbsp;@TFTUnitProperty.:TFT13_Trait_Scrap_ShieldTotal@ </rules> <br>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "HPShieldAmount": 25.0,
-        "NumComponents": 1.0,
-        "ShieldDuration": 20.0,
-        "{659aef8d}": null,
-        "{7e2474c8}": null
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "HPShieldAmount": 35.0,
-        "NumComponents": 3.0,
-        "ShieldDuration": 20.0,
-        "{659aef8d}": null,
-        "{7e2474c8}": null
-      }
-    },
-    {
-      "maxUnits": 8,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "HPShieldAmount": 50.0,
-        "NumComponents": 20.0,
-        "ShieldDuration": 20.0,
-        "{659aef8d}": 1.0,
-        "{7e2474c8}": null
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 9,
-      "style": 5,
-      "variables": {
-        "HPShieldAmount": 60.0,
-        "NumComponents": 20.0,
-        "ShieldDuration": 20.0,
-        "{659aef8d}": 1.0,
-        "{7e2474c8}": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 86 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6389,42 +2134,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/14`；完整记录SHA-256 `13dd5ac2ebb8442285868a4b3edec92709bdfee00c2de3374e6ac96056115bfe`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Sniper",
-  "name": "Sniper",
-  "desc": "Snipers deal more damage to targets farther away.<br><br><row>(@MinUnits@) @PercentDamageIncrease@%&nbsp;damage per hex</row><br><row>(@MinUnits@) @PercentDamageIncrease@%&nbsp;damage per hex</row><br><row>(@MinUnits@) @PercentDamageIncrease@%&nbsp;damage per hex and +@BonusHexRangeIncrease@ Attack Range</row>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "BonusHexRangeIncrease": null,
-        "PercentDamageIncrease": 7.0
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 5,
-      "variables": {
-        "BonusHexRangeIncrease": null,
-        "PercentDamageIncrease": 16.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "BonusHexRangeIncrease": 5.0,
-        "PercentDamageIncrease": 35.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 87 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6438,53 +2148,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/2`；完整记录SHA-256 `d6a1dad3defb7a0daa3a75a8fece467a6857ed82614e19e9ceba21d8687d6715`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Sorcerer",
-  "name": "Sorcerer",
-  "desc": "Your team gains @TeamAP@ Ability Power. Sorcerers gain more.<br><br><row>(@MinUnits@) @BaseAP@&nbsp;%i:scaleAP%</row><br><row>(@MinUnits@) @BaseAP@&nbsp;%i:scaleAP%</row><br><row>(@MinUnits@) @BaseAP@&nbsp;%i:scaleAP%</row><br><row>(@MinUnits@) @BaseAP@&nbsp;%i:scaleAP%, Abilities reduce their target's damage by @DamageDecrease*100@% for @DamageDecreaseDuration@&nbsp;seconds</row>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "BaseAP": 20.0,
-        "TeamAP": 10.0
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "BaseAP": 50.0,
-        "TeamAP": 10.0
-      }
-    },
-    {
-      "maxUnits": 7,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "BaseAP": 95.0,
-        "TeamAP": 10.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 8,
-      "style": 5,
-      "variables": {
-        "BaseAP": 110.0,
-        "DamageDecrease": 0.25,
-        "DamageDecreaseDuration": 3.0,
-        "TeamAP": 10.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 88 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6499,80 +2163,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/23`；完整记录SHA-256 `014de0cfd8af1496b5e1f5e7523863ec90d467881c4eda9f992f6ac10bb657bf`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Squad",
-  "name": "Enforcer",
-  "desc": "Combat Start: Enforcers gain Shield and Damage Amp. The highest Health enemy units become <i>WANTED!</i> <br><br>When a Wanted enemy dies, Enforcers gain @AttackSpeedPerWantedKill*100@% Attack Speed.<br><br><row>(@MinUnits@) @NumOfWantedEnemies@&nbsp;unit; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%,&nbsp;@BaseDA*100@%&nbsp;%i:scaleDA%</row><br><row>(@MinUnits@) @NumOfWantedEnemies@&nbsp;units; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%,&nbsp;@BaseDA*100@%&nbsp;%i:scaleDA%</row><br><row>(@MinUnits@) @NumOfWantedEnemies@&nbsp;units; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%,&nbsp;@BaseDA*100@%&nbsp;%i:scaleDA%</row><br><row>(@MinUnits@) @NumOfWantedEnemies@&nbsp;units; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%,&nbsp;@BaseDA*100@%&nbsp;%i:scaleDA%</row><br><row>(@MinUnits@) ALL enemies; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%, @BaseDA*100@%&nbsp;%i:scaleDA%; Combat Start: Confiscate all enemy&nbsp;items!</row>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "AttackSpeedPerWantedKill": 0.30000001192092896,
-        "BaseDA": 0.11999999731779099,
-        "NumOfWantedEnemies": 1.0,
-        "PercentMaxHealthShield": 0.11999999731779099,
-        "{36b1550f}": null,
-        "{9edd4912}": null
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "AttackSpeedPerWantedKill": 0.30000001192092896,
-        "BaseDA": 0.20000000298023224,
-        "NumOfWantedEnemies": 2.0,
-        "PercentMaxHealthShield": 0.20000000298023224,
-        "{36b1550f}": null,
-        "{9edd4912}": null
-      }
-    },
-    {
-      "maxUnits": 7,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "AttackSpeedPerWantedKill": 0.30000001192092896,
-        "BaseDA": 0.33000001311302185,
-        "NumOfWantedEnemies": 4.0,
-        "PercentMaxHealthShield": 0.30000001192092896,
-        "{36b1550f}": null,
-        "{9edd4912}": null
-      }
-    },
-    {
-      "maxUnits": 9,
-      "minUnits": 8,
-      "style": 5,
-      "variables": {
-        "AttackSpeedPerWantedKill": 0.30000001192092896,
-        "BaseDA": 0.5,
-        "NumOfWantedEnemies": 5.0,
-        "PercentMaxHealthShield": 0.4000000059604645,
-        "{36b1550f}": null,
-        "{9edd4912}": null
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 10,
-      "style": 6,
-      "variables": {
-        "AttackSpeedPerWantedKill": 0.30000001192092896,
-        "BaseDA": 1.5,
-        "NumOfWantedEnemies": 99.0,
-        "PercentMaxHealthShield": 1.0,
-        "{36b1550f}": null,
-        "{9edd4912}": 1.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 89 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6590,23 +2181,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/8/traits/28`；完整记录SHA-256 `ea80a4b4b22c49b3561a6ff6492d7ac45f818d063127d559c9a8f3d8ae445f50`；分类：强化解锁关系（Q15）。
 
-```json
-{
-  "apiName": "TFT13_Teamup_Betrayal",
-  "name": "Betrayal",
-  "desc": "Maddie always targets Ambessa's target with her Ability and attacks. Every round where either gets at least @NumKills@ kill, gain a Maddie.",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 2,
-      "style": 4,
-      "variables": {
-        "NumKills": 2.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 90 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6618,24 +2193,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/22`；完整记录SHA-256 `a377ba86339e954cc114261fc5895932fca97d549c0199b5d192f7ae70f49f3f`；分类：强化解锁关系（Q15）。
 
-```json
-{
-  "apiName": "TFT13_Teamup_BloodBrothers",
-  "name": "What Could Have Been",
-  "desc": "Vander gains @TFTTrait.TFT13_Teamup_BloodBrothers.1:MaxHealthGainPerCast@ permanent max Health for each time Silco casts. Silco gains @TFTTrait.TFT13_Teamup_BloodBrothers.1:APGainPerDeath@ permanent Ability Power for each time Vander dies.<br><br>Bonuses: @TFTUnitProperty.trait:TFT13_Sidekick_BloodBrothers_HealthGained@ %i:scaleHealth% | @TFTUnitProperty.trait:TFT13_Sidekick_BloodBrothers_APGained@ %i:scaleAP%",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 2,
-      "style": 4,
-      "variables": {
-        "APGainPerDeath": 6.0,
-        "MaxHealthGainPerCast": 30.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 91 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6647,26 +2205,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/31`；完整记录SHA-256 `2d7bcf521cad66a0c395fa390fa7aee09349e699054b6240a47cc664619491f3`；分类：强化解锁关系（Q15）。
 
-```json
-{
-  "apiName": "TFT13_Teamup_Geniuses",
-  "name": "Geniuses",
-  "desc": "When Heimerdinger casts, Ekko releases @NumEkkoAfterImages@ afterimages, each dealing @ReducedEkkoDamage*100@% damage. When Ekko casts, Heimerdinger fires @NumHeimerMissiles@ missiles, each dealing @ReducedHeimerDamage*100@% damage. ",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 2,
-      "style": 4,
-      "variables": {
-        "NumEkkoAfterImages": 3.0,
-        "NumHeimerMissiles": 3.0,
-        "ReducedEkkoDamage": 0.33000001311302185,
-        "ReducedHeimerDamage": 1.2000000476837158
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 92 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6678,23 +2217,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/1`；完整记录SHA-256 `ad423296cbe696ee6287706b84d5b6530feca4d3ce332bd94c4a51f9311610a0`；分类：强化解锁关系（Q15）。
 
-```json
-{
-  "apiName": "TFT13_Teamup_Menaces",
-  "name": "Menaces",
-  "desc": "Powder gains Dominator but no longer benefits from Family. When her monkey explodes, it creates @NumMonstrosities@ of Silco's monstrosities.",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 2,
-      "style": 4,
-      "variables": {
-        "NumMonstrosities": 3.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 93 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6706,24 +2229,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/7`；完整记录SHA-256 `a22640cfffa88100fd001e12e68edc59aa772fdd83720170a045a2fb084341e4`；分类：强化解锁关系（Q15）。
 
-```json
-{
-  "apiName": "TFT13_Teamup_Mentorship",
-  "name": "Martial Law",
-  "desc": "When Ambessa casts, Caitlyn fires an empowered attack at the target, dealing @CaitAD*100@% damage. Ambessa gains @ADShare*100@% of Caitlyn's Attack Damage.",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 2,
-      "style": 4,
-      "variables": {
-        "ADShare": 0.25,
-        "CaitAD": 2.25
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 94 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6735,24 +2241,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/9`；完整记录SHA-256 `1f07b2b22d4d391dfc6d676d9e42ed102853dac999e469ed1e753133b7663a46`；分类：强化解锁关系（Q15）。
 
-```json
-{
-  "apiName": "TFT13_Teamup_Reunion",
-  "name": "Reunion",
-  "desc": "When Vi casts, Ekko releases 3 afterimages towards her target each dealing @EkkoAfterImageReducedDamage*100@% damage. When Ekko casts, Vi slams an earthquake towards his target dealing @ViEarthquakeReducedDamage*100@% damage.",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 2,
-      "style": 4,
-      "variables": {
-        "EkkoAfterImageReducedDamage": 0.5,
-        "ViEarthquakeReducedDamage": 1.5
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 95 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6764,26 +2253,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/12`；完整记录SHA-256 `c1177d4304208b2ddeb45504f601e03b4edabe270cb64a9adcff281577b405ea`；分类：强化解锁关系（Q15）。
 
-```json
-{
-  "apiName": "TFT13_Teamup_Sisters",
-  "name": "Sisters",
-  "desc": "When Jinx scores a takedown, Vi gains @ADBuff*100@% bonus Attack Damage for @ViDuration@ seconds. When Vi scores a takedown, Jinx gains @ASBuff*100@% bonus Attack Speed for @JinxDuration@ seconds.",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 2,
-      "style": 4,
-      "variables": {
-        "ADBuff": 0.4000000059604645,
-        "ASBuff": 0.75,
-        "JinxDuration": 5.0,
-        "ViDuration": 7.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 96 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6795,26 +2265,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/25`；完整记录SHA-256 `e00b8fcc2824ceaa6e3fdbe5d0937876a978294e350b6b7f53ee656e34b769fa`；分类：强化解锁关系（Q15）。
 
-```json
-{
-  "apiName": "TFT13_Teamup_UnlikelyDuo",
-  "name": "Unlikely Duo",
-  "desc": "Jinx and Sevika gain @AD*100@% Attack Damage and @Health@ Health. Whenever one casts, they grant the other @Mana@ mana. Sevika's arm is luckier.",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 2,
-      "style": 4,
-      "variables": {
-        "AD": 0.10000000149011612,
-        "Health": 100,
-        "Mana": 10,
-        "{1e90fa01}": 0.10000000149011612
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 97 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6826,42 +2277,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/8`；完整记录SHA-256 `689ed3f7c9b0b625cfb8b219691a9f440cbb3aef5a97f0d3e360d3a8e4fc7fd7`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Titan",
-  "name": "Sentinel",
-  "desc": "Your team gains Armor and Magic Resist. Sentinels gain triple.<br><br><expandRow>(@MinUnits@) @BonusArmor@&nbsp;%i:scaleArmor%%i:scaleMR%</expandRow>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "BonusArmor": 12.0,
-        "{5921fc26}": 2.0
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "BonusArmor": 25.0,
-        "{5921fc26}": 2.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "BonusArmor": 42.0,
-        "{5921fc26}": 2.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 98 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6875,55 +2291,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/15`；完整记录SHA-256 `f301b1b00489d55fcde28879a5034c6a54fe22e9c0bfebb7a550b53d502a6255`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Warband",
-  "name": "Conqueror",
-  "desc": "Conquerors' takedowns grant stacks of Conquest. After gaining enough Conquest, open War Chests full of loot!<br><br>Conquerors gain Attack Damage and Ability Power, increased by @PercentIncreasePerChest*100@% for each War Chest opened.<br><br><expandRow>(@MinUnits@) @ADAPBase*100@%&nbsp;%i:scaleAD%%i:scaleAP%; @StacksPerKill@x&nbsp;Conquest</expandRow><br><br><rules>War Chests Opened: @TFTUnitProperty.trait:TFT13_Warband_ChestsCompleted@</rules><br><rules>Current Stats: @TFTUnitProperty.trait:TFT13_Warband_CurrentADAP@%&nbsp;%i:scaleAD%%i:scaleAP%</rules><br>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "ADAPBase": 0.18000000715255737,
-        "PercentIncreasePerChest": 0.029999999329447746,
-        "StacksPerKill": 1.0
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "ADAPBase": 0.25,
-        "PercentIncreasePerChest": 0.029999999329447746,
-        "StacksPerKill": 3.0
-      }
-    },
-    {
-      "maxUnits": 8,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "ADAPBase": 0.4000000059604645,
-        "PercentIncreasePerChest": 0.029999999329447746,
-        "StacksPerKill": 6.0
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 9,
-      "style": 6,
-      "variables": {
-        "ADAPBase": 1.0,
-        "PercentIncreasePerChest": 0.029999999329447746,
-        "StacksPerKill": 20.0
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 99 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -6938,45 +2306,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 来源：`/setData/1/traits/32`；完整记录SHA-256 `bfe633f16b03d52b3e8c6b77b43cf757a013ba7f39c1272ad5c8401fcd540d65`；分类：常规/专属。
 
-```json
-{
-  "apiName": "TFT13_Watcher",
-  "name": "Watcher",
-  "desc": "Watchers gain Durability, increased while above @HealthBreakpoint*100@%&nbsp;Health.<br><br><expandRow>(@MinUnits@) @BaseDR*100@% or @IncreasedDR*100@%&nbsp;%i:scaleDR%</expandRow><br>",
-  "effects": [
-    {
-      "maxUnits": 3,
-      "minUnits": 2,
-      "style": 1,
-      "variables": {
-        "BaseDR": 0.15000000596046448,
-        "HealthBreakpoint": 0.5,
-        "IncreasedDR": 0.30000001192092896
-      }
-    },
-    {
-      "maxUnits": 5,
-      "minUnits": 4,
-      "style": 3,
-      "variables": {
-        "BaseDR": 0.25,
-        "HealthBreakpoint": 0.5,
-        "IncreasedDR": 0.44999998807907104
-      }
-    },
-    {
-      "maxUnits": 25000,
-      "minUnits": 6,
-      "style": 5,
-      "variables": {
-        "BaseDR": 0.3499999940395355,
-        "HealthBreakpoint": 0.5,
-        "IncreasedDR": 0.5
-      }
-    }
-  ]
-}
-```
+原始 JSON 摘录 100 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 各档最终审阅参数（N显示；比例、点数和模式边界按§1.2）：
 
@@ -7019,22 +2349,7 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 
 Rammus待确认原件：`/setData/8/traits/17`；未找到对应63英雄或官方14.24上线说明；不能因“+1Team Size”文案就启用。
 
-```json
-{
-  "apiName": "TFT13_RammusTrait",
-  "desc": "Rammus always makes room for himself in any team. <br><br>+1 Team Size, but only if Rammus is on your team.",
-  "effects": [
-    {
-      "maxUnits": 25000,
-      "minUnits": 1,
-      "style": 4,
-      "variables": {}
-    }
-  ],
-  "icon": "ASSETS/UX/TraitIcons/Trait_Icon_8_Threat.tex",
-  "name": "Rammus"
-}
-```
+原始 JSON 摘录 101 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 ### 8.2 技能相关辅助单位（证据候选，不计英雄）
 
@@ -7042,256 +2357,37 @@ Rammus待确认原件：`/setData/8/traits/17`；未找到对应63英雄或官�
 
 `/setData/1/champions/54`；完整记录SHA-256 `9787ec8352205898a5d76c327980abba2e4c109c2d1f69d3c04be2fe25acdcdd`。附属记录不能替代完整后排形态/召唤参数脚本。
 
-```json
-{
-  "apiName": "TFT13_EliseSpider",
-  "name": "EliseSpider",
-  "cost": 11,
-  "traits": [],
-  "stats": {
-    "armor": null,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": null,
-    "hp": null,
-    "initialMana": 0,
-    "magicResist": 20.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": null,
-    "icon": "ASSETS/Characters/TFT13_EliseSpider/HUD/Icons2D/TFT13_EliseSpider_EyeOfTheStorm.TFT_Set13.tex",
-    "name": null,
-    "variables": []
-  }
-}
-```
+原始 JSON 摘录 102 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 #### TFT13_Sion
 
 `/setData/1/champions/60`；完整记录SHA-256 `f5f28e6e1b1982035cc00ff9d52e755884cfc875f17feb1a0b4c0573b7423dca`。附属记录不能替代完整后排形态/召唤参数脚本。
 
-```json
-{
-  "apiName": "TFT13_Sion",
-  "name": "Sion",
-  "cost": 11,
-  "traits": [],
-  "stats": {
-    "armor": 0.0,
-    "attackSpeed": 0.699999988079071,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": 750.0,
-    "initialMana": 120.0,
-    "magicResist": null,
-    "mana": 120.0,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "<spellPassive>Freed:</spellPassive> Charge through the nearest enemy, dealing <physicalDamage>@ModifiedChargeDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to all enemies&nbsp;hit. <br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Stun enemies in a line on target for @StunDuration@ seconds and deal <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to&nbsp;them.",
-    "icon": "ASSETS/Characters/TFT13_Sion/HUD/Icons2D/SionSpell_1.TFT_Set13.tex",
-    "name": "Decimating Smash",
-    "variables": [
-      {
-        "name": "ADPercent",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "SlamHexLength",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "ChargeUpDuration",
-        "value": [1.2999999523162842,1.2999999523162842,1.2999999523162842,1.2999999523162842,1.2999999523162842,1.2999999523162842,1.2999999523162842]
-      },
-      {
-        "name": "Shield",
-        "value": [175.0,175.0,175.0,75.0,175.0,175.0,175.0]
-      },
-      {
-        "name": "ChargeKnockupDuration",
-        "value": [0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-      },
-      {
-        "name": "ChargeDamageAmpDuration",
-        "value": [60.0,60.0,60.0,60.0,60.0,60.0,60.0]
-      },
-      {
-        "name": "ChargeDamageAmp",
-        "value": [0.07999999821186066,0.07999999821186066,0.07999999821186066,0.07999999821186066,0.07999999821186066,0.07999999821186066,0.07999999821186066]
-      },
-      {
-        "name": "HexRange",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      },
-      {
-        "name": "ShieldDuration",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "ChargeADPercent",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "StunDuration",
-        "value": [1.0,1.0,1.0,1.0,1.0,1.0,1.0]
-      },
-      {
-        "name": "NovaPercentHealthDamage",
-        "value": [0.25,0.25,0.25,0.25,0.25,0.25,0.25]
-      },
-      {
-        "name": "NovaAbilityPower",
-        "value": [100.0,100.0,100.0,100.0,100.0,100.0,100.0]
-      },
-      {
-        "name": "PercentOmnivamp",
-        "value": [0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645,0.4000000059604645]
-      },
-      {
-        "name": "PercentAttackSpeed",
-        "value": [3.0,3.0,3.0,3.0,3.0,3.0,3.0]
-      },
-      {
-        "name": "PercentReviveHealth",
-        "value": [0.75,0.75,0.75,0.75,0.75,0.75,0.75]
-      },
-      {
-        "name": "NovaRadius",
-        "value": [2.0,2.0,2.0,2.0,2.0,2.0,2.0]
-      }
-    ]
-  }
-}
-```
+原始 JSON 摘录 103 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 #### TFT13_Silco_Monstrosity
 
 `/setData/1/champions/62`；完整记录SHA-256 `cd5772e1b7c5b224a14e88ddff64003876a7e1e04b4a735c4cd11e9dadcd6977`。附属记录不能替代完整后排形态/召唤参数脚本。
 
-```json
-{
-  "apiName": "TFT13_Silco_Monstrosity",
-  "name": "SRU_Horde_Mini",
-  "cost": 11,
-  "traits": [],
-  "stats": {
-    "armor": 50.0,
-    "attackSpeed": 0.800000011920929,
-    "critChance": null,
-    "critMultiplier": 1.399999976158142,
-    "damage": null,
-    "hp": null,
-    "initialMana": 0,
-    "magicResist": 50.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Placeholder Tooltip",
-    "icon": "ASSETS/Maps/Particles/TFT/Item_Icons/Placeholders/TFT_Item_Unknown.tex",
-    "name": "Placeholder Name",
-    "variables": []
-  }
-}
-```
+原始 JSON 摘录 104 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 #### TFT13_Blue_Monkey
 
 `/setData/1/champions/64`；完整记录SHA-256 `fd9f30ee459e1a232820f7db432b1c838772933decce0422936ed10ec869162a`。附属记录不能替代完整后排形态/召唤参数脚本。
 
-```json
-{
-  "apiName": "TFT13_Blue_Monkey",
-  "name": "Blue_Monkey",
-  "cost": 11,
-  "traits": [],
-  "stats": {
-    "armor": null,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": null,
-    "hp": null,
-    "initialMana": 0,
-    "magicResist": 20.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Placeholder Tooltip",
-    "icon": null,
-    "name": "Placeholder Name",
-    "variables": []
-  }
-}
-```
+原始 JSON 摘录 105 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 #### TFT13_SwainDemonForm
 
 `/setData/1/champions/74`；完整记录SHA-256 `b24674963ba8d1ddc03241e1437774124f7bb338116ab68214417b379f37fb9e`。附属记录不能替代完整后排形态/召唤参数脚本。
 
-```json
-{
-  "apiName": "TFT13_SwainDemonForm",
-  "name": "SwainDemonForm",
-  "cost": 11,
-  "traits": [],
-  "stats": {
-    "armor": null,
-    "attackSpeed": 0.800000011920929,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": null,
-    "hp": null,
-    "initialMana": 0,
-    "magicResist": 20.0,
-    "mana": 100,
-    "range": 1.0
-  },
-  "ability": {
-    "desc": "Placeholder Tooltip",
-    "icon": null,
-    "name": "Placeholder Name",
-    "variables": []
-  }
-}
-```
+原始 JSON 摘录 106 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 #### TFT13_JayceSummon
 
 `/setData/1/champions/77`；完整记录SHA-256 `3ec0e039bcdc64bfb9c2677be44aabb6117c453cc75a664e2c572bfee72645a0`。附属记录不能替代完整后排形态/召唤参数脚本。
 
-```json
-{
-  "apiName": "TFT13_JayceSummon",
-  "name": "Hextech Forge",
-  "cost": 11,
-  "traits": [],
-  "stats": {
-    "armor": 0.0,
-    "attackSpeed": 0.5,
-    "critChance": 0.25,
-    "critMultiplier": 1.399999976158142,
-    "damage": 50.0,
-    "hp": null,
-    "initialMana": 0,
-    "magicResist": null,
-    "mana": 0.0,
-    "range": 10.0
-  },
-  "ability": {
-    "desc": "Placeholder Tooltip",
-    "icon": null,
-    "name": "Placeholder Name",
-    "variables": []
-  }
-}
-```
+原始 JSON 摘录 107 已迁至本地 `assets3d-local/path-migration-backup/docs/M9_DATA_LEDGER.md`（对应同名小节）。
 
 ### 8.3 验证结果与离线回查
 

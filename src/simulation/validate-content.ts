@@ -56,7 +56,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   g24Mirror:['healthBps','manaIncreaseBps'],
   g24Trench:['thresholdBps','healthBps'],
   g24Collector:['executeBps'],
-  v19Chainblade:['executeBps','pvp'],v19Garen:['healthBps'],formSwapper:['frontReductionBps','backAmpBps'],sisters:['adBps','speedBps','adTicks','speedTicks'],sistersUnlock:['enabled'],
+  v20Unlock:['enabled'],v20Teamup:['enabled'],v19Chainblade:['executeBps','pvp'],v19Garen:['healthBps'],formSwapper:['frontReductionBps','backAmpBps'],sisters:['adBps','speedBps','adTicks','speedTicks'],sistersUnlock:['enabled'],
   g24Gambler:['goldLimit','speedPerGoldBps'],
   g24Mogul:['stackCap','healthPerStack','resistPerStack','goldIntervalTicks'],
   quickstriker:['minBps','maxBps','shield','durationTicks'],g23Experiment:['warwick','mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps','allyHealingBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
@@ -136,7 +136,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
   // Augments: 30 historical + 6 P1 (blinding-speed, portable-forge, radiant-relics, going-long, hedge-fund,
   // investment-strategy-ii) + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 (dual-wielding) + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:30,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+6+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+4,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+6+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

@@ -35,7 +35,8 @@ import { unitBattleStats } from '../presentation/battle-ranking';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
-import { buildPortraitTextures, loadS13Portraits, s13AssetUrl } from '../presentation/s13-assets';
+import { buildPortraitTextures, loadRootUiAssets, loadS13Portraits, s13AssetUrl } from '../presentation/s13-assets';
+import { readAssetBase3d } from './render-mode';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
 import { playMerge } from '../presentation/merge-fx';
@@ -307,7 +308,8 @@ export class BoardScene extends Phaser.Scene {
       }, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message),
     });
     // Portraits load once the page is idle so they never delay the first usable controls.
-    const loadPortraits = () => { if (this.sys.isActive()) loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); };
+    // The asset root's side manifest (v19 six-cost portraits) is read first, so its portraits load in the same pass.
+    const loadPortraits = () => void loadRootUiAssets(readAssetBase3d()).then(() => { if (this.sys.isActive()) loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); });
     const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
     if (idle) idle(loadPortraits, { timeout: 1500 }); else window.setTimeout(loadPortraits, 300);
     const debug = Object.freeze({ read: () => this.debugSnapshot() });

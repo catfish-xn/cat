@@ -1,9 +1,11 @@
+import { detonateMenaces, teamup } from './combat-v20-traits';
+import { canMove } from './combat-movement';
 import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
 import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
-import { getNeighbors, hexDistance } from './board';
+import { hexDistance } from './board';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, ap, applyStatus, areaEnemies, byDistance, champion, enemies, grantShield, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -89,12 +91,18 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       } break;
     }
     case 'powder': {
+      if(teamup(unit,'menaces')){
+        const center=enemies(unit,ctx.units).map(t=>({t,count:enemies(unit,ctx.units).filter(u=>hexDistance(t.cell,u.cell)<=2).length})).sort((a,b)=>b.count-a.count||(a.t.id<b.t.id?-1:1))[0]?.t??target;
+        unit.tasks.push({key:JSON.stringify(['v20-powder',unit.id,seq]),kind:'v20Powder',source:origin(unit),executeAtTick:ctx.tick+1,targetId:target.id,cell:{...center.cell},amount:mag('Damage'),actionSeq:seq,ordinal:ticks('IgniteDuration'),total:Math.round(v('FalloffPercent')*10000),cancellable:false,attachedDot:true});
+        ids.push(target.id);break;
+      }
       const center = enemies(unit, ctx.units).map(t => ({ t, count: enemies(unit, ctx.units).filter(u => hexDistance(t.cell, u.cell) <= 2).length }))
         .sort((a, b) => b.count - a.count || (a.t.id < b.t.id ? -1 : 1))[0]?.t ?? target;
       for (const t of areaEnemies(unit, ctx.units).filter(t => hexDistance(center.cell, t.cell) <= 2)) {
         strike(t, Math.floor(mag('Damage') * Math.max(0, 10000 - Math.round(v('FalloffPercent') * 10000) * hexDistance(center.cell, t.cell)) / 10000), 'magic', true);
         ignite(ctx, unit, t, ticks('IgniteDuration'), seq);
-      } break;
+      }
+      break;
     }
     case 'violet':
       for (let n = 0; n < v('NumStrikes'); n++) strike(target, amount(unit, ctx.tick, { ad: v('PercentAttackDamage') }), 'physical');
@@ -172,12 +180,14 @@ export function advanceG2Passives(ctx: AbilityContext, nextSeq: () => number): v
     if (champion(unit) === 'amumu' && ctx.tick % 20 === 0)
       for (const target of areaEnemies(unit, ctx.units).filter(u => hexDistance(unit.cell, u.cell) <= 1)) hit(ctx, unit, target, amount(unit, ctx.tick, { ap: variable(unit, 'Damage') }), nextSeq(), 0, 'magic', true, origin(unit), true);
     const period = mechanic(unit, 'firelight', 'periodTicks');
-    if (period && ctx.tick % period === 0) {
+    if(period&&!unit.v20Traits?.nextDashTick)unit.v20Traits={...unit.v20Traits,nextDashTick:period};
+    if (period && ctx.tick >= unit.v20Traits!.nextDashTick!) {
+      unit.v20Traits={...unit.v20Traits,nextDashTick:unit.v20Traits!.nextDashTick!+period,dashUntilTick:ctx.tick+20};
       const m = unit.mechanics!.find(m => m.mechanic === 'firelight')!, state = expansion(unit);
       ctx.heals.push({ source: m.source, targetId: unit.id, amount: Math.floor(state.damageTaken * m.values.healBps / 10000) }); state.damageTaken = 0;
       const target = byDistance(unit, enemies(unit, ctx.units))[0];
-      const destination = target && getNeighbors(ctx.board, target.cell).filter(c => !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.cell.col === c.col && u.cell.row === c.row))
-        .sort((a, b) => hexDistance(unit.cell, a) - hexDistance(unit.cell, b) || a.row - b.row || a.col - b.col)[0];
+      const destination = canMove(unit, ctx.tick) && target && Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(unit.cell,c)<=2&&hexDistance(unit.cell,c)>0).filter(c => !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.cell.col === c.col && u.cell.row === c.row))
+        .sort((a, b) => hexDistance(target.cell, b) - hexDistance(target.cell, a) || a.row - b.row || a.col - b.col)[0];
       if (destination) { ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: unit.id, from: unit.cell, to: destination }); unit.cell = destination; }
       if (m.values.attackSpeedBps) applyStatus(unit, m.source, 'attackSpeed', m.values.attackSpeedBps, m.values.dashTicks, ctx.tick, ctx.events, true);
     }
@@ -215,4 +225,12 @@ export function recordG2Damage(ctx: AbilityContext, owner: S13Unit | undefined, 
     const total = Math.floor((hp + absorbed) * variable(caster, 'DamageShare'));
     others.forEach((id, n) => task(caster, 'g2Retaliation', ctx.tick + 1, id, Math.floor(total / others.length) + (n < total % others.length ? 1 : 0), packet.actionSeq, n, others.length));
   }
+}
+
+export function executeV20Powder(ctx:AbilityContext,u:S13Unit,t:CombatTask):void {
+  for(const victim of areaEnemies(u,ctx.units).filter(v=>hexDistance(t.cell!,v.cell)<=2)){
+    hit(ctx,u,victim,Math.floor(t.amount*Math.max(0,10000-t.total*hexDistance(t.cell!,victim.cell))/10000),t.actionSeq,10000,'magic',true,t.source);
+    ignite(ctx,u,victim,t.ordinal,t.actionSeq);
+  }
+  detonateMenaces(ctx,u,t.actionSeq,t.cell!);
 }
