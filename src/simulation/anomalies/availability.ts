@@ -1,7 +1,7 @@
 import type { CombatUnit } from '../combat-types';
 import { effectiveStatuses } from '../m8/status';
-export const isAttackProxy = (unit: Pick<CombatUnit, 'anomalySummon'>): boolean =>
-  unit.anomalySummon?.kind === 'wolf' || unit.anomalySummon?.kind === 'mini';
+export const isAttackProxy = (unit: Pick<CombatUnit, 'anomalySummon'|'definitionId'>): boolean =>
+  unit.definitionId==='v20-silco-minion' || unit.anomalySummon?.kind === 'wolf' || unit.anomalySummon?.kind === 'mini';
 
 /** Presence gates all action/area processing; invisibility only gates selection.
  * An absent living roster unit still prevents elimination. */

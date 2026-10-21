@@ -18,6 +18,8 @@ const P2_ITEMS={'crown-guarded':['crownguard',1],'not-today':['edge-of-night',1]
 function p2Gifts(state){const gifts=new Map();for(const a of state.augments){
  // V19_MECHANICS: sisters grants one Vi then one Jinx, with P2 unit indices 0/1.
  // Plan from owned augments so capacity-delayed grants keep the same identities.
+ const teamups={mentorship:['ambessa','caitlyn'],reunion:['vi','ekko'],geniuses:['heimerdinger','ekko'],menaces:['powder','silco'],'unlikely-duo':['jinx','sevika']};
+ if(teamups[a.definitionId])for(const [i,id] of teamups[a.definitionId].entries())gifts.set(JSON.stringify(['s13-augments-p2',a.choiceId,'unit',i]),{kind:'unit',definitionId:id});
  if(a.definitionId==='sisters')for(const [i,id] of ['vi','jinx'].entries())gifts.set(JSON.stringify(['s13-augments-p2',a.choiceId,'unit',i]),{kind:'unit',definitionId:id});
  const item=P2_ITEMS[a.definitionId];if(item)for(let i=0;i<item[1];i++)gifts.set(JSON.stringify(['s13-augments-p2',a.choiceId,'item',i]),{kind:'item',definitionId:item[0]});
  const units={'all-for-one-ii':[1,3],'pair-of-fours':[4,1],'trifecta-ii':[3,3]}[a.definitionId];if(!units)continue;
@@ -37,7 +39,7 @@ ANOMALIES.push('the-finisher','touch-of-frost','fireball','dragonsoul','nothing-
 AUGMENTS.push('blinding-speed','portable-forge','radiant-relics','going-long','hedge-fund','investment-strategy-ii');AUGMENTS.sort();
 ANOMALIES.push('dual-wielding');ANOMALIES.sort();
 // D11 raw identities/tags, independently transcribed from the retained archive.
-AUGMENTS.push('all-for-one-i','trifecta-i','spirit-link','sisters');AUGMENTS.sort();
+AUGMENTS.push('all-for-one-i','trifecta-i','spirit-link','sisters','mentorship','reunion','geniuses','menaces','unlikely-duo');AUGMENTS.sort();
 ANOMALIES.push('ultimate-hero','into-the-unknown');
 ANOMALIES.push('avarice-incarnate','headhunter');ANOMALIES.sort();
 // Literal tier identities, transcribed independently; no runtime content imports.
@@ -46,7 +48,7 @@ const AUGMENT_POOLS={
  gold:['all-for-one-ii','bronze-for-life-i','built-different','bulky-buddies-ii','climb-the-ladder-ii','clockwork-accelerator','crown-guarded','crownguard-spirit','defense-call','glass-cannon-ii','guardbreaker-spirit','high-voltage','inspiring-epitaph','investment-strategy-i','item-collector-ii','little-buddies','manaflow-ii','mentorship-ii','not-today','pair-of-fours','piercing-lotus-i','portable-forge','pumping-up-ii','pyromaniac','shojin-spirit','thorn-plated-armor','unleash-the-beast'],
  prismatic:['belt-overflow','blinding-speed','bronze-for-life-ii','bulky-buddies-iii','calculated-enhancement','flurry-of-blows','going-long','hedge-fund','immovable-object','investment-strategy-ii','piercing-lotus-ii','pumping-up-iii','radiant-relics','sword-overflow','trifecta-ii','wand-overflow']
 };
-AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link','sisters');
+AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link','sisters','mentorship','reunion','geniuses','menaces','unlikely-duo');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 function augmentTier(seed,node){
  let hash=2166136261n;

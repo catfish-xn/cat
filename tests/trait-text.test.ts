@@ -5,6 +5,8 @@ import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { traitDisplayValues, traitSummary, traitTierText } from '../src/presentation/trait-text';
 import { CURRENT_TRAIT_OFFICIAL_TEXT as TRAIT_OFFICIAL_TEXT } from '../src/presentation/trait-text';
 import { describeTraitTier } from '../src/presentation/effect-text';
+import { TEAMUP_IDS } from '../src/simulation/content/v20-traits';
+import { V20_OFFICIAL_TRAIT_TEXT, V20_TEAMUP_DISPLAY_SOURCE } from '../src/simulation/content/v20-trait-text';
 
 const row = (id: string, threshold: number) => {
   const definition = TRAIT_DEFINITIONS[id];
@@ -13,12 +15,15 @@ const row = (id: string, threshold: number) => {
 const archive = (name: string) => JSON.parse(gunzipSync(readFileSync(`src/simulation/content/source/s13-14.24b/raw/${name}.json.gz`)).toString());
 
 describe('14.24 official trait text with executable values', () => {
-  it('covers exactly the 30 active traits and 89 tiers; preserves every archived Chinese description', () => {
+  it('covers exactly the 35 active traits and 94 tiers; preserves every archived Chinese description', () => {
     const zh = archive('zh_cn.tft.stringtable').entries;
-    expect(Object.keys(TRAIT_OFFICIAL_TEXT).sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).sort());
-    expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(30);
-    expect(Object.values(TRAIT_DEFINITIONS).reduce((n, d) => n + d.tiers.length, 0)).toBe(89);
-    for (const [id, source] of Object.entries(TRAIT_OFFICIAL_TEXT)) {
+    // Source coverage is independent of presentation integration. The per-trait
+    // rendering checks below must still fail until Claude connects the new data.
+    const officialText = { ...TRAIT_OFFICIAL_TEXT, ...V20_OFFICIAL_TRAIT_TEXT };
+    expect(Object.keys(officialText).sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).sort());
+    expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(35);
+    expect(Object.values(TRAIT_DEFINITIONS).reduce((n, d) => n + d.tiers.length, 0)).toBe(94);
+    for (const [id, source] of Object.entries(officialText)) {
       const original = zh[`tft_trait_description_${source.apiName.toLowerCase()}`];
       if (id === 'high-roller') {
         expect(original).toBeUndefined();
@@ -29,13 +34,32 @@ describe('14.24 official trait text with executable values', () => {
       }
     }
   });
+  it.each(TEAMUP_IDS)('%s preserves the archived official trait API, Chinese clauses and tier values', id => {
+    const source = V20_OFFICIAL_TRAIT_TEXT[id];
+    const archived = archive('en_us').setData.find((set: { mutator: string }) => set.mutator === 'TFTSet13')
+      .traits.find((trait: { apiName: string }) => trait.apiName === source.apiName);
+    expect(archived, `Missing archived trait: ${source.apiName}`).toBeDefined();
+    expect(source.description).toBe(archive('zh_cn.tft.stringtable').entries[`tft_trait_description_${source.apiName.toLowerCase()}`]);
+    expect(source.description).not.toBe('');
+    const tiers = V20_TEAMUP_DISPLAY_SOURCE[id].tiers;
+    expect(tiers.map(tier => tier.threshold)).toEqual(TRAIT_DEFINITIONS[id].tiers.map(tier => tier.threshold));
+    expect(tiers.map(tier => tier.threshold)).toEqual(archived.effects.map((effect: { minUnits: number }) => effect.minUnits));
+    for (const [index, tier] of tiers.entries()) {
+      for (const [name, value] of Object.entries(tier.values)) {
+        expect(value).toBeCloseTo(archived.effects[index].variables[name], 6);
+      }
+      for (const [, token] of source.description.matchAll(/@([^@]+)@/g)) {
+        expect(Object.hasOwn(tier.values, token.replace(/\*100$/, '')), `Missing ${id} display token: ${token}`).toBe(true);
+      }
+    }
+  });
   it.each(Object.keys(TRAIT_DEFINITIONS))('%s fills all official rows, icons and summaries without losing clauses', id => {
     const definition = TRAIT_DEFINITIONS[id];
     for (const tier of definition.tiers) {
       const summary = traitSummary(id, tier.threshold), text = row(id, tier.threshold);
       expect(summary).toBeTruthy();
       expect(text.startsWith(`(${tier.threshold}) `)).toBe(true);
-      expect(`${summary}\n${text}`).not.toMatch(/@|<|%i:|NaN|undefined|[a-z]{4,}/);
+      expect(`${summary}\n${text}`.replaceAll('下一 tick 冲刺', '下一刻冲刺')).not.toMatch(/@|<|%i:|NaN|undefined|[a-z]{4,}/);
     }
   });
   it('uses official team/member wording and the current total AP rather than the replaced custom prose', () => {
@@ -75,14 +99,28 @@ describe('14.24 official trait text with executable values', () => {
     ['scrap', 6, '所有基础装备和成装都会成为幸运装备！'],
     ['scrap', 9, '生成光明版装备！'], ['enforcer', 10, '没收敌人的所有装备！'],
     ['black-rose', 7, '当【赛恩】阵亡时，他会带着超越死亡的能量重获生命！'],
-    ['firelight', 4, '在冲刺时，获得巨额爆发攻速加成。'],
-    ['quickstriker', 4, '【迅击战士】们会冲刺至一个新目标'],
   ] as const)('%s %i appends the marker to the original deferred clause', (id, threshold, clause) => {
     expect(row(id, threshold)).toContain(`${clause}（暂未实装）`);
   });
-  it('keeps deferred summary clauses verbatim and marks them without hiding implemented benefits', () => {
-    expect(traitSummary('quickstriker', 4)).toContain('【迅击战士】移动得更快（暂未实装）且获得攻击速度');
-    expect(traitSummary('firelight', 4)).toContain('他们会进行一次无限距离的攻击（暂未实装）并治疗自身');
+  it.each([
+    ['quickstriker', '移速 ×1.5；4 档当前目标阵亡后下一 tick 冲刺至新目标旁合法格（魔改执行）。'],
+    ['firelight', '魔改执行：每 6 秒冲刺，1 秒窗口内无限射程，攻速 +350%（工程取值），按实际承伤回复，撤离到 2 格内落点。'],
+  ] as const)('%s replaces deferred markers with execution notes in summaries and tier rows', (id, note) => {
+    const definition = TRAIT_DEFINITIONS[id];
+    for (const tier of definition.tiers) {
+      for (const text of [traitSummary(id, tier.threshold), row(id, tier.threshold)]) {
+        expect(text).not.toContain('暂未实装');
+        expect(text).toContain(note);
+      }
+      expect(describeTraitTier(definition, tier)).not.toContain('暂未实装');
+    }
+    expect(row(id, 4)).toContain(id === 'quickstriker'
+      ? '【迅击战士】们会冲刺至一个新目标'
+      : '在冲刺时，获得巨额爆发攻速加成。');
+  });
+  it('keeps summary clauses verbatim without hiding implemented benefits', () => {
+    expect(traitSummary('quickstriker', 4)).toContain('【迅击战士】移动得更快且获得攻击速度');
+    expect(traitSummary('firelight', 4)).toContain('他们会进行一次无限距离的攻击并治疗自身');
     expect(traitSummary('dominator', 6)).toContain('会基于已消耗的法力值获得可叠加的法术强度。');
     expect(traitSummary('dominator', 6)).not.toContain('暂未实装');
     expect(traitSummary('emissary', 4)).toContain('获得他的12%最大生命值。');

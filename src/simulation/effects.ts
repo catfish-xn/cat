@@ -28,7 +28,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   g24Mirror:['healthBps','manaIncreaseBps'],
   g24Trench:['thresholdBps','healthBps'],
   g24Collector:['executeBps'],
-  v19Chainblade:['executeBps','pvp'],v19Garen:['healthBps'],formSwapper:['frontReductionBps','backAmpBps'],sisters:['adBps','speedBps','adTicks','speedTicks'],sistersUnlock:['enabled'],
+  v20Unlock:['enabled'],v20Teamup:['enabled'],v19Chainblade:['executeBps','pvp'],v19Garen:['healthBps'],formSwapper:['frontReductionBps','backAmpBps'],sisters:['adBps','speedBps','adTicks','speedTicks'],sistersUnlock:['enabled'],
   g24Gambler:['goldLimit','speedPerGoldBps'],
   g24Mogul:['stackCap','healthPerStack','resistPerStack','goldIntervalTicks'],
   quickstriker:['minBps','maxBps','shield','durationTicks'],g23Experiment:['warwick','mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps','allyHealingBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
@@ -56,7 +56,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   damageAmp: ['bps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold: ['amount'], lowCostAllies: ['count'],
 };
 const HOOKS: readonly Hook[] = ['combatStart', 'onAttack', 'onCast', 'onHpLoss'];
-for(const name of ['v19Chainblade','v19Garen','formSwapper','sisters','sistersUnlock'])MECHANICS.add(name);
+for(const name of ['v20Unlock','v20Teamup','v19Chainblade','v19Garen','formSwapper','sisters','sistersUnlock'])MECHANICS.add(name);
 MECHANICS.add('s13P2Augment');
 MECHANICS.add('s13P2Anomaly');
 MECHANICS.add('s13P2ItemAugment');

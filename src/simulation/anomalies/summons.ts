@@ -40,7 +40,7 @@ export function appendAnomalySummon(ctx: AbilityContext, owner: S13Unit, source:
 }
 /** One scheduling boundary for owner-bound attack agents. No ordinary attack/cast/item hooks. */
 export function scheduleAnomalyAttacks(ctx: AbilityContext, nextSeq: () => number): void {
-  for (const proxy of ctx.units.filter(u => u.alive && isAttackProxy(u)).sort((a, b) => a.id < b.id ? -1 : 1)) {
+  for (const proxy of ctx.units.filter(u => u.alive && u.anomalySummon && isAttackProxy(u)).sort((a, b) => a.id < b.id ? -1 : 1)) {
     const origin = proxy.anomalySummon!, owner = ctx.units.find(u => u.id === origin.ownerId);
     if (!owner || !isPresent(owner, ctx.tick)) continue;
     relocate(ctx, proxy, owner.cell);
@@ -83,7 +83,7 @@ export function recordAnomalyProxyHit(ctx: AbilityContext, proxy: S13Unit | unde
 export function removeBoundAnomalySummons(ctx: AbilityContext, roster: readonly S13Unit[] = ctx.units): string[] {
   const removed: string[] = [];
   for (const unit of [...ctx.units].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)) {
-    if (!isAttackProxy(unit)) continue;
+    if (!unit.anomalySummon || !isAttackProxy(unit)) continue;
     const owner = roster.find(u => u.id === unit.anomalySummon!.ownerId);
     if (owner?.alive && owner.hp > 0) continue;
     removed.push(unit.id); ctx.units.splice(ctx.units.indexOf(unit), 1);

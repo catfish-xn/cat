@@ -1,3 +1,4 @@
+import { castV20Teamups, quickDashV20, advanceV20Minions } from './combat-v20-traits';
 import { settleFamilyReunionDeaths } from './combat-family-reunion';
 import { advanceSixCost, settleSixCostDeaths, recordMelAbsorption, convertViktorMana } from './combat-six-cost';
 import { p2Bonus, p2Stoneskin, p2Target, p2PacketCrit } from './s13-augments-p2-combat';
@@ -257,6 +258,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   smokeV19(ctx);
   advanceG22Traits(ctx); advanceG23Anomalies(ctx); advanceG23Summons(ctx); advanceG23Skills(ctx); advanceG23Junker(ctx,()=>actionSeq++);
   advanceG2Passives(ctx, () => actionSeq++);
+  advanceV20Minions(ctx);
   const blocked = new Set<string>();
   for (const unit of units) {
     // B9 replay2: every S13 status is anchored by frozen contributions or an activity.
@@ -266,17 +268,22 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     maintainActivities(ctx, unit, controlled);
     if (controlled && !unit.sixCost?.permanentFrenzy) { blocked.add(unit.id); unit.tasks = unit.tasks.filter(t => !t.cancellable); }
   }
+  for(const unit of units)if(unit.alive&&unit.hp>0&&!blocked.has(unit.id)&&!active(unit,tick,'channel').length)quickDashV20(ctx,unit);
+  for(const unit of units)if(unit.mechanics?.some(m=>m.mechanic==='quickstriker')&&unit.alive){
+    unit.v20Traits={...unit.v20Traits,moveTenths:Math.min(13,(unit.v20Traits?.moveTenths??7)+3)};
+  }
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
   const intents = units.map(unit => {
     if (isAttackProxy(unit)||unit.definitionId==='g23-forge'||g23Bound(unit)||!unit.alive || unit.hp<=0 || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) return undefined;
     const target = p2Target(unit,units,tick);
     if (g23Anomaly(unit,'deep-roots')) return undefined;
-    if (!target || unit.moveCooldownTicks > 0 || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
+    if (!target || (unit.mechanics?.some(m=>m.mechanic==='quickstriker')?unit.moveCooldownTicks>5||(unit.v20Traits?.moveTenths??0)<10:unit.moveCooldownTicks>0) || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
     return move(state, unit, target, occupied);
   });
   units.forEach((unit, n) => {
     const destination = intents[n]; if (!destination || reserved.has(key(destination))) return;
     reserved.add(key(destination)); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination });
+    if(unit.mechanics?.some(m=>m.mechanic==='quickstriker'))unit.v20Traits={...unit.v20Traits,moveTenths:unit.v20Traits!.moveTenths!-10};
     unit.cell = destination; unit.moveCooldownTicks = unit.definitionId==='warwick'&&(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>=tick)?Math.ceil(MOVE_INTERVAL_TICKS*10000/15000):MOVE_INTERVAL_TICKS;
   });
   refreshMechanismAuras(ctx);
@@ -322,7 +329,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
     const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie','warwick','viktor','mel'].includes(champion(unit));
     const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
-    if ((unit.g23?.ascension?.untilTick??0)<tick && !['neutral', 'amumu', 'zeri'].includes(champion(unit)) && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (inRange || selfCast)) {
+    if ((unit.g23?.ascension?.untilTick??0)<tick && !['neutral', 'amumu', 'zeri'].includes(champion(unit)) && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (hexDistance(unit.cell,target.cell)<=range(unit,false) || selfCast)) {
       const seq = actionSeq++, beforeCount = events.length;
       const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.mana)!;
       spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
@@ -335,6 +342,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       // replay2: the receipt is finalized at the end of this tick (same-tick refunds, M8_RULES G08).
       events.splice(beforeCount, 0, { type: 'cast', tick, receipt });
       v19DominatorCast(ctx,unit,receipt.actualManaSpent);
+      castV20Teamups(ctx,unit,target,seq);
       unit.cooldownTicks = oldInterval;
       const immediate = unit.tasks.filter(t => t.executeAtTick <= tick);
       unit.tasks = unit.tasks.filter(t => t.executeAtTick > tick);
@@ -449,7 +457,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (absorbed + actual > 0) {
       positiveDamage.add(target.id);
       if (trackAssists) damageContributors[target.id] = [...new Set([...(damageContributors[target.id] ?? []), context.source.ownerId,
-        ...units.filter(u=>u.id===context.source.ownerId&&isAttackProxy(u)).map(u=>u.anomalySummon!.ownerId)])].sort(compareText);
+        ...units.filter(u=>u.id===context.source.ownerId&&isAttackProxy(u)).map(u=>u.anomalySummon?.ownerId??u.v20Traits!.minion!.ownerId)])].sort(compareText);
     }
     // B9 replay2: the frozen DamageOutcome is the packet event payload.
     events.push({ type: 'packetDamage', tick, outcome });
@@ -624,7 +632,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   // Shield follows the death of the current target, including kills credited to another ally.
   for(const u of units.filter(u=>u.alive&&u.hp>0)) {
     const quick=u.mechanics?.find(m=>m.mechanic==='quickstriker');
-    if(quick?.values.shield && u.targetId && killed.has(u.targetId)) grantShield(u,quick.source,quick.values.shield,tick+quick.values.durationTicks,tick,events);
+    if(quick?.values.shield && u.targetId && killed.has(u.targetId)){
+      grantShield(u,quick.source,quick.values.shield,tick+quick.values.durationTicks,tick,events);
+      u.v20Traits={...u.v20Traits,quickDashAtTick:tick+1};
+    }
   }
   settleG23ExperimentKills(ctx,killed);
   for (const source of killed.values()) {

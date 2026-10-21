@@ -1,0 +1,62 @@
+{
+  "baseCommit": "14006984600a08f8dd96fa776bf9ba1d1048ff24",
+  "identity": {
+    "contentDigest": "fnv1a32-utf16:f9581e38",
+    "lootReplayDigest": "fnv1a32-utf16:3332bffa",
+    "rulesManifestDigest": "fnv1a32-utf16:1a12b1c8"
+  },
+  "newSyntheticTests": 35,
+  "relatedTests": {
+    "uniqueTests": 345,
+    "initialBatch": {
+      "passed": 343,
+      "failed": 2,
+      "failures": [
+        {
+          "test": "blistering-strikes public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed 0)",
+          "reason": "Error: Test timed out in 5000ms."
+        },
+        {
+          "test": "all seventeen API identities, names, tiers and coefficients match the retained raw B-patch source",
+          "reason": "Error: Test timed out in 5000ms."
+        }
+      ]
+    },
+    "isolatedRerun": {
+      "files": 2,
+      "passed": 39,
+      "failed": 0,
+      "timeoutChanged": false,
+      "fileParallelism": false
+    },
+    "allAssertionsHavePassingEvidence": true
+  },
+  "fixtureRegression": {
+    "files": [
+      "tests/opening-random-identity.test.ts",
+      "tests/m5-route.test.ts",
+      "tests/c19-missed-pulse.test.ts"
+    ],
+    "passed": 164,
+    "failed": 0,
+    "finalEpochIdentityAuditPassed": true
+  },
+  "typecheck": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit",
+    "exitCode": 0
+  },
+  "epoch": {
+    "steps": 12,
+    "allPassed": true
+  },
+  "protectedManifest": {
+    "path": "tests/fixtures/g2-4b-herald-raw/manifest.json",
+    "sha256": "b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22"
+  },
+  "syntheticTestSha256": "4d202d9394abadb3b5773c8f0498ec477cb48024939f5304290dc795346748a8",
+  "scope": {
+    "network": false,
+    "gitWrites": false,
+    "presentationWrites": false
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "baseCommit": "14006984600a08f8dd96fa776bf9ba1d1048ff24",
+  "steps": [
+    {
+      "name": "check-identities",
+      "args": [
+        "scripts/update-content-identities.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 18414,
+      "log": "artifacts\\v20-traits-recording\\check-identities.log"
+    },
+    {
+      "name": "record-release",
+      "args": [
+        "scripts/record-v20-traits-release.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 100770,
+      "log": "artifacts\\v20-traits-recording\\record-release.log"
+    },
+    {
+      "name": "record-herald",
+      "args": [
+        "tests/fixtures/record-v20-traits-herald.cjs",
+        "--write"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 117193,
+      "log": "artifacts\\v20-traits-recording\\record-herald.log"
+    },
+    {
+      "name": "record-inputs",
+      "args": [
+        "scripts/record-v20-traits-inputs.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 19931,
+      "log": "artifacts\\v20-traits-recording\\record-inputs.log"
+    },
+    {
+      "name": "record-transfer",
+      "args": [
+        "scripts/record-v20-traits-transfer.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 21732,
+      "log": "artifacts\\v20-traits-recording\\record-transfer.log"
+    },
+    {
+      "name": "check-transfer",
+      "args": [
+        "scripts/record-v20-traits-transfer.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 22494,
+      "log": "artifacts\\v20-traits-recording\\check-transfer.log"
+    },
+    {
+      "name": "record-live-reveal",
+      "args": [
+        "scripts/record-v20-traits-live-reveal.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 38753,
+      "log": "artifacts\\v20-traits-recording\\record-live-reveal.log"
+    },
+    {
+      "name": "check-inputs",
+      "args": [
+        "scripts/record-v20-traits-inputs.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 19540,
+      "log": "artifacts\\v20-traits-recording\\check-inputs.log"
+    },
+    {
+      "name": "check-herald",
+      "args": [
+        "scripts/verify-m8-herald-fixtures.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 81906,
+      "log": "artifacts\\v20-traits-recording\\check-herald.log"
+    },
+    {
+      "name": "check-history",
+      "args": [
+        "scripts/v20-traits-fixture-audit.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 5693,
+      "log": "artifacts\\v20-traits-recording\\check-history.log"
+    },
+    {
+      "name": "check-live-reveal",
+      "args": [
+        "scripts/record-v20-traits-live-reveal.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 43323,
+      "log": "artifacts\\v20-traits-recording\\check-live-reveal.log"
+    },
+    {
+      "name": "compare-digests",
+      "args": [
+        "scripts/compare-v20-traits-digests.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 18435,
+      "log": "artifacts\\v20-traits-recording\\compare-digests.log"
+    }
+  ],
+  "complete": true
+}

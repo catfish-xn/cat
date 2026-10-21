@@ -1,3 +1,4 @@
+import { startV20Traits } from './combat-v20-traits';
 import { startSixCost } from './combat-six-cost';
 import { startG22Traits } from './combat-g2-2';
 import { startV19, smokeV19 } from './combat-v19';
@@ -80,6 +81,7 @@ export function applyCombatStart(state: CombatState): CombatStep {
     smokeV19({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V19 smoke cannot draw RNG');}});
     startSixCost({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Six-cost opening cannot draw RNG');}});
     startV19({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V19 opening cannot draw RNG');}});
+    startV20Traits({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V20 opening cannot draw RNG');}});
     // Final owner HP is frozen only after all opening boosts and broadcasts.
     initializeMirrorHealth(mechanismUnits,shields);
   }

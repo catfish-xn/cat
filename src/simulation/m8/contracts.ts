@@ -486,11 +486,11 @@ export interface M8CombatExtension {
 /** Frozen target identifiers. Current M7 constants deliberately remain unchanged. */
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
-  readonly schemaVersion: 9;
-  readonly rulesVersion: 's13-g2-3-v19';
-  readonly contentVersion: 's13-14.24b-g2-3-v19';
+  readonly schemaVersion: 10;
+  readonly rulesVersion: 's13-g2-3-v20-traits';
+  readonly contentVersion: 's13-14.24b-g2-3-v20-traits';
   readonly contentDigest: string;
-  readonly saveFormatVersion: 5;
+  readonly saveFormatVersion: 6;
   readonly replayFormatVersion: 4;
   readonly commandProtocolVersion: 4;
   readonly rngAlgorithm: 'lcg32-v1';
