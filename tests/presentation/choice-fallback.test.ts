@@ -22,10 +22,10 @@ describe('generic mechanic choice display', () => {
     expect(offer.description).toBe(itemDescriptions('gunblade').join('；'));
     expect(offer.description).not.toBe('');
   });
-  it('titles an artifact forge 神器锻造器 by the rules\' artifact pool (artifacts are completed-kind) and shows their effect lines', () => {
+  it('titles an artifact forge 神器装备锻造器 by the rules\' artifact pool (artifacts are completed-kind) and shows their effect lines', () => {
     const offers = G24_FORGE_POOLS.TFT_ArmoryKeyOrnn.slice(0, 4);
     const extras = readChoiceExtras({ kind: 'forge', offers, payload: { kind: 'forge', source: 'conqueror', timeoutOption: offers[0] } });
-    expect(extras.title).toBe('神器锻造器 · 4 选 1');
+    expect(extras.title).toBe('神器装备锻造器 · 4 选 1');
     for (const id of G24_FORGE_POOLS.TFT_ArmoryKeyOrnn) {
       const offer = genericOffer(id, extras);
       expect(offer.name).toBe(itemDisplayName(id));
