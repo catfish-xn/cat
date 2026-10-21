@@ -5,6 +5,7 @@ import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 import { S13_P2_AUGMENTS } from './s13-augments-p2';
 export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  sisters:{id:'sisters',name:'姐妹',description:'获得蔚和金克丝。两者在场时解锁姐妹：金克丝参与击杀使蔚获得40%攻击力7秒；蔚参与击杀使金克丝获得75%攻速5秒。',effects:[{kind:'mechanic',mechanic:'sistersUnlock',values:{enabled:1}}]},
   ...D11_AUGMENTS,
   ...S13_P1_AUGMENTS,
   ...S13_P2_AUGMENTS,

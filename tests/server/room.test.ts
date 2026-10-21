@@ -187,7 +187,7 @@ describe('Room: choice window and stuck seats', () => {
     for (const seat of room.state.seats) {
       const pending = seat.match.pendingChoice!;
       expect(pending.step).toBe('offer');
-      const chosen = room.handle(seat.seatId, { type: 'choose', choiceId: pending.choiceId, generation: pending.generation, definitionId: pending.offers[0]! });
+      const chosen = room.handle(seat.seatId, { type: 'choose', choiceId: pending.choiceId, generation: pending.generation, definitionId: pending.offers.find(id => !['portable-forge','radiant-relics'].includes(id))! });
       expect(chosen.ok).toBe(true);
     }
     expect(room.state.phase).toBe('preparation');

@@ -154,6 +154,10 @@ export const DUAL_WIELDING_POOLS:Readonly<Record<string,readonly string[]>>=free
   ]
 });
 export const DUAL_WIELDING_ROLES:Readonly<Record<string,string>>=freezeContent({
+  // v19 six-cost roles, matching their combat scaling and resource model.
+  "warwick": "ADFIGHTER",
+  "viktor": "APCARRY",
+  "mel": "APCASTER",
   "singed": "APTANK",
   "renata": "APCASTERHIGHMANA",
   "silco": "APCASTERHIGHMANA",

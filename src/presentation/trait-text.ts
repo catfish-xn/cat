@@ -5,10 +5,27 @@ import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import type { TraitDefinition, TraitTier } from '../simulation/strategy-types';
 import { describeTraitTier } from './effect-text';
 import { fillAbilityTemplate } from './ability-text';
+import { V19_OFFICIAL_TRAIT_TEXT, V19_SISTERS_DISPLAY_SOURCE } from '../simulation/content/v19-trait-text';
 import { TRAIT_OFFICIAL_TEXT } from './trait-official-text';
+import type { familyDisplay } from '../simulation/family-heist';
+
+/** Append these supplied domain fields at the bottom of the Family tooltip; no counting or RNG in presentation. */
+export function familyTraitFooter(display:ReturnType<typeof familyDisplay>):readonly string[] {
+  return display?[display.progressText,display.policy]:[];
+}
 
 type SourceTier = { readonly threshold: number; readonly values: Readonly<Record<string, number | null | undefined>> };
-const SOURCES = G23_TRAIT_SOURCE as Readonly<Record<string, { readonly tiers: readonly SourceTier[] }>>;
+const SIX_COST_TEXT = {
+  'blood-hunter':{apiName:'TFT13_BloodHunter',locale:'zh_cn',description:'【沃里克】吞噬生命值低于@EnemyHealthPercentThreshold*100@%的敌人，为他自身回复@DevourHealing@生命值并获得@ManaPerKill@法力值。'},
+  'machine-herald':{apiName:'TFT13_MachineHerald',locale:'zh_cn',description:'【维克托】的固定攻击速度为每秒@AS@次攻击，并将所有额外攻击力、攻击速度和法力值转化为法术强度。<br><br>【维克托】不使用法力值，而是每次攻击获得1混沌能量，并且会在@MaxMana@混沌能量时施放技能。'},
+  'banished-mage':{apiName:'TFT13_MissMageTrait',locale:'zh_cn',description:'在你第一次即将被淘汰时，如果【梅尔】在本局游戏的玩家对战回合中施放过至少@MinimumCasts@次技能，那么她会救下你，让你继续存活。<br><br>在那之后，【梅尔】会永久获得@ProcDamageAmp*100@%伤害增幅。<br><br>@TFTUnitProperty.:TFT13_MissMageTrait_TrackerTRA@'},
+};
+export const CURRENT_TRAIT_OFFICIAL_TEXT:Readonly<Record<string,{readonly apiName:string;readonly locale:string;readonly description:string}>> = {...TRAIT_OFFICIAL_TEXT,...V19_OFFICIAL_TRAIT_TEXT,...SIX_COST_TEXT};
+const SOURCES = {...G23_TRAIT_SOURCE,...V19_SISTERS_DISPLAY_SOURCE,
+  'blood-hunter':{tiers:[{threshold:1,values:{EnemyHealthPercentThreshold:0.15,DevourHealing:400,ManaPerKill:50}}]},
+  'machine-herald':{tiers:[{threshold:1,values:{AS:0.55,MaxMana:8}}]},
+  'banished-mage':{tiers:[{threshold:1,values:{MinimumCasts:12,ProcDamageAmp:0.10}}]},
+} as Readonly<Record<string, { readonly tiers: readonly SourceTier[] }>>;
 export function traitDisplayValues(traitId: string, threshold: number): Record<string, number> | null {
   const tiers = Object.hasOwn(SOURCES, traitId) ? SOURCES[traitId].tiers : undefined;
   const tier = tiers?.find(t => t.threshold === threshold) ?? tiers?.[0];
@@ -57,15 +74,14 @@ function fill(template: string, values: Record<string, number>): string {
 /** Preserve the exact official clause and append the requested implementation marker. */
 function annotate(id: string, text: string): string {
   const mark = (clause: string) => { text = text.replace(clause, `${clause}（暂未实装）`); };
-  if (id === 'family') mark('去上城搞钱！在战斗后，获得搞钱进度，并且每个存活的【家人】都会使这个进度提升！');
+  if (id === 'family') text += ' 家人5：16项等权随机任务；PvP按阶段推进，每战最多完成一次，余量结转；奖励以可部分领取的法球发放。训练假人替代：10金（魔改）。';
+  if (id === 'machine-herald') text += ' 额外属性1:1转法强为魔改约定。';
   if (id === 'scrap') {
     mark('所有基础装备和成装都会成为幸运装备！');
     mark('生成光明版装备！');
   }
   if (id === 'enforcer') mark('没收敌人的所有装备！');
-  if (id === 'rebel') text = text.replace(/烟雾信号会在战斗开始时以及之后的每 \d+秒触发。/, '$&（暂未实装）');
   if (id === 'black-rose') {
-    mark('【黑色玫瑰】弈子们会对敌人造成更多伤害');
     mark('当【赛恩】阵亡时，他会带着超越死亡的能量重获生命！');
   }
   if (id === 'firelight') {
@@ -77,13 +93,11 @@ function annotate(id: string, text: string): string {
     mark('【迅击战士】移动得更快');
     mark('【迅击战士】们会冲刺至一个新目标');
   }
-  if (id === 'dominator') mark('会基于已消耗的法力值获得可叠加的法术强度');
-  if (id === 'emissary') text = text.replace(/【盖伦】：[^\n]+/, '$&（暂未实装）');
   return text;
 }
 
 function parts(id: string): { summary: string; rows: string[]; expanded: boolean } | null {
-  const source = Object.hasOwn(TRAIT_OFFICIAL_TEXT, id) ? TRAIT_OFFICIAL_TEXT[id] : undefined;
+  const source = Object.hasOwn(CURRENT_TRAIT_OFFICIAL_TEXT, id) ? (CURRENT_TRAIT_OFFICIAL_TEXT as Readonly<Record<string,{description:string}>>)[id] : undefined;
   if (!source) return null;
   const rows = [...source.description.matchAll(/<(row|expandRow)>([\s\S]*?)<\/\1>/g)];
   const summary = source.description
@@ -91,6 +105,7 @@ function parts(id: string): { summary: string; rows: string[]; expanded: boolean
     // Client inspection counters have no match-independent value. Retain static
     // <rules> text, notably Black Rose's star-level explanation.
     .replace(/<rules>[^<]*@[^<]*<\/rules>/g, '')
+    .replace(/@TFTUnitProperty\.[^@]*@/g, '')
     .replace(/\(@TFTUnitProperty[^@]+@\/7\)/g, '');
   return { summary, rows: rows.map(row => row[2]), expanded: rows[0]?.[1] === 'expandRow' };
 }

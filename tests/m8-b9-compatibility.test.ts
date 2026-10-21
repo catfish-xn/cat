@@ -25,10 +25,10 @@ function finishedEnvelope(): SaveEnvelope {
     const before = match, next = stepMatch(match); match = next.state;
     history.observe({ before, after: match, events: combat(next.events), reason: 'tick' });
   }
-  return { kind: 'hex-autobattler-save', saveFormatVersion: 4, replayFormatVersion: 3, runId: 'compat-run', createdAt: '2026-10-10T00:00:00Z',
+  return { kind: 'hex-autobattler-save', saveFormatVersion: 5, replayFormatVersion: 4, runId: 'compat-run', createdAt: '2026-10-10T00:00:00Z',
     match, battles: history.completedRecords, currentBattle: history.capturePrefix() };
 }
-const fresh = (): SaveEnvelope => ({ kind: 'hex-autobattler-save', saveFormatVersion: 4, replayFormatVersion: 3, runId: 'fresh-run',
+const fresh = (): SaveEnvelope => ({ kind: 'hex-autobattler-save', saveFormatVersion: 5, replayFormatVersion: 4, runId: 'fresh-run',
   createdAt: '2026-10-10T00:00:00Z', match: readyMatch(42), battles: [], currentBattle: null });
 const mutated = (base: SaveEnvelope, change: (file: Record<string, any>) => void) => { const file = structuredClone(base) as Record<string, any>; change(file); return file; };
 

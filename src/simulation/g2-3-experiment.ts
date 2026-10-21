@@ -23,5 +23,5 @@ export function g23ExperimentEffects(state:CombatStrategyInputs,unit:Unit,traits
  if(!onLab(unit))return [];
  const donors=army.filter(onLab),factor=tier>=7?2:1;
  return [{kind:'statFlat',stat:'maxHp',amount:(tier>=5?300:100)+(donors.some(u=>u.definitionId==='drmundo')?120*factor:0)},
-  {kind:'mechanic',mechanic:'g23Experiment',values:{mundo:donors.some(u=>u.definitionId==='drmundo')?60*factor:0,nunu:donors.some(u=>u.definitionId==='nunu')?300*factor:0,zyra:donors.some(u=>u.definitionId==='zyra')?5000*factor:0,urgot:donors.some(u=>u.definitionId==='urgot')?2000*factor:0,twitch:donors.some(u=>u.definitionId==='twitch')?2000*factor:0}}];
+  {kind:'mechanic',mechanic:'g23Experiment',values:{...(donors.some(u=>u.definitionId==='warwick')?{warwick:20*factor}:{}),mundo:donors.some(u=>u.definitionId==='drmundo')?60*factor:0,nunu:donors.some(u=>u.definitionId==='nunu')?300*factor:0,zyra:donors.some(u=>u.definitionId==='zyra')?5000*factor:0,urgot:donors.some(u=>u.definitionId==='urgot')?2000*factor:0,twitch:donors.some(u=>u.definitionId==='twitch')?2000*factor:0}}];
 }

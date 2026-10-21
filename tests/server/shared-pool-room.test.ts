@@ -69,8 +69,8 @@ describe('Room on the shared pool: opening (§12.2)', () => {
     expect(state.pool.seats.map(seat => [seat.seatId, seat.seatIndex])).toEqual(state.seats.map(seat => [seat.seatId, seat.index]));
     expect(state.pool.naturalRound).toBe(1);
     expect(state.pool.available['irelia']).toBe(30 - state.pool.holdings.filter(h=>h.definitionId==='irelia').length - state.pool.shops.filter(shop => shop.definitionId === 'irelia').length);
-    // 1171 copies − 8 openings − 40 reserved shop cards (contract §12.2).
-    expect(total(state.pool.available)).toBe(1123);
+    // 1198 copies (v19: three six-costs × 9) − 8 openings − 40 reserved shop cards (contract §12.2).
+    expect(total(state.pool.available)).toBe(1150);
     expect(state.pool.shops).toHaveLength(40);
     for (const seat of state.seats) {
       expect(seat.match.sharedPool).toEqual({ poolId: 'test-room', seatId: seat.seatId, revision: 1 });

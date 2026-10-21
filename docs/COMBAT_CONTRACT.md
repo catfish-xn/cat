@@ -1,5 +1,18 @@
 # M5 Combat contract v5
 
+## v19 第二部分（当前合同，2026-10-21）
+
+同一v19包含家人5随机任务法球、13.4六人彩蛋回移、六费 warwick / viktor / mel 与22种纹章总基础属性替换。schema/save/replay/command＝**9/5/4/4**；旧身份拒绝，无迁移，50ms和lcg32-v1不变。数值、魔改/未验证清单、导出签名、RNG、失败/恢复、说明底部显示字段及表现层交接以 [V19_PART2](V19_PART2.md) 为准；下文旧“家人预留/六费延期/纹章未改/8-4-3”描述已被本节覆盖。
+
+
+## v19 战斗规则与赛薇卡显示扩展（2026-10-21）
+
+当前规则为 `s13-g2-3-v19`；完整来源、整数公式、开场顺序、缺证约定、状态与恢复见 [V19_MECHANICS](V19_MECHANICS.md)。统领使用实际施法收据；盖伦冻结完整实际最大生命后统一广播；双形按startingCell；姐妹按强化/两种伙伴门槛和参与击杀；蓝发10用0/240/480…单一时钟。黑玫4档绑定为**推断**，标记目标的独立×1.08不叠加。链锯刃低于20%处决、400治疗、200tick击杀刷新增益；仅PvP真实敌方英雄掉3金是用户要求的**魔改**，战后唯一收据到账。
+
+`castOutcome` 领域事件及既有 `toCombatViewEvents(events)` 显示投影，新增可选 `castVariant:{actionSeq:number,move:'flamethrower'|'punch'|'chomp',channelTicks:number,enhanced:boolean,heroAugmentIds:readonly string[]}`。赛薇卡每次施法发送最终选招、实际引导tick数（非引导0）及百变铁手强化结果；当前没有已实装赛薇卡专用英雄强化，heroAugmentIds显式为空。3D按unitId/actionSeq关联cast，直接选择动画与时长，继续服从权威生命/控制状态处理打断；不得自行抽招或消费RNG。投影为脱离引用的白名单数据，首遍/重放一致；无需修改网络封套。
+
+可选 `CombatUnit.v19` 存放盖伦采样/共享生命、蓝发信号序号及一次授予标记、黑玫目标队伍标记。相关新动态战斗恢复从认证输入逐tick重建并对比完整状态；不重发任何收益。家人5任务/奖励法球及六人战斗星级覆盖已由第二部分实现，见V19_PART2。
+
 ## v18 炮手 6：14.24b 的 12/17 B 补丁修正
 
 炮手（Cannoneer，内部 id `artillerist`，归档 `TFT13_Martialist`）6 档成员攻击力加成由 60% 修正为 **70%（7000 Bps）**，依据 `M9_DATA_LEDGER.md` 的 B-12/17 `effects.variables.AD` 行。2/4 档仍为 10%/45%；6 档每 4 次普攻触发的 250% AD 范围物理包不变。运行时表供战斗编译和说明共用，原始归档不改；无公共签名、失败原因、tick 或结算顺序变化。
@@ -185,3 +198,7 @@ createCombatReplayRecorder(initialState: CombatState,
 ## v18 纹章与高档位扩展（2026-10-21）
 
 来源、数值与延期项见 [V18_TRAIT_EXPANSION](V18_TRAIT_EXPANSION.md)。沿用v18身份。迅击战士按目标缺失生命计算攻速、当前目标死亡获得4档护盾；搏击手触发治疗分40个tick发放；法师8技能命中弱化输出25%、持续60tick、不叠加；先知8按技能实际生命伤害的20%治疗友军。全程整数/基点、50ms tick、显式RNG；完整来源/事件账本与恢复验证保留。
+
+## v19 回归修复边界
+
+宝箱战中发装备重算最大生命时，必须保留盖伦已授予的实际共享生命，仍置于百分比乘区外；不改变召唤物/建筑永久禁装备、击杀归属或助攻条件。普通 v19 恢复复用由完整认证输入绑定的独立回放证据，每次仍比较完整候选；Zephyr/Trench/异常路径保留每次冷重演。细节与回归证据见 [PR364_CI_REPAIR](PR364_CI_REPAIR.md)。

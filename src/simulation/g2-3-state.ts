@@ -1,3 +1,4 @@
+import { activateFamily, familyDisplay } from './family-heist';
 import { getCatalogRoundById } from './round-selectors';
 import {g23SoloFacts} from './g2-3-settlement';
 import {canonicalContent} from './content';
@@ -16,7 +17,8 @@ export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatM
  if(state.g23)return state.g23; // immutable combat-input DTO, never a MatchState field
  const m=state.seatMechanics;if(!m?.seat.academy||!m.seat.junkerKing||!m.seat.alchemist)return undefined;
  const h=(m.hidden.progress??{version:'g2-3-progress-v1',seed:0,rngState:0,rngDraws:0,economyReceipts:[]}) as Omit<G23MatchProgress,'conquest'|'sponsored'|'chem'|'junkerRounds'|'junkerPurchases'|'itemReceipts'|'rewardClaims'|'rewards'>;
- const {rewards,...c}=m.seat.conqueror as Omit<G23MatchProgress['conquest'],'radiantConversion'>&{rewards:G23MatchProgress['rewards']};
+ const {rewards:storedRewards,...c}=m.seat.conqueror as Omit<G23MatchProgress['conquest'],'radiantConversion'>&{rewards:G23MatchProgress['rewards']};
+ const rewards=m.hidden.progress?storedRewards:storedRewards.filter(b=>b.source!=='family');
  const a=m.seat.academy as {sponsored:readonly string[]};
  const j=m.seat.junkerKing as {rounds:number;purchases:G23MatchProgress['junkerPurchases']};
  const rewardClaims:G23RewardClaim[]=[];
@@ -40,10 +42,11 @@ export function writeG23Progress<T extends Pick<MatchState,'seatMechanics'>>(sta
  const m=state.seatMechanics??emptySeatMechanics();
  const {conquest,sponsored,chem,junkerRounds,junkerPurchases,itemReceipts:_derived,rewardClaims:_selectors,epicCrowns:_epic,rewards,...hidden}=p;
  const {radiantConversion,...conqueror}=conquest;
- return {...state,seatMechanics:{...m,seat:{...m.seat,conqueror:{...conqueror,rewards},academy:{sponsored},alchemist:chem,junkerKing:{rounds:junkerRounds,purchases:junkerPurchases},radiantConversion},hidden:{...m.hidden,progress:hidden}}};
+ return {...state,seatMechanics:{...m,seat:{...m.seat,conqueror:{...conqueror,rewards},academy:{sponsored},alchemist:chem,junkerKing:{rounds:junkerRounds,purchases:junkerPurchases},radiantConversion,...(p.mel?{melRescue:{pvpCasts:p.mel.pvpCasts,saved:p.mel.savedBattleId!==null}}:{}),...(p.family?{familyHeist:familyDisplay(p.family)}:{})},hidden:{...m.hidden,progress:hidden}}};
 }
 export function updateG23Cells(state:MatchState):MatchState{
- const p=readG23Progress(state);if(!p)return state;
+ let p=readG23Progress(state);if(!p)return state;
+ if(!p.family&&state.phase==='preparation'&&!state.multiplayer?.combatRosterLocked&&(deriveTraits(state.preparation,'player',undefined,undefined,state.items).find(t=>t.traitId==='family')?.tier??0)>=5){p=activateFamily(p,state.round);state=writeG23Progress(state,p);}
  const tier=deriveTraits(state.preparation,'player',undefined,undefined,state.items).find(t=>t.traitId==='experiment')?.tier??0;
  return {...state,seatMechanics:{...state.seatMechanics!,seat:{...state.seatMechanics!.seat,experimentCells:g23Laboratories(p.seed,'player',tier)}}};
 }
@@ -57,7 +60,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
   for(const payout of action.facts.itemGoldPayouts??[]){check(!expectedGold.has(payout.receiptId));expectedGold.set(payout.receiptId,{amount:payout.amount,round:action.facts.round,source:payout.source});}
   if(action.facts.highRollerGold)expectedGold.set(`g23:high-roller:${action.facts.battleId}`,{amount:action.facts.highRollerGold,round:action.facts.round,source:'high-roller'});
   if(action.crownGold)expectedGold.set(`g23:crown:${action.facts.battleId}`,{amount:action.crownGold,round:action.facts.round,source:'tacticians-crown'});
-  for(const bundleId of action.bundles){
+  for(const bundleId of action.bundles.filter(id=>id.startsWith('g23:conqueror:'))){
    const chest=G23_CONQUEROR_CHESTS[Number(bundleId.split(':').at(-1))-1],amount=Number(g23ConquerorReward(chest).Gold??0);
    if(amount)expectedGold.set(`${bundleId}:gold`,{amount,round:action.facts.round,source:'conqueror-chest'});
   }
@@ -74,7 +77,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
    else check((r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId)
     ||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.receiptId===bundle.id&&!r.skipped&&r.price===0&&r.optionId===claim.definitionId&&r.itemId===claim.instanceId));
   }
-  else if(claim.kind==='unit'||claim.kind==='duplicator')check(r.kind==='unit'&&r.definitionId===claim.definitionId&&r.unitId===claim.instanceId&&(r.resolution!=='gold'||r.gold===UNIT_DEFINITIONS[r.definitionId]?.cost));
+  else if(claim.kind==='unit'||claim.kind==='duplicator')check(r.kind==='unit'&&r.definitionId===claim.definitionId&&r.unitId===claim.instanceId&&(r.starLevel??1)===(atom.starLevel??1)&&(r.resolution!=='gold'||r.gold===UNIT_DEFINITIONS[r.definitionId]?.cost));
   else if(claim.kind==='tool')check(r.kind==='consumable'&&r.definitionId===claim.definitionId&&r.consumableId===claim.instanceId);
   else check(r.kind==='gold'&&r.amount===claim.gold);
  }
@@ -82,7 +85,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
  for(const r of receipts){
   check(r.round<=state.round&&r.roundId===getMultiplayerRoundByOrdinal(r.round).roundId);
   if(r.source==='high-roller'||r.source==='conqueror-chest'||r.source==='tacticians-crown'||r.source==='g24-item-gold')check(expectedGold.has(r.receiptId));
-  if(r.source==='conqueror'||r.source==='black-market')check(p.rewardClaims.some(c=>c.id===r.receiptId)||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&p.economyReceipts.some(e=>e.kind==='market'&&e.offerId===r.receiptId)));
+  if(r.source==='conqueror'||r.source==='black-market'||r.source==='family')check(p.rewardClaims.some(c=>c.id===r.receiptId)||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&p.economyReceipts.some(e=>e.kind==='market'&&e.offerId===r.receiptId)));
  }
 }
 
@@ -98,11 +101,12 @@ export function validateG23RewardSources(state:MatchState):void{
    const f=r.facts,history=state.roundResults.find(h=>h.round===f.round);
    if(!history||f.round>state.round||history.roundKind==='supply'||f.roundKind!==(history.roundKind==='pvp'?'pvp':'pve')
     ||f.result!==(history.result==='playerWin'?'win':history.result==='enemyWin'?'loss':'draw'))throw new RangeError('Invalid G23 reward facts');
+   if(f.family&&f.family.stage!==getMultiplayerRoundByOrdinal(f.round).stage)throw new RangeError('Invalid family stage');
    const online=state.multiplayer?.receipts.find(m=>m.round===f.round);
    if(online?canonicalContent(online.g23Facts)!==canonicalContent(f):f.battleId!==`round-${f.round}`)throw new RangeError('Invalid G23 reward facts');
    if(!state.multiplayer&&f.round===state.round&&state.combat?.status==='finished'
     &&canonicalContent(f)!==canonicalContent(g23SoloFacts(state,state.combat)))throw new RangeError('Invalid G23 reward facts');
-  }else if(r.kind!=='market'||!Number.isSafeInteger(r.round)||r.round<1||r.round>state.round)throw new RangeError('Invalid G23 reward facts');
+  }else if(!['market','family-start','mel-save'].includes(r.kind)||!Number.isSafeInteger(r.round)||r.round<1||r.round>state.round)throw new RangeError('Invalid G23 reward facts');
  }
  const replay=replayG23Economy(state.seed,h.economyReceipts);
  if(canonicalContent(h.economyReceipts)!==canonicalContent(replay.economyReceipts))throw new RangeError('Invalid G23 reward facts');

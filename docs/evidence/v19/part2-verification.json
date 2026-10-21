@@ -1,0 +1,26 @@
+{
+  "rulesVersion": "s13-g2-3-v19",
+  "contentVersion": "s13-14.24b-g2-3-v19",
+  "schemaVersion": 9,
+  "saveFormatVersion": 5,
+  "replayFormatVersion": 4,
+  "contentDigest": "fnv1a32-utf16:3dad5abd",
+  "lootReplayDigest": "fnv1a32-utf16:e83f0193",
+  "epochComplete": true,
+  "epochSteps": 9,
+  "recordedSourceFilesVerified": 401,
+  "presentationSha256": {
+    "src/presentation/trait-text.ts": "7bff1b21d6fde082daea99b7a072cef932c97c2f052962cbd792ab533a1aaf1a",
+    "src/presentation/item-codex.ts": "8e3c0eaf25d489fec34516a716d354511d774648cff2faf31067afa0c7ad4e40",
+    "src/presentation/effect-text.ts": "3f5bbf187252d08d96ce3980e374518f0aa5098b8ce7198dffacaee87c58705c"
+  },
+  "protectedManifestSha256": "b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22",
+  "tests": {
+    "files": 28,
+    "passed": 538,
+    "failed": 0
+  },
+  "typecheck": "passed",
+  "offline": true,
+  "gitWrites": false
+}

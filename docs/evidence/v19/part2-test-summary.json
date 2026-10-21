@@ -1,0 +1,154 @@
+{
+  "files": 28,
+  "passed": 538,
+  "failed": 0,
+  "reports": [
+    "final-related",
+    "final-display",
+    "final-identity",
+    "final-part2"
+  ],
+  "checks": [
+    {
+      "file": "tests/content-identity-constants.test.ts",
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-content.test.ts",
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-followup.test.ts",
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-hook-failures.test.ts",
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-integration.test.ts",
+      "passed": 18,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+      "passed": 37,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-netcode-hooks.test.ts",
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-skills.test.ts",
+      "passed": 18,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-3-traits.test.ts",
+      "passed": 19,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-4b-replay.test.ts",
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "passed": 47,
+      "failed": 0
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "file": "tests/m8-b10-item-save-replay.test.ts",
+      "passed": 45,
+      "failed": 0
+    },
+    {
+      "file": "tests/m8-b9-compatibility.test.ts",
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "file": "tests/r3r4-consumable-targets.test.ts",
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "file": "tests/r3r4-consumables.test.ts",
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "file": "tests/shared-pool-cache.test.ts",
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "file": "tests/shop.test.ts",
+      "passed": 22,
+      "failed": 0
+    },
+    {
+      "file": "tests/t2-two-sided-battle.test.ts",
+      "passed": 21,
+      "failed": 0
+    },
+    {
+      "file": "tests/t3-round-settlement.test.ts",
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "file": "tests/tp-shared-pool.test.ts",
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "file": "tests/trait-runtime-g23.test.ts",
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "tests/v18-emblem-traits.test.ts",
+      "passed": 48,
+      "failed": 0
+    },
+    {
+      "file": "tests/v19-mechanics.test.ts",
+      "passed": 20,
+      "failed": 0
+    },
+    {
+      "file": "tests/v19-part2.test.ts",
+      "passed": 36,
+      "failed": 0
+    },
+    {
+      "file": "tests/v19-shop-oracle.test.ts",
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "file": "tests/trait-text.test.ts",
+      "passed": 69,
+      "failed": 0
+    },
+    {
+      "file": "tests/opening-random-identity.test.ts",
+      "passed": 3,
+      "failed": 0
+    }
+  ],
+  "notSelected": "opening-random-identity: 142 cases not selected by the 3-case identity filter; the current 134 checkpoints are fully exercised by the epoch recorder."
+}

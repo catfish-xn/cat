@@ -7,6 +7,12 @@ import { spellCrit } from './combat-s13-state';
 import { initializeEffectRuntime } from './effects';
 import { NEUTRAL_DEFINITIONS, type NeutralMechanism } from './content/neutrals';
 import { freezeContent } from './content/freeze';
+import { createCombatWithEvents } from './combat';
+import { canonicalContent } from './content';
+
+// Opening effects now include v19 actual-HP sharing. Reuse an independently
+// constructed opening while its complete preparation and resolved inputs match.
+const openings = new WeakMap<MatchState['preparation'], { key: string; units: ReturnType<typeof createCombatWithEvents>['state']['units'] }>();
 
 /** Runtime behavior summaries from M8_RULES §14, not unimplemented archival tooltip text. */
 const HERO_RULES: Readonly<Record<string,string>> = {
@@ -32,6 +38,18 @@ function neutralDescription(m: NeutralMechanism): string {
 export function readEncounterPreview(state: Readonly<MatchState>): EncounterPreview | null {
   if(state.m8.round.kind==='supply') return null;
   const snapshot=buildStrategySnapshot(state);
+  // PvE display subsets intentionally omit the private encounter identity needed
+  // to execute combat. They need only static neutral stats, not an execution.
+  const needsOpening=state.m8.preparation.enemies.some(enemy=>snapshot.units.find(u=>u.unitId===enemy.id)?.mechanics?.some(m=>m.mechanic==='v19Garen'));
+  let opening:ReturnType<typeof openings.get>;
+  if(needsOpening){
+    const key=canonicalContent([state.preparation,snapshot]);
+    opening=openings.get(state.preparation);
+    if(opening?.key!==key){
+      opening={key,units:createCombatWithEvents(state.preparation,snapshot,'encounter-preview',0).state.units};
+      openings.set(state.preparation,opening);
+    }
+  }
   return freezeContent({
     // B6 has no PvP encounter ID: this read-only namespace identifies its fixed public opponent.
     encounterId:state.m8.round.encounterId ?? `pvp:${state.m8.round.roundId}`,
@@ -46,7 +64,7 @@ export function readEncounterPreview(state: Readonly<MatchState>): EncounterPrev
       if(u.location.kind!=='board') throw new RangeError('Enemy preview requires board deployment');
       return {unitId:u.id,definitionId:u.definitionId,name:d.name,starLevel:u.starLevel,cell:{...u.location.cell},
         unitKind:neutral?'neutral':'champion',monsterFamily:neutral?.monsterFamily ?? null,
-        stats:{maxHp:stats.health,attackDamage:stats.attack,armor:stats.armor,magicResist:stats.magicResist,
+        stats:{maxHp:opening?.units.find(unit=>unit.id===u.id)!.maxHp??stats.health,attackDamage:stats.attack,armor:stats.armor,magicResist:stats.magicResist,
           attackRange:stats.attackRange,attackIntervalTicks:stats.attackIntervalTicks,critChanceBps:crit.chanceBps,critMultiplierBps:crit.multiplierBps,
           abilityPower:initial.abilityPower,mana,maxMana:stats.maxMana},
         abilityDescription:d.unitKind==='neutral'?neutralDescription(NEUTRAL_DEFINITIONS[u.definitionId].mechanism):HERO_RULES[u.definitionId]};

@@ -1,5 +1,5 @@
 import type { HexCell, Team } from './board';
-export type CostTier = 1 | 2 | 3 | 4 | 5;
+export type CostTier = 1 | 2 | 3 | 4 | 5 | 6;
 export type StarLevel = 1 | 2 | 3;
 export interface UnitDefinition {
   /** G2-3 summon/structure (e.g. Jayce's forge, Sion): sell refused 'unit-not-sellable' unless sellable; board slot free unless countsTowardPopulation. */

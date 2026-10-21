@@ -1,0 +1,305 @@
+{
+  "contentDigest": "fnv1a32-utf16:242e7562",
+  "lootReplayDigest": "fnv1a32-utf16:df0d757c",
+  "command": "node node_modules/vitest/vitest.mjs run --project fast --shard=N/4 --configLoader runner --maxWorkers=2 --reporter=json (final shard 4 uses maxWorkers=1)",
+  "typecheckExitCode": 0,
+  "typecheck": "",
+  "resumableTimeoutRecheck": {
+    "command": "node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --maxWorkers=1 --testTimeout=20000 tests/b8-resumable-battle.test.ts",
+    "passed": 15,
+    "failed": 0,
+    "note": "CLI-only timeout budget; original full-shard 5s failures remain recorded."
+  },
+  "epoch": {
+    "baseCommit": "9fb94704c5f0c59ec975c6f0de4dd188207129fa",
+    "steps": [
+      {
+        "name": "record-release",
+        "args": [
+          "scripts/record-v19-release.cjs",
+          "--baseline-commit=9fb94704c5f0c59ec975c6f0de4dd188207129fa"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 195112,
+        "log": "artifacts\\v19-recording\\record-release.log"
+      },
+      {
+        "name": "record-herald",
+        "args": [
+          "tests/fixtures/record-v19-herald.cjs",
+          "--write"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 176436,
+        "log": "artifacts\\v19-recording\\record-herald.log"
+      },
+      {
+        "name": "record-inputs",
+        "args": [
+          "scripts/record-v19-inputs.cjs",
+          "--baseline-commit=9fb94704c5f0c59ec975c6f0de4dd188207129fa"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 30182,
+        "log": "artifacts\\v19-recording\\record-inputs.log"
+      },
+      {
+        "name": "record-live-reveal",
+        "args": [
+          "scripts/record-v19-live-reveal.cjs",
+          "--baseline-commit=9fb94704c5f0c59ec975c6f0de4dd188207129fa"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 68118,
+        "log": "artifacts\\v19-recording\\record-live-reveal.log"
+      },
+      {
+        "name": "check-inputs",
+        "args": [
+          "scripts/record-v19-inputs.cjs",
+          "--baseline-commit=9fb94704c5f0c59ec975c6f0de4dd188207129fa",
+          "--check"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 25186,
+        "log": "artifacts\\v19-recording\\check-inputs.log"
+      },
+      {
+        "name": "check-herald",
+        "args": [
+          "scripts/verify-m8-herald-fixtures.cjs"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 139630,
+        "log": "artifacts\\v19-recording\\check-herald.log"
+      },
+      {
+        "name": "check-history",
+        "args": [
+          "scripts/v19-fixture-audit.cjs",
+          "--baseline-commit=9fb94704c5f0c59ec975c6f0de4dd188207129fa"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 8332,
+        "log": "artifacts\\v19-recording\\check-history.log"
+      },
+      {
+        "name": "check-live-reveal",
+        "args": [
+          "scripts/record-v19-live-reveal.cjs",
+          "--baseline-commit=9fb94704c5f0c59ec975c6f0de4dd188207129fa",
+          "--check"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 82871,
+        "log": "artifacts\\v19-recording\\check-live-reveal.log"
+      },
+      {
+        "name": "compare-digests",
+        "args": [
+          "scripts/compare-v19-digests.cjs"
+        ],
+        "exitCode": 0,
+        "signal": null,
+        "elapsedMs": 23636,
+        "log": "artifacts\\v19-recording\\compare-digests.log"
+      }
+    ],
+    "complete": true
+  },
+  "protectedManifestSha256": "b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22",
+  "reports": [
+    {
+      "shard": 1,
+      "passed": 1371,
+      "failed": 10,
+      "pending": 0,
+      "files": 116,
+      "failures": [
+        {
+          "file": "tests/assets3d-compress.test.ts",
+          "cases": [
+            {
+              "name": "compresses synthetic geometry, animation and typed textures; rewrites effects and hashes exact output",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at ignoredOutput (<repo>/scripts/assets3d/merge-root-output.mjs:37:18)\n    at compressAssets (<repo>/scripts/assets3d/compress.mjs:38:42)\n    at <repo>/tests/assets3d-compress.test.ts:56:18"
+            },
+            {
+              "name": "preserves an animated rig without vertices and skips meshopt (empty mesh: false)",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at ignoredOutput (<repo>/scripts/assets3d/merge-root-output.mjs:37:18)\n    at compressAssets (<repo>/scripts/assets3d/compress.mjs:38:42)\n    at <repo>/tests/assets3d-compress.test.ts:99:18"
+            },
+            {
+              "name": "preserves an animated rig without vertices and skips meshopt (empty mesh: true)",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at ignoredOutput (<repo>/scripts/assets3d/merge-root-output.mjs:37:18)\n    at compressAssets (<repo>/scripts/assets3d/compress.mjs:38:42)\n    at <repo>/tests/assets3d-compress.test.ts:99:18"
+            },
+            {
+              "name": "rejects source descendants and texture destination collisions before writes",
+              "message": "Error: expected [Function] to throw error including 'overlaps-source' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-compress.test.ts:116:74\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "compress refuses unignored worktree output and allows ignored or external output",
+              "message": "Error: expected [Function] to throw error including 'compression-output-not-ignored' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-compress.test.ts:131:31\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "build refuses unignored worktree output and allows ignored or external output",
+              "message": "Error: expected [Function] to throw error including 'merge-output-not-ignored' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-compress.test.ts:131:31\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "reads nested input junctions and refuses an existing output junction",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at ignoredOutput (<repo>/scripts/assets3d/merge-root-output.mjs:37:18)\n    at compressAssets (<repo>/scripts/assets3d/compress.mjs:38:42)\n    at <repo>/tests/assets3d-compress.test.ts:154:11"
+            }
+          ],
+          "message": ""
+        },
+        {
+          "file": "tests/assets3d-fx-pilot.test.ts",
+          "cases": [
+            {
+              "name": "latest approximate pilot indexes every synthetic merged payload and refreshes sizes/hashes on a forced merge",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at ignoredOutput (<repo>/scripts/assets3d/merge-root-output.mjs:37:18)\n    at buildAssetRoot (<repo>/scripts/assets3d/build-asset-root.mjs:39:18)\n    at <repo>/tests/assets3d-fx-pilot.test.ts:172:7"
+            }
+          ],
+          "message": ""
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "cases": [
+            {
+              "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 13",
+              "message": "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at Object.chain (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)"
+            },
+            {
+              "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 100",
+              "message": "Error: Test timed out in 5000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n    at task (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2681:43)\n    at Object.<anonymous> (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2698:16)\n    at Object.<anonymous> (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2471:28)\n    at Object.chain (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:1859:14)"
+            }
+          ],
+          "message": ""
+        }
+      ]
+    },
+    {
+      "shard": 2,
+      "passed": 1526,
+      "failed": 12,
+      "pending": 1,
+      "files": 116,
+      "failures": [
+        {
+          "file": "tests/assets3d-build-root.test.ts",
+          "cases": [
+            {
+              "name": "keeps board alignment and model in the same winning root, including merged inputs",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at ignoredOutput (<repo>/scripts/assets3d/merge-root-output.mjs:37:18)\n    at buildAssetRoot (<repo>/scripts/assets3d/build-asset-root.mjs:39:18)\n    at <repo>/tests/assets3d-build-root.test.ts:60:3"
+            },
+            {
+              "name": "allows force for an empty directory and marked output from a previous build",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at ignoredOutput (<repo>/scripts/assets3d/merge-root-output.mjs:37:18)\n    at buildAssetRoot (<repo>/scripts/assets3d/build-asset-root.mjs:39:18)\n    at <repo>/tests/assets3d-build-root.test.ts:82:3"
+            },
+            {
+              "name": "refuses force for unrelated nonempty output with report undefined without changing files",
+              "message": "Error: expected [Function] to throw error including 'refuse-force-foreign-output' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-build-root.test.ts:95:70\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "refuses force for unrelated nonempty output with report {} without changing files",
+              "message": "Error: expected [Function] to throw error including 'refuse-force-foreign-output' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-build-root.test.ts:95:70\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "refuses force for unrelated nonempty output with report {invalid without changing files",
+              "message": "Error: expected [Function] to throw error including 'refuse-force-foreign-output' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-build-root.test.ts:95:70\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "refuses force for unrelated nonempty output with report {\"generator\":\"another-tool\"} without changing files",
+              "message": "Error: expected [Function] to throw error including 'refuse-force-foreign-output' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-build-root.test.ts:95:70\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "refuses existing nonempty output without force and preserves its contents",
+              "message": "Error: expected [Function] to throw error including 'output-exists-use-force' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-build-root.test.ts:104:55\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "merges an already merged root plus a new root in system temp; later keys win together",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at ignoredOutput (<repo>/scripts/assets3d/merge-root-output.mjs:37:18)\n    at buildAssetRoot (<repo>/scripts/assets3d/build-asset-root.mjs:39:18)\n    at <repo>/tests/assets3d-build-root.test.ts:110:3"
+            },
+            {
+              "name": "clears old playback, whole-unit actions and variants when the later root omits them",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at ignoredOutput (<repo>/scripts/assets3d/merge-root-output.mjs:37:18)\n    at buildAssetRoot (<repo>/scripts/assets3d/build-asset-root.mjs:39:18)\n    at <repo>/tests/assets3d-build-root.test.ts:153:3"
+            },
+            {
+              "name": "rejects path content conflicts and case aliases before publishing",
+              "message": "Error: expected [Function] to throw error including 'merge-path-conflict' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-build-root.test.ts:168:55\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "rejects inconsistent bindings and case-only IDs",
+              "message": "Error: expected [Function] to throw error including 'conflicting-action-bindings' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-build-root.test.ts:179:55\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "accepts read-only input junctions but rejects overlapping and linked outputs, including force",
+              "message": "Error: expected [Function] to throw error including 'merge-output-overlaps-source' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-build-root.test.ts:188:71\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            }
+          ],
+          "message": ""
+        }
+      ]
+    },
+    {
+      "shard": 3,
+      "passed": 1704,
+      "failed": 2,
+      "pending": 0,
+      "files": 116,
+      "failures": [
+        {
+          "file": "tests/explorer-bracer-restore-pressure.test.ts",
+          "cases": [
+            {
+              "name": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+              "message": "Error: Build failed with 2 errors:\nerror: Cannot read directory \"../../..\": Access is denied.\nerror: Could not resolve \"<home>\\\\Desktop\\\\set13-worktrees\\\\epic-loot\\\\tests\\\\fixtures\\\\explorer-bracer-stress.ts\"\n    at failureErrorWithLog (<home>\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1752:15)\n    at <home>\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1211:25\n    at <home>\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1163:52"
+            },
+            {
+              "name": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+              "message": "Error: Build failed with 2 errors:\nerror: Cannot read directory \"../../..\": Access is denied.\nerror: Could not resolve \"<home>\\\\Desktop\\\\set13-worktrees\\\\epic-loot\\\\tests\\\\fixtures\\\\explorer-bracer-stress.ts\"\n    at failureErrorWithLog (<home>\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1752:15)\n    at <home>\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1211:25\n    at <home>\\Desktop\\set13-worktrees\\assets3d\\node_modules\\esbuild\\lib\\main.js:1163:52"
+            }
+          ],
+          "message": ""
+        }
+      ]
+    },
+    {
+      "shard": 4,
+      "passed": 1488,
+      "failed": 4,
+      "pending": 0,
+      "files": 115,
+      "failures": [
+        {
+          "file": "tests/assets3d-pack-root.test.ts",
+          "cases": [
+            {
+              "name": "covers the index exactly once; every offset and both hashes match bytes",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at packRoot (<repo>/scripts/assets3d/pack-root.mjs:34:17)\n    at <repo>/tests/assets3d-pack-root.test.ts:38:18\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "is byte deterministic even when precache entries are reordered",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at packRoot (<repo>/scripts/assets3d/pack-root.mjs:34:17)\n    at <repo>/tests/assets3d-pack-root.test.ts:64:17\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "supports in-place output without changing the original files and refuses overwrite",
+              "message": "Error: EPERM: operation not permitted, realpath '<home>'\n    at realpath (node:internal/fs/promises:1170:10)\n    at realOutput (<repo>/scripts/assets3d/merge-root-output.mjs:26:15)\n    at packRoot (<repo>/scripts/assets3d/pack-root.mjs:34:17)\n    at <repo>/tests/assets3d-pack-root.test.ts:78:3\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            },
+            {
+              "name": "packs only into a repository directory that .gitignore covers",
+              "message": "Error: expected [Function] to throw error including 'not-ignored' but got 'EPERM: operation not permitted, realp…'\n    at _Assertion.__VITEST_REJECTS__ (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/index.C4tKZ0yW.js:2463:33)\n    at _Assertion.propertyGetter (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1607:27)\n    at Object.proxyGetter [as get] (file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/chai/index.js:1696:22)\n    at <repo>/tests/assets3d-pack-root.test.ts:99:77\n    at file:///<home>/Desktop/set13-worktrees/assets3d/node_modules/vitest/dist/chunks/run.BTlFXlnv.js:2783:20"
+            }
+          ],
+          "message": ""
+        }
+      ]
+    }
+  ]
+}

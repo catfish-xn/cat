@@ -1,3 +1,4 @@
+import { EMBLEM_ITEMS, CRAFTING_ITEMS } from './content/emblems';
 import { G23_SPECIAL_ITEMS } from './content/g2-3-item-registry';
 import type {ItemDefinition} from './strategy-types';
 import { ITEM_DEFINITIONS } from './content/items';
@@ -6,7 +7,7 @@ import type { ItemCatalogEntry } from './m8/ui-contracts';
 /** Development catalogue revision; B9/B10 own the final M8 save/version switch. */
 export type RuntimeItemCatalogEntry = Omit<ItemCatalogEntry,'contentVersion'> & { readonly contentVersion: string };
 const statNames={maxHp:'最大生命',attackDamage:'攻击力',armor:'护甲',magicResist:'魔抗',initialMana:'初始法力',abilityAmount:'技能数值',abilityPower:'法强'};
-export function readItemCatalog(): readonly RuntimeItemCatalogEntry[] { return projectCatalog(ITEM_DEFINITIONS); }
+export function readItemCatalog(): readonly RuntimeItemCatalogEntry[] { return projectCatalog({...ITEM_DEFINITIONS,...CRAFTING_ITEMS,...EMBLEM_ITEMS}); }
 /** Reward-only catalogue; finite passives and convention IDs are explicit. */
 export function readG23RewardItemCatalog(): readonly RuntimeItemCatalogEntry[] { return projectCatalog(G23_SPECIAL_ITEMS); }
 function projectCatalog(catalog:Readonly<Record<string,ItemDefinition>>): readonly RuntimeItemCatalogEntry[] {

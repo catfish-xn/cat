@@ -1,0 +1,57 @@
+{
+  "scope": "PR #364 v19 两条 must-fix",
+  "contentDigest": "fnv1a32-utf16:ff78c2b0",
+  "lootReplayDigest": "fnv1a32-utf16:df0d757c",
+  "files": 12,
+  "passed": 173,
+  "failed": 0,
+  "notSelected": "opening-random-identity 中 142 项未选择，不计作通过",
+  "groups": [
+    {
+      "name": "must-fix",
+      "files": [
+        "tests/v19-part2.test.ts",
+        "tests/match-contract.test.ts",
+        "tests/t13-identity.test.ts",
+        "tests/v17-orb-combo.test.ts"
+      ],
+      "passed": 66,
+      "failed": 0
+    },
+    {
+      "name": "related",
+      "files": [
+        "tests/content-identity-constants.test.ts",
+        "tests/g2-4b-replay.test.ts",
+        "tests/m6-persistence.test.ts",
+        "tests/m6-replay.test.ts",
+        "tests/m8-b9-compatibility.test.ts",
+        "tests/v19-mechanics.test.ts",
+        "tests/v19-shop-oracle.test.ts"
+      ],
+      "passed": 104,
+      "failed": 0
+    },
+    {
+      "name": "identity",
+      "files": [
+        "tests/opening-random-identity.test.ts"
+      ],
+      "passed": 3,
+      "failed": 0
+    }
+  ],
+  "typecheck": "node node_modules/typescript/bin/tsc --noEmit: exit 0",
+  "epoch": {
+    "complete": true,
+    "passed": 9,
+    "total": 9
+  },
+  "recordingSourcesMatchCurrent": true,
+  "protectedManifest": {
+    "path": "tests/fixtures/g2-4b-herald-raw/manifest.json",
+    "equalsHEADBytes": true,
+    "sha256": "b39c443bedb12f205230ce0ffbf6a93c2184d73d73cb92ee46eaadf08e086a22"
+  },
+  "runner": "本机 Vitest，--configLoader runner；全程离线，无 Git 写操作"
+}

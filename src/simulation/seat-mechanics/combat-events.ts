@@ -1,6 +1,15 @@
 import { occupiesCell } from '../anomalies/availability';
 import { contains, sameCell, type HexCell, type Team } from '../board';
 import type { CombatEvent, CombatOrigin, CombatState, CombatUnit } from '../combat-types';
+export interface SevikaCastVariant {
+  readonly actionSeq:number;
+  readonly move:'flamethrower'|'punch'|'chomp';
+  readonly channelTicks:number;
+  /** High Roller's empowered roll, independent of augment ownership. */
+  readonly enhanced:boolean;
+  /** Applicable champion-specific augment IDs frozen by rules; empty when none are implemented. */
+  readonly heroAugmentIds:readonly string[];
+}
 
 /**
  * G2-3 combat ledger events (MATCH_CONTRACT「G2-3 机制通用接口」). They join CombatEventData and M8CombatEvent; the engine stamps them
@@ -12,7 +21,7 @@ export type G23CombatEventData =
   /** A unit left CombatState.units (barrel detonated, summon expired). Death of an ordinary unit stays 'death'. */
   | { readonly type: 'unitRemoved'; readonly tick: number; readonly unitId: string; readonly reason: string }
   /** One rolled ability result, e.g. High Roller: outcome 'rocket' | 'shield' | 'gold' | 'triple', subOutcomes for triple. */
-  | { readonly type: 'castOutcome'; readonly tick: number; readonly unitId: string; readonly abilityKey: string; readonly outcome: string; readonly subOutcomes: readonly string[] }
+  | { readonly type: 'castOutcome'; readonly tick: number; readonly unitId: string; readonly abilityKey: string; readonly outcome: string; readonly subOutcomes: readonly string[]; readonly castVariant?:SevikaCastVariant }
   /** Sion bound (true) / broke free (false); reason e.g. 'combat-start' | 'casts' | 'hp-threshold'. */
   | { readonly type: 'bindingChanged'; readonly tick: number; readonly unitId: string; readonly bound: boolean; readonly reason: string }
   /** G2-4b Unstable Treasure Chest: unitId gained a temporary pool item for the rest of this combat. source = the chest's death trigger. */

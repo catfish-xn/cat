@@ -1,3 +1,4 @@
+import { nextFamilyTask } from './family-heist';
 import { DEFAULT_BOARD } from './board';
 import { G23_CONQUEROR_CHESTS,G23_BLACK_MARKETS,g23ConquerorReward } from './content/g2-3-policy';
 import { G23_TRAIT_SOURCE } from './content/g2-3-trait-runtime';
@@ -5,6 +6,8 @@ import { rollG23BlackMarket,rollG23CrownGold,planG23Conquest } from './g2-3-prog
 import type { G23MatchProgress } from './g2-3-match-progress';
 import {validateItemGoldPayouts,type ItemGoldPayout} from './g2-4b-item-gold';
 export interface G23BattleFacts {
+ readonly family?:{readonly stage:number;readonly eligible:boolean;readonly openingIds:readonly string[];readonly survivorIds:readonly string[]};
+ readonly melCasts?:number;
  readonly d11Headhunter?:import('./d11-fill').D11KillReceipt;
  readonly itemGoldPayouts?:readonly ItemGoldPayout[];
  readonly battleId:string;readonly round:number;readonly roundKind:'pve'|'pvp';readonly result:'win'|'loss'|'draw';
@@ -13,21 +16,24 @@ export interface G23BattleFacts {
  /** Tactician's Crowns equipped on this side's deployed units; present only when nonzero. */
  readonly crowns?:number;
 }
-export interface G23RewardBundle {readonly id:string;readonly round:number;readonly source:'conqueror'|'black-market';readonly tier:number;readonly reward:Readonly<Record<string,unknown>>}
+export interface G23RewardBundle {readonly id:string;readonly round:number;readonly source:'conqueror'|'black-market'|'family';readonly tier:number;readonly reward:Readonly<Record<string,unknown>>}
 export interface G23MarketOffer {readonly id:string;readonly tier:number;readonly optionId:string;readonly round:number}
 export interface G23ChemProgress {readonly shimmer:number;readonly losses:number;readonly skips:number;readonly offeredThrough:number;readonly offer:G23MarketOffer|null}
 export interface G23EconomyAction {readonly kind:'battle';readonly facts:G23BattleFacts;readonly gold:number;readonly bundles:readonly string[];readonly crownGold?:number}
 export interface G23EconomyDecision {readonly kind:'market';readonly offerId:string;readonly take:boolean;readonly round:number}
-export type G23EconomyReceipt=G23EconomyAction|G23EconomyDecision;
+export type G23EconomyReceipt=G23EconomyAction|G23EconomyDecision|{readonly kind:'family-start';readonly round:number}|{readonly kind:'mel-save';readonly battleId:string;readonly round:number};
 // Structural bound: every deployment cell may hold one unit with three equipment slots.
 export const MAX_G23_CROWNS = DEFAULT_BOARD.columns * (DEFAULT_BOARD.deploymentZones.player.lastRow - DEFAULT_BOARD.deploymentZones.player.firstRow + 1) * 3;
 export function validateG23BattleFacts(f:G23BattleFacts):void{
  const int=(n:number,max:number)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
  const crowns=Object.hasOwn(f??{},'crowns');
- if(!f||Object.keys(f).length!==(10+(crowns?1:0)+(f.itemGoldPayouts===undefined?0:1)+(f.d11Headhunter===undefined?0:1))||crowns&&(!int(f.crowns!,MAX_G23_CROWNS)||!f.crowns)||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
+ if(!f||Object.keys(f).length!==(10+(f.family?1:0)+(f.melCasts===undefined?0:1)+(crowns?1:0)+(f.itemGoldPayouts===undefined?0:1)+(f.d11Headhunter===undefined?0:1))||crowns&&(!int(f.crowns!,MAX_G23_CROWNS)||!f.crowns)||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
  ||![0,2,4,6,9].includes(f.conquerorTier)||![0,3,4,5,6,7].includes(f.chemBaronTier)||!int(f.alliedDeaths,30)||!int(f.rumbleStar,3)||!int(f.highRollerGold,10000)||f.highRollerGold%3!==0
  ||!Array.isArray(f.conquestTakedowns)||f.conquestTakedowns.length>30||new Set(f.conquestTakedowns).size!==f.conquestTakedowns.length||f.conquestTakedowns.some(id=>typeof id!=='string'||!id)||!f.conquerorTier&&f.conquestTakedowns.length)throw new RangeError('Invalid G23 battle facts');
+ if(f.family){const x=f.family;if(Object.keys(x).sort().join(',')!=='eligible,openingIds,stage,survivorIds'||!int(x.stage,20)||x.stage<1||typeof x.eligible!=='boolean'||!Array.isArray(x.openingIds)||x.openingIds.length>28||new Set(x.openingIds).size!==x.openingIds.length||x.openingIds.some(id=>typeof id!=='string'||!id)||!Array.isArray(x.survivorIds)||new Set(x.survivorIds).size!==x.survivorIds.length||x.survivorIds.some(id=>!x.openingIds.includes(id)))throw new RangeError('Invalid family facts');}
+ if(f.melCasts!==undefined&&!int(f.melCasts,10000))throw new RangeError('Invalid Mel facts');
  if(f.itemGoldPayouts!==undefined)validateItemGoldPayouts(f.itemGoldPayouts,f.battleId);
+ if(f.roundKind!=='pvp'&&f.itemGoldPayouts?.some(p=>JSON.parse(p.receiptId)[4]==='perfected-chainblade'))throw new RangeError('Invalid Chainblade PvP gold');
  if(f.d11Headhunter!==undefined){
   const r=f.d11Headhunter;
   if(!r||Object.keys(r).sort().join(',')!=='combatId,holderId,kills'||r.combatId!==f.battleId||typeof r.holderId!=='string'||!r.holderId||!Array.isArray(r.kills)
@@ -41,7 +47,7 @@ export function advanceG23Economy(p:G23MatchProgress,f:G23BattleFacts):{progress
  if(p.economyReceipts.some(r=>r.kind==='battle'&&r.facts.battleId===f.battleId))return {progress:p,gold:0};
  if(p.economyReceipts.some(r=>r.kind==='battle'&&r.facts.round>=f.round))throw new RangeError('Unordered G23 settlement');
  const conquest=f.conquerorTier?planG23Conquest(p.conquest,f.battleId,f.conquerorTier,f.conquestTakedowns):p.conquest;
- let gold=f.highRollerGold+(f.itemGoldPayouts?.length??0);const rewards=[...p.rewards],ids:string[]=[];
+ let gold=f.highRollerGold+(f.itemGoldPayouts?.reduce((sum,p)=>sum+p.amount,0)??0);const rewards=[...p.rewards],ids:string[]=[];
  for(const chest of G23_CONQUEROR_CHESTS.slice(p.conquest.chestsOpened,conquest.chestsOpened)){
   const id=`g23:conqueror:${chest.tier}`,{Gold=0,...reward}=g23ConquerorReward(chest);
   gold+=Gold as number;ids.push(id);rewards.push({id,round:f.round,source:'conqueror',tier:chest.tier,reward});
@@ -61,8 +67,15 @@ export function advanceG23Economy(p:G23MatchProgress,f:G23BattleFacts):{progress
  let crownGold:number|undefined;
  if(f.result==='win'&&f.crowns){const roll=rollG23CrownGold(f.crowns,rngState);rngState=roll.rngState;rngDraws+=roll.draws;crownGold=roll.gold;gold+=roll.gold;}
  const junkerRounds=p.junkerRounds+(f.rumbleStar?1:0);
+ let family=p.family;
+ if(family&&f.roundKind==='pvp'&&f.family?.eligible&&f.family.stage>=2){
+  const gain=f.family.stage===2?2:(f.family.stage===3?2:3)+f.family.survivorIds.length,progress=family.CurrentProgress+gain;
+  if(progress>=family.CurrentRewardValue){const id=`family:orb:${family.sequence}`;ids.push(id);rewards.push({id,round:f.round,source:'family',tier:family.sequence,reward:{payloads:family.payloads}});family=nextFamilyTask(family,progress-family.CurrentRewardValue);}
+  else family={...family,CurrentProgress:progress};
+ }
+ const mel=f.roundKind==='pvp'&&f.melCasts!==undefined?{pvpCasts:(p.mel?.pvpCasts??0)+f.melCasts,savedBattleId:p.mel?.savedBattleId??null}:p.mel;
  const receipt:G23EconomyAction={kind:'battle',facts:structuredClone(f),gold,bundles:ids,...(crownGold===undefined?{}:{crownGold})};
- return {progress:{...p,conquest,chem,junkerRounds,rngState,rngDraws,rewards,economyReceipts:[...p.economyReceipts,receipt]},gold};
+ return {progress:{...p,...(family?{family}:{}),...(mel?{mel}:{}),conquest,chem,junkerRounds,rngState,rngDraws,rewards,economyReceipts:[...p.economyReceipts,receipt]},gold};
 }
 export function decideG23Market(p:G23MatchProgress,id:string,take:boolean,round:number):G23MatchProgress{
  const offer=p.chem.offer;if(!offer||offer.id!==id||typeof take!=='boolean'||round<offer.round)throw new RangeError('Stale G23 market');

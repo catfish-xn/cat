@@ -1,3 +1,4 @@
+import { familyReunionParticipants, familyCombatBase } from './family-reunion';
 import { d14UnitBase } from './d14-anomalies/projection';
 import { p3Program, p3ItemProgram } from './s13-p3-programs';
 import { compileD11Augment, d11OpeningSeed, d11PriorKills } from './d11-fill';
@@ -64,7 +65,11 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
 export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext): StrategySnapshot {
   state=readCombatStrategyInputs(state);
   if(context&&context.round!==state.round)throw new RangeError('Trait projection round mismatch');
-  const projection=projectEffectiveMembership(state.preparation,context,catalog.traits,[...state.items,
+  const sisterAugment=state.augments.find(a=>a.definitionId==='sisters');
+  const sisterUnits=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&['jinx','vi'].includes(u.definitionId));
+  const sisterSources=sisterAugment&&new Set(sisterUnits.map(u=>u.definitionId)).size===2?sisterUnits.map(u=>({kind:'add-trait' as const,sourceId:sisterAugment.choiceId+':sisters:'+u.id,unitId:u.id,traitId:'sisters',activeFromRound:state.round,expiresBeforeRound:state.round+1})):[];
+  const traitContext=sisterSources.length?{round:state.round,sources:[...(context?.sources??[]),...sisterSources]}:context;
+  const projection=projectEffectiveMembership(state.preparation,traitContext,catalog.traits,[...state.items,
     ...(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[]).map(i=>({id:'enemy:'+i.unitId+':'+i.slot,definitionId:i.definitionId,location:{kind:'unit' as const,unitId:i.unitId,slot:i.slot}}))]);
   state={...state,preparation:projection.preparation};
   const openingTraits=[...deriveEffectiveTraits(projection,'player',catalog.traits),...deriveEffectiveTraits(projection,'enemy',catalog.traits)];
@@ -72,6 +77,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   state={...state,preparation:voidspawn.preparation};
   const projected={...projection,preparation:state.preparation};
   const traits = [...deriveEffectiveTraits(projected,'player',catalog.traits),...deriveEffectiveTraits(projected,'enemy',catalog.traits)];
+  const reunion=new Set([...familyReunionParticipants(state,'player'),...familyReunionParticipants(state,'enemy')]);
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
@@ -114,7 +120,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     };
     // G2-4b: isolation is read from the frozen board placement, as Bulky Buddies reads adjacency.
     const isolated = !boardUnits.some(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);
-    const itemEffects = (definition: ItemDefinition): readonly Effect[] => isolated && definition.isolatedEffects ? [...definition.effects, ...definition.isolatedEffects] : definition.effects;
+    const itemEffects = (definition: ItemDefinition): readonly Effect[] => (isolated && definition.isolatedEffects ? [...definition.effects, ...definition.isolatedEffects] : definition.effects).map(effect=>
+      effect.kind==='mechanic'&&effect.mechanic==='v19Chainblade'?{...effect,values:{...effect.values,pvp:!ROUND_CATALOG.find(r=>r.ordinal===state.round)||ROUND_CATALOG.find(r=>r.ordinal===state.round)?.kind==='pvp'?1:0}}:effect);
     for (const trait of traits) {
       if (trait.team !== unit.team || trait.tier === 0 || !trait.targetUnitIds.includes(unit.id)) continue;
       const definition = lookup(catalog.traits, trait.traitId);
@@ -188,10 +195,12 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       :anomaly==='force-of-friendship'?boardUnits.filter(x=>x.team===unit.team).reduce((n,x)=>n+((state.d14Combat?.unitId===x.id&&state.d14Combat.phase==='promoted')?400:x.starLevel===3?800:x.starLevel*100),0)
       :anomaly==='comeback-story'?Math.floor((100-(state.playerHp??100))/10)*500:0;
     if(bonus&&state.anomalyBinding)sources.push(...makeSourcedEffects(unit.id,'anomaly',anomaly!,state.anomalyBinding.choiceId+':scaling',[{kind:'mechanic',mechanic:'damageAmp',values:{bps:bonus}}]));
+    if(unit.definitionId==='mel'&&state.g23?.mel?.savedBattleId)sources.push(...makeSourcedEffects(unit.id,'trait','banished-mage',unit.id,[{kind:'mechanic',mechanic:'damageAmp',values:{bps:1000}}]));
     const base = unit.location.kind==='board'?g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row):getUnitStats(unit.definitionId,unit.starLevel);
     const promoted=state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='promoted';
     if(state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='returned')sources.push(...makeSourcedEffects(unit.id,'anomaly','into-the-unknown',state.anomalyBinding!.choiceId+':return',[{kind:'statPercentBps',stat:'attackDamage',bps:5000},{kind:'statFlat',stat:'abilityPower',amount:50}]));
-    const certified=promoted?d14UnitBase(unit,true):null;
+    const reunionStar=reunion.has(unit.id)?Math.min(4,(promoted?4:unit.starLevel)+1) as 1|2|3|4:undefined;
+    const certified=reunionStar?familyCombatBase(unit,reunionStar):promoted?d14UnitBase(unit,true):null;
     let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
     const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');
     if (family) {
@@ -216,7 +225,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
     const gambler=mechanics.find(m=>m.mechanic==='g24Gambler'),avarice=anomaly==='avarice-incarnate';
     if((gambler||avarice)&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative combat bank');
-    return { unitId: unit.id, ...resolved, ...(promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
+    return { unitId: unit.id, ...resolved, ...(reunionStar?{effectiveStarLevel:reunionStar,familyReunion:{originalStarLevel:unit.starLevel,combatStarLevel:reunionStar,unboostedStarLevel:promoted?4 as const:unit.starLevel}}:promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
   return appendMirrorSummons(state.preparation,{ traits, units });
 }

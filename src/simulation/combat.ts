@@ -1,3 +1,4 @@
+import { familyCombatBase } from './family-reunion';
 import { d14UnitBase } from './d14-anomalies/projection';
 import {projectEffectiveMembership,type TraitProjectionContext} from './traits/effective-membership';
 import {createG23Forge} from './combat-g2-3-summons';
@@ -50,7 +51,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     const neutral = stats.unitKind === 'neutral' ? readNeutralCombatUnit(unit.id) : undefined;
     if (stats.unitKind === 'neutral' && (!neutral || neutral.definitionId !== unit.definitionId || neutral.encounterId !== unit.encounterId || unit.team !== 'enemy')) throw new RangeError('Invalid neutral combat identity');
     return [{ ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
-      ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel, ...(resolved?.effectiveStarLevel?{effectiveStarLevel:resolved.effectiveStarLevel}:{}),
+      ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel, ...(resolved?.familyReunion?{familyReunion:resolved.familyReunion}:{}), ...(resolved?.effectiveStarLevel?{effectiveStarLevel:resolved.effectiveStarLevel}:{}),
       ...(getUnitForm(formUnit,preparationState.board)?{form:getUnitForm(formUnit,preparationState.board)!}:{}),
       ...(resolved?.itemSummon?{itemSummon:structuredClone(resolved.itemSummon),startingCell:{...unit.location.cell}}:{}),cell: { ...unit.location.cell },
       ...(resolved?.mechanics?.some(m=>m.mechanic==='g24SpectralCutlass')?{startingCell:{...unit.location.cell}}:{}),
@@ -66,7 +67,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       ...(ability.kind === 's13' ? { attackDamageBase: resolved?.attackDamageBase ?? stats.attack, attackDamagePercentBps: resolved?.attackDamagePercentBps ?? 0,
         baseAttackSpeedBps: stats.baseAttackSpeedBps ?? Math.floor(200000 / stats.attackIntervalTicks),
         attackSpeedBonusBps: stats.attackSpeedBonusBps ?? 0,
-        maxHpBasis: { base: resolved?.effectiveStarLevel===4?d14UnitBase(unit,true).base.health:g23FormStats(unit.definitionId, unit.starLevel,unit.team,formCell.row).health,
+        maxHpBasis: { base: resolved?.familyReunion?familyCombatBase(unit,resolved.familyReunion.combatStarLevel).base.health:resolved?.effectiveStarLevel===4?d14UnitBase(unit,true).base.health:g23FormStats(unit.definitionId, unit.starLevel,unit.team,formCell.row).health,
           flat: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
           bps: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 },
         mechanics: structuredClone(resolved?.mechanics ?? []), shieldLayers: [], statuses: [], tasks: [],
@@ -87,8 +88,8 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     } },
     ...(strategy ? { strategy: shareGeneratedDeclaration(structuredClone(strategy)), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
     ...(units.some(u=>u.unitKind==='neutral') ? {...(strategy ? {neutralReceipts:{deaths:[],controls:[]}} : {}),openingDefinitions:structuredClone(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>units.some(u=>u.id===d.source.ownerId)))} : {}),
-    ...(units.some(u=>u.mechanics?.some(m=>['g24Fishbones','g24Collector','g24Gambler','g24Mogul'].includes(m.mechanic)))?{itemRandomStreams:createItemRandomStreams(rngState)}:{}),
-    ...(units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul'].includes(m.mechanic)))?{itemGoldReceipts:[]}:{}),
+    ...(units.some(u=>u.mechanics?.some(m=>['g24Fishbones','g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)))?{itemRandomStreams:createItemRandomStreams(rngState)}:{}),
+    ...(units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)))?{itemGoldReceipts:[]}:{}),
     rngState, rngDraws: 0, nextActionSeq: 0, units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
   };

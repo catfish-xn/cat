@@ -16,9 +16,10 @@ import { compileMechanismDefinitions } from './s13-definitions';
 import { commitMechanismHeal, executeMechanismEffect } from './s13-mechanisms';
 import { consumeSurvivalTriggers, remainingSurvivalKeys, survivalConsumptionKeys } from './shield';
 import { changeMaxHp, integer, resolveStat } from './stats';
+import { scaleItemSummonHp } from '../g2-4b-summons';
 
-const maxHpOf = (basis: NonNullable<CombatUnit['maxHpBasis']>, unit: CombatUnit) => resolveStat('maxHp', basis.base,
-  [constantModifier('maxHp', basis.flat), constantModifier('maxHp', basis.bps + basis.bonusBps, 'bps')], { holder: hpSample(unit) });
+const maxHpOf = (basis: NonNullable<CombatUnit['maxHpBasis']>, unit: CombatUnit) => scaleItemSummonHp(unit, resolveStat('maxHp', basis.base,
+  [constantModifier('maxHp', basis.flat), constantModifier('maxHp', basis.bps + basis.bonusBps, 'bps')], { holder: hpSample(unit) }));
 
 /** One combat random word picks the item (word modulo pool size, repeats allowed); it then works at once (G24-CHEST-03). */
 export function grantCombatItem(ctx: AbilityContext, chest: Source, target: S13Unit, seq: number): void {
