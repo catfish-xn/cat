@@ -9,7 +9,7 @@ import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/matc
 import { displayUnitName } from '../display-names';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
-import { boardFeedGeneration, provideCarouselControls, publishCarousel, setBoardLegends } from '../board-feed';
+import { boardFeedGeneration, provideCarouselControls, provideLegendControls, publishCarousel, publishLegendWalk, setBoardLegends } from '../board-feed';
 import { readLegendChoice } from '../legend-choice';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { getHeroIdentity } from '../../presentation/hero-identity';
@@ -98,6 +98,7 @@ export class OnlineApplication implements SceneApplication {
   private carouselFeedGeneration = -1;
   private carouselNextRelease = Infinity;
   private withdrawCarouselControls: () => void;
+  private withdrawLegendControls: () => void;
   /** The room's combat phase (frozen roster or battle), also before my seat's own state shows the battle (v15 orb claims). */
   get roomInCombat(): boolean { return this.view?.phase.kind === 'combat'; }
   private unlisten: () => void;
@@ -117,6 +118,7 @@ export class OnlineApplication implements SceneApplication {
     this.carousel = new CarouselPanel(frame, (slot, view) => this.pickCarousel(slot, view), () => this.syncCarouselMode());
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
+    this.withdrawLegendControls = provideLegendControls({ walk: request => client.walk?.(request) ?? false });
     this.summary = new BattleSummaryPanel(this.sidebar.root);
     this.economy = new EconomyHint(mounts?.countdown ?? this.sidebar.root);
     this.leftToggle = new LeftPanelToggle();
@@ -136,6 +138,12 @@ export class OnlineApplication implements SceneApplication {
       refused: refusal => this.onRefused(refusal),
       notice: notice => this.hooks.orbClaimRefused?.(notice.orbId, notice.reason),
       connection: status => this.onConnection(status),
+      // The room's clock onto mine (the push is taken as fresh), and whose legend it is from my seat.
+      legend: (walk, serverNow) => {
+        const shift = performance.now() - serverNow, view = this.view;
+        publishLegendWalk({ ...walk, startedAt: walk.startedAt + shift, arriveAt: walk.arriveAt + shift,
+          who: walk.seatId === view?.mySeatId ? 'me' : walk.seatId === view?.opponentSeatId ? 'opponent' : 'other' });
+      },
     });
     this.syncMode();
   }
@@ -441,7 +449,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); this.withdrawLegendControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }

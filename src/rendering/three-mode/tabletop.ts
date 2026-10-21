@@ -5,12 +5,16 @@
  * private orb view, the claim receipts, roundResults); a click on an orb goes back through BoardControls.claimOrb, which
  * is the 2D orb dock's own click. Nothing is priced, rolled or settled here, and a reload never replays an old opening
  * or hit: the first frame only records what is already there.
+ * My legend walks where I right-click (TFT), at the shared legend pace (src/server/legend-motion.ts), and an orb it walks
+ * over is claimed through that same dock click. An opponent's walks arrive from the room in that board's own cells and
+ * are drawn mirrored on the far side.
  */
 import {
   Box3, ConeGeometry, Group, Mesh, MeshStandardMaterial, SphereGeometry, Vector3, type Camera, type Object3D, type Scene,
 } from 'three';
 import { UnitActionState, UnitAnimationMixer, type ModelLease, type ParticleEffect } from '../../rendering3d';
-import type { BoardFrame, BoardOrb } from '../board-feed';
+import type { BoardFrame, BoardLegendWalk, BoardOrb } from '../board-feed';
+import type { CellPoint } from '../../server/legend-motion';
 
 import { LEGEND_MODEL, loadLegendLease } from './legend-load';
 export { LEGEND_MODEL };
@@ -35,6 +39,10 @@ const CAST_LEAD_SECONDS = 0.25, TRAVEL_SECONDS = 1, IMPACT_HOLD_SECONDS = 0.6;
 /** An opponent legend stays this long after a PvP battle left the board, so a settled loss has someone to come from. */
 const OPPONENT_LINGER_SECONDS = 4;
 const BOLT_ARC = 60;
+/** My legend roams the board and this many hex widths around it; it claims an orb it passes within ORB_REACH widths of. */
+const ROAM_MARGIN = 2, ORB_REACH = 0.45;
+/** Hex widths a second: the room's legend pace (legend-motion.ts LEGEND_CELLS_PER_SECOND; the carousel's RUN_CELLS). */
+const WALK_WIDTHS = 5;
 
 export interface TabletopContext {
   readonly scene: Scene;
@@ -50,6 +58,9 @@ export interface TabletopContext {
   /** The effect when the manifest names it; null otherwise (a stand-in is drawn). */
   readonly loadEffect: ((id: string, maxDuration: number) => Promise<ParticleEffect>) | null;
   readonly own: <T extends { dispose(): void }>(resource: T) => T;
+  /** The orb dock's own click (BoardControls.claimOrb); called once for an orb my walking legend reaches. */
+  readonly claimOrb?: (orbId: string) => void;
+  readonly now?: () => number;
 }
 export interface Tabletop {
   /** Board-space points the camera should keep in view (legends, the orb column), for this board size. */
@@ -58,12 +69,20 @@ export interface Tabletop {
   update(seconds: number): void;
   /** My orb drawn under a CSS-pixel point, by its projected center. */
   orbAt(client: { x: number; y: number }, area: { left: number; top: number; width: number; height: number }): string | null;
+  /**
+   * Walks my legend toward a board-space point (BoardScene x/y), or to my orb `orbId`, kept within the roaming area.
+   * Returns the walk in board cells for the room, or null before the board is laid out.
+   */
+  walkTo(point: { x: number; y: number }, orbId?: string | null): { from: CellPoint; to: CellPoint } | null;
+  /** An opponent's walk as the room relayed it (its own board cells): drawn mirrored on the far side. */
+  walk(walk: BoardLegendWalk): void;
   /** Acceptance read (?debug3d). */
   debug(): { legends: string[]; orbs: { orbId: string; tier: string; effect: boolean }[]; hits: string[]; opening: number; bolt: boolean };
   dispose(): void;
 }
 
-interface LegendView { readonly id: string; readonly model: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean }
+interface Path { from: Vector3; to: Vector3; start: number; end: number }
+interface LegendView { readonly id: string; readonly model: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean; path: Path | null; walked: boolean }
 interface OrbView { readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; fx: ParticleEffect | null; left: number; loading: boolean; disposed: boolean; phase: number }
 interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number }
 interface Bolt { from: Vector3; to: Vector3; elapsed: number; fx: ParticleEffect | null; mesh: Mesh | null; disposed: boolean }
@@ -82,7 +101,10 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   const legendMaterial = { me: own(new MeshStandardMaterial({ color: '#7fd8cf', roughness: 0.55 })),
     opponent: own(new MeshStandardMaterial({ color: '#e3a08f', roughness: 0.55 })), eye: own(new MeshStandardMaterial({ color: '#1b2230' })) };
 
+  const now = ctx.now ?? (() => performance.now());
   const anchors = { me: new Vector3(), opponent: new Vector3(), enemySide: new Vector3(), orbs: [] as Vector3[], center: new Vector3() };
+  /** Board cells: hex widths from the board origin. `bounds` is where my legend may walk (board-space x/z). */
+  const board = { x: 0, z: 0, width: 1, bounds: { minX: 0, maxX: 0, minZ: 0, maxZ: 0 } };
   let layoutKey = '';
   const layout = (frame: BoardFrame): readonly Vector3[] => {
     const width = Math.sqrt(3) * frame.hexRadius, step = frame.hexRadius * 1.5;
@@ -96,6 +118,10 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       anchors.opponent.set(left - width * 1.6, 0, top);
       anchors.enemySide.set(frame.origin.x + width * (frame.columns - 1) / 2, 0, top);
       anchors.center.set(frame.origin.x + width * (frame.columns - 0.5) / 2, 0, (top + bottom) / 2);
+      board.x = frame.origin.x; board.z = frame.origin.y; board.width = width;
+      const margin = ROAM_MARGIN * width;
+      board.bounds = { minX: left - margin, maxX: anchors.me.x + margin * 0.5, minZ: top - margin, maxZ: bottom + margin };
+      for (const view of legends.values()) { view.walked = false; view.path = null; }
       // Two columns of orbs rising from beside my legend toward the board's middle.
       anchors.orbs = Array.from({ length: MAX_ORBS }, (_, index) => new Vector3(
         anchors.me.x + (index % 2 ? 0.42 : -0.42) * width, 0, anchors.me.z - (1 + Math.floor(index / 2)) * step * 0.9));
@@ -122,6 +148,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     return fitHeight(group, legendHeight);
   };
   const placeLegend = (view: LegendView) => {
+    if (view.walked) return;
     const side = view.id === 'legend:me' ? anchors.me : anchors.opponent;
     view.root.position.copy(side);
     // Models face +z; turn toward the board.
@@ -131,12 +158,18 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     const model = ctx.legendModel?.(side) ?? LEGEND_MODEL;
     let view = legends.get(side);
     if (view?.model === model) return view;
+    // Another look for the same seat: the new body takes over where the old one stood or walked.
+    const before = view ? { position: view.root.position.clone(), rotation: view.root.rotation.y, path: view.path, walked: view.walked, walk: opponentWalk } : null;
     if (view) dropLegend(side);
     const root = new Group(); root.name = `render3d-legend-${side}`;
-    view = { id: `legend:${side}`, model, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false };
+    view = { id: `legend:${side}`, model, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false, path: null, walked: false };
     legends.set(side, view);
     root.add(standIn(side));
     placeLegend(view); scene.add(root);
+    if (before?.walked) { root.position.copy(before.position); root.rotation.y = before.rotation; view.path = before.path; view.walked = true; }
+    if (side === 'opponent' && before) opponentWalk = before.walk;
+    // The opponent already walked on their board before its legend was shown here: it stands where that walk ends.
+    else if (side === 'opponent' && opponentWalk) startPath(view, opponentWalk, true);
     const created = view;
     if (ctx.loadModel) void loadLegendLease(ctx.loadModel, model).then(lease => {
       if (created.disposed || lease.placeholder) { lease.release(); return; }
@@ -144,20 +177,78 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       created.lease = lease;
       created.root.add(fitHeight(lease.scene, legendHeight));
       created.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
-      created.mixer.apply(created.state.output);
+      created.mixer.apply(legendOutput(created));
     }).catch(() => { /* keeps the stand-in */ });
     return view;
   };
   const act = (view: LegendView | undefined, event: 'cast' | 'hit') => {
     if (!view) return;
-    const output = view.state.consume(event === 'cast' ? { type: 'cast', sourceId: view.id }
+    view.state.consume(event === 'cast' ? { type: 'cast', sourceId: view.id }
       : { type: 'packetDamage', sourceId: 'legend:hit', targetId: view.id, hit: true, hpDamage: 1, absorbed: 0 });
-    view.mixer?.apply(output);
+    view.mixer?.apply(legendOutput(view));
   };
   const dropLegend = (side: 'me' | 'opponent') => {
     const view = legends.get(side);
     if (!view) return;
     view.disposed = true; view.mixer?.dispose(); view.lease?.release(); view.root.removeFromParent(); legends.delete(side);
+    if (side === 'opponent') opponentWalk = null;
+  };
+  /** A legend's own animation, with the run loop while it walks (a cast or a hit still plays over it). */
+  const legendOutput = (view: LegendView) => {
+    const base = view.state.output;
+    const walking = view.path !== null && (base.state === 'idle' || base.state === 'move');
+    return { ...base, ...(walking ? { state: 'move' as const, loop: true } : {}), revision: base.revision * 2 + (walking ? 1 : 0) };
+  };
+
+  // --- walking -----------------------------------------------------------------------------------------------------
+  const toCells = (point: Vector3): CellPoint => ({ x: (point.x - board.x) / board.width, y: (point.z - board.z) / board.width });
+  /** An opponent's own cells, turned half around my board's center onto the far side. */
+  const mirrored = (point: CellPoint) => new Vector3(2 * anchors.center.x - (board.x + point.x * board.width), 0, 2 * anchors.center.z - (board.z + point.y * board.width));
+  let opponentWalk: BoardLegendWalk | null = null;
+  const startPath = (view: LegendView, walk: BoardLegendWalk, settled = false) => {
+    const to = mirrored(walk.to);
+    view.walked = true;
+    if (settled || walk.arriveAt <= now()) { view.path = null; view.root.position.copy(to); return; }
+    view.path = { from: view.root.position.clone(), to, start: now(), end: walk.arriveAt };
+  };
+  /**
+   * Claims my legend sent, by orb, with the orb's refusal count when sent: not sent again until the session reports a
+   * refusal of it (the dock put it back); forgotten when the orb leaves.
+   */
+  let orbTarget: string | null = null, refusals: Readonly<Record<string, number>> = {};
+  const sent = new Map<string, number>();
+  const walkTo = (point: { x: number; y: number }, orbId: string | null = null) => {
+    if (!layoutKey) return null;
+    const view = legend('me');
+    const orb = orbId ? orbs.get(orbId) : undefined;
+    const { minX, maxX, minZ, maxZ } = board.bounds;
+    const to = orb ? orb.root.position.clone().setY(0)
+      : new Vector3(Math.min(maxX, Math.max(minX, point.x)), 0, Math.min(maxZ, Math.max(minZ, point.y)));
+    const from = view.root.position.clone().setY(0);
+    const seconds = from.distanceTo(to) / (WALK_WIDTHS * board.width);
+    view.walked = true; orbTarget = orb ? orb.orbId : null;
+    view.path = { from, to, start: now(), end: now() + seconds * 1000 };
+    return { from: toCells(from), to: toCells(to) };
+  };
+  const moveLegend = (view: LegendView) => {
+    const path = view.path;
+    if (!path) return;
+    const span = path.end - path.start, t = span <= 0 ? 1 : Math.min(1, Math.max(0, (now() - path.start) / span));
+    const before = view.root.position.clone();
+    view.root.position.lerpVectors(path.from, path.to, t);
+    if (path.from.distanceToSquared(path.to) > 1) view.root.rotation.y = Math.atan2(path.to.x - path.from.x, path.to.z - path.from.z);
+    if (t >= 1) view.path = null;
+    if (view.id !== 'legend:me') return;
+    // An orb it walked over since the last frame (the whole stretch, so a long frame skips none), or the one it was sent
+    // to on arrival, is claimed as the dock's click; once, unless that claim was refused.
+    for (const orb of orbs.values()) {
+      const at = sent.get(orb.orbId);
+      if (at !== undefined && (refusals[orb.orbId] ?? 0) <= at) continue;
+      const reach = orb.orbId === orbTarget && t >= 1 ? board.width : ORB_REACH * board.width;
+      if (stretchDistance(orb.root.position, before, view.root.position) > reach) continue;
+      sent.set(orb.orbId, refusals[orb.orbId] ?? 0); ctx.claimOrb?.(orb.orbId);
+    }
+    if (t >= 1) orbTarget = null;
   };
 
   // --- effects -----------------------------------------------------------------------------------------------------
@@ -233,8 +324,9 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     hitsPlayed.push(key);
   };
   const launchBolt = (plan: HitPlan) => {
-    const source = plan.fromLegend ? anchors.opponent : anchors.enemySide;
-    const bolt: Bolt = { from: source.clone().setY(legendHeight * 0.6), to: anchors.me.clone().setY(legendHeight * 0.6), elapsed: 0, fx: null, mesh: null, disposed: false };
+    // From and to where the legends stand now (they may have walked off their places).
+    const source = plan.fromLegend ? legends.get('opponent')?.root.position ?? anchors.opponent : anchors.enemySide;
+    const bolt: Bolt = { from: source.clone().setY(legendHeight * 0.6), to: (legends.get('me')?.root.position ?? anchors.me).clone().setY(legendHeight * 0.6), elapsed: 0, fx: null, mesh: null, disposed: false };
     plan.bolt = bolt;
     const fallback = () => { if (!bolt.disposed && !bolt.fx) { bolt.mesh = new Mesh(boltGeometry, boltMaterial); bolt.mesh.position.copy(bolt.from); scene.add(bolt.mesh); } };
     // The Avatar bolt, or the plain one when only that was extracted (one of the two, never both).
@@ -258,7 +350,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       if (t >= 1) {
         // Arrived: the travel stops and the impact plays on my legend.
         endBolt(bolt);
-        const at = anchors.me.clone().setY(legendHeight * 0.6);
+        const at = bolt.to.clone();
         burst('player-damage-tar', IMPACT_SECONDS, at, new Mesh(boltGeometry, flashMaterial.clone()));
         act(legends.get('me'), 'hit');
       }
@@ -277,9 +369,10 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     if (frame.fighting && pvpShown) { legend('opponent'); pvpLinger = OPPONENT_LINGER_SECONDS; }
 
     const list = frame.orbs ?? [], present = new Set(list.map(orb => orb.orbId));
+    refusals = frame.orbRefusals ?? {};
     // Only an orb a granted receipt names opens; one that left with nothing granted (forfeited) is just removed.
     const opened = new Set(frame.openedOrbs ?? []);
-    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); removeOrb(view, seeded && opened.has(id)); }
+    for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); sent.delete(id); removeOrb(view, seeded && opened.has(id)); }
     list.slice(0, MAX_ORBS).forEach((orb, index) => {
       let view = orbs.get(orb.orbId);
       if (!view) { view = createOrb(orb, index); orbs.set(orb.orbId, view); }
@@ -308,8 +401,9 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       if (pvpLinger === 0) dropLegend('opponent');
     }
     for (const view of legends.values()) {
-      const output = view.state.update(seconds);
-      if (view.mixer) { view.mixer.apply(output); view.mixer.update(seconds); }
+      moveLegend(view);
+      view.state.update(seconds);
+      if (view.mixer) { view.mixer.apply(legendOutput(view)); view.mixer.update(seconds); }
     }
     for (const view of orbs.values()) {
       view.stand.position.y = ORB_FLOAT + Math.sin(clock * 2 + view.phase) * 2;
@@ -346,8 +440,14 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   };
 
   return {
-    layout, frame: onFrame, update, orbAt,
-    debug: () => ({ legends: [...legends.values()].map(view => `${view.id}:${view.lease ? 'model' : 'standin'}`),
+    layout, frame: onFrame, update, orbAt, walkTo,
+    walk(walk) {
+      if (walk.scene !== 'board' || walk.who !== 'opponent') return;
+      opponentWalk = walk;
+      const view = legends.get('opponent');
+      if (view) startPath(view, walk);
+    },
+    debug: () => ({ legends: [...legends.values()].map(view => `${view.id}:${view.lease ? 'model' : 'standin'}${view.path ? ':walk' : ''}`),
       orbs: [...orbs.values()].map(view => ({ orbId: view.orbId, tier: view.tier, effect: view.fx !== null })),
       hits: [...hitsPlayed], opening: bursts.size, bolt: !!hit?.bolt && !hit.bolt.disposed }),
     dispose() {
@@ -369,4 +469,11 @@ function fitHeight(body: Object3D, height: number): Object3D {
   body.scale.multiplyScalar(scale);
   body.position.y -= box.min.y * scale;
   return body;
+}
+
+/** Ground distance (x/z) from `point` to the segment `a`–`b`. */
+function stretchDistance(point: Vector3, a: Vector3, b: Vector3): number {
+  const dx = b.x - a.x, dz = b.z - a.z, length = dx * dx + dz * dz;
+  const t = length > 0 ? Math.min(1, Math.max(0, ((point.x - a.x) * dx + (point.z - a.z) * dz) / length)) : 0;
+  return Math.hypot(point.x - (a.x + dx * t), point.z - (a.z + dz * t));
 }

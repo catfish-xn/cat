@@ -266,3 +266,20 @@ describe('WsGameClient: battle replay', () => {
     expect(a.count('replay')).toBe(1);
   });
 });
+
+describe('WsGameClient: little-legend walks', () => {
+  it('sends a walk with no receipt or pending command and hands every seat the room\'s walk with its server time', async () => {
+    harness = await startServer();
+    const [a, b] = await seatTwo(harness);
+    const room = harness.server.room!;
+    for (let fired = 0; fired < 50 && room.state.phase !== 'preparation'; fired++) harness.clock.runNext();
+    await until(() => a.last('view')!.view.phase.kind === 'preparation', 'preparation');
+    const walks: { seatId: string; serverNow: number }[] = [];
+    b.client.listen({ lobby() {}, view() {}, state() {}, replay() {}, legend: (walk, serverNow) => walks.push({ seatId: walk.seatId, serverNow }) });
+    expect(a.client.walk({ scene: 'board', from: { x: 9, y: 9 }, to: { x: 1, y: 2 } })).toBe(true);
+    expect(a.client.pendingCount).toBe(0);
+    await until(() => walks.length === 1, 'legend push');
+    expect(walks[0]).toEqual({ seatId: a.last('view')!.view.mySeatId, serverNow: harness.clock.now() });
+    expect(a.wire.some(message => message.type === 'receipt' && message.ok === false)).toBe(false);
+  });
+});
