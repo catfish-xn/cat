@@ -62,6 +62,8 @@ const defaultIdle = (step: () => void) => {
 
 export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
   const queue: string[] = [], asked = new Set<string>(), done = new Set<string>();
+  /** The model being warmed now: a hint list naming it again does not queue it twice. */
+  let active: string | null = null;
   const idle = ctx.idle ?? defaultIdle;
   let running = false, closed = false, retry: ReturnType<typeof setTimeout> | undefined;
   // While a combat is shown the queue waits and looks again in half a second; cancel and dispose stop that at once.
@@ -77,6 +79,9 @@ export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
     if (!queue.length) { running = false; return; }
     if (ctx.busy()) { running = false; later(); return; }
     const id = queue.shift()!;
+    // Queued twice before (a cancel and a new list), or warmed meanwhile: skip it.
+    if (done.has(id)) { running = false; schedule(); return; }
+    active = id;
     try {
       const lease = await ctx.load(id);
       try {
@@ -89,14 +94,14 @@ export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
       } finally { lease.release(); }
     } catch { /* an unreadable model stays a placeholder; the piece will say so itself */ }
     finally {
-      running = false;
+      active = null; running = false;
       ctx.onProgress?.(asked.size - queue.length, asked.size);
       if (ctx.busy()) later(); else schedule();
     }
   };
   return {
     want(ids) {
-      for (const id of ids) if (!done.has(id) && !queue.includes(id) && ctx.has(id)) { asked.add(id); queue.push(id); }
+      for (const id of ids) if (!done.has(id) && id !== active && !queue.includes(id) && ctx.has(id)) { asked.add(id); queue.push(id); }
       schedule();
     },
     cancel() { queue.length = 0; clearTimeout(retry); retry = undefined; },

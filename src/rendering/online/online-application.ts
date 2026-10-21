@@ -259,7 +259,6 @@ export class OnlineApplication implements SceneApplication {
     const legendOf = (seatId: string | null) => view.seats.find(seat => seat.seatId === seatId)?.legend ?? null;
     setBoardLegends({ me: legendOf(view.mySeatId) ?? readLegendChoice(), opponent: view.opponentSeatId ? legendOf(view.opponentSeatId) ?? 'default' : null });
     this.syncScout();
-    this.syncWarmHints();
     this.syncSpectating(view);
     this.syncCarousel(view);
     this.syncBattleViews();
@@ -399,6 +398,7 @@ export class OnlineApplication implements SceneApplication {
     setBoardWarmHints([...shop, ...board(view?.opponentSeatId), ...board(this.opponentBoard.openSeatId)]);
   }
   private syncScout() {
+    this.syncWarmHints(); // the scouted board joins or leaves the warm list as the panel opens or closes
     this.scoutFeedGeneration = boardFeedGeneration();
     const view = this.view, seatId = this.opponentBoard.openSeatId, wasWatching = this.session.watchedSeat;
     const seat = seatId !== view?.mySeatId ? view?.seats.find(candidate => candidate.seatId === seatId) : undefined;

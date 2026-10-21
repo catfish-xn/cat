@@ -45,6 +45,8 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
   body.traverse(node => { if (node instanceof SkinnedMesh) meshes.push(node); });
   if (!meshes.length || !clips.length) return 0;
   const mixer = new AnimationMixer(body), point = new Vector3(), rootAt = new Vector3(), radii: number[] = [];
+  // Vertices read since the last pause, across poses, meshes and clips (small meshes alone never reach a chunk).
+  let work = 0;
   // Each mesh's skeleton root: its first bone whose parent is not a bone.
   const roots = meshes.map(mesh => mesh.skeleton.bones.find(bone => !(bone.parent instanceof Bone)) ?? null);
   // Where each root stands in the bind pose: the reach is measured from there plus the root's drift in that sample.
@@ -59,7 +61,8 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
       action.play();
       for (let i = 0; i < ENVELOPE_SAMPLES; i++) {
         // Set the pose again on every resume: nothing else animates this body, but a slice boundary may fall here.
-        const pose = () => { mixer.setTime(clip.duration * i / (loop ? ENVELOPE_SAMPLES : Math.max(1, ENVELOPE_SAMPLES - 1))); body.updateMatrixWorld(true); };
+        // A once-only clip that reached its end pauses itself (clampWhenFinished): wake it before posing again.
+        const pose = () => { action.paused = false; action.enabled = true; mixer.setTime(clip.duration * i / (loop ? ENVELOPE_SAMPLES : Math.max(1, ENVELOPE_SAMPLES - 1))); body.updateMatrixWorld(true); };
         pose();
         for (let index = 0; index < meshes.length; index++) {
           const mesh = meshes[index]!, root = roots[index];
@@ -67,10 +70,10 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
           // The axis moved by the root's horizontal drift from its bind place (0 when the skeleton has no root bone).
           if (root) root.getWorldPosition(rootAt).sub(homes[index]!); else rootAt.set(0, 0, 0);
           const count = mesh.geometry.attributes.position?.count ?? 0;
-          for (let v = 0, read = 0; v < count; v += ENVELOPE_STRIDE) {
+          for (let v = 0; v < count; v += ENVELOPE_STRIDE) {
             mesh.getVertexPosition(v, point).applyMatrix4(mesh.matrixWorld);
             radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
-            if (++read % ENVELOPE_CHUNK === 0) { yield; pose(); mesh.skeleton.update(); if (root) root.getWorldPosition(rootAt).sub(homes[index]!); }
+            if (++work >= ENVELOPE_CHUNK) { work = 0; yield; pose(); mesh.skeleton.update(); if (root) root.getWorldPosition(rootAt).sub(homes[index]!); }
           }
         }
       }
@@ -82,8 +85,10 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
     body.updateMatrixWorld(true);
   }
   if (!radii.length) return 0;
-  radii.sort((a, b) => a - b);
-  return radii[Math.min(radii.length - 1, Math.floor(radii.length * ENVELOPE_QUANTILE))]!;
+  // The quantile in its own slice: a typed numeric sort (no comparator calls) of every sample.
+  yield;
+  const sorted = Float64Array.from(radii).sort();
+  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * ENVELOPE_QUANTILE))]!;
 }
 
 /** The envelope at once (a piece mounting outside combat with nothing measured yet). */
