@@ -20,6 +20,7 @@ import {
   PerspectiveCamera, Plane, Raycaster, RingGeometry, Scene, SphereGeometry, Sprite, SpriteMaterial, Texture, TextureLoader, Vector2, Vector3, type Object3D,
 } from 'three';
 import { UnitAnimationMixer, createStarMark, type ActionOutput, type ModelLease, type ParticleEffect, type StarMark } from '../../rendering3d';
+import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot, BoardLegendWalk } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
 
@@ -80,6 +81,7 @@ export interface CarouselStageContext {
   readonly loadModel: ((id: string) => Promise<ModelLease>) | null;
   readonly hasModel: (id: string) => boolean;
   readonly loadEffect: ((id: string, maxDuration: number) => Promise<ParticleEffect>) | null;
+  /** The default little legend's model; a seat whose own legend (`little-legend-<legend>`) the manifest lacks shows it. */
   readonly legendModel: string;
   readonly starColor: (level: number) => string;
   /** Item icon textures (tests pass a stub); defaults to three's TextureLoader. */
@@ -275,9 +277,9 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     body.scale.multiplyScalar(scale); body.position.y -= bounds.min.y * scale;
     return body;
   };
-  const attach = (view: Body, id: string, height: number, width?: number) => {
-    if (!ctx.loadModel || !ctx.hasModel(id)) return;
-    void ctx.loadModel(id).then(lease => {
+  const attach = (view: Body, id: string, height: number, width?: number, load = ctx.loadModel && ctx.hasModel(id) ? ctx.loadModel : null) => {
+    if (!load) return;
+    void load(id).then(lease => {
       if (view.disposed || lease.placeholder) { lease.release(); return; }
       view.root.clear(); view.lease = lease;
       view.root.add(fit(lease.scene, height, width));
@@ -289,7 +291,8 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
 
   // --- seats -----------------------------------------------------------------------------------------------------
   const seatViews = new Map<string, SeatView>();
-  const createSeat = (seatId: string, me: boolean, index: number, count: number): SeatView => {
+  const legendOf = (legend: string | undefined) => legend && ctx.hasModel(`little-legend-${legend}`) ? `little-legend-${legend}` : ctx.legendModel;
+  const createSeat = (seatId: string, me: boolean, index: number, count: number, legend: string | undefined): SeatView => {
     const root = new Group(); root.name = `render3d-carousel-seat-${me ? 'me' : 'other'}`;
     const anchor = anchorAt(index, Math.max(8, count), LEGEND_RADIUS);
     anchor.y = surfaceAt(anchor.x, anchor.z, LEGEND_SURFACE);
@@ -303,7 +306,8 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     taken.add(tether);
     const view: SeatView = { seatId, me, anchor, root, lease: null, mixer: null, state: new Stride(), disposed: false, lock: null, indicator: null,
       releaseAtMs: Infinity, locked: false, chase: null, goal: null, speed: 0, path: null, carry: null, tether, countdown: null };
-    attach(view, ctx.legendModel, legendHeight);
+    // A legend that cannot be drawn (refused, placeholder) falls back to the default model before the stand-in.
+    attach(view, legendOf(legend), legendHeight, undefined, ctx.loadModel ? id => loadLegendLease(model => ctx.hasModel(model) ? ctx.loadModel!(model) : Promise.reject(new Error('unknown-model')), id, ctx.legendModel) : null);
     return view;
   };
   const dropCountdown = (view: SeatView) => {
@@ -525,7 +529,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     // Seats: stable public order; my seat's side faces the camera.
     view.seats.forEach((seat, index) => {
       let entry = seatViews.get(seat.seatId);
-      if (!entry) { entry = createSeat(seat.seatId, seat.me, index, view.seats.length); seatViews.set(seat.seatId, entry); }
+      if (!entry) { entry = createSeat(seat.seatId, seat.me, index, view.seats.length, seat.legend); seatViews.set(seat.seatId, entry); }
       entry.releaseAtMs = seat.releaseAtMs;
       if (seat.me) azimuth = Math.atan2(entry.anchor.x, entry.anchor.z);
       if (seat.me && !entry.indicator) {

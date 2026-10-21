@@ -25,6 +25,8 @@ import { AssetPreloader, describePreload, openAssetStore, readPackList, readPrec
 import { createAssetReader, type AssetReader } from './asset-reader';
 import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
+import { offerLegendPicker } from './legend-picker';
+import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, createBoardArena, type BoardArena } from './board-arena';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 
@@ -245,9 +247,19 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     clearTimeout(calloutTimer); calloutTimer = setTimeout(() => callout?.classList.remove('flash'), 1800);
   };
   // 河灵, my orbs and the settled-round HP bolt around the board (tabletop.ts); same asset root and effect scale.
-  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own,
+  // Each side's own little legend (board-feed legends) when the root has it, else the default 河灵.
+  const legendModel = (side: 'me' | 'opponent') => {
+    const named = feed?.legends?.()[side], id = named ? `little-legend-${named}` : LEGEND_MODEL;
+    return models.cache && Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
+  };
+  const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own, legendModel,
     loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
     loadEffect, claimOrb: orbId => feed?.controls()?.claimOrb?.(orbId) });
+  // The lobby's 外观 panel (legend-picker.ts) draws the root's legends; offered only while this layer has an asset root.
+  const withdrawPicker = models.cache ? offerLegendPicker(feed, models.cache) : () => {};
+  // 铁血征服者 chest and 微光 flask on the left of my half (trait-props.ts), from my own counters only.
+  const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
+    loadModel: models.cache ? id => Object.hasOwn(models.cache!.manifest.models, id) ? models.cache!.load(id) : Promise.reject(new Error('unknown-model')) : null });
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
@@ -266,7 +278,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let lastFrame: BoardFrame | null = null;
   const boardEntry = models.cache?.manifest.boards?.[DEFAULT_BOARD];
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
-    () => models.cache!.load(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }) : null;
+    () => models.cache!.load(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
   let boardKey = '';
   const buildBoard = (frame: BoardFrame) => {
     lastFrame = frame;
@@ -299,7 +311,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     boardBox.setFromObject(boardGroup);
     // Same camera framing with or without the arena: the bench still counts when its boxes are not drawn.
     for (const point of overlay ? frame.bench : []) boardBox.expandByPoint(new Vector3(point.x, 0, point.y));
-    for (const point of tabletop.layout(frame)) boardBox.expandByPoint(point);
+    for (const point of [...tabletop.layout(frame), ...traitProps.layout(frame)]) boardBox.expandByPoint(point);
     frameCamera();
   };
 
@@ -504,7 +516,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
     for (const [id, view] of pieces) if (!seen.has(id)) { removePiece(view); pieces.delete(id); }
-    tabletop.frame(frame);
+    tabletop.frame(frame); traitProps.frame(frame);
   };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
     for (const event of events) {
@@ -719,8 +731,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const box = readBox();
     if (width > 0 && (box ? `${box.left},${box.top},${box.width},${box.height}` : '') !== boxKey) resize(width, height);
   };
+  // TFT's FPS readout in the top-right corner, refreshed once a second.
+  const fpsLabel = typeof document === 'undefined' ? null : document.createElement('span');
+  if (fpsLabel) { fpsLabel.className = 'render3d-fps'; fpsLabel.dataset.debug = 'render3d-fps'; host.append(fpsLabel); }
+  let fpsFrames = 0, fpsSince = 0;
   const tick = (now: number) => {
     frameId = requestAnimationFrame(tick);
+    if (fpsLabel && ++fpsFrames && now - fpsSince >= 1000) { if (fpsSince) fpsLabel.textContent = `FPS: ${Math.round(fpsFrames * 1000 / (now - fpsSince))}`; fpsFrames = 0; fpsSince = now; }
     const seconds = Math.min(Math.max((now - last) / 1000, 0), 0.25);
     last = now;
     const follow = 1 - Math.exp(-seconds / FOLLOW_SECONDS);
@@ -746,7 +763,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);
-    tabletop.update(seconds); stage.update(seconds); followBox();
+    tabletop.update(seconds); traitProps.update(seconds); stage.update(seconds); followBox();
     if (width > 0) { if (stage.active) renderer.render(stage.scene, stage.camera); else renderer.render(scene, camera); }
   };
   resize(host.clientWidth, host.clientHeight);
@@ -754,18 +771,18 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, stage };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, stage };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
-      closed = true; cancelAnimationFrame(frameId); unsubscribe();
+      closed = true; cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
-      clearEffects(); tabletop.dispose(); stage.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

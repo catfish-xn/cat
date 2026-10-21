@@ -12,7 +12,7 @@
 import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
 import type { CombatReplay } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
-import type { ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, SeatStateView, WireCommand } from '../protocol';
+import { ROOM_DEFAULT_LEGEND, ROOM_LITTLE_LEGENDS, type ConsumableTarget, type LittleLegendId, type LobbyView, type PlayerView, type ReplayUnitId, type SeatStateView, type WireCommand } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
 import type { CarouselFailure } from '../room/carousel';
 import type { ConsumableDisplayEvent } from '../room/projection';
@@ -47,7 +47,7 @@ import type { CellPoint, LegendWalk, LegendWalkRequest } from '../legend-motion'
 export const NET_PROTOCOL_VERSION: number = 5;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
-export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
+export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128, legendChars: 32 } as const;
 
 /* ---------------- client → server ---------------- */
 
@@ -59,7 +59,8 @@ interface ClientEnvelope {
    */
   readonly commandId: number;
 }
-export interface JoinMessage extends ClientEnvelope { readonly type: 'join'; readonly name: string }
+/** `legend` (optional, cosmetic): the little legend the player picked; anything off the list is `default`, never a refusal. */
+export interface JoinMessage extends ClientEnvelope { readonly type: 'join'; readonly name: string; readonly legend?: LittleLegendId }
 export interface LeaveQueueMessage extends ClientEnvelope { readonly type: 'leaveQueue' }
 export interface StartMessage extends ClientEnvelope { readonly type: 'start' }
 export interface ResumeMessage extends ClientEnvelope { readonly type: 'resume'; readonly token: string }
@@ -182,6 +183,10 @@ function str(value: unknown, where: string, max: number = LIMITS.idChars, allowE
   if (value.length > max) return bad(`${where} longer than ${max} characters`);
   return value;
 }
+/** A listed little legend, or `default` for anything else (an older or newer client's pick is cosmetic, not an error). */
+function littleLegend(value: string): LittleLegendId {
+  return (ROOM_LITTLE_LEGENDS as readonly string[]).includes(value) ? value as LittleLegendId : ROOM_DEFAULT_LEGEND;
+}
 function int(value: unknown, where: string, min = Number.MIN_SAFE_INTEGER): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value)) return bad(`${where} must be an integer`);
   if (value < min) return bad(`${where} must be >= ${min}`);
@@ -264,7 +269,9 @@ const ENVELOPE = ['type', 'protocolVersion', 'commandId'] as const;
 function validateEnvelopeBody(value: Shape, commandId: number): ClientMessage {
   const protocolVersion = NET_PROTOCOL_VERSION;
   switch (value.type) {
-    case 'join': onlyKeys(value, [...ENVELOPE, 'name'], 'join'); return { type: 'join', protocolVersion, commandId, name: str(value.name, 'join.name', LIMITS.nameChars, true) };
+    case 'join': onlyKeys(value, [...ENVELOPE, 'name', 'legend'], 'join');
+      return { type: 'join', protocolVersion, commandId, name: str(value.name, 'join.name', LIMITS.nameChars, true),
+        ...(value.legend === undefined ? {} : { legend: littleLegend(str(value.legend, 'join.legend', LIMITS.legendChars, true)) }) };
     case 'leaveQueue': onlyKeys(value, ENVELOPE, 'leaveQueue'); return { type: 'leaveQueue', protocolVersion, commandId };
     case 'start': onlyKeys(value, ENVELOPE, 'start'); return { type: 'start', protocolVersion, commandId };
     case 'resume': onlyKeys(value, [...ENVELOPE, 'token'], 'resume'); return { type: 'resume', protocolVersion, commandId, token: str(value.token, 'resume.token', LIMITS.tokenChars) };

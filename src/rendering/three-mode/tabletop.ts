@@ -16,7 +16,8 @@ import { UnitActionState, UnitAnimationMixer, type ModelLease, type ParticleEffe
 import type { BoardFrame, BoardLegendWalk, BoardOrb } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
 
-export const LEGEND_MODEL = 'little-legend-default';
+import { LEGEND_MODEL, loadLegendLease } from './legend-load';
+export { LEGEND_MODEL };
 /** Orb effects by tier (parent systems that already contain their static child; never both). The prismatic orb uses the
  * bounded Idle system, and opens with the gold RewardBoxOpen: no dedicated prismatic opening was extracted, so this is an
  * explicit display convention, not a name match. */
@@ -52,6 +53,8 @@ export interface TabletopContext {
   readonly effectScale: number;
   /** A lease of `id` when the asset manifest names that model; null otherwise (a stand-in is drawn). */
   readonly loadModel: ((id: string) => Promise<ModelLease>) | null;
+  /** Model of each side's little legend now (cosmetic, board-feed legends); LEGEND_MODEL when absent. A change rebuilds that legend. */
+  readonly legendModel?: (side: 'me' | 'opponent') => string;
   /** The effect when the manifest names it; null otherwise (a stand-in is drawn). */
   readonly loadEffect: ((id: string, maxDuration: number) => Promise<ParticleEffect>) | null;
   readonly own: <T extends { dispose(): void }>(resource: T) => T;
@@ -79,7 +82,7 @@ export interface Tabletop {
 }
 
 interface Path { from: Vector3; to: Vector3; start: number; end: number }
-interface LegendView { readonly id: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean; path: Path | null; walked: boolean }
+interface LegendView { readonly id: string; readonly model: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean; path: Path | null; walked: boolean }
 interface OrbView { readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; fx: ParticleEffect | null; left: number; loading: boolean; disposed: boolean; phase: number }
 interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number }
 interface Bolt { from: Vector3; to: Vector3; elapsed: number; fx: ParticleEffect | null; mesh: Mesh | null; disposed: boolean }
@@ -152,17 +155,23 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     view.root.rotation.y = Math.atan2(anchors.center.x - side.x, anchors.center.z - side.z);
   };
   const legend = (side: 'me' | 'opponent'): LegendView => {
+    const model = ctx.legendModel?.(side) ?? LEGEND_MODEL;
     let view = legends.get(side);
-    if (view) return view;
+    if (view?.model === model) return view;
+    // Another look for the same seat: the new body takes over where the old one stood or walked.
+    const before = view ? { position: view.root.position.clone(), rotation: view.root.rotation.y, path: view.path, walked: view.walked, walk: opponentWalk } : null;
+    if (view) dropLegend(side);
     const root = new Group(); root.name = `render3d-legend-${side}`;
-    view = { id: `legend:${side}`, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false, path: null, walked: false };
+    view = { id: `legend:${side}`, model, root, state: new UnitActionState(`legend:${side}`), mixer: null, lease: null, disposed: false, path: null, walked: false };
     legends.set(side, view);
     root.add(standIn(side));
     placeLegend(view); scene.add(root);
+    if (before?.walked) { root.position.copy(before.position); root.rotation.y = before.rotation; view.path = before.path; view.walked = true; }
+    if (side === 'opponent' && before) opponentWalk = before.walk;
     // The opponent already walked on their board before its legend was shown here: it stands where that walk ends.
-    if (side === 'opponent' && opponentWalk) startPath(view, opponentWalk, true);
+    else if (side === 'opponent' && opponentWalk) startPath(view, opponentWalk, true);
     const created = view;
-    void ctx.loadModel?.(LEGEND_MODEL).then(lease => {
+    if (ctx.loadModel) void loadLegendLease(ctx.loadModel, model).then(lease => {
       if (created.disposed || lease.placeholder) { lease.release(); return; }
       created.root.clear();
       created.lease = lease;

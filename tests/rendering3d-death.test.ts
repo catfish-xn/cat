@@ -249,7 +249,7 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
 
   it('opens no browser menu over the game root or the canvas (links, text fields and selected text keep it), and right-click walks my legend', async () => {
     const app = new Canvas();
-    vi.stubGlobal('document', { getElementById: (id: string) => (id === 'app' ? app : null), body: null, createElement: () => ({ getContext: () => null }) });
+    vi.stubGlobal('document', { getElementById: (id: string) => (id === 'app' ? app : null), body: null, createElement: () => ({ getContext: () => null, dataset: {}, style: {}, classList: { add() {}, remove() {} }, append() {}, remove() {}, textContent: '' }) });
     const walk = vi.fn(() => true);
     await mount(null, { walk });
     await publish([], false);

@@ -26,7 +26,7 @@ import type { CombatReplayTick } from '../../server-entry';
 import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type LiveCatchUp } from './live-bank';
 import { useSeatConsumable } from './consumables';
 import { carouselReleased, carouselRoundOf, heldCarouselUnits, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
-import type { CarouselPickCommand } from '../protocol';
+import { ROOM_DEFAULT_LEGEND, ROOM_LITTLE_LEGENDS, type CarouselPickCommand, type LittleLegendId, type SeatKind } from '../protocol';
 import { BOARD_WALK_LIMIT, CAROUSEL_LEGEND_RADIUS, carouselHome, clampToRadius, interceptCarouselUnit, walkMs, type CellPoint, type LegendWalk, type LegendWalkRequest } from '../legend-motion';
 import { LegendWalkBook } from './legend-walk';
 import type { BattleSeatOutcome } from './types';
@@ -175,6 +175,11 @@ export type TimeoutOutcome =
   | { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }
   | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: string };
 const MAX_TIMEOUT_STEPS = 8;
+/** A seat that named no legend: a human shows `default`; a fill-in bot one of the others in seat order (cosmetic only). */
+function seatLegend(kind: SeatKind, index: number): LittleLegendId {
+  const others = ROOM_LITTLE_LEGENDS.filter(id => id !== ROOM_DEFAULT_LEGEND);
+  return kind === 'bot' ? others[index % others.length]! : ROOM_DEFAULT_LEGEND;
+}
 
 /**
  * Resolves one seat's pending decisions with the rules' timeout commands, in the contract's order:
@@ -289,7 +294,7 @@ export class Room {
     if (!opened.ok) throw new RangeError(`shared pool opening: ${opened.reason}`);
     const seatStates = imported.map(({ spec, index, seed }, position): SeatState => {
       const match = opened.states[position]!;
-      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, connected: spec.kind === 'human', controller: spec.kind === 'bot' ? 'bot' : 'human', controlEpoch: 0, hp: match.playerHp,
+      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, legend: spec.legend ?? seatLegend(spec.kind, index), connected: spec.kind === 'human', controller: spec.kind === 'bot' ? 'bot' : 'human', controlEpoch: 0, hp: match.playerHp,
         alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
     });
     const initial: RoomState = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,

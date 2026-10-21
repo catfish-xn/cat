@@ -28,8 +28,9 @@ import {
 } from '../../server/net/messages';
 import type { CombatReplay } from '../../presentation/combat-display';
 import type {
-  WireCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, SeatStateView,
+  WireCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LittleLegendId, LobbyView, PlayerView, SeatStateView,
 } from './protocol';
+import { ROOM_DEFAULT_LEGEND } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
 import type { LegendWalkRequest } from '../../server/legend-motion';
 
@@ -143,10 +144,11 @@ export class WsGameClient implements GameClient {
     if (this.status) listeners.connection?.(this.status);
     return () => { if (this.listeners === listeners) this.listeners = null; };
   }
-  joinQueue(name: string): void {
+  joinQueue(name: string, legend?: LittleLegendId): void {
     if (this.seatId !== null && this.roomId === null) return;
     this.lobbyError = null;
-    this.post({ type: 'join', name: name.trim().slice(0, 24) || '玩家' });
+    // The default legend is not sent, so a server from before little legends still accepts the join.
+    this.post({ type: 'join', name: name.trim().slice(0, 24) || '玩家', ...(legend && legend !== ROOM_DEFAULT_LEGEND ? { legend } : {}) });
   }
   leaveQueue(): void { if (this.seatId !== null && this.roomId === null) this.post({ type: 'leaveQueue' }); }
   startMatch(): void { if (this.seatId !== null && this.roomId === null) this.post({ type: 'start' }); }

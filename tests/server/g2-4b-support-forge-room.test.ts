@@ -111,7 +111,7 @@ describe('G2-4b: the support anvil in an online room', () => {
     toForgeWindow(room, () => clock.runNext(), 's0', 10, 11, 13);
     const first = seatOf(room.state, 's0').match, opened = first.pendingChoice!;
     expect(opened).toMatchObject({ kind: 'forge', choiceId: TIER10 });
-    expect(readChoiceExtras(opened).title).toBe('神器锻造器 · 4 选 1');
+    expect(readChoiceExtras(opened).title).toBe('神器装备锻造器 · 4 选 1');
     expect(room.handle('s0', { type: 'choose', choiceId: opened.choiceId, generation: opened.generation, definitionId: opened.offers[1]! }).ok).toBe(true);
     expect(room.state.phase).toBe('choice');
     const second = seatOf(room.state, 's0').match.pendingChoice!;

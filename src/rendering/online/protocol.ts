@@ -6,7 +6,7 @@
  */
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReceiptFailure, SeatNotice } from '../../server/net/messages';
-import type { WireCommand, LobbyView, PlayerView, ReplayUnitId } from '../../server/protocol';
+import type { WireCommand, LittleLegendId, LobbyView, PlayerView, ReplayUnitId } from '../../server/protocol';
 import type { CombatReplay } from '../../server-entry';
 import type { LegendWalk, LegendWalkRequest } from '../../server/legend-motion';
 
@@ -61,7 +61,8 @@ export interface ClientListeners {
 export interface GameClient {
   readonly transport: 'local-room' | 'websocket';
   listen(listeners: ClientListeners): () => void;
-  joinQueue(name: string): void;
+  /** `legend`: the little legend picked in the lobby (cosmetic); omitted means `default`. */
+  joinQueue(name: string, legend?: LittleLegendId): void;
   leaveQueue(): void;
   startMatch(): void;
   /**
