@@ -67,5 +67,6 @@ describe('M5 Match atomic integration', () => {
     expect(state.phase).toBe('settlement');expect(state.combat).toBe(null);expect(state.battleSeedRngState).toBe(battleSeed);
     expect(state.roundResults.at(-1)?.result).toBe('supply');expect(state.gold).toBeGreaterThan(gold);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
-  }, 30000);
+    // 临时、用户 10-20 批准：CI 上约 31 秒（原限 30 秒，本机约 17 秒，断言都过），按约 2 倍放宽到 60 秒；断言不变。
+  }, 60000);
 });

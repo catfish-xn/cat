@@ -116,3 +116,27 @@ curl.exe -sI "<ASSET_URL><precache 里任一 .glb 的 path>"
 - 不把素材放进仓库、`assets3d-local/` 以外的仓库目录、前端 `dist/` 或 Vite 的 `public/`。
 - 不在文档、提交、PR、聊天记录里写实际的服务器地址、目录或账号。
 - 不给素材地址加口令或访问限制。
+
+## 8. 预下载大包（可选）
+
+压缩完成后离线打包，默认每包上限 16 MiB（16,777,216 字节）：
+
+```powershell
+node scripts/assets3d/pack-root.mjs --root "<COMPRESSED_ROOT>"
+# 或生成新目录，仅含 packs/ 和 packs.json，不复制原文件：
+node scripts/assets3d/pack-root.mjs --root "<COMPRESSED_ROOT>" --out "assets3d-local/game-v4-packed" --max-bytes 16777216
+```
+
+原地模式只新增 `packs/`、`packs.json`；`--out` 必须是不存在的新目录。已有输出会被拒绝，避免覆盖。仓库内输出必须被 `.gitignore` 覆盖（如 `assets3d-local/`，用只读的 `git check-ignore` 核对）。全部 precache 文件通过大小与 SHA-256 核验后才发布。单个文件大于上限时拒绝，需调高 `--max-bytes`，文件不会跨包切割。
+
+上传整个原素材根，连同 `packs/` 与 `packs.json` 一起上传；若用 `--out`，先把其内容叠加到原根的部署副本。仍保留原文件、`manifest.json` 和 `precache.json`，供加载器逐文件回退；仅上传打包输出不能独立运行。
+
+包是原文件字节的直接拼接，无头、无填充、无额外压缩。`packs.json` 格式：
+
+```json
+{ "schemaVersion": 1, "packs": [{ "name": "models", "path": "packs/models.bin", "bytes": 8, "sha256": "<包 SHA-256>", "files": [{ "path": "models/example.glb", "offset": 0, "bytes": 8, "sha256": "<文件 SHA-256>" }] }] }
+```
+
+包的 `path` 相对素材根；`bytes` 是完整包长度，`sha256` 是完整包的小写十六进制 SHA-256。`files.path` 相对原素材根，与 precache 完全一致；`offset` 从包首按字节计，切片范围为 `[offset, offset + bytes)`，文件的 `bytes/sha256` 也与 precache 完全一致。每个 precache 文件恰好属于一个包，`manifest.json`、`precache.json`、`packs.json` 不入包。加载器可先核对完整包，再按偏移切片、核对文件并写入原有缓存。
+
+按路径组件分组，支持 `roots/0/` 等嵌套前缀：`board/boards` 优先归 board；`models/units/champions/neutrals/little-legends` 归 models（含其贴图）；其余 `effects/meshes/textures` 归 effects；其他归 other。组名及文件路径按字符码排序，顺序装包，下一文件会超上限时切新包。单包名如 models，多包名如 models-1、models-2；相同路径与字节、相同上限产生相同结果，与 precache 条目顺序无关。
