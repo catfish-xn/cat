@@ -1,7 +1,7 @@
 /**
  * Trait column (G2 prerequisite, TFT left column): the traits of the units on a board, active ones first by tier then by
  * count, inactive ones greyed after them. Each row shows the icon (or a letter badge when no icon is bundled), the count,
- * the name and every breakpoint with the current one highlighted; hover shows each tier's effect and the members.
+ * the name and every breakpoint with the current one highlighted; hover shows the trait's rule summary, each tier's effect and the members.
  * Counts and tiers are the rules' `deriveTraits` snapshot (same selector the trait tab and the scouting panel use);
  * nothing is recounted here.
  */
@@ -14,7 +14,7 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import type { MatchState } from '../simulation/match-types';
 import { readG23Progress } from '../simulation/g2-3-state';
 import { G23_CONQUEROR_CHESTS } from '../simulation/content/g2-3-policy';
-import { describeTraitTier } from '../presentation/effect-text';
+import { traitSummary, traitTierText } from '../presentation/trait-text';
 import { getHeroIdentity, traitDisplayName } from '../presentation/hero-identity';
 import { attachHoverCards, type HoverCard } from '../presentation/hover-card';
 import { s13IconHtml } from '../presentation/s13-assets';
@@ -115,10 +115,13 @@ export function traitCardBody(traitId: string, count: number, onBoard: readonly 
   const head = el('div', '', 'trait-card-head'); head.insertAdjacentHTML('afterbegin', traitIconHtml(traitId, 28));
   head.append(el('strong', traitDisplayName(traitId)), el('span', `${count} 人 · ${definition.target === 'team' ? '全队收益' : '成员收益'}`, 'trait-card-meta'));
   body.append(head);
+  const reachedTier = definition.tiers.filter(tier => tier.threshold <= count).at(-1)?.threshold ?? 0;
+  const summary = traitSummary(traitId, reachedTier);
+  if (summary) { const line = el('p', summary, 'trait-card-summary'); line.dataset.debug = 'trait-card:summary'; body.append(line); }
   const tiers = el('ul', '', 'trait-card-tiers'); tiers.dataset.debug = 'trait-card:tiers';
   for (const tier of definition.tiers) {
     const reached = tier.threshold <= count;
-    tiers.append(el('li', describeTraitTier(definition, tier), reached ? 'reached' : ''));
+    tiers.append(el('li', traitTierText(definition, tier), reached ? 'reached' : ''));
   }
   body.append(tiers);
   if (runtime?.length) {
