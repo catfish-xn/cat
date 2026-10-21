@@ -239,7 +239,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return models.cache && Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
   };
   const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own, legendModel,
-    loadModel: models.cache ? id => models.cache!.load(id) : null,
+    loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
     loadEffect });
   // The lobby's 外观 panel (legend-picker.ts) draws the root's legends; offered only while this layer has an asset root.
   const withdrawPicker = models.cache ? offerLegendPicker(feed, models.cache) : () => {};
