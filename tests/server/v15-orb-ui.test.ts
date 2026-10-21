@@ -8,7 +8,7 @@ import { createMatch } from '../../src/server-entry';
 import type { LootReceipt } from '../../src/simulation/m8/contracts';
 import { RemoteSession } from '../../src/rendering/online/remote-session';
 import type { GameClient, WireCommand } from '../../src/rendering/online/protocol';
-import { orbReceiptText, readOrbClaimReceipts, readPublicOrbs, readUnclaimedOrbs } from '../../src/rendering/online/orb-dock';
+import { orbPayloadName, orbReceiptText, readOrbClaimReceipts, readPublicOrbs, readUnclaimedOrbs } from '../../src/rendering/online/orb-dock';
 
 function recordingClient() {
   const sent: unknown[] = [];
@@ -39,6 +39,17 @@ describe('v15 orb and per-card reroll commands', () => {
 });
 
 describe('v15 orb display fields', () => {
+  it('names epic rewards by their own names, never the unit fallback, and says a forge opens a choice', () => {
+    const forge = { kind: 'forge', definitionId: 'TFT_ArmoryKeyCompleted', quantity: 1 } as const;
+    const artifact = { kind: 'forge', definitionId: 'TFT_ArmoryKeyOrnn', quantity: 1 } as const;
+    const crown = { kind: 'item', definitionId: 'TFT_Item_ForceOfNature', quantity: 1 } as const;
+    expect(orbPayloadName(forge)).toBe('成装锻造器');
+    expect(orbPayloadName(artifact)).toBe('神器装备锻造器');
+    for (const payload of [forge, artifact, crown]) expect(orbPayloadName(payload)).not.toMatch(/未知/);
+    expect(orbReceiptText(receipt({ payload: forge, resolution: 'held' }))).toBe('成装锻造器 · 进入四选一');
+    expect(orbReceiptText(receipt({ payload: artifact, resolution: 'held' }))).toBe('神器装备锻造器 · 进入四选一');
+    expect(orbReceiptText(receipt({ payload: crown, resolution: 'held' }))).toMatch(/已放入物品栏$/);
+  });
   it('reads unclaimedOrbs and orbClaimReceipts off the display state; none offline', () => {
     const offline = createMatch(1);
     expect(readUnclaimedOrbs(offline)).toEqual([]);
