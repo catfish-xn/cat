@@ -412,7 +412,7 @@ jobs:
     name: compare-evidence-sample${{ matrix.sample }}
     needs: [changes, test-and-build, chromium-match, chromium-input, m6-retention, m8-ui-dynamic]
     runs-on: ubuntu-24.04
-    timeout-minutes: 6 # Three measured comparison jobs, including artifact transfer.
+    timeout-minutes: 12 # Temporary, user-approved: npm ci on the runner took 6+ min; about 2x (was 6: three measured comparison jobs, including artifact transfer).
     strategy:
       matrix:
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
