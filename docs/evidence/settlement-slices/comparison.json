@@ -1,0 +1,240 @@
+{
+  "baseline": "2de5e26d",
+  "node": "v24.21.0",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+  "deterministic": true,
+  "terminalSha256": "7c5687861320a55381d583f1eb6579270fc1fb43f527ee9b2996610de7498f08",
+  "checkpointsSha256": "39d16bed9fa70b531e1126051d399bc513fdbdcc56cf2a8d1f8332128d12a7e7",
+  "botStepsSha256": "fcc8dcf045dd0d605283f53cc28168b107fc394e1c083755ea08c713e27770ce",
+  "rounds": [
+    {
+      "round": 2,
+      "before": {
+        "round": 2,
+        "stepMs": 728.3479380000026,
+        "stepCalls": 961,
+        "planMs": 739.2614479999997,
+        "liveMs": 0.027939000000060332,
+        "commitMs": 0.31179000000020096,
+        "advanceMs": 30.830915000000005,
+        "longestBattleCallbackMs": 739.3790680000002
+      },
+      "after": {
+        "round": 2,
+        "stepMs": 562.2536930002243,
+        "stepCalls": 961,
+        "planMs": 579.3827399999718,
+        "liveMs": 0.06872799999837298,
+        "commitMs": 0.3129049999988638,
+        "advanceMs": 25.978669999996782,
+        "longestBattleCallbackMs": 24.075257000004058
+      }
+    },
+    {
+      "round": 10,
+      "before": {
+        "round": 10,
+        "stepMs": 1199.2803069999845,
+        "stepCalls": 1016,
+        "planMs": 1210.1527340000011,
+        "liveMs": 0.015644999999494758,
+        "commitMs": 0.29418900000018766,
+        "advanceMs": 32.271928999998636,
+        "longestBattleCallbackMs": 1210.196038
+      },
+      "after": {
+        "round": 10,
+        "stepMs": 1427.7463410001365,
+        "stepCalls": 1016,
+        "planMs": 1452.371368000051,
+        "liveMs": 0.016763000006903894,
+        "commitMs": 0.30927200001315214,
+        "advanceMs": 37.86259400000563,
+        "longestBattleCallbackMs": 27.441474000006565
+      }
+    },
+    {
+      "round": 17,
+      "before": {
+        "round": 17,
+        "stepMs": 1644.6761600000173,
+        "stepCalls": 956,
+        "planMs": 1656.036107,
+        "liveMs": 0.010056999999505933,
+        "commitMs": 0.39644200000111596,
+        "advanceMs": 45.42459499999677,
+        "longestBattleCallbackMs": 1656.0746609999987
+      },
+      "after": {
+        "round": 17,
+        "stepMs": 1912.4010879997659,
+        "stepCalls": 956,
+        "planMs": 1942.0174910000933,
+        "liveMs": 0.009498999992501922,
+        "commitMs": 0.41208399999595713,
+        "advanceMs": 48.30684599999222,
+        "longestBattleCallbackMs": 29.087257999999565
+      }
+    },
+    {
+      "round": 24,
+      "before": {
+        "round": 24,
+        "stepMs": 1676.9936839999646,
+        "stepCalls": 747,
+        "planMs": 1688.1365010000009,
+        "liveMs": 0.018159999999625143,
+        "commitMs": 0.5051210000019637,
+        "advanceMs": 44.50674300000537,
+        "longestBattleCallbackMs": 1687.6906099999978
+      },
+      "after": {
+        "round": 24,
+        "stepMs": 1798.542750000197,
+        "stepCalls": 747,
+        "planMs": 1824.841207000005,
+        "liveMs": 0.016482999999425374,
+        "commitMs": 0.4514749999943888,
+        "advanceMs": 45.79795100000047,
+        "longestBattleCallbackMs": 28.954782999993768
+      }
+    },
+    {
+      "round": 31,
+      "before": {
+        "round": 31,
+        "stepMs": 1102.3172160000322,
+        "stepCalls": 450,
+        "planMs": 1109.1938819999996,
+        "liveMs": 0.01117500000691507,
+        "commitMs": 0.4877970000015921,
+        "advanceMs": 31.61771900000167,
+        "longestBattleCallbackMs": 1109.1178900000014
+      },
+      "after": {
+        "round": 31,
+        "stepMs": 1325.9355850003776,
+        "stepCalls": 450,
+        "planMs": 1342.627279000386,
+        "liveMs": 0.015644999977666885,
+        "commitMs": 0.5333329999702983,
+        "advanceMs": 31.63087700001779,
+        "longestBattleCallbackMs": 28.857775000011316
+      }
+    }
+  ],
+  "otherSlowCallbacks": {
+    "before": {
+      "count": 345,
+      "maxMs": 1645.2676839999986,
+      "top10": [
+        {
+          "round": 30,
+          "phase": "frozen",
+          "ms": 1645.2676839999986
+        },
+        {
+          "round": 27,
+          "phase": "frozen",
+          "ms": 914.9277569999977
+        },
+        {
+          "round": 33,
+          "phase": "frozen",
+          "ms": 899.3621630000125
+        },
+        {
+          "round": 25,
+          "phase": "frozen",
+          "ms": 869.3866530000014
+        },
+        {
+          "round": 26,
+          "phase": "frozen",
+          "ms": 865.1611770000018
+        },
+        {
+          "round": 29,
+          "phase": "frozen",
+          "ms": 854.8439049999943
+        },
+        {
+          "round": 34,
+          "phase": "frozen",
+          "ms": 842.9076439999917
+        },
+        {
+          "round": 27,
+          "phase": "frozen",
+          "ms": 799.6072219999987
+        },
+        {
+          "round": 32,
+          "phase": "frozen",
+          "ms": 788.8587860000116
+        },
+        {
+          "round": 23,
+          "phase": "frozen",
+          "ms": 766.1965810000038
+        }
+      ]
+    },
+    "after": {
+      "count": 75,
+      "maxMs": 1966.1766400000197,
+      "top10": [
+        {
+          "round": 29,
+          "phase": "frozen",
+          "ms": 1966.1766400000197
+        },
+        {
+          "round": 25,
+          "phase": "frozen",
+          "ms": 1165.8799770000041
+        },
+        {
+          "round": 34,
+          "phase": "frozen",
+          "ms": 951.4677209999936
+        },
+        {
+          "round": 30,
+          "phase": "frozen",
+          "ms": 901.0183279999765
+        },
+        {
+          "round": 26,
+          "phase": "frozen",
+          "ms": 839.2980559999851
+        },
+        {
+          "round": 27,
+          "phase": "frozen",
+          "ms": 835.3883280000009
+        },
+        {
+          "round": 33,
+          "phase": "frozen",
+          "ms": 809.7494169999845
+        },
+        {
+          "round": 29,
+          "phase": "frozen",
+          "ms": 791.2766330000013
+        },
+        {
+          "round": 32,
+          "phase": "frozen",
+          "ms": 741.4731029999966
+        },
+        {
+          "round": 27,
+          "phase": "frozen",
+          "ms": 714.0257500000007
+        }
+      ]
+    }
+  }
+}

@@ -129,6 +129,8 @@ function equalViewField(a: unknown, b: unknown): boolean {
 }
 
 export interface CombatReplayRecorder {
+  /** Independent writer over the same immutable frames, for speculative sliced settlement. */
+  fork(): CombatReplayRecorder;
   readonly initial: CombatViewState;
   readonly initialFrame: CombatReplayTick;
   record(previousState: CombatState, step: import('./combat').CombatStep): CombatReplayTick;
@@ -144,40 +146,43 @@ export function createCombatReplayRecorder(initialState: CombatState,
   const firstStepEventSeq = initialState.nextEventSeq ?? 0;
   const ticks: CombatReplayTick[] = [freezeReplay({ tick: 0,
     events: toCombatViewEvents(initialEvents.filter(event => event.eventSeq < firstStepEventSeq)) })];
-  let previous = initial, result: CombatReplay | null = null;
-  return {
-    initial, initialFrame: ticks[0],
-    record(previousState, next) {
-      if (result || previous.status !== 'running' || previousState.combatId !== initial.combatId
-        || next.state.combatId !== initial.combatId || previousState.tick !== previous.tick
-        || next.state.tick !== previous.tick + 1 || next.state.tick > 1200) throw new RangeError('replay-divergence');
-      // Whitelists detach nested mutable fields before freezing this tick.
-      const view = freezeReplay(combatViewState(next.state));
-      const events: CombatViewEvent[] = toCombatViewEvents(toLedgerEvents(next.events));
-      const sameMembers = view.units.length === previous.units.length && view.units.every((u, i) => u.id === previous.units[i].id);
-      // Align by identity; a keyframe below carries the exact order when the membership events cannot.
-      const before = sameMembers ? previous.units : alignReplayUnits(previous.units, view.units, events);
-      const ordered = sameMembers || replayOrderFollowsMembership(previous.units, view.units);
-      for (let i = 0; i < view.units.length; i++) {
-        const unit = view.units[i], prior = before[i];
-        if (!prior) continue;
-        const changes = Object.fromEntries(Object.entries(unit).filter(([key, value]) => key !== 'id'
-          && !equalViewField(value, prior[key as keyof CombatViewUnit])));
-        if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
-      }
-      ticks.push(freezeReplay({ tick: next.state.tick, events,
-        ...(!ordered || next.state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || next.state.status === 'finished' ? { keyframe: view } : {}) }));
-      previous = view;
-      return ticks[ticks.length - 1];
-    },
-    finish(terminalState) {
-      if (terminalState.status !== 'finished' || terminalState.tick < 0 || terminalState.tick > 1200)
-        throw new RangeError('invalid-replay-input');
-      const terminal = freezeReplay(combatViewState(terminalState));
-      if (canonicalContent(previous) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
-      return result ??= freezeReplay({ initial, ticks, terminal });
-    },
-  };
+  return branch(initial, ticks, null);
+  function branch(previous: CombatViewState, ticks: CombatReplayTick[], result: CombatReplay | null): CombatReplayRecorder {
+    return {
+      fork: () => branch(previous, [...ticks], result),
+      initial, initialFrame: ticks[0],
+      record(previousState, next) {
+        if (result || previous.status !== 'running' || previousState.combatId !== initial.combatId
+          || next.state.combatId !== initial.combatId || previousState.tick !== previous.tick
+          || next.state.tick !== previous.tick + 1 || next.state.tick > 1200) throw new RangeError('replay-divergence');
+        // Whitelists detach nested mutable fields before freezing this tick.
+        const view = freezeReplay(combatViewState(next.state));
+        const events: CombatViewEvent[] = toCombatViewEvents(toLedgerEvents(next.events));
+        const sameMembers = view.units.length === previous.units.length && view.units.every((u, i) => u.id === previous.units[i].id);
+        // Align by identity; a keyframe below carries the exact order when the membership events cannot.
+        const before = sameMembers ? previous.units : alignReplayUnits(previous.units, view.units, events);
+        const ordered = sameMembers || replayOrderFollowsMembership(previous.units, view.units);
+        for (let i = 0; i < view.units.length; i++) {
+          const unit = view.units[i], prior = before[i];
+          if (!prior) continue;
+          const changes = Object.fromEntries(Object.entries(unit).filter(([key, value]) => key !== 'id'
+            && !equalViewField(value, prior[key as keyof CombatViewUnit])));
+          if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
+        }
+        ticks.push(freezeReplay({ tick: next.state.tick, events,
+          ...(!ordered || next.state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || next.state.status === 'finished' ? { keyframe: view } : {}) }));
+        previous = view;
+        return ticks[ticks.length - 1];
+      },
+      finish(terminalState) {
+        if (terminalState.status !== 'finished' || terminalState.tick < 0 || terminalState.tick > 1200)
+          throw new RangeError('invalid-replay-input');
+        const terminal = freezeReplay(combatViewState(terminalState));
+        if (canonicalContent(previous) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
+        return result ??= freezeReplay({ initial, ticks, terminal });
+      },
+    };
+  }
 }
 
 /** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
