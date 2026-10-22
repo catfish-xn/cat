@@ -22,6 +22,8 @@ export interface StoredAsset { readonly key: string; readonly sha256: string | n
 export interface AssetStore {
   readonly persistent: boolean;
   get(key: string): Promise<StoredAsset | undefined>;
+  /** Existing keys and their stored hashes, without retaining blobs. Missing records are omitted. */
+  hashes(keys: readonly string[]): Promise<Map<string, string | null>>;
   put(asset: StoredAsset): Promise<void>;
   delete(key: string): Promise<void>;
   keys(): Promise<string[]>;
@@ -49,6 +51,8 @@ const MAX_FILES = 20000;
  * size, so a deeper pipeline matters more than bandwidth for ~2,300 small files; 12 stays under browser per-host limits on HTTP/2. */
 export const PRELOAD_CONCURRENCY = 12;
 export const PRELOAD_RETRIES = 3;
+/** Bound the number of blob records cloned by a warm-cache transaction; yield between batches for reads. */
+export const CACHE_CHECK_BATCH_SIZE = 128;
 
 /** Validates precache.json; anything unreadable falls back to the manifest's model and effect paths (unversioned). */
 export function readPrecacheList(value: unknown, manifest: AssetManifest): PrecacheList {
@@ -129,6 +133,7 @@ export class AssetPreloader {
   private readonly ready = new Map<string, Blob | null>(); // null: stored, read back from the store on demand
   private readonly jobs = new Map<string, Job>();
   private readonly queue: Job[] = [];
+  private readonly requestedPaths = new Set<string>();
   private readonly listeners = new Set<(progress: PreloadProgress) => void>();
   private readonly abort = new AbortController();
   private readonly fetcher: typeof fetch;
@@ -169,21 +174,31 @@ export class AssetPreloader {
   async start(): Promise<PreloadProgress> {
     const now = this.options.now ?? (() => performance.now());
     this.startedAt = now();
-    const keep = new Set<string>();
+    const keep = new Set([...this.files.keys()].map(path => this.key(path)));
+    // A cold cache needs just this transaction, not one empty get per manifest entry.
+    const keys = await this.store.keys().catch(() => null);
+    if (this.disposed) return this.progress;
+    const existing = keys === null ? null : new Set(keys);
+    const cached = [...keep].filter(key => existing === null || existing.has(key));
+    const hashes = new Map<string, string | null>();
+    for (let i = 0; i < cached.length; i += CACHE_CHECK_BATCH_SIZE) {
+      const batch = await this.store.hashes(cached.slice(i, i + CACHE_CHECK_BATCH_SIZE)).catch(() => new Map<string, string | null>());
+      if (this.disposed) return this.progress;
+      for (const [key, hash] of batch) hashes.set(key, hash);
+    }
     for (const file of this.files.values()) {
       const key = this.key(file.path);
-      keep.add(key);
-      const stored = await this.store.get(key).catch(() => undefined);
-      if (this.disposed) return this.progress;
-      if (stored && (file.sha256 === null || stored.sha256 === file.sha256)) this.markReady(file, null);
+      // A foreground read may have completed while the inventory was being checked.
+      if (this.ready.has(file.path)) continue;
+      if (hashes.has(key) && (file.sha256 === null || hashes.get(key) === file.sha256)) this.markReady(file, null);
       else if (!this.jobs.has(file.path)) this.enqueue(file);
     }
     const prefix = `${this.root}|`;
-    for (const key of await this.store.keys().catch(() => [] as string[])) {
+    for (const key of keys ?? []) {
       if (key.startsWith(prefix) && !keep.has(key)) await this.store.delete(key).catch(() => undefined);
     }
     if (this.disposed) return this.progress;
-    this.state = this.queue.length ? 'downloading' : 'done';
+    this.state = this.jobs.size ? 'downloading' : 'done';
     if (this.state === 'done') this.elapsedMs = now() - this.startedAt;
     this.emit();
     if (this.queue.length && this.options.packs?.length) {
@@ -193,6 +208,8 @@ export class AssetPreloader {
     }
     const workers = Array.from({ length: Math.max(1, this.options.concurrency ?? PRELOAD_CONCURRENCY) }, () => this.work());
     await Promise.all(workers);
+    // Foreground reads can be running independently of both the queue and packs.
+    await Promise.allSettled([...this.jobs.values()].map(job => job.promise));
     if (!this.disposed) { this.state = this.failed ? 'partial' : 'done'; this.elapsedMs ??= now() - this.startedAt; this.emit(); }
     return this.progress;
   }
@@ -201,6 +218,8 @@ export class AssetPreloader {
   async read(path: string): Promise<Blob> {
     const file = this.files.get(path);
     if (file) {
+      // Record demand before the async lookup: a fast inventory may fill/start the queue meanwhile.
+      this.requestedPaths.add(path);
       const memory = this.ready.get(path);
       if (memory) return memory;
       // Also covers a read before start() has checked this file.
@@ -211,8 +230,8 @@ export class AssetPreloader {
     if (job) {
       if (!job.started) {
         this.queue.splice(this.queue.indexOf(job), 1);
-        // The board needs it now: during packs (or once the queue has drained) fetch it alone rather than wait.
-        if (this.packing || this.state === 'done' || this.state === 'partial') void this.runJob(job);
+        // The board needs it now: checking and packs must not block a foreground file.
+        if (this.state === 'checking' || this.packing || this.state === 'done' || this.state === 'partial') void this.runJob(job);
         else this.queue.unshift(job);
       }
       try { return await job.promise; } catch { /* fall through to one plain network read */ }
@@ -227,7 +246,8 @@ export class AssetPreloader {
     const promise = new Promise<Blob>((done, fail) => { resolve = done; reject = fail; });
     promise.catch(() => undefined);
     const job: Job = { file, promise, resolve, reject, started: false };
-    this.jobs.set(file.path, job); this.queue.push(job);
+    this.jobs.set(file.path, job);
+    if (this.requestedPaths.has(file.path)) this.queue.unshift(job); else this.queue.push(job);
     return job;
   }
   private markReady(file: PrecacheFile, blob: Blob | null): void {
@@ -354,6 +374,19 @@ export function openIndexedDbStore(name = 'cat-assets3d'): Promise<AssetStore> {
       resolve({
         persistent: true,
         get: key => run('readonly', files => files.get(key) as IDBRequest<StoredAsset | undefined>),
+        hashes: keys => new Promise((done, fail) => {
+          const hashes = new Map<string, string | null>();
+          if (!keys.length) { done(hashes); return; }
+          const transaction = db.transaction('files', 'readonly'), files = transaction.objectStore('files');
+          // Queue synchronously in ONE transaction. Keep only hashes, not the cloned Blob handles.
+          for (const key of keys) {
+            const call = files.get(key) as IDBRequest<StoredAsset | undefined>;
+            call.onsuccess = () => { if (call.result) hashes.set(key, call.result.sha256); };
+          }
+          transaction.oncomplete = () => done(hashes);
+          transaction.onerror = () => fail(transaction.error);
+          transaction.onabort = () => fail(transaction.error ?? new Error('indexeddb-abort'));
+        }),
         put: async asset => { await run('readwrite', files => files.put(asset)); },
         delete: async key => { await run('readwrite', files => files.delete(key)); },
         keys: async () => (await run('readonly', files => files.getAllKeys())).map(String),
@@ -373,6 +406,7 @@ export function memoryStore(): AssetStore {
   return {
     persistent: false,
     get: async key => files.get(key),
+    hashes: async keys => new Map(keys.filter(key => files.has(key)).map(key => [key, files.get(key)!.sha256])),
     put: async asset => { files.set(asset.key, asset); },
     delete: async key => { files.delete(key); },
     keys: async () => [...files.keys()],
