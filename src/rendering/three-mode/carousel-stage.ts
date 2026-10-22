@@ -71,10 +71,12 @@ const ITEM_SIZE = 18, STAR_SIZE = 12, STAR_GAP = 12;
 /** Half the width of a ring unit's click box, in cells (a full cell is 0.5). */
 const PICK_HALF_WIDTH = 0.65;
 /**
- * Carousel champions stand this much larger than on the board (their body, feet rings, stars, items and pick box), as
- * TFT draws them on the draft ring (playtest 10-22: the units looked tiny once the arena filled the view).
+ * Carousel champions stand this much larger than on the board (their body, stars, items and pick box), so each draft
+ * unit reads at a glance (playtest 10-22: "make the pieces bigger, easier to tell apart").
  */
-const UNIT_SIZE = 1.35;
+const UNIT_SIZE = 1.7;
+/** Their feet rings grow less: on the ring's 9 places (UNIT_RADIUS) larger rings would run into each other. */
+const RING_SIZE = 1.35;
 /**
  * Legend motion, display only (cells, seconds): every legend runs for its unit at RUN_CELLS a second (another seat's too,
  * so the scramble can be watched even when the room picked for it at once); a legend with its unit walks home at
@@ -499,10 +501,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const body = new Mesh(geometry.pawn, materials.pawn); body.position.y = 17;
     const head = new Mesh(geometry.head, materials.pawn); head.position.y = 42;
     pawn.add(body, head); root.add(fit(pawn, ctx.championHeight * 0.6)); root.scale.setScalar(UNIT_SIZE);
-    const ring = new Mesh(geometry.ring, materials.ring.takable); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5; ring.visible = false; ring.scale.setScalar(UNIT_SIZE);
+    const ring = new Mesh(geometry.ring, materials.ring.takable); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5; ring.visible = false; ring.scale.setScalar(RING_SIZE);
     // The cost always shows as a plain colored ring, whether or not the tier effect below loads or reads clearly.
     const costRing = data.cost ? new Mesh(geometry.cost, costMaterial(data.cost)) : null;
-    if (costRing) { costRing.name = 'render3d-carousel-cost'; costRing.rotation.x = -Math.PI / 2; costRing.position.y = 0.4; costRing.scale.setScalar(UNIT_SIZE); }
+    if (costRing) { costRing.name = 'render3d-carousel-cost'; costRing.rotation.x = -Math.PI / 2; costRing.position.y = 0.4; costRing.scale.setScalar(RING_SIZE); }
     const stars = createStarMark({ effectiveStarLevel: data.starLevel, colorFor: ctx.starColor });
     stars.object.scale.setScalar(STAR_SIZE); stars.object.position.y = ctx.championHeight * UNIT_SIZE + STAR_GAP;
     holder.add(root, ring, stars.object); if (costRing) holder.add(costRing);
