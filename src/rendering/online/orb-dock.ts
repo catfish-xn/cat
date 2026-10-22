@@ -115,7 +115,6 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
 }
 
-/** Renders into the board-frame mount; one instance per scene. */
 /** Where the orb came from, for its label and hover card. */
 export function orbSourceText(orb: Pick<UnclaimedOrbView, 'source' | 'roundId'>): string {
   return orb.source === 'mechanic' ? '奖励法球' : orb.source === 'family' ? '家人搞钱奖励' : `${orb.roundId} 野怪掉落`;
@@ -129,6 +128,7 @@ export function orbOverflowHint(orb: Pick<UnclaimedOrbView, 'source' | 'entries'
   return orb.source === 'family' ? '备战席放不下的英雄留在法球里，腾出位置后可再领取' : '备战席放不下的英雄按原售价自动出售';
 }
 
+/** Renders into the board-frame mount; one instance per scene. */
 export class OrbDock {
   private key = '';
   /** Receipt ids already shown; null until the first state is seen, so a reload or a resume does not replay old results. */
