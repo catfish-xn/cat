@@ -607,6 +607,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const current = room;
     if (!current || session.roomId !== current.state.roomId) return send(conn, fail(commandId, 'no-room'));
     if (message.roomId !== current.state.roomId) return send(conn, fail(commandId, 'wrong-room'));
+    if (current.deferDuringSettlement(() => queue.push(() => { if (conn.open) handleCommand(conn, message); }))) return;
     deduped(conn, session, message, () => {
       const state = current.state;
       const seat = state.seats.find(candidate => candidate.seatId === session.seatId);

@@ -1897,3 +1897,11 @@ runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchC
 共享房间布局仅冻结载体与早期颜色，5-7/6-7为epic-reward占位；每席显式loot种子扩展为3或4颗冻结法球，顺序为成装锻造器/可选神器锻造器/铜箱/银箱，冠冕变体为冠冕/银箱/银箱。只有载体死亡才揭示，隐藏计划不投影。铜箱gray、银箱blue，锻造器/冠冕gold；一组一颗，箱内多条entry保持冻结顺序。两席共享早期颜色不共享箱内内容或随机游标。
 
 联机沿用claimOrb，不在揭示或结算时直接发英雄。铜/银箱对应费用的已上线英雄池独立抽1星，银箱双英雄独立可重复，不直接产2星。缺货折费用金币，满席折getUnitSellPrice；金币/工具/锻造器领取收据与英雄收据同一事务。锻造器领取后进入既有四选一forge，selectChoice成功才有装备出生；重连和重试复用唯一收据。复制器使用时先检查真实备战席空位，成功后创建机制英雄法球，领取时才扣共享池。旧版本存档和快照被v16严格拒绝，不迁移；schema7/save3/replay3/command4、netProtocol目标4不再递增。
+
+## 结算补算切片（2026-10-22，服务器调度补充）
+
+战斗截止后的过期预结算补算、PvE live-bank 尾部补算复用 `RoomOptions.sliceTicks` / `sliceMs`（服务器默认 20 ms）。可选 `sliceNow?: () => number` 仅替换预算计时源，默认 `clock.now()`；无头探针可用真实 `performance.now` 计预算、虚拟 clock 驱动阶段期限，不向领域注入时钟。每个不可分割工作单元至多一个共享池 `step`，PvP 收据按席位切开；每单元后检查预算，通过房间 clock 的下一次回调续算。席位、共享池、事件和 RNG 的调用顺序不变，最终一次 `commitSettlement`，不得发布部分结算。`planSettlement(results, resolverPool?): PlanResult` 同步接口保留，和切片入口共用相同生成器，不新增规则或失败原因。
+
+新增服务器公共方法 `Room.deferDuringSettlement(command: () => void): boolean`：正在结算补算时保留回调并返回 `true`，否则返回 `false` 且不执行回调。网络层在解析、限流、身份和 roomId 检查后、dedupe/round/seatRevision 检查前调用；结算完成后按到达顺序重新通过原命令入口，重新检查连接代次、身份、轮号、席位版本和 commandId。期间不返回“已执行”收据；结算引起的版本变化仍按原合同拒绝，不改参数、不自动重试规则命令。已断开的连接不再执行等待命令。终局/故障后也释放等待回调，由原入口返回当时有效的失败；dispose 丢弃等待回调并取消续算计时器。
+
+传输解析、心跳和重连仍可在切片间处理。无规则变更，无 schema/content/replay digest 或 wire 字段变更；`retained.resolving` 同时反映战斗解析与结算补算。性能证据、复现命令和剩余限制见 [结算性能定位](SETTLEMENT_SLICES_PERFORMANCE.md)。

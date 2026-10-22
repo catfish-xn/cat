@@ -76,6 +76,8 @@ export interface RoomOptions extends RoomTimings {
    * a result; a clock that does not move during a slice (test clocks) gives exactly the `sliceTicks` slices.
    */
   readonly sliceMs?: number;
+  /** Optional monotonic budget clock; defaults to clock.now. Lets headless probes measure CPU with virtual phase timers. */
+  readonly sliceNow?: () => number;
   /** G1-P6: how recent opponents are avoided; DEFAULT_PAIRING_POLICY (placeholder, S13_RULES_GAP §10) when omitted. */
   readonly pairingPolicy?: PairingPolicy;
   /**
@@ -219,6 +221,19 @@ export class Room {
   private current: RoomState;
   private timer: ClockHandle | null = null;
   private pendingSettlement: RoundSettlement | null = null;
+  private settlementWork: Generator<void, void, void> | null = null;
+  private readonly settlementCommands: (() => void)[] = [];
+
+  /** The network has already parsed/rate-limited this command. Preserve arrival order across settlement slices. */
+  deferDuringSettlement(command: () => void): boolean {
+    if (!this.settlementWork) return false;
+    this.settlementCommands.push(command);
+    return true;
+  }
+
+  private flushSettlementCommands(): void {
+    for (const command of this.settlementCommands.splice(0)) command();
+  }
   /** Envelopes frozen at the preparation deadline of the current round; results are checked against them (§11.3 item 2). */
   private frozenInputs: readonly BattleInput[] = [];
   /** Unpublished pool the current round's battles chained through (§12.4); published only with the round. */
@@ -334,10 +349,11 @@ export class Room {
     this.noticeListeners.clear();
     this.legendWalks.dispose();
     this.releaseRound();
+    this.settlementCommands.length = 0;
   }
   get retained(): RoomRetained {
     return { timers: (this.timer === null ? 0 : 1) + (this.liveTimer === null ? 0 : 1) + this.legendWalks.pendingArrivals, listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
-      resolving: this.resolution !== null };
+      resolving: this.resolution !== null || this.settlementWork !== null };
   }
 
   /** waiting → first round. */
@@ -505,6 +521,10 @@ export class Room {
 
   /** planSettlement on a given room state: the published one, or the battle-entry state about to be published. */
   private plan(state: RoomState, results: readonly BattleResult[], resolverPool: SharedPoolState, untouched: boolean): PlanResult {
+    return drainWork(this.planSteps(state, results, resolverPool, untouched));
+  }
+
+  private *planSteps(state: RoomState, results: readonly BattleResult[], resolverPool: SharedPoolState, untouched: boolean): Generator<void, PlanResult, void> {
     const alive = state.seats.filter(seat => seat.alive);
     const byId = new Map(state.seats.map(seat => [seat.seatId, seat] as const));
     const envelopes = new Map(this.frozenInputs.map(input => [input.battleId, input] as const));
@@ -555,6 +575,7 @@ export class Room {
       const settled = (match: MatchState, damage: number, receipt: RoundSettlementReceipt | null, events: readonly MatchEvent[]): SettledSeat =>
         ({ seatId: seat.seatId, hpBefore: seat.hp, damage, hpAfterRaw: seat.hp - damage, hpAfter: Math.max(0, seat.hp - damage), match, receipt, events });
       if (job.kind === 'receipt') {
+        yield;
         const applied = runSharedMatchCommand(pool, seat.match, { type: 'settleRound', receipt: job.receipt });
         if (!applied.ok) return { ok: false, detail: `seat ${seat.seatId}: ${applied.reason}` };
         if (applied.state.playerHp !== Math.max(0, seat.hp - job.damage)) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${applied.state.playerHp} disagrees with the room HP ${seat.hp} - ${job.damage}` };
@@ -570,7 +591,7 @@ export class Room {
       if (untouched) { seats.push(settled(outcome.state, outcome.damage, null, [])); continue; }
       if (seat.match.phase === 'combat') {
         if (!settledByRules) return { ok: false, detail: `seat ${seat.seatId}: an unsettled placeholder outcome cannot settle a live battle` };
-        const finished = finishLiveCombat(pool, seat.match);
+        const finished = yield* finishLiveCombatSteps(pool, seat.match);
         if (!finished.ok) return { ok: false, detail: `seat ${seat.seatId}: ${finished.reason}` };
         if (finished.state.playerHp !== expected) return { ok: false, detail: `seat ${seat.seatId}: live HP ${finished.state.playerHp} disagrees with the resolved battle ${seat.hp} - ${outcome.damage}` };
         pool = finished.pool; seats.push(settled(finished.state, outcome.damage, null, finished.events));
@@ -1060,12 +1081,12 @@ export class Room {
   private advanceSlice(job: BattleJob): BattleResult | null {
     const ticks = this.options.sliceTicks ?? Number.POSITIVE_INFINITY, budgetMs = this.options.sliceMs;
     if (budgetMs === undefined) return job.advance(ticks);
-    const clock = this.options.clock, deadline = clock.now() + budgetMs;
+    const now = this.options.sliceNow ?? (() => this.options.clock.now()), deadline = now() + budgetMs;
     for (let spent = 0; ;) {
       const step = Math.min(SLICE_STEP_TICKS, ticks - spent);
       const result = job.advance(step);
       spent += step;
-      if (result || spent >= ticks || clock.now() >= deadline) return result;
+      if (result || spent >= ticks || now() >= deadline) return result;
     }
   }
 
@@ -1198,7 +1219,7 @@ export class Room {
    * can still change its gold); PvE live combats are finished now (nothing can operate on them in between) and
    * replace their frozen outcome when they differ. Returns true while the settlement must wait.
    */
-  private settleLive(): boolean {
+  private *settleLiveSteps(): Generator<void, boolean, void> {
     if ([...this.livePvp.values()].some(track => !track.result)) {
       this.awaitingLive = true;
       this.replace({ ...this.current, deadlineAt: (this.battleStartedAt ?? 0) + 1201 * this.tickMs + this.options.battleTailMs });
@@ -1211,10 +1232,14 @@ export class Room {
       if (!seat.alive || !frozen || seat.match.roundResults.at(-1)?.round !== this.current.round && seat.match.phase !== 'combat') continue;
       let settled = seat.match;
       if (settled.phase === 'combat') {
-        const finished = track.catchUp(this.current.pool, settled, Number.MAX_SAFE_INTEGER);
-        track.commit(finished.steps);
-        this.commitSeat(seatId, finished.state, finished.pool);
-        settled = finished.state;
+        let pool = this.current.pool;
+        while (settled.phase === 'combat') {
+          yield;
+          const finished = track.catchUp(pool, settled, settled.combat!.tick + 1);
+          track.commit(finished.steps);
+          pool = finished.pool; settled = finished.state;
+        }
+        this.commitSeat(seatId, settled, pool);
       }
       const outcome = track.outcome(settled, settled.combat!, frozen);
       if (!outcome) continue;
@@ -1267,7 +1292,37 @@ export class Room {
 
   /** Battle deadline: publish the staged round, then decide what follows (§11.3 item 5). */
   private commitPending(): void {
-    try { if (this.settleLive()) return; }
+    if (this.settlementWork) return;
+    this.settlementWork = this.commitPendingSteps();
+    this.runSettlementSlice();
+  }
+
+  private runSettlementSlice(): void {
+    const work = this.settlementWork;
+    if (this.disposed || !work) return;
+    const clock = this.options.clock, now = this.options.sliceNow ?? (() => clock.now());
+    const deadline = this.options.sliceMs === undefined ? Infinity : now() + this.options.sliceMs;
+    const limit = this.options.sliceTicks ?? Infinity;
+    try {
+      for (let steps = 0; ; steps++) {
+        if (work.next().done) {
+          // An ended/faulted room may already have released the generator.
+          this.settlementWork = null;
+          this.flushSettlementCommands();
+          return;
+        }
+        if (this.settlementWork !== work) return;
+        if (steps + 1 >= limit || now() >= deadline) break;
+      }
+    } catch (error) {
+      this.failLive(`${this.current.roomId}:r${this.current.round}`, error);
+      return;
+    }
+    this.timer = clock.schedule(clock.now(), () => { this.timer = null; this.runSettlementSlice(); });
+  }
+
+  private *commitPendingSteps(): Generator<void, void, void> {
+    try { if (yield* this.settleLiveSteps()) return; }
     catch (error) { return this.failLive(`${this.current.roomId}:r${this.current.round}`, error); }
     const settlement = this.pendingSettlement;
     // D11 live bank: a live run replaced published battles, so the round settles those, never the staged ones.
@@ -1277,8 +1332,9 @@ export class Room {
     if (settlement && !this.current.settlements.includes(settlement.settlementId)) {
       let commit: CommitResult = replaced ? { ok: false, reason: 'stale-seat', state: this.current } : this.commitSettlement(settlement);
       // Operations during the battle changed live seats: settle again on the latest states (§15.2), never on the staged ones.
-      if (!commit.ok && commit.reason === 'stale-seat') {
-        const plan = this.planSettlement(replaced ? this.current.battles : settlement.results);
+      while (!commit.ok && commit.reason === 'stale-seat') {
+        const plan = yield* this.planSteps(this.current, replaced ? this.current.battles : settlement.results,
+          this.resolvedPool ?? this.current.pool, this.untouchedSinceFreeze());
         if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
         commit = this.commitSettlement(plan.settlement);
       }
@@ -1334,6 +1390,7 @@ export class Room {
     this.releaseRound();
     this.replace({ ...this.current, fault });
     this.setPhase('ended', null);
+    this.flushSettlementCommands();
   }
 
   private setPhase(phase: RoomPhase, durationMs: number | null): void {
@@ -1351,7 +1408,7 @@ export class Room {
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
   }
   /** Forgets the current round's frozen envelopes, the resolution in progress and the staged settlement. */
-  private releaseRound(): void { this.clearLive(); this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
+  private releaseRound(): void { this.settlementWork = null; this.clearLive(); this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */
@@ -1376,12 +1433,13 @@ export class Room {
 }
 
 /** Finishes a live PvE battle with the rules' shared `step` on the latest pool; the seat leaves `combat` settled by the rules. */
-function finishLiveCombat(pool: SharedPoolState, state: MatchState):
-  { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] } | { readonly ok: false; readonly reason: string } {
+function* finishLiveCombatSteps(pool: SharedPoolState, state: MatchState): Generator<void,
+  { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] } | { readonly ok: false; readonly reason: string }, void> {
   let current = state, latest = pool;
   const events: MatchEvent[] = [];
   for (let steps = 0; current.phase === 'combat'; steps++) {
     if (steps >= LIVE_COMBAT_MAX_STEPS) return { ok: false, reason: 'live-combat-steps-exhausted' };
+    yield;
     const step = runSharedMatchCommand(latest, current, { type: 'step' });
     if (!step.ok) return { ok: false, reason: step.reason };
     current = step.state; latest = step.pool;
@@ -1430,4 +1488,9 @@ function buildReceipt(roomId: string, envelope: BattleInput, proposal: SidePropo
 function boxed(point: CellPoint): CellPoint {
   const limit = (value: number) => Math.min(BOARD_WALK_LIMIT, Math.max(-BOARD_WALK_LIMIT, Number.isFinite(value) ? value : 0));
   return { x: limit(point.x), y: limit(point.y) };
+}
+
+/** The public synchronous planning API shares exactly the sliced computation. */
+function drainWork<T>(work: Generator<void, T, void>): T {
+  for (;;) { const next = work.next(); if (next.done) return next.value; }
 }
