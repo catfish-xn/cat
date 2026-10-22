@@ -11,7 +11,7 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { fitModel } from './model-fit';
+import { fitModel, type Envelope } from './model-fit';
 import { legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
 
@@ -82,6 +82,8 @@ export interface ScoutStageContext {
   readonly loadModel: ((id: string) => Promise<ModelLease>) | null;
   /** The asset root's official scale for a champion model (model-fit.ts), null when it has none. */
   readonly unitScale?: (id: string) => number | null;
+  /** The board's animation envelope for an official-scale model (model-fit.ts): width cap and idle feet; undefined if none. */
+  readonly envelope?: (id: string, lease: ModelLease) => Envelope | undefined;
   /** League source units → board units for a scaled champion (the board's FX_SCALE). */
   readonly sourceScale?: number;
   /** Legend model to load for a seat's legend (falls back to the default, see legend-load), null without legend assets. */
@@ -147,7 +149,11 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       if (piece.disposed || lease.placeholder) { lease.release(); return; }
       body.removeFromParent(); piece.lease = lease;
       const unitScale = drawn ? ctx.unitScale?.(model) ?? null : null;
-      if (unitScale && ctx.sourceScale) { piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale }); root.add(lease.scene); drawn!(piece.height); }
+      if (unitScale && ctx.sourceScale) {
+        const envelope = ctx.envelope?.(model, lease);
+        piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground });
+        root.add(lease.scene); drawn!(piece.height);
+      }
       else root.add(fit(lease.scene, height, width));
       piece.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       piece.mixer.apply(piece.state.output);

@@ -31,7 +31,7 @@ import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelopeRadius, animationEnvelopeRadiusSliced, fitModel, readUnitScale } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelopeRadius, animationEnvelopeRadiusSliced, animationGround, animationGroundSliced, fitModel, readUnitScale, type Envelope } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
@@ -323,17 +323,27 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Animation envelope per model id (model-fit.ts), shared by the warm-up (measured in idle slices) and mounting.
   const envelopes = new Map<string, number>();
+  /** The idle's lowest point per model id (model-fit.ts animationGround), measured with its envelope; null = bind box. */
+  const grounds = new Map<string, number | null>();
   const envelopeClips = (lease: ModelLease) => {
     const nameOf = (action: string) => lease.animationNames[action as keyof typeof lease.animationNames] ?? action;
     const names = new Set(ENVELOPE_ACTIONS.map(nameOf));
     return lease.animations.filter(clip => names.has(clip.name))
       .map(clip => ({ clip, loop: ENVELOPE_ACTIONS.some(action => LOOPING_ACTIONS.has(action) && nameOf(action) === clip.name) }));
   };
+  /** The standing clip alone, marked as the one the feet are measured on. */
+  const groundClips = (lease: ModelLease) => {
+    const idle = lease.animationNames.idle ?? 'idle';
+    return lease.animations.filter(clip => clip.name === idle).map(clip => ({ clip, loop: true, ground: true }));
+  };
   const prepareEnvelope = async (id: string, lease: ModelLease): Promise<boolean> => {
     if (envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
-    const radius = await animationEnvelopeRadiusSliced(lease.scene, envelopeClips(lease), { budgetMs: 3, stop: () => closed || !!fighting });
+    const stop = () => closed || !!fighting;
+    const radius = await animationEnvelopeRadiusSliced(lease.scene, envelopeClips(lease), { budgetMs: 3, stop });
     if (radius === null) return false;
-    if (!envelopes.has(id)) envelopes.set(id, radius);
+    const ground = grounds.has(id) ? grounds.get(id)! : await animationGroundSliced(lease.scene, groundClips(lease), { budgetMs: 3, stop });
+    if (ground === undefined) return false;
+    if (!envelopes.has(id)) { envelopes.set(id, radius); grounds.set(id, ground); }
     return true;
   };
   const warmup = models.cache ? createModelWarmup({ load: id => models.cache!.load(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
@@ -365,7 +375,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
     loadModel: models.cache ? id => models.cache!.load(id) : null, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
-    unitScale: id => readUnitScale(models.cache?.manifest.models, id),
+    unitScale: id => readUnitScale(models.cache?.manifest.models, id), envelope: (id, lease) => envelopeOf(id, lease),
     loadEffect, starColor: level => starColorFor(level), costColor: cost => costColorFor?.(cost) ?? '#9aa4ae', onReleased: () => flashCallout('可以选了') });
   // One line flashed low in the middle of the 3D view (my carousel release); made on first use, removed with the renderer.
   let callout: HTMLElement | null = null, calloutTimer: ReturnType<typeof setTimeout> | undefined;
@@ -547,7 +557,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // 3D 看对手 (scout-stage.ts): another seat's public build on this board while board-feed carries one; my pieces,
   // surroundings and effects are hidden meanwhile and the board takes no input.
   const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
-    unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: FX_SCALE,
+    unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: FX_SCALE, envelope: (id, lease) => envelopeOf(id, lease),
     loadModel: models.cache ? id => models.cache!.load(id) : null, legendModel: legend => {
       if (!models.cache || !Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL)) return null;
       const id = legend ? `little-legend-${legend}` : LEGEND_MODEL;
@@ -567,12 +577,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /** Animation envelope radius per model id (unscaled source units), measured on its first lease. */
   /** Models first seen during a shown combat: drawn from their bind box, measured and re-attached at the next preparation. */
   const envelopePending = new Set<string>();
-  const envelopeOf = (id: string, lease: ModelLease): number | undefined => {
+  const envelopeOf = (id: string, lease: ModelLease): Envelope | undefined => {
     let radius = envelopes.get(id);
     if (radius === undefined && fighting) { envelopePending.add(id); return undefined; } // no long task mid-combat
     // Not warmed yet (the warm-up measures in slices ahead of time): measured now, at once.
     if (radius === undefined) { radius = animationEnvelopeRadius(lease.scene, envelopeClips(lease)); envelopes.set(id, radius); }
-    return radius;
+    if (!grounds.has(id)) grounds.set(id, animationGround(lease.scene, groundClips(lease)));
+    return { radius, ground: grounds.get(id) ?? null };
   };
   const attachBody = (view: PieceView) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
@@ -606,8 +617,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // Official scale when the asset root has it (short champions stay short); the stars and bars follow the drawn height.
         const before = Math.abs(lease.scene.scale.x) || 1;
         // With an official scale the width cap covers everything the clips reach (measured once per model).
-        const envelopeRadius = unitScale ? envelopeOf(definitionId, lease) : undefined;
-        const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale, envelopeRadius });
+        // ... and its feet on the idle's lowest point (a bind pose can stand far below it: Darius, Nami floated).
+        const envelope = unitScale ? envelopeOf(definitionId, lease) : undefined;
+        const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale,
+          envelopeRadius: envelope?.radius, ground: envelope?.ground });
         view.body = lease.scene;
         // Without an official scale the stars, bars and hit volume keep the old fixed baseline (older roots unchanged).
         view.starHeight = (unitScale ? drawn : MODEL_HEIGHT) + STAR_GAP;

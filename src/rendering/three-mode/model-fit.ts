@@ -26,7 +26,14 @@ const ENVELOPE_QUANTILE = 0.98;
 export const ENVELOPE_ACTIONS = ['idle', 'move', 'attack', 'hit'] as const;
 /** Of those, the ones that loop (sampled at distinct times; the others play once and keep their last frame). */
 export const LOOPING_ACTIONS: ReadonlySet<string> = new Set(['idle', 'move']);
-export interface EnvelopeClip { readonly clip: AnimationClip; readonly loop: boolean }
+/** `ground`: the clip a piece stands in (idle); its lowest point is where the feet go. */
+export interface EnvelopeClip { readonly clip: AnimationClip; readonly loop: boolean; readonly ground?: boolean }
+/**
+ * What the clips reach: `radius` from the upright axis (the width cap), and `ground`, the lowest point of the standing
+ * clip over its samples (null without one), in the same units. A bind pose can stand far below the idle (Darius,
+ * Nami): grounding on the bind box left those pieces floating above their cell.
+ */
+export interface Envelope { readonly radius: number; readonly ground: number | null }
 
 /** Vertices read between time checks in the sliced envelope (a few hundred microseconds of work). */
 const ENVELOPE_CHUNK = 1500;
@@ -40,10 +47,11 @@ const ENVELOPE_CHUNK = 1500;
  * The work is a generator that pauses every ENVELOPE_CHUNK vertices: the sync form runs it through, the async form
  * spreads it over idle slices.
  */
-function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generator<void, number> {
+function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generator<void, Envelope> {
   const meshes: SkinnedMesh[] = [];
   body.traverse(node => { if (node instanceof SkinnedMesh) meshes.push(node); });
-  if (!meshes.length || !clips.length) return 0;
+  if (!meshes.length || !clips.length) return { radius: 0, ground: null };
+  let ground = Infinity;
   const mixer = new AnimationMixer(body), point = new Vector3(), rootAt = new Vector3(), radii: number[] = [];
   // Vertices read since the last pause, across poses, meshes and clips (small meshes alone never reach a chunk).
   let work = 0;
@@ -54,7 +62,7 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
   body.updateMatrixWorld(true);
   const homes = roots.map(root => root ? root.getWorldPosition(new Vector3()) : new Vector3());
   try {
-    for (const { clip, loop } of clips) {
+    for (const { clip, loop, ground: standing } of clips) {
       const action = mixer.clipAction(clip);
       // Looping clips: ENVELOPE_SAMPLES distinct times (duration itself wraps to 0); once-only clips end on their last frame.
       if (!loop) { action.setLoop(LoopOnce, 1); action.clampWhenFinished = true; }
@@ -73,6 +81,7 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
           for (let v = 0; v < count; v += ENVELOPE_STRIDE) {
             mesh.getVertexPosition(v, point).applyMatrix4(mesh.matrixWorld);
             radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
+            if (standing && point.y < ground) ground = point.y;
             if (++work >= ENVELOPE_CHUNK) { work = 0; yield; pose(); mesh.skeleton.update(); if (root) root.getWorldPosition(rootAt).sub(homes[index]!); }
           }
         }
@@ -84,27 +93,38 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
     for (const mesh of meshes) mesh.skeleton.pose();
     body.updateMatrixWorld(true);
   }
-  if (!radii.length) return 0;
+  const low = Number.isFinite(ground) ? ground : null;
+  if (!radii.length) return { radius: 0, ground: low };
   // The quantile in its own slice: a typed numeric sort (no comparator calls) of every sample.
   yield;
   const sorted = Float64Array.from(radii).sort();
-  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * ENVELOPE_QUANTILE))]!;
+  return { radius: sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * ENVELOPE_QUANTILE))]!, ground: low };
 }
 
 /** The envelope at once (a piece mounting outside combat with nothing measured yet). */
-export function animationEnvelopeRadius(body: Object3D, clips: readonly EnvelopeClip[]): number {
+export function animationEnvelope(body: Object3D, clips: readonly EnvelopeClip[]): Envelope {
   const steps = envelopeSteps(body, clips);
   for (;;) { const next = steps.next(); if (next.done) return next.value; }
 }
+export function animationEnvelopeRadius(body: Object3D, clips: readonly EnvelopeClip[]): number { return animationEnvelope(body, clips).radius; }
+/** The standing clip's lowest point alone (pass just that clip, `ground: true`); null without skinned meshes or clips. */
+export function animationGround(body: Object3D, clips: readonly EnvelopeClip[]): number | null { return animationEnvelope(body, clips).ground; }
 
 /**
  * The same envelope in slices of about `budgetMs`, handing the thread back between them (`pause`, an idle callback by
  * default). Resolves null when `stop()` turns true at a slice boundary (a combat began, the renderer went); the body is
  * left in its bind pose either way.
  */
-export async function animationEnvelopeRadiusSliced(body: Object3D, clips: readonly EnvelopeClip[], options: {
-  budgetMs?: number; stop?: () => boolean; pause?: () => Promise<void>; now?: () => number;
-} = {}): Promise<number | null> {
+export async function animationEnvelopeRadiusSliced(body: Object3D, clips: readonly EnvelopeClip[], options: SliceOptions = {}): Promise<number | null> {
+  return (await animationEnvelopeSliced(body, clips, options))?.radius ?? null;
+}
+interface SliceOptions { budgetMs?: number; stop?: () => boolean; pause?: () => Promise<void>; now?: () => number }
+/** animationGround in slices; resolves undefined when stopped (null still means "nothing to stand on"). */
+export async function animationGroundSliced(body: Object3D, clips: readonly EnvelopeClip[], options: SliceOptions = {}): Promise<number | null | undefined> {
+  const envelope = await animationEnvelopeSliced(body, clips, options);
+  return envelope === null ? undefined : envelope.ground;
+}
+export async function animationEnvelopeSliced(body: Object3D, clips: readonly EnvelopeClip[], options: SliceOptions = {}): Promise<Envelope | null> {
   const budget = options.budgetMs ?? 3, now = options.now ?? (() => performance.now());
   const pause = options.pause ?? (() => new Promise<void>(resolve => setTimeout(resolve, 0)));
   const steps = envelopeSteps(body, clips);
@@ -116,7 +136,7 @@ export async function animationEnvelopeRadiusSliced(body: Object3D, clips: reado
       if (now() - started >= budget) break;
     }
     await pause();
-    if (options.stop?.()) { steps.return(0); return null; }
+    if (options.stop?.()) { steps.return({ radius: 0, ground: null }); return null; }
   }
 }
 
@@ -124,7 +144,9 @@ export async function animationEnvelopeRadiusSliced(body: Object3D, clips: reado
  * Scales `body` (feet on y=0) and returns its drawn height in board units. `envelopeRadius` (official scale only, from
  * animationEnvelopeRadius) widens the footprint the width cap reads to everything the clips reach.
  */
-export function fitModel(body: Object3D, options: { height: number; width?: number; unitScale?: number | null; sourceScale: number; envelopeRadius?: number }): number {
+export function fitModel(body: Object3D, options: { height: number; width?: number; unitScale?: number | null; sourceScale: number; envelopeRadius?: number;
+  /** Official scale only: the standing clip's lowest point (Envelope.ground) goes on y=0 instead of the bind box's. */
+  ground?: number | null }): number {
   const box = new Box3().setFromObject(body), size = box.getSize(new Vector3()), width = options.width ?? Infinity;
   const { min, max } = box, official = !!options.unitScale;
   // Official scale: the footprint's diameter about the upright axis (the piece turns to face its target), over its
@@ -135,6 +157,8 @@ export function fitModel(body: Object3D, options: { height: number; width?: numb
   const scale = official ? Math.min(options.sourceScale * options.unitScale!, cap) : cap;
   if (!Number.isFinite(scale) || scale <= 0) return Number.isFinite(options.height) ? options.height : size.y;
   body.scale.multiplyScalar(scale);
-  body.position.y -= box.min.y * scale;
-  return size.y * scale;
+  // Feet: the standing clip's lowest point when measured (official scale), else the bind box's; the height runs from there.
+  const floor = official && options.ground != null && Number.isFinite(options.ground) ? options.ground : box.min.y;
+  body.position.y -= floor * scale;
+  return (box.max.y - floor) * scale;
 }
