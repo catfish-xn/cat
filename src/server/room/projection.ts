@@ -160,9 +160,10 @@ export function toItemSummonViews(match: MatchState): readonly ItemSummonView[] 
 
 /**
  * Server-originated events a seat's client may see with its state push: own-unit moves and merges (T10), the own seat's
- * G2-3 mechanic grants, key changes and hook failures (§25), nothing else of the ledger.
+ * G2-3 mechanic grants, key changes and hook failures (§25), and its own 梅尔 save receipt (the settlement feedback);
+ * nothing else of the ledger.
  */
-const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded', 'mechanicGranted', 'seatMechanicChanged', 'mechanicFailed']);
+const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded', 'mechanicGranted', 'seatMechanicChanged', 'mechanicFailed', 'playerSaved']);
 export function seatPushEvents(seat: SeatState): readonly MatchEvent[] {
   const pushed = seat.serverEvents;
   if (!pushed || pushed.seatRevision !== seat.seatRevision) return [];

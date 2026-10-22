@@ -3,6 +3,7 @@
  * single boolean check, so the default 2D path builds nothing. Frames and events flow out read-only; input flows back
  * only through BoardControls, which BoardScene implements with its own 2D gesture code and the same session commands.
  */
+import type { MelSaveReceipt } from './mel-save-feedback';
 import type { DisplayCombatEvent } from '../presentation/combat-display';
 import type { PublicBoard, PublicOrbSummary } from '../server/protocol';
 import type { LegendWalk, LegendWalkRequest } from '../server/legend-motion';
@@ -87,6 +88,7 @@ export interface BoardControls {
   claimOrb?(orbId: string): void;
 }
 export interface BoardFeedListener {
+  playerSaved?(event: MelSaveReceipt): void;
   frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;
   /** The visible piece (either team) drawn under a CSS-pixel point, by the layer's own picking; undefined over none. */
   unitAt?(client: { x: number; y: number }): string | undefined;
@@ -184,6 +186,7 @@ export function publishScout(build: () => BoardScout | null): boolean {
   listener.scout(build());
   return true;
 }
+export function publishPlayerSaved(event: MelSaveReceipt): void { listener?.playerSaved?.(event); }
 export function publishLegendWalk(walk: BoardLegendWalk): void { listener?.legendWalk?.(walk); }
 /** One 3D layer at a time; the returned function detaches it. */
 export function subscribeBoardFeed(next: BoardFeedListener): () => void {

@@ -70,6 +70,8 @@ export interface TabletopContext {
   readonly now?: () => number;
 }
 export interface Tabletop {
+  /** A confirmed Mel save, at my legend; receipt deduplication belongs to BoardScene. */
+  saved(): void;
   /** Board-space points the camera should keep in view (legends, the orb column), for this board size. */
   layout(frame: BoardFrame): readonly Vector3[];
   frame(frame: BoardFrame): void;
@@ -96,7 +98,7 @@ export interface Tabletop {
 interface Path { from: Vector3; to: Vector3; start: number; end: number }
 interface LegendView { readonly id: string; readonly model: string; readonly root: Group; state: UnitActionState; mixer: UnitAnimationMixer | null; lease: ModelLease | null; disposed: boolean; path: Path | null; walked: boolean }
 interface OrbView { readonly orbId: string; readonly tier: BoardOrb['tier']; readonly variant?: BoardOrb['variant']; readonly root: Group; readonly stand: Mesh; fx: ParticleEffect | null; left: number; loading: boolean; disposed: boolean; phase: number }
-interface Burst { fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number }
+interface Burst { expiresAt?: number; fx: ParticleEffect | null; mesh: Mesh | null; left: number; total: number }
 interface Bolt { from: Vector3; to: Vector3; elapsed: number; fx: ParticleEffect | null; mesh: Mesh | null; disposed: boolean }
 interface HitPlan { key: string; at: number; cast: boolean; bolt: Bolt | null; done: boolean; fromLegend: boolean }
 
@@ -289,6 +291,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       if (!bursts.has(entry) || !stand) { bursts.delete(entry); disposeStand(stand); return; }
       stand.position.copy(point); scene.add(stand); entry.mesh = stand; entry.left = ORB_POP_SECONDS;
     });
+    return entry;
   };
   // Stand-in bursts carry their own material copy (opacity fades per burst).
   const disposeStand = (stand: Mesh | null) => { stand?.removeFromParent(); (stand?.material as MeshStandardMaterial | undefined)?.dispose(); };
@@ -453,6 +456,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       if (view.fx.finished || view.left <= 0) { view.fx.dispose(); view.fx = null; view.stand.visible = true; startIdle(view); }
     }
     for (const entry of bursts) {
+      if (entry.expiresAt !== undefined && now() >= entry.expiresAt) { endBurst(entry); continue; }
       entry.left -= seconds;
       if (entry.fx) entry.fx.update(seconds, ctx.camera);
       else if (entry.mesh) {
@@ -480,6 +484,13 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
 
   return {
     layout, frame: onFrame, update, orbAt, walkTo,
+    saved() {
+      const view = legends.get('me');
+      if (view && !away) {
+        const save = burst('mel_tft13_missmage_base_p_damageredirect_cas', 1.4, view.root.position.clone(), null);
+        save.expiresAt = now() + 1400; // A dropped frame must not stretch the save past its wall-clock bound.
+      }
+    },
     away(on) {
       if (on === away) return;
       away = on; orbTarget = null;

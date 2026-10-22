@@ -1118,3 +1118,11 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 - `toPrivateSeatView(state).familyReunion.{eligible,participantIds,downgraded,downgradedAtTick}`：准备期资格及当前战斗权威成员/退星事实。战中即使出售/转装也读取冻结开场；`readG23MechanismState(state).familyReunion` 提供等价字段。
 - `toPrivateSeatView(state).shopOdds.sixCostBps`：当前每格六费档位概率，整数基点（10000=100%）；不以界面等级/时间另算。六费空池回退由规则处理。
 - 字段类型、数值锚点及 CI 逐条根因见 [PR364_CI_REPAIR](PR364_CI_REPAIR.md)。六费现有头像缺省使用代码图形；没有加入素材映射或复制外部资源。
+
+## 10-22 第二轮试玩：安蓓萨施法位移（2026-10-23，规则待交付）
+
+- 结论：`src/simulation/combat-g2-2.ts` 的 ambessa 分支只发伤害/晕眩，没有改 cell 或发 movement；现有 3D 已通过 BoardScene 的权威位置播放普通 movement。因此无法仅靠表现层实现真实“冲到目标处 / 砸完撤离”，本轮不伪造站位或改伤害。
+- 请求：规则层基于锁定的 14.24b 数值确定冲刺落格/占格冲突/撤离距离与时序，沿用公开 `movement {unitId,from,to,tick,eventSeq}`；若施法与普通走路必须区分，增加公开展示字段（如 movement 的 cause / actionSeq），并同步 combat replay 白名单。客户端不挑落格、不决定命中对象。
+- 用途：2D token 和 3D root 读取同一位置、播放冲刺；castSequence 的 chain/fist 分支由既有 actionSeq/显式分支字段选择，模型动画不替代权威位移。
+- 验收：独立规则测试验证两姿态落点、占格冲突、事件顺序和伤害目标；同一真实 replay 中 2D/3D 冲到一致落点，重连与追帧不重复施法、不新增命令或资源消耗。
+- 本轮仅修改表现；未修改 simulation、server。

@@ -1370,3 +1370,11 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .market-take::after { content: '↓'; float: right; margin-left: 10px; color: #7fd0ff; }
 .market-keep { border-color: #b88fe0; background: linear-gradient(180deg, #33244a, #22183a); }
 .market-pool-badge .item-glyph { font-size: 10px; line-height: 1.1; white-space: normal; text-align: center; }
+
+/* Confirmed Mel save: shared 2D/3D golden shield and callout; ends within 1.4 seconds. */
+.mel-save-feedback { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 250; pointer-events: none; display: grid; place-items: center; width: 180px; height: 180px; color: #fff2bb; animation: mel-save-flash 1.4s ease-out both; }
+.mel-save-feedback strong { z-index: 1; font-size: 38px; letter-spacing: .2em; padding-left: .2em; text-shadow: 0 0 8px #fff1b0, 0 0 24px #eab443, 0 2px 4px #542f06; }
+.mel-save-shield { position: absolute; inset: 8px; border: 4px solid #ffe29a; border-radius: 44% 44% 50% 50%; background: radial-gradient(ellipse, #ffd56822 30%, #ffdf8a88 76%, #fff3c7); box-shadow: 0 0 32px #ffcf68, inset 0 0 25px #ffe79b; }
+@keyframes mel-save-flash { 0% { opacity: 0; scale: .65; } 12% { opacity: 1; scale: 1.12; } 28% { scale: 1; } 70% { opacity: 1; } 100% { opacity: 0; scale: 1.2; } }
+@media (prefers-reduced-motion: reduce) { .mel-save-feedback { animation-name: mel-save-fade; } }
+@keyframes mel-save-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }

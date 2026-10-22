@@ -11,9 +11,16 @@ import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Sphere, Vector3, typ
 /** A drawn champion may be at most this many times the reference height (the plan's 1.6 × 92). */
 export const MAX_HEIGHT_RATIO = 1.6;
 
+/**
+ * Playtest 10-22 art overrides of the manifest unitScale (Ekko read too tall, Vi too big next to the rest of the cast).
+ * Candidates pending the user's confirmation; they replace the official skinScale only for models the root ships.
+ */
+export const UNIT_SCALE_OVERRIDES: Readonly<Record<string, number>> = Object.freeze({ ekko: 0.86, vi: 0.82 });
+
 /** The manifest's unitScale for a model when it is a positive finite number, else null (JSON from an asset root). */
 export function readUnitScale(models: Readonly<Record<string, unknown>> | undefined, id: string): number | null {
   const entry = models && Object.hasOwn(models, id) ? models[id] : undefined;
+  if (entry && Object.hasOwn(UNIT_SCALE_OVERRIDES, id)) return UNIT_SCALE_OVERRIDES[id]!;
   const value = entry && typeof entry === 'object' ? (entry as { unitScale?: unknown }).unitScale : undefined;
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 }
@@ -57,8 +64,25 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
   const mixer = new AnimationMixer(body), point = new Vector3(), rootAt = new Vector3(), radii: number[] = [];
   // Vertices read since the last pause, across poses, meshes and clips (small meshes alone never reach a chunk).
   let work = 0;
-  // Each mesh's skeleton root: its first bone whose parent is not a bone.
-  const roots = meshes.map(mesh => mesh.skeleton.bones.find(bone => !(bone.parent instanceof Bone)) ?? null);
+  // A shared skeleton may contain independent rigs (Nunu and Willump). Use the root
+  // with the greatest skin weight on this mesh, never an unused first skeleton bone.
+  // Detached leaf facial/weapon controls are pose changes, not whole-body locomotion.
+  // A prop-only mesh follows the skeleton body root even when none of its vertices weights that root.
+  const roots = meshes.map(mesh => {
+    const byBone = mesh.skeleton.bones.map(bone => {
+      let root = bone;
+      while (root.parent instanceof Bone) root = root.parent;
+      return root;
+    });
+    const totals = new Map<Bone, number>();
+    const indices = mesh.geometry.getAttribute('skinIndex'), weights = mesh.geometry.getAttribute('skinWeight');
+    for (let vertex = 0; vertex < indices.count; vertex++) for (let component = 0; component < 4; component++) {
+      const weight = weights.getComponent(vertex, component), root = byBone[indices.getComponent(vertex, component)];
+      if (weight > 0 && root?.children.some(child => child instanceof Bone)) totals.set(root, (totals.get(root) ?? 0) + weight);
+    }
+    return [...totals].sort((a, b) => b[1] - a[1])[0]?.[0]
+      ?? byBone.find(root => root.children.some(child => child instanceof Bone)) ?? byBone[0] ?? null;
+  });
   // This is an independent, freshly loaded lease. In quantized glTFs the inverse bind matrices can include
   // dequantization: Skeleton.pose() reconstructs different TRS, not the authored loading pose.
   // Include non-bone animated ancestors as well as bones (including skeleton nodes outside the mesh subtree).
@@ -175,7 +199,7 @@ export async function animationEnvelopeSliced(body: Object3D, clips: readonly En
 
 /**
  * Scales `body` (feet on y=0) and returns its drawn height in board units. `envelopeRadius` (official scale only, from
- * animationEnvelopeRadius) widens the footprint the width cap reads to everything the clips reach.
+ * animationEnvelopeRadius) supplies the animated footprint instead of an unused, spread-out loading pose.
  */
 export function fitModel(body: Object3D, options: { height: number; width?: number; unitScale?: number | null; sourceScale: number; envelopeRadius?: number;
   /** Official scale only: the standing clip's lowest point (Envelope.ground) goes on y=0 instead of the bind box's. */
@@ -185,7 +209,7 @@ export function fitModel(body: Object3D, options: { height: number; width?: numb
   // Official scale: the footprint's diameter about the upright axis (the piece turns to face its target), over its
   // animations when known; fitted: the box.
   const bind = Math.max(...[min.x, max.x].flatMap(x => [min.z, max.z].map(z => Math.hypot(x, z))));
-  const across = official ? 2 * Math.max(bind, options.envelopeRadius ?? 0) : Math.max(size.x, size.z);
+  const across = official ? 2 * (options.envelopeRadius && options.envelopeRadius > 0 ? options.envelopeRadius : bind) : Math.max(size.x, size.z);
   const cap = Math.min(size.y > 0 ? options.height * (official ? MAX_HEIGHT_RATIO : 1) / size.y : Infinity, across > 0 ? width / across : Infinity);
   const scale = official ? Math.min(options.sourceScale * options.unitScale!, cap) : cap;
   if (!Number.isFinite(scale) || scale <= 0) return Number.isFinite(options.height) ? options.height : size.y;
