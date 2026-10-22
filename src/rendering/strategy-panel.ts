@@ -1146,7 +1146,7 @@ export class StrategyPanel {
     if (!bundle.childElementCount) for (const line of lines) bundle.append(element('span', line, 'market-line'));
     const actions = element('div', '', 'market-actions');
     const take = this.button(`choice:${id}`, '全部拿走', () => send(id));
-    take.className = 'market-action market-take'; take.dataset.debug = 'market:take'; take.title = ['全部拿走', ...lines].join('\n');
+    take.className = 'market-action market-take'; take.dataset.debug = 'market:take'; take.setAttribute('aria-label', '全部拿走'); take.title = ['全部拿走', ...lines].join('\n');
     actions.append(take);
     if (skippable) {
       const keep = this.button('choice-skip', '保留微光', () => send(SKIP_OPTION));
