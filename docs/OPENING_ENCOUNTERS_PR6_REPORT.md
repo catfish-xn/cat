@@ -1,5 +1,7 @@
 # 开局奇遇 PR6 交付报告（2026-10-22）
 
+> 当前 PR2/PR4/PR5/PR6 合并身份、收据与验证结果见 [PR6 集成修复报告](OPENING_ENCOUNTERS_PR6_MERGE_REPORT.md)。下文为独立 PR 历史记录，进度接口名称已同步更名；旧版本/摘要及旧收据范围不作为当前集成契约。
+
 基线：`codex/encounters-pr6@66b3a7143ad7a564665a2f25b0cf421529b9d6b8`（PR1）。工作区开工时干净。仅修改 `src/simulation/`、`tests/`、`docs/`，全部留在工作区，未commit。按要求只读本地批准方案第3/4/6/9节及调研JSON/Markdown，未联网、下载；未改server/server-entry、rendering、presentation、CI、fixtures/golden，未录制epoch。
 
 梅尔：实现存活时首次 `oldHp>40 && 0<newHp<=40` 的个人门槛观察、独立一次性收据、单人/多人结算接入、恢复校验及本人进度字段。六费梅尔救命判定/提交先完成，再记录救命后HP；正常致死不触发、不复活。观察收据不代表奖励或领取权益，不产生奖励事件。
@@ -18,7 +20,7 @@
 | `src/simulation/opening-encounter.ts:176` | 本人进度白名单；`:188`沃里克预留事实和关闭入口 |
 | `src/simulation/match.ts:1`、`:382` | 新领域公共导出、单人救命后门槛接点 |
 | `src/simulation/round-settlement.ts:165` | 多人救命后门槛接点，沿用原子事务与重发/镜像拒绝 |
-| `src/simulation/private-seat-view.ts:101` | 本人openingEncounterProgress字段 |
+| `src/simulation/private-seat-view.ts:101` | 本人openingMelProgress字段 |
 | `tests/opening-encounters-pr6.test.ts:1`（新增） | 35例门槛/救命/重入/恢复/八席/隐私/关闭验证 |
 | `tests/t5r-private-seat-view.test.ts:122` | 新本人字段的严格投影白名单，未改旧epoch断言 |
 | `docs/MATCH_CONTRACT.md:1` | 完整新增导出、字段、失败枚举、时序、收据/恢复/身份合同 |
@@ -32,11 +34,11 @@
 
 `openingEncounter.receipts` 接受至多一条 `kind:'mel-threshold'` 的观察收据。键为 `JSON([instanceId,'mel-threshold',seatId,settlementId])`，内部instanceId绑定单人seed或共享poolId，联机seatId逐席隔离；保存round/hpBefore/hpAfter/rewardStatus='blocked-evidence'。全局context/facts/RNG不变。正常重入返回原引用；恢复仅校验，不补记、不补抽、不追奖。删改/重复/跨席复制收据被拒绝。非梅尔仍要求空收据。
 
-新导出 `isMelBlessingCrossing`、`readOpeningEncounterProgress`、`applyWarwickHunger` 及类型通过simulation与match提供；内部 `commitOpeningEncounterHealth` 仅从opening-encounter模块导出。新的直接server-entry重导出留PR8接口负责人；已有 `toPrivateSeatView` 公共接口已包含本人进度。服务器无需自行计算HP门槛。
+新导出 `isMelBlessingCrossing`、`readOpeningMelProgress`、`applyWarwickHunger` 及类型通过simulation与match提供；内部 `commitOpeningEncounterHealth` 仅从opening-encounter模块导出。新的直接server-entry重导出留PR8接口负责人；已有 `toPrivateSeatView` 公共接口已包含本人进度。服务器无需自行计算HP门槛。
 
 失败沿用 `opening-config-incomplete`（沃里克正确选择但缺配置）、`opening-context-mismatch`（绑定/收据不符）、`invalid-opening-effect`（错误奇遇/伪共享事实）；非法HP纯函数抛RangeError。多人事务内部异常映射invalid-receipt，重发/镜像仍duplicate-settlement/mirror-settlement，共享恢复异常仍invalid-seat-state。没有新增失败枚举字面量。命令失败保持原state、无events、不耗资源/RNG。
 
-给界面的字段是 `openingEncounterProgress: null | {encounterId,thresholdHp,thresholdReached,rewardStatus,triggeredRound,hpBefore,hpAfter}`，只给本人；未触发后三项null。公开openingEncounter不变且仍显示“效果尚未启用”。thresholdReached只表示观察到跨越，不能显示已获奖或待领取；不输出内部键、seed、RNG、未来奖励。
+给界面的字段是 `openingMelProgress: null | {encounterId,thresholdHp,thresholdReached,rewardStatus,triggeredRound,hpBefore,hpAfter}`，只给本人；未触发后三项null。公开openingEncounter不变且仍显示“效果尚未启用”。thresholdReached只表示观察到跨越，不能显示已获奖或待领取；不输出内部键、seed、RNG、未来奖励。
 
 配置身份 `opening-encounters-14.24b-pr6-v1`；rules/content仍为未发布 `s13-g2-3-v21-opening-encounters` / `s13-14.24b-g2-3-v21-opening-encounters`，schema/save/replay/command保持 **12/8/5/5**。CONTENT=`fnv1a32-utf16:a1a52f8f`，LOOT_REPLAY=`fnv1a32-utf16:a4dbb1dd`。旧PR1配置/digest拒绝恢复；epoch统一留PR9，历史字节不改。
 

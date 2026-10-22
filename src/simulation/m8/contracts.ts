@@ -491,8 +491,8 @@ export interface M8Version {
   readonly contentVersion: 's13-14.24b-g2-3-v21-opening-encounters';
   readonly contentDigest: string;
   readonly saveFormatVersion: 8;
-  readonly replayFormatVersion: 5;
-  readonly commandProtocolVersion: 5;
+  readonly replayFormatVersion: 6;
+  readonly commandProtocolVersion: 6;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
 }

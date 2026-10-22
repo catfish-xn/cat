@@ -1129,12 +1129,13 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 
 验收：同一根 seed 的八席（含机器人）与单人结果一致；刷新视图/恢复不发奖；任何公共 payload 均无 seed、selectionRng、未来奖励和个人候选。shared-deferred 仅为服务器建席前内部状态，查询返回 null，不应向已开始玩家展示。模式/布局/颜色/动画由 Claude 决定；此处只定义显示内容与数据源。演出计时由服务器展示阶段控制，不进入 simulation 时钟。
 
-存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2–7 的收据/候选尚未启用，后续另补本人进度投影。
 
 
 ## 开局奇遇 PR6 → PR8：梅尔本人门槛进度（2026-10-22，Codex交付）
 
-来源：`toPrivateSeatView(state).openingEncounterProgress` / `readOpeningEncounterProgress(state)`（simulation/match导出；新reader的server-entry重导出留接口负责人PR8）。现有公共 `openingEncounter` 白名单不变。仅定义显示内容与数据来源，不指定布局/配色/动画。
+集成命名：锻造器使用独立 `openingForgeProgress` / `readOpeningForgeProgress`；梅尔使用下述字段；不再发送旧 `openingEncounterProgress`。
+
+来源：`toPrivateSeatView(state).openingMelProgress` / `readOpeningMelProgress(state)`（simulation/match导出；新reader的server-entry重导出留接口负责人PR8）。现有公共 `openingEncounter` 白名单不变。仅定义显示内容与数据来源，不指定布局/配色/动画。
 
 | 字段 | 含义 / 使用 |
 | --- | --- |
@@ -1148,3 +1149,43 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 验收：41→40与41→39均达门槛，0HP不达门槛；已触发后重连/Continue/重发不重记，不由UI扣血、抽奖或生成选择；只给本人，不广播对手进度。公共enabled=false与“效果尚未启用”继续保留；个人应明确区分“已达门槛，奖励未启用”和“未达门槛”，不能显示已领取/待领取，不展示固定两冠冕。内部收据ID、seed、RNG、全局context不透传。
 
 沃里克仍只展示公开身份及关闭状态，不给掉率、奖池、保底/上限占位数值或击杀奖励动画。其预留接口统一拒绝发奖，不接成客户端按钮。梅尔没有上场梅尔要求；六费梅尔救命事件沿用现有playerSaved，与奇遇进度分开读取。
+
+存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2 的激活/锻造器收据、当前候选及本人进度投影已启用，接线见下方 PR2 节；PR5 猴子及工具选择已启用，见下方 PR5 节；PR6 梅尔门槛观察已启用但奖励关闭，沃里克关闭；PR3/7 其余效果尚未启用，魔像训练师保持关闭，见 PR4 节。
+
+## 开局奇遇 PR2 → Claude（2026-10-22）
+
+六项已启用：范德尔全黄金、艾克全棱彩、黑默丁格首次/末次棱彩，蔚1-2两个基础装备锻造器、杰斯1-2一个神器锻造器。PR5猴子另已启用，其余8项效果仍关闭；没有奇遇沿用无附加规则。完整领域签名、来源与失败语义见 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 顶部 PR2 节。
+
+- 公共字段：既有 `openingEncounter` 白名单形状不变，启用项 `enabled=true`、`effectStatus=active`、`statusTextZh=本局奇遇效果已启用`。前奏/终章其余档位是已批准等权项目约定，不能显示成“其余必不棱彩”。
+- 本人字段：`openingForgeProgress?={source,effectsApplied,forgesGranted,forgesResolved,forgesPending}`，来自 `toPrivateSeatView`。pending数量包含当前待选，组件最初2→1→0，神器1→0；仅组件/神器锻造器有授予收据时出现；强化、猴子和梅尔不出现此字段。仅本人可见。
+- 本人选择：已有 `pendingChoice.kind=forge`、`offers`（恰好4项）、`choiceId`、`generation`、`payload.source=opening-encounter`、`payload.timeoutOption`。用既有choose回调；领域依次开下一份，界面不能生成候选或扣减数量。现有强化 `augmentTier` 和逐槽 `augmentOptions.rerollAvailable` 已按奇遇处理。
+- 本人结果：`seatMechanics.receipts` 中 source=opening-encounter 的choice记录含optionId/itemId/timedOut；`openingEffectApplied` 是授予/激活事件，`mechanicGranted` 是实际选择完成事件，不要把前者当装备已入库。
+- 服务器接线：initializeSharedSeat已授予，不能另发一次。timeoutChoice每次处理一个choiceId；处理后若还有新待选，应继续依据新ID处理，重连只读当前state。PR8如需要新helper，可在server-entry按合同重导出；本PR未修改该目录或服务器。
+- 验收：八席同奇遇/同强化档位、候选仍各自独立；两个锻造器先后选择，不被其他面板覆盖；超时选第一候选、重连不重抽不重发；其他玩家收不到本人待选/后续候选/seed/RNG。布局、颜色和动画由Claude决定。
+
+## 开局奇遇 PR5 → Claude：猴子结果与杰作升级（2026-10-22）
+
+规则已启用发条猴子四分支；不改本文件前部历史记录，当前合同以 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 首节 PR2+PR4+PR5+PR6 集成说明及各奇遇专节为准。本节只规定数据和回调，不规定布局、颜色、动画。
+
+| 字段/入口 | 含义、用途与验收 |
+| --- | --- |
+| `openingEncounter.enabled/effectStatus` | wind-up-monkey=true/active；角色爆爆，nameZh=发条猴子；权重500 Bps不变 |
+| `openingEncounter.revealedFacts` | 3-5前为空；触发后 `[{nodeId:'3-5',outcome:'damage'|'gold'|'masterwork'|'components'}]`；显示已发生结果，无seed/RNG/未来分支。观战投影用 `readOpeningEncounterView(match,pool.openingEncounter)` |
+| `nextSharedRound(...).openingResolution` | 全局结果及同批`eliminated[{seatId,rank,hpBefore,hpAfterRaw}]`、`ended`、`survivorRanks`；Room应一次同步hp/alive/rank并处理终局。pool已经返还新淘汰者的卡牌；不要再返池、扣血或重新算名次 |
+| `openingMonkeyResolved` | 伤害事件，含receiptId/hpBefore/hpAfterRaw/hpAfter；10点可致死，负数raw供名次依据，显示HP读领域playerHp |
+| `consumables`、`consumableTargets` | 杰作工具definitionId=`masterwork-upgrade`，姓名/说明读CONSUMABLE_DEFINITIONS；目标列表及allowed/reason读现有本人视图。调用useConsumable的unit目标，不直接发item目标 |
+| `pendingChoice` | armory/source=masterwork-upgrade，payload.masterwork={consumableId,unitId}，offers是物品**实例ID**，不是装备定义ID；工具此时尚未消耗 |
+| 本人可选 `masterworkOptions` | `[{itemId,definitionId,radiantDefinitionId}]`，当前装备→光明版。亦可用match导出的readMasterworkOptions；不要由UI另写映射或筛选规则 |
+| `choose` / `timeoutChoice` | 选择时definitionId参数传offers中的实例ID；超时默认第一项。成功后工具耗尽、仅选中件变光明并进库存；重复/无效选择不扣工具。候选窗口期间交易、装备操作与战利品法球领取按领域wrong-phase处理 |
+| `seatMechanics.receipts` | 金币/组件/工具授予source=opening-encounter-monkey，选择source=masterwork-upgrade；不得把来源误显示为征服者或PvE |
+
+**工具图标接线（当前工作树已补键，保留验收要求）：**`src/presentation/orb-loot.ts:48` 的 `TOOL_MARK: Record<ConsumableDefinitionId,...>` 已含`masterwork-upgrade`键；源API名`TFT_Consumable_MasterworkUpgrade`在本地 `src/simulation/content/g2-3-loot-source.ts` 已有记录。图标/缺图降级由Claude决定，不要求下载资源。PR5 独立报告记录过该缺项的 TS2741；当前是否通过以集成后的 typecheck 为准。本次冲突处理未修改界面或放宽类型。
+
+PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络本人字段、Room全体淘汰/唯一幸存者终局，且协调领域command6与网络协议版本。验收八席同一分支、组件身份各人独立、工具候选只给本人、失败不耗工具、恢复不重抽不重发、先淘汰观战仍见全局结果；全体死亡与并列HP按领域返回名次发布。公开站点/服务器上线前须完成接线；不以已有自动nextSharedRound钩子代替Room状态同步验收。
+
+## 开局奇遇 PR4 → Claude：魔像训练师保持关闭（2026-10-22）
+
+- 数据继续取 `readOpeningEncounterView(state)` / `toPrivateSeatView(state).openingEncounter`；未增加界面字段，未改服务器传输。`encounterId='trainer-golems'`、`nameZh='魔像训练师'`、`champion`为安蓓萨；必须同时使用 `enabled=false`、`readiness='blocked-evidence'`、`statusTextZh='本局抽中此奇遇，效果尚未启用'`，`revealedFacts=[]`。
+- `descriptionZh` 是来源说明，不代表已发魔像。验收：抽中时保留安蓓萨身份和关闭提示，重连不触发奖励，不生成假单位/装备/羁绊/人口，不创建魔像移动、出售或工具目标。
+- 未提供魔像实例ID、属性/成长、人口/位置、永久纹章ID或个人抽样结果：完整纹章池、魔像属性成长、人口及出生/移动规则仍待补证。现有普通召唤物与纹章机制不能证明这些规则。
+- `TRAINER_GOLEMS_POLICY`、`validateTrainerGolemEmblems`、`applyTrainerGolemsOpening` 从 simulation/match 导出，属于关闭状态领域接口；后者永远失败，不能接成正常初始化动作。PR8 如需服务器诊断接口，由边界维护方重导出；不向客户端传入全局seed/RNG。完整签名/失败枚举见 [Match合同 PR4节](MATCH_CONTRACT.md)。

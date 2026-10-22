@@ -1,6 +1,10 @@
-import { createSoloOpeningEncounter, commitOpeningEncounterHealth } from './opening-encounter';
-export { isMelBlessingCrossing, readOpeningEncounterProgress, applyWarwickHunger, createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
-export type { OpeningMelThresholdReceipt, OpeningEncounterProgress, OpeningWarwickKillFact, OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
+import { openMasterworkChoice, completeMasterworkChoice } from './masterwork-choice';
+export { readMasterworkOptions } from './masterwork-choice';
+import { createSoloOpeningEncounter, commitOpeningEncounterHealth, applyOpeningEffects, planOpeningRound } from './opening-encounter';
+export { TRAINER_GOLEMS_POLICY, validateTrainerGolemEmblems, applyTrainerGolemsOpening } from './trainer-golems';
+export type { TrainerGolemEmblems } from './trainer-golems';
+export { isMelBlessingCrossing, readOpeningMelProgress, applyWarwickHunger, createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, readOpeningForgeProgress, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
+export type { OpeningMelThresholdReceipt, OpeningMelProgress, OpeningForgeProgress, OpeningWarwickKillFact, OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
 import { settleTerminalEpicForges } from './epic-forges';
@@ -70,8 +74,8 @@ import { CONTENT_DIGEST } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS, anomalyCandidates } from './content/anomalies';
 import { generateChoices } from './choices';
-import { deriveAugmentTier, augmentCandidates, drawAugmentCard } from './augment-offers';
-export { deriveAugmentTier, augmentRerollLimit } from './augment-offers';
+import { resolveAugmentTier, augmentCandidates, drawAugmentCard } from './augment-offers';
+export { deriveAugmentTier, resolveAugmentTier, augmentRerollLimit } from './augment-offers';
 import type { ScheduleReceipt } from './strategy-types';
 import { isSellableUnit } from './seat-mechanics/forms';
 import { isMechanicChoice, isMechanicChoiceKind, resolveMechanicChoice, choiceTimeoutOption } from './seat-mechanics/choices';
@@ -152,15 +156,15 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
     if (event.kind === 'anomaly' && !state.preparation.units.some(unit => unit.team === 'player')) continue;
     let choiceRngState = state.choiceRngState; let offers: readonly string[] = [];
     if (event.kind === 'augment') {
-      const drawn = generateChoices(augmentCandidates(deriveAugmentTier(state.augmentTierSeed, event.id), state.augments, state.removedAugmentIds), choiceRngState);
+      const drawn = generateChoices(augmentCandidates(resolveAugmentTier(state, event.id), state.augments, state.removedAugmentIds), choiceRngState);
       offers = drawn.offers; choiceRngState = drawn.choiceRngState;
     } else if (event.kind === 'component') offers = [...COMPONENT_IDS];
     const pendingChoice = { kind: event.kind, step: event.kind === 'anomaly' ? 'target' as const : 'offer' as const,
       choiceId: event.id, eventId: event.id, generation: 0, offers, targetId: null, rerollCount: 0,
-      ...(event.kind === 'augment' ? {augmentTier: deriveAugmentTier(state.augmentTierSeed, event.id), rerollsRemaining: 3, rerolledSlots: [false, false, false]} : {}),
+      ...(event.kind === 'augment' ? {augmentTier: resolveAugmentTier(state, event.id), rerollsRemaining: 3, rerolledSlots: [false, false, false]} : {}),
       returnPhase: timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' as const : 'preparation' as const };
     state = { ...state, augmentOffers: event.kind === 'augment'
-      ? [...state.augmentOffers, {choiceId:event.id,tier:deriveAugmentTier(state.augmentTierSeed,event.id),rerollCount:0,rerolledIndices:[]}] : state.augmentOffers, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
+      ? [...state.augmentOffers, {choiceId:event.id,tier:resolveAugmentTier(state,event.id),rerollCount:0,rerolledIndices:[]}] : state.augmentOffers, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
     events.push({ type: 'choiceOpened', choice: pendingChoice });
     return { state, events };
   }
@@ -205,7 +209,11 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
         location:{kind:'board',cell:{...OPENING_INITIAL_STATE.unit.cell}} },
       ...m8.preparation.enemies] }, roundResults: [], phase: 'preparation', combat: null };
   const entered = enterScheduledEvents(writeG23Progress(initial,createG23Progress(seed)));
-  return accept(entered.state, entered.events).state;
+  const prepared = accept(entered.state, entered.events).state;
+  if (openingEncounter.mode === 'shared-deferred') return prepared;
+  const applied = applyOpeningEffects(prepared, planOpeningRound(openingEncounter.context, '1-2').facts);
+  if (!applied.ok) throw new Error(applied.reason);
+  return applied.state;
 }
 export function getDeploymentCap(state: MatchState): number { return deploymentCapFor(state.level, readG23Progress(state)); }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
@@ -479,6 +487,7 @@ export function finishCarouselSupply(state:MatchState):MatchCommandResult {
   return accept({...settled,phase:'settlement',combat:null},[{type:'roundSettled',round:state.round}]);
 }
 export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
+  const initial = state;
   if (state.multiplayer?.status === 'eliminated') return fail(state,'wrong-phase');
   if (state.phase !== 'settlement') return fail(state, 'wrong-phase');
   if (expectedRound !== state.round) return fail(state, 'stale-round');
@@ -486,6 +495,9 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   if (state.roundResults.length !== state.round || state.roundResults.at(-1)?.round !== state.round) return fail(state, 'unsettled-round');
   const definition = getNextCatalogRound(state.m8.round.roundId);
   if (!definition) return fail(state, 'wrong-phase');
+  const augment = getRoundSchedule(definition.ordinal).find(e => e.kind === 'augment');
+  if (augment && augmentCandidates(resolveAugmentTier(state, augment.id), state.augments, state.removedAugmentIds).length < 3)
+    return fail(state, 'augment-pool-too-small');
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
   const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
@@ -495,8 +507,20 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round);
   const carousel = resolveCarouselPreparation({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
-  const entered = enterScheduledEvents(carousel.state);
-  return acceptEquipment(entered.state, [...carousel.events,...entered.events]);
+  let prepared = carousel.state;
+  const openingEvents: MatchEvent[] = [];
+  if (prepared.openingEncounter.mode === 'solo') {
+    const applied = applyOpeningEffects(prepared, planOpeningRound(prepared.openingEncounter.context, definition.roundId).facts);
+    if (!applied.ok) return fail(initial, applied.reason);
+    prepared = applied.state; openingEvents.push(...applied.events);
+  }
+  if (prepared.phase === 'gameOver') {
+    const terminal = stampMatchEvents(prepared, carousel.events);
+    return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
+  }
+  const entered = enterScheduledEvents(prepared);
+  const accepted = acceptEquipment(entered.state, [...carousel.events,...entered.events]);
+  return accepted.ok ? {...accepted, events: [...openingEvents, ...accepted.events]} : accepted;
 }
 
 /** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */
@@ -529,6 +553,10 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
 }
 
 export function useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult {
+  if (state.consumables.find(c=>c.consumableId===consumableId)?.definitionId === 'masterwork-upgrade') {
+    const opened = openMasterworkChoice(state,consumableId,target);
+    return opened.ok ? acceptEquipment(opened.state,opened.events) : opened;
+  }
   const plan=planConsumable(state,consumableId,target);
   if(!plan.ok)return fail(state,plan.reason);
   const used={...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
@@ -583,7 +611,7 @@ export function rerollAugment(state: MatchState, choiceId: string, generation: n
   if (choice.choiceId !== choiceId || choice.generation !== generation) return fail(state, 'stale-choice');
   if (optionIndex === undefined || !Number.isSafeInteger(optionIndex) || optionIndex < 0 || optionIndex >= choice.offers.length) return fail(state, 'invalid-slot');
   if (choice.rerolledSlots?.[optionIndex] !== false) return fail(state, 'augment-rerolls-exhausted');
-  const tier = deriveAugmentTier(state.augmentTierSeed, choiceId);
+  const tier = resolveAugmentTier(state, choiceId);
   const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers]);
   if (!candidates.length) return fail(state, 'augment-pool-too-small');
   const draw = drawAugmentCard(candidates, state.choiceRngState);
@@ -718,7 +746,8 @@ export function claimOrDiscardLoot(state: MatchState, expectedRound: number, uni
 /** G2-3 forge/blackMarket/armory: resolve through seat-mechanics, then continue the round's schedule like any choice. */
 function completeMechanicChoice(state: MatchState, optionId: string, timedOut: boolean,unitLootPolicy?:UnitLootPolicy): MatchCommandResult {
   const choice = state.pendingChoice!;
-  const resolved = resolveMechanicChoice(state, optionId, timedOut);
+  const resolved = choice.payload?.source === 'masterwork-upgrade'
+    ? completeMasterworkChoice(state, optionId, timedOut) : resolveMechanicChoice(state, optionId, timedOut);
   if (!resolved.ok) return fail(state, resolved.reason);
   const hookEvents:MatchEvent[]=[];
   const completed=drainG23Rewards(finishG23Choice(state,resolved.state,optionId),unitLootPolicy,hookEvents);

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createMatch, startMatchCombat, stepMatch, nextRound, selectChoice, sellUnit } from '../src/simulation/match';
 import { enableMultiplayerSettlement, applyRoundSettlement, ROUND_SETTLEMENT_VERSION } from '../src/simulation/round-settlement';
 import { createOpeningEncounter, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG, isMelBlessingCrossing,
-  commitOpeningEncounterHealth, validateOpeningEncounterState, readOpeningEncounterProgress, readOpeningEncounterView,
+  commitOpeningEncounterHealth, validateOpeningEncounterState, readOpeningMelProgress, readOpeningForgeProgress, readOpeningEncounterView,
   applyOpeningEffects, applyWarwickHunger, type OpeningMelThresholdReceipt, type OpeningWarwickKillFact } from '../src/simulation/opening-encounter';
 import { createSharedPool, initializeSharedSeat, restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
@@ -60,7 +60,7 @@ describe('PR6 Mel threshold observation with reward gate closed',()=>{
     expect(isMelBlessingCrossing(before,after)).toBe(expected);
     const state=observed(before,after),result=commitOpeningEncounterHealth(state);
     expect(receipts(result)).toHaveLength(expected?1:0);
-    expect(readOpeningEncounterProgress(result)?.thresholdReached).toBe(expected);
+    expect(readOpeningMelProgress(result)?.thresholdReached).toBe(expected);
     expect(()=>validateOpeningEncounterState(result)).not.toThrow();
     expect({...result,openingEncounter:state.openingEncounter}).toEqual(state);
     if(expected) expect(receipts(result)[0]).toMatchObject({kind:'mel-threshold',hpBefore:before,hpAfter:after,rewardStatus:'blocked-evidence'});
@@ -179,15 +179,43 @@ describe('PR6 Mel threshold observation with reward gate closed',()=>{
   it('owner-only progress is detached and explicitly blocked; public view contains no personal receipt',()=>{
     const state=structuredClone(commitOpeningEncounterHealth(observed(41,40)));
     Object.assign(receipts(state)[0],{futureReward:'SECRET',rngState:'SECRET'});
-    const progress=readOpeningEncounterProgress(state)!;
+    const progress=readOpeningMelProgress(state)!;
     expect(progress).toEqual({encounterId:'mels-blessing',thresholdHp:40,thresholdReached:true,rewardStatus:'blocked-evidence',
       triggeredRound:1,hpBefore:41,hpAfter:40});
-    expect(toPrivateSeatView(state).openingEncounterProgress).toEqual(progress);
+    expect(toPrivateSeatView(state).openingMelProgress).toEqual(progress);
+    expect(readOpeningForgeProgress(state)).toBeNull();
+    expect(toPrivateSeatView(state)).not.toHaveProperty('openingForgeProgress');
+    expect(toPrivateSeatView(state)).not.toHaveProperty('openingEncounterProgress');
     expect(JSON.stringify(progress)).not.toMatch(/SECRET|seed|receiptId|factId|rng/i);
     expect(readOpeningEncounterView(state)).toEqual(readOpeningEncounterView(createMatch(melSeed)));
     expect(readOpeningEncounterView(state)).toMatchObject({enabled:false,statusTextZh:expect.stringContaining('尚未启用')});
-    expect(readOpeningEncounterProgress(createMatch(warwickSeed))).toBeNull();
+    expect(readOpeningMelProgress(createMatch(warwickSeed))).toBeNull();
   });
+  it('a Mel settlement ID matching the monkey node remains an observation, not a monkey grant',()=>{
+    const state=observed(41,40);
+    const result=commitOpeningEncounterHealth({...state,roundResults:[{...state.roundResults[0],settlementId:'3-5'}]});
+    expect(receipts(result)[0]).toMatchObject({kind:'mel-threshold',nodeId:'3-5'});
+    expect(()=>validateOpeningEncounterState(result)).not.toThrow();
+    expect(applyOpeningEffects(result,[])).toEqual({ok:true,state:result,events:[]});
+  });
+  it.each(['component-anvils','artifact-anvil','golden-gala','prismatic-party','prismatic-prelude','prismatic-finale'])(
+    '%s: preserves effect receipts and rejects mixed or missing observations',id=>{
+      const state=createMatch(seedFor(id)),opening=state.openingEncounter;
+      if(opening.mode==='shared-deferred')throw Error('unbound');
+      expect(opening.receipts.length).toBeGreaterThan(0);
+      expect(commitOpeningEncounterHealth(state)).toBe(state);
+      expect(commitOpeningEncounterHealth(observed(41,40,state)).openingEncounter).toBe(opening);
+      expect(()=>validateOpeningEncounterState(state)).not.toThrow();
+      expect(readOpeningMelProgress(state)).toBeNull();
+      expect(toPrivateSeatView(state).openingMelProgress).toBeNull();
+      expect(toPrivateSeatView(state)).not.toHaveProperty('openingEncounterProgress');
+      if(id==='component-anvils'||id==='artifact-anvil')expect(readOpeningForgeProgress(state)?.forgesGranted).toBe(id==='component-anvils'?2:1);
+      else expect(readOpeningForgeProgress(state)).toBeNull();
+      const mel=commitOpeningEncounterHealth(observed(41,40)),observation=receipts(mel)[0];
+      for(const records of [[],[...opening.receipts,observation],[observation]])
+        expect(()=>validateOpeningEncounterState({...state,openingEncounter:{...opening,receipts:records}})).toThrow('opening-context-mismatch');
+      expect(()=>validateOpeningEncounterState({...mel,openingEncounter:{...mel.openingEncounter,receipts:[...receipts(mel),opening.receipts[0]]}} as MatchState)).toThrow('opening-context-mismatch');
+    });
   it('a public-command solo loss route restores before/after crossing without replaying or removing the receipt',()=>{
     let state=createMatch(melSeed);
     state=accepted(sellUnit(state,state.preparation.units.find(u=>u.team==='player')!.id));
