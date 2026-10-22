@@ -166,4 +166,24 @@ describe('#351 arena bench placement and drag mapping', () => {
     expect(controls.dragMove).toHaveBeenCalledTimes(9);
     expect(controls.dragEnd).toHaveBeenCalledTimes(9);
   });
+
+  it('keeps all nine authoritative bench slots on the arena despite transient token coordinates', async () => {
+    await mount();
+    const moved: BoardFrame = { ...frame, pieces: frame.pieces.map((piece, benchSlot) => ({ ...piece, benchSlot, x: -500, y: -500 })) };
+    await publish(moved); await publish(moved);
+    for (let i = 0; i < 30; i++) render();
+    units.forEach((unit, i) => unit.parent!.position.toArray().forEach((value, axis) => expect(value).toBeCloseTo(cells[i][axis])));
+    const last = screen(...cells[8]);
+    expect(listener.unitAt!(last)).toBe('unit-8');
+  });
+
+  it('hits the corner of the last square instead of falling through to the board plane', async () => {
+    await mount(); await publish(); await publish();
+    for (let i = 0; i < 30; i++) render();
+    const start = screen(cells[0][0], cells[0][1] + 30, cells[0][2]);
+    const corner = screen(cells[8][0] + 24, cells[8][1], cells[8][2] + 24);
+    canvas.pointer('pointerdown', start); canvas.pointer('pointermove', corner); canvas.pointer('pointerup', corner);
+    expect(controls.dragMove).toHaveBeenLastCalledWith(bench[8]);
+    expect(controls.dragEnd).toHaveBeenLastCalledWith(bench[8], corner);
+  });
 });

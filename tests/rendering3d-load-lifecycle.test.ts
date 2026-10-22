@@ -162,6 +162,19 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
     mounted = await renderer.mountRenderer3d({ clientWidth: 800, clientHeight: 600, append() {} } as unknown as HTMLElement, { assetBase: '/synthetic/' });
     await flush(); expect(mounted.status).toBe('assets');
   }
+  it.each(['missing', 'decode-failure'])('keeps a visible pawn instead of a magenta box for a %s model', async failure => {
+    await mount(failure === 'missing' ? [] : ['toy']);
+    if (failure === 'decode-failure') {
+      const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+      vi.mocked(GLTFLoader.prototype.parseAsync).mockRejectedValueOnce(new Error('bad-model'));
+    }
+    listener.frame(frame); await flush(); await draw();
+    const scene = gpu[0].render.mock.calls.at(-1)![0] as import('three').Object3D;
+    const pawn = scene.getObjectByName('render3d-pawn');
+    expect(pawn?.parent?.visible).toBe(true);
+    expect(pawn?.children).toHaveLength(2);
+    expect(scene.getObjectByName('rendering3d-placeholder')).toBeUndefined();
+  });
   async function leaveGame() {
     // OnlineApplication.backToLobby/syncMode publishes these browser-facing signals.
     // main.ts keeps the renderer mounted for the lifetime of the page.

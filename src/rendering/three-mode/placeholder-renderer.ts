@@ -6,14 +6,14 @@ import { planActionEffects, type EffectPlayback } from './action-effect-plan';
  * It draws the BoardScene feed (board-feed.ts) with the src/rendering3d core: hex board and bench, one piece per
  * 2D token at the same logical position (x→x, y→z), ModelCache leases with UnitActionState/UnitAnimationMixer
  * driven by display combat events. Without an asset root, or when the manifest cannot be read, pieces are
- * team-coloured pawns; a unit missing from a readable manifest shows the core's magenta placeholder box.
+ * team-coloured pawns; missing models keep those pawns, with a portrait badge for summons when available.
  * Pointer input on the 3D board is replayed through BoardControls (hit volumes for units, the board plane for drop points):
  * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
 import { installHudStyle } from './hud-style';
 import {
   AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial,
-  PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, TextureLoader, Vector2, Vector3, WebGLRenderer,
+  PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3, WebGLRenderer,
   type Object3D, type Texture,
 } from 'three';
 import {
@@ -150,6 +150,8 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 // Injected the same way: the 2D bundle's item icon URL (presentation/s13-assets.ts), for a scouted seat's items.
 let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
+let championIconFor: (id: string) => string | null = () => null;
+export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null; preloaded: null };
@@ -475,7 +477,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     let best = -1, bestDistance = Infinity, spacing = Infinity;
     for (let i = 1; i < slots.length; i++) spacing = Math.min(spacing, Math.hypot(slots[i]!.x - slots[i - 1]!.x, slots[i]!.z - slots[i - 1]!.z));
     const reach = Number.isFinite(spacing) && spacing > 0 ? spacing / 2 : (lastFrame?.hexRadius ?? 34);
-    slots.forEach((slot, i) => { const d = Math.hypot(slot.x - x, slot.z - z); if (d < reach && d < bestDistance) { best = i; bestDistance = d; } });
+    slots.forEach((slot, i) => { const d = Math.hypot(slot.x - x, slot.z - z);
+      // Cells are squares, as drawn below; their corners must not fall through to the board plane.
+      if (Math.abs(slot.x - x) <= reach && Math.abs(slot.z - z) <= reach && d < bestDistance) { best = i; bestDistance = d; } });
     return best;
   };
   const benchOf2d = (frame: BoardFrame, x: number, y: number) => nearestSlot(frame.bench.map(point => ({ x: point.x, z: point.y })), x, y);
@@ -579,12 +583,22 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     myLegend: () => feed?.legends?.().me ?? null,
     starColor: level => starColorFor(level), overhead: overheadContext, itemIcon: id => itemIconFor(id), own });
   let scoutView: Parameters<typeof scout.show>[0] = null;
-  const pawnFor = (team: BoardPiece['team']): Object3D => {
+  const pawnFor = (team: BoardPiece['team'], definitionId: string): Object3D => {
     const pawn = new Group();
     pawn.name = 'render3d-pawn';
     const body = new Mesh(pawnBody, teamMaterial[team]); body.position.y = 17;
     const head = new Mesh(pawnHead, teamMaterial[team]); head.position.y = 42;
     pawn.add(body, head);
+    const icon = definitionId.startsWith('g23-') ? championIconFor(definitionId) : null;
+    if (icon) {
+      pawn.name = `render3d-fallback-${definitionId}`;
+      const material = own(new SpriteMaterial({ color: '#ffffff' })), badge = new Sprite(material);
+      badge.position.y = 42; badge.scale.set(38, 38, 1); badge.visible = false; pawn.add(badge);
+      void overheadContext.itemTexture(icon).then(texture => {
+        if (!texture || closed) return;
+        material.map = texture; material.needsUpdate = true; badge.visible = true; head.visible = false;
+      });
+    }
     return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
   };
   /** Animation envelope radius per model id (unscaled source units), measured on its first lease. */
@@ -601,18 +615,22 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
-    view.body = pawnFor(view.team); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
+    view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     if (!loadModel) return;
     const definitionId = view.definitionId;
     void loadModel(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
       view.lease = lease;
-      if (view.body) view.root.remove(view.body);
-      // A unit missing from the manifest gets ModelCache's unit-cube placeholder: keep it pawn sized.
-      const monster = lease.placeholder ? undefined : monsterFit(definitionId);
-      const unitScale = lease.placeholder ? null : readUnitScale(models.cache?.manifest.models, definitionId);
-      if (lease.placeholder) view.body = fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH);
-      else if (monster && unitScale) {
+      if (lease.placeholder) {
+        // The loader's diagnostic magenta cube is never a player-facing model. Keep the visible, pickable stand-in.
+        if (view.dyingFor === 'loading') view.dyingFor = DEATH_FALLBACK_SECONDS;
+        if (loadReport.waiting) for (const [id, other] of pieces) if (other === view) loadReport.attached(id, definitionId);
+        return;
+      }
+      const stand = view.body;
+      const monster = monsterFit(definitionId);
+      const unitScale = readUnitScale(models.cache?.manifest.models, definitionId);
+      if (monster && unitScale) {
         // A monster at its official scale like a champion, no width cap (wolves' tails and the dragon's wings span cells);
         // its lift stays the same share of its drawn height, and its bar sits on what is drawn.
         const before = Math.abs(lease.scene.scale.x) || 1;
@@ -639,7 +657,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // The factor fitModel applied (League source units → board units, caps included), not the GLB root's own scale.
         view.modelScale = unitScale ? Math.abs(lease.scene.scale.x) / before : null;
       }
-      if (lease.placeholder) view.starHeight = PAWN_HEIGHT + STAR_GAP;
+      // Remove the pawn only after fitting succeeded; a malformed model must not leave an empty ring.
+      stand?.removeFromParent();
       view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
@@ -832,7 +851,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const shown = piece.visible && (view.dyingFor === null || view.dyingFor === 'loading' || view.dyingFor > 0);
       if (shown && !view.root.visible) resetAction(view, piece.id);
       view.root.visible = shown;
-      const slot = benchSlots ? benchOf2d(frame, piece.x, piece.y) : -1;
+      const slot = benchSlots ? (piece.id !== frame.dragging && piece.benchSlot !== undefined
+        ? piece.benchSlot ?? -1 : benchOf2d(frame, piece.x, piece.y)) : -1;
       if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }

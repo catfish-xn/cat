@@ -1369,6 +1369,7 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .market-action:hover:not(:disabled) { border-color: #bfe3ff; background: linear-gradient(180deg, #24506f, #173549); }
 .market-take::after { content: '↓'; float: right; margin-left: 10px; color: #7fd0ff; }
 .market-keep { border-color: #b88fe0; background: linear-gradient(180deg, #33244a, #22183a); }
+.market-pool-badge .item-glyph { font-size: 10px; line-height: 1.1; white-space: normal; text-align: center; }
 
 /* Confirmed Mel save: shared 2D/3D golden shield and callout; ends within 1.4 seconds. */
 .mel-save-feedback { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 250; pointer-events: none; display: grid; place-items: center; width: 180px; height: 180px; color: #fff2bb; animation: mel-save-flash 1.4s ease-out both; }
