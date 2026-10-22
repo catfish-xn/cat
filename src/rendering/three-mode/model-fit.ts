@@ -26,12 +26,14 @@ const ENVELOPE_QUANTILE = 0.98;
 export const ENVELOPE_ACTIONS = ['idle', 'move', 'attack', 'hit'] as const;
 /** Of those, the ones that loop (sampled at distinct times; the others play once and keep their last frame). */
 export const LOOPING_ACTIONS: ReadonlySet<string> = new Set(['idle', 'move']);
-/** `ground`: the clip a piece stands in (idle); its lowest point is where the feet go. */
+/** `ground`: a clip whose lowest point (net of the root's own motion) can set where the feet go. */
 export interface EnvelopeClip { readonly clip: AnimationClip; readonly loop: boolean; readonly ground?: boolean }
 /**
- * What the clips reach: `radius` from the upright axis (the width cap), and `ground`, the lowest point of the standing
- * clip over its samples (null without one), in the same units. A bind pose can stand far below the idle (Darius,
- * Nami): grounding on the bind box left those pieces floating above their cell.
+ * What the clips reach: `radius` from the upright axis (the width cap), and `ground`, the lowest point over the
+ * `ground` clips' samples once each sample's root drift from its bind place is taken out (null without such clips),
+ * in the same units. A bind pose can stand far below every clip (Darius, Nami): grounding on the bind box left those
+ * pieces floating. fitModel never puts the feet below the bind box with it, so a hovering model (root raised in its
+ * clips: Malzahar, Nocturne) keeps its height and no clip sinks under the cell.
  */
 export interface Envelope { readonly radius: number; readonly ground: number | null }
 
@@ -81,7 +83,9 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
           for (let v = 0; v < count; v += ENVELOPE_STRIDE) {
             mesh.getVertexPosition(v, point).applyMatrix4(mesh.matrixWorld);
             radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
-            if (standing && point.y < ground) ground = point.y;
+            // Feet without the skeleton root's own vertical motion (a hover, a jump, a crouch stays the clip's):
+            // what is left is how far the skinned body sits from its bind pose (Darius ~100 source units up).
+            if (standing && point.y - rootAt.y < ground) ground = point.y - rootAt.y;
             if (++work >= ENVELOPE_CHUNK) { work = 0; yield; pose(); mesh.skeleton.update(); if (root) root.getWorldPosition(rootAt).sub(homes[index]!); }
           }
         }
@@ -158,7 +162,8 @@ export function fitModel(body: Object3D, options: { height: number; width?: numb
   if (!Number.isFinite(scale) || scale <= 0) return Number.isFinite(options.height) ? options.height : size.y;
   body.scale.multiplyScalar(scale);
   // Feet: the standing clip's lowest point when measured (official scale), else the bind box's; the height runs from there.
-  const floor = official && options.ground != null && Number.isFinite(options.ground) ? options.ground : box.min.y;
+  // Never below the bind box: a ground under it would only come from root motion already taken out, so keep the bind feet.
+  const floor = official && options.ground != null && Number.isFinite(options.ground) ? Math.max(box.min.y, options.ground) : box.min.y;
   body.position.y -= floor * scale;
   return (box.max.y - floor) * scale;
 }

@@ -331,11 +331,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return lease.animations.filter(clip => names.has(clip.name))
       .map(clip => ({ clip, loop: ENVELOPE_ACTIONS.some(action => LOOPING_ACTIONS.has(action) && nameOf(action) === clip.name) }));
   };
-  /** The standing clip alone, marked as the one the feet are measured on. */
-  const groundClips = (lease: ModelLease) => {
-    const idle = lease.animationNames.idle ?? 'idle';
-    return lease.animations.filter(clip => clip.name === idle).map(clip => ({ clip, loop: true, ground: true }));
-  };
+  /** The same combat clips, each setting the feet: the body's lowest point net of root motion over all of them. */
+  const groundClips = (lease: ModelLease) => envelopeClips(lease).map(clip => ({ ...clip, ground: true }));
   const prepareEnvelope = async (id: string, lease: ModelLease): Promise<boolean> => {
     if (envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
     const stop = () => closed || !!fighting;

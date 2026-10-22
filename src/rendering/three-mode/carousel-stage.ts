@@ -48,8 +48,9 @@ export const ORBIT_SECONDS = 48;
  * circle). Fitted by projecting that rim, never estimated from the ring's center (that cropped the near pedestal).
  */
 const STAGE_RADIUS = 8.6, FRAME_FILL = 0.975, RIM_POINTS = 128, VIEW = new Vector3(0, 1.05, 1).normalize();
-/** How far below the walking level the framed rim reaches, in cells (the platform slab, not its struts). */
-const STAGE_DEPTH = 0.5;
+/** The framed rim's underside: vertices from RIM_BAND of the ring's radius outward and at most STRUT_DEPTH cells down
+ * (the pedestal ring's own slab, never the struts hanging under the platform). */
+const RIM_BAND = 0.85, STRUT_DEPTH = 3;
 /**
  * Effects (manifest keys). One variant of each is chosen explicitly: the plain restraint for my seat and the enemy one for
  * others, the Galaxy first-draft wall. The restraint plays only its reviewed early part (the later part shows a grey band),
@@ -296,10 +297,20 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const radius = STAGE_RADIUS * cell;
     const drawn = pieces.size ? platform : standIn, box = new Box3();
     drawn.updateWorldMatrix(true, true); box.setFromObject(drawn);
-    // The rim's floor is the platform's own slab (at most STAGE_DEPTH below the walking level), not the model's lowest
-    // point: the struts under it reach far down, and fitting them pushed the camera back until the arena filled a third
-    // of the view (playtest 10-22). Its top is the legends' heads, not the glass domes over them.
-    const bottom = box.isEmpty() ? 0 : Math.max(Math.min(0, box.min.y), -STAGE_DEPTH * cell);
+    // The rim's floor is the underside of the pedestal ring itself: the lowest vertex out at the ring (from RIM_BAND of
+    // its radius outward) and above STRUT_DEPTH. Not the model's lowest point: the struts under the platform reach far
+    // down, and fitting them pushed the camera back until the arena filled a third of the view (playtest 10-22). Its top
+    // is the legends' heads, not the glass domes over them.
+    let bottom = 0;
+    const vertex = new Vector3();
+    drawn.traverse(object => {
+      const mesh = object as Mesh, position = mesh.isMesh ? mesh.geometry?.getAttribute('position') : undefined;
+      if (!position) return;
+      for (let i = 0; i < position.count; i++) {
+        vertex.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
+        if (vertex.y < bottom && vertex.y >= -STRUT_DEPTH * cell && Math.hypot(vertex.x, vertex.z) >= RIM_BAND * radius) bottom = vertex.y;
+      }
+    });
     const top = box.isEmpty() ? 0 : Math.max(0, Math.min(box.max.y, surfaceAt(0, LEGEND_RADIUS * cell, LEGEND_SURFACE) + legendHeight));
     const head = surfaceAt(0, LEGEND_RADIUS * cell, LEGEND_SURFACE) + legendHeight;
     rim.length = 0;
