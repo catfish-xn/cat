@@ -22,7 +22,7 @@ import { makeRoom, runUntil } from './server/helpers';
 // Only start/continue and mandatory loot choices; no purchases, sales, rerolls or paid XP.
 describe('T11 signed opening economy', () => {
   it('seed 42 single-player enters 2-1 with 3 levels, 2/6 XP and 10 gold (v17 seed-42 has no opening gold atoms), exactly once', () => {
-    expect(XP_TO_NEXT_LEVEL).toEqual({ 1: 2, 2: 2, 3: 6, 4: 10, 5: 20, 6: 36, 7: 48, 8: 76, 9: 84 });
+    expect(XP_TO_NEXT_LEVEL).toEqual({ 1: 2, 2: 2, 3: 6, 4: 10, 5: 20, 6: 36, 7: 48, 8: 68, 9: 68 });
     let state = createMatch(42, {mode:'solo'});
     for (const roundId of ['1-2', '1-3', '1-4']) {
       expect(state.roundDefinitionId).toBe(roundId);

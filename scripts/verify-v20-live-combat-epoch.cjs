@@ -1,7 +1,7 @@
 /* Run the eleven recording/verification steps sequentially, offline, without Git writes. */
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
 process.env.GIT_OPTIONAL_LOCKS='0';
-const base='2de5e26d088e4e86032bf571d51941c9b0ecd12f',arg='--baseline-commit='+base;
+const base='db04d196e4a12933624add7d61be9081a639607f',arg='--baseline-commit='+base;
 const write=process.argv.includes('--write');
 if(process.argv.slice(2).some(x=>x!=='--write'))throw Error('Usage: verify-v20-live-combat-epoch.cjs [--write]');
 const check=write?[]:['--check'];

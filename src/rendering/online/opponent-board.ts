@@ -18,7 +18,7 @@ import { attachUnitCards } from '../../presentation/unit-card';
 import { attachTraitCards, renderTraitRows, traitRows, type TraitRow } from '../trait-column';
 import type { PublicBenchUnit, PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
 import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, itemDisplayName } from '../../presentation/g23-display';
-import { augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../../presentation/augment-display';
+import { augmentDisplayName, augmentIconOrBadgeHtml, augmentPlayerDescription } from '../../presentation/augment-display';
 import { publicOrbsElement, readPublicOrbs } from './orb-dock';
 
 /** Bench slots drawn when the seat's bench is shorter (TFT bench width); a longer bench draws every slot. */
@@ -148,7 +148,7 @@ export class OpponentBoardPanel {
     for (const id of augments) {
       const chip = element('span', augmentDisplayName(id), 'opponent-augment'); chip.dataset.augment = id;
       chip.title = [augmentDisplayName(id), augmentPlayerDescription(id)].filter(Boolean).join('\n');
-      chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 18));
+      chip.insertAdjacentHTML('afterbegin', augmentIconOrBadgeHtml(id, 18));
       row.append(chip);
     }
     return row;

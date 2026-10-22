@@ -1,15 +1,118 @@
 {
-  "incomingCommit": "2de5e26d088e4e86032bf571d51941c9b0ecd12f",
-  "streamCommit": "e472df6d235ab54e7b670e5e97ba965c6d61707e",
-  "sourceSha256": {
-    "src/rendering/board-feed.ts": "9bd5e7d271e51f38c543151ff8d923d1ed591769f8f332530b7cfee7b24061e7",
-    "src/rendering/three-mode/model-fit.ts": "a2002363d9f201275e37485263e6760c05c759182cc1f784474fca94179edc23",
-    "src/rendering/three-mode/model-warmup.ts": "90e6ca3cf31e92112b3d42b440a3c84c6e0fa27c81adba41c1c42d551f2ef60e",
-    "src/rendering/three-mode/placeholder-renderer.ts": "c9f5411b0e49f278191b02965f552ef878d1282ad5e7e712373b27faa1bc049a",
-    "src/server/room/combat-stream.ts": "9dda6f4fe83bf175c55abee941ba8c23be4f9235bd78ad0e77edc10b35a054d0",
-    "src/server/room/room.ts": "f48fee0ae43e2a5f8578c8222655281f478f8d9e5a161cecc58dc0552dcc1116",
-    "src/server/net/server.ts": "d6f5440d8f0d8796f449f0d7ba3b0adf45ebe4c5553f80e61f68970c439877e2",
-    "src/rendering/online/remote-session.ts": "9750d6b642eb3976fa026e6ff6d51f004fbd71aa3bc41f2485949b1665ba4079"
+  "incomingCommit": "db04d196e4a12933624add7d61be9081a639607f",
+  "streamCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+  "preserved": {
+    "src/presentation/augment-display.ts": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "3916a59f88305b41feba1e6afc2200f4a3b424310a97be7d14ef0794677197b5",
+      "byteIdentical": true
+    },
+    "src/presentation/g23-reward-text.ts": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "e9ec35e0d65594882f6388d0fd9aa4fa79026d3a018f5dcb6b3c28e14d348eb9",
+      "byteIdentical": true
+    },
+    "src/rendering/online/online-application.ts": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "0d2f1f1dc1fd542d61d169d287c9e1ff51f862952e1aed93219201bf732a491d",
+      "byteIdentical": true
+    },
+    "src/rendering/online/opponent-board.ts": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "e8695a5fdaf3ed4b5f49caf2f6ddb293d2246298587f4d88c2ee5998a0eb5931",
+      "byteIdentical": true
+    },
+    "src/rendering/strategy-panel.ts": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "2a8e1703659d67637d11cabf7191c859fded73fe8ac5d8598e26d88eaec3fc50",
+      "byteIdentical": true
+    },
+    "src/rendering/three-mode/carousel-stage.ts": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "bf9949be4f14536577efa7cbde1522008bf5393352b179514116bda4e80ee50d",
+      "byteIdentical": true
+    },
+    "src/rendering/three-mode/model-fit.ts": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "6f7c35f89787af9257eec76d82e2e03bd15c308b1ac8a711e466675e9f1a9612",
+      "byteIdentical": true
+    },
+    "src/rendering/three-mode/placeholder-renderer.ts": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "5087b0075f0ae94309a090cea1103fa557374715a359cd49936974f768e0160f",
+      "byteIdentical": true
+    },
+    "src/rendering/three-mode/scout-stage.ts": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "546d378bf0f6cb6ddbcbebc2bd36e35548ceea70603cc9e64e6d82a5e7eb4e4c",
+      "byteIdentical": true
+    },
+    "src/style.css": {
+      "sourceCommit": "db04d196e4a12933624add7d61be9081a639607f",
+      "sha256": "34985567b3a44aa9d95949082aaccbf59ff536c3bbc5a879d737c85890fe7c9d",
+      "byteIdentical": true
+    },
+    "src/rendering/online/remote-session.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "9750d6b642eb3976fa026e6ff6d51f004fbd71aa3bc41f2485949b1665ba4079",
+      "byteIdentical": true
+    },
+    "src/rendering/online/ws-client.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "2f56f9932d84793eaac36e1b34fe299afa596f621d55b3eceea655bc3a2f0946",
+      "byteIdentical": true
+    },
+    "src/server/room/combat-stream.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "9dda6f4fe83bf175c55abee941ba8c23be4f9235bd78ad0e77edc10b35a054d0",
+      "byteIdentical": true
+    },
+    "src/server/net/messages.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "e15efe14650c07c37090d61e26b846fbf4ba82a03e73fdda8e8051870d4cef8a",
+      "byteIdentical": true
+    },
+    "src/server/net/server.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "d6f5440d8f0d8796f449f0d7ba3b0adf45ebe4c5553f80e61f68970c439877e2",
+      "byteIdentical": true
+    },
+    "src/server/room/projection.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "dea2b6c9d3f68ffe4b9e8c29a2b0520cfe1cbaeeb8bfcf99ec4510f7b1736bdf",
+      "byteIdentical": true
+    },
+    "src/server/room/two-sided-resolver.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "cc89888c3540f8166fc29e093849752889809819145c0f3ca44bc999c3e9aa59",
+      "byteIdentical": true
+    },
+    "src/simulation/match.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "29d6a39e4414e0f578c598609a802edb39ed3d5d197f9440c8a0f1398698cb73",
+      "byteIdentical": true
+    },
+    "src/simulation/two-sided-battle.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "9177e9e3e7eb497ae0c692fe77ede3e2c875d6fd7b4b7960ca8db0aa43339e57",
+      "byteIdentical": true
+    },
+    "src/simulation/battle-input-log.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "40a5acab3455ea795625927b014b11e8a7e75c09b3c4fad33864bc9c09253975",
+      "byteIdentical": true
+    },
+    "tests/server/combat-stream.test.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "af7cd0bb235a55b9d7954e5d47fe031125b38bbce2b160d18d495461f00677fe",
+      "byteIdentical": true
+    },
+    "tests/live-combat-inputs.test.ts": {
+      "sourceCommit": "c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71",
+      "sha256": "8c5dc061bbf0b9c2c24bfc181acbba97f3107f5bf9cfeeefccb85ee79177a1db",
+      "byteIdentical": true
+    }
   },
-  "unchanged": true
+  "roomChange": "Retains incoming exact HP and single matching Mel event validation in the shared planner; stream commit skips already committed rounds.",
+  "xpTableByteIdenticalToIncoming": true
 }

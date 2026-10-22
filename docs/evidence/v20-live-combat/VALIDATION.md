@@ -1,86 +1,49 @@
-# v20-live-combat 验收
+# v20-live-combat / XP68 合流验收
 
-分支 `codex/live-combat-stream`，HEAD `e472df6d235ab54e7b670e5e97ba965c6d61707e`，MERGE_HEAD `2de5e26d088e4e86032bf571d51941c9b0ecd12f`，Node v24.21.0。全程离线、未 push、未写 Git 元数据；9处冲突内容已解除，但索引受只读限制仍有9个UU。`git diff --check`通过。
+HEAD `c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71`，MERGE_HEAD `db04d196e4a12933624add7d61be9081a639607f`；分支 `codex/live-combat-stream`。23处冲突内容已解除，Git元数据只读，索引仍有23个UU；全程离线、未push。`git diff --check`退出0。
 
-## 合并与身份
+## 身份与保留项
 
-保留父版 B 补丁、PvE微光约束、黑市多候选/保留及 schema/save=11/7；NET6、replay/command=5/5，完整身份与升版理由见 [RELEASE_NOTES](RELEASE_NOTES.md)。受保护manifest和253个历史文件按MERGE_HEAD逐字节核验，逐文件SHA256见 [history-preservation.json](history-preservation.json)。
+父epoch为 `v20-xp68`；schema/save/replay/command=11/7/5/5，NET6。CONTENT `fnv1a32-utf16:93fad04c`，LOOT_REPLAY `fnv1a32-utf16:49eb9cf0`。schema/save未增加字段，沿用父版11/7；replay/command从4/4升为5/5，标识实时流及逐tick输入语义。旧身份严格拒绝、无迁移。
 
-`merge-preservation.json`记录了预热实现4文件与MERGE_HEAD一致，服务端流调度/推送及客户端流缓冲4文件与原HEAD一致的SHA256；online-application自动合入的warm hints保持，未改视觉或素材。
+经验8→9和9→10各68，经验表与上游字节一致。普通与流式PvP结算共用同一规划器，HP严格核对 `max(0,hp-damage)`；只有唯一、同battleId、来源mel的playerSaved事件可解释致死后1HP，另核对整条round record。补充已提交轮次的流式尾段防重，防止再次规划产生duplicate-settlement故障。
 
-## 确定性
+两个分支并集中的1681个历史文件及受保护manifest字节不变，范围包含旧证据、Herald raw/support、检查点、基线、golden、历史脚本与源归档。逐文件来源和SHA256见 [history-preservation.json](history-preservation.json)。当前实现/测试1325个源文件与录制来源364个文件均通过结束时hash核验；见 [final-audit.json](final-audit.json)。上游界面自动合并和本PR双游标、绝对排拍、缓冲、整拍推送保留项见 [merge-preservation.json](merge-preservation.json)。
 
-- `tests/server/combat-stream.test.ts`：seed7/42/991、八席前5轮，对照旧整轮resolver的完整battle/ledger/proposals/damage/roundResults和双方回放；绝对排拍、两拍追赶上限、20ms步间让出、终局计划缓存与唯一结算均覆盖。
-- `tests/live-combat-inputs.test.ts`：seed7/42/991同时激活迅击、野火、搭档，覆盖120tick周期与140tick窗口；整轮、每tick、2/7tick切片和CombatStream的JSON字节相等。
-- 新增seed9/42/991炼金男爵对照：真实战斗完整结果及双方g23Facts/提案字节相等，再以相同已核算前缀结算黑市，比较三候选、逐项领取及保留、奖励收据、经济RNG和独立经济重演的完整JSON字节。
-- PvP第5轮及PvE第11轮tick1成功买、卖备战席单位和刷新，按结算瞬间金币计算利息；sliceTicks=1/8的全部席位、战斗和卡池字节一致。
-- 非空逐tick输入在推进前拒绝，可在同tick重试空输入，未追加成功日志；伪造非空/畸形日志被提案与回放边界拒绝。
-- 四条完整公共命令路线cannon/sniper/mage/sniper-caitlyn，各33战，全部命令和每轮完整事件hash与父epoch一致；新身份独立重录，不改标签。cannon/sniper各67检查点通过严格text/object恢复与原字节序列化。Herald五案在production restore模块加载前先导出原始字节，再核验准备期、开战及15个后继tick。
+## 确定性与相关测试
 
-## 定向测试
+- 迅击、野火、搭档seed7/42/991：整轮、逐tick、2/7tick切片及CombatStream的完整结果、提案、回放字节一致。
+- 黑市seed9/42/991：完整战斗、N选三候选、每项领取/保留、奖励收据与经济RNG字节一致。
+- 经验68交易向量：等级8/9各17次正常付费买XP，恰好跨级；开战和每tick完整state/events字节一致。
+- 梅尔seed42：同一冻结输入与同一实时卡池基础，整轮/流式完整结算、事件、状态、卡池字节一致；覆盖首次终局规划及尾段重规划。两种调度各自历史发布次数不同，不归一化或删除revision字段。
+- 梅尔整轮/流式20项测试覆盖1HP存活、原始伤害、唯一收据、未达施法数/已消耗救命、错误伤害、缺少/错误来源/错误battleId/重复救命事件、HP记录不一致和重复提交。
+- 保留八席多seed前5轮的完整结果/账本/伤害/回放对照、PvP第5轮与PvE第11轮战中买卖利息、绝对50ms排拍、双游标、四拍缓冲、整拍推送及逐tick空输入入口；非空输入仍明确拒绝。
 
-| 报告 | 文件 | 通过 | 失败 |
-| --- | ---: | ---: | ---: |
-| core-final.json | 8 | 132 | 0 |
-| related.json | 19 | 380 | 0 |
+相关集去重后35文件、991项，最终通过991，未通过0。首轮related为826通过、11项超时，保留原始报告；未改时限/测试代码/配置。复测选择原超时用例、hook阻断用例及M5路线必要的前置上下文，待分片及epoch完成后在单worker执行。首次名称筛选只匹配6项，发现后按标题后缀补跑遗漏18项；两份报告均保留，未重复已执行的6项，逐项结果见 [focused-results.json](focused-results.json)；未重跑整片。新增梅尔测试先暴露并修复尾段重复规划问题，原始失败日志留在忽略目录。
 
-共27个不同文件、512项通过。第一轮新增黑市测试把双席提案对象当数组，3项未执行经济断言而失败；已改为Object.values后重跑完整核心集132/132通过，首次报告保留在忽略目录，不改规则/超时/golden。
+## Epoch、类型与四分片
 
-核心集包含live-combat-inputs、chem-baron-fix、v20-traits、server/combat-stream、combat-stream-client、net/combat-stream-memory、live-bank、net/messages。
-相关集包含content-identity-constants、server/net/watch-stream、server/replay-client、g2-4a-crown-history、m6-persistence、t2-two-sided-battle、t3-round-settlement、t5r-combat-replay、server/two-sided-resolver、m8-b9-compatibility、match-contract、c19-missed-pulse、b8-resumable-battle、t13-identity、g2-3-lesser-shimmer-duplicator、g2-3-hook-failures、g2-3-integration、v19-part2、v17-orb-combo。
-
-原始日志与Vitest JSON：`artifacts/v20-live-combat-tests/`。每个定向命令使用`npm test -- <上述文件> --maxWorkers=1 --reporter=default --reporter=json --outputFile=<报告>`；核心命令只用JSON reporter。未修改测试时限或跳过用例。
-
-`npm run typecheck`退出0（62.04秒），见同目录`typecheck.json`和`typecheck.log`。
-
-## Epoch与四分片
-
-初次显式录制入口`node scripts/verify-v20-live-combat-epoch.cjs --write`，11步全部退出0；报告见 [recording-verification.json](recording-verification.json)。缺省入口再次按`--check`核验独立golden、输入和证据，不重写已录内容，最终报告见 [epoch-verification.json](epoch-verification.json)：缺省只读核验11/11步退出0，命令退出0，606.65秒。定向、类型、身份及epoch计数另见 [focused-results.json](focused-results.json)，父/当前完整根摘要见 [digest-comparison.json](digest-comparison.json)。
-
-四片每片仅跑一遍，每批两片，每片一个worker，未改时限/skip或安装依赖：
+显式重录11/11步退出0，见 [recording-verification.json](recording-verification.json)；随后默认只读核验11/11步退出0，见 [epoch-verification.json](epoch-verification.json)。四条公共路线各33战、cannon/sniper各67检查点、B8/C19、Herald五案、transfer、live-reveal均重算。命令与完整事件hash继承XP68；新epoch独立生成，未替换历史状态标签。
 
 ```sh
-node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --shard=i/4 --maxWorkers=1 --reporter=default --reporter=json --outputFile=artifacts/v20-live-combat-tests/shard-i.json
+node scripts/verify-v20-live-combat-epoch.cjs  # exit 0，653.26 秒
+npm run typecheck  # exit 0，54.79 秒
+node scripts/update-content-identities.cjs --check  # exit 0，4.64 秒
 ```
+
+四片各一遍，每批两片、每片一个worker：
 
 | 分片 | 文件 | 通过 | 失败 | 跳过 | 秒 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 1/4 | 123 | 1437 | 15 | 0 | 893.63 |
-| 2/4 | 123 | 1625 | 5 | 0 | 1215.77 |
-| 3/4 | 123 | 1838 | 16 | 0 | 1480.38 |
-| 4/4 | 123 | 1535 | 19 | 0 | 723.95 |
+| 1/4 | 124 | 1448 | 17 | 4 | 1284.01 |
+| 2/4 | 124 | 1634 | 6 | 0 | 1546.76 |
+| 3/4 | 124 | 1848 | 16 | 0 | 1636.52 |
+| 4/4 | 123 | 1533 | 19 | 0 | 829.31 |
 
-合计 **492文件、6435通过、55失败、0跳过**；四片退出码均为1。55项全部为环境限制：48项`listen EPERM`、7项子进程管道`spawnSync ... EPERM`，**计时失败0、规则/数值/golden断言失败0**。子进程的Vitest JSON省略了嵌套error的errno，已将同一默认报告中的Received错误（含EPERM）逐项附入`fast-failures.json`，未仅凭测试名推断。未加载预加载器、未修改时限、未跳过用例、未重跑整片；环境失败不计为通过。
+原始合计495文件、6463通过、58失败、4跳过。分类：timing-pass-on-idle-retry=3、environment-listen=48、environment-pipe=7；另计hook失败：{'timing-hook-pass-on-idle-retry': 1}，其阻断用例的复测结果单列。环境失败依据每项EPERM堆栈或Received错误，计时失败另列；空闲复测通过不改写首轮失败数。完整证据见 [fast-results.json](fast-results.json)、[fast-failures.json](fast-failures.json)。
 
-| 失败文件 | 数量 | 分类 |
-| --- | ---: | --- |
-| tests/explorer-bracer-restore-pressure.test.ts | 2 | environment-pipe |
-| tests/g2-4b-pr161-restore.test.ts | 1 | environment-pipe |
-| tests/server/e2e-replay-errors.test.ts | 4 | environment-pipe |
-| tests/server/g2-4a-forge-timeout.test.ts | 1 | environment-listen |
-| tests/server/g2-4b-artifact-forge-room.test.ts | 1 | environment-listen |
-| tests/server/g2-4b-support-forge-room.test.ts | 1 | environment-listen |
-| tests/server/legend-walk.test.ts | 1 | environment-listen |
-| tests/server/lifecycle.test.ts | 1 | environment-listen |
-| tests/server/little-legends.test.ts | 1 | environment-listen |
-| tests/server/net/combat-stream-wire.test.ts | 2 | environment-listen |
-| tests/server/net/heartbeat.test.ts | 4 | environment-listen |
-| tests/server/net/live-bank-wire.test.ts | 1 | environment-listen |
-| tests/server/net/server-close.test.ts | 2 | environment-listen |
-| tests/server/net/server.test.ts | 13 | environment-listen |
-| tests/server/net/slow-task.test.ts | 4 | environment-listen |
-| tests/server/net/takeover.test.ts | 3 | environment-listen |
-| tests/server/net/v17-avarice-reconnect.test.ts | 1 | environment-listen |
-| tests/server/net/watch.test.ts | 7 | environment-listen |
-| tests/server/projection-wire.test.ts | 3 | environment-listen |
-| tests/server/replay-first-pass.test.ts | 2 | environment-listen |
+原始Vitest JSON和日志在 `artifacts/v20-live-combat-tests/xp68-*`，不提交。沙箱不能监听真实socket/部分子进程管道，环境失败需在允许监听的环境复核。阶段2战中装备安装尚未实现，保持明确拒绝；没有新增账号、数据库或进程重启恢复。
 
-最终分片结果与逐项失败分类见 [fast-results.json](fast-results.json)、[fast-failures.json](fast-failures.json)。环境`listen EPERM`、子进程管道`EPERM`、未证实原因的计时失败以及真实断言失败分别记录，失败不计为通过。
+## 留工作区
 
-## 交付限制
-
-真实socket受沙箱监听权限限制，内存传输回归覆盖生产队列/协议/游标/推送；真实网络失败须在可监听环境复核。阶段2即时装备安装未实现，20ms不是单tick硬上限，没有新增进程重启房间恢复。
-
-Git元数据位于工作区外只读目录，按用户授权仅留工作区。可写环境审查后暂存跟踪文件及新epoch目录，再完成现有merge；生成物`artifacts/`、`dist/`及素材不纳入提交。
-
-全部测试结束后的 [final-audit.json](final-audit.json) 确认：253个历史文件及受保护manifest未变、364个录制来源文件hash未变、9处冲突内容均无标记、`git diff --check`退出0；索引9个UU未写入，未联网、未push。
+未写Git元数据；需在可写环境审阅、暂存23个已解冲突文件及新增测试，再完成当前merge。`artifacts/`、`dist/`和素材不纳入提交。最终审计见 [final-audit.json](final-audit.json)。

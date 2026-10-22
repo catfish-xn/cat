@@ -18,7 +18,7 @@ PvE终局只暂存，全部战斗实际结束后按固定席序在最新池规�
 D11金币直接采样同一PvP任务，PvE逐步读取Match.gold。可信、已冻结且由本地任务认证的 BattleResult 不再在 proposeSettlement 重新模拟整场；
 外部/克隆结果保留原来的完整验证。避免在最后一个实时tick重新引入整场同步计算。
 
-正式发布身份为 `v20-live-combat`，父 epoch `v20-chem-baron`。schema/save/replay/command=11/7/5/5，NET6；schema/save 沿用父版结构，replay/command 标识实时战斗流和逐 tick 输入边界。CONTENT=`fnv1a32-utf16:d0e9375f`、LOOT_REPLAY=`fnv1a32-utf16:0bd44c5e`。B 补丁、PvE 不增微光、黑市 N 选一/保留及 #381 预热全部继承；独立重录 golden、B8/C19/Herald 和67检查点，旧 epoch 严格拒绝恢复，历史字节不变。录制与验证见 [RELEASE_NOTES](evidence/v20-live-combat/RELEASE_NOTES.md)。
+正式发布身份为 `v20-live-combat`，父 epoch `v20-xp68`。schema/save/replay/command=11/7/5/5，NET6；schema/save 沿用父版结构，replay/command 标识实时战斗流和逐 tick 输入边界。CONTENT=`fnv1a32-utf16:93fad04c`、LOOT_REPLAY=`fnv1a32-utf16:49eb9cf0`。8→9 / 9→10各68 XP及梅尔救命精确HP核对、B 补丁、PvE 不增微光、黑市 N 选一/保留及 #381 预热全部继承；独立重录 golden、B8/C19/Herald 和67检查点，旧 epoch 严格拒绝恢复，历史字节不变。录制与验证见 [RELEASE_NOTES](evidence/v20-live-combat/RELEASE_NOTES.md)。
 
 战斗中允许买、卖备战席单位、刷新；利息取结算瞬间的权威 Match.gold，PvP 既有胜利金币先计入利息基数。开战冻结的是战斗资产，不冻结银行或利息基数。
 
@@ -31,11 +31,11 @@ D11金币直接采样同一PvP任务，PvE逐步读取Match.gold。可信、已�
 已有 Match 成功穿戴/合成/消耗品命令继续由 BattleHistory.equipmentCommands 记录，并经公共命令重演和资源来源账本认证；删除或伪造记录会拒绝恢复，未改变旧 tick 的含义。
 
 完整消息字段、公共函数输入输出和失败枚举见 [MULTIPLAYER_CONTRACT](MULTIPLAYER_CONTRACT.md) 的 B 方案第1阶段一节。
-测试、分片失败清单和环境限制见 [验证记录](evidence/v20/phase1-validation.md)。
+测试、分片失败清单和环境限制见 [验证记录](evidence/v20-live-combat/VALIDATION.md)。
 
 
 #382 上一轮合流记录（已被当前正式 epoch 覆盖）：HEAD=`96e9ff24`，MERGE_HEAD=`a7687b34`（#379/#383，包含 #370/#376；#381 尚未合入）。
 33 个冲突文件的内容已修复，上游自动合并的视觉/素材路径变动保留。Git 元数据位于工作区外且只读，`git add` 无法创建 index.lock，故索引仍保留未解决标记；未提交或推送。
 本轮验证和环境限制见 [合流验证](evidence/v20/pr382-merge-validation.md)。
 
-当前合流：HEAD=`e472df6d`，MERGE_HEAD=`2de5e26d`（#373/#381）。9处冲突内容已解除；Git元数据只读，索引标记留给用户在可写环境执行 `git add`。历史文件与受保护manifest均按新集成基线逐字节核验，未联网、未push。
+当前合流：HEAD=`c5c735ca`，MERGE_HEAD=`db04d196`（#384/#385/#386/#388）。23处冲突内容已解除；Git元数据只读，索引标记留给用户在可写环境执行 `git add`。历史文件与受保护manifest均按新集成基线逐字节核验，未联网、未push。

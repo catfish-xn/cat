@@ -1,6 +1,6 @@
 /* Recompute both digest roots from immutable Git source and current source, offline. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{readProcessOutput:execFileSync}=require('./offline-process-output.cjs');
-const BASE='2de5e26d088e4e86032bf571d51941c9b0ecd12f',directory=path.resolve('artifacts/v20-live-combat-recording/v20-chem-baron-source');
+const BASE='db04d196e4a12933624add7d61be9081a639607f',directory=path.resolve('artifacts/v20-live-combat-recording/v20-xp68-source');
 const digestScripts=['scripts/content-digest.ts','scripts/loot-replay-digest.ts'];
 const archive=execFileSync('git',['archive','--format=tar',BASE,'src/simulation',...digestScripts],{maxBuffer:64*1024*1024});
 for(let offset=0;offset+512<=archive.length;){const header=archive.subarray(offset,offset+512),name=header.subarray(0,100).toString().replace(/\0.*$/s,''),size=parseInt(header.subarray(124,136).toString().replace(/\0.*$/s,'').trim()||'0',8);if(!name)break;assert(Number.isSafeInteger(size)&&size>=0);const target=path.resolve(directory,name);if(header[156]===48||header[156]===0){assert(target.startsWith(directory+path.sep)&&(name.startsWith('src/simulation/')||digestScripts.includes(name)));fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,archive.subarray(offset+512,offset+512+size));}offset+=512+Math.ceil(size/512)*512;}

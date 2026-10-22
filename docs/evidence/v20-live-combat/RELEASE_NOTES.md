@@ -1,17 +1,17 @@
 # v20-live-combat
 
-父 epoch：`v20-chem-baron`。集成基线：`2de5e26d088e4e86032bf571d51941c9b0ecd12f`（#373、#381），施工 HEAD：`e472df6d235ab54e7b670e5e97ba965c6d61707e`。
+父 epoch：`v20-xp68`。集成基线：`db04d196e4a12933624add7d61be9081a639607f`（#384、#385、#386、#388），施工 HEAD：`c5c735cad69b1c7d5f413cc7d62b89a27ccf7f71`。
 
 生产战斗现在按绝对时间的50ms边界首遍推进，完整领域账本与双方回放直接来自同一任务；全体终局后才按固定席序规划并原子结算。本人/观战双游标独立恢复，客户端四拍/200ms缓冲，服务器整拍合并推送；终局至少保留800ms尾段。战中买卖和刷新使用结算时权威金币计算利息。逐 tick `beforeTick` 输入入口已接通，阶段1只允许空输入；非空输入/伪造日志报 `battle-input-unsupported`，不执行安装、不记虚假成功。字段、导出及失败枚举见 [MULTIPLAYER_CONTRACT](../../MULTIPLAYER_CONTRACT.md) 和 [LIVE_COMBAT_PHASE1](../../LIVE_COMBAT_PHASE1.md)。
 
-完整继承 Chem-Baron B 补丁16具名字段、标准 PvE 不增微光、黑市至多三包 N 选一与保留，及迅击、野火、五组搭档和 #381 模型预热。没有为新的调度修改数值、RNG抽取顺序或50ms规则。
+完整继承经验68策略、梅尔救命精确HP核对及 Chem-Baron B 补丁16具名字段、标准 PvE 不增微光、黑市至多三包 N 选一与保留，及迅击、野火、五组搭档和 #381 模型预热。没有为新的调度修改数值、RNG抽取顺序或50ms规则。
 
 | 标识 | 父 epoch | 当前 |
 | --- | --- | --- |
-| rules | s13-g2-3-v20-chem-baron | s13-g2-3-v20-live-combat |
-| content | s13-14.24b-g2-3-v20-chem-baron | s13-14.24b-g2-3-v20-live-combat |
-| CONTENT | fnv1a32-utf16:2d1eafb8 | fnv1a32-utf16:d0e9375f |
-| LOOT_REPLAY | fnv1a32-utf16:7fd08770 | fnv1a32-utf16:0bd44c5e |
+| rules | s13-g2-3-v20-xp68 | s13-g2-3-v20-live-combat |
+| content | s13-14.24b-g2-3-v20-xp68 | s13-14.24b-g2-3-v20-live-combat |
+| CONTENT | fnv1a32-utf16:3512a559 | fnv1a32-utf16:93fad04c |
+| LOOT_REPLAY | fnv1a32-utf16:d18f985e | fnv1a32-utf16:49eb9cf0 |
 | schema / save | 11 / 7 | 11 / 7 |
 | replay / command | 4 / 4 | 5 / 5 |
 | 网络 NET / 规则侧多人契约 | 5 / 4 | 6 / 5 |
@@ -28,7 +28,7 @@ node scripts/verify-v20-live-combat-epoch.cjs --write
 # 正式核验：重新计算并比较现有夹具，不覆写输入/golden
 node scripts/verify-v20-live-combat-epoch.cjs
 node scripts/compare-v20-live-combat-digests.cjs
-node scripts/v20-live-combat-fixture-audit.cjs --baseline-commit=2de5e26d088e4e86032bf571d51941c9b0ecd12f
+node scripts/v20-live-combat-fixture-audit.cjs --baseline-commit=db04d196e4a12933624add7d61be9081a639607f
 node scripts/update-content-identities.cjs --check
 ```
 

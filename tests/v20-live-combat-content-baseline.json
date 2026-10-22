@@ -1,7 +1,7 @@
 {
-  "parentEpoch": "v20-chem-baron",
-  "contentDigest": "fnv1a32-utf16:d0e9375f",
-  "lootReplayDigest": "fnv1a32-utf16:0bd44c5e",
+  "parentEpoch": "v20-xp68",
+  "contentDigest": "fnv1a32-utf16:93fad04c",
+  "lootReplayDigest": "fnv1a32-utf16:49eb9cf0",
   "rulesVersion": "s13-g2-3-v20-live-combat",
   "contentVersion": "s13-14.24b-g2-3-v20-live-combat",
   "schemaVersion": 11,
@@ -9,10 +9,10 @@
   "replayFormatVersion": 5,
   "commandProtocolVersion": 5,
   "netProtocolVersion": 6,
-  "previousContentDigest": "fnv1a32-utf16:2d1eafb8",
-  "previousLootReplayDigest": "fnv1a32-utf16:7fd08770",
+  "previousContentDigest": "fnv1a32-utf16:3512a559",
+  "previousLootReplayDigest": "fnv1a32-utf16:d18f985e",
   "traceHashes": {
-    "state": "91f41be5a1af9d17df3e7581faac309cdd77dcd9daca6e55d88620ae4acde902",
+    "state": "bfcad17be011ff41d96196a7fa7db51a2d2b345376cd1667ccbe9e55d33033f6",
     "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
     "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
   },
@@ -24,5 +24,5 @@
     "stateHash": "fnv1a32-utf16:f13e9067",
     "eventHash": "fnv1a32-utf16:cf452d32"
   },
-  "reason": "Live first-pass combat stream, dual cursors, absolute 50ms boundaries and tick input seam; inherits all Chem-Baron B-patch/PvE/market rules. Schema/save stay 11/7 (no new Match or save fields); replay/command rise from 4/4 to 5/5 for stream and tick input semantics, NET6. Old identities rejected without migration."
+  "reason": "Live first-pass combat stream, dual cursors, absolute 50ms boundaries and tick input seam; inherits XP68 and all Chem-Baron B-patch/PvE/market rules. Schema/save stay 11/7 (no new Match or save fields); replay/command rise from 4/4 to 5/5 for stream and tick input semantics, NET6. Old identities rejected without migration."
 }

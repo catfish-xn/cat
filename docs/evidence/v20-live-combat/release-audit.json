@@ -1,17 +1,17 @@
 {
   "sourceDigests": {
-    "scripts/compare-v20-live-combat-digests.cjs": "92b3613050df365e77c501c67de45dd555d79f64d3310bcf1e0d0fa6fe7686c2",
+    "scripts/compare-v20-live-combat-digests.cjs": "6f741113d3e5615de46534c2ed4e11f42b92774d98b4c5dc1cd3513bff80104f",
     "scripts/content-digest.ts": "0e18b659e7a0844d7c132e8d4d3b55cb39aa8951c33183ec4dd43eceaae37880",
     "scripts/generate-m5-route.cjs": "db97d86f27bd68c18118e2fd60297a226eccf14e0fc5f32ee3bf63415796b0eb",
     "scripts/loot-replay-digest.ts": "68c5ec17ff20388ad08c24321a06bc28904d926f279472bcd1ed2a1db1d5d0b7",
     "scripts/offline-process-output.cjs": "79c6aa7f224d905b59fe257597996da54324e02fedc1b044ac78a389f06a2705",
-    "scripts/record-v20-live-combat-inputs.cjs": "8d0922b9e48121662f0f29246503e606111267e1e8cc2e6d1e2b8c9449027268",
-    "scripts/record-v20-live-combat-live-reveal.cjs": "325cc4cc28e5cfdc910d7eec9a96262cb495483d7b2249d878c2be0cff7d56d0",
-    "scripts/record-v20-live-combat-release.cjs": "a2a79c6c6b94ca28225ab33f65fca49f6d40641d8b50e6b2586f07a393168c85",
+    "scripts/record-v20-live-combat-inputs.cjs": "d235fb948a50cf5a7e58dac6daea961f1adf48ac1b2a987fa4199a61d4369b89",
+    "scripts/record-v20-live-combat-live-reveal.cjs": "70c793b75e863c6377066b07e45a550bd7f29d48513e0f46a187bd88fe49739c",
+    "scripts/record-v20-live-combat-release.cjs": "99cd2428aa7521fa20b3a2679681b8cbacd376b9ae77ff7e37a54d832b4b24ca",
     "scripts/record-v20-live-combat-transfer.cjs": "9d453d399b1990bb25b77204f7bfe1ec4285f45130e804fe8a8d62bc7ecf7623",
-    "scripts/v20-live-combat-fixture-audit.cjs": "5eb87f2012a8eca9f481b52a85521a651d541f0f69b1775c15e8607c8ead1b54",
+    "scripts/v20-live-combat-fixture-audit.cjs": "cb98bafc0cfaecb6c477d0b7df58da9696b45241c9247b5b7b133123f570ed48",
     "scripts/verify-m8-herald-fixtures.cjs": "a891a136dfaca7123b9cb330fbe0cbc31cf44ae75130d78b0eed3837a44cc3a8",
-    "scripts/verify-v20-live-combat-epoch.cjs": "7231dc650da7bb2e7d76df5c79ed4547960436f491ee78aab9d7f6817a7ba8aa",
+    "scripts/verify-v20-live-combat-epoch.cjs": "975288f9f0d6d801f0a588fdb3b9abd38961a1f5583c720f9e1530d679ee8cc6",
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
     "src/simulation/ability-display.ts": "3d64ed7134c2351e1aae3b46e9a771e755e4465d818dc510bce25bbf7629862f",
     "src/simulation/ability-types.ts": "ddffe56e06983345d2bd677466f232bada82236f4fc0fbe837c9ea0f39fe16c5",
@@ -131,7 +131,7 @@
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
-    "src/simulation/content/identity-constants.ts": "006ca62e637582243ae6329dbced5ccbfb1023e27f289899c1abc2e003e81bad",
+    "src/simulation/content/identity-constants.ts": "c3a3883eccf987a0cc93655a1e96e344e0a7a3f4531380c86f6a706e0ad62e95",
     "src/simulation/content/index.ts": "257f7c643dfa1d5d4bdcb15f84154fc1a7b71e95b5351cc01d61db9bd624f926",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -153,7 +153,7 @@
     "src/simulation/content/neutrals.ts": "67be00c1e83c55228e9640ba99c53cab8d4a40aa7eb31677c049fb22d5b6d9cc",
     "src/simulation/content/orbs.ts": "574a80b088d695a23e29aad8f751331bce2024a27470bd0bc0240b3e8f208b91",
     "src/simulation/content/round-catalog.ts": "3df01cff78d0b74bd941e8340af4b892680fb6a5f39d801a2ea1e1c019df9e4e",
-    "src/simulation/content/rules-manifest.ts": "3b9450103b9a3fb072a6686a89960fa9b82314cd7af79af245a1913ed2d5e093",
+    "src/simulation/content/rules-manifest.ts": "863da50249d7d746b5b4ed39e0eab1f95fadbc22f1815fd675091c63165bf678",
     "src/simulation/content/s13-anomaly-summons.ts": "76d96460843cf7a45800ed70dcc83f36e96e90716a78d851243de9bdf0b87c90",
     "src/simulation/content/s13-augments-p2-source.ts": "a0452f3ac60f25da7dc10c18ef6c44e6882715d2b87949db533f53e1833026c7",
     "src/simulation/content/s13-augments-p2.ts": "d01e4bbc790aa1d016fdde15d60f9e195a7b413ca304e9784969db76e74b33f0",
@@ -290,8 +290,8 @@
     "src/simulation/m8/triggers.ts": "611d8c15d4eca4c8496a7ce962e2f45840521e7ee35f37ee3e37ee697c6652cc",
     "src/simulation/m8/ui-contracts.ts": "18f51bbc9a640365ccb61625493e9afa032aa47d973bfb2ec3b50cf75f105adf",
     "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
-    "src/simulation/m8/version.ts": "02b67907f2a5f4699b27c6e4241c3b5969ec34b9a6aa638c39669a5a6c1b26c7",
-    "src/simulation/match-rules.ts": "62d8b2d097bc3858c4d8470bfd93e5d3bc6b5a17120699b53891e67017d45f76",
+    "src/simulation/m8/version.ts": "b47d44fb928f2ad763577ef33f4689e254054b232e6ad7e2274dfba264d76952",
+    "src/simulation/match-rules.ts": "c112d58ee02e34b02d5372abeb6bc8d5b300372ba6ed92ba74fc5c2a3661f434",
     "src/simulation/match-types.ts": "277496bf4caa580c68f44ad632e745a851bd4e34e4b886d556011090179c16d2",
     "src/simulation/match.ts": "29d6a39e4414e0f578c598609a802edb39ed3d5d197f9440c8a0f1398698cb73",
     "src/simulation/mel-save.ts": "1b9343c7f0304bbfe1ed69ebb05bff42948bc9260cb12ab1a72ae8d189f3e0b4",
@@ -361,15 +361,15 @@
     "src/simulation/v20-teamups.ts": "bcc1e2def1e864e35a59831fd58a681b9c0b856483ceef0305334f43a8d03f17",
     "src/simulation/validate-content.ts": "e6f852e4304a433b53fb480b33b020b8171c3221e15395b59348286081e3ed0b",
     "src/simulation/view-fields.ts": "758328ac0d4935b74548418de09ef1f63683f5049af8b8fe5a89c197c7f1f81d",
-    "tests/fixtures/m5/oracle.g2.cjs": "5e35a760e180d6b0633127b320d9f4ac950dd06224dc807b95bbfcc125d89c6d",
+    "tests/fixtures/m5/oracle.g2.cjs": "09e99b17085feb227476ec2689378ee18605c4ed08dfe620be9cdc95651d95b3",
     "tests/fixtures/record-v20-live-combat-herald.cjs": "8e9d58f5574c4b775e7df8447e5f80062cba7f2fb222da41f0247ea05d93f40d",
     "tests/fixtures/v20-live-combat-herald-support/generate.ts": "e022bdace28118e4eaa586d92effa11adf2f415e21655a04765cf1db6802152d"
   },
-  "baseCommit": "2de5e26d088e4e86032bf571d51941c9b0ecd12f",
+  "baseCommit": "db04d196e4a12933624add7d61be9081a639607f",
   "baseline": {
-    "parentEpoch": "v20-chem-baron",
-    "contentDigest": "fnv1a32-utf16:d0e9375f",
-    "lootReplayDigest": "fnv1a32-utf16:0bd44c5e",
+    "parentEpoch": "v20-xp68",
+    "contentDigest": "fnv1a32-utf16:93fad04c",
+    "lootReplayDigest": "fnv1a32-utf16:49eb9cf0",
     "rulesVersion": "s13-g2-3-v20-live-combat",
     "contentVersion": "s13-14.24b-g2-3-v20-live-combat",
     "schemaVersion": 11,
@@ -377,10 +377,10 @@
     "replayFormatVersion": 5,
     "commandProtocolVersion": 5,
     "netProtocolVersion": 6,
-    "previousContentDigest": "fnv1a32-utf16:2d1eafb8",
-    "previousLootReplayDigest": "fnv1a32-utf16:7fd08770",
+    "previousContentDigest": "fnv1a32-utf16:3512a559",
+    "previousLootReplayDigest": "fnv1a32-utf16:d18f985e",
     "traceHashes": {
-      "state": "91f41be5a1af9d17df3e7581faac309cdd77dcd9daca6e55d88620ae4acde902",
+      "state": "bfcad17be011ff41d96196a7fa7db51a2d2b345376cd1667ccbe9e55d33033f6",
       "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
       "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
     },
@@ -392,11 +392,11 @@
       "stateHash": "fnv1a32-utf16:f13e9067",
       "eventHash": "fnv1a32-utf16:cf452d32"
     },
-    "reason": "Live first-pass combat stream, dual cursors, absolute 50ms boundaries and tick input seam; inherits all Chem-Baron B-patch/PvE/market rules. Schema/save stay 11/7 (no new Match or save fields); replay/command rise from 4/4 to 5/5 for stream and tick input semantics, NET6. Old identities rejected without migration."
+    "reason": "Live first-pass combat stream, dual cursors, absolute 50ms boundaries and tick input seam; inherits XP68 and all Chem-Baron B-patch/PvE/market rules. Schema/save stay 11/7 (no new Match or save fields); replay/command rise from 4/4 to 5/5 for stream and tick input semantics, NET6. Old identities rejected without migration."
   },
-  "previousGoldenSha256": "3cba8dc9f40c836290b839968b45d643eaba020e5430d9392e60c66604065c36",
+  "previousGoldenSha256": "4dba8e4651d77f302c7ff933c79d4f4d77be754ba50868e02a8e864b02b44a3c",
   "driverSha256": "db97d86f27bd68c18118e2fd60297a226eccf14e0fc5f32ee3bf63415796b0eb",
-  "oracleSha256": "5e35a760e180d6b0633127b320d9f4ac950dd06224dc807b95bbfcc125d89c6d",
+  "oracleSha256": "09e99b17085feb227476ec2689378ee18605c4ed08dfe620be9cdc95651d95b3",
   "builds": {
     "cannon": {
       "summary": {
@@ -417,17 +417,17 @@
       },
       "recording": {
         "byteEvidence": {
-          "previousBytes": 804774,
-          "currentBytes": 804745,
-          "previousSha256": "90bc7fb53b6cd79fc22ca886eb67380e43db0aafc8aac505608dbeffddb5e763",
-          "currentSha256": "f7aad3e239cf96d982a19f117ba1f5a297677d7e3f8aa06f8034a0dc97b4ec96",
-          "firstDifferentByte": 117
+          "previousBytes": 804581,
+          "currentBytes": 804800,
+          "previousSha256": "1fbbc496ce8ae8bfc613067b5d4eaca986940149be4a8ab2a7cb44fdeee9b122",
+          "currentSha256": "0f0219ce4cfa167f3cda07e4b4e6b4c5a7cf5927c27d659a32b01b1bf08eea01",
+          "firstDifferentByte": 9
         },
         "states": 67,
-        "gzipSha256": "f7aad3e239cf96d982a19f117ba1f5a297677d7e3f8aa06f8034a0dc97b4ec96",
-        "stateUtf8Sha256": "b66ade24fbbc77b0131628e2d591cd9ac1f2db6b855df43b9b1b46daf433a2a6",
+        "gzipSha256": "0f0219ce4cfa167f3cda07e4b4e6b4c5a7cf5927c27d659a32b01b1bf08eea01",
+        "stateUtf8Sha256": "e68593ece7b211cef128b77a9eba0f818bb3a9b28ea2ad626d698bb3350fbc49",
         "textAndObjectRestoreBytesEqual": true,
-        "previousGzipSha256": "90bc7fb53b6cd79fc22ca886eb67380e43db0aafc8aac505608dbeffddb5e763"
+        "previousGzipSha256": "1fbbc496ce8ae8bfc613067b5d4eaca986940149be4a8ab2a7cb44fdeee9b122"
       },
       "firstCommandDifference": null,
       "firstEventDifference": null,
@@ -1985,17 +1985,17 @@
       },
       "recording": {
         "byteEvidence": {
-          "previousBytes": 829154,
-          "currentBytes": 829121,
-          "previousSha256": "cb74b2f64b6be7f8044730a1f648514da98b6bf7ddc8363ae66a1b14b29edad0",
-          "currentSha256": "868c49d52ffd92aad45a14c6cd46497d1421dac6360dcd974b7b4f6483c92d1b",
-          "firstDifferentByte": 19
+          "previousBytes": 828966,
+          "currentBytes": 829183,
+          "previousSha256": "e3add294b290295ce861428cc5056d670ba35b86b31cbd9afc06e1c5327879db",
+          "currentSha256": "7ba1f5241e1b71311263796822100fccdd46c3efec6bd93da9007a8a4deeec43",
+          "firstDifferentByte": 9
         },
         "states": 67,
-        "gzipSha256": "868c49d52ffd92aad45a14c6cd46497d1421dac6360dcd974b7b4f6483c92d1b",
-        "stateUtf8Sha256": "c40e110e1089f1f30bb7a15ac22369ccc193a301975bed0e8c14ccab453f742e",
+        "gzipSha256": "7ba1f5241e1b71311263796822100fccdd46c3efec6bd93da9007a8a4deeec43",
+        "stateUtf8Sha256": "17dbda52ea043e9ae6e6e4e23314ee4a2966daa4482d87b812bba5dd772f0b6f",
         "textAndObjectRestoreBytesEqual": true,
-        "previousGzipSha256": "cb74b2f64b6be7f8044730a1f648514da98b6bf7ddc8363ae66a1b14b29edad0"
+        "previousGzipSha256": "e3add294b290295ce861428cc5056d670ba35b86b31cbd9afc06e1c5327879db"
       },
       "firstCommandDifference": null,
       "firstEventDifference": null,
@@ -5091,19 +5091,19 @@
     },
     "sniper-caitlyn": {
       "summary": {
-        "caitlynBattles": 5,
-        "caitlynCasts": 8,
+        "caitlynBattles": 6,
+        "caitlynCasts": 10,
         "build": "sniper-caitlyn",
         "seed": 42,
         "outcome": "victory",
         "round": 38,
-        "hp": 56,
+        "hp": 37,
         "gold": 12,
         "formedAt": 36,
         "formedBattles": 3,
         "boundBattles": 14,
         "transitioned": true,
-        "ticks": 12307,
+        "ticks": 12371,
         "commands": 286
       },
       "recording": null,
@@ -5114,10 +5114,10 @@
           "purchases": 54,
           "sales": 41,
           "saleLoss": 0,
-          "rerolls": 184,
-          "xp": 144,
+          "rerolls": 190,
+          "xp": 136,
           "anomaly": 1,
-          "income": 328,
+          "income": 326,
           "rewards": 26
         },
         "rounds": [
@@ -6255,7 +6255,7 @@
               "interest": 0,
               "streak": 3
             },
-            "interestBasis": 3,
+            "interestBasis": 5,
             "streakBefore": {
               "kind": "win",
               "count": 16
@@ -6267,8 +6267,8 @@
             "xpRequested": 2,
             "income": 9,
             "mechanicReceiptPrefixLength": 8,
-            "goldBefore": 2,
-            "goldAfter": 11,
+            "goldBefore": 4,
+            "goldAfter": 13,
             "xpAwarded": 2,
             "levelBefore": 9,
             "levelAfter": 9,
@@ -6295,7 +6295,7 @@
               "interest": 0,
               "streak": 3
             },
-            "interestBasis": 2,
+            "interestBasis": 4,
             "streakBefore": {
               "kind": "win",
               "count": 17
@@ -6307,8 +6307,8 @@
             "xpRequested": 2,
             "income": 9,
             "mechanicReceiptPrefixLength": 8,
-            "goldBefore": 1,
-            "goldAfter": 10,
+            "goldBefore": 3,
+            "goldAfter": 12,
             "xpAwarded": 2,
             "levelBefore": 9,
             "levelAfter": 9,
@@ -6364,42 +6364,42 @@
           {
             "round": 32,
             "roundId": "6-1",
-            "result": "playerWin",
-            "combatTicks": 492,
-            "combatEventCount": 2040,
+            "result": "enemyWin",
+            "combatTicks": 556,
+            "combatEventCount": 1871,
             "settlementId": "round-32-settled",
             "roundKind": "pvp",
             "incomeBreakdown": {
               "base": 5,
-              "win": 1,
+              "win": 0,
               "interest": 1,
-              "streak": 3
+              "streak": 0
             },
-            "interestBasis": 13,
+            "interestBasis": 12,
             "streakBefore": {
               "kind": "win",
               "count": 18
             },
             "streakAfter": {
-              "kind": "win",
-              "count": 19
+              "kind": "loss",
+              "count": 1
             },
             "xpRequested": 2,
-            "income": 10,
+            "income": 6,
             "mechanicReceiptPrefixLength": 10,
             "goldBefore": 12,
-            "goldAfter": 22,
+            "goldAfter": 18,
             "xpAwarded": 2,
             "levelBefore": 9,
             "levelAfter": 9,
             "xpBefore": 6,
             "xpAfter": 8,
             "hpBefore": 96,
-            "hpAfter": 96,
+            "hpAfter": 77,
             "baseDamage": 12,
-            "survivingEnemyCount": 0,
-            "playerDamage": 0,
-            "hpLost": 0
+            "survivingEnemyCount": 7,
+            "playerDamage": 19,
+            "hpLost": 19
           },
           {
             "round": 33,
@@ -6413,29 +6413,29 @@
               "base": 5,
               "win": 0,
               "interest": 0,
-              "streak": 0
+              "streak": 1
             },
-            "interestBasis": 6,
+            "interestBasis": 4,
             "streakBefore": {
-              "kind": "win",
-              "count": 19
-            },
-            "streakAfter": {
               "kind": "loss",
               "count": 1
             },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 2
+            },
             "xpRequested": 2,
-            "income": 5,
+            "income": 6,
             "mechanicReceiptPrefixLength": 10,
-            "goldBefore": 6,
-            "goldAfter": 11,
+            "goldBefore": 4,
+            "goldAfter": 10,
             "xpAwarded": 2,
             "levelBefore": 9,
             "levelAfter": 9,
             "xpBefore": 8,
             "xpAfter": 10,
-            "hpBefore": 96,
-            "hpAfter": 76,
+            "hpBefore": 77,
+            "hpAfter": 57,
             "baseDamage": 12,
             "survivingEnemyCount": 8,
             "playerDamage": 20,
@@ -6455,10 +6455,10 @@
               "interest": 0,
               "streak": 0
             },
-            "interestBasis": 4,
+            "interestBasis": 5,
             "streakBefore": {
               "kind": "loss",
-              "count": 1
+              "count": 2
             },
             "streakAfter": {
               "kind": "win",
@@ -6467,15 +6467,15 @@
             "xpRequested": 2,
             "income": 6,
             "mechanicReceiptPrefixLength": 10,
-            "goldBefore": 3,
-            "goldAfter": 9,
+            "goldBefore": 4,
+            "goldAfter": 10,
             "xpAwarded": 2,
             "levelBefore": 9,
             "levelAfter": 9,
             "xpBefore": 10,
             "xpAfter": 12,
-            "hpBefore": 76,
-            "hpAfter": 76,
+            "hpBefore": 57,
+            "hpAfter": 57,
             "baseDamage": 12,
             "survivingEnemyCount": 0,
             "playerDamage": 0,
@@ -6492,10 +6492,10 @@
             "incomeBreakdown": {
               "base": 5,
               "win": 0,
-              "interest": 0,
+              "interest": 1,
               "streak": 0
             },
-            "interestBasis": 9,
+            "interestBasis": 10,
             "streakBefore": {
               "kind": "win",
               "count": 1
@@ -6505,17 +6505,17 @@
               "count": 1
             },
             "xpRequested": 2,
-            "income": 5,
+            "income": 6,
             "mechanicReceiptPrefixLength": 10,
-            "goldBefore": 9,
-            "goldAfter": 14,
+            "goldBefore": 10,
+            "goldAfter": 16,
             "xpAwarded": 2,
             "levelBefore": 9,
             "levelAfter": 9,
             "xpBefore": 12,
             "xpAfter": 14,
-            "hpBefore": 76,
-            "hpAfter": 76,
+            "hpBefore": 57,
+            "hpAfter": 57,
             "baseDamage": 0,
             "survivingEnemyCount": 0,
             "playerDamage": 0,
@@ -6554,8 +6554,8 @@
             "levelAfter": 9,
             "xpBefore": 14,
             "xpAfter": 16,
-            "hpBefore": 76,
-            "hpAfter": 76,
+            "hpBefore": 57,
+            "hpAfter": 57,
             "baseDamage": 12,
             "survivingEnemyCount": 0,
             "playerDamage": 0,
@@ -6594,8 +6594,8 @@
             "levelAfter": 9,
             "xpBefore": 16,
             "xpAfter": 18,
-            "hpBefore": 76,
-            "hpAfter": 56,
+            "hpBefore": 57,
+            "hpAfter": 37,
             "baseDamage": 12,
             "survivingEnemyCount": 8,
             "playerDamage": 20,
@@ -6634,8 +6634,8 @@
             "levelAfter": 9,
             "xpBefore": 18,
             "xpAfter": 20,
-            "hpBefore": 56,
-            "hpAfter": 56,
+            "hpBefore": 37,
+            "hpAfter": 37,
             "baseDamage": 3,
             "survivingEnemyCount": 0,
             "playerDamage": 0,
@@ -6645,12 +6645,12 @@
       }
     }
   },
-  "candidateSha256": "a00302f802594ba20bcf1688db5c7cdb4a77340e66a51700fe9e73e91b600b6e",
+  "candidateSha256": "e88885d947ce26e68c227d6da0daa92ae8e1aaf416cc2e22bf526e8c0a801d4d",
   "goldenByteEvidence": {
-    "previousBytes": 110401,
-    "currentBytes": 110411,
-    "previousSha256": "3cba8dc9f40c836290b839968b45d643eaba020e5430d9392e60c66604065c36",
-    "currentSha256": "a00302f802594ba20bcf1688db5c7cdb4a77340e66a51700fe9e73e91b600b6e",
+    "previousBytes": 110169,
+    "currentBytes": 110239,
+    "previousSha256": "4dba8e4651d77f302c7ff933c79d4f4d77be754ba50868e02a8e864b02b44a3c",
+    "currentSha256": "e88885d947ce26e68c227d6da0daa92ae8e1aaf416cc2e22bf526e8c0a801d4d",
     "firstDifferentByte": 17
   }
 }

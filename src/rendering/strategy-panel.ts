@@ -34,7 +34,7 @@ import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
-import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
+import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitSummary, traitTierText } from '../presentation/trait-text';
 import { traitHoverCard } from '../presentation/hover-card';
@@ -51,8 +51,8 @@ import { genericOffer, isKnownChoiceKind, isShopChoiceKind, readChoiceExtras, SK
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
-import { anomalyDisplayName, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
-import { g23RewardLines } from '../presentation/g23-reward-text';
+import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
+import { counted, g23RewardIcons, g23RewardLines } from '../presentation/g23-reward-text';
 import { readG23Progress } from '../simulation/g2-3-state';
 import { G23_BLACK_MARKETS } from '../simulation/content/g2-3-policy';
 import { G23_TRAIT_SOURCE } from '../simulation/content/g2-3-trait-runtime';
@@ -398,7 +398,16 @@ export class StrategyPanel {
   private augmentChip(id: string): HTMLElement {
     const chip = element('span', augmentDisplayName(id), 'augment-chip');
     chip.dataset.augment = id; chip.title = [augmentDisplayName(id), augmentPlayerDescription(id), augmentEffectText(id)].filter(Boolean).join('\n');
-    chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 20));
+    chip.insertAdjacentHTML('afterbegin', augmentIconOrBadgeHtml(id, 20));
+    return chip;
+  }
+  /** Bound anomaly: the shared anomaly icon (a lettered badge without it) + name and holder; hovering shows its text. */
+  private anomalyChip(id: string, unitDefinitionId: string | undefined): HTMLElement {
+    const name = anomalyDisplayName(id), holder = unitDefinitionId ? displayUnitName(unitDefinitionId) : '';
+    const chip = element('span', `${name}${holder ? ` → ${holder}` : ''}`, 'augment-chip anomaly-chip');
+    chip.dataset.anomaly = id; chip.dataset.debug = 'anomaly-chip';
+    chip.title = [`异常：${name}${holder ? ` → ${holder}` : ''}`, anomalyPlayerDescription(id)].filter(Boolean).join('\n');
+    chip.insertAdjacentHTML('afterbegin', anomalyIconHtml(20, 'augment-icon') || '<span class="augment-icon augment-badge anomaly-badge" style="width:20px;height:20px;font-size:10px" aria-hidden="true">异</span>');
     return chip;
   }
   private button(name: string, label: string, action: () => void, disabled = false): HTMLButtonElement {
@@ -505,8 +514,13 @@ export class StrategyPanel {
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.eventList = null;
     this.traitColumn.render(state.preparation, g23TraitRuntime(state));
-    const augmentKey = state.augments.map(augment => augment.definitionId).join();
-    if (augmentKey !== this.augmentKey) { this.augmentKey = augmentKey; this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId))); }
+    // The bound anomaly sits after the augments (the online left column shows only this strip while the panel is folded).
+    const anomaly = state.anomalyBinding, anomalyUnit = anomaly && state.preparation.units.find(unit => unit.id === anomaly.unitId);
+    const augmentKey = [...state.augments.map(augment => augment.definitionId), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : ''].join();
+    if (augmentKey !== this.augmentKey) {
+      this.augmentKey = augmentKey;
+      this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId)), ...(anomaly ? [this.anomalyChip(anomaly.definitionId, anomalyUnit?.definitionId)] : []));
+    }
     this.syncAwayChip(state);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level);
@@ -1052,16 +1066,16 @@ export class StrategyPanel {
   }
 
   /**
-   * 炼金男爵 black market as the 14.24 shop row shows it: one reward card per offer (the offered item and the whole bundle
-   * as the rules' table names it; clicking it accepts), then the skip card with what a skip earns (炼金男爵 max health,
-   * read from the trait table at my current tier), and tier and 微光 on the bar. The rules grant; this only sends
-   * choose(offer) or choose(@skip).
+   * 炼金男爵 black market as the 14.24 shop row shows it: one reward card per candidate bundle (its heroes, items and gold
+   * as pictures over the rules' own reward table in words; clicking it accepts), then the skip card with what a skip
+   * earns (炼金男爵 max health, read from the trait table at my current tier), and tier and 微光 on the bar. The rules
+   * grant; this only sends choose(offer) or choose(@skip).
    */
   private blackMarket(cards: HTMLElement, bar: HTMLElement, choice: MatchState['pendingChoice'] & object, send: (id: string) => void): void {
     const state = this.actions.state();
     let chem; try { chem = readG23Progress(state)?.chem; } catch { chem = undefined; }
     const offer = chem?.offer?.id === choice.choiceId ? chem.offer : null;
-    const reward = offer ? G23_BLACK_MARKETS[offer.tier - 1]?.options.find(option => option.id === offer.optionId)?.reward : undefined;
+    const options = offer ? G23_BLACK_MARKETS[offer.tier - 1]?.options ?? [] : [];
     const payload = (choice as { payload?: { skippable?: boolean } }).payload;
     // A skip pays nothing now: every skip so far gives my 炼金男爵 heroes HealthPerSkip max health at the trait's current tier.
     const tier = boardTraitRows(state.preparation).find(row => row.traitId === 'chem-baron')?.tier;
@@ -1069,14 +1083,31 @@ export class StrategyPanel {
     const item = (id: string) => Object.hasOwn(ITEM_DEFINITIONS, id);
     bar.append(element('span', `${offer ? `第 ${offer.tier} 档 · ` : ''}微光 ${chem?.shimmer ?? 0}${chem?.skips ? ` · 已跳过 ${chem.skips} 次` : ''} · 接受后微光清零`, 'market-meta'));
     for (const id of choice.offers) {
-      const name = item(id) ? itemDisplayName(id) : choice.offers.length > 1 ? genericOffer(id, {}).name : '黑市奖励';
+      // Each offer is a candidate bundle of the tier's table (v20: three of them); an older single offer named the drawn item.
+      const reward = options.find(option => option.id === id)?.reward ?? (item(id) ? options.find(option => option.id === offer?.optionId)?.reward : undefined);
       const prize = this.button(`choice:${id}`, '', () => send(id));
       prize.className = 'shop-card shop-offer market-reward'; prize.dataset.debug = 'market:reward';
-      if (item(id)) prize.insertAdjacentHTML('afterbegin', itemMarkHtml(id, 48));
-      prize.append(element('strong', `接受 · ${name}`, 'market-name'));
-      const lines = reward ? g23RewardLines(reward, item(id) ? name : undefined) : [];
-      for (const line of lines) prize.append(element('span', line, 'market-line'));
-      prize.title = [name, ...lines].join('\n');
+      const lines = reward ? g23RewardLines(reward, item(id) ? itemDisplayName(id) : undefined) : [item(id) ? itemDisplayName(id) : '黑市奖励'];
+      const pictures = reward ? g23RewardIcons(reward) : [], icons = element('span', '', 'market-icons');
+      if (item(id)) icons.insertAdjacentHTML('beforeend', itemMarkHtml(id, 30));
+      for (const icon of pictures) {
+        if (icon.kind === 'hero') {
+          const hero = element('span', '', 'market-hero'); hero.title = `${icon.star} 星${icon.name}`;
+          hero.innerHTML = icon.unitId ? heroPortraitHtml(icon.unitId, 30, heroEmblemSvg(icon.unitId, 30)) : '';
+          hero.append(element('span', '★'.repeat(icon.star), `market-stars star-${icon.star}`));
+          icons.append(hero);
+        } else if (icon.kind === 'item') {
+          const mark = element('span', '', 'market-item'); mark.title = icon.name;
+          // No icon of its own: a random pool is a "?", a tool or forge its first character.
+          if (icon.itemId) mark.innerHTML = itemMarkHtml(icon.itemId, 30); else mark.append(element('span', icon.name.startsWith('随机') ? '?' : [...icon.name][0]!, 'market-pool'));
+          icons.append(mark);
+        } else icons.append(element('span', String(icon.amount), 'market-gold'));
+      }
+      if (icons.childElementCount) prize.append(icons);
+      // Under the pictures, what they do not say by themselves: the items and the gold (heroes are their portraits; the tooltip names all).
+      const words = pictures.length ? [counted(pictures.flatMap(icon => icon.kind === 'item' ? [icon.name] : [])).join('、'), ...pictures.flatMap(icon => icon.kind === 'gold' ? [`${icon.amount} 金币`] : [])].filter(Boolean) : lines;
+      for (const line of words) prize.append(element('span', line, 'market-line'));
+      prize.title = ['点击接受', ...lines].join('\n');
       cards.append(prize);
     }
     if (payload?.skippable) {

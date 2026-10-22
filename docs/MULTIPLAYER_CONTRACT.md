@@ -2,9 +2,9 @@
 
 ## v20-live-combat（当前正式 epoch，2026-10-22）
 
-父 epoch 为 `v20-chem-baron`，集成基线 `2de5e26d088e4e86032bf571d51941c9b0ecd12f`（#373、#381）。rules/content 为 `s13-g2-3-v20-live-combat` / `s13-14.24b-g2-3-v20-live-combat`；CONTENT `fnv1a32-utf16:d0e9375f`，LOOT_REPLAY `fnv1a32-utf16:0bd44c5e`。
+父 epoch 为 `v20-xp68`，集成基线 `db04d196e4a12933624add7d61be9081a639607f`（#384、#385、#386、#388）。rules/content 为 `s13-g2-3-v20-live-combat` / `s13-14.24b-g2-3-v20-live-combat`；CONTENT `fnv1a32-utf16:93fad04c`，LOOT_REPLAY `fnv1a32-utf16:49eb9cf0`。
 schema/save/replay/command 为 **11/7/5/5**，网络 **NET6**、规则侧多人契约5。继承黑市候选及决策字段，Match 与 SaveEnvelope 结构不再增加，schema/save 保持父版11/7；replay/command 从4/4升5/5，标识实时战斗流及逐 tick 输入边界。所有旧 rules/content/digest/replay/command 身份严格拒绝运行态恢复，无迁移；历史 epoch 原字节保留。
-完整保留 B 补丁16具名字段、标准 PvE 不增微光、黑市至多三包 N 选一与保留、迅击/野火/搭档及 #381 预热。流式首遍只改变推进与传输，逐字节对照旧整轮结算；双游标、绝对50ms排拍、客户端四拍缓冲、整拍合并推送、战中买卖利息及空输入挂点见 [LIVE_COMBAT_PHASE1](LIVE_COMBAT_PHASE1.md)。非空逐 tick 装备输入仍报 `battle-input-unsupported`，未安装、不记成功日志。
+完整保留8→9 / 9→10各68 XP、梅尔救命精确HP核对、B 补丁16具名字段、标准 PvE 不增微光、黑市至多三包 N 选一与保留、迅击/野火/搭档及 #381 预热。流式首遍只改变推进与传输，逐字节对照旧整轮结算；双游标、绝对50ms排拍、客户端四拍缓冲、整拍合并推送、战中买卖利息及空输入挂点见 [LIVE_COMBAT_PHASE1](LIVE_COMBAT_PHASE1.md)。非空逐 tick 装备输入仍报 `battle-input-unsupported`，未安装、不记成功日志。
 独立录制与只读核验命令、来源及风险见 [RELEASE_NOTES](evidence/v20-live-combat/RELEASE_NOTES.md)。本节覆盖下文历史身份。
 
 ## v19 第二部分（历史规则合同，2026-10-21）
@@ -1964,6 +1964,6 @@ PvP 使用现有 SideProposal / 唯一结算收据。统一规划并原子提交
 阶段1只支持空批次/空日志；非空输入在 stepCombat 前抛 `BattleValidationError('battle-input-unsupported')`，外部结果的 proposeSettlement 和 startCombatReplay 也拒绝非空/畸形 inputLog。
 本阶段不保存未执行装备意图、不静默重解释旧 equipmentCommands.tick。已有成功 Match 装备命令仍记入 `BattleRecord.equipmentCommands`，经公共命令重演及资源账本认证；漏记会拒绝恢复。
 
-正式身份为 `s13-g2-3-v20-live-combat` / `s13-14.24b-g2-3-v20-live-combat`，父 epoch 为 `v20-chem-baron`；CONTENT=`fnv1a32-utf16:d0e9375f`、LOOT=`fnv1a32-utf16:0bd44c5e`，schema/save/replay/command 为 **11/7/5/5**，NET6。manifest 保留 `combatStreaming:live-tick-v1`，继承全部 Chem-Baron 规则。
+正式身份为 `s13-g2-3-v20-live-combat` / `s13-14.24b-g2-3-v20-live-combat`，父 epoch 为 `v20-xp68`；CONTENT=`fnv1a32-utf16:93fad04c`、LOOT=`fnv1a32-utf16:49eb9cf0`，schema/save/replay/command 为 **11/7/5/5**，NET6。manifest 保留 `combatStreaming:live-tick-v1`，继承XP68与梅尔救命精确HP核对及全部 Chem-Baron 规则。
 golden、B8/C19/Herald 与 recorded states 已在新目录独立生成；旧身份严格拒绝恢复，所有历史字节保持。录制及只读核验入口见 [RELEASE_NOTES](evidence/v20-live-combat/RELEASE_NOTES.md)。
 本仓库无服务器房间持久化，本阶段不新增数据库；运行中单人 Match 前缀沿既有序列化重执行校验后续进，网络恢复使用已提交关键帧/尾段。

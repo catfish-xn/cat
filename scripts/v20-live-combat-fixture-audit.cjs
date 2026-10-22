@@ -1,7 +1,7 @@
-/* Independent Chem-Baron epoch. Previous evidence, raw archives and archive mirrors stay immutable. */
+/* Independent live-combat epoch. Previous evidence, raw archives and archive mirrors stay immutable. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {readProcessOutput:execFileSync}=require('./offline-process-output.cjs'),{createHash}=require('node:crypto');
-const BASELINE='2de5e26d088e4e86032bf571d51941c9b0ecd12f';
+const BASELINE='db04d196e4a12933624add7d61be9081a639607f';
 const git=(...args)=>execFileSync('git',args,{maxBuffer:128*1024*1024,env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}});
 const sha=b=>createHash('sha256').update(b).digest('hex');
 exports.baselineCommit=()=>{
