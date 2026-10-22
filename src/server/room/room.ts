@@ -237,10 +237,11 @@ export class Room {
   private readonly settlementCommands: (() => void)[] = [];
 
   /** Room writer gate: the first batch runs before one rebuild; later callbacks run FIFO after publication.
+   * During a sliced stream tick, writers wait until all seats seal that boundary.
    * Callers needing a final result (network, bot policy) defer their whole validation/operation callback here.
    */
   deferDuringSettlement(command: () => void): boolean {
-    if (!this.settlementWork) return false;
+    if (!this.settlementWork && !this.streamingBoundaryPending) return false;
     this.settlementCommands.push(command);
     return true;
   }
@@ -1113,7 +1114,8 @@ export class Room {
   }
   private advanceStreams(): void {
     if (this.disposed || this.current.phase !== 'battle') return;
-    const deadline = this.options.clock.now() + (this.options.sliceMs ?? 20);
+    const now = this.options.sliceNow ?? (() => this.options.clock.now());
+    const deadline = now() + (this.options.sliceMs ?? 20);
     const budget = Math.max(1, Math.min(this.options.sliceTicks ?? 8, 8));
     try {
       for (let count = 0; this.streamBoundary.length && count < budget; count++) {
@@ -1130,7 +1132,7 @@ export class Room {
             this.streamStateDirty = true;
           } else this.current = { ...this.current, seats: this.current.seats.map(s => s === seat ? { ...s, match: step.state } : s) };
         }
-        if (this.options.clock.now() >= deadline) break;
+        if (now() >= deadline) break;
       }
       if (this.streamBoundary.length) {
         this.timer = this.options.clock.schedule(this.options.clock.now(), () => { this.timer = null; this.advanceStreams(); });
@@ -1140,6 +1142,9 @@ export class Room {
       // Publish only the sealed boundary: no connection sees a half-updated room or gets eight push scans per tick.
       if (this.streamStateDirty) { this.assertConserved(this.current); this.streamStateDirty = false; this.replace(this.current); }
       for (const listener of this.streamListeners) listener();
+      // Writers arriving between slices may only publish after every seat reached this boundary.
+      this.flushSettlementCommands();
+      if (this.disposed || this.current.phase !== 'battle') return;
       if ([...this.streams.values()].every(s => s.done)) return this.finishStreams();
       this.scheduleStreamBoundary();
     } catch (error) { this.failLive(`${this.current.roomId}:r${this.current.round}`, error); }
@@ -1147,7 +1152,14 @@ export class Room {
 
   /** Only real terminals create proposals; PvE awards reserve the latest pool in fixed seat order. */
   private finishStreams(): void {
-    const plan = drainWork(this.planStreamSteps());
+    // Start in a separate callback: the final combat slice must not also spend a settlement slice's budget.
+    this.timer = this.options.clock.schedule(this.options.clock.now(), () => {
+      this.timer = null;
+      this.startSettlementWork(() => this.finishStreamSteps());
+    });
+  }
+  private *finishStreamSteps(): Generator<void, void, void> {
+    const plan = yield* this.planStreamSteps();
     if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
     this.pendingSettlement = plan.settlement;
     this.replace({ ...this.current, battles: plan.settlement.results });

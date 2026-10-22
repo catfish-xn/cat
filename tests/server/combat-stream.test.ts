@@ -2,18 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { Room, ROOM_TIMING_DEFAULTS } from '../../src/server/room/room';
 import { ManualClock } from '../../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
-import { toCombatReplayFor } from '../../src/server/room/projection';
+import { startReplaySpotCheck, toCombatReplayFor } from '../../src/server/room/projection';
 import type { BattleInput, BattleResult } from '../../src/server/room/types';
 import { runUntil, SEATS, TIMINGS } from './helpers';
 import { openMatchCombatStream, stepMatchCombatStream, startMatchCombat, stepMatch, createMatch, deployMatchUnit } from '../../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../../src/simulation/serialization';
 
 const json = (value: unknown) => JSON.stringify(value);
-function fixture(seed: number, sliceTicks = 8) {
+function fixture(seed: number, sliceTicks = 8, sliceNow?: () => number) {
   const clock = new ManualClock();
   const resolver = new TwoSidedBattleResolver();
   const room = new Room(SEATS.map(s => ({ ...s, kind: 'human' })), { ...ROOM_TIMING_DEFAULTS, ...TIMINGS,
-    roomId: 'stream-test', seed, clock, resolver, combatStreaming: true, sliceTicks, sliceMs: 20 });
+    roomId: 'stream-test', seed, clock, resolver, combatStreaming: true, sliceTicks, sliceMs: 20, sliceNow });
   room.start(); return { clock, room, resolver };
 }
 
@@ -104,7 +104,7 @@ it('a stream exhausting its tick limit faults instead of fabricating a terminal 
   expect(room.state.settlements).toHaveLength(4); room.dispose();
 }, 60_000);
 
-it('the 20ms budget yields inside a boundary and seals later input for the following tick', async () => {
+it('the 20ms budget yields inside a boundary and defers writers until every seat seals the tick', async () => {
   const { vi } = await import('vitest');
   const { CombatStream } = await import('../../src/server/room/combat-stream');
   const clock = new ManualClock(); let workMs = 0;
@@ -118,13 +118,22 @@ it('the 20ms budget yields inside a boundary and seals later input for the follo
     const result = original.call(this, state); workMs += 11; return result;
   });
   try {
+    const publications: number[][] = [];
+    room.subscribe(state => publications.push(state.seats.map(s => s.match.combat!.tick)));
     clock.fireNext();
     const ticks = room.state.seats.map(s => room.combatStreamFor(s.seatId)!.ticks.at(-1)!.tick);
     expect(ticks).toEqual([1, 1, 0, 0, 0, 0, 0, 0]);
     expect(room.committedBattleTick).toBe(0); expect(room.nextBattleInputTick).toBe(2);
+    const generation = room.state.seats[0]!.match.shop.generation;
+    expect(room.handle('s0', { type: 'shopLock', locked: true, generation })).toMatchObject({ queued: true });
+    expect(room.setConnected('s1', false)).toBe(true);
+    expect(publications).toEqual([]);
     for (let i = 0; i < 3; i++) clock.fireNext();
     expect(room.state.seats.map(s => room.combatStreamFor(s.seatId)!.ticks.at(-1)!.tick)).toEqual(Array(8).fill(1));
     expect(room.committedBattleTick).toBe(1);
+    expect(publications).toEqual([Array(8).fill(1), Array(8).fill(1)]);
+    expect(room.state.seats[0]!.match.shop.locked).toBe(true);
+    expect(room.state.seats[1]!.connected).toBe(false);
   } finally { spy.mockRestore(); room.dispose(); }
 });
 it('D11 gold samples feed the same first-pass task and remain replayable', async () => {
@@ -234,3 +243,78 @@ it.each([5, 11])('round %i: buys/sells/rerolls during battle use settlement gold
   };
   expect(play(1)).toBe(play(8));
 }, 120_000);
+
+it('slices terminal planning away from the final tick and keeps every closing callback below 50ms', async () => {
+  const { vi } = await import('vitest');
+  let cpu = 0;
+  const { room, clock } = fixture(42, 100, () => cpu);
+  const seam = room as unknown as { planStreamSteps: () => Generator<void, unknown, void> };
+  const original = seam.planStreamSteps.bind(room);
+  let units = 0;
+  const spy = vi.spyOn(seam, 'planStreamSteps').mockImplementation(function* () {
+    const work = original();
+    for (;;) {
+      const next = work.next();
+      if (next.done) return next.value;
+      cpu += 7; units++; yield;
+    }
+  });
+  let longest = 0, slices = 0;
+  try {
+    runUntil(room, clock, s => s.phase === 'battle');
+    while (!room.state.seats.every(s => room.combatStreamFor(s.seatId)!.terminal)) {
+      expect(clock.fireNext()).toBe(true);
+    }
+    // Final-tick callback only queues the planner; it never drains even its first work unit.
+    expect(units).toBe(0); expect(room.state.battles).toHaveLength(0);
+    while (!room.state.battles.length) {
+      const before = cpu;
+      expect(clock.fireNext()).toBe(true);
+      longest = Math.max(longest, cpu - before); slices++;
+      expect(cpu - before).toBeLessThanOrEqual(21);
+      expect(cpu - before).toBeLessThanOrEqual(50);
+    }
+    expect(units).toBe(8); expect(slices).toBeGreaterThan(1);
+    expect(longest).toBe(21);
+    expect(room.state.phase).toBe('battle'); expect(room.state.settlements).toHaveLength(0);
+    expect(room.state.deadlineAt! - clock.now()).toBeGreaterThanOrEqual(800);
+    // Invalidate the staged basis: the tail's replan must use the same budget too.
+    expect(room.handle('s0', { type: 'shopLock', locked: true, generation: room.state.seats[0]!.match.shop.generation })).toMatchObject({ ok: true });
+    while (!room.state.settlements.length) {
+      const before = cpu;
+      expect(clock.fireNext()).toBe(true);
+      expect(cpu - before).toBeLessThanOrEqual(21);
+    }
+    expect(spy).toHaveBeenCalledTimes(2); expect(room.state.fault).toBeNull();
+  } finally { spy.mockRestore(); room.dispose(); }
+});
+
+it.each([1, 5])('round %i: measures final-tick and closing slices and audits every first-pass stream', round => {
+  const { room, clock } = fixture(42, 100, () => performance.now());
+  try {
+    runUntil(room, clock, s => s.round === round && s.phase === 'battle', 20_000);
+    let longestMs = 0, finalTickMs = 0, closingMs = 0, callbacks = 0;
+    while (room.state.settlements.length < round) {
+      const alreadyTerminal = room.state.seats.every(s => room.combatStreamFor(s.seatId)!.terminal);
+      const started = performance.now();
+      const fired = clock.fireNext();
+      const elapsed = performance.now() - started;
+      expect(fired).toBe(true);
+      const terminal = room.state.seats.every(s => room.combatStreamFor(s.seatId)!.terminal);
+      if (terminal) {
+        callbacks++; longestMs = Math.max(longestMs, elapsed);
+        if (alreadyTerminal) closingMs = Math.max(closingMs, elapsed); else finalTickMs = elapsed;
+        expect(elapsed).toBeLessThanOrEqual(50);
+      }
+    }
+    expect(callbacks).toBeGreaterThan(1); expect(room.state.fault).toBeNull();
+    console.info(JSON.stringify({ probe: 'stream-closing-slices', round, callbacks, finalTickMs, closingMs, longestMs }));
+    const check = startReplaySpotCheck(room.state.battles, round, true, room.state.battleSeeds);
+    expect(check).not.toBeNull();
+    let checked: ReturnType<NonNullable<typeof check>['advance']> = null;
+    for (let guard = 0; !checked && guard < 20_000; guard++) checked = check!.advance(7);
+    expect(checked).not.toBeNull();
+    expect(checked!.flatMap(result => result.seatIds).sort()).toEqual(room.state.seats.map(s => s.seatId).sort());
+    expect(checked!.every(result => result.firstDifference === null)).toBe(true);
+  } finally { room.dispose(); }
+}, 60_000);

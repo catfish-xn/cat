@@ -1926,6 +1926,7 @@ open/end 以及 chunk 内每条增量均带 `{roomId,round,battleId,revision,sea
 
 客户端本人、观战各自保留 4 tick（200ms）抖动缓冲，按自己的时间余额推进；到达可播前沿保持画面，不清零 accumulator。
 追加不重建已播前缀或重播事件。收到 end 后释放最后四拍，播到真实终局才完成。服务器终局播放尾段至少 800ms，覆盖缓冲；真实时钟只留在 server/显示层。
+`RemoteSession.reviseReplay(replay: CombatReplay): boolean` 与 `watchReplay(seatId: string, replay: CombatReplay): boolean` 返回是否仅追加同一流（包含 end）：initial、revision、fromTick 和已有帧引用保持一致时为 true；开播、换席、重建修订或忽略输入为 false。true 时 OnlineApplication 不调用 refresh / syncScout，播放器自行读取新增帧；open 和非追加修订仍刷新，不改变任何规则状态或失败枚举。
 `resume` 可带本人 `combat:{battleId,revision,nextTick,seatId}`、观战 `watchCombat:{...}` 以及 `watchSeatId:string|null`。
 两条游标独立校验、独立续传。本人 cursor.seatId 必须等于凭证席位；观战 cursor.seatId 必须等于订阅席位；显式 null 停止观战。
 匹配当前源且 `1<=nextTick<=已录帧数` 时只发送缺失后缀及 end；游标不匹配时重发最近关键帧及尾段。未完成整拍时等整拍封口后推送。
@@ -1976,6 +1977,8 @@ golden、B8/C19/Herald 与 recorded states 已在新目录独立生成；旧身�
 
 - `Room.deferDuringSettlement(operation: () => void): boolean`：有在途结算时入房间 FIFO 并返回 true，否则返回 false、不执行。下一片首次发现排队操作时，固定本批数量、丢弃未发布的计算和回放副本，按原回合与席位版本校验、执行本批操作，再基于更新后的状态重建结算，至多重建一次。本批边界确定时即冻结；此后到达的操作（包括本批尚未排空时到达的操作）不能再次打断计算，必须等待完整结算提交及阶段发布后 FIFO 执行。不改写请求参数、不预发成功回执。首批每个排队操作也是独立预算单元；冻结计算仍检查原有 20 ms / tick 预算并让出事件循环。
 - `Room.startSettlementWork(factory: SettlementWorkFactory): void`，`SettlementWorkFactory = () => Generator<void, void, void>`：统一启动/续算/取消/重建入口；已有工作或 dispose 后不重复启动。工作必须在最后一次不 yield 的提交段前保持状态与回放私有。`planSettlement` 的同步入口与此路径共用 `planSteps`。#382 的流式接入复用该入口与同一 FIFO：流式轮在 `commitStreamSteps` 中重用 finishStreams 暂存的计划，基础变化时经 `planStreamSteps`（逐席位 yield，再 `yield* planSteps`）重规划。
+- #382 评审补充：`finishStreams` 只通过注入 clock 安排下一回调，再以 `startSettlementWork(() => finishStreamSteps())` 切片执行首次 `planStreamSteps`。末拍与首次规划不共用同一回调预算；完整规划成功后才设置 pendingSettlement、发布 battles 和至少 800ms 的 battle 尾段。battles 非空仍表示可通过 `toCombatReplayFor` 读取完整终局回放，部分计划不可见；尾段截止继续复用或切片重建计划。战斗推进和规划均使用 `sliceNow ?? clock.now` 检查预算。
+- `deferDuringSettlement` 同时覆盖 `streamingBoundaryPending`：一拍跨多个分片时沿用上述 FIFO，等全体战斗封口后才执行席位操作、发布状态；此路径不重跑已经完成的 tick。原 round / seatRevision 校验、queued 占位返回值和取消语义不变。
 - 所有外部席位写入口均走同一门：`handle`、`handleBot`、`claimBotOrbs`、`takeOver`、`setConnected`、`walkLegend`、`commitSettlement`，以及选秀到达和 live 回调。`handle/handleBot/claimBotOrbs` 在排队时返回 `ok:false, reason:'settlement-pending', queued:true, state:null`，表示尚无执行结果，调用方不可当作规则失败再发一次；走路返回同名 pending 原因，`commitSettlement` 返回该原因及当前 RoomState，布尔入口 true 表示接受排队。需要最终结果的调用方应将完整验证/执行/回执闭包交给 `deferDuringSettlement`，不要依赖上述占位返回值。BotDriver 延迟整个策略事务，包含领球和策略 RNG。
 - PvE live 尾算使用独立的 `LivePveTrack` / `CombatReplayRecorder.fork()`；fork 共享不可变帧，后续逐 tick 写入独立数组，不改规则、帧或事件序号。丢弃工作不会污染已发布回放，也不会重复发奖。所有临时席位/战斗发布与最终 `commitSettlement` 之间不 yield。
 - 冻结期网络命令在提交后的最新状态校验原 `round` / `seatRevision`：同轮旧席位版本返回既有 `seat-revision-mismatch` 回执，若轮次已变则仍优先返回 `stale-round`；显式匹配新版本的请求可继续按规则执行。失败不消耗资源或 RNG，同 ID 重发取得相同失败回执，客户端可用新 ID / 最新版本重试。

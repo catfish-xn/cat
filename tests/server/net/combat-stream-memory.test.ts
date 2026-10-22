@@ -287,3 +287,12 @@ it('WsGameClient retains both received prefixes when resuming a watched stream t
     expect(client.pendingCount).toBe(0);
   } finally { client.dispose(); }
 });
+
+it('schedules and completes a real spot check after streamed battles are published', async () => {
+  const { clock, room, logs } = await setup(8);
+  for (let guard = 0; !logs.some(log => log.event === 'replay.spot-check') && guard < 20_000; guard++) clock.fireNext();
+  expect(room.state.fault).toBeNull();
+  expect(logs.filter(log => log.event === 'replay.spot-check')).toHaveLength(1);
+  expect(logs.find(log => log.event === 'replay.spot-check')!.fields).toMatchObject({ round: 1 });
+  expect(logs.filter(log => log.event === 'replay.spot-check-failed')).toEqual([]);
+});

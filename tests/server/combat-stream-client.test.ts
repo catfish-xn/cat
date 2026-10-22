@@ -122,3 +122,19 @@ it('own and watched streams use separate callbacks and resume cursors; watch rec
   expect(session.lastBattle!.replay.ticks).toHaveLength(8);
   client.dispose();
 });
+
+it.each(['own', 'watched'] as const)('%s replay reports only same-stream appends as refresh-free', channel => {
+  const full = replay(), session = new RemoteSession(stub, undefined, () => 0);
+  const prefix: CombatReplay = { initial: full.initial, ticks: full.ticks.slice(0, 3), terminal: full.initial,
+    stream: { revision: 1, fromTick: 0, ended: false } };
+  if (channel === 'own') session.receiveReplay(prefix);
+  else expect(session.watchReplay('other', prefix)).toBe(false);
+  const revise = (next: CombatReplay) => channel === 'own' ? session.reviseReplay(next) : session.watchReplay('other', next);
+  expect(revise({ ...prefix, ticks: full.ticks.slice(0, 5) })).toBe(true);
+  expect(revise({ ...prefix, ticks: full.ticks })).toBe(true);
+  expect(revise({ ...prefix, ticks: full.ticks, terminal: full.terminal, stream: { ...prefix.stream!, ended: true } })).toBe(true);
+  expect(revise({ ...prefix, ticks: full.ticks, stream: { ...prefix.stream!, revision: 2 } })).toBe(false);
+  expect(revise({ ...prefix, initial: { ...prefix.initial }, stream: { ...prefix.stream!, revision: 2 } })).toBe(false);
+  expect(revise(full)).toBe(false);
+  if (channel === 'watched') expect(session.watchReplay('third', full)).toBe(false);
+});
