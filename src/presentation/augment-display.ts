@@ -11,6 +11,7 @@ import { fillAbilityTemplate } from './ability-text';
 import { AUGMENT_ZH_TEMPLATES } from './augment-zh';
 import { describeEffect } from './effect-text';
 import { S13_AUGMENT_ASSETS } from './s13-augment-asset-manifest';
+import { rootAugmentIconUrl } from './s13-assets';
 import { d11ChoiceDisplay } from '../simulation/d11-display';
 import { V20_TRAITS, TEAMUP_IDS } from '../simulation/content/v20-traits';
 import { getHeroIdentity } from './hero-identity';
@@ -35,9 +36,10 @@ export const AUGMENT_ZH: Readonly<Record<string, string>> = Object.freeze({
 
 export const augmentDisplayName = (id: string): string => AUGMENT_ZH[id] ?? AUGMENT_DEFINITIONS[id]?.name ?? '未知强化';
 
+/** Bundled icon, else one the 3D asset root's ui-assets.json carries (kind `augment`), else null. */
 export function augmentIconUrl(id: string): string | null {
   const path = ICONS.get(id);
-  return path ? `${BASE}${path}` : null;
+  return path ? `${BASE}${path}` : rootAugmentIconUrl(id);
 }
 
 /** Inline icon markup for DOM labels; empty when not bundled (the text name remains). */
