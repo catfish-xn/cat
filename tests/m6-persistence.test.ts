@@ -23,7 +23,7 @@ describe('M6 seed and file boundaries', () => {
     const history = vi.fn(); const original = envelope(); const copy = await validateFile(exportFile(original), history);
     expect(copy).toEqual(original); expect(copy).not.toBe(original); expect(copy.match).not.toBe(original.match); expect(history).toHaveBeenCalledTimes(1);
   });
-  // v20-chem-baron accepts save7/replay4; prior and unknown formats are refused.
+  // v20-xp68 accepts save7/replay4; prior and unknown formats are refused.
   it.each([{ extra: true }, { kind: 'wrong' }, { saveFormatVersion: 1 }, { replayFormatVersion: 1 }, { saveFormatVersion: 2 }, { replayFormatVersion: 2 }, { saveFormatVersion: 3 }, { saveFormatVersion: 4 }, { replayFormatVersion: 3 }, { saveFormatVersion: 5 }, { saveFormatVersion: 6 }, { saveFormatVersion: 8 }, { replayFormatVersion: 5 }, { runId: '' }, { createdAt: 'bad' }, { currentBattle: [] }])('rejects outer corruption before history %j', async patch => {
     const history = vi.fn(); await expect(validateEnvelope({ ...envelope(), ...patch }, history)).rejects.toThrow(); expect(history).not.toHaveBeenCalled();
   });

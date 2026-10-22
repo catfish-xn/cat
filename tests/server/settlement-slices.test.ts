@@ -1,11 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import { PlaceholderBattleResolver } from '../../src/server/room/battle-resolver';
-import type { Room } from '../../src/server/room/room';
+import { MAX_SETTLEMENT_RESTARTS, MAX_STALE_SEAT_RETRIES, type Room } from '../../src/server/room/room';
+import { readLootView } from '../../src/simulation/match';
 import type { RoomState } from '../../src/server/room/types';
 import { makeRoom, runUntil } from './helpers';
 
-type WorkSeam = { settlementWork: Generator<void, void, void> | null; runSettlementSlice(): void; clearTimer(): void };
+type WorkSeam = { settlementWork: Generator<void, void, void> | null; runSettlementSlice(): void; clearTimer(): void; commitPending(): void; drainingSettlementCommands: boolean };
 const seam = (room: Room) => room as unknown as WorkSeam;
 
 /** Reads a controllable CPU clock without moving/firing the timer queue recursively. */
@@ -38,6 +39,17 @@ describe('settlement slices', () => {
         // A lock invalidates the stage. Also change the bank on the live-reader path.
         if (avarice) expect(room.handle(seat.seatId, { type: 'buyXp' }).ok).toBe(true);
         room.subscribe(s => publications.push(JSON.stringify(s)));
+        // Same logical arrival time: sync buys immediately before settlement, sliced buys after its first yield.
+        seam(room).clearTimer();
+        const buy = () => {
+          const latest = room.state.seats[0]!;
+          const slot = latest.match.shop.slots.findIndex(offer => offer.status === 'available');
+          expect(room.handle(latest.seatId, { type: 'buy', slot, generation: latest.match.shop.generation }).ok).toBe(true);
+        };
+        if (sliceTicks) {
+          seam(room).commitPending();
+          expect(room.deferDuringSettlement(buy)).toBe(true);
+        } else { buy(); seam(room).commitPending(); }
         runUntil(room, clock, s => s.phase !== 'battle');
         expect(room.state.fault).toBeNull();
         expect(room.state.settlements).toContain('test-room:round-3');
@@ -55,13 +67,13 @@ describe('settlement slices', () => {
     seam(room).settlementWork = (function* () {
       for (let n = 0; n < 100; n++) { clock.cpu += 7; work++; yield; }
     })();
-    expect(room.deferDuringSettlement(() => order.push('command-1'))).toBe(true);
-    expect(room.deferDuringSettlement(() => order.push('command-2'))).toBe(true);
+    expect(room.deferDuringSettlement(() => { clock.cpu += 7; order.push('command-1'); })).toBe(true);
+    expect(room.deferDuringSettlement(() => { clock.cpu += 7; order.push('command-2'); })).toBe(true);
     // The competing timer was received before the next slice was scheduled.
     clock.schedule(clock.now(), () => order.push('message'));
     seam(room).runSettlementSlice();
-    expect(work).toBe(3); expect(clock.cpu).toBe(21); expect(order).toEqual([]);
-    expect(clock.fireNext()).toBe(true); expect(order).toEqual(['message']);
+    expect(work).toBe(1); expect(clock.cpu).toBe(21); expect(order).toEqual(['command-1', 'command-2']);
+    expect(clock.fireNext()).toBe(true); expect(order).toEqual(['command-1', 'command-2', 'message']);
     let callbacks = 0;
     while (clock.pending) {
       const before = clock.cpu;
@@ -70,7 +82,7 @@ describe('settlement slices', () => {
       callbacks++;
     }
     expect(callbacks).toBeGreaterThan(30); expect(work).toBe(100);
-    expect(order).toEqual(['message', 'command-1', 'command-2']);
+    expect(order).toEqual(['command-1', 'command-2', 'message']);
     expect(room.deferDuringSettlement(() => order.push('late'))).toBe(false);
     room.dispose();
   });
@@ -91,4 +103,63 @@ describe('settlement slices', () => {
     expect(flushed).toBe(cancel === 'abort');
     room.dispose();
   });
+  it('queues every public seat writer and walks until the next slice, on the original state', () => {
+    const { room, clock } = makeRoom(undefined, { sliceTicks: 1 });
+    room.start(); runUntil(room, clock, state => state.round === 3 && state.phase === 'preparation');
+    seam(room).clearTimer();
+    room.setConnected('s1', false);
+    const before = room.state;
+    seam(room).settlementWork = (function* () { yield; yield; })();
+    const bot = before.seats.find(seat => seat.kind === 'bot')!;
+    const humanOrb = readLootView(before.seats[0]!.match).unclaimedOrbs![0]!;
+    expect(humanOrb).toBeDefined();
+    expect(readLootView(bot.match).unclaimedOrbs!.length).toBeGreaterThan(0);
+    const lock = { type: 'shopLock' as const, locked: true, generation: bot.match.shop.generation };
+    expect(room.handleBot(bot.seatId, bot.controlEpoch, lock)).toMatchObject({ reason: 'settlement-pending' });
+    expect(room.claimBotOrbs(bot.seatId, bot.controlEpoch)).toMatchObject({ reason: 'settlement-pending' });
+    expect(room.takeOver('s1')).toBe(true);
+    expect(room.setConnected('s0', false)).toBe(true);
+    expect(room.walkLegend('s0', { scene: 'board', to: { x: 1, y: 1 } })).toMatchObject({ reason: 'settlement-pending' });
+    expect(room.handle('s0', { type: 'claimOrb', round: before.round, orbId: humanOrb.orbId })).toMatchObject({ reason: 'settlement-pending' });
+    expect(room.state).toBe(before); expect(room.walks).toHaveLength(0);
+    seam(room).runSettlementSlice();
+    while (seam(room).drainingSettlementCommands) expect(clock.fireNext()).toBe(true);
+    expect(room.state.seats.find(seat => seat.seatId === 's1')!.controller).toBe('takeover');
+    expect(room.state.seats[0]!.connected).toBe(false);
+    expect(room.state.seats.find(seat => seat.seatId === bot.seatId)!.match.shop.locked).toBe(true);
+    expect(room.walks).toHaveLength(1);
+    expect(readLootView(room.state.seats[0]!.match).unclaimedOrbs!.some(orb => orb.orbId === humanOrb.orbId)).toBe(false);
+    expect(readLootView(room.state.seats.find(seat => seat.seatId === bot.seatId)!.match).unclaimedOrbs).toHaveLength(0);
+    while (room.retained.resolving) expect(clock.fireNext()).toBe(true);
+    room.dispose();
+  }, 60_000);
+
+  it('faults with an explicit reason after bounded stale-seat retries', () => {
+    const { room, clock } = makeRoom();
+    room.start(); runUntil(room, clock, state => state.phase === 'battle');
+    const commit = vi.spyOn(room, 'commitSettlement').mockImplementation(() => ({ ok: false, reason: 'stale-seat', state: room.state }));
+    runUntil(room, clock, state => state.phase === 'ended');
+    expect(commit).toHaveBeenCalledTimes(MAX_STALE_SEAT_RETRIES + 1);
+    expect(room.state.fault).toEqual({ kind: 'invalid-results', detail: `stale-seat-retry-limit:${MAX_STALE_SEAT_RETRIES}` });
+    expect(room.retained.resolving).toBe(false);
+    expect(clock.pending).toBe(0);
+    room.dispose();
+  });
+
+  it('bounds work invalidations even under a continuous stream of queued writers', () => {
+    const { room, clock } = makeRoom(undefined, { sliceTicks: 1 });
+    room.start(); seam(room).clearTimer();
+    let completed = 0;
+    room.startSettlementWork(() => (function* () { for (;;) yield; })());
+    for (let n = 0; n <= MAX_SETTLEMENT_RESTARTS; n++) {
+      expect(room.deferDuringSettlement(() => { completed++; })).toBe(true);
+      expect(clock.fireNext()).toBe(true);
+      while (seam(room).drainingSettlementCommands) expect(clock.fireNext()).toBe(true);
+    }
+    expect(completed).toBe(MAX_SETTLEMENT_RESTARTS + 1);
+    expect(room.state.fault).toEqual({ kind: 'invalid-results', detail: `settlement-restart-limit:${MAX_SETTLEMENT_RESTARTS}` });
+    expect(clock.pending).toBe(0);
+    room.dispose();
+  });
+
 });

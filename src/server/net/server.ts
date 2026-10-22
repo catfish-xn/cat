@@ -197,6 +197,8 @@ interface Connection {
   readonly id: number;
   readonly socket: WebSocket;
   session: SeatSession | null;
+  /** Replay-only access during the superseded close grace. */
+  retiredSession: SeatSession | null;
   /** Epoch this connection was bound with; a resume elsewhere leaves it behind. */
   epoch: number;
   open: boolean;
@@ -538,15 +540,15 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   }
 
   /** commandId dedupe for a seated connection: replays, refuses or runs `compute` and records its receipt. */
-  function deduped(conn: Connection, session: SeatSession, message: ClientMessage, compute: () => ReceiptMessage): void {
+  function deduped(conn: Connection, session: SeatSession, message: ClientMessage, compute: () => ReceiptMessage, deliver: (receipt: ReceiptMessage) => void = receipt => send(conn, receipt)): void {
     const digest = digestOf(commandContent(message));
     const verdict = session.dedupe.check(message.commandId, digest);
-    if (verdict.kind === 'replay') return send(conn, verdict.receipt);
-    if (verdict.kind === 'conflict') return send(conn, fail(message.commandId, 'commandId-conflict', 'this commandId was already used for a different command'));
-    if (verdict.kind === 'expired') return send(conn, fail(message.commandId, 'resync-required', `commandId is older than the last ${session.dedupe.retention} commands; resynchronise and use a new id`));
+    if (verdict.kind === 'replay') return deliver(verdict.receipt);
+    if (verdict.kind === 'conflict') return deliver(fail(message.commandId, 'commandId-conflict', 'this commandId was already used for a different command'));
+    if (verdict.kind === 'expired') return deliver(fail(message.commandId, 'resync-required', `commandId is older than the last ${session.dedupe.retention} commands; resynchronise and use a new id`));
     const receipt = compute();
     session.dedupe.record(message.commandId, digest, receipt);
-    send(conn, receipt);
+    deliver(receipt);
   }
 
   function handleLeaveQueue(conn: Connection, message: ClientMessage & { type: 'leaveQueue' }): void {
@@ -600,15 +602,33 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     log('info', 'seat.resumed', { roomId: session.roomId ?? undefined, seatId: session.seatId, connection: conn.id, epoch: session.connectionEpoch, reclaimed });
   }
 
+  const pendingCommands = new WeakMap<SeatSession, Map<number, { digest: string; waiters: Connection[] }>>();
+
   function handleCommand(conn: Connection, message: CommandMessage): void {
     const { commandId } = message;
-    const session = conn.session;
-    if (!session || conn.epoch !== session.connectionEpoch) return send(conn, fail(commandId, 'not-authenticated'));
+    const session = conn.session ?? conn.retiredSession;
+    if (!session) return send(conn, fail(commandId, 'not-authenticated'));
+    const digest = digestOf(commandContent(message));
+    const verdict = session.dedupe.check(commandId, digest);
+    if (verdict.kind === 'replay') return send(conn, verdict.receipt);
+    if (verdict.kind === 'conflict') return send(conn, fail(commandId, 'commandId-conflict'));
+    const pending = pendingCommands.get(session)?.get(commandId);
+    if (pending) {
+      if (pending.digest !== digest) return send(conn, fail(commandId, 'commandId-conflict'));
+      pending.waiters.push(conn);
+      return;
+    }
+    // A superseded socket can only repeat an already admitted command, never submit a new one.
+    if (!conn.session || conn.epoch !== session.connectionEpoch) return send(conn, fail(commandId, 'not-authenticated'));
     const current = room;
     if (!current || session.roomId !== current.state.roomId) return send(conn, fail(commandId, 'no-room'));
     if (message.roomId !== current.state.roomId) return send(conn, fail(commandId, 'wrong-room'));
-    if (current.deferDuringSettlement(() => queue.push(() => { if (conn.open) handleCommand(conn, message); }))) return;
-    deduped(conn, session, message, () => {
+    const entries = pendingCommands.get(session) ?? new Map<number, { digest: string; waiters: Connection[] }>();
+    pendingCommands.set(session, entries);
+    const admitted = { digest, waiters: [conn] };
+    entries.set(commandId, admitted);
+    // Authentication belongs to admission. Closing/replacing this socket cannot silently cancel a session command.
+    const execute = () => deduped(conn, session, message, () => {
       const state = current.state;
       const seat = state.seats.find(candidate => candidate.seatId === session.seatId);
       if (!seat) return fail(commandId, 'unknown-seat');
@@ -620,7 +640,13 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       return message.command.type === 'useConsumable'
         ? done(commandId, { kind: 'consumable-used', seatRevision: result.seatRevision, roomRevision: result.roomRevision, events: consumableReceiptEvents(result.events) })
         : done(commandId, { kind: 'applied', seatRevision: result.seatRevision, roomRevision: result.roomRevision, events: result.events });
+    }, receipt => {
+      entries.delete(commandId);
+      const active = session.connection as Connection | null;
+      if (active && !admitted.waiters.includes(active)) admitted.waiters.push(active);
+      for (const waiter of admitted.waiters) send(waiter, receipt);
     });
+    if (!current.deferDuringSettlement(execute)) execute();
   }
 
   /** A walk answers nothing: a refusal is dropped, a walk taken reaches everyone as `legend` (room.walkLegend). */
@@ -677,6 +703,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   function bind(conn: Connection, session: SeatSession): void {
     conn.session = session;
+    conn.retiredSession = null;
     conn.epoch = session.connectionEpoch;
     session.connection = conn;
     conn.sentRoomRevision = -1; conn.sentSeatRevision = -1; conn.sentCombatKey = ''; conn.sentCombat = null; conn.watchSeatId = null; conn.sentWatch = null;
@@ -688,6 +715,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     if (session && session.connection === conn) session.connection = null;
     conn.session = null;
     if (reason === 'superseded' && conn.open) {
+      conn.retiredSession = session;
       sendError(conn, 'session-superseded', 'another connection resumed this seat');
       if (conn.closeHandle === null) conn.closeHandle = clock.schedule(clock.now() + limits.supersededCloseMs, () => { conn.closeHandle = null; conn.socket.close(CLOSE_CODES.superseded, 'superseded'); });
     }
@@ -715,7 +743,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   function onConnection(socket: WebSocket): void {
     if (closing) { socket.close(CLOSE_CODES.serverClosing, 'server closing'); return; }
-    const conn: Connection = { id: nextConnectionId++, socket, session: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', sentCombat: null, watchSeatId: null, sentWatch: null, closeHandle: null, lastSeen: clock.now() };
+    const conn: Connection = { id: nextConnectionId++, socket, session: null, retiredSession: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', sentCombat: null, watchSeatId: null, sentWatch: null, closeHandle: null, lastSeen: clock.now() };
     connections.set(conn.id, conn);
     socket.on('message', (data, isBinary) => queue.push(() => onMessage(conn, data, isBinary)));
     socket.on('pong', () => { conn.lastSeen = clock.now(); });

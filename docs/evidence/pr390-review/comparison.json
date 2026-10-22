@@ -1,0 +1,241 @@
+{
+  "baseline": "db04d196",
+  "node": "v24.21.0",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+  "deterministic": true,
+  "terminalSha256": "f4085d193fc34f97e6a8cfabbe60dfc708da01bcf7cf7b6836fc9cbcf52fa4b1",
+  "checkpointsSha256": "31c2285e5b90df72a399f94ef58abae0d731848e01eca2769f0be6d953cabf60",
+  "botStepsSha256": "0bc354b3a14023514fc14189a03e588b5cfbbb0ee39848ea29edca74a2833b94",
+  "otherSlowCallbacks": {
+    "before": {
+      "count": 410,
+      "maxMs": 5272.677208999987,
+      "top10": [
+        {
+          "round": 29,
+          "phase": "frozen",
+          "ms": 5272.677208999987
+        },
+        {
+          "round": 25,
+          "phase": "frozen",
+          "ms": 2101.064129999999
+        },
+        {
+          "round": 23,
+          "phase": "frozen",
+          "ms": 1663.711691000004
+        },
+        {
+          "round": 25,
+          "phase": "frozen",
+          "ms": 1467.8506569999881
+        },
+        {
+          "round": 32,
+          "phase": "frozen",
+          "ms": 1386.047470999998
+        },
+        {
+          "round": 23,
+          "phase": "frozen",
+          "ms": 1362.866802000004
+        },
+        {
+          "round": 25,
+          "phase": "frozen",
+          "ms": 1327.3179510000045
+        },
+        {
+          "round": 26,
+          "phase": "frozen",
+          "ms": 1215.4767160000047
+        },
+        {
+          "round": 12,
+          "phase": "frozen",
+          "ms": 1161.743386000002
+        },
+        {
+          "round": 27,
+          "phase": "frozen",
+          "ms": 1150.474635999999
+        }
+      ]
+    },
+    "after": {
+      "count": 191,
+      "maxMs": 5311.453659999999,
+      "top10": [
+        {
+          "round": 27,
+          "phase": "frozen",
+          "ms": 5311.453659999999
+        },
+        {
+          "round": 25,
+          "phase": "frozen",
+          "ms": 3733.7941109999956
+        },
+        {
+          "round": 25,
+          "phase": "frozen",
+          "ms": 2719.180224999989
+        },
+        {
+          "round": 29,
+          "phase": "frozen",
+          "ms": 2369.344203000015
+        },
+        {
+          "round": 26,
+          "phase": "frozen",
+          "ms": 2312.0404369999887
+        },
+        {
+          "round": 26,
+          "phase": "frozen",
+          "ms": 2096.59010999999
+        },
+        {
+          "round": 30,
+          "phase": "frozen",
+          "ms": 1950.9271420000005
+        },
+        {
+          "round": 27,
+          "phase": "frozen",
+          "ms": 1739.3312380000134
+        },
+        {
+          "round": 32,
+          "phase": "frozen",
+          "ms": 1418.597565999953
+        },
+        {
+          "round": 26,
+          "phase": "frozen",
+          "ms": 1400.1884599999757
+        }
+      ]
+    }
+  },
+  "rounds": [
+    {
+      "round": 2,
+      "before": {
+        "round": 2,
+        "stepMs": 777.033856,
+        "stepCalls": 961,
+        "planMs": 788.5404229999995,
+        "liveMs": 0.022629000000051747,
+        "commitMs": 0.22628700000041135,
+        "advanceMs": 27.198341000000255,
+        "longestBattleCallbackMs": 788.5577430000003
+      },
+      "after": {
+        "round": 2,
+        "stepMs": 1144.064085000049,
+        "stepCalls": 961,
+        "planMs": 1183.8900389998162,
+        "liveMs": 0.0877209999889601,
+        "commitMs": 0.24556300000404008,
+        "advanceMs": 55.97473099999479,
+        "longestBattleCallbackMs": 33.9220900000073
+      }
+    },
+    {
+      "round": 10,
+      "before": {
+        "round": 10,
+        "stepMs": 2181.694607000023,
+        "stepCalls": 1016,
+        "planMs": 2200.5842889999985,
+        "liveMs": 0.018996999999217223,
+        "commitMs": 0.4506189999956405,
+        "advanceMs": 65.08664599999975,
+        "longestBattleCallbackMs": 2200.2655300000006
+      },
+      "after": {
+        "round": 10,
+        "stepMs": 1825.2125530005433,
+        "stepCalls": 1016,
+        "planMs": 1854.3387310000835,
+        "liveMs": 0.034641999984160066,
+        "commitMs": 0.36401499999919906,
+        "advanceMs": 43.27722999997786,
+        "longestBattleCallbackMs": 35.64577500001178
+      }
+    },
+    {
+      "round": 17,
+      "before": {
+        "round": 17,
+        "stepMs": 5423.392434999994,
+        "stepCalls": 956,
+        "planMs": 5489.110421999998,
+        "liveMs": 0.012850999999500345,
+        "commitMs": 3.6683669999983977,
+        "advanceMs": 118.73372899999958,
+        "longestBattleCallbackMs": 5492.3301259999935
+      },
+      "after": {
+        "round": 17,
+        "stepMs": 2059.3439180001733,
+        "stepCalls": 956,
+        "planMs": 2089.3123989996384,
+        "liveMs": 0.011174999992363155,
+        "commitMs": 0.7115460000059102,
+        "advanceMs": 87.15424199998961,
+        "longestBattleCallbackMs": 28.436436000018148
+      }
+    },
+    {
+      "round": 24,
+      "before": {
+        "round": 24,
+        "stepMs": 2904.2282380000397,
+        "stepCalls": 747,
+        "planMs": 2927.415409999987,
+        "liveMs": 0.018437999999150634,
+        "commitMs": 0.5215779999853112,
+        "advanceMs": 88.39668299999903,
+        "longestBattleCallbackMs": 2927.0770970000012
+      },
+      "after": {
+        "round": 24,
+        "stepMs": 2773.69785700005,
+        "stepCalls": 747,
+        "planMs": 2813.8120829997933,
+        "liveMs": 0.017320999992080033,
+        "commitMs": 0.7115460000059102,
+        "advanceMs": 137.63517300001695,
+        "longestBattleCallbackMs": 67.48850099998526
+      }
+    },
+    {
+      "round": 31,
+      "before": {
+        "round": 31,
+        "stepMs": 2713.695147999955,
+        "stepCalls": 472,
+        "planMs": 2731.0460470000107,
+        "liveMs": 0.09247000000323169,
+        "commitMs": 1.808898000002955,
+        "advanceMs": 69.18682999999146,
+        "longestBattleCallbackMs": 2732.4283530000102
+      },
+      "after": {
+        "round": 31,
+        "stepMs": 2828.524877999851,
+        "stepCalls": 472,
+        "planMs": 2847.2569360001944,
+        "liveMs": 0.012571000028401613,
+        "commitMs": 0.6579079999937676,
+        "advanceMs": 45.041385999997146,
+        "longestBattleCallbackMs": 504.96208899997873
+      }
+    }
+  ],
+  "note": "Full-match determinism proof; performance ran concurrently with regression tests, so wall-clock values are not an isolated latency acceptance."
+}

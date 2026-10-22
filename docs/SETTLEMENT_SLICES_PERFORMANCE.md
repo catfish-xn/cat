@@ -1,6 +1,6 @@
 # 结算补算切片：定位与验收（2026-10-22）
 
-基线 `origin/multiplayer` 的本地提交 `2de5e26d088e4e86032bf571d51941c9b0ecd12f`；工作分支 `codex/settle-slices`。全程离线、不 push、不写 Git 元数据。没有修改 `src/simulation/`、规则、运算顺序、RNG、内容版本或 digest。
+基线 `origin/multiplayer` 的本地提交 `2de5e26d088e4e86032bf571d51941c9b0ecd12f`；工作分支 `codex/settle-slices`。初版全程离线、不 push、不写 Git 元数据。初版没有修改 `src/simulation/`、规则、运算顺序、RNG、内容版本或 digest。
 
 ## 根因与复现条件
 
@@ -50,3 +50,22 @@ shared step 占基线计划的 98%–99%，live-bank 检查本例仅约 0.01–0
 20 ms 是协作式预算，边界是“预算 + 一个不可抢占工作单元”，不是 GC/操作系统暂停的硬实时保证。总补算 CPU 工作仍存在，商店命令在这段原子提交边界内等待；切片的收益是事件循环继续响应，并非规则补算结果被省略。
 
 探针另记录非 battle 阶段 >50 ms 回调；冻结战斗的初始化/快照、少数换轮与 GC 仍可能出现长回调，保留在 evidence，不把这次修复宣称为全进程所有任务都 ≤50 ms。没有更改它们的规则或通过删账本、改 golden 压低耗时。腾讯云 4 核单进程上的原始数字只作现象对照，不直接与本地机器绝对耗时作硬件等价比较。
+
+
+## PR #390 评审修订（2026-10-22）
+
+本地 `origin/multiplayer=db04d196` 已包含 #386。遵守不联网，没有 fetch；原树 `git merge --no-commit --no-ff origin/multiplayer` 因 Git 元数据只读而失败。在 `/tmp/settle-pr390-merge` 从本地对象离线克隆并三方合并，无文本冲突，合并结果通过 binary patch 还原工作区。上游已有的规则/版本/界面变动随合并保留；本次自行修改仅涉及 server、tests、docs 和 `combat-replay-view.ts` 的无结果变化 recorder fork。#386 的 Mel 唯一事件、本场 battleId 与完整 HP 收据/record 核对原样保留。
+
+采用评审方案 **(a)**：暂存结算与回放，命令到达后废弃未发布切片，在原 round/seatRevision 的状态上 FIFO 执行，再有界重建。房间统一排队涵盖 bot、领球、控制权、连接标记、走路与 live 回调。策略 RNG 也随 BotDriver 整个事务延迟。排空操作按工作单元计预算；两个重试上限、返回值及 #382 复用约束见 [合同](MULTIPLAYER_CONTRACT.md#结算补算切片2026-10-22服务器调度补充)。
+
+断线策略改为按已认证 session 执行与保存回执。WsGameClient 不会重发旧 inflight；superseded 宽限期同内容重发只取同一回执，不再执行，新命令仍被撤权拒绝。之前文中的“结算后执行/断线不执行”描述由本节及新版合同覆盖。
+
+新增回归覆盖房间每个席位入口排队、真实法球领取、stale/restart 上限、真实 PvE 尾部购买的旧 revision 成功回执与客户端投影一致、关闭后执行及恢复回执、新旧连接同时重发与冲突。普通 PvE/实时金币两条路径比较同步截止前购买与首片后排队购买的完整状态及每次发布，包含全量领域账本。
+
+
+评审后整局对照：`node scripts/settlement-slices-probe.cjs db04d196 artifacts/pr390-review` 通过。seed=42，八 Bot 至第 36 回合终局，终局全局状态、每轮全局 checkpoint（含完整战斗事件账本）与 Bot 意图 SHA-256 三项完全一致；[精简证据](evidence/pr390-review/comparison.json)。该轮与回归并跑，耗时受竞争/GC 影响，不能当隔离延迟验收；单个不可分割规则事务或 GC 仍可超过 20 ms。
+
+
+最终验证：`npm run typecheck` 与 `git diff --check` 通过。`npm test -- tests/server/settlement-slices.test.ts tests/server/net/settlement-queue.test.ts tests/server/live-bank.test.ts tests/server/round-commit.test.ts tests/server/mel-save-settlement.test.ts tests/server/bot-driver.test.ts tests/server/v17-avarice-battle-end.test.ts tests/server/net/slow-task.test.ts --maxWorkers=2`：8 文件、50 项全部通过，包含 #371 原始 slow-task 四项。最后调整队列预算断言、真实法球测试时限后，`-t 'checks|queues every|bounds work'` 三项定向复验全部通过。额外使用旧 HTTP 监听桩运行 slow-task 四项也通过；并未用桩结果替代上述原始套件结果。
+
+Git HEAD 保持 `7b37ec50`；工作区包含离线合并与评审修订。仅评审增量另存 `/tmp/pr390-review-only.patch`，供有 Git 写权限的环境先正式 merge 本地已核对的 upstream、再应用增量；本次没有 push。

@@ -1,3 +1,7 @@
+## v20-xp68 当前身份（2026-10-22）
+
+当前 rules/content 为 `s13-g2-3-v20-xp68` / `s13-14.24b-g2-3-v20-xp68`，父 v20-chem-baron；schema/save/replay/command 为 11/7/4/4。仅把 8→9 的 76 XP 与 9→10 的 84 XP 分别改为 68（用户 10-22 要求，项目自定），战斗规则和事件结构不变。阈值表、完整 digest、失败边界及 epoch 重录见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 与 [XP68](XP68.md)。本节覆盖下文历史当前身份。
+
 ## v20-traits 继承规则覆盖（2026-10-21）
 
 当前规则/内容为 `s13-g2-3-v20-chem-baron` / `s13-14.24b-g2-3-v20-chem-baron`，schema/save/replay/command＝11/7/4/4；父 v20-traits 的 10/6/4/4 历史录制不变。黑市新增持久化字段使 schema/save 各升一；战斗回放与命令协议未变。迅击、野火与五组强化关系按用户批准**魔改**；野火350%攻速标**工程取值**，14.24b原归档不改。导出签名、数值、伙伴冻结、协同资格、RNG及恢复边界见 [V20_TRAITS](V20_TRAITS.md)，覆盖下文旧的关系延期、野火仅回血及v19当前身份描述。无新Match公共命令或失败reason；旧身份严格拒绝，事件枚举与网络协议不变。

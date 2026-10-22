@@ -242,11 +242,11 @@ export type SeatCommand = WireCommand;
  * `seat-controlled`: a player command reached a human seat a bot took over (B6); `control-revoked`: a bot step
  * decided under an older control generation (the player resumed in between, or the seat is not bot-controlled).
  */
-export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase' | 'seat-controlled' | 'control-revoked';
+export type RoomFailure = 'settlement-pending' | 'unknown-seat' | 'seat-eliminated' | 'room-phase' | 'seat-controlled' | 'control-revoked';
 export type RoomCommandResult =
   | { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[]; readonly seatRevision: number; readonly roomRevision: number }
   /** `SharedPoolFailure` includes every MatchFailure plus the pool's own reasons (pool-empty, empty-slot, ...). */
-  | { readonly ok: false; readonly reason: RoomFailure | MatchFailure | SharedPoolFailure | CarouselFailure; readonly state: MatchState | null };
+  | { readonly ok: false; readonly reason: RoomFailure | MatchFailure | SharedPoolFailure | CarouselFailure; readonly state: MatchState | null; readonly queued?: true };
 export type { MatchCommandResult };
 /**
  * v15: a claimOrb accepted while the round was `frozen` (RoomCommandResult ok, nothing published) that the rules refused

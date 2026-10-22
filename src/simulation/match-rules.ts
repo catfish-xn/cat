@@ -11,7 +11,7 @@ export const MATCH_RULES = Object.freeze({ initialGold: OPENING_INITIAL_STATE.go
 /** SR-C7-01: occupied allied preparation locations swap; cap checks the final formation. */
 export const DEPLOYMENT_RULES_VERSION = 'preparation-swap-v1';
 export const DEFAULT_MATCH_SEED = 42;
-export const XP_TO_NEXT_LEVEL: Readonly<Record<number, number>> = Object.freeze({ 1:2, 2:2, 3:6, 4:10, 5:20, 6:36, 7:48, 8:76, 9:84 });
+export const XP_TO_NEXT_LEVEL: Readonly<Record<number, number>> = Object.freeze({ 1:2, 2:2, 3:6, 4:10, 5:20, 6:36, 7:48, 8:68, 9:68 });
 export const SHOP_ODDS: Readonly<Record<number, readonly [number, number, number, number, number]>> = Object.freeze({
   1:[100,0,0,0,0], 2:[100,0,0,0,0], 3:[75,25,0,0,0], 4:[55,30,15,0,0], 5:[45,33,20,2,0],
   6:[30,40,25,5,0], 7:[19,30,40,10,1], 8:[18,25,32,22,3], 9:[15,20,25,30,10], 10:[5,10,20,40,25],

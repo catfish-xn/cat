@@ -7,7 +7,8 @@ import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { G23_SPECIAL_ITEM_POOLS } from '../simulation/content/g2-3-special-item-runtime';
 import { G23_POLICY } from '../simulation/content/g2-3-policy';
 import { consumableName } from './orb-loot';
-import { g23ChampionNameByApi, itemDisplayName } from './g23-display';
+import { G23_HERO_IDS, g23ChampionNameByApi, itemDisplayName } from './g23-display';
+import { UNIT_DEFINITIONS } from '../simulation/units';
 import { getHeroIdentity } from './hero-identity';
 
 const FORGES: Readonly<Record<string, string>> = { TFT_ArmoryKeyCompleted: '成装锻造器', TFT_ArmoryKeyOrnn: '神器装备锻造器', TFT_ArmoryKeySupport: '辅助装锻造器' };
@@ -30,7 +31,7 @@ function itemName(api: string): string {
 const heroName = (api: string) => g23ChampionNameByApi(api) ?? getHeroIdentity(api.slice(api.indexOf('_') + 1).toLowerCase()).name;
 const list = (value: unknown): readonly string[] => (Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []);
 /** Repeated names fold into "名字 ×N", in first-seen order. */
-const counted = (names: readonly string[]) => [...new Set(names)].map(name => { const n = names.filter(other => other === name).length; return n > 1 ? `${name} ×${n}` : name; });
+export const counted = (names: readonly string[]) => [...new Set(names)].map(name => { const n = names.filter(other => other === name).length; return n > 1 ? `${name} ×${n}` : name; });
 
 /**
  * One line per reward kind: gold, heroes, items, tools; unknown keys are left out rather than guessed. `first` names the
@@ -57,4 +58,44 @@ export function g23RewardLines(reward: Readonly<Record<string, unknown>>, first?
   if (heroes.length) lines.push(counted(heroes).join('、'));
   if (items.length) lines.push(counted(items).join('、'));
   return lines;
+}
+
+/** One picture of a bundle: a hero portrait with its stars, an item icon (null id: a random pool), or the gold in it. */
+export type G23RewardIcon =
+  | { readonly kind: 'hero'; readonly unitId: string | null; readonly star: number; readonly name: string }
+  | { readonly kind: 'item'; readonly itemId: string | null; readonly name: string }
+  | { readonly kind: 'gold'; readonly amount: number };
+
+/** A shop hero's apiName (TFT13_Gremlin) to the repo unit id (smeech) when the repo has that hero. */
+function heroUnitId(api: string): string | null {
+  const id = Object.keys(G23_HERO_IDS).find(key => G23_HERO_IDS[key] === api) ?? api.slice(api.indexOf('_') + 1).toLowerCase();
+  return Object.hasOwn(UNIT_DEFINITIONS, id) ? id : null;
+}
+function itemId(api: string): string | null {
+  const pool = (G23_SPECIAL_ITEM_POOLS as Readonly<Record<string, readonly string[]>>)[api];
+  if (pool?.length === 1) return itemId(pool[0]!);
+  if (Object.hasOwn(ITEM_DEFINITIONS, api)) return api;
+  return Object.values(ITEM_DEFINITIONS).find(item => item.apiName === api)?.id ?? null;
+}
+
+/**
+ * The same reward table as `g23RewardLines`, as pictures for a black-market card: heroes first (TFT shows the champions
+ * of a bundle up front), then items and tools, then the gold. Nothing is drawn: a random pool stays a pool.
+ */
+export function g23RewardIcons(reward: Readonly<Record<string, unknown>>): G23RewardIcon[] {
+  const heroes: G23RewardIcon[] = [], items: G23RewardIcon[] = [];
+  let gold = 0;
+  const item = (api: string) => items.push({ kind: 'item', itemId: Object.hasOwn(TOOLS, api) || Object.hasOwn(G23_POLICY.duplicators, api) ? null : itemId(api), name: itemName(api) });
+  for (const [key, value] of Object.entries(reward)) {
+    if (key === 'Gold') gold += Number(value) || 0;
+    else if (key === 'GoldItems') for (const api of list(value)) gold += Number(api.slice(api.lastIndexOf('_') + 1)) || 0;
+    else if (key === 'Remover') for (let n = 0; n < (Number(value) || 0); n++) items.push({ kind: 'item', itemId: null, name: consumableName('magnetic-remover') });
+    else if (['Item', 'ExactItem', 'ItemByKey', 'Consumables'].includes(key)) for (const api of list(value)) item(api);
+    else if (key === 'MeepTypeUnit') for (const api of list(value)) items.push({ kind: 'item', itemId: null, name: FORGES[api] ?? '锻造器' });
+    else if (key.startsWith('Champions')) {
+      const star = Number(/_(\d)Star$/.exec(key)?.[1] ?? 1);
+      for (const api of list(value)) heroes.push({ kind: 'hero', unitId: heroUnitId(api), star, name: heroName(api) });
+    }
+  }
+  return [...heroes, ...items, ...(gold ? [{ kind: 'gold' as const, amount: gold }] : [])];
 }

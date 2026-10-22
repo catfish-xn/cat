@@ -76,7 +76,7 @@ describe('T3 atomic round receipt',()=>{
     expect(nextRound(next,next.round).ok).toBe(false);
   });
   it('settles ten opposing survivors and natural XP from level nine to ten once',()=>{
-    const state={...opening(),level:9,xp:83};
+    const state={...opening(),level:9,xp:67};
     const r=receipt(state,{result:'loss',damage:12,opposingSurvivors:10});
     const next=accepted(applyRoundSettlement(freeze(state),r));
     expect(next).toMatchObject({playerHp:state.playerHp-12,level:10,xp:0});
