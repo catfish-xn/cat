@@ -141,11 +141,11 @@ export class OnlineApplication implements SceneApplication {
       view: view => this.onView(view),
       state: (state, confirmed, serverEvents) => this.onState(state, confirmed ?? [], serverEvents ?? []),
       replay: (replay, unitIds) => { this.session.receiveReplay(replay, unitIds ?? []); this.hooks.clearInput(); this.hooks.refresh(); },
-      replayRevised: replay => { this.session.reviseReplay(replay); this.hooks.refresh(); },
+      replayRevised: replay => { if (!this.session.reviseReplay(replay)) this.hooks.refresh(); },
       // The battle of the seat I visit (start, then each revision); a late one for a board I left is dropped.
       watched: (seatId, replay) => {
         if (seatId !== this.opponentBoard.openSeatId || !this.opponentBoard.drawnIn3d) return;
-        this.session.watchReplay(seatId, replay); this.syncScout(); this.hooks.refresh();
+        if (!this.session.watchReplay(seatId, replay)) { this.syncScout(); this.hooks.refresh(); }
       },
       refused: refusal => this.onRefused(refusal),
       notice: notice => this.hooks.orbClaimRefused?.(notice.orbId, notice.reason),

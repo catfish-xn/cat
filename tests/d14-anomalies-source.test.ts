@@ -8,7 +8,7 @@ import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { CONTENT_DIGEST } from '../src/simulation/content';
-import currentBaseline from './v20-xp68-content-baseline.json';
+import currentBaseline from './v20-live-combat-content-baseline.json';
 import { M8_VERSION } from '../src/simulation/m8/version';
 
 const root='src/simulation/content/source/s13-14.24b/raw/';

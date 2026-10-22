@@ -1,6 +1,7 @@
 import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
 import { readsLiveGold } from './live-gold-readers';
+import { phase1BattleInputsSupported, type BattleTickInputSource } from './battle-input-log';
 import type { CombatBankSample } from './combat-types';
 import {projectItemSummons} from './g2-4b-summons';
 import {countsG23SurvivorDamage} from './g2-3-summons';
@@ -155,6 +156,7 @@ function sideResult(seatId: string, mapping: readonly BattleIdMapping[], termina
  * every terminal field and event against that result's original tick-zero state;
  * the validated BattleInput boundary remains startTwoSidedBattle above. */
 function validateDynamicResult(result:BattleResult):void {
+  if (!phase1BattleInputsSupported(result.inputLog)) throw new BattleValidationError('battle-input-unsupported');
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
   const enabled=result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
   if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null||!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
@@ -181,7 +183,11 @@ function validateDynamicResult(result:BattleResult):void {
     ||canonicalContent(events)!==canonicalContent(result.events.slice(result.initial.nextEventSeq??0)))throw new BattleValidationError('invalid-result');
 }
 
-export interface BattleReplayOptions { readonly captureReplay?: boolean; }
+export interface BattleReplayOptions {
+  readonly captureReplay?: boolean;
+  /** Stage-2 seam; phase 1 rejects nonempty batches without changing the task. */
+  readonly beforeTick?: BattleTickInputSource;
+}
 export interface BattleReplayStep {
   readonly frame: CombatReplayTick | null;
   readonly result: BattleResult | null;
@@ -205,7 +211,7 @@ export interface BattleTask {
 const checkedResults = new WeakMap<BattleResult, ReturnType<typeof createScopedContentFreezer>>();
 
 /** In-memory continuation. A slice budget never changes the Combat's own tick limit. */
-export function startTwoSidedBattle(input: BattleInput, options: { readonly captureReplay: true }): BattleReplayTask;
+export function startTwoSidedBattle(input: BattleInput, options: BattleReplayOptions & { readonly captureReplay: true }): BattleReplayTask;
 export function startTwoSidedBattle(input: BattleInput): BattleTask;
 export function startTwoSidedBattle(input: BattleInput, options: BattleReplayOptions): BattleTask | BattleReplayTask;
 export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOptions): BattleTask | BattleReplayTask {
@@ -245,13 +251,17 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
     let steps = 0;
     if (recorder) {
       while (terminal.status === 'running' && steps < maxTicks) {
+        // TODO phase 2: validate/apply each input and append successful inputs to
+        // BattleResult.inputLog atomically; replay must inject that same log here.
+        if (!phase1BattleInputsSupported(options?.beforeTick?.(terminal.tick + 1))) throw new BattleValidationError('battle-input-unsupported');
         const next = stepCombat(terminal);
         latestFrame = recorder.record(terminal, next);
         terminal = next.state; appendEvents(next); steps++;
       }
     } else {
-      // Keep the default hot loop free of replay work and per-tick option checks.
+      // The default hot loop skips replay work; the input seam still runs before each tick.
       while (terminal.status === 'running' && steps < maxTicks) {
+        if (!phase1BattleInputsSupported(options?.beforeTick?.(terminal.tick + 1))) throw new BattleValidationError('battle-input-unsupported');
         const next = stepCombat(terminal); terminal = next.state; appendEvents(next); steps++;
       }
     }
@@ -296,7 +306,7 @@ export function proposeSettlement(result: BattleResult): { readonly a: SidePropo
   try {
     const freezeResult = checkedResults.get(result);
     if (!freezeResult) canonicalContent(result);
-    validateDynamicResult(result);
+    if (!freezeResult) validateDynamicResult(result);
     const stage = getMultiplayerRoundById(result.roundId);
     const expectedWinner = result.terminal.result === 'draw' ? null : result.terminal.result === 'playerWin' ? result.a.seatId : result.b.seatId;
     if (result.version !== TWO_SIDED_BATTLE_VERSION || stage.kind !== 'pvp' || result.a.seatId === result.b.seatId

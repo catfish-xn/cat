@@ -38,9 +38,12 @@ type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type Timers = { set(callback: () => void, ms: number): unknown; clear(handle: unknown): void };
 type Raw = ClientMessage extends infer M ? M extends ClientMessage ? Omit<M, 'protocolVersion' | 'commandId'> : never : never;
 type ReplayMessage = Extract<ServerMessage, { type: 'replay' }>;
+type CombatStreamMessage = Extract<ServerMessage, { type: 'combat-open' | 'combat-chunk' | 'combat-end' }>;
 type ReplayTailMessage = Extract<ServerMessage, { type: 'replay-tail' }>;
 type WatchReplayMessage = Extract<ServerMessage, { type: 'watch-replay' }>;
 type WatchTailMessage = Extract<ServerMessage, { type: 'watch-tail' }>;
+type StreamPart = Exclude<CombatStreamMessage, { type: 'combat-chunk' }>
+  | (Extract<CombatStreamMessage, { type: 'combat-chunk' }>['chunks'][number] & { type: 'combat-chunk' });
 
 export interface WsClientOptions {
   readonly url: string;
@@ -83,7 +86,7 @@ export function defaultWsUrl(location: Pick<Location, 'protocol' | 'host'>, over
   return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 }
 
-interface Inflight { readonly type: ClientMessage['type'] }
+interface Inflight { readonly type: ClientMessage['type']; readonly watchSeatId?: string | null }
 interface StoredSeat { readonly url: string; readonly token: string }
 
 export class WsGameClient implements GameClient {
@@ -118,6 +121,7 @@ export class WsGameClient implements GameClient {
   private confirmed: (ConfirmedCommand & { seatRevision: number })[] = [];
   private deferredRetries: { commandId: number; reason: ReceiptFailure }[] = [];
   private lastReplayKey = '';
+  private streamBattleId = '';
   /** The replay behind `lastReplayKey`, as revised so far (D11 live bank). */
   private lastReplay: CombatReplay | null = null;
 
@@ -191,21 +195,18 @@ export class WsGameClient implements GameClient {
     this.socket!.send(JSON.stringify({ type: 'walk', roomId: this.roomId, ...request, protocolVersion: NET_PROTOCOL_VERSION, commandId: this.nextCommandId++ }));
     return true;
   }
-  /** Like a walk: no receipt; the seat is kept and sent again once a reconnect is bound to the room. */
+  /** Watch is receipted; selection and both retained cursors survive reconnect. */
   watch(seatId: string | null): void {
+    if (seatId === this.seatId) seatId = null;
     if (seatId === this.watchSeat) return;
     this.watchSeat = seatId; this.lastWatch = null;
-    this.sendWatch();
+    if (this.ready && this.bound && this.roomId !== null) this.post({ type: 'watch', roomId: this.roomId, seatId });
   }
   private watchSeat: string | null = null;
-  private lastWatch: { readonly key: string; readonly replay: CombatReplay } | null = null;
-  private sendWatch(): void {
-    if (!this.ready || !this.bound || this.roomId === null) return;
-    this.socket!.send(JSON.stringify({ type: 'watch', roomId: this.roomId, seatId: this.watchSeat, protocolVersion: NET_PROTOCOL_VERSION, commandId: this.nextCommandId++ }));
-  }
+  private lastWatch: { readonly key: string; readonly battleId: string; readonly seatId: string; readonly replay: CombatReplay } | null = null;
   private onWatchReplay(message: WatchReplayMessage): void {
     if (message.roomId !== this.roomId || message.seatId !== this.watchSeat) return;
-    this.lastWatch = { key: `${message.round}:${message.battleId}:${message.seatId}`, replay: message.replay };
+    this.lastWatch = { key: `${message.round}:${message.battleId}:${message.seatId}`, battleId: message.battleId, seatId: message.seatId, replay: message.replay };
     this.listeners?.watched?.(message.seatId, message.replay);
   }
   private onWatchTail(message: WatchTailMessage): void {
@@ -213,7 +214,7 @@ export class WsGameClient implements GameClient {
     if (!last || message.roomId !== this.roomId || `${message.round}:${message.battleId}:${message.seatId}` !== last.key || !Number.isInteger(message.fromTick)
       || message.fromTick < 0 || message.fromTick > last.replay.ticks.length || !Array.isArray(message.ticks)) return;
     const replay: CombatReplay = { initial: last.replay.initial, ticks: [...last.replay.ticks.slice(0, message.fromTick), ...message.ticks], terminal: message.terminal };
-    this.lastWatch = { key: last.key, replay };
+    this.lastWatch = { ...last, replay };
     this.listeners?.watched?.(message.seatId, replay);
   }
   private get ready(): boolean { return !this.disposed && !this.superseded && this.socket !== null && this.socket.readyState === SOCKET_OPEN; }
@@ -223,7 +224,7 @@ export class WsGameClient implements GameClient {
   private post(raw: Raw): number | null {
     if (!this.ready) return null;
     const commandId = this.nextCommandId++;
-    this.inflight.set(commandId, { type: raw.type });
+    this.inflight.set(commandId, { type: raw.type, ...(raw.type === 'watch' ? { watchSeatId: raw.seatId } : {}) });
     this.socket!.send(JSON.stringify({ ...raw, protocolVersion: NET_PROTOCOL_VERSION, commandId }));
     return commandId;
   }
@@ -240,7 +241,14 @@ export class WsGameClient implements GameClient {
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.attempt = 0;
-      if (this.token) this.post({ type: 'resume', token: this.token });
+      if (this.token) {
+        const stream = this.lastReplay?.stream, watched = this.lastWatch, watchStream = watched?.replay.stream;
+        this.post({ type: 'resume', token: this.token, watchSeatId: this.watchSeat,
+          ...(stream && this.seatId ? { combat: { battleId: this.streamBattleId, revision: stream.revision,
+            nextTick: stream.fromTick + this.lastReplay!.ticks.length, seatId: this.seatId } } : {}),
+          ...(watchStream && watched ? { watchCombat: { battleId: watched.battleId, revision: watchStream.revision,
+            nextTick: watchStream.fromTick + watched.replay.ticks.length, seatId: watched.seatId } } : {}) });
+      }
       else this.setStatus({ kind: 'online' });
     };
     socket.onmessage = event => { if (this.socket === socket) { this.armLiveness(socket); this.receive(String(event.data)); } };
@@ -308,6 +316,9 @@ export class WsGameClient implements GameClient {
         this.lobbyView = message.view; this.emitLobby(); return;
       case 'view': return this.onView(message.roomId, message.view);
       case 'state': return this.onState(message.roomId, message.round, message.seatRevision, message.state, message.events ?? []);
+      case 'combat-open':
+      case 'combat-end': this.onCombatStream(message); return;
+      case 'combat-chunk': for (const chunk of message.chunks) { if (!this.onCombatStream({ type: 'combat-chunk', ...chunk })) break; } return;
       case 'replay': return this.onReplay(message);
       case 'replay-tail': return this.onReplayTail(message);
       case 'watch-replay': return this.onWatchReplay(message);
@@ -343,6 +354,48 @@ export class WsGameClient implements GameClient {
     this.listeners?.state(state, confirmed.map(({ commandId, events }) => ({ commandId, events })), serverEvents);
     this.flushRetries();
   }
+  /** The same append protocol serves two independent recordings; watch never enters my replay/history callbacks. */
+  private onCombatStream(message: StreamPart): boolean {
+    const watch = message.watch;
+    if (message.roomId !== this.roomId && this.roomId !== null) return true;
+    if (message.seatId !== (watch ? this.watchSeat : this.seatId) || message.round < this.round) return true;
+    const key = `${message.roomId}:${message.round}:${message.battleId}`;
+    const last = watch ? this.lastWatch?.replay : this.lastReplay;
+    const lastKey = watch ? this.lastWatch?.key : this.lastReplayKey;
+    if (message.type === 'combat-open') {
+      if (message.revision < 1 || message.frame.tick !== message.initial.tick) return true;
+      if (key === lastKey && last?.stream && message.revision <= last.stream.revision) return true;
+      const replay: CombatReplay = { initial: message.initial, ticks: [message.frame], terminal: message.initial,
+        stream: { revision: message.revision, fromTick: message.frame.tick, ended: false } };
+      if (watch) {
+        this.lastWatch = { key, battleId: message.battleId, seatId: message.seatId, replay };
+        this.listeners?.watched?.(message.seatId, replay);
+      } else {
+        this.streamBattleId = message.battleId; this.lastReplayKey = '';
+        this.onReplay({ type: 'replay', roomId: message.roomId, round: message.round, battleId: message.battleId, replay, unitIds: message.unitIds });
+      }
+      return true;
+    }
+    const stream = last?.stream;
+    if (!last || !stream || key !== lastKey || stream.revision !== message.revision) return true;
+    const nextTick = stream.fromTick + last.ticks.length;
+    let replay: CombatReplay;
+    if (message.type === 'combat-chunk') {
+      if (stream.ended || message.throughTick < nextTick) return true;
+      if (message.fromTick !== nextTick || !message.ticks.length || message.ticks.some((f, i) => f.tick !== nextTick + i)
+        || message.throughTick !== message.ticks.at(-1)!.tick) { this.restart(); return false; }
+      replay = { ...last, ticks: [...last.ticks, ...message.ticks] };
+    } else {
+      if (stream.ended) return true;
+      if (message.throughTick !== nextTick - 1 || message.terminal.status !== 'finished' || message.terminal.tick !== message.throughTick) { this.restart(); return false; }
+      replay = { ...last, terminal: message.terminal, stream: { ...stream, ended: true } };
+    }
+    if (watch) {
+      this.lastWatch = { key, battleId: message.battleId, seatId: message.seatId, replay };
+      this.listeners?.watched?.(message.seatId, replay);
+    } else { this.lastReplay = replay; this.listeners?.replayRevised?.(replay); }
+    return true;
+  }
   /** My battle as a compact replay (B7/C6). A resume snapshot repeats the battle already played; show it only once. */
   private onReplay(message: ReplayMessage): void {
     const key = `${message.roomId}:${message.round}:${message.battleId}`;
@@ -375,12 +428,18 @@ export class WsGameClient implements GameClient {
           this.lobbyError = null; this.emitLobby();
           break;
         case 'left': this.forgetSeat(); this.emitLobby(); break;
+        case 'watching':
+          if (entry?.type === 'watch' && entry.watchSeatId === this.watchSeat && result.seatId !== this.watchSeat) {
+            this.watchSeat = result.seatId; this.lastWatch = null;
+          }
+          break;
         case 'started': break; // the room's first view/state follow
         case 'resumed':
           this.seatId = result.seatId; this.roomId = result.roomId; this.bound = true;
           this.nextCommandId = Math.max(this.nextCommandId, result.lastCommandId + 1);
           this.setStatus(result.reclaimed ? { kind: 'online', reclaimed: true } : { kind: 'online' });
-          this.lastWatch = null; this.sendWatch();
+          // Resume already carries the selection and both cursors. Retain the
+          // watched prefix so its next chunk can append without another open.
           break;
         case 'applied':
         case 'consumable-used':
@@ -447,6 +506,7 @@ export class WsGameClient implements GameClient {
     this.listeners?.lobby({ ...base, joined, canStart: base.canStart && joined, error: this.lobbyError ?? base.error });
   }
   private forgetSeat(): void {
+    this.streamBattleId = ''; this.watchSeat = null; this.lastWatch = null; this.lastReplay = null; this.lastReplayKey = '';
     this.seatId = null; this.roomId = null; this.round = 0; this.stateRevision = -1; this.appliedRevision = -1;
     this.writeToken(null);
   }

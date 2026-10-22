@@ -1,0 +1,125 @@
+{
+  "baseCommit": "14006984600a08f8dd96fa776bf9ba1d1048ff24",
+  "steps": [
+    {
+      "name": "record-release",
+      "args": [
+        "scripts/record-v20-release.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 153638,
+      "log": "artifacts/v20-recording/record-release.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    },
+    {
+      "name": "record-transfer",
+      "args": [
+        "scripts/record-v20-transfer.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 17792,
+      "log": "artifacts/v20-recording/record-transfer.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    },
+    {
+      "name": "record-herald",
+      "args": [
+        "tests/fixtures/record-v20-herald.cjs",
+        "--write"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 154233,
+      "log": "artifacts/v20-recording/record-herald.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    },
+    {
+      "name": "record-inputs",
+      "args": [
+        "scripts/record-v20-inputs.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 8327,
+      "log": "artifacts/v20-recording/record-inputs.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    },
+    {
+      "name": "record-live-reveal",
+      "args": [
+        "scripts/record-v20-live-reveal.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 65545,
+      "log": "artifacts/v20-recording/record-live-reveal.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    },
+    {
+      "name": "check-inputs",
+      "args": [
+        "scripts/record-v20-inputs.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 9482,
+      "log": "artifacts/v20-recording/check-inputs.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    },
+    {
+      "name": "check-herald",
+      "args": [
+        "scripts/verify-m8-herald-fixtures.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 131413,
+      "log": "artifacts/v20-recording/check-herald.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    },
+    {
+      "name": "check-history",
+      "args": [
+        "scripts/v20-fixture-audit.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2437,
+      "log": "artifacts/v20-recording/check-history.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    },
+    {
+      "name": "check-live-reveal",
+      "args": [
+        "scripts/record-v20-live-reveal.cjs",
+        "--baseline-commit=14006984600a08f8dd96fa776bf9ba1d1048ff24",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 46973,
+      "log": "artifacts/v20-recording/check-live-reveal.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    },
+    {
+      "name": "compare-digests",
+      "args": [
+        "scripts/compare-v20-digests.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4412,
+      "log": "artifacts/v20-recording/compare-digests.log",
+      "error": "Error: spawnSync /opt/node-v24.21.0-linux-x64/bin/node EPERM"
+    }
+  ],
+  "complete": true
+}

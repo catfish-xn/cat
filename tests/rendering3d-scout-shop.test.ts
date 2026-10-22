@@ -98,6 +98,54 @@ describe('3D scouting shop availability', () => {
     expect(shop.inert).toBe(false);
   }
 
+  it('refreshes replay opens, seat switches and revisions but keeps appended own/watched chunks off the refresh path', async () => {
+    const { OnlineApplication } = await import('../src/rendering/online/online-application');
+    const { RemoteSession } = await import('../src/rendering/online/remote-session');
+    const { createMatch } = await import('../src/simulation/match');
+    const { createCombat } = await import('../src/simulation/combat');
+    const { toCombatViewState } = await import('../src/simulation/combat-replay-view');
+    const { subscribeBoardFeed } = await import('../src/rendering/board-feed');
+    const scout = vi.fn(), refresh = vi.fn(), clearInput = vi.fn();
+    off = subscribeBoardFeed({ frame() {}, events() {}, scout });
+    const client = { transport: 'websocket', watch() {}, listen(next: ClientListeners) { listeners = next; return () => {}; }, dispose() {} } as unknown as GameClient;
+    const initial = createMatch(42), session = new RemoteSession(client, initial, () => 0);
+    app = new OnlineApplication(session, client, { refresh, clearInput, status() {} });
+    listeners.view({ ...view, phase: { ...view.phase, kind: 'combat' } });
+    const opening = toCombatViewState(createCombat(initial.preparation));
+    const frames = Array.from({ length: 10 }, (_, tick) => ({ tick, events: [], keyframe: { ...opening, tick } }));
+    const prefix = (through: number): CombatReplay => ({ initial: opening, ticks: frames.slice(0, through + 1),
+      terminal: opening, stream: { revision: 1, fromTick: 0, ended: false } });
+    refresh.mockClear(); clearInput.mockClear();
+    listeners.replay(prefix(0));
+    expect(refresh).toHaveBeenCalledTimes(1); expect(clearInput).toHaveBeenCalledTimes(1);
+    refresh.mockClear(); scout.mockClear();
+    for (let tick = 1; tick < 6; tick++) listeners.replayRevised!(prefix(tick));
+    expect(refresh).not.toHaveBeenCalled(); expect(scout).not.toHaveBeenCalled();
+    expect(session.lastBattle!.replay.ticks).toHaveLength(6);
+    listeners.replayRevised!({ ...prefix(6), ticks: frames.slice(0, 7).map(frame => ({ ...frame })) });
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    select('other'); refresh.mockClear(); scout.mockClear();
+    listeners.watched!('other', prefix(0));
+    expect(refresh).toHaveBeenCalledTimes(1); expect(scout).toHaveBeenCalledTimes(1);
+    refresh.mockClear(); scout.mockClear();
+    const displayed = session.combatView;
+    for (let tick = 1; tick < 6; tick++) listeners.watched!('other', prefix(tick));
+    expect(refresh).not.toHaveBeenCalled(); expect(scout).not.toHaveBeenCalled();
+    expect(session.combatView).toBe(displayed);
+    session.advanceDisplay(500);
+    expect(session.combatView!.tick).toBe(1); // appended frames reached the independent watched player
+    listeners.watched!('other', { ...prefix(6), ticks: frames.slice(0, 7).map(frame => ({ ...frame })) });
+    expect(refresh).toHaveBeenCalledTimes(1); expect(scout).toHaveBeenCalledTimes(1);
+    select('me');
+    expect(refresh.mock.calls.length).toBeGreaterThan(1); expect(session.watchedSeat).toBeNull();
+    select('other'); refresh.mockClear(); scout.mockClear();
+    listeners.watched!('other', prefix(6));
+    expect(refresh).toHaveBeenCalledTimes(1); expect(scout).toHaveBeenCalledTimes(1);
+    // A fresh open of my stream still resets the board even with a matching combat id.
+    refresh.mockClear(); listeners.replay(prefix(0)); expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
   /** Public create + native event boundary; only graphics and unrelated DOM widgets are substituted.
    * The real OnlineApplication, RemoteSession and BoardScene choose whether any intent reaches send.
    * No private scene fields/methods are accessed, and no server or asset requests are made.

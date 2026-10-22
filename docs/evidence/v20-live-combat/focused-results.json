@@ -1,0 +1,678 @@
+{
+  "focused": [
+    {
+      "report": "artifacts/v20-live-combat-tests/xp68-stream.json",
+      "files": 3,
+      "passed": 33,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "report": "artifacts/v20-live-combat-tests/mel-seed-xp68.json",
+      "files": 1,
+      "passed": 2,
+      "failed": 0,
+      "pending": 18
+    },
+    {
+      "report": "artifacts/v20-live-combat-tests/core-xp68.json",
+      "files": 7,
+      "passed": 120,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "report": "artifacts/v20-live-combat-tests/related-xp68.json",
+      "files": 25,
+      "passed": 826,
+      "failed": 11,
+      "pending": 0
+    }
+  ],
+  "focusedTotalsAfterScopedRetries": {
+    "files": 35,
+    "uniqueTests": 991,
+    "passed": 991,
+    "failed": 0
+  },
+  "timeoutRetry": {
+    "needed": true,
+    "tests": [
+      {
+        "file": "tests/b8-resumable-battle.test.ts",
+        "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 9 units per side",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/b8-resumable-battle.test.ts",
+        "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/b8-resumable-battle.test.ts",
+        "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 13",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/b8-resumable-battle.test.ts",
+        "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 100",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/b8-resumable-battle.test.ts",
+        "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1201",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/b8-resumable-battle.test.ts",
+        "name": "SR-B8-02 resumable pure tasks owns mutable input through pauses and retains replay divergence validation",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+        "name": "restores the used lesser shimmer duplicator and the next battle tick for tick",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+        "name": "escrows a full-bench market and redeems its duplicator and later heroes in order as space is freed",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+        "name": "preserves an escrowed public claim at round 13 choosing another owned eligible target",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+        "name": "restores an ordinary duplicator manually claimed from escrow and the next battle tick for tick",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/opening-random-identity.test.ts",
+        "name": "sniper: checkpoint 61 survives strict text/object restore",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "name": "M5 ordinary three-build routes and independent resource ledger normally buys five-cost Caitlyn and fields her for at least two real battles",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "name": "M5 ordinary three-build routes and independent resource ledger [B8] sniper: complete-build battles and full component grant chain",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/m5-replay-mage.test.ts",
+        "name": "M5 mage restores every command and tick; rejected insertion preserves every field",
+        "reason": "test-timeout"
+      },
+      {
+        "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+        "name": "G2-4b: the artifact anvil in an online room tier 10 opens 神器装备锻造器 with four distinct artifacts and the deadline grants the first offer once",
+        "reason": "hook-blocked"
+      },
+      {
+        "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+        "name": "G2-4b: the artifact anvil in an online room a pick before the deadline grants that artifact; stale, foreign and other-seat answers are refused",
+        "reason": "hook-blocked"
+      },
+      {
+        "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+        "name": "G2-4b: the artifact anvil in an online room tiers 9, 10 and 14 in one settlement open three anvils in turn; the deadline grants each remaining first offer",
+        "reason": "hook-blocked"
+      },
+      {
+        "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+        "name": "G2-4b: the artifact anvil in an online room never shows the artifact offers to another seat, in its view or its pushes",
+        "reason": "hook-blocked"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "name": "M5 ordinary three-build routes and independent resource ledger cannon: ordinary purchases/rewards to 6-7 with a complete build",
+        "reason": "required-route-context"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "name": "M5 ordinary three-build routes and independent resource ledger sniper: ordinary purchases/rewards to 6-7 with a complete build",
+        "reason": "required-route-context"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "name": "M5 ordinary three-build routes and independent resource ledger mage: ordinary purchases/rewards to 6-7 with a complete build",
+        "reason": "required-route-context"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "name": "M5 ordinary three-build routes and independent resource ledger [B8] sniper-caitlyn: complete-build battles and full component grant chain",
+        "reason": "required-route-context"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "name": "M5 ordinary three-build routes and independent resource ledger [B8] cannon: complete-build battles and full component grant chain",
+        "reason": "required-route-context"
+      },
+      {
+        "file": "tests/m5-route.test.ts",
+        "name": "M5 ordinary three-build routes and independent resource ledger [B8] mage: complete-build battles and full component grant chain",
+        "reason": "required-route-context"
+      }
+    ],
+    "command": [
+      "node",
+      "node_modules/vitest/vitest.mjs",
+      "run",
+      "--project",
+      "fast",
+      "--configLoader",
+      "runner",
+      "tests/b8-resumable-battle.test.ts",
+      "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+      "tests/m5-replay-mage.test.ts",
+      "tests/m5-route.test.ts",
+      "tests/opening-random-identity.test.ts",
+      "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "--maxWorkers=1",
+      "--testNamePattern=^(?:G2\\-4b:\\ the\\ artifact\\ anvil\\ in\\ an\\ online\\ room\\ a\\ pick\\ before\\ the\\ deadline\\ grants\\ that\\ artifact;\\ stale,\\ foreign\\ and\\ other\\-seat\\ answers\\ are\\ refused|G2\\-4b:\\ the\\ artifact\\ anvil\\ in\\ an\\ online\\ room\\ never\\ shows\\ the\\ artifact\\ offers\\ to\\ another\\ seat,\\ in\\ its\\ view\\ or\\ its\\ pushes|G2\\-4b:\\ the\\ artifact\\ anvil\\ in\\ an\\ online\\ room\\ tier\\ 10\\ opens\\ 神器装备锻造器\\ with\\ four\\ distinct\\ artifacts\\ and\\ the\\ deadline\\ grants\\ the\\ first\\ offer\\ once|G2\\-4b:\\ the\\ artifact\\ anvil\\ in\\ an\\ online\\ room\\ tiers\\ 9,\\ 10\\ and\\ 14\\ in\\ one\\ settlement\\ open\\ three\\ anvils\\ in\\ turn;\\ the\\ deadline\\ grants\\ each\\ remaining\\ first\\ offer|M5\\ mage\\ restores\\ every\\ command\\ and\\ tick;\\ rejected\\ insertion\\ preserves\\ every\\ field|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ \\[B8\\]\\ cannon:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ \\[B8\\]\\ mage:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ \\[B8\\]\\ sniper\\-caitlyn:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ \\[B8\\]\\ sniper:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ cannon:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ mage:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ normally\\ buys\\ five\\-cost\\ Caitlyn\\ and\\ fields\\ her\\ for\\ at\\ least\\ two\\ real\\ battles|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ sniper:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 1|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 100|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 1201|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 13|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ owns\\ mutable\\ input\\ through\\ pauses\\ and\\ retains\\ replay\\ divergence\\ validation|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ pre\\-change\\ byte\\ fingerprint:\\ 9\\ units\\ per\\ side|escrows\\ a\\ full\\-bench\\ market\\ and\\ redeems\\ its\\ duplicator\\ and\\ later\\ heroes\\ in\\ order\\ as\\ space\\ is\\ freed|preserves\\ an\\ escrowed\\ public\\ claim\\ at\\ round\\ 13\\ choosing\\ another\\ owned\\ eligible\\ target|restores\\ an\\ ordinary\\ duplicator\\ manually\\ claimed\\ from\\ escrow\\ and\\ the\\ next\\ battle\\ tick\\ for\\ tick|restores\\ the\\ used\\ lesser\\ shimmer\\ duplicator\\ and\\ the\\ next\\ battle\\ tick\\ for\\ tick|sniper:\\ checkpoint\\ 61\\ survives\\ strict\\ text/object\\ restore)$",
+      "--reporter=default",
+      "--reporter=json",
+      "--outputFile=artifacts/v20-live-combat-tests/xp68-timeout-retry.json"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 331.65,
+    "log": "artifacts/v20-live-combat-tests/xp68-timeout-retry.log",
+    "report": "artifacts/v20-live-combat-tests/xp68-timeout-retry.json",
+    "conditions": "No concurrent fast shard or epoch check; original timeouts, no skip/code/config changes.",
+    "supplement": {
+      "tests": [
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 9 units per side",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 13",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 100",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1201",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks owns mutable input through pauses and retains replay divergence validation",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger normally buys five-cost Caitlyn and fields her for at least two real battles",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger [B8] sniper: complete-build battles and full component grant chain",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+          "name": "G2-4b: the artifact anvil in an online room tier 10 opens 神器装备锻造器 with four distinct artifacts and the deadline grants the first offer once",
+          "reason": "hook-blocked"
+        },
+        {
+          "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+          "name": "G2-4b: the artifact anvil in an online room a pick before the deadline grants that artifact; stale, foreign and other-seat answers are refused",
+          "reason": "hook-blocked"
+        },
+        {
+          "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+          "name": "G2-4b: the artifact anvil in an online room tiers 9, 10 and 14 in one settlement open three anvils in turn; the deadline grants each remaining first offer",
+          "reason": "hook-blocked"
+        },
+        {
+          "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+          "name": "G2-4b: the artifact anvil in an online room never shows the artifact offers to another seat, in its view or its pushes",
+          "reason": "hook-blocked"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger cannon: ordinary purchases/rewards to 6-7 with a complete build",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger sniper: ordinary purchases/rewards to 6-7 with a complete build",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger mage: ordinary purchases/rewards to 6-7 with a complete build",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger [B8] sniper-caitlyn: complete-build battles and full component grant chain",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger [B8] cannon: complete-build battles and full component grant chain",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger [B8] mage: complete-build battles and full component grant chain",
+          "reason": "required-route-context"
+        }
+      ],
+      "command": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--project",
+        "fast",
+        "--configLoader",
+        "runner",
+        "tests/b8-resumable-battle.test.ts",
+        "tests/m5-route.test.ts",
+        "tests/server/g2-4b-artifact-forge-room.test.ts",
+        "--maxWorkers=1",
+        "--testNamePattern=(?:pre\\-change\\ byte\\ fingerprint:\\ 9\\ units\\ per\\ side|PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 1|PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 13|PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 100|PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 1201|owns\\ mutable\\ input\\ through\\ pauses\\ and\\ retains\\ replay\\ divergence\\ validation|normally\\ buys\\ five\\-cost\\ Caitlyn\\ and\\ fields\\ her\\ for\\ at\\ least\\ two\\ real\\ battles|cannon:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|sniper:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|mage:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|\\[B8\\]\\ sniper\\-caitlyn:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|\\[B8\\]\\ cannon:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|\\[B8\\]\\ sniper:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|\\[B8\\]\\ mage:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|tier\\ 10\\ opens\\ 神器装备锻造器\\ with\\ four\\ distinct\\ artifacts\\ and\\ the\\ deadline\\ grants\\ the\\ first\\ offer\\ once|a\\ pick\\ before\\ the\\ deadline\\ grants\\ that\\ artifact;\\ stale,\\ foreign\\ and\\ other\\-seat\\ answers\\ are\\ refused|tiers\\ 9,\\ 10\\ and\\ 14\\ in\\ one\\ settlement\\ open\\ three\\ anvils\\ in\\ turn;\\ the\\ deadline\\ grants\\ each\\ remaining\\ first\\ offer|never\\ shows\\ the\\ artifact\\ offers\\ to\\ another\\ seat,\\ in\\ its\\ view\\ or\\ its\\ pushes)$",
+        "--reporter=default",
+        "--reporter=json",
+        "--outputFile=artifacts/v20-live-combat-tests/xp68-timeout-retry-supplement.json"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 182.79,
+      "log": "artifacts/v20-live-combat-tests/xp68-timeout-retry-supplement.log",
+      "report": "artifacts/v20-live-combat-tests/xp68-timeout-retry-supplement.json",
+      "conditions": "Only previously unmatched 18 cases; original timeouts, single worker, no concurrent fast/epoch."
+    },
+    "actualExecutedUnique": 24,
+    "allRequestedCasesExecuted": true,
+    "allRequestedCasesPassed": true,
+    "executionReports": [
+      {
+        "report": "artifacts/v20-live-combat-tests/xp68-timeout-retry.json",
+        "exitCode": 0,
+        "elapsedSeconds": 331.65
+      },
+      {
+        "report": "artifacts/v20-live-combat-tests/xp68-timeout-retry-supplement.json",
+        "exitCode": 0,
+        "elapsedSeconds": 182.79
+      }
+    ]
+  },
+  "validation": [
+    {
+      "name": "epoch-check",
+      "command": [
+        "node",
+        "scripts/verify-v20-live-combat-epoch.cjs"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 653.26,
+      "log": "artifacts/v20-live-combat-tests/xp68-epoch-check.log"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 54.79,
+      "log": "artifacts/v20-live-combat-tests/xp68-typecheck.log"
+    },
+    {
+      "name": "identity-check",
+      "command": [
+        "node",
+        "scripts/update-content-identities.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 4.64,
+      "log": "artifacts/v20-live-combat-tests/xp68-identity-check.log"
+    }
+  ],
+  "epochSteps": 11,
+  "fast": {
+    "complete": true,
+    "totals": {
+      "files": 495,
+      "numTotalTests": 6525,
+      "numPassedTests": 6463,
+      "numFailedTests": 58,
+      "numPendingTests": 4
+    },
+    "categories": {
+      "timing-pass-on-idle-retry": 3,
+      "environment-listen": 48,
+      "environment-pipe": 7
+    },
+    "suiteFailures": [
+      {
+        "shard": "1/4",
+        "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+        "suite": "G2-4b: the artifact anvil in an online room",
+        "category": "timing-hook-pass-on-idle-retry",
+        "blockedTests": [
+          "G2-4b: the artifact anvil in an online room tier 10 opens 神器装备锻造器 with four distinct artifacts and the deadline grants the first offer once",
+          "G2-4b: the artifact anvil in an online room a pick before the deadline grants that artifact; stale, foreign and other-seat answers are refused",
+          "G2-4b: the artifact anvil in an online room tiers 9, 10 and 14 in one settlement open three anvils in turn; the deadline grants each remaining first offer",
+          "G2-4b: the artifact anvil in an online room never shows the artifact offers to another seat, in its view or its pushes"
+        ],
+        "evidenceLog": "artifacts/v20-live-combat-tests/xp68-shard-1.log",
+        "evidenceExcerpt": "tests/server/g2-4b-artifact-forge-room.test.ts > G2-4b: the artifact anvil in an online room\nError: Hook timed out in 10000ms.\nIf this is a long-running hook, pass a timeout value as the last argument or configure it globally with \"hookTimeout\".\n ❯ tests/server/g2-4b-artifact-forge-room.test.ts:59:43\n     57| describe('G2-4b: the artifact anvil in an online room', () => {\n     58|   const prepared = new Map<number, ReturnType<typeof makeRoom>>();\n     59|   for (let index = 0; index < 4; index++) beforeAll(() => {\n       |                                           ^\n     60|     const own = makeRoom(new TwoSidedBattleResolver());\n     61|     own.room.start();\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯\n\n\n⎯⎯⎯⎯⎯⎯ Failed Tests 17 ⎯⎯⎯⎯⎯⎯⎯\n\n",
+        "blockedTestRetryStatuses": [
+          "passed",
+          "passed",
+          "passed",
+          "passed"
+        ],
+        "retryReports": [
+          "artifacts/v20-live-combat-tests/xp68-timeout-retry-supplement.json"
+        ]
+      }
+    ],
+    "suiteFailureCategories": {
+      "timing-hook-pass-on-idle-retry": 1
+    },
+    "timingRetry": {
+      "needed": true,
+      "tests": [
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 9 units per side",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 13",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 100",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1201",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "name": "SR-B8-02 resumable pure tasks owns mutable input through pauses and retains replay divergence validation",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+          "name": "restores the used lesser shimmer duplicator and the next battle tick for tick",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+          "name": "escrows a full-bench market and redeems its duplicator and later heroes in order as space is freed",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+          "name": "preserves an escrowed public claim at round 13 choosing another owned eligible target",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+          "name": "restores an ordinary duplicator manually claimed from escrow and the next battle tick for tick",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/opening-random-identity.test.ts",
+          "name": "sniper: checkpoint 61 survives strict text/object restore",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger normally buys five-cost Caitlyn and fields her for at least two real battles",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger [B8] sniper: complete-build battles and full component grant chain",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/m5-replay-mage.test.ts",
+          "name": "M5 mage restores every command and tick; rejected insertion preserves every field",
+          "reason": "test-timeout"
+        },
+        {
+          "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+          "name": "G2-4b: the artifact anvil in an online room tier 10 opens 神器装备锻造器 with four distinct artifacts and the deadline grants the first offer once",
+          "reason": "hook-blocked"
+        },
+        {
+          "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+          "name": "G2-4b: the artifact anvil in an online room a pick before the deadline grants that artifact; stale, foreign and other-seat answers are refused",
+          "reason": "hook-blocked"
+        },
+        {
+          "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+          "name": "G2-4b: the artifact anvil in an online room tiers 9, 10 and 14 in one settlement open three anvils in turn; the deadline grants each remaining first offer",
+          "reason": "hook-blocked"
+        },
+        {
+          "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+          "name": "G2-4b: the artifact anvil in an online room never shows the artifact offers to another seat, in its view or its pushes",
+          "reason": "hook-blocked"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger cannon: ordinary purchases/rewards to 6-7 with a complete build",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger sniper: ordinary purchases/rewards to 6-7 with a complete build",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger mage: ordinary purchases/rewards to 6-7 with a complete build",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger [B8] sniper-caitlyn: complete-build battles and full component grant chain",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger [B8] cannon: complete-build battles and full component grant chain",
+          "reason": "required-route-context"
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "name": "M5 ordinary three-build routes and independent resource ledger [B8] mage: complete-build battles and full component grant chain",
+          "reason": "required-route-context"
+        }
+      ],
+      "command": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--project",
+        "fast",
+        "--configLoader",
+        "runner",
+        "tests/b8-resumable-battle.test.ts",
+        "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+        "tests/m5-replay-mage.test.ts",
+        "tests/m5-route.test.ts",
+        "tests/opening-random-identity.test.ts",
+        "tests/server/g2-4b-artifact-forge-room.test.ts",
+        "--maxWorkers=1",
+        "--testNamePattern=^(?:G2\\-4b:\\ the\\ artifact\\ anvil\\ in\\ an\\ online\\ room\\ a\\ pick\\ before\\ the\\ deadline\\ grants\\ that\\ artifact;\\ stale,\\ foreign\\ and\\ other\\-seat\\ answers\\ are\\ refused|G2\\-4b:\\ the\\ artifact\\ anvil\\ in\\ an\\ online\\ room\\ never\\ shows\\ the\\ artifact\\ offers\\ to\\ another\\ seat,\\ in\\ its\\ view\\ or\\ its\\ pushes|G2\\-4b:\\ the\\ artifact\\ anvil\\ in\\ an\\ online\\ room\\ tier\\ 10\\ opens\\ 神器装备锻造器\\ with\\ four\\ distinct\\ artifacts\\ and\\ the\\ deadline\\ grants\\ the\\ first\\ offer\\ once|G2\\-4b:\\ the\\ artifact\\ anvil\\ in\\ an\\ online\\ room\\ tiers\\ 9,\\ 10\\ and\\ 14\\ in\\ one\\ settlement\\ open\\ three\\ anvils\\ in\\ turn;\\ the\\ deadline\\ grants\\ each\\ remaining\\ first\\ offer|M5\\ mage\\ restores\\ every\\ command\\ and\\ tick;\\ rejected\\ insertion\\ preserves\\ every\\ field|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ \\[B8\\]\\ cannon:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ \\[B8\\]\\ mage:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ \\[B8\\]\\ sniper\\-caitlyn:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ \\[B8\\]\\ sniper:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ cannon:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ mage:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ normally\\ buys\\ five\\-cost\\ Caitlyn\\ and\\ fields\\ her\\ for\\ at\\ least\\ two\\ real\\ battles|M5\\ ordinary\\ three\\-build\\ routes\\ and\\ independent\\ resource\\ ledger\\ sniper:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 1|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 100|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 1201|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 13|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ owns\\ mutable\\ input\\ through\\ pauses\\ and\\ retains\\ replay\\ divergence\\ validation|SR\\-B8\\-02\\ resumable\\ pure\\ tasks\\ pre\\-change\\ byte\\ fingerprint:\\ 9\\ units\\ per\\ side|escrows\\ a\\ full\\-bench\\ market\\ and\\ redeems\\ its\\ duplicator\\ and\\ later\\ heroes\\ in\\ order\\ as\\ space\\ is\\ freed|preserves\\ an\\ escrowed\\ public\\ claim\\ at\\ round\\ 13\\ choosing\\ another\\ owned\\ eligible\\ target|restores\\ an\\ ordinary\\ duplicator\\ manually\\ claimed\\ from\\ escrow\\ and\\ the\\ next\\ battle\\ tick\\ for\\ tick|restores\\ the\\ used\\ lesser\\ shimmer\\ duplicator\\ and\\ the\\ next\\ battle\\ tick\\ for\\ tick|sniper:\\ checkpoint\\ 61\\ survives\\ strict\\ text/object\\ restore)$",
+        "--reporter=default",
+        "--reporter=json",
+        "--outputFile=artifacts/v20-live-combat-tests/xp68-timeout-retry.json"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 331.65,
+      "log": "artifacts/v20-live-combat-tests/xp68-timeout-retry.log",
+      "report": "artifacts/v20-live-combat-tests/xp68-timeout-retry.json",
+      "conditions": "No concurrent fast shard or epoch check; original timeouts, no skip/code/config changes.",
+      "supplement": {
+        "tests": [
+          {
+            "file": "tests/b8-resumable-battle.test.ts",
+            "name": "SR-B8-02 resumable pure tasks pre-change byte fingerprint: 9 units per side",
+            "reason": "test-timeout"
+          },
+          {
+            "file": "tests/b8-resumable-battle.test.ts",
+            "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1",
+            "reason": "test-timeout"
+          },
+          {
+            "file": "tests/b8-resumable-battle.test.ts",
+            "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 13",
+            "reason": "test-timeout"
+          },
+          {
+            "file": "tests/b8-resumable-battle.test.ts",
+            "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 100",
+            "reason": "test-timeout"
+          },
+          {
+            "file": "tests/b8-resumable-battle.test.ts",
+            "name": "SR-B8-02 resumable pure tasks PvP/PvE replay bytes and deferred tick0 at slice 1201",
+            "reason": "test-timeout"
+          },
+          {
+            "file": "tests/b8-resumable-battle.test.ts",
+            "name": "SR-B8-02 resumable pure tasks owns mutable input through pauses and retains replay divergence validation",
+            "reason": "test-timeout"
+          },
+          {
+            "file": "tests/m5-route.test.ts",
+            "name": "M5 ordinary three-build routes and independent resource ledger normally buys five-cost Caitlyn and fields her for at least two real battles",
+            "reason": "test-timeout"
+          },
+          {
+            "file": "tests/m5-route.test.ts",
+            "name": "M5 ordinary three-build routes and independent resource ledger [B8] sniper: complete-build battles and full component grant chain",
+            "reason": "test-timeout"
+          },
+          {
+            "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+            "name": "G2-4b: the artifact anvil in an online room tier 10 opens 神器装备锻造器 with four distinct artifacts and the deadline grants the first offer once",
+            "reason": "hook-blocked"
+          },
+          {
+            "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+            "name": "G2-4b: the artifact anvil in an online room a pick before the deadline grants that artifact; stale, foreign and other-seat answers are refused",
+            "reason": "hook-blocked"
+          },
+          {
+            "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+            "name": "G2-4b: the artifact anvil in an online room tiers 9, 10 and 14 in one settlement open three anvils in turn; the deadline grants each remaining first offer",
+            "reason": "hook-blocked"
+          },
+          {
+            "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+            "name": "G2-4b: the artifact anvil in an online room never shows the artifact offers to another seat, in its view or its pushes",
+            "reason": "hook-blocked"
+          },
+          {
+            "file": "tests/m5-route.test.ts",
+            "name": "M5 ordinary three-build routes and independent resource ledger cannon: ordinary purchases/rewards to 6-7 with a complete build",
+            "reason": "required-route-context"
+          },
+          {
+            "file": "tests/m5-route.test.ts",
+            "name": "M5 ordinary three-build routes and independent resource ledger sniper: ordinary purchases/rewards to 6-7 with a complete build",
+            "reason": "required-route-context"
+          },
+          {
+            "file": "tests/m5-route.test.ts",
+            "name": "M5 ordinary three-build routes and independent resource ledger mage: ordinary purchases/rewards to 6-7 with a complete build",
+            "reason": "required-route-context"
+          },
+          {
+            "file": "tests/m5-route.test.ts",
+            "name": "M5 ordinary three-build routes and independent resource ledger [B8] sniper-caitlyn: complete-build battles and full component grant chain",
+            "reason": "required-route-context"
+          },
+          {
+            "file": "tests/m5-route.test.ts",
+            "name": "M5 ordinary three-build routes and independent resource ledger [B8] cannon: complete-build battles and full component grant chain",
+            "reason": "required-route-context"
+          },
+          {
+            "file": "tests/m5-route.test.ts",
+            "name": "M5 ordinary three-build routes and independent resource ledger [B8] mage: complete-build battles and full component grant chain",
+            "reason": "required-route-context"
+          }
+        ],
+        "command": [
+          "node",
+          "node_modules/vitest/vitest.mjs",
+          "run",
+          "--project",
+          "fast",
+          "--configLoader",
+          "runner",
+          "tests/b8-resumable-battle.test.ts",
+          "tests/m5-route.test.ts",
+          "tests/server/g2-4b-artifact-forge-room.test.ts",
+          "--maxWorkers=1",
+          "--testNamePattern=(?:pre\\-change\\ byte\\ fingerprint:\\ 9\\ units\\ per\\ side|PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 1|PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 13|PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 100|PvP/PvE\\ replay\\ bytes\\ and\\ deferred\\ tick0\\ at\\ slice\\ 1201|owns\\ mutable\\ input\\ through\\ pauses\\ and\\ retains\\ replay\\ divergence\\ validation|normally\\ buys\\ five\\-cost\\ Caitlyn\\ and\\ fields\\ her\\ for\\ at\\ least\\ two\\ real\\ battles|cannon:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|sniper:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|mage:\\ ordinary\\ purchases/rewards\\ to\\ 6\\-7\\ with\\ a\\ complete\\ build|\\[B8\\]\\ sniper\\-caitlyn:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|\\[B8\\]\\ cannon:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|\\[B8\\]\\ sniper:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|\\[B8\\]\\ mage:\\ complete\\-build\\ battles\\ and\\ full\\ component\\ grant\\ chain|tier\\ 10\\ opens\\ 神器装备锻造器\\ with\\ four\\ distinct\\ artifacts\\ and\\ the\\ deadline\\ grants\\ the\\ first\\ offer\\ once|a\\ pick\\ before\\ the\\ deadline\\ grants\\ that\\ artifact;\\ stale,\\ foreign\\ and\\ other\\-seat\\ answers\\ are\\ refused|tiers\\ 9,\\ 10\\ and\\ 14\\ in\\ one\\ settlement\\ open\\ three\\ anvils\\ in\\ turn;\\ the\\ deadline\\ grants\\ each\\ remaining\\ first\\ offer|never\\ shows\\ the\\ artifact\\ offers\\ to\\ another\\ seat,\\ in\\ its\\ view\\ or\\ its\\ pushes)$",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile=artifacts/v20-live-combat-tests/xp68-timeout-retry-supplement.json"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 182.79,
+        "log": "artifacts/v20-live-combat-tests/xp68-timeout-retry-supplement.log",
+        "report": "artifacts/v20-live-combat-tests/xp68-timeout-retry-supplement.json",
+        "conditions": "Only previously unmatched 18 cases; original timeouts, single worker, no concurrent fast/epoch."
+      },
+      "actualExecutedUnique": 24,
+      "allRequestedCasesExecuted": true,
+      "allRequestedCasesPassed": true,
+      "executionReports": [
+        {
+          "report": "artifacts/v20-live-combat-tests/xp68-timeout-retry.json",
+          "exitCode": 0,
+          "elapsedSeconds": 331.65
+        },
+        {
+          "report": "artifacts/v20-live-combat-tests/xp68-timeout-retry-supplement.json",
+          "exitCode": 0,
+          "elapsedSeconds": 182.79
+        }
+      ]
+    }
+  }
+}

@@ -64,6 +64,7 @@ export type SharedMatchCommand =
   | {readonly type:'rerollAugment';readonly choiceId:string;readonly generation:number;readonly optionIndex:number}
   | {readonly type:'useConsumable';readonly consumableId:string;readonly target:import('./consumable-types').ConsumableTarget}
   | {readonly type:'settleRound';readonly receipt:import('./round-settlement').RoundSettlementReceipt}
+  | {readonly type:'settleCombatStream';readonly terminal:import('./combat-types').CombatState}
   | {readonly type:'startCombat'} | {readonly type:'step'}
   | {readonly type:'choose';readonly choiceId:string;readonly generation:number;readonly definitionId:string}
   | {readonly type:'timeoutChoice';readonly round:number;readonly choiceId:string|null;readonly generation:number|null}

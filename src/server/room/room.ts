@@ -9,7 +9,7 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
+  openMatchCombatStream, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
@@ -20,6 +20,7 @@ import {
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
+import { CombatStream, type CombatStreamView } from './combat-stream';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import { toCombatReplayFor } from './projection';
 import type { CombatReplayTick } from '../../server-entry';
@@ -69,6 +70,8 @@ export interface RoomOptions extends RoomTimings {
    * scheduled on the room clock, so a server can serve other messages in between; default: one slice per battle.
    */
   readonly sliceTicks?: number;
+  /** Production NET6 scheduling. Legacy injected resolvers may keep the frozen comparison path. */
+  readonly combatStreaming?: boolean;
   /**
    * Room-clock budget of one slice, in ms. When given, a slice advances its battle in steps of at most
    * SLICE_STEP_TICKS ticks and ends once the clock has moved past this budget (or `sliceTicks` are spent), so a
@@ -234,10 +237,11 @@ export class Room {
   private readonly settlementCommands: (() => void)[] = [];
 
   /** Room writer gate: the first batch runs before one rebuild; later callbacks run FIFO after publication.
+   * During a sliced stream tick, writers wait until all seats seal that boundary.
    * Callers needing a final result (network, bot policy) defer their whole validation/operation callback here.
    */
   deferDuringSettlement(command: () => void): boolean {
-    if (!this.settlementWork) return false;
+    if (!this.settlementWork && !this.streamingBoundaryPending) return false;
     this.settlementCommands.push(command);
     return true;
   }
@@ -263,6 +267,25 @@ export class Room {
   /** Unpublished pool the current round's battles chained through (§12.4); published only with the round. */
   private resolvedPool: SharedPoolState | null = null;
   private resolution: Resolution | null = null;
+  private readonly streams = new Map<string, CombatStream>();
+  private streamBoundary: string[] = [];
+  private streamTick = 0;
+  private streamSealedTick = 0;
+  private streamCatchUp = 0;
+  private streamStateDirty = false;
+  /** Phase2 command queue stamps the next unsealed boundary, never a client-provided historical tick. */
+  get nextBattleInputTick(): number | null {
+    return this.streams.size && [...this.streams.values()].some(s => !s.done) ? this.streamSealedTick + 1 : null;
+  }
+  get committedBattleTick(): number { return this.streamTick; }
+  get hasCombatStreams(): boolean { return this.streams.size > 0; }
+  get streamingBoundaryPending(): boolean { return this.streamBoundary.length > 0; }
+  /** Same recorder for independent participant and watched-seat cursors. */
+  combatStreamFor(seatId: string): CombatStreamView | null {
+    for (const stream of this.streams.values()) { const view = stream.view(seatId); if (view) return view; }
+    return null;
+  }
+
   /** Pool and live seats as the freeze published them (§15.4); a settlement may adopt the resolver's states only while both are unchanged. */
   private lockedPool: SharedPoolState | null = null;
   /** Deadline deployments staged during `frozen`, published with the locks at battle entry. */
@@ -287,6 +310,7 @@ export class Room {
   private readonly pveIgnored = new Set<string>();
   /** Battles whose live run finished and was handled (adopted or dropped). */
   private readonly liveDone = new Set<string>();
+  private readonly streamListeners = new Set<() => void>();
   private readonly liveListeners = new Set<(battleId: string) => void>();
   private readonly noticeListeners = new Set<(notice: RoomNotice) => void>();
   /** PvE seats whose live combat was stepped during the battle phase, by seat id. */
@@ -344,6 +368,8 @@ export class Room {
   }
 
   get state(): RoomState { return this.current; }
+  /** One notification after every battle has sealed the boundary; never once per source or slice. */
+  subscribeStreams(listener: () => void): () => void { this.streamListeners.add(listener); return () => { this.streamListeners.delete(listener); }; }
   /**
    * D11 live bank: called when a two-sided battle of the current round got new live frames that differ from its frozen
    * replay (read them with `liveFrames`). The finished live battle itself is published in `state.battles` as usual.
@@ -369,7 +395,7 @@ export class Room {
     this.disposed = true;
     this.clearTimer();
     this.listeners.clear();
-    this.liveListeners.clear();
+    this.liveListeners.clear(); this.streamListeners.clear();
     this.noticeListeners.clear();
     this.legendWalks.dispose();
     this.releaseRound();
@@ -377,7 +403,7 @@ export class Room {
   }
   get retained(): RoomRetained {
     return { timers: (this.timer === null ? 0 : 1) + (this.liveTimer === null ? 0 : 1) + this.legendWalks.pendingArrivals, listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
-      resolving: this.resolution !== null || this.settlementWork !== null };
+      resolving: this.resolution !== null || this.settlementWork !== null || [...this.streams.values()].some(s => !s.done) };
   }
 
   /** waiting → first round. */
@@ -1032,9 +1058,140 @@ export class Room {
     this.deployed = deployed;
     this.drawRound();
     this.frozenInputs = this.buildInputs(deployed);
+    if (this.options.combatStreaming && this.current.roundKind !== 'supply') return this.openStreams();
     // §12.4: one unpublished proposal for the whole round; a battle that awards a unit hands its pool to the next battle.
     this.resolution = { results: [], pool: this.current.pool, job: null };
     this.scheduleSlice();
+  }
+
+  /** Tick zero is published immediately; no battle is run to its end before this publication. */
+  private openStreams(): void {
+    try {
+      let entry = this.current;
+      const seats = entry.seats.map(seat => {
+        if (!seat.alive) return seat;
+        const deployed = this.deployed.get(seat.seatId);
+        let match = deployed?.match ?? seat.match;
+        let events = deployed?.events ?? [];
+        if (entry.roundKind === 'pvp') {
+          const locked = lockMatchCombatRoster(match);
+          if (!locked.ok) throw new BattleResolveError(seat.seatId, locked.reason);
+          match = locked.state;
+        } else {
+          const opened = openMatchCombatStream(match);
+          if (!opened.ok || !opened.streamInitial) throw new BattleResolveError(seat.seatId, opened.ok ? 'no-combat' : opened.reason);
+          match = opened.state; events = [...events, ...opened.events];
+          const input = this.frozenInputs.find(input => input.seats[0]!.seatId === seat.seatId)!;
+          this.streams.set(input.battleId, new CombatStream(input, { initial: opened.streamInitial, events: opened.events }));
+        }
+        const seatRevision = seat.seatRevision + 1;
+        return { ...seat, match, seatRevision, serverEvents: { seatRevision, events } };
+      });
+      if (entry.roundKind === 'pvp') for (const input of this.frozenInputs) this.streams.set(input.battleId, new CombatStream(input));
+      entry = { ...entry, seats, battles: [] };
+      this.battleStartedAt = this.options.clock.now(); this.streamTick = 0; this.streamSealedTick = 0; this.streamCatchUp = 0; this.streamStateDirty = false;
+      this.replace(entry);
+      this.setPhase('battle', null);
+      this.flushFrozenClaims();
+      if ([...this.streams.values()].every(s => s.done)) return this.finishStreams();
+      this.scheduleStreamBoundary();
+    } catch (error) { this.failLive(`${this.current.roomId}:r${this.current.round}`, error); }
+  }
+
+  private scheduleStreamBoundary(): void {
+    // Absolute cadence includes the time spent computing/slicing the previous boundary.
+    // At most two immediately overdue boundaries, then yield a tick so overload cannot spin indefinitely.
+    const now = this.options.clock.now(), target = this.battleStartedAt! + (this.streamTick + 1) * this.tickMs;
+    let at = target;
+    if (target < now) {
+      if (this.streamCatchUp >= 2) { at = now + this.tickMs; this.streamCatchUp = 0; }
+      else this.streamCatchUp++;
+    } else this.streamCatchUp = 0;
+    this.timer = this.options.clock.schedule(at, () => {
+      this.timer = null; this.streamSealedTick = this.streamTick + 1; this.streamBoundary = [...this.streams.keys()].filter(id => !this.streams.get(id)!.done);
+      this.advanceStreams();
+    });
+  }
+  private advanceStreams(): void {
+    if (this.disposed || this.current.phase !== 'battle') return;
+    const now = this.options.sliceNow ?? (() => this.options.clock.now());
+    const deadline = now() + (this.options.sliceMs ?? 20);
+    const budget = Math.max(1, Math.min(this.options.sliceTicks ?? 8, 8));
+    try {
+      for (let count = 0; this.streamBoundary.length && count < budget; count++) {
+        const stream = this.streams.get(this.streamBoundary.shift()!)!;
+        if (this.current.roundKind === 'pvp') stream.advancePvp();
+        else {
+          const seat = this.current.seats.find(s => s.seatId === stream.envelope.seats[0]!.seatId)!;
+          const step = stream.advancePve(seat.match);
+          // Combat tick progress stays private; do not broadcast full seat/view snapshots at 20 Hz.
+          if (step.events.length) {
+            const seatRevision = seat.seatRevision + 1;
+            this.current = { ...this.current, seats: this.current.seats.map(s => s === seat
+              ? { ...s, match: step.state, seatRevision, serverEvents: { seatRevision, events: step.events } } : s) };
+            this.streamStateDirty = true;
+          } else this.current = { ...this.current, seats: this.current.seats.map(s => s === seat ? { ...s, match: step.state } : s) };
+        }
+        if (now() >= deadline) break;
+      }
+      if (this.streamBoundary.length) {
+        this.timer = this.options.clock.schedule(this.options.clock.now(), () => { this.timer = null; this.advanceStreams(); });
+        return;
+      }
+      this.streamTick++;
+      // Publish only the sealed boundary: no connection sees a half-updated room or gets eight push scans per tick.
+      if (this.streamStateDirty) { this.assertConserved(this.current); this.streamStateDirty = false; this.replace(this.current); }
+      for (const listener of this.streamListeners) listener();
+      // Writers arriving between slices may only publish after every seat reached this boundary.
+      this.flushSettlementCommands();
+      if (this.disposed || this.current.phase !== 'battle') return;
+      if ([...this.streams.values()].every(s => s.done)) return this.finishStreams();
+      this.scheduleStreamBoundary();
+    } catch (error) { this.failLive(`${this.current.roomId}:r${this.current.round}`, error); }
+  }
+
+  /** Only real terminals create proposals; PvE awards reserve the latest pool in fixed seat order. */
+  private finishStreams(): void {
+    // Start in a separate callback: the final combat slice must not also spend a settlement slice's budget.
+    this.timer = this.options.clock.schedule(this.options.clock.now(), () => {
+      this.timer = null;
+      this.startSettlementWork(() => this.finishStreamSteps());
+    });
+  }
+  private *finishStreamSteps(): Generator<void, void, void> {
+    const plan = yield* this.planStreamSteps();
+    if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
+    this.pendingSettlement = plan.settlement;
+    this.replace({ ...this.current, battles: plan.settlement.results });
+    // A short playback buffer also lets the final chunk leave before the settlement snapshot.
+    this.setPhase('battle', Math.max(this.options.battleTailMs, 800));
+  }
+  private *planStreamSteps(): Generator<void, PlanResult, void> {
+    let pool = this.current.pool;
+    const outcomes = new Map<string, BattleSeatOutcome>();
+    const staged = new Map<string, MatchState>();
+    const events = new Map<string, readonly MatchEvent[]>();
+    for (const seat of this.aliveSeats()) {
+      const stream = [...this.streams.values()].find(s => s.envelope.seats.some(p => p.seatId === seat.seatId))!;
+      if (stream.result) continue;
+      if (!stream.terminal) return { ok: false, detail: 'stream-not-terminal' };
+      const settled = runSharedMatchCommand(pool, seat.match, { type: 'settleCombatStream', terminal: stream.terminal });
+      if (!settled.ok) return { ok: false, detail: settled.reason };
+      pool = settled.pool; staged.set(seat.seatId, settled.state); events.set(seat.seatId, settled.events); outcomes.set(seat.seatId, stream.pveOutcome(settled.state));
+      yield;
+    }
+    const results: BattleResult[] = [...this.streams.values()].map(stream => stream.result ?? {
+      kind: 'placeholder', battleId: stream.envelope.battleId, round: stream.envelope.round, roomRevision: stream.envelope.roomRevision,
+      outcomes: stream.envelope.seats.map(s => outcomes.get(s.seatId)!), pool,
+    });
+    // Already staged PvE terminals must not be re-stepped by the legacy planner.
+    const entry = { ...this.current, pool, poolRevision: pool.revision, seats: this.current.seats.map(s => staged.has(s.seatId) ? { ...s, match: staged.get(s.seatId)! } : s) };
+    // PvP receipts share the exact HP/round-record validation above, including the
+    // single matching Mel playerSaved exception; streaming never trusts proposal HP.
+    const plan = yield* this.planSteps(entry, results, pool, false);
+    // Commit validation is against the currently published live states, not unpublished staged states.
+    return plan.ok ? { ok: true, settlement: { ...plan.settlement, seats: plan.settlement.seats.map(s => events.has(s.seatId) ? { ...s, events: [...events.get(s.seatId)!, ...s.events] } : s), basis: { poolRevision: this.current.poolRevision,
+      seatRevisions: Object.fromEntries(this.aliveSeats().map(s => [s.seatId, s.seatRevision])) } } } : plan;
   }
 
   /** Staged `autoDeployToCap` of every alive human seat in preparation; nothing is published yet. A refusal faults the round. */
@@ -1169,7 +1326,7 @@ export class Room {
    * live battle now. Its first catch-up starts the seat's track from the frozen run's opening ledger.
    */
   private pveCatchUp(seat: SeatState): LiveCatchUp | null {
-    if (seat.match.phase !== 'combat' || this.pveIgnored.has(seat.seatId)) return null;
+    if (this.streams.size || seat.match.phase !== 'combat' || this.pveIgnored.has(seat.seatId)) return null;
     let track = this.livePve.get(seat.seatId);
     if (!track) {
       // Judged once, at the combat's start: a holder that dies later still has its samples recorded by the rules.
@@ -1193,6 +1350,10 @@ export class Room {
 
   /** A live-bank seat's gold changed during the battle: its two-sided battle samples it at the live tick. */
   private sampleLiveBank(seatId: string, gold: number): void {
+    if (this.streams.size) {
+      for (const stream of this.streams.values()) if (stream.envelope.seats.some(s => s.seatId === seatId)) stream.sampleBank(seatId, gold);
+      return;
+    }
     if (this.pvpMode !== 'two-sided') return;
     const battle = this.current.battles.find(candidate => candidate.kind === 'two-sided' && candidate.participants.includes(seatId));
     if (!battle || battle.kind !== 'two-sided' || this.liveIgnored.has(battle.battleId)) return;
@@ -1398,6 +1559,7 @@ export class Room {
   }
 
   private *commitPendingSteps(): Generator<void, void, void> {
+    if (this.streams.size) return yield* this.commitStreamSteps();
     const settlement = this.pendingSettlement;
     if (settlement && !this.current.settlements.includes(settlement.settlementId)) {
       for (let retries = 0; ; retries++) {
@@ -1433,6 +1595,45 @@ export class Room {
         break;
       }
     }
+    this.afterSettlement();
+  }
+
+  /**
+   * Streamed rounds: the staged plan from finishStreams is reused unless the pool or a seat moved since; otherwise the
+   * stream terminals are re-planned on the latest assets through the same planSteps work, in the same writer queue.
+   */
+  private *commitStreamSteps(): Generator<void, void, void> {
+    if (!this.current.settlements.includes(`${this.current.roomId}:round-${this.current.round}`)) {
+      for (let retries = 0; ; retries++) {
+        const basis = this.current, pending = this.pendingSettlement;
+        let planned = pending;
+        if (!planned || planned.basis.poolRevision !== basis.poolRevision
+          || this.aliveSeats().some(s => planned!.basis.seatRevisions[s.seatId] !== s.seatRevision)) {
+          const plan = yield* this.planStreamSteps();
+          if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
+          planned = plan.settlement;
+        }
+        // No yield between the final basis check and the settlement commit.
+        let commit: CommitResult;
+        if (this.current !== basis) commit = { ok: false, reason: 'stale-seat', state: this.current };
+        else {
+          this.publishingSettlement = true;
+          try { commit = this.commitSettlement(planned); }
+          finally { this.publishingSettlement = false; }
+        }
+        if (!commit.ok && commit.reason === 'stale-seat') {
+          if (retries >= MAX_STALE_SEAT_RETRIES) return this.fail({ kind: 'invalid-results', detail: `stale-seat-retry-limit:${MAX_STALE_SEAT_RETRIES}` });
+          this.pendingSettlement = null;
+          continue;
+        }
+        if (!commit.ok && commit.reason !== 'duplicate-settlement') return this.fail({ kind: 'invalid-results', detail: commit.reason });
+        break;
+      }
+    }
+    this.afterSettlement();
+  }
+
+  private afterSettlement(): void {
     this.pendingSettlement = null;
     this.clearLive();
     if (this.current.ranking) { this.forfeitTerminalOrbs(); return this.setPhase('ended', null); }
@@ -1503,7 +1704,7 @@ export class Room {
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
   }
   /** Forgets the current round's frozen envelopes, the resolution in progress and the staged settlement. */
-  private releaseRound(): void { this.settlementWork = null; this.settlementFactory = null; this.settlementFrozen = false; this.drainingSettlementCommands = false; this.clearLive(); this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
+  private releaseRound(): void { this.settlementWork = null; this.settlementFactory = null; this.settlementFrozen = false; this.drainingSettlementCommands = false; this.clearLive(); this.streams.clear(); this.streamBoundary = []; this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */

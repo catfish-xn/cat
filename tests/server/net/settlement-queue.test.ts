@@ -176,11 +176,16 @@ describe('commands arriving during sliced settlement', () => {
     expect(socket.messages.at(-1)).toMatchObject({ type: 'receipt', commandId: 4, ok: false, reason: 'seat-revision-mismatch' });
   }, 60_000);
 
-  it('finishes deterministically with eight bot controllers and continuous authenticated human traffic', async () => {
+  // Legacy resolver path: PvE live-bank tails span many slices, so frozen arrivals are guaranteed.
+  // The streamed path (production default) plans from sealed terminals and usually commits within one slice.
+  it.each([
+    { combatStreaming: false, minFrozen: 10 },
+    { combatStreaming: true, minFrozen: 0 },
+  ])('finishes deterministically with eight bot controllers and continuous authenticated human traffic (streaming=$combatStreaming)', async ({ combatStreaming, minFrozen }) => {
     async function play() {
       const clock = new ManualClock();
       server = await createGameServer({ port: 0, host: '127.0.0.1', clock, seed: 42, roomId: 'busy-match',
-        timings: TIMINGS, sliceTicks: 50, sliceMs: 20, spotCheckEveryRounds: 1_000_000,
+        timings: TIMINGS, sliceTicks: 50, sliceMs: 20, spotCheckEveryRounds: 1_000_000, combatStreaming,
         limits: { maxMessagesPerWindow: 1_000_000 }, logger: () => {} });
       const socket = new Socket(); transport.connect!(socket);
       socket.receive({ type: 'join', name: 'human', commandId: 1 });
@@ -242,7 +247,7 @@ describe('commands arriving during sliced settlement', () => {
         expect(room.state.ranking?.map(entry => entry.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
         expect(room.state.round).toBeGreaterThanOrEqual(31);
         expect(new Set(botSteps.mock.calls.map(([id]) => id)).size).toBe(8);
-        expect(frozenArrivals).toBeGreaterThan(9);
+        expect(frozenArrivals).toBeGreaterThanOrEqual(minFrozen);
         expect(successful).toEqual(new Set(['buy', 'sell', 'reroll', 'shopLock']));
         expect(commandTypes.size).toBe(0); // Every admitted command receives a final receipt, including the terminal round.
         expect(room.retained.resolving).toBe(false);

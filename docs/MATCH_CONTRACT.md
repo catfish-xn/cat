@@ -1,4 +1,11 @@
-## v20-xp68 当前升级经验（2026-10-22，项目自定）
+## v20-live-combat（当前正式 epoch，2026-10-22）
+
+父 epoch 为 `v20-xp68`，集成基线 `db04d196e4a12933624add7d61be9081a639607f`（#384、#385、#386、#388）。rules/content 为 `s13-g2-3-v20-live-combat` / `s13-14.24b-g2-3-v20-live-combat`；CONTENT `fnv1a32-utf16:93fad04c`，LOOT_REPLAY `fnv1a32-utf16:49eb9cf0`。
+schema/save/replay/command 为 **11/7/5/5**，网络 **NET6**、规则侧多人契约5。继承黑市候选及决策字段，Match 与 SaveEnvelope 结构不再增加，schema/save 保持父版11/7；replay/command 从4/4升5/5，标识实时战斗流及逐 tick 输入边界。所有旧 rules/content/digest/replay/command 身份严格拒绝运行态恢复，无迁移；历史 epoch 原字节保留。
+完整保留8→9 / 9→10各68 XP、梅尔救命精确HP核对、B 补丁16具名字段、标准 PvE 不增微光、黑市至多三包 N 选一与保留、迅击/野火/搭档及 #381 预热。流式首遍只改变推进与传输，逐字节对照旧整轮结算；双游标、绝对50ms排拍、客户端四拍缓冲、整拍合并推送、战中买卖利息及空输入挂点见 [LIVE_COMBAT_PHASE1](LIVE_COMBAT_PHASE1.md)。非空逐 tick 装备输入仍报 `battle-input-unsupported`，未安装、不记成功日志。
+独立录制与只读核验命令、来源及风险见 [RELEASE_NOTES](evidence/v20-live-combat/RELEASE_NOTES.md)。本节覆盖下文历史身份。
+
+## v20-xp68 继承升级经验（2026-10-22，项目自定）
 
 按用户 10-22 要求，8→9 从 76 改为 68 XP，9→10 从 84 改为 68 XP；原版来源与项目适配标注见 [XP68](XP68.md)。父 epoch 为 v20-chem-baron（`2de5e26d`），rules/content 为 `s13-g2-3-v20-xp68` / `s13-14.24b-g2-3-v20-xp68`，schema/save/replay/command 保持 11/7/4/4，旧身份拒绝、无迁移。CONTENT `fnv1a32-utf16:3512a559`，LOOT_REPLAY `fnv1a32-utf16:d18f985e`。
 
@@ -6,7 +13,7 @@
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 到下一级 XP（非累计） | 2 | 2 | 6 | 10 | 20 | 36 | 48 | **68** | **68** | null（满级） |
 
-买经验仍为 4 金/4 XP，自然经验、溢出处理、最高 10 级及商店概率不变。`getXpToNextLevel` 返回本级阈值，非满级的“距离下一级”为阈值减当前 XP；10 级返回 null，界面沿现有满级禁用逻辑。`buyXp` 失败顺序仍为 wrong-phase → max-level → insufficient-gold，失败原 state、零事件、不耗资源或 RNG。progression policy 为 `project-xp68-user-2026-10-22-v1`。本节覆盖下文历史经验数值与旧当前身份；黑市及其他玩法完整继承父版，公共签名和失败枚举不变。
+买经验仍为 4 金/4 XP，自然经验、溢出处理、最高 10 级及商店概率不变。`getXpToNextLevel` 返回本级阈值，非满级的“距离下一级”为阈值减当前 XP；10 级返回 null，界面沿现有满级禁用逻辑。`buyXp` 失败顺序仍为 wrong-phase → max-level → insufficient-gold，失败原 state、零事件、不耗资源或 RNG。progression policy 为 `project-xp68-user-2026-10-22-v1`。本节经验表继续生效；当前身份以顶部 v20-live-combat 为准。黑市及其他玩法完整继承父版，公共签名和失败枚举不变。
 
 ## v20-traits 继承规则覆盖（2026-10-21）
 
@@ -14,7 +21,7 @@
 
 # M5 Match contract v5
 
-## v20-chem-baron 当前炼金男爵规则（2026-10-21）
+## v20-chem-baron 继承炼金男爵规则（2026-10-21）
 
 本 epoch 的父版本为 v20-traits（multiplayer `ce60a8b9`），完整保留迅击、野火、五组搭档、共用移动禁止判定、66 强化及 v19 账本。本节覆盖下文历史版本/黑市单候选/每 offer 一词及标准 PvE 微光描述。规则/内容为 `s13-g2-3-v20-chem-baron` / `s13-14.24b-g2-3-v20-chem-baron`；CONTENT `fnv1a32-utf16:2d1eafb8`，LOOT_REPLAY `fnv1a32-utf16:7fd08770`；schema/save/replay/command 为 11/7/4/4（父 10/6/4/4；新增存档候选与领取决策字段，各升 schema/save 一版），旧身份拒绝、无迁移。独立 epoch、来源、导出签名与失败语义见 [CHEM_BARON_FIX](CHEM_BARON_FIX.md)，保持项见 [S13_RULES_GAP](S13_RULES_GAP.md)。
 

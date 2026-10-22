@@ -1,4 +1,5 @@
 import { isPresent, isSelectable } from './anomalies/availability';
+import { phase1BattleInputsSupported } from './battle-input-log';
 import { d11CombatDisplay } from './d11-display';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
 import { freezeCombatDeclarations } from './combat-static';
@@ -103,11 +104,13 @@ export interface CombatReplayTick {
   readonly keyframe?: CombatViewState;
 }
 export interface CombatReplay {
+  /** Ephemeral NET6 display buffer; absent from completed recordings and domain saves. */
+  readonly stream?: { readonly revision: number; readonly fromTick: number; readonly ended: boolean };
   readonly initial: CombatViewState;
   readonly ticks: readonly CombatReplayTick[];
   readonly terminal: CombatViewState;
 }
-export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events' | 'bankSamples'>
+export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events' | 'bankSamples' | 'inputLog'>
   & Partial<Pick<import('./two-sided-types').BattleResult, 'mirrorOfSeatId'>>;
 /** Trusted ledger -> detached animation whitelist, in input order; never creates unitUpdated. */
 export function toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatAnimationEvent[] {
@@ -187,6 +190,7 @@ export function createCombatReplayRecorder(initialState: CombatState,
 
 /** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
 export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
+  if (!phase1BattleInputsSupported(input.inputLog)) throw new RangeError('battle-input-unsupported');
   const freezeReplay = createScopedContentFreezer();
   const battle = structuredClone(input);
   battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));

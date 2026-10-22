@@ -19,7 +19,7 @@ it('G2 advances the combined release and preserves P3/P4/P5 and T13 as export-on
  expect(CONTENT_DIGEST).not.toBe(currentBaseline.contentDigest);expect(currentBaseline.previousContentDigest).toBe(live.contentDigest);expect(LOOT_REPLAY_DIGEST).not.toBe(live.lootReplayDigest);
  expect(live.previousContentDigest).toBe(baseline.contentDigest);expect(live.previousLootReplayDigest).toBe(baseline.lootReplayDigest);
  expect(baseline.previousContentDigest).toBe(old.contentDigest);expect(baseline.previousLootReplayDigest).toBe(old.lootReplayDigest);
- expect(M8_VERSION).toMatchObject({schemaVersion:11,saveFormatVersion:7,replayFormatVersion:4,commandProtocolVersion:4});
+ expect(M8_VERSION).toMatchObject({schemaVersion:11,saveFormatVersion:7,replayFormatVersion:5,commandProtocolVersion:5});
  expect(CONTENT_DIGEST).not.toBe(old.contentDigest);expect(LOOT_REPLAY_DIGEST).not.toBe(old.lootReplayDigest);
 });
 

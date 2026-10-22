@@ -1,0 +1,1154 @@
+{
+  "version": "two-sided-battle-v1",
+  "battleId": "repro:r32:b0",
+  "battleSeed": 3706951144,
+  "mirrorOfSeatId": null,
+  "a": {
+    "version": "two-sided-snapshot-v1",
+    "contentDigest": "fnv1a32-utf16:ecca0d49",
+    "seatId": "s3",
+    "roundId": "6-1",
+    "level": 9,
+    "units": [
+      {
+        "id": "unit-42",
+        "definitionId": "ezreal",
+        "team": "player",
+        "starLevel": 2,
+        "location": {
+          "kind": "board",
+          "cell": {
+            "col": 4,
+            "row": 7
+          }
+        }
+      },
+      {
+        "id": "unit-48",
+        "definitionId": "garen",
+        "team": "player",
+        "starLevel": 2,
+        "location": {
+          "kind": "board",
+          "cell": {
+            "col": 2,
+            "row": 4
+          }
+        }
+      }
+    ],
+    "items": [],
+    "temporaryEquipment": [],
+    "augments": [],
+    "anomalyBinding": null,
+    "persistentGrowth": [],
+    "augmentProgress": {
+      "pumpingRounds": 0,
+      "investmentHp": 0
+    }
+  },
+  "b": {
+    "version": "two-sided-snapshot-v1",
+    "contentDigest": "fnv1a32-utf16:ecca0d49",
+    "seatId": "s4",
+    "roundId": "6-1",
+    "level": 9,
+    "units": [
+      {
+        "id": "unit-15",
+        "definitionId": "urgot",
+        "team": "player",
+        "starLevel": 2,
+        "location": {
+          "kind": "board",
+          "cell": {
+            "col": 5,
+            "row": 7
+          }
+        }
+      },
+      {
+        "id": "unit-34",
+        "definitionId": "caitlyn",
+        "team": "player",
+        "starLevel": 2,
+        "location": {
+          "kind": "board",
+          "cell": {
+            "col": 2,
+            "row": 7
+          }
+        }
+      }
+    ],
+    "items": [
+      {
+        "id": "item-12",
+        "definitionId": "sunfire-cape",
+        "location": {
+          "kind": "unit",
+          "unitId": "unit-15",
+          "slot": 0
+        }
+      },
+      {
+        "id": "item-21",
+        "definitionId": "sunfire-cape",
+        "location": {
+          "kind": "unit",
+          "unitId": "unit-34",
+          "slot": 0
+        }
+      }
+    ],
+    "temporaryEquipment": [],
+    "augments": [],
+    "anomalyBinding": null,
+    "persistentGrowth": [],
+    "augmentProgress": {
+      "pumpingRounds": 0,
+      "investmentHp": 0
+    }
+  },
+  "mapping": [
+    {
+      "seatId": "s3",
+      "kind": "unit",
+      "originalId": "unit-42",
+      "combatId": "[\"t2\",\"s3\",\"unit\",\"unit-42\"]"
+    },
+    {
+      "seatId": "s3",
+      "kind": "unit",
+      "originalId": "unit-48",
+      "combatId": "[\"t2\",\"s3\",\"unit\",\"unit-48\"]"
+    },
+    {
+      "seatId": "s4",
+      "kind": "item",
+      "originalId": "item-12",
+      "combatId": "[\"t2\",\"s4\",\"item\",\"item-12\"]"
+    },
+    {
+      "seatId": "s4",
+      "kind": "item",
+      "originalId": "item-21",
+      "combatId": "[\"t2\",\"s4\",\"item\",\"item-21\"]"
+    },
+    {
+      "seatId": "s4",
+      "kind": "unit",
+      "originalId": "unit-15",
+      "combatId": "[\"t2\",\"s4\",\"unit\",\"unit-15\"]"
+    },
+    {
+      "seatId": "s4",
+      "kind": "unit",
+      "originalId": "unit-34",
+      "combatId": "[\"t2\",\"s4\",\"unit\",\"unit-34\"]"
+    }
+  ],
+  "preparation": {
+    "board": {
+      "columns": 7,
+      "rows": 8,
+      "deploymentZones": {
+        "enemy": {
+          "firstRow": 0,
+          "lastRow": 3
+        },
+        "player": {
+          "firstRow": 4,
+          "lastRow": 7
+        }
+      }
+    },
+    "benchSize": 9,
+    "units": [
+      {
+        "id": "[\"t2\",\"s3\",\"unit\",\"unit-42\"]",
+        "definitionId": "ezreal",
+        "team": "player",
+        "starLevel": 2,
+        "location": {
+          "kind": "board",
+          "cell": {
+            "col": 4,
+            "row": 7
+          }
+        }
+      },
+      {
+        "id": "[\"t2\",\"s3\",\"unit\",\"unit-48\"]",
+        "definitionId": "garen",
+        "team": "player",
+        "starLevel": 2,
+        "location": {
+          "kind": "board",
+          "cell": {
+            "col": 2,
+            "row": 4
+          }
+        }
+      },
+      {
+        "id": "[\"t2\",\"s4\",\"unit\",\"unit-15\"]",
+        "definitionId": "urgot",
+        "team": "enemy",
+        "starLevel": 2,
+        "location": {
+          "kind": "board",
+          "cell": {
+            "col": 5,
+            "row": 0
+          }
+        }
+      },
+      {
+        "id": "[\"t2\",\"s4\",\"unit\",\"unit-34\"]",
+        "definitionId": "caitlyn",
+        "team": "enemy",
+        "starLevel": 2,
+        "location": {
+          "kind": "board",
+          "cell": {
+            "col": 2,
+            "row": 0
+          }
+        }
+      }
+    ]
+  },
+  "strategy": {
+    "traits": [
+      {
+        "team": "player",
+        "traitId": "academy",
+        "count": 1,
+        "tier": 0,
+        "memberDefinitionIds": [
+          "ezreal"
+        ],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "ambusher",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "artillerist",
+        "count": 1,
+        "tier": 0,
+        "memberDefinitionIds": [
+          "ezreal"
+        ],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "automata",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "banished-mage",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "black-rose",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "blood-hunter",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "bruiser",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "chem-baron",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "conqueror",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "dominator",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "emissary",
+        "count": 1,
+        "tier": 1,
+        "memberDefinitionIds": [
+          "garen"
+        ],
+        "targetUnitIds": [
+          "[\"t2\",\"s3\",\"unit\",\"unit-42\"]",
+          "[\"t2\",\"s3\",\"unit\",\"unit-48\"]"
+        ]
+      },
+      {
+        "team": "player",
+        "traitId": "enforcer",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "experiment",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "family",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "firelight",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "form-swapper",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "high-roller",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "junker-king",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "machine-herald",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "pit-fighter",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "quickstriker",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "rebel",
+        "count": 1,
+        "tier": 0,
+        "memberDefinitionIds": [
+          "ezreal"
+        ],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "scrap",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "sentinel",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "sisters",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "sniper",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "sorcerer",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "visionary",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "player",
+        "traitId": "watcher",
+        "count": 1,
+        "tier": 0,
+        "memberDefinitionIds": [
+          "garen"
+        ],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "academy",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "ambusher",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "artillerist",
+        "count": 1,
+        "tier": 0,
+        "memberDefinitionIds": [
+          "urgot"
+        ],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "automata",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "banished-mage",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "black-rose",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "blood-hunter",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "bruiser",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "chem-baron",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "conqueror",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "dominator",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "emissary",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "enforcer",
+        "count": 1,
+        "tier": 0,
+        "memberDefinitionIds": [
+          "caitlyn"
+        ],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "experiment",
+        "count": 1,
+        "tier": 0,
+        "memberDefinitionIds": [
+          "urgot"
+        ],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "family",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "firelight",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "form-swapper",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "high-roller",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "junker-king",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "machine-herald",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "pit-fighter",
+        "count": 1,
+        "tier": 0,
+        "memberDefinitionIds": [
+          "urgot"
+        ],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "quickstriker",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "rebel",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "scrap",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "sentinel",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "sisters",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "sniper",
+        "count": 1,
+        "tier": 0,
+        "memberDefinitionIds": [
+          "caitlyn"
+        ],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "sorcerer",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "visionary",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      },
+      {
+        "team": "enemy",
+        "traitId": "watcher",
+        "count": 0,
+        "tier": 0,
+        "memberDefinitionIds": [],
+        "targetUnitIds": []
+      }
+    ],
+    "units": [
+      {
+        "unitId": "[\"t2\",\"s3\",\"unit\",\"unit-42\"]",
+        "stats": {
+          "health": 1260,
+          "attack": 108,
+          "armor": 25,
+          "magicResist": 25,
+          "attackRange": 4,
+          "attackIntervalTicks": 27,
+          "baseAttackSpeedBps": 7500,
+          "initialMana": 0,
+          "maxMana": 60,
+          "abilityId": "ezreal-ability",
+          "attackSpeedBonusBps": 0
+        },
+        "ability": {
+          "id": "ezreal-ability",
+          "amount": 0,
+          "kind": "s13",
+          "championId": "ezreal",
+          "variables": {
+            "PercentAttackDamage": 13500,
+            "APDamage": 300000,
+            "PercentCenterDamage": 27000
+          }
+        },
+        "sources": [],
+        "triggers": [],
+        "abilityPower": 100,
+        "mechanics": [],
+        "attackDamageBase": 108,
+        "attackDamagePercentBps": 0
+      },
+      {
+        "unitId": "[\"t2\",\"s3\",\"unit\",\"unit-48\"]",
+        "stats": {
+          "health": 1800,
+          "attack": 117,
+          "armor": 60,
+          "magicResist": 60,
+          "attackRange": 1,
+          "attackIntervalTicks": 34,
+          "baseAttackSpeedBps": 6000,
+          "initialMana": 60,
+          "maxMana": 125,
+          "abilityId": "garen-ability",
+          "attackSpeedBonusBps": 0
+        },
+        "ability": {
+          "id": "garen-ability",
+          "amount": 0,
+          "kind": "s13",
+          "championId": "garen",
+          "variables": {
+            "APShield": 2200000,
+            "PercentHealthShield": 1500,
+            "ShieldDuration": 40000,
+            "ADRatio": 25000,
+            "SecondaryADRatio": 12500,
+            "HealPercentHealth": 150
+          }
+        },
+        "sources": [
+          {
+            "key": "[\"[\\\"t2\\\",\\\"s3\\\",\\\"unit\\\",\\\"unit-48\\\"]\",\"trait\",\"emissary\",\"[\\\"t2\\\",\\\"s3\\\",\\\"trait\\\",\\\"player:1\\\"]\",0]",
+            "source": {
+              "ownerId": "[\"t2\",\"s3\",\"unit\",\"unit-48\"]",
+              "sourceKind": "trait",
+              "sourceDefinitionId": "emissary",
+              "sourceInstanceId": "[\"t2\",\"s3\",\"trait\",\"player:1\"]",
+              "effectIndex": 0
+            },
+            "effect": {
+              "kind": "mechanic",
+              "mechanic": "v19Garen",
+              "values": {
+                "healthBps": 1200
+              }
+            }
+          }
+        ],
+        "triggers": [],
+        "abilityPower": 100,
+        "mechanics": [
+          {
+            "source": {
+              "ownerId": "[\"t2\",\"s3\",\"unit\",\"unit-48\"]",
+              "sourceKind": "trait",
+              "definitionId": "emissary",
+              "instanceId": "[\"t2\",\"s3\",\"trait\",\"player:1\"]",
+              "effectIndex": 0
+            },
+            "mechanic": "v19Garen",
+            "values": {
+              "healthBps": 1200
+            }
+          }
+        ],
+        "attackDamageBase": 117,
+        "attackDamagePercentBps": 0
+      },
+      {
+        "unitId": "[\"t2\",\"s4\",\"unit\",\"unit-15\"]",
+        "stats": {
+          "health": 1522,
+          "attack": 90,
+          "armor": 65,
+          "magicResist": 45,
+          "attackRange": 2,
+          "attackIntervalTicks": 29,
+          "baseAttackSpeedBps": 7000,
+          "initialMana": 20,
+          "maxMana": 70,
+          "abilityId": "urgot-ability",
+          "attackSpeedBonusBps": 0
+        },
+        "ability": {
+          "id": "urgot-ability",
+          "amount": 0,
+          "kind": "s13",
+          "championId": "urgot",
+          "variables": {
+            "PrimaryDamage": 30000,
+            "SecondaryDamage": 15000,
+            "Duration": 60000,
+            "APDamage": 500000
+          }
+        },
+        "sources": [
+          {
+            "key": "[\"[\\\"t2\\\",\\\"s4\\\",\\\"unit\\\",\\\"unit-15\\\"]\",\"item\",\"sunfire-cape\",\"[\\\"t2\\\",\\\"s4\\\",\\\"item\\\",\\\"item-12\\\"]\",0]",
+            "source": {
+              "ownerId": "[\"t2\",\"s4\",\"unit\",\"unit-15\"]",
+              "sourceKind": "item",
+              "sourceDefinitionId": "sunfire-cape",
+              "sourceInstanceId": "[\"t2\",\"s4\",\"item\",\"item-12\"]",
+              "effectIndex": 0
+            },
+            "effect": {
+              "kind": "statFlat",
+              "stat": "armor",
+              "amount": 20
+            }
+          },
+          {
+            "key": "[\"[\\\"t2\\\",\\\"s4\\\",\\\"unit\\\",\\\"unit-15\\\"]\",\"item\",\"sunfire-cape\",\"[\\\"t2\\\",\\\"s4\\\",\\\"item\\\",\\\"item-12\\\"]\",1]",
+            "source": {
+              "ownerId": "[\"t2\",\"s4\",\"unit\",\"unit-15\"]",
+              "sourceKind": "item",
+              "sourceDefinitionId": "sunfire-cape",
+              "sourceInstanceId": "[\"t2\",\"s4\",\"item\",\"item-12\"]",
+              "effectIndex": 1
+            },
+            "effect": {
+              "kind": "statFlat",
+              "stat": "maxHp",
+              "amount": 150
+            }
+          },
+          {
+            "key": "[\"[\\\"t2\\\",\\\"s4\\\",\\\"unit\\\",\\\"unit-15\\\"]\",\"item\",\"sunfire-cape\",\"[\\\"t2\\\",\\\"s4\\\",\\\"item\\\",\\\"item-12\\\"]\",2]",
+            "source": {
+              "ownerId": "[\"t2\",\"s4\",\"unit\",\"unit-15\"]",
+              "sourceKind": "item",
+              "sourceDefinitionId": "sunfire-cape",
+              "sourceInstanceId": "[\"t2\",\"s4\",\"item\",\"item-12\"]",
+              "effectIndex": 2
+            },
+            "effect": {
+              "kind": "statPercentBps",
+              "stat": "maxHp",
+              "bps": 800
+            }
+          }
+        ],
+        "triggers": [],
+        "abilityPower": 100,
+        "mechanics": [],
+        "attackDamageBase": 90,
+        "attackDamagePercentBps": 0,
+        "itemPrograms": [
+          {
+            "source": {
+              "ownerId": "[\"t2\",\"s4\",\"unit\",\"unit-15\"]",
+              "sourceKind": "item",
+              "definitionId": "sunfire-cape",
+              "instanceId": "[\"t2\",\"s4\",\"item\",\"item-12\"]",
+              "effectIndex": 4096,
+              "parentItemInstanceId": null
+            },
+            "program": {
+              "periodic": [
+                {
+                  "periodTicks": 40,
+                  "program": {
+                    "selector": {
+                      "primary": "normal",
+                      "candidates": "board",
+                      "relation": "enemy",
+                      "anchor": "holder",
+                      "radius": 2,
+                      "maxTargets": 1,
+                      "excludeSelf": true,
+                      "excludePrimary": false,
+                      "distinct": true,
+                      "order": "not-burned-by-this-instance-distance-id",
+                      "sample": "each-pulse"
+                    },
+                    "targetSnapshot": "once-per-pulse",
+                    "effects": [
+                      {
+                        "kind": "apply-status",
+                        "status": {
+                          "kind": "burn",
+                          "magnitudeBps": 100,
+                          "duration": {
+                            "kind": "ticks",
+                            "ticks": 200
+                          },
+                          "stackPolicy": {
+                            "kind": "strongest-category",
+                            "category": "burn",
+                            "retainSuppressed": true
+                          },
+                          "polarity": "harmful",
+                          "removable": true,
+                          "damageFilter": null,
+                          "onEnd": null,
+                          "activation": "immediate"
+                        }
+                      },
+                      {
+                        "kind": "apply-status",
+                        "status": {
+                          "kind": "wound",
+                          "magnitudeBps": 3300,
+                          "duration": {
+                            "kind": "ticks",
+                            "ticks": 200
+                          },
+                          "stackPolicy": {
+                            "kind": "strongest-category",
+                            "category": "wound",
+                            "retainSuppressed": true
+                          },
+                          "polarity": "harmful",
+                          "removable": true,
+                          "damageFilter": null,
+                          "onEnd": null,
+                          "activation": "immediate"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "unitId": "[\"t2\",\"s4\",\"unit\",\"unit-34\"]",
+        "stats": {
+          "health": 1911,
+          "attack": 147,
+          "armor": 60,
+          "magicResist": 40,
+          "attackRange": 13,
+          "attackIntervalTicks": 37,
+          "baseAttackSpeedBps": 5500,
+          "initialMana": 0,
+          "maxMana": 50,
+          "abilityId": "caitlyn-ability",
+          "attackSpeedBonusBps": 0
+        },
+        "ability": {
+          "id": "caitlyn-ability",
+          "amount": 0,
+          "kind": "s13",
+          "championId": "caitlyn",
+          "variables": {
+            "RaidDuration": 50000,
+            "TotalShots": 40000,
+            "PercentAttackDamage": 18000,
+            "APDamage": 300000,
+            "HeadshotPercentAD": 28000,
+            "BonusSearchRange": 6300000,
+            "PercentShotsFocusedOnFrontline": 5000,
+            "ResistReduction": 200000
+          }
+        },
+        "sources": [
+          {
+            "key": "[\"[\\\"t2\\\",\\\"s4\\\",\\\"unit\\\",\\\"unit-34\\\"]\",\"item\",\"sunfire-cape\",\"[\\\"t2\\\",\\\"s4\\\",\\\"item\\\",\\\"item-21\\\"]\",0]",
+            "source": {
+              "ownerId": "[\"t2\",\"s4\",\"unit\",\"unit-34\"]",
+              "sourceKind": "item",
+              "sourceDefinitionId": "sunfire-cape",
+              "sourceInstanceId": "[\"t2\",\"s4\",\"item\",\"item-21\"]",
+              "effectIndex": 0
+            },
+            "effect": {
+              "kind": "statFlat",
+              "stat": "armor",
+              "amount": 20
+            }
+          },
+          {
+            "key": "[\"[\\\"t2\\\",\\\"s4\\\",\\\"unit\\\",\\\"unit-34\\\"]\",\"item\",\"sunfire-cape\",\"[\\\"t2\\\",\\\"s4\\\",\\\"item\\\",\\\"item-21\\\"]\",1]",
+            "source": {
+              "ownerId": "[\"t2\",\"s4\",\"unit\",\"unit-34\"]",
+              "sourceKind": "item",
+              "sourceDefinitionId": "sunfire-cape",
+              "sourceInstanceId": "[\"t2\",\"s4\",\"item\",\"item-21\"]",
+              "effectIndex": 1
+            },
+            "effect": {
+              "kind": "statFlat",
+              "stat": "maxHp",
+              "amount": 150
+            }
+          },
+          {
+            "key": "[\"[\\\"t2\\\",\\\"s4\\\",\\\"unit\\\",\\\"unit-34\\\"]\",\"item\",\"sunfire-cape\",\"[\\\"t2\\\",\\\"s4\\\",\\\"item\\\",\\\"item-21\\\"]\",2]",
+            "source": {
+              "ownerId": "[\"t2\",\"s4\",\"unit\",\"unit-34\"]",
+              "sourceKind": "item",
+              "sourceDefinitionId": "sunfire-cape",
+              "sourceInstanceId": "[\"t2\",\"s4\",\"item\",\"item-21\"]",
+              "effectIndex": 2
+            },
+            "effect": {
+              "kind": "statPercentBps",
+              "stat": "maxHp",
+              "bps": 800
+            }
+          }
+        ],
+        "triggers": [],
+        "abilityPower": 100,
+        "mechanics": [],
+        "attackDamageBase": 147,
+        "attackDamagePercentBps": 0,
+        "itemPrograms": [
+          {
+            "source": {
+              "ownerId": "[\"t2\",\"s4\",\"unit\",\"unit-34\"]",
+              "sourceKind": "item",
+              "definitionId": "sunfire-cape",
+              "instanceId": "[\"t2\",\"s4\",\"item\",\"item-21\"]",
+              "effectIndex": 4096,
+              "parentItemInstanceId": null
+            },
+            "program": {
+              "periodic": [
+                {
+                  "periodTicks": 40,
+                  "program": {
+                    "selector": {
+                      "primary": "normal",
+                      "candidates": "board",
+                      "relation": "enemy",
+                      "anchor": "holder",
+                      "radius": 2,
+                      "maxTargets": 1,
+                      "excludeSelf": true,
+                      "excludePrimary": false,
+                      "distinct": true,
+                      "order": "not-burned-by-this-instance-distance-id",
+                      "sample": "each-pulse"
+                    },
+                    "targetSnapshot": "once-per-pulse",
+                    "effects": [
+                      {
+                        "kind": "apply-status",
+                        "status": {
+                          "kind": "burn",
+                          "magnitudeBps": 100,
+                          "duration": {
+                            "kind": "ticks",
+                            "ticks": 200
+                          },
+                          "stackPolicy": {
+                            "kind": "strongest-category",
+                            "category": "burn",
+                            "retainSuppressed": true
+                          },
+                          "polarity": "harmful",
+                          "removable": true,
+                          "damageFilter": null,
+                          "onEnd": null,
+                          "activation": "immediate"
+                        }
+                      },
+                      {
+                        "kind": "apply-status",
+                        "status": {
+                          "kind": "wound",
+                          "magnitudeBps": 3300,
+                          "duration": {
+                            "kind": "ticks",
+                            "ticks": 200
+                          },
+                          "stackPolicy": {
+                            "kind": "strongest-category",
+                            "category": "wound",
+                            "retainSuppressed": true
+                          },
+                          "polarity": "harmful",
+                          "removable": true,
+                          "damageFilter": null,
+                          "onEnd": null,
+                          "activation": "immediate"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

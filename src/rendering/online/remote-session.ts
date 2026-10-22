@@ -24,6 +24,12 @@ import type { DisplayMatch } from './seat-view-adapter';
 export type IntentNotice = { readonly kind: 'pending'; readonly commandId: number } | { readonly kind: 'offline'; readonly text: string };
 /** The "开战" transition: the initial view is held this long before tick 0 plays (inside the room's battle tail). */
 export const REPLAY_OPENING_MS = 400;
+/** Four committed ticks absorb ordinary packet/frame jitter; terminal markers release the remaining tail. */
+export const STREAM_BUFFER_TICKS = 4;
+export const STREAM_BUFFER_MS = STREAM_BUFFER_TICKS * COMBAT_TICK_MS;
+function hasBufferedFrame(replay: CombatReplay, next: number): boolean {
+  return next < replay.ticks.length - (replay.stream?.ended === false ? STREAM_BUFFER_TICKS : 0);
+}
 /** Commands the room passes to the rules while a battle runs (contract §15.2 `OPS`). */
 const BATTLE_COMMANDS: ReadonlySet<WireCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable',
   // v15: an orb clicked during my battle is queued by the rules and settled after it (user 2026-10-20 02:26).
@@ -94,18 +100,30 @@ export class RemoteSession extends MatchSession {
   /**
    * The battle of the seat I visit, or its revision: it joins at the tick my own battle is at (every battle of a round starts
    * together; without mine of my own, at its start), a revision keeps the records already shown and goes on from there.
+   * Returns true only for an append/end of the same stream, which needs no board refresh.
    */
-  watchReplay(seatId: string, replay: CombatReplay): void {
-    if (!replay.ticks.length) return;
+  watchReplay(seatId: string, replay: CombatReplay): boolean {
+    if (!replay.ticks.length) return false;
     const current = this.watched?.seatId === seatId && this.watched.replay.initial.combatId === replay.initial.combatId ? this.watched : null;
-    const at = Math.min(replay.ticks.length, current ? current.nextTick : this.replay ? this.nextTick : 0);
+    if (current && current.replay.initial === replay.initial && current.replay.stream && replay.stream
+      && current.replay.stream.revision === replay.stream.revision && current.replay.stream.fromTick === replay.stream.fromTick
+      && current.replay.ticks.every((frame, i) => frame === replay.ticks[i])) {
+      this.watched = { ...current, replay }; return true;
+    }
+    // Cursors can start on different keyframes. Align by the displayed tick, never by a prefix array index.
+    const shownTick = current ? (current.nextTick ? current.replay.ticks[current.nextTick - 1]!.tick : current.replay.initial.tick - 1)
+      : this.replay && this.nextTick ? this.replay.ticks[this.nextTick - 1]!.tick : replay.initial.tick - 1;
+    const firstUnshown = replay.ticks.findIndex(frame => frame.tick > shownTick);
+    const at = firstUnshown < 0 ? replay.ticks.length : firstUnshown;
     let view: CombatViewState = replay.initial;
     for (let index = 0; index < at; index++) view = applyCombatReplayTick(view, replay.ticks[index]!);
-    this.watched = { seatId, replay, nextTick: at, view: at === replay.ticks.length ? replay.terminal : view, accumulator: current?.accumulator ?? (this.replay ? this.accumulator : 0) };
+    this.watched = { seatId, replay, nextTick: at, view: at === replay.ticks.length && replay.stream?.ended !== false ? replay.terminal : view,
+      accumulator: current?.accumulator ?? (this.replay ? this.accumulator : replay.stream ? COMBAT_TICK_MS - STREAM_BUFFER_MS : 0) };
     // The board shows a battle even without one of mine (eliminated, or my battle already settled): the combat overlay.
     // A fresh overlay also tells the scene its board changed, so it rebuilds its tokens from the watched battle.
     const before = this.matchState; this.playbackBase = this.playbackBase ?? before; this.matchState = this.overlay();
     this.notify(before, [], 'command');
+    return false;
   }
   /** Back to my own board (and my battle, where it has got to). */
   stopWatching(): void {
@@ -141,7 +159,7 @@ export class RemoteSession extends MatchSession {
     this.replayUnitIds = new Map(unitIds.map(entry => [entry.combatId, entry.originalId]));
     this.replay = replay; this.nextTick = 0; this.view = replay.initial; this.played = []; this.openingPending = true;
     // Tick 0 plays when the opening transition ends; every later record 50 ms after the previous one.
-    this.accumulator = COMBAT_TICK_MS - REPLAY_OPENING_MS;
+    this.accumulator = COMBAT_TICK_MS - (replay.stream ? STREAM_BUFFER_MS : REPLAY_OPENING_MS);
     this.replayStartedAt = this.clock(); this.replayElapsed = 0;
     const before = this.matchState; this.playbackBase = this.playbackBase ?? before; this.matchState = this.overlay();
     const battle = { round: this.playbackBase.round, roundId: this.playbackBase.roundDefinitionId, replay, unitIds: [...unitIds] };
@@ -152,17 +170,29 @@ export class RemoteSession extends MatchSession {
    * D11 live bank: the battle on the board was revised from some tick on. The records already shown stay (the server
    * only revises ticks the playback has not reached, unless it lagged); the view is rebuilt on the revised records up
    * to the same point and playback continues from there.
+   * Returns true only for an append/end that preserves the displayed prefix.
    */
-  reviseReplay(replay: CombatReplay): void {
+  reviseReplay(replay: CombatReplay): boolean {
     const current = this.replay;
-    if (!current || !replay.ticks.length || replay.initial.combatId !== current.initial.combatId) return;
-    const shown = Math.min(this.nextTick, replay.ticks.length);
+    if (!current || !replay.ticks.length || replay.initial.combatId !== current.initial.combatId) return false;
+    if (current.initial === replay.initial && current.stream && replay.stream
+      && current.stream.revision === replay.stream.revision && current.stream.fromTick === replay.stream.fromTick
+      && current.ticks.every((frame, i) => frame === replay.ticks[i])) {
+      this.replay = replay;
+      this.finished = this.finished.map(entry => entry.replay === current ? { ...entry, replay } : entry);
+      return true; // append/end preserves the displayed prefix and never replays effects
+    }
+    // A keyframe resume may later be replaced by the completed full recording: retain the actual tick, not a buffer index.
+    const shownTick = this.nextTick ? current.ticks[this.nextTick - 1]!.tick : current.initial.tick - 1;
+    const firstUnshown = replay.ticks.findIndex(frame => frame.tick > shownTick);
+    const shown = firstUnshown < 0 ? replay.ticks.length : firstUnshown;
     let view: CombatViewState = replay.initial;
     for (let index = 0; index < shown; index++) view = applyCombatReplayTick(view, replay.ticks[index]!);
     this.replay = replay; this.nextTick = shown;
     if (this.view !== null) this.view = shown === replay.ticks.length ? replay.terminal : view;
     this.finished = this.finished.map(entry => entry.replay === current ? { ...entry, replay } : entry);
     const before = this.matchState; this.notify(before, [], 'command');
+    return false;
   }
   /** Display-only: my last authoritative state in the combat phase; the combat itself is `combatView`. */
   private overlay(): MatchState { return { ...(this.playbackBase ?? this.matchState), phase: 'combat', combat: null } as unknown as MatchState; }
@@ -171,13 +201,14 @@ export class RemoteSession extends MatchSession {
     return { playingBack: this.playingBack, played: this.played.length, tick: this.view?.tick ?? null, terminalTick: this.replay?.terminal.tick ?? null, superseded: this.superseded };
   }
   private superseded = 0;
-  get playingBack(): boolean { return this.replay !== null && this.nextTick < this.replay.ticks.length; }
+  get playingBack(): boolean { return this.replay !== null && (this.nextTick < this.replay.ticks.length || this.replay.stream?.ended === false); }
   /** Drop remaining ticks and show the battle's end (tab hidden, superseded by a newer state). */
   skipPlayback(): void {
     const replay = this.replay;
     if (!replay || !this.playingBack) return;
     for (const frame of replay.ticks.slice(this.nextTick)) this.played.push(...frame.events);
-    this.nextTick = replay.ticks.length; this.view = replay.terminal; this.accumulator = 0; this.openingPending = false;
+    this.nextTick = replay.ticks.length; this.view = replay.stream?.ended === false
+      ? replay.ticks.reduce((view, frame) => applyCombatReplayTick(view, frame), replay.initial) : replay.terminal; this.accumulator = 0; this.openingPending = false;
   }
   /** Offline stepping never runs here: the server owns the battle. */
   override advance(_delta: number): readonly LedgerCombatEvent[] { return []; }
@@ -191,13 +222,12 @@ export class RemoteSession extends MatchSession {
     if (this.paused || !watched || !Number.isFinite(delta) || delta < 0) return [];
     watched.accumulator += delta;
     const events: DisplayCombatEvent[] = [];
-    // Never behind my own battle: both started together, so a stalled watch catches up with it.
-    while (watched.nextTick < watched.replay.ticks.length && (watched.accumulator >= COMBAT_TICK_MS || (this.replay !== null && watched.nextTick < this.nextTick))) {
-      if (watched.accumulator >= COMBAT_TICK_MS) watched.accumulator -= COMBAT_TICK_MS;
+    // Watched playback has its own jitter buffer and time credit, including after my battle ends.
+    while (hasBufferedFrame(watched.replay, watched.nextTick) && watched.accumulator >= COMBAT_TICK_MS) {
+      watched.accumulator -= COMBAT_TICK_MS;
       const frame = watched.replay.ticks[watched.nextTick++]!;
       watched.view = applyCombatReplayTick(watched.view, frame); events.push(...frame.events);
     }
-    if (watched.nextTick >= watched.replay.ticks.length) watched.accumulator = 0;
     return events;
   }
   private advanceOwn(delta: number): readonly DisplayCombatEvent[] {
@@ -208,13 +238,12 @@ export class RemoteSession extends MatchSession {
     const behind = this.clock() - this.replayStartedAt - this.replayElapsed;
     if (behind > CATCH_UP_MS) { this.accumulator += behind; this.replayElapsed += behind; }
     const events: DisplayCombatEvent[] = [];
-    while (this.accumulator >= COMBAT_TICK_MS && this.nextTick < replay.ticks.length) {
+    while (this.accumulator >= COMBAT_TICK_MS && hasBufferedFrame(replay, this.nextTick)) {
       this.accumulator -= COMBAT_TICK_MS;
       const frame = replay.ticks[this.nextTick++]!;
       this.view = applyCombatReplayTick(this.view ?? replay.initial, frame);
       this.played.push(...frame.events); events.push(...frame.events);
     }
-    if (!this.playingBack) this.accumulator = 0;
     return events;
   }
   private intent(command: WireCommand): MatchCommandResult {

@@ -26,6 +26,7 @@ export { priorPvpWins, G22_EMISSARY_WIN_CAP } from '../simulation/g2-2-pvp-histo
 export { compileBattle, restoreBattleInput, startTwoSidedCombat, startTwoSidedCombatWithEvents,
   startTwoSidedBattle, resolveTwoSidedBattle, proposeSettlement, readBattleLiveGoldReaders } from '../simulation/two-sided-battle';
 export type { BattleTask, BattleReplayTask, BattleReplayStep, BattleReplayOptions, BattleLiveGoldReader } from '../simulation/two-sided-battle';
+export type { BattleEquipmentInput, BattleTickInput, BattleTickInputSource, BattleEquipmentCommand } from '../simulation/battle-input-log';
 export { sampleD11CombatGold } from '../simulation/d11-fill';
 export { readMatchLiveGoldReaders } from '../simulation/live-gold-readers';
 export type { CombatBankSample } from '../simulation/combat-types';

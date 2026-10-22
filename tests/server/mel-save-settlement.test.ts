@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as serverEntry from '../../src/server-entry';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
-import type { RoomState, TwoSidedBattleResult } from '../../src/server/room/types';
+import type { BattleInput, RoomState, TwoSidedBattleResult } from '../../src/server/room/types';
 import { readG23Progress, writeG23Progress } from '../../src/simulation/g2-3-state';
 import { makeRoom, runUntil } from './helpers';
 
@@ -9,13 +9,14 @@ const disposers: (() => void)[] = [];
 afterEach(() => { for (const dispose of disposers.splice(0)) dispose(); });
 
 /** Transaction vector: seed the live seat after real PvP inputs freeze, forcing the deadline to re-plan on it. */
-function melRoom(casts = 12, savedBattleId: string | null = null, hp = 2) {
-  const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+function melRoom(casts = 12, savedBattleId: string | null = null, hp = 2, combatStreaming = false, seedBeforeTerminal = false) {
+  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { combatStreaming });
   disposers.push(() => room.dispose());
   room.start();
   runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
   clock.runNext();
   expect(room.state.phase).toBe('battle');
+  if (combatStreaming && !seedBeforeTerminal) runUntil(room, clock, state => state.battles.length > 0, 20_000);
   const holder = room as unknown as { current: RoomState };
   holder.current = { ...holder.current, seats: holder.current.seats.map(seat => ({
     ...seat, hp, seatRevision: seat.seatRevision + 1,
@@ -23,12 +24,14 @@ function melRoom(casts = 12, savedBattleId: string | null = null, hp = 2) {
       ...readG23Progress(seat.match)!, mel: { pvpCasts: casts, savedBattleId },
     }),
   })) };
+  if (combatStreaming && seedBeforeTerminal) runUntil(room, clock, state => state.battles.length > 0, 20_000);
   return { room, clock, holder };
 }
 
-describe('Room: Mel save at PvP settlement', () => {
+describe.each([false, true])('Room: Mel save at PvP settlement (stream=%s)', combatStreaming => {
+  const fixture = (casts = 12, savedBattleId: string | null = null, hp = 2) => melRoom(casts, savedBattleId, hp, combatStreaming);
   it('keeps a rescued seat alive at 1 HP, preserves raw damage and commits the save exactly once', () => {
-    const { room, clock } = melRoom();
+    const { room, clock } = fixture();
     expect(room.state.fault).toBeNull();
     expect(room.state.phase).toBe('battle');
     const battles = room.state.battles as readonly TwoSidedBattleResult[];
@@ -66,7 +69,7 @@ describe('Room: Mel save at PvP settlement', () => {
     { casts: 11, savedBattleId: null, label: 'fewer than twelve casts' },
     { casts: 12, savedBattleId: 'prior-save', label: 'an already spent save' },
   ])('still eliminates lethal damage with $label', ({ casts, savedBattleId }) => {
-    const { room, clock } = melRoom(casts, savedBattleId);
+    const { room, clock } = fixture(casts, savedBattleId);
     expect(room.state.fault).toBeNull();
     const battles = room.state.battles as readonly TwoSidedBattleResult[];
     const proposal = battles.flatMap(battle => [battle.proposals.a, battle.proposals.b]).find(p => p.damage > 2)!;
@@ -80,7 +83,7 @@ describe('Room: Mel save at PvP settlement', () => {
   }, 20_000);
 
   it('rejects edited damage even when Mel would save the seat', () => {
-    const { room } = melRoom();
+    const { room } = fixture();
     expect(room.state.phase).toBe('battle');
     const before = room.state;
     const battles = before.battles as readonly TwoSidedBattleResult[];
@@ -93,7 +96,7 @@ describe('Room: Mel save at PvP settlement', () => {
 
   it.each(['missing', 'wrong battleId', 'wrong source', 'duplicate'] as const)(
     'rejects lethal damage returning 1 HP with a %s playerSaved event', variant => {
-      const { room, clock } = melRoom();
+      const { room, clock } = fixture();
       const before = room.state;
       const battles = before.battles as readonly TwoSidedBattleResult[];
       const proposal = battles.flatMap(battle => [battle.proposals.a, battle.proposals.b]).find(p => p.damage > 2)!;
@@ -129,7 +132,7 @@ describe('Room: Mel save at PvP settlement', () => {
   );
 
   it('rejects a room/rules HP mismatch even when the rules return 1 HP', () => {
-    const { room, holder } = melRoom();
+    const { room, holder } = fixture();
     expect(room.state.phase).toBe('battle');
     const battles = room.state.battles as readonly TwoSidedBattleResult[];
     const proposal = battles.flatMap(battle => [battle.proposals.a, battle.proposals.b]).find(p => p.damage > 2)!;
@@ -139,3 +142,22 @@ describe('Room: Mel save at PvP settlement', () => {
     expect(room.state).toBe(before);
   }, 20_000);
 });
+
+// Seed 42, same frozen inputs and live pool basis: scheduling itself publishes
+// different historical revisions, so compare both resolvers on this exact entry.
+it.each([false, true])('seed 42: streaming Mel rescue is byte-identical to full-round settlement (beforeTerminal=%s)', seedBeforeTerminal => {
+  const { room, clock } = melRoom(12, null, 2, true, seedBeforeTerminal);
+  const inputs = (room as unknown as { frozenInputs: readonly BattleInput[] }).frozenInputs;
+  const resolver = new TwoSidedBattleResolver();
+  const full = inputs.map(input => resolver.resolveBattle(input, room.state.pool));
+  const expected = room.planSettlement(full), streamed = room.planSettlement(room.state.battles);
+  expect(expected.ok).toBe(true); expect(streamed.ok).toBe(true);
+  if (!expected.ok || !streamed.ok) throw Error('settlement refused');
+  expect(streamed.settlement.seats.some(seat => seat.events.some(e => e.type === 'playerSaved'))).toBe(true);
+  expect(JSON.stringify(streamed)).toBe(JSON.stringify(expected));
+  runUntil(room, clock, state => state.settlements.includes('test-room:round-4'), 20_000);
+  expect(room.state.fault).toBeNull();
+  expect(JSON.stringify(room.state.seats.map(seat => seat.match)))
+    .toBe(JSON.stringify(expected.settlement.seats.map(seat => seat.match)));
+  expect(JSON.stringify(room.state.pool)).toBe(JSON.stringify(expected.settlement.pool));
+}, 60_000);

@@ -1,0 +1,530 @@
+[
+  {
+    "shard": "1/4",
+    "exitCode": 137,
+    "elapsedSeconds": 496.71,
+    "reportGenerated": false,
+    "files": null,
+    "failedFiles": null,
+    "failures": [],
+    "pending": [],
+    "attempt": "initial"
+  },
+  {
+    "shard": "2/4",
+    "exitCode": 1,
+    "elapsedSeconds": 820.91,
+    "numTotalTestSuites": 241,
+    "numPassedTestSuites": 228,
+    "numFailedTestSuites": 13,
+    "numTotalTests": 1548,
+    "numPassedTests": 1528,
+    "numFailedTests": 12,
+    "numPendingTests": 8,
+    "reportGenerated": true,
+    "files": 119,
+    "failedFiles": 8,
+    "failures": [
+      {
+        "file": "tests/d14-wiring-match.test.ts",
+        "tests": [
+          {
+            "name": "ultimate-hero strictly restores settled-1 and continues identically",
+            "reason": "Error: Test timed out in 5000ms."
+          },
+          {
+            "name": "ultimate-hero strictly restores combat-2 and continues identically",
+            "reason": "Error: Test timed out in 5000ms."
+          },
+          {
+            "name": "ultimate-hero strictly restores settled-2 and continues identically",
+            "reason": "Error: Test timed out in 5000ms."
+          }
+        ]
+      },
+      {
+        "file": "tests/m5-replay-mage.test.ts",
+        "tests": [
+          {
+            "name": "M5 mage restores every command and tick; rejected insertion preserves every field",
+            "reason": "Error: Test timed out in 600000ms."
+          }
+        ]
+      },
+      {
+        "file": "tests/m6-integration-mage.test.ts",
+        "tests": [
+          {
+            "name": "M6 independent route/history/playback/session integration mage: every completed battle has exact original state/events and isolated playback",
+            "reason": "Error: Test timed out in 360000ms."
+          }
+        ]
+      },
+      {
+        "file": "tests/m6-integration-sniper.test.ts",
+        "tests": [
+          {
+            "name": "M6 independent route/history/playback/session integration sniper: every completed battle has exact original state/events and isolated playback",
+            "reason": "Error: Test timed out in 360000ms."
+          }
+        ]
+      },
+      {
+        "file": "tests/m8-b8-loot-view.test.ts",
+        "tests": [
+          {
+            "name": "文件 hook / 收集阶段（子测试未执行）",
+            "reason": "Hook timed out in 10000ms."
+          }
+        ]
+      },
+      {
+        "file": "tests/r3r4-oracle.test.ts",
+        "tests": [
+          {
+            "name": "signed R3/R4 independent loot oracle matches every PvE entry and both independent RNG cursors for 512 seeds",
+            "reason": "Error: Test timed out in 5000ms."
+          }
+        ]
+      },
+      {
+        "file": "tests/server/e2e-replay-errors.test.ts",
+        "tests": [
+          {
+            "name": "Server replay errors fail acceptance scripts replay.failed after readiness cannot be hidden by an explicit success exit",
+            "reason": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined"
+          },
+          {
+            "name": "Server replay errors fail acceptance scripts split replay-divergence after readiness cannot be hidden by an explicit success exit",
+            "reason": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined"
+          },
+          {
+            "name": "Server replay errors fail acceptance scripts replay.failed before readiness cannot be hidden by an explicit success exit",
+            "reason": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined"
+          },
+          {
+            "name": "Server replay errors fail acceptance scripts unrelated server output cannot be hidden by an explicit success exit",
+            "reason": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined"
+          }
+        ]
+      },
+      {
+        "file": "tests/server/legend-walk.test.ts",
+        "tests": [
+          {
+            "name": "walk message (wire) reaches every seat of the room as `legend`, with no receipt, and a refused walk sends nothing",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ]
+      }
+    ],
+    "pending": [
+      {
+        "file": "tests/m8-b8-loot-view.test.ts",
+        "tests": [
+          "B8 readLootView over real randomized public routes exposes no future orb content and hidden payloads cannot leak before a death",
+          "B8 readLootView over real randomized public routes reveals only earned orb entries mid-combat, still without receipts or player actions",
+          "B8 readLootView over real randomized public routes after PvE grants item/tool entries and withholds the full-bench hero, with no obsolete choice",
+          "B8 readLootView over real randomized public routes one real sale grants the hero and unblocks Continue, while the next round clears the view",
+          "B8 readLootView over real randomized public routes terminal two source deaths including a hero: retained reward is read-only and unearned content stays hidden",
+          "B8 readLootView over real randomized public routes terminal only component carrier: retained reward is read-only and unearned content stays hidden",
+          "B8 readLootView over real randomized public routes terminal tool carrier: retained reward is read-only and unearned content stays hidden",
+          "B8 readLootView over real randomized public routes terminal no carrier: retained reward is read-only and unearned content stays hidden"
+        ]
+      }
+    ],
+    "attempt": "initial"
+  },
+  {
+    "shard": "3/4",
+    "exitCode": 1,
+    "elapsedSeconds": 692.13,
+    "numTotalTestSuites": 262,
+    "numPassedTestSuites": 244,
+    "numFailedTestSuites": 18,
+    "numTotalTests": 1732,
+    "numPassedTests": 1701,
+    "numFailedTests": 11,
+    "numPendingTests": 20,
+    "reportGenerated": true,
+    "files": 119,
+    "failedFiles": 8,
+    "failures": [
+      {
+        "file": "tests/explorer-bracer-restore-pressure.test.ts",
+        "tests": [
+          {
+            "name": "rejects 5,000,000 claimed triggers / 100,000,000 AP in a bounded subprocess",
+            "reason": "Error: spawnSync python3 EPERM"
+          },
+          {
+            "name": "keeps the real Titan 25-stack cap while merging 26^12 AP/AD histories",
+            "reason": "Error: spawnSync python3 EPERM"
+          }
+        ]
+      },
+      {
+        "file": "tests/g2-4b-unstable-chest.test.ts",
+        "tests": [
+          {
+            "name": "文件 hook / 收集阶段（子测试未执行）",
+            "reason": "JSON标记文件失败，但未附具体错误；原因未确定"
+          }
+        ]
+      },
+      {
+        "file": "tests/t12-combat-equip.test.ts",
+        "tests": [
+          {
+            "name": "T12 public saves across equipment phases augment choice and supply choice retain offers while equipment saves resume",
+            "reason": "Error: Test timed out in 5000ms."
+          },
+          {
+            "name": "T12 latest assets survive death, settlement and upgrades a permanent unit killed in this combat can equip; next battle uses the new stats",
+            "reason": "Error: Test timed out in 12000ms."
+          }
+        ]
+      },
+      {
+        "file": "tests/server/g2-4a-forge-timeout.test.ts",
+        "tests": [
+          {
+            "name": "G2-4a: the forge popup across a reconnect a resumed seat gets the same forge popup and the unchanged deadline, and can still pick",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ]
+      },
+      {
+        "file": "tests/server/g2-4b-support-forge-room.test.ts",
+        "tests": [
+          {
+            "name": "G2-4b: the support anvil across a reconnect a resumed seat gets the same support popup and the unchanged deadline, and can still pick",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ]
+      },
+      {
+        "file": "tests/server/little-legends.test.ts",
+        "tests": [
+          {
+            "name": "little legends: over the wire shows every seat the legend another player picked",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ]
+      },
+      {
+        "file": "tests/server/projection-wire.test.ts",
+        "tests": [
+          {
+            "name": "B7 private seat view on every state path sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "B7 private seat view on every state path keeps the fault snapshot projected",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "B7 compact replay sends each battle once as the room's own replay and never as combat frames (C6)",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ]
+      },
+      {
+        "file": "tests/server/net/v17-avarice-reconnect.test.ts",
+        "tests": [
+          {
+            "name": "v17 avarice: reconnect during and after a live battle a seat that left and came back is shown the settled live replay and settles once",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ]
+      }
+    ],
+    "pending": [
+      {
+        "file": "tests/g2-4b-unstable-chest.test.ts",
+        "tests": [
+          "G2-4b chest restore rejects forged grants accepts the genuine grants",
+          "G2-4b chest restore rejects forged grants rejects an item outside the pool",
+          "G2-4b chest restore rejects forged grants rejects a future tick",
+          "G2-4b chest restore rejects forged grants rejects a different tick from its siblings",
+          "G2-4b chest restore rejects forged grants rejects a duplicated ordinal",
+          "G2-4b chest restore rejects forged grants rejects a fifth grant",
+          "G2-4b chest restore rejects forged grants rejects a second grant to one receiver",
+          "G2-4b chest restore rejects forged grants rejects an enemy receiver",
+          "G2-4b chest restore rejects forged grants rejects a living holder",
+          "G2-4b chest restore rejects forged grants rejects an unfired chest",
+          "G2-4b chest restore rejects forged grants rejects an extra field",
+          "G2-4b chest restore rejects forged grants a Match save whose unit claims an item it never received is rejected",
+          "G2-4b chest restore rejects forged grants a Match save with not an array as combat item grants is an invalid save",
+          "G2-4b chest restore rejects forged grants a Match save with a null record as combat item grants is an invalid save",
+          "G2-4b chest restore rejects forged grants a Match save with an item outside the pool as combat item grants is an invalid save",
+          "G2-4b chest restore rejects forged grants a Match save with an unknown item as combat item grants is an invalid save",
+          "G2-4b chest restore rejects forged grants a Match save with a missing chest as combat item grants is an invalid save",
+          "G2-4b chest restore rejects forged grants a Match save with a text ordinal as combat item grants is an invalid save",
+          "G2-4b chest restore rejects forged grants a Match save with a fractional tick as combat item grants is an invalid save"
+        ]
+      },
+      {
+        "file": "tests/t12-combat-equip.test.ts",
+        "tests": [
+          "T12 supply choice input T12 supply choice permits fresh component transactions and single-save continuation"
+        ]
+      }
+    ],
+    "attempt": "initial"
+  },
+  {
+    "shard": "4/4",
+    "exitCode": 1,
+    "elapsedSeconds": 236.4,
+    "numTotalTestSuites": 267,
+    "numPassedTestSuites": 248,
+    "numFailedTestSuites": 19,
+    "numTotalTests": 1507,
+    "numPassedTests": 1485,
+    "numFailedTests": 22,
+    "numPendingTests": 0,
+    "reportGenerated": true,
+    "files": 119,
+    "failedFiles": 6,
+    "failures": [
+      {
+        "file": "tests/epic-loot-reforger.test.ts",
+        "tests": [
+          {
+            "name": "v17 epic rewards and unified consumables uses exact approved zh_cn names and rejects v15 state identities without migration",
+            "reason": "AssertionError: expected 's13-g2-3-v20' to be 's13-g2-3-v19' // Object.is equality"
+          }
+        ]
+      },
+      {
+        "file": "tests/g2-4b-pr161-restore.test.ts",
+        "tests": [
+          {
+            "name": "cold Node processes restore actual canonical saves for tiers4/10/14 with the same claims and pending choice",
+            "reason": "AssertionError: expected Error: spawnSync /opt/node-v24.21.0-linux… { …(5) } to be undefined"
+          }
+        ]
+      },
+      {
+        "file": "tests/m6-persistence.test.ts",
+        "tests": [
+          {
+            "name": "M6 seed and file boundaries rejects outer corruption before history {\"saveFormatVersion\":6}",
+            "reason": "Error: promise resolved \"{ kind: 'hex-autobattler-save', …(7) }\" instead of rejecting"
+          },
+          {
+            "name": "M6 seed and file boundaries rejects outer corruption before history {\"replayFormatVersion\":5}",
+            "reason": "Error: promise resolved \"{ kind: 'hex-autobattler-save', …(7) }\" instead of rejecting"
+          }
+        ]
+      },
+      {
+        "file": "tests/server/net/combat-stream-wire.test.ts",
+        "tests": [
+          {
+            "name": "NET6 combat stream opens before resolution, streams contiguous frames, resumes a cursor and reuses the same source for watch",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "NET6 combat stream a backpressured socket is terminated while the room and other seats continue",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ]
+      },
+      {
+        "file": "tests/server/net/server.test.ts",
+        "tests": [
+          {
+            "name": "game server: visibility shows the other seat its level and HP changes but never its shop or private state",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: rejections leave the room untouched refuses forged seats, uploaded gold, wrong protocol, wrong types and stale versions",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: commandId dedupe executes a repeated commandId once and refuses the same id with other content",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: commandId dedupe refuses an id that fell out of the retention window and demands a resync",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: disconnect and resume returns a dropped seat to its owner by token, snapshot before increments, and disarms the old socket",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: disconnect and resume G1-P6: a resumed seat gets the same opponent candidates in preparation and fights one of them",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: disconnect and resume drops a queued player that disconnects before the match and frees the seat",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: queue refuses the ninth join with \"full\" and leaves the queue at eight",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: queue refuses a join while a match runs and lets a new queue form after it ends",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: single writer runs 50 pipelined commands strictly in arrival order with no interleaving",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: connection limits closes a connection that sends an oversized frame",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: connection limits rate-limits a connection on the room clock and accepts again in the next window",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: whole match over the wire drives two clients from the queue to a full ranking with replays on the manual clock",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ]
+      },
+      {
+        "file": "tests/server/net/takeover.test.ts",
+        "tests": [
+          {
+            "name": "game server: no takeover by default (P2) keeps a disconnected seat human-controlled long after the old takeover delay; resume is a plain reconnect",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: bot takeover of a disconnected seat when switched on (B6) shows the takeover to everyone after takeoverMs and hands the seat back on resume with reclaimed=true",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: bot takeover of a disconnected seat when switched on (B6) a resume before takeoverMs is a plain reconnect: no takeover, no reclaimed flag",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ]
+      }
+    ],
+    "pending": [],
+    "attempt": "initial"
+  },
+  {
+    "shard": "1/4",
+    "attempt": "serial-after-exit137",
+    "exitCode": 1,
+    "elapsedSeconds": 637.96,
+    "numTotalTests": 1397,
+    "numPassedTests": 1382,
+    "numFailedTests": 15,
+    "numPendingTests": 0,
+    "reportGenerated": true,
+    "files": 119,
+    "failedFiles": 7,
+    "failures": [
+      {
+        "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+        "tests": [
+          {
+            "name": "G2-4b: the artifact anvil across a reconnect a resumed seat gets the same artifact popup and the unchanged deadline, and can still pick",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ],
+        "message": ""
+      },
+      {
+        "file": "tests/server/lifecycle.test.ts",
+        "tests": [
+          {
+            "name": "B8 lifecycle: the network server across matches keeps connections, credentials, dedupe windows and timers at the same baseline after each of five matches",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ],
+        "message": ""
+      },
+      {
+        "file": "tests/server/replay-first-pass.test.ts",
+        "tests": [
+          {
+            "name": "game server: spot check logs a mismatch with its battle, seed and first difference, keeps settling, and checks every later battle",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "game server: spot check checks every Nth round that captured a battle (the 1st, N+1th …), one battle each, and nothing in between",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ],
+        "message": ""
+      },
+      {
+        "file": "tests/server/net/heartbeat.test.ts",
+        "tests": [
+          {
+            "name": "server heartbeat options starts no heartbeat timer when listening fails",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "server heartbeat sends nothing extra when the option is off",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "server heartbeat keeps answering peers connected and sends them a heartbeat every interval",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "server heartbeat drops a seated peer that went silent, keeps its seat, and lets the token resume it",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ],
+        "message": ""
+      },
+      {
+        "file": "tests/server/net/live-bank-wire.test.ts",
+        "tests": [
+          {
+            "name": "D11 live bank: replay-tail on the wire streams the changed records of a live battle to its seat and ends on the settled battle",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ],
+        "message": ""
+      },
+      {
+        "file": "tests/server/net/server-close.test.ts",
+        "tests": [
+          {
+            "name": "server close and failed start cancels the delayed close of a superseded connection when the server closes",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "server close and failed start rejects a start on a taken port after releasing its lobby and WebSocketServer",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ],
+        "message": ""
+      },
+      {
+        "file": "tests/server/net/slow-task.test.ts",
+        "tests": [
+          {
+            "name": "task.slow pending-window reports logs the first slow task immediately and ignores a fast task before expiry",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "task.slow pending-window reports flushes count, maximum and latest slow duration on a fast task at window expiry, only once",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "task.slow pending-window reports flushes an idle pending batch using only the loop.lag timer",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          },
+          {
+            "name": "task.slow pending-window reports flushes the unexpired pending batch on close and cancels all timers",
+            "reason": "Error: listen EPERM: operation not permitted 127.0.0.1"
+          }
+        ],
+        "message": ""
+      }
+    ]
+  }
+]

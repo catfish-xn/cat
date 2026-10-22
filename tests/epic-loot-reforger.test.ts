@@ -174,7 +174,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(useConsumable(full,full.consumables.at(-1)!.consumableId,{kind:'unit',unitId:'unit-1'})).toEqual({ok:false,state:full,reason:'bench-full'});
  });
  it('a real 5-7 command path restores new forge receipts and never repeats the rewards',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v20-xp68-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v20-live-combat-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='5-7'&&s.phase==='preparation'));
   let state:MatchState=battle(initial).ended;
   while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
@@ -182,7 +182,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(stepMatch(state)).toEqual({state,events:[]});expect(new Set(state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(state.m8.loot.receipts.length);
  });
  it('authenticates neutral opening HP after earned radiant health auras and rejects altered frozen HP',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v20-xp68-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v20-live-combat-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   let state=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='6-7'&&s.phase==='preparation'));
   const target=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board'&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
   state=accepted(grantMechanicItem(state,{receiptId:'test:radiant-opening',source:'test',definitionId:'TFT5_Item_SunfireCapeRadiant'}));
@@ -193,7 +193,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
  });
  it('the real 6-7 terminal keeps full-bench heroes retained-terminal while completing forge fallback once',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v20-xp68-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v20-live-combat-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='6-7'&&s.phase==='preparation'));
   const heroes=initial.m8.loot.frozen.rounds.at(-1)!.encounterPlan.drops.flatMap(d=>d.payload.kind==='unit'?[d.payload.definitionId]:[]);expect(heroes.length).toBeGreaterThan(0);
   const state=battle(fillBench(initial,heroes)).ended;expect(state.phase).toBe('gameOver');
@@ -211,12 +211,12 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(paid.pool.available.zoe).toBe(available-1);expect(paid.state.nextUnitSerial).toBe(state.nextUnitSerial+1);
   expect(restoreSharedOrbSnapshot(paid.pool,JSON.stringify(paid.state))).toEqual(paid.state);conserved(paid.pool,[paid.state]);
  });
- it('uses exact approved zh_cn names and rejects v15 state identities without migration',()=>{
+ it('uses exact approved zh_cn names and rejects prior-epoch state identities without migration',()=>{
   expect(Object.fromEntries(Object.values(CONSUMABLE_DEFINITIONS).map(d=>[d.apiName,d.name]))).toEqual({TFT_Consumable_ItemRemover:'装备拆卸器',TFT_Consumable_ItemReroller:'装备重铸器',TFT_Consumable_ChampionDuplicator_III:'次级英雄复制器',TFT_Consumable_NeekosHelp:'英雄复制器'});
   expect(EPIC_REWARD_NAMES).toEqual({TFT_ArmoryKeyCompleted:'成装锻造器',TFT_ArmoryKeyComponent:'基础装备锻造器',TFT_ArmoryKeySupport:'辅助装锻造器',TFT_ArmoryKeyOrnn:'神器装备锻造器',TFT_Item_ForceOfNature:'金铲铲冠冕'});expect(ITEM_DEFINITIONS.TFT_Item_ForceOfNature.name).toBe('金铲铲冠冕');
-  const state=createMatch(42);expect(state.rulesVersion).toBe('s13-g2-3-v20-xp68');expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
+  const state=createMatch(42);expect(state.rulesVersion).toBe('s13-g2-3-v20-live-combat');expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
   for(const field of ['rulesVersion','contentVersion'] as const){
-    const previous=state[field].replace('v20-xp68','v19');
+    const previous=state[field].replace('v20-live-combat','v19');
     expect(previous).not.toBe(state[field]);
     expect(()=>restoreMatch({...state,[field]:previous})).toThrow();
   }

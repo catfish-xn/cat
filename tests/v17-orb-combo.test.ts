@@ -160,7 +160,7 @@ describe('v17 orb combination — eleven contract acceptance groups',()=>{
   const paid=accepted(selectChoice(opened,c.choiceId,c.generation,c.offers[0]));expect(paid.items.at(-1)!.definitionId).toBe(c.offers[0]);expect(openEpicForge(paid).state).toBe(paid);
  });
  it('11: current saves replay-authenticate layout/loot; prior schema/save versions and forged ledgers reject',()=>{
-  expect(M8_VERSION).toMatchObject({schemaVersion:11,saveFormatVersion:7,replayFormatVersion:4});const s=createMatch(42);expect(restoreMatch(serializeMatch(s))).toEqual(s);
+  expect(M8_VERSION).toMatchObject({schemaVersion:11,saveFormatVersion:7,replayFormatVersion:5});const s=createMatch(42);expect(restoreMatch(serializeMatch(s))).toEqual(s);
   for(const schemaVersion of [7,6])expect(()=>restoreMatch({...s,schemaVersion})).toThrow();
   expect(routeSaveFile({kind:'hex-autobattler-save',saveFormatVersion:3,replayFormatVersion:3,match:{...s,rulesVersion:'s13-g2-3-v16'}}).view).toMatchObject({status:'rejected',reason:'unsupported-version'});
   expect(()=>restoreMatch({...s,rulesVersion:'s13-g2-3-v16',contentVersion:'s13-14.24b-g2-3-v16'})).toThrow();
