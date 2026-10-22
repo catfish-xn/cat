@@ -532,6 +532,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
 
   // --- view ------------------------------------------------------------------------------------------------------
   let current: BoardCarousel | null = null, hovered: number | null = null;
+  const claimedSeats = new Set<string>();
   const styleRing = (view: UnitView) => {
     const { takable, pending } = view.data;
     view.ring.visible = takable || pending;
@@ -547,7 +548,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     for (const entry of [...bursts]) endBurst(entry);
     for (const lease of pieces.values()) lease.release();
     pieces.clear(); platform.clear(); scenery.clear(); standIn.clear(); standIn.visible = true; built = false;
-    current = null; hovered = null; intro = 0;
+    current = null; hovered = null; intro = 0; claimedSeats.clear();
   };
   /** Logical ms since the carousel opened, by the view's clock. */
   const elapsedNow = () => current ? current.elapsedMs + (now() - current.at) : 0;
@@ -594,6 +595,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
    * a carousel already taken) puts the unit by its legend at home with nothing to watch.
    */
   const take = (unit: UnitView, seat: SeatView, settled: boolean) => {
+    claimedSeats.add(seat.seatId);
     unit.takenBy = seat.seatId; seat.path = null;
     endLoop(unit.tier); unit.tier = null; unit.ring.visible = false; if (unit.costRing) unit.costRing.visible = false;
     taken.attach(unit.holder);
@@ -605,6 +607,8 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       return;
     }
     seat.chase = unit; seat.goal = null; seat.speed = RUN_CELLS * cell;
+    const at = unit.holder.getWorldPosition(new Vector3());
+    if (Math.hypot(at.x - seat.root.position.x, at.z - seat.root.position.z) <= GRAB_CELLS * cell) grab(seat, unit);
   };
   /** The legend reached its unit: the selection burst (not on a settled view) and the walk home with it. */
   const grab = (seat: SeatView, unit: UnitView, feedback = true) => {
@@ -676,7 +680,10 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   /** A unit about to go: no legend keeps running for it or dragging it. */
   function releaseTaken(unit: UnitView) {
     for (const seat of seatViews.values()) {
-      if (seat.chase === unit) { seat.chase = null; seat.goal = null; }
+      if (seat.chase === unit) {
+        seat.chase = null; seat.goal = claimedSeats.has(seat.seatId) ? seat.anchor.clone() : null;
+        if (seat.goal) seat.speed = WALK_CELLS * cell;
+      }
       if (seat.carry === unit) { seat.carry = null; seat.tether.visible = false; }
     }
   }
@@ -787,7 +794,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const mine = [...seatViews.values()].find(entry => entry.me);
     // A panel pick still out (a client without walks) holds it too, as before walks.
     const out = current?.slots.some(slot => slot.pending && !slot.pickedBy);
-    return current && mine && !out && !mine.locked && !mine.carry && !pickedBy(mine.seatId) && !(mine.chase && mine.chase.takenBy === mine.seatId) ? mine : null;
+    return current && mine && !out && !mine.locked && !mine.carry && !claimedSeats.has(mine.seatId) && !pickedBy(mine.seatId) && !(mine.chase && mine.chase.takenBy === mine.seatId) ? mine : null;
   };
   const runTo = (slot: number) => {
     const mine = movable(), unit = unitViews.get(slot);
@@ -798,7 +805,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   /** The room's walk for one seat; ignored while that legend fetches or carries its unit (the view drives that). */
   const applyWalk = (walk: BoardLegendWalk) => {
     const seat = seatViews.get(walk.seatId);
-    if (!current || walk.scene !== 'carousel' || !seat || seat.carry || (seat.chase && seat.chase.takenBy === seat.seatId)) return;
+    if (!current || walk.scene !== 'carousel' || !seat || claimedSeats.has(seat.seatId) || pickedBy(seat.seatId) || seat.carry || (seat.chase && seat.chase.takenBy === seat.seatId)) return;
     seat.chase = null; seat.goal = null;
     const to = new Vector3(walk.to.x * cell, seat.root.position.y, walk.to.y * cell);
     // From where it is drawn now, so a walk I already started bends onto the room's line instead of jumping.

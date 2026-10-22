@@ -35,6 +35,26 @@ function model(bindFeet = 0) {
 }
 
 describe('root-motion independent grounding', () => {
+  it.each(['sync', 'sliced'] as const)('ignores a weapon hidden far underground without dropping real foot vertices (%s)', async mode => {
+    const geometry = new BoxGeometry(2, 4, 2).translate(0, 2, 0);
+    const count = geometry.getAttribute('position').count;
+    const weights = new Float32Array(count * 4), indices = new Uint16Array(count * 4);
+    for (let i = 0; i < count; i++) { weights[i * 4] = 1; indices[i * 4] = i < 8 ? 1 : 0; }
+    geometry.setAttribute('skinIndex', new Uint16BufferAttribute(indices, 4));
+    geometry.setAttribute('skinWeight', new Float32BufferAttribute(weights, 4));
+    const root = new Bone(), axe = new Bone(); root.name = 'root'; axe.name = 'axe'; root.add(axe);
+    const mesh = new SkinnedMesh(geometry, new MeshBasicMaterial()); mesh.add(root); mesh.bind(new Skeleton([root, axe]));
+    const body = new Group(); body.add(mesh);
+    const attack = new AnimationClip('attack', 1, [new NumberKeyframeTrack('axe.position[y]', [0, 1], [-15000, -15000])]);
+    try {
+      const measure = mode === 'sync' ? animationEnvelope : animationEnvelopeSliced;
+      const envelope = await measure(body, [{ clip: attack, loop: false, ground: true }]);
+      expect(envelope!.ground).toBeCloseTo(0);
+      fitModel(body, { height: 92, width: 110, sourceScale: 1, unitScale: 1, ground: envelope!.ground });
+      expect(body.position.y).toBeCloseTo(0);
+      expect(body.scale.y).toBe(1);
+    } finally { mesh.skeleton.dispose(); geometry.dispose(); mesh.material.dispose(); }
+  });
   it.each(['sync', 'sliced'] as const)('keeps a raised idle at +10 and a root-zero action on the floor (%s)', async mode => {
     const toy = model();
     try {
@@ -82,6 +102,55 @@ describe('root-motion independent grounding', () => {
       expect(envelope.ground).toBeCloseTo(-2);
       fitModel(toy.body, { height: 92, sourceScale: 1, unitScale: 1, ground: envelope.ground });
       expect(toy.feet(low)).toBeCloseTo(0);
+    } finally { toy.dispose(); }
+  });
+});
+
+describe('10-22 independent rigs and animated size', () => {
+  it.each(['sync', 'sliced'] as const)('grounds a mesh on its own weighted rig, ignoring another passenger rig (%s)', async mode => {
+    const geometry = new BoxGeometry(2, 4, 2).translate(0, 2, 0), count = geometry.attributes.position.count;
+    const indices = new Uint16Array(count * 4), weights = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) { indices[i * 4] = 3; weights[i * 4] = 1; }
+    geometry.setAttribute('skinIndex', new Uint16BufferAttribute(indices, 4));
+    geometry.setAttribute('skinWeight', new Float32BufferAttribute(weights, 4));
+    const passenger = new Bone(), passengerFoot = new Bone(), mount = new Bone(), mountFoot = new Bone();
+    passenger.name = 'passenger'; mount.name = 'mount'; passenger.add(passengerFoot); mount.add(mountFoot);
+    const mesh = new SkinnedMesh(geometry, new MeshBasicMaterial()); mesh.add(passenger, mount);
+    mesh.bind(new Skeleton([passenger, passengerFoot, mount, mountFoot]));
+    const body = new Group(); body.add(mesh);
+    const clip = new AnimationClip('idle', 1, [new NumberKeyframeTrack('passenger.position[y]', [0, 1], [130, 130])]);
+    try {
+      const envelope = await (mode === 'sync' ? animationEnvelope : animationEnvelopeSliced)(body, [{ clip, loop: true, ground: true }]);
+      expect(envelope!.ground).toBeCloseTo(0);
+      fitModel(body, { height: 92, unitScale: 1, sourceScale: 0.44, ground: envelope!.ground });
+      expect(body.position.y).toBeCloseTo(0);
+    } finally { mesh.skeleton.dispose(); geometry.dispose(); mesh.material.dispose(); }
+  });
+
+  it('keeps detached animated weapon controls relative to the body root, rather than their loading positions', () => {
+    const geometry = new BoxGeometry(2, 2, 2).translate(200, 2, 0), count = geometry.attributes.position.count;
+    const indices = new Uint16Array(count * 4), weights = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) { indices[i * 4] = 2; weights[i * 4] = 1; }
+    geometry.setAttribute('skinIndex', new Uint16BufferAttribute(indices, 4));
+    geometry.setAttribute('skinWeight', new Float32BufferAttribute(weights, 4));
+    const root = new Bone(), foot = new Bone(), weapon = new Bone(); root.name = 'root'; weapon.name = 'weapon';
+    root.add(foot); weapon.position.x = 200;
+    const mesh = new SkinnedMesh(geometry, new MeshBasicMaterial()); mesh.add(root, weapon);
+    mesh.bind(new Skeleton([root, foot, weapon])); const body = new Group(); body.add(mesh);
+    const clip = new AnimationClip('idle', 1, [new NumberKeyframeTrack('weapon.position[x]', [0, 1], [10, 10])]);
+    try {
+      const envelope = animationEnvelope(body, [{ clip, loop: true, ground: true }]);
+      expect(envelope.radius).toBeLessThan(12); expect(envelope.ground).toBeCloseTo(1);
+      expect(weapon.position.x).toBe(200);
+    } finally { mesh.skeleton.dispose(); geometry.dispose(); mesh.material.dispose(); }
+  });
+
+  it('uses a measured animated footprint instead of a spread-out loading pose to cap scale', () => {
+    const toy = model();
+    try {
+      toy.body.scale.set(100, 1, 100);
+      fitModel(toy.body, { height: 92, width: 110, sourceScale: 0.44, unitScale: 0.87, envelopeRadius: 113 });
+      expect(toy.body.scale.y).toBeCloseTo(0.44 * 0.87);
     } finally { toy.dispose(); }
   });
 });

@@ -54,6 +54,7 @@ import { consumableDropText, consumableEventText, consumableName, consumableShel
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
 import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
 import { counted, g23RewardIcons, g23RewardLines } from '../presentation/g23-reward-text';
+import { rewardItemMarkHtml } from '../presentation/reward-item-mark';
 import { readG23Progress } from '../simulation/g2-3-state';
 import { G23_BLACK_MARKETS } from '../simulation/content/g2-3-policy';
 import { G23_TRAIT_SOURCE } from '../simulation/content/g2-3-trait-runtime';
@@ -525,6 +526,8 @@ export class StrategyPanel {
     this.selectedItems = this.selectedItems.includes(id) ? this.selectedItems.filter(item => item !== id) : [...this.selectedItems.slice(-1), id];
     this.render();
   }
+  /** Only the deployment tab shows bench positions. A pure bench swap changes no shop, inventory or combat data. */
+  refreshBench(): void { if (this.tab === 'units') this.render(); }
   render(): void {
     const spectating = isOnlineSpectating();
     const state = this.actions.state(), ready = state.phase === 'preparation' && !spectating;
@@ -1126,8 +1129,7 @@ export class StrategyPanel {
           icons.append(hero);
         } else if (icon.kind === 'item') {
           const mark = element('span', '', 'market-item'); mark.title = icon.name;
-          // No icon of its own: a random pool is a "?", a tool or forge its first character.
-          if (icon.itemId) mark.innerHTML = itemMarkHtml(icon.itemId, 30); else mark.append(element('span', icon.name.startsWith('随机') ? '?' : [...icon.name][0]!, 'market-pool'));
+          mark.innerHTML = rewardItemMarkHtml(icon, 30);
           icons.append(mark);
         } else icons.append(element('span', String(icon.amount), 'market-gold'));
       }
@@ -1167,7 +1169,7 @@ export class StrategyPanel {
       if (icon.kind === 'hero') {
         const caption = `${icon.star}星【${icon.name}】`;
         if (icon.unitId) slot(heroPortraitHtml(icon.unitId, 40, heroEmblemSvg(icon.unitId, 40)), caption); else slot(element('span', '?', 'market-pool'), caption);
-      } else if (icon.kind === 'item') slot(icon.itemId ? itemMarkHtml(icon.itemId, 40) : element('span', icon.name.startsWith('随机') ? '?' : [...icon.name][0]!, 'market-pool'), icon.name);
+      } else if (icon.kind === 'item') slot(rewardItemMarkHtml(icon, 40), icon.name);
       else slot(element('span', '', 'market-coin'), `${icon.amount}金币`);
     }
     if (!bundle.childElementCount) for (const line of lines) bundle.append(element('span', line, 'market-line'));

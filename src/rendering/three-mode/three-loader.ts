@@ -97,6 +97,7 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
       // The cheapest shop tiers are what a game shows first: their models are parsed and uploaded while idle.
       module.useWarmModels?.([...SHOP_CATALOG_BY_COST[1], ...SHOP_CATALOG_BY_COST[2], ...SHOP_CATALOG_BY_COST[3]]);
       module.useStarColor?.(starColor); module.useCostColor?.(costColor); module.useMeterColors?.(THEME.color); module.useItemIcon?.(id => s13AssetUrl('item', id));
+      module.useChampionIcon?.(id => s13AssetUrl('champion', id));
       module.useContextRestored?.(remount);
       return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {

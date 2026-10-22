@@ -1214,3 +1214,10 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 梅尔已有 `playerSaved{battleId,playerHp:1,source:'mel'}`，12次PvP累计条件与14.24b归档吻合，表现层按事件播放一次。
 
 备战区卡顿（本次只报告）：`applySeatCommand(deploy)` 走 deployMatchUnit/planTemporaryEquipment/accept 钩子，本身无战斗推进；但 `Room.apply` 的 battle 分支在任何命令前无条件进入 `pveCatchUp`，有实时金币读者时会追算 tick。数值见 `docs/evidence/playtest-1022b/bench-timing.json`。可评估 deploy 到 bench 是否需要追算，须保留实时金币及战中装备输入顺序；本次未改服务器或性能行为。截图 `/home/aiapps/workspace/feedback-1022b/1.png` 只证明备战席显示问题，不能证明延迟或售价异常。
+## 10-22 第二轮试玩：安蓓萨施法位移（2026-10-23，规则待交付）
+
+- 结论：`src/simulation/combat-g2-2.ts` 的 ambessa 分支只发伤害/晕眩，没有改 cell 或发 movement；现有 3D 已通过 BoardScene 的权威位置播放普通 movement。因此无法仅靠表现层实现真实“冲到目标处 / 砸完撤离”，本轮不伪造站位或改伤害。
+- 请求：规则层基于锁定的 14.24b 数值确定冲刺落格/占格冲突/撤离距离与时序，沿用公开 `movement {unitId,from,to,tick,eventSeq}`；若施法与普通走路必须区分，增加公开展示字段（如 movement 的 cause / actionSeq），并同步 combat replay 白名单。客户端不挑落格、不决定命中对象。
+- 用途：2D token 和 3D root 读取同一位置、播放冲刺；castSequence 的 chain/fist 分支由既有 actionSeq/显式分支字段选择，模型动画不替代权威位移。
+- 验收：独立规则测试验证两姿态落点、占格冲突、事件顺序和伤害目标；同一真实 replay 中 2D/3D 冲到一致落点，重连与追帧不重复施法、不新增命令或资源消耗。
+- 本轮仅修改表现；未修改 simulation、server。

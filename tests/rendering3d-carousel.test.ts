@@ -513,3 +513,35 @@ describe('board-feed carousel channel', () => {
     expect(publishCarousel(() => carousel())).toBe(false);
   });
 });
+
+describe('10-22 carousel pick is a movement lock until the carousel ends', () => {
+  it('rejects local and relayed walks after a receipt, even if a later view prunes the picked slot', () => {
+    const { stage, tick } = setup();
+    const area = { left: 0, top: 0, width: 1600, height: 900 };
+    stage.show(carousel({ seats: seats(false), slots: [slot(0, { pickedBy: 's2' })] }));
+    const mine = stage.scene.getObjectByName('render3d-carousel-seat-me')!, home = mine.position.clone();
+    const walk: BoardLegendWalk = { seatId: 's2', scene: 'carousel', from: { x: 0, y: 0 }, to: { x: 0, y: 0 }, startedAt: 0, arriveAt: 1000, slot: null, who: 'me' };
+    stage.walk(walk); tick(2000); stage.update(2);
+    expect(mine.position.distanceTo(home)).toBeCloseTo(0);
+    stage.show(carousel({ seats: seats(false), slots: [] }));
+    stage.walk(walk); tick(2000); stage.update(2);
+    expect(mine.position.distanceTo(home)).toBeCloseTo(0);
+    expect(stage.walkTo({ x: 800, y: 450 }, area)).toBeNull();
+    expect(stage.runTo(0)).toBe(false);
+    stage.show(null);
+    stage.show(carousel({ id: 'c2', seats: seats(false) }));
+    expect(stage.walkTo({ x: 800, y: 450 }, area)).not.toBeNull();
+    stage.dispose();
+  });
+
+  it('returns home if the picked slot disappears while its legend is still fetching it', () => {
+    const { stage } = setup();
+    stage.show(carousel({ seats: seats(false) }));
+    const mine = stage.scene.getObjectByName('render3d-carousel-seat-me')!, home = mine.position.clone();
+    stage.show(carousel({ seats: seats(false), slots: [slot(0, { pickedBy: 's2' })] }));
+    stage.update(0.3); expect(mine.position.distanceTo(home)).toBeGreaterThan(1);
+    stage.show(carousel({ seats: seats(false), slots: [] }));
+    for (let frame = 0; frame < 120; frame++) stage.update(1 / 60);
+    expect(mine.position.distanceTo(home)).toBeCloseTo(0); stage.dispose();
+  });
+});

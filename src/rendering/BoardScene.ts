@@ -1,4 +1,5 @@
 import { combatEquipmentDisplay } from '../presentation/battle-equipment';
+import { createMelSaveFeedback } from './mel-save-feedback';
 import Phaser from 'phaser';
 import { createConquerorFlag } from './conqueror-flag';
 import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
@@ -10,7 +11,7 @@ import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
-import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, provideBoardControls, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
+import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, provideBoardControls, publishPlayerSaved, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -94,6 +95,7 @@ export class BoardScene extends Phaser.Scene {
   private online = isOnlineMode();
   private statsPanel: StatsPanel | null = null;
   private feedback: CombatFeedbackRenderer | null = null;
+  private melSave: ReturnType<typeof createMelSaveFeedback> | null = null;
   private activeStats: BattleStats | null = null;
   /** C17: item icons of the battle on the board, as they stood when it was first shown (null when none is shown). */
   private battleItems: { readonly combatId: string | undefined; readonly items: MatchState['items']; readonly state: MatchState } | null = null;
@@ -278,6 +280,7 @@ export class BoardScene extends Phaser.Scene {
     this.feedback = createCombatFeedbackRenderer(document.getElementById('feedback-root')!);
     const boardFrame = document.getElementById('board-frame') ?? document.getElementById('board-root')?.parentElement ?? document.body;
     this.soloOpening = client ? null : new OpeningEncounterHud(boardFrame);
+    this.melSave = createMelSaveFeedback(document.body, publishPlayerSaved);
     const refresh = () => {
       this.clearCombatEffects(); this.selectedId = null; this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
       // Online stats come from the replay's own events at render time (renderActiveStats); no ledger aggregate.
@@ -290,6 +293,7 @@ export class BoardScene extends Phaser.Scene {
       serverEvents: events => this.serverEvents(events),
       refused: (commandId, reason, text) => {
         this.pendingSuccess.delete(commandId);
+        this.pendingBenchMoves.delete(commandId);
         const equipment = this.pendingEquipment.delete(commandId);
         const orbId = this.pendingOrbClaims.get(commandId);
         if (orbId !== undefined) { this.pendingOrbClaims.delete(commandId); this.releaseOrb(orbId); }
@@ -301,6 +305,7 @@ export class BoardScene extends Phaser.Scene {
       },
     }, mounts) : new MatchApplication(this.session, {
       replace: session => {
+        this.melSave?.reset();
         this.clearCombatEffects(); this.session = session; this.selectedId = null;
         this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
         this.activeStats = session.combat ? aggregateStats(this.application?.debug().runId ?? '', session.combat.combatId!, session.combatEvents) : null;
@@ -333,6 +338,7 @@ export class BoardScene extends Phaser.Scene {
       if (window.__CAT_DEBUG__ === debug) delete window.__CAT_DEBUG__;
       this.statsPanel?.dispose(); this.statsPanel = null; this.feedback?.dispose(); this.feedback = null;
       this.soloOpening?.dispose(); this.soloOpening = null;
+      this.melSave?.dispose(); this.melSave = null;
       this.application?.dispose(); this.application = null;
       this.strategyPanel?.destroy(); this.strategyPanel = null; this.help?.destroy(); this.help = null;
       this.orbDock?.reset(); this.orbDock = null;
@@ -568,7 +574,7 @@ export class BoardScene extends Phaser.Scene {
       if (!this.summonOf(unitId) && this.sellZoneAt(releaseClient(pointer))) { this.clearDrag(); this.sell(unitId); this.sync(); return; }
       // Read release coordinates directly, even if no final drag frame rendered.
       this.dropAt(token, pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
-      this.clearDrag(); this.sync();
+      this.clearDrag(); this.syncAfterDrag();
     });
   }
   /** Shared by the 2D drag and the 3D layer's: token follows the point, the status line and outline say what a drop does. */
@@ -604,7 +610,11 @@ export class BoardScene extends Phaser.Scene {
       if (target?.kind === 'board') this.command(this.session.moveItemSummon(summon.itemInstanceId, target.cell), '虚空生物已移动 · 之后每回合保持此位置');
       else this.setStatus(SUMMON_BOARD_ONLY);
     } else if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
-    else if (target) this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售');
+    else if (target) {
+      const unit = this.displayedUnit(token.getData('unitId'));
+      const benchMove = this.benchOps() && unit?.location.kind === 'bench' && target.kind === 'bench';
+      this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售', false, benchMove);
+    }
     else this.setStatus(this.failureMessage('invalid-location'));
   }
   /**
@@ -643,7 +653,7 @@ export class BoardScene extends Phaser.Scene {
         // Released over a floating panel rather than the board: cancel, never drop on the cell behind it.
         if (coveredBoardPoint(client.x, client.y)) { this.clearDrag(); this.sync(); return; }
         this.dropAt(dragged, point);
-        this.clearDrag(); this.sync();
+        this.clearDrag(); this.syncAfterDrag();
       },
       dragCancel: () => { if (this.gesture3d) { this.gesture3d = null; this.clearDrag(); this.sync(); } },
     };
@@ -748,24 +758,36 @@ export class BoardScene extends Phaser.Scene {
   private pendingOrbClaims = new Map<number, string>();
   /** Command id of the last command() that went pending; read right after by claimOrb. */
   private pendingOrbNotice: number | null = null;
+  /** Pre-PvP seats can acknowledge a deployment with no domain events; remember the sent command's scope. */
+  private pendingBenchMoves = new Set<number>();
   /** Equipment refusal: the shared preview wording for every equipment code (unknown codes get its generic text). */
   private equipmentFailure(reason: string): string {
     return reason in EQUIPMENT_FAILURE_TEXT ? equipmentFailureText(reason) : this.knownFailure(reason) ?? equipmentFailureText(reason);
   }
   private confirmed(commandIds: readonly number[], events: readonly MatchEvent[]) {
     const success = commandIds.map(id => this.pendingSuccess.get(id)).filter((text): text is string => !!text).at(-1) ?? '操作已确认';
-    for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingEquipment.delete(id); this.pendingOrbClaims.delete(id); }
+    const benchMove = commandIds.length > 0 && commandIds.every(id => this.pendingBenchMoves.has(id));
+    for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingEquipment.delete(id); this.pendingOrbClaims.delete(id); this.pendingBenchMoves.delete(id); }
     if (this.selectedId !== null && !this.state.units.some(unit => unit.id === this.selectedId)) this.selectedId = null;
-    this.command({ ok: true, state: this.session.state, events }, success);
+    this.command({ ok: true, state: this.session.state, events }, success, false, benchMove);
   }
-  private command(result: MatchCommandResult, success: string, equipment = false) {
+  private command(result: MatchCommandResult, success: string, equipment = false, sentBenchMove = false) {
     if (!result.ok) {
       // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
       const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;
-      if (notice?.kind === 'pending') { this.pendingOrbNotice = notice.commandId; this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); this.setStatus(success === BATTLE_EQUIPMENT_SUBMITTED ? BATTLE_EQUIPMENT_SUBMITTED : '待确认…'); return; }
+      if (notice?.kind === 'pending') { this.pendingOrbNotice = notice.commandId; this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); if (sentBenchMove) this.pendingBenchMoves.add(notice.commandId); this.setStatus(success === BATTLE_EQUIPMENT_SUBMITTED ? BATTLE_EQUIPMENT_SUBMITTED : '待确认…'); return; }
       this.setStatus(notice?.kind === 'offline' ? notice.text : equipment ? this.equipmentFailure(result.reason) : this.failureMessage(result.reason)); return;
     }
-    this.clearCombatEffects();
+    this.melSave?.push(result.events);
+    const benchMove = this.session.combatView && this.benchOps() && (result.events.length > 0
+      ? result.events.every(event => event.type === 'unitDeployed' && event.from.kind === 'bench' && event.to.kind === 'bench') : sentBenchMove);
+    if (benchMove) {
+      this.clearDrag(); this.syncOperable(); this.syncSelection();
+      this.strategyPanel?.refreshBench(); this.strategyPanel?.recordOperations(result.events);
+      this.setStatus(success); return;
+    }
+    // Trading on the bench does not interrupt the battle's movement/effect tweens.
+    if (this.session.combatView && this.benchOps()) this.clearDrag(); else this.clearCombatEffects();
     if (this.session.phase !== 'preparation' && !this.benchOps()) this.selectedId = null;
     if (!this.session.combatView) this.recentCombatEvents = [];
     this.sync();
@@ -839,6 +861,7 @@ export class BoardScene extends Phaser.Scene {
   }
   /** Online (T10): the server's own deadline deployment and post-battle merges arrive with its state push. */
   private serverEvents(events: readonly MatchEvent[]) {
+    this.melSave?.push(events);
     const deployed = events.filter(event => event.type === 'unitDeployed').length;
     const merged = this.showUpgrades(events).length ? mergeNotice(events) : null;
     if (merged) this.setStatus(merged);
@@ -928,6 +951,11 @@ export class BoardScene extends Phaser.Scene {
       if (token.input) { token.input.enabled = true; this.input.setDraggable(token, true); }
     }
   }
+  /** A pending bench move has not changed the HUD. Its confirmation does the one full sync when state arrives. */
+  private syncAfterDrag() {
+    if (!this.benchOps()) { this.sync(); return; }
+    this.syncOperable(); this.syncSelection(); this.syncCombat();
+  }
   /**
    * Online outside preparation: bench tokens sit on their slots, selectable and draggable (bench only). Without a battle
    * on the board (choice, settlement) the whole lineup is laid out as the latest state has it, so post-battle merges show.
@@ -1012,6 +1040,7 @@ export class BoardScene extends Phaser.Scene {
   }
   /** Offline ledger aggregate per session change; floats are fed by showEvents for both paths. */
   private observeStats(change: SessionChange) {
+    this.melSave?.push(change.events);
     if (this.session instanceof RemoteSession) { if (!this.session.combatView) this.feedback?.reset(); return; }
     const combat = change.after.combat;
     if (!combat) { this.activeStats = null; this.feedback?.reset(); return; }
@@ -1241,6 +1270,7 @@ export class BoardScene extends Phaser.Scene {
   /** Optional 3D layer (?render=3d): the tokens as drawn, in logical board coordinates. Built only while it listens. */
   private boardFrame(): BoardFrame {
     const board = this.state.board, fallen = new Set(this.session.combatView?.units.filter(unit => !unit.alive).map(unit => unit.id));
+    const bench = new Map(this.state.units.map(unit => [unit.id, unit.location.kind === 'bench' ? unit.location.slot : null]));
     const result = this.session.state.roundResults?.at(-1);
     return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
@@ -1248,6 +1278,7 @@ export class BoardScene extends Phaser.Scene {
         starLevel: token.getData('starLevel'), ...(token.getData('effectiveStarLevel') === 4 ? { effectiveStarLevel: 4 as const } : {}),
         ...(token.getData('neutral') === true ? { neutral: true as const } : {}),
         x: token.x, y: token.y, alive: !fallen.has(id),
+        benchSlot: bench.get(id) ?? null,
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
         visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id) })),
       fighting: this.session.combatView !== null, dragging: this.draggingId,

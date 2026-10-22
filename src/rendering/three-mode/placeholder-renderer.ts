@@ -5,14 +5,15 @@
  * It draws the BoardScene feed (board-feed.ts) with the src/rendering3d core: hex board and bench, one piece per
  * 2D token at the same logical position (x→x, y→z), ModelCache leases with UnitActionState/UnitAnimationMixer
  * driven by display combat events. Without an asset root, or when the manifest cannot be read, pieces are
- * team-coloured pawns; a unit missing from a readable manifest shows the core's magenta placeholder box.
+ * team-coloured pawns; missing models keep those pawns, with a portrait badge for summons when available.
  * Pointer input on the 3D board is replayed through BoardControls (hit volumes for units, the board plane for drop points):
  * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
+import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
 import {
   AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial,
-  PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, TextureLoader, Vector2, Vector3, WebGLRenderer,
+  PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3, WebGLRenderer,
   type Object3D, type Texture,
 } from 'three';
 import {
@@ -33,6 +34,7 @@ import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, type Envelope } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
+import { CastLunge, castLungeFor } from './cast-lunge';
 import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -71,8 +73,6 @@ const MAX_EFFECTS = 48;
 const MAX_STARTS_PER_FRAME = 6, MAX_QUEUED = 64, STALE_SECONDS = 0.3;
 /** A batch of combat events spanning more ticks than this (catching up after dropped frames) plays effects for its last ticks only. */
 const EFFECT_TICKS = 2;
-/** Effects without a playback entry play at the source this long. */
-const DEFAULT_EFFECT_SECONDS = 1;
 /** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
  * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
@@ -151,6 +151,8 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 // Injected the same way: the 2D bundle's item icon URL (presentation/s13-assets.ts), for a scouted seat's items.
 let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
+let championIconFor: (id: string) => string | null = () => null;
+export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null; preloaded: null };
@@ -210,7 +212,6 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
 }
 
 /** Preview staging for one effect (assets3d action-bindings.json `playback`); approximate, not gameplay timing. */
-interface EffectPlayback { anchor: 'source' | 'target' | 'projectile'; bone?: string; delay: number; maxDuration: number }
 type ResolveEffects = (unit: string, action: 'attack' | 'cast') => readonly { id: string }[];
 interface ActionEffectPlan { resolve: ResolveEffects; playback: Record<string, EffectPlayback> }
 
@@ -258,6 +259,10 @@ interface PieceView {
   readonly turn: HeadingTurn;
   /** 家人团聚 easter egg in planning: its model's dance clip ('clip') or, without one, a hop in place ('hop'). */
   dance: 'clip' | 'hop' | null;
+  /** A cast drawn as a dash toward its target (cast-lunge.ts): only the body is offset, never the root. */
+  lunge: CastLunge | null;
+  /** The body-local (x, z) offset the lunge has put on `body`, taken off again before the body changes. */
+  lungeOffset: { x: number; z: number };
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -477,7 +482,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     let best = -1, bestDistance = Infinity, spacing = Infinity;
     for (let i = 1; i < slots.length; i++) spacing = Math.min(spacing, Math.hypot(slots[i]!.x - slots[i - 1]!.x, slots[i]!.z - slots[i - 1]!.z));
     const reach = Number.isFinite(spacing) && spacing > 0 ? spacing / 2 : (lastFrame?.hexRadius ?? 34);
-    slots.forEach((slot, i) => { const d = Math.hypot(slot.x - x, slot.z - z); if (d < reach && d < bestDistance) { best = i; bestDistance = d; } });
+    slots.forEach((slot, i) => { const d = Math.hypot(slot.x - x, slot.z - z);
+      // Cells are squares, as drawn below; their corners must not fall through to the board plane.
+      if (Math.abs(slot.x - x) <= reach && Math.abs(slot.z - z) <= reach && d < bestDistance) { best = i; bestDistance = d; } });
     return best;
   };
   const benchOf2d = (frame: BoardFrame, x: number, y: number) => nearestSlot(frame.bench.map(point => ({ x: point.x, z: point.y })), x, y);
@@ -581,12 +588,22 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     myLegend: () => feed?.legends?.().me ?? null,
     starColor: level => starColorFor(level), overhead: overheadContext, itemIcon: id => itemIconFor(id), own });
   let scoutView: Parameters<typeof scout.show>[0] = null;
-  const pawnFor = (team: BoardPiece['team']): Object3D => {
+  const pawnFor = (team: BoardPiece['team'], definitionId: string): Object3D => {
     const pawn = new Group();
     pawn.name = 'render3d-pawn';
     const body = new Mesh(pawnBody, teamMaterial[team]); body.position.y = 17;
     const head = new Mesh(pawnHead, teamMaterial[team]); head.position.y = 42;
     pawn.add(body, head);
+    const icon = definitionId.startsWith('g23-') ? championIconFor(definitionId) : null;
+    if (icon) {
+      pawn.name = `render3d-fallback-${definitionId}`;
+      const material = own(new SpriteMaterial({ color: '#ffffff' })), badge = new Sprite(material);
+      badge.position.y = 42; badge.scale.set(38, 38, 1); badge.visible = false; pawn.add(badge);
+      void overheadContext.itemTexture(icon).then(texture => {
+        if (!texture || closed) return;
+        material.map = texture; material.needsUpdate = true; badge.visible = true; head.visible = false;
+      });
+    }
     return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
   };
   /** Animation envelope radius per model id (unscaled source units), measured on its first lease. */
@@ -599,22 +616,45 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (envelope === undefined) { envelope = animationEnvelope(lease.scene, envelopeClips(lease)); envelopes.set(id, envelope); }
     return envelope;
   };
+  // Cast lunges: the world-plane offset (x, z) is turned into the root's frame (it rotates to face) and put on the body
+  // as a change from what was already applied, so the body's own fitted position is never overwritten.
+  const setLungeOffset = (view: PieceView, x: number, z: number) => {
+    const turn = view.root.rotation.y, cos = Math.cos(turn), sin = Math.sin(turn);
+    const localX = x * cos - z * sin, localZ = x * sin + z * cos, applied = view.lungeOffset;
+    if (view.body) { view.body.position.x += localX - applied.x; view.body.position.z += localZ - applied.z; }
+    applied.x = localX; applied.z = localZ;
+  };
+  function cancelLunge(view: PieceView): void { view.lunge = null; setLungeOffset(view, 0, 0); }
+  const startLunge = (sourceId: string, targetId: string | undefined) => {
+    const source = pieces.get(sourceId), spec = source && castLungeFor(source.definitionId);
+    const target = targetId && targetId !== sourceId ? pieces.get(targetId) : undefined;
+    if (!source || !spec || !source.alive || !source.root.visible || !target?.alive) return;
+    const dx = (target.target.x - source.target.x) * spec.ratio, dz = (target.target.z - source.target.z) * spec.ratio;
+    if (dx * dx + dz * dz < 1) return;
+    source.lunge = new CastLunge(dx, dz, spec.seconds);
+  };
   const attachBody = (view: PieceView) => {
+    cancelLunge(view);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
-    view.body = pawnFor(view.team); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
+    view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
     if (!loadModel) return;
     const definitionId = view.definitionId;
     void loadModel(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
+      cancelLunge(view); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
-      if (view.body) view.root.remove(view.body);
-      // A unit missing from the manifest gets ModelCache's unit-cube placeholder: keep it pawn sized.
-      const monster = lease.placeholder ? undefined : monsterFit(definitionId);
-      const unitScale = lease.placeholder ? null : readUnitScale(models.cache?.manifest.models, definitionId);
-      if (lease.placeholder) view.body = fit(lease.scene, PAWN_HEIGHT, PAWN_WIDTH);
-      else if (monster && unitScale) {
+      if (lease.placeholder) {
+        // The loader's diagnostic magenta cube is never a player-facing model. Keep the visible, pickable stand-in.
+        if (view.dyingFor === 'loading') view.dyingFor = DEATH_FALLBACK_SECONDS;
+        if (loadReport.waiting) for (const [id, other] of pieces) if (other === view) loadReport.attached(id, definitionId);
+        return;
+      }
+      const stand = view.body;
+      const monster = monsterFit(definitionId);
+      const unitScale = readUnitScale(models.cache?.manifest.models, definitionId);
+      if (monster && unitScale) {
         // A monster at its official scale like a champion, no width cap (wolves' tails and the dragon's wings span cells);
         // its lift stays the same share of its drawn height, and its bar sits on what is drawn.
         const before = Math.abs(lease.scene.scale.x) || 1;
@@ -641,7 +681,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // The factor fitModel applied (League source units → board units, caps included), not the GLB root's own scale.
         view.modelScale = unitScale ? Math.abs(lease.scene.scale.x) / before : null;
       }
-      if (lease.placeholder) view.starHeight = PAWN_HEIGHT + STAR_GAP;
+      // Remove the pawn only after fitting succeeded; a malformed model must not leave an empty ring.
+      stand?.removeFromParent();
       view.root.add(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
@@ -670,7 +711,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
-      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null };
+      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null,
+      lunge: null, lungeOffset: { x: 0, z: 0 } };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -681,7 +723,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // UnitActionState stays on death until unitRevived and ignores later events, so a unit that died must start the
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
-    held.delete(view);
+    held.delete(view); cancelLunge(view);
     view.state = new UnitActionState(id); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease) {
@@ -691,7 +733,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
   };
   const removePiece = (view: PieceView) => {
-    view.disposed = true; held.delete(view);
+    cancelLunge(view); view.disposed = true; held.delete(view);
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
@@ -748,9 +790,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const source = pieces.get(sourceId);
     if (!actionEffects || !source?.alive) return;
     const owner = generation;
-    for (const { id } of actionEffects.resolve(source.definitionId, action)) {
+    for (const { id, playback: spec } of planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
       if (queued.length >= MAX_QUEUED) return;
-      const spec = actionEffects.playback[id] ?? { anchor: 'source', delay: 0, maxDuration: DEFAULT_EFFECT_SECONDS };
       queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner) });
     }
   };
@@ -827,7 +868,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (!view.alive) resetAction(view, piece.id);
         view.alive = true; view.dyingFor = null;
       } else if (view.alive) {
-        view.alive = false;
+        view.alive = false; cancelLunge(view);
         const output = view.state.consume({ type: 'death', unitId: piece.id });
         view.mixer?.apply(output);
         view.dyingFor = created ? 0 : models.cache && !view.lease ? 'loading' : deathSeconds(view);
@@ -835,7 +876,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const shown = piece.visible && (view.dyingFor === null || view.dyingFor === 'loading' || view.dyingFor > 0);
       if (shown && !view.root.visible) resetAction(view, piece.id);
       view.root.visible = shown;
-      const slot = benchSlots ? benchOf2d(frame, piece.x, piece.y) : -1;
+      const slot = benchSlots ? (piece.id !== frame.dragging && piece.benchSlot !== undefined
+        ? piece.benchSlot ?? -1 : benchOf2d(frame, piece.x, piece.y)) : -1;
       if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
     }
@@ -863,7 +905,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
       if (event.type === 'attack') { face(event.attackerId, event.targetId); if (current) playAction('attack', event.attackerId, event.targetId); }
-      else if (event.type === 'cast') { face(event.sourceId, event.targetIds[0]); if (current) playAction('cast', event.sourceId, event.targetIds[0]); }
+      else if (event.type === 'cast') {
+        face(event.sourceId, event.targetIds[0]);
+        if (current) { playAction('cast', event.sourceId, event.targetIds[0]); startLunge(event.sourceId, event.targetIds[0]); }
+      } else if (event.type === 'movement' || event.type === 'death') {
+        // A real step or death takes over from a lunge at once: the body is back on the root.
+        const view = pieces.get((event as { unitId: string }).unitId); if (view) cancelLunge(view);
+      }
     }
     // Each mixer takes the batch's final action once (it starts only a changed one; nothing ran in between).
     for (const view of pieces.values()) if (view.dance !== 'clip') view.mixer?.apply(view.state.output);
@@ -916,7 +964,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const visiting = () => scout.active || scoutView?.watching === true;
   const mine = () => !stage.active && !visiting();
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk,
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: () => { if (!visiting()) tabletop.saved(); },
     unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
@@ -1174,6 +1222,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // Hop: two bounces a second, each dancer a little out of step with the next.
         if (view.dance === 'hop') view.root.position.y += Math.abs(Math.sin(now / 1000 * Math.PI * 2 + view.root.position.x / 40)) * MODEL_HEIGHT * 0.14;
       }
+      if (view.lunge) { const offset = view.lunge.update(seconds); if (offset) setLungeOffset(view, offset.x, offset.z); else cancelLunge(view); }
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) {
