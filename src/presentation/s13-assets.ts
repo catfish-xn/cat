@@ -13,7 +13,7 @@ const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BA
 const index = new Map<string, S13Asset>(S13_ASSETS.map(asset => [`${asset.kind}:${asset.id}`, asset]));
 
 /**
- * Portraits and trait icons the 3D asset root carries beside its models (`<root>/ui-assets.json`, v19 six-costs), by
+ * Portraits, trait and augment icons the 3D asset root carries beside its models (`<root>/ui-assets.json`, v19 six-costs), by
  * `kind:id` → absolute URL. Read once when a root is configured; anything it lacks keeps the bundled file or the fallback.
  */
 const rootAssets = new Map<string, string>();
@@ -29,16 +29,19 @@ export function loadRootUiAssets(base: string | null, fetcher: typeof fetch = (.
       .finally(() => { clearTimeout(timer); resolve(); });
   });
 }
-/** Registers the manifest's champion/trait entries whose path stays inside the root; anything else is ignored. */
+/** Registers the manifest's champion/trait/augment entries whose path stays inside the root; anything else is ignored. */
 export function registerRootUiAssets(base: string, manifest: unknown): void {
   const assets = (manifest as { assets?: unknown } | null)?.assets;
   if (!Array.isArray(assets)) return;
   for (const entry of assets as { kind?: unknown; id?: unknown; path?: unknown }[]) {
-    if ((entry?.kind !== 'champion' && entry?.kind !== 'trait') || typeof entry.id !== 'string' || typeof entry.path !== 'string'
+    if ((entry?.kind !== 'champion' && entry?.kind !== 'trait' && entry?.kind !== 'augment') || typeof entry.id !== 'string' || typeof entry.path !== 'string'
       || !/^[\w-]+(\/[\w.-]+)*$/.test(entry.path) || entry.path.split('/').includes('..')) continue;
     rootAssets.set(`${entry.kind}:${entry.id}`, new URL(entry.path, base).href);
   }
 }
+
+/** An augment icon carried by the asset root (augments missing from the bundled manifest), or null. */
+export const rootAugmentIconUrl = (id: string): string | null => rootAssets.get(`augment:${id}`) ?? null;
 
 export function s13AssetUrl(kind: S13Asset['kind'], id: string): string | null {
   const asset = index.get(`${kind}:${id}`);

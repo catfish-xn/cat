@@ -116,6 +116,19 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
 }
 
 /** Renders into the board-frame mount; one instance per scene. */
+/** Where the orb came from, for its label and hover card. */
+export function orbSourceText(orb: Pick<UnclaimedOrbView, 'source' | 'roundId'>): string {
+  return orb.source === 'mechanic' ? '奖励法球' : orb.source === 'family' ? '家人搞钱奖励' : `${orb.roundId} 野怪掉落`;
+}
+/**
+ * What happens to heroes a full bench cannot take. Family claims stop there and keep the rest in the orb
+ * (claimFamilyOrb); other orbs sell the overflow at its price. Null when the orb holds no hero.
+ */
+export function orbOverflowHint(orb: Pick<UnclaimedOrbView, 'source' | 'entries'>): string | null {
+  if (!orb.entries.some(payload => payload.kind === 'unit')) return null;
+  return orb.source === 'family' ? '备战席放不下的英雄留在法球里，腾出位置后可再领取' : '备战席放不下的英雄按原售价自动出售';
+}
+
 export class OrbDock {
   private key = '';
   /** Receipt ids already shown; null until the first state is seen, so a reload or a resume does not replay old results. */
@@ -160,7 +173,7 @@ export class OrbDock {
     button.type = 'button'; button.dataset.debug = `orb-claim:${orb.orbId}`; button.dataset.tier = orb.tier; button.dataset.source = orb.source;
     if (orb.queued) button.dataset.queued = 'true';
     if (this.opening.has(orb.orbId)) button.classList.add('orb-opening');
-    const tier = ORB_TIER_TEXT[orb.tier] ?? orb.tier, source = orb.source === 'mechanic' ? '奖励法球' : `${orb.roundId} 野怪掉落`;
+    const tier = ORB_TIER_TEXT[orb.tier] ?? orb.tier, source = orbSourceText(orb);
     button.disabled = orb.queued || context.locked;
     const hint = orb.queued ? '已排队 · 战斗结束后结算' : context.locked ? '当前不能领取' : context.inBattle ? '点击领取 · 战斗中领取会在战后结算' : '点击领取';
     button.setAttribute('aria-label', `${tier} · ${source} · ${orb.entries.map(orbPayloadName).join('、')} · ${hint}`);
@@ -175,7 +188,8 @@ export class OrbDock {
       const row = element('li'); row.insertAdjacentHTML('afterbegin', payloadLabel(payload).icon); row.append(element('span', orbPayloadName(payload))); entries.append(row);
     }
     tip.append(entries, element('span', hint, 'orb-tip-hint'));
-    if (orb.entries.some(payload => payload.kind === 'unit')) tip.append(element('span', '备战席放不下的英雄按原售价自动出售', 'orb-tip-hint'));
+    const overflow = orbOverflowHint(orb);
+    if (overflow) tip.append(element('span', overflow, 'orb-tip-hint'));
     button.append(tip);
     button.addEventListener('click', () => {
       if (button.disabled) return;

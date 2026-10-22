@@ -8,7 +8,7 @@ import { createMatch } from '../../src/server-entry';
 import type { LootReceipt } from '../../src/simulation/m8/contracts';
 import { RemoteSession } from '../../src/rendering/online/remote-session';
 import type { GameClient, WireCommand } from '../../src/rendering/online/protocol';
-import { orbPayloadName, orbReceiptText, orbVariant, readOrbClaimReceipts, readPublicOrbs, readUnclaimedOrbs } from '../../src/rendering/online/orb-dock';
+import { orbOverflowHint, orbPayloadName, orbReceiptText, orbSourceText, orbVariant, readOrbClaimReceipts, readPublicOrbs, readUnclaimedOrbs } from '../../src/rendering/online/orb-dock';
 
 function recordingClient() {
   const sent: unknown[] = [];
@@ -82,5 +82,20 @@ describe('v15 orb display fields', () => {
     expect(readPublicOrbs({ seatId: 's1', orbs: { count: 2, tiers: ['gray', 'gold'] } })).toEqual({ count: 2, tiers: ['gray', 'gold'] });
     expect(readPublicOrbs({ seatId: 's1' })).toBeNull();
     expect(readPublicOrbs({ seatId: 's1', orbs: { count: '2' } })).toBeNull();
+  });
+});
+
+describe('orb source wording', () => {
+  const unit = { kind: 'unit', definitionId: 'jinx', starLevel: 1, quantity: 1 } as const;
+  const gold = { kind: 'gold', quantity: 3 } as const;
+  it('names family reward orbs as family rewards, not a round drop', () => {
+    expect(orbSourceText({ source: 'family', roundId: '3-2' })).toBe('家人搞钱奖励');
+    expect(orbSourceText({ source: 'mechanic', roundId: '3-2' })).toBe('奖励法球');
+    expect(orbSourceText({ source: 'pve', roundId: '1-3' })).toBe('1-3 野怪掉落');
+  });
+  it('says a full bench keeps family heroes in the orb and sells the overflow of other orbs', () => {
+    expect(orbOverflowHint({ source: 'family', entries: [unit] })).toBe('备战席放不下的英雄留在法球里，腾出位置后可再领取');
+    expect(orbOverflowHint({ source: 'pve', entries: [unit] })).toBe('备战席放不下的英雄按原售价自动出售');
+    expect(orbOverflowHint({ source: 'family', entries: [gold] })).toBeNull();
   });
 });

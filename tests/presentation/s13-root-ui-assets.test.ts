@@ -71,6 +71,22 @@ describe('root UI manifest path containment', () => {
     expect(load.image.mock.calls.some(([key]) => key === assets.championTextureKey(TRAIT))).toBe(false);
   });
 
+  it('registers augment icons for ids the bundle lacks, keeps bundled icons and never preloads them as portraits', async () => {
+    const display = await import('../../src/presentation/augment-display');
+    const { S13_AUGMENT_ASSETS } = await import('../../src/presentation/s13-augment-asset-manifest');
+    const bundled = S13_AUGMENT_ASSETS[0]!.id;
+    expect(display.augmentIconUrl('synthetic-augment')).toBeNull();
+    expect(display.augmentIconOrBadgeHtml('synthetic-augment', 20)).toContain('augment-badge');
+    assets.registerRootUiAssets(ROOT, { assets: [entry('icons/aug.png', 'synthetic-augment', 'augment'), entry('icons/aug-bundled.png', bundled, 'augment')] });
+    expect(display.augmentIconUrl('synthetic-augment')).toBe(`${ROOT}icons/aug.png`);
+    expect(display.augmentIconOrBadgeHtml('synthetic-augment', 20)).toContain(`src="${ROOT}icons/aug.png"`);
+    expect(display.augmentIconUrl(bundled)).not.toContain(ROOT);
+    expect(assets.s13AssetUrl('champion', 'synthetic-augment')).toBeNull();
+    const { scene, load } = sceneStub();
+    assets.loadS13Portraits(scene, vi.fn());
+    expect(load.image.mock.calls.some(([key]) => key === assets.championTextureKey('synthetic-augment'))).toBe(false);
+  });
+
   it('does not replace an earlier valid entry with a rejected duplicate or register item entries', () => {
     assets.registerRootUiAssets(ROOT, { assets: [entry('icons/hero.png'), entry('../escape.png'), entry('icons/item.png', 'synthetic-item', 'item')] });
     expect(assets.s13AssetUrl('champion', HERO)).toBe(`${ROOT}icons/hero.png`);
