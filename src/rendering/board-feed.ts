@@ -1,9 +1,9 @@
-import type { MelSaveReceipt } from './mel-save-feedback';
 /**
  * Bridge between the 2D BoardScene and the optional 3D layer (?render=3d). Without a subscriber every publish is a
  * single boolean check, so the default 2D path builds nothing. Frames and events flow out read-only; input flows back
  * only through BoardControls, which BoardScene implements with its own 2D gesture code and the same session commands.
  */
+import type { MelSaveReceipt } from './mel-save-feedback';
 import type { DisplayCombatEvent } from '../presentation/combat-display';
 import type { PublicBoard, PublicOrbSummary } from '../server/protocol';
 import type { LegendWalk, LegendWalkRequest } from '../server/legend-motion';
