@@ -11,9 +11,16 @@ import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Sphere, Vector3, typ
 /** A drawn champion may be at most this many times the reference height (the plan's 1.6 × 92). */
 export const MAX_HEIGHT_RATIO = 1.6;
 
+/**
+ * Playtest 10-22 art overrides of the manifest unitScale (Ekko read too tall, Vi too big next to the rest of the cast).
+ * Candidates pending the user's confirmation; they replace the official skinScale only for models the root ships.
+ */
+export const UNIT_SCALE_OVERRIDES: Readonly<Record<string, number>> = Object.freeze({ ekko: 0.86, vi: 0.82 });
+
 /** The manifest's unitScale for a model when it is a positive finite number, else null (JSON from an asset root). */
 export function readUnitScale(models: Readonly<Record<string, unknown>> | undefined, id: string): number | null {
   const entry = models && Object.hasOwn(models, id) ? models[id] : undefined;
+  if (entry && Object.hasOwn(UNIT_SCALE_OVERRIDES, id)) return UNIT_SCALE_OVERRIDES[id]!;
   const value = entry && typeof entry === 'object' ? (entry as { unitScale?: unknown }).unitScale : undefined;
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 }
