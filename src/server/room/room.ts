@@ -491,11 +491,17 @@ export class Room {
       if (stream && !stream.done && seat.match.preparation.units.some(u => u.id === command.unitId && u.location.kind === 'board')) {
         const effectiveTick = this.nextBattleInputTick;
         if (effectiveTick === null || effectiveTick !== stream.nextEffectiveTick) return { ok: false, reason: 'wrong-phase', state: seat.match };
+        // Staged on the stream before the commit below; nothing between here and commitSeat can refuse the command, so the
+        // queued input and the published seat state always land together.
         try {
           const staged = stream.queueEquipment({ kind: 'equipment', seq: this.battleEquipmentSeq + 1, effectiveTick, seatId,
             itemId: command.itemId, unitId: command.unitId, slot: command.slot }, seat.match, applied.state);
           applied = { ...applied, state: staged };
-        } catch (error) { return { ok: false, reason: error instanceof Error && error.message === 'battle-unit-unavailable' ? 'battle-unit-unavailable' : 'battle-input-invalid', state: seat.match }; }
+        } catch (error) {
+          // Rules refusals (BattleValidationError is a RangeError) are the player's; anything else is an internal fault.
+          if (!(error instanceof RangeError)) { this.failLive(seatId, error); return { ok: false, reason: 'wrong-phase', state: seat.match }; }
+          return { ok: false, reason: error.message === 'battle-unit-unavailable' ? 'battle-unit-unavailable' : 'battle-input-invalid', state: seat.match };
+        }
         this.battleEquipmentSeq++;
       }
     }
