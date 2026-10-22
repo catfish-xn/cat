@@ -100,7 +100,10 @@ export function toPublicOpeningEncounter(room: Pick<RoomState, 'seats' | 'pool'>
   if (cached !== undefined) return cached;
   const seat = room.seats.find(candidate => candidate.match.openingEncounter.mode === 'shared');
   if (!seat) return null;
-  const view = readOpeningEncounterView(seat.match, context);
+  // Broadcast path: never throw here. The room validates the same view before it publishes a new pool
+  // (Room.openingViewFault), so a failure seen here is already a room fault and the view is simply left out.
+  let view: OpeningEncounterView | null;
+  try { view = readOpeningEncounterView(seat.match, context); } catch { return null; }
   if (view) publicOpening.set(context, view);
   return view;
 }

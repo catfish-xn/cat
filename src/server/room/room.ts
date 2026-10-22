@@ -23,6 +23,7 @@ import {
 import { CombatStream, type CombatStreamView } from './combat-stream';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import { toCombatReplayFor } from './projection';
+import { readOpeningEncounterView } from '../../server-entry';
 import type { CombatReplayTick } from '../../server-entry';
 import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type LiveCatchUp } from './live-bank';
 import { useSeatConsumable } from './consumables';
@@ -1710,6 +1711,8 @@ export class Room {
       const seatRevision = seat.seatRevision + 1;
       return { ...seat, match, seatRevision, serverEvents: { seatRevision, events: entered.get(seat.seatId) ?? [] } };
     });
+    const viewFault = this.openingViewFault(batch.pool, seats);
+    if (viewFault) return this.fail({ kind: 'phase-mismatch', detail: viewFault });
     if (batch.openingResolution) return this.publishOpeningResolution(batch.pool, seats, batch.openingResolution);
     this.replace({ ...this.current, pool: batch.pool, poolRevision: batch.pool.revision, seats });
     this.enterRound();
@@ -1723,6 +1726,14 @@ export class Room {
    * re-damaged here. Everything is one publication; a batch that ends the match also publishes the final ranking (this
    * batch's eliminations and survivor, plus the ranks fixed earlier), the terminal orb forfeits and the `ended` phase in it.
    */
+  /** The public opening view must authenticate against the new pool before it is published (the projection never throws). */
+  private openingViewFault(pool: SharedPoolState, seats: readonly SeatState[]): string | null {
+    const seat = seats.find(candidate => candidate.match.openingEncounter.mode === 'shared');
+    if (!seat) return null;
+    try { readOpeningEncounterView(seat.match, pool.openingEncounter); return null; }
+    catch (error) { return `opening encounter view: ${error instanceof Error ? error.message : String(error)}`; }
+  }
+
   private publishOpeningResolution(pool: SharedPoolState, advanced: readonly SeatState[], resolution: OpeningRoundResolution): void {
     const eliminated = new Map(resolution.eliminated.map(entry => [entry.seatId, entry.rank] as const));
     const survivors = new Map(resolution.survivorRanks.map(entry => [entry.seatId, entry.rank] as const));
@@ -1734,9 +1745,12 @@ export class Room {
       return { ...seat, hp: 0, alive: false, rank, eliminatedRound: seat.match.round };
     });
     const unknown = [...eliminated.keys(), ...survivors.keys()].find(seatId => !before.has(seatId));
-    const alive = seats.filter(seat => seat.alive);
-    if (unknown !== undefined || alive.some(seat => seat.hp <= 0) || seats.some(seat => !seat.alive && before.has(seat.seatId) && !eliminated.has(seat.seatId))) {
-      return this.fail({ kind: 'phase-mismatch', detail: `opening resolution disagrees with the seats${unknown ? ` (${unknown})` : ''}` });
+    // Cross-check against the rules' own seat states: a previously alive seat is out (HP gone or marked eliminated)
+    // exactly when the batch lists it as eliminated.
+    const out = (seat: SeatState) => seat.match.playerHp <= 0 || seat.match.multiplayer?.status === 'eliminated';
+    const disagrees = advanced.find(seat => before.has(seat.seatId) && out(seat) !== eliminated.has(seat.seatId));
+    if (unknown !== undefined || disagrees) {
+      return this.fail({ kind: 'phase-mismatch', detail: `opening resolution disagrees with the seats (${unknown ?? disagrees!.seatId})` });
     }
     if (!resolution.ended) {
       this.replace({ ...this.current, pool, poolRevision: pool.revision, seats });
