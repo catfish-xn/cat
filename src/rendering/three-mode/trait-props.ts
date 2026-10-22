@@ -52,7 +52,7 @@ export interface TraitProps {
   /** Acceptance read (?debug3d). */
   debug(): {
     chest: { shown: boolean; glow: number; label: string; opening: boolean; model: boolean; rise: number };
-    flask: { shown: boolean; fill: number; target: number; offer: boolean; model: boolean };
+    flask: { shown: boolean; fill: number; target: number; offer: boolean; model: boolean; label: string };
     bursts: number;
   };
   dispose(): void;
@@ -95,28 +95,36 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   chestMotion.add(chestStand); chestBody.add(chestMotion); chestRoot.add(chestBody); scene.add(chestRoot);
   const chest: Prop = { root: chestRoot, body: chestBody, stand: chestStand, lease: null, motion: chestMotion, mixer: null, loading: false, disposed: false };
 
-  // A billboard outside the moving body: the total stays readable during a payout.
-  let label = '';
-  let labelView: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null = null;
-  const showLabel = (text: string) => {
-    const changed = label !== text;
-    label = text; // Also available in headless tests without a document/canvas.
-    if (!labelView) {
-      const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
-      if (!canvas?.getContext('2d')) return;
-      canvas.width = 192; canvas.height = 80;
-      const texture = new CanvasTexture(canvas);
-      const sprite = new Sprite(new SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, transparent: true }));
-      sprite.name = 'render3d-conqueror-stacks'; sprite.scale.set(48, 20, 1); sprite.renderOrder = 1003;
-      chestRoot.add(sprite); labelView = { canvas, texture, sprite };
-    } else if (!changed) return;
-    const draw = labelView.canvas.getContext('2d')!;
-    draw.clearRect(0, 0, 192, 80);
-    draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill();
-    draw.fillStyle = GOLD; draw.font = 'bold 48px sans-serif'; draw.textAlign = 'center'; draw.textBaseline = 'middle';
-    draw.fillText(text, 96, 42, 174); labelView.texture.needsUpdate = true;
-    labelView.sprite.position.y = (chest.lease ? CHEST_MODEL_HEIGHT : FLAG_HEIGHT) + 16;
+  /** A count billboard outside a prop's moving body, so the total stays readable during a payout or a bob. */
+  interface CountLabel { text: string; view: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null; show(text: string): void; place(y: number): void; dispose(): void }
+  const countLabel = (root: Group, name: string, color: string, height: () => number): CountLabel => {
+    const entry: CountLabel = {
+      text: '', view: null,
+      show(text) {
+        const changed = entry.text !== text;
+        entry.text = text; // Also available in headless tests without a document/canvas.
+        if (!entry.view) {
+          const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
+          if (!canvas?.getContext('2d')) return;
+          canvas.width = 192; canvas.height = 80;
+          const texture = new CanvasTexture(canvas);
+          const sprite = new Sprite(new SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, transparent: true }));
+          sprite.name = name; sprite.scale.set(48, 20, 1); sprite.renderOrder = 1003;
+          root.add(sprite); entry.view = { canvas, texture, sprite };
+        } else if (!changed) return;
+        const draw = entry.view.canvas.getContext('2d')!;
+        draw.clearRect(0, 0, 192, 80);
+        draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill();
+        draw.fillStyle = color; draw.font = 'bold 48px sans-serif'; draw.textAlign = 'center'; draw.textBaseline = 'middle';
+        draw.fillText(text, 96, 42, 174); entry.view.texture.needsUpdate = true;
+        entry.view.sprite.position.y = height();
+      },
+      place(y) { if (entry.view) entry.view.sprite.position.y = y; },
+      dispose() { entry.view?.texture.dispose(); entry.view?.sprite.material.dispose(); entry.view = null; },
+    };
+    return entry;
   };
+  const chestLabel = countLabel(chestRoot, 'render3d-conqueror-stacks', GOLD, () => (chest.lease ? CHEST_MODEL_HEIGHT : FLAG_HEIGHT) + 16);
 
   // --- flask -------------------------------------------------------------------------------------------------------
   const flaskRoot = new Group(); flaskRoot.name = 'render3d-shimmer-flask'; flaskRoot.visible = false;
@@ -139,6 +147,8 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   }
   const flaskBody = new Group(); flaskBody.add(flaskStand); flaskRoot.add(flaskBody); scene.add(flaskRoot);
   const flask: Prop = { root: flaskRoot, body: flaskBody, stand: flaskStand, lease: null, motion: null, mixer: null, loading: false, disposed: false };
+  // 微光 / next black market over the flask, as the 14.24b board shows it (e.g. 510/600); the total once the last market is past.
+  const flaskLabel = countLabel(flaskRoot, 'render3d-shimmer-count', '#f0dcff', () => FLASK_HEIGHT + 14);
   // Ground auras (outside the stand-ins, so a model keeps them): gold toward the next chest, violet with the 微光 level.
   const auraGeometry = own(new CircleGeometry(AURA_RADIUS, 32).rotateX(-Math.PI / 2));
   const flaskAuraMaterial = own(new MeshStandardMaterial({ color: SHIMMER, emissive: SHIMMER, emissiveIntensity: 0, transparent: true, opacity: 0, depthWrite: false }));
@@ -157,7 +167,8 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       // A wrapper takes the procedural motion, so the fitted model keeps its own scale and foot offset.
       if (!prop.motion) { prop.motion = new Group(); prop.body.add(prop.motion); }
       prop.motion.add(fitHeight(lease.scene, height));
-      if (prop === chest && labelView) labelView.sprite.position.y = CHEST_MODEL_HEIGHT + 16;
+      if (prop === chest) chestLabel.place(CHEST_MODEL_HEIGHT + 16);
+      if (prop === flask) flaskLabel.place(FLASK_HEIGHT + 14);
       const idle = lease.animations.find(clip => /idle/i.test(clip.name)) ?? lease.animations[0];
       if (idle) { prop.mixer = new AnimationMixer(lease.scene); prop.mixer.clipAction(idle).play(); }
     }).catch(() => { /* keeps the stand-in */ });
@@ -218,17 +229,18 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     chestRoot.visible = !!conquest;
     if (conquest) {
       tryModel(chest, CHEST_MODEL, CHEST_MODEL_HEIGHT);
-      showLabel(conquestLabel(conquest));
+      chestLabel.show(conquestLabel(conquest));
       const done = conquest.next === null;
       glow = done ? 0 : Math.min(1, Math.max(0, (conquest.stacks - conquest.from) / Math.max(1, conquest.next! - conquest.from)));
       if (seeded && conquest.opened > (last?.conquest?.opened ?? conquest.opened)) {
         openHold = OPEN_HOLD_SECONDS;
         burst(CHEST_OPEN_EFFECT, spots.chest.clone().setY(FLAG_HEIGHT / 2), GOLD);
       }
-    } else { label = ''; openHold = 0; }
+    } else { chestLabel.text = ''; openHold = 0; }
     flaskRoot.visible = !!shimmer;
     if (shimmer) {
       tryModel(flask, FLASK_MODEL, FLASK_HEIGHT);
+      flaskLabel.show(shimmer.next === null ? String(shimmer.value) : `${shimmer.value}/${shimmer.next}`);
       fillTarget = shimmer.next === null ? 1 : Math.min(1, shimmer.value / shimmer.next);
       const before = last?.shimmer;
       if (seeded && shimmer.offer && !before?.offer) burst(FLASK_OFFER_EFFECT, spots.flask.clone().setY(FLASK_HEIGHT), SHIMMER);
@@ -236,7 +248,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       if (seeded && before?.offer && !shimmer.offer && shimmer.value < before.value) burst(FLASK_TAKE_EFFECT, spots.flask.clone().setY(LIQUID_TOP), SHIMMER);
       offer = shimmer.offer;
       if (!seeded) fill = fillTarget;
-    } else offer = false;
+    } else { offer = false; flaskLabel.text = ''; }
     last = next; seeded = true;
   };
 
@@ -293,11 +305,11 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   return {
     layout, frame: onFrame, update,
     debug: () => ({
-      chest: { shown: chestRoot.visible, glow, label, opening: openHold > 0, model: !!chest.lease, rise: chest.motion?.position.y ?? 0 },
-      flask: { shown: flaskRoot.visible, fill, target: fillTarget, offer, model: !!flask.lease },
+      chest: { shown: chestRoot.visible, glow, label: chestLabel.text, opening: openHold > 0, model: !!chest.lease, rise: chest.motion?.position.y ?? 0 },
+      flask: { shown: flaskRoot.visible, fill, target: fillTarget, offer, model: !!flask.lease, label: flaskLabel.text },
       bursts: bursts.size,
     }),
-    dispose() { labelView?.texture.dispose(); labelView?.sprite.material.dispose(); labelView = null; for (const entry of [...bursts]) endBurst(entry); dropProp(chest); dropProp(flask); },
+    dispose() { chestLabel.dispose(); flaskLabel.dispose(); for (const entry of [...bursts]) endBurst(entry); dropProp(chest); dropProp(flask); },
   };
 }
 
