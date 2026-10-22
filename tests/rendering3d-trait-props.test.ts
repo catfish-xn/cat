@@ -70,7 +70,9 @@ describe('3D trait props: Conqueror chest and Shimmer flask', () => {
     const loadEffect = (id: string) => { loaded.push(id); return Promise.resolve({ object: new Group(), finished: false, update() {}, dispose() {} } as unknown as ParticleEffect); };
     const { props, step } = setup({ loadEffect });
     props.frame(frame({ shimmer: shimmer(150, 200) }));
-    expect(props.debug().flask).toMatchObject({ shown: true, fill: 0.75, offer: false });
+    expect(props.debug().flask).toMatchObject({ shown: true, fill: 0.75, offer: false, label: '150/200' });
+    props.frame(frame({ shimmer: shimmer(820, null) })); expect(props.debug().flask.label).toBe('820');
+    props.frame(frame({ shimmer: shimmer(150, 200) }));
     props.frame(frame({ shimmer: shimmer(200, 300, true) }));
     expect(props.debug().flask.offer).toBe(true);
     // A skip keeps the shimmer: no take effect.
