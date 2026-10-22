@@ -10,7 +10,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 172431,
+      "elapsedMs": 110524,
       "log": "artifacts/v20-live-combat-recording/record-release.log"
     },
     {
@@ -20,7 +20,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 145523,
+      "elapsedMs": 94950,
       "log": "artifacts/v20-live-combat-recording/record-herald.log"
     },
     {
@@ -32,7 +32,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 10199,
+      "elapsedMs": 5537,
       "log": "artifacts/v20-live-combat-recording/record-inputs.log"
     },
     {
@@ -44,7 +44,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 57077,
+      "elapsedMs": 36999,
       "log": "artifacts/v20-live-combat-recording/record-live-reveal.log"
     },
     {
@@ -55,7 +55,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 20430,
+      "elapsedMs": 11699,
       "log": "artifacts/v20-live-combat-recording/record-transfer.log"
     },
     {
@@ -66,7 +66,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 19525,
+      "elapsedMs": 11794,
       "log": "artifacts/v20-live-combat-recording/check-transfer.log"
     },
     {
@@ -78,7 +78,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 10107,
+      "elapsedMs": 5572,
       "log": "artifacts/v20-live-combat-recording/check-inputs.log"
     },
     {
@@ -88,7 +88,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 151214,
+      "elapsedMs": 95898,
       "log": "artifacts/v20-live-combat-recording/check-herald.log"
     },
     {
@@ -99,7 +99,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 4141,
+      "elapsedMs": 1717,
       "log": "artifacts/v20-live-combat-recording/check-history.log"
     },
     {
@@ -111,7 +111,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 56671,
+      "elapsedMs": 36266,
       "log": "artifacts/v20-live-combat-recording/check-live-reveal.log"
     },
     {
@@ -121,7 +121,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 5785,
+      "elapsedMs": 2887,
       "log": "artifacts/v20-live-combat-recording/compare-digests.log"
     }
   ],

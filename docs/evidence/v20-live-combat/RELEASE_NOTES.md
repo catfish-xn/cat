@@ -37,3 +37,5 @@ node scripts/update-content-identities.cjs --check
 验收的命令、计数、环境失败分类与限制见 [VALIDATION](VALIDATION.md) 和 [epoch-verification.json](epoch-verification.json)。
 
 阶段2战中安装尚未实现；20ms预算只在tick之间让出，单tick、初始化及终局规划不能抢占。没有新增服务器进程重启恢复或数据库。
+
+合入 #390（multiplayer 058ad0c6）后重录：所有录像、golden、Herald 原始字节不变；仅 `src/simulation/combat-replay-view.ts`（#390 新增 recorder fork）的源码指纹变化，相应更新 input/live-reveal/release 审计、Herald manifest 的 sourceSha256 和 epoch-verification.json。父 epoch 仍为 v20-xp68，baseline-commit 仍为 db04d196。
