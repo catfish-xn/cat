@@ -1,0 +1,175 @@
+{
+  "focused": [
+    {
+      "report": "artifacts/v20-live-combat-tests/core-final.json",
+      "files": 8,
+      "passed": 132,
+      "failed": 0,
+      "pending": 0,
+      "testFiles": [
+        "tests/chem-baron-fix.test.ts",
+        "tests/live-combat-inputs.test.ts",
+        "tests/v20-traits.test.ts",
+        "tests/server/combat-stream-client.test.ts",
+        "tests/server/combat-stream.test.ts",
+        "tests/server/live-bank.test.ts",
+        "tests/server/net/combat-stream-memory.test.ts",
+        "tests/server/net/messages.test.ts"
+      ]
+    },
+    {
+      "report": "artifacts/v20-live-combat-tests/related.json",
+      "files": 19,
+      "passed": 380,
+      "failed": 0,
+      "pending": 0,
+      "testFiles": [
+        "tests/b8-resumable-battle.test.ts",
+        "tests/c19-missed-pulse.test.ts",
+        "tests/content-identity-constants.test.ts",
+        "tests/g2-3-hook-failures.test.ts",
+        "tests/g2-3-integration.test.ts",
+        "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+        "tests/g2-4a-crown-history.test.ts",
+        "tests/m6-persistence.test.ts",
+        "tests/m8-b9-compatibility.test.ts",
+        "tests/match-contract.test.ts",
+        "tests/t13-identity.test.ts",
+        "tests/t2-two-sided-battle.test.ts",
+        "tests/t3-round-settlement.test.ts",
+        "tests/t5r-combat-replay.test.ts",
+        "tests/v17-orb-combo.test.ts",
+        "tests/v19-part2.test.ts",
+        "tests/server/replay-client.test.ts",
+        "tests/server/two-sided-resolver.test.ts",
+        "tests/server/net/watch-stream.test.ts"
+      ]
+    }
+  ],
+  "focusedTotals": {
+    "files": 27,
+    "passed": 512,
+    "failed": 0
+  },
+  "typecheck": {
+    "command": [
+      "npm",
+      "run",
+      "typecheck"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 62.04,
+    "log": "artifacts/v20-live-combat-tests/typecheck.log"
+  },
+  "identityCheck": {
+    "contentDigest": "fnv1a32-utf16:d0e9375f",
+    "lootReplayDigest": "fnv1a32-utf16:0bd44c5e",
+    "mode": "--check"
+  },
+  "epochCheck": {
+    "command": [
+      "node",
+      "scripts/verify-v20-live-combat-epoch.cjs"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 606.65,
+    "log": "artifacts/v20-live-combat-tests/epoch-check.log"
+  },
+  "epochSteps": 11,
+  "fast": {
+    "files": 492,
+    "passed": 6435,
+    "failed": 55,
+    "pending": 0,
+    "environmentListenFailures": 48,
+    "environmentPipeFailures": 7,
+    "timingFailures": 0,
+    "ruleAssertionFailures": 0,
+    "shardRuns": [
+      {
+        "shard": "1/4",
+        "command": [
+          "node",
+          "node_modules/vitest/vitest.mjs",
+          "run",
+          "--project",
+          "fast",
+          "--configLoader",
+          "runner",
+          "--shard=1/4",
+          "--maxWorkers=1",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile=artifacts/v20-live-combat-tests/shard-1.json"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 893.63,
+        "log": "artifacts/v20-live-combat-tests/shard-1.log",
+        "report": "artifacts/v20-live-combat-tests/shard-1.json"
+      },
+      {
+        "shard": "2/4",
+        "command": [
+          "node",
+          "node_modules/vitest/vitest.mjs",
+          "run",
+          "--project",
+          "fast",
+          "--configLoader",
+          "runner",
+          "--shard=2/4",
+          "--maxWorkers=1",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile=artifacts/v20-live-combat-tests/shard-2.json"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 1215.77,
+        "log": "artifacts/v20-live-combat-tests/shard-2.log",
+        "report": "artifacts/v20-live-combat-tests/shard-2.json"
+      },
+      {
+        "shard": "3/4",
+        "command": [
+          "node",
+          "node_modules/vitest/vitest.mjs",
+          "run",
+          "--project",
+          "fast",
+          "--configLoader",
+          "runner",
+          "--shard=3/4",
+          "--maxWorkers=1",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile=artifacts/v20-live-combat-tests/shard-3.json"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 1480.38,
+        "log": "artifacts/v20-live-combat-tests/shard-3.log",
+        "report": "artifacts/v20-live-combat-tests/shard-3.json"
+      },
+      {
+        "shard": "4/4",
+        "command": [
+          "node",
+          "node_modules/vitest/vitest.mjs",
+          "run",
+          "--project",
+          "fast",
+          "--configLoader",
+          "runner",
+          "--shard=4/4",
+          "--maxWorkers=1",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile=artifacts/v20-live-combat-tests/shard-4.json"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 723.95,
+        "log": "artifacts/v20-live-combat-tests/shard-4.log",
+        "report": "artifacts/v20-live-combat-tests/shard-4.json"
+      }
+    ]
+  }
+}

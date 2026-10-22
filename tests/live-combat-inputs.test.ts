@@ -4,6 +4,8 @@ import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, s
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { CombatStream } from '../src/server/room/combat-stream';
 import type { BattleInput } from '../src/server/room/types';
+import { createG23Progress, replayG23Economy, validateG23Progress } from '../src/simulation/g2-3-match-progress';
+import { advanceG23Economy, decideG23Market, type G23BattleFacts } from '../src/simulation/g2-3-economy';
 
 function army(seed: number): MatchState {
   const state = createMatch(seed), round = getCatalogRoundById('2-1');
@@ -23,7 +25,7 @@ function inputs(seed: number) {
 }
 const json = (value: unknown) => JSON.stringify(value);
 
-describe('v20-traits live tick determinism and phase-2 input seam', () => {
+describe('v20-live-combat live tick determinism and phase-2 input seam', () => {
   it.each([7, 42, 991])('seed %i: Quickstriker/Firelight/teamup bytes match full advance and small slices', seed => {
     const { input, envelope } = inputs(seed), full = resolveTwoSidedBattle(input, 1201);
     for (const traitId of ['quickstriker', 'firelight', 'geniuses'])
@@ -50,6 +52,61 @@ describe('v20-traits live tick determinism and phase-2 input seam', () => {
     expect(json(stream.result!.battle)).toBe(json(full));
     const view = stream.view('a')!;
     expect(json({ initial: view.initial, ticks: view.ticks, terminal: view.terminal })).toBe(json(fullReplay));
+  }, 60_000);
+
+  it.each([9, 42, 991])('seed %i: Chem-Baron battle, N-of-three rewards, keep and economy RNG match full resolution bytes', seed => {
+    const chemArmy = (value: number, starLevel: 1 | 3): MatchState => {
+      const base = army(value);
+      return { ...base, augments: [], preparation: { ...base.preparation,
+        units: ['singed', 'renata', 'renni', 'smeech', 'silco', 'sevika'].map((definitionId, i) => ({
+          id: `unit-${i + 1}`, definitionId, team: 'player', starLevel,
+          location: { kind: 'board', cell: { col: i, row: 4 } },
+        })) } };
+    };
+    const a = chemArmy(seed, 1), b = chemArmy(seed + 1, 3), battleId = `chem-stream:${seed}`;
+    const input = compileBattle(snapshotForBattle(a, 'a'), snapshotForBattle(b, 'b'), seed, { battleId });
+    expect(input.strategy.traits.some(t => t.traitId === 'chem-baron' && t.tier === 6)).toBe(true);
+    const full = resolveTwoSidedBattle(input, 1201), envelope: BattleInput = {
+      battleId, roomId: 'chem', round: a.round, roundId: a.roundDefinitionId, roundKind: 'pvp', roomRevision: 1,
+      battleSeed: seed, maxSteps: 1201, mirrorOf: null, seats: [{ seatId: 'a', state: a }, { seatId: 'b', state: b }],
+    };
+    const stream = new CombatStream(envelope);
+    while (!stream.done) stream.advancePvp();
+    expect(json(stream.result!.battle)).toBe(json(full));
+    const oldProposals = Object.values(proposeSettlement(full)), liveProposals = Object.values(proposeSettlement(stream.result!.battle));
+    expect(json(liveProposals)).toBe(json(oldProposals));
+    let prefix = createG23Progress(seed);
+    for (let round = 1; round <= 3; round++) {
+      const facts: G23BattleFacts = { battleId: `prefix:${round}`, round, roundKind: 'pvp', result: 'loss',
+        conquerorTier: 0, conquestTakedowns: [], chemBaronTier: 7, alliedDeaths: 0, rumbleStar: 0, highRollerGold: 0 };
+      prefix = advanceG23Economy(prefix, facts).progress;
+    }
+    prefix = decideG23Market(prefix, prefix.chem.offer!.id, false, 3);
+    let offers = 0;
+    for (let i = 0; i < oldProposals.length; i++) {
+      const old = advanceG23Economy(prefix, oldProposals[i].g23Facts!).progress;
+      const live = advanceG23Economy(prefix, liveProposals[i].g23Facts!).progress;
+      expect(json(live)).toBe(json(old));
+      const offer = old.chem.offer;
+      if (!offer) continue;
+      offers++;
+      expect(offer.optionIds).toHaveLength(3);
+      expect(new Set(offer.optionIds).size).toBe(3);
+      for (const optionId of offer.optionIds) {
+        const selected = decideG23Market(live, offer.id, true, a.round, optionId);
+        expect(json(selected)).toBe(json(decideG23Market(old, offer.id, true, a.round, optionId)));
+        expect(json(replayG23Economy(seed, selected.economyReceipts))).toBe(json(selected));
+        validateG23Progress(selected, seed, a.round);
+        expect(selected.chem.shimmer).toBe(0);
+        expect(selected.rewards.at(-1)!.id).toBe(offer.id);
+      }
+      const kept = decideG23Market(live, offer.id, false, a.round);
+      expect(json(kept)).toBe(json(decideG23Market(old, offer.id, false, a.round)));
+      expect(kept.chem.shimmer).toBe(old.chem.shimmer);
+      expect([kept.rngState, kept.rngDraws]).toEqual([old.rngState, old.rngDraws]);
+      validateG23Progress(kept, seed, a.round);
+    }
+    expect(offers, json({prefix: prefix.chem, facts: oldProposals.map(p => p.g23Facts)})).toBeGreaterThan(0);
   }, 60_000);
 
   it('rejects nonempty input before stepping, does not log a fictitious success, and can retry the same tick', () => {

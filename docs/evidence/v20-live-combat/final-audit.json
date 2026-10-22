@@ -1,0 +1,21 @@
+{
+  "historicalFiles": 253,
+  "protectedManifestUnchanged": true,
+  "recordingSourcesUnchanged": 364,
+  "conflictContentsResolved": true,
+  "readOnlyIndexUnmergedPaths": [
+    "docs/MATCH_CONTRACT.md",
+    "src/simulation/content/identity-constants.ts",
+    "src/simulation/m8/contracts.ts",
+    "src/simulation/m8/version.ts",
+    "tests/m6-integration-helper.ts",
+    "tests/m6-persistence.test.ts",
+    "tests/m6-replay.test.ts",
+    "tests/m8-b5-equipment-history.test.ts",
+    "tests/m8-b9-compatibility.test.ts"
+  ],
+  "diffCheckExitCode": 0,
+  "gitMetadataWritten": false,
+  "networkUsed": false,
+  "pushed": false
+}

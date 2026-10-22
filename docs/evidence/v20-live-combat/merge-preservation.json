@@ -1,0 +1,15 @@
+{
+  "incomingCommit": "2de5e26d088e4e86032bf571d51941c9b0ecd12f",
+  "streamCommit": "e472df6d235ab54e7b670e5e97ba965c6d61707e",
+  "sourceSha256": {
+    "src/rendering/board-feed.ts": "9bd5e7d271e51f38c543151ff8d923d1ed591769f8f332530b7cfee7b24061e7",
+    "src/rendering/three-mode/model-fit.ts": "a2002363d9f201275e37485263e6760c05c759182cc1f784474fca94179edc23",
+    "src/rendering/three-mode/model-warmup.ts": "90e6ca3cf31e92112b3d42b440a3c84c6e0fa27c81adba41c1c42d551f2ef60e",
+    "src/rendering/three-mode/placeholder-renderer.ts": "c9f5411b0e49f278191b02965f552ef878d1282ad5e7e712373b27faa1bc049a",
+    "src/server/room/combat-stream.ts": "9dda6f4fe83bf175c55abee941ba8c23be4f9235bd78ad0e77edc10b35a054d0",
+    "src/server/room/room.ts": "f48fee0ae43e2a5f8578c8222655281f478f8d9e5a161cecc58dc0552dcc1116",
+    "src/server/net/server.ts": "d6f5440d8f0d8796f449f0d7ba3b0adf45ebe4c5553f80e61f68970c439877e2",
+    "src/rendering/online/remote-session.ts": "9750d6b642eb3976fa026e6ff6d51f004fbd71aa3bc41f2485949b1665ba4079"
+  },
+  "unchanged": true
+}

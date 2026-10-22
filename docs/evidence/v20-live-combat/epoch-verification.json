@@ -1,0 +1,129 @@
+{
+  "baseCommit": "2de5e26d088e4e86032bf571d51941c9b0ecd12f",
+  "steps": [
+    {
+      "name": "record-release",
+      "args": [
+        "scripts/record-v20-live-combat-release.cjs",
+        "--baseline-commit=2de5e26d088e4e86032bf571d51941c9b0ecd12f",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 153527,
+      "log": "artifacts/v20-live-combat-recording/record-release.log"
+    },
+    {
+      "name": "record-herald",
+      "args": [
+        "tests/fixtures/record-v20-live-combat-herald.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 142213,
+      "log": "artifacts/v20-live-combat-recording/record-herald.log"
+    },
+    {
+      "name": "record-inputs",
+      "args": [
+        "scripts/record-v20-live-combat-inputs.cjs",
+        "--baseline-commit=2de5e26d088e4e86032bf571d51941c9b0ecd12f",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 9169,
+      "log": "artifacts/v20-live-combat-recording/record-inputs.log"
+    },
+    {
+      "name": "record-live-reveal",
+      "args": [
+        "scripts/record-v20-live-combat-live-reveal.cjs",
+        "--baseline-commit=2de5e26d088e4e86032bf571d51941c9b0ecd12f",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 48693,
+      "log": "artifacts/v20-live-combat-recording/record-live-reveal.log"
+    },
+    {
+      "name": "record-transfer",
+      "args": [
+        "scripts/record-v20-live-combat-transfer.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 17210,
+      "log": "artifacts/v20-live-combat-recording/record-transfer.log"
+    },
+    {
+      "name": "check-transfer",
+      "args": [
+        "scripts/record-v20-live-combat-transfer.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 18632,
+      "log": "artifacts/v20-live-combat-recording/check-transfer.log"
+    },
+    {
+      "name": "check-inputs",
+      "args": [
+        "scripts/record-v20-live-combat-inputs.cjs",
+        "--baseline-commit=2de5e26d088e4e86032bf571d51941c9b0ecd12f",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 9758,
+      "log": "artifacts/v20-live-combat-recording/check-inputs.log"
+    },
+    {
+      "name": "check-herald",
+      "args": [
+        "scripts/verify-m8-herald-fixtures.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 143175,
+      "log": "artifacts/v20-live-combat-recording/check-herald.log"
+    },
+    {
+      "name": "check-history",
+      "args": [
+        "scripts/v20-live-combat-fixture-audit.cjs",
+        "--baseline-commit=2de5e26d088e4e86032bf571d51941c9b0ecd12f"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3302,
+      "log": "artifacts/v20-live-combat-recording/check-history.log"
+    },
+    {
+      "name": "check-live-reveal",
+      "args": [
+        "scripts/record-v20-live-combat-live-reveal.cjs",
+        "--baseline-commit=2de5e26d088e4e86032bf571d51941c9b0ecd12f",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 55437,
+      "log": "artifacts/v20-live-combat-recording/check-live-reveal.log"
+    },
+    {
+      "name": "compare-digests",
+      "args": [
+        "scripts/compare-v20-live-combat-digests.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 5430,
+      "log": "artifacts/v20-live-combat-recording/compare-digests.log"
+    }
+  ],
+  "complete": true
+}

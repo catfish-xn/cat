@@ -135,7 +135,7 @@ it('removed summon identities cannot be reused by a later spawn in the same batt
  expect(spawnCombatUnit(removed.state,{...body,id:'new-summon:2'},source,base.tick).events).toMatchObject([{type:'unitSpawned',unitId:'new-summon:2'}]);
 });
 it('the itemless source black-market bundle still opens a skippable popup and pays its units only once',()=>{
- const initial=createMatch(42),p=readG23Progress(initial)!,offer={id:'g23:market:itemless:1',tier:1,optionId:'TFT13_Crime_LootA4',round:1};
+ const initial=createMatch(42),p=readG23Progress(initial)!,offer={id:'g23:market:itemless:1',tier:1,optionId:'TFT13_Crime_LootA4',optionIds:['TFT13_Crime_LootA4'],round:1};
  const state=writeG23Progress(initial,{...p,chem:{...p.chem,shimmer:100,offeredThrough:1,offer}});
  const opened=openG23Choice(state).state;
  expect(opened.pendingChoice).toMatchObject({kind:'blackMarket',offers:['TFT13_Crime_LootA4'],payload:{grantItem:false,timeoutOption:'@skip'}});

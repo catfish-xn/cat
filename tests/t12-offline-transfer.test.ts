@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {equipItem,startMatchCombat,stepMatch,serializeMatch,restoreMatch} from '../src/server-entry';
-import anchor from './fixtures/v20-traits-transfer-route.json';
+import anchor from './fixtures/v20-live-combat-transfer-route.json';
 import {accepted,transferPreparation} from './fixtures/t13-loot-public';
 it('T12 offline loot upgrade migrates latest equipment and restores overflow of a frozen donor item',async()=>{
   let state=await transferPreparation({equipGloves:false});

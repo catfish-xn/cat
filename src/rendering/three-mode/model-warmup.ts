@@ -5,7 +5,9 @@
  * A model shows in three steps: its bytes are read (the local store, or the network on a first visit), parsed (glTF,
  * meshopt, KTX2 transcoding) and uploaded to the GPU (textures, shader programs) on the first frame that draws it.
  * The warm-up runs the last two ahead of time for models a game is likely to show first (little legends, then the
- * cheapest shop tiers), one model per idle slot so the page never blocks, and never while a combat is shown. The parsed
+ * cheapest shop tiers, then what the room says comes next: my shop, the next opponent's board, the board I scout), one
+ * model per idle slot so the page never blocks, and never while a combat is shown. A model's animation envelope (the
+ * width its clips reach) is measured here too, in short slices, so buying a unit no longer measures it on the spot. The parsed
  * template stays in the ModelCache, so a piece that needs it later only clones it; its textures and programs are
  * already on the GPU.
  *
@@ -30,6 +32,11 @@ export interface WarmupContext {
   has(id: string): boolean;
   /** Puts a model's textures and shader programs on the GPU; resolves with the milliseconds it took. */
   upload(lease: ModelLease): Promise<number>;
+  /**
+   * Optional last step on the parsed, uploaded lease (the board's animation envelope, model-fit.ts), in slices that give
+   * the thread back. Resolves false when it stopped early (a combat began): the model is warmed again later.
+   */
+  prepare?(id: string, lease: ModelLease): Promise<boolean>;
   /** Runs `step` when the page is idle (requestIdleCallback, else a short timeout). */
   idle?(step: () => void): void;
   /** True while warming would compete with something on screen (a combat). */
@@ -55,6 +62,8 @@ const defaultIdle = (step: () => void) => {
 
 export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
   const queue: string[] = [], asked = new Set<string>(), done = new Set<string>();
+  /** The model being warmed now: a hint list naming it again does not queue it twice. */
+  let active: string | null = null;
   const idle = ctx.idle ?? defaultIdle;
   let running = false, closed = false, retry: ReturnType<typeof setTimeout> | undefined;
   // While a combat is shown the queue waits and looks again in half a second; cancel and dispose stop that at once.
@@ -70,6 +79,9 @@ export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
     if (!queue.length) { running = false; return; }
     if (ctx.busy()) { running = false; later(); return; }
     const id = queue.shift()!;
+    // Queued twice before (a cancel and a new list), or warmed meanwhile: skip it.
+    if (done.has(id)) { running = false; schedule(); return; }
+    active = id;
     try {
       const lease = await ctx.load(id);
       try {
@@ -77,18 +89,19 @@ export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
         if (closed || lease.placeholder) { if (!closed) done.add(id); return; }
         if (ctx.busy()) { queue.unshift(id); return; }
         await ctx.upload(lease);
+        if (ctx.prepare && !closed && !(await ctx.prepare(id, lease))) { if (!closed) queue.unshift(id); return; }
         done.add(id);
       } finally { lease.release(); }
     } catch { /* an unreadable model stays a placeholder; the piece will say so itself */ }
     finally {
-      running = false;
+      active = null; running = false;
       ctx.onProgress?.(asked.size - queue.length, asked.size);
       if (ctx.busy()) later(); else schedule();
     }
   };
   return {
     want(ids) {
-      for (const id of ids) if (!done.has(id) && !queue.includes(id) && ctx.has(id)) { asked.add(id); queue.push(id); }
+      for (const id of ids) if (!done.has(id) && id !== active && !queue.includes(id) && ctx.has(id)) { asked.add(id); queue.push(id); }
       schedule();
     },
     cancel() { queue.length = 0; clearTimeout(retry); retry = undefined; },

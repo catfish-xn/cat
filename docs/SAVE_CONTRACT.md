@@ -1,10 +1,11 @@
 # M6 保存合同 v1（F1 已冻结）
 
-## v20 B 方案第 1 阶段（当前，覆盖下文历史版本）
+## v20-live-combat（当前正式 epoch，2026-10-22）
 
-NET6；schema/save/replay/command=10/6/5/5（v19已占9/5/4/4）。实时推进不改战斗规则，旧身份拒绝运行态恢复，无迁移；历史字节保留。
-协议、结算与第2阶段挂点见 [MULTIPLAYER_CONTRACT](MULTIPLAYER_CONTRACT.md#b-方案第-1-阶段权威战斗流v20--net62026-10-21) 和 [实现说明](LIVE_COMBAT_PHASE1.md)。
-
+父 epoch 为 `v20-chem-baron`，集成基线 `2de5e26d088e4e86032bf571d51941c9b0ecd12f`（#373、#381）。rules/content 为 `s13-g2-3-v20-live-combat` / `s13-14.24b-g2-3-v20-live-combat`；CONTENT `fnv1a32-utf16:d0e9375f`，LOOT_REPLAY `fnv1a32-utf16:0bd44c5e`。
+schema/save/replay/command 为 **11/7/5/5**，网络 **NET6**、规则侧多人契约5。继承黑市候选及决策字段，Match 与 SaveEnvelope 结构不再增加，schema/save 保持父版11/7；replay/command 从4/4升5/5，标识实时战斗流及逐 tick 输入边界。所有旧 rules/content/digest/replay/command 身份严格拒绝运行态恢复，无迁移；历史 epoch 原字节保留。
+完整保留 B 补丁16具名字段、标准 PvE 不增微光、黑市至多三包 N 选一与保留、迅击/野火/搭档及 #381 预热。流式首遍只改变推进与传输，逐字节对照旧整轮结算；双游标、绝对50ms排拍、客户端四拍缓冲、整拍合并推送、战中买卖利息及空输入挂点见 [LIVE_COMBAT_PHASE1](LIVE_COMBAT_PHASE1.md)。非空逐 tick 装备输入仍报 `battle-input-unsupported`，未安装、不记成功日志。
+独立录制与只读核验命令、来源及风险见 [RELEASE_NOTES](evidence/v20-live-combat/RELEASE_NOTES.md)。本节覆盖下文历史身份。
 
 ## v19 第二部分（当前合同，2026-10-21）
 

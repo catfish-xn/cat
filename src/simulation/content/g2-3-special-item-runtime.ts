@@ -1,6 +1,7 @@
 // Shared browser/server/dev runtime columns. Archive text: g2-3-special-item-runtime.ts.
 import { freezeContent } from './freeze';
-export const G23_SPECIAL_ITEM_SOURCE = freezeContent({
+import { CHEM_BARON_B_OVERRIDES } from './chem-baron-b-overrides';
+export const G23_ARCHIVED_SPECIAL_ITEM_SOURCE = freezeContent({
   "TFT13_Crime_Bronze_ChemGrips": {
     "name": "Salvaged Contraption",
     "values": {
@@ -798,6 +799,12 @@ export const G23_SPECIAL_ITEM_SOURCE = freezeContent({
     "unique": false
   }
 });
+/** Adopted 12/17 B balance values; the archive mirror continues to read the unchanged table above. */
+export const G23_SPECIAL_ITEM_SOURCE = freezeContent(Object.fromEntries(
+ Object.entries(G23_ARCHIVED_SPECIAL_ITEM_SOURCE).map(([id, source]) => [id, {
+  ...source, values:{...source.values,...CHEM_BARON_B_OVERRIDES[id]},
+ }]),
+)) as typeof G23_ARCHIVED_SPECIAL_ITEM_SOURCE;
 export const G23_SPECIAL_ITEM_POOLS=freezeContent({
   "RADIANTITEMS_SET5": [
     "TFT5_Item_ThiefsGlovesRadiant",

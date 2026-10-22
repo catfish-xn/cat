@@ -11,7 +11,7 @@
 
 本地原件位于 `src/simulation/content/source/s13-14.24b/raw/`。`en_us.json.gz` 解压 SHA-256 为 `c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3`；`map22.bin.json.gz` 为 `09a9219647c08e70a8eb4d2ccbc35a9afe21934bc5279b4da2d05ca076339e0f`；中英文 stringtable 分别为 `aa9ca3629482cdde5356a38c1f83c804fdcc20e2b6315cc872e6a9800dbacda3`、`4951a0356e8d9ac7f59b3b54360c964d65baea8112bcbd8da23b8540df07a443`。这是 14.24 客户端数据，B 补丁沿用 M9 台账已明确的覆盖，不能声称拿到了完整 14.24b 服务端脚本。
 
-输入取证见用户指定的 `C:/Users/Administrator/Desktop/codex-runs/v19-mechanics-list.md`、`v19-evidence.md`。下列直接数值均可在本地命名变量和双语文案对应；“推断”“项目约定”“魔改”不当作官方执行证据。
+输入取证见本地取证记录 v19-mechanics-list 与 v19-evidence（未入库）。下列直接数值均可在本地命名变量和双语文案对应；“推断”“项目约定”“魔改”不当作官方执行证据。
 
 | 项 | 原件定位与直接数值 | v19 行为 |
 | --- | --- | --- |

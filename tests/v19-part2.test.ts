@@ -288,5 +288,5 @@ describe('v19 emblem replacement and schema',()=>{
     let c:CombatState=idle(start(s).state);c={...c,units:c.units.map(u=>u.id==='lux'?{...u,maxMana:100,mana:0}:u)};
     for(let i=0;i<19;i++)c=stepCombat(c).state;expect(unit(c,'lux').mana).toBe(0);c=stepCombat(c).state;expect(unit(c,'lux').mana).toBe(3);
   });
-  it('retains v19 rules in v20-traits schema/save/replay 10/6/4',()=>expect(M8_VERSION).toMatchObject({schemaVersion:10,saveFormatVersion:6,replayFormatVersion:4,rulesVersion:'s13-g2-3-v20-traits'}));
+  it('retains v19 rules in v20-live-combat schema/save/replay 11/7/5',()=>expect(M8_VERSION).toMatchObject({schemaVersion:11,saveFormatVersion:7,replayFormatVersion:5,rulesVersion:'s13-g2-3-v20-live-combat'}));
 });

@@ -46,7 +46,7 @@ function armory(){
 it.each(['armory','blackMarket','forge'] as const)('a failed %s open preserves the input and reports the failed hook',kind=>{
  const base=createMatch(42),p=readG23Progress(base)!;
  const state=kind==='armory'?armory():kind==='blackMarket'
-  ?writeG23Progress(base,{...p,chem:{...p.chem,offer:{id:'market',tier:1,optionId:'TFT13_Crime_LootA4',round:1}}})
+  ?writeG23Progress(base,{...p,chem:{...p.chem,offer:{id:'market',tier:1,optionId:'TFT13_Crime_LootA4',optionIds:['TFT13_Crime_LootA4'],round:1}}})
   :writeG23Progress(base,{...p,rewards:[{id:'forge',round:1,source:'conqueror',tier:9,reward:g23ConquerorReward(G23_CONQUEROR_CHESTS[8])}]});
  expect(openG23Choice(state).state.pendingChoice?.kind).toBe(kind);
  fault.hook='choice';
@@ -55,7 +55,7 @@ it.each(['armory','blackMarket','forge'] as const)('a failed %s open preserves t
 it.each(['blackMarket','other-armory'] as const)('equipment acceptance never replaces an armory with %s',mode=>{
  const opened=openG23Choice(armory()).state,choice=opened.pendingChoice!;
  const p=readG23Progress(opened)!;
- const state=mode==='blackMarket'?writeG23Progress(opened,{...p,chem:{...p.chem,offer:{id:'different-market',tier:1,optionId:'TFT13_Crime_LootA4',round:1}}})
+ const state=mode==='blackMarket'?writeG23Progress(opened,{...p,chem:{...p.chem,offer:{id:'different-market',tier:1,optionId:'TFT13_Crime_LootA4',optionIds:['TFT13_Crime_LootA4'],round:1}}})
   :{...opened,pendingChoice:{...choice,choiceId:'g23:junker:other',eventId:'g23:junker:other'}};
  const purchasable={...state,gold:20,shop:{...state.shop,slots:[{status:'available' as const,definitionId:'lux'}]}};
  // Trading while a popup is folded away is multiplayer-only.

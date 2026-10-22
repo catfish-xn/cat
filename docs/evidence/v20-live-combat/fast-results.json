@@ -1,0 +1,119 @@
+{
+  "shards": [
+    {
+      "shard": "1/4",
+      "command": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--project",
+        "fast",
+        "--configLoader",
+        "runner",
+        "--shard=1/4",
+        "--maxWorkers=1",
+        "--reporter=default",
+        "--reporter=json",
+        "--outputFile=artifacts/v20-live-combat-tests/shard-1.json"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 893.63,
+      "log": "artifacts/v20-live-combat-tests/shard-1.log",
+      "report": "artifacts/v20-live-combat-tests/shard-1.json",
+      "files": 123,
+      "numTotalTests": 1452,
+      "numPassedTests": 1437,
+      "numFailedTests": 15,
+      "numPendingTests": 0
+    },
+    {
+      "shard": "2/4",
+      "command": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--project",
+        "fast",
+        "--configLoader",
+        "runner",
+        "--shard=2/4",
+        "--maxWorkers=1",
+        "--reporter=default",
+        "--reporter=json",
+        "--outputFile=artifacts/v20-live-combat-tests/shard-2.json"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 1215.77,
+      "log": "artifacts/v20-live-combat-tests/shard-2.log",
+      "report": "artifacts/v20-live-combat-tests/shard-2.json",
+      "files": 123,
+      "numTotalTests": 1630,
+      "numPassedTests": 1625,
+      "numFailedTests": 5,
+      "numPendingTests": 0
+    },
+    {
+      "shard": "3/4",
+      "command": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--project",
+        "fast",
+        "--configLoader",
+        "runner",
+        "--shard=3/4",
+        "--maxWorkers=1",
+        "--reporter=default",
+        "--reporter=json",
+        "--outputFile=artifacts/v20-live-combat-tests/shard-3.json"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 1480.38,
+      "log": "artifacts/v20-live-combat-tests/shard-3.log",
+      "report": "artifacts/v20-live-combat-tests/shard-3.json",
+      "files": 123,
+      "numTotalTests": 1854,
+      "numPassedTests": 1838,
+      "numFailedTests": 16,
+      "numPendingTests": 0
+    },
+    {
+      "shard": "4/4",
+      "command": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--project",
+        "fast",
+        "--configLoader",
+        "runner",
+        "--shard=4/4",
+        "--maxWorkers=1",
+        "--reporter=default",
+        "--reporter=json",
+        "--outputFile=artifacts/v20-live-combat-tests/shard-4.json"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 723.95,
+      "log": "artifacts/v20-live-combat-tests/shard-4.log",
+      "report": "artifacts/v20-live-combat-tests/shard-4.json",
+      "files": 123,
+      "numTotalTests": 1554,
+      "numPassedTests": 1535,
+      "numFailedTests": 19,
+      "numPendingTests": 0
+    }
+  ],
+  "totals": {
+    "files": 492,
+    "numTotalTests": 6490,
+    "numPassedTests": 6435,
+    "numFailedTests": 55,
+    "numPendingTests": 0
+  },
+  "categories": {
+    "environment-listen": 48,
+    "environment-pipe": 7
+  }
+}

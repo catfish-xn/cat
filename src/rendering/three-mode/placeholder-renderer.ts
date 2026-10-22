@@ -31,7 +31,7 @@ import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelopeRadius, fitModel, readUnitScale } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelopeRadius, animationEnvelopeRadiusSliced, fitModel, readUnitScale } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
@@ -321,13 +321,28 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     await compile;
     return performance.now() - started;
   };
+  // Animation envelope per model id (model-fit.ts), shared by the warm-up (measured in idle slices) and mounting.
+  const envelopes = new Map<string, number>();
+  const envelopeClips = (lease: ModelLease) => {
+    const nameOf = (action: string) => lease.animationNames[action as keyof typeof lease.animationNames] ?? action;
+    const names = new Set(ENVELOPE_ACTIONS.map(nameOf));
+    return lease.animations.filter(clip => names.has(clip.name))
+      .map(clip => ({ clip, loop: ENVELOPE_ACTIONS.some(action => LOOPING_ACTIONS.has(action) && nameOf(action) === clip.name) }));
+  };
+  const prepareEnvelope = async (id: string, lease: ModelLease): Promise<boolean> => {
+    if (envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
+    const radius = await animationEnvelopeRadiusSliced(lease.scene, envelopeClips(lease), { budgetMs: 3, stop: () => closed || !!fighting });
+    if (radius === null) return false;
+    if (!envelopes.has(id)) envelopes.set(id, radius);
+    return true;
+  };
   const warmup = models.cache ? createModelWarmup({ load: id => models.cache!.load(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
-    upload: uploadModel, busy: () => !!fighting }) : null;
+    upload: uploadModel, prepare: prepareEnvelope, busy: () => !!fighting }) : null;
   const warmList = () => {
     const legends = feed?.legends?.();
     return [LEGEND_MODEL, ...[legends?.me, legends?.opponent].filter((id): id is string => !!id).map(id => `little-legend-${id}`), ...warmModels];
   };
-  let preloaded = false;
+  let preloaded = false, hintVersion = 0;
   void models.preloaded?.then(() => { preloaded = true; if (!closed) warmup?.want(warmList()); });
   // Match edges (body[data-m6-mode]): entering a match starts a fresh first-batch report and asks for anything not yet
   // warmed; leaving one (back to the lobby or the start screen) drops what was still waiting. Before the first match the
@@ -550,18 +565,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
   };
   /** Animation envelope radius per model id (unscaled source units), measured on its first lease. */
-  const envelopes = new Map<string, number>();
   /** Models first seen during a shown combat: drawn from their bind box, measured and re-attached at the next preparation. */
   const envelopePending = new Set<string>();
   const envelopeOf = (id: string, lease: ModelLease): number | undefined => {
     let radius = envelopes.get(id);
     if (radius === undefined && fighting) { envelopePending.add(id); return undefined; } // no long task mid-combat
-    if (radius === undefined) {
-      const names = new Set(ENVELOPE_ACTIONS.map(action => lease.animationNames[action] ?? action));
-      radius = animationEnvelopeRadius(lease.scene, lease.animations.filter(clip => names.has(clip.name))
-        .map(clip => ({ clip, loop: ENVELOPE_ACTIONS.some(action => LOOPING_ACTIONS.has(action) && (lease.animationNames[action] ?? action) === clip.name) })));
-      envelopes.set(id, radius);
-    }
+    // Not warmed yet (the warm-up measures in slices ahead of time): measured now, at once.
+    if (radius === undefined) { radius = animationEnvelopeRadius(lease.scene, envelopeClips(lease)); envelopes.set(id, radius); }
     return radius;
   };
   const attachBody = (view: PieceView) => {
@@ -758,6 +768,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const combatStarted = fighting !== true && frame.fighting;
     if (fighting !== null && fighting !== frame.fighting) { clearEffects(); for (const [id, view] of pieces) resetAction(view, id); }
     fighting = frame.fighting;
+    // What the room says comes next (board-feed warm hints): queued once per change, after the preload, in a match.
+    const hints = feed?.warmHints?.();
+    if (hints && hints.version !== hintVersion && preloaded && matchShown && warmup) { hintVersion = hints.version; warmup.want(hints.ids); }
     // Back in preparation: measure what a combat skipped and re-attach those pieces at their full envelope.
     if (!fighting && envelopePending.size) {
       const ids = new Set(envelopePending); envelopePending.clear();

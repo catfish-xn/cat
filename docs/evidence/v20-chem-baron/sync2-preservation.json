@@ -1,0 +1,51 @@
+{
+  "baseCommit": "ce60a8b9dd2b0c3a0c34c527405d44939233fb5b",
+  "traitsRuntimeByteIdenticalToParent": true,
+  "sourceFiles": {
+    "src/simulation/combat-movement.ts": {
+      "parentSha256": "14aba6c4a3183160aa15b91856334f32a6c6fd6a27acd60782a6be7d1878056d",
+      "currentSha256": "14aba6c4a3183160aa15b91856334f32a6c6fd6a27acd60782a6be7d1878056d"
+    },
+    "src/simulation/combat-v20-traits.ts": {
+      "parentSha256": "7b2d77cfa625f59079ecea80cd8e0f0ad3ac513299ff8484de1ffc16b499c287",
+      "currentSha256": "7b2d77cfa625f59079ecea80cd8e0f0ad3ac513299ff8484de1ffc16b499c287"
+    },
+    "src/simulation/content/v20-traits.ts": {
+      "parentSha256": "deef8d493caffd3764e04c0e9162bd3f3eab57adb20991a6a8caa113cd356750",
+      "currentSha256": "deef8d493caffd3764e04c0e9162bd3f3eab57adb20991a6a8caa113cd356750"
+    },
+    "src/simulation/content/v20-trait-text.ts": {
+      "parentSha256": "67b40ca454452fc1fef3048cf5d3c35eb5ba44d2396f1111d779af59f5a4fc2e",
+      "currentSha256": "67b40ca454452fc1fef3048cf5d3c35eb5ba44d2396f1111d779af59f5a4fc2e"
+    },
+    "src/simulation/content/augments.ts": {
+      "parentSha256": "d94b5d0f49b21c0bbd3db7afaf4e14a9d7eb8eebb6edd559969523539c3d3ca4",
+      "currentSha256": "d94b5d0f49b21c0bbd3db7afaf4e14a9d7eb8eebb6edd559969523539c3d3ca4"
+    },
+    "src/simulation/content/augment-policy.ts": {
+      "parentSha256": "d048c019813ec838258261e450fff16bf3e99f961f557d7a93616caaaf430c67",
+      "currentSha256": "d048c019813ec838258261e450fff16bf3e99f961f557d7a93616caaaf430c67"
+    },
+    "src/simulation/v20-teamups.ts": {
+      "parentSha256": "bcc1e2def1e864e35a59831fd58a681b9c0b856483ceef0305334f43a8d03f17",
+      "currentSha256": "bcc1e2def1e864e35a59831fd58a681b9c0b856483ceef0305334f43a8d03f17"
+    },
+    "src/simulation/combat-g2.ts": {
+      "parentSha256": "49083e12ab86faec9a2a38e598599d3708fc4006912e0f0b668f29063af651b2",
+      "currentSha256": "49083e12ab86faec9a2a38e598599d3708fc4006912e0f0b668f29063af651b2"
+    },
+    "src/simulation/combat-s13.ts": {
+      "parentSha256": "8bc28a5d587e16ab401be28e535b8359bebdd069146ecd9727bd2df1e4cb83fa",
+      "currentSha256": "8bc28a5d587e16ab401be28e535b8359bebdd069146ecd9727bd2df1e4cb83fa"
+    },
+    "src/simulation/g2-4b-gold-restore.ts": {
+      "parentSha256": "828d224629fe2244eab402ed420648ef084a11554f20119b1615e298d3c716ee",
+      "currentSha256": "828d224629fe2244eab402ed420648ef084a11554f20119b1615e298d3c716ee"
+    },
+    "tests/fixtures/m5/oracle.g2.cjs": {
+      "parentSha256": "6f76ce1586b81d8b5c6951e22dc04a3234f90dac1b1cf1039c75d098c4f2f4b8",
+      "currentSha256": "5e35a760e180d6b0633127b320d9f4ac950dd06224dc807b95bbfcc125d89c6d"
+    }
+  },
+  "unstagedRestrictedChanges": []
+}

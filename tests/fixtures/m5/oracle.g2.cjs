@@ -255,9 +255,50 @@ function heldResources(state){
 }
 const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'),...heldResources(state).units];
 const ownedItems=state=>[...state.items,...heldResources(state).items];
+// CHEM_BARON_FIX: independent standard 14.24b PvP values and archive map22 source-order weights.
+// N=3 is the approved project convention; no production content/planner/RNG imports.
+const CHEM_GAIN={3:[15,35],4:[20,45],5:[20,55],6:[25,70],7:[30,100]};
+const MARKET_WEIGHTS=[[25,20,20,20,10,5],[35,20,20,10,10,5],[55,15,15,5,5,5],[40,30,20,9,1],[30,25,25,15,5],[70,10,10,5,5],[100],[100]];
+function blackMarket(tier,rng){
+ const remaining=MARKET_WEIGHTS[tier-1].map((weight,index)=>({weight,id:'TFT13_Crime_Loot'+'ABCDEFGH'[tier-1]+(index||'')})),offers=[];
+ while(offers.length<3&&remaining.length){rng=word(rng);let ticket=BigInt(rng)*BigInt(remaining.reduce((n,x)=>n+x.weight,0))/4294967296n;
+  const index=remaining.findIndex(x=>{ticket-=BigInt(x.weight);return ticket<0n;});offers.push(remaining.splice(index,1)[0].id);
+ }
+ return {offers,rng,draws:offers.length};
+}
+function validateChemTransition(before,after){
+ const prior=before.seatMechanics?.hidden.progress,next=after.seatMechanics?.hidden.progress;
+ if(!prior||!next)return;
+ assert.deepEqual(next.economyReceipts.slice(0,prior.economyReceipts.length),prior.economyReceipts,'chem economy append-only');
+ const receipts=next.economyReceipts.slice(prior.economyReceipts.length);
+ let chem=structuredClone(before.seatMechanics.seat.alchemist),rng=prior.rngState,draws=prior.rngDraws;
+ for(const r of receipts){
+  if(r.kind==='battle'){
+   const f=r.facts;chem.losses=f.roundKind==='pvp'?(f.result==='loss'?chem.losses+1:0):chem.losses;
+   if(f.roundKind==='pvp'&&f.chemBaronTier){chem.shimmer+=CHEM_GAIN[f.chemBaronTier][chem.losses>=3?1:0];
+    const tier=Math.min(8,Math.floor(chem.shimmer/100));
+    if(!chem.offer&&tier>chem.offeredThrough){const roll=blackMarket(tier,rng);rng=roll.rng;draws+=roll.draws;chem.offeredThrough=tier;
+     chem.offer={id:`g23:market:${f.battleId}:${tier}`,tier,optionId:roll.offers[0],optionIds:roll.offers,round:f.round};
+    }
+   }
+   if(f.result==='win')for(let i=0;i<(f.crowns??0);i++){rng=word(rng);draws++;}
+  }else if(r.kind==='market'){
+   assert.equal(r.offerId,chem.offer?.id,'independent market decision identity');
+   if(r.take)assert(chem.offer.optionIds.includes(r.optionId),'selected complete bundle was offered');
+   const choice=after.seatMechanics.receipts.find(x=>x.receiptId===r.offerId);
+   assert(choice&&choice.kind==='choice'&&choice.choiceKind==='blackMarket'&&choice.itemId===null&&choice.price===0,'market choice grants no item directly');
+   assert.equal(choice.optionId,r.take?r.optionId:'@skip');assert.equal(choice.skipped,!r.take);
+   chem={...chem,offer:null,shimmer:r.take?0:chem.shimmer,offeredThrough:r.take?0:chem.offeredThrough,skips:chem.skips+(r.take?0:1)};
+  }
+ }
+ assert.deepEqual(after.seatMechanics.seat.alchemist,chem,'independent PvP shimmer, distinct bundles and keep');
+ assert.equal(next.rngState,rng,'independent market then crown stream');assert.equal(next.rngDraws,draws,'one explicit word per candidate/crown');
+ if(after.pendingChoice?.kind==='blackMarket')assert.deepEqual(after.pendingChoice.offers,chem.offer.optionIds,'pending choice offers complete bundles');
+}
 class Ledger {
  constructor(initial){this.gold=0;this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
+  validateChemTransition(before,after);
   if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
   if(!events.some(e=>e.type==='choiceOpened'&&e.choice.kind==='augment'))assert.deepEqual(after.augmentOffers,before.augmentOffers,'augment history retained without draw');
   const lootReceipts=validateLootTransition(before,after,command,events);
@@ -326,4 +367,4 @@ class Ledger {
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
   assert.equal(items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
-module.exports={ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
+module.exports={blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};

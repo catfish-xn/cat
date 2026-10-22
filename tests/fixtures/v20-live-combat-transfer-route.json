@@ -1,0 +1,46 @@
+{
+  "epoch": "v20-live-combat",
+  "seed": 4,
+  "contentDigest": "fnv1a32-utf16:d0e9375f",
+  "donor": "unit-11",
+  "survivor": "unit-21",
+  "reward": "unit-27",
+  "tg": "item-10",
+  "acquisitions": [
+    {
+      "kind": "unit-acquired",
+      "unitId": "unit-11",
+      "source": {
+        "kind": "shop",
+        "generation": 16,
+        "slotIndex": 2,
+        "definitionId": "tristana"
+      },
+      "sequence": 35,
+      "roundId": "3-3"
+    },
+    {
+      "kind": "unit-acquired",
+      "unitId": "unit-21",
+      "source": {
+        "kind": "shop",
+        "generation": 39,
+        "slotIndex": 2,
+        "definitionId": "tristana"
+      },
+      "sequence": 53,
+      "roundId": "3-7"
+    }
+  ],
+  "provenanceCounts": [
+    26,
+    20,
+    15,
+    6,
+    4,
+    5,
+    1
+  ],
+  "provenanceLength": 77,
+  "nextUnitSerial": 27
+}
