@@ -1,0 +1,22 @@
+[
+  {
+    "file": "docs/evidence/v20-xp68/release-audit.json",
+    "sources": 363,
+    "byteIdentical": true
+  },
+  {
+    "file": "docs/evidence/v20-xp68/input-fixture-audit.json",
+    "sources": 363,
+    "byteIdentical": true
+  },
+  {
+    "file": "docs/evidence/v20-xp68/live-reveal-audit.json",
+    "sources": 363,
+    "byteIdentical": true
+  },
+  {
+    "file": "tests/fixtures/v20-xp68-herald-raw/manifest.json",
+    "sources": 355,
+    "byteIdentical": true
+  }
+]

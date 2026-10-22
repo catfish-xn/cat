@@ -70,9 +70,9 @@ describe('M5 independent economic answers', () => {
     const plan = planRoundEconomy(input({ gold: 500, level: 7, xp: 47 }));
     expect(plan.incomeBreakdown.interest).toBe(5);
     expect(plan.progression).toEqual({ level: 8, xp: 1, xpRequested: 2, xpApplied: 2, levelsGained: 1 });
-    expect(planRoundEconomy(input({ level: 8, xp: 75 })).progression).toEqual({ level: 9, xp: 1, xpRequested: 2, xpApplied: 2, levelsGained: 1 });
+    expect(planRoundEconomy(input({ level: 8, xp: 67 })).progression).toEqual({ level: 9, xp: 1, xpRequested: 2, xpApplied: 2, levelsGained: 1 });
     expect(planRoundEconomy(input({ level: 9, xp: 0 })).progression).toEqual({ level: 9, xp: 2, xpRequested: 2, xpApplied: 2, levelsGained: 0 });
-    expect(planRoundEconomy(input({ level: 9, xp: 83 })).progression).toEqual({ level: 10, xp: 0, xpRequested: 2, xpApplied: 1, levelsGained: 1 });
+    expect(planRoundEconomy(input({ level: 9, xp: 67 })).progression).toEqual({ level: 10, xp: 0, xpRequested: 2, xpApplied: 1, levelsGained: 1 });
     expect(planRoundEconomy(input({ level: 10, xp: 0 })).progression).toEqual({ level: 10, xp: 0, xpRequested: 2, xpApplied: 0, levelsGained: 0 });
   });
 
@@ -87,7 +87,7 @@ describe('M5 independent economic answers', () => {
 
   it.each([
     { gold: -1 }, { gold: Number.MAX_SAFE_INTEGER }, { hp: 101 }, { hp: -1 }, { stage: 1 }, { stage: 7 },
-    { enemySurvivors: 0.5 }, { level: 7, xp: 48 }, { level: 10, xp: 1 }, { level: 9, xp: 84 }, { result: null },
+    { enemySurvivors: 0.5 }, { level: 7, xp: 48 }, { level: 10, xp: 1 }, { level: 9, xp: 68 }, { result: null },
     { streak: { kind: null, count: 1 } }, { streak: { kind: 'win', count: 0 } },
     { streak: { kind: 'win', count: Number.MAX_SAFE_INTEGER } },
     { roundKind: 'supply', result: 'draw' }, { roundKind: 'supply', result: null, enemySurvivors: 1 },
@@ -100,13 +100,13 @@ describe('M5 independent economic answers', () => {
 
 describe('M5 frozen XP and shop', () => {
   it('uses the complete frozen level 3–10 table', () => {
-    expect([3, 4, 5, 6, 7, 8, 9, 10].map(getXpToNextLevel)).toEqual([6, 10, 20, 36, 48, 76, 84, null]);
+    expect([3, 4, 5, 6, 7, 8, 9, 10].map(getXpToNextLevel)).toEqual([6, 10, 20, 36, 48, 68, 68, null]);
     expect([3, 4, 5, 6, 7, 8, 9, 10].map(getShopOdds)).toEqual([
       [75,25,0,0,0], [55,30,15,0,0], [45,33,20,2,0], [30,40,25,5,0],
       [19,30,40,10,1], [18,25,32,22,3], [15,20,25,30,10], [5,10,20,40,25],
     ]);
     expect(grantXp(7, 47, 4)).toEqual({ level: 8, xp: 3, xpRequested: 4, xpApplied: 4, levelsGained: 1 });
-    expect(grantXp(9, 83, 4)).toEqual({ level: 10, xp: 0, xpRequested: 4, xpApplied: 1, levelsGained: 1 });
+    expect(grantXp(9, 67, 4)).toEqual({ level: 10, xp: 0, xpRequested: 4, xpApplied: 1, levelsGained: 1 });
   });
 
   it('has exactly the 60 selectable heroes in stable code-point order', () => {

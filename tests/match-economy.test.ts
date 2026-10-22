@@ -6,6 +6,7 @@ import { accepted, battle, finish, freeze, readyMatch, emptyBoard, reachRound } 
 import { cardValue, expectedCommand, type LedgerCommand } from './fixtures/m5/command-oracle.g2.cjs';
 import { generateShop } from '../src/simulation/shop';
 import { COST, shop as expectedShop } from './fixtures/m5/oracle.g2.cjs';
+import { getXpToNextLevel } from '../src/simulation/match';
 
 /** Explicit command-unit fixture: a fixed funded level-3/three-holder input.
  * This preserves the independent command arithmetic vectors, not new-match or B8 acquisition evidence.
@@ -54,6 +55,31 @@ function fullBench(): MatchState {
 }
 
 describe('M5 atomic economy and independent ledger', () => {
+  it.each([8, 9])('buys seventeen 4G/4XP grants from level %i and exposes the exact next-level distance', level => {
+    let state = { ...economyFixture(), level, xp: 0, gold: 68 };
+    const originalShop = state.shop, originalRng = state.rngState;
+    for (let purchase = 1; purchase <= 16; purchase++) {
+      state = ledger(state, { type: 'buyXp' });
+      expect(state).toMatchObject({ level, xp: purchase * 4, gold: 68 - purchase * 4 });
+      expect(getXpToNextLevel(state.level)! - state.xp).toBe(68 - purchase * 4);
+    }
+    state = ledger(state, { type: 'buyXp' });
+    expect(state).toMatchObject({ level: level + 1, xp: 0, gold: 0 });
+    expect(state.shop).toBe(originalShop); expect(state.rngState).toBe(originalRng);
+    // Both existing UI consumers use this public query: null means full,
+    // disables buying XP and avoids presenting a next-level distance.
+    expect(getXpToNextLevel(state.level)).toBe(level === 9 ? null : 68);
+    if (level === 9) {
+      for (let repeat = 0; repeat < 3; repeat++) rejects(state, buyXp, 'max-level');
+    }
+  });
+
+  it.each([8, 9])('rejects an unaffordable high-level XP purchase atomically at level %i', level => {
+    rejects({ ...economyFixture(), level, xp: 64, gold: 3 }, buyXp, 'insufficient-gold');
+    const next = ledger({ ...economyFixture(), level, xp: 67, gold: 4 }, { type: 'buyXp' });
+    expect(next).toMatchObject({ level: level + 1, xp: level === 9 ? 0 : 3, gold: 0 });
+  });
+
   it('uses the frozen two-word level shop and buys a non-merge card into the first free bench slot', () => {
     const state = economyFixture();
     expect({ shop: state.shop, rngState: state.rngState }).toEqual(expectedShop(42, 1, 3));
@@ -152,7 +178,7 @@ describe('M5 atomic economy and independent ledger', () => {
     state = ledger(state, { type: 'buy', slot: 0, generation: 1 });
     expect(state.shop.generation).toBe(1);
     rejects({ ...state, level: 10, xp: 0, gold: 0 }, buyXp, 'max-level');
-    expect(ledger({ ...economyFixture(), level: 9, xp: 83, gold: 4 }, { type: 'buyXp' })).toMatchObject({ level: 10, xp: 0, gold: 0 });
+    expect(ledger({ ...economyFixture(), level: 9, xp: 67, gold: 4 }, { type: 'buyXp' })).toMatchObject({ level: 10, xp: 0, gold: 0 });
   });
   it('keeps every failed D/F state field unchanged during a 60-command burst', () => {
     const state = freeze({ ...economyFixture(), gold: 0 });

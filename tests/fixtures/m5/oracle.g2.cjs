@@ -6,7 +6,7 @@ const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "m
 CATALOG.push(['mel','viktor','warwick']); // Approved v19 six-cost identities; raw historical recordings stay immutable.
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
 const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10],10:[5,10,20,40,25]};
-const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76,9:84};
+const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:68,9:68};
 // Literal W4 + S13 P2 pools independently transcribed from the retained raw source.
 // No production content import; lexical ordering is the public choice contract.
 const AUGMENTS=["all-for-one-ii", "backup", "belt-overflow", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "calculated-enhancement", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "crown-guarded", "crownguard-spirit", "find-your-center", "flurry-of-blows", "glass-cannon-i", "glass-cannon-ii", "guardbreaker-spirit", "immovable-object", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "not-today", "pair-of-fours", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii", "shojin-spirit", "sword-overflow", "trifecta-ii", "wand-overflow"];
@@ -128,7 +128,7 @@ function settlement(before,combat,goldBefore=before.gold+ungrantedLootGold(befor
  const survivingEnemyCount=combat?.units.filter(u=>u.team==='enemy'&&u.alive).length??0;
  let streakAfter=before.streak;
  if(roundKind==='pvp'){const kind=result==='playerWin'?'win':'loss';streakAfter={kind,count:before.streak.kind===kind?before.streak.count+1:1};}
- const base=stage===1?{2:2,3:3,4:5}[sub]:5,naturalXp=2 /* T11 signed opening: 2/2/2; XP thresholds unchanged */;
+ const base=stage===1?{2:2,3:3,4:5}[sub]:5,naturalXp=2 /* T11 signed opening: 2/2/2; opening XP unchanged; high-level XP68 is user custom 2026-10-22 */;
  const win=roundKind==='pvp'&&result==='playerWin'?1:0,interestBasis=goldBefore+win;
  const owned=new Set(before.augments.map(a=>a.definitionId));
  const cap=owned.has('going-long')?0:owned.has('hedge-fund')?10:owned.has('investment-strategy-ii')?7:5;

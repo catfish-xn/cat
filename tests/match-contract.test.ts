@@ -10,7 +10,7 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     for(let i=0;i<10;i++)rng=(rng*1664525n+1013904223n)%4294967296n;
     expect(first).toEqual(createMatch(42));
     // B9 formal version switch (M8_RULES §10).
-    expect(first).toMatchObject({schemaVersion:11,rulesVersion:'s13-g2-3-v20-chem-baron',contentVersion:'s13-14.24b-g2-3-v20-chem-baron',commandProtocolVersion:4,
+    expect(first).toMatchObject({schemaVersion:11,rulesVersion:'s13-g2-3-v20-xp68',contentVersion:'s13-14.24b-g2-3-v20-xp68',commandProtocolVersion:4,
       phase:'preparation',round:1,gold:0,level:1,xp:0,playerHp:100,rngState:Number(rng),nextUnitSerial:2,combat:null,roundResults:[],pendingChoice:null});
     expect(first.shop.slots).toHaveLength(5);expect(first.preparation.benchSize).toBe(9);
     expect(first.preparation).not.toBe(createMatch().preparation);
@@ -19,7 +19,7 @@ describe('M5 public contract (M4 command invariants retained)', () => {
   it('concedes an empty deployment at tick zero once, with stage-one base income and fixed PvE failure damage', () => {
     const state=freeze(emptyBoard()),before=structuredClone(state),result=startMatchCombat(state);
     expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
-    // B8 forfeits unearned loot; v20-chem-baron still grants the fixed remover to a surviving loser.
+    // B8 forfeits unearned loot; v20-xp68 still grants the fixed remover to a surviving loser.
     const ids=state.m8.loot.frozen.rounds[0].encounterPlan.drops.map(d=>d.dropId);
     expect(result.events).toEqual([
       {type:'combatFinished',tick:0,result:'enemyWin',reason:'elimination',combatId:'round-1',domain:'combat',eventSeq:0},

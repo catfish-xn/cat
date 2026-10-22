@@ -79,7 +79,7 @@ describe('T7 public-command traversal',()=>{
   });
   it('does not gamble on hidden stock for an empty shared shop',()=>{
     const initial=room({irelia:1,maddie:1},1),first=batch(api.refreshSharedShops(initial.pool,initial.states,1));
-    // v18 level 9 can still buy 84 XP. Start at the actual cap so this vector
+    // XP68 level 9 can still buy 68 XP. Start at the actual cap so this vector
     // isolates empty-pool shopping rather than spending its budget on leveling.
     let pool=first.pool,state:api.MatchState={...first.states[0],level:10,xp:0,gold:0};
     // Position with no spending before isolating the stock-dependent decision.

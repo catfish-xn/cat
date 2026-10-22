@@ -30,7 +30,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
     twitchCrit: 'one-roll-per-piercing-attack', chain: 'initial-kill-empower-v1',
     unreachable: [], emblems:'custom-total-base-22/16-recipes/emblem-reforge-v19', traits:'all-source-tiers-through-10/numeric-subset-v18', quickstriker:'target-missing-health-linear/death-shield', pitHealing:'40-integer-pulses/40-ticks', sorcerer8:'all-ability-hits/25-percent/60-ticks', visionary8:'ability-hp-damage/20-percent/lowest-health-ally' },
   playerDamage: PLAYER_DAMAGE_RULES,
-  progression: {policy:'s13-14.24b-ten-levels-v1', thresholds:XP_TO_NEXT_LEVEL, maxLevel:MATCH_RULES.maxLevel},
+  progression: {policy:'project-xp68-user-2026-10-22-v1', thresholds:XP_TO_NEXT_LEVEL, maxLevel:MATCH_RULES.maxLevel},
   opening: { initial: OPENING_INITIAL_STATE, economy: OPENING_ECONOMY_RULES, rewards:'shared-stage-plan/per-seat-orb-box-v17/no-legacy-loot-words' },
   equipment: { version: EQUIPMENT_RULES_VERSION, operations: EQUIPMENT_OPERATION_RULES_VERSION,
     multiplayer: MULTIPLAYER_OPERATION_RULES, autoCombine: 'lowest-permanent-component-slot' },
