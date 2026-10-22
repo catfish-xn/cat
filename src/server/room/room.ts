@@ -552,13 +552,19 @@ export class Room {
     // Fixed seat order, independent of result arrival order: each seat's transaction runs on the pool the previous one left.
     for (const seat of alive) {
       const job = jobs.get(seat.seatId)!;
-      const settled = (match: MatchState, damage: number, receipt: RoundSettlementReceipt | null, events: readonly MatchEvent[]): SettledSeat =>
-        ({ seatId: seat.seatId, hpBefore: seat.hp, damage, hpAfterRaw: seat.hp - damage, hpAfter: Math.max(0, seat.hp - damage), match, receipt, events });
+      const settled = (match: MatchState, damage: number, receipt: RoundSettlementReceipt | null, events: readonly MatchEvent[], hpAfter = Math.max(0, seat.hp - damage)): SettledSeat =>
+        ({ seatId: seat.seatId, hpBefore: seat.hp, damage, hpAfterRaw: seat.hp - damage, hpAfter, match, receipt, events });
       if (job.kind === 'receipt') {
         const applied = runSharedMatchCommand(pool, seat.match, { type: 'settleRound', receipt: job.receipt });
         if (!applied.ok) return { ok: false, detail: `seat ${seat.seatId}: ${applied.reason}` };
-        if (applied.state.playerHp !== Math.max(0, seat.hp - job.damage)) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${applied.state.playerHp} disagrees with the room HP ${seat.hp} - ${job.damage}` };
-        pool = applied.pool; seats.push(settled(applied.state, job.damage, job.receipt, applied.events));
+        // The rules validate damage and own HP effects (including Mel's one-time save). Check their receipt/record
+        // against the room's inputs, then publish their HP; raw damage remains unchanged for elimination tie-breaks.
+        const record = applied.state.roundResults.at(-1);
+        if (!record || record.round !== state.round || record.roundId !== state.roundId
+          || record.settlementId !== job.receipt.settlementId || record.hpBefore !== seat.hp
+          || record.playerDamage !== job.damage || record.hpAfter !== applied.state.playerHp
+          || record.hpLost !== seat.hp - applied.state.playerHp) return { ok: false, detail: `seat ${seat.seatId}: rules HP record disagrees with the room settlement` };
+        pool = applied.pool; seats.push(settled(applied.state, job.damage, job.receipt, applied.events, applied.state.playerHp));
         continue;
       }
       const { outcome } = job;
