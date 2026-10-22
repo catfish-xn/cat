@@ -60,6 +60,34 @@ async function setup(count = 2, combatStreaming = true) {
   return { clock, a, b, clients, logs, token: joined.result.token, seatId: joined.result.seatId, room: server.room! };
 }
 describe('NET6 production stream with memory transport', () => {
+  it('opening queues command, close, resume, watch and subsequent authentication in FIFO order', async () => {
+    const { clock, a, token, seatId, room } = await setup();
+    const work = room as unknown as { clearTimer(): void; freezeAndResolve(): void };
+    work.clearTimer(); work.freezeAndResolve();
+    const frozen = room.state, seat = frozen.seats.find(s => s.seatId === seatId)!;
+    const command = { type: 'command', roomId: frozen.roomId, round: frozen.round,
+      seatRevision: seat.seatRevision + 1, command: { type: 'shopLock', locked: true, generation: seat.match.shop.generation } };
+    expect(a.request(command)).toBeUndefined();
+    a.close();
+    const resumed = connect();
+    (resumed as unknown as { id: number }).id = 90;
+    expect(resumed.request({ type: 'resume', token })).toBeUndefined();
+    const watched = frozen.seats.find(s => s.seatId !== seatId)!.seatId;
+    expect(resumed.request({ type: 'watch', roomId: frozen.roomId, seatId: watched })).toBeUndefined();
+    expect(resumed.request({ ...command, seatRevision: seat.seatRevision + 2,
+      command: { ...command.command, locked: false } })).toBeUndefined();
+    expect(resumed.messages('receipt')).toEqual([]);
+    expect(room.state).toBe(frozen); expect(room.hasCombatStreams).toBe(false);
+    for (let n = 0; room.combatInitializationPending && n < 100; n++) expect(clock.fireNext()).toBe(true);
+    expect(room.combatInitializationPending).toBe(false); expect(room.state.fault).toBeNull();
+    const receipts = resumed.messages('receipt');
+    expect(receipts.map(r => r.ok && r.result.kind)).toEqual(['resumed', 'watching', 'applied']);
+    expect(room.state.seats.find(s => s.seatId === seatId)).toMatchObject({ connected: true,
+      seatRevision: seat.seatRevision + 3, match: { shop: { locked: false } } });
+    expect(resumed.messages('combat-open').map(m => m.seatId)).toContain(watched);
+    expect(resumed.messages('combat-open').every(m => m.initial.tick === 0)).toBe(true);
+  });
+
   it('#376 legacy resolver fallback shares the seat subscription without introducing live watch packets', async () => {
     const { a, b, clock, room, seatId } = await setup(2, false);
     clock.advance(1_000);

@@ -743,6 +743,9 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   }
 
   function dispatch(conn: Connection, message: ClientMessage): void {
+    // Opening is one frozen transaction, including session/watch changes. Deferring dispatch
+    // also preserves resume → command authentication order on a newly connected socket.
+    if (room?.combatInitializationPending && room.deferDuringSettlement(() => dispatch(conn, message))) return;
     switch (message.type) {
       case 'join': return handleJoin(conn, message);
       case 'leaveQueue': return handleLeaveQueue(conn, message);
@@ -808,6 +811,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   }
 
   function onClose(conn: Connection): void {
+    // Keep an admitted command before its close/resume in the same FIFO as initialization.
+    if (room?.combatInitializationPending && room.deferDuringSettlement(() => onClose(conn))) return;
     if (!conn.open) return;
     conn.open = false;
     if (conn.closeHandle !== null) { clock.cancel(conn.closeHandle); conn.closeHandle = null; }

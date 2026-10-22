@@ -105,7 +105,20 @@ export function startLiveTask(envelope: BattleInput, beforeTick?: import('../../
   return { input, task: guarded(envelope.battleId, () => startTwoSidedBattle(input, { captureReplay: true, beforeTick })) };
 }
 
+/** Scheduling seam only: each rules call is unchanged and runs in its original order. */
+export function* startLiveTaskSteps(envelope: BattleInput): Generator<void, ReturnType<typeof startLiveTask>, void> {
+  const input = yield* compileEnvelopeSteps(envelope);
+  const task = guarded(envelope.battleId, () => startTwoSidedBattle(input, { captureReplay: true }));
+  yield;
+  return { input, task };
+}
+
 function compileEnvelope(envelope: BattleInput): RulesBattleInput {
+  const work = compileEnvelopeSteps(envelope);
+  for (;;) { const next = work.next(); if (next.done) return next.value; }
+}
+
+function* compileEnvelopeSteps(envelope: BattleInput): Generator<void, RulesBattleInput, void> {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
   const opponent: BattleSeatInput | undefined = envelope.mirrorOf ?? second;
@@ -119,7 +132,11 @@ function compileEnvelope(envelope: BattleInput): RulesBattleInput {
     if (side.state.roundDefinitionId !== envelope.roundId) throw new BattleResolveError(side.seatId, `round-mismatch:${side.state.roundDefinitionId}`);
   }
   const a: PlayerBattleSnapshot = guarded(first.seatId, () => snapshotForBattle(first.state, first.seatId));
+  yield;
   const b: PlayerBattleSnapshot = guarded(opponent.seatId, () => snapshotForBattle(opponent.state, opponent.seatId));
+  yield;
   const identity: BattleIdentity = envelope.mirrorOf === null ? { battleId: envelope.battleId } : { battleId: envelope.battleId, mirrorOfSeatId: envelope.mirrorOf.seatId };
-  return guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
+  const input = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
+  yield;
+  return input;
 }
