@@ -32,7 +32,9 @@ export function monkeyComponents(seed: number, seatId: string): readonly string[
 }
 export function monkeyReceipt(state: MatchState): OpeningEffectReceipt | undefined {
   const opening = state.openingEncounter;
-  return opening.mode === 'shared-deferred' ? undefined : opening.receipts.find(r => r.nodeId === MONKEY_NODE);
+  if (opening.mode === 'shared-deferred') return undefined;
+  const selection = opening.mode === 'solo' ? opening.context.selection : opening.selection;
+  return selection.encounterId === 'wind-up-monkey' ? opening.receipts.find(r => r.nodeId === MONKEY_NODE) : undefined;
 }
 /** Only a complete apply transaction may publish this state. No combat receipts or income are fabricated. */
 export function applyMonkey(state: MatchState, fact: OpeningEffectFact, receipt: OpeningEffectReceipt): {state: MatchState; events: readonly MatchEvent[]} {

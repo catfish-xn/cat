@@ -119,7 +119,7 @@ describe('T5R private own-seat whitelist',()=>{
     expect(view.m8.round).toMatchObject({roundId:'overtime-1',kind:'pvp'});
     expect(JSON.stringify(view)).not.toMatch(/opponent|their-item|secret-event|settlementId/);
     expect(view.preparation.units.every(u=>u.team==='player')).toBe(true);
-    expect(Object.keys(view).sort()).toEqual(['openingEncounter','schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
+    expect(Object.keys(view).sort()).toEqual(['openingMelProgress','openingEncounter','schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
       'round','roundDefinitionId','phase','gold','level','xp','playerHp','streak','shop','preparation','items','temporaryEquipment','augments',
       'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics',
       'unclaimedOrbs','orbClaimReceipts','familyReunion','shopOdds'].sort());

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMatch, nextRound, startMatchCombat, useConsumable, selectChoice, equipItem, type MatchState } from '../src/simulation/match';
-import { createOpeningEncounter, planOpeningRound, applyOpeningEffects, validateOpeningEncounterContext, readOpeningEncounterView } from '../src/simulation/opening-encounter';
+import { createOpeningEncounter, planOpeningRound, applyOpeningEffects, validateOpeningEncounterContext, readOpeningEncounterView,
+  commitOpeningEncounterHealth, readOpeningMelProgress, readOpeningForgeProgress, validateOpeningEncounterState } from '../src/simulation/opening-encounter';
 import { MONKEY_NODE, MONKEY_ROUND, MONKEY_OUTCOMES, selectMonkeyOutcomeFromWord, monkeyOutcome, monkeyComponents } from '../src/simulation/opening-monkey';
 import { createSharedPool, initializeSharedSeat, nextSharedRound, refreshSharedShops, assertSharedPoolConservation, restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 import { G24_FORGE_POOLS } from '../src/simulation/content/g2-4-forges';
@@ -56,6 +57,14 @@ describe('PR5 solo public lifecycle',()=>{
     const settled=before.phase==='settlement'?before:resolveM5Choices(accepted(startMatchCombat(emptyBoard(before))));
     const after=accepted(nextRound(freeze(settled),settled.round));
     expect(after.roundDefinitionId).toBe('3-5');expect(after.openingEncounter.mode==='solo'&&after.openingEncounter.receipts).toHaveLength(1);
+    expect(commitOpeningEncounterHealth(after)).toBe(after);
+    expect(readOpeningMelProgress(after)).toBeNull();expect(readOpeningForgeProgress(after)).toBeNull();
+    expect(()=>validateOpeningEncounterState(after)).not.toThrow();
+    if(after.openingEncounter.mode==='solo') {
+      const opening=after.openingEncounter,receipt=opening.receipts[0];
+      expect(()=>validateOpeningEncounterState({...after,openingEncounter:{...opening,receipts:[receipt,receipt]}}))
+        .toThrow('opening-context-mismatch');
+    }
     expect(readOpeningEncounterView(after)!.revealedFacts).toEqual([{nodeId:'3-5',outcome}]);
     if(outcome==='damage')expect(after.playerHp).toBe(settled.playerHp-10);
     if(outcome==='gold')expect(after.gold).toBe(settled.gold+25);

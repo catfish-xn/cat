@@ -1,5 +1,5 @@
 import { readMasterworkOptions } from './masterwork-choice';
-import { readOpeningEncounterView, readOpeningEncounterProgress } from './opening-encounter';
+import { readOpeningEncounterView, readOpeningMelProgress, readOpeningForgeProgress } from './opening-encounter';
 import { getUnitSellPrice } from './unit-stats';
 import { D14_POLICY } from './content/d14-anomalies';
 import { isD14PromotedUnit } from './d14-public-unit-mark';
@@ -99,7 +99,8 @@ export function toPrivateSeatView(state: MatchState) {
   }));
   return freezeContent({
     openingEncounter: readOpeningEncounterView(state),
-    ...(readOpeningEncounterProgress(state) ? {openingEncounterProgress: readOpeningEncounterProgress(state)} : {}),
+    openingMelProgress: readOpeningMelProgress(state),
+    ...(readOpeningForgeProgress(state) ? {openingForgeProgress: readOpeningForgeProgress(state)} : {}),
     ...(state.multiplayer ? {unclaimedOrbs:readLootView(state).unclaimedOrbs??[],
       orbClaimReceipts:readLootView(state).claimReceipts??[]}:{}),
     ...(d11Display?{d11Display}:{}),

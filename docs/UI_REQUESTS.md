@@ -1129,14 +1129,35 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 
 验收：同一根 seed 的八席（含机器人）与单人结果一致；刷新视图/恢复不发奖；任何公共 payload 均无 seed、selectionRng、未来奖励和个人候选。shared-deferred 仅为服务器建席前内部状态，查询返回 null，不应向已开始玩家展示。模式/布局/颜色/动画由 Claude 决定；此处只定义显示内容与数据源。演出计时由服务器展示阶段控制，不进入 simulation 时钟。
 
-存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2 的激活/锻造器收据、当前候选及本人进度投影已启用，接线见下方 PR2 节；PR5 猴子及工具选择已启用，见下方 PR5 节；PR3/6/7 其余效果尚未启用，魔像训练师保持关闭，见 PR4 节。
+
+
+## 开局奇遇 PR6 → PR8：梅尔本人门槛进度（2026-10-22，Codex交付）
+
+集成命名：锻造器使用独立 `openingForgeProgress` / `readOpeningForgeProgress`；梅尔使用下述字段；不再发送旧 `openingEncounterProgress`。
+
+来源：`toPrivateSeatView(state).openingMelProgress` / `readOpeningMelProgress(state)`（simulation/match导出；新reader的server-entry重导出留接口负责人PR8）。现有公共 `openingEncounter` 白名单不变。仅定义显示内容与数据来源，不指定布局/配色/动画。
+
+| 字段 | 含义 / 使用 |
+| --- | --- |
+| 整个值为null | 非梅尔奇遇或尚未绑定；没有个人门槛展示 |
+| encounterId / thresholdHp | mels-blessing / 40；展示奇遇与个人门槛 |
+| thresholdReached | 本人已记录首次存活跨越门槛，**不代表发奖** |
+| rewardStatus | 当前恒为blocked-evidence；奖池缺证，奖励关闭 |
+| triggeredRound | 首次观察的回合ordinal；未触发为null，显示回合标签沿现有目录映射 |
+| hpBefore / hpAfter | 首次跨越前/救命后最终HP；未触发均null |
+
+验收：41→40与41→39均达门槛，0HP不达门槛；已触发后重连/Continue/重发不重记，不由UI扣血、抽奖或生成选择；只给本人，不广播对手进度。公共enabled=false与“效果尚未启用”继续保留；个人应明确区分“已达门槛，奖励未启用”和“未达门槛”，不能显示已领取/待领取，不展示固定两冠冕。内部收据ID、seed、RNG、全局context不透传。
+
+沃里克仍只展示公开身份及关闭状态，不给掉率、奖池、保底/上限占位数值或击杀奖励动画。其预留接口统一拒绝发奖，不接成客户端按钮。梅尔没有上场梅尔要求；六费梅尔救命事件沿用现有playerSaved，与奇遇进度分开读取。
+
+存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2 的激活/锻造器收据、当前候选及本人进度投影已启用，接线见下方 PR2 节；PR5 猴子及工具选择已启用，见下方 PR5 节；PR6 梅尔门槛观察已启用但奖励关闭，沃里克关闭；PR3/7 其余效果尚未启用，魔像训练师保持关闭，见 PR4 节。
 
 ## 开局奇遇 PR2 → Claude（2026-10-22）
 
-六项已启用：范德尔全黄金、艾克全棱彩、黑默丁格首次/末次棱彩，蔚1-2两个基础装备锻造器、杰斯1-2一个神器锻造器。其他9项效果仍关闭；没有奇遇沿用无附加规则。完整领域签名、来源与失败语义见 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 顶部 PR2 节。
+六项已启用：范德尔全黄金、艾克全棱彩、黑默丁格首次/末次棱彩，蔚1-2两个基础装备锻造器、杰斯1-2一个神器锻造器。PR5猴子另已启用，其余8项效果仍关闭；没有奇遇沿用无附加规则。完整领域签名、来源与失败语义见 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 顶部 PR2 节。
 
 - 公共字段：既有 `openingEncounter` 白名单形状不变，启用项 `enabled=true`、`effectStatus=active`、`statusTextZh=本局奇遇效果已启用`。前奏/终章其余档位是已批准等权项目约定，不能显示成“其余必不棱彩”。
-- 本人字段：`openingEncounterProgress?={source,effectsApplied,forgesGranted,forgesResolved,forgesPending}`，来自 `toPrivateSeatView`。pending数量包含当前待选，组件最初2→1→0，神器1→0；无激活收据时不出现。仅本人可见。
+- 本人字段：`openingForgeProgress?={source,effectsApplied,forgesGranted,forgesResolved,forgesPending}`，来自 `toPrivateSeatView`。pending数量包含当前待选，组件最初2→1→0，神器1→0；仅组件/神器锻造器有授予收据时出现；强化、猴子和梅尔不出现此字段。仅本人可见。
 - 本人选择：已有 `pendingChoice.kind=forge`、`offers`（恰好4项）、`choiceId`、`generation`、`payload.source=opening-encounter`、`payload.timeoutOption`。用既有choose回调；领域依次开下一份，界面不能生成候选或扣减数量。现有强化 `augmentTier` 和逐槽 `augmentOptions.rerollAvailable` 已按奇遇处理。
 - 本人结果：`seatMechanics.receipts` 中 source=opening-encounter 的choice记录含optionId/itemId/timedOut；`openingEffectApplied` 是授予/激活事件，`mechanicGranted` 是实际选择完成事件，不要把前者当装备已入库。
 - 服务器接线：initializeSharedSeat已授予，不能另发一次。timeoutChoice每次处理一个choiceId；处理后若还有新待选，应继续依据新ID处理，重连只读当前state。PR8如需要新helper，可在server-entry按合同重导出；本PR未修改该目录或服务器。
@@ -1144,7 +1165,7 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 
 ## 开局奇遇 PR5 → Claude：猴子结果与杰作升级（2026-10-22）
 
-规则已启用发条猴子四分支；不改本文件前部历史记录，当前合同以 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 首节 PR2+PR4+PR5 集成说明及各奇遇专节为准。本节只规定数据和回调，不规定布局、颜色、动画。
+规则已启用发条猴子四分支；不改本文件前部历史记录，当前合同以 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 首节 PR2+PR4+PR5+PR6 集成说明及各奇遇专节为准。本节只规定数据和回调，不规定布局、颜色、动画。
 
 | 字段/入口 | 含义、用途与验收 |
 | --- | --- |

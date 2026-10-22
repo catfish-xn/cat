@@ -1,5 +1,7 @@
 # 开局奇遇 PR2 交付报告（2026-10-22）
 
+> 当前 PR2/PR4/PR5/PR6 合并身份、收据与验证结果见 [PR6 集成修复报告](OPENING_ENCOUNTERS_PR6_MERGE_REPORT.md)。下文为独立 PR 历史记录，进度接口名称已同步更名；旧版本/摘要及旧收据范围不作为当前集成契约。
+
 基线：`codex/encounters-pr2@66b3a7143ad7a564665a2f25b0cf421529b9d6b8`。工作区 `/home/aiapps/workspcae/cat-enc2`；未commit。离线读取批准方案与同目录调研JSON，未联网、下载或添加素材。只改 `src/simulation/`、`tests/`、`docs/`；未改服务器、界面、server-entry、CI或其他任务目录。
 
 ## 实现与关闭项
@@ -24,7 +26,7 @@
 | `src/simulation/match.ts:184`、`:485`、`:586` | 单人开局应用、初抽不足原子失败、初抽/换牌调用统一档位；新helper重导出 |
 | `src/simulation/g2-3-runtime.ts:55` | 奇遇锻造器排在其他机制选择之前，不覆盖活动选择 |
 | `src/simulation/shared-pool.ts:37`、`:87` | 共享原始开局准入后应用并返回盖章事件；共享恢复重演强化候选历史 |
-| `src/simulation/private-seat-view.ts:101` | 本人可选openingEncounterProgress投影 |
+| `src/simulation/private-seat-view.ts:101` | 本人可选openingForgeProgress投影 |
 | `tests/opening-encounters-pr2.test.ts:1`（新增） | 31例PR2规则、随机oracle、篡改、超时、恢复、共享与边界测试 |
 | `tests/opening-encounters.test.ts:24` | 启用清单适配批准的六项；抽选/权重/oracle断言保留 |
 | `tests/opening-encounters-integration.test.ts:45`、`:73` | PR1无效果用例仅对关闭项/none继续适用；全16项RNG与共享测试保留，锻造器先选完再测试商店 |
@@ -83,6 +85,6 @@ npm test -- --configLoader runner tests/opening-encounters-pr2.test.ts tests/ope
 
 ## 给Claude与下一步
 
-公共openingEncounter白名单不变，启用项显示active及启用文案。本人新增可选`openingEncounterProgress`：source、effectsApplied、forgesGranted、forgesResolved、forgesPending；当前候选仍读pendingChoice（forge、4项、choiceId/generation、payload.source/timeoutOption），已完成选择读seatMechanics.receipts。强化读现有augmentTier/augmentOptions，不从基础deriveAugmentTier自行推断。超时一次一个choiceId；initializeSharedSeat已授予，服务器无需另发。新helper仅在simulation/match边界导出；PR8按需接server-entry和协议/界面，本PR不越权改线。
+公共openingEncounter白名单不变，启用项显示active及启用文案。本人新增可选`openingForgeProgress`：source、effectsApplied、forgesGranted、forgesResolved、forgesPending；当前候选仍读pendingChoice（forge、4项、choiceId/generation、payload.source/timeoutOption），已完成选择读seatMechanics.receipts。强化读现有augmentTier/augmentOptions，不从基础deriveAugmentTier自行推断。超时一次一个choiceId；initializeSharedSeat已授予，服务器无需另发。新helper仅在simulation/match边界导出；PR8按需接server-entry和协议/界面，本PR不越权改线。
 
 建议Claude交叉审查：已测试（如上）；未越目录；按批准范围改变六项玩法，其余权重/数值不动。无需新增产品决定；待PR8完成客户端与服务器展示接线、PR9统一epoch及完整联机验收后再考虑发布。

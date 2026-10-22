@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createMatch, createCarouselMatch, selectChoice, rerollAugment, startMatchCombat, nextRound,
   type MatchState } from '../src/simulation/match';
 import { OPENING_ENCOUNTERS, createOpeningEncounter, applyOpeningEffects, planOpeningRound,
-  pendingOpeningForges, openOpeningForge, readOpeningEncounterProgress, validateOpeningEncounterState } from '../src/simulation/opening-encounter';
+  pendingOpeningForges, openOpeningForge, readOpeningForgeProgress, validateOpeningEncounterState } from '../src/simulation/opening-encounter';
 import { augmentCandidates, deriveAugmentTier, resolveAugmentTier, validateAugmentOfferHistory } from '../src/simulation/augment-offers';
 import { FINAL_ROUND } from '../src/simulation/round-schedule';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
@@ -131,7 +131,7 @@ describe('PR2 opening anvils', () => {
     for (let i = 0; i < count; i++) {
       expect(restoreMatch(serializeMatch(state))).toEqual(state);
       expect(applyOpeningEffects(state, facts)).toEqual({ok: true, state, events: []});
-      expect(readOpeningEncounterProgress(state)).toMatchObject({forgesGranted: count, forgesPending: count-i, forgesResolved: i});
+      expect(readOpeningForgeProgress(state)).toMatchObject({forgesGranted: count, forgesPending: count-i, forgesResolved: i});
       const c = state.pendingChoice!;
       expect(c).toMatchObject({kind: 'forge', payload: {source: 'opening-encounter'}});
       expect(c.offers).toEqual(forgeOracle(seed, 'solo', i, id === 'component-anvils' ? G24_FORGE_POOLS.TFT_ArmoryKeyComponent : G24_FORGE_POOLS.TFT_ArmoryKeyOrnn));
@@ -192,7 +192,7 @@ it.each([...policies,...forges])('%s: eight seats share policy, use private cand
       expect(state.pendingChoice!.offers).toEqual(forgeOracle(seed,`seat-${i}`,0,
         id === 'component-anvils' ? G24_FORGE_POOLS.TFT_ArmoryKeyComponent : G24_FORGE_POOLS.TFT_ArmoryKeyOrnn));
       const view = toPrivateSeatView(state);
-      expect(view.openingEncounterProgress).toMatchObject({forgesPending:id==='component-anvils'?2:1});
+      expect(view.openingForgeProgress).toMatchObject({forgesPending:id==='component-anvils'?2:1});
       expect(view.openingEncounter).not.toHaveProperty('receipts');
       expect(view).not.toHaveProperty('augmentTierSeed');
     }

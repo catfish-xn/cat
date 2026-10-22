@@ -4,7 +4,7 @@ import { freezeContent } from './content/freeze';
 import { OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG, type OpeningEncounterId } from './content/opening-encounters';
 import { openMechanicChoice } from './seat-mechanics/choices';
 import { G24_FORGE_POLICY, resolveG24ForgePool } from './content/g2-4-forges';
-import type { MatchState, MatchCommandResult } from './match-types';
+import type { MatchState, MatchCommandResult, RoundResult } from './match-types';
 import { nextRandom, validateSeed } from './rng';
 import { getCatalogRoundById } from './round-selectors';
 
@@ -26,6 +26,14 @@ export interface OpeningEffectFact {
 export interface OpeningEffectReceipt {
   readonly hpBefore?: number;
   readonly receiptId: string; readonly factId: string; readonly seatId: string; readonly nodeId: string;
+}
+/** Observation receipt, never a reward claim or pending entitlement. */
+export interface OpeningMelThresholdReceipt extends OpeningEffectReceipt {
+  readonly kind: 'mel-threshold';
+  readonly round: number;
+  readonly hpBefore: number;
+  readonly hpAfter: number;
+  readonly rewardStatus: 'blocked-evidence';
 }
 export interface OpeningEncounterContext {
   readonly selection: OpeningEncounterSelection;
@@ -136,7 +144,8 @@ export function validateOpeningEncounterState(state: MatchState, shared?: Openin
   const expected = due ? effectReceipts(context, state.sharedPool?.seatId ?? 'solo') : [];
   if (monkey && expected.length && opening.receipts[0]?.hpBefore !== undefined && monkeyOutcome(context.seed) === 'damage')
     expected[0] = {...expected[0], hpBefore: opening.receipts[0].hpBefore};
-  if (!same(opening.receipts, expected)) fail('opening-context-mismatch');
+  // Authenticate the complete ledger, including observations; never filter away foreign receipts.
+  if (!same(opening.receipts, [...expected, ...expectedMelThresholdReceipts(state)])) fail('opening-context-mismatch');
   validateOpeningForges(state);
   validateMonkeyGrants(state, monkey ? context.facts[0] : undefined);
 }
@@ -282,11 +291,85 @@ export function readOpeningEncounterView(state: Pick<MatchState, 'openingEncount
 }
 export type OpeningEncounterView = ReturnType<typeof readOpeningEncounterView>;
 
-/** Owner-only progress, never future offers or RNG. Current offers remain in pendingChoice. */
-export function readOpeningEncounterProgress(state: MatchState) {
+/** Approved project convention, applied to HP AFTER the six-cost Mel save. */
+export function isMelBlessingCrossing(oldHp: number, newHp: number): boolean {
+  if (![oldHp, newHp].every(hp => Number.isSafeInteger(hp) && hp >= 0 && hp <= 100))
+    throw new RangeError('Invalid opening encounter HP');
+  const threshold = OPENING_ENCOUNTER_CONFIG.melThreshold.hp;
+  return oldHp > threshold && newHp > 0 && newHp <= threshold;
+}
+function expectedMelThresholdReceipts(state: MatchState): readonly OpeningMelThresholdReceipt[] {
   const opening = state.openingEncounter;
-  if (opening.mode === 'shared-deferred' || !opening.receipts.length) return null;
+  if (opening.mode === 'shared-deferred') return [];
+  const selection = opening.mode === 'solo' ? opening.context.selection : opening.selection;
+  if (selection.encounterId !== 'mels-blessing') return [];
+  const first = state.roundResults.find(record => isMelBlessingCrossing(record.hpBefore, record.hpAfter));
+  if (!first) return [];
+  const instanceId = opening.mode === 'solo' ? JSON.stringify(['solo', state.seed]) : JSON.stringify(['shared', opening.poolId]);
+  const seatId = opening.mode === 'solo' ? 'solo' : opening.seatId;
+  const nodeId = first.settlementId;
+  const factId = JSON.stringify([instanceId, 'mel-threshold', seatId, nodeId]);
+  return [{kind: 'mel-threshold', receiptId: factId, factId, seatId, nodeId,
+    round: first.round, hpBefore: first.hpBefore, hpAfter: first.hpAfter, rewardStatus: 'blocked-evidence'}];
+}
+/** Domain settlement hook only: append the latest settled HP observation, after commitMelSave.
+ * Missing OLD receipts are corruption, never repaired. No rewards, events or RNG draws.
+ * Other HP-changing rules must first add an authenticated history source before using this hook.
+ */
+export function commitOpeningEncounterHealth(state: MatchState): MatchState {
+  const opening = state.openingEncounter;
+  if (openingEncounterId(state) !== 'mels-blessing' || opening.mode === 'shared-deferred') return state;
+  const expected = expectedMelThresholdReceipts(state);
+  if (same(opening.receipts, expected)) return state;
+  const latest: RoundResult | undefined = state.roundResults.at(-1);
+  if (!same(opening.receipts, []) || expected.length !== 1 || !latest
+    || expected[0].nodeId !== latest.settlementId || expected[0].round !== state.round
+    || latest.hpAfter !== state.playerHp || state.multiplayer?.status === 'eliminated') fail('opening-context-mismatch');
+  const next: MatchState = {...state, openingEncounter: {...opening, receipts: freezeContent(expected)}};
+  // Re-derive selection for authentication only; this never advances stored RNG.
+  validateOpeningEncounterState(next, state.sharedPool ? createOpeningEncounter(state.augmentTierSeed) : undefined);
+  return next;
+}
+/** Owner-only progress whitelist. Do not put this into public PlayerView. */
+export function readOpeningMelProgress(state: Pick<MatchState, 'openingEncounter'>) {
+  const opening = state.openingEncounter;
+  if (opening.mode === 'shared-deferred') return null;
+  const selection = opening.mode === 'solo' ? opening.context.selection : opening.selection;
+  if (selection.encounterId !== 'mels-blessing') return null;
+  const receipt = opening.receipts[0] as OpeningMelThresholdReceipt | undefined;
+  return freezeContent({encounterId: 'mels-blessing' as const, thresholdHp: OPENING_ENCOUNTER_CONFIG.melThreshold.hp,
+    thresholdReached: receipt !== undefined, rewardStatus: 'blocked-evidence' as const,
+    triggeredRound: receipt?.round ?? null, hpBefore: receipt?.hpBefore ?? null, hpAfter: receipt?.hpAfter ?? null});
+}
+export type OpeningMelProgress = ReturnType<typeof readOpeningMelProgress>;
+/** Reserved resolver input, not a client command. No eligibility/drop/pity logic is enabled. */
+export interface OpeningWarwickKillFact {
+  readonly battleId: string;
+  readonly eventSeq: number;
+  readonly victimId: string;
+  readonly victimKind: 'champion' | 'summon' | 'monster';
+  readonly settlementEligible: boolean;
+}
+/** Deliberately fail closed for ALL facts (including empty/retries/mirrors). */
+export function applyWarwickHunger(state: MatchState, _facts: readonly OpeningWarwickKillFact[],
+  shared?: OpeningEncounterContext): MatchCommandResult {
+  try {
+    validateOpeningEncounterState(state, shared);
+    const opening = state.openingEncounter;
+    const selection = opening.mode === 'solo' ? opening.context.selection : opening.mode === 'shared' ? opening.selection : null;
+    if (selection?.encounterId !== 'warwicks-hunger') fail('invalid-opening-effect');
+    return {ok: false, state, reason: 'opening-config-incomplete'};
+  } catch (error) {
+    return {ok: false, state, reason: error instanceof OpeningEncounterError ? error.reason : 'opening-context-mismatch'};
+  }
+}
+/** Owner-only progress, never future offers or RNG. Current offers remain in pendingChoice. */
+export function readOpeningForgeProgress(state: MatchState) {
+  const opening = state.openingEncounter;
+  if (opening.mode === 'shared-deferred' || !forgeReceipts(state).length) return null;
   const total = forgeReceipts(state).length, pending = pendingOpeningForges(state).length;
   return {source: 'opening-encounter' as const, effectsApplied: opening.receipts.length,
     forgesGranted: total, forgesResolved: total - pending, forgesPending: pending};
 }
+
+export type OpeningForgeProgress = ReturnType<typeof readOpeningForgeProgress>;
