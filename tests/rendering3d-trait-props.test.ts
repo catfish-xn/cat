@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AnimationClip, BoxGeometry, Group, Mesh, NumberKeyframeTrack, PerspectiveCamera, Scene } from 'three';
 import { createTraitProps, CHEST_MODEL, CHEST_OPEN_EFFECT, FLASK_TAKE_EFFECT, type TraitPropsContext } from '../src/rendering/three-mode/trait-props';
 import type { BoardFrame, BoardMechanics } from '../src/rendering/board-feed';
+afterEach(() => vi.unstubAllGlobals());
+
 import type { ModelLease, ParticleEffect } from '../src/rendering3d';
 
 /** Synthetic counters only (no asset files, no source thresholds): the props read whatever the feed carries. */
@@ -40,26 +42,27 @@ describe('3D trait props: Conqueror chest and Shimmer flask', () => {
   it('glows toward the next chest and opens only when the opened count grows after mount', () => {
     const { props, step } = setup();
     props.frame(frame({ conquest: conquest(5, 2, 0, 10) }));
-    expect(props.debug().chest).toMatchObject({ shown: true, glow: 0.5, opening: false });
+    expect(props.debug().chest).toMatchObject({ shown: true, glow: 0.5, opening: false, label: '5/10' });
     expect(props.debug().bursts).toBe(0);
     props.frame(frame({ conquest: conquest(12, 3, 10, 20) }));
     expect(props.debug().chest.opening).toBe(true);
     expect(props.debug().bursts).toBe(1);
     step(0.5);
-    expect(props.debug().chest.lid).toBeLessThan(-1);
+    expect(props.debug().chest.rise).toBeGreaterThan(0);
+    expect(props.debug().chest.label).toBe('12/20');
     step(3);
     props.frame(frame({ conquest: conquest(12, 3, 10, 20) }));
     expect(props.debug().chest.opening).toBe(false);
     step(2);
-    expect(Math.abs(props.debug().chest.lid)).toBeLessThan(0.05);
+    expect(props.debug().chest.rise).toBe(0);
     expect(props.debug().bursts).toBe(0);
   });
 
-  it('rests ajar with no glow once every chest is open', () => {
+  it('keeps the total visible with no glow once every chest is open', () => {
     const { props } = setup();
     props.frame(frame({ conquest: conquest(900, 15, 800, null) }));
     expect(props.debug().chest.glow).toBe(0);
-    expect(props.debug().chest.lid).toBeLessThan(0);
+    expect(props.debug().chest).toMatchObject({ shown: true, label: '900', opening: false, rise: 0 });
   });
 
   it('fills to shimmer / next market, bubbles on an offer, and drains only when an accepted offer clears it', async () => {
@@ -107,7 +110,7 @@ describe('3D trait props with extracted models (idle only, no opening clip)', ()
     const { props, step } = setup({ loadModel, loadEffect });
     props.frame(frame({ conquest: conquest(5, 1), shimmer: shimmer(40, 100) }));
     await flush();
-    expect(props.debug().chest.model).toBe(true);
+    expect(props.debug().chest).toMatchObject({ model: true, label: '5/10' });
     expect(props.debug().flask.model).toBe(true);
     step(1);
     props.frame(frame({ conquest: conquest(12, 2, 10, 20), shimmer: shimmer(100, 200, true) }));
@@ -129,4 +132,29 @@ describe('3D trait props with extracted models (idle only, no opening clip)', ()
     await flush();
     expect(props.debug().chest.model).toBe(false);
   });
+});
+
+it('billboards the total above either flag, redraws only on change, and releases the label resources', async () => {
+  const draw = { clearRect: vi.fn(), beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), fillText: vi.fn() };
+  vi.stubGlobal('document', { createElement: () => ({ getContext: () => draw }) });
+  let resolve!: (lease: ModelLease) => void;
+  const { scene, props } = setup({ loadModel: () => new Promise(r => { resolve = r; }) });
+  props.frame(frame({ conquest: conquest(7, 1) }));
+  const sprite = scene.getObjectByName('render3d-conqueror-stacks') as import('three').Sprite;
+  expect(sprite.isSprite).toBe(true);
+  expect(sprite.material.depthTest).toBe(false); expect(sprite.material.depthWrite).toBe(false);
+  expect(sprite.renderOrder).toBeGreaterThan(1000);
+  const standHeight = sprite.position.y;
+  expect(standHeight).toBeGreaterThan(70);
+  const texture = sprite.material.map!, version = texture.version;
+  props.frame(frame({ conquest: conquest(7, 1) })); expect(texture.version).toBe(version);
+  props.frame(frame({ conquest: conquest(12, 2) })); expect(texture.version).toBeGreaterThan(version);
+  expect(draw.fillText).toHaveBeenLastCalledWith('12/10', 96, 42, 174);
+  const body = new Group(); body.add(new Mesh(new BoxGeometry(10, 30, 10)));
+  resolve({ scene: body, animations: [], placeholder: false, release() {} } as unknown as ModelLease);
+  await flush(); expect(sprite.position.y).toBeGreaterThan(standHeight);
+  props.update(0.5); expect(props.debug().chest.rise).toBeGreaterThan(0);
+  expect(sprite.position.y).toBe(92);
+  const dropTexture = vi.spyOn(texture, 'dispose'), dropMaterial = vi.spyOn(sprite.material, 'dispose');
+  props.dispose(); expect(dropTexture).toHaveBeenCalledOnce(); expect(dropMaterial).toHaveBeenCalledOnce();
 });

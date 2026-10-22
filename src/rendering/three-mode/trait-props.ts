@@ -7,26 +7,31 @@
  * there, so a reload never replays an opening. Asset ids are optional manifest entries; without them stand-ins draw.
  * An extracted model replaces the stand-in body and plays its own idle clip (14.24 has no chest-opening clip: the
  * Conqueror prop is a war banner), so a chest opening on a model is the open effect plus a procedural rise and sway;
- * the lid only exists on the stand-in. A ground aura carries the progress glow / fill level for either body.
+ * the stand-in is also a war banner. A ground aura carries the progress glow / fill level for either body.
  */
 import {
-  AnimationMixer, Box3, BoxGeometry, CircleGeometry, CylinderGeometry, Group, LatheGeometry, Mesh, MeshStandardMaterial, SphereGeometry, Vector2, Vector3,
+  AnimationMixer, Box3, BoxGeometry, CanvasTexture, CircleGeometry, CylinderGeometry, Group, LatheGeometry, Mesh, MeshStandardMaterial, SphereGeometry, Sprite, SpriteMaterial, Vector2, Vector3,
   type Camera, type Object3D, type Scene,
 } from 'three';
 import type { ModelLease, ParticleEffect } from '../../rendering3d';
 import type { BoardFrame, BoardMechanics } from '../board-feed';
 
+/**
+ * Same text as conqueror-flag.ts's conquestLabel (stacks / next chest, the total once all are open). Kept local: a
+ * value import from a 2D module would pull it into the manual render3d chunk and make the 2D entry load 3D statically.
+ */
+const conquestLabel = (conquest: NonNullable<BoardMechanics['conquest']>): string =>
+  conquest.next === null ? String(conquest.stacks) : `${conquest.stacks}/${conquest.next}`;
+
 export const CHEST_MODEL = 'conqueror-chest', FLASK_MODEL = 'shimmer-flask';
 export const CHEST_OPEN_EFFECT = 'conqueror-chest-open', FLASK_OFFER_EFFECT = 'shimmer-flask-offer', FLASK_TAKE_EFFECT = 'shimmer-flask-take';
 const EFFECT_SECONDS = 3;
-/** Stand-in sizes in board units (a champion is 92 tall): chest 34 × 18 × 24, flask 36 tall. */
-const CHEST = { width: 34, height: 18, depth: 24, lid: 7 }, FLASK_HEIGHT = 36, LIQUID_BOTTOM = 1.5, LIQUID_TOP = 22;
+/** Stand-in heights in board units (a champion is 92 tall). */
+const FLAG_HEIGHT = 70, FLASK_HEIGHT = 36, LIQUID_BOTTOM = 1.5, LIQUID_TOP = 22;
 /** Extracted models stand this tall (the Conqueror banner is a standard, most of a champion's 92); the ground aura's radius. */
 const CHEST_MODEL_HEIGHT = 76, AURA_RADIUS = 22;
 /** A model's opening motion: rises this far and sways (radians) while the open effect plays. */
 const RISE = 9, SWAY = 0.16;
-/** Lid angles (radians, opening backward): shut, fully open while a chest pays out, and resting ajar once all are open. */
-const LID_OPEN = -1.95, LID_DONE = -0.55;
 const OPEN_HOLD_SECONDS = 1.6, POP_SECONDS = 0.5, FILL_RATE = 1.6, BUBBLES = 6;
 const GOLD = '#e5b64a', SHIMMER = '#c25bff';
 
@@ -46,7 +51,7 @@ export interface TraitProps {
   update(seconds: number): void;
   /** Acceptance read (?debug3d). */
   debug(): {
-    chest: { shown: boolean; glow: number; lid: number; opening: boolean; model: boolean; rise: number };
+    chest: { shown: boolean; glow: number; label: string; opening: boolean; model: boolean; rise: number };
     flask: { shown: boolean; fill: number; target: number; offer: boolean; model: boolean };
     bursts: number;
   };
@@ -71,24 +76,47 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   // --- chest -------------------------------------------------------------------------------------------------------
   const chestRoot = new Group(); chestRoot.name = 'render3d-conqueror-chest'; chestRoot.visible = false;
   const chestStand = new Group();
-  const lid = new Group();
-  {
-    const { width, height, depth } = CHEST;
-    const body = new Mesh(own(new BoxGeometry(width, height, depth)), wood); body.position.y = height / 2;
-    const bands = own(new BoxGeometry(width + 1.2, 2.4, depth + 1.2));
-    for (const y of [2, height - 2]) { const band = new Mesh(bands, metal); band.position.y = y; chestStand.add(band); }
-    const lock = new Mesh(own(new BoxGeometry(5, 6, 1.6)), metal); lock.position.set(0, height - 3, depth / 2 + 0.8);
-    // The lid hinges on the back top edge; its own band rides along.
-    lid.position.set(0, height, -depth / 2);
-    const top = new Mesh(own(new BoxGeometry(width, CHEST.lid, depth)), wood); top.position.set(0, CHEST.lid / 2, depth / 2);
-    const lidBand = new Mesh(own(new BoxGeometry(width + 1.2, 2.4, depth + 1.2)), metal); lidBand.position.set(0, CHEST.lid - 1.2, depth / 2);
-    lid.add(top, lidBand);
-    // Light from inside the seam: invisible at 0 progress, a warm halo near the next chest.
-    const glow = new Mesh(own(new BoxGeometry(width - 2, 3, depth - 2)), glowMaterial); glow.position.y = height + 0.5;
-    chestStand.add(body, lock, lid, glow);
-  }
-  const chestBody = new Group(); chestBody.add(chestStand); chestRoot.add(chestBody); scene.add(chestRoot);
-  const chest: Prop = { root: chestRoot, body: chestBody, stand: chestStand, lease: null, motion: null, mixer: null, loading: false, disposed: false };
+  chestStand.name = 'render3d-conqueror-flag';
+  const cloth = own(new MeshStandardMaterial({ color: '#741d30', roughness: 0.85 }));
+  const block = (width: number, height: number, depth: number, x: number, y: number, z: number, material: MeshStandardMaterial) => {
+    const mesh = new Mesh(own(new BoxGeometry(width, height, depth)), material);
+    mesh.position.set(x, y, z); chestStand.add(mesh); return mesh;
+  };
+  block(22, 4, 18, 0, 2, 0, metal);
+  block(3, FLAG_HEIGHT - 4, 3, 0, (FLAG_HEIGHT + 4) / 2, 0, wood);
+  block(34, 3, 3, 0, FLAG_HEIGHT - 4, 0, metal);
+  // A hanging crimson standard with gold trim, visible from either side.
+  block(28, 40, 1.4, 0, 44, 2, cloth);
+  for (const x of [-14, 14]) block(1.6, 40, 2, x, 44, 2, metal);
+  block(29, 2, 2, 0, 24, 2, metal);
+  const emblem = block(10, 10, 2, 0, 45, 2, metal); emblem.rotation.z = Math.PI / 4;
+  const emblemGlow = block(8, 8, 2.2, 0, 45, 2, glowMaterial); emblemGlow.rotation.z = Math.PI / 4;
+  const chestBody = new Group(), chestMotion = new Group();
+  chestMotion.add(chestStand); chestBody.add(chestMotion); chestRoot.add(chestBody); scene.add(chestRoot);
+  const chest: Prop = { root: chestRoot, body: chestBody, stand: chestStand, lease: null, motion: chestMotion, mixer: null, loading: false, disposed: false };
+
+  // A billboard outside the moving body: the total stays readable during a payout.
+  let label = '';
+  let labelView: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null = null;
+  const showLabel = (text: string) => {
+    const changed = label !== text;
+    label = text; // Also available in headless tests without a document/canvas.
+    if (!labelView) {
+      const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
+      if (!canvas?.getContext('2d')) return;
+      canvas.width = 192; canvas.height = 80;
+      const texture = new CanvasTexture(canvas);
+      const sprite = new Sprite(new SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, transparent: true }));
+      sprite.name = 'render3d-conqueror-stacks'; sprite.scale.set(48, 20, 1); sprite.renderOrder = 1003;
+      chestRoot.add(sprite); labelView = { canvas, texture, sprite };
+    } else if (!changed) return;
+    const draw = labelView.canvas.getContext('2d')!;
+    draw.clearRect(0, 0, 192, 80);
+    draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill();
+    draw.fillStyle = GOLD; draw.font = 'bold 48px sans-serif'; draw.textAlign = 'center'; draw.textBaseline = 'middle';
+    draw.fillText(text, 96, 42, 174); labelView.texture.needsUpdate = true;
+    labelView.sprite.position.y = (chest.lease ? CHEST_MODEL_HEIGHT : FLAG_HEIGHT) + 16;
+  };
 
   // --- flask -------------------------------------------------------------------------------------------------------
   const flaskRoot = new Group(); flaskRoot.name = 'render3d-shimmer-flask'; flaskRoot.visible = false;
@@ -127,7 +155,9 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       if (prop.disposed || lease.placeholder) { lease.release(); return; }
       prop.lease = lease; prop.stand.visible = false;
       // A wrapper takes the procedural motion, so the fitted model keeps its own scale and foot offset.
-      prop.motion = new Group(); prop.motion.add(fitHeight(lease.scene, height)); prop.body.add(prop.motion);
+      if (!prop.motion) { prop.motion = new Group(); prop.body.add(prop.motion); }
+      prop.motion.add(fitHeight(lease.scene, height));
+      if (prop === chest && labelView) labelView.sprite.position.y = CHEST_MODEL_HEIGHT + 16;
       const idle = lease.animations.find(clip => /idle/i.test(clip.name)) ?? lease.animations[0];
       if (idle) { prop.mixer = new AnimationMixer(lease.scene); prop.mixer.clipAction(idle).play(); }
     }).catch(() => { /* keeps the stand-in */ });
@@ -151,8 +181,8 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       // Each turned a little toward the board so its front (lock, label side) faces the player's camera.
       chestRoot.rotation.y = -0.45; flaskRoot.rotation.y = 0.45;
     }
-    const pad = CHEST.width;
-    return [spots.chest.clone().add(new Vector3(pad, CHEST_MODEL_HEIGHT, pad)), spots.flask.clone().add(new Vector3(-pad, FLASK_HEIGHT, 0))];
+    const pad = 34;
+    return [spots.chest.clone().add(new Vector3(pad, CHEST_MODEL_HEIGHT + 26, pad)), spots.flask.clone().add(new Vector3(-pad, FLASK_HEIGHT, 0))];
   };
 
   // --- bursts ------------------------------------------------------------------------------------------------------
@@ -179,7 +209,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
 
   // --- frames ------------------------------------------------------------------------------------------------------
   let seeded = false, last: BoardMechanics | undefined;
-  let glow = 0, lidAngle = 0, lidTarget = 0, openHold = 0, done = false;
+  let glow = 0, openHold = 0;
   let fill = 0, fillTarget = 0, offer = false, clock = 0;
   const onFrame = (frame: BoardFrame) => {
     layout(frame);
@@ -188,14 +218,14 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     chestRoot.visible = !!conquest;
     if (conquest) {
       tryModel(chest, CHEST_MODEL, CHEST_MODEL_HEIGHT);
-      done = conquest.next === null;
+      showLabel(conquestLabel(conquest));
+      const done = conquest.next === null;
       glow = done ? 0 : Math.min(1, Math.max(0, (conquest.stacks - conquest.from) / Math.max(1, conquest.next! - conquest.from)));
       if (seeded && conquest.opened > (last?.conquest?.opened ?? conquest.opened)) {
-        lidTarget = LID_OPEN; openHold = OPEN_HOLD_SECONDS;
-        burst(CHEST_OPEN_EFFECT, spots.chest.clone().setY(CHEST.height + 4), GOLD);
-      } else if (openHold <= 0) lidTarget = done ? LID_DONE : 0;
-      if (!seeded) lidAngle = lidTarget;
-    }
+        openHold = OPEN_HOLD_SECONDS;
+        burst(CHEST_OPEN_EFFECT, spots.chest.clone().setY(FLAG_HEIGHT / 2), GOLD);
+      }
+    } else { label = ''; openHold = 0; }
     flaskRoot.visible = !!shimmer;
     if (shimmer) {
       tryModel(flask, FLASK_MODEL, FLASK_HEIGHT);
@@ -213,9 +243,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const update = (seconds: number) => {
     clock += seconds;
     if (chestRoot.visible) {
-      if (openHold > 0 && (openHold -= seconds) <= 0) lidTarget = done ? LID_DONE : 0;
-      lidAngle += (lidTarget - lidAngle) * Math.min(1, seconds * 7);
-      lid.rotation.x = lidAngle;
+      openHold = Math.max(0, openHold - seconds);
       // Brighter toward the next chest, a slow breath once it is close; full while a chest is paying out.
       const breath = glow > 0.75 ? 0.15 * Math.sin(clock * 4) : 0, shine = openHold > 0 ? 1 : glow * 0.85 + breath;
       glowMaterial.opacity = Math.max(0, Math.min(1, shine)); glowMaterial.emissiveIntensity = 1.6 * Math.max(0, shine);
@@ -265,11 +293,11 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   return {
     layout, frame: onFrame, update,
     debug: () => ({
-      chest: { shown: chestRoot.visible, glow, lid: lidAngle, opening: openHold > 0, model: !!chest.lease, rise: chest.motion?.position.y ?? 0 },
+      chest: { shown: chestRoot.visible, glow, label, opening: openHold > 0, model: !!chest.lease, rise: chest.motion?.position.y ?? 0 },
       flask: { shown: flaskRoot.visible, fill, target: fillTarget, offer, model: !!flask.lease },
       bursts: bursts.size,
     }),
-    dispose() { for (const entry of [...bursts]) endBurst(entry); dropProp(chest); dropProp(flask); },
+    dispose() { labelView?.texture.dispose(); labelView?.sprite.material.dispose(); labelView = null; for (const entry of [...bursts]) endBurst(entry); dropProp(chest); dropProp(flask); },
   };
 }
 

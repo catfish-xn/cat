@@ -50,11 +50,13 @@ export interface TraitRuntimeLine {
   readonly label: string; readonly value: string;
   /** Shown at the bottom of the hover card only, not on the row (家人 5 progress). */
   readonly cardOnly?: true;
+  /** Shown with the hover card's counters (above the ladder), not on the row (征服 chests opened). */
+  readonly counterOnly?: true;
   /** 征服层数 only: the hover card draws the 15-chest ladder from these counters. */
   readonly ladder?: { readonly stacks: number; readonly opened: number };
 }
 export type TraitRuntime = ReadonlyMap<string, readonly TraitRuntimeLine[]>;
-const runtimeText = (lines: readonly TraitRuntimeLine[] | undefined, all = false) => (lines ?? []).filter(line => all || !line.cardOnly).map(line => `${line.label} ${line.value}`).join(' · ');
+const runtimeText = (lines: readonly TraitRuntimeLine[] | undefined, all = false) => (lines ?? []).filter(line => all || !(line.cardOnly || line.counterOnly)).map(line => `${line.label} ${line.value}`).join(' · ');
 
 /**
  * My own Conqueror and Chem-Baron counters, read from the rules' G2-3 progress (offline state or my private seat view):
@@ -68,7 +70,8 @@ export function g23TraitRuntime(state: MatchState): TraitRuntime | undefined {
   const { stacks, chestsOpened } = progress.conquest, next = G23_CONQUEROR_CHESTS[chestsOpened]?.threshold, shimmer = progress.chem.shimmer;
   const market = nextMarket(shimmer);
   const lines = new Map<string, readonly TraitRuntimeLine[]>([
-    ['conqueror', [{ label: '征服层数', value: next === undefined ? String(stacks) : `${stacks}/${next}`, ladder: { stacks, opened: chestsOpened } }]],
+    ['conqueror', [{ label: '征服层数', value: next === undefined ? String(stacks) : `${stacks}/${next}`, ladder: { stacks, opened: chestsOpened } },
+      { label: '已开奖励', value: `${chestsOpened}/${G23_CONQUEROR_CHESTS.length}`, counterOnly: true }]],
     ['chem-baron', [{ label: '微光', value: market ? `${shimmer}/${market}` : String(shimmer) }]],
   ]);
   // 家人 5 (v19): the rules' current reward and progress toward it, as the seat view carries them; the reunion marker on the row.
