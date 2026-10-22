@@ -1,3 +1,5 @@
+import { openingHpBeforeRound } from './opening-monkey';
+import { validateOpeningEncounterState } from './opening-encounter';
 import { validateAugmentOfferHistory } from './augment-offers';
 import { withResourceReceiptReuse } from './resource-provenance';
 import { investmentGrowth, readAugmentIncome } from './augment-income';
@@ -135,6 +137,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   requireValue((raw.playerHp as number) <= 100, 'level/HP bounds');
   requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
   const state = raw as unknown as MatchState;
+  mechanicCheck(() => validateOpeningEncounterState(state), 'opening-context-mismatch');
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
   const enemyProjection = readRoundEnemyProjection(state.round);
@@ -245,7 +248,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   for (const [i, result] of state.roundResults.entries()) {
     record(result); integer(result.mechanicReceiptPrefixLength); requireValue(result.mechanicReceiptPrefixLength!<=(state.seatMechanics?.receipts.length??0), 'mechanic receipt prefix'); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
-    requireValue(result.hpBefore === (i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
+    requireValue(result.hpBefore === openingHpBeforeRound(state, result.roundId, i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(same(result.streakBefore, streak), 'history streak before');
     requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<result.round)).roundXp),result.levelBefore,result.xpBefore), 'history XP preparation chain');
     const expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
@@ -270,7 +273,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   list(state.persistentGrowth); const growthIds = new Set<string>();
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
-  requireValue(state.playerHp === (state.roundResults.at(-1)?.hpAfter ?? 100), 'current HP');
+  requireValue(state.playerHp === (settled ? state.roundResults.at(-1)!.hpAfter : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
   if (!settled) requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<state.round)).roundXp),state.level,state.xp), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial);
@@ -280,7 +283,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
   if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold + g23RoundGold(state,state.round) && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
   requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && roundDefinition.isFinal), 'terminal boundary');
-  if (state.phase === 'preparation' || state.phase === 'choice' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
+  if (state.phase === 'preparation' || state.phase === 'choice' && !settled || state.phase === 'gameOver' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
   else {
     record(state.combat); const combat = state.combat;
     validateSeed(combat.rngState!); integer(combat.rngDraws); integer(combat.nextActionSeq); integer(combat.tick); integer(combat.maxTicks, 1); requireValue(combat.tick <= combat.maxTicks && combat.maxTicks === 1200, 'combat ticks');

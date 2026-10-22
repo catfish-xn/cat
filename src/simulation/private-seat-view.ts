@@ -1,3 +1,5 @@
+import { readMasterworkOptions } from './masterwork-choice';
+import { readOpeningEncounterView, readOpeningMelProgress, readOpeningForgeProgress } from './opening-encounter';
 import { getUnitSellPrice } from './unit-stats';
 import { D14_POLICY } from './content/d14-anomalies';
 import { isD14PromotedUnit } from './d14-public-unit-mark';
@@ -96,6 +98,9 @@ export function toPrivateSeatView(state: MatchState) {
     }),
   }));
   return freezeContent({
+    openingEncounter: readOpeningEncounterView(state),
+    openingMelProgress: readOpeningMelProgress(state),
+    ...(readOpeningForgeProgress(state) ? {openingForgeProgress: readOpeningForgeProgress(state)} : {}),
     ...(state.multiplayer ? {unclaimedOrbs:readLootView(state).unclaimedOrbs??[],
       orbClaimReceipts:readLootView(state).claimReceipts??[]}:{}),
     ...(d11Display?{d11Display}:{}),
@@ -106,6 +111,8 @@ export function toPrivateSeatView(state: MatchState) {
     ...(revealedLoot ? { revealedLoot } : {}),
     // G2-3: the whole owner-visible mechanic container; `hidden` always empty. Same key as MatchState, so display states keep it.
     ...(seatMechanics ? { seatMechanics } : {}),
+    ...(state.pendingChoice?.payload?.kind === 'armory' && state.pendingChoice.payload.masterwork
+      ? {masterworkOptions:readMasterworkOptions(state,state.pendingChoice.payload.masterwork.unitId)} : {}),
     consumables:state.consumables.map(c=>pick(c,['consumableId','definitionId'])),
     consumableTargets,
     familyReunion: familyReunionView(state),

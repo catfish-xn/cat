@@ -112,6 +112,8 @@ it('the 20ms budget yields inside a boundary and defers writers until every seat
   const room = new Room(SEATS.map(s => ({ ...s, kind: 'human' })), { ...ROOM_TIMING_DEFAULTS, ...TIMINGS,
     roomId: 'budget', seed: 42, clock: wallClock, resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs: 20 });
   room.start(); clock.fireNext();
+  expect(room.state.phase).toBe('frozen');
+  runUntil(room, clock, state => state.phase === 'battle');
   expect(room.state.phase).toBe('battle');
   const original = CombatStream.prototype.advancePve;
   const spy = vi.spyOn(CombatStream.prototype, 'advancePve').mockImplementation(function (this: InstanceType<typeof CombatStream>, state) {
@@ -169,6 +171,8 @@ it('absolute boundaries include compute time and cap immediate catch-up at two t
   const room = new Room(SEATS.map(s => ({ ...s, kind: 'human' })), { ...ROOM_TIMING_DEFAULTS, ...TIMINGS,
     roomId: 'absolute', seed: 42, clock: wallClock, resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 8, sliceMs: 20 });
   room.start(); clock.fireNext();
+  expect(room.state.phase).toBe('frozen');
+  runUntil(room, clock, state => state.phase === 'battle');
   const started = wallClock.now(), original = CombatStream.prototype.advancePve;
   const spy = vi.spyOn(CombatStream.prototype, 'advancePve').mockImplementation(function (this: InstanceType<typeof CombatStream>, state) {
     if (this.envelope.seats[0]!.seatId === 's0') starts.push(wallClock.now());

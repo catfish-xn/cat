@@ -552,7 +552,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
           integer(item.location.slot); requireValue(item.location.slot < 3, 'consumable slot');
         }
       }
-      keys(r.target, r.target.kind === 'unit' ? ['kind','unitId'] : ['kind','itemId']);
+      keys(r.target, r.target.kind === 'unit' ? r.effect === 'masterwork-upgrade' ? ['kind','unitId','itemId'] : ['kind','unitId'] : ['kind','itemId']);
       keys(r.rngBefore, ['state','draws']); keys(r.rngAfter, ['state','draws']);
       if (r.output) keys(r.output, ['id','definitionId']);
       requireValue(r.target.kind==='unit'&&!absent.has(r.target.unitId)&&units.has(r.target.unitId),'consumable target');

@@ -40,7 +40,7 @@ export function planOrbClaim(state: MatchState, orbId: string, expectedRound: nu
   if (!state.multiplayer&&!orbId.startsWith('family:orb:')) return fail('multiplayer-required');
   if (state.multiplayer?.status==='eliminated') return fail('seat-eliminated');
   if (state.round!==expectedRound) return fail('stale-round');
-  if (!ORB_CLAIM_PHASES.includes(state.phase)) return fail('wrong-phase');
+  if (!ORB_CLAIM_PHASES.includes(state.phase) || state.pendingChoice?.payload?.source === 'masterwork-upgrade') return fail('wrong-phase');
   if(orbId.startsWith('family:orb:')){
     if(state.m8.loot.queuedOrbClaims?.includes(orbId))return fail('already-claimed');
     if(!familyOrbs(state).some(o=>o.orbId===orbId))return fail('unknown-orb');

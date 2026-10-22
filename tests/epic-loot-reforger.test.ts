@@ -212,7 +212,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(restoreSharedOrbSnapshot(paid.pool,JSON.stringify(paid.state))).toEqual(paid.state);conserved(paid.pool,[paid.state]);
  });
  it('uses exact approved zh_cn names and rejects prior-epoch state identities without migration',()=>{
-  expect(Object.fromEntries(Object.values(CONSUMABLE_DEFINITIONS).map(d=>[d.apiName,d.name]))).toEqual({TFT_Consumable_ItemRemover:'装备拆卸器',TFT_Consumable_ItemReroller:'装备重铸器',TFT_Consumable_ChampionDuplicator_III:'次级英雄复制器',TFT_Consumable_NeekosHelp:'英雄复制器'});
+  expect(Object.fromEntries(Object.values(CONSUMABLE_DEFINITIONS).map(d=>[d.apiName,d.name]))).toEqual({TFT_Consumable_ItemRemover:'装备拆卸器',TFT_Consumable_ItemReroller:'装备重铸器',TFT_Consumable_ChampionDuplicator_III:'次级英雄复制器',TFT_Consumable_NeekosHelp:'英雄复制器',TFT_Consumable_MasterworkUpgrade:'杰作升级'});
   expect(EPIC_REWARD_NAMES).toEqual({TFT_ArmoryKeyCompleted:'成装锻造器',TFT_ArmoryKeyComponent:'基础装备锻造器',TFT_ArmoryKeySupport:'辅助装锻造器',TFT_ArmoryKeyOrnn:'神器装备锻造器',TFT_Item_ForceOfNature:'金铲铲冠冕'});expect(ITEM_DEFINITIONS.TFT_Item_ForceOfNature.name).toBe('金铲铲冠冕');
   const state=createMatch(42);expect(state.rulesVersion).toBe('s13-g2-3-v20-black-market');expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
   for(const field of ['rulesVersion','contentVersion'] as const){

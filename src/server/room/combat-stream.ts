@@ -9,7 +9,7 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReplayUnitId } from '../protocol';
 import type { BattleInput, BattleSeatOutcome, TwoSidedBattleResult } from './types';
 import { BattleResolveError } from './battle-resolver';
-import { startLiveTask, twoSidedResult, guardedBattle } from './two-sided-resolver';
+import { startLiveTask, startLiveTaskSteps, twoSidedResult, guardedBattle } from './two-sided-resolver';
 import { mirrorReplayTick, mirrorViewState, primeCombatReplay } from './projection';
 
 export interface CombatStreamView {
@@ -40,8 +40,15 @@ export class CombatStream {
   terminal: CombatState | null = null;
   tick = 0;
 
+  /** Keep all intermediate tasks private until the room publishes the complete set. */
+  static *open(envelope: BattleInput): Generator<void, CombatStream, void> {
+    const live = yield* startLiveTaskSteps(envelope);
+    return new CombatStream(envelope, undefined, undefined, live);
+  }
+
   constructor(readonly envelope: BattleInput, pve?: { initial: CombatState; events: readonly MatchEvent[] },
-    private readonly beforeTick?: import('../../server-entry').BattleTickInputSource) {
+    private readonly beforeTick?: import('../../server-entry').BattleTickInputSource,
+    liveTask?: ReturnType<typeof startLiveTask>) {
     if (pve) {
       this.opening = pve.initial; this.ledger = pve.events.filter((e): e is LedgerCombatEvent => 'tick' in e);
       this.recorder = createCombatReplayRecorder(pve.initial, this.ledger); this.task = null;
@@ -49,7 +56,7 @@ export class CombatStream {
       this.mapping = []; this.right = null;
       if (pve.initial.status === 'finished') { this.terminal = pve.initial; this.completedReplay = this.recorder.finish(pve.initial); }
     } else {
-      const live = startLiveTask(envelope, beforeTick);
+      const live = liveTask ?? startLiveTask(envelope, beforeTick);
       this.task = live.task; this.recorder = null; this.opening = null; this.ledger = [];
       this.initial = live.task.initial; this.frames = [live.task.initialFrame];
       this.mapping = live.input.mapping; this.right = live.input.b.seatId;

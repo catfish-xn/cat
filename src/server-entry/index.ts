@@ -73,3 +73,10 @@ export type { UnitBattleSummary } from '../simulation/combat-summary';
 export { applyBattleEquipment } from '../simulation/battle-equipment';
 export type { BattleEquipmentReceipt, BattleEquipmentFailure } from '../simulation/battle-equipment';
 export { queueMatchBattleEquipment } from '../simulation/match';
+
+// Opening encounter PR1: domain context/query only; Room/transport wiring belongs to PR8.
+export { createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext,
+  validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView,
+  OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from '../simulation/match';
+export type { OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection,
+  OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from '../simulation/match';

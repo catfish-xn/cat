@@ -1,3 +1,5 @@
+import { validateAugmentOfferHistory } from './augment-offers';
+import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 import { sixCostOddsBps } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
 import { validateConsumableState } from './consumables';
@@ -36,7 +38,7 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):Mat
   const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
-  canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);
+  canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
   return state;
 }
 
@@ -47,7 +49,7 @@ export function createSharedPool(poolId:string,seed:number,options:{readonly sea
   requirePool(typeof poolId==='string'&&poolId.length>0);
   if(options.capacities) requirePool(Object.keys(options.capacities).every(id=>SHOP_CATALOG.includes(id)));
   const initial=Object.fromEntries(SHOP_CATALOG.map(id=>[id,options.capacities ? options.capacities[id]??0 : POOL_CAPACITY_BY_COST[UNIT_DEFINITIONS[id].cost]]));
-  const pool:SharedPoolState={carouselParticipants:[],carouselReservations:[],carouselReceipts:[],carouselRounds:[],orbLayout:createOrbLayout(seed),version:SHARED_POOL_VERSION,poolId,seed,seatCount:options.seatCount??8,revision:0,
+  const pool:SharedPoolState={openingEncounter:createOpeningEncounter(seed),carouselParticipants:[],carouselReservations:[],carouselReceipts:[],carouselRounds:[],orbLayout:createOrbLayout(seed),version:SHARED_POOL_VERSION,poolId,seed,seatCount:options.seatCount??8,revision:0,
     initial,available:{...initial},seats:[],shops:[],holdings:[],pending:[],rewards:[],naturalRound:0,order:[]};
   assertSharedPoolConservation(pool);return pool;
 }
@@ -102,10 +104,13 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
       draft.holdings.push({seatId,unitId:hero.id,definitionId:hero.definitionId,sources:[sourceKey('opening',seatId)]});
     }
     // createMatch's private infinite shop was never published. Its draws are discarded too.
-    const next:MatchState={...enabled.state,augmentTierSeed:pool.seed,preparation:{...enabled.state.preparation,units:enabled.state.preparation.units.map(u=>u.id===hero.id?hero:u)},resourceProvenance:{...enabled.state.resourceProvenance,entries:enabled.state.resourceProvenance.entries.map((entry,index)=>index===0&&entry.kind==='unit-acquired'?{...entry,source:{kind:'opening' as const,seed:pool.seed,seatId}}:entry)},m8:{...enabled.state.m8,loot:boundLoot},rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
+    let next:MatchState={...enabled.state,openingEncounter:bindSharedOpeningEncounter(pool.openingEncounter,pool.poolId,seatId),augmentTierSeed:pool.seed,preparation:{...enabled.state.preparation,units:enabled.state.preparation.units.map(u=>u.id===hero.id?hero:u)},resourceProvenance:{...enabled.state.resourceProvenance,entries:enabled.state.resourceProvenance.entries.map((entry,index)=>index===0&&entry.kind==='unit-acquired'?{...entry,source:{kind:'opening' as const,seed:pool.seed,seatId}}:entry)},m8:{...enabled.state.m8,loot:boundLoot},rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
       sharedPool:{poolId:pool.poolId,seatId,revision:0}};
+    const applied=applyOpeningEffects(next,planOpeningRound(pool.openingEncounter,'1-2').facts,pool.openingEncounter);
+    if(!applied.ok) return failure(pool,state,applied.reason);
+    next=applied.state;
     draft.seats.push({seatId,seatIndex,revision:0,released:false,shop:next.shop});draft.revision++;
-    assertSharedPoolConservation(draft,[next]);return {ok:true,pool:draft,state:next,events:[],poolEvents:[]};
+    assertSharedPoolConservation(draft,[next]);return {ok:true,pool:draft,state:next,events:applied.events,poolEvents:[]};
   } catch(error) {return failure(pool,state,reasonOf(error));}
 }
 
@@ -239,7 +244,7 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
     const draft=draftPool(pool),poolEvents:SharedPoolEvent[]=[],events:{seatId:string;events:readonly MatchEvent[]}[]=[];
     const frozenLayout=freezeOrbLayoutThroughRound(draft.orbLayout,Math.min(targetRound,FINAL_ROUND));
     if(!frozenLayout.ok)throw new PoolError(frozenLayout.reason);draft.orbLayout=frozenLayout.layout;
-    const prepared=states.map((state):MatchState=>{
+    let prepared=states.map((state):MatchState=>{
       if(!advance) {requirePool(state.phase==='preparation'||state.phase==='choice','wrong-phase');return state;}
       const {sharedPool, ...unbound}=state;
       const result=advanceMultiplayerRound(unbound,round,draft.orbLayout);if(!result.ok)throw new PoolError(result.reason);
@@ -248,16 +253,46 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
       // Discard only the unobserved infinite-shop proposal; keep schedule/equipment/loot progression.
       return {...result.state,sharedPool,shop:state.shop,rngState:state.rngState};
     });
+    let openingResolution: import('./shared-pool-types').OpeningRoundResolution | undefined;
+    const openingPlan = targetRound <= FINAL_ROUND ? planOpeningRound(draft.openingEncounter, prepared[0].roundDefinitionId)
+      : {context:draft.openingEncounter,facts:[]};
+    if (openingPlan.facts[0]?.nodeId === '3-5') {
+      draft.openingEncounter = openingPlan.context;
+      const before = new Map(prepared.map(s => [s.sharedPool!.seatId, s.playerHp]));
+      prepared = prepared.map(state => {
+        const applied = applyOpeningEffects(state, openingPlan.facts, draft.openingEncounter);
+        if (!applied.ok) throw new PoolError(applied.reason);
+        const id = state.sharedPool!.seatId, row = events.find(e => e.seatId === id);
+        if (row) row.events = [...row.events, ...applied.events]; else events.push({seatId: id, events: applied.events});
+        return applied.state;
+      });
+      const index = (s: MatchState) => draft.seats.find(r => r.seatId === s.sharedPool!.seatId)!.seatIndex;
+      const hp = (s: MatchState) => before.get(s.sharedPool!.seatId)!;
+      const dying = prepared.filter(s => s.playerHp === 0).sort((a,b) => hp(a)-hp(b) || index(b)-index(a));
+      const survivors = prepared.filter(s => s.playerHp > 0);
+      openingResolution = {nodeId: '3-5', outcome: openingPlan.facts[0].outcome!,
+        eliminated: dying.map((s,i) => ({seatId:s.sharedPool!.seatId, rank:prepared.length-i, hpBefore:hp(s), hpAfterRaw:hp(s)-10})),
+        ended: survivors.length <= 1, survivorRanks: survivors.length === 1 ? [{seatId:survivors[0].sharedPool!.seatId,rank:1}] : []};
+      // Stage every death before returning stock or drawing any next shop; no partial state escapes on failure.
+      for (const dyingState of dying) {
+        const released = releaseSeatOnElimination(draft, dyingState);
+        if (!released.ok) throw new PoolError(released.reason);
+        Object.assign(draft, released.pool); poolEvents.push(...released.poolEvents);
+        prepared = prepared.map(s => s === dyingState ? released.state : s);
+        const row = events.find(e => e.seatId === dyingState.sharedPool!.seatId)!;
+        row.events = [...row.events, ...released.events];
+      }
+    }
     if(!draft.order.length) {
       const order=[...draft.seats].sort((a,b)=>a.seatIndex-b.seatIndex).map(s=>s.seatId);let rng=pool.seed;
       for(let i=order.length-1;i>0;i--) {const draw=nextRandom(rng);rng=draw.state;const j=Math.floor(draw.word*(i+1)/4294967296);[order[i],order[j]]=[order[j],order[i]];}
       draft.order=order;
     }
-    const activeOrder=draft.order.filter(id=>registered.some(s=>s.seatId===id));
-    const offset=(targetRound-1)%activeOrder.length;
+    const activeOrder=draft.order.filter(id=>draft.seats.some(s=>s.seatId===id&&!s.released));
+    const offset=activeOrder.length ? (targetRound-1)%activeOrder.length : 0;
     const order=[...activeOrder.slice(offset),...activeOrder.slice(0,offset)];
     poolEvents.push({type:'sharedRefreshOrder',round:targetRound,seatIds:order});
-    for(const state of prepared) if(!state.shop.locked) releaseShop(draft,state.sharedPool!.seatId);
+    for(const state of prepared) if(state.multiplayer?.status !== 'eliminated' && !state.shop.locked) releaseShop(draft,state.sharedPool!.seatId);
     const nextStates=new Map(prepared.map(s=>[s.sharedPool!.seatId,s]));
     for(const id of order) {
       const state=nextStates.get(id)!;
@@ -267,7 +302,7 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
     const committed=states.map(s=>finish(draft,nextStates.get(s.sharedPool!.seatId)!,false));
     draft.revision++;
     assertSharedPoolConservation(draft,committed);
-    return {ok:true,pool:draft,states:committed,events,poolEvents};
+    return {ok:true,pool:draft,states:committed,events,poolEvents,...(openingResolution ? {openingResolution} : {})};
   } catch(error) {return failed(reasonOf(error));}
 }
 /** Initial shops or an externally prepared next round; all active seats required. */
