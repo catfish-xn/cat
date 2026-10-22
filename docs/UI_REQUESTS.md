@@ -1129,7 +1129,7 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 
 验收：同一根 seed 的八席（含机器人）与单人结果一致；刷新视图/恢复不发奖；任何公共 payload 均无 seed、selectionRng、未来奖励和个人候选。shared-deferred 仅为服务器建席前内部状态，查询返回 null，不应向已开始玩家展示。模式/布局/颜色/动画由 Claude 决定；此处只定义显示内容与数据源。演出计时由服务器展示阶段控制，不进入 simulation 时钟。
 
-存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2–7 的收据/候选尚未启用，后续另补本人进度投影。
+存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2 的激活/锻造器收据、当前候选及本人进度投影已启用，接线见下方 PR2 节；PR5 猴子及工具选择已启用，见下方 PR5 节；PR3/6/7 其余效果尚未启用，魔像训练师保持关闭，见 PR4 节。
 
 ## 开局奇遇 PR2 → Claude（2026-10-22）
 
@@ -1144,7 +1144,7 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 
 ## 开局奇遇 PR5 → Claude：猴子结果与杰作升级（2026-10-22）
 
-规则已启用发条猴子四分支；不改本文件前部历史记录，当前合同以 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 首节PR5为准。本节只规定数据和回调，不规定布局、颜色、动画。
+规则已启用发条猴子四分支；不改本文件前部历史记录，当前合同以 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 首节 PR2+PR4+PR5 集成说明及各奇遇专节为准。本节只规定数据和回调，不规定布局、颜色、动画。
 
 | 字段/入口 | 含义、用途与验收 |
 | --- | --- |
@@ -1158,6 +1158,13 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 | `choose` / `timeoutChoice` | 选择时definitionId参数传offers中的实例ID；超时默认第一项。成功后工具耗尽、仅选中件变光明并进库存；重复/无效选择不扣工具。候选窗口期间交易、装备操作与战利品法球领取按领域wrong-phase处理 |
 | `seatMechanics.receipts` | 金币/组件/工具授予source=opening-encounter-monkey，选择source=masterwork-upgrade；不得把来源误显示为征服者或PvE |
 
-**明确待接线的编译项：**`src/presentation/orb-loot.ts:48` 的 `TOOL_MARK: Record<ConsumableDefinitionId,...>` 需添加`masterwork-upgrade`键；源API名`TFT_Consumable_MasterworkUpgrade`在本地 `src/simulation/content/g2-3-loot-source.ts` 已有记录。图标/缺图降级由Claude决定，不要求下载资源。该缺项会使当前`npm run typecheck`报TS2741；Codex按用户目录限制未修改界面，也未放宽类型隐藏错误。
+**工具图标接线（当前工作树已补键，保留验收要求）：**`src/presentation/orb-loot.ts:48` 的 `TOOL_MARK: Record<ConsumableDefinitionId,...>` 已含`masterwork-upgrade`键；源API名`TFT_Consumable_MasterworkUpgrade`在本地 `src/simulation/content/g2-3-loot-source.ts` 已有记录。图标/缺图降级由Claude决定，不要求下载资源。PR5 独立报告记录过该缺项的 TS2741；当前是否通过以集成后的 typecheck 为准。本次冲突处理未修改界面或放宽类型。
 
 PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络本人字段、Room全体淘汰/唯一幸存者终局，且协调领域command6与网络协议版本。验收八席同一分支、组件身份各人独立、工具候选只给本人、失败不耗工具、恢复不重抽不重发、先淘汰观战仍见全局结果；全体死亡与并列HP按领域返回名次发布。公开站点/服务器上线前须完成接线；不以已有自动nextSharedRound钩子代替Room状态同步验收。
+
+## 开局奇遇 PR4 → Claude：魔像训练师保持关闭（2026-10-22）
+
+- 数据继续取 `readOpeningEncounterView(state)` / `toPrivateSeatView(state).openingEncounter`；未增加界面字段，未改服务器传输。`encounterId='trainer-golems'`、`nameZh='魔像训练师'`、`champion`为安蓓萨；必须同时使用 `enabled=false`、`readiness='blocked-evidence'`、`statusTextZh='本局抽中此奇遇，效果尚未启用'`，`revealedFacts=[]`。
+- `descriptionZh` 是来源说明，不代表已发魔像。验收：抽中时保留安蓓萨身份和关闭提示，重连不触发奖励，不生成假单位/装备/羁绊/人口，不创建魔像移动、出售或工具目标。
+- 未提供魔像实例ID、属性/成长、人口/位置、永久纹章ID或个人抽样结果：完整纹章池、魔像属性成长、人口及出生/移动规则仍待补证。现有普通召唤物与纹章机制不能证明这些规则。
+- `TRAINER_GOLEMS_POLICY`、`validateTrainerGolemEmblems`、`applyTrainerGolemsOpening` 从 simulation/match 导出，属于关闭状态领域接口；后者永远失败，不能接成正常初始化动作。PR8 如需服务器诊断接口，由边界维护方重导出；不向客户端传入全局seed/RNG。完整签名/失败枚举见 [Match合同 PR4节](MATCH_CONTRACT.md)。

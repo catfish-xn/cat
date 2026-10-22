@@ -1,4 +1,5 @@
 import { freezeContent } from './freeze';
+import { TRAINER_GOLEMS_POLICY } from './trainer-golems';
 
 /** Local, read-only source: tft_s13_opening_encounters_14.24b.json (2026-10-22).
  * Every sourcePath below refers to that research JSON: id/portal_id/champion,
@@ -470,11 +471,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
         "name_en": "Trait Tracker"
       }
     ],
-    "missingEvidence": [
-      "golem_stats_and_growth",
-      "population_rules",
-      "emblem_sampling_pool"
-    ],
+    "missingEvidence": TRAINER_GOLEMS_POLICY.missingEvidence,
     "projectConventions": [
       "各席独立抽三个不同可执行纹章；完整池与魔像数值仍待补证"
     ],
@@ -797,7 +794,8 @@ export const OPENING_ENCOUNTERS = freezeContent([
 ] as const);
 export type OpeningEncounterId = typeof OPENING_ENCOUNTERS[number]['id'];
 export const OPENING_ENCOUNTER_CONFIG = freezeContent({
-  version: 'opening-encounters-14.24b-pr5-v1',
+  version: 'opening-encounters-14.24b-pr2-pr4-pr5-v1',
+  trainerGolems: TRAINER_GOLEMS_POLICY,
   entries: OPENING_ENCOUNTERS,
   selectionStream: 'opening-encounter-v1/select',
   derivation: 'uint32(matchSeed XOR fnv1a32-utf16(streamName))',
