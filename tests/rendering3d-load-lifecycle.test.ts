@@ -97,6 +97,35 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
       createElement: () => ({ width: 0, height: 0, dataset: {}, style: {}, remove() {}, getContext: () => null }) });
   }
 
+  it.each(['board', 'bench', 'scout', 'carousel'] as const)('keeps a model referenced by the real mounted %s consumer across idle sweeps', async consumer => {
+    const { ModelCache } = await import('../src/rendering3d/assets');
+    const evict = vi.spyOn(ModelCache.prototype, 'evict');
+    await mount(['toy']); listener.frame({ ...frame, pieces: [] });
+    if (consumer === 'board') listener.frame(frame);
+    if (consumer === 'bench') listener.frame({ ...frame, bench: [{ x: 40, y: 650 }], pieces: [{ ...frame.pieces[0], x: 40, y: 650 }] });
+    if (consumer === 'scout') listener.scout!({ seatId: 'other', name: 'Synthetic', board: {
+      units: [{ definitionId: 'toy', starLevel: 1, cell: { col: 2, row: 2 }, items: [] }], bench: [], looseItems: [], augments: [],
+    } });
+    if (consumer === 'carousel') listener.carousel!({ id: 'synthetic', slots: [{ slot: 0, definitionId: 'toy', starLevel: 1,
+      items: [], pickedBy: null, takable: false, pending: false }], seats: [], elapsedMs: 0, at: clock });
+    await flush(); expect(parses).toEqual(['toy']);
+    clock += 240_000; wall += 240_000; await draw();
+    expect(evict).not.toHaveBeenCalledWith('toy'); expect(parses).toEqual(['toy']);
+    listener.frame({ ...frame, pieces: [] }); listener.scout!(null); listener.carousel!(null); await flush();
+    clock += 120_000; wall += 120_000; await draw();
+    expect(evict.mock.calls.filter(([id]) => id === 'toy')).toHaveLength(1);
+  });
+
+  it('keeps a current shop warm hint resident after warm-up and the 120-second idle limit', async () => {
+    const { ModelCache } = await import('../src/rendering3d/assets');
+    const evict = vi.spyOn(ModelCache.prototype, 'evict');
+    board.setBoardWarmHints(['shop']); await mount(['shop']); listener.frame({ ...frame, pieces: [] });
+    await stepIdle(); expect(parses).toEqual(['shop']);
+    clock += 120_000; wall += 120_000; await draw();
+    // The hint remains current: selling an unrelated board piece must not evict the model offered in the shop.
+    expect(evict).not.toHaveBeenCalledWith('shop');
+  });
+
   it('queues changed hints only after preload and in a match, preserving hint order and cancelling on leave', async () => {
     let finish!: () => void;
     const gate = new Promise<void>(resolve => { finish = resolve; });
