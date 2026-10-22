@@ -38,7 +38,8 @@ describe('NET6 combat stream', () => {
     expect(viewerChunk.ticks).toEqual(playerChunk.ticks);
     expect(viewerChunk).toMatchObject({ watch: true, seatId: a.seatId });
     for (let i = 0; !room.state.battles.length && i < 1_300; i++) harness.clock.advance(50);
-    await flush();
+    // The whole tail leaves in one burst; a loaded runner can need longer than one flush to deliver it.
+    await resumed.waitFor(message => message.type === 'combat-end', 30_000);
     const end = messagesOfType(resumed.inbox, 'combat-end').at(-1)!;
     expect(end.terminal).toEqual(toCombatReplayFor(room.state, a.seatId!)!.replay.terminal);
     expect(room.state.settlements).toHaveLength(0);
