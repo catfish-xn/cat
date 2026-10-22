@@ -15,7 +15,13 @@ import {
 } from 'three';
 import type { ModelLease, ParticleEffect } from '../../rendering3d';
 import type { BoardFrame, BoardMechanics } from '../board-feed';
-import { conquestLabel } from '../conqueror-flag';
+
+/**
+ * Same text as conqueror-flag.ts's conquestLabel (stacks / next chest, the total once all are open). Kept local: a
+ * value import from a 2D module would pull it into the manual render3d chunk and make the 2D entry load 3D statically.
+ */
+const conquestLabel = (conquest: NonNullable<BoardMechanics['conquest']>): string =>
+  conquest.next === null ? String(conquest.stacks) : `${conquest.stacks}/${conquest.next}`;
 
 export const CHEST_MODEL = 'conqueror-chest', FLASK_MODEL = 'shimmer-flask';
 export const CHEST_OPEN_EFFECT = 'conqueror-chest-open', FLASK_OFFER_EFFECT = 'shimmer-flask-offer', FLASK_TAKE_EFFECT = 'shimmer-flask-take';
