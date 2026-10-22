@@ -1,3 +1,40 @@
+## 开局奇遇 PR4：魔像训练师关闭接口（2026-10-22）
+
+此节补充 PR1。安蓓萨 `trainer-golems` 仍为 **enabled=false**、`readiness=blocked-evidence`，保留400 Bps（4%）抽选资格；本 PR 没有新增可运行奇遇。依据只读调研 `encounters[9]`（D01–D03、14.24 排除金色炊具说明）和批准方案 §§3、4、6、9：可确认每席1只魔像、3个永久纹章；各席独立、三个不同、首轮1-2授予是批准项目约定。完整纹章池、魔像定义/属性/成长、人口以及出生/移动规则缺证，不能借用亡灵战神、锻炉、虚空生物或野怪魔像的参数。
+
+新增公共导出位于 `src/simulation/trainer-golems.ts`，由 `src/simulation/match.ts` 重导出；**本 PR 未修改 server-entry 或网络接口**。PR8 如需使用，由边界维护方添加重导出。既有 PR1 的 `planOpeningRound/applyOpeningEffects/readOpeningEncounterView` 继续直接可用。
+
+```ts
+TRAINER_GOLEMS_POLICY // 冻结的只读内容元数据；不是运行态、授予事实或 UnitDefinition
+// version='trainer-golems-blocked-v1', encounterId='trainer-golems', enabled=false
+// golemsPerSeat=1, emblemsPerGolem=3, permanentEmblems=true
+// grantRound='1-2', samplingScope='seat', distinctEmblems=true（批准约定）
+// emblemPool/unitDefinitionId/statsAndGrowth/countsTowardPopulation/placementAndMovement=null
+// missingEvidence: 纹章池、属性成长、人口、出生与移动四个缺口键
+// emblemStream: 仅预留名称；effectKey='trainer-golems'
+type TrainerGolemEmblems = readonly [string, string, string]
+validateTrainerGolemEmblems(input: unknown): TrainerGolemEmblems
+applyTrainerGolemsOpening(state: MatchState, shared?: OpeningEncounterContext): MatchCommandResult
+```
+
+`validateTrainerGolemEmblems` 仅校验恰好三个字符串、均为 `EMBLEM_ITEMS` 自有定义、物品ID和 `emblemTrait` 各不相同，返回冻结且脱离输入的三元组。拒绝重复、空洞、非纹章、原型属性及未知ID。**通过不代表来自真实奇遇池，也不认证采样、永久附着或授予来源**；不得据此发装备、额外羁绊或生成魔像。现有纹章包含 `approved-provisional` 项目数值，不能视为完整原版池。
+
+`applyTrainerGolemsOpening` 是显式授予准入接口：先验证当前上下文/席位绑定，再检查选中ID，最后因核心参数与执行器未就绪拒绝；没有接受外部配置/候选/收据的通道。正常生命周期仍使用 `applyOpeningEffects(state, [])` 成功返回原state和空events；不要在开局路径调用该显式失败接口阻断对局。
+
+| 失败原因（沿用枚举，不增加协议项） | 条件与行为 |
+| --- | --- |
+| `opening-context-mismatch` | 显式授予时上下文/收据不合法、shared-deferred未绑定、缺少或传错共享上下文；返回失败 |
+| `invalid-opening-effect` | 显式授予时选中的不是trainer-golems；或三元组校验失败（校验抛OpeningEncounterError）；通用apply拒绝所有伪造非空facts |
+| `opening-config-incomplete` | 显式授予遇到有效trainer-golems上下文仍拒绝；或通用配置校验收到启用标志、补造参数等非当前完整配置 |
+
+所有失败保持原state引用、无events，不扣工具、不推进任何RNG、不产生事实或成功收据。反复调用与恢复后调用同样拒绝，不用“已领取”假收据冒充幂等。`opening-effect-already-applied` 本 PR 未新增。共享快照伪造仍沿用 `invalid-pool/invalid-seat-state`；离线伪造奇遇仍报 `Invalid Match save: opening-context-mismatch`。普通准备/战斗恢复继续执行既有单位定义校验与策略重编译，关闭状态不接收魔像注入。
+
+预留 `opening-encounter-v1/seat/<seatId>/trainer-golems/emblems`，**未创建、未抽取子流，无新增随机消耗**；采样池和算法需补证/冻结后实现。未来真实效果必须独立收据（包含奇遇实例、effectKey、seatId、节点），与资源来源原子提交；本 PR facts/receipts仍为空。
+
+尚未实现：真实魔像三纹章羁绊、人口/移动、禁售与永久装备防拆卸/重铸/复制/额外装备、强化初抽/换牌禁用以及带魔像的恢复重编译。现有召唤物 `sellable/countsTowardPopulation`、纹章成员投影可复用，但拆卸/重铸不会自动识别永久纹章，不能直接挂三个普通ItemInstance。关闭状态不局部过滤金色炊具/Portal引用（其中有效映射有 `built-different`），也不新增历史强化。
+
+公共视图沿用PR1全部字段，没有新增seed、候选或工具字段；必须同时展示 `encounterId/nameZh/champion` 与 `enabled=false/readiness/statusTextZh`，`revealedFacts=[]`，不得将说明当作已授予。界面不生成占人口的假魔像。配置身份更新为 `opening-encounters-14.24b-pr4-v1`，`OPENING_ENCOUNTER_CONFIG.trainerGolems` 和四个缺口纳入既有manifest及双digest。沿用未发布v21 rules/content、schema/save=12/8、replay/command=5/5；未增加持久化结构/命令，不录epoch，不修改旧golden。当前摘要及验证结果见 [PR4报告](OPENING_ENCOUNTERS_PR4_REPORT.md)。
+
 ## 开局奇遇 PR1：规则框架（2026-10-22，开发身份，尚未录制 epoch）
 
 用户批准方案及唯一只读调研源：`/home/aiapps/workspace/s13-ui-atlas/encounters/开局奇遇实现方案.md` §§2–6、9，及同目录 `tft_s13_opening_encounters_14.24b.json/.md`。未联网。此节覆盖下文旧正式身份的当前开发态描述；不宣称已发布。

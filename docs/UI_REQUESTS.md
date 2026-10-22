@@ -1130,3 +1130,11 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 验收：同一根 seed 的八席（含机器人）与单人结果一致；刷新视图/恢复不发奖；任何公共 payload 均无 seed、selectionRng、未来奖励和个人候选。shared-deferred 仅为服务器建席前内部状态，查询返回 null，不应向已开始玩家展示。模式/布局/颜色/动画由 Claude 决定；此处只定义显示内容与数据源。演出计时由服务器展示阶段控制，不进入 simulation 时钟。
 
 存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2–7 的收据/候选尚未启用，后续另补本人进度投影。
+
+
+## 开局奇遇 PR4 → Claude：魔像训练师保持关闭（2026-10-22）
+
+- 数据继续取 `readOpeningEncounterView(state)` / `toPrivateSeatView(state).openingEncounter`；未增加界面字段，未改服务器传输。`encounterId='trainer-golems'`、`nameZh='魔像训练师'`、`champion`为安蓓萨；必须同时使用 `enabled=false`、`readiness='blocked-evidence'`、`statusTextZh='本局抽中此奇遇，效果尚未启用'`，`revealedFacts=[]`。
+- `descriptionZh` 是来源说明，不代表已发魔像。验收：抽中时保留安蓓萨身份和关闭提示，重连不触发奖励，不生成假单位/装备/羁绊/人口，不创建魔像移动、出售或工具目标。
+- 未提供魔像实例ID、属性/成长、人口/位置、永久纹章ID或个人抽样结果：完整纹章池、魔像属性成长、人口及出生/移动规则仍待补证。现有普通召唤物与纹章机制不能证明这些规则。
+- `TRAINER_GOLEMS_POLICY`、`validateTrainerGolemEmblems`、`applyTrainerGolemsOpening` 从 simulation/match 导出，属于关闭状态领域接口；后者永远失败，不能接成正常初始化动作。PR8 如需服务器诊断接口，由边界维护方重导出；不向客户端传入全局seed/RNG。完整签名/失败枚举见 [Match合同 PR4节](MATCH_CONTRACT.md)。

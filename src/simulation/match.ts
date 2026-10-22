@@ -1,4 +1,6 @@
 import { createSoloOpeningEncounter } from './opening-encounter';
+export { TRAINER_GOLEMS_POLICY, validateTrainerGolemEmblems, applyTrainerGolemsOpening } from './trainer-golems';
+export type { TrainerGolemEmblems } from './trainer-golems';
 export { createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
 export type { OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
