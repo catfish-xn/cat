@@ -1,7 +1,7 @@
 import { canonicalContent } from './content';
 import { freezeContent } from './content/freeze';
 import { OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG, type OpeningEncounterId } from './content/opening-encounters';
-import type { MatchState, MatchCommandResult } from './match-types';
+import type { MatchState, MatchCommandResult, RoundResult } from './match-types';
 import { nextRandom, validateSeed } from './rng';
 import { getCatalogRoundById } from './round-selectors';
 
@@ -15,12 +15,20 @@ export interface OpeningEncounterSelection {
   readonly configVersion: typeof OPENING_ENCOUNTER_CONFIG.version;
   readonly encounterId: OpeningEncounterId;
 }
-/** Reserved effect records cannot be populated until their producing/validating PR lands. */
+/** Shared effect facts remain reserved; PR6 Mel receipts are derived from personal HP history. */
 export interface OpeningEffectFact {
   readonly factId: string; readonly effectKey: string; readonly nodeId: string;
 }
 export interface OpeningEffectReceipt {
   readonly receiptId: string; readonly factId: string; readonly seatId: string; readonly nodeId: string;
+}
+/** Observation receipt, never a reward claim or pending entitlement. */
+export interface OpeningMelThresholdReceipt extends OpeningEffectReceipt {
+  readonly kind: 'mel-threshold';
+  readonly round: number;
+  readonly hpBefore: number;
+  readonly hpAfter: number;
+  readonly rewardStatus: 'blocked-evidence';
 }
 export interface OpeningEncounterContext {
   readonly selection: OpeningEncounterSelection;
@@ -84,8 +92,12 @@ export function validateOpeningEncounterState(state: MatchState, shared?: Openin
   if (state.sharedPool) {
     if (!shared) fail('opening-context-mismatch');
     validateOpeningEncounterContext(shared, state.augmentTierSeed);
-    if (!same(opening, bindSharedOpeningEncounter(shared, state.sharedPool.poolId, state.sharedPool.seatId))) fail('opening-context-mismatch');
-  } else if (!same(opening, createSoloOpeningEncounter(state.seed))) fail('opening-context-mismatch');
+    const expected = bindSharedOpeningEncounter(shared, state.sharedPool.poolId, state.sharedPool.seatId);
+    if (!same(opening, {...expected, receipts: expectedOpeningReceipts(state)})) fail('opening-context-mismatch');
+  } else {
+    const expected = createSoloOpeningEncounter(state.seed);
+    if (!same(opening, {...expected, receipts: expectedOpeningReceipts(state)})) fail('opening-context-mismatch');
+  }
 }
 /** PR1: validate a real catalog round; every selected result is a rule no-op. */
 export function planOpeningRound(shared: OpeningEncounterContext, roundId: string): {
@@ -95,7 +107,7 @@ export function planOpeningRound(shared: OpeningEncounterContext, roundId: strin
   try { getCatalogRoundById(roundId); } catch { fail('invalid-opening-effect'); }
   return {context: shared, facts: []};
 }
-/** No forged progress/receipts accepted while all effect executors are disabled. */
+/** Shared reward executors remain disabled; personal observation receipts are authenticated. */
 export function applyOpeningEffects(state: MatchState, facts: readonly OpeningEffectFact[], shared?: OpeningEncounterContext): MatchCommandResult {
   try {
     validateOpeningEncounterState(state, shared);
@@ -120,3 +132,76 @@ export function readOpeningEncounterView(state: Pick<MatchState, 'openingEncount
     revealedFacts: [] as readonly OpeningEffectFact[] });
 }
 export type OpeningEncounterView = ReturnType<typeof readOpeningEncounterView>;
+
+/** Approved project convention, applied to HP AFTER the six-cost Mel save. */
+export function isMelBlessingCrossing(oldHp: number, newHp: number): boolean {
+  if (![oldHp, newHp].every(hp => Number.isSafeInteger(hp) && hp >= 0 && hp <= 100))
+    throw new RangeError('Invalid opening encounter HP');
+  const threshold = OPENING_ENCOUNTER_CONFIG.melThreshold.hp;
+  return oldHp > threshold && newHp > 0 && newHp <= threshold;
+}
+function expectedOpeningReceipts(state: MatchState): readonly OpeningMelThresholdReceipt[] {
+  const opening = state.openingEncounter;
+  if (opening.mode === 'shared-deferred') return [];
+  const selection = opening.mode === 'solo' ? opening.context.selection : opening.selection;
+  if (selection.encounterId !== 'mels-blessing') return [];
+  const first = state.roundResults.find(record => isMelBlessingCrossing(record.hpBefore, record.hpAfter));
+  if (!first) return [];
+  const instanceId = opening.mode === 'solo' ? JSON.stringify(['solo', state.seed]) : JSON.stringify(['shared', opening.poolId]);
+  const seatId = opening.mode === 'solo' ? 'solo' : opening.seatId;
+  const nodeId = first.settlementId;
+  const factId = JSON.stringify([instanceId, 'mel-threshold', seatId, nodeId]);
+  return [{kind: 'mel-threshold', receiptId: factId, factId, seatId, nodeId,
+    round: first.round, hpBefore: first.hpBefore, hpAfter: first.hpAfter, rewardStatus: 'blocked-evidence'}];
+}
+/** Domain settlement hook only: append the latest settled HP observation, after commitMelSave.
+ * Missing OLD receipts are corruption, never repaired. No rewards, events or RNG draws.
+ * Other HP-changing rules must first add an authenticated history source before using this hook.
+ */
+export function commitOpeningEncounterHealth(state: MatchState): MatchState {
+  const opening = state.openingEncounter;
+  if (opening.mode === 'shared-deferred') return state;
+  const expected = expectedOpeningReceipts(state);
+  if (same(opening.receipts, expected)) return state;
+  const latest: RoundResult | undefined = state.roundResults.at(-1);
+  if (!same(opening.receipts, []) || expected.length !== 1 || !latest
+    || expected[0].nodeId !== latest.settlementId || expected[0].round !== state.round
+    || latest.hpAfter !== state.playerHp || state.multiplayer?.status === 'eliminated') fail('opening-context-mismatch');
+  const next: MatchState = {...state, openingEncounter: {...opening, receipts: freezeContent(expected)}};
+  // Re-derive selection for authentication only; this never advances stored RNG.
+  validateOpeningEncounterState(next, state.sharedPool ? createOpeningEncounter(state.augmentTierSeed) : undefined);
+  return next;
+}
+/** Owner-only progress whitelist. Do not put this into public PlayerView. */
+export function readOpeningEncounterProgress(state: Pick<MatchState, 'openingEncounter'>) {
+  const opening = state.openingEncounter;
+  if (opening.mode === 'shared-deferred') return null;
+  const selection = opening.mode === 'solo' ? opening.context.selection : opening.selection;
+  if (selection.encounterId !== 'mels-blessing') return null;
+  const receipt = opening.receipts[0] as OpeningMelThresholdReceipt | undefined;
+  return freezeContent({encounterId: 'mels-blessing' as const, thresholdHp: OPENING_ENCOUNTER_CONFIG.melThreshold.hp,
+    thresholdReached: receipt !== undefined, rewardStatus: 'blocked-evidence' as const,
+    triggeredRound: receipt?.round ?? null, hpBefore: receipt?.hpBefore ?? null, hpAfter: receipt?.hpAfter ?? null});
+}
+export type OpeningEncounterProgress = ReturnType<typeof readOpeningEncounterProgress>;
+/** Reserved resolver input, not a client command. No eligibility/drop/pity logic is enabled. */
+export interface OpeningWarwickKillFact {
+  readonly battleId: string;
+  readonly eventSeq: number;
+  readonly victimId: string;
+  readonly victimKind: 'champion' | 'summon' | 'monster';
+  readonly settlementEligible: boolean;
+}
+/** Deliberately fail closed for ALL facts (including empty/retries/mirrors). */
+export function applyWarwickHunger(state: MatchState, _facts: readonly OpeningWarwickKillFact[],
+  shared?: OpeningEncounterContext): MatchCommandResult {
+  try {
+    validateOpeningEncounterState(state, shared);
+    const opening = state.openingEncounter;
+    const selection = opening.mode === 'solo' ? opening.context.selection : opening.mode === 'shared' ? opening.selection : null;
+    if (selection?.encounterId !== 'warwicks-hunger') fail('invalid-opening-effect');
+    return {ok: false, state, reason: 'opening-config-incomplete'};
+  } catch (error) {
+    return {ok: false, state, reason: error instanceof OpeningEncounterError ? error.reason : 'opening-context-mismatch'};
+  }
+}

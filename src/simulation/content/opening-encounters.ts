@@ -797,7 +797,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
 ] as const);
 export type OpeningEncounterId = typeof OPENING_ENCOUNTERS[number]['id'];
 export const OPENING_ENCOUNTER_CONFIG = freezeContent({
-  version: 'opening-encounters-14.24b-pr1-v1',
+  version: 'opening-encounters-14.24b-pr6-v1',
   entries: OPENING_ENCOUNTERS,
   selectionStream: 'opening-encounter-v1/select',
   derivation: 'uint32(matchSeed XOR fnv1a32-utf16(streamName))',
@@ -805,8 +805,12 @@ export const OPENING_ENCOUNTER_CONFIG = freezeContent({
   sharedEffectStream: 'opening-encounter-v1/shared/<effectKey>',
   seatEffectStream: 'opening-encounter-v1/seat/<seatId>/<effectKey>',
   displayStream: 'opening-encounter-v1/display',
-  disabledPolicy: 'retain-selected-identity/no-effects/no-reroll/no-renormalization',
+  disabledPolicy: 'retain-selected-identity/no-rewards/no-reroll/no-renormalization/mel-threshold-observation-only',
   initialization: 'solo-before-first-preparation/shared-root-before-seat-import-bind-after-import',
   receiptKey: 'JSON([instanceId,effectKey,seatId,nodeId])',
+  melThreshold: { hp: 40, maxTriggers: 1, order: 'damage/mel-unit-save/elimination-status/threshold-receipt',
+    crossing: 'oldHp>40 && 0<newHp<=40', history: 'first-qualifying-round-result',
+    receipt: 'observation-only/reward-blocked/no-retroactive-grant', enabled: true },
+  warwickHunger: { executor: 'blocked-evidence', killFacts: 'reserved-not-consumed', rngDraws: 0 },
   melBOverride: { source: 'S03 / encounters[13].patch_history.14.24b_changes_zh', crownsInAffectedBranch: 2 },
 } as const);

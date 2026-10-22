@@ -1,3 +1,16 @@
+# 开局奇遇 PR6 增补（2026-10-22）
+
+本节覆盖下方PR1“receipts均为空”约束。完整新增导出、字段/输入输出、失败枚举与恢复边界以 [MATCH_CONTRACT的PR6节](MATCH_CONTRACT.md#开局奇遇-pr6梅尔门槛收据与沃里克关闭接口2026-10-22) 为准。
+
+- 梅尔/沃里克仍各800 Bps且enabled=false。梅尔只登记每席首次 `oldHp>40 && 0<newHp<=40` 的观察收据；奖池/权重缺证，不发奖励。14.24b冠冕分支3→2仅作约束，奖池未实现前无发放行为。沃里克掉率/奖池/保底/上限均未知，只留关闭入口。
+- `applyRoundSettlement` 已在六费梅尔救命提交后调用领域门槛钩子，PvE走现有Match结算同一钩子；服务器不另行判血或调用赐奖。每席观察收据位于其openingEncounter.receipts；pool.openingEncounter的selection/RNG/facts均不变，不复制全局可变权威。重发/镜像仍返回duplicate-settlement/mirror-settlement。
+- 新 `OpeningMelThresholdReceipt` 的kind='mel-threshold'，包括receiptId/factId/seatId/nodeId/round/hpBefore/hpAfter/rewardStatus='blocked-evidence'。首个合格roundResults决定唯一内容；共享实例按poolId、席位按seatId绑定，跨席拷贝、删收据、重复或改HP记录导致invalid-seat-state。共享恢复沿用既有可信pool快照边界，不宣称新增了完整战斗重演认证。
+- 新查询 `readOpeningEncounterProgress(state:Pick<MatchState,'openingEncounter'>)` 返回本人进度/null，已接入现有 `toPrivateSeatView().openingEncounterProgress`。字段为encounterId/thresholdHp/thresholdReached/rewardStatus/triggeredRound/hpBefore/hpAfter；公共openingEncounter不变。阈值达成不等于获得奖励；不透传内部receiptId（单人键含seed）、RNG或未来奖励。
+- 新查询 `isMelBlessingCrossing(oldHp:number,newHp:number):boolean` 对非法0–100整数输入抛RangeError，仅用于规则/测试；界面不重算。领域钩子 `commitOpeningEncounterHealth(state:MatchState):MatchState` 只在已提交HP历史后使用，收据不符抛opening-context-mismatch，多人事务映射为invalid-receipt。
+- 预留 `applyWarwickHunger(state:MatchState,facts:readonly OpeningWarwickKillFact[],shared?:OpeningEncounterContext):MatchCommandResult`。facts字段为battleId/eventSeq/victimId/victimKind(champion|summon|monster)/settlementEligible；当前不消费/认证这些输入。选择/绑定不符返回invalid-opening-effect/opening-context-mismatch；正确沃里克选择无条件返回opening-config-incomplete。全部失败保持原state、无events/资源/RNG变化；不引入新失败字面量，不建立保底状态。
+- 新函数和类型已由simulation及match导出；内部钩子仅在opening-encounter模块导出。按本任务目录权限未改server-entry/server/network；PR8需补新reader/关闭接口的公共边界重导出（已有toPrivateSeatView无需额外接规则）。网络协议升级和传输白名单由Claude负责。
+- PR6新随机子流/抽词=0；既有opening-encounter-v1/select不变。配置版本opening-encounters-14.24b-pr6-v1，更新双digest；rules/content仍未发布v21，schema/save/replay/command=12/8/5/5。旧PR1配置/digest严格拒绝，不在运行中热启用/追奖；epoch留PR9，现有NET及CI门槛不改。
+
 ## 开局奇遇 PR1：规则框架（2026-10-22，开发身份，尚未录制 epoch）
 
 用户批准方案及唯一只读调研源：`/home/aiapps/workspace/s13-ui-atlas/encounters/开局奇遇实现方案.md` §§2–6、9，及同目录 `tft_s13_opening_encounters_14.24b.json/.md`。未联网。此节覆盖下文旧正式身份的当前开发态描述；不宣称已发布。

@@ -1130,3 +1130,21 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 验收：同一根 seed 的八席（含机器人）与单人结果一致；刷新视图/恢复不发奖；任何公共 payload 均无 seed、selectionRng、未来奖励和个人候选。shared-deferred 仅为服务器建席前内部状态，查询返回 null，不应向已开始玩家展示。模式/布局/颜色/动画由 Claude 决定；此处只定义显示内容与数据源。演出计时由服务器展示阶段控制，不进入 simulation 时钟。
 
 存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2–7 的收据/候选尚未启用，后续另补本人进度投影。
+
+
+## 开局奇遇 PR6 → PR8：梅尔本人门槛进度（2026-10-22，Codex交付）
+
+来源：`toPrivateSeatView(state).openingEncounterProgress` / `readOpeningEncounterProgress(state)`（simulation/match导出；新reader的server-entry重导出留接口负责人PR8）。现有公共 `openingEncounter` 白名单不变。仅定义显示内容与数据来源，不指定布局/配色/动画。
+
+| 字段 | 含义 / 使用 |
+| --- | --- |
+| 整个值为null | 非梅尔奇遇或尚未绑定；没有个人门槛展示 |
+| encounterId / thresholdHp | mels-blessing / 40；展示奇遇与个人门槛 |
+| thresholdReached | 本人已记录首次存活跨越门槛，**不代表发奖** |
+| rewardStatus | 当前恒为blocked-evidence；奖池缺证，奖励关闭 |
+| triggeredRound | 首次观察的回合ordinal；未触发为null，显示回合标签沿现有目录映射 |
+| hpBefore / hpAfter | 首次跨越前/救命后最终HP；未触发均null |
+
+验收：41→40与41→39均达门槛，0HP不达门槛；已触发后重连/Continue/重发不重记，不由UI扣血、抽奖或生成选择；只给本人，不广播对手进度。公共enabled=false与“效果尚未启用”继续保留；个人应明确区分“已达门槛，奖励未启用”和“未达门槛”，不能显示已领取/待领取，不展示固定两冠冕。内部收据ID、seed、RNG、全局context不透传。
+
+沃里克仍只展示公开身份及关闭状态，不给掉率、奖池、保底/上限占位数值或击杀奖励动画。其预留接口统一拒绝发奖，不接成客户端按钮。梅尔没有上场梅尔要求；六费梅尔救命事件沿用现有playerSaved，与奇遇进度分开读取。

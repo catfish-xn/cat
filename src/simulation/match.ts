@@ -1,6 +1,6 @@
-import { createSoloOpeningEncounter } from './opening-encounter';
-export { createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
-export type { OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
+import { createSoloOpeningEncounter, commitOpeningEncounterHealth } from './opening-encounter';
+export { isMelBlessingCrossing, readOpeningEncounterProgress, applyWarwickHunger, createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
+export type { OpeningMelThresholdReceipt, OpeningEncounterProgress, OpeningWarwickKillFact, OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
 import { settleTerminalEpicForges } from './epic-forges';
@@ -379,7 +379,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
   const committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
-  return saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed;
+  return commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed);
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)

@@ -1,3 +1,4 @@
+import { commitOpeningEncounterHealth } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { reconcileD14 } from './d14-runtime';
 import type {TraitProjectionContext} from './traits/effective-membership';
@@ -161,6 +162,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const hookEvents:MatchEvent[]=[];
     let settled=r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next;
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
+    settled=commitOpeningEncounterHealth(settled);
     const merged = resolveDeferredUpgrades(settled);
     const d14State=reconcileD14(merged.state,hookEvents);
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
