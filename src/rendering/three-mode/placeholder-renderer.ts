@@ -31,7 +31,7 @@ import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelopeRadius, animationEnvelopeRadiusSliced, animationGround, animationGroundSliced, fitModel, readUnitScale, type Envelope } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, type Envelope } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
@@ -322,25 +322,19 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return performance.now() - started;
   };
   // Animation envelope per model id (model-fit.ts), shared by the warm-up (measured in idle slices) and mounting.
-  const envelopes = new Map<string, number>();
-  /** The idle's lowest point per model id (model-fit.ts animationGround), measured with its envelope; null = bind box. */
-  const grounds = new Map<string, number | null>();
+  const envelopes = new Map<string, Envelope>();
   const envelopeClips = (lease: ModelLease) => {
     const nameOf = (action: string) => lease.animationNames[action as keyof typeof lease.animationNames] ?? action;
     const names = new Set(ENVELOPE_ACTIONS.map(nameOf));
     return lease.animations.filter(clip => names.has(clip.name))
-      .map(clip => ({ clip, loop: ENVELOPE_ACTIONS.some(action => LOOPING_ACTIONS.has(action) && nameOf(action) === clip.name) }));
+      // Every combat clip also sets the feet (its lowest point net of root motion), in the same pass as the width.
+      .map(clip => ({ clip, loop: ENVELOPE_ACTIONS.some(action => LOOPING_ACTIONS.has(action) && nameOf(action) === clip.name), ground: true }));
   };
-  /** The same combat clips, each setting the feet: the body's lowest point net of root motion over all of them. */
-  const groundClips = (lease: ModelLease) => envelopeClips(lease).map(clip => ({ ...clip, ground: true }));
   const prepareEnvelope = async (id: string, lease: ModelLease): Promise<boolean> => {
     if (envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
-    const stop = () => closed || !!fighting;
-    const radius = await animationEnvelopeRadiusSliced(lease.scene, envelopeClips(lease), { budgetMs: 3, stop });
-    if (radius === null) return false;
-    const ground = grounds.has(id) ? grounds.get(id)! : await animationGroundSliced(lease.scene, groundClips(lease), { budgetMs: 3, stop });
-    if (ground === undefined) return false;
-    if (!envelopes.has(id)) { envelopes.set(id, radius); grounds.set(id, ground); }
+    const envelope = await animationEnvelopeSliced(lease.scene, envelopeClips(lease), { budgetMs: 3, stop: () => closed || !!fighting });
+    if (envelope === null) return false;
+    if (!envelopes.has(id)) envelopes.set(id, envelope);
     return true;
   };
   const warmup = models.cache ? createModelWarmup({ load: id => models.cache!.load(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
@@ -575,12 +569,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /** Models first seen during a shown combat: drawn from their bind box, measured and re-attached at the next preparation. */
   const envelopePending = new Set<string>();
   const envelopeOf = (id: string, lease: ModelLease): Envelope | undefined => {
-    let radius = envelopes.get(id);
-    if (radius === undefined && fighting) { envelopePending.add(id); return undefined; } // no long task mid-combat
+    let envelope = envelopes.get(id);
+    if (envelope === undefined && fighting) { envelopePending.add(id); return undefined; } // no long task mid-combat
     // Not warmed yet (the warm-up measures in slices ahead of time): measured now, at once.
-    if (radius === undefined) { radius = animationEnvelopeRadius(lease.scene, envelopeClips(lease)); envelopes.set(id, radius); }
-    if (!grounds.has(id)) grounds.set(id, animationGround(lease.scene, groundClips(lease)));
-    return { radius, ground: grounds.get(id) ?? null };
+    if (envelope === undefined) { envelope = animationEnvelope(lease.scene, envelopeClips(lease)); envelopes.set(id, envelope); }
+    return envelope;
   };
   const attachBody = (view: PieceView) => {
     if (view.body) { view.root.remove(view.body); view.body = null; }

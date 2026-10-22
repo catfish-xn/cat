@@ -111,8 +111,6 @@ export function animationEnvelope(body: Object3D, clips: readonly EnvelopeClip[]
   for (;;) { const next = steps.next(); if (next.done) return next.value; }
 }
 export function animationEnvelopeRadius(body: Object3D, clips: readonly EnvelopeClip[]): number { return animationEnvelope(body, clips).radius; }
-/** The standing clip's lowest point alone (pass just that clip, `ground: true`); null without skinned meshes or clips. */
-export function animationGround(body: Object3D, clips: readonly EnvelopeClip[]): number | null { return animationEnvelope(body, clips).ground; }
 
 /**
  * The same envelope in slices of about `budgetMs`, handing the thread back between them (`pause`, an idle callback by
@@ -123,11 +121,6 @@ export async function animationEnvelopeRadiusSliced(body: Object3D, clips: reado
   return (await animationEnvelopeSliced(body, clips, options))?.radius ?? null;
 }
 interface SliceOptions { budgetMs?: number; stop?: () => boolean; pause?: () => Promise<void>; now?: () => number }
-/** animationGround in slices; resolves undefined when stopped (null still means "nothing to stand on"). */
-export async function animationGroundSliced(body: Object3D, clips: readonly EnvelopeClip[], options: SliceOptions = {}): Promise<number | null | undefined> {
-  const envelope = await animationEnvelopeSliced(body, clips, options);
-  return envelope === null ? undefined : envelope.ground;
-}
 export async function animationEnvelopeSliced(body: Object3D, clips: readonly EnvelopeClip[], options: SliceOptions = {}): Promise<Envelope | null> {
   const budget = options.budgetMs ?? 3, now = options.now ?? (() => performance.now());
   const pause = options.pause ?? (() => new Promise<void>(resolve => setTimeout(resolve, 0)));
@@ -162,8 +155,11 @@ export function fitModel(body: Object3D, options: { height: number; width?: numb
   if (!Number.isFinite(scale) || scale <= 0) return Number.isFinite(options.height) ? options.height : size.y;
   body.scale.multiplyScalar(scale);
   // Feet: the standing clip's lowest point when measured (official scale), else the bind box's; the height runs from there.
-  // Never below the bind box: a ground under it would only come from root motion already taken out, so keep the bind feet.
-  const floor = official && options.ground != null && Number.isFinite(options.ground) ? Math.max(box.min.y, options.ground) : box.min.y;
+  // The clips' own feet (root drift taken out) land where the bind feet stand, at most on the origin: a body lifted off
+  // its bind pose in every clip comes down (Darius), a bind pose that already hovers keeps that hover, and a foot posed
+  // below the bind floor is raised onto the cell. Without a measured ground, the bind box's bottom goes on y=0 as before.
+  const measured = official && options.ground != null && Number.isFinite(options.ground);
+  const floor = measured ? options.ground! - Math.max(box.min.y, 0) : box.min.y;
   body.position.y -= floor * scale;
   return (box.max.y - floor) * scale;
 }
