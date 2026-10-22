@@ -2,6 +2,8 @@
 import type { ModelLease } from '../../rendering3d';
 
 export const LEGEND_MODEL = 'little-legend-default';
+/** Little legends' model ids all share this prefix (the 外观 panel draws them too). */
+export const isLegendModel = (id: string): boolean => id.startsWith('little-legend-');
 
 /**
  * The lease of `id`, or of the default 河灵 when `id` cannot be drawn: missing from the manifest, its load refused, or

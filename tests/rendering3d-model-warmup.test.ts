@@ -66,6 +66,27 @@ describe('idle model warm-up', () => {
     expect(load).toHaveBeenCalledExactlyOnceWith('new'); expect(warmup.warmed('new')).toBe(true);
   });
 
+  it('forgets an evicted model and schedules a fresh read and completed GPU upload on want', async () => {
+    const idle: (() => void)[] = [], first = lease(), second = lease(), uploading = deferred<number>();
+    const load = vi.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    const upload = vi.fn().mockResolvedValueOnce(1).mockReturnValueOnce(uploading.promise);
+    warmup = createModelWarmup({ load, upload, has: () => true, busy: () => false, idle: step => idle.push(step) });
+    warmup.want(['toy']); idle.shift()!(); await flush();
+    expect(warmup.warmed('toy')).toBe(true); expect(warmup.size).toBe(1);
+    warmup.want(['toy']); expect(idle).toHaveLength(0);
+    warmup.forget('toy');
+    expect(warmup.warmed('toy')).toBe(false); expect(warmup.size).toBe(0);
+    warmup.want(['toy', 'toy']); expect(idle).toHaveLength(1); expect(warmup.size).toBe(1);
+    idle.shift()!(); await flush();
+    expect(load.mock.calls).toEqual([['toy'], ['toy']]);
+    expect(upload.mock.calls).toEqual([[first], [second]]);
+    expect(warmup.warmed('toy')).toBe(false); expect(second.release).not.toHaveBeenCalled();
+    uploading.resolve(2); await flush();
+    expect(warmup.warmed('toy')).toBe(true);
+    expect(first.release).toHaveBeenCalledTimes(1); expect(second.release).toHaveBeenCalledTimes(1);
+    warmup.want(['toy']); expect(idle).toHaveLength(0);
+  });
+
   it.each(['cancel', 'dispose'] as const)('%s clears the combat retry timer immediately', async action => {
     const idle: (() => void)[] = [], load = vi.fn(async () => lease());
     warmup = createModelWarmup({ load, upload: async () => 1, has: () => true, busy: () => true, idle: step => idle.push(step) });

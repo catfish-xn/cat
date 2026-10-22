@@ -80,8 +80,16 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
     exited();
   });
 
+  // A WebGL context that was lost and came back: this renderer goes and a fresh one mounts in the same layer.
+  const remount = () => {
+    if (disposed) return;
+    observer.disconnect(); renderer?.dispose(); renderer = null;
+    layer.dataset.state = 'loading'; label.textContent = '3D 模式重新加载中…';
+    generation++; start();
+  };
   // The only reference to the 3D chunk (placeholder-renderer.ts composes src/rendering3d/).
-  import('./placeholder-renderer')
+  let generation = 0;
+  const start = (mine = generation) => import('./placeholder-renderer')
     .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.((text, fraction) => {
         // Shown while it changes; six quiet seconds after the last update (done, or stalled) it clears so it never sits on the HUD.
         if (disposed) return; preload.textContent = text; clearTimeout(preloadClear); preloadClear = setTimeout(() => { preload.textContent = ''; }, 6000);
@@ -89,9 +97,10 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
       // The cheapest shop tiers are what a game shows first: their models are parsed and uploaded while idle.
       module.useWarmModels?.([...SHOP_CATALOG_BY_COST[1], ...SHOP_CATALOG_BY_COST[2], ...SHOP_CATALOG_BY_COST[3]]);
       module.useStarColor?.(starColor); module.useCostColor?.(costColor); module.useMeterColors?.(THEME.color); module.useItemIcon?.(id => s13AssetUrl('item', id));
+      module.useContextRestored?.(remount);
       return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
-      if (disposed) { mounted.dispose(); return; }
+      if (disposed || mine !== generation) { mounted.dispose(); return; }
       renderer = mounted;
       layer.dataset.state = mounted.status;
       label.textContent = `3D 预览 · ${mounted.detail}`;
@@ -99,7 +108,7 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
     })
     .catch((error: unknown) => {
       console.warn('3D 模式不可用，留在 2D', error);
-      if (disposed) return;
+      if (disposed || mine !== generation) return;
       dispose();
       const notice = document.createElement('div');
       notice.className = 'render3d-notice';
@@ -111,5 +120,6 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
       history.replaceState(history.state, '', withoutRenderParam(window.location.href));
       exited();
     });
+  start();
   return { dispose };
 }

@@ -199,6 +199,8 @@ export class BotDriver {
 
   /** One policy call and at most one rules command, inside one queue task (§13.3 items 2–4). */
   private step(seatId: string, epoch: number, entry: number): void {
+    // Defer the whole policy transaction, including its RNG and orb prelude, on the room's writer gate.
+    if (this.room.deferDuringSettlement(() => { this.step(seatId, epoch, entry); this.sync(this.room.state); })) return;
     let state = this.room.state;
     let seat = state.seats.find(candidate => candidate.seatId === seatId);
     if (!seat) return;

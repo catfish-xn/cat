@@ -111,17 +111,25 @@ export class LivePvpTrack {
  * re-run from its start later, because the gold it read is not part of the combat input.
  */
 export class LivePveTrack {
-  private readonly recorder: CombatReplayRecorder;
+  private recorder: CombatReplayRecorder;
   private readonly initial: CombatState;
-  private readonly events: LedgerCombatEvent[];
+  private events: LedgerCombatEvent[];
 
   /** `initialEvents`: the combat's tick-0 ledger (from the frozen run, which shares the opening). */
-  constructor(readonly seatId: string, start: MatchState, initialEvents: readonly LedgerCombatEvent[]) {
+  constructor(readonly seatId: string, private readonly start: MatchState, initialEvents: readonly LedgerCombatEvent[]) {
     this.initial = combatOf(seatId, start);
     if (this.initial.tick !== 0) throw new BattleResolveError(seatId, 'live-combat-not-at-start');
     const opening = initialEvents.filter(event => event.eventSeq < (this.initial.nextEventSeq ?? 0));
     this.events = [...opening];
     this.recorder = createCombatReplayRecorder(this.initial, opening);
+  }
+
+  /** Fork immutable frames and ledger; speculative ticks never enter the published track. */
+  fork(): LivePveTrack {
+    const fork = new LivePveTrack(this.seatId, this.start, []);
+    fork.recorder = this.recorder.fork();
+    fork.events = [...this.events];
+    return fork;
   }
 
   /**
@@ -165,6 +173,7 @@ export class LivePveTrack {
     primeCombatReplay(outcome, this.recorder.finish(terminal));
     return outcome;
   }
+
 }
 
 function combatOf(seatId: string, state: MatchState): CombatState {

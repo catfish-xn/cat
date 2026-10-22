@@ -15,7 +15,9 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
   let board: typeof import('../src/rendering/board-feed');
   let waitForParse: ((id: string) => Promise<void>) | undefined;
   let waitForCompile: (() => Promise<void>) | undefined;
-  let gpu: { remove: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>; lose: ReturnType<typeof vi.fn> }[];
+  let gpu: { remove: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>; lose: ReturnType<typeof vi.fn>;
+    render: ReturnType<typeof vi.fn>; canvas: EventTarget }[];
+  let shell: { dispose(): void } | undefined;
   let releases: { id: string; release: ReturnType<typeof vi.fn> }[];
   const report = () => (window as unknown as { __render3dLoad?: LoadReport }).__render3dLoad;
   const firstLines = () => vi.mocked(console.info).mock.calls.filter(([message]) => String(message).startsWith('[3D] 首批'));
@@ -48,12 +50,14 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
       throw new Error(`Unexpected synthetic request: ${url}`);
     }));
     vi.doMock('three', async original => ({ ...await original<typeof import('three')>(), WebGLRenderer: class {
-      state = { remove: vi.fn(), dispose: vi.fn(), lose: vi.fn() };
+      canvas = new EventTarget();
+      state = { remove: vi.fn(), dispose: vi.fn(), lose: vi.fn(), render: vi.fn(), canvas: this.canvas };
       constructor() { gpu.push(this.state); }
-      domElement = { className: '', style: {}, addEventListener() {}, removeEventListener() {}, remove: this.state.remove,
+      domElement = { className: '', style: {}, addEventListener: this.canvas.addEventListener.bind(this.canvas),
+        removeEventListener: this.canvas.removeEventListener.bind(this.canvas), remove: this.state.remove,
         getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
       setPixelRatio() {} setSize() {} dispose() { this.state.dispose(); } forceContextLoss() { this.state.lose(); }
-      render() { clock += 5; }
+      render(scene: import('three').Object3D) { this.state.render(scene); clock += 5; }
       initTexture(texture: import('three').Texture) { uploads.push(texture.name); }
       async compileAsync(scene: import('three').Object3D) { compiles.push(scene.name); await waitForCompile?.(); clock += 3; }
     } }));
@@ -76,8 +80,80 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
     renderer.useBoardFeed({ ...board.boardFeed, subscribe(next) { listener = next; return board.boardFeed.subscribe(next); } });
   });
   afterEach(async () => {
+    shell?.dispose(); shell = undefined;
     mounted?.dispose(); mounted = undefined; await flush(); vi.clearAllTimers(); vi.useRealTimers();
     vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.doUnmock('three'); vi.resetModules();
+  });
+
+  it('remounts the same layer on context restoration, rereads stored models and discards a stale mount completion', async () => {
+    // IndexedDB is substituted at its public store seam; preloading, reading, parsing, caching and mounting remain real.
+    const preload = await import('../src/rendering/three-mode/asset-preload');
+    const key = 'https://example.test/synthetic/|toy.glb', sha256 = '0'.repeat(64);
+    const get = vi.fn(async (requested: string) => requested === key ? { key, sha256, blob: new Blob(['toy']) } : undefined);
+    const open = vi.spyOn(preload, 'openAssetStore').mockResolvedValue({ persistent: true, get,
+      put: vi.fn(), delete: vi.fn(), keys: async () => [key] });
+    const fetcher = vi.mocked(fetch), fallback = fetcher.getMockImplementation()!;
+    fetcher.mockImplementation(async (input, init) => String(input).endsWith('/precache.json')
+      ? Response.json({ schemaVersion: 1, files: [{ path: 'toy.glb', bytes: 3, sha256 }] }) : fallback(input, init));
+    manifest.models = { toy: { path: 'toy.glb' } };
+    class Node extends EventTarget {
+      dataset: Record<string, string> = {}; style = {}; children: unknown[] = [];
+      clientWidth = 800; clientHeight = 600; textContent = ''; className = ''; hidden = false;
+      parentElement: Node | null = null;
+      append(...children: unknown[]) { for (const child of children) {
+        this.children.push(child); if (child instanceof Node) child.parentElement = this;
+      } }
+      remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(child => child !== this); }
+      getContext() { return null; }
+      getBoundingClientRect() { return { left: 0, top: 0, width: 800, height: 600 }; }
+    }
+    const host = new Node(), observe = vi.fn(), disconnect = vi.fn();
+    vi.stubGlobal('location', { href: 'https://example.test/cat/', search: '' });
+    vi.stubGlobal('history', { state: null, replaceState: vi.fn() });
+    vi.stubGlobal('document', { body: { dataset: { m6Mode: 'active' } }, getElementById: () => null, createElement: () => new Node() });
+    vi.stubGlobal('ResizeObserver', class { observe = observe; disconnect = disconnect; });
+    const realMount = renderer.mountRenderer3d;
+    let finishOld!: (value: Renderer3d) => void, stale: Renderer3d | undefined;
+    const late = new Promise<Renderer3d>(resolve => { finishOld = resolve; });
+    const mountSpy = vi.spyOn(renderer, 'mountRenderer3d').mockImplementation(async (layer, options) => {
+      const result = await realMount(layer, options);
+      if (gpu.length === 2) { stale = { ...result, detail: 'stale generation' }; return late; }
+      return result;
+    });
+    const { mountThreeMode } = await import('../src/rendering/three-mode/three-loader');
+    shell = mountThreeMode(host as unknown as HTMLElement, '?render=3d&assets3d=/synthetic/');
+    await vi.dynamicImportSettled(); await flush();
+    const layer = host.children[0] as Node;
+    expect(layer.dataset.state).toBe('assets');
+    board.publishBoardFrame(() => frame);
+    await vi.waitFor(() => expect(parses).toEqual(['toy'])); await flush(); await draw();
+    expect(parses).toEqual(['toy']); expect(gpu[0].render).toHaveBeenCalled();
+    const storedReads = get.mock.calls.length;
+    gpu[0].canvas.dispatchEvent(new Event('webglcontextrestored'));
+    expect(gpu[0].remove).toHaveBeenCalledTimes(1); expect(layer.dataset.state).toBe('loading');
+    await vi.dynamicImportSettled(); await flush();
+    expect(stale).toBeDefined();
+    // Restore again while generation two's mount promise is still pending.
+    gpu[1].canvas.dispatchEvent(new Event('webglcontextrestored'));
+    await vi.dynamicImportSettled(); await flush();
+    expect(mountSpy).toHaveBeenCalledTimes(3); expect(open).toHaveBeenCalledTimes(3);
+    for (const [target] of mountSpy.mock.calls) expect(target).toBe(layer);
+    expect(host.children).toEqual([layer]); expect(layer.dataset.state).toBe('assets');
+    const status = (layer.children[0] as Node).children[0] as Node, currentLabel = status.textContent;
+    const observations = observe.mock.calls.length;
+    finishOld(stale!); await flush();
+    expect(gpu[1].remove).toHaveBeenCalledTimes(1); expect(gpu[1].dispose).toHaveBeenCalledTimes(1);
+    expect(observe).toHaveBeenCalledTimes(observations); expect(status.textContent).toBe(currentLabel);
+    expect(gpu[2].dispose).not.toHaveBeenCalled();
+    board.publishBoardFrame(() => frame);
+    await vi.waitFor(() => expect(parses).toEqual(['toy', 'toy'])); await flush(); await draw();
+    expect(get.mock.calls.length).toBeGreaterThan(storedReads);
+    expect(get.mock.calls.every(([requested]) => requested === key)).toBe(true);
+    expect(parses).toEqual(['toy', 'toy']); expect(reads).toEqual([]);
+    expect(gpu[2].render).toHaveBeenCalled();
+    const scene = gpu[2].render.mock.calls.at(-1)![0] as import('three').Object3D;
+    expect(scene.getObjectByName('toy')).toBeDefined();
+    expect(layer.dataset.state).toBe('assets');
   });
   async function mount(ids: string[], warm: string[] = [], scaled = false) {
     manifest.models = Object.fromEntries(ids.map(id => [id, { path: `${id}.glb`, ...(scaled ? { unitScale: 1 } : {}) }]));
@@ -96,6 +172,35 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
     vi.stubGlobal('document', { body: { dataset: { m6Mode: mode === 'active' ? 'active' : 'startup', onlineMode: mode } }, getElementById: () => null,
       createElement: () => ({ width: 0, height: 0, dataset: {}, style: {}, remove() {}, getContext: () => null }) });
   }
+
+  it.each(['board', 'bench', 'scout', 'carousel'] as const)('keeps a model referenced by the real mounted %s consumer across idle sweeps', async consumer => {
+    const { ModelCache } = await import('../src/rendering3d/assets');
+    const evict = vi.spyOn(ModelCache.prototype, 'evict');
+    await mount(['toy']); listener.frame({ ...frame, pieces: [] });
+    if (consumer === 'board') listener.frame(frame);
+    if (consumer === 'bench') listener.frame({ ...frame, bench: [{ x: 40, y: 650 }], pieces: [{ ...frame.pieces[0], x: 40, y: 650 }] });
+    if (consumer === 'scout') listener.scout!({ seatId: 'other', name: 'Synthetic', board: {
+      units: [{ definitionId: 'toy', starLevel: 1, cell: { col: 2, row: 2 }, items: [] }], bench: [], looseItems: [], augments: [],
+    } });
+    if (consumer === 'carousel') listener.carousel!({ id: 'synthetic', slots: [{ slot: 0, definitionId: 'toy', starLevel: 1,
+      items: [], pickedBy: null, takable: false, pending: false }], seats: [], elapsedMs: 0, at: clock });
+    await flush(); expect(parses).toEqual(['toy']);
+    clock += 240_000; wall += 240_000; await draw();
+    expect(evict).not.toHaveBeenCalledWith('toy'); expect(parses).toEqual(['toy']);
+    listener.frame({ ...frame, pieces: [] }); listener.scout!(null); listener.carousel!(null); await flush();
+    clock += 120_000; wall += 120_000; await draw();
+    expect(evict.mock.calls.filter(([id]) => id === 'toy')).toHaveLength(1);
+  });
+
+  it('keeps a current shop warm hint resident after warm-up and the 120-second idle limit', async () => {
+    const { ModelCache } = await import('../src/rendering3d/assets');
+    const evict = vi.spyOn(ModelCache.prototype, 'evict');
+    board.setBoardWarmHints(['shop']); await mount(['shop']); listener.frame({ ...frame, pieces: [] });
+    await stepIdle(); expect(parses).toEqual(['shop']);
+    clock += 120_000; wall += 120_000; await draw();
+    // The hint remains current: selling an unrelated board piece must not evict the model offered in the shop.
+    expect(evict).not.toHaveBeenCalledWith('shop');
+  });
 
   it('queues changed hints only after preload and in a match, preserving hint order and cancelling on leave', async () => {
     let finish!: () => void;

@@ -51,6 +51,8 @@ export interface ModelWarmup {
   cancel(): void;
   /** True once a model's template was parsed and uploaded here. */
   warmed(id: string): boolean;
+  /** Its template was evicted (model-memory.ts): no longer warmed, so a later want() warms it again. */
+  forget(id: string): void;
   readonly size: number;
   dispose(): void;
 }
@@ -106,6 +108,7 @@ export function createModelWarmup(ctx: WarmupContext): ModelWarmup {
     },
     cancel() { queue.length = 0; clearTimeout(retry); retry = undefined; },
     warmed: id => done.has(id),
+    forget(id) { done.delete(id); asked.delete(id); },
     get size() { return asked.size; },
     dispose() { closed = true; queue.length = 0; clearTimeout(retry); retry = undefined; },
   };
