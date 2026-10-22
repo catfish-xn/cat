@@ -263,6 +263,9 @@ export class OnlineApplication implements SceneApplication {
     this.syncCarousel(view);
     this.syncBattleViews();
     if (view.phase.kind === 'ended') {
+      // The match is over: a board I was visiting (and the battle on it) gives way to my own board under the ranking; the
+      // paused session below would otherwise hold that seat's battle frozen mid-play with no way back.
+      this.opponentBoard.close();
       // syncMode first: the panel reads body[data-online-mode] while re-rendering to show the online end text.
       if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.syncMode(); this.hooks.clearInput(); this.hooks.refresh(); }
       this.elimination.hide(); this.pendingHit = null; this.pendingRank = undefined;
