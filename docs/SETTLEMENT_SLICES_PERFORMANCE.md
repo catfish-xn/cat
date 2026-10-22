@@ -30,7 +30,7 @@ shared step 占基线计划的 98%–99%，live-bank 检查本例仅约 0.01–0
 
 - 同一个计划生成器同时提供同步 `planSettlement` 与房间调度用的续算形式。每个 PvE 工作单元最多一个原有共享池 step；PvP 收据按席位切开。每单元后检查 20 ms 和 tick 上限，用原 clock.schedule 让出单写队列。
 - 仍按原席位和共享池顺序运算，保留全部战斗与 match-domain 事件，只在完整计划通过后执行原 `commitSettlement`。live-bank 尾算保留录帧、共享池顺序和每席原来的一次提交，不增添中间席位版本。
-- 切片之间服务器继续解析、限流、处理心跳/重连。有效运营命令在 `Room.deferDuringSettlement` 等待，不提前发成功收据；完整结算后 FIFO 返回原入口，重新校验身份/连接代次、commandId、round、seatRevision，过期按既有原因拒绝，不改参数或自动重放。断开的连接不执行等待命令。
+- 切片之间服务器继续解析、限流、处理心跳/重连。`Room.deferDuringSettlement` 首批操作在一次重建前执行；批次边界确定后冻结，后续操作等待完整结算提交，再 FIFO 校验原 round / seatRevision，过期按既有原因拒绝，不改参数或自动重放。已认证 session 的命令不因断线丢失，回执记录在 session。
 - abort/fault 取消续算并让等待命令经过终局校验；dispose 清空等待命令和所有定时器。`retained.resolving` 包括结算补算。公共接口和失败约定见 [联机合同](MULTIPLAYER_CONTRACT.md#结算补算切片2026-10-22服务器调度补充)。
 
 ## 确定性与测试
@@ -39,7 +39,7 @@ shared step 占基线计划的 98%–99%，live-bank 检查本例仅约 0.01–0
 
 `tests/server/settlement-slices.test.ts`：普通 PvE 与实时金币持有者改变金币后的 PvE，同步和逐 tick 切片的完整状态及每次发布逐字节相同；假 CPU 时钟每单元 7 ms、预算 20 ms，100 个工作单元中每回调最多 21 ms，且竞争消息定时器可先执行；FIFO、abort、dispose 和取消定时器断言。
 
-`tests/server/net/settlement-queue.test.ts`：内存传输经过真实 parse/auth/版本校验/dedupe/写队列；结算期间有效命令等待，坏 JSON 立即应答，解锁后命令 FIFO 且重复 ID 只执行一次；断线后等待命令不再落地。
+`tests/server/net/settlement-queue.test.ts`：内存传输经过真实 parse/auth/版本校验/dedupe/写队列；结算期间有效命令等待，坏 JSON 立即应答，解锁后命令 FIFO 且重复 ID 只执行一次；已认证 session 的等待命令在断线后仍执行并保存回执。
 
 沙箱在后续运行中拒绝 loopback listen（`listen EPERM 127.0.0.1`）。原 `net/slow-task.test.ts` 的四个用例已通过仅替代 HTTP listen/address/close 的临时启动桩重跑，计时、队列、日志、计时器与断言沿用原代码；原测试文件没有修改。真实监听与 WebSocket 通路的完整验收仍需允许监听的环境。临时启动桩留在忽略目录 `artifacts/settlement-slices/http-listen.setup.ts` 与 `vitest-slow.config.ts`，命令：`node node_modules/vitest/vitest.mjs run --config artifacts/settlement-slices/vitest-slow.config.ts`。
 
@@ -69,3 +69,15 @@ shared step 占基线计划的 98%–99%，live-bank 检查本例仅约 0.01–0
 最终验证：`npm run typecheck` 与 `git diff --check` 通过。`npm test -- tests/server/settlement-slices.test.ts tests/server/net/settlement-queue.test.ts tests/server/live-bank.test.ts tests/server/round-commit.test.ts tests/server/mel-save-settlement.test.ts tests/server/bot-driver.test.ts tests/server/v17-avarice-battle-end.test.ts tests/server/net/slow-task.test.ts --maxWorkers=2`：8 文件、50 项全部通过，包含 #371 原始 slow-task 四项。最后调整队列预算断言、真实法球测试时限后，`-t 'checks|queues every|bounds work'` 三项定向复验全部通过。额外使用旧 HTTP 监听桩运行 slow-task 四项也通过；并未用桩结果替代上述原始套件结果。
 
 Git HEAD 保持 `7b37ec50`；工作区包含离线合并与评审修订。仅评审增量另存 `/tmp/pr390-review-only.patch`，供有 Git 写权限的环境先正式 merge 本地已核对的 upstream、再应用增量；本次没有 push。
+
+## PR #390 最后一条 P1：首次重建后冻结（2026-10-22）
+
+本轮起点 `codex/settle-slices` / `b3217bd0`。上述“有界重建八次”方案被本节及新版合同替代：第一次排队批次只触发一次重建，从该批次边界起冻结后续输入，继续按原 20 ms / tick 预算算到提交。后续命令在完整结算和阶段发布后 FIFO 执行，使用原始请求在最新状态上校验；同轮旧版本得到 `seat-revision-mismatch`，不改写版本、不消费 RNG，不再存在 `settlement-restart-limit` 的整局 fault 路径。
+
+回归包括：假 CPU 时钟下超过九批连续输入仍只构造两次工作、每片保持预算，首批前置且后续严格在发布后执行；真实 PvE 在首批尚未排空时持续入队，旧版本拒绝回执可 dedupe，显式匹配提交后版本的命令成功，连接与走路在提交后落地。整局压力用例在八席中将真人连接席也交由 BotDriver 驱动（测试夹具，非九席），保留真人身份以实际改变连接标记；持续通过真实认证/校验/写队列提交买、卖、刷新、锁店、走路请求及 setConnected 抖动。bot 控制期间走路按既有门槛拒绝，正常真人走路另由前述冻结回归验证。
+
+两次同 seed / 同输入序列运行，比较完整终局、每轮完整 RoomState 检查点（全部战斗事件、收据、共享池、RNG、版本、期限均不裁剪）、命令与回执 SHA-256。压力传输使用内存 ws / HTTP 桩，不访问网络；提升测试连接限流以持续施压，生产限流不变。
+
+验收结果：整局双跑 `npm test -- tests/server/net/settlement-queue.test.ts --maxWorkers=1 -t 'finishes deterministically'` 通过（245.56 秒），八个控制席均有 bot 命令、真人买卖/刷新/锁店均有成功回执、冻结输入超过九批、所有已接受命令都有最终回执；两局均到达至少第 31 轮、排名完整且 fault 为 null，五类完整指纹（终局、逐轮账本、真人输入、回执、bot 命令）一致。该真实双跑用例时限为 600 秒；首次 180 秒时限不足，未计为通过。
+
+定向三个文件共 17 项通过（包含真实冻结旧 revision 回执与 #371 原始 slow-task 四项）；扩展冻结中 abort/dispose 后，`npm test -- tests/server/settlement-slices.test.ts tests/server/net/slow-task.test.ts --maxWorkers=1 -t 'cancels|rebuilds once|task.slow'` 的 9 项通过。合计覆盖当前三个文件的全部 20 项不同用例。`npm run typecheck` 与 `git diff --check` 通过。只修改 server/tests/docs，保留工作区，HEAD 仍为 `b3217bd0`；没有联网、提交或 push。

@@ -219,7 +219,6 @@ export function resolveSeatTimeouts(match: MatchState, pool: SharedPoolState, st
 
 /** A resumable settlement producer; #382 can use the same writer gate without a second command queue. */
 export type SettlementWorkFactory = () => Generator<void, void, void>;
-export const MAX_SETTLEMENT_RESTARTS = 8;
 export const MAX_STALE_SEAT_RETRIES = 3;
 
 export class Room {
@@ -228,12 +227,13 @@ export class Room {
   private pendingSettlement: RoundSettlement | null = null;
   private settlementWork: Generator<void, void, void> | null = null;
   private settlementFactory: SettlementWorkFactory | null = null;
-  private settlementRestarts = 0;
+  /** After the first rebuild, later writers wait for publication so input cannot starve settlement. */
+  private settlementFrozen = false;
   private drainingSettlementCommands = false;
   private publishingSettlement = false;
   private readonly settlementCommands: (() => void)[] = [];
 
-  /** Room writer gate: callbacks run FIFO on the pre-settlement state, before rebuilding speculative work.
+  /** Room writer gate: the first batch runs before one rebuild; later callbacks run FIFO after publication.
    * Callers needing a final result (network, bot policy) defer their whole validation/operation callback here.
    */
   deferDuringSettlement(command: () => void): boolean {
@@ -246,7 +246,7 @@ export class Room {
   startSettlementWork(factory: SettlementWorkFactory): void {
     if (this.disposed || this.settlementWork) return;
     this.settlementFactory = factory;
-    this.settlementRestarts = 0;
+    this.settlementFrozen = false;
     this.settlementWork = factory();
     this.runSettlementSlice();
   }
@@ -1369,11 +1369,10 @@ export class Room {
     const deadline = this.options.sliceMs === undefined ? Infinity : now() + this.options.sliceMs;
     const limit = this.options.sliceTicks ?? Infinity;
     try {
-      if (this.settlementCommands.length && !this.drainingSettlementCommands) {
+      if (this.settlementCommands.length && !this.drainingSettlementCommands && !this.settlementFrozen) {
         const factory = this.settlementFactory;
-        if (factory && this.settlementRestarts++ >= MAX_SETTLEMENT_RESTARTS) {
-          return this.fail({ kind: 'invalid-results', detail: `settlement-restart-limit:${MAX_SETTLEMENT_RESTARTS}` });
-        }
+        // Freeze the batch at this boundary. Writers arriving even while it drains must wait for the commit.
+        this.settlementFrozen = true;
         // Discard speculative states/recorders; drain writers on the original state before recreating work.
         const previous = work;
         if (factory) work.return();
@@ -1383,6 +1382,7 @@ export class Room {
         if (work.next().done) {
           this.settlementWork = null;
           this.settlementFactory = null;
+          this.settlementFrozen = false;
           this.drainingSettlementCommands = false;
           this.flushSettlementCommands();
           return;
@@ -1503,7 +1503,7 @@ export class Room {
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
   }
   /** Forgets the current round's frozen envelopes, the resolution in progress and the staged settlement. */
-  private releaseRound(): void { this.settlementWork = null; this.settlementFactory = null; this.drainingSettlementCommands = false; this.clearLive(); this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
+  private releaseRound(): void { this.settlementWork = null; this.settlementFactory = null; this.settlementFrozen = false; this.drainingSettlementCommands = false; this.clearLive(); this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */

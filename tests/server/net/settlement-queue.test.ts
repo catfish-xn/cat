@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { createHash } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createGameServer, type GameServer } from '../../../src/server/net/server';
 import { NET_PROTOCOL_VERSION, type ServerMessage } from '../../../src/server/net/messages';
@@ -6,6 +7,7 @@ import { ManualClock } from '../../../src/server/room/clock';
 import { PlaceholderBattleResolver } from '../../../src/server/room/battle-resolver';
 import { toSeatPrivateView } from '../../../src/server/room/projection';
 import type { Room } from '../../../src/server/room/room';
+import type { RoomState, SeatCommand } from '../../../src/server/room/types';
 import { DamageResolver, TIMINGS, runUntil } from '../helpers';
 
 // Exercise the real parse/auth/dedupe/write queue with an in-memory transport; no listening port is required.
@@ -133,5 +135,128 @@ describe('commands arriving during sliced settlement', () => {
     const sent = socket.messages.filter(m => m.type === 'state').at(-1)!;
     expect(sent.type === 'state' && sent.state).toEqual(JSON.parse(JSON.stringify(toSeatPrivateView(after.match))));
   }, 60_000);
+
+  it('holds writers received after the first rebuild until commit and checks their original revisions then', async () => {
+    const { clock, socket, room, seat, command, work } = await setup(true);
+    expect(room.handle(seat.seatId, { type: 'shopLock', locked: true, generation: seat.match.shop.generation }).ok).toBe(true);
+    work.clearTimer(); work.commitPending();
+    const originalRevision = room.state.seats[0]!.seatRevision;
+    command(3, false, originalRevision);
+    expect(clock.fireNext()).toBe(true); // Admits the first batch and freezes, still draining that batch.
+    const before = room.state;
+    expect(before.seats[0]!.seatRevision).toBe(originalRevision + 1);
+    command(4, true, originalRevision + 1); command(4, true, originalRevision + 1);
+    // This request explicitly targets the post-commit revision; the server must not rewrite either request.
+    command(5, true, originalRevision + 2);
+    room.setConnected(seat.seatId, false);
+    socket.receive({ type: 'walk', commandId: 6, roomId: before.roomId, scene: 'board', to: { x: 1, y: 1 } });
+    let observedCommit = false;
+    expect(room.deferDuringSettlement(() => { observedCommit = room.state.settlements.includes(`${before.roomId}:round-3`); })).toBe(true);
+    expect(room.state).toBe(before);
+    expect(socket.messages.filter(m => m.type === 'receipt' && m.commandId >= 4)).toHaveLength(0);
+    // More than nine new arrival batches cannot interrupt the frozen calculation.
+    let batches = 0;
+    while (room.state.phase === 'battle' && batches < 10_000) {
+      room.setConnected(seat.seatId, batches % 2 === 0);
+      expect(clock.fireNext()).toBe(true);
+      batches++;
+    }
+    expect(batches).toBeGreaterThan(9);
+    expect(observedCommit).toBe(true);
+    expect(room.state.fault).toBeNull();
+    expect(socket.messages.filter(m => m.type === 'receipt' && m.commandId === 4)).toMatchObject([
+      { ok: false, reason: 'seat-revision-mismatch' }, { ok: false, reason: 'seat-revision-mismatch' },
+    ]);
+    expect(socket.messages.filter(m => m.type === 'receipt' && m.commandId === 5)).toMatchObject([{ ok: true }]);
+    expect(room.state.seats[0]!.seatRevision).toBe(originalRevision + 3);
+    expect(room.walks).toHaveLength(1);
+    expect(room.retained.resolving).toBe(false);
+    // The rejected command's receipt remains deduped after commit.
+    command(4, true, originalRevision + 1);
+    expect(socket.messages.at(-1)).toMatchObject({ type: 'receipt', commandId: 4, ok: false, reason: 'seat-revision-mismatch' });
+  }, 60_000);
+
+  it('finishes deterministically with eight bot controllers and continuous authenticated human traffic', async () => {
+    async function play() {
+      const clock = new ManualClock();
+      server = await createGameServer({ port: 0, host: '127.0.0.1', clock, seed: 42, roomId: 'busy-match',
+        timings: TIMINGS, sliceTicks: 50, sliceMs: 20, spotCheckEveryRounds: 1_000_000,
+        limits: { maxMessagesPerWindow: 1_000_000 }, logger: () => {} });
+      const socket = new Socket(); transport.connect!(socket);
+      socket.receive({ type: 'join', name: 'human', commandId: 1 });
+      socket.receive({ type: 'start', commandId: 2 });
+      const room = server.room!;
+      // Eight seats total: let BotDriver also drive the connected human's seat for this stress fixture.
+      // Its kind/session remain human, so setConnected changes real state and all traffic uses real auth/dedupe.
+      const holder = room as unknown as { current: RoomState };
+      holder.current = { ...room.state, seats: room.state.seats.map((seat, index) => index === 0 ? { ...seat, controller: 'bot' } : seat) };
+      room.setConnected(room.state.seats[0]!.seatId, false); // Publish once so BotDriver observes the eighth controller.
+      expect(room.state.seats.every(seat => seat.controller === 'bot')).toBe(true);
+      const botSteps = vi.spyOn(room, 'handleBot');
+      const checkpoints: RoomState[] = [];
+      let committed = 0, dirtiedRound = -1, arrivals = 0, commandId = 3, frozenArrivals = 0;
+      const sent = createHash('sha256'), receipts = createHash('sha256');
+      const successful = new Set<string>();
+      const commandTypes = new Map<number, string>();
+      room.subscribe(state => {
+        if (state.settlements.length > committed) { committed = state.settlements.length; checkpoints.push(state); }
+      });
+      try {
+        for (; room.state.phase !== 'ended' && arrivals < 100_000; arrivals++) {
+          const state = room.state, seat = state.seats[0]!;
+          // Every PvE round exercises a stale staged plan, including the late, expensive rounds.
+          if (state.phase === 'battle' && state.roundKind === 'pve' && dirtiedRound !== state.round) {
+            dirtiedRound = state.round;
+            const living = state.seats.find(candidate => candidate.alive)!;
+            room.handleBot(living.seatId, living.controlEpoch, { type: 'shopLock', locked: !living.match.shop.locked, generation: living.match.shop.generation });
+          }
+          const slot = Math.max(0, seat.match.shop.slots.findIndex(offer => offer.status === 'available'));
+          const unit = seat.match.preparation.units.find(candidate => candidate.team === 'player' && candidate.location.kind === 'bench');
+          const commands: SeatCommand[] = [
+            { type: 'buy', slot, generation: seat.match.shop.generation },
+            { type: 'sell', unitId: unit?.id ?? 'missing-unit' },
+            { type: 'reroll' },
+            { type: 'shopLock', locked: !seat.match.shop.locked, generation: seat.match.shop.generation },
+          ];
+          const command = commands[arrivals % commands.length]!;
+          const message = { type: 'command', commandId: commandId++, roomId: state.roomId, round: state.round,
+            seatRevision: room.state.seats[0]!.seatRevision, command };
+          commandTypes.set(message.commandId, command.type);
+          const walk = { type: 'walk', commandId: commandId++, roomId: state.roomId, scene: 'board', to: { x: arrivals % 3, y: 1 } };
+          const connected = arrivals % 2 === 0;
+          sent.update(JSON.stringify({ message, walk, connected }));
+          socket.receive(message);
+          socket.receive(walk);
+          room.setConnected(seat.seatId, connected);
+          if ((room as unknown as { settlementFrozen: boolean }).settlementFrozen) frozenArrivals++;
+          expect(clock.fireNext()).toBe(true);
+          for (const result of socket.messages) if (result.type === 'receipt' && result.commandId >= 3) {
+            receipts.update(JSON.stringify(result));
+            if (result.ok) successful.add(commandTypes.get(result.commandId)!);
+            commandTypes.delete(result.commandId);
+          }
+          socket.messages.length = 0; // Keep full-match transport observations bounded, without trimming domain ledgers.
+        }
+        expect(room.state.phase).toBe('ended');
+        expect(room.state.fault).toBeNull();
+        expect(room.state.ranking?.map(entry => entry.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        expect(room.state.round).toBeGreaterThanOrEqual(31);
+        expect(new Set(botSteps.mock.calls.map(([id]) => id)).size).toBe(8);
+        expect(frozenArrivals).toBeGreaterThan(9);
+        expect(successful).toEqual(new Set(['buy', 'sell', 'reroll', 'shopLock']));
+        expect(commandTypes.size).toBe(0); // Every admitted command receives a final receipt, including the terminal round.
+        expect(room.retained.resolving).toBe(false);
+        const ledger = createHash('sha256');
+        // Hash whole RoomStates, including every battle event, pool/RNG, receipt, revision and deadline; omit nothing.
+        for (const checkpoint of checkpoints) ledger.update(JSON.stringify(checkpoint) + '\n');
+        const result = { terminal: createHash('sha256').update(JSON.stringify(room.state)).digest('hex'),
+          ledger: ledger.digest('hex'), commands: sent.digest('hex'), receipts: receipts.digest('hex'),
+          bots: createHash('sha256').update(JSON.stringify(botSteps.mock.calls)).digest('hex'), arrivals, round: room.state.round, frozenArrivals };
+        console.info('settlement full-match evidence', JSON.stringify(result));
+        return result;
+      } finally { botSteps.mockRestore(); await server.close(); server = null; }
+    }
+    expect(await play()).toEqual(await play());
+  }, 600_000);
 
 });

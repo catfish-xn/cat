@@ -1902,13 +1902,14 @@ runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchC
 
 战斗截止后的过期预结算补算、PvE live-bank 尾部补算复用 `RoomOptions.sliceTicks` / `sliceMs`（服务器默认 20 ms）。可选 `sliceNow?: () => number` 仅替换预算计时源，默认 `clock.now()`；无头探针可用真实 `performance.now` 计预算、虚拟 clock 驱动阶段期限，不向领域注入时钟。每个不可分割工作单元至多一个共享池 `step`，PvP 收据按席位切开；每单元后检查预算，通过房间 clock 的下一次回调续算。席位、共享池、事件和 RNG 的调用顺序不变，最终一次 `commitSettlement`，不得发布部分结算。`planSettlement(results, resolverPool?): PlanResult` 同步接口保留，和切片入口共用相同生成器，不新增规则或失败原因。
 
-服务器公共接口（PR #390 评审修订，方案 a）：
+服务器公共接口（PR #390 最终评审修订：首次重建后冻结）：
 
-- `Room.deferDuringSettlement(operation: () => void): boolean`：有在途结算时入房间 FIFO 并返回 true，否则返回 false、不执行。排队操作先于结算生效：下一片丢弃未发布的计算和回放副本，按原回合与席位版本校验、执行操作，再基于更新后的状态重建结算；不改写请求参数。每个排队操作也是独立预算单元。已失效的请求仍按原规则拒绝。
+- `Room.deferDuringSettlement(operation: () => void): boolean`：有在途结算时入房间 FIFO 并返回 true，否则返回 false、不执行。下一片首次发现排队操作时，固定本批数量、丢弃未发布的计算和回放副本，按原回合与席位版本校验、执行本批操作，再基于更新后的状态重建结算，至多重建一次。本批边界确定时即冻结；此后到达的操作（包括本批尚未排空时到达的操作）不能再次打断计算，必须等待完整结算提交及阶段发布后 FIFO 执行。不改写请求参数、不预发成功回执。首批每个排队操作也是独立预算单元；冻结计算仍检查原有 20 ms / tick 预算并让出事件循环。
 - `Room.startSettlementWork(factory: SettlementWorkFactory): void`，`SettlementWorkFactory = () => Generator<void, void, void>`：统一启动/续算/取消/重建入口；已有工作或 dispose 后不重复启动。工作必须在最后一次不 yield 的提交段前保持状态与回放私有。`planSettlement` 的同步入口与此路径共用 `planSteps`。#382 的流式接入也必须复用该入口与同一 FIFO，本 PR 不实现流式。
 - 所有外部席位写入口均走同一门：`handle`、`handleBot`、`claimBotOrbs`、`takeOver`、`setConnected`、`walkLegend`、`commitSettlement`，以及选秀到达和 live 回调。`handle/handleBot/claimBotOrbs` 在排队时返回 `ok:false, reason:'settlement-pending', queued:true, state:null`，表示尚无执行结果，调用方不可当作规则失败再发一次；走路返回同名 pending 原因，`commitSettlement` 返回该原因及当前 RoomState，布尔入口 true 表示接受排队。需要最终结果的调用方应将完整验证/执行/回执闭包交给 `deferDuringSettlement`，不要依赖上述占位返回值。BotDriver 延迟整个策略事务，包含领球和策略 RNG。
 - PvE live 尾算使用独立的 `LivePveTrack` / `CombatReplayRecorder.fork()`；fork 共享不可变帧，后续逐 tick 写入独立数组，不改规则、帧或事件序号。丢弃工作不会污染已发布回放，也不会重复发奖。所有临时席位/战斗发布与最终 `commitSettlement` 之间不 yield。
-- `MAX_STALE_SEAT_RETRIES=3`：首次尝试后至多重试三次；失败 fault 为 `invalid-results` / `detail='stale-seat-retry-limit:3'`。`MAX_SETTLEMENT_RESTARTS=8`：被新操作打断后至多重建八次，超限为 `invalid-results` / `detail='settlement-restart-limit:8'`。均取消工作/计时器，未执行命令获得终局规则失败；不无限重算。
+- 冻结期网络命令在提交后的最新状态校验原 `round` / `seatRevision`：同轮旧席位版本返回既有 `seat-revision-mismatch` 回执，若轮次已变则仍优先返回 `stale-round`；显式匹配新版本的请求可继续按规则执行。失败不消耗资源或 RNG，同 ID 重发取得相同失败回执，客户端可用新 ID / 最新版本重试。
+- 删除 `MAX_SETTLEMENT_RESTARTS` 与 `settlement-restart-limit` fault 路径，持续输入不会导致重建饥饿或因命令批次数结束整局。`MAX_STALE_SEAT_RETRIES=3` 保留为内部提交异常防线：首次尝试后至多重试三次；失败 fault 为 `invalid-results` / `detail='stale-seat-retry-limit:3'`，正常排队输入不会触发此路径。
 
 网络层在解析、限流、身份和 roomId 检查后保留**session**与原始命令；session 级 pending commandId/content 及最终 dedupe 共用一次执行。旧连接关闭、被替换都不取消已经接受的命令；回执记录在 session，发送给仍打开的等待连接及当前连接。superseded 宽限期旧连接只可重放已经接受的相同命令，新 ID 拒绝 `not-authenticated`，同 ID 异内容拒绝 `commandId-conflict`。WsGameClient 的 `closed/restart` 会 clearInflight，resume 只推进 nextCommandId，不重发旧请求，因此不能依赖客户端重发弥补服务器丢弃。故障后释放回调，让命令得到当前终局失败；dispose 丢弃回调并取消续算计时器。
 

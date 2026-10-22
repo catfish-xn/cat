@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import { PlaceholderBattleResolver } from '../../src/server/room/battle-resolver';
-import { MAX_SETTLEMENT_RESTARTS, MAX_STALE_SEAT_RETRIES, type Room } from '../../src/server/room/room';
+import { MAX_STALE_SEAT_RETRIES, type Room } from '../../src/server/room/room';
 import { readLootView } from '../../src/simulation/match';
 import type { RoomState } from '../../src/server/room/types';
 import { makeRoom, runUntil } from './helpers';
 
-type WorkSeam = { settlementWork: Generator<void, void, void> | null; runSettlementSlice(): void; clearTimer(): void; commitPending(): void; drainingSettlementCommands: boolean };
+type WorkSeam = { settlementWork: Generator<void, void, void> | null; runSettlementSlice(): void; clearTimer(): void; commitPending(): void; drainingSettlementCommands: boolean; settlementFrozen: boolean };
 const seam = (room: Room) => room as unknown as WorkSeam;
 
 /** Reads a controllable CPU clock without moving/firing the timer queue recursively. */
@@ -87,19 +87,25 @@ describe('settlement slices', () => {
     room.dispose();
   });
 
-  for (const cancel of ['dispose', 'abort'] as const) it(`${cancel} cancels in-flight settlement and its timer`, () => {
+  for (const cancel of ['dispose', 'abort'] as const) for (const frozen of [false, true]) it(`${cancel} cancels in-flight settlement and its timer (frozen=${frozen})`, () => {
     const { room, clock } = makeRoom(undefined, { sliceTicks: 1 });
     room.start();
     seam(room).clearTimer();
     let work = 0, flushed = false;
-    seam(room).settlementWork = (function* () { for (;;) { work++; yield; } })();
-    seam(room).runSettlementSlice();
+    room.startSettlementWork(() => (function* () { for (;;) { work++; yield; } })());
+    if (frozen) {
+      room.deferDuringSettlement(() => {});
+      expect(clock.fireNext()).toBe(true);
+      expect(seam(room).settlementFrozen).toBe(true);
+    }
     room.deferDuringSettlement(() => { flushed = true; });
+    const beforeCancel = work;
     if (cancel === 'dispose') room.dispose();
     else room.abort({ kind: 'invalid-results', detail: 'test cancellation' });
     expect(seam(room).settlementWork).toBeNull();
+    expect(seam(room).settlementFrozen).toBe(false);
     expect(clock.pending).toBe(0);
-    expect(clock.fireNext()).toBe(false); expect(work).toBe(1);
+    expect(clock.fireNext()).toBe(false); expect(work).toBe(beforeCancel);
     expect(flushed).toBe(cancel === 'abort');
     room.dispose();
   });
@@ -146,18 +152,38 @@ describe('settlement slices', () => {
     room.dispose();
   });
 
-  it('bounds work invalidations even under a continuous stream of queued writers', () => {
-    const { room, clock } = makeRoom(undefined, { sliceTicks: 1 });
+  it('rebuilds once, then finishes within the slice budget despite more than nine batches of writers', () => {
+    const clock = new CpuClock();
+    const { room } = makeRoom(undefined, { clock, sliceTicks: 1, sliceMs: 20 });
     room.start(); seam(room).clearTimer();
-    let completed = 0;
-    room.startSettlementWork(() => (function* () { for (;;) yield; })());
-    for (let n = 0; n <= MAX_SETTLEMENT_RESTARTS; n++) {
-      expect(room.deferDuringSettlement(() => { completed++; })).toBe(true);
+    let builds = 0, published = false;
+    const order: number[] = [], afterPublication: boolean[] = [];
+    room.startSettlementWork(() => (function* () {
+      builds++;
+      for (let n = 0; n < 30; n++) { clock.cpu += 7; yield; }
+      published = true;
+    })());
+    const enqueue = (id: number) => expect(room.deferDuringSettlement(() => {
+      order.push(id); afterPublication.push(published);
+    })).toBe(true);
+    enqueue(0); enqueue(1);
+    expect(clock.fireNext()).toBe(true); // First batch starts draining; its boundary is already frozen.
+    enqueue(2);
+    let batches = 0;
+    while (room.retained.resolving && batches < 100) {
+      enqueue(batches + 3);
+      const before = clock.cpu;
       expect(clock.fireNext()).toBe(true);
-      while (seam(room).drainingSettlementCommands) expect(clock.fireNext()).toBe(true);
+      expect(clock.cpu - before).toBeLessThanOrEqual(21);
+      batches++;
     }
-    expect(completed).toBe(MAX_SETTLEMENT_RESTARTS + 1);
-    expect(room.state.fault).toEqual({ kind: 'invalid-results', detail: `settlement-restart-limit:${MAX_SETTLEMENT_RESTARTS}` });
+    expect(batches).toBeGreaterThan(9);
+    expect(room.retained.resolving).toBe(false);
+    expect(builds).toBe(2);
+    expect(published).toBe(true);
+    expect(order).toEqual(Array.from({ length: batches + 3 }, (_, n) => n));
+    expect(afterPublication).toEqual([false, false, ...Array<boolean>(batches + 1).fill(true)]);
+    expect(room.state.fault).toBeNull();
     expect(clock.pending).toBe(0);
     room.dispose();
   });
