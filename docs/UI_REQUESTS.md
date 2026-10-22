@@ -1130,3 +1130,14 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 验收：同一根 seed 的八席（含机器人）与单人结果一致；刷新视图/恢复不发奖；任何公共 payload 均无 seed、selectionRng、未来奖励和个人候选。shared-deferred 仅为服务器建席前内部状态，查询返回 null，不应向已开始玩家展示。模式/布局/颜色/动画由 Claude 决定；此处只定义显示内容与数据源。演出计时由服务器展示阶段控制，不进入 simulation 时钟。
 
 存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2–7 的收据/候选尚未启用，后续另补本人进度投影。
+
+## 开局奇遇 PR2 → Claude（2026-10-22）
+
+六项已启用：范德尔全黄金、艾克全棱彩、黑默丁格首次/末次棱彩，蔚1-2两个基础装备锻造器、杰斯1-2一个神器锻造器。其他9项效果仍关闭；没有奇遇沿用无附加规则。完整领域签名、来源与失败语义见 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 顶部 PR2 节。
+
+- 公共字段：既有 `openingEncounter` 白名单形状不变，启用项 `enabled=true`、`effectStatus=active`、`statusTextZh=本局奇遇效果已启用`。前奏/终章其余档位是已批准等权项目约定，不能显示成“其余必不棱彩”。
+- 本人字段：`openingEncounterProgress?={source,effectsApplied,forgesGranted,forgesResolved,forgesPending}`，来自 `toPrivateSeatView`。pending数量包含当前待选，组件最初2→1→0，神器1→0；无激活收据时不出现。仅本人可见。
+- 本人选择：已有 `pendingChoice.kind=forge`、`offers`（恰好4项）、`choiceId`、`generation`、`payload.source=opening-encounter`、`payload.timeoutOption`。用既有choose回调；领域依次开下一份，界面不能生成候选或扣减数量。现有强化 `augmentTier` 和逐槽 `augmentOptions.rerollAvailable` 已按奇遇处理。
+- 本人结果：`seatMechanics.receipts` 中 source=opening-encounter 的choice记录含optionId/itemId/timedOut；`openingEffectApplied` 是授予/激活事件，`mechanicGranted` 是实际选择完成事件，不要把前者当装备已入库。
+- 服务器接线：initializeSharedSeat已授予，不能另发一次。timeoutChoice每次处理一个choiceId；处理后若还有新待选，应继续依据新ID处理，重连只读当前state。PR8如需要新helper，可在server-entry按合同重导出；本PR未修改该目录或服务器。
+- 验收：八席同奇遇/同强化档位、候选仍各自独立；两个锻造器先后选择，不被其他面板覆盖；超时选第一候选、重连不重抽不重发；其他玩家收不到本人待选/后续候选/seed/RNG。布局、颜色和动画由Claude决定。

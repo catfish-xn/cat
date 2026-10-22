@@ -1,4 +1,5 @@
-import { createOpeningEncounter, bindSharedOpeningEncounter } from './opening-encounter';
+import { validateAugmentOfferHistory } from './augment-offers';
+import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 import { sixCostOddsBps } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
 import { validateConsumableState } from './consumables';
@@ -37,7 +38,7 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):Mat
   const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
-  canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);
+  canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
   return state;
 }
 
@@ -103,10 +104,13 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
       draft.holdings.push({seatId,unitId:hero.id,definitionId:hero.definitionId,sources:[sourceKey('opening',seatId)]});
     }
     // createMatch's private infinite shop was never published. Its draws are discarded too.
-    const next:MatchState={...enabled.state,openingEncounter:bindSharedOpeningEncounter(pool.openingEncounter,pool.poolId,seatId),augmentTierSeed:pool.seed,preparation:{...enabled.state.preparation,units:enabled.state.preparation.units.map(u=>u.id===hero.id?hero:u)},resourceProvenance:{...enabled.state.resourceProvenance,entries:enabled.state.resourceProvenance.entries.map((entry,index)=>index===0&&entry.kind==='unit-acquired'?{...entry,source:{kind:'opening' as const,seed:pool.seed,seatId}}:entry)},m8:{...enabled.state.m8,loot:boundLoot},rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
+    let next:MatchState={...enabled.state,openingEncounter:bindSharedOpeningEncounter(pool.openingEncounter,pool.poolId,seatId),augmentTierSeed:pool.seed,preparation:{...enabled.state.preparation,units:enabled.state.preparation.units.map(u=>u.id===hero.id?hero:u)},resourceProvenance:{...enabled.state.resourceProvenance,entries:enabled.state.resourceProvenance.entries.map((entry,index)=>index===0&&entry.kind==='unit-acquired'?{...entry,source:{kind:'opening' as const,seed:pool.seed,seatId}}:entry)},m8:{...enabled.state.m8,loot:boundLoot},rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
       sharedPool:{poolId:pool.poolId,seatId,revision:0}};
+    const applied=applyOpeningEffects(next,planOpeningRound(pool.openingEncounter,'1-2').facts,pool.openingEncounter);
+    if(!applied.ok) return failure(pool,state,applied.reason);
+    next=applied.state;
     draft.seats.push({seatId,seatIndex,revision:0,released:false,shop:next.shop});draft.revision++;
-    assertSharedPoolConservation(draft,[next]);return {ok:true,pool:draft,state:next,events:[],poolEvents:[]};
+    assertSharedPoolConservation(draft,[next]);return {ok:true,pool:draft,state:next,events:applied.events,poolEvents:[]};
   } catch(error) {return failure(pool,state,reasonOf(error));}
 }
 

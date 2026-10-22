@@ -21,7 +21,7 @@ describe('opening encounter PR1 content and independent selection', () => {
     expect(OPENING_ENCOUNTERS.map(e => e.weightBps)).toEqual(weights);
     expect(weights.reduce((a,b) => a+b,0)).toBe(10000);
     expect(new Set(OPENING_ENCOUNTERS.map(e => e.id)).size).toBe(16);
-    expect(OPENING_ENCOUNTERS.filter(e => e.enabled).map(e => e.id)).toEqual(['none']);
+    expect(OPENING_ENCOUNTERS.filter(e => e.enabled).map(e => e.id)).toEqual(['none','golden-gala','prismatic-party','prismatic-prelude','prismatic-finale','component-anvils','artifact-anvil']);
     expect(OPENING_ENCOUNTERS.map(e => e.nameEn)).toEqual(['No encounter','Scuttle Puddle','Crab Rave','Golden Gala',
       'Prismatic Party','Prismatic Prelude','Prismatic Finale','Gold Subscription','Loot Subscription','Trainer Golems',
       'Wind-up Monkey','Component Anvils',"Viktor's Vision","Mel's Blessing","Warwick's Hunger",'Artifact Anvil']);

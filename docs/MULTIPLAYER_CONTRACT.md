@@ -1,3 +1,62 @@
+## 开局奇遇 PR2：强化约束与 1-2 锻造器（2026-10-22）
+
+本节覆盖下方 PR1 中“15 项关闭、facts/receipts 为空、apply 无效果”的历史描述。按用户批准方案第3、4、6、9节实现；14.24b、不联网、不补造缺证数值。配置身份为 `opening-encounters-14.24b-pr2-v1`；沿用未发布的 v21 rules/content、schema12/save8/replay5/command5，重算双 digest，不录制 epoch，PR9 统一录制。
+
+| enabled=true 的新增结果 | 效果 |
+| --- | --- |
+| `golden-gala`（范德尔） | 2-1／3-2／4-2 全 gold |
+| `prismatic-party`（艾克） | 三节点全 prismatic |
+| `prismatic-prelude`（黑默丁格） | 2-1 强制 prismatic |
+| `prismatic-finale`（黑默丁格） | 4-2 强制 prismatic |
+| `component-anvils`（蔚） | 1-2 每席两个基础装备锻造器，依次选择 |
+| `artifact-anvil`（杰斯） | 1-2 每席一个神器锻造器 |
+
+其余9项效果保持关闭（none 仍启用且无附加规则）；16项抽选顺序、权重合计10000及所有原始 null 不变。未强制强化节点沿现有等权 `deriveAugmentTier(rootSeed, choiceId)` 项目约定，允许棱彩；不是已核实的历史条件分布。四种强化只覆盖正常三节点，初抽、逐槽换牌、本人按钮和恢复重演共用 `resolveAugmentTier`。候选仍使用各席既有 `choiceRngState`，初抽3词、换牌1词；不额外消费这个流。排除已持有、永久移除和换牌时当前候选；这六项调研中的强化禁用引用均为空，不编造新增互斥组，也不启用魔像/沃里克的关闭效果。初抽少于3项、换牌没有候选均失败，不降档、不跨档、不重置排除记录。
+
+新增随机子流仅为 `opening-encounter-v1/seat/<seatId>/anvil/<index>`：单人 seatId=`solo`，联机为真实 seatId；index从0起。根 seed 单人取 `state.seed`，共享取已绑定 `state.augmentTierSeed=pool.seed`。对完整流名做 UTF-16 FNV-1a32，seed XOR hash 后 uint32，lcg32-v1 连取4词；对排序后的现有 G24 组件/神器池执行前4步 Fisher–Yates，`j=i+word%(pool.length-i)`。每个锻造器内4项不同，锻造器之间及与已持有装备不互斥；独立抽样不保证不同锻造器结果绝不重复。不读写商店、强化候选、奖励、PvE掉落、装备、战斗或选秀 RNG。没有新增 shared 或 display 随机流；未来第二个锻造器的候选不投影。
+
+生命周期与凭据：
+
+- `createMatch` 在首次准备返回前应用；`initializeSharedSeat` 在原始开局准入、多人绑定完成后立即应用，正常/选秀开局相同，八席/机器人相同数量。shared-deferred 状态不授予；共享调用方不需要再次发奖。
+- `planOpeningRound(context,'1-2')` 返回固定事实列表；其他合法目录轮次返回空列表。PR2 没有可变全局随机结果，返回的 context 原引用及其 facts=[] 保持不变；重复规划结果相同。
+- 强化策略有一个 `effectKey='augment-policy'` 的激活收据；组件分别是 `anvil/0`、`anvil/1`，神器是 `anvil/0`；nodeId均为1-2。它们是独立 `openingEncounter.receipts`，不是 PvE loot.receipts，也不放进 G23 奖励箱。
+- 实例标记为对 `opening-instance/<rootSeed>` 做 FNV-1a32 后的8位小写hex（非身份凭证）；`factId=JSON(['opening-effect',configVersion,instanceTag,encounterId,effectKey,'1-2'])`，`receiptId=JSON(['opening-receipt',factId,seatId])`。收据字段形状仍是 `{receiptId,factId,seatId,nodeId}`；原始seed/RNG不进入投影或选择ID。
+- 每个新收据发 `MatchEvent {type:'openingEffectApplied',receipt}`，普通 match 事件序号递增；首个锻造器另发既有 `choiceOpened`。`applyOpeningEffects` 返回事件已盖章；initializeSharedSeat原样返回，调用者不可重复盖章。
+- 锻造器选择 `choiceId=receiptId`、`kind='forge'`、`payload.source='opening-encounter'`、`timeoutOption=offers[0]`，复用既有 `selectChoice` / shared `choose`。物品授予用现有永久物品执行器、mechanic来源资源账本和 `seatMechanics.receipts`；后者记录真实选择、itemId、timedOut。前一选择完成后再开后一选择，优先于其他机制锻造器，不覆盖 pendingChoice。
+- 超时复用 `forfeitPendingChoice` / shared `timeoutChoice`，一次只处理当前选择，默认第一候选；若新选择仍存在，服务端须继续按新choiceId处理。旧choiceId/代次重试原子失败；重复apply返回原state引用、events=[]。
+- 恢复重推绑定、精确效果收据、4候选、选择顺序、默认超时结果及物品来源；不补抽、不补发、不迁移。单人走既有完整资源历史认证；共享快照走 `restoreSharedOrbSnapshot(pool,input)`，另重演强化档位/候选历史。原始context不能替代pool权威或向客户端透传。
+
+公共接口（纯函数，无新网络命令）：
+
+```ts
+// match.ts 新增重导出；原 deriveAugmentTier 保留基础算法语义
+resolveAugmentTier(state: Pick<MatchState,'openingEncounter'|'augmentTierSeed'>,
+  choiceId: string): 'silver'|'gold'|'prismatic'
+readOpeningEncounterProgress(state: MatchState): null | {
+  source: 'opening-encounter'; effectsApplied: number;
+  forgesGranted: number; forgesResolved: number; forgesPending: number;
+}
+// opening-encounter.ts 新增模块导出（领域内部与测试使用）
+openingEncounterId(state: Pick<MatchState,'openingEncounter'>): OpeningEncounterId | null
+pendingOpeningForges(state: MatchState): readonly OpeningEffectReceipt[]
+openingForgeOffers(state: MatchState, receiptId: string): readonly string[]
+openOpeningForge(state: MatchState): {state: MatchState; events: readonly MatchEvent[]}
+validateOpeningForges(state: MatchState): void
+```
+
+既有 `planOpeningRound`、`applyOpeningEffects`、`validateOpeningEncounterState`、`readOpeningEncounterView` 签名不变。`apply` 的 facts 只接受空列表或与所选1-2事实完全相同的列表；有尚未应用的效果时必须在首次1-2准备入口提供完整列表。成功首次应用为新state与事件，完整已应用时为原state与空事件；无效输入返回原state和reason，无events、资源/RNG消耗。`openOpeningForge` 是未盖章内部队列钩子，不是服务器授予命令。`openingForgeOffers` 是私有恢复/规则工具，不可用来提前展示后续候选。新helper没有扩展 `src/server-entry`；本PR权限不含该目录，PR8按需重导出；现有网络流程用已导出的命令和本人投影即可。
+
+| 失败枚举 | PR2 含义 |
+| --- | --- |
+| `opening-config-incomplete` | 配置身份错误或锻造器池不足4项（内容缺证不能替代为部分候选） |
+| `opening-context-mismatch` | 根seed/选择/绑定/激活收据/选择来源及恢复历史不一致 |
+| `invalid-opening-effect` | 非目录节点、伪事实/receiptId、缺少完整事实、错误授予阶段 |
+| `augment-pool-too-small` | nextRound初抽不足3项或rerollAugment过滤后空池，原state且无events |
+| `stale-choice` / `invalid-choice` / `wrong-phase` | 沿用旧选择ID或代次、非法选项、阶段错误；超时也沿用stale-round等既有枚举 |
+| `invalid-pool` / `invalid-seat-state` | 共享池绑定或席位恢复不一致，沿用外层失败；具体校验工具仍可能抛已有RangeError/Error |
+
+`OpeningEncounterFailure` 没有新增成员；不引入“重复领取失败”，正常重复生命周期是成功空操作。公共 openingEncounter 字段形状不变，新增启用项 `effectStatus='active'`、`statusTextZh='本局奇遇效果已启用'`。本人 `toPrivateSeatView` 按需新增 `openingEncounterProgress`（有激活收据才存在），不公开其他席候选、收据或进度；`pendingChoice` 和 `seatMechanics.receipts` 继续承载本人选择/已完成结果。UI字段及接线验收见 UI_REQUESTS 的 PR2 节。
+
 ## 开局奇遇 PR1：规则框架（2026-10-22，开发身份，尚未录制 epoch）
 
 用户批准方案及唯一只读调研源：`/home/aiapps/workspace/s13-ui-atlas/encounters/开局奇遇实现方案.md` §§2–6、9，及同目录 `tft_s13_opening_encounters_14.24b.json/.md`。未联网。此节覆盖下文旧正式身份的当前开发态描述；不宣称已发布。
