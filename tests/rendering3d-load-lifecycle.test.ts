@@ -91,6 +91,7 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
     const key = 'https://example.test/synthetic/|toy.glb', sha256 = '0'.repeat(64);
     const get = vi.fn(async (requested: string) => requested === key ? { key, sha256, blob: new Blob(['toy']) } : undefined);
     const open = vi.spyOn(preload, 'openAssetStore').mockResolvedValue({ persistent: true, get,
+      hashes: async keys => new Map(keys.filter(requested => requested === key).map(requested => [requested, sha256])),
       put: vi.fn(), delete: vi.fn(), keys: async () => [key] });
     const fetcher = vi.mocked(fetch), fallback = fetcher.getMockImplementation()!;
     fetcher.mockImplementation(async (input, init) => String(input).endsWith('/precache.json')

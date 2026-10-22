@@ -1082,6 +1082,7 @@ export class StrategyPanel {
     const perSkip = G23_TRAIT_SOURCE['chem-baron']?.tiers.find(entry => entry.threshold === tier)?.values.HealthPerSkip;
     const item = (id: string) => Object.hasOwn(ITEM_DEFINITIONS, id);
     bar.append(element('span', `${offer ? `第 ${offer.tier} 档 · ` : ''}微光 ${chem?.shimmer ?? 0}${chem?.skips ? ` · 已跳过 ${chem.skips} 次` : ''} · 接受后微光清零`, 'market-meta'));
+    if (choice.offers.length === 1) return this.blackMarketBundle(cards, choice.offers[0]!, options, offer?.optionId, payload?.skippable === true, perSkip, send);
     for (const id of choice.offers) {
       // Each offer is a candidate bundle of the tier's table (v20: three of them); an older single offer named the drawn item.
       const reward = options.find(option => option.id === id)?.reward ?? (item(id) ? options.find(option => option.id === offer?.optionId)?.reward : undefined);
@@ -1116,6 +1117,44 @@ export class StrategyPanel {
       skip.append(element('strong', '保留', 'market-name'), element('span', perSkip ? `炼金男爵 +${perSkip} 生命值` : '炼金男爵提高生命值', 'market-line'), element('span', '微光保留', 'market-line'));
       cards.append(skip);
     }
+  }
+  /**
+   * 14.24b black market (one bundle per market): the bundle's rewards side by side, each a picture over its name
+   * (1星【塞薇卡】, 20金币, the item name), then 「全部拿走」 and 「保留微光」 stacked on the right. The whole bundle is
+   * taken at once: no reward is clickable on its own (client AllowSingleItemSelection=false).
+   */
+  private blackMarketBundle(cards: HTMLElement, id: string, options: readonly { readonly id: string; readonly reward: Parameters<typeof g23RewardIcons>[0] }[],
+    drawnOptionId: string | undefined, skippable: boolean, perSkip: number | undefined, send: (id: string) => void): void {
+    const item = (candidate: string) => Object.hasOwn(ITEM_DEFINITIONS, candidate);
+    const reward = options.find(option => option.id === id)?.reward ?? (item(id) ? options.find(option => option.id === drawnOptionId)?.reward : undefined);
+    const lines = reward ? g23RewardLines(reward, item(id) ? itemDisplayName(id) : undefined) : [item(id) ? itemDisplayName(id) : '黑市奖励'];
+    const bundle = element('div', '', 'market-bundle'); bundle.dataset.debug = 'market:bundle'; bundle.title = lines.join('\n');
+    const slot = (picture: string | HTMLElement, caption: string) => {
+      const cell = element('span', '', 'market-slot'), art = element('span', '', 'market-slot-art');
+      if (typeof picture === 'string') art.innerHTML = picture; else art.append(picture);
+      cell.append(art, element('span', caption, 'market-slot-name')); bundle.append(cell);
+    };
+    const pictures = reward ? g23RewardIcons(reward) : [];
+    if (!pictures.length && item(id)) slot(itemMarkHtml(id, 40), itemDisplayName(id));
+    for (const icon of pictures) {
+      if (icon.kind === 'hero') {
+        const caption = `${icon.star}星【${icon.name}】`;
+        if (icon.unitId) slot(heroPortraitHtml(icon.unitId, 40, heroEmblemSvg(icon.unitId, 40)), caption); else slot(element('span', '?', 'market-pool'), caption);
+      } else if (icon.kind === 'item') slot(icon.itemId ? itemMarkHtml(icon.itemId, 40) : element('span', icon.name.startsWith('随机') ? '?' : [...icon.name][0]!, 'market-pool'), icon.name);
+      else slot(element('span', '', 'market-coin'), `${icon.amount}金币`);
+    }
+    if (!bundle.childElementCount) for (const line of lines) bundle.append(element('span', line, 'market-line'));
+    const actions = element('div', '', 'market-actions');
+    const take = this.button(`choice:${id}`, '全部拿走', () => send(id));
+    take.className = 'market-action market-take'; take.dataset.debug = 'market:take'; take.setAttribute('aria-label', '全部拿走'); take.title = ['全部拿走', ...lines].join('\n');
+    actions.append(take);
+    if (skippable) {
+      const keep = this.button('choice-skip', '保留微光', () => send(SKIP_OPTION));
+      keep.className = 'market-action market-keep'; keep.dataset.debug = 'market:keep';
+      keep.title = perSkip ? `保留微光 · 炼金男爵 +${perSkip} 生命值` : '保留微光 · 炼金男爵提高生命值';
+      actions.append(keep);
+    }
+    cards.classList.add('market-single'); cards.append(bundle, actions);
   }
   private genericOfferButton(choice: MatchState['pendingChoice'] & object, offer: GenericChoiceOffer, timeoutPick = false, onPick?: () => void): HTMLButtonElement {
     const label = [offer.price === undefined ? offer.name : `${offer.name} · ${offer.price ? `${offer.price} 金币` : '免费'}`, offer.description].filter(Boolean).join('\n');

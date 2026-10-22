@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { createConquerorFlag } from './conqueror-flag';
 import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
@@ -105,6 +106,7 @@ export class BoardScene extends Phaser.Scene {
   private help: HelpPanel | null = null;
   /** v15 (online): my unclaimed orbs in the board's right gutter. */
   private orbDock: OrbDock | null = null;
+  private conquerorFlag: ReturnType<typeof createConquerorFlag> | null = null;
   private get state() { return this.session.preparation; }
   private layout = new HexLayout(this.state.board, BOARD_LAYOUT.hexRadius, BOARD_LAYOUT.origin);
   private views = new Map<string, UnitView>();
@@ -199,6 +201,7 @@ export class BoardScene extends Phaser.Scene {
       graphics.fillStyle(toNumber(isDeploymentCell(this.state.board, 'player', { col, row }) ? THEME.color.boardAlly : THEME.color.boardEnemy)).lineStyle(1, toNumber(THEME.color.boardLine));
       graphics.fillPoints(this.layout.corners({ col, row }), true).strokePoints(this.layout.corners({ col, row }), true);
     }
+    this.conquerorFlag = createConquerorFlag(this);
     this.specialCellLayer = this.add.graphics();
     this.drawSpecialCells();
     this.add.text(-2000, 140, `${this.state.board.columns} 列 × ${this.state.board.rows} 行`, { fontSize: '14px', color: '#7e95a4' });
@@ -325,6 +328,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private resetViewReferences() {
+    this.conquerorFlag?.dispose(); this.conquerorFlag = null;
     this.views.clear(); this.tokens.clear(); this.renderedCells.clear(); this.effects.clear(); this.namedObjects.clear();
     this.shopButtons.length = 0; this.shopFrames.length = 0;
     this.draggingId = null; this.selectedId = null; this.previewHighlight = new Set(); this.recentCombatEvents = [];
@@ -913,7 +917,12 @@ export class BoardScene extends Phaser.Scene {
       if (token.input) { token.input.enabled = true; this.input.setDraggable(token, unit.location.kind === 'bench'); }
     }
   }
+  private syncConquerorFlag() {
+    this.conquerorFlag?.sync(this.feedMechanics().mechanics?.conquest, boardFeedActive());
+  }
+
   private syncHud() {
+    this.syncConquerorFlag();
     const match = this.session.state, ready = match.phase === 'preparation', operable = ready || this.benchOps();
     const round = readRoundInfo(match);
     this.roundLabel.setText(round.displayName); this.goldLabel.setText(`金币 ${match.gold}`);
@@ -1036,6 +1045,7 @@ export class BoardScene extends Phaser.Scene {
     // With a 3D layer drawing the board, the 2D one is covered or hidden: Phaser keeps updating it (tweens feed the
     // frame) but no longer draws it, which was about a fifth of the main thread during a 3D match (2026-10-21).
     const feeding = boardFeedActive();
+    this.syncConquerorFlag();
     // No camera (a scene that never booted its camera manager) leaves nothing to stop.
     const camera = this.cameras?.main;
     if (camera && camera.visible === feeding) camera.setVisible(!feeding);

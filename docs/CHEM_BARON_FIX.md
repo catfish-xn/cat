@@ -1,3 +1,5 @@
+> 2026-10-22：当前黑市改为单包；本文件 N=3 和当前 epoch 描述属于历史约定，已由 [BLACK_MARKET_SINGLE_OFFER](BLACK_MARKET_SINGLE_OFFER.md) 覆盖。B 补丁16字段、标准 PvE 不增微光及跳过收益继续有效。
+
 # Chem-Baron 修正：v20-chem-baron（2026-10-22 第二次同步）
 
 父 epoch 为 v20-traits；基线为已合入 PR #379 的 `origin/multiplayer` / `ce60a8b9dd2b0c3a0c34c527405d44939233fb5b`。离线合并保留迅击、野火、五组搭档、共用移动禁止判定、66 张强化，以及 v19 家人/Mel 账本；同时保留本 PR 的 B 补丁覆盖、标准 PvE 零微光、黑市多选一/保留。v20-traits、v19 及更早 fixtures、证据、录制脚本和归档字节保持不变。

@@ -1,0 +1,103 @@
+{
+  "sources": [
+    {
+      "path": "src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz",
+      "sha256": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0"
+    },
+    {
+      "path": "/home/aiapps/workspace/s13-ui-atlas/encounters/tft_s13_opening_encounters_14.24b.md",
+      "sha256": "5131f62d520111c00693c36ae85cfe509cd8a45c0c79774fdc4f9d6bbc8c5f31"
+    },
+    {
+      "path": "/home/aiapps/workspace/s13-ui-atlas/encounters/S13_ORIGINAL_RESEARCH_BUNDLE/tft_s13_14_24b/images/chem-baron-black-market-14.24b.png",
+      "sha256": "906d31e49f987f1cd72a46bc2b111535a6bdd1ed9799fa8fa7fa95c3d191c14e"
+    }
+  ],
+  "selection": "one source-weighted draw; same first candidate for the same incoming RNG; no discarded words",
+  "clientController": "AllowSingleItemSelection=false (as documented in supplied research D04); not itself a candidate-count constant",
+  "tables": [
+    {
+      "path": "{736738df}",
+      "name": "TFT13_Crime_BlackMarket1",
+      "weightsBps": {
+        "TFT13_Crime_LootA": 2500,
+        "TFT13_Crime_LootA1": 2000,
+        "TFT13_Crime_LootA2": 2000,
+        "TFT13_Crime_LootA3": 2000,
+        "TFT13_Crime_LootA4": 1000,
+        "TFT13_Crime_LootA5": 500
+      }
+    },
+    {
+      "path": "{74673a72}",
+      "name": "TFT13_Crime_BlackMarket2",
+      "weightsBps": {
+        "TFT13_Crime_LootB": 3500,
+        "TFT13_Crime_LootB1": 2000,
+        "TFT13_Crime_LootB2": 2000,
+        "TFT13_Crime_LootB3": 1000,
+        "TFT13_Crime_LootB4": 1000,
+        "TFT13_Crime_LootB5": 500
+      }
+    },
+    {
+      "path": "{75673c05}",
+      "name": "TFT13_Crime_BlackMarket3",
+      "weightsBps": {
+        "TFT13_Crime_LootC": 5500,
+        "TFT13_Crime_LootC1": 1500,
+        "TFT13_Crime_LootC2": 1500,
+        "TFT13_Crime_LootC3": 500,
+        "TFT13_Crime_LootC4": 500,
+        "TFT13_Crime_LootC5": 500
+      }
+    },
+    {
+      "path": "{6e673100}",
+      "name": "TFT13_Crime_BlackMarket4",
+      "weightsBps": {
+        "TFT13_Crime_LootD": 4000,
+        "TFT13_Crime_LootD1": 3000,
+        "TFT13_Crime_LootD2": 2000,
+        "TFT13_Crime_LootD3": 900,
+        "TFT13_Crime_LootD4": 100
+      }
+    },
+    {
+      "path": "{6f673293}",
+      "name": "TFT13_Crime_BlackMarket5",
+      "weightsBps": {
+        "TFT13_Crime_LootE": 3000,
+        "TFT13_Crime_LootE1": 2500,
+        "TFT13_Crime_LootE2": 2500,
+        "TFT13_Crime_LootE3": 1500,
+        "TFT13_Crime_LootE4": 500
+      }
+    },
+    {
+      "path": "{70673426}",
+      "name": "TFT13_Crime_BlackMarket6",
+      "weightsBps": {
+        "TFT13_Crime_LootF": 7000,
+        "TFT13_Crime_LootF1": 1000,
+        "TFT13_Crime_LootF2": 1000,
+        "TFT13_Crime_LootF3": 500,
+        "TFT13_Crime_LootF4": 500
+      }
+    },
+    {
+      "path": "{716735b9}",
+      "name": "TFT13_Crime_BlackMarket7",
+      "weightsBps": {
+        "TFT13_Crime_LootG": 10000
+      }
+    },
+    {
+      "path": "{7a6743e4}",
+      "name": "TFT13_Crime_BlackMarket8",
+      "weightsBps": {
+        "TFT13_Crime_LootH": 10000
+      }
+    }
+  ]
+}

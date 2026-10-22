@@ -1,0 +1,28 @@
+{
+  "parentEpoch": "v20-live-combat",
+  "contentDigest": "fnv1a32-utf16:9a83da50",
+  "lootReplayDigest": "fnv1a32-utf16:e0eb43e2",
+  "rulesVersion": "s13-g2-3-v20-black-market",
+  "contentVersion": "s13-14.24b-g2-3-v20-black-market",
+  "schemaVersion": 11,
+  "saveFormatVersion": 7,
+  "replayFormatVersion": 5,
+  "commandProtocolVersion": 5,
+  "netProtocolVersion": 6,
+  "previousContentDigest": "fnv1a32-utf16:93fad04c",
+  "previousLootReplayDigest": "fnv1a32-utf16:49eb9cf0",
+  "traceHashes": {
+    "state": "42963779d920b6c9e9db28755f3c9d444d7e34cbbc1ede3f0260539cd6b3c78e",
+    "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
+    "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:f13e9067",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "One weighted black-market bundle, whole-bundle take or keep; one RNG word per offer, market before crowns. Inherits live combat and all other rules. No shape changes: schema/save/replay/command 11/7/5/5, NET6. Old identities rejected without migration."
+}
