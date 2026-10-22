@@ -1,3 +1,4 @@
+import { createOpeningEncounter, bindSharedOpeningEncounter } from './opening-encounter';
 import { sixCostOddsBps } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
 import { validateConsumableState } from './consumables';
@@ -47,7 +48,7 @@ export function createSharedPool(poolId:string,seed:number,options:{readonly sea
   requirePool(typeof poolId==='string'&&poolId.length>0);
   if(options.capacities) requirePool(Object.keys(options.capacities).every(id=>SHOP_CATALOG.includes(id)));
   const initial=Object.fromEntries(SHOP_CATALOG.map(id=>[id,options.capacities ? options.capacities[id]??0 : POOL_CAPACITY_BY_COST[UNIT_DEFINITIONS[id].cost]]));
-  const pool:SharedPoolState={carouselParticipants:[],carouselReservations:[],carouselReceipts:[],carouselRounds:[],orbLayout:createOrbLayout(seed),version:SHARED_POOL_VERSION,poolId,seed,seatCount:options.seatCount??8,revision:0,
+  const pool:SharedPoolState={openingEncounter:createOpeningEncounter(seed),carouselParticipants:[],carouselReservations:[],carouselReceipts:[],carouselRounds:[],orbLayout:createOrbLayout(seed),version:SHARED_POOL_VERSION,poolId,seed,seatCount:options.seatCount??8,revision:0,
     initial,available:{...initial},seats:[],shops:[],holdings:[],pending:[],rewards:[],naturalRound:0,order:[]};
   assertSharedPoolConservation(pool);return pool;
 }
@@ -102,7 +103,7 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
       draft.holdings.push({seatId,unitId:hero.id,definitionId:hero.definitionId,sources:[sourceKey('opening',seatId)]});
     }
     // createMatch's private infinite shop was never published. Its draws are discarded too.
-    const next:MatchState={...enabled.state,augmentTierSeed:pool.seed,preparation:{...enabled.state.preparation,units:enabled.state.preparation.units.map(u=>u.id===hero.id?hero:u)},resourceProvenance:{...enabled.state.resourceProvenance,entries:enabled.state.resourceProvenance.entries.map((entry,index)=>index===0&&entry.kind==='unit-acquired'?{...entry,source:{kind:'opening' as const,seed:pool.seed,seatId}}:entry)},m8:{...enabled.state.m8,loot:boundLoot},rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
+    const next:MatchState={...enabled.state,openingEncounter:bindSharedOpeningEncounter(pool.openingEncounter,pool.poolId,seatId),augmentTierSeed:pool.seed,preparation:{...enabled.state.preparation,units:enabled.state.preparation.units.map(u=>u.id===hero.id?hero:u)},resourceProvenance:{...enabled.state.resourceProvenance,entries:enabled.state.resourceProvenance.entries.map((entry,index)=>index===0&&entry.kind==='unit-acquired'?{...entry,source:{kind:'opening' as const,seed:pool.seed,seatId}}:entry)},m8:{...enabled.state.m8,loot:boundLoot},rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
       sharedPool:{poolId:pool.poolId,seatId,revision:0}};
     draft.seats.push({seatId,seatIndex,revision:0,released:false,shop:next.shop});draft.revision++;
     assertSharedPoolConservation(draft,[next]);return {ok:true,pool:draft,state:next,events:[],poolEvents:[]};

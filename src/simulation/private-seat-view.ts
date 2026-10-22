@@ -1,3 +1,4 @@
+import { readOpeningEncounterView } from './opening-encounter';
 import { getUnitSellPrice } from './unit-stats';
 import { D14_POLICY } from './content/d14-anomalies';
 import { isD14PromotedUnit } from './d14-public-unit-mark';
@@ -96,6 +97,7 @@ export function toPrivateSeatView(state: MatchState) {
     }),
   }));
   return freezeContent({
+    openingEncounter: readOpeningEncounterView(state),
     ...(state.multiplayer ? {unclaimedOrbs:readLootView(state).unclaimedOrbs??[],
       orbClaimReceipts:readLootView(state).claimReceipts??[]}:{}),
     ...(d11Display?{d11Display}:{}),

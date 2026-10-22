@@ -11,8 +11,8 @@ import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import type { MechanicReceipt } from '../src/simulation/seat-mechanics/types';
 
 type Subset<T> = T extends readonly (infer V)[] ? readonly Subset<V>[] : T extends object ? {[K in keyof T]?:Subset<T[K]>} : T;
-// Compile-time proof: recursive structural subset, including phase and nested choices/history.
-const asSubset = (view:PrivateSeatView):Subset<MatchState> => view;
+// Core fields remain a recursive subset. openingEncounter is an explicit public projection.
+const asSubset = (view:PrivateSeatView):Subset<Omit<MatchState, 'openingEncounter'>> => view;
 function sentinels(value:unknown):void {
   if(value===null||typeof value!=='object') return;
   // Generic owner-visible payload is explicitly public JSON, not a field whitelist.
@@ -119,7 +119,7 @@ describe('T5R private own-seat whitelist',()=>{
     expect(view.m8.round).toMatchObject({roundId:'overtime-1',kind:'pvp'});
     expect(JSON.stringify(view)).not.toMatch(/opponent|their-item|secret-event|settlementId/);
     expect(view.preparation.units.every(u=>u.team==='player')).toBe(true);
-    expect(Object.keys(view).sort()).toEqual(['schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
+    expect(Object.keys(view).sort()).toEqual(['openingEncounter','schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
       'round','roundDefinitionId','phase','gold','level','xp','playerHp','streak','shop','preparation','items','temporaryEquipment','augments',
       'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics',
       'unclaimedOrbs','orbClaimReceipts','familyReunion','shopOdds'].sort());
@@ -153,7 +153,7 @@ describe('T5R private own-seat whitelist',()=>{
   });
   it('documented display selectors see the same data with private fields replaced',()=>{
     const state=richSeat(),view=toPrivateSeatView(state);
-    const display:MatchState={...createMatch(777),...view,phase:'choice',combat:null,
+    const display:MatchState={...createMatch(777),...view,openingEncounter:state.openingEncounter,phase:'choice',combat:null,
       pendingChoice:view.pendingChoice?{...view.pendingChoice,eventId:'display-only'}:null,
       roundResults:view.roundResults.map(r=>({...r,settlementId:'display-only',
         streakBefore:{kind:null,count:0},streakAfter:{kind:null,count:0},xpRequested:0})),

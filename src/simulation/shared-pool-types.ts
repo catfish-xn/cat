@@ -28,6 +28,8 @@ export interface PoolRewardReceipt extends RewardReservation {
   readonly resolution:'held'|'gold'|'capacity-sold'|'forfeited'; readonly gold:number;
 }
 export interface SharedPoolState {
+  /** Sole shared encounter authority. Seats carry only its selection binding. */
+  readonly openingEncounter: import('./opening-encounter').OpeningEncounterContext;
   readonly carouselParticipants: readonly import('./carousel-types').CarouselParticipant[];
   readonly carouselReservations: readonly import('./carousel-types').CarouselReservation[];
   readonly carouselReceipts: readonly import('./carousel-types').CarouselReceipt[];

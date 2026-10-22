@@ -1110,3 +1110,23 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 - `toPrivateSeatView(state).familyReunion.{eligible,participantIds,downgraded,downgradedAtTick}`：准备期资格及当前战斗权威成员/退星事实。战中即使出售/转装也读取冻结开场；`readG23MechanismState(state).familyReunion` 提供等价字段。
 - `toPrivateSeatView(state).shopOdds.sixCostBps`：当前每格六费档位概率，整数基点（10000=100%）；不以界面等级/时间另算。六费空池回退由规则处理。
 - 字段类型、数值锚点及 CI 逐条根因见 [PR364_CI_REPAIR](PR364_CI_REPAIR.md)。六费现有头像缺省使用代码图形；没有加入素材映射或复制外部资源。
+
+
+## 开局奇遇 PR1 → PR8 数据交付（Codex，2026-10-22）
+
+规则公共查询 `readOpeningEncounterView(state)`，由 `src/simulation/match.ts` 与 `src/server-entry/index.ts` 导出；本人 `toPrivateSeatView(state).openingEncounter` 已有同一字段。公共 PlayerView/网络协议的接线留给 Claude PR8，本 PR 未修改服务器或界面。完整签名/失败/存储约束见 [MATCH_CONTRACT](MATCH_CONTRACT.md#开局奇遇-pr1规则框架2026-10-22开发身份尚未录制-epoch)。
+
+| 字段 | 含义与用途 |
+| --- | --- |
+| configVersion / encounterId | 已选配置/稳定规则 ID，全体一致；重连读原值，不重新抽选 |
+| sourceEncounterId / portalId | 研究原始 Encounter/Portal ID；用于后续素材映射，不能当第二个规则 |
+| champion | `{name_zh,name_en}` 或 null；没有奇遇没有角色，不虚构角色 |
+| nameZh / nameEn | 官方中英文 UI 名，用于开局中央角色说明与顶部横幅 |
+| descriptionZh | 研究原文效果说明，非“本局已生效”承诺 |
+| enabled / effectStatus / statusTextZh | none 为 true/no-additional-rules；其余 false/not-implemented，必须同时显示“效果尚未启用”，不能显示已发奖或替换成没有奇遇 |
+| readiness | ready-for-followup 或 blocked-evidence，只说明实现准备情况，不是玩法开关 |
+| revealedFacts | PR1 固定空数组；后续只追加已发生的共享结果，未来分支不公开 |
+
+验收：同一根 seed 的八席（含机器人）与单人结果一致；刷新视图/恢复不发奖；任何公共 payload 均无 seed、selectionRng、未来奖励和个人候选。shared-deferred 仅为服务器建席前内部状态，查询返回 null，不应向已开始玩家展示。模式/布局/颜色/动画由 Claude 决定；此处只定义显示内容与数据源。演出计时由服务器展示阶段控制，不进入 simulation 时钟。
+
+存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2–7 的收据/候选尚未启用，后续另补本人进度投影。

@@ -1,3 +1,6 @@
+import { createSoloOpeningEncounter } from './opening-encounter';
+export { createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
+export type { OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
 import { settleTerminalEpicForges } from './epic-forges';
@@ -180,9 +183,11 @@ export function createCarouselMatch(seed=DEFAULT_MATCH_SEED):MatchState {
 }
 export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization = {mode:'solo'}): MatchState {
   validateSeed(seed); validateContent();
+  const openingEncounter = loot.mode === 'shared-deferred' ? {mode:'shared-deferred' as const} : createSoloOpeningEncounter(seed);
   const m8 = prepareRound(seed,1,undefined,undefined,loot);
   const initial: MatchState = { schemaVersion: M8_VERSION.schemaVersion, rulesVersion: M8_VERSION.rulesVersion, contentVersion: M8_VERSION.contentVersion,
     commandProtocolVersion: M8_VERSION.commandProtocolVersion, rngAlgorithm: M8_VERSION.rngAlgorithm, tickMs: M8_VERSION.tickMs,
+    openingEncounter,
     m8, combatInputBasis:null, resourceProvenance:appendResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries:[]},m8.round.roundId,
       {kind:'unit-acquired',unitId:OPENING_INITIAL_STATE.unit.id,source:{kind:'opening',seed,seatId:'solo'}}), roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
     augmentTierSeed: seed, augmentOffers: [], removedAugmentIds: [],

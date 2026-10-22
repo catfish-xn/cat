@@ -1,3 +1,4 @@
+import { validateOpeningEncounterState } from './opening-encounter';
 import { validateAugmentOfferHistory } from './augment-offers';
 import { withResourceReceiptReuse } from './resource-provenance';
 import { investmentGrowth, readAugmentIncome } from './augment-income';
@@ -135,6 +136,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   requireValue((raw.playerHp as number) <= 100, 'level/HP bounds');
   requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
   const state = raw as unknown as MatchState;
+  mechanicCheck(() => validateOpeningEncounterState(state), 'opening-context-mismatch');
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
   const enemyProjection = readRoundEnemyProjection(state.round);

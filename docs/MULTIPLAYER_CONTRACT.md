@@ -1,3 +1,68 @@
+## 开局奇遇 PR1：规则框架（2026-10-22，开发身份，尚未录制 epoch）
+
+用户批准方案及唯一只读调研源：`/home/aiapps/workspace/s13-ui-atlas/encounters/开局奇遇实现方案.md` §§2–6、9，及同目录 `tft_s13_opening_encounters_14.24b.json/.md`。未联网。此节覆盖下文旧正式身份的当前开发态描述；不宣称已发布。
+
+- 16 项顺序与权重固定合计 10000 Bps；`enabled` **仅控制效果，不控制抽选资格**。“没有奇遇”1000 Bps 为显式结果且 enabled=true；其余15项 enabled=false、effectStatus=not-implemented。关闭项保留选中 ID/角色/原文说明并公开“效果尚未启用”，不改成 none、不重抽、不重归一化。
+- `content/opening-encounters.ts` 的 `sourcePath` 指向研究 JSON 对象；`researchParameters` 保留原始 null。`readiness` 区分后续可实现与缺证阻塞；`projectConventions` 是用户批准的工程约定，不能冒充官方参数。历史强化禁用引用只留证据，不扩大强化池。梅尔冠冕分支3→2单列 B 补丁覆盖，不拼造奖池。
+- 开局流 `opening-encounter-v1/select`：UTF-16 FNV-1a32（offset=0x811c9dc5，prime=0x01000193），`initial=(matchSeed XOR hash)>>>0`；lcg32-v1 取一词，`floor(word*10000/4294967296)` 按表顺序累计区间。商店、掉落、战斗、强化、选秀、开局弈子流不参与。预留 `opening-encounter-v1/shared/<effectKey>`、`opening-encounter-v1/seat/<seatId>/<effectKey>`、`opening-encounter-v1/display`，PR1 不生成它们。
+
+状态与恢复：
+
+```ts
+// 必填 MatchState.openingEncounter
+{ mode: 'solo', context: OpeningEncounterContext, receipts: OpeningEffectReceipt[] }
+| { mode: 'shared-deferred' }
+| { mode: 'shared', poolId: string, seatId: string,
+    selection: OpeningEncounterSelection, receipts: OpeningEffectReceipt[] }
+// SharedPoolState.openingEncounter 为多人全局唯一权威（PR1 复用已有根 seed 的领域容器）
+OpeningEncounterContext = {
+  selection: { configVersion: 'opening-encounters-14.24b-pr1-v1', encounterId: OpeningEncounterId },
+  seed: uint32, selectionRng: { state: uint32, draws: 1 }, facts: OpeningEffectFact[]
+}
+OpeningEffectFact = { factId: string, effectKey: string, nodeId: string }
+OpeningEffectReceipt = { receiptId: string, factId: string, seatId: string, nodeId: string }
+```
+
+`createMatch(seed)` 在首次准备前选定；`createMatch(seed,{mode:'shared-deferred'})` / `createCarouselMatch(seed)` 不按席位 seed 抽选。`createSharedPool(poolId,rootSeed)` 建立全局上下文；`initializeSharedSeat` 通过原始开局准入后绑定，再由已有共享准备流程推进。八席（含机器人）只有 selection、poolId/seatId 与应用收据，不复制全局 RNG。此 PR 不改 `RoomState`：PR8 可从已有 `room.pool.openingEncounter` 读取，不应另造第二份可变权威。
+
+PR1 facts/receipts 必须为空；关闭效果不会伪造“已触发”收据或事件。后续收据须含实例/效果节点/席位，订阅追加阶段、击杀追加 battleId/事件序号；在有真实执行器与历史认证前，不接受任何非空记录。
+
+单人 `serializeMatch`/`restoreMatch` 包含完整上下文，按 match.seed 重推选择与一次 RNG 轨迹并严格比较全部字段；验证不写回、不补抽。联机 `assertSharedPoolConservation` 校验 root seed/全局上下文/席位绑定；`restoreSharedOrbSnapshot` 依赖同一权威 pool。旧身份、缺字段、篡改 ID/RNG/收据一律拒绝，不迁移成 none。网络重连使用既有内存状态；不增加进程恢复或数据库。
+
+公共导出（`src/simulation/opening-encounter.ts`，下列接口及类型也由 `src/simulation/match.ts`、既有公共边界 `src/server-entry/index.ts` 导出）：
+
+```ts
+createOpeningEncounter(seed: number, config?: unknown): OpeningEncounterContext
+validateOpeningEncounterConfig(config: unknown): void
+validateOpeningEncounterContext(input: unknown, seed: number): void
+validateOpeningEncounterState(state: MatchState, shared?: OpeningEncounterContext): void
+planOpeningRound(shared: OpeningEncounterContext, roundId: string): {
+  readonly context: OpeningEncounterContext; readonly facts: readonly OpeningEffectFact[]
+}
+applyOpeningEffects(state: MatchState, facts: readonly OpeningEffectFact[],
+  shared?: OpeningEncounterContext): MatchCommandResult
+readOpeningEncounterView(state: Pick<MatchState,'openingEncounter'>): OpeningEncounterView
+```
+
+`config` 是完整配置身份断言，只接受本版本默认表或内容完全相同的副本，不是热启用开关；不能靠传参开启缺证或未实现规则。`planOpeningRound` 只接收真实目录节点（无1-1），返回原 context 引用与空 facts。`applyOpeningEffects` 验证后返回原 state 引用与空 events；重入相同。未来才增加授予 policy 参数/执行器/历史重演；PR1 不预装虚假奖励逻辑。
+
+| 失败 | 触发条件/返回 |
+| --- | --- |
+| `opening-config-incomplete` | 非当前完整配置（缺行、换顺序、改权重/版本/enabled）；纯构造/校验抛 `OpeningEncounterError`，含 `reason` |
+| `opening-context-mismatch` | seed/选择/版本/RNG/全局绑定/收据不一致或缺失；校验抛同类错误，apply 返回失败 |
+| `invalid-opening-effect` | plan 的轮次不存在；或 apply 收到任何非空 facts；前者抛同类错误，后者返回失败 |
+| `RangeError` | create/select 的输入不是 uint32 seed/word；已有 RNG 输入惯例 |
+| `invalid-pool` / `invalid-seat-state` | 共享池入口沿用原有失败枚举：全局上下文损坏 / 席位绑定损坏 |
+| `Invalid Match save: opening-context-mismatch` | 离线恢复奇遇认证失败；旧版本更早以 `unsupported-version` 拒绝 |
+
+apply 失败保持原 state 引用，无 events、不消费 RNG/资源；共享事务失败同时保持原 pool/state。`opening-effect-already-applied` 暂未引入：PR1 无可应用效果，重复空调用成功且无副作用；PR2–7 真正引入收据时再冻结重复语义。既有 choice 的 stale-choice/invalid-choice 不变。
+
+公开查询是逐字段白名单：`configVersion, encounterId`（稳定规则 ID）、`sourceEncounterId`（研究 Encounter ID）、`portalId, champion:{name_zh,name_en}|null, nameZh, nameEn, enabled, effectStatus, readiness, descriptionZh, statusTextZh, revealedFacts`。`descriptionZh` 为原始效果说明，必须结合 enabled/statusTextZh 展示。PR1 revealedFacts=[]，shared-deferred 返回 null。`toPrivateSeatView(state).openingEncounter` 使用完全相同投影；不输出 seed、selectionRng、未来事实、收据/个人选择。后续个人进度另加本人字段。
+
+`src/server-entry/index.ts` 仅追加上述领域接口重导出；Room/网络消息/客户端未改，PR8 须将 `readOpeningEncounterView` 结果逐字段接入公共 PlayerView，不能把原始 Match/SharedPool 上下文传给客户端。当前交付的是可直接调用的领域公共投影，尚未接通服务器传输。
+
+开发版本：rules/content=`s13-g2-3-v21-opening-encounters` / `s13-14.24b-g2-3-v21-opening-encounters`，schema/save=12/8。PR1 无新命令、选择工具或回放操作，replay/command 暂为5/5；方案建议6/6留待出现相关语义时切换。NET 与规则侧多人协议常量不改；发布联动在PR8/9。完整表、证据缺口、批准约定、B覆盖、命名空间和触发次序均进入 rules manifest 与双 digest。**未录制、未改 fixtures/golden；必须先 rebase 到 v20-black-market，以它为父 epoch 后再录制。**
+
 # Set13 八人联机合同草案
 
 ## v20-live-combat（当前正式 epoch，2026-10-22）
