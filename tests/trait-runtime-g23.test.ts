@@ -4,7 +4,7 @@ import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state'
 import { G23_CONQUEROR_CHESTS } from '../src/simulation/content/g2-3-policy';
 import { toPrivateSeatView } from '../src/simulation/private-seat-view';
 import { toDisplayMatch, type DisplayMatch } from '../src/rendering/online/seat-view-adapter';
-import { conquestLadder, familyReunionDancers, g23BoardMechanics, g23TraitRuntime } from '../src/rendering/trait-column';
+import { conquestLadder, familyReunionDancers, g23BoardMechanics, g23TraitRuntime, traitCardBody } from '../src/rendering/trait-column';
 import { activateFamily, familyDisplay } from '../src/simulation/family-heist';
 import { g23RewardLines } from '../src/presentation/g23-reward-text';
 import { G23_BLACK_MARKETS } from '../src/simulation/content/g2-3-policy';
@@ -18,14 +18,17 @@ const withProgress = (stacks: number, chestsOpened: number, shimmer: number) => 
 
 it('shows Conqueror stacks against the next chest and Shimmer out of 100', () => {
   const runtime = g23TraitRuntime(withProgress(5, 1, 40))!;
-  expect(runtime.get('conqueror')).toEqual([{ label: '征服层数', value: `5/${G23_CONQUEROR_CHESTS[1]!.threshold}`, ladder: { stacks: 5, opened: 1 } }]);
+  expect(runtime.get('conqueror')).toEqual([{ label: '征服层数', value: `5/${G23_CONQUEROR_CHESTS[1]!.threshold}`, ladder: { stacks: 5, opened: 1 } },
+    { label: '已开奖励', value: `1/${G23_CONQUEROR_CHESTS.length}`, counterOnly: true }]);
   expect(runtime.get('chem-baron')).toEqual([{ label: '微光', value: '40/100' }]);
-  expect(g23TraitRuntime(createMatch(7))!.get('conqueror')).toEqual([{ label: '征服层数', value: `0/${G23_CONQUEROR_CHESTS[0]!.threshold}`, ladder: { stacks: 0, opened: 0 } }]);
+  expect(g23TraitRuntime(createMatch(7))!.get('conqueror')).toEqual([{ label: '征服层数', value: `0/${G23_CONQUEROR_CHESTS[0]!.threshold}`, ladder: { stacks: 0, opened: 0 } },
+    { label: '已开奖励', value: `0/${G23_CONQUEROR_CHESTS.length}`, counterOnly: true }]);
 });
 
 it('moves Shimmer to the next hundred and drops the breakpoint past the last chest and the eighth market', () => {
   const runtime = g23TraitRuntime(withProgress(900, 15, 230))!;
-  expect(runtime.get('conqueror')).toEqual([{ label: '征服层数', value: '900', ladder: { stacks: 900, opened: 15 } }]);
+  expect(runtime.get('conqueror')).toEqual([{ label: '征服层数', value: '900', ladder: { stacks: 900, opened: 15 } },
+    { label: '已开奖励', value: `15/${G23_CONQUEROR_CHESTS.length}`, counterOnly: true }]);
   expect(runtime.get('chem-baron')).toEqual([{ label: '微光', value: '230/300' }]);
   expect(g23TraitRuntime(withProgress(0, 0, 799))!.get('chem-baron')).toEqual([{ label: '微光', value: '799/800' }]);
   expect(g23TraitRuntime(withProgress(0, 0, 800))!.get('chem-baron')).toEqual([{ label: '微光', value: '800' }]);
@@ -126,4 +129,23 @@ it('names the v19 six-costs with the 14.24 zh_cn names and gives cost 6 its own 
   expect(['warwick', 'viktor', 'mel'].map(id => getHeroIdentity(id).cost)).toEqual([6, 6, 6]);
   expect(costColor(6)).not.toBe(costColor(5));
   expect(CHAMPION_PORTRAIT_KEYS.mel).toBe('tft13_missmage');
+});
+
+
+it('puts counterOnly rewards in the hover counters above the conquest ladder', () => {
+  class Element {
+    dataset: Record<string, string> = {};
+    children: Element[] = [];
+    textContent = '';
+    className = '';
+    append(...children: Element[]) { this.children.push(...children); }
+    insertAdjacentHTML() {}
+  }
+  vi.stubGlobal('document', { createElement: () => new Element() });
+  const body = traitCardBody('conqueror', 2, [], g23TraitRuntime(withProgress(12, 2, 0))!.get('conqueror')) as unknown as Element;
+  const countersAt = body.children.findIndex(node => node.dataset.debug === 'trait-card:runtime');
+  const ladderAt = body.children.findIndex(node => node.dataset.debug === 'trait-card:ladder');
+  expect(countersAt).toBeGreaterThan(-1);
+  expect(countersAt).toBeLessThan(ladderAt);
+  expect(body.children[countersAt]!.children.map(node => node.textContent)).toContain('已开奖励：2/15');
 });

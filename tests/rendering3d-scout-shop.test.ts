@@ -140,18 +140,20 @@ describe('3D scouting shop availability', () => {
       setData(key: string, value: unknown) { this.data.set(key, value); return this; }
       getData(key: string) { return this.data.get(key); }
       setVisible(value: boolean) { this.visible = value; return this; }
+      setY(y: number) { this.y = y; return this; }
       setPosition(x: number, y: number) { this.x = x; this.y = y; return this; }
       setInteractive() { this.input.enabled = true; return this; }
       disableInteractive() { this.input.enabled = false; return this; }
       setText() { return this; } setAlpha() { return this; } setScale() { return this; }
       setDepth() { return this; } setOrigin() { return this; } setBackgroundColor() { return this; }
       on() { return this; } clear() { return this; } fillStyle() { return this; } lineStyle() { return this; }
+      fillRect() { return this; }
       fillPoints() { return this; } strokePoints() { return this; } strokeRect() { return this; }
       fillRoundedRect() { return this; } strokeRoundedRect() { return this; } destroy() {}
     }
     class Scene {
       children = { length: 0, list: [] as Drawing[] };
-      add = { text: (x: number, y: number) => { const node = new Drawing(x, y); this.children.list.push(node); return node; }, graphics: () => new Drawing() };
+      add = { text: (x: number, y: number) => { const node = new Drawing(x, y); this.children.list.push(node); return node; }, graphics: () => new Drawing(), container: (x: number, y: number) => new Drawing(x, y) };
       input = { on() {}, setDraggable() {}, setDragState() {}, manager: { pointers: [] } };
       events = { once: (_event: string, callback: () => void) => stops.push(callback) };
       scene = { isActive: () => true }; tweens = { killAll() {}, killTweensOf() {} };
