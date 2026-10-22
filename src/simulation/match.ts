@@ -1,3 +1,4 @@
+import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
 import { openMasterworkChoice, completeMasterworkChoice } from './masterwork-choice';
@@ -352,7 +353,7 @@ export function matchStartFailure(state: MatchState): MatchFailure | undefined {
   // An empty deployment may concede the round, preventing a zero-gold/empty-roster soft lock.
   return reason === 'missing-player' ? undefined : reason;
 }
-/** Income, XP, HP, persistent growth and the settlement identity commit once together. */
+/** Freeze income entitlement; commit victory gold, XP, HP, growth and the settlement identity once. */
 function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDelta: readonly import('./match-types').PersistentGrowth[] = [],unitLootPolicy?:UnitLootPolicy,hookEvents:MatchEvent[]=[]): MatchState {
   if (state.roundResults.some(record => record.round >= state.round)) throw new Error('Duplicate settlement');
   const {kind:roundKind,isFinal,roundId} = state.m8.round;
@@ -373,11 +374,11 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   const settled:MatchState={ ...state, resourceProvenance, phase: terminal && !state.multiplayer ? 'gameOver' : 'settlement',
     outcome:state.multiplayer ? null : outcome, combat,
     ...(state.multiplayer ? {multiplayer:{...state.multiplayer,status:plan.hpAfter===0?'eliminated' as const:'active' as const}} : {}),
-    gold: plan.goldAfter, playerHp: plan.hpAfter, streak: plan.streakAfter, level: plan.progression.level, xp: plan.progression.xp,
+    gold: plan.goldAfter - deferredRoundIncome(plan), playerHp: plan.hpAfter, streak: plan.streakAfter, level: plan.progression.level, xp: plan.progression.xp,
     persistentGrowth: [...growth].map(([unitId,attackDamageBps]) => ({unitId,attackDamageBps})).sort((a,b)=>a.unitId.localeCompare(b.unitId)),
     augmentProgress: {
       pumpingRounds: state.augmentProgress.pumpingRounds + (state.augments.some(a => a.definitionId === 'pumping-up-i') ? 1 : 0),
-      investmentHp: state.augmentProgress.investmentHp + readAugmentIncome(state.augments).healthPerInterest * plan.incomeBreakdown.interest,
+      investmentHp: state.augmentProgress.investmentHp,
     },
     roundResults: [...state.roundResults, { round: state.round, roundId, settlementId: `round-${state.round}-settled`, roundKind,
       result: combat?.result ?? 'supply', combatTicks: combat?.tick ?? 0, combatEventCount:combat?.nextEventSeq??0,
@@ -502,6 +503,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const augment = getRoundSchedule(definition.ordinal).find(e => e.kind === 'augment');
   if (augment && augmentCandidates(resolveAugmentTier(state, augment.id), state.augments, state.removedAugmentIds).length < 3)
     return fail(state, 'augment-pool-too-small');
+  state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
   const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
@@ -542,6 +544,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const current = getMultiplayerRoundByOrdinal(state.round);
     if (current.roundId !== state.roundDefinitionId || current.roundId !== state.m8.round.roundId) return multiplayerFail(state, 'stale-round');
     if (state.round < FINAL_ROUND) return nextRound(state, expectedRound, layout);
+    state = payPreviousRoundIncome(state);
     const definition = getMultiplayerRoundByOrdinal(state.round + 1);
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,

@@ -1,3 +1,4 @@
+import { deferredRoundIncome } from './deferred-income';
 import { openingHpBeforeRound } from './opening-monkey';
 import { validateOpeningEncounterState } from './opening-encounter';
 import { validateAugmentOfferHistory } from './augment-offers';
@@ -269,7 +270,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   record(state.augmentProgress); integer(state.augmentProgress.pumpingRounds); integer(state.augmentProgress.investmentHp);
   const pump = state.augments.find(a => a.definitionId === 'pumping-up-i');
   requireValue(state.augmentProgress.pumpingRounds === (pump ? state.roundResults.filter(r => r.round >= pump.acquiredRound).length : 0), 'pumping progress');
-  requireValue(state.augmentProgress.investmentHp === investmentGrowth(state.augments,state.roundResults), 'investment progress');
+  requireValue(state.augmentProgress.investmentHp === investmentGrowth(state.augments,state.roundResults.filter(r => r.round < state.round)), 'investment progress');
   list(state.persistentGrowth); const growthIds = new Set<string>();
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
@@ -281,7 +282,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string', typeof input === 'string');
   if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
   // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
-  if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold + g23RoundGold(state,state.round) && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
+  if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter - deferredRoundIncome(last) + saleGold + g23RoundGold(state,state.round) && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
   requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && roundDefinition.isFinal), 'terminal boundary');
   if (state.phase === 'preparation' || state.phase === 'choice' && !settled || state.phase === 'gameOver' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
   else {

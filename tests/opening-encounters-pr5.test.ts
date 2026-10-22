@@ -1,3 +1,4 @@
+import { deferredRoundIncome } from '../src/simulation/deferred-income';
 import { describe, expect, it } from 'vitest';
 import { createMatch, nextRound, startMatchCombat, useConsumable, selectChoice, equipItem, type MatchState } from '../src/simulation/match';
 import { createOpeningEncounter, planOpeningRound, applyOpeningEffects, validateOpeningEncounterContext, readOpeningEncounterView,
@@ -67,7 +68,8 @@ describe('PR5 solo public lifecycle',()=>{
     }
     expect(readOpeningEncounterView(after)!.revealedFacts).toEqual([{nodeId:'3-5',outcome}]);
     if(outcome==='damage')expect(after.playerHp).toBe(settled.playerHp-10);
-    if(outcome==='gold')expect(after.gold).toBe(settled.gold+25);
+    // Round income now lands at the next preparation entry (deferred-income.ts), then the monkey's 25 on top.
+    if(outcome==='gold')expect(after.gold).toBe(settled.gold+deferredRoundIncome(settled.roundResults.at(-1)!)+25);
     if(outcome==='components')expect(after.items.slice(-4).map(i=>i.definitionId)).toEqual(monkeyComponents(seed,'solo'));
     if(outcome==='masterwork')expect(after.consumables.filter(c=>c.definitionId==='masterwork-upgrade')).toHaveLength(1);
     const retried=applyOpeningEffects(after,plan.facts);
@@ -162,7 +164,7 @@ describe('PR5 shared atomic lifecycle',()=>{
       expect(restoreSharedOrbSnapshot(r.pool,JSON.stringify(s))).toEqual(s);
       expect(applyOpeningEffects(s,r.pool.openingEncounter.facts,r.pool.openingEncounter)).toEqual({ok:true,state:s,events:[]});
       if(outcome==='damage')expect(s.playerHp).toBe(before.states[i].playerHp-10);
-      if(outcome==='gold')expect(s.gold).toBe(before.states[i].gold+25);
+      if(outcome==='gold')expect(s.gold).toBe(before.states[i].gold+deferredRoundIncome(before.states[i].roundResults.at(-1)!)+25);
       if(outcome==='components')expect(s.items.slice(-4).map(x=>x.definitionId)).toEqual(monkeyComponents(r.pool.seed,`seat-${i}`));
       if(outcome==='masterwork')expect(s.consumables.filter(x=>x.definitionId==='masterwork-upgrade')).toHaveLength(1);
     }

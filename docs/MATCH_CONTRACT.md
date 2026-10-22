@@ -1102,3 +1102,17 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 ## v19 座位只读字段（PR #364 收尾）
 
 `toPrivateSeatView(state:MatchState)` 返回 `familyReunion.{eligible,participantIds,downgraded,downgradedAtTick}` 和 `shopOdds.sixCostBps`；`readG23MechanismState(state).familyReunion` 同退星事实。它们只投影规则，不发事件或消耗资源/RNG；精确类型、基点口径和逐项回归见 [PR364_CI_REPAIR](PR364_CI_REPAIR.md)。六费加入可购买英雄集合（63），常规赠卡/素材渠道的费用限制仍由各自合同约束。
+
+## 10-22 第二轮试玩：回合收入时序（next-preparation-income-v1）
+
+本节覆盖旧“战后收入即时到账”描述，不改 14.24b 收入表、利息档、战中操作权限或自然 XP 时点。
+
+- 战斗结束后，`settleRound`（单人/PvE/供给）与 `applyRoundSettlement`（PvP）用最终权威 `state.gold` 计算同一个 `resolveRoundEconomy` 方案；PvP 胜利金先计入利息基数，并立即到账。基础金、利息、连胜败金只冻结为本轮应收额，不能购买或显示为已到账。战中买卖/经验/刷新仍影响该最终基数。
+- `RoundResult.income/incomeBreakdown/interestBasis/goldBefore/goldAfter` 保留方案字段：`goldAfter` 是 **goldBefore + 本轮全部应收收入的方案值**，不是 settlement 余额。`state.gold` 始终是实际可花余额；结算期间还可能有机制奖励/容量出售，不能直接用方案值覆盖余额。`previewRoundEconomy` 仍是预测，不发钱。
+- 成功 `nextRound(state, expectedRound, layout?)`，或目录末尾的 `advanceMultiplayerRound(state, expectedRound, layout?)`，在商店刷新/下一轮强化和其他选择之前，将上一条唯一结算记录的 `income - incomeBreakdown.win` 加到实际余额；投资策略只在这个入口按上一轮已锁定利息和上一轮持有强化发成长。`nextSharedRound(pool, states, expectedRound)` 原子复用上述入口，不另加钱。
+- 本节的“下一准备阶段入口”包括下一轮前置强化选择；下一轮是供给也照常支付。淘汰或单人终局没有下一入口，不发未来收入。HP、战斗成长、连胜败状态、自然 XP 仍在战后唯一结算提交。
+- 无新存档字段；“本轮已有结算且仍在原轮”表示待付。成功推进会换 round，重复 step/Continue、旧 expectedRound 和恢复都不能再支付。恢复完整重算收入方案，settlement 实际余额等式减去待付额；投资成长只重建 `round < state.round` 的已付利息，不放宽任何来源或金额校验。
+- 公共签名、返回类型与失败原因枚举保持：`nextRound` 用 `MatchCommandResult/MatchFailure`；联机推进用 `MultiplayerCommandResult/MultiplayerFailure`，共享池仍用原池事务结果。旧 wrong-phase/stale-round/unsettled-round/seat-eliminated/shared-pool-required 等失败仍返回原 state，无事件、无资源/RNG 消耗。新增 `deferredRoundIncome(result)`、`payPreviousRoundIncome(state)` 为领域内部帮助函数，不导出 server-entry，不允许服务器单独调用。
+- `content/round-income-policy.ts` 的细分版本参与共同规则 manifest，自动改变 content/loot digest；外层候选身份仍按 PR9 统一录制，不录 epoch、不迁移旧存档。
+
+梅尔核对：归档 `raw/map22.bin.json.gz` 的 `{85892f99}` / `TFT13_MissMageTrait` 明确 `MinimumCasts=12`、`ProcDamageAmp≈0.1`；英文 stringtable 说明整局玩家战斗施法累计。现有 `melCanSave` 包含本场第12次、排除PvE/镜像、整局仅一次。动画消费现有 `playerSaved{battleId,playerHp:1,source:'mel'}`（带 match eventSeq），累计进度读 `seatMechanics.seat.melRescue`；不自行累计、回血或触发扣血。
