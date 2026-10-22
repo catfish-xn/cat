@@ -1,0 +1,15 @@
+/* Read-only Git baseline; exact byte evidence for current consumer/test adapters. */
+const fs=require('node:fs'),assert=require('node:assert/strict'),{createHash}=require('node:crypto');
+const {readProcessOutput:git}=require('./offline-process-output.cjs');
+const base='3394f10446b6a6c2a793d8bd96be6932ebf06374';
+const sha=x=>createHash('sha256').update(x).digest('hex');
+const files=git('git',['diff','--name-only',base,'--','tests','scripts/verify-m8-herald-fixtures.cjs']).toString().trim().split('\n').filter(Boolean);
+const evidence=Object.fromEntries(files.map(p=>{
+ const previous=git('git',['show',`${base}:${p}`]),current=fs.readFileSync(p);let first=0;
+ while(first<Math.min(previous.length,current.length)&&previous[first]===current[first])first++;
+ return [p,{previousBytes:previous.length,currentBytes:current.length,previousSha256:sha(previous),currentSha256:sha(current),firstDifferentByte:first===previous.length&&first===current.length?null:first}];
+}));
+const report={baseCommit:base,files:evidence};
+const text=JSON.stringify(report,null,2)+'\n',target='docs/evidence/v21-opening-encounters/consumer-byte-audit.json';
+if(process.argv.includes('--check'))assert.equal(fs.readFileSync(target,'utf8'),text);else fs.writeFileSync(target,text);
+console.log(JSON.stringify({files:files.length,sha256:sha(text)}));

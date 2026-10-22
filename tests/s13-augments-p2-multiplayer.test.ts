@@ -52,7 +52,7 @@ it.each(['all-for-one-ii','pair-of-fours','trifecta-ii'].flatMap(id=>[false,true
   let pool=createSharedPool('p2-pool',42,{seatCount:1,...(exhausted?{capacities:{[selectOpeningUnit(42,'A')]:1}}:{})});const born=initializeSharedSeat(pool,createMatch(5,{mode:'shared-deferred'}),'A',0);if(!born.ok)throw Error(born.reason);pool=born.pool;
   const c={kind:'augment' as const,step:'offer' as const,choiceId:'round:2-1:augment',eventId:'round:2-1:augment',generation:0,offers:[id],targetId:null,rerollCount:0,returnPhase:'preparation' as const};
   const base=reachRound('2-1',false,5),layout=syntheticSharedRound(pool,[born.state],base.round);pool=layout.pool;
-  const state={...base,m8:{...base.m8,loot:layout.states[0].m8.loot},preparation:born.state.preparation,shop:born.state.shop,rngState:born.state.rngState,resourceProvenance:born.state.resourceProvenance,sharedPool:born.state.sharedPool,multiplayer:born.state.multiplayer,pendingChoice:c};
+  const state={...base,m8:{...base.m8,loot:layout.states[0].m8.loot},preparation:born.state.preparation,shop:born.state.shop,rngState:born.state.rngState,resourceProvenance:born.state.resourceProvenance,sharedPool:born.state.sharedPool,multiplayer:born.state.multiplayer,openingEncounter:born.state.openingEncounter,augmentTierSeed:born.state.augmentTierSeed,pendingChoice:c};
   const selected=runSharedMatchCommand(pool,state,{type:'choose',choiceId:c.choiceId,generation:0,definitionId:id});if(!selected.ok)throw Error(selected.reason);expect(selected.ok).toBe(true);
   assertSharedPoolConservation(selected.pool,[selected.state]);
   const gifts=p2GiftPlan(selected.state),orbs=readLootView(selected.state).unclaimedOrbs!.filter(o=>o.source==='mechanic');

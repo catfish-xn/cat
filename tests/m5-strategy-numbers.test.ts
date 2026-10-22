@@ -193,12 +193,17 @@ describe('M5 six augments and permanent accumulation', () => {
   it('two actual loss settlements count 4+5 interest and two rounds exactly once', () => {
     let state = augment({ ...emptyBoard(reachRound('2-1')), gold: 49 }, 'pumping-up-i', 'investment-strategy-i');
     state = accepted(startMatchCombat(state));
-    expect(state.augmentProgress).toEqual({ pumpingRounds: 1, investmentHp: 32 });
-    expect(state.gold).toBe(58);
+    expect(state.augmentProgress).toEqual({ pumpingRounds: 1, investmentHp: 0 });
+    expect(state.gold).toBe(49);
     expect(stepMatch(state).state).toBe(state);
     state = accepted(nextRound(state, state.round));
     expect(state.augmentProgress).toEqual({ pumpingRounds: 1, investmentHp: 32 });
+    expect(state.gold).toBe(58);
     state = accepted(startMatchCombat(state));
+    expect(state.augmentProgress).toEqual({ pumpingRounds: 2, investmentHp: 32 });
+    expect(state.gold).toBe(58);
+    expect(stepMatch(state).state).toBe(state);
+    state = accepted(nextRound(state, state.round));
     expect(state.augmentProgress).toEqual({ pumpingRounds: 2, investmentHp: 72 });
     expect(state.gold).toBe(69); // 58 + base5 + interest5 + second-loss1.
     expect(stepMatch(state).state).toBe(state);

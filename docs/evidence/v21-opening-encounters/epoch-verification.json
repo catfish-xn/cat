@@ -1,0 +1,175 @@
+{
+  "baseCommit": "83fd7fa58fc7c935229c8f8866b14ec9d716accd",
+  "steps": [
+    {
+      "name": "check-identities",
+      "args": [
+        "scripts/update-content-identities.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2276,
+      "log": "artifacts/v21-opening-encounters-recording/check-identities.log"
+    },
+    {
+      "name": "record-battle-start",
+      "args": [
+        "scripts/record-v21-opening-encounters-battle-start.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 46180,
+      "log": "artifacts/v21-opening-encounters-recording/record-battle-start.log"
+    },
+    {
+      "name": "record-release",
+      "args": [
+        "scripts/record-v21-opening-encounters-release.cjs",
+        "--baseline-commit=83fd7fa58fc7c935229c8f8866b14ec9d716accd",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 133394,
+      "log": "artifacts/v21-opening-encounters-recording/record-release.log"
+    },
+    {
+      "name": "record-herald",
+      "args": [
+        "tests/fixtures/record-v21-opening-encounters-herald.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 118959,
+      "log": "artifacts/v21-opening-encounters-recording/record-herald.log"
+    },
+    {
+      "name": "record-inputs",
+      "args": [
+        "scripts/record-v21-opening-encounters-inputs.cjs",
+        "--baseline-commit=83fd7fa58fc7c935229c8f8866b14ec9d716accd",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 7037,
+      "log": "artifacts/v21-opening-encounters-recording/record-inputs.log"
+    },
+    {
+      "name": "record-live-reveal",
+      "args": [
+        "scripts/record-v21-opening-encounters-live-reveal.cjs",
+        "--baseline-commit=83fd7fa58fc7c935229c8f8866b14ec9d716accd",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 43404,
+      "log": "artifacts/v21-opening-encounters-recording/record-live-reveal.log"
+    },
+    {
+      "name": "record-transfer",
+      "args": [
+        "scripts/record-v21-opening-encounters-transfer.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 13687,
+      "log": "artifacts/v21-opening-encounters-recording/record-transfer.log"
+    },
+    {
+      "name": "check-transfer",
+      "args": [
+        "scripts/record-v21-opening-encounters-transfer.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 13925,
+      "log": "artifacts/v21-opening-encounters-recording/check-transfer.log"
+    },
+    {
+      "name": "check-inputs",
+      "args": [
+        "scripts/record-v21-opening-encounters-inputs.cjs",
+        "--baseline-commit=83fd7fa58fc7c935229c8f8866b14ec9d716accd",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 6804,
+      "log": "artifacts/v21-opening-encounters-recording/check-inputs.log"
+    },
+    {
+      "name": "check-herald",
+      "args": [
+        "scripts/verify-m8-herald-fixtures.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 116380,
+      "log": "artifacts/v21-opening-encounters-recording/check-herald.log"
+    },
+    {
+      "name": "check-history",
+      "args": [
+        "scripts/v21-opening-encounters-fixture-audit.cjs",
+        "--baseline-commit=83fd7fa58fc7c935229c8f8866b14ec9d716accd",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2957,
+      "log": "artifacts/v21-opening-encounters-recording/check-history.log"
+    },
+    {
+      "name": "check-live-reveal",
+      "args": [
+        "scripts/record-v21-opening-encounters-live-reveal.cjs",
+        "--baseline-commit=83fd7fa58fc7c935229c8f8866b14ec9d716accd",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 42741,
+      "log": "artifacts/v21-opening-encounters-recording/check-live-reveal.log"
+    },
+    {
+      "name": "record-chest-trial",
+      "args": [
+        "scripts/record-opening-encounters-pr9-trials.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 5581,
+      "log": "artifacts/v21-opening-encounters-recording/record-chest-trial.log"
+    },
+    {
+      "name": "consumer-byte-audit",
+      "args": [
+        "scripts/audit-encounters-pr9-adaptations.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 341,
+      "log": "artifacts/v21-opening-encounters-recording/consumer-byte-audit.log"
+    },
+    {
+      "name": "compare-digests",
+      "args": [
+        "scripts/compare-v21-opening-encounters-digests.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3583,
+      "log": "artifacts/v21-opening-encounters-recording/compare-digests.log"
+    }
+  ],
+  "complete": true
+}

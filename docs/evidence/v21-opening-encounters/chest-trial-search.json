@@ -1,0 +1,2859 @@
+[
+  {
+    "seed": 594,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 597,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 601,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 604,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 607,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 719,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 1409,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 1412,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 1424,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 1427,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 1430,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 1434,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 1437,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 1442,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 1445,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 1449,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 1452,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 1455,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 1457,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 1460,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 1463,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 1464,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 1467,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 1470,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2049,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2052,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2055,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2056,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2059,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2062,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2064,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2067,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2070,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2074,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2077,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2082,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2085,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2089,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2092,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2095,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2097,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2100,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2103,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2104,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2107,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2110,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2114,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2117,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2121,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2124,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2127,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2129,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2132,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2135,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2136,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2139,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2142,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2144,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2147,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2150,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2154,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2157,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2162,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2165,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2169,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2172,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2175,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2241,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2244,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2247,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2248,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2251,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2254,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 2266,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 2269,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 4530,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 4533,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 4537,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 4540,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7680,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7683,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7686,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7690,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7693,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7698,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7701,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7705,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7708,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7711,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7713,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7716,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7719,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7720,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7723,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7726,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7728,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7731,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7734,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7738,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7741,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7745,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7748,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7751,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7752,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7755,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7758,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7760,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7763,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7766,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7770,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7773,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7778,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7781,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7785,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7788,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7791,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7793,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7796,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7799,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7800,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 7803,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 7806,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8203,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8206,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 8258,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8261,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8265,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8268,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8271,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 8273,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 8276,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8279,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8280,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 8283,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8286,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8288,
+    "accepted": false,
+    "grantTick": 80,
+    "firstPulse": 180,
+    "bracerTicks": [
+      227,
+      461
+    ],
+    "deathTick": 524,
+    "lastLivingPulse": 4
+  },
+  {
+    "seed": 8291,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 8294,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 8298,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8301,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8306,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8309,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8313,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8316,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 8319,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10625,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10628,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 10631,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 10632,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 10635,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10638,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 10640,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10643,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10646,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 10650,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10653,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10658,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 10661,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10665,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10668,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10671,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10673,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10676,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10679,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10680,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10683,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 10686,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10720,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10723,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10726,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10730,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 10733,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 10738,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10741,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10745,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10748,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 10751,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 13824,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 13827,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 13830,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 13834,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 13837,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 13849,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 13852,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15362,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15365,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15369,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15372,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15375,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15377,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15380,
+    "accepted": false,
+    "grantTick": 80,
+    "firstPulse": 180,
+    "bracerTicks": [
+      226
+    ],
+    "deathTick": 420,
+    "lastLivingPulse": 3
+  },
+  {
+    "seed": 15383,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15384,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15387,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15390,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15395,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15398,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15402,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15405,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15424,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15427,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15430,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15434,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15437,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15442,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15445,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15449,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15452,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15455,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15457,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15460,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15463,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15464,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15467,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15470,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15472,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 15475,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15478,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15482,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 15485,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16256,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16259,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16262,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16266,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16269,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16274,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16277,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16281,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16284,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16287,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16289,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16292,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16295,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16296,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16299,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16302,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16304,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16307,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16310,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16314,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16317,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16369,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16372,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16375,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16376,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16657,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16660,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16663,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16664,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16667,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16670,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16672,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16675,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16678,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16682,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16685,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16690,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16693,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16697,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16700,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16703,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16769,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16772,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16775,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16776,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16779,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16782,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16784,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16787,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16790,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16794,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16797,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16802,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16805,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16809,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16812,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16815,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16817,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16820,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16823,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16824,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16827,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16830,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16834,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16837,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16841,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16844,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16847,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16849,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16852,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16855,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16856,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16859,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16862,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16864,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16867,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16870,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16874,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16877,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16882,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16885,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16889,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 16892,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 16895,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 21570,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 21573,
+    "accepted": false,
+    "grantTick": 80,
+    "firstPulse": 180,
+    "bracerTicks": [
+      226
+    ],
+    "deathTick": 394,
+    "lastLivingPulse": 3
+  },
+  {
+    "seed": 21577,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 21580,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 21583,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 21588,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 21591,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 21592,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 21595,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 21598,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22306,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22309,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22313,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22321,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22324,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22327,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22328,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22331,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22334,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22400,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22403,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22406,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22410,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22413,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22418,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22421,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22425,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22428,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22431,
+    "reason": "Error: Expected a genuine two-star receiver"
+  },
+  {
+    "seed": 22433,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22436,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22439,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22440,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22443,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22446,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22448,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22451,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22454,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22458,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22461,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22465,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22468,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22471,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22472,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22475,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22478,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22480,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22483,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22486,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22490,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22493,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22498,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22501,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22505,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22508,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22511,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22513,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22516,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22519,
+    "reason": "Error: Expected a genuine two-star receiver"
+  },
+  {
+    "seed": 22520,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 22523,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 22526,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23105,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23108,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23111,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23112,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23115,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23118,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23120,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23123,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23126,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23130,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23133,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23138,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23141,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23145,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23148,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23151,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23166,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23856,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23859,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23938,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23941,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23945,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23948,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23951,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23953,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23956,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23959,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23960,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23963,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23966,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23968,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23971,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23974,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23978,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23981,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23986,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23989,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 23993,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23996,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 23999,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24000,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24003,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24006,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24010,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24013,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24018,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24021,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24025,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24028,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24031,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24033,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24036,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24039,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24040,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24043,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24046,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24048,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24051,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 24054,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24058,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 24061,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28416,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28419,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28422,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28426,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28429,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28434,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28437,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28441,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28444,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28447,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28449,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28452,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28455,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28456,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28459,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28462,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28464,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28467,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28470,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28474,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28477,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28496,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28499,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28502,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28506,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28514,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28517,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28521,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28524,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28527,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28529,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28532,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28535,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28536,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28539,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28542,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28549,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28553,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 28556,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 28559,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29954,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29957,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29961,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29964,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29967,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29969,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29972,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29975,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29976,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29979,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29982,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29984,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29987,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29990,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 29994,
+    "reason": "Manaflow I not offered after public free rerolls"
+  },
+  {
+    "seed": 29997,
+    "accepted": true,
+    "grantTick": 80,
+    "firstPulse": 180,
+    "bracerTicks": [
+      220,
+      344
+    ],
+    "deathTick": 452,
+    "lastLivingPulse": 3
+  }
+]

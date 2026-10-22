@@ -107,7 +107,7 @@ describe('M1 crown history authority', () => {
 });
 
 function transferFixture(definitionId = TACTICIANS_CROWN_ID) {
-  let opening = createMatch(109897);
+  let opening = resolveM5Choices(createMatch(109897));
   const holder = opening.preparation.units.find(unit => unit.team === 'player')!;
   for (let slot = 0; slot < 3; slot++) {
     opening = accepted(grantMechanicItem(opening, {receiptId:`transfer:${slot}`,source:'test',definitionId}));
@@ -212,9 +212,10 @@ describe('M2 equipment binding continuity', () => {
   it.each(['before-upgrade','after-upgrade'] as const)('replays survivor equipment %s in exact order (M4)', order => {
     const {first,state,holder} = transferFixture();
     let legal = accepted(grantMechanicItem(state,{receiptId:'m4:blade',source:'test',definitionId:'deathblade'}));
+    const bladeId=legal.items.at(-1)!.id; // Opening anvils have earlier legitimate item births.
     legal = accepted(grantMechanicUnit(legal,{receiptId:'m4:first',source:'test',definitionId:'irelia'}));
     expect(holder.definitionId).toBe('irelia');
-    const equip = (value: MatchState) => accepted(equipItem(value,'item-5','unit-3',0));
+    const equip = (value: MatchState) => accepted(equipItem(value,bladeId,'unit-3',0));
     if (order === 'before-upgrade') legal = equip(legal);
     legal = accepted(grantMechanicUnit(legal,{receiptId:'m4:second',source:'test',definitionId:'irelia'}));
     expect(legal.resourceProvenance.entries.find(fact => fact.kind === 'unit-upgraded')).toMatchObject({
@@ -225,7 +226,7 @@ describe('M2 equipment binding continuity', () => {
       legal = accepted(useConsumable(legal,remover.consumableId,{kind:'unit',unitId:'unit-3'}));
       legal = equip(legal);
     }
-    expect(legal.items.find(item => item.id === 'item-5')!.location).toEqual({kind:'unit',unitId:'unit-3',slot:0});
+    expect(legal.items.find(item => item.id === bladeId)!.location).toEqual({kind:'unit',unitId:'unit-3',slot:0});
     if (order === 'before-upgrade') expect(legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID).map(item => item.location))
       .toEqual([{kind:'unit',unitId:'unit-3',slot:1},{kind:'unit',unitId:'unit-3',slot:2},{kind:'inventory'}]);
     const text = serializeMatch(legal,first.battles);
@@ -317,7 +318,9 @@ describe('M5/M6 ordered equipment across the first battle', () => {
     expect(() => restoreMatch(state, omitted)).toThrow();
     const mistimed = structuredClone(battles);
     Object.assign(mistimed[0].equipmentCommands![0], {tick:mistimed[0].endTick});
-    expect(() => restoreMatch(state, mistimed)).toThrow('战后穿戴命令');
+    // Moving the command removes its next-tick combat effect, so exact event replay
+    // rejects it before the later post-settlement command boundary check.
+    expect(() => restoreMatch(state, mistimed)).toThrow('战斗档案无效：事件缺失或内容错误');
   });
   it('rejects a claimed pre-first-battle equip left in inventory, with or without an empty history', () => {
     const state = openingWithBlade();
@@ -472,7 +475,7 @@ describe('M7/S7 combat equipment command replay', () => {
   beforeAll(() => { const opening = recordedReforgerOpening(); validateMatchHistory(opening.state, opening.battles); });
   let removerOpening: { state: MatchState; battles: readonly BattleRecord[] };
   beforeAll(() => {
-    const live = recorder(accepted(equipItem(swords(109897),'item-1','unit-1',0)));
+    const live = recorder(accepted(equipItem(resolveM5Choices(swords(109897)),'item-1','unit-1',0)));
     removerOpening = prepareInput({ state: advance(live.finish().state), battles: live.history.completedRecords });
   });
   function usedEquipment(mode: ConsumableScenario) {

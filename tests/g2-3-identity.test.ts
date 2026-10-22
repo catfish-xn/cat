@@ -53,7 +53,8 @@ it('restores a real paid armory purchase after settlement without deducting its 
  expect(readG23Progress(state)!.junkerPurchases).toHaveLength(1);
  expect(readG23Progress(state)!.junkerPurchases[0].cost).toBe(5);
  expect(state.roundDefinitionId).toBe('5-5');
- expect(state.gold).toBe(state.roundResults.at(-1)!.goldAfter);
+ // Deferred base/interest/streak remain unpaid until the next preparation.
+ const plan=state.roundResults.at(-1)!;expect(state.gold).toBe(plan.goldBefore+plan.incomeBreakdown.win);
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
  expect(restoreMatch(structuredClone(state))).toEqual(state);
  for(const offset of [-5,5])expect(()=>restoreMatch({...state,gold:state.gold+offset})).toThrow();

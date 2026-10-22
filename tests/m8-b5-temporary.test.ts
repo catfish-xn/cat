@@ -23,7 +23,7 @@ function inventory(level = 3, seed = 42): MatchState {
   expect(state.level).toBe(Math.max(5, level));
   return accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
 }
-function equipped(level = 3, seed = 42): MatchState { return accepted(equipItem(inventory(level, seed), 'item-3', 'unit-1', 0)); }
+function equipped(level = 3, seed = 42): MatchState { const state=inventory(level, seed);return accepted(equipItem(state, state.items.find(item=>item.definitionId==='thiefs-gloves')!.id, 'unit-1', 0)); }
 /** Deliberately synthetic 2-1 levels exercise the pool/LCG mechanism only.
  * Their same-test full Match controls below use actual paid XP at levelRounds.
  */
