@@ -256,12 +256,12 @@ function heldResources(state){
 const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'),...heldResources(state).units];
 const ownedItems=state=>[...state.items,...heldResources(state).items];
 // CHEM_BARON_FIX: independent standard 14.24b PvP values and archive map22 source-order weights.
-// N=3 is the approved project convention; no production content/planner/RNG imports.
+// One whole bundle per 14.24b UI evidence; no production content/planner/RNG imports.
 const CHEM_GAIN={3:[15,35],4:[20,45],5:[20,55],6:[25,70],7:[30,100]};
 const MARKET_WEIGHTS=[[25,20,20,20,10,5],[35,20,20,10,10,5],[55,15,15,5,5,5],[40,30,20,9,1],[30,25,25,15,5],[70,10,10,5,5],[100],[100]];
 function blackMarket(tier,rng){
  const remaining=MARKET_WEIGHTS[tier-1].map((weight,index)=>({weight,id:'TFT13_Crime_Loot'+'ABCDEFGH'[tier-1]+(index||'')})),offers=[];
- while(offers.length<3&&remaining.length){rng=word(rng);let ticket=BigInt(rng)*BigInt(remaining.reduce((n,x)=>n+x.weight,0))/4294967296n;
+ while(offers.length<1&&remaining.length){rng=word(rng);let ticket=BigInt(rng)*BigInt(remaining.reduce((n,x)=>n+x.weight,0))/4294967296n;
   const index=remaining.findIndex(x=>{ticket-=BigInt(x.weight);return ticket<0n;});offers.push(remaining.splice(index,1)[0].id);
  }
  return {offers,rng,draws:offers.length};

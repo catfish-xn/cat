@@ -25,7 +25,7 @@ function inputs(seed: number) {
 }
 const json = (value: unknown) => JSON.stringify(value);
 
-describe('v20-live-combat live tick determinism and phase-2 input seam', () => {
+describe('v20-black-market live tick determinism and phase-2 input seam', () => {
   it.each([7, 42, 991])('seed %i: Quickstriker/Firelight/teamup bytes match full advance and small slices', seed => {
     const { input, envelope } = inputs(seed), full = resolveTwoSidedBattle(input, 1201);
     for (const traitId of ['quickstriker', 'firelight', 'geniuses'])
@@ -90,8 +90,8 @@ describe('v20-live-combat live tick determinism and phase-2 input seam', () => {
       const offer = old.chem.offer;
       if (!offer) continue;
       offers++;
-      expect(offer.optionIds).toHaveLength(3);
-      expect(new Set(offer.optionIds).size).toBe(3);
+      expect(offer.optionIds).toHaveLength(1);
+      expect(new Set(offer.optionIds).size).toBe(1);
       for (const optionId of offer.optionIds) {
         const selected = decideG23Market(live, offer.id, true, a.round, optionId);
         expect(json(selected)).toBe(json(decideG23Market(old, offer.id, true, a.round, optionId)));
