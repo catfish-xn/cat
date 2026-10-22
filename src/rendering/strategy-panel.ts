@@ -51,7 +51,7 @@ import { genericOffer, isKnownChoiceKind, isShopChoiceKind, readChoiceExtras, SK
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
-import { anomalyDisplayName, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
+import { anomalyDisplayName, anomalyIconHtml, anomalyPlayerDescription, itemDisplayName } from '../presentation/g23-display';
 import { counted, g23RewardIcons, g23RewardLines } from '../presentation/g23-reward-text';
 import { readG23Progress } from '../simulation/g2-3-state';
 import { G23_BLACK_MARKETS } from '../simulation/content/g2-3-policy';
@@ -401,6 +401,15 @@ export class StrategyPanel {
     chip.insertAdjacentHTML('afterbegin', augmentIconOrBadgeHtml(id, 20));
     return chip;
   }
+  /** Bound anomaly: the shared anomaly icon (a lettered badge without it) + name and holder; hovering shows its text. */
+  private anomalyChip(id: string, unitDefinitionId: string | undefined): HTMLElement {
+    const name = anomalyDisplayName(id), holder = unitDefinitionId ? displayUnitName(unitDefinitionId) : '';
+    const chip = element('span', `${name}${holder ? ` → ${holder}` : ''}`, 'augment-chip anomaly-chip');
+    chip.dataset.anomaly = id; chip.dataset.debug = 'anomaly-chip';
+    chip.title = [`异常：${name}${holder ? ` → ${holder}` : ''}`, anomalyPlayerDescription(id)].filter(Boolean).join('\n');
+    chip.insertAdjacentHTML('afterbegin', anomalyIconHtml(20, 'augment-icon') || '<span class="augment-icon augment-badge anomaly-badge" style="width:20px;height:20px;font-size:10px" aria-hidden="true">异</span>');
+    return chip;
+  }
   private button(name: string, label: string, action: () => void, disabled = false): HTMLButtonElement {
     const button = element('button', label); button.type = 'button'; button.dataset.debug = name; button.disabled = disabled;
     button.addEventListener('click', action);
@@ -505,8 +514,13 @@ export class StrategyPanel {
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.eventList = null;
     this.traitColumn.render(state.preparation, g23TraitRuntime(state));
-    const augmentKey = state.augments.map(augment => augment.definitionId).join();
-    if (augmentKey !== this.augmentKey) { this.augmentKey = augmentKey; this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId))); }
+    // The bound anomaly sits after the augments (the online left column shows only this strip while the panel is folded).
+    const anomaly = state.anomalyBinding, anomalyUnit = anomaly && state.preparation.units.find(unit => unit.id === anomaly.unitId);
+    const augmentKey = [...state.augments.map(augment => augment.definitionId), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : ''].join();
+    if (augmentKey !== this.augmentKey) {
+      this.augmentKey = augmentKey;
+      this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId)), ...(anomaly ? [this.anomalyChip(anomaly.definitionId, anomalyUnit?.definitionId)] : []));
+    }
     this.syncAwayChip(state);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level);
