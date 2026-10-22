@@ -86,6 +86,8 @@ interface PanelActions {
   readonly combat: () => { readonly view: CombatViewState | null; readonly runtime: CombatState | null };
   /** C18: the item list as it stood when the battle on the board was first shown (null when none is shown). */
   readonly battleItems: () => MatchState['items'] | null;
+  /** The same frame-authoritative loadout as the board icons; null for a non-combat unit. */
+  readonly combatEquipmentText?: (unitId: string) => string | null;
   readonly shopLock: (locked: boolean, generation: number) => void;
   readonly selectedUnit: () => string | null;
   readonly selectUnit: (id: string) => void;
@@ -192,6 +194,7 @@ export class StrategyPanel {
   private selectedConsumable: string | null = null;
   private tab: 'traits' | 'items' | 'units' | 'events' = 'items';
   private lastCombatTick = -1;
+  private lastCombatEquipment = '';
   private lastCombatId: string | undefined;
   private eventList: HTMLElement | null = null;
   private eventTexts: string[] = [];
@@ -860,6 +863,11 @@ export class StrategyPanel {
   }
   /** Unit detail: slots and temporary children from readUnitEquipment(); temporaries are read-only. */
   private appendEquipmentDetail(node: HTMLElement, state: MatchState, unitId: string): void {
+    const combatGear = this.actions.combatEquipmentText?.(unitId);
+    if (combatGear != null) {
+      const line = element('p', `本场装备：${combatGear || '无'}`, 'unit-equipment');
+      line.dataset.debug = `unit-equipment:${unitId}`; node.append(line); return;
+    }
     // Enemy loadouts are not player instances (no permanent IDs to name); only player units get the detail.
     if (state.preparation.units.find(unit => unit.id === unitId)?.team !== 'player') return;
     const view = readUnitEquipment(state, unitId);
@@ -1182,8 +1190,11 @@ export class StrategyPanel {
   updateCombat(): void {
     const state = this.actions.state(), { view: combat, runtime } = this.actions.combat(), node = this.combatText;
     if (!node) return;
-    if (combat && this.lastCombatId === combat.combatId && this.lastCombatTick === combat.tick) return;
-    if (combat && this.lastCombatId === combat.combatId && combat.status === 'running' && combat.tick - this.lastCombatTick < 2) return;
+    const equipment = JSON.stringify(combat?.units.map(unit => [unit.id, unit.equipment]));
+    const sameEquipment = equipment === this.lastCombatEquipment;
+    if (sameEquipment && combat && this.lastCombatId === combat.combatId && this.lastCombatTick === combat.tick) return;
+    if (sameEquipment && combat && this.lastCombatId === combat.combatId && combat.status === 'running' && combat.tick - this.lastCombatTick < 2) return;
+    this.lastCombatEquipment = equipment;
     this.lastCombatId = combat?.combatId; this.lastCombatTick = combat?.tick ?? -1;
     // Drops are revealed mid-combat by the domain; refresh only when the projection changes.
     if (this.lootSection && isOnline()) {

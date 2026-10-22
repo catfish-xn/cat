@@ -1,3 +1,4 @@
+import { combatEquipmentDisplay } from '../presentation/battle-equipment';
 import Phaser from 'phaser';
 import { createConquerorFlag } from './conqueror-flag';
 import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
@@ -41,7 +42,7 @@ import { readAssetBase3d } from './render-mode';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
 import { playMerge } from '../presentation/merge-fx';
-import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, gearExtras, gearText, NO_GEAR_EXTRAS, wornDefinitions } from '../presentation/equipment-feedback';
+import { battleLoadout, battleLoadoutText, BATTLE_EQUIPMENT_SUBMITTED, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, gearExtras, gearText, NO_GEAR_EXTRAS, wornDefinitions } from '../presentation/equipment-feedback';
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
 import type { ConsumableTarget } from '../simulation/consumable-types';
@@ -92,7 +93,7 @@ export class BoardScene extends Phaser.Scene {
   private feedback: CombatFeedbackRenderer | null = null;
   private activeStats: BattleStats | null = null;
   /** C17: item icons of the battle on the board, as they stood when it was first shown (null when none is shown). */
-  private battleItems: { readonly combatId: string | undefined; readonly items: MatchState['items'] } | null = null;
+  private battleItems: { readonly combatId: string | undefined; readonly items: MatchState['items']; readonly state: MatchState } | null = null;
   private lastStatsRender = -1;
   private lastReplaySeq = -1;
   private replayBattle = '';
@@ -237,13 +238,17 @@ export class BoardScene extends Phaser.Scene {
       help: () => this.help?.show(),
       // Stored only: the next frame's ring sync applies it. Never force layout during a panel rebuild.
       highlight: ids => { this.previewHighlight = new Set(ids); },
-      state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), battleItems: () => this.frozenItems(), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
+      state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), battleItems: () => this.session.phase === 'combat' || this.session.combatView?.units.some(unit => unit.equipment !== undefined) ? null : this.frozenItems(), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
+      combatEquipmentText: id => {
+        const view = this.session.combatView?.units.some(unit => unit.id === id) ? this.views.get(id) : undefined;
+        return view ? gearText(view.equipped, view.extras, itemDisplayName) : null;
+      },
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成', true),
-      // C17: the success text is fixed when the command is sent; outside preparation it names the next battle.
+      // Fix the notice at submission; only a running permanent board target changes on the next tick.
       // C18-B (§18.3): online the room forwards it to the rules' shared transaction; offline the session runs useConsumable.
       useConsumable: (id: string, target: ConsumableTarget, success: string) => this.command(this.session.useConsumable(id, target), success),
-      equip: (item, unit, slot, combinedName) => this.command(this.session.equip(item, unit, slot), equipSuccessText(this.session.state.phase, combinedName ?? null), true),
+      equip: (item, unit, slot, combinedName) => this.command(this.session.equip(item, unit, slot), equipSuccessText(this.session.state.phase, combinedName ?? null, this.session.combatView?.status === 'running' && this.session.state.preparation.units.some(entry => entry.id === unit && entry.location.kind === 'board')), true),
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
       rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
@@ -492,14 +497,13 @@ export class BoardScene extends Phaser.Scene {
     }
   }
   /**
-   * Item drop target: any visible piece under the pointer, either team. Ownership is not
-   * filtered here, so an enemy drop reaches previewEquip and shows its 'unknown-unit' reason.
+   * Item drop target: only a visible, permanent owned piece under the pointer.
    * C17: a battle on the board may name my pieces by battle id (PvP replay, C15); the drop targets the unit it stands for.
    */
   private boardUnitAt(x: number, y: number): string | undefined {
     // A panel floating over the board (3D HUD, an open drawer) takes the point: nothing behind it is hit.
     if (coveredBoardPoint(x, y)) return undefined;
-    const session = this.session, ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
+    const ownerOf = (id: string) => this.session.equipmentTargetId(id);
     // ?render=3d covers this canvas: the 3D layer picks the model under the pointer (perspective, not 2D boxes).
     const picked = boardFeedUnitAt({ x, y });
     if (picked !== null) return picked === undefined || !this.tokens.get(picked)?.visible ? undefined : ownerOf(picked);
@@ -750,7 +754,7 @@ export class BoardScene extends Phaser.Scene {
     if (!result.ok) {
       // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
       const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;
-      if (notice?.kind === 'pending') { this.pendingOrbNotice = notice.commandId; this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); this.setStatus('待确认…'); return; }
+      if (notice?.kind === 'pending') { this.pendingOrbNotice = notice.commandId; this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); this.setStatus(success === BATTLE_EQUIPMENT_SUBMITTED ? BATTLE_EQUIPMENT_SUBMITTED : '待确认…'); return; }
       this.setStatus(notice?.kind === 'offline' ? notice.text : equipment ? this.equipmentFailure(result.reason) : this.failureMessage(result.reason)); return;
     }
     this.clearCombatEffects();
@@ -851,20 +855,22 @@ export class BoardScene extends Phaser.Scene {
     for (const unit of units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
       const owner = this.equipmentOwner(unit.id);
-      // C18: a fighting unit keeps its battle icons; what it wears now beyond them is tagged for the next battle.
+      // Keep opening equipment until the public combat frame supplies a complete replacement.
       const loadout = fighting.has(unit.id) ? battleLoadout(items, frozen, owner) : null;
-      const equipped = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
-      this.views.get(unit.id)!.update(unit, equipped, loadout?.pending ?? [], unit.team === 'player' ? gearExtras(readUnitEquipment(this.session.state, owner)) : NO_GEAR_EXTRAS, displayStarLevel(this.session.state, unit));
+      const opening = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
+      const extras = unit.team === 'player' ? gearExtras(readUnitEquipment(fighting.has(unit.id) ? this.battleItems!.state : this.session.state, owner)) : NO_GEAR_EXTRAS;
+      const gear = combatEquipmentDisplay(view?.units.find(entry => entry.id === unit.id)?.equipment, opening, extras);
+      this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || view?.units.find(entry => entry.id === unit.id)?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit));
     }
   }
   /**
-   * C17 (contract §17.2): a battle on the board shows the equipment it was fought with. Items equipped or combined
-   * while it is shown are for the next battle, so the item list is frozen when a battle first appears (null when none).
+   * Opening fallback for old frames without equipment, including their original temporary children.
+   * Once equipment is present, the public frame is authoritative.
    */
   private frozenItems(): MatchState['items'] | null {
     const view = this.session.combatView;
     if (!view) this.battleItems = null;
-    else if (!this.battleItems || this.battleItems.combatId !== view.combatId) this.battleItems = { combatId: view.combatId, items: this.session.state.items };
+    else if (!this.battleItems || this.battleItems.combatId !== view.combatId) this.battleItems = { combatId: view.combatId, items: this.session.state.items, state: this.session.state };
     return this.battleItems?.items ?? null;
   }
   /** C15: a PvP replay names my units by battle id; the server's own-unit mapping says whose items each one carries. */
@@ -1117,7 +1123,7 @@ export class BoardScene extends Phaser.Scene {
   private syncLoadoutTip() {
     const view = this.session.combatView, id = view ? this.hoveredId() : undefined;
     const token = id && view?.units.some(unit => unit.id === id) ? this.tokens.get(id) : undefined;
-    const loadout = token ? battleLoadout(this.session.state.items, this.frozenItems(), this.equipmentOwner(id!)) : null;
+    const loadout = token && this.session.phase !== 'combat' && view?.units.find(unit => unit.id === id)?.equipment === undefined ? battleLoadout(this.session.state.items, this.frozenItems(), this.equipmentOwner(id!)) : null;
     if (!token || !loadout?.changed) { if (this.loadoutTip?.visible) this.loadoutTip.setVisible(false); this.placeLoadoutTip3d(null, undefined); return; }
     const text = battleLoadoutText(loadout, definitionId => itemDisplayName(definitionId));
     this.loadoutTip?.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
@@ -1165,6 +1171,13 @@ export class BoardScene extends Phaser.Scene {
       const bench = unit.location.kind === 'bench', operable = bench && unit.team === 'player' && this.benchOps();
       if (token.input) { this.input.setDraggable(token, operable); token.input.enabled = true; }
       if (bench) token.setAlpha(operable ? 1 : 0.35);
+    }
+    // Replay reducers and offline ticks both expose the authoritative full loadout here.
+    for (const unit of view.units) {
+      if (unit.equipment === undefined) continue;
+      const gear = combatEquipmentDisplay(unit.equipment, [], NO_GEAR_EXTRAS);
+      this.views.get(unit.id)?.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
+        gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel);
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
