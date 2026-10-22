@@ -22,15 +22,15 @@ function skin(sampledVertices: number) {
 }
 
 describe('sliced animation envelope', () => {
-  it('documents the remaining synchronous bind-box vertex scan even after an envelope was warmed', async () => {
+  it('retains the refreshed loaded box after an envelope was warmed', async () => {
     const model = skin(24);
     try {
       const envelopeRadius = await animationEnvelopeRadiusSliced(model.body, model.clips);
-      expect(envelopeRadius).not.toBeNull(); expect(model.mesh.boundingBox).toBeNull();
+      expect(envelopeRadius).not.toBeNull(); expect(model.mesh.boundingBox).not.toBeNull();
       const reads = vi.spyOn(model.mesh, 'getVertexPosition');
       fitModel(model.body, { height: 92, width: 110, sourceScale: 0.44, unitScale: 1, envelopeRadius: envelopeRadius! });
-      // Three's Box3.setFromObject -> SkinnedMesh.computeBoundingBox is still O(all vertices), per uncached lease.
-      expect(reads).toHaveBeenCalledTimes(model.mesh.geometry.getAttribute('position').count);
+      // The sampler restores the loaded box; fitting this lease needs no second vertex scan.
+      expect(reads).not.toHaveBeenCalled();
     } finally { model.dispose(); }
   });
 
