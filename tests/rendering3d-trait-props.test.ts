@@ -42,14 +42,14 @@ describe('3D trait props: Conqueror chest and Shimmer flask', () => {
   it('glows toward the next chest and opens only when the opened count grows after mount', () => {
     const { props, step } = setup();
     props.frame(frame({ conquest: conquest(5, 2, 0, 10) }));
-    expect(props.debug().chest).toMatchObject({ shown: true, glow: 0.5, opening: false, label: '5' });
+    expect(props.debug().chest).toMatchObject({ shown: true, glow: 0.5, opening: false, label: '5/10' });
     expect(props.debug().bursts).toBe(0);
     props.frame(frame({ conquest: conquest(12, 3, 10, 20) }));
     expect(props.debug().chest.opening).toBe(true);
     expect(props.debug().bursts).toBe(1);
     step(0.5);
     expect(props.debug().chest.rise).toBeGreaterThan(0);
-    expect(props.debug().chest.label).toBe('12');
+    expect(props.debug().chest.label).toBe('12/20');
     step(3);
     props.frame(frame({ conquest: conquest(12, 3, 10, 20) }));
     expect(props.debug().chest.opening).toBe(false);
@@ -110,7 +110,7 @@ describe('3D trait props with extracted models (idle only, no opening clip)', ()
     const { props, step } = setup({ loadModel, loadEffect });
     props.frame(frame({ conquest: conquest(5, 1), shimmer: shimmer(40, 100) }));
     await flush();
-    expect(props.debug().chest).toMatchObject({ model: true, label: '5' });
+    expect(props.debug().chest).toMatchObject({ model: true, label: '5/10' });
     expect(props.debug().flask.model).toBe(true);
     step(1);
     props.frame(frame({ conquest: conquest(12, 2, 10, 20), shimmer: shimmer(100, 200, true) }));
@@ -149,7 +149,7 @@ it('billboards the total above either flag, redraws only on change, and releases
   const texture = sprite.material.map!, version = texture.version;
   props.frame(frame({ conquest: conquest(7, 1) })); expect(texture.version).toBe(version);
   props.frame(frame({ conquest: conquest(12, 2) })); expect(texture.version).toBeGreaterThan(version);
-  expect(draw.fillText).toHaveBeenLastCalledWith('12', 96, 42, 174);
+  expect(draw.fillText).toHaveBeenLastCalledWith('12/10', 96, 42, 174);
   const body = new Group(); body.add(new Mesh(new BoxGeometry(10, 30, 10)));
   resolve({ scene: body, animations: [], placeholder: false, release() {} } as unknown as ModelLease);
   await flush(); expect(sprite.position.y).toBeGreaterThan(standHeight);

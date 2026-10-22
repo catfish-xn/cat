@@ -2,6 +2,10 @@ import type Phaser from 'phaser';
 import type { BoardMechanics } from './board-feed';
 import { BOARD_LAYOUT } from './layout-config';
 
+/** The banner's count as the 14.23/14.24 board shows it: stacks / next chest threshold, the total alone once all are open. */
+export const conquestLabel = (conquest: NonNullable<BoardMechanics['conquest']>): string =>
+  conquest.next === null ? String(conquest.stacks) : `${conquest.stacks}/${conquest.next}`;
+
 /** Presentation only: both renderers consume the same conquest projection. */
 export function createConquerorFlag(scene: Phaser.Scene) {
   // The rightmost hex ends at x≈447; this standard stays inside the 480-wide canvas.
@@ -19,8 +23,8 @@ export function createConquerorFlag(scene: Phaser.Scene) {
     sync(conquest: BoardMechanics['conquest'], covered: boolean) {
       root.setVisible(!!conquest && !covered);
       if (conquest) {
-        const text = String(conquest.stacks);
-        if (label.text !== text) { label.setText(text); label.setScale(Math.min(1, 28 / label.width)); }
+        const text = conquestLabel(conquest);
+        if (label.text !== text) { label.setText(text); label.setScale(Math.min(1, 48 / label.width)); }
         if (!covered && opened !== undefined && conquest.opened > opened) {
           scene.tweens.killTweensOf(root); root.setY(y);
           scene.tweens.add({ targets: root, y: y - 7, duration: 180, yoyo: true, ease: 'Sine.easeOut' });

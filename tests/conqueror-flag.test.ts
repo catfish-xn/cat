@@ -20,8 +20,8 @@ const conquest = (stacks: number, opened: number, next: number | null = 20) => (
 it('shows only projected conquest, updates the total even after all rewards, and stays outside every hex', () => {
   const { flag, root, label } = setup();
   flag.sync(undefined, false); expect(root.visible).toBe(false);
-  flag.sync(conquest(0, 0), false); expect(root.visible).toBe(true); expect(label.text).toBe('0');
-  flag.sync(conquest(12, 2), false); expect(label.text).toBe('12');
+  flag.sync(conquest(0, 0), false); expect(root.visible).toBe(true); expect(label.text).toBe('0/20');
+  flag.sync(conquest(12, 2), false); expect(label.text).toBe('12/20');
   flag.sync(conquest(900, 15, null), false); expect(root.visible).toBe(true); expect(label.text).toBe('900');
   expect(root.x - 14).toBeGreaterThan(BOARD_LAYOUT.origin.x + Math.sqrt(3) * BOARD_LAYOUT.hexRadius * 7);
   expect(root.x + 14).toBeLessThanOrEqual(BOARD_LAYOUT.width);
@@ -37,7 +37,7 @@ it('bounces only for newly opened rewards, never on first display, remount or re
   expect(scene.tweens.add).toHaveBeenCalledTimes(1);
   expect(scene.tweens.add).toHaveBeenLastCalledWith(expect.objectContaining({ targets: root, y: restingY - 7, yoyo: true }));
   flag.sync(conquest(20, 3), false); expect(scene.tweens.add).toHaveBeenCalledTimes(1);
-  flag.sync(conquest(30, 4), true); expect(root.visible).toBe(false); expect(root.y).toBe(restingY); expect(label.text).toBe('30');
+  flag.sync(conquest(30, 4), true); expect(root.visible).toBe(false); expect(root.y).toBe(restingY); expect(label.text).toBe('30/20');
   flag.sync(conquest(30, 4), false); expect(root.visible).toBe(true); expect(scene.tweens.add).toHaveBeenCalledTimes(1);
   flag.sync(undefined, false); flag.sync(conquest(40, 5), false); expect(scene.tweens.add).toHaveBeenCalledTimes(1);
   flag.dispose(); expect(scene.tweens.killTweensOf).toHaveBeenCalledWith(root); expect(root.destroy).toHaveBeenCalledOnce();

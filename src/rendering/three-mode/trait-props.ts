@@ -15,6 +15,7 @@ import {
 } from 'three';
 import type { ModelLease, ParticleEffect } from '../../rendering3d';
 import type { BoardFrame, BoardMechanics } from '../board-feed';
+import { conquestLabel } from '../conqueror-flag';
 
 export const CHEST_MODEL = 'conqueror-chest', FLASK_MODEL = 'shimmer-flask';
 export const CHEST_OPEN_EFFECT = 'conqueror-chest-open', FLASK_OFFER_EFFECT = 'shimmer-flask-offer', FLASK_TAKE_EFFECT = 'shimmer-flask-take';
@@ -211,7 +212,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     chestRoot.visible = !!conquest;
     if (conquest) {
       tryModel(chest, CHEST_MODEL, CHEST_MODEL_HEIGHT);
-      showLabel(String(conquest.stacks));
+      showLabel(conquestLabel(conquest));
       const done = conquest.next === null;
       glow = done ? 0 : Math.min(1, Math.max(0, (conquest.stacks - conquest.from) / Math.max(1, conquest.next! - conquest.from)));
       if (seeded && conquest.opened > (last?.conquest?.opened ?? conquest.opened)) {
