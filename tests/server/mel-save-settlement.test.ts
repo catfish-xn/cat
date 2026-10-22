@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as serverEntry from '../../src/server-entry';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { RoomState, TwoSidedBattleResult } from '../../src/server/room/types';
 import { readG23Progress, writeG23Progress } from '../../src/simulation/g2-3-state';
@@ -89,6 +90,43 @@ describe('Room: Mel save at PvP settlement', () => {
     expect(room.planSettlement(battles.map(candidate => candidate === battle ? edited : candidate))).toMatchObject({ ok: false, detail: expect.stringContaining('invalid-receipt') });
     expect(room.state).toBe(before);
   }, 20_000);
+
+  it.each(['missing', 'wrong battleId', 'wrong source', 'duplicate'] as const)(
+    'rejects lethal damage returning 1 HP with a %s playerSaved event', variant => {
+      const { room, clock } = melRoom();
+      const before = room.state;
+      const battles = before.battles as readonly TwoSidedBattleResult[];
+      const proposal = battles.flatMap(battle => [battle.proposals.a, battle.proposals.b]).find(p => p.damage > 2)!;
+      const run = serverEntry.runSharedMatchCommand;
+      let corrupted = 0;
+      const spy = vi.spyOn(serverEntry, 'runSharedMatchCommand').mockImplementation((pool, state, command) => {
+        const applied = run(pool, state, command);
+        if (command.type !== 'settleRound' || command.receipt.seatId !== proposal.seatId || !applied.ok) return applied;
+        expect(Math.max(0, state.playerHp - command.receipt.damage)).toBe(0);
+        expect(applied.state.playerHp).toBe(1);
+        const saves = applied.events.filter(event => event.type === 'playerSaved');
+        expect(saves).toHaveLength(1);
+        const save = saves[0]!;
+        const events: serverEntry.MatchEvent[] = applied.events.filter(event => event.type !== 'playerSaved');
+        if (variant === 'wrong battleId') events.push({ ...save, battleId: `${save.battleId}:other` });
+        if (variant === 'wrong source') events.push({ ...save, source: 'other' } as unknown as serverEntry.MatchEvent);
+        if (variant === 'duplicate') events.push(save, save);
+        corrupted++;
+        // Leave HP and its record consistent so only the missing/invalid save evidence can reject this result.
+        return { ...applied, events };
+      });
+      disposers.push(() => spy.mockRestore());
+      const detail = `seat ${proposal.seatId}: rules HP 1 disagrees with the room HP 2 - ${proposal.damage}`;
+      expect(room.planSettlement(battles)).toEqual({ ok: false, detail });
+      expect(room.state).toBe(before);
+      clock.runNext();
+      expect(corrupted).toBe(2);
+      expect(room.state.fault).toEqual({ kind: 'invalid-results', detail });
+      expect(room.state.seats).toEqual(before.seats);
+      expect(room.state.pool).toBe(before.pool);
+      expect(room.state.settlements).toEqual(before.settlements);
+    }, 20_000,
+  );
 
   it('rejects a room/rules HP mismatch even when the rules return 1 HP', () => {
     const { room, holder } = melRoom();

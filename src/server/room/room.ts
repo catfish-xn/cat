@@ -557,8 +557,14 @@ export class Room {
       if (job.kind === 'receipt') {
         const applied = runSharedMatchCommand(pool, seat.match, { type: 'settleRound', receipt: job.receipt });
         if (!applied.ok) return { ok: false, detail: `seat ${seat.seatId}: ${applied.reason}` };
-        // The rules validate damage and own HP effects (including Mel's one-time save). Check their receipt/record
-        // against the room's inputs, then publish their HP; raw damage remains unchanged for elimination tie-breaks.
+        // HP must match the room's damage unless exactly one Mel save from this battle explains a lethal rescue.
+        const expected = Math.max(0, seat.hp - job.damage);
+        if (applied.state.playerHp !== expected) {
+          const saves = applied.events.filter(event => event.type === 'playerSaved');
+          if (expected !== 0 || applied.state.playerHp !== 1 || saves.length !== 1
+            || saves[0]!.source !== 'mel' || saves[0]!.battleId !== job.receipt.battleId) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${applied.state.playerHp} disagrees with the room HP ${seat.hp} - ${job.damage}` };
+        }
+        // Also check the rules' receipt/record; raw damage remains unchanged for elimination tie-breaks.
         const record = applied.state.roundResults.at(-1);
         if (!record || record.round !== state.round || record.roundId !== state.roundId
           || record.settlementId !== job.receipt.settlementId || record.hpBefore !== seat.hp
