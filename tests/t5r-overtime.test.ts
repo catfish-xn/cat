@@ -20,12 +20,13 @@ describe('T5R online overtime',()=>{
     let a:MatchState={...initial,preparation:{...initial.preparation,units:[]}},
       b:MatchState={...a,multiplayer:{...a.multiplayer!,seatId:'B'}};
     const loot = a.m8.loot, rewardRng = a.rewardRngState, choiceRng = a.choiceRngState;
-    let gold=19, xp=0;
+    let gold=25, xp=0;
     for(let n=1;n<=5;n++) {
       const prior=a;
       a=accepted(advanceMultiplayerRound(freeze(a),a.round));b=accepted(advanceMultiplayerRound(freeze(b),b.round));
       expect(a).toMatchObject({round:FINAL_ROUND+n,roundDefinitionId:`overtime-${n}`,phase:'preparation',pendingChoice:null,
         m8:{round:{kind:'pvp',isFinal:false,stage:6,encounterId:null}}});
+      expect(a.gold).toBe(gold);
       expect(a.shop.generation).toBe(prior.shop.generation+1);expect(a.shop.slots).toHaveLength(5);
       expect(a.rngState).not.toBe(prior.rngState);expect(a.m8.loot).toEqual(loot);
       expect(a.rewardRngState).toBe(rewardRng);expect(a.choiceRngState).toBe(choiceRng);
@@ -39,8 +40,9 @@ describe('T5R online overtime',()=>{
       expect(p.a).toMatchObject({result:'draw',baseDamage:17,damage:17,opposingSurvivors:0});
       expect(p.b).toMatchObject({result:'draw',damage:17});
       a=settle(a,battle,p.a);b=settle(b,battle,p.b);
+      expect(a.gold).toBe(gold); // No preparation income is paid in settlement.
       gold+=5+Math.min(5,Math.floor(gold/10))+(n>=4?2:n>=2?1:0);xp+=2;
-      expect(a.gold).toBe(gold);expect(a.xp).toBe(xp);expect(a.playerHp).toBe(100-17*n);
+      expect(a.roundResults.at(-1)!.goldAfter).toBe(gold);expect(a.xp).toBe(xp);expect(a.playerHp).toBe(100-17*n);
       expect(a.multiplayer!.receipts).toHaveLength(n);expect(a.roundResults).toHaveLength(FINAL_ROUND+n);
       expect(applyRoundSettlement(a,a.multiplayer!.receipts.at(-1))).toEqual({ok:false,state:a,reason:'duplicate-settlement'});
       expect(accepted(claimOrDiscardLoot(a,a.round))).toBe(a);

@@ -1,0 +1,76 @@
+{
+  "core": {
+    "files": [
+      "4 passed (4)"
+    ],
+    "tests": [
+      "150 passed (150)"
+    ],
+    "duration": [
+      "10.17s (tests 47%, transform 45%, import 7%)"
+    ]
+  },
+  "settlement": {
+    "files": [
+      "1 passed (1)"
+    ],
+    "tests": [
+      "11 passed (11)"
+    ],
+    "duration": [
+      "10.66s (tests 54%, transform 39%, import 6%)"
+    ]
+  },
+  "restore-overtime": {
+    "files": [
+      "2 passed (2)"
+    ],
+    "tests": [
+      "8 passed (8)"
+    ],
+    "duration": [
+      "10.93s (tests 48%, transform 41%, import 11%)"
+    ]
+  },
+  "server-mel-command": {
+    "files": [
+      "3 passed (3)"
+    ],
+    "tests": [
+      "111 passed (111)"
+    ],
+    "duration": [
+      "132.47s (tests 96%, transform 3%, import 1%)"
+    ]
+  },
+  "identity": {
+    "files": [
+      "2 failed (2)"
+    ],
+    "tests": [
+      "270 failed | 18 passed (288)"
+    ],
+    "duration": [
+      "13.97s (tests 59%, transform 29%, import 12%)"
+    ]
+  },
+  "identityFailureCount": 270,
+  "distinctFunctionalTotal": {
+    "files": 10,
+    "passed": 280,
+    "failed": 0
+  },
+  "identityTotal": {
+    "files": 2,
+    "passed": 18,
+    "failed": 270
+  },
+  "repeats": {
+    "income-final": 7,
+    "bench-final": 1
+  },
+  "typecheck": {
+    "command": "npm run typecheck",
+    "exitCode": 0
+  }
+}

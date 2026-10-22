@@ -1,3 +1,4 @@
+import { ROUND_INCOME_TIMING } from './round-income-policy';
 import { OPENING_ENCOUNTER_CONFIG } from './opening-encounters';
 import { V20_TRAITS } from './v20-traits';
 import { CHEM_BARON_B_OVERRIDES } from './chem-baron-b-overrides';
@@ -22,6 +23,7 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 /** One release manifest is included in both content and loot replay identities. */
 export const RULES_GAP_MANIFEST = freezeContent({
   openingEncounters: OPENING_ENCOUNTER_CONFIG,
+  roundIncomeTiming: ROUND_INCOME_TIMING,
   combatStreaming: { version: 'live-tick-v1', terminalSettlement: 'all-terminal-fixed-seat-order', equipment: 'next-unsealed-tick-v2', equipmentTraits: 'opening-membership-and-non-item-effects-frozen', equipmentHp: 'existing-changeMaxHp-preserve-missing-health', equipmentReplay: 'private-input-and-source-receipts-v1' },
   v20Traits:V20_TRAITS,
   v19:V19_MECHANICS,v19Part2:{sixCost:SIX_COST_POLICY,family:{policy:FAMILY_HEIST_POLICY,rewards:FAMILY_REWARDS,reunion:FAMILY_REUNION_POLICY},emblems:V19_EMBLEM_VALUES},

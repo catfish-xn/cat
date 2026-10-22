@@ -1206,3 +1206,11 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 - `descriptionZh` 是来源说明，不代表已发魔像。验收：抽中时保留安蓓萨身份和关闭提示，重连不触发奖励，不生成假单位/装备/羁绊/人口，不创建魔像移动、出售或工具目标。
 - 未提供魔像实例ID、属性/成长、人口/位置、永久纹章ID或个人抽样结果：完整纹章池、魔像属性成长、人口及出生/移动规则仍待补证。现有普通召唤物与纹章机制不能证明这些规则。
 - `TRAINER_GOLEMS_POLICY`、`validateTrainerGolemEmblems`、`applyTrainerGolemsOpening` 从 simulation/match 导出，属于关闭状态领域接口；后者永远失败，不能接成正常初始化动作。PR8 如需服务器诊断接口，由边界维护方重导出；不向客户端传入全局seed/RNG。完整签名/失败枚举见 [Match合同 PR4节](MATCH_CONTRACT.md)。
+
+## Codex → Claude：10-22b 回合收入与备战区审计
+
+领域已完成 `next-preparation-income-v1`，详见 MATCH_CONTRACT.md 同名节。服务器继续用既有唯一结算/nextSharedRound（或 advanceMultiplayerRound）接续，不增加定时发钱逻辑。结算阶段 `match.gold` 尚未含基础/利息/连胜败；下一轮前置强化选择/准备入口才到账。UI 可预测，但实际余额只能读 `match.gold`；`roundResults.goldAfter` 是收入方案值，不可当作到账余额。验收：19G PvP 胜→战后20G，下一准备27G（无连胜奖励）；战中先22G买XP再卖一星德莱文→最终19G，利息按20G计2；重复结算/Continue不重发。淘汰/终局不发下一准备收入。服务器调用点无须另移（领域推进已支付），请核对投影/显示/战后选择不误用方案值。
+
+梅尔已有 `playerSaved{battleId,playerHp:1,source:'mel'}`，12次PvP累计条件与14.24b归档吻合，表现层按事件播放一次。
+
+备战区卡顿（本次只报告）：`applySeatCommand(deploy)` 走 deployMatchUnit/planTemporaryEquipment/accept 钩子，本身无战斗推进；但 `Room.apply` 的 battle 分支在任何命令前无条件进入 `pveCatchUp`，有实时金币读者时会追算 tick。数值见 `docs/evidence/playtest-1022b/bench-timing.json`。可评估 deploy 到 bench 是否需要追算，须保留实时金币及战中装备输入顺序；本次未改服务器或性能行为。截图 `/home/aiapps/workspace/feedback-1022b/1.png` 只证明备战席显示问题，不能证明延迟或售价异常。

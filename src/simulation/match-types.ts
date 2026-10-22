@@ -25,6 +25,7 @@ export interface RoundResult {
   readonly settlementId: string; readonly roundKind: RoundKind;
   readonly incomeBreakdown: { readonly base: number; readonly win: number; readonly interest: number; readonly streak: number };
   readonly interestBasis: number; readonly streakBefore: Streak; readonly streakAfter: Streak; readonly xpRequested: number;
+  /** Frozen income plan, including deferred next-entry income; goldAfter is not the live settlement balance. */
   readonly income: number; readonly goldBefore: number; readonly goldAfter: number;
   readonly xpAwarded: number; readonly levelBefore: number; readonly levelAfter: number;
   readonly xpBefore: number; readonly xpAfter: number; readonly hpBefore: number; readonly hpAfter: number;
