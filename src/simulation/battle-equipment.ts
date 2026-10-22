@@ -100,8 +100,8 @@ export function applyBattleEquipment(state: CombatState, receipt: BattleEquipmen
       result.attackDamageBase = (unit.attackDamageBase ?? old.attackDamageBase ?? 0) + (next.attackDamageBase ?? 0) - (old.attackDamageBase ?? 0);
       result.attackDamagePercentBps = (unit.attackDamagePercentBps ?? 0) + (next.attackDamagePercentBps ?? 0) - (old.attackDamagePercentBps ?? 0);
       result.abilityPower = (unit.abilityPower ?? 100) + (next.abilityPower ?? 100) - (old.abilityPower ?? 100);
-      // These two are replaced, not shifted by a delta: they must stay static during a battle (in-combat haste lives in
-      // separate status fields), so the recompiled values are the right ones to carry forward.
+      // These two are replaced, not shifted by a delta: they must stay static during a battle (nothing in combat writes
+      // them; serialization checks they equal the resolved stats), so the recompiled values are the right ones to carry.
       result.baseAttackSpeedBps = next.stats.baseAttackSpeedBps ?? Math.floor(200000 / next.stats.attackIntervalTicks);
       result.attackSpeedBonusBps = next.stats.attackSpeedBonusBps ?? 0;
       result.maxMana += next.stats.maxMana - old.stats.maxMana;
