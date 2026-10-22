@@ -825,7 +825,6 @@ export class BoardScene extends Phaser.Scene {
     }
     return upgrades;
   }
-  /** Online (T10): the server's own deadline deployment and post-battle merges arrive with its state push. */
   /** Offline: the opening encounter of the local match, read with the rules' own readers (online: OnlineApplication). */
   private syncSoloOpening() {
     const hud = this.soloOpening;
@@ -838,6 +837,7 @@ export class BoardScene extends Phaser.Scene {
         forge: readOpeningForgeProgress(state), mel: readOpeningMelProgress(state) });
     } catch { hud.hideAll(); }
   }
+  /** Online (T10): the server's own deadline deployment and post-battle merges arrive with its state push. */
   private serverEvents(events: readonly MatchEvent[]) {
     const deployed = events.filter(event => event.type === 'unitDeployed').length;
     const merged = this.showUpgrades(events).length ? mergeNotice(events) : null;

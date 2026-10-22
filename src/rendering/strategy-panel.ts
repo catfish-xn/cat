@@ -192,7 +192,8 @@ function withMasterworkOffers(extras: ReturnType<typeof readChoiceExtras>, state
   const unitId = (choice as { payload?: { masterwork?: { unitId?: unknown } } }).payload?.masterwork?.unitId;
   let options: readonly MasterworkOptionDisplay[] = sent ?? [];
   if (!sent && typeof unitId === 'string') { try { options = readMasterworkOptions(state, unitId); } catch { options = []; } }
-  return { ...extras, offers: [...(extras.offers ?? []), ...options.map(masterworkOffer)] };
+  // First, so genericOffer's lookup by id finds the item → radiant naming before any declared display row.
+  return { ...extras, offers: [...options.map(masterworkOffer), ...(extras.offers ?? [])] };
 }
 export class StrategyPanel {
   private readonly root: HTMLElement;
