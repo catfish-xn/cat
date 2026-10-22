@@ -166,8 +166,9 @@ export class OnlineApplication implements SceneApplication {
   private onState(state: MatchState, confirmed: readonly ConfirmedCommand[], serverEvents: readonly MatchEvent[]) {
     const before = this.session.state;
     if (state.phase === 'gameOver' && before.phase !== 'gameOver') this.leaveScouting();
-    // A push I did not cause (no confirmation) that closes my open choice is the room's timeout pick: say what was picked.
-    const timedOut = confirmed.length ? null : timedOutChoiceText(before, state);
+    // A push I did not cause (no confirmation) that closes my open choice: say what it settled. Usually the room's timeout pick,
+    // but a pick of mine whose receipt a reconnect dropped looks the same, so the line stays neutral.
+    const settled = confirmed.length ? null : settledChoiceText(before, state);
     // During my battle (T10) an operation's push refreshes the panels and bench under the battle; it is still a confirmation.
     const sameView = this.session.holdsBattle(state) || (!this.session.playingBack && before.phase === state.phase && before.round === state.round);
     if (confirmed.length && sameView) {
@@ -185,11 +186,11 @@ export class OnlineApplication implements SceneApplication {
     if (merged) this.mergeNote = { round: state.round, text: merged };
     if (serverEvents.length) this.hooks.serverEvents?.(serverEvents);
     // Shown now and kept at the front of the next preparation line, which would otherwise replace it at once.
-    if (timedOut) { this.timeoutNote = { round: state.round, text: timedOut }; this.hooks.status(timedOut); }
+    if (settled) { this.settledNote = { round: state.round, text: settled }; this.hooks.status(settled); }
     this.syncWarmHints(); // a reroll or a buy changes the shop
   }
   private mergeNote: { readonly round: number; readonly text: string } | null = null;
-  private timeoutNote: { readonly round: number; readonly text: string } | null = null;
+  private settledNote: { readonly round: number; readonly text: string } | null = null;
   private phaseLine: { readonly round: number; readonly phase: string; readonly text: string } | null = null;
   private onRefused(refusal: RefusedCommand) {
     this.carousel.clearPending(); this.publishCarousel3d();
@@ -454,7 +455,7 @@ export class OnlineApplication implements SceneApplication {
     const opening = view.phase.round === 1 ? ' · 首轮 0 金币，1-2 战后到账 2 金币' : '';
     if (view.phase.kind === 'preparation') {
       const possible = candidates.length <= 3 ? candidates.map(seat => seat.name).join('、') : `${candidates.length} 人`;
-      const note = this.timeoutNote?.round === view.phase.round ? `${this.timeoutNote.text} · ` : '';
+      const note = this.settledNote?.round === view.phase.round ? `${this.settledNote.text} · ` : '';
       const text = note + (opponent ? `对手：${opponent.name} · ${view.phase.roundName} · 倒计时结束自动开战`
         : candidates.length ? `可能的对手：${possible} · ${view.phase.roundName} · 开战时确定`
         : `${view.phase.roundName} · 野怪回合${opening} · 倒计时结束自动开战`);
@@ -528,21 +529,22 @@ export class OnlineApplication implements SceneApplication {
 }
 
 /**
- * The line for a choice the room resolved at its deadline (contract §11.4: first offer, or the declared default): `before`
- * had it open, `after` no longer does. Anomaly and augment name what the rules granted; other kinds say it was picked.
+ * The line for a choice that closed without a confirmation of mine: `before` had it open, `after` no longer does. Anomaly and
+ * augment name what the rules granted; other kinds say it closed. Neutral wording: the client cannot tell a timeout pick (§11.4)
+ * from a pick of mine whose receipt was lost to a reconnect.
  */
-export function timedOutChoiceText(before: MatchState, after: MatchState): string | null {
+export function settledChoiceText(before: MatchState, after: MatchState): string | null {
   const open = before.pendingChoice;
   if (!open || after.pendingChoice?.choiceId === open.choiceId) return null;
   if (open.kind === 'anomaly') {
     const binding = after.anomalyBinding?.choiceId === open.choiceId ? after.anomalyBinding : null;
-    if (!binding) return '异常选择已超时 · 本轮未选到异常';
+    if (!binding) return '异常选择已结束 · 本轮未绑定异常';
     const unit = after.preparation.units.find(candidate => candidate.id === binding.unitId);
-    return `异常选择已超时 · 已自动选择「${anomalyDisplayName(binding.definitionId)}」${unit ? `给 ${displayUnitName(unit.definitionId)}` : ''}`;
+    return `异常已选定：「${anomalyDisplayName(binding.definitionId)}」${unit ? `给 ${displayUnitName(unit.definitionId)}` : ''}`;
   }
   if (open.kind === 'augment') {
     const owned = after.augments.find(augment => augment.choiceId === open.choiceId);
-    return owned ? `强化选择已超时 · 已自动获得「${augmentDisplayName(owned.definitionId)}」` : '强化选择已超时 · 已自动选择';
+    return owned ? `强化已选定：「${augmentDisplayName(owned.definitionId)}」` : '强化选择已结束';
   }
-  return '选择已超时 · 已按默认自动选择';
+  return '选择已结束';
 }
