@@ -12,6 +12,9 @@ import { AUGMENT_ZH_TEMPLATES } from './augment-zh';
 import { describeEffect } from './effect-text';
 import { S13_AUGMENT_ASSETS } from './s13-augment-asset-manifest';
 import { d11ChoiceDisplay } from '../simulation/d11-display';
+import { V20_TRAITS, TEAMUP_IDS } from '../simulation/content/v20-traits';
+import { getHeroIdentity } from './hero-identity';
+import { traitSummary } from './trait-text';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const ICONS = new Map(S13_AUGMENT_ASSETS.map(asset => [asset.id, asset.path]));
@@ -44,6 +47,26 @@ export function augmentIconHtml(id: string, size: number, className = 'augment-i
 }
 
 /**
+ * Inline icon, or (no bundled icon) a small lettered badge in the icon's place, for icon-only rows such as the owned
+ * augment strip, where an empty string would leave a bare name among the icons.
+ */
+export function augmentIconOrBadgeHtml(id: string, size: number): string {
+  return augmentIconHtml(id, size) || `<span class="augment-icon augment-badge" data-augment="${id}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.5)}px" aria-hidden="true">${[...augmentDisplayName(id)][0] ?? '?'}</span>`;
+}
+
+/** Team-up augments (v19 姐妹, v20 关系): the two champions they grant, by repo unit id. */
+const TEAMUP_PARTNERS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  sisters: ['vi', 'jinx'], ...Object.fromEntries(TEAMUP_IDS.map(id => [id, V20_TRAITS[id].partners])),
+});
+/** What a team-up augment grants, then its trait's official zh_cn text (with the project's 魔改 note) once both are on the board. */
+function teamupDescription(id: string): string | null {
+  const partners = TEAMUP_PARTNERS[id], text = Object.hasOwn(TEAMUP_PARTNERS, id) ? traitSummary(id) : null;
+  if (!partners || !text) return null;
+  const [a, b] = partners.map(unit => `【${getHeroIdentity(unit).name}】`);
+  return `获得${a}和${b}。两者同时在场时激活【${augmentDisplayName(id)}】：${text}`;
+}
+
+/**
  * Augments whose content `description` is player text: the first six authored ones, the economy/acquisition batch, and the
  * P2 batch (14.24 zh_cn client text with its source values already written in). The W4 batch's `description` is an
  * implementation note, so the choice card shows only the effect text for those.
@@ -63,7 +86,7 @@ function p3Description(id: string): string | null {
 }
 // v15 D11 choices use the rules' display text; other augments retain the P2/P3 player descriptions.
 export const augmentPlayerDescription = (id: string): string | null =>
-  d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
+  d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? teamupDescription(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
 /**
  * Effect lines of an augment for its card. Mechanics with no display text (they would print an internal code such as
  * `s13P2Augment`) are left out when the augment has a player description, which already says what they do; so is the

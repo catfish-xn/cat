@@ -163,6 +163,7 @@ export class OnlineApplication implements SceneApplication {
   /** A push that only confirms my own commands keeps selection and panels (like a local command); anything else redraws. */
   private onState(state: MatchState, confirmed: readonly ConfirmedCommand[], serverEvents: readonly MatchEvent[]) {
     const before = this.session.state;
+    if (state.phase === 'gameOver' && before.phase !== 'gameOver') this.leaveScouting();
     // During my battle (T10) an operation's push refreshes the panels and bench under the battle; it is still a confirmation.
     const sameView = this.session.holdsBattle(state) || (!this.session.playingBack && before.phase === state.phase && before.round === state.round);
     if (confirmed.length && sameView) {
@@ -263,6 +264,7 @@ export class OnlineApplication implements SceneApplication {
     this.syncCarousel(view);
     this.syncBattleViews();
     if (view.phase.kind === 'ended') {
+      this.leaveScouting();
       // syncMode first: the panel reads body[data-online-mode] while re-rendering to show the online end text.
       if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.syncMode(); this.hooks.clearInput(); this.hooks.refresh(); }
       this.elimination.hide(); this.pendingHit = null; this.pendingRank = undefined;
@@ -420,11 +422,18 @@ export class OnlineApplication implements SceneApplication {
     // Leaving a watched battle puts my own board (or battle) back: the scene rebuilds its tokens and drops the old effects.
     if (this.session.watchedSeat !== wasWatching) this.hooks.refresh();
   }
+  /**
+   * My game ended (room ended, my seat out, or my state at gameOver): a board I was visiting gives way to my own board, the
+   * battle I watched there stops (close → syncScout → stopWatching, watch(null)). A paused session would otherwise hold
+   * that seat's battle frozen mid-play with no way back. Eliminated, I can open another seat again afterwards.
+   */
+  private leaveScouting() { this.opponentBoard.close(); }
   private syncSpectating(view: PlayerView) {
     const me = view.seats.find(seat => seat.seatId === view.mySeatId);
     const spectating = me !== undefined && !me.alive && view.phase.kind !== 'ended';
     if (spectating === this.spectating) return;
     this.spectating = spectating; this.session.spectating = spectating;
+    if (spectating) this.leaveScouting();
     this.syncMode(); this.hooks.clearInput(); this.hooks.refresh();
     if (spectating) this.hooks.status(`已淘汰 · 第 ${me!.rank ?? '?'} 名 · 观战中 · 点击右侧玩家查看阵容`);
   }
