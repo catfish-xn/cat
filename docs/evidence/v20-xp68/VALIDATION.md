@@ -32,7 +32,7 @@ node node_modules/vitest/vitest.mjs run --project fast --configLoader runner --m
 
 真实规则相关失败为生命周期测试仍使用旧边界 `[9,83,1]`；已改为 `[9,67,1]`，原 requested/applied、满级与结果断言不变，整文件 12/12 单跑通过。另将经济输入校验的非法 XP 改为新的精确阈值 68，相关文件单跑通过。最终源码再次 typecheck，退出码 0。
 
-剩余 **26 项环境失败、0 项计时失败、0 项未解决规则断言失败**。3D 路径类环境错误明确为 `realpath <home>`（含短名 `ADMINI~1`）的 EPERM；相关工具/测试源码未修改。1 项跳过来自原有 Windows 文件符号链接 EPERM 分支（tests/assets3d-paths.test.ts:129-130），不计为通过。环境受限项需在有目录访问及符号链接权限的环境复跑；完整 fast 不能计为全绿。
+剩余 **26 项环境失败、0 项计时失败、0 项未解决规则断言失败**。3D 路径类环境错误明确为 `realpath <home>`的 EPERM；相关工具/测试源码未修改。1 项跳过来自原有 Windows 文件符号链接 EPERM 分支（tests/assets3d-paths.test.ts:129-130），不计为通过。环境受限项需在有目录访问及符号链接权限的环境复跑；完整 fast 不能计为全绿。
 
 环境失败文件：
 
