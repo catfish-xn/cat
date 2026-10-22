@@ -1,3 +1,4 @@
+import { resolveM5Choices } from './match-helpers';
 import { describe, expect, it } from 'vitest';
 import { createMatch, startMatchCombat, nextRound, rerollShop, createCarouselMatch } from '../src/simulation/match';
 import { OPENING_ENCOUNTERS, createOpeningEncounter, readOpeningEncounterView, applyOpeningEffects,
@@ -41,7 +42,7 @@ function room(seed: number, carousel=false) {
 }
 
 describe('opening encounter PR1 lifecycle, privacy and no-effect contract', () => {
-  it.each(cases)('$id: survives save/restore and every round hook without effects or RNG consumption', ({id,seed}) => {
+  it.each(cases.filter(c => !OPENING_ENCOUNTERS.find(e => e.id === c.id)!.enabled || c.id === 'none'))('$id: survives save/restore and every round hook without effects or RNG consumption', ({id,seed}) => {
     const state=createMatch(seed),before=JSON.stringify(state);
     expect(readOpeningEncounterView(state)?.encounterId).toBe(id);
     const context=createOpeningEncounter(seed);
@@ -69,7 +70,7 @@ describe('opening encounter PR1 lifecycle, privacy and no-effect contract', () =
     expect(state.equipmentState.equipment).toEqual(initializeStreams(seed).equipment);
     expect(state.m8.loot).toEqual(prepareMatchLoot(seed,1));
     expect(state.preparation.units.find(u=>u.team==='player')?.definitionId).toBe(selectOpeningUnit(seed));
-    const rerolled=rerollShop({...state,gold:20});
+    const rerolled=rerollShop({...resolveM5Choices(state),gold:20});
     if(!rerolled.ok)throw Error(rerolled.reason);
     expect(rerolled.state.shop).toEqual(generateShop(state.rngState,2,1).shop);
     expect(rerolled.state.openingEncounter).toBe(state.openingEncounter);
