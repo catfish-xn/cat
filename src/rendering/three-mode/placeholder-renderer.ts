@@ -135,6 +135,10 @@ export function useAssetProgress(next: (text: string, fraction: number | null) =
 // Injected the same way: models a game is likely to show first (the cheapest shop tiers), warmed while idle.
 let warmModels: readonly string[] = [];
 export function useWarmModels(next: readonly string[]): void { warmModels = next; }
+// Injected the same way: what the shell does when this renderer's WebGL context was lost and came back (mount a fresh
+// one); each renderer keeps the one set when it mounted.
+let contextRestored: (() => void) | null = null;
+export function useContextRestored(next: () => void): void { contextRestored = next; }
 // Injected the same way: the 2D theme's star color (presentation/theme.ts starColor), so 2D and 3D stars match.
 let starColorFor: (level: number) => string = () => '#ffd34d';
 export function useStarColor(next: (level: number) => string): void { starColorFor = next; }
@@ -310,8 +314,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   // Every lease on a model goes through the retention (model-memory.ts), so a template nothing shows is let go after a
-  // while; little legends stay (few, and the lobby's picker shares them).
-  const retention = models.cache ? createModelRetention(models.cache, { pinned: isLegendModel }) : null;
+  // while; little legends stay (few, and the lobby's picker shares them). An evicted model is no longer warmed: the
+  // next match's warm list reads and uploads it again (its envelope numbers stay).
+  const retention = models.cache ? createModelRetention(models.cache, { pinned: isLegendModel, onEvict: id => warmup?.forget(id) }) : null;
   const loadModel = retention ? (id: string) => retention.load(id) : null;
   // Online 选秀 (carousel-stage.ts): its own scene and camera, drawn instead of the board while board-feed carries one.
   // Every effect on this renderer (combat, carousel, tabletop, trait props) reads its files once (effect-library.ts).
@@ -542,6 +547,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
   const itemTextures = new Map<string, Promise<Texture | null>>();
   let closed = false;
+  // A lost context that comes back cannot re-upload models whose CPU copies were emptied (model-memory.ts): the shell
+  // mounts a fresh renderer instead, which reads them again from the local store.
+  const restored = contextRestored;
+  renderer.domElement.addEventListener('webglcontextrestored', () => { if (!closed) restored?.(); });
   const textureLoader = new TextureLoader();
   const overheadContext = {
     colors: () => meterColors,

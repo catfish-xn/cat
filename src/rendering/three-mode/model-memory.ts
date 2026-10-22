@@ -28,7 +28,7 @@ export interface ModelRetention {
 interface Use { refs: number; last: number }
 
 export function createModelRetention(cache: { load(id: string): Promise<ModelLease>; evict(id: string): void },
-  options: { idleMs?: number; pinned?: (id: string) => boolean; now?: () => number } = {}): ModelRetention {
+  options: { idleMs?: number; pinned?: (id: string) => boolean; now?: () => number; onEvict?: (id: string) => void } = {}): ModelRetention {
   const idleMs = options.idleMs ?? MODEL_IDLE_MS, now = options.now ?? (() => performance.now());
   const uses = new Map<string, Use>();
   return {
@@ -54,7 +54,7 @@ export function createModelRetention(cache: { load(id: string): Promise<ModelLea
       let gone = 0;
       for (const [id, use] of uses) {
         if (use.refs > 0 || at - use.last < idleMs || options.pinned?.(id)) continue;
-        uses.delete(id); cache.evict(id); gone++;
+        uses.delete(id); cache.evict(id); options.onEvict?.(id); gone++;
       }
       return gone;
     },
