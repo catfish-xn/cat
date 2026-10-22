@@ -1,6 +1,71 @@
+## 开局奇遇 PR2 + PR4 集成（2026-10-22）
+
+当前配置身份为 `opening-encounters-14.24b-pr2-pr4-v1`：保留 PR2 四种强化约束、两种锻造器及其独立子流，同时保留 PR4 魔像训练师接口与校验；魔像仍关闭且不创建纹章子流。下方 PR2、PR4 为当前合同，PR1 为框架历史说明，冲突处以本集成合同为准。rules/content 沿用未发布 v21，schema/save/replay/command=12/8/5/5；未录制 epoch，留 PR9 统一验收。
+
+合并后双摘要：CONTENT=`fnv1a32-utf16:747de4ce`，LOOT_REPLAY=`fnv1a32-utf16:61adb084`；用仓库既有 `node scripts/update-content-identities.cjs --write` 离线生成，再以 `--check` 核验。各独立 PR 报告中的旧摘要仅记录当时交付身份。
+
+## 开局奇遇 PR2：强化约束与 1-2 锻造器（2026-10-22）
+
+本节覆盖下方 PR1 中“15 项关闭、facts/receipts 为空、apply 无效果”的历史描述。按用户批准方案第3、4、6、9节实现；14.24b、不联网、不补造缺证数值。配置身份为 `opening-encounters-14.24b-pr2-pr4-v1`；沿用未发布的 v21 rules/content、schema12/save8/replay5/command5，重算双 digest，不录制 epoch，PR9 统一录制。
+
+| enabled=true 的新增结果 | 效果 |
+| --- | --- |
+| `golden-gala`（范德尔） | 2-1／3-2／4-2 全 gold |
+| `prismatic-party`（艾克） | 三节点全 prismatic |
+| `prismatic-prelude`（黑默丁格） | 2-1 强制 prismatic |
+| `prismatic-finale`（黑默丁格） | 4-2 强制 prismatic |
+| `component-anvils`（蔚） | 1-2 每席两个基础装备锻造器，依次选择 |
+| `artifact-anvil`（杰斯） | 1-2 每席一个神器锻造器 |
+
+其余9项效果保持关闭（none 仍启用且无附加规则）；16项抽选顺序、权重合计10000及所有原始 null 不变。未强制强化节点沿现有等权 `deriveAugmentTier(rootSeed, choiceId)` 项目约定，允许棱彩；不是已核实的历史条件分布。四种强化只覆盖正常三节点，初抽、逐槽换牌、本人按钮和恢复重演共用 `resolveAugmentTier`。候选仍使用各席既有 `choiceRngState`，初抽3词、换牌1词；不额外消费这个流。排除已持有、永久移除和换牌时当前候选；这六项调研中的强化禁用引用均为空，不编造新增互斥组，也不启用魔像/沃里克的关闭效果。初抽少于3项、换牌没有候选均失败，不降档、不跨档、不重置排除记录。
+
+新增随机子流仅为 `opening-encounter-v1/seat/<seatId>/anvil/<index>`：单人 seatId=`solo`，联机为真实 seatId；index从0起。根 seed 单人取 `state.seed`，共享取已绑定 `state.augmentTierSeed=pool.seed`。对完整流名做 UTF-16 FNV-1a32，seed XOR hash 后 uint32，lcg32-v1 连取4词；对排序后的现有 G24 组件/神器池执行前4步 Fisher–Yates，`j=i+word%(pool.length-i)`。每个锻造器内4项不同，锻造器之间及与已持有装备不互斥；独立抽样不保证不同锻造器结果绝不重复。不读写商店、强化候选、奖励、PvE掉落、装备、战斗或选秀 RNG。没有新增 shared 或 display 随机流；未来第二个锻造器的候选不投影。
+
+生命周期与凭据：
+
+- `createMatch` 在首次准备返回前应用；`initializeSharedSeat` 在原始开局准入、多人绑定完成后立即应用，正常/选秀开局相同，八席/机器人相同数量。shared-deferred 状态不授予；共享调用方不需要再次发奖。
+- `planOpeningRound(context,'1-2')` 返回固定事实列表；其他合法目录轮次返回空列表。PR2 没有可变全局随机结果，返回的 context 原引用及其 facts=[] 保持不变；重复规划结果相同。
+- 强化策略有一个 `effectKey='augment-policy'` 的激活收据；组件分别是 `anvil/0`、`anvil/1`，神器是 `anvil/0`；nodeId均为1-2。它们是独立 `openingEncounter.receipts`，不是 PvE loot.receipts，也不放进 G23 奖励箱。
+- 实例标记为对 `opening-instance/<rootSeed>` 做 FNV-1a32 后的8位小写hex（非身份凭证）；`factId=JSON(['opening-effect',configVersion,instanceTag,encounterId,effectKey,'1-2'])`，`receiptId=JSON(['opening-receipt',factId,seatId])`。收据字段形状仍是 `{receiptId,factId,seatId,nodeId}`；原始seed/RNG不进入投影或选择ID。
+- 每个新收据发 `MatchEvent {type:'openingEffectApplied',receipt}`，普通 match 事件序号递增；首个锻造器另发既有 `choiceOpened`。`applyOpeningEffects` 返回事件已盖章；initializeSharedSeat原样返回，调用者不可重复盖章。
+- 锻造器选择 `choiceId=receiptId`、`kind='forge'`、`payload.source='opening-encounter'`、`timeoutOption=offers[0]`，复用既有 `selectChoice` / shared `choose`。物品授予用现有永久物品执行器、mechanic来源资源账本和 `seatMechanics.receipts`；后者记录真实选择、itemId、timedOut。前一选择完成后再开后一选择，优先于其他机制锻造器，不覆盖 pendingChoice。
+- 超时复用 `forfeitPendingChoice` / shared `timeoutChoice`，一次只处理当前选择，默认第一候选；若新选择仍存在，服务端须继续按新choiceId处理。旧choiceId/代次重试原子失败；重复apply返回原state引用、events=[]。
+- 恢复重推绑定、精确效果收据、4候选、选择顺序、默认超时结果及物品来源；不补抽、不补发、不迁移。单人走既有完整资源历史认证；共享快照走 `restoreSharedOrbSnapshot(pool,input)`，另重演强化档位/候选历史。原始context不能替代pool权威或向客户端透传。
+
+公共接口（纯函数，无新网络命令）：
+
+```ts
+// match.ts 新增重导出；原 deriveAugmentTier 保留基础算法语义
+resolveAugmentTier(state: Pick<MatchState,'openingEncounter'|'augmentTierSeed'>,
+  choiceId: string): 'silver'|'gold'|'prismatic'
+readOpeningEncounterProgress(state: MatchState): null | {
+  source: 'opening-encounter'; effectsApplied: number;
+  forgesGranted: number; forgesResolved: number; forgesPending: number;
+}
+// opening-encounter.ts 新增模块导出（领域内部与测试使用）
+openingEncounterId(state: Pick<MatchState,'openingEncounter'>): OpeningEncounterId | null
+pendingOpeningForges(state: MatchState): readonly OpeningEffectReceipt[]
+openingForgeOffers(state: MatchState, receiptId: string): readonly string[]
+openOpeningForge(state: MatchState): {state: MatchState; events: readonly MatchEvent[]}
+validateOpeningForges(state: MatchState): void
+```
+
+既有 `planOpeningRound`、`applyOpeningEffects`、`validateOpeningEncounterState`、`readOpeningEncounterView` 签名不变。`apply` 的 facts 只接受空列表或与所选1-2事实完全相同的列表；有尚未应用的效果时必须在首次1-2准备入口提供完整列表。成功首次应用为新state与事件，完整已应用时为原state与空事件；无效输入返回原state和reason，无events、资源/RNG消耗。`openOpeningForge` 是未盖章内部队列钩子，不是服务器授予命令。`openingForgeOffers` 是私有恢复/规则工具，不可用来提前展示后续候选。新helper没有扩展 `src/server-entry`；本PR权限不含该目录，PR8按需重导出；现有网络流程用已导出的命令和本人投影即可。
+
+| 失败枚举 | PR2 含义 |
+| --- | --- |
+| `opening-config-incomplete` | 配置身份错误或锻造器池不足4项（内容缺证不能替代为部分候选） |
+| `opening-context-mismatch` | 根seed/选择/绑定/激活收据/选择来源及恢复历史不一致 |
+| `invalid-opening-effect` | 非目录节点、伪事实/receiptId、缺少完整事实、错误授予阶段 |
+| `augment-pool-too-small` | nextRound初抽不足3项或rerollAugment过滤后空池，原state且无events |
+| `stale-choice` / `invalid-choice` / `wrong-phase` | 沿用旧选择ID或代次、非法选项、阶段错误；超时也沿用stale-round等既有枚举 |
+| `invalid-pool` / `invalid-seat-state` | 共享池绑定或席位恢复不一致，沿用外层失败；具体校验工具仍可能抛已有RangeError/Error |
+
+`OpeningEncounterFailure` 没有新增成员；不引入“重复领取失败”，正常重复生命周期是成功空操作。公共 openingEncounter 字段形状不变，新增启用项 `effectStatus='active'`、`statusTextZh='本局奇遇效果已启用'`。本人 `toPrivateSeatView` 按需新增 `openingEncounterProgress`（有激活收据才存在），不公开其他席候选、收据或进度；`pendingChoice` 和 `seatMechanics.receipts` 继续承载本人选择/已完成结果。UI字段及接线验收见 UI_REQUESTS 的 PR2 节。
+
 ## 开局奇遇 PR4：魔像训练师关闭接口（2026-10-22）
 
-此节补充 PR1。安蓓萨 `trainer-golems` 仍为 **enabled=false**、`readiness=blocked-evidence`，保留400 Bps（4%）抽选资格；本 PR 没有新增可运行奇遇。依据只读调研 `encounters[9]`（D01–D03、14.24 排除金色炊具说明）和批准方案 §§3、4、6、9：可确认每席1只魔像、3个永久纹章；各席独立、三个不同、首轮1-2授予是批准项目约定。完整纹章池、魔像定义/属性/成长、人口以及出生/移动规则缺证，不能借用亡灵战神、锻炉、虚空生物或野怪魔像的参数。
+此节补充 PR1 与上方 PR2；关闭约束仅针对魔像训练师，不影响 PR2 已启用的六项效果。安蓓萨 `trainer-golems` 仍为 **enabled=false**、`readiness=blocked-evidence`，保留400 Bps（4%）抽选资格；本 PR 没有新增可运行奇遇。依据只读调研 `encounters[9]`（D01–D03、14.24 排除金色炊具说明）和批准方案 §§3、4、6、9：可确认每席1只魔像、3个永久纹章；各席独立、三个不同、首轮1-2授予是批准项目约定。完整纹章池、魔像定义/属性/成长、人口以及出生/移动规则缺证，不能借用亡灵战神、锻炉、虚空生物或野怪魔像的参数。
 
 新增公共导出位于 `src/simulation/trainer-golems.ts`，由 `src/simulation/match.ts` 重导出；**本 PR 未修改 server-entry 或网络接口**。PR8 如需使用，由边界维护方添加重导出。既有 PR1 的 `planOpeningRound/applyOpeningEffects/readOpeningEncounterView` 继续直接可用。
 
@@ -19,21 +84,21 @@ applyTrainerGolemsOpening(state: MatchState, shared?: OpeningEncounterContext): 
 
 `validateTrainerGolemEmblems` 仅校验恰好三个字符串、均为 `EMBLEM_ITEMS` 自有定义、物品ID和 `emblemTrait` 各不相同，返回冻结且脱离输入的三元组。拒绝重复、空洞、非纹章、原型属性及未知ID。**通过不代表来自真实奇遇池，也不认证采样、永久附着或授予来源**；不得据此发装备、额外羁绊或生成魔像。现有纹章包含 `approved-provisional` 项目数值，不能视为完整原版池。
 
-`applyTrainerGolemsOpening` 是显式授予准入接口：先验证当前上下文/席位绑定，再检查选中ID，最后因核心参数与执行器未就绪拒绝；没有接受外部配置/候选/收据的通道。正常生命周期仍使用 `applyOpeningEffects(state, [])` 成功返回原state和空events；不要在开局路径调用该显式失败接口阻断对局。
+`applyTrainerGolemsOpening` 是显式授予准入接口：先验证当前上下文/席位绑定，再检查选中ID，最后因核心参数与执行器未就绪拒绝；没有接受外部配置/候选/收据的通道。选中魔像训练师时，正常生命周期仍使用 `applyOpeningEffects(state, [])` 成功返回原state和空events；不要在开局路径调用该显式失败接口阻断对局。
 
 | 失败原因（沿用枚举，不增加协议项） | 条件与行为 |
 | --- | --- |
 | `opening-context-mismatch` | 显式授予时上下文/收据不合法、shared-deferred未绑定、缺少或传错共享上下文；返回失败 |
-| `invalid-opening-effect` | 显式授予时选中的不是trainer-golems；或三元组校验失败（校验抛OpeningEncounterError）；通用apply拒绝所有伪造非空facts |
+| `invalid-opening-effect` | 显式授予时选中的不是trainer-golems；或三元组校验失败（校验抛OpeningEncounterError）；魔像训练师上下文的通用apply拒绝所有非空facts；PR2合法效果按上方合同接受 |
 | `opening-config-incomplete` | 显式授予遇到有效trainer-golems上下文仍拒绝；或通用配置校验收到启用标志、补造参数等非当前完整配置 |
 
 所有失败保持原state引用、无events，不扣工具、不推进任何RNG、不产生事实或成功收据。反复调用与恢复后调用同样拒绝，不用“已领取”假收据冒充幂等。`opening-effect-already-applied` 本 PR 未新增。共享快照伪造仍沿用 `invalid-pool/invalid-seat-state`；离线伪造奇遇仍报 `Invalid Match save: opening-context-mismatch`。普通准备/战斗恢复继续执行既有单位定义校验与策略重编译，关闭状态不接收魔像注入。
 
-预留 `opening-encounter-v1/seat/<seatId>/trainer-golems/emblems`，**未创建、未抽取子流，无新增随机消耗**；采样池和算法需补证/冻结后实现。未来真实效果必须独立收据（包含奇遇实例、effectKey、seatId、节点），与资源来源原子提交；本 PR facts/receipts仍为空。
+预留 `opening-encounter-v1/seat/<seatId>/trainer-golems/emblems`，**未创建、未抽取子流，无新增随机消耗**；采样池和算法需补证/冻结后实现。未来真实效果必须独立收据（包含奇遇实例、effectKey、seatId、节点），与资源来源原子提交；魔像训练师的 facts/receipts 仍为空；PR2 激活/锻造器收据按上方合同保留。
 
 尚未实现：真实魔像三纹章羁绊、人口/移动、禁售与永久装备防拆卸/重铸/复制/额外装备、强化初抽/换牌禁用以及带魔像的恢复重编译。现有召唤物 `sellable/countsTowardPopulation`、纹章成员投影可复用，但拆卸/重铸不会自动识别永久纹章，不能直接挂三个普通ItemInstance。关闭状态不局部过滤金色炊具/Portal引用（其中有效映射有 `built-different`），也不新增历史强化。
 
-公共视图沿用PR1全部字段，没有新增seed、候选或工具字段；必须同时展示 `encounterId/nameZh/champion` 与 `enabled=false/readiness/statusTextZh`，`revealedFacts=[]`，不得将说明当作已授予。界面不生成占人口的假魔像。配置身份更新为 `opening-encounters-14.24b-pr4-v1`，`OPENING_ENCOUNTER_CONFIG.trainerGolems` 和四个缺口纳入既有manifest及双digest。沿用未发布v21 rules/content、schema/save=12/8、replay/command=5/5；未增加持久化结构/命令，不录epoch，不修改旧golden。当前摘要及验证结果见 [PR4报告](OPENING_ENCOUNTERS_PR4_REPORT.md)。
+魔像训练师的公共视图沿用PR1全部字段，没有新增seed、候选或工具字段；必须同时展示 `encounterId/nameZh/champion` 与 `enabled=false/readiness/statusTextZh`，`revealedFacts=[]`，不得将说明当作已授予。界面不生成占人口的假魔像。配置身份更新为 `opening-encounters-14.24b-pr2-pr4-v1`，`OPENING_ENCOUNTER_CONFIG.trainerGolems` 和四个缺口纳入既有manifest及双digest。沿用未发布v21 rules/content、schema/save=12/8、replay/command=5/5；未增加持久化结构/命令，不录epoch，不修改旧golden。PR4 独立交付摘要及验证结果见 [PR4报告](OPENING_ENCOUNTERS_PR4_REPORT.md)；合并身份与当前摘要以上方集成说明为准。
 
 ## 开局奇遇 PR1：规则框架（2026-10-22，开发身份，尚未录制 epoch）
 
