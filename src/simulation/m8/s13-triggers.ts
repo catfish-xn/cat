@@ -9,8 +9,10 @@ type TriggerInput = TriggerContext extends infer T ? T extends TriggerContext ? 
 export function hasMechanismSubscriber(units: AbilityContext['units'], event: Trigger): boolean {
   return units.some(u => u.mechanismDefinitions?.eventTriggers?.some(d => d.event === event || d.counters.some(c => c.events.some(e => e.event === event))));
 }
-export function emitMechanismSignal(ctx: AbilityContext, context: TriggerInput, facts: ResolutionFacts = EMPTY_FACTS, aggregation: TriggerSignal['aggregation'] = 'event'): void {
+export function emitMechanismSignal(ctx: AbilityContext, context: TriggerInput, facts: ResolutionFacts = EMPTY_FACTS, aggregation: TriggerSignal['aggregation'] = 'event', onlyItemSources?: ReadonlySet<string>): void {
   if (!hasMechanismSubscriber(ctx.units, context.event)) return;
+  if (onlyItemSources && !ctx.units.some(u => u.mechanismDefinitions?.eventTriggers?.some(d =>
+    d.source.sourceKind === 'item' && onlyItemSources.has(d.source.instanceId) && d.event === context.event))) return;
   const signal: TriggerSignal = {context:{...context,eventSeq:ctx.nextTriggerEventSeq ?? 0},facts,aggregation};
   ctx.nextTriggerEventSeq=(ctx.nextTriggerEventSeq ?? 0)+1;
   const invocations=[];
@@ -21,7 +23,7 @@ export function emitMechanismSignal(ctx: AbilityContext, context: TriggerInput, 
     hp: ctx.virtualHp?.get(u.id) ?? u.hp, maxHp: u.maxHp, alive: u.alive,
     startingRows: startingRows(u.team, u.startingCell?.row ?? u.cell.row) ?? undefined }));
   for(const holder of ctx.units) {
-    const definitions=holder.mechanismDefinitions?.eventTriggers ?? [];if(!definitions.length) continue;
+    const definitions=(holder.mechanismDefinitions?.eventTriggers ?? []).filter(d => !onlyItemSources || d.source.sourceKind === 'item' && onlyItemSources.has(d.source.instanceId));if(!definitions.length) continue;
     const result=dispatchTriggers(ctx.combatId ?? 'standalone',definitions,holder.triggerLedger ?? EMPTY_TRIGGER_LEDGER,signal,samples,(d,s)=>{
       return selectMechanismTargets(holder, ctx.units, d.selector, undefined, d.source, {
         board: ctx.board, tick: ctx.tick, eventActorId: s.context.actorId, eventTargetId: s.context.targetId,

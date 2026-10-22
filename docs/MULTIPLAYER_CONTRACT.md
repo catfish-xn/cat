@@ -1,3 +1,7 @@
+## 战斗装备阶段 2（2026-10-22，候选身份；未录制 epoch）
+
+已实现下一未封口 tick 安装、属性/装备程序重编译、PvE/PvP 私有成功日志与来源凭据、重放和恢复；本节覆盖历史 T12 下场生效及 #382 的 `battle-input-unsupported`。命令、完整签名、失败原因、羁绊冻结依据、服务器原子边界、UI 字段及待集成身份见 [LIVE_COMBAT_EQUIPMENT_PHASE2](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。当前工作树采用候选 `v20-battle-equipment`，正式历史 epoch 仍为下节 black-market，须与开局奇遇一起录制后发布。
+
 ## v20-black-market 当前正式 epoch（2026-10-22）
 
 父 epoch `v20-live-combat`，基线 `42d8a404`。rules/content=`s13-g2-3-v20-black-market` / `s13-14.24b-g2-3-v20-black-market`，CONTENT=`fnv1a32-utf16:9a83da50`、LOOT_REPLAY=`fnv1a32-utf16:e0eb43e2`；schema/save/replay/command **11/7/5/5**、NET6 不变，旧身份严格拒绝、无迁移。
@@ -1962,7 +1966,7 @@ PvP 使用现有 SideProposal / 唯一结算收据。统一规划并原子提交
 
 战斗中允许买、卖备战席单位和刷新，利息按最终结算时的权威金币计算；PvP 沿用胜利金币先计入 interestBasis 的次序，不冻结开战金币。
 
-第 2 阶段 `applyBattleEquipment` 尚未实现，装备仍只改变资产；挂点为 `Room.nextBattleInputTick`（下一未封口边界）、
+以下为 #382 阶段 1 的历史约定，阶段 2 已由 [实时装备合同](LIVE_COMBAT_EQUIPMENT_PHASE2.md) 覆盖。原挂点为 `Room.nextBattleInputTick`（下一未封口边界）、
 `CombatStream.nextEffectiveTick`（该场下一步）和规则层 `BattleReplayOptions.beforeTick(effectiveTick:number):readonly BattleTickInput[]`。
 该回调在 `advance(n)` 内每个 tick 以及 `advanceTick()` 前执行，`startLiveTask(envelope,beforeTick?)` / `CombatStream(envelope,pve?,beforeTick?)` 向原 PvP 任务传递。
 `BattleTickInput = BattleEquipmentInput`，字段 `{kind:'equipment',seq:number,effectiveTick:number,seatId:string,itemId:string,unitId:string,slot:number}`；

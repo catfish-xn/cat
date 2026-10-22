@@ -69,3 +69,7 @@ export { previewRoundEconomy } from '../simulation/economy-preview';
 export type { RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../simulation/economy-preview';
 export { summarizeBattle } from '../simulation/combat-summary';
 export type { UnitBattleSummary } from '../simulation/combat-summary';
+
+export { applyBattleEquipment } from '../simulation/battle-equipment';
+export type { BattleEquipmentReceipt, BattleEquipmentFailure } from '../simulation/battle-equipment';
+export { queueMatchBattleEquipment } from '../simulation/match';

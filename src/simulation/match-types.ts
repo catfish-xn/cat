@@ -79,7 +79,7 @@ export type MatchState = MatchBase & (
   | { readonly phase: 'combat'; readonly combat: RunningCombat }
   | { readonly phase: 'settlement' | 'gameOver'; readonly combat: FinishedCombat | null }
 );
-export type MatchFailure = DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
+export type MatchFailure = import('./battle-equipment').BattleEquipmentFailure | DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'
   | 'stale-choice' | 'invalid-choice' | 'invalid-target' | 'augment-rerolls-exhausted' | 'augment-pool-too-small'
   | import('./m8/ui-contracts').EquipmentFailure | import('./consumable-types').ConsumableFailure

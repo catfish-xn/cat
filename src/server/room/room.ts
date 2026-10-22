@@ -156,7 +156,7 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'reroll': return rerollSharedShop(pool, state, state.shop.generation);
     case 'buyXp': return plain(buyXp(state));
     case 'combine': return plain(combineItems(state, command.a, command.b));
-    case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot));
+    case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot, { deferBattleEquipment: true }));
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
     case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
     // v15: one card of the offer (optionIndex); the rules' shared-pool transaction, like every other choice command.
@@ -269,6 +269,7 @@ export class Room {
   private resolution: Resolution | null = null;
   private readonly streams = new Map<string, CombatStream>();
   private streamBoundary: string[] = [];
+  private battleEquipmentSeq = 0;
   private streamTick = 0;
   private streamSealedTick = 0;
   private streamCatchUp = 0;
@@ -482,9 +483,22 @@ export class Room {
     let live: LiveCatchUp | null = null;
     try { live = phase === 'battle' ? this.pveCatchUp(seat) : null; }
     catch (error) { this.failLive(seatId, error); return { ok: false, reason: 'wrong-phase', state: seat.match }; }
-    const applied = applySeatCommand(live?.pool ?? this.current.pool, live?.state ?? seat.match, command);
+    let applied = applySeatCommand(live?.pool ?? this.current.pool, live?.state ?? seat.match, command);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
     if (!applied.ok) return { ok: false, reason: applied.reason, state: seat.match };
+    if (command.type === 'equip' && phase === 'battle') {
+      const stream = [...this.streams.values()].find(s => s.envelope.seats.some(p => p.seatId === seatId));
+      if (stream && !stream.done && seat.match.preparation.units.some(u => u.id === command.unitId && u.location.kind === 'board')) {
+        const effectiveTick = this.nextBattleInputTick;
+        if (effectiveTick === null || effectiveTick !== stream.nextEffectiveTick) return { ok: false, reason: 'wrong-phase', state: seat.match };
+        try {
+          const staged = stream.queueEquipment({ kind: 'equipment', seq: this.battleEquipmentSeq + 1, effectiveTick, seatId,
+            itemId: command.itemId, unitId: command.unitId, slot: command.slot }, seat.match, applied.state);
+          applied = { ...applied, state: staged };
+        } catch (error) { return { ok: false, reason: error instanceof Error && error.message === 'battle-unit-unavailable' ? 'battle-unit-unavailable' : 'battle-input-invalid', state: seat.match }; }
+        this.battleEquipmentSeq++;
+      }
+    }
     if (live) this.livePve.get(seatId)!.commit(live.steps);
     const operated = live?.events.length ? { ...applied, events: [...live.events, ...applied.events] } : applied;
     // P7-1: a command that may have freed a bench slot or a board place (sell, deploy, buyXp, …) lets the rules move held

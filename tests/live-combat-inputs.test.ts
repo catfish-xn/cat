@@ -109,12 +109,12 @@ describe('v20-black-market live tick determinism and phase-2 input seam', () => 
     expect(offers, json({prefix: prefix.chem, facts: oldProposals.map(p => p.g23Facts)})).toBeGreaterThan(0);
   }, 60_000);
 
-  it('rejects nonempty input before stepping, does not log a fictitious success, and can retry the same tick', () => {
+  it('rejects unauthenticated input before stepping, does not log a fictitious success, and can retry the same tick', () => {
     const { input } = inputs(42), visited: number[] = [];
     const equipment: BattleTickInput = { kind: 'equipment', seq: 1, effectiveTick: 1, seatId: 'a', itemId: 'item-1', unitId: 'unit-1', slot: 0 };
     let pending: readonly BattleTickInput[] = [equipment];
     const task = startTwoSidedBattle(input, { captureReplay: true, beforeTick: tick => { visited.push(tick); return pending; } });
-    expect(() => task.advanceTick()).toThrow('battle-input-unsupported');
+    expect(() => task.advanceTick()).toThrow('battle-input-invalid');
     expect(task.replay()).toBeNull();
     pending = [];
     expect(task.advanceTick().frame!.tick).toBe(1);
@@ -124,8 +124,8 @@ describe('v20-black-market live tick determinism and phase-2 input seam', () => 
     expect(json(result)).toBe(json(resolveTwoSidedBattle(input, 1201)));
     for (const inputLog of [[equipment], null, {}]) {
       const forged = { ...result, inputLog } as typeof result;
-      expect(() => proposeSettlement(forged)).toThrow('battle-input-unsupported');
-      expect(() => startCombatReplay(forged)).toThrow('battle-input-unsupported');
+      expect(() => proposeSettlement(forged)).toThrow('battle-input-invalid');
+      expect(() => startCombatReplay(forged)).toThrow('battle-input-invalid');
     }
   });
 });
