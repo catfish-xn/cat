@@ -218,16 +218,9 @@ interface Connection {
   /** The seat this connection watches (`watch`) and the battle of it last pushed as `watch-replay`. */
   sentWatch: { readonly key: string; readonly battle: BattleResult; readonly replay: CombatReplay } | null;
   closeHandle: ClockHandle | null;
-  /** Real-time grace check started when the outbound queue first exceeded the soft cap. */
-  backpressureTimer: ReturnType<typeof setTimeout> | null;
-  /** Messages the socket finished writing; a backpressured peer must keep accepting them. */
-  flushed: number;
   /** Clock time of the last pong or message from the peer (heartbeat). */
   lastSeen: number;
 }
-
-/** A peer above SOFT that accepts nothing over two real-time GRACE checks (or whose queue ever exceeds HARD) is dropped; its seat stays. */
-export const BACKPRESSURE = { softBytes: 1_048_576, hardBytes: 16_777_216, graceMs: 1_000 } as const;
 
 const fail = (commandId: number, reason: ReceiptFailure, detail: string | null = null): ReceiptMessage => ({ type: 'receipt', commandId, ok: false, reason, detail });
 const done = (commandId: number, result: ReceiptResult): ReceiptMessage => ({ type: 'receipt', commandId, ok: true, result });
@@ -288,10 +281,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   };
   const resolver = options.resolver ?? new TwoSidedBattleResolver(new PlaceholderBattleResolver({ captureReplay }), { captureReplay });
   const sliceTicks = options.sliceTicks ?? DEFAULT_SLICE_TICKS;
+  const combatStreaming = options.combatStreaming ?? options.resolver === undefined;
   const sliceMs = options.sliceMs === null ? null : options.sliceMs ?? DEFAULT_SLICE_MS;
   const spotCheckEvery = options.spotCheckEveryRounds ?? SPOT_CHECK_EVERY_ROUNDS;
   const lobby = new Lobby({
-    clock: roomClock, sliceTicks, combatStreaming: options.combatStreaming ?? options.resolver === undefined,
+    clock: roomClock, sliceTicks, combatStreaming,
     ...(sliceMs === null ? {} : { sliceMs }), seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
@@ -312,29 +306,12 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   function send(conn: Connection, message: ServerMessage): void {
     if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
     // Never await a slow peer or keep an unbounded socket queue. Its seat resumes from the committed stream.
-    // One synchronous burst (a catch-up, or a manual clock) may briefly exceed the soft cap before the event loop
-    // flushes it; only a queue that is still above it after the real-time grace, or above the hard cap, is a slow peer.
-    if (conn.socket.bufferedAmount > BACKPRESSURE.hardBytes) return dropSlow(conn);
-    try { conn.socket.send(JSON.stringify(message), error => { if (!error) conn.flushed++; }); } catch { conn.socket.terminate(); return; }
-    if (conn.backpressureTimer === null && conn.socket.bufferedAmount > BACKPRESSURE.softBytes) watchBackpressure(conn, conn.flushed);
-  }
-  /**
-   * Between grace checks the peer must accept at least one queued message. A long synchronous burst (a catch-up, or a
-   * manual clock) can delay a check past the grace with no I/O in between, so only two stalled checks in a row drop it.
-   */
-  function watchBackpressure(conn: Connection, baseline: number, stalled = 0): void {
-    conn.backpressureTimer = setTimeout(() => {
-      conn.backpressureTimer = null;
-      if (!conn.open || conn.socket.bufferedAmount <= BACKPRESSURE.softBytes) return;
-      if (conn.flushed > baseline) watchBackpressure(conn, conn.flushed);
-      else if (stalled >= 1) dropSlow(conn);
-      else watchBackpressure(conn, baseline, stalled + 1);
-    }, BACKPRESSURE.graceMs);
-    conn.backpressureTimer.unref?.();
-  }
-  function dropSlow(conn: Connection): void {
-    log('warn', 'connection.backpressure', { connection: conn.id, seatId: conn.session?.seatId, bufferedAmount: conn.socket.bufferedAmount });
-    conn.socket.terminate();
+    // Only streamed rooms have that stream; the legacy replay path keeps its unbounded queue as before NET6.
+    if (combatStreaming && conn.socket.bufferedAmount > 1_048_576) {
+      log('warn', 'connection.backpressure', { connection: conn.id, seatId: conn.session?.seatId, bufferedAmount: conn.socket.bufferedAmount });
+      conn.socket.terminate(); return;
+    }
+    try { conn.socket.send(JSON.stringify(message)); } catch { conn.socket.terminate(); }
   }
   function sendError(conn: Connection, code: ErrorCode, message: string, commandId: number | null = null): void {
     send(conn, { type: 'error', code, message, commandId });
@@ -772,7 +749,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       case 'start': return handleStart(conn, message);
       case 'resume': return handleResume(conn, message);
       case 'watch': {
-        if (!(options.combatStreaming ?? options.resolver === undefined)) return handleWatch(conn, message);
+        if (!combatStreaming) return handleWatch(conn, message);
         if (!conn.session || conn.epoch !== conn.session.connectionEpoch) return send(conn, fail(message.commandId, 'not-authenticated'));
         if (!room || conn.session.roomId !== room.state.roomId) return send(conn, fail(message.commandId, 'no-room'));
         if (message.roomId !== room.state.roomId) return send(conn, fail(message.commandId, 'wrong-room'));
@@ -834,7 +811,6 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     if (!conn.open) return;
     conn.open = false;
     if (conn.closeHandle !== null) { clock.cancel(conn.closeHandle); conn.closeHandle = null; }
-    if (conn.backpressureTimer !== null) { clearTimeout(conn.backpressureTimer); conn.backpressureTimer = null; }
     connections.delete(conn.id);
     const session = conn.session;
     if (session && session.connection === conn) {
@@ -853,7 +829,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   function onConnection(socket: WebSocket): void {
     if (closing) { socket.close(CLOSE_CODES.serverClosing, 'server closing'); return; }
-    const conn: Connection = { id: nextConnectionId++, socket, session: null, retiredSession: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', watchSeatId: null, streamCursor: null, watchCursor: null, sentCombat: null, sentWatch: null, closeHandle: null, backpressureTimer: null, flushed: 0, lastSeen: clock.now() };
+    const conn: Connection = { id: nextConnectionId++, socket, session: null, retiredSession: null, epoch: 0, open: true, windowStart: clock.now(), windowCount: 0, sentRoomRevision: -1, sentSeatRevision: -1, sentCombatKey: '', watchSeatId: null, streamCursor: null, watchCursor: null, sentCombat: null, sentWatch: null, closeHandle: null, lastSeen: clock.now() };
     connections.set(conn.id, conn);
     socket.on('message', (data, isBinary) => queue.push(() => onMessage(conn, data, isBinary)));
     socket.on('pong', () => { conn.lastSeen = clock.now(); });
@@ -984,7 +960,6 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
           for (const conn of connections.values()) {
             // onClose skips a connection marked closed, so a pending superseded close is cancelled here.
             if (conn.closeHandle !== null) { clock.cancel(conn.closeHandle); conn.closeHandle = null; }
-            if (conn.backpressureTimer !== null) { clearTimeout(conn.backpressureTimer); conn.backpressureTimer = null; }
             conn.open = false; conn.socket.close(CLOSE_CODES.serverClosing, 'server closing');
           }
           unsubscribeRoom?.(); unsubscribeRoom = null;

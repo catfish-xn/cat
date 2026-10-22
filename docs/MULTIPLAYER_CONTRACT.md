@@ -1929,7 +1929,7 @@ open/end 以及 chunk 内每条增量均带 `{roomId,round,battleId,revision,sea
 `resume` 可带本人 `combat:{battleId,revision,nextTick,seatId}`、观战 `watchCombat:{...}` 以及 `watchSeatId:string|null`。
 两条游标独立校验、独立续传。本人 cursor.seatId 必须等于凭证席位；观战 cursor.seatId 必须等于订阅席位；显式 null 停止观战。
 匹配当前源且 `1<=nextTick<=已录帧数` 时只发送缺失后缀及 end；游标不匹配时重发最近关键帧及尾段。未完成整拍时等整拍封口后推送。
-断线/慢客户端不暂停战斗；每连接 bufferedAmount 超过 1MiB 后按真实时间每 1s 检查一次，连续两次检查期间对端一条消息都没收走，或积压任何时候超过 16MiB，即记录 `warn connection.backpressure`（连接、席位、积压字节）并断开保留席位。一次同步突发（追帧、手动时钟）短暂超过 1MiB 不断开。
+断线/慢客户端不暂停战斗；流式房间中每连接 bufferedAmount 超过 1MiB 即记录 `warn connection.backpressure`（连接、席位、积压字节）并断开保留席位。显式注入旧 resolver 的整段 replay 路径没有可续传的流，保持 NET6 之前的不设上限。
 客户端丢弃旧 battle/revision、重复 chunk/end；任一流发现缺口后用两条保留游标重连。游标不能结算或改写战斗，也不能读取他人私有 state。
 
 #376 的观战接线沿用 `ClientListeners.watched(seatId,replay)` → `RemoteSession.watchReplay`，本人仍走 replay/replayRevised。

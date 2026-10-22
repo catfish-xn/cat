@@ -180,8 +180,8 @@ it('reuses a terminal settlement plan, and replans only when a tail operation ch
   const { vi } = await import('vitest');
   for (const change of [false, true]) {
     const { room, clock } = fixture(42);
-    const seam = room as unknown as { planStreamSettlement: () => unknown };
-    const spy = vi.spyOn(seam, 'planStreamSettlement');
+    const seam = room as unknown as { planStreamSteps: () => unknown };
+    const spy = vi.spyOn(seam, 'planStreamSteps');
     try {
       runUntil(room, clock, s => s.battles.length > 0, 20_000);
       expect(spy).toHaveBeenCalledTimes(1);
