@@ -1,3 +1,4 @@
+import { deferredRoundIncome } from '../src/simulation/deferred-income';
 import { G23_CATALOG as G2_CATALOG } from './fixtures/g2-3-roster';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
@@ -163,7 +164,8 @@ describe('match session commands and fixed clock', () => {
     const session = new MatchSession(emptyBoard());
     expect(session.startFailure).toBeUndefined(); expect(session.start().ok).toBe(true);
     expect(session.phase).toBe('settlement'); expect(session.combat?.tick).toBe(0);
-    expect(session.state).toMatchObject({ gold: 2, playerHp: 97, level:2, xp: 0 });
+    // Round income is paid at the next round entry (deferred-income.ts).
+    expect(session.state).toMatchObject({ gold: 2 - deferredRoundIncome(session.state.roundResults.at(-1)!), playerHp: 97, level:2, xp: 0 });
     const settled = session.state;
     rejected(session, session.start(), 'wrong-phase', settled);
     expect(session.advance(60_000)).toEqual([]); expect(session.state).toBe(settled);
@@ -186,7 +188,7 @@ describe('match session commands and fixed clock', () => {
     const expectedRoster = roster;
     for (let round = 2; round <= 6; round++) {
       if(session.phase === 'preparation') { expect(session.start().ok).toBe(true); session.advance(60_025); }
-      expect(session.state.roundResults.at(-1)?.goldAfter).toBe(session.state.gold);
+      expect(session.state.roundResults.at(-1)!.goldAfter - deferredRoundIncome(session.state.roundResults.at(-1)!)).toBe(session.state.gold);
       expect(session.state.roundResults).toHaveLength(round);
       expect(players(session.state)).toEqual(expectedRoster);
       expect(session.state.m8.loot.receipts.filter(receipt => receipt.payload.kind === 'unit')).toEqual([]);

@@ -49,7 +49,8 @@ describe('B6 installed round, opening and restore transactions',()=>{
       roundTrip(state);
       const frozen=structuredClone(state.m8);
       state=concede(state);
-      expect(state).toMatchObject({phase:'settlement',gold:expected.gold,level:expected.level,xp:expected.id==='1-4'?2:0,playerHp:expected.hp,streak:{kind:null,count:0}});
+      // Round income is paid at the next round entry (deferred-income.ts): settlement still shows the previous gold.
+      expect(state).toMatchObject({phase:'settlement',gold:expected.gold-expected.base,level:expected.level,xp:expected.id==='1-4'?2:0,playerHp:expected.hp,streak:{kind:null,count:0}});
       expect(state.m8).toEqual({...frozen,loot:{...frozen.loot,
         direct:frozen.loot.direct.map(drop=>({...drop,status:'forfeited'})),
         choiceEligibility:frozen.loot.choiceEligibility.map(choice=>({...choice,status:'forfeited'})),
@@ -59,6 +60,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
       expect(stepMatch(state)).toEqual({state,events:[]}); expect(stepMatch(state).state).toBe(state);
       const old=state;
       state=accepted(nextRound(state,state.round));
+      expect(state.gold).toBe(expected.gold);
       const duplicate=nextRound(state,old.round);
       expect(duplicate).toEqual({ok:false,state,reason:'wrong-phase'});expect(duplicate.state).toBe(state);
       roundTrip(state);
