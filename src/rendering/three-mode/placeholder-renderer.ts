@@ -35,6 +35,8 @@ import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelope
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
+import { createModelRetention, releaseAfterUpload } from './model-memory';
+import { isLegendModel } from './legend-load';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -133,6 +135,10 @@ export function useAssetProgress(next: (text: string, fraction: number | null) =
 // Injected the same way: models a game is likely to show first (the cheapest shop tiers), warmed while idle.
 let warmModels: readonly string[] = [];
 export function useWarmModels(next: readonly string[]): void { warmModels = next; }
+// Injected the same way: what the shell does when this renderer's WebGL context was lost and came back (mount a fresh
+// one); each renderer keeps the one set when it mounted.
+let contextRestored: (() => void) | null = null;
+export function useContextRestored(next: () => void): void { contextRestored = next; }
 // Injected the same way: the 2D theme's star color (presentation/theme.ts starColor), so 2D and 3D stars match.
 let starColorFor: (level: number) => string = () => '#ffd34d';
 export function useStarColor(next: (level: number) => string): void { starColorFor = next; }
@@ -180,7 +186,14 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
     // Everything under the root goes through the preloader; the cache keeps models it has already decoded.
     let preloader: AssetPreloader | null = null;
     const reader = createAssetReader(renderer, url => preloader!.read(url.slice(assetBase.length)), onModel);
-    const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url));
+    // Once on the GPU a model's CPU-side copies go (model-memory.ts), except little legends: the lobby's legend picker
+    // draws those with a renderer of its own, which uploads them again.
+    const legendUrls = new Set<string>();
+    const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url).then(model => {
+      if (!legendUrls.has(url)) releaseAfterUpload(model.scene);
+      return model;
+    }));
+    for (const [id, entry] of Object.entries(cache.manifest.models)) if (isLegendModel(id)) legendUrls.add(assetUrl(assetBase, entry.path));
     const list = readPrecacheList(await fetchIndex(`${assetBase}precache.json`), cache.manifest);
     // Optional: a root without packs.json (or with one that disagrees with precache) downloads file by file.
     const packs = readPackList(await fetchIndex(`${assetBase}packs.json`), list);
@@ -300,6 +313,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     enemy: own(new MeshStandardMaterial({ color: TEAM_COLOR.enemy, emissive: TEAM_COLOR.enemy, emissiveIntensity: 0.4 })),
   };
 
+  // Every lease on a model goes through the retention (model-memory.ts), so a template nothing shows is let go after a
+  // while; little legends stay (few, and the lobby's picker shares them), and so do the models the room's current warm
+  // hints name (board-feed warmHints: the shop and what comes next), as if leased. An evicted model is no longer warmed:
+  // the next match's warm list reads and uploads it again (its envelope numbers stay).
+  const pinned = (id: string) => isLegendModel(id) || !!feed?.warmHints?.()?.ids.includes(id);
+  const retention = models.cache ? createModelRetention(models.cache, { pinned, onEvict: id => warmup?.forget(id) }) : null;
+  const loadModel = retention ? (id: string) => retention.load(id) : null;
   // Online 选秀 (carousel-stage.ts): its own scene and camera, drawn instead of the board while board-feed carries one.
   // Every effect on this renderer (combat, carousel, tabletop, trait props) reads its files once (effect-library.ts).
   const effects = models.cache && options.assetBase ? createEffectLibrary(models.cache.manifest, options.assetBase, models.reader) : null;
@@ -337,7 +357,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!envelopes.has(id)) envelopes.set(id, envelope);
     return true;
   };
-  const warmup = models.cache ? createModelWarmup({ load: id => models.cache!.load(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
+  const warmup = retention ? createModelWarmup({ load: id => retention.load(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
     upload: uploadModel, prepare: prepareEnvelope, busy: () => !!fighting }) : null;
   const warmList = () => {
     const legends = feed?.legends?.();
@@ -365,7 +385,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return effects.load(id, maxDuration);
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
-    loadModel: models.cache ? id => models.cache!.load(id) : null, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
+    loadModel, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), envelope: (id, lease) => envelopeOf(id, lease),
     loadEffect, starColor: level => starColorFor(level), costColor: cost => costColorFor?.(cost) ?? '#9aa4ae', onReleased: () => flashCallout('可以选了') });
   // One line flashed low in the middle of the 3D view (my carousel release); made on first use, removed with the renderer.
@@ -384,13 +404,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return models.cache && Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
   };
   const tabletop = createTabletop({ scene, camera, championHeight: MODEL_HEIGHT, effectScale: FX_SCALE, own, legendModel,
-    loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? id => models.cache!.load(id) : null,
+    loadModel: models.cache && Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL) ? loadModel : null,
     loadEffect, claimOrb: orbId => feed?.controls()?.claimOrb?.(orbId) });
   // The lobby's 外观 panel (legend-picker.ts) draws the root's legends; offered only while this layer has an asset root.
   const withdrawPicker = models.cache ? offerLegendPicker(feed, models.cache) : () => {};
   // 铁血征服者 chest and 微光 flask on the left of my half (trait-props.ts), from my own counters only.
   const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
-    loadModel: models.cache ? id => Object.hasOwn(models.cache!.manifest.models, id) ? models.cache!.load(id) : Promise.reject(new Error('unknown-model')) : null });
+    loadModel: loadModel ? id => Object.hasOwn(models.cache!.manifest.models, id) ? loadModel(id) : Promise.reject(new Error('unknown-model')) : null });
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
   const VIEW = new Vector3(0, 1.32, 0.98).normalize();
@@ -445,7 +465,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let lastFrame: BoardFrame | null = null;
   const boardEntry = models.cache?.manifest.boards?.[DEFAULT_BOARD];
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
-    () => models.cache!.load(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
+    () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
   let boardKey = '';
   /**
    * The arena's own bench cells (alignment.bench) while the arena is drawn, else null: bench pieces stand there instead
@@ -529,6 +549,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
   const itemTextures = new Map<string, Promise<Texture | null>>();
   let closed = false;
+  // A lost context that comes back cannot re-upload models whose CPU copies were emptied (model-memory.ts): the shell
+  // mounts a fresh renderer instead, which reads them again from the local store.
+  const restored = contextRestored;
+  renderer.domElement.addEventListener('webglcontextrestored', () => { if (!closed) restored?.(); });
   const textureLoader = new TextureLoader();
   const overheadContext = {
     colors: () => meterColors,
@@ -549,7 +573,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // surroundings and effects are hidden meanwhile and the board takes no input.
   const scout = createScoutStage({ scene, championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, pawnHeight: PAWN_HEIGHT, pawnWidth: PAWN_WIDTH,
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), sourceScale: FX_SCALE, envelope: (id, lease) => envelopeOf(id, lease),
-    loadModel: models.cache ? id => models.cache!.load(id) : null, legendModel: legend => {
+    loadModel, legendModel: legend => {
       if (!models.cache || !Object.hasOwn(models.cache.manifest.models, LEGEND_MODEL)) return null;
       const id = legend ? `little-legend-${legend}` : LEGEND_MODEL;
       return Object.hasOwn(models.cache.manifest.models, id) ? id : LEGEND_MODEL;
@@ -580,9 +604,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
-    if (!models.cache) return;
+    if (!loadModel) return;
     const definitionId = view.definitionId;
-    void models.cache.load(definitionId).then(lease => {
+    void loadModel(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
       view.lease = lease;
       if (view.body) view.root.remove(view.body);
@@ -1114,6 +1138,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const fpsLabel = typeof document === 'undefined' ? null : document.createElement('span');
   if (fpsLabel) { fpsLabel.className = 'render3d-fps'; fpsLabel.dataset.debug = 'render3d-fps'; host.append(fpsLabel); }
   let fpsFrames = 0, fpsSince = 0;
+  // Unused models, effect resources and KTX2 workers are let go (model-memory.ts, effect-library.ts, asset-reader.ts),
+  // looked at every few seconds and never during a combat, whose effects come and go too quickly to tell idle.
+  let sweptAt = 0;
+  const SWEEP_MS = 5000;
   // Pieces the board camera cannot see this frame: their skeletons are not posed (the mixer holds the time and catches
   // up when they are seen again). Hidden, off the view, or the board not drawn at all (carousel, scouting).
   const frustum = new Frustum(), viewMatrix = new Matrix4(), bounds = new Sphere();
@@ -1127,6 +1155,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     frameId = requestAnimationFrame(tick);
     if (fpsLabel && ++fpsFrames && now - fpsSince >= 1000) { if (fpsSince) fpsLabel.textContent = `FPS: ${Math.round(fpsFrames * 1000 / (now - fpsSince))}`; fpsFrames = 0; fpsSince = now; }
     followMatch();
+    if (!fighting && now - sweptAt >= SWEEP_MS) { sweptAt = now; retention?.sweep(); effects?.sweep(); models.reader?.trim?.(); }
     const seconds = Math.min(Math.max((now - last) / 1000, 0), 0.25);
     last = now;
     const follow = 1 - Math.exp(-seconds / FOLLOW_SECONDS);
