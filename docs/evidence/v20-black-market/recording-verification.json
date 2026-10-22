@@ -1,0 +1,126 @@
+{
+  "baseCommit": "42d8a4048409dc60e9b1f9647b398cb20e4529af",
+  "steps": [
+    {
+      "name": "record-release",
+      "args": [
+        "scripts/record-v20-black-market-release.cjs",
+        "--baseline-commit=42d8a4048409dc60e9b1f9647b398cb20e4529af"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 124521,
+      "log": "artifacts/v20-black-market-recording/record-release.log"
+    },
+    {
+      "name": "record-herald",
+      "args": [
+        "tests/fixtures/record-v20-black-market-herald.cjs",
+        "--write"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 113246,
+      "log": "artifacts/v20-black-market-recording/record-herald.log"
+    },
+    {
+      "name": "record-inputs",
+      "args": [
+        "scripts/record-v20-black-market-inputs.cjs",
+        "--baseline-commit=42d8a4048409dc60e9b1f9647b398cb20e4529af"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 6186,
+      "log": "artifacts/v20-black-market-recording/record-inputs.log"
+    },
+    {
+      "name": "record-live-reveal",
+      "args": [
+        "scripts/record-v20-black-market-live-reveal.cjs",
+        "--baseline-commit=42d8a4048409dc60e9b1f9647b398cb20e4529af"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 41085,
+      "log": "artifacts/v20-black-market-recording/record-live-reveal.log"
+    },
+    {
+      "name": "record-transfer",
+      "args": [
+        "scripts/record-v20-black-market-transfer.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 13234,
+      "log": "artifacts/v20-black-market-recording/record-transfer.log"
+    },
+    {
+      "name": "check-transfer",
+      "args": [
+        "scripts/record-v20-black-market-transfer.cjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 13769,
+      "log": "artifacts/v20-black-market-recording/check-transfer.log"
+    },
+    {
+      "name": "check-inputs",
+      "args": [
+        "scripts/record-v20-black-market-inputs.cjs",
+        "--baseline-commit=42d8a4048409dc60e9b1f9647b398cb20e4529af",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 6710,
+      "log": "artifacts/v20-black-market-recording/check-inputs.log"
+    },
+    {
+      "name": "check-herald",
+      "args": [
+        "scripts/verify-m8-herald-fixtures.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 114542,
+      "log": "artifacts/v20-black-market-recording/check-herald.log"
+    },
+    {
+      "name": "check-history",
+      "args": [
+        "scripts/v20-black-market-fixture-audit.cjs",
+        "--baseline-commit=42d8a4048409dc60e9b1f9647b398cb20e4529af"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2522,
+      "log": "artifacts/v20-black-market-recording/check-history.log"
+    },
+    {
+      "name": "check-live-reveal",
+      "args": [
+        "scripts/record-v20-black-market-live-reveal.cjs",
+        "--baseline-commit=42d8a4048409dc60e9b1f9647b398cb20e4529af",
+        "--check"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 41592,
+      "log": "artifacts/v20-black-market-recording/check-live-reveal.log"
+    },
+    {
+      "name": "compare-digests",
+      "args": [
+        "scripts/compare-v20-black-market-digests.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3233,
+      "log": "artifacts/v20-black-market-recording/compare-digests.log"
+    }
+  ],
+  "complete": true
+}

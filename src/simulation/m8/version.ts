@@ -6,7 +6,8 @@ export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
 /** B9 formal switch (M8_RULES §10): the one runtime source for the frozen M8 identifiers.
  * contentDigest stays computed from the canonical content (content/index.ts), never hand-written.
- * PR1 development identity: epoch NOT recorded. Rebase on v20-black-market before recording.
+ * Opening encounters candidate: parent epoch v20-black-market (multiplayer 933e0840).
+ * Epoch NOT recorded; PR9 will record the integrated candidate.
  * schema12/save8 add openingEncounter; PR5 replay/command6 add the masterwork armory flow.
  * Old epochs are rejected, never migrated. */
 export const M8_VERSION = {

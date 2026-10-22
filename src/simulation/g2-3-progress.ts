@@ -42,18 +42,13 @@ export function g23WeightedIndex(word:number,weights:readonly number[]):number {
   for(let i=0;i<weights.length;i++){cumulative+=weights[i];if(roll<cumulative)return i;}
   throw new RangeError('Invalid G2-3 weighted pool');
 }
-/** One explicit lcg32-v1 word per candidate, remaining source weights renormalized after each draw. */
+/** One explicit lcg32-v1 word for the entire bundle, using the unchanged source-order weights. */
 export function rollG23BlackMarket(tier:number,rngState:number){
   integer(tier,1);const market=G23_BLACK_MARKETS[tier-1];if(!market)throw new RangeError('Unknown Black Market');
   validateSeed(rngState);
-  const remaining=market.options.filter(o=>o.weightBps>0),options:typeof remaining=[];
-  let state=rngState;
-  while(options.length<G23_POLICY.chemBaron.candidateCount&&remaining.length){
-    const draw=nextRandom(state);state=draw.state;
-    const index=g23WeightedIndex(draw.word,remaining.map(o=>o.weightBps));
-    options.push(remaining.splice(index,1)[0]);
-  }
-  return {rngState:state,draws:options.length,table:market.table,options,...options[0]};
+  const pool=market.options.filter(o=>o.weightBps>0),draw=nextRandom(rngState);
+  const option=pool[g23WeightedIndex(draw.word,pool.map(o=>o.weightBps))];
+  return {rngState:draw.state,draws:1,table:market.table,options:[option],...option};
 }
 /** One lcg32 draw per Tactician's Crown on a won battle; returns the gold dropped (source PercentGoldChance). */
 export function rollG23CrownGold(crowns:number,rngState:number){

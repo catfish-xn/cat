@@ -1,8 +1,10 @@
 ## 开局奇遇 PR2 + PR4 + PR5 + PR6 集成（2026-10-22）
 
+当前候选以已录制的 `v20-black-market` 为父 epoch，已合入 multiplayer `9d9ea671`（含实时战斗与切片）；rules/content=`s13-g2-3-v21-opening-encounters` / `s13-14.24b-g2-3-v21-opening-encounters`，schema/save/replay/command=12/8/6/6，未录制 epoch，留 PR9 统一处理。黑市继承下方单包规则。
+
 当前配置身份为 `opening-encounters-14.24b-pr2-pr4-pr5-pr6-v1`：保留 PR2 四种强化约束、两种锻造器及独立子流、PR4 魔像关闭接口、PR5 发条猴子四分支及杰作两步选择，合入 PR6 梅尔门槛观察与沃里克关闭接口。梅尔/沃里克/魔像奖励仍关闭，不补发、不重抽。rules/content 沿用未发布 v21，schema/save/replay/command=12/8/6/6；网络协议及接线由 PR8 协调，epoch 留 PR9 统一验收。
 
-合并后双摘要：CONTENT=`fnv1a32-utf16:dcaa5334`，LOOT_REPLAY=`fnv1a32-utf16:14cd405f`；由 `node scripts/update-content-identities.cjs --write` 离线生成，`--check` 核验。各独立 PR 报告中的旧身份仅记录当时交付。
+合并后双摘要：CONTENT=`fnv1a32-utf16:89854faa`，LOOT_REPLAY=`fnv1a32-utf16:eab06e25`；由 `node scripts/update-content-identities.cjs --write` 离线生成，`--check` 核验。各独立 PR 报告中的旧身份仅记录当时交付。
 
 本人进度拆为 `readOpeningForgeProgress(state:MatchState):OpeningForgeProgress` → 可选 `openingForgeProgress`（仅组件/神器锻造器有收据时存在），及 `readOpeningMelProgress(state:Pick<MatchState,'openingEncounter'>):OpeningMelProgress` → `openingMelProgress`（非梅尔或未绑定为 null）。两种类型、reader 均从 simulation/match 导出；旧同名 reader/字段不保留。字段内容见各奇遇专节，公共投影不带个人进度。
 
@@ -283,9 +285,15 @@ apply 失败保持原 state 引用，无 events、不消费 RNG/资源；共享�
 
 `src/server-entry/index.ts` 仅追加上述领域接口重导出；Room/网络消息/客户端未改，PR8 须将 `readOpeningEncounterView` 结果逐字段接入公共 PlayerView，不能把原始 Match/SharedPool 上下文传给客户端。当前交付的是可直接调用的领域公共投影，尚未接通服务器传输。
 
-开发版本：rules/content=`s13-g2-3-v21-opening-encounters` / `s13-14.24b-g2-3-v21-opening-encounters`，schema/save=12/8。PR1 无新命令、选择工具或回放操作，replay/command 暂为5/5；方案建议6/6留待出现相关语义时切换。NET 与规则侧多人协议常量不改；发布联动在PR8/9。完整表、证据缺口、批准约定、B覆盖、命名空间和触发次序均进入 rules manifest 与双 digest。**未录制、未改 fixtures/golden；必须先 rebase 到 v20-black-market，以它为父 epoch 后再录制。**
+开发版本：rules/content=`s13-g2-3-v21-opening-encounters` / `s13-14.24b-g2-3-v21-opening-encounters`，schema/save=12/8。PR1 无新命令、选择工具或回放操作，replay/command 暂为5/5；方案建议6/6留待出现相关语义时切换。NET 与规则侧多人协议常量不改；发布联动在PR8/9。完整表、证据缺口、批准约定、B覆盖、命名空间和触发次序均进入 rules manifest 与双 digest。**已合入 multiplayer `9d9ea671`，父 epoch 为已录制的 v20-black-market；候选仍未录制，历史 fixtures/golden 保留原字节，由 PR9 统一录制。**
 
-## v20-live-combat（当前正式 epoch，2026-10-22）
+
+## v20-black-market 当前正式 epoch（2026-10-22）
+
+父 epoch `v20-live-combat`，基线 `42d8a404`。rules/content=`s13-g2-3-v20-black-market` / `s13-14.24b-g2-3-v20-black-market`，CONTENT=`fnv1a32-utf16:9a83da50`、LOOT_REPLAY=`fnv1a32-utf16:e0eb43e2`；schema/save/replay/command **11/7/5/5**、NET6 不变，旧身份严格拒绝、无迁移。
+黑市从至多三包改为**一个完整奖励包**，沿用源权重的一次加权抽样（原首候选，每 offer 一词）；接受整包、保留及超时 `@skip`，其余规则不变。命令/投影形状、签名及失败枚举不变。依据、RNG影响、唯一收据、恢复边界和 Claude 交接见 [BLACK_MARKET_SINGLE_OFFER](BLACK_MARKET_SINGLE_OFFER.md)。本节优先于下文历史身份和 N=3 描述。
+
+## v20-live-combat（历史 epoch，2026-10-22）
 
 父 epoch 为 `v20-xp68`，集成基线 `db04d196e4a12933624add7d61be9081a639607f`（#384、#385、#386、#388）。rules/content 为 `s13-g2-3-v20-live-combat` / `s13-14.24b-g2-3-v20-live-combat`；CONTENT `fnv1a32-utf16:93fad04c`，LOOT_REPLAY `fnv1a32-utf16:49eb9cf0`。
 schema/save/replay/command 为 **11/7/5/5**，网络 **NET6**、规则侧多人契约5。继承黑市候选及决策字段，Match 与 SaveEnvelope 结构不再增加，schema/save 保持父版11/7；replay/command 从4/4升5/5，标识实时战斗流及逐 tick 输入边界。所有旧 rules/content/digest/replay/command 身份严格拒绝运行态恢复，无迁移；历史 epoch 原字节保留。

@@ -6,7 +6,7 @@
  * circumscribed circle about its upright axis), never stretched up. Without a unitScale (older asset roots) every
  * model is fitted to `height` and its x/z box to `width` exactly as before.
  */
-import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Vector3, type AnimationClip, type Object3D } from 'three';
+import { AnimationMixer, Bone, Box3, LoopOnce, SkinnedMesh, Sphere, Vector3, type AnimationClip, type Object3D } from 'three';
 
 /** A drawn champion may be at most this many times the reference height (the plan's 1.6 × 92). */
 export const MAX_HEIGHT_RATIO = 1.6;
@@ -18,7 +18,7 @@ export function readUnitScale(models: Readonly<Record<string, unknown>> | undefi
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 }
 
-/** Clip samples and the vertex stride for the animation envelope: enough to catch a wide swing, cheap once per model. */
+/** Clip samples and the radius stride; grounding reads every vertex so a foot between strides is not missed. */
 const ENVELOPE_SAMPLES = 8, ENVELOPE_STRIDE = 7;
 /** The envelope is this quantile of the sampled vertex distances, so a stray vertex (a thrown weapon) cannot set it. */
 const ENVELOPE_QUANTILE = 0.98;
@@ -45,7 +45,7 @@ const ENVELOPE_CHUNK = 1500;
  * clips, in the world units fitModel's box reads (the unattached body's own transform, before fitting); 0 without
  * skinned meshes or clips. A one-frame box misses an idle that spreads its arms (Nami, Trundle) or an attack that
  * swings wide (Garen). Distances are taken from the skeleton root's own horizontal place in each sample, so a clip
- * that carries the whole body sideways (Vi, Zoe) does not count as reach. Leaves the skeleton in its bind pose.
+ * that carries the whole body sideways (Vi, Zoe) does not count as reach. Leaves all nodes in their original loaded pose.
  * The work is a generator that pauses every ENVELOPE_CHUNK vertices: the sync form runs it through, the async form
  * spreads it over idle slices.
  */
@@ -59,12 +59,39 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
   let work = 0;
   // Each mesh's skeleton root: its first bone whose parent is not a bone.
   const roots = meshes.map(mesh => mesh.skeleton.bones.find(bone => !(bone.parent instanceof Bone)) ?? null);
-  // Where each root stands in the bind pose: the reach is measured from there plus the root's drift in that sample.
-  for (const mesh of meshes) mesh.skeleton.pose();
-  body.updateMatrixWorld(true);
+  // This is an independent, freshly loaded lease. In quantized glTFs the inverse bind matrices can include
+  // dequantization: Skeleton.pose() reconstructs different TRS, not the authored loading pose.
+  // Include non-bone animated ancestors as well as bones (including skeleton nodes outside the mesh subtree).
+  const nodes = new Set<Object3D>();
+  body.traverse(node => nodes.add(node));
+  for (const mesh of meshes) for (const bone of mesh.skeleton.bones) {
+    for (let node: Object3D | null = bone; node && node !== body.parent; node = node.parent) nodes.add(node);
+  }
+  const loaded = [...nodes].map(node => ({ node, position: node.position.clone(), quaternion: node.quaternion.clone(), scale: node.scale.clone() }));
+  body.updateWorldMatrix(true, true);
+  for (const node of nodes) node.updateWorldMatrix(true, false);
+  const boxes = meshes.map(mesh => {
+    mesh.skeleton.update(); mesh.computeBoundingBox();
+    return mesh.boundingBox!.clone();
+  });
+  const restore = () => {
+    for (const { node, position, quaternion, scale } of loaded) {
+      node.position.copy(position); node.quaternion.copy(quaternion); node.scale.copy(scale); node.updateMatrix();
+    }
+    body.updateWorldMatrix(true, true);
+    for (const node of nodes) node.updateWorldMatrix(true, false);
+    meshes.forEach((mesh, index) => {
+      mesh.skeleton.update();
+      // The restored pose has exactly the loaded bounds. Its enclosing sphere is conservative and needs no rescan.
+      mesh.boundingBox = boxes[index]!.clone();
+      mesh.boundingSphere = mesh.boundingBox.getBoundingSphere(new Sphere());
+    });
+  };
+  // Root homes and the bind box must describe that same loaded pose.
   const homes = roots.map(root => root ? root.getWorldPosition(new Vector3()) : new Vector3());
   try {
     for (const { clip, loop, ground: standing } of clips) {
+      restore();
       const action = mixer.clipAction(clip);
       // Looping clips: ENVELOPE_SAMPLES distinct times (duration itself wraps to 0); once-only clips end on their last frame.
       if (!loop) { action.setLoop(LoopOnce, 1); action.clampWhenFinished = true; }
@@ -80,9 +107,9 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
           // The axis moved by the root's horizontal drift from its bind place (0 when the skeleton has no root bone).
           if (root) root.getWorldPosition(rootAt).sub(homes[index]!); else rootAt.set(0, 0, 0);
           const count = mesh.geometry.attributes.position?.count ?? 0;
-          for (let v = 0; v < count; v += ENVELOPE_STRIDE) {
+          for (let v = 0; v < count; v += standing ? 1 : ENVELOPE_STRIDE) {
             mesh.getVertexPosition(v, point).applyMatrix4(mesh.matrixWorld);
-            radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
+            if (v % ENVELOPE_STRIDE === 0) radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
             // Feet without the skeleton root's own vertical motion (a hover, a jump, a crouch stays the clip's):
             // what is left is how far the skinned body sits from its bind pose (Darius ~100 source units up).
             if (standing && point.y - rootAt.y < ground) ground = point.y - rootAt.y;
@@ -91,11 +118,11 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
         }
       }
       action.stop();
+      restore();
     }
   } finally {
     mixer.stopAllAction(); mixer.uncacheRoot(body);
-    for (const mesh of meshes) mesh.skeleton.pose();
-    body.updateMatrixWorld(true);
+    restore();
   }
   const low = Number.isFinite(ground) ? ground : null;
   if (!radii.length) return { radius: 0, ground: low };
@@ -115,7 +142,7 @@ export function animationEnvelopeRadius(body: Object3D, clips: readonly Envelope
 /**
  * The same envelope in slices of about `budgetMs`, handing the thread back between them (`pause`, an idle callback by
  * default). Resolves null when `stop()` turns true at a slice boundary (a combat began, the renderer went); the body is
- * left in its bind pose either way.
+ * left in its loaded pose either way (also when the pause callback rejects).
  */
 export async function animationEnvelopeRadiusSliced(body: Object3D, clips: readonly EnvelopeClip[], options: SliceOptions = {}): Promise<number | null> {
   return (await animationEnvelopeSliced(body, clips, options))?.radius ?? null;
@@ -125,15 +152,19 @@ export async function animationEnvelopeSliced(body: Object3D, clips: readonly En
   const budget = options.budgetMs ?? 3, now = options.now ?? (() => performance.now());
   const pause = options.pause ?? (() => new Promise<void>(resolve => setTimeout(resolve, 0)));
   const steps = envelopeSteps(body, clips);
-  for (;;) {
-    const started = now();
+  try {
     for (;;) {
-      const next = steps.next();
-      if (next.done) return next.value;
-      if (now() - started >= budget) break;
+      const started = now();
+      for (;;) {
+        const next = steps.next();
+        if (next.done) return next.value;
+        if (now() - started >= budget) break;
+      }
+      await pause();
+      if (options.stop?.()) return null;
     }
-    await pause();
-    if (options.stop?.()) { steps.return({ radius: 0, ground: null }); return null; }
+  } finally {
+    steps.return({ radius: 0, ground: null });
   }
 }
 

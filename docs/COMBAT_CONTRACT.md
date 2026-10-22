@@ -1,4 +1,9 @@
-## v20-live-combat 当前身份（2026-10-22）
+## v20-black-market 当前正式 epoch（2026-10-22）
+
+父 epoch `v20-live-combat`，基线 `42d8a404`。rules/content=`s13-g2-3-v20-black-market` / `s13-14.24b-g2-3-v20-black-market`，CONTENT=`fnv1a32-utf16:9a83da50`、LOOT_REPLAY=`fnv1a32-utf16:e0eb43e2`；schema/save/replay/command **11/7/5/5**、NET6 不变，旧身份严格拒绝、无迁移。
+黑市从至多三包改为**一个完整奖励包**，沿用源权重的一次加权抽样（原首候选，每 offer 一词）；接受整包、保留及超时 `@skip`，其余规则不变。命令/投影形状、签名及失败枚举不变。依据、RNG影响、唯一收据、恢复边界和 Claude 交接见 [BLACK_MARKET_SINGLE_OFFER](BLACK_MARKET_SINGLE_OFFER.md)。本节优先于下文历史身份和 N=3 描述。
+
+## v20-live-combat 历史身份（2026-10-22）
 
 父 epoch 为 `v20-xp68`（集成基线 `db04d196e4a12933624add7d61be9081a639607f`）；rules/content 为 `s13-g2-3-v20-live-combat` / `s13-14.24b-g2-3-v20-live-combat`，schema/save/replay/command 为 11/7/5/5，NET6。CONTENT `fnv1a32-utf16:93fad04c`，LOOT_REPLAY `fnv1a32-utf16:49eb9cf0`。完整继承8→9 / 9→10各68 XP、梅尔救命精确HP核对及父版战斗规则；只改变推进与传输，保留完整事件账本，旧身份拒绝、无迁移。实时流、逐tick空输入入口与验收见 [LIVE_COMBAT_PHASE1](LIVE_COMBAT_PHASE1.md)，本节覆盖下文历史当前身份。
 

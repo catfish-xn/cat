@@ -1,5 +1,13 @@
 # 界面数据需求（Claude → Codex）
 
+## BLACK-MARKET-SINGLE-OFFER（2026-10-22；规则已交付，Claude 待接界面/验收）
+
+- 每次只有一个完整奖励包：`pendingChoice.kind==='blackMarket'`，`offers.length===1`，`offers[0]` 是包 ID；`choiceId/generation` 沿用。`seatMechanics.seat.alchemist.offer.optionIds` 同样只有一个，`optionId` 是它的别名。reward 内容由既有源描述/展示适配器读取，不能把包 ID 当单件装备。
+- 两个按钮：「全部拿走」提交 `choose.definitionId=offers[0]`；「保留微光」提交 `@skip`。一次接受整包，不提供多包选一或逐件选择。不指定布局、颜色、动画。
+- `payload` 形状不变：`grantItem:false, source:'black-market', skippable:true, skipReward:{kind:'health-per-skip',amount:1}, timeoutOption:'@skip'`。保留不清微光，沿用跳过成长；超时仍保留，不自动接受。原包内工具/锻造器的后续使用方式不变。
+- 服务器没有新增命令/投影字段，不需改分派；Claude 验收唯一包透传、超时、重连、旧 choiceId/generation 及未提供包拒绝、重复请求不重发。客户端/服务器应一同切换新 rules/content/digest，NET6 与命令5不变。
+- 规则侧未改 `src/server/`、`src/rendering/` 或 `src/presentation/`。完整导出、失败和恢复合同见 [BLACK_MARKET_SINGLE_OFFER](BLACK_MARKET_SINGLE_OFFER.md)。此需求覆盖旧三候选约定。
+
 ## v17 当前状态（草稿）
 
 贪财化身恢复联机准入，单机/联机异常均56（联机55→56），强化60。#254/#258实时银行已接通；规则游标t注入后t+1生效，8tick=0.4秒显示前瞻不能称“显示下一帧立即生效”。rules/content同升v17、CONTENT `de829c8a→8a955c10`，LOOT保持`62c76cb9`；格式/协议不升。PR保持草稿，等v16发版收口后才合；发版排空对局。6条服务器待补验收（真实抽选、双真人/镜像、同tick增减、物品/Sevika、末尾操作、重连推帧结算）见 [V17_AVARICE_ONLINE](V17_AVARICE_ONLINE.md#服务器侧待补测试)，交由Claude，本任务不改服务器或界面。下方旧交接身份与未接线描述以各段时间为历史背景。

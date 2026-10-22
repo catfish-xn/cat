@@ -1,0 +1,72 @@
+{
+  "baseCommit": "42d8a4048409dc60e9b1f9647b398cb20e4529af",
+  "branch": "codex/black-market-single-offer",
+  "epoch": "v20-black-market",
+  "parentEpoch": "v20-live-combat",
+  "identity": {
+    "rulesVersion": "s13-g2-3-v20-black-market",
+    "contentVersion": "s13-14.24b-g2-3-v20-black-market",
+    "contentDigest": "fnv1a32-utf16:9a83da50",
+    "lootReplayDigest": "fnv1a32-utf16:e0eb43e2",
+    "schemaVersion": 11,
+    "saveFormatVersion": 7,
+    "replayFormatVersion": 5,
+    "commandProtocolVersion": 5,
+    "netProtocolVersion": 6
+  },
+  "tests": {
+    "files": 53,
+    "tests": 1108,
+    "passed": 1108,
+    "failed": 0,
+    "skipped": 0
+  },
+  "initialFocusedRun": {
+    "passed": 1105,
+    "failed": 3,
+    "reason": "two obsolete three-candidate/RNG expectations and one obsolete policy revision; replaced by exact new-rule assertions"
+  },
+  "targetedReruns": [
+    {
+      "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+      "passed": 38,
+      "failed": 0
+    },
+    {
+      "file": "tests/g2-4b-artifacts.test.ts",
+      "passed": 49,
+      "failed": 0
+    }
+  ],
+  "typecheckExitCode": 0,
+  "contentIdentityCheckExitCode": 0,
+  "recording": {
+    "steps": 11,
+    "passed": 11
+  },
+  "verification": {
+    "steps": 11,
+    "passed": 11
+  },
+  "history": {
+    "epoch": "v20-black-market",
+    "baseCommit": "42d8a4048409dc60e9b1f9647b398cb20e4529af",
+    "historicalFiles": 353,
+    "byteIdentical": true,
+    "protectedManifestByteIdentical": true
+  },
+  "scope": {
+    "changedFiles": 79,
+    "runtimeFiles": [
+      "src/simulation/content/g2-3-policy.ts",
+      "src/simulation/content/identity-constants.ts",
+      "src/simulation/g2-3-progress.ts",
+      "src/simulation/m8/contracts.ts",
+      "src/simulation/m8/version.ts"
+    ],
+    "serverUIAssetsCIChanged": false,
+    "gitMetadataWritten": false
+  },
+  "fullSuiteRun": false,
+  "claudeFollowup": "two-button UI; unchanged choose/skip protocol, timeout and reconnect acceptance tests"
+}
