@@ -118,6 +118,20 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
     return { x: (point.x + 1) * 400, y: (1 - point.y) * 300 };
   }
 
+  it('finishes a pawn death when its still-loading model resolves to a missing-model placeholder', async () => {
+    let arrive!: (value: ModelLease) => void;
+    const lease = { ...model(), placeholder: true, animations: [], animationNames: {} };
+    vi.spyOn(core.ModelCache.prototype, 'load').mockReturnValue(new Promise(done => { arrive = done; }));
+    await mount(); await publish([piece()]);
+    const pawn = scene.getObjectByName('render3d-pawn')!, unit = pawn.parent!;
+    await publish([piece({ alive: false })]);
+    expect(unit.visible).toBe(true);
+    arrive(lease); await Promise.resolve(); await Promise.resolve();
+    advance(1300);
+    expect(unit.visible).toBe(false);
+    expect(lease.scene.parent).toBeNull();
+  });
+
   it('draws meters and items over a piece, and releases an item icon that arrives after the renderer is gone', async () => {
     const lease = model(); vi.spyOn(core.ModelCache.prototype, 'load').mockResolvedValue(lease);
     let arrive!: (texture: InstanceType<typeof three.Texture>) => void;
