@@ -52,6 +52,9 @@ import type { HexCell } from '../simulation/board';
 import type { ItemSummonView } from '../server/protocol';
 import { OrbDock, grantedOrbIds, orbVariant, readOrbClaimReceipts, readUnclaimedOrbs } from './online/orb-dock';
 import { readOrbLoot } from './online/loot-fields';
+import { OpeningEncounterHud } from './opening-encounter-hud';
+import { readOpeningEncounterView, readOpeningForgeProgress, readOpeningMelProgress } from '../simulation/match';
+import { readOpeningDisplay } from '../presentation/opening-encounter-text';
 
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
 export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
@@ -107,6 +110,8 @@ export class BoardScene extends Phaser.Scene {
   private help: HelpPanel | null = null;
   /** v15 (online): my unclaimed orbs in the board's right gutter. */
   private orbDock: OrbDock | null = null;
+  /** PR8: offline, the opening-encounter HUD (online: OnlineApplication). */
+  private soloOpening: OpeningEncounterHud | null = null;
   private conquerorFlag: ReturnType<typeof createConquerorFlag> | null = null;
   private get state() { return this.session.preparation; }
   private layout = new HexLayout(this.state.board, BOARD_LAYOUT.hexRadius, BOARD_LAYOUT.origin);
@@ -271,6 +276,8 @@ export class BoardScene extends Phaser.Scene {
       this.selectedId = id; this.syncSelection(); this.renderActiveStats();
     });
     this.feedback = createCombatFeedbackRenderer(document.getElementById('feedback-root')!);
+    const boardFrame = document.getElementById('board-frame') ?? document.getElementById('board-root')?.parentElement ?? document.body;
+    this.soloOpening = client ? null : new OpeningEncounterHud(boardFrame);
     const refresh = () => {
       this.clearCombatEffects(); this.selectedId = null; this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
       // Online stats come from the replay's own events at render time (renderActiveStats); no ledger aggregate.
@@ -325,6 +332,7 @@ export class BoardScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (window.__CAT_DEBUG__ === debug) delete window.__CAT_DEBUG__;
       this.statsPanel?.dispose(); this.statsPanel = null; this.feedback?.dispose(); this.feedback = null;
+      this.soloOpening?.dispose(); this.soloOpening = null;
       this.application?.dispose(); this.application = null;
       this.strategyPanel?.destroy(); this.strategyPanel = null; this.help?.destroy(); this.help = null;
       this.orbDock?.reset(); this.orbDock = null;
@@ -817,6 +825,18 @@ export class BoardScene extends Phaser.Scene {
     }
     return upgrades;
   }
+  /** Offline: the opening encounter of the local match, read with the rules' own readers (online: OnlineApplication). */
+  private syncSoloOpening() {
+    const hud = this.soloOpening;
+    if (!hud) return;
+    // Startup, import and replay screens show no live match: nothing (and the once-only intro is not spent there).
+    if (document.body.dataset.m6Mode !== 'active') { hud.hideAll(); return; }
+    const state = this.session.state;
+    try {
+      hud.update({ encounter: readOpeningDisplay(readOpeningEncounterView(state)), matchKey: `solo|${state.seed}`, round: state.round,
+        forge: readOpeningForgeProgress(state), mel: readOpeningMelProgress(state) });
+    } catch { hud.hideAll(); }
+  }
   /** Online (T10): the server's own deadline deployment and post-battle merges arrive with its state push. */
   private serverEvents(events: readonly MatchEvent[]) {
     const deployed = events.filter(event => event.type === 'unitDeployed').length;
@@ -893,7 +913,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private sync() {
-    this.reconcileTokens(); this.syncHud();
+    this.reconcileTokens(); this.syncHud(); this.syncSoloOpening();
     this.strategyPanel?.render();
     this.syncOrbs();
     if (this.session.phase !== 'preparation') {

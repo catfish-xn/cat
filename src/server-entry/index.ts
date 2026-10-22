@@ -80,3 +80,7 @@ export { createOpeningEncounter, validateOpeningEncounterConfig, validateOpening
   OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from '../simulation/match';
 export type { OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection,
   OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from '../simulation/match';
+// Opening encounters PR8: owner-only progress readers and the shared-batch resolution shape (re-exports only).
+export { readOpeningMelProgress, readOpeningForgeProgress, readMasterworkOptions } from '../simulation/match';
+export type { OpeningMelProgress, OpeningForgeProgress } from '../simulation/match';
+export type { OpeningRoundResolution } from '../simulation/shared-pool-types';
