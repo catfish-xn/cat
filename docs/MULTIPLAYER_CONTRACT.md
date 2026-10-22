@@ -1,10 +1,20 @@
+## 战斗装备阶段 2（2026-10-22，候选身份；未录制 epoch）
+
+已实现下一未封口 tick 安装、属性/装备程序重编译、PvE/PvP 私有成功日志与来源凭据、重放和恢复；本节覆盖历史 T12 下场生效及 #382 的 `battle-input-unsupported`。命令、完整签名、失败原因、羁绊冻结依据、服务器原子边界、UI 字段及待集成身份见 [LIVE_COMBAT_EQUIPMENT_PHASE2](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。当前工作树已与开局奇遇合成候选 `v21-opening-encounters-battle-equipment`，正式历史 epoch 仍为下节 black-market，留 PR9 统一录制后发布。
+
+本次合并同时保留奇遇状态、效果、独立随机子流和战斗中装备的下一未封口 tick 安装、`beforeTick`、私有 `inputLog`、`queueEquipment`。`CombatStream` 构造器同时接收保留为成员的 `beforeTick?: BattleTickInputSource` 与可选的已分步创建 `liveTask`；#402 的 `open` 生成器继续完整创建后才发布，不同步重建任务，装备继续注入同一任务。没有新增失败枚举或改写两边玩法。
+
+身份数值取两边需求的最大值：装备侧 11/7/5/5、奇遇侧 12/8/6/6 → schema/save/replay/command=**12/8/6/6**；运行时与 `M8Version` 字面量一致。schema/save 覆盖奇遇状态，replay/command 覆盖杰作两步选择；装备语义由合成 rules/content 与双摘要区分。网络协议保持既有值；不迁移旧身份、不录 epoch、不改 golden。下方各 PR 节的旧版本与摘要仅为阶段记录，当前身份以本节为准。
+
 ## 开局奇遇 PR2 + PR4 + PR5 + PR6 集成（2026-10-22）
 
-当前候选以已录制的 `v20-black-market` 为父 epoch，已合入 multiplayer `9d9ea671`（含实时战斗与切片）；rules/content=`s13-g2-3-v21-opening-encounters` / `s13-14.24b-g2-3-v21-opening-encounters`，schema/save/replay/command=12/8/6/6，未录制 epoch，留 PR9 统一处理。黑市继承下方单包规则。
+当前候选以已录制的 `v20-black-market` 为父 epoch，已合入 multiplayer `933e0840`（含 #402 开战切片）；rules/content=`s13-g2-3-v21-opening-encounters-battle-equipment` / `s13-14.24b-g2-3-v21-opening-encounters-battle-equipment`，schema/save/replay/command=12/8/6/6，未录制 epoch，留 PR9 统一处理。黑市继承下方单包规则。
 
 当前配置身份为 `opening-encounters-14.24b-pr2-pr4-pr5-pr6-v1`：保留 PR2 四种强化约束、两种锻造器及独立子流、PR4 魔像关闭接口、PR5 发条猴子四分支及杰作两步选择，合入 PR6 梅尔门槛观察与沃里克关闭接口。梅尔/沃里克/魔像奖励仍关闭，不补发、不重抽。rules/content 沿用未发布 v21，schema/save/replay/command=12/8/6/6；网络协议及接线由 PR8 协调，epoch 留 PR9 统一验收。
 
-合并后双摘要：CONTENT=`fnv1a32-utf16:89854faa`，LOOT_REPLAY=`fnv1a32-utf16:eab06e25`；由 `node scripts/update-content-identities.cjs --write` 离线生成，`--check` 核验。各独立 PR 报告中的旧身份仅记录当时交付。
+合并后双摘要：CONTENT=`fnv1a32-utf16:ef26ec2b`，LOOT_REPLAY=`fnv1a32-utf16:af60008c`；由 `node scripts/update-content-identities.cjs --write` 离线生成，`--check` 核验。各独立 PR 报告中的旧身份仅记录当时交付。
+
+本次合并验收：`npx --no-install tsc --noEmit`、双摘要脚本 `--check` 和 `git diff --check` 通过。Vitest 用 `--configLoader runner --no-file-parallelism` 绕过共享 node_modules 的只读配置缓存，覆盖 grep 命中的全部 `.test.ts`、所有奇遇集成测试、装备服务器/网络测试、combat-stream 两组通配、3D 隔离及旧 epoch 检查：22 文件 / 627 项，346 通过、281 项预期旧身份失败；16 文件全过。失败逐项汇总：`opening-random-identity` 136（摘要/旧存档/事件哈希）、`m8-content-equivalence` 134（unsupported-version）、`v19-part2` 1、`match-contract` 1（旧版本号）、`m8-contracts` 1（硬编码合并前 v21-opening-encounters）、`server/battle-start-slices` 8（旧 black-market fixture；实测 round3 为 invalid-pool，round9/23 为 battle-validation:content-digest，导致后续切片断言失败）。其余全部通过；#402 当前身份的实时流和 PvE/PvP 装备注入/重放由通过的 combat-stream、server/battle-equipment-phase2 等覆盖。保留所有测试与历史 fixture，PR9 再统一录制身份证据。 浏览器脚本 `tests/battle-equipment-browser.mjs` 的 2D/3D 两种模式均通过，tick0 提交、tick1 生效，pageerror=0；仅在内存中把已占用的本地端口 5188 改为 5199，以 Node 原生 TypeScript 配置加载和 /tmp 缓存运行，未改脚本或构建配置，浏览器拒绝外部请求。
 
 本人进度拆为 `readOpeningForgeProgress(state:MatchState):OpeningForgeProgress` → 可选 `openingForgeProgress`（仅组件/神器锻造器有收据时存在），及 `readOpeningMelProgress(state:Pick<MatchState,'openingEncounter'>):OpeningMelProgress` → `openingMelProgress`（非梅尔或未绑定为 null）。两种类型、reader 均从 simulation/match 导出；旧同名 reader/字段不保留。字段内容见各奇遇专节，公共投影不带个人进度。
 
@@ -2207,7 +2217,7 @@ PvP 使用现有 SideProposal / 唯一结算收据。统一规划并原子提交
 
 战斗中允许买、卖备战席单位和刷新，利息按最终结算时的权威金币计算；PvP 沿用胜利金币先计入 interestBasis 的次序，不冻结开战金币。
 
-第 2 阶段 `applyBattleEquipment` 尚未实现，装备仍只改变资产；挂点为 `Room.nextBattleInputTick`（下一未封口边界）、
+以下为 #382 阶段 1 的历史约定，阶段 2 已由 [实时装备合同](LIVE_COMBAT_EQUIPMENT_PHASE2.md) 覆盖。原挂点为 `Room.nextBattleInputTick`（下一未封口边界）、
 `CombatStream.nextEffectiveTick`（该场下一步）和规则层 `BattleReplayOptions.beforeTick(effectiveTick:number):readonly BattleTickInput[]`。
 该回调在 `advance(n)` 内每个 tick 以及 `advanceTick()` 前执行，`startLiveTask(envelope,beforeTick?)` / `CombatStream(envelope,pve?,beforeTick?)` 向原 PvP 任务传递。
 `BattleTickInput = BattleEquipmentInput`，字段 `{kind:'equipment',seq:number,effectiveTick:number,seatId:string,itemId:string,unitId:string,slot:number}`；

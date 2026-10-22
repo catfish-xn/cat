@@ -6,12 +6,13 @@ export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
 /** B9 formal switch (M8_RULES §10): the one runtime source for the frozen M8 identifiers.
  * contentDigest stays computed from the canonical content (content/index.ts), never hand-written.
- * Opening encounters candidate: parent epoch v20-black-market (multiplayer 933e0840).
+ * Opening encounters + next-tick battle equipment candidate: parent epoch v20-black-market (multiplayer 933e0840).
  * Epoch NOT recorded; PR9 will record the integrated candidate.
  * schema12/save8 add openingEncounter; PR5 replay/command6 add the masterwork armory flow.
+ * Equipment inherits schema11/save7/replay5/command5; the combined candidate takes maxima 12/8/6/6.
  * Old epochs are rejected, never migrated. */
 export const M8_VERSION = {
-  schemaVersion: 12, rulesVersion: 's13-g2-3-v21-opening-encounters', contentVersion: 's13-14.24b-g2-3-v21-opening-encounters',
+  schemaVersion: 12, rulesVersion: 's13-g2-3-v21-opening-encounters-battle-equipment', contentVersion: 's13-14.24b-g2-3-v21-opening-encounters-battle-equipment',
   saveFormatVersion: 8, replayFormatVersion: 6, commandProtocolVersion: 6, rngAlgorithm: 'lcg32-v1', tickMs: 50,
 } as const satisfies Omit<M8Version, 'contractVersion' | 'contentDigest'>;
 /** D2-A: the shipped M7 identifiers, used only to recognize files for read-only preservation. */

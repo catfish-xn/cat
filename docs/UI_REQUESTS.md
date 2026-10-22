@@ -1,5 +1,14 @@
 # 界面数据需求（Claude → Codex）
 
+## BATTLE-EQUIPMENT-PHASE2（2026-10-22，Codex 规则/服务器已实现，Claude 待接拖拽）
+
+- 用户反馈「战斗中还是不能放装备」；开放本人场上永久棋子的装备拖放，网络仍发 `{type:'equip',itemId,unitId,slot}`。PvP 用既有 `unitIds` 把 combatId 换回 originalId；PvE 原 ID。不可对观战、对手、镜像或召唤物提交，也不发送 seq/effectiveTick。
+- 服务器成功回执表示资产及下一未封口 tick 意图已提交；等待该 tick 公共帧再显示战斗装备变化。闸门等待期间没有成功回执，重发复用 commandId，不自行合成/扣费/算属性。
+- 新显示字段：`CombatViewUnit.equipment?: {definitionId,slot,temporary}[]`、`unitUpdated.changes.equipment`。存在时为该持有者完整装备格，优先读它；未出现时沿用既有开场显示。名称/图标从现有目录按 definitionId 查，属性从战斗单位投影读。没有新素材要求，不规定布局、颜色、动画。
+- 补充失败提示：`battle-unit-unavailable`（当前战斗实例已移除）、`battle-input-invalid`（边界/认证错误）；其他装备/网络 reason 沿用。已阵亡永久实例能装但不复活；结束后装备只影响下一场。纹章自身属性当前 tick 生效，羁绊成员/档位下一场变化。
+- 验收：战斗拖组件、原位合成和窃贼临时子件；同 tick 连续拖放；失败保留库存；B 侧 combatId 映射；观战只读；重连关键帧+尾段 reducer；dedupe 不重复扣装备。公共帧不得包含 inputLog、equipmentReceipts、pendingEquipment 或 RNG。
+- 规则与服务器测试见 [测试记录](LIVE_COMBAT_EQUIPMENT_PHASE2_TESTS.md)，完整边界见 [合同](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。本次未修改界面目录；新身份未录制 epoch，和开局奇遇集成后统一录制。
+
 ## BLACK-MARKET-SINGLE-OFFER（2026-10-22；规则已交付，Claude 待接界面/验收）
 
 - 每次只有一个完整奖励包：`pendingChoice.kind==='blackMarket'`，`offers.length===1`，`offers[0]` 是包 ID；`choiceId/generation` 沿用。`seatMechanics.seat.alchemist.offer.optionIds` 同样只有一个，`optionId` 是它的别名。reward 内容由既有源描述/展示适配器读取，不能把包 ID 当单件装备。

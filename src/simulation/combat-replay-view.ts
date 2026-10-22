@@ -1,5 +1,5 @@
 import { isPresent, isSelectable } from './anomalies/availability';
-import { phase1BattleInputsSupported } from './battle-input-log';
+import { installBattleEquipmentBatch, validateBattleEquipmentLog } from './battle-equipment';
 import { d11CombatDisplay } from './d11-display';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
 import { freezeCombatDeclarations } from './combat-static';
@@ -39,6 +39,7 @@ const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'effectiveStarLev
 function unitView(unit: CombatUnit, state: CombatState) {
   const choiceEffects=d11CombatDisplay(unit);
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), ...statusView(state, unit.id), cell: cellView(unit.cell),
+    ...(unit.equipment ? { equipment: unit.equipment.map(i => ({ ...i })) } : {}),
     ...(choiceEffects.length?{choiceEffects}:{}),
     ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
     ...(unit.anomalyState || unit.anomalySummon || unit.v20Traits?.minion ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
@@ -190,7 +191,9 @@ export function createCombatReplayRecorder(initialState: CombatState,
 
 /** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
 export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
-  if (!phase1BattleInputsSupported(input.inputLog)) throw new RangeError('battle-input-unsupported');
+  validateBattleEquipmentLog(input.inputLog, input.terminal.equipmentReceipts, input.terminal.tick);
+  if (input.initial.equipmentReceipts || input.initial.pendingEquipment || input.terminal.pendingEquipment
+    || input.terminal.units.some(u => u.equipment) && !input.inputLog?.length) throw new RangeError('battle-input-invalid');
   const freezeReplay = createScopedContentFreezer();
   const battle = structuredClone(input);
   battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));
@@ -236,6 +239,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
         if(sampled===state)throw new RangeError('replay-divergence');
         state=sampled;
       }
+      state = installBattleEquipmentBatch(state, battle.terminal.equipmentReceipts?.filter(r => r.input.effectiveTick === state.tick + 1) ?? []);
       const next = stepCombat(state);
       const frame = recorder.record(state, next);
       state = next.state;
@@ -253,11 +257,11 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
     }
     if (state.status === 'running' && state.tick < battle.terminal.tick) return null;
     if (canonicalContent(toCombatViewState(state)) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
-    if (bankSamples) {
+    if (bankSamples || battle.inputLog?.length) {
       // PvE carries the private transcript on terminal; it is metadata, not a rule input to stepCombat.
       const { bankSamples: _actualSamples, ...actual } = state;
       const { bankSamples: _expectedSamples, ...expected } = battle.terminal;
-      if (bankCursor !== bankSamples.length || canonicalContent(actual) !== canonicalContent(expected))
+      if (bankCursor !== (bankSamples?.length ?? 0) || canonicalContent(actual) !== canonicalContent(expected))
         throw new RangeError('replay-divergence');
     }
     if (comparisonFailed) throw comparisonError;

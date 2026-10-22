@@ -70,6 +70,10 @@ export type { RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../simulat
 export { summarizeBattle } from '../simulation/combat-summary';
 export type { UnitBattleSummary } from '../simulation/combat-summary';
 
+export { applyBattleEquipment } from '../simulation/battle-equipment';
+export type { BattleEquipmentReceipt, BattleEquipmentFailure } from '../simulation/battle-equipment';
+export { queueMatchBattleEquipment } from '../simulation/match';
+
 // Opening encounter PR1: domain context/query only; Room/transport wiring belongs to PR8.
 export { createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext,
   validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView,

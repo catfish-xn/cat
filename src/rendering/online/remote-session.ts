@@ -9,6 +9,7 @@
  * HP and the round record are not touched and arrive as the server's next state push. After the last tick the
  * board stays on `terminal` until that push.
  */
+import { equipmentTargetId } from '../../presentation/battle-equipment';
 import { COMBAT_TICK_MS } from '../../simulation/combat';
 import type { LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
@@ -281,7 +282,15 @@ export class RemoteSession extends MatchSession {
   override start(): MatchCommandResult { return this.blocked(); }
   override continue(_round: number): MatchCommandResult { return this.blocked(); }
   override combine(a: string, b: string) { return this.intent({ type: 'combine', a, b }); }
-  override equip(itemId: string, unitId: string, slot: number) { return this.intent({ type: 'equip', itemId, unitId, slot }); }
+  override equipmentTargetId(id: string): string | undefined {
+    return equipmentTargetId(this.state, this.combatView, id, this.replayUnitIds, this.spectating || this.watched !== null);
+  }
+  override equip(itemId: string, unitId: string, slot: number) {
+    this.notice = null;
+    const target = this.equipmentTargetId(unitId);
+    if (target === undefined) return { ok: false as const, state: this.state, reason: 'battle-unit-unavailable' as const };
+    return this.intent({ type: 'equip', itemId, unitId: target, slot });
+  }
   /** C18-B (§18.3): the server and the rules decide the result; nothing is applied locally before the receipt. */
   override useConsumable(consumableId: string, target: ConsumableTarget) { return this.intent({ type: 'useConsumable', consumableId, target }); }
   override choose(choiceId: string, generation: number, definitionId: string) { return this.intent({ type: 'choose', choiceId, generation, definitionId }); }

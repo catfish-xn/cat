@@ -1,3 +1,5 @@
+import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
+
 import { openMasterworkChoice, completeMasterworkChoice } from './masterwork-choice';
 export { readMasterworkOptions } from './masterwork-choice';
 import { createSoloOpeningEncounter, commitOpeningEncounterHealth, applyOpeningEffects, planOpeningRound } from './opening-encounter';
@@ -70,7 +72,7 @@ import { planPermanentItemGrant } from './item-grants';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { ROUND_PREPARATION_RULES, getRoundSchedule, getRoundKind } from './round-schedule';
 import { planReward } from './rewards';
-import { CONTENT_DIGEST } from './content';
+import { CONTENT_DIGEST, canonicalContent } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS, anomalyCandidates } from './content/anomalies';
 import { generateChoices } from './choices';
@@ -450,8 +452,10 @@ export function openMatchCombatStream(state: MatchState): MatchCommandResult & {
   return { ...accept(opened.state, [...toLedgerEvents(started.events), ...opened.events]), streamInitial: started.state };
 }
 /** The final step stays outside Match until settlement; its complete ledger is still recorded immediately. */
-export function stepMatchCombatStream(state: MatchState): MatchStep & { readonly terminal: CombatState | null } {
+export function stepMatchCombatStream(state: MatchState, beforeTick?: import('./battle-input-log').BattleTickInputSource): MatchStep & { readonly terminal: CombatState | null } {
   if (state.phase !== 'combat' || state.multiplayer && state.m8.round.kind === 'pvp') throw new Error('wrong-phase');
+  const requested = beforeTick?.(state.combat.tick + 1);
+  if (requested !== undefined && (!Array.isArray(requested) || canonicalContent(requested) !== canonicalContent(state.combat.pendingEquipment?.map(r => r.input) ?? []))) throw new Error('battle-input-invalid');
   const sampled = state.multiplayer ? sampleD11CombatGold(state.combat, 'player', state.gold) : state.combat;
   const live = sampled === state.combat ? sampled : { ...sampled, bankSamples: [...(state.combat.bankSamples ?? []),
     { tick: state.combat.tick, team: 'player' as const, liveGold: state.gold }] };
@@ -572,19 +576,42 @@ export function combineItems(state: MatchState, aId: string, bId: string): Match
   return plan.ok ? accept({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
     resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,plan.events.filter((event):event is Extract<import('./strategy-types').StrategyEvent,{type:'itemCombined'}>=>event.type==='itemCombined').map(event=>({kind:'item-combined' as const,event,...timing}))) }, plan.events) : fail(state, plan.reason);
 }
-export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult {
+export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number, options?: { readonly deferBattleEquipment?: boolean }): MatchCommandResult {
   const preview = previewEquip(state, itemId, unitId, slot);
   if (!preview.allowed) return fail(state, preview.reason);
   const plan = planEquip(state.items, state.preparation, itemId, unitId, slot, state.nextItemSerial);
   if (!plan.ok) return fail(state, plan.reason);
   const combined = plan.events.filter((event): event is Extract<import('./strategy-types').StrategyEvent, {type:'itemCombined'}> => event.type === 'itemCombined');
   const timing = state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {};
-  return acceptEquipment({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
+  const accepted = acceptEquipment({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
     resourceProvenance: combined.length ? appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId,
       combined.map(event => ({ kind: 'item-combined' as const, event, ...timing })))
       : appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, {kind:'item-equipped',itemId,unitId,slot:plan.events.find(event => event.type === 'itemEquipped')!.slot,...timing}),
   }, plan.events);
+  if (accepted.ok && !(options?.deferBattleEquipment && state.multiplayer) && state.phase === 'combat' && state.combat?.status === 'running' && state.combatInputBasis
+    && !(state.multiplayer && state.m8.round.kind === 'pvp')
+    && state.preparation.units.some(u => u.id === unitId && u.location.kind === 'board')) {
+    const prior = state.combat.pendingEquipment?.at(-1) ?? state.combat.equipmentReceipts?.at(-1);
+    const staged = queueMatchBattleEquipment(state, accepted.state,
+      { kind: 'equipment', seq: (prior?.input.seq ?? 0) + 1, effectiveTick: state.combat.tick + 1,
+        seatId: state.multiplayer?.seatId ?? 'player', itemId, unitId, slot });
+    return staged.ok ? { ...accepted, state: staged.state } : staged;
+  }
+  return accepted;
 }
+/** Authoritative PvE adapter. The caller commits equipped assets and this intent together. */
+export function queueMatchBattleEquipment(before: MatchState, equipped: MatchState,
+  input: import('./battle-input-log').BattleEquipmentInput): MatchCommandResult {
+  if (before.phase !== 'combat' || before.combat.status !== 'running' || !before.combatInputBasis) return fail(before, 'wrong-phase');
+  try {
+    const prior = before.combat.pendingEquipment?.at(-1) ?? before.combat.equipmentReceipts?.at(-1);
+    const receipt = prepareBattleEquipment(prior?.after ?? before.combatInputBasis.inputs, input, equipped, 'player', before.combatInputBasis.battleSeed);
+    installBattleEquipmentBatch(before.combat, [...before.combat.pendingEquipment ?? [], receipt]);
+    return { ok: true, events: [], state: { ...equipped, combat: { ...before.combat,
+      pendingEquipment: [...before.combat.pendingEquipment ?? [], receipt] } } as MatchState };
+  } catch (error) { return fail(before, error instanceof Error && error.message === 'battle-unit-unavailable' ? 'battle-unit-unavailable' : 'battle-input-invalid'); }
+}
+
 function choiceFailure(state: MatchState, choiceId: string, generation: number): MatchFailure | undefined {
   if (state.phase !== 'choice' || isCombatRosterLocked(state)) return 'wrong-phase';
   if (!state.pendingChoice || state.pendingChoice.choiceId !== choiceId || state.pendingChoice.generation !== generation) return 'stale-choice';

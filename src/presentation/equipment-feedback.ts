@@ -9,7 +9,9 @@ import type { TemporaryEquipment } from '../simulation/m8/contracts';
 import type { MatchState } from '../simulation/match-types';
 
 /** Equipment wording for the frozen EquipmentFailure codes (M8_UI_CONTRACT §2). */
-export const EQUIPMENT_FAILURE_TEXT: Readonly<Record<EquipmentFailure, string>> = {
+export const EQUIPMENT_FAILURE_TEXT: Readonly<Record<EquipmentFailure | 'battle-unit-unavailable' | 'battle-input-invalid', string>> = {
+  'battle-unit-unavailable': '当前战斗实例已移除，无法装备到该棋子',
+  'battle-input-invalid': '装备提交边界或认证无效，请刷新状态后重试',
   'wrong-phase': '当前阶段不能对该目标合成或穿戴装备',
   'unknown-item': '该物品已不存在，请重新选择',
   'unknown-unit': '未找到该单位，只能装备到我方单位',
@@ -65,12 +67,14 @@ export function allowedPreviewText(preview: Extract<EquipPreview, { allowed: tru
   return preview.occupiedSlots.length > 1 ? `可装备 · 将占用槽 ${slotList(preview.occupiedSlots)}` : `可装备到槽 ${slot + 1}`;
 }
 /**
- * C17 (contract §17.2): equipment changed outside preparation enters the next battle, never the one in progress.
- * The phase is the shown state's own (an online battle replay is shown in its combat phase).
+ * A permanent board target in a running battle takes effect on the next logical tick.
+ * Bench targets and finished battles still use the next-battle asset path.
  */
 export const NEXT_BATTLE_TEXT = '下场生效';
 export const takesEffectNextBattle = (phase: string): boolean => phase === 'combat' || phase === 'choice' || phase === 'settlement';
-export function equipSuccessText(phase: string, combinedName: string | null): string {
+export const BATTLE_EQUIPMENT_SUBMITTED = '已提交，下一拍生效';
+export function equipSuccessText(phase: string, combinedName: string | null, liveBattleTarget = true): string {
+  if (phase === 'combat' && liveBattleTarget) return BATTLE_EQUIPMENT_SUBMITTED;
   const done = combinedName ? `已合成 ${combinedName}` : '装备已穿戴';
   return takesEffectNextBattle(phase) ? `${done} · ${NEXT_BATTLE_TEXT}` : done;
 }

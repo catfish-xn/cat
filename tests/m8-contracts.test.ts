@@ -76,7 +76,7 @@ describe('M8 B2 data expressiveness (not combat execution)', () => {
     const loot: LootView = { revealedOrbs: [], roundId: 'r-6-7', revealedDrops: [retained], pendingClaims: [], canContinue: false, reason: 'game-over', pendingChoice: null };
     const legacy: CompatibilityView = { status: 'legacy-preserved', currentRulesVersion: M8_VERSION.rulesVersion, fileRulesVersion: 'm5-14.24b-v1', canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' };
     expect(loot.revealedDrops[0].receiptId).toBeNull();
-    expect(legacy).toEqual({ status: 'legacy-preserved', currentRulesVersion: 's13-g2-3-v21-opening-encounters', fileRulesVersion: 'm5-14.24b-v1', canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' });
+    expect(legacy).toEqual({ status: 'legacy-preserved', currentRulesVersion: M8_VERSION.rulesVersion, fileRulesVersion: 'm5-14.24b-v1', canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' });
     // @ts-expect-error A future public loot view cannot expose an unrevealed plan.
     const hidden: RevealedDropView['status'] = 'planned';
     // @ts-expect-error Maximum-HP grants must never be healing.

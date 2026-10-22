@@ -1,3 +1,5 @@
+import { prepareBattleEquipment, validBattleInput } from './battle-equipment';
+import { projectTemporaryEquipment } from './m8/equipment';
 import { familyOrbs } from './family-orbs';
 import { deriveTraits } from './trait-snapshot';
 import type { G23GrantEvidence } from './g2-3-grant-evidence';
@@ -173,6 +175,56 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
   check(equipmentContinuation(items, d14OwnedItems(next)) && serial === next.nextItemSerial, 'historical equipment continuation');
 }
 
+/** Authenticate the combat transcript from the already validated resource suffix.
+ * Candidate source inputs never serve as their own ownership or numerical proof. */
+function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBasis): void {
+  const combat = state.combat!;
+  const receipts = [...combat.equipmentReceipts ?? [], ...combat.pendingEquipment ?? []];
+  let cursor = 0, items = basis.inputs.items, serial = basis.nextItemSerial, inputs = basis.inputs;
+  for (const fact of state.resourceProvenance.entries.slice(basis.provenancePrefixLength)) {
+    if (fact.kind === 'combat-growth-committed') break;
+    const before = items;
+    if (fact.kind === 'item-equipped') items = replayEquipment(items, basis.inputs.preparation, serial, fact).items;
+    else if (fact.kind === 'item-combined') {
+      const plan = replayCombination(items, basis.inputs.preparation, serial, fact); items = plan.items; serial = plan.nextItemSerial;
+    } else if (fact.kind === 'consumable-used') {
+      const plan = replayConsumableItems(items, serial, fact.record, basis.inputs.preparation); items = plan.items; serial = plan.nextItemSerial;
+    } else if (fact.kind === 'g23-item-converted') items = replayG23Conversion(items, fact);
+    else continue;
+    const equippedId = fact.kind === 'item-equipped' ? fact.itemId : fact.kind === 'item-combined' ? fact.event.itemId : null;
+    const equipped = items.find(i => i.id === equippedId);
+    const unitId = equipped?.location.kind === 'unit' ? equipped.location.unitId : null;
+    if (!('tick' in fact) || fact.tick === undefined || !unitId
+      || !basis.inputs.preparation.units.some(u => u.id === unitId && u.team === 'player' && u.location.kind === 'board')) continue;
+    const receipt = receipts[cursor++];
+    check(receipt && validBattleInput(receipt.input) && receipt.input.seq === cursor
+      && receipt.input.seatId === 'player' && receipt.input.unitId === unitId && receipt.input.effectiveTick === fact.tick + 1,
+      'battle equipment command sequence');
+    check(fact.kind === 'item-equipped' ? receipt.input.itemId === fact.itemId
+      : fact.kind === 'item-combined' && fact.event.consumedIds.includes(receipt.input.itemId)
+        && before.find(i => i.id === receipt.input.itemId)?.location.kind === 'inventory', 'battle equipment command ownership');
+    const plan = planEquip(before, basis.inputs.preparation, receipt.input.itemId, unitId, receipt.input.slot,
+      fact.kind === 'item-combined' ? serial - 1 : serial);
+    check(plan.ok && equal(plan.items, items), 'battle equipment command slot');
+    // acceptEquipment may immediately convert the new permanent item to radiant.
+    let through = fact.sequence;
+    const converted = state.resourceProvenance.entries[through + 1];
+    if (converted?.kind === 'g23-item-converted' && converted.itemId === equippedId) {
+      items = replayG23Conversion(items, converted); through++;
+    }
+    const temporaryEquipment = items.flatMap(item => item.location.kind === 'unit' ? state.equipmentState.rolls
+      .filter(r => r.parentItemInstanceId === item.id && r.roundId === basis.roundId)
+      .flatMap(r => projectTemporaryEquipment(r, item.location.kind === 'unit' ? item.location.unitId : '')) : []);
+    const source = { ...state, items, temporaryEquipment,
+      gold: state.roundResults.find(r => r.round === state.round)?.goldBefore ?? state.gold,
+      resourceProvenance: { ...state.resourceProvenance, entries: state.resourceProvenance.entries.slice(0, through + 1) } } as MatchState;
+    const expected = prepareBattleEquipment(inputs, receipt.input, source, 'player', basis.battleSeed);
+    check(equal(expected, receipt), 'battle equipment source evidence');
+    inputs = expected.after;
+  }
+  check(cursor === receipts.length, 'extra battle equipment receipt');
+}
+
 /** Pure ledger validation. Historical deaths have bounded evidence, not independent replay authentication. */
 export function validateB8Loot(state: MatchState, parsedJsonInput = false): boolean {
   const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
@@ -317,6 +369,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   check(state.equipmentState.rolls.slice(rollPrefix).every(roll => roll.roundId === state.roundDefinitionId
     && !basis.inputs.items.some(item => item.id === roll.parentItemInstanceId && item.location.kind === 'unit')), 'post-freeze equipment rolls');
   check(state.battleSeedRngState === basis.battleSeed, 'battle seed cursor');
+  validateBattleEquipmentHistory(state, basis);
   if (combat.status === 'running') {
     const { items: _items, temporaryEquipment: _children, ...live } = readCombatStrategyInputs(state);
     const { items: originalItems, temporaryEquipment: _frozenChildren, ...frozenInputs } = basis.inputs;
