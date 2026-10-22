@@ -1,3 +1,4 @@
+import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 /**
  * The 3D chunk's MountRenderer3d. The file keeps its original name because three-loader.ts imports it and
  * tests/rendering3d-mode.test.ts mocks that path; it is no longer only a placeholder.
@@ -71,8 +72,6 @@ const MAX_EFFECTS = 48;
 const MAX_STARTS_PER_FRAME = 6, MAX_QUEUED = 64, STALE_SECONDS = 0.3;
 /** A batch of combat events spanning more ticks than this (catching up after dropped frames) plays effects for its last ticks only. */
 const EFFECT_TICKS = 2;
-/** Effects without a playback entry play at the source this long. */
-const DEFAULT_EFFECT_SECONDS = 1;
 /** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
  * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
@@ -210,7 +209,6 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
 }
 
 /** Preview staging for one effect (assets3d action-bindings.json `playback`); approximate, not gameplay timing. */
-interface EffectPlayback { anchor: 'source' | 'target' | 'projectile'; bone?: string; delay: number; maxDuration: number }
 type ResolveEffects = (unit: string, action: 'attack' | 'cast') => readonly { id: string }[];
 interface ActionEffectPlan { resolve: ResolveEffects; playback: Record<string, EffectPlayback> }
 
@@ -748,9 +746,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const source = pieces.get(sourceId);
     if (!actionEffects || !source?.alive) return;
     const owner = generation;
-    for (const { id } of actionEffects.resolve(source.definitionId, action)) {
+    for (const { id, playback: spec } of planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
       if (queued.length >= MAX_QUEUED) return;
-      const spec = actionEffects.playback[id] ?? { anchor: 'source', delay: 0, maxDuration: DEFAULT_EFFECT_SECONDS };
       queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner) });
     }
   };
@@ -916,7 +913,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const visiting = () => scout.active || scoutView?.watching === true;
   const mine = () => !stage.active && !visiting();
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk,
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: () => { if (!visiting()) tabletop.saved(); },
     unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,

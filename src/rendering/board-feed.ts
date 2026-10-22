@@ -1,3 +1,4 @@
+import type { MelSaveReceipt } from './mel-save-feedback';
 /**
  * Bridge between the 2D BoardScene and the optional 3D layer (?render=3d). Without a subscriber every publish is a
  * single boolean check, so the default 2D path builds nothing. Frames and events flow out read-only; input flows back
@@ -85,6 +86,7 @@ export interface BoardControls {
   claimOrb?(orbId: string): void;
 }
 export interface BoardFeedListener {
+  playerSaved?(event: MelSaveReceipt): void;
   frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;
   /** The visible piece (either team) drawn under a CSS-pixel point, by the layer's own picking; undefined over none. */
   unitAt?(client: { x: number; y: number }): string | undefined;
@@ -182,6 +184,7 @@ export function publishScout(build: () => BoardScout | null): boolean {
   listener.scout(build());
   return true;
 }
+export function publishPlayerSaved(event: MelSaveReceipt): void { listener?.playerSaved?.(event); }
 export function publishLegendWalk(walk: BoardLegendWalk): void { listener?.legendWalk?.(walk); }
 /** One 3D layer at a time; the returned function detaches it. */
 export function subscribeBoardFeed(next: BoardFeedListener): () => void {

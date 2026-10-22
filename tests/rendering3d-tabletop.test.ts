@@ -281,3 +281,27 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(claimOrb).toHaveBeenCalledExactlyOnceWith('a');
   });
 });
+
+describe('10-22 Mel save', () => {
+  it('plays the extracted passive at my legend for at most 1.4 seconds and disposes it', async () => {
+    const fx = fakeEffect(), loadEffect = vi.fn(async () => fx);
+    const { tabletop, scene, step } = setup({ loadEffect });
+    tabletop.frame(frame()); tabletop.saved(); await flush();
+    expect(loadEffect).toHaveBeenCalledWith('mel_tft13_missmage_base_p_damageredirect_cas', 1.4);
+    expect(fx.object.position.distanceTo(scene.getObjectByName('render3d-legend-me')!.position)).toBeCloseTo(0);
+    step(1.41); expect(fx.disposed).toBe(true); expect(tabletop.debug().opening).toBe(0);
+    tabletop.dispose();
+  });
+  it('expires the save by wall time even when a dropped frame advances animation by only 16ms', async () => {
+    let clock = 0; const fx = fakeEffect();
+    const { tabletop } = setup({ now: () => clock, loadEffect: async () => fx });
+    tabletop.frame(frame()); tabletop.saved(); await flush();
+    clock = 1401; tabletop.update(0.016);
+    expect(fx.disposed).toBe(true); expect(tabletop.debug().opening).toBe(0); tabletop.dispose();
+  });
+  it('does not put my save effect on a scouted board', () => {
+    const loadEffect = vi.fn(); const { tabletop } = setup({ loadEffect });
+    tabletop.frame(frame()); tabletop.away(true); tabletop.saved();
+    expect(loadEffect).not.toHaveBeenCalled(); tabletop.dispose();
+  });
+});
