@@ -1,0 +1,24 @@
+{
+  "parentEpoch": "v20-chem-baron",
+  "contentDigest": "fnv1a32-utf16:3512a559",
+  "lootReplayDigest": "fnv1a32-utf16:d18f985e",
+  "rulesVersion": "s13-g2-3-v20-xp68",
+  "contentVersion": "s13-14.24b-g2-3-v20-xp68",
+  "schemaVersion": 11,
+  "previousContentDigest": "fnv1a32-utf16:2d1eafb8",
+  "previousLootReplayDigest": "fnv1a32-utf16:7fd08770",
+  "traceHashes": {
+    "state": "70cabe7b9608640e6c55da18460976a84cec072a74641ca6c9ba147e014ebfe1",
+    "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
+    "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:f13e9067",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "Project custom XP thresholds requested by the user on 2026-10-22: 8 to 9 = 68 and 9 to 10 = 68; all other thresholds, shop odds, 4G per 4XP, natural XP and max level 10 unchanged. Parent v20-chem-baron; schema/save/replay/command stay 11/7/4/4; old identities rejected without migration."
+}

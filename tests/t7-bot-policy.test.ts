@@ -87,7 +87,7 @@ describe('T7 economy, acquisition and formation',()=>{
   });
   it('buys XP within reserve and never at max level',()=>{
     const state=shop(opening(),[],54),r=applied(state);expect(r.action.type).toBe('buyXp');expect(r.state.gold).toBe(50);
-    const ninth=aligned({...state,level:9,xp:83});
+    const ninth=aligned({...state,level:9,xp:67});
     const upgraded=applied(ninth);expect(upgraded.action.type).toBe('buyXp');expect(upgraded.state).toMatchObject({level:10,xp:0,gold:50});
     expect(decision({...state,level:10,xp:0,gold:54})).toEqual({action:{type:'reroll'},rng:0});
   });
