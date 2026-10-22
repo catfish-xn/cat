@@ -1,3 +1,5 @@
+import { openMasterworkChoice, completeMasterworkChoice } from './masterwork-choice';
+export { readMasterworkOptions } from './masterwork-choice';
 import { createSoloOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 export { TRAINER_GOLEMS_POLICY, validateTrainerGolemEmblems, applyTrainerGolemsOpening } from './trainer-golems';
 export type { TrainerGolemEmblems } from './trainer-golems';
@@ -485,6 +487,7 @@ export function finishCarouselSupply(state:MatchState):MatchCommandResult {
   return accept({...settled,phase:'settlement',combat:null},[{type:'roundSettled',round:state.round}]);
 }
 export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
+  const initial = state;
   if (state.multiplayer?.status === 'eliminated') return fail(state,'wrong-phase');
   if (state.phase !== 'settlement') return fail(state, 'wrong-phase');
   if (expectedRound !== state.round) return fail(state, 'stale-round');
@@ -504,8 +507,20 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round);
   const carousel = resolveCarouselPreparation({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
-  const entered = enterScheduledEvents(carousel.state);
-  return acceptEquipment(entered.state, [...carousel.events,...entered.events]);
+  let prepared = carousel.state;
+  const openingEvents: MatchEvent[] = [];
+  if (prepared.openingEncounter.mode === 'solo') {
+    const applied = applyOpeningEffects(prepared, planOpeningRound(prepared.openingEncounter.context, definition.roundId).facts);
+    if (!applied.ok) return fail(initial, applied.reason);
+    prepared = applied.state; openingEvents.push(...applied.events);
+  }
+  if (prepared.phase === 'gameOver') {
+    const terminal = stampMatchEvents(prepared, carousel.events);
+    return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
+  }
+  const entered = enterScheduledEvents(prepared);
+  const accepted = acceptEquipment(entered.state, [...carousel.events,...entered.events]);
+  return accepted.ok ? {...accepted, events: [...openingEvents, ...accepted.events]} : accepted;
 }
 
 /** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */
@@ -538,6 +553,10 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
 }
 
 export function useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult {
+  if (state.consumables.find(c=>c.consumableId===consumableId)?.definitionId === 'masterwork-upgrade') {
+    const opened = openMasterworkChoice(state,consumableId,target);
+    return opened.ok ? acceptEquipment(opened.state,opened.events) : opened;
+  }
   const plan=planConsumable(state,consumableId,target);
   if(!plan.ok)return fail(state,plan.reason);
   const used={...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
@@ -727,7 +746,8 @@ export function claimOrDiscardLoot(state: MatchState, expectedRound: number, uni
 /** G2-3 forge/blackMarket/armory: resolve through seat-mechanics, then continue the round's schedule like any choice. */
 function completeMechanicChoice(state: MatchState, optionId: string, timedOut: boolean,unitLootPolicy?:UnitLootPolicy): MatchCommandResult {
   const choice = state.pendingChoice!;
-  const resolved = resolveMechanicChoice(state, optionId, timedOut);
+  const resolved = choice.payload?.source === 'masterwork-upgrade'
+    ? completeMasterworkChoice(state, optionId, timedOut) : resolveMechanicChoice(state, optionId, timedOut);
   if (!resolved.ok) return fail(state, resolved.reason);
   const hookEvents:MatchEvent[]=[];
   const completed=drainG23Rewards(finishG23Choice(state,resolved.state,optionId),unitLootPolicy,hookEvents);

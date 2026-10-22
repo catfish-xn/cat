@@ -1129,7 +1129,7 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 
 验收：同一根 seed 的八席（含机器人）与单人结果一致；刷新视图/恢复不发奖；任何公共 payload 均无 seed、selectionRng、未来奖励和个人候选。shared-deferred 仅为服务器建席前内部状态，查询返回 null，不应向已开始玩家展示。模式/布局/颜色/动画由 Claude 决定；此处只定义显示内容与数据源。演出计时由服务器展示阶段控制，不进入 simulation 时钟。
 
-存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2 的激活/锻造器收据、当前候选及本人进度投影已启用，接线见下方 PR2 节；PR3–7 的其他效果尚未启用，魔像训练师见 PR4 节。
+存储位置为 `SharedPoolState.openingEncounter`（已有 room.pool 的全局领域上下文），席位 `MatchState.openingEncounter` 仅绑定；不要在 Room 复制一份可变 RNG。PR2 的激活/锻造器收据、当前候选及本人进度投影已启用，接线见下方 PR2 节；PR5 猴子及工具选择已启用，见下方 PR5 节；PR3/6/7 其余效果尚未启用，魔像训练师保持关闭，见 PR4 节。
 
 ## 开局奇遇 PR2 → Claude（2026-10-22）
 
@@ -1141,6 +1141,26 @@ once, reject movement while roster locked. Codex changed no UI/server files.
 - 本人结果：`seatMechanics.receipts` 中 source=opening-encounter 的choice记录含optionId/itemId/timedOut；`openingEffectApplied` 是授予/激活事件，`mechanicGranted` 是实际选择完成事件，不要把前者当装备已入库。
 - 服务器接线：initializeSharedSeat已授予，不能另发一次。timeoutChoice每次处理一个choiceId；处理后若还有新待选，应继续依据新ID处理，重连只读当前state。PR8如需要新helper，可在server-entry按合同重导出；本PR未修改该目录或服务器。
 - 验收：八席同奇遇/同强化档位、候选仍各自独立；两个锻造器先后选择，不被其他面板覆盖；超时选第一候选、重连不重抽不重发；其他玩家收不到本人待选/后续候选/seed/RNG。布局、颜色和动画由Claude决定。
+
+## 开局奇遇 PR5 → Claude：猴子结果与杰作升级（2026-10-22）
+
+规则已启用发条猴子四分支；不改本文件前部历史记录，当前合同以 MATCH_CONTRACT / MULTIPLAYER_CONTRACT 首节 PR2+PR4+PR5 集成说明及各奇遇专节为准。本节只规定数据和回调，不规定布局、颜色、动画。
+
+| 字段/入口 | 含义、用途与验收 |
+| --- | --- |
+| `openingEncounter.enabled/effectStatus` | wind-up-monkey=true/active；角色爆爆，nameZh=发条猴子；权重500 Bps不变 |
+| `openingEncounter.revealedFacts` | 3-5前为空；触发后 `[{nodeId:'3-5',outcome:'damage'|'gold'|'masterwork'|'components'}]`；显示已发生结果，无seed/RNG/未来分支。观战投影用 `readOpeningEncounterView(match,pool.openingEncounter)` |
+| `nextSharedRound(...).openingResolution` | 全局结果及同批`eliminated[{seatId,rank,hpBefore,hpAfterRaw}]`、`ended`、`survivorRanks`；Room应一次同步hp/alive/rank并处理终局。pool已经返还新淘汰者的卡牌；不要再返池、扣血或重新算名次 |
+| `openingMonkeyResolved` | 伤害事件，含receiptId/hpBefore/hpAfterRaw/hpAfter；10点可致死，负数raw供名次依据，显示HP读领域playerHp |
+| `consumables`、`consumableTargets` | 杰作工具definitionId=`masterwork-upgrade`，姓名/说明读CONSUMABLE_DEFINITIONS；目标列表及allowed/reason读现有本人视图。调用useConsumable的unit目标，不直接发item目标 |
+| `pendingChoice` | armory/source=masterwork-upgrade，payload.masterwork={consumableId,unitId}，offers是物品**实例ID**，不是装备定义ID；工具此时尚未消耗 |
+| 本人可选 `masterworkOptions` | `[{itemId,definitionId,radiantDefinitionId}]`，当前装备→光明版。亦可用match导出的readMasterworkOptions；不要由UI另写映射或筛选规则 |
+| `choose` / `timeoutChoice` | 选择时definitionId参数传offers中的实例ID；超时默认第一项。成功后工具耗尽、仅选中件变光明并进库存；重复/无效选择不扣工具。候选窗口期间交易、装备操作与战利品法球领取按领域wrong-phase处理 |
+| `seatMechanics.receipts` | 金币/组件/工具授予source=opening-encounter-monkey，选择source=masterwork-upgrade；不得把来源误显示为征服者或PvE |
+
+**工具图标接线（当前工作树已补键，保留验收要求）：**`src/presentation/orb-loot.ts:48` 的 `TOOL_MARK: Record<ConsumableDefinitionId,...>` 已含`masterwork-upgrade`键；源API名`TFT_Consumable_MasterworkUpgrade`在本地 `src/simulation/content/g2-3-loot-source.ts` 已有记录。图标/缺图降级由Claude决定，不要求下载资源。PR5 独立报告记录过该缺项的 TS2741；当前是否通过以集成后的 typecheck 为准。本次冲突处理未修改界面或放宽类型。
+
+PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络本人字段、Room全体淘汰/唯一幸存者终局，且协调领域command6与网络协议版本。验收八席同一分支、组件身份各人独立、工具候选只给本人、失败不耗工具、恢复不重抽不重发、先淘汰观战仍见全局结果；全体死亡与并列HP按领域返回名次发布。公开站点/服务器上线前须完成接线；不以已有自动nextSharedRound钩子代替Room状态同步验收。
 
 ## 开局奇遇 PR4 → Claude：魔像训练师保持关闭（2026-10-22）
 

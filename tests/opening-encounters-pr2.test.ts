@@ -221,7 +221,7 @@ it.each([false,true])('two anvils: shared timeout drains one choice at a time, r
 });
 
 it('exactly six PR2 effects become enabled; unimplemented effects retain original weights and null evidence', () => {
-  expect(OPENING_ENCOUNTERS.filter(e=>e.enabled).map(e=>e.id)).toEqual(['none',...policies,'component-anvils','artifact-anvil']);
+  expect(OPENING_ENCOUNTERS.filter(e=>e.enabled).map(e=>e.id)).toEqual(['none',...policies,'wind-up-monkey','component-anvils','artifact-anvil']);
   expect(OPENING_ENCOUNTERS.reduce((sum,e)=>sum+e.weightBps,0)).toBe(10000);
   expect(OPENING_ENCOUNTERS.find(e=>e.id==='gold-subscription')!.researchParameters).toMatchObject({amount_by_stage_and_bucket:null});
 });

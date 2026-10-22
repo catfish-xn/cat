@@ -57,9 +57,15 @@ export type SharedPoolEvent =
 export type SharedPoolResult =
   | { readonly ok:true; readonly pool:SharedPoolState; readonly state:MatchState; readonly events:readonly MatchEvent[]; readonly poolEvents:readonly SharedPoolEvent[] }
   | { readonly ok:false; readonly pool:SharedPoolState; readonly state:MatchState; readonly reason:SharedPoolFailure };
+export interface OpeningRoundResolution {
+  readonly nodeId: '3-5'; readonly outcome: import('./opening-monkey').MonkeyOutcome;
+  readonly eliminated: readonly {readonly seatId:string; readonly rank:number; readonly hpBefore:number; readonly hpAfterRaw:number}[];
+  /** If ended, these are the ranks of THIS batch. Append previously eliminated seats' already-fixed ranks. */
+  readonly ended: boolean; readonly survivorRanks: readonly {readonly seatId:string; readonly rank:number}[];
+}
 export type SharedPoolBatchResult =
   | { readonly ok:true; readonly pool:SharedPoolState; readonly states:readonly MatchState[];
-      readonly events:readonly {readonly seatId:string;readonly events:readonly MatchEvent[]}[]; readonly poolEvents:readonly SharedPoolEvent[] }
+      readonly events:readonly {readonly seatId:string;readonly events:readonly MatchEvent[]}[]; readonly poolEvents:readonly SharedPoolEvent[]; readonly openingResolution?:OpeningRoundResolution }
   | { readonly ok:false; readonly pool:SharedPoolState; readonly states:readonly MatchState[]; readonly reason:SharedPoolFailure };
 export type SharedMatchCommand =
   | {readonly type:'claimOrb';readonly round:number;readonly orbId:string}
