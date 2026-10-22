@@ -74,6 +74,10 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
     mesh.skeleton.update(); mesh.computeBoundingBox();
     return mesh.boundingBox!.clone();
   });
+  // Some clips hide a weapon by moving its bones thousands of units below the floor (Draven's thrown axes).
+  // That is not a foot. Keep every vertex near the loaded body, including feet between the radius sampler's strides.
+  const bindBox = new Box3().setFromObject(body);
+  const groundLimit = bindBox.min.y - Math.max(bindBox.max.y - bindBox.min.y, 1) * 2;
   const restore = () => {
     for (const { node, position, quaternion, scale } of loaded) {
       node.position.copy(position); node.quaternion.copy(quaternion); node.scale.copy(scale); node.updateMatrix();
@@ -112,7 +116,8 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
             if (v % ENVELOPE_STRIDE === 0) radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
             // Feet without the skeleton root's own vertical motion (a hover, a jump, a crouch stays the clip's):
             // what is left is how far the skinned body sits from its bind pose (Darius ~100 source units up).
-            if (standing && point.y - rootAt.y < ground) ground = point.y - rootAt.y;
+            const foot = point.y - rootAt.y;
+            if (standing && foot >= groundLimit && foot < ground) ground = foot;
             if (++work >= ENVELOPE_CHUNK) { work = 0; yield; pose(); mesh.skeleton.update(); if (root) root.getWorldPosition(rootAt).sub(homes[index]!); }
           }
         }

@@ -1369,3 +1369,4 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .market-action:hover:not(:disabled) { border-color: #bfe3ff; background: linear-gradient(180deg, #24506f, #173549); }
 .market-take::after { content: '↓'; float: right; margin-left: 10px; color: #7fd0ff; }
 .market-keep { border-color: #b88fe0; background: linear-gradient(180deg, #33244a, #22183a); }
+.market-pool-badge .item-glyph { font-size: 10px; line-height: 1.1; white-space: normal; text-align: center; }

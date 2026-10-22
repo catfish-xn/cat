@@ -16,6 +16,8 @@ export interface BoardPiece {
   readonly neutral?: true;
   /** BoardScene logical coordinates of the drawn token (tweens included); 3D maps x→x and y→z. */
   readonly x: number; readonly y: number;
+  /** Authoritative bench cell, independent of the token's transient drag/tween coordinates. Absent on the board. */
+  readonly benchSlot?: number | null;
   /** Shown on the board apart from dying: a unit killed in this combat stays visible here and is flagged by `alive`. */
   readonly visible: boolean;
   /** False once the shown combat has killed it; the 3D layer plays the death action before hiding the piece. */

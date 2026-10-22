@@ -35,6 +35,26 @@ function model(bindFeet = 0) {
 }
 
 describe('root-motion independent grounding', () => {
+  it.each(['sync', 'sliced'] as const)('ignores a weapon hidden far underground without dropping real foot vertices (%s)', async mode => {
+    const geometry = new BoxGeometry(2, 4, 2).translate(0, 2, 0);
+    const count = geometry.getAttribute('position').count;
+    const weights = new Float32Array(count * 4), indices = new Uint16Array(count * 4);
+    for (let i = 0; i < count; i++) { weights[i * 4] = 1; indices[i * 4] = i < 8 ? 1 : 0; }
+    geometry.setAttribute('skinIndex', new Uint16BufferAttribute(indices, 4));
+    geometry.setAttribute('skinWeight', new Float32BufferAttribute(weights, 4));
+    const root = new Bone(), axe = new Bone(); root.name = 'root'; axe.name = 'axe'; root.add(axe);
+    const mesh = new SkinnedMesh(geometry, new MeshBasicMaterial()); mesh.add(root); mesh.bind(new Skeleton([root, axe]));
+    const body = new Group(); body.add(mesh);
+    const attack = new AnimationClip('attack', 1, [new NumberKeyframeTrack('axe.position[y]', [0, 1], [-15000, -15000])]);
+    try {
+      const measure = mode === 'sync' ? animationEnvelope : animationEnvelopeSliced;
+      const envelope = await measure(body, [{ clip: attack, loop: false, ground: true }]);
+      expect(envelope!.ground).toBeCloseTo(0);
+      fitModel(body, { height: 92, width: 110, sourceScale: 1, unitScale: 1, ground: envelope!.ground });
+      expect(body.position.y).toBeCloseTo(0);
+      expect(body.scale.y).toBe(1);
+    } finally { mesh.skeleton.dispose(); geometry.dispose(); mesh.material.dispose(); }
+  });
   it.each(['sync', 'sliced'] as const)('keeps a raised idle at +10 and a root-zero action on the floor (%s)', async mode => {
     const toy = model();
     try {

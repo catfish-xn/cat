@@ -63,7 +63,7 @@ export function g23RewardLines(reward: Readonly<Record<string, unknown>>, first?
 /** One picture of a bundle: a hero portrait with its stars, an item icon (null id: a random pool), or the gold in it. */
 export type G23RewardIcon =
   | { readonly kind: 'hero'; readonly unitId: string | null; readonly star: number; readonly name: string }
-  | { readonly kind: 'item'; readonly itemId: string | null; readonly name: string }
+  | { readonly kind: 'item'; readonly itemId: string | null; readonly name: string; readonly source?: string }
   | { readonly kind: 'gold'; readonly amount: number };
 
 /** A shop hero's apiName (TFT13_Gremlin) to the repo unit id (smeech) when the repo has that hero. */
@@ -85,13 +85,13 @@ function itemId(api: string): string | null {
 export function g23RewardIcons(reward: Readonly<Record<string, unknown>>): G23RewardIcon[] {
   const heroes: G23RewardIcon[] = [], items: G23RewardIcon[] = [];
   let gold = 0;
-  const item = (api: string) => items.push({ kind: 'item', itemId: Object.hasOwn(TOOLS, api) || Object.hasOwn(G23_POLICY.duplicators, api) ? null : itemId(api), name: itemName(api) });
+  const item = (api: string) => items.push({ kind: 'item', itemId: Object.hasOwn(TOOLS, api) || Object.hasOwn(G23_POLICY.duplicators, api) ? null : itemId(api), name: itemName(api), source: api });
   for (const [key, value] of Object.entries(reward)) {
     if (key === 'Gold') gold += Number(value) || 0;
     else if (key === 'GoldItems') for (const api of list(value)) gold += Number(api.slice(api.lastIndexOf('_') + 1)) || 0;
     else if (key === 'Remover') for (let n = 0; n < (Number(value) || 0); n++) items.push({ kind: 'item', itemId: null, name: consumableName('magnetic-remover') });
     else if (['Item', 'ExactItem', 'ItemByKey', 'Consumables'].includes(key)) for (const api of list(value)) item(api);
-    else if (key === 'MeepTypeUnit') for (const api of list(value)) items.push({ kind: 'item', itemId: null, name: FORGES[api] ?? '锻造器' });
+    else if (key === 'MeepTypeUnit') for (const api of list(value)) items.push({ kind: 'item', itemId: null, name: FORGES[api] ?? '锻造器', source: api });
     else if (key.startsWith('Champions')) {
       const star = Number(/_(\d)Star$/.exec(key)?.[1] ?? 1);
       for (const api of list(value)) heroes.push({ kind: 'hero', unitId: heroUnitId(api), star, name: heroName(api) });
