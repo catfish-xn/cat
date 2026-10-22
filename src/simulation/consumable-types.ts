@@ -3,8 +3,8 @@ import type { ItemInstance } from './strategy-types';
 import type { RngStream } from './m8/contracts';
 export type ConsumableDefinitionId = keyof typeof CONSUMABLE_DEFINITIONS;
 export interface ConsumableInstance { readonly consumableId:string; readonly definitionId:ConsumableDefinitionId }
-export type ConsumableTarget = {readonly kind:'item';readonly itemId:string} | {readonly kind:'unit';readonly unitId:string};
-export type ConsumableEffect = 'remove-all'|'reforge-all'|'duplicate-unit';
+export type ConsumableTarget = {readonly kind:'item';readonly itemId:string} | {readonly kind:'unit';readonly unitId:string; readonly itemId?:string};
+export type ConsumableEffect = 'remove-all'|'reforge-all'|'duplicate-unit'|'masterwork-upgrade';
 export type ConsumableFailure = 'wrong-phase'|'unknown-consumable'|'temporary-item'|'unknown-item'|'unknown-unit'
   | 'invalid-consumable-target'|'no-removable-items'|'bench-full';
 export type ConsumablePreview = {readonly ok:true;readonly effect:ConsumableEffect;readonly affectedItemIds:readonly string[];

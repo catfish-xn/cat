@@ -1,3 +1,62 @@
+## 开局奇遇 PR5：爆爆「发条猴子」（2026-10-22）
+
+本节优先于下方 PR1/PR2 历史描述。`wind-up-monkey` 已 `enabled=true/effectStatus=active`；固定权重500 Bps及全部16项区间不变。配置 `opening-encounters-14.24b-pr5-v1`；rules/content 仍为开发 v21，schema/save=12/8；按批准方案将 replay/command 升至 **6/6**（工具两步选择语义），网络协议编号仍由PR8另行协调。不录制epoch，不更新旧golden；双digest由现有脚本重算。
+
+**来源与触发：**只读批准方案第3/4/6/9节及本地 `tft_s13_opening_encounters_14.24b.json` 的 encounters[10]，不联网。3-5准备入口一次、全局四分支各2500 Bps：存活席位各受10伤害／各得25金币／各得1个杰作升级／各得4件普通基础装备。此前淘汰者不发奖、不复活。八席含机器人一致。具体准备入口、全局抽样及个人身份独立为批准项目约定；调研原始null仍保留。杰作复用现存 `G23_RADIANT_MAPPING` 全36项和对应14.24b光明定义，不新增或调整装备数值；原有限光明运行时的已知约定不因本PR改写。
+
+**随机：**两个新流均以单人seed／共享pool.seed为根，对完整流名按UTF-16 code unit做FNV-1a32，`rng=(rootSeed XOR hash)>>>0`，lcg32-v1。
+
+| 子流 | 消费与结果 |
+| --- | --- |
+| `opening-encounter-v1/shared/wind-up-monkey/outcome` | 1词，`floor(word*4/2^32)`，依次damage/gold/masterwork/components。单人也用该名称。精确四等分，没有第五分支、补抽或重归一化 |
+| `opening-encounter-v1/seat/<seatId>/wind-up-monkey/components` | 每席4词，对按ID排序的现有八普通组件池，逐词`floor(word*8/2^32)`；有放回，可重复。solo席位名为`solo` |
+
+工具选择完全个人操作，不需要随机词；超时选第一候选。上述流不读写商店、强化、奖励、装备、重铸、战斗、掉落或选秀流。恢复重推只认证，绝不补发或再推进。
+
+**权威状态与收据：**`OpeningEffectFact` 新增可选 `outcome: 'damage'|'gold'|'masterwork'|'components'`（仅猴子存在），`nodeId='3-5'`、`effectKey='monkey/<outcome>'`，factId沿原公式而节点改为3-5。`planOpeningRound`在3-5返回新context并将唯一fact写入context.facts；其他节点不揭示，不可仅丢弃返回的context。重复规划保留已有context。单人完整context、共享pool唯一context的权威位置不变。
+
+每席独立 `openingEncounter.receipts` 沿用原receiptId公式；伤害收据额外含 `hpBefore`，其余分支禁止该字段。金币/工具的 `seatMechanics.receipts.receiptId` 等于效果收据ID；四组件分别加 `/component/0..3`。来源统一 `opening-encounter-monkey`，物品另写既有 `item-acquired` mechanic provenance。工具为 `consumable-N`／`definitionId='masterwork-upgrade'`（源API名已存在于本地奖励源表：`TFT_Consumable_MasterworkUpgrade`）。工具和组件不塞进征服者箱或PvE掉落账本。重复完整apply成功返回原state、events=[]；缺收据、错误分支、错误数量/来源、重复、篡改候选/映射或已消费工具的恢复均拒绝，不修复。
+
+**生命周期及多人原子边界：**单人`nextRound`自动在3-5准备入口应用；多人必须用全存活席位 `nextSharedRound`，不可逐席发奖/扣血。该事务先准备所有席位，冻结一个全局fact，完成所有效果，再在内部统一返回淘汰者卡池、最后刷存活者商店；任何席位失败返回原pool和原states、无events。存活席位若有既有待选，仍遵循原推进准入，不覆盖它。3-5没有额外收入或伪造战斗结算，HP链在3-5准备节点扣一次，后续战斗另正常结算。
+
+伤害 `hpAfterRaw=hpBefore-10`，`playerHp=max(0,hpAfterRaw)`，可致死。非战斗伤害不调用六费梅尔战斗救命被动。名次沿§11.5：未截断HP降序→受伤前HP降序→固定seatIndex升序（较优者名次较小）；同批统一排名，不依赖输入/到达顺序。全员死亡仍确定第1名，无存活冠军；存活≤1时ended=true。既有未领取奖励按淘汰规则forfeit，库存卡池仅返还一次。
+
+```ts
+// 既有shared-pool.ts入口签名不变，成功结果新增可选openingResolution。
+nextSharedRound(pool: SharedPoolState, states: readonly MatchState[], expectedRound: number): SharedPoolBatchResult
+interface OpeningRoundResolution {
+  nodeId: '3-5'; outcome: 'damage'|'gold'|'masterwork'|'components';
+  eliminated: readonly {seatId:string; rank:number; hpBefore:number; hpAfterRaw:number}[];
+  ended: boolean;
+  survivorRanks: readonly {seatId:string; rank:number}[];
+}
+// 返回states保留本批新淘汰席位；后续调用只传仍存活者。
+// ended时合并eliminated、survivorRanks及Room以前已固定的名次，最后统一发布。
+// 不重复调用releaseSeatOnElimination；它已在事务内完成。
+```
+
+**杰作升级命令与本人投影：**复用`useConsumable(state, consumableId, {kind:'unit',unitId})`，仅准备阶段、无其他待选、非战斗锁定时可开。第一次不消耗工具；打开 `pendingChoice.kind='armory'`、`payload.source='masterwork-upgrade'`、`payload.masterwork={consumableId,unitId}`、`returnPhase='preparation'`、`choiceId=JSON(['masterwork',consumableId])`、generation=0、所有prices=0。offers是该单位永久装备中可升级的**物品实例ID**，按装备槽递增；组件、神器、辅助装、纹章、光明、临时装备均不进入。候选必须是普通36成装中有recipe且有对应光明映射者。弹窗期间交易/装备编辑/战利品法球领取暂停，避免目标变化；选择超时不会花金币。
+
+第二步复用`selectChoice(state, choiceId, generation, itemInstanceId)`／shared `choose`，超时复用`timeoutChoice`并选offers[0]。一次事务消费工具、消费被选普通装备实例、生成下一个item-N的对应光明版并放库存；其他装备保留，窃贼手套的临时子装备正常撤销。写 `consumable-used` provenance（effect=`masterwork-upgrade`，target含unitId及itemId、affectedItems只1件、outputs只1件、重铸RNG前后相同）和既有armory选择收据。外部`useConsumable`不得直接传itemId绕过第一步。
+
+```ts
+// match.ts公共重导出；不暴露未来结果。
+readMasterworkOptions(state: MatchState, unitId: string): readonly {
+  itemId:string; definitionId:string; radiantDefinitionId:string;
+}[]
+// 既有签名增可选权威shared参数；淘汰观战传pool.openingEncounter也可看到全局已揭示结果。
+readOpeningEncounterView(state: Pick<MatchState,'openingEncounter'>,
+  shared?: OpeningEncounterContext): OpeningEncounterView
+// 现有openingEncounter.revealedFacts现在仅白名单：[{nodeId:'3-5',outcome}]；3-5前=[]。
+// toPrivateSeatView新增可选masterworkOptions（仅本人打开杰作选择时）；其他玩家不接收。
+```
+
+领域内部/测试模块导出：`opening-monkey.ts` 的 `MONKEY_NODE/MONKEY_ROUND/MONKEY_OUTCOMES`、`MonkeyOutcome`、`selectMonkeyOutcomeFromWord(word:number):MonkeyOutcome`、`monkeyOutcome(seed:number):MonkeyOutcome`、`monkeyComponents(seed:number,seatId:string):readonly string[]`、`monkeyReceipt(state):OpeningEffectReceipt|undefined`、`applyMonkey(state,fact,receipt):{state,events}`、`validateMonkeyGrants(state,fact?):void`、`openingHpBeforeRound(state,roundId,hp):number`。这些不单独构成客户端命令，applyMonkey只允许在已验证的opening事务内使用。`masterwork-choice.ts` 导出 `openMasterworkChoice(state,consumableId,target):MatchCommandResult`、`completeMasterworkChoice(state,optionId,timedOut):MatchCommandResult`、`validateMasterworkChoice(state):void`；`consumables.ts` 新增 `masterworkCandidates(state:Readonly<MatchState>,unitId:string):readonly ItemInstance[]`。调用方使用Match入口；所有输入状态仍须来自可信领域/严格恢复。
+
+**事件、失败与恢复：**除原 `openingEffectApplied`、`mechanicGranted`、`choiceOpened/Selected/TimedOut`、`consumableUsed`、`itemReforged`及`itemsRemoved`外，新增伤害事件 `{type:'openingMonkeyResolved',receiptId,outcome:'damage',hpBefore,hpAfterRaw,hpAfter}`。完整事件序号连续，不用动画截断账本。没有新增失败字符串：奇遇用`opening-config-incomplete/opening-context-mismatch/invalid-opening-effect`；工具沿用`wrong-phase/unknown-consumable/unknown-unit/invalid-consumable-target/temporary-item`，选择沿用`stale-choice/invalid-choice/duplicate-mechanic-receipt/invalid-mechanic-state`；共享前置准入沿`invalid-pool/invalid-seat-state/stale-seat/incomplete-seats/stale-round/stale-refresh/unsettled-round`等既有SharedPoolFailure。非法操作原state/pool、无events、不耗工具/物品/金币/RNG；读/恢复验证异常沿原Error/RangeError边界。
+
+PR8必须接收新的openingResolution并在刷出3-5准备画面前同步Room的alive/hp/rank/ended；Room不能再按战斗结算方式自行重复扣血、返池或排序。server-entry重导出、服务器消息/UI回调及工具图标表由Claude接线；本PR不修改这些目录。`src/presentation/orb-loot.ts:48` 的穷举工具图标表现缺masterwork-upgrade，导致typecheck一项跨目录诊断，详见UI_REQUESTS。PR9统一epoch录制、历史字节核验与完整验收后再发布。
+
 ## 开局奇遇 PR2：强化约束与 1-2 锻造器（2026-10-22）
 
 本节覆盖下方 PR1 中“15 项关闭、facts/receipts 为空、apply 无效果”的历史描述。按用户批准方案第3、4、6、9节实现；14.24b、不联网、不补造缺证数值。配置身份为 `opening-encounters-14.24b-pr2-v1`；沿用未发布的 v21 rules/content、schema12/save8/replay5/command5，重算双 digest，不录制 epoch，PR9 统一录制。

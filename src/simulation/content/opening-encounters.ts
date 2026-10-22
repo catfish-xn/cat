@@ -496,8 +496,8 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "nameZh": "发条猴子",
     "nameEn": "Wind-up Monkey",
     "weightBps": 500,
-    "enabled": false,
-    "effectStatus": "not-implemented",
+    "enabled": true,
+    "effectStatus": "active",
     "readiness": "ready-for-followup",
     "followupPr": 5,
     "descriptionZh": "四种结果各 25%；14.24 普通模式未公告改变结果。",
@@ -797,7 +797,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
 ] as const);
 export type OpeningEncounterId = typeof OPENING_ENCOUNTERS[number]['id'];
 export const OPENING_ENCOUNTER_CONFIG = freezeContent({
-  version: 'opening-encounters-14.24b-pr2-v1',
+  version: 'opening-encounters-14.24b-pr5-v1',
   entries: OPENING_ENCOUNTERS,
   selectionStream: 'opening-encounter-v1/select',
   derivation: 'uint32(matchSeed XOR fnv1a32-utf16(streamName))',
@@ -816,6 +816,16 @@ export const OPENING_ENCOUNTER_CONFIG = freezeContent({
     order: 'opening-forge-before-epic-and-other-mechanic-choices',
     policyReceipt: '1-2/augment-policy-once', forgeReceipt: '1-2/anvil/0-or-1',
     restore: 'exact-activation-receipts/rederive-offers/ordered-resolution/provenance/no-regrant',
+  },
+  pr5: { node: '3-5', timing: 'preparation-entry-before-choices-and-shared-shops',
+    outcomes: ['damage', 'gold', 'masterwork', 'components'], weightsBps: [2500,2500,2500,2500],
+    damage: 10, gold: 25, tools: 1, components: 4,
+    outcomeStream: 'opening-encounter-v1/shared/wind-up-monkey/outcome',
+    componentStream: 'opening-encounter-v1/seat/<seatId>/wind-up-monkey/components',
+    sampling: 'outcome-floor-word-times-4-over-2^32/components-sorted-ordinary-eight-with-replacement-four-words',
+    damagePolicy: 'living-seats/simultaneous/lethal/no-combat-mel-save/raw-hp-desc-before-hp-desc-index-asc',
+    masterwork: 'ordinary-36-recipe-to-existing-radiant-mapping/one-permanent-equipped-item/unequip',
+    toolSelection: 'personal-unit-then-armory-instance-id/preparation-only/freeze-target-equipment-trading-and-orb-claims/first-offer-timeout/no-rng',
   },
   melBOverride: { source: 'S03 / encounters[13].patch_history.14.24b_changes_zh', crownsInAffectedBranch: 2 },
 } as const);

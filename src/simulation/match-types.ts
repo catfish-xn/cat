@@ -5,6 +5,7 @@ import type { ItemInstance, OwnedAugment, AnomalyBinding, PendingChoice, Schedul
 import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
 export type MatchEvent = LedgerCombatEvent | (({readonly type:'openingEffectApplied';readonly receipt:import('./opening-encounter').OpeningEffectReceipt} | {readonly type:'playerSaved';readonly battleId:string;readonly playerHp:1;readonly source:'mel'} | {readonly type:'d14Promoted'|'d14Returned';readonly unitId:string;readonly choiceId:string} | import('./consumable-types').ConsumableEvent | { readonly type: 'unitDeployed'; readonly unitId: string; readonly from: import('./unit-types').UnitLocation; readonly to: import('./unit-types').UnitLocation } | UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }
+  | {readonly type:'openingMonkeyResolved';readonly receiptId:string;readonly outcome:'damage';readonly hpBefore:number;readonly hpAfterRaw:number;readonly hpAfter:number}
   | {readonly type:'carouselPendingClaimed';readonly unitId:string;readonly receiptId:string}
   | {readonly type:'carouselPreparationSettled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[]}
   | {readonly type:'carouselGranted';readonly receipt:import('./carousel-types').CarouselReceipt}

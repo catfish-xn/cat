@@ -1,3 +1,4 @@
+import { MONKEY_NODE, MONKEY_ROUND, monkeyOutcome, applyMonkey, validateMonkeyGrants, type MonkeyOutcome } from './opening-monkey';
 import { canonicalContent } from './content';
 import { freezeContent } from './content/freeze';
 import { OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG, type OpeningEncounterId } from './content/opening-encounters';
@@ -19,9 +20,11 @@ export interface OpeningEncounterSelection {
 }
 /** Deterministic effect descriptors; PR2 activation and anvil grants have independent receipts. */
 export interface OpeningEffectFact {
+  readonly outcome?: MonkeyOutcome;
   readonly factId: string; readonly effectKey: string; readonly nodeId: string;
 }
 export interface OpeningEffectReceipt {
+  readonly hpBefore?: number;
   readonly receiptId: string; readonly factId: string; readonly seatId: string; readonly nodeId: string;
 }
 export interface OpeningEncounterContext {
@@ -70,7 +73,10 @@ export function createOpeningEncounter(seed: number, config: unknown = OPENING_E
 }
 /** Re-derive to authenticate, never replace an input or repair missing fields. */
 export function validateOpeningEncounterContext(input: unknown, seed: number): void {
-  if (!same(input, createOpeningEncounter(seed))) fail('opening-context-mismatch');
+  const initial = createOpeningEncounter(seed);
+  if (same(input, initial)) return;
+  if (initial.selection.encounterId === 'wind-up-monkey' && same(input, {...initial, facts: openingFacts(initial)})) return;
+  fail('opening-context-mismatch');
 }
 export function createSoloOpeningEncounter(seed: number): Extract<OpeningEncounterState, {mode: 'solo'}> {
   return freezeContent({mode: 'solo', context: createOpeningEncounter(seed), receipts: []});
@@ -90,6 +96,11 @@ function openingInstanceId(seed: number): string {
 /** The PR2 facts are deterministic grants/policy activation, not random global outcomes. */
 function openingFacts(context: OpeningEncounterContext): OpeningEffectFact[] {
   const entry = OPENING_ENCOUNTERS.find(e => e.id === context.selection.encounterId)!;
+  if (entry.id === 'wind-up-monkey') {
+    const outcome = monkeyOutcome(context.seed), effectKey = `monkey/${outcome}`;
+    return [{factId: JSON.stringify(['opening-effect', context.selection.configVersion, openingInstanceId(context.seed),
+      entry.id, effectKey, MONKEY_NODE]), effectKey, nodeId: MONKEY_NODE, outcome}];
+  }
   if (!entry.enabled || entry.followupPr !== 2) return [];
   const keys = entry.id === 'component-anvils' ? ['anvil/0', 'anvil/1']
     : entry.id === 'artifact-anvil' ? ['anvil/0'] : ['augment-policy'];
@@ -106,7 +117,8 @@ function boundContext(state: MatchState, shared?: OpeningEncounterContext): Open
     return shared;
   }
   if (!opening || opening.mode !== 'solo' || state.augmentTierSeed !== state.seed
-    || !same({...opening, receipts: []}, createSoloOpeningEncounter(state.seed))) fail('opening-context-mismatch');
+    || !same(opening, {mode:'solo', context:opening.context, receipts:opening.receipts})) fail('opening-context-mismatch');
+  validateOpeningEncounterContext(opening.context, state.seed);
   return opening.context;
 }
 function effectReceipts(context: OpeningEncounterContext, seatId: string): OpeningEffectReceipt[] {
@@ -114,38 +126,66 @@ function effectReceipts(context: OpeningEncounterContext, seatId: string): Openi
     factId: f.factId, seatId, nodeId: f.nodeId}));
 }
 export function validateOpeningEncounterState(state: MatchState, shared?: OpeningEncounterContext): void {
-  const context = boundContext(state, shared);
-  if (state.openingEncounter.mode === 'shared-deferred' || !same(state.openingEncounter.receipts,
-    effectReceipts(context, state.sharedPool?.seatId ?? 'solo'))) fail('opening-context-mismatch');
+  const context = boundContext(state, shared), opening = state.openingEncounter;
+  if (opening.mode === 'shared-deferred') fail('opening-context-mismatch');
+  const monkey = context.selection.encounterId === 'wind-up-monkey';
+  const due = !monkey || state.round >= MONKEY_ROUND;
+  // Seats eliminated earlier retain their empty personal receipt even after the global fact is revealed.
+  const earlierDeath = monkey && state.round < MONKEY_ROUND && state.multiplayer?.status === 'eliminated';
+  if (monkey && !earlierDeath && Boolean(context.facts.length) !== due) fail('opening-context-mismatch');
+  const expected = due ? effectReceipts(context, state.sharedPool?.seatId ?? 'solo') : [];
+  if (monkey && expected.length && opening.receipts[0]?.hpBefore !== undefined && monkeyOutcome(context.seed) === 'damage')
+    expected[0] = {...expected[0], hpBefore: opening.receipts[0].hpBefore};
+  if (!same(opening.receipts, expected)) fail('opening-context-mismatch');
   validateOpeningForges(state);
+  validateMonkeyGrants(state, monkey ? context.facts[0] : undefined);
 }
-/** PR2 needs no mutable shared facts or shared RNG. Each 1-2 plan returns the same facts. */
+/** Reveal the one global monkey fact only at 3-5; retries reuse the frozen fact. */
 export function planOpeningRound(shared: OpeningEncounterContext, roundId: string): {
   readonly context: OpeningEncounterContext; readonly facts: readonly OpeningEffectFact[];
 } {
   validateOpeningEncounterContext(shared, shared.seed);
   try { getCatalogRoundById(roundId); } catch { fail('invalid-opening-effect'); }
-  return {context: shared, facts: roundId === '1-2' ? openingFacts(shared) : []};
+  const facts = openingFacts(shared).filter(f => f.nodeId === roundId);
+  const context = roundId === MONKEY_NODE && facts.length && !shared.facts.length ? freezeContent({...shared, facts}) : shared;
+  return {context, facts};
 }
-/** Called once after admission/binding, before the first preparation is exposed. */
+/** Admission/round-entry hook. Failure returns the original state; a receipted retry is inert. */
 export function applyOpeningEffects(state: MatchState, facts: readonly OpeningEffectFact[], shared?: OpeningEncounterContext): MatchCommandResult {
   try {
     const context = boundContext(state, shared), opening = state.openingEncounter;
     if (opening.mode === 'shared-deferred') fail('opening-context-mismatch');
+    const allFacts = openingFacts(context), monkey = context.selection.encounterId === 'wind-up-monkey';
     const expected = effectReceipts(context, state.sharedPool?.seatId ?? 'solo');
-    if (!same(facts, []) && !same(facts, openingFacts(context))) fail('invalid-opening-effect');
-    if (same(opening.receipts, expected)) {
-      validateOpeningForges(state);
+    if (!same(facts, []) && !same(facts, allFacts)) fail('invalid-opening-effect');
+    if (opening.receipts.length || !expected.length) {
+      validateOpeningEncounterState(state, shared);
       return {ok: true, state, events: []};
     }
-    if (!same(opening.receipts, []) || state.seatMechanics?.receipts.some(r => r.source === 'opening-encounter'
-      || r.receiptId.startsWith('["opening-receipt",'))) fail('opening-context-mismatch');
-    if (!same(facts, openingFacts(context)) || state.roundDefinitionId !== '1-2' || state.round !== 1
-      || state.phase !== 'preparation' || state.pendingChoice || state.roundResults.length) fail('invalid-opening-effect');
-    const applied = openOpeningForge({...state, openingEncounter: {...opening, receipts: expected}});
+    if (!facts.length) {
+      if (monkey && state.round < MONKEY_ROUND) {
+        validateOpeningEncounterState(state, shared);
+        return {ok: true, state, events: []};
+      }
+      fail('invalid-opening-effect');
+    }
+    const node = monkey ? MONKEY_NODE : '1-2', ordinal = monkey ? MONKEY_ROUND : 1;
+    if (!same(facts, allFacts) || state.roundDefinitionId !== node || state.round !== ordinal
+      || state.phase !== 'preparation' || state.pendingChoice || state.playerHp <= 0
+      || state.multiplayer?.status === 'eliminated' || state.roundResults.length !== ordinal - 1) fail('invalid-opening-effect');
+    if (state.seatMechanics?.receipts.some(r => r.source === 'opening-encounter-monkey' || r.receiptId.includes('wind-up-monkey')))
+      fail('opening-context-mismatch');
+    if (monkey && state.sharedPool && !same(context.facts, facts)) fail('opening-context-mismatch');
+    if (monkey && facts[0].outcome === 'damage') expected[0] = {...expected[0], hpBefore: state.playerHp};
+    const nextOpening = opening.mode === 'solo' && monkey
+      ? {...opening, context: {...context, facts}, receipts: expected} : {...opening, receipts: expected};
+    const staged = {...state, openingEncounter: nextOpening};
+    const applied = monkey ? applyMonkey(staged, facts[0], expected[0]) : openOpeningForge(staged);
+    validateOpeningEncounterState(applied.state, shared);
     let eventSeq = state.nextMatchEventSeq;
     const raw: import('./match-types').MatchEvent[] = [...expected.map(receipt => ({type: 'openingEffectApplied' as const, receipt})), ...applied.events];
     const events = raw.map(event => 'tick' in event ? event : ({...event, domain: 'match' as const, eventSeq: eventSeq++}));
+    if (!Number.isSafeInteger(eventSeq)) fail('invalid-opening-effect');
     return {ok: true, state: {...applied.state, nextMatchEventSeq: eventSeq}, events};
   } catch (error) {
     return {ok: false, state, reason: error instanceof OpeningEncounterError ? error.reason : 'opening-context-mismatch'};
@@ -196,7 +236,7 @@ export function validateOpeningForges(state: MatchState): void {
   const check = (ok: unknown) => {if (!ok) fail('opening-context-mismatch');};
   const receipts = forgeReceipts(state);
   const resolved = (state.seatMechanics?.receipts ?? []).filter(r => r.source === 'opening-encounter'
-    || r.receiptId.startsWith('["opening-receipt",'));
+    || r.receiptId.startsWith('["opening-receipt",') && !r.receiptId.includes('wind-up-monkey'));
   check(resolved.length <= receipts.length);
   resolved.forEach((r, index) => {
     check(r.receiptId === receipts[index]?.receiptId);
@@ -220,18 +260,25 @@ export function validateOpeningForges(state: MatchState): void {
   }
 }
 /** Public whitelist. Never spread a context: seed, RNG and unrevealed facts stay private. */
-export function readOpeningEncounterView(state: Pick<MatchState, 'openingEncounter'>) {
+export function readOpeningEncounterView(state: Pick<MatchState, 'openingEncounter'>, shared?: OpeningEncounterContext) {
   const opening = state.openingEncounter;
   if (opening.mode === 'shared-deferred') return null;
   const selection = opening.mode === 'solo' ? opening.context.selection : opening.selection;
   const entry = OPENING_ENCOUNTERS.find(entry => entry.id === selection.encounterId);
   if (!entry || selection.configVersion !== OPENING_ENCOUNTER_CONFIG.version) fail('opening-context-mismatch');
+  if (shared) {
+    validateOpeningEncounterContext(shared, shared.seed);
+    if (!same(selection, shared.selection)) fail('opening-context-mismatch');
+  }
+  const revealed = opening.mode === 'solo' ? opening.context.facts : shared?.facts;
   return freezeContent({ configVersion: selection.configVersion, encounterId: entry.id,
     sourceEncounterId: entry.encounterId, portalId: entry.portalId, champion: entry.champion,
     nameZh: entry.nameZh, nameEn: entry.nameEn, enabled: entry.enabled, effectStatus: entry.effectStatus,
     readiness: entry.readiness, descriptionZh: entry.descriptionZh,
     statusTextZh: entry.id === 'none' ? '本局不附加奇遇规则' : entry.enabled ? '本局奇遇效果已启用' : '本局抽中此奇遇，效果尚未启用',
-    revealedFacts: [] as readonly OpeningEffectFact[] });
+    revealedFacts: revealed?.length ? revealed.map(f => ({nodeId:f.nodeId,outcome:f.outcome!}))
+      : (entry.id === 'wind-up-monkey' && opening.receipts.length
+        ? [{nodeId: MONKEY_NODE, outcome: JSON.parse(opening.receipts[0].factId)[4].slice(7) as MonkeyOutcome}] : []) });
 }
 export type OpeningEncounterView = ReturnType<typeof readOpeningEncounterView>;
 

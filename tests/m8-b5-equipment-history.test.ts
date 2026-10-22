@@ -180,7 +180,7 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
   describe('archived save envelope', () => {
     let envelope: SaveEnvelope;
     beforeAll(async () => {
-      envelope = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: 5,
+      envelope = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
         runId: 'b5-r1', createdAt: '2026-10-09T00:00:00.000Z', match: archivedState,
         battles: archiveHistory.completedRecords, currentBattle: null };
       // Fully validate the shared control before exercising the forged copy.
