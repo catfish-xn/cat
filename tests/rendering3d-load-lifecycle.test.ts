@@ -125,13 +125,13 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
 
   it.each(['complete', 'combat interruption', 'mount races warmup'] as const)('shares only completed envelopes with mounting: %s', async situation => {
     const fit = await import('../src/rendering/three-mode/model-fit');
-    let finish!: (radius: number | null) => void;
-    const sliced = vi.spyOn(fit, 'animationEnvelopeRadiusSliced').mockImplementation(() => new Promise(resolve => { finish = resolve; }));
-    const sync = vi.spyOn(fit, 'animationEnvelopeRadius').mockReturnValue(91);
+    let finish!: (envelope: import('../src/rendering/three-mode/model-fit').Envelope | null) => void;
+    const sliced = vi.spyOn(fit, 'animationEnvelopeSliced').mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const sync = vi.spyOn(fit, 'animationEnvelope').mockReturnValue({ radius: 91, ground: 0 });
     const fitted = vi.spyOn(fit, 'fitModel');
     await mount(['toy'], ['toy'], true); await stepIdle();
     expect(sliced).toHaveBeenCalledTimes(1); expect(sync).not.toHaveBeenCalled();
-    if (situation === 'complete') { finish(12); await flush(); }
+    if (situation === 'complete') { finish({ radius: 12, ground: 0 }); await flush(); }
     if (situation === 'combat interruption') {
       listener.frame({ ...frame, pieces: [], fighting: true });
       expect(sliced.mock.calls[0][2]!.stop!()).toBe(true);
@@ -141,7 +141,7 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
     const radius = situation === 'complete' ? 12 : 91;
     expect(fitted.mock.calls.at(-1)![1].envelopeRadius).toBe(radius);
     expect(sync).toHaveBeenCalledTimes(situation === 'complete' ? 0 : 1);
-    if (situation === 'mount races warmup') { finish(12); await flush(); }
+    if (situation === 'mount races warmup') { finish({ radius: 12, ground: 0 }); await flush(); }
     // A later lease must use the same cache entry; a late warm-up cannot overwrite the synchronous result.
     listener.frame({ ...frame, pieces: [] }); listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], id: 'later' }] }); await flush();
     expect(fitted.mock.calls.at(-1)![1].envelopeRadius).toBe(radius);

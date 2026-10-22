@@ -242,6 +242,38 @@ describe('3D carousel stage', () => {
     }
   });
 
+  it('frames the entire two-cell pedestal slab across aspect ratios without fitting its deep strut', async () => {
+    const radius = 8.6 * CAROUSEL_CELL;
+    const scene = new Group(), material = new MeshBasicMaterial();
+    const slab = new Mesh(new CylinderGeometry(radius, radius, 2 * CAROUSEL_CELL, 128), material);
+    slab.position.y = -CAROUSEL_CELL;
+    const strut = new Mesh(new CylinderGeometry(CAROUSEL_CELL, CAROUSEL_CELL, 20 * CAROUSEL_CELL, 16), material);
+    strut.position.y = -12 * CAROUSEL_CELL;
+    scene.add(slab, strut);
+    const { stage } = setup({ sourceScale: 1, hasModel: id => id === 'carousel-llplatforms',
+      loadModel: async () => ({ scene, animations: [], animationNames: {}, placeholder: false, release() {} }) as ModelLease });
+    try {
+      stage.show(carousel({ seats: seats(false) })); await flush(); stage.update(5);
+      expect(stage.debug().platform).toEqual(['carousel-llplatforms']);
+      for (const aspect of [16 / 9, 4 / 3, 21 / 9, 1]) {
+        stage.resize(aspect); stage.update(0); stage.scene.updateMatrixWorld(true);
+        const positions = slab.geometry.getAttribute('position'); let checked = 0;
+        for (let i = 0; i < positions.count; i++) {
+          const point = new Vector3().fromBufferAttribute(positions, i);
+          if (Math.hypot(point.x, point.z) < radius * 0.99) continue; // cap centers are not the outer rim
+          point.applyMatrix4(slab.matrixWorld).project(stage.camera);
+          expect(Math.abs(point.x), `aspect ${aspect}, rim vertex ${i}: x`).toBeLessThanOrEqual(0.975);
+          expect(Math.abs(point.y), `aspect ${aspect}, rim vertex ${i}: y`).toBeLessThanOrEqual(0.975);
+          expect(Math.abs(point.z)).toBeLessThanOrEqual(1); checked++;
+        }
+        expect(checked).toBeGreaterThanOrEqual(256);
+        // Exclusion is observable: fitting this strut would pull the whole arena far back.
+        const tip = new Vector3(0, -22 * CAROUSEL_CELL, 0).project(stage.camera);
+        expect(Math.abs(tip.y)).toBeGreaterThan(0.975);
+      }
+    } finally { stage.dispose(); slab.geometry.dispose(); strut.geometry.dispose(); material.dispose(); }
+  });
+
   it('reuses the fitted distance on stable frames and refits only when the projection key changes', () => {
     const { stage } = setup();
     stage.show(carousel({ seats: seats(false) }));

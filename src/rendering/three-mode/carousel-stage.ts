@@ -23,7 +23,7 @@ import { UnitAnimationMixer, createStarMark, type ActionOutput, type ModelLease,
 import { loadLegendLease } from './legend-load';
 import type { BoardCarousel, BoardCarouselSlot, BoardLegendWalk } from '../board-feed';
 import type { CellPoint } from '../../server/legend-motion';
-import { fitModel } from './model-fit';
+import { fitModel, type Envelope } from './model-fit';
 
 /** Board units per carousel cell, as the asset review lays out the stage (one grid interval; models and effects at .44). */
 export const CAROUSEL_CELL = 62.4;
@@ -48,6 +48,9 @@ export const ORBIT_SECONDS = 48;
  * circle). Fitted by projecting that rim, never estimated from the ring's center (that cropped the near pedestal).
  */
 const STAGE_RADIUS = 8.6, FRAME_FILL = 0.975, RIM_POINTS = 128, VIEW = new Vector3(0, 1.05, 1).normalize();
+/** The framed rim's underside: vertices from RIM_BAND of the ring's radius outward and at most STRUT_DEPTH cells down
+ * (the pedestal ring's own slab, never the struts hanging under the platform). */
+const RIM_BAND = 0.85, STRUT_DEPTH = 3;
 /**
  * Effects (manifest keys). One variant of each is chosen explicitly: the plain restraint for my seat and the enemy one for
  * others, the Galaxy first-draft wall. The restraint plays only its reviewed early part (the later part shows a grey band),
@@ -67,6 +70,13 @@ const POP_SECONDS = 0.5;
 const ITEM_SIZE = 18, STAR_SIZE = 12, STAR_GAP = 12;
 /** Half the width of a ring unit's click box, in cells (a full cell is 0.5). */
 const PICK_HALF_WIDTH = 0.65;
+/**
+ * Carousel champions stand this much larger than on the board (their body, stars, items and pick box), so each draft
+ * unit reads at a glance (playtest 10-22: "make the pieces bigger, easier to tell apart").
+ */
+const UNIT_SIZE = 1.7;
+/** Their feet rings grow less: on the ring's 9 places (UNIT_RADIUS) larger rings would run into each other. */
+const RING_SIZE = 1.35;
 /**
  * Legend motion, display only (cells, seconds): every legend runs for its unit at RUN_CELLS a second (another seat's too,
  * so the scramble can be watched even when the room picked for it at once); a legend with its unit walks home at
@@ -90,6 +100,8 @@ export interface CarouselStageContext {
   readonly hasModel: (id: string) => boolean;
   /** The asset root's official scale for a champion model (model-fit.ts), null when it has none. */
   readonly unitScale?: (id: string) => number | null;
+  /** The board's animation envelope for an official-scale model (model-fit.ts): width cap and idle feet; undefined if none. */
+  readonly envelope?: (id: string, lease: ModelLease) => Envelope | undefined;
   readonly loadEffect: ((id: string, maxDuration: number) => Promise<ParticleEffect>) | null;
   /** The default little legend's model; a seat whose own legend (`little-legend-<legend>`) the manifest lacks shows it. */
   readonly legendModel: string;
@@ -287,7 +299,21 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const radius = STAGE_RADIUS * cell;
     const drawn = pieces.size ? platform : standIn, box = new Box3();
     drawn.updateWorldMatrix(true, true); box.setFromObject(drawn);
-    const bottom = box.isEmpty() ? 0 : Math.min(0, box.min.y), top = box.isEmpty() ? 0 : Math.max(0, box.max.y);
+    // The rim's floor is the underside of the pedestal ring itself: the lowest vertex out at the ring (from RIM_BAND of
+    // its radius outward) and above STRUT_DEPTH. Not the model's lowest point: the struts under the platform reach far
+    // down, and fitting them pushed the camera back until the arena filled a third of the view (playtest 10-22). Its top
+    // is the legends' heads, not the glass domes over them.
+    let bottom = 0;
+    const vertex = new Vector3();
+    drawn.traverse(object => {
+      const mesh = object as Mesh, position = mesh.isMesh ? mesh.geometry?.getAttribute('position') : undefined;
+      if (!position) return;
+      for (let i = 0; i < position.count; i++) {
+        vertex.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
+        if (vertex.y < bottom && vertex.y >= -STRUT_DEPTH * cell && Math.hypot(vertex.x, vertex.z) >= RIM_BAND * radius) bottom = vertex.y;
+      }
+    });
+    const top = box.isEmpty() ? 0 : Math.max(0, Math.min(box.max.y, surfaceAt(0, LEGEND_RADIUS * cell, LEGEND_SURFACE) + legendHeight));
     const head = surfaceAt(0, LEGEND_RADIUS * cell, LEGEND_SURFACE) + legendHeight;
     rim.length = 0;
     for (let i = 0; i < RIM_POINTS; i++) {
@@ -345,7 +371,11 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       view.root.clear(); view.lease = lease;
       // A champion at the asset root's official scale (model-fit.ts) when it has one; legends and older roots are fitted.
       const unitScale = ctx.unitScale?.(id) ?? null;
-      if (unitScale) { fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale }); view.root.add(lease.scene); }
+      if (unitScale) {
+        const envelope = ctx.envelope?.(id, lease);
+        fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground });
+        view.root.add(lease.scene);
+      }
       else view.root.add(fit(lease.scene, height, width));
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames);
       view.mixer.apply(view.state.output);
@@ -470,13 +500,13 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     const pawn = new Group(); pawn.name = 'render3d-carousel-pawn';
     const body = new Mesh(geometry.pawn, materials.pawn); body.position.y = 17;
     const head = new Mesh(geometry.head, materials.pawn); head.position.y = 42;
-    pawn.add(body, head); root.add(fit(pawn, ctx.championHeight * 0.6));
-    const ring = new Mesh(geometry.ring, materials.ring.takable); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5; ring.visible = false;
+    pawn.add(body, head); root.add(fit(pawn, ctx.championHeight * 0.6)); root.scale.setScalar(UNIT_SIZE);
+    const ring = new Mesh(geometry.ring, materials.ring.takable); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.5; ring.visible = false; ring.scale.setScalar(RING_SIZE);
     // The cost always shows as a plain colored ring, whether or not the tier effect below loads or reads clearly.
     const costRing = data.cost ? new Mesh(geometry.cost, costMaterial(data.cost)) : null;
-    if (costRing) { costRing.name = 'render3d-carousel-cost'; costRing.rotation.x = -Math.PI / 2; costRing.position.y = 0.4; }
+    if (costRing) { costRing.name = 'render3d-carousel-cost'; costRing.rotation.x = -Math.PI / 2; costRing.position.y = 0.4; costRing.scale.setScalar(RING_SIZE); }
     const stars = createStarMark({ effectiveStarLevel: data.starLevel, colorFor: ctx.starColor });
-    stars.object.scale.setScalar(STAR_SIZE); stars.object.position.y = ctx.championHeight + STAR_GAP;
+    stars.object.scale.setScalar(STAR_SIZE); stars.object.position.y = ctx.championHeight * UNIT_SIZE + STAR_GAP;
     holder.add(root, ring, stars.object); if (costRing) holder.add(costRing);
     const view: UnitView = { slot: data.slot, definitionId: data.definitionId, holder, root, ring, costRing, stars, items: [], data, tier: null, takenBy: null,
       lease: null, mixer: null, state: new Stride(), disposed: false };
@@ -484,7 +514,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     data.items.forEach((item, at) => {
       const sprite = new Sprite(itemMaterial(item.icon)); sprite.name = `render3d-carousel-item-${item.id}`;
       sprite.scale.setScalar(ITEM_SIZE); sprite.renderOrder = 1001;
-      sprite.position.set((at - (data.items.length - 1) / 2) * (ITEM_SIZE + 3), ctx.championHeight + STAR_GAP + STAR_SIZE + ITEM_SIZE * 0.6, 0);
+      sprite.position.set((at - (data.items.length - 1) / 2) * (ITEM_SIZE + 3), ctx.championHeight * UNIT_SIZE + STAR_GAP + STAR_SIZE + ITEM_SIZE * 0.6, 0);
       holder.add(sprite); view.items.push(sprite);
     });
     units.add(holder);
@@ -699,7 +729,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     if (step.lengthSq() > 1) unit.holder.rotation.y = Math.atan2(step.x, step.z);
     unit.state.set(moving);
     from.copy(seat.root.position).setY(seat.root.position.y + legendHeight * 0.55);
-    to.copy(unit.holder.position).setY(unit.holder.position.y + ctx.championHeight * 0.45);
+    to.copy(unit.holder.position).setY(unit.holder.position.y + ctx.championHeight * UNIT_SIZE * 0.45);
     const length = from.distanceTo(to);
     seat.tether.visible = length > 1;
     if (length > 1) {
@@ -793,10 +823,13 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       if (view.takenBy) continue;
       const base = view.holder.getWorldPosition(new Vector3()), size = view.holder.getWorldScale(scale).x;
       const feet = screen(base.clone()), star = screen(view.stars.object.getWorldPosition(new Vector3()));
-      const side = screen(base.clone().addScaledVector(right, PICK_HALF_WIDTH * cell * size));
+      const side = screen(base.clone().addScaledVector(right, PICK_HALF_WIDTH * UNIT_SIZE * cell * size));
       const half = Math.hypot(side.x - feet.x, side.y - feet.y), slack = half * 0.4;
       if (Math.abs(px - feet.x) > half || py < star.y - slack || py > feet.y + slack) continue;
-      const distance = Math.hypot(px - feet.x, py - (feet.y + star.y) / 2);
+      // Distance to the unit's drawn axis (feet to star): a taller neighbour's middle no longer wins at another's feet.
+      const dx = star.x - feet.x, dy = star.y - feet.y, length = dx * dx + dy * dy;
+      const t = length > 0 ? Math.min(1, Math.max(0, ((px - feet.x) * dx + (py - feet.y) * dy) / length)) : 0;
+      const distance = Math.hypot(px - (feet.x + dx * t), py - (feet.y + dy * t));
       if (distance < bestDistance) { best = view; bestDistance = distance; }
     }
     return best ? { slot: best.slot, takable: best.data.takable } : null;
