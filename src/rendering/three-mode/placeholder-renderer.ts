@@ -314,9 +314,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   // Every lease on a model goes through the retention (model-memory.ts), so a template nothing shows is let go after a
-  // while; little legends stay (few, and the lobby's picker shares them). An evicted model is no longer warmed: the
-  // next match's warm list reads and uploads it again (its envelope numbers stay).
-  const retention = models.cache ? createModelRetention(models.cache, { pinned: isLegendModel, onEvict: id => warmup?.forget(id) }) : null;
+  // while; little legends stay (few, and the lobby's picker shares them), and so do the models the room's current warm
+  // hints name (board-feed warmHints: the shop and what comes next), as if leased. An evicted model is no longer warmed:
+  // the next match's warm list reads and uploads it again (its envelope numbers stay).
+  const pinned = (id: string) => isLegendModel(id) || !!feed?.warmHints?.()?.ids.includes(id);
+  const retention = models.cache ? createModelRetention(models.cache, { pinned, onEvict: id => warmup?.forget(id) }) : null;
   const loadModel = retention ? (id: string) => retention.load(id) : null;
   // Online 选秀 (carousel-stage.ts): its own scene and camera, drawn instead of the board while board-feed carries one.
   // Every effect on this renderer (combat, carousel, tabletop, trait props) reads its files once (effect-library.ts).

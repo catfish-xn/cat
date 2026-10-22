@@ -74,6 +74,8 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
       const letGo = () => { for (const url of urls) { const use = used(url); use.refs--; use.last = now(); } };
       return loadParticleEffect(manifest, id, { root, scale: 1, maxDuration, readJson: track(readJson), readTexture: track(readTexture),
         readMesh: track(readMesh), borrowed: true, materials: pool, budget }).then(effect => {
+        // Closed while it loaded: a mesh that landed late was released (and its emitter skipped), so this effect fails too.
+        if (closed) { effect.dispose(); letGo(); throw new Error('effect-library-closed'); }
         const dispose = effect.dispose.bind(effect);
         let ended = false;
         effect.dispose = () => {
