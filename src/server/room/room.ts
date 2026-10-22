@@ -18,7 +18,7 @@ import { readRoundInfo } from '../../simulation/round-selectors';
 import {
   assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
-  type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
+  type CarouselEvent, type CarouselRoundId, type CarouselState, type OpeningRoundResolution, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { CombatStream, type CombatStreamView } from './combat-stream';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
@@ -1704,14 +1704,61 @@ export class Room {
     const advanced = new Map(alive.map((seat, position) => [seat.seatId, batch.states[position]!] as const));
     // P7-1 (§21.6): the round entry may place and merge carousel units; its events are published with the seats they produced.
     const entered = new Map(batch.events.map(entry => [entry.seatId, entry.events] as const));
-    this.replace({ ...this.current, pool: batch.pool, poolRevision: batch.pool.revision,
-      seats: this.current.seats.map(seat => {
-        const match = advanced.get(seat.seatId);
-        if (!match) return seat;
-        const seatRevision = seat.seatRevision + 1;
-        return { ...seat, match, seatRevision, serverEvents: { seatRevision, events: entered.get(seat.seatId) ?? [] } };
-      }) });
+    const seats = this.current.seats.map(seat => {
+      const match = advanced.get(seat.seatId);
+      if (!match) return seat;
+      const seatRevision = seat.seatRevision + 1;
+      return { ...seat, match, seatRevision, serverEvents: { seatRevision, events: entered.get(seat.seatId) ?? [] } };
+    });
+    if (batch.openingResolution) return this.publishOpeningResolution(batch.pool, seats, batch.openingResolution);
+    this.replace({ ...this.current, pool: batch.pool, poolRevision: batch.pool.revision, seats });
     this.enterRound();
+  }
+
+  /**
+   * Opening encounters PR8 (MULTIPLAYER_CONTRACT PR5, `nextSharedRound(...).openingResolution`): the round-entry batch
+   * that revealed a shared opening fact (the wind-up monkey at 3-5). Its HP chain changed outside a battle, so every
+   * advanced seat takes its HP from the rules' state, and the seats the batch eliminated take the batch's own ranks. The
+   * rules already returned their stock and forfeited their rewards inside the batch: nothing is released, re-ranked or
+   * re-damaged here. Everything is one publication; a batch that ends the match also publishes the final ranking (this
+   * batch's eliminations and survivor, plus the ranks fixed earlier), the terminal orb forfeits and the `ended` phase in it.
+   */
+  private publishOpeningResolution(pool: SharedPoolState, advanced: readonly SeatState[], resolution: OpeningRoundResolution): void {
+    const eliminated = new Map(resolution.eliminated.map(entry => [entry.seatId, entry.rank] as const));
+    const survivors = new Map(resolution.survivorRanks.map(entry => [entry.seatId, entry.rank] as const));
+    const before = new Set(this.aliveSeats().map(seat => seat.seatId));
+    let seats = advanced.map((seat): SeatState => {
+      if (!before.has(seat.seatId)) return seat;
+      const rank = eliminated.get(seat.seatId);
+      if (rank === undefined) return { ...seat, hp: seat.match.playerHp, ...(resolution.ended && survivors.has(seat.seatId) ? { rank: survivors.get(seat.seatId)! } : {}) };
+      return { ...seat, hp: 0, alive: false, rank, eliminatedRound: seat.match.round };
+    });
+    const unknown = [...eliminated.keys(), ...survivors.keys()].find(seatId => !before.has(seatId));
+    const alive = seats.filter(seat => seat.alive);
+    if (unknown !== undefined || alive.some(seat => seat.hp <= 0) || seats.some(seat => !seat.alive && before.has(seat.seatId) && !eliminated.has(seat.seatId))) {
+      return this.fail({ kind: 'phase-mismatch', detail: `opening resolution disagrees with the seats${unknown ? ` (${unknown})` : ''}` });
+    }
+    if (!resolution.ended) {
+      this.replace({ ...this.current, pool, poolRevision: pool.revision, seats });
+      return this.enterRound();
+    }
+    // Survivor (at most one) is still active: its earned, unclaimed orbs are forfeited like after any final settlement.
+    seats = seats.map(seat => {
+      if (!seat.alive) return seat;
+      const step = forfeitTerminalOrbs(seat.match);
+      if (step.state === seat.match) return seat;
+      const seatRevision = seat.seatRevision + 1;
+      return { ...seat, match: step.state, seatRevision, serverEvents: { seatRevision, events: [...(seat.serverEvents?.events ?? []), ...step.events] } };
+    });
+    const ranking = [...resolution.survivorRanks, ...resolution.eliminated.map(entry => ({ seatId: entry.seatId, rank: entry.rank })),
+      ...this.current.seats.filter(seat => !before.has(seat.seatId)).map(seat => ({ seatId: seat.seatId, rank: seat.rank! }))]
+      .sort((a, b) => a.rank - b.rank);
+    // The match ends at the entry of the revealed round: the room names that round, so the eliminated seats (whose
+    // `eliminatedRound` is it) still receive their final state with the view.
+    const info = readRoundInfo(seats.find(seat => before.has(seat.seatId))!.match);
+    this.clearTimer(); this.legendWalks.clearScene('carousel'); this.releaseRound();
+    this.replace({ ...this.current, pool, poolRevision: pool.revision, seats, ranking, round: info.ordinal, roundId: info.roundId, roundName: info.displayName, roundKind: info.kind,
+      pairings: [], battleSeeds: {}, opponentCandidates: {}, carousel: null, battles: [], phase: 'ended', deadlineAt: null });
   }
 
   private onDeadline(): void {
