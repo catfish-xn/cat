@@ -86,7 +86,7 @@ it('counts the third PvP loss immediately, preserves streak through PvE and inac
 function oracle(tier:number,seed:number){
  const remaining=G23_BLACK_MARKETS[tier-1].options.filter(o=>o.weightBps>0).map(o=>({id:o.id,weight:o.weightBps}));
  let word=BigInt(seed);const ids:string[]=[];
- while(ids.length<3&&remaining.length){
+ while(ids.length<1&&remaining.length){
   word=(1664525n*word+1013904223n)%4294967296n;
   let ticket=word*BigInt(remaining.reduce((n,o)=>n+o.weight,0))/4294967296n;
   const index=remaining.findIndex(o=>{ticket-=BigInt(o.weight);return ticket<0n;});
@@ -94,7 +94,7 @@ function oracle(tier:number,seed:number){
  }
  return {ids,state:Number(word)};
 }
-it('samples up to three distinct source bundles, renormalizing weights after every explicit LCG draw',()=>{
+it('samples exactly one whole source bundle with one explicit weighted LCG draw',()=>{
  for(let tier=1;tier<=8;tier++)for(const seed of [0,1,42,0xffffffff]){
   const expected=oracle(tier,seed),actual=rollG23BlackMarket(tier,seed);
   expect(actual.options.map(o=>o.id)).toEqual(expected.ids);expect(actual.rngState).toBe(expected.state);
@@ -105,8 +105,8 @@ it('samples up to three distinct source bundles, renormalizing weights after eve
 function market(){let p=createG23Progress(9);for(let round=1;round<=3;round++)p=advanceG23Economy(p,facts(round)).progress;return p;}
 it('accepts only the selected bundle, retains shimmer on keep, and rejects stale/unoffered decisions without mutation',()=>{
  const p=market(),offer=p.chem.offer!,saved=structuredClone(p);
- expect(offer.optionIds).toHaveLength(3);
- const selected=offer.optionIds[1],chosen=decideG23Market(p,offer.id,true,3,selected);
+ expect(offer.optionIds).toHaveLength(1);
+ const selected=offer.optionIds[0],chosen=decideG23Market(p,offer.id,true,3,selected);
  expect(chosen.rewards).toEqual([{id:offer.id,round:3,source:'black-market',tier:1,reward:G23_BLACK_MARKETS[0].options.find(o=>o.id===selected)!.reward}]);
  expect(chosen.chem).toMatchObject({shimmer:0,offer:null});
  expect([chosen.rngState,chosen.rngDraws]).toEqual([p.rngState,p.rngDraws]);validateG23Progress(chosen,9,3);
@@ -129,12 +129,14 @@ it.each([false,true])('public choose/keep and timeout preserve choice projection
  const result=timeout?forfeitPendingChoice(opened,opened.round,choice.choiceId,0):selectChoice(opened,choice.choiceId,0,'@skip');
  expect(result.ok).toBe(true);expect(readG23Progress(result.state)!.chem).toMatchObject({shimmer:160,offer:null,skips:1});
  expect(readG23Progress(result.state)!.rngState).toBe(p.rngState);
- const accepted=selectChoice(opened,choice.choiceId,0,choice.offers[1]);expect(accepted.ok).toBe(true);
+ const timeoutAgain=forfeitPendingChoice(result.state,result.state.round,choice.choiceId,0);
+ expect(timeoutAgain.ok).toBe(false);expect(timeoutAgain.state).toBe(result.state);expect(timeoutAgain).not.toHaveProperty('events');
+ const accepted=selectChoice(opened,choice.choiceId,0,choice.offers[0]);expect(accepted.ok).toBe(true);
  expect(readG23Progress(accepted.state)!.rewards).toHaveLength(1);
- const duplicate=selectChoice(accepted.state,choice.choiceId,0,choice.offers[1]);expect(duplicate.ok).toBe(false);expect(duplicate.state).toBe(accepted.state);
+ const duplicate=selectChoice(accepted.state,choice.choiceId,0,choice.offers[0]);expect(duplicate.ok).toBe(false);expect(duplicate.state).toBe(accepted.state);
 });
 
-it('replays Family, Mel and a non-first black-market choice together without losing v19 receipts',()=>{
+it('replays Family, Mel and the sole black-market bundle together without losing v19 receipts',()=>{
  let p=activateFamily(createG23Progress(42),1);
  const familyRng=p.family!.rngState;
  for(let round=1;round<=3;round++)p=advanceG23Economy(p,facts(round,{
@@ -145,7 +147,7 @@ it('replays Family, Mel and a non-first black-market choice together without los
  expect(p.family!.rngState).not.toBe(familyRng);
  const saved={kind:'mel-save' as const,battleId:'synthetic-3',round:3};
  p={...p,mel:{...p.mel!,savedBattleId:saved.battleId},economyReceipts:[...p.economyReceipts,saved]};
- const offer=p.chem.offer!,optionId=offer.optionIds[1];
+ const offer=p.chem.offer!,optionId=offer.optionIds[0];
  p=decideG23Market(p,offer.id,true,3,optionId);
  const restored=replayG23Economy(42,JSON.parse(JSON.stringify(p.economyReceipts)));
  expect(restored).toEqual(p);validateG23Progress(restored,42,3);
@@ -156,7 +158,7 @@ it('replays Family, Mel and a non-first black-market choice together without los
  validateG23Progress(pve,42,4);
 });
 
-it('independently audits standard PvE, three bundle offers and keep in the route oracle',()=>{
+it('independently audits standard PvE, single bundle offers and keep in the route oracle',()=>{
  let p=createG23Progress(42);
  for(let round=1;round<=4;round++){
   const before=writeG23Progress(createMatch(42),p);
@@ -167,7 +169,7 @@ it('independently audits standard PvE, three bundle offers and keep in the route
  }
  const before=writeG23Progress(createMatch(42),p),offer=p.chem.offer!;
  for(const take of [false,true]){
-  const selected=offer.optionIds[1],next=decideG23Market(p,offer.id,take,4,selected);
+  const selected=offer.optionIds[0],next=decideG23Market(p,offer.id,take,4,selected);
   const after=writeG23Progress({...before,seatMechanics:{...before.seatMechanics!,receipts:[...before.seatMechanics!.receipts,{
    kind:'choice' as const,choiceKind:'blackMarket' as const,receiptId:offer.id,round:4,roundId:'2-1',source:'black-market',optionId:take?selected:'@skip',skipped:!take,itemId:null,price:0,timedOut:!take,
   }]}},next);

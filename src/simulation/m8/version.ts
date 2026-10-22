@@ -6,10 +6,10 @@ export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
 /** B9 formal switch (M8_RULES §10): the one runtime source for the frozen M8 identifiers.
  * contentDigest stays computed from the canonical content (content/index.ts), never hand-written.
- * v20-live-combat inherits XP68 schema11/save7; replay5/command5 identify
- * the live stream and per-tick input boundary. Old epochs are rejected, never migrated. */
+ * v20-black-market inherits live-combat schema11/save7/replay5/command5;
+ * only the black-market bundle count and RNG consumption change. Old epochs are rejected, never migrated. */
 export const M8_VERSION = {
-  schemaVersion: 11, rulesVersion: 's13-g2-3-v20-live-combat', contentVersion: 's13-14.24b-g2-3-v20-live-combat',
+  schemaVersion: 11, rulesVersion: 's13-g2-3-v20-black-market', contentVersion: 's13-14.24b-g2-3-v20-black-market',
   saveFormatVersion: 7, replayFormatVersion: 5, commandProtocolVersion: 5, rngAlgorithm: 'lcg32-v1', tickMs: 50,
 } as const satisfies Omit<M8Version, 'contractVersion' | 'contentDigest'>;
 /** D2-A: the shipped M7 identifiers, used only to recognize files for read-only preservation. */

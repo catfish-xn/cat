@@ -1,0 +1,487 @@
+{
+  "method": "latest complete per-file run; preserves initial failed report and targeted corrected runs",
+  "files": 53,
+  "tests": 1108,
+  "passed": 1108,
+  "failed": 0,
+  "skipped": 0,
+  "perFile": [
+    {
+      "file": "tests/assets3d-conqueror-shimmer.test.ts",
+      "report": "focused-results.json",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/black-market-single-offer.test.ts",
+      "report": "focused-results.json",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/c19-missed-pulse.test.ts",
+      "report": "focused-results.json",
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/chem-baron-fix.test.ts",
+      "report": "focused-results.json",
+      "tests": 30,
+      "passed": 30,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/d11-wiring-bank.test.ts",
+      "report": "focused-results.json",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/d14-anomalies-source.test.ts",
+      "report": "focused-results.json",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/epic-loot-reforger.test.ts",
+      "report": "focused-results.json",
+      "tests": 28,
+      "passed": 28,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-3-content.test.ts",
+      "report": "focused-results.json",
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-3-hook-failures.test.ts",
+      "report": "focused-results.json",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-3-integration.test.ts",
+      "report": "focused-results.json",
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+      "report": "duplicator-results.json",
+      "tests": 38,
+      "passed": 38,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-3-netcode-hooks.test.ts",
+      "report": "focused-results.json",
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-3-traits.test.ts",
+      "report": "focused-results.json",
+      "tests": 19,
+      "passed": 19,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4a-crown-gold.test.ts",
+      "report": "focused-results.json",
+      "tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-artifact-forge.test.ts",
+      "report": "focused-results.json",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-artifacts.test.ts",
+      "report": "artifacts-results.json",
+      "tests": 49,
+      "passed": 49,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-gambler.test.ts",
+      "report": "focused-results.json",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-mogul.test.ts",
+      "report": "focused-results.json",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-replay.test.ts",
+      "report": "focused-results.json",
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-restore-authority.test.ts",
+      "report": "focused-results.json",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-reward-order.test.ts",
+      "report": "focused-results.json",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-source-pins.test.ts",
+      "report": "focused-results.json",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-support-forge.test.ts",
+      "report": "focused-results.json",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-support-items.test.ts",
+      "report": "focused-results.json",
+      "tests": 17,
+      "passed": 17,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-4b-trench-gold.test.ts",
+      "report": "focused-results.json",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-augments-multiplayer.test.ts",
+      "report": "focused-results.json",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/g2-augments-static.test.ts",
+      "report": "focused-results.json",
+      "tests": 93,
+      "passed": 93,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/live-combat-inputs.test.ts",
+      "report": "focused-results.json",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/loot-orb-claim.test.ts",
+      "report": "focused-results.json",
+      "tests": 27,
+      "passed": 27,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/m6-persistence.test.ts",
+      "report": "focused-results.json",
+      "tests": 50,
+      "passed": 50,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/m8-b10-temporary-replay.test.ts",
+      "report": "focused-results.json",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/m8-b8-live-transfer.test.ts",
+      "report": "focused-results.json",
+      "tests": 19,
+      "passed": 19,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/m8-content-equivalence.test.ts",
+      "report": "focused-results.json",
+      "tests": 138,
+      "passed": 138,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/m8-contracts.test.ts",
+      "report": "focused-results.json",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/match-contract.test.ts",
+      "report": "focused-results.json",
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/mp-overtime-choices.test.ts",
+      "report": "focused-results.json",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/opening-random-identity.test.ts",
+      "report": "focused-results.json",
+      "tests": 150,
+      "passed": 150,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/presentation/choice-fallback.test.ts",
+      "report": "focused-results.json",
+      "tests": 16,
+      "passed": 16,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/presentation/g2-3-display.test.ts",
+      "report": "focused-results.json",
+      "tests": 16,
+      "passed": 16,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/presentation/special-item-text.test.ts",
+      "report": "focused-results.json",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/rendering3d-trait-props.test.ts",
+      "report": "focused-results.json",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/restore-audit/g23-reward-allocation.test.ts",
+      "report": "focused-results.json",
+      "tests": 11,
+      "passed": 11,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/s13-anomalies-settlement.test.ts",
+      "report": "focused-results.json",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/s13-augments-p2-multiplayer.test.ts",
+      "report": "focused-results.json",
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/s13-trait-projection.test.ts",
+      "report": "focused-results.json",
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/server/g23-server-facts.test.ts",
+      "report": "focused-results.json",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/server/v15-orb-ui.test.ts",
+      "report": "focused-results.json",
+      "tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/t12-offline-transfer.test.ts",
+      "report": "focused-results.json",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/trait-runtime-g23.test.ts",
+      "report": "focused-results.json",
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/trait-text.test.ts",
+      "report": "focused-results.json",
+      "tests": 79,
+      "passed": 79,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/ur-i3-combat-statuses.test.ts",
+      "report": "focused-results.json",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/v18-emblem-traits.test.ts",
+      "report": "focused-results.json",
+      "tests": 48,
+      "passed": 48,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "file": "tests/v19-part2.test.ts",
+      "report": "focused-results.json",
+      "tests": 40,
+      "passed": 40,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0
+    }
+  ]
+}

@@ -165,9 +165,9 @@ it('restores the naturally obtained pending black-market reward and the next bat
  // 临时、用户 10-21 批准：只因 CI 机器计时超时（断言都过），按约 2 倍放宽；断言不变。5 秒 → 11 秒（原因：首个黑市移到第 12 回合，路线变长；按 CI 实测 5.19 秒取约 2 倍，本机 2.611 秒）。
 },11_000);
 
-it('restores each naturally offered bundle independently, including non-first candidates, without duplicate grants',()=>{
+it('restores the sole naturally offered bundle without duplicate grants',()=>{
  const pending=publicMarket(),choice=pending.pendingChoice!;
- expect(choice.offers).toHaveLength(3);
+ expect(choice.offers).toHaveLength(1);
  for(const optionId of choice.offers){
   const accepted=ok(selectChoice(pending,choice.choiceId,choice.generation,optionId)),p=readG23Progress(accepted)!;
   const option=G23_BLACK_MARKETS[0].options.find(o=>o.id===optionId)!;
@@ -292,14 +292,14 @@ it.each([13,15])('preserves an escrowed public claim at round %s choosing anothe
 });
 
 it('keeps consecutive black-market RNG cursors and offers equal to the baseline stream',()=>{
- // Independent source-weight oracle for the changed three-word market stream.
+ // Independent source-weight oracle for the single-word market stream.
  let word=(BigInt((1^0x67323370)>>>0)*1664525n+1013904223n)%4294967296n,draws=1,shimmerTotal=0,offeredThrough=0,offerCount=0;
  const baseline=Array.from({length:18},(_,i)=>{
   shimmerTotal+=i<2?30:100;
   const tier=Math.min(8,Math.floor(shimmerTotal/100));let first:string|null=null;
   if(tier>offeredThrough){
    const remaining=G23_BLACK_MARKETS[tier-1].options.map(o=>({id:o.id,weight:o.weightBps})).filter(o=>o.weight>0);
-   for(let n=0;n<3&&remaining.length;n++){
+   for(let n=0;n<1&&remaining.length;n++){
     word=(word*1664525n+1013904223n)%4294967296n;draws++;
     let roll=word*BigInt(remaining.reduce((sum,o)=>sum+o.weight,0))/4294967296n;
     const index=remaining.findIndex(o=>{roll-=BigInt(o.weight);return roll<0n;});

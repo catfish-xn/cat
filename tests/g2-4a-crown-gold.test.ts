@@ -180,7 +180,7 @@ it('G24-CROWN-GOLD-05 consumes the black-market draw before each independent cro
    const won=advanceG23Economy(p,{...base,crowns:3});
    expect(won.progress.chem.offer).toEqual(without.progress.chem.offer);
    expect(won.progress.rngState).toBe(roll.rngState);
-   expect(market.draws).toBe(3);expect(won.progress.rngDraws).toBe(p.rngDraws+6);
+   expect(market.draws).toBe(1);expect(won.progress.rngDraws).toBe(p.rngDraws+4);
    expect((won.progress.economyReceipts.at(-1) as G23EconomyAction).crownGold).toBe(roll.gold);
    expect(()=>validateG23Progress(won.progress,42,round)).not.toThrow();
    return;
