@@ -4,7 +4,7 @@
     "scripts/record-v21-opening-encounters-battle-start.cjs": "aebb0ba5f806a6e3f940186cf2a47a451fcb6f39e699c5598ac4b57748b03566",
     "src/server/legend-motion.ts": "ee137313f1f80706352008084dc00ae7540ca7650d10cd656b26475e66fbc40f",
     "src/server/log.ts": "848e09e00096ba6d2fb8b7608f4d381e1233f2a3c83aeaa03bd0f59457308e47",
-    "src/server/main.ts": "11a3a2194eb5611f40d863afcdbd6fb33cf050fe2c5aabf9b5d97fdc6211f558",
+    "src/server/main.ts": "d75cd5bb9f347569f2d439e5bb4d4fcff2938fccd11ca792d1245f4add8e6436",
     "src/server/net/dedupe.ts": "0bcf9b26928013348fda01376d0d411b5964ee25432d56c3140c2f536dfeb2a5",
     "src/server/net/index.ts": "377db573a8c26f4ea72f16e751c3a3568b9ab16d21a40c0ca450923bd253fc53",
     "src/server/net/messages.ts": "e15efe14650c07c37090d61e26b846fbf4ba82a03e73fdda8e8051870d4cef8a",
