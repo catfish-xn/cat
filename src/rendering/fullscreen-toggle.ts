@@ -1,5 +1,5 @@
 /**
- * A small top-right button that puts the whole page (board, HUD and panels) into browser fullscreen.
+ * A small bottom-right button (3D online: bottom-left) that puts the whole page (board, HUD and panels) into browser fullscreen.
  * Esc or the button leaves it. While fullscreen, body[data-fullscreen] lifts the desktop size caps so the
  * board grows with the screen; Phaser FIT and the 3D layer follow #board-root's size on their own.
  * Browsers without the Fullscreen API (iPhone Safari) get no button. Display only: nothing reaches a rule.

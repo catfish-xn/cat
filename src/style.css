@@ -1382,8 +1382,10 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .fullscreen-toggle { position: fixed; bottom: 28px; right: 6px; z-index: 45; min-width: 0; min-height: 0; padding: 3px 10px; font-size: 12px;
   color: #cfe3e8; background: rgba(16, 25, 35, .78); border: 1px solid #3c5866; border-radius: 6px; cursor: pointer; }
 .fullscreen-toggle:hover, .fullscreen-toggle:focus-visible { color: #fff; border-color: #68ddd0; }
+/* 3D online: the seat minimap fills the bottom-right corner; the free corner under 切回 2D takes the button. */
+body[data-online]:has(> .render3d-layer) .fullscreen-toggle { right: auto; left: 8px; bottom: 8px; }
 @media (min-width: 1001px) {
   body[data-fullscreen] #app { max-width: none; }
   body[data-fullscreen]:not([data-online]) #board-root { height: calc(100dvh - 24px); }
-  body[data-online][data-fullscreen] { --online-board-h: calc(100dvh - 24px - var(--online-countdown-h) - var(--online-dock-h) - 2 * var(--online-gap)); }
+  body[data-online][data-fullscreen]:not(:has(> .render3d-layer)) { --online-board-h: calc(100dvh - 24px - var(--online-countdown-h) - var(--online-dock-h) - 2 * var(--online-gap)); }
 }
