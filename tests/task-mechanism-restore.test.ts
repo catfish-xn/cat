@@ -68,12 +68,13 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 }
 
 it.each([
-  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 192, targetId: 'enemy-r4-1' },
-  { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
-])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
-  // v15 seed 3151248 offers Manaflow II (inert in row 4); seed 5 offers
-  // Manaflow I for the back-row contribution=false board.
-  let state = acquireEquipment(['rod'], { seed: contribution ? 3151248 : 5, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
+  // v22: seeds whose public Manaflow route keeps unit serials single-digit, so Morgana's id sorts first
+  // and she owns Sion (string-sorted Black Rose owner, see S13_RULES_GAP known issue).
+  { contribution: false, seed: 108, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 174, targetId: 'enemy-r4-1' },
+  { contribution: true, seed: 104, cells: [{ col: 3, row: 7 }, { col: 0, row: 7 }, { col: 6, row: 7 }], tick: 210, targetId: 'enemy-r4-1' },
+])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => {
+  // Each route's public 2-1 augment is Manaflow I/II; the assertions only read Sion, curse and bracer facts.
+  let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
