@@ -1,3 +1,7 @@
+## 2026-10-23 黑市报价具体装备（待 v22 统一录制）
+
+用户 10-23 批准“改”：黑市开市即用既有奖励 atom 派生流确定包内随机档次装备，存进 offer 的 `concreteItems[{atomId,definitionId}]`；私有视图可读，拿走发同一批且不再抽装备。抽包权重、单包抽样、市场/王冠及其他流消耗、保留微光与复制器/锻造器语义不变。恢复/回放从种子和经济收据重建，篡改拒绝。此为用户批准的项目行为调整，本单离线，未宣称补充原版证据。契约见 [MATCH_CONTRACT](MATCH_CONTRACT.md)，实现与验收见 [报告](BLACK_MARKET_CONCRETE_OFFERS.md)；epoch/digest/golden **待 v22 统一录制**，不改单独断言。
+
 ## 2026-10-23 Batch A：梅尔、维克托、两个订阅（用户批准；待统一 epoch）
 
 本节覆盖下文历史“梅尔只观察、订阅/维克托关闭”和六费 `20 + 4×回合差 + Lv10 160 Bps` 描述。依据只读 `perf-1022/encounters-decisions.html` 的 **M1–M4、V1–V3、S1–S7「我的推荐」**及补研第1/2/4/7节、配套JSON；没有联网重查，也没有复制原始资料入库。实现与验收见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md)。

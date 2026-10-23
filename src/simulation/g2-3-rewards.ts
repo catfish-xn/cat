@@ -44,9 +44,17 @@ export function g23RewardAtoms(bundle:G23RewardBundle,seed:number,multiplayer=fa
   return task.payloads.map((p,i)=>({id:bundle.id+':atom:'+i,kind:p.kind==='consumable'?'tool':p.kind==='forge'?'item':p.kind,options:p.kind==='gold'?[]:[p.definitionId],quantity:1,gold:p.kind==='gold'?p.quantity:0,...(p.kind==='unit'?{starLevel:p.starLevel??1}:{})}));
  }
  const reward=frozenReward(bundle);
+ if(bundle.concreteItems!==undefined&&(bundle.source!=='black-market'||!Array.isArray(bundle.concreteItems)
+  ||new Set(bundle.concreteItems.map(i=>i.atomId)).size!==bundle.concreteItems.length
+  ||bundle.concreteItems.some(i=>Object.keys(i).sort().join(',')!=='atomId,definitionId'||typeof i.atomId!=='string'||typeof i.definitionId!=='string')))
+  throw new RangeError('Invalid G23 concrete equipment');
  const key=canonicalContent([seed,bundle,multiplayer]),cached=atomCache.get(key);if(cached)return cached;
  const out:G23RewardAtom[]=[],add=(kind:G23RewardAtom['kind'],pool:readonly string[],quantity=1,gold=0,choices=1,duplicatorDefinitionId?:G23RewardAtom['duplicatorDefinitionId'])=>{
- const id=`${bundle.id}:atom:${out.length}`;out.push({id,kind,options:kind==='gold'?[]:sampleG24Reward(pool,`${seed}:${id}`,choices),quantity,gold,...(duplicatorDefinitionId?{duplicatorDefinitionId}:{})});
+ const id=`${bundle.id}:atom:${out.length}`;
+ const concrete=kind==='item'&&choices===1&&bundle.concreteItems!==undefined;
+ const stored=concrete?bundle.concreteItems!.find(i=>i.atomId===id):undefined;
+ if(concrete&&(!stored||!pool.includes(stored.definitionId)))throw new RangeError('Invalid G23 concrete equipment');
+ out.push({id,kind,options:kind==='gold'?[]:concrete?[stored!.definitionId]:sampleG24Reward(pool,`${seed}:${id}`,choices),quantity,gold,...(duplicatorDefinitionId?{duplicatorDefinitionId}:{})});
  };
  const item=(api:string)=>{
   if(Object.hasOwn(G23_POLICY.duplicators,api)){
@@ -79,6 +87,8 @@ export function g23RewardAtoms(bundle:G23RewardBundle,seed:number,multiplayer=fa
   if(key.startsWith('Champions')){const copies=key.includes('3Star')?9:key.includes('2Star')?3:1;for(const api of list()){if(!apiUnits[api])throw new RangeError('Unmapped G23 champion '+api);add('unit',[apiUnits[api]],copies);}continue;}
   throw new RangeError('Unimplemented G23 reward descriptor '+key);
  }
+ if(bundle.concreteItems!==undefined&&bundle.concreteItems.length!==out.filter(a=>a.kind==='item'&&a.options.length===1).length)
+  throw new RangeError('Invalid G23 concrete equipment');
  if(multiplayer) for(let i=0;i<out.length;i++) {
   const atom=out[i];
   if(atom.kind==='unit' && (atom.quantity===3||atom.quantity===9)) out[i]={...atom,quantity:1,starLevel:atom.quantity===3?2:3};

@@ -2,6 +2,7 @@
 /* Augment tier/reroll rules: user agreement 2026-10-19 08:15, documented in
  * docs/MATCH_CONTRACT.md. Independently implemented; never imports tested code. */
 const assert = require('node:assert/strict');
+const {concreteMarketItems}=require('./black-market-oracle.cjs');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
 CATALOG.push(['mel','viktor','warwick']); // Approved v19 six-cost identities; raw historical recordings stay immutable.
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
@@ -299,6 +300,7 @@ function validateChemTransition(before,after){
     const tier=Math.min(8,Math.floor(chem.shimmer/100));
     if(!chem.offer&&tier>chem.offeredThrough){const roll=blackMarket(tier,rng);rng=roll.rng;draws+=roll.draws;chem.offeredThrough=tier;
      chem.offer={id:`g23:market:${f.battleId}:${tier}`,tier,optionId:roll.offers[0],optionIds:roll.offers,round:f.round};
+     chem.offer.concreteItems=concreteMarketItems(before.seed,chem.offer);
     }
    }
    if(f.result==='win')for(let i=0;i<(f.crowns??0);i++){rng=word(rng);draws++;}
