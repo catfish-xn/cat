@@ -11,7 +11,7 @@ import { TwoSidedBattleResolver, resolveTwoSidedPvp } from '../../src/server/roo
 import { DEFAULT_BATTLE_MAX_STEPS, type RoomState, type SeatState, type TwoSidedBattleResult } from '../../src/server/room/types';
 import { RemoteSession } from '../../src/rendering/online/remote-session';
 import type { GameClient } from '../../src/rendering/online/protocol';
-import { makeRoom, runUntil, runUntilClaiming } from './helpers';
+import { answerOpenChoices, claimAllOrbs, makeRoom, runUntil, runUntilClaiming } from './helpers';
 
 let cache: { pve: RoomState; pvp: RoomState; prep: readonly SeatState[]; equipped: ReadonlySet<string> } | null = null;
 /** One room through its PvE rounds and into the first PvP battle; every seat that accepts it equips a sword on unit-1 at 2-1. */
@@ -22,6 +22,9 @@ function rooms() {
   const pve = runUntil(room, clock, state => state.phase === 'battle' && state.roundKind === 'pve', 400);
   // v15: the PvE items arrive as orbs each seat claims in preparation.
   runUntilClaiming(room, clock, state => state.round === 4 && state.phase === 'preparation');
+  // v22: the 2-1 augment choice is open inside this preparation; every seat answers it, then claims as before.
+  answerOpenChoices(room);
+  claimAllOrbs(room);
   const equipped = new Set<string>();
   for (const seat of room.state.seats) {
     const item = seat.match.items.find(candidate => candidate.location.kind === 'inventory');
