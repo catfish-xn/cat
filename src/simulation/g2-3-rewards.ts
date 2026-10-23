@@ -9,7 +9,7 @@ import {M5_UNIT_DEFINITIONS} from './units';
 import {SHOP_CATALOG_BY_COST} from './match-rules';
 import {nextRandom} from './rng';
 import type {G23RewardBundle} from './g2-3-economy';
-export interface G23RewardAtom {readonly id:string;readonly kind:'unit'|'item'|'tool'|'gold'|'duplicator';readonly options:readonly string[];readonly quantity:number;readonly gold:number;readonly starLevel?:1|2|3;readonly duplicatorDefinitionId?:keyof typeof G23_POLICY.duplicators}
+export interface G23RewardAtom {readonly forgeDefinitionId?:string;readonly id:string;readonly kind:'unit'|'item'|'tool'|'gold'|'duplicator'|'anvil';readonly options:readonly string[];readonly quantity:number;readonly gold:number;readonly starLevel?:1|2|3;readonly duplicatorDefinitionId?:keyof typeof G23_POLICY.duplicators}
 export interface G23RewardClaim {readonly id:string;readonly bundleId:string;readonly atomId:string;readonly copy:number;readonly round:number;readonly kind:G23RewardAtom['kind'];readonly definitionId:string;readonly instanceId:string|null;readonly gold:number}
 const apiUnits:Readonly<Record<string,string>>={TFT13_Lieutenant:'sevika',TFT13_Chainsaw:'renni',TFT13_Gremlin:'smeech',TFT13_RenataGlasc:'renata',TFT13_Singed:'singed',TFT13_Silco:'silco'};
 const components=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='component'&&!i.craftingOnly).map(i=>i.id).sort();
@@ -72,7 +72,7 @@ export function g23RewardAtoms(bundle:G23RewardBundle,seed:number,multiplayer=fa
   if(['Item','ExactItem','ItemByKey'].includes(key)){for(const api of list())item(api);continue;}
   if(key==='Consumables'){for(const api of list())item(api);continue;}
   if(key==='MeepTypeUnit'){
-   for(const api of list())add('item',resolveG24ForgePool(api),1,0,G24_FORGE_POLICY.choices);continue;
+   for(const api of list()){add('item',resolveG24ForgePool(api),1,0,G24_FORGE_POLICY.choices);out[out.length-1]={...out[out.length-1],kind:'anvil',forgeDefinitionId:api};}continue;
   }
   if(key==='TwoStarUnit'){for(const cost of list())add('unit',SHOP_CATALOG_BY_COST[cost==='TwoCostUnit'?2:5],3);continue;}
   if(['ThreeCostUnit','FourCostUnit','FiveCostUnit'].includes(key)){for(let n=0;n<(value as number);n++)add('unit',SHOP_CATALOG_BY_COST[key==='ThreeCostUnit'?3:key==='FourCostUnit'?4:5]);continue;}

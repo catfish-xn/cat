@@ -1,4 +1,5 @@
-import { batchEncounter, subscriptionFact, subscriptionReceipts, grantOpeningRewards, validateOpeningRewards, openBatchForge, melBranch } from './opening-batch-rewards';
+import { grantAnvilUnit } from './anvils';
+import { batchEncounter, subscriptionFact, subscriptionReceipts, grantOpeningRewards, validateOpeningRewards, melBranch } from './opening-batch-rewards';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { validateBatchBRewards } from './opening-batch-b-rewards';
 import { enterTrainerGolems, validateTrainerGolems } from './trainer-golems';
@@ -7,7 +8,6 @@ import { MONKEY_NODE, MONKEY_ROUND, monkeyOutcome, applyMonkey, validateMonkeyGr
 import { canonicalContent } from './content';
 import { freezeContent } from './content/freeze';
 import { OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG, type OpeningEncounterId } from './content/opening-encounters';
-import { openMechanicChoice } from './seat-mechanics/choices';
 import { G24_FORGE_POLICY, resolveG24ForgePool } from './content/g2-4-forges';
 import type { MatchState, MatchCommandResult, RoundResult } from './match-types';
 import { nextRandom, validateSeed } from './rng';
@@ -272,43 +272,21 @@ export function openingForgeOffers(state: MatchState, receiptId: string): readon
   }
   return pool.slice(0, G24_FORGE_POLICY.choices);
 }
-export function openOpeningForge(state: MatchState): {state: MatchState; events: readonly import('./match-types').MatchEvent[]} {
-  const batch=openBatchForge(state);if(batch.state!==state)return batch;
-  if (state.pendingChoice || state.phase !== 'preparation' || state.multiplayer?.status === 'eliminated') return {state, events: []};
-  const receipt = pendingOpeningForges(state)[0];
-  if (!receipt) return {state, events: []};
-  const offers = openingForgeOffers(state, receipt.receiptId);
-  const opened = openMechanicChoice(state, {choiceId: receipt.receiptId, offers, returnPhase: 'preparation',
-    payload: {kind: 'forge', source: 'opening-encounter', timeoutOption: offers[0]}});
-  if (!opened.ok) fail('invalid-opening-effect');
-  return opened;
-}
-/** Bind every choice/grant to its independent effect receipt; forbid reordering and tampered timeout outcomes. */
-export function validateOpeningForges(state: MatchState): void {
-  const check = (ok: unknown) => {if (!ok) fail('opening-context-mismatch');};
-  const receipts = forgeReceipts(state);
-  const resolved = (state.seatMechanics?.receipts ?? []).filter(r => r.source === 'opening-encounter'
-    || r.receiptId.startsWith('["opening-receipt",') && !r.receiptId.includes('wind-up-monkey'));
-  check(resolved.length <= receipts.length);
-  resolved.forEach((r, index) => {
-    check(r.receiptId === receipts[index]?.receiptId);
-    const offers = openingForgeOffers(state, r.receiptId);
-    check(r.source === 'opening-encounter' && r.round === 1 && r.roundId === '1-2'
-      && r.kind === 'choice' && r.choiceKind === 'forge' && r.skipped === false && r.price === 0
-      && typeof r.itemId === 'string' && typeof r.timedOut === 'boolean'
-      && offers.includes(r.optionId) && (!r.timedOut || r.optionId === offers[0]));
-    if (r.kind === 'choice') check(state.resourceProvenance.entries.some(e => e.kind === 'item-acquired'
-      && e.itemId === r.itemId && e.source.kind === 'mechanic' && e.source.receiptId === r.receiptId));
-  });
-  const choice = state.pendingChoice;
-  const remaining = receipts.slice(resolved.length);
-  if (choice?.payload?.source === 'opening-encounter' || choice?.choiceId.startsWith('["opening-receipt",')) {
-    check(remaining.length > 0);
-    const expected = openOpeningForge({...state, phase: 'preparation', combat: null, pendingChoice: null}).state.pendingChoice;
-    check(expected && same(choice, expected));
+export function openOpeningForge(state:MatchState):{state:MatchState;events:readonly import('./match-types').MatchEvent[]} {
+  if(state.multiplayer?.status==='eliminated')return {state,events:[]};
+  const events:import('./match-types').MatchEvent[]=[];
+  for(const r of pendingOpeningForges(state)){
+    const grant=grantAnvilUnit(state,{receiptId:r.receiptId,source:'opening-encounter',definitionId:openingEncounterId(state)==='component-anvils'?'TFT_ArmoryKeyComponent':'TFT_ArmoryKeyOrnn'});
+    if(!grant.ok){if(grant.reason==='bench-full')break;fail('invalid-opening-effect');}
+    else {state=grant.state;events.push(...grant.events);}
   }
-  if (remaining.length && state.multiplayer?.status !== 'eliminated') {
-    check(state.round === 1 && state.phase === 'choice' && choice?.choiceId === remaining[0].receiptId);
+  return {state,events};
+}
+export function validateOpeningForges(state:MatchState):void {
+  const receipts=forgeReceipts(state);
+  for(const r of state.seatMechanics?.receipts??[])if(r.source==='opening-encounter'){
+    if(!receipts.some(e=>e.receiptId===r.receiptId)||r.kind!=='unit'||r.resolution!=='held'||r.gold!==0||r.round<1||r.round>state.round
+      ||r.definitionId!==(openingEncounterId(state)==='component-anvils'?'TFT_ArmoryKeyComponent':'TFT_ArmoryKeyOrnn'))fail('opening-context-mismatch');
   }
 }
 /** Public whitelist. Never spread a context: seed, RNG and unrevealed facts stay private. */
@@ -405,7 +383,10 @@ export function applyWarwickHunger(state:MatchState,facts:readonly OpeningWarwic
 export function readOpeningForgeProgress(state: MatchState) {
   const opening = state.openingEncounter;
   if (opening.mode === 'shared-deferred' || !forgeReceipts(state).length) return null;
-  const total = forgeReceipts(state).length, pending = pendingOpeningForges(state).length;
+  const total=forgeReceipts(state).length;
+  const granted=(state.seatMechanics?.receipts??[]).filter(r=>r.source==='opening-encounter'&&r.kind==='unit');
+  const resolved=granted.filter(r=>r.kind==='unit'&&state.seatMechanics?.receipts.some(c=>c.receiptId===JSON.stringify(['anvil',r.unitId]))).length;
+  const pending=total-resolved;
   return {source: 'opening-encounter' as const, effectsApplied: opening.receipts.length,
     forgesGranted: total, forgesResolved: total - pending, forgesPending: pending};
 }

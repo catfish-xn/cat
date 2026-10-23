@@ -173,7 +173,9 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
         const receipt:PoolRewardReceipt={...p,resolution:'held',gold:0};pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
       } else {
         requirePool(fact.source.kind==='loot','invalid-seat-state');
-        const receiptId=fact.source.receiptId,p=pool.pending.find(p=>p.seatId===seatId&&p.receiptId===receiptId);
+        const receiptId=fact.source.receiptId;
+        if(after.m8.loot.receipts.some(r=>r.receiptId===receiptId&&r.payload.kind==='forge'&&r.grantedUnitIds.includes(fact.unitId)))continue;
+        const p=pool.pending.find(p=>p.seatId===seatId&&p.receiptId===receiptId);
         requirePool(p,'invalid-seat-state');definitionId=p.definitionId;source=rewardSource(p);sources=rewardSources(p);
         pool.pending=pool.pending.filter(r=>r!==p);
         const receipt:PoolRewardReceipt={...p,resolution:'held',gold:0};pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});

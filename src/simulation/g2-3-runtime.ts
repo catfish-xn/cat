@@ -1,5 +1,4 @@
-import { openOpeningForge } from './opening-encounter';
-import { openEpicForge } from './epic-forges';
+import { grantAnvilUnit } from './anvils';
 import {recordG23GrantEvidence} from './g2-3-grant-evidence';
 import {drainP2Gifts} from './s13-augments-p2-grants';
 import {transferUpgradeResources} from './upgrades';
@@ -21,9 +20,9 @@ export function mechanicGrantEvents(before:MatchState,after:MatchState):MatchEve
 export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,policy?:UnitLootPolicy):{ok:true;state:MatchState;events:readonly MatchEvent[]}|{ok:false;state:MatchState;reason:MatchFailure}{
  const p=readG23Progress(state),bundle=p?.rewards.find(b=>g23RewardAtoms(b,p.seed,!!state.multiplayer).some(a=>a.id===atomId)),atom=bundle&&g23RewardAtoms(bundle,p!.seed,!!state.multiplayer).find(a=>a.id===atomId);
  if(state.sharedPool&&!policy&&bundle?.source==='family'&&atom?.kind==='unit')return {ok:false,state,reason:'invalid-mechanic-state'};
- if(!p||!bundle||!atom||atom.kind==='item'&&atom.options.length>1)return {ok:false,state,reason:'stale-choice'};
+ if(!p||!bundle||!atom||atom.kind==='item'&&atom.options.length>1&&!atom.forgeDefinitionId)return {ok:false,state,reason:'stale-choice'};
  const copy=p.rewardClaims.filter(c=>c.atomId===atom.id).length;
- if(copy>=atom.quantity||atom.kind!=='gold'&&!atom.options.includes(definitionId)||atom.kind==='gold'&&definitionId!=='')return {ok:false,state,reason:'stale-choice'};
+ if(copy>=atom.quantity||atom.kind!=='gold'&&!(atom.forgeDefinitionId?definitionId===atom.forgeDefinitionId:atom.options.includes(definitionId))||atom.kind==='gold'&&definitionId!=='')return {ok:false,state,reason:'stale-choice'};
  if(atom.duplicatorDefinitionId==='TFT13_Crime_Consumable_LesserShimmerDuplicator'
    &&!state.preparation.units.some(u=>u.team==='player'&&u.definitionId===definitionId))return {ok:false,state,reason:'stale-choice'};
  const request={receiptId:`${atom.id}:copy:${copy}`,source:bundle.source,definitionId,...(bundle.source==='family'?{immediate:true}:{}),...(atom.starLevel?{starLevel:atom.starLevel}:{})};
@@ -33,7 +32,7 @@ export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,
   const granted=appendMechanicReceipt({...state,nextConsumableSerial:state.nextConsumableSerial+1,consumables:[...state.consumables,{consumableId,definitionId:definitionId as import('./consumable-types').ConsumableDefinitionId}]},receipt);
   return {ok:true,state:granted,events:[{type:'mechanicGranted',receipt}]};
  }
- const granted=atom.kind==='item'?grantMechanicItem(state,request):atom.kind==='gold'?grantMechanicGold(state,{...request,amount:atom.gold}):grantMechanicUnit(state,request,policy);
+ const granted=atom.forgeDefinitionId?grantAnvilUnit(state,{...request,definitionId:atom.forgeDefinitionId}):atom.kind==='item'?grantMechanicItem(state,request):atom.kind==='gold'?grantMechanicGold(state,{...request,amount:atom.gold}):grantMechanicUnit(state,request,policy);
  if(!granted.ok)return granted;
  return {ok:true,state:granted.state,events:granted.events};
 }
@@ -41,9 +40,9 @@ export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,
 export function drainG23Rewards(initial:MatchState,policy?:UnitLootPolicy,events:MatchEvent[]=[]):MatchState{
  let state=drainP2Gifts(initial,policy);const p=readG23Progress(state);if(!p)return state;
  for(const bundle of p.rewards.filter(b=>b.source!=='family'))for(const atom of g23RewardAtoms(bundle,p.seed,!!state.multiplayer)){
-  if(atom.options.length>1&&atom.kind!=='duplicator')continue;
+  if(atom.forgeDefinitionId||atom.options.length>1&&atom.kind!=='duplicator')continue;
   while(readG23Progress(state)!.rewardClaims.filter(c=>c.atomId===atom.id).length<atom.quantity){
-   const definitionId=atom.kind==='duplicator'?atom.options.find(id=>state.preparation.units.some(u=>u.team==='player'&&u.definitionId===id)):atom.options[0]??'';
+   const definitionId=atom.kind==='duplicator'?atom.options.find(id=>state.preparation.units.some(u=>u.team==='player'&&u.definitionId===id)):atom.forgeDefinitionId??atom.options[0]??'';
    if(definitionId===undefined)break;
    const result=claimG23Atom(state,atom.id,definitionId,policy);
    if(!result.ok){if(result.reason==='bench-full')break;events.push({type:'mechanicFailed',hook:'rewards',reason:result.reason});return state;}state=result.state;
@@ -53,8 +52,6 @@ export function drainG23Rewards(initial:MatchState,policy?:UnitLootPolicy,events
 }
 /** Automatic popup at preparation/settlement; no permanent armory shop. */
 export function openG23Choice(state:MatchState):{state:MatchState;events:readonly MatchEvent[]}{
- const opening=openOpeningForge(state);if(opening.state!==state)return opening;
- const epic=openEpicForge(state);if(epic.state!==state)return epic;
  const p=readG23Progress(state);if(!p||state.pendingChoice||!['preparation','settlement'].includes(state.phase)||state.m8.round.kind==='supply')return {state,events:[]};
  const returnPhase=state.phase as 'preparation'|'settlement';
  // Each option identifies a complete source reward bundle; grants run only after selection.
@@ -74,7 +71,7 @@ export function openG23Choice(state:MatchState):{state:MatchState;events:readonl
  }
  for(const b of p.rewards)for(const atom of g23RewardAtoms(b,p.seed,!!state.multiplayer)){
   const copy=p.rewardClaims.filter(c=>c.atomId===atom.id).length;
-  if(atom.kind!=='item'||atom.options.length<2||copy>=atom.quantity)continue;
+  if(atom.forgeDefinitionId||atom.kind!=='item'||atom.options.length<2||copy>=atom.quantity)continue;
   const opened=openMechanicChoice(state,{choiceId:`${atom.id}:copy:${copy}`,returnPhase,offers:atom.options,payload:{kind:'forge',source:b.source,timeoutOption:atom.options[0]}});
   if(!opened.ok)return {state,events:[{type:'mechanicFailed',hook:'choice',reason:opened.reason}]};return opened;
  }

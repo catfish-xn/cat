@@ -1,3 +1,4 @@
+import { ANVIL_POLICY } from './anvils';
 import { ROUND_INCOME_TIMING } from './round-income-policy';
 import { OPENING_ENCOUNTER_CONFIG } from './opening-encounters';
 import { V20_TRAITS } from './v20-traits';
@@ -27,6 +28,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   combatStreaming: { version: 'live-tick-v1', terminalSettlement: 'all-terminal-fixed-seat-order', equipment: 'next-unsealed-tick-v2', equipmentTraits: 'opening-membership-and-non-item-effects-frozen', equipmentHp: 'existing-changeMaxHp-preserve-missing-health', equipmentReplay: 'private-input-and-source-receipts-v1' },
   v20Traits:V20_TRAITS,
   v19:V19_MECHANICS,v19Part2:{sixCost:SIX_COST_POLICY,family:{policy:FAMILY_HEIST_POLICY,rewards:FAMILY_REWARDS,reunion:FAMILY_REUNION_POLICY},emblems:V19_EMBLEM_VALUES},
+  anvils:ANVIL_POLICY,
   release: 'g2-3-v1',chemBaronBOverrides:CHEM_BARON_B_OVERRIDES,g23:{policy:G23_POLICY,summons:G23_SUMMON_POLICY,academyLists:G23_ACADEMY_LISTS,forms:'frozen-starting-two-rows-v1',laboratories:'lcg-seed-xor-6c616273-uniform-without-replacement-v1',rewards:'conqueror-g2-4b-artifact-forge-tiers-10-14-v5',anvilChoices:4,crown:'permanent-team-size-per-granted-crown-v1',crownGold:'deployed-holder-win-roll-per-crown-v1',specialItems:'source-base-stats-finite-program-subset-b-overrides-v20-chem-baron',progress:'seat-mechanics-disjoint-v1',mechanicGold:'post-settlement-receipt-prefix-v1',unitRewards:'transaction-policy-empty-to-cost-v1',armoryTimeout:'zero-price-option-v1'},
   finiteExpansion: G22_CONVENTIONS,
   expansion: { inventory: '63-units-30-enabled-traits-30-anomalies-44-ordinary-items-36-radiant-28-chemtech-reward-items',

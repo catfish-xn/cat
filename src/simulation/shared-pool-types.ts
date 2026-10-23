@@ -68,6 +68,7 @@ export type SharedPoolBatchResult =
       readonly events:readonly {readonly seatId:string;readonly events:readonly MatchEvent[]}[]; readonly poolEvents:readonly SharedPoolEvent[]; readonly openingResolution?:OpeningRoundResolution }
   | { readonly ok:false; readonly pool:SharedPoolState; readonly states:readonly MatchState[]; readonly reason:SharedPoolFailure };
 export type SharedMatchCommand =
+  | {readonly type:'openAnvil';readonly unitId:string}
   | {readonly type:'claimOrb';readonly round:number;readonly orbId:string}
   | {readonly type:'rerollAugment';readonly choiceId:string;readonly generation:number;readonly optionIndex:number}
   | {readonly type:'useConsumable';readonly consumableId:string;readonly target:import('./consumable-types').ConsumableTarget}

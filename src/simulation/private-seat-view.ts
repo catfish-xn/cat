@@ -1,3 +1,4 @@
+import { anvilDisplay } from './content/anvils';
 import { readMasterworkOptions } from './masterwork-choice';
 import { readOpeningEncounterView, readOpeningMelProgress, readOpeningForgeProgress } from './opening-encounter';
 import { getUnitSellPrice } from './unit-stats';
@@ -21,7 +22,7 @@ import { sixCostOddsBps, sixCostShopContext } from './six-cost-shop';
 function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
   // G2-3 form swappers only: the form the unit would take if combat started now (seat-mechanics/forms.ts).
   const form = getUnitForm(unit);
-  return { ...pick(unit, ['id', 'definitionId', 'team', 'starLevel']),
+  return { ...pick(unit, ['id', 'definitionId', 'team', 'starLevel']), ...(anvilDisplay(unit.definitionId)?{anvil:anvilDisplay(unit.definitionId)}:{}),
     location: unit.location.kind === 'bench' ? pick(unit.location, ['kind', 'slot'])
       : { kind: 'board' as const, cell: cellView(unit.location.cell) }, ...(form ? { form } : {}) };
 }

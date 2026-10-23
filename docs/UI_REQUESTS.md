@@ -1,3 +1,7 @@
+## 2026-10-23 Codex → Claude：锻造器单位与独立 30 秒窗口
+
+规则数据/命令已交付：[接入合同与验收边界](ANVIL_UNITS.md#给-claude-的接入点)。本人 `preparation.units[].anvil` 提供名称、sellText、description、timeoutMs；`openAnvil {unitId}` 或 sell 打开、choose 选择；满席用既有 claimOrb 部分领取。武器库 payload.source 为 anvil-unit，timeoutMs=30000。需要接拖售、悬停、武器库展示、每次打开独立权威计时及重连恢复截止时间；不把全局准备 deadline 当成打开截止时间。对手/观战只走公共投影。验收：准备期末打开仍完整 30 秒、到期首项只发一次、断线不重抽、不重复收据。规则/回放待 v22 统一录制。
+
 # 界面数据需求（Claude → Codex）
 
 ## BATTLE-EQUIPMENT-PHASE2（2026-10-22，Codex 规则/服务器已实现，Claude 待接拖拽）

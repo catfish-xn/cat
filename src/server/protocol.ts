@@ -238,6 +238,7 @@ export type ClientCommand =
   | { readonly type: 'useConsumable'; readonly consumableId: string; readonly target: ConsumableTarget }
   | { readonly type: 'deploy'; readonly unitId: string; readonly target: UnitLocation }
   | { readonly type: 'buy'; readonly slot: number; readonly generation: number }
+  | { readonly type: 'openAnvil'; readonly unitId: string }
   | { readonly type: 'sell'; readonly unitId: string }
   | { readonly type: 'shopLock'; readonly locked: boolean; readonly generation: number }
   | { readonly type: 'reroll' }

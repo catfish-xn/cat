@@ -1,3 +1,4 @@
+import { isAnvil } from './content/anvils';
 import { TRAINER_ID, TRAINER_HEALTH, TRAINER_ATTACK_CENTI } from './content/opening-batch-b';
 import { validateNeutralInputs } from './m8/unit-inputs';
 import { UNIT_DEFINITIONS, type UnitDefinition, type ResolvedUnitStats, type StarLevel, type Unit } from './units';
@@ -31,6 +32,7 @@ export function getUnitSellPrice<T extends Pick<Unit,'definitionId'|'starLevel'>
   if (!Object.hasOwn(UNIT_DEFINITIONS, unit.definitionId)) throw new RangeError(`Unknown unit definition: ${unit.definitionId}`);
   if (!Object.hasOwn(STAR_PERCENT, unit.starLevel)) throw new RangeError(`Invalid star level: ${unit.starLevel}`);
   if (UNIT_DEFINITIONS[unit.definitionId].unitKind === 'neutral') return 0; // Display-only: sell command rejects enemy identity.
+  if(isAnvil(unit.definitionId))return 0;
   const cost = UNIT_DEFINITIONS[unit.definitionId].cost;
   return unit.starLevel === 1 ? cost : cost * 3 ** (unit.starLevel - 1) - (cost > 1 ? 1 : 0);
 }

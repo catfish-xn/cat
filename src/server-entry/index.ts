@@ -1,6 +1,6 @@
 /** Pure rule boundary for Node callers. No scheduler, transport or browser adapters. */
 export {
-  createMatch, deployMatchUnit, autoDeployToCap, lockMatchCombatRoster, buyUnit, sellUnit, setShopLock, rerollShop, buyXp,
+  openAnvil, grantAnvilUnit, anvilDisplay, ANVIL_POLICY, createMatch, deployMatchUnit, autoDeployToCap, lockMatchCombatRoster, buyUnit, sellUnit, setShopLock, rerollShop, buyXp,
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem, useConsumable, previewUseConsumable,
   selectAnomalyTarget, rerollAugment, deriveAugmentTier, augmentRerollLimit, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,

@@ -1,3 +1,4 @@
+import { isAnvil } from './content/anvils';
 import { openingRewardOrbs } from './opening-batch-rewards';
 import { openingCrabCarrier } from './opening-crabs';
 import { prepareBattleEquipment, validBattleInput } from './battle-equipment';
@@ -134,6 +135,7 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         serial++;
         break;
       }
+      case 'anvil-opened':
       case 'unit-sold':
         items = items.map(item => item.location.kind === 'unit' && item.location.unitId === fact.unitId
           ? {...item,location:{kind:'inventory'}} : item);
@@ -301,9 +303,9 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     check(['planned','revealed','pending-capacity','retained-terminal','forfeited','granted'].includes(progress.status), 'direct status');
     validateEligibility(slot,progress.status);
     check(progress.status === 'granted' ? receipt && progress.receiptId === receipt.receiptId : !receipt && progress.receiptId === null, 'direct receipt');
-    if (slot.roundId !== state.roundDefinitionId) check(['granted','forfeited'].includes(progress.status), 'unresolved historical direct');
+    if (slot.roundId !== state.roundDefinitionId) check(['granted','forfeited'].includes(progress.status)||slot.payload.kind==='forge'&&progress.status==='revealed', 'unresolved historical direct');
     if (state.combat?.status === 'finished' && slot.roundId === state.roundDefinitionId) {
-      check(progress.status !== 'revealed', 'unprocessed direct');
+      check(progress.status !== 'revealed'||slot.payload.kind==='forge', 'unprocessed direct');
       if (progress.status === 'pending-capacity' || progress.status === 'retained-terminal') check(slot.payload.kind === 'unit'
         && (progress.status === 'retained-terminal') === (state.phase === 'gameOver'), 'unit capacity status');
     }
@@ -437,7 +439,9 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     const payload = 'payload' in slot ? slot.payload : {kind:'item' as const,definitionId:definitionId!,quantity:1};
     const receipt = receipts.get(slot.dropId);
     let itemIds: string[] = [], unitIds: string[] = [];
-    if (payload.kind === 'unit') {
+    const birth=entries[cursor];
+    if(payload.kind==='forge'&&(birth?.kind!=='unit-acquired'||birth.source.kind!=='loot'||birth.source.receiptId!==lootReceiptId(slot.dropId)))return false;
+    if (payload.kind === 'unit'||payload.kind==='forge') {
       const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},
         payload.definitionId,{kind:'loot',receiptId:lootReceiptId(slot.dropId)},cursor);
       if (!plan.ok) return false;
@@ -455,7 +459,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   };
   combinations(); // Commands during combat precede the atomic terminal grants/commit.
   for (const slot of direct) expectedProgress.set(slot.dropId,!earned.has(slot.dropId) ? 'forfeited'
-    : grant(slot) ? 'granted' : state.phase === 'gameOver' ? 'retained-terminal' : 'pending-capacity');
+    : grant(slot) ? 'granted' : slot.payload.kind==='forge'?'revealed':state.phase === 'gameOver' ? 'retained-terminal' : 'pending-capacity');
   const earnedChoices = choices.filter(choice => earned.has(choice.dropId));
   const resolve = (choice: LootChoiceDescriptor) => {
     const resolution = loot.choiceResolutions.find(value => value.dropId === choice.dropId), receipt = receipts.get(choice.dropId);
@@ -517,7 +521,19 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       take({kind:'d14-returned',choiceId:fact.choiceId,unitId:fact.unitId,settledOrdinal:fact.settledOrdinal});
     }
     combinations();
-    while (mechanicBirth()) combinations();
+    for(;;){
+      const fact=entries[cursor];
+      if(fact?.kind==='unit-acquired'&&fact.source.kind==='loot'){
+        const receiptId=fact.source.receiptId;
+        const slot=direct.find(s=>s.payload.kind==='forge'&&lootReceiptId(s.dropId)===receiptId) as FrozenDirectDrop|undefined;
+        check(slot&&expectedProgress.get(slot.dropId)==='revealed'&&grant(slot),'deferred anvil claim');expectedProgress.set(slot.dropId,'granted');
+      }else if(fact?.kind==='anvil-opened'){
+        check(preparation.units.some(u=>u.id===fact.unitId&&isAnvil(u.definitionId)),'anvil consumption');
+        preparation={...preparation,units:preparation.units.filter(u=>u.id!==fact.unitId)};
+        take({kind:'anvil-opened',unitId:fact.unitId,choiceId:fact.choiceId});
+      }else if(!mechanicBirth())break;
+      combinations();
+    }
   };
   if (state.phase !== 'gameOver') for (const choice of earnedChoices) {
     continuation(); // Between user choices, never inside a grant transaction.

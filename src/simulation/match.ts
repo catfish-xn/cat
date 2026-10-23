@@ -1,7 +1,10 @@
+import { planOpenAnvil } from './anvils';
+export { grantAnvilUnit } from './anvils';
+export { anvilDisplay, ANVIL_POLICY } from './content/anvils';
+import { isAnvil } from './content/anvils';
 import { sixCostShopContext } from './six-cost-shop';
 export { readOpeningBatchBRewards } from './opening-batch-b-rewards';
 import { openingEncounterId } from './opening-encounter';
-import { openBatchBForge, settleTerminalBatchBForges } from './opening-batch-b-rewards';
 import { growTrainerGolem } from './trainer-golems';
 import { enterOpeningCrabs } from './opening-crabs';
 import { choiceAcquisitionGold } from './choice-acquisition';
@@ -17,7 +20,6 @@ export { isMelBlessingCrossing, readOpeningMelProgress, applyWarwickHunger, crea
 export type { OpeningMelThresholdReceipt, OpeningMelProgress, OpeningForgeProgress, OpeningWarwickKillFact, OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
-import { settleTerminalEpicForges } from './epic-forges';
 import { grantConsumableCopy } from './consumables';
 import { grantPveRemover } from './pve-remover';
 import {grantAnomalyAcquisition} from './anomaly-acquisition';
@@ -104,7 +106,6 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
   const forge=openAugmentForge(state);state=forge.state;events=[...events,...forge.events];
-  const batchForge=openBatchBForge(state);state=batchForge.state;events=[...events,...batchForge.events];
   return { ok: true, ...stampMatchEvents(state, events) };
 };
 function stampMatchEvents(state: MatchState, events: readonly MatchEvent[]): MatchStep {
@@ -271,7 +272,7 @@ export function autoDeployToCap(state: MatchState): MatchCommandResult {
   const rows = Array.from({ length: zone.lastRow - zone.firstRow + 1 }, (_, offset) => zone.firstRow + offset);
   if (board.deploymentZones.enemy.firstRow > zone.lastRow) rows.reverse();
   const cells = rows.flatMap(row => columns.map(col => ({ col, row })));
-  const reserves = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench')
+  const reserves = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench' && !isAnvil(unit.definitionId))
     .sort((a, b) => (a.location as Extract<UnitLocation, {kind:'bench'}>).slot - (b.location as Extract<UnitLocation, {kind:'bench'}>).slot);
   let next: MatchState = state;
   const events: MatchEvent[] = [];
@@ -306,7 +307,12 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   const gifted=entered.state.phase!=='combat'&&!isCombatRosterLocked(entered.state)?drainP2Gifts(entered.state,unitLootPolicy):entered.state;
   return acceptEquipment(gifted, [...plan.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
 }
+export function openAnvil(state:MatchState,unitId:string):MatchCommandResult {
+  const result=planOpenAnvil(state,unitId);
+  return result.ok?acceptEquipment(result.state,result.events):result;
+}
 export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if(state.preparation.units.some(u=>u.id===unitId&&isAnvil(u.definitionId)))return openAnvil(state,unitId);
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
   if (!canOperateMatch(state) && !(capacity && !state.multiplayer)) return fail(state, 'wrong-phase');
   const unit = state.preparation.units.find(unit => unit.id === unitId);
@@ -432,8 +438,6 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   let settled=reconcileD14(settledPlan.state,events); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
-    const terminalForges=settleTerminalEpicForges(settled);settled=terminalForges.state;events.push(...terminalForges.events);
-    const batchForges=settleTerminalBatchBForges(settled);settled=batchForges.state;events.push(...batchForges.events);
     const forfeited=forfeitUnclaimedOrbs(settled); return {state:forfeited.state,events:[...events,...forfeited.events]};
   }
   const queued=settleQueuedOrbClaims(settled,unitLootPolicy);settled=queued.state;events.push(...queued.events);
@@ -635,7 +639,7 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
   const choice = state.pendingChoice!;
   if (choice.kind !== 'anomaly' || choice.step !== 'target') return fail(state, 'invalid-choice');
   const target = state.preparation.units.find(unit => unit.id === unitId);
-  if (!target || target.team !== 'player' || state.anomalyBinding !== null) return fail(state, 'invalid-target');
+  if (!target || target.team !== 'player' || isAnvil(target.definitionId) || state.anomalyBinding !== null) return fail(state, 'invalid-target');
   if(state.multiplayer&&choice.offers.some(id=>!eligibleD14Target(target,id)))return fail(state,'invalid-target');
   const draw = state.multiplayer && choice.offers.length
     ? {offers:choice.offers,choiceRngState:state.choiceRngState}
@@ -687,7 +691,16 @@ const multiplayerFail = (state: MatchState, reason: MultiplayerFailure): Multipl
 /** Historical name retained by T3: choose the first offer, skipping only an empty anomaly target. */
 export function forfeitPendingChoice(state: MatchState, expectedRound: number,
   expectedChoiceId: string | null, expectedGeneration: number | null, unitLootPolicy?: UnitLootPolicy): MultiplayerCommandResult {
-  if (!state.multiplayer) return multiplayerFail(state,'multiplayer-required');
+  if (!state.multiplayer) {
+    const c=state.pendingChoice;
+    if(c?.payload?.source!=='anvil-unit')return multiplayerFail(state,'multiplayer-required');
+    if(expectedRound!==state.round)return multiplayerFail(state,'stale-round');
+    if(c.choiceId!==expectedChoiceId||c.generation!==expectedGeneration)return multiplayerFail(state,'stale-choice');
+    const selected=completeMechanicChoice(state,choiceTimeoutOption(c)!,true,unitLootPolicy);
+    if(!selected.ok)return selected;
+    const timed=accept(selected.state,[{type:'choiceTimedOut',choiceId:c.choiceId,resolution:'default-option'}]);
+    return timed.ok?{...timed,events:[...selected.events,...timed.events]}:timed;
+  }
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state,'seat-eliminated');
   if (expectedRound !== state.round) return multiplayerFail(state,'stale-round');
   const choice = state.pendingChoice;

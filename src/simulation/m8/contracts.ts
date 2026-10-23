@@ -491,12 +491,12 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 12;
-  readonly rulesVersion: 's13-g2-3-v21-opening-encounters-battle-equipment';
-  readonly contentVersion: 's13-14.24b-g2-3-v21-opening-encounters-battle-equipment';
+  readonly rulesVersion: 's13-g2-3-v22-anvil-units-candidate';
+  readonly contentVersion: 's13-14.24b-g2-3-v22-anvil-units-candidate';
   readonly contentDigest: string;
   readonly saveFormatVersion: 8;
-  readonly replayFormatVersion: 6;
-  readonly commandProtocolVersion: 6;
+  readonly replayFormatVersion: 7;
+  readonly commandProtocolVersion: 7;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
 }

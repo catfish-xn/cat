@@ -1,3 +1,4 @@
+import { isAnvil } from './content/anvils';
 import { validateMasterworkChoice } from './masterwork-choice';
 import { ITEM_DEFINITIONS as ORDINARY_ITEMS } from './content/items';
 import { g23RadiantDefinitionId } from './g2-3-rewards';
@@ -41,7 +42,7 @@ export function previewUseConsumable(state:Readonly<MatchState>,consumableId:str
   if(!definition)throw new RangeError('Invalid consumable definition');
   if(!target||target.kind!=='unit')return {ok:false,reason:'invalid-consumable-target'};
   const unit=state.preparation.units.find(u=>u.id===target.unitId);
-  if(unit?.definitionId==='trainer-golem')return {ok:false,reason:'invalid-consumable-target'};
+  if(unit&&(unit.definitionId==='trainer-golem'||isAnvil(unit.definitionId)))return {ok:false,reason:'invalid-consumable-target'};
   if(!unit)return {ok:false,reason:'unknown-unit'};
   if(unit.team!=='player')return {ok:false,reason:'invalid-consumable-target'};
   if (definition.effect !== 'masterwork-upgrade' && target.itemId !== undefined) return {ok:false,reason:'invalid-consumable-target'};

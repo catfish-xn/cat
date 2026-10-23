@@ -1,3 +1,4 @@
+import { isAnvil } from './content/anvils';
 import { trainerStar, TRAINER_ID } from './content/opening-batch-b';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import { G24_FORGE_POOLS } from './content/g2-4-forges';
@@ -45,6 +46,7 @@ export type ResourceFact =
   | { readonly kind: 'unit-acquired'; readonly unitId: string; readonly source: UnitAcquisitionSource }
   | { readonly kind: 'unit-upgraded'; readonly acquisitionSequence: number; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
+  | { readonly kind: 'anvil-opened'; readonly unitId:string; readonly choiceId:string }
   | { readonly kind: 'unit-sold'; readonly unitId: string; readonly context: 'preparation' | 'settlement-capacity'; readonly goldGranted: number }
   | { readonly kind: 'item-acquired'; readonly itemId: string; readonly source: ItemAcquisitionSource }
   // tick is present exactly for operations issued during combat.
@@ -275,7 +277,8 @@ export function validateResourceReceipts(context: ReceiptContext): Map<string, B
     }
     if(receipt.payload.kind==='forge') {
       keys(receipt.payload,['kind','definitionId','quantity']);
-      requireValue(Object.hasOwn(G24_FORGE_POOLS,receipt.payload.definitionId)&&receipt.payload.quantity===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'forge grant');continue;
+      requireValue(Object.hasOwn(G24_FORGE_POOLS,receipt.payload.definitionId)&&receipt.payload.quantity===1&&!receipt.grantedItemIds.length&&receipt.grantedUnitIds.length===1,'forge grant');
+      add(`loot:${receipt.receiptId}`,{kind:'unit',id:receipt.grantedUnitIds[0],definitionId:receipt.payload.definitionId,roundId});continue;
     }
     if(receipt.payload.kind==='consumable') {
       requireValue(receipt.payload.quantity===1&&receipt.grantedConsumableIds?.length===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'consumable birth');
@@ -380,6 +383,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const deferredCarouselIds = new Set<string>(), preparationReceipts = new Set<string>(), claimedCarouselIds = new Set<string>();
   const finishAcquisition = () => {
     if (!acquisition) return;
+    if(isAnvil(acquisition.definitionId)){acquisition=null;return;}
     for (const star of [1, 2]) requireValue([...units.values()].filter(unit => unit.definitionId === acquisition!.definitionId && unit.starLevel === star && !absent.has(unit.id) && !deferredCarouselIds.has(unit.id) && !context.pendingCarouselUnitIds?.includes(unit.id)).length < 3, 'missing upgrade');
     acquisition = null;
   };
@@ -498,10 +502,14 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       const receipt=context.carouselReceipts?.find(r=>r.id===entry.receiptId);
       requireValue(receipt?.unitId===entry.unitId&&units.has(entry.unitId)&&Array.isArray(entry.upgrades),'pending carousel ownership');
       for(const event of entry.upgrades as readonly UnitUpgradedEvent[]){validateUpgrade(event);for(const id of [event.survivorId,...event.consumedIds]){const u=units.get(id);requireValue(u&&!absent.has(id)&&u.definitionId===event.definitionId&&u.starLevel===event.fromStar,'pending upgrade ownership');}event.consumedIds.forEach(id=>units.delete(id));units.set(event.survivorId,{id:event.survivorId,definitionId:event.definitionId,starLevel:event.toStar});growth=mergeGrowthLedger(growth,[event]);}
+    } else if(entry.kind==='anvil-opened'){
+      keys(entry,[...common,'unitId','choiceId']);
+      requireValue(units.has(entry.unitId)&&isAnvil(units.get(entry.unitId)!.definitionId),'anvil ownership');
+      nonempty(entry.choiceId);units.delete(entry.unitId);
     } else if (entry.kind === 'unit-sold') {
       keys(entry, [...common, 'unitId', 'context', 'goldGranted']); integer(entry.goldGranted);
       const unit = units.get(entry.unitId);
-      requireValue(unit && !absent.has(unit.id) && round.kind !== 'supply' && (entry.context === 'preparation' || entry.context === 'settlement-capacity'), 'sale ownership/context');
+      requireValue(unit && !isAnvil(unit.definitionId) && !absent.has(unit.id) && round.kind !== 'supply' && (entry.context === 'preparation' || entry.context === 'settlement-capacity'), 'sale ownership/context');
       requireValue(entry.context !== 'preparation' || !commits.has(entry.roundId), 'preparation sale after settlement');
       requireValue(entry.context !== 'settlement-capacity' || commits.has(entry.roundId), 'sale before settlement');
       requireValue(entry.goldGranted === getUnitSellPrice({ ...unit, team: 'player', location: { kind: 'bench', slot: 0 } }), 'sale price');
