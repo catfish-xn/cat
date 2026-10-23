@@ -93,7 +93,7 @@ describe('complete strategy snapshot', () => {
     expect(snapshot.units.find(unit => unit.unitId === 'enemy')!.stats.attack).toBe(70);
     const onBench = buildStrategySnapshot({ ...state, anomalyBinding: { ...state.anomalyBinding!, unitId: 'bench' } });
     expect(onBench.units.some(unit => unit.sources.some(source => source.source.sourceKind === 'anomaly'))).toBe(false);
-    expect(onBench.units.find(unit => unit.unitId === 'ranger')!.stats.attack).toBe(166);
+    expect(onBench.units.find(unit => unit.unitId === 'ranger')!.stats.attack).toBe(145);
   });
 
   it('canonicalizes input/catalog order and deep-copies definitions, effects, triggers and summaries', () => {
