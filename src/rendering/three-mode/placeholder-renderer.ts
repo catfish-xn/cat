@@ -76,6 +76,8 @@ const MAX_EFFECTS = 48;
 const MAX_STARTS_PER_FRAME = 6, MAX_QUEUED = 64, STALE_SECONDS = 0.3;
 /** A batch of combat events spanning more ticks than this (catching up after dropped frames) plays effects for its last ticks only. */
 const EFFECT_TICKS = 2;
+/** A combat step lands every MOVE_INTERVAL_TICKS (250 ms): a run must outlast it, or the piece drops to idle between cells. */
+const ACTION_CONFIG = { durations: { move: 0.3 } };
 /** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
  * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
@@ -716,7 +718,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     root.add(ring);
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
-    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
+    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null,
       lunge: null, lungeOffset: { x: 0, z: 0 } };
@@ -731,7 +733,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
     held.delete(view); cancelLunge(view);
-    view.state = new UnitActionState(id); view.facing = null;
+    view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
@@ -1016,6 +1018,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const visiting = () => scout.active || scoutView?.watching === true;
   const mine = () => !stage.active && !visiting();
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
+<<<<<<< HEAD
   const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: event => {
     if (event.source !== 'mel' || visiting() || stage.active || !lastFrame) return;
     saveBurst?.dispose();
@@ -1024,6 +1027,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     saveBurst.object.position.set(f.origin.x + (spanX - Math.sqrt(3) * f.hexRadius) / 2, 0, f.origin.y + spanZ / 2);
     scene.add(saveBurst.object); saveExpires = performance.now() + 2000; saveGoldLeft = .65;
   },
+=======
+  /** My legend runs onto my orb, which it claims on arrival (TFT: no click opens an orb); false when it cannot go there now. */
+  const walkToOrb = (orbId: string): boolean => {
+    if (stage.active || visiting()) return false;
+    const walk = tabletop.walkTo({ x: 0, y: 0 }, orbId);
+    if (walk) legend()?.walk({ scene: 'board', ...walk });
+    return walk !== null;
+  };
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: () => { if (!visiting()) tabletop.saved(); }, walkToOrb,
+>>>>>>> origin/multiplayer
     unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
@@ -1134,9 +1147,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return;
     }
     if (event.button !== 0 || press) return;
-    // My orb: the orb dock's own click (it decides whether the rules can be asked now).
+    // My orb: my legend runs onto it and claims it there, as walking over it does.
     const orb = tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport());
-    if (orb) { feed?.controls()?.claimOrb?.(orb); event.preventDefault(); return; }
+    if (orb) { if (walkToOrb(orb)) event.preventDefault(); return; }
     const id = unitAt(event);
     if (!id) return;
     press = { id, pointerId: event.pointerId, x: event.clientX, y: event.clientY };

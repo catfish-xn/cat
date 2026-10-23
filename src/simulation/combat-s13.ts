@@ -185,7 +185,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     tickAnomalies(ctx,()=>actionSeq++,true);ctx.units=activeUnits;
     if(state.tick>0)suspendBanished();
   }
+  const installedSources = new Set(units.flatMap(u => u.pendingEquipmentSources ?? []));
   initializeMechanisms(ctx);
+  if (state.tick > 0 && installedSources.size) for (const unit of units) emitMechanismSignal(ctx,
+    { event: 'combat-start', tick, actionSeq: 0, actorId: unit.id, targetId: unit.id, cast: null }, EMPTY_FACTS, 'event', installedSources);
   if (state.tick === 0) {
     // Initial programs finish at tick 0 before opening occupancy/eligibility freezes.
     ctx.tick = 0;

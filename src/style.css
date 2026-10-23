@@ -469,8 +469,6 @@ body[data-online] #board-root { height: min(max(var(--online-board-h), 360px), c
 .orb-token[data-queued="true"] .orb-token-gem { filter: saturate(.55) brightness(.85); animation: none; }
 .orb-token-mark { position: absolute; right: -2px; top: -2px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: #3a2b10; border: 1px solid #ffd782;
   color: #ffe39b; font-size: 10px; line-height: 14px; font-weight: 700; }
-.orb-token-queued { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); white-space: nowrap; padding: 0 4px; border-radius: 6px; background: #24404d;
-  color: #ffe39b; font-size: 10px; line-height: 15px; }
 .orb-opening .orb-token-gem { animation: orb-open .45s ease-out forwards; }
 .orb-tip { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); display: none; width: max-content; max-width: 220px; padding: 8px 10px;
   border-radius: 8px; border: 1px solid #304653; background: #0f1a24f2; color: #e2eef1; text-align: left; font-size: 12px; line-height: 1.5; box-shadow: 0 6px 24px #000a; z-index: 30; }
@@ -689,6 +687,10 @@ body:has(.opponent-board[data-scout-3d]:not([hidden])) .shop-dock { transform: t
 @media (prefers-reduced-motion: reduce) { .carousel-bar.my-turn { animation: none; } }
 /* Eliminated (spectating): the dock and the left panel stay visible but read as disabled. */
 body[data-online-spectating] .shop-dock, body[data-online-spectating] #strategy-root { opacity: .55; filter: grayscale(.6); }
+/* 3D: the board count is a fixed child of the dock; a filter on the dock would make the dock its containing block and clip
+   it, so the grey goes on the dock's parts instead (opacity does not move fixed children). */
+body[data-online-spectating]:has(> .render3d-layer) .shop-dock { filter: none; }
+body[data-online-spectating]:has(> .render3d-layer) .shop-dock :is(.hud-chip, .shop-odds, .touch-shop, .economy-action) { filter: grayscale(.6); }
 body[data-online-spectating] .choice-overlay { display: none !important; }
 
 /* C18-B: R3/R4 orbs and consumables (contract §18.4/§18.8). */
@@ -1066,8 +1068,8 @@ body[data-online] .online-countdown .online-timer { font-size: 24px; color: #f0e
 body[data-online] .online-countdown .online-timer.urgent { color: #f08080; }
 body[data-online] .online-countdown .countdown-round { font-size: 14px; }
 body[data-online] .online-countdown .economy-chip { font-size: 11px; padding: 1px 7px; }
-body[data-online] .shop-dock { grid-template-columns: 128px minmax(0, 1fr) 64px; grid-template-rows: 24px minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas: "level top top" "xp cards side" "reroll cards side"; column-gap: 8px; row-gap: 4px; padding: 5px 8px 6px; border: 1px solid #1d2f3d;
+body[data-online] .shop-dock { grid-template-columns: 128px minmax(0, 1fr) auto 64px; grid-template-rows: 24px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "level top gold pop" "xp cards cards lock" "reroll cards cards sell"; column-gap: 8px; row-gap: 4px; padding: 4px 8px 5px; border: 1px solid #1d2f3d;
   background: linear-gradient(180deg, #0b151fee, #14212cee); }
 body[data-online] .shop-dock :is(.hud-stats, .mobile-controls, .shop-panel) { display: contents; }
 body[data-online] .shop-dock .hud-chip { display: flex; align-items: center; gap: 5px; height: 24px; padding: 0 7px; border-radius: 12px; box-sizing: border-box; }
@@ -1078,21 +1080,22 @@ body[data-online] .shop-dock .hud-level .hud-label { display: none; }
 body[data-online] .shop-dock .hud-level strong { font-size: 13px; }
 body[data-online] .shop-dock .hud-level strong::before { content: "Lv."; font-size: 11px; color: #9aaeb9; margin-right: 1px; }
 body[data-online] .shop-dock .hud-xp-bar { flex: 1; min-width: 18px; }
-body[data-online] .shop-dock .hud-gold { grid-area: top; justify-self: end; min-width: 84px; justify-content: center; border-color: #785a28; }
+body[data-online] .shop-dock .hud-gold { grid-area: gold; justify-self: end; min-width: 84px; justify-content: center; border-color: #785a28; }
 body[data-online] .shop-dock .hud-gold .hud-label { width: 13px; height: 13px; overflow: hidden; color: transparent; border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #fff2b8, #f2c24f 55%, #a8781e); box-shadow: 0 0 4px #ffd36a99; }
 body[data-online] .shop-dock .hud-gold strong { font-size: 16px; }
-body[data-online] .shop-dock :is(.hud-pop, [data-debug="mobile:sell"], [data-debug="shop-lock"]) { grid-area: side; }
-body[data-online] .shop-dock [data-debug="shop-lock"] { align-self: start; }
-body[data-online] .shop-dock [data-debug="mobile:sell"] { align-self: center; }
-body[data-online] .shop-dock .hud-pop { align-self: end; justify-content: center; padding: 0 4px; }
+/* Lock and sell take the two 44px rows beside the cards (level with buy XP / refresh); the board count sits top right. */
+body[data-online] .shop-dock .hud-pop { grid-area: pop; justify-content: center; padding: 0 4px; white-space: nowrap; }
+body[data-online] .shop-dock [data-debug="shop-lock"] { grid-area: lock; }
+body[data-online] .shop-dock [data-debug="mobile:sell"] { grid-area: sell; }
 body[data-online] .shop-dock .hud-pop .hud-label { font-size: 10px; }
-body[data-online] .shop-dock :is([data-debug="mobile:sell"], [data-debug="shop-lock"]) { width: 100%; min-height: 0; height: 24px; padding: 0 4px; font-size: 11px; border-radius: 12px; }
+body[data-online] .shop-dock :is([data-debug="mobile:sell"], [data-debug="shop-lock"]) { width: 100%; min-height: 44px; padding: 0 4px; font-size: 12px; border-radius: 8px; }
 body[data-online] .shop-dock [data-debug="mobile:buy-xp"] { grid-area: xp; }
 body[data-online] .shop-dock [data-debug="mobile:reroll"] { grid-area: reroll; }
 body[data-online] .shop-dock :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"]) { min-height: 0; font-size: 13px; }
 body[data-online] .shop-dock .touch-shop { grid-area: cards; min-height: 0; }
-body[data-online] .shop-dock .shop-odds { grid-area: top; justify-self: start; align-self: center; margin: 0 !important; font-size: 11px !important; white-space: nowrap; }
+body[data-online] .shop-dock .shop-odds { grid-area: top; justify-self: start; align-self: center; margin: 0 !important; font-size: 11px !important; white-space: nowrap;
+  min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 body[data-online] .shop-dock[data-sell-hint]::after { border-radius: 8px; }
 
 /* L12 online 3D: the scene fills the window behind the panels, as in TFT. placeholder-renderer moves the layer to <body>
@@ -1104,7 +1107,7 @@ body[data-online] > .render3d-layer { position: fixed; inset: 0; z-index: 0; }
    letting pointers through to the 3D canvas, which handles them). The frame's own gaps let pointers through as well (the
    legend and orbs are drawn there); its panels take them back, and the overlays that never take them keep none. */
 body[data-online]:has(> .render3d-layer) #board-frame { z-index: 1; pointer-events: none; }
-body[data-online]:has(> .render3d-layer) #board-frame > :not(#board-root, #feedback-root, #item-dock, #orb-dock, .left-panel-toast, .battle-outcome, .d14-away-chip) { pointer-events: auto; }
+body[data-online]:has(> .render3d-layer) #board-frame > :not(#board-root, #feedback-root, #item-dock, #orb-dock, .left-panel-toast, .battle-outcome, .d14-away-chip, .opening-banner, .opening-toast) { pointer-events: auto; }
 body[data-online]:has(> .render3d-layer) #board-root { visibility: hidden; }
 body[data-online]:has(.render3d-layer) :is(#panels-root, #online-countdown, #shop-dock, #lobby-root) { position: relative; z-index: 1; }
 body[data-online]:has(.render3d-layer) #online-sidebar { z-index: 1; }
@@ -1235,9 +1238,14 @@ body[data-online]:has(> .render3d-layer) #online-sidebar .seat-avatar { width: 5
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me { grid-template-columns: minmax(0, 1fr) auto 76px; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-avatar { width: 76px; height: 76px; }
 body[data-online]:has(> .render3d-layer) .online-countdown .economy-hint { position: fixed; z-index: 2; left: calc(8px + var(--online-shop-left) + var(--online-shop-w) / 2 + 3px); bottom: calc(var(--online-dock-h) - 24px); }
-/* Gold and streak meet at the shop's centre line, as one capsule pair over the cards. */
-body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { position: fixed; z-index: 2; left: calc(8px + var(--online-shop-left) + var(--online-shop-w) / 2 - 3px); bottom: calc(var(--online-dock-h) - 24px); transform: translateX(-100%); }
+/* Gold and streak meet at the shop's centre line, as one capsule pair over the cards. Gold is placed inside the dock
+   (absolute, the dock is its containing block), not fixed: a filter or transform on the dock (eliminated, carousel, scouting)
+   turns a fixed child's offsets dock-relative and pushed the gold out of the dock's clip, leaving only the streak.
+   grid-area: auto makes the whole dock (not the grid cell) the containing block for the 50%; 7px keeps it level with the streak. */
+body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { position: absolute; z-index: 2; grid-area: auto; left: calc(50% - 3px); top: 7px; transform: translateX(-100%); }
 body[data-online]:has(> .render3d-layer) .economy-interest { display: none; }
+/* The odds stop short of the gold capsule, which ends at the shop's centre line. */
+body[data-online]:has(> .render3d-layer) .shop-dock .shop-odds { max-width: calc(var(--online-shop-w) / 2 - 270px); }
 body[data-online]:has(> .render3d-layer) #online-countdown { z-index: 2; }
 @media (max-width: 1500px) {
   body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat { grid-template-columns: minmax(0, 1fr) auto 42px; }
@@ -1271,7 +1279,6 @@ body[data-online]:has(> .render3d-layer) .shop-dock .hud-pop { position: fixed; 
 body[data-online]:has(> .render3d-layer) .shop-dock .hud-pop .hud-label { display: none; }
 body[data-online]:has(> .render3d-layer) .shop-dock .hud-pop strong { font-size: 34px; line-height: 1; color: #f0e6d2; text-shadow: 0 2px 6px #000, 0 0 2px #000; }
 body[data-online]:has(> .render3d-layer) .left-panel-toast { top: 17dvh; }
-body[data-online]:has(> .render3d-layer) .shop-dock [data-debug="shop-lock"] { grid-area: top; justify-self: end; align-self: center; width: 52px; }
 body[data-online]:has(> .render3d-layer) .economy-bonus { display: none; }
 body[data-online]:has(> .render3d-layer) .economy-hint { cursor: help; }
 body[data-online]:has(> .render3d-layer) .economy-streak { padding: 1px 8px; border: 1px solid #785a28; border-radius: 4px; background: #0b151fcc; font-size: 0; }
@@ -1362,21 +1369,99 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 /* v19 six-costs (沃里克/维克托/梅尔): a prismatic frame on the shop card, as TFT sets its top tier apart from the gold five-costs. */
 .shop-card[data-cost="6"], .shop-dock .shop-card[data-cost="6"] { border-width: 3px; border-image: linear-gradient(135deg, #ff5fd2, #ffd23f, #3fe0ff, #a66bff, #ff5fd2) 1; }
 
-/* 14.24b black market: one bundle across the shop row, 「全部拿走」/「保留微光」 stacked on its right. */
-.touch-shop.market-single { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
-.market-bundle { display: flex; align-items: flex-start; justify-content: space-around; gap: 6px; min-width: 0; padding: 8px 10px; border: 1px solid #c79bff; border-radius: 8px;
-  background: linear-gradient(180deg, #3a2160, #22163a); box-shadow: inset 0 0 18px #b46cff40; }
-.market-slot { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; flex: 0 1 72px; }
-.market-slot-art { display: inline-flex; width: 40px; height: 40px; }
-.market-slot-art :is(.hero-portrait, svg, img, .item-mark, .market-pool) { width: 100% !important; height: 100% !important; border-radius: 4px; border: 1px solid #e2c7ff99; object-fit: cover; }
-.market-slot-name { max-width: 100%; font-size: 11px; line-height: 1.25; color: #f3e6ff; text-align: center; overflow: hidden; overflow-wrap: anywhere;
+/* 14.24b black market (S13 实机截图): the market replaces the whole shop row, buy XP / refresh / lock / sell included;
+   a 「黑市」 tab on the purple panel, one large slot per reward (items, gold, then heroes) with its name under it,
+   「全部拿走」/「保留微光」 stacked on the right. Level, gold and board count stay in the top row; 查看商店 goes back. */
+.touch-shop.market-single { display: grid; grid-template-columns: minmax(0, 1fr) 156px; gap: 10px; align-items: stretch; }
+.market-bundle { position: relative; display: flex; align-items: center; justify-content: space-evenly; gap: 6px; min-width: 0; padding: 12px 12px 6px;
+  border: 2px solid #8a5cc8; border-radius: 4px; background: radial-gradient(120% 140% at 50% 0%, #4a2a78, #2a1747 60%, #1c1030);
+  box-shadow: inset 0 0 0 1px #00000080, inset 0 0 22px #b46cff4d, 0 0 10px #8a5cc84d; }
+.market-tab { position: absolute; z-index: 1; top: -1px; left: 50%; transform: translateX(-50%); padding: 0 22px; line-height: 15px; font-size: 11px; letter-spacing: .2em;
+  color: #f0e6ff; background: linear-gradient(180deg, #1f3448, #12202e); border: 1px solid #6f8fa8; border-top: 0; border-radius: 0 0 6px 6px; }
+.market-slot { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; flex: 0 1 108px; }
+.market-slot-art { display: inline-flex; width: 56px; height: 56px; }
+.market-slot-art :is(.hero-portrait, svg, img, .item-mark, .market-pool) { width: 100% !important; height: 100% !important; border-radius: 2px; border: 2px solid #c9a8f0; object-fit: cover; box-shadow: 0 0 8px #0009; }
+.market-slot-name { max-width: 100%; font-size: 12px; line-height: 1.2; color: #f3e6ff; text-align: center; text-shadow: 0 1px 2px #000; overflow: hidden; overflow-wrap: anywhere;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.market-coin { width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff1a8, #e8b93a 60%, #a8781a); }
-.market-actions { display: flex; flex-direction: column; gap: 6px; justify-content: center; min-width: 92px; }
-.market-action { padding: 8px 12px; border-radius: 4px; border: 1px solid #7fb4d8; background: linear-gradient(180deg, #1d3e57, #122a3c); color: #eef6ff; font-size: 13px; font-weight: 700; text-align: left; }
-.market-action:hover:not(:disabled) { border-color: #bfe3ff; background: linear-gradient(180deg, #24506f, #173549); }
-.market-take::after { content: '↓'; float: right; margin-left: 10px; color: #7fd0ff; }
-.market-keep { border-color: #b88fe0; background: linear-gradient(180deg, #33244a, #22183a); }
+/* A small stack of coins for the gold slot. */
+.market-coin { position: relative; width: 56px; height: 56px; border: 2px solid #c9a8f0; border-radius: 2px; background: radial-gradient(circle at 50% 40%, #5a4416, #241a08); }
+.market-coin::before, .market-coin::after { content: ''; position: absolute; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #8a6216;
+  background: radial-gradient(circle at 35% 35%, #fff1a8, #e8b93a 60%, #a8781a); box-shadow: 0 2px 3px #0008; }
+.market-coin::before { left: 7px; top: 18px; } .market-coin::after { left: 19px; top: 8px; }
+.market-actions { display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 0; }
+.touch-shop .market-actions .market-action { position: relative; min-height: 0; display: flex; align-items: center; justify-content: space-between; gap: 6px; flex: 1 1 0; max-height: 48px; padding: 0 8px 0 14px;
+  border-radius: 3px; border: 1px solid #6f9ec0; background: linear-gradient(180deg, #1c3a52, #0f2233); color: #eef6ff; font-size: 15px; font-weight: 700; text-align: left;
+  box-shadow: inset 0 0 0 1px #00000080; }
+.touch-shop .market-actions .market-action:hover:not(:disabled) { border-color: #bfe3ff; background: linear-gradient(180deg, #24506f, #173549); }
+.market-take::after { content: '↓'; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 3px; background: #2b6c96; color: #e8f6ff; font-size: 18px; }
+.market-keep::after { content: ''; width: 28px; height: 28px; border-radius: 3px; background: #3a2a55 no-repeat center / 18px
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2c7ff' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3'/%3E%3Cpath d='M7 15h10' stroke='%23c98bff'/%3E%3C/svg%3E"); }
+body[data-online] .shop-dock:has(.shop-choice[data-choice-source="blackMarket"]) { grid-template-areas: "level top gold pop" "cards cards cards cards" "cards cards cards cards"; }
+body[data-online] .shop-dock:has(.shop-choice[data-choice-source="blackMarket"]) :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"], [data-debug="shop-lock"], [data-debug="mobile:sell"]) { display: none; }
+/* 3D: the dock is wider (and taller above 1500px), so the slots grow to the same share of it as in the 14.24b shot. */
+body[data-online]:has(> .render3d-layer) .market-slot { flex-basis: 150px; }
+body[data-online]:has(> .render3d-layer) :is(.market-slot-art, .market-coin) { width: 60px; height: 60px; }
+body[data-online]:has(> .render3d-layer) .market-slot-name { font-size: 13px; }
+@media (min-width: 1501px) {
+  body[data-online]:has(> .render3d-layer) :is(.market-slot-art, .market-coin) { width: 84px; height: 84px; }
+  body[data-online]:has(> .render3d-layer) .market-coin::before { left: 12px; top: 30px; width: 36px; height: 36px; }
+  body[data-online]:has(> .render3d-layer) .market-coin::after { left: 32px; top: 14px; width: 36px; height: 36px; }
+}
+/* Phone portrait is the only four-row dock: the market takes the cards row and the freed button row, with smaller slots. */
+@media (max-width: 700px) and (orientation: portrait) {
+  body[data-online] .shop-dock:has(.shop-choice[data-choice-source="blackMarket"]) { grid-template-areas: "level level gold gold" "top top top pop" "cards cards cards cards" "cards cards cards cards"; }
+  .touch-shop.market-single { grid-template-columns: minmax(0, 1fr) 96px; gap: 6px; }
+  .market-slot-art, .market-coin { width: 40px; height: 40px; }
+  .market-coin::before { left: 4px; top: 13px; width: 18px; height: 18px; } .market-coin::after { left: 14px; top: 5px; width: 18px; height: 18px; }
+  .touch-shop .market-actions .market-action { padding: 0 4px 0 8px; font-size: 13px; }
+  .market-take::after, .market-keep::after { width: 22px; height: 22px; }
+}
+
+/* ---------------- Opening encounters PR8: banner, "本局奇遇" chip, intro card, 3-5 toast---------------- */
+.opening-banner { position: absolute; left: 50%; top: calc(var(--online-countdown-h, 0px) + var(--online-gap, 0px) + 52px); transform: translateX(-50%); z-index: 70;
+  width: max-content; max-width: min(640px, calc(100% - 24px)); display: grid; gap: 2px; justify-items: center; text-align: center; padding: 6px 18px 8px;
+  border: 1px solid #e8c36a99; border-radius: 10px; background: linear-gradient(180deg, #2a2412ee, #17140cee); color: #f6e7bd; box-shadow: 0 6px 22px #0009; pointer-events: none; }
+.opening-banner[hidden] { display: none; }
+/* Under the transient status toast while it shows; in 3D under the big population count (11dvh) and the toast (17dvh). */
+#board-frame:has(> .left-panel-toast:not([hidden])) > .opening-banner { top: calc(var(--online-countdown-h, 0px) + var(--online-gap, 8px) + 100px); }
+body[data-online]:has(> .render3d-layer) .opening-banner { top: calc(11dvh + 44px); }
+body[data-online]:has(> .render3d-layer) #board-frame:has(> .left-panel-toast:not([hidden])) > .opening-banner { top: calc(17dvh + 46px); }
+.opening-banner-title { font-size: 15px; letter-spacing: .04em; color: #ffd782; }
+.opening-banner-desc { font-size: 12px; line-height: 1.45; color: #e9dfc4; }
+.opening-banner-status { font-size: 12px; color: #b8e0a0; }
+.opening-banner[data-closed="true"] .opening-banner-status, .opening-chip[data-closed="true"] .opening-chip-name::after, .opening-card[data-closed="true"] .opening-card-status { color: #ffb08a; }
+.opening-chip { position: absolute; right: 8px; top: calc(var(--online-countdown-h, 0px) + var(--online-gap, 0px) + 8px); z-index: 80; display: grid; gap: 1px; justify-items: start;
+  max-width: min(260px, calc(100% - 16px)); padding: 5px 10px; border: 1px solid #e8c36a88; border-radius: 8px; background: #221d10dd; color: #f6e7bd; font-size: 12px; line-height: 1.35; text-align: left; cursor: pointer; }
+.opening-chip:hover, .opening-chip:focus-visible { border-color: #ffd782; background: #2f2814ee; }
+.opening-chip[hidden] { display: none; }
+.opening-chip-label { font-size: 11px; color: #c9a95a; letter-spacing: .06em; }
+.opening-chip-name { font-weight: 600; color: #ffd782; }
+.opening-chip[data-closed="true"] .opening-chip-name::after { content: ' · 效果尚未启用'; font-weight: 400; font-size: 11px; }
+.opening-chip-progress { color: #cfe6ff; font-size: 11px; }
+.opening-card { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 120; width: min(440px, calc(100vw - 32px)); display: grid; gap: 8px; justify-items: center; text-align: center;
+  padding: 18px 22px 16px; border: 1px solid #e8c36a; border-radius: 14px; background: radial-gradient(120% 90% at 50% 0%, #3a3018f5, #14110af5); color: #f6e7bd; box-shadow: 0 12px 48px #000c; }
+.opening-card[hidden] { display: none; }
+.opening-card[data-intro="true"] { animation: opening-card-in .35s ease-out both; }
+.opening-card-kicker { margin: 0; font-size: 12px; letter-spacing: .3em; color: #c9a95a; }
+.opening-card-title { margin: 0; font-size: 24px; color: #ffd782; }
+.opening-card-champion { margin: 0; font-size: 14px; color: #f0d9a0; }
+.opening-card-desc { margin: 0; font-size: 14px; line-height: 1.55; color: #ece2c8; }
+.opening-card-status { margin: 0; font-size: 13px; color: #b8e0a0; }
+.opening-card-progress { margin: 0; font-size: 12px; color: #cfe6ff; }
+.opening-card-close { margin-top: 4px; padding: 6px 22px; border-color: #e8c36a; }
+@keyframes opening-card-in { from { opacity: 0; transform: translate(-50%, -46%) scale(.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+.opening-toast { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); z-index: 75; width: max-content; max-width: min(560px, calc(100% - 24px)); padding: 8px 18px;
+  border: 1px solid #ffd782; border-radius: 10px; background: #2a2412f0; color: #ffe9b0; font-size: 14px; text-align: center; box-shadow: 0 8px 28px #000a; pointer-events: none; }
+.opening-toast[hidden] { display: none; }
+.opening-toast.play { animation: opening-toast 5s ease-out both; }
+@keyframes opening-toast { 0% { opacity: 0; transform: translate(-50%, -8px); } 8%, 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
+.choice-forge-count { margin: 0; color: #ffd782; font-weight: 600; }
+body[data-m6-mode="startup"] :is(.opening-banner, .opening-chip, .opening-card, .opening-toast),
+body[data-m6-mode="import"] :is(.opening-banner, .opening-chip, .opening-card, .opening-toast),
+body[data-m6-mode="replay"] :is(.opening-banner, .opening-chip, .opening-card, .opening-toast),
+body[data-online-mode="online-lobby"] :is(.opening-banner, .opening-chip, .opening-card, .opening-toast),
+body[data-online-mode="online-ended"] :is(.opening-banner, .opening-chip, .opening-card, .opening-toast) { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .opening-toast.play, .opening-card[data-intro="true"] { animation-duration: .01s; } }
 .market-pool-badge .item-glyph { font-size: 10px; line-height: 1.1; white-space: normal; text-align: center; }
 
 /* Confirmed Mel save: shared 2D/3D golden shield and callout; ends within 1.4 seconds. */
@@ -1396,4 +1481,32 @@ body[data-online]:has(> .render3d-layer) .fullscreen-toggle { right: auto; left:
   body[data-fullscreen] #app { max-width: none; }
   body[data-fullscreen]:not([data-online]) #board-root { height: calc(100dvh - 24px); }
   body[data-online][data-fullscreen]:not(:has(> .render3d-layer)) { --online-board-h: calc(100dvh - 24px - var(--online-countdown-h) - var(--online-dock-h) - 2 * var(--online-gap)); }
+}
+/* Portrait phones (≤700px wide, online 2D): one column — countdown, board, shop dock, item/orb benches, player list, then
+   the panels. The desktop three-column grid squeezed the board into ~150px under a 232px player list. The shop dock gets
+   its own rows (level · odds/gold · five cards · D/F/sell/lock) so every button keeps a 44px target. */
+@media (max-width: 700px) and (orientation: portrait) {
+  body[data-online]:not(:has(> .render3d-layer)) { --online-dock-h: 220px; --online-countdown-h: auto; }
+  body[data-online] #app, body[data-online][data-online-left="collapsed"] #app { grid-template-columns: minmax(0, 1fr); }
+  body[data-online] #online-sidebar { position: static; max-height: none; overflow: visible; }
+  body[data-online] .online-seats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body[data-online]:not(:has(> .render3d-layer)) .online-seat { grid-template-columns: 36px minmax(0, 1fr) auto; column-gap: 6px; padding: 5px 8px 5px 5px; }
+  body[data-online]:not(:has(> .render3d-layer)) .online-seat .seat-avatar { width: 36px; height: 36px; }
+  body[data-online] :is(.sound-toggle, .left-panel-toggle, .summary-tab, .summary-head[role="button"]) { min-height: 44px; }
+  body[data-online] .online-countdown { flex-wrap: wrap; justify-content: center; row-gap: 2px; max-width: 100%; min-height: 48px; padding: 2px 10px; }
+  body[data-online] #feedback-root { bottom: auto; height: min(max(var(--online-board-h), 360px), calc(100cqw * 520 / 480)); }
+  body[data-online] .shop-dock { height: auto; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 24px 24px 96px 44px;
+    grid-template-areas: "level level gold gold" "top top top pop" "cards cards cards cards" "xp reroll sell lock"; }
+  body[data-online] .shop-dock :is([data-debug="mobile:sell"], [data-debug="shop-lock"], [data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"]) {
+    align-self: stretch; height: auto; min-height: 44px; border-radius: 8px; font-size: 12px; }
+  /* The fixed corner widgets would cover the player list while scrolling: they sit at the page end instead. */
+  body[data-online]:not(:has(> .render3d-layer)) :is(.build-badge, .fullscreen-toggle) { position: static; }
+  body[data-online]:not(:has(> .render3d-layer)) .build-badge { padding: 0 10px 10px; }
+  body[data-online]:not(:has(> .render3d-layer)) .fullscreen-toggle { display: block; margin: 0 10px 6px auto; }
+  /* 3D: the dock spans the window; gold and the streak capsule drop back into the dock and the countdown. */
+  body[data-online]:has(> .render3d-layer) { --online-dock-h: 220px; --online-shop-left: 0px; --online-shop-w: 100%; }
+  body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold, body[data-online]:has(> .render3d-layer) .online-countdown .economy-hint { position: static; transform: none; }
+  body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { grid-area: gold; }
+  body[data-online]:has(> .render3d-layer) .shop-dock .shop-odds { max-width: 100%; }
+  body[data-online]:has(> .render3d-layer) .fullscreen-toggle { left: auto; right: 8px; bottom: calc(var(--online-dock-h) + 16px); }
 }

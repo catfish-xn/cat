@@ -37,6 +37,9 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  /** New declarations whose one-time installation hooks run at the next tick. */
+  pendingEquipmentSources?: readonly string[];
+  equipment?: readonly { readonly definitionId: string; readonly slot: number; readonly temporary: boolean }[];
   readonly v20Traits?:import('./combat-v20-traits').V20TraitsState;
   readonly familyReunion?:{readonly originalStarLevel:1|2|3;readonly combatStarLevel:1|2|3|4;readonly unboostedStarLevel:1|2|3|4;readonly downgradedAtTick?:number};
   readonly sixCost?:import('./combat-six-cost').SixCostState;
@@ -90,6 +93,9 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  /** Private authenticated installations; never included in display projections. */
+  readonly equipmentReceipts?: readonly import('./battle-equipment').BattleEquipmentReceipt[];
+  readonly pendingEquipment?: readonly import('./battle-equipment').BattleEquipmentReceipt[];
   /** Private PvE live-bank transcript. Absent when no authoritative sample changed state. */
   readonly bankSamples?: readonly CombatBankSample[];
   readonly trenchSplits?:readonly {readonly ownerId:string;readonly itemInstanceId:string;readonly tick:number;readonly maxHp:number;readonly permanentAdBps:number;readonly copyIds:readonly string[];readonly g23?:Pick<G23State,'conquestTakedowns'|'highRoller'>}[];

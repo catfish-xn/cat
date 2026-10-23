@@ -107,7 +107,7 @@ describe('M1 crown history authority', () => {
 });
 
 function transferFixture(definitionId = TACTICIANS_CROWN_ID) {
-  let opening = createMatch(109897);
+  let opening = resolveM5Choices(createMatch(109897));
   const holder = opening.preparation.units.find(unit => unit.team === 'player')!;
   for (let slot = 0; slot < 3; slot++) {
     opening = accepted(grantMechanicItem(opening, {receiptId:`transfer:${slot}`,source:'test',definitionId}));
@@ -212,9 +212,10 @@ describe('M2 equipment binding continuity', () => {
   it.each(['before-upgrade','after-upgrade'] as const)('replays survivor equipment %s in exact order (M4)', order => {
     const {first,state,holder} = transferFixture();
     let legal = accepted(grantMechanicItem(state,{receiptId:'m4:blade',source:'test',definitionId:'deathblade'}));
+    const bladeId=legal.items.at(-1)!.id; // Opening anvils have earlier legitimate item births.
     legal = accepted(grantMechanicUnit(legal,{receiptId:'m4:first',source:'test',definitionId:'irelia'}));
     expect(holder.definitionId).toBe('irelia');
-    const equip = (value: MatchState) => accepted(equipItem(value,'item-5','unit-3',0));
+    const equip = (value: MatchState) => accepted(equipItem(value,bladeId,'unit-3',0));
     if (order === 'before-upgrade') legal = equip(legal);
     legal = accepted(grantMechanicUnit(legal,{receiptId:'m4:second',source:'test',definitionId:'irelia'}));
     expect(legal.resourceProvenance.entries.find(fact => fact.kind === 'unit-upgraded')).toMatchObject({
@@ -225,7 +226,7 @@ describe('M2 equipment binding continuity', () => {
       legal = accepted(useConsumable(legal,remover.consumableId,{kind:'unit',unitId:'unit-3'}));
       legal = equip(legal);
     }
-    expect(legal.items.find(item => item.id === 'item-5')!.location).toEqual({kind:'unit',unitId:'unit-3',slot:0});
+    expect(legal.items.find(item => item.id === bladeId)!.location).toEqual({kind:'unit',unitId:'unit-3',slot:0});
     if (order === 'before-upgrade') expect(legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID).map(item => item.location))
       .toEqual([{kind:'unit',unitId:'unit-3',slot:1},{kind:'unit',unitId:'unit-3',slot:2},{kind:'inventory'}]);
     const text = serializeMatch(legal,first.battles);
@@ -317,7 +318,9 @@ describe('M5/M6 ordered equipment across the first battle', () => {
     expect(() => restoreMatch(state, omitted)).toThrow();
     const mistimed = structuredClone(battles);
     Object.assign(mistimed[0].equipmentCommands![0], {tick:mistimed[0].endTick});
-    expect(() => restoreMatch(state, mistimed)).toThrow('战后穿戴命令');
+    // Moving the command removes its next-tick combat effect, so exact event replay
+    // rejects it before the later post-settlement command boundary check.
+    expect(() => restoreMatch(state, mistimed)).toThrow('战斗档案无效：事件缺失或内容错误');
   });
   it('rejects a claimed pre-first-battle equip left in inventory, with or without an empty history', () => {
     const state = openingWithBlade();
@@ -472,7 +475,7 @@ describe('M7/S7 combat equipment command replay', () => {
   beforeAll(() => { const opening = recordedReforgerOpening(); validateMatchHistory(opening.state, opening.battles); });
   let removerOpening: { state: MatchState; battles: readonly BattleRecord[] };
   beforeAll(() => {
-    const live = recorder(accepted(equipItem(swords(109897),'item-1','unit-1',0)));
+    const live = recorder(accepted(equipItem(resolveM5Choices(swords(109897)),'item-1','unit-1',0)));
     removerOpening = prepareInput({ state: advance(live.finish().state), battles: live.history.completedRecords });
   });
   function usedEquipment(mode: ConsumableScenario) {
@@ -512,7 +515,7 @@ describe('M7/S7 combat equipment command replay', () => {
   it.each(['remove','reequip','combine','component','completed'] as const)('records combat consumable use with %s at all three entries and resumes tick for tick (M10)', mode => {
     const {state,battles} = usedEquipment(mode);
     if (mode === 'remove' || mode === 'reequip' || mode === 'combine')
-      expect(battles[1]).toMatchObject({endTick:274,result:'playerWin'});
+      expect(battles[1]).toMatchObject({endTick:mode === 'combine' ? 172 : 274,result:'playerWin'});
     expect(state.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used')).toMatchObject({tick:1});
     for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
   });
@@ -544,7 +547,7 @@ describe('M7/S7 combat equipment command replay', () => {
     expect(validateBattleRecord(prefix,[]).settledMatch).toEqual(live.state);
     expect(prefix.equipmentCommands).toHaveLength(equip ? 2 : 1);
     const {state,battles} = live.finish();
-    expect(battles[0].endTick).toBe(164);
+    expect(battles[0].endTick).toBe(equip ? 103 : 164);
     expect(validateBattleRecord(battles[0],[]).settledMatch).toEqual(state);
     for (const restored of roundTrip(state,battles)) nextBattleMatches(state,restored);
     const omitted = structuredClone(battles);
@@ -555,33 +558,55 @@ describe('M7/S7 combat equipment command replay', () => {
     const {state,battles} = timedEquipment(kind);
     const fact = state.resourceProvenance.entries.find(entry => (entry.kind === 'item-equipped' || entry.kind === 'item-combined') && entry.tick === 1);
     expect(fact).toBeDefined();
-    if (kind === 'in-place') expect(battles[0].endTick).toBe(138);
+    if (kind === 'in-place') expect(battles[0].endTick).toBe(103);
     for (const tick of [0,2,69]) {
       const forged = structuredClone(battles);
       Object.assign(forged[0].equipmentCommands![0],{tick});
-      rejectAll(state,forged,'历史获得或合成记录不一致');
+      rejectAll(state,forged,kind === 'inventory' ? '历史获得或合成记录不一致'
+        : tick === 2 ? '战斗档案无效：内容校验' : '战斗档案无效：事件缺失或内容错误');
       const ledgerOnly = structuredClone(state);
       Object.assign(ledgerOnly.resourceProvenance.entries[fact!.sequence],{tick});
-      rejectAll(ledgerOnly,battles,'历史获得或合成记录不一致');
+      rejectAll(ledgerOnly,battles,kind === 'inventory' ? '历史获得或合成记录不一致' : 'battle equipment command sequence');
     }
     const missingTick = structuredClone(state);
     Reflect.deleteProperty(missingTick.resourceProvenance.entries[fact!.sequence],'tick');
-    rejectAll(missingTick,battles,'历史获得或合成记录不一致');
+    rejectAll(missingTick,battles,kind === 'inventory' ? '历史获得或合成记录不一致' : 'extra battle equipment receipt');
   });
-  it.each([0,2,69])('certifies the same ordered result when both tick claims move to %i (M9 boundary)', tick => {
+  it.each([0,2,69])('binds next-tick receipts when both tick claims move to %i (M9 boundary)', tick => {
     const {state,battles} = timedEquipment('in-place');
     const shifted = structuredClone(state), records = structuredClone(battles);
     const fact = shifted.resourceProvenance.entries.find(entry => entry.kind === 'item-combined')!;
     Object.assign(fact,{tick});
     Object.assign(records[0].equipmentCommands![0],{tick});
-    // A genuine public-command run at that time has exactly this entire state,
-    // including provenance. Only the recorded tick differs from the tick-1 run.
     const genuine = timedEquipment('in-place',tick);
-    expect(shifted).toEqual(genuine.state);
-    expect(records).toEqual(genuine.battles);
-    for (const restored of roundTrip(shifted,records)) {
-      expect(restored).toEqual(genuine.state);
-      expect({...restored,resourceProvenance:state.resourceProvenance}).toEqual(state);
+    // Tick 0 changes the first hit; tick 69 leaves the hits at 35/69 using
+    // the sword. Tick 2 changes no hits, but all three change the combat receipt.
+    expect(genuine.battles[0].endTick).toBe(103);
+    expect(genuine.battles[0].result).toBe('playerWin');
+    const expectedEvents = structuredClone(battles[0].events);
+    const damageChanges = tick === 0
+      ? [{index:8,raw:69,mitigated:74,hpDamage:74,overkill:0}, {index:16,raw:69,mitigated:103,hpDamage:36,overkill:67}]
+      : tick === 69
+        ? [{index:16,raw:49,mitigated:68,hpDamage:61,overkill:7}, {index:24,raw:49,mitigated:49,hpDamage:49,overkill:0},
+          {index:29,raw:69,mitigated:74,hpDamage:61,overkill:13}]
+        : [];
+    for (const {index,...outcome} of damageChanges) {
+      const event = expectedEvents[index];
+      if (event.type !== 'packetDamage') throw new Error('Expected exact damage event');
+      Object.assign(event.outcome,outcome);
+    }
+    expect(genuine.battles[0].events).toEqual(expectedEvents);
+    expect(genuine.state.combat!.equipmentReceipts![0].input.effectiveTick).toBe(tick + 1);
+    expect(shifted).not.toEqual(genuine.state);
+    expect(records).not.toEqual(genuine.battles);
+    rejectAll(shifted,records,'battle equipment command sequence');
+    expect(() => validateBattleRecord(records[0],[])).toThrow(tick === 2
+      ? '战斗档案无效：内容校验' : '战斗档案无效：事件缺失或内容错误');
+    const consistent = structuredClone(shifted);
+    Object.assign(consistent.combat!.equipmentReceipts![0].input,{effectiveTick:tick + 1});
+    expect(consistent).toEqual(genuine.state);
+    for (const restored of roundTrip(genuine.state,genuine.battles)) {
+      expect(restored).toEqual(consistent);
       nextBattleMatches(genuine.state,restored);
     }
   });
@@ -600,7 +625,7 @@ describe('M7/S7 combat equipment command replay', () => {
       kind:'item-equipped',itemId:fact.event.itemId,unitId:'unit-1',slot:0,tick:1,sequence:fact.sequence,roundId:fact.roundId,
     }});
     else Object.assign(fact.event,{consumedIds:fact.event.consumedIds.filter((_,index) => index !== (mutation === 'missing-first' ? 0 : 1))});
-    rejectAll(forged,records,mutation === 'existing-target' ? '历史获得或合成记录不一致'
+    rejectAll(forged,records,mutation === 'existing-target' ? '战斗档案无效：事件缺失或内容错误'
       : mutation === 'ordinary-equip' ? 'equipment ownership/slot' : 'combination inputs');
   });
   it.each(['missing-first','missing-second','ordinary-equip'] as const)('rejects %s inventory combination commands at all three entries', mutation => {
@@ -610,7 +635,7 @@ describe('M7/S7 combat equipment command replay', () => {
     Object.assign(records[0],{equipmentCommands:mutation === 'ordinary-equip'
       ? [{tick:1,itemId:'item-1',unitId:'unit-1',slot:0}]
       : [{tick:1,consumedIds:command.consumedIds.filter((_,index) => index !== (mutation === 'missing-first' ? 0 : 1))}]});
-    rejectAll(state,records,mutation === 'ordinary-equip' ? '历史获得或合成记录不一致' : '合成命令字段');
+    rejectAll(state,records,mutation === 'ordinary-equip' ? '战斗档案无效：事件缺失或内容错误' : '合成命令字段');
   });
   it('rejects a structurally valid command with an invalid recipe through production replay', () => {
     const live = recorder(grantBlades(createMatch(7),2));
@@ -637,10 +662,16 @@ describe('M7/S7 combat equipment command replay', () => {
     roundTrip(original.state,original.battles);
     roundTrip(reordered.state,reordered.battles);
     // Rewrite commands AND matching equip facts while keeping the original,
-    // locally valid RNG/children ledger. The historical roll prefix must bind it.
+    // locally valid RNG/children ledger. Combat receipts now reject this first.
     const forged = {...original.state,resourceProvenance:reordered.state.resourceProvenance};
-    expect(validateMatchStructure(forged)).toEqual(forged);
-    rejectAll(forged,reordered.battles,'历史临时装备收据前缀不一致');
+    expect(() => validateMatchStructure(forged)).toThrow('battle equipment command sequence');
+    rejectAll(forged,reordered.battles,'battle equipment command sequence');
+    // After combat is cleared, align the genuine settlement too so this second
+    // forgery still reaches (and fails) the original temporary-roll prefix check.
+    const later = advance(original.state), reorderedLater = advance(reordered.state);
+    const forgedLater = {...reorderedLater,equipmentState:later.equipmentState,temporaryEquipment:later.temporaryEquipment};
+    expect(validateMatchStructure(forgedLater)).toEqual(forgedLater);
+    rejectAll(forgedLater,reordered.battles,'历史临时装备收据前缀不一致');
   });
   it('keeps combat equips before terminal resources and crown gold (M9)', () => {
     let opening = createMatch(42);
@@ -685,7 +716,7 @@ describe('M7/S7 combat equipment command replay', () => {
       definitionId:'deathblade',location:{kind:'unit',unitId:'unit-1',slot:0},
     });
     const prefix = live.history.capturePrefix()!;
-    expect(prefix.equipmentCommands).toEqual([{tick:1,itemId:'item-2',unitId:'unit-1',slot:0}]);
+    expect(prefix.equipmentCommands).toEqual([{tick:1,itemId:'item-2',unitId:'unit-1',slot}]);
     expect(validateBattleRecord(prefix,[]).settledMatch).toEqual(live.state);
     const {state,battles} = live.finish();
     expect(validateBattleRecord(battles[0],[]).settledMatch).toEqual(state);
@@ -699,12 +730,12 @@ describe('M7/S7 combat equipment command replay', () => {
         original = expected.state; resumed = actual.state;
       }
     }
-    // Omitting the combination must still fail the strict resource-prefix check.
+    // Omitting the combination removes its next-tick effect: exact event replay rejects it.
     const omitted = structuredClone(battles);
     Object.assign(omitted[0],{equipmentCommands:[]});
-    expect(() => serializeMatch(state,omitted)).toThrow('历史获得或合成记录不一致');
+    expect(() => serializeMatch(state,omitted)).toThrow('战斗档案无效：事件缺失或内容错误');
     for (const input of [state,JSON.stringify(state)])
-      expect(() => restoreMatch(input,omitted)).toThrow('历史获得或合成记录不一致');
+      expect(() => restoreMatch(input,omitted)).toThrow('战斗档案无效：事件缺失或内容错误');
   });
   it.each(['reordered','duplicated','extra','missing','unknown-target'] as const)('rejects %s commands at all three save/restore entries', mutation => {
     const live = recorder(grantBlades(createMatch(7),3));
@@ -728,7 +759,7 @@ describe('M7/S7 combat equipment command replay', () => {
     const forged = structuredClone(battles);
     Object.assign(forged[0],{equipmentCommands:changed});
     const reason = mutation === 'duplicated' || mutation === 'unknown-target'
-      ? '非法穿戴命令' : '历史获得或合成记录不一致';
+      ? '非法穿戴命令' : mutation === 'reordered' ? '战斗档案无效：内容校验' : '战斗档案无效：事件缺失或内容错误';
     expect(() => serializeMatch(state,forged)).toThrow(reason);
     expect(() => restoreMatch(structuredClone(state),forged)).toThrow(reason);
     expect(() => restoreMatch(JSON.stringify(state),forged)).toThrow(reason);

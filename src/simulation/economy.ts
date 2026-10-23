@@ -35,7 +35,7 @@ function nonnegativeInteger(value: number, label: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new RangeError(`Invalid ${label}`);
 }
 
-/** Pure calculation only. Match commits this plan together with its unique settlement receipt. */
+/** Pure calculation only. Match freezes this plan with its unique settlement receipt; base/interest/streak pay at next entry. */
 export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
   const { stage, roundKind, result, gold, streak, level, xp, hp, enemySurvivors } = input;
   if (!Number.isInteger(stage) || STAGE_PLAYER_DAMAGE[stage] === undefined) throw new RangeError('Invalid stage');

@@ -98,8 +98,8 @@ describe('first-pass combat frames', () => {
   it('disabled capture retains original task shape and result; tick-zero finish is supported', () => {
     const source = input(47, 'empty');
     const plain = startTwoSidedBattle(source), disabled = startTwoSidedBattle(source, { captureReplay: false });
-    expect(Object.keys(plain)).toEqual(['sampleBankGold', 'advance']);
-    expect(Object.keys(disabled)).toEqual(['sampleBankGold', 'advance']);
+    expect(Object.keys(plain)).toEqual(['queueEquipment', 'sampleBankGold', 'advance']);
+    expect(Object.keys(disabled)).toEqual(['queueEquipment', 'sampleBankGold', 'advance']);
     expect(canonicalContent(disabled.advance(1))).toBe(canonicalContent(plain.advance(1)));
     const actual = captured(source, 1);
     expect(actual.result.terminal.tick).toBe(0);

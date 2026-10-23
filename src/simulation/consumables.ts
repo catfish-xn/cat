@@ -1,3 +1,7 @@
+import { validateMasterworkChoice } from './masterwork-choice';
+import { ITEM_DEFINITIONS as ORDINARY_ITEMS } from './content/items';
+import { g23RadiantDefinitionId } from './g2-3-rewards';
+import { isTemporaryItemId } from './temporary-equipment';
 import { canonicalContent } from './content';
 import { validatePveRemover } from './pve-remover';
 import { CONSUMABLE_DEFINITIONS, CONSUMABLE_RULES, REFORGE_POOLS } from './content/consumables';
@@ -22,6 +26,13 @@ export function reforgeCandidates(definitionId:string):readonly {readonly defini
   const pool=Object.values(REFORGE_POOLS).find(entries=>entries.some(d=>d.definitionId===definitionId));
   return pool?.filter(d=>d.definitionId!==definitionId)??[];
 }
+/** Only permanent ordinary craftable completed items have a masterwork target. */
+export function masterworkCandidates(state: Readonly<MatchState>, unitId: string): readonly ItemInstance[] {
+  return state.items.filter(i => i.location.kind === 'unit' && i.location.unitId === unitId
+    && ORDINARY_ITEMS[i.definitionId]?.kind === 'completed' && ORDINARY_ITEMS[i.definitionId]?.recipe
+    && !!g23RadiantDefinitionId(i.definitionId) && !isTemporaryItemId(state, i.id))
+    .sort((a,b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0));
+}
 export function previewUseConsumable(state:Readonly<MatchState>,consumableId:string,target:ConsumableTarget):ConsumablePreview {
   if(!canOperateEquipment(state))return {ok:false,reason:'wrong-phase'};
   const tool=state.consumables.find(c=>c.consumableId===consumableId);
@@ -32,12 +43,20 @@ export function previewUseConsumable(state:Readonly<MatchState>,consumableId:str
   const unit=state.preparation.units.find(u=>u.id===target.unitId);
   if(!unit)return {ok:false,reason:'unknown-unit'};
   if(unit.team!=='player')return {ok:false,reason:'invalid-consumable-target'};
+  if (definition.effect !== 'masterwork-upgrade' && target.itemId !== undefined) return {ok:false,reason:'invalid-consumable-target'};
   if(definition.effect==='duplicate-unit'){
     if(isCombatRosterLocked(state))return {ok:false,reason:'wrong-phase'};
     if(!SHOP_CATALOG.includes(unit.definitionId)||(definition.maxCost!==null&&UNIT_DEFINITIONS[unit.definitionId].cost>definition.maxCost))return {ok:false,reason:'invalid-consumable-target'};
     if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length>=state.preparation.benchSize)return {ok:false,reason:'bench-full'};
     if(!planUnitAcquisition(state,unit.definitionId,{kind:'mechanic',receiptId:consumableCopyReceiptId(consumableId)},state.resourceProvenance.entries.length).ok)return {ok:false,reason:'bench-full'};
     return {ok:true,effect:definition.effect,affectedItemIds:[],destination:'inventory',affectsCurrentBattle:false};
+  }
+  if (definition.effect === 'masterwork-upgrade') {
+    if (state.phase !== 'preparation' || state.pendingChoice || isCombatRosterLocked(state)) return {ok:false,reason:'wrong-phase'};
+    if (target.itemId && isTemporaryItemId(state, target.itemId)) return {ok:false,reason:'temporary-item'};
+    const eligible = masterworkCandidates(state, target.unitId).filter(i => target.itemId === undefined || i.id === target.itemId);
+    if (!eligible.length) return {ok:false,reason:'invalid-consumable-target'};
+    return {ok:true,effect:definition.effect,affectedItemIds:eligible.map(i=>i.id),destination:'inventory',affectsCurrentBattle:false};
   }
   const items=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id)
     .sort((a,b)=>(a.location.kind==='unit'?a.location.slot:0)-(b.location.kind==='unit'?b.location.slot:0));
@@ -48,6 +67,8 @@ export function planConsumable(state:MatchState,consumableId:string,target:Consu
   const preview=previewUseConsumable(state,consumableId,target);
   if(!preview.ok)return preview;
   const tool=state.consumables.find(c=>c.consumableId===consumableId)!;
+  if (preview.effect === 'masterwork-upgrade' && (target.kind !== 'unit' || !target.itemId || preview.affectedItemIds.length !== 1))
+    return {ok:false as const,reason:'invalid-consumable-target' as const};
   const affectedItems=preview.affectedItemIds.map(id=>structuredClone(state.items.find(i=>i.id===id)!));
   let rngAfter=state.reforgeState,nextItemSerial=state.nextItemSerial;
   const outputs:ConsumableUseRecord['outputs'][number][]=[],events:MatchEvent[]=[];
@@ -58,6 +79,11 @@ export function planConsumable(state:MatchState,consumableId:string,target:Consu
     for(const original of affectedItems){
       const candidates=preview.effect==='reforge-all'?reforgeCandidates(original.definitionId):[];
       let output={id:original.id,definitionId:original.definitionId};
+      if (preview.effect === 'masterwork-upgrade') {
+        if (!Number.isSafeInteger(nextItemSerial + 1) || state.items.some(i => i.id === `item-${nextItemSerial}`)) throw new RangeError('Invalid masterwork serial');
+        output = {id: `item-${nextItemSerial++}`, definitionId: g23RadiantDefinitionId(original.definitionId)!};
+        events.push({type:'itemReforged',itemId:original.id,definitionId:original.definitionId,outputItemId:output.id,outputDefinitionId:output.definitionId,consumableId});
+      }
       if(candidates.length){
         if(!Number.isSafeInteger(nextItemSerial+1)||state.items.some(i=>i.id===`item-${nextItemSerial}`))throw new RangeError('Invalid reforge serial');
         const draw=drawIndex(rngAfter,candidates.length);rngAfter=draw.rng;
@@ -71,7 +97,7 @@ export function planConsumable(state:MatchState,consumableId:string,target:Consu
   }
   const unit=target.kind==='unit'?state.preparation.units.find(u=>u.id===target.unitId):undefined;
   const copiedUnit=preview.effect==='duplicate-unit'?{id:unit!.id,definitionId:unit!.definitionId}:null;
-  const output=preview.effect==='reforge-all'?(outputs[0]??null):null;
+  const output=preview.effect==='reforge-all'||preview.effect==='masterwork-upgrade'?(outputs[0]??null):null;
   const record:ConsumableUseRecord={...tool,target:structuredClone(target),effect:preview.effect,affectedItems,outputs,output,copiedUnit,rngBefore:state.reforgeState,rngAfter};
   events.push({type:'consumableUsed',...tool,target:structuredClone(target),effect:preview.effect,affectedItemIds:preview.affectedItemIds,outputItemId:output?.id??null});
   const next:MatchState={...state,items,nextItemSerial,reforgeState:rngAfter,consumables:state.consumables.filter(c=>c.consumableId!==consumableId)};
@@ -100,7 +126,7 @@ export function replayConsumableItems(items:readonly ItemInstance[],serial:numbe
   }
   if(record.target.kind!=='unit')return fail();
   const unitId=record.target.unitId;
-  if(placed.some(i=>i.location.kind==='unit'&&i.location.unitId===unitId&&!record.affectedItems.some(a=>a.id===i.id)))fail();
+  if(record.effect !== 'masterwork-upgrade' && placed.some(i=>i.location.kind==='unit'&&i.location.unitId===unitId&&!record.affectedItems.some(a=>a.id===i.id)))fail();
   const ids=new Set(record.affectedItems.map(i=>i.id));
   for(const [n,output] of record.outputs.entries())if(output.id!==record.affectedItems[n].id){if(output.id!==`item-${serial++}`)fail();}
   return {items:[...items.filter(i=>!ids.has(i.id)),...record.outputs.map(i=>({...i,location:{kind:'inventory' as const}}))].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0),nextItemSerial:serial};
@@ -108,6 +134,7 @@ export function replayConsumableItems(items:readonly ItemInstance[],serial:numbe
 /** Rebuild tools from unique grant receipts and validate each ordered draw/output. */
 export function validateConsumableState(state:MatchState):void {
   validatePveRemover(state);
+  validateMasterworkChoice(state);
   const check=(condition:unknown)=>{if(!condition)throw new RangeError('Invalid consumable ledger');};
   const grants=new Map<string,{definitionId:string;roundId:string}>();let serial=1;
   const all:{id:string;definitionId:string;roundId:string}[]=[];
@@ -139,13 +166,27 @@ export function validateConsumableState(state:MatchState):void {
       for(const [i,original] of r.affectedItems.entries()){
         const candidates=r.effect==='reforge-all'?reforgeCandidates(original.definitionId):[];
         let expected=original.definitionId;
+        if (r.effect === 'masterwork-upgrade') {
+          check(ORDINARY_ITEMS[original.definitionId]?.kind === 'completed' && ORDINARY_ITEMS[original.definitionId]?.recipe
+            && g23RadiantDefinitionId(original.definitionId) && r.affectedItems.length === 1 && r.target.kind === 'unit' && r.target.itemId === original.id);
+          expected = g23RadiantDefinitionId(original.definitionId)!;
+        }
         if(candidates.length){const draw=drawIndex(rng,candidates.length);rng=draw.rng;expected=candidates[draw.index].definitionId;}
-        check(r.outputs[i]?.definitionId===expected&&(candidates.length?r.outputs[i].id!==original.id:r.outputs[i].id===original.id));
+        check(r.outputs[i]?.definitionId===expected&&(candidates.length || r.effect === 'masterwork-upgrade' ? r.outputs[i].id!==original.id:r.outputs[i].id===original.id));
       }
-      check(equal(r.output,r.effect==='reforge-all'?r.outputs[0]:null));
+      check(equal(r.output,r.effect==='reforge-all'||r.effect==='masterwork-upgrade'?r.outputs[0]:null));
+      if (r.effect === 'masterwork-upgrade') {
+        const choice = state.seatMechanics?.receipts.find(c => c.receiptId === JSON.stringify(['masterwork',r.consumableId]));
+        check(choice?.kind === 'choice' && choice.source === 'masterwork-upgrade' && choice.choiceKind === 'armory'
+          && choice.optionId === r.affectedItems[0].id && choice.price === 0 && !choice.skipped && choice.itemId === null && choice.roundId === fact.roundId);
+      }
     }
     check(equal(r.rngAfter,rng));grants.delete(r.consumableId);
   }
   check((state.seatMechanics?.receipts??[]).filter(r=>r.source==='consumable-copy').every(r=>copies.has(r.receiptId)));
+  for (const choice of state.seatMechanics?.receipts ?? []) if (choice.source === 'masterwork-upgrade' || choice.receiptId.startsWith('["masterwork",')) {
+    check(state.resourceProvenance.entries.some(f => f.kind === 'consumable-used' && f.record.effect === 'masterwork-upgrade'
+      && choice.receiptId === JSON.stringify(['masterwork', f.record.consumableId])));
+  }
   check(serial===state.nextConsumableSerial&&equal(rng,state.reforgeState)&&equal(state.consumables,[...grants].map(([consumableId,g])=>({consumableId,definitionId:g.definitionId}))));
 }

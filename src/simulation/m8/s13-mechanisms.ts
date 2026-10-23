@@ -212,6 +212,25 @@ export function initializeMechanisms(ctx: AbilityContext): void {
       unit.mechanismState = { ...unit.mechanismState!, runtimes: eligible.runtimes, unconsumedSurvivalKeys: remainingSurvivalKeys(keys, eligible.runtimes) };
       for (const definition of eligible.fired) initial.push({ holder: unit, definition });
     }
+    // A mid-battle installation starts only its new declarations. Existing
+    // counters, consumed survival keys and periodic clocks are never restarted.
+    if (unit.pendingEquipmentSources?.length) {
+      const added = new Set(unit.pendingEquipmentSources);
+      const definitions = unit.mechanismDefinitions!;
+      const own = (s: Source) => s.sourceKind === 'item' && added.has(s.instanceId);
+      const survival = definitions.survivalTriggers.filter(d => own(d.source));
+      const sample: SurvivalSample = { unitId: unit.id, tick: ctx.tick, hpBeforeDamage: unit.hp, hpAfterDamage: unit.hp,
+        maxHpBeforeThresholdEffects: unit.maxHp, survivedDamageBatch: unit.alive, receivedPositiveDamage: false };
+      const current = unit.mechanismState!;
+      const fired = consumeSurvivalTriggers(survival, current.runtimes, sample, current.combatId, true);
+      const keys = [...new Set([...current.unconsumedSurvivalKeys, ...survivalConsumptionKeys(survival, current.combatId, unit.id)])];
+      unit.mechanismState = { ...current, runtimes: fired.runtimes,
+        unconsumedSurvivalKeys: remainingSurvivalKeys(keys, fired.runtimes),
+        periodicTasks: [...current.periodicTasks, ...definitions.periodicTasks.filter(t => own(t.source))
+          .map(t => ({ ...t, nextPulseAtTick: ctx.tick + t.nextPulseAtTick, endsAtTick: t.endsAtTick === null ? null : ctx.tick + t.endsAtTick }))] };
+      for (const definition of fired.fired) initial.push({ holder: unit, definition });
+      delete unit.pendingEquipmentSources;
+    }
     unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: ctx.tick };
   }
   for (const { holder, definition: { definition, sample } } of initial) for (const [index, effect] of definition.effects.entries())

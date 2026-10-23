@@ -3,7 +3,7 @@
  */
 import { createCombatReplayRecorder, type BattleReplayTask, type CombatReplay, type CombatReplayTick,
   type CombatViewState, type CombatReplayRecorder } from '../../server-entry';
-import { stepMatchCombatStream } from '../../simulation/match';
+import { stepMatchCombatStream, revealMatchCombatStreamTerminal, queueMatchBattleEquipment } from '../../simulation/match';
 import type { CombatState, LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReplayUnitId } from '../protocol';
@@ -47,7 +47,7 @@ export class CombatStream {
   }
 
   constructor(readonly envelope: BattleInput, pve?: { initial: CombatState; events: readonly MatchEvent[] },
-    beforeTick?: import('../../server-entry').BattleTickInputSource,
+    private readonly beforeTick?: import('../../server-entry').BattleTickInputSource,
     liveTask?: ReturnType<typeof startLiveTask>) {
     if (pve) {
       this.opening = pve.initial; this.ledger = pve.events.filter((e): e is LedgerCombatEvent => 'tick' in e);
@@ -71,6 +71,13 @@ export class CombatStream {
    * effectiveTick = tick + 1; never apply a command to a sealed tick or a finished run.
    */
   get nextEffectiveTick(): number | null { return this.done ? null : this.tick + 1; }
+  queueEquipment(input: import('../../simulation/battle-input-log').BattleEquipmentInput, before: MatchState, equipped: MatchState): MatchState {
+    if (this.done) throw new RangeError('battle-unit-unavailable');
+    if (this.task) { this.task.queueEquipment(input, equipped); return equipped; }
+    const staged = queueMatchBattleEquipment(before, equipped, input);
+    if (!staged.ok) throw new RangeError(staged.reason);
+    return staged.state;
+  }
   sampleBank(seatId: string, gold: number): void {
     if (!this.done && this.task) guardedBattle(this.envelope.battleId, () => this.task!.sampleBankGold(seatId, gold));
   }
@@ -86,12 +93,17 @@ export class CombatStream {
   }
   advancePve(state: MatchState): { state: MatchState; events: readonly MatchEvent[] } {
     if (this.done || !this.recorder || !state.combat) return { state, events: [] };
-    const step = stepMatchCombatStream(state);
+    const step = stepMatchCombatStream(state, this.beforeTick);
     const next = step.terminal ?? step.state.combat!;
     const events = step.events.filter((e): e is LedgerCombatEvent => 'tick' in e);
     this.frames.push(this.recorder.record(state.combat, { state: next, events }));
     this.ledger.push(...events); this.tick = next.tick;
-    if (step.terminal) { this.terminal = step.terminal; this.completedReplay = this.recorder.finish(step.terminal); }
+    if (step.terminal) {
+      const revealed = revealMatchCombatStreamTerminal(step.state, step.terminal);
+      if (!revealed.ok) throw new BattleResolveError(this.envelope.battleId, revealed.reason);
+      this.terminal = step.terminal; this.completedReplay = this.recorder.finish(step.terminal);
+      return { state: revealed.state, events: [...step.events.filter(e => !('tick' in e)), ...revealed.events] };
+    }
     this.checkLimit();
     return { state: step.state, events: step.events.filter(e => !('tick' in e)) };
   }
@@ -99,7 +111,7 @@ export class CombatStream {
     const record = state.roundResults.at(-1);
     if (!this.opening || !this.terminal || !this.completedReplay || record?.round !== state.round) throw new BattleResolveError(this.envelope.battleId, 'stream-unsettled');
     const outcome: BattleSeatOutcome = { seatId: this.envelope.seats[0]!.seatId, state, result: record.result,
-      damage: record.playerDamage, combat: { initial: this.opening, terminal: this.terminal, events: this.ledger } };
+      damage: record.playerDamage, combat: { initial: this.opening, terminal: this.terminal, events: this.ledger, ...(this.terminal.equipmentReceipts?.length ? { inputLog: this.terminal.equipmentReceipts.map(r => r.input) } : {}) } };
     primeCombatReplay(outcome, this.completedReplay); return outcome;
   }
   /** Public projection only. No RNG, private input journal or full domain ledger enters the wire. */

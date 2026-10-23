@@ -50,7 +50,27 @@ const AUGMENT_POOLS={
 };
 AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link','sisters','mentorship','reunion','geniuses','menaces','unlikely-duo');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
+// PR9: independent literal opening table from approved PR1/PR2 (16 entries,
+// original cumulative weights including disabled entries; never renormalize).
+function openingEncounter(seed) {
+ const entries=[['none',1000],['scuttle-puddle',750],['crab-rave',250],['golden-gala',1000],
+  ['prismatic-party',500],['prismatic-prelude',600],['prismatic-finale',400],['gold-subscription',400],
+  ['loot-subscription',400],['trainer-golems',400],['wind-up-monkey',500],['component-anvils',1000],
+  ['viktors-vision',800],['mels-blessing',800],['warwicks-hunger',800],['artifact-anvil',400]];
+ let hash=2166136261n;const name='opening-encounter-v1/select';
+ for(let i=0;i<name.length;i++)hash=((hash^BigInt(name.charCodeAt(i)))*16777619n)%4294967296n;
+ let ticket=Number(BigInt(word(Number(BigInt(seed)^hash)))*10000n/4294967296n);
+ for(const [id,weight] of entries){if(ticket<weight)return id;ticket-=weight;}
+ throw Error('independent opening weights');
+}
 function augmentTier(seed,node){
+ const encounter=openingEncounter(seed);
+ if(['round:2-1:augment','round:3-2:augment','round:4-2:augment'].includes(node)) {
+  if(encounter==='golden-gala')return 'gold';
+  if(encounter==='prismatic-party'||encounter==='prismatic-prelude'&&node==='round:2-1:augment'
+    ||encounter==='prismatic-finale'&&node==='round:4-2:augment')return 'prismatic';
+ }
+
  let hash=2166136261n;
  // Index UTF-16 code units, including each half of a surrogate pair.
  for(let i=0;i<node.length;i++)hash=((hash^BigInt(node.charCodeAt(i)))*16777619n)%4294967296n;
@@ -296,12 +316,15 @@ function validateChemTransition(before,after){
  if(after.pendingChoice?.kind==='blackMarket')assert.deepEqual(after.pendingChoice.offers,chem.offer.optionIds,'pending choice offers complete bundles');
 }
 class Ledger {
- constructor(initial){this.gold=0;this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
+ constructor(initial){this.gold=0;this.pending={gold:0,investmentHp:0};this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
   validateChemTransition(before,after);
   if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
   if(!events.some(e=>e.type==='choiceOpened'&&e.choice.kind==='augment'))assert.deepEqual(after.augmentOffers,before.augmentOffers,'augment history retained without draw');
   const lootReceipts=validateLootTransition(before,after,command,events);
+  // Round income (base/interest/streak) and its investment growth are paid at the next round entry (deferred-income.ts); win gold is immediate.
+  let paidInvestment=0;
+  if(command?.type==='continue'){this.gold+=this.pending.gold;this.pending.gold=0;paidInvestment=this.pending.investmentHp;this.pending.investmentHp=0;}
   if(command?.type==='continue'){const expected=xp(before.level,before.xp,before.augments.some(a=>a.definitionId==='going-long')?4:0);assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent round-start XP');}
   let choice=before.choiceRngState,reward=before.rewardRngState,battle=before.battleSeedRngState;
   if(command?.type==='start')battle=word(battle);
@@ -358,8 +381,8 @@ class Ledger {
   const eligible=records.filter(r=>r.roundKind==='pve'&&r.hpAfter>0);
   assert.equal(pveBonus.length,eligible.length,'independent fixed PvE remover count');
   for(const [i,r] of pveBonus.entries()){const round=eligible[i];assert.equal(r.receiptId,`pve-remover:${round.roundId}`);assert.equal(r.source,'pve-remover');assert.equal(r.kind,'consumable');assert.equal(r.definitionId,'magnetic-remover');assert.equal(r.round,round.round);assert.equal(r.roundId,round.roundId);assert(after.consumables.some(c=>c.consumableId===r.consumableId&&c.definitionId==='magnetic-remover'));}
-  let growth=before.augmentProgress;
-  for(const record of records){const expected=settlement(before,after.combat,this.gold);assert.deepEqual(record,expected,`independent settlement R${before.round}`);this.gold+=expected.income;costs.income+=expected.income;this.rows.push(expected);growth=investment(before,expected);}
+  let growth=paidInvestment?{...before.augmentProgress,investmentHp:before.augmentProgress.investmentHp+paidInvestment}:before.augmentProgress;
+  for(const record of records){const expected=settlement(before,after.combat,this.gold);assert.deepEqual(record,expected,`independent settlement R${before.round}`);this.gold+=expected.incomeBreakdown.win;this.pending.gold+=expected.income-expected.incomeBreakdown.win;costs.income+=expected.income;this.rows.push(expected);const grown=investment(before,expected);this.pending.investmentHp+=grown.investmentHp-before.augmentProgress.investmentHp;growth={...grown,investmentHp:growth.investmentHp};}
   assert.deepEqual(after.augmentProgress,growth,'once-only independent augment growth');
   this.combinations+=events.filter(e=>e.type==='itemCombined').length;this.check(after,true);
  }
@@ -367,4 +390,4 @@ class Ledger {
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
   assert.equal(items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
-module.exports={blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
+module.exports={blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,openingEncounter,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};

@@ -1,7 +1,9 @@
 import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
 import { readsLiveGold } from './live-gold-readers';
-import { phase1BattleInputsSupported, type BattleTickInputSource } from './battle-input-log';
+import { type BattleTickInputSource, type BattleEquipmentInput } from './battle-input-log';
+import { prepareBattleEquipment, installBattleEquipmentBatch, validateBattleEquipmentLog, type BattleEquipmentReceipt } from './battle-equipment';
+import type { MatchState } from './match-types';
 import type { CombatBankSample } from './combat-types';
 import {projectItemSummons} from './g2-4b-summons';
 import {countsG23SurvivorDamage} from './g2-3-summons';
@@ -64,7 +66,7 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
     ? {...value,sourceInstanceId:localId(s.seatId,'trait',value.sourceInstanceId)} : value;
   const sourced = (value: SourcedEffect): SourcedEffect => { const mapped = source(value.source); return {...value,source:mapped,key:effectKey(mapped)}; };
   return {
-    mapping,
+    mapping, inputs,
     units:projectItemSummons(projectG23Summons(preparation),compiled).units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
       ? {kind:'board' as const,cell:{col:unit.location.cell.col,row:team === 'player' ? unit.location.cell.row : DEFAULT_BOARD.rows - 1 - unit.location.cell.row}}
       : unit.location})),
@@ -156,9 +158,12 @@ function sideResult(seatId: string, mapping: readonly BattleIdMapping[], termina
  * every terminal field and event against that result's original tick-zero state;
  * the validated BattleInput boundary remains startTwoSidedBattle above. */
 function validateDynamicResult(result:BattleResult):void {
-  if (!phase1BattleInputsSupported(result.inputLog)) throw new BattleValidationError('battle-input-unsupported');
+  try { validateBattleEquipmentLog(result.inputLog, result.terminal.equipmentReceipts, result.terminal.tick); }
+  catch { throw new BattleValidationError('battle-input-invalid'); }
+  if (result.initial.equipmentReceipts || result.initial.pendingEquipment || result.terminal.pendingEquipment
+    || result.terminal.units.some(u => u.equipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
-  const enabled=result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
+  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
   if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null||!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
   if(!enabled){
     if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'))throw new BattleValidationError('invalid-result');
@@ -177,6 +182,7 @@ function validateDynamicResult(result:BattleResult):void {
       if(sampled===expected)throw new BattleValidationError('invalid-result');
       expected=sampled;
     }
+    expected=installBattleEquipmentBatch(expected, result.terminal.equipmentReceipts?.filter(r => r.input.effectiveTick === expected.tick + 1) ?? []);
     const next=stepCombat(expected);expected=next.state;events.push(...toLedgerEvents(next.events));
   }
   if(canonicalContent(expected)!==canonicalContent(result.terminal)
@@ -185,7 +191,7 @@ function validateDynamicResult(result:BattleResult):void {
 
 export interface BattleReplayOptions {
   readonly captureReplay?: boolean;
-  /** Stage-2 seam; phase 1 rejects nonempty batches without changing the task. */
+  /** Authenticated inputs for this boundary, in seq order; queueEquipment stages their sources. */
   readonly beforeTick?: BattleTickInputSource;
 }
 export interface BattleReplayStep {
@@ -201,6 +207,8 @@ export interface BattleReplayTask extends BattleTask {
 }
 
 export interface BattleTask {
+  /** Stage a successful Match equip; atomic with the server's asset transaction. */
+  queueEquipment(input: BattleEquipmentInput, equipped: MatchState): void;
   /** Server-owned economy only. Samples apply before the next tick, never to a completed result. */
   sampleBankGold(seatId:string,liveGold:number):boolean;
   advance(maxTicks: number): BattleResult | null;
@@ -236,7 +244,27 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
   const readers = readBattleLiveGoldReaders(checked);
   let latestFrame: CombatReplayTick | null = null;
   let result: BattleResult | null = null;
-  const task: BattleTask = { sampleBankGold(seatId,liveGold){
+  const pending: BattleEquipmentReceipt[] = [];
+  const equipmentInputs = new Map<string, CombatStrategyInputs>();
+  const install = () => {
+    const requested = options?.beforeTick?.(terminal.tick + 1);
+    const due = pending.filter(r => r.input.effectiveTick === terminal.tick + 1);
+    if (requested !== undefined && (!Array.isArray(requested) || canonicalContent(requested) !== canonicalContent(due.map(r => r.input)))) throw new BattleValidationError('battle-input-invalid');
+    const next = installBattleEquipmentBatch(terminal, due);
+    terminal = next;
+    pending.splice(0, due.length);
+  };
+  const task: BattleTask = { queueEquipment(input, equipped) {
+    if (result || terminal.status !== 'running' || input.effectiveTick !== terminal.tick + 1
+      || input.seatId !== checked.a.seatId && (input.seatId !== checked.b.seatId || checked.mirrorOfSeatId !== null)
+      || input.seq <= (pending.at(-1)?.input.seq ?? terminal.equipmentReceipts?.at(-1)?.input.seq ?? 0)) throw new BattleValidationError('battle-input-invalid');
+    const team = input.seatId === checked.a.seatId ? 'player' : 'enemy';
+    const receipt = prepareBattleEquipment(equipmentInputs.get(input.seatId) ?? compileSide(team === 'player' ? checked.a : checked.b, team).inputs, input, equipped, team, checked.battleSeed, true);
+    // Validate the complete same-tick prefix before accepting assets. This scratch
+    // install has no events, random draws or writes to the running task.
+    installBattleEquipmentBatch(terminal, [...pending, receipt]);
+    pending.push(receipt); equipmentInputs.set(input.seatId, receipt.after);
+  }, sampleBankGold(seatId,liveGold){
     if(result||terminal.status!=='running')throw new BattleValidationError('wrong-phase');
     if(!Number.isSafeInteger(liveGold)||liveGold<0||bankSamples.length>=100000||seatId!==checked.a.seatId&&seatId!==checked.b.seatId)throw new BattleValidationError('invalid-bank-sample');
     if(!readers.find(reader=>reader.seatId===seatId)!.readsLiveGold)return false;
@@ -251,9 +279,7 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
     let steps = 0;
     if (recorder) {
       while (terminal.status === 'running' && steps < maxTicks) {
-        // TODO phase 2: validate/apply each input and append successful inputs to
-        // BattleResult.inputLog atomically; replay must inject that same log here.
-        if (!phase1BattleInputsSupported(options?.beforeTick?.(terminal.tick + 1))) throw new BattleValidationError('battle-input-unsupported');
+        install();
         const next = stepCombat(terminal);
         latestFrame = recorder.record(terminal, next);
         terminal = next.state; appendEvents(next); steps++;
@@ -261,7 +287,7 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
     } else {
       // The default hot loop skips replay work; the input seam still runs before each tick.
       while (terminal.status === 'running' && steps < maxTicks) {
-        if (!phase1BattleInputsSupported(options?.beforeTick?.(terminal.tick + 1))) throw new BattleValidationError('battle-input-unsupported');
+        install();
         const next = stepCombat(terminal); terminal = next.state; appendEvents(next); steps++;
       }
     }
@@ -270,7 +296,7 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
     const candidate: BattleResult = freezeBattle({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
       winnerSeatId:terminal.result === 'draw' ? null : terminal.result === 'playerWin' ? checked.a.seatId : checked.b.seatId,
       a:sideResult(checked.a.seatId,checked.mapping,terminal,start.state), b:sideResult(checked.b.seatId,checked.mapping,terminal,start.state,checked.mirrorOfSeatId !== null),
-      mapping:checked.mapping,initial:start.state,terminal,events,...(bankSamples.length?{bankSamples}:{} )});
+      mapping:checked.mapping,initial:start.state,terminal,events,...(terminal.equipmentReceipts?.length ? {inputLog:terminal.equipmentReceipts.map(r=>r.input)} : {}),...(bankSamples.length?{bankSamples}:{} )});
     // Initial and each ledger element were fully checked and frozen before
     // scheduling pauses. Check every remaining field now, without regenerating
     // a whole-battle string. Array ordering and all settlement checks stay below.

@@ -4,7 +4,8 @@
  *
  *   PORT / CAT_PORT          listen port (default 8787)
  *   CAT_HOST                 bind address (default 127.0.0.1; set 0.0.0.0 behind a reverse proxy)
- *   CAT_SEED                 room seed, lcg32-v1 (default 20261012)
+ *   CAT_SEED                 seed of the first room, lcg32-v1; later rooms derive theirs from it (lobbyRoomSeed). Unset: a
+ *                            random uint32 per process start, logged as config.seed (set it to replay a session)
  *   CAT_PREP_SEC / CAT_CHOICE_SEC / CAT_SETTLE_SEC   phase lengths in seconds
  *   CAT_QUEUE_TIMEOUT_SEC    auto-start this long after the first join (unset: wait for "start")
  *   CAT_BOT_STEP_MS          delay between two bot steps of one seat (default 300)
@@ -31,6 +32,7 @@ import { CONTENT_DIGEST } from '../simulation/content';
 import { LOOT_REPLAY_DIGEST } from '../simulation/loot-freeze';
 import { createJsonLogger, parseLogLevel } from './log';
 import { HEARTBEAT_DEFAULTS, createGameServer } from './net/server';
+import { randomSeed } from './net/session';
 import type { BattleResolver } from './room/battle-resolver';
 import { BOT_DRIVER_DEFAULTS } from './room/bot-driver';
 import { CAROUSEL_RULES_BINDING } from './room/carousel';
@@ -85,13 +87,15 @@ function faultInjecting(inner: BattleResolver, round: number): BattleResolver {
     ...(inner.startBattle ? { startBattle: (input, pool) => { trip(input.round, input.battleId); return inner.startBattle!(input, pool); } } satisfies Pick<BattleResolver, 'startBattle'> : {}),
   };
 }
+const seed = integer('CAT_SEED', randomSeed());
+log('info', 'config.seed', { seed, source: env.CAT_SEED ? 'CAT_SEED' : 'random' });
 if (faultRound > 0) log('warn', 'config.fault-injection', { round: faultRound, msg: 'TEST ONLY: one battle of this round will throw' });
 
 process.on('uncaughtException', error => { log('error', 'process.uncaught', { error: error.stack ?? error.message }); process.exit(1); });
 process.on('unhandledRejection', reason => { log('error', 'process.unhandled-rejection', { error: reason instanceof Error ? reason.stack ?? reason.message : String(reason) }); process.exit(1); });
 
 createGameServer({
-  port, host, clock, seed: integer('CAT_SEED', 20261012),
+  port, host, clock, seed,
   ...(faultRound > 0 ? { resolver: faultInjecting(new TwoSidedBattleResolver(), faultRound) } : {}),
   timings: {
     preparationMs: seconds('CAT_PREP_SEC', ROOM_TIMING_DEFAULTS.preparationMs),

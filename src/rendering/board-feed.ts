@@ -100,6 +100,8 @@ export interface BoardFeedListener {
   scout?(view: BoardScout | null): void;
   /** A little-legend walk the room took (any seat, either scene). */
   legendWalk?(walk: BoardLegendWalk): void;
+  /** Sends my legend onto my orb, which it claims on arrival (BoardControls.claimOrb); false when it cannot go there now. */
+  walkToOrb?(orbId: string): boolean;
 }
 /**
  * A walk as the room published it (src/server/legend-motion.ts) with its times moved onto performance.now(), and whose
@@ -167,6 +169,10 @@ export function boardFeedUnitAt(client: { x: number; y: number }): string | unde
 /** null when no layer answers (2D places its own cards); otherwise where the layer drew the piece, if anywhere. */
 export function boardFeedScreenBox(id: string): BoardScreenBox | undefined | null {
   return listener?.screenBox ? listener.screenBox(id) : null;
+}
+/** null when no layer walks to orbs (the orb dock claims itself); otherwise whether my legend set off for it. */
+export function boardFeedWalkToOrb(orbId: string): boolean | null {
+  return listener?.walkToOrb ? listener.walkToOrb(orbId) : null;
 }
 export function publishBoardFrame(build: () => BoardFrame): void { if (listener) listener.frame(build()); }
 export function publishCombatEvents(build: () => readonly DisplayCombatEvent[]): void {

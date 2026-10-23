@@ -1,3 +1,13 @@
+import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
+import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
+
+import { openMasterworkChoice, completeMasterworkChoice } from './masterwork-choice';
+export { readMasterworkOptions } from './masterwork-choice';
+import { createSoloOpeningEncounter, commitOpeningEncounterHealth, applyOpeningEffects, planOpeningRound } from './opening-encounter';
+export { TRAINER_GOLEMS_POLICY, validateTrainerGolemEmblems, applyTrainerGolemsOpening } from './trainer-golems';
+export type { TrainerGolemEmblems } from './trainer-golems';
+export { isMelBlessingCrossing, readOpeningMelProgress, applyWarwickHunger, createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, readOpeningForgeProgress, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
+export type { OpeningMelThresholdReceipt, OpeningMelProgress, OpeningForgeProgress, OpeningWarwickKillFact, OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
 import { settleTerminalEpicForges } from './epic-forges';
@@ -35,6 +45,7 @@ import { M8_VERSION } from './m8/version';
 import { freezeCombatInput } from './combat-input';
 import { appendResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSION } from './resource-provenance';
 import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity } from './loot-runtime';
+import { isMatchCombatStreamTerminal } from './combat-stream-terminal';
 import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, stepCombat, validateCombatStart, type CombatState } from './combat';
 import { toLedgerEvents } from './combat-ledger';
@@ -63,12 +74,12 @@ import { planPermanentItemGrant } from './item-grants';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { ROUND_PREPARATION_RULES, getRoundSchedule, getRoundKind } from './round-schedule';
 import { planReward } from './rewards';
-import { CONTENT_DIGEST } from './content';
+import { CONTENT_DIGEST, canonicalContent } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS, anomalyCandidates } from './content/anomalies';
 import { generateChoices } from './choices';
-import { deriveAugmentTier, augmentCandidates, drawAugmentCard } from './augment-offers';
-export { deriveAugmentTier, augmentRerollLimit } from './augment-offers';
+import { resolveAugmentTier, augmentCandidates, drawAugmentCard } from './augment-offers';
+export { deriveAugmentTier, resolveAugmentTier, augmentRerollLimit } from './augment-offers';
 import type { ScheduleReceipt } from './strategy-types';
 import { isSellableUnit } from './seat-mechanics/forms';
 import { isMechanicChoice, isMechanicChoiceKind, resolveMechanicChoice, choiceTimeoutOption } from './seat-mechanics/choices';
@@ -149,15 +160,15 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
     if (event.kind === 'anomaly' && !state.preparation.units.some(unit => unit.team === 'player')) continue;
     let choiceRngState = state.choiceRngState; let offers: readonly string[] = [];
     if (event.kind === 'augment') {
-      const drawn = generateChoices(augmentCandidates(deriveAugmentTier(state.augmentTierSeed, event.id), state.augments, state.removedAugmentIds), choiceRngState);
+      const drawn = generateChoices(augmentCandidates(resolveAugmentTier(state, event.id), state.augments, state.removedAugmentIds), choiceRngState);
       offers = drawn.offers; choiceRngState = drawn.choiceRngState;
     } else if (event.kind === 'component') offers = [...COMPONENT_IDS];
     const pendingChoice = { kind: event.kind, step: event.kind === 'anomaly' ? 'target' as const : 'offer' as const,
       choiceId: event.id, eventId: event.id, generation: 0, offers, targetId: null, rerollCount: 0,
-      ...(event.kind === 'augment' ? {augmentTier: deriveAugmentTier(state.augmentTierSeed, event.id), rerollsRemaining: 3, rerolledSlots: [false, false, false]} : {}),
+      ...(event.kind === 'augment' ? {augmentTier: resolveAugmentTier(state, event.id), rerollsRemaining: 3, rerolledSlots: [false, false, false]} : {}),
       returnPhase: timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' as const : 'preparation' as const };
     state = { ...state, augmentOffers: event.kind === 'augment'
-      ? [...state.augmentOffers, {choiceId:event.id,tier:deriveAugmentTier(state.augmentTierSeed,event.id),rerollCount:0,rerolledIndices:[]}] : state.augmentOffers, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
+      ? [...state.augmentOffers, {choiceId:event.id,tier:resolveAugmentTier(state,event.id),rerollCount:0,rerolledIndices:[]}] : state.augmentOffers, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
     events.push({ type: 'choiceOpened', choice: pendingChoice });
     return { state, events };
   }
@@ -180,9 +191,11 @@ export function createCarouselMatch(seed=DEFAULT_MATCH_SEED):MatchState {
 }
 export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization = {mode:'solo'}): MatchState {
   validateSeed(seed); validateContent();
+  const openingEncounter = loot.mode === 'shared-deferred' ? {mode:'shared-deferred' as const} : createSoloOpeningEncounter(seed);
   const m8 = prepareRound(seed,1,undefined,undefined,loot);
   const initial: MatchState = { schemaVersion: M8_VERSION.schemaVersion, rulesVersion: M8_VERSION.rulesVersion, contentVersion: M8_VERSION.contentVersion,
     commandProtocolVersion: M8_VERSION.commandProtocolVersion, rngAlgorithm: M8_VERSION.rngAlgorithm, tickMs: M8_VERSION.tickMs,
+    openingEncounter,
     m8, combatInputBasis:null, resourceProvenance:appendResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries:[]},m8.round.roundId,
       {kind:'unit-acquired',unitId:OPENING_INITIAL_STATE.unit.id,source:{kind:'opening',seed,seatId:'solo'}}), roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
     augmentTierSeed: seed, augmentOffers: [], removedAugmentIds: [],
@@ -200,7 +213,11 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
         location:{kind:'board',cell:{...OPENING_INITIAL_STATE.unit.cell}} },
       ...m8.preparation.enemies] }, roundResults: [], phase: 'preparation', combat: null };
   const entered = enterScheduledEvents(writeG23Progress(initial,createG23Progress(seed)));
-  return accept(entered.state, entered.events).state;
+  const prepared = accept(entered.state, entered.events).state;
+  if (openingEncounter.mode === 'shared-deferred') return prepared;
+  const applied = applyOpeningEffects(prepared, planOpeningRound(openingEncounter.context, '1-2').facts);
+  if (!applied.ok) throw new Error(applied.reason);
+  return applied.state;
 }
 export function getDeploymentCap(state: MatchState): number { return deploymentCapFor(state.level, readG23Progress(state)); }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
@@ -337,7 +354,7 @@ export function matchStartFailure(state: MatchState): MatchFailure | undefined {
   // An empty deployment may concede the round, preventing a zero-gold/empty-roster soft lock.
   return reason === 'missing-player' ? undefined : reason;
 }
-/** Income, XP, HP, persistent growth and the settlement identity commit once together. */
+/** Freeze income entitlement; commit victory gold, XP, HP, growth and the settlement identity once. */
 function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDelta: readonly import('./match-types').PersistentGrowth[] = [],unitLootPolicy?:UnitLootPolicy,hookEvents:MatchEvent[]=[]): MatchState {
   if (state.roundResults.some(record => record.round >= state.round)) throw new Error('Duplicate settlement');
   const {kind:roundKind,isFinal,roundId} = state.m8.round;
@@ -358,11 +375,11 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   const settled:MatchState={ ...state, resourceProvenance, phase: terminal && !state.multiplayer ? 'gameOver' : 'settlement',
     outcome:state.multiplayer ? null : outcome, combat,
     ...(state.multiplayer ? {multiplayer:{...state.multiplayer,status:plan.hpAfter===0?'eliminated' as const:'active' as const}} : {}),
-    gold: plan.goldAfter, playerHp: plan.hpAfter, streak: plan.streakAfter, level: plan.progression.level, xp: plan.progression.xp,
+    gold: plan.goldAfter - deferredRoundIncome(plan), playerHp: plan.hpAfter, streak: plan.streakAfter, level: plan.progression.level, xp: plan.progression.xp,
     persistentGrowth: [...growth].map(([unitId,attackDamageBps]) => ({unitId,attackDamageBps})).sort((a,b)=>a.unitId.localeCompare(b.unitId)),
     augmentProgress: {
       pumpingRounds: state.augmentProgress.pumpingRounds + (state.augments.some(a => a.definitionId === 'pumping-up-i') ? 1 : 0),
-      investmentHp: state.augmentProgress.investmentHp + readAugmentIncome(state.augments).healthPerInterest * plan.incomeBreakdown.interest,
+      investmentHp: state.augmentProgress.investmentHp,
     },
     roundResults: [...state.roundResults, { round: state.round, roundId, settlementId: `round-${state.round}-settled`, roundKind,
       result: combat?.result ?? 'supply', combatTicks: combat?.tick ?? 0, combatEventCount:combat?.nextEventSeq??0,
@@ -374,7 +391,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
   const committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
-  return saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed;
+  return commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed);
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)
@@ -434,11 +451,19 @@ export function openMatchCombatStream(state: MatchState): MatchCommandResult & {
   const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
   const base = { ...state, combatInputBasis, battleSeedRngState: draw.state };
   const opened = started.state.status === 'running' ? withCombat(base, started.state) : { state: base, events: [] };
-  return { ...accept(opened.state, [...toLedgerEvents(started.events), ...opened.events]), streamInitial: started.state };
+  const accepted = accept(opened.state, [...toLedgerEvents(started.events), ...opened.events]);
+  if (accepted.ok && state.multiplayer && started.state.status === 'finished') {
+    const revealed = revealMatchCombatStreamTerminal(accepted.state, started.state);
+    return revealed.ok ? { ...revealed, events: [...accepted.events, ...revealed.events], streamInitial: started.state } : fail(state, revealed.reason);
+  }
+  return { ...accepted, streamInitial: started.state };
 }
-/** The final step stays outside Match until settlement; its complete ledger is still recorded immediately. */
-export function stepMatchCombatStream(state: MatchState): MatchStep & { readonly terminal: CombatState | null } {
+/** The final step is staged separately; its complete ledger is still recorded immediately. */
+export function stepMatchCombatStream(state: MatchState, beforeTick?: import('./battle-input-log').BattleTickInputSource): MatchStep & { readonly terminal: CombatState | null } {
+  if (state.pendingCombatTerminal) return { state, events: [], terminal: state.pendingCombatTerminal };
   if (state.phase !== 'combat' || state.multiplayer && state.m8.round.kind === 'pvp') throw new Error('wrong-phase');
+  const requested = beforeTick?.(state.combat.tick + 1);
+  if (requested !== undefined && (!Array.isArray(requested) || canonicalContent(requested) !== canonicalContent(state.combat.pendingEquipment?.map(r => r.input) ?? []))) throw new Error('battle-input-invalid');
   const sampled = state.multiplayer ? sampleD11CombatGold(state.combat, 'player', state.gold) : state.combat;
   const live = sampled === state.combat ? sampled : { ...sampled, bankSamples: [...(state.combat.bankSamples ?? []),
     { tick: state.combat.tick, team: 'player' as const, liveGold: state.gold }] };
@@ -448,16 +473,26 @@ export function stepMatchCombatStream(state: MatchState): MatchStep & { readonly
   const result = accept(progressed.state, [...toLedgerEvents(next.events), ...progressed.events]);
   return { state: result.state, events: result.ok ? result.events : [], terminal: null };
 }
+/** Reveal the trusted PvE terminal without granting loot, income or pool reservations. */
+export function revealMatchCombatStreamTerminal(state: MatchState, terminal: CombatState): MatchCommandResult {
+  if (!isMatchCombatStreamTerminal(state, terminal)) return fail(state, 'wrong-phase');
+  if (state.pendingCombatTerminal) return canonicalContent(state.pendingCombatTerminal) === canonicalContent(terminal)
+    ? { ok: true, state, events: [] } : fail(state, 'wrong-phase');
+  const revealed = revealMatchLoot({ ...state, pendingCombatTerminal: terminal }, terminal);
+  return { ok: true, ...stampMatchEvents(revealed.state, revealed.events) };
+}
 /** Trusted first-pass terminal only; a duplicate refuses before granting anything. */
 export function settleMatchCombatStream(state: MatchState, terminal: CombatState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (state.roundResults.some(record => record.round >= state.round) || terminal.status !== 'finished'
     || terminal.combatId !== `round-${state.round}` || !state.combatInputBasis
-    || terminal.tick < (state.combat?.tick ?? 0)) return fail(state, 'wrong-phase');
-  const settled = withCombat(state, terminal, unitLootPolicy);
+    || terminal.tick < (state.combat?.tick ?? 0)
+    || state.pendingCombatTerminal && canonicalContent(state.pendingCombatTerminal) !== canonicalContent(terminal)) return fail(state, 'wrong-phase');
+  const { pendingCombatTerminal: _pending, ...base } = state;
+  const settled = withCombat(base, terminal, unitLootPolicy);
   return accept(settled.state, settled.events);
 }
 export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
-  if (state.phase !== 'combat') return { state, events: [] };
+  if (state.phase !== 'combat' || state.pendingCombatTerminal) return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
   if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
   const sampled=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
@@ -474,6 +509,7 @@ export function finishCarouselSupply(state:MatchState):MatchCommandResult {
   return accept({...settled,phase:'settlement',combat:null},[{type:'roundSettled',round:state.round}]);
 }
 export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
+  const initial = state;
   if (state.multiplayer?.status === 'eliminated') return fail(state,'wrong-phase');
   if (state.phase !== 'settlement') return fail(state, 'wrong-phase');
   if (expectedRound !== state.round) return fail(state, 'stale-round');
@@ -481,6 +517,10 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   if (state.roundResults.length !== state.round || state.roundResults.at(-1)?.round !== state.round) return fail(state, 'unsettled-round');
   const definition = getNextCatalogRound(state.m8.round.roundId);
   if (!definition) return fail(state, 'wrong-phase');
+  const augment = getRoundSchedule(definition.ordinal).find(e => e.kind === 'augment');
+  if (augment && augmentCandidates(resolveAugmentTier(state, augment.id), state.augments, state.removedAugmentIds).length < 3)
+    return fail(state, 'augment-pool-too-small');
+  state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
   const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
@@ -490,8 +530,20 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round);
   const carousel = resolveCarouselPreparation({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
-  const entered = enterScheduledEvents(carousel.state);
-  return acceptEquipment(entered.state, [...carousel.events,...entered.events]);
+  let prepared = carousel.state;
+  const openingEvents: MatchEvent[] = [];
+  if (prepared.openingEncounter.mode === 'solo') {
+    const applied = applyOpeningEffects(prepared, planOpeningRound(prepared.openingEncounter.context, definition.roundId).facts);
+    if (!applied.ok) return fail(initial, applied.reason);
+    prepared = applied.state; openingEvents.push(...applied.events);
+  }
+  if (prepared.phase === 'gameOver') {
+    const terminal = stampMatchEvents(prepared, carousel.events);
+    return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
+  }
+  const entered = enterScheduledEvents(prepared);
+  const accepted = acceptEquipment(entered.state, [...carousel.events,...entered.events]);
+  return accepted.ok ? {...accepted, events: [...openingEvents, ...accepted.events]} : accepted;
 }
 
 /** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */
@@ -509,6 +561,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const current = getMultiplayerRoundByOrdinal(state.round);
     if (current.roundId !== state.roundDefinitionId || current.roundId !== state.m8.round.roundId) return multiplayerFail(state, 'stale-round');
     if (state.round < FINAL_ROUND) return nextRound(state, expectedRound, layout);
+    state = payPreviousRoundIncome(state);
     const definition = getMultiplayerRoundByOrdinal(state.round + 1);
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
@@ -524,6 +577,10 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
 }
 
 export function useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult {
+  if (state.consumables.find(c=>c.consumableId===consumableId)?.definitionId === 'masterwork-upgrade') {
+    const opened = openMasterworkChoice(state,consumableId,target);
+    return opened.ok ? acceptEquipment(opened.state,opened.events) : opened;
+  }
   const plan=planConsumable(state,consumableId,target);
   if(!plan.ok)return fail(state,plan.reason);
   const used={...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
@@ -539,19 +596,42 @@ export function combineItems(state: MatchState, aId: string, bId: string): Match
   return plan.ok ? accept({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
     resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,plan.events.filter((event):event is Extract<import('./strategy-types').StrategyEvent,{type:'itemCombined'}>=>event.type==='itemCombined').map(event=>({kind:'item-combined' as const,event,...timing}))) }, plan.events) : fail(state, plan.reason);
 }
-export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult {
+export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number, options?: { readonly deferBattleEquipment?: boolean }): MatchCommandResult {
   const preview = previewEquip(state, itemId, unitId, slot);
   if (!preview.allowed) return fail(state, preview.reason);
   const plan = planEquip(state.items, state.preparation, itemId, unitId, slot, state.nextItemSerial);
   if (!plan.ok) return fail(state, plan.reason);
   const combined = plan.events.filter((event): event is Extract<import('./strategy-types').StrategyEvent, {type:'itemCombined'}> => event.type === 'itemCombined');
   const timing = state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {};
-  return acceptEquipment({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
+  const accepted = acceptEquipment({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
     resourceProvenance: combined.length ? appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId,
       combined.map(event => ({ kind: 'item-combined' as const, event, ...timing })))
       : appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, {kind:'item-equipped',itemId,unitId,slot:plan.events.find(event => event.type === 'itemEquipped')!.slot,...timing}),
   }, plan.events);
+  if (accepted.ok && !(options?.deferBattleEquipment && state.multiplayer) && state.phase === 'combat' && state.combat?.status === 'running' && state.combatInputBasis
+    && !(state.multiplayer && state.m8.round.kind === 'pvp')
+    && state.preparation.units.some(u => u.id === unitId && u.location.kind === 'board')) {
+    const prior = state.combat.pendingEquipment?.at(-1) ?? state.combat.equipmentReceipts?.at(-1);
+    const staged = queueMatchBattleEquipment(state, accepted.state,
+      { kind: 'equipment', seq: (prior?.input.seq ?? 0) + 1, effectiveTick: state.combat.tick + 1,
+        seatId: state.multiplayer?.seatId ?? 'player', itemId, unitId, slot });
+    return staged.ok ? { ...accepted, state: staged.state } : staged;
+  }
+  return accepted;
 }
+/** Authoritative PvE adapter. The caller commits equipped assets and this intent together. */
+export function queueMatchBattleEquipment(before: MatchState, equipped: MatchState,
+  input: import('./battle-input-log').BattleEquipmentInput): MatchCommandResult {
+  if (before.phase !== 'combat' || before.pendingCombatTerminal || before.combat.status !== 'running' || !before.combatInputBasis) return fail(before, 'wrong-phase');
+  try {
+    const prior = before.combat.pendingEquipment?.at(-1) ?? before.combat.equipmentReceipts?.at(-1);
+    const receipt = prepareBattleEquipment(prior?.after ?? before.combatInputBasis.inputs, input, equipped, 'player', before.combatInputBasis.battleSeed);
+    installBattleEquipmentBatch(before.combat, [...before.combat.pendingEquipment ?? [], receipt]);
+    return { ok: true, events: [], state: { ...equipped, combat: { ...before.combat,
+      pendingEquipment: [...before.combat.pendingEquipment ?? [], receipt] } } as MatchState };
+  } catch (error) { return fail(before, error instanceof Error && error.message === 'battle-unit-unavailable' ? 'battle-unit-unavailable' : 'battle-input-invalid'); }
+}
+
 function choiceFailure(state: MatchState, choiceId: string, generation: number): MatchFailure | undefined {
   if (state.phase !== 'choice' || isCombatRosterLocked(state)) return 'wrong-phase';
   if (!state.pendingChoice || state.pendingChoice.choiceId !== choiceId || state.pendingChoice.generation !== generation) return 'stale-choice';
@@ -578,7 +658,7 @@ export function rerollAugment(state: MatchState, choiceId: string, generation: n
   if (choice.choiceId !== choiceId || choice.generation !== generation) return fail(state, 'stale-choice');
   if (optionIndex === undefined || !Number.isSafeInteger(optionIndex) || optionIndex < 0 || optionIndex >= choice.offers.length) return fail(state, 'invalid-slot');
   if (choice.rerolledSlots?.[optionIndex] !== false) return fail(state, 'augment-rerolls-exhausted');
-  const tier = deriveAugmentTier(state.augmentTierSeed, choiceId);
+  const tier = resolveAugmentTier(state, choiceId);
   const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers]);
   if (!candidates.length) return fail(state, 'augment-pool-too-small');
   const draw = drawAugmentCard(candidates, state.choiceRngState);
@@ -713,7 +793,8 @@ export function claimOrDiscardLoot(state: MatchState, expectedRound: number, uni
 /** G2-3 forge/blackMarket/armory: resolve through seat-mechanics, then continue the round's schedule like any choice. */
 function completeMechanicChoice(state: MatchState, optionId: string, timedOut: boolean,unitLootPolicy?:UnitLootPolicy): MatchCommandResult {
   const choice = state.pendingChoice!;
-  const resolved = resolveMechanicChoice(state, optionId, timedOut);
+  const resolved = choice.payload?.source === 'masterwork-upgrade'
+    ? completeMasterworkChoice(state, optionId, timedOut) : resolveMechanicChoice(state, optionId, timedOut);
   if (!resolved.ok) return fail(state, resolved.reason);
   const hookEvents:MatchEvent[]=[];
   const completed=drainG23Rewards(finishG23Choice(state,resolved.state,optionId),unitLootPolicy,hookEvents);

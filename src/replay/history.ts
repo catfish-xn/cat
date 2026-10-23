@@ -133,9 +133,12 @@ export class BattleHistory {
             const incoming = change.before.items.find(item => fact.event.consumedIds.includes(item.id)
               && item.location.kind === 'inventory');
             const combined = change.after.items.find(item => item.id === fact.event.itemId);
+            // Replay the requested slot from the pending input, not the
+            // slot the combined item settled into.
+            const requested = combat.pendingEquipment?.find(receipt => receipt.input.itemId === incoming?.id)?.input;
             if (incoming && combined?.location.kind === 'unit') this.current.equipmentCommands.push(Object.freeze({
               tick: change.before.combat!.tick, itemId: incoming.id,
-              unitId: combined.location.unitId, slot: combined.location.slot,
+              unitId: combined.location.unitId, slot: requested?.slot ?? combined.location.slot,
             }));
             else if (combined?.location.kind === 'inventory') this.current.equipmentCommands.push(Object.freeze({
               tick: change.before.combat!.tick,

@@ -32,7 +32,7 @@ export function finalSettlement(base?: MatchState): MatchState {
     m8: {...source.m8, round, loot:prepareMatchLoot(source.seed, round.ordinal),
       preparation:{...source.m8.preparation,roundId:round.roundId,encounterId:null,enemies:[]}},
     preparation:{...source.preparation,units:source.preparation.units.filter(u=>u.team==='player')},
-    roundResults:Array.from({length:round.ordinal},(_,i)=>({...record,round:i+1})) };
+    roundResults:Array.from({length:round.ordinal},(_,i)=>({...record,round:i+1,...(i===round.ordinal-1?{income:6,incomeBreakdown:{base:5,win:0,interest:1,streak:0},interestBasis:19,goldBefore:19,goldAfter:25}:{} )})) };
 }
 export function settle(state: MatchState, battle: BattleResult, proposal: SideProposal) {
   return accepted(applyRoundSettlement(state, {version:ROUND_SETTLEMENT_VERSION,

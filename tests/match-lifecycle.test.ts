@@ -1,3 +1,4 @@
+import { deferredRoundIncome } from '../src/simulation/deferred-income';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import {describe,expect,it} from 'vitest';
 import {createCombatWithEvents} from '../src/simulation/combat';
@@ -15,9 +16,10 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
    alive:result==='draw'||(result==='playerWin'?u.team==='player':u.team==='enemy'),hp:result==='draw'||(result==='playerWin'?u.team==='player':u.team==='enemy')?u.hp:0}))}};
   const before=structuredClone(state),settled=finish(freeze(state));expect(settled.combat?.result).toBe(result);
   const record=settlement(before,settled.combat);expect(settled.roundResults).toEqual([record]);
-  expect(settled).toMatchObject({gold:record.goldAfter,level:record.levelAfter,xp:record.xpAfter,playerHp:record.hpAfter});
+  // Round income is paid at the next round entry (deferred-income.ts); settlement keeps the win gold only.
+  expect(settled).toMatchObject({gold:record.goldAfter-deferredRoundIncome(record),level:record.levelAfter,xp:record.xpAfter,playerHp:record.hpAfter});
   for(let i=0;i<20;i++){expect(stepMatch(settled)).toEqual({state:settled,events:[]});expect(stepMatch(settled).state).toBe(settled);expect(startMatchCombat(settled).ok).toBe(false);}
-  const next=accepted(nextRound(settled,1));expect(next).toMatchObject({phase:'preparation',round:2,combat:null,gold:settled.gold});
+  const next=accepted(nextRound(settled,1));expect(next).toMatchObject({phase:'preparation',round:2,combat:null,gold:record.goldAfter});
   expect(next.roundResults).toBe(settled.roundResults);expect(players(next)).toEqual(players(before));expect({shop:next.shop,rngState:next.rngState}).toEqual(shop(settled.rngState,2,settled.level));
   expect(nextRound(next,1)).toEqual({ok:false,state:next,reason:'wrong-phase'});
  });
@@ -25,9 +27,9 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   const opening=emptyBoard(reachRound('2-1'));expect(opening).toMatchObject({level:3,xp:2});
   const prep=accepted(buyXp(opening));expect(prep).toMatchObject({level:4,xp:0});
   const settled=accepted(startMatchCombat(prep));
-  expect(settled).toMatchObject({phase:'settlement',level:4,xp:2,gold:11,playerHp:86});
+  expect(settled).toMatchObject({phase:'settlement',level:4,xp:2,gold:11-deferredRoundIncome(settled.roundResults.at(-1)!),playerHp:86});
   expect(settled.roundResults.at(-1)).toMatchObject({xpRequested:2,xpAwarded:2,levelBefore:4,levelAfter:4,xpBefore:0,xpAfter:2});
-  const next=accepted(nextRound(settled,settled.round));expect({shop:next.shop,rngState:next.rngState}).toEqual(shop(settled.rngState,settled.shop.generation+1,4));
+  const next=accepted(nextRound(settled,settled.round));expect(next.gold).toBe(11);expect({shop:next.shop,rngState:next.rngState}).toEqual(shop(settled.rngState,settled.shop.generation+1,4));
   // Keep the original natural-level-crossing coverage, now reached without buying XP.
   const natural=accepted(startMatchCombat(emptyBoard(reachRound('2-2'))));
   expect(natural.roundResults.at(-1)).toMatchObject({xpRequested:2,xpAwarded:2,levelBefore:3,levelAfter:4,xpBefore:4,xpAfter:0});
@@ -50,12 +52,14 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
  });
  it('does not tick preparation, rejects missing teams, and permits an empty-board concession',()=>{
   const empty=freeze(emptyBoard());expect(stepMatch(empty)).toEqual({state:empty,events:[]});expect(stepMatch(empty).state).toBe(empty);
-  expect(accepted(startMatchCombat(empty))).toMatchObject({phase:'settlement',playerHp:97,gold:2});
+  const conceded=accepted(startMatchCombat(empty));
+  expect(conceded).toMatchObject({phase:'settlement',playerHp:97,gold:2-deferredRoundIncome(conceded.roundResults.at(-1)!)});expect(accepted(nextRound(conceded,conceded.round)).gold).toBe(2);
   for(const[teams,reason]of[[['player'],'missing-enemy'],[[],'missing-both']]as const){const input=deployed(),fixture={...input,preparation:{...input.preparation,units:input.preparation.units.filter(u=>(teams as readonly string[]).includes(u.team))}};expect(startMatchCombat(fixture)).toEqual({ok:false,state:fixture,reason});}
  });
  it('clamps lethal loss while awarding income and XP just once',()=>{
   const before={...emptyBoard(),playerHp:1,level:3,xp:5},terminal=accepted(startMatchCombat(freeze(before)));
-  expect(terminal).toMatchObject({phase:'gameOver',outcome:'defeat',playerHp:0,gold:2,level:4,xp:1});expect(terminal.roundResults).toEqual([settlement(before,terminal.combat)]);
+  // A lethal loss ends the match: the deferred base income has no next round entry to be paid at.
+  expect(terminal).toMatchObject({phase:'gameOver',outcome:'defeat',playerHp:0,gold:2-deferredRoundIncome(terminal.roundResults[0]!),level:4,xp:1});expect(terminal.roundResults).toEqual([settlement(before,terminal.combat)]);
   expect(terminal.roundResults[0]).toMatchObject({playerDamage:3,hpLost:1});
   for(const command of[buyXp,rerollShop,startMatchCombat,(s:MatchState)=>buyUnit(s,0,s.shop.generation),(s:MatchState)=>sellUnit(s,'unit-1'),(s:MatchState)=>nextRound(s,s.round),(s:MatchState)=>deployMatchUnit(s,'unit-1',{kind:'bench',slot:0})])expect(command(terminal)).toEqual({ok:false,state:terminal,reason:'wrong-phase'});
  });
@@ -72,8 +76,8 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
  it('an empty zero-income roster can recover through a paid normal purchase next round',()=>{
   let state=readyMatch();for(const unit of players(state))state=accepted(sellUnit(state,unit.id));while(state.gold>=4)state=accepted(buyXp(state));while(state.gold>=2)state=accepted(rerollShop(state));
   expect(state.gold).toBeLessThan(2);expect(players(state)).toHaveLength(0);
-  const end=accepted(startMatchCombat(state));expect(end.gold).toBe(state.gold+2);expect(end.playerHp).toBeLessThan(state.playerHp);
-  const next=accepted(nextRound(end,1));expect(buyUnit(next,0,next.shop.generation).ok).toBe(true);
+  const end=accepted(startMatchCombat(state));expect(end.gold).toBe(state.gold);expect(end.playerHp).toBeLessThan(state.playerHp);
+  const next=accepted(nextRound(end,1));expect(next.gold).toBe(state.gold+2);expect(buyUnit(next,0,next.shop.generation).ok).toBe(true);
  });
  it('preserves every frozen preparation/economic snapshot until terminal commit',()=>{
   const prep=freeze(deployed()),copy=structuredClone(prep),started=startMatchCombat(prep);let state=accepted(started);
