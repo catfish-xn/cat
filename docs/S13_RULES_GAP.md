@@ -1,6 +1,6 @@
 ## 2026-10-23 PR9：当前 epoch 与已批准项目约定
 
-当前 epoch 为 **v21-opening-encounters**，父 **v20-black-market**。rules/content 身份分别为 `s13-g2-3-v21-opening-encounters-battle-equipment` / `s13-14.24b-g2-3-v21-opening-encounters-battle-equipment`，schema/save/replay/command=**12/8/6/6**、NET6。名称涵盖开局奇遇 PR1/2/4/5/6/8、战斗中装备第2阶段及收入延后；不只表示奇遇。当前录制、digest、历史字节证据及验收见 [PR9 报告](OPENING_ENCOUNTERS_PR9_REPORT.md)。下文旧 epoch 为历史记录，不覆盖本节。本节描述当前集成候选；PR9回放阻塞未解决，尚不代表已合入multiplayer。
+当前 epoch 为 **v21-opening-encounters**，父 **v20-black-market**。rules/content 身份分别为 `s13-g2-3-v21-opening-encounters-battle-equipment` / `s13-14.24b-g2-3-v21-opening-encounters-battle-equipment`，schema/save/replay/command=**12/8/6/6**、NET6。名称涵盖开局奇遇 PR1/2/4/5/6/8、战斗中装备第2阶段及收入延后；不只表示奇遇。当前录制、digest、历史字节证据及验收见 [PR9 报告](OPENING_ENCOUNTERS_PR9_REPORT.md)。下文旧 epoch 为历史记录，不覆盖本节。本节随 PR9 合入 multiplayer 生效；PR9 发现的战中原位合成回放槽位问题已修复（src/replay/history.ts，回归测试 tests/battle-history-equip-slot.test.ts）。
 
 - **收入延后（项目约定）**：最终战斗权威余额（含战中交易）加即付 PvP 胜利金币作为利息基数；基础金、利息、连胜败金在结算冻结应收额，到下一准备阶段入口（含前置选择）到账。自然经验仍在结算；致死回合及没有下一准备入口的单人终局不补发。重复推进/恢复不重发；可花余额只读 `state.gold`，`RoundResult.goldAfter` 是收入方案值。依据 [试玩规则报告](PLAYTEST_1022B_RULES_REPORT.md)。
 - **战斗中装备（项目约定）**：合法装备变更在下一拍生效；本场羁绊按开战时冻结。战中纹章只加持有者自身属性，不重算本场羁绊人数或门槛。完整输入顺序、恢复范围和失败原子性见 [第2阶段合同](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。
