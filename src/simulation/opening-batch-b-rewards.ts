@@ -1,4 +1,5 @@
 import { grantAnvilUnit } from './anvils';
+import { freezeContent, isFrozenContent } from './content/freeze';
 import { openingEncounterId } from './opening-encounter';
 import { isCrabEncounter, GIANT_CRAB_ANVILS, GIANT_CRAB_SILVER_BOXES, GIANT_CRAB_FROM_STAGE } from './content/opening-batch-b';
 import { ORB_BOXES } from './content/loot';
@@ -22,7 +23,20 @@ export function openingBox(draw:()=>number,kind:'gold'|'silver'):readonly LootPa
  const rows=ORB_BOXES[kind],row=rows[weightedOpeningIndex(draw(),rows.map(r=>r.weight*100))];
  return row.rewards.map(a=>{if(a.kind!=='hero')return a;const pool=SHOP_CATALOG_BY_COST[a.cost];return {kind:'unit',definitionId:pool[Math.floor(draw()*pool.length/4294967296)],quantity:1,...(a.starLevel?{starLevel:a.starLevel}:{})};});
 }
+/**
+ * openingBattleRewards is a pure derivation of these inputs; it runs every combat tick through openingRewards. Only
+ * recursively frozen facts (our settled economy receipts) remember their rewards, keyed by every state input read.
+ */
+const derivedRewards=new WeakMap<object,Map<string,readonly OpeningReward[]>>();
 export function openingBattleRewards(state:MatchState,facts:G23BattleFacts):readonly OpeningReward[] {
+ if(!isFrozenContent(facts))return deriveOpeningBattleRewards(state,facts);
+ const record=state.roundResults.find(r=>r.round===facts.round);
+ const key=JSON.stringify([openingEncounterId(state)??null,state.augmentTierSeed,state.sharedPool?.seatId??'solo',record?.roundId??null,record?.levelBefore??null]);
+ let byState=derivedRewards.get(facts);if(!byState)derivedRewards.set(facts,byState=new Map());
+ let rewards=byState.get(key);if(!rewards){rewards=freezeContent([...deriveOpeningBattleRewards(state,facts)]);byState.set(key,rewards);}
+ return rewards;
+}
+function deriveOpeningBattleRewards(state:MatchState,facts:G23BattleFacts):readonly OpeningReward[] {
  const encounter=openingEncounterId(state),record=state.roundResults.find(r=>r.round===facts.round);
  if(!record||!facts.openingDeaths)return [];
  const seat=state.sharedPool?.seatId??'solo',out:OpeningReward[]=[];

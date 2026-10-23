@@ -149,13 +149,25 @@ function openingFacts(context: OpeningEncounterContext): OpeningEffectFact[] {
   return keys.map(effectKey => ({factId: JSON.stringify(['opening-effect', context.selection.configVersion,
     openingInstanceId(context.seed), entry.id, effectKey, '1-2']), effectKey, nodeId: '1-2'}));
 }
+/**
+ * `same({...opening, receipts: []}, bindSharedOpeningEncounter(shared, poolId, seatId))` without building, freezing and
+ * re-validating a fresh binding on every call (it runs every combat tick): the same plain keys, the same ids and the
+ * canonical selection of the already validated context.
+ */
+const SHARED_BINDING_KEYS = ['mode', 'poolId', 'seatId', 'selection'];
+function sharedBinding(opening: object, shared: OpeningEncounterContext, poolId: string, seatId: string): boolean {
+  if (!poolId || !seatId || Object.getPrototypeOf(opening) !== Object.prototype) return false;
+  const keys = Object.keys(opening).filter(key => key !== 'receipts').sort();
+  if (keys.length !== SHARED_BINDING_KEYS.length || keys.some((key, i) => key !== SHARED_BINDING_KEYS[i])) return false;
+  const value = opening as {readonly mode: unknown; readonly poolId: unknown; readonly seatId: unknown; readonly selection: unknown};
+  return value.mode === 'shared' && value.poolId === poolId && value.seatId === seatId && same(value.selection, shared.selection);
+}
 function boundContext(state: MatchState, shared?: OpeningEncounterContext): OpeningEncounterContext {
   const opening = state.openingEncounter;
   if (state.sharedPool) {
     if (!shared) fail('opening-context-mismatch');
     validateOpeningEncounterContext(shared, state.augmentTierSeed);
-    if (!opening || opening.mode !== 'shared' || !same({...opening, receipts: []},
-      bindSharedOpeningEncounter(shared, state.sharedPool.poolId, state.sharedPool.seatId))) fail('opening-context-mismatch');
+    if (!opening || opening.mode !== 'shared' || !sharedBinding(opening, shared, state.sharedPool.poolId, state.sharedPool.seatId)) fail('opening-context-mismatch');
     return shared;
   }
   if (!opening || opening.mode !== 'solo' || state.augmentTierSeed !== state.seed

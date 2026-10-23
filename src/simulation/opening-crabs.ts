@@ -13,9 +13,15 @@ export function enterOpeningCrabs(state:MatchState):MatchState {
  return {...state,m8:shareGeneratedJson({...state.m8,preparation:{...state.m8.preparation,enemies:encounter.deployment}}),preparation:{...state.preparation,units:[...state.preparation.units.filter(u=>u.team==='player'),...encounter.deployment]}};
 }
 /** Preserve original base loot and its RNG; original slot order maps to crab order.
- * The sixth 4-7 carrier shares the fifth crab's death. No drop is lost or doubled. */
+ * The sixth 4-7 carrier shares the fifth crab's death. No drop is lost or doubled.
+ * The mapping reads only content tables, so it is remembered per (encounter, round, source): loot reads it every tick. */
+const carriers=new Map<string,string>();
 export function openingCrabCarrier(state:Pick<MatchState,'openingEncounter'>,roundId:string,sourceId:string):string {
  const id=openingEncounterId(state);if(!isCrabEncounter(id))return sourceId;
+ const key=JSON.stringify([id,roundId,sourceId]),known=carriers.get(key);if(known!==undefined)return known;
+ const carrier=crabCarrier(id,roundId,sourceId);if(carriers.size>=4096)carriers.clear();carriers.set(key,carrier);return carrier;
+}
+function crabCarrier(id:string,roundId:string,sourceId:string):string {
  const original=NEUTRAL_ENCOUNTERS.find(e=>e.roundId===roundId),crab=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.encounterId===`${id}/${roundId}`);
  if(!original||!crab)return sourceId;
  const index=original.slots.findIndex(s=>JSON.stringify(['pve',roundId,original.encounterId,s.slotId])===sourceId);
