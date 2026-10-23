@@ -1,4 +1,4 @@
-# 安蓓萨施法位移（P，待统一 v22）
+# 安蓓萨施法位移（P，待 v22 统一录制）
 
 2026-10-23，`codex/ambessa-dash`，基线 `5d7fb72ccd6169728e1794d6ed07264a1f3883c4`。
 本单按协调者转达的项目决定先行实现，**不合并、不提交、不录 epoch**。原版资料只证明两姿态方向和先后关系，不证明位移距离；来源保留在 [AMBESSA_DASH_EVIDENCE](AMBESSA_DASH_EVIDENCE.md)。下列落点算法全部标 **P（项目决定）**，不是 14.24b 原版数值。
@@ -6,7 +6,7 @@
 ## 规则与时序
 
 - 沿用已有 `runtime.castCount`：本次计数递增后，奇数锁链、偶数拳击。伤害系数、AOE、5 tick 短晕、姿态奖励、耗蓝和施法距离闸门不改。
-- 锁链：在既有施法目标选择之后、伤害包规划之前更新 `cell`。候选是目标六角距离 1 的**其他空格**，本单位当前格不算空格；已贴身也选其他空邻格。按距当前格的六角距离最小选取，同距沿现有普通移动 BFS 首次访问顺序（邻居 E、SE、SW、W、NW、NE）。只选从当前位置绕开阻挡可达的候选，不穿过封闭包围；无可达空邻格则原地，原伤害照常结算。
+- 锁链：在既有施法目标选择之后、伤害包规划之前更新 `cell`。**已与目标相邻时原地不动，不发位移事件**：当前格就是最近落点。不相邻时，候选是目标六角距离 1 的可达空格。按距当前格的六角距离最小选取，同距沿现有普通移动 BFS 首次访问顺序（邻居 E、SE、SW、W、NW、NE）。只选从当前位置绕开阻挡可达的候选，不穿过封闭包围；无可达空邻格则原地，原伤害照常结算。
 - 拳击：规划原砸击/短晕时保存目标此时的坐标，等本 tick 全部伤害 HP 与存活屏障提交后后撤。仅仍能移动且存活的施法者执行。目标被这次砸击杀死仍可后撤，不重选目标。
 - 后撤方向：从 `board.deploymentZones` 两队半场中心判断己方行方向；默认 player 向较大 row，enemy 向较小 row。只考虑 row 朝己方且六角距离严格远离施法时目标坐标的相邻格；同距按上述邻居顺序选第一个。**先定方向，再检查该格可用性；被占/被保留时不换另一个格。** 边界无此邻格、目标在身后导致两个条件不能同时满足时原地。
 - 位移复用 `canMove`（控制、引导、深根等限制）和 `occupiesCell`（活单位包括暂离/待复活占格；攻击代理不占格）。读取普通移动之后的当前占位，并共享本 tick 普通移动落点保留集合；本单成功冲刺也保留终点，后续安蓓萨不能抢占。单位顺序沿现有 ID 顺序，不用随机平局。
@@ -53,7 +53,7 @@ settleAmbessaRetreats(ctx: AbilityContext): void
 | 姿态/条件 | 起点 → 目标 | 期望落点/说明 |
 | --- | --- | --- |
 | 锁链正常/平局 | (1,3) → (5,3) | (4,3)，距离 3、E 优先 |
-| 锁链已贴身 | (4,3) → (5,3) | (5,4)，本格已占用，SE 先于 NE |
+| 锁链已贴身 | (4,3) → (5,3) | (4,3)，当前格就是最近落点，原地不动、无位移事件 |
 | 锁链目标六邻全占 | (1,3) → (5,3) | 原地，仍造成 250 |
 | 锁链后方被占 | (1,3) → (5,3)，(2,4) 占用 | (4,3)，后方不影响前冲 |
 | 锁链上/右边界 | (3,0) → (6,0) | (5,0) |
@@ -71,26 +71,21 @@ settleAmbessaRetreats(ctx: AbilityContext): void
 | 两姿态无活目标 | 仅死目标 | 原地、无 cast、mana 保持 100 |
 | 拳击杀死目标/施法者同拍死亡 | (3,4) → (3,3) | 目标死仍后撤 (3,5)；施法者死则不撤 |
 
-另外验证：眩晕/引导/深根均阻止两种位移；HP=0 但 alive、暂离的占位体仍阻挡；保留格即使原预订者已经离开仍不可落入；两姿态逐 tick JSON 往返后 state/events 相等；首遍 recorder、同步 replay、预算 1/3 的切片 replay 每帧相等，删改 reason 被 replay-divergence 拒绝；真实 PvP 预算 1/7 与同步完整 state/ledger 相等，两队公共流/回放/序列化帧相等。另用真实 mechanic 奖励收据取得安蓓萨、蓝霸符和圣盾使，沿公共出售/部署/装备命令形成资源账本，验证真实冲刺后的 `serializeMatch/restoreMatch` 严格认证及下一 tick 完整返回值相等。
+另外验证：眩晕/引导/深根均阻止两种位移；HP=0 但 alive、暂离的占位体仍阻挡；保留格即使原预订者已经离开仍不可落入；两姿态逐 tick JSON 往返后 state/events 相等；首遍 recorder、同步 replay、预算 1/3 的切片 replay 每帧相等，删改 reason 被 replay-divergence 拒绝；真实 PvP 预算 1/7 与同步完整 state/ledger 相等，两队公共流/回放/序列化帧相等。另用真实 mechanic 奖励收据取得安蓓萨、蓝霸符、圣盾使和狙击手的专注（增加射程以便贴身前施法），沿公共出售/部署/装备命令形成资源账本，从 (3,6) 不相邻起手，验证真实冲刺后的 `serializeMatch/restoreMatch` 严格认证及下一 tick 完整返回值相等。
 
 ## 验证结果与版本边界
 
 验证命令均先 `export PATH=$HOME/.local/bin:$PATH`，保留原 `node_modules -> ../cat/node_modules`。Vitest 使用 `--configLoader runner --no-cache` 避开只读软链 `.vite-temp`；不改配置或门槛。
 
-最终结果（重复运行不重复计数）：**12 文件，267 项通过，0 失败；另有按 `-t` 未选择的 149 项**。其中新增安蓓萨规则/流式/恢复测试共 **31 项**，typecheck 通过；未跑全套。
+本次按“已与目标相邻时原地不动”收尾，保留手算向量中的伤害、RNG、位移事件数量与顺序断言；严格 Match 用例改为不相邻起手，仍要求真实位移发生、完整存档恢复相等及下一 tick 完整返回值相等。
 
-| 验证 | 结果 |
-| --- | --- |
-| `npm test -- --configLoader runner --no-cache --maxWorkers=2 tests/ambessa-dash.test.ts tests/ambessa-dash-stream.test.ts tests/g2-2-skills.test.ts tests/g2-2-ability-display.test.ts tests/g2-2-identity.test.ts tests/m5-combat.test.ts tests/v20-traits.test.ts tests/content-identity-constants.test.ts tests/ur-i3-combat-statuses.test.ts tests/b8-resumable-battle.test.ts` | 最终规则版本下 10 文件 256 项通过；之后只补一项严格 Match 恢复测试，单独重跑流式文件 2/2 通过，因此这 10 文件共 257 项通过 |
-| `npm test -- --configLoader runner --no-cache --maxWorkers=1 tests/m5-route.test.ts` | 8/8 通过，133.55 秒，保留原路线 golden 断言 |
-| `npm test -- --configLoader runner --no-cache --maxWorkers=1 tests/opening-random-identity.test.ts -t 'binds v21-opening-encounters\|recomputes the first battle terminal'` | 2/2 选中项通过、149 项未选择；当前 epoch 身份/历史字节与首战事件哈希不变 |
-| `npm run typecheck` / `git diff --check` | 均通过 |
+本次指定验证：`npm test -- --configLoader runner --no-cache --maxWorkers=2 tests/ambessa-dash.test.ts tests/ambessa-dash-stream.test.ts`、`npm run typecheck`；两文件共 **32/32 项通过**，typecheck 与 `git diff --check` 通过。此前其他场景的验证记录不代表本次语义下重新验收通过。
 
-**因本单规则变化失败的旧 epoch/digest/golden 测试清单：无（限上述实际运行范围）。** 当前内容完整 digest、历史身份、B8 指纹、状态投影哈希、路线 golden 和选中的 v21 身份用例均通过；未宣称所有历史夹具已验收，也未修改任何旧测试断言。调试中新增测试暴露的事件封套/手算平局及测试阵容、资源收据设置问题已修正，最终没有遗留失败。
+**规则状态：待 v22 统一录制。** 已撤回本分支对 `docs/evidence/v21-opening-encounters/`、`tests/fixtures/v21-opening-encounters-herald-raw/manifest.json`、`tests/server/fixtures/battle-start.json` 的 v21 证据刷新，恢复为本地 `origin/multiplayer` 的原始字节。v21 verify 因规则变化而失败属于预期，本次不运行、不刷新；并入 v22 候选后统一录制。PR #417 不单独合并。
 
-体积抽测：同一 esbuild 配置对 `src/server-entry/index.ts` 做 browser/ESM/es2022/bundle/minify，基线从 HEAD 读取本单修改的旧模块，不改工作区。minified **1,130,065 → 1,131,279 bytes（+1,214）**，gzip **326,646 → 327,087 bytes（+441）**。这是共享规则入口抽测，不等同完整 Vite 构建或 CI JS 门槛通过；未改 CI 门槛，未引入依赖。
+此前语义下的体积抽测（本次未重跑）：同一 esbuild 配置对 `src/server-entry/index.ts` 做 browser/ESM/es2022/bundle/minify，基线从 HEAD 读取本单修改的旧模块，不改工作区。minified **1,130,065 → 1,131,279 bytes（+1,214）**，gzip **326,646 → 327,087 bytes（+441）**。这是共享规则入口抽测，不等同完整 Vite 构建或 CI JS 门槛通过；未改 CI 门槛，未引入依赖。
 
-本单不修改 epoch、digest 常量、golden 或历史断言。即使某组旧测试通过，也不表示新玩法可以使用旧 epoch 发布；本分支等待统一 v22 录制和用户最终决定。未运行完整历史/浏览器验收，未验证界面动画。
+本单不修改 epoch、digest 常量、golden 或历史断言。即使某组旧测试通过，也不表示新玩法可以使用旧 epoch 发布；本分支待 v22 统一录制，最终合并由用户决定。未运行完整历史/浏览器验收，未验证界面动画。
 
 ## 独立回退
 

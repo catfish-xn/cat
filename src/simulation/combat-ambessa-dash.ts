@@ -18,7 +18,8 @@ function dash(ctx: AbilityContext, unit: S13Unit, to: HexCell, reason: 'ambessa-
 
 /** P: nearest reachable adjacent cell by hex distance; ties keep ordinary BFS neighbor order. */
 export function dashAmbessaChain(ctx: AbilityContext, unit: S13Unit, target: S13Unit): void {
-  if (!canMove(unit, ctx.tick)) return;
+  // Already beside the target: the nearest adjacent cell is the current one, so she stays.
+  if (!canMove(unit, ctx.tick) || hexDistance(unit.cell, target.cell) === 1) return;
   const blocked = blockedCells(ctx, unit), seen = new Set([key(unit.cell)]), queue = [unit.cell];
   let destination: HexCell | undefined;
   for (let i = 0; i < queue.length; i++) {

@@ -25,13 +25,14 @@ it('strict Match save restore authenticates a real Ambessa dash and resumes the 
   const recruit = grantMechanicUnit(sold.state, { receiptId: 'ambessa-save-unit', source: 'test', definitionId: 'ambessa' });
   if (!recruit.ok) throw Error(recruit.reason);
   const holder = recruit.state.preparation.units.find(u => u.definitionId === 'ambessa')!;
-  const deployed = deployMatchUnit(recruit.state, holder.id, { kind: 'board', cell: { col: 3, row: 4 } });
+  const deployed = deployMatchUnit(recruit.state, holder.id, { kind: 'board', cell: { col: 3, row: 6 } });
   if (!deployed.ok) throw Error(deployed.reason);
   let prepared = deployed.state;
-  for (const [slot, definitionId] of ['blue-buff', 'protectors-vow'].entries()) {
+  // Extra range allows the opening chain cast before ordinary movement makes her adjacent.
+  for (const [slot, definitionId] of ['blue-buff', 'protectors-vow', 'TFT9_Item_OrnnHorizonFocus'].entries()) {
     const grant = grantMechanicItem(prepared, { receiptId: `ambessa-save-${slot}`, source: 'test', definitionId });
     if (!grant.ok) throw Error(grant.reason);
-    const equipped = equipItem(grant.state, grant.state.items.at(-1)!.id, holder.id, slot as 0 | 1);
+    const equipped = equipItem(grant.state, grant.state.items.at(-1)!.id, holder.id, slot as 0 | 1 | 2);
     if (!equipped.ok) throw Error(equipped.reason);
     prepared = equipped.state;
   }
@@ -39,7 +40,10 @@ it('strict Match save restore authenticates a real Ambessa dash and resumes the 
   let state = start.state, checked = false;
   while (state.phase === 'combat') {
     const next = stepMatch(state); state = next.state;
-    if (next.events.some(e => e.type === 'movement' && e.reason)) {
+    const dash = next.events.find(e => e.type === 'movement' && e.reason === 'ambessa-chain');
+    if (dash?.type === 'movement') {
+      expect(dash.unitId).toBe(holder.id);
+      expect(dash.from).not.toEqual(dash.to);
       const restored = restoreMatch(serializeMatch(state));
       expect(restored).toEqual(state);
       expect(stepMatch(restored)).toEqual(stepMatch(state));

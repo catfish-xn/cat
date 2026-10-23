@@ -29,7 +29,7 @@ describe('Ambessa P independent hex vectors (col,row)', () => {
   // Literal coordinates/HP, never computed with the landing selector under test.
   it.each([
     ['nearest/tie E before NE', c(1, 3), c(5, 3), [], c(4, 3)],
-    ['adjacent caster cell is occupied, choose nearest empty SE', c(4, 3), c(5, 3), [], c(5, 4)],
+    ['already adjacent, stay in the current nearest cell', c(4, 3), c(5, 3), [], c(4, 3)],
     ['target ring full', c(1, 3), c(5, 3), [c(6, 3), c(6, 4), c(5, 4), c(4, 3), c(5, 2), c(6, 2)], c(1, 3)],
     ['rear occupied is irrelevant', c(1, 3), c(5, 3), [c(2, 4)], c(4, 3)],
     ['top/right edge', c(3, 0), c(6, 0), [], c(5, 0)],
@@ -115,6 +115,11 @@ describe('Ambessa occupancy and reservations', () => {
     ctx.ambessaRetreats = [{ unitId: u.id, targetCell: t.cell }];
     dashAmbessaChain(ctx, u, t); settleAmbessaRetreats(ctx);
     expect(u.cell).toEqual(c(1, 3)); expect(ctx.events).toEqual([]); expect(ctx.draw).not.toHaveBeenCalled();
+  });
+  it('chain already beside the target stays in place with no movement event', () => {
+    const u = ambessa(c(3, 4)) as S13Unit, t = dummy(c(3, 3)) as S13Unit, ctx = context(u, [t]);
+    dashAmbessaChain(ctx, u, t);
+    expect(u.cell).toEqual(c(3, 4)); expect(ctx.events).toEqual([]); expect(ctx.draw).not.toHaveBeenCalled();
   });
   it('chain preserves a reserved best cell and uses the next BFS tie', () => {
     const u = ambessa() as S13Unit, t = dummy() as S13Unit, ctx = context(u, [t], ['4:3']);
