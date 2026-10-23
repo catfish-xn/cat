@@ -28,13 +28,15 @@ function settle(s:MatchState,result:'win'|'loss'='win') {
 describe('10-22b income timing',()=>{
   it('opening settlement remains unpaid through restore; next entry pays once before augment choice',()=>{
     let s=createMatch(5);
+    // Concede explicitly so immediate PvE loot cannot masquerade as deferred income.
+    s=ok(deployMatchUnit(s,'unit-1',{kind:'bench',slot:0}));
     s=ok(startMatchCombat(s));while(s.phase==='combat')s=stepMatch(s).state;
     expect(s.phase).toBe('settlement');expect(s.gold).toBe(0);
     expect(s.roundResults.at(-1)).toMatchObject({income:2,goldAfter:2});
     const restored=restoreMatch(serializeMatch(s));expect(restored).toEqual(s);
     const next=ok(nextRound(restored,1));expect(next.gold).toBe(2);
     expect(nextRound(next,1)).toMatchObject({ok:false});
-    const atAugment=opening(false);expect(atAugment.phase).toBe('choice');expect(atAugment.gold).toBe(10);
+    const atAugment=opening(false);expect(atAugment.phase).toBe('choice');expect(atAugment.gold).toBe(11);
     expect(restoreMatch(serializeMatch(atAugment))).toEqual(atAugment);
   });
   it.each([['win',19,20,2,9],['loss',19,19,1,7]] as const)('%s freezes final bank; preparation pays base/interest/streak and Investment once',(result,gold,basis,interest,income)=>{

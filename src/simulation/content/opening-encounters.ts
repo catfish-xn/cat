@@ -205,7 +205,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "effectStatus": "active",
     "readiness": "ready-for-followup",
     "followupPr": 2,
-    "descriptionZh": "第一次强化为棱彩阶；后两次的条件分布不能仅据此名称推断。",
+    "descriptionZh": "第一次强化选择为棱彩阶。",
     "trigger": "第一次正常强化选择",
     "stageRounds": [
       "2-1"
@@ -245,7 +245,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "effectStatus": "active",
     "readiness": "ready-for-followup",
     "followupPr": 2,
-    "descriptionZh": "最后一次强化为棱彩阶；前两次的条件分布待核实。",
+    "descriptionZh": "最后一次强化选择为棱彩阶。",
     "trigger": "第三次正常强化选择",
     "stageRounds": [
       "4-2"
@@ -484,7 +484,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "effectStatus": "active",
     "readiness": "ready-for-followup",
     "followupPr": 5,
-    "descriptionZh": "四种结果各 25%；14.24 普通模式未公告改变结果。",
+    "descriptionZh": "在 3-5 随机触发一种效果：失去 10 生命值、获得 25 金币、1 个杰作升级或 4 件基础装备；四种结果机会相同。",
     "trigger": "3-5 触发猴子事件",
     "stageRounds": [
       "3-5"
