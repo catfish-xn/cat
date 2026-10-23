@@ -1058,6 +1058,26 @@ B5 初始化流程：先 createSharedPool；对八份未发布的 `createMatch(s
 
 `generateSharedShop` 是首次单席生成的低层入口：仅 round1/generation0，且要求全部席位先注册，不能当自然刷新/免付费刷新使用；全部首次店生成完后 naturalRound=1。生产首次生成推荐批量 refreshSharedShops，保证抽签公平。generate 的逐席调用顺序即优先顺序，不自动代表公平批次。
 
+### 终局流法球揭示（2026-10-23）
+
+规则入口 `revealMatchCombatStreamTerminal(state: MatchState, terminal: CombatState): MatchCommandResult`
+由 `src/simulation/match.ts` 导出，仅供可信 PvE 首遍 runner 调用，不接受客户端上传 terminal。
+输入必须是 active 联机 PvE、当前 `round-N`、已冻结输入、尚未结算，以及 running combat 的下一 tick 的 finished terminal；无运行帧的开场终局只允许 preparation/tick 0。
+不符返回 `wrong-phase`，原 state 引用不变、无事件、资源或 RNG 消耗；已有终局若内容一致则成功空操作，否则同样拒绝。
+
+可选服务器私有字段 `MatchBase.pendingCombatTerminal?: FinishedCombat` 保存完整终局回执；`state.combat` 仍是末次 running 帧，phase 仍是 combat。
+入口只揭示冻结掉落/记录死亡证据和未击杀放弃，按既有序号发 `lootRevealed` / `lootForfeited`，不结算收入、成长、物品或共享池。
+`validateMultiplayerOrbLedger` 校验该字段的生命周期并以终局回执核对本轮死亡；`validateB8Loot` 在此合法空档允许已揭示但尚未打开的战利品选择。
+`claimOrb` 保留原 FIFO，只排队；`settleMatchCombatStream` 必须使用相同终局及 latest seat，消费临时字段后按原顺序结算/领取，唯一收据防止重复发放。重复结算仍返回 `wrong-phase`。
+挂起期间 `stepMatch` 不推进，`stepMatchCombatStream` 返回已有 terminal、无新事件，新的战斗装备输入拒绝；开场 tick 0 由 `openMatchCombatStream` 同步登记。
+
+服务器 `CombatStream.advancePve` 在终局帧调用入口，`Room.advanceStreams` 沿既有切片封口后更新 seatRevision/serverEvents 并发布；没有新增定时器或时钟读数。
+PvP 没有中立死亡掉落，仍用双边 runner/已认证结算回执生成机制奖励，不接受此 PvE 入口；其终局空档中的既有法球领取规则不变。
+Claude 客户端继续消费本人的 `unclaimedOrbs`（含 queued）、`orbClaimReceipts` 和 `lootRevealed`，死亡关联仍用 sourceUnitId/roundId；无需增加命令或网络字段。
+其他玩家只见现有数量/档位摘要，`pendingCombatTerminal` 不投影。重连重读 queued，不重发 claim；配套权威池下的 `restoreSharedOrbSnapshot` 保留此字段和队列，回放仍使用原始首遍终局与完整事件。
+该恢复边界不替代整房间持久化或认证任意客户端 combat；单机 restore 仍拒绝 multiplayer。最终状态不保留临时字段，流式与整轮结果字节一致。
+验收见 `tests/terminal-orb-reveal.test.ts`、`tests/server/terminal-orb-reveal.test.ts`；源码指纹发布证据须另行按 epoch 流程更新，本任务不改既有断言或录制。
+
 ### 12.3 商店、随机流与自然刷新
 
 购买只是把该格预留转为持有，不再次扣 available；复用既有金币/容量/升星/装备事务。付费刷新成本仍为 2，先暂存归还旧店，再抽新店；若一张也抽不到则 `pool-empty` 免费失败，旧店、锁定、金币、RNG 和 generation 全保留。部分缺货允许成功，保留五格。锁店沿用旧命令语义，同值设置无操作。
