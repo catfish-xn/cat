@@ -736,6 +736,13 @@
       "currentSha256": "ad390b2f7d39abcdad1a8b4bf597d0cc8ddde75bc0cbbc2497341e226ec1af48",
       "firstDifferentByte": 3656
     },
+    "tests/server/net/v17-avarice-reconnect.test.ts": {
+      "previousBytes": 7807,
+      "currentBytes": 7947,
+      "previousSha256": "0fafd3f3c9aa6cf61ba052ac9e4cd83c6d999adba2b6bbabde983da5ff5e917f",
+      "currentSha256": "e803d4ddb1959ce2a0b2684e787b544bd41540e62b7b7444e62128d3eaf1055c",
+      "firstDifferentByte": 1131
+    },
     "tests/server/t10-combat-ops.test.ts": {
       "previousBytes": 19914,
       "currentBytes": 20029,
@@ -750,6 +757,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "1f4ee7302b8638de32afc543909b6dde58d3033ad5da2415f478dfe8eba69279",
       "firstDifferentByte": 0
+    },
+    "tests/server/v17-avarice-helpers.ts": {
+      "previousBytes": 10680,
+      "currentBytes": 11997,
+      "previousSha256": "65663b0dfc10be6df794834bdd9e376281e00e85f6496beac3538990a188fd36",
+      "currentSha256": "603316fc4186a353e15a20be6b54e07ae40d15fee16c042d07a30304d8ec861f",
+      "firstDifferentByte": 1512
     },
     "tests/six-cost-ad-star-scaling.test.ts": {
       "previousExists": false,
