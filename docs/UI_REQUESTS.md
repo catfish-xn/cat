@@ -1,5 +1,13 @@
 # 界面数据需求（Claude → Codex）
 
+## PR410-DRAG-ENEMY（2026-10-23，Codex 定位，Claude 界面修复待办）
+
+- 离线 Chromium 对照：`83fd7fa5` 的 `verify-m8-u3-dynamic.cjs` 10/10 通过；PR9 原 HEAD `f879b2b2` 为 9/10，唯一失败为 `drag-enemy`，与本次体积优化无关。
+- 原因：分支内 `e54f2a78` 将 `BoardScene.boardUnitAt` 的 ID 映射改成 `session.equipmentTargetId`；`presentation/battle-equipment.ts` 提前过滤敌方，返回 `undefined`，输入路由因此按空白落点提示「物品未装备 · 请放到我方单位或空装备槽」，到不了原有 `unknown-unit` 提示。
+- 需要展示：可见敌方落点与空白落点保持可区分；敌方仍拒绝装备，不发送命令、不改状态。已有状态/token/team 和预检 reason 足够，无需新增规则字段。保留战斗永久单位映射、观战/召唤物/镜像限制。
+- 验收：原 `drag-enemy` 断言原样通过（「未找到该单位，只能装备到我方单位」），U3 10/10 与 `battle-equipment-client` 均通过；不得修改规则或放宽测试。
+- 证据目录：`artifacts/pr9-multiplayer-u3/`、`artifacts/pr9-before-u3/`、`artifacts/pr9-after-u3/`。本任务只要求定位；按目录分工未改界面文件。
+
 ## BATTLE-EQUIPMENT-PHASE2（2026-10-22，Codex 规则/服务器已实现，Claude 待接拖拽）
 
 - 用户反馈「战斗中还是不能放装备」；开放本人场上永久棋子的装备拖放，网络仍发 `{type:'equip',itemId,unitId,slot}`。PvP 用既有 `unitIds` 把 combatId 换回 originalId；PvE 原 ID。不可对观战、对手、镜像或召唤物提交，也不发送 seq/effectiveTick。
