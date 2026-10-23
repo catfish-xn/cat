@@ -15,7 +15,7 @@ import { getMultiplayerRoundByOrdinal } from '../../simulation/multiplayer-round
 export type StageIcon = 'pvp' | 'pve' | 'carousel' | 'augment' | 'anomaly';
 const LABEL: Record<StageIcon, string> = { pvp: '玩家对战', pve: '野怪', carousel: '选秀', augment: '强化', anomaly: '异常' };
 /** 14.24 zh_cn monster family names. */
-const FAMILY: Record<MonsterFamily, string> = { minion: '小兵', krug: '石甲虫', wolf: '暗影狼', razorbeak: '锋喙鸟', 'elder-dragon': '远古巨龙', 'rift-herald': '峡谷先锋' };
+const FAMILY: Record<MonsterFamily, string> = { minion: '小兵', krug: '石甲虫', wolf: '暗影狼', razorbeak: '锋喙鸟', 'elder-dragon': '远古巨龙', 'rift-herald': '峡谷先锋', scuttle: '迅捷蟹', 'giant-crab': '危险巨蟹' };
 /** 16×16 line icons, drawn with currentColor. */
 const PATH: Record<StageIcon, string> = {
   pvp: 'M3 3l7 7M3 3h3M3 3v3M13 3l-7 7M13 3h-3M13 3v3M5 11l-2 2M11 11l2 2',

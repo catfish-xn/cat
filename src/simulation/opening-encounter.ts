@@ -1,5 +1,8 @@
 import { batchEncounter, subscriptionFact, subscriptionReceipts, grantOpeningRewards, validateOpeningRewards, openBatchForge, melBranch } from './opening-batch-rewards';
 import { getMultiplayerRoundById } from './multiplayer-round';
+import { validateBatchBRewards } from './opening-batch-b-rewards';
+import { enterTrainerGolems, validateTrainerGolems } from './trainer-golems';
+import { enterOpeningCrabs } from './opening-crabs';
 import { MONKEY_NODE, MONKEY_ROUND, monkeyOutcome, applyMonkey, validateMonkeyGrants, type MonkeyOutcome } from './opening-monkey';
 import { canonicalContent } from './content';
 import { freezeContent } from './content/freeze';
@@ -148,6 +151,8 @@ export function validateOpeningEncounterState(state: MatchState, shared?: Openin
   // Authenticate the complete ledger, including observations; never filter away foreign receipts.
   if (!same(opening.receipts, [...expected, ...expectedMelThresholdReceipts(state)])) fail('opening-context-mismatch');
   validateOpeningRewards(state);
+  validateTrainerGolems(state);
+  validateBatchBRewards(state);
   validateOpeningForges(state);
   validateMonkeyGrants(state, monkey ? context.facts[0] : undefined);
 }
@@ -165,6 +170,7 @@ export function planOpeningRound(shared: OpeningEncounterContext, roundId: strin
 }
 /** Admission/round-entry hook. Failure returns the original state; a receipted retry is inert. */
 export function applyOpeningEffects(state: MatchState, facts: readonly OpeningEffectFact[], shared?: OpeningEncounterContext): MatchCommandResult {
+  const originalState=state;
   try {
     const context = boundContext(state, shared), opening = state.openingEncounter;
     if (opening.mode === 'shared-deferred') fail('opening-context-mismatch');
@@ -188,8 +194,10 @@ export function applyOpeningEffects(state: MatchState, facts: readonly OpeningEf
       return {ok:true,state:{...applied.state,nextMatchEventSeq:seq},events};
     }
     const allFacts = openingFacts(context), monkey = context.selection.encounterId === 'wind-up-monkey';
-    const expected = effectReceipts(context, state.sharedPool?.seatId ?? 'solo');
     if (!same(facts, []) && !same(facts, allFacts)) fail('invalid-opening-effect');
+    const batch=enterTrainerGolems(enterOpeningCrabs(state));
+    if(batch.state!==state){const original=state;state=batch.state;validateOpeningEncounterState(state,shared);let seq=original.nextMatchEventSeq;const events=batch.events.map(e=>'tick' in e?e:{...e,domain:'match' as const,eventSeq:seq++});return {ok:true,state:{...state,nextMatchEventSeq:seq},events};}
+    const expected = effectReceipts(context, state.sharedPool?.seatId ?? 'solo');
     if (opening.receipts.length || !expected.length) {
       validateOpeningEncounterState(state, shared);
       return {ok: true, state, events: []};
@@ -220,7 +228,7 @@ export function applyOpeningEffects(state: MatchState, facts: readonly OpeningEf
     if (!Number.isSafeInteger(eventSeq)) fail('invalid-opening-effect');
     return {ok: true, state: {...applied.state, nextMatchEventSeq: eventSeq}, events};
   } catch (error) {
-    return {ok: false, state, reason: error instanceof OpeningEncounterError ? error.reason : 'opening-context-mismatch'};
+    return {ok: false, state:originalState, reason: error instanceof OpeningEncounterError ? error.reason : 'opening-context-mismatch'};
   }
 }
 /** Also used by the temporary unbound shared-seat advance, before scheduled choices. */
@@ -376,7 +384,7 @@ export function readOpeningMelProgress(state: Pick<MatchState, 'openingEncounter
     triggeredRound: receipt?.round ?? null, hpBefore: receipt?.hpBefore ?? null, hpAfter: receipt?.hpAfter ?? null});
 }
 export type OpeningMelProgress = ReturnType<typeof readOpeningMelProgress>;
-/** Reserved resolver input, not a client command. No eligibility/drop/pity logic is enabled. */
+/** Compatibility input for authentic settled-kill retries; never a client reward command. */
 export interface OpeningWarwickKillFact {
   readonly battleId: string;
   readonly eventSeq: number;
@@ -384,18 +392,14 @@ export interface OpeningWarwickKillFact {
   readonly victimKind: 'champion' | 'summon' | 'monster';
   readonly settlementEligible: boolean;
 }
-/** Deliberately fail closed for ALL facts (including empty/retries/mirrors). */
-export function applyWarwickHunger(state: MatchState, _facts: readonly OpeningWarwickKillFact[],
-  shared?: OpeningEncounterContext): MatchCommandResult {
-  try {
-    validateOpeningEncounterState(state, shared);
-    const opening = state.openingEncounter;
-    const selection = opening.mode === 'solo' ? opening.context.selection : opening.mode === 'shared' ? opening.selection : null;
-    if (selection?.encounterId !== 'warwicks-hunger') fail('invalid-opening-effect');
-    return {ok: false, state, reason: 'opening-config-incomplete'};
-  } catch (error) {
-    return {ok: false, state, reason: error instanceof OpeningEncounterError ? error.reason : 'opening-context-mismatch'};
-  }
+/** External kill claims are never trusted. Settlement owns rewards; retries must match its facts. */
+export function applyWarwickHunger(state:MatchState,facts:readonly OpeningWarwickKillFact[],shared?:OpeningEncounterContext):MatchCommandResult {
+ try{validateOpeningEncounterState(state,shared);
+  if(openingEncounterId(state)!=='warwicks-hunger')fail('invalid-opening-effect');
+  const history=(state.seatMechanics?.hidden.progress as {economyReceipts?:readonly {kind:string;facts?:{battleId:string;roundKind:string;openingDeaths?:readonly {victimId:string;eventSeq:number}[]}}[]}|undefined)?.economyReceipts??[];
+  if(facts.some(f=>!f.settlementEligible||f.victimKind!=='champion'||!history.some(r=>r.kind==='battle'&&r.facts?.roundKind==='pvp'&&r.facts.battleId===f.battleId&&r.facts.openingDeaths?.some(d=>d.victimId===f.victimId&&d.eventSeq===f.eventSeq))))fail('invalid-opening-effect');
+  return {ok:true,state,events:[]};
+ }catch(e){return {ok:false,state,reason:e instanceof OpeningEncounterError?e.reason:'opening-context-mismatch'};}
 }
 /** Owner-only progress, never future offers or RNG. Current offers remain in pendingChoice. */
 export function readOpeningForgeProgress(state: MatchState) {

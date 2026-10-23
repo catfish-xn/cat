@@ -1,3 +1,4 @@
+import { trainerStar, TRAINER_ID } from './content/opening-batch-b';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import { G24_FORGE_POOLS } from './content/g2-4-forges';
 import {g23RadiantDefinitionId,g23RewardAtoms} from './g2-3-rewards';
@@ -373,7 +374,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const starts = new Set(entries.filter(entry => entry?.kind === 'combat-growth-committed')
     .map(entry => (entry as Extract<ResourceProvenanceEntry, { kind: 'combat-growth-committed' }>).combatStartProvenancePrefixLength));
   const unitPrefixes = new Map<number, ReadonlyMap<string, ProvenanceUnit>>();
-  const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit })).sort(compareIds),
+  const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit,...(unit.definitionId===TRAINER_ID?{starLevel:trainerStar(getCatalogRoundByOrdinal(context.throughRoundOrdinal).stage)}:{}) })).sort(compareIds),
     items: [...items.values()].map(item => ({ ...item })).sort(compareIds), persistentGrowth: growth.map(entry => ({ ...entry })), nextUnitSerial, nextItemSerial });
   let result = projection();
   const deferredCarouselIds = new Set<string>(), preparationReceipts = new Set<string>(), claimedCarouselIds = new Set<string>();

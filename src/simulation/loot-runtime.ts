@@ -1,3 +1,4 @@
+import { openingCrabCarrier } from './opening-crabs';
 import { shareGeneratedJson } from './immutable-json';
 import { createOrbLayout, freezeOrbLayoutThroughRound, type LootInitialization, type OrbLayoutLedger, type LootLayoutBinding } from './orb-layout';
 import { LOOT_POLICY_VERSION } from './content/loot';
@@ -56,6 +57,7 @@ export function revealMatchLoot(state: MatchState, combat: CombatState): { state
   const loot = state.m8.loot, earnedEvidence = [...loot.earnedEvidence];
   const transition = (drop: { readonly dropId: string; readonly status: string }, sourceUnitId: string) => {
     if (drop.status !== 'planned') return drop.status;
+    sourceUnitId=openingCrabCarrier(state,state.roundDefinitionId,sourceUnitId);
     const deaths = combat.neutralReceipts?.deaths.filter(value => value.unitId === sourceUnitId) ?? [];
     if (deaths.length > 1) throw new RangeError('Duplicate loot death');
     if (deaths.length) {

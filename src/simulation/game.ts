@@ -37,8 +37,10 @@ export function validateDeployment(state: GameState, unitId: string, target: Uni
   if (unit.team !== 'player') return 'enemy-unit';
   const reason = locationFailure(state, target);
   if (reason) return reason;
+  if(unit.definitionId==='trainer-golem' && target.kind==='bench')return 'invalid-location';
   const occupants = state.units.filter(other => other.id !== unitId && sameLocation(other.location, target));
   if (occupants.length > 1 || occupants.some(other => other.team !== 'player')) return 'occupied';
+  if(occupants.some(u=>u.definitionId==='trainer-golem') && unit.location.kind==='bench')return 'invalid-location';
   // Both destinations must be legal; never swap an ally into an invalid/enemy-zone source.
   if (occupants.length) return locationFailure(state, unit.location);
   return undefined;

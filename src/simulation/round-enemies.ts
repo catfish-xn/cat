@@ -59,6 +59,6 @@ export function getRoundEnemyItems(round:number):readonly EnemyItem[] {
 export const ROUND_ENEMY_PROJECTIONS = freezeContent(ROUND_CATALOG.map(round => ({
   round:round.ordinal,roundId:round.roundId,units:createRoundEnemies(round.ordinal),items:getRoundEnemyItems(round.ordinal),
 })));
-export function readRoundEnemyProjection(round:number): typeof ROUND_ENEMY_PROJECTIONS[number] {
-  getStageRound(round);return ROUND_ENEMY_PROJECTIONS[round-1];
+export function readRoundEnemyProjection(round:number,openingId?:string|null): typeof ROUND_ENEMY_PROJECTIONS[number] {
+  getStageRound(round);const base=ROUND_ENEMY_PROJECTIONS[round-1];const crab=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.encounterId===`${openingId}/${base.roundId}`);return crab?{...base,units:crab.deployment}:base;
 }

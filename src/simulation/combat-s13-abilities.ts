@@ -45,6 +45,7 @@ function replaceEndTask(unit: S13Unit, kind: CombatTask['kind'], at: number, val
   unit.tasks = unit.tasks.filter(t => t.kind !== kind); addTask(unit, kind, at, null, value, seq);
 }
 export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number): string[] {
+  if(unit.definitionId==='trainer-golem'){packet(ctx,unit,target,amount(unit,ctx.tick,{ap:variable(unit,'Damage')}),'magic',seq);return [target.id];}
   const six=sixCostCast(ctx,unit,target,seq);if(six)return six;
   const { tick, units, events } = ctx, source = origin(unit), v = (key: string, fallback = 0) => variable(unit, key, fallback);
   const mag = (key: string) => amount(unit, tick, { ap: v(key) });

@@ -10,6 +10,7 @@ export interface NeutralReceipts {
 }
 /** B7 adapter records already committed domain facts. It never applies an effect or changes events. */
 export function recordNeutralReceipts(step: CombatStep): CombatStep {
+  if(step.state.openingDeaths){const deaths=[...step.state.openingDeaths];for(const e of step.events)if(e.type==='death'&&!deaths.some(d=>d.unitId===e.unitId))deaths.push({unitId:e.unitId,eventSeq:e.eventSeq!});if(deaths.length!==step.state.openingDeaths.length)step={...step,state:{...step.state,openingDeaths:deaths}};}
   const previous=step.state.neutralReceipts;
   if(!previous) return step;
   let changed=false;

@@ -30,7 +30,9 @@ describe('opening encounter PR1 content and independent selection', () => {
       expect(e.nameZh.length).toBeGreaterThan(0);
       expect(e.encounterId).toMatch(/^TFT/); expect(e.portalId).toMatch(/^TFT/);
       expect(Object.isFrozen(e)).toBe(true);
-      if (e.readiness === 'blocked-evidence') expect(e.missingEvidence.length).toBeGreaterThan(0);
+      // Both batches now enable every entry; retain this check for future blocked content.
+      const readiness: string = e.readiness;
+      if (readiness === 'blocked-evidence') expect(e.missingEvidence.length).toBeGreaterThan(0);
     }
     expect(OPENING_ENCOUNTERS[0].champion).toBeNull();
     expect(OPENING_ENCOUNTERS[7].researchParameters).toMatchObject({amount_by_stage_and_bucket:null});

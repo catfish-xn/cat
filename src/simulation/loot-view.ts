@@ -66,7 +66,7 @@ export function readLootView(state: Readonly<MatchState>): LootView {
   const claimReceipts=loot.receipts.filter(r=>r.resolution).map(r=>({receiptId:r.receiptId,dropId:r.dropId,payload:payloadView(r.payload),
     resolution:r.resolution!,gold:r.gold!,claimedRoundId:r.claimedRoundId!,grantedItemIds:[...r.grantedItemIds],grantedUnitIds:[...r.grantedUnitIds],
     ...(r.grantedConsumableIds?{grantedConsumableIds:[...r.grantedConsumableIds]}:{})}));
-  return freezeContent({ roundId, revealedDrops: drops, revealedOrbs, ...(state.multiplayer||unclaimedOrbs.some(o=>o.source==='family')?{unclaimedOrbs,claimReceipts}:{}), pendingClaims, canContinue: reason === null, reason, pendingChoice });
+  return freezeContent({ roundId, revealedDrops: drops, revealedOrbs, ...(state.multiplayer||unclaimedOrbs.some(o=>o.source==='family'||o.orbId.startsWith('opening-batch-b/'))?{unclaimedOrbs,claimReceipts}:{}), pendingClaims, canContinue: reason === null, reason, pendingChoice });
 }
 
 export function readComponentEquivalent(state:Readonly<MatchState>):number {

@@ -2,6 +2,10 @@
 
 梅尔、维克托、金币订阅、战利品订阅已启用，覆盖历史关闭/只观察说明。普通六费商店也改为批准的完整q表、整店一次5q判定。接口、收据、恢复、加时阶段钟和UI字段见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md#接口与恢复合同)。公开命令不新增；装备与弈子待领使用既有 `claimOrb`，锻造器使用既有 `choose/timeoutChoice`。本批装备统一待领，不引入批准表外的库存格数。
 
+## 开局奇遇 Batch B（2026-10-23，待统一 epoch）
+
+四项已启用，覆盖下文 PR4/PR6 停用语义。`createMatch`/`initializeSharedSeat` 自动授予魔像，`nextRound` 自动升星及替换蟹编组；`commitG23Settlement` 接收权威首次死亡事实后一次发奖，客户端不得提交死亡来索奖。新增 `readOpeningBatchBRewards(state)` 只读本人已结算奖励；联机弈子仍用 `claimOrb` 与共享池事务。公开签名、输入/输出、失败原因、永久纹章、收据、恢复、箱子及UI字段见 [报告§3](OPENING_ENCOUNTERS_BATCH_B_REPORT.md#3-接口与恢复合同)。不更改当前epoch/digest常量或历史夹具。
+
 ## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
 
 用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。

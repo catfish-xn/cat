@@ -1,4 +1,5 @@
 import { OPENING_BATCH_A } from './opening-batch-a';
+import { OPENING_BATCH_B_POLICY } from './opening-batch-b';
 import { freezeContent } from './freeze';
 import { TRAINER_GOLEMS_POLICY } from './trainer-golems';
 
@@ -50,9 +51,9 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "nameZh": "迅捷蟹水潭",
     "nameEn": "Scuttle Puddle",
     "weightBps": 750,
-    "enabled": false,
-    "effectStatus": "not-implemented",
-    "readiness": "blocked-evidence",
+    "enabled": true,
+    "effectStatus": "active",
+    "readiness": "ready-for-followup",
     "followupPr": 7,
     "descriptionZh": "野怪替换为掉落额外战利品的迅捷蟹。",
     "trigger": "各野怪回合",
@@ -64,10 +65,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
     },
     "excludedAugmentReferences": [],
     "portalBannedAugmentReferences": [],
-    "missingEvidence": [
-      "bonus_loot_table",
-      "combat_stats"
-    ],
+    "missingEvidence": [],
     "projectConventions": [],
     "sourcePath": "encounters[1]",
     "sourceKeys": [
@@ -87,9 +85,9 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "nameZh": "蟹之狂欢",
     "nameEn": "Crab Rave",
     "weightBps": 250,
-    "enabled": false,
-    "effectStatus": "not-implemented",
-    "readiness": "blocked-evidence",
+    "enabled": true,
+    "effectStatus": "active",
+    "readiness": "ready-for-followup",
     "followupPr": 7,
     "descriptionZh": "野怪替换为带额外战利品的蟹；第 5 阶段及以后的蟹极其危险。",
     "trigger": "各野怪回合；第 5 阶段及以后强化危险性",
@@ -101,10 +99,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
     },
     "excludedAugmentReferences": [],
     "portalBannedAugmentReferences": [],
-    "missingEvidence": [
-      "bonus_loot_table",
-      "combat_stats"
-    ],
+    "missingEvidence": [],
     "projectConventions": [],
     "sourcePath": "encounters[2]",
     "sourceKeys": [
@@ -414,9 +409,9 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "nameZh": "魔像训练师",
     "nameEn": "Trainer Golems",
     "weightBps": 400,
-    "enabled": false,
-    "effectStatus": "not-implemented",
-    "readiness": "blocked-evidence",
+    "enabled": true,
+    "effectStatus": "active",
+    "readiness": "ready-for-followup",
     "followupPr": 4,
     "descriptionZh": "开局获得 1 个携带 3 个永久附着纹章的魔像。",
     "trigger": "开局获得",
@@ -465,7 +460,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
     ],
     "missingEvidence": TRAINER_GOLEMS_POLICY.missingEvidence,
     "projectConventions": [
-      "各席独立抽三个不同可执行纹章；完整池与魔像数值仍待补证"
+      "A1–A5：2026-10-23 用户批准"
     ],
     "sourcePath": "encounters[9]",
     "sourceKeys": [
@@ -683,9 +678,9 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "nameZh": "沃里克的饥饿",
     "nameEn": "Warwick's Hunger",
     "weightBps": 800,
-    "enabled": false,
-    "effectStatus": "not-implemented",
-    "readiness": "blocked-evidence",
+    "enabled": true,
+    "effectStatus": "active",
+    "readiness": "ready-for-followup",
     "followupPr": 6,
     "descriptionZh": "击杀敌方弈子时，沃里克有时吞噬尸体并留下战利品。",
     "trigger": "战斗中击杀敌方弈子时",
@@ -721,12 +716,7 @@ export const OPENING_ENCOUNTERS = freezeContent([
       }
     ],
     "portalBannedAugmentReferences": [],
-    "missingEvidence": [
-      "drop_probability",
-      "reward_table",
-      "pity_system",
-      "per_round_cap"
-    ],
+    "missingEvidence": [],
     "projectConventions": [],
     "sourcePath": "encounters[14]",
     "sourceKeys": [
@@ -781,6 +771,7 @@ export type OpeningEncounterId = typeof OPENING_ENCOUNTERS[number]['id'];
 export const OPENING_ENCOUNTER_CONFIG = freezeContent({
   version: 'opening-encounters-14.24b-batch-a-v1',
   batchA: OPENING_BATCH_A,
+  batchB: OPENING_BATCH_B_POLICY,
   trainerGolems: TRAINER_GOLEMS_POLICY,
   entries: OPENING_ENCOUNTERS,
   selectionStream: 'opening-encounter-v1/select',

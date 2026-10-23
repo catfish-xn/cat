@@ -1,4 +1,5 @@
 import { openingRewardOrbs } from './opening-batch-rewards';
+import { openingCrabCarrier } from './opening-crabs';
 import { prepareBattleEquipment, validBattleInput } from './battle-equipment';
 import { projectTemporaryEquipment } from './m8/equipment';
 import { familyOrbs } from './family-orbs';
@@ -255,7 +256,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     const combat = round.ordinal === state.round ? state.combat : null;
     check(combat ? entry.death.tick <= combat.tick && entry.death.eventSeq < combat.nextEventSeq!
       : result && entry.death.tick <= result.combatTicks && entry.death.eventSeq < result.combatEventCount, 'death history boundary');
-    const source = JSON.stringify([slot.roundId,slot.sourceUnitId]), identity = canonicalContent(entry.death);
+    const source = JSON.stringify([slot.roundId,openingCrabCarrier(state,slot.roundId,slot.sourceUnitId)]), identity = canonicalContent(entry.death);
     check(!sourceDeaths.has(source) || equal(sourceDeaths.get(source),entry.death), 'source death conflict');
     check(!deathSources.has(identity) || deathSources.get(identity) === source, 'duplicate death identity');
     sourceDeaths.set(source,entry.death); deathSources.set(identity,source); evidence.set(entry.dropId,entry);
@@ -289,7 +290,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     const finished = !current || state.combat?.status === 'finished';
     check(earned === !['planned','forfeited'].includes(status), 'qualification evidence');
     if (current) {
-      const death = state.combat?.neutralReceipts?.deaths.find(value => value.unitId === slot.sourceUnitId);
+      const death = state.combat?.neutralReceipts?.deaths.find(value => value.unitId === openingCrabCarrier(state,slot.roundId,slot.sourceUnitId));
       check(earned === !!death, 'current death qualification');
       if (death) check(equal(evidence.get(slot.dropId)!.death,{combatId:state.combat!.combatId,tick:death.tick,eventSeq:death.eventSeq}), 'current death evidence');
     }

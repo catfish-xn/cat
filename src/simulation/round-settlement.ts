@@ -1,3 +1,4 @@
+import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { deferredRoundIncome } from './deferred-income';
 import { commitOpeningEncounterHealth } from './opening-encounter';
@@ -94,7 +95,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const round = getMultiplayerRoundById(r.roundId);
     if (round.ordinal !== r.round || round.kind !== 'pvp') return fail(state,'invalid-receipt');
     if(traitContext&&traitContext.round!==state.round)return fail(state,'invalid-receipt');
+    if(openingEncounterId(state)==='warwicks-hunger'&&!r.g23Facts?.openingDeaths)return fail(state,'invalid-receipt');
     if(r.g23Facts){
+      if(r.g23Facts.openingDeaths?.some(d=>d.eventSeq>=r.combatEventCount))return fail(state,'invalid-receipt');
       validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player',undefined,traitContext,state.items);
       // A locked roster's trusted resolver receipt refers to the frozen battle, while
       // this latest live seat permits equipment edits. Recounting its emblems would

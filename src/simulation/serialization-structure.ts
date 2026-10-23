@@ -1,3 +1,4 @@
+import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { choiceAcquisitionGold } from './choice-acquisition';
 import { deferredRoundIncome } from './deferred-income';
@@ -143,7 +144,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   mechanicCheck(() => validateOpeningEncounterState(state), 'opening-context-mismatch');
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
-  const enemyProjection = readRoundEnemyProjection(state.round);
+  const enemyProjection = readRoundEnemyProjection(state.round,openingEncounterId(state));
   // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
   requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
   mechanicCheck(() => validateG23RewardSources(state), 'G23 reward authority');
