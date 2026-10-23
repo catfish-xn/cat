@@ -4,6 +4,7 @@
  * functions (`abilityDisplayName` / `abilityDisplayValues`). Nothing is computed beyond formatting.
  */
 import { getUnitStats } from '../simulation/unit-stats';
+import { anvilIconUrl, anvilInfo, type AnvilInfo } from './anvil-display';
 import { fourStarBaseStats } from './d14-display';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { abilityText } from './ability-text';
@@ -81,7 +82,23 @@ function battleLine(stats: UnitBattleStats): HTMLElement {
  * Star 4 is a promoted Ultimate Hero (v16): the rules' 4★ base health/attack and 4★ ability values; `notes` are extra
  * lines (d14-display) under the title.
  */
+/** v22 anvil (锻造器): its icon, name, the client's hover text and what selling it does; no stars, cost or stats. */
+function anvilCardBody(definitionId: string, anvil: AnvilInfo): HTMLElement {
+  const body = el('div', '', 'unit-card unit-card-anvil'); body.dataset.unitDef = definitionId;
+  const head = el('div', '', 'unit-card-head'), portrait = el('span', '', 'unit-card-portrait anvil'), url = anvilIconUrl(definitionId);
+  if (url) portrait.innerHTML = `<img src="${url}" alt="" width="40" height="40">`;
+  const title = el('div', '', 'unit-card-title');
+  title.append(el('strong', anvil.name, 'unit-card-name'), el('span', '锻造器', 'unit-card-cost'));
+  head.append(portrait, title); body.append(head);
+  const section = el('div', '', 'unit-card-ability');
+  section.append(el('p', anvil.description, 'unit-card-text'), el('p', `拖到商店或按 E：${anvil.sellText}`, 'unit-card-text'));
+  body.append(section);
+  return body;
+}
+
 export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = '', notes: readonly string[] = []): HTMLElement | null {
+  const anvil = anvilInfo(definitionId);
+  if (anvil) return anvilCardBody(definitionId, anvil);
   const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
   if (!definition) return null;
   const fourStar = Math.trunc(starLevel) >= 4 ? fourStarBaseStats(definitionId) : null;

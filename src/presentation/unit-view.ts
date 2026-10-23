@@ -14,8 +14,12 @@ import { championPortraitKey, itemTextureKey, requestItemTexture } from './s13-a
 import { drawStatusIcons, statusIconY, statusIcons, type IconPen } from './status-icons';
 import { reducedMotion } from './preferences';
 import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
+import { anvilIconUrl, isAnvilUnit } from './anvil-display';
 
 export const PIECE_RADIUS = 27;
+/** v22 anvil piece: icon size and disc colour (dark forge bronze). */
+const ANVIL_ICON = 38, ANVIL_DISC = 0x2a2118;
+const anvilTextureKey = (definitionId: string) => `s13-anvil-${definitionId}`;
 const C = THEME.color;
 export type RingState = 'normal' | 'selected' | 'target';
 /** Worn item icons: a row centred under the piece, over its lower rim (TFT style). */
@@ -55,6 +59,8 @@ export class UnitView {
   private portrait: Phaser.GameObjects.Image | null = null;
   private identity: HeroIdentity;
   private renderKey = '';
+  /** The unit and star of the last redraw, for a redraw when an anvil icon finishes loading. */
+  private lastDrawn: { readonly unit: Unit; readonly star: number } | null = null;
   /** Item definition ids whose pips are drawn now, in slot order (debug/acceptance read). */
   equipped: readonly string[] = [];
   /** Item definition ids worn for the next battle only (C18 tag; debug/acceptance read). */
@@ -106,29 +112,46 @@ export class UnitView {
   update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], extras: GearExtras = NO_GEAR_EXTRAS, star: number = unit.starLevel): void {
     const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}|${extras.reserved}|${extras.temporary.join(',')}`;
     if (key === this.renderKey) return;
-    this.renderKey = key;
+    this.renderKey = key; this.lastDrawn = { unit, star };
     this.identity = getHeroIdentity(unit.definitionId);
     this.disc.setFillStyle(this.identity.colorNumber);
     this.label.setText(this.identity.short).setColor(this.identity.ink);
+    // v22 anvil (锻造器): the client's square anvil icon on a dark forge disc; no star, no cost (it is not a hero).
+    const anvil = isAnvilUnit(unit.definitionId);
+    if (anvil) this.disc.setFillStyle(ANVIL_DISC);
     // Official S13 portrait when bundled; otherwise the code-drawn emblem and short name.
-    const portraitKey = championPortraitKey(unit.definitionId), hasPortrait = this.scene.textures.exists(portraitKey);
+    const portraitKey = anvil ? anvilTextureKey(unit.definitionId) : championPortraitKey(unit.definitionId), hasPortrait = this.scene.textures.exists(portraitKey);
+    if (anvil && !hasPortrait) this.requestAnvilTexture(unit.definitionId);
+    const size = anvil ? ANVIL_ICON : PIECE_RADIUS * 2 - 2;
     if (hasPortrait) {
       if (!this.portrait) { this.portrait = this.scene.add.image(0, 0, portraitKey); this.body.addAt(this.portrait, 1); }
-      this.portrait.setTexture(portraitKey).setDisplaySize(PIECE_RADIUS * 2 - 2, PIECE_RADIUS * 2 - 2).setVisible(true);
+      this.portrait.setTexture(portraitKey).setDisplaySize(size, size).setVisible(true);
     } else this.portrait?.setVisible(false);
     this.label.setVisible(!hasPortrait);
     const points = EMBLEM_POINTS[this.identity.shape].map(([px, py]) => new Phaser.Math.Vector2(px * PIECE_RADIUS * 0.82, py * PIECE_RADIUS * 0.82));
     this.emblem.clear().lineStyle(3, this.identity.inkNumber, 0.28).strokePoints(points, true, true);
-    this.emblem.setVisible(!hasPortrait);
-    this.star.setText('★'.repeat(star)).setColor(starColor(star));
+    this.emblem.setVisible(!hasPortrait && !anvil);
+    this.star.setText(anvil ? '' : '★'.repeat(star)).setColor(starColor(star)).setVisible(!anvil);
     // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
-    this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral);
-    this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral);
+    this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral && !anvil);
+    this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral && !anvil);
     this.equipped = [...equipped]; this.extras = extras; this.drawItems();
     this.pendingEquipped = [...pending];
     this.pendingTag.setText(pending.length ? `下场+${pending.length}` : '').setVisible(pending.length > 0);
     this.token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, effectiveStarLevel: star === 4 ? 4 : undefined, neutral: this.identity.neutral, cost: this.identity.cost, team: unit.team });
     this.applyRing(unit.team);
+  }
+
+  /** Loads the anvil icon once per scene; the piece redraws when it arrives. */
+  private requestAnvilTexture(definitionId: string): void {
+    const key = anvilTextureKey(definitionId), url = anvilIconUrl(definitionId);
+    if (!url || this.scene.textures.exists(key)) return;
+    this.scene.load.once(`filecomplete-image-${key}`, () => {
+      const last = this.lastDrawn;
+      if (this.token.active && last) { this.invalidate(); this.update(last.unit, this.equipped, this.pendingEquipped, this.extras, last.star); }
+    });
+    this.scene.load.image(key, url);
+    if (!this.scene.load.isLoading()) this.scene.load.start();
   }
 
   /**
