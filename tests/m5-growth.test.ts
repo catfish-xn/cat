@@ -7,9 +7,11 @@ import type {MatchState} from '../src/simulation/match-types';
 import {shop as independentShop} from './fixtures/m5/oracle.g2.cjs';
 
 // Warm the same public acquisition route used below, once, outside the test body.
+// v22: on seed 22 the army funding nine Tristanas reaches 4-1 at 41 HP and the lone
+// three-star Tristana dies at 4-5, short of the 4-7 control; seed 9 reaches 4-7.
 beforeAll(() => {
- const shared=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:22});
- expect(shared.seed).toBe(22);
+ const shared=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:9});
+ expect(shared.seed).toBe(9);
 },30_000);
 
 // Explicit unit-level boundary fixtures, not ordinary acquisition evidence.
@@ -34,9 +36,9 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   expect(state.persistentGrowth).toEqual([{unitId:'unit-4',attackDamageBps:250},{unitId:'unit-5',attackDamageBps:375}]);
  });
  it('commits actual battle growth once and never regrants it on restore, duplicate step or Continue',()=>{
-  // Nine paid Tristana cards from the public v17 seed22 acquisition route create the same
-  // three-star kill/growth control without relabelling the opening Irelia.
-  let state=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:22});
+  // Nine paid Tristana cards from the public seed9 acquisition route (seed22 before v22)
+  // create the same three-star kill/growth control without relabelling the opening Irelia.
+  let state=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:9});
   // Keep the naturally acquired army alive while earning purchase income. The
   // same two recipe items return with their IDs when their original holder sells.
   const equipment:string[]=[];
