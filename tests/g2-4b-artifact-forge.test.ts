@@ -14,7 +14,9 @@ import {publicConsumables} from './fixtures/r3r4-public';
 import {digestContent} from '../src/simulation/content';
 import {RULES_GAP_MANIFEST} from '../src/simulation/content/rules-manifest';
 
-import {accepted,forgeStates,restoreDomain} from './helpers/g24-forge-states';
+import {accepted,forgeStates,forgeAnvils,restoreDomain,FORGE_ATOM_IDS} from './helpers/g24-forge-states';
+import {sellUnit} from '../src/simulation/match';
+import {anvilChoiceId} from '../src/simulation/anvils';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -51,7 +53,9 @@ it('pins all 29 executable IDs against the intact 29 source identities and hashe
 it('preserves source tiers 10/14 alongside newly admitted support tiers 11/13',()=>{
  for(const tier of [10,11,13,14])expect(g23ConquerorReward(G23_CONQUEROR_CHESTS[tier-1])).toEqual(G23_CONQUEROR_CHESTS[tier-1].reward);
  const atoms=g23RewardAtoms(bundle(14),42);
- expect(atoms.map(a=>[a.kind,a.options.length])).toEqual([['item',1],['item',4],['tool',1]]);
+ // v22 anvil units (docs/ANVIL_UNITS.md): the MeepTypeUnit artifact forge is an 'anvil' atom bound to its source definitionId.
+ expect(atoms.map(a=>[a.kind,a.options.length])).toEqual([['item',1],['anvil',4],['tool',1]]);
+ expect(atoms[1].forgeDefinitionId).toBe('TFT_ArmoryKeyOrnn');
  expect(atoms[0].options[0]).toMatch(/^TFT5_Item_/);
  expect(atoms[2].options).toEqual(['magnetic-remover']);
 });
@@ -70,7 +74,11 @@ it('offers four distinct reproducible artifacts and permits overlap between inde
 });
 
 it.each([10,14])('tier %i survives pending/manual/timeout restore and rejects duplicate grants and edited authority',tier=>{
- const state=forgeStates().get(tier)!,c=state.pendingChoice!;
+ // v22 anvil units (docs/ANVIL_UNITS.md): the tier's forge is an anvil unit; the fixture claimed it from its orb
+ // and opened it by selling it, so the pending window is the anvil-unit forge (4 picks, 30 s, timeout = first).
+ const state=forgeStates().get(tier)!,c=state.pendingChoice!,{before:anvilState,unitId}=forgeAnvils().get(tier)!,atomId=FORGE_ATOM_IDS[tier];
+ expect(c).toMatchObject({kind:'forge',choiceId:anvilChoiceId(unitId),payload:{kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:c.offers[0]}});
+ expect(c.offers).toEqual(g23RewardAtoms(readG23Progress(state)!.rewards.find(b=>b.tier===tier)!,readG23Progress(state)!.seed,true).find(a=>a.id===atomId)!.options);
  expect(restoreDomain(state)).toEqual(state);
  const before=JSON.stringify(state),rng=state.reforgeState;
  const manual=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[2]));
@@ -85,17 +93,19 @@ it.each([10,14])('tier %i survives pending/manual/timeout restore and rejects du
  expect(JSON.stringify(state)).toBe(before);
  const p=readG23Progress(state)!;
  expect(readG23Progress(manual)!.rngDraws).toBe(p.rngDraws);
- expect(claimG23Atom(state,c.choiceId.replace(':copy:0',''),c.offers[0])).toEqual({ok:false,state,reason:'stale-choice'});
+ expect(claimG23Atom(state,atomId,c.offers[0])).toEqual({ok:false,state,reason:'stale-choice'});
  const preparation:MatchState={...state,phase:'preparation',combat:null,combatInputBasis:null,pendingChoice:null};
- expect(claimG23Reward(preparation,c.choiceId.replace(':copy:0',''),c.offers[0])).toEqual({ok:false,state:preparation,reason:'stale-choice'});
- // Owning all offered artifacts does not reroll or exclude them.
- let owned:MatchState=preparation;
+ expect(claimG23Reward(preparation,atomId,c.offers[0])).toEqual({ok:false,state:preparation,reason:'stale-choice'});
+ // Owning all offered artifacts does not reroll or exclude them (the anvil is opened after they are owned).
+ let owned:MatchState=anvilState;
  for(const [i,definitionId] of c.offers.entries())owned=accepted(grantMechanicItem(owned,{receiptId:`fixture:owned:${i}`,source:'fixture',definitionId})) as MatchState;
- expect(openG23Choice(owned).state.pendingChoice!.offers).toEqual(c.offers);
- for(const patch of [{offers:[...c.offers].reverse()},{offers:['warmog',...c.offers.slice(1)]},{choiceId:c.choiceId.replace(':copy:0',':copy:1')},{payload:{...c.payload,source:'black-market'}},{payload:{...c.payload,timeoutOption:c.offers[1]}}]){
+ expect(openG23Choice(owned).state.pendingChoice).toBeNull();
+ expect(accepted(sellUnit(owned,unitId)).pendingChoice!.offers).toEqual(c.offers);
+ const otherUnit=state.preparation.units.find(u=>u.team==='player')!.id;
+ for(const patch of [{offers:[...c.offers].reverse()},{offers:['warmog',...c.offers.slice(1)]},{choiceId:anvilChoiceId(otherUnit)},{payload:{...c.payload,source:'black-market'}},{payload:{...c.payload,timeoutOption:c.offers[1]}}]){
   expect(()=>restoreDomain({...state,pendingChoice:{...c,...patch}})).toThrow();
  }
- for(const patch of [{itemId:null},{kind:'item',definitionId:c.offers[2]},{source:'black-market'},{choiceKind:'blackMarket'},{price:1},{skipped:true},{timedOut:true},{optionId:'warmog'},{receiptId:c.choiceId.replace(':copy:0',':copy:1')}]){
+ for(const patch of [{itemId:null},{kind:'item',definitionId:c.offers[2]},{source:'black-market'},{choiceKind:'blackMarket'},{price:1},{skipped:true},{timedOut:true},{optionId:'warmog'},{receiptId:anvilChoiceId(otherUnit)}]){
   const bad={...manual,seatMechanics:{...manual.seatMechanics!,receipts:manual.seatMechanics!.receipts.map(r=>r.receiptId===c.choiceId?{...r,...patch}:r)}};
   expect(()=>restoreDomain(bad)).toThrow();
  }

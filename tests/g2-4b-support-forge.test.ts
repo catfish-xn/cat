@@ -14,7 +14,9 @@ import {previewUseConsumable,validateConsumableState} from '../src/simulation/co
 import {REFORGE_POOLS} from '../src/simulation/content/consumables';
 import {RULES_GAP_MANIFEST} from '../src/simulation/content/rules-manifest';
 import {publicConsumables} from './fixtures/r3r4-public';
-import {accepted,forgeStates,restoreDomain} from './helpers/g24-forge-states';
+import {accepted,forgeStates,forgeAnvils,restoreDomain,FORGE_ATOM_IDS} from './helpers/g24-forge-states';
+import {sellUnit} from '../src/simulation/match';
+import {anvilChoiceId} from '../src/simulation/anvils';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -70,15 +72,20 @@ it('offers four distinct uniformly sampled supports; previous offers and owned i
   overlap ||= first.some(id=>second.includes(id));
  }
  expect(overlap).toBe(true);
- const state=forgeStates().get(11)!,c=state.pendingChoice!;
- let owned:MatchState={...state,phase:'preparation',combat:null,combatInputBasis:null,pendingChoice:null};
+ // v22 anvil units (docs/ANVIL_UNITS.md): the support forge is an anvil unit, opened only by selling it.
+ const state=forgeStates().get(11)!,c=state.pendingChoice!,{before,unitId}=forgeAnvils().get(11)!;
+ let owned:MatchState=before;
  for(const [i,definitionId] of c.offers.entries())owned=accepted(grantMechanicItem(owned,{receiptId:`fixture:support-owned:${i}`,source:'fixture',definitionId}));
- expect(openG23Choice(owned).state.pendingChoice!.offers).toEqual(c.offers);
+ expect(openG23Choice(owned).state.pendingChoice).toBeNull();
+ expect(accepted(sellUnit(owned,unitId)).pendingChoice!.offers).toEqual(c.offers);
 });
 
 it('tier 11 selection/timeout survives domain restore, issues one item and rejects replay or forged receipts',()=>{
- const state=forgeStates().get(11)!,c=state.pendingChoice!,before=JSON.stringify(state);
- expect(c).toMatchObject({kind:'forge',offers:expect.any(Array),payload:{kind:'forge',source:'conqueror',timeoutOption:c.offers[0]}});
+ // v22 anvil units (docs/ANVIL_UNITS.md): the tier-11 support anvil was claimed onto the bench and opened by
+ // selling it, so the window is the anvil-unit forge (4 picks, 30 s, timeout = first) bound to the unit.
+ const state=forgeStates().get(11)!,c=state.pendingChoice!,before=JSON.stringify(state),{unitId}=forgeAnvils().get(11)!;
+ expect(c).toMatchObject({kind:'forge',choiceId:anvilChoiceId(unitId),offers:expect.any(Array),payload:{kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:c.offers[0]}});
+ expect(c.offers).toEqual(g23RewardAtoms(readG23Progress(state)!.rewards.find(b=>b.tier===11)!,readG23Progress(state)!.seed,true)[0].options);
  expect(c.offers).toHaveLength(4);expect(new Set(c.offers).size).toBe(4);
  expect(restoreDomain(state)).toEqual(state);
  const manual=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[2]));
@@ -94,7 +101,7 @@ it('tier 11 selection/timeout survives domain restore, issues one item and rejec
   expect(selected.reforgeState).toEqual(state.reforgeState);
   expect(readG23Progress(selected)!.rngDraws).toBe(readG23Progress(state)!.rngDraws);
  }
- expect(claimG23Atom(state,c.choiceId.replace(':copy:0',''),c.offers[0])).toEqual({ok:false,state,reason:'stale-choice'});
+ expect(claimG23Atom(state,FORGE_ATOM_IDS[11],c.offers[0])).toEqual({ok:false,state,reason:'stale-choice'});
  expect(JSON.stringify(state)).toBe(before);
  for(const patch of [{offers:[...c.offers].reverse()},{offers:['warmog',...c.offers.slice(1)]},{payload:{...c.payload,timeoutOption:c.offers[1]}}])
   expect(()=>restoreDomain({...state,pendingChoice:{...c,...patch}})).toThrow();

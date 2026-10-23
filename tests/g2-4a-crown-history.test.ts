@@ -17,6 +17,7 @@ import { accepted, resolveM5Choices } from './match-helpers';
 import { validateMatchStructure } from '../src/simulation/serialization-structure';
 import { validateMatchHistory } from '../src/simulation/battle-record-validation';
 import { recordedCrownBattle } from './crown-history-helpers';
+import { isAnvil } from '../src/simulation/content/anvils';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -106,8 +107,20 @@ describe('M1 crown history authority', () => {
   });
 });
 
+/** v22 anvil units (docs/ANVIL_UNITS.md): opening anvils arrive as bench units instead of auto-popups.
+ *  Open each one through sell (= openAnvil) and take the first offer, as resolveM5Choices did with the old popup. */
+function openBenchAnvils(initial: MatchState): MatchState {
+  let state = initial;
+  for (let anvil = state.preparation.units.find(unit => isAnvil(unit.definitionId)); anvil;
+    anvil = state.preparation.units.find(unit => isAnvil(unit.definitionId))) {
+    state = accepted(sellUnit(state, anvil.id));
+    const choice = state.pendingChoice!;
+    state = accepted(selectChoice(state, choice.choiceId, choice.generation, choice.offers[0]));
+  }
+  return state;
+}
 function transferFixture(definitionId = TACTICIANS_CROWN_ID) {
-  let opening = resolveM5Choices(createMatch(109897));
+  let opening = openBenchAnvils(resolveM5Choices(createMatch(109897)));
   const holder = opening.preparation.units.find(unit => unit.team === 'player')!;
   for (let slot = 0; slot < 3; slot++) {
     opening = accepted(grantMechanicItem(opening, {receiptId:`transfer:${slot}`,source:'test',definitionId}));
@@ -126,7 +139,7 @@ describe('M2 equipment binding continuity', () => {
   it('rejects seed 109897 cross-round crown transfer despite self-consistent production replay and rewards', async () => {
     const {first,state,holder,target} = transferFixture();
     const crownIds = state.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID).map(item => item.id);
-    expect(holder.id).toBe('unit-1'); expect(target.id).toBe('unit-2');
+    expect(holder.id).toBe('unit-1'); expect(target.id).toBe('unit-4'); // unit-2/unit-3 were the two opening anvil units (v22 anvil units consume unit serials).
     expect(equipItem(state, crownIds[0], target.id, 0)).toMatchObject({ok:false,reason:'item-not-inventory'});
     const control = recordedCrownBattle(state, first.history);
     for (const input of [control.state, JSON.stringify(control.state)]) expect(restoreMatch(input, control.battles)).toEqual(control.state);
@@ -180,10 +193,10 @@ describe('M2 equipment binding continuity', () => {
       if (kind === 'upgrade-remover-equip') {
         expect(legal.items.find(item => item.definitionId === 'deathblade')!.location).toEqual({kind:'inventory'});
         const crowns = legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID);
-        expect(crowns.map(item => item.location)).toEqual([0,1,2].map(slot => ({kind:'unit',unitId:'unit-3',slot})));
+        expect(crowns.map(item => item.location)).toEqual([0,1,2].map(slot => ({kind:'unit',unitId:'unit-5',slot})));
         const remover = legal.consumables.find(tool => tool.definitionId === 'magnetic-remover')!;
-        legal = accepted(useConsumable(legal,remover.consumableId,{kind:'unit',unitId:'unit-3'}));
-        legal = accepted(equipItem(legal,legal.items.find(item => item.definitionId === 'deathblade')!.id,'unit-3',0));
+        legal = accepted(useConsumable(legal,remover.consumableId,{kind:'unit',unitId:'unit-5'}));
+        legal = accepted(equipItem(legal,legal.items.find(item => item.definitionId === 'deathblade')!.id,'unit-5',0));
         expect(legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID).map(item => item.location))
           .toEqual(crowns.map(() => ({kind:'inventory'})));
       }
@@ -215,20 +228,20 @@ describe('M2 equipment binding continuity', () => {
     const bladeId=legal.items.at(-1)!.id; // Opening anvils have earlier legitimate item births.
     legal = accepted(grantMechanicUnit(legal,{receiptId:'m4:first',source:'test',definitionId:'irelia'}));
     expect(holder.definitionId).toBe('irelia');
-    const equip = (value: MatchState) => accepted(equipItem(value,bladeId,'unit-3',0));
+    const equip = (value: MatchState) => accepted(equipItem(value,bladeId,'unit-5',0));
     if (order === 'before-upgrade') legal = equip(legal);
     legal = accepted(grantMechanicUnit(legal,{receiptId:'m4:second',source:'test',definitionId:'irelia'}));
     expect(legal.resourceProvenance.entries.find(fact => fact.kind === 'unit-upgraded')).toMatchObject({
-      event:{survivorId:'unit-3',consumedIds:['unit-1','unit-4']},
+      event:{survivorId:'unit-5',consumedIds:['unit-1','unit-6']},
     });
     if (order === 'after-upgrade') {
       const remover = legal.consumables.find(tool => tool.definitionId === 'magnetic-remover')!;
-      legal = accepted(useConsumable(legal,remover.consumableId,{kind:'unit',unitId:'unit-3'}));
+      legal = accepted(useConsumable(legal,remover.consumableId,{kind:'unit',unitId:'unit-5'}));
       legal = equip(legal);
     }
-    expect(legal.items.find(item => item.id === bladeId)!.location).toEqual({kind:'unit',unitId:'unit-3',slot:0});
+    expect(legal.items.find(item => item.id === bladeId)!.location).toEqual({kind:'unit',unitId:'unit-5',slot:0});
     if (order === 'before-upgrade') expect(legal.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID).map(item => item.location))
-      .toEqual([{kind:'unit',unitId:'unit-3',slot:1},{kind:'unit',unitId:'unit-3',slot:2},{kind:'inventory'}]);
+      .toEqual([{kind:'unit',unitId:'unit-5',slot:1},{kind:'unit',unitId:'unit-5',slot:2},{kind:'inventory'}]);
     const text = serializeMatch(legal,first.battles);
     for (const input of [structuredClone(legal),text]) {
       const restored = restoreMatch(input,first.battles);
@@ -246,7 +259,7 @@ describe('M2 equipment binding continuity', () => {
         const forged = structuredClone(legal);
         const removal = forged.resourceProvenance.entries.find(fact => fact.kind === 'consumable-used');
         if (removal?.kind !== 'consumable-used') throw new Error('Expected remover receipt');
-        Object.assign(removal.record.affectedItems[0].location, change === 'holder' ? {unitId:'unit-2'} : {slot:2});
+        Object.assign(removal.record.affectedItems[0].location, change === 'holder' ? {unitId:'unit-4'} : {slot:2});
         expect(() => serializeMatch(forged,first.battles)).toThrow();
         for (const input of [forged,JSON.stringify(forged)]) expect(() => restoreMatch(input,first.battles)).toThrow();
       }
@@ -354,6 +367,7 @@ describe('M5/M6 ordered equipment across the first battle', () => {
   });
 });
 
+const SWORDS_SEED = 7296;
 describe('M7/S7 combat equipment command replay', () => {
   function recorder(context: MatchState, history = new BattleHistory('crown-history')) {
     let state = context;
@@ -415,7 +429,11 @@ describe('M7/S7 combat equipment command replay', () => {
     }
     expect(resumed.phase).not.toBe('combat');
   }
-  function swords(seed=7) {
+  // v22 opening encounters batch B enabled crab-rave, which seed 7 rolls: its 1-2 minions became two shielded
+  // scuttle crabs. Seed 7296 rolls no opening encounter and fields the same Irelia vs minions-a-v1 1-2 board
+  // that seed 7 produced before v22, so the tick/damage vectors below describe the same battle (only the combat
+  // RNG stream differs with the seed; see the tick-69 boundary vector).
+  function swords(seed=SWORDS_SEED) {
     let state = createMatch(seed);
     for (let i = 0; i < 2; i++) state = accepted(grantMechanicItem(state,
       {receiptId:`m8:sword:${i}`,source:'test',definitionId:'sword'}));
@@ -588,7 +606,10 @@ describe('M7/S7 combat equipment command replay', () => {
       ? [{index:8,raw:69,mitigated:74,hpDamage:74,overkill:0}, {index:16,raw:69,mitigated:103,hpDamage:36,overkill:67}]
       : tick === 69
         ? [{index:16,raw:49,mitigated:68,hpDamage:61,overkill:7}, {index:24,raw:49,mitigated:49,hpDamage:49,overkill:0},
-          {index:29,raw:69,mitigated:74,hpDamage:61,overkill:13}]
+          // v22 mana rules (docs/COMBAT_MANA_RULES.md): damage mana is pooled per tick, so Irelia's tick-96 hit
+          // now emits a 1-mana 'damage' manaChanged event and the killing blow moves from index 29 to 30. Seed 7296's
+          // combat RNG crits that blow in both runs (103); the 25 HP the weaker tick-69 hit left changes only hp/overkill.
+          {index:30,raw:69,mitigated:103,hpDamage:61,overkill:42}]
         : [];
     for (const {index,...outcome} of damageChanges) {
       const event = expectedEvents[index];
