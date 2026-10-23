@@ -1,3 +1,4 @@
+import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
 import { combatEquipmentDisplay } from '../presentation/battle-equipment';
 import { createMelSaveFeedback } from './mel-save-feedback';
 import Phaser from 'phaser';
@@ -476,7 +477,8 @@ export class BoardScene extends Phaser.Scene {
    */
   private watchSellZone(unit: Unit) {
     this.stopSellZone();
-    const hint = `松手出售 · +${getUnitSellPrice(unit)} 金币`;
+    const anvil = anvilInfo(unit.definitionId);
+    const hint = anvil ? anvilSellHint(anvil) : `松手出售 · +${getUnitSellPrice(unit)} 金币`;
     let marked: HTMLElement | null = null;
     const mark = (zone: HTMLElement | null) => {
       if (zone === marked) return;
@@ -491,11 +493,12 @@ export class BoardScene extends Phaser.Scene {
 
   private sell(id: string) {
     if (this.summonOf(id)) { this.setStatus('虚空生物由兹若特传送门召唤 · 不能出售'); return; }
+    const anvil = anvilInfo(this.state.units.find(unit => unit.id === id)?.definitionId ?? '');
     const result = this.session.sell(id);
     // A hover sale must also clear a different old selection: holding E must
     // never unexpectedly sell that unit once the hovered token disappears.
     if (result.ok) this.selectedId = null;
-    this.command(result, '出售成功 · 金币已到账');
+    this.command(result, anvil ? `已打开${anvil.name} · 在商店栏 30 秒内选择一件` : '出售成功 · 金币已到账');
   }
 
   private setStatus(message: string) { this.status.setText(message); this.strategyPanel?.status(message); }
@@ -1034,13 +1037,16 @@ export class BoardScene extends Phaser.Scene {
     if (!selected) this.selectedId = null;
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
     const displayed = this.session.phase === 'preparation' || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
-    if (displayed) {
+    const anvil = displayed ? anvilInfo(displayed.definitionId) : null;
+    if (displayed && anvil) this.selectionLabel.setText(`${anvil.name}\n${anvil.description}\n拖到商店或按 E：${anvil.sellText}`);
+    else if (displayed) {
       const definition = getDefinition(displayed), star = displayStarLevel(this.session.state, displayed);
       // v16 Ultimate Hero: the rules' certified 4★ base (physically 3★, so the sell price stays the rules' 3★ price).
       const stats = (star === 4 ? fourStarBaseStats(displayed.definitionId) : null) ?? getUnitStats(displayed.definitionId, displayed.starLevel);
       this.selectionLabel.setText(`${displayUnitName(displayed.definitionId)} ${starText(star)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}${star === 4 ? ' · 终极英雄' : ''}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币${star === 4 ? '（按物理 3 星）' : ''}`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
-    this.sellButton.setText(this.selectedId && selected ? `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
+    const selectedAnvil = selected ? anvilInfo(selected.definitionId) : null;
+    this.sellButton.setText(this.selectedId && selected ? selectedAnvil ? 'E · 打开武器库' : `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
     for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : this.previewHighlight.has(unit.id) ? 'target' : 'normal', unit.team);
   }
