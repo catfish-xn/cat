@@ -87,7 +87,10 @@ function faultInjecting(inner: BattleResolver, round: number): BattleResolver {
     ...(inner.startBattle ? { startBattle: (input, pool) => { trip(input.round, input.battleId); return inner.startBattle!(input, pool); } } satisfies Pick<BattleResolver, 'startBattle'> : {}),
   };
 }
-const seed = integer('CAT_SEED', randomSeed());
+const seed = env.CAT_SEED === undefined || env.CAT_SEED === '' ? randomSeed() : Number(env.CAT_SEED);
+if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
+  throw new RangeError(`CAT_SEED must be a uint32 integer (0..4294967295), got "${env.CAT_SEED}"`);
+}
 log('info', 'config.seed', { seed, source: env.CAT_SEED ? 'CAT_SEED' : 'random' });
 if (faultRound > 0) log('warn', 'config.fault-injection', { round: faultRound, msg: 'TEST ONLY: one battle of this round will throw' });
 
