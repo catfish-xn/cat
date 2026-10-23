@@ -187,7 +187,10 @@ it('shared public PvE -> actual PvP -> Warwick unit orb transaction conserves an
  const again=runSharedMatchCommand(pool,states[i],{type:'claimOrb',round:4,orbId:orb.orbId});expect(again.ok).toBe(false);expect(again.pool).toBe(pool);expect(again.state).toBe(states[i]);assertSharedPoolConservation(pool,states);
 },20000);
 it('crab approved roster has independent literal cells and HP, including asymmetric 4-7',()=>{
- const cases:Record<string,number[][]>={'1-2':[[2,2,250],[4,2,250]],'1-3':[[2,2,250],[4,2,250],[1,1,150]],'1-4':[[2,2,250],[4,2,250],[1,1,150],[4,1,150]],'2-7':[[0,3,1200],[1,1,1200],[5,3,1200]],'3-7':[[3,2,1300],[1,0,550],[2,0,550],[4,0,550],[5,0,550]],'4-7':[[3,0,2400],[1,2,1450],[1,1,1450],[4,1,1450],[5,2,1450]],'5-7':[[3,3,10000]],'6-7':[[3,3,10000]]};
+ // P 10-24: each round's crabs split the replaced authored neutrals' total HP (remainder to the first crabs).
+ const cases:Record<string,number[][]>={'1-2':[[2,2,110],[4,2,110]],'1-3':[[2,2,147],[4,2,147],[1,1,146]],'1-4':[[2,2,190],[4,2,190],[1,1,190],[4,1,190]],'2-7':[[0,3,400],[1,1,400],[5,3,400]],'3-7':[[3,2,540],[1,0,540],[2,0,540],[4,0,540],[5,0,540]],'4-7':[[3,0,960],[1,2,960],[1,1,960],[4,1,960],[5,2,960]],'5-7':[[3,3,6000]],'6-7':[[3,3,9000]]};
+ const authored:Record<string,number>={'1-2':220,'1-3':440,'1-4':760,'2-7':1200,'3-7':2700,'4-7':4800,'5-7':6000,'6-7':9000};
+ for(const [round,expected] of Object.entries(cases))expect(expected.reduce((n,c)=>n+c[2],0)).toBe(authored[round]);
  for(const [round,expected] of Object.entries(cases)){const encounter=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.encounterId===`scuttle-puddle/${round}`)!;expect(encounter.units.map(u=>[u.cell.col,u.cell.row,u.maxHp])).toEqual(expected);}
 });
 it('invalid opening facts fail atomically before a batch B entry grant',()=>{

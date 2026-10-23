@@ -65,7 +65,7 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   let a=live.revealed,b=roundTrip(a);const events=[...live.revealPrefix];
   while(a.phase==='combat'){const x=api.stepMatch(a),y=api.stepMatch(b);expect(y).toEqual(x);events.push(...x.events);a=x.state;b=y.state;}
   expect(events).toEqual(live.events);expect(a).toEqual(live.ended);expect(a.phase).toBe('settlement');
-  expect(a.m8.loot.receipts).toHaveLength(prepared.m8.loot.receipts.length+7);
+  expect(a.m8.loot.receipts).toHaveLength(prepared.m8.loot.receipts.length+8); // v22: the first 4-7 orb also carries the component anvil
   expect(api.nextRound(roundTrip(a),24)).toEqual(api.nextRound(a,24));
   const next=roundTrip(accepted(api.nextRound(a,24)));expect(next.roundDefinitionId).toBe('5-1');
   expect(next.m8.loot.receipts).toEqual(a.m8.loot.receipts);expect(next.resourceProvenance).toEqual(a.resourceProvenance);

@@ -7,7 +7,7 @@ import {variant,copper,silver,LIVE,stream,COMPONENTS,COMPLETED} from './fixtures
 import {lootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {freezeLootThroughRound,LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
 import {EPIC_LOOT} from '../src/simulation/content/loot';
-import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch,openAnvil} from '../src/simulation/match';
+import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch,openAnvil,sellUnit,startMatchCombat} from '../src/simulation/match';
 import {planConsumable,replayConsumableItems,reforgeCandidates} from '../src/simulation/consumables';
 import {prepareMatchLoot,revealMatchLoot,grantDirectLoot} from '../src/simulation/loot-runtime';
 import {planOrbClaim} from '../src/simulation/orb-claim';
@@ -22,6 +22,8 @@ import {appendMechanicReceipt,grantMechanicItem,grantMechanicUnit} from '../src/
 import {G24_FORGE_POOLS} from '../src/simulation/content/g2-4-forges';
 import {epicForgeOffers,openEpicForge,EPIC_REWARD_NAMES,validateEpicForges,settleTerminalEpicForges} from '../src/simulation/epic-forges';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
+import {publicAuthoredPreparation} from './fixtures/m8-neutral-public-route';
+import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {G23_BLACK_MARKETS,G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import type {MatchState} from '../src/simulation/match-types';
@@ -190,15 +192,24 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(stepMatch(state)).toEqual({state,events:[]});expect(new Set(state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(state.m8.loot.receipts.length);
  });
  it('authenticates neutral opening HP after earned radiant health auras and rejects altered frozen HP',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v22-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
-  let state=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='6-7'&&s.phase==='preparation'));
+  // v22: the seed-42 golden route draws the crab opening, whose 6-7 crab has no authored neutral opening plan;
+  // take the 6-7 prefix from the crab-free public route instead (Rift Herald keeps its opening state).
+  let state=publicAuthoredPreparation('6-7');
   const target=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board'&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
+  // Keep only the aura target fielded so the restore reaches the neutral opening check, not the V19 trait replay.
+  for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&u.id!==target.id))state=accepted(sellUnit(state,u.id));
   state=accepted(grantMechanicItem(state,{receiptId:'test:radiant-opening',source:'test',definitionId:'TFT5_Item_SunfireCapeRadiant'}));
   state=accepted(equipItem(state,state.items.find(i=>i.definitionId==='TFT5_Item_SunfireCapeRadiant')!.id,target.id,0));
+  // v22: a lone holder reaches overtime (tick 600), where the full overtime replay authenticates first;
+  // corrupt the last pre-overtime checkpoint so the neutral opening validator is the first to see it.
+  let checkpoint=accepted(startMatchCombat(state));
+  while(checkpoint.phase==='combat'&&checkpoint.combat!.tick<S13_COMBAT_RULES.overtimeStartTick-1)checkpoint=stepMatch(checkpoint).state;
+  expect(checkpoint.combat!.openingState!.initialUnits.length).toBeGreaterThan(0);
+  expect(restoreMatch(serializeMatch(checkpoint))).toEqual(checkpoint);
+  const corrupt=structuredClone(checkpoint);Object.assign(corrupt.combat!.openingState!.initialUnits[0],{hp:corrupt.combat!.openingState!.initialUnits[0].hp+1});
+  expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
   state=battle(state).ended;
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
-  const corrupt=structuredClone(state);Object.assign(corrupt.combat!.openingState!.initialUnits[0],{hp:corrupt.combat!.openingState!.initialUnits[0].hp+1});
-  expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
  });
  it('the real 6-7 terminal keeps full-bench heroes retained-terminal while completing forge fallback once',()=>{
   const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v22-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;

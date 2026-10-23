@@ -682,7 +682,9 @@ it('rejects each old release identity without migration shortcuts', () => {
   const fresh = createMatch(42);
   for (const epoch of ['v21-opening-encounters','v20-black-market','v20-live-combat']) {
   const parent = load(`tests/${epoch}-content-baseline.json`);
-  for (const key of ['contentDigest', 'rulesVersion', 'contentVersion', 'schemaVersion', 'commandProtocolVersion'] as const) {
+  for (const key of ['contentDigest', 'rulesVersion', 'contentVersion'] as const) expect(parent[key]).not.toBe(fresh[key]);
+  // v22 keeps schema 12 from v21 by design; every identity field that differs must reject on its own.
+  for (const key of (['contentDigest', 'rulesVersion', 'contentVersion', 'schemaVersion', 'commandProtocolVersion'] as const).filter(key => parent[key] !== fresh[key])) {
     const rejected = { ...fresh, [key]: parent[key] };
     expect(() => restoreMatch(rejected)).toThrow();
     expect(() => restoreMatch(JSON.stringify(rejected))).toThrow();

@@ -162,7 +162,7 @@ describe('battle opening slices', () => {
     });
     try {
       expect(room.state.seats.filter(s => s.alive).map(s => s.match.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length))
-        .toEqual([7, 8, 8, 8, 9, 8, 7]);
+        .toEqual([8, 8, 8, 7, 8, 8, 8]); // v22 recording (battle-start.json checkpoint round 23)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;

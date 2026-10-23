@@ -27,12 +27,14 @@ export const GIANT_CRAB_ANVILS = 2;
 export const GIANT_CRAB_SILVER_BOXES = 2;
 export const GIANT_CRAB_BASIC_ATTACK = false;
 // Raw row, raw column, HP. Project mapping: col=column-1, row=8-row.
+// P (10-24, coordinator for the user): scuttle HP is unverified in the research, so each round's crabs split
+// the replaced authored neutrals' total HP (remainder to the first crabs): 220/440/760/1200/2700/4800/6000/9000.
 export const CRAB_GROUPS: Readonly<Record<string, readonly (readonly [number,number,number])[]>> = freezeContent({
- '1-2':[[6,3,250],[6,5,250]],'1-3':[[6,3,250],[6,5,250],[7,2,150]],
- '1-4':[[6,3,250],[6,5,250],[7,2,150],[7,5,150]],'2-7':[[5,1,1200],[7,2,1200],[5,6,1200]],
- '3-7':[[6,4,1300],[8,2,550],[8,3,550],[8,5,550],[8,6,550]],
- '4-7':[[8,4,2400],[6,2,1450],[7,2,1450],[7,5,1450],[6,6,1450]],
- '5-7':[[5,4,10000]],'6-7':[[5,4,10000]],
+ '1-2':[[6,3,110],[6,5,110]],'1-3':[[6,3,147],[6,5,147],[7,2,146]],
+ '1-4':[[6,3,190],[6,5,190],[7,2,190],[7,5,190]],'2-7':[[5,1,400],[7,2,400],[5,6,400]],
+ '3-7':[[6,4,540],[8,2,540],[8,3,540],[8,5,540],[8,6,540]],
+ '4-7':[[8,4,960],[6,2,960],[7,2,960],[7,5,960],[6,6,960]],
+ '5-7':[[5,4,6000]],'6-7':[[5,4,9000]],
 });
 export const isCrabEncounter = (id: string|null|undefined) => id==='scuttle-puddle'||id==='crab-rave';
 export const trainerStar = (stage:number):1|2|3 => stage>=6?3:stage>=4?2:1;

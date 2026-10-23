@@ -6,8 +6,12 @@ async function main(){
   const {transferPreparation,players}=await server.ssrLoadModule('/tests/fixtures/t13-loot-public.ts');
   const s=await transferPreparation(),donor=s.anomalyBinding.unitId;
   const survivor=players(s).find(u=>u.definitionId==='tristana'&&u.id!==donor).id;
-  const pair=[donor,survivor];const counts=['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'];
-  const anchor={epoch:'v22-online-rules',seed:s.seed,contentDigest:s.contentDigest,donor,survivor,reward:`unit-${s.nextUnitSerial}`,tg:s.items.find(i=>i.definitionId==='thiefs-gloves').id,
+  const pair=[donor,survivor];
+  // v22: the 4-7 plan can birth an anvil unit (component anvil) before the Tristana reward; count births in grant order.
+  const drops=s.m8.loot.frozen.rounds.find(r=>r.encounterPlan.roundId===s.roundDefinitionId).encounterPlan.drops;
+  const rewardIndex=drops.findIndex(d=>d.payload.kind==='unit'&&d.payload.definitionId==='tristana');assert(rewardIndex>=0,'Tristana reward drop');
+  const births=drops.slice(0,rewardIndex).filter(d=>d.payload.kind==='unit'||d.payload.kind==='forge').length;const counts=['unit-acquired','combat-growth-committed','item-acquired','unit-upgraded','item-combined','unit-sold','item-equipped'];
+  const anchor={epoch:'v22-online-rules',seed:s.seed,contentDigest:s.contentDigest,donor,survivor,reward:`unit-${s.nextUnitSerial+births}`,tg:s.items.find(i=>i.definitionId==='thiefs-gloves').id,
    acquisitions:s.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&pair.includes(e.unitId)),
    provenanceCounts:counts.map(kind=>s.resourceProvenance.entries.filter(e=>e.kind===kind).length),provenanceLength:s.resourceProvenance.entries.length,nextUnitSerial:s.nextUnitSerial};
   assert(anchor.acquisitions.every(e=>e.source.kind==='shop'));
