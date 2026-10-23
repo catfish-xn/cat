@@ -58,7 +58,7 @@ describe('3D scouting input boundary', () => {
     vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.doUnmock('three'); vi.resetModules();
   });
 
-  it('hides home, cancels an in-flight orb walk, and restores home and orb clicks on return', () => {
+  it('hides home, cancels an in-flight orb walk, and restores home and orb walks on return', () => {
     const { scene, tabletop, scout } = debug();
     const home = scene.getObjectByName('render3d-legend-me')!;
     const start = home.position.clone();
@@ -88,8 +88,11 @@ describe('3D scouting input boundary', () => {
     expect(scout.group.visible).toBe(false);
     expect(scout.group.children).toHaveLength(0);
     expect(scout.walkVisitor({ x: 100, y: 100 })).toBe(false);
+    // Back home, a click on my orb sends my legend onto it (it claims on arrival), never a claim from afar.
     click(0, at.x, at.y);
-    expect(controls.claimOrb).toHaveBeenCalledExactlyOnceWith('mine');
+    expect(walk).toHaveBeenCalledOnce();
+    expect(controls.claimOrb).not.toHaveBeenCalled();
+    expect(tabletop.debug().legends).toContain('legend:me:standin:walk');
     expect(fetchAsset).not.toHaveBeenCalled();
   });
 

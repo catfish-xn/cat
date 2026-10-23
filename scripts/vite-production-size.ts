@@ -70,6 +70,8 @@ export function compactEntryStrings(code: string): string {
 
 // Pin upstream code we specialize. An engine update must be re-audited instead
 // of silently losing a required export or leaving an optional require in place.
+// phaser is pinned to an exact version in package.json for the same reason. Changing
+// a flag in vite.config.ts replacePhaserFlags (e.g. enabling WEBGL_DEBUG) also needs a re-audit.
 const PHASER_HASHES: Record<string, string> = {
   'math/index.js': '14f321d1a69a8f55c1ab8d20e4440029f3a2667d064b372ae0874051136d7709',
   'core/Config.js': '06b52660193d26c96cba779dab3bb2d7363725a14f08ace3ea5e4f622e36f5c9',
@@ -126,7 +128,7 @@ export function productionSizePlugins(): Plugin[] {
     transform(code, id) {
       const path = normalize(id), marker = '/node_modules/phaser/src/', at = path.indexOf(marker);
       if (at < 0) {
-        if (!path.includes('/node_modules/') && /\/src\/.*\.[jt]s$/.test(path)) assertNoPhaserFxUse(code, id);
+        if (!path.includes('/node_modules/') && /\/src\/.*\.(?:[cm]?[jt]s|[jt]sx)$/.test(path)) assertNoPhaserFxUse(code, id);
         return null;
       }
       const module = path.slice(at + marker.length), root = path.slice(0, at + marker.length);
