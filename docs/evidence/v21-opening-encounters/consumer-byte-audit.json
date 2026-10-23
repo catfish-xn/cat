@@ -197,9 +197,9 @@
     "tests/fixtures/v21-opening-encounters-herald-raw/manifest.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 41314,
+      "currentBytes": 41424,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "164890dcb86984f6b383922037dc0a01e7a93360d46047437c1221ea51432fc0",
+      "currentSha256": "cd5bc07bb32f72a19abfd602a622ff174aa6ea6eeb2bce7fa88fb1fede3faf57",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v21-opening-encounters-herald-raw/quicksilver.json": {
@@ -414,9 +414,9 @@
     },
     "tests/server/fixtures/battle-start.json": {
       "previousBytes": 1371639,
-      "currentBytes": 1377377,
+      "currentBytes": 1377378,
       "previousSha256": "37f502131e177a3abadff0874d11f2f672c19963ea3b4be22cb51432cbc909df",
-      "currentSha256": "e53c933cd3615d3249af94c53af653cd2c27d61505bedb2373d4e54aa392aee4",
+      "currentSha256": "e286e4e33bdd20e172ddadf0101ab647957fd6a38662264826fc7d34aa7b9ca6",
       "firstDifferentByte": 11
     },
     "tests/server/t10-combat-ops.test.ts": {
