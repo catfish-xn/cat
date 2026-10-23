@@ -26,7 +26,7 @@
     "test:timing": "vitest run --project timing --no-file-parallelism"
   },
   "dependencies": {
-    "phaser": "^3.90.0",
+    "phaser": "3.90.0",
     "three": "0.180.0",
     "ws": "8.22.0"
   },
