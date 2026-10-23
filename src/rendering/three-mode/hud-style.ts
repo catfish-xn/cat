@@ -3,6 +3,22 @@
  * the 2D entry does not carry them. The page-wide 3D layout stays in style.css.
  */
 const STYLE = `
+/* 3D owns the world-plane shock. The shared DOM receipt supplies a screen-space gold curtain and label. */
+body:has(.render3d-layer) .mel-save-feedback .mel-save-shield { display: none; }
+body:has(.render3d-layer) .mel-save-feedback::before {
+  background: radial-gradient(ellipse at 50% 46%, #fff3b95c, #d79e2945 48%, #84601c22 76%, transparent),
+    repeating-conic-gradient(from -22deg at 50% 115%, transparent 0deg 7deg, #ffe8a438 9deg, transparent 12deg 20deg);
+}
+body:has(.render3d-layer) .mel-save-feedback::after {
+  content: ''; position: absolute; inset: 10% 8% 16%; pointer-events: none;
+  background: linear-gradient(90deg, transparent 47%, #fff2b3b3 49.5%, #fff7d6dd 50%, #fff2b3b3 50.5%, transparent 53%),
+    repeating-conic-gradient(from 244deg at 50% 80%, transparent 0deg 14deg, #c78c2966 16deg, #ffe79fb3 18deg, transparent 21deg 28deg);
+  clip-path: polygon(0 5%, 18% 19%, 37% 22%, 50% 0, 63% 22%, 82% 19%, 100% 5%, 94% 48%, 76% 74%, 58% 61%, 50% 100%, 42% 61%, 24% 74%, 6% 48%);
+  filter: drop-shadow(0 0 16px #ffe698); animation: mel-save-gold 2s ease-out both;
+}
+body:has(.render3d-layer) .mel-save-reduced::after { display: none; }
+@media (prefers-reduced-motion: reduce) { body:has(.render3d-layer) .mel-save-feedback::after { display: none; } }
+
 /* Item bench as the original HUD has it: ten fixed slots in the far-left column, filled from the top and level with the
    trait list beside it (empty slots stay visible); past what fits it scrolls, with a thin scrollbar beside the slots. */
 body[data-online]:has(> .render3d-layer) .item-dock, body[data-online]:has(> .render3d-layer) .item-dock:empty { display: flex; top: 20dvh; bottom: auto; left: 6px; width: 54px;

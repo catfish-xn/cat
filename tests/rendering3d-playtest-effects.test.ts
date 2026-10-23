@@ -9,16 +9,17 @@ import { planActionEffects, type EffectPlayback } from '../src/rendering/three-m
 
 describe('10-22 reviewed action staging', () => {
   const prefix = 'renata_tft13_renataglasc_base_e_';
-  it('launches two real child missiles from the canisters and lands them with the target flash', () => {
+  it('launches one child missile from the centre and lands it with the target flash and area burst', () => {
     const effects = ['cas_r_canister', 'cas_l_canister', 'cas_center', 'mis', 'mis_child_01', 'tar', 'aoe'].map(id => ({ id: prefix + id }));
     const impact: EffectPlayback = { anchor: 'target', delay: 0.9, maxDuration: 1 };
     const plan = planActionEffects('renata', 'cast', effects, { [prefix + 'tar']: impact });
-    expect(plan).toHaveLength(7);
+    expect(plan).toHaveLength(6);
     expect(plan.some(e => e.id === prefix + 'mis')).toBe(false);
     const missiles = plan.filter(e => e.playback.anchor === 'projectile');
-    expect(missiles.map(e => e.playback.bone)).toEqual(['L_Canister', 'R_Canister']);
+    expect(missiles.map(e => e.playback.bone)).toEqual(['C_Canister']);
     expect(missiles.every(e => Math.abs(e.playback.delay + e.playback.maxDuration - impact.delay) < 1e-9)).toBe(true);
     expect(plan.find(e => e.id === prefix + 'tar')?.playback).toEqual(impact);
+    expect(plan.find(e => e.id === prefix + 'aoe')?.playback).toEqual(impact);
   });
   it('preserves unrelated and older asset bindings without guessing new effect ids', () => {
     for (const [unit, action] of [['renata', 'attack'], ['other', 'cast'], ['renata', 'cast']] as const) {
@@ -114,6 +115,36 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
   };
   const cast = (sourceId: string, targetId: string, tick = 1) =>
     listener.events([{ type: 'cast', tick, eventSeq: tick, sourceId, targetIds: [targetId] } as unknown as DisplayCombatEvent]);
+
+  it('plays Renata ground impact without assets, shows only receipted shields and clears combat effects at a phase change', async () => {
+    const me = piece({ id: 'me', definitionId: 'renata' }), ally = piece({ id: 'ally', definitionId: 'sett' });
+    const foe = piece({ id: 'foe', definitionId: 'garen', team: 'enemy', x: 250 });
+    await publish([me, ally, foe]);
+    const scene = bodies.get('renata')!.parent!.parent!;
+    cast('me', 'foe');
+    expect(bodies.get('sett')!.parent!.getObjectByName('renata-receipt-shield')).toBeUndefined();
+    listener.events([{ type: 'shieldLayerChanged', tick: 1, eventSeq: 2, reason: 'granted', remaining: 10, targetId: 'ally',
+      key: JSON.stringify(['combat', 'me', 'ability', 'renata-ability', 'me', 0, null, 'ally', 'source']) }]);
+    expect(bodies.get('sett')!.parent!.getObjectByName('renata-receipt-shield')).toBeDefined();
+    advance(890); expect(scene.getObjectByName('renata-reference-burst')).toBeUndefined();
+    advance(30); expect(scene.getObjectByName('renata-reference-burst')).toBeDefined();
+    expect(bodies.get('sett')!.parent!.getObjectByName('renata-receipt-shield')).toBeUndefined();
+    await publish([me, ally, foe], false);
+    expect(scene.getObjectByName('renata-reference-burst')).toBeUndefined();
+    advance(1200); expect(scene.getObjectByName('renata-reference-burst')).toBeUndefined();
+  });
+
+  it('starts Mel only from the save feed, survives settlement phase changes, and expires in 2 seconds', async () => {
+    const me = piece({ id: 'me', definitionId: 'mel' });
+    await publish([me]); const scene = bodies.get('mel')!.parent!.parent!;
+    cast('me', 'me'); advance(1000);
+    expect(scene.getObjectByName('mel-reference-burst')).toBeUndefined();
+    listener.playerSaved!({ type: 'playerSaved', source: 'mel', battleId: 'b' });
+    expect(scene.getObjectByName('mel-reference-burst')).toBeDefined();
+    await publish([me], false); advance(1700);
+    expect(scene.getObjectByName('mel-reference-burst')).toBeDefined();
+    advance(310); expect(scene.getObjectByName('mel-reference-burst')).toBeUndefined();
+  });
 
   it('dashes Ambessa\'s model 70% toward the target and back, leaving the root on its cell; others stay put', async () => {
     const me = piece({ id: 'me', definitionId: 'ambessa', x: 150, y: 200 });

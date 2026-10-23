@@ -9,6 +9,9 @@
  * Pointer input on the 3D board is replayed through BoardControls (hit volumes for units, the board plane for drop points):
  * BoardScene runs its own drag rules and session commands, so this layer never issues a command or reads rules itself.
  */
+import { createReferenceBurst, createRenataShield, renataShieldTarget, renataRadius, RENATA_IMPACT_DELAY } from './reference-fx';
+import { prepareRenataModel } from './renata-glass';
+import { createRenataMissile, RENATA_LAUNCH_DELAY } from './renata-missile';
 import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
 import {
@@ -127,6 +130,8 @@ function axisDistance(origin: Vector3, direction: Vector3, base: Vector3, height
 // Injected by three-loader.ts: a static import would make Rollup move board-feed.ts (also used by BoardScene)
 // into this chunk and the 2D entry would then load the whole 3D chunk.
 let feed: BoardFeed | null = null;
+let reducedMotion = () => false;
+export function useReducedMotion(read: () => boolean): void { reducedMotion = read; }
 export function useBoardFeed(next: BoardFeed): void { feed = next; }
 // Injected the same way: the shell's one-line preload status (asset-preload.ts describePreload).
 // `fraction` is the share downloaded while a download runs (the shell's progress bar), null once there is none.
@@ -192,6 +197,8 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
     // draws those with a renderer of its own, which uploads them again.
     const legendUrls = new Set<string>();
     const cache = new ModelCache(manifest, assetBase, url => reader.readModel(url).then(model => {
+      const renata = cache.manifest.models.renata;
+      if (renata && url === assetUrl(assetBase, renata.path)) prepareRenataModel(model.scene);
       if (!legendUrls.has(url)) releaseAfterUpload(model.scene);
       return model;
     }));
@@ -744,10 +751,19 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   let clock = 0, generation = 0;
   const queued: { at: number; generation: number; run: () => void }[] = [];
   const live = new Set<LiveEffect>();
+  type ReferenceEffect = ReturnType<typeof createReferenceBurst> | ReturnType<typeof createRenataShield> | ReturnType<typeof createRenataMissile>;
+  const referenceEffects = new Set<ReferenceEffect>();
+  let saveBurst: ReturnType<typeof createReferenceBurst> | null = null, saveExpires = 0, saveGoldLeft: number | null = null;
+  const addReference = (fx: ReferenceEffect) => {
+    if (referenceEffects.size >= MAX_EFFECTS) { fx.dispose(); return; }
+    referenceEffects.add(fx);
+  };
   const clearEffects = () => {
     generation++; queued.length = 0;
     for (const effect of live) effect.fx.dispose();
     live.clear();
+    for (const fx of referenceEffects) fx.dispose();
+    referenceEffects.clear();
   };
   const worldPoint = (view: PieceView, bone: string | undefined, out: Vector3): boolean => {
     const node = bone ? view.body?.getObjectByName(bone) : undefined;
@@ -788,8 +804,28 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined) => {
     const source = pieces.get(sourceId);
-    if (!actionEffects || !source?.alive) return;
+    if (!source?.alive) return;
     const owner = generation;
+    if (action === 'cast' && source.definitionId === 'renata') {
+      if (!targetId || !pieces.has(targetId) || queued.length > MAX_QUEUED - 2) return;
+      // One endpoint for both missile and impact, even if the target moves during the visual flight.
+      const point = pieces.get(targetId)!.root.position.clone();
+      if (!reducedMotion()) queued.push({ at: clock + RENATA_LAUNCH_DELAY, generation: owner, run: () => {
+        if (source.disposed || !source.alive || reducedMotion()) return;
+        const from = new Vector3();
+        if (!worldPoint(source, 'C_Canister', from)) worldPoint(source, undefined, from);
+        const fx = createRenataMissile(from, point.clone().setY(IMPACT_HEIGHT), grid?.radius ?? 34);
+        scene.add(fx.object); addReference(fx);
+      } });
+      queued.push({ at: clock + RENATA_IMPACT_DELAY, generation: owner, run: () => {
+        const fx = createReferenceBurst('renata', renataRadius(grid?.radius ?? 34), reducedMotion());
+        fx.object.position.copy(point); scene.add(fx.object); addReference(fx);
+      } });
+      // Exported E_Cas_L/R contain duplicate canister meshes and E_Mis_Child is edge-on without
+      // the original parent system. The reviewed single-flight release replaces those fragments.
+      return;
+    }
+    if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
     for (const { id, playback: spec } of planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
       if (queued.length >= MAX_QUEUED) return;
       queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner) });
@@ -797,6 +833,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const updateEffects = (seconds: number) => {
     clock += seconds;
+    for (const fx of referenceEffects) { fx.update(seconds, camera); if (fx.finished) { fx.dispose(); referenceEffects.delete(fx); } }
+    if (saveBurst) {
+      saveBurst.update(seconds);
+      if (saveGoldLeft !== null && (saveGoldLeft -= seconds) <= 0) {
+        saveGoldLeft = null;
+        if (performance.now() < saveExpires && !reducedMotion()) tabletop.saved();
+      }
+      if (saveBurst.finished || performance.now() >= saveExpires) { saveBurst.dispose(); saveBurst = null; }
+    }
     // Oldest first, MAX_STARTS_PER_FRAME at most; the rest wait for the next frame unless their moment has passed.
     let started = 0;
     for (let i = 0; i < queued.length;) {
@@ -900,6 +945,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     let latest = -Infinity;
     for (const event of events) latest = Math.max(latest, tickOf(event) ?? -Infinity);
     for (const event of events) {
+      const currentEffect = (tickOf(event) ?? latest) > latest - EFFECT_TICKS;
+      const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
+      const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
+      if (recipient?.alive && recipient.root.visible) {
+        const fx = createRenataShield(grid?.radius ?? 34, reducedMotion());
+        recipient.root.add(fx.object); addReference(fx);
+      }
       if (!ANIMATION_EVENTS.has(event.type)) continue;
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
@@ -964,7 +1016,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const visiting = () => scout.active || scoutView?.watching === true;
   const mine = () => !stage.active && !visiting();
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: () => { if (!visiting()) tabletop.saved(); },
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: event => {
+    if (event.source !== 'mel' || visiting() || stage.active || !lastFrame) return;
+    saveBurst?.dispose();
+    const f = lastFrame, spanX = Math.sqrt(3) * f.hexRadius * f.columns, spanZ = f.hexRadius * 1.5 * (f.rows - 1);
+    saveBurst = createReferenceBurst('mel', Math.hypot(spanX, spanZ) * .55, reducedMotion());
+    saveBurst.object.position.set(f.origin.x + (spanX - Math.sqrt(3) * f.hexRadius) / 2, 0, f.origin.y + spanZ / 2);
+    scene.add(saveBurst.object); saveExpires = performance.now() + 2000; saveGoldLeft = .65;
+  },
     unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
@@ -1282,7 +1341,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
-      withdrawPicker(); clearEffects(); tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
