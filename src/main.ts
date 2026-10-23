@@ -6,10 +6,12 @@ import { BOARD_LAYOUT } from './rendering/layout-config';
 import { applyThemeVariables } from './presentation/theme';
 import { installImageFallback } from './presentation/s13-assets';
 import { mountBuildBadge } from './rendering/build-badge';
+import { mountFullscreenToggle } from './rendering/fullscreen-toggle';
 import { mountThreeMode } from './rendering/three-mode/three-loader';
 applyThemeVariables();
 const removeImageFallback = installImageFallback();
 const removeBuildBadge = mountBuildBadge(document.body);
+const removeFullscreenToggle = mountFullscreenToggle(document.body);
 const app = document.getElementById('app')!;
 const shell = createAppShell(app);
 const board = shell.board;
@@ -52,7 +54,7 @@ new Phaser.Game({
         for (const type of mouseEvents) game.canvas.removeEventListener(type, ignoreTouchMouse, true);
         for (const type of geometryEvents) game.canvas.removeEventListener(type, updateInputBounds, true);
         window.removeEventListener('scroll', updateInputBounds, true);
-        observer.disconnect(); shell.dispose(); removeImageFallback(); removeBuildBadge(); threeMode.dispose();
+        observer.disconnect(); shell.dispose(); removeImageFallback(); removeBuildBadge(); removeFullscreenToggle(); threeMode.dispose();
         if (frame !== null) cancelAnimationFrame(frame);
       });
     },
