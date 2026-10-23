@@ -1,28 +1,48 @@
 import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateResistsShields } from '../src/simulation/m8/resists-shield-restore';
 import { expect, it } from 'vitest';
-import { startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
+import { buyUnit, startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
-import { accepted, reachRound, purchasedThreeHeroMatch, resolveM5Choices, battle } from './match-helpers';
+import { overtimeReceivedBps } from '../src/simulation/combat-overtime';
+import { accepted, reachRound, resolveM5Choices, battle } from './match-helpers';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
 const crest = 'TFT_Item_Artifact_LightshieldCrest';
+// v22: seed 5 now carries opening-reward Powder/Silco on the bench (unit-2/unit-3), so the shared
+// purchasedThreeHeroMatch() numbers Maddie/Lux unit-4/unit-5 and deploys both onto (5,7), benching
+// Maddie. Rebuild the intended Irelia + Maddie (3,7) + Lux (5,7) board here by definition, not serial.
+let maddieId = 'unit-2', luxId = 'unit-3';
+function threeHeroMatch(): MatchState {
+  let state = reachRound('2-1', true, 5);
+  state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
+  for (const [id, col] of [['maddie', 3], ['lux', 5]] as const) {
+    const slot = state.shop.slots.findIndex(s => s.status === 'available' && s.definitionId === id);
+    state = accepted(buyUnit(state, slot, state.shop.generation));
+    const unitId = `unit-${state.nextUnitSerial - 1}`;
+    if (id === 'maddie') maddieId = unitId; else luxId = unitId;
+    state = accepted(deployMatchUnit(state, unitId, { kind: 'board', cell: { col, row: 7 } }));
+  }
+  return state;
+}
 function publicStart(dynamic = false, deathHolder = false, bracer = false): MatchState {
-  let state = dynamic ? purchasedThreeHeroMatch() : reachRound('2-1', true, 5);
+  // v22: seed 5 now fields opening-reward Powder+Silco (Dominator), which routes the save through the
+  // earlier full V19 replay; seed 42 keeps a plain Irelia board so the resists validator decides.
+  let state = dynamic ? threeHeroMatch() : reachRound('2-1', true, 42);
   if (!dynamic) for (const [i, unit] of state.preparation.units.filter(u => u.team === 'player').entries())
     state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: { col: i * 2 + 1, row: 4 } }));
   if (deathHolder) {
-    state = accepted(deployMatchUnit(state, 'unit-1', {kind: 'board', cell: {col: 1, row: 7}}));
-    state = accepted(deployMatchUnit(state, 'unit-2', {kind: 'board', cell: {col: 2, row: 4}}));
+    // v22 combat (mana/overtime) keeps a front-line Maddie alive to the end, so the death holder is
+    // now back-line Lux behind front-line Irelia (1,4) + Maddie (2,4): she dies at tick 489, pre-overtime.
+    state = accepted(deployMatchUnit(state, maddieId, {kind: 'board', cell: {col: 2, row: 4}}));
   }
   for (const [slot, definitionId] of (dynamic && !deathHolder ? [crest, 'gargoyle', ...(bracer ? ['TFT_Item_Artifact_SeekersArmguard'] : [])] : [crest]).entries()) {
     const granted = grantMechanicItem(state, { receiptId: `resists-${slot}`, source: 'resists-restore-test', definitionId });
     if (!granted.ok) throw Error(granted.reason);
-    state = accepted(equipItem(granted.state, granted.state.items.at(-1)!.id, deathHolder ? 'unit-2' : 'unit-1', slot));
+    state = accepted(equipItem(granted.state, granted.state.items.at(-1)!.id, deathHolder ? luxId : 'unit-1', slot));
   }
   return accepted(startMatchCombat(state));
 }
@@ -108,12 +128,13 @@ it('restores the holder-death grant after live defenses and periodic history', (
   let state = publicStart(true, true), death: MatchState | undefined;
   while (state.phase === 'combat') {
     state = stepMatch(state).state;
-    const holder = state.combat!.units.find(u => u.id === 'unit-2')!;
+    const holder = state.combat!.units.find(u => u.id === luxId)!;
     if (!holder.alive && state.combat!.units.some(u => u.shieldLayers?.some(l => l.source.definitionId === crest && l.m8State!.startsAtTick === state.combat!.tick))) {
       death = state; break;
     }
   }
   expect(death).toBeDefined();
+  expect(death!.combat!.tick).toBe(489); // before overtime: the resists replay is the restore authority
   const restored = restoreMatch(JSON.stringify(death));
   expect(restored).toEqual(death); expect(stepMatch(restored)).toEqual(stepMatch(death!));
 });
@@ -172,7 +193,12 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
   expect(holder.triggerLedger!.runtimes.some(r => r.source.definitionId === 'TFT_Item_Artifact_SeekersArmguard' && r.triggerCount > 0)).toBe(true);
   expect(holder.runtime!.abilityPowerFlat).toBe(15);
   expect(readCombatStats(holder, state.combat!).abilityPower).toBe(145);
-  expect(active(state).layer.granted).toBe(217);
+  // 70% of the stacked 155 armor + 155 MR is 217; v22 tick 600 is the first overtime stack, which
+  // scales new shields by 90% (so this checkpoint is authenticated by the overtime full replay).
+  const stats = readCombatStats(holder, state.combat!);
+  expect(stats.armor + stats.magicResist).toBe(310);
+  expect(active(state).layer.granted).toBe(Math.floor(217 * overtimeReceivedBps(600) / 10000));
+  expect(active(state).layer.granted).toBe(195);
   const input = format === 'object' ? state : serializeMatch(state);
   let original = state, restored = restoreMatch(input);
   expect(restored).toEqual(original);
@@ -197,9 +223,10 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
 }, 20000);
 
 it('restores crest shields after a chest grants the holder dual resists, and rejects coherent amount edits', () => {
-  // Public commands only: crest is equipped at combat start; v15 seed 27 naturally
-  // grants Gargoyle at tick 169, before the next crest pulse at tick 180.
-  let state = reachRound('2-1', true, 27);
+  // Public commands only: crest is equipped at combat start; under v22 seed 78 (same Irelia +
+  // Maddie board; v15 used seed 27, whose chest now rolls Bramble Vest) naturally grants
+  // Gargoyle at tick 169, before the next crest pulse at tick 180.
+  let state = reachRound('2-1', true, 78);
   state = accepted(grantMechanicUnit(state, { receiptId: 'chest-crest-holder', source: 'test', definitionId: 'maddie' }));
   const players = state.preparation.units.filter(u => u.team === 'player');
   const receiver = players[0].id, chestHolder = players[1].id;

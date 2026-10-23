@@ -1,7 +1,8 @@
 import {expect,it} from 'vitest';
 import {allocateDamage,permissionsFor,validateDamageContext} from '../src/simulation/m8/damage';
 import type {DamageContext} from '../src/simulation/m8/contracts';
-import {createMatch,equipItem,startMatchCombat,stepMatch} from '../src/simulation/match';
+import {deployMatchUnit,equipItem,startMatchCombat,stepMatch} from '../src/simulation/match';
+import {reachRound,accepted} from './match-helpers';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {advanceDeferredItemDamage} from '../src/simulation/g2-4b-item-kernel';
@@ -37,10 +38,13 @@ it('fully shielded and prevented packets do not create debt; debt cannot revive 
 });
 
 it('public Match persists real debts, reproduces continuation and rejects forged debt timing/identity',()=>{
-  const granted=grantMechanicItem(createMatch(42),{receiptId:'defiance',source:'test',definitionId:'TFT4_Item_OrnnDeathsDefiance'});
+  // v22: every stage-1 PvE fight is now opening crabs, which never damage the holder,
+  // so take the first real fight (2-1) where the holder actually receives packets.
+  const granted=grantMechanicItem(reachRound('2-1',true,42),{receiptId:'defiance',source:'test',definitionId:'TFT4_Item_OrnnDeathsDefiance'});
   if(!granted.ok)throw Error(granted.reason);
   const owner=granted.state.preparation.units.find(u=>u.team==='player')!;
-  const equipped=equipItem(granted.state,granted.state.items.at(-1)!.id,owner.id,0);
+  const fielded=accepted(deployMatchUnit(granted.state,owner.id,{kind:'board',cell:{col:3,row:4}}));
+  const equipped=equipItem(fielded,fielded.items.at(-1)!.id,owner.id,0);
   if(!equipped.ok)throw Error(equipped.reason);
   const start=startMatchCombat(equipped.state);if(!start.ok)throw Error(start.reason);
   let state=start.state,found=false;

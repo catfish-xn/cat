@@ -5,6 +5,7 @@ import {grantMechanicItem,grantMechanicUnit} from '../src/simulation/seat-mechan
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {readG23Progress} from '../src/simulation/g2-3-state';
 import {createItemRandomStreams,drawItemRandom} from '../src/simulation/g2-4b-item-kernel';
+import {S13_COMBAT_RULES} from '../src/simulation/s13-rules';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -22,7 +23,12 @@ it('executes through real combat, settles only successful independent rolls, and
   const start=startMatchCombat(e.state);if(!start.ok)throw Error(start.reason);
   let state=start.state;
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
-  while(state.phase==='combat')state=stepMatch(state).state;
+  // v22: every seed here now runs into overtime (tick >= 600), where the dynamic
+  // overtime replay compares the whole combat first. Keep the last pre-overtime
+  // checkpoint so the item-gold validator is still the first one to judge a forgery.
+  let preOvertime=state;
+  while(state.phase==='combat'){state=stepMatch(state).state;if(state.phase==='combat'&&state.combat!.tick<S13_COMBAT_RULES.overtimeStartTick)preOvertime=state;}
+  expect(preOvertime.combat!.tick).toBe(S13_COMBAT_RULES.overtimeStartTick-1);
   const receipts=state.combat!.itemGoldReceipts!;
   executions+=receipts.length;
   let streams=createItemRandomStreams(state.combatInputBasis!.battleSeed);
@@ -39,12 +45,18 @@ it('executes through real combat, settles only successful independent rolls, and
   expect(stepMatch(restored).state).toEqual(state);
   // Even a self-consistent extra failure and matching RNG cursor cannot create
   // another opportunity: the validator independently reconstructs the battle.
-  const forged=structuredClone(state);
-  const extra=drawItemRandom(forged.combat!.itemRandomStreams!,'collector');
-  Object.assign(forged.combat!,{itemRandomStreams:extra.streams,itemGoldReceipts:[...receipts,
-   {battleId:state.combat!.combatId!,ownerId:owner.id,itemInstanceId:g.state.items.at(-1)!.id,kind:'collector',tick:state.combat!.tick,
-    ordinal:receipts.length,id:'forged-opportunity',word:extra.word,gold:0}]});
-  expect(()=>restoreMatch(forged)).toThrow('authoritative item gold replay');
+  expect(restoreMatch(serializeMatch(preOvertime))).toEqual(preOvertime);
+  const forgeAt=(base:typeof state)=>{
+   const forged=structuredClone(base),prior=base.combat!.itemGoldReceipts!;
+   const extra=drawItemRandom(forged.combat!.itemRandomStreams!,'collector');
+   Object.assign(forged.combat!,{itemRandomStreams:extra.streams,itemGoldReceipts:[...prior,
+    {battleId:base.combat!.combatId!,ownerId:owner.id,itemInstanceId:g.state.items.at(-1)!.id,kind:'collector',tick:base.combat!.tick,
+     ordinal:prior.length,id:'forged-opportunity',word:extra.word,gold:0}]});
+   return forged;
+  };
+  expect(()=>restoreMatch(forgeAt(preOvertime))).toThrow('authoritative item gold replay');
+  // The terminal (overtime) forgery is still rejected, by the earlier full overtime replay.
+  expect(()=>restoreMatch(forgeAt(state))).toThrow('authoritative overtime replay');
  }
  expect(executions).toBeGreaterThan(0);expect(awards).toBeGreaterThan(0);
 },20_000);
