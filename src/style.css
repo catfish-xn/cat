@@ -1379,7 +1379,7 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 @media (prefers-reduced-motion: reduce) { .mel-save-feedback { animation-name: mel-save-fade; } }
 @keyframes mel-save-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 /* Fullscreen: the button sits bottom-right above the build badge; while active the desktop width/height caps are lifted. */
-.fullscreen-toggle { position: fixed; bottom: 28px; right: 6px; z-index: 45; min-width: 0; min-height: 0; padding: 3px 10px; font-size: 12px;
+.fullscreen-toggle { position: fixed; bottom: 28px; right: 6px; z-index: 45; min-width: 44px; min-height: 44px; padding: 0 12px; font-size: 13px;
   color: #cfe3e8; background: rgba(16, 25, 35, .78); border: 1px solid #3c5866; border-radius: 6px; cursor: pointer; }
 .fullscreen-toggle:hover, .fullscreen-toggle:focus-visible { color: #fff; border-color: #68ddd0; }
 /* 3D online: the seat minimap fills the bottom-right corner; the free corner under 切回 2D takes the button. */
