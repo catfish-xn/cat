@@ -15,7 +15,7 @@ import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, Public
 import { carouselPickedSlot, carouselReleased } from './carousel';
 import { d14PublicUnitMark, listCarouselSlots, readItemSummons, readOpeningEncounterView, readPublicOrbSummary, type OpeningEncounterView } from '../../server-entry';
 import { findPairing } from './pairing';
-import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
+import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatChoiceDeadline, SeatPublic, SeatState } from './types';
 
 const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
   waiting: 'lobby', carousel: 'carousel', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', 'awaiting-settlement': 'settlement', settlement: 'settlement', ended: 'ended',
@@ -167,8 +167,12 @@ const swapResult = (result: CombatResult | null): CombatResult | null => result 
  * as it returns it. It is set in preparation and while my battle runs (a PvP seat stays in preparation under the roster
  * lock, a PvE seat is in combat) and null in choice, settlement, supply rounds, game over and for an eliminated seat.
  */
-export function toSeatPrivateView(match: MatchState): SeatStateView {
-  return { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match), itemSummons: toItemSummonViews(match) };
+export function toSeatPrivateView(match: MatchState, choiceDeadline?: SeatChoiceDeadline): SeatStateView {
+  const view: SeatStateView = { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match), itemSummons: toItemSummonViews(match) };
+  // v22 anvil units: the seat's own anvil deadline, only while it still names the open choice.
+  const pending = match.pendingChoice;
+  return choiceDeadline && pending && pending.choiceId === choiceDeadline.choiceId && pending.generation === choiceDeadline.generation
+    ? { ...view, choiceDeadline: { choiceId: choiceDeadline.choiceId, generation: choiceDeadline.generation, endsAt: choiceDeadline.deadlineAt } } : view;
 }
 /**
  * G2-4b (§26): my movable preparation summons as the rules' `readItemSummons` places them, copied field by field; empty

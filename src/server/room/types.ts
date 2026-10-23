@@ -66,7 +66,14 @@ export interface SeatState {
    * settlement with its post-battle merges); the server sends them with that state push. Ignored once the seat moved on.
    */
   readonly serverEvents?: { readonly seatRevision: number; readonly events: readonly MatchEvent[] };
+  /**
+   * v22 anvil units (docs/ANVIL_UNITS.md): the room's own deadline of the seat's open anvil choice, armed on the room
+   * clock when the choice opens (`deadlineAt` = open time + the choice's `timeoutMs`) and kept for exactly that
+   * choiceId + generation. Absent when the seat holds no open anvil choice. Only the seat's own private view carries it.
+   */
+  readonly choiceDeadline?: SeatChoiceDeadline;
 }
+export interface SeatChoiceDeadline { readonly choiceId: string; readonly generation: number; readonly deadlineAt: number }
 
 /** An opponent is either a real seat or the frozen mirror of another survivor (V2 D6). */
 export type Opponent =

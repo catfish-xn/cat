@@ -41,6 +41,22 @@ export function fieldBench(room: Room, seatId: string): number {
   }
 }
 
+/**
+ * v22 with the 14.24 mana rules: the bots' boards grow faster than fielding the bench alone keeps up with, so the idle
+ * seat also buys XP through the room (more board places for fieldBench) while it keeps at least `reserve` gold for the
+ * paid anomaly rerolls of 4-6. Only in preparation; returns how many XP purchases were made.
+ */
+export function levelForBench(room: Room, seatId: string, reserve = 50, maxLevel = 8): number {
+  let bought = 0;
+  while (room.state.phase === 'preparation') {
+    const match = seatOf(room.state, seatId).match;
+    if (match.phase !== 'preparation' || match.level >= maxLevel || match.gold < reserve + 4) return bought;
+    if (!room.handle(seatId, { type: 'buyXp' }).ok) return bought;
+    bought++;
+  }
+  return bought;
+}
+
 /** Fires timers (claiming every orb, so reward units reach the boards) until the room's 4-6 anomaly window is open. */
 export function runToAnomalyWindow(room: Room, clock: ManualClock): void {
   for (let fired = 0; fired < 5_000; fired++) {
