@@ -54,8 +54,11 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
     expect([opening.level,opening.xp]).toEqual([5,0]);
     const expected=independentLootPlan(27,10).rounds.flatMap(r=>r.encounterPlan.drops);
     expect(opening.m8.loot.receipts.map(r=>r.payload)).toEqual(expected.map(d=>d.payload));
-    expect(players(opening).map(u=>u.definitionId).sort()).toEqual(['irelia','lux','renata','sett','steb','trundle','vex']);
-    expect(opening.items.map(i=>i.definitionId).sort()).toEqual(['belt','bow','gloves','rod','rod','rod','sword','tear']);
+    // v22 augment tiers make the 2-1 card Little Buddies (a stat augment, no unit grant), and seed 27's
+    // crab-rave opening adds its 2-7 blue component (cloak) as a mechanic receipt.
+    expect(opening.augments.map(a=>a.definitionId)).toEqual(['little-buddies']);
+    expect(players(opening).map(u=>u.definitionId).sort()).toEqual(['irelia','lux','renata','sett','steb']);
+    expect(opening.items.map(i=>i.definitionId).sort()).toEqual(['belt','bow','cloak','gloves','rod','rod','rod','sword','tear']);
     expect(opening.consumables.map(c=>c.definitionId)).toEqual(Array(4).fill('magnetic-remover'));
     expect(api.readLootView(opening)).toEqual({ roundId: '3-1', revealedDrops: [], revealedOrbs: [], pendingClaims: [], canContinue: false, reason: 'unsettled-round', pendingChoice: null });
     roundTrip(opening);
