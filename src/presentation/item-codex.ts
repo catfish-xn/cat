@@ -36,8 +36,10 @@ function catalog() {
 export const catalogEntry = (id: string): Entry | undefined => catalog().byId.get(id);
 /** Base (B4) catalogue only: kind-based wording such as the plain forge names must not count reward-only items. */
 export const baseCatalogEntry = (id: string): Entry | undefined => catalog().list.find(entry => entry.id === id);
-/** Authoritative description lines, shown verbatim. */
-export const itemDescriptions = (id: string): readonly string[] => catalogEntry(id)?.effectDescriptions ?? [];
+/** The source tables' English stat token ("MagicResist: 20 magic-resist-points"); the catalogue's zh stat line already says it. */
+const RAW_STAT_LINE = /^[A-Za-z]+: -?\d+ [A-Za-z-]+$/;
+/** Authoritative description lines, shown verbatim (minus the English stat tokens). */
+export const itemDescriptions = (id: string): readonly string[] => (catalogEntry(id)?.effectDescriptions ?? []).filter(line => !RAW_STAT_LINE.test(line));
 
 /** Kind labels; a kind added by later content shows its own label here, or "其他" until one is added (never "undefined"). */
 const KIND_NAMES: Readonly<Record<string, string>> = { component: '组件', completed: '成装', radiant: '光明' };
@@ -94,8 +96,9 @@ function describe(entry: Entry): HTMLElement {
   else if (ITEM_DEFINITIONS[entry.id]?.emblemTrait) body.append(el('p', '配方：不可合成', 'item-pop-recipe'));
   else { const uses = usedIn(entry.id); if (uses.length) body.append(el('p', `可用于配方：${uses.map(item => itemDisplayName(item.id)).join('、')}`, 'item-pop-recipe')); }
   const effects = el('ul', '', 'item-pop-effects');
-  for (const line of entry.effectDescriptions) effects.append(el('li', line));
-  if (!entry.effectDescriptions.length) effects.append(el('li', '目录未提供效果说明'));
+  const lines = itemDescriptions(entry.id);
+  for (const line of lines) effects.append(el('li', line));
+  if (!lines.length) effects.append(el('li', '目录未提供效果说明'));
   body.append(effects);
   body.append(el('p', `声明：${entry.unique ? '唯一' : '非唯一'} · 占用装备槽 ${entry.slotCost}`, 'item-pop-decl'));
   body.append(el('p', `规则依据：${EVIDENCE_NAMES[entry.evidenceStatus]} · 参考版本 ${entry.referencePatch}${entry.conventionIds.length ? ` · 约定 ${entry.conventionIds.join('、')}` : ''}`, 'item-pop-meta'));

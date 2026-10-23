@@ -20,6 +20,8 @@ export interface SeatSession {
 
 export type ResumeResult = { readonly ok: true; readonly session: SeatSession } | { readonly ok: false; readonly reason: 'invalid-token' };
 
+/** A fresh uint32 from the OS RNG: the room seed of a server started without CAT_SEED. */
+export function randomSeed(): number { return randomBytes(4).readUInt32BE(0); }
 export function digestOf(text: string): string { return createHash('sha256').update(text).digest('hex'); }
 
 export class SessionRegistry {

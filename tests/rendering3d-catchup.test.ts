@@ -153,6 +153,37 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     expect(replacement).toHaveBeenCalledExactlyOnceWith(.016);
   });
 
+  it.each(['phase', 'visibility', 'revival', 'recreate'] as const)('keeps the movement window after a %s action reset', async reason => {
+    let piece = debug().pieces.get('a')!;
+    const original = piece.mixer;
+    listener.events!([attack(1)]); await advance(80);
+    const oldAttack = original.mixer.clipAction(piece.lease.animations.find(clip => clip.name === 'attack')!);
+    expect(oldAttack.isRunning()).toBe(true);
+    if (reason === 'phase') { listener.frame({ ...frame, fighting: false }); listener.frame(frame); }
+    if (reason === 'visibility') {
+      listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], visible: false }] }); listener.frame(frame);
+    }
+    if (reason === 'revival') {
+      listener.frame({ ...frame, pieces: [{ ...frame.pieces[0], alive: false }] }); listener.frame(frame);
+    }
+    if (reason === 'recreate') {
+      listener.frame({ ...frame, pieces: [] }); listener.frame(frame); await flush();
+      piece = debug().pieces.get('a')!;
+    }
+    expect(piece.mixer).not.toBe(original); expect(oldAttack.isRunning()).toBe(false);
+    expect(piece.state.output.state).toBe('idle'); expect(piece.state.output.revision).toBe(0);
+    expect(piece.mixer.mixer.clipAction(piece.lease.animations[0]).isRunning()).toBe(true);
+    const step = (tick: number): CombatViewEvent => ({ type: 'movement', tick, eventSeq: tick, unitId: 'a',
+      from: { row: 0, col: 0 }, to: { row: 0, col: 1 } });
+    listener.events!([step(2)]); const moving = piece.state.output;
+    await advance(250); expect(piece.state.output).toEqual(moving);
+    listener.events!([step(3)]); expect(piece.state.output).toEqual(moving);
+    await advance(250); expect(piece.state.output).toEqual(moving);
+    await advance(60); expect(piece.state.output.state).toBe('idle');
+    // A reset also reinstalls playback resolution on the new state/mixer.
+    listener.events!([cast(4)]); expect(piece.state.output.playback?.durationSeconds).toBe(1);
+  });
+
   it('removing a hidden piece deletes its weak held entry, releases its lease and stops all updates', async () => {
     const piece = debug().pieces.get('a')!, mixer = piece.mixer;
     // Observe the native WeakMap without retaining pieces in a production-facing test hook.
