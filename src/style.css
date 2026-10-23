@@ -172,9 +172,6 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .hud-chip strong { font-size: var(--font-hud); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hud-label { font-size: var(--font-small); color: var(--c-text-muted); }
 .hud-hp strong { color: var(--c-danger); } .hud-gold strong { color: var(--c-gold); } .hud-pop strong { color: var(--c-accent); }
-.hud-interest-pips { display: flex; gap: 3px; align-items: center; height: 8px; }
-.hud-interest-pips .pip { width: 7px; height: 7px; border-radius: 50%; border: 1px solid #c9a24a99; background: transparent; box-sizing: border-box; }
-.hud-interest-pips .pip.on { border-color: #ffe08a; background: radial-gradient(circle at 35% 35%, #fff2b8, var(--c-gold) 60%, #a8781e); box-shadow: 0 0 3px #ffd36a99; }
 .hud-xp-bar { display: block; height: 5px; border-radius: 3px; background: #0c1820; border: 1px solid #2f5566; overflow: hidden; }
 .hud-xp-fill { display: block; height: 100%; background: linear-gradient(90deg, #2f8fd8, #6cd0ff); transition: width .25s ease-out; }
 .hud-hint { margin: 0 !important; font-size: var(--font-small) !important; color: var(--c-text-muted); }
