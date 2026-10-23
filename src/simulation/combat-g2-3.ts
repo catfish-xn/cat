@@ -4,7 +4,7 @@ import { isAttackProxy } from './anomalies/availability';
 import { reviveG23Forge } from './combat-g2-3-summons';
 import { g23State } from './g2-3-combat';
 /** Fixed-form, finite hex execution. All delayed work is part of the combat snapshot. */
-import { hexDistance } from './board';
+import { contains, hexDistance, type HexCell } from './board';
 import type { CombatTask } from './combat-types';
 import type { S13Unit } from './combat-s13-state';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
@@ -131,8 +131,10 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team)).slice(0,v('NumAlliesShield')))
         grantShield(ally,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       strike(t,physical('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('EnemyFlightDuration')*20),ctx.tick,ctx.events);
-      const cells=path(ctx.board,u.cell,t.cell);
-      for(const x of foes().filter(x=>x.id!==t.id&&cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row)))strike(x,physical('PercentADSecondaryDamage'),'physical',true);break;
+      // P (user 2026-10-23): the target is knocked to the gate 3 hexes behind it (away from Jayce, cut at the board edge)
+      // and flies back to its own cell; other enemies within 1 hex of that flight path take the secondary hit once.
+      const cells=path(ctx.board,jayceGate(ctx.board,u.cell,t.cell),t.cell);
+      for(const x of foes().filter(x=>x.id!==t.id&&cells.some(c=>hexDistance(c,x.cell)<=1)))strike(x,physical('PercentADSecondaryDamage'),'physical',true);break;
     }
     case 'jayce-ranged':{
       const forge=reviveG23Forge(ctx,u)??u;
@@ -212,4 +214,14 @@ export function extendG23Swain(ctx:AbilityContext,victimId:string,contributors:r
   const a=u.g23?.ascension;
   if(a&&a.untilTick>=ctx.tick&&!a.takedowns.includes(victimId)){a.takedowns.push(victimId);a.untilTick+=Math.round(variable(u,'BonusDuration')*20);}
  }
+}
+
+/** The hex 3 steps past the target on the line from Jayce, stepped back toward the target until it is on the board. */
+export function jayceGate(board:import('./board').Board,from:HexCell,target:HexCell):HexCell{
+  const q=(c:HexCell)=>c.col-Math.floor(c.row/2),n=Math.max(1,hexDistance(from,target)),dq=q(target)-q(from),dr=target.row-from.row;
+  for(let k=3;k>0;k--){
+    const r=target.row+Math.round(dr*k/n),cell={col:q(target)+Math.round(dq*k/n)+Math.floor(r/2),row:r};
+    if(contains(board,cell))return cell;
+  }
+  return target;
 }
