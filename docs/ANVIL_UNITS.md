@@ -93,3 +93,7 @@ grantAnvilUnit(state, {
 测试覆盖 64 个 seed 的额外恰 1 个基础锻造器、原 2/3/4 散件数量与全部原抽样奖励保持、无额外 RNG 消耗、显式共享布局与单人计划一致、冻结账本恢复；共享满席留球/腾位重领/重复拒绝/卡池守恒；真实公共 4-7 路线领取与打开前中后存档、资源回放一致。
 
 本次验证：`npm test -- --configLoader runner tests/anvil-47.test.ts tests/anvil-units.test.ts tests/anvil-rewards.test.ts`，3 文件 **28/28 通过**；`npm run typecheck`、离线双摘要 `--check`、`git diff --check` 通过。双摘要 CONTENT=`fnv1a32-utf16:f335dc93`、LOOT_REPLAY=`fnv1a32-utf16:4323f5a2`。未联网、未改 CI、未提交。
+
+## 2026-10-24：补给回合（P）
+
+补给回合的结算阶段不能打开锻造器：`openAnvil`／出售锻造器返回 `wrong-phase`，因为补给回合不接受机制选择。锻造器留在备战席，下个准备阶段可打开。见 `docs/S13_RULES_GAP.md` 同日条目。
