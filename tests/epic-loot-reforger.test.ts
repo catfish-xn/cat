@@ -7,12 +7,13 @@ import {variant,copper,silver,LIVE,stream,COMPONENTS,COMPLETED} from './fixtures
 import {lootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {freezeLootThroughRound,LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
 import {EPIC_LOOT} from '../src/simulation/content/loot';
-import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch} from '../src/simulation/match';
+import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch,openAnvil} from '../src/simulation/match';
 import {planConsumable,replayConsumableItems,reforgeCandidates} from '../src/simulation/consumables';
 import {prepareMatchLoot,revealMatchLoot,grantDirectLoot} from '../src/simulation/loot-runtime';
 import {planOrbClaim} from '../src/simulation/orb-claim';
 import {readLootView} from '../src/simulation/loot-view';
 import {createCombat} from '../src/simulation/combat';
+import {enterOpeningCrabs,openingCrabCarrier} from '../src/simulation/opening-crabs';
 import {createRoundEnemies} from '../src/simulation/round-enemies';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
 import {CONSUMABLE_DEFINITIONS,REFORGE_POOLS} from '../src/simulation/content/consumables';
@@ -34,8 +35,9 @@ function tool(state:MatchState,definitionId:ConsumableDefinitionId):MatchState{
 }
 function late(seed=42,roundId='5-7',base=createMatch(seed)){
  const round=getCatalogRoundById(roundId),loot=prepareMatchLoot(seed,round.ordinal),enemies=createRoundEnemies(round.ordinal);
- const state:MatchState={...base,phase:'preparation',combat:null,round:round.ordinal,roundDefinitionId:roundId,m8:{...base.m8,round,loot},preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...enemies]}};
- const raw=createCombat(state.preparation),source=loot.frozen.rounds.at(-1)!.orbs[0].sourceUnitId;
+ // v22 opening encounters: crab seeds (e.g. 42 Scuttle Puddle) fight crabs; the epic carrier maps to its crab.
+ const state:MatchState=enterOpeningCrabs({...base,phase:'preparation',combat:null,round:round.ordinal,roundDefinitionId:roundId,m8:{...base.m8,round,loot},preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...enemies]}});
+ const raw=createCombat(state.preparation),source=openingCrabCarrier(state,roundId,loot.frozen.rounds.at(-1)!.orbs[0].sourceUnitId);
  const dead={...raw,combatId:`round-${state.round}`,status:'finished' as const,result:'playerWin' as const,tick:2,nextEventSeq:10,units:raw.units.map(u=>u.id===source?{...u,alive:false,hp:0}:u),neutralReceipts:{deaths:[{unitId:source,tick:1,eventSeq:1}],controls:[]}};
  return {state,dead,source};
 }
@@ -79,16 +81,22 @@ describe('v17 epic rewards and unified consumables',()=>{
   const {state,dead}=late(seed),earned=revealMatchLoot(state,dead).state;
   let paid:MatchState={...grantDirectLoot({...earned,phase:'settlement',combat:dead},false).state,phase:'settlement',combat:dead};
   const original=paid.m8.loot.receipts.filter(r=>r.payload.kind==='forge');expect(original).toHaveLength(2);
+  // v22 anvil units: each forge receipt is a bench anvil; nothing auto-opens, and opening it shows the same four offers.
+  expect(paid.pendingChoice).toBeNull();expect(openEpicForge(paid).state).toBe(paid);
   for(const r of original){
    if(r.payload.kind!=='forge')throw Error('forge');const offers=epicForgeOffers(paid.seed,r.receiptId,r.payload.definitionId);
    expect(new Set(offers).size).toBe(4);offers.forEach(id=>expect(G24_FORGE_POOLS[r.payload.kind==='forge'?r.payload.definitionId:'TFT_ArmoryKeyCompleted']).toContain(id));
-   const open=openEpicForge(paid).state,c=open.pendingChoice!;expect(c.kind).toBe('forge');expect(c.offers).toEqual(offers);
+   expect(r.grantedUnitIds).toHaveLength(1);
+   const open=accepted(openAnvil(paid,r.grantedUnitIds[0])),c=open.pendingChoice!;expect(c.kind).toBe('forge');expect(c.offers).toEqual(offers);
    paid=accepted(selectChoice(open,c.choiceId,c.generation,c.offers[0])) as typeof paid;
    expect(paid.seatMechanics!.receipts.filter(x=>x.receiptId===c.choiceId)).toHaveLength(1);
   }
   expect(()=>validateEpicForges(paid)).not.toThrow();expect(openEpicForge(paid).state).toBe(paid);
-  const terminal=settleTerminalEpicForges({...grantDirectLoot({...earned,phase:'settlement',combat:dead},true).state,phase:'gameOver',combat:dead,outcome:'victory'});
-  expect(terminal.events.filter(e=>e.type==='mechanicGranted')).toHaveLength(2);expect(settleTerminalEpicForges(terminal.state).events).toEqual([]);
+  // Terminal loot keeps both anvils as units; there is no terminal forge conversion any more.
+  const terminalState={...grantDirectLoot({...earned,phase:'settlement',combat:dead},true).state,phase:'gameOver' as const,combat:dead,outcome:'victory' as const};
+  expect(terminalState.m8.loot.receipts.filter(r=>r.payload.kind==='forge').map(r=>r.grantedUnitIds.length)).toEqual([1,1]);
+  const terminal=settleTerminalEpicForges(terminalState);
+  expect(terminal.events).toEqual([]);expect(terminal.state).toBe(terminalState);
  });
  it('crown receipt adds exactly one permanent deployment slot, before and after removal/reforge',()=>{
   const seed=28687;expect(lootPlan(seed).rolls[0].variant).toBe('crown');
