@@ -36,25 +36,28 @@ function mechanismInventory(level: number): MatchState {
 }
 const pair = (state: MatchState) => state.temporaryEquipment.map(i => i.definitionId);
 const otherRng = (state: MatchState) => [state.rngState, state.choiceRngState, state.rewardRngState, state.battleSeedRngState];
+// Seed 42 draws the scuttle-crab opening, whose 2-7 blue component (a bow) is item-2,
+// so the Thief's Gloves combined from the 2-4/3-4 gloves at 3-5 is item-4.
+const TG = 'item-4';
 
 describe('B5 Match TG-01 lifecycle and save validation', () => {
   it.each([3, 6, 7, 9])('level %s preserves the 2-1 pool mechanism and its legal paid-XP restore control', level => {
-    const state = mechanismInventory(level), result = equipItem(freeze(state), 'item-3', 'unit-1', 2);
+    const state = mechanismInventory(level), result = equipItem(freeze(state), TG, 'unit-1', 2);
     const next = accepted(result);
     // Independent LCG words for seed42 XOR 0x243f6a88: 3254118809,3773810212.
     // API-sorted 35-pool index4=Bramble; low second 8-pool index4=Cloak;
     // high second 34-pool (Bramble removed) index0=AdaptiveHelm.
     expect(pair(next)).toEqual(level <= 6 ? ['bramble-vest', 'cloak'] : ['bramble-vest', 'adaptive-helm']);
     expect(next.equipmentState.equipment).toEqual({ state: 3773810212, draws: 2 });
-    expect(next.equipmentState.rolls).toEqual([{ parentItemInstanceId: 'item-3', roundId: '2-1', playerLevelSnapshot: level,
+    expect(next.equipmentState.rolls).toEqual([{ parentItemInstanceId: TG, roundId: '2-1', playerLevelSnapshot: level,
       poolVersion: 'tg-01-v1', children: pair(next), rngDrawStart: 0, rngDrawEnd: 2 }]);
     expect(next.temporaryEquipment.map(i => [i.temporaryId, i.parentItemInstanceId, i.slot, i.expiresAfterRoundId]))
-      .toEqual([[JSON.stringify(['item-3', '2-1', 1]), 'item-3', 1, '2-1'], [JSON.stringify(['item-3', '2-1', 2]), 'item-3', 2, '2-1']]);
+      .toEqual([[JSON.stringify([TG, '2-1', 1]), TG, 1, '2-1'], [JSON.stringify([TG, '2-1', 2]), TG, 2, '2-1']]);
     expect(otherRng(next)).toEqual(otherRng(state));
     expect(next.nextItemSerial).toBe(state.nextItemSerial);
     expect(next.items).toHaveLength(state.items.length);
     expect(next.resourceProvenance.entries.slice(0, -1)).toEqual(state.resourceProvenance.entries);
-    expect(next.resourceProvenance.entries.at(-1)).toMatchObject({ kind: 'item-equipped', itemId: 'item-3', unitId: 'unit-1', roundId: '2-1' });
+    expect(next.resourceProvenance.entries.at(-1)).toMatchObject({ kind: 'item-equipped', itemId: TG, unitId: 'unit-1', roundId: '2-1' });
     expect(next.scheduleReceipts).toEqual(state.scheduleReceipts);
     expect(next.m8.loot).toEqual(state.m8.loot);
     if (!result.ok) throw new Error(result.reason);
@@ -91,7 +94,7 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     while (state.level < 6 || state.xp < 32) state = accepted(buyXp(state));
     expect([state.level, state.xp]).toEqual([6, 32]);
     expect(state.gold).toBeGreaterThanOrEqual(4);
-    state = accepted(equipItem(state, 'item-3', 'unit-1', 0));
+    state = accepted(equipItem(state, TG, 'unit-1', 0));
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     const roll = structuredClone(state.equipmentState);
     state = accepted(buyXp(freeze(state)));
@@ -99,9 +102,9 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     expect(pair(state)).toEqual(['bramble-vest', 'cloak']);
     state = accepted(sellUnit(freeze(state), 'unit-1'));
     expect(state.temporaryEquipment).toEqual([]);
-    expect(state.items.find(i => i.id === 'item-3')?.location.kind).toBe('inventory');
+    expect(state.items.find(i => i.id === TG)?.location.kind).toBe('inventory');
     state = restoreMatch(serializeMatch(state));
-    const result = equipItem(freeze(state), 'item-3', 'unit-2', 1);
+    const result = equipItem(freeze(state), TG, 'unit-2', 1);
     state = accepted(result);
     expect(state.equipmentState).toEqual(roll);
     expect(pair(state)).toEqual(['bramble-vest', 'cloak']);
@@ -135,7 +138,7 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     state = accepted(nextRound(state, state.round));
     expect(state.equipmentState).toEqual(old);
     expect(state.temporaryEquipment).toEqual([]);
-    state = accepted(equipItem(state, 'item-3', 'unit-2', 0));
+    state = accepted(equipItem(state, TG, 'unit-2', 0));
     expect(state.equipmentState.equipment.draws).toBe(4);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
   });
@@ -143,8 +146,8 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     const state = freeze(equipped()), before = JSON.stringify(state), id = state.temporaryEquipment[0].temporaryId;
     for (let i = 0; i < 4; i++) {
       expect(previewEquip(state, id, 'unit-2', 0).reason).toBe('temporary-item');
-      expect(previewCombine(state, id, 'item-3').reason).toBe('temporary-item');
-      for (const r of [equipItem(state, id, 'unit-2', 0), combineItems(state, id, 'item-3')]) {
+      expect(previewCombine(state, id, TG).reason).toBe('temporary-item');
+      for (const r of [equipItem(state, id, 'unit-2', 0), combineItems(state, id, TG)]) {
         expect(r).toEqual({ ok: false, state, reason: 'temporary-item' }); expect(r.state).toBe(state);
       }
       const view = readUnitEquipment(state, 'unit-1')!;
@@ -156,7 +159,7 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     expect(JSON.stringify(state)).toBe(before);
   });
   it('pure batch generation orders permanent IDs and is independent of input array order', () => {
-    const base = mechanismInventory(6), state: MatchState = { ...base, items: [...base.items.filter(i => i.id !== 'item-3'),
+    const base = mechanismInventory(6), state: MatchState = { ...base, items: [...base.items.filter(i => i.id !== TG),
       { id: 'item-20', definitionId: 'thiefs-gloves', location: { kind: 'unit', unitId: 'unit-1', slot: 0 } },
       { id: 'item-10', definitionId: 'thiefs-gloves', location: { kind: 'unit', unitId: 'unit-2', slot: 0 } }] };
     const a = planTemporaryEquipment(state), b = planTemporaryEquipment({ ...state, items: [...state.items].reverse() });
@@ -174,8 +177,8 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     expect(unit.stats.health).toBe(909);
     expect(unit.stats.armor).toBe(105);
     const childId = state.temporaryEquipment[0].temporaryId;
-    expect(unit.itemPrograms!.find(p => p.source.instanceId === childId)!.source.parentItemInstanceId).toBe('item-3');
-    expect(unit.sources.filter(s => s.source.sourceInstanceId === childId).every(s => s.source.parentItemInstanceId === 'item-3')).toBe(true);
+    expect(unit.itemPrograms!.find(p => p.source.instanceId === childId)!.source.parentItemInstanceId).toBe(TG);
+    expect(unit.sources.filter(s => s.source.sourceInstanceId === childId).every(s => s.source.parentItemInstanceId === TG)).toBe(true);
     state = accepted(startMatchCombat(state));
     const allEvents = [];
     for (let tick = 0; tick < 101 && state.phase === 'combat'; tick++) {
@@ -185,7 +188,7 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
       }
       const next = stepMatch(state); allEvents.push(...next.events); state = next.state;
     }
-    expect(allEvents.some(e => e.type === 'packetDamage' && e.outcome.context.source.instanceId === childId && e.outcome.context.source.parentItemInstanceId === 'item-3')).toBe(true);
+    expect(allEvents.some(e => e.type === 'packetDamage' && e.outcome.context.source.instanceId === childId && e.outcome.context.source.parentItemInstanceId === TG)).toBe(true);
   });
   /* User-approved test structure (2026-10-10, TG P2-1 plan A): the original single
    * 43-definition test could not finish its 35 required public routes inside one
@@ -194,8 +197,10 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
    * therefore 5 x 5 s, not 5 s. Every group prepares its own routes from createMatch,
    * shares no state with other tests, and asserts the definitions it ACTUALLY bound. */
   const TG_ROUND_GROUPS = 5;
-  const TG_SEED_SUBSTITUTES = new Map([[1401181143, 47], [2654435761, 4113], [147926525, 9605],
-    [56502658, 1082], [3724842645, 4165], [1457683801, 113], [1844960718, 9534], [4168622220, 9340]]);
+  // v22 enables the Trainer Golem opening, whose golem must stay on the board; seeds 9605 and
+  // 2563011894 draw it, so they are replaced by the first non-golem seeds rolling the identical pair.
+  const TG_SEED_SUBSTITUTES = new Map([[1401181143, 47], [2654435761, 4113], [147926525, 9533],
+    [56502658, 1082], [3724842645, 4165], [1457683801, 113], [1844960718, 9534], [4168622220, 9340], [2563011894, 2062]]);
   /** Pure planning only: the original greedy choice over 512 candidates (two unseen
    * children first, ties by ascending seed), computed afresh by each caller. */
   function plannedTemporaryRoutes() {
@@ -281,7 +286,7 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     ['missing sibling', 'Missing temporary sibling', (s: any) => s.temporaryEquipment.pop()],
     ['missing projection', 'Invalid current temporary equipment projection', (s: any) => s.temporaryEquipment = []],
     ['wrong expiry', 'Invalid temporary equipment binding/slots', (s: any) => s.temporaryEquipment[0].expiresAfterRoundId = '3-6'],
-    ['inventory parent with children', 'Invalid current temporary equipment projection', (s: any) => s.items.find((i: any) => i.id === 'item-3').location = { kind: 'inventory' }],
+    ['inventory parent with children', 'Invalid current temporary equipment projection', (s: any) => s.items.find((i: any) => i.id === TG).location = { kind: 'inventory' }],
     ['permanent child', 'Invalid Match save: item ID', (s: any) => s.items.push({ id: s.temporaryEquipment[0].temporaryId, definitionId: 'bramble-vest', location: { kind: 'inventory' } })],
   ])('restore rejects %s instead of rerolling or repairing', (_label, error, mutate) => {
     const state = equipped();
