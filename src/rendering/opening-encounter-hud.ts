@@ -39,6 +39,8 @@ export interface OpeningHudInput {
   readonly round: number;
   readonly forge?: OpeningForgeProgressDisplay | null;
   readonly mel?: OpeningMelProgressDisplay | null;
+  /** A choice popup (the encounter's own forge, an augment) is open: the intro card would cover its offers, so it stays closed. */
+  readonly choiceOpen?: boolean;
 }
 
 export class OpeningEncounterHud {
@@ -71,15 +73,17 @@ export class OpeningEncounterHud {
     if (!encounter) { this.hideAll(); return; }
     if (this.matchKey !== input.matchKey) { this.matchKey = input.matchKey; this.factSeen = monkeyFact(encounter)?.outcome ?? null; }
     const key = JSON.stringify([input.matchKey, encounter.encounterId, encounter.statusTextZh, encounter.enabled, encounter.revealedFacts, input.round <= 1,
-      input.forge?.forgesPending ?? null, input.mel?.thresholdReached ?? null]);
+      input.forge?.forgesPending ?? null, input.mel?.thresholdReached ?? null, input.choiceOpen === true]);
     if (key === this.key) return;
     this.key = key;
     this.renderBanner(encounter, input.round <= 1);
     this.renderChip(encounter, input);
+    if (input.choiceOpen && this.card.dataset.intro === 'true') this.closeCard();
     if (!this.card.hidden) this.renderCard(encounter, input, this.card.dataset.intro === 'true');
-    // Intro: once per match, only when the match is still in its opening round when first seen.
+    // Intro: once per match, only when the match is still in its opening round when first seen. Under an open choice (the
+    // opening anvils' popup names the encounter itself) it is spent without showing.
     const introKey = `${input.matchKey}|${encounter.encounterId}`;
-    if (input.round <= 1 && !this.introduced.has(introKey) && !seen(introKey)) {
+    if (input.round <= 1 && !input.choiceOpen && !this.introduced.has(introKey) && !seen(introKey)) {
       this.introduced.add(introKey); remember(introKey); this.openCard(true);
     } else this.introduced.add(introKey);
     const fact = monkeyFact(encounter), text = monkeyToastText(fact);
