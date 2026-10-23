@@ -58,8 +58,8 @@ describe('v15 orb display fields', () => {
     expect(orbPayloadName(forge)).toBe('成装锻造器');
     expect(orbPayloadName(artifact)).toBe('神器装备锻造器');
     for (const payload of [forge, artifact, crown]) expect(orbPayloadName(payload)).not.toMatch(/未知/);
-    expect(orbReceiptText(receipt({ payload: forge, resolution: 'held' }))).toBe('成装锻造器 · 进入四选一');
-    expect(orbReceiptText(receipt({ payload: artifact, resolution: 'held' }))).toBe('神器装备锻造器 · 进入四选一');
+    expect(orbReceiptText(receipt({ payload: forge, resolution: 'held' }))).toBe('成装锻造器 已进入备战席 · 拖到商店打开');
+    expect(orbReceiptText(receipt({ payload: artifact, resolution: 'held' }))).toBe('神器装备锻造器 已进入备战席 · 拖到商店打开');
     expect(orbReceiptText(receipt({ payload: crown, resolution: 'held' }))).toMatch(/已放入物品栏$/);
   });
   it('reads unclaimedOrbs and orbClaimReceipts off the display state; none offline', () => {
