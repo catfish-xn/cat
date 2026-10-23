@@ -2247,3 +2247,7 @@ golden、B8/C19/Herald 与 recorded states 已在新目录独立生成；旧身�
 网络层在解析、限流、身份和 roomId 检查后保留**session**与原始命令；session 级 pending commandId/content 及最终 dedupe 共用一次执行。旧连接关闭、被替换都不取消已经接受的命令；回执记录在 session，发送给仍打开的等待连接及当前连接。superseded 宽限期旧连接只可重放已经接受的相同命令，新 ID 拒绝 `not-authenticated`，同 ID 异内容拒绝 `commandId-conflict`。WsGameClient 的 `closed/restart` 会 clearInflight，resume 只推进 nextCommandId，不重发旧请求，因此不能依赖客户端重发弥补服务器丢弃。故障后释放回调，让命令得到当前终局失败；dispose 丢弃回调并取消续算计时器。
 
 传输解析、心跳和重连仍可在切片间处理。无规则变更，无 schema/content/replay digest 或 wire 字段变更；`retained.resolving` 同时反映战斗解析与结算补算。性能证据、复现命令和剩余限制见 [结算性能定位](SETTLEMENT_SLICES_PERFORMANCE.md)。
+
+## 安蓓萨位移事件增补（P，2026-10-23，待统一 v22）
+
+`CombatViewEvent` 既有 movement 形状增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`，包含 `tick,eventSeq,unitId,from,to`。普通移动字段不变；成功位移进完整账本，未发生位移不发空事件。`toCombatReplay`/首遍 recorder/`CombatStream.view`/`toCombatReplayFor` 均保留 reason；服务器既有 movement 镜像分支保留字符串并镜像 from/to，不另算落点。客户端沿既有 eventSeq 去重，以 unitUpdated/keyframe 的 cell 为终态。规则、时序、无位移分支和回退详见 [AMBESSA_DASH](AMBESSA_DASH.md)。本单无新公共命令或失败枚举，不修改服务器实现；未录 epoch，发布须等统一 v22。

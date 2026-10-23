@@ -7,7 +7,7 @@ import { integer, safeNumber } from './m8/stats';
 import { splitTotal } from './m8/periodic';
 import { asSource, flatAmount } from './m8/s13-definitions';
 import { executeShieldEnd } from './m8/s13-mechanisms';
-import { hexDistance, type Board } from './board';
+import { hexDistance, type Board, type HexCell } from './board';
 import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
 import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, areaEnemies, grantShield, lowestAlly, mechanic, neighborsOf,
   origin, path, range, sourceKey, variable, type S13Unit } from './combat-s13-state';
@@ -19,6 +19,8 @@ export interface S13Packet { devour?:boolean; beforeDamage?: PacketStatusEffect[
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { g22Shared?: boolean; lateAmount?: Amount; reactionKey?: string; source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
 export interface AbilityContext {
+  movementReservations?: Set<string>;
+  ambessaRetreats?: { unitId: string; targetCell: HexCell }[];
   anomalySeed?: number;
   anomalyOpening?: readonly { id: string; health: number; attackDamage: number }[];
   resolutionFacts?: import('./m8/triggers').ResolutionFacts;

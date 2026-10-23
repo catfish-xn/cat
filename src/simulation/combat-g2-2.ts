@@ -1,4 +1,5 @@
 import { isAttackProxy } from './anomalies/availability';
+import { dashAmbessaChain } from './combat-ambessa-dash';
 /** G2-2 finite skill execution. All counters, zones and marks live in Combat JSON. */
 import { hexDistance, type HexCell } from './board';
 import type { CombatTask, G22State, CombatOrigin } from './combat-types';
@@ -64,8 +65,8 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       else {const center={col:Math.floor((ctx.board.columns-1)/2),row:Math.floor((ctx.board.rows-1)/2)};for(const x of foes())strike(x,Math.floor(ad('DeathRocketPercentAD','DeathRocketAP')*Math.max(0,10000-Math.round(v('FalloffPercent')*10000)*hexDistance(center,x.cell))/10000),'physical',true);}break;
     }
     case 'ambessa':
-      if(u.runtime.castCount%2===1){for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))strike(x,ad('PercentStrikeAD'),'physical',true);}
-      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,5,ctx.tick,ctx.events);}break;
+      if(u.runtime.castCount%2===1){dashAmbessaChain(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))strike(x,ad('PercentStrikeAD'),'physical',true);}
+      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,5,ctx.tick,ctx.events);(ctx.ambessaRetreats??=[]).push({unitId:u.id,targetCell:{...t.cell}});}break;
     case 'mordekaiser': {
       g22(u).mordeUntilTick=ctx.tick+Math.round(v('EmpowerDuration')*20);
       applyStatus(u,origin(u),'damageReduction',Math.round(v('DR')*10000),20,ctx.tick,ctx.events,true);
