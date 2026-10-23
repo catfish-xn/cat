@@ -128,10 +128,13 @@ describe('B4 audit R3: projection semantics and active-effect receipt references
     let s = itemMatch('bloodthirster');
     if (s.phase !== 'combat') throw Error('combat fixture');
     // Restore replays the authenticated opening, so reach the 40% threshold through real combat damage.
-    for (let i = 0; i < 100 && s.phase === 'combat' && !s.combat.units.find(u => u.id === 'unit-1')!.shield; i++) s = stepMatch(s).state;
+    // v22 damage mana (1% pre + 3% post) lets Irelia's own ability shield land first (tick 71) and delays
+    // the 40% threshold; wait for the Bloodthirster layer itself (tick 106 on this route).
+    const bloodthirsterLayer = (unit: CombatUnit) => unit.shieldLayers?.find(layer => layer.source.definitionId === 'bloodthirster');
+    for (let i = 0; i < 200 && s.phase === 'combat' && !bloodthirsterLayer(s.combat.units.find(u => u.id === 'unit-1')!); i++) s = stepMatch(s).state;
     const original = serializeMatch(s); const raw = JSON.parse(original);
     const holder = raw.combat.units.find((u: CombatUnit) => u.id === 'unit-1');
-    expect(holder.maxHp).toBe(700); expect(holder.shield).toBe(175);
+    expect(holder.maxHp).toBe(700); expect(bloodthirsterLayer(holder)?.granted).toBe(175);
     expect(holder.mechanismState.runtimes.some((r: { source: { definitionId: string }; consumed: boolean }) => r.source.definitionId === 'bloodthirster' && r.consumed)).toBe(true);
     holder.mechanismState.runtimes = [];
     expect(() => restoreMatch(raw)).toThrow(/incomplete survival consumption/);
