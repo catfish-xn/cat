@@ -249,15 +249,17 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
   const walkTo = (point: { x: number; y: number }, orbId: string | null = null) => {
     if (!layoutKey || away) return null;
     const orb = orbId ? orbs.get(orbId) : undefined;
+    // An orb still inside its standing monster: my legend goes to that monster and takes the orb once it has landed.
+    const inside = orbId && !orb ? monsters.get(held.get(orbId) ?? '') : undefined;
     // Sent to an orb that is not drawn (any more): nowhere to go.
-    if (orbId && (!orb || !reachable(orb))) return null;
+    if (orbId && (orb ? !reachable(orb) : !inside)) return null;
     const view = legend('me');
     const { minX, maxX, minZ, maxZ } = board.bounds;
-    const to = orb ? (orb.drop?.to ?? orb.root.position).clone().setY(0)
+    const to = orb ? (orb.drop?.to ?? orb.root.position).clone().setY(0) : inside ? inside.clone().setY(0)
       : new Vector3(Math.min(maxX, Math.max(minX, point.x)), 0, Math.min(maxZ, Math.max(minZ, point.y)));
     const from = view.root.position.clone().setY(0);
     const seconds = from.distanceTo(to) / (WALK_WIDTHS * board.width);
-    view.walked = true; orbTarget = orb ? orb.orbId : null;
+    view.walked = true; orbTarget = orbId ?? null;
     view.path = { from, to, start: now(), end: now() + seconds * 1000 };
     return { from: toCells(from), to: toCells(to) };
   };
@@ -274,13 +276,29 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     // to on arrival, is claimed as the dock's click; once, unless that claim was refused.
     for (const orb of orbs.values()) {
       if (orb.drop || !reachable(orb)) continue;
-      const at = sent.get(orb.orbId);
-      if (at !== undefined && (refusals[orb.orbId] ?? 0) <= at) continue;
       const reach = orb.orbId === orbTarget && t >= 1 ? board.width : ORB_REACH * board.width;
       if (stretchDistance(orb.root.position, before, view.root.position) > reach) continue;
-      sent.set(orb.orbId, refusals[orb.orbId] ?? 0); ctx.claimOrb?.(orb.orbId);
+      claim(orb);
     }
-    if (t >= 1) orbTarget = null;
+    // Arrived before the orb it was sent to has landed (or burst out at all): it waits there and takes it on landing.
+    const waiting = orbTarget !== null && (orbs.get(orbTarget)?.drop ?? held.has(orbTarget));
+    if (t >= 1 && !waiting) orbTarget = null;
+  };
+  /** Claims `orb` as the dock's click; once, unless that claim was refused. */
+  const claim = (orb: OrbView) => {
+    const at = sent.get(orb.orbId);
+    if (at !== undefined && (refusals[orb.orbId] ?? 0) <= at) return;
+    sent.set(orb.orbId, refusals[orb.orbId] ?? 0); ctx.claimOrb?.(orb.orbId);
+  };
+  /** A landed orb that my legend stands on, or was sent to and already reached, is claimed now. */
+  const landed = (orb: OrbView) => {
+    const me = legends.get('me');
+    if (!me || away || !reachable(orb)) return;
+    const near = me.root.position.distanceTo(orb.root.position.clone().setY(me.root.position.y)) <= ORB_REACH * board.width;
+    const waited = orb.orbId === orbTarget && !me.path;
+    if (!near && !waited) return;
+    if (waited) orbTarget = null;
+    claim(orb);
   };
 
   // --- effects -----------------------------------------------------------------------------------------------------
@@ -338,6 +356,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     return spot;
   };
   const orbSource = new Map<string, string>();
+  /** Orbs revealed while their monster still stands in the shown battle, by orb id, with that monster's id. */
+  const held = new Map<string, string>();
   const idleSeconds = (tier: BoardOrb['tier']) => tier === 'prismatic' ? PRISMATIC_IDLE_SECONDS : ORB_IDLE_SECONDS;
   const startIdle = (view: OrbView) => {
     if (!ctx.loadEffect || view.loading) return;
@@ -385,7 +405,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     view.root.position.lerpVectors(drop.from, drop.to, hop);
     view.root.position.y = hop < 1 ? 4 * DROP_ARC * board.width * hop * (1 - hop) : 4 * BOUNCE_ARC * board.width * bounce * (1 - bounce);
     view.root.scale.setScalar(Math.min(1, 0.3 + hop * 1.4));
-    if (bounce >= 1) { view.drop = null; view.root.position.copy(drop.to); view.root.scale.setScalar(1); }
+    if (bounce >= 1) { view.drop = null; view.root.position.copy(drop.to); view.root.scale.setScalar(1); landed(view); }
   };
 
   // --- HP-loss bolt ------------------------------------------------------------------------------------------------
@@ -446,6 +466,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
     refusals = frame.orbRefusals ?? {};
     // Only an orb a granted receipt names opens; one that left with nothing granted (forfeited) is just removed.
     const opened = new Set(frame.openedOrbs ?? []);
+    for (const id of held.keys()) if (!present.has(id)) held.delete(id);
     for (const [id, view] of orbs) if (!present.has(id)) { orbs.delete(id); sent.delete(id); spots.delete(id); orbSource.delete(id); removeOrb(view, seeded && opened.has(id) && !view.opened); }
     if (frame.fighting && !wasFighting) monsters.clear();
     wasFighting = frame.fighting;
@@ -460,7 +481,8 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
       let view = orbs.get(orb.orbId);
       if (!view) {
         // The room reveals a drop at the monster's death on its own clock, a little ahead of the battle shown here.
-        if (seeded && orb.source && standing.has(orb.source)) return;
+        if (seeded && orb.source && standing.has(orb.source)) { held.set(orb.orbId, orb.source); return; }
+        held.delete(orb.orbId);
         view = createOrb(orb, index); orbs.set(orb.orbId, view);
         const corpse = orb.source ? monsters.get(orb.source) : undefined, spot = spotFor(orb);
         // Only a drop seen arriving bursts out; a reload just shows it lying there.

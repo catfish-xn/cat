@@ -256,6 +256,31 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(claimOrb).toHaveBeenCalledExactlyOnceWith('a');
   });
 
+  it('takes an orb it was sent to on landing when it got there first, and waits at a standing monster for its orb', () => {
+    let clock = 0;
+    const claimOrb = vi.fn();
+    const { tabletop, step } = setup({ now: () => clock, claimOrb });
+    const monster = { ...piece({ id: 'm', neutral: true }) }, other = { ...piece({ id: 'n', neutral: true, x: 120, y: 90 }) };
+    tabletop.frame(frame({ fighting: true, pieces: [monster, other] }));
+    // 'a' bursts out of m; my legend is sent to it and arrives (clock jump) while it is still in the air.
+    tabletop.frame(frame({ fighting: true, pieces: [{ ...monster, alive: false }, other], orbs: [{ ...orb('a'), source: 'm' }] }));
+    expect(tabletop.walkTo({ x: 0, y: 0 }, 'a')).not.toBeNull();
+    clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).not.toHaveBeenCalled();
+    step(1);
+    expect(claimOrb).toHaveBeenCalledExactlyOnceWith('a');
+    // 'b' is revealed while n still stands: the dock's walk goes to n, and the orb is taken once it fell and landed.
+    claimOrb.mockClear();
+    const orbs = [{ ...orb('a'), source: 'm' }, { ...orb('b', 'gold'), source: 'n' }];
+    tabletop.frame(frame({ fighting: true, pieces: [{ ...monster, alive: false }, other], orbs }));
+    expect(tabletop.walkTo({ x: 0, y: 0 }, 'b')).not.toBeNull();
+    clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).not.toHaveBeenCalled();
+    tabletop.frame(frame({ fighting: true, pieces: [{ ...monster, alive: false }, { ...other, alive: false }], orbs }));
+    step(1);
+    expect(claimOrb).toHaveBeenCalledExactlyOnceWith('b');
+  });
+
   it('claims an orb my walking legend reaches, once, through the dock click', () => {
     let clock = 0;
     const claimOrb = vi.fn();
