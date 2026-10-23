@@ -426,6 +426,14 @@
       "currentSha256": "73db6d1a46fa431067cb0cf0070c746dcf19022d64dbbfff0fe8d9a8431bfbeb",
       "firstDifferentByte": 8319
     },
+    "tests/server/terminal-orb-reveal.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6274,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1f4ee7302b8638de32afc543909b6dde58d3033ad5da2415f478dfe8eba69279",
+      "firstDifferentByte": 0
+    },
     "tests/t12-offline-transfer.test.ts": {
       "previousBytes": 1686,
       "currentBytes": 1692,
@@ -439,6 +447,14 @@
       "previousSha256": "8136cc392f264ca159207b17b8ee92347dce60f85d52bcef20e5816cacc9e9cd",
       "currentSha256": "ddd8601aa873389c93d57250689c467d69588c93c466b25ee81b575ef680f3c0",
       "firstDifferentByte": 1559
+    },
+    "tests/terminal-orb-reveal.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7350,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "c8391acebd8cea0145e7869ec5c7a90a634f52c831e7592d8be29002ec215337",
+      "firstDifferentByte": 0
     },
     "tests/ur-i3-combat-statuses.test.ts": {
       "previousBytes": 13806,
