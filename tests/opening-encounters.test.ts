@@ -91,6 +91,20 @@ describe('opening encounter PR1 content and independent selection', () => {
     expect(planOpeningRound(context,'1-2').context).toBe(context);
     expect(() => planOpeningRound(context,'1-1')).toThrow('invalid-opening-effect');
   });
+  it('keeps context authentication tied to the seed and rechecks mutable or shallow-frozen inputs', () => {
+    const context = createOpeningEncounter(42);
+    validateOpeningEncounterContext(context, 42);
+    validateOpeningEncounterContext(context, 42);
+    expect(() => validateOpeningEncounterContext(context, 43)).toThrow('opening-context-mismatch');
+    expect(() => validateOpeningEncounterContext(context, undefined as unknown as number)).toThrow(RangeError);
+    for (const shallow of [false, true]) {
+      const copy = structuredClone(context);
+      if (shallow) Object.freeze(copy);
+      validateOpeningEncounterContext(copy, 42);
+      (copy.selectionRng as {state:number}).state ^= 1;
+      expect(() => validateOpeningEncounterContext(copy, 42)).toThrow('opening-context-mismatch');
+    }
+  });
   it('includes the full table and conventions in both freshly recomputed digests', () => {
     expect(RULES_GAP_MANIFEST.openingEncounters).toBe(OPENING_ENCOUNTER_CONFIG);
     expect(recomputeContentDigest()).toBe(CONTENT_DIGEST);
