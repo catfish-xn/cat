@@ -34,7 +34,6 @@ export function createRenataMissile(from: Vector3, to: Vector3, radius: number) 
     point(Math.max(0, t - .025), previous); point(t, object.position);
     material.uniforms.alpha!.value = Math.min(1, age / .045) * Math.min(1, (RENATA_FLIGHT_SECONDS - age) / .065);
     if (camera) {
-      camera.updateMatrixWorld();
       forward.copy(object.position).sub(previous).transformDirection(camera.matrixWorldInverse);
       mesh.quaternion.copy(camera.quaternion);
       mesh.rotateZ(Math.atan2(-forward.x, forward.y));

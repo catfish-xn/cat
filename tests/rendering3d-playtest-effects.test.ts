@@ -9,17 +9,15 @@ import { planActionEffects, type EffectPlayback } from '../src/rendering/three-m
 
 describe('10-22 reviewed action staging', () => {
   const prefix = 'renata_tft13_renataglasc_base_e_';
-  it('launches one child missile from the centre and lands it with the target flash and area burst', () => {
+  it('reuses ignition and tar once, leaving flight and area to the procedural effects', () => {
     const effects = ['cas_r_canister', 'cas_l_canister', 'cas_center', 'mis', 'mis_child_01', 'tar', 'aoe'].map(id => ({ id: prefix + id }));
-    const impact: EffectPlayback = { anchor: 'target', delay: 0.9, maxDuration: 1 };
-    const plan = planActionEffects('renata', 'cast', effects, { [prefix + 'tar']: impact });
-    expect(plan).toHaveLength(6);
-    expect(plan.some(e => e.id === prefix + 'mis')).toBe(false);
-    const missiles = plan.filter(e => e.playback.anchor === 'projectile');
-    expect(missiles.map(e => e.playback.bone)).toEqual(['C_Canister']);
-    expect(missiles.every(e => Math.abs(e.playback.delay + e.playback.maxDuration - impact.delay) < 1e-9)).toBe(true);
-    expect(plan.find(e => e.id === prefix + 'tar')?.playback).toEqual(impact);
-    expect(plan.find(e => e.id === prefix + 'aoe')?.playback).toEqual(impact);
+    const plan = planActionEffects('renata', 'cast', effects, {});
+    expect(plan.map(e => e.id)).toEqual(['cas_center', 'tar'].map(id => prefix + id));
+    expect(plan.filter(e => e.playback.anchor === 'projectile')).toEqual([]);
+    expect(plan.filter(e => e.playback.anchor === 'source').map(e => e.playback.bone)).toEqual(['C_Canister']);
+    for (const { playback: spec } of plan.filter(e => e.playback.anchor === 'source'))
+      expect(spec.delay + spec.maxDuration).toBeCloseTo(.3);
+    expect(plan.find(e => e.id === prefix + 'tar')?.playback).toEqual({ anchor: 'target', delay: .9, maxDuration: .35 });
   });
   it('preserves unrelated and older asset bindings without guessing new effect ids', () => {
     for (const [unit, action] of [['renata', 'attack'], ['other', 'cast'], ['renata', 'cast']] as const) {
@@ -57,6 +55,9 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
   let three: typeof import('three'), core: typeof import('../src/rendering3d');
   let mounted: Renderer3d | undefined, listener: BoardFeedListener, now: number, nextId: number;
   let callbacks: Map<number, FrameRequestCallback>;
+  let saved: ReturnType<typeof vi.fn>, loadFx: ReturnType<typeof vi.fn>;
+  const prefix = 'renata_tft13_renataglasc_base_e_';
+  const effectIds = ['cas_r_canister', 'cas_l_canister', 'cas_center', 'mis', 'mis_child_01', 'tar', 'aoe'].map(id => prefix + id);
   const bodies = new Map<string, import('three').Group>();
 
   beforeEach(async () => {
@@ -67,7 +68,8 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
     vi.spyOn(performance, 'now').mockReturnValue(0);
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ schemaVersion: 1, models: {} })));
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => Response.json({ schemaVersion: 1, models: { renata: { path: 'renata.glb' } },
+      effects: Object.fromEntries(effectIds.map(id => [id, { path: `effects/${id}.json` }])), actionEffects: { renata: { cast: effectIds } } })));
     vi.doMock('three', async importOriginal => ({
       ...await importOriginal<typeof import('three')>(),
       WebGLRenderer: class {
@@ -80,9 +82,25 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
     three = await import('three'); core = await import('../src/rendering3d');
     vi.spyOn(core.ModelCache.prototype, 'load').mockImplementation(async (id: string) => {
       const body = new three.Group(); body.add(new three.Mesh(new three.BoxGeometry(20, 46, 20)));
+      for (const name of ['R_Canister', 'L_Canister', 'C_Canister']) { const bone = new three.Group(); bone.name = name; body.add(bone); }
       bodies.set(id, body);
       const lease: ModelLease = { scene: body, placeholder: false, animations: [new three.AnimationClip('idle', 1, [])], animationNames: {}, release: () => body.removeFromParent() };
       return lease;
+    });
+    const tabletop = await import('../src/rendering/three-mode/tabletop');
+    const createTabletop = tabletop.createTabletop;
+    vi.spyOn(tabletop, 'createTabletop').mockImplementation(ctx => {
+      const result = createTabletop(ctx); saved = vi.spyOn(result, 'saved'); return result;
+    });
+    const library = await import('../src/rendering/three-mode/effect-library');
+    const createLibrary = library.createEffectLibrary;
+    vi.spyOn(library, 'createEffectLibrary').mockImplementation((...args) => {
+      const result = createLibrary(...args);
+      loadFx = vi.spyOn(result, 'load').mockImplementation(async id => {
+        const fx = new core.ParticleEffect({ schemaVersion: 2, limits: { maxParticles: 1, maxDuration: 1 }, emitters: [] }); fx.object.name = id;
+        vi.spyOn(fx, 'finished', 'get').mockReturnValue(false); return fx;
+      });
+      return result;
     });
     const renderer = await import('../src/rendering/three-mode/placeholder-renderer');
     const controls = { hover: vi.fn(), select: vi.fn(), dragStart: vi.fn(() => false), dragMove: vi.fn(() => ({ allowed: false })), dragEnd: vi.fn(), dragCancel: vi.fn() } satisfies BoardControls;
@@ -117,6 +135,7 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
     listener.events([{ type: 'cast', tick, eventSeq: tick, sourceId, targetIds: [targetId] } as unknown as DisplayCombatEvent]);
 
   it('plays Renata ground impact without assets, shows only receipted shields and clears combat effects at a phase change', async () => {
+    loadFx.mockRejectedValue(new Error('missing-test-effect'));
     const me = piece({ id: 'me', definitionId: 'renata' }), ally = piece({ id: 'ally', definitionId: 'sett' });
     const foe = piece({ id: 'foe', definitionId: 'garen', team: 'enemy', x: 250 });
     await publish([me, ally, foe]);
@@ -132,6 +151,39 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
     await publish([me, ally, foe], false);
     expect(scene.getObjectByName('renata-reference-burst')).toBeUndefined();
     advance(1200); expect(scene.getObjectByName('renata-reference-burst')).toBeUndefined();
+  });
+
+  it('actually plays central ignition and target assets beside one missile/area and clears them on phase change', async () => {
+    await publish([piece({ id: 'me', definitionId: 'renata' }), piece({ id: 'foe', definitionId: 'sett', team: 'enemy', x: 250 })]);
+    const scene = bodies.get('renata')!.parent!.parent!;
+    cast('me', 'foe'); advance(200); for (let i = 0; i < 4; i++) await Promise.resolve();
+    expect(loadFx.mock.calls.map(([id]) => id)).toEqual([prefix + 'cas_center']);
+    for (const id of [prefix + 'cas_center']) expect(scene.getObjectByName(id)).toBeDefined();
+    advance(400); await Promise.resolve();
+    for (const id of [prefix + 'cas_center']) expect(scene.getObjectByName(id)).toBeUndefined();
+    expect(scene.children.filter(o => o.name === 'renata-reference-missile')).toHaveLength(1);
+    // Moving the target must not split the textured impact from the procedural endpoint.
+    await publish([piece({ id: 'me', definitionId: 'renata' }), piece({ id: 'foe', definitionId: 'sett', team: 'enemy', x: 350 })]);
+    advance(320); for (let i = 0; i < 4; i++) await Promise.resolve();
+    expect(loadFx.mock.calls.map(([id]) => id)).toEqual([prefix + 'cas_center', prefix + 'tar']);
+    const tar = scene.getObjectByName(prefix + 'tar')!, area = scene.getObjectByName('renata-reference-burst')!;
+    expect(tar).toBeDefined(); expect(area).toBeDefined(); expect(tar.position.equals(area.position)).toBe(true);
+    await publish([], false);
+    expect(scene.getObjectByName(prefix + 'tar')).toBeUndefined();
+    expect(scene.getObjectByName('renata-reference-burst')).toBeUndefined();
+    advance(1200); expect(loadFx).toHaveBeenCalledTimes(2);
+  });
+
+  it('plays the Mel legend save exactly once at gold, keeping other sources immediate', async () => {
+    await publish([piece({ id: 'me', definitionId: 'mel' })]);
+    listener.playerSaved!({ type: 'playerSaved', source: 'mel', battleId: 'save' });
+    expect(saved).not.toHaveBeenCalled(); advance(640); expect(saved).not.toHaveBeenCalled();
+    advance(32); expect(saved).toHaveBeenCalledTimes(1);
+    advance(1800); expect(saved).toHaveBeenCalledTimes(1);
+    // Exercise forward-compatible non-Mel receipts at the runtime boundary.
+    listener.playerSaved!({ type: 'playerSaved', source: 'other', battleId: 'other' } as unknown as Parameters<NonNullable<BoardFeedListener['playerSaved']>>[0]);
+    expect(saved).toHaveBeenCalledTimes(2);
+    advance(2100); expect(saved).toHaveBeenCalledTimes(2);
   });
 
   it('starts Mel only from the save feed, survives settlement phase changes, and expires in 2 seconds', async () => {

@@ -393,10 +393,10 @@
     },
     "tests/rendering3d-playtest-effects.test.ts": {
       "previousBytes": 9058,
-      "currentBytes": 11232,
+      "currentBytes": 15158,
       "previousSha256": "eefa5113274a24722a7f9a5738823ad2f8bbea67878b71b81e987c1eee5d4adc",
-      "currentSha256": "508464f73acc2c371e68f5a1805fc4ddbfb805bcbeec0622c34a815a3817e918",
-      "firstDifferentByte": 747
+      "currentSha256": "5c3eaafa63cfd1022903c32bacbbf42f154f50c377ad2dc229b1b53384953a12",
+      "firstDifferentByte": 738
     },
     "tests/rendering3d-reference-fx.test.ts": {
       "previousExists": false,

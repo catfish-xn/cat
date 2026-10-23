@@ -4,10 +4,16 @@ export interface PlannedEffect { readonly id: string; readonly playback: EffectP
 const RENATA = 'renata_tft13_renataglasc_base_e_';
 export function planActionEffects(unit: string, action: 'attack' | 'cast', effects: readonly { id: string }[], playback: Readonly<Record<string, EffectPlayback>>): PlannedEffect[] {
   const plan = effects.map(({ id }) => ({ id, playback: playback[id] ?? { anchor: 'source' as const, delay: 0, maxDuration: 1 } }));
-  if (unit !== 'renata' || action !== 'cast' || !effects.some(e => e.id === `${RENATA}mis_child_01`)) return plan;
-  // Reference frames show one readable purple projectile, not two separated flight paths. Keep both canister
-  // ignition assets, but launch the textured child once from the centre. Never also launch its parent.
-  return plan.flatMap(entry => entry.id === `${RENATA}mis` ? [] : entry.id === `${RENATA}mis_child_01`
-    ? [{ id: entry.id, playback: { anchor: 'projectile' as const, bone: 'C_Canister', delay: 0.3, maxDuration: 0.6 } }]
-    : entry.id === `${RENATA}aoe` ? [{ id: entry.id, playback: { anchor: 'target' as const, delay: 0.9, maxDuration: 1 } }] : [entry]);
+  if (unit !== 'renata' || action !== 'cast') return plan;
+  // The procedural missile and ground ring own flight/area. Reuse only ignition and the short
+  // textured target flash; stop the central ignition before launch. Side canister exports include duplicate projectile meshes.
+  const staging: Record<string, EffectPlayback> = {
+    cas_center: { anchor: 'source', bone: 'C_Canister', delay: 0.1, maxDuration: 0.2 },
+    tar: { anchor: 'target', delay: 0.9, maxDuration: 0.35 },
+  };
+  return plan.flatMap(entry => {
+    if (!entry.id.startsWith(RENATA)) return [entry];
+    const spec = staging[entry.id.slice(RENATA.length)];
+    return spec ? [{ id: entry.id, playback: spec }] : [];
+  });
 }

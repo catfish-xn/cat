@@ -777,7 +777,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /** Local scale that gives an effect `world` scale (FX_SCALE unless the caster has an official scale) under `parent`. */
   // abs: a mirrored parent decomposes with a negative X, which would flip the effect on every axis.
   const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
-  const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number) => {
+  const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !effects) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
@@ -791,7 +791,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         node.add(fx.object);
       } else {
         const from = new Vector3();
-        if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
+        if (spec.anchor === 'target' && targetPoint) from.copy(targetPoint);
+        else if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
         // A projectile is the caster's (its scale); an effect on the target stays in world units (FX_SCALE).
         fx.object.scale.setScalar(spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE);
         fx.object.position.copy(from);
@@ -808,10 +809,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
     const owner = generation;
+    let targetPoint: Vector3 | undefined;
     if (action === 'cast' && source.definitionId === 'renata') {
       if (!targetId || !pieces.has(targetId) || queued.length > MAX_QUEUED - 2) return;
       // One endpoint for both missile and impact, even if the target moves during the visual flight.
       const point = pieces.get(targetId)!.root.position.clone();
+      targetPoint = point;
       if (!reducedMotion()) queued.push({ at: clock + RENATA_LAUNCH_DELAY, generation: owner, run: () => {
         if (source.disposed || !source.alive || reducedMotion()) return;
         const from = new Vector3();
@@ -823,14 +826,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         const fx = createReferenceBurst('renata', renataRadius(grid?.radius ?? 34), reducedMotion());
         fx.object.position.copy(point); scene.add(fx.object); addReference(fx);
       } });
-      // Exported E_Cas_L/R contain duplicate canister meshes and E_Mis_Child is edge-on without
-      // the original parent system. The reviewed single-flight release replaces those fragments.
-      return;
+      // Continue into the asset plan: ignition and tar complement the single procedural flight/area.
     }
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
     for (const { id, playback: spec } of planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
       if (queued.length >= MAX_QUEUED) return;
-      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner) });
+      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint) });
     }
   };
   const updateEffects = (seconds: number) => {
@@ -1026,7 +1027,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return walk !== null;
   };
   const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: event => {
-    if (!visiting()) tabletop.saved();
+    if (event.source !== 'mel' && !visiting()) tabletop.saved();
     if (event.source !== 'mel' || visiting() || stage.active || !lastFrame) return;
     saveBurst?.dispose();
     const f = lastFrame, spanX = Math.sqrt(3) * f.hexRadius * f.columns, spanZ = f.hexRadius * 1.5 * (f.rows - 1);
