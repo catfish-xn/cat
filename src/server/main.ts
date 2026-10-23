@@ -112,11 +112,12 @@ createGameServer({
   build: { sha, contentDigest: CONTENT_DIGEST, lootReplayDigest: LOOT_REPLAY_DIGEST },
   processStats: () => ({ uptimeSec: Math.round(process.uptime()), rssBytes: process.memoryUsage.rss() }),
 }).then(server => {
+  // Install the signal handlers before announcing readiness: a supervisor may signal as soon as it reads the line.
+  const shutdown = (signal: string) => { log('info', 'server.stopping', { signal }); server.close().then(() => { clock.dispose(); process.exit(0); }); };
+  process.once('SIGINT', () => shutdown('SIGINT'));
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
   // `msg` keeps the "listening on" text the e2e harness and operators wait for.
   log('info', 'server.listening', { msg: `listening on ws://${host}:${server.port} (http://${host}:${server.port}/healthz)`, host, port: server.port, sha,
     contentDigest: CONTENT_DIGEST, lootReplayDigest: LOOT_REPLAY_DIGEST, prepSec: seconds('CAT_PREP_SEC', ROOM_TIMING_DEFAULTS.preparationMs) / 1000,
     takeover, carousel, stallSec: watchdog.stallMs / 1000, heartbeatSec: heartbeatMs / 1000, abandonSec: watchdog.abandonMs / 1000 });
-  const shutdown = (signal: string) => { log('info', 'server.stopping', { signal }); server.close().then(() => { clock.dispose(); process.exit(0); }); };
-  process.once('SIGINT', () => shutdown('SIGINT'));
-  process.once('SIGTERM', () => shutdown('SIGTERM'));
 }).catch(error => { log('error', 'server.start-failed', { error: error instanceof Error ? error.stack ?? error.message : String(error) }); process.exit(1); });
