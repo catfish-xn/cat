@@ -164,7 +164,7 @@ describe('M5 six augments and permanent accumulation', () => {
   it('Placebo compiles one percent attack speed and a separate eight-gold acquisition', () => {
     const state = augment(fixture(), 'placebo');
     expect(resolved(state).stats).toMatchObject({ baseAttackSpeedBps: 7000, attackSpeedBonusBps: 100 });
-    expect(mechanisms(state)).toEqual([{ mechanic: 'acquisitionGold', values: { amount: 8 } }]);
+    expect(mechanisms(state)).toEqual([{ mechanic: 'acquisitionGold', values: { amount: 8, stage3Amount: 11, stage4Amount: 15 } }]);
     expect(state.gold).toBe(0); // Compiling a snapshot must not grant acquisition gold again.
   });
   it.each([
@@ -198,14 +198,16 @@ describe('M5 six augments and permanent accumulation', () => {
     expect(stepMatch(state).state).toBe(state);
     state = accepted(nextRound(state, state.round));
     expect(state.augmentProgress).toEqual({ pumpingRounds: 1, investmentHp: 32 });
-    expect(state.gold).toBe(58);
+    // v22 PvE streaks: the three empty-board 1-x losses already count, so this
+    // fourth loss pays streak gold 1: 49 + base5 + interest4 + streak1.
+    expect(state.gold).toBe(59);
     state = accepted(startMatchCombat(state));
     expect(state.augmentProgress).toEqual({ pumpingRounds: 2, investmentHp: 32 });
-    expect(state.gold).toBe(58);
+    expect(state.gold).toBe(59);
     expect(stepMatch(state).state).toBe(state);
     state = accepted(nextRound(state, state.round));
     expect(state.augmentProgress).toEqual({ pumpingRounds: 2, investmentHp: 72 });
-    expect(state.gold).toBe(69); // 58 + base5 + interest5 + second-loss1.
+    expect(state.gold).toBe(71); // 59 + base5 + interest5 + fifth-loss streak2.
     expect(stepMatch(state).state).toBe(state);
   });
   it('Bulky requires exactly one allied neighbor and binds that concrete identity', () => {
