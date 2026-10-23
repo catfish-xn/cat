@@ -8,11 +8,13 @@ import { getMultiplayerRoundById } from './multiplayer-round';
 import { LOOT_POLICY_VERSION } from './content/loot';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { isCombatRosterLocked } from './operation-policy';
+import { isMatchCombatStreamTerminal } from './combat-stream-terminal';
 
 const check=(value:unknown,message:string)=>{if(!value)throw new RangeError(`Invalid multiplayer orb ledger: ${message}`);};
 /** Complements the authoritative shared pool snapshot validator; never admits a solo save as online. */
 export function validateMultiplayerOrbLedger(state: MatchState): void {
   check(state.multiplayer,'multiplayer required');
+  if (state.pendingCombatTerminal) check(isMatchCombatStreamTerminal(state,state.pendingCombatTerminal),'pending terminal lifecycle');
   const loot=state.m8.loot;
   const plans=allClaimableOrbPlans(state),drops=plans.flatMap(o=>o.entries);
   const queue=loot.queuedOrbClaims===undefined?[]:loot.queuedOrbClaims;
@@ -39,7 +41,7 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
   check(evidence.size===loot.earnedEvidence.length,'duplicate evidence');
   for(const e of loot.earnedEvidence) {
     const drop=drops.find(d=>d.dropId===e.dropId),round=drop&&getMultiplayerRoundById(drop.roundId),history=round&&state.roundResults[round.ordinal-1];
-    const combat=round?.ordinal===state.round?state.combat:null;
+    const combat=round?.ordinal===state.round?state.pendingCombatTerminal??state.combat:null;
     check(drop&&round&&e.death.combatId===`round-${round.ordinal}`&&Number.isSafeInteger(e.death.tick)&&e.death.tick>=1
       &&Number.isSafeInteger(e.death.eventSeq)&&e.death.eventSeq>=0&&e.death.tick<=(combat?.tick??history?.combatTicks??-1)
       &&e.death.eventSeq<(combat?.nextEventSeq??history?.combatEventCount??0),'death evidence');
@@ -59,6 +61,11 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
       const d=loot.direct.find(d=>d.dropId===e.dropId)!,r=receipts.get(e.dropId),earned=orb.source==='mechanic'||evidence.has(e.dropId);
       check(['planned','revealed','granted','forfeited'].includes(d.status),'status');
       check(earned ? d.status!=='planned' : d.status==='planned'||d.status==='forfeited','earned status');
+      if(orb.source==='pve' && orb.roundId===state.roundDefinitionId) {
+        const combat=state.pendingCombatTerminal??state.combat;
+        check(!(d.status==='forfeited'&&!earned) || combat?.status==='finished','unearned forfeit lifecycle');
+        if(state.pendingCombatTerminal) check(d.status!=='planned' && earned===!!combat?.neutralReceipts?.deaths.some(v=>v.unitId===e.sourceUnitId),'terminal qualification');
+      }
       if(d.status==='granted'||earned&&d.status==='forfeited') {
         check(r&&r.receiptId===lootReceiptId(e.dropId)&&canonicalContent(r.payload)===canonicalContent(e.payload),'receipt payload/identity');
         check(d.status==='granted'?d.receiptId===r?.receiptId&&r?.resolution!=='forfeited':d.receiptId===null&&r?.resolution==='forfeited','receipt status');
