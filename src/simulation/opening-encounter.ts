@@ -51,6 +51,29 @@ export type OpeningEncounterState =
   | { readonly mode: 'shared'; readonly poolId: string; readonly seatId: string;
       readonly selection: OpeningEncounterSelection; readonly receipts: readonly OpeningEffectReceipt[] };
 
+/** Read-only inputs also include the public whitelist carried by client display states.
+ * A projection has no context, seat binding or receipts and must never become an authority.
+ */
+export interface OpeningEncounterProjection {
+  readonly configVersion: string;
+  readonly encounterId: OpeningEncounterId;
+  readonly revealedFacts?: readonly {readonly nodeId: string; readonly outcome: MonkeyOutcome}[];
+}
+export interface OpeningEncounterReadState {
+  readonly openingEncounter?: OpeningEncounterState | OpeningEncounterProjection | null;
+}
+/** Missing authority fields are unavailable, never re-derived from a display state's placeholder seed. */
+export function readOpeningSelection(state: OpeningEncounterReadState): OpeningEncounterSelection | null {
+  const opening = state.openingEncounter;
+  if (!opening || !('mode' in opening)) return null;
+  switch (opening.mode) {
+    case 'solo': return opening.context?.selection ?? null;
+    case 'shared': return opening.selection ?? null;
+    case 'shared-deferred': return null;
+    default: return null;
+  }
+}
+
 function fail(reason: OpeningEncounterFailure): never { throw new OpeningEncounterError(reason); }
 function same(a: unknown, b: unknown): boolean {
   try { return canonicalContent(a) === canonicalContent(b); } catch { return false; }
@@ -242,14 +265,13 @@ export function applyOpeningRoundEntry(state:MatchState):MatchCommandResult {
   if(binding&&!state.sharedPool){const {sharedPool:_binding,...unbound}=result.state;return {...result,state:unbound};}
   return result;
 }
-export function openingEncounterId(state: Pick<MatchState, 'openingEncounter'>): OpeningEncounterId | null {
+export function openingEncounterId(state: OpeningEncounterReadState): OpeningEncounterId | null {
   const opening = state.openingEncounter;
-  return opening.mode === 'shared-deferred' ? null : opening.mode === 'solo'
-    ? opening.context.selection.encounterId : opening.selection.encounterId;
+  return opening && !('mode' in opening) ? opening.encounterId ?? null : readOpeningSelection(state)?.encounterId ?? null;
 }
 function forgeReceipts(state: MatchState): readonly OpeningEffectReceipt[] {
   const id = openingEncounterId(state), opening = state.openingEncounter;
-  return (id === 'component-anvils' || id === 'artifact-anvil') && opening.mode !== 'shared-deferred' ? opening.receipts : [];
+  return (id === 'component-anvils' || id === 'artifact-anvil') && opening && 'mode' in opening && opening.mode !== 'shared-deferred' ? opening.receipts ?? [] : [];
 }
 export function pendingOpeningForges(state: MatchState): readonly OpeningEffectReceipt[] {
   return forgeReceipts(state).filter(r => !state.seatMechanics?.receipts.some(m => m.receiptId === r.receiptId));
@@ -312,25 +334,27 @@ export function validateOpeningForges(state: MatchState): void {
   }
 }
 /** Public whitelist. Never spread a context: seed, RNG and unrevealed facts stay private. */
-export function readOpeningEncounterView(state: Pick<MatchState, 'openingEncounter'>, shared?: OpeningEncounterContext) {
+export function readOpeningEncounterView(state: OpeningEncounterReadState, shared?: OpeningEncounterContext) {
   const opening = state.openingEncounter;
-  if (opening.mode === 'shared-deferred') return null;
-  const selection = opening.mode === 'solo' ? opening.context.selection : opening.selection;
+  const projected = opening && !('mode' in opening) ? opening : null;
+  const selection = projected ? {configVersion: projected.configVersion, encounterId: projected.encounterId} : readOpeningSelection(state);
+  if (!selection) return null;
   const entry = OPENING_ENCOUNTERS.find(entry => entry.id === selection.encounterId);
   if (!entry || selection.configVersion !== OPENING_ENCOUNTER_CONFIG.version) fail('opening-context-mismatch');
   if (shared) {
     validateOpeningEncounterContext(shared, shared.seed);
     if (!same(selection, shared.selection)) fail('opening-context-mismatch');
   }
-  const revealed = opening.mode === 'solo' ? opening.context.facts : shared?.facts;
+  const revealed = opening && 'mode' in opening && opening.mode === 'solo' ? opening.context?.facts : shared?.facts;
+  const receipts = opening && 'mode' in opening && opening.mode !== 'shared-deferred' ? opening.receipts ?? [] : [];
   return freezeContent({ configVersion: selection.configVersion, encounterId: entry.id,
     sourceEncounterId: entry.encounterId, portalId: entry.portalId, champion: entry.champion,
     nameZh: entry.nameZh, nameEn: entry.nameEn, enabled: entry.enabled, effectStatus: entry.effectStatus,
     readiness: entry.readiness, descriptionZh: entry.descriptionZh,
     statusTextZh: entry.id === 'none' ? '本局不附加奇遇规则' : entry.enabled ? '本局奇遇效果已启用' : '本局抽中此奇遇，效果尚未启用',
-    revealedFacts: revealed?.length ? revealed.map(f => ({nodeId:f.nodeId,outcome:f.outcome!}))
-      : (entry.id === 'wind-up-monkey' && opening.receipts.length
-        ? [{nodeId: MONKEY_NODE, outcome: JSON.parse(opening.receipts[0].factId)[4].slice(7) as MonkeyOutcome}] : []) });
+    revealedFacts: projected?.revealedFacts ? projected.revealedFacts.map(f => ({nodeId: f.nodeId, outcome: f.outcome})) : revealed?.length ? revealed.map(f => ({nodeId:f.nodeId,outcome:f.outcome!}))
+      : (entry.id === 'wind-up-monkey' && receipts.length
+        ? [{nodeId: MONKEY_NODE, outcome: JSON.parse(receipts[0].factId)[4].slice(7) as MonkeyOutcome}] : []) });
 }
 export type OpeningEncounterView = ReturnType<typeof readOpeningEncounterView>;
 
@@ -373,11 +397,10 @@ export function commitOpeningEncounterHealth(state: MatchState, events: import('
   return applied.state;
 }
 /** Owner-only progress whitelist. Do not put this into public PlayerView. */
-export function readOpeningMelProgress(state: Pick<MatchState, 'openingEncounter'>) {
+export function readOpeningMelProgress(state: OpeningEncounterReadState) {
   const opening = state.openingEncounter;
-  if (opening.mode === 'shared-deferred') return null;
-  const selection = opening.mode === 'solo' ? opening.context.selection : opening.selection;
-  if (selection.encounterId !== 'mels-blessing') return null;
+  if (!opening || !('mode' in opening) || opening.mode === 'shared-deferred') return null;
+  if (readOpeningSelection(state)?.encounterId !== 'mels-blessing' || !opening.receipts) return null;
   const receipt = opening.receipts[0] as OpeningMelThresholdReceipt | undefined;
   return freezeContent({encounterId: 'mels-blessing' as const, thresholdHp: OPENING_ENCOUNTER_CONFIG.melThreshold.hp,
     thresholdReached: receipt !== undefined, rewardStatus: receipt ? 'granted' as const : 'waiting-threshold' as const,
@@ -404,7 +427,7 @@ export function applyWarwickHunger(state:MatchState,facts:readonly OpeningWarwic
 /** Owner-only progress, never future offers or RNG. Current offers remain in pendingChoice. */
 export function readOpeningForgeProgress(state: MatchState) {
   const opening = state.openingEncounter;
-  if (opening.mode === 'shared-deferred' || !forgeReceipts(state).length) return null;
+  if (!opening || !('mode' in opening) || opening.mode === 'shared-deferred' || !forgeReceipts(state).length) return null;
   const total = forgeReceipts(state).length, pending = pendingOpeningForges(state).length;
   return {source: 'opening-encounter' as const, effectsApplied: opening.receipts.length,
     forgesGranted: total, forgesResolved: total - pending, forgesPending: pending};
