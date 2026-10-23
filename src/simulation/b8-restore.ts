@@ -233,6 +233,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
   if(state.multiplayer) {
     validateMultiplayerOrbLedger(state);
     const unresolved=orderedUnresolvedLootChoices(allChoices(state),state.m8.loot.choiceEligibility,state.m8.loot.choiceResolutions);
+    if(unresolved.length && state.pendingCombatTerminal) { check(state.pendingChoice===null,'pending terminal loot choice'); return false; }
     if(unresolved.length) check(state.phase==='choice'&&equal(state.pendingChoice,makeLootPendingChoice(unresolved[0])),'first multiplayer loot choice');
     return unresolved.length>0;
   }

@@ -1,5 +1,13 @@
 # 界面数据需求（Claude → Codex）
 
+## PR410-DRAG-ENEMY（2026-10-23，Codex 定位，Claude 已修：boardUnitAt 对不可装备的可见单位返回原 id，走 unknown-unit 提示；U3 10/10）
+
+- 离线 Chromium 对照：`83fd7fa5` 的 `verify-m8-u3-dynamic.cjs` 10/10 通过；PR9 原 HEAD `f879b2b2` 为 9/10，唯一失败为 `drag-enemy`，与本次体积优化无关。
+- 原因：分支内 `e54f2a78` 将 `BoardScene.boardUnitAt` 的 ID 映射改成 `session.equipmentTargetId`；`presentation/battle-equipment.ts` 提前过滤敌方，返回 `undefined`，输入路由因此按空白落点提示「物品未装备 · 请放到我方单位或空装备槽」，到不了原有 `unknown-unit` 提示。
+- 需要展示：可见敌方落点与空白落点保持可区分；敌方仍拒绝装备，不发送命令、不改状态。已有状态/token/team 和预检 reason 足够，无需新增规则字段。保留战斗永久单位映射、观战/召唤物/镜像限制。
+- 验收：原 `drag-enemy` 断言原样通过（「未找到该单位，只能装备到我方单位」），U3 10/10 与 `battle-equipment-client` 均通过；不得修改规则或放宽测试。
+- 证据目录：`artifacts/pr9-multiplayer-u3/`、`artifacts/pr9-before-u3/`、`artifacts/pr9-after-u3/`。本任务只要求定位；按目录分工未改界面文件。
+
 ## BATTLE-EQUIPMENT-PHASE2（2026-10-22，Codex 规则/服务器已实现，Claude 待接拖拽）
 
 - 用户反馈「战斗中还是不能放装备」；开放本人场上永久棋子的装备拖放，网络仍发 `{type:'equip',itemId,unitId,slot}`。PvP 用既有 `unitIds` 把 combatId 换回 originalId；PvE 原 ID。不可对观战、对手、镜像或召唤物提交，也不发送 seq/effectiveTick。
@@ -1221,3 +1229,11 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 - 用途：2D token 和 3D root 读取同一位置、播放冲刺；castSequence 的 chain/fist 分支由既有 actionSeq/显式分支字段选择，模型动画不替代权威位移。
 - 验收：独立规则测试验证两姿态落点、占格冲突、事件顺序和伤害目标；同一真实 replay 中 2D/3D 冲到一致落点，重连与追帧不重复施法、不新增命令或资源消耗。
 - 本轮仅修改表现；未修改 simulation、server。
+
+### Codex 核查结果（2026-10-23，缺证暂停）
+
+已核对 14.24b 目录的 normalized、运行时技能、原始 en_us、map22 和中英文 stringtable：文本确认锁链冲向目标、拳击砸击后撤离，但未找到冲刺距离或撤离终点参数。锁链 +1 是攻击距离，不作为冲刺距离。按本单用户“查不到就停下、不编数”要求，未实现规则位移或新事件；Claude 暂无新接口可接。数据位置、既有 movement 账本/回放/服务器镜像接入点及验证结果见 [缺证报告](AMBESSA_DASH_EVIDENCE.md)。需补可追溯的技能来源后再实现，不能用表现动画位移反推规则数值。
+
+### Codex P 实现交付（2026-10-23，覆盖上段暂停状态，待确认合并）
+
+按后续任务采用项目决定，原版距离缺证结论保持。已实现锁链最近可达空邻格、拳击结算后向己方后撤 1 格；接口复用 `movement`，增加 `reason:'ambessa-chain'|'ambessa-fist-retreat'`，无位移不发事件。完整账本与公开回放/流式投影均保留；B 侧沿既有 movement 镜像坐标，服务器无需改文件。Claude 读取 `CombatViewEvent.reason/from/to/tick/eventSeq`，按权威坐标及事件序号播放/去重，终态读 unitUpdated/keyframe；不要自行计算落格。锁链事件在伤害前、拳击在 HP/存活提交后。独立向量、测试、事件顺序及回退见 [实施说明](AMBESSA_DASH.md)。不录 epoch、不合并，之后统一 v22；无 rendering 改动。

@@ -2,6 +2,7 @@ import { isOpeningCrab, crabMove, crabJump } from './combat-opening-crabs';
 import { overtimeBonusBps, movementIntervalTicks, quickstrikerMoveTenths } from './combat-overtime';
 import { castV20Teamups, quickDashV20, advanceV20Minions } from './combat-v20-traits';
 import { canMove, isControlled } from './combat-movement';
+import { settleAmbessaRetreats } from './combat-ambessa-dash';
 import { settleFamilyReunionDeaths } from './combat-family-reunion';
 import { advanceSixCost, settleSixCostDeaths, recordMelAbsorption, convertViktorMana } from './combat-six-cost';
 import { p2Bonus, p2Stoneskin, p2Target, p2PacketCrit } from './s13-augments-p2-combat';
@@ -279,6 +280,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     unit.v20Traits={...unit.v20Traits,moveTenths:Math.min(13,(unit.v20Traits?.moveTenths??7)+quickstrikerMoveTenths(tick))};
   }
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
+  ctx.movementReservations = reserved;
   const intents = units.map(unit => {
     if (!canMove(unit, tick)) return undefined;
     if(isOpeningCrab(unit))return crabMove(ctx,unit,occupied);
@@ -600,6 +602,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const trenchEligible=new Map(units.filter(u=>u.alive&&u.hp>0&&u.mechanics?.some(m=>m.mechanic==='g24Trench'&&BigInt(u.hp)*10000n<=BigInt(u.maxHp)*BigInt(m.values.thresholdBps))).map(u=>[u.id,u.maxHp]));
   settleSurvival(ctx, beforeDamage, positiveDamage);
+  settleAmbessaRetreats(ctx);
   // Max-HP growth follows the fixed-max survival barrier. A lethal packet cannot
   // be undone by growth; missing HP is otherwise preserved (not healing).
   for(const unit of units){

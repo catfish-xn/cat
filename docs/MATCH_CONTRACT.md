@@ -24,6 +24,10 @@
 
 本节覆盖下文历史60秒/1200tick及固定安慰剂金币描述。按用户要求不录epoch、不更新版本/digest常量或历史golden；待PR #410合并后统一切换。这是开发候选，当前身份不得用于新旧混跑或发布。
 
+## 联机终局流法球（2026-10-23）
+
+`revealMatchCombatStreamTerminal(state, terminal): MatchCommandResult` 在可信 PvE 首遍终局登记可选 `pendingCombatTerminal`，提前揭示最后一击的掉落；保留 combat 阶段和领取 FIFO，结算时移除临时字段并按唯一收据发放。签名、`wrong-phase` 失败语义、校验、恢复边界和客户端字段见 [联机合同](MULTIPLAYER_CONTRACT.md#终局流法球揭示2026-10-23)。不改规则数值、RNG、网络命令或最终结算顺序。
+
 ## 战斗装备阶段 2（2026-10-22，候选身份；未录制 epoch）
 
 已实现下一未封口 tick 安装、属性/装备程序重编译、PvE/PvP 私有成功日志与来源凭据、重放和恢复；本节覆盖历史 T12 下场生效及 #382 的 `battle-input-unsupported`。命令、完整签名、失败原因、羁绊冻结依据、服务器原子边界、UI 字段及待集成身份见 [LIVE_COMBAT_EQUIPMENT_PHASE2](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。当前工作树已与开局奇遇合成候选 `v21-opening-encounters-battle-equipment`，正式历史 epoch 仍为下节 black-market，留 PR9 统一录制后发布。
