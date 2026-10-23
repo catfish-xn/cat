@@ -116,7 +116,8 @@ describe('G2-3 mechanic choices', () => {
   });
   it('an offline save with a pending mechanic choice restores', async () => {
     // Buy Rumble from the shop and complete three real battles; Match opens the armory.
-    const state = await publicPendingArmory(), progress = readG23Progress(state)!;
+    // v22: the default seed 4 route no longer buys Rumble before 6-7; seed 3 is the first public route that does.
+    const state = await publicPendingArmory(3), progress = readG23Progress(state)!;
     const choice = state.pendingChoice!, menu = g23JunkerMenu(state)!;
     expect(state.multiplayer).toBeUndefined();
     expect(state.phase).toBe('choice');
