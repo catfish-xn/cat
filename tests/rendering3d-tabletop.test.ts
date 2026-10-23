@@ -58,10 +58,12 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     tabletop.frame(frame({ orbs: [orb('a', 'gray'), orb('b', 'gold'), orb('c', 'blue')], openedOrbs: ['old'] }));
     expect(tabletop.debug().orbs.map(entry => entry.orbId)).toEqual(['a', 'b', 'c']);
     expect(tabletop.debug().opening).toBe(0);
-    // Queued in battle: still drawn, not opened.
+    // Queued in battle (my legend touched it): it opens right away, as TFT does, and is no longer drawn.
     tabletop.frame(frame({ orbs: [orb('a', 'gray', true), orb('b', 'gold'), orb('c', 'blue')], openedOrbs: ['old'] }));
-    expect(tabletop.debug().opening).toBe(0);
-    // Same frame: 'a' granted, 'b' forfeited (no granted receipt names it) -> only 'a' opens.
+    await flush();
+    expect(tabletop.debug().opening).toBe(1);
+    expect(tabletop.debug().orbs.find(entry => entry.orbId === 'a')?.opened).toBe(true);
+    // Same frame: 'a' granted after the battle (already opened: no second opening), 'b' forfeited -> nothing more opens.
     tabletop.frame(frame({ orbs: [orb('c', 'blue')], openedOrbs: ['old', 'a'] }));
     await flush();
     expect(tabletop.debug().orbs.map(entry => entry.orbId)).toEqual(['c']);
@@ -192,32 +194,66 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     expect(far.to.x).toBeGreaterThan(-3); expect(far.to.y).toBeLessThan(20);
   });
 
-  it('drops each orb where its monster fell and keeps it there after the battle; one without a source takes the column', () => {
-    const { scene, tabletop } = setup();
+  it('bursts each orb out of its monster when it falls, lands it nearby and keeps it there; one without a source takes the column', () => {
+    const { scene, tabletop, step } = setup();
     const monster = (id: string, x: number, y: number, alive = true) => ({ id, definitionId: 'pve-krug', team: 'enemy' as const, starLevel: 1,
       neutral: true as const, x, y, alive, visible: true });
     tabletop.frame(frame());
     const column = (() => { tabletop.frame(frame({ orbs: [orb('probe', 'gray')] })); return scene.getObjectByName('render3d-orb-gray')!.position.clone(); })();
     tabletop.frame(frame({ fighting: true, pieces: [monster('m1', 200, 120), monster('m2', 120, 90)] }));
-    tabletop.frame(frame({ fighting: true, pieces: [monster('m1', 210, 125, false), monster('m2', 120, 90)],
-      orbs: [{ ...orb('a', 'blue'), source: 'm1' }, { ...orb('b', 'gold'), source: 'm1' }, orb('c', 'gray'),
-        { ...orb('d', 'prismatic'), source: 'm2' }] }));
-    const at = (tier: string) => scene.getObjectByName(`render3d-orb-${tier}`)!.position.clone();
-    expect(at('blue').x).toBeCloseTo(210); expect(at('blue').z).toBeCloseTo(125);
-    expect(at('prismatic').x).toBeCloseTo(120); expect(at('prismatic').z).toBeCloseTo(90);
-    const width = Math.sqrt(3) * 34;
-    // Siblings must be distinct and stay near their monster; exact spread radius/angle is a presentation choice.
-    expect(at('gold').distanceTo(at('blue'))).toBeGreaterThan(0);
-    expect(at('gold').distanceTo(new Vector3(210, 0, 125))).toBeLessThan(width);
-    expect(at('gray').distanceTo(column)).toBeLessThan(1e-6); // no source: the column beside my legend
+    const orbs = [{ ...orb('a', 'blue'), source: 'm1' }, { ...orb('b', 'gold'), source: 'm1' }, orb('c', 'gray'), { ...orb('d', 'prismatic'), source: 'm2' }];
+    // The room revealed every drop, but m2 still stands in the battle shown here: its orb waits for it to fall.
+    tabletop.frame(frame({ fighting: true, pieces: [monster('m1', 210, 125, false), monster('m2', 120, 90)], orbs }));
+    const at = (tier: string) => scene.getObjectByName(`render3d-orb-${tier}`)?.position.clone();
+    expect(at('prismatic')).toBeUndefined();
+    // m1's orbs leave its corpse, small and not yet claimable.
+    expect(at('blue')!.x).toBeCloseTo(210); expect(at('blue')!.z).toBeCloseTo(125);
+    expect(tabletop.debug().orbs.filter(view => view.dropping).map(view => view.orbId).sort()).toEqual(['a', 'b']);
+    step(0.3);
+    expect(at('blue')!.y).toBeGreaterThan(10); // in the air
+    step(0.6);
+    expect(tabletop.debug().orbs.some(view => view.dropping)).toBe(false);
+    const width = Math.sqrt(3) * 34, corpse = new Vector3(210, 0, 125);
+    // Landed near (not on) where it fell; siblings apart. Exact radius/angle is a presentation choice.
+    for (const tier of ['blue', 'gold']) { expect(at(tier)!.y).toBeCloseTo(0); expect(at(tier)!.distanceTo(corpse)).toBeGreaterThan(width * 0.2); expect(at(tier)!.distanceTo(corpse)).toBeLessThan(width * 1.2); }
+    expect(at('gold')!.distanceTo(at('blue')!)).toBeGreaterThan(0);
+    expect(at('gray')!.distanceTo(column)).toBeLessThan(1e-6); // no source: the column beside my legend
+    // m2 falls: its orb bursts out of it.
+    tabletop.frame(frame({ fighting: true, pieces: [monster('m1', 210, 125, false), monster('m2', 120, 90, false)], orbs }));
+    expect(at('prismatic')!.x).toBeCloseTo(120); expect(at('prismatic')!.z).toBeCloseTo(90);
+    step(1);
     const tiers = ['blue', 'gold', 'gray', 'prismatic'];
-    const dropped = tiers.map(at);
+    const dropped = tiers.map(tier => at(tier)!);
     // The battle ends and the monsters leave the board: the orbs stay where they fell.
     // Reordering the feed must not reposition the siblings or send sourced orbs back to the column.
-    tabletop.frame(frame({ orbs: [{ ...orb('b', 'gold'), source: 'm1' }, { ...orb('d', 'prismatic'), source: 'm2' },
-      orb('c', 'gray'), { ...orb('a', 'blue'), source: 'm1' }] }));
-    tiers.forEach((tier, index) => expect(at(tier).distanceTo(dropped[index]!)).toBeLessThan(1e-6));
+    tabletop.frame(frame({ orbs: [orbs[1]!, orbs[3]!, orbs[2]!, orbs[0]!] }));
+    tiers.forEach((tier, index) => expect(at(tier)!.distanceTo(dropped[index]!)).toBeLessThan(1e-6));
     tabletop.dispose();
+  });
+
+  it('shows an orb already there on mount where it lies, without a flight', () => {
+    const { scene, tabletop } = setup();
+    tabletop.frame(frame({ fighting: true, pieces: [{ ...piece({ id: 'm', neutral: true, alive: false }) }], orbs: [{ ...orb('a'), source: 'm' }] }));
+    expect(tabletop.debug().orbs[0]!.dropping).toBe(false);
+    expect(scene.getObjectByName('render3d-orb-blue')!.position.y).toBe(0);
+  });
+
+  it('does not claim an orb still in flight, and walks to an orb only while it is drawn', () => {
+    let clock = 0;
+    const claimOrb = vi.fn();
+    const { tabletop, step } = setup({ now: () => clock, claimOrb });
+    const monster = { ...piece({ id: 'm', neutral: true }) };
+    tabletop.frame(frame({ fighting: true, pieces: [monster] }));
+    expect(tabletop.walkTo({ x: 0, y: 0 }, 'a')).toBeNull(); // not revealed yet
+    tabletop.frame(frame({ fighting: true, pieces: [{ ...monster, alive: false }], orbs: [{ ...orb('a'), source: 'm' }] }));
+    // My legend walks straight through the corpse while the orb is still flying out of it.
+    tabletop.walkTo({ x: monster.x, y: monster.y });
+    clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).not.toHaveBeenCalled();
+    step(1);
+    expect(tabletop.walkTo({ x: 0, y: 0 }, 'a')).not.toBeNull();
+    clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledExactlyOnceWith('a');
   });
 
   it('claims an orb my walking legend reaches, once, through the dock click', () => {

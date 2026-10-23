@@ -97,8 +97,11 @@ export function publicOrbsElement(orbs: PublicOrbs | null): HTMLElement | null {
 export interface OrbDockActions {
   /** Sends claimOrb for one orb (the scene shows the rules' answer). */
   readonly claim: (orbId: string) => void;
-  /** Status line for "queued until after the battle" and the claim results. */
-  readonly status: (message: string) => void;
+  /**
+   * The 3D board sends my legend onto the orb instead (it claims on arrival): true when it set off, false when it cannot
+   * go there now, null without a 3D board. Anything but true claims from the dock as before.
+   */
+  readonly walk?: (orbId: string) => boolean | null;
 }
 export interface OrbDockContext {
   /** My battle is on the board or running: a click is queued by the rules and settled after it. */
@@ -107,7 +110,6 @@ export interface OrbDockContext {
   readonly locked: boolean;
 }
 
-const QUEUED_TEXT = '战后结算';
 const RESULT_MS = 4_000;
 const OPEN_MS = 450;
 
@@ -179,7 +181,6 @@ export class OrbDock {
     button.setAttribute('aria-label', `${tier} · ${source} · ${orb.entries.map(orbPayloadName).join('、')} · ${hint}`);
     button.append(element('span', '', 'orb-token-gem'));
     if (orb.source === 'mechanic') button.append(element('span', '奖', 'orb-token-mark'));
-    if (orb.queued) button.append(element('span', QUEUED_TEXT, 'orb-token-queued'));
     // Hover card: the orb's contents are visible once it dropped (contract: private unclaimedOrbs.entries).
     const tip = element('span', '', 'orb-tip'); tip.setAttribute('role', 'tooltip');
     tip.append(element('strong', `${tier} · ${source}`));
@@ -193,6 +194,7 @@ export class OrbDock {
     button.append(tip);
     button.addEventListener('click', () => {
       if (button.disabled) return;
+      if (this.actions.walk?.(orb.orbId) === true) return;
       this.claimShown(orb.orbId, context);
       button.classList.add('orb-opening');
     });
@@ -206,7 +208,7 @@ export class OrbDock {
     this.render(last.state, last.context);
   }
   private claimShown(orbId: string, context: OrbDockContext): void {
-    if (context.inBattle) { this.held.add(orbId); this.actions.status('战斗中 · 法球将在战后结算'); }
+    if (context.inBattle) this.held.add(orbId);
     this.opening.set(orbId, Date.now());
     this.actions.claim(orbId);
     // A refused or queued claim leaves the orb on the dock: drop the opening look after its animation.
@@ -222,8 +224,6 @@ export class OrbDock {
     const lines = fresh.map(orbReceiptText).filter((line): line is string => line !== null);
     if (!lines.length) return;
     this.showResult(lines);
-    // After the command's own success line (the scene sets it once this render returns), so the result stays readable.
-    queueMicrotask(() => this.actions.status(`法球已领取 · ${lines.join(' · ')}`));
   }
   private showResult(lines: readonly string[]): void {
     this.clearResult();

@@ -4,6 +4,7 @@
 import { createCombatReplayRecorder, type BattleReplayTask, type CombatReplay, type CombatReplayTick,
   type CombatViewState, type CombatReplayRecorder } from '../../server-entry';
 import { stepMatchCombatStream } from '../../simulation/match';
+import { revealMatchLoot } from '../../simulation/loot-runtime';
 import type { CombatState, LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReplayUnitId } from '../protocol';
@@ -91,9 +92,17 @@ export class CombatStream {
     const events = step.events.filter((e): e is LedgerCombatEvent => 'tick' in e);
     this.frames.push(this.recorder.record(state.combat, { state: next, events }));
     this.ledger.push(...events); this.tick = next.tick;
-    if (step.terminal) { this.terminal = step.terminal; this.completedReplay = this.recorder.finish(step.terminal); }
+    const own = step.events.filter(e => !('tick' in e));
+    if (step.terminal) {
+      this.terminal = step.terminal; this.completedReplay = this.recorder.finish(step.terminal);
+      // The killing blow's drops: the rules reveal them with the settlement, after every battle of the round ended. They
+      // are revealed here on the live seat instead, so their orbs drop when the last monster falls like every earlier one
+      // (the settlement's own reveal then finds nothing left to reveal). Nothing is granted or rolled.
+      const revealed = revealMatchLoot(step.state, step.terminal);
+      return { state: revealed.state, events: [...own, ...revealed.events] };
+    }
     this.checkLimit();
-    return { state: step.state, events: step.events.filter(e => !('tick' in e)) };
+    return { state: step.state, events: own };
   }
   pveOutcome(state: MatchState): BattleSeatOutcome {
     const record = state.roundResults.at(-1);
