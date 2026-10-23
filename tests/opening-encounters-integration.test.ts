@@ -111,7 +111,8 @@ describe('opening encounter PR1 lifecycle, privacy and no-effect contract', () =
       'enabled','effectStatus','readiness','descriptionZh','statusTextZh','revealedFacts'].sort());
     expect(JSON.stringify(view)).not.toMatch(/seed|Rng|DO_NOT_SEND|receipt/i);
     expect(toPrivateSeatView(state).openingEncounter).toEqual(view);
-    expect(view.enabled).toBe(false);expect(view.statusTextZh).toContain('尚未启用');
+    // Opening batches A/B (v22) enable every encounter.
+    expect(view.enabled).toBe(true);expect(view.statusTextZh).toBe('本局奇遇效果已启用');
     expect(view.encounterId).not.toBe('none');
   });
   it('rejects missing fields, forged state/progress and legacy identity without migration', async () => {
