@@ -1,10 +1,11 @@
 import { expect, it } from 'vitest';
-import { createMatch, nextRound, startMatchCombat, selectAnomalyTarget, claimOrb, type MatchState } from '../src/simulation/match';
+import { createMatch, nextRound, startMatchCombat, selectAnomalyTarget, claimOrb, openAnvil, selectChoice, type MatchState } from '../src/simulation/match';
+import { isAnvil } from '../src/simulation/content/anvils';
 import { createOpeningEncounter, planOpeningRound, applyOpeningEffects, commitOpeningEncounterHealth,
   validateOpeningEncounterState, isMelBlessingCrossing, readOpeningMelProgress } from '../src/simulation/opening-encounter';
 import { OPENING_BATCH_A } from '../src/simulation/content/opening-batch-a';
 import { openingWeightedIndex, openingWords } from '../src/simulation/opening-random';
-import { melBranch, subscriptionBucket, subscriptionGold, subscriptionFact, openingRewardAtoms, openingRewardOrbs, BATCH_SOURCE } from '../src/simulation/opening-batch-rewards';
+import { melBranch, subscriptionBucket, subscriptionGold, subscriptionFact, openingRewardAtoms, openingRewardOrbs, openingRewardOffers, BATCH_SOURCE } from '../src/simulation/opening-batch-rewards';
 import { sixCostOddsBps, sixCostSlotFromWords, planSixCostShop } from '../src/simulation/six-cost-shop';
 import { openingStage } from '../src/simulation/opening-stage';
 import { generateShop } from '../src/simulation/shop';
@@ -236,12 +237,22 @@ it('full unit bench preserves Mel entitlement in a claimable orb, then claims ex
   const retry=claimOrb(claimed.state,orb.orbId,claimed.state.round);expect(retry.ok).toBe(false);expect(retry.state).toBe(claimed.state);
 });
 it('forge rewards resolve through the existing choice command and authenticate offers and provenance',()=>{
+  // v22 anvil units: the loot-subscription forge stays an orb, is claimed as a bench anvil and opened by selling.
   for(const bucket of [3,4]){
-    const s=reachRound('2-1',false,lootSeeds.get(bucket)!),after=resolveM5Choices(s);
-    expect(after.seatMechanics!.receipts.filter(r=>r.source===BATCH_SOURCE)).toMatchObject([{kind:'choice',choiceKind:'forge',price:0,skipped:false}]);
-    expect(openingRewardOrbs(after)).toHaveLength(0);expect(restoreMatch(serializeMatch(after))).toEqual(after);
-    const bad=structuredClone(s);if(bad.pendingChoice?.kind==='forge')(bad.pendingChoice as unknown as {offers:string[]}).offers=['bf-sword'];
-    if(bad.pendingChoice?.kind==='forge')expect(()=>validateOpeningEncounterState(bad)).toThrow();
+    const s=resolveM5Choices(reachRound('2-1',false,lootSeeds.get(bucket)!));
+    expect(s.pendingChoice).toBeNull();
+    const atom=openingRewardAtoms(s).find(a=>a.payload.kind==='forge')!,offers=openingRewardOffers(s,atom);
+    expect(openingRewardOrbs(s).map(o=>o.orbId)).toContain(atom.id);
+    const held=acceptOrb(claimOrb(s,atom.id,s.round)),anvil=held.preparation.units.find(u=>isAnvil(u.definitionId))!;
+    expect(held.seatMechanics!.receipts.filter(r=>r.source===BATCH_SOURCE)).toMatchObject([{kind:'unit',unitId:anvil.id,resolution:'held',gold:0}]);
+    expect(openingRewardOrbs(held)).toHaveLength(0);
+    const opened=accepted(openAnvil(held,anvil.id)),c=opened.pendingChoice!;
+    expect(c).toMatchObject({kind:'forge',offers});expect(restoreMatch(serializeMatch(opened))).toEqual(opened);
+    const bad=structuredClone(opened);(bad.pendingChoice as unknown as {offers:string[]}).offers=['bf-sword',...offers.slice(1)];
+    expect(()=>restoreMatch(serializeMatch(bad))).toThrow();
+    const after=accepted(selectChoice(opened,c.choiceId,c.generation,c.offers[0]));
+    expect(after.seatMechanics!.receipts.filter(r=>r.source==='anvil-unit')).toMatchObject([{kind:'choice',choiceKind:'forge',price:0,skipped:false}]);
+    expect(restoreMatch(serializeMatch(after))).toEqual(after);
   }
 });
 it('six-cost shop uses common root/seat/generation and exact uniform slot boundaries',()=>{
