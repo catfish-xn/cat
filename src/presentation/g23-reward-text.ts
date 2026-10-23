@@ -89,7 +89,7 @@ export function g23RewardIcons(reward: Readonly<Record<string, unknown>>): G23Re
   for (const [key, value] of Object.entries(reward)) {
     if (key === 'Gold') gold += Number(value) || 0;
     else if (key === 'GoldItems') for (const api of list(value)) gold += Number(api.slice(api.lastIndexOf('_') + 1)) || 0;
-    else if (key === 'Remover') for (let n = 0; n < (Number(value) || 0); n++) items.push({ kind: 'item', itemId: null, name: consumableName('magnetic-remover') });
+    else if (key === 'Remover') for (let n = 0; n < (Number(value) || 0); n++) items.push({ kind: 'item', itemId: null, name: consumableName('magnetic-remover'), source: 'TFT_Consumable_ItemRemover' });
     else if (['Item', 'ExactItem', 'ItemByKey', 'Consumables'].includes(key)) for (const api of list(value)) item(api);
     else if (key === 'MeepTypeUnit') for (const api of list(value)) items.push({ kind: 'item', itemId: null, name: FORGES[api] ?? '锻造器', source: api });
     else if (key.startsWith('Champions')) {
