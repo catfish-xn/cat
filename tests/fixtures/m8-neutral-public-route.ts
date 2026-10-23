@@ -22,6 +22,26 @@ const route = await run(api, { build: 'sniper', seed: 42,  onStep(before, result
 if (route.final.phase !== 'gameOver' || route.final.roundDefinitionId !== '6-7' || route.final.outcome !== 'victory')
   throw new Error('Public neutral fixture did not complete the actual 33-battle route');
 
+// v22: seed 42 draws the scuttle-crab opening, which replaces every authored PvE encounter with crabs.
+// Consumers that exercise the authored minion/monster encounters take prefixes from this second
+// command-only route; seed 7296 has no opening encounter (1-2 is Irelia against minions-a-v1).
+const AUTHORED_ENCOUNTER_SEED = 7296;
+const authoredPreparations = new Map<string, api.MatchState>();
+await run(api, { build: 'sniper', seed: AUTHORED_ENCOUNTER_SEED, onStep(before, result, command) {
+  if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')
+    authoredPreparations.set(before.roundDefinitionId, before);
+  if (result.state.phase === 'preparation') authoredPreparations.set(result.state.roundDefinitionId, result.state);
+} });
+
+/** A restored prefix of the crab-free route, for authored PvE encounter checks. */
+export function publicAuthoredPreparation(roundId: string): api.MatchState {
+  const state = authoredPreparations.get(roundId);
+  if (!state) throw new Error(`Missing authored-encounter route preparation: ${roundId}`);
+  if (state.openingEncounter && 'mode' in state.openingEncounter && state.openingEncounter.mode === 'solo'
+    && state.openingEncounter.context.selection.encounterId !== 'none') throw new Error('Authored-encounter route drew an opening encounter');
+  return restoreMatch(serializeMatch(state));
+}
+
 /** Each consumer receives a provenance-complete, restored independent prefix. */
 export function publicNeutralPreparation(roundId: string): api.MatchState {
   const state = preparations.get(roundId);
