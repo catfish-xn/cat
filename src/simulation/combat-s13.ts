@@ -1,4 +1,4 @@
-import { overtimeBonusBps, overtimeMoveBonusBps, movementIntervalTicks } from './combat-overtime';
+import { overtimeBonusBps, movementIntervalTicks, quickstrikerMoveTenths } from './combat-overtime';
 import { castV20Teamups, quickDashV20, advanceV20Minions } from './combat-v20-traits';
 import { canMove, isControlled } from './combat-movement';
 import { settleFamilyReunionDeaths } from './combat-family-reunion';
@@ -275,7 +275,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   advanceV20Minions(ctx);
   for(const unit of units)quickDashV20(ctx,unit);
   for(const unit of units)if(unit.mechanics?.some(m=>m.mechanic==='quickstriker')&&unit.alive){
-    unit.v20Traits={...unit.v20Traits,moveTenths:Math.min(13,(unit.v20Traits?.moveTenths??7)+Math.floor(3*(10000+overtimeMoveBonusBps(tick))/10000))};
+    unit.v20Traits={...unit.v20Traits,moveTenths:Math.min(13,(unit.v20Traits?.moveTenths??7)+quickstrikerMoveTenths(tick))};
   }
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
   const intents = units.map(unit => {

@@ -1,7 +1,7 @@
 import { createMatch } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { describe, expect, it } from 'vitest';
-import { overtimeStacks, overtimeBonusBps, overtimeReceivedBps, overtimeControlTicks, OVERTIME_MOVE_SPEED_BONUS_BPS, movementIntervalTicks } from '../src/simulation/combat-overtime';
+import { overtimeStacks, overtimeBonusBps, overtimeReceivedBps, overtimeControlTicks, OVERTIME_MOVE_SPEED_BONUS_BPS, movementIntervalTicks, quickstrikerMoveTenths } from '../src/simulation/combat-overtime';
 import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
 import { MAX_COMBAT_TICKS, COMBAT_TICK_MS, stepCombat, type CombatState, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -35,9 +35,14 @@ describe('10-23 overtime independent integer vectors', () => {
   it('uses a fixed 50 ms tick, 900 tick timeout and a +50% overtime movement bonus', () => {
     expect(COMBAT_TICK_MS).toBe(50); expect(MAX_COMBAT_TICKS).toBe(900);
     expect(S13_COMBAT_RULES.maxTicks).toBe(900); expect(OVERTIME_MOVE_SPEED_BONUS_BPS).toBe(5000);
-    // ceil(5 / speed): 1.0 -> 5, 1.5 -> 4 (overtime or frenzy), 2.0 -> 3 (both); flat, not per stack.
-    expect([599, 600, 899].map(t => movementIntervalTicks(false, t))).toEqual([5, 4, 4]);
-    expect([599, 600, 899].map(t => movementIntervalTicks(true, t))).toEqual([4, 3, 3]);
+    // Before overtime: 5, frenzy ceil(5/1.5)=4. In overtime +50% is exact on a tick grid:
+    // continuous movement averages 10/3 ticks per step (2.5 with frenzy); flat, not per stack.
+    expect(movementIntervalTicks(false, 599)).toBe(5); expect(movementIntervalTicks(true, 599)).toBe(4);
+    const walk = (frenzy: boolean, steps: number) => { let t = 600; const gaps: number[] = [];
+      for (let i = 0; i < steps; i++) { const gap = movementIntervalTicks(frenzy, t); gaps.push(gap); t += gap; } return gaps; };
+    expect(walk(false, 9)).toEqual([4, 3, 3, 4, 3, 3, 4, 3, 3]);
+    expect(walk(true, 8)).toEqual([3, 2, 3, 2, 3, 2, 3, 2]);
+    expect([599, 600, 601, 602].map(quickstrikerMoveTenths)).toEqual([3, 4, 5, 4]);
     expect(overtimeStacks(2600)).toBe(101); // no offensive cap
   });
   it.each([[599, 100, 20], [600, 110, 19], [620, 120, 17], [720, 170, 12], [740, 180, 12], [899, 250, 8], [900, 260, 8]])(

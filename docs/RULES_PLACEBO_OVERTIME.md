@@ -37,7 +37,7 @@
 
 ## 移速与Claude交接
 
-（10-23 Claude 补）用户批准加时移速+50%：`S13_COMBAT_RULES.overtimeMoveSpeedBonusBps=5000`，`movementIntervalTicks(frenzy,tick)`统一普通/沃里克移动冷却（5/4/4/3），迅击moveTenths累计按同倍率取整。位移技能和模拟推进速率不变。
+（10-23 Claude 补）用户批准加时移速+50%：`S13_COMBAT_RULES.overtimeMoveSpeedBonusBps=5000`，`movementIntervalTicks(frenzy,tick)`统一普通/沃里克移动冷却：加时前不变，加时中按固定tick网格精确+50%（4,3,3循环）；迅击`quickstrikerMoveTenths`加时中4/5交替。位移技能和模拟推进速率不变。
 
 未发现表现层将战斗上限硬编码为60秒：`src/rendering/BoardScene.ts:1247`已读`combat.maxTicks*COMBAT_TICK_MS`，应自然显示45秒；`src/rendering/online/players-sidebar.ts:151`显示服务端deadline的剩余秒数。两处交Claude真机核对；本单未改视觉代码。`src/server/room/room.ts:133,1430`、`src/server/room/types.ts:78`仍有1200注释/步进预算（较大预算不会突破领域900上限），交Claude清理。`build-badge.ts:13`的60秒是版本轮询，与战斗无关。
 
