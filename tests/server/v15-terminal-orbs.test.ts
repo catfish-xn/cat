@@ -11,7 +11,7 @@ import type { BattleInput, RoomState, SeatState, SharedPoolState, TwoSidedBattle
 import type { CombatReplay } from '../../src/server-entry';
 import { readLootView } from '../../src/simulation/match';
 import type { MatchState } from '../../src/simulation/match-types';
-import { claimAllOrbs, DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
+import { answerOpenChoices, claimAllOrbs, DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
 
 const seat = (state: RoomState, seatId: string): SeatState => state.seats.find(candidate => candidate.seatId === seatId)!;
 const unclaimed = (match: MatchState) => readLootView(match).unclaimedOrbs ?? [];
@@ -64,6 +64,8 @@ describe('v15 match end: terminal orb forfeit', () => {
     const { room, clock } = makeRoom(new EndAtFirstPvp(), { pvpMode: 'placeholder' });
     room.start();
     runUntil(room, clock, state => { claimAllOrbs(room, ['s0']); return state.roundKind === 'pvp' && state.phase === 'preparation'; });
+    // v22: 2-1 opens the augment choice inside the preparation; a seat claims orbs once it has answered it.
+    answerOpenChoices(room);
     claimAllOrbs(room, ['s0']);
     expect(unclaimed(seat(room.state, 's0').match)).toEqual([]);
     // The settlement publication (ranking set) is the last state before the end; with nothing to forfeit the end keeps it.
