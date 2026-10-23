@@ -67,12 +67,27 @@ export type StartResult = { readonly ok: true; readonly room: Room } | { readonl
 
 const DEFAULT_BOT_NAMES = ['机器人 1', '机器人 2', '机器人 3', '机器人 4', '机器人 5', '机器人 6', '机器人 7'];
 
+/**
+ * Seed of the `index`-th room (0-based) a lobby opens: the configured seed for the first, then a fixed uint32 mix of it
+ * and the index, so consecutive matches differ while a restart with the same seed replays the same sequence.
+ */
+export function lobbyRoomSeed(seed: number, index: number): number {
+  if (index === 0) return seed >>> 0;
+  let x = (seed + Math.imul(index, 0x9e3779b9)) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 0x85ebca6b) >>> 0;
+  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35) >>> 0;
+  return (x ^ (x >>> 16)) >>> 0;
+}
+
 export class Lobby {
   private queue: SeatSpec[] = [];
   private current: Room | null = null;
   private driver: BotDriver | null = null;
   private timer: ClockHandle | null = null;
   private serial = 0;
+  private opened = 0;
+  /** Seed of the room opened last (null before the first start). */
+  private seed: number | null = null;
   private unwatch: (() => void) | null = null;
   private stallTimer: ClockHandle | null = null;
   private abandonTimer: ClockHandle | null = null;
@@ -109,19 +124,22 @@ export class Lobby {
     const seats = [...this.queue, ...bots];
     this.queue = [];
     this.disposeRoom();
-    this.current = new Room(seats, { ...ROOM_TIMING_DEFAULTS, ...this.options.timings, roomId: this.options.roomId ?? 'room-1', seed: this.options.seed, clock: this.options.clock, resolver: this.options.resolver, ...(this.options.pvpMode ? { pvpMode: this.options.pvpMode } : {}),
+    const seed = this.seed = lobbyRoomSeed(this.options.seed, this.opened++);
+    this.current = new Room(seats, { ...ROOM_TIMING_DEFAULTS, ...this.options.timings, roomId: this.options.roomId ?? 'room-1', seed, clock: this.options.clock, resolver: this.options.resolver, ...(this.options.pvpMode ? { pvpMode: this.options.pvpMode } : {}),
       ...(this.options.poolCapacities ? { poolCapacities: this.options.poolCapacities } : {}), ...(this.options.sliceTicks ? { sliceTicks: this.options.sliceTicks } : {}),
       combatStreaming: this.options.combatStreaming,
       ...(this.options.sliceMs !== undefined ? { sliceMs: this.options.sliceMs } : {}),
       ...(this.options.carousel ? { carousel: this.options.carousel } : {}) });
     // The driver subscribes before the first round opens so it sees the first phase entry.
-    if (this.options.bots !== null) this.driver = new BotDriver(this.current, this.options.seed, this.options.bots ?? {});
+    if (this.options.bots !== null) this.driver = new BotDriver(this.current, seed, this.options.bots ?? {});
     const room = this.current;
     this.unwatch = room.subscribe(state => this.watch(room, state));
     room.start();
     this.options.onStart?.(this.current);
     return { ok: true, room: this.current };
   }
+  /** Seed of the room opened last, for the server log; null before the first start. */
+  get roomSeed(): number | null { return this.seed; }
   view(seatId: string | null): LobbyView {
     const joined = seatId !== null && this.queue.some(entry => entry.seatId === seatId);
     return { queue: this.queue.map(entry => ({ name: entry.name, kind: entry.kind, me: entry.seatId === seatId })), capacity: ROOM_CAPACITY, joined, canStart: joined && !this.inProgress, error: null };

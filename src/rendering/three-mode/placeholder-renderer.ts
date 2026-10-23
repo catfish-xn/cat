@@ -32,7 +32,7 @@ import { createTraitProps } from './trait-props';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, type Envelope } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, type Envelope } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { createEffectLibrary } from './effect-library';
@@ -73,6 +73,8 @@ const MAX_EFFECTS = 48;
 const MAX_STARTS_PER_FRAME = 6, MAX_QUEUED = 64, STALE_SECONDS = 0.3;
 /** A batch of combat events spanning more ticks than this (catching up after dropped frames) plays effects for its last ticks only. */
 const EFFECT_TICKS = 2;
+/** A combat step lands every MOVE_INTERVAL_TICKS (250 ms): a run must outlast it, or the piece drops to idle between cells. */
+const ACTION_CONFIG = { durations: { move: 0.3 } };
 /** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
  * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
@@ -353,7 +355,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const names = new Set(ENVELOPE_ACTIONS.map(nameOf));
     return lease.animations.filter(clip => names.has(clip.name))
       // Every combat clip also sets the feet (its lowest point net of root motion), in the same pass as the width.
-      .map(clip => ({ clip, loop: ENVELOPE_ACTIONS.some(action => LOOPING_ACTIONS.has(action) && nameOf(action) === clip.name), ground: true }));
+      .map(clip => ({ clip, loop: ENVELOPE_ACTIONS.some(action => LOOPING_ACTIONS.has(action) && nameOf(action) === clip.name), ground: true,
+        feet: clip.name === nameOf('idle') }));
   };
   const prepareEnvelope = async (id: string, lease: ModelLease): Promise<boolean> => {
     if (envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
@@ -674,7 +677,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // ... and its feet on the idle's lowest point (a bind pose can stand far below it: Darius, Nami floated).
         const envelope = unitScale ? envelopeOf(definitionId, lease) : undefined;
         const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: FX_SCALE, unitScale,
-          envelopeRadius: envelope?.radius, ground: envelope?.ground });
+          envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(definitionId, envelope) });
         view.body = lease.scene;
         // Without an official scale the stars, bars and hit volume keep the old fixed baseline (older roots unchanged).
         view.starHeight = (unitScale ? drawn : MODEL_HEIGHT) + STAR_GAP;
@@ -709,7 +712,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     root.add(ring);
     scene.add(root);
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
-    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id), body: null, lease: null, mixer: null, team: piece.team,
+    const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null,
       lunge: null, lungeOffset: { x: 0, z: 0 } };
@@ -724,7 +727,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
     held.delete(view); cancelLunge(view);
-    view.state = new UnitActionState(id); view.facing = null;
+    view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
