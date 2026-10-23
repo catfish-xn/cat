@@ -70,7 +70,7 @@ describe('T5R private own-seat whitelist',()=>{
     // Only displayed fields and harmless required metadata are restored, never hidden enemy plans.
     const base=createMatch(777);
     // The public opening projection selects the preview rules note (crab encounters have their own).
-    const display:MatchState={...base,openingEncounter:view.openingEncounter as MatchState['openingEncounter'],preparation:view.preparation,
+    const display:MatchState={...base,openingEncounter:view.openingEncounter as unknown as MatchState['openingEncounter'],preparation:view.preparation,
       round:view.round,roundDefinitionId:view.roundDefinitionId,
       m8:{...base.m8,round:{...view.m8.round,isFinal:false},
         preparation:{version:'m8-b8-preparation-v1',contentStatus:'ready-b8-loot',...view.m8.preparation!}}};
