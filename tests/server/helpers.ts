@@ -53,12 +53,17 @@ export function claimAllOrbs(room: Room, seatIds?: readonly string[]): number {
   let claimed = 0;
   for (const { seatId } of room.state.seats) {
     if (seatIds && !seatIds.includes(seatId)) continue;
+    // An anvil stays in its orb while the bench is full (v22), so each orb is claimed at most once per call.
+    const tried = new Set<string>();
     for (;;) {
       const seat = room.state.seats.find(candidate => candidate.seatId === seatId)!;
       if (!seat.alive || seat.match.phase !== 'preparation') break;
-      const orb = (readLootView(seat.match).unclaimedOrbs ?? []).filter(candidate => !candidate.queued).map(candidate => candidate.orbId).sort()[0];
+      const orb = (readLootView(seat.match).unclaimedOrbs ?? []).filter(candidate => !candidate.queued && !tried.has(candidate.orbId)).map(candidate => candidate.orbId).sort()[0];
       if (orb === undefined) break;
+      tried.add(orb);
       const result = room.handle(seatId, { type: 'claimOrb', round: seat.match.round, orbId: orb });
+      // v22: an orb holding an anvil stays put while the bench is full.
+      if (!result.ok && (result as { reason?: unknown }).reason === 'bench-full') continue;
       expect(result, `${seatId} claims ${orb}`).toMatchObject({ ok: true });
       claimed++;
     }
