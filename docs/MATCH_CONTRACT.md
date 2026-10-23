@@ -56,6 +56,12 @@
 
 派生仍为 `sampleG24Reward(pool, \`${seed}:${offer.id}:atom:${index}\`, 1)`，相同 seed/offer/源顺序的装备与旧领取时结果一致；无新增子流，不消耗市场、王冠或其他全局 RNG 游标。恢复/战斗输入/回放按原经济收据重建 offer 与领取包，严格比较包括具体装备的完整结构，缺失、重复、改序、跨 offer 或同池换装均拒绝；不迁移旧存档。保留微光、跳过成长、整包及唯一发奖语义不变。规则身份已记入 `G23_POLICY.chemBaron.equipment`；epoch/version/digest 常量及历史 golden 留待 v22 统一录制，候选不得混跑发布。验收见 [黑市报告](BLACK_MARKET_CONCRETE_OFFERS.md)。
 
+## v22 候选：奇遇展示读取兼容投影
+
+`openingEncounterId`、`readOpeningEncounterView`、`readOpeningMelProgress` 的只读输入扩为 `OpeningEncounterReadState`，接受完整奇遇状态、公开白名单或 null/缺字段；奖励读取只认权威 selection/receipts，不从投影重建。权威恢复校验及规则结果不变。完整签名、返回/失败语义、客户端回归及旧基线失败见 [V22_VIEW_FIX_REPORT](V22_VIEW_FIX_REPORT.md)。
+
+用户 10-23 批准采用 TFT 通用规则：普通单位 1/2/3 星 HP 为 100/180/324%，AD 改为 100/150/225%，分别从一星基础值乘百分比后向下取整。14.24 源数据只有一星属性，不将倍率声称为源表中的三档数值。`getUnitStats(definitionId,starLevel)` / `resolveUnitStats(definition,starLevel)` 签名、输出形状和失败原因不变；无新命令。普通倍率唯一来源为 `content/unit-star-scaling.ts`，`S13_COMBAT_RULES` 元数据改为 `starHealthPercent` / `starAttackPercent`，六费用 `sixCostStarPercent`，均为星级键到整数百分比的只读表；原 `starStatPercent` 无调用方，移除。六费原有 100/180/360%、维克托固定 AD/转法强基线、魔像自定表、fixedStarStats 召唤物及专用四星值保持不变。来源、六费逐项现状、检查范围与测试清单见 [AD 星级报告](AD_STAR_SCALING.md)。不更新身份常量、epoch 或历史 golden；**待 v22 统一录制**。
+
 ## 2026-10-23 Batch A 覆盖合同（待统一 epoch）
 
 梅尔、维克托、金币订阅、战利品订阅已启用，覆盖历史关闭/只观察说明。普通六费商店也改为批准的完整q表、整店一次5q判定。接口、收据、恢复、加时阶段钟和UI字段见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md#接口与恢复合同)。公开命令不新增；装备与弈子待领使用既有 `claimOrb`，锻造器使用既有 `choose/timeoutChoice`。本批装备统一待领，不引入批准表外的库存格数。

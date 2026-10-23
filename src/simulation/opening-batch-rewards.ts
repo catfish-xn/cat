@@ -9,6 +9,7 @@ import { getMultiplayerRoundByOrdinal, getMultiplayerRoundById } from './multipl
 import { grantMechanicGold, grantMechanicItem, grantMechanicUnit } from './seat-mechanics/grants';
 import { appendMechanicReceipt } from './seat-mechanics/state';
 import type { MatchState, MatchEvent, MatchCommandResult } from './match-types';
+import { readOpeningSelection } from './opening-encounter';
 import type { OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import type { LootPayload } from './m8/contracts';
 import type { UnitLootPolicy } from './loot-runtime';
@@ -41,8 +42,9 @@ export function subscriptionFact(seed:number,id:string,round:number):OpeningEffe
   return {factId:JSON.stringify(['opening-batch-a',instance(seed),id,effectKey,nodeId]),effectKey,nodeId};
 }
 export function subscriptionReceipts(state:MatchState):OpeningEffectReceipt[] {
-  const o=state.openingEncounter;if(o.mode==='shared-deferred')return [];
-  const id=o.mode==='solo'?o.context.selection.encounterId:o.selection.encounterId,seatId=o.mode==='solo'?'solo':o.seatId;
+  const o=state.openingEncounter,selection=readOpeningSelection(state);
+  if(!selection||!o||o.mode==='shared-deferred')return [];
+  const id=selection.encounterId,seatId=o.mode==='solo'?'solo':o.seatId;
   const receipts:OpeningEffectReceipt[]=[];
   for(let round=1;round<=state.round;round++){
     const f=subscriptionFact(state.augmentTierSeed,id,round);
@@ -52,8 +54,9 @@ export function subscriptionReceipts(state:MatchState):OpeningEffectReceipt[] {
 }
 interface Atom {readonly id:string;readonly round:number;readonly payload:LootPayload}
 export function openingRewardAtoms(state:MatchState):Atom[] {
-  const o=state.openingEncounter;if(o.mode==='shared-deferred')return [];
-  const id=o.mode==='solo'?o.context.selection.encounterId:o.selection.encounterId;
+  const o=state.openingEncounter,selection=readOpeningSelection(state);
+  if(!selection||!o||o.mode==='shared-deferred'||!o.receipts)return [];
+  const id=selection.encounterId;
   if(!batchEncounter(id))return [];
   const atoms:Atom[]=[];
   for(const receipt of o.receipts){
