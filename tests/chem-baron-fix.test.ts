@@ -107,7 +107,7 @@ it('accepts only the selected bundle, retains shimmer on keep, and rejects stale
  const p=market(),offer=p.chem.offer!,saved=structuredClone(p);
  expect(offer.optionIds).toHaveLength(1);
  const selected=offer.optionIds[0],chosen=decideG23Market(p,offer.id,true,3,selected);
- expect(chosen.rewards).toEqual([{id:offer.id,round:3,source:'black-market',tier:1,reward:G23_BLACK_MARKETS[0].options.find(o=>o.id===selected)!.reward}]);
+ expect(chosen.rewards).toEqual([{id:offer.id,round:3,source:'black-market',tier:1,reward:G23_BLACK_MARKETS[0].options.find(o=>o.id===selected)!.reward,concreteItems:offer.concreteItems}]);
  expect(chosen.chem).toMatchObject({shimmer:0,offer:null});
  expect([chosen.rngState,chosen.rngDraws]).toEqual([p.rngState,p.rngDraws]);validateG23Progress(chosen,9,3);
  const kept=decideG23Market(p,offer.id,false,3);
@@ -151,7 +151,7 @@ it('replays Family, Mel and the sole black-market bundle together without losing
  p=decideG23Market(p,offer.id,true,3,optionId);
  const restored=replayG23Economy(42,JSON.parse(JSON.stringify(p.economyReceipts)));
  expect(restored).toEqual(p);validateG23Progress(restored,42,3);
- expect(restored.rewards.filter(r=>r.source==='black-market')).toEqual([{id:offer.id,round:3,source:'black-market',tier:offer.tier,reward:G23_BLACK_MARKETS[offer.tier-1].options.find(o=>o.id===optionId)!.reward}]);
+ expect(restored.rewards.filter(r=>r.source==='black-market')).toEqual([{id:offer.id,round:3,source:'black-market',tier:offer.tier,reward:G23_BLACK_MARKETS[offer.tier-1].options.find(o=>o.id===optionId)!.reward,concreteItems:offer.concreteItems}]);
  expect(restored.mel!.savedBattleId).toBe('synthetic-3');
  const pve=advanceG23Economy(restored,facts(4,{roundKind:'pve',melCasts:99,family:{stage:4,eligible:true,openingIds:['a'],survivorIds:['a']}})).progress;
  expect(pve.chem).toEqual(restored.chem);expect(pve.family).toEqual(restored.family);expect(pve.mel).toEqual(restored.mel);

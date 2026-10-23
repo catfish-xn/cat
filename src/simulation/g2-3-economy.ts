@@ -5,6 +5,7 @@ import { G23_TRAIT_SOURCE } from './content/g2-3-trait-runtime';
 import { rollG23BlackMarket,rollG23CrownGold,planG23Conquest } from './g2-3-progress';
 import type { G23MatchProgress } from './g2-3-match-progress';
 import {validateItemGoldPayouts,type ItemGoldPayout} from './g2-4b-item-gold';
+import {g23RewardAtoms} from './g2-3-rewards';
 export interface G23BattleFacts {
  readonly openingDeaths?:readonly {readonly victimId:string;readonly eventSeq:number}[];
  readonly family?:{readonly stage:number;readonly eligible:boolean;readonly openingIds:readonly string[];readonly survivorIds:readonly string[]};
@@ -17,8 +18,9 @@ export interface G23BattleFacts {
  /** Tactician's Crowns equipped on this side's deployed units; present only when nonzero. */
  readonly crowns?:number;
 }
-export interface G23RewardBundle {readonly id:string;readonly round:number;readonly source:'conqueror'|'black-market'|'family';readonly tier:number;readonly reward:Readonly<Record<string,unknown>>}
-export interface G23MarketOffer {readonly id:string;readonly tier:number;readonly optionId:string;readonly optionIds:readonly string[];readonly round:number}
+export interface G23ConcreteItem {readonly atomId:string;readonly definitionId:string}
+export interface G23RewardBundle {readonly id:string;readonly round:number;readonly source:'conqueror'|'black-market'|'family';readonly tier:number;readonly reward:Readonly<Record<string,unknown>>;readonly concreteItems?:readonly G23ConcreteItem[]}
+export interface G23MarketOffer {readonly id:string;readonly tier:number;readonly optionId:string;readonly optionIds:readonly string[];readonly round:number;readonly concreteItems:readonly G23ConcreteItem[]}
 export interface G23ChemProgress {readonly shimmer:number;readonly losses:number;readonly skips:number;readonly offeredThrough:number;readonly offer:G23MarketOffer|null}
 export interface G23EconomyAction {readonly kind:'battle';readonly facts:G23BattleFacts;readonly gold:number;readonly bundles:readonly string[];readonly crownGold?:number}
 export interface G23EconomyDecision {readonly kind:'market';readonly offerId:string;readonly take:boolean;readonly round:number;readonly optionId?:string}
@@ -65,7 +67,12 @@ export function advanceG23Economy(p:G23MatchProgress,f:G23BattleFacts):{progress
   chem={...chem,shimmer,losses};
   if(!chem.offer&&tier>chem.offeredThrough){
    const roll=rollG23BlackMarket(tier,rngState);rngState=roll.rngState;rngDraws+=roll.draws;
-   chem={...chem,offeredThrough:tier,offer:{id:`g23:market:${f.battleId}:${tier}`,tier,optionId:roll.id,optionIds:roll.options.map(o=>o.id),round:f.round}};
+   const id=`g23:market:${f.battleId}:${tier}`;
+   // Reuse the existing reward atom substreams, not the market/crown cursor.
+   // The same bundle id preserves every former take-time equipment result.
+   const concreteItems=g23RewardAtoms({id,round:f.round,source:'black-market',tier,reward:roll.reward},p.seed)
+    .filter(a=>a.kind==='item'&&a.options.length===1).map(a=>({atomId:a.id,definitionId:a.options[0]}));
+   chem={...chem,offeredThrough:tier,offer:{id,tier,optionId:roll.id,optionIds:roll.options.map(o=>o.id),round:f.round,concreteItems}};
   }
  }else chem={...chem,losses};
  let crownGold:number|undefined;
@@ -85,6 +92,6 @@ export function decideG23Market(p:G23MatchProgress,id:string,take:boolean,round:
  const offer=p.chem.offer;if(!offer||offer.id!==id||typeof take!=='boolean'||!Number.isSafeInteger(round)||round<offer.round||take&&!offer.optionIds.includes(optionId))throw new RangeError('Stale G23 market');
  const option=G23_BLACK_MARKETS[offer.tier-1].options.find(o=>o.id===(take?optionId:offer.optionId))!;
  return {...p,chem:{...p.chem,offer:null,shimmer:take?0:p.chem.shimmer,offeredThrough:take?0:p.chem.offeredThrough,skips:p.chem.skips+(take?0:1)},
-  rewards:take?[...p.rewards,{id:offer.id,round,source:'black-market',tier:offer.tier,reward:option.reward}]:p.rewards,
+  rewards:take?[...p.rewards,{id:offer.id,round,source:'black-market',tier:offer.tier,reward:option.reward,concreteItems:offer.concreteItems}]:p.rewards,
   economyReceipts:[...p.economyReceipts,{kind:'market',offerId:id,take,round,...(take?{optionId}:{})}]};
 }

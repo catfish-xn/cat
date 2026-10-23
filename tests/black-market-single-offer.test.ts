@@ -66,6 +66,18 @@ it('restores a real pending market, grants the entire bundle once, and preserves
  expect(choice.offers).toEqual([progress.chem.offer!.optionId]);
  expect(choice.payload).toMatchObject({grantItem:false,skippable:true,timeoutOption:'@skip',skipReward:{kind:'health-per-skip',amount:1}});
  expect(toPrivateSeatView(pending).pendingChoice?.offers).toEqual(choice.offers);
+ const offer=progress.chem.offer!;
+ expect(offer.concreteItems.length).toBeGreaterThan(0);
+ expect(toPrivateSeatView(pending).seatMechanics?.seat.alchemist).toEqual(progress.chem);
+ // Both object and JSON restore must reject changed, absent, duplicated or
+ // reordered equipment, even when a replacement definition is valid content.
+ for(const items of [undefined,[],[...offer.concreteItems,offer.concreteItems[0]],
+  offer.concreteItems.map((i,n)=>n?i:{...i,definitionId:'warmog'}),
+  offer.concreteItems.map((i,n)=>n?i:{...i,atomId:i.atomId+':forged'})]){
+  const forged=structuredClone(pending),chem=forged.seatMechanics!.seat.alchemist as unknown as {offer:{concreteItems?:unknown}};
+  chem.offer.concreteItems=items;
+  for(const input of [forged,JSON.stringify(forged)])expect(()=>restoreMatch(input)).toThrow();
+ }
  for(const input of [pending,serializeMatch(pending)])expect(restoreMatch(input)).toEqual(pending);
  // A valid source pool ID that was not offered must still be refused atomically.
  const unoffered=G23_BLACK_MARKETS[progress.chem.offer!.tier-1].options.find(o=>o.id!==choice.offers[0])!.id;
@@ -83,9 +95,18 @@ it('restores a real pending market, grants the entire bundle once, and preserves
   if(decision==='take'){
    const source=G23_BLACK_MARKETS[progress.chem.offer!.tier-1].options.find(o=>o.id===choice.offers[0])!;
    expect(bundles[0].reward).toEqual(source.reward);
+   expect(bundles[0].concreteItems).toEqual(offer.concreteItems);
    const atoms=g23RewardAtoms(bundles[0],pending.seed);
    expect(atoms.length).toBeGreaterThan(1); // this route must exercise a multi-part bundle
    for(const atom of atoms)expect(after.rewardClaims.filter(c=>c.atomId===atom.id)).toHaveLength(atom.quantity);
+   for(const item of offer.concreteItems){
+    expect(after.rewardClaims.find(c=>c.atomId===item.atomId)?.definitionId).toBe(item.definitionId);
+    expect(atoms.find(a=>a.id===item.atomId)?.options).toEqual([item.definitionId]);
+   }
+   const forged=structuredClone(state),rewards=(forged.seatMechanics!.seat.conqueror as unknown as {rewards:{concreteItems?:unknown}[]}).rewards;
+   const index=after.rewards.findIndex(b=>b.id===offer.id);
+   rewards[index].concreteItems=offer.concreteItems.map((i,n)=>n?i:{...i,definitionId:'warmog'});
+   for(const input of [forged,JSON.stringify(forged)])expect(()=>restoreMatch(input)).toThrow();
    expect(drainG23Rewards(state)).toEqual(state);
   }else expect(after.rewards).toEqual(progress.rewards);
   for(const input of [state,serializeMatch(state)])expect(restoreMatch(input)).toEqual(state);

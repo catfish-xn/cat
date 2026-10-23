@@ -37,6 +37,14 @@
 
 4-7 野怪回合固定额外给 1 个基础装备锻造器（项目决定 **P**，用户 2026-10-23 批准）；原有 2–4 个散件掉落照常，不替换、不减少。固定 forge payload 追加到冻结计划首个法球末尾，不新增 RNG 消耗；领取入备战席，满席留球，沿用原收据、恢复和回放路径，单机/联机同源。14.24 原版数据未找到 4-7 必出散件锻造器的证据，仅有一张未被引用的 `EpicNPCLootComponentAnvil` 表，不能据此标为原版确认。候选规则/content 身份已变更，schema12/save8/replay7/command7；digest 随 manifest 计算，历史 epoch/golden 不改，**待 v22 统一录制**。
 
+## 2026-10-23 黑市开市固定装备（待 v22 统一录制）
+
+用户 10-23 批准“改”：黑市仍按原始权重、同一经济流的一词抽一个完整奖励包；开市时用既有奖励 atom 派生流，将包内直接发放的装备确定为 definitionId，保存在 `G23MarketOffer.concreteItems: readonly {atomId:string;definitionId:string}[]`（无装备为 `[]`）。具体装备包含固定装备，锻造器的后续选择、复制器目标、弈子及其他奖励不改。领取复制该数组到 `G23RewardBundle.concreteItems`，发装备只读取所存结果，不再抽取。
+
+私有界面入口为 `toPrivateSeatView(state).seatMechanics.seat.alchemist.offer.concreteItems`，例如 `[{atomId:'g23:market:round-12:1:atom:0',definitionId:'TFT13_Crime_Bronze_MageGuard'}]`（仅形状示例）。`offer.optionId/optionIds` 和 `pendingChoice.offers` 仍是原奖励包 apiName；界面按 definitionId 查已有装备名称，不得将其当作 choose 参数。拿走仍用 `selectChoice(state,choiceId,generation,offer.optionId)`，保留/超时仍为 `@skip`；没有新增命令或失败枚举，原有 stale/invalid-choice 原子失败不变。接口由既有 owner-only seatMechanics 投影直接带出，界面及服务器文件未改。
+
+派生仍为 `sampleG24Reward(pool, \`${seed}:${offer.id}:atom:${index}\`, 1)`，相同 seed/offer/源顺序的装备与旧领取时结果一致；无新增子流，不消耗市场、王冠或其他全局 RNG 游标。恢复/战斗输入/回放按原经济收据重建 offer 与领取包，严格比较包括具体装备的完整结构，缺失、重复、改序、跨 offer 或同池换装均拒绝；不迁移旧存档。保留微光、跳过成长、整包及唯一发奖语义不变。规则身份已记入 `G23_POLICY.chemBaron.equipment`；epoch/version/digest 常量及历史 golden 留待 v22 统一录制，候选不得混跑发布。验收见 [黑市报告](BLACK_MARKET_CONCRETE_OFFERS.md)。
+
 ## 2026-10-23 Batch A 覆盖合同（待统一 epoch）
 
 梅尔、维克托、金币订阅、战利品订阅已启用，覆盖历史关闭/只观察说明。普通六费商店也改为批准的完整q表、整店一次5q判定。接口、收据、恢复、加时阶段钟和UI字段见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md#接口与恢复合同)。公开命令不新增；装备与弈子待领使用既有 `claimOrb`，锻造器使用既有 `choose/timeoutChoice`。本批装备统一待领，不引入批准表外的库存格数。

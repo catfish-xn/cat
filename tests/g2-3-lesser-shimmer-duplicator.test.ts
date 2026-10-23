@@ -171,7 +171,7 @@ it('restores the sole naturally offered bundle without duplicate grants',()=>{
  for(const optionId of choice.offers){
   const accepted=ok(selectChoice(pending,choice.choiceId,choice.generation,optionId)),p=readG23Progress(accepted)!;
   const option=G23_BLACK_MARKETS[0].options.find(o=>o.id===optionId)!;
-  expect(p.rewards.filter(b=>b.source==='black-market')).toEqual([{id:choice.choiceId,round:pending.round,source:'black-market',tier:1,reward:option.reward}]);
+  expect(p.rewards.filter(b=>b.source==='black-market')).toEqual([{id:choice.choiceId,round:pending.round,source:'black-market',tier:1,reward:option.reward,concreteItems:readG23Progress(pending)!.chem.offer!.concreteItems}]);
   expect(p.economyReceipts.at(-1)).toMatchObject({kind:'market',take:true,optionId});
   expect(restoreMatch(serializeMatch(accepted))).toEqual(accepted);
   const duplicate=selectChoice(accepted,choice.choiceId,choice.generation,optionId);
