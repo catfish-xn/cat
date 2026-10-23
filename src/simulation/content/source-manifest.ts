@@ -208,6 +208,6 @@ export const SOURCE_MANIFEST = freezeContent({
     "Fixed tick multi-shot cadence",
     "No Corki gameplay dash",
     "Template enemies, supply replaces carousel",
-    "HP/AD star multipliers 1/1.8/3.24"
+    "HP star multipliers 1/1.8/3.24; AD 1/1.5/2.25 (TFT general rule, approved 2026-10-23); custom six-cost scaling unchanged"
   ]
 });

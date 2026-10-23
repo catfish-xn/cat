@@ -1,3 +1,5 @@
+import { STAR_HEALTH_PERCENT, STAR_ATTACK_PERCENT, SIX_COST_STAR_PERCENT } from './content/unit-star-scaling';
+
 /** Finite S13 engine constants and semantic identifiers are part of the content
  * digest. A change here invalidates earlier development saves and goldens. */
 export const S13_COMBAT_RULES = Object.freeze({
@@ -17,7 +19,9 @@ export const S13_COMBAT_RULES = Object.freeze({
   damageManaBps: 300,
   damageManaCap: 20,
   attackSpeedIntervalNumerator: 2000000000,
-  starStatPercent: Object.freeze([100, 180, 324]),
+  starHealthPercent: STAR_HEALTH_PERCENT,
+  starAttackPercent: STAR_ATTACK_PERCENT,
+  sixCostStarPercent: SIX_COST_STAR_PERCENT,
   arithmeticRevision: 'm8-b4-catalog-1',
   modifierPipeline: 'm8-global-numeric-01-bigint-intermediates-safe-integer-results',
   damagePipeline: 'm8-g02-delivery-permissions-true-bypass-inherited-single-mitigation',

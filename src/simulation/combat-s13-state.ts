@@ -1,4 +1,5 @@
 import { TRAINER_ATTACK_CENTI, TRAINER_ID } from './content/opening-batch-b';
+import { SIX_COST_STAR_PERCENT } from './content/unit-star-scaling';
 import { overtimeBonusBps } from './combat-overtime';
 import { p2Bonus } from './s13-augments-p2-combat';
 import { d11HeadhunterAttackSpeedBps } from './d11-fill';
@@ -89,12 +90,12 @@ export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind'
   return (unit.statuses ?? []).filter(s => s.kind === kind && s.startsAtTick <= tick && s.expiresAtTick > tick);
 }
 export function ap(unit: S13Unit, tick: number, units:readonly CombatUnit[]=[]): number {
-  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat+(unit.definitionId==='viktor'?Math.max(0,ad(unit,true)-({1:100,2:180,3:360} as const)[unit.starLevel])+Math.floor(Math.max(0,attackSpeedBonus(unit,tick,units))/100)+(unit.sixCost?.convertedMana??0):0)+p2Bonus(unit,'abilityPower')),
+  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat+(unit.definitionId==='viktor'?Math.max(0,ad(unit,true)-SIX_COST_STAR_PERCENT[unit.starLevel])+Math.floor(Math.max(0,attackSpeedBonus(unit,tick,units))/100)+(unit.sixCost?.convertedMana??0):0)+p2Bonus(unit,'abilityPower')),
     ...active(unit, tick, 'abilityPower').filter(s => !s.contributionKeys).map(s => constantModifier('abilityPower', s.amount)), ...statusModifiers(unit, 'abilityPower', tick)], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='magic-expert')?14000:10000)/10000);
 }
 export function ad(unit: S13Unit, raw=false): number {
-  if(unit.definitionId==='viktor'&&!raw)return ({1:100,2:180,3:360} as const)[unit.starLevel];
+  if(unit.definitionId==='viktor'&&!raw)return SIX_COST_STAR_PERCENT[unit.starLevel];
   const result = resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
     [constantModifier('attackDamage', (unit.attackDamagePercentBps ?? 0)+p2Bonus(unit,'attackDamageBps'), 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined },unit.definitionId===TRAINER_ID?TRAINER_ATTACK_CENTI[unit.starLevel-1]%100:0);
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0)+(unit.anomalyState?.consumed?.attackDamage??0)+p2Bonus(unit,'attackDamageFlat')+(unit.v20Traits?.mentorshipGranted??0);
