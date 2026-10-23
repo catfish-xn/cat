@@ -1,0 +1,17 @@
+/* Overrides the old small shield without adding runtime animation code to the 2D bundle. */
+.mel-save-feedback.mel-save-feedback { inset: 0; width: auto; height: auto; transform: none; animation: mel-save-presence 2s linear both; }
+.mel-save-feedback.mel-save-feedback strong { align-self: end; margin-bottom: 22vh; animation: mel-save-gold 2s ease-out both; }
+.mel-save-feedback::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse, #ffe9a366, #c58d1830 65%, transparent); opacity: 0; animation: mel-save-gold 2s ease-out both; }
+.mel-save-feedback .mel-save-shield { inset: 12% 14% 20%; border: 3px solid #9b7eff; border-radius: 50%; background: radial-gradient(ellipse, #832be51c 35%, #814bdb50 68%, #8caaff88 73%, transparent 74%); box-shadow: 0 0 28px #a960dd88, inset 0 0 35px #684dce66; animation: mel-save-wave 2s ease-out both; }
+@keyframes mel-save-presence { 0%, 85% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes mel-save-wave { 0% { opacity: 0; scale: .12; } 10% { opacity: .8; } 30% { scale: 1; opacity: .7; } 55%, 100% { scale: 1.08; opacity: 0; } }
+@keyframes mel-save-gold { 0%, 32% { opacity: 0; } 50%, 70% { opacity: 1; } 100% { opacity: 0; } }
+.mel-save-feedback.mel-save-reduced { animation: mel-save-presence 2s linear both; }
+.mel-save-reduced .mel-save-shield { animation: none; opacity: .15; scale: 1; }
+.mel-save-reduced::before { animation: none; opacity: .15; }
+.mel-save-reduced strong { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .mel-save-feedback .mel-save-shield { animation: none; opacity: .15; scale: 1; }
+  .mel-save-feedback::before { animation: none; opacity: .15; }
+  .mel-save-feedback.mel-save-feedback strong { animation: none; }
+}
