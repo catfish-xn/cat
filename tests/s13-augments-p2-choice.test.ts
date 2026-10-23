@@ -97,7 +97,8 @@ it('later gift triple revisits a previously blocked gift in the same drain',()=>
 it('public Crown + Trifecta acquisition serializes and restores both entrances with historical shields',()=>{
   // v20-traits adds five gold cards. Deterministic search found this unchanged
   // Crown -> Trifecta -> Kog'Maw scenario at attempt 16003, beyond the old 10000 budget.
-  const seed=1708925843;
+  // v22 augment tier table and economy moved that scenario; sequential search finds the same chain at seed 1837.
+  const seed=1837;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){
@@ -115,8 +116,9 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
 });
 
-it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('seed 18 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
-  let s=reachRound('2-1',false,18),c=s.pendingChoice!;
+it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('seed 14 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
+  // v22 augment tier table: seed 18 no longer offers Trifecta II at 2-1; seed 14 is the first public Trifecta -> Nami route.
+  let s=reachRound('2-1',false,14),c=s.pendingChoice!;
   s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
   expect(s.preparation.units.find(u=>u.id==='unit-2')!.definitionId).toBe('nami');
   s=accepted(grantMechanicItem(s,{receiptId:`review:${definitionId}`,source:'test',definitionId}));
