@@ -512,7 +512,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     }
     // Queued behind the current task (the "start" receipt) when a player started it; immediate on a queue timeout.
     queue.push(() => { pushAll(opened.state); broadcastLobby(); });
-    log('info', 'room.started', { roomId, humans: opened.state.seats.filter(seat => seat.kind === 'human').length, bots: opened.state.seats.filter(seat => seat.kind === 'bot').length });
+    log('info', 'room.started', { roomId, seed: lobby.roomSeed, humans: opened.state.seats.filter(seat => seat.kind === 'human').length, bots: opened.state.seats.filter(seat => seat.kind === 'bot').length });
     logPhase(opened.state);
   }
 
