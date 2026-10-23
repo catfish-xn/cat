@@ -7,6 +7,7 @@
 import { buildAssetBase3d, readAssetBase3d, readRenderMode, withRenderParam, withoutRenderParam } from '../render-mode';
 import type { Renderer3d } from './contract';
 import { boardFeed } from '../board-feed';
+import { reducedMotion } from '../../presentation/preferences';
 import { THEME, costColor, starColor } from '../../presentation/theme';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { SHOP_CATALOG_BY_COST } from '../../simulation/match-rules';
@@ -90,7 +91,7 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
   // The only reference to the 3D chunk (placeholder-renderer.ts composes src/rendering3d/).
   let generation = 0;
   const start = (mine = generation) => import('./placeholder-renderer')
-    .then(module => { module.useBoardFeed?.(boardFeed); module.useAssetProgress?.((text, fraction) => {
+    .then(module => { module.useBoardFeed?.(boardFeed); module.useReducedMotion?.(reducedMotion); module.useAssetProgress?.((text, fraction) => {
         // Shown while it changes; six quiet seconds after the last update (done, or stalled) it clears so it never sits on the HUD.
         if (disposed) return; preload.textContent = text; clearTimeout(preloadClear); preloadClear = setTimeout(() => { preload.textContent = ''; }, 6000);
         meter.hidden = fraction === null; if (fraction !== null) fill.style.width = `${Math.round(Math.min(1, Math.max(0, fraction)) * 100)}%`; });

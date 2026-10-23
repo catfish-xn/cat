@@ -363,6 +363,13 @@
       "currentSha256": "82339f0bae01e68c7587b1358010ae0b03c4c4457cc42f15d44929a386794c44",
       "firstDifferentByte": 910
     },
+    "tests/mel-save-feedback.test.ts": {
+      "previousBytes": 2535,
+      "currentBytes": 3141,
+      "previousSha256": "3aa7951b546adf06344ad6f47a77376f280e36dad18d483fe9215668aec0260b",
+      "currentSha256": "b21a9b9d5fe41ea9a1a4b532c96d6d998b275a6d79e88011d519e8cd393c1a22",
+      "firstDifferentByte": 160
+    },
     "tests/opening-encounter-ui.test.ts": {
       "previousBytes": 10716,
       "currentBytes": 10716,
@@ -412,6 +419,21 @@
       "currentSha256": "158811aff31b0a5bd5a8b5318bf2c6840f6cdd4525cf2be21381c58d53961915",
       "firstDifferentByte": 310
     },
+    "tests/rendering3d-playtest-effects.test.ts": {
+      "previousBytes": 9058,
+      "currentBytes": 15158,
+      "previousSha256": "eefa5113274a24722a7f9a5738823ad2f8bbea67878b71b81e987c1eee5d4adc",
+      "currentSha256": "5c3eaafa63cfd1022903c32bacbbf42f154f50c377ad2dc229b1b53384953a12",
+      "firstDifferentByte": 738
+    },
+    "tests/rendering3d-reference-fx.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3372,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "4ad9fc9351cbc16fd11264a3e40e995ba1a629d1efcb6453666961a4ab2656db",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-scout-input.test.ts": {
       "previousBytes": 7195,
       "currentBytes": 7401,
@@ -460,6 +482,22 @@
       "previousSha256": "37f502131e177a3abadff0874d11f2f672c19963ea3b4be22cb51432cbc909df",
       "currentSha256": "e286e4e33bdd20e172ddadf0101ab647957fd6a38662264826fc7d34aa7b9ca6",
       "firstDifferentByte": 11
+    },
+    "tests/server/main-seed.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3007,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e4da6d79df9749c14ce82bc9efddebce2c4659cca53fd339b4add4a14289384c",
+      "firstDifferentByte": 0
+    },
+    "tests/server/net/room-seed.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1838,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "2fc958c454af7d1c702d4b1d69e7a0b5373c68c0aee52851d99ce372fcacb341",
+      "firstDifferentByte": 0
     },
     "tests/server/t10-combat-ops.test.ts": {
       "previousBytes": 19914,
