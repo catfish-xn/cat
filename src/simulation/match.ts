@@ -1,3 +1,4 @@
+import { drainSetup } from './setup-work';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
@@ -47,7 +48,7 @@ import { appendResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSIO
 import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity } from './loot-runtime';
 import { isMatchCombatStreamTerminal } from './combat-stream-terminal';
 import { makeLootPendingChoice } from './loot-choice';
-import { createCombatWithEvents, stepCombat, validateCombatStart, type CombatState } from './combat';
+import { createCombatWithEvents, createCombatWithEventsSteps, stepCombat, validateCombatStart, type CombatState } from './combat';
 import { toLedgerEvents } from './combat-ledger';
 import { deployUnit, getPlayerDeploymentCount } from './game';
 import { UNIT_DEFINITIONS, type UnitLocation } from './units';
@@ -71,7 +72,7 @@ import { previewCombine, previewEquip } from './item-selectors';
 import { initializeStreams } from './m8/equipment';
 import { planTemporaryEquipment } from './temporary-equipment';
 import { planPermanentItemGrant } from './item-grants';
-import { buildStrategySnapshot } from './strategy-snapshot';
+import { buildStrategySnapshot, buildStrategySnapshotSteps } from './strategy-snapshot';
 import { ROUND_PREPARATION_RULES, getRoundSchedule, getRoundKind } from './round-schedule';
 import { planReward } from './rewards';
 import { CONTENT_DIGEST, canonicalContent } from './content';
@@ -445,10 +446,17 @@ export function startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPol
 /** Streaming PvE: only open/advance combat here. Terminal loot, income and pool reservations
  * are committed later in fixed seat order by settleCombatStream. No wall clock enters rules. */
 export function openMatchCombatStream(state: MatchState): MatchCommandResult & { readonly streamInitial?: CombatState } {
+  return drainSetup(openMatchCombatStreamSteps(state));
+}
+export function* openMatchCombatStreamSteps(state: MatchState): Generator<void, MatchCommandResult & { readonly streamInitial?: CombatState }, void> {
   const reason = matchStartFailure(state); if (reason) return fail(state, reason);
   const draw = nextRandom(state.battleSeedRngState);
   const combatInputBasis = freezeCombatInput(state, draw.word, state.resourceProvenance.entries.length);
-  const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
+  yield;
+  const strategy = yield* buildStrategySnapshotSteps(combatInputBasis.inputs);
+  yield;
+  const started = yield* createCombatWithEventsSteps(combatInputBasis.inputs.preparation, strategy, `round-${state.round}`, draw.word);
+  yield;
   const base = { ...state, combatInputBasis, battleSeedRngState: draw.state };
   const opened = started.state.status === 'running' ? withCombat(base, started.state) : { state: base, events: [] };
   const accepted = accept(opened.state, [...toLedgerEvents(started.events), ...opened.events]);
