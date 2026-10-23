@@ -968,6 +968,12 @@ body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-d
 .shop-dock .shop-card[data-cost]:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.12);
   box-shadow: 0 0 0 1px var(--card-cost), 0 6px 16px color-mix(in srgb, var(--card-cost) 50%, transparent); }
 .shop-dock .shop-card .shop-emblem { inset: 0 0 22px; }
+/* TFT's shop art is a landscape splash with the champion on the right. Only the square HUD icons exist, so the icon sits
+   on the card's right ~4/5 (cover-cropped to the face) and fades into a cost-tinted ground on the left, under the traits. */
+.shop-dock .shop-card[data-cost] .shop-emblem { background: radial-gradient(120% 140% at 85% 30%, color-mix(in srgb, var(--card-cost) 38%, #0b151f), #050b12 70%); }
+.shop-dock .shop-card .shop-emblem > :is(img, svg, .hero-fallback) { position: absolute; top: 0; right: 0; width: 80%; height: 100%; object-position: 50% 32%;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 38%); mask-image: linear-gradient(90deg, transparent, #000 38%); }
+.shop-dock .shop-card .shop-emblem .hero-fallback > svg { width: 100%; height: 100%; }
 .shop-dock .shop-card .shop-emblem::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, #050b12d9 100%), linear-gradient(90deg, #050b1299, transparent 55%); }
 .shop-dock .shop-card .shop-name { grid-row: 2; align-self: stretch; display: block; line-height: 21px; padding: 0 24px 0 5px; font-size: 12.5px; letter-spacing: 0;
   color: var(--lol-gold-light); background: linear-gradient(180deg, #0d1822, #050b12); border-top: 1px solid color-mix(in srgb, var(--card-cost) 55%, #000); text-shadow: none; }
@@ -1158,7 +1164,9 @@ body[data-online] .augment-strip:not(:empty) { display: flex; flex-wrap: wrap; g
 .summary-head[role="button"]::after { content: "▾"; font-size: 11px; color: #9aaeb9; }
 .battle-summary[data-folded] .summary-head::after { content: "▸"; }
 .battle-summary[data-folded] > :not(.summary-head) { display: none; }
-body[data-online]:has(> .render3d-layer) { --online-countdown-h: 44px; --online-dock-h: clamp(140px, 19.5dvh, 220px);
+/* The dock's height follows the card width so the five shop cards stay landscape (~1.42:1, TFT's shape): card width is
+   (shop width − 250px of side columns, gaps and padding) / 5, plus 41px for the top row, gaps and padding; 140px keeps D/F ≥ 44px. */
+body[data-online]:has(> .render3d-layer) { --online-countdown-h: 44px; --online-dock-h: clamp(140px, min(19.5dvh, (var(--online-shop-w) - 250px) / 7.1 + 41px), 220px);
   --online-shop-left: max(11.6vw - 8px, 0px); --online-shop-w: min(67vw, 100vw - 236px);
   --online-board-h: calc(100dvh - 16px - var(--online-countdown-h) - var(--online-dock-h) - 2 * var(--online-gap)); }
 body[data-online]:has(> .render3d-layer) #app { max-width: none; padding: 8px; grid-template-columns: minmax(0, 1fr); }
