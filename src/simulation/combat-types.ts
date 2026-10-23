@@ -5,7 +5,7 @@ import type { StrategySnapshot, SourcedEffect, ResolvedTrigger, EffectRuntime, E
 import type { DamagePacket } from './ability-types';
 import type { StarLevel } from './unit-types';
 export const COMBAT_TICK_MS = 50;
-export const MAX_COMBAT_TICKS = 1200;
+export const MAX_COMBAT_TICKS = 900;
 export const MOVE_INTERVAL_TICKS = 5;
 export type CombatResult = 'playerWin' | 'enemyWin' | 'draw';
 export interface CombatOrigin { readonly parentItemInstanceId?: string | null; readonly ownerId: string; readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth'; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number }

@@ -1,3 +1,5 @@
+import { MAX_COMBAT_TICKS } from './combat-types';
+import { choiceAcquisitionGold } from './choice-acquisition';
 import { deferredRoundIncome } from './deferred-income';
 import { openingHpBeforeRound } from './opening-monkey';
 import { validateOpeningEncounterState } from './opening-encounter';
@@ -195,7 +197,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     } else if (event.kind === 'component') {
       definitionId(receipt.definitionId, ITEM_DEFINITIONS, 'component receipt');
       requireValue(ITEM_DEFINITIONS[receipt.definitionId!].kind === 'component' && receipt.itemIds.length === 1 && receipt.gold === 0 && receipt.unitId === null, 'component receipt values');
-    } else requireValue(receipt.gold === (receipt.kind === 'augment' || receipt.kind === 'anomaly' ? (receipt.kind==='augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[receipt.definitionId!].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0) && receipt.itemIds.length === (receipt.kind === 'augment' && P3_AUGMENT_ITEMS[receipt.definitionId!] ? 1 : 0), 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
+    } else requireValue(receipt.gold === (receipt.kind === 'augment' || receipt.kind === 'anomaly' ? choiceAcquisitionGold((receipt.kind==='augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[receipt.definitionId!], receipt.round) : 0) && receipt.itemIds.length === (receipt.kind === 'augment' && P3_AUGMENT_ITEMS[receipt.definitionId!] ? 1 : 0), 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
     for (const itemId of receipt.itemIds) checkSerial(itemId, 'item', state.nextItemSerial);
     nullableString(receipt.unitId); nullableString(receipt.definitionId);
     if (receipt.kind === 'augment') requireValue(state.augments.some(a => a.choiceId === receipt.eventId && a.definitionId === receipt.definitionId), 'augment receipt');
@@ -262,7 +264,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     requireValue(result.income === expected.income && result.goldAfter === expected.goldAfter && result.interestBasis === expected.interestBasis && same(result.incomeBreakdown, expected.incomeBreakdown), 'history income');
     requireValue(same(result.streakAfter, expected.streakAfter), 'history streak'); streak = expected.streakAfter;
     experienceAfter=totalExperience(result.levelAfter,result.xpAfter);
-    requireValue(result.combatTicks <= 1200 && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
+    requireValue(result.combatTicks <= MAX_COMBAT_TICKS && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
   }
   requireValue(same(state.streak, streak), 'current streak');
   requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
@@ -287,7 +289,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   if (state.phase === 'preparation' || state.phase === 'choice' && !settled || state.phase === 'gameOver' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
   else {
     record(state.combat); const combat = state.combat;
-    validateSeed(combat.rngState!); integer(combat.rngDraws); integer(combat.nextActionSeq); integer(combat.tick); integer(combat.maxTicks, 1); requireValue(combat.tick <= combat.maxTicks && combat.maxTicks === 1200, 'combat ticks');
+    validateSeed(combat.rngState!); integer(combat.rngDraws); integer(combat.nextActionSeq); integer(combat.tick); integer(combat.maxTicks, 1); requireValue(combat.tick <= combat.maxTicks && combat.maxTicks === MAX_COMBAT_TICKS, 'combat ticks');
     requireValue(combat.combatId === `round-${state.round}` && combat.startEffectsApplied === true, 'combat identity/start'); integer(combat.nextEventSeq);
     requireValue(combat.status === 'running' || combat.status === 'finished', 'combat status');
     requireValue((state.phase === 'combat') === (combat.status === 'running'), 'combat phase');

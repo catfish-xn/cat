@@ -1,3 +1,5 @@
+import { overtimeStacks } from './combat-overtime';
+import { MAX_COMBAT_TICKS } from './combat-types';
 import { installBattleEquipmentBatch, validateBattleEquipmentLog } from './battle-equipment';
 import {createCombatWithEvents,stepCombat} from './combat';
 import type {CombatState} from './combat-types';
@@ -45,7 +47,11 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   const d11=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'));
   const v20=strategy.units.some(u=>u.mechanics?.some(m=>['quickstriker','firelight','v20Teamup'].includes(m.mechanic)));
   const v19=strategy.units.some(u=>u.familyReunion||['warwick','viktor','mel'].includes(u.ability.kind==='s13'?u.ability.championId:'')||u.mechanics?.some(m=>['v19Garen','v19Chainblade','sisters'].includes(m.mechanic)||m.mechanic==='rebel'&&m.values.forcedPeriodTicks>0||m.mechanic==='g23Trait'&&(m.source.definitionId==='dominator'||m.source.definitionId==='black-rose'&&m.values.tier>=4)));
-  if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19&&!v20){
+  // Overtime refresh can retain an older, larger shield and earlier control end.
+  // Authenticate the complete trajectory instead of guessing historical stacks
+  // from a refreshed layer's startsAtTick. Reuse the input-bound replay cache.
+  const overtime = overtimeStacks(candidate.tick) > 0;
+  if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19&&!v20&&!overtime){
     if(candidate.units.some(u=>u.v20Traits!==undefined))throw new RangeError('Unexpected V20 runtime');
     if(candidate.units.some(u=>u.v19!==undefined||u.sixCost!==undefined||u.familyReunion!==undefined))throw new RangeError('Unexpected V19 runtime');
     if(candidate.units.some(u=>u.d11Kills!==undefined))throw new RangeError('Unexpected D11 kill runtime');
@@ -55,16 +61,16 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
     if(candidate.units.some(u=>u.itemBanish!==undefined))throw new RangeError('Unexpected item banishment');
     return false;
   }
-  if(!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>1200)throw new RangeError('Invalid dynamic combat checkpoint');
+  if(!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>MAX_COMBAT_TICKS)throw new RangeError('Invalid dynamic combat checkpoint');
   // Preserve the existing cold-replay contract for roster/absence/anomaly paths.
-  // Only ordinary v19 combats reuse input-bound independent evidence.
+  // Ordinary v19/v20 and overtime combats reuse input-bound independent evidence.
   let expected:CombatState;
-  if((v19||v20)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
+  if((v19||v20||overtime)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
   else{
     expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
     while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
   }
-  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':v19?'V19':'Mirror forge'} replay`);
+  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':v19?'V19':overtime?'overtime':'Mirror forge'} replay`);
   return true;
 }
 
@@ -77,7 +83,7 @@ export function validateCombatItemGold(candidate:CombatState,basis:CombatInputBa
     if(candidate.itemGoldReceipts!==undefined)throw new RangeError('Unexpected item gold receipts');
     return;
   }
-  if(!Array.isArray(candidate.itemGoldReceipts)||!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>1200)throw new RangeError('Invalid item gold checkpoint');
+  if(!Array.isArray(candidate.itemGoldReceipts)||!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>MAX_COMBAT_TICKS)throw new RangeError('Invalid item gold checkpoint');
   let expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
   while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
   if(expected.tick!==candidate.tick||canonicalContent(expected.itemGoldReceipts)!==canonicalContent(candidate.itemGoldReceipts)

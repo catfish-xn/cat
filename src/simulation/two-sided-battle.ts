@@ -1,3 +1,4 @@
+import { MAX_COMBAT_TICKS } from './combat-types';
 import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
 import { readsLiveGold } from './live-gold-readers';
@@ -170,7 +171,7 @@ function validateDynamicResult(result:BattleResult):void {
     return;
   }
   if(result.initial.tick!==0||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench')
-    ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>1200)throw new BattleValidationError('invalid-result');
+    ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>MAX_COMBAT_TICKS)throw new BattleValidationError('invalid-result');
   let expected=structuredClone(result.initial);
   let bankCursor=0;
   // Tick-zero events already belong to the trusted initial state; authenticate

@@ -225,9 +225,11 @@ export interface HealContribution {
 export interface HealShare {
   readonly source: Source;
   readonly requested: number;
+  /** Remaining after wound and overtime received-healing reductions. */
   readonly afterWound: number;
   readonly actual: number;
   readonly overheal: number;
+  /** Legacy field name: total prevented by wound and overtime. */
   readonly preventedByWound: number;
 }
 export interface HealRequest {
@@ -240,9 +242,11 @@ export interface HealRequest {
 }
 export interface HealOutcome extends HealRequest {
   readonly shares: readonly HealShare[];
+  /** Remaining after wound and overtime received-healing reductions. */
   readonly afterWound: number;
   readonly actual: number;
   readonly overheal: number;
+  /** Legacy field name: total prevented by wound and overtime. */
   readonly preventedByWound: number;
 }
 export type ShieldEndReason = 'depleted' | 'expired' | 'death-cleanup' | 'replaced' | 'combat-end';

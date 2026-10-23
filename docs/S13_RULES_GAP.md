@@ -1,3 +1,13 @@
+## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
+
+用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
+
+每战固定50ms/tick、最长 **900 tick（45秒）**；先结算该tick和消灭判定，双方仍有存活单位才 timeout→draw。**tick600（30秒）即时第1层**，之后每20tick加1层；伤害增幅和攻速各+1000Bps/层，无层数上限；受到治疗/护盾与新控制时长各-1000Bps/层，最多-7000Bps。控制持续tick四舍五入（正数半入，至少1tick），旧控制不回改。攻击冷却不追溯重算，模拟速度不变。
+
+层数/增减幅依据用户提供的 [Riot TFT 13.22 补丁说明](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-13-22-notes/)；30/45秒和离散tick边界为本项目执行约定。**本单按要求离线，未联网重新核验来源。** 移速：加时期间（tick600起，不按层叠加）固定+5000Bps（+50%），用户10-23拍板（Riot 13.22只写“固定移速加成”无数值，属项目决定P）。移动间隔=ceil(5×10000/(10000+沃里克狂暴5000+加时5000))：普通5→4tick，狂暴或加时4，两者叠加3；迅击moveTenths每tick累计3→floor(3×1.5)=4。完整数值、调用点和验收见 [规则实现报告](RULES_PLACEBO_OVERTIME.md)。
+
+本节覆盖下文历史60秒/1200tick及固定安慰剂金币描述。按用户要求不录epoch、不更新版本/digest常量或历史golden；待PR #410合并后统一切换。这是开发候选，当前身份不得用于新旧混跑或发布。
+
 ## 2026-10-23 PR9：当前 epoch 与已批准项目约定
 
 当前 epoch 为 **v21-opening-encounters**，父 **v20-black-market**。rules/content 身份分别为 `s13-g2-3-v21-opening-encounters-battle-equipment` / `s13-14.24b-g2-3-v21-opening-encounters-battle-equipment`，schema/save/replay/command=**12/8/6/6**、NET6。名称涵盖开局奇遇 PR1/2/4/5/6/8、战斗中装备第2阶段及收入延后；不只表示奇遇。当前录制、digest、历史字节证据及验收见 [PR9 报告](OPENING_ENCOUNTERS_PR9_REPORT.md)。下文旧 epoch 为历史记录，不覆盖本节。本节描述当前集成候选；PR9回放阻塞未解决，尚不代表已合入multiplayer。

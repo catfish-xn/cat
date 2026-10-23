@@ -1,3 +1,7 @@
+## 2026-10-23 战斗上限覆盖（待统一 epoch）
+
+当前候选每场最长900tick（45秒），tick600起逐秒加时；这是单场战斗属性，与6-7后延长整局的PvP轮次不同。所有同步、切片、回放沿同一`stepCombat`，切片预算不改变规则时钟；预算耗尽仍running继续拒绝`step-limit-exceeded`，不可伪造平局。完整公式、接口和待定移速见 [COMBAT_CONTRACT](COMBAT_CONTRACT.md) 顶部及 [实现报告](RULES_PLACEBO_OVERTIME.md)。下文旧验收记录保留历史语境；PR #410合并后统一录epoch。
+
 ## 战斗装备阶段 2（2026-10-22，候选身份；未录制 epoch）
 
 已实现下一未封口 tick 安装、属性/装备程序重编译、PvE/PvP 私有成功日志与来源凭据、重放和恢复；本节覆盖历史 T12 下场生效及 #382 的 `battle-input-unsupported`。命令、完整签名、失败原因、羁绊冻结依据、服务器原子边界、UI 字段及待集成身份见 [LIVE_COMBAT_EQUIPMENT_PHASE2](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。当前工作树已与开局奇遇合成候选 `v21-opening-encounters-battle-equipment`，正式历史 epoch 仍为下节 black-market，留 PR9 统一录制后发布。
@@ -714,7 +718,7 @@ interface SideProposal {
 - 阵容、装备、强化等输入列表规范排序，复用原 combat 排序/破同顺序。相同内容、版本、输入、显式 uint32 `battleSeed` 与足够预算产出逐字段相等的结果；不读取任何一方 Match RNG，不调用真实时钟或系统随机。交换 a/b 会改变坐标和 player/enemy 视角，**不承诺镜像后的完全对称胜负**。
 - 正式调度必须传第四参 `{battleId}`，使用该局/轮次/配对/执行代次的唯一标识。只传三参时生成的 `diagnostic:<digest>` 供离线测试，32 位内容摘要不保证生产唯一性，不能用作收据键。
 - `startTwoSidedCombat` 只返回初态；需要完整账本时必须用 `startTwoSidedCombatWithEvents` 并从 start.events 开始收集。每次 `stepCombat` 固定 50 ms；结果事件包含连续 `eventSeq` 和同一 `combatId`，不按动画帧删减。推荐直接用有界的 `resolveTwoSidedBattle`，默认不偷偷提供预算。
-- `maxSteps` 为正安全整数，当前引擎最多 1200 ticks，传 1200 足够；耗尽预算而仍 running 是失败，不返回伪造平局。双方空阵容合法，在 tick 0 平局；一方空则另一方 tick 0 胜利。真实战斗达到原 1200 tick 上限仍未分胜负才是 timeout 平局。
+- `maxSteps` 为正安全整数，当前引擎最多 900 ticks，传 900 足够；耗尽预算而仍 running 是失败，不返回伪造平局。双方空阵容合法，在 tick 0 平局；一方空则另一方 tick 0 胜利。真实战斗达到 900 tick 上限仍未分胜负才是 timeout 平局。
 
 ### 10.4 未提交的伤害和成长提案
 
@@ -921,7 +925,7 @@ interface RoundSettlementReceipt {
 }
 ```
 
-字段必须齐全且无额外字段，ID 非空；非负安全整数，survivors ≤9、ticks ≤1200、eventCount ≥1。提交准备态不能还有 pendingChoice 或未处理的空阵容异常节点；历史须连续到上一轮。接收目录 PvP 及 §11.5 的加时 PvP。收据是**可信服务器从 T2 结果构建的交接对象，不是客户端命令或战斗真实性证明**。规则验证 seat、轮次、资格、数值和重复，但无法从裸 battleId 证明执行代次；B4 负责将其绑定冻结快照、battleId、roomRevision、实际参战席位与本次执行。客户端不能指定 eligibility/growth/结果。
+字段必须齐全且无额外字段，ID 非空；非负安全整数，survivors ≤9、ticks ≤900、eventCount ≥1。提交准备态不能还有 pendingChoice 或未处理的空阵容异常节点；历史须连续到上一轮。接收目录 PvP 及 §11.5 的加时 PvP。收据是**可信服务器从 T2 结果构建的交接对象，不是客户端命令或战斗真实性证明**。规则验证 seat、轮次、资格、数值和重复，但无法从裸 battleId 证明执行代次；B4 负责将其绑定冻结快照、battleId、roomRevision、实际参战席位与本次执行。客户端不能指定 eligibility/growth/结果。
 
 沿用 `planCatalogRoundEconomy` → `planRoundEconomy` → `grantXp`，不接收外部 goldAfter/HP 或第二套收入。PvP 基础收入5、胜利1、利息采样 gold+胜利金币（每10得1，上限5）、连胜败2/4/6得1/2/3、经验2；平局按连败。例：轮前19金币、已有1连胜，本轮胜 → 利息2、连胜1、总收入9、轮后28。9级经验截停。复核 damage 必须等于现有阶段伤害规则（胜0，否则基础+对方存活数）；不允许截断输入。HP1承受9 → HP0、hpLost1，但 roundResults.playerDamage 和收据仍保存9。
 
@@ -982,7 +986,7 @@ const result = applyRoundSettlement(originalSeat.match, r);
 - **已导出的推进入口**：`advanceMultiplayerRound(state: MatchState, expectedRound: number): MultiplayerCommandResult`。要求已 enableMultiplayerSettlement、active、settlement、无 pendingChoice/待领取奖励且 roundResults 连续覆盖当前轮；目录内委托 nextRound，6-7 及之后生成加时准备态（`kind='pvp', isFinal=false, stage=6, subround=7+N, encounterId=null`）。返回 state/events 的既有成功形状；失败原 state 引用、无 events、无资源或 RNG 变化。失败枚举：`multiplayer-required`（未启用）、`seat-eliminated`（已淘汰）、`shared-pool-required`（已绑定共享池，应走下一段的批量入口）、`stale-round`（expectedRound 或当前轮 ID 不符）、`wrong-phase`（非 settlement）、`unsettled-round`（待选/待领或历史不连续）、`invalid-round`（非法序号、溢出或无法生成该轮），目录内亦透传 nextRound 的失败原因。
 - **B4/B5 接入**：无共享池时用上述入口替换 Room.advanceRound 中 nextRound；同时解除当前 Room.commitPending 在 overtimeRequired 时返回 overtime-unavailable 的依赖中断分支（B4 合入基线 bc35bac 仍存在），正常进入 settlement 再推进；有共享池时必须传全部未释放席给 `nextSharedRound(pool, states, expectedRound)`，它已支持加时：先暂存全部推进，再统一释放未锁商店占用、按原固定顺序轮换抽卡，原子提交池与席位，任一失败整批不变。锁店保留原占用，淘汰归还仍在下一轮前。不要逐席解除 sharedPool 后发布无限商店；解除仅是池事务内部的未发布暂存步骤。不能直接改 round/m8，不能调用旧 nextRound 推进加时；全局0/1席结束及≥2席继续仍由调度器决定。
 - T2 snapshot/restore/compile/resolve/propose 与 T3 apply 均识别规范 `overtime-N`（N 正安全整数，且 FINAL_ROUND+N 安全）；临时装备跨轮刷新，买/卖/合成来源账本可追加加时 ID，离线 restore/目录查询仍拒绝加时。加时经济调用 planRoundEconomy 并传入规范 roundId，由同源 selector 取基础伤害17；不生成新掉落计划、选择或奖励。
-- 平局（含双方空阵容、1200 tick 超时）：**每个真实席**扣12+对方存活数；普通配对双方各算自己的提案。胜方0、败方12+对方存活数；镜像 b 不扣、不提交，镜像来源真身在其实际配对独立结算。目录内平局用相应阶段基础伤害，规则相同。
+- 平局（含双方空阵容、900 tick 超时）：**每个真实席**扣12+对方存活数；普通配对双方各算自己的提案。胜方0、败方12+对方存活数；镜像 b 不扣、不提交，镜像来源真身在其实际配对独立结算。目录内平局用相应阶段基础伤害，规则相同。
 - 同轮归零排序沿用 B1 项目规则：比较 **未截断 HP=`hpBefore-damage` 降序 → hpBefore 降序 → 固定 seatIndex 升序**，先者名次更好。不能用截到0的 playerHp 破同分。seatIndex 从开局固定0–7，与断线/重连、数组重排无关。同轮淘汰者排在剩余存活者后，较晚淘汰优于早轮淘汰；如果最后所有席同轮归零，也按此键产生唯一冠军，不能继续等待无人存活的下一轮。
 - 有限终局：≥2席每完整加时至少有一场普通配对，该配对至少一个真实席被扣正伤害；总存活 HP 严格下降。无任何恢复玩家 HP 的规则，初始最多8×100 HP，因此加时最多800个已提交轮次即可结束（保守上界，空阵容连续平局通常远少于此）。T4 必测连续平局、双方空阵容、镜像及同轮多人归零的唯一排名；不能以单人 isFinal 或客户端倒计时直接定胜负。
 
@@ -1333,7 +1337,7 @@ toCombatReplay(battle: CombatReplayInput): CombatReplay;
 applyCombatReplayTick(view: CombatViewState, frame: CombatReplayTick): CombatViewState;
 ```
 
-输入为同一场完整可信战斗的首帧、已结束末帧和完整有序账本。PvP 直接传 BattleResult；PvE 传 start 后的 CombatState、最终 CombatState、含 tick0 的完整 LedgerCombatEvent[]。**不传 MatchState，不把 Match 奖励事件混入 events**。投影只读，不结算、不分配 ID、不消耗 Match 的任何随机流；内部对冻结初态做一次最多1200 tick 的纯重执行，生成权威显示差分。B7 替换原 B3 的逐 tick 重执行取帧，避免再多跑第三遍。
+输入为同一场完整可信战斗的首帧、已结束末帧和完整有序账本。PvP 直接传 BattleResult；PvE 传 start 后的 CombatState、最终 CombatState、含 tick0 的完整 LedgerCombatEvent[]。**不传 MatchState，不把 Match 奖励事件混入 events**。投影只读，不结算、不分配 ID、不消耗 Match 的任何随机流；内部对冻结初态做一次最多900 tick 的纯重执行，生成权威显示差分。B7 替换原 B3 的逐 tick 重执行取帧，避免再多跑第三遍。
 
 **SR-C6-01 共用事件投影。** `toCombatViewEvents` 从 `src/server-entry` 与纯模块 `combat-replay-view.ts` 导出，返回类型 `CombatAnimationEvent[]` 可赋给 `CombatViewEvent[]`，但类型与运行时均不包含 unitUpdated。输入为可信的完整账本或局部批次，按输入顺序逐条应用下表白名单，保留原 tick/eventSeq（包括延后发出的 tick0 和过滤后留下的序号间隔），不排序、不重编号；activityChanged/effectTriggered 被省略，空输入返回空数组。嵌套坐标、targetIds 等也复制，不共享输入对象或数组，不修改输入，不执行战斗、推进随机流或结算；返回独立数组，函数本身不冻结它，完整回放仍由 toCombatReplay 递归冻结。无正常业务失败枚举；不校验不可信网络输入，非法结构导致的底层异常原样传播。
 

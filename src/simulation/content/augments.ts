@@ -15,7 +15,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   "placebo": {
     "id": "placebo",
     "name": "安慰剂",
-    "description": "立即获得8金币，全队获得1%攻速。",
+    "description": "获得时按阶段一次性获得金币：2阶段8、3阶段11、4阶段及以后15；全队获得1%攻速。",
     "effects": [
       {
         "kind": "attackSpeedBps",
@@ -25,7 +25,9 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
         "kind": "mechanic",
         "mechanic": "acquisitionGold",
         "values": {
-          "amount": 8
+          "amount": 8,
+          "stage3Amount": 11,
+          "stage4Amount": 15
         }
       }
     ]
@@ -211,7 +213,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   "placebo-plus": {
     "id": "placebo-plus",
     "name": "Placebo+",
-    "description": "15金币仅获得时发放一次；全队1%攻速，不改变经济规则。",
+    "description": "获得时按阶段一次性获得金币：2阶段15、3阶段18、4阶段及以后22；全队获得1%攻速。",
     "effects": [
       {
         "kind": "attackSpeedBps",
@@ -221,7 +223,9 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
         "kind": "mechanic",
         "mechanic": "acquisitionGold",
         "values": {
-          "amount": 15
+          "amount": 15,
+          "stage3Amount": 18,
+          "stage4Amount": 22
         }
       }
     ]

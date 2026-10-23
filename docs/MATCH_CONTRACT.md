@@ -1,3 +1,13 @@
+## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
+
+用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
+
+每战固定50ms/tick、最长 **900 tick（45秒）**；先结算该tick和消灭判定，双方仍有存活单位才 timeout→draw。**tick600（30秒）即时第1层**，之后每20tick加1层；伤害增幅和攻速各+1000Bps/层，无层数上限；受到治疗/护盾与新控制时长各-1000Bps/层，最多-7000Bps。控制持续tick四舍五入（正数半入，至少1tick），旧控制不回改。攻击冷却不追溯重算，模拟速度不变。
+
+层数/增减幅依据用户提供的 [Riot TFT 13.22 补丁说明](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-13-22-notes/)；30/45秒和离散tick边界为本项目执行约定。**本单按要求离线，未联网重新核验来源。** 移速固定加成缺明确数值，`OVERTIME_MOVE_SPEED_BONUS_BPS=0`，保留TODO，本单不改变移动间隔。完整数值、调用点和验收见 [规则实现报告](RULES_PLACEBO_OVERTIME.md)。
+
+本节覆盖下文历史60秒/1200tick及固定安慰剂金币描述。按用户要求不录epoch、不更新版本/digest常量或历史golden；待PR #410合并后统一切换。这是开发候选，当前身份不得用于新旧混跑或发布。
+
 ## 战斗装备阶段 2（2026-10-22，候选身份；未录制 epoch）
 
 已实现下一未封口 tick 安装、属性/装备程序重编译、PvE/PvP 私有成功日志与来源凭据、重放和恢复；本节覆盖历史 T12 下场生效及 #382 的 `battle-input-unsupported`。命令、完整签名、失败原因、羁绊冻结依据、服务器原子边界、UI 字段及待集成身份见 [LIVE_COMBAT_EQUIPMENT_PHASE2](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。当前工作树已与开局奇遇合成候选 `v21-opening-encounters-battle-equipment`，正式历史 epoch 仍为下节 black-market，留 PR9 统一录制后发布。

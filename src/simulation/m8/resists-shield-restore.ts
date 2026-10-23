@@ -1,3 +1,4 @@
+import { MAX_COMBAT_TICKS } from '../combat-types';
 import type { CombatState } from '../combat';
 import { createRestoreCombatReplay, type RestoreCombatReplay, type CombatReplayFacts } from '../restore-combat-replay';
 import type { CombatInputBasis } from '../combat-input';
@@ -30,7 +31,7 @@ function projection(combat: Pick<CombatState, 'units'> | CombatReplayFacts, sour
  */
 export function validateResistsShields(combat: CombatState, basis: CombatInputBasis, strategy: StrategySnapshot, replay: RestoreCombatReplay = createRestoreCombatReplay(basis, strategy, combat.tick)): void {
   if (!hasResistsShield(strategy)) return;
-  if (!Number.isSafeInteger(combat.tick) || combat.tick < 0 || combat.tick > 1200)
+  if (!Number.isSafeInteger(combat.tick) || combat.tick < 0 || combat.tick > MAX_COMBAT_TICKS)
     throw new Error('Invalid Match save: resists shield replay tick');
   const opening = replay.opening();
   const sources = new Set(opening.units.flatMap(unit => declaredEffects(unit, basis.combatId))

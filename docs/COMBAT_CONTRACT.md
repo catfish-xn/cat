@@ -1,3 +1,13 @@
+## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
+
+用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
+
+每战固定50ms/tick、最长 **900 tick（45秒）**；先结算该tick和消灭判定，双方仍有存活单位才 timeout→draw。**tick600（30秒）即时第1层**，之后每20tick加1层；伤害增幅和攻速各+1000Bps/层，无层数上限；受到治疗/护盾与新控制时长各-1000Bps/层，最多-7000Bps。控制持续tick四舍五入（正数半入，至少1tick），旧控制不回改。攻击冷却不追溯重算，模拟速度不变。
+
+层数/增减幅依据用户提供的 [Riot TFT 13.22 补丁说明](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-13-22-notes/)；30/45秒和离散tick边界为本项目执行约定。**本单按要求离线，未联网重新核验来源。** 移速：加时期间（tick600起，不按层叠加）固定+5000Bps（+50%），用户10-23拍板（Riot 13.22只写“固定移速加成”无数值，属项目决定P）。移动间隔=ceil(5×10000/(10000+沃里克狂暴5000+加时5000))：普通5→4tick，狂暴或加时4，两者叠加3；迅击moveTenths每tick累计3→floor(3×1.5)=4。完整数值、调用点和验收见 [规则实现报告](RULES_PLACEBO_OVERTIME.md)。
+
+本节覆盖下文历史60秒/1200tick及固定安慰剂金币描述。按用户要求不录epoch、不更新版本/digest常量或历史golden；待PR #410合并后统一切换。这是开发候选，当前身份不得用于新旧混跑或发布。
+
 ## 战斗装备阶段 2（2026-10-22，候选身份；未录制 epoch）
 
 已实现下一未封口 tick 安装、属性/装备程序重编译、PvE/PvP 私有成功日志与来源凭据、重放和恢复；本节覆盖历史 T12 下场生效及 #382 的 `battle-input-unsupported`。命令、完整签名、失败原因、羁绊冻结依据、服务器原子边界、UI 字段及待集成身份见 [LIVE_COMBAT_EQUIPMENT_PHASE2](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。当前工作树采用候选 `v20-battle-equipment`，正式历史 epoch 仍为下节 black-market，须与开局奇遇一起录制后发布。
@@ -42,7 +52,7 @@
 
 Match freezes `buildStrategySnapshot` before creating Combat. `combat-types.ts`, `ability-types.ts` and `strategy-types.ts` define the boundary; [M5_RULES R5–R6](../M5_RULES.md) defines numerical rules and the19 finite abilities. Runtime S13 execution lives in `combat-s13.ts`, `combat-s13-abilities.ts` and `combat-s13-state.ts`. The legacy standalone engine remains for unchanged low-level/historical primitive tests; its max-shield behavior must not be confused with M5 layers.
 
-- Fixed50ms ticks, maximum1200ticks, movement every5ticks. Existing hex geometry, E/SE/SW/W/NW/NE neighbor ordering and shared occupancy/reservations remain. Nearest-target ties use code-point ID. Input permutations cannot alter semantic ordering.
+- Fixed50ms ticks, maximum900ticks, movement every5ticks. Existing hex geometry, E/SE/SW/W/NW/NE neighbor ordering and shared occupancy/reservations remain. Nearest-target ties use code-point ID. Input permutations cannot alter semantic ordering.
 - Snapshot excludes bench and freezes distinct-definition trait tiers, equipment, augment/anomaly sources, ability variables, AP, base/percentage AD, precise attack speed, initial state and mechanics. Later catalog/Match/UI changes cannot change a running battle. Glass Cannon starts qualifying units at80%HP. No hidden enemy growth is added.
 - Combat owns explicit RNG state/draw count and action/event sequences. Each planned ordinary attack consumes one word even at0% or100%crit; Caitlyn consumes one word per bombardment center. Consumption follows tick, actor ID and action index. No visual action consumes RNG.
 - Tick barriers: cooldown/expiration/periodic work; existing control; movement; target/action planning; costs/counters/RNG/new shields; stable packet mitigation, redirect and shield absorption; simultaneous HP; surviving-target healing; surviving Mana/kill credit/growth; delayed status effects; death cleanup; elimination before timeout. New control cannot cancel an already planned action in the same tick.
@@ -51,7 +61,7 @@ Match freezes `buildStrategySnapshot` before creating Combat. `combat-types.ts`,
 - Target selection uses hex cells, never rendering coordinates. Lowest percentage compares integer cross products; Lux uses absolute currentHP. Line/path and cone approximations are explicitly defined in R6. Channel tasks stop on caster death/control; packets already planned land. Attached bleed persists after source death.
 - Packet order is source-unit ID, action sequence, target ID, packet ordinal. Virtual remainingHP assigns actual damage and the first killing packet. Loris redirect uses the original target's mitigated amount, floors the50% share and skips a second resistance calculation; its shield still absorbs. Redirect cannot recurse, and multiple eligible Loris sources choose smallest ID.
 - Shields are independent source layers. Same-source refresh uses larger remaining amount/later expiry; different sources add. Absorption consumes earliest expiry then source key and records source-specific totals. Irelia decays linearly in integers and tracks absorbed damage independently of remaining shield. Defensive duration records survive shield exhaustion so end effects are not lost.
-- Status keys include source/definition/target. Newly delayed statuses start next tick and retain their complete duration: a1second control blocks20ticks. Same-source refresh cannot create a gap; different-source semantics follow the finite mechanic. Periodic tasks explicitly track due tick and remaining shots. Darius' four primary-target bleed packets preserve the integer total including remainders.
+- Status keys include source/definition/target. Newly delayed statuses start next tick; a1second control blocks20ticks before overtime, then uses the application-tick overtime duration documented above. Same-source refresh cannot create a gap; different-source semantics follow the finite mechanic. Periodic tasks explicitly track due tick and remaining shots. Darius' four primary-target bleed packets preserve the integer total including remainders.
 - Healing caps at maximumHP and never revives a same-tick dead unit. Gunblade consumes actual damage and cannot recurse. Derived damage does not invent extra attack/cast triggers. Full future tasks and source provenance are part of the serializable state, not hidden closures.
 - Tristana's once-per-cast lethal bounce is committed for next tick, and growth occurs only when a secondary bounce actually exists. Growth affects the current battle and is returned to Match once at settlement, including defeated battles. Match alone persists, merges or destroys growth.
 - `targetChanged`, `packetDamage`, `heal`, `shieldLayerChanged`, `statusChanged`, `statChanged`, `kill` and `growth` supplement attack/cast/movement/death/finish events. Events retain actor, target, source, action/packet identity and numerical outcomes; actualHP, absorption, requested/actual healing and status changes remain distinguishable. UI can aggregate visual text but cannot truncate the authoritative ledger.

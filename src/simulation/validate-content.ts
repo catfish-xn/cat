@@ -80,7 +80,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   rageblade:['attackSpeedBps'],damageAmp:['bps'],extraAttackMana:['amount','backRowOnly'],archangel:['periodTicks','abilityPower'],
   dragonClaw:['periodTicks','healMaxHpBps'],gargoyle:['resistPerEnemy'],gunblade:['selfHealBps','allyHealBps'],
   s13P3:['enabled','stage'],
-  acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold:['amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
+  acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold:['amount','stage3Amount','stage4Amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
   investment:['healthPerInterest'],bulkyBuddies:['health','shieldMaxHpBps','durationTicks'],titanic:['adBps','radius'],mageArmor:['apBps'],killStreak:['mana'],
 });
 export function validateEffect(effect:Effect):void {
@@ -88,7 +88,7 @@ export function validateEffect(effect:Effect):void {
   if(effect.kind==='mechanic') {
     const fields=MECHANIC_FIELDS[effect.mechanic];
     if(!keysAre(effect,['kind','mechanic','values'])||!fields||!effect.values||!keysAre(effect.values,fields)
-      ||fields.some(key=>key!=='backRowOnly'&&key!=='forcedPeriodTicks'&&key!=='warwick'&&!Object.hasOwn(effect.values,key))
+      ||fields.some(key=>key!=='backRowOnly'&&key!=='stage3Amount' && key!=='stage4Amount' && key!=='forcedPeriodTicks'&&key!=='warwick'&&!Object.hasOwn(effect.values,key))
       ||Object.values(effect.values).some(value=>!integer(value)||value>1000000)) fail('Invalid mechanic');
     for(const key of ['periodTicks','durationTicks','everyN']) if(Object.hasOwn(effect.values,key)&&!integer(effect.values[key],1)) fail('Invalid mechanic interval');
     if(effect.values.backRowOnly!==undefined&&effect.values.backRowOnly!==1) fail('Invalid row condition');

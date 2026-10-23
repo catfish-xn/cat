@@ -53,7 +53,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   gargoyle: ['resistPerEnemy'], gunblade: ['selfHealBps', 'allyHealBps'], extraAttackMana: ['amount'], titanic: ['adBps', 'radius'],
   killStreak: ['mana'], bulkyBuddies: ['health', 'shieldMaxHpBps', 'durationTicks'], mageArmor: ['apBps'],
   glassCannon: ['startingHealthBps', 'damageAmpBps'], pumpingUp: ['attackSpeedBpsPerRound'], investment: ['healthPerInterest'],
-  damageAmp: ['bps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold: ['amount'], lowCostAllies: ['count'],
+  damageAmp: ['bps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold: ['amount','stage3Amount','stage4Amount'], lowCostAllies: ['count'],
 };
 const HOOKS: readonly Hook[] = ['combatStart', 'onAttack', 'onCast', 'onHpLoss'];
 for(const name of ['v20Unlock','v20Teamup','v19Chainblade','v19Garen','formSwapper','sisters','sistersUnlock'])MECHANICS.add(name);
@@ -105,7 +105,7 @@ export function cloneEffect(effect: Effect): Effect {
     case 'mechanic': {
       if (!MECHANICS.has(effect.mechanic)) throw new RangeError('Unknown finite mechanic');
       const fields = MECHANIC_FIELDS[effect.mechanic];
-      if (fields.some(key => key!=='forcedPeriodTicks' && key!=='warwick' && !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
+      if (fields.some(key => key!=='stage3Amount' && key!=='stage4Amount' && key!=='forcedPeriodTicks' && key!=='warwick' && !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
       if (Object.keys(effect.values).some(key => !fields.includes(key) && !['backRowOnly', 'buddyIndex'].includes(key))) throw new RangeError('Unknown mechanic parameter');
       for (const value of Object.values(effect.values)) integer(value);
       for (const key of ['everyN', 'periodTicks', 'durationTicks']) if (Object.hasOwn(effect.values, key)) integer(effect.values[key], 1);

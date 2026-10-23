@@ -348,7 +348,7 @@ export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['
   const late = entry.lateAmount ? evaluateAmount(entry.lateAmount, { holder: hpSample(target), target: hpSample(target), attackDamage: ad(target), abilityPower: ap(target, ctx.tick,ctx.units) }) : entry.amount;
   const request = entry.request ?? makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(entry.source)), entry.targetId, 'direct', ctx.heals.indexOf(entry)]), entry.targetId, 'direct', null,
     [{ source: asSource(entry.source), numerator: late, denominator: 1 }]);
-  const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick)); target.hp += outcome.actual;
+  const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick), ctx.tick); target.hp += outcome.actual;
   if (ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, healing: [...ctx.resolutionFacts.healing, outcome] };
   if (entry.periodic && (outcome.actual < outcome.afterWound || target.hp === target.maxHp)) clearPeriodicAccount(ctx, entry.periodic, target.id);
   ctx.events.push({ type: 'heal', tick: ctx.tick, outcome });

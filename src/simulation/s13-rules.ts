@@ -2,7 +2,13 @@
  * digest. A change here invalidates earlier development saves and goldens. */
 export const S13_COMBAT_RULES = Object.freeze({
   tickMs: 50,
-  maxTicks: 1200,
+  maxTicks: 900,
+  overtimeStartTick: 600,
+  overtimeStackTicks: 20,
+  overtimePerStackBps: 1000,
+  overtimeReductionCapBps: 7000,
+  overtimeMoveSpeedBonusBps: 5000,
+  overtimeTiming: 'first-stack-at-600-every-20-control-half-up-min-one',
   moveIntervalTicks: 5,
   abilityPowerBase: 100,
   attackCritBps: 2500,

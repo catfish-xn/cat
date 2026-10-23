@@ -1,3 +1,4 @@
+import { overtimeBonusBps, overtimeMoveBonusBps, movementIntervalTicks } from './combat-overtime';
 import { castV20Teamups, quickDashV20, advanceV20Minions } from './combat-v20-traits';
 import { canMove, isControlled } from './combat-movement';
 import { settleFamilyReunionDeaths } from './combat-family-reunion';
@@ -36,7 +37,7 @@ import { executeDamageControlSequence, executeMechanismEffect } from './m8/s13-m
 import { completeCast, damageMana, planManaCost, refundCast, resolveMana } from './m8/mana';
 import { S13_COMBAT_RULES } from './s13-rules';
 import { getNeighbors, hexDistance, type HexCell } from './board';
-import { compareIds, eliminationResult, MOVE_INTERVAL_TICKS, type CombatState, type CombatStep, type CombatEvent, type CombatOrigin } from './combat-types';
+import { compareIds, eliminationResult, type CombatState, type CombatStep, type CombatEvent, type CombatOrigin } from './combat-types';
 import { invocationEvent, stampCombatStep } from './combat-effects';
 import { collectTriggers } from './effects';
 import type { Hook } from './strategy-types';
@@ -116,7 +117,7 @@ function chargedCritBps(owner: S13Unit, packet: S13Packet): number {
   return bonus;
 }
 function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[], hp: number): DamageSample {
-  const amplifiers: StatModifier[] = owner ? [...statusModifiers(owner, 'damageAmp', tick)] : [];
+  const amplifiers: StatModifier[] = [constantModifier('damageAmp', overtimeBonusBps(tick), 'bps'), ...(owner ? statusModifiers(owner, 'damageAmp', tick) : [])];
   if(owner?.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))
     amplifiers.push(constantModifier('damageAmp',d11AvariceDamageAmpBps(owner.currentItemBankGold!),'bps'));
   if (target.g22 && target.g22.exposureFromTick <= tick && target.g22.exposureUntilTick > tick) amplifiers.push(constantModifier('damageAmp', target.g22.exposureBps, 'bps'));
@@ -274,7 +275,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   advanceV20Minions(ctx);
   for(const unit of units)quickDashV20(ctx,unit);
   for(const unit of units)if(unit.mechanics?.some(m=>m.mechanic==='quickstriker')&&unit.alive){
-    unit.v20Traits={...unit.v20Traits,moveTenths:Math.min(13,(unit.v20Traits?.moveTenths??7)+3)};
+    unit.v20Traits={...unit.v20Traits,moveTenths:Math.min(13,(unit.v20Traits?.moveTenths??7)+Math.floor(3*(10000+overtimeMoveBonusBps(tick))/10000))};
   }
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
   const intents = units.map(unit => {
@@ -287,7 +288,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const destination = intents[n]; if (!destination || reserved.has(key(destination))) return;
     reserved.add(key(destination)); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination });
     if(unit.mechanics?.some(m=>m.mechanic==='quickstriker'))unit.v20Traits={...unit.v20Traits,moveTenths:unit.v20Traits!.moveTenths!-10};
-    unit.cell = destination; unit.moveCooldownTicks = unit.definitionId==='warwick'&&(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>=tick)?Math.ceil(MOVE_INTERVAL_TICKS*10000/15000):MOVE_INTERVAL_TICKS;
+    unit.cell = destination; unit.moveCooldownTicks = movementIntervalTicks(unit.definitionId==='warwick'&&Boolean(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>=tick), tick);
   });
   refreshMechanismAuras(ctx);
   if (openingState) {

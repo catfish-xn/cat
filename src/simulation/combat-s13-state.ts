@@ -1,3 +1,4 @@
+import { overtimeBonusBps } from './combat-overtime';
 import { p2Bonus } from './s13-augments-p2-combat';
 import { d11HeadhunterAttackSpeedBps } from './d11-fill';
 import { shortestPath, startingRows } from './m8/targeting';
@@ -120,14 +121,14 @@ export function attackSpeedBonus(unit:S13Unit,tick:number,units:readonly CombatU
   const signedSpeed = modifierValues('attackSpeed', statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   const quick = unit.mechanics?.find(m=>m.mechanic==='quickstriker'), target=units.find(u=>u.id===unit.targetId);
   const quickBps=quick ? quick.values.minBps+(target ? Math.floor((quick.values.maxBps-quick.values.minBps)*(target.maxHp-target.hp)/target.maxHp) : 0) : 0;
-  const speedBps = quickBps + bankSpeed + p2Bonus(unit,'attackSpeedBps') + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + signedSpeed.flat + signedSpeed.bps;
+  const speedBps = overtimeBonusBps(tick) + quickBps + bankSpeed + p2Bonus(unit,'attackSpeedBps') + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + signedSpeed.flat + signedSpeed.bps;
   return speedBps;
 }
 export function interval(unit: S13Unit, tick: number, units: readonly CombatUnit[] = []): number {
   if(unit.definitionId==='viktor')return attackInterval(5500,0);
-  // R7 neutral definitions author exact integer periods; they have no speed
-  // modifiers in this slice. Inverting a rounded speed adds a spurious tick.
-  if (champion(unit) === 'neutral' && unit.unitKind !== 'neutral') return unit.attackIntervalTicks;
+  // R7 legacy neutrals author exact integer periods; apply overtime directly.
+  // Inverting their rounded base speed would add a spurious tick.
+  if (champion(unit) === 'neutral' && unit.unitKind !== 'neutral') return Math.max(1, Math.ceil(unit.attackIntervalTicks * 10000 / (10000 + overtimeBonusBps(tick))));
   // G2-4b Silvermere Dawn: a lock replaces every speed term; two locks keep the slower one.
   const locks = statusModifiers(unit, 'attackSpeedLock', tick).flatMap(m => m.value.kind === 'constant' ? [m.value.amount] : []);
   if (locks.length) return attackInterval(Math.min(...locks), 0);

@@ -1,3 +1,4 @@
+import { overtimeReceivedBps } from '../combat-overtime';
 import type { DamageOutcome, HealContribution, HealOutcome, HealRequest, Source } from './contracts';
 import { addFractions, canonicalSource, compareCodePoints, fraction, savedFraction, type Fraction } from './identity';
 import { integer, safeNumber } from './stats';
@@ -28,12 +29,13 @@ function apportion(total: number, weights: readonly Fraction[], sources: readonl
   for (const f of fractions) if (remaining-- > 0) result[f.index]++;
   return result;
 }
-export function resolveHeal(request: HealRequest, target: { readonly hp: number; readonly maxHp: number; readonly alive: boolean }, woundBps: number): HealOutcome {
+export function resolveHeal(request: HealRequest, target: { readonly hp: number; readonly maxHp: number; readonly alive: boolean }, woundBps: number, tick = 0): HealOutcome {
   integer(target.hp); integer(target.maxHp, 1); integer(woundBps);
   if (target.hp > target.maxHp || woundBps > 10000) throw new RangeError('Invalid healing sample');
   const canonical = makeHealRequest(request.healId, request.targetId, request.kind, request.fromPacketId, request.contributions);
   if (canonical.requested !== request.requested) throw new RangeError('Heal requested total mismatch');
-  const afterWound = safeNumber(integer(canonical.requested) * BigInt(10000 - woundBps) / 10000n);
+  const wounded = integer(canonical.requested) * BigInt(10000 - woundBps) / 10000n;
+  const afterWound = safeNumber(wounded * BigInt(overtimeReceivedBps(tick)) / 10000n);
   const actual = target.alive && target.hp > 0 ? Math.min(afterWound, target.maxHp - target.hp) : 0;
   const sources = canonical.contributions.map(c => c.source);
   const requestedShares = apportion(canonical.requested, canonical.contributions.map(c => fraction(c.numerator, c.denominator)), sources);

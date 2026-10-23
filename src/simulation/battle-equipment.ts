@@ -1,3 +1,4 @@
+import { MAX_COMBAT_TICKS } from './combat-types';
 import { scaleItemSummonHp } from './g2-4b-summons';
 /** Battle-time equipment uses the opening strategy compiler and preserves runtime.
  * Receipts are server-private source inputs, not client-supplied resolved numbers. */
@@ -32,7 +33,7 @@ export type BattleEquipmentFailure = 'battle-input-invalid' | 'battle-unit-unava
 export const battleLocalId = (seat: string, kind: string, id: string) => JSON.stringify(['t2', seat, kind, id]);
 export function validBattleInput(input: BattleEquipmentInput): boolean {
   return !!input && input.kind === 'equipment' && Number.isSafeInteger(input.seq) && input.seq > 0
-    && Number.isSafeInteger(input.effectiveTick) && input.effectiveTick > 0 && input.effectiveTick <= 1200
+    && Number.isSafeInteger(input.effectiveTick) && input.effectiveTick > 0 && input.effectiveTick <= MAX_COMBAT_TICKS
     && [input.seatId, input.itemId, input.unitId].every(id => typeof id === 'string' && id.length > 0)
     && Number.isSafeInteger(input.slot) && input.slot >= 0 && input.slot < 3
     && Object.keys(input).sort().join() === 'effectiveTick,itemId,kind,seatId,seq,slot,unitId';
