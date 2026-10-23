@@ -18,6 +18,7 @@ import { M8_VERSION } from './m8/version';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
 import { buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
   forfeitPendingChoice, claimOrDiscardLoot, rerollAugment } from './match';
+import { externalAugmentBlocks } from './augment-offers';
 import { enableMultiplayerSettlement, applyRoundSettlement } from './round-settlement';
 import type { MultiplayerCommandResult } from './round-settlement';
 import type { MatchEvent, MatchState, ShopSlot } from './match-types';
@@ -197,7 +198,7 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult {
   return transact(pool,state,(_draft,policy)=>{
     switch(command.type) {
-      case 'rerollAugment': return rerollAugment(state,command.choiceId,command.generation,command.optionIndex);
+      case 'rerollAugment': return rerollAugment(state,command.choiceId,command.generation,command.optionIndex,command.augmentBlocked);
       case 'useConsumable': {
         const tool=state.consumables.find(c=>c.consumableId===command.consumableId),target=command.target,u=target.kind==='unit'?state.preparation.units.find(u=>u.id===target.unitId):undefined;
         if(tool?.definitionId==='TFT_Consumable_NeekosHelp'&&u&&UNIT_DEFINITIONS[u.definitionId]?.cost===6)requirePool(_draft.available[u.definitionId]>0,'pool-empty');
@@ -256,14 +257,18 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
     const draft=draftPool(pool),poolEvents:SharedPoolEvent[]=[],events:{seatId:string;events:readonly MatchEvent[]}[]=[];
     const frozenLayout=freezeOrbLayoutThroughRound(draft.orbLayout,Math.min(targetRound,FINAL_ROUND));
     if(!frozenLayout.ok)throw new PoolError(frozenLayout.reason);draft.orbLayout=frozenLayout.layout;
-    let prepared=states.map((state):MatchState=>{
+    // v22: seats open their augment nodes in batch order; each sees the offers already opened before it (one-per-match).
+    const opened:MatchState[]=[];
+    let prepared=states.map((state,index):MatchState=>{
       if(!advance) {requirePool(state.phase==='preparation'||state.phase==='choice','wrong-phase');return state;}
       const {sharedPool, ...unbound}=state;
-      const result=advanceMultiplayerRound(unbound,round,draft.orbLayout);if(!result.ok)throw new PoolError(result.reason);
+      const blocked=externalAugmentBlocks(state.sharedPool!.seatId,[...opened,...states.slice(index)]);
+      const result=advanceMultiplayerRound(unbound,round,draft.orbLayout,blocked);if(!result.ok)throw new PoolError(result.reason);
       reconcileHoldings(draft,state,result.state,poolEvents);
       events.push({seatId:state.sharedPool!.seatId,events:result.events});
       // Discard only the unobserved infinite-shop proposal; keep schedule/equipment/loot progression.
-      return {...result.state,sharedPool,shop:state.shop,rngState:state.rngState};
+      const next={...result.state,sharedPool,shop:state.shop,rngState:state.rngState};
+      opened.push(next);return next;
     });
     let openingResolution: import('./shared-pool-types').OpeningRoundResolution | undefined;
     const openingPlan = planOpeningRound(draft.openingEncounter, prepared[0].roundDefinitionId);

@@ -9,8 +9,9 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  openMatchCombatStream, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
+  openMatchCombatStream, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
+import { externalAugmentBlocks } from '../../simulation/augment-offers';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { nextRandom, validateSeed } from '../../simulation/rng';
@@ -42,6 +43,8 @@ import {
 export interface RoomTimings {
   readonly preparationMs: number;
   readonly choiceMs: number;
+  /** v22: preparation at an augment round, the open augment choice included; AUGMENT_PREPARATION_MS when absent. */
+  readonly augmentPreparationMs?: number;
   readonly settlementMs: number;
   /** Playback allowance added after the longest battle's replay (also covers the client's opening transition). */
   readonly battleTailMs: number;
@@ -96,6 +99,8 @@ export interface RoomOptions extends RoomTimings {
 export const CAROUSEL_DEPARTURE_MS = 2_000;
 /** Ticks per step of a time-budgeted slice (`sliceMs`): one, since a late-round tick alone can take several milliseconds. */
 export const SLICE_STEP_TICKS = 1;
+/** v22: total preparation at an augment round, the augment choice included (14.24: 30 s planning + 20 s armory bonus). */
+export const AUGMENT_PREPARATION_MS = 50_000;
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
 /** `stale-seat`: a seat or the pool changed after the plan was made; plan again on the latest live states. */
@@ -142,7 +147,7 @@ export type SeatCommandOutcome =
  * Pure dispatch to the rules; the room adds nothing. Shop commands and choices (which may award a unit) go through the
  * TP shared-pool transactions (§12.4); commands that move no unit between owners stay on the plain public commands.
  */
-export function applySeatCommand(pool: SharedPoolState, state: MatchState, command: SeatCommand): SeatCommandOutcome {
+export function applySeatCommand(pool: SharedPoolState, state: MatchState, command: SeatCommand, augmentBlocked: readonly string[] = []): SeatCommandOutcome {
   const plain = (result: MatchCommandResult): SeatCommandOutcome => result.ok
     ? { ok: true, pool, state: result.state, events: result.events } : { ok: false, pool, state: result.state, reason: result.reason };
   switch (command.type) {
@@ -161,7 +166,8 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
     case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
     // v15: one card of the offer (optionIndex); the rules' shared-pool transaction, like every other choice command.
-    case 'rerollAugment': return runSharedMatchCommand(pool, state, { type: 'rerollAugment', choiceId: command.choiceId, generation: command.generation, optionIndex: command.optionIndex });
+    // v22: the room supplies what the other live seats block (externalAugmentBlocks); the client never does.
+    case 'rerollAugment': return runSharedMatchCommand(pool, state, { type: 'rerollAugment', choiceId: command.choiceId, generation: command.generation, optionIndex: command.optionIndex, augmentBlocked });
     // v15: forwarded as is; the rules claim at once or queue it during the battle (settled with the round), and refuse the rest.
     case 'claimOrb': return runSharedMatchCommand(pool, state, { type: 'claimOrb', round: command.round, orbId: command.orbId });
     case 'anomalyReroll': return plain(rerollAnomaly(state, command.choiceId, command.generation));
@@ -488,7 +494,8 @@ export class Room {
     let live: LiveCatchUp | null = null;
     try { live = phase === 'battle' ? this.pveCatchUp(seat) : null; }
     catch (error) { this.failLive(seatId, error); return { ok: false, reason: 'wrong-phase', state: seat.match }; }
-    let applied = applySeatCommand(live?.pool ?? this.current.pool, live?.state ?? seat.match, command);
+    const augmentBlocked = command.type === 'rerollAugment' ? externalAugmentBlocks(seatId, this.aliveSeats().map(candidate => candidate.match)) : [];
+    let applied = applySeatCommand(live?.pool ?? this.current.pool, live?.state ?? seat.match, command, augmentBlocked);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
     if (!applied.ok) return { ok: false, reason: applied.reason, state: seat.match };
     if (command.type === 'equip' && phase === 'battle') {
@@ -808,8 +815,21 @@ export class Room {
 
   /** After round entry (and its carousel, when it had one): the round's own choice phase, or what follows it. */
   private continueRound(): void {
+    if (this.opensAugmentPreparation()) { this.resolvePendingOnEntry(); return this.setPhase('preparation', this.options.augmentPreparationMs ?? AUGMENT_PREPARATION_MS); }
     if (this.aliveSeats().some(seat => seat.match.phase === 'choice')) this.setPhase('choice', this.options.choiceMs);
     else this.afterChoiceWindow();
+  }
+
+  /**
+   * v22 (user approval 2026-10-23): at an augment round (2-1, 3-2, 4-2) there is no separate choice phase. The augment
+   * choice opens with preparation, which lasts AUGMENT_PREPARATION_MS in total; seats shop and move while it is open, and
+   * the preparation deadline's timeouts take the first option of a choice still open. Any other pending choice at round
+   * entry keeps the old choice phase.
+   */
+  private opensAugmentPreparation(): boolean {
+    const alive = this.aliveSeats();
+    return alive.some(seat => isAugmentPreparationChoice(seat.match))
+      && alive.every(seat => seat.match.phase === 'preparation' || isAugmentPreparationChoice(seat.match));
   }
 
   /* ---------------- G1-P7 carousel (MULTIPLAYER_CONTRACT §21) ---------------- */
