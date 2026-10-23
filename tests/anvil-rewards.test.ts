@@ -51,8 +51,8 @@ describe('anvil reward paths',()=>{
   const offers=openingRewardOffers(s,atom);s=accepted(claimOpeningReward(s,atom.id));expect(units(s)).toHaveLength(1);expect(s.pendingChoice).toBeNull();
   s=accepted(openAnvil(s,units(s)[0].id));expect(s.pendingChoice!.offers).toEqual(offers);
  });
- it('full bench keeps epic forge orb; retry grants once and preserves shared pool',()=>{
-  let {pool,state}=fullBench();const round=getCatalogRoundById('5-7'),jump=syntheticSharedRound(pool,[state],round.ordinal);pool=jump.pool;
+ it.each(['4-7','5-7'])('%s full bench keeps forge orb; retry grants once and preserves shared pool',node=>{
+  let {pool,state}=fullBench();const round=getCatalogRoundById(node),jump=syntheticSharedRound(pool,[state],round.ordinal);pool=jump.pool;
   state={...jump.states[0],roundDefinitionId:round.roundId,m8:{...jump.states[0].m8,round},phase:'preparation',combat:null,pendingChoice:null};
   const enemies=createRoundEnemies(round.ordinal);state={...state,preparation:{...state.preparation,units:[...state.preparation.units.filter(u=>u.team==='player'),...enemies]}};
   const plan=state.m8.loot.frozen.rounds.at(-1)!,forge=plan.orbs.find(o=>o.entries.some(e=>e.payload.kind==='forge'))!;
@@ -87,14 +87,14 @@ describe('anvil reward paths',()=>{
  });
 });
 
-it('public 5-7 combat: save/replay before and after opening an epic anvil',async()=>{
+it.each(['4-7','5-7'])('public %s combat: save/replay before and after opening an anvil',async node=>{
  const {battle}=await import('./fixtures/t13-loot-public');
  const api=await import('../src/simulation/match');
  const {decideBotAction}=await import('../src/simulation/bot');
  const {context,execute}=await import('./t7-helpers');
  const {serializeMatch,restoreMatch}=await import('../src/simulation/serialization');
  const seed=42;let before=createMatch(seed);
- while(before.roundDefinitionId!=='5-7'){
+ while(before.roundDefinitionId!==node){
    for(let n=0;n<64;n++){const d=decideBotAction(before,context(before,n),0);if(d.action==='done')break;before=accepted(execute(before,d.action));}
    if(before.phase==='preparation')before=battle(before).ended;
    while(before.phase==='choice'){const c=before.pendingChoice!;before=accepted(selectChoice(before,c.choiceId,c.generation,c.offers[0]));}

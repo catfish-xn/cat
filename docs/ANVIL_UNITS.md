@@ -47,7 +47,7 @@ grantAnvilUnit(state, {
 
 这是规则内部发放接口，不是客户端索奖命令。调用者必须提供已认证来源（开局、Batch A/B、G2-3）对应的奖励收据；未知来源不能作为可恢复存档。失败为 `invalid-mechanic-state`、`duplicate-mechanic-receipt`、`bench-full`，后者不写领取收据。Loot 来源使用现有 `LootPayload {kind:'forge',definitionId,quantity:1}` 和 `grantDirectLoot`，由冻结奖励计划认证。
 
-**4-7 固定基础锻造器没有启用。** 规则确定后，在冻结奖励计划增加该 forge payload 即可复用满席留球/领取/选项/恢复；若采用 mechanic 来源，则先补来源描述符及确定性选项认证，再调用 `grantAnvilUnit`。不允许凭临时 receiptId 绕开恢复校验。建议按批准材料中的 A：4-7 固定给 1 个基础锻造器，等待用户决定。
+**4-7 固定额外 1 个基础装备锻造器已启用（P，用户 2026-10-23 批准）。** 原有 2–4 个散件全部保留；在冻结奖励计划的首个已有法球末尾追加 forge payload，不替换奖励、不改变原奖励身份、不新增 RNG 消耗。单机/联机共用 `freezeLootThroughRound`；沿用 `claimOrb` 入备战席、满席留球、打开和收据恢复路径。14.24 原版数据未找到必出证据，仅有未被引用的 `EpicNPCLootComponentAnvil` 表，故不标为原版规则。**待 v22 统一录制**。
 
 ## 给 Claude 的接入点
 
@@ -85,3 +85,11 @@ grantAnvilUnit(state, {
 - 同依赖重建 CI 固定 M7 提交 `15313a75c6e74beec739fe52a2875c104c55eae3` 得 **424,407 B**；父候选比率 **1.562917**，本候选 **1.566562**，均超过 **1.50**，本候选超过上限约 **28,250 B**。这是已复现的 JS 静态门槛失败，不是通过；未调整门槛，也未做无关目录减包。未运行浏览器首交互预算。
 
 剩余验收：Claude 界面/实际计时器/重连截止时间、合并后的 v22 统一录制及已有 JS 体积超标处理。真实公共命令路线已覆盖 5-7 满席跨到下一回合领取、打开前/中/后存档恢复；人工修改状态的奖励边界测试另用于覆盖全部分支，不把它们当作完整对局回放。
+
+## 2026-10-23：4-7 补充验收
+
+本次不新增公共命令、字段或失败原因，`claimOrb` / `openAnvil` 合同不变。`ANVIL_POLICY.version=anvil-units-v2`，规则/content 沿用本分支 v22 候选身份；双摘要离线重算，历史 epoch/golden 不改，**待 v22 统一录制**。固定奖励仍以对应野怪载体死亡作为揭示条件，复用现有法球发放时点。
+
+测试覆盖 64 个 seed 的额外恰 1 个基础锻造器、原 2/3/4 散件数量与全部原抽样奖励保持、无额外 RNG 消耗、显式共享布局与单人计划一致、冻结账本恢复；共享满席留球/腾位重领/重复拒绝/卡池守恒；真实公共 4-7 路线领取与打开前中后存档、资源回放一致。
+
+本次验证：`npm test -- --configLoader runner tests/anvil-47.test.ts tests/anvil-units.test.ts tests/anvil-rewards.test.ts`，3 文件 **28/28 通过**；`npm run typecheck`、离线双摘要 `--check`、`git diff --check` 通过。双摘要 CONTENT=`fnv1a32-utf16:f335dc93`、LOOT_REPLAY=`fnv1a32-utf16:4323f5a2`。未联网、未改 CI、未提交。

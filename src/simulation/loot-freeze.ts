@@ -1,5 +1,6 @@
 import { sampleOrbBox } from './orb-box';
 import { EPIC_LOOT } from './content/loot';
+import { ANVIL_POLICY } from './content/anvils';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
 import type { ConsumableDefinitionId } from './consumable-types';
 import { isImmutableJson, shareGeneratedJson } from './immutable-json';
@@ -120,7 +121,12 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
         continue;
       }
       const orbId=lootOrbId(round.roundId,round.encounterId!,orb.sourceUnitId,orb.slotOrdinal);
-      add(orb,sampleOrbBox(seed,orbId,orb.templateId).payloads);
+      const payloads = sampleOrbBox(seed,orbId,orb.templateId).payloads;
+      // Approved project rule: append after sampling, preserving all original entries/IDs and RNG streams.
+      const fixed = ANVIL_POLICY.component47;
+      add(orb,round.roundId === fixed.roundId && orb === template.orbs[0]
+        ? [...payloads,{kind:'forge',definitionId:fixed.definitionId,quantity:fixed.quantity}]
+        : payloads);
     }
     rounds.push({encounterPlan:{roundId:round.roundId,encounterId:round.encounterId!,policyVersion:NEUTRAL_ENCOUNTER_POLICY_VERSION,drops},choices:[],orbs});
   }
