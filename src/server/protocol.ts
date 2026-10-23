@@ -115,7 +115,14 @@ export interface ReplayUnitId { readonly combatId: string; readonly originalId: 
  * settlement of this round would credit if that gold and streak stay as they are (a PvP draw settles as `ifLoss`).
  * Base income, drops, XP and HP are not part of it. The client shows it as given and never recomputes it.
  */
-export type SeatStateView = PrivateSeatView & { readonly economyPreview: RoundEconomyPreview | null; readonly itemSummons: readonly ItemSummonView[] };
+export type SeatStateView = PrivateSeatView & { readonly economyPreview: RoundEconomyPreview | null; readonly itemSummons: readonly ItemSummonView[];
+  /**
+   * v22 anvil units: present only while my open anvil choice (pendingChoice.payload.source 'anvil-unit') runs on its own
+   * server deadline. `endsAt` is server time like PlayerViewPhase.endsAt (compare with its `serverNow`); the choice is
+   * answered with its first offer at that time unless I choose before. Resume sends the same `endsAt`.
+   */
+  readonly choiceDeadline?: SeatChoiceDeadlineView };
+export interface SeatChoiceDeadlineView { readonly choiceId: string; readonly generation: number; readonly endsAt: number }
 /**
  * G2-4b (contract §26): one of my movable preparation summons (兹若特传送门's 虚空生物), the rules' `readItemSummons` of the
  * same state, field by field. Not an asset: no bench slot, population, sale or equipment. `unit.location` is where the rules
