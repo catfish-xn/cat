@@ -74,6 +74,8 @@ export interface CombatUnit {
   readonly monsterFamily?: string;
   readonly companionDefinitions?: readonly import('./m8/companions').CompanionDefinition[];
   readonly manaLockedUntilTick?: number;
+  /** Unspent hundredths from damage mana, carried across tick boundaries. */
+  readonly damageManaRemainderCenti?: number;
   readonly unitKind?: 'champion' | 'neutral';
   readonly mechanismDefinitions?: import('./m8/runtime-types').MechanismDefinitions;
   readonly mechanismState?: import('./m8/runtime-types').MechanismState;

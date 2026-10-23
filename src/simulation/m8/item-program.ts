@@ -6,7 +6,7 @@ import type { TargetLimitedTrigger } from './triggers';
 import type { VampDefinition } from './runtime-types';
 import { authorizeSpellCrit } from './crit';
 import { validateStatusApplication } from './status';
-import { integer, resolveStat } from './stats';
+import { integer, modifierValues, safeNumber } from './stats';
 import { grantedItemPrograms } from './combat-item-programs';
 export type ItemTrigger = Omit<TargetLimitedTrigger, 'source'> & { readonly initialAlso?: true };
 export interface ItemProgram {
@@ -38,7 +38,8 @@ export function programEntries(unit: Pick<CombatUnit, 'itemPrograms'> & Partial<
 export function compileItemCrit(unit: Pick<CombatUnit, 'id' | 'hp' | 'maxHp' | 'ability' | 'itemPrograms' | 'baseCritChanceBps' | 'baseCritMultiplierBps'> & Partial<Pick<CombatUnit, 'combatItemGrants' | 'mechanics'>>) {
   const programs=itemPrograms(unit), modifiers=programs.flatMap(p=>p.program.modifiers ?? []);
   const sources=programEntries(unit).flatMap(e=>e.kind==='effect' && 'kind' in e.declaration && e.declaration.kind==='authorize-spell-crit'?[e.source]:[]);
-  const chance=resolveStat('critChance',unit.baseCritChanceBps ?? (unit.ability.kind==='s13'&&unit.ability.championId==='neutral'?0:2500),modifiers,{holder:unit});
+  const {flat,bps}=modifierValues('critChance',modifiers,{holder:unit});
+  const chance=safeNumber(BigInt(unit.baseCritChanceBps ?? (unit.ability.kind==='s13'&&unit.ability.championId==='neutral'?0:2500))+BigInt(flat)+BigInt(bps));
   return authorizeSpellCrit(sources.filter(s=>s.sourceKind!=='item'),sources.filter(s=>s.sourceKind==='item'),chance,unit.baseCritMultiplierBps ?? 14000);
 }
 export function validateItemProgram(program: ItemProgram): void {

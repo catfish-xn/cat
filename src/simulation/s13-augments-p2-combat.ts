@@ -11,6 +11,7 @@ import { freezeContent } from './content/freeze';
 import type { SpellCritAuthorization } from './m8/contracts';
 import type { RestoreCombatReplay } from './restore-combat-replay';
 import { canonicalContent } from './content';
+import { addCritChance } from './m8/crit';
 
 export interface P2SharedStats { readonly attackDamage: number; readonly abilityPower: number; readonly health: number; readonly armor: number; readonly magicResist: number }
 export interface P2Opening {
@@ -81,7 +82,7 @@ export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number):S13Unit
 export function p2Crit(u:S13Unit|undefined,target:CombatUnit|undefined,base:SpellCritAuthorization):SpellCritAuthorization {
   if(!u||!target||!p2HasAnomaly(u,'cull-the-weak'))return base;
   const bps=Math.floor((target.maxHp-target.hp)*Math.round(p2Values('cull-the-weak').CritPercent*10000)/target.maxHp);
-  return {...base,chanceBps:Math.min(10000,base.chanceBps+bps)};
+  return addCritChance(base,bps);
 }
 /** Avoid a target lookup on every ordinary packet when the attacker has no Cull The Weak. */
 export function p2PacketCrit(u:S13Unit|undefined,targetId:string,units:readonly S13Unit[],base:SpellCritAuthorization):SpellCritAuthorization {

@@ -144,7 +144,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
     abilityPower: owner ? ap(owner, tick) : 0, armor: defenses(target, true, tick, units), magicResist: defenses(target, false, tick, units),
     ...(champion(target) === 'amumu' ? { flatReduction: variable(target, 'FlatDamageReduction') } : {}),
     amplifiers, reductions, prevention: effectiveStatuses(target.mechanismState?.statuses ?? [], tick).some(g => g.kind === 'damage-prevention'), ...(packet.delivery === 'item-burn' && champion(target) === 'neutral' ? { burnCap: 100 } : {}), critical: packet.critical ?? false,
-    critMultiplierBps: owner ? spellCrit(owner).multiplierBps + chargedCritBps(owner, packet) : S13_COMBAT_RULES.critMultiplierBps,
+    critMultiplierBps: owner ? (packet.critMultiplierBps ?? p2PacketCrit(owner, target.id, units, spellCrit(owner)).multiplierBps) + chargedCritBps(owner, packet) : S13_COMBAT_RULES.critMultiplierBps,
     shields: [...target.shieldLayers].sort((a, b) => a.expiresAtTick - b.expiresAtTick || compareText(frozenShield(a, target).key, frozenShield(b, target).key)) };
 }
 /** S13 development resolver; standalone M3/M4 battles keep their original rules. */
@@ -340,8 +340,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
     if ((unit.g23?.ascension?.untilTick??0)<tick && !['neutral', 'amumu', 'zeri'].includes(champion(unit)) && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (hexDistance(unit.cell,target.cell)<=range(unit,false) || selfCast)) {
       const seq = actionSeq++, beforeCount = events.length;
-      const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.mana)!;
+      const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.maxMana)!;
       spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
+      if (champion(unit) !== 'viktor') unit.manaLockedUntilTick = tick + S13_COMBAT_RULES.castManaLockTicks;
       if(unit.unreavedMaxMana!==undefined&&unit.definitionId!=='viktor')unit.maxMana=unit.unreavedMaxMana;
       const oldInterval = interval(unit, tick, units);
       castAnomaly(ctx,unit,target);
@@ -406,7 +407,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const beforeDamage = units.map(u => ({ id: u.id, hp: u.hp, maxHp: u.maxHp }));
   const positiveDamage = new Set<string>();
   // Virtual health and layered shields give each packet a deterministic actual contribution and killer.
-  const virtualHp = new Map(units.map(u => [u.id, u.hp])), hpLost = new Map<string, number>();
+  const virtualHp = new Map(units.map(u => [u.id, u.hp])), hpLost = new Map<string, number>(), damageManaCenti = new Map<string, number>();
   // Pay prior debts at the damage barrier. These are nonlethal HP payments:
   // no second shield/resistance, redirection, mana, vamp or equipment proc.
   for (const unit of units) if (unit.deferredItemDamage?.length) {
@@ -435,7 +436,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   ctx.virtualHp = virtualHp;
   const killed = new Map<string, CombatOrigin>();
   const ricochetActions = new Set<string>(), aggregatedActions = new Set<number>();
-  const commitOutcome = (target: S13Unit, result: ReturnType<typeof allocateDamage>, packet: S13Packet) => {
+  const commitOutcome = (target: S13Unit, result: ReturnType<typeof allocateDamage>, packet: S13Packet, beforeMitigation = result.outcome.raw) => {
     const outcome = result.outcome, { absorbed, hpDamage: actual, context, critical } = outcome;
     if (outcome.deferred) target.deferredItemDamage=[...target.deferredItemDamage??[],{
       packetId:context.packetId,startedAtTick:tick,amount:outcome.deferred,paid:0,elapsedTicks:0}];
@@ -463,6 +464,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     allOutcomes.push(outcome);
     ctx.resolutionFacts = { ...ctx.resolutionFacts!, damage: allOutcomes };
     hpLost.set(target.id, (hpLost.get(target.id) ?? 0) + actual);
+    if (outcome.mitigated > 0 && context.permissions.includes('damage-mana') && tick >= (target.manaLockedUntilTick ?? 0) && target.maxMana > 0 && champion(target) !== 'viktor')
+      damageManaCenti.set(target.id, (damageManaCenti.get(target.id) ?? 0) + damageMana(beforeMitigation, outcome.mitigated));
     if (absorbed + actual > 0) {
       positiveDamage.add(target.id);
       if (trackAssists) damageContributors[target.id] = [...new Set([...(damageContributors[target.id] ?? []), context.source.ownerId,
@@ -567,7 +570,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const sample = damageSample(packet, target, owner, tick, units, virtualHp.get(target.id)!);
     const basePrepared = prepareDamage(request, sample);
     // One target multiplier after existing amplification/mitigation, before shields/redirect. Never double-scale inherited packets.
-    const prepared = roseAmpV19(owner,target)&&!packet.inherited ? {...basePrepared,mitigated:Math.floor(basePrepared.mitigated*10800/10000)} : basePrepared;
+    const prepared = roseAmpV19(owner,target)&&!packet.inherited ? {...basePrepared,beforeMitigation:Math.floor(basePrepared.beforeMitigation*10800/10000),mitigated:Math.floor(basePrepared.mitigated*10800/10000)} : basePrepared;
     if ((virtualHp.get(target.id) ?? 0) > 0 && !sample.prevention) p3Reflect(ctx, target, packet, prepared.blockedByMitigation);
     if (packet.periodic && (sample.prevention || sample.burnCap !== undefined && prepared.mitigated >= sample.burnCap)) clearPeriodicAccount(ctx, packet.periodic, target.id);
     if(packet.devour){
@@ -576,14 +579,15 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const protector = units.filter(u => u.alive && u.id !== target.id && u.team === target.team && hexDistance(u.cell, target.cell) <= 1
       && active(u, tick, 'redirect').length > 0).sort(compareIds)[0];
     const transfer = protector ? safeNumber(BigInt(prepared.mitigated) * BigInt(Math.max(...active(protector, tick, 'redirect').map(s => s.amount))) / 10000n) : 0;
-    commitOutcome(target, allocateDamage(request.context, { ...prepared, mitigated: prepared.mitigated - transfer }, sample.target!.hp, sample.shields,mechanic(target,'g24DeathsDefiance','fractionBps')), packet);
+    const transferredRaw = transfer > 0 ? safeNumber(BigInt(prepared.beforeMitigation) * BigInt(transfer) / BigInt(prepared.mitigated)) : 0;
+    commitOutcome(target, allocateDamage(request.context, { ...prepared, mitigated: prepared.mitigated - transfer }, sample.target!.hp, sample.shields,mechanic(target,'g24DeathsDefiance','fractionBps')), packet, prepared.beforeMitigation - transferredRaw);
     if (protector && transfer > 0) {
       const partial: DamageContext = { ...request.context, targetId: protector.id, redirected: true, critEligibility: 'never',
         parentPacketId: request.context.packetId, packetId: JSON.stringify([request.context.packetId, 'redirect', protector.id]) };
       const redirected: DamageRequest = { context: { ...partial, permissions: permissionsFor(partial) }, input: { stage: 'after-mitigation', amount: transfer,
         inherited: { parentPacketId: request.context.packetId, resolvedAtTick: tick, portion: 'redirect-share', critical: prepared.critical } } };
       const redirectSample = damageSample(packet, protector, owner, tick, units, virtualHp.get(protector.id)!);
-      commitOutcome(protector, allocateDamage(redirected.context,prepareDamage(redirected,redirectSample),redirectSample.target!.hp,redirectSample.shields,mechanic(protector,'g24DeathsDefiance','fractionBps')), packet);
+      commitOutcome(protector, allocateDamage(redirected.context,prepareDamage(redirected,redirectSample),redirectSample.target!.hp,redirectSample.shields,mechanic(protector,'g24DeathsDefiance','fractionBps')), packet, transferredRaw);
     }
     // The bound target's virtual HP is authoritative here; alive/hp are committed
     // after the batch. Prevention and full shield absorption still allow control.
@@ -679,12 +683,14 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if ((hpLost.get(unit.id) ?? 0) > 0) hooks(unit, 'onHpLoss', actionSeq);
     // Legacy gainMana hooks have no frozen ManaRequest reason; no M8 content declares them.
     if ((hookMana.get(unit.id) ?? 0) > 0) throw new RangeError('Legacy gainMana hook cannot enter the replay2 ledger');
-    const attackGain = attackMana.get(unit.id) ?? 0, damageGain = damageMana(hpLost.get(unit.id) ?? 0), killGain = killMana.get(unit.id) ?? 0;
+    const centi = (unit.damageManaRemainderCenti ?? 0) + Math.floor((damageManaCenti.get(unit.id) ?? 0) * (10000 + mechanic(unit, 'visionary', 'manaBps')) / 10000);
+    if (damageManaCenti.has(unit.id)) unit.damageManaRemainderCenti = centi % 100;
+    const attackGain = attackMana.get(unit.id) ?? 0, damageGain = Math.floor(centi / 100), killGain = killMana.get(unit.id) ?? 0;
     // replay2: one ManaOutcome event per non-zero request, resolved in the same order as before.
     for (const [reason, gain] of [['attack', attackGain], ['damage', damageGain], ['kill', killGain]] as const) {
       if(unit.definitionId==='viktor'){if(reason!=='attack'&&reason!=='damage')convertViktorMana(ctx,unit,gain);else if(reason==='attack')convertViktorMana(ctx,unit,Math.max(0,Math.floor(gain*(10000+mechanic(unit,'visionary','manaBps'))/10000)-10));continue;}
       const outcome = resolveMana({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 },
-        { source: asSource(origin(unit)), targetId: unit.id, amount: Math.floor(gain*(10000+mechanic(unit,'visionary','manaBps'))/10000), reason, bypassLock: 'none', castActionSeq: null }, tick);
+        { source: asSource(origin(unit)), targetId: unit.id, amount: reason === 'damage' ? gain : Math.floor(gain*(10000+mechanic(unit,'visionary','manaBps'))/10000), reason, bypassLock: 'none', castActionSeq: null }, tick);
       unit.mana = outcome.after;
       if (gain > 0) events.push({ type: 'manaChanged', tick, outcome });
     }

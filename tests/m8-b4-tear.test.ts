@@ -9,12 +9,12 @@ vi.setConfig({ testTimeout: 20_000 });
 describe('B4 tear recipes: hand vectors and real effects',()=>{
  it('blue:completed1000 mana cast refunds10;kill buffs5% for160ticks',()=>{const r=run(wearing('blue-buff',{mana:1000}),1,[enemy('e',1,3,{hp:100}),enemy('e2',2,3)]);expect(r.p.mana).toBe(10);expect(r.p.mechanismState?.statuses.flatMap(g=>g.contributions).some(c=>c.application.modifier?.stat==='damageAmp'&&c.expiresAtTick===161)).toBe(true);expect(packets(r.events)[0].hpDamage).toBe(100);});
  it('vow:positive hit at40% grants250 shield+20 permanent resists,armor20+20=40',()=>{const r=run(wearing('protectors-vow',{hp:400,cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(r.p.shield).toBe(250);expect(readCombatStats(r.p,r.state)).toMatchObject({armor:40,magicResist:20});});
- it('helm front:armor40 mitigates100→71;gain1 incoming+floor71×.03=2 mana on top15',()=>{const r=run(wearing('adaptive-helm',{cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(packets(r.events,'e')[0].hpDamage).toBe(71);expect(r.p.mana).toBe(18);expect(readCombatStats(r.p,r.state).magicResist).toBe(60);});
+ it('helm front:armor40 mitigates100→71;gain1 incoming+floor(1+71×.03)=3 mana on top15',()=>{const r=run(wearing('adaptive-helm',{cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(packets(r.events,'e')[0].hpDamage).toBe(71);expect(r.p.mana).toBe(19);expect(readCombatStats(r.p,r.state).magicResist).toBe(60);});
  it('helm back:AP100+10+15=125;tick60 adds10 mana,original branch survives movement',()=>{const r=run(wearing('adaptive-helm',{cell:{col:1,row:6},startingCell:{col:1,row:6},cooldownTicks:1000,attackRange:1,moveCooldownTicks:0}),60,[enemy('e',1,1)]);expect(r.events.some(e=>e.type==='movement'&&e.unitId==='p'&&e.to.row<=5)).toBe(true);expect(r.p.cell.row).toBeLessThanOrEqual(5);expect(readCombatStats(r.p,r.state)).toMatchObject({abilityPower:125,magicResist:20,armor:0});expect(r.p.mana).toBe(25);});
  it('helm front moves into back rows but retains40 resists and incoming-hit mana instead of periodic mana',()=>{
   const r=run(wearing('adaptive-helm',{cooldownTicks:1000,attackRange:1,moveCooldownTicks:0}),60,[enemy('e',1,7,{cooldownTicks:60,attackDamage:100,attackRange:1})]);
   expect(r.events.some(e=>e.type==='movement'&&e.unitId==='p'&&e.to.row>=6)).toBe(true);expect(r.p.cell.row).toBeGreaterThanOrEqual(6);
-  expect(readCombatStats(r.p,r.state)).toMatchObject({abilityPower:110,armor:40,magicResist:60});expect(r.p.mana).toBe(18);
+  expect(readCombatStats(r.p,r.state)).toMatchObject({abilityPower:110,armor:40,magicResist:60});expect(r.p.mana).toBe(19);
  });
  it('redemption first contribution is [101,201): damage100/90/90/100 at ticks100/101/200/201 without refresh',()=>{
   const ally=enemy('ally',2,4,{team:'player',hp:100000,maxHp:100000}),attacker=enemy('e',2,3,{targetId:'ally',attackDamage:100});

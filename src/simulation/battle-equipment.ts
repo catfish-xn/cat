@@ -106,7 +106,8 @@ export function applyBattleEquipment(state: CombatState, receipt: BattleEquipmen
       result.baseAttackSpeedBps = next.stats.baseAttackSpeedBps ?? Math.floor(200000 / next.stats.attackIntervalTicks);
       result.attackSpeedBonusBps = next.stats.attackSpeedBonusBps ?? 0;
       result.maxMana += next.stats.maxMana - old.stats.maxMana;
-      result.mana = unit.alive ? Math.min(result.maxMana, unit.mana + Math.max(0, next.stats.initialMana - old.stats.initialMana)) : 0;
+      result.mana = unit.alive && result.maxMana > 0 ? unit.mana + (state.tick + 1 < (unit.manaLockedUntilTick ?? 0) ? 0 : Math.max(0, next.stats.initialMana - old.stats.initialMana)) : 0;
+      if (unit.definitionId === 'viktor') result.mana = Math.min(result.maxMana, result.mana);
       const oldHp = hpParts(old), newHp = hpParts(next);
       if (result.maxHpBasis) {
         result.maxHpBasis = { ...result.maxHpBasis, flat: result.maxHpBasis.flat + newHp.flat - oldHp.flat,

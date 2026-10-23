@@ -45,7 +45,7 @@ export function validateDamageContext(context: DamageContext): void {
   if (context.permissions.length !== expected.length || new Set(context.permissions).size !== expected.length || expected.some(p => !context.permissions.includes(p))) throw new RangeError('Forged proc permissions');
 }
 /** Coefficient/critical/resistance stages precede the one allowed Loris split. */
-export function prepareDamage(request: DamageRequest, sample: DamageSample): Pick<DamageOutcome, 'raw' | 'prevented' | 'mitigated' | 'critical'> & { readonly rawAfterCritical: number; readonly blockedByMitigation: number } {
+export function prepareDamage(request: DamageRequest, sample: DamageSample): Pick<DamageOutcome, 'raw' | 'prevented' | 'mitigated' | 'critical'> & { readonly beforeMitigation: number; readonly blockedByMitigation: number } {
   const { context, input } = request;
   validateDamageContext(context);
   if (sample.holder.id !== context.source.ownerId) throw new RangeError('Wrong damage holder sample');
@@ -54,7 +54,7 @@ export function prepareDamage(request: DamageRequest, sample: DamageSample): Pic
   integer(sample.armor); integer(sample.magicResist); integer(sample.critMultiplierBps, 10000);
   if (sample.target.hp > sample.target.maxHp) throw new RangeError('Invalid target HP');
   const raw = input.stage === 'raw' ? evaluateAmount(input.amount, sample) : safeNumber(integer(input.amount));
-  let value = raw, rawAfterCritical = raw, critical = sample.critical, blockedByMitigation = 0;
+  let value = raw, rawAfterCritical = raw, beforeMitigation = raw, critical = sample.critical, blockedByMitigation = 0;
   if (input.stage === 'after-mitigation') {
     if (context.parentPacketId !== input.inherited.parentPacketId) throw new RangeError('Mismatched inherited packet');
     integer(input.inherited.resolvedAtTick);
@@ -76,12 +76,13 @@ export function prepareDamage(request: DamageRequest, sample: DamageSample): Pic
     value = safeNumber(BigInt(value) * (10000n + integer(amp, -10000)) * (10000n - integer(reduction)) / 100000000n);
     if (raw > 0 && context.delivery !== 'item-burn') value = Math.max(1, value);
     if (sample.flatReduction) value = Math.max(0, value - safeNumber(integer(sample.flatReduction)));
-    if(context.damageType !== 'true')blockedByMitigation=Math.max(0,safeNumber(BigInt(rawAfterCritical)*(10000n+integer(amp,-10000))/10000n)-value);
+    beforeMitigation=safeNumber(BigInt(rawAfterCritical)*(10000n+integer(amp,-10000))/10000n);
+    if(context.damageType !== 'true')blockedByMitigation=Math.max(0,beforeMitigation-value);
     if (context.delivery === 'item-burn' && sample.burnCap !== undefined) value = Math.min(value, safeNumber(integer(sample.burnCap)));
   }
   const prevented = sample.prevention ? value : 0;
   if (sample.prevention) value = 0;
-  return { raw, rawAfterCritical, blockedByMitigation, prevented, mitigated: value, critical };
+  return { raw, beforeMitigation, blockedByMitigation, prevented, mitigated: value, critical };
 }
 export function allocateDamage(context: DamageContext, prepared: Pick<DamageOutcome, 'raw' | 'prevented' | 'mitigated' | 'critical'>,
   hp: number, layers: readonly DamageShield[], deferBps = 0): { readonly outcome: DamageOutcome; readonly shields: readonly DamageShield[]; readonly hpAfter: number } {
