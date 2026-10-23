@@ -33,8 +33,11 @@ const ENVELOPE_QUANTILE = 0.98;
 export const ENVELOPE_ACTIONS = ['idle', 'move', 'attack', 'hit'] as const;
 /** Of those, the ones that loop (sampled at distinct times; the others play once and keep their last frame). */
 export const LOOPING_ACTIONS: ReadonlySet<string> = new Set(['idle', 'move']);
-/** `ground`: a clip whose lowest point (net of the root's own motion) can set where the feet go. */
-export interface EnvelopeClip { readonly clip: AnimationClip; readonly loop: boolean; readonly ground?: boolean }
+/**
+ * `ground`: a clip whose lowest point (net of the root's own motion) can set where the feet go. `feet`: a clip whose
+ * plain lowest point (root motion included) is where the piece stands (the board's idle).
+ */
+export interface EnvelopeClip { readonly clip: AnimationClip; readonly loop: boolean; readonly ground?: boolean; readonly feet?: boolean }
 /**
  * What the clips reach: `radius` from the upright axis (the width cap), and `ground`, the lowest point over the
  * `ground` clips' samples once each sample's root drift from its bind place is taken out (null without such clips),
@@ -42,7 +45,18 @@ export interface EnvelopeClip { readonly clip: AnimationClip; readonly loop: boo
  * pieces floating. fitModel never puts the feet below the bind box with it, so a hovering model (root raised in its
  * clips: Malzahar, Nocturne) keeps its height and no clip sinks under the cell.
  */
-export interface Envelope { readonly radius: number; readonly ground: number | null }
+export interface Envelope { readonly radius: number; readonly ground: number | null; readonly feet?: number | null }
+
+/**
+ * Models whose idle hovers on purpose (Malzahar, Nocturne, Corki's flyer): they keep the root-motion-free `ground`.
+ * Every other official-scale model stands its idle's lowest point on the cell. Netting out the root's rise floated
+ * pieces whose clips lift the skeleton root while the feet stay put (Steb ~77 board units up, Rell, Jayce, Mordekaiser).
+ */
+export const HOVERING_MODELS: ReadonlySet<string> = new Set(['malzahar', 'nocturne', 'corki']);
+/** The `feet` fitModel takes for this model: the envelope's idle feet, unless the model hovers by design. */
+export function standingFeet(id: string, envelope: Envelope | undefined): number | null {
+  return HOVERING_MODELS.has(id) ? null : envelope?.feet ?? null;
+}
 
 /** Vertices read between time checks in the sliced envelope (a few hundred microseconds of work). */
 const ENVELOPE_CHUNK = 1500;
@@ -59,8 +73,8 @@ const ENVELOPE_CHUNK = 1500;
 function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generator<void, Envelope> {
   const meshes: SkinnedMesh[] = [];
   body.traverse(node => { if (node instanceof SkinnedMesh) meshes.push(node); });
-  if (!meshes.length || !clips.length) return { radius: 0, ground: null };
-  let ground = Infinity;
+  if (!meshes.length || !clips.length) return { radius: 0, ground: null, feet: null };
+  let ground = Infinity, feet = Infinity;
   const mixer = new AnimationMixer(body), point = new Vector3(), rootAt = new Vector3(), radii: number[] = [];
   // Vertices read since the last pause, across poses, meshes and clips (small meshes alone never reach a chunk).
   let work = 0;
@@ -118,7 +132,7 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
   // Root homes and the bind box must describe that same loaded pose.
   const homes = roots.map(root => root ? root.getWorldPosition(new Vector3()) : new Vector3());
   try {
-    for (const { clip, loop, ground: standing } of clips) {
+    for (const { clip, loop, ground: standing, feet: stands } of clips) {
       restore();
       const action = mixer.clipAction(clip);
       // Looping clips: ENVELOPE_SAMPLES distinct times (duration itself wraps to 0); once-only clips end on their last frame.
@@ -135,13 +149,14 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
           // The axis moved by the root's horizontal drift from its bind place (0 when the skeleton has no root bone).
           if (root) root.getWorldPosition(rootAt).sub(homes[index]!); else rootAt.set(0, 0, 0);
           const count = mesh.geometry.attributes.position?.count ?? 0;
-          for (let v = 0; v < count; v += standing ? 1 : ENVELOPE_STRIDE) {
+          for (let v = 0; v < count; v += standing || stands ? 1 : ENVELOPE_STRIDE) {
             mesh.getVertexPosition(v, point).applyMatrix4(mesh.matrixWorld);
             if (v % ENVELOPE_STRIDE === 0) radii.push(Math.hypot(point.x - rootAt.x, point.z - rootAt.z));
             // Feet without the skeleton root's own vertical motion (a hover, a jump, a crouch stays the clip's):
             // what is left is how far the skinned body sits from its bind pose (Darius ~100 source units up).
             const foot = point.y - rootAt.y;
             if (standing && foot >= groundLimit && foot < ground) ground = foot;
+            if (stands && point.y >= groundLimit && point.y < feet) feet = point.y;
             if (++work >= ENVELOPE_CHUNK) { work = 0; yield; pose(); mesh.skeleton.update(); if (root) root.getWorldPosition(rootAt).sub(homes[index]!); }
           }
         }
@@ -153,12 +168,12 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
     mixer.stopAllAction(); mixer.uncacheRoot(body);
     restore();
   }
-  const low = Number.isFinite(ground) ? ground : null;
-  if (!radii.length) return { radius: 0, ground: low };
+  const low = Number.isFinite(ground) ? ground : null, plain = Number.isFinite(feet) ? feet : null;
+  if (!radii.length) return { radius: 0, ground: low, feet: plain };
   // The quantile in its own slice: a typed numeric sort (no comparator calls) of every sample.
   yield;
   const sorted = Float64Array.from(radii).sort();
-  return { radius: sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * ENVELOPE_QUANTILE))]!, ground: low };
+  return { radius: sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * ENVELOPE_QUANTILE))]!, ground: low, feet: plain };
 }
 
 /** The envelope at once (a piece mounting outside combat with nothing measured yet). */
@@ -193,7 +208,7 @@ export async function animationEnvelopeSliced(body: Object3D, clips: readonly En
       if (options.stop?.()) return null;
     }
   } finally {
-    steps.return({ radius: 0, ground: null });
+    steps.return({ radius: 0, ground: null, feet: null });
   }
 }
 
@@ -203,7 +218,9 @@ export async function animationEnvelopeSliced(body: Object3D, clips: readonly En
  */
 export function fitModel(body: Object3D, options: { height: number; width?: number; unitScale?: number | null; sourceScale: number; envelopeRadius?: number;
   /** Official scale only: the standing clip's lowest point (Envelope.ground) goes on y=0 instead of the bind box's. */
-  ground?: number | null }): number {
+  ground?: number | null;
+  /** Official scale only: the idle's plain lowest point (Envelope.feet via standingFeet) goes on y=0; wins over `ground`. */
+  feet?: number | null }): number {
   const box = new Box3().setFromObject(body), size = box.getSize(new Vector3()), width = options.width ?? Infinity;
   const { min, max } = box, official = !!options.unitScale;
   // Official scale: the footprint's diameter about the upright axis (the piece turns to face its target), over its
@@ -218,8 +235,9 @@ export function fitModel(body: Object3D, options: { height: number; width?: numb
   // The clips' own feet (root drift taken out) land where the bind feet stand, at most on the origin: a body lifted off
   // its bind pose in every clip comes down (Darius), a bind pose that already hovers keeps that hover, and a foot posed
   // below the bind floor is raised onto the cell. Without a measured ground, the bind box's bottom goes on y=0 as before.
+  const standing = official && options.feet != null && Number.isFinite(options.feet);
   const measured = official && options.ground != null && Number.isFinite(options.ground);
-  const floor = measured ? options.ground! - Math.max(box.min.y, 0) : box.min.y;
+  const floor = standing ? options.feet! : measured ? options.ground! - Math.max(box.min.y, 0) : box.min.y;
   body.position.y -= floor * scale;
   return (box.max.y - floor) * scale;
 }

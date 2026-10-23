@@ -185,13 +185,14 @@ describe('P7 boundary rejection and recovery authentication', () => {
         expect(wrong.ok).toBe(false);
     });
     it('freezes low HP pairs and uses seatIndex for equal HP, including odd final batches', () => {
-        const a = opening(5), states = a.states.map((s, i) => ({ ...s, playerHp: [80, 20, 20, 100, 50][i] }));
-        // A new pool with matching initialized seats is used; the first creation cannot be repeated.
+        const hp = [80, 20, 20, 100, 50], states: MatchState[] = [];
+        // This ordering test needs initialized seats, not a discarded five-seat
+        // simulation through 2-4: all match data below comes from the new pool.
         let pool = createSharedPool('hp', 42, { seatCount: 5 });
         for (let i = 0; i < 5; i++) {
             const r = must(initializeSharedSeat(pool, createCarouselMatch(42 + i), `s${i}`, i));
             pool = r.pool;
-            states[i] = { ...r.state, playerHp: states[i].playerHp };
+            states[i] = { ...r.state, playerHp: hp[i] };
         }
         pool = must(prepareCarouselParticipants(pool, states.map((state, i) => ({ seatId: `s${i}`, state })))).pool;
         pool={...pool,naturalRound:7};
