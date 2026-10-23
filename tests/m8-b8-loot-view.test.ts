@@ -46,7 +46,7 @@ describe('B8 readLootView over real randomized public routes',()=>{
   const ids=new Set(frozen.encounterPlan.drops.map(d=>d.dropId));expect(v.revealedDrops.map(d=>d.receiptId).sort()).toEqual(s.m8.loot.receipts.filter(r=>ids.has(r.dropId)).map(r=>r.receiptId).sort());
   const next=accepted(api.nextRound(s,17));expect(view(next).revealedDrops).toEqual([]);expect(view(next).revealedOrbs).toEqual([]);
  });
- it.each([{name:'two source deaths including a hero',keep:'loris',col:6,row:5,deaths:2},{name:'only component carrier',keep:'loris',col:1,row:7,deaths:1},{name:'tool carrier',keep:'loris',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths})=>{
+ it.each([{name:'two source deaths including a hero',keep:'maddie',col:2,row:7,deaths:2},{name:'only component carrier',keep:'urgot',col:0,row:4,deaths:1},{name:'tool carrier',keep:'loris',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths})=>{
   const terminal=battle(await terminalPreparation(keep,col,row)),s=terminal.ended,v=view(s);expect(s.phase).toBe('gameOver');
   expect(s.combat!.neutralReceipts!.deaths).toHaveLength(deaths);
   expect(v).toMatchObject({canContinue:false,reason:'game-over',pendingClaims:[],pendingChoice:null});

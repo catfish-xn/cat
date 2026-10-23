@@ -91,12 +91,16 @@ export async function transferPreparation({equipGloves=true}={}) {
   }
   return s;
 }
+// v22: seed 38 draws the scuttle-crab opening, whose 4-7 crabs carry the razorbeak orbs, so source
+// deaths no longer name the frozen razorbeak slots. Seed 2253 has no opening encounter and the same
+// 4-7 shape (component, reforger at entry 1, heroes) with the identical 3 HP / 97 lost entry.
+const TERMINAL_SEED=2253;
 export async function terminalPreparation(keep:string|null,col=1,row=7) {
-  const key='terminal38';
+  const key=`terminal${TERMINAL_SEED}`;
   if(!prefixes.has(key)) {
     const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
     const captured=new Error('terminal capture');let prefix:MatchState|undefined;
-    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[]});
+    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:TERMINAL_SEED,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[]});
     }catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
   }
