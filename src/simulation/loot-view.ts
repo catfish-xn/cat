@@ -4,6 +4,7 @@ import type { LootView, RevealedDropView } from './m8/ui-contracts';
 import { compareLootFreezeSlots, lootChoiceId } from './loot-identity';
 import { hasPendingLootCapacity, unresolvedLootChoices } from './loot-runtime';
 import { freezeContent } from './content/freeze';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { unclaimedOrbPlans } from './orb-claim';
 
 /** Payload is a display whitelist too: future nested fields must neither leak nor freeze input references. */
@@ -72,7 +73,14 @@ export function readLootView(state: Readonly<MatchState>): LootView {
 export function readComponentEquivalent(state:Readonly<MatchState>):number {
   return state.scheduleReceipts.filter(r=>r.kind==='component').reduce((n,r)=>n+r.itemIds.length,0)
     + Object.values(state.m8.loot.guaranteeCounters).reduce((a,b)=>a+b,0)
-    + (state.seatMechanics?.receipts.filter(r=>r.source==='epic-loot'&&(r.kind==='item'||r.kind==='choice'&&r.itemId!==null)).length??0)*2;
+    + (state.seatMechanics?.receipts.filter(r=>r.source==='epic-loot'&&(r.kind==='item'||r.kind==='choice'&&r.itemId!==null)).length??0)*2
+    + lootAnvilEquivalent(state);
+}
+/** v22: loot forges arrive as bench anvils; an opened one counts its pick (completed 2, component 1). */
+function lootAnvilEquivalent(state:Readonly<MatchState>):number {
+  const born=new Set(state.m8.loot.receipts.filter(r=>r.payload.kind==='forge').flatMap(r=>r.grantedUnitIds.map(id=>JSON.stringify(['anvil',id]))));
+  return (state.seatMechanics?.receipts??[]).reduce((n,r)=>r.kind==='choice'&&r.source==='anvil-unit'&&r.itemId!==null&&born.has(r.receiptId)
+    ?n+(ITEM_DEFINITIONS[r.optionId]?.kind==='completed'?2:1):n,0);
 }
 
 /** Opponents receive count/tier only; never identities or contents. */

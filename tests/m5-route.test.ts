@@ -65,10 +65,17 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
    expect(loot.map(r=>r.dropId).sort()).toEqual(planned.map(d=>d.dropId).sort());
    expect(loot.every(r=>r.grantedItemIds.length===1&&r.payload.quantity===1)).toBe(true);
    const value=loot.reduce((n,r)=>n+(r.payload.kind==='item'&&ITEM_DEFINITIONS[r.payload.definitionId].kind==='completed'?2:1),0);
-   const forges=route.final.seatMechanics!.receipts.filter(r=>r.source==='epic-loot'&&(r.kind==='item'||r.kind==='choice'&&r.itemId!==null));
+   // v22: loot forges are bench anvils (opened by selling, 4 picks); the 4-7 component anvil is extra.
+   const anvils=route.final.m8.loot.receipts.flatMap(r=>r.payload.kind==='forge'?r.grantedUnitIds.map(id=>({id,definitionId:(r.payload as {definitionId:string}).definitionId})):[]);
+   const opened=new Set(route.final.seatMechanics!.receipts.filter(r=>r.source==='anvil-unit'&&r.kind==='choice'&&r.itemId!==null).map(r=>r.receiptId));
+   const forges=anvils.filter(a=>a.definitionId==='TFT_ArmoryKeyCompleted'),componentAnvils=anvils.filter(a=>a.definitionId==='TFT_ArmoryKeyComponent');
+   const isOpened=(a:{id:string})=>opened.has(JSON.stringify(['anvil',a.id]));
    // Independent #265 reward oracle: seed42 has two standard epic variants,
    // eight original components + five supply components + two completed forges.
-   expect(forges).toHaveLength(2);expect(supply+value+forges.length*2).toBe(20);expect(readComponentEquivalent(route.final)).toBe(20);
+   expect(forges).toHaveLength(2);expect(componentAnvils).toHaveLength(1);expect(supply+value+forges.length*2).toBe(20);
+   // The 6-7 forge lands with the final settlement, so it stays an unopened anvil.
+   expect(forges.map(isOpened)).toEqual([true,false]);expect(componentAnvils.every(isOpened)).toBe(true);
+   expect(readComponentEquivalent(route.final)).toBe(20-2+componentAnvils.length);
   }
  // Temporary 70s: 34.78s measured at four workers for the extra real transfer route; user approved ~2x on 2026-10-21.
  },70000);

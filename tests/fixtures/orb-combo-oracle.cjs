@@ -44,12 +44,13 @@ const ROUNDS=[['1-2','minions-a-v1',['m01','m02']],['1-3','minions-b-v1',['m01',
 function lootPlan(seed,ordinal=38,roomSeed=seed){const p=plan(roomSeed),rng=stream((seed^0xdeadbeef)>>>0),rounds=[],rolls=[];
  for(const [roundId,encounterId,carriers] of ROUNDS){const stage=Number(roundId[0]),ord=stage===1?Number(roundId[2])-1:stage*7-4;if(ord>ordinal)break;
   const drops=[],orbs=[];
-  const add=(local,slotOrdinal,tier,templateId,payloads)=>{const sourceUnitId=JSON.stringify(['pve',roundId,encounterId,local]),orbId=JSON.stringify(['orb',roundId,encounterId,sourceUnitId,slotOrdinal]),identity={roundId,encounterId,sourceUnitId,slotOrdinal,orbId};
-   payloads??=box(seed,orbId,templateId);const entries=payloads.map((payload,entryOrdinal)=>({...identity,entryOrdinal,dropId:JSON.stringify([orbId,entryOrdinal]),payload,status:'planned',revealCondition:'source-killed',receiptId:null}));drops.push(...entries);orbs.push({...identity,tier,templateId,entries});};
+  const add=(local,slotOrdinal,tier,templateId,payloads,extra=[])=>{const sourceUnitId=JSON.stringify(['pve',roundId,encounterId,local]),orbId=JSON.stringify(['orb',roundId,encounterId,sourceUnitId,slotOrdinal]),identity={roundId,encounterId,sourceUnitId,slotOrdinal,orbId};
+   payloads=[...(payloads??box(seed,orbId,templateId)),...extra];const entries=payloads.map((payload,entryOrdinal)=>({...identity,entryOrdinal,dropId:JSON.stringify([orbId,entryOrdinal]),payload,status:'planned',revealCondition:'source-killed',receiptId:null}));drops.push(...entries);orbs.push({...identity,tier,templateId,entries});};
   if(stage<=4){let seq=[];const row=p.rows[stage-1];for(let col=1;col<=5;col++)for(let n=0;n<(row[col]||0);n++)seq.push(col);
    if(stage===1)seq=seq.filter((_,i)=>i%3===ord-1);
    const slots=seq.map((col,i)=>{const tier=['blue','gray','blue','gold','prismatic'][col-1],id=col===1?'component':col===2?(stage<3?'copper':'copperPlus'):col===3?(stage<4?'silver':'silverPlus'):col===4?(stage<4?'gold':'goldPlus'):'ultraPlus';return {local:carriers[i%carriers.length],slot:Math.floor(i/carriers.length),tier,id};});
-   slots.sort((a,b)=>a.local<b.local?-1:a.local>b.local?1:a.slot-b.slot).forEach(s=>add(s.local,s.slot,s.tier,s.id));
+   // v22 (10-23): 4-7 appends one component anvil to its first orb, after sampling; no extra draws.
+   slots.sort((a,b)=>a.local<b.local?-1:a.local>b.local?1:a.slot-b.slot).forEach((s,i)=>add(s.local,s.slot,s.tier,s.id,undefined,roundId==='4-7'&&i===0?[{kind:'forge',definitionId:'TFT_ArmoryKeyComponent',quantity:1}]:[]));
   }else{
    const v=rng.draw(1000),variant=v<899?'standard':v<999?'artifact':'crown',c=v===999?null:choose(BOXES.copperPlus,rng.draw(100)),ss=Array.from({length:v===999?2:1},()=>choose(BOXES.silverPlus,rng.draw(100)));
    const copperIds=['three-cost','two-cost-gold','reforger','remover','lesser'],silverIds=['four-cost-gold','three-cost-pair','reforger','duplicator'];
