@@ -11,7 +11,7 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { fitModel, type Envelope } from './model-fit';
+import { fitModel, standingFeet, type Envelope } from './model-fit';
 import { legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
 
@@ -151,7 +151,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       const unitScale = drawn ? ctx.unitScale?.(model) ?? null : null;
       if (unitScale && ctx.sourceScale) {
         const envelope = ctx.envelope?.(model, lease);
-        piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground });
+        piece.height = fitModel(lease.scene, { height, width, unitScale, sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope) });
         root.add(lease.scene); drawn!(piece.height);
       }
       else root.add(fit(lease.scene, height, width));
