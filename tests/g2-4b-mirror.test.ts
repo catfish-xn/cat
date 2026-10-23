@@ -99,7 +99,9 @@ it.each([
  // Fortified adds12%: floor(1670*1.24)=2070; floor(*.7)=1449.
  expect(owner.maxHp).toBe(maxHp);expect(clone.maxHp).toBe(cloneHp);
  expect(clone.itemSummonOpeningMaxHp).toBe(maxHp);expect(clone.maxMana).toBe(66);
- expect(clone.attackDamage).toBe(75);expect(owner.attackDamage).toBe(84);
+ // v22 AD star scaling 1/1.5/2.25 (HP stays 1/1.8/3.24): Tristana 1-star AD 42 -> 2-star floor(42*1.5)=63 (was floor(42*1.8)=75).
+ // Owner adds persistent growth 1250 Bps: floor(63*1.125)=70 (was floor(75*1.125)=84); the naked clone keeps 63.
+ expect(clone.attackDamage).toBe(63);expect(owner.attackDamage).toBe(70);
  expect(clone.runtime!.permanentAdBps).toBe(0);
  expect(clone.sources!.some(s=>s.source.sourceKind==='augment'||s.source.sourceKind==='anomaly')).toBe(false);
  expect(clone.itemPrograms?.some(p=>p.source.sourceKind==='item'||p.source.sourceKind==='anomaly')).toBeFalsy();

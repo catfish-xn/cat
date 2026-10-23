@@ -12,16 +12,19 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 const coat='TFT_Item_Artifact_SuspiciousTrenchCoat';
-function equipped(champion?:string){
- let base=createMatch(42);
+function equipped(champion?:string,seed=42){
+ let base=createMatch(seed);
  if(champion)base={...base,preparation:{...base.preparation,units:base.preparation.units.map(u=>u.team==='player'?{...u,definitionId:champion,starLevel:2,location:{kind:'board',cell:{col:3,row:6}}}:u)}};
  const grant=grantMechanicItem(base,{receiptId:'trench-runtime',source:'test',definitionId:coat});if(!grant.ok)throw Error(grant.reason);
  const owner=grant.state.preparation.units.find(u=>u.team==='player')!;
  const equip=equipItem(grant.state,grant.state.items.at(-1)!.id,owner.id,0);if(!equip.ok)throw Error(equip.reason);
  return equip.state;
 }
-function combat(){const state=equipped();return createCombatWithEvents(state.preparation,buildStrategySnapshot(state),'trench-runtime').state;}
-function quietAt(bps:number):CombatState {const s=combat();return {...s,units:s.units.map(u=>({...u,hp:u.team==='player'?Math.floor(u.maxHp*bps/10000):u.hp,cooldownTicks:100,mana:0,moveCooldownTicks:5}))};}
+function combat(seed=42){const state=equipped(undefined,seed);return createCombatWithEvents(state.preparation,buildStrategySnapshot(state),'trench-runtime').state;}
+// v22 opening encounters: seed 42 rolls scuttle-puddle, so its 1-2 enemies are crabs that never attack. Tests that need
+// real incoming enemy packets use seed 4242 (mels-blessing, no combat effect), which keeps the attacking melee minions.
+const ATTACKING_SEED=4242;
+function quietAt(bps:number,seed=42):CombatState {const s=combat(seed);return {...s,units:s.units.map(u=>({...u,hp:u.team==='player'?Math.floor(u.maxHp*bps/10000):u.hp,cooldownTicks:100,mana:0,moveCooldownTicks:5}))};}
 it.each([5000,4999])('splits at %i bps into three full-health fresh IDs without recursive coat',bps=>{
  const state=quietAt(bps),owner=state.units.find(u=>u.team==='player')!;
  const result=stepCombat(state),copies=result.state.units.filter(u=>u.itemSummon?.kind==='trench');
@@ -37,7 +40,8 @@ it.each([5000,4999])('splits at %i bps into three full-health fresh IDs without 
 });
 it('does not trigger above half health or on lethal damage',()=>{
  expect(stepCombat(quietAt(5100)).state.trenchSplits).toBeUndefined();
- const base=quietAt(10000),player=base.units.find(u=>u.team==='player')!;
+ const base=quietAt(10000,ATTACKING_SEED),player=base.units.find(u=>u.team==='player')!;
+ expect(base.units.filter(u=>u.team==='enemy').every(u=>u.definitionId==='pve-minion-melee-a')).toBe(true);
  const state={...base,units:base.units.map(u=>u.team==='player'?{...u,hp:1,cell:{col:3,row:4}}:{...u,cell:{col:3,row:3},cooldownTicks:0,attackDamage:9999,attackDamageBase:9999})};
  const next=stepCombat(state);expect(next.state.trenchSplits).toBeUndefined();expect(next.state.units.find(u=>u.id===player.id)!.alive).toBe(false);
 });
@@ -68,7 +72,8 @@ it('preserves preparation, items and deterministic compact replay across both se
  expect(view).toEqual(replay.terminal);
 });
 it('waits for the entire damage batch, with two incoming packets and a single replacement',()=>{
- const base=quietAt(5100),player=base.units.find(u=>u.team==='player')!;
+ const base=quietAt(5100,ATTACKING_SEED),player=base.units.find(u=>u.team==='player')!;
+ expect(base.units.filter(u=>u.team==='enemy').every(u=>u.definitionId==='pve-minion-melee-a')).toBe(true);
  const state={...base,units:base.units.map((u,i)=>u.team==='player'?{...u,cell:{col:3,row:4}}:{...u,cell:{col:i===0?2:3,row:3},cooldownTicks:0,attackDamage:20,attackDamageBase:20})};
  const result=stepCombat(state);
  expect(result.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.targetId===player.id)).toHaveLength(2);

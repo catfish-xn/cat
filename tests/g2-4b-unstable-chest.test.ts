@@ -235,8 +235,11 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
     expect(() => check({ ...caster, runtime: { ...caster.runtime!, [field]: damage + 1 } }))
       .toThrow(`Invalid Match save: derived empowered ${field === 'nextAttackMagic' ? 'magic' : 'physical'}`);
   }
+  // v22 AD star scaling: 2-star Garen AD is floor(65*1.5)=97 (v21 floor(65*1.8)=117). Three 97-AD hits (102 each after
+  // armor) no longer break Lux's 324 self-shield before it expires, so the caster would outlive the 100-tick window. The
+  // foe keeps its v21 117 AD (about 123 per hit, 3 hits > 324 + 1 HP) so Lux still dies inside the same window.
   function killCaster(state: CombatState): CombatState {
-    state = { ...state, units: state.units.map(u => u.id === 'foe' ? { ...u, cell: { col: 0, row: 6 }, cooldownTicks: 0, moveCooldownTicks: 0 }
+    state = { ...state, units: state.units.map(u => u.id === 'foe' ? { ...u, cell: { col: 0, row: 6 }, cooldownTicks: 0, moveCooldownTicks: 0, attackDamage: 117, attackDamageBase: 117 }
       : u.id === 'caster' ? { ...idle(u), hp: 1 } : idle(u)) };
     for (let i = 0; i < 100 && unitOf(state, 'caster').alive; i++) state = stepCombat(state).state;
     expect(unitOf(state, 'caster').alive).toBe(false);
@@ -274,16 +277,19 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
     expectSampledRestore(state, 'nextAttackMagic', 972);
   });
 
-  it('M1: Vander casts before Shojin arrives, accepts the old 540 physical damage and rejects 541', () => {
+  it('M1: Vander casts before Shojin arrives, accepts the old 450 physical damage and rejects 451', () => {
+    // v22 AD star scaling 1/1.5/2.25: 2-star Vander AD floor(50*1.5)=75 (was floor(50*1.8)=90). The empowered strike is
+    // AD x (PercentAttackDamage 4.0 + BonusDamageADRatio 1.0 per 1/2-cost ally: Leona, Vander = 2) = 75*6 = 450 (was 540).
     const fight = sampledFight('vander');
     const cast = castNow({ ...fight, units: fight.units.map(idle) });
-    expect(unitOf(cast, 'caster').runtime!.nextAttackPhysical).toBe(540);
+    expect(unitOf(cast, 'caster').runtime!.nextAttackPhysical).toBe(450);
     expect(unitOf(cast, 'caster').combatItemGrants).toBeUndefined();
     const { after } = untilGranted({ ...cast, rngState: 317, units: cast.units.map(u => u.id === 'foe' ? { ...u, cooldownTicks: 0 } : idle(u)) });
     const caster = unitOf(after, 'caster');
     expect(caster.combatItemGrants!.map(g => g.definitionId)).toEqual(['shojin']);
-    expect(attackDamageCandidates(caster, after.tick, after.combatId!)).toEqual(new Set([90, 103]));
-    expectSampledRestore(after, 'nextAttackPhysical', 540);
+    // Candidates: naked 2-star AD 75, or with the granted Shojin's +15% AD floor(75*1.15)=86 (v21: 90 / floor(90*1.15)=103).
+    expect(attackDamageCandidates(caster, after.tick, after.combatId!)).toEqual(new Set([75, 86]));
+    expectSampledRestore(after, 'nextAttackPhysical', 450);
   });
 
   it('M2: Lux dies after casting at two granted Archangel pulses; 972 magic restores and continues identically', () => {
