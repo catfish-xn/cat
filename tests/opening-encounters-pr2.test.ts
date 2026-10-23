@@ -69,11 +69,21 @@ describe('PR2 augment constraints', () => {
       expect(state.pendingChoice).toMatchObject({kind: 'augment', augmentTier: tier});
       expect(state.pendingChoice!.offers.every(a => AUGMENT_TIERS[a] === tier && !discarded.includes(a)
         && !state.augments.some(owned => owned.definitionId === a))).toBe(true);
+      // v22: every shown card is excluded for the rest of the match (not only the rerolled-away ones).
+      discarded.push(...state.pendingChoice!.offers);
       for (const slot of [2,0,1]) {
         const c = state.pendingChoice!;
-        discarded.push(c.offers[slot]);
-        state = accepted(rerollAugment(freeze(state), c.choiceId, c.generation, slot));
-        expect(state.pendingChoice!.offers.every(a => AUGMENT_TIERS[a] === tier && !discarded.includes(a)
+        const result = rerollAugment(freeze(state), c.choiceId, c.generation, slot);
+        if (!result.ok) {
+          // An all-prismatic match can run the 16-card prismatic pool dry by 4-2 under the seen-once rule.
+          expect(result.reason).toBe('augment-pool-too-small');
+          expect(augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...c.offers])).toEqual([]);
+          break;
+        }
+        state = result.state;
+        expect(discarded).not.toContain(state.pendingChoice!.offers[slot]);
+        discarded.push(state.pendingChoice!.offers[slot]);
+        expect(state.pendingChoice!.offers.every(a => AUGMENT_TIERS[a] === tier
           && !state.augments.some(owned => owned.definitionId === a))).toBe(true);
         expect(() => validateAugmentOfferHistory(state)).not.toThrow();
       }

@@ -20,7 +20,9 @@ export interface RoundEconomyPreview {
 
 /** Current own-seat resources only; no loot, enemy information or RNG is sampled. */
 export function previewRoundEconomy(state: MatchState): RoundEconomyPreview | null {
-  if (state.phase !== 'preparation' && state.phase !== 'combat') return null;
+  // v22: an augment choice open inside preparation is still preparation for the preview.
+  const augmentPreparation = state.phase === 'choice' && state.pendingChoice?.kind === 'augment' && state.pendingChoice.returnPhase === 'preparation';
+  if (state.phase !== 'preparation' && state.phase !== 'combat' && !augmentPreparation) return null;
   if (state.multiplayer?.status === 'eliminated' || getMultiplayerRoundById(state.roundDefinitionId).kind === 'supply') return null;
   const preview = (result: 'playerWin' | 'enemyWin'): RoundEconomyPreviewOutcome => {
     const plan = resolveRoundEconomy({ augments:state.augments, roundId: state.roundDefinitionId, result, gold: state.gold,

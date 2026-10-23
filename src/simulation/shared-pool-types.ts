@@ -70,7 +70,8 @@ export type SharedPoolBatchResult =
 export type SharedMatchCommand =
   | {readonly type:'openAnvil';readonly unitId:string}
   | {readonly type:'claimOrb';readonly round:number;readonly orbId:string}
-  | {readonly type:'rerollAugment';readonly choiceId:string;readonly generation:number;readonly optionIndex:number}
+  /** `augmentBlocked`: server-computed externalAugmentBlocks for the seat; never taken from a client. */
+  | {readonly type:'rerollAugment';readonly choiceId:string;readonly generation:number;readonly optionIndex:number;readonly augmentBlocked?:readonly string[]}
   | {readonly type:'useConsumable';readonly consumableId:string;readonly target:import('./consumable-types').ConsumableTarget}
   | {readonly type:'settleRound';readonly receipt:import('./round-settlement').RoundSettlementReceipt}
   | {readonly type:'settleCombatStream';readonly terminal:import('./combat-types').CombatState}

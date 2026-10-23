@@ -71,7 +71,7 @@ describe('independent augment card-reroll oracle',()=>{
    state=accepted(nextRound(state,state.round));
   }
   c=state.pendingChoice!;
-  const tier=augmentTier(state.seed,c.choiceId),draw=augmentDraw(rng,tier,state.augments,state.removedAugmentIds);
+  const tier=augmentTier(state.seed,c.choiceId),draw=augmentDraw(rng,tier,state.augments,state.removedAugmentIds.slice(0,-3),c.choiceId,state.augmentOffers.at(-1)!.fieldedTraits); // v22: the opened three join the seen ledger
   expect(c).toMatchObject({offers:draw.offers,augmentTier:tier,generation:0,rerollCount:0,rerollsRemaining:3,rerolledSlots:[false,false,false]});
   expect(state.choiceRngState).toBe(draw.rng);
   expect(state.augmentOffers.map(r=>r.rerollCount)).toEqual([1,0]);

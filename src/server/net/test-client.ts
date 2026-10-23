@@ -139,7 +139,8 @@ export async function runSmoke(url: string, name: string, log: (line: string) =>
         actedRound = view.phase.round;
         receipt = await client.command({ type: 'buyXp' });
         log(`round ${view.phase.round} buyXp → ${receipt.ok ? 'ok' : receipt.reason}`);
-      } else if (view.phase.kind === 'choice' && state.pendingChoice && state.pendingChoice.step === 'offer') {
+      // v22: an augment choice opens inside preparation; any open offer is answered first.
+      } else if ((view.phase.kind === 'choice' || view.phase.kind === 'preparation') && state.pendingChoice && state.pendingChoice.step === 'offer') {
         const pending = state.pendingChoice;
         receipt = await client.command({ type: 'choose', choiceId: pending.choiceId, generation: pending.generation, definitionId: pending.offers[0]! });
         log(`round ${view.phase.round} choose → ${receipt.ok ? 'ok' : receipt.reason}`);
