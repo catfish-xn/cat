@@ -28,7 +28,8 @@ function pageAdapter(seed=42) {
   };
 }
 describe('B6 gate preparation and explicit dependency metadata',()=>{
-  for(const [roundId,gold,hp] of [['1-3',2,97],['1-4',5,94],['2-1',10,91]])it(`earns ${gold}G legally before ${roundId}`,async()=>{
+  // v22 opening base 2/3/4 plus PvE loss-streak gold 0/1/1 after the 1-3 and 1-4 losses.
+  for(const [roundId,gold,hp] of [['1-3',2,97],['1-4',6,94],['2-1',11,91]])it(`earns ${gold}G legally before ${roundId}`,async()=>{
     const state=await prepareB6Opening(pageAdapter(),roundId);
     expect(state.m8.round.roundId).toBe(roundId);expect(state.phase).toBe('preparation');
     expect(state.gold).toBe(gold);expect(state.playerHp).toBe(hp);
@@ -36,12 +37,15 @@ describe('B6 gate preparation and explicit dependency metadata',()=>{
   });
   it('stops on the real 2-1 augment rather than silently omitting modal coverage',async()=>{
     const state=await prepareB6Opening(pageAdapter(),'2-1',{resolveChoices:false,redeploy:false});
-    expect(state.phase).toBe('choice');expect(state.pendingChoice.kind).toBe('augment');expect(state.gold).toBe(10);
+    expect(state.phase).toBe('choice');expect(state.pendingChoice.kind).toBe('augment');expect(state.gold).toBe(11);
   });
   it('obtains one actual 2-4 supply component and reaches the next legal equipment phase',async()=>{
     const state=await prepareB6Opening(pageAdapter(),'2-5');
-    expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');expect(state.items).toHaveLength(1);
-    expect(state.scheduleReceipts.some(receipt=>receipt.kind==='component'&&receipt.itemIds[0]===state.items[0].id)).toBe(true);
+    // v22 augment tiers make the first non-placebo 2-1 card Crown Guarded, which grants its own Crownguard.
+    expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');
+    expect(state.augments.map(augment=>augment.definitionId)).toEqual(['crown-guarded']);
+    expect(state.items.map(item=>item.definitionId)).toEqual(['crownguard','sword']);
+    expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([[state.items[1].id]]);
   });
   it('reproduces public opening setup for the same seed',async()=>{
     expect(await prepareB6Opening(pageAdapter(4294967295),'1-3')).toEqual(await prepareB6Opening(pageAdapter(4294967295),'1-3'));
