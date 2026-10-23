@@ -2,10 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { choiceAcquisitionGold } from '../src/simulation/choice-acquisition';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
-import { selectChoice, nextRound, startMatchCombat, createMatch, deployMatchUnit, stepMatch } from '../src/simulation/match';
+import { selectChoice, nextRound, startMatchCombat, createMatch, deployMatchUnit, stepMatch, sellUnit, type MatchState } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
 
+// v22 crab openings can fill all nine bench slots with loot heroes (e.g. seed 56);
+// then the board unit is sold instead of benched before conceding the round.
+function concede(state: MatchState): MatchState {
+  for (const unit of state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board')) {
+    const used = new Set(state.preparation.units.flatMap(u => u.location.kind === 'bench' ? [u.location.slot] : []));
+    const slot = Array.from({ length: state.preparation.benchSize }, (_, i) => i).find(i => !used.has(i));
+    state = accepted(slot === undefined ? sellUnit(state, unit.id) : deployMatchUnit(state, unit.id, { kind: 'bench', slot }));
+  }
+  return state;
+}
 function reachChoice(roundId: string, seed: number) {
   if (roundId !== '4-2') return reachRound(roundId, false, seed);
   // Win the opening PvE rounds using the supplied opening champion, then concede later
@@ -19,7 +29,7 @@ function reachChoice(roundId: string, seed: number) {
         state = accepted(deployMatchUnit(state, hero.id, { kind: 'board', cell: { col: 3, row: 4 } }));
         state = accepted(startMatchCombat(state));
         while (state.phase === 'combat') state = stepMatch(state).state;
-      } else state = accepted(startMatchCombat(emptyBoard(state)));
+      } else state = accepted(startMatchCombat(concede(state)));
     }
     state = resolveM5Choices(state);
     if (state.phase !== 'settlement') throw Error(`Cannot reach ${roundId}: ${state.roundDefinitionId}/${state.phase}`);

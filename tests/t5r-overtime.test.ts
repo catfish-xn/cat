@@ -41,7 +41,8 @@ describe('T5R online overtime',()=>{
       expect(p.b).toMatchObject({result:'draw',damage:17});
       a=settle(a,battle,p.a);b=settle(b,battle,p.b);
       expect(a.gold).toBe(gold); // No preparation income is paid in settlement.
-      gold+=5+Math.min(5,Math.floor(gold/10))+(n>=4?2:n>=2?1:0);xp+=2;
+      // Draws extend the loss streak; v22 streak thresholds are 2/5/6 -> 1/2/3 gold.
+      gold+=5+Math.min(5,Math.floor(gold/10))+(n>=6?3:n>=5?2:n>=2?1:0);xp+=2;
       expect(a.roundResults.at(-1)!.goldAfter).toBe(gold);expect(a.xp).toBe(xp);expect(a.playerHp).toBe(100-17*n);
       expect(a.multiplayer!.receipts).toHaveLength(n);expect(a.roundResults).toHaveLength(FINAL_ROUND+n);
       expect(applyRoundSettlement(a,a.multiplayer!.receipts.at(-1))).toEqual({ok:false,state:a,reason:'duplicate-settlement'});
