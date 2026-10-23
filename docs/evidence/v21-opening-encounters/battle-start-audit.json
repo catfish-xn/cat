@@ -324,7 +324,7 @@
     "src/simulation/neutral-receipts.ts": "028860fa83319434f5c34d604e3ac7a3755331e49b71b0794d7a9d8f04b45f40",
     "src/simulation/neutral-restore.ts": "1cd658e5c29410a7686d66e46f2d3b71c6cee9e31f9f1d0e67dfb34fcee82a0b",
     "src/simulation/opening-economy.ts": "738401d4a82d7f22455724df07fc2696d0b088726140bf89e67bd5ecf8466914",
-    "src/simulation/opening-encounter.ts": "f183f0b0d9783cfb432309b2ac9b17234a5e068e0b232da4b2269ccc055babe3",
+    "src/simulation/opening-encounter.ts": "e64e5c09dc04906d61a8b827d7bf97e149257f0c0fd10e13f46ee9fbc12e4edf",
     "src/simulation/opening-monkey.ts": "facc595434707d4274f4ac3e8ddeb5da8f9a2b3ce0d9fd72464b5760aa9d6605",
     "src/simulation/opening-unit.ts": "7629ff7f7d931e9f19d75ef64d152e49de2e6c160cebb033df4c4e230c136e42",
     "src/simulation/operation-policy.ts": "e93131a0166ee3433b96c3f9813d228c39252ef3377e59e1c28e6429c15c93b5",

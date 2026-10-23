@@ -1,6 +1,6 @@
 import { MONKEY_NODE, MONKEY_ROUND, monkeyOutcome, applyMonkey, validateMonkeyGrants, type MonkeyOutcome } from './opening-monkey';
 import { canonicalContent } from './content';
-import { freezeContent } from './content/freeze';
+import { freezeContent, isFrozenContent } from './content/freeze';
 import { OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG, type OpeningEncounterId } from './content/opening-encounters';
 import { openMechanicChoice } from './seat-mechanics/choices';
 import { G24_FORGE_POLICY, resolveG24ForgePool } from './content/g2-4-forges';
@@ -80,11 +80,18 @@ export function createOpeningEncounter(seed: number, config: unknown = OPENING_E
     seed, selectionRng: {state: word, draws: 1}, facts: [] });
 }
 /** Re-derive to authenticate, never replace an input or repair missing fields. */
+const validatedContexts = new WeakMap<object, number>();
 export function validateOpeningEncounterContext(input: unknown, seed: number): void {
+  // Only our recursively frozen graphs can retain an authentication result.
+  // Restored/mutable callers still re-derive on every call, including after edits.
+  const immutable = isFrozenContent(input);
+  const validatedSeed = immutable ? validatedContexts.get(input) : undefined;
+  if (validatedSeed !== undefined && validatedSeed === seed) return;
   const initial = createOpeningEncounter(seed);
-  if (same(input, initial)) return;
-  if (initial.selection.encounterId === 'wind-up-monkey' && same(input, {...initial, facts: openingFacts(initial)})) return;
-  fail('opening-context-mismatch');
+  if (!same(input, initial)
+    && !(initial.selection.encounterId === 'wind-up-monkey' && same(input, {...initial, facts: openingFacts(initial)})))
+    fail('opening-context-mismatch');
+  if (immutable) validatedContexts.set(input, seed);
 }
 export function createSoloOpeningEncounter(seed: number): Extract<OpeningEncounterState, {mode: 'solo'}> {
   return freezeContent({mode: 'solo', context: createOpeningEncounter(seed), receipts: []});
