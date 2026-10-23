@@ -19,7 +19,20 @@ function hit(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordina
 }
 function later(ctx:AbilityContext,u:S13Unit,t:S13Unit,kind:CombatTask['kind'],delay:number,raw:number,seq:number,ordinal:number,total:number){
   u.tasks.push({key:JSON.stringify([u.id,seq,kind,ordinal,t.id]),kind,source:origin(u),executeAtTick:ctx.tick+delay,targetId:t.id,
-    amount:raw,actionSeq:seq,ordinal,total,cancellable:false});
+    amount:raw,actionSeq:seq,ordinal,total,cancellable:kind==='g23Flame'||kind==='g23Chomp'});
+}
+/** One bite keeps its cast identity; executions and resets use the damage ledger. */
+function chomp(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number):void{
+  hit(ctx,u,t,raw,seq,ordinal,'physical');ctx.packets.at(-1)!.sevikaChomp=true;
+  applyStatus(t,origin(u),'stun',0,Math.round(variable(u,'Spell3_StunDuration')*20),ctx.tick,ctx.events);
+}
+function flame(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number):string[]{
+  const targets=enemies(u,ctx.units).filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1);
+  hit(ctx,u,t,raw,seq,ordinal,'true');
+  for(const [i,x] of targets.entries())
+    hit(ctx,u,x,Math.floor(raw*(1-variable(u,'Spell1_ReducedDamagePercent'))),seq,ordinal+i+1,'physical',true);
+  later(ctx,u,t,'g23Flame',20,raw,seq,ordinal+1,ordinal+2);
+  return [t.id,...targets.map(x=>x.id)];
 }
 function split(total:number,n:number,i:number){return Math.floor(total/n)+(i<total%n?1:0);}
 /** 约定值: instant leap to the nearest unoccupied adjacent hex; no movement animation. */
@@ -133,14 +146,13 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
         castVariant:{actionSeq:seq,move:spell===0?'flamethrower':spell===1?'punch':'chomp',channelTicks:spell===0?Math.round(v('Spell1_MinDuration'))*20:0,enhanced:mod.enhanced,heroAugmentIds:[]}});
       g23State(u).highRoller.push({actionSeq:seq,spell,...mod,gold:mod.mod==='coin'||mod.mod==='jackpot'?3:0});
       applyStatus(u,origin(u),'damageReduction',G23_POLICY.highRoller.durabilityBps,G23_POLICY.highRoller.durabilityTicks,ctx.tick,ctx.events,true);
+      const base=physical('Spell1_ADPercent','APBonusDamage'),scaled=(key:string)=>Math.floor(base*Math.round(v(key)*10000)/10000);
       if(spell===0){
-       const raw=physical('Spell1_ADPercent','APBonusDamage'),seconds=Math.round(v('Spell1_MinDuration'));
-       strike(t,raw,'true');for(let i=1;i<seconds;i++)later(ctx,u,t,'g23True',i*20,raw,seq,i,seconds);
-       for(const x of foes().filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=1)){strike(x,Math.floor(raw*(1-v('Spell1_ReducedDamagePercent'))),'physical',true);for(let i=1;i<seconds;i++)later(ctx,u,x,'g23Physical',i*20,Math.floor(raw*(1-v('Spell1_ReducedDamagePercent'))),seq,i,seconds);}
-       applyStatus(u,origin(u),'channel',0,seconds*20,ctx.tick,ctx.events,true);
+       ids.push(...flame(ctx,u,t,base,seq,0));
+       applyStatus(u,origin(u),'channel',0,Math.round(v('Spell1_MinDuration')*20),ctx.tick,ctx.events,true,'',seq);
       }
-      else if(spell===1){strike(t,physical('Spell2_Modifier','APBonusDamage'),'physical');leapG23(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=v('Spell2_HexRadius'))){strike(x,physical('Spell2_SecondaryModifier','APBonusDamage'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('Spell2_StunDuration')*20),ctx.tick,ctx.events);}}
-      else {strike(t,physical('Spell3_Modifier','APBonusDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('Spell3_StunDuration')*20),ctx.tick,ctx.events);}
+      else if(spell===1){strike(t,scaled('Spell2_Modifier'),'physical');leapG23(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=v('Spell2_HexRadius'))){strike(x,scaled('Spell2_SecondaryModifier'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('Spell2_StunDuration')*20),ctx.tick,ctx.events);}}
+      else {chomp(ctx,u,t,scaled('Spell3_Modifier'),seq,0);ids.push(t.id);}
       if(mod.mod==='rocket'||mod.mod==='jackpot')for(let i=0;i<G23_POLICY.highRoller.rockets*(mod.enhanced?3:1);i++)strike(t,G23_POLICY.highRoller.rocketPhysicalDamage,'physical');
       if(mod.mod==='shield'||mod.mod==='jackpot')grantShield(u,origin(u),G23_POLICY.highRoller.shield*(mod.enhanced?3:1),ctx.tick+G23_POLICY.highRoller.shieldTicks,ctx.tick,ctx.events);
       // Gold is committed by the battle settlement receipt, never by the combat tick.
@@ -150,6 +162,22 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
   return ids;
 }
 export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):void{
+  if(task.kind==='g23Chomp'){
+   const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous)return;
+   const next=enemies(u,ctx.units).filter(x=>hexDistance(previous.cell,x.cell)<=variable(u,'Spell3_ResetDashRange'))
+     .sort((a,b)=>a.hp-b.hp||compareText(a.id,b.id))[0];
+   if(next){leapG23(ctx,u,next);chomp(ctx,u,next,task.amount,task.actionSeq,task.ordinal);}return;
+  }
+  if(task.kind==='g23Flame'){
+   const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);
+   const activity=u.mechanismState!.activities.find(a=>a.kind==='channel'&&a.actionSeq===task.actionSeq&&a.lifecycle==='active');
+   if(!target||!activity)return;
+   const refreshed={...activity,expiresAtTick:ctx.tick+Math.round(variable(u,'Spell1_MinDuration')*20)};
+   u.mechanismState={...u.mechanismState!,activities:u.mechanismState!.activities.map(a=>a.key===activity.key?refreshed:a)};
+   u.statuses=u.statuses.map(s=>s.activity?.key===activity.key?{...s,expiresAtTick:refreshed.expiresAtTick,activity:refreshed}:s);
+   ctx.events.push({type:'activityChanged',tick:ctx.tick,reason:'refreshed',activity:refreshed});
+   flame(ctx,u,target,task.amount,task.actionSeq,task.ordinal);return;
+  }
   if(task.kind==='g23Smeech'){
    const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous||previous.alive||task.ordinal>=task.total)return;
    const next=smeechTarget(ctx,u);if(!next)return;

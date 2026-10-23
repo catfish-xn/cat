@@ -9,7 +9,7 @@ import { selectTargets, startingRows, type TargetEnvironment } from './targeting
 import { targetingEnvironment } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference, S13Packet } from '../combat-s13-abilities';
-import { origin, ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
+import { byDistance, enemies, origin, ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
 import type { AmountSample } from './stats';
 import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safeNumber } from './stats';
 import type { AbilityTargeting, Effect, PeriodicTask, Source, StatusApplication, StatusContribution, SurvivalSample, TargetSelector } from './contracts';
@@ -369,7 +369,15 @@ export function cleanupMechanisms(ctx: AbilityContext, combatEnd = false): void 
       }
       unit.mechanismState = { ...unit.mechanismState!, statuses: [], activities: unit.mechanismState!.activities.map(a => a.lifecycle === 'active' ? { ...a, lifecycle: 'ended', endedAtTick: ctx.tick, endReason: reason } : a) };
     }
-    unit.tasks = unit.tasks.filter(task => !task.attachedDot || task.targetId === null || !dead.has(task.targetId));
+    // Infection stacks migrate without changing their source, pulse phase, or count.
+    unit.tasks = unit.tasks.flatMap(task => {
+      if(!task.attachedDot||task.targetId===null||!dead.has(task.targetId))return [task];
+      if(task.kind!=='g2Infection'||combatEnd)return [];
+      const victim=ctx.units.find(u=>u.id===task.targetId)!;
+      const next=byDistance(victim,enemies(unit,ctx.units))[0];
+      return next?[{...task,targetId:next.id}]:[];
+    });
+    if(unit.tasks.some(t=>t.kind==='g23Flame'&&dead.has(t.targetId!)))maintainActivities(ctx,unit,false);
     unit.mechanismState = { ...unit.mechanismState!, periodicTasks: combatEnd ? [] : cleanPeriodicTasks(unit.mechanismState!.periodicTasks, dead, dead) };
   }
   if (!combatEnd) refreshMechanismAuras(ctx, false);
@@ -377,11 +385,14 @@ export function cleanupMechanisms(ctx: AbilityContext, combatEnd = false): void 
 export function maintainActivities(ctx: AbilityContext, unit: S13Unit, controlled: boolean): void {
   unit.mechanismState = { ...unit.mechanismState!, activities: unit.mechanismState!.activities.map(activity => {
     if (activity.lifecycle === 'ended') return activity;
-    const reason = activity.expiresAtTick <= ctx.tick ? 'expired' as const : activity.kind === 'channel' && controlled ? 'control-cancelled' as const : null;
+    const flame=activity.kind==='channel'&&unit.tasks.find(t=>t.kind==='g23Flame'&&t.actionSeq===activity.actionSeq);
+    const targetDied=flame&&!ctx.units.some(u=>u.id===flame.targetId&&u.alive&&u.hp>0);
+    const reason = targetDied ? 'expired' as const : activity.expiresAtTick <= ctx.tick ? 'expired' as const : activity.kind === 'channel' && controlled ? 'control-cancelled' as const : null;
     if (!reason) return activity;
-    const ended = { ...activity, lifecycle: 'ended' as const, endedAtTick: reason === 'expired' ? activity.expiresAtTick : ctx.tick, endReason: reason };
+    const ended = { ...activity, lifecycle: 'ended' as const, endedAtTick: reason === 'expired'&&!targetDied ? activity.expiresAtTick : ctx.tick, endReason: reason };
     if (unit.statuses.some(s => s.activity?.key === activity.key)) ctx.events.push({ type: 'activityChanged', tick: ctx.tick, activity: ended, reason });
     return ended;
   }) };
   unit.statuses = unit.statuses.filter(s => !s.activity || unit.mechanismState!.activities.some(a => a.key === s.activity!.key && a.lifecycle === 'active'));
+  unit.tasks=unit.tasks.filter(t=>t.kind!=='g23Flame'||unit.mechanismState!.activities.some(a=>a.kind==='channel'&&a.actionSeq===t.actionSeq&&a.lifecycle==='active'));
 }

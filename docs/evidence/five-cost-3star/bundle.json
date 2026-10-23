@@ -1,0 +1,18 @@
+{
+  "after": {
+    "js2dRaw": 2210493,
+    "js2dGzip9": 659153,
+    "files": [
+      "index-DAN6bV69.js",
+      "phaser-ax-wMCa1.js"
+    ]
+  },
+  "before": {
+    "js2dRaw": 2208117,
+    "js2dGzip9": 658492,
+    "files": [
+      "phaser-ax-wMCa1.js",
+      "index-RyuHwpru.js"
+    ]
+  }
+}

@@ -1221,3 +1221,13 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 - 用途：2D token 和 3D root 读取同一位置、播放冲刺；castSequence 的 chain/fist 分支由既有 actionSeq/显式分支字段选择，模型动画不替代权威位移。
 - 验收：独立规则测试验证两姿态落点、占格冲突、事件顺序和伤害目标；同一真实 replay 中 2D/3D 冲到一致落点，重连与追帧不重复施法、不新增命令或资源消耗。
 - 本轮仅修改表现；未修改 simulation、server。
+
+
+## 2026-10-23 Codex → Claude：五费技能修正（v22 候选）
+
+完整字段含义与验收见 [FIVE_COST_3STAR_FIXES.md](FIVE_COST_3STAR_FIXES.md)“给 Claude 的接入点”。没有新增下发字段或事件种类。
+
+- 喷火 `castVariant.channelTicks=40` 为初始期限，继续读取既有 `activityChanged.refreshed` 更新，按权威活动结束停播；验收：目标存活且未被打断时超过两秒仍引导，目标死亡当拍结束。
+- 大嘴连咬使用同一施法 actionSeq，通过 `movement` 与 `packetDamage` 的目标、rootActionSeq/triggeringCastActionSeq 关联；验收：三次连咬不重复计施法/扣蓝，伤害和斩杀显示服从事件账本。
+- 感染转移更新权威 tasks.targetId，周期伤害仍用既有包；暂没有独立的转移动画事件。若需要逐层转移特效，再提出所需显示字段。
+- 金克丝直线、杰斯路径、莫德凯撒选线因几何缺证暂停，不要在界面自行补命中规则。
