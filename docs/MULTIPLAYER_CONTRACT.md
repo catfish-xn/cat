@@ -1,3 +1,7 @@
+## 2026-10-23 Batch A 覆盖合同（待统一 epoch）
+
+梅尔、维克托、金币订阅、战利品订阅已启用，覆盖历史关闭/只观察说明。普通六费商店也改为批准的完整q表、整店一次5q判定。接口、收据、恢复、加时阶段钟和UI字段见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md#接口与恢复合同)。公开命令不新增；装备与弈子待领使用既有 `claimOrb`，锻造器使用既有 `choose/timeoutChoice`。本批装备统一待领，不引入批准表外的库存格数。
+
 ## 2026-10-23 战斗上限覆盖（待统一 epoch）
 
 当前候选每场最长900tick（45秒），tick600起逐秒加时；这是单场战斗属性，与6-7后延长整局的PvP轮次不同。所有同步、切片、回放沿同一`stepCombat`，切片预算不改变规则时钟；预算耗尽仍running继续拒绝`step-limit-exceeded`，不可伪造平局。完整公式、接口和待定移速见 [COMBAT_CONTRACT](COMBAT_CONTRACT.md) 顶部及 [实现报告](RULES_PLACEBO_OVERTIME.md)。下文旧验收记录保留历史语境；PR #410合并后统一录epoch。

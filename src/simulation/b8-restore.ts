@@ -1,3 +1,4 @@
+import { openingRewardOrbs } from './opening-batch-rewards';
 import { prepareBattleEquipment, validBattleInput } from './battle-equipment';
 import { projectTemporaryEquipment } from './m8/equipment';
 import { familyOrbs } from './family-orbs';
@@ -236,7 +237,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
   }
   const loot = state.m8.loot;
   keys(loot, ['layoutBinding','frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters',...(loot.queuedOrbClaims?['queuedOrbClaims']:[])]);
-  if(loot.queuedOrbClaims){check(Array.isArray(loot.queuedOrbClaims)&&new Set(loot.queuedOrbClaims).size===loot.queuedOrbClaims.length&&(!loot.queuedOrbClaims.length||state.phase==='combat'&&state.combat?.status==='running'),'family claim queue');for(const id of loot.queuedOrbClaims)check(familyOrbs(state).some(o=>o.orbId===id),'family queued identity');}
+  if(loot.queuedOrbClaims){check(Array.isArray(loot.queuedOrbClaims)&&new Set(loot.queuedOrbClaims).size===loot.queuedOrbClaims.length&&(!loot.queuedOrbClaims.length||state.phase==='combat'&&state.combat?.status==='running'),'family claim queue');for(const id of loot.queuedOrbClaims)check([...familyOrbs(state),...openingRewardOrbs(state)].some(o=>o.orbId===id),'family queued identity');}
   check(loot.layoutBinding.mode==='solo'&&loot.layoutBinding.layout.seed===state.seed&&loot.layoutBinding.layout.throughRoundOrdinal===state.round,'solo layout binding');
   const frozen = restoreFrozenLootLedger(loot.frozen, {seed:state.seed, throughRoundOrdinal:state.round,layout:loot.layoutBinding.layout}, parsedJsonInput);
   for (const value of [loot.direct,loot.choiceEligibility,loot.choiceResolutions,loot.earnedEvidence,loot.receipts]) check(Array.isArray(value), 'ledger array');

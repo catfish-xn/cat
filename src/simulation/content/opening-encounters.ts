@@ -1,3 +1,4 @@
+import { OPENING_BATCH_A } from './opening-batch-a';
 import { freezeContent } from './freeze';
 import { TRAINER_GOLEMS_POLICY } from './trainer-golems';
 
@@ -285,9 +286,9 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "nameZh": "金币订阅",
     "nameEn": "Gold Subscription",
     "weightBps": 400,
-    "enabled": false,
-    "effectStatus": "not-implemented",
-    "readiness": "blocked-evidence",
+    "enabled": true,
+    "effectStatus": "active",
+    "readiness": "ready-for-followup",
     "followupPr": 3,
     "descriptionZh": "每阶段给所有玩家同额的随机金币。",
     "trigger": "每阶段发放",
@@ -306,12 +307,8 @@ export const OPENING_ENCOUNTERS = freezeContent([
     },
     "excludedAugmentReferences": [],
     "portalBannedAugmentReferences": [],
-    "missingEvidence": [
-      "amount_by_stage_and_bucket"
-    ],
-    "projectConventions": [
-      "阶段1首次准备、阶段2起x-1准备且在强化前；仅存活席位；加时边界仍待明确"
-    ],
+    "missingEvidence": [],
+    "projectConventions": ["2026-10-23批准值；见OPENING_BATCH_A与批次报告"],
     "sourcePath": "encounters[7]",
     "sourceKeys": [
       "D01",
@@ -330,9 +327,9 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "nameZh": "战利品订阅",
     "nameEn": "Loot Subscription",
     "weightBps": 400,
-    "enabled": false,
-    "effectStatus": "not-implemented",
-    "readiness": "blocked-evidence",
+    "enabled": true,
+    "effectStatus": "active",
+    "readiness": "ready-for-followup",
     "followupPr": 3,
     "descriptionZh": "每阶段从九类战利品中抽取奖励。",
     "trigger": "每阶段发放",
@@ -396,13 +393,8 @@ export const OPENING_ENCOUNTERS = freezeContent([
     },
     "excludedAugmentReferences": [],
     "portalBannedAugmentReferences": [],
-    "missingEvidence": [
-      "outcomes[4].cost_cap",
-      "outcomes[7].exact_behavior"
-    ],
-    "projectConventions": [
-      "同金币订阅调度；共享类别，弈子/组件身份各席独立"
-    ],
+    "missingEvidence": [],
+    "projectConventions": ["2026-10-23批准值；见OPENING_BATCH_A与批次报告"],
     "sourcePath": "encounters[8]",
     "sourceKeys": [
       "L03",
@@ -602,9 +594,9 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "nameZh": "维克托的愿景",
     "nameEn": "Viktor's Vision",
     "weightBps": 800,
-    "enabled": false,
-    "effectStatus": "not-implemented",
-    "readiness": "blocked-evidence",
+    "enabled": true,
+    "effectStatus": "active",
+    "readiness": "ready-for-followup",
     "followupPr": 7,
     "descriptionZh": "六费弈子从 4-1 起可出现，出现概率为常态的 3 倍。",
     "trigger": "从 4-1 开始",
@@ -620,10 +612,8 @@ export const OPENING_ENCOUNTERS = freezeContent([
     },
     "excludedAugmentReferences": [],
     "portalBannedAugmentReferences": [],
-    "missingEvidence": [
-      "base_odds_table_14_24b"
-    ],
-    "projectConventions": [],
+    "missingEvidence": [],
+    "projectConventions": ["2026-10-23批准值；见OPENING_BATCH_A与批次报告"],
     "sourcePath": "encounters[12]",
     "sourceKeys": [
       "S03",
@@ -643,9 +633,9 @@ export const OPENING_ENCOUNTERS = freezeContent([
     "nameZh": "梅尔的赐福",
     "nameEn": "Mel's Blessing",
     "weightBps": 800,
-    "enabled": false,
-    "effectStatus": "not-implemented",
-    "readiness": "blocked-evidence",
+    "enabled": true,
+    "effectStatus": "active",
+    "readiness": "ready-for-followup",
     "followupPr": 6,
     "descriptionZh": "到达文案所述 40 玩家生命值门槛时获得强力战利品。",
     "trigger": "与个人 40 玩家生命值门槛相关",
@@ -672,13 +662,8 @@ export const OPENING_ENCOUNTERS = freezeContent([
         "name_en": "Cruel Pact"
       }
     ],
-    "missingEvidence": [
-      "reward_table",
-      "reward_weights"
-    ],
-    "projectConventions": [
-      "oldHp>40且救命后0<newHp<=40时首次触发；每人一次；不救活淘汰席位"
-    ],
+    "missingEvidence": [],
+    "projectConventions": ["2026-10-23批准值；见OPENING_BATCH_A与批次报告"],
     "sourcePath": "encounters[13]",
     "sourceKeys": [
       "S03",
@@ -794,7 +779,8 @@ export const OPENING_ENCOUNTERS = freezeContent([
 ] as const);
 export type OpeningEncounterId = typeof OPENING_ENCOUNTERS[number]['id'];
 export const OPENING_ENCOUNTER_CONFIG = freezeContent({
-  version: 'opening-encounters-14.24b-pr2-pr4-pr5-pr6-v1',
+  version: 'opening-encounters-14.24b-batch-a-v1',
+  batchA: OPENING_BATCH_A,
   trainerGolems: TRAINER_GOLEMS_POLICY,
   entries: OPENING_ENCOUNTERS,
   selectionStream: 'opening-encounter-v1/select',
@@ -803,12 +789,12 @@ export const OPENING_ENCOUNTER_CONFIG = freezeContent({
   sharedEffectStream: 'opening-encounter-v1/shared/<effectKey>',
   seatEffectStream: 'opening-encounter-v1/seat/<seatId>/<effectKey>',
   displayStream: 'opening-encounter-v1/display',
-  disabledPolicy: 'retain-selected-identity/no-rewards/no-reroll/no-renormalization/mel-threshold-observation-only',
+  disabledPolicy: 'retain-selected-identity/no-rewards/no-reroll/no-renormalization',
   initialization: 'solo-before-first-preparation/shared-root-before-seat-import-bind-after-import',
   melReceiptKey: 'JSON([instanceId,effectKey,seatId,nodeId])',
   melThreshold: { hp: 40, maxTriggers: 1, order: 'damage/mel-unit-save/elimination-status/threshold-receipt',
     crossing: 'oldHp>40 && 0<newHp<=40', history: 'first-qualifying-round-result',
-    receipt: 'observation-only/reward-blocked/no-retroactive-grant', enabled: true },
+    receipt: 'first-crossing/once/reward-entitlement/no-retroactive-repair', enabled: true },
   warwickHunger: { executor: 'blocked-evidence', killFacts: 'reserved-not-consumed', rngDraws: 0 },
   receiptKey: 'JSON([opening-receipt,JSON([opening-effect,configVersion,fnv1a32-utf16(opening-instance/rootSeed),encounterId,effectKey,nodeId]),seatId])',
   pr2: { activationNode: '1-2', augmentNodes: ['2-1','3-2','4-2'],

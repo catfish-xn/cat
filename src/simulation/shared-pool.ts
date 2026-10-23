@@ -1,6 +1,6 @@
 import { validateAugmentOfferHistory } from './augment-offers';
 import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
-import { sixCostOddsBps } from './six-cost-shop';
+import { planSixCostShop, sixCostShopContext } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
 import { validateConsumableState } from './consumables';
 import { selectOpeningUnit } from './opening-unit';
@@ -120,9 +120,8 @@ function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):
   const seatId=state.sharedPool!.seatId,generation=state.shop.generation+1,odds=getShopOdds(state.level);
   const slots:ShopSlot[]=[];let rngState=state.rngState,rngDraws=0;
   for(let slot=0;slot<MATCH_RULES.shopSize;slot++) {
-    const sixBps=sixCostOddsBps(state.round,state.level);
-    const weights=[...odds.map(w=>w*(10000-sixBps)),100*sixBps];
-    const stocked=([1,2,3,4,5,6] as CostTier[]).filter(t=>weights[t-1]>0&&SHOP_CATALOG_BY_COST[t].some(id=>pool.available[id]>0));
+    const weights=odds;
+    const stocked=([1,2,3,4,5] as CostTier[]).filter(t=>weights[t-1]>0&&SHOP_CATALOG_BY_COST[t].some(id=>pool.available[id]>0));
     if(!stocked.length) {slots.push({status:'purchased',empty:true});continue;}
     const tierWord=nextRandom(rngState),weight=stocked.reduce((sum,t)=>sum+weights[t-1],0);
     let roll=Math.floor(tierWord.word*weight/4294967296),tier=stocked[0];
@@ -132,6 +131,19 @@ function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):
     const definitionId=catalog.find(id=>{if(copy<pool.available[id])return true;copy-=pool.available[id];return false;})!;
     pool.available[definitionId]--;pool.shops.push({seatId,generation,slot,definitionId});
     slots.push({status:'available',definitionId});rngState=memberWord.state;rngDraws+=2;
+  }
+  const six=planSixCostShop(state.round,state.level,generation,sixCostShopContext(state));
+  const catalog=SHOP_CATALOG_BY_COST[6], total=catalog.reduce((n,id)=>n+pool.available[id],0);
+  if(six.slot!==null&&total>0){
+    const old=slots[six.slot];
+    if(old.status==='available'){
+      pool.available[old.definitionId]++;
+      pool.shops=pool.shops.filter(r=>!(r.seatId===seatId&&r.generation===generation&&r.slot===six.slot));
+    }
+    let copy=Math.floor(six.memberWord*total/4294967296);
+    const definitionId=catalog.find(id=>{if(copy<pool.available[id])return true;copy-=pool.available[id];return false;})!;
+    pool.available[definitionId]--;pool.shops.push({seatId,generation,slot:six.slot,definitionId});
+    slots[six.slot]={status:'available',definitionId};
   }
   poolEvents.push({type:'sharedShopGenerated',seatId,generation,rngDraws});
   return {...state,rngState,shop:{generation,slots,locked:Boolean(state.shop.locked)}};
@@ -254,8 +266,16 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
       return {...result.state,sharedPool,shop:state.shop,rngState:state.rngState};
     });
     let openingResolution: import('./shared-pool-types').OpeningRoundResolution | undefined;
-    const openingPlan = targetRound <= FINAL_ROUND ? planOpeningRound(draft.openingEncounter, prepared[0].roundDefinitionId)
-      : {context:draft.openingEncounter,facts:[]};
+    const openingPlan = planOpeningRound(draft.openingEncounter, prepared[0].roundDefinitionId);
+    if (['gold-subscription','loot-subscription'].includes(draft.openingEncounter.selection.encounterId)) {
+      prepared=prepared.map(state=>{
+        const applied=applyOpeningEffects(state,openingPlan.facts,draft.openingEncounter);
+        if(!applied.ok)throw new PoolError(applied.reason);
+        const id=state.sharedPool!.seatId,row=events.find(e=>e.seatId===id);
+        if(row)row.events=[...row.events,...applied.events];else events.push({seatId:id,events:applied.events});
+        return applied.state;
+      });
+    }
     if (openingPlan.facts[0]?.nodeId === '3-5') {
       draft.openingEncounter = openingPlan.context;
       const before = new Map(prepared.map(s => [s.sharedPool!.seatId, s.playerHp]));

@@ -1,10 +1,11 @@
+import { sixCostShopContext } from './six-cost-shop';
 import { choiceAcquisitionGold } from './choice-acquisition';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
 import { openMasterworkChoice, completeMasterworkChoice } from './masterwork-choice';
 export { readMasterworkOptions } from './masterwork-choice';
-import { createSoloOpeningEncounter, commitOpeningEncounterHealth, applyOpeningEffects, planOpeningRound } from './opening-encounter';
+import { applyOpeningRoundEntry, createSoloOpeningEncounter, commitOpeningEncounterHealth, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 export { TRAINER_GOLEMS_POLICY, validateTrainerGolemEmblems, applyTrainerGolemsOpening } from './trainer-golems';
 export type { TrainerGolemEmblems } from './trainer-golems';
 export { isMelBlessingCrossing, readOpeningMelProgress, applyWarwickHunger, createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, readOpeningForgeProgress, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
@@ -330,7 +331,7 @@ export function setShopLock(state: MatchState, locked: boolean, expectedGenerati
 export function rerollShop(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.gold < MATCH_RULES.rerollCost) return fail(state, 'insufficient-gold');
-  const generated = generateShop(state.rngState, state.shop.generation + 1, state.level, state.round);
+  const generated = generateShop(state.rngState, state.shop.generation + 1, state.level, state.round, sixCostShopContext(state));
   if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - MATCH_RULES.rerollCost)) return fail(state, 'insufficient-gold');
   return accept({ ...state, gold: state.gold - MATCH_RULES.rerollCost, ...generated,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
@@ -391,7 +392,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
   const committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
-  return commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed);
+  return commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed,hookEvents);
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)
@@ -511,16 +512,14 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   state={...state,level:progression.level,xp:progression.xp};
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
-  const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round);
+  const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round, sixCostShopContext(state));
   const carousel = resolveCarouselPreparation({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
   let prepared = carousel.state;
   const openingEvents: MatchEvent[] = [];
-  if (prepared.openingEncounter.mode === 'solo') {
-    const applied = applyOpeningEffects(prepared, planOpeningRound(prepared.openingEncounter.context, definition.roundId).facts);
-    if (!applied.ok) return fail(initial, applied.reason);
-    prepared = applied.state; openingEvents.push(...applied.events);
-  }
+  const applied=applyOpeningRoundEntry(prepared);
+  if(!applied.ok)return fail(initial,applied.reason);
+  prepared=applied.state;openingEvents.push(...applied.events);
   if (prepared.phase === 'gameOver') {
     const terminal = stampMatchEvents(prepared, carousel.events);
     return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
@@ -553,10 +552,13 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
     state={...state,level:progression.level,xp:progression.xp};
     const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
-      : generateShop(state.rngState, state.shop.generation + 1, state.level, definition.ordinal);
-    return acceptEquipment({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
+      : generateShop(state.rngState, state.shop.generation + 1, state.level, definition.ordinal, sixCostShopContext(state));
+    const applied=applyOpeningRoundEntry({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
-      preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } }, []);
+      preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
+    if(!applied.ok)return multiplayerFail(initial,applied.reason);
+    const accepted=acceptEquipment(applied.state,[]);
+    return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
 

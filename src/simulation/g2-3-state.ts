@@ -33,7 +33,7 @@ export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatM
    rewardClaims.push({id:r.receiptId,bundleId:b.id,atomId:atom.id,copy,round:r.round,kind:atom.kind,definitionId,instanceId,gold:atom.gold});
   }
  }
- const epicCrowns=state.m8?.loot.receipts.filter(r=>r.payload.kind==='item'&&r.payload.definitionId==='TFT_Item_ForceOfNature'&&r.resolution!=='forfeited').map(r=>({receiptId:r.receiptId,round:getCatalogRoundById(r.claimedRoundId??JSON.parse(JSON.parse(r.dropId)[0])[1]).ordinal}));
+ const epicCrowns=[...(state.m8?.loot.receipts.filter(r=>r.payload.kind==='item'&&r.payload.definitionId==='TFT_Item_ForceOfNature'&&r.resolution!=='forfeited').map(r=>({receiptId:r.receiptId,round:getCatalogRoundById(r.claimedRoundId??JSON.parse(JSON.parse(r.dropId)[0])[1]).ordinal}))??[]),...m.receipts.filter(r=>r.source==='opening-encounter-batch-a'&&r.kind==='item'&&r.definitionId==='TFT_Item_ForceOfNature').map(r=>({receiptId:r.receiptId,round:r.round}))];
  return {...h,...(epicCrowns?.length?{epicCrowns}:{}),rewards,rewardClaims,conquest:{...c,radiantConversion:m.seat.radiantConversion as boolean},sponsored:a.sponsored,chem:m.seat.alchemist as G23MatchProgress['chem'],junkerRounds:j.rounds,junkerPurchases:j.purchases,
  itemReceipts:m.receipts.flatMap(r=>r.kind==='item'&&(r.source==='academy'||r.receiptId.startsWith('g23:academy:'))?[{id:r.receiptId,kind:'academy' as const,tier:Number(r.receiptId.split(':').at(-1)),round:r.round,itemId:r.itemId,definitionId:r.definitionId}]:[])};
 }
@@ -118,6 +118,6 @@ export function validateG23RewardSources(state:MatchState):void{
 
 /** Receipt-backed permanent population at an authenticated resource prefix, including same-round online claims. */
 export function epicCrownsAtResourcePrefix(state:MatchState,prefixLength:number):NonNullable<G23MatchProgress['epicCrowns']>{
- const granted=new Set(state.resourceProvenance.entries.slice(0,prefixLength).flatMap(e=>e.kind==='item-acquired'&&e.source.kind==='loot'?[e.source.receiptId]:[]));
+ const granted=new Set(state.resourceProvenance.entries.slice(0,prefixLength).flatMap(e=>e.kind==='item-acquired'&&(e.source.kind==='loot'||e.source.kind==='mechanic')?[e.source.receiptId]:[]));
  return (readG23Progress(state)?.epicCrowns??[]).filter(c=>granted.has(c.receiptId));
 }

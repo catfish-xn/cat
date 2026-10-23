@@ -163,7 +163,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const hookEvents:MatchEvent[]=[];
     let settled=r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next;
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
-    settled=commitOpeningEncounterHealth(settled);
+    settled=commitOpeningEncounterHealth(settled,hookEvents);
     const merged = resolveDeferredUpgrades(settled);
     const d14State=reconcileD14(merged.state,hookEvents);
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);

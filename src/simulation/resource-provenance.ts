@@ -298,7 +298,7 @@ export function validateResourceReceipts(context: ReceiptContext): Map<string, B
       ...(receipt.payload.kind==='unit'?{starLevel:receipt.payload.starLevel??1}:{}) });
   }
   for (const birth of mechanicBirths(context.mechanicReceipts ?? [])) {
-    requireValue(getCatalogRoundById(birth.roundId).ordinal <= context.throughRoundOrdinal, 'mechanic receipt round');
+    requireValue(getMultiplayerRoundById(birth.roundId).ordinal <= context.throughRoundOrdinal, 'mechanic receipt round');
     add(birth.key, birth);
   }
   receiptScope?.push({ context: { ...context }, births: copyBirths(births) });
