@@ -10,6 +10,25 @@
 
 [五费技能修正](FIVE_COST_3STAR_FIXES.md) 仅调整战斗实现：无新 Match 公共函数、输入输出、失败 reason 或网络事件种类。内部新增赛维卡持续/连咬任务，存档结构校验限定来源和取消语义，完整事实仍由认证战斗输入重演核对。按用户要求保留当前候选版本/digest/golden，随 v22 与攻击力星级倍率等改动统一录 epoch 后才能发布；不要将新旧战斗状态混用。后续项目决定P已完成金克丝三星电击和莫德凯撒最优直线，并明确玛尔扎哈五层平分；杰斯缺返回起点定义，仍未完成。见[五费技能几何报告](FIVE_COST_SKILL_GEOMETRY.md)，无新增公共签名、失败原因、事件或存档结构；待v22统一录制。
 
+## v22 候选：全桌强化等级组合（2026-10-23 用户批准；待 v22 统一录制）
+
+本节覆盖下文 v14/v15/PR2 的逐节点等权等级派生描述及上一版 Wiki V12.9 表。来源为用户批准第 6 条的本地 `augments-research-2026-10-23/data/odds-all27.csv`，14.24 客户端 `TFT9_AugmentArmoryConfiguration_Table`（`RandomizeProbabilityTableGlobally=true`）。按 CSV 顺序保留原整数权重，18 个非零组合，权重合计/分母 **109**；9 个零权重组合不会从基础表抽出。完整有序表冻结在 `AUGMENT_OFFER_POLICY.tierCombinations`，随既有 `scripts/content-digest.ts` 的 augmentPolicy 输入进入内容 digest；策略版本仍为候选 `augment-tier-table-v22`，整体 epoch/digest/golden **待 v22 统一录制**。
+
+| 三次强化等级（银/金/彩，按 CSV 顺序） | 原权重 |
+| --- | --- |
+| 银银金 / 银银彩 / 银金金 / 银金彩 / 银彩彩 | 5 / 5 / 12 / 5 / 1 |
+| 金银金 / 金银彩 / 金金金 / 金金彩 | 18 / 2 / 22 / 12 |
+| 金彩银 / 金彩金 / 金彩彩 | 6 / 10 / 1 |
+| 彩银金 / 彩银彩 / 彩金金 / 彩金彩 / 彩彩金 / 彩彩彩 | 4 / 1 / 2 / 1 / 1 / 1 |
+
+每局逻辑上只取一个组合，三个日程节点索引同一次样本。沿既有 UTF-16 FNV-1a32 算法（初值 `0x811c9dc5`、乘数 `0x01000193`、逐步 uint32），固定流名 `augment-tier-sequence-v1` 替代节点 ID；输入 `(rootSeed xor 0x61756774 xor streamHash) >>> 0`，lcg32-v1 仅取首词，`word % 109` 对应有序累计权重的半开区间。单机根为 Match.seed，联机根为 initializeSharedSeat 绑定的 SharedPoolState.seed（augmentTierSeed），与席位种子、调用顺序、候选或换牌次数无关。纯函数按不可变根重推同一组合，不新增可变 RNG/存档字段；不推进商店、候选、奖励、战斗、奇遇等任何现有流。恢复与回放共用此算法，私有投影仍不公开未来等级。
+
+奇遇仍先覆盖指定位置，不重抽组合、不按奇遇重新归一化：`golden-gala`（范德尔/PR2 augment-policy）三节点全金；`prismatic-party`（艾克/PR2）三节点全彩；`prismatic-prelude`（黑默丁格/PR2）仅 2-1 彩；`prismatic-finale`（黑默丁格/PR2）仅 4-2 彩。其余位置保留基础组合，其他奇遇无等级覆盖；激活收据语义不变。
+
+同批批准第 7、8 条：`geniuses`（羁绊：天才）从金改彩，其他强化档位、能力/赠卡数值不变；服务器 `ROOM_TIMING_DEFAULTS.choiceMs=48_000`，`CAT_CHOICE_SEC` 和显式 `RoomOptions.choiceMs` 仍可覆盖。该时长沿用既有统一 choice 阶段（强化及其他选择），不新增按类型分流或领域时钟。期限前不自动选取，到期沿既有 `timeoutChoice`；不消耗新的 RNG。天才改彩/48 秒为项目决定 P，来源为用户 10-23 批准的 `perf-1022/rules-1023/approved-1023-batch2.md` 第 7、8 条。界面本地演示默认覆盖仍为 30 秒，需 Claude 同步；在线服务器默认已为 48 秒。
+
+接口：既有 Match/server-entry 导出的 `deriveAugmentTier(seed:number,choiceId:string):AugmentTier` 保留签名，只接受 `round:2-1:augment` / `round:3-2:augment` / `round:4-2:augment`，返回组合第 1/2/3 项；非法节点抛 `Error('Unknown augment tier node')`。`resolveAugmentTier` 签名不变、先用奇遇覆盖。领域内部/测试新增 `augment-offers.ts` 导出 `deriveAugmentTierSequence(seed:number):readonly [AugmentTier,AugmentTier,AugmentTier]`，返回未覆盖的基础组合；配置权重不覆盖票值时抛 `Error('Invalid augment tier combination weights')`。没有新增命令或失败原因枚举；命令失败仍原 state、无事件/资源/RNG 变化。旧规则历史录制不迁移、不改断言，本批恢复一致性针对当前实现新生成的状态。
+
 ## 2026-10-23 Batch A 覆盖合同（待统一 epoch）
 
 梅尔、维克托、金币订阅、战利品订阅已启用，覆盖历史关闭/只观察说明。普通六费商店也改为批准的完整q表、整店一次5q判定。接口、收据、恢复、加时阶段钟和UI字段见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md#接口与恢复合同)。公开命令不新增；装备与弈子待领使用既有 `claimOrb`，锻造器使用既有 `choose/timeoutChoice`。本批装备统一待领，不引入批准表外的库存格数。
@@ -183,7 +202,7 @@ PR8必须接收新的openingResolution并在刷出3-5准备画面前同步Room�
 | `component-anvils`（蔚） | 1-2 每席两个基础装备锻造器，依次选择 |
 | `artifact-anvil`（杰斯） | 1-2 每席一个神器锻造器 |
 
-PR5 另启用发条猴子，其余8项效果保持关闭（none 仍启用且无附加规则）；16项抽选顺序、权重合计10000及所有原始 null 不变。未强制强化节点沿现有等权 `deriveAugmentTier(rootSeed, choiceId)` 项目约定，允许棱彩；不是已核实的历史条件分布。四种强化只覆盖正常三节点，初抽、逐槽换牌、本人按钮和恢复重演共用 `resolveAugmentTier`。候选仍使用各席既有 `choiceRngState`，初抽3词、换牌1词；不额外消费这个流。排除已持有、永久移除和换牌时当前候选；这六项调研中的强化禁用引用均为空，不编造新增互斥组，也不启用魔像/沃里克的关闭效果。初抽少于3项、换牌没有候选均失败，不降档、不跨档、不重置排除记录。
+PR5 另启用发条猴子，其余8项效果保持关闭（none 仍启用且无附加规则）；16项抽选顺序、权重合计10000及所有原始 null 不变。未强制强化节点现按本文 v22 组合表派生；以下其余 PR2 语义保持。四种强化只覆盖正常三节点，初抽、逐槽换牌、本人按钮和恢复重演共用 `resolveAugmentTier`。候选仍使用各席既有 `choiceRngState`，初抽3词、换牌1词；不额外消费这个流。排除已持有、永久移除和换牌时当前候选；这六项调研中的强化禁用引用均为空，不编造新增互斥组，也不启用魔像/沃里克的关闭效果。初抽少于3项、换牌没有候选均失败，不降档、不跨档、不重置排除记录。
 
 PR2 新增随机子流仅为 `opening-encounter-v1/seat/<seatId>/anvil/<index>`：单人 seatId=`solo`，联机为真实 seatId；index从0起。根 seed 单人取 `state.seed`，共享取已绑定 `state.augmentTierSeed=pool.seed`。对完整流名做 UTF-16 FNV-1a32，seed XOR hash 后 uint32，lcg32-v1 连取4词；对排序后的现有 G24 组件/神器池执行前4步 Fisher–Yates，`j=i+word%(pool.length-i)`。每个锻造器内4项不同，锻造器之间及与已持有装备不互斥；独立抽样不保证不同锻造器结果绝不重复。不读写商店、强化候选、奖励、PvE掉落、装备、战斗或选秀 RNG。PR2 没有新增 shared 或 display 随机流；PR5 的共享分支流与个人组件流见上节。未来第二个锻造器的候选不投影。
 
@@ -201,7 +220,7 @@ PR2 新增随机子流仅为 `opening-encounter-v1/seat/<seatId>/anvil/<index>`�
 公共接口（纯函数，无新网络命令）：
 
 ```ts
-// match.ts 新增重导出；原 deriveAugmentTier 保留基础算法语义
+// match.ts 新增重导出；deriveAugmentTier 基础算法现见本文 v22 组合表
 resolveAugmentTier(state: Pick<MatchState,'openingEncounter'|'augmentTierSeed'>,
   choiceId: string): 'silver'|'gold'|'prismatic'
 readOpeningForgeProgress(state: MatchState): null | {

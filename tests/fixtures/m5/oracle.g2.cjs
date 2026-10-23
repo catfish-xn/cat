@@ -48,7 +48,8 @@ const AUGMENT_POOLS={
  gold:['all-for-one-ii','bronze-for-life-i','built-different','bulky-buddies-ii','climb-the-ladder-ii','clockwork-accelerator','crown-guarded','crownguard-spirit','defense-call','glass-cannon-ii','guardbreaker-spirit','high-voltage','inspiring-epitaph','investment-strategy-i','item-collector-ii','little-buddies','manaflow-ii','mentorship-ii','not-today','pair-of-fours','piercing-lotus-i','portable-forge','pumping-up-ii','pyromaniac','shojin-spirit','thorn-plated-armor','unleash-the-beast'],
  prismatic:['belt-overflow','blinding-speed','bronze-for-life-ii','bulky-buddies-iii','calculated-enhancement','flurry-of-blows','going-long','hedge-fund','immovable-object','investment-strategy-ii','piercing-lotus-ii','pumping-up-iii','radiant-relics','sword-overflow','trifecta-ii','wand-overflow']
 };
-AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link','sisters','mentorship','reunion','geniuses','menaces','unlikely-duo');
+AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link','sisters','mentorship','reunion','menaces','unlikely-duo');
+AUGMENT_POOLS.prismatic.push('geniuses');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).
@@ -64,6 +65,8 @@ function openingEncounter(seed) {
  throw Error('independent opening weights');
 }
 function augmentTier(seed,node){
+ const index=['round:2-1:augment','round:3-2:augment','round:4-2:augment'].indexOf(node);
+ if(index<0)throw Error('Unknown augment tier node');
  const encounter=openingEncounter(seed);
  if(['round:2-1:augment','round:3-2:augment','round:4-2:augment'].includes(node)) {
   if(encounter==='golden-gala')return 'gold';
@@ -71,10 +74,16 @@ function augmentTier(seed,node){
     ||encounter==='prismatic-finale'&&node==='round:4-2:augment')return 'prismatic';
  }
 
- let hash=2166136261n;
- // Index UTF-16 code units, including each half of a surrogate pair.
- for(let i=0;i<node.length;i++)hash=((hash^BigInt(node.charCodeAt(i)))*16777619n)%4294967296n;
- return ['silver','gold','prismatic'][word(Number(BigInt(seed)^0x61756774n^hash))%3];
+ // Independent 14.24 client CSV (approved 2026-10-23): 18 nonzero rows / 109.
+ const table=[['SSG',5],['SSP',5],['SGG',12],['SGP',5],['SPP',1],['GSG',18],['GSP',2],['GGG',22],['GGP',12],['GPS',6],['GPG',10],['GPP',1],['PSG',4],['PSP',1],['PGG',2],['PGP',1],['PPG',1],['PPP',1]];
+ let hash=2166136261n;const name='augment-tier-sequence-v1';
+ for(let i=0;i<name.length;i++)hash=((hash^BigInt(name.charCodeAt(i)))*16777619n)%4294967296n;
+ let ticket=word(Number(BigInt(seed)^0x61756774n^hash))%109;
+ for(const [combination,weight] of table){
+  if(ticket<weight)return {S:'silver',G:'gold',P:'prismatic'}[combination[index]];
+  ticket-=weight;
+ }
+ throw Error('independent augment combination weights');
 }
 function augmentPool(tier,owned,excluded=[]){return AUGMENT_POOLS[tier].filter(id=>!owned.some(a=>a.definitionId===id)&&!excluded.includes(id)).sort();}
 function augmentDraw(rng,tier,owned,excluded=[]){

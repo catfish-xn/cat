@@ -1,10 +1,11 @@
 import { expect, it } from 'vitest';
 import { makeRoom, runUntil, SEATS, TIMINGS } from './helpers';
-import { Room } from '../../src/server/room/room';
+import { Room, ROOM_TIMING_DEFAULTS } from '../../src/server/room/room';
 import { ManualClock } from '../../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { AUGMENT_TIERS } from '../../src/simulation/content/augment-policy';
 import { deriveAugmentTier } from '../../src/simulation/augment-offers';
+import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { toSeatPrivateView } from '../../src/server/room/projection';
 import { validateClientCommand } from '../../src/server/net/messages';
 
@@ -25,6 +26,7 @@ it('eight room seats share tiers across all three nodes and forward free rerolls
     expect(new Set(choices.map(c => c.augmentTier))).toEqual(new Set([tier]));
     for (const seat of room.state.seats) {
       const c = seat.match.pendingChoice!;
+      expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(seat.match))).toEqual(seat.match);
       expect(c.offers.every(id => AUGMENT_TIERS[id] === tier)).toBe(true);
       // v15: each of the three cards has its own free reroll; only the card named by optionIndex changes.
       expect(c.rerollsRemaining).toBe(3);
@@ -33,6 +35,7 @@ it('eight room seats share tiers across all three nodes and forward free rerolls
       const rerolled = room.handle(seat.seatId,command);
       expect(rerolled.ok).toBe(true); if (!rerolled.ok) throw new Error(rerolled.reason);
       const next = rerolled.state.pendingChoice!;
+      expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(rerolled.state))).toEqual(rerolled.state);
       expect([next.offers[0], next.offers[2]]).toEqual([c.offers[0], c.offers[2]]);
       expect(c.offers.includes(next.offers[1]!)).toBe(false);
       expect(AUGMENT_TIERS[next.offers[1]!]).toBe(tier);
@@ -58,4 +61,29 @@ it('reroll wire validation refuses unknown fields, a missing card index, negativ
   const {room} = makeRoom(); const before = room.state;
   expect(room.handle('s0',command as Parameters<typeof room.handle>[1])).toMatchObject({ok:false,reason:'wrong-phase'});
   expect(room.state).toBe(before); room.dispose();
+});
+
+it('default choice deadline is 48000 ms: no timeout at 30000 or 47999, exactly one at 48000', () => {
+  expect(ROOM_TIMING_DEFAULTS.choiceMs).toBe(48_000);
+  const clock = new ManualClock();
+  const room = new Room(SEATS.map(seat => ({...seat,kind:'bot'})), {roomId:'deadline-test',seed:42,clock,
+    resolver:new TwoSidedBattleResolver(),...TIMINGS,choiceMs:ROOM_TIMING_DEFAULTS.choiceMs});
+  room.start();
+  for (const seat of room.state.seats) {
+    const unit = seat.match.preparation.units.find(u => u.team==='player')!;
+    expect(room.handle(seat.seatId,{type:'deploy',unitId:unit.id,target:{kind:'bench',slot:0}}).ok).toBe(true);
+  }
+  runUntil(room,clock,s => s.roundId==='2-1' && s.phase==='choice');
+  const before = room.state, opened = clock.now();
+  expect(before.deadlineAt).toBe(opened+48_000);
+  const choice = before.seats[0].match.pendingChoice!;
+  clock.advance(30_000); expect(room.state).toBe(before);
+  clock.advance(17_999); expect(room.state).toBe(before);
+  clock.advance(1);
+  expect(clock.now()).toBe(opened+48_000);
+  expect(room.state.fault).toBeNull();
+  expect(room.state.seats[0].match.augments).toContainEqual({definitionId:choice.offers[0],choiceId:choice.choiceId,acquiredRound:4});
+  const after = room.state;
+  clock.advance(0); expect(room.state).toBe(after);
+  room.dispose();
 });

@@ -14,6 +14,12 @@
 
 来源：用户 10-23 批准的 `perf-1022/rules-1023/approved-1023-batch2.md`「五费/六费」及离线补充调研 `champion-skills-research-2026-10-23/champion-skills-report.zh-CN.md` 第2–5节。**P**：金克丝三星电击采用施法者朝目标的14格长×1格全宽穿透线；莫德凯撒枚举六格向8×3线，按人数→覆盖当前目标→方向编号择优；玛尔扎哈每次合计五层感染平分，余数按稳定命中顺序。三项已完成，数值表不改。杰斯“落点返回原位、路径两侧1格、每敌一次”仍缺落点定义，已询问用户，保留旧实现，不能标为完成。手算、实现行号、恢复/切片/回放、11项原HEAD失败清单见[本单报告](FIVE_COST_SKILL_GEOMETRY.md)。**待 v22 统一录制**，本单不改epoch/digest/golden或旧断言；本节覆盖旧报告中金克丝三星/莫德凯撒暂停状态。
 
+## 2026-10-23 强化等级表、天才档位与选择时限（第 6–8 条；待 v22 统一录制）
+
+依据：用户 10-23 批准的本地 `perf-1022/rules-1023/approved-1023-batch2.md` 第 6、7、8 条，仅做本单三项。等级表来源为本地 `augments-research-2026-10-23/data/odds-all27.csv` / 14.24 客户端 `TFT9_AugmentArmoryConfiguration_Table`（原版数据；`RandomizeProbabilityTableGlobally=true`），替换先前 Wiki V12.9 的 16 组合/101。保留原整数权重：18 个非零组合/109，9 个零权重组合不抽出；全桌共用，专用 `augment-tier-sequence-v1` 首词重推、不推进其他 RNG。范德尔全金、艾克全彩、黑默丁格仅首/末节点彩的既有覆盖保留，未指定位置不重抽。
+
+`geniuses`（羁绊：天才）改彩；服务器默认 `choiceMs` 从 30000 改为 48000 毫秒，沿已有统一选择窗口，保留显式配置覆盖。第 7、8 条未另给原版独立依据，标为**项目决定 P（用户 10-23 批准）**。天才其他效果和其他数值不变。本地演示层的 30 秒显式覆盖留 Claude 同步。完整有序权重、签名及恢复语义见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 首节，向量、验证及失败清单见 [简报](AUGMENT_TIER_TABLE_REPORT.md)。**待 v22 统一录制**：本单不录 epoch、不改 digest 常量/golden/历史断言；本轮全程离线。
+
 ## 2026-10-23 Batch A：梅尔、维克托、两个订阅（用户批准；待统一 epoch）
 
 本节覆盖下文历史“梅尔只观察、订阅/维克托关闭”和六费 `20 + 4×回合差 + Lv10 160 Bps` 描述。依据只读 `perf-1022/encounters-decisions.html` 的 **M1–M4、V1–V3、S1–S7「我的推荐」**及补研第1/2/4/7节、配套JSON；没有联网重查，也没有复制原始资料入库。实现与验收见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md)。

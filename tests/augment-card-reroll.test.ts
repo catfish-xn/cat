@@ -46,9 +46,9 @@ it.each([[2,0,1], [0,1,2]])('each slot is usable exactly once in command order %
   expect(restoreMatch(serializeMatch(selected))).toEqual(selected);
 });
 
-it('permanently excludes removed IDs at every later node, including repeated silver tiers', () => {
+it('permanently excludes removed IDs at every later node, including two silver nodes from the approved silver/silver/gold combination', () => {
   const nodes=['2-1','3-2','4-2'];
-  const seed=Array.from({length:1000},(_,i)=>i).find(seed=>nodes.every(id=>deriveAugmentTier(seed,`round:${id}:augment`)==='silver'))!;
+  const seed=Array.from({length:1000},(_,i)=>i).find(seed=>nodes.map(id=>deriveAugmentTier(seed,`round:${id}:augment`)).join(',')==='silver,silver,gold')!;
   expect(seed).toBeDefined();
   // Synthetic survival budget isolates candidate admission through all three nodes.
   // Save/restore is verified separately on unmodified public states.
@@ -61,7 +61,7 @@ it('permanently excludes removed IDs at every later node, including repeated sil
       state=resolveM5Choices(state);
       state=accepted(nextRound(state,state.round));
     }
-    expect(state.pendingChoice).toMatchObject({augmentTier:'silver',rerolledSlots:[false,false,false],generation:0});
+    expect(state.pendingChoice).toMatchObject({augmentTier:deriveAugmentTier(seed,`round:${node}:augment`),rerolledSlots:[false,false,false],generation:0});
     expect(state.pendingChoice!.offers.every(id=>!removed.includes(id))).toBe(true);
     for(const optionIndex of [1,2,0]) {
       const c=state.pendingChoice!;
