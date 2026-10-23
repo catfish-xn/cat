@@ -86,9 +86,11 @@ describe('B8 real simultaneous loot-source deaths', () => {
   });
 
   it.each([
-    ['loris', 'r00', 437, 'settlement', 1],
-    ['zyra', 'r01', 176, 'settlement', 1],
-  ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts) => {
+    // v22 seed 2116 (no opening encounter). Loris kills r00, whose first 4-7 orb now also carries the
+    // component anvil: two receipts, one component item and one anvil unit birth. Zyra kills r01 (one component).
+    ['loris', 'r00', 456, 'settlement', 2, 1, 1],
+    ['zyra', 'r01', 212, 'settlement', 1, 1, 0],
+  ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts, itemBirths, unitBirths) => {
     let state = clone(partialB8Preparation(survivor === 'zyra' ? zyraPrefix : lorisPrefix, survivor));
     const targetId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===survivor)!.id;
     expect(state.preparation.units.find(unit => unit.id === targetId)).toMatchObject({
@@ -117,8 +119,8 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(state.m8.loot.receipts).toHaveLength(beforeReceipts + directReceipts);
     expect(state.m8.loot.direct.filter(d=>frozen.rounds.at(-1)!.encounterPlan.drops.some(p=>p.dropId===d.dropId)).map(drop => drop.status)).toEqual(independentLootPlan(state.seed,24).rounds.at(-1)!.encounterPlan.drops.map(d=>d.sourceUnitId===JSON.stringify(['pve','4-7','razorbeaks-v1',source])?'granted':'forfeited'));
     expect(state.m8.loot.choiceEligibility).toEqual([]);
-    expect(state.nextUnitSerial).toBe(unitSerial);
-    expect(state.nextItemSerial).toBe(beforeItemSerial + directReceipts);
+    expect(state.nextUnitSerial).toBe(unitSerial + unitBirths);
+    expect(state.nextItemSerial).toBe(beforeItemSerial + itemBirths);
     expect(state.m8.loot.frozen).toBe(frozen);
     expect(clone(state)).toEqual(state);
     const forged = JSON.parse(serializeMatch(state));
@@ -140,6 +142,10 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(result.events.filter(e=>e.type==='death')).toEqual([expect.objectContaining({unitId:carrier,tick:122,eventSeq:956})]);
     expect(result.events.filter(e=>e.type==='lootRevealed')).toEqual([]);
     expect(result.state.m8.loot.earnedEvidence).toEqual(before.m8.loot.earnedEvidence);
+    // Known v22 hazard: the settling withLoot (src/simulation/loot-runtime.ts:24) interns the new m8 via
+    // shareGeneratedJson (src/simulation/immutable-json.ts reuse). If the JSON-equal m8 from the earlier
+    // simultaneous test on this same route is still in the 64-entry intern cache, it is returned and loot.frozen
+    // is that test's equal-but-distinct object. The partial cases currently evict it; pending a src decision.
     expect(result.state.m8.loot.frozen).toBe(before.m8.loot.frozen);
     // This is the last death: settlement pays the nine already-earned entries (v22 adds the component anvil),
     // without inventing a receipt or qualification for the unloaded carrier.
