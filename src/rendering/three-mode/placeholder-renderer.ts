@@ -1018,16 +1018,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const visiting = () => scout.active || scoutView?.watching === true;
   const mine = () => !stage.active && !visiting();
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
-<<<<<<< HEAD
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: event => {
-    if (event.source !== 'mel' || visiting() || stage.active || !lastFrame) return;
-    saveBurst?.dispose();
-    const f = lastFrame, spanX = Math.sqrt(3) * f.hexRadius * f.columns, spanZ = f.hexRadius * 1.5 * (f.rows - 1);
-    saveBurst = createReferenceBurst('mel', Math.hypot(spanX, spanZ) * .55, reducedMotion());
-    saveBurst.object.position.set(f.origin.x + (spanX - Math.sqrt(3) * f.hexRadius) / 2, 0, f.origin.y + spanZ / 2);
-    scene.add(saveBurst.object); saveExpires = performance.now() + 2000; saveGoldLeft = .65;
-  },
-=======
   /** My legend runs onto my orb, which it claims on arrival (TFT: no click opens an orb); false when it cannot go there now. */
   const walkToOrb = (orbId: string): boolean => {
     if (stage.active || visiting()) return false;
@@ -1035,8 +1025,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (walk) legend()?.walk({ scene: 'board', ...walk });
     return walk !== null;
   };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: () => { if (!visiting()) tabletop.saved(); }, walkToOrb,
->>>>>>> origin/multiplayer
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: event => {
+    if (!visiting()) tabletop.saved();
+    if (event.source !== 'mel' || visiting() || stage.active || !lastFrame) return;
+    saveBurst?.dispose();
+    const f = lastFrame, spanX = Math.sqrt(3) * f.hexRadius * f.columns, spanZ = f.hexRadius * 1.5 * (f.rows - 1);
+    saveBurst = createReferenceBurst('mel', Math.hypot(spanX, spanZ) * .55, reducedMotion());
+    saveBurst.object.position.set(f.origin.x + (spanX - Math.sqrt(3) * f.hexRadius) / 2, 0, f.origin.y + spanZ / 2);
+    scene.add(saveBurst.object); saveExpires = performance.now() + 2000; saveGoldLeft = .65;
+  }, walkToOrb,
     unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
