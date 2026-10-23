@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { makeRoom, runUntil, SEATS, TIMINGS } from './helpers';
-import { Room, ROOM_TIMING_DEFAULTS } from '../../src/server/room/room';
+import { AUGMENT_PREPARATION_MS, Room, ROOM_TIMING_DEFAULTS } from '../../src/server/room/room';
 import { ManualClock } from '../../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { AUGMENT_TIERS } from '../../src/simulation/content/augment-policy';
@@ -19,7 +19,8 @@ it('eight room seats share tiers across all three nodes and forward free rerolls
     expect(room.handle(seat.seatId,{type:'deploy',unitId:unit.id,target:{kind:'bench',slot:0}}).ok).toBe(true);
   }
   for (const roundId of ['2-1','3-2','4-2']) {
-    runUntil(room,clock,s => s.roundId === roundId && s.phase === 'choice');
+    // v22: the augment choice opens inside the round's preparation (no separate choice phase).
+    runUntil(room,clock,s => s.roundId === roundId && s.phase === 'preparation');
     const choices = room.state.seats.map(seat => seat.match.pendingChoice!);
     expect(choices.every(c => c?.kind === 'augment')).toBe(true);
     const tier = deriveAugmentTier(42,choices[0].choiceId);
@@ -63,8 +64,9 @@ it('reroll wire validation refuses unknown fields, a missing card index, negativ
   expect(room.state).toBe(before); room.dispose();
 });
 
-it('default choice deadline is 48000 ms: no timeout at 30000 or 47999, exactly one at 48000', () => {
-  expect(ROOM_TIMING_DEFAULTS.choiceMs).toBe(48_000);
+it('v22: the augment pick runs inside the 50000 ms preparation (no timeout at 30000 or 49999, exactly one at 50000); other choices keep 30000 ms', () => {
+  expect(AUGMENT_PREPARATION_MS).toBe(50_000);
+  expect(ROOM_TIMING_DEFAULTS.choiceMs).toBe(30_000);
   const clock = new ManualClock();
   const room = new Room(SEATS.map(seat => ({...seat,kind:'bot'})), {roomId:'deadline-test',seed:42,clock,
     resolver:new TwoSidedBattleResolver(),...TIMINGS,choiceMs:ROOM_TIMING_DEFAULTS.choiceMs});
@@ -73,15 +75,18 @@ it('default choice deadline is 48000 ms: no timeout at 30000 or 47999, exactly o
     const unit = seat.match.preparation.units.find(u => u.team==='player')!;
     expect(room.handle(seat.seatId,{type:'deploy',unitId:unit.id,target:{kind:'bench',slot:0}}).ok).toBe(true);
   }
-  runUntil(room,clock,s => s.roundId==='2-1' && s.phase==='choice');
+  runUntil(room,clock,s => s.roundId==='2-1' && s.phase==='preparation');
   const before = room.state, opened = clock.now();
-  expect(before.deadlineAt).toBe(opened+48_000);
+  expect(before.deadlineAt).toBe(opened+50_000);
   const choice = before.seats[0].match.pendingChoice!;
+  expect(choice).toMatchObject({kind:'augment',choiceId:'round:2-1:augment'});
   clock.advance(30_000); expect(room.state).toBe(before);
-  clock.advance(17_999); expect(room.state).toBe(before);
+  clock.advance(19_999); expect(room.state).toBe(before);
   clock.advance(1);
-  expect(clock.now()).toBe(opened+48_000);
+  expect(clock.now()).toBe(opened+50_000);
   expect(room.state.fault).toBeNull();
+  expect(room.state.phase).not.toBe('preparation');
+  expect(room.state.seats[0].match.pendingChoice).toBeNull();
   expect(room.state.seats[0].match.augments).toContainEqual({definitionId:choice.offers[0],choiceId:choice.choiceId,acquiredRound:4});
   const after = room.state;
   clock.advance(0); expect(room.state).toBe(after);
