@@ -305,7 +305,7 @@ export class OnlineApplication implements SceneApplication {
     const state = this.session.state as MatchState & { readonly openingEncounter?: unknown; readonly openingForgeProgress?: OpeningForgeProgressDisplay | null; readonly openingMelProgress?: OpeningMelProgressDisplay | null };
     const encounter = readOpeningDisplay(view.openingEncounter) ?? readOpeningDisplay(state.openingEncounter);
     this.opening.update({ encounter, matchKey: `${view.mySeatId}|${view.seats.map(seat => `${seat.seatId}:${seat.name}`).join(',')}`, round: view.phase.round,
-      forge: state.openingForgeProgress ?? null, mel: state.openingMelProgress ?? null });
+      forge: state.openingForgeProgress ?? null, mel: state.openingMelProgress ?? null, choiceOpen: state.pendingChoice != null });
   }
   private lastPhase = '';
   /** Remembers what the last push did to my seat (HP lost, eliminated); `flushOutcome` shows it once my battle stops playing. */
