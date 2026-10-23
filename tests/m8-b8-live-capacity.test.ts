@@ -8,7 +8,9 @@ import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} f
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-const prefix=fillBench(await publicPrefix('3-7',10,'cannon',['bulky-buddies-i']),['zeri']);
+// v22: seed 10 draws the crab-rave opening (crabs carry the wolf orbs); seed 2412 has no opening
+// encounter and keeps a lone Zeri hero sharing an orb, four components and a full bench.
+const prefix=fillBench(await publicPrefix('3-7',2412,'cannon',['bulky-buddies-i']),['zeri']);
 // v15's expanded augment pool changes the real combat program. Two public
 // moves retain the merged exact reveal-117 / final-137 boundary and resources.
 const moved=accepted(api.deployMatchUnit(prefix,prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId==='urgot')!.id,{kind:'board',cell:{col:4,row:7}}));
@@ -22,10 +24,10 @@ function reject(s:MatchState,message:string,change:(s:any)=>void){const saved=se
 const soldResult=command(waiting,s=>api.sellUnit(s,soldUnit.id)),sold=accepted(soldResult);
 describe('B8 live full-bench settlement and exact command resumption',()=>{
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
-  expect(prepared.gold).toBe(15);expect(bench(prepared)).toHaveLength(9);
+  expect(prepared.gold).toBe(19);expect(bench(prepared)).toHaveLength(9);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'zeri',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(25);expect(waiting.combat!.tick).toBe(97);
+  expect(live.revealed!.combat!.tick).toBe(50);expect(waiting.combat!.tick).toBe(85);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);

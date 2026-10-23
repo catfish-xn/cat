@@ -7,7 +7,9 @@ import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} f
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-const prepared=fillBench(await publicPrefix('3-7',10),['zeri']),live=battle(prepared),frozen=plan(prepared);
+// v22: seed 10 draws the crab-rave opening (crabs carry the wolf orbs); seed 2412 has no opening
+// encounter and the same 3-7 shape: one Zeri sharing an orb with other entries, four components, a reforger.
+const prepared=fillBench(await publicPrefix('3-7',2412),['zeri']),live=battle(prepared),frozen=plan(prepared);
 const hero=frozen.encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);expect(api.readLootView(s)).toEqual(v);expect(api.readLootView(restoreMatch(saved))).toEqual(v);expect(serializeMatch(s)).toBe(saved);
  expect(Object.isFrozen(v)&&Object.isFrozen(v.revealedDrops)&&Object.isFrozen(v.revealedOrbs)).toBe(true);
