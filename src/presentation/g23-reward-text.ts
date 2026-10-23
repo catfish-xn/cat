@@ -80,12 +80,17 @@ function itemId(api: string): string | null {
 
 /**
  * The same reward table as `g23RewardLines`, as pictures for a black-market card: heroes first (TFT shows the champions
- * of a bundle up front), then items and tools, then the gold. Nothing is drawn: a random pool stays a pool.
+ * of a bundle up front), then items and tools, then the gold. Nothing is drawn here: a random pool stays a pool unless
+ * `concrete` (the rules' black-market `offer.concreteItems`, in reward order) names what each item slot already is.
  */
-export function g23RewardIcons(reward: Readonly<Record<string, unknown>>): G23RewardIcon[] {
-  const heroes: G23RewardIcon[] = [], items: G23RewardIcon[] = [];
+export function g23RewardIcons(reward: Readonly<Record<string, unknown>>, concrete?: readonly { readonly definitionId: string }[]): G23RewardIcon[] {
+  const heroes: G23RewardIcon[] = [], items: G23RewardIcon[] = [], drawn: number[] = [];
   let gold = 0;
-  const item = (api: string) => items.push({ kind: 'item', itemId: Object.hasOwn(TOOLS, api) || Object.hasOwn(G23_POLICY.duplicators, api) ? null : itemId(api), name: itemName(api), source: api });
+  const item = (api: string) => {
+    const tool = Object.hasOwn(TOOLS, api) || Object.hasOwn(G23_POLICY.duplicators, api);
+    if (!tool) drawn.push(items.length);
+    items.push({ kind: 'item', itemId: tool ? null : itemId(api), name: itemName(api), source: api });
+  };
   for (const [key, value] of Object.entries(reward)) {
     if (key === 'Gold') gold += Number(value) || 0;
     else if (key === 'GoldItems') for (const api of list(value)) gold += Number(api.slice(api.lastIndexOf('_') + 1)) || 0;
@@ -97,5 +102,10 @@ export function g23RewardIcons(reward: Readonly<Record<string, unknown>>): G23Re
       for (const api of list(value)) heroes.push({ kind: 'hero', unitId: heroUnitId(api), star, name: heroName(api) });
     }
   }
+  // The rules list one concrete item per item slot (tools, duplicators and forges excluded); any other count is not this bundle's.
+  if (concrete && concrete.length === drawn.length) drawn.forEach((index, n) => {
+    const id = concrete[n]!.definitionId;
+    if (Object.hasOwn(ITEM_DEFINITIONS, id)) items[index] = { kind: 'item', itemId: id, name: itemDisplayName(id), source: id };
+  });
   return [...heroes, ...items, ...(gold ? [{ kind: 'gold' as const, amount: gold }] : [])];
 }
