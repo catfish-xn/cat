@@ -64,6 +64,8 @@ function openingEncounter(seed) {
  throw Error('independent opening weights');
 }
 function augmentTier(seed,node){
+ const index=['round:2-1:augment','round:3-2:augment','round:4-2:augment'].indexOf(node);
+ if(index<0)throw Error('Unknown augment tier node');
  const encounter=openingEncounter(seed);
  if(['round:2-1:augment','round:3-2:augment','round:4-2:augment'].includes(node)) {
   if(encounter==='golden-gala')return 'gold';
@@ -71,10 +73,17 @@ function augmentTier(seed,node){
     ||encounter==='prismatic-finale'&&node==='round:4-2:augment')return 'prismatic';
  }
 
- let hash=2166136261n;
- // Index UTF-16 code units, including each half of a surrogate pair.
- for(let i=0;i<node.length;i++)hash=((hash^BigInt(node.charCodeAt(i)))*16777619n)%4294967296n;
- return ['silver','gold','prismatic'][word(Number(BigInt(seed)^0x61756774n^hash))%3];
+ // Independent approved Wiki V12.9 table (2026-10-23): one root draw, denominator 101.
+ const table=[['SSG',25],['SGG',15],['GSG',12],['GGG',10],['SSP',6],['GSS',5],['PSG',5],['SGP',4],
+  ['PGG',4],['GGP',3],['SPS',3],['GPG',3],['GSP',2],['PPP',2],['PSP',1],['SPP',1]];
+ let hash=2166136261n;const name='augment-tier-sequence-v1';
+ for(let i=0;i<name.length;i++)hash=((hash^BigInt(name.charCodeAt(i)))*16777619n)%4294967296n;
+ let ticket=word(Number(BigInt(seed)^0x61756774n^hash))%101;
+ for(const [combination,weight] of table){
+  if(ticket<weight)return {S:'silver',G:'gold',P:'prismatic'}[combination[index]];
+  ticket-=weight;
+ }
+ throw Error('independent augment combination weights');
 }
 function augmentPool(tier,owned,excluded=[]){return AUGMENT_POOLS[tier].filter(id=>!owned.some(a=>a.definitionId===id)&&!excluded.includes(id)).sort();}
 function augmentDraw(rng,tier,owned,excluded=[]){

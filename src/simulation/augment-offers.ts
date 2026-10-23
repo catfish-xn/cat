@@ -19,15 +19,29 @@ export interface AugmentOfferRecord {
   readonly rerolledIndices: readonly number[];
 }
 
-/** User convention 2026-10-19: FNV-1a UTF-16 node ID, seed xor namespace, one private LCG word. */
-export function deriveAugmentTier(seed: number, choiceId: string): AugmentTier {
+/** One match-level draw: FNV-1a UTF-16 stream name, seed xor namespace, one private LCG word.
+ * Recomputed from the immutable root on reads/restore, never advanced per node or per seat. */
+export function deriveAugmentTierSequence(seed: number): readonly [AugmentTier, AugmentTier, AugmentTier] {
+  const policy = AUGMENT_OFFER_POLICY;
   let hash = 0x811c9dc5;
-  for (let i = 0; i < choiceId.length; i++) hash = Math.imul(hash ^ choiceId.charCodeAt(i), 0x01000193) >>> 0;
-  const word = nextRandom((seed ^ AUGMENT_OFFER_POLICY.tierSeedXor ^ hash) >>> 0).word;
-  return AUGMENT_OFFER_POLICY.tiers[word % AUGMENT_OFFER_POLICY.tiers.length];
+  for (let i = 0; i < policy.tierStream.length; i++) hash = Math.imul(hash ^ policy.tierStream.charCodeAt(i), 0x01000193) >>> 0;
+  const word = nextRandom((seed ^ policy.tierSeedXor ^ hash) >>> 0).word;
+  let ticket = word % policy.tierWeightTotal;
+  for (const row of policy.tierCombinations) {
+    if (ticket < row.weight) return row.tiers;
+    ticket -= row.weight;
+  }
+  throw new Error('Invalid augment tier combination weights');
 }
 
-/** One resolver for initial offers, rerolls, projection and restore. Unforced tiers keep the approved existing stream. */
+/** Scheduled nodes index the same match-level sample, independent of call order. */
+export function deriveAugmentTier(seed: number, choiceId: string): AugmentTier {
+  const index = ['round:2-1:augment', 'round:3-2:augment', 'round:4-2:augment'].indexOf(choiceId);
+  if (index < 0) throw new Error('Unknown augment tier node');
+  return deriveAugmentTierSequence(seed)[index];
+}
+
+/** One resolver for initial offers, rerolls, projection and restore. Encounters override only their specified positions. */
 export function resolveAugmentTier(state: Pick<MatchState, 'openingEncounter' | 'augmentTierSeed'>, choiceId: string): AugmentTier {
   const id = openingEncounterId(state);
   const node = /^round:(2-1|3-2|4-2):augment$/.exec(choiceId)?.[1];

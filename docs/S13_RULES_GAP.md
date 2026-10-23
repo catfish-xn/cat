@@ -1,3 +1,7 @@
+## 2026-10-23 强化等级组合表（用户批准；待 v22 统一录制）
+
+替换历史逐节点银/金/彩等权抽样：每局从 16 个组合按原整数权重抽一次，权重合计/分母 **101**，全桌共用，单机/联机同源。来源：用户提供的 Wiki `TFT:Augment` “Augment choices” 组合表，最后改动记录 V12.9；无证据表明 14.24b 不同，用户 10-23 批准本次采用，未联网重查。专用 `augment-tier-sequence-v1` 流沿既有 FNV-1a32 + seed XOR + lcg32-v1 首词方式，不推进其他流。PR2 覆盖保持：范德尔全金、艾克全彩、黑默丁格棱彩前奏仅 2-1 彩/终章仅 4-2 彩；其余位置沿基础组合。强化池与其他数值不变。签名、完整权重及恢复语义见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 首节；检查及失败清单见 [简报](AUGMENT_TIER_TABLE_REPORT.md)。**待 v22 统一录制**，本次不改单独 epoch/digest/golden 断言。
+
 ## 2026-10-23 Batch A：梅尔、维克托、两个订阅（用户批准；待统一 epoch）
 
 本节覆盖下文历史“梅尔只观察、订阅/维克托关闭”和六费 `20 + 4×回合差 + Lv10 160 Bps` 描述。依据只读 `perf-1022/encounters-decisions.html` 的 **M1–M4、V1–V3、S1–S7「我的推荐」**及补研第1/2/4/7节、配套JSON；没有联网重查，也没有复制原始资料入库。实现与验收见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md)。

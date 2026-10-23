@@ -78,7 +78,7 @@ describe('independent augment card-reroll oracle',()=>{
   expect(c.offers.some(id=>state.augments.some(a=>a.definitionId===id))).toBe(false);
   validateAugmentReroll(freeze(state),rerollAugment(state,c.choiceId,0,0),{type:'rerollAugment',choiceId:c.choiceId,generation:0,optionIndex:0});
  });
- it('hashes UTF-16 surrogate code units independently of code point iteration',()=>{
-  expect(augmentTier(42,'round:\ud83d\ude00:augment')).toBe('silver');
+ it('refuses unknown nodes instead of deriving another independent tier sample',()=>{
+  expect(()=>augmentTier(42,'round:\ud83d\ude00:augment')).toThrow('Unknown augment tier node');
  });
 });
