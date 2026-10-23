@@ -1,3 +1,4 @@
+import { validateOpeningEncounterContext, validateOpeningEncounterState } from './opening-encounter';
 import { d14OwnedUnits } from './d14-runtime';
 import {findMechanicReceipt} from './seat-mechanics/state';
 import { validateCarouselMetadata } from './carousel-units';
@@ -49,6 +50,7 @@ export function releaseShop(pool:PoolDraft,seatId:string):void {
 export function assertSharedPoolConservation(pool:SharedPoolState,states:readonly MatchState[]=[]):void {
   requirePool(pool.version===SHARED_POOL_VERSION && typeof pool.poolId==='string' && pool.poolId.length>0);
   validateSeed(pool.seed);
+  try { validateOpeningEncounterContext(pool.openingEncounter,pool.seed); } catch { requirePool(false,'invalid-pool'); }
   requirePool(restoreOrbLayout(pool.orbLayout).seed===pool.seed);
   requirePool(safe(pool.revision)&&safe(pool.naturalRound)&&safe(pool.seatCount,1)&&pool.seatCount<=8);
   requirePool(Object.keys(pool.initial).length===SHOP_CATALOG.length && Object.keys(pool.available).length===SHOP_CATALOG.length);
@@ -122,6 +124,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
   for(const id of SHOP_CATALOG) requirePool(totals[id]===pool.initial[id]);
   const provided=new Set<string>();
   for(const state of states) {
+    try { validateOpeningEncounterState(state,pool.openingEncounter); } catch { requirePool(false,'invalid-seat-state'); }
     validateCarouselMetadata(state);
     const layoutBinding=state.m8.loot.layoutBinding;
     requirePool(layoutBinding.mode==='shared'&&layoutBinding.poolId===pool.poolId&&layoutBinding.version===pool.orbLayout.version,'invalid-seat-state');

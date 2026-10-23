@@ -44,10 +44,11 @@ import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, ite
 import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
 import { allowedPreviewText, battleLoadout, battleLoadoutText, combinationResult, equipmentFailureText, NEXT_BATTLE_TEXT, pickUnitDropSlot, routeSlotDrop, slotList, slotViews, temporaryItemText, type BattleLoadout } from '../presentation/equipment-feedback';
 import type { EquipPreview } from '../simulation/m8/ui-contracts';
-import { readEncounterPreview, readLootView } from '../simulation/match';
+import { readEncounterPreview, readLootView, readMasterworkOptions } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
-import { genericOffer, isKnownChoiceKind, isShopChoiceKind, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
+import { genericOffer, isKnownChoiceKind, isMasterworkChoice, isShopChoice, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
+import { forgeProgressText, masterworkOffer, type MasterworkOptionDisplay, type OpeningForgeProgressDisplay } from '../presentation/opening-encounter-text';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
@@ -87,6 +88,8 @@ interface PanelActions {
   readonly combat: () => { readonly view: CombatViewState | null; readonly runtime: CombatState | null };
   /** C18: the item list as it stood when the battle on the board was first shown (null when none is shown). */
   readonly battleItems: () => MatchState['items'] | null;
+  /** The same frame-authoritative loadout as the board icons; null for a non-combat unit. */
+  readonly combatEquipmentText?: (unitId: string) => string | null;
   readonly shopLock: (locked: boolean, generation: number) => void;
   readonly selectedUnit: () => string | null;
   readonly selectUnit: (id: string) => void;
@@ -179,6 +182,20 @@ const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new
 const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
 const SCROLL_INTENT_MS = 1_000;
 
+/**
+ * PR5/PR8: the masterwork pick's offers are item INSTANCE ids; the private view's `masterworkOptions` names each one
+ * (current item → radiant version). The id sent with choose stays the instance id. Other choices are unchanged.
+ */
+function withMasterworkOffers(extras: ReturnType<typeof readChoiceExtras>, state: MatchState, choice: object): ReturnType<typeof readChoiceExtras> {
+  if (!isMasterworkChoice(choice)) return extras;
+  // Online the private view carries them; offline (a real MatchState) the rules' own reader gives the same rows.
+  const sent = (state as { masterworkOptions?: readonly MasterworkOptionDisplay[] }).masterworkOptions;
+  const unitId = (choice as { payload?: { masterwork?: { unitId?: unknown } } }).payload?.masterwork?.unitId;
+  let options: readonly MasterworkOptionDisplay[] = sent ?? [];
+  if (!sent && typeof unitId === 'string') { try { options = readMasterworkOptions(state, unitId); } catch { options = []; } }
+  // First, so genericOffer's lookup by id finds the item → radiant naming before any declared display row.
+  return { ...extras, offers: [...options.map(masterworkOffer), ...(extras.offers ?? [])] };
+}
 export class StrategyPanel {
   private readonly root: HTMLElement;
   private readonly modal: HTMLElement;
@@ -193,6 +210,7 @@ export class StrategyPanel {
   private selectedConsumable: string | null = null;
   private tab: 'traits' | 'items' | 'units' | 'events' = 'items';
   private lastCombatTick = -1;
+  private lastCombatEquipment = '';
   private lastCombatId: string | undefined;
   private eventList: HTMLElement | null = null;
   private eventTexts: string[] = [];
@@ -863,6 +881,11 @@ export class StrategyPanel {
   }
   /** Unit detail: slots and temporary children from readUnitEquipment(); temporaries are read-only. */
   private appendEquipmentDetail(node: HTMLElement, state: MatchState, unitId: string): void {
+    const combatGear = this.actions.combatEquipmentText?.(unitId);
+    if (combatGear != null) {
+      const line = element('p', `本场装备：${combatGear || '无'}`, 'unit-equipment');
+      line.dataset.debug = `unit-equipment:${unitId}`; node.append(line); return;
+    }
     // Enemy loadouts are not player instances (no permanent IDs to name); only player units get the detail.
     if (state.preparation.units.find(unit => unit.id === unitId)?.team !== 'player') return;
     const view = readUnitEquipment(state, unitId);
@@ -947,7 +970,7 @@ export class StrategyPanel {
   }
   private renderChoice(state: MatchState): void {
     const choice = state.pendingChoice;
-    if (!choice || isShopChoiceKind(choice.kind)) {
+    if (!choice || isShopChoice(choice)) {
       this.choiceToken = ''; this.dropChoiceReopen();
       if (this.dismissalTimer === null) {
         const restoreFocus = this.modal.contains(document.activeElement);
@@ -972,7 +995,7 @@ export class StrategyPanel {
     if (choice.augmentTier) card.dataset.augmentTier = choice.augmentTier;
     const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
     // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
-    const generic = !isKnownChoiceKind(choice.kind), extras = readChoiceExtras(choice);
+    const generic = !isKnownChoiceKind(choice.kind), extras = withMasterworkOffers(readChoiceExtras(choice), state, choice);
     const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效` : '异常 · 单位永久进化';
     card.append(element('h2', title));
     // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
@@ -981,6 +1004,10 @@ export class StrategyPanel {
     // Online the room closes the window at its deadline and grants the declared timeout option; offline there is no deadline.
     const fallback = generic && isOnline() ? timeoutOption(choice) : undefined;
     if (fallback) card.append(element('p', fallback === SKIP_OPTION ? '倒计时结束仍未选择时，自动跳过。' : `倒计时结束仍未选择时，自动获得「${genericOffer(fallback, extras).name}」。`, 'choice-timeout'));
+    // PR8: the opening encounter's anvils come one after another; the private view counts them (the open one included).
+    const openingForges = (choice as { payload?: { source?: unknown } }).payload?.source === 'opening-encounter'
+      ? forgeProgressText((state as { openingForgeProgress?: OpeningForgeProgressDisplay | null }).openingForgeProgress) : null;
+    if (openingForges) { const line = element('p', openingForges, 'choice-forge-count'); line.dataset.debug = 'opening:forges-left'; card.append(line); }
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
@@ -1184,8 +1211,11 @@ export class StrategyPanel {
   updateCombat(): void {
     const state = this.actions.state(), { view: combat, runtime } = this.actions.combat(), node = this.combatText;
     if (!node) return;
-    if (combat && this.lastCombatId === combat.combatId && this.lastCombatTick === combat.tick) return;
-    if (combat && this.lastCombatId === combat.combatId && combat.status === 'running' && combat.tick - this.lastCombatTick < 2) return;
+    const equipment = JSON.stringify(combat?.units.map(unit => [unit.id, unit.equipment]));
+    const sameEquipment = equipment === this.lastCombatEquipment;
+    if (sameEquipment && combat && this.lastCombatId === combat.combatId && this.lastCombatTick === combat.tick) return;
+    if (sameEquipment && combat && this.lastCombatId === combat.combatId && combat.status === 'running' && combat.tick - this.lastCombatTick < 2) return;
+    this.lastCombatEquipment = equipment;
     this.lastCombatId = combat?.combatId; this.lastCombatTick = combat?.tick ?? -1;
     // Drops are revealed mid-combat by the domain; refresh only when the projection changes.
     if (this.lootSection && isOnline()) {
@@ -1304,7 +1334,7 @@ export class StrategyPanel {
   }
   private renderShop(state: MatchState, ready: boolean): void {
     const choice = state.pendingChoice, token = choice ? `${choice.choiceId}:${choice.generation}` : '';
-    if (choice && isShopChoiceKind(choice.kind) && !isOnlineSpectating()) {
+    if (choice && isShopChoice(choice) && !isOnlineSpectating()) {
       if (this.shopChoiceAway !== token) { this.renderShopChoice(choice, token); return; }
     } else this.shopChoiceAway = '';
     // Cards answered a moment ago sat where the shop cards now are: the rest of that click burst must not buy a hero.

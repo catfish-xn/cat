@@ -1,0 +1,270 @@
+tests/opening-random-identity.test.ts > binds v20-black-market to fresh public rules and preserved v20-live-combat byte evidence 22ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 0 survives strict text/object restore 8ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 1 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 2 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 3 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 4 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 5 survives strict text/object restore 7ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 6 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 7 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 8 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 9 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 10 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 11 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 12 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 13 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 14 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 15 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 16 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 17 survives strict text/object restore 5ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 18 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 19 survives strict text/object restore 7ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 20 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 21 survives strict text/object restore 9ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 22 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 23 survives strict text/object restore 9ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 24 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 25 survives strict text/object restore 6ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 26 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 27 survives strict text/object restore 10ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 28 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 29 survives strict text/object restore 10ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 30 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 31 survives strict text/object restore 16ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 32 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 33 survives strict text/object restore 9ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 34 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 35 survives strict text/object restore 12ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 36 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 37 survives strict text/object restore 8ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 38 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 39 survives strict text/object restore 11ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 40 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 41 survives strict text/object restore 9ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 42 survives strict text/object restore 5ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 43 survives strict text/object restore 11ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 44 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 45 survives strict text/object restore 14ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 46 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 47 survives strict text/object restore 12ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 48 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 49 survives strict text/object restore 18ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 50 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 51 survives strict text/object restore 15ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 52 survives strict text/object restore 6ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 53 survives strict text/object restore 10ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 54 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 55 survives strict text/object restore 16ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 56 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 57 survives strict text/object restore 15ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 58 survives strict text/object restore 5ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 59 survives strict text/object restore 13ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 60 survives strict text/object restore 7ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 61 survives strict text/object restore 13ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 62 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 63 survives strict text/object restore 15ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 64 survives strict text/object restore 5ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 65 survives strict text/object restore 12ms
+tests/opening-random-identity.test.ts > cannon: checkpoint 66 survives strict text/object restore 10ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 0 survives strict text/object restore 1ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 1 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 2 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 3 survives strict text/object restore 7ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 4 survives strict text/object restore 1ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 5 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 6 survives strict text/object restore 1ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 7 survives strict text/object restore 5ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 8 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 9 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 10 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 11 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 12 survives strict text/object restore 2ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 13 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 14 survives strict text/object restore 7ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 15 survives strict text/object restore 6ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 16 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 17 survives strict text/object restore 6ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 18 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 19 survives strict text/object restore 8ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 20 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 21 survives strict text/object restore 10ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 22 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 23 survives strict text/object restore 10ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 24 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 25 survives strict text/object restore 10ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 26 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 27 survives strict text/object restore 15ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 28 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 29 survives strict text/object restore 11ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 30 survives strict text/object restore 5ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 31 survives strict text/object restore 15ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 32 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 33 survives strict text/object restore 8ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 34 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 35 survives strict text/object restore 15ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 36 survives strict text/object restore 3ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 37 survives strict text/object restore 12ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 38 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 39 survives strict text/object restore 17ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 40 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 41 survives strict text/object restore 11ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 42 survives strict text/object restore 9ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 43 survives strict text/object restore 11ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 44 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 45 survives strict text/object restore 13ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 46 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 47 survives strict text/object restore 11ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 48 survives strict text/object restore 8ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 49 survives strict text/object restore 13ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 50 survives strict text/object restore 7ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 51 survives strict text/object restore 22ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 52 survives strict text/object restore 7ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 53 survives strict text/object restore 15ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 54 survives strict text/object restore 9ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 55 survives strict text/object restore 13ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 56 survives strict text/object restore 4ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 57 survives strict text/object restore 19ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 58 survives strict text/object restore 6ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 59 survives strict text/object restore 19ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 60 survives strict text/object restore 8ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 61 survives strict text/object restore 19ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 62 survives strict text/object restore 11ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 63 survives strict text/object restore 13ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 64 survives strict text/object restore 5ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 65 survives strict text/object restore 16ms
+tests/opening-random-identity.test.ts > sniper: checkpoint 66 survives strict text/object restore 13ms
+tests/opening-random-identity.test.ts > recomputes the first battle terminal and every event hash from public commands 207ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 0: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 1: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 2: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 3: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 4: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 5: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 6: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 7: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 8: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 9: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 10: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 11: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 12: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 13: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 14: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 15: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 16: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 17: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 18: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 19: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 20: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 21: restore from text equals restore from the parsed object 5ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 22: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 23: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 24: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 25: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 26: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 27: restore from text equals restore from the parsed object 6ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 28: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 29: restore from text equals restore from the parsed object 6ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 30: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 31: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 32: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 33: restore from text equals restore from the parsed object 8ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 34: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 35: restore from text equals restore from the parsed object 10ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 36: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 37: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 38: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 39: restore from text equals restore from the parsed object 10ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 40: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 41: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 42: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 43: restore from text equals restore from the parsed object 8ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 44: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 45: restore from text equals restore from the parsed object 9ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 46: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 47: restore from text equals restore from the parsed object 8ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 48: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 49: restore from text equals restore from the parsed object 10ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 50: restore from text equals restore from the parsed object 5ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 51: restore from text equals restore from the parsed object 9ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 52: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 53: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 54: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 55: restore from text equals restore from the parsed object 10ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 56: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 57: restore from text equals restore from the parsed object 8ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 58: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 59: restore from text equals restore from the parsed object 8ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 60: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 61: restore from text equals restore from the parsed object 8ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 62: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 63: restore from text equals restore from the parsed object 9ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 64: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 65: restore from text equals restore from the parsed object 10ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon state 66: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 0: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 1: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 2: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 3: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 4: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 5: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 6: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 7: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 8: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 9: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 10: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 11: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 12: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 13: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 14: restore from text equals restore from the parsed object 1ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 15: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 16: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 17: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 18: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 19: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 20: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 21: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 22: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 23: restore from text equals restore from the parsed object 5ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 24: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 25: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 26: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 27: restore from text equals restore from the parsed object 6ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 28: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 29: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 30: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 31: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 32: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 33: restore from text equals restore from the parsed object 5ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 34: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 35: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 36: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 37: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 38: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 39: restore from text equals restore from the parsed object 6ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 40: restore from text equals restore from the parsed object 2ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 41: restore from text equals restore from the parsed object 6ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 42: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 43: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 44: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 45: restore from text equals restore from the parsed object 10ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 46: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 47: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 48: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 49: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 50: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 51: restore from text equals restore from the parsed object 7ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 52: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 53: restore from text equals restore from the parsed object 6ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 54: restore from text equals restore from the parsed object 3ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 55: restore from text equals restore from the parsed object 8ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 56: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 57: restore from text equals restore from the parsed object 9ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 58: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 59: restore from text equals restore from the parsed object 14ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 60: restore from text equals restore from the parsed object 4ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 61: restore from text equals restore from the parsed object 9ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 62: restore from text equals restore from the parsed object 5ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 63: restore from text equals restore from the parsed object 11ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 64: restore from text equals restore from the parsed object 5ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 65: restore from text equals restore from the parsed object 8ms
+tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper state 66: restore from text equals restore from the parsed object 7ms

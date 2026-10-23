@@ -486,13 +486,13 @@ export interface M8CombatExtension {
 /** Frozen target identifiers. Current M7 constants deliberately remain unchanged. */
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
-  readonly schemaVersion: 11;
-  readonly rulesVersion: 's13-g2-3-v20-black-market';
-  readonly contentVersion: 's13-14.24b-g2-3-v20-black-market';
+  readonly schemaVersion: 12;
+  readonly rulesVersion: 's13-g2-3-v21-opening-encounters-battle-equipment';
+  readonly contentVersion: 's13-14.24b-g2-3-v21-opening-encounters-battle-equipment';
   readonly contentDigest: string;
-  readonly saveFormatVersion: 7;
-  readonly replayFormatVersion: 5;
-  readonly commandProtocolVersion: 5;
+  readonly saveFormatVersion: 8;
+  readonly replayFormatVersion: 6;
+  readonly commandProtocolVersion: 6;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
 }

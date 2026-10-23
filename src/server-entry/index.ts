@@ -69,3 +69,18 @@ export { previewRoundEconomy } from '../simulation/economy-preview';
 export type { RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../simulation/economy-preview';
 export { summarizeBattle } from '../simulation/combat-summary';
 export type { UnitBattleSummary } from '../simulation/combat-summary';
+
+export { applyBattleEquipment } from '../simulation/battle-equipment';
+export type { BattleEquipmentReceipt, BattleEquipmentFailure } from '../simulation/battle-equipment';
+export { queueMatchBattleEquipment } from '../simulation/match';
+
+// Opening encounter PR1: domain context/query only; Room/transport wiring belongs to PR8.
+export { createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext,
+  validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView,
+  OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from '../simulation/match';
+export type { OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection,
+  OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from '../simulation/match';
+// Opening encounters PR8: owner-only progress readers and the shared-batch resolution shape (re-exports only).
+export { readOpeningMelProgress, readOpeningForgeProgress, readMasterworkOptions } from '../simulation/match';
+export type { OpeningMelProgress, OpeningForgeProgress } from '../simulation/match';
+export type { OpeningRoundResolution } from '../simulation/shared-pool-types';

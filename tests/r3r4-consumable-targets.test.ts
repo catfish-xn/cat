@@ -79,8 +79,8 @@ describe('SR-C18 authority-projected consumable targets', () => {
       .toEqual({ ok: false, reason: 'unknown-consumable' });
     expect(toPrivateSeatView(state)).toEqual(view);
   }, 30000);
-  it('exports four frozen content definitions with UI text and target kind', () => {
-    expect(Object.keys(CONSUMABLE_DEFINITIONS)).toEqual(['magnetic-remover', 'reforger', 'TFT_Consumable_ChampionDuplicator_III', 'TFT_Consumable_NeekosHelp']);
+  it('exports five frozen content definitions with UI text and target kind', () => {
+    expect(Object.keys(CONSUMABLE_DEFINITIONS)).toEqual(['magnetic-remover', 'masterwork-upgrade', 'reforger', 'TFT_Consumable_ChampionDuplicator_III', 'TFT_Consumable_NeekosHelp']);
     expect(RULES_GAP_MANIFEST.consumables.definitions).toBe(CONSUMABLE_DEFINITIONS);
     const changed = structuredClone(RULES_GAP_MANIFEST);
     Object.assign(changed.consumables.definitions['magnetic-remover'], { description: 'changed' });

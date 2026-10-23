@@ -1,3 +1,4 @@
+import { installBattleEquipmentBatch, validateBattleEquipmentLog } from './battle-equipment';
 import {createCombatWithEvents,stepCombat} from './combat';
 import type {CombatState} from './combat-types';
 import type {CombatInputBasis} from './combat-input';
@@ -21,6 +22,22 @@ export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBas
  * Trench also replaces the roster, so this runs before static-roster checks.
  * Every call reconstructs independently from the validated frozen basis. */
 export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):boolean {
+  if (candidate.equipmentReceipts !== undefined || candidate.pendingEquipment !== undefined) {
+    validateBattleEquipmentLog(candidate.equipmentReceipts?.map(r => r.input) ?? [], candidate.equipmentReceipts ?? [], candidate.tick);
+    validateBattleEquipmentLog(candidate.pendingEquipment?.map(r => r.input) ?? [], candidate.pendingEquipment ?? [], candidate.tick + 1);
+    if (candidate.pendingEquipment?.some(r => r.input.effectiveTick !== candidate.tick + 1)) throw new RangeError('Invalid pending equipment');
+    let expected = createCombatWithEvents(basis.inputs.preparation, strategy, basis.combatId, basis.battleSeed).state;
+    while (expected.tick < candidate.tick && expected.status === 'running') {
+      expected = installBattleEquipmentBatch(expected, candidate.equipmentReceipts?.filter(r => r.input.effectiveTick === expected.tick + 1) ?? []);
+      expected = stepCombat(expected).state;
+    }
+    if (candidate.pendingEquipment) {
+      installBattleEquipmentBatch(expected, candidate.pendingEquipment); // Validate pending targets/order without advancing or publishing.
+      expected = { ...expected, pendingEquipment: candidate.pendingEquipment };
+    }
+    if (canonicalContent(expected) !== canonicalContent(candidate)) throw new RangeError('Invalid authoritative equipment replay');
+    return true;
+  }
   const zephyr=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr'));
   const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');

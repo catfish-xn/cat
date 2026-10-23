@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { productionSizePlugins } from './scripts/vite-production-size';
 
 // Phaser's source tree is written for its webpack DefinePlugin: `typeof FLAG`
 // must become a literal, otherwise every optional branch (WebGL debug, FB
@@ -51,7 +52,7 @@ export default defineConfig(({ mode }) => ({
   // Runtime S13 icons use import.meta.env.BASE_URL in both modes.
   base: mode === 'pages' ? '/cat/' : './',
   // `import Phaser from 'phaser'` resolves to the trimmed build in dev and production alike.
-  plugins: [phaserFlags, stripAssetChecks, ...(loadEnv(mode, process.cwd(), 'VITE_').VITE_LOCAL_ROOM === '1' ? [] : [localRoomOff])],
+  plugins: [phaserFlags, stripAssetChecks, ...productionSizePlugins(), ...(loadEnv(mode, process.cwd(), 'VITE_').VITE_LOCAL_ROOM === '1' ? [] : [localRoomOff])],
   resolve: { alias: [{ find: /^phaser$/, replacement: fileURLToPath(new URL('./src/rendering/phaser-slim.js', import.meta.url)) }] },
   optimizeDeps: {
     // phaser-core.js ends with `global.Phaser = Phaser`; the production CommonJS transform maps it already.

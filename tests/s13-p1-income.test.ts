@@ -39,10 +39,12 @@ it.each(['going-long','hedge-fund','investment-strategy-ii'])('%s public acquisi
  expect(result.incomeBreakdown.interest).toBe(id==='going-long'?0:Math.min(id==='hedge-fund'?10:7,Math.floor(goldBefore/10)));
  expect(result.incomeBreakdown.interest).toBe(preview.ifLoss.interest);
  expect(result.xpRequested).toBe(2);
- expect(state.augmentProgress.investmentHp).toBe(id==='investment-strategy-ii'?result.incomeBreakdown.interest*9:0);
+ expect(state.augmentProgress.investmentHp).toBe(0); // Earned interest is still deferred.
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
  const settledState=state;
  state=accepted(nextRound(state,state.round));expect(restoreMatch(serializeMatch(state))).toEqual(state);
+ expect(state.augmentProgress.investmentHp).toBe(id==='investment-strategy-ii'?result.incomeBreakdown.interest*9:0);
+ expect(state.gold).toBe(result.goldAfter);
  if(id==='going-long'){const expected=grantXp(settledState.level,settledState.xp,4);expect({level:state.level,xp:state.xp}).toEqual({level:expected.level,xp:expected.xp});expect(nextRound(state,settledState.round).ok).toBe(false);}
 
  if(id==='investment-strategy-ii'){

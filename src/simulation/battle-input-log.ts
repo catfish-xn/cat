@@ -15,7 +15,7 @@ export interface BattleEquipmentInput {
 export type BattleTickInput = BattleEquipmentInput;
 /** Invoked immediately before EVERY rules tick, including inside advance(n).
  * The caller supplies only server-authorized inputs in (effectiveTick, seq) order.
- * Phase 1 supports empty batches only; applyBattleEquipment is deliberately absent.
+ * Successful assets are staged through queueEquipment; this hook authenticates their order.
  */
 export type BattleTickInputSource = (effectiveTick: number) => readonly BattleTickInput[];
 
@@ -27,8 +27,3 @@ export type BattleEquipmentCommand =
   | { readonly tick: number; readonly itemId: string; readonly unitId: string; readonly slot: number }
   | { readonly tick: number; readonly consumableId: string; readonly target: import('./consumable-types').ConsumableTarget }
   | { readonly tick: number; readonly consumedIds: readonly [string, string] };
-
-/** Fail closed until installation and deterministic replay are implemented together. */
-export function phase1BattleInputsSupported(inputs: readonly BattleTickInput[] | undefined): boolean {
-  return inputs === undefined || Array.isArray(inputs) && inputs.length === 0;
-}

@@ -116,7 +116,7 @@ it.each([false,true])('shared settleRound queues a source chest orb and claim us
  const committed=accept(runSharedMatchCommand(pool,state,{type:'settleRound',receipt}));
  const grant=committed.state.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.definitionId===definitionId)!;
  expect(grant).toMatchObject({kind:'unit',resolution:'orb',gold:0});
- expect(committed.state.gold).toBe(beforeGold+committed.state.roundResults.at(-1)!.income);
+ expect(committed.state.gold).toBe(beforeGold+committed.state.roundResults.at(-1)!.incomeBreakdown.win);
  if(grant.kind!=='unit')throw Error('unit');
  const claimed=accept(runSharedMatchCommand(committed.pool,committed.state,{type:'claimOrb',round:committed.state.round,orbId:grant.orbId!}));
  expect(claimed.state.m8.loot.receipts.at(-1)).toMatchObject({resolution:empty?'gold':'held',gold:empty?4:0});

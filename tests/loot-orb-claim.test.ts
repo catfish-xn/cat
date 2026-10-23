@@ -311,7 +311,7 @@ describe('multiplayer explicit orb claims',()=>{
     expect(receiptTotals(receipts)).toEqual({count:1,gold:expected.gold});
     expect(receipts[0].resolution).toBe(expected.resolution);
     expect(done.pool.available[id]).toBe(current.pool.available[id]-expected.copies);
-    expect(done.state.gold).toBe(done.state.roundResults.at(-1)!.goldAfter+expected.gold);
+    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win)+expected.gold);
     expect(done.state.preparation.units.some(u=>u.definitionId===id&&u.starLevel===2)).toBe(sell);
     const after=restoreSharedOrbSnapshot(done.pool,JSON.stringify(done.state));unchanged(done.pool,after,orbId,'already-claimed');
     const retry=accept(runSharedMatchCommand(done.pool,after,{type:'step'}));expect(retry.state).toBe(after);expect(retry.pool).toBe(done.pool);
@@ -334,7 +334,7 @@ describe('multiplayer explicit orb claims',()=>{
     expect(paid.map(r=>r.resolution)).toEqual(CLAIM_EXPECTATIONS.queued.competition.resolutions);
     expect(receiptTotals(paid)).toEqual({count:2,gold:CLAIM_EXPECTATIONS.queued.competition.gold});
     expect(done.pool.available.leona).toBe(pool.available.leona-CLAIM_EXPECTATIONS.queued.competition.copies);
-    expect(done.state.gold).toBe(done.state.roundResults.at(-1)!.goldAfter+2);independentConservation(done.pool);
+    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win)+2);independentConservation(done.pool);
     assertSharedPoolConservation(done.pool,[done.state]);
   });
   it.each([false,true])('locked PvP queues; authoritative settlement pays or forfeits exactly once (eliminated: %s)',loss=>{
@@ -348,7 +348,7 @@ describe('multiplayer explicit orb claims',()=>{
     expect(paid).toMatchObject({resolution:expected.resolution,gold:expected.gold});
     expect(done.pool.available.leona).toBe(queued.pool.available.leona-expected.copies);
     expect(done.state.m8.loot.queuedOrbClaims).toEqual([]);
-    expect(done.state.gold).toBe(done.state.roundResults.at(-1)!.goldAfter);
+    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win));
     expect(done.state.preparation.units.some(u=>u.definitionId==='leona'&&u.starLevel===2)).toBe(!loss);
     const after=restoreSharedOrbSnapshot(done.pool,JSON.stringify(done.state));
     unchanged(done.pool,after,orbId,loss?'seat-eliminated':'already-claimed');
@@ -372,7 +372,7 @@ describe('multiplayer explicit orb claims',()=>{
     expect(done.state.m8.loot.receipts.filter(r=>JSON.parse(r.dropId)[0]===orbId)).toEqual([
       expect.objectContaining({resolution:CLAIM_EXPECTATIONS.queued.forfeited.resolution,gold:0,grantedUnitIds:[]})]);
     expect(done.pool.available.leona).toBe(queued.pool.available.leona);
-    expect(done.state.gold).toBe(done.state.roundResults.at(-1)!.goldAfter);expect(stepMatch(done.state).state).toBe(done.state);
+    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win));expect(stepMatch(done.state).state).toBe(done.state);
     expectTerminalForfeitNoop(done.state);
     independentConservation(done.pool);assertSharedPoolConservation(done.pool,[done.state]);
   });

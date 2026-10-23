@@ -68,7 +68,7 @@ export type MechanicChoicePayload =
   | { readonly kind: 'forge'; readonly source: MechanicSource; readonly timeoutOption: string }
   | { readonly kind: 'blackMarket'; readonly grantItem?:boolean; readonly source: MechanicSource; readonly skippable: boolean;
       readonly skipReward: { readonly kind: string; readonly amount: number } | null; readonly timeoutOption: string }
-  | { readonly kind: 'armory'; readonly source: MechanicSource; readonly prices: Readonly<Record<string, number>>; readonly timeoutOption: string };
+  | { readonly kind: 'armory'; readonly masterwork?: {readonly consumableId:string; readonly unitId:string}; readonly source: MechanicSource; readonly prices: Readonly<Record<string, number>>; readonly timeoutOption: string };
 
 export interface MechanicChoiceSpec {
   readonly choiceId: string;

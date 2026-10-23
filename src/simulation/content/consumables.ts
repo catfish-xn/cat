@@ -5,6 +5,7 @@ import { G24_FORGE_POOLS } from './g2-4-forges';
 import { G23_RADIANT_MAPPING } from './g2-3-special-item-runtime';
 export const CONSUMABLE_DEFINITIONS = freezeContent({
   'magnetic-remover':{id:'magnetic-remover',apiName:'TFT_Consumable_ItemRemover',effect:'remove-all',target:'unit',targetKind:'unit',name:'装备拆卸器',description:'拆下己方单位的全部永久装备，保留原物品并放回库存；战斗中使用下场生效。'},
+  'masterwork-upgrade':{id:'masterwork-upgrade',apiName:'TFT_Consumable_MasterworkUpgrade',effect:'masterwork-upgrade',target:'unit',targetKind:'unit',name:'杰作升级',description:'选择己方弈子携带的一件可合成成装，升级为对应光明版并卸下。'},
   reforger:{id:'reforger',apiName:'TFT_Consumable_ItemReroller',effect:'reforge-all',target:'unit',targetKind:'unit',name:'装备重铸器',description:'拆下己方单位全部永久装备，每件随机重铸为同类别的另一件并放入库存；无其他候选则原样退回。'},
   TFT_Consumable_ChampionDuplicator_III:{id:'TFT_Consumable_ChampionDuplicator_III',apiName:'TFT_Consumable_ChampionDuplicator_III',effect:'duplicate-unit',target:'unit',targetKind:'unit',name:'次级英雄复制器',maxCost:3,description:'复制一名己方至多3费英雄，获得一张1星英雄；无空位时不消耗。'},
   TFT_Consumable_NeekosHelp:{id:'TFT_Consumable_NeekosHelp',apiName:'TFT_Consumable_NeekosHelp',effect:'duplicate-unit',target:'unit',targetKind:'unit',name:'英雄复制器',maxCost:null,description:'复制一名己方任意费用英雄，获得一张1星英雄；无空位时不消耗。'},

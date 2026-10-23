@@ -1,3 +1,7 @@
+## 战斗装备阶段 2（2026-10-22，候选身份；未录制 epoch）
+
+已实现下一未封口 tick 安装、属性/装备程序重编译、PvE/PvP 私有成功日志与来源凭据、重放和恢复；本节覆盖历史 T12 下场生效及 #382 的 `battle-input-unsupported`。命令、完整签名、失败原因、羁绊冻结依据、服务器原子边界、UI 字段及待集成身份见 [LIVE_COMBAT_EQUIPMENT_PHASE2](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。当前工作树采用候选 `v20-battle-equipment`，正式历史 epoch 仍为下节 black-market，须与开局奇遇一起录制后发布。
+
 ## v20-black-market 当前正式 epoch（2026-10-22）
 
 父 epoch `v20-live-combat`，基线 `42d8a404`。rules/content=`s13-g2-3-v20-black-market` / `s13-14.24b-g2-3-v20-black-market`，CONTENT=`fnv1a32-utf16:9a83da50`、LOOT_REPLAY=`fnv1a32-utf16:e0eb43e2`；schema/save/replay/command **11/7/5/5**、NET6 不变，旧身份严格拒绝、无迁移。

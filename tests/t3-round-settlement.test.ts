@@ -54,10 +54,10 @@ describe('T3 atomic round receipt',()=>{
       augments:[{definitionId:'pumping-up-i',choiceId:'p',acquiredRound:4},{definitionId:'investment-strategy-i',choiceId:'i',acquiredRound:4}],
       augmentProgress:{pumpingRounds:2,investmentHp:8}};
     const r=receipt(state,{growth:[{unitId:'unit-1',attackDamageBps:125}]}), result=applyRoundSettlement(freeze(state),r), next=accepted(result);
-    expect(next.gold).toBe(28); expect(next.xp).toBe(2); expect(next.level).toBe(3);
+    expect(next.gold).toBe(20); expect(next.xp).toBe(2); expect(next.level).toBe(3);
     expect(next.roundResults.at(-1)).toMatchObject({income:9,incomeBreakdown:{base:5,win:1,interest:2,streak:1},interestBasis:20});
     expect(next.persistentGrowth).toEqual([{unitId:'unit-1',attackDamageBps:375}]);
-    expect(next.augmentProgress).toEqual({pumpingRounds:3,investmentHp:24});
+    expect(next.augmentProgress).toEqual({pumpingRounds:3,investmentHp:8});
     expect(result.ok&&result.events).toEqual([{type:'roundSettled',round:4,domain:'match',eventSeq:state.nextMatchEventSeq}]);
     for(const key of ['rngState','choiceRngState','rewardRngState','battleSeedRngState','equipmentState'] as const) expect(next[key]).toEqual(state[key]);
     expect(next.roundResults).toHaveLength(state.roundResults.length+1);
@@ -65,13 +65,14 @@ describe('T3 atomic round receipt',()=>{
     rejection(next,{...r,settlementId:'different-id'},'already-settled');
     rejection(JSON.parse(JSON.stringify(next)),{...r,damage:999},'duplicate-settlement');
     const advanced=accepted(nextRound(next,next.round));
+    expect(advanced.gold).toBe(28); expect(advanced.augmentProgress.investmentHp).toBe(24);
     expect(snapshotForBattle(advanced,'A').persistentGrowth).toEqual(next.persistentGrowth);
     expect(()=>restoreMatch(next)).toThrow('multiplayer-state');
   });
   it.each(['loss','draw'] as const)('%s uses existing loss streak and XP cap; raw damage survives HP clipping',result=>{
     const state={...opening(),gold:19,level:10,xp:0,playerHp:1,streak:{kind:'loss' as const,count:1}};
     const next=accepted(applyRoundSettlement(state,receipt(state,{result,damage:9,opposingSurvivors:7})));
-    expect(next).toMatchObject({phase:'settlement',outcome:null,playerHp:0,gold:26,level:10,xp:0,multiplayer:{status:'eliminated'}});
+    expect(next).toMatchObject({phase:'settlement',outcome:null,playerHp:0,gold:19,level:10,xp:0,multiplayer:{status:'eliminated'}});
     expect(next.roundResults.at(-1)).toMatchObject({playerDamage:9,hpLost:1,hpAfter:0,xpAwarded:0,streakAfter:{kind:'loss',count:2}});
     expect(nextRound(next,next.round).ok).toBe(false);
   });
@@ -154,7 +155,8 @@ describe('T3 timeout default-first project rule',()=>{
     const first=supply.pendingChoice!.offers[0],next=timeout(supply);
     expect(next.items).toHaveLength(supply.items.length+1);expect(next.items.at(-1)?.definitionId).toBe(first);
     expect(next.roundResults).toHaveLength(supply.round);
-    expect(next.gold).toBeGreaterThan(supply.gold);
+    expect(next.gold).toBe(supply.gold);
+    expect(accepted(nextRound(next,next.round)).gold).toBeGreaterThan(supply.gold);
     expect(forfeitPendingChoice(next,next.round,supply.pendingChoice!.choiceId,0)).toMatchObject({ok:false,reason:'stale-choice'});
     expect(nextRound(next,next.round).ok).toBe(true);
   });

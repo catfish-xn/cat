@@ -1,5 +1,5 @@
 import { createMatch, buyUnit, deployMatchUnit, nextRound, selectChoice, rerollAugment, startMatchCombat, combineItems } from '../../src/simulation/match';
-import { finishPublicEquipmentBattle, benchPublicEquipmentPlayers } from './b8-public-equipment';
+import { finishPublicEquipmentBattle, benchPublicEquipmentPlayers, resolvePublicEquipmentChoices } from './b8-public-equipment';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
 import { S13_P2_SOURCE } from '../../src/simulation/content/s13-augments-p2-source';
 import { P2_ITEM_GRANTS } from '../../src/simulation/content/s13-augments-p2';
@@ -18,7 +18,7 @@ const extraItemChoices = new Set(['high-voltage','pyromaniac','thorn-plated-armo
 export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
   const key = JSON.stringify([seed, roundId]);
   if (cached.has(key)) return structuredClone(cached.get(key)!);
-  let state = createMatch(seed);
+  let state = resolvePublicEquipmentChoices(createMatch(seed));
   if (roundId !== '4-2') state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'bench', slot: 0 }));
   for (let budget = 0; budget < 40; budget++) {
     while (state.phase === 'choice') {

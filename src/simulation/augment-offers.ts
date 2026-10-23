@@ -1,8 +1,9 @@
+import { openingEncounterId } from './opening-encounter';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { AUGMENT_OFFER_POLICY, AUGMENT_TIERS } from './content/augment-policy';
 import { generateChoices } from './choices';
 import { nextRandom } from './rng';
-import { getRoundSchedule } from './round-schedule';
+import { getRoundSchedule, FINAL_ROUND } from './round-schedule';
 import { isCombatRosterLocked } from './operation-policy';
 import type { MatchState } from './match-types';
 import type { OwnedAugment } from './strategy-types';
@@ -23,6 +24,18 @@ export function deriveAugmentTier(seed: number, choiceId: string): AugmentTier {
   for (let i = 0; i < choiceId.length; i++) hash = Math.imul(hash ^ choiceId.charCodeAt(i), 0x01000193) >>> 0;
   const word = nextRandom((seed ^ AUGMENT_OFFER_POLICY.tierSeedXor ^ hash) >>> 0).word;
   return AUGMENT_OFFER_POLICY.tiers[word % AUGMENT_OFFER_POLICY.tiers.length];
+}
+
+/** One resolver for initial offers, rerolls, projection and restore. Unforced tiers keep the approved existing stream. */
+export function resolveAugmentTier(state: Pick<MatchState, 'openingEncounter' | 'augmentTierSeed'>, choiceId: string): AugmentTier {
+  const id = openingEncounterId(state);
+  const node = /^round:(2-1|3-2|4-2):augment$/.exec(choiceId)?.[1];
+  if (node) {
+    if (id === 'golden-gala') return 'gold';
+    if (id === 'prismatic-party' || id === 'prismatic-prelude' && node === '2-1'
+      || id === 'prismatic-finale' && node === '4-2') return 'prismatic';
+  }
+  return deriveAugmentTier(state.augmentTierSeed, choiceId);
 }
 
 /** One use per slot per node. ExtraRolls is not admitted by the current card-reroll rule. */
@@ -46,7 +59,7 @@ export function drawAugmentCard(candidates: readonly string[], rng: number): { d
 export function augmentOptionViews(state: MatchState) {
   const choice = state.pendingChoice;
   if (choice?.kind !== 'augment') return [];
-  const candidates = augmentCandidates(choice.augmentTier!, state.augments, [...state.removedAugmentIds, ...choice.offers]);
+  const candidates = augmentCandidates(resolveAugmentTier(state, choice.choiceId), state.augments, [...state.removedAugmentIds, ...choice.offers]);
   return choice.offers.map((definitionId, optionIndex) => ({ definitionId, optionIndex,
     rerollAvailable: state.phase === 'choice' && choice.step === 'offer' && !isCombatRosterLocked(state)
       && state.multiplayer?.status !== 'eliminated'
@@ -57,20 +70,20 @@ export function augmentOptionViews(state: MatchState) {
  * Scheduled augment nodes precede the anomaly node in the admitted S13 schedule. */
 export function validateAugmentOfferHistory(state: MatchState): void {
   const check = (condition: boolean) => { if (!condition) throw new Error('Invalid augment offer history'); };
-  check(state.augmentTierSeed === state.seed);
+  check(state.sharedPool ? state.openingEncounter.mode === 'shared' : state.augmentTierSeed === state.seed);
   check(Array.isArray(state.augmentOffers) && state.augmentOffers.length <= 3);
   let rng = (state.seed ^ 0x9e3779b9) >>> 0;
   const owned: OwnedAugment[] = [];
   const removed: string[] = [];
   check(Array.isArray(state.removedAugmentIds));
   let index = 0;
-  for (let round = 1; round <= state.round; round++) for (const node of getRoundSchedule(round)) {
+  for (let round = 1; round <= Math.min(state.round, FINAL_ROUND); round++) for (const node of getRoundSchedule(round)) {
     if (node.kind !== 'augment') continue;
     const selected = state.augments.find(a => a.choiceId === node.id);
     const pending = state.pendingChoice?.kind === 'augment' && state.pendingChoice.choiceId === node.id ? state.pendingChoice : null;
     if (!selected && !pending) continue;
     const record = state.augmentOffers[index++];
-    const tier = deriveAugmentTier(state.seed, node.id);
+    const tier = resolveAugmentTier(state, node.id);
     check(!!record && record.choiceId === node.id && record.tier === tier
       && Number.isSafeInteger(record.rerollCount) && record.rerollCount >= 0 && record.rerollCount <= 3
       && Array.isArray(record.rerolledIndices) && record.rerolledIndices.length === record.rerollCount

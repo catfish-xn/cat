@@ -5,7 +5,7 @@ import {readG23Progress} from '../src/simulation/g2-3-state';
 import type {CombatEvent} from '../src/simulation/combat-types';
 import {expect,it} from 'vitest';
 import {reachRound,accepted} from './match-helpers';
-import {deployMatchUnit,equipItem,startMatchCombat,stepMatch,selectChoice} from '../src/simulation/match';
+import {deployMatchUnit,equipItem,startMatchCombat,stepMatch,selectChoice,rerollAugment} from '../src/simulation/match';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
@@ -13,8 +13,11 @@ vi.setConfig({ testTimeout: 20_000 });
 const items=['TFT_Item_Artifact_SuspiciousTrenchCoat','TFT7_Item_ShimmerscaleGamblersBlade','TFT4_Item_OrnnTheCollector'];
 function prepare(seed:number){
  let state=reachRound('2-1',false,seed);
- const choice=state.pendingChoice!;expect(choice.offers).toContain('manaflow-i');
- state=accepted(selectChoice(state,choice.choiceId,choice.generation,'manaflow-i'));
+ // Golden Gala forces gold at seed307. Two public free card rerolls reach
+ // Manaflow II, also inactive on the front row; preserve the exact combat oracle.
+ for(const slot of [0,1]) {const c=state.pendingChoice!;state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));}
+ const choice=state.pendingChoice!;expect(choice.offers).toContain('manaflow-ii');
+ state=accepted(selectChoice(state,choice.choiceId,choice.generation,'manaflow-ii'));
  const owner=state.preparation.units.find(u=>u.team==='player')!;
  state=accepted(deployMatchUnit(state,owner.id,{kind:'board',cell:{col:3,row:4}}));
  for(const [slot,definitionId] of items.entries()){
@@ -25,7 +28,7 @@ function prepare(seed:number){
 }
 
 it('real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts',()=>{
- // v20 seed 307 selects inert front-row Manaflow I: the original Darius and copies all
+ // v21 seed 307 selects inert front-row Manaflow II: the original Darius and copies all
  // attack, with positive Gambler payouts on both sides of the split and
  // two successful Collector executions by copies. No combat state is edited.
  const {state,ownerId}=prepare(307);

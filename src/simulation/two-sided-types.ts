@@ -66,7 +66,7 @@ export interface BattleSideResult {
   readonly growth: readonly PersistentGrowth[];
 }
 export interface BattleResult {
-  /** Reserved authenticated successful installations. Empty/absent in phase 1. */
+  /** Authenticated successful installations. Absent when no equipment was installed. */
   readonly inputLog?: readonly import('./battle-input-log').BattleTickInput[];
   readonly bankSamples?:readonly import('./combat-types').CombatBankSample[];
   readonly version: typeof TWO_SIDED_BATTLE_VERSION;
@@ -99,7 +99,8 @@ export interface SideProposal {
   readonly events: readonly LedgerCombatEvent[];
 }
 export type BattleFailure = 'snapshot-version' | 'content-digest' | 'invalid-snapshot' | 'wrong-phase'
-  | 'battle-input-unsupported'
+  | 'battle-input-invalid'
+  | 'battle-unit-unavailable'
   | 'invalid-bank-sample'
   | 'seat-collision' | 'round-mismatch' | 'round-kind' | 'invalid-seed' | 'invalid-battle-id'
   | 'invalid-mirror' | 'battle-input' | 'invalid-budget' | 'step-limit-exceeded' | 'invalid-result';

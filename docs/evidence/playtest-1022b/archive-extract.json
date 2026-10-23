@@ -1,0 +1,781 @@
+{
+  "sources": {
+    "src/simulation/content/source/s13-14.24b/raw/en_us.json.gz": "7e0e2d41a806833f6f18e5752c0d5eea4fa3a74e75b61c1c54853de74c2ac5d2",
+    "src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+    "src/simulation/content/source/s13-14.24b/raw/en_us.tft.stringtable.json.gz": "1a96281672670a865cea018b7b2c447ead04e74b7a6800984749cb0f71732e8e"
+  },
+  "placebo": [
+    {
+      "apiName": "TFT_Augment_PlaceboPlus",
+      "associatedTraits": [],
+      "composition": [],
+      "desc": "Gain @Gold@ gold. Your team gains @AttackSpeed*100@% Attack Speed.",
+      "effects": {
+        "AttackSpeed": 0.009999999776482582,
+        "Gold": 15.0
+      },
+      "from": null,
+      "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Placebo_I.TFT_Set12.tex",
+      "id": null,
+      "incompatibleTraits": [],
+      "name": "Placebo+",
+      "unique": false
+    },
+    {
+      "apiName": "TFT_Augment_Placebo",
+      "associatedTraits": [],
+      "composition": [],
+      "desc": "Gain @Gold@ gold. Your team gains @AttackSpeed*100@% Attack Speed.",
+      "effects": {
+        "AttackSpeed": 0.009999999776482582,
+        "Gold": 8.0
+      },
+      "from": null,
+      "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Placebo_I.TFT_Set12.tex",
+      "id": null,
+      "incompatibleTraits": [],
+      "name": "Placebo",
+      "unique": false
+    }
+  ],
+  "mel": {
+    "key": "{85892f99}",
+    "data": {
+      "mName": "TFT13_MissMageTrait",
+      "mDisplayNameTra": "tft_trait_displayname_TFT13_MissMageTrait",
+      "mDescriptionNameTra": "tft_trait_description_TFT13_MissMageTrait",
+      "mIconPath": "ASSETS/UX/TraitIcons/Trait_Icon_13_BanishedMage.TFT_Set13.tex",
+      "TraitType": 1,
+      "mConditionalTraitSets": [
+        {
+          "{86b5abcb}": [
+            {
+              "targetStrategy": 3,
+              "buffName": "TFT13_MissMageTrait_ArmyBuff",
+              "__type": "{76621fa6}"
+            }
+          ],
+          "activatedBuffName": "TFT13_TraitVFXBanishedMage",
+          "constants": {
+            "{df085b93}": {
+              "MinimumCasts": {
+                "mValue": 12.0,
+                "__type": "GameModeConstantFloat"
+              },
+              "{00885e86}": {
+                "mValue": 1.0,
+                "__type": "GameModeConstantFloat"
+              },
+              "ProcDamageAmp": {
+                "mValue": 0.10000000149011612,
+                "__type": "GameModeConstantFloat"
+              },
+              "MinimumCastsHR": {
+                "mValue": 6.0,
+                "__type": "GameModeConstantFloat"
+              },
+              "ProcDamageAmpHR": {
+                "mValue": 0.10000000149011612,
+                "__type": "GameModeConstantFloat"
+              },
+              "MinimumCastsDU": {
+                "mValue": 12.0,
+                "__type": "GameModeConstantFloat"
+              },
+              "MissMageHealDU": {
+                "mValue": 15.0,
+                "__type": "GameModeConstantFloat"
+              },
+              "ProcDamageAmpDU": {
+                "mValue": 0.10000000149011612,
+                "__type": "GameModeConstantFloat"
+              }
+            },
+            "__type": "{d65315ee}"
+          },
+          "minUnits": 1,
+          "Style": 4,
+          "__type": "TftConditionalTraitSetData"
+        }
+      ],
+      "__type": "TftTraitData"
+    }
+  },
+  "draven": {
+    "apiName": "TFT13_Draven",
+    "cost": 1
+  },
+  "overtimeSearch": {
+    "terms": [
+      "overtime",
+      "suddendeath",
+      "sudden death"
+    ],
+    "hits": [
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT11_Round_Encounter_PostFirstCarousel/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT13_Round_HextechTower/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{05145570}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{0b19a908}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{1019b0e7}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{109bfd48}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{1119b27a}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{1219b40d}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{129c006e}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{139c0201}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{159c0527}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{4c7e2861}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{4c96d309}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{7ad57d48}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{7cd5806e}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{7d211843}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{7dd58201}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{80211cfc}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{80945ed3}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{81946066}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{81c84bd6}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{82212022}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{829461f9}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{832121b5}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{8394638c}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{8ecf8cfe}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{ef525143}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Set9_StillwaterHoldItem/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT6_Round_Dragon/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_RaptorsTutorial/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro2Set3/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Standard_Bonus_Stage5/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Hyperroll_Krugs/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT7_Round_TreasureDragonOrder/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Standard_Bonus_Stage6/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_HyperRoll_Stage9_CompleteItemArmory/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Hyperroll_Wolves/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Set8_Augment_HeroThreat/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Hyperroll_Set6_Standard_AugmentMid/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Raptors/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Hyperroll_Items/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT5_Round_Combat_Blessing/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Wolves_ScuttleCrab/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_DrakeTutorial/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Nexus/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Set6_Standard_AugmentEarly/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Raptors_ScuttleCrab/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Simulation_Carousel/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Kayn/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_HyperRoll/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_PostTreasureDragon/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Combat_BossArmory_MidLate/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_KrugsTutorial/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Herald/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Emblems/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_HyperRoll_Stage7_Bonus/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Carousel/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_WolvesSet3/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Combat_BossArmory_SuperLate/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT13_Round_PostGoopCombat/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_KrugsSet3/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT7_Round_TreasureDragon/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Set6_Standard_AugmentMid/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Hyperroll_Herald/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_HyperRoll_Set9_StillwaterHoldItem/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_ShadowItem_1/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_ShadowItem_2/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_ASol/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Blessing/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFTEvent_SF_Round_Combat_NPCVisit/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_KaynEpicSet3/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT9_Round_WarlordsPalaceChaos/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT7_Round_TreasureDragonChaos/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Drake/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_HyperRollPostTreasureDragon/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT9_Round_WarlordsPalace/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{70f9a488}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{cbf2633f}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/{e084b0f1}/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Tutorial_Augment_2/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro2_LNY23/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Morgana/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT11_Round_Encounter_Carousel_Intro/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT9_Round_WarlordsPalaceOrder/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro3/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro2/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro1/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Krugs/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Combat_BossArmory_Early/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT13_Round_GoopAppearance_PVE/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFTEvent_SF_Round_Combat_NewTournyRound/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Zac/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_PairsAssistEarly_PartnerA/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_PairsAssistEarly_PartnerB/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Boss/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro3Tutorial/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_RaptorsSet3/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Simulation/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_KaynSet3/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Urgot/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Set8_Augment_HeroThreat_TURBO/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT5_Round_Dragon/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_HyperRoll_Stage9_Bonus/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Morgana_UnitDrop/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_IntroCrab1/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_IntroCrab3/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_IntroCrab2/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Hyperroll_Raptors/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Hyperroll_Drake/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_BasicItem/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_PairsAssistLate_PartnerB/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_LNY23Gift/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_PairsAssistLate_PartnerA/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Combat_EmblemArmory/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Boss_Epic/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Wolves/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro2_EarlyAugment/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Standard_Bonus/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro2Tutorial/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT13_Round_GoopAppearance/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro1Tutorial/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Hyperroll_Set6_Standard_AugmentLate/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_KaynEpic/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT11_Round_Encounter_Board/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_HyperRoll_Set6_Standard_AugmentEarly/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFTEvent_SF_Round_BossSett/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFTEvent_SF_Round_BossGwen/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT13_Round_GoopAppearance_TURBO/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Set6_Standard_AugmentLate/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_HyperRoll_Intro2_EarlyAugment/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Combat_BossArmory_Late/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro_Carousel/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Intro1Set3/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT7_Round_TestOfValor/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_WolvesTutorial/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Tutorial_Augment/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_ShadowItem_HyperRoll/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Raptors_LateAugment/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT8_Round_Combat_BossArmory_Mid/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT7_Round_TestOfValor_HR/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Combat_HyperRoll_Bonus/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Dragon_ScuttleCrab/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Hyperroll_Dragon/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFTEvent_SF_Round_Combat_FirstTournyRound/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Dragon/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "map22/Maps/Shipping/Map22/Rounds/TFT_Round_Krugs_ScuttleCrab/mCombat/mLabel",
+        "value": "TFT_phase_title_overtime"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_miliow_tooltiplevelupgrid",
+        "value": "<postScriptLeft>Range<br>Healing<br>Cooldown<br>Mana Cost</postScriptLeft><postScriptRight>[ @RangePctIncrease1Prefix@@RangePctIncrease1*100.000000@%@RangePctIncrease1Postfix@ / @RangePctIncrease2Prefix@@RangePctIncrease2*100.000000@%@RangePctIncrease2Postfix@ / @RangePctIncrease3Prefix@@RangePctIncrease3*100.000000@%@RangePctIncrease3Postfix@ / @RangePctIncrease4Prefix@@RangePctIncrease4*100.0000"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_carpetbomb_tooltiplevelup",
+        "value": "<titleLeft>[@Hotkey@]&nbsp;Spell_CarpetBomb_Name</titleLeft><titleRight>@Cooldown@s %i:cooldown%</titleRight><subtitleLeft>@SpellTags@</subtitleLeft><subtitleRight>@Cost@ @AbilityResourceName@</subtitleRight><mainText>Spell_CarpetBomb_Tooltip@SpellModifierDescriptionAppend@</mainText><postScriptTitle>Click or press [@LevelUpHotkey@] to level up</postScriptTitle><postScriptLeft>Spell_ListType_Damag"
+      },
+      {
+        "path": "stringtable/entries/{16c1ab6d9e}",
+        "value": "<postScriptLeft>Damage<br>Damage Per Second<br>Cooldown</postScriptLeft><postScriptRight>[ @RBaseDamage1Prefix@@RBaseDamage1@@RBaseDamage1Postfix@ / @RBaseDamage2Prefix@@RBaseDamage2@@RBaseDamage2Postfix@ / @RBaseDamage3Prefix@@RBaseDamage3@@RBaseDamage3Postfix@ ]<br>[ @BaseDamageOverTime1Prefix@@BaseDamageOverTime1@@BaseDamageOverTime1Postfix@ / @BaseDamageOverTime2Prefix@@BaseDamageOverTime2@@Ba"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_carpetbomb_tooltipextended",
+        "value": "<titleLeft>[@Hotkey@]&nbsp;Spell_CarpetBomb_Name</titleLeft><titleRight>@Cooldown@s %i:cooldown%</titleRight><subtitleLeft>@SpellTags@</subtitleLeft><subtitleRight>@Cost@ @AbilityResourceName@</subtitleRight><mainText>Spell_CarpetBomb_Tooltip@SpellModifierDescriptionAppend@</mainText><postScriptTitle></postScriptTitle><postScriptLeft>Spell_ListType_DamageOverTime<br>Cooldown<br>@AbilityResourceNam"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_hweir_tooltipextended",
+        "value": "<titleLeft>[@Hotkey@]&nbsp;Spell_HweiR_Name</titleLeft><titleRight>@Cooldown@s %i:cooldown%</titleRight><subtitleLeft>@SpellTags@</subtitleLeft><subtitleRight>@Cost@ @AbilityResourceName@</subtitleRight><mainText>Spell_HweiR_Tooltip@SpellModifierDescriptionAppend@</mainText><postScriptTitle>Spell_HweiR_TooltipExtendedBelowLine</postScriptTitle><postScriptLeft>Damage<br>Damage Per Second<br>Cooldow"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_miliow_tooltipextended",
+        "value": "<titleLeft>[@Hotkey@]&nbsp;Spell_MilioW_Name</titleLeft><titleRight>@Cooldown@s %i:cooldown%</titleRight><subtitleLeft>@SpellTags@</subtitleLeft><subtitleRight>@Cost@ @AbilityResourceName@</subtitleRight><mainText>Spell_MilioW_Tooltip@SpellModifierDescriptionAppend@</mainText><postScriptTitle></postScriptTitle><postScriptLeft>Range<br>Healing<br>Cooldown<br>Mana Cost</postScriptLeft><postScriptRig"
+      },
+      {
+        "path": "stringtable/entries/{27ab836277}",
+        "value": "<titleLeft>[@Hotkey@]&nbsp;Spell_HweiR_Name</titleLeft><titleRight>@Cooldown@s %i:cooldown%</titleRight><subtitleLeft>@SpellTags@</subtitleLeft><subtitleRight>@Cost@ @AbilityResourceName@</subtitleRight><mainText>Spell_HweiR_Tooltip@SpellModifierDescriptionAppend@</mainText><postScriptTitle>Click or press [@LevelUpHotkey@] to level up</postScriptTitle><postScriptLeft>Damage<br>Damage Per Second<br"
+      },
+      {
+        "path": "stringtable/entries/tft_phase_title_overtime",
+        "value": "OVERTIME!"
+      },
+      {
+        "path": "stringtable/entries/tft_phase_title_overtime",
+        "value": "OVERTIME!"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_hweir_tooltiplevelup",
+        "value": "<titleLeft>[@Hotkey@]&nbsp;Spell_HweiR_Name</titleLeft><titleRight>@Cooldown@s %i:cooldown%</titleRight><subtitleLeft>@SpellTags@</subtitleLeft><subtitleRight>@Cost@ @AbilityResourceName@</subtitleRight><mainText>Spell_HweiR_Tooltip@SpellModifierDescriptionAppend@</mainText><postScriptTitle>Click or press [@LevelUpHotkey@] to level up</postScriptTitle><postScriptLeft>Damage<br>Damage Per Second<br"
+      },
+      {
+        "path": "stringtable/entries/spell_tft12_norraspell_damageovertime",
+        "value": "Damage Over Time: <magicDamage>@DOTDamage@ (%i:scaleAP%)</magicDamage>"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_miliow_tooltipleveluplist",
+        "value": "<postScriptLeft>Range<br>Healing<br>Cooldown<br>Mana Cost</postScriptLeft><postScriptRight>@RangePctIncrease*100.000000@% -> @RangePctIncreaseNL*100.000000@%<br>@TotalHealingOverTime@ -> @TotalHealingOverTimeNL@<br>@Cooldown@ -> @CooldownNL@<br>@Cost@ -> @CostNL@</postScriptRight>"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_hweir_tooltiplevelupgrid",
+        "value": "<postScriptLeft>Damage<br>Damage Per Second<br>Cooldown</postScriptLeft><postScriptRight>[ @RBaseDamage1Prefix@@RBaseDamage1@@RBaseDamage1Postfix@ / @RBaseDamage2Prefix@@RBaseDamage2@@RBaseDamage2Postfix@ / @RBaseDamage3Prefix@@RBaseDamage3@@RBaseDamage3Postfix@ ]<br>[ @BaseDamageOverTime1Prefix@@BaseDamageOverTime1@@BaseDamageOverTime1Postfix@ / @BaseDamageOverTime2Prefix@@BaseDamageOverTime2@@Ba"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_miliow_tooltiplevelup",
+        "value": "<titleLeft>[@Hotkey@]&nbsp;Spell_MilioW_Name</titleLeft><titleRight>@Cooldown@s %i:cooldown%</titleRight><subtitleLeft>@SpellTags@</subtitleLeft><subtitleRight>@Cost@ @AbilityResourceName@</subtitleRight><mainText>Spell_MilioW_Tooltip@SpellModifierDescriptionAppend@</mainText><postScriptTitle>Click or press [@LevelUpHotkey@] to level up</postScriptTitle><postScriptLeft>Range<br>Healing<br>Cooldown"
+      },
+      {
+        "path": "stringtable/entries/{5c651a9481}",
+        "value": "<titleLeft>[@Hotkey@]&nbsp;Spell_HweiR_Name</titleLeft><titleRight>@Cooldown@s %i:cooldown%</titleRight><subtitleLeft>@SpellTags@</subtitleLeft><subtitleRight>@Cost@ @AbilityResourceName@</subtitleRight><mainText>Spell_HweiR_Tooltip@SpellModifierDescriptionAppend@</mainText><postScriptTitle>Spell_HweiR_TooltipExtendedBelowLine</postScriptTitle><postScriptLeft>Damage<br>Damage Per Second<br>Cooldow"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_carpetbomb_tooltiplevelupgrid",
+        "value": "<postScriptLeft>Spell_ListType_DamageOverTime<br>Cooldown<br>@AbilityResourceName@ Cost</postScriptLeft><postScriptRight>[ @BaseDamage1Prefix@@BaseDamage1@@BaseDamage1Postfix@ / @BaseDamage2Prefix@@BaseDamage2@@BaseDamage2Postfix@ / @BaseDamage3Prefix@@BaseDamage3@@BaseDamage3Postfix@ / @BaseDamage4Prefix@@BaseDamage4@@BaseDamage4Postfix@ / @BaseDamage5Prefix@@BaseDamage5@@BaseDamage5Postfix@ ]<br"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_carpetbomb_tooltipleveluplist",
+        "value": "<postScriptLeft>Spell_ListType_DamageOverTime<br>Cooldown<br>@AbilityResourceName@ Cost</postScriptLeft><postScriptRight>@BaseDamage@ -> @BaseDamageNL@<br>@Cooldown@ -> @CooldownNL@<br>@Cost@ -> @CostNL@</postScriptRight>"
+      },
+      {
+        "path": "stringtable/entries/generatedtip_spell_hweir_tooltipleveluplist",
+        "value": "<postScriptLeft>Damage<br>Damage Per Second<br>Cooldown</postScriptLeft><postScriptRight>@RBaseDamage@ -> @RBaseDamageNL@<br>@BaseDamageOverTime@ -> @BaseDamageOverTimeNL@<br>@Cooldown@ -> @CooldownNL@</postScriptRight>"
+      },
+      {
+        "path": "stringtable/entries/{7f9567b35f}",
+        "value": "<postScriptLeft>Damage<br>Damage Per Second<br>Cooldown</postScriptLeft><postScriptRight>@RBaseDamage@ -> @RBaseDamageNL@<br>@BaseDamageOverTime@ -> @BaseDamageOverTimeNL@<br>@Cooldown@ -> @CooldownNL@</postScriptRight>"
+      }
+    ]
+  }
+}
