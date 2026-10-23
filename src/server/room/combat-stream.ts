@@ -3,7 +3,7 @@
  */
 import { createCombatReplayRecorder, type BattleReplayTask, type CombatReplay, type CombatReplayTick,
   type CombatViewState, type CombatReplayRecorder } from '../../server-entry';
-import { stepMatchCombatStream, queueMatchBattleEquipment } from '../../simulation/match';
+import { stepMatchCombatStream, revealMatchCombatStreamTerminal, queueMatchBattleEquipment } from '../../simulation/match';
 import type { CombatState, LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReplayUnitId } from '../protocol';
@@ -98,7 +98,12 @@ export class CombatStream {
     const events = step.events.filter((e): e is LedgerCombatEvent => 'tick' in e);
     this.frames.push(this.recorder.record(state.combat, { state: next, events }));
     this.ledger.push(...events); this.tick = next.tick;
-    if (step.terminal) { this.terminal = step.terminal; this.completedReplay = this.recorder.finish(step.terminal); }
+    if (step.terminal) {
+      const revealed = revealMatchCombatStreamTerminal(step.state, step.terminal);
+      if (!revealed.ok) throw new BattleResolveError(this.envelope.battleId, revealed.reason);
+      this.terminal = step.terminal; this.completedReplay = this.recorder.finish(step.terminal);
+      return { state: revealed.state, events: [...step.events.filter(e => !('tick' in e)), ...revealed.events] };
+    }
     this.checkLimit();
     return { state: step.state, events: step.events.filter(e => !('tick' in e)) };
   }

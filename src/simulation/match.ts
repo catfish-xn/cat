@@ -45,6 +45,7 @@ import { M8_VERSION } from './m8/version';
 import { freezeCombatInput } from './combat-input';
 import { appendResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSION } from './resource-provenance';
 import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity } from './loot-runtime';
+import { isMatchCombatStreamTerminal } from './combat-stream-terminal';
 import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, stepCombat, validateCombatStart, type CombatState } from './combat';
 import { toLedgerEvents } from './combat-ledger';
@@ -450,10 +451,16 @@ export function openMatchCombatStream(state: MatchState): MatchCommandResult & {
   const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
   const base = { ...state, combatInputBasis, battleSeedRngState: draw.state };
   const opened = started.state.status === 'running' ? withCombat(base, started.state) : { state: base, events: [] };
-  return { ...accept(opened.state, [...toLedgerEvents(started.events), ...opened.events]), streamInitial: started.state };
+  const accepted = accept(opened.state, [...toLedgerEvents(started.events), ...opened.events]);
+  if (accepted.ok && state.multiplayer && started.state.status === 'finished') {
+    const revealed = revealMatchCombatStreamTerminal(accepted.state, started.state);
+    return revealed.ok ? { ...revealed, events: [...accepted.events, ...revealed.events], streamInitial: started.state } : fail(state, revealed.reason);
+  }
+  return { ...accepted, streamInitial: started.state };
 }
-/** The final step stays outside Match until settlement; its complete ledger is still recorded immediately. */
+/** The final step is staged separately; its complete ledger is still recorded immediately. */
 export function stepMatchCombatStream(state: MatchState, beforeTick?: import('./battle-input-log').BattleTickInputSource): MatchStep & { readonly terminal: CombatState | null } {
+  if (state.pendingCombatTerminal) return { state, events: [], terminal: state.pendingCombatTerminal };
   if (state.phase !== 'combat' || state.multiplayer && state.m8.round.kind === 'pvp') throw new Error('wrong-phase');
   const requested = beforeTick?.(state.combat.tick + 1);
   if (requested !== undefined && (!Array.isArray(requested) || canonicalContent(requested) !== canonicalContent(state.combat.pendingEquipment?.map(r => r.input) ?? []))) throw new Error('battle-input-invalid');
@@ -466,16 +473,26 @@ export function stepMatchCombatStream(state: MatchState, beforeTick?: import('./
   const result = accept(progressed.state, [...toLedgerEvents(next.events), ...progressed.events]);
   return { state: result.state, events: result.ok ? result.events : [], terminal: null };
 }
+/** Reveal the trusted PvE terminal without granting loot, income or pool reservations. */
+export function revealMatchCombatStreamTerminal(state: MatchState, terminal: CombatState): MatchCommandResult {
+  if (!isMatchCombatStreamTerminal(state, terminal)) return fail(state, 'wrong-phase');
+  if (state.pendingCombatTerminal) return canonicalContent(state.pendingCombatTerminal) === canonicalContent(terminal)
+    ? { ok: true, state, events: [] } : fail(state, 'wrong-phase');
+  const revealed = revealMatchLoot({ ...state, pendingCombatTerminal: terminal }, terminal);
+  return { ok: true, ...stampMatchEvents(revealed.state, revealed.events) };
+}
 /** Trusted first-pass terminal only; a duplicate refuses before granting anything. */
 export function settleMatchCombatStream(state: MatchState, terminal: CombatState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (state.roundResults.some(record => record.round >= state.round) || terminal.status !== 'finished'
     || terminal.combatId !== `round-${state.round}` || !state.combatInputBasis
-    || terminal.tick < (state.combat?.tick ?? 0)) return fail(state, 'wrong-phase');
-  const settled = withCombat(state, terminal, unitLootPolicy);
+    || terminal.tick < (state.combat?.tick ?? 0)
+    || state.pendingCombatTerminal && canonicalContent(state.pendingCombatTerminal) !== canonicalContent(terminal)) return fail(state, 'wrong-phase');
+  const { pendingCombatTerminal: _pending, ...base } = state;
+  const settled = withCombat(base, terminal, unitLootPolicy);
   return accept(settled.state, settled.events);
 }
 export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
-  if (state.phase !== 'combat') return { state, events: [] };
+  if (state.phase !== 'combat' || state.pendingCombatTerminal) return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
   if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
   const sampled=state.multiplayer?sampleD11CombatGold(state.combat,'player',state.gold):state.combat;
@@ -605,7 +622,7 @@ export function equipItem(state: MatchState, itemId: string, unitId: string, slo
 /** Authoritative PvE adapter. The caller commits equipped assets and this intent together. */
 export function queueMatchBattleEquipment(before: MatchState, equipped: MatchState,
   input: import('./battle-input-log').BattleEquipmentInput): MatchCommandResult {
-  if (before.phase !== 'combat' || before.combat.status !== 'running' || !before.combatInputBasis) return fail(before, 'wrong-phase');
+  if (before.phase !== 'combat' || before.pendingCombatTerminal || before.combat.status !== 'running' || !before.combatInputBasis) return fail(before, 'wrong-phase');
   try {
     const prior = before.combat.pendingEquipment?.at(-1) ?? before.combat.equipmentReceipts?.at(-1);
     const receipt = prepareBattleEquipment(prior?.after ?? before.combatInputBasis.inputs, input, equipped, 'player', before.combatInputBasis.battleSeed);
