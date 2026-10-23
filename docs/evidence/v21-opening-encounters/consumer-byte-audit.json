@@ -433,6 +433,22 @@
       "currentSha256": "e286e4e33bdd20e172ddadf0101ab647957fd6a38662264826fc7d34aa7b9ca6",
       "firstDifferentByte": 11
     },
+    "tests/server/main-seed.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3007,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e4da6d79df9749c14ce82bc9efddebce2c4659cca53fd339b4add4a14289384c",
+      "firstDifferentByte": 0
+    },
+    "tests/server/net/room-seed.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1838,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "2fc958c454af7d1c702d4b1d69e7a0b5373c68c0aee52851d99ce372fcacb341",
+      "firstDifferentByte": 0
+    },
     "tests/server/t10-combat-ops.test.ts": {
       "previousBytes": 19914,
       "currentBytes": 20029,
