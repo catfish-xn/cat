@@ -461,7 +461,7 @@ export class OnlineApplication implements SceneApplication {
         : `${view.phase.roundName} · 野怪回合${opening} · 倒计时结束自动开战`);
       this.phaseLine = { round: view.phase.round, phase: 'preparation', text }; this.hooks.status(text);
     }
-    else if (view.phase.kind === 'combat') this.hooks.status(opponent ? `对战 ${opponent.name} · 战斗由服务器计算` : '战斗由服务器计算 · 正在播放');
+    else if (view.phase.kind === 'combat') this.hooks.status(opponent ? `对战 ${opponent.name}` : '战斗中');
     const merged = this.mergeNote?.round === view.phase.round ? `${this.mergeNote.text} · ` : '';
     if (view.phase.kind === 'carousel') this.hooks.status('选秀 · 生命越低越先放行 · 倒计时结束仍未选取由服务器代选');
     else if (view.phase.kind === 'choice') this.hooks.status(`${merged}请在倒计时内完成选择 · 超时由服务器代选`);

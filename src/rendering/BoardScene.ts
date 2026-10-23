@@ -10,7 +10,7 @@ import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
-import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, provideBoardControls, publishPlayerSaved, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
+import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, boardFeedWalkToOrb, provideBoardControls, publishPlayerSaved, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -256,7 +256,8 @@ export class BoardScene extends Phaser.Scene {
       unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
     }, this.inputRouter, mounts?.shopDock ?? null, mounts?.itemDock ?? null);
-    this.orbDock = mounts ? new OrbDock(mounts.orbDock, { claim: id => this.claimOrb(id), status: message => this.setStatus(message) }) : null;
+    // ?render=3d: a dock click sends my legend onto the orb (it claims on arrival); the 3D layer's arrival comes back as claimOrb.
+    this.orbDock = mounts ? new OrbDock(mounts.orbDock, { claim: id => this.claimOrb(id), walk: id => this.online ? boardFeedWalkToOrb(id) : null }) : null;
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
     this.installKeyboardHandlers();
@@ -753,7 +754,7 @@ export class BoardScene extends Phaser.Scene {
     return reason in EQUIPMENT_FAILURE_TEXT ? equipmentFailureText(reason) : this.knownFailure(reason) ?? equipmentFailureText(reason);
   }
   private confirmed(commandIds: readonly number[], events: readonly MatchEvent[]) {
-    const success = commandIds.map(id => this.pendingSuccess.get(id)).filter((text): text is string => !!text).at(-1) ?? '操作已确认';
+    const success = commandIds.map(id => this.pendingSuccess.get(id)).filter((text): text is string => !!text).at(-1) ?? '';
     const benchMove = commandIds.length > 0 && commandIds.every(id => this.pendingBenchMoves.has(id));
     for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingEquipment.delete(id); this.pendingOrbClaims.delete(id); this.pendingBenchMoves.delete(id); }
     if (this.selectedId !== null && !this.state.units.some(unit => unit.id === this.selectedId)) this.selectedId = null;
@@ -763,7 +764,7 @@ export class BoardScene extends Phaser.Scene {
     if (!result.ok) {
       // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
       const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;
-      if (notice?.kind === 'pending') { this.pendingOrbNotice = notice.commandId; this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); if (sentBenchMove) this.pendingBenchMoves.add(notice.commandId); this.setStatus('待确认…'); return; }
+      if (notice?.kind === 'pending') { this.pendingOrbNotice = notice.commandId; this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); if (sentBenchMove) this.pendingBenchMoves.add(notice.commandId); return; }
       this.setStatus(notice?.kind === 'offline' ? notice.text : equipment ? this.equipmentFailure(result.reason) : this.failureMessage(result.reason)); return;
     }
     this.melSave?.push(result.events);
@@ -772,7 +773,8 @@ export class BoardScene extends Phaser.Scene {
     if (benchMove) {
       this.clearDrag(); this.syncOperable(); this.syncSelection();
       this.strategyPanel?.refreshBench(); this.strategyPanel?.recordOperations(result.events);
-      this.setStatus(success); return;
+      if (success) this.setStatus(success);
+      return;
     }
     // Trading on the bench does not interrupt the battle's movement/effect tweens.
     if (this.session.combatView && this.benchOps()) this.clearDrag(); else this.clearCombatEffects();
@@ -782,7 +784,9 @@ export class BoardScene extends Phaser.Scene {
     this.showEvents(result.events.filter((event): event is LedgerCombatEvent => 'tick' in event));
     this.strategyPanel?.recordOperations(result.events);
     const upgrades = this.showUpgrades(result.events);
-    this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
+    // An empty success text (an online confirmation with nothing to say, an orb claim) leaves the status line as it was.
+    const done = upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success;
+    if (done) this.setStatus(done);
     if (this.session.phase === 'gameOver') this.setStatus(this.endText());
     // A confirmed per-card reroll (offline at once, online on its receipt) names itself; anything else points back at the choice.
     else if (this.session.phase === 'choice' && success !== AUGMENT_REROLL_SUCCESS) this.setStatus('完成当前三选一后继续运营');
@@ -808,8 +812,8 @@ export class BoardScene extends Phaser.Scene {
   private claimOrb(orbId: string) {
     this.pendingOrbNotice = null;
     const result = this.session.claimOrb(orbId);
-    const queued = result.ok && readUnclaimedOrbs(result.state).some(orb => orb.orbId === orbId && orb.queued);
-    this.command(result, queued || this.orbsInBattle() ? '法球已排队 · 战后结算' : '法球已打开');
+    // No status line: the orb opens on the board and the dock lists what it gave.
+    this.command(result, '');
     // A refusal (now, or later for a pending socket command) puts the orb back to claimable.
     const notice = !result.ok ? this.pendingOrbNotice : null; this.pendingOrbNotice = null;
     if (notice !== null) this.pendingOrbClaims.set(notice, orbId);
@@ -1047,7 +1051,13 @@ export class BoardScene extends Phaser.Scene {
       return [unit.id, { x: canvas.left - host.left + p.x * scale, y: canvas.top - host.top + p.y * scale, radius: BOARD_LAYOUT.tokenRadius * scale }];
     })), (canvasLabelRects.get(overlay) ?? []).map(rect => ({ x: canvas.left - host.left + rect.x * scale, y: canvas.top - host.top + rect.y * scale, w: rect.w * scale, h: rect.h * scale })));
   }
+  /**
+   * Online 3D: no floating damage/heal numbers over the board. They were the busiest DOM layer of a battle and fought the
+   * models' own hit and cast animations for the frame; the combat panel still lists every event.
+   */
+  private quietBoard(): boolean { return this.online && boardFeedActive(); }
   private renderFeedback() {
+    if (this.quietBoard()) return;
     const canvas = this.game.canvas.getBoundingClientRect(), host = document.getElementById('feedback-root')!.getBoundingClientRect();
     const scale = canvas.width / this.scale.gameSize.width;
     if (boardFeedActive()) {
@@ -1227,7 +1237,7 @@ export class BoardScene extends Phaser.Scene {
     this.fx.drawn = !boardFeedActive();
     this.fx.show(events, this.session.combatRuntime ?? combat);
     this.renderedCastCount += this.fx.casts - casts;
-    this.feedback?.push(events, performance.now());
+    if (!this.quietBoard()) this.feedback?.push(events, performance.now());
   }
   private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc | Phaser.GameObjects.Container, duration: number) {
     this.effects.add(effect);

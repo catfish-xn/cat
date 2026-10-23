@@ -99,7 +99,7 @@ async function main() {
     });
     // Round 1 starts with no gold: the server refuses, and nothing local changed in between.
     const poor = await clickBuy(a);
-    check(poor !== null && poor.after === poor.before && poor.status.includes('待确认'), `pending buy (${poor?.slot}) keeps gold ${poor?.before} and shows "${poor?.status}"`);
+    check(poor !== null && poor.after === poor.before && !poor.status.includes('待确认'), `pending buy (${poor?.slot}) keeps gold ${poor?.before} with no pending notice ("${poor?.status}")`);
     if (poor.before === 0) {
       await a.waitForFunction(() => document.querySelector('.panel-status')?.textContent?.includes('金币不足'), null, { timeout: 5_000 });
       const refused = await read(a);
@@ -108,7 +108,7 @@ async function main() {
     // A later preparation phase with gold: the purchase is confirmed by the receipt and the state push.
     const rich = await waitRead(a, s => s.state.phase === 'preparation' && s.m6.phase?.kind === 'preparation' && !s.m6.playingBack && s.state.gold >= 5, 'a preparation phase with gold', 120_000);
     const pending = await clickBuy(a);
-    check(pending !== null && pending.after === pending.before && pending.status.includes('待确认'), `round ${rich.state.round}: pending buy keeps gold ${pending?.before} until the receipt`);
+    check(pending !== null && pending.after === pending.before, `round ${rich.state.round}: pending buy keeps gold ${pending?.before} until the receipt`);
     const bought = await waitRead(a, s => s.state.gold < pending.before, 'gold after receipt', 5_000);
     check(bought.state.preparation.units.length === pending.units + 1, `receipt + state push spent ${pending.before - bought.state.gold} gold and added the unit`);
     await a.screenshot({ path: `${OUT}/2-bought.png` });
