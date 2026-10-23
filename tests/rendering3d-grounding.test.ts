@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { AnimationClip, AnimationMixer, Bone, BoxGeometry, Float32BufferAttribute, Group, MeshBasicMaterial,
   NumberKeyframeTrack, Skeleton, SkinnedMesh, Uint16BufferAttribute, Vector3 } from 'three';
-import { animationEnvelope, animationEnvelopeSliced, fitModel } from '../src/rendering/three-mode/model-fit';
+import { animationEnvelope, animationEnvelopeSliced, fitModel, standingFeet } from '../src/rendering/three-mode/model-fit';
 
 /** Feet and head are repeated so both occur in the production sampler's stride; no asset files or GPU. */
-function model(bindFeet = 0) {
-  const geometry = new BoxGeometry(2, 4, 2).translate(0, bindFeet + 2, 0);
+function model(bindFeet = 0, segments = 1) {
+  const geometry = new BoxGeometry(2, 4, 2, segments, segments, segments).translate(0, bindFeet + 2, 0);
   const count = geometry.getAttribute('position').count;
   const weights = new Float32Array(count * 4);
   const indices = new Uint16Array(count * 4);
@@ -33,6 +33,62 @@ function model(bindFeet = 0) {
   return { body, idle, attack, clips, feet, clip,
     dispose() { mesh.skeleton.dispose(); geometry.dispose(); mesh.material.dispose(); } };
 }
+
+describe('idle feet grounding', () => {
+  it('includes root rise in idle feet and agrees across multiple envelope slices', async () => {
+    const toy = model(0, 5);
+    const rise = 6;
+    const idle = toy.clip('idle', rise, -rise);
+    const clips = [{ clip: idle, loop: true, ground: true, feet: true }];
+    let clock = 0, pauses = 0;
+    try {
+      expect(toy.feet(idle)).toBeCloseTo(0);
+      const envelope = animationEnvelope(toy.body, clips);
+      expect(envelope.feet).toBeCloseTo(0);
+      expect(envelope.ground).toBeCloseTo(-rise);
+      const sliced = await animationEnvelopeSliced(toy.body, clips, {
+        now: () => ++clock, budgetMs: 1, pause: async () => { pauses++; },
+      });
+      expect(pauses).toBeGreaterThan(1);
+      expect(sliced).toEqual(envelope);
+      fitModel(toy.body, { height: 24, sourceScale: 0.5, unitScale: 1,
+        ground: envelope.ground, feet: envelope.feet });
+      expect(toy.body.scale.y).toBeCloseTo(0.5);
+      expect(toy.feet(idle)).toBeCloseTo(0);
+    } finally { toy.dispose(); }
+  });
+
+  it.each([2, 0, null, undefined])('prefers finite feet over ground and preserves the fallback for feet=%s', feet => {
+    const toy = model(2);
+    try {
+      const floor = feet ?? -3; // Legacy ground (-1) minus the positive bind floor (2).
+      const drawn = fitModel(toy.body, { height: 24, sourceScale: 0.5, unitScale: 1, ground: -1, feet });
+      expect(toy.body.position.y).toBeCloseTo(-floor * 0.5);
+      expect(drawn).toBeCloseTo((6 - floor) * 0.5);
+    } finally { toy.dispose(); }
+  });
+
+  it('retains designed hover exceptions and passes through other models idle feet', () => {
+    const envelope = { radius: 2, ground: -3, feet: 4 };
+    for (const id of ['malzahar', 'nocturne', 'corki']) {
+      expect(standingFeet(id, envelope)).toBeNull();
+    }
+    expect(standingFeet('steb', envelope)).toBe(envelope.feet);
+    expect(standingFeet('steb', { ...envelope, feet: 0 })).toBe(0);
+    expect(standingFeet('steb', undefined)).toBeNull();
+    expect(standingFeet('steb', { radius: 2, ground: -3 })).toBeNull();
+  });
+
+  it.each([undefined, false])('does not measure feet for unmarked clips (feet=%s)', async feet => {
+    const toy = model();
+    try {
+      const clips = [{ clip: toy.idle, loop: true, ground: true, feet }];
+      const envelope = animationEnvelope(toy.body, clips);
+      expect(envelope.feet).toBeNull();
+      expect(await animationEnvelopeSliced(toy.body, clips)).toEqual(envelope);
+    } finally { toy.dispose(); }
+  });
+});
 
 describe('root-motion independent grounding', () => {
   it.each(['sync', 'sliced'] as const)('ignores a weapon hidden far underground without dropping real foot vertices (%s)', async mode => {
