@@ -1,3 +1,4 @@
+import { CRAB_ENCOUNTERS } from './content/opening-crabs';
 import { DEFAULT_BOARD, isDeploymentCell } from './board';
 import { compareIds, type CombatUnit } from './combat-types';
 import type { Unit, ResolvedUnitStats } from './unit-types';
@@ -25,8 +26,8 @@ export interface CompiledNeutralEncounter {
  * Pure trusted content compiler used by Match preparation, combat and restore.
  * No RNG, player resources, rewards or combat execution.
  */
-export function compileNeutralEncounter(roundId: string): CompiledNeutralEncounter {
-  const encounter = NEUTRAL_ENCOUNTERS.find(entry => entry.roundId === roundId);
+export function compileNeutralEncounter(roundId: string, encounterId?:string): CompiledNeutralEncounter {
+  const encounter = (encounterId ? CRAB_ENCOUNTERS : NEUTRAL_ENCOUNTERS).find(entry => entry.roundId === roundId && (!encounterId||entry.encounterId===encounterId));
   if (!encounter) throw new RangeError(`Unknown neutral round: ${roundId}`);
   const deployment: Unit[] = [], units: CombatUnit[] = [], openingDefinitions: OpeningDefinition[] = [];
   const seenSlots = new Set<string>(), seenCells = new Set<string>();
@@ -84,6 +85,6 @@ export function compileNeutralEncounter(roundId: string): CompiledNeutralEncount
 }
 
 /** Finite, immutable same-version plans. No query or restore recompiles/randomizes an encounter. */
-export const COMPILED_NEUTRAL_ENCOUNTERS = freezeContent(NEUTRAL_ENCOUNTERS.map(e => compileNeutralEncounter(e.roundId)));
+export const COMPILED_NEUTRAL_ENCOUNTERS = freezeContent([...NEUTRAL_ENCOUNTERS.map(e => compileNeutralEncounter(e.roundId)),...CRAB_ENCOUNTERS.map(e=>compileNeutralEncounter(e.roundId,e.encounterId))]);
 const NEUTRAL_COMBAT_UNITS = new Map(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e => e.units.map(u => [u.id,u] as const)));
 export function readNeutralCombatUnit(id: string): CombatUnit | undefined { return NEUTRAL_COMBAT_UNITS.get(id); }

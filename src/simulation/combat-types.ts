@@ -93,6 +93,7 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly openingDeaths?:readonly {readonly unitId:string;readonly eventSeq:number}[];
   /** Private authenticated installations; never included in display projections. */
   readonly equipmentReceipts?: readonly import('./battle-equipment').BattleEquipmentReceipt[];
   readonly pendingEquipment?: readonly import('./battle-equipment').BattleEquipmentReceipt[];

@@ -21,6 +21,7 @@ export interface UnitDefinition {
 export type UnitLocation = { readonly kind: 'bench'; readonly slot: number } | { readonly kind: 'board'; readonly cell: HexCell };
 export interface Unit { readonly encounterId?: string; readonly id: string; readonly definitionId: string; readonly team: Team; readonly location: UnitLocation; readonly starLevel: StarLevel }
 export interface ResolvedUnitStats {
+  readonly attackRemainderCenti?:number;
   readonly unitKind?: 'champion' | 'neutral';
   readonly monsterFamily?: string;
   readonly baseCritChanceBps?: number;

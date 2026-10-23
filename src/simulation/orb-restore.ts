@@ -1,3 +1,4 @@
+import { openingCrabCarrier } from './opening-crabs';
 import { familyOrbs } from './family-orbs';
 import { canonicalContent } from './content';
 import { lootEntryId, lootOrbId, lootReceiptId } from './loot-identity';
@@ -43,7 +44,7 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
     check(drop&&round&&e.death.combatId===`round-${round.ordinal}`&&Number.isSafeInteger(e.death.tick)&&e.death.tick>=1
       &&Number.isSafeInteger(e.death.eventSeq)&&e.death.eventSeq>=0&&e.death.tick<=(combat?.tick??history?.combatTicks??-1)
       &&e.death.eventSeq<(combat?.nextEventSeq??history?.combatEventCount??0),'death evidence');
-    if(combat) check(combat.neutralReceipts?.deaths.some(d=>d.unitId===drop?.sourceUnitId&&d.tick===e.death.tick&&d.eventSeq===e.death.eventSeq),'current death');
+    if(combat) check(combat.neutralReceipts?.deaths.some(d=>d.unitId===openingCrabCarrier(state,drop!.roundId,drop?.sourceUnitId??'')&&d.tick===e.death.tick&&d.eventSeq===e.death.eventSeq),'current death');
   }
   for(const orb of plans) {
     if(orb.source==='mechanic') {

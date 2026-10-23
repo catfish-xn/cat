@@ -112,7 +112,7 @@ export function modifierValues(stat: Stat, modifiers: readonly BoundModifier[], 
   }
   return { flat: safeNumber(flat), bps: safeNumber(bps + resistanceReduction) };
 }
-export function resolveStat(stat: Stat, base: number, modifiers: readonly BoundModifier[], sample: StatSample): number {
+export function resolveStat(stat: Stat, base: number, modifiers: readonly BoundModifier[], sample: StatSample, baseRemainderCenti=0): number {
   const { flat, bps } = modifierValues(stat, modifiers, sample);
   if (stat === 'damageReduction') return Math.max(base, bps);
   if (['attackSpeed', 'critChance', 'critMultiplier', 'damageAmp', 'omnivamp'].includes(stat)) {
@@ -120,8 +120,9 @@ export function resolveStat(stat: Stat, base: number, modifiers: readonly BoundM
     if (stat === 'critChance') return total < 0n ? 0 : total > 10000n ? 10000 : safeNumber(total);
     return safeNumber(total > 0n ? total : 0n);
   }
-  const numerator = (integer(base, Number.MIN_SAFE_INTEGER) + integer(flat, Number.MIN_SAFE_INTEGER)) * (10000n + integer(bps, Number.MIN_SAFE_INTEGER));
-  return Math.max(stat === 'maxHp' ? 1 : 0, safeNumber(numerator / 10000n));
+  if(!baseRemainderCenti){const numerator=(integer(base,Number.MIN_SAFE_INTEGER)+integer(flat,Number.MIN_SAFE_INTEGER))*(10000n+integer(bps,Number.MIN_SAFE_INTEGER));return Math.max(stat==='maxHp'?1:0,safeNumber(numerator/10000n));}
+  const numerator = ((integer(base, Number.MIN_SAFE_INTEGER) + integer(flat, Number.MIN_SAFE_INTEGER))*100n+integer(baseRemainderCenti)) * (10000n + integer(bps, Number.MIN_SAFE_INTEGER));
+  return Math.max(stat === 'maxHp' ? 1 : 0, safeNumber(numerator / 1000000n));
 }
 export function attackInterval(baseSpeedBps: number, bonusBps: number): number {
   const denominator = integer(baseSpeedBps, 1) * (10000n + integer(bonusBps, -9999));

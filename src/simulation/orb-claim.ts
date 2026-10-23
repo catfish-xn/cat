@@ -1,3 +1,4 @@
+import { openingRewardOrbs, claimOpeningReward } from './opening-batch-b-rewards';
 import { familyOrbs, claimFamilyOrb } from './family-orbs';
 import type { MatchState, MatchEvent } from './match-types';
 import type { FrozenDirectDrop, RewardOrb } from './loot-types';
@@ -18,7 +19,7 @@ export function allClaimableOrbPlans(state: MatchState) {
 }
 export function unclaimedOrbPlans(state: MatchState) {
   if (state.multiplayer?.status==='eliminated' || state.phase==='gameOver') return [];
-  return [...familyOrbs(state),...allClaimableOrbPlans(state).filter(o=>getMultiplayerRoundById(o.roundId).ordinal<=state.round
+  return [...openingRewardOrbs(state),...familyOrbs(state),...allClaimableOrbPlans(state).filter(o=>getMultiplayerRoundById(o.roundId).ordinal<=state.round
     && o.entries.length && o.entries.every(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId && d.status==='revealed')
       && (o.source==='mechanic'||state.m8.loot.earnedEvidence.some(v=>v.dropId===e.dropId))))];
 }
@@ -37,10 +38,16 @@ export function enqueueRewardOrb(state: MatchState, receiptId: string, definitio
 /** Match owns stamping and equipment commits. Shared pool policy is transaction-local. */
 export function planOrbClaim(state: MatchState, orbId: string, expectedRound: number, policy?:UnitLootPolicy): MultiplayerCommandResult {
   const fail=(reason:Extract<MultiplayerCommandResult,{ok:false}>['reason']):MultiplayerCommandResult=>({ok:false,state,reason});
-  if (!state.multiplayer&&!orbId.startsWith('family:orb:')) return fail('multiplayer-required');
+  if (!state.multiplayer&&!orbId.startsWith('family:orb:')&&!orbId.startsWith('opening-batch-b/')) return fail('multiplayer-required');
   if (state.multiplayer?.status==='eliminated') return fail('seat-eliminated');
   if (state.round!==expectedRound) return fail('stale-round');
   if (!ORB_CLAIM_PHASES.includes(state.phase) || state.pendingChoice?.payload?.source === 'masterwork-upgrade') return fail('wrong-phase');
+  if(orbId.startsWith('opening-batch-b/')){
+    if(state.sharedPool&&!policy)return fail('shared-pool-required');
+    if(isCombatRosterLocked(state))return fail('wrong-phase');
+    if(!openingRewardOrbs(state).some(o=>o.orbId===orbId))return fail('already-claimed');
+    const result=claimOpeningReward(state,orbId,policy);return result.ok?result:fail(result.reason==='bench-full'?'bench-full':'invalid-loot');
+  }
   if(orbId.startsWith('family:orb:')){
     if(state.m8.loot.queuedOrbClaims?.includes(orbId))return fail('already-claimed');
     if(!familyOrbs(state).some(o=>o.orbId===orbId))return fail('unknown-orb');

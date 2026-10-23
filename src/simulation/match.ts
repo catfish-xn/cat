@@ -1,3 +1,8 @@
+export { readOpeningBatchBRewards } from './opening-batch-b-rewards';
+import { openingEncounterId } from './opening-encounter';
+import { openBatchBForge, settleTerminalBatchBForges } from './opening-batch-b-rewards';
+import { growTrainerGolem } from './trainer-golems';
+import { enterOpeningCrabs } from './opening-crabs';
 import { choiceAcquisitionGold } from './choice-acquisition';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
@@ -98,6 +103,7 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
   const forge=openAugmentForge(state);state=forge.state;events=[...events,...forge.events];
+  const batchForge=openBatchBForge(state);state=batchForge.state;events=[...events,...batchForge.events];
   return { ok: true, ...stampMatchEvents(state, events) };
 };
 function stampMatchEvents(state: MatchState, events: readonly MatchEvent[]): MatchStep {
@@ -160,7 +166,7 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
     if (event.kind === 'anomaly' && !state.preparation.units.some(unit => unit.team === 'player')) continue;
     let choiceRngState = state.choiceRngState; let offers: readonly string[] = [];
     if (event.kind === 'augment') {
-      const drawn = generateChoices(augmentCandidates(resolveAugmentTier(state, event.id), state.augments, state.removedAugmentIds), choiceRngState);
+      const drawn = generateChoices(augmentCandidates(resolveAugmentTier(state, event.id), state.augments, state.removedAugmentIds,openingEncounterId(state)), choiceRngState);
       offers = drawn.offers; choiceRngState = drawn.choiceRngState;
     } else if (event.kind === 'component') offers = [...COMPONENT_IDS];
     const pendingChoice = { kind: event.kind, step: event.kind === 'anomaly' ? 'target' as const : 'offer' as const,
@@ -426,6 +432,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
     const terminalForges=settleTerminalEpicForges(settled);settled=terminalForges.state;events.push(...terminalForges.events);
+    const batchForges=settleTerminalBatchBForges(settled);settled=batchForges.state;events.push(...batchForges.events);
     const forfeited=forfeitUnclaimedOrbs(settled); return {state:forfeited.state,events:[...events,...forfeited.events]};
   }
   const queued=settleQueuedOrbClaims(settled,unitLootPolicy);settled=queued.state;events.push(...queued.events);
@@ -502,7 +509,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const definition = getNextCatalogRound(state.m8.round.roundId);
   if (!definition) return fail(state, 'wrong-phase');
   const augment = getRoundSchedule(definition.ordinal).find(e => e.kind === 'augment');
-  if (augment && augmentCandidates(resolveAugmentTier(state, augment.id), state.augments, state.removedAugmentIds).length < 3)
+  if (augment && augmentCandidates(resolveAugmentTier(state, augment.id), state.augments, state.removedAugmentIds,openingEncounterId(state)).length < 3)
     return fail(state, 'augment-pool-too-small');
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
@@ -514,7 +521,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round);
   const carousel = resolveCarouselPreparation({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
-  let prepared = carousel.state;
+  let prepared = growTrainerGolem(enterOpeningCrabs(carousel.state));
   const openingEvents: MatchEvent[] = [];
   if (prepared.openingEncounter.mode === 'solo') {
     const applied = applyOpeningEffects(prepared, planOpeningRound(prepared.openingEncounter.context, definition.roundId).facts);
@@ -643,7 +650,7 @@ export function rerollAugment(state: MatchState, choiceId: string, generation: n
   if (optionIndex === undefined || !Number.isSafeInteger(optionIndex) || optionIndex < 0 || optionIndex >= choice.offers.length) return fail(state, 'invalid-slot');
   if (choice.rerolledSlots?.[optionIndex] !== false) return fail(state, 'augment-rerolls-exhausted');
   const tier = resolveAugmentTier(state, choiceId);
-  const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers]);
+  const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers],openingEncounterId(state));
   if (!candidates.length) return fail(state, 'augment-pool-too-small');
   const draw = drawAugmentCard(candidates, state.choiceRngState);
   const rerollCount = choice.rerollCount + 1;

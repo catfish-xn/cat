@@ -1,3 +1,4 @@
+import { TRAINER_DAMAGE } from './content/opening-batch-b';
 import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
 import { hexDistance } from './board';
 import { compareIds, type CombatUnit } from './combat-types';
@@ -44,6 +45,7 @@ validateAbilityDefinitions();
 /** Copy only resolved numbers into battle state, never content-table objects or callbacks. */
 export function resolveAbility(abilityId: string, starLevel: StarLevel): ResolvedAbility {
   if (![1, 2, 3].includes(starLevel)) throw new RangeError('Invalid star level');
+  if (abilityId==='trainer-golem-ability') return {id:abilityId,amount:0,kind:'s13',championId:'trainer-golem',variables:{Damage:TRAINER_DAMAGE[starLevel-1]*10000}};
   if (Object.hasOwn(S13_ABILITY_DATA, abilityId)) {
     const definition = S13_ABILITY_DATA[abilityId];
     return { id: abilityId, amount: 0, kind: 's13', championId: definition.championId,

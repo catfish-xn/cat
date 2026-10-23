@@ -87,7 +87,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       player: { ...preparationState.board.deploymentZones.player },
       enemy: { ...preparationState.board.deploymentZones.enemy },
     } },
-    ...(strategy ? { strategy: shareGeneratedDeclaration(structuredClone(strategy)), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
+    ...(strategy ? { openingDeaths:[], strategy: shareGeneratedDeclaration(structuredClone(strategy)), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
     ...(units.some(u=>u.unitKind==='neutral') ? {...(strategy ? {neutralReceipts:{deaths:[],controls:[]}} : {}),openingDefinitions:structuredClone(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>units.some(u=>u.id===d.source.ownerId)))} : {}),
     ...(units.some(u=>u.mechanics?.some(m=>['g24Fishbones','g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)))?{itemRandomStreams:createItemRandomStreams(rngState)}:{}),
     ...(units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)))?{itemGoldReceipts:[]}:{}),

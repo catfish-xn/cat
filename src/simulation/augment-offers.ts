@@ -1,3 +1,4 @@
+import { WARWICK_EXCLUDED_AUGMENTS } from './content/opening-batch-b';
 import { openingEncounterId } from './opening-encounter';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { AUGMENT_OFFER_POLICY, AUGMENT_TIERS } from './content/augment-policy';
@@ -43,8 +44,8 @@ export function augmentRerollLimit(_augments: readonly OwnedAugment[]): number {
   return 1;
 }
 
-export function augmentCandidates(tier: AugmentTier, owned: readonly OwnedAugment[], excluded: readonly string[] = []): string[] {
-  return Object.keys(AUGMENT_DEFINITIONS).filter(id => AUGMENT_TIERS[id] === tier
+export function augmentCandidates(tier: AugmentTier, owned: readonly OwnedAugment[], excluded: readonly string[] = [], encounterId?:string|null): string[] {
+  return Object.keys(AUGMENT_DEFINITIONS).filter(id => !(encounterId==='warwicks-hunger' && WARWICK_EXCLUDED_AUGMENTS.some(api=>id===api || (AUGMENT_DEFINITIONS[id] as {apiName?:string}).apiName===api)) && AUGMENT_TIERS[id] === tier
     && !owned.some(a => a.definitionId === id) && !excluded.includes(id));
 }
 
@@ -59,7 +60,7 @@ export function drawAugmentCard(candidates: readonly string[], rng: number): { d
 export function augmentOptionViews(state: MatchState) {
   const choice = state.pendingChoice;
   if (choice?.kind !== 'augment') return [];
-  const candidates = augmentCandidates(resolveAugmentTier(state, choice.choiceId), state.augments, [...state.removedAugmentIds, ...choice.offers]);
+  const candidates = augmentCandidates(resolveAugmentTier(state, choice.choiceId), state.augments, [...state.removedAugmentIds, ...choice.offers],openingEncounterId(state));
   return choice.offers.map((definitionId, optionIndex) => ({ definitionId, optionIndex,
     rerollAvailable: state.phase === 'choice' && choice.step === 'offer' && !isCombatRosterLocked(state)
       && state.multiplayer?.status !== 'eliminated'
@@ -88,12 +89,12 @@ export function validateAugmentOfferHistory(state: MatchState): void {
       && Number.isSafeInteger(record.rerollCount) && record.rerollCount >= 0 && record.rerollCount <= 3
       && Array.isArray(record.rerolledIndices) && record.rerolledIndices.length === record.rerollCount
       && new Set(record.rerolledIndices).size === record.rerollCount);
-    const initial = generateChoices(augmentCandidates(tier, owned, removed), rng);
+    const initial = generateChoices(augmentCandidates(tier, owned, removed,openingEncounterId(state)), rng);
     const offers = [...initial.offers], rerolledSlots = [false, false, false];
     rng = initial.choiceRngState;
     for (const slot of record.rerolledIndices) {
       check(Number.isSafeInteger(slot) && slot >= 0 && slot < 3);
-      const draw = drawAugmentCard(augmentCandidates(tier, owned, [...removed, ...offers]), rng);
+      const draw = drawAugmentCard(augmentCandidates(tier, owned, [...removed, ...offers],openingEncounterId(state)), rng);
       removed.push(offers[slot]); offers[slot] = draw.definitionId;
       rng = draw.choiceRngState; rerolledSlots[slot] = true;
     }

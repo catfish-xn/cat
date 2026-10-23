@@ -1,3 +1,4 @@
+import { settleOpeningBatchB } from './opening-batch-b-rewards';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import {itemGoldPayouts} from './g2-4b-item-gold';
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from './content/g2-3-policy';
@@ -26,7 +27,8 @@ export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKi
  const familyTrait=combat.strategy.traits.find(t=>t.team===team&&t.traitId==='family');
  const familyIds=allies.filter(u=>owners.has(u.id)&&!u.itemSummon&&!u.anomalySummon&&!UNIT_DEFINITIONS[u.definitionId]?.summon&&(familyTrait?.memberUnitIds?familyTrait.memberUnitIds.includes(u.id):familyTrait?.memberDefinitionIds.includes(u.definitionId))).map(u=>u.id).sort();
  const melCasts=allies.filter(u=>owners.has(u.id)&&u.definitionId==='mel'&&!u.itemSummon&&!u.anomalySummon).reduce((n,u)=>n+(u.runtime?.castCount??0),0);
- return {...(familyTrait&&familyIds.length?{family:{stage:getMultiplayerRoundByOrdinal(round).stage,eligible:familyTrait.tier>=5,openingIds:familyIds,survivorIds:familyIds.filter(id=>allies.some(u=>u.id===id&&u.alive&&u.hp>0))}}:{}),...(melCasts?{melCasts}:{}),...(hunter?{d11Headhunter:{combatId:combat.combatId!,holderId:hunter.id,kills:hunter.d11Kills!}}:{}),...(itemPayouts.length?{itemGoldPayouts:itemPayouts}:{}),battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
+ const openingDeaths=(combat.openingDeaths??[]).filter(d=>{const u=combat.units.find(u=>u.id===d.unitId);return u&&u.team!==team&&openingUnits.some(o=>o.id===u.id)&&!u.itemSummon&&!u.anomalySummon&&!UNIT_DEFINITIONS[u.definitionId]?.summon&&(roundKind==='pvp'?u.unitKind!=='neutral':u.definitionId.startsWith('pve-scuttle-')||u.definitionId==='pve-giant-crab');}).map(d=>({victimId:d.unitId,eventSeq:d.eventSeq}));
+ return {openingDeaths,...(familyTrait&&familyIds.length?{family:{stage:getMultiplayerRoundByOrdinal(round).stage,eligible:familyTrait.tier>=5,openingIds:familyIds,survivorIds:familyIds.filter(id=>allies.some(u=>u.id===id&&u.alive&&u.hp>0))}}:{}),...(melCasts?{melCasts}:{}),...(hunter?{d11Headhunter:{combatId:combat.combatId!,holderId:hunter.id,kills:hunter.d11Kills!}}:{}),...(itemPayouts.length?{itemGoldPayouts:itemPayouts}:{}),battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
  conquestTakedowns:[...new Set([...allies.flatMap(u=>u.g23?.conquestTakedowns??[]),...splits.flatMap(s=>s.g23?.conquestTakedowns??[])])].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive&&!u.itemSummon).length,
  rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),...(crowns?{crowns}:{}),highRollerGold:[...allies.map(u=>u.g23),...splits.map(s=>s.g23)].reduce((n,g)=>n+(g?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0)};
 
@@ -40,6 +42,7 @@ export function commitG23Settlement(state:MatchState,facts:G23BattleFacts,policy
  const planned=advanceG23Economy(p,facts);let committed=writeG23Progress(state,planned.progress);
  const receipt=planned.progress.economyReceipts.at(-1) as import('./g2-3-economy').G23EconomyAction;
  for(const payout of g23BattlePayouts(facts,planned.progress.conquest.chestsOpened,p.conquest.chestsOpened,receipt.crownGold??0)){const granted=grantMechanicGold(committed,payout);if(!granted.ok)throw Error(granted.reason);committed=granted.state;}
+ committed=settleOpeningBatchB(committed,facts,policy,events);
  committed=drainG23Rewards(committed,policy,events);
  return !p.conquest.radiantConversion&&planned.progress.conquest.radiantConversion?applyG23Radiant(committed):committed;
 }

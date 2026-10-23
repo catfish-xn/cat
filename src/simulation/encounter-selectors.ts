@@ -1,4 +1,6 @@
 import type { MatchState } from './match-types';
+import { openingEncounterId } from './opening-encounter';
+import { isCrabEncounter } from './content/opening-batch-b';
 import type { EncounterPreview } from './m8/ui-contracts';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { M5_UNIT_DEFINITIONS, UNIT_DEFINITIONS } from './units';
@@ -67,9 +69,9 @@ export function readEncounterPreview(state: Readonly<MatchState>): EncounterPrev
         stats:{maxHp:opening?.units.find(unit=>unit.id===u.id)!.maxHp??stats.health,attackDamage:stats.attack,armor:stats.armor,magicResist:stats.magicResist,
           attackRange:stats.attackRange,attackIntervalTicks:stats.attackIntervalTicks,critChanceBps:crit.chanceBps,critMultiplierBps:crit.multiplierBps,
           abilityPower:initial.abilityPower,mana,maxMana:stats.maxMana},
-        abilityDescription:d.unitKind==='neutral'?neutralDescription(NEUTRAL_DEFINITIONS[u.definitionId].mechanism):HERO_RULES[u.definitionId]};
+        abilityDescription:neutral?.monsterFamily==='scuttle'?'不普攻；每4秒尝试挪到相邻空格。':neutral?.monsterFamily==='giant-crab'?'不普攻；2秒首跳，之后每2秒一跳；第n跳对全体敌人造成100×n魔法伤害。':d.unitKind==='neutral'?neutralDescription(NEUTRAL_DEFINITIONS[u.definitionId].mechanism):HERO_RULES[u.definitionId]};
     }),
-    rulesNote:state.m8.round.kind==='pve'?'固定普通PvE；项目首版参数，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。特殊奇遇池未启用。'
+    rulesNote:state.m8.round.kind==='pve'?isCrabEncounter(openingEncounterId(state))?'蟹奇遇：采用10-23批准参数；基础野怪奖励保留，额外奖励由结算收据发放。':'固定普通PvE；项目首版参数，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。'
       :'固定PvP模板；公开星级、装备与羁绊参与开战属性计算，不从中立遭遇池抽取。',
   });
 }

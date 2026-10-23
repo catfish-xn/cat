@@ -1,3 +1,4 @@
+import { isOpeningCrab, crabMove, crabJump } from './combat-opening-crabs';
 import { overtimeBonusBps, movementIntervalTicks, quickstrikerMoveTenths } from './combat-overtime';
 import { castV20Teamups, quickDashV20, advanceV20Minions } from './combat-v20-traits';
 import { canMove, isControlled } from './combat-movement';
@@ -280,6 +281,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
   const intents = units.map(unit => {
     if (!canMove(unit, tick)) return undefined;
+    if(isOpeningCrab(unit))return crabMove(ctx,unit,occupied);
     const target = p2Target(unit,units,tick);
     if (!target || (unit.mechanics?.some(m=>m.mechanic==='quickstriker')?unit.moveCooldownTicks>5||(unit.v20Traits?.moveTenths??0)<10:unit.moveCooldownTicks>0) || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
     return move(state, unit, target, occupied);
@@ -329,6 +331,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         if (piercing) piercingCrit.set(packet.actionSeq, packet.critical);
       }
     };
+    if(isOpeningCrab(unit)){if(unit.alive&&!blocked.has(unit.id))crabJump(ctx,unit,()=>actionSeq++);rollPlannedPackets();continue;}
     if (unit.definitionId==='g23-forge'||unit.anomalySummon?.kind==='crab'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(); continue; }
     const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
     const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie','warwick','viktor','mel'].includes(champion(unit));

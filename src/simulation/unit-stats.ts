@@ -1,3 +1,4 @@
+import { TRAINER_ID, TRAINER_HEALTH, TRAINER_ATTACK_CENTI } from './content/opening-batch-b';
 import { validateNeutralInputs } from './m8/unit-inputs';
 import { UNIT_DEFINITIONS, type UnitDefinition, type ResolvedUnitStats, type StarLevel, type Unit } from './units';
 
@@ -14,10 +15,11 @@ export function resolveUnitStats(definition: UnitDefinition, starLevel: StarLeve
   validateNeutralInputs(definition);
   if (!Object.hasOwn(STAR_PERCENT, starLevel)) throw new RangeError(`Invalid star level: ${starLevel}`);
   return {
+    ...(definition.id===TRAINER_ID?{attackRemainderCenti:TRAINER_ATTACK_CENTI[starLevel-1]%100}:{}),
     ...(definition.unitKind ? { unitKind: definition.unitKind, ...(definition.monsterFamily ? { monsterFamily: definition.monsterFamily } : {}) } : {}),
     ...(definition.baseCritChanceBps === undefined ? {} : { baseCritChanceBps: definition.baseCritChanceBps, baseCritMultiplierBps: definition.baseCritMultiplierBps }),
-    health: Math.floor(definition.baseStats.health * (definition.summon?.fixedStarStats?100:(definition.cost===6&&starLevel===3?360:STAR_PERCENT[starLevel])) / 100),
-    attack: Math.floor(definition.baseStats.attack * (definition.summon?.fixedStarStats?100:(definition.cost===6&&starLevel===3?360:STAR_PERCENT[starLevel])) / 100),
+    health: definition.id===TRAINER_ID ? TRAINER_HEALTH[starLevel-1] : Math.floor(definition.baseStats.health * (definition.summon?.fixedStarStats?100:(definition.cost===6&&starLevel===3?360:STAR_PERCENT[starLevel])) / 100),
+    attack: definition.id===TRAINER_ID ? Math.floor(TRAINER_ATTACK_CENTI[starLevel-1]/100) : Math.floor(definition.baseStats.attack * (definition.summon?.fixedStarStats?100:(definition.cost===6&&starLevel===3?360:STAR_PERCENT[starLevel])) / 100),
     armor: definition.baseStats.armor, magicResist: definition.baseStats.magicResist,
     attackRange: definition.attackRange, attackIntervalTicks: definition.attackIntervalTicks,
     ...(definition.baseAttackSpeedBps === undefined ? {} : { baseAttackSpeedBps: definition.baseAttackSpeedBps }),

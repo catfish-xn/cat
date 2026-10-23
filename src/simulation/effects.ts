@@ -189,7 +189,7 @@ export function resolveEffects(baseStats: ResolvedUnitStats, baseAbility: Resolv
       return [{ stat: name as M8Stat, unit: effect.kind === 'statFlat' ? 'flat' : 'bps',
         value: { kind: 'constant', amount: effect.kind === 'statFlat' ? effect.amount : effect.bps }, condition: { kind: 'always' }, damageFilter: null }];
     });
-    return Math.max(minimum, resolveStat(name as M8Stat, base, modifiers, { holder: { id: 'static', hp: baseStats.health, maxHp: baseStats.health } }));
+    return Math.max(minimum, resolveStat(name as M8Stat, base, modifiers, { holder: { id: 'static', hp: baseStats.health, maxHp: baseStats.health } },name==='attackDamage'?baseStats.attackRemainderCenti??0:0));
   };
   const stats: ResolvedUnitStats = {
     ...baseStats,

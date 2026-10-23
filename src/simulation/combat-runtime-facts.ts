@@ -14,6 +14,7 @@ export function validateTaskAndSummonFacts(combat: CombatState, basis: CombatInp
   // curse pulses (or inventing delayed Maddie damage on another hero) cannot
   // escape a kind-filtered comparison. Reuse sampled-stat evidence when present.
   const expected = replay.atSaveTick();
+  if(!same(combat.openingDeaths,expected.openingDeaths))throw new Error('Invalid Match save: opening deaths');
   if (expected.tick !== combat.tick) throw new Error('Invalid Match save: curse task fact tick');
   if (!same(combat.damageContributors ?? {}, expected.damageContributors ?? {}))
     throw new Error('Invalid Match save: damage contributors binding facts');
