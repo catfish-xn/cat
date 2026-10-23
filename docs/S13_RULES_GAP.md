@@ -1,6 +1,8 @@
-## 2026-10-23 强化等级组合表（用户批准；待 v22 统一录制）
+## 2026-10-23 强化等级表、天才档位与选择时限（第 6–8 条；待 v22 统一录制）
 
-替换历史逐节点银/金/彩等权抽样：每局从 16 个组合按原整数权重抽一次，权重合计/分母 **101**，全桌共用，单机/联机同源。来源：用户提供的 Wiki `TFT:Augment` “Augment choices” 组合表，最后改动记录 V12.9；无证据表明 14.24b 不同，用户 10-23 批准本次采用，未联网重查。专用 `augment-tier-sequence-v1` 流沿既有 FNV-1a32 + seed XOR + lcg32-v1 首词方式，不推进其他流。PR2 覆盖保持：范德尔全金、艾克全彩、黑默丁格棱彩前奏仅 2-1 彩/终章仅 4-2 彩；其余位置沿基础组合。强化池与其他数值不变。签名、完整权重及恢复语义见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 首节；检查及失败清单见 [简报](AUGMENT_TIER_TABLE_REPORT.md)。**待 v22 统一录制**，本次不改单独 epoch/digest/golden 断言。
+依据：用户 10-23 批准的本地 `perf-1022/rules-1023/approved-1023-batch2.md` 第 6、7、8 条，仅做本单三项。等级表来源为本地 `augments-research-2026-10-23/data/odds-all27.csv` / 14.24 客户端 `TFT9_AugmentArmoryConfiguration_Table`（原版数据；`RandomizeProbabilityTableGlobally=true`），替换先前 Wiki V12.9 的 16 组合/101。保留原整数权重：18 个非零组合/109，9 个零权重组合不抽出；全桌共用，专用 `augment-tier-sequence-v1` 首词重推、不推进其他 RNG。范德尔全金、艾克全彩、黑默丁格仅首/末节点彩的既有覆盖保留，未指定位置不重抽。
+
+`geniuses`（羁绊：天才）改彩；服务器默认 `choiceMs` 从 30000 改为 48000 毫秒，沿已有统一选择窗口，保留显式配置覆盖。第 7、8 条未另给原版独立依据，标为**项目决定 P（用户 10-23 批准）**。天才其他效果和其他数值不变。本地演示层的 30 秒显式覆盖留 Claude 同步。完整有序权重、签名及恢复语义见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 首节，向量、验证及失败清单见 [简报](AUGMENT_TIER_TABLE_REPORT.md)。**待 v22 统一录制**：本单不录 epoch、不改 digest 常量/golden/历史断言；本轮全程离线。
 
 ## 2026-10-23 Batch A：梅尔、维克托、两个订阅（用户批准；待统一 epoch）
 

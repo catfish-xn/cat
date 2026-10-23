@@ -48,7 +48,8 @@ const AUGMENT_POOLS={
  gold:['all-for-one-ii','bronze-for-life-i','built-different','bulky-buddies-ii','climb-the-ladder-ii','clockwork-accelerator','crown-guarded','crownguard-spirit','defense-call','glass-cannon-ii','guardbreaker-spirit','high-voltage','inspiring-epitaph','investment-strategy-i','item-collector-ii','little-buddies','manaflow-ii','mentorship-ii','not-today','pair-of-fours','piercing-lotus-i','portable-forge','pumping-up-ii','pyromaniac','shojin-spirit','thorn-plated-armor','unleash-the-beast'],
  prismatic:['belt-overflow','blinding-speed','bronze-for-life-ii','bulky-buddies-iii','calculated-enhancement','flurry-of-blows','going-long','hedge-fund','immovable-object','investment-strategy-ii','piercing-lotus-ii','pumping-up-iii','radiant-relics','sword-overflow','trifecta-ii','wand-overflow']
 };
-AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link','sisters','mentorship','reunion','geniuses','menaces','unlikely-duo');
+AUGMENT_POOLS.silver.push('all-for-one-i');AUGMENT_POOLS.gold.push('trifecta-i','spirit-link','sisters','mentorship','reunion','menaces','unlikely-duo');
+AUGMENT_POOLS.prismatic.push('geniuses');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).
@@ -73,12 +74,11 @@ function augmentTier(seed,node){
     ||encounter==='prismatic-finale'&&node==='round:4-2:augment')return 'prismatic';
  }
 
- // Independent approved Wiki V12.9 table (2026-10-23): one root draw, denominator 101.
- const table=[['SSG',25],['SGG',15],['GSG',12],['GGG',10],['SSP',6],['GSS',5],['PSG',5],['SGP',4],
-  ['PGG',4],['GGP',3],['SPS',3],['GPG',3],['GSP',2],['PPP',2],['PSP',1],['SPP',1]];
+ // Independent 14.24 client CSV (approved 2026-10-23): 18 nonzero rows / 109.
+ const table=[['SSG',5],['SSP',5],['SGG',12],['SGP',5],['SPP',1],['GSG',18],['GSP',2],['GGG',22],['GGP',12],['GPS',6],['GPG',10],['GPP',1],['PSG',4],['PSP',1],['PGG',2],['PGP',1],['PPG',1],['PPP',1]];
  let hash=2166136261n;const name='augment-tier-sequence-v1';
  for(let i=0;i<name.length;i++)hash=((hash^BigInt(name.charCodeAt(i)))*16777619n)%4294967296n;
- let ticket=word(Number(BigInt(seed)^0x61756774n^hash))%101;
+ let ticket=word(Number(BigInt(seed)^0x61756774n^hash))%109;
  for(const [combination,weight] of table){
   if(ticket<weight)return {S:'silver',G:'gold',P:'prismatic'}[combination[index]];
   ticket-=weight;

@@ -1,17 +1,19 @@
 ## v22 候选：全桌强化等级组合（2026-10-23 用户批准；待 v22 统一录制）
 
-本节覆盖下文 v14/v15/PR2 的逐节点等权等级派生描述；按卡刷新、强化池与奇遇规则不变。来源为用户提供的 Wiki `TFT:Augment` → “Augment choices” 组合表（最后改动记录 V12.9；没有证据表明 14.24b 不同，按批准用于本版本），表内原整数权重合计 **101**，分母保留 101。完整有序表冻结在 `AUGMENT_OFFER_POLICY.tierCombinations`，随既有 `scripts/content-digest.ts` 的 augmentPolicy 输入进入内容 digest；策略版本为 `augment-tier-table-v22`，整体 epoch/digest/golden 待 v22 联合录制。
+本节覆盖下文 v14/v15/PR2 的逐节点等权等级派生描述及上一版 Wiki V12.9 表。来源为用户批准第 6 条的本地 `augments-research-2026-10-23/data/odds-all27.csv`，14.24 客户端 `TFT9_AugmentArmoryConfiguration_Table`（`RandomizeProbabilityTableGlobally=true`）。按 CSV 顺序保留原整数权重，18 个非零组合，权重合计/分母 **109**；9 个零权重组合不会从基础表抽出。完整有序表冻结在 `AUGMENT_OFFER_POLICY.tierCombinations`，随既有 `scripts/content-digest.ts` 的 augmentPolicy 输入进入内容 digest；策略版本仍为候选 `augment-tier-table-v22`，整体 epoch/digest/golden **待 v22 统一录制**。
 
-| 三次强化等级（银/金/彩） | 权重 |
+| 三次强化等级（银/金/彩，按 CSV 顺序） | 原权重 |
 | --- | --- |
-| 银银金 / 银金金 / 金银金 / 金金金 | 25 / 15 / 12 / 10 |
-| 银银彩 / 金银银 / 彩银金 / 银金彩 | 6 / 5 / 5 / 4 |
-| 彩金金 / 金金彩 / 银彩银 / 金彩金 | 4 / 3 / 3 / 3 |
-| 金银彩 / 彩彩彩 / 彩银彩 / 银彩彩 | 2 / 2 / 1 / 1 |
+| 银银金 / 银银彩 / 银金金 / 银金彩 / 银彩彩 | 5 / 5 / 12 / 5 / 1 |
+| 金银金 / 金银彩 / 金金金 / 金金彩 | 18 / 2 / 22 / 12 |
+| 金彩银 / 金彩金 / 金彩彩 | 6 / 10 / 1 |
+| 彩银金 / 彩银彩 / 彩金金 / 彩金彩 / 彩彩金 / 彩彩彩 | 4 / 1 / 2 / 1 / 1 / 1 |
 
-每局逻辑上只取一个组合，三个日程节点索引同一次样本。沿既有 UTF-16 FNV-1a32 算法（初值 `0x811c9dc5`、乘数 `0x01000193`、逐步 uint32），固定流名 `augment-tier-sequence-v1` 替代节点 ID；输入 `(rootSeed xor 0x61756774 xor streamHash) >>> 0`，lcg32-v1 仅取首词，`word % 101` 对应有序累计权重的半开区间。单机根为 Match.seed，联机根为 initializeSharedSeat 绑定的 SharedPoolState.seed（augmentTierSeed），与席位种子、调用顺序、候选或换牌次数无关。纯函数按不可变根重推同一组合，不新增可变 RNG/存档字段；不推进商店、候选、奖励、战斗、奇遇等任何现有流。恢复与回放共用此算法，私有投影仍不公开未来等级。
+每局逻辑上只取一个组合，三个日程节点索引同一次样本。沿既有 UTF-16 FNV-1a32 算法（初值 `0x811c9dc5`、乘数 `0x01000193`、逐步 uint32），固定流名 `augment-tier-sequence-v1` 替代节点 ID；输入 `(rootSeed xor 0x61756774 xor streamHash) >>> 0`，lcg32-v1 仅取首词，`word % 109` 对应有序累计权重的半开区间。单机根为 Match.seed，联机根为 initializeSharedSeat 绑定的 SharedPoolState.seed（augmentTierSeed），与席位种子、调用顺序、候选或换牌次数无关。纯函数按不可变根重推同一组合，不新增可变 RNG/存档字段；不推进商店、候选、奖励、战斗、奇遇等任何现有流。恢复与回放共用此算法，私有投影仍不公开未来等级。
 
 奇遇仍先覆盖指定位置，不重抽组合、不按奇遇重新归一化：`golden-gala`（范德尔/PR2 augment-policy）三节点全金；`prismatic-party`（艾克/PR2）三节点全彩；`prismatic-prelude`（黑默丁格/PR2）仅 2-1 彩；`prismatic-finale`（黑默丁格/PR2）仅 4-2 彩。其余位置保留基础组合，其他奇遇无等级覆盖；激活收据语义不变。
+
+同批批准第 7、8 条：`geniuses`（羁绊：天才）从金改彩，其他强化档位、能力/赠卡数值不变；服务器 `ROOM_TIMING_DEFAULTS.choiceMs=48_000`，`CAT_CHOICE_SEC` 和显式 `RoomOptions.choiceMs` 仍可覆盖。该时长沿用既有统一 choice 阶段（强化及其他选择），不新增按类型分流或领域时钟。期限前不自动选取，到期沿既有 `timeoutChoice`；不消耗新的 RNG。天才改彩/48 秒为项目决定 P，来源为用户 10-23 批准的 `perf-1022/rules-1023/approved-1023-batch2.md` 第 7、8 条。界面本地演示默认覆盖仍为 30 秒，需 Claude 同步；在线服务器默认已为 48 秒。
 
 接口：既有 Match/server-entry 导出的 `deriveAugmentTier(seed:number,choiceId:string):AugmentTier` 保留签名，只接受 `round:2-1:augment` / `round:3-2:augment` / `round:4-2:augment`，返回组合第 1/2/3 项；非法节点抛 `Error('Unknown augment tier node')`。`resolveAugmentTier` 签名不变、先用奇遇覆盖。领域内部/测试新增 `augment-offers.ts` 导出 `deriveAugmentTierSequence(seed:number):readonly [AugmentTier,AugmentTier,AugmentTier]`，返回未覆盖的基础组合；配置权重不覆盖票值时抛 `Error('Invalid augment tier combination weights')`。没有新增命令或失败原因枚举；命令失败仍原 state、无事件/资源/RNG 变化。旧规则历史录制不迁移、不改断言，本批恢复一致性针对当前实现新生成的状态。
 
