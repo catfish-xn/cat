@@ -2,7 +2,7 @@ import * as api from '../../src/simulation/match';
 import { accepted, configuredPrefix } from './t13-loot-public';
 
 // #265 independent bonus stream restores the original v15 public acquisition vectors.
-export const PARTIAL_REVEAL_SEEDS = {loris:139464,zyra:3464} as const;
+export const PARTIAL_REVEAL_SEEDS = {loris:2116,zyra:2116} as const;
 
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item
