@@ -363,6 +363,13 @@
       "currentSha256": "82339f0bae01e68c7587b1358010ae0b03c4c4457cc42f15d44929a386794c44",
       "firstDifferentByte": 910
     },
+    "tests/opening-encounter-ui.test.ts": {
+      "previousBytes": 10716,
+      "currentBytes": 10716,
+      "previousSha256": "c2a50c17568df3e2382a39ce13ec7a0374ac6e9e802bb6d29583abb004754256",
+      "currentSha256": "b8571ffc2104b6d5c072adf5db5dd2ee44127d63c491b26e9429d793d5a5173e",
+      "firstDifferentByte": 3945
+    },
     "tests/opening-random-identity.test.ts": {
       "previousBytes": 42713,
       "currentBytes": 46013,

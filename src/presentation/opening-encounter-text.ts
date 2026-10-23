@@ -93,8 +93,8 @@ export function monkeyFact(view: OpeningEncounterDisplay | null): { readonly nod
  */
 export function melProgressText(progress: OpeningMelProgressDisplay | null | undefined): string | null {
   if (!progress || !Number.isFinite(progress.thresholdHp)) return null;
-  return progress.thresholdReached ? '梅尔的祝福 · 已达门槛（奖励尚未启用）'
-    : `梅尔的祝福 · 生命值降到 ${progress.thresholdHp} 及以下时触发（奖励尚未启用）`;
+  return progress.thresholdReached ? '梅尔的赐福 · 已达门槛（奖励尚未启用）'
+    : `梅尔的赐福 · 生命值降到 ${progress.thresholdHp} 及以下时触发（奖励尚未启用）`;
 }
 /** Remaining opening forges (the pending count includes the one open now); null when there is nothing to forge. */
 export function forgeProgressText(progress: OpeningForgeProgressDisplay | null | undefined): string | null {
