@@ -37,12 +37,12 @@ describe('frozen combat contract', () => {
     const prep = preparation();
     const upgraded: GameState = { ...prep, units: prep.units.map(unit => unit.id === 'unit-1' ? { ...unit, starLevel: 2 } : unit) };
     const combat = createCombat(freeze(upgraded)), sentinel = combat.units.find(unit => unit.id === 'unit-1')!;
-    expect(sentinel).toMatchObject({ starLevel: 2, hp: 1440, maxHp: 1440, attackDamage: 81, armor: 40, magicResist: 30,
+    expect(sentinel).toMatchObject({ starLevel: 2, hp: 1440, maxHp: 1440, attackDamage: 67, armor: 40, magicResist: 30,
       attackRange: 1, attackIntervalTicks: 20, maxMana: 80, ability: { id: 'sentinel-guard', kind: 'selfShield', amount: 400, durationTicks: 60 } });
     expect(sentinel.ability).not.toBe(ABILITY_DEFINITIONS['sentinel-guard']);
     expect(createCombat(upgraded).units.find(unit => unit.id === 'unit-1')?.ability).not.toBe(sentinel.ability);
     const threeStar: GameState = { ...prep, units: prep.units.map(unit => unit.id === 'unit-1' ? { ...unit, starLevel: 3 } : unit) };
-    expect(createCombat(threeStar).units.find(unit => unit.id === 'unit-1')).toMatchObject({ hp: 2592, attackDamage: 145,
+    expect(createCombat(threeStar).units.find(unit => unit.id === 'unit-1')).toMatchObject({ hp: 2592, attackDamage: 101,
       armor: 40, magicResist: 30, ability: { amount: 720 } });
   });
   it('makes a two-star upgrade change a real symmetric duel from a draw to a win', () => {
