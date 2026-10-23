@@ -1551,7 +1551,8 @@ export class Room {
     const deadline = this.options.sliceMs === undefined ? Infinity : now() + (this.openingStreams ? Math.min(5, this.options.sliceMs / 2) : this.options.sliceMs);
     // Setup now yields inside rules calls. Reserve headroom for the next indivisible
     // step and GC; settlement retains its existing full budget.
-    const limit = this.options.sliceTicks ?? Infinity;
+    // Without a time budget, keep the old one-step-per-callback bound for openings.
+    const limit = this.openingStreams && this.options.sliceMs === undefined ? 1 : this.options.sliceTicks ?? Infinity;
     try {
       if (this.settlementCommands.length && !this.drainingSettlementCommands && !this.settlementFrozen) {
         const factory = this.settlementFactory;
