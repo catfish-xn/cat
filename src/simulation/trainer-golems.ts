@@ -47,7 +47,8 @@ export function enterTrainerGolems(state:MatchState):{state:MatchState;events:re
 export function validateTrainerGolems(state:MatchState):void {
  const check=(v:unknown)=>{if(!v)throw new OpeningEncounterError('opening-context-mismatch');};
  const grants=state.seatMechanics?.receipts.filter(r=>r.source===source||r.receiptId.startsWith(receiptId))??[];
- const units=state.preparation.units.filter(u=>u.definitionId===TRAINER_ID);
+ // Restore checks this before the structural roster check; a malformed roster is reported there.
+ const units=Array.isArray(state.preparation?.units)?state.preparation.units.filter(u=>u.definitionId===TRAINER_ID):[];
  if(openingEncounterId(state)!=='trainer-golems'){check(!grants.length&&!units.length);return;}
  check(grants.length===4&&units.length===1);
  const unit=units[0],birth=grants[0];

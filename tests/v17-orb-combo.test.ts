@@ -7,12 +7,14 @@ import {sampleOrbStagePlan,orbPlanTotals} from '../src/simulation/orb-stage-plan
 import {sampleOrbBox} from '../src/simulation/orb-box';
 import {createOrbLayout,freezeOrbLayoutThroughRound,restoreOrbLayout} from '../src/simulation/orb-layout';
 import {freezeLootThroughRound,restoreFrozenLootLedger} from '../src/simulation/loot-freeze';
-import {createMatch,claimOrb,rerollShop,equipItem,useConsumable,selectChoice} from '../src/simulation/match';
+import {createMatch,claimOrb,rerollShop,equipItem,useConsumable,selectChoice,openAnvil} from '../src/simulation/match';
+import {anvilChoiceId} from '../src/simulation/anvils';
+import {enterOpeningCrabs,openingCrabCarrier} from '../src/simulation/opening-crabs';
 import {prepareMatchLoot,revealMatchLoot,grantDirectLoot} from '../src/simulation/loot-runtime';
 import {toPrivateSeatView} from '../src/simulation/private-seat-view';
 import {readLootView,readPublicOrbSummary} from '../src/simulation/loot-view';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
-import {epicForgeOffers,openEpicForge,epicForgeId} from '../src/simulation/epic-forges';
+import {epicForgeOffers,openEpicForge} from '../src/simulation/epic-forges';
 import {G24_FORGE_POOLS} from '../src/simulation/content/g2-4-forges';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {getUnitSellPrice} from '../src/simulation/unit-stats';
@@ -96,8 +98,10 @@ describe('v17 orb combination — eleven contract acceptance groups',()=>{
    }
    expect(JSON.stringify({seed:v.seed,shops,reforges})).toBe(JSON.stringify(v));
   }
-  const p=freezeLootThroughRound(42,10).rounds.at(-1)!,sources=[...new Set(p.orbs.map(o=>o.sourceUnitId))];
-  const round=getCatalogRoundById('2-7'),base=createMatch(42),prepared:MatchState={...base,round:10,roundDefinitionId:'2-7',m8:{...base.m8,round,loot:prepareMatchLoot(42,10)},preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...createRoundEnemies(10)]}};
+  // v22 opening encounters: seed 42 rolls Scuttle Puddle, so each orb's carrier is the crab mapped from its original source.
+  const base=createMatch(42),carrier=(id:string)=>openingCrabCarrier(base,'2-7',id);
+  const p=freezeLootThroughRound(42,10).rounds.at(-1)!,sources=[...new Set(p.orbs.map(o=>carrier(o.sourceUnitId)))];
+  const round=getCatalogRoundById('2-7'),prepared:MatchState=enterOpeningCrabs({...base,round:10,roundDefinitionId:'2-7',m8:{...base.m8,round,loot:prepareMatchLoot(42,10)},preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...createRoundEnemies(10)]}});
   const raw=createCombat(prepared.preparation);
   const reveal=(dead:readonly string[])=>{
    const combat={...raw,combatId:'round-10',tick:1,nextEventSeq:sources.length+1,status:'finished' as const,result:'playerWin' as const,units:raw.units.map(u=>dead.includes(u.id)?{...u,alive:false,hp:0}:u),neutralReceipts:{deaths:dead.map((unitId,i)=>({unitId,tick:1,eventSeq:i+1})),controls:[]}};
@@ -105,7 +109,7 @@ describe('v17 orb combination — eleven contract acceptance groups',()=>{
   };
   const all=reveal(sources),reversed=reveal([...sources].reverse()),partial=reveal(sources.slice(1));
   for(const o of p.orbs){const payloads=o.entries.map(e=>e.payload);expect(all.m8.loot.frozen.rounds.at(-1)!.orbs.find(x=>x.orbId===o.orbId)!.entries.map(e=>e.payload)).toEqual(payloads);expect(reversed.m8.loot.frozen).toBe(all.m8.loot.frozen);expect(partial.m8.loot.frozen).toBe(all.m8.loot.frozen);}
-  expect(partial.m8.loot.direct.filter(d=>d.status==='forfeited').map(d=>d.dropId)).toEqual(p.orbs.filter(o=>o.sourceUnitId===sources[0]).flatMap(o=>o.entries.map(e=>e.dropId)));
+  expect(partial.m8.loot.direct.filter(d=>d.status==='forfeited').map(d=>d.dropId)).toEqual(p.orbs.filter(o=>carrier(o.sourceUnitId)===sources[0]).flatMap(o=>o.entries.map(e=>e.dropId)));
  });
  it('7: every box row opens correctly, D2 omits only unsupported atoms; two-star pool/shortage/capacity accounting',()=>{
   for(const [id,rows] of Object.entries(ORB_BOXES)){
@@ -134,7 +138,9 @@ describe('v17 orb combination — eleven contract acceptance groups',()=>{
  it('8: duplicators come only from selected box rows; legacy loot cursor is reserved for unchanged epic structure',()=>{
   for(let seed=0;seed<100;seed++){
    const early=freezeLootThroughRound(seed,24);expect(early.rng).toEqual({state:(seed^0xdeadbeef)>>>0,draws:0});
-   for(const r of early.rounds)for(const o of r.orbs)expect(o.entries.map(e=>e.payload)).toEqual(sampleOrbBox(seed,o.orbId,o.templateId).payloads);
+   // v22: the first 4-7 orb appends one component anvil after its sampled box, without RNG.
+   for(const r of early.rounds)for(const o of r.orbs)expect(o.entries.map(e=>e.payload)).toEqual([...sampleOrbBox(seed,o.orbId,o.templateId).payloads,
+    ...(r.encounterPlan.roundId==='4-7'&&o===r.orbs[0]?[{kind:'forge',definitionId:'TFT_ArmoryKeyComponent',quantity:1}]:[])]);
    const full=freezeLootThroughRound(seed,38),expected=oracle.lootPlan(seed,38);expect(full.rng).toEqual(expected.rng);expect(full.rounds.slice(6)).toEqual(expected.rounds.slice(6));
   }
  });
@@ -151,16 +157,21 @@ describe('v17 orb combination — eleven contract acceptance groups',()=>{
  it('10: component forge offers four unique ordinary components and follows the existing choice/receipt path',()=>{
   expect(G24_FORGE_POOLS.TFT_ArmoryKeyComponent).toEqual(['belt','bow','cloak','gloves','rod','sword','tear','vest']);
   for(let seed=0;seed<100;seed++){const offers=epicForgeOffers(seed,'synthetic','TFT_ArmoryKeyComponent');expect(new Set(offers).size).toBe(4);for(const id of offers)expect(G24_FORGE_POOLS.TFT_ArmoryKeyComponent).toContain(id);}
-  let state=createMatch(42);const drop=state.m8.loot.frozen.rounds[0].encounterPlan.drops[0],receiptId=JSON.stringify([drop.dropId,'grant']);
-  const payload:LootPayload={kind:'forge',definitionId:'TFT_ArmoryKeyComponent',quantity:1};
-  state={...state,m8:{...state.m8,loot:{...state.m8.loot,receipts:[{receiptId,dropId:drop.dropId,payload,grantedItemIds:[],grantedUnitIds:[]}]}}};
-  for(const definitionId of Object.keys(G24_FORGE_POOLS))expect(()=>validateResourceReceipts({scheduleReceipts:[],lootReceipts:[{...state.m8.loot.receipts[0],payload:{kind:'forge',definitionId:definitionId as typeof payload.definitionId,quantity:1}}],throughRoundOrdinal:1})).not.toThrow();
-  expect(()=>validateResourceReceipts({scheduleReceipts:[],lootReceipts:[{...state.m8.loot.receipts[0],payload:{kind:'forge',definitionId:'unknown-forge' as typeof payload.definitionId,quantity:1}}],throughRoundOrdinal:1})).toThrow('forge grant');
-  const opened=openEpicForge(state).state,c=opened.pendingChoice!;expect(c.choiceId).toBe(epicForgeId(receiptId));
+  // v22 anvil units: the forge receipt births one bench anvil; opening it uses the same choice/receipt path.
+  const solo=createMatch(42),payload:LootPayload={kind:'forge',definitionId:'TFT_ArmoryKeyComponent',quantity:1};
+  const drop={...solo.m8.loot.frozen.rounds[0].encounterPlan.drops[0],payload} as FrozenDirectDrop;
+  const state=grantDirectLoot({...solo,m8:{...solo.m8,loot:{...solo.m8.loot,direct:[{dropId:drop.dropId,status:'revealed' as const,receiptId:null}]}}},false,undefined,[drop]).state;
+  const receipt=state.m8.loot.receipts.at(-1)!;expect(receipt).toMatchObject({payload,grantedItemIds:[]});expect(receipt.grantedUnitIds).toHaveLength(1);
+  for(const definitionId of Object.keys(G24_FORGE_POOLS))expect(()=>validateResourceReceipts({scheduleReceipts:[],lootReceipts:[{...receipt,payload:{kind:'forge',definitionId:definitionId as typeof payload.definitionId,quantity:1}}],throughRoundOrdinal:1})).not.toThrow();
+  expect(()=>validateResourceReceipts({scheduleReceipts:[],lootReceipts:[{...receipt,payload:{kind:'forge',definitionId:'unknown-forge' as typeof payload.definitionId,quantity:1}}],throughRoundOrdinal:1})).toThrow('forge grant');
+  expect(openEpicForge(state).state).toBe(state);
+  const opened=accepted(openAnvil(state,receipt.grantedUnitIds[0])),c=opened.pendingChoice!;expect(c.choiceId).toBe(anvilChoiceId(receipt.grantedUnitIds[0]));
+  expect(c.offers).toEqual(epicForgeOffers(42,receipt.receiptId,'TFT_ArmoryKeyComponent'));
   const paid=accepted(selectChoice(opened,c.choiceId,c.generation,c.offers[0]));expect(paid.items.at(-1)!.definitionId).toBe(c.offers[0]);expect(openEpicForge(paid).state).toBe(paid);
  });
  it('11: current saves replay-authenticate layout/loot; prior schema/save versions and forged ledgers reject',()=>{
-  expect(M8_VERSION).toMatchObject({schemaVersion:12,saveFormatVersion:8,replayFormatVersion:6});const s=createMatch(42);expect(restoreMatch(serializeMatch(s))).toEqual(s);
+  // v22 anvil units bumped the replay format to 7.
+  expect(M8_VERSION).toMatchObject({schemaVersion:12,saveFormatVersion:8,replayFormatVersion:7});const s=createMatch(42);expect(restoreMatch(serializeMatch(s))).toEqual(s);
   for(const schemaVersion of [7,6])expect(()=>restoreMatch({...s,schemaVersion})).toThrow();
   expect(routeSaveFile({kind:'hex-autobattler-save',saveFormatVersion:3,replayFormatVersion:3,match:{...s,rulesVersion:'s13-g2-3-v16'}}).view).toMatchObject({status:'rejected',reason:'unsupported-version'});
   expect(()=>restoreMatch({...s,rulesVersion:'s13-g2-3-v16',contentVersion:'s13-14.24b-g2-3-v16'})).toThrow();

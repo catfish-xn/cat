@@ -25,7 +25,7 @@ describe('M6 seed and file boundaries', () => {
     expect(copy).toEqual(original); expect(copy).not.toBe(original); expect(copy.match).not.toBe(original.match); expect(history).toHaveBeenCalledTimes(1);
   });
   // v21-opening-encounters accepts save8/replay6; prior and unknown formats are refused.
-  it.each([{ extra: true }, { kind: 'wrong' }, { saveFormatVersion: 1 }, { replayFormatVersion: 1 }, { saveFormatVersion: 2 }, { replayFormatVersion: 2 }, { saveFormatVersion: 3 }, { saveFormatVersion: 4 }, { replayFormatVersion: 3 }, { saveFormatVersion: 5 }, { saveFormatVersion: 6 }, { saveFormatVersion: 7 }, { saveFormatVersion: 9 }, { replayFormatVersion: 4 }, { replayFormatVersion: 5 }, { replayFormatVersion: 7 }, { runId: '' }, { createdAt: 'bad' }, { currentBattle: [] }])('rejects outer corruption before history %j', async patch => {
+  it.each([{ extra: true }, { kind: 'wrong' }, { saveFormatVersion: 1 }, { replayFormatVersion: 1 }, { saveFormatVersion: 2 }, { replayFormatVersion: 2 }, { saveFormatVersion: 3 }, { saveFormatVersion: 4 }, { replayFormatVersion: 3 }, { saveFormatVersion: 5 }, { saveFormatVersion: 6 }, { saveFormatVersion: 7 }, { saveFormatVersion: 9 }, { replayFormatVersion: 4 }, { replayFormatVersion: 5 }, { replayFormatVersion: 6 }, { replayFormatVersion: 8 }, { runId: '' }, { createdAt: 'bad' }, { currentBattle: [] }])('rejects outer corruption before history %j', async patch => {
     const history = vi.fn(); await expect(validateEnvelope({ ...envelope(), ...patch }, history)).rejects.toThrow(); expect(history).not.toHaveBeenCalled();
   });
   it('checks file byte size before reading and bad JSON before history', async () => {

@@ -17,6 +17,7 @@ import {prepareMatchLoot,revealMatchLoot} from '../src/simulation/loot-runtime';
 import {createRoundEnemies} from '../src/simulation/round-enemies';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
 import {createCombat} from '../src/simulation/combat';
+import {enterOpeningCrabs,openingCrabCarrier} from '../src/simulation/opening-crabs';
 import {foldResourceProvenance} from '../src/simulation/resource-provenance';
 import type {MatchState} from '../src/simulation/match-types';
 import type {SharedPoolState} from '../src/simulation/shared-pool-types';
@@ -38,6 +39,9 @@ function unchanged(pool:SharedPoolState,state:MatchState,orbId:string,reason:str
   expect(JSON.stringify({pool,state})).toBe(before);
 }
 const twoCost=['leona','vander','rell','tristana','urgot','renata','sett'];
+// v22 opening encounters: this room seed rolls Scuttle Puddle, whose crab kills pay
+// 1 gold each through the seat's own opening-batch-b receipts this round.
+const openingCrabGold=(state:MatchState)=>(state.seatMechanics?.receipts??[]).reduce((n,r)=>n+(r.kind==='gold'&&r.source==='opening-batch-b'&&r.round===state.round?r.amount:0),0);
 function unusedTwoCost(state:MatchState){return twoCost.find(id=>!state.preparation.units.some(u=>u.definitionId===id))!;}
 function finish(pool:SharedPoolState,state:MatchState) {
   let r={pool,state},budget=1201;
@@ -186,9 +190,11 @@ describe('multiplayer explicit orb claims',()=>{
     const layout=freezeOrbLayoutThroughRound(initial.pool.orbLayout,round.ordinal+1);if(!layout.ok)throw Error(layout.reason);
     const pool={...initial.pool,orbLayout:layout.layout},old=initial.states[0],record=fight(initial.pool,old).state.roundResults[0];
     const loot=prepareMatchLoot(old.seed,round.ordinal,old.m8.loot,layout.layout),enemies=createRoundEnemies(round.ordinal);
-    let state:MatchState={...old,round:round.ordinal,roundDefinitionId:round.roundId,m8:{...old.m8,round,loot},
-      preparation:{...old.preparation,units:[...old.preparation.units.filter(u=>u.team==='player'),...enemies]}};
-    const plan=loot.frozen.rounds.at(-1)!,sources=[...new Set(plan.orbs.map(o=>o.sourceUnitId))],raw=createCombat(state.preparation);
+    // v22 opening encounters: this room seed rolls a crab encounter, so kill the crab
+    // that carries each original loot source.
+    let state:MatchState=enterOpeningCrabs({...old,round:round.ordinal,roundDefinitionId:round.roundId,m8:{...old.m8,round,loot},
+      preparation:{...old.preparation,units:[...old.preparation.units.filter(u=>u.team==='player'),...enemies]}});
+    const plan=loot.frozen.rounds.at(-1)!,sources=[...new Set(plan.orbs.map(o=>openingCrabCarrier(old,round.roundId,o.sourceUnitId)))],raw=createCombat(state.preparation);
     const combat={...raw,combatId:`round-${state.round}`,status:'finished' as const,result:'draw' as const,tick:5,nextEventSeq:30,
       units:raw.units.map(u=>sources.includes(u.id)?{...u,alive:false,hp:0}:u),neutralReceipts:{deaths:sources.map((unitId,i)=>({unitId,tick:4,eventSeq:7+i})),controls:[]}};
     state={...revealMatchLoot(state,combat).state,phase:'settlement',combat};
@@ -311,7 +317,7 @@ describe('multiplayer explicit orb claims',()=>{
     expect(receiptTotals(receipts)).toEqual({count:1,gold:expected.gold});
     expect(receipts[0].resolution).toBe(expected.resolution);
     expect(done.pool.available[id]).toBe(current.pool.available[id]-expected.copies);
-    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win)+expected.gold);
+    expect(done.state.gold).toBe((done.state.roundResults.at(-1)!.goldBefore+done.state.roundResults.at(-1)!.incomeBreakdown.win)+openingCrabGold(done.state)+expected.gold);
     expect(done.state.preparation.units.some(u=>u.definitionId===id&&u.starLevel===2)).toBe(sell);
     const after=restoreSharedOrbSnapshot(done.pool,JSON.stringify(done.state));unchanged(done.pool,after,orbId,'already-claimed');
     const retry=accept(runSharedMatchCommand(done.pool,after,{type:'step'}));expect(retry.state).toBe(after);expect(retry.pool).toBe(done.pool);
@@ -361,7 +367,9 @@ describe('multiplayer explicit orb claims',()=>{
     expect(stepMatch(after).state).toBe(after);independentConservation(done.pool);assertSharedPoolConservation(done.pool,[after]);
   });
   it('PvE damage eliminates before queued rewards can allocate any copies or sale gold',()=>{
-    const initial=room(undefined,1),round=getCatalogRoundById('2-7');
+    // v22 45s combat + overtime lets the lone opening unit outlast 2-7 krugs, so
+    // use the 3-7 wolves, which still beat it and deal real PvE damage.
+    const initial=room(undefined,1),round=getCatalogRoundById('3-7');
     // Isolate the later PvE damage boundary with its real enemies and a real shared holding.
     const advanced=syntheticSharedRound(initial.pool,initial.states,round.ordinal),base=advanced.states[0];
     const state=gift({...base,roundDefinitionId:round.roundId,playerHp:1,m8:{...base.m8,round},

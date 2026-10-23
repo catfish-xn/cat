@@ -3,6 +3,7 @@ import { finishPublicEquipmentBattle, benchPublicEquipmentPlayers, resolvePublic
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
 import { S13_P2_SOURCE } from '../../src/simulation/content/s13-augments-p2-source';
 import { P2_ITEM_GRANTS } from '../../src/simulation/content/s13-augments-p2';
+import { TEAMUP_IDS } from '../../src/simulation/content/v20-traits';
 
 const accepted = (result: MatchCommandResult): MatchState => {
   if (!result.ok) throw Error(`Public TG supply route: ${result.reason}`);
@@ -10,7 +11,10 @@ const accepted = (result: MatchCommandResult): MatchState => {
 };
 const cached = new Map<string, MatchState>();
 // Keep this TG-only route free of earlier item births, including P1/P3 gifts.
-const extraItemChoices = new Set(['high-voltage','pyromaniac','thorn-plated-armor','unleash-the-beast','portable-forge','radiant-relics','blinding-speed']);
+const extraItemChoices = new Set(['high-voltage','pyromaniac','thorn-plated-armor','unleash-the-beast','portable-forge','radiant-relics','blinding-speed',
+  // v22 tiers offer team-ups (two partner units) and Investment Strategy (max-HP growth) on this route;
+  // both would change the bench and the independent holder stats, so keep them out as well.
+  ...TEAMUP_IDS,'investment-strategy-i','investment-strategy-ii']);
 /** T13's five supply choices remain guaranteed. Concede with an empty board to
  * obtain two gloves at 2-4/3-4 without depending on random PvE content. The level-9
  * control fights the opening to retain enough HP for 4-2. All battles, income,
@@ -19,7 +23,10 @@ export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
   const key = JSON.stringify([seed, roundId]);
   if (cached.has(key)) return structuredClone(cached.get(key)!);
   let state = resolvePublicEquipmentChoices(createMatch(seed));
-  if (roundId !== '4-2') state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'bench', slot: 0 }));
+  // v22 anvils are bench units, so bench the opening unit in the first free slot.
+  const freeSlot = (s: MatchState) => Array.from({ length: s.preparation.benchSize }, (_, i) => i)
+    .find(i => !s.preparation.units.some(u => u.location.kind === 'bench' && u.location.slot === i))!;
+  if (roundId !== '4-2') state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'bench', slot: freeSlot(state) }));
   for (let budget = 0; budget < 40; budget++) {
     while (state.phase === 'choice') {
       const choice = state.pendingChoice!;

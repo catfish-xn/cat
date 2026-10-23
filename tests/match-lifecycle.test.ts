@@ -27,9 +27,10 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   const opening=emptyBoard(reachRound('2-1'));expect(opening).toMatchObject({level:3,xp:2});
   const prep=accepted(buyXp(opening));expect(prep).toMatchObject({level:4,xp:0});
   const settled=accepted(startMatchCombat(prep));
-  expect(settled).toMatchObject({phase:'settlement',level:4,xp:2,gold:11-deferredRoundIncome(settled.roundResults.at(-1)!),playerHp:86});
+  expect(settled).toMatchObject({phase:'settlement',level:4,xp:2,gold:13-deferredRoundIncome(settled.roundResults.at(-1)!),playerHp:86});
   expect(settled.roundResults.at(-1)).toMatchObject({xpRequested:2,xpAwarded:2,levelBefore:4,levelAfter:4,xpBefore:0,xpAfter:2});
-  const next=accepted(nextRound(settled,settled.round));expect(next.gold).toBe(11);expect({shop:next.shop,rngState:next.rngState}).toEqual(shop(settled.rngState,settled.shop.generation+1,4));
+  // v22 PvE streaks: the three empty 1-x losses count, so this fourth loss adds streak gold 1 (7+5+1).
+  const next=accepted(nextRound(settled,settled.round));expect(next.gold).toBe(13);expect({shop:next.shop,rngState:next.rngState}).toEqual(shop(settled.rngState,settled.shop.generation+1,4));
   // Keep the original natural-level-crossing coverage, now reached without buying XP.
   const natural=accepted(startMatchCombat(emptyBoard(reachRound('2-2'))));
   expect(natural.roundResults.at(-1)).toMatchObject({xpRequested:2,xpAwarded:2,levelBefore:3,levelAfter:4,xpBefore:4,xpAfter:0});
@@ -84,6 +85,9 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   if(!started.ok)throw Error(started.reason);
   const basis=state.combatInputBasis,basisBefore=structuredClone(basis),events:MatchEvent[]=[...started.events];
   const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']),heroSource=JSON.stringify(['pve','1-2','minions-a-v1','m02']);
+  // v22 enables crab encounters: seed 42 rolls scuttle-puddle, so the m01/m02 drops keep their
+  // original identities but are carried by the first/second crab, whose deaths reveal them.
+  const sourceCarrier=JSON.stringify(['pve','1-2','scuttle-puddle/1-2','c0']),heroCarrier=JSON.stringify(['pve','1-2','scuttle-puddle/1-2','c1']);
   const dropId=JSON.stringify([JSON.stringify(['orb','1-2','minions-a-v1',sourceUnitId,0]),0]),heroDropId=JSON.stringify([JSON.stringify(['orb','1-2','minions-a-v1',heroSource,0]),0]);
   const itemReceipt={receiptId:JSON.stringify([dropId,'grant']),dropId,payload:{kind:'item',definitionId:'belt',quantity:1},grantedItemIds:['item-1'],grantedUnitIds:[]};
   const receiptId=JSON.stringify([heroDropId,'grant']),receipt={receiptId,dropId:heroDropId,payload:{kind:'unit',definitionId:'tristana',quantity:1},grantedItemIds:[],grantedUnitIds:['unit-2']};
@@ -102,11 +106,13 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
     expect(state.preparation).toEqual({...prep.preparation,units:[...prep.preparation.units.filter(u=>u.team==='enemy'),...players(prep),maddie]});
     expect(state.nextUnitSerial).toBe(3);expect(state.items).toEqual([...prep.items,{id:'item-1',definitionId:'belt',location:{kind:'inventory'}}]);expect(state.nextItemSerial).toBe(prep.nextItemSerial+1);
     expect(state.m8.loot.receipts).toEqual([itemReceipt,receipt]);expect(state.consumables).toHaveLength(1);expect(step.events.filter(e=>e.domain==='match')).toEqual([
-     {type:'lootRevealed',dropId:heroDropId,death:{combatId:'round-1',tick:state.combat!.tick,eventSeq:step.events.find(e=>e.type==='death'&&e.unitId===heroSource)!.eventSeq},domain:'match',eventSeq:prior.nextMatchEventSeq},
+     {type:'lootRevealed',dropId:heroDropId,death:{combatId:'round-1',tick:state.combat!.tick,eventSeq:step.events.find(e=>e.type==='death'&&e.unitId===heroCarrier)!.eventSeq},domain:'match',eventSeq:prior.nextMatchEventSeq},
      {type:'lootGranted',receipt:itemReceipt,domain:'match',eventSeq:prior.nextMatchEventSeq+1},
      {type:'lootGranted',receipt,domain:'match',eventSeq:prior.nextMatchEventSeq+2},
-     {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prior.nextMatchEventSeq+3},
-     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+4},
+     // v22 scuttle-puddle: each slain crab pays one gold through its own settlement receipt.
+     ...['c0','c1'].map((crab,i)=>({type:'mechanicGranted',receipt:{receiptId:`opening-batch-b/${JSON.stringify(['scuttle-puddle','round-1',JSON.stringify(['pve','1-2','scuttle-puddle/1-2',crab]),0])}`,source:'opening-batch-b',kind:'gold',round:1,roundId:'1-2',amount:1},domain:'match',eventSeq:prior.nextMatchEventSeq+3+i})),
+     {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prior.nextMatchEventSeq+5},
+     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+6},
     ]);
     expect(state.resourceProvenance).toEqual({...prep.resourceProvenance,entries:[...prep.resourceProvenance.entries,
      {sequence:1,roundId:'1-2',kind:'item-acquired',itemId:'item-1',source:{kind:'loot',receiptId:itemReceipt.receiptId}},
@@ -115,15 +121,16 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
     ]});
    }
   }
-  const drops=[{dropId,sourceUnitId},{dropId:heroDropId,sourceUnitId:heroSource}];
-  const evidence=drops.map(d=>{const deaths=events.filter((e):e is Extract<MatchEvent,{type:'death'}>=>e.type==='death'&&e.unitId===d.sourceUnitId);expect(deaths).toHaveLength(1);return {dropId:d.dropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq}};});
+  const drops=[{dropId,carrier:sourceCarrier},{dropId:heroDropId,carrier:heroCarrier}];
+  const evidence=drops.map(d=>{const deaths=events.filter((e):e is Extract<MatchEvent,{type:'death'}>=>e.type==='death'&&e.unitId===d.carrier);expect(deaths).toHaveLength(1);return {dropId:d.dropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq}};});
   expect(state.m8.loot.earnedEvidence).toEqual(evidence);
   expect(events.filter(e=>e.domain==='match')).toEqual([
    ...evidence.map((e,i)=>({type:'lootRevealed',...e,domain:'match',eventSeq:prep.nextMatchEventSeq+i})),
    {type:'lootGranted',receipt:itemReceipt,domain:'match',eventSeq:prep.nextMatchEventSeq+2},
    {type:'lootGranted',receipt,domain:'match',eventSeq:prep.nextMatchEventSeq+3},
-   {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prep.nextMatchEventSeq+4},
-   {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+5},
+   ...['c0','c1'].map((crab,i)=>({type:'mechanicGranted',receipt:{receiptId:`opening-batch-b/${JSON.stringify(['scuttle-puddle','round-1',JSON.stringify(['pve','1-2','scuttle-puddle/1-2',crab]),0])}`,source:'opening-batch-b',kind:'gold',round:1,roundId:'1-2',amount:1},domain:'match',eventSeq:prep.nextMatchEventSeq+4+i})),
+   {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prep.nextMatchEventSeq+6},
+   {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+7},
   ]);
   expect(state.m8.loot.frozen).toBe(prep.m8.loot.frozen);
   expect(state.m8.loot.direct).toEqual([{dropId,status:'granted',receiptId:itemReceipt.receiptId},{dropId:heroDropId,status:'granted',receiptId}]);

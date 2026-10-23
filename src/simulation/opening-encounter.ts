@@ -203,6 +203,8 @@ export function applyOpeningEffects(state: MatchState, facts: readonly OpeningEf
       if(same(opening.receipts,[...expected,...expectedMelThresholdReceipts(state)])){
         validateOpeningEncounterState(state,shared);return {ok:true,state,events:[]};
       }
+      // Forged or foreign receipts are a context mismatch (contract), not an invalid effect.
+      if(!same(opening.receipts,expected.slice(0,-1)))validateOpeningEncounterState(state,shared);
       if(!due||!same(opening.receipts,expected.slice(0,-1))||state.phase!=='preparation'||state.pendingChoice
         ||state.playerHp<=0||state.multiplayer?.status==='eliminated')fail('invalid-opening-effect');
       validateOpeningRewards(state);

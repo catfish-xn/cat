@@ -24,18 +24,18 @@ const run = (a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, seed = 42) => res
 const local = (value: BattleInput, seatId: string, originalId: string, kind = 'unit') => value.mapping.find(m=>m.seatId === seatId && m.originalId === originalId && m.kind === kind)!.combatId;
 
 describe('T2 true two-sided combat', () => {
-  it('hand oracle: 3-star Maddie defeats 1-star Maddie in four simultaneous basic attacks', () => {
-    // Frozen content: HP 500, AD 50, armor 15, 0.7 attacks/s; 3-star = 324% HP/AD.
-    // Seed42 LCG's first 8 words alternate noncrit(A), crit(B). No skill reaches 120 mana.
-    // A hit floor(162*100/115)=140; B crit floor(50*1.4*100/115)=60.
-    // Four attacks at ticks 1,30,59,88: B loses 560 HP; A has 1620-240=1380 HP.
+  it('hand oracle: 3-star Maddie defeats 1-star Maddie in six simultaneous basic attacks', () => {
+    // Frozen content: HP 500, AD 50, armor 15, 0.7 attacks/s; v22 3-star = 324% HP, 225% AD (112).
+    // A never crits in seed42's first 12 words; B crits 4 of its 6 rolls. No skill reaches 120 mana.
+    // A hit floor(112*100/115)=97; B hit floor(50*100/115)=43, crit floor(50*1.4*100/115)=60.
+    // Six attacks at ticks 1,30,59,88,117,146: B loses 582 HP; A has 1620-(4*60+2*43)=1294 HP.
     const a = snap([hero('maddie','unit-1',3)],'A'), b = snap([hero('maddie')],'B');
     const result = run(a,b);
     expect(result.winnerSeatId).toBe('A');
-    expect(result.terminal.tick).toBe(88);
-    expect(result.a.survivors).toEqual([{unitId:'unit-1',definitionId:'maddie',starLevel:3,hp:1380}]);
+    expect(result.terminal.tick).toBe(146);
+    expect(result.a.survivors).toEqual([{unitId:'unit-1',definitionId:'maddie',starLevel:3,hp:1294}]);
     expect(result.b.survivors).toEqual([]);
-    expect(result.terminal.rngDraws).toBe(8);
+    expect(result.terminal.rngDraws).toBe(12);
     const proposal = proposeSettlement(result);
     expect(proposal.a).toMatchObject({seatId:'A',result:'win',damage:0});
     expect(proposal.b).toMatchObject({seatId:'B',result:'loss',baseDamage:2,opposingSurvivors:1,damage:3});
@@ -43,7 +43,7 @@ describe('T2 true two-sided combat', () => {
   });
 
   it('a fixed two-star A wins against one-star B and loses against three-star B', () => {
-    // Identical hero/ability, but HP and AD scale 100/180/324%; assert actual expected winners.
+    // Identical hero/ability, but HP scales 100/180/324% and AD 100/150/225%; assert actual expected winners.
     const a = snap([hero('maddie','unit-1',2)],'A');
     expect(run(a,snap([hero('maddie')],'B')).winnerSeatId).toBe('A');
     expect(run(a,snap([hero('maddie','unit-1',3)],'B')).winnerSeatId).toBe('B');
@@ -160,14 +160,14 @@ describe('T2 true two-sided combat', () => {
     expect(JSON.stringify(both)).toBe(before);
   });
 
-  it('real equipped tanks reach the unchanged 1200-tick limit; budget exhaustion is not a draw', () => {
+  it('real equipped tanks reach the v22 45s (900-tick) combat limit inside a 1200-tick budget; budget exhaustion is not a draw', () => {
     const tanks = (seatId: string) => snap([hero('leona','unit-1',3)],seatId,{
       items:['warmog','dragons-claw','gargoyle'].map((definitionId,slot)=>({id:`item-${slot+1}`,definitionId,location:{kind:'unit' as const,unitId:'unit-1',slot}})),
     });
     const battle = input(tanks('A'),tanks('B'));
     expect(()=>resolveTwoSidedBattle(battle,1)).toThrow('step-limit-exceeded');
     const result = resolveTwoSidedBattle(battle,1200);
-    expect(result.terminal.tick).toBe(1200); expect(result.winnerSeatId).toBeNull();
+    expect(result.terminal.tick).toBe(900); expect(result.winnerSeatId).toBeNull();
     expect(result.a.survivors).toHaveLength(1); expect(result.b.survivors).toHaveLength(1);
     expect(result.events.at(-1)).toMatchObject({type:'combatFinished',reason:'timeout'});
     expect(proposeSettlement(result).a.damage).toBe(3); expect(proposeSettlement(result).b.damage).toBe(3);
@@ -283,6 +283,6 @@ describe('T2 true two-sided combat', () => {
     (badBoard.preparation.board as {rows:number}).rows = 9;
     expect(()=>snapshotForBattle(badBoard,'A')).toThrow('invalid-snapshot');
     expect(()=>proposeSettlement({...run(a,b),winnerSeatId:'stranger'})).toThrow('invalid-result');
-    expect(getUnitStats('maddie',3).attack).toBe(162);
+    expect(getUnitStats('maddie',3).attack).toBe(112);
   });
 });

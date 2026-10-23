@@ -12,6 +12,12 @@ import type {G23MatchProgress} from './g2-3-match-progress';
 import {emptySeatMechanics} from './seat-mechanics/state';
 import {g23Laboratories} from './g2-3-experiment';
 import {deriveTraits} from './trait-snapshot';
+/** Settled economy receipts only. Expands no reward atoms, so restore-time readers that run before
+ * validateG23RewardSources never sample an unauthenticated reward descriptor. */
+export function readG23EconomyReceipts(state:Pick<MatchState,'seatMechanics'>):G23MatchProgress['economyReceipts']{
+ const m=state.seatMechanics;if(!m?.seat.academy||!m.seat.junkerKing||!m.seat.alchemist)return [];
+ return (m.hidden.progress as {economyReceipts?:G23MatchProgress['economyReceipts']}|undefined)?.economyReceipts??[];
+}
 /** The DTO is reconstructed from disjoint container fields; never persisted alongside them. */
 export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatMechanics'];readonly g23?:G23MatchProgress;readonly multiplayer?:MatchState['multiplayer'];readonly m8?:MatchState['m8']}):G23MatchProgress|undefined{
  if(state.g23)return state.g23; // immutable combat-input DTO, never a MatchState field

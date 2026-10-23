@@ -7,7 +7,7 @@ import { COMPONENT_POOL } from './component-pool';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
 import { openingSeatDraw, weightedOpeningIndex } from './opening-batch-b-rng';
 import { warwickLoot } from './opening-warwick';
-import { readG23Progress } from './g2-3-state';
+import { readG23EconomyReceipts } from './g2-3-state';
 import { grantMechanicGold, grantMechanicItem, grantMechanicUnit } from './seat-mechanics/grants';
 import { appendMechanicReceipt } from './seat-mechanics/state';
 import type { G23BattleFacts } from './g2-3-economy';
@@ -45,7 +45,7 @@ export function openingBattleRewards(state:MatchState,facts:G23BattleFacts):read
 }
 export function openingRewards(state:MatchState):readonly OpeningReward[]{
  if(!['warwicks-hunger','scuttle-puddle','crab-rave'].includes(openingEncounterId(state)??''))return [];
- return (readG23Progress(state)?.economyReceipts??[]).flatMap(r=>r.kind==='battle'?openingBattleRewards(state,r.facts):[]);
+ return readG23EconomyReceipts(state).flatMap(r=>r.kind==='battle'?openingBattleRewards(state,r.facts):[]);
 }
 const claimed=(state:MatchState,id:string)=>state.seatMechanics?.receipts.some(r=>r.receiptId===id)??false;
 export function openingRewardOffers(state:MatchState,reward:OpeningReward):readonly string[]{

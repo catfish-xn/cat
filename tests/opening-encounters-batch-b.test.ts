@@ -1,6 +1,6 @@
 import { snapshotForBattle } from '../src/simulation/two-sided-snapshot';
 import { expect, it, describe } from 'vitest';
-import { createMatch, startMatchCombat, stepMatch, nextRound, sellUnit, deployMatchUnit, type MatchState } from '../src/simulation/match';
+import { createMatch, startMatchCombat, stepMatch, nextRound, sellUnit, deployMatchUnit, openAnvil, type MatchState } from '../src/simulation/match';
 import { createOpeningEncounter, applyOpeningEffects, validateOpeningEncounterState } from '../src/simulation/opening-encounter';
 import { trainerEmblems, growTrainerGolem } from '../src/simulation/trainer-golems';
 import { CRAB_GROUPS, TRAINER_EMBLEMS, TRAINER_ATTACK_CENTI, giantCrabDamage } from '../src/simulation/content/opening-batch-b';
@@ -35,7 +35,8 @@ describe('batch B public lifecycle',()=>{
 
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
-import { openingBattleRewards, openingRewards,  openBatchBForge, validateBatchBRewards,  openingBox } from '../src/simulation/opening-batch-b-rewards';
+import { openingBattleRewards, openingRewards,  openBatchBForge, validateBatchBRewards,  openingBox, claimOpeningReward, openingRewardOffers, openingRewardOrbs as batchBOrbs } from '../src/simulation/opening-batch-b-rewards';
+import { validateAnvils } from '../src/simulation/anvils';
 import { g23BattleFacts, commitG23Settlement } from '../src/simulation/g2-3-settlement';
 import { recordNeutralReceipts } from '../src/simulation/neutral-receipts';
 import { resolveStat } from '../src/simulation/m8/stats';
@@ -90,8 +91,15 @@ describe('batch B combat and reward vectors',()=>{
  it('reward grants and forge resolution are idempotent; tampered gold rejected',()=>{
   const s=syntheticRound('crab-rave','5-7'),f=factsFor(s,1);let state=commitG23Settlement(settledVector(s,f),f);const once=state;
   expect(commitG23Settlement(state,f)).toBe(state);expect(()=>validateBatchBRewards(state)).not.toThrow();
-  for(let i=0;i<2;i++){state=openBatchBForge(state).state;expect(state.pendingChoice?.payload?.source).toBe('opening-batch-b');const c=state.pendingChoice!;const resolved=resolveMechanicChoice(state,c.offers[0],true);expect(resolved.ok).toBe(true);state={...resolved.state,phase:'settlement',combat:null};}
-  expect(openBatchBForge(state).state.pendingChoice).toBeNull();expect(()=>validateBatchBRewards(state)).not.toThrow();
+  // v22 anvil units: each forge is claimed once as a bench anvil, then opened by selling into the same offers.
+  expect(openBatchBForge(state).state).toBe(state);
+  for(const r of openingRewards(state).filter(r=>r.payload.kind==='forge')){
+   state=accepted(claimOpeningReward(state,r.id));expect(claimOpeningReward(state,r.id).state).toBe(state);
+   const g=state.seatMechanics!.receipts.find(g=>g.receiptId===r.id)!;expect(g).toMatchObject({kind:'unit',source:'opening-batch-b',resolution:'held'});
+   const offers=openingRewardOffers(state,r);state=accepted(openAnvil(state,(g as {unitId:string}).unitId));
+   expect(state.pendingChoice?.payload?.source).toBe('anvil-unit');expect(state.pendingChoice!.offers).toEqual(offers);const c=state.pendingChoice!;
+   const resolved=resolveMechanicChoice(state,c.offers[0],true);expect(resolved.ok).toBe(true);state={...resolved.state,phase:'settlement',combat:null};}
+  expect(openBatchBForge(state).state.pendingChoice).toBeNull();expect(()=>validateBatchBRewards(state)).not.toThrow();expect(()=>validateAnvils(state)).not.toThrow();
   expect(openingRewards(once).filter(r=>r.payload.kind==='forge')).toHaveLength(2);
  });
  it('Warwick has all 9 reward branches, 1–5 costs only, level 10 cap, deterministic seat stream',()=>{
@@ -143,10 +151,15 @@ it('real trainer transfers to both-sided combat with all three permanent emblems
  const battle=resolveTwoSidedBattle(input,1200);expect(battle.initial.units.filter(u=>u.definitionId==='trainer-golem')).toHaveLength(2);
  expect(battle.initial.strategy!.units.filter(u=>battle.initial.units.some(x=>x.id===u.unitId&&x.definitionId==='trainer-golem')).every(u=>u.sources.filter(e=>e.source.sourceKind==='item').length>0)).toBe(true);
 });
-it('terminal 6-7 grants both completed forges, keeps terminal phase and cannot repeat',()=>{
+it('terminal 6-7 keeps both completed forges as bench anvils, keeps terminal phase and cannot repeat',()=>{
+ // v22 anvil units: settlement grants both forges as held anvil units; no automatic terminal choice.
  const s=syntheticRound('crab-rave','6-7'),f=factsFor(s,1),settled=commitG23Settlement(settledVector(s,f),f);
  const terminal={...settled,phase:'gameOver' as const,combat:null,outcome:'victory' as const};const done=settleTerminalBatchBForges(terminal);
- expect(done.state.phase).toBe('gameOver');expect(done.state.seatMechanics!.receipts.filter(r=>r.source==='opening-batch-b'&&r.kind==='choice')).toHaveLength(2);
+ expect(done.state).toBe(terminal);expect(done.state.seatMechanics?.receipts.filter(r=>r.source==='opening-batch-b'&&r.kind==='choice')??[]).toHaveLength(0);
+ const held=done.state.seatMechanics!.receipts.filter(r=>r.source==='opening-batch-b'&&r.kind==='unit'&&r.receiptId.includes('anvil/'));
+ expect(held).toMatchObject([{definitionId:'TFT_ArmoryKeyCompleted',resolution:'held'},{definitionId:'TFT_ArmoryKeyCompleted',resolution:'held'}]);
+ for(const r of held)expect(done.state.preparation.units.some(u=>u.id===(r as {unitId:string}).unitId&&u.location.kind==='bench')).toBe(true);
+ expect(batchBOrbs(done.state)).toHaveLength(0);
  expect(settleTerminalBatchBForges(done.state).state).toBe(done.state);expect(()=>validateBatchBRewards(done.state)).not.toThrow();
 });
 
@@ -180,10 +193,13 @@ it('crab approved roster has independent literal cells and HP, including asymmet
 it('invalid opening facts fail atomically before a batch B entry grant',()=>{
  const state=createMatch(seeds.get('trainer-golems')!);const r=applyOpeningEffects(state,[{factId:'forged',effectKey:'forged',nodeId:'1-2'}]);expect(r).toEqual({ok:false,state,reason:'invalid-opening-effect'});expect(r.state).toBe(state);
 });
-it('forge restore rejects changed source, forged offers and skipping the first pending anvil',()=>{
- const s=syntheticRound('crab-rave','5-7'),f=factsFor(s,1),state=openBatchBForge(commitG23Settlement(settledVector(s,f),f)).state,c=state.pendingChoice!;
- expect(()=>validateBatchBRewards({...state,pendingChoice:{...c,payload:{...c.payload!,source:'forged'}}} as MatchState)).toThrow();
- expect(()=>validateBatchBRewards({...state,pendingChoice:{...c,offers:['warmog']}} as MatchState)).toThrow();
- const second=openingRewards(state).filter(r=>r.payload.kind==='forge')[1];
- expect(()=>validateBatchBRewards({...state,pendingChoice:{...c,choiceId:second.id,eventId:second.id}} as MatchState)).toThrow();
+it('forge restore rejects changed source, forged offers and an opened choice bound to the other anvil',()=>{
+ const s=syntheticRound('crab-rave','5-7'),f=factsFor(s,1);let held=commitG23Settlement(settledVector(s,f),f);
+ const forges=openingRewards(held).filter(r=>r.payload.kind==='forge');for(const r of forges)held=accepted(claimOpeningReward(held,r.id));
+ const unitIds=forges.map(r=>(held.seatMechanics!.receipts.find(g=>g.receiptId===r.id) as {unitId:string}).unitId);
+ const state=accepted(openAnvil(held,unitIds[0])),c=state.pendingChoice!;expect(()=>validateAnvils(state)).not.toThrow();
+ expect(()=>validateAnvils({...state,pendingChoice:{...c,payload:{...c.payload!,source:'forged'}}} as MatchState)).toThrow();
+ expect(()=>validateAnvils({...state,pendingChoice:{...c,offers:['warmog',...c.offers.slice(1)]}} as MatchState)).toThrow();
+ const other=JSON.stringify(['anvil',unitIds[1]]);
+ expect(()=>validateAnvils({...state,pendingChoice:{...c,choiceId:other,eventId:other}} as MatchState)).toThrow();
 });

@@ -8,6 +8,7 @@ import { createRoundEnemies } from '../src/simulation/round-enemies';
 import { getCatalogRoundByOrdinal } from '../src/simulation/round-selectors';
 import { appendResourceProvenance, RESOURCE_PROVENANCE_VERSION } from '../src/simulation/resource-provenance';
 import type { Unit } from '../src/simulation/unit-types';
+import { enterOpeningCrabs, openingCrabCarrier } from '../src/simulation/opening-crabs';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -15,19 +16,22 @@ vi.setConfig({ testTimeout: 20_000 });
 // Pure runtime vectors intentionally isolate the award transaction from Match phase/settlement.
 // The integration suite separately exercises real ticks, commands, economy and restoration.
 const key = (round: string) => JSON.stringify(['s13-orbs-project-v17', round, 'components-granted']);
+// v22 opening encounters: Scuttle Puddle / Crab Rave seeds (e.g. 0, 4, 5) replace PvE
+// neutrals with crabs; loot keeps its original carriers and maps them to crab deaths.
+const carrier = (state: MatchState, sourceUnitId: string) => openingCrabCarrier(state, state.roundDefinitionId, sourceUnitId);
 function fixture(round = 1, seed = 5): MatchState {
   const base = createMatch(seed), definition = getCatalogRoundByOrdinal(round), enemies = createRoundEnemies(round);
-  return { ...base, round, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis: null,
+  return enterOpeningCrabs({ ...base, round, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis: null,
     m8: { ...base.m8, round: definition, loot: prepareMatchLoot(seed, round), preparation: { ...base.m8.preparation,
       roundId: definition.roundId, encounterId: definition.encounterId, enemies } },
     preparation: { ...base.preparation, units: [...base.preparation.units.filter(unit => unit.team === 'player'), ...enemies] },
     resourceProvenance: appendResourceProvenance({ version: RESOURCE_PROVENANCE_VERSION, entries: [] }, '1-2',
       { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening', seed, seatId: 'solo' } }),
-  };
+  });
 }
 const plan = (state: MatchState) => state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === state.roundDefinitionId)!;
 function observed(state: MatchState, killed?: readonly string[], finished = true): MatchState {
-  const ids = killed ?? [...new Set([...plan(state).encounterPlan.drops, ...plan(state).choices].map(value => value.sourceUnitId!))];
+  const ids = [...new Set((killed ?? [...plan(state).encounterPlan.drops, ...plan(state).choices].map(value => value.sourceUnitId!)).map(id => carrier(state, id)))];
   const initial = createCombat(state.preparation);
   const common = { ...initial, combatId: `round-${state.round}`, nextEventSeq: 30, tick: 5,
     units: initial.units.map(unit => ids.includes(unit.id) ? { ...unit, alive: false, hp: 0 } : unit),
@@ -87,7 +91,7 @@ describe('B8 real loot preparation and earned-only transitions', () => {
   });
 
   it('forfeits unearned slots, ignores no-loot monsters and rejects forged observation inputs', () => {
-    const state = fixture(2), noLoot = state.m8.preparation.enemies.find(unit => !plan(state).encounterPlan.drops.some(drop => drop.sourceUnitId === unit.id))!;
+    const state = fixture(2), noLoot = state.m8.preparation.enemies.find(unit => !plan(state).encounterPlan.drops.some(drop => carrier(state, drop.sourceUnitId!) === unit.id))!;
     const running = observed(state, [noLoot.id], false);
     expect(running.m8.loot.direct[0].status).toBe('planned'); expect(running.m8.loot.earnedEvidence).toEqual([]);
     const finished = observed(state, [noLoot.id]); expect(finished.m8.loot.direct.find(d=>d.dropId===plan(state).encounterPlan.drops[0].dropId)!.status).toBe('forfeited');
@@ -185,7 +189,7 @@ describe('B8 atomic direct awards, capacity and actual purchase lineage', () => 
           ...state.m8.preparation, roundId: round.roundId, encounterId: round.encounterId, enemies } },
         // Isolated receipt accumulation: reserve capacity anew for each bundle.
         preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'&&unit.id==='unit-1'), ...enemies] } };
-      state = grantDirectLoot(observed(state), ordinal === 38).state;
+      state = grantDirectLoot(observed(enterOpeningCrabs(state)), ordinal === 38).state;
       for (const descriptor of unresolvedLootChoices(state)) state = grantLootChoice(state, descriptor, 'tear', 'player-choice').state;
     }
     const expected=lootPlan(5,38),drops=expected.rounds.flatMap(r=>r.encounterPlan.drops);

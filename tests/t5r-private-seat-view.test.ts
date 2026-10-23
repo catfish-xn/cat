@@ -27,7 +27,7 @@ function noReferences(a:unknown,b:unknown):void {
 function richSeat():MatchState {
   let state=accepted(advanceMultiplayerRound(finalSettlement(),38));const id=state.preparation.units[0].id;
   state=accepted(equipItem({...state,items:[{id:'item-1',definitionId:'thiefs-gloves',location:{kind:'inventory'}}]},'item-1',id,0));
-  return {...state,phase:'choice',combat:null,pendingChoice:{kind:'augment',step:'offer',choiceId:'shown',eventId:'secret-event',
+  return {...state,phase:'choice',combat:null,pendingChoice:{kind:'augment',step:'offer',choiceId:'round:4-2:augment',eventId:'secret-event',
     generation:1,offers:['placebo','manaflow-i','backup'],targetId:null,rerollCount:1,
     augmentTier:'silver',rerollsRemaining:2,rerolledSlots:[true,false,false],returnPhase:'preparation'},
     shop:{generation:17,locked:true,slots:[{status:'available',definitionId:'maddie'},{status:'purchased',empty:true},{status:'purchased'}]},
@@ -69,7 +69,8 @@ describe('T5R private own-seat whitelist',()=>{
     expect(view.preparation.units.filter(u=>u.team==='enemy')).toEqual(shown);
     // Only displayed fields and harmless required metadata are restored, never hidden enemy plans.
     const base=createMatch(777);
-    const display:MatchState={...base,preparation:view.preparation,
+    // The public opening projection selects the preview rules note (crab encounters have their own).
+    const display:MatchState={...base,openingEncounter:view.openingEncounter as unknown as MatchState['openingEncounter'],preparation:view.preparation,
       round:view.round,roundDefinitionId:view.roundDefinitionId,
       m8:{...base.m8,round:{...view.m8.round,isFinal:false},
         preparation:{version:'m8-b8-preparation-v1',contentStatus:'ready-b8-loot',...view.m8.preparation!}}};
@@ -107,7 +108,7 @@ describe('T5R private own-seat whitelist',()=>{
   });
   it('keeps exact Match names/nesting, shown choices, empty slots, own inventory and history',()=>{
     const state=richSeat(),view=toPrivateSeatView(freeze(state));expect(asSubset(view)).toBe(view);
-    expect(view.shop).toEqual(state.shop);expect(view.pendingChoice).toEqual({kind:'augment',step:'offer',choiceId:'shown',
+    expect(view.shop).toEqual(state.shop);expect(view.pendingChoice).toEqual({kind:'augment',step:'offer',choiceId:'round:4-2:augment',
       generation:1,offers:['placebo','manaflow-i','backup'],targetId:null,rerollCount:1,
       augmentTier:'silver',rerollsRemaining:2,rerolledSlots:[true,false,false],augmentOptions:[
         {optionIndex:0,definitionId:'placebo',rerollAvailable:false},

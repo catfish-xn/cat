@@ -3,9 +3,9 @@ import {reachRound,accepted,emptyBoard,resolveM5Choices} from './match-helpers';
 import {selectChoice,equipItem,useConsumable,startMatchCombat,nextRound} from '../src/simulation/match';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {augmentForgeOffers,grantAugmentAcquisition} from '../src/simulation/augment-acquisition';
-// Fixed public first-node seeds under the v20 same-tier pool. Portable Forge
-// first appears at 236, outside the previous 200-seed combat replay search.
-const acquisitionSeeds:Record<string,number>={'blinding-speed':3,'portable-forge':236,'radiant-relics':10};
+// Fixed public first-node seeds: the first seed whose 2-1 offer shows each card under the
+// v22 14.24 augment tier table and offer rules (Radiant Relics first appears at 323).
+const acquisitionSeeds:Record<string,number>={'blinding-speed':6,'portable-forge':5,'radiant-relics':323};
 function select(id:string){
  const s=reachRound('2-1',false,acquisitionSeeds[id]),c=s.pendingChoice!;
  expect(c.offers).toContain(id);

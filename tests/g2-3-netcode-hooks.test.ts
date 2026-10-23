@@ -41,15 +41,17 @@ const blackMarket = (skippable: boolean): MechanicChoiceSpec => ({ choiceId: 'ma
 
 describe('G2-3 seat mechanic container', () => {
   it('reaches the private view and the display state verbatim; hidden state never does', () => {
-    let state = writeSeatMechanic(solo(), 'conqueror', { stacks: 640, chestsOpened: 9, nextThreshold: 650, bonusBps: 4500 });
+    // The real conqueror container always carries its reward bundles; v22 anvil
+    // orbs make the private loot view read them, so keep the (empty) list.
+    let state = writeSeatMechanic(solo(), 'conqueror', { stacks: 640, chestsOpened: 9, nextThreshold: 650, bonusBps: 4500, rewards: [] });
     state = writeSeatMechanic(state, 'radiantConversion', true);
     state = writeHiddenMechanic(state, 'alchemist', { rng: 123456 });
     const view = toPrivateSeatView(freeze(state));
-    expect(view.seatMechanics?.seat).toMatchObject({ conqueror: { stacks: 640, chestsOpened: 9, nextThreshold: 650, bonusBps: 4500 }, radiantConversion: true });
+    expect(view.seatMechanics?.seat).toMatchObject({ conqueror: { stacks: 640, chestsOpened: 9, nextThreshold: 650, bonusBps: 4500, rewards: [] }, radiantConversion: true });
     expect(view.seatMechanics?.hidden).toEqual({});
     expect(JSON.stringify(view)).not.toContain('123456');
     const display = toDisplayMatch(view as never);
-    expect(readSeatMechanic(display, 'conqueror')).toEqual({ stacks: 640, chestsOpened: 9, nextThreshold: 650, bonusBps: 4500 });
+    expect(readSeatMechanic(display, 'conqueror')).toEqual({ stacks: 640, chestsOpened: 9, nextThreshold: 650, bonusBps: 4500, rewards: [] });
     expect(readSeatMechanic(display, 'radiantConversion')).toBe(true);
   });
   it('is present in G2-3 states and views, and rejects non-integer values', () => {

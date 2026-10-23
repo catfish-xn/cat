@@ -66,7 +66,7 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
       if(orb.source==='pve' && orb.roundId===state.roundDefinitionId) {
         const combat=state.pendingCombatTerminal??state.combat;
         check(!(d.status==='forfeited'&&!earned) || combat?.status==='finished','unearned forfeit lifecycle');
-        if(state.pendingCombatTerminal) check(d.status!=='planned' && earned===!!combat?.neutralReceipts?.deaths.some(v=>v.unitId===e.sourceUnitId),'terminal qualification');
+        if(state.pendingCombatTerminal) check(d.status!=='planned' && earned===!!combat?.neutralReceipts?.deaths.some(v=>v.unitId===openingCrabCarrier(state,orb.roundId,e.sourceUnitId)),'terminal qualification');
       }
       if(d.status==='granted'||earned&&d.status==='forfeited') {
         check(r&&r.receiptId===lootReceiptId(e.dropId)&&canonicalContent(r.payload)===canonicalContent(e.payload),'receipt payload/identity');

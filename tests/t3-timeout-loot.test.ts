@@ -7,15 +7,18 @@ import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { createRoundEnemies } from '../src/simulation/round-enemies';
 import type { Unit } from '../src/simulation/unit-types';
 import { freeze } from './combat-helpers';
+import { enterOpeningCrabs, openingCrabCarrier } from '../src/simulation/opening-crabs';
 const accept=(r:MultiplayerCommandResult)=>{if(!r.ok)throw new Error(r.reason);return r.state;};
 // Earned-loot vectors isolate timeout commits; normal command traversal is in t3-round-settlement.
 function fixture(roundId='1-2',seed=roundId==='2-7'?26:5):MatchState {
   const base=accept(enableMultiplayerSettlement(createMatch(seed),'A')),round=getCatalogRoundById(roundId),enemies=createRoundEnemies(round.ordinal);
-  const state:MatchState={...base,round:round.ordinal,roundDefinitionId:roundId,
+  // v22 opening encounters: Crab Rave seeds (5, 26) fight crabs; loot keeps its
+  // original carriers, mapped to the crab whose death earns it.
+  const state:MatchState=enterOpeningCrabs({...base,round:round.ordinal,roundDefinitionId:roundId,
     m8:{...base.m8,round,loot:prepareMatchLoot(seed,round.ordinal),preparation:{...base.m8.preparation,roundId,encounterId:round.encounterId,enemies}},
-    preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...enemies]}};
+    preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...enemies]}});
   const plan=state.m8.loot.frozen.rounds.find(r=>r.encounterPlan.roundId===roundId)!;
-  const ids=[...new Set([...plan.encounterPlan.drops,...plan.choices].map(d=>d.sourceUnitId!))];
+  const ids=[...new Set([...plan.encounterPlan.drops,...plan.choices].map(d=>openingCrabCarrier(state,roundId,d.sourceUnitId!)))];
   const initial=createCombat(state.preparation);
   const combat={...initial,combatId:`round-${state.round}`,status:'finished' as const,result:'draw' as const,tick:5,nextEventSeq:30,
     units:initial.units.map(u=>ids.includes(u.id)?{...u,alive:false,hp:0}:u),
