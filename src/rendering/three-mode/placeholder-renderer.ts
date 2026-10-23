@@ -159,8 +159,12 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
 let championIconFor: (id: string) => string | null = () => null;
-/** v22 anvils (锻造器, TFT_ArmoryKey*) are bench units without a model or stars: their icon (championIconFor) stands in. */
-const isAnvilPiece = (definitionId: string): boolean => definitionId.startsWith('TFT_ArmoryKey');
+/**
+ * v22 anvils (锻造器) are bench units without a model or stars: their icon (championIconFor) stands in. The rules' isAnvil
+ * is injected by the 2D loader so this chunk imports nothing from the rules.
+ */
+let isAnvilPiece: (definitionId: string) => boolean = () => false;
+export function useAnvilTest(next: (definitionId: string) => boolean): void { isAnvilPiece = next; }
 export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }

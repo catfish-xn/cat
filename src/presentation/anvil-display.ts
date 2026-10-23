@@ -10,8 +10,14 @@ export type AnvilInfo = NonNullable<ReturnType<typeof anvilDisplay>>;
 /** Name, sell text and hover description of an anvil unit; null for every other unit. */
 export const anvilInfo = (definitionId: string): AnvilInfo | null => anvilDisplay(definitionId) ?? null;
 export const isAnvilUnit = (definitionId: string): boolean => isAnvil(definitionId);
-/** The anvil's 14.24 client icon (TFT_ArmoryKey*_Square), bundled with the Conqueror loot icons. */
-export const anvilIconUrl = (definitionId: string): string | null => (isAnvil(definitionId) ? lootEntry(definitionId)?.iconUrl ?? null : null);
+/**
+ * The anvil's 14.24 client icon (TFT_ArmoryKey*_Square), bundled with the Conqueror loot icons. The Component Anvil's
+ * own icon is not bundled yet, so it borrows the Completed Item Anvil's until that asset is approved.
+ */
+export const anvilIconUrl = (definitionId: string): string | null => {
+  if (!isAnvil(definitionId)) return null;
+  return lootEntry(definitionId)?.iconUrl ?? lootEntry('TFT_ArmoryKeyCompleted')?.iconUrl ?? null;
+};
 
 /** The four-way pick an anvil's sale opened (rules payload `source: 'anvil-unit'`): shown in the shop row, not as a popup. */
 export function isAnvilArmory(choice: object | null | undefined): boolean {
