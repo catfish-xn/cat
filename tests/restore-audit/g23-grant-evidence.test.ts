@@ -9,7 +9,8 @@ import {publicPendingArmory} from '../fixtures/g2-3-armory-public';
 import {publicAcademyGrant} from '../fixtures/g2-3-academy-public';
 let junker:MatchState,academy:MatchState;
 beforeAll(async()=>{
- const pending=await publicPendingArmory();
+ // Under v22 economy the seed-4 cannon route never buys Rumble before 6-7; seed 3 is the first that reaches the armory.
+ const pending=await publicPendingArmory(3);
  const choice=chooseG23Junker(pending,pending.pendingChoice!.choiceId,'spare-parts');
  if(!choice.ok)throw Error(choice.reason);junker=choice.state;
  academy=await publicAcademyGrant();
@@ -35,7 +36,7 @@ it('rejects titan on a non-three-star holder even when both receipts agree',()=>
 });
 it('rejects a paid option outside the seed-derived menu even when generic and mechanic receipts agree',()=>{
  const bad=structuredClone(junker),purchase=readG23Progress(bad)!.junkerPurchases[0];
- // Public seed4 menu has just two of five paid upgrades; try all five and prove at least three fail specifically at menu admission.
+ // Public seed3 menu has just two of five paid upgrades; try all five and prove at least three fail specifically at menu admission.
  let rejected=0;
  for(const upgrade of ['flamethrower','petricite-rod','repairing-microbots','self-destruct','tankbuster']){
   Object.assign(purchase,{upgrade,cost:5});Object.assign(bad.seatMechanics!.receipts.find(r=>r.receiptId===purchase.id)!,{optionId:upgrade,price:5});

@@ -10,7 +10,7 @@ import { mirrorCombatReplay, primeCombatReplay, startReplaySpotCheck, toCombatRe
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { toCombatReplay } from '../../src/server-entry';
 import { DEFAULT_BATTLE_MAX_STEPS, type BattleInput, type BattleResult, type RoomState } from '../../src/server/room/types';
-import { makeRoom, runUntil } from './helpers';
+import { answerOpenChoices, makeRoom, runUntil } from './helpers';
 import { SPOT_CHECK_EVERY_ROUNDS } from '../../src/server/net/server';
 import { seatTwo, startServer, type NetHarness } from './net/helpers';
 
@@ -34,7 +34,9 @@ describe('first-pass replay capture', () => {
   // Real lineups frozen at the first PvP round (2-1) of an idle placeholder room, built once outside the case timeouts.
   const idle = makeRoom(new PlaceholderBattleResolver());
   idle.room.start();
-  const seats = runUntil(idle.room, idle.clock, state => state.round === 4 && state.phase === 'preparation').seats;
+  runUntil(idle.room, idle.clock, state => state.round === 4 && state.phase === 'preparation');
+  answerOpenChoices(idle.room); // v22: the 2-1 augment choice opens inside the preparation
+  const seats = idle.room.state.seats;
   const pool = idle.room.state.pool;
 
   it('pushes the recorded frames of a PvE round, byte-identical to the re-executed replay', () => {

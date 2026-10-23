@@ -165,12 +165,13 @@ function expectRejectedAtAllEntrances(bad: MatchState, reason: string) {
 
 it('rejects altered or invented target reave facts beside the legal seed 3151248 curse', () => {
   const state = morganaCurseSave();
-  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(89);
+  // v22 mana rules (damage-taken mana, overflow) bring Morgana's first curse forward from tick 89 to 70.
+  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(70);
   const target = state.combat!.units.find(u => u.id === 'enemy-r4-1')!;
-  expect(target.g22).toMatchObject({ reaveBps: 5000, reaveUntilTick: 289 });
+  expect(target.g22).toMatchObject({ reaveBps: 5000, reaveUntilTick: 270 });
   const owner = state.combat!.units.find(u => u.definitionId === 'morgana')!;
   expect(owner.tasks).toHaveLength(10);
-  for (const patch of [{ reaveBps: 0 }, { reaveUntilTick: 89 }, { reaveBps: 0, reaveUntilTick: 0 }]) {
+  for (const patch of [{ reaveBps: 0 }, { reaveUntilTick: 70 }, { reaveBps: 0, reaveUntilTick: 0 }]) {
     const bad = structuredClone(state);
     Object.assign(bad.combat!.units.find(u => u.id === target.id)!.g22!, patch);
     expectRejectedAtAllEntrances(bad, 'curse reave binding facts');
@@ -178,7 +179,7 @@ it('rejects altered or invented target reave facts beside the legal seed 3151248
   const bad = structuredClone(state), untouched = bad.combat!.units.find(u => u.team === target.team && u.id !== target.id)!;
   expect(untouched.g22?.reaveBps ?? 0).toBe(0);
   Object.assign(untouched, { g22: { initialized: false, wanted: [], wantedDeaths: 0, mordeUntilTick: 0,
-    reaveBps: 5000, reaveUntilTick: 289, rebelTriggered: false, exposureFromTick: 0, exposureUntilTick: 0, exposureBps: 0 } });
+    reaveBps: 5000, reaveUntilTick: 270, rebelTriggered: false, exposureFromTick: 0, exposureUntilTick: 0, exposureBps: 0 } });
   expectRejectedAtAllEntrances(bad, 'curse reave binding facts');
 });
 
@@ -280,8 +281,9 @@ it('rejects an appended fake bleed while retaining every genuine Morgana curse p
 
 it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce revives that same Forge', async () => {
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
-  // v15 seed 53 offers Bulky Buddies I at the same 2-1 node.
-  let state = prepare(['rod'], { seed: 53 });
+  // v15 seed 53 offered Bulky Buddies I at 2-1. Under the v22 augment tier table seed 22 is the first
+  // public route (with card rerolls) whose Forge dies and is revived beside a living holder.
+  let state = prepare(['rod'], { seed: 22, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
   expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
   for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
     for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));

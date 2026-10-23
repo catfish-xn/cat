@@ -85,13 +85,14 @@ describe('PR8 public opening-encounter projection', () => {
     // Candidates are personal (independent substreams): not every seat sees the same four.
     expect(new Set([...offersBySeat.values()].map(offers => offers.join(','))).size).toBeGreaterThan(1);
   });
-  it('Mel progress is private and starts below the threshold; the public view keeps the closed status', () => {
+  // v22 (opening encounters batch A) enables Mel's blessing: the public view shows the enabled status, never the progress.
+  it('Mel progress is private and starts below the threshold; the public view shows only the enabled status', () => {
     const { room } = openRoom(MEL_SEED);
     room.start();
     const state = room.state, seat = state.seats[0]!;
-    expect(toPlayerView(state, seat.seatId, 0).openingEncounter).toMatchObject({ encounterId: 'mels-blessing', enabled: false, statusTextZh: '本局抽中此奇遇，效果尚未启用' });
+    expect(toPlayerView(state, seat.seatId, 0).openingEncounter).toMatchObject({ encounterId: 'mels-blessing', enabled: true, statusTextZh: '本局奇遇效果已启用' });
     expect((toSeatPrivateView(seat.match) as { openingMelProgress?: unknown }).openingMelProgress).toEqual({ encounterId: 'mels-blessing', thresholdHp: 40,
-      thresholdReached: false, rewardStatus: 'blocked-evidence', triggeredRound: null, hpBefore: null, hpAfter: null });
+      thresholdReached: false, rewardStatus: 'waiting-threshold', triggeredRound: null, hpBefore: null, hpAfter: null });
     expect(JSON.stringify(toPlayerView(state, seat.seatId, 0))).not.toContain('thresholdHp');
   });
 });
