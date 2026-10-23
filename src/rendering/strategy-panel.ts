@@ -1163,7 +1163,10 @@ export class StrategyPanel {
       if (typeof picture === 'string') art.innerHTML = picture; else art.append(picture);
       cell.append(art, element('span', caption, 'market-slot-name')); bundle.append(cell);
     };
-    const pictures = reward ? g23RewardIcons(reward) : [];
+    // The 14.24b market lists items first, then gold, then heroes, one slot per copy, under a 「黑市」 tab.
+    bundle.append(element('span', '黑市', 'market-tab'));
+    const rank = { item: 0, gold: 1, hero: 2 } as const;
+    const pictures = (reward ? g23RewardIcons(reward) : []).sort((a, b) => rank[a.kind] - rank[b.kind]);
     if (!pictures.length && item(id)) slot(itemMarkHtml(id, 40), itemDisplayName(id));
     for (const icon of pictures) {
       if (icon.kind === 'hero') {
@@ -1172,7 +1175,7 @@ export class StrategyPanel {
       } else if (icon.kind === 'item') slot(rewardItemMarkHtml(icon, 40), icon.name);
       else slot(element('span', '', 'market-coin'), `${icon.amount}金币`);
     }
-    if (!bundle.childElementCount) for (const line of lines) bundle.append(element('span', line, 'market-line'));
+    if (bundle.childElementCount === 1) for (const line of lines) bundle.append(element('span', line, 'market-line'));
     const actions = element('div', '', 'market-actions');
     const take = this.button(`choice:${id}`, '全部拿走', () => send(id));
     take.className = 'market-action market-take'; take.dataset.debug = 'market:take'; take.setAttribute('aria-label', '全部拿走'); take.title = ['全部拿走', ...lines].join('\n');
