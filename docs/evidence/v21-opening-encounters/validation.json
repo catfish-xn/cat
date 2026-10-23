@@ -1,41 +1,52 @@
 {
-  "status": "BLOCKED_DO_NOT_MERGE",
-  "fullFastCommand": "npx --no-install vitest run --project fast --maxWorkers=16",
+  "status": "LOCAL_VALIDATION_PASSED",
+  "inputHead": "3b8e2c13bd314375ded86c6b08c47ab8edec0bf7",
+  "branch": "codex/encounters-pr9-epoch",
+  "fullFastCommand": "npx --no-install vitest run --project fast --maxWorkers=16 --reporter=default --reporter=json --outputFile=artifacts/v21-opening-encounters-recording/pr9-fast-final.json",
   "fullFastExitCode": 1,
+  "fullFastElapsedSeconds": 767.651,
   "fullFast": {
-    "numTotalTests": 6912,
-    "numPassedTests": 6844,
-    "numFailedTests": 3,
-    "numPendingTests": 65
+    "numTotalTests": 6913,
+    "numPassedTests": 6892,
+    "numFailedTests": 1,
+    "numPendingTests": 20
   },
+  "fullFastFiles": 524,
   "fullFastFailedFiles": [
-    "tests/assets3d-compress.test.ts",
     "tests/assets3d-fx-pilot.test.ts",
-    "tests/g2-4a-crown-history.test.ts",
-    "tests/p7-carousel.test.ts",
     "tests/server/g2-4b-artifact-forge-room.test.ts",
-    "tests/server/g5-battle-ranking.test.ts"
+    "tests/server/g5-battle-ranking.test.ts",
+    "tests/server/projection-wire.test.ts",
+    "tests/server/replay-client.test.ts"
+  ],
+  "fullFastFailureDetails": [
+    {
+      "file": "tests/assets3d-fx-pilot.test.ts",
+      "kind": "test-timeout",
+      "timeoutMs": 5000
+    },
+    {
+      "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
+      "kind": "hook-timeout",
+      "timeoutMs": 10000
+    },
+    {
+      "file": "tests/server/g5-battle-ranking.test.ts",
+      "kind": "hook-timeout",
+      "timeoutMs": 10000
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "kind": "hook-timeout",
+      "timeoutMs": 10000
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "kind": "hook-timeout",
+      "timeoutMs": 10000
+    }
   ],
   "isolatedRetries": [
-    {
-      "file": "tests/assets3d-compress.test.ts",
-      "command": [
-        "npx",
-        "--no-install",
-        "vitest",
-        "run",
-        "--project",
-        "fast",
-        "--maxWorkers=1",
-        "tests/assets3d-compress.test.ts",
-        "--reporter=json",
-        "--outputFile=artifacts/v21-opening-encounters-recording/final-retry-0.json"
-      ],
-      "exitCode": 0,
-      "elapsedSeconds": 4.545,
-      "json": "artifacts/v21-opening-encounters-recording/final-retry-0.json",
-      "log": "artifacts/v21-opening-encounters-recording/final-retry-0.log"
-    },
     {
       "file": "tests/assets3d-fx-pilot.test.ts",
       "command": [
@@ -48,50 +59,19 @@
         "--maxWorkers=1",
         "tests/assets3d-fx-pilot.test.ts",
         "--reporter=json",
-        "--outputFile=artifacts/v21-opening-encounters-recording/final-retry-1.json"
+        "--outputFile=artifacts/v21-opening-encounters-recording/pr9-retry-0.json"
       ],
       "exitCode": 0,
-      "elapsedSeconds": 2.868,
-      "json": "artifacts/v21-opening-encounters-recording/final-retry-1.json",
-      "log": "artifacts/v21-opening-encounters-recording/final-retry-1.log"
-    },
-    {
-      "file": "tests/g2-4a-crown-history.test.ts",
-      "command": [
-        "npx",
-        "--no-install",
-        "vitest",
-        "run",
-        "--project",
-        "fast",
-        "--maxWorkers=1",
-        "tests/g2-4a-crown-history.test.ts",
-        "--reporter=json",
-        "--outputFile=artifacts/v21-opening-encounters-recording/final-retry-2.json"
-      ],
-      "exitCode": 1,
-      "elapsedSeconds": 23.438,
-      "json": "artifacts/v21-opening-encounters-recording/final-retry-2.json",
-      "log": "artifacts/v21-opening-encounters-recording/final-retry-2.log"
-    },
-    {
-      "file": "tests/p7-carousel.test.ts",
-      "command": [
-        "npx",
-        "--no-install",
-        "vitest",
-        "run",
-        "--project",
-        "fast",
-        "--maxWorkers=1",
-        "tests/p7-carousel.test.ts",
-        "--reporter=json",
-        "--outputFile=artifacts/v21-opening-encounters-recording/final-retry-3.json"
-      ],
-      "exitCode": 0,
-      "elapsedSeconds": 16.612,
-      "json": "artifacts/v21-opening-encounters-recording/final-retry-3.json",
-      "log": "artifacts/v21-opening-encounters-recording/final-retry-3.log"
+      "elapsedSeconds": 2.88,
+      "json": "artifacts/v21-opening-encounters-recording/pr9-retry-0.json",
+      "log": "artifacts/v21-opening-encounters-recording/pr9-retry-0.log",
+      "results": {
+        "numTotalTests": 9,
+        "numPassedTests": 9,
+        "numFailedTests": 0,
+        "numPendingTests": 0
+      },
+      "allFilesPassed": true
     },
     {
       "file": "tests/server/g2-4b-artifact-forge-room.test.ts",
@@ -105,12 +85,19 @@
         "--maxWorkers=1",
         "tests/server/g2-4b-artifact-forge-room.test.ts",
         "--reporter=json",
-        "--outputFile=artifacts/v21-opening-encounters-recording/final-retry-4.json"
+        "--outputFile=artifacts/v21-opening-encounters-recording/pr9-retry-1.json"
       ],
       "exitCode": 0,
-      "elapsedSeconds": 39.299,
-      "json": "artifacts/v21-opening-encounters-recording/final-retry-4.json",
-      "log": "artifacts/v21-opening-encounters-recording/final-retry-4.log"
+      "elapsedSeconds": 38.898,
+      "json": "artifacts/v21-opening-encounters-recording/pr9-retry-1.json",
+      "log": "artifacts/v21-opening-encounters-recording/pr9-retry-1.log",
+      "results": {
+        "numTotalTests": 5,
+        "numPassedTests": 5,
+        "numFailedTests": 0,
+        "numPendingTests": 0
+      },
+      "allFilesPassed": true
     },
     {
       "file": "tests/server/g5-battle-ranking.test.ts",
@@ -124,136 +111,376 @@
         "--maxWorkers=1",
         "tests/server/g5-battle-ranking.test.ts",
         "--reporter=json",
-        "--outputFile=artifacts/v21-opening-encounters-recording/final-retry-5.json"
+        "--outputFile=artifacts/v21-opening-encounters-recording/pr9-retry-2.json"
       ],
       "exitCode": 0,
-      "elapsedSeconds": 12.205,
-      "json": "artifacts/v21-opening-encounters-recording/final-retry-5.json",
-      "log": "artifacts/v21-opening-encounters-recording/final-retry-5.log"
+      "elapsedSeconds": 12.823,
+      "json": "artifacts/v21-opening-encounters-recording/pr9-retry-2.json",
+      "log": "artifacts/v21-opening-encounters-recording/pr9-retry-2.log",
+      "results": {
+        "numTotalTests": 7,
+        "numPassedTests": 7,
+        "numFailedTests": 0,
+        "numPendingTests": 0
+      },
+      "allFilesPassed": true
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "command": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "--project",
+        "fast",
+        "--maxWorkers=1",
+        "tests/server/projection-wire.test.ts",
+        "--reporter=json",
+        "--outputFile=artifacts/v21-opening-encounters-recording/pr9-retry-3.json"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 41.054,
+      "json": "artifacts/v21-opening-encounters-recording/pr9-retry-3.json",
+      "log": "artifacts/v21-opening-encounters-recording/pr9-retry-3.log",
+      "results": {
+        "numTotalTests": 9,
+        "numPassedTests": 9,
+        "numFailedTests": 0,
+        "numPendingTests": 0
+      },
+      "allFilesPassed": true
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "command": [
+        "npx",
+        "--no-install",
+        "vitest",
+        "run",
+        "--project",
+        "fast",
+        "--maxWorkers=1",
+        "tests/server/replay-client.test.ts",
+        "--reporter=json",
+        "--outputFile=artifacts/v21-opening-encounters-recording/pr9-retry-4.json"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 12.536,
+      "json": "artifacts/v21-opening-encounters-recording/pr9-retry-4.json",
+      "log": "artifacts/v21-opening-encounters-recording/pr9-retry-4.log",
+      "results": {
+        "numTotalTests": 8,
+        "numPassedTests": 8,
+        "numFailedTests": 0,
+        "numPendingTests": 0
+      },
+      "allFilesPassed": true
     }
   ],
-  "crownAfterOpeningChoiceAdapter": {
-    "numTotalTests": 56,
-    "numPassedTests": 41,
-    "numFailedTests": 15,
-    "numPendingTests": 0
+  "crownFinal": {
+    "files": 2,
+    "numTotalTests": 57,
+    "numPassedTests": 57,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "crownCases": 56,
+    "slotRegressionCases": 1
   },
   "combinedPerFileLatestAssertions": {
-    "passed": 6897,
-    "failed": 15
+    "files": 524,
+    "passed": 6913,
+    "failed": 0,
+    "pending": 0
   },
-  "combinedNote": "Per-file latest results, not a second full-suite run. Five isolated timeout files passed (44/44). Crown initialization adapter exposes 15 remaining failures; stop per user instruction on confirmed production bug.",
-  "remainingFailures": [
+  "combinedNote": "全套maxWorkers=16原始结果与负载超时文件maxWorkers=1逐文件复验合并；不是第二次全套运行。未改超时、未跳过用例。",
+  "resolvedFailures": [
     {
+      "id": 1,
       "test": "M7/S7 combat equipment command replay records combat consumable use with combine at all three entries and resumes tick for tick (M10)",
-      "category": "timing-golden-pending-recorder",
-      "message": "AssertionError: expected { version: { …(5) }, …(12) } to match object { endTick: 274, result: 'playerWin' }"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时终点；真实移除→合成→穿戴使本战endTick从274变172，仍playerWin；remove/reequip保留274，完整恢复和下一战逐拍比较保留。",
+      "status": "passed"
     },
     {
+      "id": 2,
       "test": "M7/S7 combat equipment command replay records inventory combination followed by equip=true and resumes the next battle tick for tick (M8)",
-      "category": "timing-golden-pending-recorder",
-      "message": "AssertionError: expected 103 to be 164 // Object.is equality"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时终点；equip=true下一拍生效，endTick从164变103；equip=false仍164。",
+      "status": "passed"
     },
     {
+      "id": 3,
       "test": "M7/S7 combat equipment command replay rejects changing only the command tick to 0, 2 or 69 for ordinary (M9)",
-      "category": "earlier-rejection-or-admission-boundary-pending-adapter",
-      "message": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got '战斗档案无效：事件缺失或内容错误'"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时拒绝层；命令tick0/69报事件缺失或内容错误，tick2报内容校验；单改资源tick报battle equipment command sequence，缺tick报extra battle equipment receipt。",
+      "status": "passed"
     },
     {
+      "id": 4,
       "test": "M7/S7 combat equipment command replay rejects changing only the command tick to 0, 2 or 69 for in-place (M9)",
-      "category": "timing-golden-pending-recorder",
-      "message": "AssertionError: expected 103 to be 138 // Object.is equality"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时终点与拒绝层；endTick从138变103，其余拒绝边界与ordinary相同。",
+      "status": "passed"
     },
     {
+      "id": 5,
       "test": "M7/S7 combat equipment command replay certifies the same ordered result when both tick claims move to 0 (M9 boundary)",
-      "category": "approved-next-tick-semantics-old-equivalence",
-      "message": "AssertionError: expected { schemaVersion: 12, …(47) } to deeply equal { schemaVersion: 12, …(47) }"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时等价假设；effectiveTick=1改变tick1/35伤害事件；endTick103/playerWin相同，完整状态/记录不同。",
+      "status": "passed"
     },
     {
+      "id": 6,
       "test": "M7/S7 combat equipment command replay certifies the same ordered result when both tick claims move to 2 (M9 boundary)",
-      "category": "approved-next-tick-semantics-old-equivalence",
-      "message": "AssertionError: expected { schemaVersion: 12, …(47) } to deeply equal { schemaVersion: 12, …(47) }"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时完整状态等价假设；effectiveTick=3不改变事件，但装备收据及终态哈希不同，旧记录不能直接复用。",
+      "status": "passed"
     },
     {
+      "id": 7,
       "test": "M7/S7 combat equipment command replay certifies the same ordered result when both tick claims move to 69 (M9 boundary)",
-      "category": "approved-next-tick-semantics-old-equivalence",
-      "message": "AssertionError: expected { schemaVersion: 12, …(47) } to deeply equal { schemaVersion: 12, …(47) }"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时等价假设；effectiveTick=70使tick35/69仍用大剑，tick103伤害量随之改变；endTick103/playerWin相同，完整状态/记录不同。",
+      "status": "passed"
     },
     {
+      "id": 8,
       "test": "M7/S7 combat equipment command replay rejects existing-target in-place combination tampering at all three entries",
-      "category": "earlier-rejection-or-admission-boundary-pending-adapter",
-      "message": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got '战斗档案无效：事件缺失或内容错误'"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时拒绝层；改投真实板凳目标使场上合成不生效，三入口先在完整事件比对处拒绝。",
+      "status": "passed"
     },
     {
+      "id": 9,
       "test": "M7/S7 combat equipment command replay rejects ordinary-equip inventory combination commands at all three entries",
-      "category": "earlier-rejection-or-admission-boundary-pending-adapter",
-      "message": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got '战斗档案无效：事件缺失或内容错误'"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时拒绝层；库存合成改为场上穿戴新增下一拍效果，三入口先在完整事件比对处拒绝。",
+      "status": "passed"
     },
     {
+      "id": 10,
       "test": "M7/S7 combat equipment command replay binds combat equip order to the temporary item roll prefix (M9)",
-      "category": "earlier-rejection-or-admission-boundary-pending-adapter",
-      "message": "RangeError: Invalid B8 Match: battle equipment command sequence"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时构造；原伪造终战态被装备序列拒绝；补充真实后续准备态，仅移植临时装备账本/投影，结构合法且三入口仍拒绝历史临时装备收据前缀不一致。",
+      "status": "passed"
     },
     {
+      "id": 11,
       "test": "M7/S7 combat equipment command replay records in-place sword combination at tick 1 (requested slot 0) and resumes the next battle tick for tick",
-      "category": "earlier-rejection-or-admission-boundary-pending-adapter",
-      "message": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got '战斗档案无效：事件缺失或内容错误'"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时拒绝层；合法slot0完整恢复和下一战一致，漏合成先在事件比对处拒绝。",
+      "status": "passed"
     },
     {
+      "id": 12,
       "test": "M7/S7 combat equipment command replay records in-place sword combination at tick 1 (requested slot 2) and resumes the next battle tick for tick",
-      "category": "confirmed-production-replay-bug",
-      "message": "Error: 战斗档案无效：内容校验"
+      "classification": "production-bug-fixed-in-input-head; stale-assertion",
+      "conclusion": "原生产槽位丢失已在输入HEAD修复；本轮遗留断言应记录请求slot2，合成品仍在slot0；前缀/终战/下一战精确一致及漏命令拒绝均通过。",
+      "status": "passed"
     },
     {
+      "id": 13,
       "test": "M7/S7 combat equipment command replay rejects reordered commands at all three save/restore entries",
-      "category": "earlier-rejection-or-admission-boundary-pending-adapter",
-      "message": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got '战斗档案无效：内容校验'"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时拒绝层；同tick合法穿戴重排改变有序装备收据，三入口先在内容哈希校验处拒绝。",
+      "status": "passed"
     },
     {
+      "id": 14,
       "test": "M7/S7 combat equipment command replay rejects extra commands at all three save/restore entries",
-      "category": "earlier-rejection-or-admission-boundary-pending-adapter",
-      "message": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got '战斗档案无效：事件缺失或内容错误'"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时拒绝层；额外穿戴改变下一拍战斗，三入口先在完整事件比对处拒绝。",
+      "status": "passed"
     },
     {
+      "id": 15,
       "test": "M7/S7 combat equipment command replay rejects missing commands at all three save/restore entries",
-      "category": "earlier-rejection-or-admission-boundary-pending-adapter",
-      "message": "AssertionError: expected [Function] to throw error including '历史获得或合成记录不一致' but got '战斗档案无效：事件缺失或内容错误'"
+      "classification": "outdated-expectation-or-construction",
+      "conclusion": "过时拒绝层；缺少穿戴改变下一拍战斗，三入口先在完整事件比对处拒绝。",
+      "status": "passed"
+    }
+  ],
+  "remainingFailures": [],
+  "tickEquivalence": [
+    {
+      "commandTick": 0,
+      "effectiveTick": 1,
+      "endTick": 103,
+      "result": "playerWin",
+      "stateHash": "fnv1a32-utf16:215aa9e7",
+      "eventHash": "fnv1a32-utf16:ec28bb2a",
+      "eventDifferencesFromTick1": [
+        {
+          "index": 8,
+          "tick": 1,
+          "before": {
+            "raw": 49,
+            "mitigated": 49,
+            "hpDamage": 49,
+            "overkill": 0
+          },
+          "after": {
+            "raw": 69,
+            "mitigated": 74,
+            "hpDamage": 74,
+            "overkill": 0
+          }
+        },
+        {
+          "index": 16,
+          "tick": 35,
+          "before": {
+            "raw": 69,
+            "mitigated": 103,
+            "hpDamage": 61,
+            "overkill": 42
+          },
+          "after": {
+            "raw": 69,
+            "mitigated": 103,
+            "hpDamage": 36,
+            "overkill": 67
+          }
+        }
+      ],
+      "fullStateEquivalent": false,
+      "eventEquivalent": false,
+      "forgedStateRejection": "Invalid B8 Match: battle equipment command sequence",
+      "forgedRecordRejection": "战斗档案无效：事件缺失或内容错误"
+    },
+    {
+      "commandTick": 2,
+      "effectiveTick": 3,
+      "endTick": 103,
+      "result": "playerWin",
+      "stateHash": "fnv1a32-utf16:c7f1483d",
+      "eventHash": "fnv1a32-utf16:8c90d515",
+      "eventDifferencesFromTick1": [],
+      "fullStateEquivalent": false,
+      "eventEquivalent": true,
+      "forgedStateRejection": "Invalid B8 Match: battle equipment command sequence",
+      "forgedRecordRejection": "战斗档案无效：内容校验"
+    },
+    {
+      "commandTick": 69,
+      "effectiveTick": 70,
+      "endTick": 103,
+      "result": "playerWin",
+      "stateHash": "fnv1a32-utf16:e263986b",
+      "eventHash": "fnv1a32-utf16:02c44c71",
+      "eventDifferencesFromTick1": [
+        {
+          "index": 16,
+          "tick": 35,
+          "before": {
+            "raw": 69,
+            "mitigated": 103,
+            "hpDamage": 61,
+            "overkill": 42
+          },
+          "after": {
+            "raw": 49,
+            "mitigated": 68,
+            "hpDamage": 61,
+            "overkill": 7
+          }
+        },
+        {
+          "index": 24,
+          "tick": 69,
+          "before": {
+            "raw": 69,
+            "mitigated": 74,
+            "hpDamage": 74,
+            "overkill": 0
+          },
+          "after": {
+            "raw": 49,
+            "mitigated": 49,
+            "hpDamage": 49,
+            "overkill": 0
+          }
+        },
+        {
+          "index": 29,
+          "tick": 103,
+          "before": {
+            "raw": 69,
+            "mitigated": 74,
+            "hpDamage": 36,
+            "overkill": 38
+          },
+          "after": {
+            "raw": 69,
+            "mitigated": 74,
+            "hpDamage": 61,
+            "overkill": 13
+          }
+        }
+      ],
+      "fullStateEquivalent": false,
+      "eventEquivalent": false,
+      "forgedStateRejection": "Invalid B8 Match: battle equipment command sequence",
+      "forgedRecordRejection": "战斗档案无效：事件缺失或内容错误"
     }
   ],
   "epochVerification": {
     "passed": 15,
     "total": 15,
-    "note": "Current-consumer byte audit regenerated and checked after the final Crown initialization adapter; other epoch inputs unchanged."
+    "elapsedSeconds": 545.69,
+    "mode": "check-only",
+    "sourceFingerprintUpdates": [],
+    "note": "1512个已有源码指纹条目一致；指纹集合未覆盖src/replay/history.ts，无需更新；未写录像。"
   },
   "typecheckExitCode": 0,
-  "build": {
-    "exitCode": 0,
-    "command": "npm run build",
-    "includesTypecheck": true,
-    "viteBuildSeconds": 11.69,
-    "warning": "existing production chunks exceed 500 kB; no production code changed"
+  "productionEditsThisTurn": false,
+  "preexistingProductionFix": {
+    "head": "3b8e2c13",
+    "file": "src/replay/history.ts",
+    "cause": "原位合成错把结果槽位当作请求槽位",
+    "fix": "捕获pendingEquipment中原请求slot",
+    "regression": "tests/battle-history-equip-slot.test.ts",
+    "status": "passed"
   },
-  "productionEdits": false,
+  "auditScriptFix": "只读ls-tree区分旧基线新增文件，记录previousExists:false；消费者审计60文件，含19新增文件。",
   "ciWorkflowEdits": false,
-  "remoteCiRequired": "not run; offline and no commit as requested",
+  "timeoutEdits": false,
+  "ruleNumericalRngEdits": false,
+  "remoteCiRequired": "未运行；按要求离线、未提交，原合入门槛不变。",
   "rawResultsSha256": {
-    "artifacts/v21-opening-encounters-recording/final-fast.json": "2cbbceaa44c24436460db9a99b1a77a7b3cbd5f1d64b95e3ee6ec2c8d788d52f",
-    "artifacts/v21-opening-encounters-recording/crown-full.json": "499fcf67d25eff7abe7ff52ef843f98466f61461d428e10da14f0a3dabb27995",
-    "artifacts/v21-opening-encounters-recording/initial-fast.json": "7287cd98db7b41a4ea61ff9333d3e9f2e596709588f4b2f270ee1a14f49884c0",
-    "artifacts/v21-opening-encounters-recording/build-final.log": "8da101ce3a6cc87925cfa9956a4d62743476388bdb1212e2d143a2ed0992feb0",
-    "artifacts/v21-opening-encounters-recording/typecheck-final.log": "4a0b9d63c8dc0781d84fe590fb615962af85bbc020795a0b0e87689bdf3a54b0",
-    "artifacts/v21-opening-encounters-recording/crown-diagnostic.log": "45ad9bb005aab9a11d92f0312c6f974919035156eb6de502f5754bce83f3294f",
-    "artifacts/v21-opening-encounters-recording/crown-full.log": "9616c51555500dbfd30c9b9efe20a40427e464fff3dab707707a710d3d2a7190",
-    "artifacts/v21-opening-encounters-recording/slot-replay-blocker.log": "56592a48b836816743f2e95562fb67fb16a5e36324ab817ae531d62c7b26df3f"
+    "artifacts/v21-opening-encounters-recording/pr9-fast-final.json": "038818825dc11856460cf39cd23b696ec4459a8abeafab9618dee8590bec813c",
+    "artifacts/v21-opening-encounters-recording/pr9-fast-final.log": "37db494877c52e08936a8e0c7f800b7c24a3d19491850cf5050906349c6f24a0",
+    "artifacts/v21-opening-encounters-recording/pr9-crown-final.json": "cc263c016b4f32cc65f9c589eed6ee709a2da8c453c823f7398f43b818f05b5c",
+    "artifacts/v21-opening-encounters-recording/pr9-crown-final.log": "50da7f400c5e05a570ff669337d90cd6c7175464143108445b7d7e202dd8e484",
+    "artifacts/v21-opening-encounters-recording/pr9-typecheck-final.log": "4a0b9d63c8dc0781d84fe590fb615962af85bbc020795a0b0e87689bdf3a54b0",
+    "artifacts/v21-opening-encounters-recording/pr9-epoch-verify.log": "770882820a7e9df2a495ca3d109a36ebaef50bc5dc66c5433fc928b60e37debd",
+    "artifacts/v21-opening-encounters-recording/tick-probe.json": "6934c52f935644b70205729e13fd5fd5438ada0c9683fad524e751f6ec3f7ba1",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-0.json": "81f5c509a14620a67cb42f5483a7dd5e046231c9d69d17e0edae2b2fe248e53f",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-0.log": "7cdebe020b23a4b40f6a4e9a69e6deac586a656cc689277e8262bd8c7e97d4bc",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-1.json": "b2c5dcf57158ac46f9940b1ad94418fd7b848fc8c89200808432eae0fd292061",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-1.log": "9e31ca3774869850858f8ac12a9abbee509a1d8a6a1bf945424de51e2b8ffca3",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-2.json": "d560726a9130d5da97c3b1c28216431a2378e14dbe93a8db689b4ea1fa536a0b",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-2.log": "655cdf521ff7811166a4a92af9fa039d43382067cb1f843d4f9e6a1f00d44efb",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-3.json": "a7f215b576451e8e49ce4da6801eb5c24adcd431edd5669be9b754208cbb165c",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-3.log": "3d17d493f3338af5aa508115652d5994f4fa6290ab0220ec1d04d4861b1b1270",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-4.json": "c40ee4e999c3a743a6f9525f5f1c4064f8e4281c6ea474ee02836c01bb17f694",
+    "artifacts/v21-opening-encounters-recording/pr9-retry-4.log": "3c1e316d320c6c4c37c2b152f3c6a4e602c5a8cc6d1634151ed9900ca5ed21ca"
   },
   "historicalBytes": {
     "files": 393,
     "byteIdentical": true,
     "protectedHeraldManifestByteIdentical": true
   },
-  "blockerReproduction": {
-    "command": "node scripts/reproduce-encounters-pr9-slot-replay.cjs",
-    "exitCode": 1,
-    "evidence": "docs/evidence/v21-opening-encounters/slot-replay-blocker.json"
-  }
+  "currentFixtureBytes": {
+    "files": 426,
+    "byteIdenticalToInputHead": true
+  },
+  "generatedEvidenceRestoredFromInputHead": [
+    "docs/evidence/playtest-1022b/bench-timing.json"
+  ],
+  "risks": [
+    "本地离线验收不替代远端ci-required和交叉审查。",
+    "16-worker负载会触发既有超时；所有受影响文件已保持原超时用单worker通过。"
+  ]
 }
