@@ -43,6 +43,23 @@ export function runUntil(room: Room, clock: ManualClock, predicate: (state: Room
 }
 
 /**
+ * v22: an augment round (2-1, 3-2, 4-2) opens every seat's augment choice inside its preparation. For room tests that
+ * need the seats' prepared states (frozen envelopes, "the deadline changes nothing"): each alive seat answers its open
+ * choices with the first offer through the room, including one the answer opens at once (Portable Forge's forge).
+ */
+export function answerOpenChoices(room: Room): void {
+  for (const { seatId } of room.state.seats) {
+    for (let picks = 0; ; picks++) {
+      const seat = room.state.seats.find(candidate => candidate.seatId === seatId)!;
+      const choice = seat.alive ? seat.match.pendingChoice : null;
+      if (!choice) break;
+      expect(picks).toBeLessThan(4);
+      expect(room.handle(seatId, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: choice.offers[0]! })).toMatchObject({ ok: true });
+    }
+  }
+}
+
+/**
  * v15: online rewards are orbs a seat claims itself (a player with `claimOrb`, a bot at its preparation entry through the
  * rules' helper). For room tests whose precondition is "the rewards arrived": while the room and the seat prepare, every
  * alive seat (or only `seatIds`) claims each unclaimed, unqueued orb through the room's own command, in orbId order.

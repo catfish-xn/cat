@@ -8,13 +8,14 @@ import { mirrorCombatReplay, startReplayWarmup, toCombatReplayFor, toPlayerView 
 import { toCombatReplay, toCombatViewState } from '../../src/server-entry';
 import { TwoSidedBattleResolver, resolveTwoSidedPvp } from '../../src/server/room/two-sided-resolver';
 import { DEFAULT_BATTLE_MAX_STEPS, type BattleInput, type BattleResult, type SeatState } from '../../src/server/room/types';
-import { makeRoom, runUntil } from './helpers';
+import { answerOpenChoices, makeRoom, runUntil } from './helpers';
 
-/** Real seats frozen at the first PvP round (2-1) of an idle placeholder room. */
+/** Real seats frozen at the first PvP round (2-1) of an idle placeholder room, their v22 in-preparation augments answered. */
 function pvpSeats(): readonly SeatState[] {
   const { room, clock } = makeRoom(new PlaceholderBattleResolver());
   room.start();
   runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
+  answerOpenChoices(room);
   return room.state.seats;
 }
 function envelope(seats: readonly SeatState[], a: number, b: number, overrides: Partial<BattleInput> = {}): BattleInput {
@@ -108,6 +109,7 @@ describe('Room in pvpMode=two-sided', () => {
     const { room, clock } = makeRoom(resolver);
     room.start();
     runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
+    answerOpenChoices(room); // v22: the 2-1 augments are answered in preparation, so the deadline itself changes no seat
     const hpBefore = room.state.seats.map(seat => seat.hp), matchesBefore = room.state.seats.map(seat => seat.match);
     clock.runNext();
     expect(room.state.phase).toBe('ended');

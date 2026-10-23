@@ -6,8 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { BattleResolver } from '../../src/server/room/battle-resolver';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { BattleResult, RoomState } from '../../src/server/room/types';
-import type { Room } from '../../src/server/room/room';
-import { DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
+import { answerOpenChoices, DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
 import { expectWallClockBelow } from '../fixtures/wallclock';
 
 const twoSided = (battle: BattleResult): battle is Extract<BattleResult, { kind: 'two-sided' }> => battle.kind === 'two-sided';
@@ -29,21 +28,6 @@ function killAtRoundOne(victim: string): BattleResolver {
   } };
 }
 const atFirstPvp = (state: RoomState) => state.round === 4 && state.phase === 'preparation';
-/**
- * v22: 2-1 opens each seat's augment choice inside its preparation; every seat answers it (first offer) through the room,
- * and any choice that augment opens at once (Portable Forge's artifact forge) the same way.
- */
-function pickAugments(room: Room): void {
-  for (const { seatId } of room.state.seats) {
-    for (let picks = 0; ; picks++) {
-      const choice = room.state.seats.find(seat => seat.seatId === seatId)!.match.pendingChoice;
-      if (!choice) break;
-      expect(picks).toBeLessThan(4);
-      expect(room.handle(seatId, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: choice.offers[0]! })).toMatchObject({ ok: true });
-    }
-  }
-}
-
 export function registerRoundCommit(mode: 'fast' | 'timing'): void {
 describe('Room: whole-round commit through T3 receipts', () => {
   if (mode === 'fast') { it('publishes the round once: every seat HP is the rules\' playerHp and each real seat holds exactly one receipt', () => {
@@ -108,7 +92,7 @@ describe('Room: whole-round commit through T3 receipts', () => {
     room.start();
     runUntil(room, clock, atFirstPvp);
     // v22: answer the 2-1 augment choices first, so the preparation deadline itself changes no seat state.
-    pickAugments(room);
+    answerOpenChoices(room);
     const before = room.state;
     const seen: RoomState[] = [];
     room.subscribe(state => seen.push(state));
