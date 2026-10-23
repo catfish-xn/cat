@@ -1,5 +1,6 @@
 import type { CritEligibility, Source, SpellCritAuthorization } from './contracts';
 import { integer, safeNumber } from './stats';
+import { S13_COMBAT_RULES } from '../s13-rules';
 
 export const sourceTuple = (source: Source): string => JSON.stringify([source.ownerId, source.sourceKind, source.definitionId,
   source.instanceId, source.effectIndex, source.parentItemInstanceId]);
@@ -22,7 +23,7 @@ export function authorizeSpellCrit(nonItemSources: readonly Source[], itemSource
   const bonus = 1000 * (nonItems.length > 0 ? items.length : Math.max(0, items.length - 1));
   return { nonItemSources: nonItems, itemSources: items, enabled: nonItems.length > 0 || items.length > 0,
     redundantItemBonusBps: bonus, chanceBps: Math.max(0, Math.min(10000, chanceBps)),
-    multiplierBps: safeNumber(BigInt(baseMultiplierBps) + BigInt(bonus)) };
+    multiplierBps: safeNumber(BigInt(baseMultiplierBps) + BigInt(bonus) + BigInt(Math.max(0, chanceBps - 10000)) / BigInt(S13_COMBAT_RULES.excessCritChanceDivisor)) };
 }
 export function validateSpellCrit(authorization: SpellCritAuthorization): SpellCritAuthorization {
   const expected = authorizeSpellCrit(authorization.nonItemSources, authorization.itemSources, authorization.chanceBps,
@@ -32,6 +33,11 @@ export function validateSpellCrit(authorization: SpellCritAuthorization): SpellC
     || expected.itemSources.some((s, i) => sourceTuple(s) !== sourceTuple(authorization.itemSources[i]))
     || expected.nonItemSources.some((s, i) => sourceTuple(s) !== sourceTuple(authorization.nonItemSources[i]))) throw new RangeError('Invalid spell critical projection');
   return expected;
+}
+/** Add a situational chance bonus to an already compiled authorization. */
+export function addCritChance(base: SpellCritAuthorization, bonusBps: number): SpellCritAuthorization {
+  return authorizeSpellCrit(base.nonItemSources, base.itemSources, base.chanceBps + bonusBps,
+    base.multiplierBps - base.redundantItemBonusBps);
 }
 /** Caller invokes only for a planned packet. Inherited inputs never call this function. */
 export function rollCrit(eligibility: CritEligibility, authorization: SpellCritAuthorization, draw: () => number): boolean {

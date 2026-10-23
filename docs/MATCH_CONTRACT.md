@@ -1,3 +1,7 @@
+## 2026-10-23 战斗法力规则（待 v22 统一录制）
+
+Match公共命令/失败原因不变。战斗新增可选 `CombatUnit.damageManaRemainderCenti`（0–99），`mana`可因非受伤来源超过`maxMana`；施法后`manaLockedUntilTick`为开始tick+20。恢复从认证输入核对法力、余数、锁蓝时间，JSON保存和完整重放保持，拒绝伪造（`mana binding facts`或动态战斗既有authoritative错误）。阿木木零蓝条与维克托专用资源保持。完整公式、溢出/退款/锁蓝与暴击转换见 [COMBAT_CONTRACT](COMBAT_CONTRACT.md) 顶部及[本单报告](COMBAT_MANA_RULES.md)。**待 v22 统一录制**；本单不录epoch，不改版本/digest常量/历史golden。
+
 ## 2026-10-23 普通单位攻击力星级倍率修正（待 v22 统一录制）
 
 用户 10-23 批准采用 TFT 通用规则：普通单位 1/2/3 星 HP 为 100/180/324%，AD 改为 100/150/225%，分别从一星基础值乘百分比后向下取整。14.24 源数据只有一星属性，不将倍率声称为源表中的三档数值。`getUnitStats(definitionId,starLevel)` / `resolveUnitStats(definition,starLevel)` 签名、输出形状和失败原因不变；无新命令。普通倍率唯一来源为 `content/unit-star-scaling.ts`，`S13_COMBAT_RULES` 元数据改为 `starHealthPercent` / `starAttackPercent`，六费用 `sixCostStarPercent`，均为星级键到整数百分比的只读表；原 `starStatPercent` 无调用方，移除。六费原有 100/180/360%、维克托固定 AD/转法强基线、魔像自定表、fixedStarStats 召唤物及专用四星值保持不变。来源、六费逐项现状、检查范围与测试清单见 [AD 星级报告](AD_STAR_SCALING.md)。不更新身份常量、epoch 或历史 golden；**待 v22 统一录制**。

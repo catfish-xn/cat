@@ -27,6 +27,9 @@ export function validateTaskAndSummonFacts(combat: CombatState, basis: CombatInp
     throw new Error('Invalid Match save: combat cursor binding facts');
   for (const unit of combat.units) {
     const settledUnit = expected.units.find(u => u.id === unit.id)!;
+    if (unit.mana !== settledUnit.mana || unit.manaLockedUntilTick !== settledUnit.manaLockedUntilTick
+      || unit.damageManaRemainderCenti !== settledUnit.damageManaRemainderCenti)
+      throw new Error('Invalid Match save: mana binding facts');
     // Sion reuses buddyTriggered for its Black Rose release. Current HP/cast
     // totals cannot establish when the threshold was crossed (or later healed).
     if (unit.definitionId === 'g23-sion' && unit.runtime!.buddyTriggered !== settledUnit.buddyTriggered)
