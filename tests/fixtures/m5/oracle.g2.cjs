@@ -12,6 +12,9 @@ const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:68,9:68};
 // No production content import; lexical ordering is the public choice contract.
 const AUGMENTS=["all-for-one-ii", "backup", "belt-overflow", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "calculated-enhancement", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "crown-guarded", "crownguard-spirit", "find-your-center", "flurry-of-blows", "glass-cannon-i", "glass-cannon-ii", "guardbreaker-spirit", "immovable-object", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "not-today", "pair-of-fours", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii", "shojin-spirit", "sword-overflow", "trifecta-ii", "wand-overflow"];
 const AUGMENT_GOLD={'placebo':8,'placebo-plus':15,'going-long':15,'hedge-fund':25,'investment-strategy-ii':5};
+// User P 10-23: Placebo pays once by acquisition stage 8/11/15 (stage 2/3/4+); Placebo+ 15/18/22.
+const STAGED_AUGMENT_GOLD={'placebo':[8,11,15],'placebo-plus':[15,18,22]};
+function augmentGold(id,roundId){const staged=STAGED_AUGMENT_GOLD[id];if(!staged)return AUGMENT_GOLD[id]??0;return staged[Math.min(2,Math.max(0,Number(roundId.split('-')[0])-2))];}
 const ANOMALIES=["TFT13_GoopBuff_CenteroftheUniverse","TFT13_GoopBuff_CertainDeath","TFT13_GoopBuff_DeftHands","TFT13_GoopBuff_DramaticEntrance","TFT13_GoopBuff_EvenInDeath","TFT13_GoopBuff_HungerForPower","TFT13_GoopBuff_Invisibility","TFT13_GoopBuff_Repulsor","TFT13_GoopBuff_ScuttleFamiliar","TFT13_GoopBuff_UnstoppableForce","TFT13_GoopBuff_WolfFamiliars","arcana-overwhelming","attack-expert","avalanche-of-armor","berserker-rage","bully","bulwark","comeback-story","cull-the-weak","deep-roots","defense-expert","eagle-eye","energy-absorption","force-of-friendship","fortified","freestyling","giant-sized","heavy-hitter","hypervelocity","kill-streak","laser-eyes","legacy-of-shurima","mage-armor","magic-expert","magic-training","one-thousand-cuts","power-absorption","protective-shielding","share-your-energy","slime-time","slow-cooker","stoneskin","strength-training","titanic-strikes"];
 
 // Independent gift identities and lcg32 arithmetic: no production planner imports.
@@ -369,7 +372,9 @@ function validateChemTransition(before,after){
  if(after.pendingChoice?.kind==='blackMarket')assert.deepEqual(after.pendingChoice.offers,chem.offer.optionIds,'pending choice offers complete bundles');
 }
 class Ledger {
- constructor(initial){this.gold=0;this.pending={gold:0,investmentHp:0};this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
+ constructor(initial){this.gold=0;this.pending={gold:0,investmentHp:0};
+  // v22 openings can start with a second unit (Trainer Golems); conservation starts from the actual opening roster.
+  this.cards=ownedUnits(initial).reduce((n,u)=>n+3**(u.starLevel-1),0);assert(this.cards>=1,'opening unit');this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
   validateChemTransition(before,after);
   if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
@@ -420,9 +425,11 @@ class Ledger {
    assert.equal(r.receiptId,JSON.stringify(['d11-fill',before.pendingChoice.choiceId,'avarice-gold']));this.gold+=5;costs.rewards+=5;
   }
   // v22 opening encounters (batch A/B, trainer golems…): rewards are audited by the opening-encounters suites; the ledger books them.
-  let openingGold=0;
+  let lateGold=0;
+  // G2-4 item gold (Gambler's Blade and friends) pays per combat roll after the settlement record; its rolls are audited by g2-4b-collector.
+  for(const r of appendedMechanics.filter(r=>r.source==='g24-item-gold'&&r.kind==='gold')){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
   for(const r of appendedMechanics.filter(r=>r.source.startsWith('opening-'))){
-   if(r.kind==='gold'){this.gold+=r.amount;costs.rewards+=r.amount;openingGold+=r.amount;}
+   if(r.kind==='gold'){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
    else if(r.kind==='unit'){assert.equal(r.unitId,`unit-${serial}`,'opening reward unit serial');units.set(`unit-${serial++}`,{definitionId:r.definitionId,starLevel:r.starLevel??1});this.cards+=3**((r.starLevel??1)-1);}
   }
   for(const receipt of mechanicGifts){const expected=giftPlan.get(receipt.receiptId);assert(expected,'independent P2 gift identity');assert.equal(receipt.kind,expected.kind);assert.equal(receipt.definitionId,expected.definitionId,'independent P2 gift definition');
@@ -431,7 +438,7 @@ class Ledger {
   for(const event of events.filter(e=>e.type==='unitUpgraded')){assert.equal(event.consumedIds.length,2);assert.equal(new Set([event.survivorId,...event.consumedIds]).size,3);for(const id of [event.survivorId,...event.consumedIds])assert.deepEqual(units.get(id),{definitionId:event.definitionId,starLevel:event.fromStar},'upgrade consumes actual candidate lineage');assert.equal(event.toStar,event.fromStar+1);for(const id of event.consumedIds)units.delete(id);units.set(event.survivorId,{definitionId:event.definitionId,starLevel:event.toStar});}
   assert.deepEqual(new Map(ownedUnits(after).map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}])),units,'actual player unit lineage');
   const schedule=appended(before.scheduleReceipts,after.scheduleReceipts,'eventId','schedule receipts');
-  for(const receipt of schedule){if(before.pendingChoice?.kind==='augment'&&receipt.eventId===before.pendingChoice.eventId){assert.equal(command?.type,'select');assert.equal(receipt.gold,AUGMENT_GOLD[command.definitionId]??0,'independent once-only augment acquisition gold');const item=AUGMENT_ITEMS[command.definitionId];assert.deepEqual(receipt.itemIds,item?[`item-${before.nextItemSerial}`]:[],'independent exact augment item grant');if(item)assert.equal(after.items.find(i=>i.id===receipt.itemIds[0])?.definitionId,item,'independent augment item identity');}assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
+  for(const receipt of schedule){if(before.pendingChoice?.kind==='augment'&&receipt.eventId===before.pendingChoice.eventId){assert.equal(command?.type,'select');assert.equal(receipt.gold,augmentGold(command.definitionId,before.roundDefinitionId),'independent once-only augment acquisition gold');const item=AUGMENT_ITEMS[command.definitionId];assert.deepEqual(receipt.itemIds,item?[`item-${before.nextItemSerial}`]:[],'independent exact augment item grant');if(item)assert.equal(after.items.find(i=>i.id===receipt.itemIds[0])?.definitionId,item,'independent augment item identity');}assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
   let itemSerial=before.nextItemSerial;
   for(const receipt of lootReceipts)for(const id of receipt.grantedItemIds)assert.equal(id,`item-${itemSerial++}`,'loot item serial');
   for(const receipt of schedule)for(const id of receipt.itemIds)assert.equal(id,`item-${itemSerial++}`,'schedule item serial');
@@ -448,7 +455,7 @@ class Ledger {
   assert.equal(pveBonus.length,eligible.length,'independent fixed PvE remover count');
   for(const [i,r] of pveBonus.entries()){const round=eligible[i];assert.equal(r.receiptId,`pve-remover:${round.roundId}`);assert.equal(r.source,'pve-remover');assert.equal(r.kind,'consumable');assert.equal(r.definitionId,'magnetic-remover');assert.equal(r.round,round.round);assert.equal(r.roundId,round.roundId);assert(after.consumables.some(c=>c.consumableId===r.consumableId&&c.definitionId==='magnetic-remover'));}
   let growth=paidInvestment?{...before.augmentProgress,investmentHp:before.augmentProgress.investmentHp+paidInvestment}:before.augmentProgress;
-  for(const record of records){const expected=settlement(before,after.combat,this.gold-openingGold /* batch B pays after the settlement record */);assert.deepEqual(record,expected,`independent settlement R${before.round}`);this.gold+=expected.incomeBreakdown.win;this.pending.gold+=expected.income-expected.incomeBreakdown.win;costs.income+=expected.income;this.rows.push(expected);const grown=investment(before,expected);this.pending.investmentHp+=grown.investmentHp-before.augmentProgress.investmentHp;growth={...grown,investmentHp:growth.investmentHp};}
+  for(const record of records){const expected=settlement(before,after.combat,this.gold-lateGold /* batch B pays after the settlement record */);assert.deepEqual(record,expected,`independent settlement R${before.round}`);this.gold+=expected.incomeBreakdown.win;this.pending.gold+=expected.income-expected.incomeBreakdown.win;costs.income+=expected.income;this.rows.push(expected);const grown=investment(before,expected);this.pending.investmentHp+=grown.investmentHp-before.augmentProgress.investmentHp;growth={...grown,investmentHp:growth.investmentHp};}
   assert.deepEqual(after.augmentProgress,growth,'once-only independent augment growth');
   this.combinations+=events.filter(e=>e.type==='itemCombined').length;this.check(after,true);
  }

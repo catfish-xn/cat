@@ -491,8 +491,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 12;
-  readonly rulesVersion: 's13-g2-3-v22-anvil-units-candidate';
-  readonly contentVersion: 's13-14.24b-g2-3-v22-anvil-units-candidate';
+  readonly rulesVersion: 's13-g2-3-v22-online-rules';
+  readonly contentVersion: 's13-14.24b-g2-3-v22-online-rules';
   readonly contentDigest: string;
   readonly saveFormatVersion: 8;
   readonly replayFormatVersion: 7;

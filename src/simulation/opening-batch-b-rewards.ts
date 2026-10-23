@@ -64,11 +64,12 @@ function grant(state:MatchState,r:OpeningReward,policy?:UnitLootPolicy):MatchCom
  const result=p.kind==='gold'?grantMechanicGold(state,{...request,amount:p.quantity}):p.kind==='item'?grantMechanicItem(state,{...request,definitionId:p.definitionId}):grantMechanicUnit(state,{...request,definitionId:p.definitionId,starLevel:p.starLevel??1,immediate:true},policy);
  return result.ok?result:{ok:false,state,reason:result.reason==='bench-full'?'bench-full':'invalid-opening-effect'};
 }
-export function settleOpeningBatchB(state:MatchState,facts:G23BattleFacts,policy?:UnitLootPolicy,events:MatchEvent[]=[]):MatchState{
+export function settleOpeningBatchB(state:MatchState,facts:G23BattleFacts,policy?:UnitLootPolicy,_events:MatchEvent[]=[]):MatchState{
  for(const r of openingBattleRewards(state,facts)){
   // Online unit allocations wait for a personal orb claim and the shared pool transaction.
   if(state.multiplayer&&r.payload.kind==='unit')continue;
-  const g=grant(state,r,policy);if(g.ok){state=g.state;events.push(...g.events.filter(e=>e.type!=='mechanicGranted'));}else if(g.reason!=='bench-full')throw new RangeError(g.reason);
+  // Grant events (receipt, upgrades, upgrade item transfers) are derived once by the settlement's mechanicGrantEvents.
+  const g=grant(state,r,policy);if(g.ok)state=g.state;else if(g.reason!=='bench-full')throw new RangeError(g.reason);
  }
  return state;
 }

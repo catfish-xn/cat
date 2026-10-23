@@ -4,6 +4,7 @@ import { ITEM_DEFINITIONS } from '../../../src/simulation/content/g2-3-item-regi
 import { UNIT_DEFINITIONS } from '../../../src/simulation/units';
 import { MATCH_RULES } from '../../../src/simulation/match-rules';
 import { checkEquipmentPlacement } from '../../../src/simulation/equipment-policy';
+import { isAnvil } from '../../../src/simulation/content/anvils';
 
 /** Version the actual command recipe, independently of generated save bytes. */
 export const HERALD_RAW_GENERATION_VERSION = 'v22-online-rules-herald-public-commands-v1';
@@ -55,6 +56,7 @@ export function fieldHeraldTarget(initial: api.MatchState, observer?: HeraldComm
   return accepted(commands.deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 3, row: 4 } }));
 }
 
+const forgePick=(offers:readonly string[])=>['rageblade','gunblade','archangel','warmog','gargoyle','deathblade','giant-slayer'].find(id=>offers.includes(id))??offers[0];
 /** Raw command construction only: no import or call of restoreMatch/serializeMatch.
  * The supplied genuine unresolved 4-4 prefix is independently copied. Every
  * intervening battle and item acquisition remains the original public route. */
@@ -85,9 +87,15 @@ export function buildRawHeraldEquipment(initial: api.MatchState, definitions: re
       }
       state = accepted(choice.step === 'target'
         ? commands.selectAnomalyTarget(state, choice.choiceId, choice.generation, state.preparation.units.find(u => u.definitionId === 'kogmaw')!.id)
-        : commands.selectChoice(state, choice.choiceId, choice.generation, choice.kind === 'component' ? missingComponent() : choice.kind==='anomaly'&&choice.offers.includes('hypervelocity')?'hypervelocity':choice.kind==='forge'?['rageblade','gunblade','archangel','warmog','gargoyle','deathblade','giant-slayer'].find(id=>choice.offers.includes(id))??choice.offers[0]:choice.offers[0]));
+        : commands.selectChoice(state, choice.choiceId, choice.generation, choice.kind === 'component' ? missingComponent() : choice.kind==='anomaly'&&choice.offers.includes('hypervelocity')?'hypervelocity':choice.kind==='forge'?forgePick(choice.offers):choice.offers[0]));
     }
     if (state.phase === 'preparation') {
+      // v22: forges arrive as bench anvils; open each by the public sell command and take the usual pick.
+      for (const anvil of state.preparation.units.filter(u => u.team === 'player' && isAnvil(u.definitionId))) {
+        state = accepted(commands.sellUnit(state, anvil.id));
+        const opened = state.pendingChoice!;
+        state = accepted(commands.selectChoice(state, opened.choiceId, opened.generation, forgePick(opened.offers)));
+      }
       while (state.level < 8 && state.gold >= 4) state = accepted(commands.buyXp(state));
       // P3 current-route policy: spend only gold above the unchanged maximum-interest reserve.
       // Existing default recipe and all battle/restore assertions remain available unchanged.
@@ -97,6 +105,8 @@ export function buildRawHeraldEquipment(initial: api.MatchState, definitions: re
         const needsScar = !army.some(u => u.definitionId === 'scar' && u.starLevel > 1)
           && army.filter(u => u.definitionId === 'scar' && u.starLevel === 1).length === 2;
         if (!needsGaren && !needsScar) break;
+        // v22 opening rewards can fill the bench first; never attempt a purchase the bench cannot hold.
+        if (state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench').length >= state.preparation.benchSize) break;
         const slot = state.shop.slots.findIndex(s => s.status === 'available'
           && (needsGaren && s.definitionId === 'garen' || needsScar && s.definitionId === 'scar'));
         state = accepted(slot >= 0 ? commands.buyUnit(state, slot, state.shop.generation) : commands.rerollShop(state));

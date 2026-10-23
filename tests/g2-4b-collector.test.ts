@@ -46,7 +46,7 @@ it('executes through real combat, settles only successful independent rolls, and
   // Even a self-consistent extra failure and matching RNG cursor cannot create
   // another opportunity: the validator independently reconstructs the battle.
   expect(restoreMatch(serializeMatch(preOvertime))).toEqual(preOvertime);
-  const forgeAt=(base:typeof state)=>{
+  const forgeAt=(base:ReturnType<typeof stepMatch>['state'])=>{
    const forged=structuredClone(base),prior=base.combat!.itemGoldReceipts!;
    const extra=drawItemRandom(forged.combat!.itemRandomStreams!,'collector');
    Object.assign(forged.combat!,{itemRandomStreams:extra.streams,itemGoldReceipts:[...prior,
