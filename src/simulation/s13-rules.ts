@@ -21,7 +21,8 @@ export const S13_COMBAT_RULES = Object.freeze({
   attackSpeedIntervalNumerator: 2000000000,
   starHealthPercent: STAR_HEALTH_PERCENT,
   starAttackPercent: STAR_ATTACK_PERCENT,
-  sixCostStarPercent: SIX_COST_STAR_PERCENT,
+  sixCostStarPercent: SIX_COST_STAR_PERCENT, // Health only.
+  sixCostAttackRounding: 'half-up',
   arithmeticRevision: 'm8-b4-catalog-1',
   modifierPipeline: 'm8-global-numeric-01-bigint-intermediates-safe-integer-results',
   damagePipeline: 'm8-g02-delivery-permissions-true-bypass-inherited-single-mitigation',

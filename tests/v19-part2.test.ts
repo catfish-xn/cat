@@ -50,9 +50,9 @@ const idle=(c:CombatState,actors:string[]=[])=>({...c,units:c.units.map(u=>actor
 const facts=(round=4,stage=2,survivors=['a','b'],eligible=true,kind:'pvp'|'pve'='pvp'):G23BattleFacts=>({battleId:'battle-'+round,round,roundKind:kind,result:'loss',conquerorTier:0,conquestTakedowns:[],chemBaronTier:0,alliedDeaths:0,rumbleStar:0,highRollerGold:0,family:{stage,eligible,openingIds:['a','b'],survivorIds:survivors}});
 
 describe('v19 six costs',()=>{
-  it.each([['warwick',2100,110,70,9000,1,60,100],['viktor',1600,100,40,5500,4,0,100],['mel',1800,80,60,8000,3,0,40]] as const)('independent base/star table: %s',(id,hp,ad,resist,speed,range,mana,maxMana)=>{
+  it.each([['warwick',2100,[110,165,248],70,9000,1,60,100],['viktor',1600,[100,150,225],40,5500,4,0,100],['mel',1800,[80,120,180],60,8000,3,0,40]] as const)('independent base/star table: %s',(id,hp,ad,resist,speed,range,mana,maxMana)=>{
     expect(UNIT_DEFINITIONS[id]).toMatchObject({id,cost:6,baseAttackSpeedBps:speed,attackRange:range,initialMana:mana,maxMana});
-    for(const [star,bps] of [[1,10000],[2,18000],[3,36000]] as const)expect(getUnitStats(id,star)).toMatchObject({health:Math.floor(hp*bps/10000),attack:Math.floor(ad*bps/10000),armor:resist,magicResist:resist});
+    for(const [star,bps] of [[1,10000],[2,18000],[3,36000]] as const)expect(getUnitStats(id,star)).toMatchObject({health:Math.floor(hp*bps/10000),attack:ad[star-1],armor:resist,magicResist:resist});
   });
   it('freezes stage/level odds and preserves two words per shop slot',()=>{
     const unlock=getCatalogRoundById('4-6').ordinal;

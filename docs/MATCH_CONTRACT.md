@@ -1,6 +1,10 @@
+## 2026-10-23 六费 AD（P；覆盖历史六费 AD 3.6 倍说明）
+
+来源：本地 `perf-1022/rules-1023/approved-1023-batch2.md`，用户 10-23 批准的项目决定（P）。沃里克 **110/165/248**、维克托 **100/150/225**、梅尔 **80/120/180**；从一星值乘 `STAR_ATTACK_PERCENT` 后正数四舍五入，`floor((基础AD×整数百分比+50)/100)`，不是从二星递推。普通 AD 仍向下取整；六费 HP 与专用四星不变。`S13_COMBAT_RULES.starAttackPercent` 同时适用于普通/六费，`sixCostStarPercent` 仅用于六费 HP，新增 `sixCostAttackRounding:'half-up'` 标明取整语义。维克托固定 AD 与转 AP 的基础 AD 扣除均改用 100/150/225，额外 AD 的原有计算顺序不变。公共函数签名、输入输出形状、失败原因不变；无新命令、事件或 RNG 抽取。**待 v22 统一录制**；不更新 epoch/digest/golden。手算与验证见 [六费 AD 报告](SIX_COST_AD_STAR_SCALING.md)。
+
 ## 2026-10-23 普通单位攻击力星级倍率修正（待 v22 统一录制）
 
-用户 10-23 批准采用 TFT 通用规则：普通单位 1/2/3 星 HP 为 100/180/324%，AD 改为 100/150/225%，分别从一星基础值乘百分比后向下取整。14.24 源数据只有一星属性，不将倍率声称为源表中的三档数值。`getUnitStats(definitionId,starLevel)` / `resolveUnitStats(definition,starLevel)` 签名、输出形状和失败原因不变；无新命令。普通倍率唯一来源为 `content/unit-star-scaling.ts`，`S13_COMBAT_RULES` 元数据改为 `starHealthPercent` / `starAttackPercent`，六费用 `sixCostStarPercent`，均为星级键到整数百分比的只读表；原 `starStatPercent` 无调用方，移除。六费原有 100/180/360%、维克托固定 AD/转法强基线、魔像自定表、fixedStarStats 召唤物及专用四星值保持不变。来源、六费逐项现状、检查范围与测试清单见 [AD 星级报告](AD_STAR_SCALING.md)。不更新身份常量、epoch 或历史 golden；**待 v22 统一录制**。
+用户 10-23 批准采用 TFT 通用规则：普通单位 1/2/3 星 HP 为 100/180/324%，AD 改为 100/150/225%，分别从一星基础值乘百分比后向下取整。14.24 源数据只有一星属性，不将倍率声称为源表中的三档数值。`getUnitStats(definitionId,starLevel)` / `resolveUnitStats(definition,starLevel)` 签名、输出形状和失败原因不变；无新命令。普通倍率唯一来源为 `content/unit-star-scaling.ts`，`S13_COMBAT_RULES` 元数据改为 `starHealthPercent` / `starAttackPercent`，六费用 `sixCostStarPercent`，均为星级键到整数百分比的只读表；原 `starStatPercent` 无调用方，移除。六费 HP 保留 100/180/360%；六费 AD 按各自一星值 × 100/150/225% 后四舍五入（正数半入），见下述 P 决定。魔像自定表、fixedStarStats 召唤物及专用四星值保持不变。来源、六费逐项现状、检查范围与测试清单见 [AD 星级报告](AD_STAR_SCALING.md)。不更新身份常量、epoch 或历史 golden；**待 v22 统一录制**。
 
 ## 2026-10-23 Batch A 覆盖合同（待统一 epoch）
 

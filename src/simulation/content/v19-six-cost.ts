@@ -6,7 +6,7 @@ import type { TraitDefinition } from '../strategy-types';
 
 /** Local 14.24 archive with 12/17 B overrides. Missing execution details are explicitly custom; see V19_PART2.md. */
 export const SIX_COST_POLICY = freezeContent({
-  version:'v19-six-cost-custom-v1', copies:9, threeStarBps:36000,
+  version:'v19-six-cost-custom-v1', copies:9, threeStarBps:36000, // Health only; AD follows unit-star-scaling.
   odds:{qBps:OPENING_BATCH_A.sixCostQ,sampler:OPENING_BATCH_A.sampler},
   viktor:{conversion:'1-extra-AD/1-AS-percentage-point/1-extra-mana-to-1-AP',speedBps:5500,initialEnergy:3,maxEnergy:8},
   warwick:{executeBps:1500,heal:400,mana:50,frenzyTicks:80,speedBps:4000,moveSpeedBps:5000,permanentKills:5},

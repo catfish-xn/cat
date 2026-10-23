@@ -39,12 +39,16 @@ describe('2026-10-23 approved ordinary AD star correction', () => {
   });
 
   it.each([
-    ['warwick', [2100, 3780, 7560], [110, 198, 396]],
-    ['viktor', [1600, 2880, 5760], [100, 180, 360]],
-    ['mel', [1800, 3240, 6480], [80, 144, 288]],
-  ] as const)('preserves all existing custom six-cost stars: %s', (id, hp, ad) => {
-    for (const star of [1, 2, 3] as const)
-      expect(getUnitStats(id, star)).toMatchObject({ health: hp[star - 1], attack: ad[star - 1] });
+    ['warwick', [2100, 3780, 7560], [110, 165, 248]],
+    ['viktor', [1600, 2880, 5760], [100, 150, 225]],
+    ['mel', [1800, 3240, 6480], [80, 120, 180]],
+  ] as const)('applies approved six-cost AD, preserving HP: %s', (id, hp, ad) => {
+    for (const star of [1, 2, 3] as const) {
+      const expected = { health: hp[star - 1], attack: ad[star - 1] };
+      expect(getUnitStats(id, star)).toMatchObject(expected);
+      expect(resolveUnitStats(UNIT_DEFINITIONS[id], star)).toMatchObject(expected);
+      expect(familyCombatBase({ definitionId: id, starLevel: star }, star).base).toMatchObject(expected);
+    }
   });
 
   it('retains trainer centi-AD and other fixed-star summons', () => {

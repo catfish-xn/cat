@@ -15,13 +15,14 @@ export function resolveUnitStats(definition: UnitDefinition, starLevel: StarLeve
   if (!Object.hasOwn(STAR_HEALTH_PERCENT, starLevel)) throw new RangeError(`Invalid star level: ${starLevel}`);
   const fixed = definition.summon?.fixedStarStats;
   const healthPercent = fixed ? 100 : (definition.cost === 6 ? SIX_COST_STAR_PERCENT : STAR_HEALTH_PERCENT)[starLevel];
-  const attackPercent = fixed ? 100 : (definition.cost === 6 ? SIX_COST_STAR_PERCENT : STAR_ATTACK_PERCENT)[starLevel];
+  const attackPercent = fixed ? 100 : STAR_ATTACK_PERCENT[starLevel];
   return {
     ...(definition.id===TRAINER_ID?{attackRemainderCenti:TRAINER_ATTACK_CENTI[starLevel-1]%100}:{}),
     ...(definition.unitKind ? { unitKind: definition.unitKind, ...(definition.monsterFamily ? { monsterFamily: definition.monsterFamily } : {}) } : {}),
     ...(definition.baseCritChanceBps === undefined ? {} : { baseCritChanceBps: definition.baseCritChanceBps, baseCritMultiplierBps: definition.baseCritMultiplierBps }),
     health: definition.id===TRAINER_ID ? TRAINER_HEALTH[starLevel-1] : Math.floor(definition.baseStats.health * healthPercent / 100),
-    attack: definition.id===TRAINER_ID ? Math.floor(TRAINER_ATTACK_CENTI[starLevel-1]/100) : Math.floor(definition.baseStats.attack * attackPercent / 100),
+    // Six-cost AD uses half-up rounding (approved 2026-10-23); other AD retains floor.
+    attack: definition.id===TRAINER_ID ? Math.floor(TRAINER_ATTACK_CENTI[starLevel-1]/100) : Math.floor((definition.baseStats.attack * attackPercent + (!fixed && definition.cost === 6 ? 50 : 0)) / 100),
     armor: definition.baseStats.armor, magicResist: definition.baseStats.magicResist,
     attackRange: definition.attackRange, attackIntervalTicks: definition.attackIntervalTicks,
     ...(definition.baseAttackSpeedBps === undefined ? {} : { baseAttackSpeedBps: definition.baseAttackSpeedBps }),
