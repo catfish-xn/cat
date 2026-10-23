@@ -50,12 +50,12 @@ describe('PR8 opening-encounter texts', () => {
     expect(monkeyToastText({ nodeId: '3-5', outcome: 'jackpot' })).toBeNull();
     expect(monkeyToastText(undefined)).toBeNull();
   });
-  it('Mel progress: before and after the threshold, the reward always closed, never claimable', () => {
+  it('Mel progress: before the threshold it says when, after it the blessing waits as orbs; an older server stays closed', () => {
     const progress = readOpeningMelProgress(createMatch(seedFor('mels-blessing')))!;
-    expect(melProgressText(progress)).toBe('梅尔的祝福 · 生命值降到 40 及以下时触发（奖励尚未启用）');
-    expect(melProgressText({ ...progress, thresholdReached: true })).toBe('梅尔的祝福 · 已达门槛（奖励尚未启用）');
+    expect(melProgressText(progress)).toBe('梅尔的赐福 · 生命值首次降到 40 及以下（仍存活）时获得一次');
+    expect(melProgressText({ ...progress, thresholdReached: true, rewardStatus: 'granted' })).toBe('梅尔的赐福 · 已获得（奖励在法球里领取）');
+    expect(melProgressText({ thresholdHp: 40, thresholdReached: false })).toBe('梅尔的祝福 · 生命值降到 40 及以下时触发（奖励尚未启用）');
     expect(melProgressText(null)).toBeNull();
-    for (const text of [melProgressText(progress), melProgressText({ ...progress, thresholdReached: true })]) expect(text).not.toMatch(/领取|已获得/);
   });
   it('opening forges left; masterwork offers keep the instance id', () => {
     expect(forgeProgressText({ forgesGranted: 2, forgesPending: 2 })).toBe('锻造器 剩余 2');

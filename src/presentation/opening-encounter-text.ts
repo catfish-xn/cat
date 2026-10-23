@@ -19,7 +19,7 @@ export interface OpeningEncounterDisplay {
   readonly revealedFacts: readonly { readonly nodeId: string; readonly outcome?: string }[];
 }
 /** My own Mel threshold progress (`openingMelProgress`), as the private seat view carries it. */
-export interface OpeningMelProgressDisplay { readonly thresholdHp: number; readonly thresholdReached: boolean }
+export interface OpeningMelProgressDisplay { readonly thresholdHp: number; readonly thresholdReached: boolean; readonly rewardStatus?: 'waiting-threshold' | 'granted' }
 /** My own opening forge count (`openingForgeProgress`). */
 export interface OpeningForgeProgressDisplay { readonly forgesGranted: number; readonly forgesPending: number }
 /** One `masterworkOptions` row: the offered item instance, its definition and its radiant version. */
@@ -88,14 +88,48 @@ export function monkeyFact(view: OpeningEncounterDisplay | null): { readonly nod
 }
 
 /**
- * Mel's personal threshold. Before it: when it triggers; after it: reached. The reward is closed either way and the line
- * says so; it is never shown as claimable or claimed.
+ * Mel's personal threshold. Before it: when it triggers; after it: the blessing was granted (its rewards wait as orbs).
+ * A server without the reward (no `rewardStatus`) still says the reward is not enabled.
  */
 export function melProgressText(progress: OpeningMelProgressDisplay | null | undefined): string | null {
   if (!progress || !Number.isFinite(progress.thresholdHp)) return null;
-  return progress.thresholdReached ? '梅尔的祝福 · 已达门槛（奖励尚未启用）'
+  if (progress.rewardStatus === undefined) return progress.thresholdReached ? '梅尔的祝福 · 已达门槛（奖励尚未启用）'
     : `梅尔的祝福 · 生命值降到 ${progress.thresholdHp} 及以下时触发（奖励尚未启用）`;
+  return progress.thresholdReached ? '梅尔的赐福 · 已获得（奖励在法球里领取）'
+    : `梅尔的赐福 · 生命值首次降到 ${progress.thresholdHp} 及以下（仍存活）时获得一次`;
 }
+
+/** Mel's 13 blessing branches (Blessing_High_<n>), as the batch A reward pool grants them. */
+const MEL_BLESSINGS: Readonly<Record<number, string>> = {
+  1: '30 金币', 2: '1 个英雄复制器、2 件基础装备、1 把金铲铲', 4: '4 件基础装备、1 个装备重铸器', 5: '1 个金铲铲冠冕',
+  6: '2 件基础装备、1 把金铲铲、1 个装备重铸器、10 金币', 7: '2 副窃贼手套', 8: '2 件基础装备、1 个五费弈子',
+  9: '2 个基础装备锻造器、1 把金铲铲、1 口金锅锅', 10: '2 件基础装备、1 口金锅锅、1 个装备重铸器、10 金币',
+  11: '50 金币', 12: '2 个金铲铲冠冕', 13: '20 金币、2 个英雄复制器', 14: '8 件基础装备',
+};
+/** Gold subscription buckets XS/S/M/L/XL/Giga (index = rules bucket). */
+const GOLD_BUCKETS = ['极小', '小', '中', '大', '特大', '巨额'] as const;
+/** Loot subscription categories in the rules' weight order; 0 is the boot (a visual only, no reward). */
+const LOOT_CATEGORIES = ['靴子（空奖励）', '金铲铲', '阶段金币', '辅助装备锻造器', '神器锻造器', '二星弈子', '基础装备', '装备重铸器', '金铲铲冠冕'] as const;
+
+/** One `openingRewardResolved` event as a toast line; null for an outcome this build does not know. */
+export function openingRewardText(event: { readonly encounterId: string; readonly outcome: string }, goldOf?: (stage: number, bucket: number) => number): string | null {
+  if (event.encounterId === 'mels-blessing') {
+    const branch = Number(/^Blessing_High_(\d+)$/.exec(event.outcome)?.[1]);
+    return Object.hasOwn(MEL_BLESSINGS, branch) ? `梅尔的赐福 · 获得 ${MEL_BLESSINGS[branch]}（在法球里领取）` : null;
+  }
+  const match = /^(gold-subscription|loot-subscription)\/stage\/(\d+)\/(\d+)$/.exec(event.outcome);
+  if (!match || match[1] !== event.encounterId) return null;
+  const stage = Number(match[2]), bucket = Number(match[3]);
+  if (match[1] === 'gold-subscription') {
+    const name = GOLD_BUCKETS[bucket]; if (!name) return null;
+    const gold = goldOf?.(stage, bucket);
+    return `金币订阅 · 第 ${stage} 阶段 · ${name}档${gold === undefined ? '' : ` · 所有玩家 +${gold} 金币`}`;
+  }
+  const category = LOOT_CATEGORIES[bucket]; if (!category) return null;
+  return bucket === 0 ? `战利品订阅 · 第 ${stage} 阶段 · 一只靴子砸了下来，什么也没有`
+    : `战利品订阅 · 第 ${stage} 阶段 · 所有玩家获得${category}（在法球里领取）`;
+}
+
 /** Remaining opening forges (the pending count includes the one open now); null when there is nothing to forge. */
 export function forgeProgressText(progress: OpeningForgeProgressDisplay | null | undefined): string | null {
   if (!progress || !Number.isInteger(progress.forgesPending) || progress.forgesPending <= 0) return null;

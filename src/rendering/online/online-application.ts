@@ -33,7 +33,8 @@ import type { RemoteSession } from './remote-session';
 import type { SceneApplication } from './scene-application';
 import type { OnlineBoardMounts } from '../app-shell';
 import { OpeningEncounterHud } from '../opening-encounter-hud';
-import { readOpeningDisplay, type OpeningForgeProgressDisplay, type OpeningMelProgressDisplay } from '../../presentation/opening-encounter-text';
+import { openingRewardText, readOpeningDisplay, type OpeningForgeProgressDisplay, type OpeningMelProgressDisplay } from '../../presentation/opening-encounter-text';
+import { subscriptionGold } from '../../simulation/opening-batch-rewards';
 
 export interface OnlineHooks {
   /** The server replaced my state outside a command: redraw everything. */
@@ -187,6 +188,9 @@ export class OnlineApplication implements SceneApplication {
       if (line && line.round === state.round && line.phase === state.phase) { this.phaseLine = null; this.hooks.status(line.text); }
     }
     // The settlement's merges arrive before the phase change; its status line keeps them (syncStatus).
+    // Batch A rewards: subscriptions each stage, Mel's blessing; the rules settled them, the toast only names them.
+    for (const event of [...confirmed.flatMap(command => command.events), ...serverEvents])
+      if (event.type === 'openingRewardResolved') { const text = openingRewardText(event, subscriptionGold); if (text) this.opening.showToast(text); }
     const merged = mergeNotice(serverEvents);
     if (merged) this.mergeNote = { round: state.round, text: merged };
     if (serverEvents.length) this.hooks.serverEvents?.(serverEvents);

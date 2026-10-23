@@ -71,7 +71,7 @@ export class OpeningEncounterHud {
     if (!encounter) { this.hideAll(); return; }
     if (this.matchKey !== input.matchKey) { this.matchKey = input.matchKey; this.factSeen = monkeyFact(encounter)?.outcome ?? null; }
     const key = JSON.stringify([input.matchKey, encounter.encounterId, encounter.statusTextZh, encounter.enabled, encounter.revealedFacts, input.round <= 1,
-      input.forge?.forgesPending ?? null, input.mel?.thresholdReached ?? null]);
+      input.forge?.forgesPending ?? null, input.mel?.thresholdReached ?? null, input.mel?.rewardStatus ?? null]);
     if (key === this.key) return;
     this.key = key;
     this.renderBanner(encounter, input.round <= 1);
