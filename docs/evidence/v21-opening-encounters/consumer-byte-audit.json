@@ -250,6 +250,14 @@
       "currentSha256": "bb03ad2f88fb1481c887f7cbc4072cf65aad1ad6333cf4446dcfe74932de9fd7",
       "firstDifferentByte": 0
     },
+    "tests/fullscreen-toggle.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2516,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1ea24f779bd0012814097fe306fb129e5f373499c251c2172a9a2b113ad97660",
+      "firstDifferentByte": 0
+    },
     "tests/g2-3-hook-failures.test.ts": {
       "previousBytes": 6050,
       "currentBytes": 6147,
@@ -362,6 +370,20 @@
       "currentSha256": "13bce5fddc6052947717c6306d27b595356b7519f9bbfbb68926eb4e0126f8c7",
       "firstDifferentByte": 1299
     },
+    "tests/rendering3d-scout-input.test.ts": {
+      "previousBytes": 7195,
+      "currentBytes": 7401,
+      "previousSha256": "efea0bdb28fd85da2e8db669e5a4a913cc473de0e1918d21aaa3e58c7cf7f636",
+      "currentSha256": "f47bf971cd7847ad386bc32915b0c51ae1c09de86824211648c3435176293e28",
+      "firstDifferentByte": 3856
+    },
+    "tests/rendering3d-tabletop.test.ts": {
+      "previousBytes": 18893,
+      "currentBytes": 22852,
+      "previousSha256": "beb0539d0c17ef545355ae6ea737f19ac5e6b63b69b65322b5dbec3b07c899e1",
+      "currentSha256": "80bfe7e92399123a65f71b952f22f13643677fcebf64ad76e95a3b804df01cb2",
+      "firstDifferentByte": 3719
+    },
     "tests/s13-augments-p2-multiplayer.test.ts": {
       "previousBytes": 8008,
       "currentBytes": 8096,
@@ -382,6 +404,13 @@
       "previousSha256": "791b59f1a80d2615c4e9a360f291422cb195686cb33eea5cc04b96fefd6c4728",
       "currentSha256": "158ad072a6ecc0990a56f5f87207412f9a62c95eb26210e0667ccc0990104d26",
       "firstDifferentByte": 748
+    },
+    "tests/server/e2e/ws-two-contexts.mjs": {
+      "previousBytes": 12567,
+      "currentBytes": 12543,
+      "previousSha256": "43db85bdfdadb329ff60cc289c3b2681873e3ea7d8d9ca82a826faa36415314b",
+      "currentSha256": "a7a357ba59f99948b242e3989850e185d00953d5181dd2dd957b99c1e3dd413b",
+      "firstDifferentByte": 6360
     },
     "tests/server/fixtures/battle-start.json": {
       "previousBytes": 1371639,
