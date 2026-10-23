@@ -1,3 +1,4 @@
+import { openingAnvilOrbs, g23AnvilOrbs, grantAnvilUnit } from './anvils';
 import { openingRewardOrbs, claimOpeningReward, isOpeningRewardOrb } from './opening-batch-rewards';
 import { openingRewardOrbs as batchBRewardOrbs, claimOpeningReward as claimBatchBReward } from './opening-batch-b-rewards';
 import { familyOrbs, claimFamilyOrb } from './family-orbs';
@@ -8,7 +9,7 @@ import { commitReceipt, grantDirectLoot, type UnitLootPolicy } from './loot-runt
 import { lootOrbId, lootEntryId, lootReceiptId } from './loot-identity';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { isCombatRosterLocked } from './operation-policy';
-import { drainG23Rewards, mechanicGrantEvents } from './g2-3-runtime';
+import { drainG23Rewards, claimG23Atom, mechanicGrantEvents } from './g2-3-runtime';
 import { planTemporaryEquipment } from './temporary-equipment';
 
 /** Combat accepts intent only; the authoritative settlement drains the FIFO. */
@@ -20,8 +21,8 @@ export function allClaimableOrbPlans(state: MatchState) {
 }
 export function unclaimedOrbPlans(state: MatchState) {
   if (state.multiplayer?.status==='eliminated' || state.phase==='gameOver') return [];
-  return [...openingRewardOrbs(state),...batchBRewardOrbs(state),...familyOrbs(state),...allClaimableOrbPlans(state).filter(o=>getMultiplayerRoundById(o.roundId).ordinal<=state.round
-    && o.entries.length && o.entries.every(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId && d.status==='revealed')
+  return [...openingAnvilOrbs(state),...g23AnvilOrbs(state),...openingRewardOrbs(state),...batchBRewardOrbs(state),...familyOrbs(state),...allClaimableOrbPlans(state).filter(o=>getMultiplayerRoundById(o.roundId).ordinal<=state.round
+    && o.entries.length && o.entries.some(e=>state.m8.loot.direct.some(d=>d.dropId===e.dropId && d.status==='revealed')
       && (o.source==='mechanic'||state.m8.loot.earnedEvidence.some(v=>v.dropId===e.dropId))))];
 }
 /** Enqueue once under the mechanic receipt identity; no inventory, RNG or pool allocation. */
@@ -39,10 +40,21 @@ export function enqueueRewardOrb(state: MatchState, receiptId: string, definitio
 /** Match owns stamping and equipment commits. Shared pool policy is transaction-local. */
 export function planOrbClaim(state: MatchState, orbId: string, expectedRound: number, policy?:UnitLootPolicy): MultiplayerCommandResult {
   const fail=(reason:Extract<MultiplayerCommandResult,{ok:false}>['reason']):MultiplayerCommandResult=>({ok:false,state,reason});
-  if (!state.multiplayer&&!orbId.startsWith('family:orb:')&&!isOpeningRewardOrb(orbId)&&!orbId.startsWith('opening-batch-b/')) return fail('multiplayer-required');
+  if (!state.multiplayer&&!orbId.startsWith('g23-anvil:')&&!orbId.startsWith('opening-anvil:')&&!allClaimableOrbPlans(state).some(o=>o.orbId===orbId&&o.entries.some(e=>e.payload.kind==='forge'))&&!orbId.startsWith('family:orb:')&&!isOpeningRewardOrb(orbId)&&!orbId.startsWith('opening-batch-b/')) return fail('multiplayer-required');
   if (state.multiplayer?.status==='eliminated') return fail('seat-eliminated');
   if (state.round!==expectedRound) return fail('stale-round');
   if (!ORB_CLAIM_PHASES.includes(state.phase) || state.pendingChoice?.payload?.source === 'masterwork-upgrade') return fail('wrong-phase');
+  if(orbId.startsWith('g23-anvil:')){
+    const orb=g23AnvilOrbs(state).find(o=>o.orbId===orbId);if(!orb)return fail('unknown-orb');
+    if(isCombatRosterLocked(state))return fail('wrong-phase');
+    const entry=orb.entries[0],result=claimG23Atom(state,entry.dropId,entry.payload.definitionId,policy);
+    return !result.ok&&result.reason==='bench-full'?{ok:true,state,events:[]}:result;
+  }
+  if(orbId.startsWith('opening-anvil:')){
+    const orb=openingAnvilOrbs(state).find(o=>o.orbId===orbId);if(!orb)return fail('unknown-orb');
+    if(isCombatRosterLocked(state))return fail('wrong-phase');
+    return grantAnvilUnit(state,{receiptId:orb.entries[0].sourceUnitId,source:'opening-encounter',definitionId:orb.entries[0].payload.definitionId});
+  }
   if(isOpeningRewardOrb(orbId)){
     if(state.sharedPool&&!policy)return fail('shared-pool-required');
     if(state.m8.loot.queuedOrbClaims?.includes(orbId))return fail('already-claimed');

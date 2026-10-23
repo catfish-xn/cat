@@ -20,6 +20,14 @@
 
 `geniuses`（羁绊：天才）改彩；服务器默认 `choiceMs` 从 30000 改为 48000 毫秒，沿已有统一选择窗口，保留显式配置覆盖。第 7、8 条未另给原版独立依据，标为**项目决定 P（用户 10-23 批准）**。天才其他效果和其他数值不变。本地演示层的 30 秒显式覆盖留 Claude 同步。完整有序权重、签名及恢复语义见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 首节，向量、验证及失败清单见 [简报](AUGMENT_TIER_TABLE_REPORT.md)。**待 v22 统一录制**：本单不录 epoch、不改 digest 常量/golden/历史断言；本轮全程离线。
 
+## 2026-10-23 锻造器单位覆盖合同（待 v22 统一录制）
+
+本节覆盖下文以及 Batch A/B 报告中锻造器“自动弹窗/终局自动选择”的旧语义。四种 `TFT_ArmoryKeyCompleted/Component/Ornn/Support` 为备战席单位：不占人口、不可上阵/合星/装备、可挪位并跨回合保存。满席锻造器保留在未领取法球，其他条目可部分领取。蔚给 2 基础、杰斯给 1 神器；法球、史诗奖励、订阅/梅尔/巨蟹和 G2-3 forge atom 均改发单位。光明遗物 5 选 1、便携锻炉 4 选 1 仍立即选择。
+
+新增 `openAnvil(state, unitId): MatchCommandResult`，共享/线上命令 `{type:'openAnvil',unitId}`；出售锻造器等价打开且不加金币。新 `pendingChoice.payload={kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:offers[0]}`；仍用 choose 和 timeoutChoice，4 选 1，保留原采样器/种子流，超时首项。本人 `preparation.units[].anvil` 提供名称、出售/悬停文字及时间；公开观战不暴露选项。命令失败枚举、字段、发放接口、收据/恢复、Claude 计时器接入点见 [锻造器报告](ANVIL_UNITS.md)。规则不使用墙钟，打开后的独立 30 秒计时尚待 Claude 接线，不能复用准备期剩余秒数。
+
+4-7 野怪回合固定额外给 1 个基础装备锻造器（项目决定 **P**，用户 2026-10-23 批准）；原有 2–4 个散件掉落照常，不替换、不减少。固定 forge payload 追加到冻结计划首个法球末尾，不新增 RNG 消耗；领取入备战席，满席留球，沿用原收据、恢复和回放路径，单机/联机同源。14.24 原版数据未找到 4-7 必出散件锻造器的证据，仅有一张未被引用的 `EpicNPCLootComponentAnvil` 表，不能据此标为原版确认。候选规则/content 身份已变更，schema12/save8/replay7/command7；digest 随 manifest 计算，历史 epoch/golden 不改，**待 v22 统一录制**。
+
 ## 2026-10-23 Batch A：梅尔、维克托、两个订阅（用户批准；待统一 epoch）
 
 本节覆盖下文历史“梅尔只观察、订阅/维克托关闭”和六费 `20 + 4×回合差 + Lv10 160 Bps` 描述。依据只读 `perf-1022/encounters-decisions.html` 的 **M1–M4、V1–V3、S1–S7「我的推荐」**及补研第1/2/4/7节、配套JSON；没有联网重查，也没有复制原始资料入库。实现与验收见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md)。

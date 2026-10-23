@@ -29,7 +29,7 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
     if([...familyOrbs(state),...openingRewardOrbs(state)].some(o=>o.orbId===orbId))continue;
     const orb=plans.find(o=>o.orbId===orbId);
     check(typeof orbId==='string' && orb && getMultiplayerRoundById(orb.roundId).ordinal<=state.round
-      && orb.entries.length && orb.entries.every(e=>loot.direct.some(d=>d.dropId===e.dropId&&d.status==='revealed')
+      && orb.entries.length && orb.entries.some(e=>loot.direct.some(d=>d.dropId===e.dropId&&d.status==='revealed')
         && (orb.source==='mechanic'||loot.earnedEvidence.some(v=>v.dropId===e.dropId))),'queued orb eligibility');
   }
   check(new Set(plans.map(o=>o.orbId)).size===plans.length,'duplicate orb');
@@ -58,7 +58,7 @@ export function validateMultiplayerOrbLedger(state: MatchState): void {
       check(orb.orbId===lootOrbId(orb.roundId,'mechanic',e.sourceUnitId,0)&&e.dropId===lootEntryId(orb.orbId,0),'mechanic identity');
     }
     const statuses=new Set(orb.entries.map(e=>loot.direct.find(d=>d.dropId===e.dropId)?.status));
-    check(statuses.size===1,'atomic orb status');
+    check(statuses.size===1||[...statuses].every(s=>s==='granted'||s==='revealed')&&orb.entries.every(e=>loot.direct.find(d=>d.dropId===e.dropId)?.status!=='revealed'||e.payload.kind==='forge'),'partial anvil orb status');
     for(const e of orb.entries) {
       const d=loot.direct.find(d=>d.dropId===e.dropId)!,r=receipts.get(e.dropId),earned=orb.source==='mechanic'||evidence.has(e.dropId);
       check(['planned','revealed','granted','forfeited'].includes(d.status),'status');

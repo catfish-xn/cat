@@ -25,7 +25,7 @@ export function validateG23Restoration(state:MatchState,parsedJsonInput=false):v
   validateG23MechanicLinks(state);
   const mel=readG23Progress(state)?.mel;check(equal(state.seatMechanics?.seat.melRescue??null,mel?{pvpCasts:mel.pvpCasts,saved:mel.savedBattleId!==null}:null),'Mel display projection');
   check(equal(state.seatMechanics?.seat.familyHeist??null,familyDisplay(readG23Progress(state)?.family)),'family display projection');
-  if(state.phase==='choice'){
+  if(state.phase==='choice'&&state.pendingChoice?.payload?.source!=='anvil-unit'){
     const choice=state.pendingChoice!;const expected=openG23Choice({...state,phase:choice.returnPhase,pendingChoice:null} as MatchState);
     const source=choice.payload?.source;
     if((isMechanicChoice(choice)&&expected.state.pendingChoice)||source==='conqueror'||source==='black-market'||source==='junker-king'||choice.choiceId.startsWith('g23:'))

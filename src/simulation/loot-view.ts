@@ -35,7 +35,7 @@ export function readLootView(state: Readonly<MatchState>): LootView {
     const paid = state.sharedPool && loot.receipts.find(receipt => receipt.dropId === drop.dropId);
     const identity = { orbId:drop.orbId, entryOrdinal:drop.entryOrdinal, dropId: drop.dropId, encounterId: drop.encounterId, sourceUnitId: drop.sourceUnitId, roundId: drop.roundId, payload: payloadView(paid ? paid.payload : drop.payload) };
     if (progress?.status === 'granted') drops.push({ ...identity, status: 'granted', receiptId: progress.receiptId, allowedActions: [] });
-    else if (progress?.status === 'revealed') drops.push({ ...identity, status: 'revealed', receiptId: null, allowedActions: [], reason: state.multiplayer?'awaiting-claim':'auto-grant-in-domain' });
+    else if (progress?.status === 'revealed') drops.push({ ...identity, status: 'revealed', receiptId: null, allowedActions: [], reason: state.multiplayer||drop.payload.kind==='forge'?'awaiting-claim':'auto-grant-in-domain' });
     else if (progress?.status === 'pending-capacity') drops.push({ ...identity, status: 'pending-capacity', receiptId: null, allowedActions: [], reason: 'bench-full' });
     else if (progress?.status === 'forfeited' && loot.earnedEvidence.some(e=>e.dropId===drop.dropId)) drops.push({...identity,status:'forfeited',receiptId:null,allowedActions:[],reason:state.multiplayer?.status==='eliminated'?'eliminated-forfeited':'timeout-forfeited'});
     else if (progress?.status === 'retained-terminal') drops.push({ ...identity, status: 'retained-terminal', receiptId: null, allowedActions: [], reason: 'terminal-bench-full' });
@@ -66,7 +66,7 @@ export function readLootView(state: Readonly<MatchState>): LootView {
   const claimReceipts=loot.receipts.filter(r=>r.resolution).map(r=>({receiptId:r.receiptId,dropId:r.dropId,payload:payloadView(r.payload),
     resolution:r.resolution!,gold:r.gold!,claimedRoundId:r.claimedRoundId!,grantedItemIds:[...r.grantedItemIds],grantedUnitIds:[...r.grantedUnitIds],
     ...(r.grantedConsumableIds?{grantedConsumableIds:[...r.grantedConsumableIds]}:{})}));
-  return freezeContent({ roundId, revealedDrops: drops, revealedOrbs, ...(state.multiplayer||unclaimedOrbs.some(o=>o.source==='family'||o.orbId.startsWith('opening-batch-b/'))?{unclaimedOrbs,claimReceipts}:{}), pendingClaims, canContinue: reason === null, reason, pendingChoice });
+  return freezeContent({ roundId, revealedDrops: drops, revealedOrbs, ...(unclaimedOrbs.length||state.multiplayer?{unclaimedOrbs,claimReceipts}:{}), pendingClaims, canContinue: reason === null, reason, pendingChoice });
 }
 
 export function readComponentEquivalent(state:Readonly<MatchState>):number {

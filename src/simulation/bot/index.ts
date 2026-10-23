@@ -1,3 +1,4 @@
+import { isAnvil } from '../content/anvils';
 import type { ClientCommand } from '../../server/protocol';
 import type { MatchState } from '../match-types';
 import { buyUnit, getDeploymentCap, needsAnomalyRecruitment } from '../match';
@@ -21,11 +22,13 @@ export type { BotContext, BotDecision } from './types';
 export function claimBotPreparationOrbs(pool: SharedPoolState, state: MatchState): SharedPoolResult {
   if (state.phase!=='preparation') return {ok:false,pool,state,reason:'wrong-phase'};
   const initialPool=pool, initialState=state, events:MatchEvent[]=[],poolEvents:SharedPoolEvent[]=[];
+  const attempted=new Set<string>();
   for(;;) {
-    const orbId=unclaimedOrbPlans(state).map(o=>o.orbId).sort((a,b)=>a<b?-1:a>b?1:0)[0];
+    const orbId=unclaimedOrbPlans(state).filter(o=>!attempted.has(o.orbId)).map(o=>o.orbId).sort((a,b)=>a<b?-1:a>b?1:0)[0];
     if(!orbId)break;
+    attempted.add(orbId);
     const result=runSharedMatchCommand(pool,state,{type:'claimOrb',round:state.round,orbId});
-    if(!result.ok) return {...result,pool:initialPool,state:initialState};
+    if(!result.ok){if(result.reason==='bench-full')continue;return {...result,pool:initialPool,state:initialState};}
     pool=result.pool;state=result.state;events.push(...result.events);poolEvents.push(...result.poolEvents);
   }
   return {ok:true,pool,state,events,poolEvents};
@@ -43,7 +46,9 @@ export function decideBotAction(state: MatchState, context: BotContext, rng: num
     || state.playerHp<=0 || state.multiplayer?.status==='eliminated') return done;
   if(state.phase!=='preparation' && state.phase!=='choice') return done;
   const emit=(action:ClientCommand):BotDecision=>({action,rng});
-  const roster=state.preparation.units.filter(u=>u.team==='player').sort(strongest);
+  const anvil=state.preparation.units.find(u=>u.team==='player'&&isAnvil(u.definitionId));
+  if(state.phase==='preparation'&&anvil&&legal(state,{type:'sell',unitId:anvil.id}))return emit({type:'sell',unitId:anvil.id});
+  const roster=state.preparation.units.filter(u=>u.team==='player'&&!isAnvil(u.definitionId)).sort(strongest);
   if(state.phase==='choice') {
     const choice=state.pendingChoice;
     if(!choice) return done;

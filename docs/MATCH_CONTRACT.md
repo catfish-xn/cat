@@ -29,6 +29,14 @@
 
 接口：既有 Match/server-entry 导出的 `deriveAugmentTier(seed:number,choiceId:string):AugmentTier` 保留签名，只接受 `round:2-1:augment` / `round:3-2:augment` / `round:4-2:augment`，返回组合第 1/2/3 项；非法节点抛 `Error('Unknown augment tier node')`。`resolveAugmentTier` 签名不变、先用奇遇覆盖。领域内部/测试新增 `augment-offers.ts` 导出 `deriveAugmentTierSequence(seed:number):readonly [AugmentTier,AugmentTier,AugmentTier]`，返回未覆盖的基础组合；配置权重不覆盖票值时抛 `Error('Invalid augment tier combination weights')`。没有新增命令或失败原因枚举；命令失败仍原 state、无事件/资源/RNG 变化。旧规则历史录制不迁移、不改断言，本批恢复一致性针对当前实现新生成的状态。
 
+## 2026-10-23 锻造器单位覆盖合同（待 v22 统一录制）
+
+本节覆盖下文以及 Batch A/B 报告中锻造器“自动弹窗/终局自动选择”的旧语义。四种 `TFT_ArmoryKeyCompleted/Component/Ornn/Support` 为备战席单位：不占人口、不可上阵/合星/装备、可挪位并跨回合保存。满席锻造器保留在未领取法球，其他条目可部分领取。蔚给 2 基础、杰斯给 1 神器；法球、史诗奖励、订阅/梅尔/巨蟹和 G2-3 forge atom 均改发单位。光明遗物 5 选 1、便携锻炉 4 选 1 仍立即选择。
+
+新增 `openAnvil(state, unitId): MatchCommandResult`，共享/线上命令 `{type:'openAnvil',unitId}`；出售锻造器等价打开且不加金币。新 `pendingChoice.payload={kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:offers[0]}`；仍用 choose 和 timeoutChoice，4 选 1，保留原采样器/种子流，超时首项。本人 `preparation.units[].anvil` 提供名称、出售/悬停文字及时间；公开观战不暴露选项。命令失败枚举、字段、发放接口、收据/恢复、Claude 计时器接入点见 [锻造器报告](ANVIL_UNITS.md)。规则不使用墙钟，打开后的独立 30 秒计时尚待 Claude 接线，不能复用准备期剩余秒数。
+
+4-7 野怪回合固定额外给 1 个基础装备锻造器（项目决定 **P**，用户 2026-10-23 批准）；原有 2–4 个散件掉落照常，不替换、不减少。固定 forge payload 追加到冻结计划首个法球末尾，不新增 RNG 消耗；领取入备战席，满席留球，沿用原收据、恢复和回放路径，单机/联机同源。14.24 原版数据未找到 4-7 必出散件锻造器的证据，仅有一张未被引用的 `EpicNPCLootComponentAnvil` 表，不能据此标为原版确认。候选规则/content 身份已变更，schema12/save8/replay7/command7；digest 随 manifest 计算，历史 epoch/golden 不改，**待 v22 统一录制**。
+
 ## 2026-10-23 Batch A 覆盖合同（待统一 epoch）
 
 梅尔、维克托、金币订阅、战利品订阅已启用，覆盖历史关闭/只观察说明。普通六费商店也改为批准的完整q表、整店一次5q判定。接口、收据、恢复、加时阶段钟和UI字段见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md#接口与恢复合同)。公开命令不新增；装备与弈子待领使用既有 `claimOrb`，锻造器使用既有 `choose/timeoutChoice`。本批装备统一待领，不引入批准表外的库存格数。

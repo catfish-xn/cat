@@ -119,7 +119,7 @@ interface Resolution {
 }
 
 /** Contract §15.2: operations and choices the room passes to the rules, by room phase; the rules then check the seat's own phase and target (§15.1). */
-const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
+const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'openAnvil', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
 const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
 /** G2-4b (§26): a preparation summon moves only while its seat prepares; the rules refuse it after the roster lock. */
 const PREPARATION_ONLY: readonly SeatCommand['type'][] = ['moveItemSummon'];
@@ -150,6 +150,7 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'moveItemSummon': return plain(moveItemSummon(state, command.itemInstanceId, command.cell));
     case 'buy': return buySharedUnit(pool, state, command.slot, command.generation);
     // P7-1: a unit in the carousel holding slot (`carousel.heldCarouselUnits`) is sold through the rules' own entry.
+    case 'openAnvil': return runSharedMatchCommand(pool, state, command);
     case 'sell': return heldCarouselUnits(state).some(unit => unit.unitId === command.unitId)
       ? sellPendingCarouselUnit(pool, state, command.unitId) : sellSharedUnit(pool, state, command.unitId);
     case 'shopLock': return setSharedShopLock(pool, state, command.locked, command.generation);

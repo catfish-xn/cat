@@ -1,3 +1,4 @@
+import { grantAnvilUnit } from './anvils';
 import { OPENING_BATCH_A as P } from './content/opening-batch-a';
 import { G24_FORGE_POOLS, resolveG24ForgePool } from './content/g2-4-forges';
 import { UNIT_DEFINITIONS } from './units';
@@ -5,10 +6,8 @@ import { SHOP_CATALOG_BY_COST } from './match-rules';
 import { openingWords, openingWeightedIndex } from './opening-random';
 import { openingStage } from './opening-stage';
 import { getMultiplayerRoundByOrdinal, getMultiplayerRoundById } from './multiplayer-round';
-import { canonicalContent } from './content';
 import { grantMechanicGold, grantMechanicItem, grantMechanicUnit } from './seat-mechanics/grants';
 import { appendMechanicReceipt } from './seat-mechanics/state';
-import { openMechanicChoice } from './seat-mechanics/choices';
 import type { MatchState, MatchEvent, MatchCommandResult } from './match-types';
 import type { OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import type { LootPayload } from './m8/contracts';
@@ -105,11 +104,7 @@ export function openingRewardOffers(state:MatchState,atom:Atom):readonly string[
 function grantAtom(state:MatchState,atom:Atom,policy?:UnitLootPolicy):MatchCommandResult {
   const p=atom.payload,request={receiptId:atom.id,source:BATCH_SOURCE};
   if(claimed(state,atom.id))return {ok:true,state,events:[]};
-  if(p.kind==='forge'){
-    if(state.pendingChoice||!['preparation','settlement'].includes(state.phase)||state.m8.round.kind==='supply')return {ok:true,state,events:[]};
-    const offers=openingRewardOffers(state,atom);
-    return openMechanicChoice(state,{choiceId:atom.id,offers,returnPhase:state.phase as 'preparation'|'settlement',payload:{kind:'forge',source:BATCH_SOURCE,timeoutOption:offers[0]}});
-  }
+  if(p.kind==='forge'){const r=grantAnvilUnit(state,{...request,definitionId:p.definitionId});return !r.ok&&r.reason==='bench-full'?{ok:true,state,events:[]}:r;}
   if(p.kind==='item')return grantMechanicItem(state,{...request,definitionId:p.definitionId});
   if(p.kind==='gold')return grantMechanicGold(state,{...request,amount:p.quantity});
   if(p.kind==='unit'){
@@ -147,12 +142,6 @@ export function claimOpeningReward(state:MatchState,id:string,policy?:UnitLootPo
   if(claimed(state,id))return {ok:false,state,reason:'already-claimed'};
   return grantAtom(state,atom,policy);
 }
-export function openBatchForge(state:MatchState):{state:MatchState;events:readonly MatchEvent[]} {
-  if(state.playerHp<=0||state.multiplayer?.status==='eliminated')return {state,events:[]};
-  const atom=openingRewardAtoms(state).find(a=>a.payload.kind==='forge'&&!claimed(state,a.id));
-  if(!atom)return {state,events:[]};
-  const r=grantAtom(state,atom);if(!r.ok)throw new RangeError(r.reason);return r;
-}
 export function validateOpeningRewards(state:MatchState):void {
   const check=(v:unknown)=>{if(!v)throw new RangeError('Invalid opening reward ledger');};
   const atoms=openingRewardAtoms(state),grants=(state.seatMechanics?.receipts??[]).filter(r=>r.source===BATCH_SOURCE||isOpeningRewardOrb(r.receiptId));
@@ -161,7 +150,7 @@ export function validateOpeningRewards(state:MatchState):void {
     const a=atoms.find(a=>a.id===r.receiptId);check(a&&r.source===BATCH_SOURCE&&r.round>=a.round&&r.round<=state.round&&r.roundId===getMultiplayerRoundByOrdinal(r.round).roundId);if(!a)continue;
     const p=a.payload;
     if(p.kind==='gold')check(r.kind==='gold'&&r.amount===p.quantity&&r.round===a.round);
-    else if(p.kind==='forge'){const offers=openingRewardOffers(state,a);check(r.kind==='choice'&&r.choiceKind==='forge'&&!r.skipped&&r.price===0&&offers.includes(r.optionId)&&(!r.timedOut||r.optionId===offers[0]));}
+    else if(p.kind==='forge')check(r.kind==='unit'&&r.definitionId===p.definitionId&&r.resolution==='held'&&r.gold===0);
     else check(r.kind===p.kind&&'definitionId' in r&&r.definitionId===p.definitionId);
     if(p.kind==='unit'){
       check(r.kind==='unit'&&(r.starLevel??1)===(p.starLevel??1)&&['held','gold'].includes(r.resolution));
@@ -171,9 +160,4 @@ export function validateOpeningRewards(state:MatchState):void {
     if(r.kind==='item'||r.kind==='choice')check(state.resourceProvenance.entries.some(e=>e.kind==='item-acquired'&&e.itemId===r.itemId&&e.source.kind==='mechanic'&&e.source.receiptId===r.receiptId));
   }
   for(const a of atoms)if(a.payload.kind==='gold'||a.payload.kind==='consumable')check(claimed(state,a.id));
-  const c=state.pendingChoice;
-  if(c&&(c.payload?.source===BATCH_SOURCE||isOpeningRewardOrb(c.choiceId))){
-    const a=atoms.find(a=>a.id===c.choiceId);check(a?.payload.kind==='forge'&&!claimed(state,c.choiceId));
-    if(a){const offers=openingRewardOffers(state,a);check(c.kind==='forge'&&canonicalContent(c.offers)===canonicalContent(offers)&&c.payload?.source===BATCH_SOURCE&&c.payload.timeoutOption===offers[0]);}
-  }
 }

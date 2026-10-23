@@ -1,3 +1,4 @@
+import { isAnvil } from './content/anvils';
 import type { GameState } from './game';
 import type { Unit } from './unit-types';
 import type { ItemInstance } from './strategy-types';
@@ -58,6 +59,7 @@ export function validateInputAssets(
   for (const unit of input.preparation.units) {
     record(unit); id(unit.id); requireValue(!units.has(unit.id), 'duplicate unit'); units.set(unit.id, unit);
     requireValue(!['s13-crab','s13-wolf','s13-mini'].includes(unit.definitionId), 'combat-only anomaly identity');
+    requireValue(!isAnvil(unit.definitionId)||(unit.team==='player'&&unit.location.kind==='bench'&&unit.starLevel===1),'anvil bench unit');
     definitionId(unit.definitionId, unit.team === 'player'&&!UNIT_DEFINITIONS[unit.definitionId]?.summon ? M5_UNIT_DEFINITIONS : UNIT_DEFINITIONS, 'unit definition');
     requireValue(unit.team === 'player' || unit.team === 'enemy', 'team');
     requireValue([1, 2, 3].includes(unit.starLevel), 'star'); record(unit.location);

@@ -1,3 +1,4 @@
+import { grantAnvilUnit } from './anvils';
 import { openingEncounterId } from './opening-encounter';
 import { isCrabEncounter, GIANT_CRAB_ANVILS, GIANT_CRAB_SILVER_BOXES, GIANT_CRAB_FROM_STAGE } from './content/opening-batch-b';
 import { ORB_BOXES } from './content/loot';
@@ -9,8 +10,6 @@ import { warwickLoot } from './opening-warwick';
 import { readG23Progress } from './g2-3-state';
 import { grantMechanicGold, grantMechanicItem, grantMechanicUnit } from './seat-mechanics/grants';
 import { appendMechanicReceipt } from './seat-mechanics/state';
-import { openMechanicChoice, resolveMechanicChoice } from './seat-mechanics/choices';
-import { canonicalContent } from './content';
 import type { G23BattleFacts } from './g2-3-economy';
 import type { MatchState, MatchEvent, MatchCommandResult } from './match-types';
 import type { LootPayload } from './m8/contracts';
@@ -57,7 +56,7 @@ export function openingRewardOffers(state:MatchState,reward:OpeningReward):reado
 function grant(state:MatchState,r:OpeningReward,policy?:UnitLootPolicy):MatchCommandResult{
  const p=r.payload,request={receiptId:r.id,source};
  if(claimed(state,r.id))return {ok:true,state,events:[]};
- if(p.kind==='forge')return {ok:true,state,events:[]};
+ if(p.kind==='forge')return grantAnvilUnit(state,{...request,definitionId:p.definitionId});
  if(p.kind==='consumable'){
   const consumableId=`consumable-${state.nextConsumableSerial}`,receipt={...request,kind:'consumable' as const,round:state.round,roundId:state.roundDefinitionId,definitionId:p.definitionId,consumableId};
   return {ok:true,state:appendMechanicReceipt({...state,nextConsumableSerial:state.nextConsumableSerial+1,consumables:[...state.consumables,{consumableId,definitionId:p.definitionId}]},receipt),events:[{type:'mechanicGranted',receipt}]};
@@ -73,17 +72,11 @@ export function settleOpeningBatchB(state:MatchState,facts:G23BattleFacts,policy
  }
  return state;
 }
-export function openBatchBForge(state:MatchState):{state:MatchState;events:readonly MatchEvent[]}{
- if(state.pendingChoice||!['preparation','settlement'].includes(state.phase)||state.multiplayer?.status==='eliminated')return {state,events:[]};
- const r=openingRewards(state).find(r=>r.payload.kind==='forge'&&!claimed(state,r.id));if(!r)return {state,events:[]};
- const offers=openingRewardOffers(state,r),result=openMechanicChoice(state,{choiceId:r.id,offers,returnPhase:state.phase as 'preparation'|'settlement',payload:{kind:'forge',source,timeoutOption:offers[0]}});
- if(!result.ok)throw new RangeError(result.reason);return result;
-}
 export function openingRewardOrbs(state:MatchState){
- return openingRewards(state).filter(r=>r.payload.kind==='unit'&&!claimed(state,r.id)).map(r=>({orbId:r.id,roundId:r.roundId,tier:r.tier,source:'mechanic' as const,entries:[{orbId:r.id,entryOrdinal:0,dropId:r.id,roundId:r.roundId,encounterId:source,sourceUnitId:r.id,slotOrdinal:0,status:'planned',receiptId:null,revealCondition:'source-killed',payload:r.payload} satisfies FrozenDirectDrop]}));
+ return openingRewards(state).filter(r=>(r.payload.kind==='unit'||r.payload.kind==='forge')&&!claimed(state,r.id)).map(r=>({orbId:r.id,roundId:r.roundId,tier:r.tier,source:'mechanic' as const,entries:[{orbId:r.id,entryOrdinal:0,dropId:r.id,roundId:r.roundId,encounterId:source,sourceUnitId:r.id,slotOrdinal:0,status:'planned',receiptId:null,revealCondition:'source-killed',payload:r.payload} satisfies FrozenDirectDrop]}));
 }
 export function claimOpeningReward(state:MatchState,id:string,policy?:UnitLootPolicy):MatchCommandResult{
- const r=openingRewards(state).find(r=>r.id===id&&r.payload.kind==='unit');if(!r)return {ok:false,state,reason:'invalid-opening-effect'};
+ const r=openingRewards(state).find(r=>r.id===id&&(r.payload.kind==='unit'||r.payload.kind==='forge'));if(!r)return {ok:false,state,reason:'invalid-opening-effect'};
  if(claimed(state,id))return {ok:true,state,events:[]};return grant(state,r,policy);
 }
 /** Authenticate all issued grants against the settled, replay-checked facts. Never grant on restore. */
@@ -94,33 +87,18 @@ export function validateBatchBRewards(state:MatchState):void{
   if(p.kind==='gold')check(g.kind==='gold'&&g.amount===p.quantity);
   if(p.kind==='item'||p.kind==='consumable'||p.kind==='unit')check(g.kind===p.kind&&g.definitionId===p.definitionId);
   if(p.kind==='unit'&&g.kind==='unit')check((g.starLevel??1)===(p.starLevel??1));
-  if(p.kind==='forge'){const offers=openingRewardOffers(state,r);check(g.kind==='choice'&&g.choiceKind==='forge'&&!g.skipped&&g.price===0&&offers.includes(g.optionId)&&(!g.timedOut||g.optionId===offers[0]));}
+  if(p.kind==='forge')check(g.kind==='unit'&&g.definitionId===p.definitionId&&g.resolution==='held'&&g.gold===0);
  }
  for(const r of rewards)if(r.payload.kind!=='unit'&&r.payload.kind!=='forge')check(grants.some(g=>g.receiptId===r.id));
- const choice=state.pendingChoice;
- if(choice?.payload?.source===source||choice?.choiceId.startsWith('opening-batch-b/')){
-  const r=rewards.find(r=>r.payload.kind==='forge'&&!claimed(state,r.id));
-  check(r&&choice?.choiceId===r.id&&choice.kind==='forge');
-  if(r&&choice)check(canonicalContent(choice.offers)===canonicalContent(openingRewardOffers(state,r))&&canonicalContent(choice.payload)===canonicalContent({kind:'forge',source,timeoutOption:choice.offers[0]}));
- }
 }
 
-/** Like existing terminal PvE forges: deterministic timeout choice, no inaccessible final popup. */
-export function settleTerminalBatchBForges(state:MatchState):{state:MatchState;events:readonly MatchEvent[]}{
- if(state.phase!=='gameOver')return {state,events:[]};
- const terminal=state;const events:MatchEvent[]=[];
- for(const r of openingRewards(state).filter(r=>r.payload.kind==='forge'&&!claimed(state,r.id))){
-  const offers=openingRewardOffers(state,r);
-  const opened=openMechanicChoice({...state,phase:'settlement',combat:terminal.combat,pendingChoice:null},{choiceId:r.id,offers,returnPhase:'settlement',payload:{kind:'forge',source,timeoutOption:offers[0]}});
-  if(!opened.ok)throw new RangeError(opened.reason);
-  const chosen=resolveMechanicChoice(opened.state,offers[0],true);if(!chosen.ok)throw new RangeError(chosen.reason);
-  state={...chosen.state,phase:terminal.phase,combat:terminal.combat,pendingChoice:terminal.pendingChoice} as MatchState;events.push(...opened.events,...chosen.events);
- }
- return {state,events};
-}
 /** Owner-only grouping: 4-7 has one gold-orb bundle; each giant win has two silver bundles. */
 export function readOpeningBatchBRewards(state:MatchState){
  const groups=new Map<string,{id:string;roundId:string;tier:OpeningReward['tier'];entries:{payload:LootPayload;claimed:boolean}[]}>();
  for(const r of openingRewards(state)){const key=JSON.parse(r.id.slice('opening-batch-b/'.length)) as (string|number)[];key.pop();const id=JSON.stringify(key);let group=groups.get(id);if(!group){group={id,roundId:r.roundId,tier:r.tier,entries:[]};groups.set(id,group);}group.entries.push({payload:r.payload,claimed:claimed(state,r.id)});}
  return [...groups.values()];
 }
+
+/** Legacy hooks: units persist; no automatic choice, including terminal rounds. */
+export function openBatchBForge(state:MatchState):{state:MatchState;events:readonly MatchEvent[]}{return {state,events:[]};}
+export const settleTerminalBatchBForges=openBatchBForge;

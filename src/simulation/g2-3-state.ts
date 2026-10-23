@@ -70,7 +70,8 @@ export function validateG23MechanicLinks(state:MatchState):void{
   if(!r)continue;
   const bundle=p.rewards.find(b=>b.id===claim.bundleId)!,atom=g23RewardAtoms(bundle,p.seed,!!state.multiplayer).find(a=>a.id===claim.atomId)!;
   check(r.source===bundle.source);
-  if(claim.kind==='item'){
+  if(claim.kind==='anvil')check(r.kind==='unit'&&r.definitionId===atom.forgeDefinitionId&&r.resolution==='held'&&r.gold===0);
+  else if(claim.kind==='item'){
    if(atom.options.length>1)check(r.kind==='choice'&&r.choiceKind==='forge'&&r.optionId===claim.definitionId&&r.itemId!==null&&r.itemId===claim.instanceId
     &&!r.skipped&&r.price===0&&(!r.timedOut||r.optionId===atom.options[0]));
    else check(r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId);

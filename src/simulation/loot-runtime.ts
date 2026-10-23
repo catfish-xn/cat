@@ -114,8 +114,8 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
     if (progress?.status !== 'revealed' && progress?.status !== 'pending-capacity') continue;
     if (!claimedDrops && state.combat?.status !== 'finished') throw new RangeError('Loot grant before combat finish');
     const receiptId = lootReceiptId(drop.dropId);
-    const purchase = drop.payload.kind === 'unit' ? planUnitAcquisition(state, drop.payload.definitionId,
-      {kind:'loot',receiptId}, state.resourceProvenance.entries.length, false, drop.payload.starLevel ?? 1) : null;
+    const purchase = drop.payload.kind === 'unit' || drop.payload.kind === 'forge' ? planUnitAcquisition(state, drop.payload.definitionId,
+      {kind:'loot',receiptId}, state.resourceProvenance.entries.length, false, drop.payload.kind==='unit'?drop.payload.starLevel??1:1) : null;
     const decision: ReturnType<UnitLootPolicy> = drop.payload.kind === 'unit' && unitLootPolicy ? unitLootPolicy(drop, !!state.multiplayer && !purchase?.ok) : drop.payload;
     const payload: LootPayload = decision.kind === 'gold' ? {kind:'gold',quantity:decision.quantity} : decision;
     const capacityGold = state.multiplayer && drop.payload.kind === 'unit' && !purchase?.ok && payload.kind === 'unit'
@@ -142,7 +142,9 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
     } else if (payload.kind === 'item') {
       const grant = grantItem(state, payload.definitionId, receiptId); state = grant.state; grantedItemIds = grant.grantedItemIds;
     } else if(payload.kind==='forge') {
-      // The claim receipt owns one pending four-choice forge. No item is minted yet.
+      if(!purchase?.ok||!claimedDrops&&state.roundResults.some(r=>r.round===state.round))continue;
+      state={...state,preparation:purchase.preparation,nextUnitSerial:purchase.nextUnitSerial,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,purchase.facts)};
+      grantedUnitIds=[purchase.unitId];
     } else if(payload.kind==='consumable') {
       const serial=state.nextConsumableSerial;
       if(!Number.isSafeInteger(serial+1)||serial<1)throw new RangeError('Invalid consumable serial');
@@ -155,7 +157,7 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
       state = { ...state, gold };
     }
     const receipt: LootReceipt = { receiptId, dropId: drop.dropId, payload: state.multiplayer ? drop.payload : payload, grantedItemIds, grantedUnitIds,
-      ...(state.multiplayer ? {resolution:resolution!,gold:capacityGold || (payload.kind==='gold'?payload.quantity:0),claimedRoundId:state.roundDefinitionId} : {}),
+      ...(state.multiplayer||drop.roundId!==state.roundDefinitionId ? {resolution:resolution!,gold:capacityGold || (payload.kind==='gold'?payload.quantity:0),claimedRoundId:state.roundDefinitionId} : {}),
       ...(grantedConsumableIds?{grantedConsumableIds}:{}) };
     state = commitReceipt(state, receipt);
     state = withLoot(state, { ...state.m8.loot, direct: state.m8.loot.direct.map(value => value.dropId === drop.dropId
