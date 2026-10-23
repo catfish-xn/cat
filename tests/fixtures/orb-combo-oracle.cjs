@@ -45,7 +45,10 @@ function lootPlan(seed,ordinal=38,roomSeed=seed){const p=plan(roomSeed),rng=stre
  for(const [roundId,encounterId,carriers] of ROUNDS){const stage=Number(roundId[0]),ord=stage===1?Number(roundId[2])-1:stage*7-4;if(ord>ordinal)break;
   const drops=[],orbs=[];
   const add=(local,slotOrdinal,tier,templateId,payloads)=>{const sourceUnitId=JSON.stringify(['pve',roundId,encounterId,local]),orbId=JSON.stringify(['orb',roundId,encounterId,sourceUnitId,slotOrdinal]),identity={roundId,encounterId,sourceUnitId,slotOrdinal,orbId};
-   payloads??=box(seed,orbId,templateId);const entries=payloads.map((payload,entryOrdinal)=>({...identity,entryOrdinal,dropId:JSON.stringify([orbId,entryOrdinal]),payload,status:'planned',revealCondition:'source-killed',receiptId:null}));drops.push(...entries);orbs.push({...identity,tier,templateId,entries});};
+   payloads??=box(seed,orbId,templateId);
+   // v22 approved rule: the first 4-7 orb gains one component anvil appended after its sampled entries (no RNG draw).
+   if(roundId==='4-7'&&orbs.length===0)payloads=[...payloads,{kind:'forge',definitionId:'TFT_ArmoryKeyComponent',quantity:1}];
+   const entries=payloads.map((payload,entryOrdinal)=>({...identity,entryOrdinal,dropId:JSON.stringify([orbId,entryOrdinal]),payload,status:'planned',revealCondition:'source-killed',receiptId:null}));drops.push(...entries);orbs.push({...identity,tier,templateId,entries});};
   if(stage<=4){let seq=[];const row=p.rows[stage-1];for(let col=1;col<=5;col++)for(let n=0;n<(row[col]||0);n++)seq.push(col);
    if(stage===1)seq=seq.filter((_,i)=>i%3===ord-1);
    const slots=seq.map((col,i)=>{const tier=['blue','gray','blue','gold','prismatic'][col-1],id=col===1?'component':col===2?(stage<3?'copper':'copperPlus'):col===3?(stage<4?'silver':'silverPlus'):col===4?(stage<4?'gold':'goldPlus'):'ultraPlus';return {local:carriers[i%carriers.length],slot:Math.floor(i/carriers.length),tier,id};});
