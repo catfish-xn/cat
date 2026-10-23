@@ -687,6 +687,10 @@ body:has(.opponent-board[data-scout-3d]:not([hidden])) .shop-dock { transform: t
 @media (prefers-reduced-motion: reduce) { .carousel-bar.my-turn { animation: none; } }
 /* Eliminated (spectating): the dock and the left panel stay visible but read as disabled. */
 body[data-online-spectating] .shop-dock, body[data-online-spectating] #strategy-root { opacity: .55; filter: grayscale(.6); }
+/* 3D: the board count is a fixed child of the dock; a filter on the dock would make the dock its containing block and clip
+   it, so the grey goes on the dock's parts instead (opacity does not move fixed children). */
+body[data-online-spectating]:has(> .render3d-layer) .shop-dock { filter: none; }
+body[data-online-spectating]:has(> .render3d-layer) .shop-dock :is(.hud-chip, .shop-odds, .touch-shop, .economy-action) { filter: grayscale(.6); }
 body[data-online-spectating] .choice-overlay { display: none !important; }
 
 /* C18-B: R3/R4 orbs and consumables (contract §18.4/§18.8). */
@@ -1234,8 +1238,11 @@ body[data-online]:has(> .render3d-layer) #online-sidebar .seat-avatar { width: 5
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me { grid-template-columns: minmax(0, 1fr) auto 76px; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-avatar { width: 76px; height: 76px; }
 body[data-online]:has(> .render3d-layer) .online-countdown .economy-hint { position: fixed; z-index: 2; left: calc(8px + var(--online-shop-left) + var(--online-shop-w) / 2 + 3px); bottom: calc(var(--online-dock-h) - 24px); }
-/* Gold and streak meet at the shop's centre line, as one capsule pair over the cards. */
-body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { position: fixed; z-index: 2; left: calc(8px + var(--online-shop-left) + var(--online-shop-w) / 2 - 3px); bottom: calc(var(--online-dock-h) - 24px); transform: translateX(-100%); }
+/* Gold and streak meet at the shop's centre line, as one capsule pair over the cards. Gold is placed inside the dock
+   (absolute, the dock is its containing block), not fixed: a filter or transform on the dock (eliminated, carousel, scouting)
+   turns a fixed child's offsets dock-relative and pushed the gold out of the dock's clip, leaving only the streak.
+   grid-area: auto makes the whole dock (not the grid cell) the containing block for the 50%; 7px keeps it level with the streak. */
+body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { position: absolute; z-index: 2; grid-area: auto; left: calc(50% - 3px); top: 7px; transform: translateX(-100%); }
 body[data-online]:has(> .render3d-layer) .economy-interest { display: none; }
 /* The odds stop short of the gold capsule, which ends at the shop's centre line. */
 body[data-online]:has(> .render3d-layer) .shop-dock .shop-odds { max-width: calc(var(--online-shop-w) / 2 - 270px); }
@@ -1467,6 +1474,7 @@ body[data-online]:has(> .render3d-layer) .fullscreen-toggle { right: auto; left:
   /* 3D: the dock spans the window; gold and the streak capsule drop back into the dock and the countdown. */
   body[data-online]:has(> .render3d-layer) { --online-dock-h: 220px; --online-shop-left: 0px; --online-shop-w: 100%; }
   body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold, body[data-online]:has(> .render3d-layer) .online-countdown .economy-hint { position: static; transform: none; }
+  body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { grid-area: gold; }
   body[data-online]:has(> .render3d-layer) .shop-dock .shop-odds { max-width: 100%; }
   body[data-online]:has(> .render3d-layer) .fullscreen-toggle { left: auto; right: 8px; bottom: calc(var(--online-dock-h) + 16px); }
 }
