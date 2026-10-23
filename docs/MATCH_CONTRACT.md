@@ -6,6 +6,10 @@
 
 用户 10-23 批准采用 TFT 通用规则：普通单位 1/2/3 星 HP 为 100/180/324%，AD 改为 100/150/225%，分别从一星基础值乘百分比后向下取整。14.24 源数据只有一星属性，不将倍率声称为源表中的三档数值。`getUnitStats(definitionId,starLevel)` / `resolveUnitStats(definition,starLevel)` 签名、输出形状和失败原因不变；无新命令。普通倍率唯一来源为 `content/unit-star-scaling.ts`，`S13_COMBAT_RULES` 元数据改为 `starHealthPercent` / `starAttackPercent`，六费用 `sixCostStarPercent`，均为星级键到整数百分比的只读表；原 `starStatPercent` 无调用方，移除。六费 HP 保留 100/180/360%；六费 AD 按各自一星值 × 100/150/225% 后四舍五入（正数半入），见下述 P 决定。魔像自定表、fixedStarStats 召唤物及专用四星值保持不变。来源、六费逐项现状、检查范围与测试清单见 [AD 星级报告](AD_STAR_SCALING.md)。不更新身份常量、epoch 或历史 golden；**待 v22 统一录制**。
 
+## 2026-10-23 五费技能候选集成
+
+[五费技能修正](FIVE_COST_3STAR_FIXES.md) 仅调整战斗实现：无新 Match 公共函数、输入输出、失败 reason 或网络事件种类。内部新增赛维卡持续/连咬任务，存档结构校验限定来源和取消语义，完整事实仍由认证战斗输入重演核对。按用户要求保留当前候选版本/digest/golden，随 v22 与攻击力星级倍率等改动统一录 epoch 后才能发布；不要将新旧战斗状态混用。后续项目决定P已完成金克丝三星电击和莫德凯撒最优直线，并明确玛尔扎哈五层平分；杰斯缺返回起点定义，仍未完成。见[五费技能几何报告](FIVE_COST_SKILL_GEOMETRY.md)，无新增公共签名、失败原因、事件或存档结构；待v22统一录制。
+
 ## 2026-10-23 Batch A 覆盖合同（待统一 epoch）
 
 梅尔、维克托、金币订阅、战利品订阅已启用，覆盖历史关闭/只观察说明。普通六费商店也改为批准的完整q表、整店一次5q判定。接口、收据、恢复、加时阶段钟和UI字段见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md#接口与恢复合同)。公开命令不新增；装备与弈子待领使用既有 `claimOrb`，锻造器使用既有 `choose/timeoutChoice`。本批装备统一待领，不引入批准表外的库存格数。

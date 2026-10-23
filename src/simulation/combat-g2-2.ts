@@ -8,6 +8,7 @@ import { amount, ap, applyStatus, byDistance, champion, enemies, grantShield, or
 import { asSource } from './m8/s13-definitions';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
 import { modifier, stat } from './content/item-programs';
+import { lineContains, lineDirections } from './combat-skill-lines';
 export function g22(unit: S13Unit): G22State { return unit.g22 ??= {initialized:false,rebelTriggered:false,wanted:[],wantedDeaths:0,mordeUntilTick:0,reaveUntilTick:0,reaveBps:0,exposureFromTick:0,exposureUntilTick:0,exposureBps:0}; }
 function hit(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number,type:S13Packet['damageType']='magic',area=false,basic=false,source=origin(u)) {
   ctx.packets.push({source:basic?{...source,sourceKind:'attack'}:source,targetId:t.id,raw,damageType:type,actionSeq:seq,ordinal,
@@ -60,7 +61,7 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'jinx': {
       const phase=(u.runtime.castCount-1)%3;
-      if(phase===0){const cells=path(ctx.board,u.cell,t.cell);for(const x of foes().filter(x=>cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row))){strike(x,ad('ZapPercentAD'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('ZapStunDuration')*20),ctx.tick,ctx.events);}}
+      if(phase===0){const cells=u.starLevel===3?null:path(ctx.board,u.cell,t.cell);for(const x of foes().filter(x=>cells?cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row):lineContains(u.cell,t.cell,x.cell,1,14))){strike(x,ad('ZapPercentAD'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('ZapStunDuration')*20),ctx.tick,ctx.events);}}
       else if(phase===1){const centers=foes().slice(0,v('NumOfFlameChompers'));for(const x of foes().filter(x=>centers.some(c=>hexDistance(c.cell,x.cell)<=1)))strike(x,ad('FlameChompersPercentAD'),'physical',true);}
       else {const center={col:Math.floor((ctx.board.columns-1)/2),row:Math.floor((ctx.board.rows-1)/2)};for(const x of foes())strike(x,Math.floor(ad('DeathRocketPercentAD','DeathRocketAP')*Math.max(0,10000-Math.round(v('FalloffPercent')*10000)*hexDistance(center,x.cell))/10000),'physical',true);}break;
     }
@@ -70,8 +71,11 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'mordekaiser': {
       g22(u).mordeUntilTick=ctx.tick+Math.round(v('EmpowerDuration')*20);
       applyStatus(u,origin(u),'damageReduction',Math.round(v('DR')*10000),20,ctx.tick,ctx.events,true);
-      const targets=foes(),cells=path(ctx.board,u.cell,t.cell);
-      for(const x of targets.filter(x=>cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row)))strike(x,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),'magic',true);break;
+      const targets=foes();
+      const lines=lineDirections(u.cell).map(direction=>({hits:targets.filter(x=>lineContains(u.cell,direction,x.cell,3,8)),target:lineContains(u.cell,direction,t.cell,3,8)}));
+      // Stable sort preserves direction order after count and current-target ties.
+      lines.sort((a,b)=>b.hits.length-a.hits.length||Number(b.target)-Number(a.target));
+      for(const x of lines[0].hits)strike(x,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),'magic',true);break;
     }
     case 'morgana': {
       const target=foes().find(x=>(x.g22?.reaveUntilTick??0)<=ctx.tick)??t,total=mag('Damage'),pulses=Math.round(v('Duration'));

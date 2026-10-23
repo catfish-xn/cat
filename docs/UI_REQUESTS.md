@@ -1237,3 +1237,13 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 ### Codex P 实现交付（2026-10-23，覆盖上段暂停状态，待确认合并）
 
 按后续任务采用项目决定，原版距离缺证结论保持。已实现锁链最近可达空邻格、拳击结算后向己方后撤 1 格；接口复用 `movement`，增加 `reason:'ambessa-chain'|'ambessa-fist-retreat'`，无位移不发事件。完整账本与公开回放/流式投影均保留；B 侧沿既有 movement 镜像坐标，服务器无需改文件。Claude 读取 `CombatViewEvent.reason/from/to/tick/eventSeq`，按权威坐标及事件序号播放/去重，终态读 unitUpdated/keyframe；不要自行计算落格。锁链事件在伤害前、拳击在 HP/存活提交后。独立向量、测试、事件顺序及回退见 [实施说明](AMBESSA_DASH.md)。不录 epoch、不合并，之后统一 v22；无 rendering 改动。
+
+
+## 2026-10-23 Codex → Claude：五费技能修正（v22 候选）
+
+完整字段含义与验收见 [FIVE_COST_3STAR_FIXES.md](FIVE_COST_3STAR_FIXES.md)“给 Claude 的接入点”。没有新增下发字段或事件种类。
+
+- 喷火 `castVariant.channelTicks=40` 为初始期限，继续读取既有 `activityChanged.refreshed` 更新，按权威活动结束停播；验收：目标存活且未被打断时超过两秒仍引导，目标死亡当拍结束。
+- 大嘴连咬使用同一施法 actionSeq，通过 `movement` 与 `packetDamage` 的目标、rootActionSeq/triggeringCastActionSeq 关联；验收：三次连咬不重复计施法/扣蓝，伤害和斩杀显示服从事件账本。
+- 感染转移更新权威 tasks.targetId，周期伤害仍用既有包；暂没有独立的转移动画事件。若需要逐层转移特效，再提出所需显示字段。
+- 金克丝直线、杰斯路径、莫德凯撒选线因几何缺证暂停，不要在界面自行补命中规则。

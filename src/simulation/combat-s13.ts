@@ -519,6 +519,17 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const finisher=owner&&p3Mechanic(owner,'the-finisher');
     const collector=finisher&&(!itemCollector||itemCollector.values.executeBps<Math.round(p3Values('the-finisher').ExecutePercent*10000))?{...finisher,values:{executeBps:Math.round(p3Values('the-finisher').ExecutePercent*10000)}}:itemCollector;
     const remaining=virtualHp.get(target.id)!;
+    if(owner&&packet.sevikaChomp&&outcome.hit&&!context.redirected){
+      if(remaining>0&&BigInt(remaining)*10000n<BigInt(target.maxHp)*BigInt(Math.round(variable(owner,'Spell3_ExecutePercentage')*10000))){
+        const execution:S13Packet={...packet,sevikaChomp:undefined,raw:remaining,damageType:'true',ordinal:1000+packet.ordinal,critEligibility:'never',critical:false};
+        const request=damageRequest(execution,ctx.combatId!,tick);
+        const executed=allocateDamage(request.context,{raw:remaining,prevented:0,mitigated:remaining,critical:false},remaining,[]);
+        commitOutcome(target,{...executed,shields:target.shieldLayers},execution);
+      }
+      if(virtualHp.get(target.id)===0){owner.tasks.push({key:JSON.stringify([owner.id,packet.actionSeq,'g23Chomp',packet.ordinal]),kind:'g23Chomp',source:packet.source,
+        executeAtTick:tick+1,targetId:target.id,amount:Math.floor(packet.raw*Math.round(variable(owner,'Spell3_ResetDamageFalloff')*10000)/10000),
+        actionSeq:packet.actionSeq,ordinal:packet.ordinal+1,total:packet.ordinal+2,cancellable:true});return;}
+    }
     const blade=chainblade(owner);
     if(owner&&blade&&!context.redirected&&['basic-attack','ability-direct','ability-periodic','attack-extra'].includes(context.delivery)
       &&absorbed+actual>0&&remaining>0&&owner.team!==target.team&&BigInt(remaining)*10000n<BigInt(target.maxHp)*BigInt(V19_MECHANICS.chainblade.executeBps)){
