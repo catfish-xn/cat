@@ -37,7 +37,9 @@ const formations = [
 
 describe('B7 isolated approved content, not the enabled Match catalog', () => {
   it('compiles all 12 authored base stats, 25%/1.4 critical inputs and 0/0 mana', () => {
-    expect(Object.keys(NEUTRAL_DEFINITIONS).sort()).toEqual(stats.map(row => row[0]).sort());
+    // Opening encounters batch B (Jinx's crabs) adds its own scuttle/giant-crab neutrals beside the 12 B7 rows.
+    const openingCrabs = ['pve-giant-crab', ...[150, 250, 550, 1200, 1300, 1450, 2400, 10000].map(hp => `pve-scuttle-${hp}`)];
+    expect(Object.keys(NEUTRAL_DEFINITIONS).sort()).toEqual([...stats.map(row => row[0]), ...openingCrabs].sort());
     const compiled = NEUTRAL_ENCOUNTERS.flatMap(e => compileNeutralEncounter(e.roundId).units);
     for (const [id, family, hp, ad, as, ticks, armor, mr, range] of stats) {
       const definition = NEUTRAL_DEFINITIONS[id];
