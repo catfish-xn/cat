@@ -18,7 +18,7 @@ const steps=[
  ['check-herald','scripts/verify-m8-herald-fixtures.cjs'],
  ['check-history','scripts/v22-online-rules-fixture-audit.cjs',arg,...check],
  ['check-live-reveal','scripts/record-v22-online-rules-live-reveal.cjs',arg,'--check'],
- ['record-chest-trial','scripts/record-v22-online-rules-chest-trial.cjs',...check],
+ ['record-chest-trial','scripts/record-chest-trial-v22.cjs',...check],
  ['consumer-byte-audit','scripts/audit-v22-online-rules-adaptations.cjs',...check],
  ['compare-digests','scripts/compare-v22-online-rules-digests.cjs',...check],
 ];

@@ -1,0 +1,28 @@
+{
+  "parentEpoch": "v21-opening-encounters",
+  "contentDigest": "fnv1a32-utf16:91481ccb",
+  "lootReplayDigest": "fnv1a32-utf16:e68f0f1b",
+  "rulesVersion": "s13-g2-3-v22-online-rules",
+  "contentVersion": "s13-14.24b-g2-3-v22-online-rules",
+  "schemaVersion": 12,
+  "saveFormatVersion": 8,
+  "replayFormatVersion": 7,
+  "commandProtocolVersion": 7,
+  "netProtocolVersion": 6,
+  "previousContentDigest": "fnv1a32-utf16:35273c97",
+  "previousLootReplayDigest": "fnv1a32-utf16:ef359464",
+  "traceHashes": {
+    "state": "e25ae9a62e5c5ba41c0ab0dfe47d3c8dcd02764e4d5b104a9c8e78119ddbf973",
+    "events": "234bafdee811fed1e0a7139e79ed947ce10be9633a3342eb3c9a6d5b0fcc984a",
+    "rng": "633f1769d8c1688992d745ef29a5353aa7c82c7d330838aef3154393b0b6a3e7"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 342,
+    "events": 115,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:615010a2",
+    "eventHash": "fnv1a32-utf16:3950dfbc"
+  },
+  "reason": "User-approved 10-23 rules: attack damage star factor 1/1.5/2.25 and six-cost AD, five-cost skill fixes, damage mana/lock/overflow and crit conversion, 14.24 augment tier table merged into a 50 s preparation with filters, anvils as bench units opened by selling (4-7 component anvil), concrete black-market items, streak/opening income and per-round preparation, Ambessa dash, 45 s combat with 30 s overtime. schema/save/replay/command 12/8/7/7, NET6. Old identities rejected without migration."
+}

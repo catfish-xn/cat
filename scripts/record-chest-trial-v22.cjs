@@ -43,7 +43,7 @@ async function main(){
  assert(chosen,'No authentic trial found in the bounded search');
  const text=JSON.stringify(chosen,null,2)+'\n';
  if(check)assert.equal(fs.readFileSync(output,'utf8'),text);else fs.writeFileSync(output,text);
- const sources=['scripts/record-opening-encounters-pr9-trials.cjs','tests/fixtures/v22-online-rules-chest-trial.ts','tests/fixtures/b8-public-equipment.ts','tests/fixtures/m5/oracle.g2.cjs'];
+ const sources=['scripts/record-chest-trial-v22.cjs','tests/fixtures/v22-online-rules-chest-trial.ts','tests/fixtures/b8-public-equipment.ts','tests/fixtures/m5/oracle.g2.cjs'];
  const audit={epoch:'v22-online-rules',reason:'seed554 Prismatic Prelude replaced Manaflow I; search actual silver offers, preserving Archangel grant, two bracer stacks, three pulses, death and full continuation assertions',sourceDigests:Object.fromEntries(sources.map(p=>[p,sha(fs.readFileSync(p))])),fixtureBytes:Buffer.byteLength(text),fixtureSha256:sha(text),seed:chosen.seed};
  const auditPath='docs/evidence/v22-online-rules/chest-trial-audit.json',auditText=JSON.stringify(audit,null,2)+'\n';
  if(check)assert.equal(fs.readFileSync(auditPath,'utf8'),auditText);else{fs.writeFileSync(auditPath,auditText);fs.writeFileSync('docs/evidence/v22-online-rules/chest-trial-search.json',JSON.stringify(candidates,null,2)+'\n');}

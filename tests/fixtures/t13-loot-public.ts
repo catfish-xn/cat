@@ -1,4 +1,5 @@
 import * as api from '../../src/simulation/match';
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import type { MatchState, MatchCommandResult, MatchEvent } from '../../src/simulation/match';
 import { createRequire } from 'node:module';
 const { run } = createRequire(import.meta.url)('../../scripts/generate-m5-route.cjs');
@@ -11,11 +12,12 @@ export const bench = (s: MatchState) => players(s).filter(u => u.location.kind =
 export const plan = (s: MatchState) => s.m8.loot.frozen.rounds.find(r => r.encounterPlan.roundId === s.roundDefinitionId)!;
 export function reserveExcept(initial: MatchState, keep: readonly string[]): MatchState {
   let s = initial;
-  for (const u of players(s).filter(u => u.location.kind === 'board' && !keep.includes(u.id))) {
+  // v22 opening structures (Trainer Golem) cannot be benched or sold; they stay where the opening put them.
+  for (const u of players(s).filter(u => u.location.kind === 'board' && !keep.includes(u.id) && isSellableUnit(u.definitionId))) {
     const used = new Set(bench(s).map(u => u.location.kind === 'bench' ? u.location.slot : -1));
     const slot = Array.from({length:9}, (_,i)=>i).find(i=>!used.has(i));
     if (slot === undefined) {
-      const excess=bench(s).find(unit=>!keep.includes(unit.id));
+      const excess=bench(s).find(unit=>!keep.includes(unit.id)&&isSellableUnit(unit.definitionId));
       if(!excess)throw Error('T13 public bench full');
       s=accepted(api.sellUnit(s,excess.id));
       const location=excess.location;

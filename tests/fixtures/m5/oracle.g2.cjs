@@ -11,6 +11,8 @@ const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:68,9:68};
 // Literal W4 + S13 P2 pools independently transcribed from the retained raw source.
 // No production content import; lexical ordering is the public choice contract.
 const AUGMENTS=["all-for-one-ii", "backup", "belt-overflow", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "calculated-enhancement", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "crown-guarded", "crownguard-spirit", "find-your-center", "flurry-of-blows", "glass-cannon-i", "glass-cannon-ii", "guardbreaker-spirit", "immovable-object", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "not-today", "pair-of-fours", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii", "shojin-spirit", "sword-overflow", "trifecta-ii", "wand-overflow"];
+// v22 anvil units (hand-copied ids).
+const ANVIL_IDS=new Set(['TFT_ArmoryKeyCompleted','TFT_ArmoryKeyComponent','TFT_ArmoryKeyOrnn','TFT_ArmoryKeySupport']);
 const AUGMENT_GOLD={'placebo':8,'placebo-plus':15,'going-long':15,'hedge-fund':25,'investment-strategy-ii':5};
 // User P 10-23: Placebo pays once by acquisition stage 8/11/15 (stage 2/3/4+); Placebo+ 15/18/22.
 const STAGED_AUGMENT_GOLD={'placebo':[8,11,15],'placebo-plus':[15,18,22]};
@@ -328,7 +330,8 @@ function heldResources(state){
  assert(d.held.items.every(i=>!state.items.some(a=>a.id===i.id)),'D14 held items cannot also be active');
  return {units:[d.held.unit],items:d.held.items};
 }
-const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'),...heldResources(state).units];
+// v22 Trainer Golem is an opening structure whose star follows the stage (audited by opening-encounters-trainer-golems), not a card.
+const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'&&u.definitionId!=='trainer-golem'),...heldResources(state).units];
 const ownedItems=state=>[...state.items,...heldResources(state).items];
 // CHEM_BARON_FIX: independent standard 14.24b PvP values and archive map22 source-order weights.
 // One whole bundle per 14.24b UI evidence; no production content/planner/RNG imports.
@@ -373,8 +376,7 @@ function validateChemTransition(before,after){
 }
 class Ledger {
  constructor(initial){this.gold=0;this.pending={gold:0,investmentHp:0};
-  // v22 openings can start with a second unit (Trainer Golems); conservation starts from the actual opening roster.
-  this.cards=ownedUnits(initial).reduce((n,u)=>n+3**(u.starLevel-1),0);assert(this.cards>=1,'opening unit');this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
+this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
   validateChemTransition(before,after);
   if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
@@ -413,7 +415,7 @@ class Ledger {
   let serial=before.nextUnitSerial;
   if(command?.type==='buy'){const definitionId=before.shop.slots[command.slot].definitionId,cost=COST[definitionId];this.gold-=cost;costs.purchases+=cost;this.cards++;units.set(`unit-${serial++}`,{definitionId,starLevel:1});}
   // v22: selling an anvil opens its four-pick for 0 gold; the anvil unit leaves the bench.
-  if(command?.type==='sell'&&COST[before.preparation.units.find(u=>u.id===command.id)?.definitionId]===undefined){this.cards-=1;units.delete(command.id);}
+  if(command?.type==='sell'&&ANVIL_IDS.has(before.preparation.units.find(u=>u.id===command.id)?.definitionId)){this.cards-=1;units.delete(command.id);}
   else if(command?.type==='sell'){const unit=before.preparation.units.find(u=>u.id===command.id),cost=COST[unit.definitionId],copies=3**(unit.starLevel-1),value=SELL[cost][unit.starLevel-1];this.gold+=value;costs.sales+=value;costs.saleLoss+=cost*copies-value;this.cards-=copies;units.delete(unit.id);}
   for(const [type,cost,key] of [['reroll',2,'rerolls'],['buyXp',4,'xp'],['anomalyReroll',1,'anomaly']])if(command?.type===type){this.gold-=cost;costs[key]+=cost;}
   for(const receipt of lootReceipts){if(receipt.payload.kind==='gold'){this.gold+=receipt.payload.quantity;costs.rewards+=receipt.payload.quantity;}
@@ -463,4 +465,4 @@ class Ledger {
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
   assert.equal(items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
-module.exports={blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,openingEncounter,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
+module.exports={ANVIL_IDS,blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,openingEncounter,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
