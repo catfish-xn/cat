@@ -12,14 +12,14 @@ export const EQUIPMENT_OPERATION_RULES_VERSION = 'equipment-ops-next-battle-v1';
 
 /** Permanent equipment is editable in every live phase, including a locked PvP roster. */
 export function canOperateEquipment(state: Readonly<MatchState>): boolean {
-  return state.multiplayer?.status !== 'eliminated'
+  return state.pendingChoice?.payload?.source !== 'masterwork-upgrade' && state.multiplayer?.status !== 'eliminated'
     && (state.phase === 'preparation' || state.phase === 'combat'
       || state.phase === 'choice' || state.phase === 'settlement');
 }
 
 /** Authority is opt-in multiplayer metadata, never a client-supplied command flag. */
 export function canOperateMatch(state: Readonly<MatchState>): boolean {
-  if (state.multiplayer?.status === 'eliminated') return false;
+  if (state.multiplayer?.status === 'eliminated' || state.pendingChoice?.payload?.source === 'masterwork-upgrade') return false;
   return state.phase === 'preparation' || (state.multiplayer?.status === 'active'
     && (state.phase === 'combat' || state.phase === 'choice' || state.phase === 'settlement'));
 }

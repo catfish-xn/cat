@@ -1,4 +1,4 @@
-import currentFingerprints from './fixtures/v20-black-market-b8-fingerprints.json';
+import currentFingerprints from './fixtures/v21-opening-encounters-b8-fingerprints.json';
 import { deepStrictEqual } from 'node:assert';
 import { freeze } from './combat-helpers';
 import { expectWallClockBelow } from './fixtures/wallclock';

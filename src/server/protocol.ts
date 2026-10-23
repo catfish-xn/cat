@@ -6,8 +6,8 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
-import type { ConsumableFailure, ConsumableTarget, ItemSummonOrigin, OrbTier, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
-export type { ConsumableFailure, ConsumableTarget, RoundEconomyPreview, RoundEconomyPreviewOutcome };
+import type { ConsumableFailure, ConsumableTarget, ItemSummonOrigin, OpeningEncounterView, OrbTier, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
+export type { ConsumableFailure, ConsumableTarget, OpeningEncounterView, RoundEconomyPreview, RoundEconomyPreviewOutcome };
 
 export const ROOM_CAPACITY = 8;
 export const ROOM_PROTOCOL_VERSION = 1;
@@ -202,6 +202,13 @@ export interface PlayerView {
   readonly opponentCandidates?: readonly string[];
   /** G1-P7: the shared carousel while the room is in its carousel phase; null or absent otherwise. */
   readonly carousel?: CarouselView | null;
+  /**
+   * Opening encounters PR8: the match's shared opening encounter as everyone may see it, the rules' public whitelist
+   * `readOpeningEncounterView(seat, pool.openingEncounter)` as returned (name, champion, description, status text and only
+   * the shared facts already revealed). Identical for every seat and spectator. No seed, RNG, future outcome or any
+   * seat's personal progress or candidates (those stay in my private seat view). Optional so older views stay valid.
+   */
+  readonly openingEncounter?: OpeningEncounterView | null;
   /** Full ranking once the match ended normally. */
   readonly ranking: readonly SeatPublic[] | null;
   /** Set when the room ended abnormally (then `ranking` stays null). */

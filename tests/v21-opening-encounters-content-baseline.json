@@ -1,0 +1,28 @@
+{
+  "parentEpoch": "v20-black-market",
+  "contentDigest": "fnv1a32-utf16:35273c97",
+  "lootReplayDigest": "fnv1a32-utf16:ef359464",
+  "rulesVersion": "s13-g2-3-v21-opening-encounters-battle-equipment",
+  "contentVersion": "s13-14.24b-g2-3-v21-opening-encounters-battle-equipment",
+  "schemaVersion": 12,
+  "saveFormatVersion": 8,
+  "replayFormatVersion": 6,
+  "commandProtocolVersion": 6,
+  "netProtocolVersion": 6,
+  "previousContentDigest": "fnv1a32-utf16:9a83da50",
+  "previousLootReplayDigest": "fnv1a32-utf16:e0eb43e2",
+  "traceHashes": {
+    "state": "5175fff42de69a18488c4f0f63d5e08943ac4eb914d4ea05cd7a4d8619d83156",
+    "events": "d4b3e7083560184291a114164626b2abc1cbed4ce9c112692bbd33e822732683",
+    "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:f13e9067",
+    "eventHash": "fnv1a32-utf16:cf452d32"
+  },
+  "reason": "Opening encounters PR1/2/4/5/6/8, next-tick battle equipment with frozen combat traits, and deferred income paid at next preparation (no lethal-round payout). schema/save/replay/command 12/8/6/6, NET6. Old identities rejected without migration."
+}

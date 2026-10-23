@@ -4,7 +4,8 @@ import type { DeploymentFailure, GameState } from './game';
 import type { ItemInstance, OwnedAugment, AnomalyBinding, PendingChoice, ScheduleReceipt, StrategyEvent } from './strategy-types';
 import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
-export type MatchEvent = LedgerCombatEvent | (({readonly type:'playerSaved';readonly battleId:string;readonly playerHp:1;readonly source:'mel'} | {readonly type:'d14Promoted'|'d14Returned';readonly unitId:string;readonly choiceId:string} | import('./consumable-types').ConsumableEvent | { readonly type: 'unitDeployed'; readonly unitId: string; readonly from: import('./unit-types').UnitLocation; readonly to: import('./unit-types').UnitLocation } | UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }
+export type MatchEvent = LedgerCombatEvent | (({readonly type:'openingEffectApplied';readonly receipt:import('./opening-encounter').OpeningEffectReceipt} | {readonly type:'playerSaved';readonly battleId:string;readonly playerHp:1;readonly source:'mel'} | {readonly type:'d14Promoted'|'d14Returned';readonly unitId:string;readonly choiceId:string} | import('./consumable-types').ConsumableEvent | { readonly type: 'unitDeployed'; readonly unitId: string; readonly from: import('./unit-types').UnitLocation; readonly to: import('./unit-types').UnitLocation } | UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }
+  | {readonly type:'openingMonkeyResolved';readonly receiptId:string;readonly outcome:'damage';readonly hpBefore:number;readonly hpAfterRaw:number;readonly hpAfter:number}
   | {readonly type:'carouselPendingClaimed';readonly unitId:string;readonly receiptId:string}
   | {readonly type:'carouselPreparationSettled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[]}
   | {readonly type:'carouselGranted';readonly receipt:import('./carousel-types').CarouselReceipt}
@@ -24,6 +25,7 @@ export interface RoundResult {
   readonly settlementId: string; readonly roundKind: RoundKind;
   readonly incomeBreakdown: { readonly base: number; readonly win: number; readonly interest: number; readonly streak: number };
   readonly interestBasis: number; readonly streakBefore: Streak; readonly streakAfter: Streak; readonly xpRequested: number;
+  /** Frozen income plan, including deferred next-entry income; goldAfter is not the live settlement balance. */
   readonly income: number; readonly goldBefore: number; readonly goldAfter: number;
   readonly xpAwarded: number; readonly levelBefore: number; readonly levelAfter: number;
   readonly xpBefore: number; readonly xpAfter: number; readonly hpBefore: number; readonly hpAfter: number;
@@ -38,6 +40,7 @@ export interface RoundPreparation {
   readonly enemies: readonly import('./unit-types').Unit[];
 }
 export interface MatchBase {
+  readonly openingEncounter: import('./opening-encounter').OpeningEncounterState;
   readonly carousel?: {readonly openingPending?:boolean;readonly receipts:readonly import('./carousel-types').CarouselReceipt[];readonly pendingUnits:readonly import('./carousel-types').PendingCarouselUnit[];readonly heldCarouselUnits:readonly import('./carousel-types').PendingCarouselUnit[];readonly preparationReceipts:readonly string[]};
   readonly consumables: readonly import('./consumable-types').ConsumableInstance[];
   readonly nextConsumableSerial: number;
@@ -79,7 +82,7 @@ export type MatchState = MatchBase & (
   | { readonly phase: 'combat'; readonly combat: RunningCombat }
   | { readonly phase: 'settlement' | 'gameOver'; readonly combat: FinishedCombat | null }
 );
-export type MatchFailure = DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
+export type MatchFailure = import('./battle-equipment').BattleEquipmentFailure | import('./opening-encounter').OpeningEncounterFailure | DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'
   | 'stale-choice' | 'invalid-choice' | 'invalid-target' | 'augment-rerolls-exhausted' | 'augment-pool-too-small'
   | import('./m8/ui-contracts').EquipmentFailure | import('./consumable-types').ConsumableFailure

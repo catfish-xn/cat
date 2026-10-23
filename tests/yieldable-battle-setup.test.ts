@@ -5,6 +5,7 @@ import { compileBattle, compileBattleSteps, restoreBattleInput, restoreBattleInp
 import { canonicalContent, canonicalContentSteps } from '../src/simulation/content';
 import { freezeContent, freezeContentSteps } from '../src/simulation/content/freeze';
 import { drainSetup } from '../src/simulation/setup-work';
+import { buildStrategySnapshot, buildStrategySnapshotSteps } from '../src/simulation/strategy-snapshot';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import type { MatchState } from '../src/simulation/match-types';
 
@@ -73,6 +74,24 @@ describe('yieldable battle setup', () => {
       expect(bytes(a)).toBe(bytes(b)); left = a.state; right = b.state; done = a.terminal !== null;
     }
     expect(done).toBe(true); expect(bytes(source)).toBe(original);
+  });
+
+  it('preserves the frozen equipment trait basis through both compiler entry points', () => {
+    const state = pve(42), original = bytes(state);
+    const opening = buildStrategySnapshot(state);
+    expect(opening.traits.length).toBeGreaterThan(0);
+    // An explicit empty basis must override freshly derived membership too.
+    for (const equipmentBasis of [opening, { ...opening, traits: [] }]) {
+      const before = bytes(equipmentBasis);
+      const sync = buildStrategySnapshot(state, undefined, undefined, equipmentBasis);
+      const actual = sliced(buildStrategySnapshotSteps(state, undefined, undefined, equipmentBasis), () => {
+        expect(bytes(state)).toBe(original);
+        expect(bytes(equipmentBasis)).toBe(before);
+      });
+      expect(bytes(actual)).toBe(bytes(sync));
+      expect(actual.traits).toBe(equipmentBasis.traits);
+      expect(sync.traits).toBe(equipmentBasis.traits);
+    }
   });
 
   it('cancellation during validation leaves input intact and a new initialization matches', () => {

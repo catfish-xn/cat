@@ -1,3 +1,4 @@
+import { openOpeningForge } from './opening-encounter';
 import { openEpicForge } from './epic-forges';
 import {recordG23GrantEvidence} from './g2-3-grant-evidence';
 import {drainP2Gifts} from './s13-augments-p2-grants';
@@ -52,6 +53,7 @@ export function drainG23Rewards(initial:MatchState,policy?:UnitLootPolicy,events
 }
 /** Automatic popup at preparation/settlement; no permanent armory shop. */
 export function openG23Choice(state:MatchState):{state:MatchState;events:readonly MatchEvent[]}{
+ const opening=openOpeningForge(state);if(opening.state!==state)return opening;
  const epic=openEpicForge(state);if(epic.state!==state)return epic;
  const p=readG23Progress(state);if(!p||state.pendingChoice||!['preparation','settlement'].includes(state.phase)||state.m8.round.kind==='supply')return {state,events:[]};
  const returnPhase=state.phase as 'preparation'|'settlement';

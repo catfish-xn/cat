@@ -10,7 +10,7 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     for(let i=0;i<10;i++)rng=(rng*1664525n+1013904223n)%4294967296n;
     expect(first).toEqual(createMatch(42));
     // B9 formal version switch (M8_RULES §10).
-    expect(first).toMatchObject({schemaVersion:11,rulesVersion:'s13-g2-3-v20-black-market',contentVersion:'s13-14.24b-g2-3-v20-black-market',commandProtocolVersion:5,
+    expect(first).toMatchObject({schemaVersion:12,rulesVersion:'s13-g2-3-v21-opening-encounters-battle-equipment',contentVersion:'s13-14.24b-g2-3-v21-opening-encounters-battle-equipment',commandProtocolVersion:6,
       phase:'preparation',round:1,gold:0,level:1,xp:0,playerHp:100,rngState:Number(rng),nextUnitSerial:2,combat:null,roundResults:[],pendingChoice:null});
     expect(first.shop.slots).toHaveLength(5);expect(first.preparation.benchSize).toBe(9);
     expect(first.preparation).not.toBe(createMatch().preparation);
@@ -32,7 +32,11 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:ids.map(dropId=>({dropId,status:'forfeited',receiptId:null}))});
     expect(result.state.preparation).toEqual(state.preparation);
     expect(result.state.nextUnitSerial).toBe(2);expect(result.state.nextItemSerial).toBe(1);expect(result.state.items).toEqual([]);
-    expect(result.state).toMatchObject({phase:'settlement',playerHp:97,gold:2,level:2,xp:0});
+    expect(result.state).toMatchObject({phase:'settlement',playerHp:97,gold:0,level:2,xp:0});
+    // Approved deferred income: no spendable base gold at settlement; pay exactly once on preparation entry.
+    expect(result.state.roundResults[0]).toMatchObject({goldAfter:2,incomeBreakdown:{base:2,win:0,interest:0,streak:0}});
+    const continued=accepted(nextRound(result.state,result.state.round));
+    expect(continued.gold).toBe(2);expect(stepMatch(continued).state.gold).toBe(2);
     expect(result.state.roundResults).toHaveLength(1);expect(result.state.roundResults[0]).toMatchObject({result:'enemyWin',combatTicks:0,combatEventCount:1,playerDamage:3});
     expect(stepMatch(result.state)).toEqual({state:result.state,events:[]});expect(stepMatch(result.state).state).toBe(result.state);expect(state.playerHp).toBe(100);expect(state).toEqual(before);
   });

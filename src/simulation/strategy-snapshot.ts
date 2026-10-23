@@ -64,10 +64,10 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
 /** The only strategy compilation boundary. Combat receives JSON numbers and provenance,
  * with no links to Match or content records and no board/bench decisions left for the tick.
  */
-export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext): StrategySnapshot {
-  return drainSetup(buildStrategySnapshotSteps(state, catalog, context));
+export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot): StrategySnapshot {
+  return drainSetup(buildStrategySnapshotSteps(state, catalog, context, equipmentBasis));
 }
-export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext): Generator<void, StrategySnapshot, void> {
+export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot): Generator<void, StrategySnapshot, void> {
   state=readCombatStrategyInputs(state);
   if(context&&context.round!==state.round)throw new RangeError('Trait projection round mismatch');
   const sisterAugment=state.augments.find(a=>a.definitionId==='sisters');
@@ -82,7 +82,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
   const voidspawn=projectVoidspawns(state,openingTraits);
   state={...state,preparation:voidspawn.preparation};
   const projected={...projection,preparation:state.preparation};
-  const traits = [...deriveEffectiveTraits(projected,'player',catalog.traits),...deriveEffectiveTraits(projected,'enemy',catalog.traits)];
+  const traits = equipmentBasis?.traits ?? [...deriveEffectiveTraits(projected,'player',catalog.traits),...deriveEffectiveTraits(projected,'enemy',catalog.traits)];
   const reunion=new Set([...familyReunionParticipants(state,'player'),...familyReunionParticipants(state,'enemy')]);
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
@@ -211,6 +211,11 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     // Keep the death-linked reunion membership even when Menaces suppresses the extra star.
     const reunionStar=reunion.has(unit.id)?Math.min(4,(promoted?4:unit.starLevel)+(suppressFamily?0:1)) as 1|2|3|4:undefined;
     const certified=reunionStar?familyCombatBase(unit,reunionStar):promoted?d14UnitBase(unit,true):null;
+    // During battle only item declarations change. Membership, tier effects and all
+    // other opening bonuses stay frozen; use the same numerical compiler below.
+    const frozen = equipmentBasis?.units.find(u => u.unitId === unit.id);
+    if (frozen) sources.splice(0, sources.length, ...frozen.sources.filter(s => s.source.sourceKind !== 'item'),
+      ...sources.filter(s => s.source.sourceKind === 'item'));
     let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
     const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');
     if (family) {

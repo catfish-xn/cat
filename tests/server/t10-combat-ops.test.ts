@@ -109,8 +109,9 @@ describe('T10 settlement on the latest live seat (contract §15.2)', () => {
       // their gold when it ends, before the settlement (the rules' own granted receipts, read back here).
       expect(busy.spent).toBeGreaterThan(0);
       expect(record.goldBefore).toBe(busy.live.gold + lootGold(busy.settled.match, round));
-      expect(record.goldAfter).toBe(busy.settled.match.gold);
-      expect(busy.settled.match.gold).toBe(record.goldBefore + record.income);
+      expect(record.goldAfter).toBe(record.goldBefore + record.income);
+      // Base/interest/streak are a next-preparation receivable; the win coin is immediate.
+      expect(busy.settled.match.gold).toBe(record.goldBefore + record.incomeBreakdown.win);
       expect(record.levelBefore).toBe(busy.live.level);
       // The bought unit is still owned (possibly merged), the shop is the rerolled one.
       expect(busy.bought).not.toBeNull();

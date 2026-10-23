@@ -1,15 +1,6 @@
 import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
-import {afterEach,expect,it,vi} from 'vitest';
+import {afterAll,afterEach,expect,it,vi} from 'vitest';
 const fault=vi.hoisted(()=>({hook:''}));
-// Intercept the implementation leaves: the public barrel now participates in
-// the Match/D14 restore graph, so importOriginal(barrel) can re-enter itself.
-vi.mock('../src/simulation/seat-mechanics/grants',async importOriginal=>{
- const real=await importOriginal<typeof import('../src/simulation/seat-mechanics/grants')>();
- return {...real,
-  grantMechanicGold:(...args:Parameters<typeof real.grantMechanicGold>)=>fault.hook==='rewards'?{ok:false,state:args[0],reason:'invalid-mechanic-state'}:real.grantMechanicGold(...args),
-  grantMechanicItem:(...args:Parameters<typeof real.grantMechanicItem>)=>fault.hook==='academy'?{ok:false,state:args[0],reason:'invalid-mechanic-state'}:real.grantMechanicItem(...args),
- };
-});
 vi.mock('../src/simulation/seat-mechanics/choices',async importOriginal=>{
  const real=await importOriginal<typeof import('../src/simulation/seat-mechanics/choices')>();
  return {...real,
@@ -22,6 +13,14 @@ import {drainG23Rewards,openG23Choice} from '../src/simulation/g2-3-runtime';
 import {grantG23Academy} from '../src/simulation/g2-3-match-progress';
 import {freeze} from './combat-helpers';
 import type {MatchEvent} from '../src/simulation/match-types';
+// Opening-encounter imports make grants re-enter the barrel while an async
+// importOriginal factory is pending. Spy after module evaluation so the injected
+// failure reaches the actual live export; retain all failure/resource assertions.
+import * as grants from '../src/simulation/seat-mechanics/grants';
+const goldGrant=grants.grantMechanicGold,itemGrant=grants.grantMechanicItem;
+const goldSpy=vi.spyOn(grants,'grantMechanicGold').mockImplementation((...args)=>fault.hook==='rewards'?{ok:false,state:args[0],reason:'invalid-mechanic-state'}:goldGrant(...args));
+const itemSpy=vi.spyOn(grants,'grantMechanicItem').mockImplementation((...args)=>fault.hook==='academy'?{ok:false,state:args[0],reason:'invalid-mechanic-state'}:itemGrant(...args));
+afterAll(()=>{goldSpy.mockRestore();itemSpy.mockRestore();});
 afterEach(()=>{fault.hook='';});
 it('a failed reward atom preserves its input resources and emits an observable reason',()=>{
  const base=createMatch(42),state=writeG23Progress(base,{...readG23Progress(base)!,rewards:[{id:'reward',round:1,source:'conqueror',tier:1,reward:{Gold:2}}]});

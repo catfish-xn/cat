@@ -1,3 +1,4 @@
+import { augmentTier, augmentDraw, openingEncounter } from './fixtures/m5/oracle.g2.cjs';
 import { expect, it } from 'vitest';
 import { accepted, reachRound } from './match-helpers';
 import { createMatch, selectChoice, equipItem, claimOrb, lockMatchCombatRoster } from '../src/simulation/match';
@@ -94,11 +95,19 @@ it.each(ids)('%s survives online snapshot JSON, both combat sides, authoritative
 });
 
 it.each(['all-for-one-i','trifecta-i'].flatMap(id=>[false,true].map(exhausted=>({id,exhausted}))))('$id routes gifts through the actual shared transaction (pool exhausted $exhausted)',({id,exhausted})=>{
-  let pool=createSharedPool('d11-pool',42,{seatCount:1,...(exhausted?{capacities:{[selectOpeningUnit(42,'A')]:1}}:{})});
-  const born=initializeSharedSeat(pool,createMatch(5,{mode:'shared-deferred'}),'A',0);if(!born.ok)throw Error(born.reason);pool=born.pool;
-  const base=reachRound('2-1',false,5),layout=syntheticSharedRound(pool,[born.state],base.round);pool=layout.pool;
+  // Search independent literal-table offers; shared root and solo prefix must
+  // bind the same encounter/tier. Keep a genuinely offered card for strict restore.
+  let seed=0;
+  for(;seed<10000;seed++) {
+    if(['golden-gala','prismatic-party','prismatic-prelude','prismatic-finale','wind-up-monkey','component-anvils','artifact-anvil'].includes(openingEncounter(seed)))continue;
+    if(augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[]).offers.includes(id))break;
+  }
+  expect(seed).toBeLessThan(10000);
+  let pool=createSharedPool('d11-pool',seed,{seatCount:1,...(exhausted?{capacities:{[selectOpeningUnit(seed,'A')]:1}}:{})});
+  const born=initializeSharedSeat(pool,createMatch(seed,{mode:'shared-deferred'}),'A',0);if(!born.ok)throw Error(born.reason);pool=born.pool;
+  const base=reachRound('2-1',false,seed),layout=syntheticSharedRound(pool,[born.state],base.round);pool=layout.pool;
   const c=base.pendingChoice!,state={...base,m8:{...base.m8,loot:layout.states[0].m8.loot},preparation:born.state.preparation,shop:born.state.shop,
-    rngState:born.state.rngState,resourceProvenance:born.state.resourceProvenance,sharedPool:born.state.sharedPool,multiplayer:born.state.multiplayer,pendingChoice:{...c,offers:[id]}};
+    rngState:born.state.rngState,resourceProvenance:born.state.resourceProvenance,sharedPool:born.state.sharedPool,multiplayer:born.state.multiplayer,openingEncounter:born.state.openingEncounter,augmentTierSeed:born.state.augmentTierSeed,pendingChoice:c};
   const selected=runSharedMatchCommand(pool,state,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:id});if(!selected.ok)throw Error(selected.reason);
   assertSharedPoolConservation(selected.pool,[selected.state]);
   const gifts=d11GiftPlan(selected.state,selected.state.augments.at(-1)!);

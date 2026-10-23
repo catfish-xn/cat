@@ -1,3 +1,4 @@
+import { M8_VERSION } from '../src/simulation/m8/version';
 import { describe, expect, it } from 'vitest';
 import { deepFreeze, isOwnedBattleRecord } from '../src/replay/history';
 import { BattleHistory, PlaybackSession, validateBattleCollection, validateBattleRecord } from '../src/replay';
@@ -19,7 +20,7 @@ function battle(initial = readyMatch(42), maxTick = Infinity) {
     history.observe({before,after:match,events:next.events.filter((e):e is CombatEvent=>e.domain==='combat'),reason:'tick'});
     ticks.set(match.combat!.tick,structuredClone(match));
   }
-  const envelope: SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion: 7,replayFormatVersion:5,runId:'test-run',createdAt:'2026-10-06T00:00:00Z',match,battles:history.completedRecords,currentBattle:history.capturePrefix()};
+  const envelope: SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion: M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,runId:'test-run',createdAt:'2026-10-06T00:00:00Z',match,battles:history.completedRecords,currentBattle:history.capturePrefix()};
   return {history,envelope,ticks};
 }
 describe('M6 isolated battle records and replay',()=>{
@@ -154,7 +155,7 @@ describe('M6 isolated battle records and replay',()=>{
       while(match.phase==='settlement') match=accepted(nextRound(match,match.round));
     }
     expect(sawChoice).toBe(true);expect(history.capturePrefix()).toBeNull();
-    await expect(validateBattleCollection({kind:'hex-autobattler-save',saveFormatVersion: 7,replayFormatVersion:5,runId:'choice-run',createdAt:'2026-10-06',match,battles:history.completedRecords,currentBattle:null})).resolves.toBeUndefined();
+    await expect(validateBattleCollection({kind:'hex-autobattler-save',saveFormatVersion: M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,runId:'choice-run',createdAt:'2026-10-06',match,battles:history.completedRecords,currentBattle:null})).resolves.toBeUndefined();
     const first=history.completedRecords[0];expect(history.completedRecords[0]).toBe(first);expect(Object.isFrozen(first.context.preparation.units)).toBe(true);
     const playback=new PlaybackSession(first), snapshot=playback.read();expect(playback.advance(50)).toBe(snapshot);expect(Object.isFrozen(snapshot.combat.units)).toBe(true);
   });

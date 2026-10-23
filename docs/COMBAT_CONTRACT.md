@@ -1,3 +1,7 @@
+## 战斗装备阶段 2（2026-10-22，候选身份；未录制 epoch）
+
+已实现下一未封口 tick 安装、属性/装备程序重编译、PvE/PvP 私有成功日志与来源凭据、重放和恢复；本节覆盖历史 T12 下场生效及 #382 的 `battle-input-unsupported`。命令、完整签名、失败原因、羁绊冻结依据、服务器原子边界、UI 字段及待集成身份见 [LIVE_COMBAT_EQUIPMENT_PHASE2](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。当前工作树采用候选 `v20-battle-equipment`，正式历史 epoch 仍为下节 black-market，须与开局奇遇一起录制后发布。
+
 ## v20-black-market 当前正式 epoch（2026-10-22）
 
 父 epoch `v20-live-combat`，基线 `42d8a404`。rules/content=`s13-g2-3-v20-black-market` / `s13-14.24b-g2-3-v20-black-market`，CONTENT=`fnv1a32-utf16:9a83da50`、LOOT_REPLAY=`fnv1a32-utf16:e0eb43e2`；schema/save/replay/command **11/7/5/5**、NET6 不变，旧身份严格拒绝、无迁移。
@@ -238,10 +242,12 @@ createCombatReplayRecorder(initialState: CombatState,
 | `two-sided-snapshot.ts` | `snapshotForBattleSteps(state: MatchState, seatId: string): Generator<void, PlayerBattleSnapshot, void>`；`restorePlayerBattleSnapshotSteps(input: unknown)` 同返回类型 |
 | `two-sided-battle.ts` | `compileBattleSteps(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, battleSeed: number, identity?: BattleIdentity): Generator<void, BattleInput, void>`；`restoreBattleInputSteps(input: unknown)` 同返回类型 |
 | `two-sided-battle.ts` | `startTwoSidedBattleSteps(input: BattleInput, options?: BattleReplayOptions)` 返回 `Generator<void, BattleTask, void>`；`captureReplay: true` 重载返回 `Generator<void, BattleReplayTask, void>`；联合选项返回联合任务 |
-| `strategy-snapshot.ts` | `buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog?: StrategyCatalog, context?: TraitProjectionContext): Generator<void, StrategySnapshot, void>` |
+| `strategy-snapshot.ts` | `buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog?: StrategyCatalog, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot): Generator<void, StrategySnapshot, void>` |
 | `combat.ts` | `createCombatWithEventsSteps(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState?: number, context?: TraitProjectionContext): Generator<void, CombatStep, void>` |
 | `match.ts` | `openMatchCombatStreamSteps(state: MatchState): Generator<void, MatchCommandResult & { readonly streamInitial?: CombatState }, void>` |
 | `setup-work.ts` | `drainSetup<T>(work: Generator<void, T, void>): T` |
+
+`buildStrategySnapshot` 同步入口向生成器原样传递 PR9 的 `equipmentBasis`；战斗中装备重编译沿用冻结羁绊与非装备来源，不重新计算开战选择。PvP 内部 `compileSide` 同步入口同样 drain `compileSideSteps`，供 PR9 的 `queueEquipment` 首次准备收据使用。
 
 PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校验与冻结按至多64个未命中缓存的对象节点分段；G23 经济历史按收据重演、逐字段比较；策略编译和战斗单位创建按原单位顺序分段。字符串解析、单个对象/数组枚举、原生 clone、单次 combatStart 等仍是不可抢占步骤。`freezeContentSteps` 只用于调用方拥有的数据图，可能在暂停前冻结已完成子树；它不保证取消时撤销冻结。canonical 同步/切片共用遍历器，切片模式不保留短命快照文本缓存，不跳过任何校验。
 

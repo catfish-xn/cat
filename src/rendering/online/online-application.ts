@@ -32,6 +32,8 @@ import type { CombatReplay } from '../../simulation/combat-replay-view';
 import type { RemoteSession } from './remote-session';
 import type { SceneApplication } from './scene-application';
 import type { OnlineBoardMounts } from '../app-shell';
+import { OpeningEncounterHud } from '../opening-encounter-hud';
+import { readOpeningDisplay, type OpeningForgeProgressDisplay, type OpeningMelProgressDisplay } from '../../presentation/opening-encounter-text';
 
 export interface OnlineHooks {
   /** The server replaced my state outside a command: redraw everything. */
@@ -92,6 +94,8 @@ export class OnlineApplication implements SceneApplication {
   private outcome: BattleOutcome;
   /** Item 3: placement card the moment I am eliminated while the match goes on. */
   private elimination: EliminationCard;
+  /** PR8: the match's opening encounter (intro card, opening-round banner, "本局奇遇" chip, 3-5 monkey toast). */
+  private opening: OpeningEncounterHud;
   /** My battle seen playing back (its replay and PvP opponent name), so its end shows the banner once. */
   private watched: { readonly replay: CombatReplay; readonly opponent: string | null } | null = null;
   /** HP I lost in the last view push, and my rank if that push eliminated me: both wait for the playback to end. */
@@ -133,6 +137,7 @@ export class OnlineApplication implements SceneApplication {
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.outcome = new BattleOutcome(frame);
     this.elimination = new EliminationCard(document.body, () => this.again());
+    this.opening = new OpeningEncounterHud(frame);
     this.session.pause('lobby');
     this.unsubscribe = this.session.subscribe(change => { this.hooks.changed?.(change); this.syncBattleViews(); this.commandSound(change); });
     document.addEventListener('visibilitychange', this.visibility);
@@ -188,6 +193,7 @@ export class OnlineApplication implements SceneApplication {
     // Shown now and kept at the front of the next preparation line, which would otherwise replace it at once.
     if (settled) { this.settledNote = { round: state.round, text: settled }; this.hooks.status(settled); }
     this.syncWarmHints(); // a reroll or a buy changes the shop
+    this.syncOpening(); // my forge count / Mel progress
   }
   private mergeNote: { readonly round: number; readonly text: string } | null = null;
   private settledNote: { readonly round: number; readonly text: string } | null = null;
@@ -276,6 +282,7 @@ export class OnlineApplication implements SceneApplication {
       // syncMode first: the panel reads body[data-online-mode] while re-rendering to show the online end text.
       if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.syncMode(); this.hooks.clearInput(); this.hooks.refresh(); }
       this.elimination.hide(); this.pendingHit = null; this.pendingRank = undefined;
+      this.opening.hideAll(); this.opening.forgetMatch();
       if (view.ranking) this.ranking.render(view.ranking, view.mySeatId);
       else if (view.fault) { this.ranking.renderFault(view.fault.detail); this.hooks.status(`对局异常结束：${view.fault.detail}`); }
       return;
@@ -285,6 +292,20 @@ export class OnlineApplication implements SceneApplication {
       this.hooks.status('对局开始 · 准备阶段结束时服务器自动开战，无需点击开始');
     }
     this.syncStatus(view);
+    this.syncOpening();
+  }
+  /**
+   * PR8: the public encounter of the view (the same for every seat and spectator), with my own progress from my private
+   * seat view (opening forges left, Mel's threshold). A view of an older server without the field falls back to my seat
+   * view's copy of the same whitelist.
+   */
+  private syncOpening() {
+    const view = this.view;
+    if (!view || this.mode !== 'active' || view.phase.kind === 'lobby' || view.phase.kind === 'ended') { this.opening.hideAll(); return; }
+    const state = this.session.state as MatchState & { readonly openingEncounter?: unknown; readonly openingForgeProgress?: OpeningForgeProgressDisplay | null; readonly openingMelProgress?: OpeningMelProgressDisplay | null };
+    const encounter = readOpeningDisplay(view.openingEncounter) ?? readOpeningDisplay(state.openingEncounter);
+    this.opening.update({ encounter, matchKey: `${view.mySeatId}|${view.seats.map(seat => `${seat.seatId}:${seat.name}`).join(',')}`, round: view.phase.round,
+      forge: state.openingForgeProgress ?? null, mel: state.openingMelProgress ?? null });
   }
   private lastPhase = '';
   /** Remembers what the last push did to my seat (HP lost, eliminated); `flushOutcome` shows it once my battle stops playing. */
@@ -461,7 +482,7 @@ export class OnlineApplication implements SceneApplication {
         : `${view.phase.roundName} · 野怪回合${opening} · 倒计时结束自动开战`);
       this.phaseLine = { round: view.phase.round, phase: 'preparation', text }; this.hooks.status(text);
     }
-    else if (view.phase.kind === 'combat') this.hooks.status(opponent ? `对战 ${opponent.name} · 战斗由服务器计算` : '战斗由服务器计算 · 正在播放');
+    else if (view.phase.kind === 'combat') this.hooks.status(opponent ? `对战 ${opponent.name}` : '战斗中');
     const merged = this.mergeNote?.round === view.phase.round ? `${this.mergeNote.text} · ` : '';
     if (view.phase.kind === 'carousel') this.hooks.status('选秀 · 生命越低越先放行 · 倒计时结束仍未选取由服务器代选');
     else if (view.phase.kind === 'choice') this.hooks.status(`${merged}请在倒计时内完成选择 · 超时由服务器代选`);
@@ -469,6 +490,7 @@ export class OnlineApplication implements SceneApplication {
   }
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
+    this.opening.hideAll(); this.opening.forgetMatch();
     this.ranking.hide(); this.elimination.hide(); this.outcome.clear(); this.watched = null; this.pendingHit = null; this.pendingRank = undefined; this.hitLanding = false;
     this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null; setBoardLegends(null); setBoardWarmHints([]);
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
@@ -516,14 +538,14 @@ export class OnlineApplication implements SceneApplication {
   selectReplayUnit(_id: string | null) { /* no replay online */ }
   debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, leftCollapsed: this.leftToggle.isCollapsed, sound: { muted: this.sound.isMuted, played: [...this.sound.played] }, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
     battleSummary: this.summary.debug(), outcome: this.outcome.debug(), eliminationCard: this.elimination.showing, economy: this.economy.debug(),
-    opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], carousel: this.view?.carousel ?? null, carouselSide: this.carousel.showing, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
+    opening: this.opening.debug(), opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], carousel: this.view?.carousel ?? null, carouselSide: this.carousel.showing, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
   dispose() {
     if (this.disposed) return; this.disposed = true;
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.minimap.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); this.withdrawLegendControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.minimap.dispose(); this.summary.dispose(); this.economy.dispose(); this.leftToggle.dispose(); this.sound.dispose(); this.carousel.dispose(); this.withdrawCarouselControls(); this.withdrawLegendControls(); publishCarousel(() => null); this.carouselHolding.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.outcome.dispose(); this.elimination.dispose(); this.opening.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }

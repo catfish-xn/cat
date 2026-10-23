@@ -1,3 +1,4 @@
+import { equipmentTargetId } from '../presentation/battle-equipment';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { CombatState, LedgerCombatEvent } from '../simulation/combat-types';
 import { toCombatViewState, toDisplayEvents, type CombatViewState, type DisplayCombatEvent, type SceneCombatEvent } from '../presentation/combat-display';
@@ -90,6 +91,7 @@ export class MatchSession {
   start() { return this.paused ? this.blocked() : this.commit(startMatchCombat(this.matchState)); }
   continue(round: number) { return this.paused ? this.blocked() : this.commit(nextRound(this.matchState, round)); }
   combine(a: string, b: string) { return this.paused ? this.blocked() : this.commit(combineItems(this.matchState, a, b)); }
+  equipmentTargetId(id: string): string | undefined { return equipmentTargetId(this.state, this.combatView, id); }
   equip(itemId: string, unitId: string, slot: number) { return this.paused ? this.blocked() : this.commit(equipItem(this.matchState, itemId, unitId, slot)); }
   /** C18-B (§18.1): one tool instance on one target; the rules decide everything and commit atomically. */
   useConsumable(consumableId: string, target: ConsumableTarget) { return this.paused ? this.blocked() : this.commit(useConsumable(this.matchState, consumableId, target)); }

@@ -18,11 +18,12 @@ import { readRoundInfo } from '../../simulation/round-selectors';
 import {
   assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
-  type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
+  type CarouselEvent, type CarouselRoundId, type CarouselState, type OpeningRoundResolution, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { CombatStream, type CombatStreamView } from './combat-stream';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import { toCombatReplayFor } from './projection';
+import { readOpeningEncounterView } from '../../server-entry';
 import type { CombatReplayTick } from '../../server-entry';
 import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type LiveCatchUp } from './live-bank';
 import { useSeatConsumable } from './consumables';
@@ -156,7 +157,7 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'reroll': return rerollSharedShop(pool, state, state.shop.generation);
     case 'buyXp': return plain(buyXp(state));
     case 'combine': return plain(combineItems(state, command.a, command.b));
-    case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot));
+    case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot, { deferBattleEquipment: true }));
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
     case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
     // v15: one card of the offer (optionIndex); the rules' shared-pool transaction, like every other choice command.
@@ -272,6 +273,7 @@ export class Room {
   private resolution: Resolution | null = null;
   private readonly streams = new Map<string, CombatStream>();
   private streamBoundary: string[] = [];
+  private battleEquipmentSeq = 0;
   private streamTick = 0;
   private streamSealedTick = 0;
   private streamCatchUp = 0;
@@ -486,9 +488,28 @@ export class Room {
     let live: LiveCatchUp | null = null;
     try { live = phase === 'battle' ? this.pveCatchUp(seat) : null; }
     catch (error) { this.failLive(seatId, error); return { ok: false, reason: 'wrong-phase', state: seat.match }; }
-    const applied = applySeatCommand(live?.pool ?? this.current.pool, live?.state ?? seat.match, command);
+    let applied = applySeatCommand(live?.pool ?? this.current.pool, live?.state ?? seat.match, command);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
     if (!applied.ok) return { ok: false, reason: applied.reason, state: seat.match };
+    if (command.type === 'equip' && phase === 'battle') {
+      const stream = [...this.streams.values()].find(s => s.envelope.seats.some(p => p.seatId === seatId));
+      if (stream && !stream.done && seat.match.preparation.units.some(u => u.id === command.unitId && u.location.kind === 'board')) {
+        const effectiveTick = this.nextBattleInputTick;
+        if (effectiveTick === null || effectiveTick !== stream.nextEffectiveTick) return { ok: false, reason: 'wrong-phase', state: seat.match };
+        // Staged on the stream before the commit below; nothing between here and commitSeat can refuse the command, so the
+        // queued input and the published seat state always land together.
+        try {
+          const staged = stream.queueEquipment({ kind: 'equipment', seq: this.battleEquipmentSeq + 1, effectiveTick, seatId,
+            itemId: command.itemId, unitId: command.unitId, slot: command.slot }, seat.match, applied.state);
+          applied = { ...applied, state: staged };
+        } catch (error) {
+          // Rules refusals (BattleValidationError is a RangeError) are the player's; anything else is an internal fault.
+          if (!(error instanceof RangeError)) { this.failLive(seatId, error); return { ok: false, reason: 'wrong-phase', state: seat.match }; }
+          return { ok: false, reason: error.message === 'battle-unit-unavailable' ? 'battle-unit-unavailable' : 'battle-input-invalid', state: seat.match };
+        }
+        this.battleEquipmentSeq++;
+      }
+    }
     if (live) this.livePve.get(seatId)!.commit(live.steps);
     const operated = live?.events.length ? { ...applied, events: [...live.events, ...applied.events] } : applied;
     // P7-1: a command that may have freed a bench slot or a board place (sell, deploy, buyXp, …) lets the rules move held
@@ -1685,14 +1706,74 @@ export class Room {
     const advanced = new Map(alive.map((seat, position) => [seat.seatId, batch.states[position]!] as const));
     // P7-1 (§21.6): the round entry may place and merge carousel units; its events are published with the seats they produced.
     const entered = new Map(batch.events.map(entry => [entry.seatId, entry.events] as const));
-    this.replace({ ...this.current, pool: batch.pool, poolRevision: batch.pool.revision,
-      seats: this.current.seats.map(seat => {
-        const match = advanced.get(seat.seatId);
-        if (!match) return seat;
-        const seatRevision = seat.seatRevision + 1;
-        return { ...seat, match, seatRevision, serverEvents: { seatRevision, events: entered.get(seat.seatId) ?? [] } };
-      }) });
+    const seats = this.current.seats.map(seat => {
+      const match = advanced.get(seat.seatId);
+      if (!match) return seat;
+      const seatRevision = seat.seatRevision + 1;
+      return { ...seat, match, seatRevision, serverEvents: { seatRevision, events: entered.get(seat.seatId) ?? [] } };
+    });
+    const viewFault = this.openingViewFault(batch.pool, seats);
+    if (viewFault) return this.fail({ kind: 'phase-mismatch', detail: viewFault });
+    if (batch.openingResolution) return this.publishOpeningResolution(batch.pool, seats, batch.openingResolution);
+    this.replace({ ...this.current, pool: batch.pool, poolRevision: batch.pool.revision, seats });
     this.enterRound();
+  }
+
+  /**
+   * Opening encounters PR8 (MULTIPLAYER_CONTRACT PR5, `nextSharedRound(...).openingResolution`): the round-entry batch
+   * that revealed a shared opening fact (the wind-up monkey at 3-5). Its HP chain changed outside a battle, so every
+   * advanced seat takes its HP from the rules' state, and the seats the batch eliminated take the batch's own ranks. The
+   * rules already returned their stock and forfeited their rewards inside the batch: nothing is released, re-ranked or
+   * re-damaged here. Everything is one publication; a batch that ends the match also publishes the final ranking (this
+   * batch's eliminations and survivor, plus the ranks fixed earlier), the terminal orb forfeits and the `ended` phase in it.
+   */
+  /** The public opening view must authenticate against the new pool before it is published (the projection never throws). */
+  private openingViewFault(pool: SharedPoolState, seats: readonly SeatState[]): string | null {
+    const seat = seats.find(candidate => candidate.match.openingEncounter.mode === 'shared');
+    if (!seat) return null;
+    try { readOpeningEncounterView(seat.match, pool.openingEncounter); return null; }
+    catch (error) { return `opening encounter view: ${error instanceof Error ? error.message : String(error)}`; }
+  }
+
+  private publishOpeningResolution(pool: SharedPoolState, advanced: readonly SeatState[], resolution: OpeningRoundResolution): void {
+    const eliminated = new Map(resolution.eliminated.map(entry => [entry.seatId, entry.rank] as const));
+    const survivors = new Map(resolution.survivorRanks.map(entry => [entry.seatId, entry.rank] as const));
+    const before = new Set(this.aliveSeats().map(seat => seat.seatId));
+    let seats = advanced.map((seat): SeatState => {
+      if (!before.has(seat.seatId)) return seat;
+      const rank = eliminated.get(seat.seatId);
+      if (rank === undefined) return { ...seat, hp: seat.match.playerHp, ...(resolution.ended && survivors.has(seat.seatId) ? { rank: survivors.get(seat.seatId)! } : {}) };
+      return { ...seat, hp: 0, alive: false, rank, eliminatedRound: seat.match.round };
+    });
+    const unknown = [...eliminated.keys(), ...survivors.keys()].find(seatId => !before.has(seatId));
+    // Cross-check against the rules' own seat states: a previously alive seat is out (HP gone or marked eliminated)
+    // exactly when the batch lists it as eliminated.
+    const out = (seat: SeatState) => seat.match.playerHp <= 0 || seat.match.multiplayer?.status === 'eliminated';
+    const disagrees = advanced.find(seat => before.has(seat.seatId) && out(seat) !== eliminated.has(seat.seatId));
+    if (unknown !== undefined || disagrees) {
+      return this.fail({ kind: 'phase-mismatch', detail: `opening resolution disagrees with the seats (${unknown ?? disagrees!.seatId})` });
+    }
+    if (!resolution.ended) {
+      this.replace({ ...this.current, pool, poolRevision: pool.revision, seats });
+      return this.enterRound();
+    }
+    // Survivor (at most one) is still active: its earned, unclaimed orbs are forfeited like after any final settlement.
+    seats = seats.map(seat => {
+      if (!seat.alive) return seat;
+      const step = forfeitTerminalOrbs(seat.match);
+      if (step.state === seat.match) return seat;
+      const seatRevision = seat.seatRevision + 1;
+      return { ...seat, match: step.state, seatRevision, serverEvents: { seatRevision, events: [...(seat.serverEvents?.events ?? []), ...step.events] } };
+    });
+    const ranking = [...resolution.survivorRanks, ...resolution.eliminated.map(entry => ({ seatId: entry.seatId, rank: entry.rank })),
+      ...this.current.seats.filter(seat => !before.has(seat.seatId)).map(seat => ({ seatId: seat.seatId, rank: seat.rank! }))]
+      .sort((a, b) => a.rank - b.rank);
+    // The match ends at the entry of the revealed round: the room names that round, so the eliminated seats (whose
+    // `eliminatedRound` is it) still receive their final state with the view.
+    const info = readRoundInfo(seats.find(seat => before.has(seat.seatId))!.match);
+    this.clearTimer(); this.legendWalks.clearScene('carousel'); this.releaseRound();
+    this.replace({ ...this.current, pool, poolRevision: pool.revision, seats, ranking, round: info.ordinal, roundId: info.roundId, roundName: info.displayName, roundKind: info.kind,
+      pairings: [], battleSeeds: {}, opponentCandidates: {}, carousel: null, battles: [], phase: 'ended', deadlineAt: null });
   }
 
   private onDeadline(): void {

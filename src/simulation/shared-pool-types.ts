@@ -28,6 +28,8 @@ export interface PoolRewardReceipt extends RewardReservation {
   readonly resolution:'held'|'gold'|'capacity-sold'|'forfeited'; readonly gold:number;
 }
 export interface SharedPoolState {
+  /** Sole shared encounter authority. Seats carry only its selection binding. */
+  readonly openingEncounter: import('./opening-encounter').OpeningEncounterContext;
   readonly carouselParticipants: readonly import('./carousel-types').CarouselParticipant[];
   readonly carouselReservations: readonly import('./carousel-types').CarouselReservation[];
   readonly carouselReceipts: readonly import('./carousel-types').CarouselReceipt[];
@@ -55,9 +57,15 @@ export type SharedPoolEvent =
 export type SharedPoolResult =
   | { readonly ok:true; readonly pool:SharedPoolState; readonly state:MatchState; readonly events:readonly MatchEvent[]; readonly poolEvents:readonly SharedPoolEvent[] }
   | { readonly ok:false; readonly pool:SharedPoolState; readonly state:MatchState; readonly reason:SharedPoolFailure };
+export interface OpeningRoundResolution {
+  readonly nodeId: '3-5'; readonly outcome: import('./opening-monkey').MonkeyOutcome;
+  readonly eliminated: readonly {readonly seatId:string; readonly rank:number; readonly hpBefore:number; readonly hpAfterRaw:number}[];
+  /** If ended, these are the ranks of THIS batch. Append previously eliminated seats' already-fixed ranks. */
+  readonly ended: boolean; readonly survivorRanks: readonly {readonly seatId:string; readonly rank:number}[];
+}
 export type SharedPoolBatchResult =
   | { readonly ok:true; readonly pool:SharedPoolState; readonly states:readonly MatchState[];
-      readonly events:readonly {readonly seatId:string;readonly events:readonly MatchEvent[]}[]; readonly poolEvents:readonly SharedPoolEvent[] }
+      readonly events:readonly {readonly seatId:string;readonly events:readonly MatchEvent[]}[]; readonly poolEvents:readonly SharedPoolEvent[]; readonly openingResolution?:OpeningRoundResolution }
   | { readonly ok:false; readonly pool:SharedPoolState; readonly states:readonly MatchState[]; readonly reason:SharedPoolFailure };
 export type SharedMatchCommand =
   | {readonly type:'claimOrb';readonly round:number;readonly orbId:string}

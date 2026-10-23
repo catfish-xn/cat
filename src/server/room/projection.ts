@@ -10,9 +10,10 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
+import type { SharedPoolState } from '../../simulation/shared-pool-types';
 import type { CarouselView, ItemSummonView, PublicBenchUnit, PublicBoard, PublicOrbSummary, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
-import { d14PublicUnitMark, listCarouselSlots, readItemSummons, readPublicOrbSummary } from '../../server-entry';
+import { d14PublicUnitMark, listCarouselSlots, readItemSummons, readOpeningEncounterView, readPublicOrbSummary, type OpeningEncounterView } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -78,9 +79,33 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
     opponentSeatId,
     opponentCandidates: toOpponentCandidates(room, seatId),
     carousel: toCarouselView(room, seatId),
+    openingEncounter: toPublicOpeningEncounter(room),
     ranking,
     fault: room.fault === null ? null : toPlayerFault(room.fault),
   };
+}
+
+/** One public view per published shared context: the context only changes when a shared fact is revealed (3-5). */
+const publicOpening = new WeakMap<SharedPoolState['openingEncounter'], OpeningEncounterView>();
+/**
+ * Opening encounters PR8: the shared encounter as every seat and spectator sees it. The rules' public whitelist
+ * `readOpeningEncounterView` of any seat bound to this pool, authenticated against and revealed from the pool's single
+ * shared context (`pool.openingEncounter`), so a seat eliminated before a reveal still sees the shared result. Never the
+ * context itself (seed, selection RNG, unrevealed facts), never a seat's receipts, progress or candidates. Null when no
+ * seat is bound yet (shared-deferred).
+ */
+export function toPublicOpeningEncounter(room: Pick<RoomState, 'seats' | 'pool'>): OpeningEncounterView | null {
+  const context = room.pool.openingEncounter;
+  const cached = publicOpening.get(context);
+  if (cached !== undefined) return cached;
+  const seat = room.seats.find(candidate => candidate.match.openingEncounter.mode === 'shared');
+  if (!seat) return null;
+  // Broadcast path: never throw here. The room validates the same view before it publishes a new pool
+  // (Room.openingViewFault), so a failure seen here is already a room fault and the view is simply left out.
+  let view: OpeningEncounterView | null;
+  try { view = readOpeningEncounterView(seat.match, context); } catch { return null; }
+  if (view) publicOpening.set(context, view);
+  return view;
 }
 
 /**

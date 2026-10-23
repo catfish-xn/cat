@@ -1,8 +1,9 @@
+import { deferredRoundIncome } from './deferred-income';
+import { commitOpeningEncounterHealth } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { reconcileD14 } from './d14-runtime';
 import type {TraitProjectionContext} from './traits/effective-membership';
 import { forfeitUnclaimedOrbs, settleQueuedOrbClaims } from './orb-claim';
-import { readAugmentIncome } from './augment-income';
 import type {UnitLootPolicy} from './loot-runtime';
 import {mechanicGrantEvents,openG23Choice} from './g2-3-runtime';
 import {commitG23Settlement} from './g2-3-settlement';
@@ -149,18 +150,19 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     };
     const augmentProgress = {
       pumpingRounds:state.augmentProgress.pumpingRounds+(state.augments.some(a=>a.definitionId==='pumping-up-i')?1:0),
-      investmentHp:state.augmentProgress.investmentHp+readAugmentIncome(state.augments).healthPerInterest*plan.incomeBreakdown.interest,
+      investmentHp:state.augmentProgress.investmentHp,
     };
     if (!Object.values(augmentProgress).every(n=>integer(n)) || !integer(state.nextMatchEventSeq+1)) return fail(state,'invalid-receipt');
     const {combatRosterLocked: _combatRosterLocked, ...unlockedMultiplayer} = state.multiplayer;
     const next: MatchState = {...state,phase:'settlement',combat:null,combatInputBasis:null,outcome:null,
-      gold:plan.goldAfter,playerHp:hpAfter,level:plan.progression.level,xp:plan.progression.xp,streak:plan.streakAfter,
+      gold:plan.goldAfter-deferredRoundIncome(plan),playerHp:hpAfter,level:plan.progression.level,xp:plan.progression.xp,streak:plan.streakAfter,
       persistentGrowth:[...growth].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([unitId,attackDamageBps])=>({unitId,attackDamageBps})),
       augmentProgress,roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
     const hookEvents:MatchEvent[]=[];
     let settled=r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next;
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
+    settled=commitOpeningEncounterHealth(settled);
     const merged = resolveDeferredUpgrades(settled);
     const d14State=reconcileD14(merged.state,hookEvents);
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);

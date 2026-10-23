@@ -28,6 +28,15 @@ const KNOWN_KINDS: ReadonlySet<string> = new Set(['component', 'augment', 'anoma
 export const isKnownChoiceKind = (kind: string): boolean => KNOWN_KINDS.has(kind);
 /** As in TFT, the Chem-Baron black market and the Junker King armory take the shop row's place instead of a popup. */
 export const isShopChoiceKind = (kind: string): boolean => kind === 'blackMarket' || kind === 'armory';
+/** Opening encounters PR5/PR8: the masterwork upgrade's item pick (armory kind, `payload.source='masterwork-upgrade'`). */
+export function isMasterworkChoice(choice: object | null | undefined): boolean {
+  const payload = (choice as { payload?: { source?: unknown } } | null | undefined)?.payload;
+  return !!payload && typeof payload === 'object' && payload.source === 'masterwork-upgrade';
+}
+/** Shop-row choice (black market, Junker King armory); the masterwork pick is a popup like a forge. */
+export function isShopChoice(choice: { readonly kind: string } & object): boolean {
+  return isShopChoiceKind(choice.kind) && !isMasterworkChoice(choice);
+}
 
 const text = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined);
 const int = (value: unknown): number | undefined => (Number.isInteger(value) ? value as number : undefined);
@@ -40,7 +49,7 @@ const int = (value: unknown): number | undefined => (Number.isInteger(value) ? v
  */
 const FORGE_POOL_NAMES: readonly (readonly [readonly string[], string])[] = [
   [G24_FORGE_POOLS.TFT_ArmoryKeyOrnn, '神器装备锻造器'], [G24_FORGE_POOLS.TFT_ArmoryKeySupport, '辅助装锻造器'],
-  [G24_FORGE_POOLS.TFT_ArmoryKeyCompleted, '成装锻造器'],
+  [G24_FORGE_POOLS.TFT_ArmoryKeyCompleted, '成装锻造器'], [G24_FORGE_POOLS.TFT_ArmoryKeyComponent, '基础装备锻造器'],
 ];
 const FORGE_NAMES: Readonly<Record<string, string>> = { completed: '成装锻造器', artifact: '神器装备锻造器', support: '辅助装锻造器' };
 function forgeName(offers: readonly unknown[]): string {
@@ -54,8 +63,11 @@ function forgeName(offers: readonly unknown[]): string {
 function defaultTitle(choice: object): string | undefined {
   const { kind, offers, payload } = choice as { kind?: unknown; offers?: unknown; payload?: { source?: unknown } };
   // v16: the 5-7 / 6-7 carriers' forges say where they came from.
-  const epic = payload && typeof payload === 'object' && payload.source === 'epic-loot' ? '史诗奖励 · ' : '';
+  const epic = payload && typeof payload === 'object' && payload.source === 'epic-loot' ? '史诗奖励 · '
+    // PR8: the opening encounter's anvils (蔚 / 杰斯) say they come from this match's encounter.
+    : payload && typeof payload === 'object' && payload.source === 'opening-encounter' ? '本局奇遇 · ' : '';
   if (kind === 'blackMarket') return '炼金男爵 · 黑市';
+  if (isMasterworkChoice(choice)) return '杰作升级 · 选择一件装备升级为光明版';
   if (kind === 'armory' && payload?.source === 'junker-king') return '机械公敌 · 升级';
   return kind === 'forge' && Array.isArray(offers) ? `${epic}${forgeName(offers)} · ${offers.length} 选 1` : undefined;
 }

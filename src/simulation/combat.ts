@@ -1,4 +1,5 @@
 import { drainSetup } from './setup-work';
+import { installBattleEquipmentBatch } from './battle-equipment';
 import { familyCombatBase } from './family-reunion';
 import { d14UnitBase } from './d14-anomalies/projection';
 import {projectEffectiveMembership,type TraitProjectionContext} from './traits/effective-membership';
@@ -129,5 +130,9 @@ export function* createCombatWithEventsSteps(preparation: GameState, strategy: S
 }
 export function stepCombat(state: CombatState): CombatStep {
   if (state.status === 'finished') return { state, events: [] };
+  if (state.pendingEquipment?.length) {
+    const { pendingEquipment, ...base } = state;
+    state = installBattleEquipmentBatch(base, pendingEquipment);
+  }
   return recordNeutralReceipts(advanceCombatTick(state));
 }

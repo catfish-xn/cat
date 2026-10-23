@@ -964,7 +964,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const visiting = () => scout.active || scoutView?.watching === true;
   const mine = () => !stage.active && !visiting();
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
-  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: () => { if (!visiting()) tabletop.saved(); },
+  /** My legend runs onto my orb, which it claims on arrival (TFT: no click opens an orb); false when it cannot go there now. */
+  const walkToOrb = (orbId: string): boolean => {
+    if (stage.active || visiting()) return false;
+    const walk = tabletop.walkTo({ x: 0, y: 0 }, orbId);
+    if (walk) legend()?.walk({ scene: 'board', ...walk });
+    return walk !== null;
+  };
+  const unsubscribe = feed?.subscribe({ frame: onFrame, events: onEvents, carousel: onCarousel, scout: onScout, legendWalk: onLegendWalk, playerSaved: () => { if (!visiting()) tabletop.saved(); }, walkToOrb,
     unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
@@ -1075,9 +1082,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return;
     }
     if (event.button !== 0 || press) return;
-    // My orb: the orb dock's own click (it decides whether the rules can be asked now).
+    // My orb: my legend runs onto it and claims it there, as walking over it does.
     const orb = tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport());
-    if (orb) { feed?.controls()?.claimOrb?.(orb); event.preventDefault(); return; }
+    if (orb) { if (walkToOrb(orb)) event.preventDefault(); return; }
     const id = unitAt(event);
     if (!id) return;
     press = { id, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
