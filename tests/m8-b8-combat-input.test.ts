@@ -66,7 +66,8 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
     expect(nextRandom(state.battleSeedRngState).word).toBe(890455596);
   });
   it('binds public later-round inputs, skips supply battle seeds and preserves original G12 children', () => {
-    let state = createMatch(6);
+    // Under the v22 rules seed 6 also holds a cloak by 3-5; seed 65 is the first whose public route holds exactly the two gloves supplies.
+    let state = createMatch(65);
     while (state.roundDefinitionId !== '3-5') {
       if (state.phase === 'choice') {
         const choice = state.pendingChoice!;
