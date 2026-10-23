@@ -7,7 +7,9 @@ import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} f
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-const prepared=fillBench(await publicPrefix('3-7',10),['zeri']),live=battle(prepared),frozen=plan(prepared);
+// v22: seed 10 draws the crab-rave opening (crabs carry the wolf orbs); seed 2412 has no opening
+// encounter and the same 3-7 shape: one Zeri sharing an orb with other entries, four components, a reforger.
+const prepared=fillBench(await publicPrefix('3-7',2412),['zeri']),live=battle(prepared),frozen=plan(prepared);
 const hero=frozen.encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);expect(api.readLootView(s)).toEqual(v);expect(api.readLootView(restoreMatch(saved))).toEqual(v);expect(serializeMatch(s)).toBe(saved);
  expect(Object.isFrozen(v)&&Object.isFrozen(v.revealedDrops)&&Object.isFrozen(v.revealedOrbs)).toBe(true);
@@ -46,7 +48,7 @@ describe('B8 readLootView over real randomized public routes',()=>{
   const ids=new Set(frozen.encounterPlan.drops.map(d=>d.dropId));expect(v.revealedDrops.map(d=>d.receiptId).sort()).toEqual(s.m8.loot.receipts.filter(r=>ids.has(r.dropId)).map(r=>r.receiptId).sort());
   const next=accepted(api.nextRound(s,17));expect(view(next).revealedDrops).toEqual([]);expect(view(next).revealedOrbs).toEqual([]);
  });
- it.each([{name:'two source deaths including a hero',keep:'loris',col:6,row:5,deaths:2},{name:'only component carrier',keep:'loris',col:1,row:7,deaths:1},{name:'tool carrier',keep:'loris',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths})=>{
+ it.each([{name:'two source deaths including a hero',keep:'maddie',col:2,row:7,deaths:2},{name:'only component carrier',keep:'urgot',col:0,row:4,deaths:1},{name:'tool carrier',keep:'loris',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths})=>{
   const terminal=battle(await terminalPreparation(keep,col,row)),s=terminal.ended,v=view(s);expect(s.phase).toBe('gameOver');
   expect(s.combat!.neutralReceipts!.deaths).toHaveLength(deaths);
   expect(v).toMatchObject({canContinue:false,reason:'game-over',pendingClaims:[],pendingChoice:null});

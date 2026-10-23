@@ -10,7 +10,7 @@ import { freezeContent } from '../src/simulation/content/freeze';
 import { BRACER } from './fixtures/explorer-bracer-public';
 import { createMatch } from '../src/simulation/match';
 import { createCombatWithEvents, stepCombat, type CombatState } from '../src/simulation/combat';
-import type { CombatUnit, LedgerCombatEvent } from '../src/simulation/combat-types';
+import { MAX_COMBAT_TICKS, type CombatUnit, type LedgerCombatEvent } from '../src/simulation/combat-types';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { BattleHistory } from '../src/replay/history';
 import { PlaybackSession } from '../src/replay/playback-session';
@@ -46,11 +46,14 @@ function expectContinuation(from: MatchState, copies: MatchState[]) {
 // v19 Sisters shifts seed 3151248's gold offers to Spirit Link. Public card
 // rerolls recover the inert front-row Glass Cannon II control without changing any combat assertions.
 // Seed 5 still offers Manaflow I for the contribution=false board.
-const frontRowRod = () => {let s=acquireEquipment(['rod'],{seed:3151248,augmentPriorities:['glass-cannon-ii'],rerollForAugment:true});for(const u of s.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))s=accepted(sellUnit(s,u.id));if(!s.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))s=accepted(grantMechanicUnit(s,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));return s;};
+// v22 augment tier table: seed 3151248 no longer reaches Glass Cannon II, so each
+// public fixture names a seed whose card rerolls still recover it.
+const frontRowRod = (seed: number) => {let s=acquireEquipment(['rod'],{seed,augmentPriorities:['glass-cannon-ii'],rerollForAugment:true});for(const u of s.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))s=accepted(sellUnit(s,u.id));if(!s.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))s=accepted(grantMechanicUnit(s,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));return s;};
 let initial: MatchState, before: MatchState, after: MatchState, doubleKill: MatchEvent[];
 let luxFixture: { initial: MatchState; before: MatchState; after: MatchState; doubleKill: MatchEvent[] };
 beforeAll(() => {
-  let state = frontRowRod();
+  // v22 AD/mana rules: Luden's splash now kills three from column 0; seed 1 from column 4 is an exact double kill.
+  let state = frontRowRod(1);
   for (let i = 0; i < 8; i++) state = accepted(grantMechanicUnit(state, { receiptId: `lux-${i}`, source: 'test', definitionId: 'lux' }));
   const owner = state.preparation.units.find(u => u.definitionId === 'lux' && u.team === 'player')!;
   // S13 Lux shields and empowers her next attack. Its real Luden splash makes
@@ -59,7 +62,7 @@ beforeAll(() => {
     state = accepted(grantMechanicItem(state, { receiptId: `item-${slot}`, source: 'test', definitionId }));
     state = accepted(equipItem(state, state.items.at(-1)!.id, owner.id, slot));
   }
-  state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 0, row: 4 } }));
+  state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 4, row: 4 } }));
   initial = state = accepted(startMatchCombat(state));
   while (state.phase === 'combat') {
     const r = stepMatch(state);
@@ -78,9 +81,9 @@ beforeEach(() => {
 
 it('Lux kills two different targets in one root action and gains two +20 stacks', () => {
   const packets = doubleKill.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome] : []);
-  expect(after.combat!.tick).toBe(143);
+  expect(after.combat!.tick).toBe(118);
   expect(packets).toHaveLength(2);
-  expect(new Set(packets.map(p => p.context.rootActionSeq))).toEqual(new Set([20]));
+  expect(new Set(packets.map(p => p.context.rootActionSeq))).toEqual(new Set([18]));
   expect(new Set(packets.map(p => p.context.targetId)).size).toBe(2);
   expect(packets.map(p => p.context.delivery)).toEqual(['ability-direct', 'equipment-proc']);
   expect(count(before)).toBe(0); expect(count(after)).toBe(2);
@@ -101,7 +104,8 @@ it.each(['object', 'json'] as const)('restores the real double kill and continue
 describe('Renata public acquisition fixture', () => {
   let acquired: MatchState, granted: MatchState, deployed: MatchState;
   beforeAll(() => {
-    let preparation = acquireEquipment(['rod'],{seed:3151248,augmentPriorities:['glass-cannon-ii'],rerollForAugment:true});
+    // v22 augment tier table and mana rules: seed 3151248 now opens with a single kill; seed 84 keeps the tick-60 double kill.
+    let preparation = acquireEquipment(['rod'],{seed:84,augmentPriorities:['glass-cannon-ii'],rerollForAugment:true});
     for(const u of preparation.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))preparation=accepted(sellUnit(preparation,u.id));
     acquired = freezeContent(structuredClone(preparation));
     for (let i = 0; i < 9; i++) preparation = accepted(grantMechanicUnit(preparation, { receiptId: `renata-${i}`, source: 'test', definitionId: 'renata' }));
@@ -118,7 +122,7 @@ describe('Renata public acquisition fixture', () => {
   // Temporarily 20 s (user-approved 2026-10-20); restore the default 5 s once this slow case is sped up.
   it('saves Renata\'s tick-60 double kill, restores object/JSON, and replays every complete combat state', () => {
     let preparation = ownFixture(acquired);
-    expect(preparation.seed).toBe(3151248); expect(preparation.roundDefinitionId).toBe('2-1');
+    expect(preparation.seed).toBe(84); expect(preparation.roundDefinitionId).toBe('2-1');
     preparation = ownFixture(granted);
     const owner = preparation.preparation.units.find(u => u.definitionId === 'renata' && u.team === 'player')!;
     expect(owner.starLevel).toBe(3);
@@ -271,8 +275,8 @@ it.each(['ownerId', 'sourceKind', 'definitionId', 'instanceId', 'effectIndex', '
       expect(isDeclaredStatus(d.source, app, state.combat!.units, combatId)).toBe(true);
       const bad = structuredClone(state), holder = lux(bad), ledger = holder.triggerLedger!;
       const runtime = ledger.runtimes.find(r => r.source.definitionId === BRACER)!;
-      // A late clock would accept these two layers under the old fallback.
-      Object.assign(holder.mechanismState!, { sampledAtTick: 1000 });
+      // A late (but legal: v22 combat ends at MAX_COMBAT_TICKS = 900) clock would accept these two layers under the old fallback.
+      Object.assign(holder.mechanismState!, { sampledAtTick: MAX_COMBAT_TICKS });
       if (mismatch === 'missing') Object.assign(ledger, { runtimes: [] });
       else if (mismatch === 'under-count') {
         Object.assign(runtime, { triggerCount: 1 });
@@ -294,8 +298,8 @@ it.each(['kill', 'assist'] as const)('deduplicates the same target, counts the s
   for (const [eventSeq, targetIndex, expected] of [[1, 0, 1], [2, 0, 0], [3, 1, 1], [3, 1, 0]] as const) {
     const packet = packets[targetIndex];
     const damage = kind === 'kill' ? packet : { ...packet, context: { ...packet.context, source: { ...packet.context.source, ownerId: 'other-killer' } } };
-    const signal: TriggerSignal = { aggregation: 'event', context: { event: 'kill-or-assist', eventSeq, tick: 143,
-      actionSeq: 20, actorId: owner.id, targetId: packet.context.targetId, cast: null }, facts: { damage: [damage], healing: [], shieldDecay: [] } };
+    const signal: TriggerSignal = { aggregation: 'event', context: { event: 'kill-or-assist', eventSeq, tick: 118,
+      actionSeq: 18, actorId: owner.id, targetId: packet.context.targetId, cast: null }, facts: { damage: [damage], healing: [], shieldDecay: [] } };
     const result = dispatchTriggers(combatId, definitions, ledger, signal, units, () => [owner.id]);
     expect(result.invocations).toHaveLength(expected);
     for (const invocation of result.invocations) expect(invocation.definition.id).toBe(kind);
@@ -313,7 +317,7 @@ it('only the bracer opts into per-target limits; other item declarations retain 
   const packets = doubleKill.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome] : []);
   let ledger = EMPTY_TRIGGER_LEDGER;
   for (const [i, packet] of packets.entries()) {
-    const signal: TriggerSignal = { aggregation: 'event', context: { event: 'kill-or-assist', eventSeq: i + 1, tick: 143, actionSeq: 20, actorId: owner.id, targetId: packet.context.targetId, cast: null }, facts: { damage: [packet], healing: [], shieldDecay: [] } };
+    const signal: TriggerSignal = { aggregation: 'event', context: { event: 'kill-or-assist', eventSeq: i + 1, tick: 118, actionSeq: 18, actorId: owner.id, targetId: packet.context.targetId, cast: null }, facts: { damage: [packet], healing: [], shieldDecay: [] } };
     const result = dispatchTriggers(initial.combat!.combatId!, [definition], ledger, signal, initial.combat!.units, () => [owner.id]);
     expect(result.invocations).toHaveLength(i === 0 ? 1 : 0); ledger = result.ledger;
   }
@@ -387,14 +391,15 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 describe('dead-holder public combat fixture', () => {
   let fixture: { state: MatchState; initial: MatchState; before: MatchState; ownerId: string };
   beforeAll(() => {
-    let state = frontRowRod();
+    // v22 AD/mana rules moved the old seed's same-tick death; seed 207 at (3,7) has it at tick 352 after one earlier kill.
+    let state = frontRowRod(207);
     for (let i = 0; i < 9; i++) state = accepted(grantMechanicUnit(state, { receiptId: `boundary-zyra-${i}`, source: 'test', definitionId: 'zyra' }));
     const owner = state.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!;
     state = equipBracer(state, owner.id);
-    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 5, row: 4 } }));
+    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 3, row: 7 } }));
     const initial = accepted(startMatchCombat(state));
     let before = initial;
-    while (before.phase === 'combat' && before.combat!.tick < 410) before = stepMatch(before).state;
+    while (before.phase === 'combat' && before.combat!.tick < 351) before = stepMatch(before).state;
     fixture = freezeContent(structuredClone({ state, initial, before, ownerId: owner.id }));
   });
 
@@ -403,13 +408,13 @@ describe('dead-holder public combat fixture', () => {
     certifyFixture(copy.initial); certifyFixture(copy.before);
     const owner = state.preparation.units.find(u => u.id === copy.ownerId)!;
     expect(owner.starLevel).toBe(3);
-    const initial = copy.initial, before = stepTo(copy.before, 410);
+    const initial = copy.initial, before = stepTo(copy.before, 351);
     const result = stepMatch(before), after = result.state;
     const targetId = 'enemy-r4-2';
-    expect(after.combat!.tick).toBe(411);
+    expect(after.combat!.tick).toBe(352);
     expect(result.events.filter(e => e.type === 'kill')).toEqual([
-      expect.objectContaining({ type: 'kill', tick: 411, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r4-2' }) }),
-      expect.objectContaining({ type: 'kill', tick: 411, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
+      expect.objectContaining({ type: 'kill', tick: 352, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r4-2' }) }),
+      expect.objectContaining({ type: 'kill', tick: 352, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
     ]);
     expect(result.events.filter(e => e.type === 'packetDamage' && e.outcome.killingPacket)).toEqual([
       expect.objectContaining({ outcome: expect.objectContaining({ context: expect.objectContaining({ targetId: owner.id }) }) }),
@@ -434,13 +439,15 @@ describe('dead-holder public combat fixture', () => {
 });
 
 describe.each([
-  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 192, targetId: 'enemy-r4-1' },
-  { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
-])('summon public combat fixture: contribution=$contribution', ({ contribution, cells, tick, targetId }) => {
+  // v22: seeds whose public Manaflow route keeps unit serials single-digit, so Morgana's id sorts first
+  // and she owns Sion (string-sorted Black Rose owner, see S13_RULES_GAP known issue).
+  { contribution: false, seed: 108, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 174, targetId: 'enemy-r4-1' },
+  { contribution: true, seed: 104, cells: [{ col: 3, row: 7 }, { col: 0, row: 7 }, { col: 6, row: 7 }], tick: 210, targetId: 'enemy-r4-1' },
+])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   let fixture: { state: MatchState; start: MatchCommandResult; before: MatchState; ownerId: string };
   beforeAll(() => {
     // v15 retains the same contribution cases with actual Manaflow offers.
-    let state = acquireEquipment(['rod'], { seed: contribution ? 3151248 : 5, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
+    let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
     for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
       state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
       const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;

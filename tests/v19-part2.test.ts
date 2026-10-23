@@ -57,22 +57,25 @@ describe('v19 six costs',()=>{
   it('freezes stage/level odds and preserves two words per shop slot',()=>{
     const unlock=getCatalogRoundById('4-6').ordinal;
     for(let level=1;level<=10;level++){
-      expect(sixCostOddsBps(unlock-1,level)).toBe(0);expect(sixCostOddsBps(unlock,level)).toBe(level===10?180:20);
-      expect(sixCostOddsBps(unlock+1,level)).toBe(level===10?184:24);
+      // Batch A (approved 10-23, table V1) replaced the v19 +4/round ramp: 4-6/4-7 are 16 (Lv10 126), 5-1 is 19 (129).
+      expect(sixCostOddsBps(unlock-1,level)).toBe(0);expect(sixCostOddsBps(unlock,level)).toBe(level===10?126:16);
+      expect(sixCostOddsBps(unlock+1,level)).toBe(level===10?126:16);expect(sixCostOddsBps(unlock+2,level)).toBe(level===10?129:19);
       const projected=toPrivateSeatView({...army(['lux']),level});
-      expect(projected.shopOdds).toEqual({sixCostBps:level===10?180:20});
+      expect(projected.shopOdds).toEqual({sixCostBps:level===10?126:16});
     }
     const before=generateShop(42,1,10,unlock-1),after=generateShop(42,1,10,unlock);
     expect(after.rngState).toBe(before.rngState);
-    const seeds=Array.from({length:500},(_,i)=>i);
+    // One seat-stream draw per shop hits at clamp(5q)=0.8% at 4-6; spread the seeds so the stream words are independent.
+    const seeds=Array.from({length:2000},(_,i)=>Math.imul(i+1,2654435761)>>>0);
     expect(seeds.some(seed=>generateShop(seed,1,1,unlock).shop.slots.some(s=>s.status==='available'&&UNIT_DEFINITIONS[s.definitionId].cost===6))).toBe(true);
   });
   it('shared six-cost reservations are finite, can merge, sell and fall back after exhaustion; locks and failures are inert',()=>{
-    const r=room({irelia:1,warwick:9},1),round=getCatalogRoundById('4-6'),initial=accept(generateSharedShop(r.pool,r.states[0],0)),x=syntheticSharedRound(initial.pool,[initial.state],round.ordinal);
+    // v22 batch A: six-costs only enter through one seat-stream draw per shop (6.3% at 4-6 Lv10), so ordinary
+    // slots must stay stocked for rerolls to succeed; Lux is the only ordinary stock besides the held Irelia.
+    const r=room({irelia:1,lux:30,warwick:9},1),round=getCatalogRoundById('4-6'),initial=accept(generateSharedShop(r.pool,r.states[0],0)),x=syntheticSharedRound(initial.pool,[initial.state],round.ordinal);
     let state={...x.states[0],roundDefinitionId:round.roundId,m8:{...x.states[0].m8,round},gold:1000,level:10},pool=x.pool;
     let g=accept(rerollSharedShop(pool,state,state.shop.generation));pool=g.pool;state=g.state;
-    // Only the six-cost tier is stocked for this level (Irelia is already held).
-    for(let n=0;n<30&&pool.holdings.filter(h=>h.definitionId==='warwick').reduce((n,h)=>n+h.sources.length,0)<9;n++){
+    for(let n=0;n<400&&pool.holdings.filter(h=>h.definitionId==='warwick').reduce((n,h)=>n+h.sources.length,0)<9;n++){
       const slot=state.shop.slots.findIndex(s=>s.status==='available'&&s.definitionId==='warwick');
       g=accept(slot<0?rerollSharedShop(pool,state,state.shop.generation):buySharedUnit(pool,state,slot,state.shop.generation));pool=g.pool;state=g.state;conserved(pool,[state]);
     }
