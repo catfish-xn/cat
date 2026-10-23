@@ -15,9 +15,9 @@ describe('M5 independent frozen numerical acceptance answers',()=>{
   const value=planRoundEconomy({stage:2,roundKind:'pvp',result:c.result,gold:c.gold,streak:{kind:c.kind,count:c.count},level:3,xp:0,hp:100,enemySurvivors:0});
   expect(value.goldAfter).toBe(c.expectedGold);expect(value.incomeBreakdown).toEqual(c.breakdown);
  });
- it('three-win streak survives PvE but awards no streak or victory gold',()=>{
+ it('three-win streak advances through PvE with streak gold but no victory gold',()=>{
   const value=planRoundEconomy({stage:2,roundKind:'pve',result:'playerWin',gold:50,streak:{kind:'win',count:3},level:3,xp:0,hp:100,enemySurvivors:0});
-  expect(value.goldAfter).toBe(60);expect(value.streakAfter).toEqual({kind:'win',count:3});expect(value.incomeBreakdown).toEqual({base:5,win:0,interest:5,streak:0});
+  expect(value.goldAfter).toBe(61);expect(value.streakAfter).toEqual({kind:'win',count:4});expect(value.incomeBreakdown).toEqual({base:5,win:0,interest:5,streak:1});
  });
  it('all levels and boundary seeds agree with separately implemented BigInt shop arithmetic',()=>{
   for(const seed of [0,1,42,0xffffffff])for(let level=1;level<=10;level++)expect(generateShop(seed,7,level)).toEqual(shop(seed,7,level));

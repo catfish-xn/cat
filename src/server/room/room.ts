@@ -15,6 +15,7 @@ import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulatio
 import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
+import { getRoundPreparationMs } from '../../simulation/round-schedule';
 import {
   assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
@@ -40,6 +41,7 @@ import {
 } from './types';
 
 export interface RoomTimings {
+  /** 30s selects the rules' per-round table; other values explicitly override all rounds (e.g. test clocks). */
   readonly preparationMs: number;
   readonly choiceMs: number;
   readonly settlementMs: number;
@@ -1052,7 +1054,11 @@ export class Room {
     const alive = this.aliveSeats();
     const committed = this.current.settlements.includes(`${this.current.roomId}:round-${this.current.round}`);
     if (committed) return this.setPhase('settlement', this.options.settlementMs);
-    if (alive.every(seat => seat.match.phase === 'preparation')) { this.resolvePendingOnEntry(); return this.setPhase('preparation', this.options.preparationMs); }
+    if (alive.every(seat => seat.match.phase === 'preparation')) {
+      this.resolvePendingOnEntry();
+      return this.setPhase('preparation', this.options.preparationMs === ROOM_TIMING_DEFAULTS.preparationMs
+        ? getRoundPreparationMs(alive[0].match.roundDefinitionId) : this.options.preparationMs);
+    }
     // A supply round settles inside the choice itself; the rules left nothing to fight.
     if (alive.every(seat => seat.match.phase === 'settlement')) return this.freezeAndResolve();
     this.fail({ kind: 'phase-mismatch', detail: alive.map(seat => `${seat.seatId}:${seat.match.phase}`).join(',') });

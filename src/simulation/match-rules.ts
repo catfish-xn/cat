@@ -29,13 +29,14 @@ export const SHOP_CATALOG: readonly string[] = Object.freeze(Object.values(SHOP_
 /** Standard stage damage in the frozen 14.24b reference; M5 supports stages 2–6. */
 export const STAGE_PLAYER_DAMAGE: Readonly<Record<number, number>> = Object.freeze({ 2:2, 3:5, 4:8, 5:10, 6:12 });
 export const ECONOMY_RULES = Object.freeze({ interestDivisor: 10, interestCap: 5, victoryGold: 1, pveFailureDamage: 3,
-  streakThresholds: Object.freeze([Object.freeze({ count: 2, gold: 1 }), Object.freeze({ count: 4, gold: 2 }), Object.freeze({ count: 6, gold: 3 })]) });
+  streakThresholds: Object.freeze([Object.freeze({ count: 2, gold: 1 }), Object.freeze({ count: 5, gold: 2 }), Object.freeze({ count: 6, gold: 3 })]) });
 
 /** Frozen numeric policy: the planner and digest consume these exact parameters. */
 export const OPENING_ECONOMY_RULES = freezeContent({
   version:'m8b-opening-project-v2',
-  rounds:{'1-2':{baseGold:2,naturalXp:2},'1-3':{baseGold:3,naturalXp:2},'1-4':{baseGold:5,naturalXp:2}},
-  interest:0, victoryGold:0, streakGold:0, updateStreak:false, pveFailureDamage:ECONOMY_RULES.pveFailureDamage,
+  // Entitlements frozen here pay at the next preparation entry: 1-3 / 1-4 / 2-1.
+  rounds:{'1-2':{baseGold:2,naturalXp:2},'1-3':{baseGold:3,naturalXp:2},'1-4':{baseGold:4,naturalXp:2}},
+  interest:0, victoryGold:0, updateStreak:true, pveFailureDamage:ECONOMY_RULES.pveFailureDamage,
 } as const);
 
 /** Project overtime maps to standard stage 7 damage, without changing its schedule/economy. */

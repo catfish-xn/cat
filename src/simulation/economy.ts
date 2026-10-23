@@ -35,6 +35,17 @@ function nonnegativeInteger(value: number, label: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new RangeError(`Invalid ${label}`);
 }
 
+/** PvP and PvE share streaks; a draw counts as a loss. Supply preserves but does not pay the streak. */
+export function planCombatStreak(streak: EconomyStreak, result: RoundEconomyInput['result']): { streakAfter: EconomyStreak; streakGold: number } {
+  if (result === null) return { streakAfter: { ...streak }, streakGold: 0 };
+  const kind = result === 'playerWin' ? 'win' : 'loss';
+  const streakAfter = { kind, count: streak.kind === kind ? streak.count + 1 : 1 } as const;
+  nonnegativeInteger(streakAfter.count, 'streak count');
+  let streakGold = 0;
+  for (const threshold of ECONOMY_RULES.streakThresholds) if (streakAfter.count >= threshold.count) streakGold = threshold.gold;
+  return { streakAfter, streakGold };
+}
+
 /** Pure calculation only. Match freezes this plan with its unique settlement receipt; base/interest/streak pay at next entry. */
 export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
   const { stage, roundKind, result, gold, streak, level, xp, hp, enemySurvivors } = input;
@@ -54,20 +65,11 @@ export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
 
   const isPvp = roundKind === 'pvp';
   const won = result === 'playerWin';
-  let streakAfter = { ...streak };
-  if (isPvp) {
-    const kind = won ? 'win' : 'loss';
-    streakAfter = { kind, count: streak.kind === kind ? streak.count + 1 : 1 };
-    nonnegativeInteger(streakAfter.count, 'streak count');
-  }
+  const { streakAfter, streakGold } = planCombatStreak(streak, result);
   const win = isPvp && won ? ECONOMY_RULES.victoryGold : 0;
   const interestBasis = gold + win;
   nonnegativeInteger(interestBasis, 'interest basis');
   const interest = Math.min(readAugmentIncome(input.augments).interestCap, Math.floor(interestBasis / ECONOMY_RULES.interestDivisor));
-  let streakGold = 0;
-  if (isPvp) for (const threshold of ECONOMY_RULES.streakThresholds) {
-    if (streakAfter.count >= threshold.count) streakGold = threshold.gold;
-  }
   const incomeBreakdown = { base: MATCH_RULES.roundIncome, win, interest, streak: streakGold };
   const income = incomeBreakdown.base + win + interest + streakGold;
   const goldAfter = gold + income;

@@ -23,18 +23,18 @@ describe('B6 isolated opening economy', () => {
     expect(Object.isFrozen(OPENING_INITIAL_STATE.unit.cell)).toBe(true);
   });
 
-  it('follows the complete 0G/level1 -> 2G/level2 -> 5G/level3 -> 10G/level3 ledger', () => {
+  it('follows the complete 0G/level1 -> 2G/level2 -> 6G/level3 -> 11G/level3 ledger', () => {
     let current = input();
     for (const expected of [
-      {roundId:'1-2', base:2, naturalXp:2, gold:2, level:2, xp:0, gained:1},
-      {roundId:'1-3', base:3, naturalXp:2, gold:5, level:3, xp:0, gained:1},
-      {roundId:'1-4', base:5, naturalXp:2, gold:10, level:3, xp:2, gained:0},
+      {roundId:'1-2', base:2, streak:0, naturalXp:2, gold:2, level:2, xp:0, gained:1},
+      {roundId:'1-3', base:3, streak:1, naturalXp:2, gold:6, level:3, xp:0, gained:1},
+      {roundId:'1-4', base:4, streak:1, naturalXp:2, gold:11, level:3, xp:2, gained:0},
     ]) {
       const plan = planOpeningEconomy({...current, roundId:expected.roundId});
       expect(plan.kind).toBe('opening');
       if (plan.kind !== 'opening') throw new Error('Expected an opening plan');
-      expect(plan.incomeBreakdown).toEqual({base:expected.base,win:0,interest:0,streak:0});
-      expect(plan.income).toBe(expected.base);
+      expect(plan.incomeBreakdown).toEqual({base:expected.base,win:0,interest:0,streak:expected.streak});
+      expect(plan.income).toBe(expected.base + expected.streak);
       expect(plan.goldAfter).toBe(expected.gold);
       expect(plan.naturalXp).toBe(expected.naturalXp);
       expect(plan.playerDamage).toBe(0);
@@ -42,25 +42,28 @@ describe('B6 isolated opening economy', () => {
         level:expected.level, xp:expected.xp, xpRequested:expected.naturalXp,
         xpApplied:expected.naturalXp, levelsGained:expected.gained,
       });
-      current = {...current, gold:plan.goldAfter, level:plan.progression.level, xp:plan.progression.xp};
+      current = {...current, gold:plan.goldAfter, level:plan.progression.level, xp:plan.progression.xp, streak:plan.streakAfter};
     }
     expect(planOpeningEconomy({...current, roundId:'2-1'})).toEqual({kind:'existing-rules',roundId:'2-1'});
   });
 
   it.each([
-    ['1-2',2,2], ['1-3',3,2], ['1-4',5,2],
-  ] as const)('%s pays %iG and %iXP on win, loss and draw without interest or streak changes', (roundId, base, naturalXp) => {
+    ['1-2',2,2], ['1-3',3,2], ['1-4',4,2],
+  ] as const)('%s pays %iG and %iXP on win, loss and draw without interest, while updating combat streaks', (roundId, base, naturalXp) => {
     for (const result of ['playerWin','enemyWin','draw'] as const) {
       for (const streak of [{kind:null,count:0}, {kind:'win',count:6}, {kind:'loss',count:4}] as const) {
         const value = input({roundId,result,gold:50,level:3,streak});
         const before = structuredClone(value);
         const plan = planOpeningEconomy(value);
         if (plan.kind !== 'opening') throw new Error('Expected an opening plan');
-        expect(plan.incomeBreakdown).toEqual({base,win:0,interest:0,streak:0});
-        expect(plan.goldAfter).toBe(50 + base);
+        const kind = result === 'playerWin' ? 'win' : 'loss';
+        const count = streak.kind === kind ? streak.count + 1 : 1;
+        const bonus = count >= 6 ? 3 : count >= 5 ? 2 : count >= 2 ? 1 : 0;
+        expect(plan.incomeBreakdown).toEqual({base,win:0,interest:0,streak:bonus});
+        expect(plan.goldAfter).toBe(50 + base + bonus);
         expect(plan.naturalXp).toBe(naturalXp);
         expect(plan.playerDamage).toBe(result === 'playerWin' ? 0 : 3);
-        expect(plan.streakAfter).toEqual(streak);
+        expect(plan.streakAfter).toEqual({kind,count});
         expect(plan.streakAfter).not.toBe(streak);
         expect(value).toEqual(before);
       }
@@ -71,7 +74,7 @@ describe('B6 isolated opening economy', () => {
     const cases = [
       {roundId:'1-2', gold:17, level:3, xp:5, afterGold:19, afterLevel:4, afterXp:1, applied:2, gained:1},
       {roundId:'1-3', gold:1, level:8, xp:67, afterGold:4, afterLevel:9, afterXp:1, applied:2, gained:1},
-      {roundId:'1-4', gold:23, level:4, xp:7, afterGold:28, afterLevel:4, afterXp:9, applied:2, gained:0},
+      {roundId:'1-4', gold:23, level:4, xp:7, afterGold:27, afterLevel:4, afterXp:9, applied:2, gained:0},
       {roundId:'1-2', gold:3, level:10, xp:0, afterGold:5, afterLevel:10, afterXp:0, applied:0, gained:0},
     ];
     for (const c of cases) {
@@ -89,7 +92,7 @@ describe('B6 isolated opening economy', () => {
       .toEqual({kind:'existing-rules',roundId:r.roundId});
   });
 
-  it('has the handwritten full-match base budget: 0 + 10 + 35*5 = 185G', () => {
+  it('has the handwritten full-match base budget: 0 + 9 + 35*5 = 184G', () => {
     let baseGold = OPENING_INITIAL_STATE.gold;
     let laterRounds = 0;
     for (const r of ROUND_CATALOG) {
@@ -97,10 +100,10 @@ describe('B6 isolated opening economy', () => {
       if (plan.kind === 'opening') baseGold += plan.incomeBreakdown.base;
       else laterRounds++;
     }
-    expect(baseGold).toBe(10);
+    expect(baseGold).toBe(9);
     expect(laterRounds).toBe(35);
     expect(MATCH_RULES.roundIncome).toBe(5);
-    expect(baseGold + laterRounds * MATCH_RULES.roundIncome).toBe(185);
+    expect(baseGold + laterRounds * MATCH_RULES.roundIncome).toBe(184);
   });
 
   it('is deterministic and never mutates frozen input, including its streak', () => {
