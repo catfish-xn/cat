@@ -19,6 +19,28 @@ export const pvpBattleOf = (state: RoomState, seatId: string): TwoSidedBattleRes
 /** Private bank fields that must never leave the server. */
 export const PRIVATE_BANK = /bankSamples|liveGold|currentItemBankGold|openingItemBankGold/;
 
+/**
+ * v22: an idle human seat no longer lives to 4-6 on its opening unit alone (the stronger star attack damage of the bots'
+ * boards takes it out around round 22). While the seat prepares, its bench units go to free cells of its deployment
+ * rows until the room refuses one (population cap), so the orb reward units fight. Returns how many were fielded.
+ */
+export function fieldBench(room: Room, seatId: string): number {
+  if (room.state.phase !== 'preparation') return 0;
+  let fielded = 0;
+  for (;;) {
+    const seat = seatOf(room.state, seatId);
+    if (!seat.alive || seat.match.phase !== 'preparation') return fielded;
+    const units = seat.match.preparation.units.filter(unit => unit.team === 'player');
+    const bench = units.find(unit => unit.location.kind === 'bench');
+    const taken = new Set(units.flatMap(unit => unit.location.kind === 'board' ? [`${unit.location.cell.col},${unit.location.cell.row}`] : []));
+    let cell: { col: number; row: number } | undefined;
+    for (let row = 4; row <= 7 && !cell; row++) for (let col = 0; col < 7 && !cell; col++) if (!taken.has(`${col},${row}`)) cell = { col, row };
+    if (!bench || !cell) return fielded;
+    if (!room.handle(seatId, { type: 'deploy', unitId: bench.id, target: { kind: 'board', cell } }).ok) return fielded;
+    fielded++;
+  }
+}
+
 /** Fires timers (claiming every orb, so reward units reach the boards) until the room's 4-6 anomaly window is open. */
 export function runToAnomalyWindow(room: Room, clock: ManualClock): void {
   for (let fired = 0; fired < 5_000; fired++) {
