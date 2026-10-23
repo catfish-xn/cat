@@ -8,7 +8,7 @@ import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 import { hexDistance } from './board';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
-import { amount, ap, applyStatus, areaEnemies, byDistance, champion, enemies, grantShield, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
+import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
 import { asSource } from './m8/s13-definitions';
 import { executeMechanismEffect, executeOverTimeTask } from './m8/s13-mechanisms';
 import { burn, modifier, stat, status } from './content/item-programs';
@@ -110,8 +110,9 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       applyStatus(target, origin(unit), 'stun', 0, ticks('StunDuration'), ctx.tick, ctx.events); break;
     case 'malzahar': {
       // The gate crosses the target row: two hexes on either side, clipped by the board.
-      const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2);
+      const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));
       for (const t of targets) { strike(t, mag('Damage'), 'magic', true); effect(ctx, unit, t, status('shred', 2000, ticks('ShredDuration'), { activation: 'immediate' }), seq); }
+      // Five total stacks: round-robin gives floor(5/N), then +1 in hit order.
       for (let n = 0; n < 5; n++) task(unit, 'g2Infection', ctx.tick + 20, targets[n % targets.length].id, mag('InfectionDamage'), seq, n, 5);
       break;
     }

@@ -14,7 +14,7 @@ function army(name:string,star:1|2|3=3):MatchState {
     preparation:{...base.preparation,units:[name,'drmundo','drmundo'].map((definitionId,i)=>({id:`unit-${i+1}`,definitionId,
       team:'player',starLevel:i===0?star:3,location:{kind:'board',cell:{col:2+i,row:i===0?5:4}}}))}};
 }
-it.each(['sevika','malzahar'])('%s synchronous / 1- and 7-tick slices / replay preserve complete bytes',(name)=>{
+it.each(['sevika','malzahar','jinx','mordekaiser'])('%s synchronous / 1- and 7-tick slices / replay preserve complete bytes',(name)=>{
   const source=compileBattle(snapshotForBattle(army(name),'A'),snapshotForBattle(army('garen'),'B'),42,{battleId:'five-cost'});
   const expected=resolveTwoSidedBattle(source,901),expectedReplay=toCombatReplay(expected);
   expect(expected.events.some(e=>e.type==='cast'&&e.receipt.source.definitionId===name+'-ability')).toBe(true);
@@ -26,6 +26,22 @@ it.each(['sevika','malzahar'])('%s synchronous / 1- and 7-tick slices / replay p
     while(!frames)frames=replay.advance(budget);
     expect(JSON.stringify(frames)).toBe(JSON.stringify(expectedReplay));
   }
+});
+it.each(['jinx','mordekaiser','malzahar'])('%s geometry restores from authenticated input after casting',(name)=>{
+  const player=army(name),opponent=army('garen');
+  const s:MatchState={...player,items:(['blue-buff','tear','tear'] as const).map((definitionId,slot)=>({id:`mana-${slot}`,definitionId,location:{kind:'unit' as const,unitId:'unit-1',slot:slot as 0|1|2}})),preparation:{...player.preparation,units:[...player.preparation.units,
+    ...opponent.preparation.units.map(u=>({...u,id:'enemy-'+u.id,team:'enemy' as const,
+      location:{kind:'board' as const,cell:{col:u.location.kind==='board'?u.location.cell.col:0,row:2}}}))]}};
+  const strategy=buildStrategySnapshot(s),basis=freezeCombatInput(s,42,s.resourceProvenance.entries.length);
+  let state=createCombatWithEvents(s.preparation,strategy,basis.combatId,42).state,cast=false;
+  while(state.status==='running'){
+    const next=stepCombat(state);state=next.state;
+    if(!next.events.some(e=>e.type==='cast'&&'receipt' in e&&e.receipt.source.definitionId===name+'-ability'))continue;
+    const rebuilt=createRestoreCombatReplay(JSON.parse(JSON.stringify(basis)),strategy,state.tick).stateAtSaveTick();
+    expect(rebuilt).toEqual(state);
+    expect(stepCombat(JSON.parse(JSON.stringify(rebuilt)))).toEqual(stepCombat(state));cast=true;break;
+  }
+  expect(cast).toBe(true);
 });
 it.each([['sevika',1,'g23Flame'],['sevika',3,'g23Chomp'],['malzahar',3,'g2Infection']] as const)('%s star %s restores %s from authenticated inputs and rejects forged tasks',(name,star,expectedKind)=>{
   const player=army(name,star),opponent=army('garen');
