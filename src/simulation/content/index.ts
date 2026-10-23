@@ -1,3 +1,4 @@
+import { drainSetup } from '../setup-work';
 import { TRAIT_DEFINITIONS } from './traits';
 import { ITEM_DEFINITIONS } from './g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './augments';
@@ -38,26 +39,48 @@ function rememberFrozen(value: object, text: string, keys: readonly string[]): s
 }
 /** JSON canonicalization preserves semantic array order and sorts object keys by ASCII. */
 export function canonicalContent(value: unknown): string {
+  return canonicalLeaf(value) ?? drainSetup(canonicalSteps(value, { remaining: 64, retainFrozen: true }));
+}
+/** Setup uses bounded traversal without retaining short-lived snapshot text. */
+export function* canonicalContentSteps(value: unknown): Generator<void, string, void> {
+  return yield* canonicalSteps(value, { remaining: 64, retainFrozen: false });
+}
+function canonicalLeaf(value: unknown): string | undefined {
   if (value === null) return 'null';
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (typeof value === 'string') return JSON.stringify(value);
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  if (value !== null && typeof value === 'object') {
-    const cached = (frozenCanonical ??= new WeakMap()).get(value);
-    if (cached !== undefined) return cached;
-  }
+  if (value !== null && typeof value === 'object') return (frozenCanonical ??= new WeakMap()).get(value);
+  return undefined;
+}
+function* canonicalSteps(value: unknown, budget: { remaining: number; retainFrozen: boolean }): Generator<void, string, void> {
+  const leaf = canonicalLeaf(value);
+  if (leaf !== undefined) return leaf;
+  if (--budget.remaining === 0) { budget.remaining = 64; yield; }
   if (Array.isArray(value)) {
     for (let i = 0; i < value.length; i++) if (!Object.hasOwn(value, i)) throw new TypeError('Content cannot contain sparse arrays');
-    const text = `[${value.map(canonicalContent).join(',')}]`;
-    return !Object.isFrozen(value) || Object.hasOwn(value, 'map') ? text : rememberFrozen(value, text, Array.from({ length: value.length }, (_, i) => String(i)));
+    // Preserve the synchronous API's native map/species behavior for non-plain arrays.
+    if (Object.hasOwn(value, 'map') || Object.hasOwn(value, 'constructor') || Object.getPrototypeOf(value) !== Array.prototype)
+      return `[${value.map(canonicalContent).join(',')}]`;
+    const length = value.length, parts = new Array<string>(length);
+    for (let i = 0; i < length; i++) if (i in value) {
+      const child: unknown = value[i];
+      parts[i] = canonicalLeaf(child) ?? (yield* canonicalSteps(child, budget));
+    }
+    const text = `[${parts.join(',')}]`;
+    return !budget.retainFrozen || !Object.isFrozen(value) ? text : rememberFrozen(value, text, Array.from({ length: value.length }, (_, i) => String(i)));
   }
   if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
     const keys = Object.keys(value).sort();
-    // Native JSON handles a flat scalar record in one call. Keep numeric keys
-    // on the original path (native enumeration would reorder them), and stop
-    // at the first nested value so getter evaluation order remains unchanged.
-    if (keys.some(key => key.charCodeAt(0) >= 48 && key.charCodeAt(0) <= 57))
-      return rememberFrozen(value, `{${keys.map(key => `${quoteKey(key)}:${canonicalContent((value as Record<string, unknown>)[key])}`).join(',')}}`, keys);
+    if (keys.some(key => key.charCodeAt(0) >= 48 && key.charCodeAt(0) <= 57)) {
+      const parts: string[] = [];
+      for (const key of keys) {
+        const quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
+        parts.push(`${quoted}:${canonicalLeaf(child) ?? (yield* canonicalSteps(child, budget))}`);
+      }
+      const text = `{${parts.join(',')}}`;
+      return budget.retainFrozen ? rememberFrozen(value, text, keys) : text;
+    }
     const scalars = Object.create(scalarPrototype ??= Object.freeze(Object.create(null))) as Record<string, unknown>;
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i], child = (value as Record<string, unknown>)[key];
@@ -65,13 +88,16 @@ export function canonicalContent(value: unknown): string {
         scalars[key] = child; continue;
       }
       const parts = keys.slice(0, i).map(key => `${quoteKey(key)}:${canonicalContent(scalars[key])}`);
-      parts.push(`${quoteKey(key)}:${canonicalContent(child)}`);
+      parts.push(`${quoteKey(key)}:${canonicalLeaf(child) ?? (yield* canonicalSteps(child, budget))}`);
       for (let rest = i + 1; rest < keys.length; rest++) {
-        const key = keys[rest]; parts.push(`${quoteKey(key)}:${canonicalContent((value as Record<string, unknown>)[key])}`);
+        const key = keys[rest], quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
+        parts.push(`${quoted}:${canonicalLeaf(child) ?? (yield* canonicalSteps(child, budget))}`);
       }
-      return rememberFrozen(value, `{${parts.join(',')}}`, keys);
+      const text = `{${parts.join(',')}}`;
+      return budget.retainFrozen ? rememberFrozen(value, text, keys) : text;
     }
-    return rememberFrozen(value, JSON.stringify(scalars), keys);
+    const text = JSON.stringify(scalars);
+    return budget.retainFrozen ? rememberFrozen(value, text, keys) : text;
   }
   throw new TypeError('Content must be finite plain JSON data');
 }

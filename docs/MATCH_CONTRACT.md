@@ -802,3 +802,7 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 ## v19 座位只读字段（PR #364 收尾）
 
 `toPrivateSeatView(state:MatchState)` 返回 `familyReunion.{eligible,participantIds,downgraded,downgradedAtTick}` 和 `shopOdds.sixCostBps`；`readG23MechanismState(state).familyReunion` 同退星事实。它们只投影规则，不发事件或消耗资源/RNG；精确类型、基点口径和逐项回归见 [PR364_CI_REPAIR](PR364_CI_REPAIR.md)。六费加入可购买英雄集合（63），常规赠卡/素材渠道的费用限制仍由各自合同约束。
+
+## 单场初始化的可让出入口（2026-10-23）
+
+`openMatchCombatStreamSteps(state: MatchState): Generator<void, MatchCommandResult & { readonly streamInitial?: CombatState }, void>` 是现有 PvE 开流的协作入口；`openMatchCombatStream` 同步 drain 同一生成器。暂停不发布 Match，不提前结算或消费调用方的 RNG；最终结果和失败 reason/原 state 引用保持不变。调用方须保持输入不变，取消丢弃 continuation。逐单位编译、初态创建及 PvP 对应接口、失败枚举和服务器调度约定见 [COMBAT_CONTRACT 的单场初始化协作切片](COMBAT_CONTRACT.md#单场初始化协作切片2026-10-23不变更-epoch)。本改动不变更规则/内容 digest，不录 epoch。

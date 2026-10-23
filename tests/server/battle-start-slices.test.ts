@@ -15,11 +15,11 @@ type Seam = { current: RoomState; streams: Map<string, CombatStream>; frozenInpu
   freezeAndResolve(): void; openStreamSteps(): Generator<void, void, void>; clearTimer(): void };
 const seam = (room: Room) => room as unknown as Seam;
 
-function fixture(round: number, sliceNow = () => performance.now()) {
+function fixture(round: number, sliceNow = () => performance.now(), sliceMs = 20) {
   const cp = checkpoints.find(cp => cp.state.round === round)!;
   const clock = new ManualClock(cp.time);
   const room = new Room(cp.state.seats, { ...ROOM_TIMING_DEFAULTS, roomId: cp.state.roomId, seed: cp.seed,
-    clock, resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs: 20,
+    clock, resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs,
     sliceNow, assertPoolConservation: true, carousel: CAROUSEL_RULES_BINDING });
   seam(room).current = structuredClone(cp.state);
   return { room, clock, cp };
@@ -171,6 +171,31 @@ describe('battle opening slices', () => {
       }
       expect(slices).toBeGreaterThan(20);
       expect(room.state.fault).toBeNull();
+    } finally { spy.mockRestore(); room.dispose(); }
+  });
+
+  it.each([2, 8, 20])('uses the %i ms budget between rules substeps, without publishing partial streams', sliceMs => {
+    let cpu = 0, steps = 0;
+    const { room, clock } = fixture(3, () => cpu, sliceMs);
+    const work = seam(room), original = work.openStreamSteps.bind(room);
+    const spy = vi.spyOn(work, 'openStreamSteps').mockImplementation(function* () {
+      const inner = original();
+      for (;;) { const next = inner.next(); cpu += 2; steps++; if (next.done) return; yield; }
+    });
+    try {
+      seam(room).freezeAndResolve();
+      const counts: number[] = [];
+      for (let n = 0; room.combatInitializationPending && n < 20_000; n++) {
+        expect(room.hasCombatStreams).toBe(false);
+        const before = cpu, previous = steps;
+        expect(clock.fireNext()).toBe(true);
+        expect(cpu - before).toBeLessThanOrEqual(Math.min(5, sliceMs / 2) + 2);
+        counts.push(steps - previous);
+      }
+      expect(room.combatInitializationPending).toBe(false);
+      expect(room.state.phase).toBe('battle'); expect(room.state.fault).toBeNull();
+      if (sliceMs > 2) expect(Math.max(...counts)).toBeGreaterThan(1);
+      else expect(Math.max(...counts)).toBe(1);
     } finally { spy.mockRestore(); room.dispose(); }
   });
 });

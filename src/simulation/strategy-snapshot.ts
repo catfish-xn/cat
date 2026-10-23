@@ -1,3 +1,4 @@
+import { drainSetup } from './setup-work';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
 import { d14UnitBase } from './d14-anomalies/projection';
@@ -64,6 +65,9 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
  * with no links to Match or content records and no board/bench decisions left for the tick.
  */
 export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext): StrategySnapshot {
+  return drainSetup(buildStrategySnapshotSteps(state, catalog, context));
+}
+export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext): Generator<void, StrategySnapshot, void> {
   state=readCombatStrategyInputs(state);
   if(context&&context.round!==state.round)throw new RangeError('Trait projection round mismatch');
   const sisterAugment=state.augments.find(a=>a.definitionId==='sisters');
@@ -102,7 +106,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   });
   const d11=new Map(state.augments.filter(a=>Object.hasOwn(D11_FILL_TIERS,a.definitionId)).map(a=>[a.choiceId,
     compileD11Augment(a.definitionId as D11AugmentId,boardUnits,state.playerHp??100,d11OpeningSeed(state.g23?.seed??0,state.round,a.choiceId))]));
-  const units = boardUnits.map(unit => {
+  yield;
+  const compileUnit = (unit: typeof boardUnits[number]) => {
     const suppressFamily=teamups.get('menaces')?.[0]===unit.id;
     const itemSummon=voidspawn.origins.find(o=>o.unit.id===unit.id);
     const sources: SourcedEffect[] = [];
@@ -235,6 +240,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const gambler=mechanics.find(m=>m.mechanic==='g24Gambler'),avarice=anomaly==='avarice-incarnate';
     if((gambler||avarice)&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative combat bank');
     return { unitId: unit.id, ...resolved, ...(reunionStar?{effectiveStarLevel:reunionStar,familyReunion:{originalStarLevel:unit.starLevel,combatStarLevel:reunionStar,unboostedStarLevel:promoted?4 as const:unit.starLevel}}:promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
-  });
+  };
+  const units: ReturnType<typeof compileUnit>[] = [];
+  for (const unit of boardUnits) { units.push(compileUnit(unit)); yield; }
   return appendMirrorSummons(state.preparation,{ traits, units });
 }

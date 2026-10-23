@@ -228,3 +228,23 @@ createCombatReplayRecorder(initialState: CombatState,
 `BattleResult.inputLog?:readonly BattleTickInput[]` 预留成功安装日志，空时省略；不进入 CombatView/网络公共帧。阶段2须将安装效果与成功日志原子提交，在恢复/重演中按相同 tick/seq 注入，失败不记入日志或消费 RNG。
 本阶段没有 applyBattleEquipment：输入源返回空批次时无副作用；非空批次在 stepCombat 前抛 `battle-input-unsupported`，不会推进该 tick；外部 BattleResult 的结算与回放也拒绝非空/畸形 inputLog，防止静默丢弃日志。
 既有单人 Match 的成功装备操作继续写 `BattleRecord.equipmentCommands`（共享类型 `BattleEquipmentCommand`），按原游标 tick 重演并与资源账本逐项认证；日志缺失、伪造或时序不符仍拒绝恢复。
+
+## 单场初始化协作切片（2026-10-23；不变更 epoch）
+
+新增 `Generator<void, T, void>` 入口。每次 `next()` 只继续初始化，`yield` 不携带状态或事件；只有 `done: true` 返回完整结果。同步入口 drain 同一生成器，保留校验次序、错误归属、RNG 次序、JSON 字段及数组顺序。调用方必须在 continuation 存活期间保持输入不变；服务器用原有冻结写入/FIFO 屏障满足此约束。取消可调用 `return()`，未发布的任务直接丢弃，重新创建不消费调用方 RNG，不补发奖励。
+
+| 导出（规则模块） | 签名 / 返回值 |
+| --- | --- |
+| `two-sided-snapshot.ts` | `snapshotForBattleSteps(state: MatchState, seatId: string): Generator<void, PlayerBattleSnapshot, void>`；`restorePlayerBattleSnapshotSteps(input: unknown)` 同返回类型 |
+| `two-sided-battle.ts` | `compileBattleSteps(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, battleSeed: number, identity?: BattleIdentity): Generator<void, BattleInput, void>`；`restoreBattleInputSteps(input: unknown)` 同返回类型 |
+| `two-sided-battle.ts` | `startTwoSidedBattleSteps(input: BattleInput, options?: BattleReplayOptions)` 返回 `Generator<void, BattleTask, void>`；`captureReplay: true` 重载返回 `Generator<void, BattleReplayTask, void>`；联合选项返回联合任务 |
+| `strategy-snapshot.ts` | `buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog?: StrategyCatalog, context?: TraitProjectionContext): Generator<void, StrategySnapshot, void>` |
+| `combat.ts` | `createCombatWithEventsSteps(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState?: number, context?: TraitProjectionContext): Generator<void, CombatStep, void>` |
+| `match.ts` | `openMatchCombatStreamSteps(state: MatchState): Generator<void, MatchCommandResult & { readonly streamInitial?: CombatState }, void>` |
+| `setup-work.ts` | `drainSetup<T>(work: Generator<void, T, void>): T` |
+
+PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校验与冻结按至多64个未命中缓存的对象节点分段；G23 经济历史按收据重演、逐字段比较；策略编译和战斗单位创建按原单位顺序分段。字符串解析、单个对象/数组枚举、原生 clone、单次 combatStart 等仍是不可抢占步骤。`freezeContentSteps` 只用于调用方拥有的数据图，可能在暂停前冻结已完成子树；它不保证取消时撤销冻结。canonical 同步/切片共用遍历器，切片模式不保留短命快照文本缓存，不跳过任何校验。
+
+失败枚举不新增：快照/编译/任务沿用 `BattleFailure` / `BattleValidationError`，包括 `snapshot-version`、`content-digest`、`invalid-snapshot`、`wrong-phase`、`round-mismatch`、`round-kind`、`seat-collision`、`invalid-seed`、`invalid-battle-id`、`invalid-mirror`、`battle-input`。PvE 仍返回原有 `MatchFailure`，失败保持原 state 引用，无事件、资源及 RNG 变更。异常可能在后续 `next()` 才抛出；服务器 `guardedSteps` 沿用 `BattleResolveError` 包装。
+
+服务器 `startLiveTaskSteps(envelope, beforeTick?)` 依次委派快照、编译、任务初始化；`openStreamSteps` 委派 PvE 初始化。所有流仍私有暂存，全部完成才原子发布并启动共同 tick0 时钟。`runSettlementSlice` 用注入的 `sliceNow`，初始化工作窗口为 `min(5ms, sliceMs/2)`，保留余量给下一不可抢占子步骤；同时遵守 `sliceTicks`。未配置 `sliceMs` 时沿用无时间预算语义。结算窗口、50ms 战斗 tick、RNG、内容身份、账本及录像格式不变；真实 GC/系统调度暂停不构成跨硬件硬实时保证。

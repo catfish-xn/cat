@@ -33,3 +33,9 @@
 `verify-v20-black-market-epoch.cjs --write` 独立录制，再执行不带 `--write` 的完整11步核验；后者重新计算并逐字节比较夹具，不覆写旧输入。历史字节审计覆盖353个文件及指定 manifest。四条通用整局路线没有触发黑市，命令/事件差异断言仍为零；黑市的行为变化由专用真实路线、独立 oracle 和连续市场测试覆盖。
 
 受影响/新增文件完整清单见 [changed-files.json](changed-files.json)。
+
+## 2026-10-23 初始化调度重构的指纹维护
+
+单场初始化改用可让出生成器，未改变规则、数值、RNG 顺序或内容身份。仅更新 `release-audit.json`、`input-fixture-audit.json`、`live-reveal-audit.json` 的 `sourceDigests`：8个已有规则源文件和新增 `setup-work.ts`。其余审计字段逐项与 HEAD `83fd7fa58fc7c935229c8f8866b14ec9d716accd` 比较保持不变；全部408个已跟踪 `tests/fixtures/` 文件字节不变。未运行 epoch 录制器，未改 golden、录像、content/loot digest 常量或测试断言。性能与一致性证据另存本地 `/home/aiapps/workspcae/perf-1022/battle-start/yield/REDO_REPORT.md`，指纹差异和夹具审计为同目录 `redo-source-fingerprint-update.json`、`redo-source-audit-check.json`、`redo-fixture-byte-audit.json`。
+
+该重构最终相关验证为16文件159项通过（15文件156项完整复跑，身份专项3项；另147项未选中），typecheck与diff检查通过。原脚本剔除每回合首个预热样本的72次口径，连续调度/事件循环最大片分别16.36/23.79ms；最后无插桩事件循环复核包含预热84次全部≤50ms，最长48.44ms，uptime负载3.16/5.72/9.58→4.17/5.76/9.51。此前高负载及预热样本仍曾超50ms，全部保留在本地报告，不声称硬实时保证；未通过删样本、修改旧哈希或放宽50ms阈值取得上述结果。
