@@ -8,6 +8,22 @@
       "currentSha256": "073a7e35ef69b99f0942da878067eec5aecc2c587a95221a4a4b0cb795bbcdab",
       "firstDifferentByte": 606
     },
+    "tests/ambessa-dash-stream.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6208,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "522ad9826ad4cc74f6e50225c35b4afee056882ba671bc4994d7b255d9eae39b",
+      "firstDifferentByte": 0
+    },
+    "tests/ambessa-dash.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10994,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "4f795dd5646d5a966b649e1bfea245e252778294f969f6b5546edaa68b9dc069",
+      "firstDifferentByte": 0
+    },
     "tests/b8-resumable-battle-helper.ts": {
       "previousBytes": 10380,
       "currentBytes": 10386,
@@ -197,9 +213,9 @@
     "tests/fixtures/v21-opening-encounters-herald-raw/manifest.json": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 41424,
+      "currentBytes": 41531,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "cd5bc07bb32f72a19abfd602a622ff174aa6ea6eeb2bce7fa88fb1fede3faf57",
+      "currentSha256": "6e2458583716f521b88077366acce4227893b7bf0923800a6b5b550f5bf18f85",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v21-opening-encounters-herald-raw/quicksilver.json": {
@@ -416,7 +432,7 @@
       "previousBytes": 1371639,
       "currentBytes": 1377378,
       "previousSha256": "37f502131e177a3abadff0874d11f2f672c19963ea3b4be22cb51432cbc909df",
-      "currentSha256": "e286e4e33bdd20e172ddadf0101ab647957fd6a38662264826fc7d34aa7b9ca6",
+      "currentSha256": "51dec575c4371ba24c0e149d7e03ba0b5c74a0b025538a6202aa5f0a90ef1f54",
       "firstDifferentByte": 11
     },
     "tests/server/t10-combat-ops.test.ts": {
