@@ -60,7 +60,9 @@ export class UnitAnimationMixer {
     const clip = sequence?.[0] ?? this.clips.get(this.names[output.state] ?? output.state);
     this.queue = []; this.stageLeft = 0; this.speed = 1;
     if (!clip) return !!this.active;
-    if (output.state === 'idle' && this.active === this.mixer.clipAction(clip)) return true;
+    // Preserve only an actual continuous loop: a shared clip may still be playing once for attack/cast.
+    if (output.loop && this.active === this.mixer.clipAction(clip) && this.active.loop === LoopRepeat
+      && this.active.repetitions === Infinity && this.active.isRunning()) return true;
     if (sequence && playback) {
       this.speed = sequence.reduce((sum, c) => sum + c!.duration, 0) / playback.durationSeconds;
       this.queue = sequence.slice(1) as AnimationClip[];

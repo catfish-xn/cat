@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { AnimationClip, Group, LoopOnce, LoopRepeat, NumberKeyframeTrack } from 'three';
-import { UnitActionState } from '../src/rendering3d/animation-state';
+import { AnimationClip, Bone, Group, LoopOnce, LoopRepeat, NumberKeyframeTrack } from 'three';
+import { UnitActionState, type ActionOutput } from '../src/rendering3d/animation-state';
 import { UnitAnimationMixer } from '../src/rendering3d/animation-mixer';
 import type { CombatAnimationEvent } from '../src/simulation/combat-replay-view';
 
@@ -92,5 +92,151 @@ describe('pure 3D animation state and optional mixer', () => {
     expect(adapter.apply(state.consume({ type: 'cast', sourceId: 'u' }))).toBe(true);
     expect(adapter.mixer.clipAction(idle).isRunning()).toBe(true);
     expect(() => adapter.update(-1)).toThrow(); adapter.dispose();
+  });
+});
+
+// Entirely generated curves on a toy joint; no external assets or authored animation data.
+function fixture() {
+  const root = new Group(), bone = new Bone(); bone.name = 'toy-joint'; root.add(bone);
+  const clips = ['curve-a', 'curve-b', 'curve-c', 'curve-d', 'curve-e', 'curve-f'].map((name, i) =>
+    new AnimationClip(name, 1.6, [new NumberKeyframeTrack('toy-joint.position[x]', [0, 1.6], [i, i + 2])]));
+  const names = { idle: clips[0].name, move: clips[1].name, attack: clips[2].name,
+    cast: clips[3].name, hit: clips[4].name, death: clips[5].name };
+  const mixer = new UnitAnimationMixer(root, clips, names);
+  const state = new UnitActionState('toy-unit', { blendSeconds: 0, durations: { move: 0.3 },
+    resolvePlayback: (action, index) => mixer.resolvePlayback(action, index) });
+  mixer.apply(state.output);
+  const advance = (seconds: number) => { mixer.update(seconds); return mixer.apply(state.update(seconds)); };
+  return { root, bone, clips, names, mixer, state, advance };
+}
+const damage = { type: 'packetDamage', sourceId: 'other-toy', targetId: 'toy-unit', hit: true, hpDamage: 7, absorbed: 0 } as const;
+const movement = { type: 'movement', unitId: 'toy-unit' } as const;
+const attack = { type: 'attack', attackerId: 'toy-unit' } as const;
+const cast = { type: 'cast', sourceId: 'toy-unit' } as const;
+const output = (state: ActionOutput['state'], revision: number): ActionOutput =>
+  ({ state, previous: state, loop: state === 'idle' || state === 'move', revision, blendSeconds: 0 });
+
+describe('smooth combat action ownership and revisions', () => {
+  it('finishes the attack curve despite incoming damage, then allows an idle hit', () => {
+    const f = fixture();
+    const started = f.state.consume(attack); f.mixer.apply(started); f.advance(0.4);
+    const action = f.mixer.mixer.clipAction(f.clips[2]);
+    expect(f.state.consume(damage)).toEqual(started); f.mixer.apply(f.state.output);
+    expect(action.time).toBeCloseTo(0.4);
+    f.advance(1.1); expect(f.state.output.state).toBe('attack');
+    expect(action.time).toBeCloseTo(1.5); expect(f.bone.position.x).toBeGreaterThan(3);
+    f.advance(0.11);
+    expect(action.time).toBeCloseTo(f.clips[2].duration); expect(action.paused).toBe(true);
+    expect(f.state.output.state).toBe('idle'); expect(f.state.output.revision).toBe(started.revision + 1);
+    expect(f.state.consume(damage).state).toBe('hit'); f.mixer.apply(f.state.output);
+    expect(f.mixer.mixer.clipAction(f.clips[4]).isRunning()).toBe(true);
+    f.mixer.dispose();
+  });
+
+  it.each(['move', 'fallback-cast', 'resolved-cast'] as const)('does not interrupt or extend %s for damage', action => {
+    const f = fixture();
+    const state = action === 'fallback-cast'
+      ? new UnitActionState('toy-unit', { durations: { cast: 1.6 } }) : f.state;
+    const started = state.consume(action === 'move' ? movement : cast);
+    state.update(0.1); expect(state.consume(damage)).toEqual(started);
+    expect(state.update(action === 'move' ? 0.21 : 1.51).state).toBe('idle');
+    f.mixer.dispose();
+  });
+
+  it('retains effective hit retriggers, ignores misses and other targets', () => {
+    const state = new UnitActionState('toy-unit', { durations: { hit: 0.28 } });
+    const first = state.consume(damage); state.update(0.2);
+    expect(state.consume({ ...damage, hit: false })).toEqual(first);
+    expect(state.consume({ ...damage, hpDamage: 0 })).toEqual(first);
+    expect(state.consume({ ...damage, targetId: 'another-toy' })).toEqual(first);
+    const second = state.consume({ ...damage, hpDamage: 0, absorbed: 7 });
+    expect(second.state).toBe('hit'); expect(second.revision).toBe(first.revision + 1);
+    expect(state.update(0.2).state).toBe('hit'); expect(state.update(0.09).state).toBe('idle');
+  });
+
+  it.each([movement, attack, cast, damage])('death interrupts $type and stays locked until revival', event => {
+    const f = fixture(); f.mixer.apply(f.state.consume(event)); f.advance(0.07);
+    const dead = f.state.consume({ type: 'death', unitId: 'toy-unit' }); f.mixer.apply(dead);
+    for (const next of [movement, attack, cast, damage]) expect(f.state.consume(next)).toEqual(dead);
+    f.advance(3.2); expect(f.state.output).toEqual(dead);
+    const action = f.mixer.mixer.clipAction(f.clips[5]);
+    expect(action.loop).toBe(LoopOnce); expect(action.paused).toBe(true);
+    expect(action.time).toBeCloseTo(f.clips[5].duration);
+    const revived = f.state.consume({ type: 'unitRevived', unitId: 'toy-unit' });
+    expect(revived.state).toBe('idle'); expect(revived.revision).toBe(dead.revision + 1);
+    f.mixer.apply(revived); expect(f.mixer.mixer.clipAction(f.clips[0]).isRunning()).toBe(true);
+    f.mixer.dispose();
+  });
+
+  it('keeps 250 ms steps moving with a 0.3 s window, without revisions or curve rewinds', () => {
+    const f = fixture(), started = f.state.consume(movement); f.mixer.apply(started);
+    const action = f.mixer.mixer.clipAction(f.clips[1]);
+    for (let step = 1; step <= 4; step++) {
+      f.advance(0.25); expect(f.state.output).toEqual(started);
+      expect(f.state.consume(movement)).toEqual(started); f.mixer.apply(f.state.output);
+      expect(action.time).toBeCloseTo(step * 0.25);
+    }
+    f.advance(0.29); expect(f.state.output).toEqual(started);
+    f.advance(0.02); expect(f.state.output.state).toBe('idle');
+    expect(f.state.output.revision).toBe(started.revision + 1);
+    const restarted = f.state.consume(movement);
+    expect(restarted.previous).toBe('idle'); expect(restarted.revision).toBe(started.revision + 2);
+    f.mixer.dispose();
+  });
+});
+
+describe('mixer loop reuse with generated skeletal animations', () => {
+  it.each(['idle', 'move'] as const)('preserves a running %s across both identical and changed revisions', state => {
+    const f = fixture(), clip = f.clips[state === 'idle' ? 0 : 1];
+    f.mixer.apply(output(state, 10)); f.mixer.update(0.37);
+    const action = f.mixer.mixer.clipAction(clip);
+    for (const revision of [10, 11, 12]) {
+      f.mixer.apply(output(state, revision)); expect(action.time).toBeCloseTo(0.37);
+    }
+    f.mixer.update(0.19); expect(action.time).toBeCloseTo(0.56);
+    expect(action.loop).toBe(LoopRepeat); expect(action.isRunning()).toBe(true);
+    f.mixer.dispose();
+  });
+
+  it.each(['attack', 'cast', 'hit', 'death'] as const)('replays non-looping %s on a new revision only', state => {
+    const f = fixture(), clip = f.clips[['idle', 'move', 'attack', 'cast', 'hit', 'death'].indexOf(state)];
+    const action = f.mixer.mixer.clipAction(clip);
+    f.mixer.apply(output(state, 10)); f.mixer.update(0.37);
+    f.mixer.apply(output(state, 10)); expect(action.time).toBeCloseTo(0.37);
+    f.mixer.apply(output(state, 11)); expect(action.time).toBe(0); expect(action.loop).toBe(LoopOnce);
+    f.mixer.update(2); expect(action.paused).toBe(true);
+    f.mixer.apply(output(state, 12)); expect(action.time).toBe(0); expect(action.isRunning()).toBe(true);
+    f.mixer.dispose();
+  });
+
+  it.each(['paused', 'disabled', 'zero-speed', 'stopped'] as const)('restarts a %s loop on a new revision', status => {
+    const f = fixture(), action = f.mixer.mixer.clipAction(f.clips[0]); f.mixer.update(0.37);
+    if (status === 'paused') action.paused = true;
+    if (status === 'disabled') action.enabled = false;
+    if (status === 'zero-speed') action.setEffectiveTimeScale(0);
+    if (status === 'stopped') action.stop();
+    expect(action.isRunning()).toBe(false);
+    f.mixer.apply(output('idle', 10)); expect(action.isRunning()).toBe(true); expect(action.time).toBe(0);
+    f.mixer.update(0.19); expect(action.time).toBeCloseTo(0.19); f.mixer.dispose();
+  });
+
+  it('restores infinite repetitions instead of reusing a finite repeat action', () => {
+    const f = fixture(), action = f.mixer.mixer.clipAction(f.clips[0]);
+    action.setLoop(LoopRepeat, 2); f.mixer.update(0.37); expect(action.isRunning()).toBe(true);
+    f.mixer.apply(output('idle', 10));
+    expect(action.time).toBe(0); expect(action.repetitions).toBe(Infinity);
+    f.mixer.update(4.9); expect(action.isRunning()).toBe(true); f.mixer.dispose();
+  });
+
+  it.each(['idle', 'move'] as const)('restores looping when a running single-use clip is also mapped to %s', state => {
+    const f = fixture(), clip = f.clips[2]; f.mixer.dispose();
+    const mixer = new UnitAnimationMixer(f.root, f.clips, { ...f.names, [state]: clip.name });
+    mixer.apply(output('attack', 1)); mixer.update(0.37);
+    const action = mixer.mixer.clipAction(clip);
+    expect(action.isRunning()).toBe(true); expect(action.loop).toBe(LoopOnce);
+    mixer.apply(output(state, 2)); expect(action.loop).toBe(LoopRepeat);
+    expect(action.time).toBe(0); expect(action.clampWhenFinished).toBe(false);
+    mixer.update(2); expect(action.isRunning()).toBe(true); expect(action.time).toBeCloseTo(0.4);
+    mixer.dispose();
   });
 });

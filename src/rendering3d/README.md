@@ -205,13 +205,17 @@ D7 不能通过丢弃必需语义把此类源发射器标成普通 v1 sprite，�
 字段对应 `combat-replay-view.ts`；按事件 type 明确归属：伤害/治疗属于 targetId，攻击属于
 attackerId，施法属于 sourceId，移动/死亡/复活属于 unitId。heal 可接收但不产生动作或中断
 当前动作；没有治疗动作状态。宿主筛选上述事件，其余完整账本保留在宿主。
-同动作重复事件增加 revision，支持普攻重新播放；非死亡状态按事件顺序切换。
+同动作重复事件增加 revision，支持普攻重新播放；连续 movement 只延长 move 时窗，
+不增加 revision。有效受击只在 idle/hit 进入或重播 hit，不打断 move/attack/cast。
+带已解析播放计划的 cast 还会忽略 movement/attack，保护施法收尾。
 死亡锁定直到复活。`update(seconds)` 结束短动作回待机，死亡不自动恢复。
 默认视觉时长 move=.2、attack=.45、cast=.7、hit=.15，混合 .12 秒；均可配置，
 这些只是表现时长，不改变规则 tick、数值或结算。
 
 `UnitAnimationMixer(root,clips,animationNames)` 接受 `state.output`，按 revision 更新动作，
-跨动作 crossfade；idle/move 循环，其余单次，death 停末帧。缺少动作时回退 idle，
+跨动作 crossfade；idle/move 循环，其余单次，death 停末帧。正在运行的无限循环片段
+即使 revision 改变也保留播放时间；同片段若此前为单次播放则重新配置为循环。
+暂停、禁用、停止或零速的片段在新 revision 时重启。缺少动作时回退 idle，
 连 idle 都没有时静态显示。每帧宿主调用 `apply(state.update(delta))` 和 `mixer.update(delta)`。
 粒子每帧调用 `effect.update(delta,camera)` 以更新生命周期和朝向；`finished` 可用于回收。
 

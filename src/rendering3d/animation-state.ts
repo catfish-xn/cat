@@ -62,6 +62,10 @@ export class UnitActionState {
     if (this.state === 'death') return this.output;
     // Resolved casts own their visual window, so incidental hits cannot cut off the ending.
     if (this.state === 'cast' && this.playback && ['movement', 'attack', 'packetDamage'].includes(event.type)) return this.output;
+    // A hit shows only on a unit at rest: a swing or run cut by every incoming packet snaps back to idle mid-clip.
+    if (event.type === 'packetDamage' && this.state !== 'idle' && this.state !== 'hit') return this.output;
+    // The next step of a run extends it; restarting it would rewind the looping clip at every cell.
+    if (event.type === 'movement' && this.state === 'move') { this.remaining = this.durations.move; return this.output; }
     switch (event.type) {
       case 'death': this.enter('death'); break;
       case 'movement': this.enter('move'); break;
