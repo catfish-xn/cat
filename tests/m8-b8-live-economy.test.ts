@@ -8,10 +8,11 @@ import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-pu
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-// v20 seed selected by the independent loot/augment oracle, then verified via
-// public commands: Investment I, three opening components/two heroes and the
-// same 2-7 shape (three items plus 1G, no new unit).
-let preparation=api.createMatch(11111); // v20 Investment I + the original 2-7 gold/item shape.
+// v22 seed: the first with no opening encounter whose independent 2-7 loot keeps the
+// original shape (three items plus 1G, no new unit) and whose public 2-1 offer has
+// Investment I; seed 11111 lost the offer under the v22 augment tiers and now draws
+// the scuttle-crab opening. The 2-6 loss keeps the 2-7 win's streak gold at 0.
+let preparation=api.createMatch(4867); // v22 Investment I + the original 2-7 gold/item shape.
 while(preparation.roundDefinitionId!=='2-7'){
  if(preparation.phase==='choice'){const c=preparation.pendingChoice!;preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}
  else if(preparation.phase==='settlement')preparation=accepted(api.nextRound(preparation,preparation.round));
@@ -25,10 +26,10 @@ preparation=accepted(api.equipItem(preparation,'item-2','unit-1',1));
 preparation=accepted(api.equipItem(preparation,'item-3','unit-2',0));
 function roundTrip(s:MatchState){const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 function reject(s:MatchState,change:(s:any)=>void,message:string){const saved=serializeMatch(s),bad=JSON.parse(saved);change(bad);expect(()=>restoreMatch(bad)).toThrow(message);expect(serializeMatch(s)).toBe(saved);}
-// Isolated H=80 arithmetic remains in the independent oracle. This real route has H=112.
+// Isolated H=80 arithmetic remains in the independent oracle. This real route has H=136.
 describe('B8 live gold before interest, randomized direct loot',()=>{
- it.each([{gold:9,basis:10,interest:1,after:16,hp:120},{gold:49,basis:50,interest:5,after:60,hp:152},{gold:50,basis:51,interest:5,after:61,hp:152}])('$gold G plus earned 1G settles to $after once, across exact restore/Continue',v=>{
-  expect(preparation).toMatchObject({gold:60,playerHp:73,level:4,augmentProgress:{investmentHp:112}});
+ it.each([{gold:9,basis:10,interest:1,after:16,hp:144},{gold:49,basis:50,interest:5,after:60,hp:176},{gold:50,basis:51,interest:5,after:61,hp:176}])('$gold G plus earned 1G settles to $after once, across exact restore/Continue',v=>{
+  expect(preparation).toMatchObject({gold:66,playerHp:73,level:4,augmentProgress:{investmentHp:136}});
   let before=preparation;
   if(v.gold%2===1){const slot=before.shop.slots.findIndex(o=>o.status==='available'&&UNIT_DEFINITIONS[o.definitionId].cost%2===1);expect(slot).toBeGreaterThanOrEqual(0);before=accepted(api.buyUnit(before,slot,before.shop.generation));}
   while(before.gold>v.gold)before=accepted(api.rerollShop(before));
@@ -40,7 +41,7 @@ describe('B8 live gold before interest, randomized direct loot',()=>{
   expect(s.gold).toBe(v.basis);expect(s.augmentProgress.investmentHp).toBe(before.augmentProgress.investmentHp);
   expect(s.gold+5+v.interest).toBe(v.after);
   const drops=plan(before).encounterPlan.drops,ids=new Set(drops.map(d=>d.dropId));
-  expect(drops.map(d=>d.payload)).toEqual(independentLootPlan(11111,10).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
+  expect(drops.map(d=>d.payload)).toEqual(independentLootPlan(4867,10).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
   const receipts=s.m8.loot.receipts.filter(r=>ids.has(r.dropId));expect(receipts.map(r=>r.payload)).toEqual(drops.map(d=>d.payload));
   expect(receipts.slice(0,2).map(r=>r.grantedItemIds)).toEqual([[`item-${before.nextItemSerial}`],[`item-${before.nextItemSerial+1}`]]);
   expect(s.nextUnitSerial).toBe(before.nextUnitSerial);expect(s.nextItemSerial).toBe(before.nextItemSerial+3);
