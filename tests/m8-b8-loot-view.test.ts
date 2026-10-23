@@ -13,7 +13,8 @@ const prepared=fillBench(await publicPrefix('3-7',2412),['zeri']),live=battle(pr
 const hero=frozen.encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);expect(api.readLootView(s)).toEqual(v);expect(api.readLootView(restoreMatch(saved))).toEqual(v);expect(serializeMatch(s)).toBe(saved);
  expect(Object.isFrozen(v)&&Object.isFrozen(v.revealedDrops)&&Object.isFrozen(v.revealedOrbs)).toBe(true);
- expect(Object.keys(v).sort()).toEqual(['canContinue','pendingChoice','pendingClaims','reason','revealedDrops','revealedOrbs','roundId']);
+ // v22 exposes the unclaimed-orb pair whenever an orb is listed (see the mid-combat case); otherwise the set is unchanged.
+ expect(Object.keys(v).sort()).toEqual(['canContinue','pendingChoice','pendingClaims','reason','revealedDrops','revealedOrbs','roundId',...(v.unclaimedOrbs?['claimReceipts','unclaimedOrbs']:[])].sort());
  for(const d of v.revealedDrops)expect(Object.keys(d).filter(k=>!['orbId','entryOrdinal','dropId','encounterId','sourceUnitId','roundId','payload','status','receiptId','allowedActions','reason'].includes(k))).toEqual([]);
  expect(api.nextRound(s,s.round).ok).toBe(v.canContinue);return v;}
 function hiddenIndependent(s:MatchState,mutate:(s:any)=>void){const raw=JSON.parse(serializeMatch(s));mutate(raw);expect(api.readLootView(raw)).toEqual(api.readLootView(s));}
@@ -33,6 +34,13 @@ describe('B8 readLootView over real randomized public routes',()=>{
    expect(api.readEncounterPreview(s)!.units.filter(u=>u.unitId===d.sourceUnitId)).toHaveLength(1);
   }
   expect(v.revealedOrbs.map(o=>o.orbId)).toEqual([...new Set(v.revealedDrops.map(d=>d.orbId))]);
+  // v22 lists the earned orb as unclaimed while it waits for settlement. In single player it is still granted
+  // by the domain: no claim receipt exists and claimOrb is refused. The online claim flow for these same orbs
+  // is covered by tests/t5r-loot-view.test.ts ('shows real shared-pool shortage compensation...' and
+  // 'shows an unclaimed full-bench orb at deadline...').
+  expect(v.unclaimedOrbs!.map(o=>o.orbId)).toEqual(v.revealedOrbs.map(o=>o.orbId));
+  expect(v.claimReceipts).toEqual([]);
+  for(const orb of v.unclaimedOrbs!)expect(api.claimOrb(s,orb.orbId,s.round)).toEqual({ok:false,state:s,reason:'multiplayer-required'});
  });
  it('after PvE grants item/tool entries and withholds the full-bench hero, with no obsolete choice',()=>{
   const v=view(live.ended);expect(live.ended.phase).toBe('settlement');expect(v.pendingChoice).toBeNull();
