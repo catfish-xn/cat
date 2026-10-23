@@ -11,6 +11,8 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { createSharedPool, initializeSharedSeat, restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 import { toPrivateSeatView } from '../src/simulation/private-seat-view';
 import type { MatchCommandResult, MatchState } from '../src/simulation/match-types';
+import { TRAINER_EMBLEMS, TRAINER_UNIT } from '../src/simulation/content/opening-batch-b';
+import { trainerEmblems } from '../src/simulation/trainer-golems';
 
 // Locate a legitimate draw; never overwrite the authenticated selection.
 let seed = 0;
@@ -29,19 +31,26 @@ function rejected(result: MatchCommandResult, state: MatchState, reason: string)
   expect(result.state).toBe(state);
   expect(result).not.toHaveProperty('events');
 }
+/** Batch B (v22) grants the trainer at creation; explicit retries authenticate and change nothing. */
+function unchanged(result: MatchCommandResult, state: MatchState): void {
+  expect(result).toEqual({ ok: true, state, events: [] });
+  expect(result.state).toBe(state);
+}
 
 describe('PR4 trainer evidence admission and executable emblem validation', () => {
-  it('retains the 4% identity, known counts, approved conventions and unknown core parameters', () => {
+  it('retains the 4% identity, known counts, approved conventions and the batch B core parameters', () => {
+    // Opening batch B (v22) supplies the approved pool, unit, growth and placement and enables the entry.
     expect(OPENING_ENCOUNTERS.find(e => e.id === 'trainer-golems')).toMatchObject({
-      weightBps: 400, enabled: false, readiness: 'blocked-evidence',
+      weightBps: 400, enabled: true, readiness: 'ready-for-followup',
       researchParameters: { emblem_sampling_pool: null, same_emblems_for_all_players: null },
       missingEvidence: TRAINER_GOLEMS_POLICY.missingEvidence,
     });
     expect(OPENING_ENCOUNTERS.reduce((n, e) => n + e.weightBps, 0)).toBe(10000);
     expect(TRAINER_GOLEMS_POLICY).toMatchObject({ golemsPerSeat: 1, emblemsPerGolem: 3,
       permanentEmblems: true, grantRound: '1-2', samplingScope: 'seat', distinctEmblems: true,
-      emblemPool: null, unitDefinitionId: null, statsAndGrowth: null,
-      countsTowardPopulation: null, placementAndMovement: null });
+      emblemPool: TRAINER_EMBLEMS, unitDefinitionId: TRAINER_UNIT.id,
+      countsTowardPopulation: false, placementAndMovement: 'front-center-first-empty/board-only', missingEvidence: [] });
+    expect(TRAINER_GOLEMS_POLICY.statsAndGrowth).toMatchObject({ unit: TRAINER_UNIT });
     expect(Object.isFrozen(TRAINER_GOLEMS_POLICY)).toBe(true);
     expect(Object.isFrozen(TRAINER_GOLEMS_POLICY.missingEvidence)).toBe(true);
   });
@@ -49,25 +58,27 @@ describe('PR4 trainer evidence admission and executable emblem validation', () =
   it.each(['enabled', 'emblemPool', 'unitDefinitionId', 'statsAndGrowth', 'countsTowardPopulation', 'placementAndMovement'])(
     'rejects caller-supplied %s instead of filling the evidence gap', key => {
       const config = structuredClone(OPENING_ENCOUNTER_CONFIG);
-      Object.assign(config.trainerGolems, { [key]: key === 'enabled' ? true : 'unverified' });
+      Object.assign(config.trainerGolems, { [key]: key === 'enabled' ? false : 'unverified' });
       expect(() => validateOpeningEncounterConfig(config)).toThrow('opening-config-incomplete');
     });
 
-  it('rejects enabling only the weighted entry and accepts the exact disabled config copy', () => {
+  it('rejects disabling only the weighted entry and accepts the exact enabled config copy', () => {
     const config = structuredClone(OPENING_ENCOUNTER_CONFIG);
     expect(() => validateOpeningEncounterConfig(config)).not.toThrow();
-    Object.assign(config.entries.find(e => e.id === 'trainer-golems')!, { enabled: true });
+    Object.assign(config.entries.find(e => e.id === 'trainer-golems')!, { enabled: false });
     expect(() => createOpeningEncounter(seed, config)).toThrow('opening-config-incomplete');
   });
 
-  it('accepts every executable distinct triple, returns a detached frozen tuple, without declaring a sampling pool', () => {
+  it('accepts every executable distinct triple, returns a detached frozen tuple; batch B samples from its approved 22-emblem pool', () => {
     for (let i = 0; i < emblems.length; i++) for (let j = i + 1; j < emblems.length; j++)
       for (let k = j + 1; k < emblems.length; k++) {
         const input = [emblems[i], emblems[j], emblems[k]], validated = validateTrainerGolemEmblems(input);
         expect(validated).toEqual(input); expect(validated).not.toBe(input);
         expect(Object.isFrozen(validated)).toBe(true);
       }
-    expect(TRAINER_GOLEMS_POLICY.emblemPool).toBeNull();
+    expect(TRAINER_GOLEMS_POLICY.emblemPool).toEqual(TRAINER_EMBLEMS);
+    expect(TRAINER_EMBLEMS).toHaveLength(22);
+    for (const id of TRAINER_EMBLEMS) expect(emblems).toContain(id);
   });
 
   it.each([
@@ -98,12 +109,12 @@ describe('PR4 trainer evidence admission and executable emblem validation', () =
   });
 });
 
-describe('PR4 disabled lifecycle, bypass rejection and restoration', () => {
-  it('repeated explicit grants fail atomically; generic round hooks and restore never grant or draw', () => {
+describe('PR4 lifecycle (enabled by batch B), bypass rejection and restoration', () => {
+  it('repeated explicit grants are idempotent; generic round hooks and restore never regrant or draw', () => {
     let state = createMatch(seed);
     const before = serializeMatch(state), cap = getDeploymentCap(state);
     for (let n = 0; n < 3; n++) {
-      rejected(applyTrainerGolemsOpening(state), state, 'opening-config-incomplete');
+      unchanged(applyTrainerGolemsOpening(state), state);
       if (state.openingEncounter.mode !== 'solo') throw new Error('solo');
       const plan = planOpeningRound(state.openingEncounter.context, '1-2');
       expect(plan.facts).toEqual([]);
@@ -111,11 +122,16 @@ describe('PR4 disabled lifecycle, bypass rejection and restoration', () => {
       expect(serializeMatch(state)).toBe(before);
       state = restoreMatch(before);
     }
-    expect(state.items).toEqual([]); expect(getDeploymentCap(state)).toBe(cap);
+    // Exactly one golem with its three permanent seat-sampled emblems, issued once at creation.
+    const golems = state.preparation.units.filter(u => u.definitionId === TRAINER_UNIT.id);
+    expect(golems).toHaveLength(1);
+    expect(state.items.map(i => i.definitionId)).toEqual(trainerEmblems(seed, 'solo'));
+    expect(state.items.map(i => i.location)).toEqual([0, 1, 2].map(slot => ({ kind: 'unit', unitId: golems[0].id, slot })));
+    expect(getDeploymentCap(state)).toBe(cap);
     expect(state.removedAugmentIds).toEqual([]);
-    expect(state.preparation.units.filter(u => u.team === 'player')).toHaveLength(1);
-    expect(readOpeningEncounterView(state)).toMatchObject({ encounterId: 'trainer-golems', enabled: false,
-      readiness: 'blocked-evidence', statusTextZh: '本局抽中此奇遇，效果尚未启用', revealedFacts: [] });
+    expect(state.preparation.units.filter(u => u.team === 'player')).toHaveLength(2);
+    expect(readOpeningEncounterView(state)).toMatchObject({ encounterId: 'trainer-golems', enabled: true,
+      readiness: 'ready-for-followup', statusTextZh: '本局奇遇效果已启用', revealedFacts: [] });
     expect(toPrivateSeatView(state).openingEncounter).toEqual(readOpeningEncounterView(state));
   });
 
@@ -143,19 +159,19 @@ describe('PR4 disabled lifecycle, bypass rejection and restoration', () => {
     expect(JSON.stringify(state)).toBe(before);
   });
 
-  it('keeps all eight seats closed and rejects forged shared receipts and foreign bindings', () => {
+  it('keeps all eight seats idempotent and rejects forged shared receipts and foreign bindings', () => {
     let pool = createSharedPool('trainer-test', seed);
     for (let i = 0; i < 8; i++) {
       const joined = initializeSharedSeat(pool, createMatch(100 + i, { mode: 'shared-deferred' }), `seat-${i}`, i);
       if (!joined.ok) throw new Error(joined.reason);
       pool = joined.pool;
       const state = joined.state, before = JSON.stringify({ pool, state });
-      rejected(applyTrainerGolemsOpening(state, pool.openingEncounter), state, 'opening-config-incomplete');
+      unchanged(applyTrainerGolemsOpening(state, pool.openingEncounter), state);
       rejected(applyTrainerGolemsOpening(state), state, 'opening-context-mismatch');
       rejected(applyTrainerGolemsOpening(state, createOpeningEncounter(42)), state, 'opening-context-mismatch');
       const restored = restoreSharedOrbSnapshot(pool, JSON.stringify(state));
       expect(restored).toEqual(state);
-      rejected(applyTrainerGolemsOpening(restored, pool.openingEncounter), restored, 'opening-config-incomplete');
+      unchanged(applyTrainerGolemsOpening(restored, pool.openingEncounter), restored);
       const bad = { ...state, openingEncounter: { ...state.openingEncounter, receipts: [receipt] } };
       expect(() => restoreSharedOrbSnapshot(pool, bad)).toThrow('invalid-seat-state');
       expect(JSON.stringify({ pool, state })).toBe(before);
