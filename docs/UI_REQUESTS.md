@@ -1,6 +1,6 @@
 # 界面数据需求（Claude → Codex）
 
-## PR410-DRAG-ENEMY（2026-10-23，Codex 定位，Claude 界面修复待办）
+## PR410-DRAG-ENEMY（2026-10-23，Codex 定位，Claude 已修：boardUnitAt 对不可装备的可见单位返回原 id，走 unknown-unit 提示；U3 10/10）
 
 - 离线 Chromium 对照：`83fd7fa5` 的 `verify-m8-u3-dynamic.cjs` 10/10 通过；PR9 原 HEAD `f879b2b2` 为 9/10，唯一失败为 `drag-enemy`，与本次体积优化无关。
 - 原因：分支内 `e54f2a78` 将 `BoardScene.boardUnitAt` 的 ID 映射改成 `session.equipmentTargetId`；`presentation/battle-equipment.ts` 提前过滤敌方，返回 `undefined`，输入路由因此按空白落点提示「物品未装备 · 请放到我方单位或空装备槽」，到不了原有 `unknown-unit` 提示。

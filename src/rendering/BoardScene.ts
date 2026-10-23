@@ -517,7 +517,9 @@ export class BoardScene extends Phaser.Scene {
   private boardUnitAt(x: number, y: number): string | undefined {
     // A panel floating over the board (3D HUD, an open drawer) takes the point: nothing behind it is hit.
     if (coveredBoardPoint(x, y)) return undefined;
-    const ownerOf = (id: string) => this.session.equipmentTargetId(id);
+    // A visible piece I can't equip (an enemy, a summon, a mirror) still answers with its id: the drop then fails on the
+    // domain preview with 'unknown-unit', not as a drop on empty board, and no command is sent.
+    const ownerOf = (id: string) => this.session.equipmentTargetId(id) ?? id;
     // ?render=3d covers this canvas: the 3D layer picks the model under the pointer (perspective, not 2D boxes).
     const picked = boardFeedUnitAt({ x, y });
     if (picked !== null) return picked === undefined || !this.tokens.get(picked)?.visible ? undefined : ownerOf(picked);
