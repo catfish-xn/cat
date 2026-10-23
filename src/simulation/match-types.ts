@@ -53,6 +53,8 @@ export interface MatchBase {
   readonly seatMechanics?: import('./seat-mechanics/types').SeatMechanicsState;
   readonly m8: Pick<import('./m8/contracts').M8MatchExtension, 'round' | 'encounterPlan'> & {readonly preparation: RoundPreparation; readonly loot: import('./loot-types').MatchLootState};
   readonly combatInputBasis: import('./combat-input').CombatInputBasis | null;
+  /** Online PvE first-pass terminal, retained until the atomic settlement consumes it. */
+  readonly pendingCombatTerminal?: FinishedCombat;
   readonly resourceProvenance: import('./resource-provenance').ResourceProvenance;
 
   readonly equipmentState: import('./m8/equipment').EquipmentState;
