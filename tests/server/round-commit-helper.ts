@@ -3,9 +3,10 @@
  * resolves timeouts with the rules' commands (§11.4) and ranks same-round eliminations by the §11.5 key.
  */
 import { describe, expect, it } from 'vitest';
-import { PlaceholderBattleResolver, type BattleResolver } from '../../src/server/room/battle-resolver';
+import type { BattleResolver } from '../../src/server/room/battle-resolver';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { BattleResult, RoomState } from '../../src/server/room/types';
+import type { Room } from '../../src/server/room/room';
 import { DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
 import { expectWallClockBelow } from '../fixtures/wallclock';
 
@@ -28,6 +29,20 @@ function killAtRoundOne(victim: string): BattleResolver {
   } };
 }
 const atFirstPvp = (state: RoomState) => state.round === 4 && state.phase === 'preparation';
+/**
+ * v22: 2-1 opens each seat's augment choice inside its preparation; every seat answers it (first offer) through the room,
+ * and any choice that augment opens at once (Portable Forge's artifact forge) the same way.
+ */
+function pickAugments(room: Room): void {
+  for (const { seatId } of room.state.seats) {
+    for (let picks = 0; ; picks++) {
+      const choice = room.state.seats.find(seat => seat.seatId === seatId)!.match.pendingChoice;
+      if (!choice) break;
+      expect(picks).toBeLessThan(4);
+      expect(room.handle(seatId, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: choice.offers[0]! })).toMatchObject({ ok: true });
+    }
+  }
+}
 
 export function registerRoundCommit(mode: 'fast' | 'timing'): void {
 describe('Room: whole-round commit through T3 receipts', () => {
@@ -92,6 +107,8 @@ describe('Room: whole-round commit through T3 receipts', () => {
     const { room, clock } = makeRoom(resolver);
     room.start();
     runUntil(room, clock, atFirstPvp);
+    // v22: answer the 2-1 augment choices first, so the preparation deadline itself changes no seat state.
+    pickAugments(room);
     const before = room.state;
     const seen: RoomState[] = [];
     room.subscribe(state => seen.push(state));
@@ -163,12 +180,14 @@ describe('Room: whole-round commit through T3 receipts', () => {
   }); }
 
   if (mode === 'fast') { it('resolves choice and loot timeouts with the rules\' commands, never with a client-style fallback', () => {
-    const { room, clock } = makeRoom(new PlaceholderBattleResolver());
+    // v22: the 2-1 augment choice is open inside the preparation; a PvP round needs the two-sided resolver.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
-    runUntil(room, clock, current => current.round === 4 && current.phase === 'choice');
+    runUntil(room, clock, atFirstPvp);
     const pending = room.state.seats.map(seat => seat.match.pendingChoice!.choiceId);
-    clock.runNext(); // choice deadline → every seat timed out to its first offer
-    expect(room.state.phase).toBe('preparation');
+    clock.runNext(); // preparation deadline → every seat timed out to its first offer, then the battle
+    expect(room.state.fault).toBeNull();
+    expect(room.state.phase).toBe('battle');
     for (const [index, seat] of room.state.seats.entries()) {
       expect(seat.match.pendingChoice).toBeNull();
       expect(seat.match.scheduleReceipts.some(receipt => receipt.eventId === pending[index])).toBe(true);
