@@ -66,7 +66,8 @@ it('Epitaph chooses nearest surviving ally with stable ID tie, stacks independen
   s={...s,units:s.units.map(u=>({...u,cell:u.id==='p0'||u.id==='p1'?{col:3,row:3}:u.id==='p2'?{col:2,row:3}:u.id==='p3'?{col:4,row:3}:u.cell}))};
   const result=deaths(s,['p1','p0']), recipient=result.units.find(u=>u.id==='p2')!;
   expect(recipient.shield).toBe(2*Math.floor(recipient.maxHp*.2));expect(recipient.shieldLayers).toHaveLength(2);
-  expect(recipient.shieldLayers!.map(l=>l.expiresAtTick)).toEqual([1201,1201]);expect(amounts(recipient,'attackSpeed')).toEqual([1000,1000]);
+  // v22 combat lasts 45s (900 ticks incl. overtime), so "this combat" now ends at tick 901.
+  expect(recipient.shieldLayers!.map(l=>l.expiresAtTick)).toEqual([901,901]);expect(amounts(recipient,'attackSpeed')).toEqual([1000,1000]);
   expect(result.units.find(u=>u.id==='p3')!.shield).toBe(0);validate(result);
   expect(deaths(result,['p0','p1'])).toEqual(result);
   expect(stepCombat(JSON.parse(JSON.stringify(result)))).toEqual(stepCombat(result));
@@ -113,8 +114,9 @@ import { selectChoice, deployMatchUnit, buyUnit, startMatchCombat, stepMatch, ty
 import { accepted, reachRound } from './match-helpers';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
+// v22 augment tier table: Climb the Ladder I is offered at 2-1 only by seeds 108/109 below 600; seed 109's real battle has the ally death.
 it.each([
- ['blistering-strikes',0],['clockwork-accelerator',7],['lone-hero',20],['climb-the-ladder-i',28],['inspiring-epitaph',18],
+ ['blistering-strikes',0],['clockwork-accelerator',7],['lone-hero',20],['climb-the-ladder-i',109],['inspiring-epitaph',18],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
  let s=reachRound('2-1',false,seed);
  for(let candidate=0;!s.pendingChoice!.offers.includes(id)&&candidate<300;candidate++)s=reachRound('2-1',false,candidate);
