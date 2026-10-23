@@ -21,7 +21,8 @@ describe('opening encounter PR1 content and independent selection', () => {
     expect(OPENING_ENCOUNTERS.map(e => e.weightBps)).toEqual(weights);
     expect(weights.reduce((a,b) => a+b,0)).toBe(10000);
     expect(new Set(OPENING_ENCOUNTERS.map(e => e.id)).size).toBe(16);
-    expect(OPENING_ENCOUNTERS.filter(e => e.enabled).map(e => e.id)).toEqual(['none','golden-gala','prismatic-party','prismatic-prelude','prismatic-finale','wind-up-monkey','component-anvils','artifact-anvil']);
+    // Opening batches A/B (v22) enable every entry.
+    expect(OPENING_ENCOUNTERS.filter(e => e.enabled).map(e => e.id)).toEqual(OPENING_ENCOUNTERS.map(e => e.id));
     expect(OPENING_ENCOUNTERS.map(e => e.nameEn)).toEqual(['No encounter','Scuttle Puddle','Crab Rave','Golden Gala',
       'Prismatic Party','Prismatic Prelude','Prismatic Finale','Gold Subscription','Loot Subscription','Trainer Golems',
       'Wind-up Monkey','Component Anvils',"Viktor's Vision","Mel's Blessing","Warwick's Hunger",'Artifact Anvil']);
@@ -70,7 +71,7 @@ describe('opening encounter PR1 content and independent selection', () => {
   });
   it('rejects incomplete/reordered/enabled configs without altering the supplied input', () => {
     for (const mutate of [
-      (c:any) => c.entries.pop(), (c:any) => c.entries.reverse(), (c:any) => c.entries[1].enabled=true,
+      (c:any) => c.entries.pop(), (c:any) => c.entries.reverse(), (c:any) => c.entries[1].enabled=false,
       (c:any) => c.entries[0].weightBps=1001, (c:any) => c.version='unknown',
     ]) {
       const config:any=structuredClone(OPENING_ENCOUNTER_CONFIG); mutate(config);
