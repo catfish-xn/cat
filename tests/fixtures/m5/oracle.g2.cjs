@@ -142,6 +142,15 @@ const ROUND_IDS=['1-2','1-3','1-4','2-1','2-2','2-3','2-4','2-5','2-6','2-7',
  '3-1','3-2','3-3','3-4','3-5','3-6','3-7','4-1','4-2','4-3','4-4','4-5','4-6','4-7',
  '5-1','5-2','5-3','5-4','5-5','5-6','5-7','6-1','6-2','6-3','6-4','6-5','6-6','6-7'];
 const ROUNDS=ROUND_IDS.map((roundId,index)=>{const [stage,sub]=roundId.split('-').map(Number);return {roundId,ordinal:index+1,stage,sub,kind:stage===1?'pve':sub===4?'supply':sub===7?'pve':'pvp'};});
+// v22 opening crabs replace a round's neutrals; original slot k (sorted ids) drops from crab c{min(k,n-1)}.
+const ORIGINAL_PVE_SLOTS={'1-2':['m01','m02'],'1-3':['m01','m02','r01'],'1-4':['m01','m02','r01','r02'],'2-7':['k01','k02','k03'],'3-7':['w00','w01','w02','w03','w04'],'4-7':['r00','r01','r02','r03','r04','r05'],'5-7':['d01'],'6-7':['h01']};
+function lootCarrier(combat,sourceId){
+ const [kind,roundId,,slotId]=JSON.parse(sourceId),units=combat?.units??[];
+ if(kind!=='pve'||units.some(u=>u.id===sourceId))return sourceId;
+ const crabs=units.map(u=>u.id).filter(id=>id.startsWith('[')&&(([k,r,e])=>k==='pve'&&r===roundId&&String(e).endsWith(`/${roundId}`))(JSON.parse(id))).sort();
+ const index=(ORIGINAL_PVE_SLOTS[roundId]??[]).indexOf(slotId);
+ return crabs.length&&index>=0?crabs[Math.min(index,crabs.length-1)]:sourceId;
+}
 function roundOrdinal(id){const round=ROUNDS.find(r=>r.roundId===id);assert(round,`Unknown independent round ${id}`);return round.ordinal;}
 // Public helper accepts the pre-combat snapshot too. Derive ungranted gold from the
 // approved independent plan plus formal source deaths, never from production income.
@@ -149,21 +158,21 @@ function ungrantedLootGold(before,combat){
  if(before.seed===undefined||!combat)return 0;
  const drops=lootPlan(before.seed,before.round).rounds.find(r=>r.encounterPlan.roundId===ROUNDS[before.round-1].roundId)?.encounterPlan.drops??[];
  return drops.filter(d=>d.payload.kind==='gold'&&!before.m8?.loot.receipts.some(r=>r.dropId===d.dropId)
-  &&combat.neutralReceipts?.deaths.some(e=>e.unitId===d.sourceUnitId)
-  &&combat.units.some(u=>u.id===d.sourceUnitId&&u.team==='enemy'&&!u.alive)).reduce((sum,d)=>sum+d.payload.quantity,0);
+  &&combat.neutralReceipts?.deaths.some(e=>e.unitId===lootCarrier(combat,d.sourceUnitId))
+  &&combat.units.some(u=>u.id===lootCarrier(combat,d.sourceUnitId)&&u.team==='enemy'&&!u.alive)).reduce((sum,d)=>sum+d.payload.quantity,0);
 }
 function settlement(before,combat,goldBefore=before.gold+ungrantedLootGold(before,combat)){
  const round=before.round,definition=ROUNDS[round-1];assert(definition,'Round outside approved campaign');
  const {roundId,stage,sub,kind:roundKind}=definition,result=combat?.result??'supply';
  const survivingEnemyCount=combat?.units.filter(u=>u.team==='enemy'&&u.alive).length??0;
  let streakAfter=before.streak;
- if(roundKind==='pvp'){const kind=result==='playerWin'?'win':'loss';streakAfter={kind,count:before.streak.kind===kind?before.streak.count+1:1};}
- const base=stage===1?{2:2,3:3,4:5}[sub]:5,naturalXp=2 /* T11 signed opening: 2/2/2; opening XP unchanged; high-level XP68 is user custom 2026-10-22 */;
+ if(roundKind!=='supply'){const kind=result==='playerWin'?'win':'loss';streakAfter={kind,count:before.streak.kind===kind?before.streak.count+1:1};}
+ const base=stage===1?{2:2,3:3,4:4}[sub]:5 /* v22 10-23: next-entry 2/3/4G */,naturalXp=2 /* T11 signed opening: 2/2/2; opening XP unchanged; high-level XP68 is user custom 2026-10-22 */;
  const win=roundKind==='pvp'&&result==='playerWin'?1:0,interestBasis=goldBefore+win;
  const owned=new Set(before.augments.map(a=>a.definitionId));
  const cap=owned.has('going-long')?0:owned.has('hedge-fund')?10:owned.has('investment-strategy-ii')?7:5;
  const interest=stage===1?0:Math.min(cap,Math.floor(interestBasis/10));
- const streak=roundKind!=='pvp'?0:streakAfter.count>=6?3:streakAfter.count>=4?2:streakAfter.count>=2?1:0;
+ const streak=roundKind==='supply'?0:streakAfter.count>=6?3:streakAfter.count>=5?2:streakAfter.count>=2?1:0; /* v22: PvE counts; 2-4/5/6+ */
  const baseDamage=roundKind==='pvp'?[2,5,8,10,12][stage-2]:roundKind==='pve'?3:0;
  const playerDamage=result==='playerWin'||roundKind==='supply'?0:roundKind==='pve'?3:baseDamage+survivingEnemyCount;
  const progression=xp(before.level,before.xp,naturalXp),income=base+win+interest+streak,hpLost=Math.min(before.playerHp,playerDamage);
@@ -199,8 +208,9 @@ function validateLoot(state){
   assert.equal(evidence.death.combatId,`round-${roundOrdinal(entry.roundId)}`,'earned combat identity');
   assert(Number.isSafeInteger(evidence.death.tick)&&evidence.death.tick>=0);assert(Number.isSafeInteger(evidence.death.eventSeq)&&evidence.death.eventSeq>=0);
   if(entry.roundId===state.roundDefinitionId){const combat=state.combat;assert(combat,'earned loot requires combat');
-   assert(combat.units.some(u=>u.id===entry.sourceUnitId&&u.team==='enemy'&&u.unitKind==='neutral'&&!u.alive),'earned source must be dead');
-   const deaths=combat.neutralReceipts.deaths.filter(d=>d.unitId===entry.sourceUnitId);assert.equal(deaths.length,1,'unique source death');
+   const source=lootCarrier(combat,entry.sourceUnitId);
+   assert(combat.units.some(u=>u.id===source&&u.team==='enemy'&&u.unitKind==='neutral'&&!u.alive),'earned source must be dead');
+   const deaths=combat.neutralReceipts.deaths.filter(d=>d.unitId===source);assert.equal(deaths.length,1,'unique source death');
    assert.deepEqual(evidence.death,{combatId:combat.combatId,tick:deaths[0].tick,eventSeq:deaths[0].eventSeq},'earned source death identity');
    assert(evidence.death.tick<=combat.tick&&evidence.death.eventSeq<combat.nextEventSeq,'earned death boundary');
   }
@@ -259,7 +269,7 @@ function validateLootTransition(before,after,command,events){
  const newlyForfeited=[...next.direct,...next.choiceEligibility].filter(d=>d.status==='forfeited'&&![...prior.direct,...prior.choiceEligibility].some(p=>p.dropId===d.dropId&&p.status==='forfeited'));
  assert.deepEqual(events.filter(e=>e.type==='lootForfeited').map(e=>e.dropId),newlyForfeited.map(d=>d.dropId),'exactly one event per loot forfeit');
  for(const drop of newlyForfeited){assert.equal(after.combat?.status,'finished','forfeit only after combat');assert.equal(entries.get(drop.dropId).roundId,after.roundDefinitionId,'forfeit only current round');}
- for(const evidence of earned){const entry=entries.get(evidence.dropId);assert(events.some(e=>e.domain==='combat'&&e.type==='death'&&e.unitId===entry.sourceUnitId&&e.tick===evidence.death.tick&&e.eventSeq===evidence.death.eventSeq),'reveal requires this transition actual source death');}
+ for(const evidence of earned){const entry=entries.get(evidence.dropId);assert(events.some(e=>e.domain==='combat'&&e.type==='death'&&e.unitId===lootCarrier(after.combat,entry.sourceUnitId)&&e.tick===evidence.death.tick&&e.eventSeq===evidence.death.eventSeq),'reveal requires this transition actual source death');}
  for(const receipt of receipts){assert.equal(after.combat?.status,'finished','loot only after combat');const entry=entries.get(receipt.dropId);assert.equal(entry.roundId,after.roundDefinitionId,'grant only current round');
   for(const id of receipt.grantedItemIds)assert.equal(after.items.find(i=>i.id===id)?.definitionId,receipt.payload.definitionId,'actual granted component definition');
  }
@@ -397,7 +407,7 @@ class Ledger {
   assert.deepEqual(after.augmentProgress,growth,'once-only independent augment growth');
   this.combinations+=events.filter(e=>e.type==='itemCombined').length;this.check(after,true);
  }
- check(state,lootChecked=false){if(!lootChecked)validateLoot(state);assert.equal(state.gold,this.gold,'independent gold ledger');const units=ownedUnits(state),items=ownedItems(state);assert.equal(units.reduce((n,u)=>n+3**(u.starLevel-1),0),this.cards,'card-equivalent conservation');assert.equal(new Set(items.map(i=>i.id)).size,items.length,'unique item IDs');
+ check(state,lootChecked=false){if(!lootChecked)validateLoot(state);assert.equal(state.gold,this.gold,'independent gold ledger R'+state.round+' '+state.roundDefinitionId+' '+state.phase+' '+JSON.stringify(state.m8?.round?.kind));const units=ownedUnits(state),items=ownedItems(state);assert.equal(units.reduce((n,u)=>n+3**(u.starLevel-1),0),this.cards,'card-equivalent conservation');assert.equal(new Set(items.map(i=>i.id)).size,items.length,'unique item IDs');
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
   assert.equal(items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
