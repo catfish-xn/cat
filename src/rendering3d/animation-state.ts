@@ -8,7 +8,8 @@ export type AnimationEvent =
   | { type: 'heal'; targetId: string }
   | { type: 'packetDamage'; sourceId: string; targetId: string; hit: boolean; hpDamage: number; absorbed: number };
 export interface ActionPlayback { clips: readonly string[]; durationSeconds: number }
-export type ResolveActionPlayback = (state: 'cast' | 'attack', castIndex: number) => ActionPlayback | null;
+/** `spawn`: the model's rise clip (shown in the cast state), null when it has none. */
+export type ResolveActionPlayback = (state: 'cast' | 'attack' | 'spawn', castIndex: number) => ActionPlayback | null;
 export interface ActionOutput { state: ActionState; previous: ActionState; blendSeconds: number; loop: boolean; revision: number; playback?: ActionPlayback }
 export interface ActionConfig { blendSeconds?: number; durations?: Partial<Record<Exclude<ActionState, 'idle' | 'death'>, number>>; resolvePlayback?: ResolveActionPlayback }
 const defaults = { move: 0.2, attack: 0.45, cast: 0.3, hit: 0.15 };
@@ -35,6 +36,15 @@ export class UnitActionState {
       ...(this.playback ? { playback: this.playback } : {}) };
   }
   setPlaybackResolver(resolve: ResolveActionPlayback): void { this.resolvePlayback = resolve; }
+  /** A summon rising (it appears or is revived) plays its spawn clip once, when its model names one. */
+  spawn(): ActionOutput {
+    const playback = this.resolvePlayback?.('spawn', 0);
+    if (!playback || this.state === 'death') return this.output;
+    if (!playback.clips.length || !Number.isFinite(playback.durationSeconds) || playback.durationSeconds <= 0) throw new Error('invalid-playback');
+    this.playback = playback;
+    this.previous = this.state; this.state = 'cast'; this.revision++; this.remaining = playback.durationSeconds;
+    return this.output;
+  }
   private enter(state: ActionState): void {
     let playback: ActionPlayback | undefined;
     if (state === 'cast' || state === 'attack') {
@@ -58,7 +68,7 @@ export class UnitActionState {
       case 'packetDamage': case 'heal': id = event.targetId; break;
     }
     if (id !== this.unitId) return this.output;
-    if (event.type === 'unitRevived') { if (this.state === 'death') this.enter('idle'); return this.output; }
+    if (event.type === 'unitRevived') { if (this.state === 'death') { this.enter('idle'); this.spawn(); } return this.output; }
     if (this.state === 'death') return this.output;
     // Resolved casts own their visual window, so incidental hits cannot cut off the ending.
     if (this.state === 'cast' && this.playback && ['movement', 'attack', 'packetDamage'].includes(event.type)) return this.output;
