@@ -7,10 +7,16 @@ import { nextRandom } from '../src/simulation/rng';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, emptyBoard, reachRound, resolveM5Choices, freeze } from './match-helpers';
 import { toPrivateSeatView } from '../src/simulation/private-seat-view';
+import { openingEncounter } from './fixtures/m5/oracle.g2.cjs';
 
 it('single-player nodes choose a deterministic shared tier without consuming choice-stream words', () => {
   const seen = new Set<string>();
-  for (let seed = 0; seed < 9; seed++) {
+  // v23 fmix32 openings: tier-overriding openings (Golden Gala, Prismatic *) and Trainer Golems (unbenchable,
+  // blocks reachRound's empty board) are skipped; nine ordinary-opening seeds are still checked.
+  const skipped = ['golden-gala','prismatic-party','prismatic-prelude','prismatic-finale','trainer-golems'];
+  const seeds = Array.from({length:60},(_,i)=>i).filter(seed=>!skipped.includes(openingEncounter(seed))).slice(0,9);
+  expect(seeds).toHaveLength(9);
+  for (const seed of seeds) {
     const state = reachRound('2-1', false, seed), c = state.pendingChoice!;
     const tier = deriveAugmentTier(seed, c.choiceId); seen.add(tier);
     expect(c.augmentTier).toBe(tier);

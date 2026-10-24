@@ -123,6 +123,8 @@ it('real combat steps reproduce exactly and preserve the prior checkpoint',()=>{
 function acquire(id:string){
  for(let seed=0;seed<10000;seed++){
   const s=createMatch(seed),filter={node:'2-1',fieldedTraits:[],blocked:[]};
+  // v23 fmix32 openings: skip Trainer Golem seeds; the unbenchable golem blocks reachRound's empty-board helper.
+  if(s.preparation.units.some(u=>u.definitionId==='trainer-golem'))continue;
   if(!generateChoices(augmentCandidates(resolveAugmentTier(s,'round:2-1:augment'),[],[],null,filter),s.choiceRngState).offers.includes(id))continue;
   const before=reachRound('2-1',false,seed),c=before.pendingChoice!;return accepted(selectChoice(before,c.choiceId,c.generation,id));
  }
