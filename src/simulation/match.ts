@@ -11,6 +11,7 @@ import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition
 import { drainSetup } from './setup-work';
 import { spendFreeReroll } from './free-rerolls';
 import { drainBatch3RoundEntry } from './augment-pool-batch3-progress';
+import { applyReinfourcement, enterShopAugmentRound, recordShopReroll } from './shop-augments';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
@@ -321,9 +322,10 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
     preparation: plan.preparation,
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
   };
-  const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
+  const reinforced = applyReinfourcement(state, purchased, unitLootPolicy);
+  const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(reinforced.state) : { state: reinforced.state, events: [] };
   const gifted=entered.state.phase!=='combat'&&!isCombatRosterLocked(entered.state)?drainP2Gifts(entered.state,unitLootPolicy):entered.state;
-  return acceptEquipment(gifted, [...plan.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
+  return acceptEquipment(gifted, [...plan.events, ...reinforced.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
 }
 export function openAnvil(state:MatchState,unitId:string):MatchCommandResult {
   const result=planOpenAnvil(state,unitId);
@@ -364,7 +366,7 @@ export function rerollShop(state: MatchState): MatchCommandResult {
   if (state.gold < cost) return fail(state, 'insufficient-gold');
   const generated = generateShop(state.rngState, state.shop.generation + 1, state.level, state.round, sixCostShopContext(state));
   if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - cost)) return fail(state, 'insufficient-gold');
-  return accept({ ...spent.state, gold: state.gold - cost, ...generated,
+  return accept({ ...recordShopReroll(spent.state), gold: state.gold - cost, ...generated,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
 export function buyXp(state: MatchState): MatchCommandResult {
@@ -572,7 +574,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const openingEvents: MatchEvent[] = [];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
-  prepared=drainBatch3RoundEntry(applied.state);openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,prepared));
+  prepared=enterShopAugmentRound(drainBatch3RoundEntry(applied.state));openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,prepared));
   if (prepared.phase === 'gameOver') {
     const terminal = stampMatchEvents(prepared, carousel.events);
     return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
@@ -610,7 +612,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
-    const drained=drainBatch3RoundEntry(applied.state),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
+    const drained=enterShopAugmentRound(drainBatch3RoundEntry(applied.state)),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }

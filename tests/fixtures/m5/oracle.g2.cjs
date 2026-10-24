@@ -64,7 +64,9 @@ AUGMENTS.push('item-grab-bag-i','one-two-five','band-of-thieves-i','teaming-up-i
 const batch2Offers=require('../../augment-pool-batch2-oracle-data.cjs');
 // Batch 3 (14.24 tiers): player-combat scheduled grants and free shop rerolls.
 const batch3Offers={silver:['team-building','latent-forge','eye-for-an-eye','eye-for-an-eye-plus','rolling-for-days-i','superstars-i','corrosion','wealthy-rehab-i'],gold:['what-doesnt-kill-you','prizefighter','superstars-ii','trade-sector','worth-the-wait','blazing-soul-i','noble-sacrifice','wealthy-rehab-ii','bad-luck-protection'],prismatic:['blazing-soul-ii','phreaky-friday','phreaky-friday-plus','dark-alley-dealings','living-forge','shimmerscale-essence','building-a-collection-iii','worth-the-wait-ii','flexible']};
-for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
+// Shop-rule augments (14.24 tiers).
+const shopOffers={silver:['patience-is-a-virtue','firesale','rigged-shop-plus'],gold:['reinfourcement'],prismatic:['dual-purpose','invested-plus','invested-plus-plus','prismatic-ticket','subscription-service']};
+for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier],...shopOffers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier],...shopOffers[tier]);}AUGMENTS.sort();
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).

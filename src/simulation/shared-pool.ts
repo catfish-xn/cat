@@ -1,5 +1,7 @@
 import { validateAugmentOfferHistory } from './augment-offers';
 import { spendFreeReroll } from './free-rerolls';
+import { planRiggedShop, drawSubscriptionSlots, subscriptionAcquired, subscriptionStageStart, planFiresale, stealFiresaleUnit,
+  recordShopReroll, dualPurposeOwner, grantDualPurposeGold } from './shop-augments';
 import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 import { planSixCostShop, sixCostShopContext } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
@@ -17,7 +19,7 @@ import { canOperateMatch } from './operation-policy';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { M8_VERSION } from './m8/version';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
-import { openAnvil, buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
+import { openAnvil, buyUnit, buyXp, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
   forfeitPendingChoice, claimOrDiscardLoot, rerollAugment } from './match';
 import { externalAugmentBlocks } from './augment-offers';
 import { enableMultiplayerSettlement, applyRoundSettlement } from './round-settlement';
@@ -120,9 +122,12 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
 function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):MatchState {
   requirePool(safe(state.shop.generation+1,1));
   const seatId=state.sharedPool!.seatId,generation=state.shop.generation+1,odds=getShopOdds(state.level);
+  // Rigged Shop+ forces a single tier; with that tier out of stock the slot falls back to the level odds.
+  const rigged=planRiggedShop(state,generation);state=rigged.state;
   const slots:ShopSlot[]=[];let rngState=state.rngState,rngDraws=0;
   for(let slot=0;slot<MATCH_RULES.shopSize;slot++) {
-    const weights=odds;
+    const forced=rigged.tier!==undefined&&SHOP_CATALOG_BY_COST[rigged.tier].some(id=>pool.available[id]>0);
+    const weights=forced?odds.map((_,i)=>i+1===rigged.tier?1:0):odds;
     const stocked=([1,2,3,4,5] as CostTier[]).filter(t=>weights[t-1]>0&&SHOP_CATALOG_BY_COST[t].some(id=>pool.available[id]>0));
     if(!stocked.length) {slots.push({status:'purchased',empty:true});continue;}
     const tierWord=nextRandom(rngState),weight=stocked.reduce((sum,t)=>sum+weights[t-1],0);
@@ -136,7 +141,7 @@ function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):
   }
   const six=planSixCostShop(state.round,state.level,generation,sixCostShopContext(state));
   const catalog=SHOP_CATALOG_BY_COST[6], total=catalog.reduce((n,id)=>n+pool.available[id],0);
-  if(six.slot!==null&&total>0){
+  if(six.slot!==null&&total>0&&rigged.tier===undefined){
     const old=slots[six.slot];
     if(old.status==='available'){
       pool.available[old.definitionId]++;
@@ -149,6 +154,22 @@ function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):
   }
   poolEvents.push({type:'sharedShopGenerated',seatId,generation,rngDraws});
   return {...state,rngState,shop:{generation,slots,locked:Boolean(state.shop.locked)}};
+}
+/** Subscription Service: replaces the seat's shop (locked or not) with its 4-cost shop; the caller released the old one. */
+function drawSubscriptionShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):MatchState {
+  requirePool(safe(state.shop.generation+1,1));
+  const seatId=state.sharedPool!.seatId,generation=state.shop.generation+1;
+  const drawn=drawSubscriptionSlots(state,pool.available,(definitionId,slot)=>{pool.available[definitionId]--;pool.shops.push({seatId,generation,slot,definitionId});});
+  poolEvents.push({type:'sharedShopGenerated',seatId,generation,rngDraws:drawn.rngDraws});
+  return {...state,rngState:drawn.rngState,shop:{generation,slots:drawn.slots,locked:Boolean(state.shop.locked)}};
+}
+/** Firesale: return the stolen slot's reserved copy, then grant it through the transaction's reward policy. */
+function applyFiresale(pool:PoolDraft,state:MatchState,round:number,poolEvents:SharedPoolEvent[]):{state:MatchState;events:readonly MatchEvent[]} {
+  const plan=planFiresale(state,round);if(!plan)return {state,events:[]};
+  const seatId=state.sharedPool!.seatId,r=pool.shops.find(r=>r.seatId===seatId&&r.generation===state.shop.generation&&r.slot===plan.slot);
+  requirePool(r,'invalid-seat-state');pool.shops=pool.shops.filter(s=>s!==r);pool.available[r.definitionId]++;
+  const stolen=stealFiresaleUnit(state,plan.owner,plan.slot,rewardPolicy(pool,state,poolEvents));
+  reconcileHoldings(pool,state,stolen.state,poolEvents);return stolen;
 }
 export function generateSharedShop(pool:SharedPoolState,state:MatchState,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(draft,_policy,events)=>{
@@ -177,9 +198,19 @@ export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedG
     const spent=spendFreeReroll(state),cost=spent.free?0:MATCH_RULES.rerollCost;
     requirePool(state.gold>=cost,'insufficient-gold');
     releaseShop(draft,state.sharedPool!.seatId);
-    const next=drawShop(draft,spent.state,events);
+    const next=drawShop(draft,recordShopReroll(spent.state),events);
     requirePool(next.shop.slots.some(s=>s.status==='available'),'pool-empty');
     return {ok:true,...stamp({...next,gold:state.gold-cost})};
+  });
+}
+/** XP purchase; Dual Purpose pays its first-per-round gold and rerolls an unlocked shop for free. */
+export function buySharedXp(pool:SharedPoolState,state:MatchState):SharedPoolResult {
+  return transact(pool,state,(draft,_policy,events)=>{
+    const bought=buyXp(state);
+    if(!bought.ok||!dualPurposeOwner(bought.state))return bought;
+    let next=grantDualPurposeGold(bought.state);
+    if(!next.shop.locked){releaseShop(draft,state.sharedPool!.seatId);next=drawShop(draft,next,events);}
+    return {ok:true,state:next,events:bought.events};
   });
 }
 export function setSharedShopLock(pool:SharedPoolState,state:MatchState,locked:boolean,expectedGeneration:number):SharedPoolResult {
@@ -198,7 +229,14 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 
 /** All original Match paths that may award a unit use this transaction-local pool policy. */
 export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult {
-  return transact(pool,state,(_draft,policy)=>{
+  return transact(pool,state,(_draft,policy,poolEvents)=>{
+    const result=matchCommand(_draft,policy);
+    // Subscription Service opens its shop the moment it is acquired (a pick or a timed-out pick).
+    if(!result.ok||!subscriptionAcquired(state,result.state))return result;
+    releaseShop(_draft,state.sharedPool!.seatId);
+    return {...result,state:drawSubscriptionShop(_draft,result.state,poolEvents)};
+  });
+  function matchCommand(_draft:PoolDraft,policy:UnitLootPolicy):MultiplayerCommandResult {
     switch(command.type) {
       case 'openAnvil': return openAnvil(state,command.unitId);
       case 'rerollAugment': return rerollAugment(state,command.choiceId,command.generation,command.optionIndex,command.augmentBlocked);
@@ -217,7 +255,7 @@ export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,comm
       case 'claimOrb': return claimOrb(state,command.orbId,command.round,policy);
       default: throw new PoolError('invalid-command');
     }
-  });
+  }
 }
 export function releaseSeatOnElimination(pool:SharedPoolState,state:MatchState):SharedPoolResult {
   try {
@@ -320,11 +358,20 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
     const offset=activeOrder.length ? (targetRound-1)%activeOrder.length : 0;
     const order=[...activeOrder.slice(offset),...activeOrder.slice(0,offset)];
     poolEvents.push({type:'sharedRefreshOrder',round:targetRound,seatIds:order});
-    for(const state of prepared) if(state.multiplayer?.status !== 'eliminated' && !state.shop.locked) releaseShop(draft,state.sharedPool!.seatId);
+    const subscribed=(state:MatchState)=>advance&&state.multiplayer?.status!=='eliminated'&&subscriptionStageStart(state,targetRound);
+    for(const state of prepared) if(state.multiplayer?.status !== 'eliminated' && (!state.shop.locked||subscribed(state))) releaseShop(draft,state.sharedPool!.seatId);
     const nextStates=new Map(prepared.map(s=>[s.sharedPool!.seatId,s]));
     for(const id of order) {
       const state=nextStates.get(id)!;
-      if(!state.shop.locked) nextStates.set(id,drawShop(draft,state,poolEvents));
+      if(subscribed(state)) nextStates.set(id,drawSubscriptionShop(draft,state,poolEvents));
+      else if(!state.shop.locked) nextStates.set(id,drawShop(draft,state,poolEvents));
+    }
+    if(advance) for(const id of order) {
+      const stolen=applyFiresale(draft,nextStates.get(id)!,targetRound,poolEvents);
+      if(!stolen.events.length) continue;
+      nextStates.set(id,stolen.state);
+      const row=events.find(e=>e.seatId===id);
+      if(row) row.events=[...row.events,...stolen.events]; else events.push({seatId:id,events:stolen.events});
     }
     draft.naturalRound=targetRound;
     const committed=states.map(s=>finish(draft,nextStates.get(s.sharedPool!.seatId)!,false));

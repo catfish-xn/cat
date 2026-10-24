@@ -100,7 +100,8 @@ it.each(['all-for-one-i','trifecta-i'].flatMap(id=>[false,true].map(exhausted=>(
   let seed=0;
   for(;seed<10000;seed++) {
     if(['golden-gala','prismatic-party','prismatic-prelude','prismatic-finale','wind-up-monkey','component-anvils','artifact-anvil'].includes(openingEncounter(seed)))continue;
-    if(augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[]).offers.includes(id))break;
+    // The 2-1 node filter (no Black Rose crest/crown) matters once the shop-rule cards move the first matching seed.
+    if(augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[],[],'round:2-1:augment').offers.includes(id))break;
   }
   expect(seed).toBeLessThan(10000);
   let pool=createSharedPool('d11-pool',seed,{seatCount:1,...(exhausted?{capacities:{[selectOpeningUnit(seed,'A')]:1}}:{})});

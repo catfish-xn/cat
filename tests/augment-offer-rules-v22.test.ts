@@ -166,8 +166,8 @@ describe('v22 augment choice inside preparation (rules side)', () => {
   });
 
   it('cross-player blocks are empty for the current pool, whatever the other seats hold', () => {
-    // Seeds whose 2-1 offers hold no one-per-match card (batch 3 put Crimson Pact into seed 9's offer).
-    const a = reachRound('2-1', false, 7), b = reachRound('2-1', false, 10);
+    // Seeds whose 2-1 offers hold no one-per-match card (batch 3 put Crimson Pact into seed 9's offer, the shop-rule cards into seed 10's).
+    const a = reachRound('2-1', false, 7), b = reachRound('2-1', false, 11);
     const seat = (s: MatchState, seatId: string) => ({ ...s, multiplayer: { version: 1, seatId, status: 'active', receipts: [], forfeitedChoices: [] } }) as unknown as MatchState;
     expect(externalAugmentBlocks('A', [seat(a, 'A'), seat(b, 'B')])).toEqual([]);
   });

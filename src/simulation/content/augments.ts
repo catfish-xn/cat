@@ -1,6 +1,7 @@
 import { AUGMENT_BATCH2_DEFINITIONS } from './augment-pool-batch2';
 import { AUGMENT_BATCH1_DEFINITIONS } from './augment-pool-batch1';
 import { AUGMENT_BATCH3_DEFINITIONS } from './augment-pool-batch3';
+import { AUGMENT_SHOP_DEFINITIONS } from './augment-pool-shop';
 import { V20_TEAMUP_AUGMENTS } from './v20-traits';
 import { S13_P1_AUGMENTS } from './s13-p1-augments';
 import { D11_AUGMENTS } from './d11-fill';
@@ -12,6 +13,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   ...AUGMENT_BATCH1_DEFINITIONS,
   ...AUGMENT_BATCH2_DEFINITIONS,
   ...AUGMENT_BATCH3_DEFINITIONS,
+  ...AUGMENT_SHOP_DEFINITIONS,
   ...V20_TEAMUP_AUGMENTS,
   sisters:{id:'sisters',name:'姐妹',description:'获得蔚和金克丝。两者在场时解锁姐妹：金克丝参与击杀使蔚获得40%攻击力7秒；蔚参与击杀使金克丝获得75%攻速5秒。',effects:[{kind:'mechanic',mechanic:'sistersUnlock',values:{enabled:1}}]},
   ...D11_AUGMENTS,
