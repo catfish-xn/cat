@@ -3,6 +3,7 @@ import { heroPortraitHtml } from '../../presentation/s13-assets';
 import { avatarUnit } from './opponent-board';
 import type { PlayerView, SeatPublic } from './protocol';
 import { StageTrack } from './stage-track';
+import { overtimeIndicator } from '../../presentation/overtime-display';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -35,6 +36,8 @@ export class PlayersSidebar {
   private clockOffset = 0;
   /** Length of the current countdown (first sight of its deadline) and the deadline it belongs to, for the TFT progress line. */
   private countdownSpan = { endsAt: null as number | null, total: 0 };
+  /** The shown battle's tick from the last frame (null: no running battle), for the overtime indicator. */
+  private combatTick: number | null = null;
   constructor(host: HTMLElement, private readonly countdownHost: HTMLElement | null = null, private readonly onSelect: ((seatId: string) => void) | null = null) {
     this.root = element('aside', '', 'online-sidebar'); this.root.id = 'online-sidebar'; this.root.setAttribute('aria-label', '玩家列表');
     const top = element('div', '', 'online-topbar');
@@ -142,11 +145,18 @@ export class PlayersSidebar {
     const endsAt = this.view?.phase.endsAt ?? null;
     return endsAt === null ? null : Math.ceil(Math.max(0, endsAt - (performance.now() - this.clockOffset)) / 1000);
   }
-  /** Called every frame; only touches the countdown text. */
-  tick(): void {
+  /** Called every frame; only touches the countdown text. `combatTick`: the shown battle's tick (overtime indicator). */
+  tick(combatTick?: number | null): void {
+    if (combatTick !== undefined) this.combatTick = combatTick;
     const view = this.view; if (!view) return;
     const endsAt = view.phase.endsAt;
-    if (endsAt === null) { this.timerLabel.textContent = ''; this.timerLabel.classList.remove('urgent'); this.countdownHost?.style.setProperty('--countdown-left', '0'); return; }
+    const overtime = endsAt === null && view.phase.kind === 'combat' ? overtimeIndicator(this.combatTick) : null;
+    this.timerLabel.classList.toggle('overtime', overtime !== null);
+    if (endsAt === null) {
+      const text = overtime?.text ?? '';
+      if (this.timerLabel.textContent !== text) this.timerLabel.textContent = text;
+      this.timerLabel.classList.remove('urgent'); this.countdownHost?.style.setProperty('--countdown-left', '0'); return;
+    }
     const remaining = Math.max(0, endsAt - (performance.now() - this.clockOffset));
     const seconds = Math.ceil(remaining / 1000); const text = `${seconds}`;
     if (this.countdownSpan.total > 0) this.countdownHost?.style.setProperty('--countdown-left', `${Math.min(1, remaining / this.countdownSpan.total).toFixed(3)}`);

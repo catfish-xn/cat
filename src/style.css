@@ -1072,6 +1072,7 @@ body[data-online] .online-countdown { justify-self: center; gap: 10px; padding: 
   background: linear-gradient(180deg, #0b151fe6, #14212ce6); box-shadow: 0 4px 14px #0007; }
 body[data-online] .online-countdown .online-timer { font-size: 24px; color: #f0e6d2; }
 body[data-online] .online-countdown .online-timer.urgent { color: #f08080; }
+body[data-online] .online-countdown .online-timer.overtime { font-size: 18px; color: #f0b45a; }
 body[data-online] .online-countdown .countdown-round { font-size: 14px; }
 body[data-online] .online-countdown .economy-chip { font-size: 11px; padding: 1px 7px; }
 body[data-online] .shop-dock { grid-template-columns: 128px minmax(0, 1fr) auto 64px; grid-template-rows: 24px minmax(0, 1fr) minmax(0, 1fr);

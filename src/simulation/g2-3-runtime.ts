@@ -25,8 +25,6 @@ export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,
  if(!p||!bundle||!atom||atom.kind==='item'&&atom.options.length>1&&!atom.forgeDefinitionId)return {ok:false,state,reason:'stale-choice'};
  const copy=p.rewardClaims.filter(c=>c.atomId===atom.id).length;
  if(copy>=atom.quantity||atom.kind!=='gold'&&!(atom.forgeDefinitionId?definitionId===atom.forgeDefinitionId:atom.options.includes(definitionId))||atom.kind==='gold'&&definitionId!=='')return {ok:false,state,reason:'stale-choice'};
- if(atom.duplicatorDefinitionId==='TFT13_Crime_Consumable_LesserShimmerDuplicator'
-   &&!state.preparation.units.some(u=>u.team==='player'&&u.definitionId===definitionId))return {ok:false,state,reason:'stale-choice'};
  const request={receiptId:`${atom.id}:copy:${copy}`,source:bundle.source,definitionId,...(bundle.source==='family'?{immediate:true}:{}),...(atom.starLevel?{starLevel:atom.starLevel}:{})};
  if(atom.kind==='tool'){
   const consumableId=`consumable-${state.nextConsumableSerial}`;
