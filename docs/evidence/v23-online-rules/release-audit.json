@@ -50,7 +50,7 @@
     "src/simulation/augment-pool-batch2-progress.ts": "aae44e407b6999ec9d3e0443830d10e47bb51d26a4c54992f2b93ece82ccd891",
     "src/simulation/augment-pool-formswapper.ts": "333a5f94f452f3ad73cbc82e4e587e1063eaa8192c314c8d9f6f658d34e8cde2",
     "src/simulation/augment-pool-grants.ts": "dd2b16aaefde1403b532ce3f2cb3354d3981cfbc2850b153b1ccab4ea5827bd3",
-    "src/simulation/b8-restore.ts": "29bb9d7e04f1799a9e7f62d3989af367b8c1cea0b63f507a7cf777a0cce5eb47",
+    "src/simulation/b8-restore.ts": "a4e0eb77d3977d79ad4e38b84901f90f40da57b5d8bd4ef4bd5736a0d2791a38",
     "src/simulation/battle-equipment.ts": "7c00a2c20cf6aeab7c540d97e22f7a1270e72703d5398c3bdd2557e09bc32b22",
     "src/simulation/battle-input-log.ts": "33b5e48d58c69c294f1a0f7c7426905dac536a2243ce711efbfc996033984fcd",
     "src/simulation/battle-record-validation.ts": "80f2580a2bb74eaea2c0c7cdc5035ab762f36f0594f7c25083c56977e7d33eef",
@@ -104,7 +104,7 @@
     "src/simulation/combat.ts": "b198cd18ebd2fe59a89a3166702caa5a826f2ed3e7632a12ba7d6b2f0fbab80b",
     "src/simulation/component-pool.ts": "1b062923fdfec971b0eaf3b8646470750093565a7bc8d24b27339eaee60f0857",
     "src/simulation/consumable-types.ts": "356658d072bdc230862d25052c3d080a2f7955a7629bddf2db8c0ab74a8aa042",
-    "src/simulation/consumables.ts": "5492f8307b5f6918625bdfb45e2b51046a55214518b13ebf86238f11eba2618b",
+    "src/simulation/consumables.ts": "d36b050f452af44634750ea2fd8df72e59a46bb2f43986f08bb5f832ac103621",
     "src/simulation/content/abilities.ts": "d238cb7345f1fad675ee10d21e329b400019473db06829f77b2396313ef218d8",
     "src/simulation/content/anomalies.ts": "8af0f34f813fb64abd5481a91d6313b0ef91382ad3dbbfd71cdea45eb579c81e",
     "src/simulation/content/anvils.ts": "4b85c4ba57dee11c472079c28530b68c933de529c1d6464f9ba9494609755f15",
@@ -116,7 +116,7 @@
     "src/simulation/content/augment-pool-batch2.ts": "2e39ace600e5a9751ac94de8da06136ca1309c8d64d31dc40b3282efe8d71e12",
     "src/simulation/content/augments.ts": "b46447a23f6b601c9aa69a80a7e75322d1a3a8636f84928b42d33486e0234b69",
     "src/simulation/content/chem-baron-b-overrides.ts": "b438c234b19276f9f821845081bf3d9435c4f421e1f0972a69da02d0ba2e8d51",
-    "src/simulation/content/consumables.ts": "39ba12917094969fb2e8400cd748981c7cd009bf971ffae1acaed21d938fa4d6",
+    "src/simulation/content/consumables.ts": "b85f0cdb398433d72dd6ccf32e969a6c4c6932e41fe7c3e40c115cc3e24145d5",
     "src/simulation/content/d11-fill-source.ts": "1ef70b109a3546c5dd44f9b4873fd6dbceaa24dc16dc4358fc7a33a52fdf4f30",
     "src/simulation/content/d11-fill.ts": "9d9167876c4a0155354636673583881809dff30a960f0e893c6356d67743e468",
     "src/simulation/content/d14-anomalies.ts": "87af76df11ba116afee31128ad645e592a0c961e8176177727f9a8e15ce86659",
@@ -133,7 +133,7 @@
     "src/simulation/content/g2-3-anomaly-source.ts": "b74fc184b83549caea6e7c7a2bdb7690955aaff8fd5c894f42b7c91e21fbd3a1",
     "src/simulation/content/g2-3-item-registry.ts": "eaab98554dfd2d58f4b7ef11e0bbe297ea4b1881ac8edb53538ac8b181a1ffdf",
     "src/simulation/content/g2-3-loot-source.ts": "c62373e4a5d907afce0fe03e9db5e682a5626c55f376a36d9da78474cfe7d459",
-    "src/simulation/content/g2-3-policy.ts": "bcbe21631c86bf04da3493b9717c60a894f39c4cef3fd7af61531f33f7f53b39",
+    "src/simulation/content/g2-3-policy.ts": "c99ab53ea27a73482de9470a7c2cd11ac5854427c3738c2cd6b5fb7ba0101b99",
     "src/simulation/content/g2-3-radiant-programs.ts": "0ec2b735c361dc4b531a1d434b287a217c5c2227c6ba53cf1e53228459de5369",
     "src/simulation/content/g2-3-special-item-runtime.ts": "01d281fb46ac07e38b276d76f923d2718836dfc1e8fc9896f4aa147debbc1c0e",
     "src/simulation/content/g2-3-special-item-source.ts": "36d0de4552dace27e085781dd6be2bc10fde692d992f2b7753214b62060913b9",
@@ -155,7 +155,7 @@
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
-    "src/simulation/content/identity-constants.ts": "2f8adf7793cd2143e6af7d5e7b179a71700f9ade84d5d411e8df4128c95b6451",
+    "src/simulation/content/identity-constants.ts": "e296fd7f34c7b54ed167bc0904303dfcc0dfa541a32d50a130b8c059a0fcd1f5",
     "src/simulation/content/index.ts": "e23e1391eb2c2f853a5a607d99728f91cdbe2397ff7c9e43896cac6226396cd4",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -270,14 +270,14 @@
     "src/simulation/g2-3-progress.ts": "b208562df3809323e72210a3b7a482675ab03b99d64c0a182ed64d85adc3d69b",
     "src/simulation/g2-3-radiant.ts": "a6e81641114f8ae5fa042e3fb050c362bb4c1bbf7f043d0b3173bd862d0497cf",
     "src/simulation/g2-3-restore.ts": "461174bdb2a2e2e5bccf85b82ce35fc61046b3a4a36b1e62b8184bd48ae4e6af",
-    "src/simulation/g2-3-rewards.ts": "df644923d4a5f1d242d2494802656a14f856807b6f012ea954f92384af32061c",
-    "src/simulation/g2-3-runtime.ts": "fa4c4ccd69570f1c0bfbaf930a9b4c93b84c9de059b4b6612b05b66c0ffe18a0",
+    "src/simulation/g2-3-rewards.ts": "bb2481e265011496c7f17ed330714db680854a2a8da8902a0dfd25df7a35112d",
+    "src/simulation/g2-3-runtime.ts": "72e9c7d37b4d782f3161375eed0728248d3035b082465e13c47926509816aa54",
     "src/simulation/g2-3-settlement.ts": "7dc6c3cf118dd1c8a8624cd31f88b0b536b0ae0a8213288fdf8d4c4c79c9577e",
     "src/simulation/g2-3-state.ts": "de955930e66b46a55375a4142e970c901b48be9e572b415fd1c83480c455b4d8",
     "src/simulation/g2-3-summons.ts": "845e6be30c8c7246a3e1db68ccb55a5a9dfb72bfc7bf63822f04c964dd2e5f0c",
     "src/simulation/g2-3-view.ts": "8815b45bed70b354a215e70ea67b5057012fefdbe54fff99ba1b485fd9077d7b",
     "src/simulation/g2-4-support.ts": "db05c129202ca12389b1754c3120ee8f52afa3cde657623e0662dd2b69d4fbd6",
-    "src/simulation/g2-4b-gold-restore.ts": "884102dddea79674eae8a0f7e0abf1744f067dccd3c4b5e33b1aab41146c882e",
+    "src/simulation/g2-4b-gold-restore.ts": "d13d3631addd05344b26d09a664021944ae1ea5a548111739bca008ccff71e1d",
     "src/simulation/g2-4b-item-gold.ts": "65788f307ff4f644ec5a8a8117d998693e324a32cfdec1890a071816238ff03e",
     "src/simulation/g2-4b-item-kernel.ts": "a7d2bcbf394fe7ac753cd4424c575cad216b23aad7f115c36e7bcfafea4448e2",
     "src/simulation/g2-4b-summons.ts": "8e7b47064d9b2bb4c01be3707bd4735302acf73482ee1b1185bfa22f7a4b3ae0",
@@ -358,7 +358,7 @@
     "src/simulation/private-seat-view.ts": "98f1a12bfc29e6430abfab5804ea9a092e4b3da6dbcedd185d06eef353ea4b38",
     "src/simulation/progression.ts": "bf9df858df4e3fde5f7296e988ad09bfd93c30b0b101fd92a406b67685b05669",
     "src/simulation/pve-remover.ts": "74f09b4aa34887ba7d4ae6122df299c8b2fd679dda2474c068c378b271e0b661",
-    "src/simulation/resource-provenance.ts": "9d9788dc573ba8ed4555a3b2f1ffb67c4832c266ae7df30db27115abd2b471e3",
+    "src/simulation/resource-provenance.ts": "557376761b0d221df638f0c47a81f567d7612513b5ae7aa6e4e6bb7741107fe0",
     "src/simulation/restore-bounds-preflight.ts": "32174996022aea6009fd6750f3a00087386b365c5eda32ebb8f1b4461d4a7543",
     "src/simulation/restore-combat-replay.ts": "dd37f3dbc95989b4b082669ef5c0756402aab0444a935f42e8b8a568e9a54692",
     "src/simulation/rewards.ts": "42ed20b01f6abc5897f2b546acc8c7ab93a8722d65701e5ea9978652e0e8c5dd",
@@ -417,8 +417,8 @@
   "baseCommit": "2b434e28248232906a3251e0c56af68ca15c7bcf",
   "baseline": {
     "parentEpoch": "v22-online-rules",
-    "contentDigest": "fnv1a32-utf16:19a07434",
-    "lootReplayDigest": "fnv1a32-utf16:0eb630e2",
+    "contentDigest": "fnv1a32-utf16:1b4978e8",
+    "lootReplayDigest": "fnv1a32-utf16:fcf9dc36",
     "rulesVersion": "s13-g2-3-v23-online-rules",
     "contentVersion": "s13-14.24b-g2-3-v23-online-rules",
     "schemaVersion": 12,
@@ -429,7 +429,7 @@
     "previousContentDigest": "fnv1a32-utf16:2ee7d9d2",
     "previousLootReplayDigest": "fnv1a32-utf16:84b3b60c",
     "traceHashes": {
-      "state": "8ffb287ab2e4410f77be1f3f5bf8d6b389b921b30d31a27a2b8147a934f6824a",
+      "state": "b3baaed037c82155d30e18d9ef32bc099e6ac32e5ae29a4469ce4c9c9d594e5e",
       "events": "b82d46fa16f39d98add3fb39ba8b0cd4446810b6594a882ca956c0a28bbec134",
       "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
     },
@@ -467,14 +467,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 914301,
-          "currentBytes": 882351,
+          "currentBytes": 882438,
           "previousSha256": "aa86af2e8d59a1e053e19ed9f6e3ba6bf329da26ded9704b7d99edbfcbe82a03",
-          "currentSha256": "d023556f74844a44b1c0acb8adde7bf4c92b13882c785901ecab57c50598435b",
+          "currentSha256": "7e20a74e819e142170ad2dd61c5a15abfab07119f1d65dfc0683cbdb5b7c2e12",
           "firstDifferentByte": 15
         },
         "states": 67,
-        "gzipSha256": "d023556f74844a44b1c0acb8adde7bf4c92b13882c785901ecab57c50598435b",
-        "stateUtf8Sha256": "c53707941f7775ca7affc4cafae9be774d5d62d7d30027b740e74d9d15388a1d",
+        "gzipSha256": "7e20a74e819e142170ad2dd61c5a15abfab07119f1d65dfc0683cbdb5b7c2e12",
+        "stateUtf8Sha256": "e8f7ba06718a4b568be8213b0282b37bdb5e36ca756e5ce57fe706b70899e09e",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "aa86af2e8d59a1e053e19ed9f6e3ba6bf329da26ded9704b7d99edbfcbe82a03"
       },
@@ -2053,14 +2053,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 958847,
-          "currentBytes": 901924,
+          "currentBytes": 902019,
           "previousSha256": "fb5a4acd8afaa9d9dfde65691f6495110d78b5ec865efad7832b37bf7eb35099",
-          "currentSha256": "32be2bbcdf9826cd1b62d676c554d88607994910092bdc3fdb07f4837eddea78",
+          "currentSha256": "a510530611d4f329efc64c7e3d22fa295079d5f936b6ede5e68286a0dc5b77a5",
           "firstDifferentByte": 19
         },
         "states": 67,
-        "gzipSha256": "32be2bbcdf9826cd1b62d676c554d88607994910092bdc3fdb07f4837eddea78",
-        "stateUtf8Sha256": "986bbb90c536ccc0e6bffd5e7c12659ed892e26506b3981359d7f70b86015d8d",
+        "gzipSha256": "a510530611d4f329efc64c7e3d22fa295079d5f936b6ede5e68286a0dc5b77a5",
+        "stateUtf8Sha256": "70503c4651f2ab27a7ed1171ce759320738ab9fb0499e03e0ac24b9cad099970",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "fb5a4acd8afaa9d9dfde65691f6495110d78b5ec865efad7832b37bf7eb35099"
       },
@@ -6766,12 +6766,12 @@
       }
     }
   },
-  "candidateSha256": "7e21128de331e1d22dab951cdb3b5641e2ce7006540775ffc3edb2e5af51e9d7",
+  "candidateSha256": "e98ee444aaad0c994e301ddf46216c3b62fc48c861cd95ef5109fe1b2010cf22",
   "goldenByteEvidence": {
     "previousBytes": 112053,
     "currentBytes": 109206,
     "previousSha256": "afc8e287f0a80bd8b677577bffabc23191c83d4018a3053f0b2a8195a98b68d2",
-    "currentSha256": "7e21128de331e1d22dab951cdb3b5641e2ce7006540775ffc3edb2e5af51e9d7",
+    "currentSha256": "e98ee444aaad0c994e301ddf46216c3b62fc48c861cd95ef5109fe1b2010cf22",
     "firstDifferentByte": 15
   }
 }

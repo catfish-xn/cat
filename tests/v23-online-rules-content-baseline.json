@@ -1,7 +1,7 @@
 {
   "parentEpoch": "v22-online-rules",
-  "contentDigest": "fnv1a32-utf16:19a07434",
-  "lootReplayDigest": "fnv1a32-utf16:0eb630e2",
+  "contentDigest": "fnv1a32-utf16:1b4978e8",
+  "lootReplayDigest": "fnv1a32-utf16:fcf9dc36",
   "rulesVersion": "s13-g2-3-v23-online-rules",
   "contentVersion": "s13-14.24b-g2-3-v23-online-rules",
   "schemaVersion": 12,
@@ -12,7 +12,7 @@
   "previousContentDigest": "fnv1a32-utf16:2ee7d9d2",
   "previousLootReplayDigest": "fnv1a32-utf16:84b3b60c",
   "traceHashes": {
-    "state": "8ffb287ab2e4410f77be1f3f5bf8d6b389b921b30d31a27a2b8147a934f6824a",
+    "state": "b3baaed037c82155d30e18d9ef32bc099e6ac32e5ae29a4469ce4c9c9d594e5e",
     "events": "b82d46fa16f39d98add3fb39ba8b0cd4446810b6594a882ca956c0a28bbec134",
     "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
   },
