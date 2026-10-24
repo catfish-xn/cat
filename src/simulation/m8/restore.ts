@@ -62,6 +62,13 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
           // The D11 source compiler binds this static damage amplifier at tick 0.
           // isDeclaredStatus above and consumption below authenticate coefficients.
           check(c.source.ownerId===unit.id&&c.appliedAtTick===0&&c.expiresAtTick===null,'D11 opening status source/timing');
+        } else if (c.source.sourceKind === 'augment' && units.find(u => u.id === c.source.ownerId)?.mechanics?.some(m => m.mechanic === 'corrosion' && canonicalSource(asSource(m.source)) === canonicalSource(c.source))) {
+          // Batch-3 Corrosion: an enemy-side, permanent pulse on the holder's combat clock (combat-augment-effects.ts).
+          const owner = units.find(u => u.id === c.source.ownerId)!, m = owner.mechanics!.find(m => m.mechanic === 'corrosion')!;
+          const [tickOf, index] = JSON.parse(JSON.parse(c.key)[8]).slice(1) as [number, number];
+          check(owner.team !== unit.team && c.expiresAtTick === null && c.appliedAtTick > 0 && c.appliedAtTick <= tick && c.appliedAtTick % m.values.periodTicks === 0
+            && tickOf === c.appliedAtTick && JSON.parse(c.key)[8] === JSON.stringify(['corrosion', c.appliedAtTick, index])
+            && same(statusDeclaration(augmentCombatEffects(m)[index], owner, c.source), c.application), 'augment corrosion pulse');
         } else if (c.source.sourceKind === 'augment') {
           const owner = units.find(u => u.id === c.source.ownerId)!;
           const m = owner.mechanics?.find(m => canonicalSource(asSource(m.source)) === canonicalSource(c.source));

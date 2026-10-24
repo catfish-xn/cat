@@ -22,6 +22,8 @@ interface Batch3Content {
  readonly superstars?:boolean; readonly gold?:string;
  /** Flexible: every board ally gains HPPerEmblem for each emblem held across the board (P 2026-10-24). */
  readonly flexible?:boolean;
+ /** Corrosion: every Time seconds, enemies in their own front two rows lose ResistLoss armor and magic resist. */
+ readonly corrosion?:boolean;
 }
 /** classification.json batch 3, group 3a-1: grants scheduled by player-combat count, player-combat results or allied deaths.
  * Every count and reward is the 14.24 zh_cn/en_us source value. Three readings are project conventions (P 2026-10-24,
@@ -29,6 +31,26 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+
+
+ "corrosion": {
+  "apiName": "TFT_Augment_Corrosion",
+  "name": "腐蚀",
+  "tier": "silver",
+  "description": "前两排的敌方弈子们每2秒损失3护甲和魔抗。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "ResistLoss": 3.0,
+    "Time": 2.0
+   },
+   "description_en_us": "Enemy champions in the first two rows lose 3 Armor and Magic Resist every 2 seconds."
+  },
+  "gifts": [],
+  "schedules": [],
+  "corrosion": true
+ },
  "building-a-collection-iii": {
   "apiName": "TFT9_Augment_BuildingACollectionPlusPlus",
   "name": "珍藏财宝 III",
@@ -635,6 +657,7 @@ export function batch3Count(row:Batch3Content,key:string|number):number {
 export const AUGMENT_BATCH3_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>>=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH3).map(([id,row]):[string,ChoiceDefinition]=>[id,{
  id,name:row.name,description:row.description,effects:[{kind:'mechanic',mechanic:'acquisitionBundle',values:{enabled:1}},
   ...(row.gold?[{kind:'mechanic' as const,mechanic:'acquisitionGold',values:{amount:batch3Count(row,row.gold)}}]:[]),
+  ...(row.corrosion?[{kind:'mechanic' as const,mechanic:'corrosion',values:{resistLoss:batch3Count(row,'ResistLoss'),periodTicks:batch3Count(row,'Time')*20}}]:[]),
   ...(row.flexible?[{kind:'mechanic' as const,mechanic:'flexible',values:{healthPerEmblem:batch3Count(row,'HPPerEmblem')}}]:[]),
   ...(row.superstars?[{kind:'mechanic' as const,mechanic:'superstars',values:{baseBps:Math.round(row.source.values.BaseBonusDamage!*10000),per3StarBps:Math.round(row.source.values.BonusDamagePer3Star!*10000)}}]:[])],
 }])));

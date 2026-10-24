@@ -12,6 +12,7 @@ import type { Effect } from './m8/contracts';
 import { asSource } from './m8/s13-definitions';
 import { effectIdentity } from './m8/identity';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
+import { startingRows } from './m8/targeting';
 
 /** Shared declarations also let restore validate exact source coefficients. */
 export function augmentCombatEffects(m: CombatMechanic, tick = 0): readonly Effect[] {
@@ -30,6 +31,7 @@ export function augmentCombatEffects(m: CombatMechanic, tick = 0): readonly Effe
       const protection = shield(v.shieldMaxHpBps, MAX_COMBAT_TICKS + 1 - tick) as Extract<Effect, {kind:'grant-shield'}>;
       return [{ ...protection, amount: { ...protection.amount, hpBasis: 'target' } }, independent(stat(modifier('attackSpeed', v.attackSpeedBps, 'bps')))];
     }
+    case 'corrosion': return [independent(stat(modifier('armor', -v.resistLoss))), independent(stat(modifier('magicResist', -v.resistLoss)))];
     default: return [];
   }
 }
@@ -52,6 +54,19 @@ export function advanceAugmentCombat(ctx: AbilityContext): void {
       if (m.mechanic === 'loneHero' && ctx.units.filter(u => u.team === unit.team && u.alive && u.hp > 0 && !isAttackProxy(u)).length === 1)
         augmentCombatEffects(m).forEach((effect, index) => grant(ctx, unit, unit, m, effect, JSON.stringify(['loneHero', index])));
     }
+  }
+  advanceCorrosion(ctx);
+}
+/** Corrosion is one team-wide clock: the first live holder (by id) applies each pulse once to every live enemy
+ * that started the combat in its own front two rows (P 2026-10-24: the board's row helper samples starting rows). */
+function advanceCorrosion(ctx: AbilityContext): void {
+  for (const team of ['player', 'enemy'] as const) {
+    const holder = ctx.units.filter(u => u.team === team && u.alive && u.hp > 0 && u.mechanics?.some(m => m.mechanic === 'corrosion'))
+      .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)[0];
+    const m = holder?.mechanics!.find(m => m.mechanic === 'corrosion');
+    if (!holder || !m || ctx.tick <= 0 || ctx.tick % m.values.periodTicks !== 0) continue;
+    for (const enemy of ctx.units.filter(u => u.team !== team && u.alive && u.hp > 0 && startingRows(u.team, u.startingCell?.row ?? u.cell.row) === 'front-two'))
+      augmentCombatEffects(m).forEach((effect, index) => grant(ctx, holder, enemy, m, effect, JSON.stringify(['corrosion', ctx.tick, index])));
   }
 }
 /** The opening strategy, including inactive rows, owns runtime membership.

@@ -11,10 +11,12 @@ import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import type { MatchState } from '../src/simulation/match-types';
-import { rerollShop, selectChoice, startMatchCombat, nextRound } from '../src/simulation/match';
+import { rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit } from '../src/simulation/match';
+import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { drainBatch3RoundEntry } from '../src/simulation/augment-pool-batch3-progress';
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
+import { startingRows } from '../src/simulation/m8/targeting';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateSharedShop, rerollSharedShop } from '../src/server-entry';
@@ -40,9 +42,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the nineteen batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the twenty batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['building-a-collection-iii','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','latent-forge','living-forge','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','latent-forge','living-forge','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -205,4 +207,39 @@ it('round-start gifts arrive through real round entries, once, with receipts the
   expect(count()).toBe(Math.min(6,1+s.round-acquired));expect(drainBatch3RoundEntry(s)).toBe(s);
   validateBatch1Gifts(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  }
+});
+
+it('Corrosion: every 2 seconds each enemy that started in its own front two rows loses 3 armor and 3 magic resist, once per pulse per team', ()=>{
+ const s=createMatch(42),u=s.preparation.units[0];
+ const units=[
+  {...u,id:'p0',team:'player' as const,location:{kind:'board' as const,cell:{col:0,row:7}}},{...u,id:'p1',team:'player' as const,location:{kind:'board' as const,cell:{col:6,row:7}}},
+  {...u,id:'e-front',definitionId:'garen',team:'enemy' as const,location:{kind:'board' as const,cell:{col:3,row:3}}},{...u,id:'e-back',definitionId:'garen',team:'enemy' as const,location:{kind:'board' as const,cell:{col:3,row:0}}}];
+ const preparation={...s.preparation,units};
+ const strategy=buildStrategySnapshot({...s,preparation,augments:[{definitionId:'corrosion',choiceId:'t',acquiredRound:1}]});
+ let c=createCombatWithEvents(preparation,strategy,'corrosion',42).state;
+ const pulses=(id:string)=>c.units.find(x=>x.id===id)!.mechanismState?.statuses.flatMap(g=>g.contributions).filter(x=>x.source.definitionId==='corrosion')??[];
+ const frontAt=()=>c.units.filter(x=>x.team==='enemy'&&x.alive&&x.hp>0&&startingRows('enemy',x.startingCell?.row??x.cell.row)==='front-two').map(x=>x.id).sort();
+ for(const pulse of [40,80]){
+  while(c.tick<pulse-1)c=stepCombat(c).state;
+  const before=Object.fromEntries(c.units.map(x=>[x.id,pulses(x.id).length])),eligible=frontAt();
+  c=stepCombat(c).state;expect(c.tick).toBe(pulse);
+  for(const x of c.units.filter(x=>x.team==='enemy'))expect(pulses(x.id).length-before[x.id]).toBe(eligible.includes(x.id)&&x.alive?2:0);
+  expect(c.units.filter(x=>x.team==='player').every(x=>pulses(x.id).length===0)).toBe(true);
+  for(const x of c.units.filter(x=>x.team==='enemy'))for(const p of pulses(x.id))expect([p.source.ownerId,p.application.modifier?.value]).toEqual(['p0',{kind:'constant',amount:-3}]);
+ }
+ expect(c.units.some(x=>pulses(x.id).length>0)).toBe(true);
+});
+it('Corrosion survives a real public selection, combat and strict mid-combat save/restore', ()=>{
+ let seed=0;while(!firstOffers(seed).includes('corrosion'))seed++;
+ let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;expect(c.offers).toContain('corrosion');
+ s=accept(selectChoice(s,c.choiceId,c.generation,'corrosion') as any).state as MatchState;
+ const unit=s.preparation.units.find(u=>u.team==='player')!;
+ s=accept(deployMatchUnit(s,unit.id,{kind:'board',cell:{col:3,row:4}}) as any).state;
+ s=accept(startMatchCombat(s) as any).state;let checked=0,seen=false;
+ while(s.phase==='combat'){
+  s=stepMatch(s).state;
+  if(s.combat&&s.combat.tick%40===1){expect(restoreMatch(serializeMatch(s))).toEqual(s);checked++;}
+  seen||=!!s.combat?.units.some(u=>u.team==='enemy'&&u.mechanismState?.statuses.some(g=>g.contributions.some(x=>x.source.definitionId==='corrosion')));
+ }
+ expect(checked).toBeGreaterThan(0);expect(seen).toBe(true);
 });
