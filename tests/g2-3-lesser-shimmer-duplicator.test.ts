@@ -142,8 +142,12 @@ function publicMarket():MatchState{
  throw Error('Public market battle budget');
 }
 
-function expectRoundTripAndNextBattle(state:MatchState):void{
- const saved=serializeMatch(state),copies=[restoreMatch(saved),restoreMatch(state),restoreMatch(JSON.stringify(state))];
+/** The three save entrances; a long replay can check one entrance per case. */
+const ENTRIES=['serialized save','state object','JSON string'] as const;
+type Entry=typeof ENTRIES[number];
+const restoreVia=(state:MatchState,entry:Entry)=>entry==='serialized save'?restoreMatch(serializeMatch(state)):entry==='state object'?restoreMatch(state):restoreMatch(JSON.stringify(state));
+function expectRoundTripAndNextBattle(state:MatchState,entries:readonly Entry[]=ENTRIES):void{
+ const copies=entries.map(entry=>restoreVia(state,entry));
  for(const copy of copies)expect(copy).toEqual(state);
  let original=preparation(state),restored=copies.map(preparation);
  const start=startMatchCombat(original);original=ok(start);
@@ -157,6 +161,8 @@ function expectRoundTripAndNextBattle(state:MatchState):void{
  }
  expect(ticks).toBeGreaterThan(0);expect(original.combat?.status).toBe('finished');
 }
+/** Built once per file; the first case to use it also runs its assertions. */
+function once<T>(build:()=>T):()=>T{let value:T|undefined;return ()=>value??=build();}
 
 it('restores the naturally obtained pending black-market reward and the next battle tick for tick',()=>{
  const state=publicMarket();
@@ -179,14 +185,18 @@ it('restores the sole naturally offered bundle without duplicate grants',()=>{
  }
 });
 
-it('restores the used lesser shimmer duplicator and the next battle tick for tick',()=>{
+const usedDuplicator=once(()=>{
  const pending=publicMarket(),choice=pending.pendingChoice!;
  const used=ok(selectChoice(pending,choice.choiceId,choice.generation,choice.offers[0]));
  const claim=readG23Progress(used)!.rewardClaims.find(c=>c.kind==='duplicator')!;
  expect(['singed','renata','renni','smeech']).toContain(claim.definitionId);
  expect(used.preparation.units.some(u=>u.id===claim.instanceId)).toBe(true);
- expectRoundTripAndNextBattle(used);
-},15_000); // whole-route replay: 2.4-3.5 s alone, timed out at the 5 s default under parallel load
+ return used;
+});
+// One save entrance per case keeps each next-battle replay inside the default timeout under parallel load.
+it.each(ENTRIES)('restores the used lesser shimmer duplicator and the next battle tick for tick (%s)',entry=>{
+ expectRoundTripAndNextBattle(usedDuplicator(),[entry]);
+});
 
 function usedMarket():MatchState{
  const pending=publicMarket(),choice=pending.pendingChoice!;
@@ -273,7 +283,9 @@ it('escrows a full-bench market and redeems its duplicator and later heroes in o
  const saved=serializeMatch(preparation(state));expect(serializeMatch(restoreMatch(saved))).toBe(saved);
 },20_000);
 
-it.each([13,15])('preserves an escrowed public claim at round %s choosing another owned eligible target',round=>{
+const escrowedClaims=new Map<number,MatchState>();
+function escrowedClaim(round:number):MatchState{
+ const cached=escrowedClaims.get(round);if(cached)return cached;
  let state=preparation(fullMarket());
  while(state.round<round){
   state=ok(startMatchCombat(state));
@@ -289,8 +301,11 @@ it.each([13,15])('preserves an escrowed public claim at round %s choosing anothe
  expect(atom.options.find(id=>state.preparation.units.some(u=>u.team==='player'&&u.definitionId===id))).toBe('singed');
  state=ok(claimG23Reward(state,atom.id,'renata'));
  expect(readG23Progress(state)!.rewardClaims.find(c=>c.atomId===atom.id)).toMatchObject({definitionId:'renata'});
- expectRoundTripAndNextBattle(state);
-},15_000); // whole-route replay: 2.4-3.5 s alone, timed out at the 5 s default under parallel load
+ escrowedClaims.set(round,state);return state;
+}
+it.each([13,15].flatMap(round=>ENTRIES.map(entry=>({round,entry}))))('preserves an escrowed public claim at round $round choosing another owned eligible target ($entry)',({round,entry})=>{
+ expectRoundTripAndNextBattle(escrowedClaim(round),[entry]);
+});
 
 it('keeps consecutive black-market RNG cursors and offers equal to the baseline stream',()=>{
  // Independent source-weight oracle for the single-word market stream.
@@ -369,7 +384,7 @@ it.each(['settlement','next preparation'])('rejects a different owned ordinary l
  rejectsEveryEntry(forged,'mechanic duplicator target');
 });
 
-it('restores an ordinary duplicator manually claimed from escrow and the next battle tick for tick',()=>{
+const ordinaryEscrowClaim=once(()=>{
  publicConqueror();
  let state=beforeConqueror!;
  for(const definitionId of ['leona','lux','tristana','maddie','vex','zyra','singed','renata','renni']){
@@ -390,5 +405,8 @@ it('restores an ordinary duplicator manually claimed from escrow and the next ba
  const target=['darius','draven','swain','irelia'].find(id=>id!==first)!;
  state=ok(claimG23Reward(state,atom.id,target));
  expect(readG23Progress(state)!.rewardClaims.find(c=>c.atomId===atom.id)).toMatchObject({definitionId:target});
- expectRoundTripAndNextBattle(state);
-},15_000); // whole-route replay: 2.4-3.5 s alone, timed out at the 5 s default under parallel load
+ return state;
+});
+it.each(ENTRIES)('restores an ordinary duplicator manually claimed from escrow and the next battle tick for tick (%s)',entry=>{
+ expectRoundTripAndNextBattle(ordinaryEscrowClaim(),[entry]);
+});
