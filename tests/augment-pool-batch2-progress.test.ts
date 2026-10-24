@@ -70,6 +70,17 @@ it('Betrayal follows Ambessa target for ordinary attacks and spells; two kills m
  expect(batch2BattleFacts({...s,units:c.units},'player')).toEqual([{definitionId:'betrayal',count:0}]);
  batch2Kill(c,a,e,()=>3);expect(batch2BattleFacts({...s,units:c.units},'player')).toEqual([{definitionId:'betrayal',count:1}]);
 });
+it('Betrayal needs both partners fielded and counts champion and PvE monster kills, never summons (P-AG5)',()=>{
+ expect(combat('betrayal',['maddie']).units.some(u=>u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'))).toBe(false);
+ const s=combat('betrayal',['maddie','ambessa']),c=context(s,1),a=c.units.find(u=>u.definitionId==='ambessa')!,e=c.units.find(u=>u.team==='enemy')!;
+ for(const definitionId of ['g23-sion','g23-forge','s13-mini'])batch2Kill(c,a,{...e,definitionId},()=>1);
+ batch2Kill(c,a,{...e,itemSummon:{} as never},()=>1);
+ expect(a.batch2?.kills).toBeUndefined();
+ batch2Kill(c,a,{...e,definitionId:'s13-wolf'} as typeof e,()=>1);
+ expect(a.batch2?.kills).toBeUndefined();
+ batch2Kill(c,a,e,()=>2);expect(a.batch2?.kills).toBe(1);
+ batch2Kill(c,a,{...e,definitionId:'neutral-stage-2',unitKind:'neutral'} as typeof e,()=>3);expect(a.batch2?.kills).toBe(2);
+});
 it('Pit Fighters gain 45 HP per win and 1.5% AD per loss; draws grant neither, and source history is not mutated',()=>{
  const s=combat('pit-fighter-prizefighter',['urgot']),base=createMatch(42);let p=createG23Progress(42);
  for(const [i,result] of ['win','loss','win','draw'].entries())p=advanceG23Economy(p,fact(i+1,[],result as 'win'|'loss'|'draw')).progress;

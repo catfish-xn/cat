@@ -41,7 +41,7 @@
 | `TFT13_Augment_Visionary` | `visionary-voidlings` | 阻塞 | Mana=275.0, MaxVoidlings=5.0, Stage2Health=400.0, Stage3Health=450.0, Stage4Health=500.0, Stage5Health=550.0, Stage6Health=600.0 |
 | `TFT13_Augment_Watcher` | `watcher-growth` | 完成 | IncreaseADByTakeAttack=2.0, IncreaseAPByTakeSpell=4.0 |
 | `TFT13_TeamupAugment_Betrayal` | `betrayal` | 完成 | NumKills=2.0 |
-| `TFT13_TeamupAugment_BloodBrothers` | `blood-brothers` | 阻塞 | APGainPerDeath=6.0, MaxHealthGainPerCast=30.0 |
+| `TFT13_TeamupAugment_BloodBrothers` | `blood-brothers` | 完成（2026-10-24 wave4，P-AG5） | APGainPerDeath=6.0, MaxHealthGainPerCast=30.0 |
 
 ## 2026-10-24 独立审查续修
 
@@ -68,7 +68,7 @@ S1/S2/N1与本次逐项复核、最新测试见 [续修报告](AUGMENT_POOL_REVI
 - `TFT13_Augment_Rebel`：5名/减400HP齐；缺一星死亡后的目标星级（原文低一星）、最低生命下限及召唤复制继承装备/永久成长/强化、是否能再触发复制的完整口径。
 - `TFT13_Augment_Sniper`：每次8%、上限32%齐；缺首战是否即有一层、换格/备战席/离场/重新购买时的层数重置规则及合星继承规则。
 - `TFT13_Augment_Visionary`：275法力、最多5只、阶段2–6生命400/450/500/550/600齐；缺虚灵基础AD/攻速/双抗/射程/技能与出生位置/无空格政策，不能只造一个有HP但其余数值自定的单位。
-- `TFT13_TeamupAugment_BloodBrothers`：30永久HP/6永久AP、二星范德尔/希尔科/朔极之矛齐；缺多副本时的配对/受益实例范围及死亡/复活/出售/合星后永久成长归属；尚无本项的跨战成长认证字段与接线。
+- `TFT13_TeamupAugment_BloodBrothers`：已于2026-10-24 wave4开启。原缺的多副本配对、死亡/复活/出售/合星成长归属按 `S13_RULES_GAP.md` P-AG5（next-version-data-check 推荐约定）补齐；跨战累计用战斗事实 `blood-brothers`/`blood-brothers-deaths` 认证。
 
 ## 后续规则问题与建议（均未擅自设为P）
 
@@ -76,7 +76,7 @@ S1/S2/N1与本次逐项复核、最新测试见 [续修报告](AUGMENT_POOL_REVI
 - 禁忌魔法三弈子：建议补原版候选/费用/权重；若改为项目政策，建议明确列出已有Black Rose成员池并沿用通用等权、共享池奖励规则。
 - 空战每格3%：建议取得脚本/历史释义确认加法还是乘法与移动计格，不把Bonus=3自行绑定到AD/AP或距离。
 - 试验品特殊格、一星蓝发复制、狙神层数重置、虚灵完整属性：建议继续禁用直到补齐上节字段，避免选择一个未经批准的坐标、下限或单位数值。
-- 本可发生之事：建议先确认多副本配对与永久成长继承；可选沿用已有V20“装备数/星级/id”单对政策，但它是项目政策，不能伪称本项14.24事实。
+- 本可发生之事：已按 P-AG5 开启（多副本取获得最早者；累计值属于玩家），属项目约定，不伪称14.24事实。
 
 ## 测试与结果
 

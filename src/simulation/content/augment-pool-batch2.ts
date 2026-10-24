@@ -671,8 +671,22 @@ export const AUGMENT_BATCH2:Readonly<Record<string,TraitAugmentContent>>=freezeC
       },
       "description_en_us": "Vander gains 30 permanent max Health each time Silco casts. Silco gains 6 permanent Ability Power each time Vander dies.\n\nGain a 2-star Vander, a Silco, and a Spear of Shojin."
     },
-    "gifts": [],
-    "enabled": false
+    "gifts": [
+      {
+        "kind": "unit",
+        "definitionId": "vander",
+        "starLevel": 2
+      },
+      {
+        "kind": "unit",
+        "definitionId": "silco"
+      },
+      {
+        "kind": "item",
+        "definitionId": "shojin"
+      }
+    ],
+    "enabled": true
   }
 });
 export const AUGMENT_BATCH2_ENABLED=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH2).filter(([,row])=>row.enabled)));
@@ -695,6 +709,5 @@ export const AUGMENT_BATCH2_BLOCKED=freezeContent({
   "aerial-warfare": "R[73]：9%AD/9AP 与 Bonus=3 齐；缺“每格另外3%”作用于基础值还是累积值的精确定义，以及该战移动格数是否含普通移动/冲刺/传送、冲刺过程如何计格。",
   "rebel-resurgence": "R[144]：5名/减400HP齐；缺一星死亡后的目标星级（原文低一星）、最低生命下限及召唤复制继承装备/永久成长/强化、是否能再触发复制的完整口径。",
   "snipers-nest": "R[178]：每次8%、上限32%齐；缺首战是否即有一层、换格/备战席/离场/重新购买时的层数重置规则及合星继承规则。",
-  "visionary-voidlings": "R[208]：275法力、最多5只、阶段2–6生命400/450/500/550/600齐；缺虚灵基础AD/攻速/双抗/射程/技能与出生位置/无空格政策，不能只造一个有HP但其余数值自定的单位。",
-  "blood-brothers": "R[301]：30永久HP/6永久AP、二星范德尔/希尔科/朔极之矛齐；缺多副本时的配对/受益实例范围及死亡/复活/出售/合星后永久成长归属；尚无本项的跨战成长认证字段与接线。"
+  "visionary-voidlings": "R[208]：275法力、最多5只、阶段2–6生命400/450/500/550/600齐；缺虚灵基础AD/攻速/双抗/射程/技能与出生位置/无空格政策，不能只造一个有HP但其余数值自定的单位。"
 });

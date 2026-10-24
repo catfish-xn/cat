@@ -1,3 +1,4 @@
+import { startExperimentClones } from './combat-experiment-clone';
 import { startV20Traits } from './combat-v20-traits';
 import { startSixCost } from './combat-six-cost';
 import { startG22Traits } from './combat-g2-2';
@@ -84,6 +85,7 @@ export function applyCombatStart(state: CombatState): CombatStep {
     startV20Traits({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V20 opening cannot draw RNG');}});
     // Final owner HP is frozen only after all opening boosts and broadcasts.
     initializeMirrorHealth(mechanismUnits,shields);
+    startExperimentClones(mechanismUnits);
   }
   return stampCombatStep({ ...state, units, rngState, rngDraws, startEffectsApplied: true }, [...effects, ...shields, ...mana]);
 }

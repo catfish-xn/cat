@@ -1,4 +1,4 @@
-import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick } from './augment-pool-batch2-combat';
+import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
 import { isOpeningCrab, crabMove, crabJump } from './combat-opening-crabs';
 import { overtimeBonusBps, movementIntervalTicks, quickstrikerMoveTenths } from './combat-overtime';
@@ -15,6 +15,7 @@ import { UNIT_DEFINITIONS } from './units';
 import { advanceP3, p3Attack, p3Cast, p3Roll, p3BurnRaw, p3Reflect, p3Damage, p3Mechanic, settleP3Deaths } from './s13-p3-combat';
 import { p3Values } from './s13-p3-programs';
 import {splitTrenchHolders} from './combat-g2-4b-trench';
+import {splitExperimentClones} from './combat-experiment-clone';
 import { castAnomaly, tickAnomalies, takedownAnomalies, deathAnomalies, attackAnomaly } from './anomalies/runtime';
 import { isAttackProxy, scheduleAnomalyAttacks, removeBoundAnomalySummons, recordAnomalyProxyHit } from './anomalies/summons';
 import { isAbsent, occupiesCell } from './anomalies/availability';
@@ -355,6 +356,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       events.splice(beforeCount, 0, { type: 'cast', tick, receipt });
       v19DominatorCast(ctx,unit,receipt.actualManaSpent);
       castV20Teamups(ctx,unit,target,seq);
+      batch2Cast(ctx,unit);
       unit.cooldownTicks = oldInterval;
       const immediate = unit.tasks.filter(t => t.executeAtTick <= tick);
       unit.tasks = unit.tasks.filter(t => t.executeAtTick > tick);
@@ -748,6 +750,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const deaths = units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive && u.unitKind === 'neutral' && u.encounterId && u.monsterFamily).map(u => ({ combatId: ctx.combatId!, tick, deadUnitId: u.id, team: u.team, encounterId: u.encounterId!, monsterFamily: u.monsterFamily!, eventId: JSON.stringify([ctx.combatId, tick, (state.nextEventSeq ?? 0) + events.findIndex(e => e.type === 'death' && e.unitId === u.id)]) }));
     companionState = registerDeaths(companionState, deaths, units.filter(u => u.alive).map(u => u.id));
   }
+  splitExperimentClones(ctx,state,fullRoster);
   const eliminated = eliminationResult(fullRoster), result = eliminated ?? (tick >= state.maxTicks ? 'draw' : null);
   if (result) { cleanupMechanisms(ctx, true); for (const unit of units) { unit.statuses = []; unit.shieldLayers = []; syncShield(unit); unit.tasks = []; } }
   if (result && companionState) companionState = advanceReactions(companionState, tick, [], true).state;

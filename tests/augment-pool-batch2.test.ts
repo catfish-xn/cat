@@ -60,7 +60,7 @@ function opening(id:string,definitionId:string,others:string[]=[]):CombatState {
  const combat=createCombatWithEvents(preparation,strategy,'b2',42).state;return {...combat,units:[...combat.units].sort((a,b)=>a.id==='enemy'?1:b.id==='enemy'?-1:a.id.localeCompare(b.id))};
 }
 function ctx(s:CombatState,tick=1):AbilityContext{return {tick,combatId:s.combatId,board:s.board,units:structuredClone(s.units) as S13Unit[],events:[],packets:[],heals:[],draw:()=>0};}
-it.each(Object.keys(AUGMENT_BATCH2_ENABLED).filter(id=>!['betrayal','why-not-both'].includes(id)))('%s compiles only for members, including emblem holders, even below an activated trait tier',id=>{
+it.each(Object.keys(AUGMENT_BATCH2_ENABLED).filter(id=>!['betrayal','blood-brothers','why-not-both'].includes(id)))('%s compiles only for members, including emblem holders, even below an activated trait tier',id=>{
  const row=AUGMENT_BATCH2[id],s=createMatch(42),emblem=Object.values(EMBLEM_ITEMS).find(e=>e.emblemTrait===row.traits[0])!;
  const preparation={...s.preparation,units:[{...s.preparation.units[0],definitionId:'darius'}]};
  const base={...s,preparation,augments:[{definitionId:id,choiceId:'test',acquiredRound:1}]};
