@@ -63,6 +63,8 @@ export function g23RewardAtoms(bundle:G23RewardBundle,seed:number,multiplayer=fa
     &&(rule.traitId===null||u.traits.includes(rule.traitId))).map(u=>u.id),1,0,60,api as G23RewardAtom['duplicatorDefinitionId']);return;
   }
   if(api==='TFT_Consumable_ItemRemover'){add('tool',['magnetic-remover']);return;}
+  // 14.24: a consumable the player uses on a <=3-cost Chem-Baron (P 2026-10-25), not an automatic copy.
+  if(api==='TFT13_Crime_Consumable_LesserShimmerDuplicator'){add('tool',[api]);return;}
   if(api==='TFT_Consumable_ItemReroller'){add('tool',['reforger']);return;}
   if(api==='COMPONENT_NOSPAT'){add('item',components);return;}
   const pools=G23_SPECIAL_ITEM_POOLS as Readonly<Record<string,readonly string[]>>;

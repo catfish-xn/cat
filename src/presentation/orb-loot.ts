@@ -50,6 +50,7 @@ const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, { readonly glyph: strin
   reforger: { glyph: '铸', apiName: 'TFT_Consumable_ItemReroller' },
   TFT_Consumable_ChampionDuplicator_III: { glyph: '复', apiName: 'TFT_Consumable_ChampionDuplicator_III' },
   TFT_Consumable_NeekosHelp: { glyph: '复', apiName: 'TFT_Consumable_NeekosHelp' },
+  TFT13_Crime_Consumable_LesserShimmerDuplicator: { glyph: '复', apiName: 'TFT13_Crime_Consumable_LesserShimmerDuplicator' },
   'masterwork-upgrade': { glyph: '杰', apiName: 'TFT_Consumable_MasterworkUpgrade' },
 };
 export const consumableName = (id: string): string => CONSUMABLE_DEFINITIONS[id as ConsumableDefinitionId]?.name ?? id;

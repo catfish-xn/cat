@@ -469,8 +469,6 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
           // preparation-only. Replay its ordered selection before adding this birth,
           // even when the saved match has already advanced and combat is null.
           if (commits.has(entry.roundId)) requireValue(atom.options.find(id => owned.has(id)) === definitionId, 'mechanic duplicator target');
-          else if (atom.duplicatorDefinitionId === 'TFT13_Crime_Consumable_LesserShimmerDuplicator')
-            requireValue(owned.has(definitionId), 'mechanic duplicator target');
         }
       } else {
         keys(entry.source, ['kind', 'receiptId']);
