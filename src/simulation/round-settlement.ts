@@ -167,7 +167,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const next: MatchState = {...state,phase:'settlement',combat:null,combatInputBasis:null,outcome:null,
       gold:plan.goldAfter-deferredRoundIncome(plan),playerHp:hpAfter,level:plan.progression.level,xp:plan.progression.xp,streak:plan.streakAfter,
       persistentGrowth:[...growth].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([unitId,attackDamageBps])=>({unitId,attackDamageBps})),
-      augmentProgress,roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
+      augmentProgress:{...augmentProgress,...(state.augmentProgress.forming?{forming:state.augmentProgress.forming}:{})},roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
     const hookEvents:MatchEvent[]=[];
     // Kingslayer pays from the receipt itself, so a settlement without battle facts still gets its gold.

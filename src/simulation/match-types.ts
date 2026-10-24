@@ -67,7 +67,9 @@ export interface MatchBase {
   readonly augmentOffers: readonly import('./augment-offers').AugmentOfferRecord[];
   /** Ordered unique IDs permanently excluded for this player in this match. */
   readonly removedAugmentIds: readonly string[];
-  readonly augmentProgress: { readonly pumpingRounds: number; readonly investmentHp: number };
+  readonly augmentProgress: { readonly pumpingRounds: number; readonly investmentHp: number;
+    /** Batch-3 Dummify/Golemify totals of the champions removed on acquisition (base panel × star); recomputed on restore. */
+    readonly forming?: import('./augment-pool-batch3-progress').FormingTotals };
   readonly items: readonly ItemInstance[]; readonly nextItemSerial: number; readonly augments: readonly OwnedAugment[];
   readonly d14?: import('./d14-runtime').D14Progress;
   readonly anomalyBinding: AnomalyBinding | null; readonly pendingChoice: PendingChoice | null;

@@ -7,8 +7,15 @@ import type { S13AbilityData } from './abilities';
  * cannot be sold, equipped or targeted by consumables; while alive it counts like any unit for player damage. */
 export const TRAINING_DUMMY_ID = 'training-dummy';
 export const TOWER_DUMMY_ID = 'tower-dummy';
+export const AUGMENT_GOLEM_ID = 'augment-golem';
+export const FORMING_DUMMY_ID = 'forming-dummy';
 export const BATCH3_SUMMON_UNITS: Readonly<Record<string, UnitDefinition>> = freezeContent({
   [TRAINING_DUMMY_ID]: { id: TRAINING_DUMMY_ID, name: '训练假人', symbol: '假', color: 9993582, cost: 1, traits: [],
+    summon: { sellable: false, countsTowardPopulation: true, fixedStarStats: true },
+    baseStats: { health: 550, attack: 50, armor: 30, magicResist: 30 }, attackRange: 1, attackIntervalTicks: 50, baseAttackSpeedBps: 4000,
+    initialMana: 0, maxMana: 0, abilityId: 'training-dummy-ability' },
+  /** Dummify's dummy: a training dummy whose health comes from the champions it replaced (augment-effects forming). */
+  [FORMING_DUMMY_ID]: { id: FORMING_DUMMY_ID, name: '训练假人', symbol: '假', color: 9993582, cost: 1, traits: [],
     summon: { sellable: false, countsTowardPopulation: true, fixedStarStats: true },
     baseStats: { health: 550, attack: 50, armor: 30, magicResist: 30 }, attackRange: 1, attackIntervalTicks: 50, baseAttackSpeedBps: 4000,
     initialMana: 0, maxMana: 0, abilityId: 'training-dummy-ability' },
@@ -19,6 +26,12 @@ export const BATCH3_SUMMON_UNITS: Readonly<Record<string, UnitDefinition>> = fre
     summon: { sellable: false, countsTowardPopulation: true, fixedStarStats: true },
     baseStats: { health: 550, attack: 60, armor: 30, magicResist: 30 }, attackRange: 4, attackIntervalTicks: 50, baseAttackSpeedBps: 4000,
     initialMana: 0, maxMana: 0, abilityId: 'tower-dummy-ability' },
+  /** Golemify's golem: the 14.24 golem panel (600 HP / 55 AD / 40 armor / 40 MR / 0.55 AS, 30 starting mana, the
+   * trainer golem's 300 AP strike). P 2026-10-24: max mana 100 like the opening golem, fixed one star, dummy rules. */
+  [AUGMENT_GOLEM_ID]: { id: AUGMENT_GOLEM_ID, name: '魔像', symbol: '像', color: 9993582, cost: 1, traits: [],
+    summon: { sellable: false, countsTowardPopulation: true, fixedStarStats: true },
+    baseStats: { health: 600, attack: 55, armor: 40, magicResist: 40 }, attackRange: 1, attackIntervalTicks: 37, baseAttackSpeedBps: 5500,
+    initialMana: 30, maxMana: 100, abilityId: 'trainer-golem-ability' },
 });
 export const BATCH3_SUMMON_ABILITIES: Readonly<Record<string, S13AbilityData>> = freezeContent({
   'training-dummy-ability': { id: 'training-dummy-ability', championId: TRAINING_DUMMY_ID, name: '训练假人',
@@ -31,4 +44,4 @@ export const BATCH3_SUMMON_ABILITIES: Readonly<Record<string, S13AbilityData>> =
 export const TOWER_DEFENSE_SPELL = freezeContent({ apRatio: [60, 90, 135], upgrade1Stage: 3, upgrade1AsBps: 2500, upgrade2Stage: 5, upgrade2Bps: 5000 });
 export const isTrainingDummy = (unit: { readonly definitionId: string }): boolean => unit.definitionId === TRAINING_DUMMY_ID;
 /** Either batch-3 dummy: never sold, equipped, merged or targeted; replay-authenticated in combat. */
-export const isBatch3Dummy = (definitionId: string): boolean => definitionId === TRAINING_DUMMY_ID || definitionId === TOWER_DUMMY_ID;
+export const isBatch3Dummy = (definitionId: string): boolean => definitionId === TRAINING_DUMMY_ID || definitionId === FORMING_DUMMY_ID || definitionId === TOWER_DUMMY_ID || definitionId === AUGMENT_GOLEM_ID;

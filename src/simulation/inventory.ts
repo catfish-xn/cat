@@ -70,7 +70,7 @@ export function validateEquip(
   if (!item) return { allowed: false, reason: 'unknown-item', conflictingItemIds: [] };
   const unit = preparation.units.find(candidate => candidate.id === unitId);
   if (!unit || unit.team !== 'player') return { allowed: false, reason: 'unknown-unit', conflictingItemIds: [] };
-  if(isAnvil(unit.definitionId)||unit.definitionId==='training-dummy'||unit.definitionId==='tower-dummy')return {allowed:false,reason:'item-restricted',conflictingItemIds:[]};
+  if(isAnvil(unit.definitionId)||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.definitionId==='tower-dummy'||unit.definitionId==='augment-golem')return {allowed:false,reason:'item-restricted',conflictingItemIds:[]};
   if (item.location.kind !== 'inventory') return { allowed: false, reason: 'item-not-inventory', conflictingItemIds: [] };
   if (!Number.isInteger(slot) || slot < 0 || slot > 2) return { allowed: false, reason: 'invalid-slot', conflictingItemIds: [] };
   if (!itemRestrictionAllows(ITEM_DEFINITIONS[item.definitionId]?.restriction, unit.definitionId)) return { allowed: false, reason: 'item-restricted', conflictingItemIds: [] };

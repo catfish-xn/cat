@@ -99,7 +99,8 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   // Crown -> Trifecta -> Kog'Maw scenario at attempt 16003, beyond the old 10000 budget.
   // v23 batch 2: independent offer/gift seed search retains Crown → Trifecta → Kog'Maw at 7329.
   // v23 batch 3 (forty-four more cards): the same sequential search finds the chain at 1736.
-  const seed=1736;
+  // Dummify/Golemify (two more cards) move it again; the same sequential search finds it first at 23144.
+  const seed=23144;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){

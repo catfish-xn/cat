@@ -9,7 +9,7 @@ import {canonicalContent} from './content';
 import {createRestoreCombatReplay} from './restore-combat-replay';
 
 /** Combat mechanics whose saves are authenticated only by exact replay (combat-augment-effects.ts). */
-export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['blazingSoul','nobleSacrifice','wealthyRehab','badLuck','goldForDummies','towerDefense','towerDefenseLive','heroCarry','heroCarryLive'];
+export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['blazingSoul','nobleSacrifice','wealthyRehab','badLuck','goldForDummies','towerDefense','towerDefenseLive','heroCarry','heroCarryLive','forming'];
 
 /** Opening HP is derived from authenticated inputs, never the saved owner HP. */
 export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
@@ -47,7 +47,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   // declaration to check against, so the whole combat must be reproduced from the frozen input instead.
   const batch2=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'||m.mechanic==='g23Tactician'||BATCH3_REPLAYED_MECHANICS.includes(m.mechanic)))
     // A training dummy has no static combat contract of its own, so its combats are replay-authenticated too.
-    ||basis.inputs.preparation.units.some(u=>u.definitionId==='training-dummy'||u.definitionId==='tower-dummy');
+    ||basis.inputs.preparation.units.some(u=>u.definitionId==='training-dummy'||u.definitionId==='forming-dummy'||u.definitionId==='tower-dummy'||u.definitionId==='augment-golem');
   const zephyr=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr'));
   const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
