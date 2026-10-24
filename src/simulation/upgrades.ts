@@ -1,3 +1,4 @@
+import { TRAINING_DUMMY_ID } from './content/batch3-summons';
 import { isAnvil } from './content/anvils';
 import { contains, isDeploymentCell } from './board';
 import { checkEquipmentPlacement } from './equipment-policy';
@@ -37,7 +38,7 @@ function validateRoster(preparation: GameState): void {
 
 /** The same retention and recursive triples for purchases and post-combat merges. */
 function mergeTriples(input: Candidate[], definitionId: string, benchOnly = false): { units: Candidate[]; events: UnitUpgradedEvent[] } {
-  if(isAnvil(definitionId))return {units:input,events:[]};
+  if(isAnvil(definitionId)||definitionId===TRAINING_DUMMY_ID)return {units:input,events:[]};
   let units = input;
   const events: UnitUpgradedEvent[] = [];
   for (const fromStar of [1, 2] as const) {

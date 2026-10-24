@@ -11,15 +11,16 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[])).sort(),pool=[...ids];
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(ids);let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  expect(ids).toHaveLength(175);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
+  expect(ids).toHaveLength(181);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
  it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!['black-rose-crest','black-rose-crown'].includes(id)))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
   // Search the independent first-node offer oracle, then play only the chosen
   // public route. The expanded pool puts Portable Forge at seed 236; replaying
   // three opening combats for every candidate needlessly hits CI time limits.
-  let selectedSeed=-1;
-  for(let seed=0;seed<1000;seed++){const draw=augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[],[],'round:2-1:augment');if(draw.offers.includes(id)){selectedSeed=seed;break;}}
-  expect(selectedSeed).toBeGreaterThanOrEqual(0);const state=reachRound('2-1',false,selectedSeed),choice=state.pendingChoice!;
+  // v23 batch 3: skip seeds whose opening (e.g. the trainer golem, which cannot be benched) the empty-board helper cannot route.
+  let selectedSeed=-1,found:ReturnType<typeof reachRound>|undefined;
+  for(let seed=0;seed<1000;seed++){const draw=augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[],[],'round:2-1:augment');if(!draw.offers.includes(id))continue;try{found=reachRound('2-1',false,seed);}catch{continue;}selectedSeed=seed;break;}
+  expect(selectedSeed).toBeGreaterThanOrEqual(0);const state=found!,choice=state.pendingChoice!;
   expect(choice.offers).toContain(id);
   const invalid=selectChoice(state,choice.choiceId,choice.generation+1,id);expect(invalid.ok).toBe(false);expect(invalid.state).toBe(state);expect("events" in invalid).toBe(false);
   const gold=AUGMENT_DEFINITIONS[id].effects.reduce((sum,e)=>sum+(e.kind==='mechanic'&&e.mechanic==='acquisitionGold'?e.values.amount:0),0);

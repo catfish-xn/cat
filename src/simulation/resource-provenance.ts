@@ -47,6 +47,8 @@ export type ResourceFact =
   | { readonly kind: 'unit-upgraded'; readonly acquisitionSequence: number; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'anvil-opened'; readonly unitId:string; readonly choiceId:string }
+  /** Batch 3: a training dummy retired by its augment (Support Mining); the grant ledger authenticates receiptId. */
+  | { readonly kind: 'unit-removed'; readonly unitId:string; readonly receiptId:string }
   | { readonly kind: 'unit-sold'; readonly unitId: string; readonly context: 'preparation' | 'settlement-capacity'; readonly goldGranted: number }
   | { readonly kind: 'item-acquired'; readonly itemId: string; readonly source: ItemAcquisitionSource }
   // tick is present exactly for operations issued during combat.
@@ -506,6 +508,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       keys(entry,[...common,'unitId','choiceId']);
       requireValue(units.has(entry.unitId)&&isAnvil(units.get(entry.unitId)!.definitionId),'anvil ownership');
       nonempty(entry.choiceId);units.delete(entry.unitId);
+    } else if(entry.kind==='unit-removed'){
+      keys(entry,[...common,'unitId','receiptId']);nonempty(entry.receiptId);
+      requireValue(units.has(entry.unitId)&&units.get(entry.unitId)!.definitionId==='training-dummy'&&!absent.has(entry.unitId),'dummy removal ownership');
+      units.delete(entry.unitId);growth=growth.filter(value=>value.unitId!==entry.unitId);
     } else if (entry.kind === 'unit-sold') {
       keys(entry, [...common, 'unitId', 'context', 'goldGranted']); integer(entry.goldGranted);
       const unit = units.get(entry.unitId);

@@ -53,7 +53,7 @@ export function naturalForgeStates():Map<number,MatchState>{
    // Earlier Conqueror anvils (tier 9) resolve through the choice branch with their first offer, as the old popup did.
    const opened=openConquerorAnvil(state);
    if(opened){if(opened.receiptId==='g23:conqueror:10:atom:0:copy:0'){states.set(10,opened.state);cached=states;return states;}state=opened.state;continue;}
-   while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));continue;}
+   while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId)&&u.definitionId!=='training-dummy')!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));continue;}
   if(state.phase!=='preparation')throw Error(`Unexpected solo fixture phase ${state.phase} at ${state.round}, stacks ${readG23Progress(state)!.conquest.stacks}`);
   if(state.round===1&&!recruited){
    state=accepted(grantMechanicGold(state,{receiptId:'fixture:gold',source:'fixture',amount:150}));
@@ -66,7 +66,7 @@ export function naturalForgeStates():Map<number,MatchState>{
    }
    recruited=true;
   }
-  for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1'&&!isAnvil(u.definitionId)))state=accepted(sellUnit(state,u.id));
+  for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1'&&!isAnvil(u.definitionId)&&u.definitionId!=='training-dummy'))state=accepted(sellUnit(state,u.id));
   if(state.round===6)tier4Preparation=state;
   state=accepted(startMatchCombat(state));
  }

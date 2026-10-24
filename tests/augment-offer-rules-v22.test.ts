@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch, nextRound, rerollAugment, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, nextRound, rerollAugment, selectChoice, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { augmentCandidates, augmentOfferAllowed, deriveAugmentTier, externalAugmentBlocks, externallyBlockableAugments, fieldedTraitSnapshot,
   resolveAugmentTier, type AugmentOfferFilter } from '../src/simulation/augment-offers';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
@@ -25,6 +26,11 @@ function reachKeepingBoard(roundId: string, seed: number): MatchState {
       for (let i = 0; i < 1201 && state.phase === 'combat'; i++) state = stepMatch(state).state;
     }
     state = resolveM5Choices(state);
+    // v23: gift augments (e.g. One, Two, Three) can fill the bench; free a slot so pending loot settles.
+    while (state.m8.loot.direct.some(d => d.status === 'pending-capacity')) {
+      const extra = state.preparation.units.find(u => u.team === 'player' && u.location.kind === 'bench' && !UNIT_DEFINITIONS[u.definitionId]?.summon)!;
+      state = accepted(sellUnit(state, extra.id));
+    }
     state = accepted(nextRound(state, state.round));
   }
   return state;

@@ -11,7 +11,8 @@ import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import type { MatchState } from '../src/simulation/match-types';
-import { rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit, buyUnit, buyXp } from '../src/simulation/match';
+import { rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit, buyUnit, buyXp, sellUnit, equipItem } from '../src/simulation/match';
+import { planDeferredUpgrades } from '../src/simulation/upgrades';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { drainBatch3RoundEntry } from '../src/simulation/augment-pool-batch3-progress';
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
@@ -43,9 +44,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the twenty-six batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the thirty-two batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['bad-luck-protection','blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['bad-luck-protection','blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','scapegoat','shimmerscale-essence','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -355,4 +356,94 @@ it('P: round-entry champions never arrive on a supply (carousel) round; that cop
  expect(batch1GiftPlan(at('worth-the-wait-ii',6,8)).filter(g=>g.acquiredRound>6).map(g=>g.acquiredRound)).toEqual([8,8]);
  // Items are not champions and still arrive on the supply round itself.
  expect(batch3RewardPlan(at('building-a-collection-iii',5,8)).map(g=>g.acquiredRound)).toEqual([6,7,8]);
+});
+
+const owned=(definitionId:string,round=1):MatchState=>drainBatch1Gifts({...createMatch(42),round,augments:[{definitionId,choiceId:'test',acquiredRound:round}]});
+const dummyOf=(s:MatchState)=>s.preparation.units.find(u=>u.definitionId==='training-dummy')!;
+function dummyBattles(id:string,facts:readonly {deaths?:boolean;first?:boolean;gold?:number;kind?:'pvp'|'pve'}[]):MatchState {
+ let s=owned(id);const dummy=dummyOf(s).id;
+ for(const [i,f] of facts.entries()){
+  s=writeG23Progress({...s,round:i+1},advanceG23Economy(readG23Progress(s)!,{...fact(i+1,[f.kind??'pvp','loss']),batch3Dummy:{deaths:f.deaths?[dummy]:[],first:f.first?dummy:null,gold:f.gold??0}}).progress);
+  s=drainBatch1Gifts(s);
+ }
+ return s;
+}
+it('Training Dummy: a fixed one-star summon that cannot be sold, equipped or merged, and neither moves nor attacks', ()=>{
+ const s=owned('support-mining'),dummy=dummyOf(s);
+ expect(dummy).toMatchObject({team:'player',starLevel:1});expect(dummy.location.kind).toBe('bench');
+ expect(sellUnit(s,dummy.id).ok).toBe(false);
+ const item=s.items.find(i=>i.location.kind==='inventory');
+ if(item)expect(equipItem(s,item.id,dummy.id,0).ok).toBe(false);
+ const three={...s.preparation,units:[0,1,2].map(i=>({...dummy,id:'d'+i,location:{kind:'bench' as const,slot:i}}))};
+ expect(planDeferredUpgrades(three).events).toEqual([]);
+ const c0=combatOf('support-mining',1);
+ const m=createMatch(42),u=m.preparation.units[0];
+ const units=[{...u,id:'p0',team:'player' as const,location:{kind:'board' as const,cell:{col:3,row:7}}},{...dummy,id:'dummy',location:{kind:'board' as const,cell:{col:3,row:4}}},{...u,id:'e0',definitionId:'garen',team:'enemy' as const,location:{kind:'board' as const,cell:{col:3,row:0}}}];
+ const preparation={...m.preparation,units};
+ let c=createCombatWithEvents(preparation,buildStrategySnapshot({...m,preparation,augments:[]}),'dummy',42).state;
+ const start=c.units.find(x=>x.id==='dummy')!;expect([start.maxHp,start.armor,start.magicResist,start.maxMana]).toEqual([550,30,30,0]);
+ const dealt:string[]=[];
+ while(c.status==='running'&&c.tick<200){const step=stepCombat(c);c=step.state;for(const e of step.events as any[])if(e.type==='packetDamage')dealt.push(e.outcome.context.source.ownerId);}
+ const d=c.units.find(x=>x.id==='dummy')!;if(d.alive)expect(d.cell).toEqual({col:3,row:4});
+ expect(dealt).not.toContain('dummy');expect(c0.units.length).toBeGreaterThan(0);
+});
+it.each([['support-mining',7],['support-mining-plus',4]] as const)('%s: the dummy\'s %i-th death gives a support item and retires that dummy, once', (id,n)=>{
+ const before=dummyBattles(id,Array.from({length:n-1},()=>({deaths:true})));
+ expect(before.preparation.units.some(u=>u.definitionId==='training-dummy')).toBe(true);
+ const after=dummyBattles(id,[...Array.from({length:n-1},()=>({deaths:true})),{kind:'pve'},{deaths:true}]);
+ expect(after.preparation.units.some(u=>u.definitionId==='training-dummy')).toBe(false);
+ const support=batch3RewardPlan(after);expect(support).toHaveLength(1);expect(support[0].acquiredRound).toBe(n+1);
+ expect(after.seatMechanics!.receipts.some(r=>r.receiptId===support[0].receiptId)).toBe(true);
+ validateBatch1Gifts(after);expect(drainBatch1Gifts(after)).toBe(after);
+ const forged=structuredClone(before) as any;const e=after.resourceProvenance.entries.find(x=>x.kind==='unit-removed')!;
+ forged.resourceProvenance.entries.push({...e,sequence:forged.resourceProvenance.entries.length});forged.preparation.units=forged.preparation.units.filter((u:any)=>u.definitionId!=='training-dummy');
+ expect(()=>validateBatch1Gifts(forged)).toThrow();
+});
+it('Scapegoat: a dummy and 4 gold; 1 gold each player combat its dummy dies first, never in PvE or when another ally dies first', ()=>{
+ expect(AUGMENT_DEFINITIONS['scapegoat'].effects).toContainEqual({kind:'mechanic',mechanic:'acquisitionGold',values:{amount:4}});
+ const s=dummyBattles('scapegoat',[{first:true},{first:false,deaths:true},{first:true,kind:'pve'},{first:true}]);
+ expect(s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch3').map(r=>[r.kind,(r as any).amount,r.round])).toEqual([['gold',1,1],['gold',1,4]]);
+ validateBatch1Gifts(s);
+});
+it.each([['wandering-trainer-i',2,1],['wandering-trainer-ii',3,6]] as const)('%s: a dummy with %i permanently attached random emblems and %i gold', (id,n,gold)=>{
+ const s=owned(id),dummy=dummyOf(s),worn=s.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===dummy.id);
+ expect(worn).toHaveLength(n);expect(worn.every(i=>Object.hasOwn(EMBLEM_ITEMS,i.definitionId))).toBe(true);expect(new Set(worn.map(i=>i.definitionId)).size).toBe(n);
+ expect(worn.map(i=>i.location.kind==='unit'?i.location.slot:-1).sort()).toEqual([...Array(n).keys()]);
+ expect(AUGMENT_DEFINITIONS[id].effects).toContainEqual({kind:'mechanic',mechanic:'acquisitionGold',values:{amount:gold}});
+ validateBatch1Gifts(s);expect(drainBatch1Gifts(s)).toBe(s);
+ const loose=structuredClone(s) as any;loose.items.find((i:any)=>i.id===worn[0].id).location={kind:'inventory'};expect(()=>validateBatch1Gifts(loose)).toThrow();
+});
+it('Gold for Dummies: each live dummy records a pulse every 10 seconds of combat; the battle fact pays 1 gold per pulse', ()=>{
+ const m=createMatch(42),u=m.preparation.units[0],dummy={...u,definitionId:'training-dummy'};
+ const units=[{...dummy,id:'d0',team:'player' as const,location:{kind:'board' as const,cell:{col:0,row:7}}},{...dummy,id:'d1',team:'player' as const,location:{kind:'board' as const,cell:{col:6,row:7}}},{...u,id:'p0',team:'player' as const,location:{kind:'board' as const,cell:{col:3,row:7}}},{...u,id:'e0',definitionId:'garen',team:'enemy' as const,location:{kind:'board' as const,cell:{col:3,row:0}}}];
+ const preparation={...m.preparation,units};
+ let c=createCombatWithEvents(preparation,buildStrategySnapshot({...m,preparation,augments:[{definitionId:'gold-for-dummies',choiceId:'t',acquiredRound:1}]}),'gfd',42).state;
+ while(c.status==='running'&&c.tick<400)c=stepCombat(c).state;
+ const pulses=c.units.filter(x=>x.definitionId==='training-dummy').map(x=>x.batch2?.dummyGold??0);
+ for(const [i,x] of c.units.filter(x=>x.definitionId==='training-dummy').entries())if(x.alive)expect(pulses[i]).toBe(2);
+ const s=dummyBattles('gold-for-dummies',[{gold:3},{gold:0,kind:'pve'},{gold:2}]);
+ expect(s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch3').reduce((n,r)=>n+((r as any).amount??0),0)).toBe(5);
+ expect(()=>advanceG23Economy(readG23Progress(s)!,{...fact(4,['pvp','win']),batch3Dummy:{deaths:[],first:null,gold:-1}})).toThrow();
+});
+it('a real match with a training dummy restores mid-combat exactly and rejects an edited dummy', ()=>{
+ let seed=0;while(!firstOffers(seed).includes('gold-for-dummies'))seed++;
+ let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;
+ s=accept(selectChoice(s,c.choiceId,c.generation,'gold-for-dummies') as any).state as MatchState;
+ const dummy=dummyOf(s);expect(dummy).toBeDefined();
+ let placed=s;for(let row=4;row<=7;row++)for(let col=0;col<7;col++){if(placed.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===row))continue;const r=deployMatchUnit(placed,dummy.id,{kind:'board',cell:{col,row}}) as any;if(r.ok){placed=r.state;row=99;break;}}
+ expect(dummyOf(placed).location.kind).toBe('board');
+ s=accept(startMatchCombat(placed) as any).state;let checked=0;
+ while(s.phase==='combat'){s=stepMatch(s).state;if(s.combat&&s.combat.tick%100===1){expect(restoreMatch(serializeMatch(s))).toEqual(s);checked++;
+  const edit=structuredClone(s) as any,d=edit.combat.units.find((u:any)=>u.definitionId==='training-dummy');d.hp=Math.max(1,d.hp-1);if(d.alive)expect(()=>restoreMatch(serializeMatch(edit))).toThrow();}}
+ expect(checked).toBeGreaterThan(0);
+});
+it.each(['wandering-trainer-ii','support-mining','scapegoat'])('%s: a public selection saves and restores with its dummy (and emblems), through a real round', id=>{
+ let seed=0;while(!firstOffers(seed).includes(id))seed++;
+ let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;
+ s=accept(selectChoice(s,c.choiceId,c.generation,id) as any).state as MatchState;
+ expect(dummyOf(s)).toBeDefined();expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ s=resolveM5Choices(s);if(s.phase==='preparation')s=accept(startMatchCombat(s) as any).state;
+ while(s.phase==='combat')s=stepMatch(s).state;
+ s=resolveM5Choices(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ s=accept(nextRound(s,s.round) as any).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
 });

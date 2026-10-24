@@ -1,3 +1,4 @@
+import { BATCH3_SUMMON_ABILITIES } from './content/batch3-summons';
 import { SIX_COST_ABILITIES } from './content/v19-six-cost';
 import { S13_ANOMALY_SUMMON_ABILITIES } from './content/s13-anomaly-summons';
 import { G24_VOIDSPAWN_ABILITIES } from './content/g2-4b-voidspawn';
@@ -20,6 +21,7 @@ function sourceFor(id: string): {readonly name:string;readonly variables:Readonl
   if(Object.hasOwn(S13_ANOMALY_SUMMON_ABILITIES,id+'-ability'))return S13_ANOMALY_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G24_VOIDSPAWN_ABILITIES,id+'-ability'))return G24_VOIDSPAWN_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G23_SUMMON_ABILITIES,id+'-ability'))return G23_SUMMON_ABILITIES[id+'-ability'];
+  if(Object.hasOwn(BATCH3_SUMMON_ABILITIES,id+'-ability'))return BATCH3_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G23_ABILITIES,id+'-ability'))return G23_ABILITIES[id+'-ability'];
   if (!Object.hasOwn(ABILITY_DISPLAY_SOURCE, id)) throw new RangeError(`Unknown ability display definition: ${id}`);
   return ABILITY_DISPLAY_SOURCE[id as keyof typeof ABILITY_DISPLAY_SOURCE];

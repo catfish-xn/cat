@@ -17,9 +17,8 @@ const crest = 'TFT_Item_Artifact_LightshieldCrest';
 // Maddie. Rebuild the intended Irelia + Maddie (3,7) + Lux (5,7) board here by definition, not serial.
 let maddieId = 'unit-2', luxId = 'unit-3';
 function threeHeroMatch(): MatchState {
-  // v23 batch 3: seed 5's first offer became Built Different (changes the shield numbers); pin a public crest pick.
-  const open = reachRound('2-1', false, 5), c = open.pendingChoice!;
-  let state = resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, 'artillerist-crest')));
+  // v23 batch 3: seed 5's first offer stopped being a quiet card (changes the shield numbers); pick one publicly.
+  let state = crestPick(5);
   state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
   for (const [id, col] of [['maddie', 3], ['lux', 5]] as const) {
     const slot = state.shop.slots.findIndex(s => s.status === 'available' && s.definitionId === id);
@@ -30,12 +29,17 @@ function threeHeroMatch(): MatchState {
   }
   return state;
 }
-// v23 batch 3: pool growth moved seed 42's first 2-1 offer to Sorcerer Explosion (a replay-validated batch-2
-// mechanic), so the resists validator no longer decided. Pin a public pick that adds no combat mechanic.
-function pick42(): MatchState {
-  const open = reachRound('2-1', false, 42), c = open.pendingChoice!;
-  return resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, 'ambusher-crest')));
+// v23 batch 3: pool growth keeps moving the seeds' first 2-1 offer onto augments that change the board or route the
+// save through exact replay, so the resists validator no longer decides. Publicly pick the first offered trait crest
+// (an emblem plus a bench champion, no combat mechanic of its own), else a quiet economy card, instead of the first card.
+function crestPick(seed: number): MatchState {
+  const open = reachRound('2-1', false, seed), c = open.pendingChoice!;
+  const quiet = ['big-grab-bag', 'raining-gold', 'raining-gold-plus', 'iron-assets'];
+  const crest = c.offers.find(id => id.endsWith('-crest')) ?? c.offers.find(id => quiet.includes(id));
+  if (!crest) throw Error(`seed ${seed} offers no crest or quiet economy card at 2-1: ${c.offers.join(',')}`);
+  return resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, crest)));
 }
+const pick42 = () => crestPick(42);
 function publicStart(dynamic = false, deathHolder = false, bracer = false): MatchState {
   // v22: seed 5 now fields opening-reward Powder+Silco (Dominator), which routes the save through the
   // earlier full V19 replay; seed 42 keeps a plain Irelia board so the resists validator decides.
