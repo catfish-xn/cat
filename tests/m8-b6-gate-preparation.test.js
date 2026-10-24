@@ -41,10 +41,10 @@ describe('B6 gate preparation and explicit dependency metadata',()=>{
   });
   it('obtains one actual 2-4 supply component and reaches the next legal equipment phase',async()=>{
     const state=await prepareB6Opening(pageAdapter(),'2-5');
-    // v22 augment tiers make the first non-placebo 2-1 card Crown Guarded, which grants its own Crownguard.
+    // v23 151-offer pool: the first non-placebo 2-1 card is now Thorn-Plated Armor, which grants its own Bramble Vest.
     expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');
-    expect(state.augments.map(augment=>augment.definitionId)).toEqual(['crown-guarded']);
-    expect(state.items.map(item=>item.definitionId)).toEqual(['crownguard','sword']);
+    expect(state.augments.map(augment=>augment.definitionId)).toEqual(['thorn-plated-armor']);
+    expect(state.items.map(item=>item.definitionId)).toEqual(['bramble-vest','sword']);
     expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([[state.items[1].id]]);
   });
   it('reproduces public opening setup for the same seed',async()=>{
