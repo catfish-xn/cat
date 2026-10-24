@@ -25,8 +25,24 @@ export const skillColor = (definitionId: string): number => SKILL_COLOR[definiti
 export const WINDUP_SECONDS = 0.25;
 /** Seconds the caster and its targets hold still at the impact. */
 export const HITSTOP_SECONDS = 0.07;
+/**
+ * Casts whose impact read too weak on the GPU review (10-24: 蔚、烈娜塔命中力度不够): a ring in the champion's color
+ * bursts at each target, the hold is longer and the camera kick stronger.
+ */
+const STRONG_IMPACT: ReadonlySet<string> = new Set(['vi', 'renata']);
+export const impactFeel = (definitionId: string): { hold: number; kick: number; ring: boolean } =>
+  STRONG_IMPACT.has(definitionId) ? { hold: 0.1, kick: 1.5, ring: true } : { hold: HITSTOP_SECONDS, kick: 1, ring: false };
+/**
+ * Per-effect size and particle limit for sample casts, where the official one is too loud (10-24: 金克丝命中的粉色爆炸
+ * 太亮太大). Size multiplies the effect's own scale; fewer live particles also make it fainter.
+ */
+const EFFECT_TUNING: Readonly<Record<string, { readonly scale: number; readonly particles: number }>> = {
+  jinx_tft13_jinx_base_r_tar: { scale: 0.6, particles: 50 },
+};
 /** Live particles one cast effect of a sample champion may have (the shared budget still caps the whole board). */
 export const CAST_PARTICLE_CAP = 120;
+/** A sample cast effect's size factor and live-particle limit. */
+export const castEffectTuning = (id: string): { scale: number; particles: number } => EFFECT_TUNING[id] ?? { scale: 1, particles: CAST_PARTICLE_CAP };
 const RELEASE_SECONDS = 0.14, SHAKE_SECONDS = 0.16, SHAKE_AMPLITUDE = 1.6, SHAKE_GAP = 0.35;
 
 /** The cast effects kept per sample champion (suffixes after the champion's prefix); unlisted ones keep their plan. */
@@ -60,8 +76,10 @@ export function windupEnvelope(age: number): { ring: number; opacity: number; gl
   return { ring: 0.9 + 0.8 * t, opacity: 0.9 * (1 - t), glow: 0.6 * (1 - t) };
 }
 
-const ATTACK_COLOR = 0xfff4e6, TRACER_SECONDS = 0.16, SPARK_SECONDS = 0.12, TRACER_SIZE = 6, SPARK_SIZE = 15;
-const SPRITES = 48, CHARGES = 8;
+// 10-24 GPU review: the first tracer (6 units, two ghosts) was barely visible; twice the size with a four-step tail.
+const ATTACK_COLOR = 0xfff4e6, TRACER_SECONDS = 0.16, SPARK_SECONDS = 0.12, TRACER_SIZE = 12, SPARK_SIZE = 26, TRAIL = 4, TRAIL_GAP = 0.022;
+const IMPACT_SECONDS = 0.28;
+const SPRITES = 96, CHARGES = 8, IMPACTS = 8;
 
 function glowTexture(): Texture | null {
   if (typeof document === 'undefined') return null;
@@ -77,6 +95,7 @@ function glowTexture(): Texture | null {
 
 interface Pulse { sprite: Sprite; age: number; from: Vector3; to: Vector3 | null; trail: number }
 interface Charge { ring: Mesh<RingGeometry, MeshBasicMaterial>; glow: Sprite; age: number; follow: Object3D; height: number; radius: number }
+interface Impact { ring: Mesh<RingGeometry, MeshBasicMaterial>; flash: Sprite; age: number; at: Vector3; radius: number }
 
 export interface SkillFeel {
   /** Scene child holding every pooled object (all hidden while unused). */
@@ -85,8 +104,10 @@ export interface SkillFeel {
   charge(follow: Object3D, color: number, radius: number, height: number): void;
   /** A basic attack: a tracer from `from` to `to` when ranged, a spark at `to` either way, after `delay` seconds. */
   attack(from: Vector3, to: Vector3, ranged: boolean, delay: number): void;
-  /** A skill impact: a camera kick, unless one is still settling. */
-  kick(): void;
+  /** A ring in `color` bursting at `at` (a target's feet), `radius` board units at its widest. */
+  impact(at: Vector3, color: number, radius: number): void;
+  /** A skill impact: a camera kick (`strength` times the usual), unless one is still settling. */
+  kick(strength?: number): void;
   update(seconds: number): void;
   /** The camera's offset this frame (zero when still). */
   shake(out: Vector3): Vector3;
@@ -111,7 +132,15 @@ export function createSkillFeel(): SkillFeel {
     glow.visible = false; object.add(ring, glow);
     idleCharges.push({ ring, glow, age: 0, follow: object, height: 0, radius: 0 });
   }
-  let shakeLeft = 0, sinceShake = Infinity, disposed = false;
+  const impacts = new Set<Impact>(), idleImpacts: Impact[] = [];
+  for (let i = 0; i < IMPACTS; i++) {
+    const ring = new Mesh(ringGeometry, new MeshBasicMaterial({ transparent: true, depthWrite: false, blending: AdditiveBlending }));
+    ring.rotation.x = -Math.PI / 2; ring.visible = false;
+    const flash = new Sprite(new SpriteMaterial({ map: texture, transparent: true, depthWrite: false, blending: AdditiveBlending }));
+    flash.visible = false; object.add(ring, flash);
+    idleImpacts.push({ ring, flash, age: 0, at: new Vector3(), radius: 0 });
+  }
+  let shakeLeft = 0, shakeStrength = 1, sinceShake = Infinity, disposed = false;
   const at = new Vector3();
   const release = (pulse: Pulse) => { pulse.sprite.visible = false; free.push(pulse.sprite); pulses.delete(pulse); };
   return {
@@ -125,15 +154,21 @@ export function createSkillFeel(): SkillFeel {
     },
     attack(from, to, ranged, delay) {
       // Ranged: the head and two fading ghosts behind it, then the spark; melee: the spark only.
-      const parts = ranged ? [0, 1, 2, -1] : [-1];
+      const parts = ranged ? [...Array.from({ length: TRAIL + 1 }, (_, i) => i), -1] : [-1];
       for (const trail of parts) {
         const sprite = free.pop();
         if (!sprite) return; // pool spent: a crowded fight draws fewer attacks, never more objects
         if (trail < 0) pulses.add({ sprite, age: -delay - (ranged ? TRACER_SECONDS : 0), from: to.clone(), to: null, trail });
-        else pulses.add({ sprite, age: -delay - trail * 0.03, from: from.clone(), to: to.clone(), trail });
+        else pulses.add({ sprite, age: -delay - trail * TRAIL_GAP, from: from.clone(), to: to.clone(), trail });
       }
     },
-    kick() { if (sinceShake < SHAKE_GAP) return; shakeLeft = SHAKE_SECONDS; sinceShake = 0; },
+    impact(at, color, radius) {
+      const impact = idleImpacts.pop();
+      if (!impact) return;
+      impacts.add(impact); impact.age = 0; impact.at.copy(at); impact.radius = radius;
+      impact.ring.material.color.setHex(color); impact.flash.material.color.setHex(color);
+    },
+    kick(strength = 1) { if (sinceShake < SHAKE_GAP) return; shakeLeft = SHAKE_SECONDS; shakeStrength = strength; sinceShake = 0; },
     update(seconds) {
       shakeLeft = Math.max(0, shakeLeft - seconds); sinceShake += seconds;
       for (const pulse of pulses) {
@@ -144,8 +179,8 @@ export function createSkillFeel(): SkillFeel {
           const t = pulse.age / TRACER_SECONDS;
           if (t >= 1) { release(pulse); continue; }
           sprite.position.lerpVectors(pulse.from, pulse.to, t);
-          const size = TRACER_SIZE * (1 - pulse.trail * 0.25);
-          sprite.scale.set(size, size, 1); sprite.material.opacity = 0.95 - pulse.trail * 0.3;
+          const size = TRACER_SIZE * (1 - pulse.trail * 0.17);
+          sprite.scale.set(size, size, 1); sprite.material.opacity = 0.95 * (1 - pulse.trail / (TRAIL + 1));
         } else {
           const t = pulse.age / SPARK_SECONDS;
           if (t >= 1) { release(pulse); continue; }
@@ -154,6 +189,18 @@ export function createSkillFeel(): SkillFeel {
           sprite.scale.set(size, size, 1); sprite.material.opacity = 0.9 * (1 - t);
         }
         sprite.visible = true;
+      }
+      for (const impact of impacts) {
+        impact.age += seconds;
+        const t = impact.age / IMPACT_SECONDS;
+        if (t >= 1) { impact.ring.visible = impact.flash.visible = false; impacts.delete(impact); idleImpacts.push(impact); continue; }
+        const out = 1 - (1 - t) ** 2;
+        impact.ring.position.set(impact.at.x, impact.at.y + 1, impact.at.z); impact.ring.scale.setScalar(impact.radius * (0.3 + 0.7 * out));
+        impact.ring.material.opacity = 0.95 * (1 - t);
+        const flash = impact.radius * (0.9 + 0.6 * out);
+        impact.flash.position.set(impact.at.x, impact.at.y + impact.radius * 0.6, impact.at.z);
+        impact.flash.scale.set(flash, flash, 1); impact.flash.material.opacity = 0.7 * Math.max(0, 1 - t * 1.8);
+        impact.ring.visible = impact.flash.visible = true;
       }
       for (const charge of charges) {
         charge.age += seconds;
@@ -172,18 +219,22 @@ export function createSkillFeel(): SkillFeel {
     },
     shake(out) {
       if (shakeLeft <= 0) return out.set(0, 0, 0);
-      const strength = SHAKE_AMPLITUDE * shakeLeft / SHAKE_SECONDS;
+      const strength = SHAKE_AMPLITUDE * shakeStrength * shakeLeft / SHAKE_SECONDS;
       return out.set((Math.random() * 2 - 1) * strength, (Math.random() * 2 - 1) * strength * 0.5, (Math.random() * 2 - 1) * strength);
     },
     reveal(on) {
       for (const child of object.children) child.visible = on;
-      if (!on) { for (const pulse of pulses) pulse.sprite.visible = pulse.age >= 0; for (const charge of charges) charge.ring.visible = charge.glow.visible = true; }
+      if (!on) {
+        for (const pulse of pulses) pulse.sprite.visible = pulse.age >= 0;
+        for (const charge of charges) charge.ring.visible = charge.glow.visible = true;
+        for (const impact of impacts) impact.ring.visible = impact.flash.visible = true;
+      }
     },
     dispose() {
       if (disposed) return;
       disposed = true; object.removeFromParent();
       for (const child of object.children) ((child as Sprite | Mesh<RingGeometry, MeshBasicMaterial>).material).dispose();
-      ringGeometry.dispose(); texture?.dispose(); object.clear(); pulses.clear(); charges.clear();
+      ringGeometry.dispose(); texture?.dispose(); object.clear(); pulses.clear(); charges.clear(); impacts.clear();
     },
   };
 }

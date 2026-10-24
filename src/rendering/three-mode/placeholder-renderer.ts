@@ -38,7 +38,7 @@ import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOv
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, type Envelope } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
-import { CAST_PARTICLE_CAP, HITSTOP_SECONDS, WINDUP_SECONDS, createSkillFeel, impactDelay, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
+import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -785,24 +785,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /** Local scale that gives an effect `world` scale (FX_SCALE unless the caster has an official scale) under `parent`. */
   // abs: a mirrored parent decomposes with a negative X, which would flip the effect on every axis.
   const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
-  const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3, cap?: number) => {
+  const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3,
+    tuning?: { scale: number; particles: number }) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !effects) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
-    void effects.load(id, spec.maxDuration, cap).then(fx => {
+    void effects.load(id, spec.maxDuration, tuning?.particles).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0 };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed) || live.size >= MAX_EFFECTS) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
         const node = spec.bone ? source.body.getObjectByName(spec.bone) : source.root;
         if (!node) { fx.dispose(); return; }
-        fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE));
+        fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE) * (tuning?.scale ?? 1));
         node.add(fx.object);
       } else {
         const from = new Vector3();
         if (spec.anchor === 'target' && targetPoint) from.copy(targetPoint);
         else if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
         // A projectile is the caster's (its scale); an effect on the target stays in world units (FX_SCALE).
-        fx.object.scale.setScalar(spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE);
+        fx.object.scale.setScalar((spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE) * (tuning?.scale ?? 1));
         fx.object.position.copy(from);
         scene.add(fx.object);
         if (spec.anchor === 'projectile') {
@@ -837,8 +838,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       source.overhead.flashMana(true);
       queued.push({ at: clock + WINDUP_SECONDS, generation: owner, run: () => source.overhead.flashMana(false) });
       queued.push({ at: clock + impactDelay(castPlan), generation: owner, run: () => {
-        for (const id of [sourceId, ...targetIds]) { const view = pieces.get(id); if (view?.alive) holds.set(view, HITSTOP_SECONDS); }
-        if (!reducedMotion()) feel.kick();
+        const hit = impactFeel(source.definitionId), color = skillColor(source.definitionId);
+        for (const id of [sourceId, ...targetIds]) {
+          const view = pieces.get(id);
+          if (!view?.alive) continue;
+          holds.set(view, hit.hold);
+          if (hit.ring && id !== sourceId && view.root.visible) feel.impact(view.root.position, color, (grid?.radius ?? 34) * 1.3);
+        }
+        if (!reducedMotion()) feel.kick(hit.kick);
       } });
     }
     let targetPoint: Vector3 | undefined;
@@ -863,7 +870,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
     for (const { id, playback: spec } of castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
       if (queued.length >= MAX_QUEUED) return;
-      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? CAST_PARTICLE_CAP : undefined) });
+      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : undefined) });
     }
   };
   // Shader prewarm for the sample casts: in preparation each sample champion on the board has its trimmed cast effects
@@ -874,7 +881,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!effects || !actionEffects || !skillFeelFor(definitionId) || warmedCasts.has(definitionId)) return;
     warmedCasts.add(definitionId);
     const plan = simplifyCast(definitionId, planActionEffects(definitionId, 'cast', actionEffects.resolve(definitionId, 'cast'), actionEffects.playback));
-    void Promise.all(plan.map(({ id, playback }) => effects.load(id, playback.maxDuration, CAST_PARTICLE_CAP).catch(() => null))).then(async loaded => {
+    void Promise.all(plan.map(({ id, playback }) => effects.load(id, playback.maxDuration, castEffectTuning(id).particles).catch(() => null))).then(async loaded => {
       const group = new Group(); group.position.y = -1e5; scene.add(group);
       for (const fx of loaded) if (fx) { group.add(fx.object); fx.update(0.1, camera); }
       try {

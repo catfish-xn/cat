@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HITSTOP_SECONDS, SKILL_FEEL_SAMPLE, WINDUP_SECONDS, createSkillFeel, impactDelay, simplifyCast, windupEnvelope } from '../src/rendering/three-mode/skill-feel';
+import { CAST_PARTICLE_CAP, HITSTOP_SECONDS, SKILL_FEEL_SAMPLE, WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactFeel, simplifyCast, windupEnvelope } from '../src/rendering/three-mode/skill-feel';
 import { Group, Vector3 } from 'three';
 
 const entry = (id: string, anchor: 'source' | 'target' | 'projectile', delay: number) => ({ id, playback: { anchor, delay, maxDuration: 1 } });
@@ -57,6 +57,24 @@ describe('skill feel sample', () => {
     expect(feel.shake(new Vector3()).length()).toBeGreaterThan(0);
     feel.update(1);
     expect(feel.shake(new Vector3()).length()).toBe(0);
+    expect(feel.object.children.filter(child => child.visible)).toEqual([]);
+    feel.dispose();
+  });
+
+  it('hits harder for Vi and Renata and turns Jinx\'s impact down (10-24 GPU review)', () => {
+    for (const id of ['vi', 'renata']) expect(impactFeel(id)).toEqual({ hold: 0.1, kick: 1.5, ring: true });
+    for (const id of ['jinx', 'jayce']) expect(impactFeel(id)).toEqual({ hold: HITSTOP_SECONDS, kick: 1, ring: false });
+    expect(castEffectTuning('jinx_tft13_jinx_base_r_tar')).toEqual({ scale: 0.6, particles: 50 });
+    expect(castEffectTuning('jinx_tft13_jinx_base_r_muzzleflash')).toEqual({ scale: 1, particles: CAST_PARTICLE_CAP });
+  });
+
+  it('bursts an impact ring from its pool and lets it go', () => {
+    const feel = createSkillFeel(), count = feel.object.children.length;
+    for (let i = 0; i < 20; i++) feel.impact(new Vector3(10, 0, 10), 0x00ff00, 40);
+    feel.update(0.05);
+    expect(feel.object.children.length).toBe(count);
+    expect(feel.object.children.filter(child => child.visible).length).toBe(16); // 8 rings and their flashes, no more
+    feel.update(0.5);
     expect(feel.object.children.filter(child => child.visible)).toEqual([]);
     feel.dispose();
   });
