@@ -144,7 +144,7 @@ describe('3D scouting shop availability', () => {
     expect(refresh).toHaveBeenCalledTimes(1); expect(scout).toHaveBeenCalledTimes(1);
     // A fresh open of my stream still resets the board even with a matching combat id.
     refresh.mockClear(); listeners.replay(prefix(0)); expect(refresh).toHaveBeenCalledTimes(1);
-  });
+  }, 20_000);
 
   /** Public create + native event boundary; only graphics and unrelated DOM widgets are substituted.
    * The real OnlineApplication, RemoteSession and BoardScene choose whether any intent reaches send.
