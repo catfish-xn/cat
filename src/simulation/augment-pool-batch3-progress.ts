@@ -10,6 +10,11 @@ import { appendResourceProvenance } from './resource-provenance';
 import { EMBLEM_ITEMS } from './content/emblems';
 import { nextRandom } from './rng';
 import type { UnitLootPolicy } from './loot-runtime';
+import type { AugmentGiftSpec } from './augment-gift-plan';
+import { getMultiplayerRoundById } from './multiplayer-round';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
+import { CONSUMABLE_DEFINITIONS } from './content/consumables';
+import { GOLDEN_EGG_LOOT, EXALTED_ADVENTURE_LOOT, type Batch3LootTable } from './content/augment-pool-batch3-loot';
 export const AUGMENT_BATCH3_SOURCE='augment-pool-batch3';
 const DUMMY_SOURCE='augment-pool-batch3-dummy';
 interface Batch3Event {readonly augment:MatchState['augments'][number];readonly schedule:number;readonly ordinal:number;readonly round:number}
@@ -36,6 +41,10 @@ function batch3Events(state:MatchState):Batch3Event[] {
     }
     return events;
    }
+   if(schedule.counter==='golden-egg'||schedule.counter==='adventure-quest'){
+    const due=schedule.counter==='golden-egg'?goldenEggHatch(state,augment,row,battles):adventureQuestRound(state,augment);
+    return due!==undefined&&due<=state.round?[{augment,schedule:index,ordinal:0,round:due}]:[];
+   }
    const dummy=schedule.counter.startsWith('dummy-')?ownDummyId(state,augment):undefined;
    if(schedule.counter.startsWith('dummy-')&&schedule.counter!=='dummy-gold'&&!dummy)return events;
    for(const r of battles){
@@ -54,8 +63,59 @@ function batch3Events(state:MatchState):Batch3Event[] {
   });
  });
 }
+/** The first non-supply round ordinal at or after `round` (nothing is born on a carousel round). */
+const nonSupply=(round:number)=>{let r=round;while(getMultiplayerRoundByOrdinal(r).kind==='supply')r++;return r;};
+/** Golden Egg (P 2026-10-24): EggTurns counts down once per round entry after acquisition and once more per player-
+ * combat win from the acquisition round; it hatches at the first round entry where the count reaches 0. */
+function goldenEggHatch(state:MatchState,augment:MatchState['augments'][number],row:(typeof AUGMENT_BATCH3)[string],battles:readonly {readonly kind:string;readonly facts?:{readonly round:number;readonly roundKind:string;readonly result:string}}[]):number|undefined {
+ const turns=batch3Count(row,'EggTurns');
+ for(let round=augment.acquiredRound+1;round<=state.round;round++){
+  const wins=battles.filter(r=>r.kind==='battle'&&r.facts!.round>=augment.acquiredRound&&r.facts!.round<round&&r.facts!.roundKind==='pvp'&&r.facts!.result==='win').length;
+  if(turns-(round-augment.acquiredRound)-wins<=0)return nonSupply(round);
+ }
+ return undefined;
+}
+/** Exalted Adventure (P 2026-10-24): the orb arrives at the round entry after the second of the three acquired
+ * champions first reaches 3 stars (authenticated upgrade provenance from the acquisition round on). */
+function adventureQuestRound(state:MatchState,augment:MatchState['augments'][number]):number|undefined {
+ const defs=new Set(planAugmentGifts(state,augment,AUGMENT_BATCH3[augment.definitionId].gifts).filter(g=>g.kind==='unit').map(g=>g.definitionId)),done=new Set<string>();
+ for(const e of state.resourceProvenance.entries){
+  if(e.kind!=='unit-upgraded'&&e.kind!=='unit-upgraded-after-combat')continue;
+  const round=getMultiplayerRoundById(e.roundId).ordinal;
+  if(round<augment.acquiredRound||e.event.toStar!==3||!defs.has(e.event.definitionId))continue;
+  done.add(e.event.definitionId);if(done.size>=2)return nonSupply(round+1);
+ }
+ return undefined;
+}
+/** One weighted table per event on its own source/seat/choice stream; weights are the raw 14.24 floats. */
+export function pickLootTable(seed:number,seat:string,choiceId:string,definitionId:string,tables:readonly Batch3LootTable[]):Batch3LootTable {
+ const namespace=JSON.stringify([AUGMENT_BATCH3_SOURCE,'loot',seat,choiceId,definitionId]);
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;
+ const weights=tables.map(t=>Math.round(t.weight*1e8)),total=weights.reduce((a,b)=>a+b,0);
+ let ticket=Math.floor(nextRandom((seed^rng)>>>0).word*total/4294967296);
+ for(const [i,w] of weights.entries()){if(ticket<w)return tables[i];ticket-=w;}
+ return tables.at(-1)!;
+}
+const lootTable=(state:MatchState,e:Batch3Event,tables:readonly Batch3LootTable[])=>pickLootTable(state.seed,state.multiplayer?.seatId??'solo',e.augment.choiceId,e.augment.definitionId,tables);
+const LOOT_POOLS:Readonly<Record<string,'artifact'|'radiant'|'completed'>>={ORNNARTIFACTS_SET6:'artifact',RADIANTITEMS_SET5:'radiant',COMPLETEDITEMS:'completed'};
+/** apiName → project content id. Golden Item Remover is projected onto the project's item remover (P 2026-10-24). */
+export function lootSpecs(t:Batch3LootTable):AugmentGiftSpec[] {
+ const item=(api:string)=>{const d=Object.values(ITEM_DEFINITIONS).find(d=>(d.apiName??d.id)===api);if(!d)throw new RangeError('Unknown loot item '+api);return d.id;};
+ const consumable=(api:string)=>{const id=api==='TFT9_Consumable_GoldenItemRemover'?'TFT_Consumable_ItemRemover':api;
+  const d=Object.values(CONSUMABLE_DEFINITIONS).find(d=>d.apiName===id);if(!d)throw new RangeError('Unknown loot consumable '+api);return d.id;};
+ return [
+  ...(t.Item??[]).map(api=>Object.values(CONSUMABLE_DEFINITIONS).some(d=>d.apiName===api)?{kind:'consumable' as const,definitionId:consumable(api)}:{kind:'item' as const,definitionId:item(api)}),
+  ...(t.Consumable??[]).map(api=>({kind:'consumable' as const,definitionId:consumable(api)})),
+  ...(t.ItemByKey??[]).map(key=>({kind:'random-item' as const,pool:LOOT_POOLS[key],count:1})),
+  ...(t.MeepTypeUnit??[]).map(definitionId=>({kind:'unit' as const,definitionId})),
+  ...(t.RandomUnit??[]).map(key=>{if(key!=='FiveCostUnit')throw new RangeError('Unknown loot unit '+key);return {kind:'random-unit' as const,cost:5 as const,count:1};}),
+ ];
+}
+const LOOT_TABLES:Readonly<Record<string,readonly Batch3LootTable[]>>={'golden-egg':GOLDEN_EGG_LOOT,'adventure-quest':EXALTED_ADVENTURE_LOOT};
 function eventGifts(state:MatchState,e:Batch3Event):AugmentGift[] {
  const row=AUGMENT_BATCH3[e.augment.definitionId],schedule=row.schedules[e.schedule];
+ const tables=LOOT_TABLES[schedule.counter];
+ if(tables)return planAugmentGifts(state,{...e.augment,choiceId:JSON.stringify([e.augment.choiceId,'batch3',e.schedule,e.ordinal]),acquiredRound:e.round},lootSpecs(lootTable(state,e,tables)));
  // A copy repeats the champion drawn by the acquisition gift at that index (Worth the Wait).
  const gifts=schedule.copyOf===undefined?schedule.gifts:[{kind:'unit' as const,definitionId:planAugmentGifts(state,e.augment,row.gifts)[schedule.copyOf].definitionId}];
  return planAugmentGifts(state,{...e.augment,choiceId:JSON.stringify([e.augment.choiceId,'batch3',e.schedule,e.ordinal]),acquiredRound:e.round},gifts);
@@ -129,7 +189,7 @@ export function drainBatch3RoundEntry(initial:MatchState,policy?:UnitLootPolicy)
  let state=initial;
  for(const e of batch3Events(state)){
   const counter=AUGMENT_BATCH3[e.augment.definitionId].schedules[e.schedule].counter;
-  if(e.round!==state.round||counter!=='round-start'&&counter!=='stage-start')continue;
+  if(e.round!==state.round||!['round-start','stage-start','golden-egg','adventure-quest'].includes(counter))continue;
   for(const gift of eventGifts(state,e)){
    if(state.seatMechanics?.receipts.some(r=>r.receiptId===gift.receiptId))continue;
    const request={...gift,source:AUGMENT_GIFT_SOURCE};
@@ -138,11 +198,18 @@ export function drainBatch3RoundEntry(initial:MatchState,policy?:UnitLootPolicy)
    else if(result.reason!=='bench-full')throw new RangeError(`Augment batch3 round grant: ${result.reason} (${gift.definitionId})`);
   }
  }
+ // Loot-table gold on this round's entry events pays here too, so its receipt carries the entry round.
+ for(const p of goldPlan(state)){
+  if(p.round!==state.round||state.seatMechanics?.receipts.some(r=>r.receiptId===p.receiptId))continue;
+  const result=grantMechanicGold(state,p);if(!result.ok)throw new RangeError(result.reason);state=result.state;
+ }
  return state;
 }
 function goldPlan(state:MatchState){
  return batch3Events(state).flatMap(e=>{
-  const row=AUGMENT_BATCH3[e.augment.definitionId],key=row.schedules[e.schedule].gold;
+  const row=AUGMENT_BATCH3[e.augment.definitionId],schedule=row.schedules[e.schedule],key=schedule.gold;
+  const tables=LOOT_TABLES[schedule.counter];
+  if(tables){const gold=lootTable(state,e,tables).Gold??0;return gold?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:gold,round:e.round}]:[];}
   return key?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:batch3Count(row,key),round:e.round}]:[];
  });
 }
