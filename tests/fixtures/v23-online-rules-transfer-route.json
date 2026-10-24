@@ -1,0 +1,46 @@
+{
+  "epoch": "v23-online-rules",
+  "seed": 4,
+  "contentDigest": "fnv1a32-utf16:19a07434",
+  "donor": "unit-11",
+  "survivor": "unit-22",
+  "reward": "unit-33",
+  "tg": "item-11",
+  "acquisitions": [
+    {
+      "kind": "unit-acquired",
+      "unitId": "unit-11",
+      "source": {
+        "kind": "shop",
+        "generation": 16,
+        "slotIndex": 2,
+        "definitionId": "tristana"
+      },
+      "sequence": 37,
+      "roundId": "3-3"
+    },
+    {
+      "kind": "unit-acquired",
+      "unitId": "unit-22",
+      "source": {
+        "kind": "shop",
+        "generation": 39,
+        "slotIndex": 2,
+        "definitionId": "tristana"
+      },
+      "sequence": 55,
+      "roundId": "3-6"
+    }
+  ],
+  "provenanceCounts": [
+    31,
+    20,
+    18,
+    7,
+    4,
+    5,
+    1
+  ],
+  "provenanceLength": 89,
+  "nextUnitSerial": 32
+}
