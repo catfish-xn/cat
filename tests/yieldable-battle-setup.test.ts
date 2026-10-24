@@ -20,7 +20,8 @@ function sliced<T>(work: Generator<void, T, void>, paused: () => void = () => {}
 }
 function pve(seed: number) {
   const initial = createMatch(seed);
-  const deployed = deployMatchUnit(initial, initial.preparation.units[0]!.id, { kind: 'board', cell: { col: 3, row: 6 } });
+  // v22 crab openings put the replacement crabs ahead of the player's opening unit in the roster.
+  const deployed = deployMatchUnit(initial, initial.preparation.units.find(u => u.team === 'player')!.id, { kind: 'board', cell: { col: 3, row: 6 } });
   if (!deployed.ok) throw Error(deployed.reason);
   return deployed.state;
 }

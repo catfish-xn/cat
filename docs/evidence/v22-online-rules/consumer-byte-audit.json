@@ -1379,6 +1379,13 @@
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "227e471718e0896da5137cb63d379c5e47307a37f3e23cd9e9f883886e29b3b3",
       "firstDifferentByte": 0
+    },
+    "tests/yieldable-battle-setup.test.ts": {
+      "previousBytes": 9102,
+      "currentBytes": 9229,
+      "previousSha256": "6b2d71ce5744612083f5f9f4c664cf49fdccca5e56b54c002c0dfd9271ec5e3d",
+      "currentSha256": "22c64087a9e1070947bc9ff1bedc2e992b921b1742d4f3f0c52f7a45575b0db4",
+      "firstDifferentByte": 1421
     }
   }
 }
