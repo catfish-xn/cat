@@ -22,6 +22,9 @@ export function openConquerorAnvil(input:MatchState):{state:MatchState;receiptId
  }
  return null;
 }
+/** v23 fmix32: seed 42 now opens golden-gala (tier 10 at 5-2/654); seed 20 opens scuttle-puddle like v22's seed 42
+ * and reproduces its natural trajectory (tier 10 at 5-3/690). */
+export const NATURAL_FORGE_SEED=20;
 let cached:Map<number,MatchState>|undefined;
 let tier4Preparation:MatchState|undefined;
 export function naturalTier4Preparation():MatchState{
@@ -30,7 +33,7 @@ export function naturalTier4Preparation():MatchState{
 /** Real solo combats, explicit generic grants only: no forged progress/history/settlement. */
 export function naturalForgeStates():Map<number,MatchState>{
  if(cached)return cached;
- const states=new Map<number,MatchState>();let state=createMatch(42),recruited=false;
+ const states=new Map<number,MatchState>();let state=createMatch(NATURAL_FORGE_SEED),recruited=false;
  for(let guard=0;guard<60000;guard++){
   if(state.phase==='choice'){
    let c=state.pendingChoice!;

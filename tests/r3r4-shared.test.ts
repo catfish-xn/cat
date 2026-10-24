@@ -6,12 +6,14 @@ import {toPrivateSeatView} from '../src/simulation/private-seat-view';
 import {readLootView} from '../src/simulation/loot-view';
 import {room,fight,accept,batch,conserved,fullBench} from './tp-helpers';
 import {accepted} from './fixtures/r3r4-public';
+import {isAnvil} from '../src/simulation/content/anvils';
 import type {MatchState} from '../src/simulation/match-types';
 function claimAll(result:ReturnType<typeof fight>){for(const orb of readLootView(result.state).unclaimedOrbs!)result=accept(runSharedMatchCommand(result.pool,result.state,{type:'claimOrb',round:result.state.round,orbId:orb.orbId}));return result;}
 function secondSettlement(){
  const initial=room(undefined,1,56),start=batch(refreshSharedShops(initial.pool,initial.states,1));
  const first=claimAll(fight(start.pool,start.states[0])),next=batch(nextSharedRound(first.pool,[first.state],1));
- let state=next.states[0];const unit=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;
+ // v23 fmix32 openings can bench anvil units, which can never be fielded; deploy the first benched hero.
+ let state=next.states[0];const unit=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;
  state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col:3,row:7}}));
  return claimAll(fight(next.pool,state));
 }

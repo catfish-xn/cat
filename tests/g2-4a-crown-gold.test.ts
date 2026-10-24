@@ -14,6 +14,7 @@ import {openG23Choice} from '../src/simulation/g2-3-runtime';
 import type {G23BattleFacts} from '../src/simulation/g2-3-economy';
 import {accepted,board} from './t10-helpers';
 import {catalogPreparation} from './t5r-helpers';
+import {isAnvil} from '../src/simulation/content/anvils';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -28,13 +29,15 @@ function crowned(battles:number,seed=42):MatchState{
  return state;
 }
 const own=(state:MatchState)=>state.preparation.units.filter(u=>u.team==='player');
+// v23 fmix32 openings (e.g. seed 3 component anvils) can bench anvil units, which cannot be fielded or hold crowns.
+const heroes=(state:MatchState)=>own(state).filter(u=>!isAnvil(u.definitionId));
 const crowns=(state:MatchState)=>state.items.filter(i=>i.definitionId===TACTICIANS_CROWN_ID);
 /** Three crowns (tier 15), the first `holders` of them equipped on deployed units. */
 function deployed(seed:number,holders:number,where:'board'|'bench'='board'):MatchState{
  let state=crowned(3,seed);
  const free=[0,2,3,4,5,6].map(col=>board(col));
- for(const unit of own(state).filter(u=>u.location.kind==='bench')){if(getPlayerDeploymentCount(state.preparation)>=getDeploymentCap(state))break;state=accepted(deployMatchUnit(state,unit.id,free.shift()!));}
- const targets=own(state).filter(u=>u.location.kind===where);
+ for(const unit of heroes(state).filter(u=>u.location.kind==='bench')){if(getPlayerDeploymentCount(state.preparation)>=getDeploymentCap(state))break;state=accepted(deployMatchUnit(state,unit.id,free.shift()!));}
+ const targets=heroes(state).filter(u=>u.location.kind===where);
  crowns(state).slice(0,holders).forEach((c,i)=>{state=accepted(equipItem(state,c.id,targets[i].id,0));});
  return state;
 }

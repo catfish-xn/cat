@@ -14,8 +14,9 @@ import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {drainG23Rewards} from '../src/simulation/g2-3-runtime';
 import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import {grantMechanicGold,grantMechanicItem,grantMechanicUnit,openMechanicChoice} from '../src/simulation/seat-mechanics';
-import {accepted,naturalForgeStates,naturalTier4Preparation,openConquerorAnvil} from './fixtures/g24-natural-forge';
+import {accepted,naturalForgeStates,naturalTier4Preparation,openConquerorAnvil,NATURAL_FORGE_SEED} from './fixtures/g24-natural-forge';
 import {anvilChoiceId} from '../src/simulation/anvils';
+import {isAnvil} from '../src/simulation/content/anvils';
 import {finishPublicEquipmentBattle} from './fixtures/b8-public-equipment';
 import {CompletedBattleHistory} from './fixtures/completed-battle-history';
 import {validateBattleCollection} from '../src/replay/history';
@@ -33,7 +34,7 @@ function nextDuplicatorPreparation(input:MatchState):MatchState{
   if(state.phase==='preparation')return state;
   if(state.phase==='choice'){
    const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
-  }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
+  }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
   else throw Error(`Unexpected duplicator fixture phase ${state.phase}`);
  }
  throw Error('Duplicator preparation budget');
@@ -48,6 +49,10 @@ function publicDuplicatorArchive():{state:MatchState;history:CompletedBattleHist
   const history=new CompletedBattleHistory('pr161-duplicator');
   state=accepted(grantMechanicGold(state,{receiptId:'fixture:duplicator:gold',source:'fixture',amount:150}));
   while(state.level<6)state=accepted(buyXp(state));
+  // v23 fmix32: seed 27566 opens two component anvils on the bench. Open them (sell = openAnvil, first offer) so
+  // they neither swap onto the board nor fill the bench that the real tier-4 duplicator needs.
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&isAnvil(u.definitionId)))
+   state=nextDuplicatorPreparation(accepted(sellUnit(state,unit.id)));
   for(const unit of state.preparation.units.filter(u=>u.team==='player'))
    state=accepted(deployMatchUnit(state,unit.id,{kind:'bench',slot:0}));
   for(const [col,definitionId] of ['darius','draven','rell','swain','ambessa','mordekaiser'].entries()){
@@ -263,10 +268,12 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
  // multiplayer G2-4a restored the tier-12 crown; the tier-11 support anvil takes item-16 first, so the crown is item-17.
  // v22: four earlier item births precede it (2-1 Portable Forge from the gold 2-1 augment tier, the 4-2 augment item,
  // and scuttle-puddle's 2-7/3-7 component rewards), so the crown moves from item-20 to item-24.
- expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-24',definitionId:'TFT_Item_ForceOfNature'});
+ // v23: NATURAL_FORGE_SEED 20's 2-1 augment (Mentorship II) grants no item, so the crown is one serial earlier (item-23).
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-23',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
   // The support trial grants four earlier items; birth must still use the exact frozen serial.
-  kind:'item',itemId:`item-${states[1].combatInputBasis!.nextItemSerial}`,definitionId:'TFT5_Item_ArchangelsStaffRadiant',
+  // v23: seed 20's tier-14 radiant roll is Ionic Spark (seed 42/v22: Archangel's Staff).
+  kind:'item',itemId:`item-${states[1].combatInputBasis!.nextItemSerial}`,definitionId:'TFT5_Item_IonicSparkRadiant',
  });
  for(const state of states){
   const before=JSON.stringify(state),save=serializeMatch(state);
@@ -279,19 +286,21 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
 
 it('rejects a duplicator receipt and matching hero forged to an unowned option at tier4',()=>{
  const state=naturalForgeStates().get(4)!;
- expect([state.seed,state.round,state.roundDefinitionId]).toEqual([42,6,'2-3']);
+ // v23: the natural forge route moved from seed 42 to NATURAL_FORGE_SEED 20 (same scuttle-puddle opening).
+ expect([state.seed,state.round,state.roundDefinitionId]).toEqual([NATURAL_FORGE_SEED,6,'2-3']);
  const receiptId='g23:conqueror:4:atom:1:copy:0';
  const receipt=state.seatMechanics!.receipts.find(r=>r.receiptId===receiptId);
  // v22 augment tier table: seed42's 2-1 node is gold, so the fixture takes Portable Forge instead of All For One I,
  // whose two filler heroes no longer take unit-66/67.
- expect(receipt).toMatchObject({kind:'unit',definitionId:'swain',unitId:'unit-68'});
+ // v23: seed 20's augments and duplicator roll give Irelia as unit-64 (seed 42/v22: Swain, unit-68).
+ expect(receipt).toMatchObject({kind:'unit',definitionId:'irelia',unitId:'unit-64'});
  expect(state.preparation.units.some(u=>u.definitionId==='zeri')).toBe(false);
  const progress=readG23Progress(state)!,bundle=progress.rewards.find(b=>b.id==='g23:conqueror:4')!;
  const atom=g23RewardAtoms(bundle,state.seed).find(a=>a.kind==='duplicator')!;
  expect(atom.options).toContain('zeri');
  const bad=structuredClone(state);
  Object.assign(bad.seatMechanics!.receipts.find(r=>r.receiptId===receiptId)!,{definitionId:'zeri'});
- Object.assign(bad.preparation.units.find(u=>u.id==='unit-68')!,{definitionId:'zeri'});
+ Object.assign(bad.preparation.units.find(u=>u.id==='unit-64')!,{definitionId:'zeri'});
  expect(()=>serializeMatch(bad)).toThrow('mechanic duplicator target');
  expect(()=>restoreMatch(bad)).toThrow('mechanic duplicator target');
  expect(()=>restoreMatch(JSON.stringify(bad))).toThrow('mechanic duplicator target');
@@ -352,7 +361,8 @@ it('rejects edited automatic birth serials, receipt/ledger order, rounds and def
  }
 },60000);
 
-it('seed42 naturally opens tier10 at 5-3/690 stacks and round-trips the selected artifact in settlement',()=>{
+// v23: NATURAL_FORGE_SEED (20) carries v22 seed 42's scuttle-puddle opening and trajectory.
+it('the scuttle-puddle seed naturally opens tier10 at 5-3/690 stacks and round-trips the selected artifact in settlement',()=>{
  const state=naturalForgeStates().get(10)!,choice=state.pendingChoice!;
  // v22 batch-B crabs: seed42 rolls scuttle-puddle, whose 4-7 board has five crabs (the sixth carrier shares the
  // fifth crab's death), so 4-7 yields one fewer takedown and the 650-stack tier 10 is crossed at 5-3 (648+42).
