@@ -126,6 +126,8 @@ export function publicEquipmentPreparation(components: readonly string[],
       while(state.preparation.units.filter(u=>u.team==='player').length>state.preparation.benchSize){
         const excess=[...state.preparation.units].reverse().find(u=>u.team==='player'&&!['unit-1','unit-2','unit-3'].includes(u.id))!;
         state=accepted(sellUnit(state,excess.id));
+        // v23 routes can bank a v22 anvil here: "selling" it opens its forge choice; take the first offer publicly.
+        while(state.phase==='choice'&&state.pendingChoice?.kind==='forge'&&state.pendingChoice.step==='offer')state=choose(state,state.pendingChoice.offers[0]);
       }
       state=benchPublicEquipmentPlayers(state);
       // A recorded route reaches the identical preparation. Publish it for
