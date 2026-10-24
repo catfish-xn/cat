@@ -191,7 +191,7 @@ describe('Enforcer 10 confiscation (P enforcer-confiscation-v1)', () => {
       const task = startTwoSidedBattle(input);
       task.queueEquipment({ kind: 'equipment', seq: 1, effectiveTick: 1, seatId: 'B', itemId: 'item-5', unitId: 'unit-2', slot: 1 }, equipped.state);
       const result = task.advance(1201)!;
-      return result.terminal.units.find(u => u.id === local(input, 'B', 'unit-2'))?.sources.filter(x => x.source.sourceKind === 'item').map(x => x.source.sourceDefinitionId);
+      return result.terminal.units.find(u => u.id === local(input, 'B', 'unit-2'))?.sources?.filter(x => x.source.sourceKind === 'item').map(x => x.source.sourceDefinitionId);
     };
     expect(run(enforcerSeat())).toEqual([]);
     // Control without Enforcer 10: the sword combines with Ekko's belt into Sterak's Gage and takes effect.
