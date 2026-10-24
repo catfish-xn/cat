@@ -12,6 +12,7 @@ import { amount, applyStatus, byDistance, champion, compareText, enemies, grantS
 import { rollG23HighRoller } from './g2-3-progress';
 import { G23_POLICY } from './content/g2-3-policy';
 import { isSupportAuraInstance } from './g2-4-support';
+import { knockAway } from './combat-displacement';
 
 function hit(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number,type:S13Packet['damageType']='magic',area=false){
   ctx.packets.push({source:origin(u),targetId:t.id,raw,damageType:type,actionSeq:seq,ordinal,
@@ -153,7 +154,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
        ids.push(...flame(ctx,u,t,base,seq,0));
        applyStatus(u,origin(u),'channel',0,Math.round(v('Spell1_MinDuration')*20),ctx.tick,ctx.events,true,'',seq);
       }
-      else if(spell===1){strike(t,scaled('Spell2_Modifier'),'physical');leapG23(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=v('Spell2_HexRadius'))){strike(x,scaled('Spell2_SecondaryModifier'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('Spell2_StunDuration')*20),ctx.tick,ctx.events);}}
+      else if(spell===1){strike(t,scaled('Spell2_Modifier'),'physical');knockAway(ctx,u,t,v('Spell2_HexKnockback'),'sevika-knockback');leapG23(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=v('Spell2_HexRadius'))){strike(x,scaled('Spell2_SecondaryModifier'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('Spell2_StunDuration')*20),ctx.tick,ctx.events);}}
       else {chomp(ctx,u,t,scaled('Spell3_Modifier'),seq,0);ids.push(t.id);}
       if(mod.mod==='rocket'||mod.mod==='jackpot')for(let i=0;i<G23_POLICY.highRoller.rockets*(mod.enhanced?3:1);i++)strike(t,G23_POLICY.highRoller.rocketPhysicalDamage,'physical');
       if(mod.mod==='shield'||mod.mod==='jackpot')grantShield(u,origin(u),G23_POLICY.highRoller.shield*(mod.enhanced?3:1),ctx.tick+G23_POLICY.highRoller.shieldTicks,ctx.tick,ctx.events);
