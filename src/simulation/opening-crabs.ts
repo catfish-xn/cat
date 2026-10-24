@@ -3,14 +3,14 @@ import { NEUTRAL_ENCOUNTERS } from './content/neutral-encounters';
 import { isCrabEncounter } from './content/opening-batch-b';
 import { openingEncounterId } from './opening-encounter';
 import type { MatchState } from './match-types';
-import { shareGeneratedJson } from './immutable-json';
+import { claimGeneratedJson } from './immutable-json';
 export function enterOpeningCrabs(state:MatchState):MatchState {
  const id=openingEncounterId(state);
  if(!isCrabEncounter(id)||state.m8.round.kind!=='pve')return state;
  const encounter=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.encounterId===`${id}/${state.roundDefinitionId}`);
  if(!encounter)throw new RangeError('Missing crab encounter');
  if(state.m8.preparation.enemies[0]?.id===encounter.deployment[0].id)return state;
- return {...state,m8:shareGeneratedJson({...state.m8,preparation:{...state.m8.preparation,enemies:encounter.deployment}}),preparation:{...state.preparation,units:[...state.preparation.units.filter(u=>u.team==='player'),...encounter.deployment]}};
+ return {...state,m8:claimGeneratedJson({...state.m8,preparation:{...state.m8.preparation,enemies:encounter.deployment}}),preparation:{...state.preparation,units:[...state.preparation.units.filter(u=>u.team==='player'),...encounter.deployment]}};
 }
 /** Preserve original base loot and its RNG; original slot order maps to crab order.
  * The sixth 4-7 carrier shares the fifth crab's death. No drop is lost or doubled.
