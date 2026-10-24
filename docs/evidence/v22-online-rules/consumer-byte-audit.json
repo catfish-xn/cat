@@ -744,6 +744,13 @@
       "currentSha256": "57ec6bb52e9a8ed5bbe83e8a24c7136fb1f5003b652c69bf51c46c71b1c4390e",
       "firstDifferentByte": 10930
     },
+    "tests/m6-application-failures.cjs": {
+      "previousBytes": 33951,
+      "currentBytes": 34230,
+      "previousSha256": "6e8bc4a4c37d51653b1d66c7ff5f2dc47e38de282d903759665d37b5f319e30d",
+      "currentSha256": "4f109550493b8137b98c0fd4403dccf57b928550e9027b603aebf5bc6d49ab4c",
+      "firstDifferentByte": 206
+    },
     "tests/m6-persistence.test.ts": {
       "previousBytes": 18088,
       "currentBytes": 18110,
