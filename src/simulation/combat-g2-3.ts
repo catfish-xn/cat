@@ -11,6 +11,7 @@ import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, applyStatus, byDistance, champion, compareText, enemies, grantShield, origin, path, variable } from './combat-s13-state';
 import { rollG23HighRoller } from './g2-3-progress';
 import { G23_POLICY } from './content/g2-3-policy';
+import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { isSupportAuraInstance } from './g2-4-support';
 import { knockAway } from './combat-displacement';
 
@@ -53,7 +54,8 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
   const foes=()=>byDistance(u,enemies(u,ctx.units));
   switch(champion(u)){
     case 'g23-sion':{
-      grantShield(u,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
+      const tier=u.mechanics?.find(m=>m.mechanic==='g23Sion')?.values.tier??3;
+      grantShield(u,origin(u),amount(u,ctx.tick,{ap:tier>=5?G23_SUMMON_POLICY.sion.tier5PlusShieldAp:v('Shield')}),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       const cells=path(ctx.board,u.cell,t.cell);
       for(const x of foes().filter(x=>cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row))){strike(x,physical('PercentAttackDamage'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);}break;
     }

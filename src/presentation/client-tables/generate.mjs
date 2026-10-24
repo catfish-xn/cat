@@ -18,7 +18,7 @@ const { S13_ABILITY_DATA, UNIT_DEFINITIONS } = await import('data:text/javascrip
 
 /** Project-authored notes (not client strings) of three project-defined abilities, translated here for display only. */
 const AUTHORED = {
-  'g23-sion-ability': { name: 'spell_tft13_sionspell_name', text: '（项目约定）获得护盾，对一条直线上的敌人造成伤害并眩晕。基础属性和登场阶段为约定值。' },
+  'g23-sion-ability': { name: 'spell_tft13_sionspell_name', text: '获得持续3秒、175%法术强度（5档及以上黑色玫瑰为75%）的护盾，然后对目标方向一条直线上的敌人造成300%攻击力的物理伤害并眩晕1秒。挣脱束缚时冲向最近的敌人，对路径上的敌人造成100%攻击力的物理伤害并击飞0.5秒（冲锋路线为项目约定）。' },
   'g23-forge-ability': { zhName: '海克斯科技锻炉', name: null, text: '固定不动、不会攻击的锻炉；杰斯施放技能时会将其复活。' },
   'g24-voidspawn-ability': { name: null, text: '只会普通攻击的召唤单位。14.6 版本后不再嘲讽。' },
 };

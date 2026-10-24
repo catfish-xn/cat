@@ -98,7 +98,6 @@ describe('14.24 official trait text with executable values', () => {
   it.each([
     ['scrap', 6, '所有基础装备和成装都会成为幸运装备！'],
     ['scrap', 9, '生成光明版装备！'], ['enforcer', 10, '没收敌人的所有装备！'],
-    ['black-rose', 7, '当【赛恩】阵亡时，他会带着超越死亡的能量重获生命！'],
   ] as const)('%s %i appends the marker to the original deferred clause', (id, threshold, clause) => {
     expect(row(id, threshold)).toContain(`${clause}（暂未实装）`);
   });
@@ -127,6 +126,7 @@ describe('14.24 official trait text with executable values', () => {
     expect(traitSummary('emissary', 4)).not.toContain('暂未实装');
     expect(row('rebel', 10)).not.toContain('暂未实装');
     expect(row('black-rose', 4)).not.toContain('暂未实装');
+    expect(row('black-rose', 7)).not.toContain('暂未实装');
     expect(traitSummary('emissary', 4)).toContain('【娜美】： 己方弈子的每次普攻提供2额外法力值。');
     expect(traitSummary('black-rose', 7)).toBe('【黑色玫瑰】弈子们的每个星级都会提升【赛恩】的强度');
   });

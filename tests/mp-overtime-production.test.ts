@@ -26,8 +26,8 @@ it('three Black Rose champions compile one Sion per side at 6-6 and after advanc
       sionHp.push(compiled.stats.health);
     }
   }
-  // The original five-entry growth table caps at stage 6, including overtime's stage 7.
-  expect(sionHp).toEqual([1450, 1450, 1450, 1450]);
+  // 750 base HP × (1 + 3 stars × 15%); the five-entry growth table caps at stage 6, including overtime's stage 7.
+  expect(sionHp).toEqual([1087, 1087, 1087, 1087]);
 });
 
 it('public production commands reach ordinal 39, resolve its earned armory, and settle real overtime combat once', () => {

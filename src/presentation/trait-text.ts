@@ -82,9 +82,6 @@ function annotate(id: string, text: string): string {
     mark('生成光明版装备！');
   }
   if (id === 'enforcer') mark('没收敌人的所有装备！');
-  if (id === 'black-rose') {
-    mark('当【赛恩】阵亡时，他会带着超越死亡的能量重获生命！');
-  }
   if (id === 'firelight') text += ' 魔改执行：每 6 秒冲刺，1 秒窗口内无限射程，攻速 +350%（工程取值），按实际承伤回复，撤离到 2 格内落点。';
   if (id === 'quickstriker') text += ' 移速 ×1.5；4 档当前目标阵亡后下一 tick 冲刺至新目标旁合法格（魔改执行）。';
   // Team-ups need the augment plus both named champions on the board; follow-ups land one tick later (project timing).

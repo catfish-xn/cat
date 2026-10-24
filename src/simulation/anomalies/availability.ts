@@ -14,7 +14,7 @@ export function occupiesCell(unit: CombatUnit, _tick: number): boolean {
   return unit.alive && !isAttackProxy(unit);
 }
 export function isAbsent(unit: CombatUnit, tick: number): boolean {
-  return (unit.itemBanish?.untilTick ?? 0) > tick || (unit.anomalyState?.absentUntilTick ?? 0) > tick;
+  return (unit.itemBanish?.untilTick ?? 0) > tick || (unit.anomalyState?.absentUntilTick ?? 0) > tick || (unit.g23Sion?.reviveAtTick ?? 0) > tick;
 }
 export function isSelectable(unit: CombatUnit, tick: number): boolean {
   return isPresent(unit, tick) && !isAttackProxy(unit)

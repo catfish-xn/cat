@@ -68,7 +68,7 @@ export const ABILITY_ZH: Readonly<Record<string, { readonly name?: string; reado
   "gangplank-ranged-ability": {"name":"粘性炸弹","text":"被动：在获得法力值时，投掷@NumOfBarrels@枚粘性炸弹。如果被粘到的敌人阵亡，炸弹将转移到附近的另一名敌人身上。<br><br><spellActive>主动：</spellActive>引爆炸弹，对被粘到的敌人造成@TotalDamage@ (%i:scaleAD%%i:scaleAP%)物理伤害，并对邻格的敌人造成@SecondaryDamage@ (%i:scaleAD%%i:scaleAP%)物理伤害。"},
   "swain-ability": {"name":"恶魔升华","text":"回复@ModifiedHeal@ (%i:scaleAP%)生命值并飞升@Duration@秒。处于飞升状态时，每过一秒，就会回复@ModifiedHealPerSecond@ (%i:scaleAP%)生命值并对邻格的敌人们造成@ModifiedDamage@ (%i:scaleAP%)魔法伤害。参与击杀时，飞升的持续时长会延长@BonusDuration@秒。"},
   "swain-ranged-ability": {"name":"群鸦凶杀","text":"向目标派出@NumOfCrows@只乌鸦，总计造成@ModifiedDamage@ (%i:scaleAP%)魔法伤害。每只乌鸦都会飞向一个附近敌人，并造成@ModifiedSecondaryDamage@ (%i:scaleAP%)魔法伤害。"},
-  "g23-sion-ability": {"name":"残虐猛击","text":"（项目约定）获得护盾，对一条直线上的敌人造成伤害并眩晕。基础属性和登场阶段为约定值。"},
+  "g23-sion-ability": {"name":"残虐猛击","text":"获得持续3秒、175%法术强度（5档及以上黑色玫瑰为75%）的护盾，然后对目标方向一条直线上的敌人造成300%攻击力的物理伤害并眩晕1秒。挣脱束缚时冲向最近的敌人，对路径上的敌人造成100%攻击力的物理伤害并击飞0.5秒（冲锋路线为项目约定）。"},
   "g23-forge-ability": {"name":"海克斯科技锻炉","text":"固定不动、不会攻击的锻炉；杰斯施放技能时会将其复活。"},
   "g24-voidspawn-ability": {"text":"只会普通攻击的召唤单位。14.6 版本后不再嘲讽。"},
 });

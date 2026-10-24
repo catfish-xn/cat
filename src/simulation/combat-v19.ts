@@ -68,8 +68,9 @@ export function sistersV19(ctx:AbilityContext,contributors:readonly string[]):vo
       v19Stat(ctx,partner,{...m.source,ownerId:partner.id,instanceId:'sisters:'+partner.id},u.definitionId==='jinx'?'attackDamage':'attackSpeed',u.definitionId==='jinx'?V.sisters.adBps:V.sisters.speedBps,'bps',u.definitionId==='jinx'?V.sisters.adTicks:V.sisters.speedTicks);
   }
 }
-export function markRoseV19(owner:S13Unit|undefined,target:S13Unit,positive:number):void {
-  if(positive<=0||!owner||champion(owner)!=='g23-sion'||!owner.mechanics?.some(m=>m.mechanic==='g23Sion'&&m.values.tier>=V.blackRose.minimumTier))return;
+/** Only enemies hit by an unshackled 4+ Black Rose Sion's charge take the amp. */
+export function markRoseV19(owner:S13Unit|undefined,target:S13Unit):void {
+  if(!owner||champion(owner)!=='g23-sion'||!owner.mechanics?.some(m=>m.mechanic==='g23Sion'&&m.values.tier>=V.blackRose.minimumTier))return;
   target.v19={...target.v19,roseTeams:[...new Set([...(target.v19?.roseTeams??[]),owner.team])]};
 }
 export function roseAmpV19(owner:S13Unit|undefined,target:S13Unit):boolean {
