@@ -3,6 +3,8 @@ import { shop as independentShop, COST } from './m5/oracle.g2.cjs';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import { nextRound, buyUnit, combineItems, deployMatchUnit, rerollShop, sellUnit } from '../../src/simulation/match';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
+import { isAnvil } from '../../src/simulation/content/anvils';
 import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicEquipmentChoices } from './b8-public-equipment';
 
 function accepted(result: MatchCommandResult): MatchState {
@@ -56,7 +58,8 @@ export function publicRecursivePurchase(state: MatchState): {
   state: MatchState; slot: number; definitionId: string; survivorId: string; secondId: string; incomingId: string; purchaseIds: string[];
 } {
   const fundingState = state;
-  for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) state = accepted(sellUnit(state, unit.id));
+  // v22/v23 opening structures (Trainer Golem) and anvils are not cards: they cannot be sold, so they stay.
+  for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && isSellableUnit(unit.definitionId) && !isAnvil(unit.definitionId))) state = accepted(sellUnit(state, unit.id));
   // Expanded bags make nine fixed Irelias unaffordable. Select the cheapest
   // nine-card paid route using the independent shop oracle; never grant gold,
   // rewrite RNG or edit offers. All actual operations below remain public.
