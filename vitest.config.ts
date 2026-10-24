@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
 import { BaseSequencer, type TestSpecification } from 'vitest/node';
 import { configDefaults, defineConfig } from 'vitest/config';
 
@@ -30,7 +32,34 @@ class RouteFirstSequencer extends BaseSequencer {
     };
     return sorted.sort((a, b) => weight(b) - weight(a));
   }
+  // CI runs the fast project as four `--shard` machines. Vitest's own shard cuts the
+  // hash-sorted file list into equal counts, which left one shard with over twice the
+  // work of another. Assign files greedily by measured duration instead (longest first,
+  // to the least-loaded shard), so every file still lands in exactly one shard.
+  override async shard(files: TestSpecification[]): Promise<TestSpecification[]> {
+    const { index, count } = this.ctx.config.shard!;
+    const root = this.ctx.config.root;
+    const path = (file: TestSpecification) => relative(root, file.moduleId).split('\\').join('/');
+    const load = Array.from({ length: count }, (_, shard) => shard === 0 && count > 1 ? SHARD_ONE_HEADSTART : 0);
+    const mine: TestSpecification[] = [];
+    const ordered = [...files].sort((a, b) => shardWeight(path(b)) - shardWeight(path(a)) || (path(a) < path(b) ? -1 : 1));
+    for (const file of ordered) {
+      const target = load.indexOf(Math.min(...load));
+      load[target] += shardWeight(path(file));
+      if (target === index - 1) mine.push(file);
+    }
+    return mine;
+  }
 }
+// Seconds per fast-project file from one full local run (8 workers); refresh with
+// `node scripts/update-shard-weights.cjs <vitest json report>`. Files not listed count as
+// UNKNOWN_WEIGHT, so a stale table only costs balance, never coverage.
+const SHARD_WEIGHTS: Record<string, number> = JSON.parse(readFileSync(new URL('./tests/fixtures/shard-weights.json', import.meta.url), 'utf8'));
+const UNKNOWN_WEIGHT = 2;
+const shardWeight = (path: string): number => SHARD_WEIGHTS[path] ?? UNKNOWN_WEIGHT;
+// Shard 1 also runs the timing project after its fast tests (ci.yml, full tier): 150-250 s
+// on CI, which is about 900 of these table seconds (CI shards finish ~4.8 table seconds per second).
+const SHARD_ONE_HEADSTART = 900;
 export default defineConfig({
   test: {
     sequence: { sequencer: RouteFirstSequencer },
