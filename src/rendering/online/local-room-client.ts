@@ -15,6 +15,7 @@ import {
   Lobby, PlaceholderBattleResolver, RealClock, mirrorReplayTick, TwoSidedBattleResolver, toCombatReplayFor, toPlayerView, toSeatPrivateView, seatPushEvents,
   type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type Room, type RoomState, type RoomTimings, type SharedPoolState,
 } from '../../server/room';
+import { CAROUSEL_RULES_BINDING } from '../../server/room/carousel';
 import type { ClientListeners, GameClient, LittleLegendId, LobbyView, PlayerView, WireCommand } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
 import { LOCAL_ROOM_DEFAULTS, type LocalRoomOptions } from './local-room-options';
@@ -69,7 +70,9 @@ export class LocalRoomClient implements GameClient {
     const base: BattleResolver = options.pvpMode === 'two-sided' ? new TwoSidedBattleResolver(placeholder) : placeholder;
     const resolver = options.faultAtRound === null ? base : new FaultInjectingResolver(base, options.faultAtRound);
     this.lobby = new Lobby({ clock: this.clock, resolver, seed: options.seed, timings, roomId: 'local-room', pvpMode: options.pvpMode,
-      ...(options.poolCapacities ? { poolCapacities: options.poolCapacities } : {}) });
+      ...(options.poolCapacities ? { poolCapacities: options.poolCapacities } : {}),
+      // Same shared carousel as the game server (main.ts CAT_CAROUSEL); off, the x-4 rounds fall back to the component supply.
+      ...(options.carousel !== false ? { carousel: CAROUSEL_RULES_BINDING } : {}) });
   }
 
   /** Test/debug access to the room the client is driving. */
