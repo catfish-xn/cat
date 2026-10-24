@@ -4,7 +4,7 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
 const { createHash } = require('node:crypto');
 const { readProcessOutput } = require('./offline-process-output.cjs');
 const sha = x => createHash('sha256').update(x).digest('hex');
-const base = '5e72a4c03f1f292ed0cba52c2e918d4a0918c6b7';
+const base = '8715a2c15912788a56d4ed4a0788177defe38037';
 const target = 'tests/server/fixtures/battle-start.json';
 async function main() {
   assert(process.argv.slice(2).every(x => x === '--check'));

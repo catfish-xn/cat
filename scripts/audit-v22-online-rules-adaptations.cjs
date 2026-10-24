@@ -1,7 +1,7 @@
 /* Read-only Git baseline; exact byte evidence for current consumer/test adapters. */
 const fs=require('node:fs'),assert=require('node:assert/strict'),{createHash}=require('node:crypto');
 const {readProcessOutput:git}=require('./offline-process-output.cjs');
-const base='5e72a4c03f1f292ed0cba52c2e918d4a0918c6b7';
+const base='8715a2c15912788a56d4ed4a0788177defe38037';
 const sha=x=>createHash('sha256').update(x).digest('hex');
 const files=git('git',['diff','--name-only',base,'--','tests','scripts/verify-m8-herald-fixtures.cjs']).toString().trim().split('\n').filter(Boolean);
 const existing=new Set(git('git',['ls-tree','-r','--name-only',base]).toString().trim().split('\n'));

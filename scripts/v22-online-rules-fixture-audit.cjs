@@ -1,7 +1,7 @@
 /* Independent live-combat epoch. Previous evidence, raw archives and archive mirrors stay immutable. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {readProcessOutput:execFileSync}=require('./offline-process-output.cjs'),{createHash}=require('node:crypto');
-const BASELINE='5e72a4c03f1f292ed0cba52c2e918d4a0918c6b7';
+const BASELINE='8715a2c15912788a56d4ed4a0788177defe38037';
 const git=(...args)=>execFileSync('git',args,{maxBuffer:128*1024*1024,env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}});
 const sha=b=>createHash('sha256').update(b).digest('hex');
 exports.baselineCommit=()=>{

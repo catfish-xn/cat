@@ -1,7 +1,7 @@
 /* Run the recording/verification steps sequentially, offline, without Git writes. */
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
 process.env.GIT_OPTIONAL_LOCKS='0';
-const base='5e72a4c03f1f292ed0cba52c2e918d4a0918c6b7',arg='--baseline-commit='+base;
+const base='8715a2c15912788a56d4ed4a0788177defe38037',arg='--baseline-commit='+base;
 const write=process.argv.includes('--write');
 if(process.argv.slice(2).some(x=>x!=='--write'))throw Error('Usage: verify-v22-online-rules-epoch.cjs [--write]');
 const check=write?[]:['--check'];
