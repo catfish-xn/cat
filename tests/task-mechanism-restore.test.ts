@@ -68,10 +68,10 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 }
 
 it.each([
-  // v22: seeds whose public Manaflow route keeps unit serials single-digit, so Morgana's id sorts first
-  // and she owns Sion (string-sorted Black Rose owner, see S13_RULES_GAP known issue).
-  { contribution: false, seed: 108, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 174, targetId: 'enemy-r4-1' },
-  { contribution: true, seed: 104, cells: [{ col: 3, row: 7 }, { col: 0, row: 7 }, { col: 6, row: 7 }], tick: 210, targetId: 'enemy-r4-1' },
+  // v23: Black Rose owner is the lowest numeric unit serial (unit-9 before unit-10); on these public Manaflow
+  // routes Morgana is that unit and owns Sion. Ticks moved with the v23 opening-encounter mixing.
+  { contribution: false, seed: 108, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 164, targetId: 'enemy-r4-1' },
+  { contribution: true, seed: 175, cells: [{ col: 3, row: 7 }, { col: 0, row: 7 }, { col: 6, row: 7 }], tick: 233, targetId: 'enemy-r4-1' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => {
   // Each route's public 2-1 augment is Manaflow I/II; the assertions only read Sion, curse and bracer facts.
   let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });

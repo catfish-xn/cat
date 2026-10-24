@@ -87,7 +87,11 @@ function selectionWord(seed: number): number {
   let hash = 0x811c9dc5;
   const name = OPENING_ENCOUNTER_CONFIG.selectionStream;
   for (let i = 0; i < name.length; i++) hash = Math.imul(hash ^ name.charCodeAt(i), 0x01000193) >>> 0;
-  return nextRandom((seed ^ hash) >>> 0).word;
+  // murmur3 fmix32 avalanche: one LCG step left small neighbouring seeds' words correlated.
+  let x = (seed ^ hash) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 0x85ebca6b) >>> 0;
+  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35) >>> 0;
+  return (x ^ (x >>> 16)) >>> 0;
 }
 /** No enabled filtering: all intervals, including disabled effects, retain their weight. */
 export function selectOpeningEncounterFromWord(word: number): OpeningEncounterId {

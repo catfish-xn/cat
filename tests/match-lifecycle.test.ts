@@ -85,9 +85,9 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   if(!started.ok)throw Error(started.reason);
   const basis=state.combatInputBasis,basisBefore=structuredClone(basis),events:MatchEvent[]=[...started.events];
   const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']),heroSource=JSON.stringify(['pve','1-2','minions-a-v1','m02']);
-  // v22 enables crab encounters: seed 42 rolls scuttle-puddle, so the m01/m02 drops keep their
-  // original identities but are carried by the first/second crab, whose deaths reveal them.
-  const sourceCarrier=JSON.stringify(['pve','1-2','scuttle-puddle/1-2','c0']),heroCarrier=JSON.stringify(['pve','1-2','scuttle-puddle/1-2','c1']);
+  // v23: seed 42 now rolls golden-gala (v22's single LCG step gave scuttle-puddle), so the authored
+  // m01/m02 minions carry their own drops again and no crab gold is paid.
+  const sourceCarrier=sourceUnitId,heroCarrier=heroSource;
   const dropId=JSON.stringify([JSON.stringify(['orb','1-2','minions-a-v1',sourceUnitId,0]),0]),heroDropId=JSON.stringify([JSON.stringify(['orb','1-2','minions-a-v1',heroSource,0]),0]);
   const itemReceipt={receiptId:JSON.stringify([dropId,'grant']),dropId,payload:{kind:'item',definitionId:'belt',quantity:1},grantedItemIds:['item-1'],grantedUnitIds:[]};
   const receiptId=JSON.stringify([heroDropId,'grant']),receipt={receiptId,dropId:heroDropId,payload:{kind:'unit',definitionId:'tristana',quantity:1},grantedItemIds:[],grantedUnitIds:['unit-2']};
@@ -109,10 +109,8 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
      {type:'lootRevealed',dropId:heroDropId,death:{combatId:'round-1',tick:state.combat!.tick,eventSeq:step.events.find(e=>e.type==='death'&&e.unitId===heroCarrier)!.eventSeq},domain:'match',eventSeq:prior.nextMatchEventSeq},
      {type:'lootGranted',receipt:itemReceipt,domain:'match',eventSeq:prior.nextMatchEventSeq+1},
      {type:'lootGranted',receipt,domain:'match',eventSeq:prior.nextMatchEventSeq+2},
-     // v22 scuttle-puddle: each slain crab pays one gold through its own settlement receipt.
-     ...['c0','c1'].map((crab,i)=>({type:'mechanicGranted',receipt:{receiptId:`opening-batch-b/${JSON.stringify(['scuttle-puddle','round-1',JSON.stringify(['pve','1-2','scuttle-puddle/1-2',crab]),0])}`,source:'opening-batch-b',kind:'gold',round:1,roundId:'1-2',amount:1},domain:'match',eventSeq:prior.nextMatchEventSeq+3+i})),
-     {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prior.nextMatchEventSeq+5},
-     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+6},
+     {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prior.nextMatchEventSeq+3},
+     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+4},
     ]);
     expect(state.resourceProvenance).toEqual({...prep.resourceProvenance,entries:[...prep.resourceProvenance.entries,
      {sequence:1,roundId:'1-2',kind:'item-acquired',itemId:'item-1',source:{kind:'loot',receiptId:itemReceipt.receiptId}},
@@ -128,9 +126,8 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
    ...evidence.map((e,i)=>({type:'lootRevealed',...e,domain:'match',eventSeq:prep.nextMatchEventSeq+i})),
    {type:'lootGranted',receipt:itemReceipt,domain:'match',eventSeq:prep.nextMatchEventSeq+2},
    {type:'lootGranted',receipt,domain:'match',eventSeq:prep.nextMatchEventSeq+3},
-   ...['c0','c1'].map((crab,i)=>({type:'mechanicGranted',receipt:{receiptId:`opening-batch-b/${JSON.stringify(['scuttle-puddle','round-1',JSON.stringify(['pve','1-2','scuttle-puddle/1-2',crab]),0])}`,source:'opening-batch-b',kind:'gold',round:1,roundId:'1-2',amount:1},domain:'match',eventSeq:prep.nextMatchEventSeq+4+i})),
-   {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prep.nextMatchEventSeq+6},
-   {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+7},
+   {type:'mechanicGranted',receipt:{receiptId:'pve-remover:1-2',source:'pve-remover',kind:'consumable',round:1,roundId:'1-2',definitionId:'magnetic-remover',consumableId:'consumable-1'},domain:'match',eventSeq:prep.nextMatchEventSeq+4},
+   {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+5},
   ]);
   expect(state.m8.loot.frozen).toBe(prep.m8.loot.frozen);
   expect(state.m8.loot.direct).toEqual([{dropId,status:'granted',receiptId:itemReceipt.receiptId},{dropId:heroDropId,status:'granted',receiptId}]);

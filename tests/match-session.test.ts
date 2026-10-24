@@ -211,12 +211,14 @@ describe('match session commands and fixed clock', () => {
     const session=new MatchSession(prepared);
     const slot=session.state.shop.slots.findIndex(o=>o.status==='available'&&!['irelia','maddie','lux'].includes(o.definitionId));
     expect(session.buy(slot,session.state.shop.generation).ok).toBe(true);
-    for(let i=1;i<=3;i++) expect(session.deploy(`unit-${i}`,{kind:'board',cell:{col:i,row:6}}).ok).toBe(true);
-    const capped=session.state;rejected(session,session.deploy('unit-4',{kind:'board',cell:{col:4,row:7}}),'population-cap',capped);
+    // v23: seed 5 now opens with Artifact Anvil, whose anvil unit takes a serial; deploy real champions only.
+    const heroes=players(session.state).filter(u=>!u.definitionId.startsWith('TFT_')).map(u=>u.id);
+    for(let i=1;i<=3;i++) expect(session.deploy(heroes[i-1],{kind:'board',cell:{col:i,row:6}}).ok).toBe(true);
+    const capped=session.state;rejected(session,session.deploy(heroes[3],{kind:'board',cell:{col:4,row:7}}),'population-cap',capped);
     const shop=structuredClone(session.state.shop),rng=session.state.rngState,gold=session.state.gold;
     expect(session.buyXp().ok).toBe(true);
     expect(session.state).toMatchObject({level:4,xp:2,gold:gold-4,rngState:rng,shop});
-    expect(session.deploy('unit-4',{kind:'board',cell:{col:4,row:7}}).ok).toBe(true);
+    expect(session.deploy(heroes[3],{kind:'board',cell:{col:4,row:7}}).ok).toBe(true);
   });
 
   it('returns upgrade events without delaying the next sell or allocating a second purchase', () => {

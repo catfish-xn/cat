@@ -66,7 +66,11 @@ function openingEncounter(seed) {
   ['viktors-vision',800],['mels-blessing',800],['warwicks-hunger',800],['artifact-anvil',400]];
  let hash=2166136261n;const name='opening-encounter-v1/select';
  for(let i=0;i<name.length;i++)hash=((hash^BigInt(name.charCodeAt(i)))*16777619n)%4294967296n;
- let ticket=Number(BigInt(word(Number(BigInt(seed)^hash)))*10000n/4294967296n);
+ // v23: murmur3 fmix32 over the stream-salted seed (was one lcg32 step).
+ let x=BigInt(seed)^hash;
+ x=((x^(x>>16n))*0x85ebca6bn)%4294967296n;
+ x=((x^(x>>13n))*0xc2b2ae35n)%4294967296n;
+ let ticket=Number((x^(x>>16n))*10000n/4294967296n);
  for(const [id,weight] of entries){if(ticket<weight)return id;ticket-=weight;}
  throw Error('independent opening weights');
 }

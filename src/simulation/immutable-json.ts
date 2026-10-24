@@ -41,6 +41,16 @@ export function shareGeneratedJson<T extends object>(value: T): T {
   const owned: object[] = [];
   return plainData(value, new Set(), owned) ? reuse(value, owned) : freezeContent(value);
 }
+/** Like shareGeneratedJson but always keeps the caller's object: no older JSON-equal hit can
+ * swap out children (e.g. a frozen ledger) the caller still compares by identity. */
+export function claimGeneratedJson<T extends object>(value: T): T {
+  if (dataObjects.has(value)) return value;
+  const owned: object[] = [];
+  if (!plainData(value, new Set(), owned)) return freezeContent(value);
+  freezeContent(value);
+  for (const object of owned) dataObjects.add(object);
+  dataObjects.add(value); return value;
+}
 /** Locally parsed, fully validated JSON with no negative-zero token. No external object inputs. */
 export function shareParsedJson<T extends object>(value: T): T { return reuse(value); }
 
