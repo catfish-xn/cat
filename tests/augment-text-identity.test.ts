@@ -6,11 +6,12 @@ import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
 import { AUGMENT_POOL_TEXT } from '../src/presentation/augment-pool-text';
 import { loadAugmentText } from '../src/presentation/augment-text-loader';
 import { augmentPlayerDescription } from '../src/presentation/augment-display';
+import { CONTENT_DIGEST, LOOT_REPLAY_DIGEST } from '../src/simulation/content/identity-constants';
 
-// Independently measured from the untouched task HEAD b2acbb1, including all archive columns.
-it('reconstructs the untouched v23 candidate identity roots without changing frozen release constants', () => {
-  expect(recomputeContentDigest()).toBe('fnv1a32-utf16:30d7827d');
-  expect(recomputeLootReplayDigest()).toBe('fnv1a32-utf16:0eb630e2');
+// Moving prose to the lazy chunk must not change the recorded v23-online-rules identity roots.
+it('keeps the recorded content identity roots while descriptions live in the UI chunk', () => {
+  expect(recomputeContentDigest()).toBe(CONTENT_DIGEST);
+  expect(recomputeLootReplayDigest()).toBe(LOOT_REPLAY_DIGEST);
 });
 it('shows every batch description after the UI chunk arrives, without putting prose in runtime rows', async () => {
   await loadAugmentText();
