@@ -61,7 +61,7 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
         const feedback = await import('/src/presentation/equipment-feedback.ts');
         const accepted = result => { if (!result.ok) throw Error(result.reason); return result.state; };
         let state = api.createMatch(42);
-        // B6 setup only: real empty-board losses earn 2+3+5G and reach the
+        // B6 setup only: real empty-board losses earn v22 2+3+4G plus 0+1+1G streak and reach the
         // original 2-1 test round. Paid shop heroes are not B8 reward evidence.
         state = accepted(api.deployMatchUnit(state, 'unit-1', { kind: 'bench', slot: 0 }));
         for (let guard = 0; guard < 20; guard++) {
