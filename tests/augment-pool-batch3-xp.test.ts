@@ -187,4 +187,4 @@ it('Kingslayer offline: the AI opponent is not a player, so a player-combat win 
  expect(kingGold(drainKingslayerGold(won))).toEqual([1]);
  expect(kingGold(drainKingslayerGold({...won,roundResults:[...s.roundResults,{...won.roundResults.at(-1)!,result:'draw' as const}]}))).toEqual([]);
  s=advance(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
-});
+}, 30_000);

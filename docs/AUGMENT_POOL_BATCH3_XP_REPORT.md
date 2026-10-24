@@ -30,8 +30,8 @@
 
 - 升级回血 `applyLevelUpHealth` 接在所有升级点：买经验、进入回合（开局遭遇之后）、获得强化的经验、单机与联机结算。
 - 单机校验：`batch2HpAfterSettlement` 加结算升级回血，`batch2HpBeforeBattle` 加备战段升级回血，两段都从等级历史和获得等级推导；猴子遭遇的两处校验同样走这两段。
-- 联机房间（`src/server/room/room.ts`）：房间血量账本允许两次结算之间的规则回血（只升不降），结算期望值加上结算升级回血；规则血量低于房间血量仍被拒绝。试跑 seed 5 整局时，持有上进心的座位曾在结算时报“rules HP 56 disagrees with the room HP 63 - 9”，就是这个问题，已修正；按代码推断，`crimson-pact`（底城争夺战）在联机两次结算之间回血原本也会触发同样的报错（未单独复现）。
-- 弑君突刺：房间结算收据加 `opponentHp`（仅持有者），规则端校验它必须存在且在 0–100，金币按收据推导、恢复时逐项比对。
+- 联机房间（`src/server/room/room.ts`）：房间血量账本 `seat.hp` 在每次发布时按来源同步（`src/simulation/player-hp.ts` 的 `explainedHp`：上进心升级回血、底城争夺战跳过黑市的选择收据），解释不了的血量变化直接让房间报错终止；结算时恢复以账本为起点的严格相等，只加结算记录里的升级回血。试跑 seed 5 整局时，持有上进心的座位曾在结算时报“rules HP 56 disagrees with the room HP 63 - 9”，就是账本不跟随回血造成的，现已修正，SeatPublic 显示的血量也随之及时更新。（500b866f 里先用过“取房间与规则血量较大者”的修法，评审指出等于放松校验，已在后续提交替换。）
+- 弑君突刺：房间结算收据加 `opponentHp`（仅持有者），规则端校验它必须存在且在 0–100，金币按收据推导、恢复时逐项比对。没有升 `ROUND_SETTLEMENT_VERSION`：字段可选且只在持有者的收据里出现，现有收据和录制都不变；收据字段只在 `applyRoundSettlement` 校验，`g2-3` 恢复只比对 `g23Facts`，单机恢复走 `validateBatch1Gifts` 的金币比对，联机座位恢复（`restoreSharedOrbSnapshot`）本来就不校验强化发放。
 
 | 中文名 | 内部 id | 等级 | 14.24 数值 | 行为 |
 |---|---|---|---|---|
@@ -53,3 +53,7 @@
 - 新增上进心（买经验3金、连升两级精确+4血/+6刷新、之后经真实回合的升级、血量±2与获得等级篡改被拒、上限100与阵亡不回血）与弑君突刺（联机1/4金、输不给、缺/越界 `opponentHp` 与非持有者带该字段被拒、篡改/删除金币收据被拒；单机胜利1金、平局不给）测试。
 - 扩池到 176 张后又改了种子：`g2-augments-combat` 爬梯子 774→656，`s13-augments-p2-choice` 2304→3762、53→3502（顺序搜索，原断言不变）；`g2-augments-choice` 总数 176。
 - 56 个相关文件：失败的只有基线已有的 carousel-room 1 项、`local-room-client-full-match` 超时（d4dd9cfa 上同样超时），g2-4b 两个文件各 2 项（同上，种子路线），以及 `v17-avarice-pvp` 1 项：扩池后种子 42 的四个人类座位选到的强化全变了（都不是本批强化），压金后的金币样本不再改变战斗，属固定种子路线断言，留待 v23 集成。几个 5 秒超时的用例在并发跑时超时，单独重跑通过。
+
+第三轮（评审 must-fix）：
+- 新增 `tests/server/room-hp-ledger.test.ts` 3 项：经房间买经验触发上进心升级，账本与规则同为52、每次扣3金，之后一整轮结算不报错；无来源的血量变化让房间以 invalid-results 终止且账本不动；`explainedHp` 对底城争夺战只认新增的跳过收据、对等级只认上进心、上限100。
+- 相关 30 个文件：除基线已有的 carousel-room 1 项和种子路线的 v17-avarice 1 项外全部通过；并发时超时的 battle-start-slices、pairing-room、projection-wire 与弑君突刺单机用例单独重跑通过。

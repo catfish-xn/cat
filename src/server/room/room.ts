@@ -16,6 +16,7 @@ import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulatio
 import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { needsOpponentHp } from '../../simulation/augment-kingslayer';
 import { settlementLevelUpHealth } from '../../simulation/augment-xp';
+import { explainedHp, liveHpAfterSettlement } from '../../simulation/player-hp';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import { getRoundPreparationMs } from '../../simulation/round-schedule';
@@ -690,20 +691,13 @@ export class Room {
     // Fixed seat order, independent of result arrival order: each seat's transaction runs on the pool the previous one left.
     for (const seat of alive) {
       const job = jobs.get(seat.seatId)!;
-      // Rules heals between settlements (Upward Mobility level-ups, Crimson Pact) may only raise the live HP above the
-      // room's ledger; damage lands only here and at the opening. `base` is that live HP, never below the room's: a lower
-      // rules HP keeps the room's and fails the checks below.
-      const settled = (match: MatchState, damage: number, receipt: RoundSettlementReceipt | null, events: readonly MatchEvent[], hpAfter = Math.max(0, seat.hp - damage), base = seat.hp): SettledSeat =>
-        ({ seatId: seat.seatId, hpBefore: base, damage, hpAfterRaw: base - damage, hpAfter, match, receipt, events });
-      // A rules-settled seat: HP before must not undercut the room, and HP after is that minus the room's damage plus
-      // the settlement's own level-up health (rules derivation from the settled record).
-      const ruledHp = (match: MatchState, damage: number): { base: number; expected: number } => {
-        const base = Math.min(100, Math.max(seat.hp, match.roundResults.at(-1)!.hpBefore));
-        return { base, expected: settlementLevelUpHealth(match, state.round, Math.max(0, base - damage)) };
-      };
+      // seat.hp already carries every explained heal since the last settlement (replace → syncedSeatHp), so HP before
+      // is exactly the room's; the only rules addition here is the settlement's own level-up health (Upward Mobility).
+      const settled = (match: MatchState, damage: number, receipt: RoundSettlementReceipt | null, events: readonly MatchEvent[], hpAfter = Math.max(0, seat.hp - damage)): SettledSeat =>
+        ({ seatId: seat.seatId, hpBefore: seat.hp, damage, hpAfterRaw: seat.hp - damage, hpAfter, match, receipt, events });
       if (job.kind === 'receipt') {
         yield;
-        const base = Math.min(100, Math.max(seat.hp, seat.match.playerHp));
+        const base = seat.hp;
         const applied = runSharedMatchCommand(pool, seat.match, { type: 'settleRound', receipt: job.receipt });
         if (!applied.ok) return { ok: false, detail: `seat ${seat.seatId}: ${applied.reason}` };
         // HP must match the room's damage unless exactly one Mel save from this battle explains a lethal rescue.
@@ -717,33 +711,34 @@ export class Room {
           || record.settlementId !== job.receipt.settlementId || record.hpBefore !== base
           || record.playerDamage !== job.damage || record.hpAfter !== after
           || record.hpLost !== base - after) return { ok: false, detail: `seat ${seat.seatId}: rules HP record disagrees with the room settlement` };
-        pool = applied.pool; seats.push(settled(applied.state, job.damage, job.receipt, applied.events, applied.state.playerHp, base));
+        pool = applied.pool; seats.push(settled(applied.state, job.damage, job.receipt, applied.events, applied.state.playerHp));
         continue;
       }
       const { outcome } = job;
       // The rules settled this seat themselves (PvE/supply): their HP is authoritative and must agree with the room's. A
       // placeholder outcome that left the state unsettled (test resolvers) is subtracted by the room as in B1.
       const settledByRules = outcome.state.roundResults.at(-1)?.round === state.round;
-      const ruled = settledByRules ? ruledHp(outcome.state, outcome.damage) : { base: seat.hp, expected: Math.max(0, seat.hp - outcome.damage) };
-      const { expected } = ruled;
-      if (settledByRules && outcome.state.playerHp !== expected) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${outcome.state.playerHp} disagrees with the room HP ${ruled.base} - ${outcome.damage}` };
-      if (untouched) { seats.push(settled(outcome.state, outcome.damage, null, [], expected, ruled.base)); continue; }
+      const raw = Math.max(0, seat.hp - outcome.damage);
+      const expected = settledByRules ? settlementLevelUpHealth(outcome.state, state.round, raw) : raw;
+      if (settledByRules && outcome.state.playerHp !== expected) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${outcome.state.playerHp} disagrees with the room HP ${seat.hp} - ${outcome.damage}` };
+      if (untouched) { seats.push(settled(outcome.state, outcome.damage, null, [], expected)); continue; }
       if (seat.match.phase === 'combat') {
         if (!settledByRules) return { ok: false, detail: `seat ${seat.seatId}: an unsettled placeholder outcome cannot settle a live battle` };
         const finished = yield* finishLiveCombatSteps(pool, seat.match);
         if (!finished.ok) return { ok: false, detail: `seat ${seat.seatId}: ${finished.reason}` };
-        const live = ruledHp(finished.state, outcome.damage);
-        if (finished.state.playerHp !== live.expected) return { ok: false, detail: `seat ${seat.seatId}: live HP ${finished.state.playerHp} disagrees with the resolved battle ${live.base} - ${outcome.damage}` };
-        pool = finished.pool; seats.push(settled(finished.state, outcome.damage, null, finished.events, live.expected, live.base));
+        const live = settlementLevelUpHealth(finished.state, state.round, raw);
+        if (finished.state.playerHp !== live) return { ok: false, detail: `seat ${seat.seatId}: live HP ${finished.state.playerHp} disagrees with the resolved battle ${seat.hp} - ${outcome.damage}` };
+        pool = finished.pool; seats.push(settled(finished.state, outcome.damage, null, finished.events, live));
         continue;
       }
       // The rules already settled this round on the live seat at or before the freeze (an empty PvE board loses at once
       // when its battle starts; a supply round settles in its choice): that live seat, with whatever was operated since,
       // is the result. Its HP is the rules' own and must agree with the resolved battle.
       if (seat.match.roundResults.at(-1)?.round === state.round) {
-        const live = ruledHp(seat.match, outcome.damage);
-        if (seat.match.playerHp !== live.expected) return { ok: false, detail: `seat ${seat.seatId}: live HP ${seat.match.playerHp} disagrees with the resolved battle ${live.base} - ${outcome.damage}` };
-        seats.push(settled(seat.match, outcome.damage, null, [], live.expected, live.base));
+        // Settled in place before the room resolved it: later commands may only have added explained heals.
+        const live = liveHpAfterSettlement(seat.match, state.round, raw);
+        if (seat.match.playerHp !== live) return { ok: false, detail: `seat ${seat.seatId}: live HP ${seat.match.playerHp} disagrees with the resolved battle ${seat.hp} - ${outcome.damage}` };
+        seats.push(settled(seat.match, outcome.damage, null, [], live));
         continue;
       }
       // Neither in a live battle nor settled by the rules (a state the resolver left as it was): only an unchanged seat may pass.
@@ -1888,13 +1883,44 @@ export class Room {
   }
   private replace(next: RoomState): void {
     if (this.disposed) return;
-    const published = { ...this.withChoiceDeadlines(next), roomRevision: this.current.roomRevision + 1 };
+    const synced = this.syncedSeatHp(next);
+    if (typeof synced === 'string') return this.fail({ kind: 'invalid-results', detail: synced });
+    const published = { ...this.withChoiceDeadlines(synced), roomRevision: this.current.roomRevision + 1 };
     // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
     this.current = published;
     for (const listener of this.listeners) listener(this.current);
     this.syncChoiceTimers();
     this.fitDeadlineToChoices();
+  }
+
+  /**
+   * Keeps the room's HP ledger (`seat.hp`, shown on SeatPublic) in step with every rules heal between settlements, in the
+   * same publication. A seat whose match changed without a settlement inside the change (a command, a round entry) and
+   * whose publication did not set its HP itself must end at exactly `explainedHp`: an Upward Mobility level-up or a
+   * Crimson Pact skip receipt. Any other HP change is refused (the room faults). Settlement and the opening resolution
+   * set `seat.hp` themselves and are checked there.
+   */
+  private syncedSeatHp(next: RoomState): RoomState | string {
+    if (next.seats === this.current.seats) return next;
+    let changed = false;
+    const seats = next.seats.map(seat => {
+      const prev = this.current.seats.find(candidate => candidate.seatId === seat.seatId);
+      if (!prev || seat.match === prev.match || seat.hp !== prev.hp || !seat.alive) return seat;
+      const before = prev.match, after = seat.match;
+      if (after.playerHp === before.playerHp) return seat;
+      const settledInside = after.roundResults.length !== before.roundResults.length;
+      if (settledInside) return seat;
+      const explained = explainedHp(before, after);
+      if (after.playerHp !== explained) return `seat ${seat.seatId}: rules HP ${after.playerHp} has no explained source (${before.playerHp} → ${explained})`;
+      // A seat the rules already settled this round keeps the pre-settlement ledger until the room resolves the round.
+      if (before.roundResults.at(-1)?.round === before.round && !next.settlements.includes(`${next.roomId}:round-${before.round}`)) return seat;
+      changed = true;
+      return { ...seat, hp: after.playerHp };
+    });
+    const bad = seats.find(seat => typeof seat === 'string');
+    if (typeof bad === 'string') return bad;
+    return changed ? { ...next, seats: seats as SeatState[] } : next;
   }
 
   /* ---------------- v22 anvil choice deadlines (docs/ANVIL_UNITS.md) ---------------- */
