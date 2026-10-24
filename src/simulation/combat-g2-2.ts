@@ -4,7 +4,7 @@ import { dashAmbessaChain } from './combat-ambessa-dash';
 import { hexDistance, type HexCell } from './board';
 import type { CombatTask, G22State, CombatOrigin } from './combat-types';
 import type { AbilityContext, S13Packet, S13Heal } from './combat-s13-abilities';
-import { amount, ap, applyStatus, byDistance, champion, enemies, grantShield, origin, path, variable, type S13Unit } from './combat-s13-state';
+import { ad, amount, ap, applyStatus, byDistance, champion, enemies, grantShield, origin, path, variable, type S13Unit } from './combat-s13-state';
 import { asSource } from './m8/s13-definitions';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
 import { modifier, stat } from './content/item-programs';
@@ -89,6 +89,15 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
 }
 export function planG22Attack(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):boolean {
   const n=champion(u),v=(k:string)=>variable(u,k);
+  if(u.definitionId==='tower-dummy'){
+    // Batch-3 Tower Defense: 100% AD + APRatio×AP physical; from Upgrade2 a second arrow (50%) hits the nearest other enemy.
+    const m=u.mechanics?.find(m=>m.mechanic==='towerDefenseLive');
+    const raw=ad(u)+Math.floor(ap(u,ctx.tick,ctx.units)*(m?.values.apRatio??0)/100);
+    hit(ctx,u,t,raw,seq,0,'physical',false,true);
+    const extra=m?.values.extraBps??0,second=extra?byDistance(t,enemies(u,ctx.units)).find(x=>x.id!==t.id):undefined;
+    if(second)hit(ctx,u,second,Math.floor(raw*extra/10000),seq,1,'physical',false,true);
+    return true;
+  }
   if(n==='draven'&&u.runtime.castCount>0){hit(ctx,u,t,amount(u,ctx.tick,{ad:v('PercentAD'),flat:v('BaseDamage')}),seq,0,'physical',false,true);return true;}
   if(n==='ambessa'&&(u.runtime.castCount===0||u.runtime.castCount%2===1)){hit(ctx,u,t,amount(u,ctx.tick,{ad:v('PercentChainAttackAD')}),seq,0,'physical',false,true);return true;}
   if(n==='mordekaiser'&&(u.g22?.mordeUntilTick??0)>ctx.tick){

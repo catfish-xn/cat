@@ -1,7 +1,7 @@
 import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateResistsShields } from '../src/simulation/m8/resists-shield-restore';
 import { expect, it } from 'vitest';
-import { selectChoice, buyUnit, startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
+import { selectChoice, rerollAugment, buyUnit, startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -33,9 +33,15 @@ function threeHeroMatch(): MatchState {
 // save through exact replay, so the resists validator no longer decides. Publicly pick the first offered trait crest
 // (an emblem plus a bench champion, no combat mechanic of its own), else a quiet economy card, instead of the first card.
 function crestPick(seed: number): MatchState {
-  const open = reachRound('2-1', false, seed), c = open.pendingChoice!;
-  const quiet = ['big-grab-bag', 'raining-gold', 'raining-gold-plus', 'iron-assets'];
-  const crest = c.offers.find(id => id.endsWith('-crest')) ?? c.offers.find(id => quiet.includes(id));
+  const quiet = ['big-grab-bag', 'heroic-grab-bag', 'raining-gold', 'raining-gold-plus', 'iron-assets'];
+  const wanted = (offers: readonly string[]) => offers.find(id => id.endsWith('-crest')) ?? offers.find(id => quiet.includes(id));
+  let open = reachRound('2-1', false, seed);
+  // Public free rerolls (one per slot) until a wanted card shows, so later pool growth cannot strand the fixture.
+  for (let slot = 0; slot < 3 && !wanted(open.pendingChoice!.offers); slot++) {
+    const c = open.pendingChoice!, rerolled = rerollAugment(open, c.choiceId, c.generation, slot);
+    if (rerolled.ok) open = rerolled.state;
+  }
+  const c = open.pendingChoice!, crest = wanted(c.offers);
   if (!crest) throw Error(`seed ${seed} offers no crest or quiet economy card at 2-1: ${c.offers.join(',')}`);
   return resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, crest)));
 }

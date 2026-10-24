@@ -1,3 +1,4 @@
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import * as api from '../../src/simulation/match';
 import {createRequire} from 'node:module';
 import {readG23Progress} from '../../src/simulation/g2-3-state';
@@ -12,7 +13,7 @@ export async function publicAcademyGrant():Promise<api.MatchState>{
  if(!state)throw Error('Missing Academy public prefix');
  const all=['lux','leona','ezreal','heimerdinger','jayce'];
  // Sell through the public command; no fabricated income or shop outcomes.
- for(const u of state.preparation.units.filter(u=>u.team==='player'&&!all.includes(u.definitionId)))state=accept(api.sellUnit(state,u.id));
+ for(const u of state.preparation.units.filter(u=>u.team==='player'&&!all.includes(u.definitionId)&&isSellableUnit(u.definitionId)))state=accept(api.sellUnit(state,u.id));
  const owned=()=>[...new Set(state!.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId))];
  while(owned().length<3){
   const slot=state.shop.slots.findIndex(s=>s.status==='available'&&all.includes(s.definitionId)&&!owned().includes(s.definitionId));

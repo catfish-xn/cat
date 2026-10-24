@@ -122,7 +122,7 @@ function eventGifts(state:MatchState,e:Batch3Event):AugmentGift[] {
 }
 /** The training dummy born from the augment's own acquisition gift (gift index 0), once its receipt exists. */
 export function ownDummyId(state:MatchState,augment:MatchState['augments'][number]):string|undefined {
- const gift=planAugmentGifts(state,augment,AUGMENT_BATCH3[augment.definitionId]?.gifts??[]).find(g=>g.definitionId==='training-dummy');
+ const gift=planAugmentGifts(state,augment,AUGMENT_BATCH3[augment.definitionId]?.gifts??[]).find(g=>g.definitionId==='training-dummy'||g.definitionId==='tower-dummy');
  const r=gift&&state.seatMechanics?.receipts.find(r=>r.receiptId===gift.receiptId);
  return r?.kind==='unit'&&r.unitId?r.unitId:undefined;
 }
