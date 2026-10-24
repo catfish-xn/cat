@@ -156,7 +156,9 @@ describe('PR6 Mel threshold observation (reward enabled by batch A)',()=>{
     expect(applyRoundSettlement(state,{...r,settlementEligible:false})).toMatchObject({ok:false,state,reason:'mirror-settlement'});
     const result=applyRoundSettlement(state,r),settled=accepted(result);
     expect(settled.playerHp).toBe(39);expect(receipts(settled)).toHaveLength(1);
-    expect(result.ok&&result.events.map(e=>e.type)).toEqual(['roundSettled','openingEffectApplied','openingRewardResolved','mechanicGranted']);
+    // The rolled Mel reward decides the tail: a seat mechanic grant emits mechanicGranted, an all-orb reward does not.
+    const mechanic=(settled.seatMechanics?.receipts??[]).some(r=>r.source===BATCH_SOURCE);
+    expect(result.ok&&result.events.map(e=>e.type)).toEqual(['roundSettled','openingEffectApplied','openingRewardResolved',...(mechanic?['mechanicGranted']:[])]);
     expectMelRewardIssued(settled);
     for(const key of ['rngState','choiceRngState','rewardRngState','battleSeedRngState','equipmentState'] as const)
       expect(settled[key]).toEqual(state[key]);

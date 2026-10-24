@@ -10,7 +10,11 @@ import { recomputeLootReplayDigest } from '../scripts/loot-replay-digest';
 function oracle(seed: number) {
   let h = 2166136261n;
   for (const ch of 'opening-encounter-v1/select') h = ((h ^ BigInt(ch.charCodeAt(0))) * 16777619n) & 0xffffffffn;
-  const word = (((BigInt(seed) ^ h) * 1664525n) + 1013904223n) & 0xffffffffn;
+  // murmur3 fmix32 over the stream-salted seed (v23: replaced the correlated single LCG step).
+  let x = BigInt(seed) ^ h;
+  x = ((x ^ (x >> 16n)) * 0x85ebca6bn) & 0xffffffffn;
+  x = ((x ^ (x >> 13n)) * 0xc2b2ae35n) & 0xffffffffn;
+  const word = x ^ (x >> 16n);
   return {word: Number(word), ticket: Number(word * 10000n / 4294967296n)};
 }
 const weights = [1000,750,250,1000,500,600,400,400,400,400,500,1000,800,800,800,400];
@@ -83,10 +87,10 @@ describe('opening encounter PR1 content and independent selection', () => {
     for (const seed of [-1,0.5,4294967296,NaN]) expect(() => createOpeningEncounter(seed)).toThrow(RangeError);
   });
   it('rejects forged selection, RNG, facts and invalid round nodes', () => {
-    const context=createOpeningEncounter(42);
+    const context=createOpeningEncounter(4); // crab-rave: no 1-2 opening facts
     for (const patch of [{selectionRng:{state:0,draws:1}}, {facts:[{factId:'fake'}]}, {seed:1},
       {selection:{...context.selection,encounterId:'unknown'}}, {selectionRng:{...context.selectionRng,draws:2}}])
-      expect(() => validateOpeningEncounterContext({...context,...patch},42)).toThrow('opening-context-mismatch');
+      expect(() => validateOpeningEncounterContext({...context,...patch},4)).toThrow('opening-context-mismatch');
     expect(planOpeningRound(context,'1-2')).toEqual({context,facts:[]});
     expect(planOpeningRound(context,'1-2').context).toBe(context);
     expect(() => planOpeningRound(context,'1-1')).toThrow('invalid-opening-effect');
