@@ -830,3 +830,8 @@ P7 方案 B（2026-10-15）：P7-1 覆盖后仅五次 x-4，全部按 HP 每批�
 - 影响：确定性不受影响（同输入同结果、回放一致）；但归属单位随编号位数变化，装备/海克斯按"持有者"计数的交互（如探索者护臂的协助）可能落到非预期单位。
 - 处理：v22 冲刺期不改 src（改动会改变规则与回放身份）；测试使用编号不跨位数的种子。计划 v23 改为按出生序号（数值）排序并随纪元录制。
 - v23：`projectG23Summons` 改为按 id 中数字段数值比较（`unit-9` 在 `unit-10` 前），随 v23 纪元重录。
+
+## v23：开局遭遇抽取改为 fmix32（2026-10-24）
+
+- `selectionWord` 由单步 LCG 改为 murmur3 fmix32（小种子相邻时抽到同一开局的问题）。`OPENING_ENCOUNTER_CONFIG.selection` 描述随之改为 `murmur3-fmix32-word/...`，`version` 升为 `opening-encounters-14.24b-batch-a-v2`。
+- `selectionStream` 仍是 `opening-encounter-v1/select`：它只是 FNV 盐值，改名不带来额外保护；旧 v1 开局上下文由 `configVersion` 版本检查明确拒绝，不会被静默重算成另一个开局。

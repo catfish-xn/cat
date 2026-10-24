@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { projectG23Summons } from '../src/simulation/g2-3-summons';
 import { claimGeneratedJson, isImmutableJson, shareGeneratedJson } from '../src/simulation/immutable-json';
-import { createOpeningEncounter } from '../src/simulation/opening-encounter';
+import { createOpeningEncounter, OPENING_ENCOUNTER_CONFIG, validateOpeningEncounterContext } from '../src/simulation/opening-encounter';
 import type { GameState } from '../src/simulation/game';
 import type { TraitSnapshot } from '../src/simulation/strategy-types';
 
@@ -17,6 +17,12 @@ describe('v23 small fixes', () => {
     const encounters = new Set(Array.from({ length: 32 }, (_, seed) => createOpeningEncounter(seed).selection.encounterId));
     // v22's single LCG step drew crab-rave for every seed 0..31.
     expect(encounters.size).toBeGreaterThan(8);
+    expect(OPENING_ENCOUNTER_CONFIG.version).toBe('opening-encounters-14.24b-batch-a-v2');
+    expect(OPENING_ENCOUNTER_CONFIG.selection).toMatch(/^murmur3-fmix32-word\//);
+    // A v1 context (old version string) is rejected outright, never re-derived into another encounter.
+    const current = createOpeningEncounter(7);
+    const v1 = { ...current, selection: { ...current.selection, configVersion: 'opening-encounters-14.24b-batch-a-v1' } };
+    expect(() => validateOpeningEncounterContext(v1, 7)).toThrow('opening-context-mismatch');
   });
   it('claimGeneratedJson keeps the caller object and its shared children over a JSON-equal cache hit', () => {
     const child = shareGeneratedJson({ ledger: [1, 2, 3] });

@@ -157,8 +157,12 @@ describe('PR6 Mel threshold observation (reward enabled by batch A)',()=>{
     const result=applyRoundSettlement(state,r),settled=accepted(result);
     expect(settled.playerHp).toBe(39);expect(receipts(settled)).toHaveLength(1);
     // The rolled Mel reward decides the tail: a seat mechanic grant emits mechanicGranted, an all-orb reward does not.
-    const mechanic=(settled.seatMechanics?.receipts??[]).some(r=>r.source===BATCH_SOURCE);
-    expect(result.ok&&result.events.map(e=>e.type)).toEqual(['roundSettled','openingEffectApplied','openingRewardResolved',...(mechanic?['mechanicGranted']:[])]);
+    // v23 seed 21 (first mels-blessing seed) rolls two Thief's Gloves: both arrive as gray orbs, no seat mechanic grant.
+    expect(melSeed).toBe(21);
+    expect(openingRewardAtoms(settled).map(a=>a.payload)).toEqual([{kind:'item',definitionId:'thiefs-gloves',quantity:1},{kind:'item',definitionId:'thiefs-gloves',quantity:1}]);
+    expect(openingRewardOrbs(settled).map(o=>[o.orbId,o.tier,o.source])).toEqual(openingRewardAtoms(settled).map(a=>[a.id,'gray','mechanic']));
+    expect((settled.seatMechanics?.receipts??[]).filter(r=>r.source===BATCH_SOURCE)).toEqual([]);
+    expect(result.ok&&result.events.map(e=>e.type)).toEqual(['roundSettled','openingEffectApplied','openingRewardResolved']);
     expectMelRewardIssued(settled);
     for(const key of ['rngState','choiceRngState','rewardRngState','battleSeedRngState','equipmentState'] as const)
       expect(settled[key]).toEqual(state[key]);
