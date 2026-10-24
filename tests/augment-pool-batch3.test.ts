@@ -715,7 +715,6 @@ it('Warpath: the PvP-win damage fact is stage base + own survivors, and 60 dealt
  expect(g23BattleFacts(combat,'player',round,'pvp',[]).batch3DamageDealt).toBe(selectPlayerBaseDamage(3,'pvp','3-2')+3);
  expect(g23BattleFacts({...combat,result:'enemyWin'},'player',round,'pvp',[]).batch3DamageDealt).toBeUndefined();
  expect(g23BattleFacts(combat,'player',round,'pve',[]).batch3DamageDealt).toBeUndefined();
- expect(g23BattleFacts(combat,'player',round,'pvp',[],false).batch3DamageDealt).toBeUndefined();
  expect(()=>validateG23BattleFacts({...fact(3,['pvp','loss']),batch3DamageDealt:5})).toThrow();
  // 59 dealt: nothing; the battle that reaches 60 opens the chest once, never again.
  const damage=(amounts:readonly number[])=>{let s:MatchState={...createMatch(42),augments:[{definitionId:'warpath',choiceId:'test',acquiredRound:1}]};

@@ -1,3 +1,4 @@
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import {sellUnit,createMatch,buyXp,deployMatchUnit,startMatchCombat,stepMatch,nextRound,selectChoice,selectAnomalyTarget,claimOrb,type MatchState} from '../../src/simulation/match';
 import {readLootView} from '../../src/simulation/loot-view';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
@@ -66,7 +67,7 @@ export function naturalForgeStates():Map<number,MatchState>{
    }
    recruited=true;
   }
-  for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1'&&!isAnvil(u.definitionId)&&u.definitionId!=='training-dummy'))state=accepted(sellUnit(state,u.id));
+  for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1'&&!isAnvil(u.definitionId)&&isSellableUnit(u.definitionId)))state=accepted(sellUnit(state,u.id));
   if(state.round===6)tier4Preparation=state;
   state=accepted(startMatchCombat(state));
  }

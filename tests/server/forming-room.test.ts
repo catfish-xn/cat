@@ -7,12 +7,12 @@ import { UNIT_DEFINITIONS } from '../../src/simulation/units';
 const rooms: Room[] = [];
 afterEach(() => { for (const room of rooms.splice(0)) room.dispose(); });
 
-/** v23 batch 3: a seat picks Golemify online with pool conservation asserted on every commit. */
+/** v23 batch 3: a seat picks Golemify online (a 3-2 card by its 14.24 stage tags) with pool conservation asserted on every commit. */
 it('Golemify online: the seat keeps only its golem, removed copies return to the pool and the room plays on without a fault', { timeout: 300_000 }, () => {
   for (let seed = 1; seed < 200; seed++) {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed, assertPoolConservation: true });
     rooms.push(room); room.start();
-    runUntilClaiming(room, clock, state => state.roundId === '2-1' && state.phase === 'preparation');
+    runUntilClaiming(room, clock, state => state.roundId === '3-2' && state.phase === 'preparation');
     let picker: string | undefined;
     for (const s of room.state.seats.filter(s => s.alive)) {
       for (let slot = 0; slot < 3 && !s.match.pendingChoice!.offers.includes('golemify'); slot++) {
@@ -34,9 +34,9 @@ it('Golemify online: the seat keeps only its golem, removed copies return to the
     expect(after.match.preparation.units.filter(u => u.definitionId === 'augment-golem')).toHaveLength(1);
     expect(room.state.pool.holdings.filter(h => h.seatId === picker && champions.includes(h.unitId))).toEqual([]);
     // The room settles the golem's fights with conservation checks on every commit.
-    const end = runUntil(room, clock, state => state.roundId === '3-1' && state.phase === 'preparation' || state.phase === 'ended', 20_000);
+    const end = runUntil(room, clock, state => state.roundId === '4-1' && state.phase === 'preparation' || state.phase === 'ended', 40_000);
     expect(end.fault).toBeNull();
-    expect(end.roundId).toBe('3-1');
+    expect(end.roundId).toBe('4-1');
     return;
   }
   throw new Error('no seat was offered Golemify');

@@ -1,3 +1,4 @@
+import { isSellableUnit } from '../src/simulation/seat-mechanics/forms';
 import {expect,it} from 'vitest';
 import {mkdtempSync,writeFileSync,readFileSync,rmSync,existsSync,statSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -33,7 +34,7 @@ function nextDuplicatorPreparation(input:MatchState):MatchState{
   if(state.phase==='preparation')return state;
   if(state.phase==='choice'){
    const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
-  }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&u.definitionId!=='training-dummy')!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
+  }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&isSellableUnit(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
   else throw Error(`Unexpected duplicator fixture phase ${state.phase}`);
  }
  throw Error('Duplicator preparation budget');
@@ -200,8 +201,8 @@ function tier4WithoutOwnedTarget(fullBench=false):MatchState{
  expect(replay.conquest.stacks).toBe(99);
  expect(replay.rewards).toEqual(original.rewards);
  state=writeG23Progress(state,{...original,...replay});
- // v23 batch 3: an augment summon (training dummy) is not a sellable champion.
- for(const unit of state.preparation.units.filter(u=>u.team==='player'&&Object.hasOwn(M5_UNIT_DEFINITIONS,u.definitionId)&&M5_UNIT_DEFINITIONS[u.definitionId]!.cost<=3))
+ // v23 batch 3: augment summons (dummies, golems) are not sellable champions.
+ for(const unit of state.preparation.units.filter(u=>u.team==='player'&&Object.hasOwn(M5_UNIT_DEFINITIONS,u.definitionId)&&M5_UNIT_DEFINITIONS[u.definitionId]!.cost<=3&&isSellableUnit(u.definitionId)))
   state=accepted(sellUnit(state,unit.id));
  if(fullBench){
   const free=state.preparation.benchSize-state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length;

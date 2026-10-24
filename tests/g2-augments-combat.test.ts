@@ -117,9 +117,10 @@ import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 // v22 augment tier table: Climb the Ladder I is offered at 2-1 only by seeds 108/109 below 600; seed 109's real battle has the ally death.
 // v23 batch 3 grows the pool: Climb the Ladder I is next offered at 600 (its real battle has the ally death); Lone Hero's
 // seed-20 offer moved, and 689 is the first seed that offers it with a lone-survivor battle.
-// Dummify/Golemify (two more cards): Blistering Strikes is first offered at 2-1 at seed 600.
+// Batch 3 after the XP line (14.24 stage tags, cross-version cards): Blistering Strikes is first offered at 852, Climb the Ladder I
+// at 682, but 883 is the first of its offering seeds whose real battle has the ally death.
 it.each([
- ['blistering-strikes',600],['clockwork-accelerator',7],['lone-hero',689],['climb-the-ladder-i',600],['inspiring-epitaph',18],
+ ['blistering-strikes',852],['clockwork-accelerator',7],['lone-hero',689],['climb-the-ladder-i',883],['inspiring-epitaph',18],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
  let s=reachRound('2-1',false,seed);
  for(let candidate=0;!s.pendingChoice!.offers.includes(id)&&candidate<300;candidate++)s=reachRound('2-1',false,candidate);

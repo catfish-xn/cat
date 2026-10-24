@@ -15,8 +15,7 @@ import { UNIT_DEFINITIONS } from './units';
 import { selectPlayerBaseDamage } from './match-rules';
 import { countsG23SurvivorDamage } from './g2-3-summons';
 import { TACTICIANS_CROWN_ID } from './deployment-cap';
-/** `dealsDamage` is false only online against a mirror, whose source seat takes no damage. */
-export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKind:'pve'|'pvp',openingUnits:readonly {readonly id:string;readonly team:Team}[],dealsDamage=true):G23BattleFacts{
+export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKind:'pve'|'pvp',openingUnits:readonly {readonly id:string;readonly team:Team}[]):G23BattleFacts{
  const tier=(id:string)=>combat.strategy?.traits.find(t=>t.traitId===id&&t.team===team)?.tier??0;
  const allies=combat.units.filter(u=>u.team===team&&!u.anomalySummon&&!u.definitionId.startsWith('g23-'));
  // 约定值 G24-CROWN-GOLD-01: only crowns bound to units deployed at combat start roll; the holder need not survive.
@@ -38,9 +37,10 @@ export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKi
  const firstDeath=[...(combat.openingDeaths??[])].sort((a,b)=>a.eventSeq-b.eventSeq).find(d=>combat.units.some(u=>u.id===d.unitId&&u.team===team))?.unitId??null;
  const batch3Dummy=dummies.length?{deaths:dummies.filter(u=>!u.alive).map(u=>u.id).sort(),first:firstDeath,gold:dummies.reduce((n,u)=>n+(u.batch2?.dummyGold??0),0)}:undefined;
  // Batch-3 Warpath (P 2026-10-24): the player damage this side deals on a PvP win, by the frozen PvP rule
- // (stage base damage + this side's surviving units, as economy.ts and two-sided-battle charge the loser).
+ // (stage base damage + this side's surviving units, as economy.ts and two-sided-battle charge the loser). Damage to a
+ // mirror counts too (S14 14.2 fixed Warpath to count damage dealt to ghost armies); the source seat takes none.
  const won=combat.result===(team==='player'?'playerWin':'enemyWin'),info=getMultiplayerRoundByOrdinal(round);
- const batch3DamageDealt=roundKind==='pvp'&&won&&dealsDamage?selectPlayerBaseDamage(info.stage,'pvp',info.roundId)+combat.units.filter(u=>u.team===team&&countsG23SurvivorDamage(u)).length:0;
+ const batch3DamageDealt=roundKind==='pvp'&&won?selectPlayerBaseDamage(info.stage,'pvp',info.roundId)+combat.units.filter(u=>u.team===team&&countsG23SurvivorDamage(u)).length:0;
  return {...(batch2?{batch2}:{}),...(batch3Healing?{batch3Healing}:{}),...(batch3DamageDealt?{batch3DamageDealt}:{}),...(batch3Dummy?{batch3Dummy}:{}),openingDeaths,...(familyTrait&&familyIds.length?{family:{stage:getMultiplayerRoundByOrdinal(round).stage,eligible:familyTrait.tier>=5,openingIds:familyIds,survivorIds:familyIds.filter(id=>allies.some(u=>u.id===id&&u.alive&&u.hp>0))}}:{}),...(melCasts?{melCasts}:{}),...(hunter?{d11Headhunter:{combatId:combat.combatId!,holderId:hunter.id,kills:hunter.d11Kills!}}:{}),...(itemPayouts.length?{itemGoldPayouts:itemPayouts}:{}),battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
  conquestTakedowns:[...new Set([...allies.flatMap(u=>u.g23?.conquestTakedowns??[]),...splits.flatMap(s=>s.g23?.conquestTakedowns??[])])].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive&&!u.itemSummon).length,
  rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),...(crowns?{crowns}:{}),highRollerGold:[...allies.map(u=>u.g23),...splits.map(s=>s.g23)].reduce((n,g)=>n+(g?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0)};
