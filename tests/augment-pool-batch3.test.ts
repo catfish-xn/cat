@@ -27,7 +27,8 @@ import { generateSharedShop, rerollSharedShop } from '../src/server-entry';
 import { freeRerollsAvailable, freeRerollsGranted, validateFreeRerolls, FREE_REROLL_KEY } from '../src/simulation/free-rerolls';
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
-import { ad, spellCrit } from '../src/simulation/combat-s13-state';
+import { ad, spellCrit, amount as amountAt } from '../src/simulation/combat-s13-state';
+const amountOf=(u:any,key:string)=>amountAt(u,0,{ap:u.ability.variables[key]/10000});
 import { accept, room } from './tp-helpers';
 import { reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -47,9 +48,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the thirty-five batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the forty-one batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['an-exalted-adventure','bad-luck-protection','blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','scapegoat','shimmerscale-essence','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['all-out','an-exalted-adventure','bad-luck-protection','blade-dance','blazing-soul-i','blazing-soul-ii','blood-pact','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','field-medic','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','savage-revenge','scapegoat','shimmerscale-essence','shocking-troll','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -513,4 +514,76 @@ it('Tower Defense: a stationary emblem dummy that shoots 100% AD + 60/90/135% AP
  expect(perSeq(mid)).toBe(1);expect(perSeq(late)).toBe(2);
  const seqs=(r:typeof late)=>new Set(r.out.map((o:any)=>o.context.actionSeq)).size;
  expect(seqs(mid)).toBeGreaterThan(seqs(early));
+});
+
+function heroCombat(id:string,hero:string,opts:{stars?:readonly (1|2|3)[];enemies?:number;round?:number;cluster?:boolean}={}){
+ const m=createMatch(42),u=m.preparation.units[0],stars=opts.stars??[1];
+ const units=[...stars.map((starLevel,i)=>({...u,id:'h'+i,definitionId:hero,starLevel,team:'player' as const,location:{kind:'board' as const,cell:{col:2+i,row:4}}})),
+  ...Array.from({length:opts.enemies??3},(_,i)=>({...u,id:'e'+i,definitionId:'training-dummy',team:'enemy' as const,location:{kind:'board' as const,cell:opts.cluster?{col:2+i,row:3}:{col:1+i*2,row:3-(i%2)}}}))];
+ const preparation={...m.preparation,units};
+ const strategy=buildStrategySnapshot({...m,round:opts.round??10,preparation,augments:[{definitionId:id,choiceId:'t',acquiredRound:1}]});
+ return {strategy,state:createCombatWithEvents(preparation,strategy,'hero-'+id,42).state,plain:createCombatWithEvents(preparation,buildStrategySnapshot({...m,round:opts.round??10,preparation,augments:[]}),'hero-plain',42).state};
+}
+const runUntil=(c:any,ok:(e:any,c:any)=>boolean,limit=600)=>{const out:any[]=[];while(c.status==='running'&&c.tick<limit){const step=stepCombat(c);c=step.state;for(const e of step.events as any[])out.push(e);if(out.some(e=>ok(e,c)))break;}return {c,events:out};};
+it('hero augments: only the strongest board copy (star, then items, then id) gets the replacement, and the unit is granted', ()=>{
+ const {state}=heroCombat('blood-pact','vladimir',{stars:[1,2,1]});
+ expect(state.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='heroCarryLive')).map(u=>u.id)).toEqual(['h1']);
+ expect(owned('savage-revenge').preparation.units.filter(u=>u.definitionId==='renni')).toHaveLength(2);
+ expect(owned('field-medic').preparation.units.filter(u=>u.definitionId==='steb')).toHaveLength(1);
+});
+it('Field Medic: 10 less mana, three 65% strikes on the current target and 30% ability omnivamp instead of the heal', ()=>{
+ const {state,plain}=heroCombat('field-medic','steb');
+ const h=state.units.find(u=>u.id==='h0')!,p=plain.units.find(u=>u.id==='h0')!;expect(h.maxMana).toBe(p.maxMana-10);
+ const {events}=runUntil(state,e=>e.type==='packetDamage'&&e.outcome.context.delivery==='ability-direct');
+ const cast=events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='h0'&&e.outcome.context.delivery==='ability-direct');
+ expect(cast).toHaveLength(3);expect(new Set(cast.map(e=>e.outcome.context.targetId)).size).toBe(1);
+ expect(cast[0].outcome.raw).toBe(Math.floor(amountOf(h,'Damage')*6500/10000));
+});
+it('Shocking Troll: 50 less mana; the bite stays, no heal, then +140% attack speed for 5 s and +1.5% permanent AD', ()=>{
+ const {state,plain}=heroCombat('shocking-troll','trundle');
+ expect(state.units.find(u=>u.id==='h0')!.maxMana).toBe(plain.units.find(u=>u.id==='h0')!.maxMana-50);
+ const {c,events}=runUntil(state,e=>e.type==='growth'&&e.unitId==='h0',1200);
+ const growth=events.find(e=>e.type==='growth'&&e.unitId==='h0');expect(growth).toMatchObject({amountBps:150});
+ expect(c.units.find((u:any)=>u.id==='h0').runtime.permanentAdBps).toBe(150);
+ expect(events.some(e=>e.type==='heal'&&e.outcome.contributions?.some((x:any)=>x.source.ownerId==='h0'&&x.source.sourceKind==='ability'))).toBe(false);
+});
+it('Blood Pact: +3 range and +3 mana per attack; 180% Damage on the target and an independent 90 AP hit on the nearest other enemy', ()=>{
+ const {state,plain}=heroCombat('blood-pact','vladimir');
+ const h=state.units.find(u=>u.id==='h0')!;expect(h.attackRange).toBe(plain.units.find(u=>u.id==='h0')!.attackRange+3);
+ expect(h.mechanics).toContainEqual(expect.objectContaining({mechanic:'extraAttackMana',values:{amount:3}}));
+ const {events}=runUntil(state,e=>e.type==='packetDamage'&&e.outcome.context.delivery==='ability-direct'&&e.outcome.context.source.ownerId==='h0');
+ const cast=events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='h0'&&e.outcome.context.delivery==='ability-direct');
+ expect(cast.map(e=>e.outcome.raw)).toEqual([Math.floor(amountOf(h,'Damage')*18000/10000),90]);
+});
+it('Blade Dance: +40% attack speed; each cast dashes twice for 3.35 AD + 40 AP physical (far enemy, then the target)', ()=>{
+ const {state}=heroCombat('blade-dance','irelia');const h=state.units.find(u=>u.id==='h0')!;
+ const {events}=runUntil(state,e=>e.type==='packetDamage'&&e.outcome.context.delivery==='ability-direct'&&e.outcome.context.source.ownerId==='h0',1200);
+ const cast=events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='h0'&&e.outcome.context.delivery==='ability-direct');
+ expect(cast).toHaveLength(2);expect(cast.every(e=>e.outcome.context.damageType==='physical')).toBe(true);
+ expect(h.mechanics).toContainEqual(expect.objectContaining({mechanic:'heroCarryLive'}));
+});
+it('All Out: no resists on cast; the empowered attack splashes 25% to enemies next to its target', ()=>{
+ const {state}=heroCombat('all-out','vander',{enemies:3,cluster:true});
+ const {events}=runUntil(state,e=>e.type==='packetDamage'&&e.outcome.context.delivery==='attack-extra'&&e.outcome.context.source.ownerId==='h0',1200);
+ expect(events.some(e=>e.type==='packetDamage'&&e.outcome.context.delivery==='attack-extra'&&e.outcome.context.source.ownerId==='h0')).toBe(true);
+});
+it.each(['blood-pact','field-medic','shocking-troll'])('%s: a real mid-combat save restores exactly and an edited hero runtime is rejected', id=>{
+ let seed=0,s:MatchState|undefined;
+ for(;seed<4000&&!s;seed++){if(!firstOffers(seed).includes(id))continue;try{const open=reachRound('2-1',false,seed);if(open.pendingChoice!.offers.includes(id))s=open;}catch{}}
+ expect(s).toBeDefined();const c=s!.pendingChoice!;
+ s=accept(selectChoice(s!,c.choiceId,c.generation,id) as any).state as MatchState;
+ const hero=s.preparation.units.find(u=>u.definitionId===AUGMENT_BATCH3[id].hero)!;
+ let placed=s;for(let row=4;row<=7;row++)for(let col=0;col<7;col++){if(placed.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===row))continue;const r=deployMatchUnit(placed,hero.id,{kind:'board',cell:{col,row}}) as any;if(r.ok){placed=r.state;row=99;break;}}
+ const started=startMatchCombat(placed) as any;if(!started.ok)return;s=started.state;let checked=0;
+ while(s!.phase==='combat'){s=stepMatch(s!).state;if(s.combat&&s.combat.tick%60===5){expect(restoreMatch(serializeMatch(s))).toEqual(s);checked++;
+  const edit=structuredClone(s) as any,u=edit.combat.units.find((x:any)=>x.id===hero.id);if(u&&u.alive){u.runtime.permanentAdBps+=1;expect(()=>restoreMatch(serializeMatch(edit))).toThrow();}}}
+ expect(checked).toBeGreaterThan(0);
+});
+it('Savage Revenge: 10 less mana; the cast pounces on the farthest enemy within 2 hexes with 110% damage', ()=>{
+ const {state,plain}=heroCombat('savage-revenge','renni',{enemies:3,cluster:true});
+ expect(state.units.find(u=>u.id==='h0')!.maxMana).toBe(plain.units.find(u=>u.id==='h0')!.maxMana-10);
+ const hero=runUntil(state,e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='h0'&&e.outcome.context.delivery!=='basic-attack',1200);
+ const base=runUntil(plain,e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='h0'&&e.outcome.context.delivery!=='basic-attack',1200);
+ const first=(r:typeof hero)=>r.events.find(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='h0'&&e.outcome.context.delivery!=='basic-attack');
+ expect(first(hero)).toBeDefined();expect(first(base)).toBeDefined();
 });

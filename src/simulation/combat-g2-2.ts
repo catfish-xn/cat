@@ -4,7 +4,7 @@ import { dashAmbessaChain } from './combat-ambessa-dash';
 import { hexDistance, type HexCell } from './board';
 import type { CombatTask, G22State, CombatOrigin } from './combat-types';
 import type { AbilityContext, S13Packet, S13Heal } from './combat-s13-abilities';
-import { ad, amount, ap, applyStatus, byDistance, champion, enemies, grantShield, origin, path, variable, type S13Unit } from './combat-s13-state';
+import { ad, amount, ap, applyStatus, byDistance, champion, enemies, grantShield, heroLive, origin, path, variable, type S13Unit } from './combat-s13-state';
 import { asSource } from './m8/s13-definitions';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
 import { modifier, stat } from './content/item-programs';
@@ -44,13 +44,26 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       for(let i=0;i<n;i++)strike(targets[Math.floor(ctx.draw()/2**32*targets.length)],mag('Damage'));break;
     }
     case 'trundle': {
-      const bps=10000+Math.floor((u.maxHp-u.hp)*Math.round(v('AmountIncreaseMax')*10000)/u.maxHp);
-      heal(Math.floor(mag('GainHealth')*bps/10000));strike(t,Math.floor(ad('PercentAttackDamage')*bps/10000),'physical');break;
+      const bps=10000+Math.floor((u.maxHp-u.hp)*Math.round(v('AmountIncreaseMax')*10000)/u.maxHp),hero=heroLive(u);
+      // Shocking Troll (P): no heal; the bite stays, then SpeedBps attack speed for SpeedTicks and permanent AD growth.
+      if(!hero)heal(Math.floor(mag('GainHealth')*bps/10000));strike(t,Math.floor(ad('PercentAttackDamage')*bps/10000),'physical');
+      if(hero){
+        applyStatus(u,origin(u),'attackSpeed',hero.speedBps,hero.speedTicks,ctx.tick,ctx.events,true);
+        u.runtime.permanentAdBps+=hero.permanentAdBps;
+        ctx.events.push({type:'growth',tick:ctx.tick,unitId:u.id,amountBps:hero.permanentAdBps,totalBps:u.runtime.permanentAdBps});
+      }
+      break;
     }
     case 'ziggs': {
       strike(t,mag('Damage'));const targets=foes();for(let i=0;i<v('NumBombs');i++)strike(targets[Math.floor(ctx.draw()/2**32*targets.length)],mag('MinibombDamage'));break;
     }
-    case 'steb':heal(mag('Heal'));strike(t,mag('Damage'));break;
+    case 'steb':{
+      // Field Medic (P): no heal; HITS strikes of HitBps × Damage on the current target in this cast.
+      const hero=heroLive(u);
+      if(hero){const each=Math.floor(mag('Damage')*hero.hitBps/10000);for(let i=0;i<hero.hits;i++)strike(t,each);}
+      else{heal(mag('Heal'));strike(t,mag('Damage'));}
+      break;
+    }
     case 'vex':strike(t,mag('Damage'));schedule(u,'g22Vex',ctx.tick+Math.round(v('DOTDuration')*20),t,mag('SecondaryDamage'),seq,0,1,t.cell);break;
     case 'twistedfate': {
       const ally=ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team).sort((a,b)=>a.hp-b.hp||(a.id<b.id?-1:1))[0];

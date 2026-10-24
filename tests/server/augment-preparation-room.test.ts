@@ -56,7 +56,9 @@ describe('v22: the augment choice opens inside a 50 s preparation (2-1, 3-2, 4-2
     expect(room.handle('s0', { type: 'rerollAugment', choiceId: c.choiceId, generation: c.generation, optionIndex: 2 })).toMatchObject({ ok: true });
     s0 = seat(room.state, 's0').match;
     expect(s0.phase).toBe('choice');
-    expect(s0.augmentOffers.at(-1)).toMatchObject({ rerolledIndices: [2], externalBlocks: [[], []] });
+    // One block list per draw; their content depends on which one-per-match cards other seats were shown (pool-dependent).
+    expect(s0.augmentOffers.at(-1)).toMatchObject({ rerolledIndices: [2] });
+    expect(s0.augmentOffers.at(-1)!.externalBlocks).toHaveLength(2);
     c = s0.pendingChoice!;
     expect(room.handle('s0', { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: c.offers[1] })).toMatchObject({ ok: true });
     expect(room.state.phase).toBe('preparation');

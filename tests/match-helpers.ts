@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { createMatch, buyUnit, nextRound, selectChoice, selectAnomalyTarget, deployMatchUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
+import { createMatch, buyUnit, nextRound, rerollAugment, selectChoice, selectAnomalyTarget, deployMatchUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 
 export function freeze<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
@@ -62,8 +62,20 @@ export function reachRound(roundId:string, resolveChoices=true, seed=42): MatchS
 
 /** Seed-5 multi-holder fixture acquired entirely through normal opening/shops.
  * These paid purchases are not B8 rewards and do not prove the opening loot chain. */
+/** Public 2-1 pick that adds no combat mechanic of its own (a quiet economy card, else a trait crest), using the free
+ * per-slot rerolls when needed, so augment pool growth cannot route a fixture's saves through exact replay. */
+export function quietAugmentRound(seed:number):MatchState {
+  const quiet=['big-grab-bag','heroic-grab-bag','raining-gold','raining-gold-plus','iron-assets'];
+  const wanted=(offers:readonly string[])=>offers.find(id=>quiet.includes(id))??offers.find(id=>id.endsWith('-crest'));
+  let open=reachRound('2-1',false,seed);
+  for(let slot=0;slot<3&&!wanted(open.pendingChoice!.offers);slot++){const c=open.pendingChoice!,r=rerollAugment(open,c.choiceId,c.generation,slot);if(r.ok)open=r.state;}
+  const c=open.pendingChoice!,id=wanted(c.offers);
+  if(!id)throw new Error(`seed ${seed} offers no quiet 2-1 card: ${c.offers.join(',')}`);
+  return resolveM5Choices(accepted(selectChoice(open,c.choiceId,c.generation,id)));
+}
 export function purchasedThreeHeroMatch():MatchState {
-  let state=reachRound('2-1',true,5);
+  // v23 batch 3: pick publicly instead of taking seed 5's first card (pool growth made it a replay-validated augment).
+  let state=quietAugmentRound(5);
   state=accepted(deployMatchUnit(state,'unit-1',{kind:'board',cell:{col:1,row:4}}));
   for(const id of ['maddie','lux']) {
     const slot=state.shop.slots.findIndex(s=>s.status==='available'&&s.definitionId===id);

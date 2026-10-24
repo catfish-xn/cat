@@ -29,6 +29,8 @@ interface Batch3Content {
  readonly corrosion?:boolean;
  /** Wandering Trainer: this many random emblems (a source value) are permanently attached to the augment's dummy. */
  readonly dummyEmblems?:string;
+ /** Hero augment: the champion whose strongest copy on the board gets the replacement ability (heroCarryLive). */
+ readonly hero?:'steb'|'irelia'|'trundle'|'renni'|'vander'|'vladimir';
  /** Replay-authenticated combat mechanics (g2-4b-gold-restore BATCH3_REPLAYED_MECHANICS); values come from the source row. */
  readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck'|'goldForDummies'|'towerDefense';
 }
@@ -38,6 +40,158 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+ "field-medic": {
+  "apiName": "TFT13_Augment_FishCarry",
+  "name": "战地医生",
+  "tier": "silver",
+  "description": "获得1个【斯特卜】。你最强大的那个【斯特卜】的技能的法力消耗降低10，但不再回复生命值。【斯特卜】的技能提供30%全能吸血并进行3次打击，每次造成65%伤害。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "ManaReduction": 10.0,
+    "TOOLTIPONLYModifiedDamage": 0.6499999761581421,
+    "TOOLTIPONLYOmnivamp": 30.0
+   },
+   "description_en_us": "Gain a Steb. Your strongest Steb's Ability's Mana cost is reduced by 10, but no longer heals. Steb's spell grants 30% Omnivamp and strikes 3 times, each dealing 65%."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "steb",
+    "count": 1
+   }
+  ],
+  "schedules": [],
+  "hero": "steb"
+ },
+ "blade-dance": {
+  "apiName": "TFT13_Augment_IreliaCarry",
+  "name": "刀锋之舞",
+  "tier": "silver",
+  "description": "获得1个【艾瑞莉娅】。你最强大的那个【艾瑞莉娅】获得40%攻击速度，并获得一个全新技能：在两个目标之间冲刺，对两个目标都造成物理伤害。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "TOOLTIPBonusAS": 0.4000000059604645
+   },
+   "description_en_us": "Gain an Irelia. Your strongest Irelia gains 40% Attack Speed and gains a brand new Ability that dashes her between two targets, dealing physical damage to both."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "irelia",
+    "count": 1
+   }
+  ],
+  "schedules": [],
+  "hero": "irelia"
+ },
+ "shocking-troll": {
+  "apiName": "TFT13_Augment_TrundleCarry",
+  "name": "震惊巨魔",
+  "tier": "silver",
+  "description": "获得1个【特朗德尔】。你最强大的那个【特朗德尔】的技能不再回复生命值，但会提供持续5秒的140%攻击速度，并为他永久提供1.5%攻击力。他的最大法力值降低50。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "ManaReduction": 50.0,
+    "TOOLTIPONLYADPerCast": 1.5,
+    "TOOLTIPONLYAS": 140.0,
+    "TOOLTIPONLYDuration": 5.0
+   },
+   "description_en_us": "Gain a Trundle. Your strongest Trundle's Ability no longer heals, but grants him 140% Attack Speed for 5 seconds, and permanently grants him 1.5% Attack Damage. His maximum mana is reduced by 50."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "trundle",
+    "count": 1
+   }
+  ],
+  "schedules": [],
+  "hero": "trundle"
+ },
+ "savage-revenge": {
+  "apiName": "TFT13_Augment_ChainsawCarry",
+  "name": "残暴复仇",
+  "tier": "gold",
+  "description": "获得2个【荏妮】。你最强大的那个【荏妮】的技能的消耗降低10，并使她朝2格内相距最远的那个敌人猛扑，对该目标造成110%伤害，并对途经的敌人造成削减过的伤害。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "TOOLTIPAbilityDamage": 1.100000023841858,
+    "TOOLTIPHexDistance": 2.0,
+    "TOOLTIPManaReduction": 10.0,
+    "{9dff3ac5}": 0.30000001192092896
+   },
+   "description_en_us": "Gain 2 Rennis. Your strongest Renni's Ability costs 10 less and causes her to lunge towards the farthest enemy within 2 hexes, dealing 110% damage to the target and reduced damage to enemies in her path."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "renni",
+    "count": 2
+   }
+  ],
+  "schedules": [],
+  "hero": "renni"
+ },
+ "all-out": {
+  "apiName": "TFT13_Augment_PrimeCarry",
+  "name": "卯足全力",
+  "tier": "gold",
+  "description": "获得1个【范德尔】。你最强大的那个【范德尔】获得一个全新技能：不再提供双抗，但造成的伤害提升85%，并且会将目标击退，对所有被命中的敌人造成25%原伤害。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "TOOLTIPONLYSplashPerc": 0.25,
+    "TooltipBonusDamage": 0.8500000238418579,
+    "{8cfa39af}": 60.0
+   },
+   "description_en_us": "Gain a Vander. Your strongest Vander gains a brand new Ability that no longer grants resistances, but deals 85% increased damage and punches the target backwards, dealing 25% of the original damage to all enemies hit."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "vander",
+    "count": 1
+   }
+  ],
+  "schedules": [],
+  "hero": "vander"
+ },
+ "blood-pact": {
+  "apiName": "TFT13_Augment_VladCarry",
+  "name": "血色契约",
+  "tier": "gold",
+  "description": "获得1个【弗拉基米尔】。你最强大的那个【弗拉基米尔】获得+3距离并且每次普攻获得3额外法力值。他的技能不再回复生命值，但会提供10%伤害增幅，造成80%额外伤害，并将额外伤害传播给相距最近的那个敌人。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "BonusMana": 3.0,
+    "IncRange": 3.0,
+    "TOOLTIPDamageAmp": 0.10000000149011612,
+    "TooltipBonusDamage": 0.800000011920929,
+    "{256e31ce}": 50.0
+   },
+   "description_en_us": "Gain a Vladimir. Your strongest Vladimir gains +3 Range and gains 3 bonus Mana each attack. His Ability no longer heals but grants 10% Damage Amp, deals 80% bonus damage, and spreads additional damage to the nearest enemy."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "vladimir",
+    "count": 1
+   }
+  ],
+  "schedules": [],
+  "hero": "vladimir"
+ },
  "tower-defense": {
   "apiName": "TFT_Augment_TowerDefense",
   "name": "塔防游戏",
@@ -1070,6 +1224,23 @@ export function batch3Count(row:Batch3Content,key:string|number):number {
  const n=typeof key==='number'?key:row.source.values[key];
  if(!Number.isSafeInteger(n)||n!<1)throw new RangeError(`Batch3 source value ${String(key)}`);return n!;
 }
+export const HERO_UNITS=['steb','irelia','trundle','renni','vander','vladimir'] as const;
+/** Every hero row carries every coefficient (0 when unused), so the mechanic has one fixed parameter set. */
+export const HERO_FIELDS=['hero','manaReduction','hitBps','hits','omnivampBps','attackSpeedBps','dashAd1','dashAd2','dashAd3','dashAp1','dashAp2','dashAp3','dashRange','speedBps','speedTicks','permanentAdBps','mainBps','chargeBps','pounceRange','damageBps','splashBps','rangeBonus','attackMana','ampBps','overkillBps','near1','near2','near3'] as const;
+/** Hero augment coefficients: 14.24 augment values plus the a-level Hero SpellObject values (s13-missing-values research C3,
+ * star slots 1–3). Everything a later cast reads is frozen here; P 2026-10-24 for the unconfirmed timing/geometry. */
+function batch3HeroValues(row:Batch3Content):Record<string,number> {
+ const v=row.source.values as Record<string,number>,hero=HERO_UNITS.indexOf(row.hero!);
+ const all=(x:Record<string,number>)=>({...Object.fromEntries(HERO_FIELDS.map(k=>[k,0])),...x});
+ switch(row.hero){
+  case 'steb':return all({hero,manaReduction:v.ManaReduction,hitBps:Math.round(v.TOOLTIPONLYModifiedDamage*10000),hits:3,omnivampBps:Math.round(v.TOOLTIPONLYOmnivamp*100)});
+  case 'irelia':return all({hero,attackSpeedBps:Math.round(v.TOOLTIPBonusAS*10000),dashAd1:33500,dashAd2:33500,dashAd3:34500,dashAp1:40,dashAp2:60,dashAp3:90,dashRange:3});
+  case 'trundle':return all({hero,manaReduction:v.ManaReduction,speedBps:Math.round(v.TOOLTIPONLYAS*100),speedTicks:Math.round(v.TOOLTIPONLYDuration*20),permanentAdBps:Math.round(v.TOOLTIPONLYADPerCast*100)});
+  case 'renni':return all({hero,manaReduction:v.TOOLTIPManaReduction,mainBps:Math.round(v.TOOLTIPAbilityDamage*10000),chargeBps:Math.round(v['{9dff3ac5}']*10000),pounceRange:v.TOOLTIPHexDistance});
+  case 'vander':return all({hero,damageBps:10000+Math.round(v.TooltipBonusDamage*10000),splashBps:Math.round(v.TOOLTIPONLYSplashPerc*10000)});
+  default:return all({hero,rangeBonus:v.IncRange,attackMana:v.BonusMana,damageBps:10000+Math.round(v.TooltipBonusDamage*10000),ampBps:Math.round(v.TOOLTIPDamageAmp*10000),overkillBps:Math.round(v['{256e31ce}']*100),near1:90,near2:135,near3:205});
+ }
+}
 function batch3CombatValues(row:Batch3Content):Record<string,number> {
  const bps=(key:string)=>Math.round(row.source.values[key]!*10000);
  switch(row.combat){
@@ -1084,6 +1255,7 @@ function batch3CombatValues(row:Batch3Content):Record<string,number> {
 export const AUGMENT_BATCH3_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>>=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH3).map(([id,row]):[string,ChoiceDefinition]=>[id,{
  id,name:row.name,description:row.description,effects:[{kind:'mechanic',mechanic:'acquisitionBundle',values:{enabled:1}},
   ...(row.gold?[{kind:'mechanic' as const,mechanic:'acquisitionGold',values:{amount:batch3Count(row,row.gold)}}]:[]),
+  ...(row.hero?[{kind:'mechanic' as const,mechanic:'heroCarry',values:batch3HeroValues(row)}]:[]),
   ...(row.combat?[{kind:'mechanic' as const,mechanic:row.combat,values:batch3CombatValues(row)}]:[]),
   ...(row.corrosion?[{kind:'mechanic' as const,mechanic:'corrosion',values:{resistLoss:batch3Count(row,'ResistLoss'),periodTicks:batch3Count(row,'Time')*20}}]:[]),
   ...(row.flexible?[{kind:'mechanic' as const,mechanic:'flexible',values:{healthPerEmblem:batch3Count(row,'HPPerEmblem')}}]:[]),

@@ -88,6 +88,10 @@ export function mechanic(unit: CombatUnit, name: string, key: string, fallback =
   return (unit.mechanics ?? []).filter(m => m.mechanic === name).reduce((sum, m) => sum + (m.values[key] ?? fallback), 0);
 }
 export function hasMechanic(unit: CombatUnit, name: string): boolean { return (unit.mechanics ?? []).some(m => m.mechanic === name); }
+/** Batch-3 hero augment coefficients on the strongest copy only (augment-effects heroCarry). */
+export function heroLive(unit: Pick<CombatUnit, 'mechanics'> | undefined): Readonly<Record<string, number>> | undefined {
+  return unit?.mechanics?.find(m => m.mechanic === 'heroCarryLive')?.values;
+}
 export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind']): CombatStatus[] {
   return (unit.statuses ?? []).filter(s => s.kind === kind && s.startsAtTick <= tick && s.expiresAtTick > tick);
 }

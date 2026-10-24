@@ -47,7 +47,7 @@ import { collectTriggers } from './effects';
 import type { Hook } from './strategy-types';
 import { nextRandom } from './rng';
 import { executeTask, planS13Attack, planS13Cast, type AbilityContext, type S13Packet } from './combat-s13-abilities';
-import { active, ad, ap, byDistance, champion, compareText, EMPTY_RUNTIME, enemies, grantShield, hasMechanic, interval,
+import { active, ad, ap, byDistance, champion, compareText, EMPTY_RUNTIME, enemies, grantShield, hasMechanic, heroLive, interval,
   mechanic, range, syncShield, variable, origin, hpSample, statusModifiers, frozenShield, shieldProjection, constantModifier, spellCrit, type S13Unit } from './combat-s13-state';
 import { allocateDamage, permissionsFor, prepareDamage, type DamageSample } from './m8/damage';
 import { rollCrit } from './m8/crit';
@@ -128,6 +128,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   if(owner&&g23Anomaly(owner,'bully')&&(target.effectiveStarLevel??target.starLevel)<(owner.effectiveStarLevel??owner.starLevel))amplifiers.push(constantModifier('damageAmp',2400,'bps'));
   if (owner) for (const m of owner.mechanics ?? []) {
     if (m.mechanic === 'damageAmp') amplifiers.push(constantModifier('damageAmp', m.values.bps, 'bps'));
+    if (m.mechanic === 'heroCarryLive' && m.values.ampBps && owner.batch2?.vladCasts) amplifiers.push(constantModifier('damageAmp', m.values.ampBps * owner.batch2.vladCasts, 'bps'));
     if (m.mechanic === 'sniper') amplifiers.push(constantModifier('damageAmp', m.values.damageBpsPerHex * hexDistance(owner.cell, target.cell), 'bps'));
     if (m.mechanic === 'glassCannon') amplifiers.push(constantModifier('damageAmp', m.values.damageAmpBps, 'bps'));
     if (m.mechanic === 'formSwapper' && startingRows(owner.team, owner.startingCell?.row ?? owner.cell.row)==='back-two') amplifiers.push(constantModifier('damageAmp',m.values.backAmpBps,'bps'));
@@ -650,6 +651,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const rates = new Map(units.map(unit => [unit.id, vampRates(unit, unit.hp)]));
   for (const { owner, source, seq, outcomes, hpAmount, heal: positiveHeal } of damageByAction.values()) {
     if (owner.hp <= 0) continue;
+    const fieldMedic = heroLive(owner)?.omnivampBps ?? 0;
+    if (hpAmount > 0 && fieldMedic && source.sourceKind === 'ability') ctx.heals.push({ source, targetId: owner.id, amount: Math.floor(hpAmount * fieldMedic / 10000) });
     if (hpAmount > 0) for (const definition of positiveHeal ? [{ source, amount: positiveHeal }] : owner.mechanismDefinitions!.positiveDamageHeals ?? []) ctx.heals.push({ source: definition.source, targetId: owner.id,
       amount: evaluateAmount(definition.amount, { holder: hpSample(owner), attackDamage: ad(owner), abilityPower: ap(owner, tick) }) });
     for (const request of vampRequests(JSON.stringify([ctx.combatId, tick, owner.id, seq, 'vamp']), owner, outcomes, rates.get(owner.id)!, units.filter(u=>!isAttackProxy(u))))
