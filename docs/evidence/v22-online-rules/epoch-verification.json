@@ -9,7 +9,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 2136,
+      "elapsedMs": 2478,
       "log": "artifacts/v22-online-rules-recording/check-identities.log"
     },
     {
@@ -19,7 +19,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 44676,
+      "elapsedMs": 40881,
       "log": "artifacts/v22-online-rules-recording/record-battle-start.log"
     },
     {
@@ -30,7 +30,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 142036,
+      "elapsedMs": 129150,
       "log": "artifacts/v22-online-rules-recording/record-release.log"
     },
     {
@@ -41,7 +41,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 125453,
+      "elapsedMs": 113958,
       "log": "artifacts/v22-online-rules-recording/record-herald.log"
     },
     {
@@ -52,7 +52,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 6510,
+      "elapsedMs": 6348,
       "log": "artifacts/v22-online-rules-recording/record-inputs.log"
     },
     {
@@ -63,7 +63,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 44553,
+      "elapsedMs": 41600,
       "log": "artifacts/v22-online-rules-recording/record-live-reveal.log"
     },
     {
@@ -73,7 +73,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 14407,
+      "elapsedMs": 13801,
       "log": "artifacts/v22-online-rules-recording/record-transfer.log"
     },
     {
@@ -84,7 +84,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 14489,
+      "elapsedMs": 14014,
       "log": "artifacts/v22-online-rules-recording/check-transfer.log"
     },
     {
@@ -96,7 +96,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 6454,
+      "elapsedMs": 6331,
       "log": "artifacts/v22-online-rules-recording/check-inputs.log"
     },
     {
@@ -106,7 +106,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 123184,
+      "elapsedMs": 113420,
       "log": "artifacts/v22-online-rules-recording/check-herald.log"
     },
     {
@@ -117,7 +117,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 3171,
+      "elapsedMs": 3517,
       "log": "artifacts/v22-online-rules-recording/check-history.log"
     },
     {
@@ -129,7 +129,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 44625,
+      "elapsedMs": 41728,
       "log": "artifacts/v22-online-rules-recording/check-live-reveal.log"
     },
     {
@@ -139,7 +139,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 232013,
+      "elapsedMs": 215165,
       "log": "artifacts/v22-online-rules-recording/record-chest-trial.log"
     },
     {
@@ -149,7 +149,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 890,
+      "elapsedMs": 1074,
       "log": "artifacts/v22-online-rules-recording/consumer-byte-audit.log"
     },
     {
@@ -159,7 +159,7 @@
       ],
       "exitCode": 0,
       "signal": null,
-      "elapsedMs": 3272,
+      "elapsedMs": 3275,
       "log": "artifacts/v22-online-rules-recording/compare-digests.log"
     }
   ],

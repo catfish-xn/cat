@@ -1097,9 +1097,9 @@
     "tests/server/anvil-choice-deadline.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11757,
+      "currentBytes": 13060,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "eba980d6f6e4067e2c046d41f88e569fc410e187cc4328cae708b1b6bbe78f82",
+      "currentSha256": "1809b22f16be332efaaec53197d706889791d3dc5d9c897f2e09142c1cb62e5c",
       "firstDifferentByte": 0
     },
     "tests/server/anvil-room-helpers.ts": {
