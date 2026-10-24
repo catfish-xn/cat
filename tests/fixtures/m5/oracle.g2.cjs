@@ -376,7 +376,8 @@ function validateChemTransition(before,after){
 }
 class Ledger {
  constructor(initial){this.gold=0;this.pending={gold:0,investmentHp:0};
-this.cards=1;this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
+  // v22 openings can start with extra cards; conservation starts from the actual opening roster (Trainer Golem excluded).
+  this.cards=ownedUnits(initial).reduce((n,u)=>n+3**(u.starLevel-1),0);assert(this.cards>=1,'opening unit');this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
   validateChemTransition(before,after);
   if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
