@@ -39,6 +39,7 @@ import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelope
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createStunHalo, displacementHop, type StunHalo } from './unit-control';
+import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -790,7 +791,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (referenceEffects.size >= MAX_EFFECTS) { fx.dispose(); return; }
     referenceEffects.add(fx);
   };
+  // Skill feel sample (skill-feel.ts): pooled attack tracers and cast charges, the impact hold and camera kick.
+  const feel = createSkillFeel(); scene.add(feel.object);
+  /** Seconds each piece's animation still holds still for a cast's impact. */
+  const holds = new Map<PieceView, number>();
+  const shakeOffset = new Vector3();
   const clearEffects = () => {
+    holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
     generation++; queued.length = 0;
     for (const effect of live) effect.fx.dispose();
     live.clear();
@@ -807,24 +814,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /** Local scale that gives an effect `world` scale (FX_SCALE unless the caster has an official scale) under `parent`. */
   // abs: a mirrored parent decomposes with a negative X, which would flip the effect on every axis.
   const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
-  const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3) => {
+  const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3,
+    tuning?: { scale: number; particles: number }) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !effects) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
-    void effects.load(id, spec.maxDuration).then(fx => {
+    void effects.load(id, spec.maxDuration, tuning?.particles).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0 };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed) || live.size >= MAX_EFFECTS) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
         const node = spec.bone ? source.body.getObjectByName(spec.bone) : source.root;
         if (!node) { fx.dispose(); return; }
-        fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE));
+        fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE) * (tuning?.scale ?? 1));
         node.add(fx.object);
       } else {
         const from = new Vector3();
         if (spec.anchor === 'target' && targetPoint) from.copy(targetPoint);
         else if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
         // A projectile is the caster's (its scale); an effect on the target stays in world units (FX_SCALE).
-        fx.object.scale.setScalar(spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE);
+        fx.object.scale.setScalar((spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE) * (tuning?.scale ?? 1));
         fx.object.position.copy(from);
         scene.add(fx.object);
         if (spec.anchor === 'projectile') {
@@ -835,10 +843,42 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       live.add(effect);
     }).catch(() => { /* a missing or invalid effect file just plays nothing */ });
   };
-  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined) => {
+  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : []) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
     const owner = generation;
+    const sample = skillFeelFor(source.definitionId);
+    if (sample && action === 'attack') {
+      // One small near-white tracer or spark instead of the champion's own attack effects.
+      const target = targetId && targetId !== sourceId ? pieces.get(targetId) : undefined;
+      if (!target?.alive) return;
+      const ranged = !!actionEffects?.resolve(source.definitionId, 'attack').some(({ id }) => actionEffects.playback[id]?.anchor === 'projectile');
+      const from = source.root.position.clone().setY(IMPACT_HEIGHT * 1.1), to = target.root.position.clone().setY(IMPACT_HEIGHT);
+      if (ranged) from.addScaledVector(to.clone().sub(from).setY(0).normalize(), 14);
+      feel.attack(from, to, ranged, ranged ? 0.1 : 0.18);
+      return;
+    }
+    let castPlan: ReturnType<typeof planActionEffects> | null = null;
+    if (sample && action === 'cast') {
+      // Charge, then the trimmed cast; at its impact the caster and its targets hold a moment and the camera kicks.
+      castPlan = actionEffects ? simplifyCast(source.definitionId, planActionEffects(source.definitionId, 'cast',
+        actionEffects.resolve(source.definitionId, 'cast'), actionEffects.playback)) : [];
+      feel.charge(source.root, skillColor(source.definitionId), (grid?.radius ?? 34) * 0.95, source.starHeight * 0.5);
+      source.overhead.flashMana(true);
+      queued.push({ at: clock + WINDUP_SECONDS, generation: owner, run: () => source.overhead.flashMana(false) });
+      queued.push({ at: clock + impactDelay(castPlan), generation: owner, run: () => {
+        const hit = impactFeel(source.definitionId), color = skillColor(source.definitionId);
+        for (const id of [sourceId, ...targetIds]) {
+          const view = pieces.get(id);
+          if (!view?.alive) continue;
+          holds.set(view, hit.hold);
+          if (!hit.ring || id === sourceId || !view.root.visible) continue;
+          const ring = () => { if (view.alive && view.root.visible) feel.impact(view.root.position, color, (grid?.radius ?? 34) * 1.3); };
+          if (hit.ringDelay) queued.push({ at: clock + hit.ringDelay, generation: owner, run: ring }); else ring();
+        }
+        if (!reducedMotion()) feel.kick(hit.kick);
+      } });
+    }
     let targetPoint: Vector3 | undefined;
     if (action === 'cast' && source.definitionId === 'renata') {
       if (!targetId || !pieces.has(targetId) || queued.length > MAX_QUEUED - 2) return;
@@ -859,13 +899,42 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Continue into the asset plan: ignition and tar complement the single procedural flight/area.
     }
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
-    for (const { id, playback: spec } of planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
+    for (const { id, playback: spec } of castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
       if (queued.length >= MAX_QUEUED) return;
-      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint) });
+      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : undefined) });
     }
   };
+  // Shader prewarm for the sample casts: in preparation each sample champion on the board has its trimmed cast effects
+  // read, a moment of particles born far below the board and their programs and textures sent to the GPU once, so its
+  // first cast in combat does not stall a frame (the pooled materials then reuse those programs).
+  const warmedCasts = new Set<string>();
+  const warmCast = (definitionId: string) => {
+    if (!effects || !actionEffects || !skillFeelFor(definitionId) || warmedCasts.has(definitionId)) return;
+    warmedCasts.add(definitionId);
+    const plan = simplifyCast(definitionId, planActionEffects(definitionId, 'cast', actionEffects.resolve(definitionId, 'cast'), actionEffects.playback));
+    void Promise.all(plan.map(({ id, playback }) => effects.load(id, playback.maxDuration, castEffectTuning(id).particles).catch(() => null))).then(async loaded => {
+      const group = new Group(); group.position.y = -1e5; scene.add(group);
+      for (const fx of loaded) if (fx) { group.add(fx.object); fx.update(0.1, camera); }
+      try {
+        if (!closed) {
+          group.traverse(object => {
+            const material = (object as Mesh).material;
+            for (const one of material ? Array.isArray(material) ? material : [material] : [])
+              for (const value of [...Object.values(one), ...Object.values((one as { uniforms?: Record<string, { value: unknown }> }).uniforms ?? {}).map(u => u.value)])
+                if ((value as Texture | null)?.isTexture) renderer.initTexture(value as Texture);
+          });
+          await renderer.compileAsync(group, camera, scene);
+        }
+      } catch { /* a failed compile only means the first cast compiles as before */ }
+      for (const fx of loaded) fx?.dispose();
+      group.removeFromParent();
+    });
+  };
+  // The pool's own two programs, compiled up front (test renderers may not compile at all).
+  if (typeof renderer.compile === 'function') { feel.reveal(true); renderer.compile(feel.object, camera, scene); feel.reveal(false); }
   const updateEffects = (seconds: number) => {
     clock += seconds;
+    feel.update(seconds);
     for (const fx of referenceEffects) { fx.update(seconds, camera); if (fx.finished) { fx.dispose(); referenceEffects.delete(fx); } }
     if (saveBurst) {
       saveBurst.update(seconds);
@@ -974,6 +1043,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const [id, view] of pieces) if (!seen.has(id)) { loadReport.dropped(id); removePiece(view); pieces.delete(id); }
     if (models.cache && matchShown && !loadReport.began) loadReport.frame([...pieces].filter(([, view]) => !view.lease).map(([id]) => id),
       [...pieces.values()].filter(view => warmup?.warmed(view.definitionId)).length);
+    if (!frame.fighting) for (const view of pieces.values()) warmCast(view.definitionId);
     dancing = new Set(frame.fighting ? [] : frame.mechanics?.reunion ?? []);
     for (const [id, view] of pieces) setDance(view, id, dancing.has(id) && view.root.visible);
     tabletop.frame(frame); traitProps.frame(frame);
@@ -1012,7 +1082,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attack') { face(event.attackerId, event.targetId); if (current) playAction('attack', event.attackerId, event.targetId); }
       else if (event.type === 'cast') {
         face(event.sourceId, event.targetIds[0]);
-        if (current) { playAction('cast', event.sourceId, event.targetIds[0]); startLunge(event.sourceId, event.targetIds[0]); }
+        if (current) { playAction('cast', event.sourceId, event.targetIds[0], event.targetIds); startLunge(event.sourceId, event.targetIds[0]); }
         // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
         // own cast clip. A dead one ignores it; the revive that follows in the same cast plays its spawn instead.
         const forgeId = `${event.sourceId}:g23-forge`, forge = pieces.get(forgeId);
@@ -1366,7 +1436,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         const kept = held.get(view), same = !!kept && kept.mixer === view.mixer && kept.revision === output.revision;
         // Controlled: the clip runs slow (a dazed sway rather than a frozen statue or a full idle).
         const pace = view.control.control ? CONTROL_3D.clipTimeScale : 1;
-        if (seen(view)) { view.mixer.update((seconds + (same ? kept!.seconds : 0)) * pace); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
+        // A cast's impact hold: the pose stays put and the held time is skipped, not caught up.
+        const hold = holds.get(view), step = hold === undefined ? seconds : 0;
+        if (hold !== undefined) { if (hold - seconds > 0) holds.set(view, hold - seconds); else holds.delete(view); }
+        if (seen(view)) { view.mixer.update((step + (same ? kept!.seconds : 0)) * pace); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
         else held.set(view, { seconds: same ? kept!.seconds + seconds : 0, revision: output.revision, mixer: view.mixer });
         if (view.dance !== 'clip') view.mixer.apply(output); // a dance clip runs outside the action state
       }
@@ -1387,6 +1460,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
     updateEffects(seconds);
     tabletop.update(seconds); traitProps.update(seconds); stage.update(seconds); scout.update(seconds); followBox();
+    // The board camera's impact kick, put on for this frame's render only.
+    const kick = stage.active || scout.active ? shakeOffset.set(0, 0, 0) : feel.shake(shakeOffset);
+    camera.position.add(kick); camera.updateMatrixWorld();
     if (width > 0) {
       if (stage.active) renderer.render(stage.scene, stage.camera);
       else if (scout.active) {
@@ -1409,6 +1485,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       console.info(`[3D] 首批 ${r.shown}/${r.pieces} 个棋子模型 ${ms(r.wallMs!)} ms 后出现；各模型合计：读取 ${ms(r.readMs)} ms，解析 ${ms(r.parseMs)} ms，`
         + `首帧上传与编译 ${ms(r.uploadMs)} ms；其中 ${r.warmed} 个已预热`);
     }
+    camera.position.sub(kick); camera.updateMatrixWorld();
   };
   resize(host.clientWidth, host.clientHeight);
   frameId = requestAnimationFrame(tick);
@@ -1426,7 +1503,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
-      withdrawPicker(); clearEffects(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

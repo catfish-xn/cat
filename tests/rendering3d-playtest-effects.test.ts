@@ -156,10 +156,11 @@ describe('10-23 Ambessa cast lunge (presentation only)', () => {
   it('actually plays central ignition and target assets beside one missile/area and clears them on phase change', async () => {
     await publish([piece({ id: 'me', definitionId: 'renata' }), piece({ id: 'foe', definitionId: 'sett', team: 'enemy', x: 250 })]);
     const scene = bodies.get('renata')!.parent!.parent!;
-    cast('me', 'foe'); advance(200); for (let i = 0; i < 4; i++) await Promise.resolve();
+    // Renata is a skill-feel sample (skill-feel.ts): the ignition waits for the 0.25 s charge.
+    cast('me', 'foe'); advance(300); for (let i = 0; i < 4; i++) await Promise.resolve();
     expect(loadFx.mock.calls.map(([id]) => id)).toEqual([prefix + 'cas_center']);
     for (const id of [prefix + 'cas_center']) expect(scene.getObjectByName(id)).toBeDefined();
-    advance(400); await Promise.resolve();
+    advance(300); await Promise.resolve();
     for (const id of [prefix + 'cas_center']) expect(scene.getObjectByName(id)).toBeUndefined();
     expect(scene.children.filter(o => o.name === 'renata-reference-missile')).toHaveLength(1);
     // Moving the target must not split the textured impact from the procedural endpoint.

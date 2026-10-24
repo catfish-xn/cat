@@ -21,6 +21,8 @@ export interface UnitOverhead {
   readonly object: Group;
   /** Meters show while `meters` is given; items whenever the piece wears any. */
   set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items']): void;
+  /** A cast's charge: the mana bar shows full and bright until it is switched off, then the meters as they are. */
+  flashMana(on: boolean): void;
   /** True when something is drawn (the host skips placing an empty one). */
   readonly drawn: boolean;
   dispose(): void;
@@ -44,7 +46,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   object.add(bar);
   const icons = new Group(); icons.name = 'render3d-overhead-items';
   object.add(icons);
-  let barKey = '', itemKey = '', disposed = false;
+  let barKey = '', itemKey = '', disposed = false, flashing = false;
+  let shown: { team: BoardPiece['team']; meters: BoardMeters } | null = null;
 
   const drawBar = (team: BoardPiece['team'], m: BoardMeters) => {
     const g = canvas?.getContext('2d');
@@ -61,7 +64,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     }
     g.fillStyle = 'rgba(9, 18, 25, 0.6)';
     for (let mark = 300; mark < m.maxHp; mark += 300) g.fillRect(pad + inner * mark / m.maxHp, pad, 2, 12);
-    g.fillStyle = m.maxMana > 0 && m.mana >= m.maxMana ? c.manaFull : c.mana; g.fillRect(pad, 19, inner * manaRatio, 5);
+    if (flashing) { g.fillStyle = '#ffffff'; g.fillRect(pad, 19, inner, 5); }
+    else { g.fillStyle = m.maxMana > 0 && m.mana >= m.maxMana ? c.manaFull : c.mana; g.fillRect(pad, 19, inner * manaRatio, 5); }
     if (texture) texture.needsUpdate = true;
   };
 
@@ -87,11 +91,17 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     set(team, meters, items) {
       if (disposed) return;
       const nextBar = meters ? `${team}:${meters.hp}/${meters.maxHp}:${meters.mana}/${meters.maxMana}:${meters.shield}` : '';
+      shown = meters ? { team, meters } : null;
       if (nextBar !== barKey) { barKey = nextBar; bar.visible = Boolean(meters); if (meters) drawBar(team, meters); }
       const nextItems = (items ?? []).map(item => `${item.id}@${item.icon ?? ''}`).join(',');
       if (nextItems !== itemKey) { itemKey = nextItems; placeItems(items ?? []); }
       // Icons sit above the bar while it shows, in its place otherwise.
       icons.position.y = bar.visible ? BAR_HEIGHT + ITEM_GAP : 0;
+    },
+    flashMana(on) {
+      if (disposed || flashing === on) return;
+      flashing = on;
+      if (shown) drawBar(shown.team, shown.meters);
     },
     dispose() {
       if (disposed) return;
