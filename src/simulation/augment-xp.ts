@@ -10,7 +10,7 @@ import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
 export const AUGMENT_ACQUISITION_LEVEL_KEY='augment-acquisition-levels';
 type AcquisitionLevels=Readonly<Record<string,number>>;
 const stageStart=(round:number)=>getMultiplayerRoundByOrdinal(round).subround===1;
-const countsLevels=(a:OwnedAugment)=>AUGMENT_BATCH3_XP[a.definitionId]?.levelUpRerolls!==undefined||AUGMENT_BATCH3_XP[a.definitionId]?.levelUpHealth!==undefined;
+const countsLevels=(a:OwnedAugment)=>{const row=AUGMENT_BATCH3_XP[a.definitionId];return row?.levelUpRerolls!==undefined||row?.levelUpHealth!==undefined||row?.acquisitionHealthLoss!==undefined;};
 
 /** XP granted on entering `round`, beside the passive round XP. Derived only from owned augments and settled history:
  * Epoch at each stage start after acquisition; Patient Study for the previous round's player combat if it was fought
@@ -73,14 +73,27 @@ export function settlementLevelUpHealth(state:MatchState,round:number,hp:number)
 }
 /** Restore: level-up health from the previous settlement to round `round`'s battle (entry XP, acquisition XP, purchases).
  * Levels before an acquisition in this round never heal: offline, the recorded level is the round-entry level. */
-export function preparationLevelUpHealth(state:MatchState,round:number,hp:number):number {
+export function preparationLevelUpHealth(state:MatchState,round:number,hp:number,segment:{readonly from?:number;readonly to?:number}={}):number {
  const result=state.roundResults.find(r=>r.round===round),end=result?.levelBefore??(state.round===round?state.level:undefined);
  if(end===undefined)return hp;
  const start=state.roundResults.find(r=>r.round===round-1)?.levelAfter??MATCH_RULES.initialLevel,levels=acquisitionLevels(state);
  return heal(hp,state.augments.reduce((n,a)=>{
   if(a.acquiredRound>round||!healthPerLevel(a))return n;
-  return n+healthPerLevel(a)*Math.max(0,end-(a.acquiredRound===round?levels[a.choiceId]??end:start));
+  const low=Math.max(a.acquiredRound===round?levels[a.choiceId]??end:start,segment.from??-Infinity),high=Math.min(end,segment.to??Infinity);
+  return n+healthPerLevel(a)*Math.max(0,high-low);
  },0));
+}
+/** Risky Moves: health lost on selection, never below 1 (P), never to a player already at 0. */
+export function applyAcquisitionHealthLoss(state:MatchState,a:OwnedAugment):MatchState {
+ const key=AUGMENT_BATCH3_XP[a.definitionId]?.acquisitionHealthLoss;
+ if(!key||state.playerHp<=0)return state;
+ return {...state,playerHp:Math.max(1,state.playerHp-batch3XpValue(a.definitionId,key))};
+}
+/** Restore: the Risky Moves selection inside round `round`'s preparation, as the level reached at that point and the loss. */
+export function preparationHealthLoss(state:MatchState,round:number):{readonly level:number;readonly augment:OwnedAugment}|undefined {
+ const levels=acquisitionLevels(state);
+ const a=state.augments.find(a=>a.acquiredRound===round&&AUGMENT_BATCH3_XP[a.definitionId]?.acquisitionHealthLoss);
+ return a&&Object.hasOwn(levels,a.choiceId)?{level:levels[a.choiceId],augment:a}:undefined;
 }
 /** Level reached by `total` experience from level 1. */
 export function levelAtExperience(total:number):number {

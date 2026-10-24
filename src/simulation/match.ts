@@ -11,7 +11,7 @@ import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition
 import { drainSetup } from './setup-work';
 import { spendFreeReroll } from './free-rerolls';
 import { drainBatch3RoundEntry } from './augment-pool-batch3-progress';
-import { batch3EntryXp, xpPurchaseAmount, xpPurchaseCost, recordAcquisitionLevel, applyLevelUpHealth } from './augment-xp';
+import { batch3EntryXp, xpPurchaseAmount, xpPurchaseCost, recordAcquisitionLevel, applyLevelUpHealth, applyAcquisitionHealthLoss } from './augment-xp';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
@@ -892,6 +892,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   selected = applyLevelUpHealth(state, selected);
+  if (choice.kind === 'augment') selected = applyAcquisitionHealthLoss(selected, selected.augments.at(-1)!);
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
   if(choice.kind==='augment'){
     selected=recordAcquisitionLevel(selected,selected.augments.at(-1)!);

@@ -16,7 +16,7 @@ import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canonicalContent } from './content';
 import { resolveRoundEconomy } from './round-economy';
 import { applyLevelUpHealth } from './augment-xp';
-import { needsOpponentHp, drainKingslayerGold } from './augment-kingslayer';
+import { needsOpponentHp, drainSettlementGold } from './augment-settlement-gold';
 import { MATCH_RULES } from './match-rules';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { FINAL_ROUND, getRoundSchedule } from './round-schedule';
@@ -171,7 +171,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
     const hookEvents:MatchEvent[]=[];
     // Kingslayer pays from the receipt itself, so a settlement without battle facts still gets its gold.
-    let settled=drainKingslayerGold(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
+    let settled=drainSettlementGold(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
     settled=applyLevelUpHealth(state,commitOpeningEncounterHealth(settled,hookEvents));
     const merged = resolveDeferredUpgrades(settled);

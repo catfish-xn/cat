@@ -88,3 +88,15 @@ it('explainedHp: Crimson Pact heals only with a new skipped black-market receipt
   expect(explainedHp(um, { ...um, level: um.level + 2 })).toBe(64);
   expect(explainedHp({ ...um, playerHp: 99 }, { ...um, playerHp: 99, level: um.level + 2 })).toBe(100);
 }, 30_000);
+
+it('selecting Risky Moves lowers the ledger by exactly its loss; any other drop with it faults the room', () => {
+  for (const [hp, ok] of [[40, true], [39, false]] as const) {
+    const { room, holder } = preparedRoom();
+    patch(holder, 's3', match => ({ ...match, playerHp: 60 }), 60);
+    holder.replace({ ...holder.current, seats: holder.current.seats.map(seat => seat.seatId !== 's3' ? seat : {
+      ...seat, match: { ...seat.match, playerHp: hp, augments: [...seat.match.augments, { definitionId: 'risky-moves', choiceId: 'rm', acquiredRound: seat.match.round }] }, seatRevision: seat.seatRevision + 1 }) });
+    if (ok) { expect(room.state.fault).toBeNull(); expect(seatOf(room.state, 's3').hp).toBe(40); }
+    else { expect(room.state.fault).toMatchObject({ kind: 'invalid-results' }); expect(seatOf(room.state, 's3').hp).toBe(60); }
+    room.dispose();
+  }
+}, 60_000);

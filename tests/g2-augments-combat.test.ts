@@ -117,8 +117,9 @@ import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 // v22 augment tier table: Climb the Ladder I is offered at 2-1 only by seeds 108/109 below 600; seed 109's real battle has the ally death.
 // v23 batch 3 grows the silver pool: the first seeds offering it are 735/774/782; seed 774 is the first whose real battle has the ally death.
 // v23 batch 3 XP/health adds Kingslayer to silver: seed 656 is now the first offering it, and its real battle has the ally death.
+// Risky Moves (silver) pushes Blistering Strikes out of seeds 0–680: 681 is the first seed offering it.
 it.each([
- ['blistering-strikes',0],['clockwork-accelerator',7],['lone-hero',20],['climb-the-ladder-i',656],['inspiring-epitaph',18],
+ ['blistering-strikes',681],['clockwork-accelerator',7],['lone-hero',20],['climb-the-ladder-i',656],['inspiring-epitaph',18],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
  let s=reachRound('2-1',false,seed);
  for(let candidate=0;!s.pendingChoice!.offers.includes(id)&&candidate<300;candidate++)s=reachRound('2-1',false,candidate);

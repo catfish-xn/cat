@@ -14,7 +14,7 @@ import {
 import { externalAugmentBlocks } from '../../simulation/augment-offers';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
-import { needsOpponentHp } from '../../simulation/augment-kingslayer';
+import { needsOpponentHp } from '../../simulation/augment-settlement-gold';
 import { settlementLevelUpHealth } from '../../simulation/augment-xp';
 import { explainedHp, liveHpAfterSettlement } from '../../simulation/player-hp';
 import { nextRandom, validateSeed } from '../../simulation/rng';

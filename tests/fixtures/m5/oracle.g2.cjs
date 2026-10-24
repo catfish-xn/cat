@@ -65,7 +65,7 @@ const batch2Offers=require('../../augment-pool-batch2-oracle-data.cjs');
 // Batch 3 (14.24 tiers): player-combat scheduled grants and free shop rerolls.
 const batch3Offers={silver:['team-building','latent-forge','eye-for-an-eye','eye-for-an-eye-plus','rolling-for-days-i','superstars-i','corrosion'],gold:['what-doesnt-kill-you','prizefighter','superstars-ii','trade-sector','worth-the-wait'],prismatic:['phreaky-friday','phreaky-friday-plus','dark-alley-dealings','living-forge','shimmerscale-essence','building-a-collection-iii','worth-the-wait-ii','flexible']};
 // Batch 3 XP (14.24 tiers): XP grants and XP-purchase rules.
-batch3Offers.silver.push('kingslayer');batch3Offers.gold.push('patient-study','epoch','epoch-plus');batch3Offers.prismatic.push('level-up','shopping-spree','upward-mobility');
+batch3Offers.silver.push('kingslayer','risky-moves');batch3Offers.gold.push('patient-study','epoch','epoch-plus');batch3Offers.prismatic.push('level-up','shopping-spree','upward-mobility');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,

@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { createMatch, buyXp, rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch } from '../src/simulation/match';
 import { enableMultiplayerSettlement, applyRoundSettlement, forfeitPendingChoice, claimOrDiscardLoot, ROUND_SETTLEMENT_VERSION, type RoundSettlementReceipt } from '../src/server-entry';
-import { KINGSLAYER_SOURCE, drainKingslayerGold } from '../src/simulation/augment-kingslayer';
+import { KINGSLAYER_SOURCE, RISKY_MOVES_SOURCE, drainSettlementGold } from '../src/simulation/augment-settlement-gold';
+import { batch2HpBeforeBattle } from '../src/simulation/augment-pool-batch2-health';
+import { applyAcquisitionHealthLoss } from '../src/simulation/augment-xp';
+import { explainedHp } from '../src/simulation/player-hp';
 import type { MatchState } from '../src/simulation/match-types';
 import { AUGMENT_BATCH3_XP, AUGMENT_BATCH3_XP_BLOCKED } from '../src/simulation/content/augment-pool-batch3-xp';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
@@ -37,9 +40,9 @@ function advance(s:MatchState):MatchState {
  s=resolveM5Choices(s);return resolveM5Choices(accept(nextRound(s,s.round) as any).state);
 }
 
-it('the seven batch rows carry their 14.24 zh_cn name, tier, description and values and are registered in the offer pool', ()=>{
+it('the eight batch rows carry their 14.24 zh_cn name, tier, description and values and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3_XP).sort()).toEqual(['epoch','epoch-plus','kingslayer','level-up','patient-study','shopping-spree','upward-mobility']);
+ expect(Object.keys(AUGMENT_BATCH3_XP).sort()).toEqual(['epoch','epoch-plus','kingslayer','level-up','patient-study','risky-moves','shopping-spree','upward-mobility']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3_XP)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -184,7 +187,40 @@ it('Kingslayer: a player win pays 1 gold, 4 when the opponent had more health; t
 it('Kingslayer offline: the AI opponent is not a player, so a player-combat win pays the plain 1 gold; real saves restore', ()=>{
  let s=pick('kingslayer');expect(kingGold(s)).toEqual([]);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  const last=s.roundResults.at(-1)!,won={...s,roundResults:[...s.roundResults,{...last,round:s.round,roundKind:'pvp' as const,result:'playerWin' as const,hpBefore:1}]};
- expect(kingGold(drainKingslayerGold(won))).toEqual([1]);
- expect(kingGold(drainKingslayerGold({...won,roundResults:[...s.roundResults,{...won.roundResults.at(-1)!,result:'draw' as const}]}))).toEqual([]);
+ expect(kingGold(drainSettlementGold(won))).toEqual([1]);
+ expect(kingGold(drainSettlementGold({...won,roundResults:[...s.roundResults,{...won.roundResults.at(-1)!,result:'draw' as const}]}))).toEqual([]);
  s=advance(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
 }, 30_000);
+
+const riskyGold=(s:MatchState)=>s.seatMechanics?.receipts.filter(r=>r.source===RISKY_MOVES_SOURCE).map(r=>r.kind==='gold'?r.amount:0)??[];
+it('Risky Moves: selecting it loses 20 HP (never below 1); the save restores and any other HP is rejected', ()=>{
+ const s=pick('risky-moves'),before=opened.playerHp;
+ expect(s.playerHp).toBe(Math.max(1,before-20));expect(before).toBeGreaterThan(21);
+ expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ for(const hp of [s.playerHp-1,s.playerHp+1,before])expect(()=>restoreMatch(serializeMatch({...s,playerHp:hp}))).toThrow();
+ expect(()=>restoreMatch(serializeMatch(writeSeatMechanic(s,AUGMENT_ACQUISITION_LEVEL_KEY,undefined)))).toThrow();
+ const a=s.augments.at(-1)!;
+ expect([applyAcquisitionHealthLoss({...s,playerHp:15},a).playerHp,applyAcquisitionHealthLoss({...s,playerHp:21},a).playerHp,applyAcquisitionHealthLoss({...s,playerHp:0},a).playerHp]).toEqual([1,1,0]);
+ // A real later round keeps the chain: the loss belongs to the acquisition round only.
+ const next=advance(s);expect(restoreMatch(serializeMatch(next))).toEqual(next);
+}, 30_000);
+it('Risky Moves: 30 gold at the settlement of the 7th player combat from the acquisition round, once; PvE does not count', ()=>{
+ const base=pick('risky-moves'),a=base.augments.at(-1)!,last=base.roundResults.at(-1)!;
+ const history=(kinds:readonly ('pvp'|'pve')[])=>({...base,roundResults:[...base.roundResults.filter(r=>r.round<a.acquiredRound),...kinds.map((roundKind,i)=>({...last,round:a.acquiredRound+i,roundKind,result:'enemyWin' as const}))]});
+ expect(riskyGold(drainSettlementGold(history(['pvp','pvp','pvp','pvp','pvp','pvp'])))).toEqual([]);
+ expect(riskyGold(drainSettlementGold(history(['pvp','pve','pvp','pvp','pvp','pvp','pvp','pvp','pvp'])))).toEqual([30]);
+ const once=drainSettlementGold(history(['pvp','pvp','pvp','pvp','pvp','pvp','pvp','pvp']));
+ expect(riskyGold(drainSettlementGold(once))).toEqual([30]);
+});
+it('Risky Moves with Upward Mobility: entry level-ups heal before the loss, later ones after (cap 100 in between)', ()=>{
+ const s=pick('risky-moves'),risky=s.augments.at(-1)!,start=s.roundResults.find(r=>r.round===s.round-1)!.levelAfter;
+ const state={...s,level:start+2,augments:[{definitionId:'upward-mobility',choiceId:'um',acquiredRound:1},...s.augments],
+  seatMechanics:{...s.seatMechanics!,seat:{...s.seatMechanics!.seat,[AUGMENT_ACQUISITION_LEVEL_KEY]:{um:1,[risky.choiceId]:start+1}}}};
+ // 99 → entry level-up +2 (capped 100) → -20 = 80 → a later level-up +2 = 82; a single combined step would give 83.
+ expect(batch2HpBeforeBattle(state,s.roundDefinitionId,99)).toBe(82);
+ // The room accepts exactly the rules' selection: heal for levels, then the loss of the newly selected augment.
+ const prior={...s,augments:s.augments.filter(x=>x.choiceId!==risky.choiceId),playerHp:60};
+ expect(explainedHp(prior,{...s,playerHp:40})).toBe(40);
+ expect(explainedHp(prior,{...prior,playerHp:40})).toBe(60);
+ expect(explainedHp({...prior,playerHp:10},{...s,playerHp:1})).toBe(1);
+});

@@ -19,13 +19,16 @@ interface Batch3XpContent {
  readonly xpCostReduction?:number;
  /** Kingslayer: gold per player-combat win, `bonus` instead when that opponent had more health. */
  readonly kingslayer?:{readonly win:string;readonly bonus:string};
+ /** Risky Moves: player health lost on selection (P: never below 1) and gold once after that many player combats. */
+ readonly acquisitionHealthLoss?:string; readonly pvpCombatGold?:{readonly combats:string;readonly gold:string};
 }
 const ARCHIVE='augments-research-2026-10-23/data/augments-14.24.json';
 /** classification.json batch 3: XP grants, XP-purchase rules and player-health readings. Every amount is the 14.24 zh_cn/en_us source value.
  * Project readings (P 2026-10-24, docs/S13_RULES_GAP.md): Patient Study pays at the next round entry and a draw counts as a
  * loss (the streak rule); Shopping Spree counts levels reached after acquisition and leaves the unnamed `{a9ad6d1b}=8` unused;
  * Upward Mobility heals only a living player, capped at 100, and a round entry's level-up heals after the opening encounter;
- * Kingslayer compares the opponent's battle-start health with this seat's health at settlement, and an offline opponent has none.
+ * Kingslayer compares the opponent's battle-start health with this seat's health at settlement, and an offline opponent has none;
+ * Risky Moves loses its health on selection but never below 1, and counts player combats (any result) from the acquisition round.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3_XP:Readonly<Record<string,Batch3XpContent>>=freezeContent({
  'patient-study':{apiName:'TFT9_Augment_LearningFromExperience2',name:'耐心学习',tier:'gold',
@@ -56,6 +59,10 @@ export const AUGMENT_BATCH3_XP:Readonly<Record<string,Batch3XpContent>>=freezeCo
   description:'在赢得玩家对战回合后，获得1金币。如果该玩家的生命值高于你，则获得4金币作为替代。即刻获得1金币。',
   source:{patch:'14.24',archive:ARCHIVE,values:{Gold:1,WinBonusGold:4,WinGold:1},description_en_us:'After winning player combat, gain 1 gold. If they had more health than you, gain 4 Gold instead. Gain 1 gold now.'},
   gold:'Gold',kingslayer:{win:'WinGold',bonus:'WinBonusGold'}},
+ 'risky-moves':{apiName:'TFT9_Augment_RiskyMoves',name:'冒险举动',tier:'silver',
+  description:'你的小小英雄损失20生命值，但在7个与玩家的战斗回合后，获得30金币。',
+  source:{patch:'14.24',archive:ARCHIVE,values:{Gold:30,Health:20,PlayerCombatNum:7},description_en_us:'Your Tactician loses 20 Health, but after 7 player combats, gain 30 gold.'},
+  acquisitionHealthLoss:'Health',pvpCombatGold:{combats:'PlayerCombatNum',gold:'Gold'}},
 });
 /** Disabled rows never enter definitions, tiers or API offer mappings. */
 export const AUGMENT_BATCH3_XP_BLOCKED:Readonly<Record<string,string>>=freezeContent({});
