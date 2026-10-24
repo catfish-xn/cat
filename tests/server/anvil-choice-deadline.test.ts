@@ -126,6 +126,27 @@ describe('v22: an opened anvil runs on its own room deadline', () => {
     expect(room.state.fault).toBeNull();
   });
 
+  it('P 乙: one phase is extended by at most 30 s in total; a later anvil still open at the cap gets the first offer', () => {
+    const { room, clock } = openRoom();
+    const phaseDeadline = room.state.deadlineAt!;
+    clock.advance(TIMINGS.preparationMs - 100);
+    const [first, second] = benchAnvils(seatOf(room.state, 's0').match);
+    const one = openAnvil(room, 's0', first!.id);
+    expect(room.state.deadlineAt).toBe(phaseDeadline + 29_900);
+    clock.advance(10_000);
+    expect(room.handle('s0', { type: 'choose', choiceId: one.choiceId, generation: one.generation, definitionId: one.offers[1]! })).toMatchObject({ ok: true });
+    const opened = clock.now(), two = openAnvil(room, 's0', second!.id);
+    expect(opened + 30_000).toBeGreaterThan(phaseDeadline + 30_000);
+    expect(room.state.deadlineAt).toBe(phaseDeadline + 30_000); // capped, not opened + 30 s
+    clock.advance(phaseDeadline + 30_000 - 1 - clock.now());
+    expect(room.state.phase).toBe('preparation');
+    expect(receiptsOf(room, 's0', two.choiceId)).toEqual([]);
+    clock.advance(1);
+    expect(receiptsOf(room, 's0', two.choiceId)).toEqual([expect.objectContaining({ optionId: two.offers[0], timedOut: true })]);
+    expect(room.state.phase).not.toBe('preparation');
+    expect(room.state.fault).toBeNull();
+  });
+
   it('reaches the owning seat only: its private view carries choiceDeadline, no other view names the choice', () => {
     const { room, clock } = openRoom();
     const unit = benchAnvils(seatOf(room.state, 's0').match)[0]!;

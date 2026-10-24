@@ -97,3 +97,7 @@ grantAnvilUnit(state, {
 ## 2026-10-24：补给回合（P）
 
 补给回合的结算阶段不能打开锻造器：`openAnvil`／出售锻造器返回 `wrong-phase`，因为补给回合不接受机制选择。锻造器留在备战席，下个准备阶段可打开。见 `docs/S13_RULES_GAP.md` 同日条目。
+
+## 2026-10-24：阶段截止延长上限（P，用户选乙）
+
+联机房间里打开的锻造器会把当前阶段截止延长到它自己的截止，但同一阶段合计最多延长 30 秒；到上限还没选的锻造器由阶段超时自动选第一项。见 `docs/S13_RULES_GAP.md` 同日条目，房间测试 `tests/server/anvil-choice-deadline.test.ts`。

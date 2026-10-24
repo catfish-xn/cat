@@ -238,6 +238,8 @@ export type SettlementWorkFactory = () => Generator<void, void, void>;
 
 /** Room phases whose deadline would time out an open seat choice (§11.4); an anvil deadline extends them (see `fitDeadlineToChoices`). */
 const CHOICE_TIMEOUT_PHASES: ReadonlySet<RoomPhase> = new Set(['preparation', 'choice', 'settlement']);
+/** The most an open anvil may add to one phase deadline (one anvil's own 30 s window). */
+export const ANVIL_PHASE_EXTENSION_MS = 30_000;
 /**
  * v22 anvil units: the open choice of an alive seat that runs on its own deadline (an opened anvil, whose rules payload
  * names `source: 'anvil-unit'` and its `timeoutMs`), or null.
@@ -1927,15 +1929,18 @@ export class Room {
     this.choiceTimers.clear();
   }
   /**
-   * An anvil's own deadline is never cut short by the room's phase deadline (whose timeouts would answer the choice
-   * early): a preparation, choice or settlement phase ends at the later of its own deadline and every open anvil
-   * deadline of an alive seat (published like any deadline, as the view's `endsAt`), and goes back to its own deadline
-   * once those anvils are answered. The anvil timer, armed first, fires before the phase deadline at the same time.
+   * An open anvil extends the room's phase deadline (whose timeouts would answer the choice early): a preparation,
+   * choice or settlement phase ends at the later of its own deadline and every open anvil deadline of an alive seat
+   * (published like any deadline, as the view's `endsAt`), capped at its own deadline + ANVIL_PHASE_EXTENSION_MS, and
+   * goes back to its own deadline once those anvils are answered. The anvil timer, armed first, fires before the phase
+   * deadline at the same time; an anvil still open at the cap is answered by the phase timeouts.
    */
   private fitDeadlineToChoices(): void {
     const state = this.current;
     if (this.extendingDeadline || this.timer === null || this.phaseDeadline === null || state.deadlineAt === null || !CHOICE_TIMEOUT_PHASES.has(state.phase)) return;
-    const wanted = Math.max(this.phaseDeadline, ...this.aliveSeats().map(seat => seat.choiceDeadline?.deadlineAt ?? -Infinity));
+    // P (user 2026-10-24, option 乙): anvils extend a phase by at most ANVIL_PHASE_EXTENSION_MS in total; an anvil still open
+    // at the capped deadline is answered by the phase's own timeouts (`timeoutChoice`, first offer).
+    const wanted = Math.min(this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS, Math.max(this.phaseDeadline, ...this.aliveSeats().map(seat => seat.choiceDeadline?.deadlineAt ?? -Infinity)));
     if (wanted === state.deadlineAt) return;
     this.extendingDeadline = true;
     try {
