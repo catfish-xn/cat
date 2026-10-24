@@ -27,6 +27,8 @@ export interface BoardPiece {
   readonly meters?: BoardMeters;
   /** Worn items in slot order, then this round's temporary (窃贼手套) items, with the 2D icon URL (null when there is none); absent when it has none. */
   readonly items?: readonly { readonly id: string; readonly icon: string | null }[];
+  /** Crowd control on it in the shown combat (presentation/control-display.ts): 'airborne' is a knock-up; absent when none. */
+  readonly control?: 'stun' | 'airborne';
 }
 export interface BoardMeters { readonly hp: number; readonly maxHp: number; readonly mana: number; readonly maxMana: number; readonly shield: number }
 export interface BoardFrame {

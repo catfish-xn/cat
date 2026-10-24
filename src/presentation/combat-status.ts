@@ -23,6 +23,8 @@ const STATUS_BADGES: Readonly<Record<StatusKind, string>> = {
 };
 const ACTIVITY_NAMES: Readonly<Record<CombatActivity['kind'], string>> = { channel: '引导', redirect: '伤害分担' };
 const ACTIVITY_BADGES: Readonly<Record<CombatActivity['kind'], string>> = { channel: '引', redirect: '担' };
+/** The board strip glyph of a status or activity kind ('' for one it does not know). */
+export const statusBadge = (kind: string): string => (STATUS_BADGES as Record<string, string>)[kind] ?? (ACTIVITY_BADGES as Record<string, string>)[kind] ?? '';
 const STAT_NAMES: Readonly<Record<Stat, string>> = {
   maxHp: '最大生命', attackDamage: '攻击力', abilityPower: '法强', armor: '护甲', magicResist: '魔抗', attackSpeed: '攻速', range: '射程',
   critChance: '暴击率', critMultiplier: '暴击伤害', damageAmp: '增伤', damageReduction: '减伤', omnivamp: '全能吸血', attackSpeedLock: '攻速锁定', damageAmpPerHex: '每格增伤',
@@ -98,6 +100,8 @@ export interface StatusRow {
   readonly nextPulseAtTick: number | null;
   /** 'suppressed' only for unfiltered strongest-category contributions the domain did not pick (stronger or tie-break). */
   readonly state: 'effective' | 'suppressed' | 'pending' | 'active';
+  /** A stun the domain marked as a knock-up (StatusApplication.knockup). */
+  readonly knockup?: true;
 }
 
 /** The single read of current statuses; replace with readCombatStatuses(combat) once delivered. */
@@ -137,7 +141,7 @@ function groupRow(group: StatusGroup, contribution: StatusContribution, tick: nu
   return { key: contribution.key, kind: group.kind, name: STATUS_KIND_NAMES[group.kind], badge: STATUS_BADGES[group.kind],
     harmful: contribution.application.polarity === 'harmful', magnitude: magnitudeText(contribution), scope: filter ? damageFilterText(filter) : null,
     source: contribution.source, appliedAtTick: contribution.appliedAtTick, expiresAtTick: contribution.expiresAtTick,
-    nextPulseAtTick: group.kind === 'burn' ? group.nextPulseAtTick : null, state };
+    nextPulseAtTick: group.kind === 'burn' ? group.nextPulseAtTick : null, state, ...(contribution.application.knockup ? { knockup: true as const } : {}) };
 }
 
 /** Full sentence for detail panels; timing comes from recorded ticks. */

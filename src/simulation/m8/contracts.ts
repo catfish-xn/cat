@@ -173,6 +173,8 @@ export interface StatusApplication {
   readonly modifier?: StatModifier;
   readonly damageFilter: DamageFilter | null;
   readonly onEnd: StatusEndEffects | null;
+  /** Stun only: a knock-up (击飞). The rules treat it exactly as a stun; views draw the target airborne while it lasts. */
+  readonly knockup?: true;
 }
 export interface StatusContribution extends EffectIdentity {
   readonly application: StatusApplication;

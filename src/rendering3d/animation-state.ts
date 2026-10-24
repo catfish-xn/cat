@@ -76,6 +76,11 @@ export class UnitActionState {
     }
     return this.output;
   }
+  /** Crowd control (presentation): drops a swing, cast, run or flinch back to idle; death stays. */
+  interrupt(): ActionOutput {
+    if (this.state !== 'idle' && this.state !== 'death') this.enter('idle');
+    return this.output;
+  }
   update(seconds: number): ActionOutput {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
     if (this.state !== 'idle' && this.state !== 'death' && (this.remaining -= seconds) <= 0) this.enter('idle');

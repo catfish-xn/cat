@@ -31,6 +31,7 @@ export function validateStatusApplication(app: StatusApplication): void {
   const stat = app.kind === 'stat-buff' || app.kind === 'stat-debuff';
   if (stat !== (app.modifier !== undefined) || (app.kind === 'damage-reduction') !== (app.damageFilter !== null)) throw new RangeError('Status modifier/filter mismatch');
   if (app.stackPolicy.kind === 'strongest-category' && app.stackPolicy.category !== app.kind) throw new RangeError('Wrong strongest status category');
+  if (app.knockup !== undefined && (app.knockup !== true || app.kind !== 'stun')) throw new RangeError('Knock-up must be a stun');
 }
 export function applyStatusContribution(groups: readonly StatusGroup[], identity: EffectIdentity, app: StatusApplication, tick: number): { groups: StatusGroup[]; accepted: boolean; refreshed: boolean } {
   validateIdentity(identity); validateStatusApplication(app); integer(tick);
