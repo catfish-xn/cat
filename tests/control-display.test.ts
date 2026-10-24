@@ -21,6 +21,12 @@ describe('stun vs knock-up as drawn', () => {
     expect(t.control('c', false)).toBeNull();
   });
 
+  it("keeps another unit's stun on the same tick a stun", () => {
+    const t = tracker();
+    t.observe([cast(10, 'violet', ['a']), stun(10, 'a'), stun(10, 'b')]);
+    expect([t.control('a', true), t.control('b', true)]).toEqual(['airborne', 'stun']);
+  });
+
   it('蔚: the slammed target is stunned, the rest of its row knocked up', () => {
     const t = tracker();
     t.observe([cast(5, 'vi', ['a', 'b', 'c']), stun(5, 'a'), stun(5, 'b'), stun(5, 'c')]);

@@ -1,7 +1,7 @@
 /**
  * Crowd control as drawn (presentation only). The rules model every knock-up as a plain stun status: the 2D and 3D
- * views tell 击飞 from 眩晕 here, by the cast that applied it — a stun that lands on the same tick as a cast of one of
- * the champions below (on the targets that champion's ability knocks up) is drawn airborne until the stun ends.
+ * views tell 击飞 from 眩晕 here, by the cast that applied it — a stun that lands on one of the targets of a cast by a
+ * champion below, on that cast's tick (and that the ability knocks up), is drawn airborne until the stun ends.
  * Nothing here feeds back into the rules. If the rules ever expose the difference, read that instead of this table.
  */
 import type { CombatState } from '../simulation/combat-types';
@@ -34,7 +34,7 @@ export function unitStunned(runtime: CombatState | null, unit: ViewUnitStatuses)
 /** A displayed unit with the replay view's status list (CombatViewUnit.statuses) when it has one. */
 export type ViewUnitStatuses = DisplayUnit & { readonly statuses?: readonly { readonly kind: string; readonly harmful?: boolean }[] };
 
-interface KnockCast { readonly sourceId: string; readonly rule: 'all' | 'secondary'; readonly primary: string | undefined }
+interface KnockCast { readonly rule: 'all' | 'secondary'; readonly targetIds: readonly string[] }
 
 /** Remembers which stunned units were knocked up. Feed it every shown event batch; reset it with each new combat. */
 export class ControlTracker {
@@ -53,7 +53,7 @@ export class ControlTracker {
       if (event.type === 'cast') {
         const definitionId = this.definitionOf(event.sourceId), rule = definitionId ? KNOCKUP_CASTS[definitionId] : undefined;
         if (!rule) continue;
-        push(this.casts, tick, { sourceId: event.sourceId, rule, primary: event.targetIds[0] });
+        push(this.casts, tick, { rule, targetIds: event.targetIds });
         touched.add(tick);
       } else if (event.type === 'statusChanged' && event.kind === 'stun' && (event.reason === 'applied' || event.reason === 'refreshed')) {
         push(this.stuns, tick, event.targetId); touched.add(tick);
@@ -63,7 +63,8 @@ export class ControlTracker {
     for (const tick of [...touched].sort((a, b) => a - b)) {
       const casts = this.casts.get(tick) ?? [];
       for (const target of this.stuns.get(tick) ?? []) {
-        const knocked = casts.some(cast => cast.sourceId !== target && (cast.rule === 'all' || cast.primary !== target));
+        // Only the cast's own targets: another unit's stun landing on the same tick stays a stun.
+        const knocked = casts.some(cast => cast.targetIds.includes(target) && (cast.rule === 'all' || cast.targetIds[0] !== target));
         // A plain stun landing on a unit in the air takes over: it is drawn stunned from then on.
         if (knocked) this.airborne.add(target); else this.airborne.delete(target);
       }

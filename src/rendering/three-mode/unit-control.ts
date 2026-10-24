@@ -18,7 +18,7 @@ export const CONTROL_3D = {
   /** Mixer time scale while controlled (0 freezes the pose; TFT's stunned units sway slowly). */
   clipTimeScale: 0.25,
   /** Star ring over the head: stars, ring radius and star size (board units), turns per second. */
-  stars: 3, ringRadius: 13, starSize: 9, turnsPerSecond: 0.8,
+  stars: 3, ringRadius: 17, starSize: 13, turnsPerSecond: 0.8,
 } as const;
 
 /**
