@@ -72,8 +72,8 @@ export function orbReceiptText(receipt: LootReceipt): string | null {
   if (receipt.resolution === 'capacity-sold') return `备战席已满，${name} 自动出售 +${receipt.gold ?? 0} 金币`;
   if (receipt.resolution === 'gold') return `${name} 卡池缺货，补偿 +${receipt.gold ?? 0} 金币`;
   if (payload.kind === 'unit') return `${name} 已进入备战席`;
-  // A forge is not an item: claiming it opens the four-way choice of what to forge.
-  if (payload.kind === 'forge') return `${name} · 进入四选一`;
+  // v22: an anvil is a bench unit; selling it (drag to the shop) opens its armory.
+  if (payload.kind === 'forge') return `${name} 已进入备战席 · 拖到商店打开`;
   return `${name} 已放入物品栏`;
 }
 

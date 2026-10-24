@@ -48,6 +48,7 @@ import { readEncounterPreview, readLootView, readMasterworkOptions } from '../si
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
 import { genericOffer, isKnownChoiceKind, isMasterworkChoice, isShopChoice, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
+import { armorySecondsLeft, isAnvilArmory } from '../presentation/anvil-display';
 import { forgeProgressText, masterworkOffer, type MasterworkOptionDisplay, type OpeningForgeProgressDisplay } from '../presentation/opening-encounter-text';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
@@ -240,6 +241,8 @@ export class StrategyPanel {
   /** Black market / Junker King offers in the shop row: the choice the player switched back to the shop for, and the pointer quiet window after answering. */
   private shopChoiceAway = '';
   private shopChoiceQuietUntil = 0;
+  /** Ticks the open anvil armory's countdown; cleared on every shop redraw. */
+  private armoryTimer: number | null = null;
 
   /**
    * @param shopDock Optional mount for the HUD chips, economy buttons and shop (online TFT layout); null keeps them in the panel.
@@ -407,7 +410,7 @@ export class StrategyPanel {
   }
   private dropDragGhost(): void { this.dragGhost?.remove(); this.dragGhost = null; }
   reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
-  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.dropChoiceReopen(); this.awayChip?.remove(); this.awayChip = null; this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
+  destroy(): void { this.cancel(); if (this.armoryTimer != null) { globalThis.clearInterval(this.armoryTimer); this.armoryTimer = null; } this.clearChoiceDismissal(); this.dropChoiceReopen(); this.awayChip?.remove(); this.awayChip = null; this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void {
     if (this.statusText) this.statusText.textContent = message;
     // The online left-column fold can hide this line; it shows the same message as a toast over the board.
@@ -1339,6 +1342,7 @@ export class StrategyPanel {
     for (const text of this.eventTexts.slice().reverse()) this.eventList.append(element('p', text));
   }
   private renderShop(state: MatchState, ready: boolean): void {
+    if (this.armoryTimer != null) { globalThis.clearInterval(this.armoryTimer); this.armoryTimer = null; }
     const choice = state.pendingChoice, token = choice ? `${choice.choiceId}:${choice.generation}` : '';
     if (choice && isShopChoice(choice) && !isOnlineSpectating()) {
       if (this.shopChoiceAway !== token) { this.renderShopChoice(choice, token); return; }
@@ -1413,6 +1417,16 @@ export class StrategyPanel {
       cards.append(card);
     }
     if (fallback) bar.append(element('span', fallback === SKIP_OPTION ? '倒计时结束自动保留' : `倒计时结束自动选「${genericOffer(fallback, extras).name}」`, 'choice-timeout'));
+    // v22 anvil armory: the server's own 30 s window for this opening (choiceDeadline), counted down here.
+    if (isAnvilArmory(choice)) {
+      const clock = element('span', '', 'armory-clock'); clock.dataset.debug = 'armory:clock';
+      const tick = () => {
+        const left = armorySecondsLeft(this.actions.state() as Parameters<typeof armorySecondsLeft>[0]);
+        clock.textContent = left === null ? '' : `剩余 ${left} 秒`; clock.classList.toggle('urgent', left !== null && left <= 5);
+      };
+      tick(); this.armoryTimer = globalThis.setInterval(tick, 250) as unknown as number;
+      bar.insertBefore(clock, bar.children[1] ?? null);
+    }
     // Offline the choice blocks the shop (contract §15.1 is online only), so there is nothing to switch to.
     if (online) {
       const away = this.button('shop-choice-away', '查看商店', () => { this.shopChoiceAway = token; this.render(); });

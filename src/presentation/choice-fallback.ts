@@ -14,6 +14,7 @@ import { itemDisplayName, lootEntry } from './g23-display';
 import { G23_LOOT } from './s13-g23-manifest';
 import { G24_FORGE_POOLS } from '../simulation/content/g2-4-forges';
 import { augmentDisplayName, augmentEffectText, augmentPlayerDescription } from './augment-display';
+import { isAnvilArmory } from './anvil-display';
 
 export interface GenericChoiceOffer { readonly id: string; readonly name: string; readonly description: string; readonly price?: number; readonly iconUrl?: string }
 export interface GenericChoiceExtras {
@@ -33,9 +34,9 @@ export function isMasterworkChoice(choice: object | null | undefined): boolean {
   const payload = (choice as { payload?: { source?: unknown } } | null | undefined)?.payload;
   return !!payload && typeof payload === 'object' && payload.source === 'masterwork-upgrade';
 }
-/** Shop-row choice (black market, Junker King armory); the masterwork pick is a popup like a forge. */
+/** Shop-row choice (black market, Junker King armory, a sold anvil's armory); the masterwork pick is a popup like a forge. */
 export function isShopChoice(choice: { readonly kind: string } & object): boolean {
-  return isShopChoiceKind(choice.kind) && !isMasterworkChoice(choice);
+  return (isShopChoiceKind(choice.kind) && !isMasterworkChoice(choice)) || isAnvilArmory(choice);
 }
 
 const text = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined);

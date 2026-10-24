@@ -161,6 +161,12 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
 let championIconFor: (id: string) => string | null = () => null;
+/**
+ * v22 anvils (锻造器) are bench units without a model or stars: their icon (championIconFor) stands in. The rules' isAnvil
+ * is injected by the 2D loader so this chunk imports nothing from the rules.
+ */
+let isAnvilPiece: (definitionId: string) => boolean = () => false;
+export function useAnvilTest(next: (definitionId: string) => boolean): void { isAnvilPiece = next; }
 export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }
@@ -615,14 +621,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const body = new Mesh(pawnBody, teamMaterial[team]); body.position.y = 17;
     const head = new Mesh(pawnHead, teamMaterial[team]); head.position.y = 42;
     pawn.add(body, head);
-    const icon = definitionId.startsWith('g23-') ? championIconFor(definitionId) : null;
+    const anvil = isAnvilPiece(definitionId);
+    const icon = definitionId.startsWith('g23-') || anvil ? championIconFor(definitionId) : null;
     if (icon) {
       pawn.name = `render3d-fallback-${definitionId}`;
       const material = own(new SpriteMaterial({ color: '#ffffff' })), badge = new Sprite(material);
-      badge.position.y = 42; badge.scale.set(38, 38, 1); badge.visible = false; pawn.add(badge);
+      // v22 anvil: no model exists, so its client icon stands on the cell in place of the pawn.
+      badge.position.y = anvil ? 30 : 42; badge.scale.set(anvil ? 50 : 38, anvil ? 50 : 38, 1); badge.visible = false; pawn.add(badge);
       void overheadContext.itemTexture(icon).then(texture => {
         if (!texture || closed) return;
-        material.map = texture; material.needsUpdate = true; badge.visible = true; head.visible = false;
+        material.map = texture; material.needsUpdate = true; badge.visible = true; head.visible = false; if (anvil) body.visible = false;
       });
     }
     return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
@@ -671,7 +679,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
-    if (!loadModel) return;
+    if (!loadModel || isAnvilPiece(view.definitionId)) return;
     const definitionId = view.definitionId;
     void loadModel(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
@@ -730,7 +738,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get
   // none, nor does Jayce's Hextech Forge (a summoned structure, always one star in the rules).
   const syncStars = (view: PieceView, piece: BoardPiece) => {
-    if (piece.neutral || piece.definitionId === 'g23-forge') { view.stars?.dispose(); view.stars = null; return; }
+    if (piece.neutral || piece.definitionId === 'g23-forge' || isAnvilPiece(piece.definitionId)) { view.stars?.dispose(); view.stars = null; return; }
     const level = piece.effectiveStarLevel ?? piece.starLevel;
     if (view.stars) { view.stars.setLevel(level); return; }
     view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });
