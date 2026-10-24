@@ -62,7 +62,8 @@ describe('Scrap 6/9 role tables (14.24 client source)', () => {
       'TFT_Item_MadredsBloodrazor', 'TFT_Item_LastWhisper', 'TFT_Item_UnstableConcoction', 'TFT_Item_RapidFireCannon']);
     expect(SCRAP_CHAMPION_ROLES).toEqual(CHAMPION_ROLES);
     expect(SCRAP_ROLE_ITEMS).toEqual(Object.fromEntries(Object.entries(ROLE_DISPLAY).map(([role, row]) => [role, row.items])));
-  });
+    // Decompressing and parsing the raw map22 bin takes ~6 s under parallel CI load; the default 5 s case limit is too tight.
+  }, 30_000);
 });
 
 describe('Scrap 6 lucky / Scrap 9 radiant (P scrap-lucky-v1)', () => {

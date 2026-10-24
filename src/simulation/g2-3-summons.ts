@@ -4,16 +4,7 @@ import {deriveEffectiveTrait,projectEffectiveMembership} from './traits/effectiv
 import type { TraitSnapshot } from './strategy-types';
 import { sameCell, contains, type Board, type HexCell, type Team } from './board';
 import { nearestItemCell } from './g2-4b-item-kernel';
-/** Numeric-aware id order (unit-9 before unit-10); ties fall back to plain code-unit order. */
-const compareUnitIds=(a:{readonly id:string},b:{readonly id:string})=>{
- const x=a.id.split(/(\d+)/),y=b.id.split(/(\d+)/);
- for(let i=0;i<Math.min(x.length,y.length);i++){
-  if(x[i]===y[i])continue;
-  if(i%2){const p=x[i].replace(/^0+/,''),q=y[i].replace(/^0+/,'');if(p.length!==q.length)return p.length-q.length;if(p!==q)return p<q?-1:1;}
-  return x[i]<y[i]?-1:1;
- }
- return x.length-y.length||(a.id<b.id?-1:a.id>b.id?1:0);
-};
+import { compareUnitIds } from './unit-id-order';
 export const isG23Summon=(unit:{readonly definitionId:string})=>unit.definitionId==='g23-sion'||unit.definitionId==='g23-forge';
 /** Forge and the reserved barrel identity are skill bodies, never an army's last fighter. */
 export const isG23NonCombatant=(unit:{readonly definitionId:string})=>unit.definitionId==='g23-forge'||unit.definitionId==='g23-barrel'||unit.definitionId==='v20-silco-minion';
