@@ -9,6 +9,10 @@ import { asSource } from './m8/s13-definitions';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
 import { modifier, stat } from './content/item-programs';
 import { lineContains, lineDirections } from './combat-skill-lines';
+/** User-approved 10-24 from the S13 third-party data table: Vi's row shockwave knocks up for 0.5 s (was 0.25 s). */
+export const VI_ROW_KNOCKUP_TICKS = 10;
+/** User-approved 10-24: Ambessa's gauntlet slam stuns its target for 1 s (was 0.25 s); the slam↔gauntlet link is inferred (P). */
+export const AMBESSA_SLAM_STUN_TICKS = 20;
 import { DISPLACEMENT_POLICY, grabAdjacent, pullToward, rawRangeToHexes } from './combat-displacement';
 export function g22(unit: S13Unit): G22State { return unit.g22 ??= {initialized:false,rebelTriggered:false,wanted:[],wantedDeaths:0,mordeUntilTick:0,reaveUntilTick:0,reaveBps:0,exposureFromTick:0,exposureUntilTick:0,exposureBps:0}; }
 function hit(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number,type:S13Packet['damageType']='magic',area=false,basic=false,source=origin(u)) {
@@ -31,7 +35,7 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'vi':
       grantShield(u,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       strike(t,ad('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);
-      for(const other of foes().filter(x=>x.id!==t.id&&x.cell.row===t.cell.row)) {strike(other,ad('PercentAttackDamage_SecondaryDamage'),'physical',true);applyStatus(other,origin(u),'stun',0,5,ctx.tick,ctx.events,false,'',undefined,true);}break; // the row shockwave knocks up
+      for(const other of foes().filter(x=>x.id!==t.id&&x.cell.row===t.cell.row)) {strike(other,ad('PercentAttackDamage_SecondaryDamage'),'physical',true);applyStatus(other,origin(u),'stun',0,VI_ROW_KNOCKUP_TICKS,ctx.tick,ctx.events,false,'',undefined,true);}break; // the row shockwave knocks up
     case 'akali':
       strike(t,mag('Damage'));strike(t,Math.floor(mag('SecondaryDamage')*(10000+Math.round(v('TargetDamageAmp')*10000))/10000));
       Object.assign(g22(t),{exposureFromTick:ctx.tick+1,exposureUntilTick:ctx.tick+1+Math.round(v('Duration')*20),exposureBps:Math.round(v('TargetDamageAmp')*10000)});break;
@@ -69,7 +73,7 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'ambessa':
       if(u.runtime.castCount%2===1){dashAmbessaChain(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))strike(x,ad('PercentStrikeAD'),'physical',true);}
-      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,5,ctx.tick,ctx.events);(ctx.ambessaRetreats??=[]).push({unitId:u.id,targetCell:{...t.cell}});}break;
+      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,AMBESSA_SLAM_STUN_TICKS,ctx.tick,ctx.events);(ctx.ambessaRetreats??=[]).push({unitId:u.id,targetCell:{...t.cell}});}break;
     case 'mordekaiser': {
       g22(u).mordeUntilTick=ctx.tick+Math.round(v('EmpowerDuration')*20);
       applyStatus(u,origin(u),'damageReduction',Math.round(v('DR')*10000),20,ctx.tick,ctx.events,true);
