@@ -1,8 +1,9 @@
 /* Independent ROOT-03/04 browser gates over public application controls and native IDB. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),os=require('node:os');
-// v22: seed 1 draws Crab Rave, whose 6-7 giant crab outlasts R4's one-periodic-save final battle (80 < end < 120);
-// crab-free seed 2192 ends its final battle at tick 106. The page's fixed starts use the same seed.
-const ROUTE_SEED=2192;
+// v22: seed 1 draws Crab Rave, whose 6-7 giant crab outlasts R4's one-periodic-save final battle (80 < end < 120).
+// v23: v22's seed 2192 (now Loot Subscription) ends at tick 122; seed 2199 (no opening encounter) is the first seed
+// from 2192 whose cannon route reaches every sampled phase and ends its final battle at tick 117. The page's fixed starts use the same seed.
+const ROUTE_SEED=2199;
 const {execFileSync}=require('node:child_process'),{randomUUID}=require('node:crypto'),{chromium}=require('playwright');
 const {sourceFingerprint}=require('../scripts/m5-evidence.cjs');
 (async()=>{

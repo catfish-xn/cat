@@ -171,7 +171,7 @@ describe('v17 orb combination — eleven contract acceptance groups',()=>{
  });
  it('11: current saves replay-authenticate layout/loot; prior schema/save versions and forged ledgers reject',()=>{
   // v22 anvil units bumped the replay format to 7.
-  expect(M8_VERSION).toMatchObject({schemaVersion:12,saveFormatVersion:8,replayFormatVersion:7});const s=createMatch(42);expect(restoreMatch(serializeMatch(s))).toEqual(s);
+  expect(M8_VERSION).toMatchObject({schemaVersion:12,saveFormatVersion:8,replayFormatVersion:8});const s=createMatch(42);expect(restoreMatch(serializeMatch(s))).toEqual(s);
   for(const schemaVersion of [7,6])expect(()=>restoreMatch({...s,schemaVersion})).toThrow();
   expect(routeSaveFile({kind:'hex-autobattler-save',saveFormatVersion:3,replayFormatVersion:3,match:{...s,rulesVersion:'s13-g2-3-v16'}}).view).toMatchObject({status:'rejected',reason:'unsupported-version'});
   expect(()=>restoreMatch({...s,rulesVersion:'s13-g2-3-v16',contentVersion:'s13-14.24b-g2-3-v16'})).toThrow();

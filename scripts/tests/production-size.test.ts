@@ -104,9 +104,9 @@ describe('production representation preserves runtime semantics', () => {
     const before = execute(original), after = execute(compact);
     expect(after).toBe(before);
     const parsed = JSON.parse(after);
-    // v22-online-rules identities (tests/v22-online-rules-content-baseline.json).
-    expect(parsed.content).toBe('fnv1a32-utf16:2ee7d9d2');
-    expect(parsed.loot).toBe('fnv1a32-utf16:84b3b60c');
+    // v23-online-rules identities (tests/v23-online-rules-content-baseline.json).
+    expect(parsed.content).toBe('fnv1a32-utf16:19a07434');
+    expect(parsed.loot).toBe('fnv1a32-utf16:0eb630e2');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
 });
