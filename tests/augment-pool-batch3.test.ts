@@ -31,7 +31,7 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { generateSharedShop, rerollSharedShop, buySharedUnit } from '../src/server-entry';
 import { draftPool, reconcileHoldings, assertSharedPoolConservation } from '../src/simulation/shared-pool-ledger';
 import { getUnitStats } from '../src/simulation/unit-stats';
-import { freeRerollsAvailable, freeRerollsGranted, validateFreeRerolls, FREE_REROLL_KEY } from '../src/simulation/free-rerolls';
+import { freeRerollsAvailable, freeRerollsGranted, validateFreeRerolls, spendFreeReroll, FREE_REROLL_KEY } from '../src/simulation/free-rerolls';
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { ad, spellCrit, amount as amountAt } from '../src/simulation/combat-s13-state';
@@ -147,8 +147,7 @@ const firstOffers=(seed:number)=>{const state=createMatch(seed);return generateC
 const owning=(s:MatchState,definitionId:string,acquiredRound=s.round):MatchState=>({...s,augments:[...s.augments,{definitionId,choiceId:'test-'+definitionId,acquiredRound}]});
 it('free shop rerolls: Rolling for Days I grants 11, Superstars 2/4; each free reroll costs no gold and the 12th costs 2', ()=>{
  // Public selection, so the save carries the acquisition receipt and the restore validates the spend counter.
- let seed=0;while(!firstOffers(seed).includes('rolling-for-days-i'))seed++;
- const open=reachRound('2-1',false,seed),c=open.pendingChoice!;expect(c.offers).toContain('rolling-for-days-i');
+ const open=publicOpen('rolling-for-days-i'),c=open.pendingChoice!;expect(c.offers).toContain('rolling-for-days-i');
  let s=accept(selectChoice(open,c.choiceId,c.generation,'rolling-for-days-i') as any).state as MatchState;s={...s,gold:s.gold+2};
  expect(freeRerollsGranted(owning(s,'superstars-i'))-freeRerollsGranted(s)).toBe(2);expect(freeRerollsGranted(owning(s,'superstars-ii'))-freeRerollsGranted(s)).toBe(4);
  for(let i=0;i<11;i++){const next=accept(rerollShop(s) as any).state as MatchState;expect(next.gold).toBe(s.gold);expect(next.shop.generation).toBe(s.shop.generation+1);s=next;}
@@ -172,7 +171,11 @@ it('the shared-pool reroll spends a free credit before gold and keeps the pool c
 it('a restored spend counter above the derived credits, zero, or malformed is rejected', ()=>{
  const s=owning(createMatch(42),'superstars-i',1);
  for(const bad of [{used:3},{used:0},{used:1,extra:1},{used:1.5},[1]])expect(()=>validateFreeRerolls(writeSeatMechanic(s,FREE_REROLL_KEY,bad as any))).toThrow();
- validateFreeRerolls(writeSeatMechanic(s,FREE_REROLL_KEY,{used:2}));
+ // Two real spends (each a provenance fact at its shop generation) validate; a counter that disagrees with them does not.
+ let spent=s;for(let i=0;i<2;i++){spent=spendFreeReroll(spent).state;spent={...spent,shop:{...spent.shop,generation:spent.shop.generation+1}};}
+ validateFreeRerolls(spent);
+ expect(()=>validateFreeRerolls(writeSeatMechanic(spent,FREE_REROLL_KEY,{used:1}))).toThrow();
+ expect(()=>validateFreeRerolls(writeSeatMechanic(s,FREE_REROLL_KEY,{used:2}))).toThrow();
  expect(()=>validateBatch1Gifts(writeSeatMechanic(createMatch(42),FREE_REROLL_KEY,{used:1}))).toThrow();
 });
 it('Superstars I/II give 5%/7% team damage amp plus 2%/5% per 3-star ally on the board', ()=>{
@@ -211,8 +214,7 @@ it('Flexible: an emblem now and one at each later stage start; board allies gain
  for(const i of [0,1])expect(snap.units[i].stats.health-zero.units[i].stats.health).toBe(80);
 });
 it('round-start gifts arrive through real round entries, once, with receipts the restore accepts', ()=>{
- let seed=0;while(!firstOffers(seed).includes('building-a-collection-iii'))seed++;
- let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;expect(c.offers).toContain('building-a-collection-iii');
+ let s=publicOpen('building-a-collection-iii');const c=s.pendingChoice!;expect(c.offers).toContain('building-a-collection-iii');
  s=accept(selectChoice(s,c.choiceId,c.generation,'building-a-collection-iii') as any).state as MatchState;
  const acquired=s.round,count=()=>s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch1'&&r.kind==='item').length;
  expect(count()).toBe(1);
@@ -245,8 +247,7 @@ it('Corrosion: every 2 seconds each enemy that started in its own front two rows
  expect(c.units.some(x=>pulses(x.id).length>0)).toBe(true);
 });
 it('Corrosion survives a real public selection, combat and strict mid-combat save/restore', ()=>{
- let seed=0;while(!firstOffers(seed).includes('corrosion'))seed++;
- let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;expect(c.offers).toContain('corrosion');
+ let s=publicOpen('corrosion');const c=s.pendingChoice!;expect(c.offers).toContain('corrosion');
  s=accept(selectChoice(s,c.choiceId,c.generation,'corrosion') as any).state as MatchState;
  const unit=s.preparation.units.find(u=>u.team==='player')!;
  s=accept(deployMatchUnit(s,unit.id,{kind:'board',cell:{col:3,row:4}}) as any).state;
@@ -302,8 +303,7 @@ it('Wealthy Rehab: team omnivamp is declared, healing is counted into the battle
  expect(plan.map(r=>[r.kind,(r as any).amount,r.round])).toEqual([['gold',8,3]]);
 });
 it.each(['blazing-soul-i','noble-sacrifice','wealthy-rehab-ii','bad-luck-protection'])('%s: a real mid-combat save restores exactly, and edited augment runtime or contributions are rejected', id=>{
- let seed=0;while(!firstOffers(seed).includes(id))seed++;
- let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;
+ let s=publicOpen(id);const c=s.pendingChoice!;
  s=accept(selectChoice(s,c.choiceId,c.generation,id) as any).state as MatchState;
  for(const unit of s.preparation.units.filter(u=>u.team==='player').slice(0,2))s=accept(deployMatchUnit(s,unit.id,{kind:'board',cell:{col:unit===s.preparation.units.find(u=>u.team==='player')?3:5,row:4}}) as any).state;
  s=accept(startMatchCombat(s) as any).state;let checked=0,tampered=0;
@@ -320,8 +320,7 @@ it.each(['blazing-soul-i','noble-sacrifice','wealthy-rehab-ii','bad-luck-protect
 it('Noble Sacrifice grants from a real ally death restore exactly, and an edited grant amount is rejected', ()=>{
  let found=false;
  for(let seed=0;seed<3000&&!found;seed++){
-  if(!firstOffers(seed).includes('noble-sacrifice'))continue;
-  let s:MatchState;try{s=reachRound('2-1',false,seed);}catch{continue;}const c=s.pendingChoice!;if(!c.offers.includes('noble-sacrifice'))continue;
+  const opened=openAt('noble-sacrifice',seed);if(!opened)continue;let s:MatchState=opened;const c=s.pendingChoice!;
   const chosen=selectChoice(s,c.choiceId,c.generation,'noble-sacrifice') as any;if(!chosen.ok)continue;s=chosen.state;
   let placed=s,count=0;
   for(let i=0;i<3;i++){const r=buyXp(placed) as any;if(r.ok)placed=r.state;}
@@ -438,8 +437,7 @@ it('Gold for Dummies: each live dummy records a pulse every 10 seconds of combat
  expect(()=>advanceG23Economy(readG23Progress(s)!,{...fact(4,['pvp','win']),batch3Dummy:{deaths:[],first:null,gold:-1}})).toThrow();
 });
 it('a real match with a training dummy restores mid-combat exactly and rejects an edited dummy', ()=>{
- let seed=0;while(!firstOffers(seed).includes('gold-for-dummies'))seed++;
- let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;
+ let s=publicOpen('gold-for-dummies');const c=s.pendingChoice!;
  s=accept(selectChoice(s,c.choiceId,c.generation,'gold-for-dummies') as any).state as MatchState;
  const dummy=dummyOf(s);expect(dummy).toBeDefined();
  let placed=s;for(let row=4;row<=7;row++)for(let col=0;col<7;col++){if(placed.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===row))continue;const r=deployMatchUnit(placed,dummy.id,{kind:'board',cell:{col,row}}) as any;if(r.ok){placed=r.state;row=99;break;}}
@@ -450,8 +448,7 @@ it('a real match with a training dummy restores mid-combat exactly and rejects a
  expect(checked).toBeGreaterThan(0);
 });
 it.each(['wandering-trainer-ii','support-mining','scapegoat','the-golden-egg','an-exalted-adventure','tower-defense'])('%s: a public selection saves and restores through a real round', id=>{
- let seed=0;while(!firstOffers(seed).includes(id))seed++;
- let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;
+ let s=publicOpen(id);const c=s.pendingChoice!;
  s=accept(selectChoice(s,c.choiceId,c.generation,id) as any).state as MatchState;
  if(AUGMENT_BATCH3[id].gifts.some(g=>g.kind==='unit'&&g.definitionId==='training-dummy'))expect(dummyOf(s)).toBeDefined();
  if(id==='tower-defense')expect(s.preparation.units.some(u=>u.definitionId==='tower-dummy')).toBe(true);
@@ -459,7 +456,8 @@ it.each(['wandering-trainer-ii','support-mining','scapegoat','the-golden-egg','a
  s=resolveM5Choices(s);if(s.phase==='preparation')s=accept(startMatchCombat(s) as any).state;
  while(s.phase==='combat')s=stepMatch(s).state;
  s=resolveM5Choices(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
- s=accept(nextRound(s,s.round) as any).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ // The Golden Egg is a 4-2 card (14.24 stage tags): that conceding route may end the match at this fight.
+ if(s.phase!=='gameOver'){s=accept(nextRound(s,s.round) as any).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);}
 });
 it('P: the Golden Egg hatches at the first round entry its 11-turn timer reaches 0, one extra turn per player-combat win', ()=>{
  const hatch=(s:MatchState)=>[...new Set(batch3RewardPlan(s).map(g=>g.acquiredRound))];
@@ -577,7 +575,7 @@ it('All Out: no resists on cast; the empowered attack splashes 25% to enemies ne
 });
 it.each(['blood-pact','field-medic','shocking-troll'])('%s: a real mid-combat save restores exactly and an edited hero runtime is rejected', id=>{
  let seed=0,s:MatchState|undefined;
- for(;seed<4000&&!s;seed++){if(!firstOffers(seed).includes(id))continue;try{const open=reachRound('2-1',false,seed);if(open.pendingChoice!.offers.includes(id))s=open;}catch{}}
+ for(;seed<4000&&!s;seed++)s=openAt(id,seed);
  expect(s).toBeDefined();const c=s!.pendingChoice!;
  s=accept(selectChoice(s!,c.choiceId,c.generation,id) as any).state as MatchState;
  const hero=s.preparation.units.find(u=>u.definitionId===AUGMENT_BATCH3[id].hero)!;
@@ -609,14 +607,46 @@ it.each([['spoils-of-war-i',1],['spoils-of-war-ii',2],['spoils-of-war-iii',3]] a
  expect(()=>validateBatch3Gold(forged)).toThrow();
 });
 
+/** Reach 4-2 with real HP: win stage 1 with the opening champion, then concede (as rules-placebo-stage does). */
+function reach42(seed:number):MatchState {
+ const concede=(state:MatchState)=>{
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board')){
+   const used=new Set(state.preparation.units.flatMap(u=>u.location.kind==='bench'?[u.location.slot]:[]));
+   const slot=Array.from({length:state.preparation.benchSize},(_,i)=>i).find(i=>!used.has(i));
+   state=accept(slot===undefined?sellUnit(state,unit.id):deployMatchUnit(state,unit.id,{kind:'bench',slot}) as any).state;
+  }
+  return state;
+ };
+ let state=createMatch(seed);
+ while(state.roundDefinitionId!=='4-2'){
+  state=resolveM5Choices(state);
+  if(state.phase==='preparation'){
+   if(state.roundDefinitionId.startsWith('1-')){
+    const hero=state.preparation.units.find(u=>u.team==='player')!;
+    state=accept(deployMatchUnit(state,hero.id,{kind:'board',cell:{col:3,row:4}}) as any).state;
+    state=accept(startMatchCombat(state) as any).state;while(state.phase==='combat')state=stepMatch(state).state;
+   }else state=accept(startMatchCombat(concede(state)) as any).state;
+  }
+  state=resolveM5Choices(state);
+  if(state.phase!=='settlement')throw Error('Cannot reach 4-2');
+  state=accept(nextRound(state,state.round) as any).state;
+ }
+ return state;
+}
+/** One seed's public offer of `id` at its first allowed node, or undefined. */
+function openAt(id:string,seed:number):MatchState|undefined {
+ const bans=AUGMENT_BATCH3_NODE_BANS[AUGMENT_BATCH3[id]?.apiName]??[],node=(['2-1','3-2','4-2'] as const).find(n=>!bans.includes(n))!;
+ if(node==='2-1'&&!firstOffers(seed).includes(id))return undefined;
+ let s:MatchState;try{s=node==='4-2'?reach42(seed):reachRound(node,false,seed);}catch{return undefined;}
+ for(let slot=0;node!=='2-1'&&slot<3&&s.pendingChoice?.kind==='augment'&&!s.pendingChoice.offers.includes(id);slot++){const c=s.pendingChoice,r=rerollAugment(s,c.choiceId,c.generation,slot);if(r.ok)s=r.state;}
+ const c=s.pendingChoice;return c?.kind==='augment'&&c.offers.includes(id)?s:undefined;
+}
+const publicOpen=(id:string)=>publicPick(id,6000,0,false);
 /** A public offer of `id` at its first allowed augment node (14.24 stage tags); later nodes also use the free card rerolls. */
-function publicPick(id:string,maxSeed=6000):MatchState {
- const bans=AUGMENT_BATCH3_NODE_BANS[AUGMENT_BATCH3[id].apiName]??[],node=(['2-1','3-2','4-2'] as const).find(n=>!bans.includes(n))!;
- for(let seed=0;seed<maxSeed;seed++){
-  if(node==='2-1'&&!firstOffers(seed).includes(id))continue;
-  let s:MatchState;try{s=reachRound(node,false,seed);}catch{continue;}
-  for(let slot=0;node!=='2-1'&&slot<3&&s.pendingChoice?.kind==='augment'&&!s.pendingChoice.offers.includes(id);slot++){const c=s.pendingChoice,r=rerollAugment(s,c.choiceId,c.generation,slot);if(r.ok)s=r.state;}
-  const c=s.pendingChoice;if(c?.kind!=='augment'||!c.offers.includes(id))continue;
+function publicPick(id:string,maxSeed=6000,from=0,buy=true):MatchState {
+ for(let seed=from;seed<maxSeed;seed++){
+  const opened=openAt(id,seed);if(!opened)continue;let s:MatchState=opened;
+  if(!buy)return s;
   // Field a second champion (bought publicly) so the removal covers board and bench.
   for(let slot=0;slot<s.shop.slots.length;slot++){const r=buyUnit(s,slot,s.shop.generation) as any;if(r.ok){s=r.state;break;}}
   return s;
@@ -799,7 +829,8 @@ it('Call to Chaos: ten equal outcomes on a seat/choice stream, each granting its
 });
 
 it('Call to Chaos public pick at 4-2: the outcome is granted once and the save restores (XP branch through the acquisition XP chain)', ()=>{
- const open=publicPick('call-to-chaos',400),c=open.pendingChoice!;
+ // Seed 14 is the first that publicly offers it at 4-2 (with the free card rerolls).
+ const open=publicPick('call-to-chaos',15,14),c=open.pendingChoice!;
  const s=accept(selectChoice(open,c.choiceId,c.generation,'call-to-chaos') as any).state as MatchState,a=s.augments.at(-1)!;
  const o=callToChaosOutcome(s,a);
  expect(restoreMatch(serializeMatch(s))).toEqual(s);

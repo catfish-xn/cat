@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 // Public seed discovery and replay-authenticated restores are CPU-bound on shared runners.
-vi.setConfig({testTimeout:60000});
+vi.setConfig({testTimeout:300000});
 import { createMatch, selectChoice, rerollShop, nextRound, startMatchCombat, stepMatch, deployMatchUnit, sellUnit, buyUnit, buyXp, type MatchState } from '../src/simulation/match';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
@@ -9,6 +9,7 @@ import { reachRound, accepted, resolveM5Choices, emptyBoard } from './match-help
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
+import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 
 // Source for each expectation: augments-research-2026-10-23/data/augments-14.24.json,
 // identified by apiName in augment-batch3-verify-source.test.ts. No grant/planning internals used.
@@ -16,8 +17,55 @@ import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 const offerSeeds=new Map<string,number>();
 const selected=new Map<string,{before:MatchState;state:MatchState}>();
 let nextSeed=0;
+// Batch 3 stage tags (14.24 ItemTags, after this review): cards never offered at 2-1 are picked at their first allowed node.
+const firstNode=(id:string)=>(['2-1','3-2','4-2'] as const).find(n=>!((AUGMENT_OFFER_RULES.nodeBans as Readonly<Record<string,readonly string[]>>)[AUGMENT_POOL_API_NAMES[id]]??[]).includes(n))!;
+// Hero cards at 3-2/4-2 are trait-tailored (record 89: Savage Revenge needs a fielded Bruiser).
+const TAILORED:Readonly<Record<string,string>>={'savage-revenge':'bruiser'};
+/** Public route to a later node with real HP: win stage 1 with the opener, then bench everything and concede, except
+ * that a tailored card's trait is bought from the shop and kept fielded so the offer snapshot sees it. */
+function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
+ let state=createMatch(seed);
+ while(state.roundDefinitionId!==node){
+  state=resolveM5Choices(state);
+  if(state.phase==='preparation'){
+   if(state.roundDefinitionId.startsWith('1-')){
+    const hero=state.preparation.units.find(u=>u.team==='player')!;
+    state=accepted(deployMatchUnit(state,hero.id,{kind:'board',cell:{col:3,row:4}}));
+   }else{
+    const fits=(definitionId:string)=>!!trait&&(UNIT_DEFINITIONS[definitionId].traits as readonly string[]).includes(trait);
+    if(trait&&!state.preparation.units.some(u=>u.team==='player'&&fits(u.definitionId))){
+     const slot=state.shop.slots.findIndex(x=>x.status==='available'&&fits(x.definitionId)&&UNIT_DEFINITIONS[x.definitionId].cost<=state.gold);
+     if(slot>=0){const r=buyUnit(state,slot,state.shop.generation);if(r.ok)state=r.state;}
+    }
+    for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&!fits(u.definitionId))){
+     const used=new Set(state.preparation.units.flatMap(u=>u.location.kind==='bench'?[u.location.slot]:[]));
+     const free=Array.from({length:state.preparation.benchSize},(_,i)=>i).find(i=>!used.has(i));
+     state=accepted(free===undefined?sellUnit(state,unit.id):deployMatchUnit(state,unit.id,{kind:'bench',slot:free}));
+    }
+    const fielded=state.preparation.units.find(u=>u.team==='player'&&fits(u.definitionId));
+    if(fielded&&fielded.location.kind==='bench'){const r=deployMatchUnit(state,fielded.id,{kind:'board',cell:{col:3,row:4}});if(r.ok)state=r.state;}
+   }
+   state=accepted(startMatchCombat(state));
+  }
+  while(state.phase==='combat')state=stepMatch(state).state;
+  state=resolveM5Choices(state);
+  if(state.phase!=='settlement')throw new Error('Cannot reach '+node);
+  state=accepted(nextRound(state,state.round));
+ }
+ return state;
+}
+function pickLater(id:string,node:'3-2'|'4-2') {
+ for(let seed=0;seed<600;seed++){
+  let before:MatchState;try{before=reachNode(node,seed,TAILORED[id]);}catch{continue;}
+  const c=before.pendingChoice;if(c?.kind!=='augment'||!c.offers.includes(id))continue;
+  const result={before,state:accepted(selectChoice(before,c.choiceId,c.generation,id))};
+  selected.set(id,result);return result;
+ }
+ throw new Error('No public '+node+' offer: '+id);
+}
 function pick(id:string) {
  const cached=selected.get(id);if(cached)return cached;
+ const node=firstNode(id);if(node!=='2-1')return pickLater(id,node);
  while(!offerSeeds.has(id)&&nextSeed<20000){
   const seed=nextSeed++,root=createMatch(seed);
   const offers=generateChoices(augmentCandidates(resolveAugmentTier(root,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),root.choiceRngState).offers;
@@ -199,7 +247,7 @@ it.each([
  const edited=JSON.parse(serializeMatch(s));
  edited.seatMechanics.receipts=edited.seatMechanics.receipts.filter((r:{receiptId:string})=>r.receiptId!==late.receiptId);
  expect(()=>restoreMatch(JSON.stringify(edited))).toThrow();
-},60000);
+},300000);
 
 it('G1 What Doesnt Kill You: 2 gold for each real PvP loss, component exactly on the fourth (record 214)',()=>{
  let s=pick('what-doesnt-kill-you').state;const acquired=s.round;
@@ -270,15 +318,15 @@ it.each([['blazing-soul-i',20,2000],['blazing-soul-ii',35,3000]] as const)('G6 %
  expect(()=>restoreMatch(JSON.stringify(bad))).toThrow();
 });
 
-// BUG B3-V1: free-rerolls.ts:27-32 checks only shape/range, never authenticates spend history.
-it.fails('G2 anti-tamper: spent free rerolls cannot be reset by deleting their counter',()=>{
+// B3-V1 (fixed): every free spend is a resource-provenance fact the counter must match.
+it('G2 anti-tamper: spent free rerolls cannot be reset by deleting their counter',()=>{
  let s=pick('rolling-for-days-i').state;
  s=accepted(rerollShop(s));expect(freeRerollsAvailable(s)).toBe(10);
  const edit=JSON.parse(serializeMatch(s));delete edit.seatMechanics.seat['free-shop-rerolls'];
  expect(()=>restoreMatch(JSON.stringify(edit))).toThrow();
 });
-// BUG B3-V1: free-rerolls.ts:27-32 checks only shape/range, never authenticates spend history.
-it.fails('G2 anti-tamper: spent free rerolls cannot be refunded by lowering the counter within range',()=>{
+// B3-V1 (fixed): every free spend is a resource-provenance fact the counter must match.
+it('G2 anti-tamper: spent free rerolls cannot be refunded by lowering the counter within range',()=>{
  let s=pick('rolling-for-days-i').state;
  s=accepted(rerollShop(accepted(rerollShop(s))));expect(freeRerollsAvailable(s)).toBe(9);
  const edit=JSON.parse(serializeMatch(s));edit.seatMechanics.seat['free-shop-rerolls'].used=1;
@@ -308,15 +356,18 @@ it.each([['support-mining',7],['support-mining-plus',4]] as const)('G5 %s: actua
  const s=mine(id,threshold);
  const r=s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch1'&&r.kind==='item'&&r.receiptId.includes('"'+id+'"'));
  expect(r).toHaveLength(1);
-},60000);
-// BUG B3-V2: b8-restore.ts:548 does not consume the legitimate unit-removed retirement fact.
-it.fails('G5 normal Support Mining retirement save restores',()=>roundTrip(mine('support-mining',7)),60000);
-it.fails('G5 Support Mining Plus retirement save restores',()=>roundTrip(mine('support-mining-plus',4)),60000);
+},300000);
+// B3-V2 (fixed): the settlement suffix replay consumes the dummy's unit-removed retirement fact.
+it('G5 normal Support Mining retirement save restores',()=>roundTrip(mine('support-mining',7)),300000);
+it('G5 Support Mining Plus retirement save restores',()=>roundTrip(mine('support-mining-plus',4)),300000);
 
 it('G8 Golden Egg: actual public round entries hatch once at eleven without wins (record 296)',()=>{
  let s=pick('the-golden-egg').state;const acquired=s.round;
  const receipts=()=>s.seatMechanics!.receipts.filter(r=>r.receiptId.includes('"the-golden-egg"'));
+ // The egg is a 4-2 card (14.24 stage tags, after this review). A no-win route from 4-2 can be eliminated before its
+ // eleventh entry; then only the "nothing before eleven" half is observable here (augment-pool-batch3 covers the timer).
  for(let entry=1;entry<=12;entry++){
+  const next=resolveM5Choices(s);if(next.phase==='preparation'){const fought=accepted(startMatchCombat(emptyBoard(next)));let f=fought;while(f.phase==='combat')f=stepMatch(f).state;if(resolveM5Choices(f).phase==='gameOver'){expect(entry).toBeLessThan(12);return;}}
   s=advance(s);
   expect(s.roundResults.filter(r=>r.round>=acquired&&r.result==='playerWin'&&r.roundKind==='pvp')).toHaveLength(0);
   if(entry<11)expect(receipts()).toHaveLength(0);
@@ -324,9 +375,9 @@ it('G8 Golden Egg: actual public round entries hatch once at eleven without wins
   if(entry===11){roundTrip(s);const bad=JSON.parse(serializeMatch(s));bad.seatMechanics.receipts=bad.seatMechanics.receipts.filter((r:{receiptId:string})=>!r.receiptId.includes('"the-golden-egg"'));expect(()=>restoreMatch(JSON.stringify(bad))).toThrow();}
  }
  expect(new Set(receipts().map(r=>r.round))).toEqual(new Set([acquired+11]));
-},60000);
+},300000);
 
-// The valid public terminal also fails direct restore, independently of serializeMatch preflight.
-it.fails.each([['support-mining',7],['support-mining-plus',4]] as const)('B3-V2 %s direct restore accepts legitimate retirement', (id,threshold)=>{
+// B3-V2 (fixed): the valid public terminal also restores directly, independently of serializeMatch preflight.
+it.each([['support-mining',7],['support-mining-plus',4]] as const)('B3-V2 %s direct restore accepts legitimate retirement', (id,threshold)=>{
  const s=mine(id,threshold);expect(restoreMatch(JSON.stringify(s))).toEqual(s);
-},60000);
+},300000);

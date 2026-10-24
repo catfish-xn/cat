@@ -533,6 +533,11 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
         check(preparation.units.some(u=>u.id===fact.unitId&&isAnvil(u.definitionId)),'anvil consumption');
         preparation={...preparation,units:preparation.units.filter(u=>u.id!==fact.unitId)};
         take({kind:'anvil-opened',unitId:fact.unitId,choiceId:fact.choiceId});
+      }else if(fact?.kind==='unit-removed'&&fact.definitionId===undefined){
+        // Batch-3 Support Mining retires its own training dummy in the settlement drain; the dummy ledger authenticates it.
+        check(preparation.units.some(u=>u.id===fact.unitId&&u.definitionId==='training-dummy'),'dummy retirement');
+        preparation={...preparation,units:preparation.units.filter(u=>u.id!==fact.unitId)};
+        take({kind:'unit-removed',unitId:fact.unitId,receiptId:fact.receiptId});
       }else if(!mechanicBirth())break;
       combinations();
     }
