@@ -54,7 +54,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
   switch(champion(u)){
     case 'g23-sion':{
       const tier=u.mechanics?.find(m=>m.mechanic==='g23Sion')?.values.tier??3;
-      grantShield(u,origin(u),amount(u,ctx.tick,{ap:tier>=5&&tier<7?G23_SUMMON_POLICY.sion.tier5ShieldAp:v('Shield')}),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
+      grantShield(u,origin(u),amount(u,ctx.tick,{ap:tier>=5?G23_SUMMON_POLICY.sion.tier5PlusShieldAp:v('Shield')}),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       const cells=path(ctx.board,u.cell,t.cell);
       for(const x of foes().filter(x=>cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row))){strike(x,physical('PercentAttackDamage'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);}break;
     }

@@ -70,7 +70,7 @@ function chargeG23Sion(ctx:AbilityContext,u:S13Unit,tier:number,seq:number):void
  for(const [ordinal,x] of hits.entries()){
   ctx.packets.push({source,targetId:x.id,raw,damageType:'physical',actionSeq:seq,ordinal,delivery:'ability-direct',
    critEligibility:'requires-spell-authorization',area:x.id!==target.id,triggeringCastActionSeq:null});
-  applyStatus(x,source,'stun',0,knockup,ctx.tick,ctx.events);
+  applyStatus(x,source,'stun',0,knockup,ctx.tick,ctx.events,false,'',undefined,true);
   if(tier>=V19_MECHANICS.blackRose.minimumTier)markRoseV19(u,x);
  }
  const occupied=(c:HexCell)=>ctx.units.some(x=>x.id!==u.id&&occupiesCell(x,ctx.tick)&&sameCell(x.cell,c));
@@ -96,8 +96,6 @@ function reviveG23Sion(ctx:AbilityContext,u:S13Unit,seq:number):void{
  executeMechanismEffect(ctx,u,asSource(origin(u,3)),u,status('control-immunity',0,MAX_COMBAT_TICKS,{activation:'immediate'}),seq,1,undefined,undefined,undefined,undefined,context);
  v19Stat(ctx,u,origin(u,3),'attackSpeed',Math.round(variable(u,'PercentAttackSpeed')*10000),'bps');
 }
-/** Omnivamp of a revived 7 Black Rose Sion, read by the vamp settlement. */
-export function g23SionVampBps(u:S13Unit):number{return u.g23Sion?.revived?Math.round(variable(u,'PercentOmnivamp')*10000):0;}
 /** A dead forge returns on Jayce's cast. Occupied corpses relocate to the first free hex. */
 export function reviveG23Forge(ctx:AbilityContext,jayce:S13Unit):S13Unit|undefined{
  const forge=ctx.units.find(u=>u.id===jayce.id+':g23-forge');if(!forge)return;

@@ -441,8 +441,8 @@ describe('dead-holder public combat fixture', () => {
 describe.each([
   // v23: Black Rose owner is the lowest numeric unit serial (unit-9 before unit-10); on these public Manaflow
   // routes Morgana is that unit and owns Sion. Ticks moved with the v23 opening-encounter mixing.
-  { contribution: false, seed: 108, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 164, targetId: 'enemy-r4-1' },
-  { contribution: true, seed: 175, cells: [{ col: 3, row: 7 }, { col: 0, row: 7 }, { col: 6, row: 7 }], tick: 233, targetId: 'enemy-r4-1' },
+  { contribution: false, seed: 108, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 219, targetId: 'enemy-r4-1' },
+  { contribution: true, seed: 175, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 226, targetId: 'enemy-r4-1' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   let fixture: { state: MatchState; start: MatchCommandResult; before: MatchState; ownerId: string };
   beforeAll(() => {
