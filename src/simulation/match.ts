@@ -21,6 +21,7 @@ export { isMelBlessingCrossing, readOpeningMelProgress, applyWarwickHunger, crea
 export type { OpeningMelThresholdReceipt, OpeningMelProgress, OpeningForgeProgress, OpeningWarwickKillFact, OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
+import { pruneForgePositions } from './forge-positions';
 import { grantConsumableCopy } from './consumables';
 import { grantPveRemover } from './pve-remover';
 import {grantAnomalyAcquisition} from './anomaly-acquisition';
@@ -103,7 +104,7 @@ export { d14PublicUnitMark } from './d14-public-unit-mark';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
-  const d14Events:MatchEvent[]=[];state=reconcileD14(state,d14Events);events=[...events,...d14Events];
+  const d14Events:MatchEvent[]=[];state=pruneForgePositions(reconcileD14(state,d14Events));events=[...events,...d14Events];
   state=applyG23Radiant(state,new Set(events.flatMap(e=>e.type==='itemCombined'?[e.itemId]:[])));
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
@@ -451,7 +452,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   }
   const equipment=planTemporaryEquipment(state); events.push(...equipment.events);
   const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy,events));
-  let settled=reconcileD14(settledPlan.state,events); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
+  let settled=pruneForgePositions(reconcileD14(settledPlan.state,events)); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
     const forfeited=forfeitUnclaimedOrbs(settled); return {state:forfeited.state,events:[...events,...forfeited.events]};

@@ -11,6 +11,7 @@ import type { UnitUpgradedEvent } from '../unit-types';
 import { appendMechanicReceipt, findMechanicReceipt } from './state';
 import type { MechanicReceipt, MechanicSource } from './types';
 import { enqueueRewardOrb } from '../orb-claim';
+import { pruneForgePositions } from '../forge-positions';
 
 export interface MechanicGrantRequest { readonly receiptId: string; readonly source: MechanicSource }
 export type MechanicGrantResult =
@@ -31,7 +32,7 @@ function badRequest(state: MatchState, request: MechanicGrantRequest): MechanicG
   return findMechanicReceipt(state, request.receiptId) ? refuse(state, 'duplicate-mechanic-receipt') : null;
 }
 function commit(state: MatchState, receipt: MechanicReceipt, events: readonly MatchEvent[] = [], upgradeEvents: readonly UnitUpgradedEvent[] = []): MechanicGrantResult {
-  const next = appendMechanicReceipt(state, receipt);
+  const next = appendMechanicReceipt(pruneForgePositions(state), receipt);
   return { ok: true, state: next, receipt, upgradeEvents, events: [...events, { type: 'mechanicGranted', receipt }] };
 }
 

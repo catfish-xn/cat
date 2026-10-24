@@ -4,6 +4,7 @@ import { deferredRoundIncome } from './deferred-income';
 import { commitOpeningEncounterHealth } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { reconcileD14 } from './d14-runtime';
+import { pruneForgePositions } from './forge-positions';
 import type {TraitProjectionContext} from './traits/effective-membership';
 import { forfeitUnclaimedOrbs, settleQueuedOrbClaims } from './orb-claim';
 import type {UnitLootPolicy} from './loot-runtime';
@@ -168,7 +169,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
     settled=commitOpeningEncounterHealth(settled,hookEvents);
     const merged = resolveDeferredUpgrades(settled);
-    const d14State=reconcileD14(merged.state,hookEvents);
+    const d14State=pruneForgePositions(reconcileD14(merged.state,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
     const opened=openG23Choice(forfeited.state);
     const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...forfeited.events,...opened.events];
