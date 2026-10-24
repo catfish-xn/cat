@@ -17,7 +17,7 @@
 import { BOT_MAX_STEPS, decideBotAction, type BotContext } from '../../server-entry';
 import { nextRandom } from '../../simulation/rng';
 import type { Clock, ClockHandle } from './clock';
-import type { Room } from './room';
+import { ownDeadlineChoice, type Room } from './room';
 import { ROOM_CAPACITY, type ClientCommand, type RoomFailure, type RoomState, type SeatController, type SeatState } from './types';
 
 export interface BotDriverOptions {
@@ -42,7 +42,7 @@ export const BOT_DRIVER_DEFAULTS: BotDriverOptions = { stepMs: 300, takeover: fa
 export interface BotStepRecord {
   readonly seatId: string;
   readonly round: number;
-  /** Room phase the step was decided and issued in (always preparation or choice). */
+  /** Room phase the step was decided and issued in (preparation or choice; battle/settlement only to answer an open anvil). */
   readonly phase: RoomState['phase'];
   readonly controller: SeatController;
   readonly controlEpoch: number;
@@ -85,8 +85,11 @@ function operable(room: RoomState, seat: SeatState): boolean {
   if (!seat.alive) return false;
   if (room.phase === 'preparation') return seat.match.phase === 'preparation' || seat.match.phase === 'choice';
   if (room.phase === 'choice') return seat.match.phase === 'choice';
-  return false;
+  // v22 anvil units: an anvil open after the seat settled (opened by its player before a takeover) is answered where it is
+  // open, as the room gate lets it be, instead of waiting for its own deadline.
+  return ANVIL_PHASES.has(room.phase) && ownDeadlineChoice(seat) !== null;
 }
+const ANVIL_PHASES: ReadonlySet<RoomState['phase']> = new Set(['battle', 'awaiting-settlement', 'settlement']);
 const botControlled = (seat: SeatState): boolean => seat.controller === 'bot' || seat.controller === 'takeover';
 const running = (room: RoomState): boolean => room.phase !== 'waiting' && room.phase !== 'ended';
 
@@ -101,7 +104,7 @@ export class BotDriver {
   private readonly unsubscribe: () => void;
   private readonly enqueue: (task: () => void) => void;
   private lastPhase: RoomState['phase'] | null = null;
-  /** Counts entries into an operable room phase (choice before preparation, preparation, a post-battle choice). */
+  /** Counts room phase entries (choice before preparation, preparation, a post-battle choice, settlement with an open anvil, …). */
   private entry = 0;
   private disposed = false;
 
@@ -146,7 +149,7 @@ export class BotDriver {
     if (this.disposed) return;
     if (state.phase !== this.lastPhase) {
       this.lastPhase = state.phase;
-      if (state.phase === 'preparation' || state.phase === 'choice') this.entry++;
+      this.entry++;
     }
     const roundKey = `${state.round}:${state.roundId}`;
     for (const seat of state.seats) {

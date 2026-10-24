@@ -31,7 +31,8 @@ export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions
   const params = new URLSearchParams(search);
   const num = (key: string, fallback: number) => numberParam(params, key, fallback);
   const faultAt = params.has('faultAt') ? num('faultAt', 0) : 0;
-  return { seed: num('seed', LOCAL_ROOM_DEFAULTS.seed), preparationMs: num('prep', LOCAL_ROOM_DEFAULTS.preparationMs / 1000) * 1000,
+  const prep = num('prep', NaN);
+  return { seed: num('seed', LOCAL_ROOM_DEFAULTS.seed), preparationMs: Number.isFinite(prep) ? prep * 1000 : LOCAL_ROOM_DEFAULTS.preparationMs,
     choiceMs: num('choice', LOCAL_ROOM_DEFAULTS.choiceMs / 1000) * 1000, settlementMs: num('settle', LOCAL_ROOM_DEFAULTS.settlementMs / 1000) * 1000,
     myName: params.get('name') ?? LOCAL_ROOM_DEFAULTS.myName, faultAtRound: Number.isInteger(faultAt) && faultAt > 0 ? faultAt : null,
     pvpMode: params.get('pvp') === 'placeholder' ? 'placeholder' : LOCAL_ROOM_DEFAULTS.pvpMode, poolCapacities: poolCapsParam(params.get('poolCaps')) };

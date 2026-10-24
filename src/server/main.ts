@@ -37,7 +37,7 @@ import type { BattleResolver } from './room/battle-resolver';
 import { BOT_DRIVER_DEFAULTS } from './room/bot-driver';
 import { CAROUSEL_RULES_BINDING } from './room/carousel';
 import { RealClock } from './room/real-clock';
-import { ROOM_TIMING_DEFAULTS } from './room/room';
+import { PER_ROUND_PREPARATION, ROOM_TIMING_DEFAULTS } from './room/room';
 import { TwoSidedBattleResolver } from './room/two-sided-resolver';
 
 const env = process.env;
@@ -49,6 +49,8 @@ const integer = (name: string, fallback: number): number => {
   return value;
 };
 const seconds = (name: string, fallbackMs: number): number => integer(name, fallbackMs / 1000) * 1000;
+/** `CAT_PREP_SEC` overrides every round's preparation; unset keeps the rules' per-round table. */
+const preparationMs = env.CAT_PREP_SEC === undefined || env.CAT_PREP_SEC === '' ? PER_ROUND_PREPARATION : integer('CAT_PREP_SEC', 0) * 1000;
 const flag = (name: string, fallback: boolean): boolean => {
   const raw = (env[name] ?? '').trim().toLowerCase();
   if (raw === '') return fallback;
@@ -101,7 +103,7 @@ createGameServer({
   port, host, clock, seed,
   ...(faultRound > 0 ? { resolver: faultInjecting(new TwoSidedBattleResolver(), faultRound) } : {}),
   timings: {
-    preparationMs: seconds('CAT_PREP_SEC', ROOM_TIMING_DEFAULTS.preparationMs),
+    preparationMs,
     choiceMs: seconds('CAT_CHOICE_SEC', ROOM_TIMING_DEFAULTS.choiceMs),
     settlementMs: seconds('CAT_SETTLE_SEC', ROOM_TIMING_DEFAULTS.settlementMs),
   },
@@ -118,6 +120,6 @@ createGameServer({
   process.once('SIGTERM', () => shutdown('SIGTERM'));
   // `msg` keeps the "listening on" text the e2e harness and operators wait for.
   log('info', 'server.listening', { msg: `listening on ws://${host}:${server.port} (http://${host}:${server.port}/healthz)`, host, port: server.port, sha,
-    contentDigest: CONTENT_DIGEST, lootReplayDigest: LOOT_REPLAY_DIGEST, prepSec: seconds('CAT_PREP_SEC', ROOM_TIMING_DEFAULTS.preparationMs) / 1000,
+    contentDigest: CONTENT_DIGEST, lootReplayDigest: LOOT_REPLAY_DIGEST, prepSec: preparationMs === PER_ROUND_PREPARATION ? preparationMs : preparationMs / 1000,
     takeover, carousel, stallSec: watchdog.stallMs / 1000, heartbeatSec: heartbeatMs / 1000, abandonSec: watchdog.abandonMs / 1000 });
 }).catch(error => { log('error', 'server.start-failed', { error: error instanceof Error ? error.stack ?? error.message : String(error) }); process.exit(1); });
