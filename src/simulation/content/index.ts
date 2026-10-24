@@ -15,6 +15,15 @@ var canonicalFrozen: WeakSet<object> | undefined;
 var frozenDigests: WeakMap<object, string> | undefined;
 var canonicalKeys: Map<string, string> | undefined;
 var scalarPrototype: object | undefined;
+// No memo or admission result: synchronous restore drains all setup work before
+// returning. Keep cooperative callers and external object inputs on their
+// original generator path; nested scopes (including failures) restore it.
+var synchronousRestoreEncoding: boolean | undefined;
+export function withSynchronousRestoreEncoding<T>(enabled: boolean, run: () => T): T {
+  const previous = synchronousRestoreEncoding;
+  synchronousRestoreEncoding = enabled;
+  try { return run(); } finally { synchronousRestoreEncoding = previous; }
+}
 function quoteKey(key: string): string {
   const cache = canonicalKeys ??= new Map<string, string>();
   const cached = cache.get(key);
@@ -39,10 +48,12 @@ function rememberFrozen(value: object, text: string, keys: readonly string[]): s
 }
 /** JSON canonicalization preserves semantic array order and sorts object keys by ASCII. */
 export function canonicalContent(value: unknown): string {
-  return canonicalLeaf(value) ?? drainSetup(canonicalSteps(value, { remaining: 64, retainFrozen: true }));
+  return canonicalLeaf(value) ?? (synchronousRestoreEncoding ? canonicalSync(value, true)
+    : drainSetup(canonicalSteps(value, { remaining: 64, retainFrozen: true })));
 }
 /** Setup uses bounded traversal without retaining short-lived snapshot text. */
 export function* canonicalContentSteps(value: unknown): Generator<void, string, void> {
+  if (synchronousRestoreEncoding) return canonicalSync(value, false);
   return yield* canonicalSteps(value, { remaining: 64, retainFrozen: false });
 }
 function canonicalLeaf(value: unknown): string | undefined {
@@ -101,20 +112,81 @@ function* canonicalSteps(value: unknown, budget: { remaining: number; retainFroz
   }
   throw new TypeError('Content must be finite plain JSON data');
 }
+/** Identical traversal, key order, array fallback, finite-data checks and
+ * frozen-text policy, without generator allocation/delegation when the owning
+ * restore will synchronously drain every chunk anyway. */
+function canonicalSync(value: unknown, retainFrozen: boolean): string {
+  const leaf = canonicalLeaf(value);
+  if (leaf !== undefined) return leaf;
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) if (!Object.hasOwn(value, i)) throw new TypeError('Content cannot contain sparse arrays');
+    // Preserve the synchronous API's native map/species behavior for non-plain arrays.
+    if (Object.hasOwn(value, 'map') || Object.hasOwn(value, 'constructor') || Object.getPrototypeOf(value) !== Array.prototype)
+      return `[${value.map(canonicalContent).join(',')}]`;
+    const length = value.length, parts = new Array<string>(length);
+    for (let i = 0; i < length; i++) if (i in value) {
+      const child: unknown = value[i];
+      parts[i] = canonicalLeaf(child) ?? canonicalSync(child, retainFrozen);
+    }
+    const text = `[${parts.join(',')}]`;
+    return !retainFrozen || !Object.isFrozen(value) ? text : rememberFrozen(value, text, Array.from({ length: value.length }, (_, i) => String(i)));
+  }
+  if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
+    const keys = Object.keys(value).sort();
+    if (keys.some(key => key.charCodeAt(0) >= 48 && key.charCodeAt(0) <= 57)) {
+      const parts: string[] = [];
+      for (const key of keys) {
+        const quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
+        parts.push(`${quoted}:${canonicalLeaf(child) ?? canonicalSync(child, retainFrozen)}`);
+      }
+      const text = `{${parts.join(',')}}`;
+      return retainFrozen ? rememberFrozen(value, text, keys) : text;
+    }
+    const scalars = Object.create(scalarPrototype ??= Object.freeze(Object.create(null))) as Record<string, unknown>;
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i], child = (value as Record<string, unknown>)[key];
+      if (child === null || typeof child === 'string' || typeof child === 'boolean' || typeof child === 'number' && Number.isFinite(child)) {
+        scalars[key] = child; continue;
+      }
+      const parts = keys.slice(0, i).map(key => `${quoteKey(key)}:${canonicalContent(scalars[key])}`);
+      parts.push(`${quoteKey(key)}:${canonicalLeaf(child) ?? canonicalSync(child, retainFrozen)}`);
+      for (let rest = i + 1; rest < keys.length; rest++) {
+        const key = keys[rest], quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
+        parts.push(`${quoted}:${canonicalLeaf(child) ?? canonicalSync(child, retainFrozen)}`);
+      }
+      const text = `{${parts.join(',')}}`;
+      return retainFrozen ? rememberFrozen(value, text, keys) : text;
+    }
+    const text = JSON.stringify(scalars);
+    return retainFrozen ? rememberFrozen(value, text, keys) : text;
+  }
+  throw new TypeError('Content must be finite plain JSON data');
+}
 /** Equality for data already admitted by the restore boundary's full JSON validation.
  * Compares object keys without sorting or allocating canonical strings. Array order,
  * extra fields and JSON's -0/0 equivalence retain canonicalContent semantics.
  * This is not an input validator; callers must validate finite plain JSON first. */
 export function equalValidatedContent(a: unknown, b: unknown): boolean {
-  if (a === b) return a !== undefined;
+  // Parsed restores may decode constructor metadata by immutable reference.
+  // Still visit every object/array field in this invocation; identity is not
+  // admission evidence. Object inputs retain the original dispatch.
+  if (a === b && (!synchronousRestoreEncoding || a === null || typeof a !== 'object')) return a !== undefined;
   if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
-  if (Array.isArray(a)) return Array.isArray(b) && a.length === b.length
-    && a.every((value, index) => equalValidatedContent(value, b[index]));
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false;
+    // Only the private parsed restore graph uses the loop. Other callers keep
+    // native every dispatch, including custom methods and property reads.
+    if (!synchronousRestoreEncoding) return a.every((value, index) => equalValidatedContent(value, b[index]));
+    const length = a.length;
+    for (let i = 0; i < length; i++) if (i in a && !equalValidatedContent(a[i], b[i])) return false;
+    return true;
+  }
   if (Array.isArray(b)) return false;
   const left = a as Record<string, unknown>, right = b as Record<string, unknown>;
   const keys = Object.keys(left);
-  return keys.length === Object.keys(right).length
-    && keys.every(key => Object.hasOwn(right, key) && equalValidatedContent(left[key], right[key]));
+  if (keys.length !== Object.keys(right).length) return false;
+  for (const key of keys) if (!Object.hasOwn(right, key) || !equalValidatedContent(left[key], right[key])) return false;
+  return true;
 }
 /** Validation-only walk for JSON.parse output, whose values are data properties in dense arrays and plain objects: there it
  * accepts and rejects exactly what canonicalContent does (the only possible rejection is a non-finite number), without

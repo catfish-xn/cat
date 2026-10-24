@@ -5,7 +5,8 @@ import {createCombatWithEvents,stepCombat} from './combat';
 import type {CombatState} from './combat-types';
 import type {CombatInputBasis} from './combat-input';
 import type {StrategySnapshot} from './strategy-types';
-import {canonicalContent} from './content';
+import {canonicalContent,equalValidatedContent} from './content';
+import {shareValidatedCombatDeclarations} from './combat-static';
 import {createRestoreCombatReplay} from './restore-combat-replay';
 
 /** Opening HP is derived from authenticated inputs, never the saved owner HP. */
@@ -23,7 +24,7 @@ export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBas
  * combat, not a candidate-supplied absence flag or weaker clock bounds.
  * Trench also replaces the roster, so this runs before static-roster checks.
  * Every call reconstructs independently from the validated frozen basis. */
-export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):boolean {
+export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot,parsedJsonInput=false,shareDeclarations=false):boolean {
   if (candidate.equipmentReceipts !== undefined || candidate.pendingEquipment !== undefined) {
     validateBattleEquipmentLog(candidate.equipmentReceipts?.map(r => r.input) ?? [], candidate.equipmentReceipts ?? [], candidate.tick);
     validateBattleEquipmentLog(candidate.pendingEquipment?.map(r => r.input) ?? [], candidate.pendingEquipment ?? [], candidate.tick + 1);
@@ -37,7 +38,8 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
       installBattleEquipmentBatch(expected, candidate.pendingEquipment); // Validate pending targets/order without advancing or publishing.
       expected = { ...expected, pendingEquipment: candidate.pendingEquipment };
     }
-    if (canonicalContent(expected) !== canonicalContent(candidate)) throw new RangeError('Invalid authoritative equipment replay');
+    if (!sameCombat(expected,candidate,parsedJsonInput)) throw new RangeError('Invalid authoritative equipment replay');
+    if(shareDeclarations)shareValidatedCombatDeclarations(candidate,expected);
     return true;
   }
   const zephyr=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr'));
@@ -64,14 +66,29 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   if(!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>MAX_COMBAT_TICKS)throw new RangeError('Invalid dynamic combat checkpoint');
   // Preserve the existing cold-replay contract for roster/absence/anomaly paths.
   // Ordinary v19/v20 and overtime combats reuse input-bound independent evidence.
-  let expected:CombatState;
-  if((v19||v20||overtime)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
-  else{
-    expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
+  let matches:boolean;
+  if((v19||v20||overtime)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11){
+    const replay=createRestoreCombatReplay(basis,strategy,candidate.tick,parsedJsonInput);
+    // Only restoreMatch's fully admitted, privately parsed candidate can avoid
+    // a second canonical encoding. Object callers retain cloning and all reads.
+    matches=parsedJsonInput?replay.matchesValidatedAtSaveTick(candidate,shareDeclarations)
+      :canonicalContent(replay.stateAtSaveTick())===canonicalContent(candidate);
+  } else {
+    let expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
     while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
+    matches=sameCombat(expected,candidate,parsedJsonInput);
+    if(matches&&shareDeclarations)shareValidatedCombatDeclarations(candidate,expected);
   }
-  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':v19?'V19':overtime?'overtime':'Mirror forge'} replay`);
+  if(!matches)throw new RangeError(`Invalid authoritative ${anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':v19?'V19':overtime?'overtime':'Mirror forge'} replay`);
   return true;
+}
+
+/** Expected evidence retains canonical validation before equality. A candidate
+ * owned by restoreMatch's JSON.parse has already passed the full JSON walk;
+ * recursive equality checks every field without encoding that graph again. */
+function sameCombat(expected:CombatState,candidate:CombatState,parsedJsonInput:boolean):boolean {
+  const text=canonicalContent(expected);
+  return parsedJsonInput?equalValidatedContent(expected,candidate):text===canonicalContent(candidate);
 }
 
 /** Money authority cannot be the candidate's own receipt list. Independently
