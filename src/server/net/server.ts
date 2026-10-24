@@ -332,6 +332,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     if (!session || session.roomId !== state.roomId) return;
     const seat = state.seats.find(candidate => candidate.seatId === session.seatId);
     if (!seat) return;
+    // A queued publication older than one already pushed (a direct push of the latest state overtook it) is stale.
+    if (state.roomRevision < conn.sentRoomRevision) return;
     if (conn.sentRoomRevision !== state.roomRevision) {
       conn.sentRoomRevision = state.roomRevision;
       send(conn, { type: 'view', roomId: state.roomId, roomRevision: state.roomRevision, view: toPlayerView(state, seat.seatId, clock.now()) });

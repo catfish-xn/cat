@@ -1914,7 +1914,10 @@ export class Room {
       // P 乙: inside a capped phase the anvil's own deadline is the cap at the latest, so the seat's countdown (endsAt)
       // shows when the choice is really forced, and its own timer answers it there.
       const own = this.options.clock.now() + open.timeoutMs;
-      const cap = CHOICE_TIMEOUT_PHASES.has(next.phase) && this.phaseDeadline !== null ? this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS : Infinity;
+      // A fill-in bot answers its anvil at its next step: its deadline never reaches past the phase deadline, so its
+      // opening never moves every player's countdown (v23 live pre-check: 6 s ↔ 30 s flicker at 1-2).
+      const extension = seat.controller === 'bot' ? 0 : ANVIL_PHASE_EXTENSION_MS;
+      const cap = CHOICE_TIMEOUT_PHASES.has(next.phase) && this.phaseDeadline !== null ? this.phaseDeadline + extension : Infinity;
       return { ...rest, choiceDeadline: { choiceId: open.choiceId, generation: open.generation, deadlineAt: Math.min(own, cap) } };
     });
     return changed ? { ...next, seats } : next;
@@ -1946,14 +1949,16 @@ export class Room {
    * choice or settlement phase ends at the later of its own deadline and every open anvil deadline of an alive seat
    * (published like any deadline, as the view's `endsAt`), capped at its own deadline + ANVIL_PHASE_EXTENSION_MS, and
    * goes back to its own deadline once those anvils are answered. The anvil timer, armed first, fires before the phase
-   * deadline at the same time; an anvil still open at the cap is answered by the phase timeouts.
+   * deadline at the same time; an anvil still open at the cap is answered by the phase timeouts. A fill-in bot seat's
+   * anvil never extends the phase (its deadline is capped at the phase's own; v23 live fix).
    */
   private fitDeadlineToChoices(): void {
     const state = this.current;
     if (this.extendingDeadline || this.timer === null || this.phaseDeadline === null || state.deadlineAt === null || !CHOICE_TIMEOUT_PHASES.has(state.phase)) return;
     // P (user 2026-10-24, option 乙): anvils extend a phase by at most ANVIL_PHASE_EXTENSION_MS in total; an anvil still open
     // at the capped deadline is answered by the phase's own timeouts (`timeoutChoice`, first offer).
-    const wanted = Math.min(this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS, Math.max(this.phaseDeadline, ...this.aliveSeats().map(seat => seat.choiceDeadline?.deadlineAt ?? -Infinity)));
+    // Fill-in bot seats (controller 'bot') never extend the phase; a takeover seat is still a player's and keeps 乙.
+    const wanted = Math.min(this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS, Math.max(this.phaseDeadline, ...this.aliveSeats().map(seat => seat.controller === 'bot' ? -Infinity : seat.choiceDeadline?.deadlineAt ?? -Infinity)));
     if (wanted === state.deadlineAt) return;
     this.extendingDeadline = true;
     try {

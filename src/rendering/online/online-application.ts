@@ -503,7 +503,8 @@ export class OnlineApplication implements SceneApplication {
   }
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
-    this.sidebar.tick(); this.carousel.tick(); this.syncSummary(); this.flushOutcome();
+    const shown = this.session.combatView;
+    this.sidebar.tick(shown?.status === 'running' ? shown.tick : null); this.carousel.tick(); this.syncSummary(); this.flushOutcome();
     // A 3D layer that subscribed after the last view (or a release time that passed) gets the carousel again.
     if (this.carousel.showing && (this.carouselFeedGeneration !== boardFeedGeneration() || this.carouselReleaseDue())) this.publishCarousel3d();
     if (this.opponentBoard.openSeatId && this.scoutFeedGeneration !== boardFeedGeneration()) this.syncScout();

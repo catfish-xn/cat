@@ -13,6 +13,7 @@ import { ManualClock } from '../../src/server/room/clock';
 import { Room, ROOM_TIMING_DEFAULTS, type RoomOptions } from '../../src/server/room/room';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { toPlayerView, toSeatPrivateView } from '../../src/server/room/projection';
+import { BotDriver } from '../../src/server/room/bot-driver';
 import { createOpeningEncounter } from '../../src/server-entry';
 import { SEATS, TIMINGS } from './helpers';
 import { anvilChoiceId, benchAnvils, countOf, openAnvil, seatOf } from './anvil-room-helpers';
@@ -163,6 +164,55 @@ describe('v22: an opened anvil runs on its own room deadline', () => {
       expect(view).not.toContain('choiceDeadline');
       for (const id of choice.offers) expect(view).not.toContain(`"${id}"`);
     }
+  });
+});
+
+describe('v23 live fix: fill-in bots open their anvils without moving the phase deadline', () => {
+  it('bots open and pick both anvils at the start of 1-2; every published deadline and every view endsAt stays the phase\'s own', () => {
+    // As the live pre-check: a 6 s first preparation, the default bot step; s4–s7 are fill-in bots.
+    const { room, clock } = openRoom({ preparationMs: 6_000 });
+    const phaseDeadline = room.state.deadlineAt!;
+    const bots = new BotDriver(room, ANVIL_SEED);
+    rooms.push({ dispose: () => bots.dispose() } as unknown as Room);
+    const published: { deadlineAt: number | null; endsAt: number | null; bot: (number | undefined)[] }[] = [];
+    const unsubscribe = room.subscribe(state => {
+      if (state.phase !== 'preparation') return;
+      published.push({ deadlineAt: state.deadlineAt, endsAt: toPlayerView(state, 's0', clock.now()).phase.endsAt,
+        bot: state.seats.filter(seat => seat.controller === 'bot').map(seat => seat.choiceDeadline?.deadlineAt) });
+    });
+    const botIds = room.state.seats.filter(seat => seat.controller === 'bot').map(seat => seat.seatId);
+    expect(botIds).toEqual(['s4', 's5', 's6', 's7']);
+    const opened = (seatId: string) => (seatOf(room.state, seatId).match.seatMechanics?.receipts ?? []).filter(receipt => receipt.kind === 'choice' && (receipt as { source?: string }).source === 'anvil-unit');
+    while (room.state.phase === 'preparation' && !botIds.every(seatId => opened(seatId).length === 2) && clock.runNext()) { /* bot steps */ }
+    unsubscribe();
+    expect(room.state.fault).toBeNull();
+    expect(room.state.phase).toBe('preparation');
+    for (const seatId of botIds) expect(opened(seatId).map(receipt => (receipt as { timedOut?: boolean }).timedOut), seatId).toEqual([false, false]);
+    // Something was published while a bot anvil was open, and nothing moved the countdown.
+    expect(published.some(entry => entry.bot.some(deadline => deadline !== undefined))).toBe(true);
+    for (const entry of published) {
+      expect(entry.deadlineAt).toBe(phaseDeadline);
+      expect(entry.endsAt).toBe(phaseDeadline);
+      for (const deadline of entry.bot) if (deadline !== undefined) expect(deadline).toBeLessThanOrEqual(phaseDeadline);
+    }
+    // A human seat's anvil in the same room still extends the phase (乙 unchanged).
+    const unit = benchAnvils(seatOf(room.state, 's0').match)[0]!;
+    const at = clock.now();
+    openAnvil(room, 's0', unit.id);
+    expect(room.state.deadlineAt).toBe(Math.min(at + 30_000, phaseDeadline + 30_000));
+  });
+
+  it('a bot anvil still open at the phase deadline is answered by the phase, without an extension', () => {
+    const { room, clock } = openRoom();
+    const phaseDeadline = room.state.deadlineAt!;
+    clock.advance(TIMINGS.preparationMs - 100);
+    const unit = benchAnvils(seatOf(room.state, 's4').match)[0]!;
+    const choice = openAnvil(room, 's4', unit.id, false, phaseDeadline);
+    expect(room.state.deadlineAt).toBe(phaseDeadline);
+    clock.advance(100);
+    expect(room.state.phase).not.toBe('preparation');
+    expect(room.state.fault).toBeNull();
+    expect(receiptsOf(room, 's4', choice.choiceId)).toEqual([expect.objectContaining({ optionId: choice.offers[0], timedOut: true })]);
   });
 });
 

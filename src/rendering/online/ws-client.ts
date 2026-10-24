@@ -116,6 +116,12 @@ export class WsGameClient implements GameClient {
   /** seatRevision of the latest `state` and highest seatRevision an applied receipt reported. */
   private stateRevision = -1;
   private appliedRevision = -1;
+  /**
+   * Newest roomRevision (view) and seatRevision (state) taken on this socket for `roomId`: an older push that arrives
+   * after a newer one is dropped. Reset with every new socket and seat, so a resume or resync snapshot is always taken.
+   */
+  private viewFloor = -1;
+  private stateFloor = -1;
   private nextCommandId = 1;
   private readonly inflight = new Map<number, Inflight>();
   private confirmed: (ConfirmedCommand & { seatRevision: number })[] = [];
@@ -236,7 +242,7 @@ export class WsGameClient implements GameClient {
     let socket: WebSocket;
     try { socket = this.createSocket(this.options.url); }
     catch (error) { this.log(`connect failed: ${String(error)}`); this.scheduleReconnect(); return; }
-    this.socket = socket; this.bound = false;
+    this.socket = socket; this.bound = false; this.viewFloor = -1; this.stateFloor = -1;
     this.cancelLiveness(); this.livenessMs = null;
     socket.onopen = () => {
       if (this.socket !== socket) return;
@@ -314,7 +320,7 @@ export class WsGameClient implements GameClient {
         // On a socket bound to my seat in a room, a lobby push means the server revoked it (a new match started).
         if (this.bound && this.roomId !== null) { this.forgetSeat(); this.lastView = null; this.lastState = null; this.lastReplayKey = ''; this.lastReplay = null; }
         this.lobbyView = message.view; this.emitLobby(); return;
-      case 'view': return this.onView(message.roomId, message.view);
+      case 'view': return this.onView(message.roomId, message.roomRevision, message.view);
       case 'state': return this.onState(message.roomId, message.round, message.seatRevision, message.state, message.events ?? []);
       case 'combat-open':
       case 'combat-end': this.onCombatStream(message); return;
@@ -337,7 +343,12 @@ export class WsGameClient implements GameClient {
     this.livenessMs = intervalMs * HEARTBEAT_MISSED;
     if (first && this.socket) this.armLiveness(this.socket);
   }
-  private onView(roomId: string, view: PlayerView): void {
+  private onView(roomId: string, roomRevision: number, view: PlayerView): void {
+    if (roomId === this.roomId && typeof roomRevision === 'number') {
+      if (roomRevision < this.viewFloor) { this.log(`stale view ${roomRevision} < ${this.viewFloor} dropped`); return; }
+      this.viewFloor = roomRevision;
+    } else this.viewFloor = typeof roomRevision === 'number' ? roomRevision : -1;
+    if (roomId !== this.roomId) this.stateFloor = -1;
     this.roomId = roomId;
     // The match is over: the token resumes nothing worth coming back to; the ranking stays on screen.
     if (view.phase.kind === 'ended' && this.token !== null) this.writeToken(null);
@@ -347,6 +358,8 @@ export class WsGameClient implements GameClient {
   }
   /** The server sends my seat as the rules' private view (B7); the UI gets a display-only MatchState of it. */
   private onState(roomId: string, round: number, seatRevision: number, view: SeatStateView, serverEvents: readonly MatchEvent[]): void {
+    if (roomId === this.roomId && seatRevision < this.stateFloor) { this.log(`stale state ${seatRevision} < ${this.stateFloor} dropped`); return; }
+    this.stateFloor = seatRevision;
     const state = toDisplayMatch(view);
     this.roomId = roomId; this.round = round; this.stateRevision = seatRevision; this.lastState = state;
     const confirmed = this.confirmed.filter(entry => entry.seatRevision <= seatRevision);
@@ -507,7 +520,7 @@ export class WsGameClient implements GameClient {
   }
   private forgetSeat(): void {
     this.streamBattleId = ''; this.watchSeat = null; this.lastWatch = null; this.lastReplay = null; this.lastReplayKey = '';
-    this.seatId = null; this.roomId = null; this.round = 0; this.stateRevision = -1; this.appliedRevision = -1;
+    this.seatId = null; this.roomId = null; this.round = 0; this.stateRevision = -1; this.appliedRevision = -1; this.viewFloor = -1; this.stateFloor = -1;
     this.writeToken(null);
   }
   private readToken(): string | null {
