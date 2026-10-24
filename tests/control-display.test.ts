@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ControlTracker, KNOCKUP_CASTS, knockupLift, unitStunned, type ViewUnitStatuses } from '../src/presentation/control-display';
+import { ControlTracker, DISPLACEMENT_REASONS, KNOCKUP_CASTS, isDisplacement, knockupLift, unitStunned, type ViewUnitStatuses } from '../src/presentation/control-display';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { statusIcons } from '../src/presentation/status-icons';
 
@@ -75,5 +75,19 @@ describe('stun vs knock-up as drawn', () => {
     expect(knockupLift(null, 0, 0.6, 0.2, 0.2)).toBeCloseTo(0.6);
     expect(knockupLift(null, 0.1, 1, 0.2, 0.2)).toBeCloseTo(0.75);
     expect(knockupLift(null, 0.2, 1, 0.2, 0.2)).toBe(0);
+  });
+});
+
+describe('forced moves as drawn', () => {
+  const move = (reason?: string) =>
+    ({ type: 'movement', tick: 5, eventSeq: 0, unitId: 'a', from: { col: 1, row: 1 }, to: { col: 2, row: 1 }, ...(reason ? { reason } : {}) }) as unknown as DisplayCombatEvent;
+  it('skids the pull, grab and knockback reasons only; walks and dashes stay walks', () => {
+    for (const reason of ['mordekaiser-pull', 'sett-grab', 'sevika-knockback']) expect(isDisplacement(move(reason))).toBe(true);
+    for (const reason of [undefined, 'ambessa-chain', 'ambessa-fist-retreat']) expect(isDisplacement(move(reason))).toBe(false);
+    expect(isDisplacement(stun(5, 'a'))).toBe(false);
+  });
+  it('matches the 3D list', async () => {
+    const { DISPLACEMENT_REASONS: three } = await import('../src/rendering/three-mode/unit-control');
+    expect([...DISPLACEMENT_REASONS].sort()).toEqual([...three].sort());
   });
 });

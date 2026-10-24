@@ -10,8 +10,8 @@ import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToN
 import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
-import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
-import { ControlTracker, unitStunned, type ControlKind } from '../presentation/control-display';
+import { asDisplayEvents, type DisplayCombat, type DisplayCombatEvent, type SceneCombatEvent } from '../presentation/combat-display';
+import { ControlTracker, DISPLACEMENT_SLIDE_2D, isDisplacement, unitStunned, type ControlKind } from '../presentation/control-display';
 import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, boardFeedWalkToOrb, provideBoardControls, publishPlayerSaved, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
@@ -1276,6 +1276,7 @@ export class BoardScene extends Phaser.Scene {
     if (!combat || !events.length) return;
     this.strategyPanel?.observeEvents(events);
     this.followControlCombat(); this.controlTracker.observe(asDisplayEvents(events));
+    this.skidDisplaced(asDisplayEvents(events));
     this.recentCombatEvents.push(...structuredClone(events));
     publishCombatEvents(() => asDisplayEvents(events));
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
@@ -1286,6 +1287,29 @@ export class BoardScene extends Phaser.Scene {
     this.fx.show(events, this.session.combatRuntime ?? combat);
     this.renderedCastCount += this.fx.casts - casts;
     if (!this.quietBoard()) this.feedback?.push(events, performance.now());
+  }
+  /**
+   * Forced moves (pulled, grabbed, knocked back) skid: syncCombat has just started the ordinary walk to the new cell,
+   * so this swaps it for a short ease-out slide with a dust streak on the floor. Reduced motion keeps the jump.
+   */
+  private skidDisplaced(events: readonly DisplayCombatEvent[]) {
+    if (reducedMotion()) return;
+    for (const event of events) {
+      if (!isDisplacement(event) || this.renderedCells.get(event.unitId) !== `${event.to.col},${event.to.row}`) continue;
+      const token = this.tokens.get(event.unitId), view = this.views.get(event.unitId);
+      if (!token?.visible || !view) continue;
+      const from = this.layout.center(event.from), to = this.layout.center(event.to);
+      this.tweens.killTweensOf(token); token.setPosition(from.x, from.y);
+      this.tweens.add({ targets: token, x: to.x, y: to.y, duration: DISPLACEMENT_SLIDE_2D.ms, ease: 'Cubic.easeOut' });
+      view.skid(to.x - from.x);
+      if (this.fx.drawn) {
+        const streak = this.add.graphics().setDepth(token.depth);
+        // Dust puffs along the floor, thicker toward where the skid stops.
+        for (let i = 1; i <= 5; i++) streak.fillStyle(0xd8c8a8, 0.08 + 0.06 * i).fillCircle(from.x + (to.x - from.x) * i / 6, from.y + (to.y - from.y) * i / 6 + PIECE_RADIUS * 0.55, 4 + 1.6 * i);
+        this.children.moveBelow(streak, token); // on the floor, under the piece that skids over it
+        this.fadeEffect(streak, DISPLACEMENT_SLIDE_2D.streakMs);
+      }
+    }
   }
   /** A different shown combat (a new round, or another seat's battle): no knock-up carries over. */
   private followControlCombat() {

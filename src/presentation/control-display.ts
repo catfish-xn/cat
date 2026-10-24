@@ -24,6 +24,16 @@ export const KNOCKUP_CASTS: Readonly<Record<string, 'all' | 'secondary'>> = {
 /** 2D lift (logical px) and its rise/fall seconds; the 3D layer has its own (three-mode/unit-control.ts). */
 export const KNOCKUP_2D = { height: 16, riseSeconds: 0.16, fallSeconds: 0.2 } as const;
 
+/**
+ * Forced moves (pull, grab, knockback): the rules mark these movement events with a reason. 2D draws them as a quick
+ * skid along the floor instead of the 220 ms walk; the 3D layer keeps its own list (three-mode/unit-control.ts).
+ */
+export const DISPLACEMENT_REASONS: ReadonlySet<string> = new Set(['mordekaiser-pull', 'sett-grab', 'sevika-knockback']);
+export const isDisplacement = (event: DisplayCombatEvent): event is Extract<DisplayCombatEvent, { type: 'movement' }> =>
+  event.type === 'movement' && DISPLACEMENT_REASONS.has((event as { reason?: string }).reason ?? '');
+/** 2D skid: milliseconds, lean (radians, against the slide) and the dust streak's fade. */
+export const DISPLACEMENT_SLIDE_2D = { ms: 150, lean: 0.22, streakMs: 260 } as const;
+
 /** True while the unit has a stun in effect: the replay view's statuses online, the engine's offline. */
 export function unitStunned(runtime: CombatState | null, unit: ViewUnitStatuses): boolean {
   if (!unit.alive) return false;

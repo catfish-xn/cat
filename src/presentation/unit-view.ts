@@ -14,7 +14,7 @@ import { championPortraitKey, itemTextureKey, requestItemTexture } from './s13-a
 import { drawStatusIcons, statusIconY, statusIcons, type IconPen } from './status-icons';
 import { reducedMotion } from './preferences';
 import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
-import { KNOCKUP_2D, knockupLift, type ControlKind } from './control-display';
+import { DISPLACEMENT_SLIDE_2D, KNOCKUP_2D, knockupLift, type ControlKind } from './control-display';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
@@ -42,6 +42,9 @@ export class UnitView {
   private airborneAt: number | null = null;
   private landedAt: number | null = null;
   private landFrom = 0;
+  /** Forced skid (pull/grab/knockback): when it started and its lean sign (-1 left, 1 right). */
+  private slideAt = -Infinity;
+  private slideLean = 0;
   /** Ground shadow under a knocked-up piece; outside `body`, so it stays on the cell. */
   private readonly shadow: Phaser.GameObjects.Arc;
   readonly disc: Phaser.GameObjects.Arc;
@@ -183,8 +186,10 @@ export class UnitView {
   animate(now: number): void {
     if (!this.token.visible) return;
     const still = reducedMotion();
-    // A controlled piece holds still: no idle bob.
-    let x = 0, y = still || this.controlKind ? 0 : Math.sin(now / BOB_PERIOD_MS + this.bobPhase) * BOB_PX;
+    const slide = now - this.slideAt, sliding = slide >= 0 && slide < DISPLACEMENT_SLIDE_2D.ms;
+    // A controlled or skidding piece holds still: no idle bob. The skid leans the body back against the slide.
+    let x = 0, y = still || this.controlKind || sliding ? 0 : Math.sin(now / BOB_PERIOD_MS + this.bobPhase) * BOB_PX;
+    this.body.setRotation(!still && sliding ? this.slideLean * DISPLACEMENT_SLIDE_2D.lean * Math.sin(Math.PI * slide / DISPLACEMENT_SLIDE_2D.ms) : 0);
     const lunge = now - this.lungeAt;
     if (!still && lunge >= 0 && lunge < LUNGE_MS) { const k = Math.sin((Math.PI * lunge) / LUNGE_MS); x += this.lunge.x * k; y += this.lunge.y * k; }
     const hit = now - this.hitAt;
@@ -220,6 +225,7 @@ export class UnitView {
     this.statusIcons.clear().setVisible(false); this.statusKey = ''; this.strip = { harmful: '', beneficial: '' };
     this.disc.setAlpha(1); this.flash.setAlpha(0); this.hitAt = this.lungeAt = -Infinity;
     this.controlKind = null; this.airborneAt = this.landedAt = null; this.shadow.setVisible(false);
+    this.slideAt = -Infinity; this.body.setRotation(0);
   }
 
   /** The control drawn on the piece (null: none). Airborne lifts it until the control ends, then it drops back. */
@@ -229,6 +235,10 @@ export class UnitView {
     else if (this.controlKind === 'airborne') { this.landFrom = this.liftShare(now); this.airborneAt = null; this.landedAt = now; }
     this.controlKind = kind;
   }
+  /** A forced move started: `dx` is the slide's screen x direction; the body leans back against it. */
+  skid(dx: number, now = performance.now()): void { this.slideAt = now; this.slideLean = dx < 0 ? 1 : -1; }
+  /** Debug/acceptance read: true while a forced skid is drawn. */
+  skidding(now = performance.now()): boolean { return now - this.slideAt >= 0 && now - this.slideAt < DISPLACEMENT_SLIDE_2D.ms; }
   /** Debug/acceptance read of the drawn control. */
   get control(): ControlKind | null { return this.controlKind; }
   private liftShare(now: number): number {
