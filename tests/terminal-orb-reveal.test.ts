@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openMatchCombatStream, stepMatchCombatStream, revealMatchCombatStreamTerminal, settleMatchCombatStream,
+import { openMatchCombatStream, openMatchCombatStreamSteps, stepMatchCombatStream, revealMatchCombatStreamTerminal, settleMatchCombatStream,
   startMatchCombat, stepMatch, deployMatchUnit } from '../src/simulation/match';
 import { validateMultiplayerOrbLedger } from '../src/simulation/orb-restore';
 import { validateB8Loot } from '../src/simulation/b8-restore';
@@ -29,6 +29,46 @@ function valid(state: MatchState) {
 }
 
 describe('terminal orb rule boundary', () => {
+  it.each(['synchronous', 'generator'] as const)('%s opening records a tick-zero PvE terminal before settlement', path => {
+    // A legal empty board loses immediately; it has no killing blow or earned orb.
+    let source = room(undefined, 1).states[0];
+    for (const unit of source.preparation.units.filter(u => u.team === 'player')) {
+      source = ok(deployMatchUnit(source, unit.id, { kind: 'bench', slot: 0 })).state;
+    }
+    const original = json(source);
+    const open = () => {
+      if (path === 'synchronous') return openMatchCombatStream(source);
+      const work = openMatchCombatStreamSteps(source);
+      let pauses = 0;
+      for (;;) {
+        const next = work.next();
+        if (next.done) { expect(pauses).toBeGreaterThan(0); return next.value; }
+        pauses++;
+        expect(next.value).toBeUndefined();
+        expect(json(source)).toBe(original);
+        expect(source).not.toHaveProperty('pendingCombatTerminal');
+      }
+    };
+    const opened = open();
+    if (!opened.ok) throw Error(opened.reason);
+    expect(opened.streamInitial).toMatchObject({ tick: 0, status: 'finished', result: 'enemyWin' });
+    expect(opened.state.pendingCombatTerminal).toBe(opened.streamInitial);
+    expect(opened.state.phase).toBe('preparation');
+    expect(opened.state.combat).toBeNull();
+    expect(opened.events.some(e => e.type === 'lootForfeited')).toBe(true);
+    expect(opened.events.some(e => e.type === 'lootRevealed')).toBe(false);
+    for (const field of ['gold', 'items', 'playerHp', 'roundResults', 'preparation', 'rngState',
+      'rewardRngState', 'choiceRngState', 'sharedPool'] as const) expect(opened.state[field]).toEqual(source[field]);
+    expect(stepMatchCombatStream(opened.state)).toEqual({ state: opened.state, events: [], terminal: opened.streamInitial });
+    expect(ok(revealMatchCombatStreamTerminal(opened.state, opened.streamInitial!)))
+      .toEqual({ ok: true, state: opened.state, events: [] });
+    valid(opened.state);
+    const settled = ok(settleMatchCombatStream(opened.state, opened.streamInitial!));
+    expect(settled.state).not.toHaveProperty('pendingCombatTerminal');
+    expect(json(settled.state)).toBe(json(ok(startMatchCombat(source)).state));
+    expect(json(source)).toBe(original);
+  });
+
   it('records the killing blow, reveals immediately and validates before settlement without moving resources or RNG', () => {
     const { before, terminal } = fixture(), result = ok(revealMatchCombatStreamTerminal(before, terminal));
     const reveals = result.events.filter(e => e.type === 'lootRevealed');

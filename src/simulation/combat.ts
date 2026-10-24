@@ -1,3 +1,4 @@
+import { drainSetup } from './setup-work';
 import { installBattleEquipmentBatch } from './battle-equipment';
 import { familyCombatBase } from './family-reunion';
 import { d14UnitBase } from './d14-anomalies/projection';
@@ -40,8 +41,11 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
 function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatStep {
+  return drainSetup(snapshotCombatSteps(preparationState, strategy, combatId, rngState));
+}
+function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): Generator<void, CombatStep, void> {
   preparationState=projectItemSummons(projectG23Summons(preparationState,strategy?.traits),strategy);
-  let units: CombatUnit[] = preparationState.units.flatMap(unit => {
+  const createUnit = (unit: GameState['units'][number]): CombatUnit[] => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
     if (strategy && !resolved) throw new Error(`Missing strategy unit: ${unit.id}`);
@@ -75,12 +79,15 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
         runtime: { attackCount: 0, castCount: 0, attackSpeedBps: 0, abilityPowerFlat: 0, rangeBonus: 0,
           nextAttackMagic: 0, nextAttackPhysical: 0, permanentAdBps: 0, buddyTriggered: false } } : {}),
       alive: true, targetId: null }];
-  }).sort(compareIds);
+  };
+  let units: CombatUnit[] = [];
+  for (const unit of preparationState.units) { units.push(...createUnit(unit)); yield; }
+  units.sort(compareIds);
   for(const copy of [...units].filter(u=>u.itemSummon?.kind==='mirror')){const forge=createG23Forge(copy,units,preparationState.board);if(forge)units.push(forge);}
   initializeMirrorHealth(units);
   if(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud')))units=initializeShroud(units);
   if(units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr')))units=initializeZephyr(units,preparationState.board);
-  units.forEach(unit => freezeCombatDeclarations(unit, false, true));
+  for (const unit of units) { freezeCombatDeclarations(unit, false, true); yield; }
   const result = eliminationResult(units);
   let state:CombatState={
     board: { ...preparationState.board, deploymentZones: {
@@ -108,9 +115,14 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
 }
 export function createCombat(preparationState: GameState): CombatState { return snapshotCombat(preparationState).state; }
 export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42, context?:TraitProjectionContext): CombatStep {
+  return drainSetup(createCombatWithEventsSteps(preparation, strategy, combatId, rngState, context));
+}
+export function* createCombatWithEventsSteps(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42, context?:TraitProjectionContext): Generator<void, CombatStep, void> {
   const projected=projectEffectiveMembership(preparation,context);
-  const spawned=snapshotCombat(projected.preparation,strategy,combatId,rngState);
+  const spawned=yield* snapshotCombatSteps(projected.preparation,strategy,combatId,rngState);
+  yield;
   const start=applyCombatStart(spawned.state);
+  yield;
   const started={state:start.state,events:[...spawned.events,...start.events]};
   for (const unit of started.state.units) if (unit.mechanismDefinitions)
     Object.assign(unit, { mechanismDefinitions: shareGeneratedDeclaration(structuredClone(unit.mechanismDefinitions)) });

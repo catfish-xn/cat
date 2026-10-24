@@ -28,6 +28,22 @@ const output = path.resolve(process.env.U7_EVIDENCE_DIR || 'artifacts/m8-u7-comp
     const active = load('02-preparation.json.gz'), history = { ...load('05-settlement.json.gz'), runId: 'm7-history-settlement' };
     history.battles = history.battles.map(b => ({ ...b, runId: history.runId }));
     const read = () => page.evaluate(() => window.__CAT_DEBUG__.read());
+    // Some random seeds open the match on a modal choice (e.g. an opening-encounter forge) whose overlay covers the
+    // save controls, so the export clicks never land. Answer it through the public offer buttons, as a player would.
+    const settleChoices = async () => {
+      for (let step = 0; step < 10; step++) {
+        const open = await page.waitForFunction(() => {
+          if (document.querySelector('.choice-overlay.dismissal-shield')) return false;
+          const choice = window.__CAT_DEBUG__.read().state.pendingChoice;
+          const shop = choice && (choice.kind === 'blackMarket' || choice.kind === 'armory') && choice.payload?.source !== 'masterwork-upgrade';
+          if (!choice || shop) return 'none';
+          return document.querySelector('.choice-overlay:not([hidden]) button[data-debug^="choice:"]:not(:disabled)') ? 'open' : false;
+        }, null, { timeout: 30000 }).then(handle => handle.jsonValue());
+        if (open === 'none') return;
+        await page.locator('.choice-overlay:not([hidden]) button[data-debug^="choice:"]:not(:disabled)').first().click();
+      }
+      throw new Error('modal choices did not settle after 10 picks');
+    };
 
     // Seed a real M7 v1 library at this origin, then load the application against it.
     await page.goto(url); await page.waitForFunction(() => window.__CAT_DEBUG__);
@@ -53,6 +69,8 @@ const output = path.resolve(process.env.U7_EVIDENCE_DIR || 'artifacts/m8-u7-comp
     // A fresh M8 match; the M7 library stays untouched and is never offered as resumable.
     await page.locator('[data-debug="m6-random-start"]').click();
     await page.waitForFunction(() => window.__CAT_DEBUG__.read().m6?.mode === 'active', null, { timeout: 60000 });
+    report.randomSeed = (await read()).state.seed;
+    await settleChoices();
     const before = await read();
     check(before.state.rulesVersion === M8_VERSION.rulesVersion && before.state.schemaVersion === M8_VERSION.schemaVersion, 'new match runs the M8 version');
     for (const [index, original] of [[0, active], [1, history]]) {
