@@ -14,7 +14,7 @@ import type { MatchState } from '../src/simulation/match-types';
 import { rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit, buyUnit, buyXp, sellUnit, equipItem } from '../src/simulation/match';
 import { planDeferredUpgrades } from '../src/simulation/upgrades';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
-import { drainBatch3RoundEntry, drainBatch3Forming } from '../src/simulation/augment-pool-batch3-progress';
+import { drainBatch3RoundEntry, drainBatch3Forming, formingTotals } from '../src/simulation/augment-pool-batch3-progress';
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { startingRows } from '../src/simulation/m8/targeting';
@@ -638,6 +638,14 @@ it.each([['dummify','forming-dummy',10000,0,250],['golemify','augment-golem',900
  // Tampering: edited totals, a forged extra removal, or a re-added champion are all rejected on restore.
  const totals=structuredClone(s) as any;totals.augmentProgress.forming[key].health+=1;expect(()=>restoreMatch(serializeMatch(totals))).toThrow();
  const reborn=structuredClone(s) as any;reborn.augmentProgress.forming=undefined;delete reborn.augmentProgress.forming;expect(()=>restoreMatch(serializeMatch(reborn))).toThrow();
+ // Completeness: dropping the batch's last removal (champion kept, totals recomputed) is rejected.
+ const removals=s.resourceProvenance.entries.filter(e=>e.kind==='unit-removed'),last=removals.at(-1)! as any;
+ const kept=structuredClone(s) as any;
+ kept.resourceProvenance.entries=kept.resourceProvenance.entries.filter((e:any)=>e.sequence!==last.sequence).map((e:any,i:number)=>({...e,sequence:i}));
+ const freeSlot=[...Array(9).keys()].find(i=>!kept.preparation.units.some((u:any)=>u.location.kind==='bench'&&u.location.slot===i))!;
+ kept.preparation.units=[...kept.preparation.units,{...structuredClone(open.preparation.units.find(u=>u.id===last.unitId)!),location:{kind:'bench',slot:freeSlot}}];
+ kept.augmentProgress.forming=formingTotals(kept);
+ expect(()=>restoreMatch(serializeMatch(kept))).toThrow(/forming removal completeness/);
  // Online battle snapshots carry the totals; a forged key or field is rejected.
  const shot=snapshotForBattle(placed,'owner');expect(restorePlayerBattleSnapshot(JSON.stringify(shot))).toEqual(shot);
  expect(shot.augmentProgress.forming).toEqual({[key]:{health,attack}});

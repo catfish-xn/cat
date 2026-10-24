@@ -457,6 +457,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       } else if (entry.source.kind === 'mechanic') {
         keys(entry.source, ['kind', 'receiptId']); nonempty(entry.source.receiptId);
         definitionId = takeBirth(`mechanic:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
+        // Dummify/Golemify: their summon is born right after the removals, so nothing but summons (and carousel picks not
+        // yet placed, P 2026-10-24) may remain; this also covers an acquisition with no champion to remove.
+        if(definitionId==='forming-dummy'||definitionId==='augment-golem')
+          requireValue([...units.values()].every(unit=>absent.has(unit.id)||deferredCarouselIds.has(unit.id)||context.pendingCarouselUnitIds?.includes(unit.id)||UNIT_DEFINITIONS[unit.definitionId]?.summon),'forming removal completeness');
         const atom = duplicatorClaims.get(entry.source.receiptId);
         if (atom) {
           const owned = new Set([...units.values()].filter(unit => !deferredCarouselIds.has(unit.id)
