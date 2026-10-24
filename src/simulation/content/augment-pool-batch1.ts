@@ -11,6 +11,81 @@ interface Batch1Content {
  * Counts not present in effectAmounts are stated explicitly in the source description (e.g. Final Polish).
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH1:Readonly<Record<string,Batch1Content>> = freezeContent({
+  "coronation": {
+  "apiName": "TFT_Augment_Coronation",
+  "name": "加冕礼",
+  "tier": "prismatic",
+  "description": "获得1个【金铲铲冠冕】。【金铲铲冠冕】、【金锅锅冠冕】和【金锅铲冠冕】将为携带者提供额外的30%攻击速度、30%攻击力和40法术强度。",
+  "source": {
+    "patch": "14.24",
+    "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+    "values": {
+      "BonusAD": 0.30000001192092896,
+      "BonusAP": 40.0,
+      "BonusAS": 0.30000001192092896
+    },
+    "description_en_us": "Gain a Tactician's Crown. Tactician's Crown, Shield, and Cape grant the holder an additional 30% Attack Speed, 30% Attack Damage, and 40 Ability Power."
+  },
+  "gifts": [
+    {
+      "kind": "item",
+      "definitionId": "TFT_Item_ForceOfNature"
+    }
+  ]
+},
+  "tacticians-kitchen": {
+  "apiName": "TFT_Augment_TacticiansKitchen",
+  "name": "锅铲厨房",
+  "tier": "prismatic",
+  "description": "获得1个【金锅铲冠冕】和1个随机纹章。",
+  "source": {
+    "patch": "14.24",
+    "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+    "values": {
+      "NumFryingPan": 1.0,
+      "NumItemAnvils": 1.0,
+      "NumSpatula": 1.0
+    },
+    "description_en_us": "Gain a Tactician's Cape and a random Emblem."
+  },
+  "gifts": [
+    {
+      "kind": "item",
+      "definitionId": "TFT_Item_TacticiansRing"
+    },
+    {
+      "kind": "random-item",
+      "pool": "emblem",
+      "count": 1
+    }
+  ]
+},
+  "branching-out": {
+  "apiName": "TFT_Augment_BranchingOut",
+  "name": "节外生枝",
+  "tier": "silver",
+  "description": "提供1个随机【纹章】和1个【装备重铸器】。\n\n【装备重铸器】允许你将任一装备随机成另一件装备。",
+  "source": {
+    "patch": "14.24",
+    "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+    "values": {
+      "Numberofcombats": null
+    },
+    "description_en_us": "Gain a random Emblem and a Reforger.\n\nReforgers allow you to remake any item."
+  },
+  "gifts": [
+    {
+      "kind": "random-item",
+      "pool": "emblem",
+      "count": 1
+    },
+    {
+      "kind": "consumable",
+      "definitionId": "reforger",
+      "count": 1
+    }
+  ]
+},
   "item-grab-bag-i": {
     "apiName": "TFT6_Augment_ItemGrabBag1",
     "name": "百宝袋 I",
@@ -1530,7 +1605,7 @@ export const AUGMENT_BATCH1:Readonly<Record<string,Batch1Content>> = freezeConte
 });
 export const AUGMENT_BATCH1_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>> = freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH1).map(([id,row]):[string,ChoiceDefinition]=>[id,{
  id,name:row.name,description:row.description,effects:[
-  {kind:'mechanic',mechanic:'acquisitionBundle',values:{enabled:1}},
+  {kind:'mechanic',mechanic:id==='coronation'?'coronation':'acquisitionBundle',values:{enabled:1}},
   ...(row.gold?[{kind:'mechanic' as const,mechanic:'acquisitionGold',values:{amount:row.gold}}]:[]),
   ...(row.xp?[{kind:'mechanic' as const,mechanic:'acquisitionXp',values:{amount:row.xp}}]:[]),
   ...(row.roundGold?[{kind:'mechanic' as const,mechanic:'incomePolicy',values:{interestDisabled:0,interestCap:5,roundXp:0,roundGold:row.roundGold}}]:[]),
@@ -1539,9 +1614,6 @@ export const AUGMENT_BATCH1_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>
 export const AUGMENT_BATCH1_TIERS = freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH1).map(([id,row])=>[id,row.tier])));
 export const AUGMENT_BATCH1_API_NAMES = freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH1).map(([id,row])=>[id,row.apiName])));
 export const AUGMENT_BATCH1_BLOCKED = freezeContent({
-  "TFT_Augment_BranchingOut": "研究未定义随机纹章候选池/权重；不擅定22纹章均匀池。",
   "TFT9_Augment_AllThatShimmers": "尚缺已认证生金神器候选池与InterestCap=5语义；3选1不能套用4选锻造器。",
   "TFT_Augment_AllThatShimmersPlus": "同闪若金鳞：生金池/InterestCap语义未认证、3选管线待接。",
-  "TFT_Augment_Coronation": "已知30%AS/30%AD/40AP，但完整描述涉及Crown/Shield/Cape；后两件物品未实现，避免仅支持部分携带者。",
-  "TFT_Augment_TacticiansKitchen": "Tactician Cape未实现；描述与NumSpatula/NumFryingPan/NumItemAnvils矛盾，随机纹章池未定义。"
 });

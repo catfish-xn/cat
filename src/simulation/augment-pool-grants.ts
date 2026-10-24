@@ -1,3 +1,5 @@
+import { batch2RewardPlan, drainBatch2Gold, validateBatch2Gold } from './augment-pool-batch2-progress';
+import { AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
 import type { MatchState } from './match-types';
 import type { UnitLootPolicy } from './loot-runtime';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
@@ -8,7 +10,7 @@ import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,AUGMENT_BATCH1[a.definitionId]?.gifts??[]));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */
@@ -25,7 +27,7 @@ export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):Matc
    else if(result.reason!=='bench-full')throw new RangeError(`Augment batch1 grant: ${result.reason} (${gift.definitionId})`);
   }
  }while(progressed);
- return state;
+ return drainBatch2Gold(state);
 }
 /** Anvil options belong to the acquisition receipt; open order and current round do not affect them. */
 export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
@@ -34,6 +36,7 @@ export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
   ?{definitionId:gift.definitionId,offers:augmentAnvilOffers(state.seed,receiptId,gift.definitionId)}:undefined;
 }
 export function validateBatch1Gifts(state:MatchState):void {
+ validateBatch2Gold(state);
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
  for(const r of receipts)if(r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')){

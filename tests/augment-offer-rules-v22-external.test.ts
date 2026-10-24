@@ -51,15 +51,15 @@ describe('v22 node bans and external rules (re-mapped pool)', () => {
 
   it('War for the Undercity: shown once to any other live player (offer, seen, owned) blocks it for everyone else', () => {
     const base = reachRound('2-1', false), b = seat(base, 'B');
-    expect(externalAugmentBlocks('B', [seat(base, 'A', { removedAugmentIds: ['menaces'] }), b])).toEqual(['menaces']);
-    expect(externalAugmentBlocks('B', [seat(base, 'A', { augments: own('menaces') }), b])).toEqual(['menaces']);
+    expect(externalAugmentBlocks('B', [seat(base, 'A', { removedAugmentIds: ['menaces'] }), b])).toEqual(['crimson-pact','menaces']);
+    expect(externalAugmentBlocks('B', [seat(base, 'A', { augments: own('menaces') }), b])).toEqual(['crimson-pact','menaces']);
     const offered = seat(base, 'A', { pendingChoice: { ...base.pendingChoice!, offers: ['menaces', 'x', 'y'] }, removedAugmentIds: [] });
-    expect(externalAugmentBlocks('B', [offered, b])).toEqual(['menaces']);
+    expect(externalAugmentBlocks('B', [offered, b])).toEqual(['crimson-pact','menaces']);
     expect(externalAugmentBlocks('B', [seat(base, 'A', { removedAugmentIds: ['menaces'] }, 'eliminated'), b])).toEqual([]);
   });
 
   it('a reroll records its external blocks; restore replays them and rejects blocks no rule can produce', () => {
-    expect(externallyBlockableAugments()).toEqual(['geniuses', 'menaces', 'reunion']);
+    expect(externallyBlockableAugments()).toEqual(['crimson-pact','geniuses','menaces','reunion','welcome-to-the-playground']);
     let state: MatchState | null = null;
     for (let seed = 1; seed < 300 && !state; seed++) {
       const s = reachRound('2-1', false, seed);

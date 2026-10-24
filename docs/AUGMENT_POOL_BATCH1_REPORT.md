@@ -1,3 +1,5 @@
+> 2026-10-24续批更新：现为67/69；Branching Out、Kitchen、Coronation及Shield/Cape已补齐，仅All That Shimmers/Plus两项继续阻塞。下文保留batch-1提交时的历史结果；当前清单、来源和测试见[AUGMENT_POOL_BATCH2_REPORT](AUGMENT_POOL_BATCH2_REPORT.md)。
+
 【完成】前置：多锻造器及基础/成装/神器/辅助池、独立随机成装/单位流、两种复制器及消耗品通用发放、获得经验、每回合金币；唯一收据、满席待发、严格恢复和联机共享池接通。
 【完成】A（20）：`item-grab-bag-i`, `one-two-five`, `band-of-thieves-i`, `teaming-up-i`, `iron-assets`, `missed-connections`, `ones-twos-three`, `silver-spoon`, `heroic-grab-bag`, `raining-gold`, `raining-gold-plus`, `big-grab-bag`, `teaming-up-ii`, `support-cache`, `duo-queue`, `two-trick`, `build-a-bud`, `radiant-refactor`, `final-polish`, `one-buff-two-buff`。
 【完成】之徽（22）：`academy-crest`, `ambusher-crest`, `artillerist-crest`, `automata-crest`, `bruiser-crest`, `black-rose-crest`, `chem-baron-crest`, `conqueror-crest`, `dominator-crest`, `enforcer-crest`, `experiment-crest`, `family-crest`, `firelight-crest`, `pit-fighter-crest`, `quickstriker-crest`, `rebel-crest`, `scrap-crest`, `sentinel-crest`, `sniper-crest`, `sorcerer-crest`, `visionary-crest`, `watcher-crest`。

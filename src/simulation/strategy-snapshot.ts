@@ -212,8 +212,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     // During battle only item declarations change. Membership, tier effects and all
     // other opening bonuses stay frozen; use the same numerical compiler below.
     const frozen = equipmentBasis?.units.find(u => u.unitId === unit.id);
-    if (frozen) sources.splice(0, sources.length, ...frozen.sources.filter(s => s.source.sourceKind !== 'item'),
-      ...sources.filter(s => s.source.sourceKind === 'item'));
+    if (frozen) sources.splice(0, sources.length, ...frozen.sources.filter(s => s.source.sourceKind !== 'item' && !(s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation')),
+      ...sources.filter(s => s.source.sourceKind === 'item'||s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation'));
     let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
     const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');
     if (family) {

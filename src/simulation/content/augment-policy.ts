@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH2_TIERS } from './augment-pool-batch2';
 import { AUGMENT_BATCH1_TIERS } from './augment-pool-batch1';
 import { P3_TIERS } from './s13-p3';
 import { D11_FILL_TIERS } from './d11-fill';
@@ -85,6 +86,7 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
   ...AUGMENT_BATCH1_TIERS,
+  ...AUGMENT_BATCH2_TIERS,
   sisters:'gold', mentorship:'gold',reunion:'gold',geniuses:'prismatic',menaces:'gold','unlikely-duo':'gold',
   ...D11_FILL_TIERS,
   "blinding-speed": "prismatic",

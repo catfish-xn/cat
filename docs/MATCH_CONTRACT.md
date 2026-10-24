@@ -1,3 +1,17 @@
+## v23候选：增强池续批（2026-10-24）
+
+本节接续batch 1，详见[续批报告](AUGMENT_POOL_BATCH2_REPORT.md)。Branching Out、Kitchen与Coronation开放，batch 1现为67项；batch 2的26项中16项开放、10项完整禁用。`AUGMENT_BATCH2`保存来源与原值，`AUGMENT_BATCH2_BLOCKED`保存缺字段。此内容进RULES_GAP_MANIFEST；正式身份仍待v23集成统一切换。
+
+新增Shield/Cape源值来自仓库保留raw map22与双语stringtable：人口各+1，Shield实际死亡10%掉1金，Cape第200tick存活10%掉1金；配方锅+锅/铲+锅，人口沿用既有冠冕取得后永久授予政策。Coronation每件Crown/Shield/Cape给携带者3000AD Bps/3000AS Bps/40AP。成功与失败抽取均在ItemGoldLedger留存，复用collector物品独立流；相关存档完整重演，不修改其他RNG流。
+
+Match公共命令、失败reason不变。内部新增：
+
+- `batch2BattleFacts(combat:CombatState, team:Team):Batch2BattleFacts|undefined`：只由权威战斗投影，每条`{definitionId:string,count:number}`，绑定火箭数、实际极客转换、通缉死亡、游乐场资格、伙伴击杀资格；无相关成员时无字段。`validateBatch2Facts(f)`拒绝未知id、额外字段、重复id、越界/非整数计数，抛`RangeError`。该可选字段纳入已有G23BattleFacts与完整战斗重演认证，不消费经济RNG。
+- `batch2RewardPlan(state:MatchState):AugmentGift[]`：从取得后battle事实逐场累计阈值/上限，收据choice namespace含奖励序号；重复派生相同。`batch1GiftPlan`/`drainBatch1Gifts`/`validateBatch1Gifts`统一包含本批的初始与阈值物品/英雄，继续容量待发及联机共享池，不接受客户端索奖参数。
+- `drainBatch2Gold(state:MatchState):MatchState` / `validateBatch2Gold(state):void`：通缉每6次6金与黑市保留6金，唯一来源`augment-pool-batch2`，逐份认证身份/金额/发生轮次；重复排放原状态，非法来源或缺收据抛RangeError。已有机械金币统计与下一轮余额链照常读取收据。
+- `batch2HpAfterSettlement(state,round,hp)` / `batch2HpBeforeBattle(state,roundId,hp)`：认证过的黑市保留收据每次回4HP、上限100；战后治疗先于下一轮开局猴子扣血，准备期治疗再计入下一场hpBefore，不倒写已结算战损。成功选择/超时选择走相同finishG23Choice回调；重复命令仍按旧选择错误拒绝，无治疗或金币副作用。
+- `traitAugmentB2`仅编译给当前原生/纹章成员；战斗动态`CombatUnit.batch2`保留周期消耗、击中成长、处决、火箭、家人生存与伙伴击杀事实。相关战斗的恢复从已认证CombatInputBasis独立重演完整状态，比对全部运行态/事件序号；不信任候选counter，也不另设客户端战斗规则。随机发奖复用seat/choice/spec独立流，新增固定名单`random-unit-pool`，只用于解析文案明确列出的Vander/Powder/Violet。
+
 ## v23 候选：增强池 batch 1（2026-10-24）
 
 本节只为下一版扩池；不改 v22 身份常量、不重录、不提交历史证据。实现/阻塞清单与验证见 [batch 1 报告](AUGMENT_POOL_BATCH1_REPORT.md)。64 个新条目（20 个 A、22 个之徽、22 个之冕）在 `content/augment-pool-batch1.ts` 保留 14.24 apiName、等级、原始 effectAmounts、解析后的中英文奖励描述及可执行发奖计划。内容和通用抽样策略已加入 `RULES_GAP_MANIFEST.augmentPoolBatch1`，摘要自然变化；整体正式 v23 epoch 仍待集成发布时切换。

@@ -1,3 +1,4 @@
+import { validateBatch2Facts, type Batch2BattleFacts } from './augment-pool-batch2-progress';
 import { nextFamilyTask } from './family-heist';
 import { DEFAULT_BOARD } from './board';
 import { G23_CONQUEROR_CHESTS,G23_BLACK_MARKETS,g23ConquerorReward } from './content/g2-3-policy';
@@ -7,6 +8,7 @@ import type { G23MatchProgress } from './g2-3-match-progress';
 import {validateItemGoldPayouts,type ItemGoldPayout} from './g2-4b-item-gold';
 import {g23RewardAtoms} from './g2-3-rewards';
 export interface G23BattleFacts {
+ readonly batch2?:Batch2BattleFacts;
  readonly openingDeaths?:readonly {readonly victimId:string;readonly eventSeq:number}[];
  readonly family?:{readonly stage:number;readonly eligible:boolean;readonly openingIds:readonly string[];readonly survivorIds:readonly string[]};
  readonly melCasts?:number;
@@ -29,8 +31,9 @@ export type G23EconomyReceipt=G23EconomyAction|G23EconomyDecision|{readonly kind
 export const MAX_G23_CROWNS = DEFAULT_BOARD.columns * (DEFAULT_BOARD.deploymentZones.player.lastRow - DEFAULT_BOARD.deploymentZones.player.firstRow + 1) * 3;
 export function validateG23BattleFacts(f:G23BattleFacts):void{
  const int=(n:number,max:number)=>Number.isSafeInteger(n)&&n>=0&&n<=max;
+ if(f?.batch2!==undefined)validateBatch2Facts(f.batch2);
  const crowns=Object.hasOwn(f??{},'crowns');
- if(!f||Object.keys(f).length!==(10+(f.openingDeaths===undefined?0:1)+(f.family?1:0)+(f.melCasts===undefined?0:1)+(crowns?1:0)+(f.itemGoldPayouts===undefined?0:1)+(f.d11Headhunter===undefined?0:1))||crowns&&(!int(f.crowns!,MAX_G23_CROWNS)||!f.crowns)||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
+ if(!f||Object.keys(f).length!==(10+(f.batch2===undefined?0:1)+(f.openingDeaths===undefined?0:1)+(f.family?1:0)+(f.melCasts===undefined?0:1)+(crowns?1:0)+(f.itemGoldPayouts===undefined?0:1)+(f.d11Headhunter===undefined?0:1))||crowns&&(!int(f.crowns!,MAX_G23_CROWNS)||!f.crowns)||typeof f.battleId!=='string'||!f.battleId||!int(f.round,100)||f.round===0||!['pve','pvp'].includes(f.roundKind)||!['win','loss','draw'].includes(f.result)
  ||![0,2,4,6,9].includes(f.conquerorTier)||![0,3,4,5,6,7].includes(f.chemBaronTier)||!int(f.alliedDeaths,30)||!int(f.rumbleStar,3)||!int(f.highRollerGold,10000)||f.highRollerGold%3!==0
  ||!Array.isArray(f.conquestTakedowns)||f.conquestTakedowns.length>30||new Set(f.conquestTakedowns).size!==f.conquestTakedowns.length||f.conquestTakedowns.some(id=>typeof id!=='string'||!id)||!f.conquerorTier&&f.conquestTakedowns.length)throw new RangeError('Invalid G23 battle facts');
  if(f.openingDeaths!==undefined&&(!Array.isArray(f.openingDeaths)||new Set(f.openingDeaths.map(d=>d.victimId)).size!==f.openingDeaths.length||f.openingDeaths.some((d,i)=>Object.keys(d).sort().join(',')!=='eventSeq,victimId'||typeof d.victimId!=='string'||!d.victimId||!int(d.eventSeq,1000000)||i>0&&d.eventSeq<=f.openingDeaths![i-1].eventSeq)))throw new RangeError('Invalid opening deaths');

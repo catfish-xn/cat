@@ -1,3 +1,4 @@
+import { batch2HpAfterSettlement, batch2HpBeforeBattle } from './augment-pool-batch2-health';
 import { G24_FORGE_POOLS } from './content/g2-4-forges';
 import { nextRandom, validateSeed } from './rng';
 import { getCatalogRoundById } from './round-selectors';
@@ -93,16 +94,18 @@ export function validateMonkeyGrants(state: MatchState, fact?: OpeningEffectFact
   if (outcome === 'damage') {
     const hpBefore = state.roundResults.find(r => r.round === MONKEY_ROUND - 1)?.hpAfter;
     check(Number.isSafeInteger(receipt.hpBefore) && receipt.hpBefore! > 0 && receipt.hpBefore! <= 100
-      && (hpBefore === undefined || receipt.hpBefore === hpBefore));
+      && (hpBefore === undefined || receipt.hpBefore === batch2HpAfterSettlement(state,MONKEY_ROUND-1,hpBefore)));
     const hpAfter = Math.max(0, receipt.hpBefore! - 10);
     const result = state.roundResults.find(r => r.round === MONKEY_ROUND);
-    if (result) check(result.hpBefore === hpAfter);
-    else if (state.round === MONKEY_ROUND) check(state.playerHp === hpAfter);
+    if (result) check(result.hpBefore === batch2HpBeforeBattle(state,MONKEY_NODE,hpAfter));
+    else if (state.round === MONKEY_ROUND) check(state.playerHp === batch2HpBeforeBattle(state,MONKEY_NODE,hpAfter));
     if (hpAfter === 0) check(!result && state.round === MONKEY_ROUND && state.playerHp === 0
       && (state.multiplayer ? state.multiplayer.status === 'eliminated' : state.phase === 'gameOver'));
   } else check(!Object.hasOwn(receipt, 'hpBefore'));
 }
 /** HP at a preparation boundary; strict restore uses this only after authenticating the opening receipt. */
 export function openingHpBeforeRound(state: MatchState, roundId: string, hp: number): number {
-  return roundId === MONKEY_NODE && monkeyReceipt(state)?.hpBefore !== undefined ? Math.max(0, hp - 10) : hp;
+  hp=batch2HpAfterSettlement(state,getCatalogRoundById(roundId).ordinal-1,hp);
+  hp=roundId === MONKEY_NODE && monkeyReceipt(state)?.hpBefore !== undefined ? Math.max(0,hp-10):hp;
+  return batch2HpBeforeBattle(state,roundId,hp);
 }

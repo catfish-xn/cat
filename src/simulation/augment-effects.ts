@@ -1,3 +1,8 @@
+import { TACTICIAN_SIZE_ITEMS } from './content/tactician-items';
+import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
+import { scrapConversions, g22Equipment } from './strategy-g2-2';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
+import { AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
 import { isTraitSnapshotMember } from './traits/effective-membership';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
@@ -17,6 +22,24 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
   const v=effect.values, allies=board.filter(u=>u.team===unit.team), zone=state.preparation.board.deploymentZones.player;
   const row=(u:Unit)=>u.location.kind==='board'?u.location.cell.row:-1;
   switch(effect.mechanic){
+    case 'coronation': {
+      const count=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length+state.temporaryEquipment.filter(i=>i.holderId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length;
+      const v=AUGMENT_BATCH1.coronation.source.values;
+      return count?[{kind:'attackSpeedBps',bps:count*Math.round(v.BonusAS!*10000)},{kind:'statPercentBps',stat:'attackDamage',bps:count*Math.round(v.BonusAD!*10000)},{kind:'statFlat',stat:'abilityPower',amount:count*v.BonusAP!}]:[];
+    }
+    case 'traitAugmentB2': {
+      const spec=AUGMENT_BATCH2_ENABLED[augment.definitionId];
+      if(!spec||!traits.some(t=>t.team===unit.team&&spec.traits.includes(t.traitId)&&isTraitSnapshotMember(t,unit)))return [];
+      if(augment.definitionId==='betrayal'&&!['maddie','ambessa'].includes(unit.definitionId))return [];
+      if(augment.definitionId==='pit-fighter-prizefighter'){
+        const battles=state.g23?.economyReceipts.filter(r=>r.kind==='battle'&&r.facts.round>=augment.acquiredRound)??[];
+        const wins=battles.filter(r=>r.kind==='battle'&&r.facts.result==='win').length,losses=battles.filter(r=>r.kind==='battle'&&r.facts.result==='loss').length;
+        return [effect,{kind:'statFlat',stat:'maxHp',amount:wins*spec.source.values.HealthPerWin!},{kind:'statPercentBps',stat:'attackDamage',bps:losses*Math.round(spec.source.values.ADPerLoss!*10000)}];
+      }
+      const equipment=g22Equipment(state),converted=augment.definitionId==='scrap-recycling'?scrapConversions(board,traits,equipment,ITEM_DEFINITIONS):null;
+      const marker=converted?{...effect,values:{enabled:1,converted:[...converted.keys()].filter(id=>equipment.some(e=>e.id===id&&e.unitId===unit.id)).length}}:effect;
+      return [marker,...(augment.definitionId==='enforce'?[{kind:'statPercentBps' as const,stat:'attackDamage' as const,bps:Math.round(spec.source.values.BonusAD!*10000)}]:[]),...(augment.definitionId==='sentinel-slam'?(['armor','magicResist'] as const).map(stat=>({kind:'statPercentBps' as const,stat,bps:Math.round(spec.source.values.PercGain!*10000)})):[])];
+    }
     case 'acquisitionXp': return [];
     case 's13P2Augment': return p2AugmentEffects(augment.definitionId,unit,board,state);
     case 's13P3': return [mechanic('s13P3',{...v,stage:getMultiplayerRoundByOrdinal(state.round).stage})];

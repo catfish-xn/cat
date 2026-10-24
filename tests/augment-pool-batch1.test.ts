@@ -33,8 +33,8 @@ function acquire(id:string) {
  const before=reachRound('2-1',false,batch1Seed(id)),c=before.pendingChoice!;
  return {before,state:accepted(selectChoice(before,c.choiceId,c.generation,id))};
 }
-it('covers 69 classified entries, admits 64 fully implemented entries and leaves five out of the pool',()=>{
- expect(Object.keys(AUGMENT_BATCH1)).toHaveLength(64);expect(Object.keys(AUGMENT_BATCH1_BLOCKED)).toHaveLength(5);
+it('covers 69 classified entries, admits 67 fully implemented entries and leaves two out of the pool',()=>{
+ expect(Object.keys(AUGMENT_BATCH1)).toHaveLength(67);expect(Object.keys(AUGMENT_BATCH1_BLOCKED)).toHaveLength(2);
  expect(Object.values(AUGMENT_BATCH1).filter(x=>x.apiName.endsWith('Crest'))).toHaveLength(22);
  expect(Object.values(AUGMENT_BATCH1).filter(x=>x.apiName.endsWith('Crown'))).toHaveLength(22);
  for(const api of Object.keys(AUGMENT_BATCH1_BLOCKED))expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(api);
