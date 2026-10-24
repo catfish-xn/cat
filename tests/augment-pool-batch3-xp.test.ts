@@ -51,7 +51,8 @@ it('the eight batch rows carry their 14.24 zh_cn name, tier, description and val
  expect(AUGMENT_BATCH3_XP_BLOCKED).toEqual({});
 });
 it('Epoch and Epoch+ exclude each other, Shopping Spree excludes Trade Sector (14.24 static mutex)', ()=>{
- const own=(id:string)=>owned(id,1),ctx={node:'3-2',fieldedTraits:[],blocked:[]};
+ // No node: only the mutex is under test here (stage bans have their own test below).
+ const own=(id:string)=>owned(id,1),ctx={node:null,fieldedTraits:[],blocked:[]};
  expect(augmentOfferAllowed('epoch',own('epoch-plus'),ctx)).toBe(false);
  expect(augmentOfferAllowed('epoch-plus',own('epoch'),ctx)).toBe(false);
  expect(augmentOfferAllowed('shopping-spree',own('trade-sector'),ctx)).toBe(false);
@@ -223,4 +224,17 @@ it('Risky Moves with Upward Mobility: entry level-ups heal before the loss, late
  expect(explainedHp(prior,{...s,playerHp:40})).toBe(40);
  expect(explainedHp(prior,{...prior,playerHp:40})).toBe(60);
  expect(explainedHp({...prior,playerHp:10},{...s,playerHp:1})).toBe(1);
+});
+it('offer nodes follow the 14.24 stage tags: {d02ae323}/{d12ae4b6}/{d22ae649} mean not at 2-1/3-2/4-2; Risky Moves only at 2-1', ()=>{
+ const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;item_tags_raw:string[]}[];
+ const tag:Record<string,string>={'{d02ae323}':'2-1','{d12ae4b6}':'3-2','{d22ae649}':'4-2'};
+ // The same reading reproduces the patch-note ban already in the rules: Black Rose crest/crown never at 2-1.
+ for(const api of ['TFT13_Augment_CabalCrest','TFT13_Augment_CabalCrown'])expect(research.find(r=>r.apiName===api)!.item_tags_raw.filter(t=>tag[t]).map(t=>tag[t])).toEqual(['2-1']);
+ for(const [id,row] of Object.entries(AUGMENT_BATCH3_XP)){
+  const banned=research.find(r=>r.apiName===row.apiName)!.item_tags_raw.filter(t=>tag[t]).map(t=>tag[t]);
+  expect([...row.nodes].sort()).toEqual(['2-1','3-2','4-2'].filter(n=>!banned.includes(n)));
+  for(const node of ['2-1','3-2','4-2'])expect(augmentOfferAllowed(id,[],{node,fieldedTraits:[],blocked:[]})).toBe((row.nodes as readonly string[]).includes(node));
+ }
+ expect(AUGMENT_BATCH3_XP['risky-moves'].nodes).toEqual(['2-1']);
+ expect(AUGMENT_BATCH3_XP['epoch-plus'].nodes).toEqual(['3-2']);
 });

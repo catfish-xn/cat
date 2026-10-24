@@ -121,7 +121,10 @@ Object.assign(TEAMUP_TRAITS,batch2Offers.traits);
 EXCLUSIVE_GROUPS.push(...batch2Offers.exclusive);
 function excludedByOwned(id,owned){return owned.some(a=>a.definitionId!==id&&EXCLUSIVE_GROUPS.some(g=>g.includes(id)&&g.includes(a.definitionId)));}
 function traitAllowed(id,node,traits){return !['round:3-2:augment','round:4-2:augment'].includes(node)||!TEAMUP_TRAITS[id]||TEAMUP_TRAITS[id].some(t=>traits.includes(t));}
-function augmentPool(tier,owned,excluded=[],node=null,traits=[]){return AUGMENT_POOLS[tier].filter(id=>!(node==='round:2-1:augment'&&['black-rose-crest','black-rose-crown'].includes(id))&&!owned.some(a=>a.definitionId===id)&&!excluded.includes(id)&&!excludedByOwned(id,owned)&&traitAllowed(id,node,traits)).sort();}
+// Batch 3 XP/health stage tags (14.24 {d02ae323}/{d12ae4b6}/{d22ae649} = not at 2-1/3-2/4-2), written out independently.
+const STAGE_BANS={'patient-study':['3-2','4-2'],'epoch':['3-2','4-2'],'epoch-plus':['2-1','4-2'],'level-up':['3-2','4-2'],'shopping-spree':['3-2','4-2'],'kingslayer':['4-2'],'risky-moves':['3-2','4-2']};
+const stageBanned=(id,node)=>node!==null&&(STAGE_BANS[id]??[]).some(n=>node==='round:'+n+':augment');
+function augmentPool(tier,owned,excluded=[],node=null,traits=[]){return AUGMENT_POOLS[tier].filter(id=>!(node==='round:2-1:augment'&&['black-rose-crest','black-rose-crown'].includes(id))&&!stageBanned(id,node)&&!owned.some(a=>a.definitionId===id)&&!excluded.includes(id)&&!excludedByOwned(id,owned)&&traitAllowed(id,node,traits)).sort();}
 function augmentDraw(rng,tier,owned,excluded=[],node=null,traits=[]){
  const pool=augmentPool(tier,owned,excluded,node,traits);assert(pool.length>=3,'independent augment pool has three candidates');
  for(let i=0;i<3;i++){rng=word(rng);const j=i+rng%(pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}

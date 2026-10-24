@@ -13,7 +13,8 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
   expect(ids).toHaveLength(177);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
- it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!['black-rose-crest','black-rose-crown'].includes(id)))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
+ // Black Rose and Epoch+ (14.24 stage tag: 3-2 only) are never offered at 2-1.
+it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!['black-rose-crest','black-rose-crown','epoch-plus'].includes(id)))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
   // Search the independent first-node offer oracle, then play only the chosen
   // public route. The expanded pool puts Portable Forge at seed 236; replaying
   // three opening combats for every candidate needlessly hits CI time limits.

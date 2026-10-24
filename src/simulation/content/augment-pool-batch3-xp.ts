@@ -3,6 +3,10 @@ import type { ChoiceDefinition } from '../strategy-types';
 
 interface Batch3XpContent {
  readonly apiName:string; readonly name:string; readonly tier:'silver'|'gold'|'prismatic'; readonly description:string;
+ /** Augment rounds this card may be offered at (P 2026-10-24): the 14.24 ItemTags {d02ae323}/{d12ae4b6}/{d22ae649}
+  * read as "not at 2-1/3-2/4-2". The reading matches every known case: Black Rose crest/crown carry only the 2-1 tag
+  * (patch notes: never at 2-1), Risky Moves carries 3-2 and 4-2 (only at 2-1, user 2026-10-24), Epoch 2-1 / Epoch+ 3-2. */
+ readonly nodes:readonly ('2-1'|'3-2'|'4-2')[];
  readonly source:{readonly patch:string;readonly archive:string;readonly values:Readonly<Record<string,number>>;readonly description_en_us:string};
  /** Source keys: XP and gold on acquisition. */
  readonly acquisitionXp?:string; readonly gold?:string;
@@ -31,35 +35,35 @@ const ARCHIVE='augments-research-2026-10-23/data/augments-14.24.json';
  * Risky Moves loses its health on selection but never below 1, and counts player combats (any result) from the acquisition round.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3_XP:Readonly<Record<string,Batch3XpContent>>=freezeContent({
- 'patient-study':{apiName:'TFT9_Augment_LearningFromExperience2',name:'耐心学习',tier:'gold',
+ 'patient-study':{apiName:'TFT9_Augment_LearningFromExperience2',name:'耐心学习',tier:'gold',nodes:['2-1'],
   description:'在与玩家的战斗后，如果你赢了则获得2经验，如果你输了则获得3经验。',
   source:{patch:'14.24',archive:ARCHIVE,values:{lossxp:3,winxp:2},description_en_us:'After player combat, gain 2 XP if you won or 3 XP if you lost.'},
   pvpXp:{win:'winxp',loss:'lossxp'}},
- epoch:{apiName:'TFT11_Augment_Epoch',name:'新纪元',tier:'gold',
+ epoch:{apiName:'TFT11_Augment_Epoch',name:'新纪元',tier:'gold',nodes:['2-1'],
   description:'现在以及每个阶段开始时，获得6经验值和2次免费刷新。',
   source:{patch:'14.24',archive:ARCHIVE,values:{Rerolls:2,XP:6},description_en_us:'Now, and at the start of every stage, gain 6 XP and 2 free rerolls.'},
   acquisitionXp:'XP',stageXp:'XP',stageRerolls:'Rerolls'},
- 'epoch-plus':{apiName:'TFT11_Augment_EpochPlus',name:'新纪元+',tier:'gold',
+ 'epoch-plus':{apiName:'TFT11_Augment_EpochPlus',name:'新纪元+',tier:'gold',nodes:['3-2'],
   description:'现在以及每个阶段开始时，获得8经验值和3次免费刷新。',
   source:{patch:'14.24',archive:ARCHIVE,values:{Rerolls:3,XP:8},description_en_us:'Now, and at the start of every stage, gain 8 XP and 3 free rerolls.'},
   acquisitionXp:'XP',stageXp:'XP',stageRerolls:'Rerolls'},
- 'level-up':{apiName:'TFT6_Augment_MaxLevel10',name:'升级咯！',tier:'prismatic',
+ 'level-up':{apiName:'TFT6_Augment_MaxLevel10',name:'升级咯！',tier:'prismatic',nodes:['2-1'],
   description:'在你购买经验值的时候，获得额外的2经验值。立刻获得12经验值。',
   source:{patch:'14.24',archive:ARCHIVE,values:{InitialXP:12,XP:2},description_en_us:'When you buy XP, gain an additional 2. Gain 12 immediately.'},
   acquisitionXp:'InitialXP',purchaseXp:'XP'},
- 'shopping-spree':{apiName:'TFT9_Augment_HighEndSector',name:'大买特买',tier:'prismatic',
+ 'shopping-spree':{apiName:'TFT9_Augment_HighEndSector',name:'大买特买',tier:'prismatic',nodes:['2-1'],
   description:'在你升级时，获得相当于你等级数的免费商店刷新次数。获得4金币。 ',
   source:{patch:'14.24',archive:ARCHIVE,values:{Gold:4,'{a9ad6d1b}':8},description_en_us:'When you level up, gain a number of free shop refreshes equal to your level. Gain 4 gold. '},
   gold:'Gold',levelUpRerolls:'level'},
- 'upward-mobility':{apiName:'TFT_Augment_UpwardMobility',name:'上进心',tier:'prismatic',
+ 'upward-mobility':{apiName:'TFT_Augment_UpwardMobility',name:'上进心',tier:'prismatic',nodes:['2-1','3-2','4-2'],
   description:'购买经验的费用降低1。每当你升级时，获得2生命值和3次免费刷新。',
   source:{patch:'14.24',archive:ARCHIVE,values:{Health:2,Rerolls:3},description_en_us:'Buying XP costs 1 less. Gain 2 Health and 3 free rerolls whenever you level up.'},
   levelUpRerolls:'Rerolls',levelUpHealth:'Health',xpCostReduction:1},
- kingslayer:{apiName:'TFT_Augment_Kingslayer',name:'弑君突刺',tier:'silver',
+ kingslayer:{apiName:'TFT_Augment_Kingslayer',name:'弑君突刺',tier:'silver',nodes:['2-1','3-2'],
   description:'在赢得玩家对战回合后，获得1金币。如果该玩家的生命值高于你，则获得4金币作为替代。即刻获得1金币。',
   source:{patch:'14.24',archive:ARCHIVE,values:{Gold:1,WinBonusGold:4,WinGold:1},description_en_us:'After winning player combat, gain 1 gold. If they had more health than you, gain 4 Gold instead. Gain 1 gold now.'},
   gold:'Gold',kingslayer:{win:'WinGold',bonus:'WinBonusGold'}},
- 'risky-moves':{apiName:'TFT9_Augment_RiskyMoves',name:'冒险举动',tier:'silver',
+ 'risky-moves':{apiName:'TFT9_Augment_RiskyMoves',name:'冒险举动',tier:'silver',nodes:['2-1'],
   description:'你的小小英雄损失20生命值，但在7个与玩家的战斗回合后，获得30金币。',
   source:{patch:'14.24',archive:ARCHIVE,values:{Gold:30,Health:20,PlayerCombatNum:7},description_en_us:'Your Tactician loses 20 Health, but after 7 player combats, gain 30 gold.'},
   acquisitionHealthLoss:'Health',pvpCombatGold:{combats:'PlayerCombatNum',gold:'Gold'}},
@@ -75,5 +79,8 @@ export const AUGMENT_BATCH3_XP_DEFINITIONS:Readonly<Record<string,ChoiceDefiniti
   ...(row.acquisitionXp?[{kind:'mechanic' as const,mechanic:'acquisitionXp',values:{amount:batch3XpValue(id,row.acquisitionXp)}}]:[]),
   ...(row.gold?[{kind:'mechanic' as const,mechanic:'acquisitionGold',values:{amount:batch3XpValue(id,row.gold)}}]:[])],
 }])));
+/** Offer-rule node bans for these rows, keyed by apiName like AUGMENT_OFFER_RULES.nodeBans. */
+export const AUGMENT_BATCH3_XP_NODE_BANS:Readonly<Record<string,readonly string[]>>=freezeContent(Object.fromEntries(Object.values(AUGMENT_BATCH3_XP)
+ .map(row=>[row.apiName,(['2-1','3-2','4-2'] as const).filter(node=>!row.nodes.includes(node))] as const).filter(([,bans])=>bans.length)));
 export const AUGMENT_BATCH3_XP_TIERS=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH3_XP).map(([id,row])=>[id,row.tier])));
 export const AUGMENT_BATCH3_XP_API_NAMES=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH3_XP).map(([id,row])=>[id,row.apiName])));
