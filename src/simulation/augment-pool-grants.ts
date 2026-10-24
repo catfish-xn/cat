@@ -6,6 +6,7 @@ import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
 import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
 import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold } from './augment-pool-batch3-progress';
 import { validateFreeRerolls } from './free-rerolls';
+import { validateAcquisitionLevels } from './augment-xp';
 import { planAugmentGifts, augmentAnvilOffers, AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { grantMechanicItem, grantMechanicUnit, grantMechanicConsumable } from './seat-mechanics/grants';
 import { isAnvil } from './content/anvils';
@@ -41,6 +42,7 @@ export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
 export function validateBatch1Gifts(state:MatchState):void {
  validateBatch2Gold(state);
  validateBatch3Gold(state);
+ validateAcquisitionLevels(state);
  validateFreeRerolls(state);
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};

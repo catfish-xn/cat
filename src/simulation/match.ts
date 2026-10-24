@@ -11,6 +11,7 @@ import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition
 import { drainSetup } from './setup-work';
 import { spendFreeReroll } from './free-rerolls';
 import { drainBatch3RoundEntry } from './augment-pool-batch3-progress';
+import { batch3EntryXp, xpPurchaseAmount, recordAcquisitionLevel } from './augment-xp';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
@@ -372,7 +373,7 @@ export function buyXp(state: MatchState): MatchCommandResult {
   if (state.level >= MATCH_RULES.maxLevel) return fail(state, 'max-level');
   if (state.gold < MATCH_RULES.xpPurchaseCost) return fail(state, 'insufficient-gold');
   if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - MATCH_RULES.xpPurchaseCost)) return fail(state, 'insufficient-gold');
-  const progression = grantXp(state.level, state.xp, MATCH_RULES.xpPurchaseAmount);
+  const progression = grantXp(state.level, state.xp, xpPurchaseAmount(state.augments, state.round));
   return accept({ ...state, gold: state.gold - MATCH_RULES.xpPurchaseCost, level: progression.level, xp: progression.xp });
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
@@ -561,7 +562,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
-  const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
+  const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,round));
   state={...state,level:progression.level,xp:progression.xp};
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
@@ -602,7 +603,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
-    const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
+    const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};
     const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
       : generateShop(state.rngState, state.shop.generation + 1, state.level, definition.ordinal, sixCostShopContext(state));
@@ -888,6 +889,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
   if(choice.kind==='augment'){
+    selected=recordAcquisitionLevel(selected,selected.augments.at(-1)!);
     const gifted=drainP2Gifts(selected,unitLootPolicy);
     events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;
   }

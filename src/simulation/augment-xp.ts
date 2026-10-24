@@ -1,0 +1,67 @@
+import type { MatchState, RoundResult } from './match-types';
+import type { OwnedAugment } from './strategy-types';
+import { AUGMENT_BATCH3_XP, batch3XpValue } from './content/augment-pool-batch3-xp';
+import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
+import { MATCH_RULES } from './match-rules';
+import { grantXp } from './progression';
+import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
+
+/** Owner-visible acquisition levels, `{choiceId: level}`, of the augments that count later level-ups. */
+export const AUGMENT_ACQUISITION_LEVEL_KEY='augment-acquisition-levels';
+type AcquisitionLevels=Readonly<Record<string,number>>;
+const stageStart=(round:number)=>getMultiplayerRoundByOrdinal(round).subround===1;
+const countsLevels=(a:OwnedAugment)=>AUGMENT_BATCH3_XP[a.definitionId]?.levelUpRerolls!==undefined;
+
+/** XP granted on entering `round`, beside the passive round XP. Derived only from owned augments and settled history:
+ * Epoch at each stage start after acquisition; Patient Study for the previous round's player combat if it was fought
+ * on or after acquisition (P: paid at this entry; a draw is a loss, as for streaks). */
+export function batch3EntryXp(augments:readonly OwnedAugment[],history:readonly Pick<RoundResult,'round'|'roundKind'|'result'>[],round:number):number {
+ let xp=0;
+ for(const a of augments){
+  const row=AUGMENT_BATCH3_XP[a.definitionId];if(!row||a.acquiredRound>=round)continue;
+  if(row.stageXp&&stageStart(round))xp+=batch3XpValue(a.definitionId,row.stageXp);
+  const fought=history.find(r=>r.round===round-1);
+  if(row.pvpXp&&fought&&fought.roundKind==='pvp'&&fought.round>=a.acquiredRound)
+   xp+=batch3XpValue(a.definitionId,fought.result==='playerWin'?row.pvpXp.win:row.pvpXp.loss);
+ }
+ return xp;
+}
+/** XP from one purchase in `round`; Level Up! counts from its acquisition round (offline acquisition precedes any purchase). */
+export function xpPurchaseAmount(augments:readonly OwnedAugment[],round:number):number {
+ return augments.reduce<number>((sum,a)=>{const row=AUGMENT_BATCH3_XP[a.definitionId];return sum+(row?.purchaseXp&&a.acquiredRound<=round?batch3XpValue(a.definitionId,row.purchaseXp):0);},MATCH_RULES.xpPurchaseAmount);
+}
+export function acquisitionLevels(state:Pick<MatchState,'seatMechanics'>):AcquisitionLevels {
+ return readSeatMechanic<AcquisitionLevels>(state,AUGMENT_ACQUISITION_LEVEL_KEY)??{};
+}
+/** Record the level right after a newly selected augment's own acquisition XP. */
+export function recordAcquisitionLevel(state:MatchState,a:OwnedAugment):MatchState {
+ if(!countsLevels(a))return state;
+ return writeSeatMechanic(state,AUGMENT_ACQUISITION_LEVEL_KEY,{...acquisitionLevels(state),[a.choiceId]:state.level});
+}
+/** Free rerolls from this batch: Epoch now and at each later stage start; Shopping Spree the new level at every level-up. */
+export function batch3XpFreeRerolls(state:Pick<MatchState,'augments'|'round'|'level'|'seatMechanics'>):number {
+ const levels=acquisitionLevels(state);let credits=0;
+ for(const a of state.augments){
+  const row=AUGMENT_BATCH3_XP[a.definitionId];if(!row)continue;
+  if(row.stageRerolls){
+   const per=batch3XpValue(a.definitionId,row.stageRerolls);credits+=per;
+   for(let round=a.acquiredRound+1;round<=state.round;round++)if(stageStart(round))credits+=per;
+  }
+  if(row.levelUpRerolls){const from=levels[a.choiceId]??state.level;for(let level=from+1;level<=state.level;level++)credits+=level;}
+ }
+ return credits;
+}
+/** Level reached by `total` experience from level 1. */
+export function levelAtExperience(total:number):number {
+ return grantXp(1,0,total).level;
+}
+/** Shape and bounds; the offline chain additionally checks each value against its acquisition round entry. */
+export function validateAcquisitionLevels(state:MatchState):void {
+ const raw=state.seatMechanics?.seat[AUGMENT_ACQUISITION_LEVEL_KEY],owners=state.augments.filter(countsLevels);
+ if(raw===undefined&&!owners.length)return;
+ const fail=()=>{throw new RangeError('Invalid augment acquisition levels');};
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))fail();
+ const levels=raw as AcquisitionLevels;
+ if(Object.keys(levels).sort().join('\n')!==owners.map(a=>a.choiceId).sort().join('\n'))fail();
+ for(const a of owners){const level=levels[a.choiceId];if(!Number.isSafeInteger(level)||level<1||level>state.level)fail();}
+}

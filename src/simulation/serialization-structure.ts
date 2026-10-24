@@ -8,6 +8,7 @@ import { validateOpeningEncounterState } from './opening-encounter';
 import { validateAugmentOfferHistory } from './augment-offers';
 import { withResourceReceiptReuse } from './resource-provenance';
 import { augmentAcquisitionXpAtRound } from './choice-acquisition';
+import { batch3EntryXp, xpPurchaseAmount, acquisitionLevels, levelAtExperience } from './augment-xp';
 import { investmentGrowth, readAugmentIncome } from './augment-income';
 import { validateP2Opening } from './s13-augments-p2-combat';
 import {readG23Progress,validateG23RewardSources} from './g2-3-state';
@@ -114,9 +115,18 @@ function totalExperience(level:number,xp:number):number {
   grantXp(level,xp,0); // Validate normalized values before using them as indices.
   return xp+Object.entries(XP_TO_NEXT_LEVEL).filter(([from])=>Number(from)<level).reduce((sum,[,amount])=>sum+amount,0);
 }
-function validPreparationExperience(before:number,level:number,xp:number):boolean {
+function validPreparationExperience(before:number,level:number,xp:number,purchase:number=MATCH_RULES.xpPurchaseAmount):boolean {
   const after=totalExperience(level,xp),cap=totalExperience(MATCH_RULES.maxLevel,0);
-  return after>=before && (after===cap || (after-before)%MATCH_RULES.xpPurchaseAmount===0);
+  return after>=before && (after===cap || (after-before)%purchase===0);
+}
+/** Experience on entering `round` and taking its augment, before any purchase; also fixes recorded acquisition levels
+ * (offline purchases wait for the round's augment choice). */
+function preparationExperience(state:MatchState,after:number,round:number):number {
+  const before=Math.min(totalExperience(MATCH_RULES.maxLevel,0),after+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<round)).roundXp
+    +batch3EntryXp(state.augments,state.roundResults,round)+augmentAcquisitionXpAtRound(state.augments,round));
+  const levels=acquisitionLevels(state);
+  for(const a of state.augments)if(a.acquiredRound===round&&Object.hasOwn(levels,a.choiceId))requireValue(levels[a.choiceId]===levelAtExperience(before),'augment acquisition level');
+  return before;
 }
 /** Internal staging validator, NOT a restore/admission API. Callers must check
  * historical authority before resuming. It validates plain JSON and persistent
@@ -256,7 +266,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === openingHpBeforeRound(state, result.roundId, i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(same(result.streakBefore, streak), 'history streak before');
-    requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<result.round)).roundXp+augmentAcquisitionXpAtRound(state.augments,result.round)),result.levelBefore,result.xpBefore), 'history XP preparation chain');
+    requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,result.round),result.levelBefore,result.xpBefore,xpPurchaseAmount(state.augments,result.round)), 'history XP preparation chain');
     const expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
@@ -280,7 +290,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
   requireValue(state.playerHp === (settled ? batch2HpAfterSettlement(state,state.round,state.roundResults.at(-1)!.hpAfter) : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
-  if (!settled) requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<state.round)).roundXp+augmentAcquisitionXpAtRound(state.augments,state.round)),state.level,state.xp), 'current XP preparation chain');
+  if (!settled) requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,state.round),state.level,state.xp,xpPurchaseAmount(state.augments,state.round)), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial,state.nextUnitSerial);
   validateMatchEquipment(state);
