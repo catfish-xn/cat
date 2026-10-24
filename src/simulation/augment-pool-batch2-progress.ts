@@ -7,19 +7,22 @@ import { readG23Progress } from './g2-3-state';
 import { batch2Values, AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
 import { grantMechanicGold } from './seat-mechanics/grants';
 export type Batch2BattleFacts=readonly {readonly definitionId:string;readonly count:number}[];
-const counterIds=['rocket-collection','rocket-collection-plus','enforce','welcome-to-the-playground','scrap-recycling','betrayal'];
+const counterIds=['rocket-collection','rocket-collection-plus','enforce','welcome-to-the-playground','scrap-recycling','betrayal','blood-brothers','blood-brothers-deaths'];
 export function validateBatch2Facts(f:Batch2BattleFacts):void {
- if(!Array.isArray(f)||new Set(f.map(x=>x.definitionId)).size!==f.length||f.some(x=>!x||Object.keys(x).sort().join(',')!=='count,definitionId'||!counterIds.includes(x.definitionId)||!Number.isSafeInteger(x.count)||x.count<0||x.count>100000||['betrayal','welcome-to-the-playground'].includes(x.definitionId)&&x.count>1))throw new RangeError('Invalid batch2 battle facts');
+ if(!Array.isArray(f)||new Set(f.map(x=>x.definitionId)).size!==f.length||f.some(x=>!x||Object.keys(x).sort().join(',')!=='count,definitionId'||!counterIds.includes(x.definitionId)||!Number.isSafeInteger(x.count)||x.count<0||x.count>100000||['betrayal','welcome-to-the-playground'].includes(x.definitionId)&&x.count>1)||f.some(x=>x.definitionId==='blood-brothers')!==f.some(x=>x.definitionId==='blood-brothers-deaths'))throw new RangeError('Invalid batch2 battle facts');
 }
 /** Facts are projected from the authoritative combat, including inactive trait members and permanent emblems. */
 export function batch2BattleFacts(combat:CombatState,team:Team):Batch2BattleFacts|undefined {
  const units=combat.units.filter(u=>u.team===team),ids=new Set(units.flatMap(u=>u.mechanics?.filter(m=>m.mechanic==='traitAugmentB2').map(m=>m.source.definitionId)??[]));
- const rows=counterIds.filter(id=>ids.has(id)).map(definitionId=>{
+ const rows=counterIds.filter(id=>ids.has(id==='blood-brothers-deaths'?'blood-brothers':id)).map(definitionId=>{
   const members=units.filter(u=>u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'&&m.source.definitionId===definitionId));let count=0;
   if(definitionId.startsWith('rocket-collection'))count=members.reduce((n,u)=>n+(u.batch2?.rockets??0),0);
   if(definitionId==='enforce')count=new Set(members.flatMap(u=>u.g22?.wanted??[]).filter(id=>(combat.openingDeaths??[]).some(d=>d.unitId===id))).size;
   if(definitionId==='scrap-recycling')count=members.reduce((n,u)=>n+(u.mechanics?.find(m=>m.mechanic==='traitAugmentB2'&&m.source.definitionId===definitionId)?.values.converted??0),0);
   if(definitionId==='welcome-to-the-playground')count=members.some(u=>u.batch2?.familyQualified)||members.filter(u=>u.alive&&u.hp>0).length>=batch2Values(definitionId).MinNumFamilyMembers?1:0;
+  // Silco casts and Vander deaths accrue to the player even when the partner was already dead (P-AG5).
+  if(definitionId==='blood-brothers')count=units.filter(u=>u.definitionId==='silco'&&u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'&&m.source.definitionId==='blood-brothers')).reduce((n,u)=>n+(u.batch2?.casts??0),0);
+  if(definitionId==='blood-brothers-deaths')count=units.filter(u=>u.definitionId==='vander'&&u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'&&m.source.definitionId==='blood-brothers')).reduce((n,u)=>n+(u.batch2?.deaths??0),0);
   if(definitionId==='betrayal')count=members.some(u=>(u.batch2?.kills??0)>=batch2Values(definitionId).NumKills)?1:0;
   return {definitionId,count};
  });return rows.length?rows:undefined;

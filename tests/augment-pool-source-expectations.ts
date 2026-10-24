@@ -94,7 +94,7 @@ export const BATCH2_SOURCE:SourceExpectation[]=[
  r('visionary-voidlings',208,'TFT13_Augment_Visionary','gold',{Mana:275,MaxVoidlings:5,Stage2Health:400,Stage3Health:450,Stage4Health:500,Stage5Health:550,Stage6Health:600,'{3bc62dd2}':60},['u:rell','u:morgana'],0,0,0,false),
  r('watcher-growth',82,'TFT13_Augment_Watcher','gold',{IncreaseADByTakeAttack:2,IncreaseAPByTakeSpell:4},['u:vander']),
  r('betrayal',196,'TFT13_TeamupAugment_Betrayal','gold',{NumKills:2},['u:maddie','u:ambessa'],0,0,0,true,'either partner 2 kills -> maddie'),
- r('blood-brothers',301,'TFT13_TeamupAugment_BloodBrothers','prismatic',{APGainPerDeath:6,MaxHealthGainPerCast:30},['u:vander:2','u:silco','i:shojin'],0,0,0,false),
+ r('blood-brothers',301,'TFT13_TeamupAugment_BloodBrothers','prismatic',{APGainPerDeath:6,MaxHealthGainPerCast:30},['u:vander:2','u:silco','i:shojin'],0,0,0,true,'silco cast -> vander +30 max HP; vander death -> silco +6 AP; player-owned totals'),
 ];
 // The two remaining batch-1 exclusions have no executable row; keep their known
 // source amounts explicit without pretending that the unresolved artifact pool exists.

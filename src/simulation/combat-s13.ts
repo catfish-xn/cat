@@ -1,4 +1,4 @@
-import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick } from './augment-pool-batch2-combat';
+import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
 import { isOpeningCrab, crabMove, crabJump } from './combat-opening-crabs';
 import { overtimeBonusBps, movementIntervalTicks, quickstrikerMoveTenths } from './combat-overtime';
@@ -355,6 +355,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       events.splice(beforeCount, 0, { type: 'cast', tick, receipt });
       v19DominatorCast(ctx,unit,receipt.actualManaSpent);
       castV20Teamups(ctx,unit,target,seq);
+      batch2Cast(ctx,unit);
       unit.cooldownTicks = oldInterval;
       const immediate = unit.tasks.filter(t => t.executeAtTick <= tick);
       unit.tasks = unit.tasks.filter(t => t.executeAtTick > tick);

@@ -39,7 +39,7 @@ batch 2现为 **17/26完成，9/26完整禁用**；batch 1仍 **67/69完成，2/
 | 爆蓝之城 `TFT13_Augment_Rebel` [144] | 前5名、低一星、减400HP | 一星阵亡的目标星级、最低HP、装备/永久成长/强化继承、复制递归资格，继续禁用。 |
 | 狙神之巢 `TFT13_Augment_Sniper` [178] | 每次8%增伤、上限32% | 首战是否有层、换格/备战席/离场/重买的重置、合星继承，继续禁用。 |
 | 虚空召唤者 `TFT13_Augment_Visionary` [208] | 每275法力、至多5只、2–6阶段HP=400/450/500/550/600；哈希60 | 虚灵AD/攻速/双抗/射程/技能、出生位置和无空格政策；哈希60不能擅自命名为AD，继续禁用。 |
-| 本可发生之事 `TFT13_TeamupAugment_BloodBrothers` [301] | 30永久HP/6永久AP；二星Vander、Silco、Shojin | 多副本配对/受益范围、死亡/复活/出售/合星的成长归属；跨战认证接线也未完成，继续禁用。 |
+| 本可发生之事 `TFT13_TeamupAugment_BloodBrothers` [301] | 30永久HP/6永久AP；二星Vander、Silco、Shojin | 2026-10-24 wave4 已开启：配对/成长归属按 `S13_RULES_GAP.md` P-AG5；跨战累计经战斗事实认证。 |
 
 batch 1仍阻塞的`TFT9_Augment_AllThatShimmers` **[74]**、`TFT_Augment_AllThatShimmersPlus` **[75]**也复核并列入独立表：三选、拆卸器、Plus四金、InterestCap=5已知；完整生金神器候选/权重绑定和InterestCap的实际作用仍无证据，保持禁用。
 

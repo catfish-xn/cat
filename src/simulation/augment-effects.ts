@@ -17,6 +17,24 @@ import { p2AugmentEffects } from './s13-augments-p2-strategy';
 const flat = (stat: 'maxHp'|'armor'|'magicResist'|'abilityPower', amount:number):Effect => ({kind:'statFlat',stat,amount});
 const speed = (bps:number):Effect => ({kind:'attackSpeedBps',bps});
 const mechanic = (name:string,values:Record<string,number>):Effect => ({kind:'mechanic',mechanic:name,values});
+const serialOf=(id:string)=>{const m=/(\d+)$/.exec(id);return m?Number(m[1]):Number.MAX_SAFE_INTEGER;};
+/** P-AG5 (P, 2026-10-24): one Vander and one Silco on board bind; with several copies
+ * the earliest acquired (lowest unit serial, then ID) of each binds. */
+export function bloodBrothersPair(allies:readonly Unit[]):readonly [string,string]|undefined {
+  const first=(def:string)=>allies.filter(u=>u.definitionId===def&&u.location.kind==='board').sort((a,b)=>serialOf(a.id)-serialOf(b.id)||(a.id<b.id?-1:a.id>b.id?1:0))[0]?.id;
+  const vander=first('vander'),silco=first('silco');
+  return vander&&silco?[vander,silco]:undefined;
+}
+/** P-AG5: permanent growth belongs to the player, summed from authenticated battle facts since acquisition. */
+export function bloodBrothersTotals(state:Pick<CombatStrategyInputs,'g23'>,augment:OwnedAugment):{casts:number;deaths:number} {
+  let casts=0,deaths=0;
+  for(const r of state.g23?.economyReceipts??[]){
+    if(r.kind!=='battle'||r.facts.round<augment.acquiredRound)continue;
+    casts+=r.facts.batch2?.find(x=>x.definitionId==='blood-brothers')?.count??0;
+    deaths+=r.facts.batch2?.find(x=>x.definitionId==='blood-brothers-deaths')?.count??0;
+  }
+  return {casts,deaths};
+}
 /** Pure compilation: all conditions are sampled from the frozen start input. */
 export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,unit:Unit,augment:OwnedAugment,board:readonly Unit[],traits:readonly TraitSnapshot[]):Effect[] {
   if(effect.kind!=='mechanic') return [effect];
@@ -31,7 +49,13 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
     case 'traitAugmentB2': {
       const spec=AUGMENT_BATCH2_ENABLED[augment.definitionId];
       if(!spec||!traits.some(t=>t.team===unit.team&&spec.traits.includes(t.traitId)&&isTraitSnapshotMember(t,unit)))return [];
-      if(augment.definitionId==='betrayal'&&!['maddie','ambessa'].includes(unit.definitionId))return [];
+      if(augment.definitionId==='betrayal'&&(!['maddie','ambessa'].includes(unit.definitionId)||!['maddie','ambessa'].every(def=>allies.some(u=>u.definitionId===def&&u.location.kind==='board'))))return [];
+      if(augment.definitionId==='blood-brothers'){
+        const pair=bloodBrothersPair(allies);
+        if(!pair||!pair.includes(unit.id))return [];
+        const totals=bloodBrothersTotals(state,augment);
+        return [effect,unit.definitionId==='vander'?flat('maxHp',totals.casts*spec.source.values.MaxHealthGainPerCast!):flat('abilityPower',totals.deaths*spec.source.values.APGainPerDeath!)];
+      }
       if(augment.definitionId==='why-not-both'){
         const form=getUnitForm(unit,state.preparation.board);
         if(!form||!allies.some(other=>other.id!==unit.id&&other.definitionId===unit.definitionId&&getUnitForm(other,state.preparation.board)!==null&&getUnitForm(other,state.preparation.board)!==form))return [];
