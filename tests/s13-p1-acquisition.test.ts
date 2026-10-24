@@ -3,9 +3,9 @@ import {reachRound,accepted,emptyBoard,resolveM5Choices} from './match-helpers';
 import {selectChoice,equipItem,useConsumable,startMatchCombat,nextRound} from '../src/simulation/match';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {augmentForgeOffers,grantAugmentAcquisition} from '../src/simulation/augment-acquisition';
-// Fixed public first-node seeds: the first seed whose 2-1 offer shows each card under the
-// v22 14.24 augment tier table and offer rules (Radiant Relics first appears at 323).
-const acquisitionSeeds:Record<string,number>={'blinding-speed':6,'portable-forge':5,'radiant-relics':323};
+// Fixed public first-node seeds: the first non-Trainer-Golem seed whose 2-1 offer shows each card under the
+// v23 151-offer pool and fmix32 openings (re-chosen from v22's 6/5/323).
+const acquisitionSeeds:Record<string,number>={'blinding-speed':7,'portable-forge':83,'radiant-relics':238};
 function select(id:string){
  const s=reachRound('2-1',false,acquisitionSeeds[id]),c=s.pendingChoice!;
  expect(c.offers).toContain(id);
