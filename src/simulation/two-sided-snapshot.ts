@@ -49,7 +49,7 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     if(s.priorPvpWins!==undefined){integer(s.priorPvpWins,1);requireSnapshot(s.priorPvpWins<=priorPvpRoundLimit(getMultiplayerRoundById(s.roundId).ordinal));}
     id(s.seatId); id(s.roundId); integer(s.level, 1);
     const round = getMultiplayerRoundById(s.roundId);
-    if(s.itemSummonPositions)requireSnapshot(Object.keys(s.itemSummonPositions).every(id=>Array.isArray(s.items)&&s.items.some(i=>i.id===id)));
+    if(s.itemSummonPositions)requireSnapshot(Object.keys(s.itemSummonPositions).every(id=>id.startsWith('unit-')?Array.isArray(s.units)&&s.units.some(u=>u.id===id&&u.definitionId==='jayce'):Array.isArray(s.items)&&s.items.some(i=>i.id===id)));
     list(s.units); list(s.items); list(s.temporaryEquipment); list(s.augments); list(s.persistentGrowth);
     for (const unit of s.units) { record(unit); id(unit.id); requireSnapshot(unit.team === 'player' && unit.location?.kind === 'board' && !unit.encounterId); }
     for (const item of s.items) { record(item); id(item.id); requireSnapshot(item.location?.kind === 'unit'); }
@@ -139,7 +139,8 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
   const ids = new Set(units.map(unit => unit.id));
   const wins = priorPvpWins(state.roundResults, state.round);
-  const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
+  // A placed Hextech Forge travels with its deployed Jayce (keyed by the Jayce), a Voidspawn with its equipped portal.
+  const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>units.some(u=>u.id===id&&u.definitionId==='jayce')||state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   const d14Combat=d14Certificate(state);
   return restorePlayerBattleSnapshot({
     ...(d14Combat&&ids.has(d14Combat.unitId)?{d14Combat}:{}),

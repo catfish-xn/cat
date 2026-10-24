@@ -8,6 +8,7 @@ export {
   readItemSummons, moveItemSummon, d14PublicUnitMark,
 } from '../simulation/match';
 export type { ItemSummonOrigin } from '../simulation/g2-4b-summons';
+export type { MovableSummon } from '../simulation/g2-4b-voidspawn';
 export { serializeMatch, restoreMatch } from '../simulation/serialization';
 export type {
   MatchState, MatchBase, MatchCommandResult, MatchFailure, MatchStep, MatchEvent,

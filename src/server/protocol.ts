@@ -6,7 +6,7 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
-import type { ConsumableFailure, ConsumableTarget, ItemSummonOrigin, OpeningEncounterView, OrbTier, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
+import type { ConsumableFailure, ConsumableTarget, ItemSummonOrigin, MovableSummon, OpeningEncounterView, OrbTier, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
 export type { ConsumableFailure, ConsumableTarget, OpeningEncounterView, RoundEconomyPreview, RoundEconomyPreviewOutcome };
 
 export const ROOM_CAPACITY = 8;
@@ -128,9 +128,10 @@ export interface SeatChoiceDeadlineView { readonly choiceId: string; readonly ge
  * same state, field by field. Not an asset: no bench slot, population, sale or equipment. `unit.location` is where the rules
  * place it this preparation (the saved cell, or the nearest free one); the client draws it there and only sends
  * `moveItemSummon` with `itemInstanceId`. Stage stats are not part of it and are never computed on the client.
+ * `kind: 'forge'` (P, 2026-10-24): 杰斯's 海克斯科技锻炉, whose `itemInstanceId` is its Jayce's unit id.
  */
 export interface ItemSummonView {
-  readonly kind: ItemSummonOrigin['kind'];
+  readonly kind: MovableSummon['kind'];
   readonly ownerId: string;
   readonly itemInstanceId: string;
   readonly unit: Pick<ItemSummonOrigin['unit'], 'id' | 'definitionId' | 'team' | 'starLevel' | 'location'>;
