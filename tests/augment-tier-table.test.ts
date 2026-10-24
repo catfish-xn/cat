@@ -41,7 +41,7 @@ it.each([[0,19,'SGG'],[1,33,'GSG'],[42,62,'GGG'],[0x80000000,36,'GSG'],[0xffffff
 
 it('offers Geniuses only at prismatic tier, preserving owned and removed exclusion', () => {
   expect(AUGMENT_TIERS.geniuses).toBe('prismatic');
-  expect(augmentCandidates('prismatic',[])).toContain('geniuses');
+  expect(augmentCandidates('prismatic',[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]})).toContain('geniuses');
   for (const tier of ['silver','gold'] as const) expect(augmentCandidates(tier,[])).not.toContain('geniuses');
   expect(augmentCandidates('prismatic',[{definitionId:'geniuses',choiceId:nodes[0],acquiredRound:4}])).not.toContain('geniuses');
   expect(augmentCandidates('prismatic',[],['geniuses'])).not.toContain('geniuses');
@@ -52,7 +52,7 @@ it('public prismatic Geniuses acquisition restores the same offer history, grant
   for (let seed=0; seed<20000; seed++) {
     if (createOpeningEncounter(seed).selection.encounterId!=='none' || deriveAugmentTierSequence(seed)[0]!=='prismatic') continue;
     const initial = createMatch(seed);
-    if (generateChoices(augmentCandidates('prismatic',[]),initial.choiceRngState).offers.includes('geniuses')) { root=seed; break; }
+    if (generateChoices(augmentCandidates('prismatic',[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState).offers.includes('geniuses')) { root=seed; break; }
   }
   expect(root).toBeGreaterThanOrEqual(0);
   const state = reachRound('2-1',false,root), c = state.pendingChoice!;

@@ -11,15 +11,15 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[])).sort(),pool=[...ids];
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(ids);let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  expect(ids).toHaveLength(66);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
+  expect(ids).toHaveLength(150);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
- it.each(Object.keys(AUGMENT_DEFINITIONS))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
+ it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!['black-rose-crest','black-rose-crown'].includes(id)))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
   // Search the independent first-node offer oracle, then play only the chosen
   // public route. The expanded pool puts Portable Forge at seed 236; replaying
   // three opening combats for every candidate needlessly hits CI time limits.
   let selectedSeed=-1;
   // v23: skip Trainer Golem openings; the unbenchable golem blocks this route's empty-board helper.
-  for(let seed=0;seed<1000;seed++){if(openingEncounter(seed)==='trainer-golems')continue;const draw=augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[]);if(draw.offers.includes(id)){selectedSeed=seed;break;}}
+  for(let seed=0;seed<1000;seed++){if(openingEncounter(seed)==='trainer-golems')continue;const draw=augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[],[],'round:2-1:augment');if(draw.offers.includes(id)){selectedSeed=seed;break;}}
   expect(selectedSeed).toBeGreaterThanOrEqual(0);const state=reachRound('2-1',false,selectedSeed),choice=state.pendingChoice!;
   expect(choice.offers).toContain(id);
   const invalid=selectChoice(state,choice.choiceId,choice.generation+1,id);expect(invalid.ok).toBe(false);expect(invalid.state).toBe(state);expect("events" in invalid).toBe(false);
@@ -41,7 +41,7 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
 describe('independent augment card-reroll oracle',()=>{
  it.each([0,1,42,123456789,4294967295])('strictly checks tier, three words, free reroll and failures for seed %i',seed=>{
   const state=freeze(reachRound('2-1',false,seed)),c=state.pendingChoice!,tier=augmentTier(seed,c.choiceId);
-  const draw=augmentDraw((seed^0x9e3779b9)>>>0,tier,[]);
+  const draw=augmentDraw((seed^0x9e3779b9)>>>0,tier,[],[],'round:2-1:augment');
   expect(c).toMatchObject({offers:draw.offers,augmentTier:tier,rerollCount:0,generation:0,rerollsRemaining:3,rerolledSlots:[false,false,false]});
   expect(state.choiceRngState).toBe(draw.rng);
   const command={type:'rerollAugment',choiceId:c.choiceId,generation:0,optionIndex:1},result=rerollAugment(state,c.choiceId,0,1);

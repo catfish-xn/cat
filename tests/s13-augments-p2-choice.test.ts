@@ -27,7 +27,7 @@ it('all seventeen API identities, names, tiers and coefficients match the retain
     expect((S13_P2_AUGMENTS[id]??S13_P2_ANOMALIES[id]).description).not.toMatch(/@[a-z0-9_*]+@/i);
   }
 });
-function seedFor(id:string){for(let seed=0;seed<1000;seed++){const state=createMatch(seed);if(generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[]),state.choiceRngState).offers.includes(id))return seed;}throw Error('seed budget');}
+function seedFor(id:string){for(let seed=0;seed<1000;seed++){const state=createMatch(seed);if(generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers.includes(id))return seed;}throw Error('seed budget');}
 it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restores strictly, and continues the same seeded combat',id=>{
   let s=reachRound('2-1',false,seedFor(id));const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
   s=accepted(selectChoice(s,c.choiceId,c.generation,id));
@@ -95,10 +95,9 @@ it('later gift triple revisits a previously blocked gift in the same drain',()=>
 });
 
 it('public Crown + Trifecta acquisition serializes and restores both entrances with historical shields',()=>{
-  // v20-traits adds five gold cards. Deterministic search found this unchanged
-  // Crown -> Trifecta -> Kog'Maw scenario at attempt 16003, beyond the old 10000 budget.
-  // v22 augment tier table and economy moved that scenario; sequential search finds the same chain at seed 1837.
-  const seed=1837;
+  // v23 Form Swapper expansion: independent offer/gift arithmetic locates
+  // Crown → Trifecta → Kog'Maw at 14588; historical stat/shield assertions stay fixed.
+  const seed=14588;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){
@@ -106,7 +105,10 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
     s=resolveM5Choices(s);expect(s.phase).toBe('settlement');s=accepted(nextRound(s,s.round));
   }
   c=s.pendingChoice!;expect(c.offers).toContain('trifecta-ii');s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
-  const hero=s.preparation.units.find(u=>u.team==='player'&&u.id!=='unit-1')!;
+  const gift=p2GiftPlan(s).find(g=>g.kind==='unit'&&g.definitionId==='kogmaw')!;
+  const birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.receiptId===gift.receiptId)!;
+  if(birth.kind!=='unit'||!birth.unitId)throw Error('missing KogMaw receipt');
+  const hero=s.preparation.units.find(u=>u.id===birth.unitId)!;
   expect(hero.definitionId).toBe('kogmaw');
   s=accepted(deployMatchUnit(s,hero.id,{kind:'board',cell:{col:0,row:7}}));
   s=accepted(equipItem(s,s.items.find(i=>i.definitionId==='crownguard')!.id,hero.id,0));
@@ -116,16 +118,18 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
 });
 
-it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('seed 14 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
-  // v22 augment tier table: seed 18 no longer offers Trifecta II at 2-1; seed 14 is the first public Trifecta -> Nami route.
-  let s=reachRound('2-1',false,14),c=s.pendingChoice!;
+it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('seed 6672 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
+  // v23 expanded pool: 6672 publicly offers Trifecta → Nami; the original stat/shield assertions remain unchanged.
+  let s=reachRound('2-1',false,6672),c=s.pendingChoice!;
   s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
-  expect(s.preparation.units.find(u=>u.id==='unit-2')!.definitionId).toBe('nami');
+  const gift=p2GiftPlan(s).find(g=>g.kind==='unit')!,birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.receiptId===gift.receiptId)!;
+  if(birth.kind!=='unit'||!birth.unitId)throw Error('missing Nami receipt');
+  const unitId=birth.unitId;expect(s.preparation.units.find(u=>u.id===unitId)!.definitionId).toBe('nami');
   s=accepted(grantMechanicItem(s,{receiptId:`review:${definitionId}`,source:'test',definitionId}));
-  s=accepted(equipItem(s,s.items.at(-1)!.id,'unit-2',0));
-  s=accepted(deployMatchUnit(s,'unit-2',{kind:'board',cell:{col:0,row:7}}));
+  s=accepted(equipItem(s,s.items.at(-1)!.id,unitId,0));
+  s=accepted(deployMatchUnit(s,unitId,{kind:'board',cell:{col:0,row:7}}));
   s=accepted(startMatchCombat(s));
-  expect(s.combat!.units.find(u=>u.id==='unit-2')).toMatchObject({maxHp,shield});
+  expect(s.combat!.units.find(u=>u.id===unitId)).toMatchObject({maxHp,shield});
   if(definitionId!=='crownguard')expect(s.combat!.units.find(u=>u.itemSummon?.kind==='mirror')).toMatchObject({maxHp:721,itemSummonOpeningMaxHp:1030});
   const text=serializeMatch(s);expect(restoreMatch(structuredClone(s))).toEqual(s);expect(restoreMatch(text)).toEqual(s);
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);

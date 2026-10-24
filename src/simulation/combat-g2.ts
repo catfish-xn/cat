@@ -1,3 +1,4 @@
+import { batch2AutomataBlast } from './augment-pool-batch2-combat';
 import { detonateMenaces, teamup } from './combat-v20-traits';
 import { canMove } from './combat-movement';
 import { occupiesCell } from './anomalies/availability';
@@ -201,13 +202,17 @@ export function recordG2Damage(ctx: AbilityContext, owner: S13Unit | undefined, 
     if (champion(owner) === 'leblanc' && hp > 0 && survivingHp === 0 && packet.actionSeq === owner.expansion.chainCastSeq && packet.delivery === 'ability-direct') owner.expansion.chainKills++;
   }
   if (target.expansion) target.expansion.damageTaken += hp;
-  if (owner && hp + absorbed > 0 && packet.source.definitionId !== 'automata') {
+  if (owner && hp + absorbed > 0 && packet.source.definitionId !== 'automata' && packet.source.definitionId !== 'fractured-crystals') {
     const m = owner.mechanics?.find(m => m.mechanic === 'automata');
     if (m) {
       const state = expansion(owner); state.crystals++; state.crystalDamage += hp + absorbed;
       if (state.crystals === m.values.crystals) {
         const next = enemies(owner, ctx.units).find(u => u.id === owner.targetId) ?? byDistance(owner, enemies(owner, ctx.units))[0];
-        if (next) task(owner, 'g2Blast', ctx.tick + 1, next.id, m.values.damage + Math.floor(state.crystalDamage * m.values.conversionBps / 10000), packet.actionSeq, 0, 1, m.source);
+        if (next) {
+          const raw=m.values.damage + Math.floor(state.crystalDamage * m.values.conversionBps / 10000);
+          task(owner, 'g2Blast', ctx.tick + 1, next.id, raw, packet.actionSeq, 0, 1, m.source);
+          batch2AutomataBlast(ctx,owner,raw,packet.actionSeq);
+        }
         state.crystals = 0; state.crystalDamage = 0;
       }
     }

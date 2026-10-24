@@ -1,3 +1,4 @@
+import { batch2HpAfterSettlement } from './augment-pool-batch2-health';
 import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { choiceAcquisitionGold } from './choice-acquisition';
@@ -6,6 +7,7 @@ import { openingHpBeforeRound } from './opening-monkey';
 import { validateOpeningEncounterState } from './opening-encounter';
 import { validateAugmentOfferHistory } from './augment-offers';
 import { withResourceReceiptReuse } from './resource-provenance';
+import { augmentAcquisitionXpAtRound } from './choice-acquisition';
 import { investmentGrowth, readAugmentIncome } from './augment-income';
 import { validateP2Opening } from './s13-augments-p2-combat';
 import {readG23Progress,validateG23RewardSources} from './g2-3-state';
@@ -254,7 +256,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === openingHpBeforeRound(state, result.roundId, i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(same(result.streakBefore, streak), 'history streak before');
-    requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<result.round)).roundXp),result.levelBefore,result.xpBefore), 'history XP preparation chain');
+    requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<result.round)).roundXp+augmentAcquisitionXpAtRound(state.augments,result.round)),result.levelBefore,result.xpBefore), 'history XP preparation chain');
     const expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
@@ -277,8 +279,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   list(state.persistentGrowth); const growthIds = new Set<string>();
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
-  requireValue(state.playerHp === (settled ? state.roundResults.at(-1)!.hpAfter : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
-  if (!settled) requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<state.round)).roundXp),state.level,state.xp), 'current XP preparation chain');
+  requireValue(state.playerHp === (settled ? batch2HpAfterSettlement(state,state.round,state.roundResults.at(-1)!.hpAfter) : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
+  if (!settled) requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<state.round)).roundXp+augmentAcquisitionXpAtRound(state.augments,state.round)),state.level,state.xp), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial,state.nextUnitSerial);
   validateMatchEquipment(state);

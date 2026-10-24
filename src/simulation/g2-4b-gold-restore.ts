@@ -40,6 +40,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
     if (canonicalContent(expected) !== canonicalContent(candidate)) throw new RangeError('Invalid authoritative equipment replay');
     return true;
   }
+  const batch2=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'||m.mechanic==='g23Tactician'));
   const zephyr=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr'));
   const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
@@ -51,7 +52,8 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   // Authenticate the complete trajectory instead of guessing historical stacks
   // from a refreshed layer's startsAtTick. Reuse the input-bound replay cache.
   const overtime = overtimeStacks(candidate.tick) > 0;
-  if(!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19&&!v20&&!overtime){
+  if(!batch2&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19&&!v20&&!overtime){
+    if(candidate.units.some(u=>u.batch2!==undefined))throw new RangeError('Unexpected batch2 runtime');
     if(candidate.units.some(u=>u.v20Traits!==undefined))throw new RangeError('Unexpected V20 runtime');
     if(candidate.units.some(u=>u.v19!==undefined||u.sixCost!==undefined||u.familyReunion!==undefined))throw new RangeError('Unexpected V19 runtime');
     if(candidate.units.some(u=>u.d11Kills!==undefined))throw new RangeError('Unexpected D11 kill runtime');
@@ -65,7 +67,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   // Preserve the existing cold-replay contract for roster/absence/anomaly paths.
   // Ordinary v19/v20 and overtime combats reuse input-bound independent evidence.
   let expected:CombatState;
-  if((v19||v20||overtime)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
+  if((batch2||v19||v20||overtime)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
   else{
     expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
     while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
@@ -78,7 +80,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
  * replay only gold-item combats from the validated frozen input, without
  * settling or granting anything. Existing non-gold saves take no replay path. */
 export function validateCombatItemGold(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
-  const enabled=strategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)));
+  const enabled=strategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul','v19Chainblade','g23Tactician'].includes(m.mechanic)));
   if(!enabled){
     if(candidate.itemGoldReceipts!==undefined)throw new RangeError('Unexpected item gold receipts');
     return;

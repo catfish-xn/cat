@@ -7,7 +7,7 @@ export { readOpeningBatchBRewards } from './opening-batch-b-rewards';
 import { openingEncounterId } from './opening-encounter';
 import { growTrainerGolem } from './trainer-golems';
 import { enterOpeningCrabs } from './opening-crabs';
-import { choiceAcquisitionGold } from './choice-acquisition';
+import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition';
 import { drainSetup } from './setup-work';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
@@ -623,7 +623,8 @@ export function useConsumable(state:MatchState,consumableId:string,target:Consum
   const used={...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
     {kind:'consumable-used',record:plan.record,...(state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {})})};
   const copied=grantConsumableCopy(used,plan.record);
-  return acceptEquipment(copied.state,[...plan.events,...copied.events]);
+  const gifted=copied.state.augments.some(a=>a.definitionId==='why-not-both')&&copied.state.phase!=='combat'&&!isCombatRosterLocked(copied.state)?drainP2Gifts(copied.state):copied.state;
+  return acceptEquipment(gifted,[...plan.events,...copied.events,...mechanicGrantEvents(copied.state,gifted)]);
 }
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
   const preview = previewCombine(state, aId, bId);
@@ -876,7 +877,8 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? choiceAcquisitionGold((choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId], state.round) : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
-  let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold,
+  const acquisitionProgress = grantXp(state.level,state.xp,choice.kind==='augment'?choiceAcquisitionXp(AUGMENT_DEFINITIONS[definitionId]):0);
+  let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold, level:acquisitionProgress.level, xp:acquisitionProgress.xp,
     scheduleReceipts: [...state.scheduleReceipts, receipt],
     resourceProvenance:itemId?appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'item-acquired',itemId,source:{kind:'schedule',eventId:choice.eventId}}):state.resourceProvenance,
     items: granted?.ok ? granted.state.items : state.items,
@@ -885,6 +887,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
   if(choice.kind==='augment'){
+    if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
     const gifted=drainP2Gifts(selected,unitLootPolicy);
     events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;
   }

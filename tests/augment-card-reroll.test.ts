@@ -20,7 +20,7 @@ it.each([[2,0,1], [0,1,2]])('each slot is usable exactly once in command order %
   let rng = state.choiceRngState;
   for (const optionIndex of order) {
     const before = freeze(state), c = before.pendingChoice!, generation = c.generation;
-    const candidates = augmentCandidates(c.augmentTier!, before.augments, [...removed,...c.offers]).sort();
+    const candidates = augmentCandidates(c.augmentTier!, before.augments, [...removed,...c.offers],null,{node:'2-1',fieldedTraits:[],blocked:[]}).sort();
     // Independent arithmetic for the sole word and selected index (not the production draw helper).
     rng = Number((BigInt(rng)*1664525n+1013904223n)%4294967296n);
     const result = rerollAugment(before, choiceId, generation, optionIndex);
