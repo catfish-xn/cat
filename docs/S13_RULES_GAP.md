@@ -1,3 +1,11 @@
+## 2026-10-24 当前 epoch：v22-online-rules
+
+当前 epoch 为 **v22-online-rules**，父 **v21-opening-encounters**。rules/content 身份为 `s13-g2-3-v22-online-rules` / `s13-14.24b-g2-3-v22-online-rules`，schema/save/replay/command=**12/8/7/7**；`CONTENT_DIGEST=fnv1a32-utf16:2ee7d9d2`、`LOOT_REPLAY_DIGEST=fnv1a32-utf16:84b3b60c`（PR #435 head cefde414 的值，以合入后 `scripts/update-content-identities.cjs --check` 为准）。录制由 `scripts/verify-v22-online-rules-epoch.cjs` 在基线 multiplayer 8715a2c1 上一次完成，证据在 `docs/evidence/v22-online-rules/`。v21 及更早的存档、回放不迁移，按严格边界拒绝；v21 及更早的 evidence/fixture 逐字节保留。
+
+本 epoch 收录下列 10-23／10-24 各节：杰斯锻炉 P-F1～F7、迅捷蟹生命值、补给回合不能打开锻造器、六费与普通单位攻击力星级倍率、强化并入准备阶段及过滤互斥、强化等级表与天才改彩、经济与阶段流程、战斗法力与暴击溢出、杰斯击飞路径、五费技能几何、锻造器单位、黑市具体装备、开局奇遇 Batch A/B、安慰剂与战斗加时、安蓓萨施法位移。这些节里写的“待 v22 统一录制”“待统一 epoch”“不能发布／不能与旧身份混跑”是当时各单的说明，现已由本节的录制取代。
+
+选择时限：强化选择并入准备阶段，2-1／3-2／4-2 该回合准备合计 50 秒（`AUGMENT_PREPARATION_MS`）；强化不再使用 `choiceMs`，早先另一分支的 48 秒作废。其他选择（独立选择阶段，如奇遇里的选择）仍用 `ROOM_TIMING_DEFAULTS.choiceMs=30_000`，`CAT_CHOICE_SEC` 可覆盖；锻造器打开后的 30 秒是规则自带的独立截止时间，不受 `choiceMs` 影响。
+
 ## 2026-10-24 杰斯的海克斯科技锻炉：准备阶段在场、可拖动（P，用户批准）
 
 14.24 技能原文是"召唤一个**可放置的**【海克斯科技锻炉】"，研究资料没写锻炉何时出现。用户 10-24 决定：锻炉在准备阶段就在棋盘上，玩家可以拖动。此前的规则是开战时才生成锻炉，位置固定在杰斯身后一格。细节为项目决定（P），沿用兹若特传送门虚空生物的"可移动准备召唤物"做法：
@@ -12,7 +20,7 @@
 | P-F6 | 有保存位置的锻炉在开战布置时先于黑玫瑰 Sion 等其他召唤物落位；没有保存位置时，布置顺序与旧版一致，旧存档和旧回放的结果不变。 |
 | P-F7 | 联机对战：快照只带上场杰斯的锻炉位置，上方座位按镜像翻转，与虚空生物相同。战斗规则不变：锻炉不攻击、不移动，杰斯施法时复活它，并以它为中心选最近的友军。 |
 
-实现：`projectG23Summons` 增加 `forgeCells`；`readItemSummons` 和 `moveItemSummon` 增加 `kind: 'forge'`，其 `itemInstanceId` 为杰斯的单位编号。客户端和服务器沿用 `moveItemSummon` 指令与 `itemSummons` 视图。PvE 开战时，保存的位置经策略快照里锻炉单位的 `summonCell` 带入战斗构造。改动影响规则身份，需要随 v22（赶不上就随 v23）纪元重录。
+实现：`projectG23Summons` 增加 `forgeCells`；`readItemSummons` 和 `moveItemSummon` 增加 `kind: 'forge'`，其 `itemInstanceId` 为杰斯的单位编号。客户端和服务器沿用 `moveItemSummon` 指令与 `itemSummons` 视图。PvE 开战时，保存的位置经策略快照里锻炉单位的 `summonCell` 带入战斗构造。改动影响规则身份，已随 v22-online-rules 录制。
 
 ## 2026-10-24 迅捷蟹生命值（P，待核实）
 
@@ -24,11 +32,11 @@
 
 ## 2026-10-23 六费攻击力星级倍率（P）
 
-## 2026-10-23 强化选择并入准备阶段、羁绊过滤与互斥、见过不再出（用户批准；待 v22 统一录制）
+## 2026-10-23 强化选择并入准备阶段、羁绊过滤与互斥、见过不再出（用户批准；已录入 v22）
 
 用户 10-23 批准三项，依据 `augments-research-2026-10-23`（14.24 map22 `AssociatedTraits`／`MutuallyExclusiveItems`、官方 14.24 主文 [P1]）：
 
-1. **并入准备阶段**：2-1／3-2／4-2 不再有独立选择阶段；三选一在准备开始时打开，该回合准备合计 **50 秒**（`AUGMENT_PREPARATION_MS`，14.24 `mPlanning 30 + BonusPlanningTimeWithArmory 20`）。选择打开期间（联机）可买卖、刷新商店、上下场、装备；准备截止仍走既有超时规则（取第一项），随后自动上场、冻结。独立选择计时 `choiceMs` 未改（另一分支改 48 秒），其余回合准备时长未改。
+1. **并入准备阶段**：2-1／3-2／4-2 不再有独立选择阶段；三选一在准备开始时打开，该回合准备合计 **50 秒**（`AUGMENT_PREPARATION_MS`，14.24 `mPlanning 30 + BonusPlanningTimeWithArmory 20`）。选择打开期间（联机）可买卖、刷新商店、上下场、装备；准备截止仍走既有超时规则（取第一项），随后自动上场、冻结。强化不再使用独立选择计时 `choiceMs`；早先另一分支把 `choiceMs` 改为 48 秒的做法已作废，`choiceMs` 仍为 30 秒，只用于其他选择（见顶部 v22 节）。其余回合准备时长见“经济与阶段流程”。
 2. **过滤与互斥**（数据驱动，规则按 apiName 写在 `content/augment-offer-rules.ts`，池中不存在的强化规则自动不生效，扩池只需补 id→apiName 一行）。
 3. **见过不再出**：展示给该玩家的每张卡（开局三张及每次刷新结果）本局不再向其提供，选中与否不论；此前只排除刷掉的。
 
@@ -44,53 +52,53 @@
 | P-A6 | 个人互斥：`MutuallyExclusiveItems`（对称）以**已拥有**为触发，例如有安慰剂不再出安慰剂+、有一费奉献不出一对4、卓尔不群与 Climb The Ladder 互斥；展示不触发，同一次三选一内不额外去重。 | 字段证明静态配置存在，触发时点未确认（报告 5.1） |
 | P-A7 | 跨玩家屏蔽列表由服务器在开节点和每次刷新时计算，逐次记入 `augmentOffers[].externalBlocks`（客户端不能提交）；单机为空。 | — |
 
-当前 66 个强化中受影响的是：组队强化 6 个（3-2／4-2 羁绊过滤）与个人互斥对；黑玫瑰、游乐场、卯足全力、底城争夺战尚不在池中，规则已就位。`removedAugmentIds` 语义改为“全部已展示”。**待 v22 统一录制**：本次不改 epoch／digest／golden 断言，内容 digest（`scripts/content-digest.ts` 尚未纳入新规则表）同样待 v22 重算。
+当前 66 个强化中受影响的是：组队强化 6 个（3-2／4-2 羁绊过滤）与个人互斥对；黑玫瑰、游乐场、卯足全力、底城争夺战尚不在池中，规则已就位。`removedAugmentIds` 语义改为“全部已展示”。**当时待 v22 统一录制，现已录入**：本次不改 epoch／digest／golden 断言，内容 digest（`scripts/content-digest.ts` 尚未纳入新规则表）已在 v22 重算。
 
-## 2026-10-23 强化等级组合表（用户批准；待 v22 统一录制）
+## 2026-10-23 强化等级组合表（用户批准；已录入 v22）
 
-来源：`/home/aiapps/workspcae/perf-1022/rules-1023/approved-1023-batch2.md`，用户 10-23 批准，项目决定 **P**（离线执行）。六费 AD＝各自一星 AD×1/1.5/2.25，正数四舍五入：沃里克 **110/165/248**、维克托 **100/150/225**、梅尔 **80/120/180**；六费 HP 不变。维克托固定 AD 与额外 AD 转法强扣除基线同步；普通 AD 的向下取整、魔像小数、fixedStarStats 与专用四星不变。覆盖下文历史六费 AD 100/180/360% 及“另定”说明，原 `threeStarBps:36000` 仅表述 HP。无新增 RNG 消耗。**待 v22 统一录制**，epoch/digest/golden 断言不改。实现、手算、实测与旧失败清单见 [六费 AD 报告](SIX_COST_AD_STAR_SCALING.md)。
+来源：`/home/aiapps/workspcae/perf-1022/rules-1023/approved-1023-batch2.md`，用户 10-23 批准，项目决定 **P**（离线执行）。六费 AD＝各自一星 AD×1/1.5/2.25，正数四舍五入：沃里克 **110/165/248**、维克托 **100/150/225**、梅尔 **80/120/180**；六费 HP 不变。维克托固定 AD 与额外 AD 转法强扣除基线同步；普通 AD 的向下取整、魔像小数、fixedStarStats 与专用四星不变。覆盖下文历史六费 AD 100/180/360% 及“另定”说明，原 `threeStarBps:36000` 仅表述 HP。无新增 RNG 消耗。**当时待 v22 统一录制，现已录入**，epoch/digest/golden 断言不改。实现、手算、实测与旧失败清单见 [六费 AD 报告](SIX_COST_AD_STAR_SCALING.md)。
 
-## 2026-10-23 经济与阶段流程（项目决定 P；待 v22 统一录制）
+## 2026-10-23 经济与阶段流程（项目决定 P；已录入 v22）
 
-来源：本地 `perf-1022/rules-1023/approved-1023-batch2.md` 第10/11/12/13/15条，用户10-23批准；本单不联网，未另宣称外部原版核验。连胜败金2–4连+1、5连+2、6+连+3；所有PvE含开局计胜负并支付连胜败金，供给不变。兼容#406延后到账：1-3/1-4/2-1准备入口基础金2/3/4，结算应收额挂在上一轮；此后5不变。准备时长1-2=6秒、1-3=15秒、1-4及其他野怪=20秒、4-6=75秒，其余含加时30秒；服务器使用同一规则查询，显式非默认调试覆盖保留。三条奇遇只清理玩家描述，无新RNG消耗，HP/XP、PvE胜利金与开局利息不变。接口与支付语义见 [MATCH合同](MATCH_CONTRACT.md)，手算与验收见 [报告](ECONOMY_FLOW_1023.md)。**待 v22 统一录制**，不改epoch/digest常量、历史fixture/golden或身份断言。
+来源：本地 `perf-1022/rules-1023/approved-1023-batch2.md` 第10/11/12/13/15条，用户10-23批准；本单不联网，未另宣称外部原版核验。连胜败金2–4连+1、5连+2、6+连+3；所有PvE含开局计胜负并支付连胜败金，供给不变。兼容#406延后到账：1-3/1-4/2-1准备入口基础金2/3/4，结算应收额挂在上一轮；此后5不变。准备时长1-2=6秒、1-3=15秒、1-4及其他野怪=20秒、4-6=75秒，其余含加时30秒；服务器使用同一规则查询，显式非默认调试覆盖保留。三条奇遇只清理玩家描述，无新RNG消耗，HP/XP、PvE胜利金与开局利息不变。接口与支付语义见 [MATCH合同](MATCH_CONTRACT.md)，手算与验收见 [报告](ECONOMY_FLOW_1023.md)。**当时待 v22 统一录制，现已录入**，不改epoch/digest常量、历史fixture/golden或身份断言。
 
-## 2026-10-23 战斗法力与暴击溢出（第1–4条，待 v22 统一录制）
+## 2026-10-23 战斗法力与暴击溢出（第1–4条，已录入 v22）
 
 来源：[用户10-23批准的第二批规则](../../perf-1022/rules-1023/approved-1023-batch2.md)第1–4条。本单离线执行；第3条14.15起保留非受伤溢出的历史依据沿批准材料，第4条归档 `raw/map22.bin.json.gz` 的 `/{310fd2ff}/constants/{df085b93}/CritConversion.mValue=1.5`，按批准的“超100%部分×0.5”执行。**P：42.50单包上限、百分之一累计/单位tick末取整、精确20tick锁蓝及重定向分摊等离散执行口径**；不将批准材料未提供的服务端脚本细节称为原版直接证据。
 
-受伤法力为每包 `min(4250, 减伤前伤害 + 3×减伤后伤害)` 百分之一法力；减伤前含暴击/增伤，减伤后含护盾、原包延迟扣血量。单位同tick合计并带上余数后取整，余数进入下一tick；受伤回蓝不产生整数溢出。施法开始扣最大法力、保留非受伤溢出，锁蓝至 `tick+20`（含施法tick、不含截止tick）；绑定本次施法的退款仍走已有特例。阿木木零蓝条、维克托混沌能量与外部法力转AP保持；减伤叠加（第5条）不动。不增RNG调用。实现、手算向量、恢复/回放与旧测试失败清单见 [本单报告](COMBAT_MANA_RULES.md)。**待 v22 统一录制**；不改epoch/digest常量与历史golden，候选不可与旧身份混跑。
+受伤法力为每包 `min(4250, 减伤前伤害 + 3×减伤后伤害)` 百分之一法力；减伤前含暴击/增伤，减伤后含护盾、原包延迟扣血量。单位同tick合计并带上余数后取整，余数进入下一tick；受伤回蓝不产生整数溢出。施法开始扣最大法力、保留非受伤溢出，锁蓝至 `tick+20`（含施法tick、不含截止tick）；绑定本次施法的退款仍走已有特例。阿木木零蓝条、维克托混沌能量与外部法力转AP保持；减伤叠加（第5条）不动。不增RNG调用。实现、手算向量、恢复/回放与旧测试失败清单见 [本单报告](COMBAT_MANA_RULES.md)。**当时待 v22 统一录制，现已录入**；不改epoch/digest常量与历史golden，候选不可与旧身份混跑。
 
-## 2026-10-23 攻击力星级倍率（用户批准；待 v22 统一录制）
+## 2026-10-23 攻击力星级倍率（用户批准；已录入 v22）
 
-普通单位 HP 保持 **100/180/324%**，AD 从共用 HP 表改为独立 **100/150/225%**，均从一星基础值乘倍率后向下取整。来源：**TFT 通用规则，用户 10-23 批准；14.24 源数据只有一星属性**，本次按要求离线执行。结算与规则元数据共用 `content/unit-star-scaling.ts`；展示、ability-display 和普通家人升星沿属性查询，bot 不使用 AD 倍率。六费原有 **100/180/360%**、维克托固定 AD/额外 AD 转法强基线、魔像独立 AD 表、fixedStarStats 与专用四星值不变，六费是否调整由用户另定。六费逐项 AD、文件行号、独立手算与验收见 [AD 星级报告](AD_STAR_SCALING.md)。**待 v22 统一录制**，不修改 epoch/digest 常量或历史 golden 断言。
+普通单位 HP 保持 **100/180/324%**，AD 从共用 HP 表改为独立 **100/150/225%**，均从一星基础值乘倍率后向下取整。来源：**TFT 通用规则，用户 10-23 批准；14.24 源数据只有一星属性**，本次按要求离线执行。结算与规则元数据共用 `content/unit-star-scaling.ts`；展示、ability-display 和普通家人升星沿属性查询，bot 不使用 AD 倍率。六费原有 **100/180/360%**、维克托固定 AD/额外 AD 转法强基线、魔像独立 AD 表、fixedStarStats 与专用四星值不变，六费是否调整由用户另定。六费逐项 AD、文件行号、独立手算与验收见 [AD 星级报告](AD_STAR_SCALING.md)。**当时待 v22 统一录制，现已录入**，不修改 epoch/digest 常量或历史 golden 断言。
 
 ## 2026-10-24 杰斯击飞路径：P（项目决定，用户 10-23 批准“落点→原位路径两侧 1 格”，落点细节为执行端默认）
 
-目标被击飞到其身后（远离杰斯方向）3 格的飞门处（14.24 InitialGateDistanceBehindTheTarget=480≈2.7 格，取 3；越出棋盘时向目标回退到棋盘内），再从该处飞回原位；飞行路径上及两侧 1 格内的其他敌人各受一次 PercentADSecondaryDamage。实现：src/simulation/combat-g2-3.ts jayceGate。待 v22 统一录制。
+目标被击飞到其身后（远离杰斯方向）3 格的飞门处（14.24 InitialGateDistanceBehindTheTarget=480≈2.7 格，取 3；越出棋盘时向目标回退到棋盘内），再从该处飞回原位；飞行路径上及两侧 1 格内的其他敌人各受一次 PercentADSecondaryDamage。实现：src/simulation/combat-g2-3.ts jayceGate。已录入 v22。
 
-## 2026-10-23 五费技能几何（P，待 v22 统一录制）
+## 2026-10-23 五费技能几何（P，已录入 v22）
 
-来源：用户 10-23 批准的 `perf-1022/rules-1023/approved-1023-batch2.md`「五费/六费」及离线补充调研 `champion-skills-research-2026-10-23/champion-skills-report.zh-CN.md` 第2–5节。**P**：金克丝三星电击采用施法者朝目标的14格长×1格全宽穿透线；莫德凯撒枚举六格向8×3线，按人数→覆盖当前目标→方向编号择优；玛尔扎哈每次合计五层感染平分，余数按稳定命中顺序。三项已完成，数值表不改。杰斯“落点返回原位、路径两侧1格、每敌一次”仍缺落点定义，已询问用户，保留旧实现，不能标为完成。手算、实现行号、恢复/切片/回放、11项原HEAD失败清单见[本单报告](FIVE_COST_SKILL_GEOMETRY.md)。**待 v22 统一录制**，本单不改epoch/digest/golden或旧断言；本节覆盖旧报告中金克丝三星/莫德凯撒暂停状态。
+来源：用户 10-23 批准的 `perf-1022/rules-1023/approved-1023-batch2.md`「五费/六费」及离线补充调研 `champion-skills-research-2026-10-23/champion-skills-report.zh-CN.md` 第2–5节。**P**：金克丝三星电击采用施法者朝目标的14格长×1格全宽穿透线；莫德凯撒枚举六格向8×3线，按人数→覆盖当前目标→方向编号择优；玛尔扎哈每次合计五层感染平分，余数按稳定命中顺序。三项已完成，数值表不改。杰斯“落点返回原位、路径两侧1格、每敌一次”仍缺落点定义，已询问用户，保留旧实现，不能标为完成。手算、实现行号、恢复/切片/回放、11项原HEAD失败清单见[本单报告](FIVE_COST_SKILL_GEOMETRY.md)。**当时待 v22 统一录制，现已录入**，本单不改epoch/digest/golden或旧断言；本节覆盖旧报告中金克丝三星/莫德凯撒暂停状态。
 
-## 2026-10-23 强化等级表、天才档位与选择时限（第 6–8 条；待 v22 统一录制）
+## 2026-10-23 强化等级表、天才档位与选择时限（第 6–8 条；已录入 v22）
 
 依据：用户 10-23 批准的本地 `perf-1022/rules-1023/approved-1023-batch2.md` 第 6、7、8 条，仅做本单三项。等级表来源为本地 `augments-research-2026-10-23/data/odds-all27.csv` / 14.24 客户端 `TFT9_AugmentArmoryConfiguration_Table`（原版数据；`RandomizeProbabilityTableGlobally=true`），替换先前 Wiki V12.9 的 16 组合/101。保留原整数权重：18 个非零组合/109，9 个零权重组合不抽出；全桌共用，专用 `augment-tier-sequence-v1` 首词重推、不推进其他 RNG。范德尔全金、艾克全彩、黑默丁格仅首/末节点彩的既有覆盖保留，未指定位置不重抽。
 
-`geniuses`（羁绊：天才）改彩；服务器默认 `choiceMs` 从 30000 改为 48000 毫秒，沿已有统一选择窗口，保留显式配置覆盖。第 7、8 条未另给原版独立依据，标为**项目决定 P（用户 10-23 批准）**。天才其他效果和其他数值不变。本地演示层的 30 秒显式覆盖留 Claude 同步。完整有序权重、签名及恢复语义见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 首节，向量、验证及失败清单见 [简报](AUGMENT_TIER_TABLE_REPORT.md)。**待 v22 统一录制**：本单不录 epoch、不改 digest 常量/golden/历史断言；本轮全程离线。
+`geniuses`（羁绊：天才）改彩；第 8 条原为服务器默认 `choiceMs` 从 30000 改为 48000 毫秒；强化并入 50 秒准备阶段后，48 秒作废，`choiceMs` 回到 30000，只用于其他选择（见顶部 v22 节）。第 7、8 条未另给原版独立依据，标为**项目决定 P（用户 10-23 批准）**。天才其他效果和其他数值不变。本地演示层的 `choiceMs:30_000` 与服务器默认一致，无需同步。完整有序权重、签名及恢复语义见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 首节，向量、验证及失败清单见 [简报](AUGMENT_TIER_TABLE_REPORT.md)。**当时待 v22 统一录制，现已录入**：本单不录 epoch、不改 digest 常量/golden/历史断言；本轮全程离线。
 
-## 2026-10-23 锻造器单位覆盖合同（待 v22 统一录制）
+## 2026-10-23 锻造器单位覆盖合同（已录入 v22）
 
 本节覆盖下文以及 Batch A/B 报告中锻造器“自动弹窗/终局自动选择”的旧语义。四种 `TFT_ArmoryKeyCompleted/Component/Ornn/Support` 为备战席单位：不占人口、不可上阵/合星/装备、可挪位并跨回合保存。满席锻造器保留在未领取法球，其他条目可部分领取。蔚给 2 基础、杰斯给 1 神器；法球、史诗奖励、订阅/梅尔/巨蟹和 G2-3 forge atom 均改发单位。光明遗物 5 选 1、便携锻炉 4 选 1 仍立即选择。
 
 新增 `openAnvil(state, unitId): MatchCommandResult`，共享/线上命令 `{type:'openAnvil',unitId}`；出售锻造器等价打开且不加金币。新 `pendingChoice.payload={kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:offers[0]}`；仍用 choose 和 timeoutChoice，4 选 1，保留原采样器/种子流，超时首项。本人 `preparation.units[].anvil` 提供名称、出售/悬停文字及时间；公开观战不暴露选项。命令失败枚举、字段、发放接口、收据/恢复、Claude 计时器接入点见 [锻造器报告](ANVIL_UNITS.md)。规则不使用墙钟，打开后的独立 30 秒计时尚待 Claude 接线，不能复用准备期剩余秒数。
 
-4-7 野怪回合固定额外给 1 个基础装备锻造器（项目决定 **P**，用户 2026-10-23 批准）；原有 2–4 个散件掉落照常，不替换、不减少。固定 forge payload 追加到冻结计划首个法球末尾，不新增 RNG 消耗；领取入备战席，满席留球，沿用原收据、恢复和回放路径，单机/联机同源。14.24 原版数据未找到 4-7 必出散件锻造器的证据，仅有一张未被引用的 `EpicNPCLootComponentAnvil` 表，不能据此标为原版确认。候选规则/content 身份已变更，schema12/save8/replay7/command7；digest 随 manifest 计算，历史 epoch/golden 不改，**待 v22 统一录制**。
+4-7 野怪回合固定额外给 1 个基础装备锻造器（项目决定 **P**，用户 2026-10-23 批准）；原有 2–4 个散件掉落照常，不替换、不减少。固定 forge payload 追加到冻结计划首个法球末尾，不新增 RNG 消耗；领取入备战席，满席留球，沿用原收据、恢复和回放路径，单机/联机同源。14.24 原版数据未找到 4-7 必出散件锻造器的证据，仅有一张未被引用的 `EpicNPCLootComponentAnvil` 表，不能据此标为原版确认。候选规则/content 身份已变更，schema12/save8/replay7/command7；digest 随 manifest 计算，历史 epoch/golden 不改，**当时待 v22 统一录制，现已录入**。
 
-## 2026-10-23 黑市报价具体装备（待 v22 统一录制）
+## 2026-10-23 黑市报价具体装备（已录入 v22）
 
-用户 10-23 批准“改”：黑市开市即用既有奖励 atom 派生流确定包内随机档次装备，存进 offer 的 `concreteItems[{atomId,definitionId}]`；私有视图可读，拿走发同一批且不再抽装备。抽包权重、单包抽样、市场/王冠及其他流消耗、保留微光与复制器/锻造器语义不变。恢复/回放从种子和经济收据重建，篡改拒绝。此为用户批准的项目行为调整，本单离线，未宣称补充原版证据。契约见 [MATCH_CONTRACT](MATCH_CONTRACT.md)，实现与验收见 [报告](BLACK_MARKET_CONCRETE_OFFERS.md)；epoch/digest/golden **待 v22 统一录制**，不改单独断言。
+用户 10-23 批准“改”：黑市开市即用既有奖励 atom 派生流确定包内随机档次装备，存进 offer 的 `concreteItems[{atomId,definitionId}]`；私有视图可读，拿走发同一批且不再抽装备。抽包权重、单包抽样、市场/王冠及其他流消耗、保留微光与复制器/锻造器语义不变。恢复/回放从种子和经济收据重建，篡改拒绝。此为用户批准的项目行为调整，本单离线，未宣称补充原版证据。契约见 [MATCH_CONTRACT](MATCH_CONTRACT.md)，实现与验收见 [报告](BLACK_MARKET_CONCRETE_OFFERS.md)；epoch/digest/golden **当时待 v22 统一录制，现已录入**，不改单独断言。
 
-## 2026-10-23 Batch A：梅尔、维克托、两个订阅（用户批准；待统一 epoch）
+## 2026-10-23 Batch A：梅尔、维克托、两个订阅（用户批准；已录入 v22）
 
 本节覆盖下文历史“梅尔只观察、订阅/维克托关闭”和六费 `20 + 4×回合差 + Lv10 160 Bps` 描述。依据只读 `perf-1022/encounters-decisions.html` 的 **M1–M4、V1–V3、S1–S7「我的推荐」**及补研第1/2/4/7节、配套JSON；没有联网重查，也没有复制原始资料入库。实现与验收见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md)。
 
@@ -113,7 +121,7 @@
 
 按用户要求不更新identity常量、不录epoch、不改历史golden/fixture/旧测试断言。当前开发身份与新规则不等价，禁止新旧状态混用；等PR #410合并后统一版本/digest/epoch。
 
-## 2026-10-23 开局奇遇 Batch B（用户批准，待统一 epoch）
+## 2026-10-23 开局奇遇 Batch B（用户批准，已录入 v22）
 
 本节覆盖下文魔像/沃里克/两种蟹仍关闭的历史描述；四项均已启用。只读决定表 `perf-1022/encounters-decisions.html` 的 **A1–A5、W1–W4、J1–J5「我的推荐」**及补充资料第3/5/6节，不联网、不复制原始资料。实现、签名、向量、旧测试失败和表现层交接见 [Batch B 报告](OPENING_ENCOUNTERS_BATCH_B_REPORT.md)。
 
@@ -126,7 +134,7 @@
 
 坐标转换、战后统一发放、基础奖励载体顺序映射、确定性空邻格选择属于项目执行适配；未伪称原版脚本。巨蟹的基础伤害仍接受现有抗性、增减伤与父分支加时规则。普通/银/金箱子池沿已有PvE政策，未另编数。本单不录epoch、不改digest常量/历史golden；需在 #410 合入后与另一批奇遇合并统一录制，当前候选不能发布或与旧版本混跑。
 
-## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
+## 2026-10-23 安慰剂与战斗加时（项目决定 P，已录入 v22）
 
 用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
 
@@ -136,15 +144,15 @@
 
 本节覆盖下文历史60秒/1200tick及固定安慰剂金币描述。按用户要求不录epoch、不更新版本/digest常量或历史golden；待PR #410合并后统一切换。这是开发候选，当前身份不得用于新旧混跑或发布。
 
-## 2026-10-23 安蓓萨施法位移：P（项目决定，用户 10-23 已批准，待 v22 统一录制）
+## 2026-10-23 安蓓萨施法位移：P（项目决定，用户 10-23 已批准，已录入 v22）
 
 按本单项目决定先行实现：锁链到目标身边距自己最近的可达空格，同距按普通移动 BFS 邻居顺序；已与目标相邻时原地不动，不发位移事件；不相邻且无可达空格时也原地。拳击砸击 HP 结算后向远离目标且朝己方起始半场的邻格后撤 1 格，该格被占/保留或越界则原地。相邻时当前格就是最近落点，不另选其他空邻格。复用 `movement` 并加 `reason:'ambessa-chain'|'ambessa-fist-retreat'`，进入账本、回放和双方流式投影。**P，不是 14.24b 原版距离数值**：原档只有行为文字，没有距离参数，见 [来源核查](AMBESSA_DASH_EVIDENCE.md)。详细时序、平局口径、独立向量、测试与 Claude 接口见 [实施说明](AMBESSA_DASH.md)。
 
 回退时单独撤销安蓓萨两分支的位移接线和伤害后的后撤调用，恢复原伤害/短晕分支；删除独立 helper/测试及可选事件字段，具体逐块步骤见实施说明“独立回退”。不影响其他规则或历史证据。
 
-## 2026-10-23 PR9：当前 epoch 与已批准项目约定
+## 2026-10-23 PR9：v21 epoch 与已批准项目约定（历史，当前 epoch 见顶部 v22 节）
 
-当前 epoch 为 **v21-opening-encounters**，父 **v20-black-market**。rules/content 身份分别为 `s13-g2-3-v21-opening-encounters-battle-equipment` / `s13-14.24b-g2-3-v21-opening-encounters-battle-equipment`，schema/save/replay/command=**12/8/6/6**、NET6。名称涵盖开局奇遇 PR1/2/4/5/6/8、战斗中装备第2阶段及收入延后；不只表示奇遇。当前录制、digest、历史字节证据及验收见 [PR9 报告](OPENING_ENCOUNTERS_PR9_REPORT.md)。下文旧 epoch 为历史记录，不覆盖本节。本节随 PR9 合入 multiplayer 生效；PR9 发现的战中原位合成回放槽位问题已修复（src/replay/history.ts，回归测试 tests/battle-history-equip-slot.test.ts）。
+当时（PR9）的 epoch 为 **v21-opening-encounters**，已被 v22-online-rules 取代；父 **v20-black-market**。rules/content 身份分别为 `s13-g2-3-v21-opening-encounters-battle-equipment` / `s13-14.24b-g2-3-v21-opening-encounters-battle-equipment`，schema/save/replay/command=**12/8/6/6**、NET6。名称涵盖开局奇遇 PR1/2/4/5/6/8、战斗中装备第2阶段及收入延后；不只表示奇遇。当前录制、digest、历史字节证据及验收见 [PR9 报告](OPENING_ENCOUNTERS_PR9_REPORT.md)。下文旧 epoch 为历史记录，不覆盖本节。本节随 PR9 合入 multiplayer 生效；PR9 发现的战中原位合成回放槽位问题已修复（src/replay/history.ts，回归测试 tests/battle-history-equip-slot.test.ts）。
 
 - **收入延后（项目约定）**：最终战斗权威余额（含战中交易）加即付 PvP 胜利金币作为利息基数；基础金、利息、连胜败金在结算冻结应收额，到下一准备阶段入口（含前置选择）到账。自然经验仍在结算；致死回合及没有下一准备入口的单人终局不补发。重复推进/恢复不重发；可花余额只读 `state.gold`，`RoundResult.goldAfter` 是收入方案值。依据 [试玩规则报告](PLAYTEST_1022B_RULES_REPORT.md)。
 - **战斗中装备（项目约定）**：合法装备变更在下一拍生效；本场羁绊按开战时冻结。战中纹章只加持有者自身属性，不重算本场羁绊人数或门槛。完整输入顺序、恢复范围和失败原子性见 [第2阶段合同](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。

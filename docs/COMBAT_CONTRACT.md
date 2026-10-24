@@ -267,11 +267,11 @@ createCombatReplayRecorder(initialState: CombatState,
 本阶段没有 applyBattleEquipment：输入源返回空批次时无副作用；非空批次在 stepCombat 前抛 `battle-input-unsupported`，不会推进该 tick；外部 BattleResult 的结算与回放也拒绝非空/畸形 inputLog，防止静默丢弃日志。
 既有单人 Match 的成功装备操作继续写 `BattleRecord.equipmentCommands`（共享类型 `BattleEquipmentCommand`），按原游标 tick 重演并与资源账本逐项认证；日志缺失、伪造或时序不符仍拒绝恢复。
 
-## 安蓓萨施法位移（P，2026-10-23，待统一 v22）
+## 安蓓萨施法位移（P，2026-10-23，已录入 v22）
 
-沿用奇数锁链/偶数拳击。锁链伤害前移到目标最近可达空邻格（不含当前占用格），距离平局沿普通 BFS；拳击在本 tick HP/存活屏障后向己方半场且远离施法时目标坐标后撤 1 格，几何首选格不可用则原地。复用占格、移动限制及本 tick 保留格；不增加 RNG 调用，不改伤害/短晕/耗蓝。精确口径、独立向量和回退见 [AMBESSA_DASH](AMBESSA_DASH.md)，原档缺距离来源见 [证据](AMBESSA_DASH_EVIDENCE.md)。
+沿用奇数锁链/偶数拳击。锁链伤害前移到目标身边距自己最近的可达空邻格，距离平局沿普通 BFS；已与目标相邻时原地不动（当前格就是最近落点），不发位移事件；不相邻且无可达空格时也原地；拳击在本 tick HP/存活屏障后向己方半场且远离施法时目标坐标后撤 1 格，几何首选格不可用则原地。复用占格、移动限制及本 tick 保留格；不增加 RNG 调用，不改伤害/短晕/耗蓝。精确口径、独立向量和回退见 [AMBESSA_DASH](AMBESSA_DASH.md)，原档缺距离来源见 [证据](AMBESSA_DASH_EVIDENCE.md)。
 
-既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，尚未录 epoch，不应以旧身份发布。
+既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，已随 v22-online-rules 录制。
 
 ## 单场初始化协作切片（2026-10-23；不变更 epoch）
 

@@ -8,11 +8,11 @@
 | --- | --- |
 | `src/simulation/content/augment-policy.ts:8`、`:29` | 按 CSV 顺序替换为 14.24 客户端 18 个非零组合，保留原整数权重/109；9 个零权重组合不入基础表。原版来源 `TFT9_AugmentArmoryConfiguration_Table`，`RandomizeProbabilityTableGlobally=true`。 |
 | `src/simulation/content/augment-policy.ts:86` | `geniuses`（羁绊：天才）金→彩；能力、赠卡及其他强化档位不变。 |
-| `src/server/room/room.ts:99` | `ROOM_TIMING_DEFAULTS.choiceMs=48_000`，沿现有统一选择阶段；保留环境变量/显式时限覆盖。 |
+| `src/server/room/room.ts:107` | 本单当时把 `ROOM_TIMING_DEFAULTS.choiceMs` 改为 48_000；v22 集成时作废：强化并入 50 秒准备阶段（`AUGMENT_PREPARATION_MS`，`room.ts:106`），`choiceMs` 回到 30_000，只用于其他选择，保留环境变量/显式时限覆盖。 |
 | `tests/fixtures/m5/oracle.g2.cjs:51`、`:77` | 独立 oracle 同步天才档位及客户端组合表，不导入生产配置。历史录制未改。 |
 | `docs/MATCH_CONTRACT.md:1`、`docs/S13_RULES_GAP.md:1` | 完整权重、来源/P、RNG/恢复及待 v22 统一录制；发布配置示例与 V2 时限说明一并同步。战斗合同无变化。 |
 
-本地数据：`/home/aiapps/workspace/augments-research-2026-10-23/data/odds-all27.csv`，SHA-256 `d081f1cc2ea60ed6935b707d03d54ed88267fa3a64fc63913c10923b60f2d62e`。离线逐行比对生产表与 CSV：18/18 相同，非零权重合计 109。等级表为原版数据；天才改彩与48秒未另给独立原版依据，按用户批准记项目决定 **P**。
+本地数据：`/home/aiapps/workspace/augments-research-2026-10-23/data/odds-all27.csv`，SHA-256 `d081f1cc2ea60ed6935b707d03d54ed88267fa3a64fc63913c10923b60f2d62e`。离线逐行比对生产表与 CSV：18/18 相同，非零权重合计 109。等级表为原版数据；天才改彩与（已作废的）48秒未另给独立原版依据，按用户批准记项目决定 **P**。
 
 沿用原 `augment-tier-sequence-v1`、FNV-1a32、根种子 XOR 与 `lcg32-v1` 首词；仅模数/累计区间变更，不新增 RNG 消耗或存档字段。单机根为 Match.seed，全桌根为 SharedPoolState.seed；恢复按不可变根重推。保留范德尔全金、艾克全彩、黑默丁格前奏仅 2-1 彩/终章仅 4-2 彩，未指定位置不重抽、不重归一化。奇遇覆盖后的组合不受基础表零权重限制。
 
@@ -53,6 +53,6 @@
 
 ## 集成边界
 
-- **待 v22 统一录制**：未改 rules/content/schema/save/replay/command 版本、digest 常量、epoch、golden 或旧测试断言，当前候选不可与旧规则混跑/发布。
-- `src/rendering/online/local-room-options.ts:20` 仍显式 `choiceMs:30_000`，位于 Claude 界面目录，未越权修改；Claude 需同步本地演示默认值，真服务器默认不受此覆盖影响。
+- **当时待 v22 统一录制，现已录入 v22-online-rules**：未改 rules/content/schema/save/replay/command 版本、digest 常量、epoch、golden 或旧测试断言，当前候选不可与旧规则混跑/发布。
+- `src/rendering/online/local-room-options.ts:20` 显式 `choiceMs:30_000`；v22 服务器默认也是 30 秒（48 秒作废），无需同步。
 - 无界面、其他玩法数值、`.github/CI`、素材改动；无新运行时辅助模块，仅替换原配置及一处服务器默认值。
