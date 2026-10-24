@@ -3,7 +3,8 @@ import { expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
 import { advanceG23Economy, type G23BattleFacts } from '../src/simulation/g2-3-economy';
-import { AUGMENT_BATCH3 } from '../src/simulation/content/augment-pool-batch3';
+import { AUGMENT_BATCH3, AUGMENT_BATCH3_NODE_BANS } from '../src/simulation/content/augment-pool-batch3';
+import { AUGMENT_OFFER_RULES } from '../src/simulation/content/augment-offer-rules';
 import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold, pickLootTable, lootSpecs } from '../src/simulation/augment-pool-batch3-progress';
 import { batch1GiftPlan, drainBatch1Gifts, validateBatch1Gifts, batch1AnvilSpecification } from '../src/simulation/augment-pool-grants';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
@@ -11,11 +12,11 @@ import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import type { MatchState } from '../src/simulation/match-types';
-import { rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit, buyUnit, buyXp, sellUnit, equipItem } from '../src/simulation/match';
+import { rerollAugment, rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit, buyUnit, buyXp, sellUnit, equipItem } from '../src/simulation/match';
 import { planDeferredUpgrades } from '../src/simulation/upgrades';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
-import { drainBatch3RoundEntry, drainBatch3Forming, formingTotals, magicRollDice } from '../src/simulation/augment-pool-batch3-progress';
-import { magicRollKind } from '../src/simulation/content/augment-pool-batch3';
+import { drainBatch3RoundEntry, drainBatch3Forming, formingTotals, magicRollDice, outcomeAcquisitionXp } from '../src/simulation/augment-pool-batch3-progress';
+import { magicRollKind, callToChaosOutcome, CALL_TO_CHAOS_OUTCOMES } from '../src/simulation/content/augment-pool-batch3';
 import { g23BattleFacts } from '../src/simulation/g2-3-settlement';
 import { validateG23BattleFacts } from '../src/simulation/g2-3-economy';
 import { selectPlayerBaseDamage } from '../src/simulation/match-rules';
@@ -55,9 +56,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the forty-eight batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the forty-nine batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['all-out','an-exalted-adventure','bad-luck-protection','blade-dance','blazing-soul-i','blazing-soul-ii','blood-pact','building-a-collection-iii','corrosion','dark-alley-dealings','dummify','eye-for-an-eye','eye-for-an-eye-plus','field-medic','flexible','gold-for-dummies','golemify','latent-forge','living-forge','magic-roll','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','savage-revenge','scapegoat','shimmerscale-essence','shocking-troll','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','warpath','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['all-out','an-exalted-adventure','bad-luck-protection','blade-dance','blazing-soul-i','blazing-soul-ii','blood-pact','building-a-collection-iii','call-to-chaos','corrosion','dark-alley-dealings','dummify','eye-for-an-eye','eye-for-an-eye-plus','field-medic','flexible','gold-for-dummies','golemify','latent-forge','living-forge','magic-roll','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','savage-revenge','scapegoat','shimmerscale-essence','shocking-troll','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','warpath','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -608,11 +609,14 @@ it.each([['spoils-of-war-i',1],['spoils-of-war-ii',2],['spoils-of-war-iii',3]] a
  expect(()=>validateBatch3Gold(forged)).toThrow();
 });
 
+/** A public offer of `id` at its first allowed augment node (14.24 stage tags); later nodes also use the free card rerolls. */
 function publicPick(id:string,maxSeed=6000):MatchState {
+ const bans=AUGMENT_BATCH3_NODE_BANS[AUGMENT_BATCH3[id].apiName]??[],node=(['2-1','3-2','4-2'] as const).find(n=>!bans.includes(n))!;
  for(let seed=0;seed<maxSeed;seed++){
-  if(!firstOffers(seed).includes(id))continue;
-  let s:MatchState;try{s=reachRound('2-1',false,seed);}catch{continue;}
-  const c=s.pendingChoice!;if(!c.offers.includes(id))continue;
+  if(node==='2-1'&&!firstOffers(seed).includes(id))continue;
+  let s:MatchState;try{s=reachRound(node,false,seed);}catch{continue;}
+  for(let slot=0;node!=='2-1'&&slot<3&&s.pendingChoice?.kind==='augment'&&!s.pendingChoice.offers.includes(id);slot++){const c=s.pendingChoice,r=rerollAugment(s,c.choiceId,c.generation,slot);if(r.ok)s=r.state;}
+  const c=s.pendingChoice;if(c?.kind!=='augment'||!c.offers.includes(id))continue;
   // Field a second champion (bought publicly) so the removal covers board and bench.
   for(let slot=0;slot<s.shop.slots.length;slot++){const r=buyUnit(s,slot,s.shop.generation) as any;if(r.ok){s=r.state;break;}}
   return s;
@@ -752,3 +756,56 @@ it('Magic Roll public pick: the dice survive restore and edited dice are rejecte
  const shot=snapshotForBattle(s,'owner');expect(restorePlayerBattleSnapshot(JSON.stringify(shot))).toEqual(shot);
  const bad=structuredClone(shot) as any;bad.augmentProgress.magicRoll=[7,1,1];expect(()=>restorePlayerBattleSnapshot(JSON.stringify(bad))).toThrow();
 });
+
+it('every batch-3 row carries its 14.24 stage tags as offer node bans', ()=>{
+ const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;item_tags_raw:string[]}[];
+ const tags:Record<string,string>={'{d02ae323}':'2-1','{d12ae4b6}':'3-2','{d22ae649}':'4-2'};
+ for(const row of Object.values(AUGMENT_BATCH3)){
+  const bans=research.find(r=>r.apiName===row.apiName)!.item_tags_raw.flatMap(t=>tags[t]?[tags[t]]:[]).sort();
+  expect([row.apiName,[...(AUGMENT_BATCH3_NODE_BANS[row.apiName]??[])]]).toEqual([row.apiName,bans]);
+  expect([row.apiName,[...((AUGMENT_OFFER_RULES.nodeBans as Record<string,readonly string[]>)[row.apiName]??[])]]).toEqual([row.apiName,bans]);
+ }
+});
+
+it('Call to Chaos: ten equal outcomes on a seat/choice stream, each granting its S13 reward with 14.24 counts', ()=>{
+ const seen=new Map<string,MatchState>();
+ for(let seed=0;seed<600&&seen.size<10;seed++){
+  const o=callToChaosOutcome({seed},{choiceId:'test',definitionId:'call-to-chaos'});
+  if(!seen.has(o))seen.set(o,drainBatch1Gifts({...createMatch(seed),gold:0,augments:[{definitionId:'call-to-chaos',choiceId:'test',acquiredRound:1}]}));
+ }
+ expect([...seen.keys()].sort()).toEqual([...CALL_TO_CHAOS_OUTCOMES].sort());
+ // Uniform: the 10 outcomes split 5000 seeds evenly within sampling noise.
+ const counts:Record<string,number>={};for(let seed=0;seed<5000;seed++){const o=callToChaosOutcome({seed},{choiceId:'c',definitionId:'call-to-chaos'});counts[o]=(counts[o]??0)+1;}
+ for(const n of Object.values(counts))expect(Math.abs(n-500)).toBeLessThan(80);
+ const gold=(s:MatchState)=>s.seatMechanics!.receipts.filter(r=>r.kind==='gold').map(r=>(r as any).amount);
+ const items=(s:MatchState)=>s.items.map(i=>i.definitionId).sort();
+ expect(gold(seen.get('gold')!)).toEqual([58]);
+ const three=seen.get('three-star')!;expect(gold(three)).toEqual([20]);
+ expect(three.preparation.units.filter(u=>u.team==='player'&&u.starLevel===3).map(u=>UNIT_DEFINITIONS[u.definitionId].cost)).toEqual([3]);
+ for(const [o,id] of [['hullbreakers','TFT9_Item_OrnnHullbreaker'],['horizon-focus','TFT9_Item_OrnnHorizonFocus'],['thiefs-gloves','thiefs-gloves']] as const){
+  const s=seen.get(o)!;expect(items(s).filter(d=>d===id)).toHaveLength(3);expect(s.consumables.map(c=>c.definitionId)).toContain('magnetic-remover');
+ }
+ for(const [o,id] of [['solari-dummy','TFT_Item_LocketOfTheIronSolari'],['zeke-dummy','TFT_Item_ZekesHerald']] as const){
+  const s=seen.get(o)!,dummy=s.preparation.units.find(u=>u.definitionId==='training-dummy')!;
+  expect(s.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===dummy.id).map(i=>i.definitionId)).toEqual([id,id]);
+  expect(()=>validateBatch1Gifts(s)).not.toThrow();
+  const detached=structuredClone(s) as any;detached.items.find((i:any)=>i.definitionId===id).location={kind:'inventory'};expect(()=>validateBatch1Gifts(detached)).toThrow();
+ }
+ expect(seen.get('emblems')!.items.filter(i=>i.definitionId in EMBLEM_ITEMS)).toHaveLength(5);
+ const rerolls=seen.get('rerolls')!;expect(freeRerollsGranted(rerolls)).toBe(40);
+ expect(freeRerollsGranted({...seen.get('gold')!,round:30})).toBe(0);
+ const xp=seen.get('xp')!;expect(outcomeAcquisitionXp(xp,xp.augments[0])).toBe(64);
+ expect(outcomeAcquisitionXp(seen.get('gold')!,seen.get('gold')!.augments[0])).toBe(0);
+});
+
+it('Call to Chaos public pick at 4-2: the outcome is granted once and the save restores (XP branch through the acquisition XP chain)', ()=>{
+ const open=publicPick('call-to-chaos',400),c=open.pendingChoice!;
+ const s=accept(selectChoice(open,c.choiceId,c.generation,'call-to-chaos') as any).state as MatchState,a=s.augments.at(-1)!;
+ const o=callToChaosOutcome(s,a);
+ expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ if(o==='xp')expect(s.xp+s.level*1000).not.toBe(open.xp+open.level*1000);
+ // Forging another outcome's reward is rejected: an extra 58-gold receipt has no plan behind it.
+ const forged=structuredClone(s) as any;
+ forged.seatMechanics.receipts.push({kind:'gold',receiptId:JSON.stringify(['augment-pool-batch3',a.choiceId,9,9]),source:'augment-pool-batch3',amount:58,round:s.round});
+ forged.gold+=58;expect(()=>restoreMatch(serializeMatch(forged))).toThrow();
+},120_000);

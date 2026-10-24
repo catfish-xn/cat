@@ -2,6 +2,7 @@ import { freezeContent } from './freeze';
 import type { ChoiceDefinition } from '../strategy-types';
 import type { AugmentGiftSpec } from '../augment-gift-plan';
 import { TOWER_DEFENSE_SPELL } from './batch3-summons';
+import { nextRandom } from '../rng';
 
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
@@ -1438,6 +1439,37 @@ export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent
     ]
    }
   ]
+ },
+ "call-to-chaos": {
+  "apiName": "TFT11_Augment_Calltochaos",
+  "name": "混沌召唤",
+  "tier": "prismatic",
+  "description": "获得1个强大的随机奖励。\n\n奖励：〔对局动态值〕",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": 58.0,
+    "NumEmblems": 5.0,
+    "Rerolls": 40.0,
+    "XP": 64.0,
+    "numtg": 3.0,
+    "{5edfa63d}": 20.0,
+    "{8c58ac06}": 3.0,
+    "{8f15cad2}": 3.0
+   },
+   "description_en_us": "Gain a powerful and random reward.\n\nReward: 〔对局动态值〕"
+  },
+  "gifts": [],
+  "outcome": "call-to-chaos",
+  "schedules": [
+   {
+    "counter": "outcome",
+    "every": 1,
+    "repeat": false,
+    "gifts": []
+   }
+  ]
  }
 });
 export type MagicRollKind='egg'|'high-triple'|'low-triple'|'health'|'units'|'components'|'pan';
@@ -1447,6 +1479,18 @@ export function magicRollKind(d:readonly number[]):MagicRollKind {
  if(d[0]===d[1]&&d[1]===d[2])return d[0]>=4?'high-triple':'low-triple';
  const sum=d[0]+d[1]+d[2];
  return sum<=8?'health':sum<=11?'units':sum<=15?'components':'pan';
+}
+/** Avalanche finalizer (murmur3 fmix32) so neighbouring match seeds give independent first draws. */
+export function mixSeed(value:number):number {
+ let h=value>>>0;h^=h>>>16;h=Math.imul(h,0x85ebca6b);h^=h>>>13;h=Math.imul(h,0xc2b2ae35);h^=h>>>16;return h>>>0;
+}
+/** Call to Chaos: one of its ten S13 rewards (10% each; P 2026-10-24) on a source/seat/choice-bound stream. */
+export const CALL_TO_CHAOS_OUTCOMES=['gold','three-star','hullbreakers','horizon-focus','thiefs-gloves','solari-dummy','zeke-dummy','emblems','xp','rerolls'] as const;
+export type CallToChaosOutcome=(typeof CALL_TO_CHAOS_OUTCOMES)[number];
+export function callToChaosOutcome(state:{readonly seed:number;readonly multiplayer?:{readonly seatId:string}},augment:{readonly choiceId:string;readonly definitionId:string}):CallToChaosOutcome {
+ const namespace=JSON.stringify(['augment-pool-batch3','chaos',state.multiplayer?.seatId??'solo',augment.choiceId,augment.definitionId]);
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;
+ return CALL_TO_CHAOS_OUTCOMES[Math.floor(nextRandom(mixSeed(state.seed^rng)).word*CALL_TO_CHAOS_OUTCOMES.length/4294967296)];
 }
 export function batch3Count(row:Batch3Content,key:string|number):number {
  const n=typeof key==='number'?key:row.source.values[key];
@@ -1493,5 +1537,58 @@ export const AUGMENT_BATCH3_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>
   ...(row.flexible?[{kind:'mechanic' as const,mechanic:'flexible',values:{healthPerEmblem:batch3Count(row,'HPPerEmblem')}}]:[]),
   ...(row.superstars?[{kind:'mechanic' as const,mechanic:'superstars',values:{baseBps:Math.round(row.source.values.BaseBonusDamage!*10000),per3StarBps:Math.round(row.source.values.BonusDamagePer3Star!*10000)}}]:[])],
 }])));
+/** 14.24 stage ItemTags of the batch-3 rows, read as the batch-3 XP line does ({d02ae323}/{d12ae4b6}/{d22ae649} =
+ * not at 2-1/3-2/4-2; P 2026-10-24, docs/S13_RULES_GAP.md). Copied from the research JSON's item_tags_raw (test-checked). */
+export const AUGMENT_BATCH3_NODE_BANS:Readonly<Record<string,readonly string[]>>=freezeContent({
+ TFT_Augment_Dummify:["2-1", "4-2"],
+ TFT_Augment_Golemify:["2-1", "4-2"],
+ TFT9_Augment_DravenSpoilsOfWar:["3-2", "4-2"],
+ TFT9_Augment_DravenSpoilsOfWar2:["3-2", "4-2"],
+ TFT9_Augment_DravenSpoilsOfWar3:["3-2", "4-2"],
+ TFT13_Augment_FishCarry:["3-2", "4-2"],
+ TFT13_Augment_IreliaCarry:["3-2", "4-2"],
+ TFT13_Augment_TrundleCarry:["3-2", "4-2"],
+ TFT13_Augment_ChainsawCarry:["2-1", "4-2"],
+ TFT13_Augment_PrimeCarry:["3-2", "4-2"],
+ TFT13_Augment_VladCarry:["3-2", "4-2"],
+ TFT_Augment_TowerDefense:["4-2"],
+ TFT6_Augment_TheGoldenEgg:["2-1", "3-2"],
+ TFT_Augment_AnExaltedAdventure:["3-2", "4-2"],
+ TFT_Augment_SupportMining:["3-2", "4-2"],
+ TFT_Augment_SupportMiningPlus:["2-1", "4-2"],
+ TFT10_Augment_Scapegoat:["3-2", "4-2"],
+ TFT11_Augment_WanderingTrainerGold:["3-2", "4-2"],
+ TFT9_Augment_WanderingTrainer:["3-2", "4-2"],
+ TFT_Augment_GoldForDummies:["3-2", "4-2"],
+ TFT_Augment_BadLuckProtection:["2-1"],
+ TFT_Augment_BlazingSoul:["2-1"],
+ TFT_Augment_BlazingSoul2:["2-1"],
+ TFT_Augment_NobleSacrifice:["2-1"],
+ TFT_Augment_WealthyRehab1:["2-1"],
+ TFT_Augment_WealthyRehab2:["2-1"],
+ TFT_Augment_Corrosion:["2-1"],
+ TFT9_Augment_BuildingACollectionPlusPlus:["4-2"],
+ TFT_Augment_WorthTheWaitGold:["3-2", "4-2"],
+ TFT_Augment_WorthTheWaitPrismatic:["3-2", "4-2"],
+ TFT_Augment_Flexible:["3-2", "4-2"],
+ TFT9_Augment_Commander_RollingForDays:["2-1"],
+ TFT_Augment_SuperstarsSilver:["3-2", "4-2"],
+ TFT_Augment_Superstars:["3-2", "4-2"],
+ TFT6_Augment_TradeSector:["3-2", "4-2"],
+ TFT_Augment_EyeForAnEyePlus:["2-1", "4-2"],
+ TFT11_Augment_Prizefighter:["3-2", "4-2"],
+ TFT_Augment_ShimmerscaleEssence:["3-2", "4-2"],
+ TFT_Augment_EyeForAnEye:["3-2", "4-2"],
+ TFT9_Augment_ArmyBuilding:["4-2"],
+ TFT9_Augment_LongTimeCrafting:["3-2", "4-2"],
+ TFT9_Augment_PhreakyFriday:["3-2", "4-2"],
+ TFT9_Augment_PhreakyFridayPlus:["2-1"],
+ TFT_Augment_DarkAlleyDealings:["2-1", "4-2"],
+ TFT7_Augment_LivingForge:["3-2", "4-2"],
+ TFT9_Augment_WhatDoesntKillYou:["3-2", "4-2"],
+ TFT_Augment_Warpath:["3-2", "4-2"],
+ TFT_Augment_MagicRoll:["2-1", "4-2"],
+ TFT11_Augment_Calltochaos:["2-1", "3-2"]
+});
 export const AUGMENT_BATCH3_TIERS=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH3).map(([id,row])=>[id,row.tier])));
 export const AUGMENT_BATCH3_API_NAMES=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH3).map(([id,row])=>[id,row.apiName])));

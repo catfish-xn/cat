@@ -33,7 +33,7 @@ export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):Matc
    else if(result.reason!=='bench-full')throw new RangeError(`Augment batch1 grant: ${result.reason} (${gift.definitionId})`);
   }
  }while(progressed);
- return drainBatch3Dummies(drainBatch3Gold(drainBatch2Gold(state)));
+ return drainBatch3Dummies(drainSettlementGold(drainBatch3Gold(drainBatch2Gold(state))));
 }
 /** Anvil options belong to the acquisition receipt; open order and current round do not affect them. */
 export function batch1AnvilSpecification(state:MatchState,receiptId:string) {

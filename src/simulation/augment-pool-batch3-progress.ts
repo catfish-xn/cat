@@ -2,7 +2,7 @@ import type { MatchState } from './match-types';
 import type { AugmentGift } from './augment-gift-plan';
 import { planAugmentGifts } from './augment-gift-plan';
 import { readG23Progress } from './g2-3-state';
-import { AUGMENT_BATCH3, batch3Count, magicRollKind } from './content/augment-pool-batch3';
+import { AUGMENT_BATCH3, batch3Count, magicRollKind, callToChaosOutcome, mixSeed } from './content/augment-pool-batch3';
 import { grantMechanicGold, grantMechanicItem, grantMechanicUnit, grantMechanicConsumable } from './seat-mechanics/grants';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
@@ -151,7 +151,9 @@ function eventGifts(state:MatchState,e:Batch3Event):AugmentGift[] {
 }
 /** The training dummy born from the augment's own acquisition gift (gift index 0), once its receipt exists. */
 export function ownDummyId(state:MatchState,augment:MatchState['augments'][number]):string|undefined {
- const gift=planAugmentGifts(state,augment,AUGMENT_BATCH3[augment.definitionId]?.gifts??[]).find(g=>g.definitionId==='training-dummy'||g.definitionId==='forming-dummy'||g.definitionId==='tower-dummy');
+ const row=AUGMENT_BATCH3[augment.definitionId],outcome=row?.schedules.findIndex(s=>s.counter==='outcome')??-1;
+ const planned=[...planAugmentGifts(state,augment,row?.gifts??[]),...(outcome>=0?planAugmentGifts(state,{...augment,choiceId:JSON.stringify([augment.choiceId,'batch3',outcome,0])},outcomeReward(state,augment).gifts):[])];
+ const gift=planned.find(g=>g.definitionId==='training-dummy'||g.definitionId==='forming-dummy'||g.definitionId==='tower-dummy');
  const r=gift&&state.seatMechanics?.receipts.find(r=>r.receiptId===gift.receiptId);
  return r?.kind==='unit'&&r.unitId?r.unitId:undefined;
 }
@@ -159,7 +161,10 @@ const retireId=(augment:MatchState['augments'][number])=>JSON.stringify([AUGMENT
 /** Distinct emblems (an emblem cannot be held twice), drawn by a partial shuffle of the sorted emblem pool on a
  * source/seat/choice-bound stream; P 2026-10-24. Own receipt namespace: never part of the batch-1 inventory plan. */
 const emblemGifts=(state:MatchState,augment:MatchState['augments'][number])=>{
- const row=AUGMENT_BATCH3[augment.definitionId];if(!row?.dummyEmblems)return [];
+ const row=AUGMENT_BATCH3[augment.definitionId];
+ const fixed=chaosDummyItems(state,augment);
+ if(fixed.length)return fixed.map((definitionId,slot)=>({receiptId:JSON.stringify([DUMMY_SOURCE,augment.choiceId,slot]),definitionId}));
+ if(!row?.dummyEmblems)return [];
  const namespace=JSON.stringify([DUMMY_SOURCE,state.multiplayer?.seatId??'solo',augment.choiceId,augment.definitionId]);
  let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;rng=(state.seed^rng)>>>0;
  const pool=Object.keys(EMBLEM_ITEMS).sort(),n=batch3Count(row,row.dummyEmblems);
@@ -193,7 +198,7 @@ export function validateBatch3Dummies(state:MatchState):void {
  const expected=new Map<string,string>();
  for(const augment of state.augments){
   const unitId=ownDummyId(state,augment),row=AUGMENT_BATCH3[augment.definitionId];if(!row)continue;
-  if(row.dummyEmblems&&unitId){
+  if(emblemGifts(state,augment).length&&unitId){
    const present=state.preparation.units.some(u=>u.id===unitId);
    for(const [slot,gift] of emblemGifts(state,augment).entries()){
     const r=state.seatMechanics?.receipts.find(r=>r.receiptId===gift.receiptId);
@@ -310,7 +315,7 @@ export function validateBatch3Gold(state:MatchState):void {
 /** Magic Roll: three fair six-sided dice on a source/seat/choice-bound stream (P 2026-10-24, the S14 table's ratios). */
 export function magicRollDice(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):readonly [number,number,number] {
  const namespace=JSON.stringify([AUGMENT_BATCH3_SOURCE,'dice',state.multiplayer?.seatId??'solo',augment.choiceId,augment.definitionId]);
- let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;rng=(state.seed^rng)>>>0;
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;rng=mixSeed(state.seed^rng);
  const die=()=>{const d=nextRandom(rng);rng=d.state;return Math.floor(d.word*6/4294967296)+1;};
  return [die(),die(),die()];
 }
@@ -331,5 +336,35 @@ export function outcomeReward(state:Pick<MatchState,'seed'|'multiplayer'>,augmen
    default:return {gold:0,gifts:[]};
   }
  }
+ if(row?.outcome==='call-to-chaos'){
+  const n=(k:string)=>batch3Count(row,k),remover={kind:'consumable' as const,definitionId:'magnetic-remover'};
+  switch(callToChaosOutcome(state,augment)){
+   case 'gold':return {gold:n('Gold'),gifts:[]};
+   case 'three-star':return {gold:n('{5edfa63d}'),gifts:[{kind:'random-unit',cost:3,count:1,starLevel:3}]};
+   // P 2026-10-24: the two anonymous 3.0 counts are read as the Hullcrusher and Sniper's Focus counts (both 3), numtg as the gloves.
+   case 'hullbreakers':return {gold:0,gifts:[{kind:'item',definitionId:'TFT9_Item_OrnnHullbreaker',count:n('{8c58ac06}')},remover]};
+   case 'horizon-focus':return {gold:0,gifts:[{kind:'item',definitionId:'TFT9_Item_OrnnHorizonFocus',count:n('{8f15cad2}')},remover]};
+   case 'thiefs-gloves':return {gold:0,gifts:[{kind:'item',definitionId:'thiefs-gloves',count:n('numtg')},remover]};
+   case 'solari-dummy':case 'zeke-dummy':return {gold:0,gifts:[{kind:'unit',definitionId:'training-dummy'}]};
+   case 'emblems':return {gold:0,gifts:[{kind:'random-item',pool:'emblem',count:n('NumEmblems')}]};
+   default:return {gold:0,gifts:[]};
+  }
+ }
  return {gold:0,gifts:[]};
 }
+/** Call to Chaos's XP branch, paid with the acquisition (the batch-3 XP line's acquisition XP chain). */
+export function outcomeAcquisitionXp(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):number {
+ const row=AUGMENT_BATCH3[augment.definitionId];
+ return row?.outcome==='call-to-chaos'&&callToChaosOutcome(state,augment)==='xp'?batch3Count(row,'XP'):0;
+}
+/** Call to Chaos's reroll branch: 40 free shop rerolls that never expire (the free-reroll ledger). */
+export function outcomeFreeRerolls(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):number {
+ const row=AUGMENT_BATCH3[augment.definitionId];
+ return row?.outcome==='call-to-chaos'&&callToChaosOutcome(state,augment)==='rerolls'?batch3Count(row,'Rerolls'):0;
+}
+/** The two items Call to Chaos's dummy branches carry (14.24 Locket of the Iron Solari / Zeke's Herald). */
+const chaosDummyItems=(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):readonly string[]=>{
+ if(AUGMENT_BATCH3[augment.definitionId]?.outcome!=='call-to-chaos')return [];
+ const o=callToChaosOutcome(state,augment);
+ return o==='solari-dummy'?['TFT_Item_LocketOfTheIronSolari','TFT_Item_LocketOfTheIronSolari']:o==='zeke-dummy'?['TFT_Item_ZekesHerald','TFT_Item_ZekesHerald']:[];
+};

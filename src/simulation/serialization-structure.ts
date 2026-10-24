@@ -1,4 +1,4 @@
-import { formingTotals, expectedMagicRoll } from './augment-pool-batch3-progress';
+import { formingTotals, expectedMagicRoll, outcomeAcquisitionXp } from './augment-pool-batch3-progress';
 import { batch2HpAfterSettlement } from './augment-pool-batch2-health';
 import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
@@ -124,7 +124,8 @@ function validPreparationExperience(before:number,level:number,xp:number,purchas
  * (offline purchases wait for the round's augment choice). */
 function preparationExperience(state:MatchState,after:number,round:number):number {
   const before=Math.min(totalExperience(MATCH_RULES.maxLevel,0),after+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<round)).roundXp
-    +batch3EntryXp(state.augments,state.roundResults,round)+augmentAcquisitionXpAtRound(state.augments,round));
+    +batch3EntryXp(state.augments,state.roundResults,round)+augmentAcquisitionXpAtRound(state.augments,round)
+    +state.augments.filter(a=>a.acquiredRound===round).reduce((n,a)=>n+outcomeAcquisitionXp(state,a),0));
   const levels=acquisitionLevels(state);
   for(const a of state.augments)if(a.acquiredRound===round&&Object.hasOwn(levels,a.choiceId))requireValue(levels[a.choiceId]===levelAtExperience(before),'augment acquisition level');
   return before;

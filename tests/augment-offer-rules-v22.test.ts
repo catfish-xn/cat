@@ -62,7 +62,11 @@ describe('v22 trait filter: 3-2 and 4-2 tailored, 2-1 not', () => {
       const enforcer = augmentCandidates('gold', [], [], null, filter(node, ['enforcer']));
       expect(TEAMUPS.filter(id => enforcer.includes(id)).sort()).toEqual(['mentorship', 'reunion', 'sisters']);
       // Untouched augments without AssociatedTraits are never filtered.
-      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - GOLD_TEAMUPS.length - 22 - 16 - 3); // 22 new trait-linked crests; batch 3's three gold hero augments
+      // Stage-banned gold cards (batch 3 XP: 14.24 stage tags) are absent at that node as well.
+      const heroGold = ['savage-revenge', 'all-out', 'blood-pact'];
+      const stageBanned = Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold' && !heroGold.includes(id)
+        && ((AUGMENT_OFFER_RULES.nodeBans as Readonly<Record<string, readonly string[]>>)[AUGMENT_POOL_API_NAMES[id]] ?? []).includes(node)).length;
+      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - GOLD_TEAMUPS.length - 22 - 16 - heroGold.length - stageBanned); // 22 new trait-linked crests; batch 3's three gold hero augments
     }
     const untailored = augmentCandidates('gold', [], [], null, filter('2-1'));
     for (const id of GOLD_TEAMUPS) expect(untailored).toContain(id);

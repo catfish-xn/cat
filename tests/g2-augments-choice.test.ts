@@ -13,8 +13,9 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
   expect(ids).toHaveLength(195);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
- // Black Rose and Epoch+ (14.24 stage tag: 3-2 only) are never offered at 2-1.
-it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!['black-rose-crest','black-rose-crown','epoch-plus'].includes(id)))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
+ // Black Rose and Epoch+ (14.24 stage tag: 3-2 only) are never offered at 2-1, nor are the batch-3 cards tagged not-at-2-1.
+const BATCH3_NOT_AT_2_1=['bad-luck-protection', 'blazing-soul-i', 'blazing-soul-ii', 'corrosion', 'dark-alley-dealings', 'dummify', 'eye-for-an-eye-plus', 'golemify', 'magic-roll', 'noble-sacrifice', 'phreaky-friday-plus', 'rolling-for-days-i', 'savage-revenge', 'support-mining-plus', 'the-golden-egg', 'wealthy-rehab-i', 'wealthy-rehab-ii'];
+it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!['black-rose-crest','black-rose-crown','epoch-plus',...BATCH3_NOT_AT_2_1].includes(id)))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
   // Search the independent first-node offer oracle, then play only the chosen
   // public route. The expanded pool puts Portable Forge at seed 236; replaying
   // three opening combats for every candidate needlessly hits CI time limits.
