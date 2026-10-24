@@ -16,7 +16,9 @@ import { getUnitStats } from '../src/simulation/unit-stats';
 
 let prefix:MatchState|undefined;
 const stop=Error('public 4-5 prefix');
-try{await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(api,{build:'sniper',seed:42,copyLimits:{irelia:9,maddie:9,darius:9},onStep(_before:MatchState,result:{state:MatchState}){
+// v22: seed 42's route (scuttle-puddle opening, v22 economy) leaves 75 gold for the paid anomaly rerolls, and Into the
+// Unknown first appears after 110. Seed 92 (crab-free opening) reaches both anomalies within the paid budget.
+try{await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(api,{build:'sniper',seed:92,copyLimits:{irelia:9,maddie:9,darius:9},onStep(_before:MatchState,result:{state:MatchState}){
   if(result.state.roundDefinitionId==='4-5'&&result.state.phase==='preparation'){prefix=result.state;throw stop;}
 }});}catch(e){if(e!==stop)throw e;}
 if(!prefix)throw Error('Missing paid army');
