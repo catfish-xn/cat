@@ -8,7 +8,7 @@ import type { CombatStrategyInputs } from './combat-input';
 import type { MatchState } from './match-types';
 import type { StrategySnapshot } from './strategy-types';
 import type { BattleEquipmentInput } from './battle-input-log';
-import { buildStrategySnapshot } from './strategy-snapshot';
+import { buildStrategySnapshot, enforcerConfiscates } from './strategy-snapshot';
 import { canonicalContent } from './content';
 import { freezeContent } from './content/freeze';
 import { initializeEffectRuntime } from './effects';
@@ -59,7 +59,8 @@ function strategy(inputs: CombatStrategyInputs, opening: StrategySnapshot, team:
   const ids = new Set(inputs.preparation.units.map(u => u.id));
   const frozen = { traits: opening.traits.filter(t => t.team === team).map(t => ({ ...t, team: 'player' as const })),
     units: opening.units.filter(u => ids.has(u.unitId)) };
-  const compiled = buildStrategySnapshot(inputs, undefined, undefined, frozen);
+  // Enforcer 10 confiscation is frozen with the opening roster: later equipment on the victim side stays inert.
+  const compiled = buildStrategySnapshot(inputs, undefined, undefined, frozen, enforcerConfiscates(opening.traits, team) ? ['player'] : []);
   return { ...compiled, traits: compiled.traits.map(t => ({ ...t, team })) };
 }
 const hpParts = (unit: StrategySnapshot['units'][number]) => ({

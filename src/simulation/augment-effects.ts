@@ -43,7 +43,7 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
         const wins=battles.filter(r=>r.kind==='battle'&&r.facts.result==='win').length,losses=battles.filter(r=>r.kind==='battle'&&r.facts.result==='loss').length;
         return [effect,{kind:'statFlat',stat:'maxHp',amount:wins*spec.source.values.HealthPerWin!},{kind:'statPercentBps',stat:'attackDamage',bps:losses*Math.round(spec.source.values.ADPerLoss!*10000)}];
       }
-      const equipment=g22Equipment(state),converted=augment.definitionId==='scrap-recycling'?scrapConversions(board,traits,equipment,ITEM_DEFINITIONS):null;
+      const equipment=g22Equipment(state),converted=augment.definitionId==='scrap-recycling'?scrapConversions(board,traits,equipment,ITEM_DEFINITIONS,{seed:state.g23?.seed??0,round:state.round}):null;
       const marker=converted?{...effect,values:{enabled:1,converted:[...converted.keys()].filter(id=>equipment.some(e=>e.id===id&&e.unitId===unit.id)).length}}:effect;
       return [marker,...(augment.definitionId==='enforce'?[{kind:'statPercentBps' as const,stat:'attackDamage' as const,bps:Math.round(spec.source.values.BonusAD!*10000)}]:[]),...(augment.definitionId==='sentinel-slam'?(['armor','magicResist'] as const).map(stat=>({kind:'statPercentBps' as const,stat,bps:Math.round(spec.source.values.PercGain!*10000)})):[])];
     }
