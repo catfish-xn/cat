@@ -3,26 +3,58 @@ import { g23ConquerorBonusBps } from './g2-3-progress';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
 import type { Effect, ItemDefinition, TraitSnapshot, TraitTier } from './strategy-types';
-import { readRoundEnemyProjection } from './round-enemies';
+import { readRoundEnemyProjection, type EnemyItem } from './round-enemies';
 import { G22_CONVENTIONS } from './content/g2-2-traits';
 import { priorPvpWins } from './g2-2-pvp-history';
+import { SCRAP_CHAMPION_ROLES, SCRAP_LUCKY_POLICY, SCRAP_ROLE_ITEMS } from './content/scrap-lucky';
+import { G23_RADIANT_MAPPING } from './content/g2-3-special-item-runtime';
 export interface G22Equipment { id:string; unitId:string; definitionId:string }
-export function g22Equipment(state:CombatStrategyInputs):G22Equipment[] {
+export function g22Equipment(state:CombatStrategyInputs,enemyItems?:readonly EnemyItem[]):G22Equipment[] {
   return [...state.items.flatMap(i=>i.location.kind==='unit'?[{id:i.id,unitId:i.location.unitId,definitionId:i.definitionId}]:[]),
     ...state.temporaryEquipment.map(i=>({id:i.temporaryId,unitId:i.holderId,definitionId:i.definitionId})),
-    ...(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[]).map(i=>({id:`enemy:${state.round}:${i.unitId}:${i.slot}`,unitId:i.unitId,definitionId:i.definitionId}))];
+    ...(enemyItems??(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[])).map(i=>({id:`enemy:${state.round}:${i.unitId}:${i.slot}`,unitId:i.unitId,definitionId:i.definitionId}))];
 }
-/** Frozen combat-only conversion; no item grants, receipts, slots or RNG are mutated. */
-export function scrapConversions(units:readonly Unit[],traits:readonly TraitSnapshot[],equipment:readonly G22Equipment[],catalog:Readonly<Record<string,ItemDefinition>>):Map<string,string> {
-  const result=new Map<string,string>();
+const roleItems=new Map<Readonly<Record<string,ItemDefinition>>,ReadonlyMap<string,readonly string[]>>();
+/** Recommended items by unit definition, resolved from client apiNames to this catalog's ids (client order). */
+function recommendedItems(catalog:Readonly<Record<string,ItemDefinition>>):ReadonlyMap<string,readonly string[]> {
+  let cached=roleItems.get(catalog);
+  if(!cached){
+    const byApi=new Map(Object.values(catalog).flatMap(d=>d.apiName?[[d.apiName,d.id] as const]:[]));
+    cached=new Map(Object.entries(SCRAP_CHAMPION_ROLES).map(([unit,role])=>[unit,(SCRAP_ROLE_ITEMS[role]??[]).flatMap(api=>byApi.has(api)?[byApi.get(api)!]:[])]));
+    roleItems.set(catalog,cached);
+  }
+  return cached;
+}
+/** P scrap-lucky-v1 fallback word: FNV-1a over the item instance id, salted by seed and round, then murmur3 fmix32. */
+export function scrapLuckyWord(seed:number,round:number,itemId:string):number {
+  let x=(0x811c9dc5^seed^Math.imul(round,0x9e3779b1))>>>0;
+  for(let i=0;i<itemId.length;i++)x=Math.imul(x^itemId.charCodeAt(i),0x01000193)>>>0;
+  x=Math.imul(x^(x>>>16),0x85ebca6b)>>>0;x=Math.imul(x^(x>>>13),0xc2b2ae35)>>>0;
+  return (x^(x>>>16))>>>0;
+}
+export interface ScrapLuckContext { readonly seed:number; readonly round:number }
+/** Frozen combat-only conversion; no item grants, receipts, slots or RNG state are mutated.
+ * Tiers 2/4: lexicographically first legal recipe. Tier 6+ (P scrap-lucky-v1): the holder's recommended items first,
+ * else a derived uniform draw; spatula/frying pan stay. Tier 9: produced items become their radiant version. */
+export function scrapConversions(units:readonly Unit[],traits:readonly TraitSnapshot[],equipment:readonly G22Equipment[],catalog:Readonly<Record<string,ItemDefinition>>,luck:ScrapLuckContext={seed:0,round:0}):Map<string,string> {
+  const result=new Map<string,string>(),base=new Map<string,string>();
   for(const trait of traits.filter(t=>t.traitId==='scrap'&&t.tier>0)){
     let left=trait.tier>=6?20:trait.tier>=4?3:1;
+    const lucky=trait.tier>=SCRAP_LUCKY_POLICY.luckyFromTier,radiant=trait.tier>=SCRAP_LUCKY_POLICY.radiantFromTier;
     for(const item of [...equipment].sort((a,b)=>a.id<b.id?-1:1)){
       const owner=units.find(u=>u.id===item.unitId);
       if(!left||!owner||owner.team!==trait.team||!trait.targetUnitIds.includes(owner.id)||catalog[item.definitionId]?.kind!=='component')continue;
-      const held=equipment.filter(i=>i.unitId===owner.id).map(i=>result.get(i.id)??i.definitionId);
+      if(lucky&&(SCRAP_LUCKY_POLICY.excludedComponents as readonly string[]).includes(item.definitionId))continue;
+      const held=equipment.filter(i=>i.unitId===owner.id).map(i=>base.get(i.id)??i.definitionId);
       const candidates=Object.values(catalog).filter(d=>d.kind==='completed'&&!d.emblemTrait&&d.recipe?.includes(item.definitionId)&&d.slotCost!==3&&(!d.unique||!held.includes(d.id))).sort((a,b)=>a.id<b.id?-1:1);
-      if(candidates.length){result.set(item.id,candidates[0].id);left--;}
+      if(!candidates.length)continue;
+      let chosen=candidates[0].id;
+      if(lucky){
+        const recommended=(recommendedItems(catalog).get(owner.definitionId)??[]).find(id=>candidates.some(c=>c.id===id));
+        chosen=recommended??candidates[Math.floor(scrapLuckyWord(luck.seed,luck.round,item.id)*candidates.length/4294967296)].id;
+      }
+      const shown=radiant&&Object.hasOwn(G23_RADIANT_MAPPING,chosen)?(G23_RADIANT_MAPPING as Readonly<Record<string,string>>)[chosen]:chosen;
+      base.set(item.id,chosen);result.set(item.id,Object.hasOwn(catalog,shown)?shown:chosen);left--;
     }
   }
   return result;
