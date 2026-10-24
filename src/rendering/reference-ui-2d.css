@@ -1,0 +1,73 @@
+/*
+ * 2D UI against the offline S13 reference (wave 4 of the gap list). Rules that only the 2D board takes are scoped to
+ * `body:not(:has(> .render3d-layer))`; the 3D HUD keeps its own (three-mode/hud-style.ts).
+ */
+
+/* Augment pick, "Choose One": the instruction as the title with the tier beside it, three tall cards in the tier's
+   colour, each card in layers: icon, tier ornament, name, effect description, then the extra notes in their own block. */
+.augment-tier-chip { display: inline-block; margin-left: 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid #a9b9c6;
+  vertical-align: middle; font-size: 13px; font-weight: 400; letter-spacing: .04em; color: #dfe7ec; background: #0b151fcc; text-shadow: none; }
+.augment-tier-chip[data-tier="gold"] { border-color: #e6bc4a; color: #ffe3a1; }
+.augment-tier-chip[data-tier="prismatic"] { border-color: #d58cff; color: #f1d9ff; }
+body:has(> .render3d-layer) .augment-tier-mark { display: none; }
+
+body:not(:has(> .render3d-layer)) .choice-dialog[data-choice-source="augment"] { --aug-edge: #a9b9c6; width: min(980px, 100%); text-align: center;
+  border-color: color-mix(in srgb, var(--aug-edge) 60%, #182a37); background: radial-gradient(ellipse at 50% 0%, #223a4b, #142330 72%); }
+body:not(:has(> .render3d-layer)) .choice-dialog[data-augment-tier="gold"] { --aug-edge: #e6bc4a; }
+body:not(:has(> .render3d-layer)) .choice-dialog[data-augment-tier="prismatic"] { --aug-edge: #d58cff; }
+body:not(:has(> .render3d-layer)) .choice-dialog[data-choice-source="augment"] h2 { font-size: 26px; letter-spacing: .08em; color: #f0e6d2; }
+body:not(:has(> .render3d-layer)) .choice-dialog[data-choice-source="augment"] .choice-cards { gap: 18px; }
+body:not(:has(> .render3d-layer)) .choice-cards button.augment-card { display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  gap: 0; min-height: 320px; height: 100%; padding: 24px 16px 16px; border: 2px solid var(--aug-edge); border-radius: 8px; color: #c8d6dc;
+  font-size: 15px; line-height: 1.6; background: radial-gradient(ellipse at 50% 16%, #2a3d4f, #0d1720 72%); box-shadow: 0 6px 20px #0009, inset 0 0 22px #0008;
+  transition: transform .12s, box-shadow .12s; }
+body:not(:has(> .render3d-layer)) .choice-dialog[data-augment-tier="prismatic"] button.augment-card { border-image: linear-gradient(160deg, #ff7ad9, #7af0ff, #ffe27a, #d58cff) 1; }
+body:not(:has(> .render3d-layer)) .choice-cards button.augment-card:is(:hover, :focus-visible) { transform: translateY(-3px); border-color: var(--aug-edge);
+  box-shadow: 0 8px 24px #000a, 0 0 16px color-mix(in srgb, var(--aug-edge) 50%, transparent), inset 0 0 22px #0008; }
+body:not(:has(> .render3d-layer)) .augment-card .augment-icon { flex: none; width: 72px !important; height: 72px !important; margin: 0; border-radius: 14px;
+  box-shadow: 0 0 0 2px var(--aug-edge), 0 0 18px color-mix(in srgb, var(--aug-edge) 40%, transparent); }
+body:not(:has(> .render3d-layer)) .augment-card .augment-badge { display: grid; place-items: center; font-size: 34px !important; font-weight: 700; color: #f0e6d2;
+  background: radial-gradient(circle at 50% 35%, #3a5366, #15232e); }
+/* The tier ornament between icon and name: a small faceted gem in the tier's colour on a thin rule. */
+.augment-tier-mark { position: relative; flex: none; width: 70%; height: 16px; margin: 10px 0 6px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--aug-edge, #a9b9c6) 70%, transparent) 30% 70%, transparent) 50% 50% / 100% 1px no-repeat; }
+.augment-tier-mark::after { content: ""; position: absolute; left: 50%; top: 50%; width: 11px; height: 11px; transform: translate(-50%, -50%) rotate(45deg);
+  border: 1px solid #0b151f; background: linear-gradient(135deg, #f4f7fa, #8d9ba6); box-shadow: 0 0 8px #c9d6df99; }
+.augment-tier-mark[data-tier="gold"]::after { background: linear-gradient(135deg, #fff1b8, #c8902c); box-shadow: 0 0 8px #ffd56a99; }
+.augment-tier-mark[data-tier="prismatic"]::after { background: conic-gradient(from 45deg, #ff7ad9, #7af0ff, #ffe27a, #d58cff, #ff7ad9); box-shadow: 0 0 10px #e3a8ffb3; }
+body:not(:has(> .render3d-layer)) .augment-card .augment-name { font-size: 19px; line-height: 1.35; color: #f0e6d2; }
+body:not(:has(> .render3d-layer)) .augment-card .augment-desc { display: block; margin-top: 8px; white-space: normal; }
+body:not(:has(> .render3d-layer)) .augment-card .augment-extra { display: block; width: 100%; margin-top: auto; padding-top: 10px; border-top: 1px solid #ffffff1f;
+  font-size: 13px; line-height: 1.5; color: #93a8b4; }
+body:not(:has(> .render3d-layer)) .augment-card .augment-desc + .augment-extra { margin-top: 12px; }
+body:not(:has(> .render3d-layer)) .augment-card .augment-extra-line { display: block; white-space: normal; }
+body:not(:has(> .render3d-layer)) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll { justify-self: center; width: 132px; border-radius: 999px;
+  border-color: #785a28; background: #0b151fe6; color: #f0e6d2; }
+body:not(:has(> .render3d-layer)) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll::before { content: "⟳ "; }
+
+/* Trait hover, member row: portraits framed in the cost colour with the name under them; heroes not on the board dimmed. */
+.trait-card-members { gap: 6px 4px; }
+.trait-card-members .member { display: inline-grid; justify-items: center; gap: 2px; width: 46px; padding: 0; border-radius: 0; background: none; color: #7e95a4; font-size: 11px; }
+.trait-card-members .member-portrait { display: grid; place-items: center; width: 34px; height: 34px; overflow: hidden; border: 2px solid #9aa7b0; border-radius: 6px;
+  background: #203440; filter: grayscale(.85) brightness(.6); }
+.trait-card-members .member-portrait :is(img, svg) { width: 32px; height: 32px; display: block; object-fit: cover; }
+.trait-card-members .member.cost-2 .member-portrait { border-color: #68c087; }
+.trait-card-members .member.cost-3 .member-portrait { border-color: #5aa0e6; }
+.trait-card-members .member.cost-4 .member-portrait { border-color: #b46be6; }
+.trait-card-members .member.cost-5 .member-portrait { border-color: #e6bc76; }
+.trait-card-members .member.cost-6 .member-portrait { border-color: var(--cost-6, #ff6f6f); }
+.trait-card-members .member.on-board { color: #e2eef1; box-shadow: none; }
+.trait-card-members .member.on-board .member-portrait { filter: none; box-shadow: 0 0 0 1px #68ddd0, 0 0 8px #68ddd066; }
+.trait-card-members .member-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Placement card when I am eliminated: the leave action on top, keep watching under it. */
+.elimination-actions { flex-direction: column; align-items: stretch; min-width: 180px; }
+
+/* Eliminated, watching on (2D): as in the original the shop is gone and my own board reads as out of the game, greyed;
+   traits, the player list, other players' boards and the minimap stay. The 3D board has its own rule (style.css). */
+body[data-online-spectating]:not(:has(> .render3d-layer)) .shop-dock { transform: translateY(calc(100% + 16px)); opacity: 0; filter: none; pointer-events: none; }
+body[data-online-spectating]:not(:has(> .render3d-layer)) #board-root > canvas { filter: grayscale(.9) brightness(.7); transition: filter .4s ease; }
+
+/* Carousel (2D): nothing can be bought on the shared ring, so the shop slides away while the ring is shown, as in the
+   original and the 3D HUD; 查看我的棋盘 brings it back with my board. */
+body[data-online-carousel="carousel"]:not(:has(.render3d-layer)) .shop-dock { transform: translateY(calc(100% + 16px)); opacity: 0; pointer-events: none; }

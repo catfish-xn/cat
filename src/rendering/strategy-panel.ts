@@ -33,7 +33,7 @@ import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
-import { AUGMENT_TIER_TEXT, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentPlayerDescription } from '../presentation/augment-display';
+import { AUGMENT_TIER_TEXT, augmentCardSections, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitSummary, traitTierText } from '../presentation/trait-text';
 import { traitHoverCard } from '../presentation/hover-card';
@@ -58,6 +58,7 @@ import { rewardItemMarkHtml } from '../presentation/reward-item-mark';
 import { readG23Progress } from '../simulation/g2-3-state';
 import { G23_BLACK_MARKETS } from '../simulation/content/g2-3-policy';
 import { G23_TRAIT_SOURCE } from '../simulation/content/g2-3-trait-runtime';
+import './reference-ui-2d.css';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -996,7 +997,14 @@ export class StrategyPanel {
     // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
     const generic = !isKnownChoiceKind(choice.kind), extras = withMasterworkOffers(readChoiceExtras(choice), state, choice);
     const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效` : '异常 · 单位永久进化';
-    card.append(element('h2', title));
+    // The augment pick reads as the original's "Choose One" layer: the instruction as the title, the tier beside it.
+    const heading = element('h2', choice.kind === 'augment' && !loot && !generic ? '选择一个强化' : title);
+    if (choice.kind === 'augment' && !loot && !generic) {
+      const chip = element('span', `${choice.augmentTier ? `${AUGMENT_TIER_TEXT[choice.augmentTier]} · ` : ''}本局永久生效`, 'augment-tier-chip');
+      if (choice.augmentTier) chip.dataset.tier = choice.augmentTier;
+      heading.append(chip);
+    }
+    card.append(heading);
     // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
     const blocking = isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
     card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。${isOnline() ? '' : '完成选择前不能继续。'}` : blocking));
@@ -1036,10 +1044,20 @@ export class StrategyPanel {
           if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
         });
         if (choice.kind === 'augment') {
-          // Name and effect as their own blocks (the original card sets the name large); the text content stays the label.
-          const [name = '', ...rest] = label.split('\n');
-          button.replaceChildren(element('strong', name, 'augment-name'), element('span', rest.length ? `\n${rest.join('\n')}` : '', 'augment-desc'));
-          button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label;
+          // The original card's layers: icon, the tier ornament under it, the name set large, the effect description, then
+          // the extra notes in their own block. Each text block keeps its leading line break, so the text reads as the label.
+          const { body, extra } = augmentCardSections(id);
+          const ornament = element('span', '', 'augment-tier-mark'); ornament.setAttribute('aria-hidden', 'true');
+          if (choice.augmentTier) ornament.dataset.tier = choice.augmentTier;
+          button.replaceChildren(ornament, element('strong', augmentDisplayName(id), 'augment-name'), element('span', body ? `\n${body}` : '', 'augment-desc'));
+          if (extra.length) {
+            const notes = element('span', '', 'augment-extra'); notes.dataset.debug = 'augment-card:extra';
+            for (const line of extra) notes.append(element('span', `\n${line}`, 'augment-extra-line'));
+            button.append(notes);
+          }
+          // No bundled icon: the lettered badge holds the icon's place, so the three cards keep one layout.
+          button.insertAdjacentHTML('afterbegin', augmentIconOrBadgeHtml(id, 56)); button.title = label;
+          button.classList.add('augment-card');
         }
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
         const option = augmentOptions.find(entry => entry.optionIndex === index && entry.definitionId === id);

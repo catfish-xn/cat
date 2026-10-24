@@ -39,8 +39,8 @@ export class RankingOverlay {
   dispose() { this.root.remove(); }
 }
 /**
- * TFT's placement card, shown the moment my seat is eliminated while the match goes on: 第 N 名, then 继续观看 (close the
- * card, keep spectating) or 返回匹配 (leave the match). The rank is the server's (`SeatPublic.rank`). The backdrop lets
+ * TFT's placement card, shown the moment my seat is eliminated while the match goes on: 第 N 名, then 返回匹配 (leave the
+ * match, the primary action on top) or 继续观看 under it (close the card, keep spectating). The rank is the server's (`SeatPublic.rank`). The backdrop lets
  * clicks through, so the player list stays usable while it shows; the final ranking replaces it when the match ends.
  */
 export class EliminationCard {
@@ -55,7 +55,8 @@ export class EliminationCard {
     const actions = element('div', '', 'elimination-actions');
     const watch = element('button', '继续观看'); watch.type = 'button'; watch.dataset.debug = 'online:elimination-watch'; watch.addEventListener('click', () => this.hide());
     const leave = element('button', '返回匹配'); leave.type = 'button'; leave.dataset.debug = 'online:elimination-leave'; leave.classList.add('primary-action'); leave.addEventListener('click', onLeave);
-    actions.append(watch, leave); card.append(element('span', '已淘汰', 'elimination-kicker'), this.rank, this.note, actions);
+    // As the original placement banner: the leave action on top as the primary one, keep watching under it.
+    actions.append(leave, watch); card.append(element('span', '已淘汰', 'elimination-kicker'), this.rank, this.note, actions);
     this.root.append(card); host.append(this.root);
     document.addEventListener('keydown', this.keydown);
   }
