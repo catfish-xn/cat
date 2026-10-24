@@ -21,9 +21,10 @@ import { makeRoom, runUntil } from './server/helpers';
 // User-signed T11 oracle: 0 + 2 + 2 + 2 XP, thresholds 2 + 2 => level 3, 2/6.
 // Only start/continue and mandatory loot choices; no purchases, sales, rerolls or paid XP.
 describe('T11 signed opening economy', () => {
-  it('seed 42 single-player enters 2-1 with 3 levels, 2/6 XP and 20 gold (v22 opening income and PvE streaks plus scuttle-crab kill gold), exactly once', () => {
+  it('seed 20 single-player enters 2-1 with 3 levels, 2/6 XP and 20 gold (v22 opening income and PvE streaks plus scuttle-crab kill gold), exactly once', () => {
     expect(XP_TO_NEXT_LEVEL).toEqual({ 1: 2, 2: 2, 3: 6, 4: 10, 5: 20, 6: 36, 7: 48, 8: 68, 9: 68 });
-    let state = createMatch(42, {mode:'solo'});
+    // v23 fmix32 opening word: seed 42 now draws Golden Gala; seed 20 draws the scuttle-crab opening this oracle prices.
+    let state = createMatch(20, {mode:'solo'});
     for (const roundId of ['1-2', '1-3', '1-4']) {
       expect(state.roundDefinitionId).toBe(roundId);
       state = resolveM5Choices(finish(accepted(startMatchCombat(state))));
@@ -35,15 +36,16 @@ describe('T11 signed opening economy', () => {
       state = accepted(nextRound(restored, round));
       expect(nextRound(state, round)).toEqual({ ok: false, state, reason: 'wrong-phase' });
     }
-    // v22 opening base 2/3/4 + PvE loss-streak gold 0/1/1 = 11; seed 42 draws the scuttle-crab opening,
+    // v22 opening base 2/3/4 + PvE loss-streak gold 0/1/1 = 11; seed 20 draws the scuttle-crab opening,
     // whose 2/3/4 crab kills each pay 1G (stage <= 4) = 9.
     expect(state).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 20 });
     expect(state.roundResults.map(r => r.xpRequested)).toEqual([2, 2, 2]);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
   });
 
-  it('seed 42 eight-seat room reaches 2-1 with the same earned income before explicit orb claims', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+  it('seed 20 eight-seat room reaches 2-1 with the same earned income before explicit orb claims', () => {
+    // v23 fmix32: room seed 20 shares the scuttle-crab opening (seed 42 now shares Golden Gala).
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 20 });
     room.start();
     // v22: the 2-1 augment choice opens inside the room's preparation phase.
     runUntil(room, clock, s => s.roundId === '2-1' && s.phase === 'preparation');
