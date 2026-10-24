@@ -8,6 +8,8 @@ import { batch2Values } from './content/augment-pool-batch2';
 export interface Batch2CombatRuntime {
  readonly rockets?:number;readonly familyQualified?:boolean;readonly kills?:number;
  readonly slamPeriods?:Readonly<Record<string,number>>;readonly executions?:number;readonly attacksTaken?:number;readonly spellsTaken?:number;
+ /** Batch 3 (replay-authenticated): last Blazing Soul recipient, Noble Sacrifice spent, healing received for Wealthy Rehab. */
+ readonly blazingLast?:string;readonly nobleSpent?:boolean;readonly healed?:number;
 }
 export function batch2Mechanic(u:Pick<CombatUnit,'mechanics'>,id:string):CombatMechanic|undefined {
  return u.mechanics?.find(m=>m.mechanic==='traitAugmentB2'&&m.source.definitionId===id);

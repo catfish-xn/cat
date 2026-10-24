@@ -8,6 +8,9 @@ import type {StrategySnapshot} from './strategy-types';
 import {canonicalContent} from './content';
 import {createRestoreCombatReplay} from './restore-combat-replay';
 
+/** Combat mechanics whose saves are authenticated only by exact replay (combat-augment-effects.ts). */
+export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['blazingSoul','nobleSacrifice','wealthyRehab'];
+
 /** Opening HP is derived from authenticated inputs, never the saved owner HP. */
 export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
   const enabled=strategy.units.some(u=>u.itemSummon?.kind==='mirror');
@@ -40,7 +43,9 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
     if (canonicalContent(expected) !== canonicalContent(candidate)) throw new RangeError('Invalid authoritative equipment replay');
     return true;
   }
-  const batch2=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'||m.mechanic==='g23Tactician'));
+  // Batch-3 timed or unit-dependent augment contributions (and their runtime counters) have no static
+  // declaration to check against, so the whole combat must be reproduced from the frozen input instead.
+  const batch2=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'||m.mechanic==='g23Tactician'||BATCH3_REPLAYED_MECHANICS.includes(m.mechanic)));
   const zephyr=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr'));
   const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');

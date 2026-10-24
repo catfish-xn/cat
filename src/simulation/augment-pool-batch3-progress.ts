@@ -30,6 +30,7 @@ function batch3Events(state:MatchState):Batch3Event[] {
    for(const r of battles){
     if(r.kind!=='battle'||r.facts.round<augment.acquiredRound)continue;
     if(schedule.counter==='allied-deaths')count+=r.facts.alliedDeaths;
+    else if(schedule.counter==='team-healing')count+=r.facts.batch3Healing??0;
     else if(r.facts.roundKind==='pvp'&&(schedule.counter==='pvp-combat'||r.facts.result===(schedule.counter==='pvp-win'?'win':'loss')))count++;
     else continue;
     const due=Math.min(schedule.repeat?Math.floor(count/every):count>=every?1:0,max);
