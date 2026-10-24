@@ -8,7 +8,7 @@
 | --- | --- |
 | `src/simulation/content/augment-policy.ts:8`、`:29` | 按 CSV 顺序替换为 14.24 客户端 18 个非零组合，保留原整数权重/109；9 个零权重组合不入基础表。原版来源 `TFT9_AugmentArmoryConfiguration_Table`，`RandomizeProbabilityTableGlobally=true`。 |
 | `src/simulation/content/augment-policy.ts:86` | `geniuses`（羁绊：天才）金→彩；能力、赠卡及其他强化档位不变。 |
-| `src/server/room/room.ts:99` | `ROOM_TIMING_DEFAULTS.choiceMs=48_000`，沿现有统一选择阶段；保留环境变量/显式时限覆盖。 |
+| `src/server/room/room.ts:99` | 当时改为 `ROOM_TIMING_DEFAULTS.choiceMs=48_000`；后续海克斯并入 50 秒准备阶段，`choiceMs` 回到 30_000，只用于其他选择。 |
 | `tests/fixtures/m5/oracle.g2.cjs:51`、`:77` | 独立 oracle 同步天才档位及客户端组合表，不导入生产配置。历史录制未改。 |
 | `docs/MATCH_CONTRACT.md:1`、`docs/S13_RULES_GAP.md:1` | 完整权重、来源/P、RNG/恢复及待 v22 统一录制；发布配置示例与 V2 时限说明一并同步。战斗合同无变化。 |
 

@@ -40,7 +40,7 @@ Match公共命令/失败原因不变。战斗新增可选 `CombatUnit.damageMana
 
 奇遇仍先覆盖指定位置，不重抽组合、不按奇遇重新归一化：`golden-gala`（范德尔/PR2 augment-policy）三节点全金；`prismatic-party`（艾克/PR2）三节点全彩；`prismatic-prelude`（黑默丁格/PR2）仅 2-1 彩；`prismatic-finale`（黑默丁格/PR2）仅 4-2 彩。其余位置保留基础组合，其他奇遇无等级覆盖；激活收据语义不变。
 
-同批批准第 7、8 条：`geniuses`（羁绊：天才）从金改彩，其他强化档位、能力/赠卡数值不变；服务器 `ROOM_TIMING_DEFAULTS.choiceMs=48_000`，`CAT_CHOICE_SEC` 和显式 `RoomOptions.choiceMs` 仍可覆盖。该时长沿用既有统一 choice 阶段（强化及其他选择），不新增按类型分流或领域时钟。期限前不自动选取，到期沿既有 `timeoutChoice`；不消耗新的 RNG。天才改彩/48 秒为项目决定 P，来源为用户 10-23 批准的 `perf-1022/rules-1023/approved-1023-batch2.md` 第 7、8 条。界面本地演示默认覆盖仍为 30 秒，需 Claude 同步；在线服务器默认已为 48 秒。
+同批批准第 7、8 条：`geniuses`（羁绊：天才）从金改彩，其他强化档位、能力/赠卡数值不变；服务器 `ROOM_TIMING_DEFAULTS.choiceMs` 曾为 48_000；海克斯并入 50 秒准备阶段后回到 30_000（海克斯在 50 秒准备阶段内选，其他选择 30 秒），`CAT_CHOICE_SEC` 和显式 `RoomOptions.choiceMs` 仍可覆盖。该时长沿用既有统一 choice 阶段（强化及其他选择），不新增按类型分流或领域时钟。期限前不自动选取，到期沿既有 `timeoutChoice`；不消耗新的 RNG。天才改彩/48 秒为项目决定 P，来源为用户 10-23 批准的 `perf-1022/rules-1023/approved-1023-batch2.md` 第 7、8 条。界面本地演示默认覆盖仍为 30 秒，需 Claude 同步；在线服务器默认已为 48 秒。
 
 接口：既有 Match/server-entry 导出的 `deriveAugmentTier(seed:number,choiceId:string):AugmentTier` 保留签名，只接受 `round:2-1:augment` / `round:3-2:augment` / `round:4-2:augment`，返回组合第 1/2/3 项；非法节点抛 `Error('Unknown augment tier node')`。`resolveAugmentTier` 签名不变、先用奇遇覆盖。领域内部/测试新增 `augment-offers.ts` 导出 `deriveAugmentTierSequence(seed:number):readonly [AugmentTier,AugmentTier,AugmentTier]`，返回未覆盖的基础组合；配置权重不覆盖票值时抛 `Error('Invalid augment tier combination weights')`。没有新增命令或失败原因枚举；命令失败仍原 state、无事件/资源/RNG 变化。旧规则历史录制不迁移、不改断言，本批恢复一致性针对当前实现新生成的状态。
 
