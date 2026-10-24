@@ -14,7 +14,7 @@ const SOURCE_ORDER: Readonly<Record<SourceKind, number>> = {
 };
 const STAT_NAMES: readonly Stat[] = ['maxHp', 'attackDamage', 'armor', 'magicResist', 'initialMana', 'abilityAmount', 'abilityPower'];
 const MECHANICS = new Set(['d14Anomaly','d11Anomaly','d11Fill','s13P3','s13Anomaly','g23Junker','g23Experiment','quickstriker','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
-  'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'incomePolicy', 'acquisitionBundle', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance', 'g24Mirror', 'g24Trench', 'g24Collector', 'g24Gambler', 'g24Mogul','g24Zephyr']);
+  'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionXp', 'acquisitionGold', 'incomePolicy', 'acquisitionBundle', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance', 'g24Mirror', 'g24Trench', 'g24Collector', 'g24Gambler', 'g24Mogul','g24Zephyr']);
 const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   d14Anomaly:['enabled'],d11Anomaly:['enabled','priorKills'],d11Fill:['enabled'],
   s13P2Augment: ['enabled'], s13P2Anomaly: ['enabled'], s13P2ItemAugment: ['enabled'],
@@ -53,7 +53,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   gargoyle: ['resistPerEnemy'], gunblade: ['selfHealBps', 'allyHealBps'], extraAttackMana: ['amount'], titanic: ['adBps', 'radius'],
   killStreak: ['mana'], bulkyBuddies: ['health', 'shieldMaxHpBps', 'durationTicks'], mageArmor: ['apBps'],
   glassCannon: ['startingHealthBps', 'damageAmpBps'], pumpingUp: ['attackSpeedBpsPerRound'], investment: ['healthPerInterest'],
-  damageAmp: ['bps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold: ['amount','stage3Amount','stage4Amount'], lowCostAllies: ['count'],
+  damageAmp: ['bps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp','roundGold'], acquisitionXp:['amount'], acquisitionGold: ['amount','stage3Amount','stage4Amount'], lowCostAllies: ['count'],
 };
 const HOOKS: readonly Hook[] = ['combatStart', 'onAttack', 'onCast', 'onHpLoss'];
 for(const name of ['v20Unlock','v20Teamup','v19Chainblade','v19Garen','formSwapper','sisters','sistersUnlock'])MECHANICS.add(name);
@@ -105,7 +105,7 @@ export function cloneEffect(effect: Effect): Effect {
     case 'mechanic': {
       if (!MECHANICS.has(effect.mechanic)) throw new RangeError('Unknown finite mechanic');
       const fields = MECHANIC_FIELDS[effect.mechanic];
-      if (fields.some(key => key!=='stage3Amount' && key!=='stage4Amount' && key!=='forcedPeriodTicks' && key!=='warwick' && !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
+      if (fields.some(key => key!=='roundGold' && key!=='stage3Amount' && key!=='stage4Amount' && key!=='forcedPeriodTicks' && key!=='warwick' && !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
       if (Object.keys(effect.values).some(key => !fields.includes(key) && !['backRowOnly', 'buddyIndex'].includes(key))) throw new RangeError('Unknown mechanic parameter');
       for (const value of Object.values(effect.values)) integer(value);
       for (const key of ['everyN', 'periodTicks', 'durationTicks']) if (Object.hasOwn(effect.values, key)) integer(effect.values[key], 1);

@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH1 } from '../src/simulation/content/augment-pool-batch1';
 import { describe, expect, it, vi } from 'vitest';
 import { compileAugmentEffect } from '../src/simulation/augment-effects';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
@@ -78,7 +79,7 @@ const expected: Record<string, Effect[]> = {
   'inspiring-epitaph': [mech('inspiringEpitaph', { shieldMaxHpBps: 2000, attackSpeedBps: 1000 })],
 };
 describe('G2, P1 and S13 P2 augments: independent exact source parameters', () => {
-  it('contains exactly the thirty existing, six P1, fourteen P2, seven P3, three D11, one v19 Sisters and five v20 relationship augments', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(expected),'mentorship','reunion','geniuses','menaces','unlikely-duo','sisters','defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
+  it('contains exactly the thirty existing, six P1, fourteen P2, seven P3, three D11, one v19 Sisters and five v20 relationship augments', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(AUGMENT_BATCH1),...Object.keys(expected),'mentorship','reunion','geniuses','menaces','unlikely-duo','sisters','defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
   it.each(Object.keys(expected))('%s keeps exact normalized source values', id => expect(AUGMENT_DEFINITIONS[id].effects).toEqual(expected[id]));
 });
 

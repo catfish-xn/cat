@@ -17,6 +17,7 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
   const v=effect.values, allies=board.filter(u=>u.team===unit.team), zone=state.preparation.board.deploymentZones.player;
   const row=(u:Unit)=>u.location.kind==='board'?u.location.cell.row:-1;
   switch(effect.mechanic){
+    case 'acquisitionXp': return [];
     case 's13P2Augment': return p2AugmentEffects(augment.definitionId,unit,board,state);
     case 's13P3': return [mechanic('s13P3',{...v,stage:getMultiplayerRoundByOrdinal(state.round).stage})];
     case 'pumpingUp': {

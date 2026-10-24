@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH1, AUGMENT_BATCH1_BLOCKED } from './augment-pool-batch1';
 import { ANVIL_POLICY } from './anvils';
 import { ROUND_INCOME_TIMING } from './round-income-policy';
 import { OPENING_ENCOUNTER_CONFIG } from './opening-encounters';
@@ -23,6 +24,7 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 
 /** One release manifest is included in both content and loot replay identities. */
 export const RULES_GAP_MANIFEST = freezeContent({
+  augmentPoolBatch1:{version:'augment-pool-batch1-v23-candidate',content:AUGMENT_BATCH1,blocked:AUGMENT_BATCH1_BLOCKED,random:'source-seat-choice-spec-lcg32-uniform-sorted-with-replacement',anvilChoices:4,roundGold:'add-to-deferred-base-income-next-entry',unitEscrow:'solo-capacity-online-reward-orb'},
   openingEncounters: OPENING_ENCOUNTER_CONFIG,
   roundIncomeTiming: ROUND_INCOME_TIMING,
   combatStreaming: { version: 'live-tick-v1', terminalSettlement: 'all-terminal-fixed-seat-order', equipment: 'next-unsealed-tick-v2', equipmentTraits: 'opening-membership-and-non-item-effects-frozen', equipmentHp: 'existing-changeMaxHp-preserve-missing-health', equipmentReplay: 'private-input-and-source-receipts-v1' },

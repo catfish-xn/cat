@@ -1,3 +1,4 @@
+import { drainBatch1Gifts } from './augment-pool-grants';
 import { TEAMUP_IDS, V20_TRAITS, type TeamupId } from './content/v20-traits';
 /** Exactly-once acquisition gifts: online heroes enqueue reward orbs; offline heroes retain capacity escrow. */
 import type { MatchState } from './match-types';
@@ -46,7 +47,7 @@ export function drainP2Gifts(initial: MatchState, policy?: UnitLootPolicy): Matc
       else if(result.reason!=='bench-full')throw new RangeError(`P2 grant: ${result.reason}`);
     }
   } while(progressed);
-  return drainAllD11Gifts(state,policy);
+  return drainBatch1Gifts(drainAllD11Gifts(state,policy),policy);
 }
 /** No candidate receipt selects its own reward, cost or acquisition authority. */
 export function validateP2Gifts(state: MatchState): void {

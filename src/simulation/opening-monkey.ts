@@ -75,7 +75,7 @@ export function applyMonkey(state: MatchState, fact: OpeningEffectFact, receipt:
 export function validateMonkeyGrants(state: MatchState, fact?: OpeningEffectFact): void {
   const check = (v: unknown) => {if (!v) throw new RangeError('Invalid monkey grant');};
   const receipt = monkeyReceipt(state), grants = (state.seatMechanics?.receipts ?? []).filter(r => r.source === source
-    || r.receiptId.includes('wind-up-monkey') || r.kind === 'consumable' && r.definitionId === 'masterwork-upgrade');
+    || r.receiptId.includes('wind-up-monkey') || r.kind === 'consumable' && r.definitionId === 'masterwork-upgrade' && r.source !== 'augment-pool-batch1');
   if (!receipt) {check(grants.length === 0); return;}
   check(fact && fact.factId === receipt.factId);
   const outcome = fact!.outcome;

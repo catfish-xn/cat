@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
 import { validateItemProgram } from './m8/item-program';
 import { validateComponentPool } from './component-pool';
 import { ABILITY_DEFINITIONS, validateAbilityDefinitions } from './combat-abilities';
@@ -80,7 +81,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   rageblade:['attackSpeedBps'],damageAmp:['bps'],extraAttackMana:['amount','backRowOnly'],archangel:['periodTicks','abilityPower'],
   dragonClaw:['periodTicks','healMaxHpBps'],gargoyle:['resistPerEnemy'],gunblade:['selfHealBps','allyHealBps'],
   s13P3:['enabled','stage'],
-  acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold:['amount','stage3Amount','stage4Amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
+  acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp','roundGold'], acquisitionXp:['amount'], acquisitionGold:['amount','stage3Amount','stage4Amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
   investment:['healthPerInterest'],bulkyBuddies:['health','shieldMaxHpBps','durationTicks'],titanic:['adBps','radius'],mageArmor:['apBps'],killStreak:['mana'],
 });
 export function validateEffect(effect:Effect):void {
@@ -88,7 +89,7 @@ export function validateEffect(effect:Effect):void {
   if(effect.kind==='mechanic') {
     const fields=MECHANIC_FIELDS[effect.mechanic];
     if(!keysAre(effect,['kind','mechanic','values'])||!fields||!effect.values||!keysAre(effect.values,fields)
-      ||fields.some(key=>key!=='backRowOnly'&&key!=='stage3Amount' && key!=='stage4Amount' && key!=='forcedPeriodTicks'&&key!=='warwick'&&!Object.hasOwn(effect.values,key))
+      ||fields.some(key=>key!=='backRowOnly'&&key!=='roundGold' && key!=='stage3Amount' && key!=='stage4Amount' && key!=='forcedPeriodTicks'&&key!=='warwick'&&!Object.hasOwn(effect.values,key))
       ||Object.values(effect.values).some(value=>!integer(value)||value>1000000)) fail('Invalid mechanic');
     for(const key of ['periodTicks','durationTicks','everyN']) if(Object.hasOwn(effect.values,key)&&!integer(effect.values[key],1)) fail('Invalid mechanic interval');
     if(effect.values.backRowOnly!==undefined&&effect.values.backRowOnly!==1) fail('Invalid row condition');
@@ -136,7 +137,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
   // Augments: 30 historical + 6 P1 (blinding-speed, portable-forge, radiant-relics, going-long, hedge-fund,
   // investment-strategy-ii) + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 (dual-wielding) + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+6+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+6+Object.keys(AUGMENT_BATCH1).length+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);
