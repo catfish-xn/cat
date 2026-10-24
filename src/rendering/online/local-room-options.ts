@@ -3,7 +3,8 @@ import type { Clock, PvpMode } from '../../server/room';
 
 export interface LocalRoomOptions {
   readonly seed: number;
-  readonly preparationMs: number;
+  /** `per-round` (default): the rules' per-round table; `?prep=N` fixes every round to N seconds. */
+  readonly preparationMs: number | 'per-round';
   readonly choiceMs: number;
   readonly settlementMs: number;
   readonly myName: string;
@@ -17,4 +18,4 @@ export interface LocalRoomOptions {
   /** Injectable for tests; the browser uses the real clock. */
   readonly clock?: Clock;
 }
-export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'two-sided', poolCapacities: null };
+export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 'per-round', choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'two-sided', poolCapacities: null };

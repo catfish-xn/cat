@@ -42,8 +42,8 @@ import {
 } from './types';
 
 export interface RoomTimings {
-  /** 30s selects the rules' per-round table; other values explicitly override all rounds (e.g. test clocks). */
-  readonly preparationMs: number;
+  /** `per-round` (the default) selects the rules' per-round table (`getRoundPreparationMs`); a number overrides every round (e.g. test clocks). */
+  readonly preparationMs: number | typeof PER_ROUND_PREPARATION;
   readonly choiceMs: number;
   /** v22: preparation at an augment round, the open augment choice included; AUGMENT_PREPARATION_MS when absent. */
   readonly augmentPreparationMs?: number;
@@ -104,7 +104,9 @@ export const SLICE_STEP_TICKS = 1;
 /** v22: total preparation at an augment round, the augment choice included (14.24: 30 s planning + 20 s armory bonus).
  * The augment pick no longer uses `choiceMs` (the earlier 48 s pick is superseded by this merged phase). */
 export const AUGMENT_PREPARATION_MS = 50_000;
-export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
+/** `RoomTimings.preparationMs`: the rules decide each round's preparation (6/15/20 s openings, PvE 20 s, anomaly 75 s, others 30 s). */
+export const PER_ROUND_PREPARATION = 'per-round';
+export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: PER_ROUND_PREPARATION, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
 /** `stale-seat`: a seat or the pool changed after the plan was made; plan again on the latest live states. */
 export type CommitFailure = 'settlement-pending' | 'duplicate-settlement' | 'stale-round' | 'stale-seat' | 'wrong-phase' | 'invalid-settlement';
@@ -1104,8 +1106,8 @@ export class Room {
     if (committed) return this.setPhase('settlement', this.options.settlementMs);
     if (alive.every(seat => seat.match.phase === 'preparation')) {
       this.resolvePendingOnEntry();
-      return this.setPhase('preparation', this.options.preparationMs === ROOM_TIMING_DEFAULTS.preparationMs
-        ? getRoundPreparationMs(alive[0].match.roundDefinitionId) : this.options.preparationMs);
+      const preparationMs = this.options.preparationMs;
+      return this.setPhase('preparation', preparationMs === PER_ROUND_PREPARATION ? getRoundPreparationMs(alive[0].match.roundDefinitionId) : preparationMs);
     }
     // A supply round settles inside the choice itself; the rules left nothing to fight.
     if (alive.every(seat => seat.match.phase === 'settlement')) return this.freezeAndResolve();
