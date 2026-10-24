@@ -394,7 +394,8 @@ describe('T12 supply choice input', () => {
       state=resolvePublicEquipmentChoices(state);state=accepted(nextRound(state,state.round));
     }
     supplyInput=prepareInput({ acquired, state });
-  });
+    // Plays the public route to 4-4; it exceeded the 10 s hook default under parallel load (empty-message file failure).
+  }, 30_000);
   afterAll(() => { supplyInput = undefined; });
   it('T12 supply choice permits fresh component transactions and single-save continuation',()=>{
     const input=copyInput(supplyInput!),acquired=input.acquired;let state=input.state;
