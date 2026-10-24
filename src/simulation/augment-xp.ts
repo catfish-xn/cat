@@ -10,7 +10,7 @@ import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
 export const AUGMENT_ACQUISITION_LEVEL_KEY='augment-acquisition-levels';
 type AcquisitionLevels=Readonly<Record<string,number>>;
 const stageStart=(round:number)=>getMultiplayerRoundByOrdinal(round).subround===1;
-const countsLevels=(a:OwnedAugment)=>AUGMENT_BATCH3_XP[a.definitionId]?.levelUpRerolls!==undefined;
+const countsLevels=(a:OwnedAugment)=>AUGMENT_BATCH3_XP[a.definitionId]?.levelUpRerolls!==undefined||AUGMENT_BATCH3_XP[a.definitionId]?.levelUpHealth!==undefined;
 
 /** XP granted on entering `round`, beside the passive round XP. Derived only from owned augments and settled history:
  * Epoch at each stage start after acquisition; Patient Study for the previous round's player combat if it was fought
@@ -47,9 +47,40 @@ export function batch3XpFreeRerolls(state:Pick<MatchState,'augments'|'round'|'le
    const per=batch3XpValue(a.definitionId,row.stageRerolls);credits+=per;
    for(let round=a.acquiredRound+1;round<=state.round;round++)if(stageStart(round))credits+=per;
   }
-  if(row.levelUpRerolls){const from=levels[a.choiceId]??state.level;for(let level=from+1;level<=state.level;level++)credits+=level;}
+  if(row.levelUpRerolls){
+   const from=levels[a.choiceId]??state.level;
+   for(let level=from+1;level<=state.level;level++)credits+=row.levelUpRerolls==='level'?level:batch3XpValue(a.definitionId,row.levelUpRerolls);
+  }
  }
  return credits;
+}
+/** Gold for one XP purchase; Upward Mobility counts from its acquisition round. */
+export function xpPurchaseCost(augments:readonly OwnedAugment[],round:number):number {
+ return Math.max(0,augments.reduce<number>((cost,a)=>cost-(a.acquiredRound<=round?AUGMENT_BATCH3_XP[a.definitionId]?.xpCostReduction??0:0),MATCH_RULES.xpPurchaseCost));
+}
+const healthPerLevel=(a:OwnedAugment)=>{const key=AUGMENT_BATCH3_XP[a.definitionId]?.levelUpHealth;return key?batch3XpValue(a.definitionId,key):0;};
+const heal=(hp:number,amount:number)=>hp>0&&amount>0?Math.min(MATCH_RULES.initialHp,hp+amount):hp;
+/** Upward Mobility: a living player heals per level gained from `before` to `after` (P: capped at 100). */
+export function applyLevelUpHealth(before:Pick<MatchState,'level'>,after:MatchState):MatchState {
+ const amount=after.augments.reduce((n,a)=>n+healthPerLevel(a),0)*Math.max(0,after.level-before.level);
+ const playerHp=heal(after.playerHp,amount);
+ return playerHp===after.playerHp?after:{...after,playerHp};
+}
+/** Restore: level-up health during round `round`'s settlement (settlement XP), applied to the settled HP. */
+export function settlementLevelUpHealth(state:MatchState,round:number,hp:number):number {
+ const result=state.roundResults.find(r=>r.round===round);if(!result)return hp;
+ return heal(hp,state.augments.filter(a=>a.acquiredRound<=round).reduce((n,a)=>n+healthPerLevel(a),0)*(result.levelAfter-result.levelBefore));
+}
+/** Restore: level-up health from the previous settlement to round `round`'s battle (entry XP, acquisition XP, purchases).
+ * Levels before an acquisition in this round never heal: offline, the recorded level is the round-entry level. */
+export function preparationLevelUpHealth(state:MatchState,round:number,hp:number):number {
+ const result=state.roundResults.find(r=>r.round===round),end=result?.levelBefore??(state.round===round?state.level:undefined);
+ if(end===undefined)return hp;
+ const start=state.roundResults.find(r=>r.round===round-1)?.levelAfter??MATCH_RULES.initialLevel,levels=acquisitionLevels(state);
+ return heal(hp,state.augments.reduce((n,a)=>{
+  if(a.acquiredRound>round||!healthPerLevel(a))return n;
+  return n+healthPerLevel(a)*Math.max(0,end-(a.acquiredRound===round?levels[a.choiceId]??end:start));
+ },0));
 }
 /** Level reached by `total` experience from level 1. */
 export function levelAtExperience(total:number):number {

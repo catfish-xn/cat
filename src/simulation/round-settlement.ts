@@ -15,6 +15,8 @@ import {deriveTraits} from './trait-snapshot';
 import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canonicalContent } from './content';
 import { resolveRoundEconomy } from './round-economy';
+import { applyLevelUpHealth } from './augment-xp';
+import { needsOpponentHp, drainKingslayerGold } from './augment-kingslayer';
 import { MATCH_RULES } from './match-rules';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { FINAL_ROUND, getRoundSchedule } from './round-schedule';
@@ -38,6 +40,8 @@ export interface MultiplayerProgress {
 /** Trusted server receipt; income is calculated from seat resources, never supplied by a client. */
 export interface RoundSettlementReceipt {
   readonly g23Facts?:G23BattleFacts;
+  /** Opponent's frozen battle-start health; present exactly when this seat owns Kingslayer for the round. */
+  readonly opponentHp?:number;
   readonly version: typeof ROUND_SETTLEMENT_VERSION;
   readonly settlementId: string;
   readonly battleId: string;
@@ -141,6 +145,8 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const fields = ['version','settlementId','battleId','seatId','round','roundId','settlementEligible','result','damage',
       'baseDamage','opposingSurvivors','growth','combatTicks','combatEventCount'];
     if(r.g23Facts)fields.push('g23Facts');
+    if(r.opponentHp!==undefined)fields.push('opponentHp');
+    if((r.opponentHp!==undefined)!==needsOpponentHp(state.augments,r.round)||r.opponentHp!==undefined&&(!integer(r.opponentHp)||r.opponentHp>100)) return fail(state,'invalid-receipt');
     if (Object.keys(r).length !== fields.length || Object.keys(r).some(key => !fields.includes(key))) return fail(state,'invalid-receipt');
     const saved=melCanSave(state,r.g23Facts,Math.max(0,state.playerHp-r.damage)),hpAfter=saved?1:Math.max(0,state.playerHp-r.damage);
     const record: RoundResult = {
@@ -164,9 +170,10 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       augmentProgress,roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
     const hookEvents:MatchEvent[]=[];
-    let settled=r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next;
+    // Kingslayer pays from the receipt itself, so a settlement without battle facts still gets its gold.
+    let settled=drainKingslayerGold(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
-    settled=commitOpeningEncounterHealth(settled,hookEvents);
+    settled=applyLevelUpHealth(state,commitOpeningEncounterHealth(settled,hookEvents));
     const merged = resolveDeferredUpgrades(settled);
     const d14State=reconcileD14(merged.state,hookEvents);
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);

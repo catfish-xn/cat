@@ -11,7 +11,7 @@ import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition
 import { drainSetup } from './setup-work';
 import { spendFreeReroll } from './free-rerolls';
 import { drainBatch3RoundEntry } from './augment-pool-batch3-progress';
-import { batch3EntryXp, xpPurchaseAmount, recordAcquisitionLevel } from './augment-xp';
+import { batch3EntryXp, xpPurchaseAmount, xpPurchaseCost, recordAcquisitionLevel, applyLevelUpHealth } from './augment-xp';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
@@ -371,10 +371,11 @@ export function rerollShop(state: MatchState): MatchCommandResult {
 export function buyXp(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.level >= MATCH_RULES.maxLevel) return fail(state, 'max-level');
-  if (state.gold < MATCH_RULES.xpPurchaseCost) return fail(state, 'insufficient-gold');
-  if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - MATCH_RULES.xpPurchaseCost)) return fail(state, 'insufficient-gold');
+  const cost = xpPurchaseCost(state.augments, state.round);
+  if (state.gold < cost) return fail(state, 'insufficient-gold');
+  if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - cost)) return fail(state, 'insufficient-gold');
   const progression = grantXp(state.level, state.xp, xpPurchaseAmount(state.augments, state.round));
-  return accept({ ...state, gold: state.gold - MATCH_RULES.xpPurchaseCost, level: progression.level, xp: progression.xp });
+  return accept(applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp }));
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
@@ -424,7 +425,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
   const committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
-  return commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed,hookEvents);
+  return applyLevelUpHealth(state,commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed,hookEvents));
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)
@@ -562,6 +563,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
+  const entryLevel = state.level;
   const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,round));
   state={...state,level:progression.level,xp:progression.xp};
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
@@ -573,7 +575,8 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const openingEvents: MatchEvent[] = [];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
-  prepared=drainBatch3RoundEntry(applied.state);openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,prepared));
+  // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
+  prepared=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,prepared));
   if (prepared.phase === 'gameOver') {
     const terminal = stampMatchEvents(prepared, carousel.events);
     return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
@@ -603,6 +606,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
+    const entryLevel=state.level;
     const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};
     const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
@@ -611,7 +615,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
-    const drained=drainBatch3RoundEntry(applied.state),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
+    const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state)),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
@@ -887,6 +891,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     nextItemSerial: granted?.ok ? granted.state.nextItemSerial : state.nextItemSerial,
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
+  selected = applyLevelUpHealth(state, selected);
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
   if(choice.kind==='augment'){
     selected=recordAcquisitionLevel(selected,selected.augments.at(-1)!);

@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { createMatch, buyXp, rerollShop, selectChoice, startMatchCombat, nextRound } from '../src/simulation/match';
+import { createMatch, buyXp, rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch } from '../src/simulation/match';
+import { enableMultiplayerSettlement, applyRoundSettlement, forfeitPendingChoice, claimOrDiscardLoot, ROUND_SETTLEMENT_VERSION, type RoundSettlementReceipt } from '../src/server-entry';
+import { KINGSLAYER_SOURCE, drainKingslayerGold } from '../src/simulation/augment-kingslayer';
 import type { MatchState } from '../src/simulation/match-types';
 import { AUGMENT_BATCH3_XP, AUGMENT_BATCH3_XP_BLOCKED } from '../src/simulation/content/augment-pool-batch3-xp';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
@@ -8,7 +10,7 @@ import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentOfferAllowed, augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
-import { batch3EntryXp, xpPurchaseAmount, batch3XpFreeRerolls, AUGMENT_ACQUISITION_LEVEL_KEY } from '../src/simulation/augment-xp';
+import { batch3EntryXp, xpPurchaseAmount, xpPurchaseCost, applyLevelUpHealth, batch3XpFreeRerolls, AUGMENT_ACQUISITION_LEVEL_KEY } from '../src/simulation/augment-xp';
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
@@ -35,16 +37,15 @@ function advance(s:MatchState):MatchState {
  s=resolveM5Choices(s);return resolveM5Choices(accept(nextRound(s,s.round) as any).state);
 }
 
-it('the five XP rows carry their 14.24 zh_cn name, tier, description and values; Upward Mobility stays out of the pool', ()=>{
+it('the seven batch rows carry their 14.24 zh_cn name, tier, description and values and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3_XP).sort()).toEqual(['epoch','epoch-plus','level-up','patient-study','shopping-spree']);
+ expect(Object.keys(AUGMENT_BATCH3_XP).sort()).toEqual(['epoch','epoch-plus','kingslayer','level-up','patient-study','shopping-spree','upward-mobility']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3_XP)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
   expect(AUGMENT_DEFINITIONS[id].name).toBe(r.name_zh_cn);expect(AUGMENT_TIERS[id]).toBe(row.tier);expect(AUGMENT_POOL_API_NAMES[id]).toBe(row.apiName);
  }
- for(const id of Object.keys(AUGMENT_BATCH3_XP_BLOCKED))expect([AUGMENT_DEFINITIONS[id],AUGMENT_TIERS[id],AUGMENT_POOL_API_NAMES[id]]).toEqual([undefined,undefined,undefined]);
- expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain('TFT_Augment_UpwardMobility');
+ expect(AUGMENT_BATCH3_XP_BLOCKED).toEqual({});
 });
 it('Epoch and Epoch+ exclude each other, Shopping Spree excludes Trade Sector (14.24 static mutex)', ()=>{
  const own=(id:string)=>owned(id,1),ctx={node:'3-2',fieldedTraits:[],blocked:[]};
@@ -119,4 +120,71 @@ it('Shopping Spree: records the acquisition level and grants the new level in fr
  for(const bad of [{[choiceId]:from-1},{[choiceId]:s.level+1},{},{[choiceId]:from,other:1},[from]])
   expect(()=>restoreMatch(serializeMatch(writeSeatMechanic(s,AUGMENT_ACQUISITION_LEVEL_KEY,bad as any)))).toThrow();
  expect(()=>validateBatch1Gifts(writeSeatMechanic(s,AUGMENT_ACQUISITION_LEVEL_KEY,undefined))).toThrow();
+});
+it('Upward Mobility: XP costs 3 gold from acquisition; each later level-up heals a living player 2 (cap 100) and adds 3 free rerolls; restore is exact', ()=>{
+ let s=pick('upward-mobility');const from=s.level,choiceId=s.augments.at(-1)!.choiceId;
+ expect(s.seatMechanics!.seat[AUGMENT_ACQUISITION_LEVEL_KEY]).toEqual({[choiceId]:from});
+ expect([xpPurchaseCost(s.augments,s.round),xpPurchaseCost(s.augments,s.round-1),xpPurchaseCost([],s.round)]).toEqual([3,4,4]);
+ let r={...s,gold:s.gold+30};const hp0=r.playerHp;expect(hp0).toBeLessThan(96);
+ while(r.level<from+2){const before=r;r=accept(buyXp(r) as any).state;expect(before.gold-r.gold).toBe(3);}
+ expect(r.playerHp).toBe(Math.min(100,hp0+4));expect(batch3XpFreeRerolls(r)).toBe(6);expect(freeRerollsAvailable(r)).toBe(6);
+ expect(restoreMatch(serializeMatch(r))).toEqual(r);
+ // Settlement and entry level-ups keep healing through real rounds; every save is checked against the derived chain.
+ let levelUps=0;
+ for(let n=0;n<12&&!levelUps&&r.phase!=='gameOver';n++){
+  const prev=r;r=advance(r);levelUps+=r.level-prev.level;
+  const gained=r.level-prev.level,settledHp=r.roundResults.at(-1)!.hpAfter;
+  if(settledHp>0)expect(r.playerHp).toBeGreaterThanOrEqual(Math.min(100,settledHp));
+  expect(freeRerollsAvailable(r)-freeRerollsAvailable(prev)).toBe(3*gained);
+  expect(restoreMatch(serializeMatch(r))).toEqual(r);
+ }
+ expect(levelUps).toBeGreaterThan(0);
+ // Tampering: an HP off by the heal, or a moved acquisition level, is rejected.
+ for(const bad of [{...r,playerHp:r.playerHp-2},{...r,playerHp:Math.min(100,r.playerHp+2)}].filter(b=>b.playerHp!==r.playerHp))
+  expect(()=>restoreMatch(serializeMatch(bad))).toThrow();
+ expect(()=>restoreMatch(serializeMatch(writeSeatMechanic(r,AUGMENT_ACQUISITION_LEVEL_KEY,{[choiceId]:from+1})))).toThrow();
+ expect(applyLevelUpHealth({level:3},{...r,level:5,playerHp:99}).playerHp).toBe(100);
+ expect(applyLevelUpHealth({level:3},{...r,level:5,playerHp:0}).playerHp).toBe(0);
+ expect(applyLevelUpHealth({level:3},{...r,augments:[],level:5,playerHp:50}).playerHp).toBe(50);
+});
+
+// Kingslayer: multiplayer receipts carry the opponent's frozen health; offline opponents are not players.
+function mpOpening():MatchState {
+ let state=accept(enableMultiplayerSettlement(createMatch(5),'A') as any).state as MatchState;
+ const timeout=(s:MatchState)=>accept(forfeitPendingChoice(s,s.round,s.pendingChoice?.choiceId??null,s.pendingChoice?.generation??null) as any).state as MatchState;
+ while(state.roundDefinitionId!=='2-1'){
+  if(state.phase==='choice')state=timeout(state);
+  else if(state.phase==='preparation')state=accept(startMatchCombat(state) as any).state;
+  else if(state.phase==='combat')state=stepMatch(state).state;
+  else state=accept(nextRound(accept(claimOrDiscardLoot(state,state.round) as any).state,state.round) as any).state;
+ }
+ return state.phase==='choice'?timeout(state):state;
+}
+const settlement=(s:MatchState,extra:Partial<RoundSettlementReceipt>={}):RoundSettlementReceipt=>({version:ROUND_SETTLEMENT_VERSION,settlementId:`${s.round}:A`,battleId:`battle:${s.round}`,
+ seatId:s.multiplayer!.seatId,round:s.round,roundId:s.roundDefinitionId,settlementEligible:true,result:'win',damage:0,baseDamage:2,opposingSurvivors:0,growth:[],combatTicks:88,combatEventCount:20,...extra});
+const kingGold=(s:MatchState)=>s.seatMechanics?.receipts.filter(r=>r.source===KINGSLAYER_SOURCE).map(r=>r.kind==='gold'?r.amount:0)??[];
+it('Kingslayer: a player win pays 1 gold, 4 when the opponent had more health; the receipt must carry exactly that health', ()=>{
+ const base=mpOpening(),s={...base,playerHp:80,augments:[...base.augments,{definitionId:'kingslayer',choiceId:'k',acquiredRound:base.round}]};
+ expect(AUGMENT_DEFINITIONS.kingslayer.effects).toContainEqual({kind:'mechanic',mechanic:'acquisitionGold',values:{amount:1}});
+ for(const [hp,gold] of [[90,4],[80,1],[50,1]] as const){
+  const r=applyRoundSettlement(s,settlement(s,{opponentHp:hp}));if(!r.ok)throw new Error(r.reason);
+  expect(kingGold(r.state)).toEqual([gold]);validateBatch1Gifts(r.state);
+  const forged=structuredClone(r.state) as any;forged.seatMechanics.receipts.find((x:any)=>x.source===KINGSLAYER_SOURCE).amount=gold===4?1:4;
+  expect(()=>validateBatch1Gifts(forged)).toThrow();
+ }
+ const lost=applyRoundSettlement(s,settlement(s,{result:'loss',damage:2,opponentHp:90}));if(!lost.ok)throw new Error(lost.reason);
+ expect(kingGold(lost.state)).toEqual([]);
+ for(const bad of [settlement(s),settlement(s,{opponentHp:101}),settlement(s,{opponentHp:-1})])expect(applyRoundSettlement(s,bad)).toMatchObject({ok:false,reason:'invalid-receipt'});
+ expect(applyRoundSettlement(base,settlement(base,{opponentHp:90}))).toMatchObject({ok:false,reason:'invalid-receipt'});
+ // A forged settled history without its receipt is refused as well.
+ const r=applyRoundSettlement(s,settlement(s,{opponentHp:90}));if(!r.ok)throw new Error(r.reason);
+ const dropped={...r.state,seatMechanics:{...r.state.seatMechanics!,receipts:r.state.seatMechanics!.receipts.filter(x=>x.source!==KINGSLAYER_SOURCE)}};
+ expect(()=>validateBatch1Gifts(dropped)).toThrow();
+});
+it('Kingslayer offline: the AI opponent is not a player, so a player-combat win pays the plain 1 gold; real saves restore', ()=>{
+ let s=pick('kingslayer');expect(kingGold(s)).toEqual([]);expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ const last=s.roundResults.at(-1)!,won={...s,roundResults:[...s.roundResults,{...last,round:s.round,roundKind:'pvp' as const,result:'playerWin' as const,hpBefore:1}]};
+ expect(kingGold(drainKingslayerGold(won))).toEqual([1]);
+ expect(kingGold(drainKingslayerGold({...won,roundResults:[...s.roundResults,{...won.roundResults.at(-1)!,result:'draw' as const}]}))).toEqual([]);
+ s=advance(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
 });

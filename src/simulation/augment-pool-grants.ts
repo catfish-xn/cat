@@ -7,6 +7,7 @@ import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
 import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold } from './augment-pool-batch3-progress';
 import { validateFreeRerolls } from './free-rerolls';
 import { validateAcquisitionLevels } from './augment-xp';
+import { drainKingslayerGold, validateKingslayerGold } from './augment-kingslayer';
 import { planAugmentGifts, augmentAnvilOffers, AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { grantMechanicItem, grantMechanicUnit, grantMechanicConsumable } from './seat-mechanics/grants';
 import { isAnvil } from './content/anvils';
@@ -31,7 +32,7 @@ export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):Matc
    else if(result.reason!=='bench-full')throw new RangeError(`Augment batch1 grant: ${result.reason} (${gift.definitionId})`);
   }
  }while(progressed);
- return drainBatch3Gold(drainBatch2Gold(state));
+ return drainKingslayerGold(drainBatch3Gold(drainBatch2Gold(state)));
 }
 /** Anvil options belong to the acquisition receipt; open order and current round do not affect them. */
 export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
@@ -43,6 +44,7 @@ export function validateBatch1Gifts(state:MatchState):void {
  validateBatch2Gold(state);
  validateBatch3Gold(state);
  validateAcquisitionLevels(state);
+ validateKingslayerGold(state);
  validateFreeRerolls(state);
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
