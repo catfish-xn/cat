@@ -6,7 +6,7 @@ import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
-import { enterShopAugmentRound, validateShopAugments, SHOP_AUGMENT_KEY, SHOP_AUGMENT_SOURCE } from '../src/simulation/shop-augments';
+import { enterShopAugmentRound, validateShopAugments, starryChanceBps, SHOP_AUGMENT_KEY, SHOP_AUGMENT_SOURCE } from '../src/simulation/shop-augments';
 import { freeRerollsAvailable, freeRerollsGranted } from '../src/simulation/free-rerolls';
 import { validateBatch1Gifts } from '../src/simulation/augment-pool-grants';
 import { readSeatMechanic, writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
@@ -15,15 +15,16 @@ import { SHOP_CATALOG_BY_COST } from '../src/simulation/match-rules';
 import { generateSharedShop, rerollSharedShop, buySharedUnit, buySharedXp, refreshSharedShops, nextSharedRound, runSharedMatchCommand,
   type MatchState, type SharedPoolState } from '../src/server-entry';
 import { applySeatCommand } from '../src/server/room/room';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accept, batch, room, conserved, fight } from './tp-helpers';
 
 const owning=(s:MatchState,definitionId:string,acquiredRound=s.round):MatchState=>({...s,augments:[...s.augments,{definitionId,choiceId:'test-'+definitionId,acquiredRound}]});
 const record=(s:MatchState)=>readSeatMechanic(s,SHOP_AUGMENT_KEY) as unknown as {credits:number;rounds?:[number,number][];rolls?:number;rigAnchor?:number;reinforced?:number}|undefined;
 const costOf=(s:MatchState)=>s.shop.slots.map(x=>x.status==='available'?UNIT_DEFINITIONS[x.definitionId].cost:0);
 
-it('the nine shop-rule rows carry their 14.24 zh_cn name, tier, description and values and are registered in the offer pool', ()=>{
+it('the eleven shop-rule rows carry their 14.24 zh_cn name, tier, description and values and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_SHOP).sort()).toEqual(['dual-purpose','firesale','invested-plus','invested-plus-plus','patience-is-a-virtue','prismatic-ticket','reinfourcement','rigged-shop-plus','subscription-service']);
+ expect(Object.keys(AUGMENT_SHOP).sort()).toEqual(['dual-purpose','firesale','invested-plus','invested-plus-plus','patience-is-a-virtue','prismatic-ticket','reinfourcement','rigged-shop-plus','starry-night','starry-night-plus','subscription-service']);
  for(const [id,row] of Object.entries(AUGMENT_SHOP)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -163,4 +164,36 @@ it('Subscription Service: a stage start replaces the shop with 4 unique 4-costs 
  const picked=accept(runSharedMatchCommand(pool,offered,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'subscription-service'}));
  expect(costOf(picked.state)).toEqual([4,4,4,4,0]);expect(picked.state.gold).toBe(state.gold+6);
  expect(picked.state.shop.generation).toBe(state.shop.generation+1);conserved(picked.pool,[picked.state]);
+});
+
+it('Starry Night: 1- and 2-cost offers become 2-star at the level chance, reserve three copies and sell for three times the cost', ()=>{
+ expect(starryChanceBps({augments:[{definitionId:'starry-night',choiceId:'x',acquiredRound:1}],level:9})).toBe(8000);
+ expect([1,2,3,4,5,6,7,8,10].map(level=>starryChanceBps({augments:[{definitionId:'starry-night-plus',choiceId:'x',acquiredRound:1}],level}))).toEqual([1800,1800,1800,2000,2200,2500,3000,5000,10000]);
+ const {pool,states}=room(undefined,1);
+ let r=accept(generateSharedShop(pool,{...owning(states[0],'starry-night'),gold:300,level:10,xp:0},0));
+ for(let i=0;i<30&&!r.state.shop.slots.some(s=>s.status==='available'&&s.starLevel===2);i++)r=accept(rerollSharedShop(r.pool,r.state,r.state.shop.generation));
+ // Level 10 is 100%: every 1- or 2-cost offer with three copies in stock is 2-star; 3+ costs never are.
+ for(const s of r.state.shop.slots)if(s.status==='available')expect(s.starLevel===2).toBe(UNIT_DEFINITIONS[s.definitionId].cost<=2);
+ conserved(r.pool,[r.state]);
+ const slot=r.state.shop.slots.findIndex(s=>s.status==='available'&&s.starLevel===2),offer=r.state.shop.slots[slot] as {definitionId:string;starLevel:2};
+ const gold=r.state.gold,shopHeld=r.pool.shops.filter(x=>x.definitionId===offer.definitionId).length;void shopHeld;
+ r=accept(buySharedUnit(r.pool,r.state,slot,r.state.shop.generation));
+ expect(r.state.gold).toBe(gold-3*UNIT_DEFINITIONS[offer.definitionId].cost);
+ expect(r.state.preparation.units.find(u=>u.id===`unit-${r.state.nextUnitSerial-1}`)).toMatchObject({definitionId:offer.definitionId,starLevel:2});
+ expect(r.pool.holdings.find(h=>h.unitId===`unit-${r.state.nextUnitSerial-1}`)!.sources).toHaveLength(3);
+ conserved(r.pool,[r.state]);
+ // Reroll returns all three copies of an unbought 2-star offer.
+ const rerolled=accept(rerollSharedShop(r.pool,r.state,r.state.shop.generation));conserved(rerolled.pool,[rerolled.state]);
+ // Without the augment no offer is 2-star.
+ const plain=accept(generateSharedShop(room(undefined,1).pool,{...room(undefined,1).states[0],level:10},0));
+ expect(plain.state.shop.slots.some(s=>s.status==='available'&&s.starLevel===2)).toBe(false);
+});
+it('a 2-star shop purchase folds to a 2-star unit on restore; a forged star on a 3-cost is rejected', ()=>{
+ const base=createMatch(42),one=SHOP_CATALOG_BY_COST[1][0],three=SHOP_CATALOG_BY_COST[3][0];
+ const s:MatchState={...base,gold:50,shop:{...base.shop,slots:[{status:'available',definitionId:one,starLevel:2},...base.shop.slots.slice(1)]}};
+ const bought=accept(buyUnit(s,0,s.shop.generation) as any).state as MatchState;
+ expect(bought.gold).toBe(50-3);expect(bought.preparation.units.find(u=>u.id===`unit-${bought.nextUnitSerial-1}`)!.starLevel).toBe(2);
+ expect(restoreMatch(serializeMatch(bought))).toEqual(bought);
+ const forged={...bought,shop:{...bought.shop,slots:[{status:'available' as const,definitionId:three,starLevel:2 as const},...bought.shop.slots.slice(1)]}};
+ expect(()=>restoreMatch(serializeMatch(forged))).toThrow();
 });

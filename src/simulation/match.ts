@@ -11,7 +11,7 @@ import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition
 import { drainSetup } from './setup-work';
 import { spendFreeReroll } from './free-rerolls';
 import { drainBatch3RoundEntry } from './augment-pool-batch3-progress';
-import { applyReinfourcement, enterShopAugmentRound, recordShopReroll } from './shop-augments';
+import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost } from './shop-augments';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
@@ -63,7 +63,7 @@ import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, createCombatWithEventsSteps, stepCombat, validateCombatStart, type CombatState } from './combat';
 import { toLedgerEvents } from './combat-ledger';
 import { deployUnit, getPlayerDeploymentCount } from './game';
-import { UNIT_DEFINITIONS, type UnitLocation } from './units';
+import { type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 import { nextRandom, validateSeed } from './rng';
 import { DEFAULT_BOARD, sameCell } from './board';
@@ -154,7 +154,7 @@ export function needsAnomalyRecruitment(state: MatchState): boolean {
       && !state.multiplayer?.forfeitedChoices.includes(event.id));
 }
 function affordableOffer(state: MatchState, gold = state.gold): boolean {
-  return state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost <= gold);
+  return state.shop.slots.some(slot => slot.status === 'available' && shopOfferCost(slot) <= gold);
 }
 /** v22: the candidate filter of an augment node opening now (trait snapshot only where the node is tailored). */
 function openingOfferFilter(state: MatchState, choiceId: string, blocked: readonly string[]): AugmentOfferFilter {
@@ -312,10 +312,10 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
   const offer = state.shop.slots[slotIndex];
   if (offer.status !== 'available') return fail(state, 'purchased-slot');
-  const cost = UNIT_DEFINITIONS[offer.definitionId].cost;
+  const cost = shopOfferCost(offer);
   if (state.gold < cost) return fail(state, 'insufficient-gold');
   const plan = planUnitAcquisition(state, offer.definitionId,
-    { kind: 'shop', generation: expectedGeneration, slotIndex, definitionId: offer.definitionId }, state.resourceProvenance.entries.length, isCombatRosterLocked(state));
+    { kind: 'shop', generation: expectedGeneration, slotIndex, definitionId: offer.definitionId,...(offer.starLevel?{starLevel:offer.starLevel}:{}) }, state.resourceProvenance.entries.length, isCombatRosterLocked(state), offer.starLevel ?? 1);
   if (!plan.ok) return fail(state, plan.reason);
   const purchased: MatchState = { ...state, items: plan.items, anomalyBinding: plan.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, plan.upgradeEvents), gold: state.gold - cost, nextUnitSerial: plan.nextUnitSerial,
     resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, plan.facts),

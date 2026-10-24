@@ -99,7 +99,8 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   // Crown -> Trifecta -> Kog'Maw scenario at attempt 16003, beyond the old 10000 budget.
   // v23 batch 2: independent offer/gift seed search retains Crown → Trifecta → Kog'Maw at 7329.
   // v23 batch 3 (twenty-six more cards): the same sequential search finds the chain at 6974.
-  const seed=6974;
+  // v23 shop-rule augments (eleven more cards): the same sequential search finds it at 3684.
+  const seed=3684;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){
@@ -120,9 +121,10 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
 });
 
-it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('seed 3709 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
-  // v23 expanded pool (batch 3): 3709 publicly offers Trifecta → Nami; the original stat/shield assertions remain unchanged.
-  let s=reachRound('2-1',false,3709),c=s.pendingChoice!;
+it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('seed 1939 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
+  // v23 expanded pool (batch 3 + shop-rule augments): the first sequential seed publicly offering Trifecta → Nami is 1939;
+  // the original stat/shield assertions remain unchanged.
+  let s=reachRound('2-1',false,1939),c=s.pendingChoice!;
   s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
   const gift=p2GiftPlan(s).find(g=>g.kind==='unit')!,birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.receiptId===gift.receiptId)!;
   if(birth.kind!=='unit'||!birth.unitId)throw Error('missing Nami receipt');

@@ -99,6 +99,25 @@ export function enterShopAugmentRound(initial:MatchState):MatchState {
 
 /* ---------------- shop generation ---------------- */
 
+/** Price of a shop offer: a 2-star offer is three copies. */
+export function shopOfferCost(offer:{readonly definitionId:string;readonly starLevel?:2}):number {
+ return UNIT_DEFINITIONS[offer.definitionId].cost*(offer.starLevel===2?3:1);
+}
+/** Starry Night: 14.24 chance by player level, under the archive's hashed field names (triage 2026-10-24). Levels 1-2
+ * use the level-3 chance and 1- and 2-cost share one chance (P). MaxTier ({0d14760d}) bounds the cost. */
+const STARRY_CHANCE_KEYS:Readonly<Record<number,string>>={3:'{4abd7204}',4:'{49c43705}',5:'{99dcb7a2}',6:'{020fb2eb}',7:'{7083c200}',8:'{ca771d21}',9:'{019b80fe}',10:'{4885b8ce}'};
+export function starryChanceBps(state:Pick<MatchState,'augments'|'level'>):number {
+ const a=owned(state,'starry')[0];if(!a)return 0;
+ const v=AUGMENT_SHOP[a.definitionId].source.values[STARRY_CHANCE_KEYS[Math.min(10,Math.max(3,state.level))]];
+ return Math.round(v!*10000);
+}
+/** Whether this freshly drawn 1-star offer becomes 2-star. Seat/generation/slot-bound, so the shop RNG stream is unchanged;
+ * the caller reserves the two extra copies and keeps a 1-star offer when the pool lacks them. */
+export function starryUpgrade(state:MatchState,generation:number,slot:number,definitionId:string):boolean {
+ const a=owned(state,'starry')[0];if(!a||UNIT_DEFINITIONS[definitionId].cost>shopAugmentValue(a.definitionId,'{0d14760d}'))return false;
+ return Math.floor(word(state,['starry',a.choiceId,generation,slot])*10000/4294967296)<starryChanceBps(state);
+}
+
 /** Rigged Shop+: the first shop drawn after acquisition and every Numrolls-th one after it hold only 3-cost champions.
  * The anchor is fixed by that first draw. Returns the tier to force, if any. */
 export function planRiggedShop(state:MatchState,generation:number):{readonly state:MatchState;readonly tier?:CostTier} {
@@ -134,7 +153,7 @@ export function drawSubscriptionSlots(state:MatchState,available:Readonly<Record
 
 /** Online heroes are granted at once while the roster is editable (the policy reserves the copy) and fall back to a
  * reward orb on a full bench or a locked roster, like every other online gift. */
-function grantUnit(state:MatchState,request:{readonly receiptId:string;readonly definitionId:string},policy?:UnitLootPolicy) {
+function grantUnit(state:MatchState,request:{readonly receiptId:string;readonly definitionId:string;readonly starLevel?:2},policy?:UnitLootPolicy) {
  const base={...request,source:SHOP_AUGMENT_SOURCE};
  if(!isCombatRosterLocked(state)&&(policy||!state.multiplayer)){
   const now=grantMechanicUnit(state,{...base,immediate:true},policy);
@@ -152,7 +171,7 @@ export function planFiresale(state:MatchState,round:number):{readonly owner:Owne
 export function stealFiresaleUnit(state:MatchState,owner:OwnedAugment,slot:number,policy?:UnitLootPolicy):{readonly state:MatchState;readonly events:readonly MatchEvent[]} {
  const offer=state.shop.slots[slot];if(offer.status!=='available')throw new RangeError('Firesale slot');
  const emptied:MatchState={...state,shop:{...state.shop,slots:state.shop.slots.map((s,i)=>i===slot?{status:'purchased' as const}:s)}};
- const result=grantUnit(emptied,{receiptId:receiptId('firesale',owner,state.round),definitionId:offer.definitionId},policy);
+ const result=grantUnit(emptied,{receiptId:receiptId('firesale',owner,state.round),definitionId:offer.definitionId,...(offer.starLevel?{starLevel:offer.starLevel}:{})},policy);
  if(!result.ok)throw new RangeError(`Firesale grant: ${result.reason}`);
  return {state:result.state,events:result.events};
 }
@@ -220,7 +239,7 @@ export function validateShopAugments(state:MatchState):void {
   const own=a!;
   if(rule==='subscription'){if(receipt.kind!=='gold'||receipt.amount!==shopAugmentValue(own.definitionId,'GoldPerStage')||receipt.round!==n||n<=own.acquiredRound||n>state.round||!isStageStart(n))fail('subscription gold');}
   else if(rule==='dual-purpose'){if(receipt.kind!=='gold'||receipt.amount!==shopAugmentValue(own.definitionId,'goldtogive')||receipt.round!==n||n<own.acquiredRound||n>state.round)fail('dual purpose gold');}
-  else if(rule==='firesale'){if(receipt.kind!=='unit'||(receipt.starLevel??1)!==1||!SHOP_CATALOG.includes(receipt.definitionId)||receipt.round!==n||n<=own.acquiredRound||n>state.round)fail('firesale');}
+  else if(rule==='firesale'){if(receipt.kind!=='unit'||![1,2].includes(receipt.starLevel??1)||receipt.starLevel===2&&UNIT_DEFINITIONS[receipt.definitionId]?.cost>2||!SHOP_CATALOG.includes(receipt.definitionId)||receipt.round!==n||n<=own.acquiredRound||n>state.round)fail('firesale');}
   else if(rule==='reinfourcement'){if(receipt.kind!=='unit'||(receipt.starLevel??1)!==1||n>1||receipt.definitionId!==reinforced)fail('reinfourcement');}
   else fail('receipt rule');
  }

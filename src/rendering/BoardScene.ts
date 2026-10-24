@@ -1,5 +1,6 @@
 import { combatEquipmentDisplay } from '../presentation/battle-equipment';
 import { freeRerollsAvailable } from '../simulation/free-rerolls';
+import { shopOfferCost } from '../simulation/shop-augments';
 import { createMelSaveFeedback } from './mel-save-feedback';
 import Phaser from 'phaser';
 import { createConquerorFlag } from './conqueror-flag';
@@ -1014,7 +1015,7 @@ export class BoardScene extends Phaser.Scene {
         const definition = UNIT_DEFINITIONS[offer.definitionId];
         const colors = ['#304653', '#245841', '#28517d', '#634786', '#846230'];
         const borders = [0x7b94a3, 0x68c087, 0x72b6ff, 0xba8bff, 0xffd675];
-        button.setText(`${definition.symbol} ${displayUnitName(offer.definitionId)}\n购买 · ${definition.cost} 金币`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(operable ? 1 : 0.4);
+        button.setText(`${definition.symbol} ${displayUnitName(offer.definitionId)}${offer.starLevel === 2 ? ' ★★' : ''}\n购买 · ${shopOfferCost(offer)} 金币`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(operable ? 1 : 0.4);
         frame.lineStyle(2, borders[definition.cost - 1], operable ? 1 : 0.4).strokeRect(204 + slot * 106, 567, 104, 54);
       }
     }

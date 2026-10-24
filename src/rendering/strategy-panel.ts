@@ -1,4 +1,5 @@
 import { d14AnomalyLine, d14UnitNotes, displayStarLevel, fourStarBaseStats, readD14Display, starText } from '../presentation/d14-display';
+import { shopOfferCost } from '../simulation/shop-augments';
 import { displayUnitName } from './display-names';
 export { displayUnitName } from './display-names';
 import { readRoundInfo } from '../simulation/round-selectors';
@@ -1350,15 +1351,17 @@ export class StrategyPanel {
     const upgrades = shopUpgradeStars(state);
     state.shop.slots.forEach((offer, slot) => {
       const definition = offer.status === 'available' ? UNIT_DEFINITIONS[offer.definitionId] : null;
-      const affordable = definition ? state.gold >= definition.cost : false;
+      const price = offer.status === 'available' ? shopOfferCost(offer) : 0, star = offer.status === 'available' ? offer.starLevel ?? 1 : 1;
+      const affordable = definition ? state.gold >= price : false;
       const button = this.button(`mobile:buy-${slot}`, '', () => this.actions.buy(slot, state.shop.generation), !ready || !definition);
       button.classList.add('shop-card');
       if (definition) {
         const identity = getHeroIdentity(definition.id);
         button.dataset.cost = String(definition.cost); button.classList.toggle('unaffordable', !affordable);
-        button.dataset.unitDef = definition.id; button.dataset.unitStar = '1';
+        button.dataset.unitDef = definition.id; button.dataset.unitStar = String(star);
         const emblem = element('span', '', 'shop-emblem'); emblem.innerHTML = heroPortraitHtml(definition.id, 34, heroEmblemSvg(definition.id, 34));
-        button.append(emblem, element('span', identity.name, 'shop-name'), traitLine(definition.id), element('span', `${definition.cost}`, 'shop-cost'));
+        button.append(emblem, element('span', identity.name, 'shop-name'), traitLine(definition.id), element('span', `${price}`, 'shop-cost'));
+        if (star === 2) button.append(element('span', '★★', 'shop-offer-star'));
         const upgrade = upgrades.get(slot);
         if (upgrade) {
           button.classList.add('upgrade'); button.dataset.upgradeStar = String(upgrade);

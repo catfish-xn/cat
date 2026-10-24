@@ -18,8 +18,9 @@ const crest = 'TFT_Item_Artifact_LightshieldCrest';
 let maddieId = 'unit-2', luxId = 'unit-3';
 function threeHeroMatch(): MatchState {
   // v23 batch 3: seed 5's first offer became Built Different (changes the shield numbers); pin a public crest pick.
+  // Shop-rule augments: Artillerist Crest left seed 5's offer; Sniper Crest has the same shape (one emblem + one champion).
   const open = reachRound('2-1', false, 5), c = open.pendingChoice!;
-  let state = resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, 'artillerist-crest')));
+  let state = resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, 'sniper-crest')));
   state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
   for (const [id, col] of [['maddie', 3], ['lux', 5]] as const) {
     const slot = state.shop.slots.findIndex(s => s.status === 'available' && s.definitionId === id);
@@ -32,9 +33,10 @@ function threeHeroMatch(): MatchState {
 }
 // v23 batch 3: pool growth moved seed 42's first 2-1 offer to Sorcerer Explosion (a replay-validated batch-2
 // mechanic), so the resists validator no longer decided. Pin a public pick that adds no combat mechanic.
+// Shop-rule augments: seed 42 now offers no crest; ReinFOURcement adds only gold and an unused purchase rule.
 function pick42(): MatchState {
   const open = reachRound('2-1', false, 42), c = open.pendingChoice!;
-  return resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, 'ambusher-crest')));
+  return resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, 'reinfourcement')));
 }
 function publicStart(dynamic = false, deathHolder = false, bracer = false): MatchState {
   // v22: seed 5 now fields opening-reward Powder+Silco (Dominator), which routes the save through the

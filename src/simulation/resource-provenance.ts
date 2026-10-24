@@ -26,7 +26,7 @@ export const RESOURCE_PROVENANCE_VERSION = 'm8-b8-resource-provenance-v1';
 export type UnitAcquisitionSource =
   | {readonly kind:'carousel';readonly receiptId:string}
   | { readonly kind: 'opening'; readonly seed: number; readonly seatId: string }
-  | { readonly kind: 'shop'; readonly generation: number; readonly slotIndex: number; readonly definitionId: string }
+  | { readonly kind: 'shop'; readonly generation: number; readonly slotIndex: number; readonly definitionId: string; readonly starLevel?: 2 }
   | { readonly kind: 'loot'; readonly receiptId: string }
   /** G2-3 seat-mechanics grant; receiptId names a SeatMechanicsState receipt. */
   | { readonly kind: 'mechanic'; readonly receiptId: string };
@@ -444,7 +444,8 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       } else if(entry.source.kind==='carousel') {
         keys(entry.source,['kind','receiptId']);definitionId=takeBirth(`carousel-unit:${entry.source.receiptId}`,'unit',entry.unitId,entry.roundId);
       } else if (entry.source.kind === 'shop') {
-        keys(entry.source, ['kind', 'generation', 'slotIndex', 'definitionId']);
+        keys(entry.source, ['kind', 'generation', 'slotIndex', 'definitionId',...(Object.hasOwn(entry.source,'starLevel')?['starLevel']:[])]);
+        requireValue(entry.source.starLevel===undefined||entry.source.starLevel===2&&UNIT_DEFINITIONS[entry.source.definitionId]?.cost<=2, 'shop star');
         requireValue(!commits.has(entry.roundId), 'shop after settlement');
         integer(entry.source.generation, 1); integer(entry.source.slotIndex);
         requireValue(entry.source.slotIndex < MATCH_RULES.shopSize && entry.source.generation >= lastShopGeneration
@@ -472,7 +473,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         definitionId = takeBirth(`${entry.source.kind}:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
       }
       requireValue(index !== 0 || (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
-      const starLevel=entry.source.kind==='loot'?births.get(`loot:${entry.source.receiptId}`)?.starLevel??1:entry.source.kind==='mechanic'?births.get(`mechanic:${entry.source.receiptId}`)?.starLevel??1:1;
+      const starLevel=entry.source.kind==='shop'?entry.source.starLevel??1:entry.source.kind==='loot'?births.get(`loot:${entry.source.receiptId}`)?.starLevel??1:entry.source.kind==='mechanic'?births.get(`mechanic:${entry.source.receiptId}`)?.starLevel??1:1;
       units.set(entry.unitId, { id: entry.unitId, definitionId, starLevel }); nextUnitSerial++;
       if(entry.source.kind==='carousel')deferredCarouselIds.add(entry.unitId);
       acquisition = { sequence: index, unitId: entry.unitId, definitionId, roundId: entry.roundId, survivorId: entry.unitId, star: starLevel };

@@ -138,7 +138,7 @@ it.each(['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED)])('%s selects th
  if(id!=='branching-out'){
   const changed=structuredClone(combat) as any;changed.combat.units[0].batch2={executions:99};expect(()=>restoreMatch(serializeMatch(changed))).toThrow();
  }
-});
+},20_000); // the shop-rule cards push Branching Out's first offering seed to 852, so the seed search alone takes seconds
 it('actual Family settlement persists the authoritative reward fact, restores, and repeated stepping never pays twice',()=>{
  let s=acquire('welcome-to-the-playground');
  for(const [i,id] of ['powder','violet'].entries()){

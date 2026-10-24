@@ -1,7 +1,7 @@
 import { validateAugmentOfferHistory } from './augment-offers';
 import { spendFreeReroll } from './free-rerolls';
 import { planRiggedShop, drawSubscriptionSlots, subscriptionAcquired, subscriptionStageStart, planFiresale, stealFiresaleUnit,
-  recordShopReroll, dualPurposeOwner, grantDualPurposeGold } from './shop-augments';
+  recordShopReroll, dualPurposeOwner, grantDualPurposeGold, starryUpgrade } from './shop-augments';
 import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 import { planSixCostShop, sixCostShopContext } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
@@ -136,15 +136,18 @@ function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):
     const memberWord=nextRandom(tierWord.state),catalog=SHOP_CATALOG_BY_COST[tier];
     let copy=Math.floor(memberWord.word*catalog.reduce((sum,id)=>sum+pool.available[id],0)/4294967296);
     const definitionId=catalog.find(id=>{if(copy<pool.available[id])return true;copy-=pool.available[id];return false;})!;
-    pool.available[definitionId]--;pool.shops.push({seatId,generation,slot,definitionId});
-    slots.push({status:'available',definitionId});rngState=memberWord.state;rngDraws+=2;
+    pool.available[definitionId]--;
+    // Starry Night: a 2-star offer reserves two more copies; without them it stays 1-star.
+    const star=pool.available[definitionId]>=2&&starryUpgrade(state,generation,slot,definitionId);if(star)pool.available[definitionId]-=2;
+    pool.shops.push({seatId,generation,slot,definitionId,...(star?{starLevel:2 as const}:{})});
+    slots.push({status:'available',definitionId,...(star?{starLevel:2 as const}:{})});rngState=memberWord.state;rngDraws+=2;
   }
   const six=planSixCostShop(state.round,state.level,generation,sixCostShopContext(state));
   const catalog=SHOP_CATALOG_BY_COST[6], total=catalog.reduce((n,id)=>n+pool.available[id],0);
   if(six.slot!==null&&total>0&&rigged.tier===undefined){
     const old=slots[six.slot];
     if(old.status==='available'){
-      pool.available[old.definitionId]++;
+      pool.available[old.definitionId]+=old.starLevel===2?3:1;
       pool.shops=pool.shops.filter(r=>!(r.seatId===seatId&&r.generation===generation&&r.slot===six.slot));
     }
     let copy=Math.floor(six.memberWord*total/4294967296);
@@ -167,7 +170,7 @@ function drawSubscriptionShop(pool:PoolDraft,state:MatchState,poolEvents:SharedP
 function applyFiresale(pool:PoolDraft,state:MatchState,round:number,poolEvents:SharedPoolEvent[]):{state:MatchState;events:readonly MatchEvent[]} {
   const plan=planFiresale(state,round);if(!plan)return {state,events:[]};
   const seatId=state.sharedPool!.seatId,r=pool.shops.find(r=>r.seatId===seatId&&r.generation===state.shop.generation&&r.slot===plan.slot);
-  requirePool(r,'invalid-seat-state');pool.shops=pool.shops.filter(s=>s!==r);pool.available[r.definitionId]++;
+  requirePool(r,'invalid-seat-state');pool.shops=pool.shops.filter(s=>s!==r);pool.available[r.definitionId]+=r.starLevel===2?3:1;
   const stolen=stealFiresaleUnit(state,plan.owner,plan.slot,rewardPolicy(pool,state,poolEvents));
   reconcileHoldings(pool,state,stolen.state,poolEvents);return stolen;
 }

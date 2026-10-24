@@ -400,7 +400,7 @@ describe('P7 carousel timing and refusals, each on its own room played to 2-4', 
  * holdings, and `carouselReceipts` stay `granted` by design (ownership is the holdings). These pin both halves on one match.
  */
 describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a later elimination returns the picks', () => {
-  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { carousel: rules, seed: 24 });
+  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { carousel: rules, seed: 4 });
   const seat = (seatId: string) => seatOf(room, seatId);
   type Snapshot = typeof room.state;
   const opened: string[] = [];
@@ -485,7 +485,7 @@ describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a lat
   it('a seat eliminated at the first fight after a carousel, still holding that pick, returns its holdings to the pool', () => {
     expect(death).not.toBeNull();
     const { state: atDeath, afterCarousel } = death!;
-    // Seed 24: s0 dies at 5-6, two fights after the 5-4 carousel. Only this line names the round; a content or rules change that
+    // Seed 4 (first sequential seed after the shop-rule augments moved seed 24's death to 6-1): s0 dies at 5-6, two fights after the 5-4 carousel. Only this line names the round; a content or rules change that
     // moves the death fails here, and the rest follows from what the match recorded.
     expect(atDeath.roundId).toBe('5-6');
     expect(death!.fightsSinceCarousel).toBe(2);

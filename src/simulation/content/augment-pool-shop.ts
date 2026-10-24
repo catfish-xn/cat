@@ -4,8 +4,9 @@ import type { ChoiceDefinition } from '../strategy-types';
 /** Shop-rule augments (classification.json batch 3, G2): shop generation, purchases, rerolls and round-start economy facts.
  * Every number is the 14.24 zh_cn/en_us source value; the runtime is src/simulation/shop-augments.ts and each project reading
  * is a P entry in docs/S13_RULES_GAP.md. Shop Glitch (real-time refresh timer) and Two Much Value (no fielded-units battle
- * fact) are not in this table. v23 candidate content; no v22 identity, evidence or recording is changed. */
-export type ShopAugmentRule='patience'|'firesale'|'rigged'|'reinfourcement'|'dual-purpose'|'invested'|'ticket'|'subscription';
+ * fact) are not in this table. Starry Night's per-level chances are the 14.24 values stored under hashed field names
+ * (decoded in perf-1022/augment-pool/missing-values-triage-2026-10-24.md). v23 candidate content; no v22 identity, evidence or recording is changed. */
+export type ShopAugmentRule='starry'|'patience'|'firesale'|'rigged'|'reinfourcement'|'dual-purpose'|'invested'|'ticket'|'subscription';
 export interface ShopAugmentContent {
  readonly apiName:string; readonly name:string; readonly tier:'silver'|'gold'|'prismatic'; readonly description:string;
  readonly source:{readonly patch:string;readonly archive:string;readonly values:Readonly<Record<string,number|null>>;readonly description_en_us:string};
@@ -162,6 +163,56 @@ export const AUGMENT_SHOP:Readonly<Record<string,ShopAugmentContent>>=freezeCont
   },
   "rule": "subscription",
   "gold": "GoldPerStage"
+ },
+ "starry-night": {
+  "apiName": "TFT_Augment_StarryNight",
+  "name": "星夜",
+  "tier": "gold",
+  "description": "你商店中的1费和2费弈子有几率成为2星。获得6金币。\n\n当前几率：〔对局动态值〕%\n几率随玩家等级提升。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": 6.0,
+    "{019b80fe}": 0.800000011920929,
+    "{020fb2eb}": 0.25,
+    "{0d14760d}": 2.0,
+    "{4885b8ce}": 1.0,
+    "{49c43705}": 0.20000000298023224,
+    "{4abd7204}": 0.18000000715255737,
+    "{7083c200}": 0.30000001192092896,
+    "{99dcb7a2}": 0.2199999988079071,
+    "{ca771d21}": 0.5
+   },
+   "description_en_us": "1-cost and 2-cost units in your shop have a chance to be 2-star. Gain 6 gold.\n\nCurrent Chances: 〔对局动态值〕%\nChances increase with player level."
+  },
+  "rule": "starry",
+  "gold": "Gold"
+ },
+ "starry-night-plus": {
+  "apiName": "TFT_Augment_StarryNightPlus",
+  "name": "星夜+",
+  "tier": "gold",
+  "description": "你商店中的1费和2费弈子有几率成为2星。获得8金币。\n\n当前几率：〔对局动态值〕%\n几率随玩家等级提升。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": 8.0,
+    "{019b80fe}": 0.800000011920929,
+    "{020fb2eb}": 0.25,
+    "{0d14760d}": 2.0,
+    "{4885b8ce}": 1.0,
+    "{49c43705}": 0.20000000298023224,
+    "{4abd7204}": 0.18000000715255737,
+    "{7083c200}": 0.30000001192092896,
+    "{99dcb7a2}": 0.2199999988079071,
+    "{ca771d21}": 0.5
+   },
+   "description_en_us": "1-cost and 2-cost units in your shop have a chance to be 2-star. Gain 8 gold.\n\nCurrent Chances: 〔对局动态值〕%\nChances increase with player level."
+  },
+  "rule": "starry",
+  "gold": "Gold"
  }
 });
 export function shopAugmentValue(id:string,key:string):number {
