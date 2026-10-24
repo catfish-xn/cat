@@ -45,8 +45,9 @@ const expected: Record<string, Effect[]> = {
   'hedge-fund':[mech('acquisitionGold',{amount:25}),mech('incomePolicy',{interestDisabled:0,interestCap:10,roundXp:0})],
   'investment-strategy-ii':[mech('acquisitionGold',{amount:5}),mech('incomePolicy',{interestDisabled:0,interestCap:7,roundXp:0}),mech('investment',{healthPerInterest:9})],
   ...Object.fromEntries(['crown-guarded','not-today','all-for-one-ii','belt-overflow','calculated-enhancement','crownguard-spirit','flurry-of-blows','guardbreaker-spirit','pair-of-fours','immovable-object','shojin-spirit','sword-overflow','trifecta-ii','wand-overflow'].map(id=>[id,[mech('s13P2Augment',{enabled:1})]])),
-  'placebo': [speed(100), mech('acquisitionGold', { amount: 8 })],
-  'placebo-plus': [speed(100), mech('acquisitionGold', { amount: 15 })],
+  // v22 approved placebo stage gold: 8/11/15 (Placebo+ 15/18/22) by acquisition stage.
+  'placebo': [speed(100), mech('acquisitionGold', { amount: 8, stage3Amount: 11, stage4Amount: 15 })],
+  'placebo-plus': [speed(100), mech('acquisitionGold', { amount: 15, stage3Amount: 18, stage4Amount: 22 })],
   'manaflow-i': [mech('extraAttackMana', { amount: 2, backRowOnly: 1 })],
   'manaflow-ii': [mech('extraAttackMana', { amount: 4, backRowOnly: 1 })],
   'glass-cannon-i': [mech('glassCannon', { startingHealthBps: 8000, damageAmpBps: 1200, backRowOnly: 1 })],

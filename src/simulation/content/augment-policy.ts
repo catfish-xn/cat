@@ -2,9 +2,31 @@ import { P3_TIERS } from './s13-p3';
 import { D11_FILL_TIERS } from './d11-fill';
 import { freezeContent } from './freeze';
 import { S13_P2_TIERS } from './s13-augments-p2';
-/** User convention: shared node tier; v15 rerolls each slot once and permanently excludes discarded IDs.
- * No historical tier probabilities/weights found: equal tiers pending user confirmation. */
-export const AUGMENT_OFFER_POLICY = freezeContent({version:'augment-card-reroll-v15',evidence:'user-convention-2026-10-20',tierEvidence:'unweighted-project-convention-pending-confirmation',tiers:['silver','gold','prismatic'],tierSeedXor:0x61756774,freeRerolls:1,rerollScope:'per-slot-per-choice',sampling:'equal-without-replacement',words:{initial:3,reroll:1},reroll:'single-card-locked-tier-exclude-current-owned-and-permanently-removed-reject-empty-pool'} as const);
+/** 14.24 client TFT9_AugmentArmoryConfiguration_Table, approved 2026-10-23.
+ * CSV order, original integer weights / 109; omit zero-weight configurations.
+ * RandomizeProbabilityTableGlobally=true: one shared match-level sample. */
+export const AUGMENT_TIER_COMBINATIONS = freezeContent([
+  {tiers:['silver','silver','gold'],weight:5},
+  {tiers:['silver','silver','prismatic'],weight:5},
+  {tiers:['silver','gold','gold'],weight:12},
+  {tiers:['silver','gold','prismatic'],weight:5},
+  {tiers:['silver','prismatic','prismatic'],weight:1},
+  {tiers:['gold','silver','gold'],weight:18},
+  {tiers:['gold','silver','prismatic'],weight:2},
+  {tiers:['gold','gold','gold'],weight:22},
+  {tiers:['gold','gold','prismatic'],weight:12},
+  {tiers:['gold','prismatic','silver'],weight:6},
+  {tiers:['gold','prismatic','gold'],weight:10},
+  {tiers:['gold','prismatic','prismatic'],weight:1},
+  {tiers:['prismatic','silver','gold'],weight:4},
+  {tiers:['prismatic','silver','prismatic'],weight:1},
+  {tiers:['prismatic','gold','gold'],weight:2},
+  {tiers:['prismatic','gold','prismatic'],weight:1},
+  {tiers:['prismatic','prismatic','gold'],weight:1},
+  {tiers:['prismatic','prismatic','prismatic'],weight:1},
+] as const);
+/** One shared match-level tier draw; v15 card reroll rules remain unchanged. */
+export const AUGMENT_OFFER_POLICY = freezeContent({version:'augment-tier-table-v22',evidence:'user-convention-2026-10-20',tierEvidence:'client-14.24-TFT9_AugmentArmoryConfiguration_Table-user-approved-2026-10-23',tiers:['silver','gold','prismatic'],tierSeedXor:0x61756774,tierStream:'augment-tier-sequence-v1',tierWeightTotal:109,tierCombinations:AUGMENT_TIER_COMBINATIONS,freeRerolls:1,rerollScope:'per-slot-per-choice',sampling:'equal-without-replacement',words:{initial:3,reroll:1},reroll:'single-card-locked-tier-exclude-current-owned-and-permanently-removed-reject-empty-pool'} as const);
 /** CDragon style 1 only, never merely the lowest implemented threshold. */
 export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[]>> = freezeContent({
   'form-swapper':[2],
@@ -61,7 +83,7 @@ export const AUGMENT_BRONZE_THRESHOLDS: Readonly<Record<string, readonly number[
 });
 
 export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismatic'>> = freezeContent({
-  sisters:'gold', mentorship:'gold',reunion:'gold',geniuses:'gold',menaces:'gold','unlikely-duo':'gold',
+  sisters:'gold', mentorship:'gold',reunion:'gold',geniuses:'prismatic',menaces:'gold','unlikely-duo':'gold',
   ...D11_FILL_TIERS,
   "blinding-speed": "prismatic",
   "portable-forge": "gold",

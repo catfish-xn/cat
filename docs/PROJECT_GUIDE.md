@@ -87,7 +87,7 @@ main 已有 M6 的 `src/m6/`、`src/persistence/`、`src/replay/`、`src/stats/`
 | `game.ts` | 准备阵容 `GameState`、部署校验和部署操作；不负责整局经济 |
 | `unit-types.ts` | 单位定义、实例、位置、费用、星级、解析属性与升星事件类型 |
 | `units.ts` | 当前 19 英雄、中立敌人、旧测试单位及目录验证；旧单位不得进入 M5 获取池 |
-| `unit-stats.ts` | 星级属性与出售价格查询；HP/AD 星级倍率为 1/1.8/3.24 |
+| `unit-stats.ts` | 星级属性与出售价格查询；普通单位 HP 星级倍率 1/1.8/3.24，AD 1/1.5/2.25；六费与魔像保留专用表 |
 | `match-types.ts` | MatchState 阶段联合类型、商店、轮次结果、失败原因和命令返回值 |
 | `match.ts` | 整局唯一权威入口：创建、部署、买卖、D/F、锁店、开战、tick、Continue、装备与选择 |
 | `match-rules.ts` | 初始资源、经验表、商店概率/候选池、阶段掉血及经济常量 |

@@ -13,6 +13,7 @@ import { createG23Progress } from '../src/simulation/g2-3-match-progress';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
 import type { MatchState, MatchEvent, RoundResult } from '../src/simulation/match-types';
 import type { G23BattleFacts } from '../src/simulation/g2-3-economy';
+import { openingRewardAtoms, openingRewardOrbs, BATCH_SOURCE } from '../src/simulation/opening-batch-rewards';
 
 function seedFor(id: string) {
   for (let seed=0; seed<20000; seed++) if (createOpeningEncounter(seed).selection.encounterId===id) return seed;
@@ -52,7 +53,17 @@ function loss(state:MatchState,survivors=0,extra?:G23BattleFacts) {
     ...(extra?{g23Facts:extra}:{})};
 }
 
-describe('PR6 Mel threshold observation with reward gate closed',()=>{
+const streams=(s:MatchState)=>[s.rngState,s.choiceRngState,s.rewardRngState,s.battleSeedRngState];
+/** Batch A (v22): a Mel crossing issues every reward atom once, either granted or left as a claimable orb. */
+function expectMelRewardIssued(state:MatchState){
+  const atoms=openingRewardAtoms(state),orbs=openingRewardOrbs(state).map(o=>o.orbId);
+  const granted=(state.seatMechanics?.receipts??[]).filter(r=>r.source===BATCH_SOURCE).map(r=>r.receiptId);
+  expect(atoms.length).toBeGreaterThan(0);
+  for(const atom of atoms)expect(granted.includes(atom.id)!==orbs.includes(atom.id)).toBe(true);
+  expect(state.pendingChoice).toBeNull();
+}
+
+describe('PR6 Mel threshold observation (reward enabled by batch A)',()=>{
   it.each([
     [41,40,true],[41,39,true],[100,40,true],[41,41,false],[40,39,false],[39,38,false],
     [40,40,false],[40,41,false],[41,0,false],[1,0,false],[0,0,false],[0,40,false],[41,1,true],
@@ -62,29 +73,34 @@ describe('PR6 Mel threshold observation with reward gate closed',()=>{
     expect(receipts(result)).toHaveLength(expected?1:0);
     expect(readOpeningMelProgress(result)?.thresholdReached).toBe(expected);
     expect(()=>validateOpeningEncounterState(result)).not.toThrow();
-    expect({...result,openingEncounter:state.openingEncounter}).toEqual(state);
-    if(expected) expect(receipts(result)[0]).toMatchObject({kind:'mel-threshold',hpBefore:before,hpAfter:after,rewardStatus:'blocked-evidence'});
+    if(expected) {
+      expect(receipts(result)[0]).toMatchObject({kind:'mel-threshold',hpBefore:before,hpAfter:after,rewardStatus:'granted'});
+      expectMelRewardIssued(result);
+      expect(streams(result)).toEqual(streams(state));
+      expect(commitOpeningEncounterHealth(result)).toBe(result);
+    }
     else expect(result).toBe(state);
   });
   it.each([-1,0.5,101,NaN,Infinity])('rejects invalid HP %s',hp=>{
     expect(()=>isMelBlessingCrossing(hp,40)).toThrow(RangeError);
     expect(()=>isMelBlessingCrossing(41,hp)).toThrow(RangeError);
   });
-  it('keeps all rewards closed and preserves only the evidenced B-patch branch override',()=>{
+  it('enables both rewards and preserves only the evidenced B-patch branch override',()=>{
     const mel=OPENING_ENCOUNTERS.find(e=>e.id==='mels-blessing')!;
     const warwick=OPENING_ENCOUNTERS.find(e=>e.id==='warwicks-hunger')!;
-    expect([mel.enabled,warwick.enabled]).toEqual([false,false]);
+    // Batches A/B (v22) implement Mel's reward and Warwick's hunger.
+    expect([mel.enabled,warwick.enabled]).toEqual([true,true]);
     expect([mel.weightBps,warwick.weightBps]).toEqual([800,800]);
     expect(mel.researchParameters).toMatchObject({reward_table:null,reward_weights:null,
       known_b_patch_reward_override:{old_count:3,new_count:2,applies_to:"one reward outcome; not every player's fixed reward"}});
     expect(warwick.researchParameters).toMatchObject({drop_probability:null,reward_table:null,pity_system:null,per_round_cap:null});
     expect(OPENING_ENCOUNTER_CONFIG.melBOverride.crownsInAffectedBranch).toBe(2);
     const state=commitOpeningEncounterHealth(observed(41,40));
-    expect(state.items).toEqual([]);expect(state.consumables).toEqual([]);expect(state.pendingChoice).toBeNull();
+    expectMelRewardIssued(state);
     expect(applyOpeningEffects(state,[])).toEqual({ok:true,state,events:[]});
-    const enabled=structuredClone(OPENING_ENCOUNTER_CONFIG) as any;
-    enabled.entries.find((e:any)=>e.id==='mels-blessing').enabled=true;
-    expect(()=>createOpeningEncounter(melSeed,enabled)).toThrow('opening-config-incomplete');
+    const disabled=structuredClone(OPENING_ENCOUNTER_CONFIG) as any;
+    disabled.entries.find((e:any)=>e.id==='mels-blessing').enabled=false;
+    expect(()=>createOpeningEncounter(melSeed,disabled)).toThrow('opening-config-incomplete');
   });
   it('observes once across retries, HP recovery and a second crossing; never backfills missing receipts',()=>{
     const first=commitOpeningEncounterHealth(observed(41,40));
@@ -99,7 +115,7 @@ describe('PR6 Mel threshold observation with reward gate closed',()=>{
   it('authenticates every receipt field and rejects duplicates, missing records, and foreign encounters',()=>{
     const state=commitOpeningEncounterHealth(observed(41,40)),receipt=receipts(state)[0];
     for(const patch of [{receiptId:'fake'},{factId:'fake'},{seatId:'other'},{nodeId:'other'},{round:2},
-      {hpBefore:42},{hpAfter:39},{kind:'reward'},{rewardStatus:'granted'},{unknown:true}]) {
+      {hpBefore:42},{hpAfter:39},{kind:'reward'},{rewardStatus:'blocked-evidence'},{unknown:true}]) {
       const forged={...state,openingEncounter:{...state.openingEncounter,receipts:[{...receipt,...patch}]}} as MatchState;
       expect(()=>validateOpeningEncounterState(forged)).toThrow('opening-context-mismatch');
       expect(applyOpeningEffects(forged,[])).toEqual({ok:false,state:forged,reason:'opening-context-mismatch'});
@@ -135,13 +151,14 @@ describe('PR6 Mel threshold observation with reward gate closed',()=>{
     const next=accepted(nextRound(settled,settled.round));
     expect(next.openingEncounter).toBe(settled.openingEncounter);
   });
-  it('multiplayer settlement records 41 → 39 atomically, rejects retries and mirrors without RNG or grants',()=>{
+  it('multiplayer settlement records 41 → 39 atomically with the Mel reward, rejects retries and mirrors without RNG',()=>{
     const state=pvp(createMatch(melSeed),41),r=loss(state);
     expect(applyRoundSettlement(state,{...r,settlementEligible:false})).toMatchObject({ok:false,state,reason:'mirror-settlement'});
     const result=applyRoundSettlement(state,r),settled=accepted(result);
     expect(settled.playerHp).toBe(39);expect(receipts(settled)).toHaveLength(1);
-    expect(result.ok&&result.events.map(e=>e.type)).toEqual(['roundSettled']);
-    for(const key of ['rngState','choiceRngState','rewardRngState','battleSeedRngState','equipmentState','items','consumables'] as const)
+    expect(result.ok&&result.events.map(e=>e.type)).toEqual(['roundSettled','openingEffectApplied','openingRewardResolved','mechanicGranted']);
+    expectMelRewardIssued(settled);
+    for(const key of ['rngState','choiceRngState','rewardRngState','battleSeedRngState','equipmentState'] as const)
       expect(settled[key]).toEqual(state[key]);
     expect(applyRoundSettlement(settled,r)).toEqual({ok:false,state:settled,reason:'duplicate-settlement'});
     expect(receipts(accepted(applyRoundSettlement(pvp(createMatch(melSeed),2),loss(state))))).toEqual([]);
@@ -176,11 +193,11 @@ describe('PR6 Mel threshold observation with reward gate closed',()=>{
       {...crossed[0],openingEncounter:{...crossed[0].openingEncounter,receipts:bad}})).toThrow('invalid-seat-state');
     expect(JSON.stringify(pool.openingEncounter)).toBe(globalBefore);
   });
-  it('owner-only progress is detached and explicitly blocked; public view contains no personal receipt',()=>{
+  it('owner-only progress is detached and reports the granted reward; public view contains no personal receipt',()=>{
     const state=structuredClone(commitOpeningEncounterHealth(observed(41,40)));
     Object.assign(receipts(state)[0],{futureReward:'SECRET',rngState:'SECRET'});
     const progress=readOpeningMelProgress(state)!;
-    expect(progress).toEqual({encounterId:'mels-blessing',thresholdHp:40,thresholdReached:true,rewardStatus:'blocked-evidence',
+    expect(progress).toEqual({encounterId:'mels-blessing',thresholdHp:40,thresholdReached:true,rewardStatus:'granted',
       triggeredRound:1,hpBefore:41,hpAfter:40});
     expect(toPrivateSeatView(state).openingMelProgress).toEqual(progress);
     expect(readOpeningForgeProgress(state)).toBeNull();
@@ -188,7 +205,7 @@ describe('PR6 Mel threshold observation with reward gate closed',()=>{
     expect(toPrivateSeatView(state)).not.toHaveProperty('openingEncounterProgress');
     expect(JSON.stringify(progress)).not.toMatch(/SECRET|seed|receiptId|factId|rng/i);
     expect(readOpeningEncounterView(state)).toEqual(readOpeningEncounterView(createMatch(melSeed)));
-    expect(readOpeningEncounterView(state)).toMatchObject({enabled:false,statusTextZh:expect.stringContaining('尚未启用')});
+    expect(readOpeningEncounterView(state)).toMatchObject({enabled:true,statusTextZh:'本局奇遇效果已启用'});
     expect(readOpeningMelProgress(createMatch(warwickSeed))).toBeNull();
   });
   it('a Mel settlement ID matching the monkey node remains an observation, not a monkey grant',()=>{
@@ -239,14 +256,15 @@ describe('PR6 Mel threshold observation with reward gate closed',()=>{
   });
 });
 
-describe('PR6 Warwick reserved interface fails closed',()=>{
+describe('PR6 Warwick interface accepts only settled PvP kills',()=>{
   const kill:OpeningWarwickKillFact={battleId:'battle',eventSeq:1,victimId:'enemy',victimKind:'champion',settlementEligible:true};
   it.each([[],[kill],[kill,kill],[{...kill,victimKind:'summon' as const}],[{...kill,victimKind:'monster' as const}],
     [{...kill,settlementEligible:false}]].map(facts=>({facts})))('never rolls or grants for reserved facts %#',({facts})=>{
     const state=createMatch(warwickSeed),before=JSON.stringify(state);
     const result=applyWarwickHunger(state,facts);
-    expect(result).toEqual({ok:false,state,reason:'opening-config-incomplete'});expect(result.state).toBe(state);
-    expect(result).not.toHaveProperty('events');expect(JSON.stringify(state)).toBe(before);
+    // Batch B (v22) rolls Warwick loot at battle settlement; this interface only authenticates settled kills.
+    expect(result).toEqual(facts.length?{ok:false,state,reason:'invalid-opening-effect'}:{ok:true,state,events:[]});expect(result.state).toBe(state);
+    expect(JSON.stringify(state)).toBe(before);
     expect(applyWarwickHunger(restoreMatch(serializeMatch(state)),facts)).toEqual(result);
     expect(receipts(state)).toEqual([]);
   });

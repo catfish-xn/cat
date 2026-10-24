@@ -10,7 +10,7 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     for(let i=0;i<10;i++)rng=(rng*1664525n+1013904223n)%4294967296n;
     expect(first).toEqual(createMatch(42));
     // B9 formal version switch (M8_RULES §10).
-    expect(first).toMatchObject({schemaVersion:12,rulesVersion:'s13-g2-3-v21-opening-encounters-battle-equipment',contentVersion:'s13-14.24b-g2-3-v21-opening-encounters-battle-equipment',commandProtocolVersion:6,
+    expect(first).toMatchObject({schemaVersion:12,rulesVersion:'s13-g2-3-v22-online-rules',contentVersion:'s13-14.24b-g2-3-v22-online-rules',commandProtocolVersion:7,
       phase:'preparation',round:1,gold:0,level:1,xp:0,playerHp:100,rngState:Number(rng),nextUnitSerial:2,combat:null,roundResults:[],pendingChoice:null});
     expect(first.shop.slots).toHaveLength(5);expect(first.preparation.benchSize).toBe(9);
     expect(first.preparation).not.toBe(createMatch().preparation);
@@ -51,15 +51,18 @@ describe('M5 public contract (M4 command invariants retained)', () => {
   it.each([0,4294967295])('accepts boundary seed %s',seed=>{expect(createMatch(seed).seed).toBe(seed);expect(createMatch(seed)).toEqual(createMatch(seed));});
   it('shares population guard between preview/commit, permits repositioning, and F unlocks another deployment',()=>{
     let staged=accepted(nextRound(accepted(startMatchCombat(emptyBoard(purchasedThreeHeroMatch()))),getCatalogRoundById('2-1').ordinal));
-    for(const [index,u] of staged.preparation.units.filter(u=>u.team==='player').entries()) staged=accepted(deployMatchUnit(staged,u.id,{kind:'board',cell:{col:index+1,row:6}}));
-    const slot=staged.shop.slots.findIndex(o=>o.status==='available'&&o.definitionId!=='irelia'&&o.definitionId!=='maddie'&&o.definitionId!=='lux');
-    const state=accepted(buyUnit(staged,slot,staged.shop.generation)),target:UnitLocation={kind:'board',cell:{col:4,row:4}};
-    expect(getDeploymentCap(state)).toBe(3);expect(validateMatchDeployment(state,'unit-4',target)).toBe('population-cap');
-    expect(deployMatchUnit(state,'unit-4',target)).toEqual({ok:false,state,reason:'population-cap'});
+    // v22 enables crab encounters: seed 5 rolls crab-rave, whose bonus adds two heroes
+    // before the shop purchases, so fill the three-unit cap and leave the rest benched.
+    for(const [index,u] of staged.preparation.units.filter(u=>u.team==='player').slice(0,3).entries()) staged=accepted(deployMatchUnit(staged,u.id,{kind:'board',cell:{col:index+1,row:6}}));
+    const owned=new Set(staged.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId));
+    const slot=staged.shop.slots.findIndex(o=>o.status==='available'&&!owned.has(o.definitionId));
+    const state=accepted(buyUnit(staged,slot,staged.shop.generation)),target:UnitLocation={kind:'board',cell:{col:4,row:4}},bought=`unit-${state.nextUnitSerial-1}`;
+    expect(getDeploymentCap(state)).toBe(3);expect(validateMatchDeployment(state,bought,target)).toBe('population-cap');
+    expect(deployMatchUnit(state,bought,target)).toEqual({ok:false,state,reason:'population-cap'});
     const moved=accepted(deployMatchUnit(state,'unit-1',target));expect(validateMatchDeployment(moved,'unit-1',{kind:'bench',slot:1})).toBeUndefined();
     const upgraded=accepted(buyXp(state));expect(upgraded.level).toBe(4);expect(upgraded.shop).toBe(state.shop);expect(upgraded.rngState).toBe(state.rngState);
-    expect(deployMatchUnit(upgraded,'unit-4',target).ok).toBe(true);
-    const over={...state,preparation:{...state.preparation,units:state.preparation.units.map(u=>u.id==='unit-4'?{...u,location:target}:u)}};
+    expect(deployMatchUnit(upgraded,bought,target).ok).toBe(true);
+    const over={...state,preparation:{...state.preparation,units:state.preparation.units.map(u=>u.id===bought?{...u,location:target}:u)}};
     expect(matchStartFailure(over)).toBe('population-cap');
   });
   it('prioritizes phase, max-level, then affordability for F',()=>{

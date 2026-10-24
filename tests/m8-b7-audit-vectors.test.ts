@@ -5,7 +5,7 @@ import { compileNeutralEncounter } from '../src/simulation/neutral-encounter-com
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { battle, unit } from './combat-helpers';
 import { accepted } from './match-helpers';
-import { publicNeutralPreparation, publicHeraldTarget } from './fixtures/m8-neutral-public-route';
+import { publicAuthoredPreparation, publicHeraldTarget } from './fixtures/m8-neutral-public-route';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -116,7 +116,8 @@ describe('B7 audit: Elder Dragon cone (ENCOUNTERS §4.4) against independent geo
 });
 
 // Real acquisition prefixes preserve the full Match restoration boundary.
-const prepared = publicNeutralPreparation;
+// v22: seed 42's scuttle-crab opening replaces the authored encounters; use the crab-free route.
+const prepared = publicAuthoredPreparation;
 const encounterArmy = (s: api.MatchState) => s.roundDefinitionId === '6-7' ? publicHeraldTarget(s) : s;
 // Let the restore boundary parse the saved text once; checkpoints/assertions stay unchanged.
 const restored = (s: api.MatchState) => restoreMatch(serializeMatch(s));

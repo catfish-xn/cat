@@ -12,6 +12,12 @@ import type {G23MatchProgress} from './g2-3-match-progress';
 import {emptySeatMechanics} from './seat-mechanics/state';
 import {g23Laboratories} from './g2-3-experiment';
 import {deriveTraits} from './trait-snapshot';
+/** Settled economy receipts only. Expands no reward atoms, so restore-time readers that run before
+ * validateG23RewardSources never sample an unauthenticated reward descriptor. */
+export function readG23EconomyReceipts(state:Pick<MatchState,'seatMechanics'>):G23MatchProgress['economyReceipts']{
+ const m=state.seatMechanics;if(!m?.seat.academy||!m.seat.junkerKing||!m.seat.alchemist)return [];
+ return (m.hidden.progress as {economyReceipts?:G23MatchProgress['economyReceipts']}|undefined)?.economyReceipts??[];
+}
 /** The DTO is reconstructed from disjoint container fields; never persisted alongside them. */
 export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatMechanics'];readonly g23?:G23MatchProgress;readonly multiplayer?:MatchState['multiplayer'];readonly m8?:MatchState['m8']}):G23MatchProgress|undefined{
  if(state.g23)return state.g23; // immutable combat-input DTO, never a MatchState field
@@ -33,7 +39,7 @@ export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatM
    rewardClaims.push({id:r.receiptId,bundleId:b.id,atomId:atom.id,copy,round:r.round,kind:atom.kind,definitionId,instanceId,gold:atom.gold});
   }
  }
- const epicCrowns=state.m8?.loot.receipts.filter(r=>r.payload.kind==='item'&&r.payload.definitionId==='TFT_Item_ForceOfNature'&&r.resolution!=='forfeited').map(r=>({receiptId:r.receiptId,round:getCatalogRoundById(r.claimedRoundId??JSON.parse(JSON.parse(r.dropId)[0])[1]).ordinal}));
+ const epicCrowns=[...(state.m8?.loot.receipts.filter(r=>r.payload.kind==='item'&&r.payload.definitionId==='TFT_Item_ForceOfNature'&&r.resolution!=='forfeited').map(r=>({receiptId:r.receiptId,round:getCatalogRoundById(r.claimedRoundId??JSON.parse(JSON.parse(r.dropId)[0])[1]).ordinal}))??[]),...m.receipts.filter(r=>r.source==='opening-encounter-batch-a'&&r.kind==='item'&&r.definitionId==='TFT_Item_ForceOfNature').map(r=>({receiptId:r.receiptId,round:r.round}))];
  return {...h,...(epicCrowns?.length?{epicCrowns}:{}),rewards,rewardClaims,conquest:{...c,radiantConversion:m.seat.radiantConversion as boolean},sponsored:a.sponsored,chem:m.seat.alchemist as G23MatchProgress['chem'],junkerRounds:j.rounds,junkerPurchases:j.purchases,
  itemReceipts:m.receipts.flatMap(r=>r.kind==='item'&&(r.source==='academy'||r.receiptId.startsWith('g23:academy:'))?[{id:r.receiptId,kind:'academy' as const,tier:Number(r.receiptId.split(':').at(-1)),round:r.round,itemId:r.itemId,definitionId:r.definitionId}]:[])};
 }
@@ -70,7 +76,8 @@ export function validateG23MechanicLinks(state:MatchState):void{
   if(!r)continue;
   const bundle=p.rewards.find(b=>b.id===claim.bundleId)!,atom=g23RewardAtoms(bundle,p.seed,!!state.multiplayer).find(a=>a.id===claim.atomId)!;
   check(r.source===bundle.source);
-  if(claim.kind==='item'){
+  if(claim.kind==='anvil')check(r.kind==='unit'&&r.definitionId===atom.forgeDefinitionId&&r.resolution==='held'&&r.gold===0);
+  else if(claim.kind==='item'){
    if(atom.options.length>1)check(r.kind==='choice'&&r.choiceKind==='forge'&&r.optionId===claim.definitionId&&r.itemId!==null&&r.itemId===claim.instanceId
     &&!r.skipped&&r.price===0&&(!r.timedOut||r.optionId===atom.options[0]));
    else check(r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId);
@@ -118,6 +125,6 @@ export function validateG23RewardSources(state:MatchState):void{
 
 /** Receipt-backed permanent population at an authenticated resource prefix, including same-round online claims. */
 export function epicCrownsAtResourcePrefix(state:MatchState,prefixLength:number):NonNullable<G23MatchProgress['epicCrowns']>{
- const granted=new Set(state.resourceProvenance.entries.slice(0,prefixLength).flatMap(e=>e.kind==='item-acquired'&&e.source.kind==='loot'?[e.source.receiptId]:[]));
+ const granted=new Set(state.resourceProvenance.entries.slice(0,prefixLength).flatMap(e=>e.kind==='item-acquired'&&(e.source.kind==='loot'||e.source.kind==='mechanic')?[e.source.receiptId]:[]));
  return (readG23Progress(state)?.epicCrowns??[]).filter(c=>granted.has(c.receiptId));
 }

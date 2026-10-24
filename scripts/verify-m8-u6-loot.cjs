@@ -1,6 +1,6 @@
 /* U6 automated UI regression: the live loot panel through the real app (T13 orbs: no PvE loot pick).
  * States come only from public commands: a fresh seed-42 opening driven by native clicks,
- * and the seed-36 3-7 capacity / seed-38 lethal 4-7 routes recorded headlessly with BattleHistory and
+ * and the seed-36 3-7 capacity / seed-2253 lethal 4-7 routes recorded headlessly with BattleHistory and
  * loaded through the real save-import control. After import every action is a native click.
  * At each checkpoint the DOM rows, statuses, receipts and Continue verdict must equal
  * readLootView() computed independently in Node from the page's own Match state.
@@ -31,7 +31,9 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
 
     /* ---------- headless public routes recorded as ordinary save envelopes ---------- */
     // T13 orb loot has no PvE pick: the scenarios are the public ones of tests/m8-b8-live-capacity
-    // (seed-36 3-7 Nocturne / Ezreal at nine capacity; seed-38 lethal 4-7 with Loris killing two carriers).
+    // (seed-36 3-7 Nocturne / Ezreal at nine capacity; seed-2253 lethal 4-7 with Maddie killing two carriers).
+    // v22: seed 38 draws the scuttle-crab opening, whose 4-7 crabs carry the razorbeak orbs; seed 2253 is the
+    // crab-free terminal route of tests/fixtures/t13-loot-public.ts (same 3 HP entry after the same losses).
     const players = state => state.preparation.units.filter(unit => unit.team === 'player');
     const bench = state => players(state).filter(unit => unit.location.kind === 'bench');
     function reserveExcept(initial, keep) {
@@ -98,19 +100,20 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     const capacityState = fillBench(capacity.prefix, capacityHeroes.map(drop => drop.payload.definitionId));
     assert.equal(bench(capacityState).length, 9);
     const capacityFile = await envelopeFile('u6-capacity-3-7', 'u6-capacity', capacityState, capacity.history);
-    // Terminal: seed-38 lethal 4-7 (3 HP after empty-board losses, full bench, only Loris fielded at 6,5).
+    // Terminal: seed-2253 lethal 4-7 (3 HP after empty-board losses, full bench, only Maddie fielded at 2,7).
     const losses = ['1-3', '1-4', '2-1', '2-2', '2-3', '2-5', '2-6', '2-7', '3-1', '3-2', '3-3', '3-7', '4-1', '4-2', '4-7'];
-    const terminal = await recordedPrefix('4-7', { seed: 38, emptyBoardRounds: losses, protectedUnitIds: [] }, 'u6-terminal');
+    const terminal = await recordedPrefix('4-7', { seed: 2253, emptyBoardRounds: losses, protectedUnitIds: [] }, 'u6-terminal');
     const terminalDrops = oracleDrops(terminal.prefix);
     const terminalHeroes = heroDrops(terminal.prefix);
     assert.deepEqual(terminalHeroes.map(drop => drop.payload), [
+      { kind: 'unit', definitionId: 'ezreal', quantity: 1 },
       { kind: 'unit', definitionId: 'gangplank', quantity: 1 },
-      { kind: 'unit', definitionId: 'twistedfate', quantity: 1 },
-    ], 'seed-38 4-7 orbs carry Gangplank and Twisted Fate');
+      { kind: 'unit', definitionId: 'garen', quantity: 1 },
+    ], 'seed-2253 4-7 orbs carry Ezreal, Gangplank and Garen');
     const terminalExcluded = terminalHeroes.map(drop => drop.payload.definitionId);
     let terminalState = fillBench(reserveExcept(terminal.prefix, []), terminalExcluded);
-    const loris = players(terminalState).find(unit => unit.definitionId === 'loris');
-    terminalState = fillBench(accepted(api.deployMatchUnit(terminalState, loris.id, { kind: 'board', cell: { col: 6, row: 5 } })), terminalExcluded);
+    const maddie = players(terminalState).find(unit => unit.definitionId === 'maddie');
+    terminalState = fillBench(accepted(api.deployMatchUnit(terminalState, maddie.id, { kind: 'board', cell: { col: 2, row: 7 } })), terminalExcluded);
     assert.equal(bench(terminalState).length, 9); assert.equal(terminalState.playerHp, 3);
     const terminalFile = await envelopeFile('u6-terminal-4-7', 'u6-terminal', terminalState, terminal.history);
     report.fixtures = { capacity: capacityFile, terminal: terminalFile };
@@ -121,20 +124,24 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
       while (state.phase === 'combat') state = api.stepMatch(state).state;
       return state;
     };
-    let capacityEnded = resolve(capacityState);
-    assert.equal(capacityEnded.pendingChoice?.kind, 'forge');
-    const forge = capacityEnded.pendingChoice;
-    capacityEnded = accepted(api.selectChoice(capacityEnded, forge.choiceId, forge.generation, forge.offers[0]));
+    // v22 (docs/MATCH_CONTRACT.md anvil units): the completed-item forge is a bench anvil unit, not an
+    // automatic choice. On the full bench it stays in its unclaimed orb while the heroes wait for capacity.
+    const capacityForges = plan(capacity.prefix).encounterPlan.drops.filter(drop => drop.payload.kind === 'forge');
+    assert.deepEqual(capacityForges.map(drop => drop.payload.definitionId), ['TFT_ArmoryKeyCompleted'], 'seed-36 3-7 orbs carry one completed-item forge');
+    const capacityEnded = resolve(capacityState);
+    assert.equal(capacityEnded.pendingChoice, null, 'v22 forge opens no automatic choice');
     assert.equal(capacityEnded.phase, 'settlement');
     assert.deepEqual(api.readLootView(capacityEnded).pendingClaims, capacityHeroes.map(drop => drop.dropId));
+    const retainedForge = drops => drops.filter(drop => drop.payload.kind === 'forge').map(drop => ({ dropId: drop.dropId, status: drop.status }));
+    assert.deepEqual(retainedForge(api.readLootView(capacityEnded).revealedDrops), capacityForges.map(drop => ({ dropId: drop.dropId, status: 'revealed' })), 'full-bench forge stays in its unclaimed orb');
     const terminalEnded = resolve(terminalState);
     assert.equal(terminalEnded.phase, 'gameOver');
     assert.deepEqual(terminalEnded.combat.neutralReceipts.deaths.map(death => death.unitId), [
-      JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r00']),
-      JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r03']),
+      JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r01']),
+      JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r04']),
     ]);
-    assert.deepEqual(api.readLootView(terminalEnded).revealedDrops.map(drop => drop.status), ['granted', 'retained-terminal']);
-    report.publicRoutePreflight = { capacityPendingHeroes: capacityHeroes.length, terminalRetainedHero: 'gangplank', passed: true };
+    assert.deepEqual(api.readLootView(terminalEnded).revealedDrops.map(drop => drop.status), ['granted', 'retained-terminal', 'granted']);
+    report.publicRoutePreflight = { capacityPendingHeroes: capacityHeroes.length, terminalRetainedHero: 'garen', passed: true };
 
     /* ---------- the real app ---------- */
     await server.listen();
@@ -235,13 +242,12 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     assert.equal((await state()).roundDefinitionId, '3-7');
     await delay(450); await click('mobile:start-combat');
     assert(await finishCombat('3-7 capacity'), '3-7 orb drops are revealed during combat');
-    const forgeState = await state();
-    assert.equal(forgeState.phase, 'choice');
-    assert.equal(forgeState.pendingChoice.kind, 'forge', 'v17 completed-item forge opens its own choice');
-    await click(`choice:${forgeState.pendingChoice.offers[0]}`);
-    await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase === 'settlement');
+    const settled = await state();
+    assert.equal(settled.phase, 'settlement', 'v22 completed-item forge is a bench anvil and opens no choice');
+    assert.equal(settled.pendingChoice, null);
     const blocked = await checkPanel('3-7 capacity blocks Continue', view => {
       assert.equal(view.reason, 'pending-capacity'); assert.equal(view.canContinue, false); assert.deepEqual(view.pendingClaims, capacityHeroes.map(drop => drop.dropId));
+      assert.deepEqual(retainedForge(view.revealedDrops), capacityForges.map(drop => ({ dropId: drop.dropId, status: 'revealed' })), 'full-bench forge waits in its orb');
     });
     // The button is not operable: a native click on it is a no-op (the domain refusal is tested separately).
     const blockedBefore = blocked.state, continueBox = await page.locator('[data-debug="mobile:continue"]').boundingBox();
@@ -259,7 +265,11 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
         for (const hero of capacityHeroes.slice(0, index + 1)) {
           assert(view.revealedDrops.some(drop => drop.dropId === hero.dropId && drop.status === 'granted' && drop.receiptId), 'waiting hero granted by receipt after sale');
         }
-        if (view.canContinue) assert(view.revealedDrops.every(drop => drop.status === 'granted'));
+        // The heroes take the freed slots; the bench is full again, so the forge stays in its orb (v22).
+        if (view.canContinue) {
+          assert(view.revealedDrops.filter(drop => drop.payload.kind !== 'forge').every(drop => drop.status === 'granted'));
+          assert.deepEqual(retainedForge(view.revealedDrops), capacityForges.map(drop => ({ dropId: drop.dropId, status: 'revealed' })), 'refilled bench keeps the forge in its orb');
+        }
       });
     }
     const recovered = await state();
@@ -282,21 +292,21 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
       assert.equal(current.phase, 'gameOver'); assert.equal(view.reason, 'game-over'); assert.equal(dom.block, 'game-over');
       const killed = current.combat.neutralReceipts.deaths.map(death => death.unitId);
       assert.deepEqual(killed, [
-        JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r00']),
-        JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r03']),
-      ], 'Loris kills the component and Gangplank carriers');
+        JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r01']),
+        JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r04']),
+      ], 'Maddie kills the component and Garen carriers');
       const earned = terminalDrops.filter(drop => killed.includes(drop.sourceUnitId));
       assert.deepEqual(view.revealedDrops.map(drop => ({ dropId: drop.dropId, payload: drop.payload, status: drop.status })),
         earned.map(drop => ({ dropId: drop.dropId, payload: drop.payload, status: drop.payload.kind === 'unit' ? 'retained-terminal' : 'granted' })), 'exact v17 terminal drops and statuses');
-      assert.deepEqual(view.revealedDrops.map(drop => drop.status), ['granted', 'retained-terminal']);
+      assert.deepEqual(view.revealedDrops.map(drop => drop.status), ['granted', 'retained-terminal', 'granted']);
       const component = view.revealedDrops[0];
       const receipts = current.m8.loot.receipts.filter(receipt => receipt.dropId === component.dropId);
       assert.equal(receipts.length, 1, 'earned component has exactly one loot receipt');
       assert.equal(component.receiptId, receipts[0].receiptId);
       assert.equal(receipts[0].grantedItemIds.length, 1);
-      assert(current.items.some(item => item.id === receipts[0].grantedItemIds[0] && item.definitionId === 'vest'), 'receipt creates the actual v17 component');
+      assert(current.items.some(item => item.id === receipts[0].grantedItemIds[0] && item.definitionId === 'rod'), 'receipt creates the actual v17 component');
       assert.deepEqual(api.stepMatch(current), { state: current, events: [] }, 'terminal step cannot grant loot again');
-      assert(view.revealedDrops.some(drop => drop.status === 'retained-terminal' && drop.receiptId === null && drop.payload.definitionId === 'gangplank'), 'retained hero shown without receipt');
+      assert(view.revealedDrops.some(drop => drop.status === 'retained-terminal' && drop.receiptId === null && drop.payload.definitionId === 'garen'), 'retained hero shown without receipt');
       assert(view.revealedDrops.filter(drop => drop.status === 'granted').every(drop => drop.receiptId), 'earned drops shown only via their receipts');
     });
     assert.deepEqual(report.errors, []);

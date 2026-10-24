@@ -225,9 +225,11 @@ export interface HealContribution {
 export interface HealShare {
   readonly source: Source;
   readonly requested: number;
+  /** Remaining after wound and overtime received-healing reductions. */
   readonly afterWound: number;
   readonly actual: number;
   readonly overheal: number;
+  /** Legacy field name: total prevented by wound and overtime. */
   readonly preventedByWound: number;
 }
 export interface HealRequest {
@@ -240,9 +242,11 @@ export interface HealRequest {
 }
 export interface HealOutcome extends HealRequest {
   readonly shares: readonly HealShare[];
+  /** Remaining after wound and overtime received-healing reductions. */
   readonly afterWound: number;
   readonly actual: number;
   readonly overheal: number;
+  /** Legacy field name: total prevented by wound and overtime. */
   readonly preventedByWound: number;
 }
 export type ShieldEndReason = 'depleted' | 'expired' | 'death-cleanup' | 'replaced' | 'combat-end';
@@ -487,12 +491,12 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 12;
-  readonly rulesVersion: 's13-g2-3-v21-opening-encounters-battle-equipment';
-  readonly contentVersion: 's13-14.24b-g2-3-v21-opening-encounters-battle-equipment';
+  readonly rulesVersion: 's13-g2-3-v22-online-rules';
+  readonly contentVersion: 's13-14.24b-g2-3-v22-online-rules';
   readonly contentDigest: string;
   readonly saveFormatVersion: 8;
-  readonly replayFormatVersion: 6;
-  readonly commandProtocolVersion: 6;
+  readonly replayFormatVersion: 7;
+  readonly commandProtocolVersion: 7;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch, createCarouselMatch, selectChoice, rerollAugment, startMatchCombat, nextRound,
+import { createMatch, createCarouselMatch, selectChoice, rerollAugment, startMatchCombat, nextRound, openAnvil,
   type MatchState } from '../src/simulation/match';
 import { OPENING_ENCOUNTERS, createOpeningEncounter, applyOpeningEffects, planOpeningRound,
   pendingOpeningForges, openOpeningForge, readOpeningForgeProgress, validateOpeningEncounterState } from '../src/simulation/opening-encounter';
@@ -37,6 +37,13 @@ function forgeOracle(seed: number, seat: string, index: number, ids: readonly st
   }
   return pool.slice(0, 4);
 }
+// v22 anvil units: each opening forge receipt is a held bench anvil, opened by selling it.
+function anvilFor(state: MatchState, index: number): string {
+  const opening = state.openingEncounter as {receipts: readonly {receiptId: string}[]};
+  const r = state.seatMechanics!.receipts.find(m => m.receiptId === opening.receipts[index].receiptId);
+  expect(r).toMatchObject({kind: 'unit', source: 'opening-encounter', resolution: 'held'});
+  return (r as {unitId: string}).unitId;
+}
 function room(seed: number, carousel = false) {
   let pool = createSharedPool('pr2', seed);
   const states: MatchState[] = [];
@@ -69,11 +76,21 @@ describe('PR2 augment constraints', () => {
       expect(state.pendingChoice).toMatchObject({kind: 'augment', augmentTier: tier});
       expect(state.pendingChoice!.offers.every(a => AUGMENT_TIERS[a] === tier && !discarded.includes(a)
         && !state.augments.some(owned => owned.definitionId === a))).toBe(true);
+      // v22: every shown card is excluded for the rest of the match (not only the rerolled-away ones).
+      discarded.push(...state.pendingChoice!.offers);
       for (const slot of [2,0,1]) {
         const c = state.pendingChoice!;
-        discarded.push(c.offers[slot]);
-        state = accepted(rerollAugment(freeze(state), c.choiceId, c.generation, slot));
-        expect(state.pendingChoice!.offers.every(a => AUGMENT_TIERS[a] === tier && !discarded.includes(a)
+        const result = rerollAugment(freeze(state), c.choiceId, c.generation, slot);
+        if (!result.ok) {
+          // An all-prismatic match can run the 16-card prismatic pool dry by 4-2 under the seen-once rule.
+          expect(result.reason).toBe('augment-pool-too-small');
+          expect(augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...c.offers])).toEqual([]);
+          break;
+        }
+        state = result.state;
+        expect(discarded).not.toContain(state.pendingChoice!.offers[slot]);
+        discarded.push(state.pendingChoice!.offers[slot]);
+        expect(state.pendingChoice!.offers.every(a => AUGMENT_TIERS[a] === tier
           && !state.augments.some(owned => owned.definitionId === a))).toBe(true);
         expect(() => validateAugmentOfferHistory(state)).not.toThrow();
       }
@@ -132,8 +149,11 @@ describe('PR2 opening anvils', () => {
       expect(restoreMatch(serializeMatch(state))).toEqual(state);
       expect(applyOpeningEffects(state, facts)).toEqual({ok: true, state, events: []});
       expect(readOpeningForgeProgress(state)).toMatchObject({forgesGranted: count, forgesPending: count-i, forgesResolved: i});
+      expect(state.pendingChoice).toBeNull();
+      state = accepted(openAnvil(state, anvilFor(state, i)));
+      expect(restoreMatch(serializeMatch(state))).toEqual(state);
       const c = state.pendingChoice!;
-      expect(c).toMatchObject({kind: 'forge', payload: {source: 'opening-encounter'}});
+      expect(c).toMatchObject({kind: 'forge', payload: {source: 'anvil-unit'}});
       expect(c.offers).toEqual(forgeOracle(seed, 'solo', i, id === 'component-anvils' ? G24_FORGE_POOLS.TFT_ArmoryKeyComponent : G24_FORGE_POOLS.TFT_ArmoryKeyOrnn));
       expect(new Set(c.offers).size).toBe(4);
       const before = freeze(state);
@@ -155,7 +175,8 @@ describe('PR2 opening anvils', () => {
     expect(pendingOpeningForges(advanced)).toEqual([]);
   });
   it.each(forges)('%s: tampered queue/offers/source/grant is rejected on restore', id => {
-    const state = createMatch(seeds.get(id)!);
+    const base = createMatch(seeds.get(id)!), state = accepted(openAnvil(base, anvilFor(base, 0)));
+    expect(restoreMatch(serializeMatch(state))).toEqual(state);
     const mutations = [
       (s: any) => {s.openingEncounter.receipts = [];},
       (s: any) => {s.openingEncounter.receipts.push(s.openingEncounter.receipts[0]);},
@@ -170,8 +191,8 @@ describe('PR2 opening anvils', () => {
     Object.assign(forged.seatMechanics!.receipts.at(-1)!, {timedOut: true});
     expect(() => restoreMatch(forged)).toThrow();
     if (id === 'component-anvils') {
-      const reordered = structuredClone(state);
-      Object.assign(reordered.openingEncounter, {receipts: [...(state.openingEncounter as any).receipts].reverse()});
+      const reordered = structuredClone(base);
+      Object.assign(reordered.openingEncounter, {receipts: [...(base.openingEncounter as any).receipts].reverse()});
       expect(() => restoreMatch(reordered)).toThrow();
     }
   });
@@ -189,7 +210,8 @@ it.each([...policies,...forges])('%s: eight seats share policy, use private cand
     expect(restoreSharedOrbSnapshot(pool,JSON.stringify(state))).toEqual(state);
     for (const node of nodes) expect(resolveAugmentTier(state,`round:${node}:augment`)).toBe(expectedTier(id,seed,node));
     if (id === 'component-anvils' || id === 'artifact-anvil') {
-      expect(state.pendingChoice!.offers).toEqual(forgeOracle(seed,`seat-${i}`,0,
+      expect(state.pendingChoice).toBeNull();
+      expect(accepted(openAnvil(state,anvilFor(state,0))).pendingChoice!.offers).toEqual(forgeOracle(seed,`seat-${i}`,0,
         id === 'component-anvils' ? G24_FORGE_POOLS.TFT_ArmoryKeyComponent : G24_FORGE_POOLS.TFT_ArmoryKeyOrnn));
       const view = toPrivateSeatView(state);
       expect(view.openingForgeProgress).toMatchObject({forgesPending:id==='component-anvils'?2:1});
@@ -197,20 +219,23 @@ it.each([...policies,...forges])('%s: eight seats share policy, use private cand
       expect(view).not.toHaveProperty('augmentTierSeed');
     }
   }
-  if (id === 'component-anvils' || id === 'artifact-anvil') expect(new Set(states.map(s=>JSON.stringify(s.pendingChoice!.offers))).size).toBeGreaterThan(1);
+  if (id === 'component-anvils' || id === 'artifact-anvil') expect(new Set(states.map(s=>JSON.stringify(accepted(openAnvil(s,anvilFor(s,0))).pendingChoice!.offers))).size).toBeGreaterThan(1);
 });
 
 it.each([false,true])('two anvils: shared timeout drains one choice at a time, restores and rejects stale retries (carousel=%s)', carousel => {
   let {pool,states} = room(seeds.get('component-anvils')!,carousel), state = states[0];
   const others = JSON.stringify(states.slice(1));
   for (let i = 0; i < 2; i++) {
+    const open = runSharedMatchCommand(pool,state,{type:'openAnvil',unitId:anvilFor(state,i)});
+    if (!open.ok) throw Error(open.reason);
+    pool = open.pool;state = open.state;
     const c = state.pendingChoice!;
     const command = {type:'timeoutChoice' as const,round:1,choiceId:c.choiceId,generation:0};
     const result = runSharedMatchCommand(pool,state,command);
     if (!result.ok) throw Error(result.reason);
     pool = result.pool;state = result.state;
     expect(state.items.at(-1)?.definitionId).toBe(c.offers[0]);
-    expect(state.seatMechanics!.receipts.at(-1)).toMatchObject({source:'opening-encounter',timedOut:true});
+    expect(state.seatMechanics!.receipts.at(-1)).toMatchObject({source:'anvil-unit',timedOut:true});
     expect(restoreSharedOrbSnapshot(pool,state)).toEqual(state);
     const retry = runSharedMatchCommand(pool,state,command);
     expect(retry.ok).toBe(false);expect(retry.state).toBe(state);expect(retry.pool).toBe(pool);
@@ -221,7 +246,9 @@ it.each([false,true])('two anvils: shared timeout drains one choice at a time, r
 });
 
 it('exactly six PR2 effects become enabled; unimplemented effects retain original weights and null evidence', () => {
-  expect(OPENING_ENCOUNTERS.filter(e=>e.enabled).map(e=>e.id)).toEqual(['none',...policies,'wind-up-monkey','component-anvils','artifact-anvil']);
+  // Opening batches A/B (v22) enable every remaining entry.
+  expect(OPENING_ENCOUNTERS.filter(e=>e.enabled).map(e=>e.id)).toEqual(['none','scuttle-puddle','crab-rave',...policies,'gold-subscription',
+    'loot-subscription','trainer-golems','wind-up-monkey','component-anvils','viktors-vision','mels-blessing','warwicks-hunger','artifact-anvil']);
   expect(OPENING_ENCOUNTERS.reduce((sum,e)=>sum+e.weightBps,0)).toBe(10000);
   expect(OPENING_ENCOUNTERS.find(e=>e.id==='gold-subscription')!.researchParameters).toMatchObject({amount_by_stage_and_bucket:null});
 });

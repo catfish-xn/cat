@@ -100,12 +100,13 @@ async function firstBattle(browser, reduced) {
     // Help dialog: information only, focus handling, shortcuts blocked while open.
     const { context, page, errors } = await newGame(browser);
     await chooseAll(page);
-    // B6 starts at 0G. Two public empty-board settlements provide 2+3=5G,
+    // B6 starts at 0G. Two public empty-board settlements provide v22 base 2+3G plus the
+    // loss-streak 0+1G = 6G,
     // so both D and F could actually execute if help failed to block them.
     // This preparation is separate from the first-battle/reduced-motion checks below.
     await benchEveryone(page);
     await advanceTo(page, '1-4');
-    assert.equal((await read(page)).state.gold, 5, 'legal opening income funds help shortcut checks');
+    assert.equal((await read(page)).state.gold, 6, 'legal opening income funds help shortcut checks');
     const before = (await read(page)).state;
     await page.locator('[data-debug="help-open"]').click();
     await page.waitForSelector('[data-debug="help-dialog"]:not([hidden])');

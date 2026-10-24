@@ -10,7 +10,7 @@ import { readLootView } from '../../src/simulation/match';
 import type { BattleInput, RoomState } from '../../src/server/room/types';
 
 interface Checkpoint { time: number; seed: number; state: RoomState; expected: { initialHash: string; firstHash: string } }
-// Recorded from public Room progression by scripts/record-v21-opening-encounters-battle-start.cjs
+// Recorded from public Room progression by scripts/record-v22-online-rules-battle-start.cjs
 // at integrated 3394f104; recorder checks sliced versus synchronous tick0/1 bytes.
 const checkpoints = (JSON.parse(readFileSync(new URL('./fixtures/battle-start.json', import.meta.url), 'utf8')) as { checkpoints: Checkpoint[] }).checkpoints;
 type Seam = { current: RoomState; streams: Map<string, CombatStream>; frozenInputs: BattleInput[];
@@ -41,7 +41,7 @@ function fingerprint(room: Room) {
 }
 
 describe('battle opening slices', () => {
-  it.each([3, 9, 23])('round %i: tick0/1 hashes equal the v21-opening-encounters synchronous baseline', round => {
+  it.each([3, 9, 23])('round %i: tick0/1 hashes equal the v22-online-rules synchronous baseline', round => {
     const { room, clock, cp } = fixture(round);
     const publications: number[] = [];
     room.subscribe(state => { if (state.phase === 'battle') publications.push(seam(room).streams.size); });
@@ -162,7 +162,7 @@ describe('battle opening slices', () => {
     });
     try {
       expect(room.state.seats.filter(s => s.alive).map(s => s.match.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length))
-        .toEqual([7, 8, 8, 8, 9, 8, 7]);
+        .toEqual([8, 8, 8, 7, 8, 8, 8]); // v22 recording (battle-start.json checkpoint round 23)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;

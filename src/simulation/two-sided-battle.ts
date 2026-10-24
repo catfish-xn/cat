@@ -1,3 +1,4 @@
+import { MAX_COMBAT_TICKS } from './combat-types';
 import { drainSetup } from './setup-work';
 import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
@@ -52,7 +53,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team) {
   const inputs: CombatStrategyInputs = {
     round:getMultiplayerRoundById(s.roundId).ordinal, preparation,
     ...(s.d14Combat?{d14Combat:{...s.d14Combat,unitId:map('unit',s.d14Combat.unitId)}}:{}),
-    ...(s.itemSummonPositions?{itemSummonPositions:Object.fromEntries(Object.entries(s.itemSummonPositions).map(([id,cell])=>[map('item',id),cell]))}:{}),...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,
+    ...(s.itemSummonPositions?{itemSummonPositions:Object.fromEntries(Object.entries(s.itemSummonPositions).map(([id,cell])=>[map(id.startsWith('unit-')?'unit':'item',id),cell]))}:{}),...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,
     items:s.items.map(item => ({...item,id:map('item',item.id),location:item.location.kind === 'unit'
       ? {...item.location,unitId:map('unit',item.location.unitId)} : item.location})),
     temporaryEquipment:s.temporaryEquipment.map(child => ({...child,temporaryId:map('temporary-item',child.temporaryId),
@@ -70,7 +71,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team) {
   const sourced = (value: SourcedEffect): SourcedEffect => { const mapped = source(value.source); return {...value,source:mapped,key:effectKey(mapped)}; };
   return {
     mapping, inputs,
-    units:projectItemSummons(projectG23Summons(preparation),compiled).units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
+    units:projectItemSummons(projectG23Summons(preparation,undefined,inputs.itemSummonPositions),compiled).units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
       ? {kind:'board' as const,cell:{col:unit.location.cell.col,row:team === 'player' ? unit.location.cell.row : DEFAULT_BOARD.rows - 1 - unit.location.cell.row}}
       : unit.location})),
     strategy:{ traits:compiled.traits.filter(trait=>trait.team === 'player').map(trait=>({...trait,team})),
@@ -188,7 +189,7 @@ function validateDynamicResult(result:BattleResult):void {
     return;
   }
   if(result.initial.tick!==0||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench')
-    ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>1200)throw new BattleValidationError('invalid-result');
+    ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>MAX_COMBAT_TICKS)throw new BattleValidationError('invalid-result');
   let expected=structuredClone(result.initial);
   let bankCursor=0;
   // Tick-zero events already belong to the trusted initial state; authenticate

@@ -38,24 +38,24 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(state.m8.encounterPlan).toBeNull();
     roundTrip(state);
   });
-  it('concedes the three opening battles once: 2/3/5G, 2/2/2XP, fixed 3HP and no streak',()=>{
+  it('concedes the three opening battles once: 2/3/4 base + 0/1/1 streak, 2/2/2XP and fixed 3HP',()=>{
     let state=createMatch(42);
     for(const expected of [
-      {id:'1-2',gold:2,level:2,hp:97,base:2,xp:2},
-      {id:'1-3',gold:5,level:3,hp:94,base:3,xp:2},
-      {id:'1-4',gold:10,level:3,hp:91,base:5,xp:2},
+      {id:'1-2',gold:2,level:2,hp:97,base:2,bonus:0,count:1,xp:2},
+      {id:'1-3',gold:6,level:3,hp:94,base:3,bonus:1,count:2,xp:2},
+      {id:'1-4',gold:11,level:3,hp:91,base:4,bonus:1,count:3,xp:2},
     ]) {
       expect(readRoundInfo(state).roundId).toBe(expected.id);
       roundTrip(state);
       const frozen=structuredClone(state.m8);
       state=concede(state);
       // Round income is paid at the next round entry (deferred-income.ts): settlement still shows the previous gold.
-      expect(state).toMatchObject({phase:'settlement',gold:expected.gold-expected.base,level:expected.level,xp:expected.id==='1-4'?2:0,playerHp:expected.hp,streak:{kind:null,count:0}});
+      expect(state).toMatchObject({phase:'settlement',gold:expected.gold-expected.base-expected.bonus,level:expected.level,xp:expected.id==='1-4'?2:0,playerHp:expected.hp,streak:{kind:'loss',count:expected.count}});
       expect(state.m8).toEqual({...frozen,loot:{...frozen.loot,
         direct:frozen.loot.direct.map(drop=>({...drop,status:'forfeited'})),
         choiceEligibility:frozen.loot.choiceEligibility.map(choice=>({...choice,status:'forfeited'})),
       }});
-      expect(state.roundResults.at(-1)).toMatchObject({roundId:expected.id,incomeBreakdown:{base:expected.base,win:0,interest:0,streak:0},xpRequested:expected.xp,playerDamage:3});
+      expect(state.roundResults.at(-1)).toMatchObject({roundId:expected.id,incomeBreakdown:{base:expected.base,win:0,interest:0,streak:expected.bonus},xpRequested:expected.xp,playerDamage:3});
       roundTrip(state);
       expect(stepMatch(state)).toEqual({state,events:[]}); expect(stepMatch(state).state).toBe(state);
       const old=state;
@@ -65,7 +65,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
       expect(duplicate).toEqual({ok:false,state,reason:'wrong-phase'});expect(duplicate.state).toBe(state);
       roundTrip(state);
     }
-    expect(state).toMatchObject({round:4,roundDefinitionId:'2-1',phase:'choice',gold:10,level:3,xp:2,playerHp:91});
+    expect(state).toMatchObject({round:4,roundDefinitionId:'2-1',phase:'choice',gold:11,level:3,xp:2,playerHp:91});
     expect(state.pendingChoice).toMatchObject({kind:'augment',eventId:'round:2-1:augment'});
     expect(state.items).toEqual([]);expect(state.preparation.units.filter(u=>u.team==='player')).toHaveLength(1);
     expect(state.scheduleReceipts).toEqual([]); // Empty-board losses forfeit every hero/component entitlement.
@@ -100,9 +100,9 @@ describe('B6 installed round, opening and restore transactions',()=>{
     state=accepted(buyUnit(state,slot,state.shop.generation));
     expect(state.nextUnitSerial).toBe(3);expect(state.gold).toBe(1);
     state=concede(state);state=accepted(nextRound(state,state.round));
-    state=accepted(buyXp(state));expect([state.gold,state.level,state.xp]).toEqual([0,3,4]);
+    state=accepted(buyXp(state));expect([state.gold,state.level,state.xp]).toEqual([1,3,4]);
     state=concede(state);state=accepted(nextRound(state,state.round));
-    expect([state.gold,state.level,state.xp]).toEqual([5,4,0]);roundTrip(state);
+    expect([state.gold,state.level,state.xp]).toEqual([6,4,0]);roundTrip(state);
   });
   it('maps every ordinal and semantic node through the catalog, including 36-38',()=>{
     expect(ROUND_CATALOG.filter(r=>r.kind!=='supply')).toHaveLength(33);
@@ -113,7 +113,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(['6-5','6-6','6-7'].map(id=>getCatalogRoundById(id).ordinal)).toEqual([36,37,38]);
     expect(getRoundSchedule(1)).toEqual([]);expect(getRoundSchedule(4).map(e=>e.kind)).toEqual(['augment']);
   });
-  it('uses the old economy only from 2-1 and preserves the independent 185G base budget',()=>{
+  it('uses the old economy only from 2-1 and preserves the independent 184G base budget',()=>{
     let gold=0,level=1,xp=0,hp=100;
     let bases=0;
     for(const r of ROUND_CATALOG) {
@@ -121,7 +121,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
       bases+=plan.incomeBreakdown.base;gold=plan.goldAfter;level=plan.progression.level;xp=plan.progression.xp;
       if(r.roundId==='2-1') expect(plan.incomeBreakdown).toEqual({base:5,win:1,interest:1,streak:0});
     }
-    expect(bases).toBe(185);
+    expect(bases).toBe(184);
     expect(Object.isFrozen(OPENING_INITIAL_STATE)).toBe(true);expect(Object.isFrozen(OPENING_ECONOMY_RULES.rounds['1-4'])).toBe(true);
     expect(CONTENT_DIGEST).toMatch(/^fnv1a32-utf16:/);
     expect(digestContent(OPENING_ECONOMY_RULES)).not.toBe(digestContent({...OPENING_ECONOMY_RULES,rounds:{...OPENING_ECONOMY_RULES.rounds,'1-4':{baseGold:5,naturalXp:0}}}));

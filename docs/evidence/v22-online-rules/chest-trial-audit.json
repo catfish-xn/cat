@@ -1,0 +1,13 @@
+{
+  "epoch": "v22-online-rules",
+  "reason": "seed554 Prismatic Prelude replaced Manaflow I; search actual silver offers, preserving Archangel grant, two bracer stacks, three pulses, death and full continuation assertions",
+  "sourceDigests": {
+    "scripts/record-chest-trial-v22.cjs": "195cafc1f937e54946344bd6c7dc15627116def5a4c152515af340ec3c32b737",
+    "tests/fixtures/v22-online-rules-chest-trial.ts": "78fd36b6714e4c153ebc4b950675cccfe26ee870d740acd922ded7ce997c7d40",
+    "tests/fixtures/b8-public-equipment.ts": "dc50241adf7b94c99e61b59bb652637b5186d14a85964b600c0bb86cdde5c702",
+    "tests/fixtures/m5/oracle.g2.cjs": "b52a9f15afa81eb5faa5935b7cdf9af7fd736b48cfc540017bf22fef3dc82f77"
+  },
+  "fixtureBytes": 54005,
+  "fixtureSha256": "587be3bb7bd414929b43abc1c9cc3e73e1d831eb3892d573e40b5a72c123981b",
+  "seed": 16828
+}

@@ -1,3 +1,5 @@
+import { openingEncounterId } from './opening-encounter';
+import { MAX_COMBAT_TICKS } from './combat-types';
 import { deferredRoundIncome } from './deferred-income';
 import { commitOpeningEncounterHealth } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
@@ -80,7 +82,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     if (r.version !== ROUND_SETTLEMENT_VERSION || !id(r.settlementId) || !id(r.battleId)
       || r.seatId !== state.multiplayer.seatId || r.settlementEligible !== true
       || !['win','loss','draw'].includes(r.result) || !integer(r.damage) || !integer(r.baseDamage)
-      || !integer(r.opposingSurvivors) || r.opposingSurvivors > MATCH_RULES.maxLevel || !integer(r.combatTicks) || r.combatTicks > 1200
+      || !integer(r.opposingSurvivors) || r.opposingSurvivors > MATCH_RULES.maxLevel || !integer(r.combatTicks) || r.combatTicks > MAX_COMBAT_TICKS
       || !integer(r.combatEventCount,1) || !Array.isArray(r.growth)) return fail(state,'invalid-receipt');
     if (state.multiplayer.status === 'eliminated') return fail(state,'seat-eliminated');
     if (state.roundResults.some(old => old.round === r.round)
@@ -93,7 +95,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const round = getMultiplayerRoundById(r.roundId);
     if (round.ordinal !== r.round || round.kind !== 'pvp') return fail(state,'invalid-receipt');
     if(traitContext&&traitContext.round!==state.round)return fail(state,'invalid-receipt');
+    if(openingEncounterId(state)==='warwicks-hunger'&&!r.g23Facts?.openingDeaths)return fail(state,'invalid-receipt');
     if(r.g23Facts){
+      if(r.g23Facts.openingDeaths?.some(d=>d.eventSeq>=r.combatEventCount))return fail(state,'invalid-receipt');
       validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player',undefined,traitContext,state.items);
       // A locked roster's trusted resolver receipt refers to the frozen battle, while
       // this latest live seat permits equipment edits. Recounting its emblems would
@@ -162,7 +166,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const hookEvents:MatchEvent[]=[];
     let settled=r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next;
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
-    settled=commitOpeningEncounterHealth(settled);
+    settled=commitOpeningEncounterHealth(settled,hookEvents);
     const merged = resolveDeferredUpgrades(settled);
     const d14State=reconcileD14(merged.state,hookEvents);
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);

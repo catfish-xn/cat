@@ -19,7 +19,7 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted, freeze } from './match-helpers';
-import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
+import { publicNeutralPreparation, publicAuthoredPreparation } from './fixtures/m8-neutral-public-route';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -53,7 +53,8 @@ const ENCOUNTERS = [
 
 // Original opening/live-value assertions now use complete public acquisition
 // prefixes, including real combat outcomes, loot, purchases and upgrades.
-const prepared = publicNeutralPreparation;
+// v22: seed 42's scuttle-crab opening replaces the authored encounters, so previews use the crab-free route.
+const prepared = publicAuthoredPreparation;
 const sturdyArmy = publicNeutralPreparation;
 function preview(state: match.MatchState): EncounterPreview {
   const result = match.readEncounterPreview(state);
@@ -276,7 +277,7 @@ describe('U5 EncounterPreview additive opening-state contract', () => {
   });
 
   it('retains opening range/cells/intervals after real bird deaths and next-tick speed stacks', () => {
-    let state = sturdyArmy('4-7');
+    let state = publicAuthoredPreparation('4-7'); // authored razorbeak birds: crab-free route
     const opening = preview(state);
     state = expectTickZero(state, opening);
     while (state.phase === 'combat' && !state.combat.companionState?.reactions.some(reaction => reaction.status === 'pending'))
@@ -390,7 +391,8 @@ describe('U5 shared initialization differential at existing Combat seams', () =>
     { items: ['infinity-edge'], chance: 6000, multiplier: 14000, enabled: true, authorizations: 1, ap: 100 },
     { items: ['jeweled-gauntlet'], chance: 6000, multiplier: 14000, enabled: true, authorizations: 1, ap: 135 },
     { items: ['infinity-edge', 'jeweled-gauntlet'], chance: 9500, multiplier: 15000, enabled: true, authorizations: 2, ap: 135 },
-    { items: ['infinity-edge', 'jeweled-gauntlet', 'infinity-edge'], chance: 10000, multiplier: 16000, enabled: true, authorizations: 3, ap: 135 },
+    // v22 crit overflow: the 3000 bps above the 10000 cap adds floor(3000 / 2) to crit damage (16000 + 1500).
+    { items: ['infinity-edge', 'jeweled-gauntlet', 'infinity-edge'], chance: 10000, multiplier: 17500, enabled: true, authorizations: 3, ap: 135 },
   ])('shares authored item crit modifiers/authorization multiplicity and AP: $items', row => {
     const fixture = freeze(initializationFixture('zyra', [], row.items, {}, 3));
     const before = structuredClone(fixture), resolved = fixture.strategy.units.find(unit => unit.unitId === 'p')!;

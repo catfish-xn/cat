@@ -23,6 +23,7 @@ it('source descriptor order survives canonical/reversed keys on cache misses and
   }
   expect(g23RewardAtoms(bundle,seed)).toEqual(expected);
   if(bundle.source==='conqueror'&&bundle.tier===4)expect(expected.map(a=>a.kind)).toEqual(['unit','duplicator']);
-  if(bundle.source==='conqueror'&&bundle.tier===14)expect(expected.map(a=>[a.kind,a.options.length])).toEqual([['item',1],['item',4],['tool',1]]);
+  // v22 anvil units (docs/ANVIL_UNITS.md): the MeepTypeUnit artifact forge is an 'anvil' atom, still in source order.
+  if(bundle.source==='conqueror'&&bundle.tier===14)expect(expected.map(a=>[a.kind,a.options.length])).toEqual([['item',1],['anvil',4],['tool',1]]);
  }
 });

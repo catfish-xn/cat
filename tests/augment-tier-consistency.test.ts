@@ -19,7 +19,8 @@ it('single-player nodes choose a deterministic shared tier without consuming cho
     let rng = (seed ^ 0x9e3779b9) >>> 0;
     for (let word = 0; word < 3; word++) rng = nextRandom(rng).state;
     expect(state.choiceRngState).toBe(rng);
-    expect(state.augmentOffers).toEqual([{choiceId:c.choiceId,tier,rerollCount:0,rerolledIndices:[]}]);
+    expect(state.augmentOffers).toEqual([{choiceId:c.choiceId,tier,rerollCount:0,rerolledIndices:[],fieldedTraits:[],externalBlocks:[[]]}]);
+    expect(state.removedAugmentIds).toEqual(c.offers); // v22: shown once, never offered again
     expect(c.rerollsRemaining).toBe(3);
     expect(c.rerolledSlots).toEqual([false,false,false]);
   }
@@ -34,7 +35,7 @@ it('free reroll replaces one card, locks tier, consumes one word and exhausts th
   expect(c.offers).not.toContain(next.offers[1]);
   expect(next.offers.every(id => AUGMENT_TIERS[id] === c.augmentTier)).toBe(true);
   expect(next).toMatchObject({augmentTier:c.augmentTier,generation:1,rerollCount:1,rerollsRemaining:2,rerolledSlots:[false,true,false]});
-  expect(after.removedAugmentIds).toEqual([c.offers[1]]);
+  expect(after.removedAugmentIds).toEqual([...c.offers,next.offers[1]]); // v22: every shown card
   expect(after.gold).toBe(before.gold);
   const rng = nextRandom(before.choiceRngState).state;
   expect(after.choiceRngState).toBe(rng);
@@ -77,7 +78,7 @@ it('the next node resets its free allowance and its generation after an earlier 
   expect(c).toMatchObject({kind:'augment',rerollCount:0,rerollsRemaining:3,generation:0,rerolledSlots:[false,false,false]});
   expect(c.offers.every(id => AUGMENT_TIERS[id] === c.augmentTier)).toBe(true);
   expect(c.offers.every(id => !removed.includes(id))).toBe(true);
-  expect(state.removedAugmentIds).toEqual(removed);
+  expect(state.removedAugmentIds).toEqual([...removed, ...c.offers]);
   expect(state.augmentOffers.map(r => r.rerollCount)).toEqual([1,0]);
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
 });

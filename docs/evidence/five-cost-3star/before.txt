@@ -1,0 +1,24 @@
+caitlyn 1★ hp=900 ad=82 casts=1 [tick:dmg] 122:hp358/raw563/n2 unattributed=0 attackDmg=181 kills=0  end@137 enemyWin 
+caitlyn 2★ hp=1620 ad=147 casts=1 [tick:dmg] 113:hp831/raw1293/n3 unattributed=0 attackDmg=371 kills=0  end@127 enemyWin 
+caitlyn 3★ hp=2916 ad=265 casts=1 [tick:dmg] 113:hp16476/raw70652/n7 unattributed=0 attackDmg=671 kills=7  end@163 playerWin 
+malzahar 1★ hp=950 ad=45 casts=1 [tick:dmg] 127:hp60/raw80/n1 unattributed=0 attackDmg=174 kills=0  end@137 enemyWin 
+malzahar 2★ hp=1710 ad=81 casts=1 [tick:dmg] 127:hp165/raw225/n1 unattributed=0 attackDmg=365 kills=0  end@160 enemyWin 
+malzahar 3★ hp=3078 ad=145 casts=1 [tick:dmg] 127:hp261/raw1000/n1 unattributed=0 attackDmg=685 kills=1  end@167 enemyWin 
+leblanc 1★ hp=900 ad=50 casts=1 [tick:dmg] 86:hp484/raw723/n4 unattributed=659 attackDmg=164 kills=0  end@137 enemyWin 
+leblanc 2★ hp=1620 ad=90 casts=1 [tick:dmg] 86:hp770/raw1128/n4 unattributed=933 attackDmg=297 kills=0  end@157 enemyWin 
+leblanc 3★ hp=2916 ad=162 casts=1 [tick:dmg] 86:hp6552/raw8276/n7 unattributed=4307 attackDmg=562 kills=3  end@147 enemyWin 
+jayce 1★ hp=1200 ad=90 casts=0 [tick:dmg]  unattributed=0 attackDmg=180 kills=0  end@187 enemyWin 
+jayce 2★ hp=2160 ad=162 casts=0 [tick:dmg]  unattributed=0 attackDmg=324 kills=5  end@744 enemyWin 
+jayce 3★ hp=3888 ad=291 casts=1 [tick:dmg] 126:hp1401/raw5820/n1 unattributed=0 attackDmg=944 kills=3  end@343 enemyWin 
+rumble 1★ hp=1200 ad=60 casts=0 [tick:dmg]  unattributed=0 attackDmg=120 kills=0  end@187 enemyWin 
+rumble 2★ hp=2160 ad=108 casts=0 [tick:dmg]  unattributed=0 attackDmg=216 kills=5  end@744 enemyWin 
+rumble 3★ hp=3888 ad=194 casts=1 [tick:dmg] 126:hp4096/raw8000/n2 unattributed=35 attackDmg=508 kills=7  end@723 playerWin 
+sevika 1★ hp=1200 ad=80 casts=0 [tick:dmg]  unattributed=0 attackDmg=159 kills=0  end@187 enemyWin 
+sevika 2★ hp=2160 ad=144 casts=0 [tick:dmg]  unattributed=0 attackDmg=288 kills=5  end@744 enemyWin 
+sevika 3★ hp=3888 ad=259 casts=1 [tick:dmg] 126:hp4644/raw11761/n3 unattributed=0 attackDmg=742 kills=7 rocket/flamethrower end@784 playerWin 
+jinx 1★ hp=900 ad=60 casts=1 [tick:dmg] 122:hp113/raw159/n1 unattributed=0 attackDmg=188 kills=0  end@137 enemyWin 
+jinx 2★ hp=1620 ad=108 casts=1 [tick:dmg] 122:hp204/raw286/n1 unattributed=0 attackDmg=412 kills=0  end@157 enemyWin 
+jinx 3★ hp=2916 ad=194 casts=2 [tick:dmg] 122:hp364/raw3880/n1 161:hp7309/raw19400/n5 unattributed=0 attackDmg=742 kills=3  end@162 enemyWin 
+mordekaiser 1★ hp=1200 ad=75 casts=0 [tick:dmg]  unattributed=0 attackDmg=100 kills=0  end@187 enemyWin 
+mordekaiser 2★ hp=2160 ad=135 casts=0 [tick:dmg]  unattributed=0 attackDmg=180 kills=7  end@746 playerWin 
+mordekaiser 3★ hp=3888 ad=243 casts=1 [tick:dmg] 127:hp666/raw1000/n1 unattributed=0 attackDmg=9308 kills=7  end@238 playerWin 

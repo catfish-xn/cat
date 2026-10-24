@@ -14,7 +14,9 @@ function triggerFirst(s: MatchState): MatchState {
   if (s.phase !== 'combat') throw Error('combat fixture');
   // Restore replays the authenticated opening, so only real incoming damage of
   // the unchanged combat may consume the source.
-  for (let i = 0; i < 200 && s.phase === 'combat' && !holder(s).shield; i++) s = stepMatch(s).state;
+  // v22 damage mana (1% + 3%) lets Irelia cast first; her own ability shield is not the trigger, so wait for the
+  // Bloodthirster consumption itself (her shield is fully absorbed by then).
+  for (let i = 0; i < 200 && s.phase === 'combat' && !receipts(s).length; i++) s = stepMatch(s).state;
   // Bloodthirster gives 25% max HP per independent instance; later public
   // acquisition may include Bulky Buddies, so use the actual frozen max HP.
   expect(holder(s).shield).toBe(Math.floor(holder(s).maxHp / 4) * receipts(s).length);

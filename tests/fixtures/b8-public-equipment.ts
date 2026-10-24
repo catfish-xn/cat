@@ -3,6 +3,8 @@ import { freezeContent } from '../../src/simulation/content/freeze';
 import {
   createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, rerollShop, rerollAugment, selectAnomalyTarget, sellUnit,
 } from '../../src/simulation/match';
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
+import { isAnvil } from '../../src/simulation/content/anvils';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../src/simulation/match-types';
 import type { LedgerCombatEvent as CombatEvent } from '../../src/simulation/combat-types';
 import type { BattleHistory } from '../../src/replay';
@@ -74,7 +76,8 @@ export function resolvePublicEquipmentChoices(input: MatchState, component = 'gl
 
 export function benchPublicEquipmentPlayers(input: MatchState): MatchState {
   let state = input;
-  for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board')) {
+  // v22 opening structures (Trainer Golem) cannot be benched; they stay on the board.
+  for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board' && isSellableUnit(unit.definitionId))) {
     const used = new Set(state.preparation.units.flatMap(unit => unit.location.kind === 'bench' ? [unit.location.slot] : []));
     const slot = Array.from({ length: state.preparation.benchSize }, (_, index) => index).find(index => !used.has(index));
     if (slot === undefined) throw new Error('Public B8 equipment fixture has no bench slot');
@@ -138,7 +141,8 @@ export function publicEquipmentPreparation(components: readonly string[],
         const result:MatchCommandResult=slot<0?rerollShop(state):buyUnit(state,slot,state.shop.generation);
         if(!result.ok)break;state=result.state;
       }
-      for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench')){
+      // v22 anvils are bench-only units.
+      for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))){
         const held=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');if(held.length>=state.level)break;
         const col=[3,2,4,1,5,0,6].find(col=>!held.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===7))!;
         state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:7}}));

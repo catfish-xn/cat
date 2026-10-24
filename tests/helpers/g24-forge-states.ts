@@ -1,4 +1,7 @@
-import {createMatch,forfeitPendingChoice,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,claimOrb,buyXp,deployMatchUnit,type MatchState} from '../../src/simulation/match';
+import {createMatch,forfeitPendingChoice,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,claimOrb,buyXp,deployMatchUnit,sellUnit,type MatchState} from '../../src/simulation/match';
+import {readLootView} from '../../src/simulation/loot-view';
+import {isAnvil} from '../../src/simulation/content/anvils';
+import {validateAnvils} from '../../src/simulation/anvils';
 import {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION} from '../../src/simulation/round-settlement';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
 import {validateG23Restoration} from '../../src/simulation/g2-3-restore';
@@ -6,24 +9,44 @@ import {validateSeatMechanicsState} from '../../src/simulation/seat-mechanics/st
 import {validateMechanicPendingChoice} from '../../src/simulation/seat-mechanics/choices';
 import {openG23Choice} from '../../src/simulation/g2-3-runtime';
 export const accepted=<T extends {ok:boolean;state:MatchState}>(r:T):MatchState=>{if(!r.ok)throw Error(JSON.stringify(r));return r.state;};
+/** The conqueror forge atom whose anvil unit each captured tier opens. */
+export const FORGE_ATOM_IDS:Readonly<Record<number,string>>={10:'g23:conqueror:10:atom:0',11:'g23:conqueror:11:atom:0',14:'g23:conqueror:14:atom:1'};
+/** The same seat just before the tier's anvil unit was opened (anvil still on the bench). */
+export interface ForgeAnvil {readonly before:MatchState;readonly unitId:string}
 let cached:Map<number,MatchState>|undefined;
+let cachedAnvils:Map<number,ForgeAnvil>|undefined;
+/** v22 anvil units (docs/ANVIL_UNITS.md): conqueror forges no longer auto-open. Claim every waiting G2-3 anvil
+ * orb onto the bench and open each anvil unit by selling it (sell = openAnvil), recording the tiers under test. */
+function openConquerorAnvils(input:MatchState,anvils:Map<number,ForgeAnvil>,states:Map<number,MatchState>):MatchState{
+ let state=input;
+ for(const orb of readLootView(state).unclaimedOrbs??[])if(orb.orbId.startsWith('g23-anvil:'))state=accepted(claimOrb(state,orb.orbId,state.round));
+ const unit=state.preparation.units.find(u=>u.team==='player'&&isAnvil(u.definitionId));
+ if(!unit)return state;
+ const birth=state.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.unitId===unit.id)!;
+ const tier=Object.entries(FORGE_ATOM_IDS).find(([,atomId])=>birth.receiptId===`${atomId}:copy:0`)?.[0];
+ const opened=accepted(sellUnit(state,unit.id));
+ if(tier!==undefined){anvils.set(Number(tier),{before:state,unitId:unit.id});states.set(Number(tier),opened);}
+ return opened;
+}
 /** Server-authoritative settlement vectors: real opening/history/commands and generic grant provenance.
  * Six heroes are granted explicitly; each PvP receipt supplies 30 distinct takedowns. This tests the
  * domain's trusted receipt boundary, not an assertion that the fixture is a natural combat trajectory. */
 export function forgeStates():Map<number,MatchState>{
  if(cached)return cached;
- const states=new Map<number,MatchState>();
+ const states=new Map<number,MatchState>(),anvils=new Map<number,ForgeAnvil>();
  let state=accepted(enableMultiplayerSettlement(createMatch(5),'A')),recruited=false;
  for(let guard=0;guard<15000;guard++){
   if(state.phase==='choice'){
    const c=state.pendingChoice!;
-   if(c.choiceId==='g23:conqueror:10:atom:0:copy:0')states.set(10,state);
-   if(c.choiceId==='g23:conqueror:11:atom:0:copy:0')states.set(11,state);
-   if(c.choiceId==='g23:conqueror:14:atom:1:copy:0'){states.set(14,state);cached=states;return states;}
+   if(states.has(14)){cached=states;cachedAnvils=anvils;return states;}
    state=accepted(forfeitPendingChoice(state,state.round,c.choiceId,c.generation));continue;
   }
   if(state.phase==='combat'){state=stepMatch(state).state;continue;}
-  if(state.phase==='settlement'){state=accepted(claimOrDiscardLoot(state,state.round));if(state.phase==='settlement')state=accepted(nextRound(state,state.round));continue;}
+  if(state.phase==='settlement'){
+   const opened=openConquerorAnvils(state,anvils,states);
+   if(opened!==state){state=opened;continue;}
+   state=accepted(claimOrDiscardLoot(state,state.round));if(state.phase==='settlement')state=accepted(nextRound(state,state.round));continue;
+  }
   if(state.phase!=='preparation')throw Error('Unexpected fixture phase '+state.phase);
   if(state.round===4&&!recruited){
    state=accepted(grantMechanicGold(state,{receiptId:'fixture:gold',source:'fixture',amount:150}));
@@ -56,8 +79,11 @@ function expectOrbUnallocated(state:MatchState,definitionId:string):void{
  if(state.preparation.units.some(u=>u.team==='player'&&u.definitionId===definitionId))throw Error('fixture hero allocated before claim');
 }
 
+export function forgeAnvils():Map<number,ForgeAnvil>{forgeStates();return cachedAnvils!;}
+
 export function restoreDomain(input:unknown):MatchState{
  const state=JSON.parse(JSON.stringify(input)) as MatchState;
- validateSeatMechanicsState(state.seatMechanics);if(state.pendingChoice?.kind==='forge')validateMechanicPendingChoice(state);validateG23Restoration(state);return state;
+ // Anvil-unit forges (v22) are authenticated by the anvil ledger: birth receipt, opening fact, offers and choice receipt.
+ validateSeatMechanicsState(state.seatMechanics);if(state.pendingChoice?.kind==='forge')validateMechanicPendingChoice(state);validateG23Restoration(state);validateAnvils(state);return state;
 }
 

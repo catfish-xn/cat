@@ -44,7 +44,8 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
   return drainSetup(snapshotCombatSteps(preparationState, strategy, combatId, rngState));
 }
 function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): Generator<void, CombatStep, void> {
-  preparationState=projectItemSummons(projectG23Summons(preparationState,strategy?.traits),strategy);
+  const forgeCells=strategy?.units.some(u=>u.summonCell)?Object.fromEntries(strategy.units.flatMap(u=>u.summonCell?[[u.unitId.slice(0,-':g23-forge'.length),u.summonCell]]:[])):undefined;
+  preparationState=projectItemSummons(projectG23Summons(preparationState,strategy?.traits,forgeCells),strategy);
   const createUnit = (unit: GameState['units'][number]): CombatUnit[] => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
@@ -94,7 +95,7 @@ function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySn
       player: { ...preparationState.board.deploymentZones.player },
       enemy: { ...preparationState.board.deploymentZones.enemy },
     } },
-    ...(strategy ? { strategy: shareGeneratedDeclaration(structuredClone(strategy)), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
+    ...(strategy ? { openingDeaths:[], strategy: shareGeneratedDeclaration(structuredClone(strategy)), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
     ...(units.some(u=>u.unitKind==='neutral') ? {...(strategy ? {neutralReceipts:{deaths:[],controls:[]}} : {}),openingDefinitions:structuredClone(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>units.some(u=>u.id===d.source.ownerId)))} : {}),
     ...(units.some(u=>u.mechanics?.some(m=>['g24Fishbones','g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)))?{itemRandomStreams:createItemRandomStreams(rngState)}:{}),
     ...(units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)))?{itemGoldReceipts:[]}:{}),

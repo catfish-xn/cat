@@ -8,8 +8,9 @@ import type { D14State } from './types';
 import { D14_FOURTH_ABILITY } from './fourth-ability';
 import { D14_POLICY } from '../content/d14-anomalies';
 
-/** Provisional D14-only convention: extend the existing 100/180/324% HP/AD sequence
- * once to 583.2%, floor from 1-star base. Not claimed as recovered original scaling.
+/** Provisional D14-only convention: preserve the historically approved 583.2%
+ * HP/AD override, floored from 1-star base, independently of normal star scaling.
+ * Not claimed as recovered original scaling.
  * Physical ownership remains 3-star / nine shares; no general four-star merge exists. */
 export const D14_ULTIMATE_BASE_BPS = 58320;
 /** Compile before resolveEffects, passing ALL item/trait/growth sources once. Absent units

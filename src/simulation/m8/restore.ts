@@ -1,3 +1,5 @@
+import { overtimeReceivedBps } from '../combat-overtime';
+import { MAX_COMBAT_TICKS } from '../combat-types';
 import { d14UnitBase } from '../d14-anomalies/projection';
 import { p2Bonus } from '../s13-augments-p2-combat';
 import { g23FormStats } from '../g2-3-forms';
@@ -159,11 +161,11 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       const m = owner?.mechanics?.find(m => m.mechanic === 'inspiringEpitaph' && canonicalSource(asSource(m.source)) === canonicalSource(shield.source));
       if (m) {
         check(owner && !owner.alive && owner.team === unit.team && owner.id !== unit.id && shield.startsAtTick > 0 && shield.startsAtTick <= tick, 'augment shield death source');
-        check(same(grant, augmentCombatEffects(m, shield.startsAtTick)[0]) && shield.expiresAtTick === 1201 && shield.decay.kind === 'none', 'augment shield declaration');
+        check(same(grant, augmentCombatEffects(m, shield.startsAtTick)[0]) && shield.expiresAtTick === MAX_COMBAT_TICKS + 1 && shield.decay.kind === 'none', 'augment shield declaration');
         const speed = contributions.find(c => canonicalSource(c.source) === canonicalSource(shield.source) && JSON.parse(c.key)[8] === JSON.stringify(['inspiringEpitaph', owner.id, 1]));
         check(speed && speed.appliedAtTick === shield.startsAtTick, 'augment shield receipt');
         const reave = (unit.g22?.reaveUntilTick ?? 0) > shield.startsAtTick ? unit.g22!.reaveBps : 0;
-        check([...maxHpCandidates(unit,shield.startsAtTick,combatId)].some(hp => shield.granted === Math.floor(Math.floor(hp * m.values.shieldMaxHpBps / 10000) * (10000 - reave) / 10000)), 'augment shield amount');
+        check([...maxHpCandidates(unit,shield.startsAtTick,combatId)].some(hp => shield.granted === Math.floor(Math.floor(Math.floor(hp * m.values.shieldMaxHpBps / 10000) * (10000 - reave) / 10000) * overtimeReceivedBps(shield.startsAtTick) / 10000)), 'augment shield amount');
         check(shield.remaining > 0 && !shield.endRewardConsumed && layer.endedReason === undefined, 'augment shield lifecycle');
         continue;
       }
@@ -181,7 +183,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       check(shield.decay.kind===grant.decay.kind && (grant.amount.resistsBps ? Number.isSafeInteger(shield.granted) && shield.granted >= 0 : [...maxHpCandidates(holder,shield.startsAtTick,combatId)].some(hp=>{
         const numerator=grant.amount.flat*10000+hp*grant.amount.maxHpBps;
         const previous=remainder?((remainder.numerator-numerator%10000+10000)%10000):0;
-        return shield.granted===Math.floor(Math.floor((numerator+previous)/10000)*(10000-reave)/10000);
+        return shield.granted===Math.floor(Math.floor(Math.floor((numerator+previous)/10000)*(10000-reave)/10000)*overtimeReceivedBps(shield.startsAtTick)/10000);
       })), 'declared shield sampled amount');
       check(shield.remaining>0&&layer.endedReason===undefined&&!shield.endRewardConsumed&&!units.some(u=>u.tasks?.some(t=>t.shieldEndKey===layer.key)), 'item shield active lifecycle');
       continue;

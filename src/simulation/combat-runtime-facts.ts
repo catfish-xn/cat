@@ -14,6 +14,7 @@ export function validateTaskAndSummonFacts(combat: CombatState, basis: CombatInp
   // curse pulses (or inventing delayed Maddie damage on another hero) cannot
   // escape a kind-filtered comparison. Reuse sampled-stat evidence when present.
   const expected = replay.atSaveTick();
+  if(!same(combat.openingDeaths,expected.openingDeaths))throw new Error('Invalid Match save: opening deaths');
   if (expected.tick !== combat.tick) throw new Error('Invalid Match save: curse task fact tick');
   if (!same(combat.damageContributors ?? {}, expected.damageContributors ?? {}))
     throw new Error('Invalid Match save: damage contributors binding facts');
@@ -26,6 +27,9 @@ export function validateTaskAndSummonFacts(combat: CombatState, basis: CombatInp
     throw new Error('Invalid Match save: combat cursor binding facts');
   for (const unit of combat.units) {
     const settledUnit = expected.units.find(u => u.id === unit.id)!;
+    if (unit.mana !== settledUnit.mana || unit.manaLockedUntilTick !== settledUnit.manaLockedUntilTick
+      || unit.damageManaRemainderCenti !== settledUnit.damageManaRemainderCenti)
+      throw new Error('Invalid Match save: mana binding facts');
     // Sion reuses buddyTriggered for its Black Rose release. Current HP/cast
     // totals cannot establish when the threshold was crossed (or later healed).
     if (unit.definitionId === 'g23-sion' && unit.runtime!.buddyTriggered !== settledUnit.buddyTriggered)

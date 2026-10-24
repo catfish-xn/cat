@@ -68,12 +68,13 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 }
 
 it.each([
-  { contribution: false, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 192, targetId: 'enemy-r4-1' },
-  { contribution: true, cells: [{ col: 0, row: 4 }, { col: 6, row: 4 }, { col: 5, row: 4 }], tick: 369, targetId: 'enemy-r4-2' },
-])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, cells, tick, targetId }) => {
-  // v15 seed 3151248 offers Manaflow II (inert in row 4); seed 5 offers
-  // Manaflow I for the back-row contribution=false board.
-  let state = acquireEquipment(['rod'], { seed: contribution ? 3151248 : 5, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
+  // v22: seeds whose public Manaflow route keeps unit serials single-digit, so Morgana's id sorts first
+  // and she owns Sion (string-sorted Black Rose owner, see S13_RULES_GAP known issue).
+  { contribution: false, seed: 108, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 174, targetId: 'enemy-r4-1' },
+  { contribution: true, seed: 104, cells: [{ col: 3, row: 7 }, { col: 0, row: 7 }, { col: 6, row: 7 }], tick: 210, targetId: 'enemy-r4-1' },
+])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => {
+  // Each route's public 2-1 augment is Manaflow I/II; the assertions only read Sion, curse and bracer facts.
+  let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
     const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
@@ -165,12 +166,13 @@ function expectRejectedAtAllEntrances(bad: MatchState, reason: string) {
 
 it('rejects altered or invented target reave facts beside the legal seed 3151248 curse', () => {
   const state = morganaCurseSave();
-  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(89);
+  // v22 mana rules (damage-taken mana, overflow) bring Morgana's first curse forward from tick 89 to 70.
+  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(70);
   const target = state.combat!.units.find(u => u.id === 'enemy-r4-1')!;
-  expect(target.g22).toMatchObject({ reaveBps: 5000, reaveUntilTick: 289 });
+  expect(target.g22).toMatchObject({ reaveBps: 5000, reaveUntilTick: 270 });
   const owner = state.combat!.units.find(u => u.definitionId === 'morgana')!;
   expect(owner.tasks).toHaveLength(10);
-  for (const patch of [{ reaveBps: 0 }, { reaveUntilTick: 89 }, { reaveBps: 0, reaveUntilTick: 0 }]) {
+  for (const patch of [{ reaveBps: 0 }, { reaveUntilTick: 70 }, { reaveBps: 0, reaveUntilTick: 0 }]) {
     const bad = structuredClone(state);
     Object.assign(bad.combat!.units.find(u => u.id === target.id)!.g22!, patch);
     expectRejectedAtAllEntrances(bad, 'curse reave binding facts');
@@ -178,7 +180,7 @@ it('rejects altered or invented target reave facts beside the legal seed 3151248
   const bad = structuredClone(state), untouched = bad.combat!.units.find(u => u.team === target.team && u.id !== target.id)!;
   expect(untouched.g22?.reaveBps ?? 0).toBe(0);
   Object.assign(untouched, { g22: { initialized: false, wanted: [], wantedDeaths: 0, mordeUntilTick: 0,
-    reaveBps: 5000, reaveUntilTick: 289, rebelTriggered: false, exposureFromTick: 0, exposureUntilTick: 0, exposureBps: 0 } });
+    reaveBps: 5000, reaveUntilTick: 270, rebelTriggered: false, exposureFromTick: 0, exposureUntilTick: 0, exposureBps: 0 } });
   expectRejectedAtAllEntrances(bad, 'curse reave binding facts');
 });
 
@@ -280,8 +282,9 @@ it('rejects an appended fake bleed while retaining every genuine Morgana curse p
 
 it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce revives that same Forge', async () => {
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
-  // v15 seed 53 offers Bulky Buddies I at the same 2-1 node.
-  let state = prepare(['rod'], { seed: 53 });
+  // v15 seed 53 offered Bulky Buddies I at 2-1. Under the v22 augment tier table seed 22 is the first
+  // public route (with card rerolls) whose Forge dies and is revived beside a living holder.
+  let state = prepare(['rod'], { seed: 22, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
   expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
   for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
     for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));

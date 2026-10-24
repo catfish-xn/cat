@@ -6,7 +6,7 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
-import type { ConsumableFailure, ConsumableTarget, ItemSummonOrigin, OpeningEncounterView, OrbTier, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
+import type { ConsumableFailure, ConsumableTarget, ItemSummonOrigin, MovableSummon, OpeningEncounterView, OrbTier, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
 export type { ConsumableFailure, ConsumableTarget, OpeningEncounterView, RoundEconomyPreview, RoundEconomyPreviewOutcome };
 
 export const ROOM_CAPACITY = 8;
@@ -115,15 +115,23 @@ export interface ReplayUnitId { readonly combatId: string; readonly originalId: 
  * settlement of this round would credit if that gold and streak stay as they are (a PvP draw settles as `ifLoss`).
  * Base income, drops, XP and HP are not part of it. The client shows it as given and never recomputes it.
  */
-export type SeatStateView = PrivateSeatView & { readonly economyPreview: RoundEconomyPreview | null; readonly itemSummons: readonly ItemSummonView[] };
+export type SeatStateView = PrivateSeatView & { readonly economyPreview: RoundEconomyPreview | null; readonly itemSummons: readonly ItemSummonView[];
+  /**
+   * v22 anvil units: present only while my open anvil choice (pendingChoice.payload.source 'anvil-unit') runs on its own
+   * server deadline. `endsAt` is server time like PlayerViewPhase.endsAt (compare with its `serverNow`); the choice is
+   * answered with its first offer at that time unless I choose before. Resume sends the same `endsAt`.
+   */
+  readonly choiceDeadline?: SeatChoiceDeadlineView };
+export interface SeatChoiceDeadlineView { readonly choiceId: string; readonly generation: number; readonly endsAt: number }
 /**
  * G2-4b (contract §26): one of my movable preparation summons (兹若特传送门's 虚空生物), the rules' `readItemSummons` of the
  * same state, field by field. Not an asset: no bench slot, population, sale or equipment. `unit.location` is where the rules
  * place it this preparation (the saved cell, or the nearest free one); the client draws it there and only sends
  * `moveItemSummon` with `itemInstanceId`. Stage stats are not part of it and are never computed on the client.
+ * `kind: 'forge'` (P, 2026-10-24): 杰斯's 海克斯科技锻炉, whose `itemInstanceId` is its Jayce's unit id.
  */
 export interface ItemSummonView {
-  readonly kind: ItemSummonOrigin['kind'];
+  readonly kind: MovableSummon['kind'];
   readonly ownerId: string;
   readonly itemInstanceId: string;
   readonly unit: Pick<ItemSummonOrigin['unit'], 'id' | 'definitionId' | 'team' | 'starLevel' | 'location'>;
@@ -238,6 +246,7 @@ export type ClientCommand =
   | { readonly type: 'useConsumable'; readonly consumableId: string; readonly target: ConsumableTarget }
   | { readonly type: 'deploy'; readonly unitId: string; readonly target: UnitLocation }
   | { readonly type: 'buy'; readonly slot: number; readonly generation: number }
+  | { readonly type: 'openAnvil'; readonly unitId: string }
   | { readonly type: 'sell'; readonly unitId: string }
   | { readonly type: 'shopLock'; readonly locked: boolean; readonly generation: number }
   | { readonly type: 'reroll' }

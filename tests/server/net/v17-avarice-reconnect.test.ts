@@ -12,8 +12,8 @@ import type { Room } from '../../../src/server/room/room';
 import { TwoSidedBattleResolver } from '../../../src/server/room/two-sided-resolver';
 import type { WireCommand } from '../../../src/server/protocol';
 import type { CombatReplay } from '../../../src/server-entry';
-import { claimAllOrbs } from '../helpers';
-import { AVARICE, avariceReceipts, boardTarget, DRAINED_GOLD, PRIVATE_BANK, pvpBattleOf, seatOf } from '../v17-avarice-helpers';
+import { answerOpenChoices, claimAllOrbs } from '../helpers';
+import { AVARICE, avariceReceipts, boardTarget, DRAINED_GOLD, fieldBench, levelForBench, PRIVATE_BANK, pvpBattleOf, seatOf } from '../v17-avarice-helpers';
 import { expectOk, flush, hasKey, seatTwo, startServer, type NetHarness } from './helpers';
 
 let harness: NetHarness | null = null;
@@ -48,10 +48,16 @@ describe('v17 avarice: reconnect during and after a live battle', () => {
     harness = await startServer({}, new TwoSidedBattleResolver());
     const [a] = await seatTwo(harness);
     const room = harness.server.room!, seatId = a.seatId!, token = a.token!;
-    // To the 4-6 anomaly node (orbs claimed so reward units reach the board).
+    // To the 4-6 anomaly node (orbs claimed and the seat's reward units fielded, so it lives that long under v22).
     for (let guard = 0; !(room.state.phase === 'choice' && seatOf(room.state, seatId).match.pendingChoice?.kind === 'anomaly'); guard++) {
       expect(guard).toBeLessThan(5_000);
+      expect(seatOf(room.state, seatId).alive).toBe(true);
+      // v22: the 2-1/3-2/4-2 augment opens inside the preparation; the seat answers it, levels with spare gold, then
+      // claims and fields as before.
+      if (room.state.phase === 'preparation' && seatOf(room.state, seatId).match.pendingChoice?.kind === 'augment') answerOpenChoices(room, [seatId]);
       claimAllOrbs(room);
+      levelForBench(room, seatId);
+      fieldBench(room, seatId);
       expect(harness.clock.runNext()).toBe(true);
     }
     // Over the wire: target, paid rerolls until avarice is offered, then choose it.

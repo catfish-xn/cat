@@ -1,3 +1,4 @@
+import { createOpeningEncounter } from './opening-encounter';
 import { d14Certificate, type D14CombatCertificate } from './d14-runtime';
 import { investmentGrowth } from './augment-income';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
@@ -97,7 +98,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     && basis.contentDigest === authority.contentDigest && input.round === authority.round);
   integer(basis.mechanicReceiptPrefixLength);
   requireBasis(equal(input.itemSummonPositions??null,authority.itemSummonPositions??null));
-  if(input.itemSummonPositions)validateItemSummonPositions(input.itemSummonPositions,authority.resources.nextItemSerial);
+  if(input.itemSummonPositions)validateItemSummonPositions(input.itemSummonPositions,authority.resources.nextItemSerial,authority.resources.nextUnitSerial);
   if(input.bankGold!==undefined){integer(input.bankGold);requireBasis(input.bankGold===authority.bankGold);}
   if(input.playerHp!==undefined){integer(input.playerHp);requireBasis(input.playerHp<=100&&input.playerHp===authority.playerHp);}
   if(authority.g23){
@@ -127,7 +128,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     && basis.equipmentRollPrefixLength === authority.equipmentRollPrefixLength
     && basis.equipmentRollPrefixLength <= authority.equipmentRolls.length
     && basis.nextUnitSerial === authority.resources.nextUnitSerial && basis.nextItemSerial === authority.resources.nextItemSerial);
-  const units = validateInputAssets(input, {...basis, teamSizeBonus: crownTeamSizeBonus(input.g23)}, readRoundEnemyProjection(authority.round).units, inputValidation);
+  const units = validateInputAssets(input, {...basis, teamSizeBonus: crownTeamSizeBonus(input.g23)}, readRoundEnemyProjection(authority.round,createOpeningEncounter(authority.seed).selection.encounterId).units, inputValidation);
   requireBasis(equal(input.d14Combat??null,authority.d14Combat??null));
   const players = input.preparation.units.filter(unit => unit.team === 'player');
   requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units.filter(u=>!authority.heldUnitIds?.includes(u.id)).map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})))));

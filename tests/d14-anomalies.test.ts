@@ -69,7 +69,8 @@ describe('D14 Ultimate Hero dedicated permanent promotion (independent API)',()=
   it('promotes only after three real settlements; keeps identity, nine shares, equipment and gold',()=>{
     const f=setup();let s=commit(f.state,f.a,f.command).state;
     const pool=structuredClone(s.ownership.pool), seat=s.ownership.seats[0];
-    expect(p(s).effectiveStarLevel).toBe(3);expect(p(s).stats.health).toBe(1620);expect(p(s).stats.attack).toBe(97);
+    // Ordinary Lux AD: floor(30 * 2.25) = 67; dedicated fourth-rank override below is unchanged.
+    expect(p(s).effectiveStarLevel).toBe(3);expect(p(s).stats.health).toBe(1620);expect(p(s).stats.attack).toBe(67);
     s=advance(s,f.a,2);expect(s.records[0].phase).toBe('waiting');expect(p(s).effectiveStarLevel).toBe(3);
     const last=round(s,f.a);s=last.state;
     expect(last.events.filter(e=>e.type==='d14Promoted')).toEqual([{type:'d14Promoted',receiptId:'choice',unitId:f.targetId}]);
@@ -200,7 +201,8 @@ describe('D14 Into the Unknown lifecycle (Q3 fallback where scripts unavailable)
     s=resources(s,f.a,'third',[{kind:'acquire',grantId:'siblings',full:'hold'},{kind:'merge-live',seatId:'seat-0'}]);
     expect(s.records[0].unitId).toBe(copy.id);expect(s.records[0].unitId).not.toBe(f.targetId);
     expect(s.ownership.seats[0].anomalyBinding!.unitId).toBe(s.records[0].unitId);
-    expect(p(s).physicalStarLevel).toBe(2);expect(p(s).stats.attack).toBe(81);expect(p(s).abilityPower).toBe(150);
+    // Two-star Lux AD 45, then the existing returned +50%: floor(45 * 1.5) = 67.
+    expect(p(s).physicalStarLevel).toBe(2);expect(p(s).stats.attack).toBe(67);expect(p(s).abilityPower).toBe(150);
     expect(s.ownership.pool.holdings.find(h=>h.unitId===s.records[0].unitId)!.sources).toHaveLength(3);
   });
 });

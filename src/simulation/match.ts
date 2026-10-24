@@ -1,17 +1,26 @@
+import { planOpenAnvil } from './anvils';
+export { grantAnvilUnit } from './anvils';
+export { anvilDisplay, ANVIL_POLICY } from './content/anvils';
+import { isAnvil } from './content/anvils';
+import { sixCostShopContext } from './six-cost-shop';
+export { readOpeningBatchBRewards } from './opening-batch-b-rewards';
+import { openingEncounterId } from './opening-encounter';
+import { growTrainerGolem } from './trainer-golems';
+import { enterOpeningCrabs } from './opening-crabs';
+import { choiceAcquisitionGold } from './choice-acquisition';
 import { drainSetup } from './setup-work';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
 import { openMasterworkChoice, completeMasterworkChoice } from './masterwork-choice';
 export { readMasterworkOptions } from './masterwork-choice';
-import { createSoloOpeningEncounter, commitOpeningEncounterHealth, applyOpeningEffects, planOpeningRound } from './opening-encounter';
+import { applyOpeningRoundEntry, createSoloOpeningEncounter, commitOpeningEncounterHealth, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 export { TRAINER_GOLEMS_POLICY, validateTrainerGolemEmblems, applyTrainerGolemsOpening } from './trainer-golems';
 export type { TrainerGolemEmblems } from './trainer-golems';
 export { isMelBlessingCrossing, readOpeningMelProgress, applyWarwickHunger, createOpeningEncounter, validateOpeningEncounterConfig, validateOpeningEncounterContext, validateOpeningEncounterState, planOpeningRound, applyOpeningEffects, readOpeningEncounterView, readOpeningForgeProgress, OpeningEncounterError, OPENING_ENCOUNTERS, OPENING_ENCOUNTER_CONFIG } from './opening-encounter';
 export type { OpeningMelThresholdReceipt, OpeningMelProgress, OpeningForgeProgress, OpeningWarwickKillFact, OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
-import { settleTerminalEpicForges } from './epic-forges';
 import { grantConsumableCopy } from './consumables';
 import { grantPveRemover } from './pve-remover';
 import {grantAnomalyAcquisition} from './anomaly-acquisition';
@@ -79,7 +88,7 @@ import { CONTENT_DIGEST, canonicalContent } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS, anomalyCandidates } from './content/anomalies';
 import { generateChoices } from './choices';
-import { resolveAugmentTier, augmentCandidates, drawAugmentCard } from './augment-offers';
+import { resolveAugmentTier, augmentCandidates, drawAugmentCard, augmentNodeOf, isTraitTailoredNode, fieldedTraitSnapshot, recordedOfferFilter, type AugmentOfferFilter } from './augment-offers';
 export { deriveAugmentTier, resolveAugmentTier, augmentRerollLimit } from './augment-offers';
 import type { ScheduleReceipt } from './strategy-types';
 import { isSellableUnit } from './seat-mechanics/forms';
@@ -144,7 +153,13 @@ export function needsAnomalyRecruitment(state: MatchState): boolean {
 function affordableOffer(state: MatchState, gold = state.gold): boolean {
   return state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost <= gold);
 }
-function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 'before'): { state: MatchState; events: MatchEvent[] } {
+/** v22: the candidate filter of an augment node opening now (trait snapshot only where the node is tailored). */
+function openingOfferFilter(state: MatchState, choiceId: string, blocked: readonly string[]): AugmentOfferFilter {
+  const node = augmentNodeOf(choiceId);
+  return { node, fieldedTraits: isTraitTailoredNode(node) ? fieldedTraitSnapshot(state) : [], blocked: [...blocked].sort() };
+}
+/** `augmentBlocked`: ids other live seats block (externalAugmentBlocks), supplied by the all-seat round advance. */
+function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 'before', augmentBlocked: readonly string[] = []): { state: MatchState; events: MatchEvent[] } {
   let state = initial; const events: MatchEvent[] = [];
   // Overtime has no catalog schedule; earned mechanic choices still return to their requested phase.
   const schedule = state.multiplayer && state.round > FINAL_ROUND ? [] : getRoundSchedule(state.round);
@@ -160,8 +175,9 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
     }
     if (event.kind === 'anomaly' && !state.preparation.units.some(unit => unit.team === 'player')) continue;
     let choiceRngState = state.choiceRngState; let offers: readonly string[] = [];
+    const filter = event.kind === 'augment' ? openingOfferFilter(state, event.id, augmentBlocked) : null;
     if (event.kind === 'augment') {
-      const drawn = generateChoices(augmentCandidates(resolveAugmentTier(state, event.id), state.augments, state.removedAugmentIds), choiceRngState);
+      const drawn = generateChoices(augmentCandidates(resolveAugmentTier(state, event.id), state.augments, state.removedAugmentIds,openingEncounterId(state), filter!), choiceRngState);
       offers = drawn.offers; choiceRngState = drawn.choiceRngState;
     } else if (event.kind === 'component') offers = [...COMPONENT_IDS];
     const pendingChoice = { kind: event.kind, step: event.kind === 'anomaly' ? 'target' as const : 'offer' as const,
@@ -169,7 +185,9 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
       ...(event.kind === 'augment' ? {augmentTier: resolveAugmentTier(state, event.id), rerollsRemaining: 3, rerolledSlots: [false, false, false]} : {}),
       returnPhase: timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' as const : 'preparation' as const };
     state = { ...state, augmentOffers: event.kind === 'augment'
-      ? [...state.augmentOffers, {choiceId:event.id,tier:resolveAugmentTier(state,event.id),rerollCount:0,rerolledIndices:[]}] : state.augmentOffers, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
+      ? [...state.augmentOffers, {choiceId:event.id,tier:resolveAugmentTier(state,event.id),rerollCount:0,rerolledIndices:[],fieldedTraits:filter!.fieldedTraits,externalBlocks:[filter!.blocked]}] : state.augmentOffers,
+      // v22: a shown card is never offered to this seat again, chosen or not.
+      removedAugmentIds: event.kind === 'augment' ? [...state.removedAugmentIds, ...offers] : state.removedAugmentIds, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
     events.push({ type: 'choiceOpened', choice: pendingChoice });
     return { state, events };
   }
@@ -220,10 +238,15 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
   if (!applied.ok) throw new Error(applied.reason);
   return applied.state;
 }
+/** v22: the round's augment choice opens inside preparation; the board stays editable while it is open. */
+export function isAugmentPreparationChoice(state: MatchState): boolean {
+  return state.phase === 'choice' && state.pendingChoice?.kind === 'augment' && state.pendingChoice.returnPhase === 'preparation';
+}
+function isBoardEditablePhase(state: MatchState): boolean { return state.phase === 'preparation' || isAugmentPreparationChoice(state); }
 export function getDeploymentCap(state: MatchState): number { return deploymentCapFor(state.level, readG23Progress(state)); }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
   if (!canOperateMatch(state)) return 'wrong-phase';
-  if ((state.phase !== 'preparation' || isCombatRosterLocked(state)) && (target?.kind === 'board'
+  if ((!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && (target?.kind === 'board'
     || state.preparation.units.some(unit => unit.id === unitId && unit.location.kind === 'board'))) return 'wrong-phase';
   const planned = deployUnit(state.preparation, unitId, target);
   if (!planned.ok) return planned.reason;
@@ -265,7 +288,7 @@ export function autoDeployToCap(state: MatchState): MatchCommandResult {
   const rows = Array.from({ length: zone.lastRow - zone.firstRow + 1 }, (_, offset) => zone.firstRow + offset);
   if (board.deploymentZones.enemy.firstRow > zone.lastRow) rows.reverse();
   const cells = rows.flatMap(row => columns.map(col => ({ col, row })));
-  const reserves = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench')
+  const reserves = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench' && !isAnvil(unit.definitionId))
     .sort((a, b) => (a.location as Extract<UnitLocation, {kind:'bench'}>).slot - (b.location as Extract<UnitLocation, {kind:'bench'}>).slot);
   let next: MatchState = state;
   const events: MatchEvent[] = [];
@@ -300,7 +323,12 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   const gifted=entered.state.phase!=='combat'&&!isCombatRosterLocked(entered.state)?drainP2Gifts(entered.state,unitLootPolicy):entered.state;
   return acceptEquipment(gifted, [...plan.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
 }
+export function openAnvil(state:MatchState,unitId:string):MatchCommandResult {
+  const result=planOpenAnvil(state,unitId);
+  return result.ok?acceptEquipment(result.state,result.events):result;
+}
 export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if(state.preparation.units.some(u=>u.id===unitId&&isAnvil(u.definitionId)))return openAnvil(state,unitId);
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
   if (!canOperateMatch(state) && !(capacity && !state.multiplayer)) return fail(state, 'wrong-phase');
   const unit = state.preparation.units.find(unit => unit.id === unitId);
@@ -308,7 +336,7 @@ export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Uni
   if (unit.team !== 'player') return fail(state, 'enemy-unit');
   if (!isSellableUnit(unit.definitionId)) return fail(state, 'unit-not-sellable');
   if(unit.definitionId==='rumble'&&state.pendingChoice?.kind==='armory'&&state.pendingChoice.choiceId.startsWith('g23:junker:'))return fail(state,'wrong-phase');
-  if (state.multiplayer && (state.phase !== 'preparation' || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
+  if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
   const returned = returnUnitItems(state.items, unitId), removesBinding = state.anomalyBinding?.unitId === unitId;
   const goldGranted = getUnitSellPrice(unit);
   let sold: MatchState = { ...state, items: returned.items, anomalyBinding: removesBinding ? null : state.anomalyBinding,
@@ -331,7 +359,7 @@ export function setShopLock(state: MatchState, locked: boolean, expectedGenerati
 export function rerollShop(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.gold < MATCH_RULES.rerollCost) return fail(state, 'insufficient-gold');
-  const generated = generateShop(state.rngState, state.shop.generation + 1, state.level, state.round);
+  const generated = generateShop(state.rngState, state.shop.generation + 1, state.level, state.round, sixCostShopContext(state));
   if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - MATCH_RULES.rerollCost)) return fail(state, 'insufficient-gold');
   return accept({ ...state, gold: state.gold - MATCH_RULES.rerollCost, ...generated,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
@@ -392,7 +420,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
   const committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
-  return commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed);
+  return commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed,hookEvents);
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)
@@ -426,7 +454,6 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   let settled=reconcileD14(settledPlan.state,events); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
-    const terminalForges=settleTerminalEpicForges(settled);settled=terminalForges.state;events.push(...terminalForges.events);
     const forfeited=forfeitUnclaimedOrbs(settled); return {state:forfeited.state,events:[...events,...forfeited.events]};
   }
   const queued=settleQueuedOrbClaims(settled,unitLootPolicy);settled=queued.state;events.push(...queued.events);
@@ -516,7 +543,7 @@ export function finishCarouselSupply(state:MatchState):MatchCommandResult {
   const settled=settleRound(state,null);
   return accept({...settled,phase:'settlement',combat:null},[{type:'roundSettled',round:state.round}]);
 }
-export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
+export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger, augmentBlocked: readonly string[] = []): MatchCommandResult {
   const initial = state;
   if (state.multiplayer?.status === 'eliminated') return fail(state,'wrong-phase');
   if (state.phase !== 'settlement') return fail(state, 'wrong-phase');
@@ -526,7 +553,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const definition = getNextCatalogRound(state.m8.round.roundId);
   if (!definition) return fail(state, 'wrong-phase');
   const augment = getRoundSchedule(definition.ordinal).find(e => e.kind === 'augment');
-  if (augment && augmentCandidates(resolveAugmentTier(state, augment.id), state.augments, state.removedAugmentIds).length < 3)
+  if (augment && augmentCandidates(resolveAugmentTier(state, augment.id), state.augments, state.removedAugmentIds,openingEncounterId(state), openingOfferFilter(state, augment.id, augmentBlocked)).length < 3)
     return fail(state, 'augment-pool-too-small');
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
@@ -535,27 +562,25 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   state={...state,level:progression.level,xp:progression.xp};
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
-  const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round);
+  const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round, sixCostShopContext(state));
   const carousel = resolveCarouselPreparation({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
-  let prepared = carousel.state;
+  let prepared = growTrainerGolem(enterOpeningCrabs(carousel.state));
   const openingEvents: MatchEvent[] = [];
-  if (prepared.openingEncounter.mode === 'solo') {
-    const applied = applyOpeningEffects(prepared, planOpeningRound(prepared.openingEncounter.context, definition.roundId).facts);
-    if (!applied.ok) return fail(initial, applied.reason);
-    prepared = applied.state; openingEvents.push(...applied.events);
-  }
+  const applied=applyOpeningRoundEntry(prepared);
+  if(!applied.ok)return fail(initial,applied.reason);
+  prepared=applied.state;openingEvents.push(...applied.events);
   if (prepared.phase === 'gameOver') {
     const terminal = stampMatchEvents(prepared, carousel.events);
     return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
   }
-  const entered = enterScheduledEvents(prepared);
+  const entered = enterScheduledEvents(prepared, 'before', augmentBlocked);
   const accepted = acceptEquipment(entered.state, [...carousel.events,...entered.events]);
   return accepted.ok ? {...accepted, events: [...openingEvents, ...accepted.events]} : accepted;
 }
 
 /** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */
-export function advanceMultiplayerRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MultiplayerCommandResult {
+export function advanceMultiplayerRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger, augmentBlocked: readonly string[] = []): MultiplayerCommandResult {
   const initial=state;
   if (!state.multiplayer) return multiplayerFail(state, 'multiplayer-required');
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state, 'seat-eliminated');
@@ -568,7 +593,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
   try {
     const current = getMultiplayerRoundByOrdinal(state.round);
     if (current.roundId !== state.roundDefinitionId || current.roundId !== state.m8.round.roundId) return multiplayerFail(state, 'stale-round');
-    if (state.round < FINAL_ROUND) return nextRound(state, expectedRound, layout);
+    if (state.round < FINAL_ROUND) return nextRound(state, expectedRound, layout, augmentBlocked);
     state = payPreviousRoundIncome(state);
     const definition = getMultiplayerRoundByOrdinal(state.round + 1);
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
@@ -577,10 +602,13 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
     state={...state,level:progression.level,xp:progression.xp};
     const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
-      : generateShop(state.rngState, state.shop.generation + 1, state.level, definition.ordinal);
-    return acceptEquipment({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
+      : generateShop(state.rngState, state.shop.generation + 1, state.level, definition.ordinal, sixCostShopContext(state));
+    const applied=applyOpeningRoundEntry({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
-      preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } }, []);
+      preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
+    if(!applied.ok)return multiplayerFail(initial,applied.reason);
+    const accepted=acceptEquipment(applied.state,[]);
+    return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
 
@@ -650,7 +678,7 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
   const choice = state.pendingChoice!;
   if (choice.kind !== 'anomaly' || choice.step !== 'target') return fail(state, 'invalid-choice');
   const target = state.preparation.units.find(unit => unit.id === unitId);
-  if (!target || target.team !== 'player' || state.anomalyBinding !== null) return fail(state, 'invalid-target');
+  if (!target || target.team !== 'player' || isAnvil(target.definitionId) || state.anomalyBinding !== null) return fail(state, 'invalid-target');
   if(state.multiplayer&&choice.offers.some(id=>!eligibleD14Target(target,id)))return fail(state,'invalid-target');
   const draw = state.multiplayer && choice.offers.length
     ? {offers:choice.offers,choiceRngState:state.choiceRngState}
@@ -659,7 +687,7 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }
 /** One free reroll per slot; missing legacy slot arguments fail closed until UI/server wiring. */
-export function rerollAugment(state: MatchState, choiceId: string, generation: number, optionIndex?: number): MatchCommandResult {
+export function rerollAugment(state: MatchState, choiceId: string, generation: number, optionIndex?: number, augmentBlocked: readonly string[] = []): MatchCommandResult {
   const choice = state.pendingChoice;
   if (state.phase !== 'choice' || choice?.kind !== 'augment' || choice.step !== 'offer'
     || isCombatRosterLocked(state) || state.multiplayer?.status === 'eliminated') return fail(state, 'wrong-phase');
@@ -667,19 +695,21 @@ export function rerollAugment(state: MatchState, choiceId: string, generation: n
   if (optionIndex === undefined || !Number.isSafeInteger(optionIndex) || optionIndex < 0 || optionIndex >= choice.offers.length) return fail(state, 'invalid-slot');
   if (choice.rerolledSlots?.[optionIndex] !== false) return fail(state, 'augment-rerolls-exhausted');
   const tier = resolveAugmentTier(state, choiceId);
-  const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers]);
+  const record = state.augmentOffers.find(candidate => candidate.choiceId === choiceId);
+  if (!record) return fail(state, 'stale-choice');
+  const blocked = [...augmentBlocked].sort();
+  const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers],openingEncounterId(state), {...recordedOfferFilter(record, 0), blocked});
   if (!candidates.length) return fail(state, 'augment-pool-too-small');
   const draw = drawAugmentCard(candidates, state.choiceRngState);
   const rerollCount = choice.rerollCount + 1;
   const offers = [...choice.offers], rerolledSlots = [...choice.rerolledSlots!];
-  const removedId = offers[optionIndex];
   offers[optionIndex] = draw.definitionId; rerolledSlots[optionIndex] = true;
   const pendingChoice = {...choice, offers, augmentTier:tier, generation:generation+1,
     rerollCount, rerollsRemaining:3-rerollCount, rerolledSlots};
   return accept({...state, choiceRngState:draw.choiceRngState, pendingChoice,
-    removedAugmentIds:[...state.removedAugmentIds,removedId],
-    augmentOffers:state.augmentOffers.map(record => record.choiceId === choiceId
-      ? {...record,rerollCount,rerolledIndices:[...record.rerolledIndices,optionIndex]} : record)},
+    removedAugmentIds:[...state.removedAugmentIds,draw.definitionId],
+    augmentOffers:state.augmentOffers.map(entry => entry.choiceId === choiceId
+      ? {...entry,rerollCount,rerolledIndices:[...entry.rerolledIndices,optionIndex],externalBlocks:[...entry.externalBlocks,blocked]} : entry)},
     [{type:'choiceOpened',choice:pendingChoice}]);
 }
 export function rerollAnomaly(state: MatchState, choiceId: string, generation: number): MatchCommandResult {
@@ -702,7 +732,16 @@ const multiplayerFail = (state: MatchState, reason: MultiplayerFailure): Multipl
 /** Historical name retained by T3: choose the first offer, skipping only an empty anomaly target. */
 export function forfeitPendingChoice(state: MatchState, expectedRound: number,
   expectedChoiceId: string | null, expectedGeneration: number | null, unitLootPolicy?: UnitLootPolicy): MultiplayerCommandResult {
-  if (!state.multiplayer) return multiplayerFail(state,'multiplayer-required');
+  if (!state.multiplayer) {
+    const c=state.pendingChoice;
+    if(c?.payload?.source!=='anvil-unit')return multiplayerFail(state,'multiplayer-required');
+    if(expectedRound!==state.round)return multiplayerFail(state,'stale-round');
+    if(c.choiceId!==expectedChoiceId||c.generation!==expectedGeneration)return multiplayerFail(state,'stale-choice');
+    const selected=completeMechanicChoice(state,choiceTimeoutOption(c)!,true,unitLootPolicy);
+    if(!selected.ok)return selected;
+    const timed=accept(selected.state,[{type:'choiceTimedOut',choiceId:c.choiceId,resolution:'default-option'}]);
+    return timed.ok?{...timed,events:[...selected.events,...timed.events]}:timed;
+  }
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state,'seat-eliminated');
   if (expectedRound !== state.round) return multiplayerFail(state,'stale-round');
   const choice = state.pendingChoice;
@@ -833,7 +872,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   const granted = grantDefinition ? planPermanentItemGrant(state, { definitionId: grantDefinition, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
   if (granted && !granted.ok) return fail(state, 'invalid-choice');
   const itemId = granted?.ok ? granted.grantedItemIds[0] : null;
-  const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? (choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0;
+  const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? choiceAcquisitionGold((choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId], state.round) : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
   let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold,

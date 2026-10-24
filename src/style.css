@@ -1400,7 +1400,8 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .market-take::after { content: '↓'; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 3px; background: #2b6c96; color: #e8f6ff; font-size: 18px; }
 .market-keep::after { content: ''; width: 28px; height: 28px; border-radius: 3px; background: #3a2a55 no-repeat center / 18px
   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2c7ff' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3'/%3E%3Cpath d='M7 15h10' stroke='%23c98bff'/%3E%3C/svg%3E"); }
-body[data-online] .shop-dock:has(.shop-choice[data-choice-source="blackMarket"]) { grid-template-areas: "level top gold pop" "cards cards cards cards" "cards cards cards cards"; }
+/* Placed by lines, not area names, so it holds for any dock grid: every row under the top one, full width. */
+body[data-online] .shop-dock:has(.shop-choice[data-choice-source="blackMarket"]) .touch-shop { grid-column: 1 / -1; grid-row: 2 / -1; }
 body[data-online] .shop-dock:has(.shop-choice[data-choice-source="blackMarket"]) :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"], [data-debug="shop-lock"], [data-debug="mobile:sell"]) { display: none; }
 /* 3D: the dock is wider (and taller above 1500px), so the slots grow to the same share of it as in the 14.24b shot. */
 body[data-online]:has(> .render3d-layer) .market-slot { flex-basis: 128px; }
@@ -1411,9 +1412,9 @@ body[data-online]:has(> .render3d-layer) .market-slot-name { font-size: 13px; }
   body[data-online]:has(> .render3d-layer) .market-coin::before { left: 12px; top: 30px; width: 36px; height: 36px; }
   body[data-online]:has(> .render3d-layer) .market-coin::after { left: 32px; top: 14px; width: 36px; height: 36px; }
 }
-/* Phone portrait is the only four-row dock: the market takes the cards row and the freed button row, with smaller slots. */
+/* Phone portrait is the only four-row dock (top two rows are chips): the market takes the cards row and the freed button row, with smaller slots. */
 @media (max-width: 700px) and (orientation: portrait) {
-  body[data-online] .shop-dock:has(.shop-choice[data-choice-source="blackMarket"]) { grid-template-areas: "level level gold gold" "top top top pop" "cards cards cards cards" "cards cards cards cards"; }
+  body[data-online] .shop-dock:has(.shop-choice[data-choice-source="blackMarket"]) .touch-shop { grid-row: 3 / -1; }
   .touch-shop.market-single { grid-template-columns: minmax(0, 1fr) 96px; gap: 6px; }
   .market-slot-art, .market-coin { width: 40px; height: 40px; }
   .market-coin::before { left: 4px; top: 13px; width: 18px; height: 18px; } .market-coin::after { left: 14px; top: 5px; width: 18px; height: 18px; }

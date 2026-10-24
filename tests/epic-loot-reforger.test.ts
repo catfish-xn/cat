@@ -7,12 +7,13 @@ import {variant,copper,silver,LIVE,stream,COMPONENTS,COMPLETED} from './fixtures
 import {lootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {freezeLootThroughRound,LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
 import {EPIC_LOOT} from '../src/simulation/content/loot';
-import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch} from '../src/simulation/match';
+import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch,openAnvil,sellUnit,startMatchCombat} from '../src/simulation/match';
 import {planConsumable,replayConsumableItems,reforgeCandidates} from '../src/simulation/consumables';
 import {prepareMatchLoot,revealMatchLoot,grantDirectLoot} from '../src/simulation/loot-runtime';
 import {planOrbClaim} from '../src/simulation/orb-claim';
 import {readLootView} from '../src/simulation/loot-view';
 import {createCombat} from '../src/simulation/combat';
+import {enterOpeningCrabs,openingCrabCarrier} from '../src/simulation/opening-crabs';
 import {createRoundEnemies} from '../src/simulation/round-enemies';
 import {getCatalogRoundById} from '../src/simulation/round-selectors';
 import {CONSUMABLE_DEFINITIONS,REFORGE_POOLS} from '../src/simulation/content/consumables';
@@ -21,6 +22,8 @@ import {appendMechanicReceipt,grantMechanicItem,grantMechanicUnit} from '../src/
 import {G24_FORGE_POOLS} from '../src/simulation/content/g2-4-forges';
 import {epicForgeOffers,openEpicForge,EPIC_REWARD_NAMES,validateEpicForges,settleTerminalEpicForges} from '../src/simulation/epic-forges';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
+import {publicAuthoredPreparation} from './fixtures/m8-neutral-public-route';
+import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {G23_BLACK_MARKETS,G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import type {MatchState} from '../src/simulation/match-types';
@@ -34,8 +37,9 @@ function tool(state:MatchState,definitionId:ConsumableDefinitionId):MatchState{
 }
 function late(seed=42,roundId='5-7',base=createMatch(seed)){
  const round=getCatalogRoundById(roundId),loot=prepareMatchLoot(seed,round.ordinal),enemies=createRoundEnemies(round.ordinal);
- const state:MatchState={...base,phase:'preparation',combat:null,round:round.ordinal,roundDefinitionId:roundId,m8:{...base.m8,round,loot},preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...enemies]}};
- const raw=createCombat(state.preparation),source=loot.frozen.rounds.at(-1)!.orbs[0].sourceUnitId;
+ // v22 opening encounters: crab seeds (e.g. 42 Scuttle Puddle) fight crabs; the epic carrier maps to its crab.
+ const state:MatchState=enterOpeningCrabs({...base,phase:'preparation',combat:null,round:round.ordinal,roundDefinitionId:roundId,m8:{...base.m8,round,loot},preparation:{...base.preparation,units:[...base.preparation.units.filter(u=>u.team==='player'),...enemies]}});
+ const raw=createCombat(state.preparation),source=openingCrabCarrier(state,roundId,loot.frozen.rounds.at(-1)!.orbs[0].sourceUnitId);
  const dead={...raw,combatId:`round-${state.round}`,status:'finished' as const,result:'playerWin' as const,tick:2,nextEventSeq:10,units:raw.units.map(u=>u.id===source?{...u,alive:false,hp:0}:u),neutralReceipts:{deaths:[{unitId:source,tick:1,eventSeq:1}],controls:[]}};
  return {state,dead,source};
 }
@@ -79,16 +83,22 @@ describe('v17 epic rewards and unified consumables',()=>{
   const {state,dead}=late(seed),earned=revealMatchLoot(state,dead).state;
   let paid:MatchState={...grantDirectLoot({...earned,phase:'settlement',combat:dead},false).state,phase:'settlement',combat:dead};
   const original=paid.m8.loot.receipts.filter(r=>r.payload.kind==='forge');expect(original).toHaveLength(2);
+  // v22 anvil units: each forge receipt is a bench anvil; nothing auto-opens, and opening it shows the same four offers.
+  expect(paid.pendingChoice).toBeNull();expect(openEpicForge(paid).state).toBe(paid);
   for(const r of original){
    if(r.payload.kind!=='forge')throw Error('forge');const offers=epicForgeOffers(paid.seed,r.receiptId,r.payload.definitionId);
    expect(new Set(offers).size).toBe(4);offers.forEach(id=>expect(G24_FORGE_POOLS[r.payload.kind==='forge'?r.payload.definitionId:'TFT_ArmoryKeyCompleted']).toContain(id));
-   const open=openEpicForge(paid).state,c=open.pendingChoice!;expect(c.kind).toBe('forge');expect(c.offers).toEqual(offers);
+   expect(r.grantedUnitIds).toHaveLength(1);
+   const open=accepted(openAnvil(paid,r.grantedUnitIds[0])),c=open.pendingChoice!;expect(c.kind).toBe('forge');expect(c.offers).toEqual(offers);
    paid=accepted(selectChoice(open,c.choiceId,c.generation,c.offers[0])) as typeof paid;
    expect(paid.seatMechanics!.receipts.filter(x=>x.receiptId===c.choiceId)).toHaveLength(1);
   }
   expect(()=>validateEpicForges(paid)).not.toThrow();expect(openEpicForge(paid).state).toBe(paid);
-  const terminal=settleTerminalEpicForges({...grantDirectLoot({...earned,phase:'settlement',combat:dead},true).state,phase:'gameOver',combat:dead,outcome:'victory'});
-  expect(terminal.events.filter(e=>e.type==='mechanicGranted')).toHaveLength(2);expect(settleTerminalEpicForges(terminal.state).events).toEqual([]);
+  // Terminal loot keeps both anvils as units; there is no terminal forge conversion any more.
+  const terminalState={...grantDirectLoot({...earned,phase:'settlement',combat:dead},true).state,phase:'gameOver' as const,combat:dead,outcome:'victory' as const};
+  expect(terminalState.m8.loot.receipts.filter(r=>r.payload.kind==='forge').map(r=>r.grantedUnitIds.length)).toEqual([1,1]);
+  const terminal=settleTerminalEpicForges(terminalState);
+  expect(terminal.events).toEqual([]);expect(terminal.state).toBe(terminalState);
  });
  it('crown receipt adds exactly one permanent deployment slot, before and after removal/reforge',()=>{
   const seed=28687;expect(lootPlan(seed).rolls[0].variant).toBe('crown');
@@ -174,7 +184,7 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(useConsumable(full,full.consumables.at(-1)!.consumableId,{kind:'unit',unitId:'unit-1'})).toEqual({ok:false,state:full,reason:'bench-full'});
  });
  it('a real 5-7 command path restores new forge receipts and never repeats the rewards',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v21-opening-encounters-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v22-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='5-7'&&s.phase==='preparation'));
   let state:MatchState=battle(initial).ended;
   while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
@@ -182,18 +192,27 @@ describe('v17 epic rewards and unified consumables',()=>{
   expect(stepMatch(state)).toEqual({state,events:[]});expect(new Set(state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(state.m8.loot.receipts.length);
  });
  it('authenticates neutral opening HP after earned radiant health auras and rejects altered frozen HP',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v21-opening-encounters-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
-  let state=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='6-7'&&s.phase==='preparation'));
+  // v22: the seed-42 golden route draws the crab opening, whose 6-7 crab has no authored neutral opening plan;
+  // take the 6-7 prefix from the crab-free public route instead (Rift Herald keeps its opening state).
+  let state=publicAuthoredPreparation('6-7');
   const target=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board'&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
+  // Keep only the aura target fielded so the restore reaches the neutral opening check, not the V19 trait replay.
+  for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&u.id!==target.id))state=accepted(sellUnit(state,u.id));
   state=accepted(grantMechanicItem(state,{receiptId:'test:radiant-opening',source:'test',definitionId:'TFT5_Item_SunfireCapeRadiant'}));
   state=accepted(equipItem(state,state.items.find(i=>i.definitionId==='TFT5_Item_SunfireCapeRadiant')!.id,target.id,0));
+  // v22: a lone holder reaches overtime (tick 600), where the full overtime replay authenticates first;
+  // corrupt the last pre-overtime checkpoint so the neutral opening validator is the first to see it.
+  let checkpoint=accepted(startMatchCombat(state));
+  while(checkpoint.phase==='combat'&&checkpoint.combat!.tick<S13_COMBAT_RULES.overtimeStartTick-1)checkpoint=stepMatch(checkpoint).state;
+  expect(checkpoint.combat!.openingState!.initialUnits.length).toBeGreaterThan(0);
+  expect(restoreMatch(serializeMatch(checkpoint))).toEqual(checkpoint);
+  const corrupt=structuredClone(checkpoint);Object.assign(corrupt.combat!.openingState!.initialUnits[0],{hp:corrupt.combat!.openingState!.initialUnits[0].hp+1});
+  expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
   state=battle(state).ended;
   expect(restoreMatch(serializeMatch(state))).toEqual(state);
-  const corrupt=structuredClone(state);Object.assign(corrupt.combat!.openingState!.initialUnits[0],{hp:corrupt.combat!.openingState!.initialUnits[0].hp+1});
-  expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
  });
  it('the real 6-7 terminal keeps full-bench heroes retained-terminal while completing forge fallback once',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v21-opening-encounters-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
+  const raw=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/v22-online-rules-recorded-states/cannon.json.gz',import.meta.url))).toString()).states;
   const initial=restoreMatch(raw.find((s:MatchState)=>s.roundDefinitionId==='6-7'&&s.phase==='preparation'));
   const heroes=initial.m8.loot.frozen.rounds.at(-1)!.encounterPlan.drops.flatMap(d=>d.payload.kind==='unit'?[d.payload.definitionId]:[]);expect(heroes.length).toBeGreaterThan(0);
   const state=battle(fillBench(initial,heroes)).ended;expect(state.phase).toBe('gameOver');
@@ -214,9 +233,9 @@ describe('v17 epic rewards and unified consumables',()=>{
  it('uses exact approved zh_cn names and rejects prior-epoch state identities without migration',()=>{
   expect(Object.fromEntries(Object.values(CONSUMABLE_DEFINITIONS).map(d=>[d.apiName,d.name]))).toEqual({TFT_Consumable_ItemRemover:'装备拆卸器',TFT_Consumable_ItemReroller:'装备重铸器',TFT_Consumable_ChampionDuplicator_III:'次级英雄复制器',TFT_Consumable_NeekosHelp:'英雄复制器',TFT_Consumable_MasterworkUpgrade:'杰作升级'});
   expect(EPIC_REWARD_NAMES).toEqual({TFT_ArmoryKeyCompleted:'成装锻造器',TFT_ArmoryKeyComponent:'基础装备锻造器',TFT_ArmoryKeySupport:'辅助装锻造器',TFT_ArmoryKeyOrnn:'神器装备锻造器',TFT_Item_ForceOfNature:'金铲铲冠冕'});expect(ITEM_DEFINITIONS.TFT_Item_ForceOfNature.name).toBe('金铲铲冠冕');
-  const state=createMatch(42);expect(state.rulesVersion).toBe('s13-g2-3-v21-opening-encounters-battle-equipment');expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
+  const state=createMatch(42);expect(state.rulesVersion).toBe('s13-g2-3-v22-online-rules');expect(restoreMatch(serializeMatch(state))).toEqual(state);expect(LOOT_REPLAY_DIGEST).not.toBe('fnv1a32-utf16:61568ec0');
   for(const field of ['rulesVersion','contentVersion'] as const){
-    const previous=state[field].replace('v21-opening-encounters-battle-equipment','v19');
+    const previous=state[field].replace('v22-online-rules','v19');
     expect(previous).not.toBe(state[field]);
     expect(()=>restoreMatch({...state,[field]:previous})).toThrow();
   }

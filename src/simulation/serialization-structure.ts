@@ -1,3 +1,6 @@
+import { openingEncounterId } from './opening-encounter';
+import { MAX_COMBAT_TICKS } from './combat-types';
+import { choiceAcquisitionGold } from './choice-acquisition';
 import { deferredRoundIncome } from './deferred-income';
 import { openingHpBeforeRound } from './opening-monkey';
 import { validateOpeningEncounterState } from './opening-encounter';
@@ -141,7 +144,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   mechanicCheck(() => validateOpeningEncounterState(state), 'opening-context-mismatch');
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
-  const enemyProjection = readRoundEnemyProjection(state.round);
+  const enemyProjection = readRoundEnemyProjection(state.round,openingEncounterId(state));
   // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
   requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
   mechanicCheck(() => validateG23RewardSources(state), 'G23 reward authority');
@@ -195,7 +198,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     } else if (event.kind === 'component') {
       definitionId(receipt.definitionId, ITEM_DEFINITIONS, 'component receipt');
       requireValue(ITEM_DEFINITIONS[receipt.definitionId!].kind === 'component' && receipt.itemIds.length === 1 && receipt.gold === 0 && receipt.unitId === null, 'component receipt values');
-    } else requireValue(receipt.gold === (receipt.kind === 'augment' || receipt.kind === 'anomaly' ? (receipt.kind==='augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[receipt.definitionId!].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0) && receipt.itemIds.length === (receipt.kind === 'augment' && P3_AUGMENT_ITEMS[receipt.definitionId!] ? 1 : 0), 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
+    } else requireValue(receipt.gold === (receipt.kind === 'augment' || receipt.kind === 'anomaly' ? choiceAcquisitionGold((receipt.kind==='augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[receipt.definitionId!], receipt.round) : 0) && receipt.itemIds.length === (receipt.kind === 'augment' && P3_AUGMENT_ITEMS[receipt.definitionId!] ? 1 : 0), 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
     for (const itemId of receipt.itemIds) checkSerial(itemId, 'item', state.nextItemSerial);
     nullableString(receipt.unitId); nullableString(receipt.definitionId);
     if (receipt.kind === 'augment') requireValue(state.augments.some(a => a.choiceId === receipt.eventId && a.definitionId === receipt.definitionId), 'augment receipt');
@@ -262,7 +265,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     requireValue(result.income === expected.income && result.goldAfter === expected.goldAfter && result.interestBasis === expected.interestBasis && same(result.incomeBreakdown, expected.incomeBreakdown), 'history income');
     requireValue(same(result.streakAfter, expected.streakAfter), 'history streak'); streak = expected.streakAfter;
     experienceAfter=totalExperience(result.levelAfter,result.xpAfter);
-    requireValue(result.combatTicks <= 1200 && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
+    requireValue(result.combatTicks <= MAX_COMBAT_TICKS && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
   }
   requireValue(same(state.streak, streak), 'current streak');
   requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
@@ -277,7 +280,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   requireValue(state.playerHp === (settled ? state.roundResults.at(-1)!.hpAfter : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
   if (!settled) requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<state.round)).roundXp),state.level,state.xp), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
-  if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial);
+  if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial,state.nextUnitSerial);
   validateMatchEquipment(state);
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string', typeof input === 'string');
   if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
@@ -287,7 +290,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   if (state.phase === 'preparation' || state.phase === 'choice' && !settled || state.phase === 'gameOver' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
   else {
     record(state.combat); const combat = state.combat;
-    validateSeed(combat.rngState!); integer(combat.rngDraws); integer(combat.nextActionSeq); integer(combat.tick); integer(combat.maxTicks, 1); requireValue(combat.tick <= combat.maxTicks && combat.maxTicks === 1200, 'combat ticks');
+    validateSeed(combat.rngState!); integer(combat.rngDraws); integer(combat.nextActionSeq); integer(combat.tick); integer(combat.maxTicks, 1); requireValue(combat.tick <= combat.maxTicks && combat.maxTicks === MAX_COMBAT_TICKS, 'combat ticks');
     requireValue(combat.combatId === `round-${state.round}` && combat.startEffectsApplied === true, 'combat identity/start'); integer(combat.nextEventSeq);
     requireValue(combat.status === 'running' || combat.status === 'finished', 'combat status');
     requireValue((state.phase === 'combat') === (combat.status === 'running'), 'combat phase');
@@ -296,7 +299,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
     const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'), forSerialization);
-    const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
+    const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation,undefined,basis.inputs.itemSummonPositions),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     const shroudOrigins=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud'))?combatPreparation.units.flatMap(u=>u.location.kind==='board'?[{
       team:u.team,cell:u.location.cell,mechanics:expectedStrategy.units.find(s=>s.unitId===u.id)?.mechanics,
     }]:[]):[];
@@ -364,7 +367,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
       requireValue(same(unit.ability, resolved.ability), 'resolved ability');
       requireValue(same(unit.sources, resolved.sources) && same(unit.triggers, resolved.triggers), 'resolved effect source/trigger');
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
-      requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || ['amumu','g24-voidspawn'].includes(champion(unit)) ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
+      requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || ['amumu','g24-voidspawn'].includes(champion(unit)) ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && (unit.maxMana > 0 || unit.mana === 0), 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
       requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');
@@ -544,10 +547,10 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
-    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g24Heal','g24Mana'].includes(task.kind), 'task kind');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g23Flame','g23Chomp','g24Heal','g24Mana'].includes(task.kind), 'task kind');
     if (task.kind.startsWith('g2')) {
-      const expected = ({g22Vex:'vex',g22Curse:'morgana',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed'} as Record<string,string>)[task.kind];
-      requireValue(task.source.ownerId === unit.id && !task.cancellable, 'G2 task owner');
+      const expected = ({g22Vex:'vex',g22Curse:'morgana',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed',g23Flame:'sevika',g23Chomp:'sevika'} as Record<string,string>)[task.kind];
+      requireValue(task.source.ownerId === unit.id && task.cancellable === (task.kind==='g23Flame'||task.kind==='g23Chomp'), 'G2 task owner');
       if(task.kind.startsWith('g23')) requireValue((Object.hasOwn(G23_ABILITIES, task.source.definitionId)||champion(owner)==='rumble'&&mechanic(owner,'g23Junker','rod')===1||task.kind==='g23True'&&mechanic(owner,'g23Experiment','zyra')>0) && task.source.definitionId === owner.ability.id && task.source.sourceKind === 'ability', 'G23 task source');
       // G2-4b over-time restores: one declared item effect owns every pulse.
       if(task.kind.startsWith('g24')) requireValue((task.source.sourceKind === 'item' || task.source.sourceKind === 'trait' && task.source.definitionId === 'pit-fighter') && task.targetId !== null && declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(task.source))&&d.effect.kind==='over-time'&&d.effect.resource===(task.kind==='g24Heal'?'heal':'mana')&&task.total===d.effect.pulses), 'G24 task source');

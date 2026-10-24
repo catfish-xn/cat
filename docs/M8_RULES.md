@@ -1,3 +1,7 @@
+## 2026-10-23 加时接收削减覆盖（待统一 epoch）
+
+tick600起按[战斗合同](COMBAT_CONTRACT.md)的加时层数工作。`resolveHeal(request,target,woundBps,tick=0)`新增可选tick（旧低层调用默认无加时），生产统一传ctx.tick：先重伤floor，再加时接收率floor，最后缺血封顶。原`afterWound`/`preventedByWound`和shares同名字段沿用形状，含重伤与加时的合计接收削减；归属分配仍守恒。新盾在`grantShieldState`统一乘接收率；旧剩余盾不削减，刷新仍取max。`applyStatusContribution`只对新stun的requestedEnd使用半入、至少1tick的加时持续量，原始声明/旧控制不改。其余有限机制语义保持。
+
 # M8 B2 规则与数据合同（m8-b2-v3-review，已复审签收、合同冻结）
 
 > T13 联合规则修订：本文件的旧 PvE 自选、固定开局英雄、15 件物理组件、放弃项隐藏、版本 6/2/2 描述为历史；当前以 M8B_LOOT §11 和 MULTIPLAYER_CONTRACT §18 为准。五次 .4 自选保留；新预算为 15–16 组件价值，开局 2–3。旧格式 2 只读保全导出、不迁移，新局格式 3。验证/接线状态见 T13_RELEASE.md。

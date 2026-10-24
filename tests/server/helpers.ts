@@ -43,6 +43,25 @@ export function runUntil(room: Room, clock: ManualClock, predicate: (state: Room
 }
 
 /**
+ * v22: an augment round (2-1, 3-2, 4-2) opens every seat's augment choice inside its preparation. For room tests that
+ * need the seats' prepared states (frozen envelopes, "the deadline changes nothing"): each alive seat answers its open
+ * choices with the first offer through the room, including one the answer opens at once (Portable Forge's forge).
+ * `seatIds` limits it to those seats.
+ */
+export function answerOpenChoices(room: Room, seatIds?: readonly string[]): void {
+  for (const { seatId } of room.state.seats) {
+    if (seatIds && !seatIds.includes(seatId)) continue;
+    for (let picks = 0; ; picks++) {
+      const seat = room.state.seats.find(candidate => candidate.seatId === seatId)!;
+      const choice = seat.alive ? seat.match.pendingChoice : null;
+      if (!choice) break;
+      expect(picks).toBeLessThan(4);
+      expect(room.handle(seatId, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: choice.offers[0]! })).toMatchObject({ ok: true });
+    }
+  }
+}
+
+/**
  * v15: online rewards are orbs a seat claims itself (a player with `claimOrb`, a bot at its preparation entry through the
  * rules' helper). For room tests whose precondition is "the rewards arrived": while the room and the seat prepare, every
  * alive seat (or only `seatIds`) claims each unclaimed, unqueued orb through the room's own command, in orbId order.
@@ -53,12 +72,17 @@ export function claimAllOrbs(room: Room, seatIds?: readonly string[]): number {
   let claimed = 0;
   for (const { seatId } of room.state.seats) {
     if (seatIds && !seatIds.includes(seatId)) continue;
+    // An anvil stays in its orb while the bench is full (v22), so each orb is claimed at most once per call.
+    const tried = new Set<string>();
     for (;;) {
       const seat = room.state.seats.find(candidate => candidate.seatId === seatId)!;
       if (!seat.alive || seat.match.phase !== 'preparation') break;
-      const orb = (readLootView(seat.match).unclaimedOrbs ?? []).filter(candidate => !candidate.queued).map(candidate => candidate.orbId).sort()[0];
+      const orb = (readLootView(seat.match).unclaimedOrbs ?? []).filter(candidate => !candidate.queued && !tried.has(candidate.orbId)).map(candidate => candidate.orbId).sort()[0];
       if (orb === undefined) break;
+      tried.add(orb);
       const result = room.handle(seatId, { type: 'claimOrb', round: seat.match.round, orbId: orb });
+      // v22: an orb holding an anvil stays put while the bench is full.
+      if (!result.ok && (result as { reason?: unknown }).reason === 'bench-full') continue;
       expect(result, `${seatId} claims ${orb}`).toMatchObject({ ok: true });
       claimed++;
     }

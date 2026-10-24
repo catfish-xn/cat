@@ -14,13 +14,19 @@ import type { Unit } from '../../src/simulation/units';
 import { makeRoom, runUntil, runUntilClaiming } from './helpers';
 import { readLootView } from '../../src/simulation/match';
 
-const OPS = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
+const OPS = ['buy', 'sell', 'openAnvil', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
 const CHOICES = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
 /** v15: an orb claim passes wherever an operation does (queued by the rules during a battle). */
 const ORB = ['claimOrb'];
 /** Gold the rules granted from this round's revealed orbs (granted receipts only; 0 for PvP). */
 const lootGold = (match: MatchState, round: number) => match.round !== round ? 0 : readLootView(match).revealedDrops
   .reduce((sum, drop) => sum + (drop.status === 'granted' && drop.payload.kind === 'gold' ? drop.payload.quantity : 0), 0);
+/**
+ * v22: gold the opening encounter's settlement paid this round (Jinx's scuttle crabs, opening batch B: seed 42 draws
+ * them, and each crab killed at 1-4 pays 1 gold as a seat-mechanic receipt with the commit).
+ */
+const encounterGold = (match: MatchState, round: number) => (match.seatMechanics?.receipts ?? [])
+  .reduce((sum, receipt) => sum + (receipt.round === round && receipt.source === 'opening-batch-b' && receipt.kind === 'gold' ? receipt.amount : 0), 0);
 const seat = (state: RoomState, seatId: string): SeatState => state.seats.find(candidate => candidate.seatId === seatId)!;
 const own = (match: MatchState): Unit[] => match.preparation.units.filter(unit => unit.team === 'player');
 const onBoard = (match: MatchState) => own(match).filter(unit => unit.location.kind === 'board');
@@ -38,7 +44,7 @@ describe('T10 room gate (contract §15.2)', () => {
     const expected: Record<RoomPhase, readonly string[]> = {
       // G2-4b (contract §26): the summon move passes only while seats prepare.
       waiting: [], carousel: ['carousel-pick'], preparation: [...OPS, ...ORB, ...CHOICES, 'moveItemSummon'], choice: [...OPS, ...ORB, ...CHOICES, 'moveItemSummon'], frozen: [],
-      battle: [...OPS, ...ORB], 'awaiting-settlement': [...OPS, ...ORB], settlement: [...OPS, ...ORB], ended: [],
+      battle: [...OPS, ...ORB], 'awaiting-settlement': [...OPS, ...ORB], settlement: [...OPS, ...ORB, 'choose'], ended: [],
     };
     for (const phase of Object.keys(expected) as RoomPhase[]) expect([...ROOM_COMMAND_GATE[phase]].sort()).toEqual([...expected[phase]].sort());
   });
@@ -110,8 +116,8 @@ describe('T10 settlement on the latest live seat (contract §15.2)', () => {
       expect(busy.spent).toBeGreaterThan(0);
       expect(record.goldBefore).toBe(busy.live.gold + lootGold(busy.settled.match, round));
       expect(record.goldAfter).toBe(record.goldBefore + record.income);
-      // Base/interest/streak are a next-preparation receivable; the win coin is immediate.
-      expect(busy.settled.match.gold).toBe(record.goldBefore + record.incomeBreakdown.win);
+      // Base/interest/streak are a next-preparation receivable; the win coin (and v22 opening-encounter gold) is immediate.
+      expect(busy.settled.match.gold).toBe(record.goldBefore + record.incomeBreakdown.win + encounterGold(busy.settled.match, round));
       expect(record.levelBefore).toBe(busy.live.level);
       // The bought unit is still owned (possibly merged), the shop is the rerolled one.
       expect(busy.bought).not.toBeNull();

@@ -50,29 +50,32 @@ const idle=(c:CombatState,actors:string[]=[])=>({...c,units:c.units.map(u=>actor
 const facts=(round=4,stage=2,survivors=['a','b'],eligible=true,kind:'pvp'|'pve'='pvp'):G23BattleFacts=>({battleId:'battle-'+round,round,roundKind:kind,result:'loss',conquerorTier:0,conquestTakedowns:[],chemBaronTier:0,alliedDeaths:0,rumbleStar:0,highRollerGold:0,family:{stage,eligible,openingIds:['a','b'],survivorIds:survivors}});
 
 describe('v19 six costs',()=>{
-  it.each([['warwick',2100,110,70,9000,1,60,100],['viktor',1600,100,40,5500,4,0,100],['mel',1800,80,60,8000,3,0,40]] as const)('independent base/star table: %s',(id,hp,ad,resist,speed,range,mana,maxMana)=>{
+  it.each([['warwick',2100,[110,165,248],70,9000,1,60,100],['viktor',1600,[100,150,225],40,5500,4,0,100],['mel',1800,[80,120,180],60,8000,3,0,40]] as const)('independent base/star table: %s',(id,hp,ad,resist,speed,range,mana,maxMana)=>{
     expect(UNIT_DEFINITIONS[id]).toMatchObject({id,cost:6,baseAttackSpeedBps:speed,attackRange:range,initialMana:mana,maxMana});
-    for(const [star,bps] of [[1,10000],[2,18000],[3,36000]] as const)expect(getUnitStats(id,star)).toMatchObject({health:Math.floor(hp*bps/10000),attack:Math.floor(ad*bps/10000),armor:resist,magicResist:resist});
+    for(const [star,bps] of [[1,10000],[2,18000],[3,36000]] as const)expect(getUnitStats(id,star)).toMatchObject({health:Math.floor(hp*bps/10000),attack:ad[star-1],armor:resist,magicResist:resist});
   });
   it('freezes stage/level odds and preserves two words per shop slot',()=>{
     const unlock=getCatalogRoundById('4-6').ordinal;
     for(let level=1;level<=10;level++){
-      expect(sixCostOddsBps(unlock-1,level)).toBe(0);expect(sixCostOddsBps(unlock,level)).toBe(level===10?180:20);
-      expect(sixCostOddsBps(unlock+1,level)).toBe(level===10?184:24);
+      // Batch A (approved 10-23, table V1) replaced the v19 +4/round ramp: 4-6/4-7 are 16 (Lv10 126), 5-1 is 19 (129).
+      expect(sixCostOddsBps(unlock-1,level)).toBe(0);expect(sixCostOddsBps(unlock,level)).toBe(level===10?126:16);
+      expect(sixCostOddsBps(unlock+1,level)).toBe(level===10?126:16);expect(sixCostOddsBps(unlock+2,level)).toBe(level===10?129:19);
       const projected=toPrivateSeatView({...army(['lux']),level});
-      expect(projected.shopOdds).toEqual({sixCostBps:level===10?180:20});
+      expect(projected.shopOdds).toEqual({sixCostBps:level===10?126:16});
     }
     const before=generateShop(42,1,10,unlock-1),after=generateShop(42,1,10,unlock);
     expect(after.rngState).toBe(before.rngState);
-    const seeds=Array.from({length:500},(_,i)=>i);
+    // One seat-stream draw per shop hits at clamp(5q)=0.8% at 4-6; spread the seeds so the stream words are independent.
+    const seeds=Array.from({length:2000},(_,i)=>Math.imul(i+1,2654435761)>>>0);
     expect(seeds.some(seed=>generateShop(seed,1,1,unlock).shop.slots.some(s=>s.status==='available'&&UNIT_DEFINITIONS[s.definitionId].cost===6))).toBe(true);
   });
   it('shared six-cost reservations are finite, can merge, sell and fall back after exhaustion; locks and failures are inert',()=>{
-    const r=room({irelia:1,warwick:9},1),round=getCatalogRoundById('4-6'),initial=accept(generateSharedShop(r.pool,r.states[0],0)),x=syntheticSharedRound(initial.pool,[initial.state],round.ordinal);
+    // v22 batch A: six-costs only enter through one seat-stream draw per shop (6.3% at 4-6 Lv10), so ordinary
+    // slots must stay stocked for rerolls to succeed; Lux is the only ordinary stock besides the held Irelia.
+    const r=room({irelia:1,lux:30,warwick:9},1),round=getCatalogRoundById('4-6'),initial=accept(generateSharedShop(r.pool,r.states[0],0)),x=syntheticSharedRound(initial.pool,[initial.state],round.ordinal);
     let state={...x.states[0],roundDefinitionId:round.roundId,m8:{...x.states[0].m8,round},gold:1000,level:10},pool=x.pool;
     let g=accept(rerollSharedShop(pool,state,state.shop.generation));pool=g.pool;state=g.state;
-    // Only the six-cost tier is stocked for this level (Irelia is already held).
-    for(let n=0;n<30&&pool.holdings.filter(h=>h.definitionId==='warwick').reduce((n,h)=>n+h.sources.length,0)<9;n++){
+    for(let n=0;n<400&&pool.holdings.filter(h=>h.definitionId==='warwick').reduce((n,h)=>n+h.sources.length,0)<9;n++){
       const slot=state.shop.slots.findIndex(s=>s.status==='available'&&s.definitionId==='warwick');
       g=accept(slot<0?rerollSharedShop(pool,state,state.shop.generation):buySharedUnit(pool,state,slot,state.shop.generation));pool=g.pool;state=g.state;conserved(pool,[state]);
     }
@@ -288,5 +291,5 @@ describe('v19 emblem replacement and schema',()=>{
     let c:CombatState=idle(start(s).state);c={...c,units:c.units.map(u=>u.id==='lux'?{...u,maxMana:100,mana:0}:u)};
     for(let i=0;i<19;i++)c=stepCombat(c).state;expect(unit(c,'lux').mana).toBe(0);c=stepCombat(c).state;expect(unit(c,'lux').mana).toBe(3);
   });
-  it('retains v19 rules in v21-opening-encounters schema/save/replay 12/8/6',()=>expect(M8_VERSION).toMatchObject({schemaVersion:12,saveFormatVersion:8,replayFormatVersion:6,rulesVersion:'s13-g2-3-v21-opening-encounters-battle-equipment'}));
+  it('retains v19 rules in v22-online-rules schema/save/replay 12/8/7',()=>expect(M8_VERSION).toMatchObject({schemaVersion:12,saveFormatVersion:8,replayFormatVersion:7,rulesVersion:'s13-g2-3-v22-online-rules'}));
 });

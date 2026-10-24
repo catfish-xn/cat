@@ -5,13 +5,13 @@ import type { StrategySnapshot, SourcedEffect, ResolvedTrigger, EffectRuntime, E
 import type { DamagePacket } from './ability-types';
 import type { StarLevel } from './unit-types';
 export const COMBAT_TICK_MS = 50;
-export const MAX_COMBAT_TICKS = 1200;
+export const MAX_COMBAT_TICKS = 900;
 export const MOVE_INTERVAL_TICKS = 5;
 export type CombatResult = 'playerWin' | 'enemyWin' | 'draw';
 export interface CombatOrigin { readonly parentItemInstanceId?: string | null; readonly ownerId: string; readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth'; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number }
 export interface ShieldLayer { readonly m8State?: import('./m8/contracts').ShieldState; readonly m8Grant?: Extract<import('./m8/contracts').Effect, { kind: 'grant-shield' }>; readonly endedReason?: import('./m8/contracts').ShieldEndReason;  readonly key: string; readonly source: CombatOrigin; readonly granted: number; readonly remaining: number; readonly absorbed: number; readonly expiresAtTick: number; readonly decayPerTick?: number; readonly grantedAtTick?: number; readonly decayDurationTicks?: number }
 export interface CombatStatus { readonly contributionKeys?: readonly string[]; readonly activity?: import('./m8/contracts').CombatActivity;  readonly key: string; readonly kind: 'stun' | 'damageReduction' | 'armorReduction' | 'resistanceFlat' | 'attackSpeed' | 'abilityPower' | 'channel' | 'redirect'; readonly source: CombatOrigin; readonly amount: number; readonly startsAtTick: number; readonly expiresAtTick: number }
-export interface CombatTask { readonly teamupKind?:'attack'|'echo'|'wave'|'missiles'; readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse' | 'g23Heal' | 'g23Magic' | 'g23Physical' | 'g23True' | 'g23Smeech' | 'g24Heal' | 'g24Mana' | 'v20Teamup' | 'v20Powder'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
+export interface CombatTask { readonly teamupKind?:'attack'|'echo'|'wave'|'missiles'; readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse' | 'g23Heal' | 'g23Magic' | 'g23Physical' | 'g23True' | 'g23Smeech' | 'g23Flame' | 'g23Chomp' | 'g24Heal' | 'g24Mana' | 'v20Teamup' | 'v20Powder'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
   readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited']; }
 export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
 export interface V19CombatFacts { readonly garenSample?:number; readonly sharedHealth?:number; readonly smokePermanent?:boolean; readonly smokeOrdinal?:number; readonly roseTeams?:readonly Team[] }
@@ -74,6 +74,8 @@ export interface CombatUnit {
   readonly monsterFamily?: string;
   readonly companionDefinitions?: readonly import('./m8/companions').CompanionDefinition[];
   readonly manaLockedUntilTick?: number;
+  /** Unspent hundredths from damage mana, carried across tick boundaries. */
+  readonly damageManaRemainderCenti?: number;
   readonly unitKind?: 'champion' | 'neutral';
   readonly mechanismDefinitions?: import('./m8/runtime-types').MechanismDefinitions;
   readonly mechanismState?: import('./m8/runtime-types').MechanismState;
@@ -93,6 +95,7 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly openingDeaths?:readonly {readonly unitId:string;readonly eventSeq:number}[];
   /** Private authenticated installations; never included in display projections. */
   readonly equipmentReceipts?: readonly import('./battle-equipment').BattleEquipmentReceipt[];
   readonly pendingEquipment?: readonly import('./battle-equipment').BattleEquipmentReceipt[];
@@ -125,7 +128,7 @@ export type UnchangedCombatEventData = import('./combat-six-cost').SixCostEvent
   | { readonly type: 'kill'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin }
   | { readonly type: 'growth'; readonly tick: number; readonly unitId: string; readonly amountBps: number; readonly totalBps: number }
   | { readonly type: 'effectTriggered'; readonly tick: number; readonly source: EffectSource; readonly effectKey: string; readonly action: EffectAction; readonly targetId: string }
-  | { readonly type: 'movement'; readonly tick: number; readonly unitId: string; readonly from: HexCell; readonly to: HexCell }
+  | { readonly type: 'movement'; readonly tick: number; readonly unitId: string; readonly from: HexCell; readonly to: HexCell; readonly reason?: 'ambessa-chain' | 'ambessa-fist-retreat' }
   | { readonly type: 'attack'; readonly tick: number; readonly attackerId: string; readonly targetId: string }
   | { readonly type: 'unitRevived'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly hp: number }
   | { readonly type: 'death'; readonly tick: number; readonly unitId: string }

@@ -6,7 +6,7 @@ import { hexDistance } from './board';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
 import { asSource } from './m8/s13-definitions';
 import { resolveMana } from './m8/mana';
-import { rollCrit } from './m8/crit';
+import { addCritChance, rollCrit } from './m8/crit';
 import { burn } from './content/item-programs';
 import { p3Stun, p3Values, p3ReflectionDamage } from './s13-p3-programs';
 import type { DamageOutcome } from './m8/contracts';
@@ -73,8 +73,9 @@ export function p3Attack(ctx: AbilityContext, u: S13Unit, target: S13Unit, seq: 
 /** Shared critical authorization/true conversion boundary. No second resistance, shield or HP settlement. */
 export function p3Roll(ctx: AbilityContext, u: S13Unit, packet: S13Packet, charged: boolean, shared?: boolean): boolean {
   const authorization = spellCrit(u), boosted = charged && packet.delivery === 'basic-attack';
-  const critical = shared ?? rollCrit(packet.critEligibility, boosted ? { ...authorization,
-    chanceBps: Math.min(10000, authorization.chanceBps + Math.round(p3Values('knockout').BonusCrit * 10000)) } : authorization, ctx.draw);
+  const boostedAuth = boosted ? addCritChance(authorization, Math.round(p3Values('knockout').BonusCrit * 10000)) : authorization;
+  const critical = shared ?? rollCrit(packet.critEligibility, boostedAuth, ctx.draw);
+  if (boosted) packet.critMultiplierBps = boostedAuth.multiplierBps;
   if (boosted) {
     // 项目约定：替换本次基础普攻为90%原始普攻真伤，非额外相加；先转换系数、后走统一暴击。
     packet.raw = Math.floor(packet.raw * Math.round(p3Values('knockout').TrueDamagePercent * 10000) / 10000);

@@ -1,3 +1,4 @@
+import { overtimeReceivedBps } from '../combat-overtime';
 import type { Effect, EffectIdentity, EffectRuntime, ShieldEndReason, ShieldState, SurvivalSample, TriggerDefinition } from './contracts';
 import { canonicalSource, compareCodePoints, effectIdentity, validateIdentity } from './identity';
 import { conditionHolds, integer, safeNumber } from './stats';
@@ -5,7 +6,7 @@ export type ShieldGrant = Extract<Effect, { kind: 'grant-shield' }>;
 export function grantShieldState(identity: EffectIdentity, value: number, definition: ShieldGrant, tick: number, old?: ShieldState): ShieldState {
   validateIdentity(identity); integer(value); integer(tick); integer(definition.durationTicks, 1);
   if (old && old.key !== identity.key) throw new RangeError('Shield refresh source mismatch');
-  const granted = Math.max(value, old?.remaining ?? 0), expiresAtTick = Math.max(tick + definition.durationTicks, old?.expiresAtTick ?? 0);
+  const granted = Math.max(safeNumber(integer(value) * BigInt(overtimeReceivedBps(tick)) / 10000n), old?.remaining ?? 0), expiresAtTick = Math.max(tick + definition.durationTicks, old?.expiresAtTick ?? 0);
   return { ...identity, granted, remaining: granted, absorbed: 0, decayed: 0, expiredDiscarded: 0, startsAtTick: tick, expiresAtTick, endRewardConsumed: false,
     decay: definition.decay.kind === 'none' ? { kind: 'none' } : { kind: 'linear-initial-grant', basisGranted: granted, grantedAtTick: tick, durationTicks: expiresAtTick - tick, lastDecayAtTick: tick } };
 }

@@ -137,12 +137,17 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     async function fundedReset() {
       await reset(); const prepared = await prepareB6Opening(page, '2-1');
-      assert.equal(prepared.gold, 10, 'three public opening settlements provide 2+3+5G');
+      // v22 opening income: base 2/3/4 plus the PvE loss streak (count 1/2/3 pays 0/1/1).
+      assert.equal(prepared.gold, 11, 'three public opening settlements provide (2+0)+(3+1)+(4+1)G');
       return prepared;
     }
     async function itemReset() {
       await reset(); const prepared = await prepareB6Opening(page, '2-5');
-      assert.equal(prepared.items.length, 1, 'real 2-4 supply grants the item used by native item-input tests');
+      // Under the v22 augment tiers the first non-placebo 2-1 offer for seed 42 is Crown Guarded; its crownguard is
+      // item-1. The real 2-4 supply component is item-2, the item used by the native item-input tests.
+      assert.deepEqual(prepared.items.map(item => [item.id, item.location.kind]), [['item-1', 'inventory'], ['item-2', 'inventory']]);
+      assert.equal(prepared.items[0].definitionId, 'crownguard', 'the 2-1 Crown Guarded augment grants item-1');
+      assert.equal(prepared.items[1].definitionId, 'sword', 'real 2-4 supply grants the item used by native item-input tests');
       return prepared;
     }
     if (!metricsOnly) {
@@ -245,7 +250,12 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       const { inputs } = await record('native-repeat-fast-DDFE', before, expected, start);
       assert.deepEqual(inputs.filter(input => input.type === 'keydown').map(input => input.code), ['KeyD', 'KeyD', 'KeyF', 'KeyE']);
       assert(inputs.some(input => input.type === 'keydown' && input.repeat));
-      const rejectStart = await offset(); await page.keyboard.press('f'); await record('failed-F-preserves-complete-state', expected, expected, rejectStart);
+      // v22: the opening loss streak leaves 4G here (11-2-2-4+1), enough for F. One more native D
+      // spends 2G so the following F really fails on gold.
+      const drainStart = await offset(); await page.keyboard.press('d');
+      const drained = accepted(api.rerollShop(expected)); await record('native-D-spends-v22-opening-streak-gold', expected, drained, drainStart);
+      assert(drained.gold < 4, 'F is unaffordable before the failed-F check');
+      const rejectStart = await offset(); await page.keyboard.press('f'); await record('failed-F-preserves-complete-state', drained, drained, rejectStart);
     }
     for (const [edge, exitX, exitY] of [['left', -10, 200], ['right', 1450, 200], ['top', 200, -10]]) {
       await resizeViewport(page, { width: 1440, height: 1000 }); const before = await reset();
@@ -298,17 +308,17 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     {
       const before = await itemReset(); await click('panel:items');
       await page.locator('[data-debug="equipment:unit-1:0"]').scrollIntoViewIfNeeded();
-      let snap = await read(); const item = snap.bounds['item:item-1'], equip = snap.bounds['equipment:unit-1:0'];
+      let snap = await read(); const item = snap.bounds['item:item-2'], equip = snap.bounds['equipment:unit-1:0'];
       async function dragItem() {
         await touch('touchStart', [{ id: 12, x: item.centerX, y: item.centerY }]);
         await touch('touchMove', [{ id: 12, x: item.centerX - 12, y: item.centerY }]);
-        assert.equal((await read()).gesture?.id, 'item-1');
+        assert.equal((await read()).gesture?.id, 'item-2');
         await touch('touchMove', [{ id: 12, x: equip.centerX, y: equip.centerY }]);
       }
       let start = await offset(); await dragItem(); await touch('touchCancel');
       const canceled = await record('native-item-pointercancel-does-not-equip', before, before, start); assert.equal(canceled.snap.gesture, null);
       start = await offset(); await dragItem(); await touch('touchEnd');
-      await record('native-item-same-path-release-equips', before, accepted(api.equipItem(before, 'item-1', 'unit-1', 0)), start);
+      await record('native-item-same-path-release-equips', before, accepted(api.equipItem(before, 'item-2', 'unit-1', 0)), start);
     }
     // Layout/rotation gates are read against actual CSS bounds, not game pixels.
     for (const viewport of [{ width: 1440, height: 600 }, { width: 390, height: 650 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 360, height: 640 }]) {
@@ -324,8 +334,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     await resizeViewport(page, { width: 390, height: 844 });
     {
-      const before = await itemReset(); await click('panel:items'); await page.locator('[data-debug="item:item-1"]').scrollIntoViewIfNeeded();
-      const bounds = (await read()).bounds['item:item-1'], start = await offset();
+      const before = await itemReset(); await click('panel:items'); await page.locator('[data-debug="item:item-2"]').scrollIntoViewIfNeeded();
+      const bounds = (await read()).bounds['item:item-2'], start = await offset();
       await touch('touchStart', [{ id: 13, x: bounds.centerX, y: bounds.centerY }]); assert.equal((await read()).gesture?.kind, 'item');
       await resizeViewport(page, { width: 844, height: 390 }); await touch('touchEnd');
       const result = await record('orientation-cancels-item-late-release', before, before, start); assert.equal(result.snap.gesture, null);
@@ -347,7 +357,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       await record('trait-official-summary-and-tiers-visible', traitBefore, traitBefore, traitStart);
       await page.screenshot({ path: path.join(output, 'trait-audit-benefits.png') });
       const before = await itemReset(); await click('panel:items', true);
-      const target = page.locator('[data-debug="item:item-1"]');
+      const target = page.locator('[data-debug="item:item-2"]');
       await target.evaluate(node => node.scrollIntoView({ block: 'start' }));
       const coveredBy = await target.evaluate(node => {
         const box = node.getBoundingClientRect();
@@ -355,12 +365,12 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       });
       const positions = await page.evaluate(() => ({shop:getComputedStyle(document.querySelector('.shop-panel')).position,tabs:getComputedStyle(document.querySelector('.panel-tabs')).position}));
       assert.notEqual(positions.shop, 'sticky'); assert.notEqual(positions.tabs, 'sticky');
-      assert.equal(coveredBy, 'item:item-1', 'M6 layout removes the old shop/tab overlap at the actual target');
+      assert.equal(coveredBy, 'item:item-2', 'M6 layout removes the old shop/tab overlap at the actual target');
       await page.locator('canvas').scrollIntoViewIfNeeded();
-      const start = await offset(); await click('item:item-1', true);
+      const start = await offset(); await click('item:item-2', true);
       const result = await record('nonoverlapping-layout-native-item-tap-does-not-buy-or-deploy', before, before, start, { coveredBy, positions, adaptation: 'M6 shop and tabs are relative: original sticky overlap trigger is eliminated; native scroll/hit-test and complete-state/no-background-command assertions retained, with actual choice/dismissal overlays still covered by their unchanged native cases' });
-      assert.deepEqual(result.inputs.filter(input => input.type === 'pointerdown').map(input => input.target), ['item:item-1']);
-      assert(result.snap.strategy.selectedItemIds.includes('item-1'));
+      assert.deepEqual(result.inputs.filter(input => input.type === 'pointerdown').map(input => input.target), ['item:item-2']);
+      assert(result.snap.strategy.selectedItemIds.includes('item-2'));
 
     }
     // New Match resets listeners as well as domain state. Two resets then one D

@@ -13,7 +13,7 @@ import type { RoomState } from '../../src/server/room/types';
 import type { CombatState } from '../../src/simulation/combat-types';
 import { grantTestItems, TEST_GOLD_ITEMS } from '../helpers/grant-test-items';
 import { claimAllOrbs, runUntil } from './helpers';
-import { avariceRoom, HUMANS, nextBattle, pvpBattleOf, seatOf, spendGold } from './v17-avarice-helpers';
+import { avariceRoom, fieldBench, HUMANS, levelForBench, nextBattle, pvpBattleOf, seatOf, spendGold } from './v17-avarice-helpers';
 
 /**
  * The earning seat. Under seed 42 with the v17 orb combinations s2 fights a bot as side A at 4-6, PvE at 4-7 and the
@@ -83,9 +83,13 @@ describe('v17 avarice: in-combat earnings on its team', () => {
     const kinds = new Set<string>();
     let sideBAgainstAvarice = false;
     let mogulStacks = 0;
+    // v22: the idle human seats (level 6, full benches, gold piling up) no longer outlast the earner's late first coin;
+    // the last one fell in the very battle that paid it, the room ended and no later round could show "paid once".
+    // In preparation they level with their own gold and field their bench through the room, so the room plays on.
+    const fieldIdle = () => { for (const seatId of HUMANS) if (seatId !== EARNER) { levelForBench(room, seatId, 0); fieldBench(room, seatId); } };
     for (let roundName = '4-6'; checked.length < 2 || paid.highRoller === 0 || !kinds.has('gamblers') || !kinds.has('collector') || !sideBAgainstAvarice;) {
       expect(checked.length).toBeLessThan(20);
-      if (checked.length) roundName = runUntil(room, clock, state => { claimAllOrbs(room); return state.phase === 'battle' && state.roundName !== checked.at(-1)!.roundId; }).roundName;
+      if (checked.length) roundName = runUntil(room, clock, state => { claimAllOrbs(room); fieldIdle(); return state.phase === 'battle' && state.roundName !== checked.at(-1)!.roundId; }).roundName;
       else nextBattle(room, clock, roundName);
       const own = pvpBattleOf(room.state, EARNER);
       if (own?.battle.b.seatId === EARNER && (HUMANS as readonly string[]).includes(own.battle.a.seatId)) sideBAgainstAvarice = true;
@@ -127,7 +131,7 @@ describe('v17 avarice: in-combat earnings on its team', () => {
     expect(mogulStacks).toBeGreaterThan(0);
     // A later round pays none of them again.
     clock.advance(1);
-    runUntil(room, clock, state => state.phase === 'preparation' && state.roundName !== checked.at(-1)!.roundId);
+    runUntil(room, clock, state => { fieldIdle(); return state.phase === 'preparation' && state.roundName !== checked.at(-1)!.roundId; });
     for (const entry of checked) { expectPaidOnce(room, entry.roundId, entry.highRoller); expectItemGoldPaidOnce(room, entry.roundId, entry.items); }
     // A re-pay under a later round would carry the same receipt id: across all rounds every earnings receipt id is unique.
     const ids = (seatOf(room.state, EARNER).match.seatMechanics?.receipts ?? []).filter(receipt => receipt.source === 'high-roller' || receipt.source === 'g24-item-gold').map(receipt => receipt.receiptId);

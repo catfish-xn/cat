@@ -9,12 +9,14 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  openMatchCombatStreamSteps, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
+  openMatchCombatStreamSteps, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
+import { externalAugmentBlocks } from '../../simulation/augment-offers';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
+import { getRoundPreparationMs } from '../../simulation/round-schedule';
 import {
   assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders,
   moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
@@ -40,8 +42,11 @@ import {
 } from './types';
 
 export interface RoomTimings {
+  /** 30s selects the rules' per-round table; other values explicitly override all rounds (e.g. test clocks). */
   readonly preparationMs: number;
   readonly choiceMs: number;
+  /** v22: preparation at an augment round, the open augment choice included; AUGMENT_PREPARATION_MS when absent. */
+  readonly augmentPreparationMs?: number;
   readonly settlementMs: number;
   /** Playback allowance added after the longest battle's replay (also covers the client's opening transition). */
   readonly battleTailMs: number;
@@ -96,6 +101,9 @@ export interface RoomOptions extends RoomTimings {
 export const CAROUSEL_DEPARTURE_MS = 2_000;
 /** Ticks per step of a time-budgeted slice (`sliceMs`): one, since a late-round tick alone can take several milliseconds. */
 export const SLICE_STEP_TICKS = 1;
+/** v22: total preparation at an augment round, the augment choice included (14.24: 30 s planning + 20 s armory bonus).
+ * The augment pick no longer uses `choiceMs` (the earlier 48 s pick is superseded by this merged phase). */
+export const AUGMENT_PREPARATION_MS = 50_000;
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
 /** `stale-seat`: a seat or the pool changed after the plan was made; plan again on the latest live states. */
@@ -119,16 +127,18 @@ interface Resolution {
 }
 
 /** Contract §15.2: operations and choices the room passes to the rules, by room phase; the rules then check the seat's own phase and target (§15.1). */
-const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
+const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'openAnvil', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
 const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll', 'rerollAugment'];
 /** G2-4b (§26): a preparation summon moves only while its seat prepares; the rules refuse it after the roster lock. */
 const PREPARATION_ONLY: readonly SeatCommand['type'][] = ['moveItemSummon'];
 /** v15: an orb claim passes wherever an operation does; the rules claim it at once or queue it until the battle settles. */
 const ORB: readonly SeatCommand['type'][] = ['claimOrb'];
+/** v22 anvil units: an anvil opened in settlement (the rules allow it there) is answered there too, before its deadline. */
+const SETTLEMENT_CHOICE: readonly SeatCommand['type'][] = ['choose'];
 export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
   waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]),
   // The deadline, the automatic deployment and the freeze are one boundary no command may interleave with.
-  frozen: new Set(), battle: new Set([...OPS, ...ORB]), 'awaiting-settlement': new Set([...OPS, ...ORB]), settlement: new Set([...OPS, ...ORB]), ended: new Set(),
+  frozen: new Set(), battle: new Set([...OPS, ...ORB]), 'awaiting-settlement': new Set([...OPS, ...ORB]), settlement: new Set([...OPS, ...ORB, ...SETTLEMENT_CHOICE]), ended: new Set(),
 };
 /** Upper bound of rules steps when the room finishes a live PvE battle itself (the engine stops at 1200 ticks). */
 const LIVE_COMBAT_MAX_STEPS = 5_000;
@@ -142,7 +152,7 @@ export type SeatCommandOutcome =
  * Pure dispatch to the rules; the room adds nothing. Shop commands and choices (which may award a unit) go through the
  * TP shared-pool transactions (§12.4); commands that move no unit between owners stay on the plain public commands.
  */
-export function applySeatCommand(pool: SharedPoolState, state: MatchState, command: SeatCommand): SeatCommandOutcome {
+export function applySeatCommand(pool: SharedPoolState, state: MatchState, command: SeatCommand, augmentBlocked: readonly string[] = []): SeatCommandOutcome {
   const plain = (result: MatchCommandResult): SeatCommandOutcome => result.ok
     ? { ok: true, pool, state: result.state, events: result.events } : { ok: false, pool, state: result.state, reason: result.reason };
   switch (command.type) {
@@ -150,6 +160,7 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'moveItemSummon': return plain(moveItemSummon(state, command.itemInstanceId, command.cell));
     case 'buy': return buySharedUnit(pool, state, command.slot, command.generation);
     // P7-1: a unit in the carousel holding slot (`carousel.heldCarouselUnits`) is sold through the rules' own entry.
+    case 'openAnvil': return runSharedMatchCommand(pool, state, command);
     case 'sell': return heldCarouselUnits(state).some(unit => unit.unitId === command.unitId)
       ? sellPendingCarouselUnit(pool, state, command.unitId) : sellSharedUnit(pool, state, command.unitId);
     case 'shopLock': return setSharedShopLock(pool, state, command.locked, command.generation);
@@ -161,7 +172,8 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
     case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
     // v15: one card of the offer (optionIndex); the rules' shared-pool transaction, like every other choice command.
-    case 'rerollAugment': return runSharedMatchCommand(pool, state, { type: 'rerollAugment', choiceId: command.choiceId, generation: command.generation, optionIndex: command.optionIndex });
+    // v22: the room supplies what the other live seats block (externalAugmentBlocks); the client never does.
+    case 'rerollAugment': return runSharedMatchCommand(pool, state, { type: 'rerollAugment', choiceId: command.choiceId, generation: command.generation, optionIndex: command.optionIndex, augmentBlocked });
     // v15: forwarded as is; the rules claim at once or queue it during the battle (settled with the round), and refuse the rest.
     case 'claimOrb': return runSharedMatchCommand(pool, state, { type: 'claimOrb', round: command.round, orbId: command.orbId });
     case 'anomalyReroll': return plain(rerollAnomaly(state, command.choiceId, command.generation));
@@ -223,11 +235,34 @@ export function resolveSeatTimeouts(match: MatchState, pool: SharedPoolState, st
 
 /** A resumable settlement producer; #382 can use the same writer gate without a second command queue. */
 export type SettlementWorkFactory = () => Generator<void, void, void>;
+
+/** Room phases whose deadline would time out an open seat choice (§11.4); an anvil deadline extends them (see `fitDeadlineToChoices`). */
+const CHOICE_TIMEOUT_PHASES: ReadonlySet<RoomPhase> = new Set(['preparation', 'choice', 'settlement']);
+/** The most an open anvil may add to one phase deadline (one anvil's own 30 s to choose). */
+export const ANVIL_PHASE_EXTENSION_MS = 30_000;
+/**
+ * v22 anvil units: the open choice of an alive seat that runs on its own deadline (an opened anvil, whose rules payload
+ * names `source: 'anvil-unit'` and its `timeoutMs`), or null.
+ */
+function ownDeadlineChoice(seat: SeatState): { readonly choiceId: string; readonly generation: number; readonly timeoutMs: number } | null {
+  const choice = seat.alive && seat.match.phase === 'choice' ? seat.match.pendingChoice : null;
+  const payload = choice?.payload;
+  if (!choice || payload?.kind !== 'forge' || payload.source !== 'anvil-unit' || typeof payload.timeoutMs !== 'number') return null;
+  return { choiceId: choice.choiceId, generation: choice.generation, timeoutMs: payload.timeoutMs };
+}
 export const MAX_STALE_SEAT_RETRIES = 3;
 
 export class Room {
   private current: RoomState;
   private timer: ClockHandle | null = null;
+  /**
+   * v22 anvil units: one room-clock timer per seat for its open anvil choice, keyed by `choiceId` + generation
+   * (`SeatState.choiceDeadline`). `handle` is null once the timer fired (its run may wait behind a settlement slice).
+   */
+  private readonly choiceTimers = new Map<string, { readonly key: string; handle: ClockHandle | null }>();
+  private extendingDeadline = false;
+  /** The deadline `setPhase` gave the current phase, before any anvil extension (see `fitDeadlineToChoices`). */
+  private phaseDeadline: number | null = null;
   private pendingSettlement: RoundSettlement | null = null;
   private settlementWork: Generator<void, void, void> | null = null;
   private settlementFactory: SettlementWorkFactory | null = null;
@@ -400,6 +435,7 @@ export class Room {
   dispose(): void {
     this.disposed = true;
     this.clearTimer();
+    this.clearChoiceTimers();
     this.listeners.clear();
     this.liveListeners.clear(); this.streamListeners.clear();
     this.noticeListeners.clear();
@@ -408,7 +444,8 @@ export class Room {
     this.settlementCommands.length = 0;
   }
   get retained(): RoomRetained {
-    return { timers: (this.timer === null ? 0 : 1) + (this.liveTimer === null ? 0 : 1) + this.legendWalks.pendingArrivals, listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
+    const choiceTimers = [...this.choiceTimers.values()].filter(timer => timer.handle !== null).length;
+    return { timers: (this.timer === null ? 0 : 1) + (this.liveTimer === null ? 0 : 1) + choiceTimers + this.legendWalks.pendingArrivals, listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
       resolving: this.resolution !== null || this.settlementWork !== null || [...this.streams.values()].some(s => !s.done) };
   }
 
@@ -488,7 +525,8 @@ export class Room {
     let live: LiveCatchUp | null = null;
     try { live = phase === 'battle' ? this.pveCatchUp(seat) : null; }
     catch (error) { this.failLive(seatId, error); return { ok: false, reason: 'wrong-phase', state: seat.match }; }
-    let applied = applySeatCommand(live?.pool ?? this.current.pool, live?.state ?? seat.match, command);
+    const augmentBlocked = command.type === 'rerollAugment' ? externalAugmentBlocks(seatId, this.aliveSeats().map(candidate => candidate.match)) : [];
+    let applied = applySeatCommand(live?.pool ?? this.current.pool, live?.state ?? seat.match, command, augmentBlocked);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
     if (!applied.ok) return { ok: false, reason: applied.reason, state: seat.match };
     if (command.type === 'equip' && phase === 'battle') {
@@ -808,8 +846,21 @@ export class Room {
 
   /** After round entry (and its carousel, when it had one): the round's own choice phase, or what follows it. */
   private continueRound(): void {
+    if (this.opensAugmentPreparation()) { this.resolvePendingOnEntry(); return this.setPhase('preparation', this.options.augmentPreparationMs ?? AUGMENT_PREPARATION_MS); }
     if (this.aliveSeats().some(seat => seat.match.phase === 'choice')) this.setPhase('choice', this.options.choiceMs);
     else this.afterChoiceWindow();
+  }
+
+  /**
+   * v22 (user approval 2026-10-23): at an augment round (2-1, 3-2, 4-2) there is no separate choice phase. The augment
+   * choice opens with preparation, which lasts AUGMENT_PREPARATION_MS in total; seats shop and move while it is open, and
+   * the preparation deadline's timeouts take the first option of a choice still open. Any other pending choice at round
+   * entry keeps the old choice phase.
+   */
+  private opensAugmentPreparation(): boolean {
+    const alive = this.aliveSeats();
+    return alive.some(seat => isAugmentPreparationChoice(seat.match))
+      && alive.every(seat => seat.match.phase === 'preparation' || isAugmentPreparationChoice(seat.match));
   }
 
   /* ---------------- G1-P7 carousel (MULTIPLAYER_CONTRACT §21) ---------------- */
@@ -1051,7 +1102,11 @@ export class Room {
     const alive = this.aliveSeats();
     const committed = this.current.settlements.includes(`${this.current.roomId}:round-${this.current.round}`);
     if (committed) return this.setPhase('settlement', this.options.settlementMs);
-    if (alive.every(seat => seat.match.phase === 'preparation')) { this.resolvePendingOnEntry(); return this.setPhase('preparation', this.options.preparationMs); }
+    if (alive.every(seat => seat.match.phase === 'preparation')) {
+      this.resolvePendingOnEntry();
+      return this.setPhase('preparation', this.options.preparationMs === ROOM_TIMING_DEFAULTS.preparationMs
+        ? getRoundPreparationMs(alive[0].match.roundDefinitionId) : this.options.preparationMs);
+    }
     // A supply round settles inside the choice itself; the rules left nothing to fight.
     if (alive.every(seat => seat.match.phase === 'settlement')) return this.freezeAndResolve();
     this.fail({ kind: 'phase-mismatch', detail: alive.map(seat => `${seat.seatId}:${seat.match.phase}`).join(',') });
@@ -1800,6 +1855,7 @@ export class Room {
     // Every carousel starts with the legends on their cradles; a walk toward a unit never outlives its carousel.
     this.legendWalks.clearScene('carousel');
     const deadlineAt = durationMs === null ? null : this.options.clock.now() + durationMs;
+    this.phaseDeadline = deadlineAt;
     if (phase === 'ended') {
       // An ended room keeps only what its last view and replay need (the rules' battle results, terminals and ledgers);
       // the frozen envelopes and staged results of the round go.
@@ -1808,6 +1864,7 @@ export class Room {
     }
     this.replace({ ...this.current, phase, deadlineAt });
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
+    this.fitDeadlineToChoices();
   }
   /** Forgets the current round's frozen envelopes, the resolution in progress and the staged settlement. */
   private releaseRound(): void { this.openingStreams = false; this.settlementWork = null; this.settlementFactory = null; this.settlementFrozen = false; this.drainingSettlementCommands = false; this.clearLive(); this.streams.clear(); this.streamBoundary = []; this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
@@ -1820,11 +1877,99 @@ export class Room {
   }
   private replace(next: RoomState): void {
     if (this.disposed) return;
-    const published = { ...next, roomRevision: this.current.roomRevision + 1 };
+    const published = { ...this.withChoiceDeadlines(next), roomRevision: this.current.roomRevision + 1 };
     // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
     this.current = published;
     for (const listener of this.listeners) listener(this.current);
+    this.syncChoiceTimers();
+    this.fitDeadlineToChoices();
+  }
+
+  /* ---------------- v22 anvil choice deadlines (docs/ANVIL_UNITS.md) ---------------- */
+
+  /**
+   * Keeps each seat's `choiceDeadline` in step with its open anvil choice, in the same publication: armed at
+   * now + `timeoutMs` when a new choiceId + generation opens, kept unchanged while that choice stays open, dropped once
+   * it is answered, timed out or gone (elimination, the end of the room). Returns `next` itself when nothing changes.
+   */
+  private withChoiceDeadlines(next: RoomState): RoomState {
+    let changed = false;
+    const seats = next.seats.map(seat => {
+      const open = next.phase === 'ended' ? null : ownDeadlineChoice(seat);
+      const held = seat.choiceDeadline;
+      if (open && held && held.choiceId === open.choiceId && held.generation === open.generation) return seat;
+      if (!open && !held) return seat;
+      changed = true;
+      const { choiceDeadline: _dropped, ...rest } = seat;
+      if (!open) return rest;
+      // P 乙: inside a capped phase the anvil's own deadline is the cap at the latest, so the seat's countdown (endsAt)
+      // shows when the choice is really forced, and its own timer answers it there.
+      const own = this.options.clock.now() + open.timeoutMs;
+      const cap = CHOICE_TIMEOUT_PHASES.has(next.phase) && this.phaseDeadline !== null ? this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS : Infinity;
+      return { ...rest, choiceDeadline: { choiceId: open.choiceId, generation: open.generation, deadlineAt: Math.min(own, cap) } };
+    });
+    return changed ? { ...next, seats } : next;
+  }
+  private choiceKey(deadline: { readonly choiceId: string; readonly generation: number }): string { return JSON.stringify([deadline.choiceId, deadline.generation]); }
+  /** One timer per published `choiceDeadline`; a timer whose choice is gone (or replaced) is cancelled. */
+  private syncChoiceTimers(): void {
+    const wanted = new Map(this.current.seats.flatMap(seat => seat.choiceDeadline ? [[seat.seatId, seat.choiceDeadline] as const] : []));
+    for (const [seatId, timer] of [...this.choiceTimers]) {
+      const deadline = wanted.get(seatId);
+      if (deadline && this.choiceKey(deadline) === timer.key) continue;
+      if (timer.handle !== null) this.options.clock.cancel(timer.handle);
+      this.choiceTimers.delete(seatId);
+    }
+    for (const [seatId, deadline] of wanted) {
+      if (this.choiceTimers.has(seatId)) continue;
+      const { choiceId, generation } = deadline;
+      const timer: { key: string; handle: ClockHandle | null } = { key: this.choiceKey(deadline), handle: null };
+      timer.handle = this.options.clock.schedule(deadline.deadlineAt, () => { timer.handle = null; this.onChoiceDeadline(seatId, choiceId, generation); });
+      this.choiceTimers.set(seatId, timer);
+    }
+  }
+  private clearChoiceTimers(): void {
+    for (const timer of this.choiceTimers.values()) if (timer.handle !== null) this.options.clock.cancel(timer.handle);
+    this.choiceTimers.clear();
+  }
+  /**
+   * An open anvil extends the room's phase deadline (whose timeouts would answer the choice early): a preparation,
+   * choice or settlement phase ends at the later of its own deadline and every open anvil deadline of an alive seat
+   * (published like any deadline, as the view's `endsAt`), capped at its own deadline + ANVIL_PHASE_EXTENSION_MS, and
+   * goes back to its own deadline once those anvils are answered. The anvil timer, armed first, fires before the phase
+   * deadline at the same time; an anvil still open at the cap is answered by the phase timeouts.
+   */
+  private fitDeadlineToChoices(): void {
+    const state = this.current;
+    if (this.extendingDeadline || this.timer === null || this.phaseDeadline === null || state.deadlineAt === null || !CHOICE_TIMEOUT_PHASES.has(state.phase)) return;
+    // P (user 2026-10-24, option 乙): anvils extend a phase by at most ANVIL_PHASE_EXTENSION_MS in total; an anvil still open
+    // at the capped deadline is answered by the phase's own timeouts (`timeoutChoice`, first offer).
+    const wanted = Math.min(this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS, Math.max(this.phaseDeadline, ...this.aliveSeats().map(seat => seat.choiceDeadline?.deadlineAt ?? -Infinity)));
+    if (wanted === state.deadlineAt) return;
+    this.extendingDeadline = true;
+    try {
+      this.clearTimer();
+      this.replace({ ...state, deadlineAt: wanted });
+      this.timer = this.options.clock.schedule(wanted, () => this.onDeadline());
+    } finally { this.extendingDeadline = false; }
+  }
+  /**
+   * The anvil deadline: the rules' own `timeoutChoice` (first offer) for exactly the choiceId + generation it was armed
+   * for; nothing when that choice was already answered or replaced, or the seat is out. Waits behind a running
+   * settlement slice like any writer.
+   */
+  private onChoiceDeadline(seatId: string, choiceId: string, generation: number): void {
+    if (this.disposed) return;
+    if (this.deferDuringSettlement(() => { this.onChoiceDeadline(seatId, choiceId, generation); })) return;
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    const pending = seat?.alive && seat.match.phase === 'choice' ? seat.match.pendingChoice : null;
+    if (!seat || !pending || pending.choiceId !== choiceId || pending.generation !== generation) { this.syncChoiceTimers(); return; }
+    const result = runSharedMatchCommand(this.current.pool, seat.match, { type: 'timeoutChoice', round: seat.match.round, choiceId, generation });
+    if (!result.ok) return this.fail({ kind: 'seat-stuck', seatId, reason: `forfeit:${result.reason}` });
+    const resolved = this.withPendingResolved(result);
+    this.commitSeat(seatId, resolved.state, resolved.pool);
+    if (this.current.phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
   }
   /** B5 item 6: the published pool balances against every seat it binds; throws before anything is published. */
   private assertConserved(state: RoomState): void {

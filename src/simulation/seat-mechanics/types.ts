@@ -65,7 +65,7 @@ export const CHOICE_SKIP_OPTION = '@skip' as const;
  * timeoutOption: what a timeout and the basic bot pick. armory requires price 0; blackMarket may name CHOICE_SKIP_OPTION.
  */
 export type MechanicChoicePayload =
-  | { readonly kind: 'forge'; readonly source: MechanicSource; readonly timeoutOption: string }
+  | { readonly kind: 'forge'; readonly timeoutMs?:30000; readonly source: MechanicSource; readonly timeoutOption: string }
   | { readonly kind: 'blackMarket'; readonly grantItem?:boolean; readonly source: MechanicSource; readonly skippable: boolean;
       readonly skipReward: { readonly kind: string; readonly amount: number } | null; readonly timeoutOption: string }
   | { readonly kind: 'armory'; readonly masterwork?: {readonly consumableId:string; readonly unitId:string}; readonly source: MechanicSource; readonly prices: Readonly<Record<string, number>>; readonly timeoutOption: string };

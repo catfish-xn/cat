@@ -1,3 +1,37 @@
+## 2026-10-23 战斗法力与暴击率溢出（已随 v22 录制）
+
+用户10-23批准第1–4条：受伤每包 `min(4250, pre + 3×post)` 百分之一法力（pre含暴击/增伤，post含护盾与原包延迟伤害），同单位tick末合计取整、余数跨tick；受伤回蓝封顶当前最大法力，其他来源可超过上限。施法消耗最大法力并保留溢出，普通单位施法开始 `manaLockedUntilTick=tick+20`，`tick<截止`阻挡普通法力来源，绑定本次施法退款沿原特例。阿木木/维克托专用资源保持。暴击率超100%部分每2Bps转1Bps暴伤，转换时向下取整，授权和RNG抽取数不变。旧M3/M4独立测试引擎不切换。内部签名、事件字段语义、分摊、恢复与失败枚举见 [法力规则报告](COMBAT_MANA_RULES.md)。本节覆盖下文旧“仅hpLoss×3%/同tick上限20/清空法力”描述；第5条减伤叠加不变。已随 v22-online-rules 纪元录制。
+
+## 2026-10-23 普通单位 AD 星级修正（已随 v22 录制）
+
+普通单位基础 AD 的 1/2/3 星倍率为 100/150/225%，HP 保留 100/180/324%；来源为 TFT 通用规则，用户 10-23 批准，14.24 源表只有一星属性。两者均由 `resolveUnitStats` 从一星属性乘整数百分比后向下取整，再进入既有装备/羁绊/成长管线。六费 HP 保留 100/180/360%；六费 AD 按各自一星值 × 100/150/225% 后四舍五入（正数半入），沃里克 110/165/248、维克托 100/150/225、梅尔 80/120/180。维克托固定攻击与转法强扣除基线同步使用 100/150/225。此项为用户 10-23 第二批批准的项目决定（P）；来源与元数据语义见 MATCH_CONTRACT 顶部。trainer 百分之一 AD 表、固定属性召唤物和专用四星不变。公开接口及失败行为不变；元数据字段和影响清单见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 顶部与 [AD 星级报告](AD_STAR_SCALING.md)。**已随 v22 录制**，本次保留旧身份常量与 golden。
+
+## 2026-10-23 五费技能几何 P 补充（已随 v22 录制）
+
+金克丝仅三星电击采用朝当前目标的14×1穿透矩形；莫德凯撒自身出发枚举 E/SE/SW/W/NW/NE 六条8×3矩形，按命中人数、是否覆盖当前目标、方向序号择优。宽度为全宽，格中心判定，边界闭合，起点后方/终点之外排除；整数平方比较，不新增RNG。伤害、眩晕、最近四人加伤及其他招式均沿原表。玛尔扎哈每次施法合计五层感染，floor(5/N)平分、前5%N名命中者各多一层，命中顺序按ID稳定；沿用五个附着任务和原死亡传播时钟。当前HEAD原已总计五层，本单补明确顺序与1–5人验证。
+
+沿用所有公共签名、失败reason、事件、任务和存档结构；完整事件及认证输入重演仍是恢复依据。杰斯返回起点尚未定义，保留旧路径，仍未完成。本节覆盖下文金克丝三星/莫德凯撒暂停说明；P来源、整数公式和验收见[五费技能几何报告](FIVE_COST_SKILL_GEOMETRY.md)。不录epoch/digest/golden，已随 v22 录制。
+
+## 2026-10-23 五费实现修正（v22 候选，待统一 epoch）
+
+赛维卡拳击/落点/大嘴改为火焰伤害基数的 3/1.3/3.2 倍；大嘴按星级 15/15/100% 严格低于阈值斩杀，下一 tick 在 2/2/10 格内连咬最低当前 HP 敌人，每跳保留 80% 原始咬伤；喷火按 20 tick 周期持续至目标死亡，控制/自身死亡取消。玛尔扎哈感染在死亡清理时转给最近存活可选敌人，保留层数和脉冲相位；虚空门按本次用户明确的横线要求取目标行 col±2。金克丝原有 25/30/200 tick 眩晕经独立向量确认。
+
+沿用事件封套。`castVariant.channelTicks=40` 仅为喷火初始活动期限，后续 `activityChanged.refreshed` 更新期限；终止以权威活动结束为准。内部增加 `g23Flame/g23Chomp` 任务及严格的赛维卡来源/取消绑定；恢复仍校验完整重演事实，新增步骤不消费 RNG。新几何缺证部分（金克丝直线、杰斯飞行路径、莫德凯撒最优线）暂停，保留旧实现。依据、手算、工程粒度、接入点与未完成清单见 [五费修正报告](FIVE_COST_3STAR_FIXES.md)。按用户要求不在此分支修改版本/digest/golden，合回 v22 后统一录制；本节覆盖历史赛维卡固定两秒引导描述。
+
+## 开局奇遇 Batch B（2026-10-23，待统一 epoch）
+
+新增正式开战单位首次死亡账本 `CombatState.openingDeaths`；完整重放核对，不截断战斗事件。`g23BattleFacts` 投影敌方正式弈子首次死亡给沃里克，排除野怪、召唤物、后生单位、复活后的重复死亡；镜像无结算资格。普通蟹无普攻，每80tick尝试空邻格；危险巨蟹40tick首跳、每40tick全敌方100×实际跳数魔伤，接受既有控制/抗性/加时规则。魔像4-1/6-1升星，AD采用整数百分之一存基底，最终伤害阶段按原整数规则取整。完整数值、映射、签名与向量见 [Batch B 报告](OPENING_ENCOUNTERS_BATCH_B_REPORT.md)，旧epoch待 #410 合入后统一录制。
+
+## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
+
+用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
+
+每战固定50ms/tick、最长 **900 tick（45秒）**；先结算该tick和消灭判定，双方仍有存活单位才 timeout→draw。**tick600（30秒）即时第1层**，之后每20tick加1层；伤害增幅和攻速各+1000Bps/层，无层数上限；受到治疗/护盾与新控制时长各-1000Bps/层，最多-7000Bps。控制持续tick四舍五入（正数半入，至少1tick），旧控制不回改。攻击冷却不追溯重算，模拟速度不变。
+
+层数/增减幅依据用户提供的 [Riot TFT 13.22 补丁说明](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-13-22-notes/)；30/45秒和离散tick边界为本项目执行约定。**本单按要求离线，未联网重新核验来源。** 移速：加时期间（tick600起，不按层叠加）固定+5000Bps（+50%），用户10-23拍板（Riot 13.22只写“固定移速加成”无数值，属项目决定P）。加时前移动不变（5tick，沃里克狂暴ceil(5/1.5)=4）；加时中速度相加，步点落在周期5×10000/速度的固定tick网格上（单独10/3tick，叠加狂暴2.5tick），连续移动间隔为4,3,3循环（狂暴3,2循环），长期正好+50%，不存小数状态；迅击moveTenths每tick累计由3改为4/5交替（均值4.5）。完整数值、调用点和验收见 [规则实现报告](RULES_PLACEBO_OVERTIME.md)。
+
+本节覆盖下文历史60秒/1200tick及固定安慰剂金币描述。按用户要求不录epoch、不更新版本/digest常量或历史golden；待PR #410合并后统一切换。这是开发候选，当前身份不得用于新旧混跑或发布。
+
 ## 战斗装备阶段 2（2026-10-22，候选身份；未录制 epoch）
 
 已实现下一未封口 tick 安装、属性/装备程序重编译、PvE/PvP 私有成功日志与来源凭据、重放和恢复；本节覆盖历史 T12 下场生效及 #382 的 `battle-input-unsupported`。命令、完整签名、失败原因、羁绊冻结依据、服务器原子边界、UI 字段及待集成身份见 [LIVE_COMBAT_EQUIPMENT_PHASE2](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。当前工作树采用候选 `v20-battle-equipment`，正式历史 epoch 仍为下节 black-market，须与开局奇遇一起录制后发布。
@@ -42,7 +76,7 @@
 
 Match freezes `buildStrategySnapshot` before creating Combat. `combat-types.ts`, `ability-types.ts` and `strategy-types.ts` define the boundary; [M5_RULES R5–R6](../M5_RULES.md) defines numerical rules and the19 finite abilities. Runtime S13 execution lives in `combat-s13.ts`, `combat-s13-abilities.ts` and `combat-s13-state.ts`. The legacy standalone engine remains for unchanged low-level/historical primitive tests; its max-shield behavior must not be confused with M5 layers.
 
-- Fixed50ms ticks, maximum1200ticks, movement every5ticks. Existing hex geometry, E/SE/SW/W/NW/NE neighbor ordering and shared occupancy/reservations remain. Nearest-target ties use code-point ID. Input permutations cannot alter semantic ordering.
+- Fixed50ms ticks, maximum900ticks, movement every5ticks. Existing hex geometry, E/SE/SW/W/NW/NE neighbor ordering and shared occupancy/reservations remain. Nearest-target ties use code-point ID. Input permutations cannot alter semantic ordering.
 - Snapshot excludes bench and freezes distinct-definition trait tiers, equipment, augment/anomaly sources, ability variables, AP, base/percentage AD, precise attack speed, initial state and mechanics. Later catalog/Match/UI changes cannot change a running battle. Glass Cannon starts qualifying units at80%HP. No hidden enemy growth is added.
 - Combat owns explicit RNG state/draw count and action/event sequences. Each planned ordinary attack consumes one word even at0% or100%crit; Caitlyn consumes one word per bombardment center. Consumption follows tick, actor ID and action index. No visual action consumes RNG.
 - Tick barriers: cooldown/expiration/periodic work; existing control; movement; target/action planning; costs/counters/RNG/new shields; stable packet mitigation, redirect and shield absorption; simultaneous HP; surviving-target healing; surviving Mana/kill credit/growth; delayed status effects; death cleanup; elimination before timeout. New control cannot cancel an already planned action in the same tick.
@@ -51,7 +85,7 @@ Match freezes `buildStrategySnapshot` before creating Combat. `combat-types.ts`,
 - Target selection uses hex cells, never rendering coordinates. Lowest percentage compares integer cross products; Lux uses absolute currentHP. Line/path and cone approximations are explicitly defined in R6. Channel tasks stop on caster death/control; packets already planned land. Attached bleed persists after source death.
 - Packet order is source-unit ID, action sequence, target ID, packet ordinal. Virtual remainingHP assigns actual damage and the first killing packet. Loris redirect uses the original target's mitigated amount, floors the50% share and skips a second resistance calculation; its shield still absorbs. Redirect cannot recurse, and multiple eligible Loris sources choose smallest ID.
 - Shields are independent source layers. Same-source refresh uses larger remaining amount/later expiry; different sources add. Absorption consumes earliest expiry then source key and records source-specific totals. Irelia decays linearly in integers and tracks absorbed damage independently of remaining shield. Defensive duration records survive shield exhaustion so end effects are not lost.
-- Status keys include source/definition/target. Newly delayed statuses start next tick and retain their complete duration: a1second control blocks20ticks. Same-source refresh cannot create a gap; different-source semantics follow the finite mechanic. Periodic tasks explicitly track due tick and remaining shots. Darius' four primary-target bleed packets preserve the integer total including remainders.
+- Status keys include source/definition/target. Newly delayed statuses start next tick; a1second control blocks20ticks before overtime, then uses the application-tick overtime duration documented above. Same-source refresh cannot create a gap; different-source semantics follow the finite mechanic. Periodic tasks explicitly track due tick and remaining shots. Darius' four primary-target bleed packets preserve the integer total including remainders.
 - Healing caps at maximumHP and never revives a same-tick dead unit. Gunblade consumes actual damage and cannot recurse. Derived damage does not invent extra attack/cast triggers. Full future tasks and source provenance are part of the serializable state, not hidden closures.
 - Tristana's once-per-cast lethal bounce is committed for next tick, and growth occurs only when a secondary bounce actually exists. Growth affects the current battle and is returned to Match once at settlement, including defeated battles. Match alone persists, merges or destroys growth.
 - `targetChanged`, `packetDamage`, `heal`, `shieldLayerChanged`, `statusChanged`, `statChanged`, `kill` and `growth` supplement attack/cast/movement/death/finish events. Events retain actor, target, source, action/packet identity and numerical outcomes; actualHP, absorption, requested/actual healing and status changes remain distinguishable. UI can aggregate visual text but cannot truncate the authoritative ledger.
@@ -232,6 +266,12 @@ createCombatReplayRecorder(initialState: CombatState,
 `BattleResult.inputLog?:readonly BattleTickInput[]` 预留成功安装日志，空时省略；不进入 CombatView/网络公共帧。阶段2须将安装效果与成功日志原子提交，在恢复/重演中按相同 tick/seq 注入，失败不记入日志或消费 RNG。
 本阶段没有 applyBattleEquipment：输入源返回空批次时无副作用；非空批次在 stepCombat 前抛 `battle-input-unsupported`，不会推进该 tick；外部 BattleResult 的结算与回放也拒绝非空/畸形 inputLog，防止静默丢弃日志。
 既有单人 Match 的成功装备操作继续写 `BattleRecord.equipmentCommands`（共享类型 `BattleEquipmentCommand`），按原游标 tick 重演并与资源账本逐项认证；日志缺失、伪造或时序不符仍拒绝恢复。
+
+## 安蓓萨施法位移（P，2026-10-23，已随 v22 录制）
+
+沿用奇数锁链/偶数拳击。锁链伤害前移到目标身边距自己最近的可达空格；已与目标相邻时原地不动、不发位移事件（不相邻且无可达空格时也原地，见 S13_RULES_GAP 同名条目），距离平局沿普通 BFS；拳击在本 tick HP/存活屏障后向己方半场且远离施法时目标坐标后撤 1 格，几何首选格不可用则原地。复用占格、移动限制及本 tick 保留格；不增加 RNG 调用，不改伤害/短晕/耗蓝。精确口径、独立向量和回退见 [AMBESSA_DASH](AMBESSA_DASH.md)，原档缺距离来源见 [证据](AMBESSA_DASH_EVIDENCE.md)。
+
+既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，尚未录 epoch，不应以旧身份发布。
 
 ## 单场初始化协作切片（2026-10-23；不变更 epoch）
 

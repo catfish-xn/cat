@@ -301,9 +301,12 @@ it('Prowler\'s Claw cleanses and leaps after a killing blow',()=>{
 });
 it('Prowler\'s Claw adds 60% crit damage to the two critical attacks after each killing blow',()=>{
  // Every attack crits and Lux never casts, so each kill is followed by charged crits on the next targets.
- const initial=arena('TFT_Item_Artifact_ProwlersClaw',[{id:'p',definitionId:'lux',cell:{col:2,row:4}}],[{id:'e1',definitionId:'garen',cell:{col:2,row:2},hp:150},{id:'e2',definitionId:'garen',cell:{col:3,row:1},hp:400},{id:'e3',definitionId:'garen',cell:{col:1,row:1},hp:400}]);
+ // v22 overtime (from tick 600: +10% damage amp and attack speed per second) would scale later plain hits, so
+ // e2/e3 hold 250 HP: 2 charged (52) + 5 plain (36) crits kill each (104+180>=250), last kill near tick 520 < 600.
+ const initial=arena('TFT_Item_Artifact_ProwlersClaw',[{id:'p',definitionId:'lux',cell:{col:2,row:4}}],[{id:'e1',definitionId:'garen',cell:{col:2,row:2},hp:150},{id:'e2',definitionId:'garen',cell:{col:3,row:1},hp:250},{id:'e3',definitionId:'garen',cell:{col:1,row:1},hp:250}]);
  const state=frozen({...initial,units:initial.units.map(u=>u.id==='p'?{...u,mana:0,maxMana:100000,spellCrit:{...u.spellCrit!,chanceBps:10000}}:u)},['e1','e2','e3']);
  const {events}=run(state,1200);
+ expect(events.filter(e=>e.type==='kill'&&e.source.ownerId==='p').map(e=>e.tick).every(t=>t<600)).toBe(true);
  let charges=0;const crits:{charged:boolean;k:number;target:string}[]=[];
  for(const e of events){
   if(e.type==='kill'&&e.source.ownerId==='p')charges=2;

@@ -25,7 +25,7 @@ describe('M5 independent economic answers', () => {
     expect(plan.progression).toEqual({ level: 3, xp: 2, xpRequested: 2, xpApplied: 2, levelsGained: 0 });
   });
 
-  it.each([[0, 0], [1, 1], [2, 1], [3, 2], [4, 2], [5, 3], [6, 3]] as const)(
+  it.each([[0, 0], [1, 1], [2, 1], [3, 1], [4, 2], [5, 3], [6, 3]] as const)(
     'win/loss streak length %i advances with payout %i', (before, payout) => {
       for (const kind of ['win', 'loss'] as const) {
         const plan = planRoundEconomy(input({ result: kind === 'win' ? 'playerWin' : 'enemyWin',
@@ -43,12 +43,12 @@ describe('M5 independent economic answers', () => {
     expect(draw.incomeBreakdown).toEqual({ base: 5, win: 0, interest: 4, streak: 0 });
   });
 
-  it.each(['pve', 'supply'] as const)('%s preserves streak and pays only base and interest', roundKind => {
+  it.each(['pve', 'supply'] as const)('%s uses combat streaks only for actual battles', roundKind => {
     const plan = planRoundEconomy(input({ roundKind, result: roundKind === 'supply' ? null : 'playerWin',
       gold: 50, streak: { kind: 'win', count: 3 } }));
-    expect(plan.streakAfter).toEqual({ kind: 'win', count: 3 });
-    expect(plan.incomeBreakdown).toEqual({ base: 5, win: 0, interest: 5, streak: 0 });
-    expect(plan.goldAfter).toBe(60);
+    expect(plan.streakAfter).toEqual({ kind: 'win', count: roundKind === 'pve' ? 4 : 3 });
+    expect(plan.incomeBreakdown).toEqual({ base: 5, win: 0, interest: 5, streak: roundKind === 'pve' ? 1 : 0 });
+    expect(plan.goldAfter).toBe(roundKind === 'pve' ? 61 : 60);
     expect(plan.playerDamage).toBe(0);
   });
 
@@ -62,7 +62,7 @@ describe('M5 independent economic answers', () => {
     for (const result of ['enemyWin', 'draw'] as const) {
       const plan = planRoundEconomy(input({ roundKind: 'pve', result, hp: 2, enemySurvivors: 8 }));
       expect([plan.baseDamage, plan.playerDamage, plan.hpLost, plan.hpAfter]).toEqual([3, 3, 2, 0]);
-      expect(plan.streakAfter).toEqual({ kind: null, count: 0 });
+      expect(plan.streakAfter).toEqual({ kind: 'loss', count: 1 });
     }
   });
 

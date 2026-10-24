@@ -1,3 +1,4 @@
+import { MAX_COMBAT_TICKS } from './combat-types';
 import { isPresent, isSelectable } from './anomalies/availability';
 import { installBattleEquipmentBatch, validateBattleEquipmentLog } from './battle-equipment';
 import { d11CombatDisplay } from './d11-display';
@@ -60,7 +61,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'chaosEnergyChanged':case 'melEnergyChanged':return {...envelope,...pick(event,['type','unitId','before','after'])};
     case 'bloodFrenzyChanged':return {...envelope,...pick(event,['type','unitId','active','permanent'])};
     case 'devoured':return {...envelope,...pick(event,['type','unitId','targetId'])};
-    case 'movement': return { ...envelope, type: event.type, unitId: event.unitId, from: cellView(event.from), to: cellView(event.to) };
+    case 'movement': return { ...envelope, type: event.type, unitId: event.unitId, from: cellView(event.from), to: cellView(event.to), ...(event.reason ? { reason: event.reason } : {}) };
     case 'attack': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId']) };
     case 'targetChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'before', 'after']) };
     case 'unitRevived': return { ...envelope, ...pick(event, ['type','unitId','hp']), sourceId:event.source.ownerId };
@@ -158,7 +159,7 @@ export function createCombatReplayRecorder(initialState: CombatState,
       record(previousState, next) {
         if (result || previous.status !== 'running' || previousState.combatId !== initial.combatId
           || next.state.combatId !== initial.combatId || previousState.tick !== previous.tick
-          || next.state.tick !== previous.tick + 1 || next.state.tick > 1200) throw new RangeError('replay-divergence');
+          || next.state.tick !== previous.tick + 1 || next.state.tick > MAX_COMBAT_TICKS) throw new RangeError('replay-divergence');
         // Whitelists detach nested mutable fields before freezing this tick.
         const view = freezeReplay(combatViewState(next.state));
         const events: CombatViewEvent[] = toCombatViewEvents(toLedgerEvents(next.events));
@@ -179,7 +180,7 @@ export function createCombatReplayRecorder(initialState: CombatState,
         return ticks[ticks.length - 1];
       },
       finish(terminalState) {
-        if (terminalState.status !== 'finished' || terminalState.tick < 0 || terminalState.tick > 1200)
+        if (terminalState.status !== 'finished' || terminalState.tick < 0 || terminalState.tick > MAX_COMBAT_TICKS)
           throw new RangeError('invalid-replay-input');
         const terminal = freezeReplay(combatViewState(terminalState));
         if (canonicalContent(previous) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
@@ -198,7 +199,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   const battle = structuredClone(input);
   battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));
   if (battle.initial.tick !== 0 || battle.terminal.status !== 'finished'
-    || battle.terminal.tick > 1200 || battle.terminal.tick < 0) throw new RangeError('invalid-replay-input');
+    || battle.terminal.tick > MAX_COMBAT_TICKS || battle.terminal.tick < 0) throw new RangeError('invalid-replay-input');
   const terminal = freezeReplay(combatViewState(battle.terminal));
   const recorder = createCombatReplayRecorder(battle.initial, battle.events);
   const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;

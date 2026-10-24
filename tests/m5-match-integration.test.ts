@@ -28,9 +28,12 @@ describe('M5 Match atomic integration', () => {
     expect(restoreMatch(serializeMatch(initial))).toEqual(initial);
     const before=reachRound('2-1',false),c=before.pendingChoice!;
     expect(c.kind).toBe('augment');expect(restoreMatch(serializeMatch(before))).toEqual(before);
-    const selected=selectChoice(before,c.choiceId,c.generation,c.offers[0]);
+    // v22 augment tier table: seed 42 now offers crown-guarded first, which grants its own
+    // Crownguard item; pick the item-free Reunion so the no-component-package check stays exact.
+    const pick='reunion';expect(c.offers).toContain(pick);
+    const selected=selectChoice(before,c.choiceId,c.generation,pick);
     expect(selected.ok).toBe(true);if(!selected.ok)throw new Error(selected.reason);
-    const stale=selectChoice(selected.state,c.choiceId,c.generation,c.offers[0]);
+    const stale=selectChoice(selected.state,c.choiceId,c.generation,pick);
     expect(stale.ok).toBe(false);expect(stale.state).toBe(selected.state);
     expect(selected.state.phase).toBe('preparation');expect(selected.state.items).toHaveLength(0);expect(selected.state.augments).toHaveLength(1);
     expect(restoreMatch(serializeMatch(selected.state))).toEqual(selected.state);

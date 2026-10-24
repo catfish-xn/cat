@@ -1,7 +1,8 @@
+import { CRAB_DEFINITIONS } from './opening-crabs';
 import { freezeContent } from './freeze';
 
 /** Approved project content; candidate S13 records do not establish these encounters. */
-export type MonsterFamily = 'minion' | 'krug' | 'wolf' | 'razorbeak' | 'elder-dragon' | 'rift-herald';
+export type MonsterFamily = 'minion' | 'krug' | 'wolf' | 'razorbeak' | 'elder-dragon' | 'rift-herald' | 'scuttle' | 'giant-crab';
 export type NeutralMechanism =
   | { readonly kind: 'none' }
   | { readonly kind: 'companion-heal'; readonly id: string; readonly missingHpBps: number; readonly maxReactions: number }
@@ -47,6 +48,7 @@ export function neutralAbilityId(definition: NeutralDefinition): string {
 
 /** M8B_ENCOUNTERS §3–4 / POLICY P-N01–13, P-M01–05. */
 export const NEUTRAL_DEFINITIONS: Readonly<Record<string, NeutralDefinition>> = freezeContent({
+  ...CRAB_DEFINITIONS,
   'pve-minion-melee-a': neutral('pve-minion-melee-a', '近战小兵 A', 'minion', 110, 8, 5000, 0, 0, 1),
   'pve-minion-melee-b': neutral('pve-minion-melee-b', '近战小兵 B', 'minion', 160, 10, 6000, 0, 0, 1),
   'pve-minion-ranged-b': neutral('pve-minion-ranged-b', '远程小兵 B', 'minion', 120, 9, 6000, 0, 0, 3),

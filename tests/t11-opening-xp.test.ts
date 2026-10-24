@@ -21,7 +21,7 @@ import { makeRoom, runUntil } from './server/helpers';
 // User-signed T11 oracle: 0 + 2 + 2 + 2 XP, thresholds 2 + 2 => level 3, 2/6.
 // Only start/continue and mandatory loot choices; no purchases, sales, rerolls or paid XP.
 describe('T11 signed opening economy', () => {
-  it('seed 42 single-player enters 2-1 with 3 levels, 2/6 XP and 10 gold (v17 seed-42 has no opening gold atoms), exactly once', () => {
+  it('seed 42 single-player enters 2-1 with 3 levels, 2/6 XP and 20 gold (v22 opening income and PvE streaks plus scuttle-crab kill gold), exactly once', () => {
     expect(XP_TO_NEXT_LEVEL).toEqual({ 1: 2, 2: 2, 3: 6, 4: 10, 5: 20, 6: 36, 7: 48, 8: 68, 9: 68 });
     let state = createMatch(42, {mode:'solo'});
     for (const roundId of ['1-2', '1-3', '1-4']) {
@@ -35,7 +35,9 @@ describe('T11 signed opening economy', () => {
       state = accepted(nextRound(restored, round));
       expect(nextRound(state, round)).toEqual({ ok: false, state, reason: 'wrong-phase' });
     }
-    expect(state).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 10 });
+    // v22 opening base 2/3/4 + PvE loss-streak gold 0/1/1 = 11; seed 42 draws the scuttle-crab opening,
+    // whose 2/3/4 crab kills each pay 1G (stage <= 4) = 9.
+    expect(state).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 20 });
     expect(state.roundResults.map(r => r.xpRequested)).toEqual([2, 2, 2]);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
   });
@@ -43,14 +45,17 @@ describe('T11 signed opening economy', () => {
   it('seed 42 eight-seat room reaches 2-1 with the same earned income before explicit orb claims', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
-    runUntil(room, clock, s => s.roundId === '2-1' && s.phase === 'choice');
+    // v22: the 2-1 augment choice opens inside the room's preparation phase.
+    runUntil(room, clock, s => s.roundId === '2-1' && s.phase === 'preparation');
     expect(room.state.fault).toBeNull();
     expect(room.state.seats).toHaveLength(8);
     for (const seat of room.state.seats) {
-      // v15 online loot is earned but not banked until claimOrb. The 3G
-      // opening bonus remains unclaimed; signed income itself is 2 + 3 + 5.
-      expect(seat.match).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 10 });
-      expect(seat.match.roundResults.map(r => r.goldAfter)).toEqual([2, 5, 10]);
+      // v15 online loot is earned but not banked until claimOrb. v22 income is 2 + 4 + 5
+      // (opening base 2/3/4 plus PvE loss streak); the scuttle-crab opening pays 2 + 3 + 4
+      // kill gold as settlement receipts, not orbs.
+      expect(seat.match).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 20 });
+      expect(seat.match.pendingChoice?.kind).toBe('augment');
+      expect(seat.match.roundResults.map(r => r.goldAfter)).toEqual([2, 8, 16]);
       expect(seat.match.m8.loot.receipts.filter(r => r.payload.kind === 'gold')).toEqual([]);
       expect(seat.match.roundResults.map(r => r.xpRequested)).toEqual([2, 2, 2]);
     }

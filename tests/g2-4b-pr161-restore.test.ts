@@ -14,7 +14,8 @@ import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {drainG23Rewards} from '../src/simulation/g2-3-runtime';
 import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import {grantMechanicGold,grantMechanicItem,grantMechanicUnit,openMechanicChoice} from '../src/simulation/seat-mechanics';
-import {accepted,naturalForgeStates,naturalTier4Preparation} from './fixtures/g24-natural-forge';
+import {accepted,naturalForgeStates,naturalTier4Preparation,openConquerorAnvil} from './fixtures/g24-natural-forge';
+import {anvilChoiceId} from '../src/simulation/anvils';
 import {finishPublicEquipmentBattle} from './fixtures/b8-public-equipment';
 import {CompletedBattleHistory} from './fixtures/completed-battle-history';
 import {validateBattleCollection} from '../src/replay/history';
@@ -133,7 +134,10 @@ it('restores the copied hero across battles and an equip/remove cycle with full 
 },20_000);
 
 let tier14:MatchState|undefined;
-/** Historical receipt vector reaches 1172; the tier14 award itself comes from a real solo battle. */
+/** Historical receipt vector reaches 1188; the tier14 award itself comes from a real solo battle (5-5).
+ * v22: batch-B crabs (scuttle-puddle) field five 4-7 crabs, so seed42 opens tier 10 one round later (5-3, see below);
+ * the vector now rewrites the 5-3 receipt on top of 648 stacks, and 27 tier-9 takedowns (20 stacks each) keep it
+ * below the tier-14 threshold (1200) so the next real battle (+42) still earns tier 14. */
 function tier14Battle():MatchState{
  if(tier14)return tier14;
  const pending=naturalForgeStates().get(10)!,choice=pending.pendingChoice!;
@@ -141,7 +145,7 @@ function tier14Battle():MatchState{
  const original=readG23Progress(state)!;let replay=createG23Progress(state.seed);
  for(const receipt of original.economyReceipts){
   if(receipt.kind!=='battle')throw Error('Unexpected fixture market');
-  const facts=receipt.facts.round===state.round?{...receipt.facts,conquerorTier:9,conquestTakedowns:Array.from({length:28},(_,i)=>`vector-enemy-${i}`)}:receipt.facts;
+  const facts=receipt.facts.round===state.round?{...receipt.facts,conquerorTier:9,conquestTakedowns:Array.from({length:27},(_,i)=>`vector-enemy-${i}`)}:receipt.facts;
   replay=advanceG23Economy(replay,facts).progress;
  }
  state=writeG23Progress(state,{...original,...replay});
@@ -149,15 +153,31 @@ function tier14Battle():MatchState{
  if(last.kind!=='battle')throw Error('Expected final battle');
  for(const payout of g23BattlePayouts(last.facts,replay.conquest.chestsOpened,original.conquest.chestsOpened))state=accepted(grantMechanicGold(state,payout));
  state=accepted(nextRound(state,state.round));
- expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['5-3',1172,13]);
- while(state.phase==='choice'){
-  const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
+ expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['5-4',1188,13]);
+ // 5-4 is a supply round (its pick settles it; no mechanic choices/anvil openings); the next battle is 5-5.
+ expect(state.pendingChoice?.payload).toBeUndefined();
+ while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
+ expect(state.phase).toBe('settlement');
+ state=accepted(nextRound(state,state.round));
+ expect([state.roundDefinitionId,state.phase]).toEqual(['5-5','preparation']);
+ // v22 anvil units: the tier-11 support anvil waits in an orb; claim it, open it by selling and take the first offer
+ // exactly as the old popup was resolved here.
+ for(;;){
+  if(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));continue;}
+  const opened=openConquerorAnvil(state);if(!opened)break;state=opened.state;
  }
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
  state=accepted(startMatchCombat(state));
  for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
- expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['5-3',1214,14]);
- expect(state.pendingChoice?.choiceId).toBe('g23:conqueror:14:atom:1:copy:0');
+ expect([state.roundDefinitionId,readG23Progress(state)!.conquest.stacks,readG23Progress(state)!.conquest.chestsOpened]).toEqual(['5-5',1230,14]);
+ // v22 anvil units: the tier-14 artifact forge is claimed as an anvil unit and opened by selling it (no popup).
+ expect(state.pendingChoice).toBeNull();
+ const opened=openConquerorAnvil(state)!;
+ expect(opened.receiptId).toBe('g23:conqueror:14:atom:1:copy:0');
+ state=opened.state;
+ const anvilUnit=state.seatMechanics!.receipts.find(r=>r.receiptId===opened.receiptId);
+ if(anvilUnit?.kind!=='unit')throw Error('Expected tier14 anvil unit');
+ expect(state.pendingChoice?.choiceId).toBe(anvilChoiceId(anvilUnit.unitId!));
  tier14=state;return state;
 }
 
@@ -241,7 +261,9 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
   expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
  ]);
  // multiplayer G2-4a restored the tier-12 crown; the tier-11 support anvil takes item-16 first, so the crown is item-17.
- expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-20',definitionId:'TFT_Item_ForceOfNature'});
+ // v22: four earlier item births precede it (2-1 Portable Forge from the gold 2-1 augment tier, the 4-2 augment item,
+ // and scuttle-puddle's 2-7/3-7 component rewards), so the crown moves from item-20 to item-24.
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-24',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
   // The support trial grants four earlier items; birth must still use the exact frozen serial.
   kind:'item',itemId:`item-${states[1].combatInputBasis!.nextItemSerial}`,definitionId:'TFT5_Item_ArchangelsStaffRadiant',
@@ -260,14 +282,16 @@ it('rejects a duplicator receipt and matching hero forged to an unowned option a
  expect([state.seed,state.round,state.roundDefinitionId]).toEqual([42,6,'2-3']);
  const receiptId='g23:conqueror:4:atom:1:copy:0';
  const receipt=state.seatMechanics!.receipts.find(r=>r.receiptId===receiptId);
- expect(receipt).toMatchObject({kind:'unit',definitionId:'swain',unitId:'unit-70'});
+ // v22 augment tier table: seed42's 2-1 node is gold, so the fixture takes Portable Forge instead of All For One I,
+ // whose two filler heroes no longer take unit-66/67.
+ expect(receipt).toMatchObject({kind:'unit',definitionId:'swain',unitId:'unit-68'});
  expect(state.preparation.units.some(u=>u.definitionId==='zeri')).toBe(false);
  const progress=readG23Progress(state)!,bundle=progress.rewards.find(b=>b.id==='g23:conqueror:4')!;
  const atom=g23RewardAtoms(bundle,state.seed).find(a=>a.kind==='duplicator')!;
  expect(atom.options).toContain('zeri');
  const bad=structuredClone(state);
  Object.assign(bad.seatMechanics!.receipts.find(r=>r.receiptId===receiptId)!,{definitionId:'zeri'});
- Object.assign(bad.preparation.units.find(u=>u.id==='unit-70')!,{definitionId:'zeri'});
+ Object.assign(bad.preparation.units.find(u=>u.id==='unit-68')!,{definitionId:'zeri'});
  expect(()=>serializeMatch(bad)).toThrow('mechanic duplicator target');
  expect(()=>restoreMatch(bad)).toThrow('mechanic duplicator target');
  expect(()=>restoreMatch(JSON.stringify(bad))).toThrow('mechanic duplicator target');
@@ -328,9 +352,13 @@ it('rejects edited automatic birth serials, receipt/ledger order, rounds and def
  }
 },60000);
 
-it('seed42 naturally opens tier10 at 5-2/654 stacks and round-trips the selected artifact in settlement',()=>{
+it('seed42 naturally opens tier10 at 5-3/690 stacks and round-trips the selected artifact in settlement',()=>{
  const state=naturalForgeStates().get(10)!,choice=state.pendingChoice!;
- expect([state.round,state.roundDefinitionId,readG23Progress(state)!.conquest.stacks]).toEqual([26,'5-2',654]);
+ // v22 batch-B crabs: seed42 rolls scuttle-puddle, whose 4-7 board has five crabs (the sixth carrier shares the
+ // fifth crab's death), so 4-7 yields one fewer takedown and the 650-stack tier 10 is crossed at 5-3 (648+42).
+ expect([state.round,state.roundDefinitionId,readG23Progress(state)!.conquest.stacks]).toEqual([27,'5-3',690]);
+ // v22 anvil units: the fixture claimed the tier-10 anvil unit from its orb and opened it by selling it.
+ expect(choice).toMatchObject({kind:'forge',payload:{kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:choice.offers[0]}});
  // Pick a non-timeout offer; the 29-artifact pool (v11) changed the natural seed42 offers.
  const pick=choice.offers[1];
  const picked=accepted(selectChoice(state,choice.choiceId,choice.generation,pick));
@@ -401,13 +429,21 @@ it('cold Node processes restore actual canonical saves for tiers4/10/14 with the
 
 it('rejects an edited forge ID prefix and ordinary completed candidates while source remains conqueror',()=>{
  const state=naturalForgeStates().get(10)!,choice=state.pendingChoice!;
- const choiceId='fixture:disguised-forge';
+ const choiceId='fixture:disguised-forge',conqueror={kind:'forge' as const,source:'conqueror',timeoutOption:choice.offers[0]};
+ // v22 anvil units: the open tier-10 window belongs to an opened anvil unit, so the anvil ledger (birth receipt,
+ // anvil-opened fact, rebuilt offers and anvil-unit payload) is its authority; disguising it is rejected there.
  for(const replacement of [
   {...choice,choiceId,eventId:choiceId},
   {...choice,choiceId,eventId:choiceId,offers:['warmog','infinity-edge','bloodthirster','last-whisper'],payload:{...choice.payload!,timeoutOption:'warmog'}},
+  {...choice,choiceId,eventId:choiceId,payload:conqueror},
+  {...choice,payload:conqueror},
  ]){
   const forged={...state,pendingChoice:replacement};
-  expect(()=>restoreMatch(forged)).toThrow('G23 pending choice authority');
-  expect(()=>restoreMatch(JSON.stringify(forged))).toThrow('G23 pending choice authority');
+  expect(()=>restoreMatch(forged)).toThrow('Invalid anvil ledger');
+  expect(()=>restoreMatch(JSON.stringify(forged))).toThrow('Invalid anvil ledger');
  }
+ // Re-labelling it as the old automatic Conqueror popup is rejected by the mechanic choice authority.
+ const legacyId='g23:conqueror:10:atom:0:copy:0',legacy={...state,pendingChoice:{...choice,choiceId:legacyId,eventId:legacyId,payload:conqueror}};
+ expect(()=>restoreMatch(legacy)).toThrow('mechanic choice');
+ expect(()=>restoreMatch(JSON.stringify(legacy))).toThrow('mechanic choice');
 },60000);

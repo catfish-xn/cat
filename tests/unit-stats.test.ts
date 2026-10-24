@@ -32,10 +32,10 @@ describe('authored unit catalog and star stat resolution', () => {
 
   it.each(CONTENT)('resolves %s at all stars with one integer rounding and unchanged other attributes',
     (id, _cost, health, attack, armor, magicResist, attackRange, maxMana, abilityId) => {
-      const percents = [100n, 180n, 324n];
+      const healthPercents = [100n, 180n, 324n], attackPercents = [100n, 150n, 225n];
       for (const star of [1, 2, 3] as const) {
-        expect(getUnitStats(id, star)).toEqual({ health: Number(BigInt(health) * percents[star - 1] / 100n),
-          attack: Number(BigInt(attack) * percents[star - 1] / 100n), armor, magicResist, attackRange,
+        expect(getUnitStats(id, star)).toEqual({ health: Number(BigInt(health) * healthPercents[star - 1] / 100n),
+          attack: Number(BigInt(attack) * attackPercents[star - 1] / 100n), armor, magicResist, attackRange,
           maxMana, initialMana: 0, abilityId, attackIntervalTicks: 20 });
       }
     },
@@ -68,7 +68,7 @@ describe('authored unit catalog and star stat resolution', () => {
   });
 
   it('keeps Loris 14.24b mana override and exact integer star scaling', () => {
-    const stars = [[850, 50], [1530, 90], [2754, 162]];
+    const stars = [[850, 50], [1530, 75], [2754, 112]];
     for (const star of [1, 2, 3] as const) expect(getUnitStats('loris', star)).toEqual({
       health: stars[star - 1][0], attack: stars[star - 1][1], armor: 50, magicResist: 50,
       attackRange: 1, attackIntervalTicks: 31, baseAttackSpeedBps: 6500, initialMana: 40, maxMana: 80, abilityId: 'loris-ability',

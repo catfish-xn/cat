@@ -1,4 +1,5 @@
 import * as api from '../../src/simulation/match';
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import type { MatchState, MatchCommandResult, MatchEvent } from '../../src/simulation/match';
 import { createRequire } from 'node:module';
 const { run } = createRequire(import.meta.url)('../../scripts/generate-m5-route.cjs');
@@ -11,11 +12,12 @@ export const bench = (s: MatchState) => players(s).filter(u => u.location.kind =
 export const plan = (s: MatchState) => s.m8.loot.frozen.rounds.find(r => r.encounterPlan.roundId === s.roundDefinitionId)!;
 export function reserveExcept(initial: MatchState, keep: readonly string[]): MatchState {
   let s = initial;
-  for (const u of players(s).filter(u => u.location.kind === 'board' && !keep.includes(u.id))) {
+  // v22 opening structures (Trainer Golem) cannot be benched or sold; they stay where the opening put them.
+  for (const u of players(s).filter(u => u.location.kind === 'board' && !keep.includes(u.id) && isSellableUnit(u.definitionId))) {
     const used = new Set(bench(s).map(u => u.location.kind === 'bench' ? u.location.slot : -1));
     const slot = Array.from({length:9}, (_,i)=>i).find(i=>!used.has(i));
     if (slot === undefined) {
-      const excess=bench(s).find(unit=>!keep.includes(unit.id));
+      const excess=bench(s).find(unit=>!keep.includes(unit.id)&&isSellableUnit(unit.definitionId));
       if(!excess)throw Error('T13 public bench full');
       s=accepted(api.sellUnit(s,excess.id));
       const location=excess.location;
@@ -91,12 +93,16 @@ export async function transferPreparation({equipGloves=true}={}) {
   }
   return s;
 }
+// v22: seed 38 draws the scuttle-crab opening, whose 4-7 crabs carry the razorbeak orbs, so source
+// deaths no longer name the frozen razorbeak slots. Seed 2253 has no opening encounter and the same
+// 4-7 shape (component, reforger at entry 1, heroes) with the identical 3 HP / 97 lost entry.
+const TERMINAL_SEED=2253;
 export async function terminalPreparation(keep:string|null,col=1,row=7) {
-  const key='terminal38';
+  const key=`terminal${TERMINAL_SEED}`;
   if(!prefixes.has(key)) {
     const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
     const captured=new Error('terminal capture');let prefix:MatchState|undefined;
-    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[]});
+    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:TERMINAL_SEED,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[]});
     }catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
   }

@@ -51,7 +51,7 @@ export const G23_POLICY = freezeContent({
   academy:{memberBaseBps:500,stacking:'per-matching-copy-base-once',grantsAtDistinctTier:[3,4,5]},
   // 14.24b Take All / Save Shimmer evidence (user 2026-10-22); source weights unchanged.
   // One weighted draw equals the former first candidate; no discarded RNG draws.
-  chemBaron:{candidateCount:1,sampling:'weighted-single-bundle',shimmerRounds:'pvp-only',keep:'skip-retains-shimmer'},
+  chemBaron:{candidateCount:1,sampling:'weighted-single-bundle',shimmerRounds:'pvp-only',keep:'skip-retains-shimmer',equipment:'concrete-at-open-existing-reward-atom-substreams-v1'},
   blackMarkets:G23_BLACK_MARKETS,
   /** Source PercentGoldChance per crown; 约定值 G24-CROWN-GOLD-01..05 (deployed holder, PvE and PvP wins, one roll per crown). */
   crownGold:{chanceBps:G23_SPECIAL_ITEM_SOURCE.TFT_Item_ForceOfNature.values.PercentGoldChance*100,gold:1,holders:'equipped-on-deployed-unit-at-combat-start',results:['win'],roundKinds:['pve','pvp'],rolls:'one-per-crown-after-black-market'},

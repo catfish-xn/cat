@@ -4,6 +4,7 @@ import type { LootView, RevealedDropView } from './m8/ui-contracts';
 import { compareLootFreezeSlots, lootChoiceId } from './loot-identity';
 import { hasPendingLootCapacity, unresolvedLootChoices } from './loot-runtime';
 import { freezeContent } from './content/freeze';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { unclaimedOrbPlans } from './orb-claim';
 
 /** Payload is a display whitelist too: future nested fields must neither leak nor freeze input references. */
@@ -35,7 +36,7 @@ export function readLootView(state: Readonly<MatchState>): LootView {
     const paid = state.sharedPool && loot.receipts.find(receipt => receipt.dropId === drop.dropId);
     const identity = { orbId:drop.orbId, entryOrdinal:drop.entryOrdinal, dropId: drop.dropId, encounterId: drop.encounterId, sourceUnitId: drop.sourceUnitId, roundId: drop.roundId, payload: payloadView(paid ? paid.payload : drop.payload) };
     if (progress?.status === 'granted') drops.push({ ...identity, status: 'granted', receiptId: progress.receiptId, allowedActions: [] });
-    else if (progress?.status === 'revealed') drops.push({ ...identity, status: 'revealed', receiptId: null, allowedActions: [], reason: state.multiplayer?'awaiting-claim':'auto-grant-in-domain' });
+    else if (progress?.status === 'revealed') drops.push({ ...identity, status: 'revealed', receiptId: null, allowedActions: [], reason: state.multiplayer||drop.payload.kind==='forge'?'awaiting-claim':'auto-grant-in-domain' });
     else if (progress?.status === 'pending-capacity') drops.push({ ...identity, status: 'pending-capacity', receiptId: null, allowedActions: [], reason: 'bench-full' });
     else if (progress?.status === 'forfeited' && loot.earnedEvidence.some(e=>e.dropId===drop.dropId)) drops.push({...identity,status:'forfeited',receiptId:null,allowedActions:[],reason:state.multiplayer?.status==='eliminated'?'eliminated-forfeited':'timeout-forfeited'});
     else if (progress?.status === 'retained-terminal') drops.push({ ...identity, status: 'retained-terminal', receiptId: null, allowedActions: [], reason: 'terminal-bench-full' });
@@ -66,13 +67,20 @@ export function readLootView(state: Readonly<MatchState>): LootView {
   const claimReceipts=loot.receipts.filter(r=>r.resolution).map(r=>({receiptId:r.receiptId,dropId:r.dropId,payload:payloadView(r.payload),
     resolution:r.resolution!,gold:r.gold!,claimedRoundId:r.claimedRoundId!,grantedItemIds:[...r.grantedItemIds],grantedUnitIds:[...r.grantedUnitIds],
     ...(r.grantedConsumableIds?{grantedConsumableIds:[...r.grantedConsumableIds]}:{})}));
-  return freezeContent({ roundId, revealedDrops: drops, revealedOrbs, ...(state.multiplayer||unclaimedOrbs.some(o=>o.source==='family')?{unclaimedOrbs,claimReceipts}:{}), pendingClaims, canContinue: reason === null, reason, pendingChoice });
+  return freezeContent({ roundId, revealedDrops: drops, revealedOrbs, ...(unclaimedOrbs.length||state.multiplayer?{unclaimedOrbs,claimReceipts}:{}), pendingClaims, canContinue: reason === null, reason, pendingChoice });
 }
 
 export function readComponentEquivalent(state:Readonly<MatchState>):number {
   return state.scheduleReceipts.filter(r=>r.kind==='component').reduce((n,r)=>n+r.itemIds.length,0)
     + Object.values(state.m8.loot.guaranteeCounters).reduce((a,b)=>a+b,0)
-    + (state.seatMechanics?.receipts.filter(r=>r.source==='epic-loot'&&(r.kind==='item'||r.kind==='choice'&&r.itemId!==null)).length??0)*2;
+    + (state.seatMechanics?.receipts.filter(r=>r.source==='epic-loot'&&(r.kind==='item'||r.kind==='choice'&&r.itemId!==null)).length??0)*2
+    + lootAnvilEquivalent(state);
+}
+/** v22: loot forges arrive as bench anvils; an opened one counts its pick (completed 2, component 1). */
+function lootAnvilEquivalent(state:Readonly<MatchState>):number {
+  const born=new Set(state.m8.loot.receipts.filter(r=>r.payload.kind==='forge').flatMap(r=>r.grantedUnitIds.map(id=>JSON.stringify(['anvil',id]))));
+  return (state.seatMechanics?.receipts??[]).reduce((n,r)=>r.kind==='choice'&&r.source==='anvil-unit'&&r.itemId!==null&&born.has(r.receiptId)
+    ?n+(ITEM_DEFINITIONS[r.optionId]?.kind==='completed'?2:1):n,0);
 }
 
 /** Opponents receive count/tier only; never identities or contents. */

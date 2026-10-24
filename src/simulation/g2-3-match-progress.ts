@@ -60,7 +60,7 @@ export function* validateG23ProgressSteps(progress:G23MatchProgress,seed:number,
  fail(Array.isArray(progress.rewardClaims));const claimIds=new Set<string>();
  for(const r of progress.rewardClaims){
  const bundle=progress.rewards.find(b=>b.id===r.bundleId),atom=bundle&&g23RewardAtoms(bundle,seed).find(a=>a.id===r.atomId);
- fail(Object.keys(r).length===9&&bundle&&atom&&r.id===`${r.atomId}:copy:${r.copy}`&&!claimIds.has(r.id)&&Number.isSafeInteger(r.copy)&&r.copy>=0&&r.copy<atom!.quantity&&Number.isSafeInteger(r.round)&&r.round>=bundle!.round&&r.round<=round&&r.copy===progress.rewardClaims.slice(0,progress.rewardClaims.indexOf(r)).filter(c=>c.atomId===r.atomId).length&&r.kind===atom!.kind&&r.gold===atom!.gold&&(r.kind==='gold'?r.definitionId===''&&r.instanceId===null:atom!.options.includes(r.definitionId)));
+ fail(Object.keys(r).length===9&&bundle&&atom&&r.id===`${r.atomId}:copy:${r.copy}`&&!claimIds.has(r.id)&&Number.isSafeInteger(r.copy)&&r.copy>=0&&r.copy<atom!.quantity&&Number.isSafeInteger(r.round)&&r.round>=bundle!.round&&r.round<=round&&r.copy===progress.rewardClaims.slice(0,progress.rewardClaims.indexOf(r)).filter(c=>c.atomId===r.atomId).length&&r.kind===atom!.kind&&r.gold===atom!.gold&&(r.kind==='gold'?r.definitionId===''&&r.instanceId===null:atom!.forgeDefinitionId?atom!.forgeDefinitionId===r.definitionId:atom!.options.includes(r.definitionId)));
  claimIds.add(r.id); yield;
  }
  validateG23Conquest(progress.conquest);fail(Array.isArray(progress.itemReceipts));

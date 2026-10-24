@@ -1,3 +1,89 @@
+## 2026-10-23 六费 AD（P；覆盖历史六费 AD 3.6 倍说明）
+
+来源：本地 `perf-1022/rules-1023/approved-1023-batch2.md`，用户 10-23 批准的项目决定（P）。沃里克 **110/165/248**、维克托 **100/150/225**、梅尔 **80/120/180**；从一星值乘 `STAR_ATTACK_PERCENT` 后正数四舍五入，`floor((基础AD×整数百分比+50)/100)`，不是从二星递推。普通 AD 仍向下取整；六费 HP 与专用四星不变。`S13_COMBAT_RULES.starAttackPercent` 同时适用于普通/六费，`sixCostStarPercent` 仅用于六费 HP，新增 `sixCostAttackRounding:'half-up'` 标明取整语义。维克托固定 AD 与转 AP 的基础 AD 扣除均改用 100/150/225，额外 AD 的原有计算顺序不变。公共函数签名、输入输出形状、失败原因不变；无新命令、事件或 RNG 抽取。**待 v22 统一录制**；不更新 epoch/digest/golden。手算与验证见 [六费 AD 报告](SIX_COST_AD_STAR_SCALING.md)。
+
+## 2026-10-23 经济与阶段流程（项目决定 P；待 v22 统一录制）
+
+来源：本地 `perf-1022/rules-1023/approved-1023-batch2.md`，用户 10-23 批准第10/11/12/13/15条；本单离线，不扩展其他条目。本节覆盖下文旧连胜档、PvE不计连胜败和开局2/3/5基础金的历史描述。
+
+- PvP、PvE（含1-2/1-3/1-4）胜负都更新同一连胜败；平局沿已有规则算败。结算后2–4连+1、5连+2、6连及以上+3；供给轮既不更新也不支付连胜败。PvE仍无胜利金，开局仍无利息，HP/XP规则不改。
+- 兼容 #406：1-3/1-4/2-1 **准备入口基础金为2/3/4**，由上一轮1-2/1-3/1-4结算冻结应收额；2-2起基础金仍5。连胜败金同基础金一起下一入口支付；PvP胜利金仍即付。`RoundResult.goldAfter`是方案值，`state.gold`才是可花余额。三场全败且无操作/战利品时，入口余额0→2→6→11（基础9+连败2），2-1强化前已到账。恢复/重复推进不重付。
+- 新只读查询 `getRoundPreparationMs(roundId:string):number`（`simulation/round-schedule`）：1-2=6000、1-3=15000、1-4及其他PvE=20000、4-6=75000，其余（含`overtime-n`）=30000毫秒；无效ID抛`RangeError`，无状态/RNG变化。服务器 `Room.afterChoiceWindow` 统一调用；选择阶段计时不变。既有`preparationMs`=30000使用规则表，显式非默认值仍作为全部回合的调试/加速覆盖。4-6选择完成后进入准备时使用75秒。
+- 棱彩前奏、棱彩终章、发条猴子的`descriptionZh`改成玩家可读效果；内部来源、概率、触发、抽取和其他说明不改。无新Match命令、状态字段或失败原因枚举。
+
+**待 v22 统一录制**：不改身份常量、epoch、历史fixture/golden/身份断言；规则表仍由既有content digest脚本采集。验收与旧失败清单见 [经济阶段报告](ECONOMY_FLOW_1023.md)。
+
+## 2026-10-23 战斗法力规则（待 v22 统一录制）
+
+Match公共命令/失败原因不变。战斗新增可选 `CombatUnit.damageManaRemainderCenti`（0–99），`mana`可因非受伤来源超过`maxMana`；施法后`manaLockedUntilTick`为开始tick+20。恢复从认证输入核对法力、余数、锁蓝时间，JSON保存和完整重放保持，拒绝伪造（`mana binding facts`或动态战斗既有authoritative错误）。阿木木零蓝条与维克托专用资源保持。完整公式、溢出/退款/锁蓝与暴击转换见 [COMBAT_CONTRACT](COMBAT_CONTRACT.md) 顶部及[本单报告](COMBAT_MANA_RULES.md)。**待 v22 统一录制**；本单不录epoch，不改版本/digest常量/历史golden。
+
+## 2026-10-23 普通单位攻击力星级倍率修正（待 v22 统一录制）
+
+用户 10-23 批准采用 TFT 通用规则：普通单位 1/2/3 星 HP 为 100/180/324%，AD 改为 100/150/225%，分别从一星基础值乘百分比后向下取整。14.24 源数据只有一星属性，不将倍率声称为源表中的三档数值。`getUnitStats(definitionId,starLevel)` / `resolveUnitStats(definition,starLevel)` 签名、输出形状和失败原因不变；无新命令。普通倍率唯一来源为 `content/unit-star-scaling.ts`，`S13_COMBAT_RULES` 元数据改为 `starHealthPercent` / `starAttackPercent`，六费用 `sixCostStarPercent`，均为星级键到整数百分比的只读表；原 `starStatPercent` 无调用方，移除。六费 HP 保留 100/180/360%；六费 AD 按各自一星值 × 100/150/225% 后四舍五入（正数半入），见下述 P 决定。魔像自定表、fixedStarStats 召唤物及专用四星值保持不变。来源、六费逐项现状、检查范围与测试清单见 [AD 星级报告](AD_STAR_SCALING.md)。不更新身份常量、epoch 或历史 golden；**待 v22 统一录制**。
+
+## 2026-10-23 五费技能候选集成
+
+[五费技能修正](FIVE_COST_3STAR_FIXES.md) 仅调整战斗实现：无新 Match 公共函数、输入输出、失败 reason 或网络事件种类。内部新增赛维卡持续/连咬任务，存档结构校验限定来源和取消语义，完整事实仍由认证战斗输入重演核对。按用户要求保留当前候选版本/digest/golden，随 v22 与攻击力星级倍率等改动统一录 epoch 后才能发布；不要将新旧战斗状态混用。后续项目决定P已完成金克丝三星电击和莫德凯撒最优直线，并明确玛尔扎哈五层平分；杰斯缺返回起点定义，仍未完成。见[五费技能几何报告](FIVE_COST_SKILL_GEOMETRY.md)，无新增公共签名、失败原因、事件或存档结构；待v22统一录制。
+
+## v22 候选：全桌强化等级组合（2026-10-23 用户批准；待 v22 统一录制）
+
+本节覆盖下文 v14/v15/PR2 的逐节点等权等级派生描述及上一版 Wiki V12.9 表。来源为用户批准第 6 条的本地 `augments-research-2026-10-23/data/odds-all27.csv`，14.24 客户端 `TFT9_AugmentArmoryConfiguration_Table`（`RandomizeProbabilityTableGlobally=true`）。按 CSV 顺序保留原整数权重，18 个非零组合，权重合计/分母 **109**；9 个零权重组合不会从基础表抽出。完整有序表冻结在 `AUGMENT_OFFER_POLICY.tierCombinations`，随既有 `scripts/content-digest.ts` 的 augmentPolicy 输入进入内容 digest；策略版本仍为候选 `augment-tier-table-v22`，整体 epoch/digest/golden **待 v22 统一录制**。
+
+| 三次强化等级（银/金/彩，按 CSV 顺序） | 原权重 |
+| --- | --- |
+| 银银金 / 银银彩 / 银金金 / 银金彩 / 银彩彩 | 5 / 5 / 12 / 5 / 1 |
+| 金银金 / 金银彩 / 金金金 / 金金彩 | 18 / 2 / 22 / 12 |
+| 金彩银 / 金彩金 / 金彩彩 | 6 / 10 / 1 |
+| 彩银金 / 彩银彩 / 彩金金 / 彩金彩 / 彩彩金 / 彩彩彩 | 4 / 1 / 2 / 1 / 1 / 1 |
+
+每局逻辑上只取一个组合，三个日程节点索引同一次样本。沿既有 UTF-16 FNV-1a32 算法（初值 `0x811c9dc5`、乘数 `0x01000193`、逐步 uint32），固定流名 `augment-tier-sequence-v1` 替代节点 ID；输入 `(rootSeed xor 0x61756774 xor streamHash) >>> 0`，lcg32-v1 仅取首词，`word % 109` 对应有序累计权重的半开区间。单机根为 Match.seed，联机根为 initializeSharedSeat 绑定的 SharedPoolState.seed（augmentTierSeed），与席位种子、调用顺序、候选或换牌次数无关。纯函数按不可变根重推同一组合，不新增可变 RNG/存档字段；不推进商店、候选、奖励、战斗、奇遇等任何现有流。恢复与回放共用此算法，私有投影仍不公开未来等级。
+
+奇遇仍先覆盖指定位置，不重抽组合、不按奇遇重新归一化：`golden-gala`（范德尔/PR2 augment-policy）三节点全金；`prismatic-party`（艾克/PR2）三节点全彩；`prismatic-prelude`（黑默丁格/PR2）仅 2-1 彩；`prismatic-finale`（黑默丁格/PR2）仅 4-2 彩。其余位置保留基础组合，其他奇遇无等级覆盖；激活收据语义不变。
+
+同批批准第 7、8 条：`geniuses`（羁绊：天才）从金改彩，其他强化档位、能力/赠卡数值不变；服务器 `ROOM_TIMING_DEFAULTS.choiceMs` 曾为 48_000；海克斯并入 50 秒准备阶段后回到 30_000（海克斯在 50 秒准备阶段内选，其他选择 30 秒），`CAT_CHOICE_SEC` 和显式 `RoomOptions.choiceMs` 仍可覆盖。该时长沿用既有统一 choice 阶段（强化及其他选择），不新增按类型分流或领域时钟。期限前不自动选取，到期沿既有 `timeoutChoice`；不消耗新的 RNG。天才改彩/48 秒为项目决定 P，来源为用户 10-23 批准的 `perf-1022/rules-1023/approved-1023-batch2.md` 第 7、8 条。界面本地演示默认覆盖仍为 30 秒，需 Claude 同步；在线服务器默认已为 48 秒。
+
+接口：既有 Match/server-entry 导出的 `deriveAugmentTier(seed:number,choiceId:string):AugmentTier` 保留签名，只接受 `round:2-1:augment` / `round:3-2:augment` / `round:4-2:augment`，返回组合第 1/2/3 项；非法节点抛 `Error('Unknown augment tier node')`。`resolveAugmentTier` 签名不变、先用奇遇覆盖。领域内部/测试新增 `augment-offers.ts` 导出 `deriveAugmentTierSequence(seed:number):readonly [AugmentTier,AugmentTier,AugmentTier]`，返回未覆盖的基础组合；配置权重不覆盖票值时抛 `Error('Invalid augment tier combination weights')`。没有新增命令或失败原因枚举；命令失败仍原 state、无事件/资源/RNG 变化。旧规则历史录制不迁移、不改断言，本批恢复一致性针对当前实现新生成的状态。
+
+## 2026-10-23 锻造器单位覆盖合同（待 v22 统一录制）
+
+本节覆盖下文以及 Batch A/B 报告中锻造器“自动弹窗/终局自动选择”的旧语义。四种 `TFT_ArmoryKeyCompleted/Component/Ornn/Support` 为备战席单位：不占人口、不可上阵/合星/装备、可挪位并跨回合保存。满席锻造器保留在未领取法球，其他条目可部分领取。蔚给 2 基础、杰斯给 1 神器；法球、史诗奖励、订阅/梅尔/巨蟹和 G2-3 forge atom 均改发单位。光明遗物 5 选 1、便携锻炉 4 选 1 仍立即选择。
+
+新增 `openAnvil(state, unitId): MatchCommandResult`，共享/线上命令 `{type:'openAnvil',unitId}`；出售锻造器等价打开且不加金币。新 `pendingChoice.payload={kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:offers[0]}`；仍用 choose 和 timeoutChoice，4 选 1，保留原采样器/种子流，超时首项。本人 `preparation.units[].anvil` 提供名称、出售/悬停文字及时间；公开观战不暴露选项。命令失败枚举、字段、发放接口、收据/恢复、Claude 计时器接入点见 [锻造器报告](ANVIL_UNITS.md)。规则不使用墙钟，打开后的独立 30 秒计时尚待 Claude 接线，不能复用准备期剩余秒数。
+
+4-7 野怪回合固定额外给 1 个基础装备锻造器（项目决定 **P**，用户 2026-10-23 批准）；原有 2–4 个散件掉落照常，不替换、不减少。固定 forge payload 追加到冻结计划首个法球末尾，不新增 RNG 消耗；领取入备战席，满席留球，沿用原收据、恢复和回放路径，单机/联机同源。14.24 原版数据未找到 4-7 必出散件锻造器的证据，仅有一张未被引用的 `EpicNPCLootComponentAnvil` 表，不能据此标为原版确认。候选规则/content 身份已变更，schema12/save8/replay7/command7；digest 随 manifest 计算，历史 epoch/golden 不改，**待 v22 统一录制**。
+
+## 2026-10-23 黑市开市固定装备（待 v22 统一录制）
+
+用户 10-23 批准“改”：黑市仍按原始权重、同一经济流的一词抽一个完整奖励包；开市时用既有奖励 atom 派生流，将包内直接发放的装备确定为 definitionId，保存在 `G23MarketOffer.concreteItems: readonly {atomId:string;definitionId:string}[]`（无装备为 `[]`）。具体装备包含固定装备，锻造器的后续选择、复制器目标、弈子及其他奖励不改。领取复制该数组到 `G23RewardBundle.concreteItems`，发装备只读取所存结果，不再抽取。
+
+私有界面入口为 `toPrivateSeatView(state).seatMechanics.seat.alchemist.offer.concreteItems`，例如 `[{atomId:'g23:market:round-12:1:atom:0',definitionId:'TFT13_Crime_Bronze_MageGuard'}]`（仅形状示例）。`offer.optionId/optionIds` 和 `pendingChoice.offers` 仍是原奖励包 apiName；界面按 definitionId 查已有装备名称，不得将其当作 choose 参数。拿走仍用 `selectChoice(state,choiceId,generation,offer.optionId)`，保留/超时仍为 `@skip`；没有新增命令或失败枚举，原有 stale/invalid-choice 原子失败不变。接口由既有 owner-only seatMechanics 投影直接带出，界面及服务器文件未改。
+
+派生仍为 `sampleG24Reward(pool, \`${seed}:${offer.id}:atom:${index}\`, 1)`，相同 seed/offer/源顺序的装备与旧领取时结果一致；无新增子流，不消耗市场、王冠或其他全局 RNG 游标。恢复/战斗输入/回放按原经济收据重建 offer 与领取包，严格比较包括具体装备的完整结构，缺失、重复、改序、跨 offer 或同池换装均拒绝；不迁移旧存档。保留微光、跳过成长、整包及唯一发奖语义不变。规则身份已记入 `G23_POLICY.chemBaron.equipment`；epoch/version/digest 常量及历史 golden 留待 v22 统一录制，候选不得混跑发布。验收见 [黑市报告](BLACK_MARKET_CONCRETE_OFFERS.md)。
+
+## v22 候选：奇遇展示读取兼容投影
+
+`openingEncounterId`、`readOpeningEncounterView`、`readOpeningMelProgress` 的只读输入扩为 `OpeningEncounterReadState`，接受完整奇遇状态、公开白名单或 null/缺字段；奖励读取只认权威 selection/receipts，不从投影重建。权威恢复校验及规则结果不变。完整签名、返回/失败语义、客户端回归及旧基线失败见 [V22_VIEW_FIX_REPORT](V22_VIEW_FIX_REPORT.md)。
+
+用户 10-23 批准采用 TFT 通用规则：普通单位 1/2/3 星 HP 为 100/180/324%，AD 改为 100/150/225%，分别从一星基础值乘百分比后向下取整。14.24 源数据只有一星属性，不将倍率声称为源表中的三档数值。`getUnitStats(definitionId,starLevel)` / `resolveUnitStats(definition,starLevel)` 签名、输出形状和失败原因不变；无新命令。普通倍率唯一来源为 `content/unit-star-scaling.ts`，`S13_COMBAT_RULES` 元数据改为 `starHealthPercent` / `starAttackPercent`，六费用 `sixCostStarPercent`，均为星级键到整数百分比的只读表；原 `starStatPercent` 无调用方，移除。六费原有 100/180/360%、维克托固定 AD/转法强基线、魔像自定表、fixedStarStats 召唤物及专用四星值保持不变。来源、六费逐项现状、检查范围与测试清单见 [AD 星级报告](AD_STAR_SCALING.md)。不更新身份常量、epoch 或历史 golden；**待 v22 统一录制**。
+
+## 2026-10-23 Batch A 覆盖合同（待统一 epoch）
+
+梅尔、维克托、金币订阅、战利品订阅已启用，覆盖历史关闭/只观察说明。普通六费商店也改为批准的完整q表、整店一次5q判定。接口、收据、恢复、加时阶段钟和UI字段见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md#接口与恢复合同)。公开命令不新增；装备与弈子待领使用既有 `claimOrb`，锻造器使用既有 `choose/timeoutChoice`。本批装备统一待领，不引入批准表外的库存格数。
+
+## 开局奇遇 Batch B（2026-10-23，待统一 epoch）
+
+四项已启用，覆盖下文 PR4/PR6 停用语义。`createMatch`/`initializeSharedSeat` 自动授予魔像，`nextRound` 自动升星及替换蟹编组；`commitG23Settlement` 接收权威首次死亡事实后一次发奖，客户端不得提交死亡来索奖。新增 `readOpeningBatchBRewards(state)` 只读本人已结算奖励；联机弈子仍用 `claimOrb` 与共享池事务。公开签名、输入/输出、失败原因、永久纹章、收据、恢复、箱子及UI字段见 [报告§3](OPENING_ENCOUNTERS_BATCH_B_REPORT.md#3-接口与恢复合同)。不更改当前epoch/digest常量或历史夹具。
+
+## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
+
+用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
+
+每战固定50ms/tick、最长 **900 tick（45秒）**；先结算该tick和消灭判定，双方仍有存活单位才 timeout→draw。**tick600（30秒）即时第1层**，之后每20tick加1层；伤害增幅和攻速各+1000Bps/层，无层数上限；受到治疗/护盾与新控制时长各-1000Bps/层，最多-7000Bps。控制持续tick四舍五入（正数半入，至少1tick），旧控制不回改。攻击冷却不追溯重算，模拟速度不变。
+
+层数/增减幅依据用户提供的 [Riot TFT 13.22 补丁说明](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-13-22-notes/)；30/45秒和离散tick边界为本项目执行约定。**本单按要求离线，未联网重新核验来源。** 移速固定加成缺明确数值，`OVERTIME_MOVE_SPEED_BONUS_BPS=0`，保留TODO，本单不改变移动间隔。完整数值、调用点和验收见 [规则实现报告](RULES_PLACEBO_OVERTIME.md)。
+
+本节覆盖下文历史60秒/1200tick及固定安慰剂金币描述。按用户要求不录epoch、不更新版本/digest常量或历史golden；待PR #410合并后统一切换。这是开发候选，当前身份不得用于新旧混跑或发布。
+
 ## 联机终局流法球（2026-10-23）
 
 `revealMatchCombatStreamTerminal(state, terminal): MatchCommandResult` 在可信 PvE 首遍终局登记可选 `pendingCombatTerminal`，提前揭示最后一击的掉落；保留 combat 阶段和领取 FIFO，结算时移除临时字段并按唯一收据发放。签名、`wrong-phase` 失败语义、校验、恢复边界和客户端字段见 [联机合同](MULTIPLAYER_CONTRACT.md#终局流法球揭示2026-10-23)。不改规则数值、RNG、网络命令或最终结算顺序。
@@ -153,7 +239,7 @@ PR8必须接收新的openingResolution并在刷出3-5准备画面前同步Room�
 | `component-anvils`（蔚） | 1-2 每席两个基础装备锻造器，依次选择 |
 | `artifact-anvil`（杰斯） | 1-2 每席一个神器锻造器 |
 
-PR5 另启用发条猴子，其余8项效果保持关闭（none 仍启用且无附加规则）；16项抽选顺序、权重合计10000及所有原始 null 不变。未强制强化节点沿现有等权 `deriveAugmentTier(rootSeed, choiceId)` 项目约定，允许棱彩；不是已核实的历史条件分布。四种强化只覆盖正常三节点，初抽、逐槽换牌、本人按钮和恢复重演共用 `resolveAugmentTier`。候选仍使用各席既有 `choiceRngState`，初抽3词、换牌1词；不额外消费这个流。排除已持有、永久移除和换牌时当前候选；这六项调研中的强化禁用引用均为空，不编造新增互斥组，也不启用魔像/沃里克的关闭效果。初抽少于3项、换牌没有候选均失败，不降档、不跨档、不重置排除记录。
+PR5 另启用发条猴子，其余8项效果保持关闭（none 仍启用且无附加规则）；16项抽选顺序、权重合计10000及所有原始 null 不变。未强制强化节点现按本文 v22 组合表派生；以下其余 PR2 语义保持。四种强化只覆盖正常三节点，初抽、逐槽换牌、本人按钮和恢复重演共用 `resolveAugmentTier`。候选仍使用各席既有 `choiceRngState`，初抽3词、换牌1词；不额外消费这个流。排除已持有、永久移除和换牌时当前候选；这六项调研中的强化禁用引用均为空，不编造新增互斥组，也不启用魔像/沃里克的关闭效果。初抽少于3项、换牌没有候选均失败，不降档、不跨档、不重置排除记录。
 
 PR2 新增随机子流仅为 `opening-encounter-v1/seat/<seatId>/anvil/<index>`：单人 seatId=`solo`，联机为真实 seatId；index从0起。根 seed 单人取 `state.seed`，共享取已绑定 `state.augmentTierSeed=pool.seed`。对完整流名做 UTF-16 FNV-1a32，seed XOR hash 后 uint32，lcg32-v1 连取4词；对排序后的现有 G24 组件/神器池执行前4步 Fisher–Yates，`j=i+word%(pool.length-i)`。每个锻造器内4项不同，锻造器之间及与已持有装备不互斥；独立抽样不保证不同锻造器结果绝不重复。不读写商店、强化候选、奖励、PvE掉落、装备、战斗或选秀 RNG。PR2 没有新增 shared 或 display 随机流；PR5 的共享分支流与个人组件流见上节。未来第二个锻造器的候选不投影。
 
@@ -171,7 +257,7 @@ PR2 新增随机子流仅为 `opening-encounter-v1/seat/<seatId>/anvil/<index>`�
 公共接口（纯函数，无新网络命令）：
 
 ```ts
-// match.ts 新增重导出；原 deriveAugmentTier 保留基础算法语义
+// match.ts 新增重导出；deriveAugmentTier 基础算法现见本文 v22 组合表
 resolveAugmentTier(state: Pick<MatchState,'openingEncounter'|'augmentTierSeed'>,
   choiceId: string): 'silver'|'gold'|'prismatic'
 readOpeningForgeProgress(state: MatchState): null | {

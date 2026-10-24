@@ -25,16 +25,15 @@ describe('PR8 opening-encounter texts', () => {
     expect(openingBannerLine(view)).toBe(`${view.nameZh} · ${view.champion!.name_zh}`);
   });
   it('every closed encounter (enabled=false) says 效果尚未启用 plainly', () => {
-    const closed = OPENING_ENCOUNTERS.filter(entry => !entry.enabled);
-    expect(closed.length).toBeGreaterThan(0);
-    for (const entry of closed) {
-      const view = viewFor(entry.id);
-      expect(view.enabled).toBe(false);
+    // Opening batches A/B (v22) enable every entry; the closed wording is still checked on a closed copy of each view.
+    expect(OPENING_ENCOUNTERS.filter(entry => !entry.enabled)).toEqual([]);
+    for (const entry of OPENING_ENCOUNTERS) {
+      const view = { ...viewFor(entry.id), enabled: false };
       expect(openingStatusText(view), entry.id).toContain(NOT_ENABLED_TEXT);
       expect(openingBannerText(view).closed).toBe(true);
     }
     // Even a status text that does not carry the words gets them.
-    expect(openingStatusText({ ...viewFor('trainer-golems'), statusTextZh: '本局抽中此奇遇' })).toBe(`本局抽中此奇遇 · ${NOT_ENABLED_TEXT}`);
+    expect(openingStatusText({ ...viewFor('trainer-golems'), enabled: false, statusTextZh: '本局抽中此奇遇' })).toBe(`本局抽中此奇遇 · ${NOT_ENABLED_TEXT}`);
   });
   it('"no encounter" has its own title and no champion', () => {
     const view = viewFor('none');
@@ -106,7 +105,9 @@ describe('PR8 opening-encounter HUD', () => {
     hud.update({ encounter: view, matchKey: 'm1', round: 1 });
     let shown = hud.debug();
     expect(shown.card).toContain(view.nameZh);
-    expect(shown.card).toContain(NOT_ENABLED_TEXT);
+    // Trainer golems is enabled under v22 batch B: the card carries the rules' enabled status, not the closed wording.
+    expect(shown.card).toContain('本局奇遇效果已启用');
+    expect(shown.card).not.toContain(NOT_ENABLED_TEXT);
     expect(shown.card).toContain('跳过');
     expect(shown.banner).toContain(`本局奇遇 · ${view.nameZh} · ${view.champion!.name_zh}`);
     expect(shown.chip).toContain('本局奇遇');

@@ -1,3 +1,4 @@
+import { overtimeControlTicks } from '../combat-overtime';
 import type { Effect, EffectIdentity, StatusApplication, StatusContribution, StatusEndReason, StatusGroup, StatusKind } from './contracts';
 import { compareCodePoints, validateIdentity } from './identity';
 import { integer, safeNumber } from './stats';
@@ -37,7 +38,7 @@ export function applyStatusContribution(groups: readonly StatusGroup[], identity
   const group = groups.find(g => g.targetId === identity.targetId && g.kind === app.kind);
   const old = group?.contributions.find(c => c.key === identity.key);
   const requestedStart = tick + (app.activation === 'next-tick' ? 1 : 0);
-  const requestedEnd = app.duration.kind === 'combat' ? null : requestedStart + app.duration.ticks;
+  const requestedEnd = app.duration.kind === 'combat' ? null : requestedStart + (app.kind === 'stun' ? overtimeControlTicks(app.duration.ticks, tick) : app.duration.ticks);
   let application = app;
   const policy = app.stackPolicy;
   if (old && policy.kind === 'independent-instances') throw new RangeError('Duplicate independent status identity');

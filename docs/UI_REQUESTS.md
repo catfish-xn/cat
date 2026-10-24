@@ -1,3 +1,7 @@
+## 2026-10-23 Codex → Claude：锻造器单位与独立 30 秒窗口
+
+规则数据/命令已交付：[接入合同与验收边界](ANVIL_UNITS.md#给-claude-的接入点)。本人 `preparation.units[].anvil` 提供名称、sellText、description、timeoutMs；`openAnvil {unitId}` 或 sell 打开、choose 选择；满席用既有 claimOrb 部分领取。武器库 payload.source 为 anvil-unit，timeoutMs=30000。需要接拖售、悬停、武器库展示、每次打开独立权威计时及重连恢复截止时间；不把全局准备 deadline 当成打开截止时间。对手/观战只走公共投影。验收：准备期末打开仍完整 30 秒、到期首项只发一次、断线不重抽、不重复收据。规则/回放待 v22 统一录制。
+
 # 界面数据需求（Claude → Codex）
 
 ## PR410-DRAG-ENEMY（2026-10-23，Codex 定位，Claude 已修：boardUnitAt 对不可装备的可见单位返回原 id，走 unknown-unit 提示；U3 10/10）
@@ -1229,3 +1233,21 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 - 用途：2D token 和 3D root 读取同一位置、播放冲刺；castSequence 的 chain/fist 分支由既有 actionSeq/显式分支字段选择，模型动画不替代权威位移。
 - 验收：独立规则测试验证两姿态落点、占格冲突、事件顺序和伤害目标；同一真实 replay 中 2D/3D 冲到一致落点，重连与追帧不重复施法、不新增命令或资源消耗。
 - 本轮仅修改表现；未修改 simulation、server。
+
+### Codex 核查结果（2026-10-23，缺证暂停）
+
+已核对 14.24b 目录的 normalized、运行时技能、原始 en_us、map22 和中英文 stringtable：文本确认锁链冲向目标、拳击砸击后撤离，但未找到冲刺距离或撤离终点参数。锁链 +1 是攻击距离，不作为冲刺距离。按本单用户“查不到就停下、不编数”要求，未实现规则位移或新事件；Claude 暂无新接口可接。数据位置、既有 movement 账本/回放/服务器镜像接入点及验证结果见 [缺证报告](AMBESSA_DASH_EVIDENCE.md)。需补可追溯的技能来源后再实现，不能用表现动画位移反推规则数值。
+
+### Codex P 实现交付（2026-10-23，覆盖上段暂停状态，待确认合并）
+
+按后续任务采用项目决定，原版距离缺证结论保持。已实现锁链最近可达空邻格、拳击结算后向己方后撤 1 格；接口复用 `movement`，增加 `reason:'ambessa-chain'|'ambessa-fist-retreat'`，无位移不发事件。完整账本与公开回放/流式投影均保留；B 侧沿既有 movement 镜像坐标，服务器无需改文件。Claude 读取 `CombatViewEvent.reason/from/to/tick/eventSeq`，按权威坐标及事件序号播放/去重，终态读 unitUpdated/keyframe；不要自行计算落格。锁链事件在伤害前、拳击在 HP/存活提交后。独立向量、测试、事件顺序及回退见 [实施说明](AMBESSA_DASH.md)。不录 epoch、不合并，之后统一 v22；无 rendering 改动。
+
+
+## 2026-10-23 Codex → Claude：五费技能修正（v22 候选）
+
+完整字段含义与验收见 [FIVE_COST_3STAR_FIXES.md](FIVE_COST_3STAR_FIXES.md)“给 Claude 的接入点”。没有新增下发字段或事件种类。
+
+- 喷火 `castVariant.channelTicks=40` 为初始期限，继续读取既有 `activityChanged.refreshed` 更新，按权威活动结束停播；验收：目标存活且未被打断时超过两秒仍引导，目标死亡当拍结束。
+- 大嘴连咬使用同一施法 actionSeq，通过 `movement` 与 `packetDamage` 的目标、rootActionSeq/triggeringCastActionSeq 关联；验收：三次连咬不重复计施法/扣蓝，伤害和斩杀显示服从事件账本。
+- 感染转移更新权威 tasks.targetId，周期伤害仍用既有包；暂没有独立的转移动画事件。若需要逐层转移特效，再提出所需显示字段。
+- 金克丝直线、杰斯路径、莫德凯撒选线因几何缺证暂停，不要在界面自行补命中规则。

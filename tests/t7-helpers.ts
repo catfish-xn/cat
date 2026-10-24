@@ -7,6 +7,7 @@ export function execute(state:api.MatchState,a:ClientCommand):api.MatchCommandRe
   switch(a.type) {
     case 'useConsumable': return api.useConsumable(state,a.consumableId,a.target);
     case 'buy': return api.buyUnit(state,a.slot,a.generation);
+    case 'openAnvil': return api.openAnvil(state,a.unitId);
     case 'sell': return api.sellUnit(state,a.unitId);
     case 'deploy': return api.deployMatchUnit(state,a.unitId,a.target);
     case 'buyXp': return api.buyXp(state);

@@ -1,3 +1,4 @@
+import { isAnvil } from './content/anvils';
 import { validateMasterworkChoice } from './masterwork-choice';
 import { ITEM_DEFINITIONS as ORDINARY_ITEMS } from './content/items';
 import { g23RadiantDefinitionId } from './g2-3-rewards';
@@ -6,7 +7,7 @@ import { canonicalContent } from './content';
 import { validatePveRemover } from './pve-remover';
 import { CONSUMABLE_DEFINITIONS, CONSUMABLE_RULES, REFORGE_POOLS } from './content/consumables';
 import { canOperateEquipment, isCombatRosterLocked } from './operation-policy';
-import { getCatalogRoundById } from './round-selectors';
+import { getMultiplayerRoundById } from './multiplayer-round';
 import { planEquip } from './inventory';
 import type { GameState } from './game';
 import { drawIndex } from './orb-layout';
@@ -41,6 +42,7 @@ export function previewUseConsumable(state:Readonly<MatchState>,consumableId:str
   if(!definition)throw new RangeError('Invalid consumable definition');
   if(!target||target.kind!=='unit')return {ok:false,reason:'invalid-consumable-target'};
   const unit=state.preparation.units.find(u=>u.id===target.unitId);
+  if(unit&&(unit.definitionId==='trainer-golem'||isAnvil(unit.definitionId)))return {ok:false,reason:'invalid-consumable-target'};
   if(!unit)return {ok:false,reason:'unknown-unit'};
   if(unit.team!=='player')return {ok:false,reason:'invalid-consumable-target'};
   if (definition.effect !== 'masterwork-upgrade' && target.itemId !== undefined) return {ok:false,reason:'invalid-consumable-target'};
@@ -154,7 +156,7 @@ export function validateConsumableState(state:MatchState):void {
     const r=fact.record,grant=grants.get(r.consumableId),definition=CONSUMABLE_DEFINITIONS[r.definitionId];
     check(grant&&grant.definitionId===r.definitionId&&definition&&definition.effect===r.effect&&r.target.kind==='unit'&&equal(r.rngBefore,rng));
     const loot=state.m8.loot.receipts.find(x=>x.grantedConsumableIds?.includes(r.consumableId));
-    check(grant&&(settled.has(grant.roundId)||loot?.claimedRoundId||state.seatMechanics?.receipts.some(x=>x.kind==='consumable'&&x.consumableId===r.consumableId))&&getCatalogRoundById(grant.roundId).ordinal<=getCatalogRoundById(fact.roundId).ordinal);
+    check(grant&&(settled.has(grant.roundId)||loot?.claimedRoundId||state.seatMechanics?.receipts.some(x=>x.kind==='consumable'&&x.consumableId===r.consumableId))&&getMultiplayerRoundById(grant.roundId).ordinal<=getMultiplayerRoundById(fact.roundId).ordinal);
     check(Array.isArray(r.affectedItems)&&Array.isArray(r.outputs)&&new Set(r.affectedItems.map(i=>i.id)).size===r.affectedItems.length);
     if(definition.effect==='duplicate-unit'){
       check(r.affectedItems.length===0&&r.outputs.length===0&&r.output===null&&r.copiedUnit&&r.target.kind==='unit'&&r.copiedUnit.id===r.target.unitId&&SHOP_CATALOG.includes(r.copiedUnit.definitionId)&&(definition.maxCost===null||UNIT_DEFINITIONS[r.copiedUnit.definitionId].cost<=definition.maxCost));

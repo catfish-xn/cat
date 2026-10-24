@@ -17,7 +17,7 @@ const sourced = (kind: SourceKind, id: string, effects: readonly Effect[], owner
   makeSourcedEffects(owner, kind, id, id, effects);
 
 describe('finite strategy effect compilation', () => {
-  it('matches the independent 172 AD / 16 tick arithmetic example and leaves skill damage independent of AD', () => {
+  it('matches the independent 147 AD / 16 tick arithmetic example and leaves skill damage independent of AD', () => {
     const effects = [
       ...sourced('anomaly', 'ad-percent', [{ kind: 'statPercentBps', stat: 'attackDamage', bps: 2000 }]),
       ...sourced('item', 'blade', [{ kind: 'statFlat', stat: 'attackDamage', amount: 10 }]),
@@ -25,7 +25,7 @@ describe('finite strategy effect compilation', () => {
       ...sourced('augment', 'speed', [{ kind: 'attackSpeedBps', bps: 2500 }]),
     ];
     const result = resolveEffects(frozen(ranger), frozen(ability), frozen(effects));
-    expect(result.stats.attack).toBe(172);
+    expect(result.stats.attack).toBe(147);
     expect(result.stats.attackIntervalTicks).toBe(16);
     expect(result.ability.amount).toBe(270);
     expect(resolveEffects(ranger, ability, [...effects].reverse())).toEqual(result);
@@ -78,7 +78,7 @@ describe('finite strategy effect compilation', () => {
     }
     expect(resolveEffects(ranger, ability, sourced('item', 'max', [
       { kind: 'statPercentBps', stat: 'attackDamage', bps: 40000 }, { kind: 'attackSpeedBps', bps: 20000 },
-    ])).stats).toMatchObject({ attack: 630, attackIntervalTicks: 7 });
+    ])).stats).toMatchObject({ attack: 525, attackIntervalTicks: 7 });
   });
 
   it.each([

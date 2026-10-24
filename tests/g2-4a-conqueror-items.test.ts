@@ -1,5 +1,8 @@
 import {expect,it} from 'vitest';
-import {createMatch,sellUnit,selectChoice,forfeitPendingChoice,type MatchState} from '../src/simulation/match';
+import {createMatch,sellUnit,selectChoice,forfeitPendingChoice,claimOrb,type MatchState} from '../src/simulation/match';
+import {isAnvil} from '../src/simulation/content/anvils';
+import {anvilChoiceId} from '../src/simulation/anvils';
+import {readLootView} from '../src/simulation/loot-view';
 import {G23_CONQUEROR_CHESTS,G23_DEFERRED_CONQUEROR_ITEMS,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
@@ -29,7 +32,8 @@ it('G2-4a restores tiers 4, 8 and 9 to their source rewards and keeps the gold f
 });
 it('the completed-item anvil offers four distinct ordinary completed items, stable per seed and atom',()=>{
  const [anvil]=g23RewardAtoms(bundle(9),42);
- expect(anvil).toMatchObject({kind:'item',quantity:1,gold:0});
+ // v22 anvil units (docs/ANVIL_UNITS.md): the MeepTypeUnit atom is an 'anvil' bound to its original definitionId.
+ expect(anvil).toMatchObject({kind:'anvil',forgeDefinitionId:'TFT_ArmoryKeyCompleted',quantity:1,gold:0});
  expect(anvil.options).toHaveLength(4);expect(new Set(anvil.options).size).toBe(4);
  for(const id of anvil.options)expect(ordinary).toContain(id);
  expect(g23RewardAtoms(bundle(9),42)).toEqual([anvil]);
@@ -53,7 +57,7 @@ function preparedAtRound4():MatchState{
 const facts=(patch:Partial<G23BattleFacts>={}):G23BattleFacts=>({battleId:'g2-4a-battle',round:4,roundKind:'pvp',result:'win',conquerorTier:9,
  conquestTakedowns:Array.from({length:28},(_,i)=>'enemy-'+i),chemBaronTier:0,alliedDeaths:0,rumbleStar:0,highRollerGold:0,...patch});
 
-it('one settlement crossing tier 9 grants the duplicate, Thief\'s Gloves and a four-way anvil popup exactly once',()=>{
+it('one settlement crossing tier 9 grants the duplicate, Thief\'s Gloves and a four-way anvil unit exactly once',()=>{
  const before=preparedAtRound4();
  expect(before.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId)).toEqual(['irelia']);
  const settled=commitG23Settlement(before,facts());
@@ -73,8 +77,20 @@ it('one settlement crossing tier 9 grants the duplicate, Thief\'s Gloves and a f
  // Settling the same battle again grants nothing.
  expect(commitG23Settlement(settled,facts())).toBe(settled);
 
- const opened=openG23Choice(settled).state,choice=opened.pendingChoice!;
- expect(choice).toMatchObject({kind:'forge',choiceId:'g23:conqueror:9:atom:0:copy:0',payload:{kind:'forge',source:'conqueror',timeoutOption:choice.offers[0]}});
+ // v22 anvil units (docs/ANVIL_UNITS.md): no auto-popup; the tier-9 anvil waits in an orb, is claimed onto
+ // the bench as a unit, and selling it (= openAnvil) opens the 4-way, 30 s forge whose timeout picks the first.
+ expect(openG23Choice(settled).state.pendingChoice).toBeNull();
+ const orb=readLootView(settled).unclaimedOrbs!.find(o=>o.orbId.startsWith('g23-anvil:'))!;
+ expect(orb.entries).toEqual([{kind:'forge',definitionId:'TFT_ArmoryKeyCompleted',quantity:1}]);
+ const claimed=ok(claimOrb(settled,orb.orbId,settled.round)).state;
+ const anvilUnits=claimed.preparation.units.filter(u=>isAnvil(u.definitionId));
+ expect(anvilUnits).toMatchObject([{team:'player',definitionId:'TFT_ArmoryKeyCompleted',starLevel:1,location:{kind:'bench'}}]);
+ expect(claimed.seatMechanics!.receipts.filter(r=>r.receiptId.startsWith('g23:conqueror:9:')).map(r=>r.receiptId)).toEqual(['g23:conqueror:9:atom:0:copy:0']);
+ expect((readLootView(claimed).unclaimedOrbs??[]).some(o=>o.orbId.startsWith('g23-anvil:'))).toBe(false);
+ expect(()=>validateG23MechanicLinks(claimed)).not.toThrow();
+ const opened=ok(sellUnit(claimed,anvilUnits[0].id)).state,choice=opened.pendingChoice!;
+ expect(opened.gold).toBe(claimed.gold);
+ expect(choice).toMatchObject({kind:'forge',choiceId:anvilChoiceId(anvilUnits[0].id),payload:{kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:choice.offers[0]}});
  expect(choice.offers).toEqual(g23RewardAtoms(p.rewards.find(b=>b.tier===9)!,p.seed)[0].options);
  expect(choice.offers).toHaveLength(4);
 

@@ -185,10 +185,12 @@ describe('M5 independent finite combat rules', () => {
     expect(result.state.units.every(u => !u.alive && u.hp === 0 && u.mana === 0)).toBe(true);
     expect(heals(result.events)).toEqual([]);
   });
-  it('damage mana is floor(HP loss×3%) and positive damage rounds each separate packet', () => {
+  it('damage mana is 1% pre-mitigation + 3% post-mitigation per packet, floored once per tick with a centimana carry', () => {
     const result = stepCombat(battle([hero('ezreal'), hero('lux', 'e', { mana: 0, cooldownTicks: 1000, armor: 100 })]));
-    // Ezreal 155/2 -> 77, center270/2 ->135, total212; mana floor(212*.03)=6.
-    expect(result.state.units.find(u => u.id === 'e')!.mana).toBe(6);
+    // v22 (14.24): Ezreal 155/2 -> 77: floor(155*1+77*3)=386 centi; center 270/2 -> 135: floor(270*1+135*3)=675 centi.
+    // Total 1061 centi -> 10 mana, 61 centi carried to the next tick.
+    expect(result.state.units.find(u => u.id === 'e')!.mana).toBe(10);
+    expect(result.state.units.find(u => u.id === 'e')!.damageManaRemainderCenti).toBe(61);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.mitigated)).toEqual([77, 135]);
   });
   it('uses an explicit crit word for every planned attack including zero-probability neutrals', () => {
@@ -267,9 +269,14 @@ describe('M5 independent finite combat rules', () => {
   it('Kill Streak belongs to the first lethal packet and only a surviving owner gets mana', () => {
     const m = mechanic('p', 'killStreak', { mana: 20 });
     const alive = stepCombat(battle([hero('zyra', 'p', { mechanics: [m] }), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3)]));
-    expect(alive.state.units.find(u => u.id === 'p')!.mana).toBe(20);
+    // v22 cast mana lock: the surviving owner's 20 kill mana is requested in the lethal cast's tick and fully blocked.
+    const killMana = (events: readonly CombatEvent[]) =>
+      events.flatMap(e => e.type === 'manaChanged' && 'outcome' in e && e.outcome.reason === 'kill' ? [e.outcome] : []);
+    expect(killMana(alive.events)).toEqual([expect.objectContaining({ targetId: 'p', amount: 20, before: 0, blocked: 20, applied: 0, after: 0 })]);
+    expect(alive.state.units.find(u => u.id === 'p')!.mana).toBe(0);
     expect(alive.events.filter(e => e.type === 'kill')).toEqual([expect.objectContaining({ unitId: 'e', source: expect.objectContaining({ ownerId: 'p' }) })]);
     const dead = stepCombat(battle([hero('zyra', 'p', { hp: 50, mechanics: [m] }), hero('zyra', 'e', { hp: 50 })]));
+    expect(killMana(dead.events)).toEqual([]);
     expect(dead.state.units.find(u => u.id === 'p')!.mana).toBe(0);
   });
   it('Sniper distance amplification and Watcher threshold use pre-damage HP with strict greater-than', () => {
@@ -375,7 +382,8 @@ describe('M5 independent finite combat rules', () => {
     // replay2: the seed-42 Lux attack crits and outcome.raw is pre-crit: 100 AD (was 140 = 100×140% after crit).
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.raw)).toEqual([100, 25]);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => [p.critical, p.mitigated])).toEqual([[true, 140], [false, 25]]);
-    expect(result.state.units.find(u => u.id === 'p')!.mana).toBe(11); //10 attack + floor(40*.03)=1; the hook3 trigger is not in this input.
+    // v22: 10 attack + floor(100*1% + 100*3%)=4 (damage mana counts the shield-absorbed 60 too); the hook3 trigger is not in this input.
+    expect(result.state.units.find(u => u.id === 'p')!.mana).toBe(14);
     expect(result.state.units.find(u => u.id === 'p')!.effectRuntime!.map(c => c.count)).toEqual([1, 1]);
     expect(result.events.map(e => e.eventSeq)).toEqual(Array.from({ length: result.events.length }, (_, n) => n + start.events.length));
   });

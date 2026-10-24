@@ -71,14 +71,14 @@ describe('independent augment card-reroll oracle',()=>{
    state=accepted(nextRound(state,state.round));
   }
   c=state.pendingChoice!;
-  const tier=augmentTier(state.seed,c.choiceId),draw=augmentDraw(rng,tier,state.augments,state.removedAugmentIds);
+  const tier=augmentTier(state.seed,c.choiceId),draw=augmentDraw(rng,tier,state.augments,state.removedAugmentIds.slice(0,-3),c.choiceId,state.augmentOffers.at(-1)!.fieldedTraits); // v22: the opened three join the seen ledger
   expect(c).toMatchObject({offers:draw.offers,augmentTier:tier,generation:0,rerollCount:0,rerollsRemaining:3,rerolledSlots:[false,false,false]});
   expect(state.choiceRngState).toBe(draw.rng);
   expect(state.augmentOffers.map(r=>r.rerollCount)).toEqual([1,0]);
   expect(c.offers.some(id=>state.augments.some(a=>a.definitionId===id))).toBe(false);
   validateAugmentReroll(freeze(state),rerollAugment(state,c.choiceId,0,0),{type:'rerollAugment',choiceId:c.choiceId,generation:0,optionIndex:0});
  });
- it('hashes UTF-16 surrogate code units independently of code point iteration',()=>{
-  expect(augmentTier(42,'round:\ud83d\ude00:augment')).toBe('silver');
+ it('refuses unknown nodes instead of deriving another independent tier sample',()=>{
+  expect(()=>augmentTier(42,'round:\ud83d\ude00:augment')).toThrow('Unknown augment tier node');
  });
 });

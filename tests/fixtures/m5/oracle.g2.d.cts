@@ -10,8 +10,8 @@ export type OracleCommand = Readonly<{ type: string; [key: string]: unknown }>;
 export type OracleAugmentTier = 'silver' | 'gold' | 'prismatic';
 export function openingEncounter(seed: number): string;
 export function augmentTier(seed: number, node: string): OracleAugmentTier;
-export function augmentPool(tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[]): string[];
-export function augmentDraw(rng: number, tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[]): { offers: string[]; rng: number };
+export function augmentPool(tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[]): string[];
+export function augmentDraw(rng: number, tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[]): { offers: string[]; rng: number };
 export function validateAugmentReroll(before: MatchState, result: unknown, command: OracleCommand): void;
 export type EconomyInput = Pick<MatchState, 'round' | 'gold' | 'level' | 'xp' | 'playerHp' | 'streak'> & Partial<Pick<MatchState, 'seed' | 'm8'>>;
 export type EconomyCombat = Pick<CombatState, 'result' | 'tick' | 'nextEventSeq'> & {
@@ -23,7 +23,7 @@ export function investment(before: {
   readonly augmentProgress: MatchState['augmentProgress'];
   readonly augments: readonly { readonly definitionId: string }[];
 }, record: Pick<RoundResult, 'incomeBreakdown'>): MatchState['augmentProgress'];
-export function shop(rng: number, generation: number, level: number, locked?: boolean, round?: number): { rngState: number; shop: MatchState['shop'] };
+export function shop(rng: number, generation: number, level: number, locked?: boolean, round?: number, context?: { seed: number; viktor: boolean } | null): { rngState: number; shop: MatchState['shop'] };
 export function xp(level: number, value: number, amount: number): { level: number; xp: number; xpApplied: number };
 export function lootIndex(rng: RngStream, n: number): { index: number; rng: RngStream };
 export function lootPlan(seed: number, ordinal: number): { readonly rng: RngStream; readonly rounds: readonly FrozenLootRound[] };
@@ -43,3 +43,4 @@ export class Ledger {
 
 export function blackMarket(tier: number, rng: number): { offers: string[]; rng: number; draws: number };
 export function validateChemTransition(before: MatchState, after: MatchState): void;
+export const ANVIL_IDS: ReadonlySet<string>;

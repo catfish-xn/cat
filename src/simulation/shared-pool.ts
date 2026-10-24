@@ -1,6 +1,6 @@
 import { validateAugmentOfferHistory } from './augment-offers';
 import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
-import { sixCostOddsBps } from './six-cost-shop';
+import { planSixCostShop, sixCostShopContext } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
 import { validateConsumableState } from './consumables';
 import { selectOpeningUnit } from './opening-unit';
@@ -16,8 +16,9 @@ import { canOperateMatch } from './operation-policy';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { M8_VERSION } from './m8/version';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
-import { buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
+import { openAnvil, buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
   forfeitPendingChoice, claimOrDiscardLoot, rerollAugment } from './match';
+import { externalAugmentBlocks } from './augment-offers';
 import { enableMultiplayerSettlement, applyRoundSettlement } from './round-settlement';
 import type { MultiplayerCommandResult } from './round-settlement';
 import type { MatchEvent, MatchState, ShopSlot } from './match-types';
@@ -120,9 +121,8 @@ function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):
   const seatId=state.sharedPool!.seatId,generation=state.shop.generation+1,odds=getShopOdds(state.level);
   const slots:ShopSlot[]=[];let rngState=state.rngState,rngDraws=0;
   for(let slot=0;slot<MATCH_RULES.shopSize;slot++) {
-    const sixBps=sixCostOddsBps(state.round,state.level);
-    const weights=[...odds.map(w=>w*(10000-sixBps)),100*sixBps];
-    const stocked=([1,2,3,4,5,6] as CostTier[]).filter(t=>weights[t-1]>0&&SHOP_CATALOG_BY_COST[t].some(id=>pool.available[id]>0));
+    const weights=odds;
+    const stocked=([1,2,3,4,5] as CostTier[]).filter(t=>weights[t-1]>0&&SHOP_CATALOG_BY_COST[t].some(id=>pool.available[id]>0));
     if(!stocked.length) {slots.push({status:'purchased',empty:true});continue;}
     const tierWord=nextRandom(rngState),weight=stocked.reduce((sum,t)=>sum+weights[t-1],0);
     let roll=Math.floor(tierWord.word*weight/4294967296),tier=stocked[0];
@@ -132,6 +132,19 @@ function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):
     const definitionId=catalog.find(id=>{if(copy<pool.available[id])return true;copy-=pool.available[id];return false;})!;
     pool.available[definitionId]--;pool.shops.push({seatId,generation,slot,definitionId});
     slots.push({status:'available',definitionId});rngState=memberWord.state;rngDraws+=2;
+  }
+  const six=planSixCostShop(state.round,state.level,generation,sixCostShopContext(state));
+  const catalog=SHOP_CATALOG_BY_COST[6], total=catalog.reduce((n,id)=>n+pool.available[id],0);
+  if(six.slot!==null&&total>0){
+    const old=slots[six.slot];
+    if(old.status==='available'){
+      pool.available[old.definitionId]++;
+      pool.shops=pool.shops.filter(r=>!(r.seatId===seatId&&r.generation===generation&&r.slot===six.slot));
+    }
+    let copy=Math.floor(six.memberWord*total/4294967296);
+    const definitionId=catalog.find(id=>{if(copy<pool.available[id])return true;copy-=pool.available[id];return false;})!;
+    pool.available[definitionId]--;pool.shops.push({seatId,generation,slot:six.slot,definitionId});
+    slots[six.slot]={status:'available',definitionId};
   }
   poolEvents.push({type:'sharedShopGenerated',seatId,generation,rngDraws});
   return {...state,rngState,shop:{generation,slots,locked:Boolean(state.shop.locked)}};
@@ -185,7 +198,8 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult {
   return transact(pool,state,(_draft,policy)=>{
     switch(command.type) {
-      case 'rerollAugment': return rerollAugment(state,command.choiceId,command.generation,command.optionIndex);
+      case 'openAnvil': return openAnvil(state,command.unitId);
+      case 'rerollAugment': return rerollAugment(state,command.choiceId,command.generation,command.optionIndex,command.augmentBlocked);
       case 'useConsumable': {
         const tool=state.consumables.find(c=>c.consumableId===command.consumableId),target=command.target,u=target.kind==='unit'?state.preparation.units.find(u=>u.id===target.unitId):undefined;
         if(tool?.definitionId==='TFT_Consumable_NeekosHelp'&&u&&UNIT_DEFINITIONS[u.definitionId]?.cost===6)requirePool(_draft.available[u.definitionId]>0,'pool-empty');
@@ -244,18 +258,30 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
     const draft=draftPool(pool),poolEvents:SharedPoolEvent[]=[],events:{seatId:string;events:readonly MatchEvent[]}[]=[];
     const frozenLayout=freezeOrbLayoutThroughRound(draft.orbLayout,Math.min(targetRound,FINAL_ROUND));
     if(!frozenLayout.ok)throw new PoolError(frozenLayout.reason);draft.orbLayout=frozenLayout.layout;
-    let prepared=states.map((state):MatchState=>{
+    // v22: seats open their augment nodes in batch order; each sees the offers already opened before it (one-per-match).
+    const opened:MatchState[]=[];
+    let prepared=states.map((state,index):MatchState=>{
       if(!advance) {requirePool(state.phase==='preparation'||state.phase==='choice','wrong-phase');return state;}
       const {sharedPool, ...unbound}=state;
-      const result=advanceMultiplayerRound(unbound,round,draft.orbLayout);if(!result.ok)throw new PoolError(result.reason);
+      const blocked=externalAugmentBlocks(state.sharedPool!.seatId,[...opened,...states.slice(index)]);
+      const result=advanceMultiplayerRound(unbound,round,draft.orbLayout,blocked);if(!result.ok)throw new PoolError(result.reason);
       reconcileHoldings(draft,state,result.state,poolEvents);
       events.push({seatId:state.sharedPool!.seatId,events:result.events});
       // Discard only the unobserved infinite-shop proposal; keep schedule/equipment/loot progression.
-      return {...result.state,sharedPool,shop:state.shop,rngState:state.rngState};
+      const next={...result.state,sharedPool,shop:state.shop,rngState:state.rngState};
+      opened.push(next);return next;
     });
     let openingResolution: import('./shared-pool-types').OpeningRoundResolution | undefined;
-    const openingPlan = targetRound <= FINAL_ROUND ? planOpeningRound(draft.openingEncounter, prepared[0].roundDefinitionId)
-      : {context:draft.openingEncounter,facts:[]};
+    const openingPlan = planOpeningRound(draft.openingEncounter, prepared[0].roundDefinitionId);
+    if (['gold-subscription','loot-subscription'].includes(draft.openingEncounter.selection.encounterId)) {
+      prepared=prepared.map(state=>{
+        const applied=applyOpeningEffects(state,openingPlan.facts,draft.openingEncounter);
+        if(!applied.ok)throw new PoolError(applied.reason);
+        const id=state.sharedPool!.seatId,row=events.find(e=>e.seatId===id);
+        if(row)row.events=[...row.events,...applied.events];else events.push({seatId:id,events:applied.events});
+        return applied.state;
+      });
+    }
     if (openingPlan.facts[0]?.nodeId === '3-5') {
       draft.openingEncounter = openingPlan.context;
       const before = new Map(prepared.map(s => [s.sharedPool!.seatId, s.playerHp]));

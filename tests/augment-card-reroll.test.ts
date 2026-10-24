@@ -15,7 +15,8 @@ import { context } from './t7-helpers';
 
 it.each([[2,0,1], [0,1,2]])('each slot is usable exactly once in command order %j', (...order) => {
   let state = reachRound('2-1', false);
-  const choiceId = state.pendingChoice!.choiceId, removed: string[] = [];
+  // v22: the opening three are already seen; each reroll result joins them.
+  const choiceId = state.pendingChoice!.choiceId, removed: string[] = [...state.pendingChoice!.offers];
   let rng = state.choiceRngState;
   for (const optionIndex of order) {
     const before = freeze(state), c = before.pendingChoice!, generation = c.generation;
@@ -29,10 +30,11 @@ it.each([[2,0,1], [0,1,2]])('each slot is usable exactly once in command order %
     expect(after.offers[optionIndex]).toBe(candidates[rng%candidates.length]);
     expect(state.choiceRngState).toBe(rng);
     for (let i=0;i<3;i++) if(i!==optionIndex) expect(after.offers[i]).toBe(c.offers[i]);
-    removed.push(c.offers[optionIndex]);
+    expect(removed).not.toContain(after.offers[optionIndex]);
+    removed.push(after.offers[optionIndex]);
     expect(state.removedAugmentIds).toEqual(removed);
     expect(new Set(after.offers).size).toBe(3);
-    expect(after.offers.every(id=>AUGMENT_TIERS[id]===c.augmentTier && !removed.includes(id))).toBe(true);
+    expect(after.offers.every(id=>AUGMENT_TIERS[id]===c.augmentTier && removed.includes(id))).toBe(true);
     const exhausted = rerollAugment(state,choiceId,after.generation,optionIndex);
     expect(exhausted).toEqual({ok:false,state,reason:'augment-rerolls-exhausted'});
     expect(exhausted.state).toBe(state);
@@ -46,9 +48,9 @@ it.each([[2,0,1], [0,1,2]])('each slot is usable exactly once in command order %
   expect(restoreMatch(serializeMatch(selected))).toEqual(selected);
 });
 
-it('permanently excludes removed IDs at every later node, including repeated silver tiers', () => {
+it('v22: permanently excludes every shown ID at every later node, including two silver nodes from the approved silver/silver/gold combination', () => {
   const nodes=['2-1','3-2','4-2'];
-  const seed=Array.from({length:1000},(_,i)=>i).find(seed=>nodes.every(id=>deriveAugmentTier(seed,`round:${id}:augment`)==='silver'))!;
+  const seed=Array.from({length:1000},(_,i)=>i).find(seed=>nodes.map(id=>deriveAugmentTier(seed,`round:${id}:augment`)).join(',')==='silver,silver,gold')!;
   expect(seed).toBeDefined();
   // Synthetic survival budget isolates candidate admission through all three nodes.
   // Save/restore is verified separately on unmodified public states.
@@ -61,18 +63,19 @@ it('permanently excludes removed IDs at every later node, including repeated sil
       state=resolveM5Choices(state);
       state=accepted(nextRound(state,state.round));
     }
-    expect(state.pendingChoice).toMatchObject({augmentTier:'silver',rerolledSlots:[false,false,false],generation:0});
+    expect(state.pendingChoice).toMatchObject({augmentTier:deriveAugmentTier(seed,`round:${node}:augment`),rerolledSlots:[false,false,false],generation:0});
     expect(state.pendingChoice!.offers.every(id=>!removed.includes(id))).toBe(true);
+    removed.push(...state.pendingChoice!.offers);
     for(const optionIndex of [1,2,0]) {
       const c=state.pendingChoice!;
-      removed.push(c.offers[optionIndex]);
       state=accepted(rerollAugment(freeze(state),c.choiceId,c.generation,optionIndex));
-      expect(state.pendingChoice!.offers.every(id=>!removed.includes(id))).toBe(true);
+      expect(removed).not.toContain(state.pendingChoice!.offers[optionIndex]);
+      removed.push(state.pendingChoice!.offers[optionIndex]);
       expect(state.pendingChoice!.offers.every(id=>!state.augments.some(a=>a.definitionId===id))).toBe(true);
     }
   }
   expect(state.removedAugmentIds).toEqual(removed);
-  expect(new Set(removed).size).toBe(9);
+  expect(new Set(removed).size).toBe(18);
   expect(state.augmentOffers.map(r=>r.rerolledIndices)).toEqual([[1,2,0],[1,2,0],[1,2,0]]);
 });
 
@@ -87,10 +90,15 @@ it('draws the last candidate successfully, then refuses an empty pool without us
   const original=reachRound('2-1',false),c=original.pendingChoice!;
   const candidates=augmentCandidates(c.augmentTier!,[],c.offers);
   // Synthetic finite-catalog vector: exactly one ID remains after owned and removed filtering.
-  const owned=candidates.slice(0,1).map(definitionId=>({definitionId,choiceId:'prior',acquiredRound:1}));
-  const before=freeze({...original,augments:owned,removedAugmentIds:candidates.slice(2)});
+  // v22 mutual exclusions (e.g. team-ups) apply against owned augments, so pair the owned ID with
+  // the first candidate it does not exclude.
+  const ownedOf=(definitionId:string)=>[{definitionId,choiceId:'prior',acquiredRound:1}];
+  const [ownedId,lastId]=candidates.map(id=>[id,augmentCandidates(c.augmentTier!,ownedOf(id),c.offers)[0]] as const).find(([,last])=>last)!;
+  const owned=ownedOf(ownedId);
+  // v22 invariant: the shown offers are part of the seen ledger.
+  const before=freeze({...original,augments:owned,removedAugmentIds:[...c.offers,...candidates.filter(id=>id!==ownedId&&id!==lastId)]});
   const after=accepted(rerollAugment(before,c.choiceId,0,2));
-  expect(after.pendingChoice!.offers[2]).toBe(candidates[1]);
+  expect(after.pendingChoice!.offers[2]).toBe(lastId);
   expect(after.choiceRngState).toBe(nextRandom(before.choiceRngState).state);
   expect(after.pendingChoice!.rerolledSlots).toEqual([false,false,true]);
   const failed=rerollAugment(freeze(after),c.choiceId,1,0);
@@ -112,7 +120,7 @@ it('shared command uses the same per-player rules, survives JSON persistence and
   expect(result.state.sharedPool!.revision).toBe(state.sharedPool!.revision+1);
   expect(result.poolEvents).toEqual([]);
   pool=result.pool;state=result.state;
-  expect(state.removedAugmentIds).toEqual([c.offers[1]]);
+  expect(state.removedAugmentIds).toEqual([state.pendingChoice!.offers[1]]);
   expect(other.removedAugmentIds).toEqual([]);
   expect(augmentCandidates(c.augmentTier!,other.augments,other.removedAugmentIds)).toContain(c.offers[1]);
   expect(pool.available).toEqual(initialAvailable);expect(pool.holdings).toEqual(holdings);
@@ -122,7 +130,7 @@ it('shared command uses the same per-player rules, survives JSON persistence and
   rejected(runSharedMatchCommand(pool,state,{type:'rerollAugment',choiceId:c.choiceId,generation:0,optionIndex:0}),pool,state,'stale-choice');
   rejected(runSharedMatchCommand(pool,state,{type:'rerollAugment',choiceId:c.choiceId,generation:1,optionIndex:3}),pool,state,'invalid-slot');
   const continued=accept(runSharedMatchCommand(saved.pool,saved.state,{type:'rerollAugment',choiceId:c.choiceId,generation:1,optionIndex:0}));
-  expect(continued.state.removedAugmentIds).toEqual([c.offers[1],c.offers[0]]);
+  expect(continued.state.removedAugmentIds).toEqual([state.pendingChoice!.offers[1],continued.state.pendingChoice!.offers[0]]);
   expect(continued.state.pendingChoice!.rerolledSlots).toEqual([true,true,false]);
   const locked={...state,multiplayer:{...state.multiplayer!,combatRosterLocked:true as const}};
   rejected(runSharedMatchCommand(pool,locked,{type:'rerollAugment',choiceId:c.choiceId,generation:1,optionIndex:0}),pool,locked,'wrong-phase');

@@ -14,7 +14,7 @@ import { battle, unit, freeze } from './combat-helpers';
 import { source } from './fixtures/m8-contract-cases';
 import { packets } from './helpers/replay2-views';
 
-const fixture = () => JSON.parse(readFileSync(new URL('./fixtures/v21-opening-encounters-c19-seed-9-minimal.json', import.meta.url), 'utf8'));
+const fixture = () => JSON.parse(readFileSync(new URL('./fixtures/v22-online-rules-c19-seed-9-minimal.json', import.meta.url), 'utf8'));
 const id = (seat: string, unitId: string) => JSON.stringify(['t2', seat, 'unit', unitId]);
 function advance(state: CombatState, through: number) {
   const events: CombatEvent[] = [];
@@ -53,23 +53,27 @@ function isolated(holderId: string, mode: 'new-group' | 'new-source' | 'refresh'
 describe('SR-C19-01 same-tick burn attachment', () => {
   it('reduced seed-9 compiled input finishes with one pulse per live 20-tick interval', () => {
     const input = freeze(fixture()), result = resolveTwoSidedBattle(input, 5000);
-    expect(result.terminal).toMatchObject({ status: 'finished', tick: 273, result: 'enemyWin' });
+    expect(result.terminal).toMatchObject({ status: 'finished', tick: 346, result: 'enemyWin' });
     const pulses = burnPackets(result.events);
-    // Both first applications are at 40. Ezreal dies at 148: 60..140 = 5.
-    // Garen dies at 273: 60..260 = 11, despite a new source joining at 160.
-    for (const [unitId, deathTick, count] of [['unit-42', 148, 5], ['unit-48', 273, 11]] as const) {
+    // Both first applications are at 40. v22 (AD star factor, mana): Ezreal dies at 164: 60..160 = 6.
+    // Garen dies at 346: 60..340 = 15, despite a new source joining at 200.
+    for (const [unitId, deathTick, count] of [['unit-42', 164, 6], ['unit-48', 346, 15]] as const) {
       const target = id('s3', unitId);
       expect(result.events.find(e => e.type === 'death' && e.unitId === target)?.tick).toBe(deathTick);
       const paid = pulses.filter(e => e.unitId === target);
       expect(paid.map(e => e.tick)).toEqual(Array.from({ length: count }, (_, i) => 60 + i * 20));
       expect(paid).toHaveLength(Math.floor((deathTick - 40) / 20));
     }
-    expect(pulses.filter(e => e.unitId === id('s3', 'unit-48')).reduce((sum, e) => sum + e.raw, 0)).toBe(220); // Garen Emissary adds 12% HP: floor(2016 × 1%) × 11
-    const at160 = advance(startTwoSidedCombatWithEvents(input).state, 160).state;
-    const target = at160.units.find(u => u.id === id('s3', 'unit-48'))!;
+    expect(pulses.filter(e => e.unitId === id('s3', 'unit-48')).reduce((sum, e) => sum + e.raw, 0)).toBe(302); // Garen Emissary adds 12% HP: 2016 × 1% = 20.16 per pulse; 15 pulses, each burn group carries its 0.16 remainder
+    // so the 7th pulse of each group pays 21 (180 for item-21, 340 for item-12 from 220): 15 × 20 + 2
+    // v22: the second Sunfire source reaches Garen at 200 (was 160) and keeps the group phase.
+    const at200 = advance(startTwoSidedCombatWithEvents(input).state, 200).state;
+    const target = at200.units.find(u => u.id === id('s3', 'unit-48'))!;
     expect(target.mechanismState!.periodicTasks.find(t => t.source.ownerId === id('s4', 'unit-15')))
-      .toMatchObject({ nextPulseAtTick: 180, pulseOrdinal: 0, periodTicks: 20, endsAtTick: 360 });
-    expect(target.mechanismState!.statuses.find(g => g.kind === 'burn')!.nextPulseAtTick).toBe(180);
+      .toMatchObject({ nextPulseAtTick: 220, pulseOrdinal: 0, periodTicks: 20, endsAtTick: 400 });
+    expect(target.mechanismState!.statuses.find(g => g.kind === 'burn')!.nextPulseAtTick).toBe(220);
+    expect(advance(startTwoSidedCombatWithEvents(input).state, 199).state.units.find(u => u.id === id('s3', 'unit-48'))!
+      .mechanismState!.periodicTasks.some(t => t.source.ownerId === id('s4', 'unit-15'))).toBe(false);
   });
 
   for (const holderId of ['a-holder', 'z-holder']) {

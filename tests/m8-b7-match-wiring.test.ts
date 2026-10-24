@@ -1,4 +1,4 @@
-import { lootPlan } from './fixtures/m5/oracle.g2.cjs';
+import { lootPlan, openingEncounter } from './fixtures/m5/oracle.g2.cjs';
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -12,13 +12,17 @@ import { getUnitStats } from '../src/simulation/unit-stats';
 import { planPurchase } from '../src/simulation/upgrades';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { accepted, resolveM5Choices } from './match-helpers';
-import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+import { publicAuthoredPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
+import { NEUTRAL_ENCOUNTERS } from '../src/simulation/content/neutral-encounters';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
-// Every prefix comes from the complete public command-only acquisition route.
-const prepared=publicNeutralPreparation;
+// Every prefix comes from a complete public command-only acquisition route. v22: seed 42's scuttle-crab
+// opening replaces the authored encounters, so these prefixes come from the crab-free route.
+const prepared=publicAuthoredPreparation;
+// COMPILED_NEUTRAL_ENCOUNTERS now also lists the opening crab variants; this suite covers the eight authored ones.
+const AUTHORED=COMPILED_NEUTRAL_ENCOUNTERS.filter(e=>NEUTRAL_ENCOUNTERS.some(n=>n.encounterId===e.encounterId));
 function battleFixture(roundId:string):api.MatchState {
   return accepted(api.startMatchCombat(prepared(roundId)));
 }
@@ -31,9 +35,9 @@ function roundTrip(s:api.MatchState):api.MatchState {
 const corrupt=(s:api.MatchState,mutate:(x:any)=>void)=>{ const saved=serializeMatch(s);expect(restoreMatch(saved)).toEqual(s);const x=JSON.parse(saved);mutate(x);expect(()=>restoreMatch(x)).toThrow(); };
 
 describe('B7 installed encounters and trusted Match restore',()=>{
-  it.each(COMPILED_NEUTRAL_ENCOUNTERS.map(e=>e.roundId))('%s freezes, starts, runs to settlement and resumes canonical saves',roundId=>{
+  it.each(AUTHORED.map(e=>e.roundId))('%s freezes, starts, runs to settlement and resumes canonical saves',roundId=>{
     let s=battleFixture(roundId),steps=0;
-    const compiled=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.roundId===roundId)!;
+    const compiled=AUTHORED.find(e=>e.roundId===roundId)!;
     expect(s.m8.preparation.enemies).toEqual(compiled.deployment);
     expect(s.combat!.units.filter(u=>u.team==='enemy').map(u=>[u.id,u.maxMana,u.baseCritChanceBps])).toEqual(compiled.units.map(u=>[u.id,0,2500]));
     expect(s.m8.encounterPlan).toBeNull(); // The authoritative B8 plan lives in the independently frozen loot ledger.
@@ -85,7 +89,8 @@ describe('B7 installed encounters and trusted Match restore',()=>{
       expect(view!.units.every(u=>u.abilityDescription.length>5)).toBe(true);
       for(const u of view!.units) expect(u.stats.maxHp).toBeGreaterThan(0);
     }
-    expect(readEncounterPreview(prepared('1-2'))!.rulesNote).toContain('特殊奇遇池未启用');
+    // v22 cleaned the encounter text; a crab-free 1-2 is the fixed ordinary PvE note, never a special pool.
+    expect(readEncounterPreview(prepared('1-2'))!.rulesNote).toBe('固定普通PvE；项目首版参数，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。');
     expect(readEncounterPreview(prepared('2-1'))!.encounterId).toBe('pvp:2-1');
   });
   it('keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates',()=>{
@@ -212,7 +217,10 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     }
     const expected=lootPlan(seed,3).rounds.flatMap(r=>r.encounterPlan.drops.map(d=>d.payload));
     const bonus=expected.filter(p=>p.kind==='gold').reduce((n,p)=>n+p.quantity,0);
-    expect(s).toMatchObject({roundDefinitionId:'2-1',gold:10+bonus,level:3,xp:2,playerHp:100});
+    // v22 opening income: base 2/3/4 plus PvE win-streak gold 0/1/1 = 11. Crab openings (independent
+    // literal table) also pay 1G per stage-one crab kill: 2+3+4 crabs, all cleared by these wins.
+    const crabGold=['scuttle-puddle','crab-rave'].includes(openingEncounter(seed))?9:0;
+    expect(s).toMatchObject({roundDefinitionId:'2-1',gold:11+bonus+crabGold,level:3,xp:2,playerHp:100});
     expect(s.items.map(item=>item.definitionId)).toEqual(expected.flatMap(p=>p.kind==='item'?[p.definitionId]:[]));
     expect(s.m8.loot.receipts.filter(receipt=>receipt.payload.kind==='item').map(receipt=>receipt.payload))
       .toEqual(expected.filter(p=>p.kind==='item'));

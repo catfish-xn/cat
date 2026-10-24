@@ -50,12 +50,17 @@ describe('SR-G5-02 preview agrees with committed round results', () => {
         expect(actual.result).toBe(won ? 'playerWin' : 'enemyWin');
         expect(preview[won?'ifWin':'ifLoss']).toEqual({ base:actual.incomeBreakdown.base, interest:actual.incomeBreakdown.interest,
           win:actual.incomeBreakdown.win, streakGold:actual.incomeBreakdown.streak, streakAfter:actual.streakAfter });
-        if (roundId === '1-2') expect(preview.ifWin).toEqual({base:2,interest:0,win:0,streakGold:0,streakAfter:streak});
+        // v22 opening rounds count streaks and pay streak gold (thresholds 2/5/6 -> 1/2/3); no interest or win gold.
+        if (roundId === '1-2') {
+          const count = streak.kind === 'win' ? streak.count + 1 : 1;
+          expect(preview.ifWin).toEqual({base:2,interest:0,win:0,streakGold:count >= 6 ? 3 : count >= 5 ? 2 : count >= 2 ? 1 : 0,streakAfter:{kind:'win',count}});
+        }
         expect(JSON.stringify(state)).toBe(before);
       }
     });
   }
-  it.each([['1-2',2],['1-3',3],['1-4',5],['2-1',5],['2-7',5],['overtime-1',5]] as const)(
+  // v22 opening base income is 2/3/4 for 1-2/1-3/1-4.
+  it.each([['1-2',2],['1-3',3],['1-4',4],['2-1',5],['2-7',5],['overtime-1',5]] as const)(
     '%s exposes base income %i separately from outcome bonuses and loot', (roundId, base) => {
       for (const phase of ['preparation','combat'] as const) {
         const state = { ...(phase === 'combat' ? openingLastTick : createMatch(42)), roundDefinitionId:roundId, gold:49,

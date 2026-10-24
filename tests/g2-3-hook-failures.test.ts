@@ -7,7 +7,9 @@ vi.mock('../src/simulation/seat-mechanics/choices',async importOriginal=>{
   openMechanicChoice:(...args:Parameters<typeof real.openMechanicChoice>)=>fault.hook==='choice'?{ok:false,state:args[0],reason:'invalid-mechanic-state'}:real.openMechanicChoice(...args),
  };
 });
-import {createMatch,setShopLock,buyUnit,type MatchState} from '../src/simulation/match';
+import {createMatch,setShopLock,buyUnit,claimOrb,openAnvil,type MatchState} from '../src/simulation/match';
+import {readLootView} from '../src/simulation/loot-view';
+import {isAnvil} from '../src/simulation/content/anvils';
 import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import {drainG23Rewards,openG23Choice} from '../src/simulation/g2-3-runtime';
 import {grantG23Academy} from '../src/simulation/g2-3-match-progress';
@@ -42,19 +44,31 @@ it('a failed academy grant is observable through the public accept hook without 
 function armory(){
  const base=createMatch(42);return writeG23Progress({...base,preparation:{...base.preparation,units:[{id:'rumble',definitionId:'rumble',starLevel:1 as const,team:'player' as const,location:{kind:'board' as const,cell:{col:0,row:4}}}]}},{...readG23Progress(base)!,junkerRounds:3});
 }
-it.each(['armory','blackMarket','forge'] as const)('a failed %s open preserves the input and reports the failed hook',kind=>{
+it.each(['armory','blackMarket'] as const)('a failed %s open preserves the input and reports the failed hook',kind=>{
  const base=createMatch(42),p=readG23Progress(base)!;
- const state=kind==='armory'?armory():kind==='blackMarket'
-  ?writeG23Progress(base,{...p,chem:{...p.chem,offer:{id:'market',tier:1,optionId:'TFT13_Crime_LootA4',optionIds:['TFT13_Crime_LootA4'],round:1}}})
-  :writeG23Progress(base,{...p,rewards:[{id:'forge',round:1,source:'conqueror',tier:9,reward:g23ConquerorReward(G23_CONQUEROR_CHESTS[8])}]});
+ const state=kind==='armory'?armory()
+  :writeG23Progress(base,{...p,chem:{...p.chem,offer:{id:'market',tier:1,optionId:'TFT13_Crime_LootA4',optionIds:['TFT13_Crime_LootA4'],round:1,concreteItems:[]}}});
  expect(openG23Choice(state).state.pendingChoice?.kind).toBe(kind);
  fault.hook='choice';
  expect(openG23Choice(freeze(state))).toEqual({state,events:[{type:'mechanicFailed',hook:'choice',reason:'invalid-mechanic-state'}]});
 });
+// v22 anvil units: a conqueror forge no longer pops up from openG23Choice; it is
+// claimed as a bench anvil and opened explicitly. The failed open keeps the input.
+it('a failed forge open preserves the input and reports the failed hook',()=>{
+ const base=createMatch(42),p=readG23Progress(base)!;
+ let state=drainG23Rewards(writeG23Progress(base,{...p,rewards:[{id:'forge',round:1,source:'conqueror',tier:9,reward:g23ConquerorReward(G23_CONQUEROR_CHESTS[8])}]}));
+ expect(openG23Choice(state).state.pendingChoice).toBeNull();
+ const orb=readLootView(state).unclaimedOrbs!.find(o=>o.orbId.startsWith('g23-anvil:'))!;
+ const claimed=claimOrb(state,orb.orbId,state.round);if(!claimed.ok)throw Error(claimed.reason);state=claimed.state;
+ const anvil=state.preparation.units.find(u=>isAnvil(u.definitionId))!;
+ const opened=openAnvil(state,anvil.id);expect(opened.ok&&opened.state.pendingChoice?.kind).toBe('forge');
+ fault.hook='choice';
+ expect(openAnvil(freeze(state),anvil.id)).toEqual({ok:false,state,reason:'invalid-mechanic-state'});
+});
 it.each(['blackMarket','other-armory'] as const)('equipment acceptance never replaces an armory with %s',mode=>{
  const opened=openG23Choice(armory()).state,choice=opened.pendingChoice!;
  const p=readG23Progress(opened)!;
- const state=mode==='blackMarket'?writeG23Progress(opened,{...p,chem:{...p.chem,offer:{id:'different-market',tier:1,optionId:'TFT13_Crime_LootA4',optionIds:['TFT13_Crime_LootA4'],round:1}}})
+ const state=mode==='blackMarket'?writeG23Progress(opened,{...p,chem:{...p.chem,offer:{id:'different-market',tier:1,optionId:'TFT13_Crime_LootA4',optionIds:['TFT13_Crime_LootA4'],round:1,concreteItems:[]}}})
   :{...opened,pendingChoice:{...choice,choiceId:'g23:junker:other',eventId:'g23:junker:other'}};
  const purchasable={...state,gold:20,shop:{...state.shop,slots:[{status:'available' as const,definitionId:'lux'}]}};
  // Trading while a popup is folded away is multiplayer-only.

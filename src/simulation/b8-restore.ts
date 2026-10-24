@@ -1,3 +1,6 @@
+import { isAnvil } from './content/anvils';
+import { openingRewardOrbs } from './opening-batch-rewards';
+import { openingCrabCarrier } from './opening-crabs';
 import { prepareBattleEquipment, validBattleInput } from './battle-equipment';
 import { projectTemporaryEquipment } from './m8/equipment';
 import { familyOrbs } from './family-orbs';
@@ -132,6 +135,7 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         serial++;
         break;
       }
+      case 'anvil-opened':
       case 'unit-sold':
         items = items.map(item => item.location.kind === 'unit' && item.location.unitId === fact.unitId
           ? {...item,location:{kind:'inventory'}} : item);
@@ -237,7 +241,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
   }
   const loot = state.m8.loot;
   keys(loot, ['layoutBinding','frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters',...(loot.queuedOrbClaims?['queuedOrbClaims']:[])]);
-  if(loot.queuedOrbClaims){check(Array.isArray(loot.queuedOrbClaims)&&new Set(loot.queuedOrbClaims).size===loot.queuedOrbClaims.length&&(!loot.queuedOrbClaims.length||state.phase==='combat'&&state.combat?.status==='running'),'family claim queue');for(const id of loot.queuedOrbClaims)check(familyOrbs(state).some(o=>o.orbId===id),'family queued identity');}
+  if(loot.queuedOrbClaims){check(Array.isArray(loot.queuedOrbClaims)&&new Set(loot.queuedOrbClaims).size===loot.queuedOrbClaims.length&&(!loot.queuedOrbClaims.length||state.phase==='combat'&&state.combat?.status==='running'),'family claim queue');for(const id of loot.queuedOrbClaims)check([...familyOrbs(state),...openingRewardOrbs(state)].some(o=>o.orbId===id),'family queued identity');}
   check(loot.layoutBinding.mode==='solo'&&loot.layoutBinding.layout.seed===state.seed&&loot.layoutBinding.layout.throughRoundOrdinal===state.round,'solo layout binding');
   const frozen = restoreFrozenLootLedger(loot.frozen, {seed:state.seed, throughRoundOrdinal:state.round,layout:loot.layoutBinding.layout}, parsedJsonInput);
   for (const value of [loot.direct,loot.choiceEligibility,loot.choiceResolutions,loot.earnedEvidence,loot.receipts]) check(Array.isArray(value), 'ledger array');
@@ -255,7 +259,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     const combat = round.ordinal === state.round ? state.combat : null;
     check(combat ? entry.death.tick <= combat.tick && entry.death.eventSeq < combat.nextEventSeq!
       : result && entry.death.tick <= result.combatTicks && entry.death.eventSeq < result.combatEventCount, 'death history boundary');
-    const source = JSON.stringify([slot.roundId,slot.sourceUnitId]), identity = canonicalContent(entry.death);
+    const source = JSON.stringify([slot.roundId,openingCrabCarrier(state,slot.roundId,slot.sourceUnitId)]), identity = canonicalContent(entry.death);
     check(!sourceDeaths.has(source) || equal(sourceDeaths.get(source),entry.death), 'source death conflict');
     check(!deathSources.has(identity) || deathSources.get(identity) === source, 'duplicate death identity');
     sourceDeaths.set(source,entry.death); deathSources.set(identity,source); evidence.set(entry.dropId,entry);
@@ -289,7 +293,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     const finished = !current || state.combat?.status === 'finished';
     check(earned === !['planned','forfeited'].includes(status), 'qualification evidence');
     if (current) {
-      const death = state.combat?.neutralReceipts?.deaths.find(value => value.unitId === slot.sourceUnitId);
+      const death = state.combat?.neutralReceipts?.deaths.find(value => value.unitId === openingCrabCarrier(state,slot.roundId,slot.sourceUnitId));
       check(earned === !!death, 'current death qualification');
       if (death) check(equal(evidence.get(slot.dropId)!.death,{combatId:state.combat!.combatId,tick:death.tick,eventSeq:death.eventSeq}), 'current death evidence');
     }
@@ -300,9 +304,9 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     check(['planned','revealed','pending-capacity','retained-terminal','forfeited','granted'].includes(progress.status), 'direct status');
     validateEligibility(slot,progress.status);
     check(progress.status === 'granted' ? receipt && progress.receiptId === receipt.receiptId : !receipt && progress.receiptId === null, 'direct receipt');
-    if (slot.roundId !== state.roundDefinitionId) check(['granted','forfeited'].includes(progress.status), 'unresolved historical direct');
+    if (slot.roundId !== state.roundDefinitionId) check(['granted','forfeited'].includes(progress.status)||slot.payload.kind==='forge'&&progress.status==='revealed', 'unresolved historical direct');
     if (state.combat?.status === 'finished' && slot.roundId === state.roundDefinitionId) {
-      check(progress.status !== 'revealed', 'unprocessed direct');
+      check(progress.status !== 'revealed'||slot.payload.kind==='forge', 'unprocessed direct');
       if (progress.status === 'pending-capacity' || progress.status === 'retained-terminal') check(slot.payload.kind === 'unit'
         && (progress.status === 'retained-terminal') === (state.phase === 'gameOver'), 'unit capacity status');
     }
@@ -436,7 +440,9 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     const payload = 'payload' in slot ? slot.payload : {kind:'item' as const,definitionId:definitionId!,quantity:1};
     const receipt = receipts.get(slot.dropId);
     let itemIds: string[] = [], unitIds: string[] = [];
-    if (payload.kind === 'unit') {
+    const birth=entries[cursor];
+    if(payload.kind==='forge'&&(birth?.kind!=='unit-acquired'||birth.source.kind!=='loot'||birth.source.receiptId!==lootReceiptId(slot.dropId)))return false;
+    if (payload.kind === 'unit'||payload.kind==='forge') {
       const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},
         payload.definitionId,{kind:'loot',receiptId:lootReceiptId(slot.dropId)},cursor);
       if (!plan.ok) return false;
@@ -454,7 +460,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   };
   combinations(); // Commands during combat precede the atomic terminal grants/commit.
   for (const slot of direct) expectedProgress.set(slot.dropId,!earned.has(slot.dropId) ? 'forfeited'
-    : grant(slot) ? 'granted' : state.phase === 'gameOver' ? 'retained-terminal' : 'pending-capacity');
+    : grant(slot) ? 'granted' : slot.payload.kind==='forge'?'revealed':state.phase === 'gameOver' ? 'retained-terminal' : 'pending-capacity');
   const earnedChoices = choices.filter(choice => earned.has(choice.dropId));
   const resolve = (choice: LootChoiceDescriptor) => {
     const resolution = loot.choiceResolutions.find(value => value.dropId === choice.dropId), receipt = receipts.get(choice.dropId);
@@ -516,7 +522,19 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       take({kind:'d14-returned',choiceId:fact.choiceId,unitId:fact.unitId,settledOrdinal:fact.settledOrdinal});
     }
     combinations();
-    while (mechanicBirth()) combinations();
+    for(;;){
+      const fact=entries[cursor];
+      if(fact?.kind==='unit-acquired'&&fact.source.kind==='loot'){
+        const receiptId=fact.source.receiptId;
+        const slot=direct.find(s=>s.payload.kind==='forge'&&lootReceiptId(s.dropId)===receiptId) as FrozenDirectDrop|undefined;
+        check(slot&&expectedProgress.get(slot.dropId)==='revealed'&&grant(slot),'deferred anvil claim');expectedProgress.set(slot.dropId,'granted');
+      }else if(fact?.kind==='anvil-opened'){
+        check(preparation.units.some(u=>u.id===fact.unitId&&isAnvil(u.definitionId)),'anvil consumption');
+        preparation={...preparation,units:preparation.units.filter(u=>u.id!==fact.unitId)};
+        take({kind:'anvil-opened',unitId:fact.unitId,choiceId:fact.choiceId});
+      }else if(!mechanicBirth())break;
+      combinations();
+    }
   };
   if (state.phase !== 'gameOver') for (const choice of earnedChoices) {
     continuation(); // Between user choices, never inside a grant transaction.

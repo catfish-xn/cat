@@ -11,7 +11,8 @@ import { effectIdentity } from '../src/simulation/m8/identity';
 import { EMPTY_MECHANISMS } from '../src/simulation/m8/runtime-types';
 import { planCatalogRoundEconomy } from '../src/simulation/opening-economy';
 import { accepted } from './match-helpers';
-import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
+import { publicNeutralPreparation, publicAuthoredPreparation } from './fixtures/m8-neutral-public-route';
+import { MAX_COMBAT_TICKS } from '../src/simulation/combat-types';
 import { unit } from './combat-helpers';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
@@ -64,9 +65,10 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
     expect(api.stepMatch(state)).toEqual({ state, events: [] });
     if (roundId === '6-7') {
       expect(state.phase).toBe('gameOver');
-      // Seed42 after the independent additive bonus stream: both literal-table
-      // BigInt oracles (epic-loot-oracle.cjs and m5/oracle.g2.cjs) give this order.
-      expect(receipts.map(r => r.payload)).toEqual(independentLootPlan(42,38).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
+      // Seed 2192 (v22: the public route moved off seed 42's crab opening) after the independent
+      // additive bonus stream: both literal-table BigInt oracles (epic-loot-oracle.cjs and
+      // m5/oracle.g2.cjs) give this order.
+      expect(receipts.map(r => r.payload)).toEqual(independentLootPlan(2192,38).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
     }
   });
 });
@@ -78,7 +80,8 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
  * actual stamped death events; no death receipt or result is authored by this test.
  */
 function boundary(roundId: string, burning: boolean, partial = false) {
-  const state = publicNeutralPreparation(roundId);
+  // The compiled authored encounter needs a crab-free opening: seed 42's crabs carry these sources in v22.
+  const state = publicAuthoredPreparation(roundId);
   const started = accepted(api.startMatchCombat(state)).combat!;
   const compiled = COMPILED_NEUTRAL_ENCOUNTERS.find(e => e.roundId === roundId)!;
   const dummy = unit('b10-boundary', 'player', 3, 7, { hp: partial ? 100 : 1_000_000_000, maxHp: partial ? 100 : 1_000_000_000,
@@ -129,10 +132,10 @@ describe('B10 eight encounters: explicitly isolated engine result boundaries', (
     expect(grantDirectLoot(granted.state, false).events).toEqual([]);
   });
 
-  it.each(rounds)('%s: full 1200-tick timeout draw grants no unearned loot', roundId => {
+  it.each(rounds)('%s: full v22 45-second (MAX_COMBAT_TICKS) timeout draw grants no unearned loot', roundId => {
     const fixture = boundary(roundId, false); let combat = fixture.combat;
     while (combat.status === 'running') combat = stepCombat(combat).state;
-    expect(combat.result).toBe('draw'); expect(combat.tick).toBe(1200);
+    expect(combat.result).toBe('draw'); expect(combat.tick).toBe(MAX_COMBAT_TICKS); expect(MAX_COMBAT_TICKS).toBe(900);
     expect(combat.neutralReceipts!.deaths).toEqual([]);
     const result = revealMatchLoot(fixture.state, combat);
     expect(result.events.filter(e => e.type === 'lootRevealed')).toEqual([]);

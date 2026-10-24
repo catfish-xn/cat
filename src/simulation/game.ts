@@ -1,3 +1,4 @@
+import { isAnvil } from './content/anvils';
 import { contains, DEFAULT_BOARD, isDeploymentCell, sameCell, type Board } from './board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from './units';
 import { countsTowardPopulation } from './seat-mechanics/forms';
@@ -37,8 +38,12 @@ export function validateDeployment(state: GameState, unitId: string, target: Uni
   if (unit.team !== 'player') return 'enemy-unit';
   const reason = locationFailure(state, target);
   if (reason) return reason;
+  if(unit.definitionId==='trainer-golem' && target.kind==='bench')return 'invalid-location';
+  if(isAnvil(unit.definitionId)&&target.kind==='board')return 'invalid-location';
   const occupants = state.units.filter(other => other.id !== unitId && sameLocation(other.location, target));
+  if(unit.location.kind==='board'&&occupants.some(u=>isAnvil(u.definitionId)))return 'invalid-location';
   if (occupants.length > 1 || occupants.some(other => other.team !== 'player')) return 'occupied';
+  if(occupants.some(u=>u.definitionId==='trainer-golem') && unit.location.kind==='bench')return 'invalid-location';
   // Both destinations must be legal; never swap an ally into an invalid/enemy-zone source.
   if (occupants.length) return locationFailure(state, unit.location);
   return undefined;

@@ -1,6 +1,6 @@
 import type { ClientCommand } from '../../server/protocol';
 import type { MatchState } from '../match-types';
-import { buyUnit, buyXp, sellUnit, setShopLock, rerollShop, selectChoice, selectAnomalyTarget,
+import { openAnvil, buyUnit, buyXp, sellUnit, setShopLock, rerollShop, selectChoice, selectAnomalyTarget,
   rerollAugment, rerollAnomaly, validateMatchDeployment } from '../match';
 import { previewCombine, previewEquip } from '../item-selectors';
 
@@ -14,6 +14,7 @@ export function legal(state: MatchState, action: ClientCommand): boolean {
     case 'combine': return previewCombine(state, action.a, action.b).allowed;
     case 'equip': return previewEquip(state, action.itemId, action.unitId, action.slot).allowed;
     case 'buy': return buyUnit(state, action.slot, action.generation).ok;
+    case 'openAnvil': return openAnvil(state,action.unitId).ok;
     case 'sell': return sellUnit(state, action.unitId).ok;
     case 'buyXp': return buyXp(state).ok;
     case 'reroll': return rerollShop(state).ok;

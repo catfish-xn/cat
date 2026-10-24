@@ -13,13 +13,16 @@ vi.setConfig({ testTimeout: 20_000 });
 const items=['TFT_Item_Artifact_SuspiciousTrenchCoat','TFT7_Item_ShimmerscaleGamblersBlade','TFT4_Item_OrnnTheCollector'];
 function prepare(seed:number){
  let state=reachRound('2-1',false,seed);
- // Golden Gala forces gold at seed307. Two public free card rerolls reach
- // Manaflow II, also inactive on the front row; preserve the exact combat oracle.
+ // Golden Gala forces gold at seed307. Under v22 augment flow (every shown card is never offered again) the two
+ // public free card rerolls (slots 0, 1) now give not-today/mentorship-ii/spirit-link and Manaflow II is no longer
+ // reachable. Mentorship II only buffs a unit adjacent to a higher-cost ally; Darius fights alone and his Trench
+ // copies share his cost, so it stays inert like Manaflow II on the front row and the combat oracle is unaffected.
  for(const slot of [0,1]) {const c=state.pendingChoice!;state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));}
- const choice=state.pendingChoice!;expect(choice.offers).toContain('manaflow-ii');
- state=accepted(selectChoice(state,choice.choiceId,choice.generation,'manaflow-ii'));
+ const choice=state.pendingChoice!;expect(choice.offers).toContain('mentorship-ii');
+ state=accepted(selectChoice(state,choice.choiceId,choice.generation,'mentorship-ii'));
  const owner=state.preparation.units.find(u=>u.team==='player')!;
  state=accepted(deployMatchUnit(state,owner.id,{kind:'board',cell:{col:3,row:4}}));
+ expect(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').map(u=>u.id)).toEqual([owner.id]);
  for(const [slot,definitionId] of items.entries()){
   const grant=grantMechanicItem(state,{receiptId:`trench-gold-${slot}`,source:'test',definitionId});if(!grant.ok)throw Error(grant.reason);
   state=accepted(equipItem(grant.state,grant.state.items.at(-1)!.id,owner.id,slot));
@@ -28,7 +31,7 @@ function prepare(seed:number){
 }
 
 it('real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts',()=>{
- // v21 seed 307 selects inert front-row Manaflow II: the original Darius and copies all
+ // Seed 307 selects inert Mentorship II (v21 used front-row Manaflow II): the original Darius and copies all
  // attack, with positive Gambler payouts on both sides of the split and
  // two successful Collector executions by copies. No combat state is edited.
  const {state,ownerId}=prepare(307);

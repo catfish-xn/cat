@@ -1,3 +1,4 @@
+import { MAX_COMBAT_TICKS } from './combat-types';
 import { scaleItemSummonHp } from './g2-4b-summons';
 /** Battle-time equipment uses the opening strategy compiler and preserves runtime.
  * Receipts are server-private source inputs, not client-supplied resolved numbers. */
@@ -32,7 +33,7 @@ export type BattleEquipmentFailure = 'battle-input-invalid' | 'battle-unit-unava
 export const battleLocalId = (seat: string, kind: string, id: string) => JSON.stringify(['t2', seat, kind, id]);
 export function validBattleInput(input: BattleEquipmentInput): boolean {
   return !!input && input.kind === 'equipment' && Number.isSafeInteger(input.seq) && input.seq > 0
-    && Number.isSafeInteger(input.effectiveTick) && input.effectiveTick > 0 && input.effectiveTick <= 1200
+    && Number.isSafeInteger(input.effectiveTick) && input.effectiveTick > 0 && input.effectiveTick <= MAX_COMBAT_TICKS
     && [input.seatId, input.itemId, input.unitId].every(id => typeof id === 'string' && id.length > 0)
     && Number.isSafeInteger(input.slot) && input.slot >= 0 && input.slot < 3
     && Object.keys(input).sort().join() === 'effectiveTick,itemId,kind,seatId,seq,slot,unitId';
@@ -105,7 +106,8 @@ export function applyBattleEquipment(state: CombatState, receipt: BattleEquipmen
       result.baseAttackSpeedBps = next.stats.baseAttackSpeedBps ?? Math.floor(200000 / next.stats.attackIntervalTicks);
       result.attackSpeedBonusBps = next.stats.attackSpeedBonusBps ?? 0;
       result.maxMana += next.stats.maxMana - old.stats.maxMana;
-      result.mana = unit.alive ? Math.min(result.maxMana, unit.mana + Math.max(0, next.stats.initialMana - old.stats.initialMana)) : 0;
+      result.mana = unit.alive && result.maxMana > 0 ? unit.mana + (state.tick + 1 < (unit.manaLockedUntilTick ?? 0) ? 0 : Math.max(0, next.stats.initialMana - old.stats.initialMana)) : 0;
+      if (unit.definitionId === 'viktor') result.mana = Math.min(result.maxMana, result.mana);
       const oldHp = hpParts(old), newHp = hpParts(next);
       if (result.maxHpBasis) {
         result.maxHpBasis = { ...result.maxHpBasis, flat: result.maxHpBasis.flat + newHp.flat - oldHp.flat,

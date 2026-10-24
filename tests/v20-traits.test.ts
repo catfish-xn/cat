@@ -100,8 +100,9 @@ describe('v20-traits approved custom rules',()=>{
     const c=start(army(['jinx','sevika'],['unlikely-duo'])),plain=start(army(['jinx','sevika']));
     for(const id of ['jinx','sevika']){expect(unit(c,id).maxHp-unit(plain,id).maxHp).toBe(100);expect(ad(unit(c,id))).toBe(Math.floor(unit(plain,id).attackDamageBase!*110/100));}
     const ready=idle(c,['jinx']);const s={...ready,units:ready.units.map(u=>u.id==='sevika'?{...u,maxMana:60,mana:57}:u)};
-    const r=stepCombat(s);expect(unit(r.state,'sevika').mana).toBe(60);
-    expect(r.events.find(e=>e.type==='manaChanged'&&'outcome' in e&&e.outcome.source.definitionId==='unlikely-duo')).toMatchObject({outcome:{amount:10,applied:3,overflow:7}});
+    // v22 mana rule: non-damage mana keeps its overflow above max until the cast spends maxMana (docs/COMBAT_MANA_RULES.md).
+    const r=stepCombat(s);expect(unit(r.state,'sevika').mana).toBe(67);
+    expect(r.events.find(e=>e.type==='manaChanged'&&'outcome' in e&&e.outcome.source.definitionId==='unlikely-duo')).toMatchObject({outcome:{amount:10,applied:10,overflow:0}});
     const locked=stepCombat({...s,units:s.units.map(u=>u.id==='sevika'?{...u,manaLockedUntilTick:20}:u)});expect(unit(locked.state,'sevika').mana).toBe(57);
   });
   it('luck conversion is strictly below 10%, triples do not reroll and jackpots keep their original table',()=>{

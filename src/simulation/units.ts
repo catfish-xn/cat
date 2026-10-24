@@ -1,3 +1,5 @@
+import { ANVIL_UNITS, isAnvil } from './content/anvils';
+import { TRAINER_ID, TRAINER_UNIT } from './content/opening-batch-b';
 import { SIX_COST_UNITS } from './content/v19-six-cost';
 import {G24_VOIDSPAWN_UNITS} from './content/g2-4b-voidspawn';
 import { S13_ANOMALY_SUMMON_UNITS } from './content/s13-anomaly-summons';
@@ -608,7 +610,7 @@ export const M8_NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition
     baseCritChanceBps:d.baseCritChanceBps,baseCritMultiplierBps:d.baseCritMultiplierBps,
   }])));
 export const M5_UNIT_IDS: readonly string[] = Object.freeze(Object.keys(M5_UNIT_DEFINITIONS).sort());
-export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({ ...S13_ANOMALY_SUMMON_UNITS,...G23_SUMMON_UNITS,...G24_VOIDSPAWN_UNITS,...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
+export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({ ...ANVIL_UNITS,[TRAINER_ID]:TRAINER_UNIT,...S13_ANOMALY_SUMMON_UNITS,...G23_SUMMON_UNITS,...G24_VOIDSPAWN_UNITS,...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
 /** Reject malformed IDs and fields without silently changing shop sampling. */
 export function validateUnitDefinitions(definitions: Readonly<Record<string,UnitDefinition>> = UNIT_DEFINITIONS, catalogByCost = SHOP_CATALOG_BY_COST): void {
   const integerAtLeast = (value:number,minimum:number) => Number.isSafeInteger(value) && value >= minimum;
@@ -616,7 +618,7 @@ export function validateUnitDefinitions(definitions: Readonly<Record<string,Unit
     validateManaDefinition(definition);
     validateNeutralInputs(definition);
     const s=definition.baseStats;
-    if (definition.id !== id || !/^[a-z][a-z0-9-]*$/.test(id) || !definition.name || !definition.symbol || !definition.abilityId
+    if (definition.id !== id || (!/^[a-z][a-z0-9-]*$/.test(id)&&!isAnvil(id)) || !definition.name || !definition.symbol || !definition.abilityId
       || !integerAtLeast(definition.color,0) || definition.color>0xffffff || !integerAtLeast(definition.cost,1) || definition.cost>6
       || !integerAtLeast(s.health,1) || !integerAtLeast(s.attack,0) || !integerAtLeast(s.armor,0) || !integerAtLeast(s.magicResist,0)
       || !integerAtLeast(definition.attackRange,1) || !integerAtLeast(definition.attackIntervalTicks,1)

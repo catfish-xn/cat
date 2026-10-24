@@ -1,4 +1,4 @@
-import { planRoundEconomy, type EconomyStreak, type RoundEconomyInput, type RoundEconomyPlan } from './economy';
+import { planCombatStreak, planRoundEconomy, type EconomyStreak, type RoundEconomyInput, type RoundEconomyPlan } from './economy';
 import { MATCH_RULES, OPENING_ECONOMY_RULES } from './match-rules';
 import { grantXp } from './progression';
 import { getCatalogRoundById } from './round-selectors';
@@ -18,7 +18,7 @@ export type OpeningEconomyPlan = {
   readonly kind: 'opening';
   readonly roundId: string;
   readonly income: number;
-  readonly incomeBreakdown: { readonly base: number; readonly win: 0; readonly interest: 0; readonly streak: 0 };
+  readonly incomeBreakdown: { readonly base: number; readonly win: 0; readonly interest: 0; readonly streak: number };
   readonly goldAfter: number;
   readonly naturalXp: number;
   /** Requested HP deduction; the caller applies its existing HP clamp. */
@@ -45,17 +45,19 @@ export function planOpeningEconomy(input: OpeningEconomyInput): OpeningEconomyPl
   if (!Number.isSafeInteger(count) || count < 0 || !['win','loss',null].includes(kind)
     || (kind === null) !== (count === 0)) throw new RangeError('Invalid opening streak');
 
-  // OPENING §3.1: approved 2/3/5G and 2/2/2XP, independent of combat outcome.
+  // 10-23 approved next-entry base income 2/3/4G; natural XP remains 2/2/2.
   const parameters = OPENING_ECONOMY_RULES.rounds[round.roundId as keyof typeof OPENING_ECONOMY_RULES.rounds];
   if (!parameters) throw new RangeError('Missing opening economy parameters');
   const {baseGold:base,naturalXp} = parameters;
-  const goldAfter = input.gold + base;
+  const { streakAfter, streakGold } = planCombatStreak(input.streak, input.result);
+  const income = base + streakGold;
+  const goldAfter = input.gold + income;
   if (!Number.isSafeInteger(goldAfter)) throw new RangeError('Invalid settled opening gold');
   return {
-    kind:'opening', roundId:round.roundId, income:base,
-    incomeBreakdown:{base,win:OPENING_ECONOMY_RULES.victoryGold,interest:OPENING_ECONOMY_RULES.interest,streak:OPENING_ECONOMY_RULES.streakGold}, goldAfter, naturalXp,
+    kind:'opening', roundId:round.roundId, income,
+    incomeBreakdown:{base,win:OPENING_ECONOMY_RULES.victoryGold,interest:OPENING_ECONOMY_RULES.interest,streak:streakGold}, goldAfter, naturalXp,
     playerDamage:input.result === 'playerWin' ? 0 : OPENING_ECONOMY_RULES.pveFailureDamage,
-    streakAfter:{...input.streak}, progression:grantXp(input.level,input.xp,naturalXp),
+    streakAfter, progression:grantXp(input.level,input.xp,naturalXp),
   };
 }
 

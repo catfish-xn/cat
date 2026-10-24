@@ -84,8 +84,8 @@ describe('complete strategy snapshot', () => {
     });
     const snapshot = buildStrategySnapshot(frozen(state));
     const ranger = snapshot.units.find(unit => unit.unitId === 'ranger')!;
-    // (126 from 2 stars + 8 Forge + 20 duplicate blades + 12 Augment) * 1.35 = 224.1.
-    expect(ranger.stats.attack).toBe(224);
+    // (105 from 2 stars at v22 1.5x AD + 8 Forge + 20 duplicate blades + 12 Augment) * 1.35 = 195.75.
+    expect(ranger.stats.attack).toBe(195);
     expect(ranger.stats.attackIntervalTicks).toBe(18);
     expect(ranger.ability.amount).toBe(270);
     expect(ranger.sources.map(source => source.source.sourceKind)).toEqual(['trait', 'trait', 'item', 'item', 'augment', 'anomaly']);
@@ -93,7 +93,7 @@ describe('complete strategy snapshot', () => {
     expect(snapshot.units.find(unit => unit.unitId === 'enemy')!.stats.attack).toBe(70);
     const onBench = buildStrategySnapshot({ ...state, anomalyBinding: { ...state.anomalyBinding!, unitId: 'bench' } });
     expect(onBench.units.some(unit => unit.sources.some(source => source.source.sourceKind === 'anomaly'))).toBe(false);
-    expect(onBench.units.find(unit => unit.unitId === 'ranger')!.stats.attack).toBe(166);
+    expect(onBench.units.find(unit => unit.unitId === 'ranger')!.stats.attack).toBe(145);
   });
 
   it('canonicalizes input/catalog order and deep-copies definitions, effects, triggers and summaries', () => {

@@ -7,18 +7,20 @@ import { integer, safeNumber } from './m8/stats';
 import { splitTotal } from './m8/periodic';
 import { asSource, flatAmount } from './m8/s13-definitions';
 import { executeShieldEnd } from './m8/s13-mechanisms';
-import { hexDistance, type Board } from './board';
+import { hexDistance, type Board, type HexCell } from './board';
 import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
 import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, areaEnemies, grantShield, lowestAlly, mechanic, neighborsOf,
   origin, path, range, sourceKey, variable, type S13Unit } from './combat-s13-state';
 import type { CritEligibility, DamageDelivery, DamageInput, Amount, HealRequest } from './m8/contracts';
 export interface PeriodicReference { taskKey: string; effectIndex: number; holderId: string }
 export interface PacketStatusEffect { source: import('./m8/contracts').Source; effect: Extract<import('./m8/contracts').Effect, { kind: 'apply-status' }>; ordinal: number }
-export interface S13Packet { devour?:boolean; beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
-  ordinal: number; critical?: boolean; bounce?: boolean; delivery: DamageDelivery; critEligibility: CritEligibility;
+export interface S13Packet { sevikaChomp?: boolean; devour?:boolean; beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
+  ordinal: number; critical?: boolean; critMultiplierBps?: number; bounce?: boolean; delivery: DamageDelivery; critEligibility: CritEligibility;
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { g22Shared?: boolean; lateAmount?: Amount; reactionKey?: string; source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
 export interface AbilityContext {
+  movementReservations?: Set<string>;
+  ambessaRetreats?: { unitId: string; targetCell: HexCell }[];
   anomalySeed?: number;
   anomalyOpening?: readonly { id: string; health: number; attackDamage: number }[];
   resolutionFacts?: import('./m8/triggers').ResolutionFacts;
@@ -45,6 +47,7 @@ function replaceEndTask(unit: S13Unit, kind: CombatTask['kind'], at: number, val
   unit.tasks = unit.tasks.filter(t => t.kind !== kind); addTask(unit, kind, at, null, value, seq);
 }
 export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number): string[] {
+  if(unit.definitionId==='trainer-golem'){packet(ctx,unit,target,amount(unit,ctx.tick,{ap:variable(unit,'Damage')}),'magic',seq);return [target.id];}
   const six=sixCostCast(ctx,unit,target,seq);if(six)return six;
   const { tick, units, events } = ctx, source = origin(unit), v = (key: string, fallback = 0) => variable(unit, key, fallback);
   const mag = (key: string) => amount(unit, tick, { ap: v(key) });

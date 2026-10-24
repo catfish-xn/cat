@@ -4,6 +4,7 @@ import {createMatch,equipItem,startMatchCombat,stepMatch} from '../src/simulatio
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {recordItemGold} from '../src/simulation/g2-4b-item-gold';
+import {MAX_COMBAT_TICKS} from '../src/simulation/combat-types';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -56,7 +57,7 @@ it('warm restore rejects edited bank/absence and frozen inputs without poisoning
 
 it('rejects invalid tick bounds before any replay work',()=>{
  const {state}=checkpoint(ids.zephyr),step=vi.spyOn(combat,'stepCombat'),create=vi.spyOn(combat,'createCombatWithEvents');
- for(const tick of [-1,0.5,1201,Number.MAX_SAFE_INTEGER,NaN,Infinity]){
+ for(const tick of [-1,0.5,MAX_COMBAT_TICKS+1,1201,Number.MAX_SAFE_INTEGER,NaN,Infinity]){
   const bad=structuredClone(state);Object.assign(bad.combat!,{tick});
   expect(()=>restoreMatch(bad)).toThrow();
  }
@@ -66,9 +67,11 @@ it('rejects invalid tick bounds before any replay work',()=>{
 it('an in-range forged late Zephyr clock stops replay at the real terminal boundary and rejects',()=>{
  const {state}=checkpoint(ids.zephyr);let terminal=state;
  while(terminal.phase==='combat')terminal=stepMatch(terminal).state;
- const bad=structuredClone(state);Object.assign(bad.combat!,{tick:1199});
+ // v22: combat is 45 s (MAX_COMBAT_TICKS 900), so the last in-range forged clock is 899.
+ const late=MAX_COMBAT_TICKS-1;expect(terminal.combat!.tick).toBeLessThan(late);
+ const bad=structuredClone(state);Object.assign(bad.combat!,{tick:late});
  const step=vi.spyOn(combat,'stepCombat');
  expect(()=>restoreMatch(JSON.stringify(bad))).toThrow('authoritative Zephyr replay');
  expect(step).toHaveBeenCalledTimes(terminal.combat!.tick);
- expect(step.mock.calls.length).toBeLessThan(1199);
+ expect(step.mock.calls.length).toBeLessThan(late);
 });
