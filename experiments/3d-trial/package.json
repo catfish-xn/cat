@@ -1,0 +1,19 @@
+{
+  "name": "tft-3d-trial",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "独立 3D 渲染试验页，不属于正式游戏构建",
+  "scripts": {
+    "fetch-assets": "node tools/fetch-assets.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "vite": "7.1.12"
+  }
+}
