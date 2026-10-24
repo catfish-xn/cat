@@ -271,7 +271,7 @@ createCombatReplayRecorder(initialState: CombatState,
 
 沿用奇数锁链/偶数拳击。锁链伤害前移到目标身边距自己最近的可达空格；已与目标相邻时原地不动、不发位移事件（不相邻且无可达空格时也原地，见 S13_RULES_GAP 同名条目），距离平局沿普通 BFS；拳击在本 tick HP/存活屏障后向己方半场且远离施法时目标坐标后撤 1 格，几何首选格不可用则原地。复用占格、移动限制及本 tick 保留格；不增加 RNG 调用，不改伤害/短晕/耗蓝。精确口径、独立向量和回退见 [AMBESSA_DASH](AMBESSA_DASH.md)，原档缺距离来源见 [证据](AMBESSA_DASH_EVIDENCE.md)。
 
-既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，已随 v22-online-rules 录制。
+既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat' | 'mordekaiser-pull' | 'sett-grab' | 'sevika-knockback'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，已随 v22-online-rules 录制。
 
 ## 单场初始化协作切片（2026-10-23；不变更 epoch）
 
@@ -294,3 +294,11 @@ PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校�
 失败枚举不新增：快照/编译/任务沿用 `BattleFailure` / `BattleValidationError`，包括 `snapshot-version`、`content-digest`、`invalid-snapshot`、`wrong-phase`、`round-mismatch`、`round-kind`、`seat-collision`、`invalid-seed`、`invalid-battle-id`、`invalid-mirror`、`battle-input`。PvE 仍返回原有 `MatchFailure`，失败保持原 state 引用，无事件、资源及 RNG 变更。异常可能在后续 `next()` 才抛出；服务器 `guardedSteps` 沿用 `BattleResolveError` 包装。
 
 服务器 `startLiveTaskSteps(envelope, beforeTick?)` 依次委派快照、编译、任务初始化；`openStreamSteps` 委派 PvE 初始化。所有流仍私有暂存，全部完成才原子发布并启动共同 tick0 时钟。`runSettlementSlice` 用注入的 `sliceNow`，初始化工作窗口为 `min(5ms, sliceMs/2)`，保留余量给下一不可抢占子步骤；同时遵守 `sliceTicks`。未配置 `sliceMs` 时沿用无时间预算语义。结算窗口、50ms 战斗 tick、RNG、内容身份、账本及录像格式不变；真实 GC/系统调度暂停不构成跨硬件硬实时保证。
+
+## v23 控制与赛恩存档恢复（P，2026-10-25）
+
+`StatusApplication.knockup?: true` 只给击飞的 stun 贡献附加标记；普通眩晕省略。两者仍按原 stun 规则禁行动、打断，不改变伤害或持续时间。恢复从认证开战输入独立重放，比较全部 stun 分组和贡献（含来源、目标、时序与 knockup 的存在性）；添加、删除或伪造标记均拒绝。
+
+`CombatUnit.g23Sion?: { reviveAtTick: number; revived: boolean }` 保持现有可选格式。只有黑玫档位至少7的 `g23-sion` 可持有；首次致死屏障记录返回 tick（死亡 tick + 20），等待时仍为存活但缺席单位。`revived=false` 时返回 tick 必须在当前 tick 之后、最多20 tick；`revived=true` 时返回 tick 不得晚于当前 tick，记录保留以禁止二次复活。字段结构、类型、持有者及完整历史事实（包括无字段的状态）均认证，不从候选 HP 或标记推断死亡史。
+
+赛恩 ability 来源 effectIndex：0 为主动技能，1 为解缚冲锋伤害/击飞，2 为高档解缚 AP，3 为复活清除/免控/攻速。旧状态来源校验仅对赛恩冲锋 stun 接纳 effectIndex=1，并用独立重放认证真实贡献；不普遍放宽其他技能、护盾或任务的 effectIndex。以上仅补存档支持与认证，不更改合法状态的格式、事件、回放或战斗推进。

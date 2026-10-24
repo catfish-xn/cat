@@ -14,8 +14,9 @@ export interface CombatReplayFacts {
   readonly nextEventSeq: CombatState['nextEventSeq'];
   readonly damageContributors: CombatState['damageContributors'];
   readonly nextTriggerEventSeq: CombatState['nextTriggerEventSeq'];
-  readonly units: readonly (Pick<CombatUnit, 'mana' | 'manaLockedUntilTick' | 'damageManaRemainderCenti' | 'runtime' | 'shieldLayers' | 'shield' | 'shieldExpiresAtTick' | 'g23' | 'maxHp' | 'maxHpBasis'> & {
+  readonly units: readonly (Pick<CombatUnit, 'mana' | 'manaLockedUntilTick' | 'damageManaRemainderCenti' | 'runtime' | 'shieldLayers' | 'shield' | 'shieldExpiresAtTick' | 'g23' | 'g23Sion' | 'maxHp' | 'maxHpBasis'> & {
     readonly periodicTasks: NonNullable<CombatUnit['mechanismState']>['periodicTasks'];
+    readonly stunStatuses: NonNullable<CombatUnit['mechanismState']>['statuses'];
     readonly burnStatuses: NonNullable<CombatUnit['mechanismState']>['statuses'];
     readonly activities: NonNullable<CombatUnit['mechanismState']>['activities'];
     readonly exposureBps: number;
@@ -50,8 +51,9 @@ function facts(state: CombatState): CombatReplayFacts {
     reaveBps: unit.g22?.reaveBps ?? 0, reaveUntilTick: unit.g22?.reaveUntilTick ?? 0,
     tasks: unit.tasks ?? [], triggerLedger: unit.triggerLedger,
     runtime: unit.runtime, shieldLayers: unit.shieldLayers, shield: unit.shield, shieldExpiresAtTick: unit.shieldExpiresAtTick,
-    g23: unit.g23, maxHp: unit.maxHp, maxHpBasis: unit.maxHpBasis,
+    g23: unit.g23, g23Sion: unit.g23Sion, maxHp: unit.maxHp, maxHpBasis: unit.maxHpBasis,
     periodicTasks: unit.mechanismState?.periodicTasks ?? [],
+    stunStatuses: unit.mechanismState?.statuses.filter(s => s.kind === 'stun') ?? [],
     burnStatuses: unit.mechanismState?.statuses.filter(s => s.kind === 'burn') ?? [],
     activities: unit.mechanismState?.activities ?? [],
     exposureBps: unit.g22?.exposureBps ?? 0, exposureFromTick: unit.g22?.exposureFromTick ?? 0,

@@ -381,7 +381,7 @@ applyTrainerGolemsOpening(state: MatchState, shared?: OpeningEncounterContext): 
 
 - 16 项顺序与权重固定合计 10000 Bps；`enabled` **仅控制效果，不控制抽选资格**。“没有奇遇”1000 Bps 为显式结果且 enabled=true；其余15项 enabled=false、effectStatus=not-implemented。关闭项保留选中 ID/角色/原文说明并公开“效果尚未启用”，不改成 none、不重抽、不重归一化。
 - `content/opening-encounters.ts` 的 `sourcePath` 指向研究 JSON 对象；`researchParameters` 保留原始 null。`readiness` 区分后续可实现与缺证阻塞；`projectConventions` 是用户批准的工程约定，不能冒充官方参数。历史强化禁用引用只留证据，不扩大强化池。梅尔冠冕分支3→2单列 B 补丁覆盖，不拼造奖池。
-- 开局流 `opening-encounter-v1/select`：UTF-16 FNV-1a32（offset=0x811c9dc5，prime=0x01000193），`initial=(matchSeed XOR hash)>>>0`；lcg32-v1 取一词，`floor(word*10000/4294967296)` 按表顺序累计区间。商店、掉落、战斗、强化、选秀、开局弈子流不参与。预留 `opening-encounter-v1/shared/<effectKey>`、`opening-encounter-v1/seat/<seatId>/<effectKey>`、`opening-encounter-v1/display`，PR1 不生成它们。
+- 开局流 `opening-encounter-v1/select`：UTF-16 FNV-1a32（offset=0x811c9dc5，prime=0x01000193），`initial=(matchSeed XOR hash)>>>0`；当前 v23 用 Murmur3 fmix32 混合该 initial：`x=imul(x^(x>>>16),0x85ebca6b)>>>0`，再 `x=imul(x^(x>>>13),0xc2b2ae35)>>>0`，最后 `word=(x^(x>>>16))>>>0`（覆盖旧 PR1 的单步 lcg32-v1 描述，不推进其他 LCG 流）。`selectionRng={state:word,draws:1}`，`floor(word*10000/4294967296)` 按表顺序累计区间。商店、掉落、战斗、强化、选秀、开局弈子流不参与。预留 `opening-encounter-v1/shared/<effectKey>`、`opening-encounter-v1/seat/<seatId>/<effectKey>`、`opening-encounter-v1/display`，PR1 不生成它们。
 
 状态与恢复：
 
@@ -393,7 +393,7 @@ applyTrainerGolemsOpening(state: MatchState, shared?: OpeningEncounterContext): 
     selection: OpeningEncounterSelection, receipts: OpeningEffectReceipt[] }
 // SharedPoolState.openingEncounter 为多人全局唯一权威（PR1 复用已有根 seed 的领域容器）
 OpeningEncounterContext = {
-  selection: { configVersion: 'opening-encounters-14.24b-pr1-v1', encounterId: OpeningEncounterId },
+  selection: { configVersion: 'opening-encounters-14.24b-batch-a-v2', encounterId: OpeningEncounterId },
   seed: uint32, selectionRng: { state: uint32, draws: 1 }, facts: OpeningEffectFact[]
 }
 OpeningEffectFact = { factId: string, effectKey: string, nodeId: string }
