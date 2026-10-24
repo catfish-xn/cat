@@ -50,7 +50,7 @@ S1改为独立手抄期待表：batch 1开放67项与阻塞2项、batch 2全部2
 | P-F6 | 有保存位置的锻炉在开战布置时先于黑玫瑰 Sion 等其他召唤物落位；没有保存位置时，布置顺序与旧版一致，旧存档和旧回放的结果不变。 |
 | P-F7 | 联机对战：快照只带上场杰斯的锻炉位置，上方座位按镜像翻转，与虚空生物相同。战斗规则不变：锻炉不攻击、不移动，杰斯施法时复活它，并以它为中心选最近的友军。 |
 
-实现：`projectG23Summons` 增加 `forgeCells`；`readItemSummons` 和 `moveItemSummon` 增加 `kind: 'forge'`，其 `itemInstanceId` 为杰斯的单位编号。客户端和服务器沿用 `moveItemSummon` 指令与 `itemSummons` 视图。PvE 开战时，保存的位置经策略快照里锻炉单位的 `summonCell` 带入战斗构造。改动影响规则身份，需要随 v22（赶不上就随 v23）纪元重录。
+实现：`projectG23Summons` 增加 `forgeCells`；`readItemSummons` 和 `moveItemSummon` 增加 `kind: 'forge'`，其 `itemInstanceId` 为杰斯的单位编号。客户端和服务器沿用 `moveItemSummon` 指令与 `itemSummons` 视图。PvE 开战时，保存的位置经策略快照里锻炉单位的 `summonCell` 带入战斗构造。改动影响规则身份，已随 v22-online-rules 录制。
 
 ## 2026-10-24 迅捷蟹生命值（P，待核实）
 
@@ -66,7 +66,7 @@ S1改为独立手抄期待表：batch 1开放67项与阻塞2项、batch 2全部2
 
 用户 10-23 批准三项，依据 `augments-research-2026-10-23`（14.24 map22 `AssociatedTraits`／`MutuallyExclusiveItems`、官方 14.24 主文 [P1]）：
 
-1. **并入准备阶段**：2-1／3-2／4-2 不再有独立选择阶段；三选一在准备开始时打开，该回合准备合计 **50 秒**（`AUGMENT_PREPARATION_MS`，14.24 `mPlanning 30 + BonusPlanningTimeWithArmory 20`）。选择打开期间（联机）可买卖、刷新商店、上下场、装备；准备截止仍走既有超时规则（取第一项），随后自动上场、冻结。独立选择计时 `choiceMs` 未改（另一分支改 48 秒），其余回合准备时长未改。
+1. **并入准备阶段**：2-1／3-2／4-2 不再有独立选择阶段；三选一在准备开始时打开，该回合准备合计 **50 秒**（`AUGMENT_PREPARATION_MS`，14.24 `mPlanning 30 + BonusPlanningTimeWithArmory 20`）。选择打开期间（联机）可买卖、刷新商店、上下场、装备；准备截止仍走既有超时规则（取第一项），随后自动上场、冻结。强化不再使用独立选择计时 `choiceMs`；早先另一分支把 `choiceMs` 改为 48 秒的做法已作废，`choiceMs` 仍为 30 秒，只用于其他选择（见顶部 v22 节）。其余回合准备时长见“经济与阶段流程”。
 2. **过滤与互斥**（数据驱动，规则按 apiName 写在 `content/augment-offer-rules.ts`，池中不存在的强化规则自动不生效，扩池只需补 id→apiName 一行）。
 3. **见过不再出**：展示给该玩家的每张卡（开局三张及每次刷新结果）本局不再向其提供，选中与否不论；此前只排除刷掉的。
 
@@ -128,7 +128,7 @@ S1改为独立手抄期待表：batch 1开放67项与阻塞2项、batch 2全部2
 
 用户 10-23 批准“改”：黑市开市即用既有奖励 atom 派生流确定包内随机档次装备，存进 offer 的 `concreteItems[{atomId,definitionId}]`；私有视图可读，拿走发同一批且不再抽装备。抽包权重、单包抽样、市场/王冠及其他流消耗、保留微光与复制器/锻造器语义不变。恢复/回放从种子和经济收据重建，篡改拒绝。此为用户批准的项目行为调整，本单离线，未宣称补充原版证据。契约见 [MATCH_CONTRACT](MATCH_CONTRACT.md)，实现与验收见 [报告](BLACK_MARKET_CONCRETE_OFFERS.md)；epoch/digest/golden **已随 v22 录制**，不改单独断言。
 
-## 2026-10-23 Batch A：梅尔、维克托、两个订阅（用户批准；待统一 epoch）
+## 2026-10-23 Batch A：梅尔、维克托、两个订阅（用户批准；已录入 v22）
 
 本节覆盖下文历史“梅尔只观察、订阅/维克托关闭”和六费 `20 + 4×回合差 + Lv10 160 Bps` 描述。依据只读 `perf-1022/encounters-decisions.html` 的 **M1–M4、V1–V3、S1–S7「我的推荐」**及补研第1/2/4/7节、配套JSON；没有联网重查，也没有复制原始资料入库。实现与验收见 [Batch A报告](OPENING_ENCOUNTERS_BATCH_A_REPORT.md)。
 
@@ -151,7 +151,7 @@ S1改为独立手抄期待表：batch 1开放67项与阻塞2项、batch 2全部2
 
 按用户要求不更新identity常量、不录epoch、不改历史golden/fixture/旧测试断言。当前开发身份与新规则不等价，禁止新旧状态混用；等PR #410合并后统一版本/digest/epoch。
 
-## 2026-10-23 开局奇遇 Batch B（用户批准，待统一 epoch）
+## 2026-10-23 开局奇遇 Batch B（用户批准，已录入 v22）
 
 本节覆盖下文魔像/沃里克/两种蟹仍关闭的历史描述；四项均已启用。只读决定表 `perf-1022/encounters-decisions.html` 的 **A1–A5、W1–W4、J1–J5「我的推荐」**及补充资料第3/5/6节，不联网、不复制原始资料。实现、签名、向量、旧测试失败和表现层交接见 [Batch B 报告](OPENING_ENCOUNTERS_BATCH_B_REPORT.md)。
 
@@ -164,7 +164,7 @@ S1改为独立手抄期待表：batch 1开放67项与阻塞2项、batch 2全部2
 
 坐标转换、战后统一发放、基础奖励载体顺序映射、确定性空邻格选择属于项目执行适配；未伪称原版脚本。巨蟹的基础伤害仍接受现有抗性、增减伤与父分支加时规则。普通/银/金箱子池沿已有PvE政策，未另编数。本单不录epoch、不改digest常量/历史golden；需在 #410 合入后与另一批奇遇合并统一录制，当前候选不能发布或与旧版本混跑。
 
-## 2026-10-23 安慰剂与战斗加时（项目决定 P，待统一 epoch）
+## 2026-10-23 安慰剂与战斗加时（项目决定 P，已录入 v22）
 
 用户 10-23 拍板：安慰剂按获得阶段一次发放 **2阶段8 / 3阶段11 / 4阶段及以后15** 金币；安慰剂+暂按 **15 / 18 / 22**，全队 **1%攻速**不变。S13原版安慰剂并非分阶段，本项目明确采用自定义规则，不改原始来源归档。收据以获得时的 round 认证，不随当前阶段重算或补发。
 
@@ -190,9 +190,9 @@ S1改为独立手抄期待表：batch 1开放67项与阻塞2项、batch 2全部2
 
 回退时单独撤销安蓓萨两分支的位移接线和伤害后的后撤调用，恢复原伤害/短晕分支；删除独立 helper/测试及可选事件字段，具体逐块步骤见实施说明“独立回退”。不影响其他规则或历史证据。
 
-## 2026-10-23 PR9：当前 epoch 与已批准项目约定
+## 2026-10-23 PR9：v21 epoch 与已批准项目约定（历史，当前 epoch 见顶部 v22 节）
 
-当前 epoch 为 **v21-opening-encounters**，父 **v20-black-market**。rules/content 身份分别为 `s13-g2-3-v21-opening-encounters-battle-equipment` / `s13-14.24b-g2-3-v21-opening-encounters-battle-equipment`，schema/save/replay/command=**12/8/6/6**、NET6。名称涵盖开局奇遇 PR1/2/4/5/6/8、战斗中装备第2阶段及收入延后；不只表示奇遇。当前录制、digest、历史字节证据及验收见 [PR9 报告](OPENING_ENCOUNTERS_PR9_REPORT.md)。下文旧 epoch 为历史记录，不覆盖本节。本节随 PR9 合入 multiplayer 生效；PR9 发现的战中原位合成回放槽位问题已修复（src/replay/history.ts，回归测试 tests/battle-history-equip-slot.test.ts）。
+当时（PR9）的 epoch 为 **v21-opening-encounters**，已被 v22-online-rules 取代；父 **v20-black-market**。rules/content 身份分别为 `s13-g2-3-v21-opening-encounters-battle-equipment` / `s13-14.24b-g2-3-v21-opening-encounters-battle-equipment`，schema/save/replay/command=**12/8/6/6**、NET6。名称涵盖开局奇遇 PR1/2/4/5/6/8、战斗中装备第2阶段及收入延后；不只表示奇遇。当前录制、digest、历史字节证据及验收见 [PR9 报告](OPENING_ENCOUNTERS_PR9_REPORT.md)。下文旧 epoch 为历史记录，不覆盖本节。本节随 PR9 合入 multiplayer 生效；PR9 发现的战中原位合成回放槽位问题已修复（src/replay/history.ts，回归测试 tests/battle-history-equip-slot.test.ts）。
 
 - **收入延后（项目约定）**：最终战斗权威余额（含战中交易）加即付 PvP 胜利金币作为利息基数；基础金、利息、连胜败金在结算冻结应收额，到下一准备阶段入口（含前置选择）到账。自然经验仍在结算；致死回合及没有下一准备入口的单人终局不补发。重复推进/恢复不重发；可花余额只读 `state.gold`，`RoundResult.goldAfter` 是收入方案值。依据 [试玩规则报告](PLAYTEST_1022B_RULES_REPORT.md)。
 - **战斗中装备（项目约定）**：合法装备变更在下一拍生效；本场羁绊按开战时冻结。战中纹章只加持有者自身属性，不重算本场羁绊人数或门槛。完整输入顺序、恢复范围和失败原子性见 [第2阶段合同](LIVE_COMBAT_EQUIPMENT_PHASE2.md)。

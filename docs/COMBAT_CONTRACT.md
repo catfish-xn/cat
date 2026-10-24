@@ -271,7 +271,7 @@ createCombatReplayRecorder(initialState: CombatState,
 
 沿用奇数锁链/偶数拳击。锁链伤害前移到目标身边距自己最近的可达空格；已与目标相邻时原地不动、不发位移事件（不相邻且无可达空格时也原地，见 S13_RULES_GAP 同名条目），距离平局沿普通 BFS；拳击在本 tick HP/存活屏障后向己方半场且远离施法时目标坐标后撤 1 格，几何首选格不可用则原地。复用占格、移动限制及本 tick 保留格；不增加 RNG 调用，不改伤害/短晕/耗蓝。精确口径、独立向量和回退见 [AMBESSA_DASH](AMBESSA_DASH.md)，原档缺距离来源见 [证据](AMBESSA_DASH_EVIDENCE.md)。
 
-既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，尚未录 epoch，不应以旧身份发布。
+既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，已随 v22-online-rules 录制。
 
 ## 单场初始化协作切片（2026-10-23；不变更 epoch）
 

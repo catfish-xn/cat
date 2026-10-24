@@ -165,9 +165,9 @@ sudo nano /etc/cat/game.env
 NODE_ENV=production
 CAT_HOST=127.0.0.1
 PORT=8787
-CAT_SEED=20261012
+# CAT_SEED=20261012    # 不设置则每次启动随机
 CAT_PREP_SEC=30
-CAT_CHOICE_SEC=48
+CAT_CHOICE_SEC=30
 CAT_SETTLE_SEC=6
 # CAT_QUEUE_TIMEOUT_SEC=30
 # CAT_TAKEOVER=1
@@ -178,9 +178,9 @@ CAT_SETTLE_SEC=6
 | PORT | 8787；优先于 CAT_PORT |
 | CAT_PORT | 8787；PORT 未设置时作为后备；建议只设置 PORT |
 | CAT_HOST | 127.0.0.1；本说明保持本机绑定，由 Caddy 对外提供 WSS |
-| CAT_SEED | 20261012；合法 uint32，复现压测时可用42；不是登录密钥 |
-| CAT_PREP_SEC | 30；准备阶段秒数 |
-| CAT_CHOICE_SEC | 48；选择阶段秒数（用户 2026-10-23 批准） |
+| CAT_SEED | 不设置时每次启动随机（日志 `config.seed` 记下实际值）；设置时第一局用它，之后各局由它派生。合法 uint32，复现压测时可用42；不是登录密钥 |
+| CAT_PREP_SEC | 30；**保持 30 或不设置**才按回合表走（1-2 6 秒、1-3 15 秒、1-4 与其他野怪 20 秒、4-6 75 秒、强化回合 50 秒、其余 30 秒）；设成其他值会让除强化回合外的所有回合都用这个秒数，只用于调试 |
+| CAT_CHOICE_SEC | 30；独立选择阶段秒数（如奇遇里的选择）。v22 起强化并入准备阶段（该回合合计 50 秒，不受此项影响），10-23 批准的 48 秒作废；锻造器打开后的 30 秒由规则决定，也不受此项影响 |
 | CAT_SETTLE_SEC | 6；结算阶段秒数 |
 | CAT_QUEUE_TIMEOUT_SEC | 不设置时等待任意排队玩家点开始；设置后首位入队开始倒计时 |
 | CAT_TAKEOVER | 不设置（默认关）：按云顶"掉线不接管"，掉线席位什么都不做、棋盘照常参战，重连后继续操作；设为 `1`/`true`/`on`/`yes` 才让机器人接管掉线席位（B6），`0`/`false`/`off`/`no` 显式关闭，其他值启动报错 |
