@@ -128,7 +128,7 @@ export type UnchangedCombatEventData = import('./combat-six-cost').SixCostEvent
   | { readonly type: 'kill'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin }
   | { readonly type: 'growth'; readonly tick: number; readonly unitId: string; readonly amountBps: number; readonly totalBps: number }
   | { readonly type: 'effectTriggered'; readonly tick: number; readonly source: EffectSource; readonly effectKey: string; readonly action: EffectAction; readonly targetId: string }
-  | { readonly type: 'movement'; readonly tick: number; readonly unitId: string; readonly from: HexCell; readonly to: HexCell; readonly reason?: 'ambessa-chain' | 'ambessa-fist-retreat' }
+  | { readonly type: 'movement'; readonly tick: number; readonly unitId: string; readonly from: HexCell; readonly to: HexCell; readonly reason?: 'ambessa-chain' | 'ambessa-fist-retreat' | import('./combat-displacement').DisplacementReason }
   | { readonly type: 'attack'; readonly tick: number; readonly attackerId: string; readonly targetId: string }
   | { readonly type: 'unitRevived'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly hp: number }
   | { readonly type: 'death'; readonly tick: number; readonly unitId: string }
