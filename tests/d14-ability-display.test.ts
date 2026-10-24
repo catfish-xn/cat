@@ -1,3 +1,7 @@
+import { loadTooltipText } from '../src/presentation/tooltip-text-loader';
+import { beforeAll } from 'vitest';
+import { loadAugmentText } from '../src/presentation/augment-text-loader';
+beforeAll(() => Promise.all([loadAugmentText(), loadTooltipText()]));
 import { expect, it } from 'vitest';
 import { abilityDisplayValues, ultimateHeroAbilityDisplayValues } from '../src/simulation/ability-display';
 import { D14_FOURTH_ABILITY } from '../src/simulation/d14-anomalies/fourth-ability';

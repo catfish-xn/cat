@@ -3,6 +3,7 @@ import { performance } from 'node:perf_hooks';
 import { build } from 'vite';
 import type { OutputChunk } from 'rollup';
 import { expect, test } from 'vitest';
+import { gzipSync } from 'node:zlib';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const normalize = (id: string): string => id.replaceAll('\\', '/');
@@ -70,6 +71,22 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     const leaks = [...staticPaths].flatMap(([name, path]) => byName.get(name)!.moduleIds
       .filter(is3dModule).map(module => ({ module: normalize(module), chain: path.join(' ') })));
     expect.soft(leaks, '3D modules reachable from the 2D entry using only static imports').toEqual([]);
+
+    const uiChunks = chunks.filter(chunk => chunk.fileName.startsWith('assets/ui/'));
+    expect(uiChunks.length, 'pure UI data must actually be emitted').toBeGreaterThan(0);
+    for (const chunk of uiChunks) {
+      expect(staticPaths.has(chunk.fileName), 'UI text must never be eagerly imported').toBe(false);
+      expect(chunk.imports, 'UI data must not pull the application or domain back in').toEqual([]);
+      expect(allPaths.has(chunk.fileName), 'UI data must be reachable on demand').toBe(true);
+      expect(chunk.moduleIds.every(id => /\/src\/presentation\//.test(normalize(id)))).toBe(true);
+    }
+    for (const chunk of threeDChunks) {
+      expect(chunk.imports.filter(name => !name.startsWith('assets/3d/')),
+        '3D chunks must not import 2D or UI chunks').toEqual([]);
+    }
+    const gzip2d = chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
+      .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0);
+    expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(637_144);
 
     const preloads = [...html.matchAll(/<link\b[^>]*>/gi)]
       .filter(([tag]) => attribute(tag, 'rel')?.toLowerCase().split(/\s+/).includes('modulepreload'))

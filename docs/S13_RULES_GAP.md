@@ -941,3 +941,9 @@ Batch 2取分类中全部26项，完成16、禁用10；逐项apiName、14.24源�
 ## v23 上线前预检修正（P，2026-10-25）
 
 - **P，2026-10-25，机器人开锻造器不延长阶段**：上线预检（1-2 准备 6 秒的开局铁砧房间）中，补位机器人一进准备期就打开铁砧并在下一步立刻选择，每次打开都把房间阶段截止时间延到铁砧截止（约 30 秒）再恢复，全体玩家倒计时在 6 与 30 之间来回跳约 1 秒。约定：补位机器人席位（controller `bot`）打开的铁砧，其截止时间封顶在阶段本身的截止时间，不参与 `fitDeadlineToChoices` 的延长；机器人照常在下一步作答，若阶段先结束则由阶段超时按首选项代答。人类席位（含被接管的 `takeover` 席位）不变，仍按"乙"：一个阶段因铁砧最多共延长 30 秒。实现：`src/server/room/room.ts`；测试：`tests/server/anvil-choice-deadline.test.ts`。
+## UI 文本按需加载（P，2026-10-25）
+
+- **P，2026-10-25，augment-ui-text-v1**：增强池 batch1/batch2 的中文名称、说明移入纯展示数据；规则表保留 apiName、tier、数值、traits、enabled、奖励计划与来源定位，ChoiceDefinition 的 name/description 使用 id 作同步占位。显示必须经 presentation/augment-display，服务端与恢复不等待 UI 文本。
+- **P，2026-10-25，ui-text-chunks-v1**：增强名称/说明、增强中文模板及图标索引经 dynamic import 按需加载至 assets/ui/augment-text-*.js；技能中文模板、羁绊原文/展示注释、推荐装备和微光装备文本模板另在 assets/ui/tooltip-text-*.js，仅请求相关提示时加载。两类请求分别合并、缓存，加载时显示提示，完成后刷新仍存活的展示；失败显示刷新重试提示，不自动循环重试。纯 UI chunk 不导入应用入口、规则或 2D/3D 实现。
+- **P，2026-10-25，augment-archive-identity-v1**：离线摘要工具补回完整名称、说明和英文归档列，摘要覆盖范围与拆分前一致；不改冻结身份常量、版本、历史证据及回放夹具。当前 HEAD 的完整重算摘要与冻结常量原有不一致单独报告，不借此更新身份或放宽测试/CI。
+- 体积仍按原 scripts/m7-budget.cjs 的顶层 assets/*.js、gzip level 9 口径计算；UI 与 3D 延迟资源单列，不调整阈值。独立构建测试验证 UI 数据只可动态到达、无静态依赖，以及 3D 不反向导入 2D/UI chunk。

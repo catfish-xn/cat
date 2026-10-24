@@ -1,3 +1,7 @@
+import { loadTooltipText } from '../../src/presentation/tooltip-text-loader';
+import { beforeAll } from 'vitest';
+import { loadAugmentText } from '../../src/presentation/augment-text-loader';
+beforeAll(() => Promise.all([loadAugmentText(), loadTooltipText()]));
 import { describe, expect, it } from 'vitest';
 import { catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml } from '../../src/presentation/item-codex';
 import { shimmerFamily, shimmerItemLines } from '../../src/presentation/special-item-text';

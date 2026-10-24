@@ -1,3 +1,5 @@
+import { onTooltipTextChanged } from '../presentation/tooltip-text-loader';
+import { onAugmentTextChanged } from '../presentation/augment-text-loader';
 import { d14AnomalyLine, d14UnitNotes, displayStarLevel, fourStarBaseStats, readD14Display, starText } from '../presentation/d14-display';
 import { displayUnitName } from './display-names';
 export { displayUnitName } from './display-names';
@@ -257,7 +259,10 @@ export class StrategyPanel {
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
     document.body.append(this.modal);
-    this.disposers.push(attachItemPopover(this.root));
+    this.disposers.push(attachItemPopover(this.root), onAugmentTextChanged(() => this.render()), onTooltipTextChanged(() => {
+      const state = this.actions.state();
+      if (state.augments.length || state.pendingChoice?.kind === 'augment') this.render();
+    }));
     this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
     this.augmentStrip.dataset.debug = 'augment-strip'; this.traitColumn.root.before(this.augmentStrip);
     this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root));

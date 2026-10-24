@@ -15,7 +15,7 @@ import { heroPortraitHtml } from './s13-assets';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { itemDisplayName } from './g23-display';
 import { itemMarkHtml } from './item-codex';
-import { CHAMPION_ROLES, ROLE_DISPLAY } from './unit-roles';
+import { readTooltipText } from './tooltip-text-loader';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -35,6 +35,9 @@ const ITEM_ID_BY_API = new Map(Object.values(ITEM_DEFINITIONS).flatMap(item => '
  * for units without a client role (summons, neutrals). Display only (client data via `unit-roles.ts`).
  */
 export function unitRole(definitionId: string): { name: string; itemIds: string[] } | null {
+  const data = readTooltipText();
+  if (!data) return null;
+  const { CHAMPION_ROLES, ROLE_DISPLAY } = data;
   const hero = definitionId.replace(/-ranged$/, ''), role = Object.hasOwn(CHAMPION_ROLES, hero) ? ROLE_DISPLAY[CHAMPION_ROLES[hero]] : undefined;
   return role ? { name: role.name, itemIds: role.items.flatMap(api => ITEM_ID_BY_API.get(api) ?? []) } : null;
 }
