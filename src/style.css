@@ -172,9 +172,6 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .hud-chip strong { font-size: var(--font-hud); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hud-label { font-size: var(--font-small); color: var(--c-text-muted); }
 .hud-hp strong { color: var(--c-danger); } .hud-gold strong { color: var(--c-gold); } .hud-pop strong { color: var(--c-accent); }
-.hud-interest-pips { display: flex; gap: 3px; align-items: center; height: 8px; }
-.hud-interest-pips .pip { width: 7px; height: 7px; border-radius: 50%; border: 1px solid #c9a24a99; background: transparent; box-sizing: border-box; }
-.hud-interest-pips .pip.on { border-color: #ffe08a; background: radial-gradient(circle at 35% 35%, #fff2b8, var(--c-gold) 60%, #a8781e); box-shadow: 0 0 3px #ffd36a99; }
 /* Gold's income card (TFT "Total Income Possible"). Fixed with auto offsets it stays at the gold and is not clipped by the
    shop dock's overflow; it lifts itself above the gold and centres on it (gold chips are about 90px wide). */
 .hud-tip { display: none; position: fixed; z-index: 95; transform: translate(calc(45px - 50%), calc(-100% - 12px)); width: max-content; max-width: 360px; padding: 8px 12px;
