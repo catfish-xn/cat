@@ -53,7 +53,12 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   // Authenticate the complete trajectory instead of guessing historical stacks
   // from a refreshed layer's startsAtTick. Reuse the input-bound replay cache.
   const overtime = overtimeStacks(candidate.tick) > 0;
-  if(!batch2&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19&&!v20&&!overtime){
+  // Legacy ignite emits burn and wound under one ability identity (combat-g2.ts).
+  // Its display anchor is shared too. Preserve saved/replay bytes; authenticate
+  // the entire trajectory rather than allowing duplicate keys in status.ts.
+  // Select from the trusted strategy, never from candidate contribution fields.
+  const ignite = strategy.units.some(u => u.ability.kind === 's13' && ['powder', 'rumble'].includes(u.ability.championId));
+  if(!batch2&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19&&!v20&&!overtime&&!ignite){
     if(candidate.units.some(u=>u.batch2!==undefined))throw new RangeError('Unexpected batch2 runtime');
     if(candidate.units.some(u=>u.v20Traits!==undefined))throw new RangeError('Unexpected V20 runtime');
     if(candidate.units.some(u=>u.v19!==undefined||u.sixCost!==undefined||u.familyReunion!==undefined))throw new RangeError('Unexpected V19 runtime');
@@ -67,14 +72,14 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   }
   if(!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>MAX_COMBAT_TICKS)throw new RangeError('Invalid dynamic combat checkpoint');
   // Preserve the existing cold-replay contract for roster/absence/anomaly paths.
-  // Ordinary v19/v20 and overtime combats reuse input-bound independent evidence.
+  // Ordinary v19/v20, overtime and ignite combats reuse input-bound independent evidence.
   let expected:CombatState;
-  if((batch2||v19||v20||overtime)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
+  if((batch2||v19||v20||overtime||ignite)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11)expected=createRestoreCombatReplay(basis,strategy,candidate.tick).stateAtSaveTick();
   else{
     expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
     while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
   }
-  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':v19?'V19':overtime?'overtime':'Mirror forge'} replay`);
+  if(canonicalContent(expected)!==canonicalContent(candidate))throw new RangeError(`Invalid authoritative ${anomaly?'anomaly':trench?'Trench':zephyr?'Zephyr':v19?'V19':overtime?'overtime':ignite?'ignite':'Mirror forge'} replay`);
   return true;
 }
 
