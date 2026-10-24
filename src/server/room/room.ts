@@ -135,12 +135,17 @@ const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'ano
 const PREPARATION_ONLY: readonly SeatCommand['type'][] = ['moveItemSummon'];
 /** v15: an orb claim passes wherever an operation does; the rules claim it at once or queue it until the battle settles. */
 const ORB: readonly SeatCommand['type'][] = ['claimOrb'];
-/** v22 anvil units: an anvil opened in settlement (the rules allow it there) is answered there too, before its deadline. */
-const SETTLEMENT_CHOICE: readonly SeatCommand['type'][] = ['choose'];
+/**
+ * v22 anvil units: wherever an anvil can be opened (a seat the rules settled, in settlement or already during the battle
+ * phase and its tail), its choice is answered there too, before its deadline. In battle and awaiting-settlement only the
+ * seat's own open anvil passes (see `apply`); settlement keeps passing every choice as before.
+ */
+const ANVIL_CHOICE: readonly SeatCommand['type'][] = ['choose'];
+const ANVIL_ONLY_CHOICE_PHASES: ReadonlySet<RoomPhase> = new Set(['battle', 'awaiting-settlement']);
 export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
   waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]),
   // The deadline, the automatic deployment and the freeze are one boundary no command may interleave with.
-  frozen: new Set(), battle: new Set([...OPS, ...ORB]), 'awaiting-settlement': new Set([...OPS, ...ORB]), settlement: new Set([...OPS, ...ORB, ...SETTLEMENT_CHOICE]), ended: new Set(),
+  frozen: new Set(), battle: new Set([...OPS, ...ORB, ...ANVIL_CHOICE]), 'awaiting-settlement': new Set([...OPS, ...ORB, ...ANVIL_CHOICE]), settlement: new Set([...OPS, ...ORB, ...ANVIL_CHOICE]), ended: new Set(),
 };
 /** Upper bound of rules steps when the room finishes a live PvE battle itself (the engine stops at 1200 ticks). */
 const LIVE_COMBAT_MAX_STEPS = 5_000;
@@ -246,7 +251,7 @@ export const ANVIL_PHASE_EXTENSION_MS = 30_000;
  * v22 anvil units: the open choice of an alive seat that runs on its own deadline (an opened anvil, whose rules payload
  * names `source: 'anvil-unit'` and its `timeoutMs`), or null.
  */
-function ownDeadlineChoice(seat: SeatState): { readonly choiceId: string; readonly generation: number; readonly timeoutMs: number } | null {
+export function ownDeadlineChoice(seat: SeatState): { readonly choiceId: string; readonly generation: number; readonly timeoutMs: number } | null {
   const choice = seat.alive && seat.match.phase === 'choice' ? seat.match.pendingChoice : null;
   const payload = choice?.payload;
   if (!choice || payload?.kind !== 'forge' || payload.source !== 'anvil-unit' || typeof payload.timeoutMs !== 'number') return null;
@@ -522,6 +527,7 @@ export class Room {
     const allowed = !this.disposed && ROOM_COMMAND_GATE[phase].has(command.type);
     if (!allowed) return phase === 'frozen' && command.type === 'claimOrb' && !this.disposed ? this.holdFrozenClaim(seat, command) : { ok: false, reason: 'wrong-phase', state: seat.match };
     if (command.type === 'carousel-pick') return this.pickCarousel(seat, command);
+    if (command.type === 'choose' && ANVIL_ONLY_CHOICE_PHASES.has(phase) && ownDeadlineChoice(seat)?.choiceId !== command.choiceId) return { ok: false, reason: 'wrong-phase', state: seat.match };
     // D11 live bank: a PvE seat fighting its live battle first catches up to the live tick, so the operation's gold
     // reaches the rules at that tick (published together with the operation, nothing if it is refused).
     let live: LiveCatchUp | null = null;

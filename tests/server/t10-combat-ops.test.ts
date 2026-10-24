@@ -44,7 +44,7 @@ describe('T10 room gate (contract §15.2)', () => {
     const expected: Record<RoomPhase, readonly string[]> = {
       // G2-4b (contract §26): the summon move passes only while seats prepare.
       waiting: [], carousel: ['carousel-pick'], preparation: [...OPS, ...ORB, ...CHOICES, 'moveItemSummon'], choice: [...OPS, ...ORB, ...CHOICES, 'moveItemSummon'], frozen: [],
-      battle: [...OPS, ...ORB], 'awaiting-settlement': [...OPS, ...ORB], settlement: [...OPS, ...ORB, 'choose'], ended: [],
+      battle: [...OPS, ...ORB, 'choose'], 'awaiting-settlement': [...OPS, ...ORB, 'choose'], settlement: [...OPS, ...ORB, 'choose'], ended: [],
     };
     for (const phase of Object.keys(expected) as RoomPhase[]) expect([...ROOM_COMMAND_GATE[phase]].sort()).toEqual([...expected[phase]].sort());
   });
