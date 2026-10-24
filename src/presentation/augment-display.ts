@@ -99,6 +99,19 @@ export function augmentEffectText(id: string): string {
   return effects.filter(effect => !(described && effect.kind === 'mechanic' && (describeEffect(effect) === effect.mechanic || effect.mechanic === 'acquisitionGold'))).map(describeEffect).join('；');
 }
 
+/**
+ * The choice card's two text areas, as the original card sets them: the effect description, then the extra notes in
+ * their own block (the project's 魔改执行 note of a team-up, and the effect lines once a description already says what the
+ * augment does). Without a description the effect lines are the description. Formatting only: the text is the same.
+ */
+export function augmentCardSections(id: string): { readonly body: string; readonly extra: readonly string[] } {
+  const description = augmentPlayerDescription(id), effects = augmentEffectText(id);
+  if (!description) return { body: effects, extra: [] };
+  const cut = description.indexOf(' 魔改执行：');
+  const body = cut < 0 ? description : description.slice(0, cut), note = cut < 0 ? '' : description.slice(cut + 1);
+  return { body, extra: [note, effects].filter(Boolean) };
+}
+
 /** Augment offer tier as the rules name it (pendingChoice.augmentTier); the in-game 银色/金色/彩色 wording. */
 export const AUGMENT_TIER_TEXT: Readonly<Record<import('../simulation/augment-offers').AugmentTier, string>> = {
   silver: '银色', gold: '金色', prismatic: '彩色',

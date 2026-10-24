@@ -20,9 +20,9 @@ import { readSeatMechanic } from '../simulation/seat-mechanics/state';
 import { G23_CONQUEROR_CHESTS, G23_POLICY } from '../simulation/content/g2-3-policy';
 import { g23RewardLines } from '../presentation/g23-reward-text';
 import { traitSummary, traitTierText } from '../presentation/trait-text';
-import { getHeroIdentity, traitDisplayName } from '../presentation/hero-identity';
+import { getHeroIdentity, heroEmblemSvg, traitDisplayName } from '../presentation/hero-identity';
 import { attachHoverCards, type HoverCard } from '../presentation/hover-card';
-import { s13IconHtml } from '../presentation/s13-assets';
+import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { traitTierStyle } from '../presentation/trait-styles';
 import type { BoardMechanics } from './board-feed';
 
@@ -197,7 +197,12 @@ export function traitCardBody(traitId: string, count: number, onBoard: readonly 
   const members = el('div', '', 'trait-card-members'); members.dataset.debug = 'trait-card:members';
   for (const id of SHOP_CATALOG.filter(id => UNIT_DEFINITIONS[id]?.traits.includes(traitId))) {
     const unit = UNIT_DEFINITIONS[id]!;
-    members.append(el('span', `${getHeroIdentity(id).name} ${unit.cost}费`, onBoard.includes(id) ? 'member on-board' : 'member'));
+    // The original card's member row: each hero's portrait framed in its cost colour, the name under it; off-board ones dimmed.
+    const member = el('span', '', `member cost-${unit.cost}${onBoard.includes(id) ? ' on-board' : ''}`), name = getHeroIdentity(id).name;
+    member.title = `${name} ${unit.cost}费${onBoard.includes(id) ? ' · 在场' : ''}`;
+    member.insertAdjacentHTML('afterbegin', `<span class="member-portrait" aria-hidden="true">${heroPortraitHtml(id, 32, heroEmblemSvg(id, 32))}</span>`);
+    member.append(el('span', name, 'member-name'));
+    members.append(member);
   }
   body.append(members);
   if (footLines?.length) {

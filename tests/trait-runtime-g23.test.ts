@@ -149,3 +149,24 @@ it('puts counterOnly rewards in the hover counters above the conquest ladder', (
   expect(countersAt).toBeLessThan(ladderAt);
   expect(body.children[countersAt]!.children.map(node => node.textContent)).toContain('已开奖励：2/15');
 });
+
+it('lists the trait members as portraits with the name under them, the ones on the board marked', () => {
+  class Element {
+    dataset: Record<string, string> = {};
+    children: Element[] = [];
+    textContent = '';
+    className = '';
+    title = '';
+    html = '';
+    append(...children: Element[]) { this.children.push(...children); }
+    insertAdjacentHTML(_where: string, html: string) { this.html += html; }
+  }
+  vi.stubGlobal('document', { createElement: () => new Element() });
+  const body = traitCardBody('conqueror', 1, ['darius']) as unknown as Element;
+  const members = body.children.find(node => node.dataset.debug === 'trait-card:members')!;
+  const darius = members.children.find(node => node.title.startsWith('德莱厄斯'))!;
+  expect(darius.className).toBe('member cost-1 on-board');
+  expect(darius.html).toContain('member-portrait');
+  expect(darius.children.map(node => [node.className, node.textContent])).toEqual([['member-name', '德莱厄斯']]);
+  expect(members.children.filter(node => node.className.includes('on-board'))).toHaveLength(1);
+});
