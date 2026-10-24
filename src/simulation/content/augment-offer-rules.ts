@@ -1,5 +1,6 @@
 import { AUGMENT_BATCH2_API_NAMES } from './augment-pool-batch2';
 import { AUGMENT_BATCH1_API_NAMES } from './augment-pool-batch1';
+import { AUGMENT_BATCH3_API_NAMES } from './augment-pool-batch3';
 import { freezeContent } from './freeze';
 import { AUGMENT_ASSOCIATED_TRAITS, AUGMENT_MUTUALLY_EXCLUSIVE } from './augment-offer-source';
 
@@ -11,6 +12,7 @@ import { AUGMENT_ASSOCIATED_TRAITS, AUGMENT_MUTUALLY_EXCLUSIVE } from './augment
 export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeContent({
   ...AUGMENT_BATCH1_API_NAMES,
   ...AUGMENT_BATCH2_API_NAMES,
+  ...AUGMENT_BATCH3_API_NAMES,
   sisters:'TFT13_TeamupAugment_Sisters', mentorship:'TFT13_TeamupAugment_Mentorship', reunion:'TFT13_TeamupAugment_Reunion',
   geniuses:'TFT13_TeamupAugment_Geniuses', menaces:'TFT13_TeamupAugment_Menaces', 'unlikely-duo':'TFT13_TeamupAugment_UnlikelyDuo',
   'all-for-one-i':'TFT_Augment_AllForOneI', 'all-for-one-ii':'TFT_Augment_AllForOneII', 'trifecta-i':'TFT_Augment_Trifecta1',
