@@ -107,7 +107,7 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
     case 'violet':
       for (let n = 0; n < v('NumStrikes'); n++) strike(target, amount(unit, ctx.tick, { ad: v('PercentAttackDamage') }), 'physical');
       strike(target, amount(unit, ctx.tick, { ad: v('PercentIncreasedAttackDamage'), ap: v('APDamage') }), 'physical');
-      applyStatus(target, origin(unit), 'stun', 0, ticks('StunDuration'), ctx.tick, ctx.events); break;
+      applyStatus(target, origin(unit), 'stun', 0, ticks('StunDuration'), ctx.tick, ctx.events, false, '', undefined, true); break; // the uppercut knocks up
     case 'malzahar': {
       // The gate crosses the target row: two hexes on either side, clipped by the board.
       const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));

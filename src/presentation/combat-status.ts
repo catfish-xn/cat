@@ -100,6 +100,8 @@ export interface StatusRow {
   readonly nextPulseAtTick: number | null;
   /** 'suppressed' only for unfiltered strongest-category contributions the domain did not pick (stronger or tie-break). */
   readonly state: 'effective' | 'suppressed' | 'pending' | 'active';
+  /** A stun the domain marked as a knock-up (StatusApplication.knockup). */
+  readonly knockup?: true;
 }
 
 /** The single read of current statuses; replace with readCombatStatuses(combat) once delivered. */
@@ -139,7 +141,7 @@ function groupRow(group: StatusGroup, contribution: StatusContribution, tick: nu
   return { key: contribution.key, kind: group.kind, name: STATUS_KIND_NAMES[group.kind], badge: STATUS_BADGES[group.kind],
     harmful: contribution.application.polarity === 'harmful', magnitude: magnitudeText(contribution), scope: filter ? damageFilterText(filter) : null,
     source: contribution.source, appliedAtTick: contribution.appliedAtTick, expiresAtTick: contribution.expiresAtTick,
-    nextPulseAtTick: group.kind === 'burn' ? group.nextPulseAtTick : null, state };
+    nextPulseAtTick: group.kind === 'burn' ? group.nextPulseAtTick : null, state, ...(contribution.application.knockup ? { knockup: true as const } : {}) };
 }
 
 /** Full sentence for detail panels; timing comes from recorded ticks. */

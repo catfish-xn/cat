@@ -30,7 +30,7 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'vi':
       grantShield(u,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       strike(t,ad('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);
-      for(const other of foes().filter(x=>x.id!==t.id&&x.cell.row===t.cell.row)) {strike(other,ad('PercentAttackDamage_SecondaryDamage'),'physical',true);applyStatus(other,origin(u),'stun',0,5,ctx.tick,ctx.events);}break;
+      for(const other of foes().filter(x=>x.id!==t.id&&x.cell.row===t.cell.row)) {strike(other,ad('PercentAttackDamage_SecondaryDamage'),'physical',true);applyStatus(other,origin(u),'stun',0,5,ctx.tick,ctx.events,false,'',undefined,true);}break; // the row shockwave knocks up
     case 'akali':
       strike(t,mag('Damage'));strike(t,Math.floor(mag('SecondaryDamage')*(10000+Math.round(v('TargetDamageAmp')*10000))/10000));
       Object.assign(g22(t),{exposureFromTick:ctx.tick+1,exposureUntilTick:ctx.tick+1+Math.round(v('Duration')*20),exposureBps:Math.round(v('TargetDamageAmp')*10000)});break;

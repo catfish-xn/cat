@@ -11,7 +11,7 @@ import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
-import { ControlTracker, unitStunned, type ControlKind } from '../presentation/control-display';
+import { unitControl, type ControlKind } from '../presentation/control-display';
 import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, boardFeedWalkToOrb, provideBoardControls, publishPlayerSaved, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
@@ -123,8 +123,7 @@ export class BoardScene extends Phaser.Scene {
   private views = new Map<string, UnitView>();
   private tokens = new Map<string, Phaser.GameObjects.Container>();
   private renderedCells = new Map<string, string>();
-  /** 眩晕 vs 击飞 as drawn (control-display.ts), for the 2D pieces and the 3D feed; reset with each shown combat. */
-  private readonly controlTracker = new ControlTracker(id => this.session.combatView?.units.find(unit => unit.id === id)?.definitionId);
+  /** 眩晕 vs 击飞 as drawn (control-display.ts), for the 2D pieces and the 3D feed; cleared with each shown combat. */
   private controlCombat: unknown = null;
   private readonly controls = new Map<string, ControlKind>();
   private effects = new Set<Phaser.GameObjects.GameObject>();
@@ -1264,7 +1263,7 @@ export class BoardScene extends Phaser.Scene {
         this.renderedCells.set(unit.id, key);
       }
       this.views.get(unit.id)?.drawCombat(unit, runtime);
-      const control = this.controlTracker.control(unit.id, unitStunned(runtime, unit));
+      const control = unitControl(runtime, unit);
       if (control) this.controls.set(unit.id, control); else this.controls.delete(unit.id);
       this.views.get(unit.id)?.setControl?.(control);
     }
@@ -1275,7 +1274,7 @@ export class BoardScene extends Phaser.Scene {
     const combat = this.session.combatView;
     if (!combat || !events.length) return;
     this.strategyPanel?.observeEvents(events);
-    this.followControlCombat(); this.controlTracker.observe(asDisplayEvents(events));
+    this.followControlCombat();
     this.recentCombatEvents.push(...structuredClone(events));
     publishCombatEvents(() => asDisplayEvents(events));
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
@@ -1287,11 +1286,11 @@ export class BoardScene extends Phaser.Scene {
     this.renderedCastCount += this.fx.casts - casts;
     if (!this.quietBoard()) this.feedback?.push(events, performance.now());
   }
-  /** A different shown combat (a new round, or another seat's battle): no knock-up carries over. */
+  /** A different shown combat (a new round, or another seat's battle): no control carries over. */
   private followControlCombat() {
     const view = this.session.combatView, key = view ? `${view.combatId}` : null;
     if (key === this.controlCombat) return;
-    this.controlCombat = key; this.controlTracker.reset(); this.controls.clear();
+    this.controlCombat = key; this.controls.clear();
   }
   private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc | Phaser.GameObjects.Container, duration: number) {
     this.effects.add(effect);

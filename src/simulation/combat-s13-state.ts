@@ -185,7 +185,7 @@ export function endedStatusEvents(tick: number, targetId: string, ended: readonl
 }
 
 export function applyStatus(unit: S13Unit, source: CombatOrigin, kind: CombatStatus['kind'], value: number, duration: number,
-  tick: number, events: CombatEvent[], immediate = false, suffix = '', actionSeq?: number): void {
+  tick: number, events: CombatEvent[], immediate = false, suffix = '', actionSeq?: number, knockup = false): void {
   ensureMechanisms(unit, tick);
   const key = `${sourceKey(source)}:${kind}:${unit.id}:${suffix}`;
   const old = unit.statuses.find(s => s.key === key);
@@ -219,7 +219,8 @@ export function applyStatus(unit: S13Unit, source: CombatOrigin, kind: CombatSta
     const identity = effectIdentity(unit.mechanismState!.combatId, frozenSource, unit.id, applicationId);
     const application: StatusApplication = { activation: immediate ? 'immediate' : 'next-tick', kind: frozenKind, magnitudeBps: modifier ? 0 : value, duration: { kind: 'ticks', ticks: duration }, stackPolicy: policy,
       polarity: kind === 'stun' || kind === 'armorReduction' || value < 0 ? 'harmful' : 'beneficial', removable: kind !== 'damageReduction',
-      ...(modifier ? { modifier } : {}), damageFilter: kind === 'damageReduction' ? { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } : null, onEnd: null };
+      ...(modifier ? { modifier } : {}), damageFilter: kind === 'damageReduction' ? { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } : null, onEnd: null,
+      ...(knockup && kind === 'stun' ? { knockup: true as const } : {}) };
     const result = applyStatusContribution(groups, identity, application, tick); if (!result.accepted) return;
     groups = result.groups; contributionKeys.push(identity.key); refreshed &&= result.refreshed;
   }
