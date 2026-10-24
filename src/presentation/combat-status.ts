@@ -23,6 +23,8 @@ const STATUS_BADGES: Readonly<Record<StatusKind, string>> = {
 };
 const ACTIVITY_NAMES: Readonly<Record<CombatActivity['kind'], string>> = { channel: '引导', redirect: '伤害分担' };
 const ACTIVITY_BADGES: Readonly<Record<CombatActivity['kind'], string>> = { channel: '引', redirect: '担' };
+/** The board strip glyph of a status or activity kind ('' for one it does not know). */
+export const statusBadge = (kind: string): string => (STATUS_BADGES as Record<string, string>)[kind] ?? (ACTIVITY_BADGES as Record<string, string>)[kind] ?? '';
 const STAT_NAMES: Readonly<Record<Stat, string>> = {
   maxHp: '最大生命', attackDamage: '攻击力', abilityPower: '法强', armor: '护甲', magicResist: '魔抗', attackSpeed: '攻速', range: '射程',
   critChance: '暴击率', critMultiplier: '暴击伤害', damageAmp: '增伤', damageReduction: '减伤', omnivamp: '全能吸血', attackSpeedLock: '攻速锁定', damageAmpPerHex: '每格增伤',
