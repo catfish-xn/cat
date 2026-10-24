@@ -30,5 +30,5 @@ export const EMBLEM_ITEMS: Readonly<Record<string, ItemDefinition>> = freezeCont
       ...(v.CritDamage ? [modifier('critMultiplier',v.CritDamage*100,'bps')] : []),
       ...(v.RangeIncrease ? [modifier('range',v.RangeIncrease,'hexes')] : [])],...(v.ManaPerSecond?{periodic:[periodic(20,[mana(v.ManaPerSecond,'periodic')])]}:{})},
     evidenceStatus:'approved-provisional', conventionIds:['V19-EMBLEM-CUSTOM'], effectDescriptions:[...(v.ManaPerSecond?[`每秒回复 ${v.ManaPerSecond} 法力。`]:[]),...(v.CritChance?[`暴击率 +${v.CritChance} 个百分点。`]:[]),...(v.CritDamage?[`暴击伤害 +${v.CritDamage} 个百分点。`]:[]),...(v.RangeIncrease?[`射程 +${v.RangeIncrease} 格。`]:[]),`携带者获得${names[row.traitId]}羁绊。`,
-      ...(row.traitId==='experiment' ? ['试验品纹章的分身实验加成尚未实现。'] : [])]} satisfies ItemDefinition];
+      ...(row.traitId==='experiment' ? ['【试验品】加成：站在试验格上时，试验格上的试验品在 8 秒后或阵亡时（先到者，一次）召唤自身复制体，生命为其开战最大生命的 69%/78%/90%（3/5/7 档）。'] : [])]} satisfies ItemDefinition];
 })));

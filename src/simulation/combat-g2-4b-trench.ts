@@ -46,7 +46,7 @@ export function createTrenchCopy(holder:CombatUnit,item:CombatMechanic,ordinal:n
 }
 
 /** Birth-relative periodic clocks; old counters, debts and temporary states never enter. */
-function initializeBornUnits(ctx:AbilityContext,born:readonly CombatUnit[]):void {
+export function initializeBornUnits(ctx:AbilityContext,born:readonly CombatUnit[]):void {
  const fresh=born as S13Unit[];
  for(const unit of fresh){
   const definitions=compileMechanismDefinitions(unit,ctx.combatId??'standalone');

@@ -29,7 +29,7 @@ export function initializeMirrorHealth(units:readonly CombatUnit[],events:Combat
 
 /** Combat-only provenance, derived by the strategy compiler. Never an asset. */
 export interface ItemSummonOrigin {
-  readonly kind:'mirror'|'voidspawn'|'trench';
+  readonly kind:'mirror'|'voidspawn'|'trench'|'experiment';
   readonly spawnedAtTick?:number;
   readonly copyOrdinal?:number;
   readonly ownerId:string;

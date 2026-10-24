@@ -80,7 +80,7 @@ export function traitTierLimitations(traitId: string, threshold: number): string
   if (traitId === 'scrap' && threshold >= 6) notes.push(`幸运装备${threshold >= 9 ? '与光明转换' : ''}暂未实装`);
   if (traitId === 'enforcer' && threshold >= 10) notes.push('没收装备暂未实装');
   if (traitId === 'rebel' && threshold >= 10) notes.push('开场及每 12 秒烟雾信号暂未实装');
-  if (traitId === 'experiment') notes.push('试验品纹章的分身实验加成暂未实装');
+  if (traitId === 'experiment') notes.push('试验品纹章分身：8 秒或阵亡先到者触发一次，复制体生命为开战最大生命的 69%/78%/90%（3/5/7 档），无装备、法力 0（项目约定）');
   if (traitId === 'dominator') notes.push('按实际耗蓝增长暂未实装');
   if (traitId === 'emissary') notes.push('实际共享生命暂未实装');
   return notes.length ? `；${notes.join('；')}` : '';

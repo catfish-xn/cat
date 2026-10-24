@@ -49,6 +49,8 @@ export interface CombatUnit {
   readonly anomalyState?: import('./anomalies/contracts').AnomalyRuntime;
   readonly anomalySummon?: import('./anomalies/contracts').AnomalySummon;
   readonly itemSummonOpeningMaxHp?:number;
+  /** Experiment emblem copy bonus (P-EX1..): opening max HP sample and the one-shot trigger. */
+  readonly experimentClone?: {readonly openingMaxHp:number;readonly triggeredAtTick:number|null;readonly cloneId:string|null};
   readonly itemBanish?: {readonly ownerId:string;readonly itemInstanceId:string;readonly untilTick:number};
   /** 7 Black Rose Sion's one revive: absent until reviveAtTick, then revived for the rest of combat. */
   readonly g23Sion?: {readonly reviveAtTick:number;readonly revived:boolean};

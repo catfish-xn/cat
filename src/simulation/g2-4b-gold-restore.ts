@@ -42,7 +42,8 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   }
   const batch2=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'||m.mechanic==='g23Tactician'));
   const zephyr=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Zephyr'));
-  const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'));
+  // Experiment copies change the roster mid-combat like Trench: authenticate by full cold replay.
+  const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'));
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
   const anomaly=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='s13Anomaly'));
   const d11=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'));
@@ -60,6 +61,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
     if(candidate.units.some(u=>u.anomalyState!==undefined||u.anomalySummon!==undefined))throw new RangeError('Unexpected anomaly runtime');
     if(candidate.trenchSplits!==undefined)throw new RangeError('Unexpected Trench splits');
     if(candidate.units.some(u=>u.itemSummon?.kind==='trench'))throw new RangeError('Unexpected Trench copy');
+    if(candidate.units.some(u=>u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new RangeError('Unexpected Experiment copy');
     if(candidate.units.some(u=>u.itemBanish!==undefined))throw new RangeError('Unexpected item banishment');
     return false;
   }
