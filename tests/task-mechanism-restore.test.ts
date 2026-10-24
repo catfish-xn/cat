@@ -285,7 +285,8 @@ it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce 
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
   // v15 seed 53 offered Bulky Buddies I at 2-1. Under the v22 augment tier table seed 22 is the first
   // public route (with card rerolls) whose Forge dies and is revived beside a living holder.
-  let state = prepare(['rod'], { seed: 22, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
+  // Global 14.24 stage bans: seed 100 is now the first such route (22 no longer reaches Bulky Buddies I).
+  let state = prepare(['rod'], { seed: 100, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
   expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
   for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
     for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));

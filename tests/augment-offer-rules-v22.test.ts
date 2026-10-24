@@ -1,3 +1,4 @@
+import { offeredAt } from './augment-stage-helpers';
 import { describe, expect, it } from 'vitest';
 import { createMatch, nextRound, rerollAugment, selectChoice, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
@@ -55,22 +56,25 @@ describe('v22 trait filter: 3-2 and 4-2 tailored, 2-1 not', () => {
     const GOLD_TEAMUPS = TEAMUPS.filter(id => AUGMENT_TIERS[id] === 'gold');
     expect(TEAMUPS.filter(id => !GOLD_TEAMUPS.includes(id))).toEqual(['geniuses']);
     expect(AUGMENT_TIERS.geniuses).toBe('prismatic');
-    for (const node of ['3-2', '4-2']) {
+    for (const node of ['3-2', '4-2'] as const) {
       const none = augmentCandidates('gold', [], [], null, filter(node));
       for (const id of TEAMUPS) expect(none, `${node} ${id}`).not.toContain(id);
       expect(augmentCandidates('prismatic', [], [], null, filter(node)), `${node} geniuses`).not.toContain('geniuses');
       const enforcer = augmentCandidates('gold', [], [], null, filter(node, ['enforcer']));
-      expect(TEAMUPS.filter(id => enforcer.includes(id)).sort()).toEqual(['mentorship', 'reunion', 'sisters']);
+      // 14.24 stage tags: Mentorship, Reunion and Sisters are 4-2 cards.
+      expect(TEAMUPS.filter(id => enforcer.includes(id)).sort()).toEqual(['mentorship', 'reunion', 'sisters'].filter(id => offeredAt(id, node)));
       // Untouched augments without AssociatedTraits are never filtered.
-      // Stage-banned gold cards (batch 3 XP: 14.24 stage tags) are absent at that node as well.
-      const heroGold = ['savage-revenge', 'all-out', 'blood-pact'];
-      const stageBanned = Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold' && !heroGold.includes(id)
-        && ((AUGMENT_OFFER_RULES.nodeBans as Readonly<Record<string, readonly string[]>>)[AUGMENT_POOL_API_NAMES[id]] ?? []).includes(node)).length;
-      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - GOLD_TEAMUPS.length - 22 - 16 - heroGold.length - stageBanned); // 22 new trait-linked crests; batch 3's three gold hero augments
+      // Stage-banned gold cards (14.24 stage tags) are absent at that node as well; the 22 crests and 16 batch-2 trait
+      // cards stay trait-linked whatever their stage.
+      const traitLinked = (id: string) => (AUGMENT_OFFER_RULES.associatedTraits[AUGMENT_POOL_API_NAMES[id]]?.length ?? 0) > 0;
+      expect(TEAMUPS.every(traitLinked)).toBe(true);
+      const heroGold = ['savage-revenge', 'all-out', 'blood-pact']; // batch 3's gold hero augments need their hero fielded
+      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold' && !traitLinked(id) && !heroGold.includes(id) && offeredAt(id, node)).length);
     }
     const untailored = augmentCandidates('gold', [], [], null, filter('2-1'));
-    for (const id of GOLD_TEAMUPS) expect(untailored).toContain(id);
-    expect(augmentCandidates('prismatic', [], [], null, filter('2-1'))).toContain('geniuses');
+    // 2-1 is never tailored; the 14.24 stage tags keep every team-up out of 2-1.
+    for (const id of GOLD_TEAMUPS) expect(untailored.includes(id)).toBe(offeredAt(id, '2-1'));
+    expect(augmentCandidates('prismatic', [], [], null, filter('2-1')).includes('geniuses')).toBe(offeredAt('geniuses', '2-1'));
   });
 
   it('records the fielded-trait snapshot when 3-2 opens, reuses it for rerolls and restores from it', () => {

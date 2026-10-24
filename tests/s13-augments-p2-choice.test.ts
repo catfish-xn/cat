@@ -1,3 +1,4 @@
+import { offerFor, offeredAt } from './augment-stage-helpers';
 import { grantMechanicItem } from '../src/simulation/seat-mechanics';
 import { expect, it } from 'vitest';
 import type { MatchState } from '../src/simulation/match-types';
@@ -29,9 +30,12 @@ it('all seventeen API identities, names, tiers and coefficients match the retain
 });
 function seedFor(id:string){for(let seed=0;seed<1000;seed++){const state=createMatch(seed);if(generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers.includes(id))return seed;}throw Error('seed budget');}
 it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restores strictly, and continues the same seeded combat',id=>{
-  let s=reachRound('2-1',false,seedFor(id));const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
+  // 14.24 stage tags: a card not offered at 2-1 is taken at its first offering round instead.
+  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):offerFor(id);const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
   s=accepted(selectChoice(s,c.choiceId,c.generation,id));
-  const gifts=p2GiftPlan(s),receipts=s.seatMechanics!.receipts.filter(r=>r.source==='s13-augments-p2');
+  // Only this selection's gifts: a 3-2/4-2 route may already own an earlier P2 augment with its own gifts.
+  const mine=(receiptId:string)=>JSON.parse(receiptId)[1]===c.choiceId;
+  const gifts=p2GiftPlan(s).filter(g=>mine(g.receiptId)),receipts=s.seatMechanics!.receipts.filter(r=>r.source==='s13-augments-p2'&&mine(r.receiptId));
   expect(receipts).toHaveLength(gifts.length);expect(gifts.length).toBe(P2_ITEM_GRANTS[id]?.count??(id==='all-for-one-ii'||id==='trifecta-ii'?3:id==='pair-of-fours'?1:0));
   expect(s.choiceRngState).toBe(before.choiceRngState);expect(s.rewardRngState).toBe(before.rewardRngState);
   expect(drainP2Gifts(s)).toBe(s);expect(selectChoice(s,c.choiceId,c.generation,id)).toEqual({ok:false,state:s,reason:'wrong-phase'});
@@ -50,7 +54,7 @@ it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restor
   for(let tick=0;tick<3&&s.phase==='combat';tick++)s=stepMatch(s).state;
   const restored=restoreMatch(serializeMatch(s));expect(restored).toEqual(s);expect(stepMatch(restored)).toEqual(stepMatch(s));
   if(gifts.length){const forged=structuredClone(s) as any;forged.seatMechanics.receipts.find((r:any)=>r.source==='s13-augments-p2').definitionId='lux';expect(()=>validateP2Gifts(forged)).toThrow();}
-});
+},60_000);
 it('full bench escrows all hero gifts, selling retries the same plan and never duplicates a receipt',()=>{
   let s=reachRound('2-1',false,seedFor('all-for-one-ii'));const c=s.pendingChoice!;
   const heroes=Object.keys(UNIT_DEFINITIONS).filter(id=>!UNIT_DEFINITIONS[id].summon).slice(0,9);
@@ -98,9 +102,9 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   // v20-traits adds five gold cards. Deterministic search found this unchanged
   // Crown -> Trifecta -> Kog'Maw scenario at attempt 16003, beyond the old 10000 budget.
   // v23 batch 2: independent offer/gift seed search retains Crown → Trifecta → Kog'Maw at 7329.
-  // v23 batch 3 (forty-four more cards): the same sequential search finds the chain at 1736.
-  // Batch 3 after the XP line, with 14.24 stage tags and the cross-version cards: the same sequential search finds it at 19492.
-  const seed=19492;
+  // v23 batch 3 (nineteen more cards): the same sequential search finds the chain at 12900.
+  // Global 14.24 stage bans (pool after batch 3): the same sequential search finds the chain at 7806.
+  const seed=7806;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){
@@ -121,10 +125,9 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
 });
 
-it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('seed 6559 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
-  // v23 expanded pool (batch 3 after the XP line, 14.24 stage tags): 6559 is the first seed whose 2-1 offer gives Trifecta → Nami;
-  // the original stat/shield assertions remain unchanged.
-  let s=reachRound('2-1',false,6559),c=s.pendingChoice!;
+it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('3-2 seed 320 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
+  // 14.24 stage tags put Trifecta II at 3-2/4-2: 3-2 seed 320 publicly offers it with Nami; the stat/shield assertions remain unchanged.
+  let s=reachRound('3-2',false,320),c=s.pendingChoice!;expect(c.offers).toContain('trifecta-ii');
   s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
   const gift=p2GiftPlan(s).find(g=>g.kind==='unit')!,birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.receiptId===gift.receiptId)!;
   if(birth.kind!=='unit'||!birth.unitId)throw Error('missing Nami receipt');

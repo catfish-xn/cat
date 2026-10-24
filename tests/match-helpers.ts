@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { createMatch, buyUnit, nextRound, rerollAugment, selectChoice, selectAnomalyTarget, deployMatchUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../src/simulation/match';
+import { createMatch, buyUnit, nextRound, rerollAugment, selectChoice, selectAnomalyTarget, deployMatchUnit, startMatchCombat, stepMatch, getDeploymentCap, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 
 export function freeze<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
@@ -58,6 +58,35 @@ export function reachRound(roundId:string, resolveChoices=true, seed=42): MatchS
     state=accepted(nextRound(state,state.round));
   }
   return resolveChoices?resolveM5Choices(state):state;
+}
+
+/** Deploys bench units to free front cells up to the population cap (public deploy commands only). */
+export function fieldBench(initial: MatchState): MatchState {
+  let state = initial;
+  for (const unit of state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench')) {
+    const used = new Set(state.preparation.units.flatMap(u => u.team === 'player' && u.location.kind === 'board' ? [`${u.location.cell.col},${u.location.cell.row}`] : []));
+    if (used.size >= getDeploymentCap(state)) break;
+    for (let i = 0; i < 28; i++) {
+      const cell = { col: i % 7, row: 4 + Math.floor(i / 7) };
+      if (used.has(`${cell.col},${cell.row}`)) continue;
+      const deployed = deployMatchUnit(state, unit.id, { kind: 'board', cell });
+      if (deployed.ok) { state = deployed.state; break; }
+    }
+  }
+  return state;
+}
+/** Like reachRound, but fields the bench and fights every battle, so empty-board losses do not end the match before
+ * 4-2 (augments offered only at 4-2 by their 14.24 stage tags). */
+export function reachRoundFielded(roundId: string, seed = 42): MatchState {
+  let state = createMatch(seed);
+  while (state.roundDefinitionId !== roundId) {
+    state = resolveM5Choices(state);
+    if (state.phase === 'preparation') { state = accepted(startMatchCombat(fieldBench(state))); while (state.phase === 'combat') state = stepMatch(state).state; }
+    state = resolveM5Choices(state);
+    if (state.phase !== 'settlement') throw new Error(`Cannot reach ${roundId} from ${state.roundDefinitionId}/${state.phase}`);
+    state = accepted(nextRound(state, state.round));
+  }
+  return state;
 }
 
 /** Seed-5 multi-holder fixture acquired entirely through normal opening/shops.

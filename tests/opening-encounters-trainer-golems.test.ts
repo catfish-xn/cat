@@ -16,7 +16,7 @@ import { trainerEmblems } from '../src/simulation/trainer-golems';
 
 // Locate a legitimate draw; never overwrite the authenticated selection.
 let seed = 0;
-while (createOpeningEncounter(seed).selection.encounterId !== 'trainer-golems') seed++;
+while (createOpeningEncounter(seed).selection.encounterId !== 'trainer-golems') { seed++; if (seed > 100000) throw new Error('No trainer-golems opening seed'); }
 const emblems = Object.keys(EMBLEM_ITEMS);
 const triple = emblems.slice(0, 3);
 const fakeUnitId = 'trainer-golem-unissued';

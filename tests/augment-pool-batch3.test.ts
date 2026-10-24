@@ -1,3 +1,4 @@
+import { offerFor } from './augment-stage-helpers';
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
@@ -828,8 +829,8 @@ it('Call to Chaos: ten equal outcomes on a seat/choice stream, each granting its
 });
 
 it('Call to Chaos public pick at 4-2: the outcome is granted once and the save restores (XP branch through the acquisition XP chain)', ()=>{
- // Seed 14 is the first that publicly offers it at 4-2 (with the free card rerolls).
- const open=publicPick('call-to-chaos',15,14),c=open.pendingChoice!;
+ // Global 14.24 stage bans: its first public 4-2 offer is in tests/augment-stage-helpers.ts (fielded 4-2 route).
+ const open=offerFor('call-to-chaos'),c=open.pendingChoice!;
  const s=accept(selectChoice(open,c.choiceId,c.generation,'call-to-chaos') as any).state as MatchState,a=s.augments.at(-1)!;
  const o=callToChaosOutcome(s,a);
  expect(restoreMatch(serializeMatch(s))).toEqual(s);

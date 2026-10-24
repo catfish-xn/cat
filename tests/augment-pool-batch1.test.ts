@@ -18,6 +18,7 @@ import { grantXp } from '../src/simulation/progression';
 import { previewRoundEconomy } from '../src/simulation/economy-preview';
 import { readAugmentIncome } from '../src/simulation/augment-income';
 import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
+import { offerFor, offeredAt } from './augment-stage-helpers';
 import type { MatchState } from '../src/simulation/match-types';
 import { room, accept, conserved } from './tp-helpers';
 import { runSharedMatchCommand } from '../src/simulation/shared-pool';
@@ -30,7 +31,8 @@ function batch1Seed(id:string):number {
  throw new Error(`No first-node seed for ${id}`);
 }
 function acquire(id:string) {
- const before=reachRound('2-1',false,batch1Seed(id)),c=before.pendingChoice!;
+ // 14.24 stage tags: a card not offered at 2-1 is taken at its first offering round instead.
+ const before=offeredAt(id,'2-1')?reachRound('2-1',false,batch1Seed(id)):offerFor(id),c=before.pendingChoice!;
  return {before,state:accepted(selectChoice(before,c.choiceId,c.generation,id))};
 }
 it('covers 69 classified entries, admits 67 fully implemented entries and leaves two out of the pool',()=>{
@@ -95,7 +97,7 @@ it('Final Polish grants two bench anvils, opens in either order, restores and ti
    expect(openAnvil(s,unit.id)).toEqual({ok:false,state:s,reason:'unknown-unit'});
   }
  }
-});
+},30_000);
 it('Silver Spoon grants exactly ten XP, composes with purchased XP, restores across settlement, and respects level ten',()=>{
  const {before,state}=acquire('silver-spoon'),expected=grantXp(before.level,before.xp,10);
  expect([state.level,state.xp]).toEqual([expected.level,expected.xp]);expect(restoreMatch(serializeMatch(state))).toEqual(state);

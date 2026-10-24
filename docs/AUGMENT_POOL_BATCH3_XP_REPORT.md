@@ -81,4 +81,233 @@
 
 - 测试：各条 `nodes` 与研究 JSON 标签逐条一致，并对三个节点用 `augmentOfferAllowed` 断言；同一读法复现黑色玫瑰只禁 2-1。独立 oracle 池表同步写入同样的阶段禁令。
 - 受影响的旧测试：`g2-augments-choice` 的“2-1 公开选取”列表排除新纪元+（与黑色玫瑰同理）；`augment-offer-rules-v22` 的 3-2/4-2 金色候选数减去阶段禁用数，跨玩家用例种子 10→14；`s13-augments-p2-choice` 冠冕链种子 3762→9844。相关 36 个文件通过（Silver Spoon 一项并发超时，单独重跑通过）。
-- 其他批次的强化同样带这些标签，本线没有改它们，需协调者统一决定是否全量套用。
+- 其他批次的强化同样带这些标签，见第七轮（已全量套用）。
+
+## 第七轮：全量套用 14.24 阶段标签（单独提交）
+
+- 依据：14.24 map22 ItemTags 的 `{d02ae323}`/`{d12ae4b6}`/`{d22ae649}` 读作“不在 2-1/3-2/4-2 出现”（推断，原字符串未取得），并经跨版本交叉印证：对默认 312 条，304 条与 S13 归档一致，不一致的 8 条中 7 条是 13.4/13.8 的官方后续调整（perf-1022/augment-pool/missing-values-triage-2026-10-24.md 第四节；数据 `augment-crossversion-research-2026-10-24/excerpts/stages/14.24-active-augment-tags-with-s13-crosscheck.json`）。`{4529fead}` 不当阶段标签。
+- 实现：`src/simulation/content/augment-stage-bans.ts`（134 张，apiName → 不出现的轮次，由研究 JSON 一次性生成）并入 `AUGMENT_OFFER_RULES.nodeBans`；规则清单加 `augmentStageBans`，出牌在重放和恢复时按同一张表推导。独立 oracle（`tests/fixtures/m5/oracle.g2.cjs`）按 id 另写一份同样的禁令。
+- `{4529fead}` 线索的结论：与标签读法不矛盾。它出现在 5 条上，冒险举动、银汤匙、不计代价按三个阶段标签本来就只在 2-1；上进心、挖角不带阶段标签，按 14.24 三轮都可。若把 `{4529fead}` 当作“只在 2-1”，只会额外改这两条，没有其他证据支持，不采用。
+- 与 S13 归档不同的池内强化只有玻璃大炮 I/II（标签允许 2-1，归档不在 2-1，属 13.x 后调整），按 14.24 标签。战斗伤疤三轮都不出，与归档一致。餐桌剩菜不在池内，按 14.24 不出现（P，已记入 S13_RULES_GAP）。
+
+接入第三批：`claude/augment-pool-batch3`（7b863dad）已基于本线 206dbbda，按快进接入、保留其历史；本轮改动作为一个提交放在它之后。合入后卡池 206 张，134 张带阶段限制；第三批自带的 49 条 `AUGMENT_BATCH3_NODE_BANS` 与本表逐条一致，两张表一并并入 nodeBans。
+
+测试（只改选取轮次与种子；规则本身变了的断言按新规则改，逐条列在下面）：
+- 新增 `tests/augment-stage-helpers.ts`：`offeredAt`、带上限的 `firstNodeSeed`、`STAGE_SEEDS`（66 张不在 2-1 出现的强化在其首个可出现轮次的种子，顺序搜索所得）、`offerFor`/`acquireAugment`；`tests/match-helpers.ts` 加 `fieldBench`/`reachRoundFielded`（空阵容会在 4-2 前被打死，4-2 才出的强化和 3-2 需羁绊的强化用上阵路线）。
+- 没有上限的种子搜索都加了上限：`opening-encounters-trainer-golems`、`v19-part2`（2 处）；第三批测试改用其自带的带上限 `publicPick`（之前 `while(!offers.includes(id))seed++` 在 `rolling-for-days-i`、`corrosion` 不在 2-1 后无限循环，整套测试因此卡住）。
+- 改为在首个可出现轮次选取：`augment-pool-batch1`（`final-polish`、`raining-gold-plus`）、`augment-pool-batch2`（`rocket-collection-plus`、`betrayal` 等）、`augment-pool-tactician-items`（`coronation`）、`s13-augments-p2-choice`（各 overflow、`trifecta-ii`，只核对本次选择的赠品；`trifecta-ii` 送娜美改为 3-2 种子 320）、`augment-tier-table`（`geniuses` 在 4-2）、`augment-pool-batch3`（`call-to-chaos` 用共用种子表）。
+- 规则变了而改的断言：`augment-pool-batch2` 的羁绊过滤断言改为在可出现的轮次检查，被阶段禁用的轮次即使有羁绊也不出；`augment-offer-rules-v22` 的“3-2 有执法官时出 mentorship/reunion/sisters”改为只在可出现轮次出现（三者只在 4-2），2-1 不出任何羁绊强化，金色候选数改为按“非羁绊、非英雄、可出现”计算；`augment-tier-table` 的“`geniuses` 在彩色池可出”改为 4-2 带羁绊时可出、2-1 不出；`g2-augments-choice` 的 2-1 公开选取只覆盖 2-1 可出现的强化；`augment-card-reroll` 的最后一张候选按 2-1 过滤计算；`d11-wiring-online` 的联机发放用例去掉 `trifecta-i`（只在 3-2/4-2，2-1 联机夹具无法选到），同一路线由 `all-for-one-i` 覆盖；`augment-pool-batch2` 的公开选取不再覆盖 `watcher-growth`（从不出现）；`rules-placebo-stage` 的公开选取只测 `placebo` 2-1、`placebo-plus` 3-2（其余阶段金额仍由单元断言覆盖）；`p7-carousel` 的卡池持有数只数商店卡池弈子（`gold-for-dummies` 的训练假人不占卡池）；`g2-4b-pr161-restore` 的冠冕物品编号 item-24→item-23（该路线 3-2/4-2 改选 `betrayal`/`quickstriker-boost`，之前少一次物品产出）。
+- 只换种子：`g2-augments-combat`（`blistering-strikes` 601、`lone-hero` 688、`climb-the-ladder-i` 3-2 种子 61）、`s13-augments-p2-choice` 冠冕链 7806、`black-market-single-offer` 9→0、`match-session` 7216→7226、`restore-audit/cd-replay-facts`（roster 5→6，Experiment/鹰眼路线 1→2）、`opening-encounters-batch-a`（2-1 三张都发装备，用免费卡牌刷新换到不发装备的强化）、`s13-p1-multiplayer-income` 搜索上限 400→3000、`task-mechanism-restore` 的 `bulky-buddies-i` 路线 22→100、`s13-p1-dual-wielding` 路线 23→26、`mp-overtime-production` 42→43。
+- 对照：按文件、带超时跑 138 个涉及出牌或种子路线的测试文件；与第三批 7b863dad 同文件逐项对照，本提交新增的失败已全部修掉。仍失败、未掩盖的都是对照基线上已有的：`m8-b8-live-capacity`、`m8-b8-live-transfer`、`m8-b8-loot-view`（基线已在独立金币账本前置检查失败，本提交后在独立弈子编号账本处失败，独立账本不认第一批/第三批赠弈子，属同一类旧问题）、carousel-room 1 项、g2-4b 两个文件、v17-avarice-pvp、task-mechanism-restore 召唤物两项，以及第三批测试里基线已有的失败项。
+- 转给其他线的缺陷：`blistering-strikes` 在第三批接入前的种子 16、648 路线上战斗中途恢复报 `Invalid status contribution`（战斗恢复线）；`worth-the-wait` 选秀回合发弈子的问题第三批已在 0f193f5f 修掉，接入后不再出现。
+
+### 出现阶段一览表（206 张，来源：14.24 哈希标签推导 + S13 归档交叉印证）
+
+| 中文名 | 内部 id | 等级 | 可出现轮次 | S13 归档对照 |
+|---|---|---|---|---|
+| C位的觉悟 | `find-your-center` | 银 | 3-2、4-2 | 一致 |
+| D个痛快！ I | `rolling-for-days-i` | 银 | 3-2、4-2 | 一致 |
+| 一二二三 | `ones-twos-three` | 银 | 2-1 | 一致 |
+| 一费奉献 I | `all-for-one-i` | 银 | 2-1 | 一致 |
+| 一，二，五！ | `one-two-five` | 银 | 4-2 | 一致 |
+| 以眼还眼 | `eye-for-an-eye` | 银 | 2-1 | 一致 |
+| 以眼还眼+ | `eye-for-an-eye-plus` | 银 | 3-2 | 一致 |
+| 休眠锻炉 | `latent-forge` | 银 | 2-1 | 一致 |
+| 假人化 | `dummify` | 银 | 3-2 | 一致 |
+| 健康就是财富 I | `wealthy-rehab-i` | 银 | 3-2、4-2 | 一致 |
+| 冒险举动 | `risky-moves` | 银 | 2-1 | 一致 |
+| 刀锋之舞 | `blade-dance` | 银 | 2-1 | 一致 |
+| 列队 | `lineup` | 银 | 3-2、4-2 | 一致 |
+| 别再错过 | `missed-connections` | 银 | 3-2、4-2 | 一致 |
+| 后援 | `backup` | 银 | 3-2、4-2 | 一致 |
+| 团队建设 | `team-building` | 银 | 2-1、3-2 | 一致 |
+| 孤胆英雄 | `lone-hero` | 银 | 2-1、3-2、4-2 | 一致 |
+| 安慰剂 | `placebo` | 银 | 2-1 | 一致 |
+| 安慰剂+ | `placebo-plus` | 银 | 3-2 | 一致 |
+| 导师制 I | `mentorship-i` | 银 | 2-1、3-2、4-2 | 一致 |
+| 巨大伙伴 I | `bulky-buddies-i` | 银 | 2-1、3-2、4-2 | 一致 |
+| 弑君突刺 | `kingslayer` | 银 | 2-1、3-2 | 一致 |
+| 成群结队 I | `teaming-up-i` | 银 | 3-2、4-2 | 一致 |
+| 战争财宝 I | `spoils-of-war-i` | 银 | 2-1 | 一致 |
+| 战地医生 | `field-medic` | 银 | 2-1 | 一致 |
+| 打气 I | `pumping-up-i` | 银 | 2-1 | 一致 |
+| 攀登天梯 I | `climb-the-ladder-i` | 银 | 3-2、4-2 | 一致 |
+| 法力流 I | `manaflow-i` | 银 | 3-2、4-2 | 一致 |
+| 玻璃大炮 I | `glass-cannon-i` | 银 | 2-1、3-2、4-2 | 归档：3-2、4-2 |
+| 百宝袋 I | `item-grab-bag-i` | 银 | 2-1、3-2、4-2 | 一致 |
+| 窃贼帮派 I | `band-of-thieves-i` | 银 | 2-1、3-2、4-2 | 一致 |
+| 腐蚀 | `corrosion` | 银 | 3-2、4-2 | 一致 |
+| 节外生枝 | `branching-out` | 银 | 2-1、3-2 | 一致 |
+| 装备收集器 I | `item-collector-i` | 银 | 3-2、4-2 | 一致 |
+| 超级巨星 I | `superstars-i` | 银 | 2-1 | 一致 |
+| 辅助挖矿 | `support-mining` | 银 | 2-1 | 一致 |
+| 辅助挖矿+ | `support-mining-plus` | 银 | 3-2 | 一致 |
+| 酷热打击 | `blistering-strikes` | 银 | 2-1、3-2、4-2 | 一致 |
+| 银汤匙 | `silver-spoon` | 银 | 2-1 | 一致 |
+| 震惊巨魔 | `shocking-troll` | 银 | 2-1 | 一致 |
+| 黑铁资产 | `iron-assets` | 银 | 2-1 | 一致 |
+| DD街区 | `trade-sector` | 金 | 2-1 | 一致 |
+| 一对4 | `pair-of-fours` | 金 | 4-2 | 一致 |
+| 一费奉献 II | `all-for-one-ii` | 金 | 2-1 | 一致 |
+| 三项赛 I | `trifecta-i` | 金 | 3-2、4-2 | 一致 |
+| 不是今天 | `not-today` | 金 | 2-1、3-2、4-2 | 一致 |
+| 两把刷子 | `two-trick` | 金 | 2-1 | 一致 |
+| 伏击专家之徽 | `ambusher-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 便携锻炉 | `portable-forge` | 金 | 2-1、3-2、4-2 | 一致 |
+| 值得等待 | `worth-the-wait` | 金 | 2-1 | 一致 |
+| 假人金币 | `gold-for-dummies` | 金 | 2-1 | 一致 |
+| 健康就是财富 II | `wealthy-rehab-ii` | 金 | 3-2、4-2 | 一致 |
+| 先知之徽 | `visionary-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 冕已有卫 | `crown-guarded` | 金 | 2-1、3-2 | 一致 |
+| 卓尔不群 | `built-different` | 金 | 2-1 | 一致 |
+| 卯足全力 | `all-out` | 金 | 2-1 | 一致 |
+| 厄运保护 | `bad-luck-protection` | 金 | 3-2、4-2 | 一致 |
+| 双排 | `duo-queue` | 金 | 4-2 | 一致 |
+| 发条增速器 | `clockwork-accelerator` | 金 | 2-1、3-2、4-2 | 一致 |
+| 哨兵之徽 | `sentinel-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 嗜火 | `pyromaniac` | 金 | 2-1、3-2 | 一致 |
+| 在失败中变强 | `what-doesnt-kill-you` | 金 | 2-1 | 一致 |
+| 塔防游戏 | `tower-defense` | 金 | 2-1、3-2 | 一致 |
+| 大百宝袋 | `big-grab-bag` | 金 | 3-2、4-2 | 一致 |
+| 天降金币 | `raining-gold` | 金 | 2-1 | 一致 |
+| 天降金币+ | `raining-gold-plus` | 金 | 3-2 | 一致 |
+| 奥术之惩 | `sorcerer-explosion` | 金 | 2-1、3-2、4-2 | 一致 |
+| 家人之徽 | `family-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 导师制 II | `mentorship-ii` | 金 | 2-1、3-2、4-2 | 一致 |
+| 小伙伴 | `little-buddies` | 金 | 3-2、4-2 | 一致 |
+| 巨大伙伴 II | `bulky-buddies-ii` | 金 | 3-2、4-2 | 一致 |
+| 底城争夺战 | `crimson-pact` | 金 | 2-1、3-2 | 一致 |
+| 强力重击 | `heavy-hitters` | 金 | 2-1、3-2、4-2 | 一致 |
+| 征战之路 | `warpath` | 金 | 2-1 | 一致 |
+| 成群结队 II | `teaming-up-ii` | 金 | 4-2 | 一致 |
+| 战争财宝 II | `spoils-of-war-ii` | 金 | 2-1 | 一致 |
+| 战斗伤疤 | `watcher-growth` | 金 | 三轮都不出 | 一致 |
+| 打气 II | `pumping-up-ii` | 金 | 2-1 | 一致 |
+| 执法 | `enforce` | 金 | 2-1、3-2 | 一致 |
+| 执法官之徽 | `enforcer-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 投资策略 I | `investment-strategy-i` | 金 | 2-1 | 一致 |
+| 护盾猛击 | `sentinel-slam` | 金 | 2-1、3-2、4-2 | 一致 |
+| 搏击手之徽 | `pit-fighter-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 攀登天梯 II | `climb-the-ladder-ii` | 金 | 3-2、4-2 | 一致 |
+| 新纪元 | `epoch` | 金 | 2-1 | 一致 |
+| 新纪元+ | `epoch-plus` | 金 | 3-2 | 一致 |
+| 替罪羊 | `scapegoat` | 金 | 2-1 | 一致 |
+| 权杖意志 | `guardbreaker-spirit` | 金 | 2-1、3-2、4-2 | 一致 |
+| 极客之徽 | `scrap-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 极客宝藏之顶 | `scrap-recycling` | 金 | 2-1 | 一致 |
+| 格斗家之徽 | `bruiser-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 棘刺镀板铠甲 | `thorn-plated-armor` | 金 | 2-1、3-2 | 一致 |
+| 欢迎来到游乐场 | `welcome-to-the-playground` | 金 | 2-1、3-2 | 一致 |
+| 残暴复仇 | `savage-revenge` | 金 | 3-2 | 一致 |
+| 法力流 II | `manaflow-ii` | 金 | 3-2、4-2 | 一致 |
+| 法师之徽 | `sorcerer-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 海克斯机械之徽 | `automata-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 漫游训练师 I | `wandering-trainer-i` | 金 | 2-1 | 一致 |
+| 激昂墓志铭 | `inspiring-epitaph` | 金 | 2-1、3-2、4-2 | 一致 |
+| 火箭收藏 | `rocket-collection` | 金 | 2-1 | 一致 |
+| 火箭收藏+ | `rocket-collection-plus` | 金 | 3-2 | 一致 |
+| 灵魂连接 | `spirit-link` | 金 | 2-1、3-2、4-2 | 一致 |
+| 炮手之徽 | `artillerist-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 炼金男爵之徽 | `chem-baron-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 炽热灵魂 I | `blazing-soul-i` | 金 | 3-2、4-2 | 一致 |
+| 狙神之徽 | `sniper-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 王冠意志 | `crownguard-spirit` | 金 | 2-1、3-2、4-2 | 一致 |
+| 玻璃大炮 II | `glass-cannon-ii` | 金 | 2-1、3-2、4-2 | 归档：3-2、4-2 |
+| 皮城学院之徽 | `academy-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 监察之徽 | `watcher-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 硬化护盾 | `defense-call` | 金 | 3-2、4-2 | 一致 |
+| 碎裂水晶 | `fractured-crystals` | 金 | 2-1、3-2、4-2 | 一致 |
+| 终身黄铜 I | `bronze-for-life-i` | 金 | 3-2、4-2 | 一致 |
+| 统领之徽 | `dominator-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 统领全场 | `dominate` | 金 | 2-1、3-2、4-2 | 一致 |
+| 羁绊：军事管制 | `mentorship` | 金 | 4-2 | 一致 |
+| 羁绊：危险人物 | `menaces` | 金 | 3-2 | 一致 |
+| 羁绊：姐妹 | `sisters` | 金 | 4-2 | 一致 |
+| 羁绊：意外搭档 | `unlikely-duo` | 金 | 4-2 | 一致 |
+| 羁绊：背叛 | `betrayal` | 金 | 3-2 | 一致 |
+| 羁绊：重新联合 | `reunion` | 金 | 4-2 | 一致 |
+| 耐心学习 | `patient-study` | 金 | 2-1 | 一致 |
+| 肾上腺爆发 | `quickstriker-boost` | 金 | 2-1、3-2、4-2 | 一致 |
+| 英勇福袋 | `heroic-grab-bag` | 金 | 2-1、3-2、4-2 | 一致 |
+| 蓝发小队之徽 | `rebel-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 血色契约 | `blood-pact` | 金 | 2-1 | 一致 |
+| 装备收集器 II | `item-collector-ii` | 金 | 3-2、4-2 | 一致 |
+| 训练篇 | `pit-fighter-prizefighter` | 金 | 2-1 | 一致 |
+| 试验品之徽 | `experiment-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 诺克萨斯断头台 | `noxian-guillotine` | 金 | 2-1、3-2、4-2 | 一致 |
+| 赏金战士 | `prizefighter` | 金 | 2-1 | 一致 |
+| 超级巨星 II | `superstars-ii` | 金 | 2-1 | 一致 |
+| 辅助宝库 | `support-cache` | 金 | 2-1、3-2、4-2 | 一致 |
+| 迅击战士之徽 | `quickstriker-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 透体莲花 I | `piercing-lotus-i` | 金 | 3-2、4-2 | 一致 |
+| 释放野兽 | `unleash-the-beast` | 金 | 2-1、3-2 | 一致 |
+| 野火帮之徽 | `firelight-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 铁血征服者之徽 | `conqueror-crest` | 金 | 2-1、3-2、4-2 | 一致 |
+| 长矛意志 | `shojin-spirit` | 金 | 2-1、3-2、4-2 | 一致 |
+| 高压电 | `high-voltage` | 金 | 2-1、3-2 | 一致 |
+| 高贵牺牲 | `noble-sacrifice` | 金 | 3-2、4-2 | 一致 |
+| 魔像化 | `golemify` | 金 | 3-2 | 一致 |
+| 魔法投掷 | `magic-roll` | 金 | 3-2 | 一致 |
+| 黑色玫瑰之徽 | `black-rose-crest` | 金 | 3-2、4-2 | 一致 |
+| 1个霸符，2个霸符 | `one-buff-two-buff` | 彩 | 3-2、4-2 | 一致 |
+| 三项赛 II | `trifecta-ii` | 彩 | 3-2、4-2 | 一致 |
+| 上进心 | `upward-mobility` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 不可撼动之物 | `immovable-object` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 伏击专家之冕 | `ambusher-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 值得等待 II | `worth-the-wait-ii` | 彩 | 2-1 | 一致 |
+| 先知之冕 | `visionary-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 光明圣物 | `radiant-relics` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 光明重构器 | `radiant-refactor` | 彩 | 3-2、4-2 | 一致 |
+| 加冕礼 | `coronation` | 彩 | 3-2、4-2 | 一致 |
+| 升级咯！ | `level-up` | 彩 | 2-1 | 一致 |
+| 哨兵之冕 | `sentinel-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 大买特买 | `shopping-spree` | 彩 | 2-1 | 一致 |
+| 大剑溢流 | `sword-overflow` | 彩 | 3-2、4-2 | 一致 |
+| 家人之冕 | `family-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 对冲基金 | `hedge-fund` | 彩 | 2-1 | 一致 |
+| 崇高冒险 | `an-exalted-adventure` | 彩 | 2-1 | 一致 |
+| 巨大伙伴 III | `bulky-buddies-iii` | 彩 | 3-2、4-2 | 一致 |
+| 成吨的伤害 | `phreaky-friday` | 彩 | 2-1 | 一致 |
+| 成吨的伤害+ | `phreaky-friday-plus` | 彩 | 3-2、4-2 | 一致 |
+| 战争财宝 III | `spoils-of-war-iii` | 彩 | 2-1 | 一致 |
+| 打气 III | `pumping-up-iii` | 彩 | 2-1 | 一致 |
+| 执法官之冕 | `enforcer-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 投资策略 II | `investment-strategy-ii` | 彩 | 2-1 | 一致 |
+| 搏击手之冕 | `pit-fighter-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 暗巷交易 | `dark-alley-dealings` | 彩 | 3-2 | 一致 |
+| 最终润色 | `final-polish` | 彩 | 4-2 | 一致 |
+| 来个好伙计！ | `build-a-bud` | 彩 | 2-1 | 一致 |
+| 极客之冕 | `scrap-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 格斗家之冕 | `bruiser-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 法师之冕 | `sorcerer-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 法杖溢流 | `wand-overflow` | 彩 | 3-2、4-2 | 一致 |
+| 活体锻炉 | `living-forge` | 彩 | 2-1 | 一致 |
+| 海克斯机械之冕 | `automata-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 混沌召唤 | `call-to-chaos` | 彩 | 4-2 | 一致 |
+| 漫游训练师 II | `wandering-trainer-ii` | 彩 | 2-1 | 一致 |
+| 灵活摇摆 | `flexible` | 彩 | 2-1 | 一致 |
+| 炫目之速 | `blinding-speed` | 彩 | 3-2、4-2 | 一致 |
+| 炮手之冕 | `artillerist-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 炼金男爵之冕 | `chem-baron-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 炽热灵魂 II | `blazing-soul-ii` | 彩 | 3-2、4-2 | 一致 |
+| 狙神之冕 | `sniper-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 珍藏财宝 III | `building-a-collection-iii` | 彩 | 2-1、3-2 | 一致 |
+| 皮城学院之冕 | `academy-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 监察之冕 | `watcher-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 精心赋能 | `calculated-enhancement` | 彩 | 3-2、4-2 | 一致 |
+| 终身黄铜 II | `bronze-for-life-ii` | 彩 | 3-2、4-2 | 一致 |
+| 统领之冕 | `dominator-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 羁绊：天才 | `geniuses` | 彩 | 4-2 | 一致 |
+| 腰带溢流 | `belt-overflow` | 彩 | 3-2、4-2 | 一致 |
+| 蓝发小队之冕 | `rebel-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 试验品之冕 | `experiment-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 迅击战士之冕 | `quickstriker-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 连串打击 | `flurry-of-blows` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 透体莲花 II | `piercing-lotus-ii` | 彩 | 3-2、4-2 | 一致 |
+| 遥遥领先 | `going-long` | 彩 | 2-1 | 一致 |
+| 野火帮之冕 | `firelight-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 金蛋 | `the-golden-egg` | 彩 | 4-2 | 一致 |
+| 金鳞精粹 | `shimmerscale-essence` | 彩 | 2-1 | 一致 |
+| 铁血征服者之冕 | `conqueror-crown` | 彩 | 2-1、3-2、4-2 | 一致 |
+| 锅铲厨房 | `tacticians-kitchen` | 彩 | 2-1 | 一致 |
+| 黑色玫瑰之冕 | `black-rose-crown` | 彩 | 3-2、4-2 | 一致 |

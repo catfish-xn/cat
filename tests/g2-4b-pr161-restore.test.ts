@@ -265,7 +265,9 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
  // multiplayer G2-4a restored the tier-12 crown; the tier-11 support anvil takes item-16 first, so the crown is item-17.
  // v22: four earlier item births precede it (2-1 Portable Forge from the gold 2-1 augment tier, the 4-2 augment item,
  // and scuttle-puddle's 2-7/3-7 component rewards), so the crown moves from item-20 to item-24.
- expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-24',definitionId:'TFT_Item_ForceOfNature'});
+ // Global 14.24 stage bans: this route now takes betrayal at 3-2 and quickstriker-boost at 4-2 (was tower-defense and
+ // raining-gold-plus), one item birth fewer before the crown, so it is item-23.
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-23',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
   // The support trial grants four earlier items; birth must still use the exact frozen serial.
   kind:'item',itemId:`item-${states[1].combatInputBasis!.nextItemSerial}`,definitionId:'TFT5_Item_ArchangelsStaffRadiant',

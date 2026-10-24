@@ -193,7 +193,7 @@ describe('v19 Family heist and reunion',()=>{
   });
   it('partially claims a full-bench family orb without dropping, rerolling or paying the blocked units',()=>{
     // Find the frozen two-hero reward deterministically; both heroes need real capacity.
-    let seed=0;while(initialFamilyTask(seed).CurrentReward!=='ViJinx')seed++;
+    let seed=0;while(initialFamilyTask(seed).CurrentReward!=='ViJinx'){seed++;if(seed>100000)throw Error('No ViJinx seed');}
     let p=activateFamily(createG23Progress(seed),4);p={...p,family:{...p.family!,CurrentProgress:9}};p=advanceG23Economy(p,facts(4,2,[])).progress;
     const base=army(['lux']),units=[...base.preparation.units,...Array.from({length:9},(_,i)=>({...hero('bench-'+i,0,0,'player',['irelia','darius','lux'][i%3]),location:{kind:'bench' as const,slot:i}}))];
     const s=writeG23Progress({...base,seed,preparation:{...base.preparation,units}},p),orb=familyOrbs(s)[0],r=claimOrb(s,orb.orbId,s.round);expect(r.ok).toBe(true);if(!r.ok)throw Error(r.reason);
@@ -205,7 +205,7 @@ describe('v19 Family heist and reunion',()=>{
     expect(forfeitUnclaimedOrbs(r.state).state).toBe(r.state);
   });
   it('claims 2-star Family heroes through a real shared-pool transaction with three copies each and no repeated award',()=>{
-    let seed=0;while(initialFamilyTask(seed).CurrentReward!=='2starViJinx')seed++;
+    let seed=0;while(initialFamilyTask(seed).CurrentReward!=='2starViJinx'){seed++;if(seed>100000)throw Error('No 2starViJinx seed');}
     const r=room(undefined,1),initial=r.states[0];let p=activateFamily(createG23Progress(seed),4);
     p={...p,family:{...p.family!,CurrentProgress:29}};p=advanceG23Economy(p,facts(4,2,[])).progress;
     const state=writeG23Progress(initial,p),orb=familyOrbs(state)[0];

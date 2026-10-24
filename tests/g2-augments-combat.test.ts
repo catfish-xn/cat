@@ -1,3 +1,4 @@
+import { offeredAt } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
@@ -115,14 +116,17 @@ import { accepted, reachRound } from './match-helpers';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 // v22 augment tier table: Climb the Ladder I is offered at 2-1 only by seeds 108/109 below 600; seed 109's real battle has the ally death.
-// v23 batch 3 grows the pool: Climb the Ladder I is next offered at 600 (its real battle has the ally death); Lone Hero's
-// seed-20 offer moved, and 689 is the first seed that offers it with a lone-survivor battle.
-// Batch 3 after the XP line (14.24 stage tags, cross-version cards): Blistering Strikes is first offered at 852, Climb the Ladder I
-// at 682, but 883 is the first of its offering seeds whose real battle has the ally death.
+// v23 batch 3 grows the silver pool: the first seeds offering it are 735/774/782; seed 774 is the first whose real battle has the ally death.
+// v23 batch 3 XP/health adds Kingslayer to silver: seed 656 is now the first offering it, and its real battle has the ally death.
+// Global 14.24 stage bans (pool after batch 3): Climb the Ladder I is a 3-2/4-2 card; 3-2 seed 61 is the first offering seed
+// whose real battle has the ally death (17 has none). Blistering Strikes is first offered at 601, Lone Hero at 688.
+// (Before batch 3 merged, Blistering Strikes seeds 16 and 648 hit a mid-combat "Invalid status contribution" restore
+// failure; reported to the battle-restore line.)
 it.each([
- ['blistering-strikes',852],['clockwork-accelerator',7],['lone-hero',689],['climb-the-ladder-i',883],['inspiring-epitaph',18],
+ ['blistering-strikes',601],['clockwork-accelerator',7],['lone-hero',688],['climb-the-ladder-i',61],['inspiring-epitaph',18],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
- let s=reachRound('2-1',false,seed);
+ // 14.24 stage tags: Climb the Ladder I is offered at 3-2/4-2; its seed column is a 3-2 seed.
+ let s=offeredAt(id,'2-1')?reachRound('2-1',false,seed):reachRound('3-2',false,seed);
  for(let candidate=0;!s.pendingChoice!.offers.includes(id)&&candidate<300;candidate++)s=reachRound('2-1',false,candidate);
  const choice=s.pendingChoice!;expect(choice.offers).toContain(id);
  s=accepted(selectChoice(s,choice.choiceId,choice.generation,id));
