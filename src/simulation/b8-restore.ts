@@ -179,6 +179,20 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
   check(equipmentContinuation(items, d14OwnedItems(next)) && serial === next.nextItemSerial, 'historical equipment continuation');
 }
 
+/** Direct PvE loot is granted before solo economy records goldBefore, but
+ * after all battle equipment commands. Frozen slots and receipts are validated
+ * by validateB8Loot before this check; never trust the candidate bank itself.
+ * Multiplayer claims settle after economy and must not be subtracted here. */
+function combatBankGold(state: MatchState): number {
+  const result = state.roundResults[state.round - 1];
+  if (!result) return state.gold;
+  const drops = state.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === result.roundId)?.encounterPlan.drops ?? [];
+  const granted = new Set(state.m8.loot.receipts.map(receipt => receipt.dropId));
+  const lootGold = state.multiplayer ? 0 : drops.reduce((sum, drop) =>
+    sum + (drop.payload.kind === 'gold' && granted.has(drop.dropId) ? drop.payload.quantity : 0), 0);
+  return result.goldBefore - lootGold;
+}
+
 /** Authenticate the combat transcript from the already validated resource suffix.
  * Candidate source inputs never serve as their own ownership or numerical proof. */
 function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBasis): void {
@@ -220,7 +234,7 @@ function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBas
       .filter(r => r.parentItemInstanceId === item.id && r.roundId === basis.roundId)
       .flatMap(r => projectTemporaryEquipment(r, item.location.kind === 'unit' ? item.location.unitId : '')) : []);
     const source = { ...state, items, temporaryEquipment,
-      gold: state.roundResults.find(r => r.round === state.round)?.goldBefore ?? state.gold,
+      gold: combatBankGold(state),
       resourceProvenance: { ...state.resourceProvenance, entries: state.resourceProvenance.entries.slice(0, through + 1) } } as MatchState;
     const expected = prepareBattleEquipment(inputs, receipt.input, source, 'player', basis.battleSeed);
     check(equal(expected, receipt), 'battle equipment source evidence');
@@ -365,7 +379,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:state.roundResults[state.round-1]?.goldBefore??state.gold,g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
