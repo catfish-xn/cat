@@ -12,9 +12,11 @@ import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { drainP2Gifts, p2GiftPlan, validateP2Gifts } from '../src/simulation/s13-augments-p2-grants';
 import { accepted, reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
+import { rawTopLevelEntries } from './fixtures/raw-bin-entries';
 
 it('all seventeen API identities, names, tiers and coefficients match the retained raw B-patch source',()=>{
-  const raw=JSON.parse(gunzipSync(readFileSync('src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz')).toString());
+  // Only the seventeen records are parsed from the 54 MB bin (a full JSON.parse took most of this case's time).
+  const raw=rawTopLevelEntries('src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz',Object.values(S13_P2_SOURCE).map(source=>source.rawKey));
   const zh=JSON.parse(gunzipSync(readFileSync('src/simulation/content/source/s13-14.24b/raw/zh_cn.tft.stringtable.json.gz')).toString()).entries;
   expect(Object.keys(S13_P2_AUGMENTS)).toHaveLength(14);expect(Object.keys(S13_P2_ANOMALIES)).toHaveLength(3);
   for(const [id,source] of Object.entries(S13_P2_SOURCE)){
@@ -26,8 +28,7 @@ it('all seventeen API identities, names, tiers and coefficients match the retain
     if('tier' in source){expect(S13_P2_TIERS[id]).toBe(source.tier);expect(original.ItemTags).toContain(source.tier==='gold'?'{ce1fd21c}':'{cf1fd3af}');}
     expect((S13_P2_AUGMENTS[id]??S13_P2_ANOMALIES[id]).description).not.toMatch(/@[a-z0-9_*]+@/i);
   }
-  // Parsing the raw map22 bin takes ~1.7 s alone and timed out at 5 s under parallel load (same as the Scrap raw-source test).
-},30_000);
+});
 // v23 fmix32 openings: Trainer Golem seeds are skipped (the unbenchable golem blocks reachRound's empty board).
 function seedFor(id:string){for(let seed=0;seed<1000;seed++){const state=createMatch(seed);if(state.preparation.units.some(u=>u.definitionId==='trainer-golem'))continue;if(generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers.includes(id))return seed;}throw Error('seed budget');}
 it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restores strictly, and continues the same seeded combat',id=>{
