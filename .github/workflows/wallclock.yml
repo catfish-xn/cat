@@ -94,8 +94,9 @@ jobs:
           git worktree add ../m7-js-base 15313a75c6e74beec739fe52a2875c104c55eae3
           ln -s "$PWD/node_modules" ../m7-js-base/node_modules
           (cd ../m7-js-base && npx vite build)
+      # 15 alternating samples (default 9): firstInteractiveRatio ranged 0.97–1.21 over 25 runs and twice failed at 1.208/1.211; the 1.2 gate is unchanged.
       - name: M7 JS and first-interactive budgets (budgets enforced)
-        run: node scripts/m7-budget.cjs --base=../m6-base/dist --js-base=../m7-js-base/dist --current=dist --out=artifacts/m7-budget
+        run: node scripts/m7-budget.cjs --base=../m6-base/dist --js-base=../m7-js-base/dist --current=dist --out=artifacts/m7-budget --samples=15
       - uses: actions/upload-artifact@v4
         if: always()
         with:
