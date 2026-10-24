@@ -1,4 +1,5 @@
 import { validateAugmentOfferHistory } from './augment-offers';
+import { spendFreeReroll } from './free-rerolls';
 import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 import { planSixCostShop, sixCostShopContext } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
@@ -173,11 +174,12 @@ export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedG
   return transact(pool,state,(draft,_policy,events)=>{
     requirePool(canOperateMatch(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
-    requirePool(state.gold>=MATCH_RULES.rerollCost,'insufficient-gold');
+    const spent=spendFreeReroll(state),cost=spent.free?0:MATCH_RULES.rerollCost;
+    requirePool(state.gold>=cost,'insufficient-gold');
     releaseShop(draft,state.sharedPool!.seatId);
-    const next=drawShop(draft,state,events);
+    const next=drawShop(draft,spent.state,events);
     requirePool(next.shop.slots.some(s=>s.status==='available'),'pool-empty');
-    return {ok:true,...stamp({...next,gold:state.gold-MATCH_RULES.rerollCost})};
+    return {ok:true,...stamp({...next,gold:state.gold-cost})};
   });
 }
 export function setSharedShopLock(pool:SharedPoolState,state:MatchState,locked:boolean,expectedGeneration:number):SharedPoolResult {

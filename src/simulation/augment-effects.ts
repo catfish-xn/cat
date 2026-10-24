@@ -40,6 +40,7 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
       const marker=converted?{...effect,values:{enabled:1,converted:[...converted.keys()].filter(id=>equipment.some(e=>e.id===id&&e.unitId===unit.id)).length}}:effect;
       return [marker,...(augment.definitionId==='enforce'?[{kind:'statPercentBps' as const,stat:'attackDamage' as const,bps:Math.round(spec.source.values.BonusAD!*10000)}]:[]),...(augment.definitionId==='sentinel-slam'?(['armor','magicResist'] as const).map(stat=>({kind:'statPercentBps' as const,stat,bps:Math.round(spec.source.values.PercGain!*10000)})):[])];
     }
+    case 'superstars': return [mechanic('damageAmp',{bps:v.baseBps+allies.filter(u=>u.location.kind==='board'&&u.starLevel===3).length*v.per3StarBps})];
     case 'acquisitionXp': return [];
     case 's13P2Augment': return p2AugmentEffects(augment.definitionId,unit,board,state);
     case 's13P3': return [mechanic('s13P3',{...v,stage:getMultiplayerRoundByOrdinal(state.round).stage})];

@@ -1,4 +1,5 @@
 import { combatEquipmentDisplay } from '../presentation/battle-equipment';
+import { freeRerollsAvailable } from '../simulation/free-rerolls';
 import { createMelSaveFeedback } from './mel-save-feedback';
 import Phaser from 'phaser';
 import { createConquerorFlag } from './conqueror-flag';
@@ -1001,7 +1002,8 @@ export class BoardScene extends Phaser.Scene {
     const canContinue = readLootView(match).canContinue;
     this.continueButton.setData('round', match.round).setAlpha(canContinue ? 1 : 0.4);
     if (canContinue) this.continueButton.setInteractive({ useHandCursor: true }); else this.continueButton.disableInteractive();
-    this.rerollButton.setAlpha(operable ? 1 : 0.4);
+    const freeRerolls = freeRerollsAvailable(match);
+    this.rerollButton.setText(freeRerolls > 0 ? `D · 免费刷新 · 剩 ${freeRerolls} 次` : `D · 刷新 · ${MATCH_RULES.rerollCost} 金币`).setAlpha(operable ? 1 : 0.4);
     this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`).setAlpha(operable && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {
       const offer = match.shop.slots[slot], button = this.shopButtons[slot];

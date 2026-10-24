@@ -11,6 +11,16 @@ import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import type { MatchState } from '../src/simulation/match-types';
+import { rerollShop, selectChoice } from '../src/simulation/match';
+import { generateChoices } from '../src/simulation/choices';
+import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
+import { generateSharedShop, rerollSharedShop } from '../src/server-entry';
+import { freeRerollsAvailable, freeRerollsGranted, validateFreeRerolls, FREE_REROLL_KEY } from '../src/simulation/free-rerolls';
+import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
+import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
+import { accept, room } from './tp-helpers';
+import { reachRound } from './match-helpers';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 
 type Battle = readonly ['pvp'|'pve', G23BattleFacts['result']];
 const fact=(round:number,[roundKind,result]:Battle):G23BattleFacts=>({battleId:'battle-'+round,round,roundKind,result,conquerorTier:0,conquestTakedowns:[],chemBaronTier:0,alliedDeaths:0,rumbleStar:0,highRollerGold:0});
@@ -27,9 +37,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the eight 3a-1 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the fifteen batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['dark-alley-dealings','eye-for-an-eye','latent-forge','living-forge','phreaky-friday','phreaky-friday-plus','team-building','what-doesnt-kill-you']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','latent-forge','living-forge','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','what-doesnt-kill-you']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -46,7 +56,7 @@ it('Phreaky Friday variants exclude each other and Dark Alley Dealings through t
 it.each([
  ['team-building',7,'TFT_Consumable_ChampionDuplicator_III'],['latent-forge',8,'TFT_ArmoryKeyOrnn'],
  ['phreaky-friday',5,'TFT4_Item_OrnnInfinityForce'],['phreaky-friday-plus',3,'TFT4_Item_OrnnInfinityForce'],
- ['dark-alley-dealings',3,'TFT9_Item_OrnnTrickstersGlass'],
+ ['dark-alley-dealings',3,'TFT9_Item_OrnnTrickstersGlass'],['shimmerscale-essence',5,'TFT7_Item_ShimmerscaleGamblersBlade'],
 ] as const)('%s grants once after exactly %i player combats, counting the acquisition round and skipping PvE', (id,n,reward)=>{
  expect(scheduled(withBattles(id,pvp(n-1)))).toEqual([]);
  expect(scheduled(withBattles(id,pvp(n)))).toEqual([[reward,n]]);
@@ -63,7 +73,7 @@ it('Living Forge gives an Artifact anvil now and after every 9 player combats, e
  for(const g of anvils)expect(batch1AnvilSpecification(s,g.receiptId)?.offers).toHaveLength(4);
 });
 it('immediate rewards are granted at acquisition through the shared grant ledger', ()=>{
- for(const [id,item] of [['phreaky-friday','TFT4_Item_OrnnInfinityForce'],['dark-alley-dealings','TFT_Item_Artifact_SuspiciousTrenchCoat']] as const){
+ for(const [id,item] of [['phreaky-friday','TFT4_Item_OrnnInfinityForce'],['dark-alley-dealings','TFT_Item_Artifact_SuspiciousTrenchCoat'],['shimmerscale-essence','TFT7_Item_ShimmerscaleMogulsMail']] as const){
   const s=drainBatch1Gifts({...createMatch(42),augments:[{definitionId:id,choiceId:'test',acquiredRound:1}]});
   expect(s.items.filter(i=>i.definitionId===item)).toHaveLength(1);validateBatch1Gifts(s);
  }
@@ -88,6 +98,18 @@ it('scheduled rewards drain exactly once and restored receipts are authenticated
  const p=readG23Progress(granted)!,rewritten=writeG23Progress(granted,{...p,economyReceipts:p.economyReceipts.slice(0,3)});
  expect(()=>validateBatch1Gifts(rewritten)).toThrow();
 });
+it('P: Eye for an Eye+ gives a component now and caps the 13-death components at three more', ()=>{
+ let s:MatchState={...createMatch(42),augments:[{definitionId:'eye-for-an-eye-plus',choiceId:'test',acquiredRound:1}]};
+ for(let i=0;i<3;i++)s=writeG23Progress({...s,round:i+1},advanceG23Economy(readG23Progress(s)!,{...fact(i+1,['pvp','loss']),alliedDeaths:26}).progress);
+ expect(batch3RewardPlan(s).map(g=>[g.kind,g.acquiredRound])).toEqual([['item',1],['item',1],['item',2]]);
+ expect(batch1GiftPlan(s).filter(g=>g.kind==='item')).toHaveLength(4);
+});
+it('P: Prizefighter gives two components now and one per five player-combat wins; PvE wins, draws and losses do not count', ()=>{
+ const history:Battle[]=[...pvp(4),['pve','win'],['pvp','draw'],['pvp','loss'],['pvp','win'],...pvp(5)];
+ expect(batch3RewardPlan(withBattles('prizefighter',history)).map(g=>[g.kind,g.acquiredRound])).toEqual([['item',8],['item',13]]);
+ const now=drainBatch1Gifts({...createMatch(42),augments:[{definitionId:'prizefighter',choiceId:'test',acquiredRound:1}]});
+ expect(now.items.length-createMatch(42).items.length).toBe(2);
+});
 it('Eye for an Eye counts allied deaths in every combat from acquisition, carries the remainder and stops at four components', ()=>{
  const deaths=(counts:number[])=>{
   let s:MatchState={...createMatch(42),augments:[{definitionId:'eye-for-an-eye',choiceId:'test',acquiredRound:2}]};
@@ -100,4 +122,46 @@ it('Eye for an Eye counts allied deaths in every combat from acquisition, carrie
  expect(deaths([0,30,0])).toEqual([['item',2],['item',2]]);
  expect(deaths([0,30,30,30])).toEqual([['item',2],['item',2],['item',3],['item',3]]);
  const plan=batch3RewardPlan(withBattles('eye-for-an-eye',[]));expect(plan).toEqual([]);
+});
+
+const firstOffers=(seed:number)=>{const state=createMatch(seed);return generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers;};
+const owning=(s:MatchState,definitionId:string,acquiredRound=s.round):MatchState=>({...s,augments:[...s.augments,{definitionId,choiceId:'test-'+definitionId,acquiredRound}]});
+it('free shop rerolls: Rolling for Days I grants 11, Superstars 2/4; each free reroll costs no gold and the 12th costs 2', ()=>{
+ // Public selection, so the save carries the acquisition receipt and the restore validates the spend counter.
+ let seed=0;while(!firstOffers(seed).includes('rolling-for-days-i'))seed++;
+ const open=reachRound('2-1',false,seed),c=open.pendingChoice!;expect(c.offers).toContain('rolling-for-days-i');
+ let s=accept(selectChoice(open,c.choiceId,c.generation,'rolling-for-days-i') as any).state as MatchState;s={...s,gold:s.gold+2};
+ expect(freeRerollsGranted(owning(s,'superstars-i'))-freeRerollsGranted(s)).toBe(2);expect(freeRerollsGranted(owning(s,'superstars-ii'))-freeRerollsGranted(s)).toBe(4);
+ for(let i=0;i<11;i++){const next=accept(rerollShop(s) as any).state as MatchState;expect(next.gold).toBe(s.gold);expect(next.shop.generation).toBe(s.shop.generation+1);s=next;}
+ expect(freeRerollsAvailable(s)).toBe(0);validateFreeRerolls(s);
+ const paid=(rerollShop(s) as any).state as MatchState;expect(paid.gold).toBe(s.gold-2);
+ expect(restoreMatch(serializeMatch(s))).toEqual(s);
+});
+it('Trade Sector adds one free reroll every round from the acquisition round and 1 gold on acquisition; credits carry over', ()=>{
+ const s={...createMatch(42),round:5};
+ expect(freeRerollsGranted(owning(s,'trade-sector',5))).toBe(1);
+ expect(freeRerollsGranted({...owning(s,'trade-sector',5),round:9})).toBe(5);
+ expect(AUGMENT_DEFINITIONS['trade-sector'].effects).toContainEqual({kind:'mechanic',mechanic:'acquisitionGold',values:{amount:1}});
+});
+it('the shared-pool reroll spends a free credit before gold and keeps the pool conserved', ()=>{
+ let {pool,states}=room(undefined,1);let r=accept(generateSharedShop(pool,{...owning(states[0],'superstars-i'),gold:10},0));
+ const gold=r.state.gold;
+ r=accept(rerollSharedShop(r.pool,r.state,r.state.shop.generation));r=accept(rerollSharedShop(r.pool,r.state,r.state.shop.generation));
+ expect(r.state.gold).toBe(gold);expect(freeRerollsAvailable(r.state)).toBe(0);
+ r=accept(rerollSharedShop(r.pool,r.state,r.state.shop.generation));expect(r.state.gold).toBe(gold-2);
+});
+it('a restored spend counter above the derived credits, zero, or malformed is rejected', ()=>{
+ const s=owning(createMatch(42),'superstars-i',1);
+ for(const bad of [{used:3},{used:0},{used:1,extra:1},{used:1.5},[1]])expect(()=>validateFreeRerolls(writeSeatMechanic(s,FREE_REROLL_KEY,bad as any))).toThrow();
+ validateFreeRerolls(writeSeatMechanic(s,FREE_REROLL_KEY,{used:2}));
+ expect(()=>validateBatch1Gifts(writeSeatMechanic(createMatch(42),FREE_REROLL_KEY,{used:1}))).toThrow();
+});
+it('Superstars I/II give 5%/7% team damage amp plus 2%/5% per 3-star ally on the board', ()=>{
+ const base=createMatch(42),unit=base.preparation.units[0];
+ const board=(stars:readonly (1|2|3)[])=>stars.map((starLevel,i)=>({...unit,id:'p'+i,starLevel,location:{kind:'board' as const,cell:{col:i,row:4}}}));
+ for(const [id,b,p] of [['superstars-i',500,200],['superstars-ii',700,500]] as const)for(const stars of [[1,2],[3,1],[3,3,2]] as const){
+  const snap=buildStrategySnapshot({...base,preparation:{...base.preparation,units:board(stars)},augments:[{definitionId:id,choiceId:'t',acquiredRound:1}]});
+  const amp=snap.units[0].mechanics?.filter(m=>m.mechanic==='damageAmp'&&m.source.definitionId===id).reduce((n,m)=>n+m.values.bps,0);
+  expect(amp).toBe(b+p*stars.filter(x=>x===3).length);
+ }
 });

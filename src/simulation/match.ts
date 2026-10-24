@@ -9,6 +9,7 @@ import { growTrainerGolem } from './trainer-golems';
 import { enterOpeningCrabs } from './opening-crabs';
 import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition';
 import { drainSetup } from './setup-work';
+import { spendFreeReroll } from './free-rerolls';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
@@ -358,10 +359,11 @@ export function setShopLock(state: MatchState, locked: boolean, expectedGenerati
 }
 export function rerollShop(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
-  if (state.gold < MATCH_RULES.rerollCost) return fail(state, 'insufficient-gold');
+  const spent = spendFreeReroll(state), cost = spent.free ? 0 : MATCH_RULES.rerollCost;
+  if (state.gold < cost) return fail(state, 'insufficient-gold');
   const generated = generateShop(state.rngState, state.shop.generation + 1, state.level, state.round, sixCostShopContext(state));
-  if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - MATCH_RULES.rerollCost)) return fail(state, 'insufficient-gold');
-  return accept({ ...state, gold: state.gold - MATCH_RULES.rerollCost, ...generated,
+  if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - cost)) return fail(state, 'insufficient-gold');
+  return accept({ ...spent.state, gold: state.gold - cost, ...generated,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
 export function buyXp(state: MatchState): MatchCommandResult {
