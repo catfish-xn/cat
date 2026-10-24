@@ -14,6 +14,7 @@ import { championPortraitKey, itemTextureKey, requestItemTexture } from './s13-a
 import { drawStatusIcons, statusIconY, statusIcons, type IconPen } from './status-icons';
 import { reducedMotion } from './preferences';
 import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
+import { KNOCKUP_2D, knockupLift, type ControlKind } from './control-display';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
@@ -22,6 +23,7 @@ export type RingState = 'normal' | 'selected' | 'target';
 const ITEM_ICON = 16, ITEM_Y = 32;
 /** Cheap motion (presentation only): idle bob, attack lunge, hit flash/shake. */
 const BOB_PX = 1.8, BOB_PERIOD_MS = 520, LUNGE_MS = 180, HIT_MS = 200;
+const SHADOW_FLAT = 0.35;
 export interface MeterData { value: number; maxValue: number; ratio: number; width: number }
 
 export class UnitView {
@@ -35,6 +37,13 @@ export class UnitView {
   private lungeAt = -Infinity;
   private lunge = { x: 0, y: 0 };
   private hitAt = -Infinity;
+  /** Crowd control drawn now (control-display.ts): stunned pieces stop bobbing, knocked-up ones rise off a shadow. */
+  private controlKind: ControlKind | null = null;
+  private airborneAt: number | null = null;
+  private landedAt: number | null = null;
+  private landFrom = 0;
+  /** Ground shadow under a knocked-up piece; outside `body`, so it stays on the cell. */
+  private readonly shadow: Phaser.GameObjects.Arc;
   readonly disc: Phaser.GameObjects.Arc;
   readonly hp: Phaser.GameObjects.Graphics;
   readonly mana: Phaser.GameObjects.Graphics;
@@ -86,7 +95,9 @@ export class UnitView {
       children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));
     }
     this.body = add.container(0, 0, children);
-    this.token = add.container(x, y, [this.body]).setSize(58, 58).setName(`unit:${unit.id}`);
+    // A flattened circle (the trimmed Phaser build has no Ellipse).
+    this.shadow = add.circle(0, PIECE_RADIUS * 0.55, PIECE_RADIUS * 0.85, 0x000000, 0.35).setScale(1, SHADOW_FLAT).setVisible(false);
+    this.token = add.container(x, y, [this.shadow, this.body]).setSize(58, 58).setName(`unit:${unit.id}`);
     this.bobPhase = [...unit.id].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 7;
     this.token.setData('unitId', unit.id);
     for (const meter of [this.hp, this.mana, this.shield]) meter.setData({ value: 0, maxValue: 0, ratio: 0, width: 0 });
@@ -172,7 +183,8 @@ export class UnitView {
   animate(now: number): void {
     if (!this.token.visible) return;
     const still = reducedMotion();
-    let x = 0, y = still ? 0 : Math.sin(now / BOB_PERIOD_MS + this.bobPhase) * BOB_PX;
+    // A controlled piece holds still: no idle bob.
+    let x = 0, y = still || this.controlKind ? 0 : Math.sin(now / BOB_PERIOD_MS + this.bobPhase) * BOB_PX;
     const lunge = now - this.lungeAt;
     if (!still && lunge >= 0 && lunge < LUNGE_MS) { const k = Math.sin((Math.PI * lunge) / LUNGE_MS); x += this.lunge.x * k; y += this.lunge.y * k; }
     const hit = now - this.hitAt;
@@ -180,6 +192,12 @@ export class UnitView {
       const fade = 1 - hit / HIT_MS; this.flash.setAlpha(0.7 * fade);
       if (!still) x += Math.sin(hit * 0.09) * 2.5 * fade;
     } else if (this.flash.alpha !== 0) this.flash.setAlpha(0);
+    // Knock-up: the body rises off its shadow (reduced motion: it stays down, the stun icon still says so).
+    const lift = still ? 0 : this.liftShare(now);
+    if (this.landedAt !== null && lift === 0) this.landedAt = null;
+    y -= lift * KNOCKUP_2D.height;
+    const shrink = 1 - lift * 0.3;
+    this.shadow.setVisible(lift > 0).setScale(shrink, shrink * SHADOW_FLAT);
     this.body.setPosition(x, y);
   }
   /** Death: a copy of the face that shrinks and fades where the piece fell; the caller owns its cleanup. */
@@ -201,6 +219,21 @@ export class UnitView {
     this.shieldLabel.setVisible(false).setText('');
     this.statusIcons.clear().setVisible(false); this.statusKey = ''; this.strip = { harmful: '', beneficial: '' };
     this.disc.setAlpha(1); this.flash.setAlpha(0); this.hitAt = this.lungeAt = -Infinity;
+    this.controlKind = null; this.airborneAt = this.landedAt = null; this.shadow.setVisible(false);
+  }
+
+  /** The control drawn on the piece (null: none). Airborne lifts it until the control ends, then it drops back. */
+  setControl(kind: ControlKind | null, now = performance.now()): void {
+    if (kind === this.controlKind) return;
+    if (kind === 'airborne') { this.airborneAt = now; this.landedAt = null; }
+    else if (this.controlKind === 'airborne') { this.landFrom = this.liftShare(now); this.airborneAt = null; this.landedAt = now; }
+    this.controlKind = kind;
+  }
+  /** Debug/acceptance read of the drawn control. */
+  get control(): ControlKind | null { return this.controlKind; }
+  private liftShare(now: number): number {
+    const since = this.airborneAt === null ? null : (now - this.airborneAt) / 1000, landing = this.landedAt === null ? null : (now - this.landedAt) / 1000;
+    return knockupLift(since, landing, this.landFrom, KNOCKUP_2D.riseSeconds, KNOCKUP_2D.fallSeconds);
   }
 
   /**

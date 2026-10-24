@@ -11,6 +11,7 @@ import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
+import { unitControl, type ControlKind } from '../presentation/control-display';
 import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, boardFeedWalkToOrb, provideBoardControls, publishPlayerSaved, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
@@ -122,6 +123,9 @@ export class BoardScene extends Phaser.Scene {
   private views = new Map<string, UnitView>();
   private tokens = new Map<string, Phaser.GameObjects.Container>();
   private renderedCells = new Map<string, string>();
+  /** 眩晕 vs 击飞 as drawn (control-display.ts), for the 2D pieces and the 3D feed; cleared with each shown combat. */
+  private controlCombat: unknown = null;
+  private readonly controls = new Map<string, ControlKind>();
   private effects = new Set<Phaser.GameObjects.GameObject>();
   private namedObjects = new Map<string, Phaser.GameObjects.Text | Phaser.GameObjects.Container>();
   private draggingId: string | null = null;
@@ -1227,6 +1231,7 @@ export class BoardScene extends Phaser.Scene {
    */
   private syncCombat() {
     const view = this.session.combatView, runtime = this.session.combatRuntime;
+    this.followControlCombat();
     if (!view) return;
     const combat: DisplayCombat & { readonly tick: number; readonly maxTicks: number } = runtime ?? view;
     for (const unit of this.state.units) {
@@ -1258,6 +1263,9 @@ export class BoardScene extends Phaser.Scene {
         this.renderedCells.set(unit.id, key);
       }
       this.views.get(unit.id)?.drawCombat(unit, runtime);
+      const control = unitControl(runtime, unit);
+      if (control) this.controls.set(unit.id, control); else this.controls.delete(unit.id);
+      this.views.get(unit.id)?.setControl?.(control);
     }
     this.timer.setText(`${(combat.tick * COMBAT_TICK_MS / 1000).toFixed(1)}s / ${(combat.maxTicks * COMBAT_TICK_MS / 1000).toFixed(0)}s`);
   }
@@ -1266,6 +1274,7 @@ export class BoardScene extends Phaser.Scene {
     const combat = this.session.combatView;
     if (!combat || !events.length) return;
     this.strategyPanel?.observeEvents(events);
+    this.followControlCombat();
     this.recentCombatEvents.push(...structuredClone(events));
     publishCombatEvents(() => asDisplayEvents(events));
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
@@ -1276,6 +1285,12 @@ export class BoardScene extends Phaser.Scene {
     this.fx.show(events, this.session.combatRuntime ?? combat);
     this.renderedCastCount += this.fx.casts - casts;
     if (!this.quietBoard()) this.feedback?.push(events, performance.now());
+  }
+  /** A different shown combat (a new round, or another seat's battle): no control carries over. */
+  private followControlCombat() {
+    const view = this.session.combatView, key = view ? `${view.combatId}` : null;
+    if (key === this.controlCombat) return;
+    this.controlCombat = key; this.controls.clear();
   }
   private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc | Phaser.GameObjects.Container, duration: number) {
     this.effects.add(effect);
@@ -1295,7 +1310,8 @@ export class BoardScene extends Phaser.Scene {
         x: token.x, y: token.y, alive: !fallen.has(id),
         benchSlot: bench.get(id) ?? null,
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
-        visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id) })),
+        visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id),
+        ...(this.controls.has(id) && this.session.combatView ? { control: this.controls.get(id)! } : {}) })),
       fighting: this.session.combatView !== null, dragging: this.draggingId,
       orbs: this.feedOrbs(),
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
@@ -1356,7 +1372,7 @@ export class BoardScene extends Phaser.Scene {
       tokens: [...this.tokens].map(([id, token]) => ({ id, x: token.x, y: token.y, screenX: client(token).x, screenY: client(token).y,
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
-        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip,
+        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip, control: this.views.get(id)!.control,
         equipped: this.views.get(id)!.equipped, pendingEquipped: this.views.get(id)!.pendingEquipped, owner: this.equipmentOwner(id) })),
       loadoutTip: this.loadoutTip?.visible ? this.loadoutTip.text : '',
       health: meters('hp'), mana: meters('mana'),

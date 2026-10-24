@@ -38,6 +38,7 @@ import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOv
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, type Envelope } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
+import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createStunHalo, displacementHop, type StunHalo } from './unit-control';
 import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -272,6 +273,13 @@ interface PieceView {
   lunge: CastLunge | null;
   /** The body-local (x, z) offset the lunge has put on `body`, taken off again before the body changes. */
   lungeOffset: { x: number; z: number };
+  /** Stun/knock-up drawn from BoardPiece.control (unit-control.ts): the lift curve and the star ring over the head. */
+  readonly control: ControlMotion;
+  halo: StunHalo | null;
+  /** The body-local y the knock-up has put on `body`, taken off again before the body changes. */
+  liftOffset: number;
+  /** Seconds into a forced move's hop (pulled, grabbed, knocked back), null when none. */
+  hop: number | null;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -635,6 +643,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     applied.x = localX; applied.z = localZ;
   };
   function cancelLunge(view: PieceView): void { view.lunge = null; setLungeOffset(view, 0, 0); }
+  // Knock-ups lift the body the same way: a change from what was applied, never its fitted y.
+  const setLiftOffset = (view: PieceView, y: number) => {
+    if (view.body) view.body.position.y += y - view.liftOffset;
+    view.liftOffset = y;
+  };
+  /** Shows or ends a piece's control; a new one stops its action at once (no swing finishes while it is stunned). */
+  const setControl = (view: PieceView, kind: BoardPiece['control'] | null) => {
+    if (view.control.set(kind ?? null)) { view.state.interrupt(); if (view.dance !== 'clip') view.mixer?.apply(view.state.output); }
+    if (kind && !view.halo) { view.halo = createStunHalo(); scene.add(view.halo.object); }
+    else if (!kind && view.halo) { view.halo.dispose(); view.halo = null; }
+  };
   const startLunge = (sourceId: string, targetId: string | undefined) => {
     const source = pieces.get(sourceId), spec = source && castLungeFor(source.definitionId);
     const target = targetId && targetId !== sourceId ? pieces.get(targetId) : undefined;
@@ -644,7 +663,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     source.lunge = new CastLunge(dx, dz, spec.seconds);
   };
   const attachBody = (view: PieceView) => {
-    cancelLunge(view);
+    cancelLunge(view); setLiftOffset(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
@@ -653,7 +672,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const definitionId = view.definitionId;
     void loadModel(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
-      cancelLunge(view); // the stand-in pawn gives way: the lunge's offset never moves to the model
+      cancelLunge(view); setLiftOffset(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
       if (lease.placeholder) {
         // The loader's diagnostic magenta cube is never a player-facing model. Keep the visible, pickable stand-in.
@@ -722,7 +741,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
       starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null,
-      lunge: null, lungeOffset: { x: 0, z: 0 } };
+      lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, liftOffset: 0, hop: null };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -734,6 +753,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
     held.delete(view); cancelLunge(view);
+    view.control.clear(); setControl(view, null); setLiftOffset(view, 0); view.hop = null;
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease) {
@@ -743,7 +763,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
   };
   const removePiece = (view: PieceView) => {
-    cancelLunge(view); view.disposed = true; held.delete(view);
+    cancelLunge(view); view.disposed = true; held.delete(view); view.halo?.dispose(); view.halo = null;
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
@@ -911,6 +931,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       syncStars(view, piece);
       view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items);
+      setControl(view, frame.fighting && piece.alive ? piece.control : null);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
         // Revived or a new combat: never stay locked in a death pose that had not finished.
@@ -957,6 +978,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         recipient.root.add(fx.object); addReference(fx);
       }
       if (!ANIMATION_EVENTS.has(event.type)) continue;
+      // A forced move is no run: the moved unit hops along the slide and keeps its action (its stun stops that).
+      if (event.type === 'movement' && DISPLACEMENT_REASONS.has((event as { reason?: string }).reason ?? '')) {
+        const view = pieces.get(event.unitId);
+        if (view) { cancelLunge(view); view.hop = 0; }
+        continue;
+      }
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
@@ -1294,22 +1321,39 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.dance === 'hop') view.root.position.y += Math.abs(Math.sin(now / 1000 * Math.PI * 2 + view.root.position.x / 40)) * MODEL_HEIGHT * 0.14;
       }
       if (view.lunge) { const offset = view.lunge.update(seconds); if (offset) setLungeOffset(view, offset.x, offset.z); else cancelLunge(view); }
+      // Knock-up: the body (and its stars, bars and star ring below) rises by a share of its drawn height.
+      const height = view.starHeight - STAR_GAP;
+      let lift = view.control.active || view.liftOffset ? view.control.update(seconds) * height * CONTROL_3D.liftShare : 0;
+      if (view.hop !== null) {
+        view.hop += seconds;
+        if (view.hop >= DISPLACEMENT_HOP.seconds) view.hop = null;
+        else lift = Math.max(lift, displacementHop(view.hop) * height * DISPLACEMENT_HOP.liftShare);
+      }
+      if (lift !== view.liftOffset) setLiftOffset(view, lift);
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) {
         // Held time catches up only the action it was held for, on the same mixer: a new action starts from its own start.
         const kept = held.get(view), same = !!kept && kept.mixer === view.mixer && kept.revision === output.revision;
-        if (seen(view)) { view.mixer.update(seconds + (same ? kept!.seconds : 0)); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
+        // Controlled: the clip runs slow (a dazed sway rather than a frozen statue or a full idle).
+        const pace = view.control.control ? CONTROL_3D.clipTimeScale : 1;
+        if (seen(view)) { view.mixer.update((seconds + (same ? kept!.seconds : 0)) * pace); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
         else held.set(view, { seconds: same ? kept!.seconds + seconds : 0, revision: output.revision, mixer: view.mixer });
         if (view.dance !== 'clip') view.mixer.apply(output); // a dance clip runs outside the action state
       }
       if (view.stars) {
-        view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
+        view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift);
         view.stars.object.visible = view.root.visible;
       }
       // Above the star row; a monster has none, so its bar takes the stars' place.
       view.overhead.object.position.copy(view.root.position)
-        .setY(view.root.position.y + view.starHeight + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+        .setY(view.root.position.y + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+      // The star ring circles just over the head, under the star row.
+      if (view.halo) {
+        view.halo.update(seconds);
+        view.halo.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight - STAR_GAP / 2 + lift);
+        view.halo.object.visible = view.root.visible;
+      }
       view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);

@@ -132,7 +132,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const forge=reviveG23Forge(ctx,u)??u;
       for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team)).slice(0,v('NumAlliesShield')))
         grantShield(ally,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
-      strike(t,physical('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('EnemyFlightDuration')*20),ctx.tick,ctx.events);
+      strike(t,physical('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('EnemyFlightDuration')*20),ctx.tick,ctx.events,false,'',undefined,true);
       // P (user 2026-10-23): the target is knocked to the gate 3 hexes behind it (away from Jayce, cut at the board edge)
       // and flies back to its own cell; other enemies within 1 hex of that flight path take the secondary hit once.
       const cells=path(ctx.board,jayceGate(ctx.board,u.cell,t.cell),t.cell);

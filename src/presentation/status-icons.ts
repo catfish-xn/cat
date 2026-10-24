@@ -7,7 +7,8 @@
 import type { CombatState } from '../simulation/combat-types';
 import type { CombatActivity, StatusKind } from '../simulation/m8/contracts';
 import type { DisplayUnit } from './combat-display';
-import { readUnitStatusRows } from './combat-status';
+import { readUnitStatusRows, statusBadge } from './combat-status';
+import type { ViewUnitStatuses } from './control-display';
 import { THEME, toNumber } from './theme';
 
 export type StatusIconKind = StatusKind | CombatActivity['kind'] | 'shield';
@@ -24,16 +25,22 @@ const STATUS_ICON_Y_BELOW = 49;
 /** Piece-relative row centre for a piece whose centre is at canvas y `pieceY`. */
 export const statusIconY = (pieceY: number): number => pieceY + STATUS_ICON_Y - STATUS_ICON_RADIUS < 1 ? STATUS_ICON_Y_BELOW : STATUS_ICON_Y;
 
-/** Statuses in effect now (pending/suppressed contributions are skipped, as in the old strip) plus a shield icon. */
-export function statusIcons(runtime: CombatState | null, unit: DisplayUnit): StatusIcon[] {
+/**
+ * Statuses in effect now (pending/suppressed contributions are skipped, as in the old strip) plus a shield icon.
+ * Offline from the engine state; online from the replay view's own status list (combat-replay-view statusView).
+ */
+export function statusIcons(runtime: CombatState | null, unit: DisplayUnit | ViewUnitStatuses): StatusIcon[] {
   if (!unit.alive) return [];
   const harmful: StatusIcon[] = [], beneficial: StatusIcon[] = [], seen = new Set<string>();
-  for (const row of runtime ? readUnitStatusRows(runtime, unit.id) : []) {
+  const rows = runtime ? readUnitStatusRows(runtime, unit.id)
+    : ((unit as ViewUnitStatuses).statuses ?? []).filter(status => status.kind in ICONS)
+      .map(status => ({ kind: status.kind as StatusIconKind, harmful: status.harmful === true, badge: statusBadge(status.kind), state: 'effective' as const }));
+  for (const row of rows) {
     if (row.state === 'pending' || row.state === 'suppressed') continue;
     const key = `${row.harmful}:${row.kind}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    (row.harmful ? harmful : beneficial).push({ kind: row.kind, harmful: row.harmful, badge: row.badge });
+    (row.harmful ? harmful : beneficial).push({ kind: row.kind as StatusIconKind, harmful: row.harmful, badge: row.badge });
   }
   if (unit.shield > 0) beneficial.push({ kind: 'shield', harmful: false, badge: '' });
   return [...harmful, ...beneficial].slice(0, STATUS_ICON_MAX);
