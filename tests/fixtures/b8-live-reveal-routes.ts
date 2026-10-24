@@ -2,7 +2,9 @@ import * as api from '../../src/simulation/match';
 import { accepted, configuredPrefix } from './t13-loot-public';
 
 // #265 independent bonus stream restores the original v15 public acquisition vectors.
-export const PARTIAL_REVEAL_SEEDS = {loris:2116,zyra:2116} as const;
+// v23: selectionWord now mixes with fmix32, so 2116 no longer draws the "none" opening; 2125 does and keeps
+// the v22 partial vectors byte-for-byte (loris kills r00 at 456, zyra kills r01 at 212).
+export const PARTIAL_REVEAL_SEEDS = {loris:2125,zyra:2125} as const;
 
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item

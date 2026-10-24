@@ -2,7 +2,7 @@ import { describe,it,expect } from 'vitest';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { generateChoices } from '../src/simulation/choices';
 import { createMatch,nextRound,rerollAugment,selectChoice,stepMatch,startMatchCombat } from '../src/simulation/match';
-import { augmentTier,augmentPool,augmentDraw,validateAugmentReroll } from './fixtures/m5/oracle.g2.cjs';
+import { augmentTier,augmentPool,augmentDraw,validateAugmentReroll,openingEncounter } from './fixtures/m5/oracle.g2.cjs';
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { accepted,reachRound,resolveM5Choices,emptyBoard,freeze } from './match-helpers';
 
@@ -18,7 +18,8 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   // public route. The expanded pool puts Portable Forge at seed 236; replaying
   // three opening combats for every candidate needlessly hits CI time limits.
   let selectedSeed=-1;
-  for(let seed=0;seed<1000;seed++){const draw=augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[]);if(draw.offers.includes(id)){selectedSeed=seed;break;}}
+  // v23: skip Trainer Golem openings; the unbenchable golem blocks this route's empty-board helper.
+  for(let seed=0;seed<1000;seed++){if(openingEncounter(seed)==='trainer-golems')continue;const draw=augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[]);if(draw.offers.includes(id)){selectedSeed=seed;break;}}
   expect(selectedSeed).toBeGreaterThanOrEqual(0);const state=reachRound('2-1',false,selectedSeed),choice=state.pendingChoice!;
   expect(choice.offers).toContain(id);
   const invalid=selectChoice(state,choice.choiceId,choice.generation+1,id);expect(invalid.ok).toBe(false);expect(invalid.state).toBe(state);expect("events" in invalid).toBe(false);

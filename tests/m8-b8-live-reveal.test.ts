@@ -86,7 +86,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
   });
 
   it.each([
-    // v22 seed 2116 (no opening encounter). Loris kills r00, whose first 4-7 orb now also carries the
+    // v23 seed 2125 (no opening encounter; v22 used 2116). Loris kills r00, whose first 4-7 orb now also carries the
     // component anvil: two receipts, one component item and one anvil unit birth. Zyra kills r01 (one component).
     ['loris', 'r00', 456, 'settlement', 2, 1, 1],
     ['zyra', 'r01', 212, 'settlement', 1, 1, 0],
@@ -142,10 +142,8 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(result.events.filter(e=>e.type==='death')).toEqual([expect.objectContaining({unitId:carrier,tick:122,eventSeq:956})]);
     expect(result.events.filter(e=>e.type==='lootRevealed')).toEqual([]);
     expect(result.state.m8.loot.earnedEvidence).toEqual(before.m8.loot.earnedEvidence);
-    // Known v22 hazard: the settling withLoot (src/simulation/loot-runtime.ts:24) interns the new m8 via
-    // shareGeneratedJson (src/simulation/immutable-json.ts reuse). If the JSON-equal m8 from the earlier
-    // simultaneous test on this same route is still in the 64-entry intern cache, it is returned and loot.frozen
-    // is that test's equal-but-distinct object. The partial cases currently evict it; pending a src decision.
+    // v23: withLoot (src/simulation/loot-runtime.ts) claims the new m8 without an intern-cache lookup, so a
+    // JSON-equal m8 from an earlier test can no longer replace it and swap in that test's loot.frozen.
     expect(result.state.m8.loot.frozen).toBe(before.m8.loot.frozen);
     // This is the last death: settlement pays the nine already-earned entries (v22 adds the component anvil),
     // without inventing a receipt or qualification for the unloaded carrier.

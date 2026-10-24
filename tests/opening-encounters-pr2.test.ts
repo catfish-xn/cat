@@ -3,7 +3,7 @@ import { createMatch, createCarouselMatch, selectChoice, rerollAugment, startMat
   type MatchState } from '../src/simulation/match';
 import { OPENING_ENCOUNTERS, createOpeningEncounter, applyOpeningEffects, planOpeningRound,
   pendingOpeningForges, openOpeningForge, readOpeningForgeProgress, validateOpeningEncounterState } from '../src/simulation/opening-encounter';
-import { augmentCandidates, deriveAugmentTier, resolveAugmentTier, validateAugmentOfferHistory } from '../src/simulation/augment-offers';
+import { augmentCandidates, deriveAugmentTier, recordedOfferFilter, resolveAugmentTier, validateAugmentOfferHistory } from '../src/simulation/augment-offers';
 import { FINAL_ROUND } from '../src/simulation/round-schedule';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { G24_FORGE_POOLS } from '../src/simulation/content/g2-4-forges';
@@ -84,7 +84,9 @@ describe('PR2 augment constraints', () => {
         if (!result.ok) {
           // An all-prismatic match can run the 16-card prismatic pool dry by 4-2 under the seen-once rule.
           expect(result.reason).toBe('augment-pool-too-small');
-          expect(augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...c.offers])).toEqual([]);
+          // Same filter the engine applies: the node's recorded board-trait snapshot (an empty board drops trait augments).
+          const record = state.augmentOffers.find(r => r.choiceId === c.choiceId)!;
+          expect(augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...c.offers], id, {...recordedOfferFilter(record, 0), blocked: []})).toEqual([]);
           break;
         }
         state = result.state;
