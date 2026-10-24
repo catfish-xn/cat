@@ -415,6 +415,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       pumpingRounds: state.augmentProgress.pumpingRounds + (state.augments.some(a => a.definitionId === 'pumping-up-i') ? 1 : 0),
       investmentHp: state.augmentProgress.investmentHp,
       ...(state.augmentProgress.forming ? { forming: state.augmentProgress.forming } : {}),
+      ...(state.augmentProgress.magicRoll ? { magicRoll: state.augmentProgress.magicRoll } : {}),
     },
     roundResults: [...state.roundResults, { round: state.round, roundId, settlementId: `round-${state.round}-settled`, roundKind,
       result: combat?.result ?? 'supply', combatTicks: combat?.tick ?? 0, combatEventCount:combat?.nextEventSeq??0,

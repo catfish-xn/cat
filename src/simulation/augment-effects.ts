@@ -1,5 +1,5 @@
 import { EMBLEM_ITEMS } from './content/emblems';
-import { HERO_UNITS } from './content/augment-pool-batch3';
+import { HERO_UNITS, magicRollKind } from './content/augment-pool-batch3';
 import { TACTICIAN_SIZE_ITEMS } from './content/tactician-items';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
 import { scrapConversions, g22Equipment } from './strategy-g2-2';
@@ -57,6 +57,11 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
       const health=Math.max(0,Math.floor(total.health*v.healthBps/10000)+stages*v.healthPerStage-base.health);
       const attack=Math.max(0,Math.floor(total.attack*v.attackBps/10000)-base.attack);
       return [...(health?[flat('maxHp',health)]:[]),...(v.golem&&attack?[{kind:'statFlat' as const,stat:'attackDamage' as const,amount:attack}]:[])];
+    }
+    case 'magicRoll': {
+      // A Magic Roll of 4–8 (P 2026-10-24 precedence, the S14 table): every ally permanently gains {3b0ef232} health.
+      const dice=state.augmentProgress.magicRoll;
+      return dice&&magicRollKind(dice)==='health'?[flat('maxHp',v.health)]:[];
     }
     case 'heroCarry': {
       // P 2026-10-24: "strongest" = highest star, then most equipped items, then lowest id, among this side's board copies.

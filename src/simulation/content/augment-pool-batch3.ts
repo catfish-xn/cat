@@ -6,8 +6,8 @@ import { TOWER_DEFENSE_SPELL } from './batch3-summons';
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
 export interface Batch3Schedule {
- readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'|'dummy-deaths'|'dummy-first-death'|'dummy-gold'|'golden-egg'|'adventure-quest'|'enemy-kills'; readonly every:string|number; readonly repeat:boolean;
- readonly gifts:readonly AugmentGiftSpec[]; readonly gold?:string; readonly max?:string|number;
+ readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'|'dummy-deaths'|'dummy-first-death'|'dummy-gold'|'golden-egg'|'adventure-quest'|'enemy-kills'|'damage-dealt'|'outcome'|'magic-egg'; readonly every:string|number; readonly repeat:boolean;
+ readonly gifts:readonly AugmentGiftSpec[]; readonly gold?:string|number; readonly max?:string|number;
  /** round-start only: first entry this many rounds after acquisition (default 1). */
  readonly from?:string|number;
  /** Grant one more 1-star copy of the champion drawn by the acquisition gift at this index instead of `gifts`. */
@@ -34,6 +34,8 @@ interface Batch3Content {
  readonly spoilsTier?:1|2|3;
  /** Dummify/Golemify: remove every champion on acquisition; the granted forming-dummy/augment-golem takes their totals. */
  readonly forming?:'dummy'|'golem';
+ /** Magic Roll / Call to Chaos: one random reward at acquisition (the `outcome` schedule), drawn on its own stream. */
+ readonly outcome?:'magic-roll'|'call-to-chaos';
  readonly hero?:'steb'|'irelia'|'trundle'|'renni'|'vander'|'vladimir';
  /** Replay-authenticated combat mechanics (g2-4b-gold-restore BATCH3_REPLAYED_MECHANICS); values come from the source row. */
  readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck'|'goldForDummies'|'towerDefense';
@@ -1344,8 +1346,108 @@ export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent
     ]
    }
   ]
+ },
+ "warpath": {
+  "apiName": "TFT_Augment_Warpath",
+  "name": "征战之路",
+  "tier": "gold",
+  "description": "造成60玩家伤害后，获得一个装有高费弈子和装备的宝箱。\n(当前：〔对局动态值〕)",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "PlayerDamage": 60.0,
+    "{16253d09}": null,
+    "{3dc22ab3}": 4.0,
+    "{68c537b7}": null,
+    "{6cf88c79}": 1.0,
+    "{7c96bf44}": 1
+   },
+   "description_en_us": "After dealing 60 player damage, gain a chest of high cost champions and items.\n(Current: 〔对局动态值〕)"
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "damage-dealt",
+    "every": "PlayerDamage",
+    "repeat": false,
+    "gifts": [
+     {
+      "kind": "random-unit",
+      "cost": 5,
+      "count": 4,
+      "starLevel": 1
+     },
+     {
+      "kind": "random-unit",
+      "cost": 4,
+      "count": 1,
+      "starLevel": 2
+     },
+     {
+      "kind": "unit",
+      "definitionId": "TFT_ArmoryKeyCompleted"
+     }
+    ]
+   }
+  ]
+ },
+ "magic-roll": {
+  "apiName": "TFT_Augment_MagicRoll",
+  "name": "魔法投掷",
+  "tier": "gold",
+  "description": "投掷3个骰子，根据总点数获得奖励。\n\n奖励：〔对局动态值〕",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "EggTurns": 3.0,
+    "NumComponents": 2.0,
+    "{3b0ef232}": 250.0,
+    "{95ed8271}": 3,
+    "{9a58ced6}": 4.0,
+    "{b0892e64}": 2.0,
+    "{c726cd82}": 1.0
+   },
+   "description_en_us": "Roll 3 dice. Gain rewards based on their total.\n\nReward: 〔对局动态值〕"
+  },
+  "gifts": [],
+  "outcome": "magic-roll",
+  "schedules": [
+   {
+    "counter": "outcome",
+    "every": 1,
+    "repeat": false,
+    "gifts": []
+   },
+   {
+    "counter": "magic-egg",
+    "every": 1,
+    "repeat": false,
+    "gold": 5,
+    "gifts": [
+     {
+      "kind": "item",
+      "definitionId": "TFT_Item_ForceOfNature"
+     },
+     {
+      "kind": "random-unit",
+      "cost": 5,
+      "count": 2
+     }
+    ]
+   }
+  ]
  }
 });
+export type MagicRollKind='egg'|'high-triple'|'low-triple'|'health'|'units'|'components'|'pan';
+/** P 2026-10-24 precedence: the ordered 6-2-6 egg, then triples, then the total's band (4–8, 9–11, 12–15, 16–17). */
+export function magicRollKind(d:readonly number[]):MagicRollKind {
+ if(d[0]===6&&d[1]===2&&d[2]===6)return 'egg';
+ if(d[0]===d[1]&&d[1]===d[2])return d[0]>=4?'high-triple':'low-triple';
+ const sum=d[0]+d[1]+d[2];
+ return sum<=8?'health':sum<=11?'units':sum<=15?'components':'pan';
+}
 export function batch3Count(row:Batch3Content,key:string|number):number {
  const n=typeof key==='number'?key:row.source.values[key];
  if(!Number.isSafeInteger(n)||n!<1)throw new RangeError(`Batch3 source value ${String(key)}`);return n!;
@@ -1385,6 +1487,7 @@ export const AUGMENT_BATCH3_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>
   ...(row.forming?[{kind:'mechanic' as const,mechanic:'forming',values:row.forming==='dummy'
    ?{golem:0,healthBps:batch3Count(row,'HealthPercent')*100,attackBps:0,healthPerStage:batch3Count(row,'HPPerStage')}
    :{golem:1,healthBps:batch3Count(row,'HealthPercent')*100,attackBps:batch3Count(row,'ADPercent')*100,healthPerStage:batch3Count(row,'HPPerStage')}}]:[]),
+  ...(row.outcome==='magic-roll'?[{kind:'mechanic' as const,mechanic:'magicRoll',values:{health:batch3Count(row,'{3b0ef232}')}}]:[]),
   ...(row.combat?[{kind:'mechanic' as const,mechanic:row.combat,values:batch3CombatValues(row)}]:[]),
   ...(row.corrosion?[{kind:'mechanic' as const,mechanic:'corrosion',values:{resistLoss:batch3Count(row,'ResistLoss'),periodTicks:batch3Count(row,'Time')*20}}]:[]),
   ...(row.flexible?[{kind:'mechanic' as const,mechanic:'flexible',values:{healthPerEmblem:batch3Count(row,'HPPerEmblem')}}]:[]),

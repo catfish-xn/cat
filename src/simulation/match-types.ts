@@ -69,7 +69,9 @@ export interface MatchBase {
   readonly removedAugmentIds: readonly string[];
   readonly augmentProgress: { readonly pumpingRounds: number; readonly investmentHp: number;
     /** Batch-3 Dummify/Golemify totals of the champions removed on acquisition (base panel × star); recomputed on restore. */
-    readonly forming?: import('./augment-pool-batch3-progress').FormingTotals };
+    readonly forming?: import('./augment-pool-batch3-progress').FormingTotals;
+    /** Batch-3 Magic Roll: the three dice, re-derived from the seed on restore. */
+    readonly magicRoll?: readonly [number,number,number] };
   readonly items: readonly ItemInstance[]; readonly nextItemSerial: number; readonly augments: readonly OwnedAugment[];
   readonly d14?: import('./d14-runtime').D14Progress;
   readonly anomalyBinding: AnomalyBinding | null; readonly pendingChoice: PendingChoice | null;

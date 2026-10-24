@@ -14,7 +14,11 @@ import type { MatchState } from '../src/simulation/match-types';
 import { rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit, buyUnit, buyXp, sellUnit, equipItem } from '../src/simulation/match';
 import { planDeferredUpgrades } from '../src/simulation/upgrades';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
-import { drainBatch3RoundEntry, drainBatch3Forming, formingTotals } from '../src/simulation/augment-pool-batch3-progress';
+import { drainBatch3RoundEntry, drainBatch3Forming, formingTotals, magicRollDice } from '../src/simulation/augment-pool-batch3-progress';
+import { magicRollKind } from '../src/simulation/content/augment-pool-batch3';
+import { g23BattleFacts } from '../src/simulation/g2-3-settlement';
+import { validateG23BattleFacts } from '../src/simulation/g2-3-economy';
+import { selectPlayerBaseDamage } from '../src/simulation/match-rules';
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { startingRows } from '../src/simulation/m8/targeting';
@@ -51,9 +55,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the forty-six batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the forty-eight batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['all-out','an-exalted-adventure','bad-luck-protection','blade-dance','blazing-soul-i','blazing-soul-ii','blood-pact','building-a-collection-iii','corrosion','dark-alley-dealings','dummify','eye-for-an-eye','eye-for-an-eye-plus','field-medic','flexible','gold-for-dummies','golemify','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','savage-revenge','scapegoat','shimmerscale-essence','shocking-troll','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['all-out','an-exalted-adventure','bad-luck-protection','blade-dance','blazing-soul-i','blazing-soul-ii','blood-pact','building-a-collection-iii','corrosion','dark-alley-dealings','dummify','eye-for-an-eye','eye-for-an-eye-plus','field-medic','flexible','gold-for-dummies','golemify','latent-forge','living-forge','magic-roll','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','savage-revenge','scapegoat','shimmerscale-essence','shocking-troll','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','warpath','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -667,4 +671,84 @@ it('Dummify/Golemify online: the pool ledger returns every removed copy and cons
  expect(draft.holdings.filter(h=>h.seatId===state.sharedPool!.seatId)).toEqual([]);
  const returned=Object.keys(before).reduce((n,id)=>n+(draft.available[id]-before[id]),0);expect(returned).toBe(held);
  assertSharedPoolConservation(draft,[after]);
+});
+
+it('Warpath: the PvP-win damage fact is stage base + own survivors, and 60 dealt opens one chest of 4 five-costs, a two-star 4-cost and an anvil', ()=>{
+ // The fact itself: a won PvP combat reports base damage + this side's surviving units (economy.ts rule), a loss nothing.
+ // A surviving training dummy counts like any survivor, as in the damage the loser is charged.
+ const combat={result:'playerWin',units:[{team:'player',alive:true,definitionId:'garen',hp:1},{team:'player',alive:true,definitionId:'lux',hp:1},{team:'player',alive:false,definitionId:'lux',hp:0},{team:'player',alive:true,definitionId:'training-dummy',hp:1},{team:'enemy',alive:false,definitionId:'garen',hp:0}],strategy:{traits:[],units:[]},openingDeaths:[],combatId:'c'} as any;
+ const round=getMultiplayerRoundById('3-2').ordinal;
+ expect(g23BattleFacts(combat,'player',round,'pvp',[]).batch3DamageDealt).toBe(selectPlayerBaseDamage(3,'pvp','3-2')+3);
+ expect(g23BattleFacts({...combat,result:'enemyWin'},'player',round,'pvp',[]).batch3DamageDealt).toBeUndefined();
+ expect(g23BattleFacts(combat,'player',round,'pve',[]).batch3DamageDealt).toBeUndefined();
+ expect(g23BattleFacts(combat,'player',round,'pvp',[],false).batch3DamageDealt).toBeUndefined();
+ expect(()=>validateG23BattleFacts({...fact(3,['pvp','loss']),batch3DamageDealt:5})).toThrow();
+ // 59 dealt: nothing; the battle that reaches 60 opens the chest once, never again.
+ const damage=(amounts:readonly number[])=>{let s:MatchState={...createMatch(42),augments:[{definitionId:'warpath',choiceId:'test',acquiredRound:1}]};
+  for(const [i,d] of amounts.entries())s=writeG23Progress({...s,round:i+1},advanceG23Economy(readG23Progress(s)!,{...fact(i+1,['pvp','win']),batch3DamageDealt:d}).progress);return s;};
+ expect(batch3RewardPlan(damage([20,20,19]))).toEqual([]);
+ const chest=batch3RewardPlan(damage([20,20,20,30]));
+ expect(chest.map(g=>[g.kind,g.acquiredRound,g.starLevel??1])).toEqual([...Array(4).fill(['unit',3,1]),['unit',3,2],['unit',3,1]]);
+ expect(chest.slice(0,4).every(g=>UNIT_DEFINITIONS[g.definitionId].cost===5)).toBe(true);
+ expect(UNIT_DEFINITIONS[chest[4].definitionId].cost).toBe(4);expect(chest[5].definitionId).toBe('TFT_ArmoryKeyCompleted');
+ const granted=drainBatch1Gifts({...damage([60]),gold:0});
+ expect(granted.preparation.units.filter(u=>u.team==='player'&&UNIT_DEFINITIONS[u.definitionId].cost===5)).toHaveLength(4);
+ // The grant ledger accepts exactly this chest, and draining again grants nothing more.
+ expect(()=>validateBatch1Gifts(granted)).not.toThrow();
+ expect(drainBatch1Gifts(granted)).toEqual(granted);
+});
+
+it('Magic Roll: fair dice, the 6-2-6 egg first, then triples, then the total band; each band grants its 14.24 counts', ()=>{
+ expect(magicRollKind([6,2,6])).toBe('egg');expect(magicRollKind([2,6,6])).toBe('components');
+ expect(magicRollKind([5,5,5])).toBe('high-triple');expect(magicRollKind([1,1,1])).toBe('low-triple');expect(magicRollKind([3,3,3])).toBe('low-triple');
+ expect([[1,2,5],[2,3,3],[4,4,1]].map(magicRollKind)).toEqual(['health','health','units']);
+ expect([[4,4,3],[4,4,4].slice(0,2).concat(5),[6,5,5],[6,6,5]].map(magicRollKind)).toEqual(['units','components','pan','pan']);
+ // The band probabilities of three fair dice (with these precedences) match the S14 ratios.
+ const counts:Record<string,number>={};for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)for(let c=1;c<=6;c++){const k=magicRollKind([a,b,c]);counts[k]=(counts[k]??0)+1;}
+ expect(counts).toEqual({health:54,units:78,components:68,pan:9,'high-triple':3,'low-triple':3,egg:1});
+ // Each seed's dice are seat/choice bound and survive restore; the dice decide the acquisition grant.
+ const kinds=new Set<string>();
+ for(let seed=0;seed<400&&kinds.size<6;seed++){
+  const s=drainBatch1Gifts({...createMatch(seed),augments:[{definitionId:'magic-roll',choiceId:'test',acquiredRound:1}]});
+  const dice=s.augmentProgress.magicRoll!,kind=magicRollKind(dice);kinds.add(kind);
+  expect(dice).toEqual(magicRollDice(s,s.augments[0]));
+  const gifts=batch1GiftPlan(s);
+  if(kind==='units')expect(gifts.map(g=>[UNIT_DEFINITIONS[g.definitionId].cost,g.starLevel])).toEqual([[3,2],[3,2],[2,2]]);
+  if(kind==='components'){expect(gifts).toHaveLength(4);expect(new Set(gifts.map(g=>g.definitionId)).size).toBe(1);}
+  if(kind==='pan')expect(gifts.map(g=>g.definitionId)[0]).toBe('frying-pan');
+  if(kind==='high-triple')expect(gifts.map(g=>g.definitionId)).toEqual(['TFT_Item_TacticiansRing']);
+  if(kind==='low-triple'){expect(gifts.map(g=>g.definitionId)).toEqual(Array(3).fill('TFT_Consumable_ChampionDuplicator_III'));expect(s.seatMechanics!.receipts.filter(r=>r.kind==='gold').map(r=>(r as any).amount)).toEqual([6]);}
+  if(kind==='health'){
+   expect(gifts).toEqual([]);
+   const placed={...s,preparation:{...s.preparation,units:s.preparation.units.map(u=>u.team==='player'?{...u,location:{kind:'board' as const,cell:{col:3,row:4}}}:u)}};
+   const unit=placed.preparation.units.find(u=>u.team==='player')!;
+   const plain=buildStrategySnapshot({...placed,augments:[],augmentProgress:{...placed.augmentProgress,magicRoll:undefined}} as any).units.find(u=>u.unitId===unit.id)!.stats.health;
+   expect(buildStrategySnapshot(placed).units.find(u=>u.unitId===unit.id)!.stats.health).toBe(plain+250);
+  }
+ }
+ expect(kinds.size).toBeGreaterThanOrEqual(5);
+});
+
+it('Magic Roll 6-2-6: the egg hatches at the round entry three rounds later with 5 gold, a Tactician\'s Crown and two five-costs', ()=>{
+ let seed=0;for(;seed<5000;seed++)if(magicRollKind(magicRollDice({seed,multiplayer:undefined},{definitionId:'magic-roll',choiceId:'test',acquiredRound:5}))==='egg')break;
+ const base={...createMatch(seed),augments:[{definitionId:'magic-roll',choiceId:'test',acquiredRound:5}]};
+ const at=(round:number)=>({...base,round});
+ expect(batch1GiftPlan(drainBatch1Gifts(at(5)))).toEqual([]);
+ expect(batch3RewardPlan(at(7))).toEqual([]);
+ let hatch=8;while(getMultiplayerRoundByOrdinal(hatch).kind==='supply')hatch++;
+ const egg=batch3RewardPlan(at(hatch));
+ expect(egg.map(g=>g.definitionId)[0]).toBe('TFT_Item_ForceOfNature');
+ expect(egg.slice(1).map(g=>UNIT_DEFINITIONS[g.definitionId].cost)).toEqual([5,5]);
+ const paid=drainBatch3RoundEntry(drainBatch1Gifts(at(hatch)));
+ expect(paid.seatMechanics!.receipts.filter(r=>r.kind==='gold').map(r=>(r as any).amount)).toEqual([5]);
+});
+
+it('Magic Roll public pick: the dice survive restore and edited dice are rejected', ()=>{
+ const open=publicPick('magic-roll'),c=open.pendingChoice!,s=accept(selectChoice(open,c.choiceId,c.generation,'magic-roll') as any).state as MatchState;
+ const dice=s.augmentProgress.magicRoll!;expect(dice).toEqual(magicRollDice(s,s.augments.at(-1)!));
+ expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ const forged=structuredClone(s) as any;forged.augmentProgress.magicRoll=[dice[0]%6+1,dice[1],dice[2]];expect(()=>restoreMatch(serializeMatch(forged))).toThrow();
+ const dropped=structuredClone(s) as any;delete dropped.augmentProgress.magicRoll;expect(()=>restoreMatch(serializeMatch(dropped))).toThrow();
+ const shot=snapshotForBattle(s,'owner');expect(restorePlayerBattleSnapshot(JSON.stringify(shot))).toEqual(shot);
+ const bad=structuredClone(shot) as any;bad.augmentProgress.magicRoll=[7,1,1];expect(()=>restorePlayerBattleSnapshot(JSON.stringify(bad))).toThrow();
 });

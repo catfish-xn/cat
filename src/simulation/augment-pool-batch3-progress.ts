@@ -2,7 +2,7 @@ import type { MatchState } from './match-types';
 import type { AugmentGift } from './augment-gift-plan';
 import { planAugmentGifts } from './augment-gift-plan';
 import { readG23Progress } from './g2-3-state';
-import { AUGMENT_BATCH3, batch3Count } from './content/augment-pool-batch3';
+import { AUGMENT_BATCH3, batch3Count, magicRollKind } from './content/augment-pool-batch3';
 import { grantMechanicGold, grantMechanicItem, grantMechanicUnit, grantMechanicConsumable } from './seat-mechanics/grants';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
@@ -53,6 +53,13 @@ function batch3Events(state:MatchState):Batch3Event[] {
     }
     return events;
    }
+   if(schedule.counter==='outcome')return [{augment,schedule:index,ordinal:0,round:augment.acquiredRound}];
+   if(schedule.counter==='magic-egg'){
+    // P 2026-10-24: the 6-2-6 egg hatches at the round entry EggTurns rounds after acquisition (never on a carousel).
+    if(magicRollKind(magicRollDice(state,augment))!=='egg')return [];
+    const due=nonSupply(augment.acquiredRound+batch3Count(row,'EggTurns'));
+    return due<=state.round?[{augment,schedule:index,ordinal:0,round:due}]:[];
+   }
    if(schedule.counter==='golden-egg'||schedule.counter==='adventure-quest'){
     const due=schedule.counter==='golden-egg'?goldenEggHatch(state,augment,row,battles):adventureQuestRound(state,augment);
     return due!==undefined&&due<=state.round?[{augment,schedule:index,ordinal:0,round:due}]:[];
@@ -66,6 +73,7 @@ function batch3Events(state:MatchState):Batch3Event[] {
     else if(schedule.counter==='dummy-gold')count+=r.facts.batch3Dummy?.gold??0;
     else if(schedule.counter==='allied-deaths')count+=r.facts.alliedDeaths;
     else if(schedule.counter==='team-healing')count+=r.facts.batch3Healing??0;
+    else if(schedule.counter==='damage-dealt')count+=r.facts.batch3DamageDealt??0;
     else if(r.facts.roundKind==='pvp'&&(schedule.counter==='pvp-combat'||r.facts.result===(schedule.counter==='pvp-win'?'win':'loss')))count++;
     else continue;
     const due=Math.min(schedule.repeat?Math.floor(count/every):count>=every?1:0,max);
@@ -134,6 +142,7 @@ export function lootSpecs(t:Batch3LootTable):AugmentGiftSpec[] {
 const LOOT_TABLES:Readonly<Record<string,readonly Batch3LootTable[]>>={'golden-egg':GOLDEN_EGG_LOOT,'adventure-quest':EXALTED_ADVENTURE_LOOT};
 function eventGifts(state:MatchState,e:Batch3Event):AugmentGift[] {
  const row=AUGMENT_BATCH3[e.augment.definitionId],schedule=row.schedules[e.schedule];
+ if(schedule.counter==='outcome')return planAugmentGifts(state,{...e.augment,choiceId:JSON.stringify([e.augment.choiceId,'batch3',e.schedule,e.ordinal])},outcomeReward(state,e.augment).gifts);
  const tables=LOOT_TABLES[schedule.counter];
  if(tables)return planAugmentGifts(state,{...e.augment,choiceId:JSON.stringify([e.augment.choiceId,'batch3',e.schedule,e.ordinal]),acquiredRound:e.round},lootSpecs(lootTable(state,e,tables)));
  // A copy repeats the champion drawn by the acquisition gift at that index (Worth the Wait).
@@ -240,7 +249,13 @@ export function drainBatch3Forming(initial:MatchState):MatchState {
   }
   state={...state,augmentProgress:{...state.augmentProgress,forming:formingTotals(state)}};
  }
+  for(const augment of state.augments)if(AUGMENT_BATCH3[augment.definitionId]?.outcome==='magic-roll'&&!state.augmentProgress.magicRoll)
+  state={...state,augmentProgress:{...state.augmentProgress,magicRoll:magicRollDice(state,augment)}};
  return state;
+}
+/** The dice an owned Magic Roll must carry in augmentProgress (restore and snapshot authority). */
+export function expectedMagicRoll(state:Pick<MatchState,'seed'|'multiplayer'|'augments'>):readonly [number,number,number]|undefined {
+ const a=state.augments.find(a=>AUGMENT_BATCH3[a.definitionId]?.outcome==='magic-roll');return a&&magicRollDice(state,a);
 }
 export function batch3RewardPlan(state:MatchState):AugmentGift[] {
  return batch3Events(state).flatMap(e=>eventGifts(state,e));
@@ -251,7 +266,7 @@ export function drainBatch3RoundEntry(initial:MatchState,policy?:UnitLootPolicy)
  let state=initial;
  for(const e of batch3Events(state)){
   const counter=AUGMENT_BATCH3[e.augment.definitionId].schedules[e.schedule].counter;
-  if(e.round!==state.round||!['round-start','stage-start','golden-egg','adventure-quest'].includes(counter))continue;
+  if(e.round!==state.round||!['round-start','stage-start','golden-egg','adventure-quest','magic-egg'].includes(counter))continue;
   for(const gift of eventGifts(state,e)){
    if(state.seatMechanics?.receipts.some(r=>r.receiptId===gift.receiptId))continue;
    const request={...gift,source:AUGMENT_GIFT_SOURCE};
@@ -271,6 +286,7 @@ function goldPlan(state:MatchState){
  return batch3Events(state).flatMap(e=>{
   const row=AUGMENT_BATCH3[e.augment.definitionId],schedule=row.schedules[e.schedule],key=schedule.gold;
   if(schedule.counter==='enemy-kills')return [{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:spoilsGold(spoilsTable(state,e.augment,row.spoilsTier!),e.ordinal),round:e.round}];
+  if(schedule.counter==='outcome'){const gold=outcomeReward(state,e.augment).gold;return gold?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:gold,round:e.round}]:[];}
   const tables=LOOT_TABLES[schedule.counter];
   if(tables){const gold=lootTable(state,e,tables).Gold??0;return gold?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:gold,round:e.round}]:[];}
   return key?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:batch3Count(row,key),round:e.round}]:[];
@@ -289,4 +305,31 @@ export function validateBatch3Gold(state:MatchState):void {
   if(!p||r.kind!=='gold'||r.source!==p.source||r.amount!==p.amount||r.round!==p.round)throw new RangeError('Invalid batch3 gold authority');
  }
  for(const p of plan)if(!receipts.some(r=>r.receiptId===p.receiptId))throw new RangeError('Missing batch3 gold receipt');
+}
+
+/** Magic Roll: three fair six-sided dice on a source/seat/choice-bound stream (P 2026-10-24, the S14 table's ratios). */
+export function magicRollDice(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):readonly [number,number,number] {
+ const namespace=JSON.stringify([AUGMENT_BATCH3_SOURCE,'dice',state.multiplayer?.seatId??'solo',augment.choiceId,augment.definitionId]);
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;rng=(state.seed^rng)>>>0;
+ const die=()=>{const d=nextRandom(rng);rng=d.state;return Math.floor(d.word*6/4294967296)+1;};
+ return [die(),die(),die()];
+}
+/** Low triples pay 6 gold with the three Lesser Duplicators (P 2026-10-24: 14.24 has no text for this band; 6 is the fixed
+ * amount of the S14 ratio table, the other S14 table gives 4–6). */
+export const MAGIC_ROLL_LOW_TRIPLE_GOLD=6;
+/** The acquisition reward of an outcome augment; every count is a 14.24 source value. */
+export function outcomeReward(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):{readonly gifts:readonly AugmentGiftSpec[];readonly gold:number} {
+ const row=AUGMENT_BATCH3[augment.definitionId];
+ if(row?.outcome==='magic-roll'){
+  const n=(k:string)=>batch3Count(row,k);
+  switch(magicRollKind(magicRollDice(state,augment))){
+   case 'units':return {gold:0,gifts:[{kind:'random-unit',cost:3,count:n('{b0892e64}'),starLevel:2},{kind:'random-unit',cost:2,count:n('{c726cd82}'),starLevel:2}]};
+   case 'components':return {gold:0,gifts:[{kind:'random-item',pool:'component',count:n('{9a58ced6}'),identical:true}]};
+   case 'pan':return {gold:0,gifts:[{kind:'item',definitionId:'frying-pan'},{kind:'random-item',pool:'component',count:n('NumComponents')}]};
+   case 'high-triple':return {gold:0,gifts:[{kind:'item',definitionId:'TFT_Item_TacticiansRing'}]};
+   case 'low-triple':return {gold:MAGIC_ROLL_LOW_TRIPLE_GOLD,gifts:[{kind:'consumable',definitionId:'TFT_Consumable_ChampionDuplicator_III',count:n('{95ed8271}')}]};
+   default:return {gold:0,gifts:[]};
+  }
+ }
+ return {gold:0,gifts:[]};
 }

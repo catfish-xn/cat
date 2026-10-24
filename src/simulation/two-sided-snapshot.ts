@@ -102,7 +102,8 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       growthIds.add(growth.unitId);
     }
     record(s.augmentProgress); integer(s.augmentProgress.pumpingRounds); integer(s.augmentProgress.investmentHp);
-    requireSnapshot(Object.keys(s.augmentProgress).every(k => ['pumpingRounds','investmentHp','forming'].includes(k)));
+    requireSnapshot(Object.keys(s.augmentProgress).every(k => ['pumpingRounds','investmentHp','forming','magicRoll'].includes(k)));
+    if (s.augmentProgress.magicRoll !== undefined) { const d = s.augmentProgress.magicRoll; requireSnapshot(augmentIds.has('magic-roll') && Array.isArray(d) && d.length === 3 && d.every(n => Number.isSafeInteger(n) && n >= 1 && n <= 6)); }
     if (s.augmentProgress.forming !== undefined) {
       record(s.augmentProgress.forming);
       for (const [k, t] of Object.entries(s.augmentProgress.forming)) {
@@ -131,6 +132,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
         unitId:s.anomalyBinding.unitId, choiceId:s.anomalyBinding.choiceId, boundRound:s.anomalyBinding.boundRound },
       persistentGrowth: s.persistentGrowth.map(g => ({unitId:g.unitId,attackDamageBps:g.attackDamageBps})),
       augmentProgress: { pumpingRounds:s.augmentProgress.pumpingRounds, investmentHp:s.augmentProgress.investmentHp,
+        ...(s.augmentProgress.magicRoll === undefined ? {} : { magicRoll: [s.augmentProgress.magicRoll[0], s.augmentProgress.magicRoll[1], s.augmentProgress.magicRoll[2]] as const }),
         ...(s.augmentProgress.forming === undefined ? {} : { forming: Object.fromEntries(Object.entries(s.augmentProgress.forming).map(([k, t]) => [k, { health:t!.health, attack:t!.attack }])) }) },
     };
     const cleanText = yield* canonicalContentSteps(clean);
