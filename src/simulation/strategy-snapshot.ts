@@ -197,8 +197,11 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     if(unit.definitionId==='g23-sion'){
       const rose=g23SionTeam(state.preparation,unit.team,traits,state.d14Combat?.phase==='promoted'?state.d14Combat.unitId:undefined),stage=strategyStage(state.round),index=Math.max(0,Math.min(4,stage-2));
       const stages=rose.tier>=5?G23_SUMMON_POLICY.sion.tier5StageBps:rose.tier===4?G23_SUMMON_POLICY.sion.tier4StageBps:G23_SUMMON_POLICY.sion.tier3StageBps;
-      const bps=Math.floor(stages[index]*(10000+rose.stars*1500)/10000)-10000;
-      sources.push(...makeSourcedEffects(unit.id,'trait','black-rose',unit.id,[{kind:'statFlat',stat:'maxHp',amount:Math.max(0,Math.floor(1000*bps/10000))},{kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));
+      const sion=G23_SUMMON_POLICY.sion,bps=Math.floor(stages[index]*(10000+rose.stars*sion.starHealthBps)/10000)-10000;
+      const resists=rose.tier>=7?sion.resistsByTier[7]:rose.tier>=5?sion.resistsByTier[5]:rose.tier===4?sion.resistsByTier[4]:sion.resistsByTier[3];
+      sources.push(...makeSourcedEffects(unit.id,'trait','black-rose',unit.id,[{kind:'statFlat',stat:'maxHp',amount:Math.max(0,Math.floor(sion.base.baseStats.health*bps/10000))},
+        {kind:'statPercentBps',stat:'attackDamage',bps:rose.stars*sion.starAttackBps},{kind:'statFlat',stat:'armor',amount:resists},{kind:'statFlat',stat:'magicResist',amount:resists},
+        {kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));
     }
     const growth = state.persistentGrowth.find(entry => entry.unitId === unit.id);
     if (growth) sources.push(...makeSourcedEffects(unit.id, 'ability', 'tristana-ability', `persistent:${unit.id}`, [{ kind: 'statPercentBps', stat: 'attackDamage', bps: growth.attackDamageBps }]));

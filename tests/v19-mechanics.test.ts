@@ -150,11 +150,14 @@ describe('v19 archived mechanics in synthetic combat',()=>{
     for(const [r,n] of [[a,1],[b,2]] as const){const u=unit(r.state,id);expect(u.v19?.smokeOrdinal).toBe(n);expect(u.maxHp).toBe(hp);expect(ad(u)).toBe(attack);expect(ap(u,r.state.tick)).toBe(power);
       expect(r.events.some(e=>e.type==='statusChanged'&&e.group.kind==='stun'&&e.tick===240*n)).toBe(true);}
   });
-  it('Rose marks only damaged enemies, gives one separate 1.08 multiplier to members, and remains after Sion death',()=>{
+  it('Rose marks only enemies hit by the unshackle charge, gives one separate 1.08 multiplier to members, and remains after Sion death',()=>{
     const s=army(['morgana','vladimir','cassiopeia','elise']),base=start(s).state;
     const sion=base.units.find(u=>u.definitionId==='g23-sion')!;
     expect(sion.mechanics?.find(m=>m.mechanic==='g23Sion')?.values.tier).toBe(4);
-    let c=idle(base,[sion.id]);c={...c,units:c.units.map(u=>u.id===sion.id?{...u,runtime:{...u.runtime!,buddyTriggered:true},maxMana:0,mana:0,attackRange:100}:u.id==='enemy'?{...u,hp:100000,maxHp:100000}:u)};
+    const attacking=idle(base,[sion.id]),attacked=stepCombat({...attacking,units:attacking.units.map(u=>u.id===sion.id?{...u,runtime:{...u.runtime!,buddyTriggered:true},maxMana:0,mana:0,attackRange:100,cooldownTicks:0}:u.id==='enemy'?{...u,hp:100000,maxHp:100000}:u)});
+    expect(attacked.events.some(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId===sion.id&&e.outcome.hpDamage>0)).toBe(true);
+    expect(unit(attacked.state,'enemy').v19?.roseTeams).toBeUndefined();
+    let c=idle(base,[sion.id]);c={...c,units:c.units.map(u=>u.id===sion.id?{...u,hp:Math.floor(u.maxHp/2),maxMana:0,mana:0}:u.id==='enemy'?{...u,hp:100000,maxHp:100000}:u)};
     const marked=stepCombat(c).state;expect(unit(marked,'enemy').v19?.roseTeams).toEqual(['player']);
     const probe=(mark:boolean)=>stepCombat({...idle(marked,['morgana']),units:idle(marked,['morgana']).units.map(u=>u.id===sion.id?{...u,alive:false,hp:0}:u.id==='morgana'?{...u,attackRange:100,maxMana:0,mana:0,cooldownTicks:0}:u.id==='enemy'?{...u,v19:mark?u.v19:undefined}:u)});
     const a=probe(false).events.find(e=>e.type==='packetDamage'),b=probe(true).events.find(e=>e.type==='packetDamage');

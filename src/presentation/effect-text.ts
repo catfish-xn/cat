@@ -80,8 +80,6 @@ export function traitTierLimitations(traitId: string, threshold: number): string
   if (traitId === 'scrap' && threshold >= 6) notes.push(`幸运装备${threshold >= 9 ? '与光明转换' : ''}暂未实装`);
   if (traitId === 'enforcer' && threshold >= 10) notes.push('没收装备暂未实装');
   if (traitId === 'rebel' && threshold >= 10) notes.push('开场及每 12 秒烟雾信号暂未实装');
-  if (traitId === 'black-rose' && threshold >= 4) notes.push('黑色玫瑰成员增伤暂未实装');
-  if (traitId === 'black-rose' && threshold >= 7) notes.push('赛恩阵亡复活暂未实装');
   if (traitId === 'experiment') notes.push('试验品纹章的分身实验加成暂未实装');
   if (traitId === 'dominator') notes.push('按实际耗蓝增长暂未实装');
   if (traitId === 'emissary') notes.push('实际共享生命暂未实装');

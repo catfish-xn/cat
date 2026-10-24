@@ -42,7 +42,7 @@ function unitView(unit: CombatUnit, state: CombatState) {
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), ...statusView(state, unit.id), cell: cellView(unit.cell),
     ...(unit.equipment ? { equipment: unit.equipment.map(i => ({ ...i })) } : {}),
     ...(choiceEffects.length?{choiceEffects}:{}),
-    ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
+    ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined || unit.g23Sion ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
     ...(unit.anomalyState || unit.anomalySummon || unit.v20Traits?.minion ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
 }

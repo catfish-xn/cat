@@ -49,6 +49,8 @@ export interface CombatUnit {
   readonly anomalySummon?: import('./anomalies/contracts').AnomalySummon;
   readonly itemSummonOpeningMaxHp?:number;
   readonly itemBanish?: {readonly ownerId:string;readonly itemInstanceId:string;readonly untilTick:number};
+  /** 7 Black Rose Sion's one revive: absent until reviveAtTick, then revived for the rest of combat. */
+  readonly g23Sion?: {readonly reviveAtTick:number;readonly revived:boolean};
   readonly s13P3?: import('./s13-p3-combat').P3CombatState;
   readonly itemMogulHits?:readonly {readonly packetId:string;readonly tick:number}[];
   readonly openingItemBankGold?:number;

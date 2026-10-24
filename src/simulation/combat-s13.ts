@@ -6,7 +6,7 @@ import { settleAmbessaRetreats } from './combat-ambessa-dash';
 import { settleFamilyReunionDeaths } from './combat-family-reunion';
 import { advanceSixCost, settleSixCostDeaths, recordMelAbsorption, convertViktorMana } from './combat-six-cost';
 import { p2Bonus, p2Stoneskin, p2Target, p2PacketCrit } from './s13-augments-p2-combat';
-import { v19DominatorCast, smokeV19, sistersV19, markRoseV19, roseAmpV19, chainblade, chainbladeGoldTarget, chainbladeKill } from './combat-v19';
+import { v19DominatorCast, smokeV19, sistersV19, roseAmpV19, chainblade, chainbladeGoldTarget, chainbladeKill } from './combat-v19';
 import { V19_MECHANICS } from './content/v19-mechanics';
 import { d11AvariceDamageAmpBps, d11HeadhunterAttackSpeedBps } from './d11-fill';
 import { UNIT_DEFINITIONS } from './units';
@@ -22,7 +22,7 @@ import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
 import {scaleItemSummonHp} from './g2-4b-summons';
 import {advanceSpectralCutlass,returnZephyrUnits} from './combat-g2-4b';
 import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
-import { advanceG23Summons,g23Bound } from './combat-g2-3-summons';
+import { advanceG23Summons,deathG23Sion,g23Bound } from './combat-g2-3-summons';
 import { advanceG23Anomalies,recordG23Conquest,settleG23ExperimentKills,recordG23Attack,recordG23Damage,g23Anomaly } from './g2-3-combat';
 import { advanceAugmentCombat, settleAugmentDeaths } from './combat-augment-effects';
 import { advanceG22Traits, recordG22Damage, shareStebHeal } from './combat-g2-2';
@@ -159,7 +159,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       cooldownTicks: unit.alive ? Math.max(0, unit.cooldownTicks - 1) : 0,
       moveCooldownTicks: unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0 });
   }).sort(compareIds);
-  const hasBanish=units.some(u=>u.itemBanish || u.anomalyState?.absentUntilTick !== undefined);
+  const hasBanish=units.some(u=>u.itemBanish || u.anomalyState?.absentUntilTick !== undefined || u.g23Sion);
   const fullRoster=hasBanish?[...units]:units;
   const suspendBanished=()=>{for(let i=units.length-1;i>=0;i--)if(isAbsent(units[i],tick))units.splice(i,1);};
   if(hasBanish&&state.tick>0)suspendBanished();
@@ -263,7 +263,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   advanceSpectralCutlass(ctx);
   advanceAugmentCombat(ctx);
   smokeV19(ctx);
-  advanceG22Traits(ctx); advanceG23Anomalies(ctx); advanceG23Summons(ctx); advanceG23Skills(ctx); advanceG23Junker(ctx,()=>actionSeq++);
+  advanceG22Traits(ctx); advanceG23Anomalies(ctx); advanceG23Summons(ctx,()=>actionSeq++); advanceG23Skills(ctx); advanceG23Junker(ctx,()=>actionSeq++);
   const blocked = new Set<string>();
   for (const unit of units) {
     // B9 replay2: every S13 status is anchored by frozen contributions or an activity.
@@ -459,7 +459,6 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       return next;
     }); syncShield(target);
     virtualHp.set(target.id, result.hpAfter);
-    markRoseV19(units.find(u=>u.id===packet.source.ownerId),target,absorbed+actual);
     if(outcome.hit&&packet.source.definitionId.endsWith('DeftHands'))recordAnomalyProxyHit(ctx,units.find(u=>u.id===packet.source.ownerId),target,packet.actionSeq,context.redirected);
     allOutcomes.push(outcome);
     ctx.resolutionFacts = { ...ctx.resolutionFacts!, damage: allOutcomes };
@@ -702,6 +701,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const trenchMembership=splitTrenchHolders(ctx,state,trenchEligible);
   deathAnomalies(ctx);
+  deathG23Sion(ctx);
   settleSixCostDeaths(ctx,killed);
   if(hasBanish){const suspended=fullRoster.filter(u=>isAbsent(u,tick));fullRoster.splice(0,fullRoster.length,...units,...suspended);}
   // G2-4b: only true zero-HP deaths notify item declarations before cleanup.
