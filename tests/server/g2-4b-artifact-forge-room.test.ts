@@ -101,25 +101,27 @@ describe('G2-4b: the artifact anvil in an online room', () => {
     expect(units.map(unit => unit.definitionId)).toEqual([ANVIL.completed, ANVIL.artifact, ANVIL.artifact]);
     const [completed, tier10, tier14] = units;
     const first = seatOf(room.state, 's0').match;
-    const opened = openAnvil(room, 's0', completed!.id);
+    // P 乙 (10-24): anvils extend this settlement by at most 30 s in total.
+    const settlementEnds = room.state.deadlineAt!, cap = settlementEnds + 30_000;
+    const opened = openAnvil(room, 's0', completed!.id, false, Math.min(clock.now() + 30_000, cap));
     expect(readChoiceExtras(opened).title).toBe('成装锻造器 · 4 选 1');
     // One open choice at a time: the other anvils wait on the bench until this one is answered.
     expect(room.handle('s0', { type: 'openAnvil', unitId: tier10!.id })).toMatchObject({ ok: false, reason: 'wrong-phase' });
     expect(room.handle('s0', { type: 'choose', choiceId: opened.choiceId, generation: opened.generation, definitionId: opened.offers[1]! }).ok).toBe(true);
-    const second = openAnvil(room, 's0', tier10!.id);
+    const secondDeadline = Math.min(clock.now() + 30_000, cap), second = openAnvil(room, 's0', tier10!.id, false, secondDeadline);
     expect(readChoiceExtras(second).title).toBe('神器装备锻造器 · 4 选 1');
     expect(second.offers).toEqual(atomOptions(first, 10, 0));
-    clock.advance(29_999);
+    clock.advance(secondDeadline - clock.now() - 1);
     expect(clock.fireNext()).toBe(true); // exactly the tier-10 anvil's deadline (the settlement it held is due at the same time)
     expect(receiptsOf(seatOf(room.state, 's0').match, second.choiceId)).toEqual([expect.objectContaining({ optionId: second.offers[0], timedOut: true })]);
     expect(room.state.phase).toBe('settlement');
-    // Still in that settlement, the tier-14 anvil opens on its own deadline and holds the settlement again.
+    // Still in that settlement, the tier-14 anvil opens; the settlement is held again, but only up to the 30 s cap.
     const tier14Options = atomOptions(first, 14, 1);
     for (const id of tier14Options) expect(artifacts).toContain(id);
-    const third = openAnvil(room, 's0', tier14!.id);
+    const thirdDeadline = Math.min(clock.now() + 30_000, cap), third = openAnvil(room, 's0', tier14!.id, false, thirdDeadline);
     expect(third.offers).toEqual(tier14Options);
-    expect(room.state.deadlineAt).toBe(clock.now() + 30_000);
-    clock.advance(30_000);
+    expect(room.state.deadlineAt).toBe(thirdDeadline);
+    clock.advance(thirdDeadline - clock.now());
     const after = seatOf(room.state, 's0').match;
     expect(after.pendingChoice).toBeNull();
     expect(receiptsOf(after, third.choiceId)).toEqual([expect.objectContaining({ kind: 'choice', choiceKind: 'forge', optionId: tier14Options[0], timedOut: true })]);

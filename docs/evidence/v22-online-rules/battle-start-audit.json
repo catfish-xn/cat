@@ -26,7 +26,7 @@
     "src/server/room/pairing.ts": "ea73a85f74b52050e1e70c4c28e09b451b327cbadb630681c57cb15e5a7d43d9",
     "src/server/room/projection.ts": "9957de89f03d4bfb4e8b1d7708c633e5fbc70e55dd120634f47ef9e082103d34",
     "src/server/room/real-clock.ts": "daa6d6f911eb4d971807ebf44041310cd93ae306bc482820b4217ec51c49d7c3",
-    "src/server/room/room.ts": "5d84beef5061e9050f0901b6d00a1126ab5f5a51c3a29f1d3f483afde6cf700f",
+    "src/server/room/room.ts": "00a8b1bb7a004318bf084b0ea753e8ae76ba00072ae895973b5116d2a436acfe",
     "src/server/room/two-sided-resolver.ts": "5a482558ec98cf7ecaa604da3444130815b87a1f78ad8c1fbad82960d70c38c1",
     "src/server/room/types.ts": "6fd7db1debfbfb7713388cce9585b7717212622aff276880f360345a455ecbd0",
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",

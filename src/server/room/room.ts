@@ -238,7 +238,7 @@ export type SettlementWorkFactory = () => Generator<void, void, void>;
 
 /** Room phases whose deadline would time out an open seat choice (§11.4); an anvil deadline extends them (see `fitDeadlineToChoices`). */
 const CHOICE_TIMEOUT_PHASES: ReadonlySet<RoomPhase> = new Set(['preparation', 'choice', 'settlement']);
-/** The most an open anvil may add to one phase deadline (one anvil's own 30 s window). */
+/** The most an open anvil may add to one phase deadline (one anvil's own 30 s to choose). */
 export const ANVIL_PHASE_EXTENSION_MS = 30_000;
 /**
  * v22 anvil units: the open choice of an alive seat that runs on its own deadline (an opened anvil, whose rules payload
@@ -1902,7 +1902,12 @@ export class Room {
       if (!open && !held) return seat;
       changed = true;
       const { choiceDeadline: _dropped, ...rest } = seat;
-      return open ? { ...rest, choiceDeadline: { choiceId: open.choiceId, generation: open.generation, deadlineAt: this.options.clock.now() + open.timeoutMs } } : rest;
+      if (!open) return rest;
+      // P 乙: inside a capped phase the anvil's own deadline is the cap at the latest, so the seat's countdown (endsAt)
+      // shows when the choice is really forced, and its own timer answers it there.
+      const own = this.options.clock.now() + open.timeoutMs;
+      const cap = CHOICE_TIMEOUT_PHASES.has(next.phase) && this.phaseDeadline !== null ? this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS : Infinity;
+      return { ...rest, choiceDeadline: { choiceId: open.choiceId, generation: open.generation, deadlineAt: Math.min(own, cap) } };
     });
     return changed ? { ...next, seats } : next;
   }

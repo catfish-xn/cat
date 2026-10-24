@@ -1097,17 +1097,17 @@
     "tests/server/anvil-choice-deadline.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 13060,
+      "currentBytes": 13481,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1809b22f16be332efaaec53197d706889791d3dc5d9c897f2e09142c1cb62e5c",
+      "currentSha256": "90c24d74b5a285e264b364c182543f07d2bad2d9a9455e2af1619615b5cd100c",
       "firstDifferentByte": 0
     },
     "tests/server/anvil-room-helpers.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6198,
+      "currentBytes": 6354,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "beb3240db5d659ad4bcbff3e884c70ea953566a492f16de62a484a4c041ef872",
+      "currentSha256": "654d4dbb8c6ea9da1768282a65e07b86448bfa0cd06d19a82f1e1612de0ea8c0",
       "firstDifferentByte": 0
     },
     "tests/server/augment-preparation-room.test.ts": {
@@ -1170,9 +1170,9 @@
     },
     "tests/server/g2-4b-artifact-forge-room.test.ts": {
       "previousBytes": 13269,
-      "currentBytes": 13236,
+      "currentBytes": 13640,
       "previousSha256": "e05bae31836d7e15dedf2ed9c8f5e1353682cf42ee87d3c0a10c3f0ad7e93e0b",
-      "currentSha256": "a222cb62c28223b5e6d69bbf45507e8964a810278fa67389d8f95865ddd1abd0",
+      "currentSha256": "5b0ea80cc6ec8752bf94ec4ca4547e30a7dadd4abc43fee4cfbed5c3f088183d",
       "firstDifferentByte": 22
     },
     "tests/server/g2-4b-support-forge-room.test.ts": {

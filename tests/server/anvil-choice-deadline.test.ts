@@ -135,9 +135,12 @@ describe('v22: an opened anvil runs on its own room deadline', () => {
     expect(room.state.deadlineAt).toBe(phaseDeadline + 29_900);
     clock.advance(10_000);
     expect(room.handle('s0', { type: 'choose', choiceId: one.choiceId, generation: one.generation, definitionId: one.offers[1]! })).toMatchObject({ ok: true });
-    const opened = clock.now(), two = openAnvil(room, 's0', second!.id);
+    const opened = clock.now(), two = openAnvil(room, 's0', second!.id, false, phaseDeadline + 30_000);
     expect(opened + 30_000).toBeGreaterThan(phaseDeadline + 30_000);
     expect(room.state.deadlineAt).toBe(phaseDeadline + 30_000); // capped, not opened + 30 s
+    // The seat's own countdown says the same: its private view ends at the cap, not at opened + 30 s.
+    expect(seatOf(room.state, 's0').choiceDeadline).toMatchObject({ choiceId: two.choiceId, deadlineAt: phaseDeadline + 30_000 });
+    expect(toSeatPrivateView(seatOf(room.state, 's0').match, seatOf(room.state, 's0').choiceDeadline).choiceDeadline?.endsAt).toBe(phaseDeadline + 30_000);
     clock.advance(phaseDeadline + 30_000 - 1 - clock.now());
     expect(room.state.phase).toBe('preparation');
     expect(receiptsOf(room, 's0', two.choiceId)).toEqual([]);

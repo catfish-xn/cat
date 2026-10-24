@@ -74,13 +74,14 @@ export function claimAnvils(room: Room, seatId: string): ReturnType<typeof bench
  * Opens the seat's anvil unit through the room (`openAnvil`, or `sell` with `viaSell`) and checks the opened choice and
  * the room's deadline for it: the choice's own `timeoutMs` from now, kept on the seat for exactly that choice.
  */
-export function openAnvil(room: Room, seatId: string, unitId: string, viaSell = false): PendingChoice {
+/** `deadlineAt` overrides the expected anvil deadline when the phase cap (P 乙, ANVIL_PHASE_EXTENSION_MS) clips it. */
+export function openAnvil(room: Room, seatId: string, unitId: string, viaSell = false, deadlineAt?: number): PendingChoice {
   const opened = room.clock.now();
   expect(room.handle(seatId, viaSell ? { type: 'sell', unitId } : { type: 'openAnvil', unitId })).toMatchObject({ ok: true });
   const seat = seatOf(room.state, seatId), choice = seat.match.pendingChoice!;
   expect(choice).toMatchObject({ kind: 'forge', choiceId: anvilChoiceId(unitId), payload: { kind: 'forge', source: 'anvil-unit', timeoutOption: choice.offers[0] } });
   const timeoutMs = (choice.payload as { timeoutMs: number }).timeoutMs;
   expect(timeoutMs).toBe(30_000);
-  expect(seat.choiceDeadline).toEqual({ choiceId: choice.choiceId, generation: choice.generation, deadlineAt: opened + timeoutMs });
+  expect(seat.choiceDeadline).toEqual({ choiceId: choice.choiceId, generation: choice.generation, deadlineAt: deadlineAt ?? opened + timeoutMs });
   return choice;
 }
