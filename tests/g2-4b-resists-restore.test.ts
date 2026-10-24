@@ -1,7 +1,7 @@
 import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateResistsShields } from '../src/simulation/m8/resists-shield-restore';
 import { expect, it } from 'vitest';
-import { buyUnit, startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
+import { selectChoice, buyUnit, startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -17,7 +17,9 @@ const crest = 'TFT_Item_Artifact_LightshieldCrest';
 // Maddie. Rebuild the intended Irelia + Maddie (3,7) + Lux (5,7) board here by definition, not serial.
 let maddieId = 'unit-2', luxId = 'unit-3';
 function threeHeroMatch(): MatchState {
-  let state = reachRound('2-1', true, 5);
+  // v23 batch 3: seed 5's first offer became Built Different (changes the shield numbers); pin a public crest pick.
+  const open = reachRound('2-1', false, 5), c = open.pendingChoice!;
+  let state = resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, 'artillerist-crest')));
   state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
   for (const [id, col] of [['maddie', 3], ['lux', 5]] as const) {
     const slot = state.shop.slots.findIndex(s => s.status === 'available' && s.definitionId === id);
@@ -28,10 +30,16 @@ function threeHeroMatch(): MatchState {
   }
   return state;
 }
+// v23 batch 3: pool growth moved seed 42's first 2-1 offer to Sorcerer Explosion (a replay-validated batch-2
+// mechanic), so the resists validator no longer decided. Pin a public pick that adds no combat mechanic.
+function pick42(): MatchState {
+  const open = reachRound('2-1', false, 42), c = open.pendingChoice!;
+  return resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, 'ambusher-crest')));
+}
 function publicStart(dynamic = false, deathHolder = false, bracer = false): MatchState {
   // v22: seed 5 now fields opening-reward Powder+Silco (Dominator), which routes the save through the
   // earlier full V19 replay; seed 42 keeps a plain Irelia board so the resists validator decides.
-  let state = dynamic ? threeHeroMatch() : reachRound('2-1', true, 42);
+  let state = dynamic ? threeHeroMatch() : pick42();
   if (!dynamic) for (const [i, unit] of state.preparation.units.filter(u => u.team === 'player').entries())
     state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: { col: i * 2 + 1, row: 4 } }));
   if (deathHolder) {

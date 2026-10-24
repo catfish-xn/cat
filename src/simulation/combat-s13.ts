@@ -145,7 +145,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   return { holder: hpSample(owner ?? target), target: { ...hpSample(target), hp }, attackDamage: owner ? ad(owner) : 0,
     abilityPower: owner ? ap(owner, tick) : 0, armor: defenses(target, true, tick, units), magicResist: defenses(target, false, tick, units),
     ...(champion(target) === 'amumu' ? { flatReduction: variable(target, 'FlatDamageReduction') } : {}),
-    amplifiers, reductions, prevention: effectiveStatuses(target.mechanismState?.statuses ?? [], tick).some(g => g.kind === 'damage-prevention'), ...(packet.delivery === 'item-burn' && champion(target) === 'neutral' ? { burnCap: 100 } : {}), critical: packet.critical ?? false,
+    amplifiers, reductions, prevention: effectiveStatuses(target.mechanismState?.statuses ?? [], tick).some(g => g.kind === 'damage-prevention'), ...(packet.delivery === 'item-burn' && champion(target) === 'neutral' ? { burnCap: 100 } : {}), critical: (packet.critical ?? false) && !(owner && hasMechanic(owner, 'badLuck')),
     critMultiplierBps: owner ? (packet.critMultiplierBps ?? p2PacketCrit(owner, target.id, units, spellCrit(owner)).multiplierBps) + chargedCritBps(owner, packet) : S13_COMBAT_RULES.critMultiplierBps,
     shields: [...target.shieldLayers].sort((a, b) => a.expiresAtTick - b.expiresAtTick || compareText(frozenShield(a, target).key, frozenShield(b, target).key)) };
 }
