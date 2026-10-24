@@ -144,7 +144,7 @@ export function applyBattleEquipment(state: CombatState, receipt: BattleEquipmen
       ].sort((a, b) => a.slot - b.slot);
       return freezeCombatDeclarations(result);
     });
-    const randomItems = units.some(u => u.mechanics?.some(m => ['g24Fishbones','g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)));
+    const randomItems = units.some(u => u.mechanics?.some(m => ['g24Fishbones','g24Collector','g24Gambler','g24Mogul','v19Chainblade','g23Tactician'].includes(m.mechanic)));
     return { ok: true, state: { ...state, units, ...(randomItems && !state.itemRandomStreams ? { itemRandomStreams: createItemRandomStreams(receipt.battleSeed), itemGoldReceipts: [] } : {}),
       equipmentReceipts: [...state.equipmentReceipts ?? [], receipt] } };
   } catch { return refuse('battle-input-invalid'); }

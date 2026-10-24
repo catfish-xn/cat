@@ -70,7 +70,7 @@ export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
   const interestBasis = gold + win;
   nonnegativeInteger(interestBasis, 'interest basis');
   const interest = Math.min(readAugmentIncome(input.augments).interestCap, Math.floor(interestBasis / ECONOMY_RULES.interestDivisor));
-  const incomeBreakdown = { base: MATCH_RULES.roundIncome, win, interest, streak: streakGold };
+  const incomeBreakdown = { base: MATCH_RULES.roundIncome + readAugmentIncome(input.augments).roundGold, win, interest, streak: streakGold };
   const income = incomeBreakdown.base + win + interest + streakGold;
   const goldAfter = gold + income;
   nonnegativeInteger(goldAfter, 'settled gold');

@@ -37,8 +37,8 @@ describe('v22 content: data-driven offer rules', () => {
     for (const traits of Object.values(AUGMENT_OFFER_RULES.associatedTraits)) for (const trait of traits) expect(TRAIT_DEFINITIONS, trait).toHaveProperty(trait);
     expect(AUGMENT_OFFER_RULES.associatedTraits.TFT13_TeamupAugment_Sisters).toEqual(['ambusher', 'enforcer', 'pit-fighter', 'rebel']);
     expect(AUGMENT_OFFER_RULES.associatedTraits.TFT13_Augment_CabalCrest).toEqual(['black-rose']);
-    // None of the cross-player / one-per-match augments is in today's pool: those rules are inert, not missing.
-    expect(externallyBlockableAugments()).toEqual([]);
+    // Batch 2 activates Family and Chembaron global offer rules.
+    expect(externallyBlockableAugments()).toEqual(['crimson-pact','welcome-to-the-playground']);
   });
 });
 
@@ -55,7 +55,7 @@ describe('v22 trait filter: 3-2 and 4-2 tailored, 2-1 not', () => {
       const enforcer = augmentCandidates('gold', [], [], null, filter(node, ['enforcer']));
       expect(TEAMUPS.filter(id => enforcer.includes(id)).sort()).toEqual(['mentorship', 'reunion', 'sisters']);
       // Untouched augments without AssociatedTraits are never filtered.
-      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - GOLD_TEAMUPS.length);
+      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - GOLD_TEAMUPS.length - 22 - 16); // 22 new trait-linked crests
     }
     const untailored = augmentCandidates('gold', [], [], null, filter('2-1'));
     for (const id of GOLD_TEAMUPS) expect(untailored).toContain(id);

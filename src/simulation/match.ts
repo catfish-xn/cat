@@ -7,7 +7,7 @@ export { readOpeningBatchBRewards } from './opening-batch-b-rewards';
 import { openingEncounterId } from './opening-encounter';
 import { growTrainerGolem } from './trainer-golems';
 import { enterOpeningCrabs } from './opening-crabs';
-import { choiceAcquisitionGold } from './choice-acquisition';
+import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition';
 import { drainSetup } from './setup-work';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
@@ -875,7 +875,8 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? choiceAcquisitionGold((choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId], state.round) : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
-  let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold,
+  const acquisitionProgress = grantXp(state.level,state.xp,choice.kind==='augment'?choiceAcquisitionXp(AUGMENT_DEFINITIONS[definitionId]):0);
+  let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold, level:acquisitionProgress.level, xp:acquisitionProgress.xp,
     scheduleReceipts: [...state.scheduleReceipts, receipt],
     resourceProvenance:itemId?appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'item-acquired',itemId,source:{kind:'schedule',eventId:choice.eventId}}):state.resourceProvenance,
     items: granted?.ok ? granted.state.items : state.items,

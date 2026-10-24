@@ -1,3 +1,4 @@
+import { batch2Rocket } from './augment-pool-batch2-combat';
 import { executeV20Teamup } from './combat-v20-traits';
 import { sixCostCast, sixCostAttack } from './combat-six-cost';
 import { planG2Cast, planG2Attack, executeG2Task, executeV20Powder } from './combat-g2';
@@ -257,8 +258,9 @@ export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Uni
   for (const effect of [...unit.mechanics ?? []].sort((a, b) => compareOrigins(a.source, b.source))) {
     if ((effect.mechanic === 'artillery' && unit.runtime.attackCount % (effect.values.everyN ?? 5) === 0) || effect.mechanic === 'titanic') {
       const bps = effect.values.adBps ?? (effect.mechanic === 'artillery' ? 12500 : 4000);
+      const rocketRaw=effect.mechanic==='artillery'?batch2Rocket(unit,Math.floor(ad(unit)*bps/10000)):Math.floor(ad(unit)*bps/10000);
       for (const enemy of areaEnemies(unit, ctx.units).filter(u => hexDistance(target.cell, u.cell) <= 1))
-        ctx.packets.push({ source: effect.source, targetId: enemy.id, raw: Math.floor(ad(unit) * bps / 10000), damageType: 'physical', actionSeq: seq, ordinal: ordinal++,
+        ctx.packets.push({ source: effect.source, targetId: enemy.id, raw: rocketRaw, damageType: 'physical', actionSeq: seq, ordinal: ordinal++,
           delivery: 'attack-extra', critEligibility: 'never', area: true, triggeringCastActionSeq: null });
     }
   }

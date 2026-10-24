@@ -1,3 +1,4 @@
+import { batch2Target } from './augment-pool-batch2-combat';
 /** Frozen opening facts. Random choices share Combat's lcg32 stream after existing opening consumers.
  * Sharing reads every donor before writing any recipient, so broadcasts cannot feed each other. */
 import type { CombatOrigin, CombatUnit, CombatState } from './combat-types';
@@ -73,6 +74,7 @@ export function p2Stoneskin(u: CombatUnit,tick:number):number {
   const v=p2Values('stoneskin');return p2HasAnomaly(u,'stoneskin')?Math.max(0,v.BonusArmorMR-Math.floor(tick/20)*v.ArmorMRLossPerSecond):0;
 }
 export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number):S13Unit|undefined {
+  const forced=batch2Target(u,units);if(forced)return forced;
   const candidates=enemies(u,units),normal=byDistance(u,candidates)[0];
   if(!p2HasAnomaly(u,'cull-the-weak'))return normal;
   const inRange=candidates.filter(t=>hexDistance(u.cell,t.cell)<=range(u));
