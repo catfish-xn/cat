@@ -843,7 +843,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           const view = pieces.get(id);
           if (!view?.alive) continue;
           holds.set(view, hit.hold);
-          if (hit.ring && id !== sourceId && view.root.visible) feel.impact(view.root.position, color, (grid?.radius ?? 34) * 1.3);
+          if (!hit.ring || id === sourceId || !view.root.visible) continue;
+          const ring = () => { if (view.alive && view.root.visible) feel.impact(view.root.position, color, (grid?.radius ?? 34) * 1.3); };
+          if (hit.ringDelay) queued.push({ at: clock + hit.ringDelay, generation: owner, run: ring }); else ring();
         }
         if (!reducedMotion()) feel.kick(hit.kick);
       } });

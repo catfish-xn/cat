@@ -6,7 +6,7 @@
  * launch / flight / impact; at the impact the caster and its targets hold their pose a moment and the camera gives a
  * small kick. Their basic attacks drop the official, colorful attack effects for one small near-white tracer (ranged) or
  * spark (melee), drawn from a fixed pool of sprites sharing one texture: no per-attack loads, materials or geometry.
- * Every other champion is unchanged until the sample is accepted.
+ * Champions without a row in skill-fx-table.ts are unchanged.
  */
 import { AdditiveBlending, CanvasTexture, Group, Mesh, MeshBasicMaterial, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, Vector3, type Object3D, type Texture } from 'three';
 import type { PlannedEffect } from './action-effect-plan';
@@ -27,7 +27,7 @@ export const WINDUP_SECONDS = SKILL_FX_DEFAULTS.windup;
 /** Seconds the caster and its targets hold still at the impact. */
 export const HITSTOP_SECONDS = SKILL_FX_DEFAULTS.impact.hold;
 /** A sample cast's impact: hold seconds, camera kick strength, and whether a ring bursts at each target. */
-export const impactFeel = (definitionId: string): { hold: number; kick: number; ring: boolean } =>
+export const impactFeel = (definitionId: string): { hold: number; kick: number; ring: boolean; ringDelay?: number } =>
   ({ ...(SKILL_FX_TABLE[definitionId]?.impact ?? SKILL_FX_DEFAULTS.impact) });
 /** Live particles one cast effect of a sample champion may have (the shared budget still caps the whole board). */
 export const CAST_PARTICLE_CAP = SKILL_FX_DEFAULTS.effect.particles;

@@ -5,8 +5,8 @@ import { Group, Vector3 } from 'three';
 const entry = (id: string, anchor: 'source' | 'target' | 'projectile', delay: number) => ({ id, playback: { anchor, delay, maxDuration: 1 } });
 
 describe('skill feel sample', () => {
-  it('samples four champions, one of them melee', () => {
-    expect([...SKILL_FEEL_SAMPLE].sort()).toEqual(['jayce', 'jinx', 'renata', 'vi']);
+  it('covers the four reviewed champions, one of them melee, among every row of the table', () => {
+    for (const id of ['jayce', 'jinx', 'renata', 'vi']) expect(SKILL_FEEL_SAMPLE.has(id)).toBe(true);
     expect(WINDUP_SECONDS).toBeGreaterThanOrEqual(0.2); expect(WINDUP_SECONDS).toBeLessThanOrEqual(0.3);
     expect(HITSTOP_SECONDS).toBeLessThan(0.1);
   });
@@ -62,7 +62,8 @@ describe('skill feel sample', () => {
   });
 
   it('hits harder for Vi and Renata and turns Jinx\'s impact down (10-24 GPU review)', () => {
-    for (const id of ['vi', 'renata']) expect(impactFeel(id)).toEqual({ hold: 0.1, kick: 1.5, ring: true });
+    expect(impactFeel('renata')).toEqual({ hold: 0.1, kick: 1.5, ring: true });
+    expect(impactFeel('vi')).toEqual({ hold: 0.1, kick: 1.5, ring: true, ringDelay: 0.15 });
     for (const id of ['jinx', 'jayce']) expect(impactFeel(id)).toEqual({ hold: HITSTOP_SECONDS, kick: 1, ring: false });
     expect(castEffectTuning('jinx_tft13_jinx_base_r_tar')).toEqual({ scale: 0.6, particles: 50 });
     expect(castEffectTuning('jinx_tft13_jinx_base_r_muzzleflash')).toEqual({ scale: 1, particles: CAST_PARTICLE_CAP });
