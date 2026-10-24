@@ -120,7 +120,9 @@ function openBenchAnvils(initial: MatchState): MatchState {
   return state;
 }
 function transferFixture(definitionId = TACTICIANS_CROWN_ID) {
-  let opening = openBenchAnvils(resolveM5Choices(createMatch(109897)));
+  // v23 fmix32 opening word: seed 109897 now draws Gold Subscription; seed 77 keeps the two component anvils (unit-2/unit-3)
+  // and a Tactician's Crown roll that pays the forged holder 1 more gold.
+  let opening = openBenchAnvils(resolveM5Choices(createMatch(77)));
   const holder = opening.preparation.units.find(unit => unit.team === 'player')!;
   for (let slot = 0; slot < 3; slot++) {
     opening = accepted(grantMechanicItem(opening, {receiptId:`transfer:${slot}`,source:'test',definitionId}));
@@ -136,7 +138,7 @@ function transferFixture(definitionId = TACTICIANS_CROWN_ID) {
 }
 
 describe('M2 equipment binding continuity', () => {
-  it('rejects seed 109897 cross-round crown transfer despite self-consistent production replay and rewards', async () => {
+  it('rejects seed 77 cross-round crown transfer despite self-consistent production replay and rewards', async () => {
     const {first,state,holder,target} = transferFixture();
     const crownIds = state.items.filter(item => item.definitionId === TACTICIANS_CROWN_ID).map(item => item.id);
     expect(holder.id).toBe('unit-1'); expect(target.id).toBe('unit-4'); // unit-2/unit-3 were the two opening anvil units (v22 anvil units consume unit serials).
@@ -471,7 +473,8 @@ describe('M7/S7 combat equipment command replay', () => {
           state = result.state;
         }
         for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
-          if (unit.location.kind === 'board') continue;
+          // v23 fmix32 openings (seed 27566: component anvils) bench anvil units, which can never be fielded.
+          if (unit.location.kind === 'board' || isAnvil(unit.definitionId)) continue;
           const held = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board');
           if (held.length >= state.level) break;
           const col = [3,2,4,1,5,0,6].find(col => !held.some(unit => unit.location.kind === 'board'
@@ -481,10 +484,10 @@ describe('M7/S7 combat equipment command replay', () => {
         state = recorder(state,history).finish().state;
       }
       if (state.round === 10) break;
-      while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;state=accepted(sellUnit(state,extra.id));}
+      while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}
       state = accepted(nextRound(state,state.round));
     }
-    while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;state=accepted(sellUnit(state,extra.id));}
+    while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}
     reforgerOpening = {state:advance(state),battles:history.completedRecords};
     return reforgerOpening;
   }
