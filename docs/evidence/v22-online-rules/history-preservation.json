@@ -1,6 +1,6 @@
 {
   "epoch": "v22-online-rules",
-  "baseCommit": "5e72a4c03f1f292ed0cba52c2e918d4a0918c6b7",
+  "baseCommit": "8715a2c15912788a56d4ed4a0788177defe38037",
   "historicalFiles": 432,
   "byteIdentical": true,
   "protectedManifestByteIdentical": true,
@@ -458,8 +458,8 @@
       "sha256": "bd83bf2dc86360e82c649ae2f39516837e92b335188e08828ff6d13a14eb0984"
     },
     "docs/evidence/v21-opening-encounters/battle-start-audit.json": {
-      "bytes": 45293,
-      "sha256": "7485625393c594e56ee528ddc77a0e0d7bed6ddc505d248c95fe3e1c58b2fc23"
+      "bytes": 45397,
+      "sha256": "fc3af70d506967d946c81da04f588822d5a9615e76dcb76fcbed6acfca64959d"
     },
     "docs/evidence/v21-opening-encounters/chest-trial-audit.json": {
       "bytes": 857,
@@ -470,16 +470,16 @@
       "sha256": "e8023a0bcc2304e72562d32b6eeab81e4fc379b87c5196f15c46f7f80833dd5f"
     },
     "docs/evidence/v21-opening-encounters/consumer-byte-audit.json": {
-      "bytes": 25846,
-      "sha256": "3431b849a14525aaa2127bc5db8ed8e3894b6367a7a8088b410f1f04d4fb47b0"
+      "bytes": 26523,
+      "sha256": "cf8cc65ab6f7377f8c3527cd5b7118f89fc9975a2a4ee1b715424e95fa7b7810"
     },
     "docs/evidence/v21-opening-encounters/digest-comparison.json": {
       "bytes": 338,
       "sha256": "c43e15b2c563a84cd9d96ec5eaf67969b53aef356225c1685dca688f4981b48c"
     },
     "docs/evidence/v21-opening-encounters/epoch-verification.json": {
-      "bytes": 4930,
-      "sha256": "bd472a4db48cb5109e56e44dedd55d4ec7c3b1d726309b62e16a0489ff5e2b01"
+      "bytes": 4927,
+      "sha256": "7b4d7244f6f13b1834968ae866aa5d4550d341658e161d661bd4e4e7359cfd29"
     },
     "docs/evidence/v21-opening-encounters/exploratory-failures.json": {
       "bytes": 27362,
@@ -490,16 +490,16 @@
       "sha256": "4bbe1a57d65b14c168befca64c2838f223bba91169deaad14c9fa54ddd74ec59"
     },
     "docs/evidence/v21-opening-encounters/input-fixture-audit.json": {
-      "bytes": 46480,
-      "sha256": "c52e9e244f8bc7cd0b82e07182c1b1d2f13e4c68cf01b604b2cea4861f2368f0"
+      "bytes": 46584,
+      "sha256": "b4c939aa6af613e6d07d1ca05fa41fe9e6ba71d3ec3e0ba54cced649b7c5f313"
     },
     "docs/evidence/v21-opening-encounters/live-reveal-audit.json": {
-      "bytes": 54937,
-      "sha256": "3891039cf508c5e87f41f703c543ea63030edc849493fce1b65042e405fc06e5"
+      "bytes": 55041,
+      "sha256": "cbb8e0e2621e4dba260d8af6b6404e0af524130c6dcf17c4c13f65dd416b4dd5"
     },
     "docs/evidence/v21-opening-encounters/release-audit.json": {
-      "bytes": 220483,
-      "sha256": "cae34cf88b29ba13fbcf3de541932ac197fb1bfe33be926942b9dc2271f05ed9"
+      "bytes": 220587,
+      "sha256": "72eb7732249007b5c59f36908dfb79f35f9d5f37b2ab38c4f67fb3b3523a5920"
     },
     "docs/evidence/v21-opening-encounters/validation.json": {
       "bytes": 18955,
@@ -1658,8 +1658,8 @@
       "sha256": "5334256d397a105ae2a2036bb46dcde49d1eec691b02d3d336667ca4a99d5c66"
     },
     "tests/fixtures/v21-opening-encounters-herald-raw/manifest.json": {
-      "bytes": 41424,
-      "sha256": "01e990a4733d3a62fb3a6fb22dbfda20b5d32e2f982a446fc925a7a43d2863e0"
+      "bytes": 41522,
+      "sha256": "581e223cd8f96739533ac7ec51b84c4af18d19bcf92c740ec00c4aada205620f"
     },
     "tests/fixtures/v21-opening-encounters-herald-raw/quicksilver.json": {
       "bytes": 175695,
