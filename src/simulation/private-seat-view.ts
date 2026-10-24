@@ -133,7 +133,7 @@ export function toPrivateSeatView(state: MatchState) {
     anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId)
       ? pick(state.anomalyBinding, ['definitionId', 'unitId', 'choiceId', 'boundRound']) : null,
     persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)).map(growth => pick(growth, ['unitId', 'attackDamageBps'])),
-    augmentProgress: pick(state.augmentProgress, ['pumpingRounds', 'investmentHp']),
+    augmentProgress: pick(state.augmentProgress, ['pumpingRounds', 'investmentHp', 'forming']),
     pendingChoice: state.phase === 'choice' && state.pendingChoice ? {
       ...pick(state.pendingChoice, ['kind', 'step', 'choiceId', 'generation', 'targetId', 'rerollCount', 'augmentTier', 'rerollsRemaining']),
       offers: [...state.pendingChoice.offers],

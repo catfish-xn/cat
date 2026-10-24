@@ -50,6 +50,8 @@ export interface CombatInputAuthority {
   readonly epicCrownsBeforeCombat?:NonNullable<import('./g2-3-match-progress').G23MatchProgress['epicCrowns']>;
   readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions;
   readonly bankGold?:number;
+  /** Batch-3 Dummify/Golemify totals, recomputed by the caller from authenticated provenance. */
+  readonly forming?:import('./augment-pool-batch3-progress').FormingTotals;
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly playerHp?:number;
   readonly seed: number; readonly round: number; readonly contentDigest: string;
   readonly playerLevel: number; readonly provenancePrefixLength: number;
@@ -152,9 +154,11 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   }
   const history = authority.roundResults.filter(result => result.round < authority.round);
   const pump = input.augments.find(augment => augment.definitionId === 'pumping-up-i');
+  const forming = authority.forming;
   requireBasis(equal(input.augmentProgress, {
     pumpingRounds: pump ? history.filter(result => result.round >= pump.acquiredRound).length : 0,
     investmentHp: investmentGrowth(input.augments,history),
+    ...(forming ? { forming } : {}),
   }));
   const rolls = authority.equipmentRolls.slice(0, basis.equipmentRollPrefixLength);
   const expectedChildren = sorted(input.items).filter(item => item.location.kind === 'unit' && grantsTemporaryEquipment(ITEM_DEFINITIONS[item.definitionId])).flatMap(item => {

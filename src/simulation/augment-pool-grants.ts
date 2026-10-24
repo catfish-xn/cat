@@ -4,7 +4,7 @@ import type { MatchState } from './match-types';
 import type { UnitLootPolicy } from './loot-runtime';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
 import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
-import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold, drainBatch3Dummies, validateBatch3Dummies } from './augment-pool-batch3-progress';
+import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold, drainBatch3Dummies, validateBatch3Dummies, drainBatch3Forming } from './augment-pool-batch3-progress';
 import { validateFreeRerolls } from './free-rerolls';
 import { planAugmentGifts, augmentAnvilOffers, AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { grantMechanicItem, grantMechanicUnit, grantMechanicConsumable } from './seat-mechanics/grants';
@@ -18,7 +18,8 @@ export function batch1GiftPlan(state:MatchState) {
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */
 export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):MatchState {
- let state=initial,progressed:boolean; const plan=batch1GiftPlan(state);
+ // Dummify/Golemify first: their removal frees the bench for the dummy or golem they grant.
+ let state=drainBatch3Forming(initial),progressed:boolean; const plan=batch1GiftPlan(state);
  do {
   progressed=false;
   for(const gift of plan){

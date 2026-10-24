@@ -32,6 +32,8 @@ interface Batch3Content {
  /** Hero augment: the champion whose strongest copy on the board gets the replacement ability (heroCarryLive). */
  /** Spoils of War tier: which TFT9_Augment_Spoils_Tier{n} tables the enemy-kills schedule reads. */
  readonly spoilsTier?:1|2|3;
+ /** Dummify/Golemify: remove every champion on acquisition; the granted forming-dummy/augment-golem takes their totals. */
+ readonly forming?:'dummy'|'golem';
  readonly hero?:'steb'|'irelia'|'trundle'|'renni'|'vander'|'vladimir';
  /** Replay-authenticated combat mechanics (g2-4b-gold-restore BATCH3_REPLAYED_MECHANICS); values come from the source row. */
  readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck'|'goldForDummies'|'towerDefense';
@@ -42,6 +44,53 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+ "dummify": {
+  "apiName": "TFT_Augment_Dummify",
+  "name": "假人化",
+  "tier": "silver",
+  "description": "失去你场上和备战席上的所有弈子。获得1个【训练假人】，其生命值为失去所有弈子的100%总生命值。这个假人每阶段获得250生命值。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "HPPerStage": 250,
+    "HealthPercent": 100.0
+   },
+   "description_en_us": "Lose all champions on your board and bench. Gain a Training Dummy with 100% of their combined health. The dummy gains 250 Health per stage."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "forming-dummy"
+   }
+  ],
+  "schedules": [],
+  "forming": "dummy"
+ },
+ "golemify": {
+  "apiName": "TFT_Augment_Golemify",
+  "name": "魔像化",
+  "tier": "gold",
+  "description": "失去你场上和备战席上的所有弈子。获得1个【魔像】，【魔像】拥有失去弈子90%的总生命值和60%的总攻击力。这个魔像每阶段获得150生命值。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "ADPercent": 60.0,
+    "HPPerStage": 150,
+    "HealthPercent": 90.0
+   },
+   "description_en_us": "Lose all champions on your board and bench. Gain a Golem with 90% of their combined Health and 60% of their combined Attack Damage. The Golem gains 150 Health per stage."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "augment-golem"
+   }
+  ],
+  "schedules": [],
+  "forming": "golem"
+ },
  "spoils-of-war-i": {
   "apiName": "TFT9_Augment_DravenSpoilsOfWar",
   "name": "战争财宝 I",
@@ -1333,6 +1382,9 @@ export const AUGMENT_BATCH3_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>
  id,name:row.name,description:row.description,effects:[{kind:'mechanic',mechanic:'acquisitionBundle',values:{enabled:1}},
   ...(row.gold?[{kind:'mechanic' as const,mechanic:'acquisitionGold',values:{amount:batch3Count(row,row.gold)}}]:[]),
   ...(row.hero?[{kind:'mechanic' as const,mechanic:'heroCarry',values:batch3HeroValues(row)}]:[]),
+  ...(row.forming?[{kind:'mechanic' as const,mechanic:'forming',values:row.forming==='dummy'
+   ?{golem:0,healthBps:batch3Count(row,'HealthPercent')*100,attackBps:0,healthPerStage:batch3Count(row,'HPPerStage')}
+   :{golem:1,healthBps:batch3Count(row,'HealthPercent')*100,attackBps:batch3Count(row,'ADPercent')*100,healthPerStage:batch3Count(row,'HPPerStage')}}]:[]),
   ...(row.combat?[{kind:'mechanic' as const,mechanic:row.combat,values:batch3CombatValues(row)}]:[]),
   ...(row.corrosion?[{kind:'mechanic' as const,mechanic:'corrosion',values:{resistLoss:batch3Count(row,'ResistLoss'),periodTicks:batch3Count(row,'Time')*20}}]:[]),
   ...(row.flexible?[{kind:'mechanic' as const,mechanic:'flexible',values:{healthPerEmblem:batch3Count(row,'HPPerEmblem')}}]:[]),

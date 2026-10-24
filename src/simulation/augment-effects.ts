@@ -47,6 +47,17 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
       const held=state.items.filter(i=>i.location.kind==='unit'&&ids.has(i.location.unitId)&&Object.hasOwn(EMBLEM_ITEMS,i.definitionId)).length;
       return held?[flat('maxHp',held*v.healthPerEmblem)]:[];
     }
+    case 'forming': {
+      // Dummify/Golemify (P 2026-10-24): the summon's health (and the golem's attack) become the removed champions'
+      // totals × HealthPercent/ADPercent, plus HPPerStage for every stage start (x-1) after acquisition.
+      if(unit.definitionId!==(v.golem?'augment-golem':'forming-dummy'))return [];
+      const total=state.augmentProgress.forming?.[v.golem?'golemify':'dummify'];if(!total)return [];
+      let stages=0;for(let r=augment.acquiredRound+1;r<=state.round;r++)if(getMultiplayerRoundByOrdinal(r).subround===1)stages++;
+      const base=UNIT_DEFINITIONS[unit.definitionId].baseStats;
+      const health=Math.max(0,Math.floor(total.health*v.healthBps/10000)+stages*v.healthPerStage-base.health);
+      const attack=Math.max(0,Math.floor(total.attack*v.attackBps/10000)-base.attack);
+      return [...(health?[flat('maxHp',health)]:[]),...(v.golem&&attack?[{kind:'statFlat' as const,stat:'attackDamage' as const,amount:attack}]:[])];
+    }
     case 'heroCarry': {
       // P 2026-10-24: "strongest" = highest star, then most equipped items, then lowest id, among this side's board copies.
       const id=HERO_UNITS[v.hero],held=(x:Unit)=>state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===x.id).length;

@@ -48,7 +48,7 @@ export type ResourceFact =
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'anvil-opened'; readonly unitId:string; readonly choiceId:string }
   /** Batch 3: a training dummy retired by its augment (Support Mining); the grant ledger authenticates receiptId. */
-  | { readonly kind: 'unit-removed'; readonly unitId:string; readonly receiptId:string }
+  | { readonly kind: 'unit-removed'; readonly unitId:string; readonly receiptId:string; readonly definitionId?:string; readonly starLevel?:1|2|3 }
   | { readonly kind: 'unit-sold'; readonly unitId: string; readonly context: 'preparation' | 'settlement-capacity'; readonly goldGranted: number }
   | { readonly kind: 'item-acquired'; readonly itemId: string; readonly source: ItemAcquisitionSource }
   // tick is present exactly for operations issued during combat.
@@ -509,8 +509,12 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       requireValue(units.has(entry.unitId)&&isAnvil(units.get(entry.unitId)!.definitionId),'anvil ownership');
       nonempty(entry.choiceId);units.delete(entry.unitId);
     } else if(entry.kind==='unit-removed'){
-      keys(entry,[...common,'unitId','receiptId']);nonempty(entry.receiptId);
-      requireValue(units.has(entry.unitId)&&units.get(entry.unitId)!.definitionId==='training-dummy'&&!absent.has(entry.unitId),'dummy removal ownership');
+      // Support Mining retires its dummy; Dummify/Golemify remove champions and record what was removed.
+      const forming=Object.hasOwn(entry,'definitionId');
+      keys(entry,[...common,'unitId','receiptId',...(forming?['definitionId','starLevel']:[])]);nonempty(entry.receiptId);
+      const removed=units.get(entry.unitId);
+      requireValue(removed&&!absent.has(entry.unitId)&&(forming?removed.definitionId===entry.definitionId&&removed.starLevel===entry.starLevel&&!UNIT_DEFINITIONS[removed.definitionId]?.summon
+        &&entry.receiptId.endsWith(',"forming"]'):removed.definitionId==='training-dummy'),'mechanic removal ownership');
       units.delete(entry.unitId);growth=growth.filter(value=>value.unitId!==entry.unitId);
     } else if (entry.kind === 'unit-sold') {
       keys(entry, [...common, 'unitId', 'context', 'goldGranted']); integer(entry.goldGranted);

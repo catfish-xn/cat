@@ -1,3 +1,4 @@
+import { formingTotals } from './augment-pool-batch3-progress';
 import { batch2HpAfterSettlement } from './augment-pool-batch2-health';
 import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
@@ -276,6 +277,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   const pump = state.augments.find(a => a.definitionId === 'pumping-up-i');
   requireValue(state.augmentProgress.pumpingRounds === (pump ? state.roundResults.filter(r => r.round >= pump.acquiredRound).length : 0), 'pumping progress');
   requireValue(state.augmentProgress.investmentHp === investmentGrowth(state.augments,state.roundResults.filter(r => r.round < state.round)), 'investment progress');
+  requireValue(Object.keys(state.augmentProgress).every(k => ['pumpingRounds','investmentHp','forming'].includes(k)) && same(state.augmentProgress.forming ?? null, formingTotals(state) ?? null), 'forming progress');
   list(state.persistentGrowth); const growthIds = new Set<string>();
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }

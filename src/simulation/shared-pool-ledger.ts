@@ -190,6 +190,8 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
     } else if(fact.kind==='carousel-preparation-settled'||fact.kind==='carousel-unit-claimed') {
       for(const e of fact.upgrades){const ids=[e.survivorId,...e.consumedIds],parts=ids.map(id=>pool.holdings.find(h=>h.seatId===seatId&&h.unitId===id));requirePool(parts.every(h=>h&&h.definitionId===e.definitionId&&h.sources.length===3**(e.fromStar-1)),'invalid-seat-state');pool.holdings=pool.holdings.filter(h=>h.seatId!==seatId||!ids.includes(h.unitId));pool.holdings.push({seatId,unitId:e.survivorId,definitionId:e.definitionId,sources:parts.flatMap(h=>h!.sources)});}
     } else if(fact.kind==='unit-sold' && fact.unitId!==preSold && !isSummon(before,fact.unitId)) returnHolding(pool,seatId,fact.unitId);
+    // Batch-3 Dummify/Golemify: a removed champion returns every copy it holds, exactly like a sale (the fact is the receipt).
+    else if(fact.kind==='unit-removed' && !isSummon(before,fact.unitId)) returnHolding(pool,seatId,fact.unitId);
   }
   for(const p of pool.pending.filter(p=>p.seatId===seatId)) {
     if(after.m8.loot.direct.find(d=>d.dropId===p.dropId)?.status!=='forfeited') continue;

@@ -14,7 +14,7 @@ import type { MatchState } from '../src/simulation/match-types';
 import { rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit, buyUnit, buyXp, sellUnit, equipItem } from '../src/simulation/match';
 import { planDeferredUpgrades } from '../src/simulation/upgrades';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
-import { drainBatch3RoundEntry } from '../src/simulation/augment-pool-batch3-progress';
+import { drainBatch3RoundEntry, drainBatch3Forming } from '../src/simulation/augment-pool-batch3-progress';
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { startingRows } from '../src/simulation/m8/targeting';
@@ -23,7 +23,9 @@ import { getMultiplayerRoundById } from '../src/simulation/multiplayer-round';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
-import { generateSharedShop, rerollSharedShop } from '../src/server-entry';
+import { generateSharedShop, rerollSharedShop, buySharedUnit } from '../src/server-entry';
+import { draftPool, reconcileHoldings, assertSharedPoolConservation } from '../src/simulation/shared-pool-ledger';
+import { getUnitStats } from '../src/simulation/unit-stats';
 import { freeRerollsAvailable, freeRerollsGranted, validateFreeRerolls, FREE_REROLL_KEY } from '../src/simulation/free-rerolls';
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
@@ -32,6 +34,7 @@ const amountOf=(u:any,key:string)=>amountAt(u,0,{ap:u.ability.variables[key]/100
 import { accept, room } from './tp-helpers';
 import { reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { snapshotForBattle, restorePlayerBattleSnapshot } from '../src/simulation/two-sided-snapshot';
 
 type Battle = readonly ['pvp'|'pve', G23BattleFacts['result']];
 const fact=(round:number,[roundKind,result]:Battle):G23BattleFacts=>({battleId:'battle-'+round,round,roundKind,result,conquerorTier:0,conquestTakedowns:[],chemBaronTier:0,alliedDeaths:0,rumbleStar:0,highRollerGold:0});
@@ -48,9 +51,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the forty-four batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the forty-six batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['all-out','an-exalted-adventure','bad-luck-protection','blade-dance','blazing-soul-i','blazing-soul-ii','blood-pact','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','field-medic','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','savage-revenge','scapegoat','shimmerscale-essence','shocking-troll','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['all-out','an-exalted-adventure','bad-luck-protection','blade-dance','blazing-soul-i','blazing-soul-ii','blood-pact','building-a-collection-iii','corrosion','dark-alley-dealings','dummify','eye-for-an-eye','eye-for-an-eye-plus','field-medic','flexible','gold-for-dummies','golemify','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','savage-revenge','scapegoat','shimmerscale-essence','shocking-troll','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -599,4 +602,61 @@ it.each([['spoils-of-war-i',1],['spoils-of-war-ii',2],['spoils-of-war-iii',3]] a
  expect(drops/83).toBeGreaterThan([0,0.2,0.24,0.33][tier]);expect(drops/83).toBeLessThan([0,0.34,0.4,0.55][tier]);
  const forged=structuredClone(s) as any;forged.seatMechanics.receipts.find((r:any)=>r.source==='augment-pool-batch3').amount+=1;
  expect(()=>validateBatch3Gold(forged)).toThrow();
+});
+
+function publicPick(id:string,maxSeed=6000):MatchState {
+ for(let seed=0;seed<maxSeed;seed++){
+  if(!firstOffers(seed).includes(id))continue;
+  let s:MatchState;try{s=reachRound('2-1',false,seed);}catch{continue;}
+  const c=s.pendingChoice!;if(!c.offers.includes(id))continue;
+  // Field a second champion (bought publicly) so the removal covers board and bench.
+  for(let slot=0;slot<s.shop.slots.length;slot++){const r=buyUnit(s,slot,s.shop.generation) as any;if(r.ok){s=r.state;break;}}
+  return s;
+ }
+ throw Error('no public '+id);
+}
+it.each([['dummify','forming-dummy',10000,0,250],['golemify','augment-golem',9000,6000,150]] as const)('%s: every champion is removed (items back to inventory) for one summon carrying their totals', (id,unit,hpBps,adBps,perStage)=>{
+ const open=publicPick(id),champions=open.preparation.units.filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId].summon);
+ expect(champions.length).toBeGreaterThan(0);
+ const health=champions.reduce((n,u)=>n+getUnitStats(u.definitionId,u.starLevel).health,0),attack=champions.reduce((n,u)=>n+getUnitStats(u.definitionId,u.starLevel).attack,0);
+ const c=open.pendingChoice!,s=accept(selectChoice(open,c.choiceId,c.generation,id) as any).state as MatchState;
+ expect(s.preparation.units.filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId].summon)).toEqual([]);
+ const summon=s.preparation.units.filter(u=>u.definitionId===unit);expect(summon).toHaveLength(1);
+ expect(s.items.filter(i=>i.location.kind==='unit'&&champions.some(u=>u.id===(i.location as any).unitId))).toEqual([]);
+ const key=id==='dummify'?'dummify':'golemify';
+ expect(s.augmentProgress.forming).toEqual({[key]:{health,attack}});
+ expect(s.resourceProvenance.entries.filter(e=>e.kind==='unit-removed').map(e=>(e as any).unitId).sort()).toEqual(champions.map(u=>u.id).sort());
+ expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ // The summon's combat panel: totals × percent (+ HPPerStage per later stage start, none yet).
+ const placed={...s,preparation:{...s.preparation,units:s.preparation.units.map(u=>u.id===summon[0].id?{...u,location:{kind:'board' as const,cell:{col:3,row:4}}}:u)}};
+ const snap=buildStrategySnapshot(placed),stats=snap.units.find(u=>u.unitId===summon[0].id)!.stats;
+ expect(stats.health).toBe(Math.max(UNIT_DEFINITIONS[unit].baseStats.health,Math.floor(health*hpBps/10000)));
+ if(adBps)expect(stats.attack).toBe(Math.max(UNIT_DEFINITIONS[unit].baseStats.attack,Math.floor(attack*adBps/10000)));
+ const later=buildStrategySnapshot({...placed,round:30}).units.find(u=>u.unitId===summon[0].id)!.stats;
+ let stages=0;for(let r=s.round+1;r<=30;r++)if(getMultiplayerRoundByOrdinal(r).subround===1)stages++;
+ expect(later.health).toBe(Math.max(UNIT_DEFINITIONS[unit].baseStats.health,Math.floor(health*hpBps/10000)+stages*perStage));
+ // Tampering: edited totals, a forged extra removal, or a re-added champion are all rejected on restore.
+ const totals=structuredClone(s) as any;totals.augmentProgress.forming[key].health+=1;expect(()=>restoreMatch(serializeMatch(totals))).toThrow();
+ const reborn=structuredClone(s) as any;reborn.augmentProgress.forming=undefined;delete reborn.augmentProgress.forming;expect(()=>restoreMatch(serializeMatch(reborn))).toThrow();
+ // Online battle snapshots carry the totals; a forged key or field is rejected.
+ const shot=snapshotForBattle(placed,'owner');expect(restorePlayerBattleSnapshot(JSON.stringify(shot))).toEqual(shot);
+ expect(shot.augmentProgress.forming).toEqual({[key]:{health,attack}});
+ const otherKey=structuredClone(shot) as any;otherKey.augmentProgress.forming={[key==='dummify'?'golemify':'dummify']:{health,attack}};
+ expect(()=>restorePlayerBattleSnapshot(JSON.stringify(otherKey))).toThrow();
+ const extra=structuredClone(shot) as any;extra.augmentProgress.forming[key].mana=1;expect(()=>restorePlayerBattleSnapshot(JSON.stringify(extra))).toThrow();
+ // Later purchases are never removed again.
+ let after=s;for(let slot=0;slot<after.shop.slots.length;slot++){const r=buyUnit(after,slot,after.shop.generation) as any;if(r.ok){after=r.state;break;}}
+ expect(drainBatch1Gifts(after).preparation.units.length).toBe(after.preparation.units.length);
+});
+it('Dummify/Golemify online: the pool ledger returns every removed copy and conservation holds', ()=>{
+ let {pool,states}=room(undefined,1);let state:MatchState={...states[0],gold:50};
+ let r=accept(generateSharedShop(pool,state,0));pool=r.pool;state=r.state;
+ for(let i=0;i<3;i++){const slot=state.shop.slots.findIndex(x=>x.status==='available');if(slot<0)break;r=accept(buySharedUnit(pool,state,slot,state.shop.generation));pool=r.pool;state=r.state;}
+ const owned={...state,augments:[{definitionId:'dummify',choiceId:'test',acquiredRound:state.round}]};
+ const held=pool.holdings.filter(h=>h.seatId===state.sharedPool!.seatId).reduce((n,h)=>n+h.sources.length,0);
+ const before={...pool.available};const after=drainBatch3Forming(owned);
+ const draft=draftPool(pool),events:any[]=[];reconcileHoldings(draft,owned,after,events);
+ expect(draft.holdings.filter(h=>h.seatId===state.sharedPool!.seatId)).toEqual([]);
+ const returned=Object.keys(before).reduce((n,id)=>n+(draft.available[id]-before[id]),0);expect(returned).toBe(held);
+ assertSharedPoolConservation(draft,[after]);
 });

@@ -8,6 +8,9 @@ import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { appendResourceProvenance } from './resource-provenance';
 import { EMBLEM_ITEMS } from './content/emblems';
+import { getUnitStats } from './unit-stats';
+import { UNIT_DEFINITIONS } from './units';
+import { returnUnitItems } from './inventory';
 import { nextRandom } from './rng';
 import type { UnitLootPolicy } from './loot-runtime';
 import type { AugmentGiftSpec } from './augment-gift-plan';
@@ -139,7 +142,7 @@ function eventGifts(state:MatchState,e:Batch3Event):AugmentGift[] {
 }
 /** The training dummy born from the augment's own acquisition gift (gift index 0), once its receipt exists. */
 export function ownDummyId(state:MatchState,augment:MatchState['augments'][number]):string|undefined {
- const gift=planAugmentGifts(state,augment,AUGMENT_BATCH3[augment.definitionId]?.gifts??[]).find(g=>g.definitionId==='training-dummy'||g.definitionId==='tower-dummy');
+ const gift=planAugmentGifts(state,augment,AUGMENT_BATCH3[augment.definitionId]?.gifts??[]).find(g=>g.definitionId==='training-dummy'||g.definitionId==='forming-dummy'||g.definitionId==='tower-dummy');
  const r=gift&&state.seatMechanics?.receipts.find(r=>r.receiptId===gift.receiptId);
  return r?.kind==='unit'&&r.unitId?r.unitId:undefined;
 }
@@ -192,10 +195,52 @@ export function validateBatch3Dummies(state:MatchState):void {
   }
   if(unitId&&batch3Events(state).some(e=>e.augment===augment&&row.schedules[e.schedule].retireDummy))expected.set(retireId(augment),unitId);
  }
+ // Forming removals: only under an owned forming augment's receipt, all within its acquisition round.
+ const forming=new Map(state.augments.filter(a=>AUGMENT_BATCH3[a.definitionId]?.forming).map(a=>[formingRemovalId(a),a]));
+ for(const e of removals.filter(e=>e.definitionId!==undefined)){
+  const a=forming.get(e.receiptId);if(!a||getMultiplayerRoundById(e.roundId).ordinal!==a.acquiredRound)fail('unexpected forming removal');
+  expected.set(e.receiptId,e.unitId);
+ }
  const emblems=new Set(state.augments.flatMap(a=>emblemGifts(state,a).map(g=>g.receiptId)));
  for(const r of state.seatMechanics?.receipts??[])if((r.source===DUMMY_SOURCE||r.receiptId.startsWith(`["${DUMMY_SOURCE}",`))&&!emblems.has(r.receiptId))fail('unexpected emblem');
- for(const e of removals)if(expected.get(e.receiptId)!==e.unitId)fail('unexpected removal');
- if(new Set(removals.map(e=>e.receiptId)).size!==removals.length)fail('duplicate removal');
+ for(const e of removals)if(e.definitionId===undefined&&expected.get(e.receiptId)!==e.unitId)fail('unexpected removal');
+ const retired=removals.filter(e=>e.definitionId===undefined);
+ if(new Set(retired.map(e=>e.receiptId)).size!==retired.length||new Set(removals.map(e=>e.unitId)).size!==removals.length)fail('duplicate removal');
+}
+/** Dummify/Golemify: base health/attack (panel × star, no items or traits; P 2026-10-24) of the champions removed. */
+export type FormingTotals=Readonly<Partial<Record<'dummify'|'golemify',{readonly health:number;readonly attack:number}>>>;
+export const formingRemovalId=(augment:MatchState['augments'][number])=>JSON.stringify([AUGMENT_BATCH3_SOURCE,augment.choiceId,'forming']);
+export function formingTotals(state:Pick<MatchState,'augments'|'resourceProvenance'>):FormingTotals|undefined {
+ const out:Record<string,{health:number;attack:number}>={};
+ for(const augment of state.augments){
+  const kind=AUGMENT_BATCH3[augment.definitionId]?.forming;if(!kind)continue;
+  const id=formingRemovalId(augment);let health=0,attack=0;
+  for(const e of state.resourceProvenance.entries)if(e.kind==='unit-removed'&&e.receiptId===id&&e.definitionId){
+   const stats=getUnitStats(e.definitionId,e.starLevel!);health+=stats.health;attack+=stats.attack;
+  }
+  out[kind==='dummy'?'dummify':'golemify']={health,attack};
+ }
+ return Object.keys(out).length?out:undefined;
+}
+/** On acquisition (outside combat) every non-summon champion on the board and bench is removed once, like a sale
+ * without gold: items return to the inventory (P 2026-10-24, as when selling), an anomaly binding ends, AD growth is
+ * dropped; online the pool ledger returns every copy (shared-pool-ledger reconcileHoldings on unit-removed). */
+export function drainBatch3Forming(initial:MatchState):MatchState {
+ let state=initial;if(state.phase==='combat')return state;
+ for(const augment of state.augments){
+  const kind=AUGMENT_BATCH3[augment.definitionId]?.forming;if(!kind)continue;
+  const key=kind==='dummy'?'dummify':'golemify';if(state.augmentProgress.forming?.[key])continue;
+  const receiptId=formingRemovalId(augment);
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId]?.summon)){
+   const returned=returnUnitItems(state.items,unit.id);
+   state={...state,items:returned.items,anomalyBinding:state.anomalyBinding?.unitId===unit.id?null:state.anomalyBinding,
+    persistentGrowth:state.persistentGrowth.filter(g=>g.unitId!==unit.id),
+    preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.id!==unit.id)},
+    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'unit-removed',unitId:unit.id,receiptId,definitionId:unit.definitionId,starLevel:unit.starLevel})};
+  }
+  state={...state,augmentProgress:{...state.augmentProgress,forming:formingTotals(state)}};
+ }
+ return state;
 }
 export function batch3RewardPlan(state:MatchState):AugmentGift[] {
  return batch3Events(state).flatMap(e=>eventGifts(state,e));
