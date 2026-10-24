@@ -33,8 +33,8 @@ function threeHeroMatch(): MatchState {
 // save through exact replay, so the resists validator no longer decides. Publicly pick the first offered trait crest
 // (an emblem plus a bench champion, no combat mechanic of its own), else a quiet economy card, instead of the first card.
 function crestPick(seed: number): MatchState {
-  const quiet = ['big-grab-bag', 'heroic-grab-bag', 'raining-gold', 'raining-gold-plus', 'iron-assets'];
-  const wanted = (offers: readonly string[]) => offers.find(id => id.endsWith('-crest')) ?? offers.find(id => quiet.includes(id));
+  const quiet = ['big-grab-bag', 'heroic-grab-bag', 'raining-gold', 'raining-gold-plus', 'iron-assets','item-grab-bag-i','team-building','rolling-for-days-i','trade-sector','what-doesnt-kill-you','spoils-of-war-i','spoils-of-war-ii','latent-forge','prizefighter','crown-guarded','not-today'];
+  const wanted = (offers: readonly string[]) => offers.find(id => quiet.includes(id)) ?? offers.find(id => id.endsWith('-crest'));
   let open = reachRound('2-1', false, seed);
   // Public free rerolls (one per slot) until a wanted card shows, so later pool growth cannot strand the fixture.
   for (let slot = 0; slot < 3 && !wanted(open.pendingChoice!.offers); slot++) {
