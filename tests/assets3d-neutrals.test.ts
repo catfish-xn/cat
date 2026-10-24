@@ -56,7 +56,7 @@ describe('offline non-champion entry', () => {
       'sample-large': { path: 'models/sample-large/model.glb', animations: { idle: 'sample_idle' } },
       'sample-small': { path: 'models/sample-small/model.glb', animations: { idle: 'sample_idle' } },
     } });
-    expect(() => neutralManifest([{ config, animations: { spawn: 'sample_spawn' } }], assertManifest)).toThrow('invalid-animation-map');
+    expect(() => neutralManifest([{ config, animations: { taunt: 'sample_spawn' } }], assertManifest)).toThrow('invalid-animation-map');
     expect(() => neutralManifest([{ config }, { config }], assertManifest)).toThrow('duplicate-neutral-id');
   });
   it('covers every project definition and every encounter without champion IDs', () => {

@@ -252,6 +252,8 @@ interface PieceView {
   readonly overhead: UnitOverhead;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
+  /** A summon that appeared or was revived in the shown combat: plays its spawn clip once its mixer is ready. */
+  rise: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
   alive: boolean;
   starLevel: number; form: 'front' | 'back';
@@ -697,6 +699,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);
+      flushRise(view);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
       if (loadReport.waiting) for (const [id, other] of pieces) if (other === view) { loadReport.attached(id, definitionId); timeUpload = true; }
     }).catch(() => {
@@ -704,9 +707,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
     });
   };
-  // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get none.
+  // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get
+  // none, nor does Jayce's Hextech Forge (a summoned structure, always one star in the rules).
   const syncStars = (view: PieceView, piece: BoardPiece) => {
-    if (piece.neutral) { view.stars?.dispose(); view.stars = null; return; }
+    if (piece.neutral || piece.definitionId === 'g23-forge') { view.stars?.dispose(); view.stars = null; return; }
     const level = piece.effectiveStarLevel ?? piece.starLevel;
     if (view.stars) { view.stars.setLevel(level); return; }
     view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });
@@ -721,7 +725,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
-      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null,
+      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 } };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
@@ -741,6 +745,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);
     }
+  };
+  // The spawn clip (a model naming one: the Hextech Forge) once the piece is drawn, after any reset of its action.
+  const flushRise = (view: PieceView) => {
+    if (!view.rise || !view.mixer || !view.alive) return;
+    view.rise = false; view.mixer.apply(view.state.spawn());
   };
   const removePiece = (view: PieceView) => {
     cancelLunge(view); view.disposed = true; held.delete(view);
@@ -899,7 +908,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       seen.add(piece.id);
       let view = pieces.get(piece.id);
       const created = !view;
-      if (!view) { view = createPiece(piece); pieces.set(piece.id, view); }
+      if (!view) { view = createPiece(piece); pieces.set(piece.id, view); if (frame.fighting) view.rise = true; }
       view.starLevel = piece.effectiveStarLevel ?? piece.starLevel;
       // Form is chosen from deployment, then frozen while combat movement changes the drawn position.
       if (!frame.fighting || combatStarted || created) {
@@ -914,7 +923,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
         // Revived or a new combat: never stay locked in a death pose that had not finished.
-        if (!view.alive) resetAction(view, piece.id);
+        if (!view.alive) { resetAction(view, piece.id); if (frame.fighting) view.rise = true; }
         view.alive = true; view.dyingFor = null;
       } else if (view.alive) {
         view.alive = false; cancelLunge(view);
@@ -925,6 +934,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const shown = piece.visible && (view.dyingFor === null || view.dyingFor === 'loading' || view.dyingFor > 0);
       if (shown && !view.root.visible) resetAction(view, piece.id);
       view.root.visible = shown;
+      if (shown) flushRise(view);
       const slot = benchSlots ? (piece.id !== frame.dragging && piece.benchSlot !== undefined
         ? piece.benchSlot ?? -1 : benchOf2d(frame, piece.x, piece.y)) : -1;
       if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
@@ -964,6 +974,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       else if (event.type === 'cast') {
         face(event.sourceId, event.targetIds[0]);
         if (current) { playAction('cast', event.sourceId, event.targetIds[0]); startLunge(event.sourceId, event.targetIds[0]); }
+        // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
+        // own cast clip. A dead one ignores it; the revive that follows in the same cast plays its spawn instead.
+        const forgeId = `${event.sourceId}:g23-forge`, forge = pieces.get(forgeId);
+        if (forge?.definitionId === 'g23-forge') forge.state.consume({ type: 'cast', sourceId: forgeId });
       } else if (event.type === 'movement' || event.type === 'death') {
         // A real step or death takes over from a lunge at once: the body is back on the root.
         const view = pieces.get((event as { unitId: string }).unitId); if (view) cancelLunge(view);
