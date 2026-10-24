@@ -1,3 +1,4 @@
+import { onTooltipTextChanged } from './tooltip-text-loader';
 /**
  * One floating description card for units and traits (G2 prerequisite). DOM anchors inside a scope open it on hover or
  * focus through `attachHoverCards`; the board canvas opens it at a token's screen box through `showAt`. It never takes
@@ -12,14 +13,18 @@ export interface HoverBox { readonly left: number; readonly top: number; readonl
 export class HoverCard {
   readonly root: HTMLElement;
   private key: string | null = null;
+  private rebuild: (() => void) | undefined;
+  private readonly unsubscribe: () => void;
   constructor(id: string, debug: string) {
     this.root = el('div', 'hover-card'); this.root.id = id; this.root.setAttribute('role', 'tooltip'); this.root.hidden = true;
     this.root.dataset.debug = debug;
     document.body.append(this.root);
+    this.unsubscribe = onTooltipTextChanged(() => this.rebuild?.());
   }
   get shownKey(): string | null { return this.key; }
   /** Shows `build()` beside `box` (viewport coordinates); rebuilds only when `key` changed. */
   showAt(box: HoverBox, key: string, build: () => HTMLElement): void {
+    this.rebuild = () => { this.key = null; this.showAt(box, key, build); };
     if (this.key !== key) { this.root.replaceChildren(build()); this.key = key; this.root.dataset.key = key; }
     this.root.hidden = false;
     const width = Math.min(320, window.innerWidth - 16);
@@ -35,9 +40,10 @@ export class HoverCard {
   }
   hide(): void {
     if (this.key === null && this.root.hidden) return;
+    this.rebuild = undefined;
     this.key = null; this.root.hidden = true; this.root.replaceChildren(); delete this.root.dataset.key;
   }
-  dispose(): void { this.root.remove(); }
+  dispose(): void { this.unsubscribe(); this.rebuild = undefined; this.root.remove(); }
 }
 
 /**

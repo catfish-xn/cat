@@ -73,6 +73,7 @@ describe('root UI manifest path containment', () => {
 
   it('registers augment icons for ids the bundle lacks, keeps bundled icons and never preloads them as portraits', async () => {
     const display = await import('../../src/presentation/augment-display');
+    await (await import('../../src/presentation/augment-text-loader')).loadAugmentText();
     const { S13_AUGMENT_ASSETS } = await import('../../src/presentation/s13-augment-asset-manifest');
     const bundled = S13_AUGMENT_ASSETS[0]!.id;
     expect(display.augmentIconUrl('synthetic-augment')).toBeNull();

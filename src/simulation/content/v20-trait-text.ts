@@ -4,7 +4,7 @@ import { freezeContent } from './freeze';
  * Trait APIs use Teamup_, unlike the corresponding TeamupAugment_ augment APIs.
  * Keep official wording separate from v20 custom execution annotations.
  */
-export const V20_OFFICIAL_TRAIT_TEXT = freezeContent({
+export const V20_OFFICIAL_TRAIT_TEXT = /* @__PURE__ */ freezeContent({
   mentorship: {
     apiName: 'TFT13_Teamup_Mentorship', locale: 'zh_cn',
     description: '当【安蓓萨】施放技能时，【凯特琳】对该目标进行一次强化攻击，造成@CaitAD*100@%伤害。【安蓓萨】获得【凯特琳】的@ADShare*100@%攻击力。',
@@ -31,7 +31,7 @@ export const V20_OFFICIAL_TRAIT_TEXT = freezeContent({
  * The unnamed Unlikely Duo hash is omitted: it is not a text token and does not
  * establish the custom luck formula. No rule evaluation occurs here.
  */
-export const V20_TEAMUP_DISPLAY_SOURCE = freezeContent({
+export const V20_TEAMUP_DISPLAY_SOURCE = /* @__PURE__ */ freezeContent({
   mentorship: { tiers: [{ threshold: 2, values: { ADShare: 0.25, CaitAD: 2.25 } }] },
   reunion: { tiers: [{ threshold: 2, values: { EkkoAfterImageReducedDamage: 0.5, ViEarthquakeReducedDamage: 1.5 } }] },
   geniuses: { tiers: [{ threshold: 2, values: { NumEkkoAfterImages: 3, NumHeimerMissiles: 3, ReducedEkkoDamage: 0.33, ReducedHeimerDamage: 1.2 } }] },

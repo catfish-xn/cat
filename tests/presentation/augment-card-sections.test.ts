@@ -1,3 +1,7 @@
+import { loadTooltipText } from '../../src/presentation/tooltip-text-loader';
+import { beforeAll } from 'vitest';
+import { loadAugmentText } from '../../src/presentation/augment-text-loader';
+beforeAll(() => Promise.all([loadAugmentText(), loadTooltipText()]));
 import { describe, expect, it } from 'vitest';
 import { augmentCardSections, augmentEffectText, augmentPlayerDescription } from '../../src/presentation/augment-display';
 import { AUGMENT_DEFINITIONS } from '../../src/simulation/content/augments';

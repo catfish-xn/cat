@@ -8,7 +8,7 @@
 import { abilityDisplayName, abilityDisplayValues, ultimateHeroAbilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
-import { ABILITY_ZH } from './ability-zh';
+import { readTooltipText, tooltipTextPlaceholder } from './tooltip-text-loader';
 
 export interface AbilityText {
   /** zh_cn client ability name; the locked CDragon name when the client table has none. */
@@ -64,7 +64,9 @@ export function abilityText(definitionId: string, starLevel: number, stats?: Abi
   const data = definition && Object.hasOwn(S13_ABILITY_DATA, definition.abilityId) ? S13_ABILITY_DATA[definition.abilityId] : undefined;
   if (!data) return null;
   const star = Math.min(3, Math.max(1, Math.trunc(starLevel))) as StarLevel;
-  const zh = Object.hasOwn(ABILITY_ZH, data.id) ? ABILITY_ZH[data.id] : undefined;
+  const texts = readTooltipText();
+  if (!texts) return { name: abilityDisplayName(definitionId), text: tooltipTextPlaceholder().replace('强化', '技能'), unknown: [] };
+  const zh = Object.hasOwn(texts.ABILITY_ZH, data.id) ? texts.ABILITY_ZH[data.id] : undefined;
   try {
     const values = starLevel === 4 ? ultimateHeroAbilityDisplayValues(definitionId, stats)
       : abilityDisplayValues(definitionId, star, stats);
@@ -78,5 +80,5 @@ export function abilityText(definitionId: string, starLevel: number, stats?: Abi
 /** Ability name of a hero (zh_cn client name when known), or null when the rules have no display source for it. */
 export function abilityNameOf(definitionId: string): string | null {
   const abilityId = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId].abilityId : `${definitionId}-ability`;
-  try { const name = abilityDisplayName(definitionId); return (Object.hasOwn(ABILITY_ZH, abilityId) ? ABILITY_ZH[abilityId].name : undefined) ?? name; } catch (error) { if (error instanceof RangeError) return null; throw error; }
+  try { const name = abilityDisplayName(definitionId); return (Object.hasOwn(readTooltipText()?.ABILITY_ZH ?? {}, abilityId) ? readTooltipText()!.ABILITY_ZH[abilityId].name : undefined) ?? name; } catch (error) { if (error instanceof RangeError) return null; throw error; }
 }

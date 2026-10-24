@@ -1,3 +1,4 @@
+import { onTooltipTextChanged } from './tooltip-text-loader';
 /**
  * M8 U3 (static part): item codex, recipe table and description popover.
  * Reads only the signed-off B4 query readItemCatalog(); never evaluates effects and never
@@ -13,6 +14,7 @@ import { specialItemLines } from './special-item-text';
 
 type Entry = RuntimeItemCatalogEntry;
 let cached: { list: readonly Entry[]; byId: ReadonlyMap<string, Entry> } | null = null;
+onTooltipTextChanged(() => { cached = null; });
 /**
  * Reward-only items (微光装备, radiant, artifacts, support, mechanism) are not in the B4 catalogue; they get an entry here
  * with player text so every item surface (popover, bench tags, black market and loot cards) can describe them.
@@ -147,6 +149,9 @@ export function attachItemPopover(scope: HTMLElement, id = 'item-popover'): () =
     place(target);
     watcher.observe(scope, { childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'hidden', 'class', 'style'] });
   }
+  const unsubscribe = onTooltipTextChanged(() => {
+    if (anchor && usable(anchor)) { const target = anchor, how = via; hide(); show(target, how); }
+  });
   const target = (event: Event) => (event.target instanceof Element ? event.target.closest<HTMLElement>('[data-item-def]') : null);
   const over = (event: PointerEvent) => { if (event.pointerType === 'mouse') { const t = target(event); if (t && scope.contains(t)) show(t, 'hover'); } };
   const out = (event: PointerEvent) => {
@@ -168,7 +173,7 @@ export function attachItemPopover(scope: HTMLElement, id = 'item-popover'): () =
     scope.removeEventListener('pointerover', over); scope.removeEventListener('pointerout', out);
     scope.removeEventListener('focusin', focus); scope.removeEventListener('focusout', blur);
     scope.removeEventListener('pointerdown', hide); document.removeEventListener('keydown', key); window.removeEventListener('scroll', scrolled, true);
-    hide(); pop.remove();
+    unsubscribe(); hide(); pop.remove();
   };
 }
 
