@@ -44,8 +44,10 @@ it('accepts transported PvP snapshots and produces authentic gold effects for al
       location: { kind: 'board' as const, cell: { col: 3, row: 4 } } },
   ] } };
   const defender = { ...base, level: 8, preparation: { ...base.preparation,
+    // v22 star AD is 1/1.5/2.25 while HP stays 1/1.8/3.24: 3-star defenders keep Garen's hits
+    // landing inside the Collector execute window (2-star Maddie now stops at 114/900, just above 12%).
     units: Array.from({ length: 8 }, (_, n) => ({ id: `unit-${n + 1}`, definitionId: 'maddie',
-      starLevel: 2 as const, team: 'player' as const,
+      starLevel: 3 as const, team: 'player' as const,
       location: { kind: 'board' as const, cell: { col: n % 7, row: 4 + Math.floor(n / 7) } } })),
   } };
   const equipped = grantTestItems(attacker, { unitId: 'unit-1', itemIds });
