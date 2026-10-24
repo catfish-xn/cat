@@ -25,7 +25,7 @@ interface Batch3Content {
  /** Corrosion: every Time seconds, enemies in their own front two rows lose ResistLoss armor and magic resist. */
  readonly corrosion?:boolean;
  /** Replay-authenticated combat mechanics (g2-4b-gold-restore BATCH3_REPLAYED_MECHANICS); values come from the source row. */
- readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab';
+ readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck';
 }
 /** classification.json batch 3, group 3a-1: grants scheduled by player-combat count, player-combat results or allied deaths.
  * Every count and reward is the 14.24 zh_cn/en_us source value. Three readings are project conventions (P 2026-10-24,
@@ -33,6 +33,30 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+ "bad-luck-protection": {
+  "apiName": "TFT_Augment_BadLuckProtection",
+  "name": "厄运保护",
+  "tier": "gold",
+  "description": "己方弈子们无法再造成暴击。将每1%暴击几率转化为1%攻击力。获得1个【拳套】。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "ADPerCrit": 0.009999999776482582,
+    "CritChancePercent": 1.0,
+    "{1a2d5ea3}": null
+   },
+   "description_en_us": "Your team can no longer critically strike. Convert each 1% Critical Strike Chance into 1% Attack Damage. Gain a Sparring Gloves."
+  },
+  "gifts": [
+   {
+    "kind": "item",
+    "definitionId": "gloves"
+   }
+  ],
+  "schedules": [],
+  "combat": "badLuck"
+ },
  "blazing-soul-i": {
   "apiName": "TFT_Augment_BlazingSoul",
   "name": "炽热灵魂 I",
@@ -770,6 +794,7 @@ function batch3CombatValues(row:Batch3Content):Record<string,number> {
  const bps=(key:string)=>Math.round(row.source.values[key]!*10000);
  switch(row.combat){
   case 'blazingSoul':return {abilityPower:batch3Count(row,'AbilityPower'),attackSpeedBps:bps('AttackSpeed'),periodTicks:batch3Count(row,'TransferDuration')*20};
+  case 'badLuck':return {ratioBps:Math.round(row.source.values.ADPerCrit!*10000/row.source.values.CritChancePercent!*100)};
   case 'nobleSacrifice':return {baseResists:batch3Count(row,'BaseResists'),shareBps:bps('SharePerc')};
   default:return {omnivampBps:bps('Omnivamp')};
  }

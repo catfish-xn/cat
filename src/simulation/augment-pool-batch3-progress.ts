@@ -21,9 +21,14 @@ function batch3Events(state:MatchState):Batch3Event[] {
    if(schedule.counter==='round-start'||schedule.counter==='stage-start'){
     // Round entries strictly after acquisition; the acquisition round's own share is an immediate gift.
     const from=schedule.from===undefined?1:batch3Count(row,schedule.from);
+    // P 2026-10-24: a champion is never born on a supply (carousel) round; that entry's copy waits for the next
+    // non-supply round entry, keeping its own ordinal and receipt. Items still arrive on the supply round itself.
+    const units=schedule.copyOf!==undefined||schedule.gifts.some(g=>g.kind==='unit'||g.kind==='random-unit'||g.kind==='random-unit-pool'||g.kind==='all-units');
     for(let round=augment.acquiredRound+1;round<=state.round&&events.length<max;round++){
-     if(schedule.counter==='round-start'?round-augment.acquiredRound>=from:getMultiplayerRoundByOrdinal(round).subround===1)
-      events.push({augment,schedule:index,ordinal:events.length,round});
+     if(!(schedule.counter==='round-start'?round-augment.acquiredRound>=from:getMultiplayerRoundByOrdinal(round).subround===1))continue;
+     let due=round;while(units&&getMultiplayerRoundByOrdinal(due).kind==='supply')due++;
+     if(due<=state.round)events.push({augment,schedule:index,ordinal:events.length,round:due});
+     else break;
     }
     return events;
    }

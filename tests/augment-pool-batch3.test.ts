@@ -23,6 +23,7 @@ import { generateSharedShop, rerollSharedShop } from '../src/server-entry';
 import { freeRerollsAvailable, freeRerollsGranted, validateFreeRerolls, FREE_REROLL_KEY } from '../src/simulation/free-rerolls';
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
+import { ad, spellCrit } from '../src/simulation/combat-s13-state';
 import { accept, room } from './tp-helpers';
 import { reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -42,9 +43,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the twenty-five batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the twenty-six batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['bad-luck-protection','blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -180,9 +181,10 @@ it('Building a Collection III: one component now and at each of the next five ro
 it('Worth the Wait: a 2-star 1-cost now, 1-star copies of that champion from the second round entry on; II copies its 2-cost from the next entry', ()=>{
  const gold=batch1GiftPlan(at('worth-the-wait',5,9)),first=gold.find(g=>g.acquiredRound===5)!;
  expect(first).toMatchObject({kind:'unit',starLevel:2});
- expect(gold.filter(g=>g.acquiredRound>5).map(g=>[g.definitionId,g.acquiredRound,g.starLevel])).toEqual([7,8,9].map(r=>[first.definitionId,r,undefined]));
+ expect(gold.filter(g=>g.acquiredRound>5).map(g=>[g.definitionId,g.acquiredRound,g.starLevel])).toEqual([8,8,9].map(r=>[first.definitionId,r,undefined])); // 7 (2-4) is a supply round
  const ii=batch1GiftPlan(at('worth-the-wait-ii',5,7)),base=ii.find(g=>g.acquiredRound===5)!;
- expect(ii.filter(g=>g.acquiredRound>5).map(g=>[g.definitionId,g.acquiredRound])).toEqual([[base.definitionId,6],[base.definitionId,7]]);
+ // Round 7 (2-4) is a supply round: its copy waits for round 8, which has not been entered yet.
+ expect(ii.filter(g=>g.acquiredRound>5).map(g=>[g.definitionId,g.acquiredRound])).toEqual([[base.definitionId,6]]);
 });
 it('Flexible: an emblem now and one at each later stage start; board allies gain 40 HP per emblem held on the board', ()=>{
  const starts=Array.from({length:30},(_,i)=>i+1).filter(r=>r>3&&getMultiplayerRoundByOrdinal(r).subround===1);
@@ -286,7 +288,7 @@ it('Wealthy Rehab: team omnivamp is declared, healing is counted into the battle
  const plan=(()=>{const x=drainBatch3Gold({...s,round:3});return x.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch3');})();
  expect(plan.map(r=>[r.kind,(r as any).amount,r.round])).toEqual([['gold',8,3]]);
 });
-it.each(['blazing-soul-i','noble-sacrifice','wealthy-rehab-ii'])('%s: a real mid-combat save restores exactly, and edited augment runtime or contributions are rejected', id=>{
+it.each(['blazing-soul-i','noble-sacrifice','wealthy-rehab-ii','bad-luck-protection'])('%s: a real mid-combat save restores exactly, and edited augment runtime or contributions are rejected', id=>{
  let seed=0;while(!firstOffers(seed).includes(id))seed++;
  let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;
  s=accept(selectChoice(s,c.choiceId,c.generation,id) as any).state as MatchState;
@@ -325,3 +327,32 @@ it('Noble Sacrifice grants from a real ally death restore exactly, and an edited
  }
  expect(found).toBe(true);
 },600000);
+
+it('Bad Luck Protection: the team never deals a critical hit and gains 1% AD per 1% crit chance; RNG consumption is unchanged', ()=>{
+ const run=(augments:string[])=>{
+  const m=createMatch(42),u=m.preparation.units[0];
+  const units=[...[0,1,2].map(i=>({...u,id:'p'+i,team:'player' as const,location:{kind:'board' as const,cell:{col:i*2,row:7}}})),
+   ...[0,1].map(i=>({...u,id:'e'+i,definitionId:'garen',starLevel:2 as const,team:'enemy' as const,location:{kind:'board' as const,cell:{col:i*2,row:0}}}))];
+  const preparation={...m.preparation,units};
+  let c=createCombatWithEvents(preparation,buildStrategySnapshot({...m,preparation,augments:augments.map(definitionId=>({definitionId,choiceId:'t',acquiredRound:1}))}),'b3-luck',42).state;
+  const crits:boolean[]=[];const p0=c.units.find(u=>u.id==='p0')! as any;const adAt0=ad(p0),chance=spellCrit(p0).chanceBps;
+  while(c.status==='running'){const step=stepCombat(c);c=step.state;for(const e of step.events as any[])if(e.type==='packetDamage'&&e.outcome.context.source.ownerId.startsWith('p'))crits.push(e.outcome.critical);}
+  return {crits,adAt0,chance};
+ };
+ const plain=run([]),lucky=run(['bad-luck-protection']);
+ expect(plain.crits.some(Boolean)).toBe(true);expect(lucky.crits.length).toBeGreaterThan(0);expect(lucky.crits.some(Boolean)).toBe(false);
+ expect(lucky.chance).toBe(plain.chance);expect(lucky.chance).toBeGreaterThan(0);
+ expect(lucky.adAt0).toBe(Math.floor(plain.adAt0*(10000+lucky.chance)/10000));
+ const gifted=drainBatch1Gifts({...createMatch(42),augments:[{definitionId:'bad-luck-protection',choiceId:'test',acquiredRound:1}]});
+ expect(gifted.items.filter(i=>i.definitionId==='gloves').length-createMatch(42).items.filter(i=>i.definitionId==='gloves').length).toBe(1);
+});
+
+it('P: round-entry champions never arrive on a supply (carousel) round; that copy waits for the next round entry', ()=>{
+ expect(getMultiplayerRoundByOrdinal(7).kind).toBe('supply');
+ const gold=batch1GiftPlan(at('worth-the-wait',5,9)).filter(g=>g.acquiredRound>5);
+ expect(gold.map(g=>g.acquiredRound)).toEqual([8,8,9]);expect(new Set(gold.map(g=>g.receiptId)).size).toBe(3);
+ expect(batch1GiftPlan(at('worth-the-wait',5,7)).filter(g=>g.acquiredRound>5)).toEqual([]);
+ expect(batch1GiftPlan(at('worth-the-wait-ii',6,8)).filter(g=>g.acquiredRound>6).map(g=>g.acquiredRound)).toEqual([8,8]);
+ // Items are not champions and still arrive on the supply round itself.
+ expect(batch3RewardPlan(at('building-a-collection-iii',5,8)).map(g=>g.acquiredRound)).toEqual([6,7,8]);
+});
