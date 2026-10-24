@@ -134,6 +134,45 @@ describe('Hextech Forge summon in the real mountRenderer3d', () => {
     expect(forgeClip(forgeLease)).toBe('idle');
   });
 
+  it('shows a forge already standing without its spawn clip when the view joins a battle midway', async () => {
+    const { forgeLease } = useModels();
+    await mount(); await publish([jayce(), forge()]); // the first frame after mounting is a running combat
+    expect(forgeClip(forgeLease)).toBe('idle');
+  });
+
+  it("does not replay the spawn clip when switching to another seat's battle in progress", async () => {
+    const { forgeLease } = useModels();
+    await mount(); await publish([jayce({ id: 'mine' })], false);
+    await publish([jayce({ id: 'mine' })]); // my battle begins: nothing of mine rises
+    const scout = { seatId: 'B', name: 'B', board: { units: [] }, orbs: [], watching: true as const };
+    listener.scout!(scout as unknown as Parameters<NonNullable<BoardFeedListener['scout']>>[0]);
+    await publish([jayce(), forge()]); // its battle as the stream shows it: the forge was placed at its start
+    expect(forgeClip(forgeLease)).toBe('idle');
+    // Even when my board had gone back to preparation before the watched battle reached the frames.
+    listener.scout!(null);
+    await publish([jayce({ id: 'mine' })], false);
+    listener.scout!({ ...scout, seatId: 'C' } as unknown as Parameters<NonNullable<BoardFeedListener['scout']>>[0]);
+    await publish([jayce({ id: 'c' }), forge({ id: 'c:g23-forge' })]);
+    expect(forgeClip(forgeLease)).toBe('idle');
+  });
+
+  it('rises when a current unitSpawned event brings it in during a battle', async () => {
+    const { forgeLease } = useModels();
+    await mount(); await publish([jayce()]);
+    listener.events([{ type: 'unitSpawned', tick: 12, eventSeq: 12, unitId: 'j:g23-forge', definitionId: 'g23-forge', team: 'player',
+      sourceId: 'j', cell: { col: 1, row: 1 } } as unknown as DisplayCombatEvent]);
+    await publish([jayce(), forge()]);
+    expect(forgeClip(forgeLease)).toBe('f_spawn');
+  });
+
+  it("does not rise for an alive flip without a revive event (another battle's unit under the same id)", async () => {
+    const { forgeLease } = useModels();
+    await mount(); await publish([jayce()], false); await publish([jayce(), forge()]); advance(1600);
+    await publish([jayce(), forge({ alive: false })]); advance(1500);
+    await publish([jayce(), forge()]);
+    expect(forgeClip(forgeLease)).toBe('idle');
+  });
+
   it("plays its own cast clip when Jayce casts, and nothing for another unit's cast", async () => {
     const { forgeLease } = useModels();
     await mount(); await publish([jayce(), forge()]); advance(1600);

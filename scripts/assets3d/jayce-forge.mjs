@@ -48,8 +48,11 @@ export async function buildJayceForge({ source = 'assets3d-local/trial/local' } 
   if (archives.length !== WADS.length) {
     const chunks = downloadChunks(reader.missing);
     await write('plan.json', { ...plan, wads: WADS.map(name => ({ name, entries: [] })), chunks });
-    await write('report.json', { ready: false, phase: 'index', failures, missingChunks: chunks });
-    return { ready: false, phase: 'index', chunks };
+    // Same shape as the later reports: the CLI summary reads failures/missingChunks/downloadBytes from any of them.
+    const report = { ready: false, phase: 'index', version: VERSION, sourceManifestSha256: SHA, failures, missingChunks: chunks,
+      downloadBytes: chunks.reduce((s, c) => s + c.size, 0) };
+    await write('report.json', report);
+    return report;
   }
   const byHash = new Map();
   for (const a of archives) {
@@ -144,10 +147,16 @@ export async function forgeDelta(base) {
   return { files: [model.path, 'manifest.json', 'precache.json'], bytes: glb.length };
 }
 
+/** The CLI's one-line summary of any report buildJayceForge returns (index, source or converted phase). */
+export function forgeSummary(report) {
+  return { ready: report.ready, phase: report.phase, failures: report.failures, missingChunks: report.missingChunks.length,
+    downloadBytes: report.downloadBytes, actions: report.model?.actionMapping, clips: report.model?.clips };
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const base = process.argv.indexOf('--base');
   if (base > 0) { console.log(JSON.stringify(await forgeDelta(process.argv[base + 1]))); process.exit(0); }
   const report = await buildJayceForge();
-  console.log(JSON.stringify({ ready: report.ready, phase: report.phase, failures: report.failures, missingChunks: report.missingChunks.length, downloadBytes: report.downloadBytes, actions: report.model?.actionMapping, clips: report.model?.clips }));
+  console.log(JSON.stringify(forgeSummary(report)));
   if (!report.ready) process.exitCode = 1;
 }
