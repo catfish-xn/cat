@@ -13,7 +13,9 @@ const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:68,9:68};
 const AUGMENTS=["all-for-one-ii", "backup", "belt-overflow", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "calculated-enhancement", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "crown-guarded", "crownguard-spirit", "find-your-center", "flurry-of-blows", "glass-cannon-i", "glass-cannon-ii", "guardbreaker-spirit", "immovable-object", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "not-today", "pair-of-fours", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii", "shojin-spirit", "sword-overflow", "trifecta-ii", "wand-overflow"];
 // v22 anvil units (hand-copied ids).
 const ANVIL_IDS=new Set(['TFT_ArmoryKeyCompleted','TFT_ArmoryKeyComponent','TFT_ArmoryKeyOrnn','TFT_ArmoryKeySupport']);
-const AUGMENT_GOLD={'placebo':8,'placebo-plus':15,'going-long':15,'hedge-fund':25,'investment-strategy-ii':5};
+const AUGMENT_GOLD={'placebo':8,'placebo-plus':15,'going-long':15,'hedge-fund':25,'investment-strategy-ii':5,
+ // v23 batch 1 instant gold (14.24 records 40, 26, 124, 157, 158, 83, 233; hand transcription in tests/augment-pool-source-expectations.ts).
+ 'one-two-five':2,'iron-assets':4,'heroic-grab-bag':9,'raining-gold':8,'raining-gold-plus':18,'big-grab-bag':2,'build-a-bud':8};
 // User P 10-23: Placebo pays once by acquisition stage 8/11/15 (stage 2/3/4+); Placebo+ 15/18/22.
 const STAGED_AUGMENT_GOLD={'placebo':[8,11,15],'placebo-plus':[15,18,22]};
 function augmentGold(id,roundId){const staged=STAGED_AUGMENT_GOLD[id];if(!staged)return AUGMENT_GOLD[id]??0;return staged[Math.min(2,Math.max(0,Number(roundId.split('-')[0])-2))];}
@@ -445,11 +447,15 @@ class Ledger {
   }
   // v22 opening encounters (batch A/B, trainer golems…): rewards are audited by the opening-encounters suites; the ledger books them.
   let lateGold=0;
-  // G2-4 item gold (Gambler's Blade and friends) pays per combat roll after the settlement record; its rolls are audited by g2-4b-collector.
-  for(const r of appendedMechanics.filter(r=>r.source==='g24-item-gold'&&r.kind==='gold')){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
-  for(const r of appendedMechanics.filter(r=>r.source.startsWith('opening-'))){
+  // G2-3/G2-4 battle payouts (item gold rolls, Conqueror chest gold, High Roller, Tactician's Crown) pay after the settlement record;
+  // their amounts are audited by g2-4b-collector and the G2-3 conquest suites.
+  for(const r of appendedMechanics.filter(r=>['g24-item-gold','conqueror-chest','high-roller','tacticians-crown'].includes(r.source)&&r.kind==='gold')){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
+  // v23 augment pool batches and G2-3 Conqueror chests book their grants the same way; their values are audited by
+  // the augment-pool and G2-3 conquest suites.
+  for(const r of appendedMechanics.filter(r=>r.source.startsWith('opening-')||r.source.startsWith('augment-pool')||r.source==='conqueror')){
    if(r.kind==='gold'){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
-   else if(r.kind==='unit'){assert.equal(r.unitId,`unit-${serial}`,'opening reward unit serial');units.set(`unit-${serial++}`,{definitionId:r.definitionId,starLevel:r.starLevel??1});this.cards+=3**((r.starLevel??1)-1);}
+   else if(r.kind==='unit'&&r.resolution==='gold'){this.gold+=r.gold;costs.rewards+=r.gold;lateGold+=r.gold;}
+   else if(r.kind==='unit'&&r.resolution!=='orb'){assert.equal(r.unitId,`unit-${serial}`,'reward unit serial');units.set(`unit-${serial++}`,{definitionId:r.definitionId,starLevel:r.starLevel??1});this.cards+=3**((r.starLevel??1)-1);}
   }
   for(const receipt of mechanicGifts){const expected=giftPlan.get(receipt.receiptId);assert(expected,'independent P2 gift identity');assert.equal(receipt.kind,expected.kind);assert.equal(receipt.definitionId,expected.definitionId,'independent P2 gift definition');
    if(receipt.kind==='unit'){if(receipt.resolution==='gold'){assert.equal(receipt.gold,COST[receipt.definitionId]);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}else{assert.equal(receipt.unitId,`unit-${serial}`);units.set(`unit-${serial++}`,{definitionId:receipt.definitionId,starLevel:1});this.cards++;}}}

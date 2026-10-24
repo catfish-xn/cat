@@ -1,6 +1,6 @@
 // Independent offer-catalog transcription; no production modules, state recording, or golden updates.
 module.exports={
-  "prismatic": ["coronation","tacticians-kitchen"],
+  "prismatic": ["coronation","tacticians-kitchen","blood-brothers"],
   "silver": [
     "branching-out"
   ],
@@ -24,6 +24,8 @@ module.exports={
     "betrayal"
   ],
   "traits": {
+    // 14.24 record TFT13_TeamupAugment_BloodBrothers (enabled 10-24, P-AG5).
+    "blood-brothers": ["dominator","family","watcher"],
     "why-not-both": ["form-swapper"],
     "rocket-collection": [
       "artillerist"
