@@ -44,16 +44,22 @@ describe('v22 content: data-driven offer rules', () => {
 
 describe('v22 trait filter: 3-2 and 4-2 tailored, 2-1 not', () => {
   it('drops trait-linked augments at 3-2/4-2 without a fielded member and keeps them at 2-1', () => {
+    // Geniuses is prismatic in the 14.24 tier table; the other five team-ups are gold.
+    const GOLD_TEAMUPS = TEAMUPS.filter(id => AUGMENT_TIERS[id] === 'gold');
+    expect(TEAMUPS.filter(id => !GOLD_TEAMUPS.includes(id))).toEqual(['geniuses']);
+    expect(AUGMENT_TIERS.geniuses).toBe('prismatic');
     for (const node of ['3-2', '4-2']) {
       const none = augmentCandidates('gold', [], [], null, filter(node));
       for (const id of TEAMUPS) expect(none, `${node} ${id}`).not.toContain(id);
+      expect(augmentCandidates('prismatic', [], [], null, filter(node)), `${node} geniuses`).not.toContain('geniuses');
       const enforcer = augmentCandidates('gold', [], [], null, filter(node, ['enforcer']));
       expect(TEAMUPS.filter(id => enforcer.includes(id)).sort()).toEqual(['mentorship', 'reunion', 'sisters']);
       // Untouched augments without AssociatedTraits are never filtered.
-      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - TEAMUPS.length);
+      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - GOLD_TEAMUPS.length);
     }
     const untailored = augmentCandidates('gold', [], [], null, filter('2-1'));
-    for (const id of TEAMUPS) expect(untailored).toContain(id);
+    for (const id of GOLD_TEAMUPS) expect(untailored).toContain(id);
+    expect(augmentCandidates('prismatic', [], [], null, filter('2-1'))).toContain('geniuses');
   });
 
   it('records the fielded-trait snapshot when 3-2 opens, reuses it for rerolls and restores from it', () => {
