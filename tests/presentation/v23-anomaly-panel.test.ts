@@ -133,7 +133,7 @@ describe('4-6 anomaly private view and rendered steps', () => {
     expect(duplicate).not.toHaveProperty('events');
   });
 
-  it.fails('BUG: same-generation gold updates must refresh the displayed balance and reroll affordability', () => {
+  it('same-generation gold updates refresh the displayed balance and reroll affordability', () => {
     const state = { ...offerStep(), gold: 1 }, ui = panel(state);
     // Online shopping can change gold without changing choiceId/generation/step.
     ui.render({ ...state, gold: 0 });

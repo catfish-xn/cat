@@ -655,7 +655,7 @@ body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
   background: rgba(14, 24, 33, .94); box-shadow: 0 10px 24px rgba(0, 0, 0, .45); display: none; }
 .carousel-panel[data-ring-3d]:is(:hover, :focus-within) .carousel-order { display: grid; }
 /* TFT hides the shop on the carousel (nothing can be bought there): in 3D it slides away while the carousel side is shown. */
-body[data-online-carousel="carousel"]:has(.render3d-layer) .shop-dock,
+body[data-online-carousel="carousel"]:has(> .render3d-layer) .shop-dock,
 /* TFT: on another player's board my shop is closed (it comes back with my board). */
 body:has(.opponent-board[data-scout-3d]:not([hidden])) .shop-dock,
 /* TFT: once eliminated the shop is gone; the board, traits, player list and minimap stay for watching. */
@@ -1388,6 +1388,11 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .minimap-name { position: absolute; left: 3px; right: 22px; bottom: 1px; font-size: 10px; line-height: 13px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .minimap-hp { position: absolute; right: 3px; bottom: 1px; font-size: 10px; line-height: 13px; color: #8fe08a; }
 .choice-cards .augment-name { font-weight: 700; }
+/* 3D augment cards: the extra notes sit under a rule in a smaller face; the lettered badge (inline 56px) fills the 112px icon slot. */
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra { display: block; margin-top: 12px; padding-top: 8px; border-top: 1px solid #ffffff1f;
+  font-size: 12px; line-height: 1.5; color: #93a8b4; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra-line { display: block; white-space: normal; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-badge { width: 112px !important; height: 112px !important; font-size: 56px !important; }
 
 /* v19 six-costs (沃里克/维克托/梅尔): a prismatic frame on the shop card, as TFT sets its top tier apart from the gold five-costs. */
 .shop-card[data-cost="6"], .shop-dock .shop-card[data-cost="6"] { border-width: 3px; border-image: linear-gradient(135deg, #ff5fd2, #ffd23f, #3fe0ff, #a66bff, #ff5fd2) 1; }

@@ -41,7 +41,7 @@ body:not(:has(> .render3d-layer)) .augment-card .augment-extra { display: block;
   font-size: 13px; line-height: 1.5; color: #93a8b4; }
 body:not(:has(> .render3d-layer)) .augment-card .augment-desc + .augment-extra { margin-top: 12px; }
 body:not(:has(> .render3d-layer)) .augment-card .augment-extra-line { display: block; white-space: normal; }
-body:not(:has(> .render3d-layer)) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll { justify-self: center; width: 132px; border-radius: 999px;
+body:not(:has(> .render3d-layer)) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll { justify-self: center; width: 132px; min-height: 44px; border-radius: 999px;
   border-color: #785a28; background: #0b151fe6; color: #f0e6d2; }
 body:not(:has(> .render3d-layer)) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll::before { content: "⟳ "; }
 
