@@ -58,6 +58,16 @@ export function advanceAugmentCombat(ctx: AbilityContext): void {
   }
   advanceCorrosion(ctx);
   advanceBlazingSoul(ctx);
+  advanceDummyGold(ctx);
+}
+/** Gold for Dummies: every GoldDuration, each live training dummy of a team owning the augment records one pulse. */
+function advanceDummyGold(ctx: AbilityContext): void {
+  for (const team of ['player', 'enemy'] as const) {
+    const m = ctx.units.find(u => u.team === team && u.mechanics?.some(m => m.mechanic === 'goldForDummies'))?.mechanics!.find(m => m.mechanic === 'goldForDummies');
+    if (!m || ctx.tick <= 0 || ctx.tick % m.values.periodTicks !== 0) continue;
+    for (const dummy of ctx.units.filter(u => u.team === team && u.definitionId === 'training-dummy' && u.alive && u.hp > 0))
+      dummy.batch2 = { ...dummy.batch2, dummyGold: (dummy.batch2?.dummyGold ?? 0) + 1 };
+  }
 }
 const byId = (a: S13Unit, b: S13Unit) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 /** Blazing Soul (P 2026-10-24): from the first combat tick and every TransferDuration, a TransferDuration-long buff goes

@@ -5,12 +5,14 @@ import type { AugmentGiftSpec } from '../augment-gift-plan';
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
 export interface Batch3Schedule {
- readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'; readonly every:string|number; readonly repeat:boolean;
+ readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'|'dummy-deaths'|'dummy-first-death'|'dummy-gold'; readonly every:string|number; readonly repeat:boolean;
  readonly gifts:readonly AugmentGiftSpec[]; readonly gold?:string; readonly max?:string|number;
  /** round-start only: first entry this many rounds after acquisition (default 1). */
  readonly from?:string|number;
  /** Grant one more 1-star copy of the champion drawn by the acquisition gift at this index instead of `gifts`. */
  readonly copyOf?:number;
+ /** Support Mining: when this schedule fires, the augment's own training dummy is removed from the roster. */
+ readonly retireDummy?:true;
 }
 interface Batch3Content {
  readonly apiName:string; readonly name:string; readonly tier:'silver'|'gold'|'prismatic'; readonly description:string;
@@ -24,8 +26,10 @@ interface Batch3Content {
  readonly flexible?:boolean;
  /** Corrosion: every Time seconds, enemies in their own front two rows lose ResistLoss armor and magic resist. */
  readonly corrosion?:boolean;
+ /** Wandering Trainer: this many random emblems (a source value) are permanently attached to the augment's dummy. */
+ readonly dummyEmblems?:string;
  /** Replay-authenticated combat mechanics (g2-4b-gold-restore BATCH3_REPLAYED_MECHANICS); values come from the source row. */
- readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck';
+ readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck'|'goldForDummies';
 }
 /** classification.json batch 3, group 3a-1: grants scheduled by player-combat count, player-combat results or allied deaths.
  * Every count and reward is the 14.24 zh_cn/en_us source value. Three readings are project conventions (P 2026-10-24,
@@ -33,6 +37,186 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+ "support-mining": {
+  "apiName": "TFT_Augment_SupportMining",
+  "name": "辅助挖矿",
+  "tier": "silver",
+  "description": "获得1个【训练假人】。当它阵亡7次时，获得1个随机辅助装并移除该训练假人。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "NumDeaths": 7.0
+   },
+   "description_en_us": "Gain a Training Dummy. When it dies 7 times, gain a random Support Item and remove the Training Dummy."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "training-dummy"
+   }
+  ],
+  "schedules": [
+   {
+    "counter": "dummy-deaths",
+    "every": "NumDeaths",
+    "repeat": false,
+    "retireDummy": true,
+    "gifts": [
+     {
+      "kind": "random-item",
+      "pool": "support",
+      "count": 1
+     }
+    ]
+   }
+  ]
+ },
+ "support-mining-plus": {
+  "apiName": "TFT_Augment_SupportMiningPlus",
+  "name": "辅助挖矿+",
+  "tier": "silver",
+  "description": "获得1个【训练假人】。当它阵亡4次时，获得1个随机辅助装并移除该训练假人。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "NumDeaths": 4.0
+   },
+   "description_en_us": "Gain a Training Dummy. When it dies 4 times, gain a random Support Item and remove the Training Dummy."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "training-dummy"
+   }
+  ],
+  "schedules": [
+   {
+    "counter": "dummy-deaths",
+    "every": "NumDeaths",
+    "repeat": false,
+    "retireDummy": true,
+    "gifts": [
+     {
+      "kind": "random-item",
+      "pool": "support",
+      "count": 1
+     }
+    ]
+   }
+  ]
+ },
+ "scapegoat": {
+  "apiName": "TFT10_Augment_Scapegoat",
+  "name": "替罪羊",
+  "tier": "gold",
+  "description": "获得1个【训练假人】和4金币。如果这个假人在玩家对战回合中第一个阵亡，就会获得1金币。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": 1.0,
+    "InitialGold": 4.0
+   },
+   "description_en_us": "Gain a Training Dummy and 4 gold. If it is the first to die each player combat, gain 1 gold."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "training-dummy"
+   }
+  ],
+  "schedules": [
+   {
+    "counter": "dummy-first-death",
+    "every": 1,
+    "repeat": true,
+    "gold": "Gold",
+    "gifts": []
+   }
+  ],
+  "gold": "InitialGold"
+ },
+ "wandering-trainer-i": {
+  "apiName": "TFT11_Augment_WanderingTrainerGold",
+  "name": "漫游训练师 I",
+  "tier": "gold",
+  "description": "获得1金币和1个携带着2个永久附着的纹章的【训练假人】。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": 1.0,
+    "NumOfEmblems": 2.0
+   },
+   "description_en_us": "Gain 1 gold and a Training Dummy with 2 permanently attached Emblems."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "training-dummy"
+   }
+  ],
+  "schedules": [],
+  "gold": "Gold",
+  "dummyEmblems": "NumOfEmblems"
+ },
+ "wandering-trainer-ii": {
+  "apiName": "TFT9_Augment_WanderingTrainer",
+  "name": "漫游训练师 II",
+  "tier": "prismatic",
+  "description": "获得6金币和1个携带着3个永久附着的纹章的【训练假人】。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": 6.0,
+    "NumOfEmblems": 3.0
+   },
+   "description_en_us": "Gain 6 gold and a Training Dummy with 3 permanently attached Emblems."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "training-dummy"
+   }
+  ],
+  "schedules": [],
+  "gold": "Gold",
+  "dummyEmblems": "NumOfEmblems"
+ },
+ "gold-for-dummies": {
+  "apiName": "TFT_Augment_GoldForDummies",
+  "name": "假人金币",
+  "tier": "gold",
+  "description": "获得1个【训练假人】。每10秒，所有【训练假人】提供1金币.",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "GoldAmount": 1.0,
+    "GoldDuration": 10.0
+   },
+   "description_en_us": "Gain a Training Dummy. Every 10 seconds, all Training Dummies grant 1 gold."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "training-dummy"
+   }
+  ],
+  "schedules": [
+   {
+    "counter": "dummy-gold",
+    "every": 1,
+    "repeat": true,
+    "gold": "GoldAmount",
+    "gifts": []
+   }
+  ],
+  "combat": "goldForDummies"
+ },
  "bad-luck-protection": {
   "apiName": "TFT_Augment_BadLuckProtection",
   "name": "厄运保护",
@@ -795,6 +979,7 @@ function batch3CombatValues(row:Batch3Content):Record<string,number> {
  switch(row.combat){
   case 'blazingSoul':return {abilityPower:batch3Count(row,'AbilityPower'),attackSpeedBps:bps('AttackSpeed'),periodTicks:batch3Count(row,'TransferDuration')*20};
   case 'badLuck':return {ratioBps:Math.round(row.source.values.ADPerCrit!*10000/row.source.values.CritChancePercent!*100)};
+  case 'goldForDummies':return {periodTicks:batch3Count(row,'GoldDuration')*20};
   case 'nobleSacrifice':return {baseResists:batch3Count(row,'BaseResists'),shareBps:bps('SharePerc')};
   default:return {omnivampBps:bps('Omnivamp')};
  }

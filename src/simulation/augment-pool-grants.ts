@@ -4,7 +4,7 @@ import type { MatchState } from './match-types';
 import type { UnitLootPolicy } from './loot-runtime';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
 import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
-import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold } from './augment-pool-batch3-progress';
+import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold, drainBatch3Dummies, validateBatch3Dummies } from './augment-pool-batch3-progress';
 import { validateFreeRerolls } from './free-rerolls';
 import { validateAcquisitionLevels } from './augment-xp';
 import { drainSettlementGold, validateSettlementGold } from './augment-settlement-gold';
@@ -32,7 +32,7 @@ export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):Matc
    else if(result.reason!=='bench-full')throw new RangeError(`Augment batch1 grant: ${result.reason} (${gift.definitionId})`);
   }
  }while(progressed);
- return drainSettlementGold(drainBatch3Gold(drainBatch2Gold(state)));
+ return drainBatch3Dummies(drainBatch3Gold(drainBatch2Gold(state)));
 }
 /** Anvil options belong to the acquisition receipt; open order and current round do not affect them. */
 export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
@@ -46,6 +46,7 @@ export function validateBatch1Gifts(state:MatchState):void {
  validateAcquisitionLevels(state);
  validateSettlementGold(state);
  validateFreeRerolls(state);
+ validateBatch3Dummies(state);
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
  for(const r of receipts)if(r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')){

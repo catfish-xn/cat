@@ -12,7 +12,7 @@ export function isControlled(unit: S13Unit, tick: number): boolean {
 
 /** Shared eligibility for ordinary movement and trait dashes; cooldown/range are caller-specific. */
 export function canMove(unit: S13Unit, tick: number): boolean {
-  return unit.alive && unit.hp > 0 && !isAttackProxy(unit) && unit.definitionId !== 'g23-forge'
+  return unit.alive && unit.hp > 0 && !isAttackProxy(unit) && unit.definitionId !== 'g23-forge' && unit.definitionId !== 'training-dummy'
     && !g23Bound(unit) && !(isControlled(unit, tick) && !unit.sixCost?.permanentFrenzy)
     && active(unit, tick, 'channel').length === 0 && !g23Anomaly(unit, 'deep-roots');
 }
