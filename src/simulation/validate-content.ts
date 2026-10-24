@@ -84,7 +84,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   rageblade:['attackSpeedBps'],damageAmp:['bps'],extraAttackMana:['amount','backRowOnly'],archangel:['periodTicks','abilityPower'],
   dragonClaw:['periodTicks','healMaxHpBps'],gargoyle:['resistPerEnemy'],gunblade:['selfHealBps','allyHealBps'],
   coronation:['enabled'],g23Tactician:['goldChanceBps','timerTicks'],
-  traitAugmentB2:['enabled','converted'],superstars:['baseBps','per3StarBps'],flexible:['healthPerEmblem'],corrosion:['resistLoss','periodTicks'],blazingSoul:['abilityPower','attackSpeedBps','periodTicks'],nobleSacrifice:['baseResists','shareBps'],wealthyRehab:['omnivampBps'],badLuck:['ratioBps'],goldForDummies:['periodTicks'],
+  traitAugmentB2:['enabled','converted'],superstars:['baseBps','per3StarBps'],flexible:['healthPerEmblem'],corrosion:['resistLoss','periodTicks'],blazingSoul:['abilityPower','attackSpeedBps','periodTicks'],nobleSacrifice:['baseResists','shareBps'],wealthyRehab:['omnivampBps'],badLuck:['ratioBps'],goldForDummies:['periodTicks'],towerDefense:['apRatio1','apRatio2','apRatio3','upgrade1Stage','upgrade1AsBps','upgrade2Stage','upgrade2Bps'],towerDefenseLive:['apRatio','extraBps'],
   s13P3:['enabled','stage'],
   acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp','roundGold'], acquisitionXp:['amount'], acquisitionGold:['amount','stage3Amount','stage4Amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
   investment:['healthPerInterest'],bulkyBuddies:['health','shieldMaxHpBps','durationTicks'],titanic:['adBps','radius'],mageArmor:['apBps'],killStreak:['mana'],

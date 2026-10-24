@@ -46,6 +46,11 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
       const held=state.items.filter(i=>i.location.kind==='unit'&&ids.has(i.location.unitId)&&Object.hasOwn(EMBLEM_ITEMS,i.definitionId)).length;
       return held?[flat('maxHp',held*v.healthPerEmblem)]:[];
     }
+    case 'towerDefense': {
+      if(unit.definitionId!=='tower-dummy')return [];
+      const stage=getMultiplayerRoundByOrdinal(state.round).stage,tier=stage>=v.upgrade2Stage?2:stage>=v.upgrade1Stage?1:0;
+      return [mechanic('towerDefenseLive',{apRatio:[v.apRatio1,v.apRatio2,v.apRatio3][tier],extraBps:tier>=2?v.upgrade2Bps:0}),...(tier>=1?[speed(v.upgrade1AsBps)]:[])];
+    }
     case 'superstars': return [mechanic('damageAmp',{bps:v.baseBps+allies.filter(u=>u.location.kind==='board'&&u.starLevel===3).length*v.per3StarBps})];
     case 'acquisitionXp': return [];
     case 's13P2Augment': return p2AugmentEffects(augment.definitionId,unit,board,state);

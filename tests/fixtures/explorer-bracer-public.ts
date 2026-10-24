@@ -1,3 +1,4 @@
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import { sellUnit, deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState } from '../../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../../src/simulation/seat-mechanics';
 import { publicEquipmentPreparation } from './b8-public-equipment';
@@ -12,7 +13,7 @@ export function startBracerFight(twoHolders = false): MatchState {
   // v19: publicly reroll the shifted gold offer to recover Glass Cannon II;
   // this back-row-only augment keeps the row-4 Lux numeric control unchanged.
   let state = publicEquipmentPreparation(['rod'], { seed: 3151248, augmentPriorities:['glass-cannon-ii'],rerollForAugment:true });
-  for(const u of state.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))state=accepted(sellUnit(state,u.id));
+  for(const u of state.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)&&isSellableUnit(u.definitionId)))state=accepted(sellUnit(state,u.id));
   if(!state.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))state=accepted(grantMechanicUnit(state,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));
   for (const definitionId of twoHolders ? ['lux', 'irelia'] : ['lux'])
     for (let i = 0; i < 8; i++) state = accepted(grantMechanicUnit(state, { receiptId: `${definitionId}-${i}`, source: 'test', definitionId }));

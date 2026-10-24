@@ -47,9 +47,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the thirty-four batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the thirty-five batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['an-exalted-adventure','bad-luck-protection','blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','scapegoat','shimmerscale-essence','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['an-exalted-adventure','bad-luck-protection','blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','scapegoat','shimmerscale-essence','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -440,11 +440,12 @@ it('a real match with a training dummy restores mid-combat exactly and rejects a
   const edit=structuredClone(s) as any,d=edit.combat.units.find((u:any)=>u.definitionId==='training-dummy');d.hp=Math.max(1,d.hp-1);if(d.alive)expect(()=>restoreMatch(serializeMatch(edit))).toThrow();}}
  expect(checked).toBeGreaterThan(0);
 });
-it.each(['wandering-trainer-ii','support-mining','scapegoat','the-golden-egg','an-exalted-adventure'])('%s: a public selection saves and restores through a real round', id=>{
+it.each(['wandering-trainer-ii','support-mining','scapegoat','the-golden-egg','an-exalted-adventure','tower-defense'])('%s: a public selection saves and restores through a real round', id=>{
  let seed=0;while(!firstOffers(seed).includes(id))seed++;
  let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;
  s=accept(selectChoice(s,c.choiceId,c.generation,id) as any).state as MatchState;
  if(AUGMENT_BATCH3[id].gifts.some(g=>g.kind==='unit'&&g.definitionId==='training-dummy'))expect(dummyOf(s)).toBeDefined();
+ if(id==='tower-defense')expect(s.preparation.units.some(u=>u.definitionId==='tower-dummy')).toBe(true);
  expect(restoreMatch(serializeMatch(s))).toEqual(s);
  s=resolveM5Choices(s);if(s.phase==='preparation')s=accept(startMatchCombat(s) as any).state;
  while(s.phase==='combat')s=stepMatch(s).state;
@@ -488,4 +489,28 @@ it('An Exalted Adventure: three different 2-costs and a lesser duplicator now an
  expect(orb(upgraded([defs[0]],'3-2'))).toEqual([]);
  expect(orb(upgraded(['vex',defs[1]],'3-2'))).toEqual([]);
  const o=orb(upgraded([defs[0],defs[2]],'3-2'));expect(o.length).toBeGreaterThan(0);expect(new Set(o.map(g=>g.acquiredRound))).toEqual(new Set([getMultiplayerRoundById('3-3').ordinal]));
+});
+it('Tower Defense: a stationary emblem dummy that shoots 100% AD + 60/90/135% AP; +25% AS from stage 3 and a 50% second arrow from stage 5', ()=>{
+ const tower=owned('tower-defense'),t=tower.preparation.units.find(u=>u.definitionId==='tower-dummy')!;
+ expect(tower.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===t.id)).toHaveLength(1);validateBatch1Gifts(tower);
+ const m=createMatch(42),u=m.preparation.units[0];
+ const shots=(round:number)=>{
+  const units=[{...u,id:'tower',definitionId:'tower-dummy',team:'player' as const,location:{kind:'board' as const,cell:{col:3,row:7}}},
+   // Enemy training dummies never move or hit back, so every shot in the window is the tower's.
+   ...[0,1].map(i=>({...u,id:'e'+i,definitionId:'training-dummy',team:'enemy' as const,location:{kind:'board' as const,cell:{col:2+i,row:3}}}))];
+  const preparation={...m.preparation,units};
+  let c=createCombatWithEvents(preparation,buildStrategySnapshot({...m,round,preparation,augments:[{definitionId:'tower-defense',choiceId:'t',acquiredRound:1}]}),'tower',42).state;
+  const start=c.units.find(x=>x.id==='tower')!;const out:any[]=[];
+  while(c.status==='running'&&c.tick<300){const step=stepCombat(c);c=step.state;for(const e of step.events as any[])if(e.type==='packetDamage'&&e.outcome.context.source.ownerId==='tower')out.push(e.outcome);}
+  return {start,cell:c.units.find(x=>x.id==='tower')!.cell,out,interval:start.attackIntervalTicks,speed:start.attackSpeedBonusBps};
+ };
+ const early=shots(3),mid=shots(14),late=shots(30);
+ expect([early.out[0].raw,mid.out[0].raw,late.out[0].raw]).toEqual([120,150,195]);
+ expect(late.out.filter((o:any)=>o.context.actionSeq===late.out[0].context.actionSeq).map((o:any)=>o.raw)).toEqual([195,97]);
+ expect(early.cell).toEqual({col:3,row:7});expect(early.out.length).toBeGreaterThan(0);
+ expect(new Set(early.out.map((o:any)=>o.context.actionSeq)).size).toBe(early.out.length);
+ const perSeq=(r:typeof late)=>Math.max(...[...r.out.reduce((m:Map<number,number>,o:any)=>m.set(o.context.actionSeq,(m.get(o.context.actionSeq)??0)+1),new Map()).values()]);
+ expect(perSeq(mid)).toBe(1);expect(perSeq(late)).toBe(2);
+ const seqs=(r:typeof late)=>new Set(r.out.map((o:any)=>o.context.actionSeq)).size;
+ expect(seqs(mid)).toBeGreaterThan(seqs(early));
 });

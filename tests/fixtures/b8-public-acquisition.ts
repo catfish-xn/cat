@@ -1,3 +1,4 @@
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import {lootPlan as independentLootPlan} from './orb-combo-oracle.cjs';
 import { shop as independentShop, COST } from './m5/oracle.g2.cjs';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
@@ -56,7 +57,7 @@ export function publicRecursivePurchase(state: MatchState): {
   state: MatchState; slot: number; definitionId: string; survivorId: string; secondId: string; incomingId: string; purchaseIds: string[];
 } {
   const fundingState = state;
-  for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) state = accepted(sellUnit(state, unit.id));
+  for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && isSellableUnit(unit.definitionId))) state = accepted(sellUnit(state, unit.id));
   // Expanded bags make nine fixed Irelias unaffordable. Select the cheapest
   // nine-card paid route using the independent shop oracle; never grant gold,
   // rewrite RNG or edit offers. All actual operations below remain public.

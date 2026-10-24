@@ -65,7 +65,7 @@ function advanceDummyGold(ctx: AbilityContext): void {
   for (const team of ['player', 'enemy'] as const) {
     const m = ctx.units.find(u => u.team === team && u.mechanics?.some(m => m.mechanic === 'goldForDummies'))?.mechanics!.find(m => m.mechanic === 'goldForDummies');
     if (!m || ctx.tick <= 0 || ctx.tick % m.values.periodTicks !== 0) continue;
-    for (const dummy of ctx.units.filter(u => u.team === team && u.definitionId === 'training-dummy' && u.alive && u.hp > 0))
+    for (const dummy of ctx.units.filter(u => u.team === team && (u.definitionId === 'training-dummy' || u.definitionId === 'tower-dummy') && u.alive && u.hp > 0))
       dummy.batch2 = { ...dummy.batch2, dummyGold: (dummy.batch2?.dummyGold ?? 0) + 1 };
   }
 }

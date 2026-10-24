@@ -1,6 +1,7 @@
 import { freezeContent } from './freeze';
 import type { ChoiceDefinition } from '../strategy-types';
 import type { AugmentGiftSpec } from '../augment-gift-plan';
+import { TOWER_DEFENSE_SPELL } from './batch3-summons';
 
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
@@ -29,7 +30,7 @@ interface Batch3Content {
  /** Wandering Trainer: this many random emblems (a source value) are permanently attached to the augment's dummy. */
  readonly dummyEmblems?:string;
  /** Replay-authenticated combat mechanics (g2-4b-gold-restore BATCH3_REPLAYED_MECHANICS); values come from the source row. */
- readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck'|'goldForDummies';
+ readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck'|'goldForDummies'|'towerDefense';
 }
 /** classification.json batch 3, group 3a-1: grants scheduled by player-combat count, player-combat results or allied deaths.
  * Every count and reward is the 14.24 zh_cn/en_us source value. Three readings are project conventions (P 2026-10-24,
@@ -37,6 +38,32 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+ "tower-defense": {
+  "apiName": "TFT_Augment_TowerDefense",
+  "name": "塔防游戏",
+  "tier": "gold",
+  "description": "获得1个装备随机纹章的训练假人，它可向敌人发动远程攻击。训练假人会随着游戏的进行而升级。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": null,
+    "NumOfEmblems": 1.0,
+    "{103ddd87}": 0.4000000059604645,
+    "{fd3dbf9e}": 60.0
+   },
+   "description_en_us": "Gain a Training Dummy equipped with a random emblem that fires ranged attacks at enemies. It upgrades as the game goes on."
+  },
+  "gifts": [
+   {
+    "kind": "unit",
+    "definitionId": "tower-dummy"
+   }
+  ],
+  "schedules": [],
+  "dummyEmblems": "NumOfEmblems",
+  "combat": "towerDefense"
+ },
  "the-golden-egg": {
   "apiName": "TFT6_Augment_TheGoldenEgg",
   "name": "金蛋",
@@ -1048,6 +1075,7 @@ function batch3CombatValues(row:Batch3Content):Record<string,number> {
  switch(row.combat){
   case 'blazingSoul':return {abilityPower:batch3Count(row,'AbilityPower'),attackSpeedBps:bps('AttackSpeed'),periodTicks:batch3Count(row,'TransferDuration')*20};
   case 'badLuck':return {ratioBps:Math.round(row.source.values.ADPerCrit!*10000/row.source.values.CritChancePercent!*100)};
+  case 'towerDefense':{const t=TOWER_DEFENSE_SPELL;return {apRatio1:t.apRatio[0],apRatio2:t.apRatio[1],apRatio3:t.apRatio[2],upgrade1Stage:t.upgrade1Stage,upgrade1AsBps:t.upgrade1AsBps,upgrade2Stage:t.upgrade2Stage,upgrade2Bps:t.upgrade2Bps};}
   case 'goldForDummies':return {periodTicks:batch3Count(row,'GoldDuration')*20};
   case 'nobleSacrifice':return {baseResists:batch3Count(row,'BaseResists'),shareBps:bps('SharePerc')};
   default:return {omnivampBps:bps('Omnivamp')};
