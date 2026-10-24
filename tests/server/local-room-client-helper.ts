@@ -5,27 +5,20 @@
 import { describe, expect, it } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import type { MatchState } from '../../src/simulation/match-types';
-import { LocalRoomClient, type LocalRoomOptions } from '../../src/rendering/online/local-room-client';
+import { LOCAL_ROOM_DEFAULTS, LocalRoomClient, type LocalRoomOptions } from '../../src/rendering/online/local-room-client';
+import { readLocalRoomOptions } from '../../src/rendering/online/mode';
 import { toDisplayMatch } from '../../src/rendering/online/seat-view-adapter';
 import { toSeatPrivateView } from '../../src/server/room/projection';
 import type { ClientListeners, LobbyView, PlayerView } from '../../src/rendering/online/protocol';
 import { assertSharedPoolConservation, type CombatReplay } from '../../src/server-entry';
-import { Lobby, PlaceholderBattleResolver, TwoSidedBattleResolver } from '../../src/server/room';
-import { CAROUSEL_RULES_BINDING } from '../../src/server/room/carousel';
 
-const OPTIONS: Omit<LocalRoomOptions, 'clock'> = { seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '测试', faultAtRound: null, pvpMode: 'two-sided' };
+const OPTIONS: Omit<LocalRoomOptions, 'clock'> = { seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '测试', faultAtRound: null, pvpMode: 'two-sided', carousel: false };
 
 function harness(overrides: Partial<LocalRoomOptions> = {}, { carousel = false } = {}) {
   const clock = new ManualClock();
-  const client = new LocalRoomClient({ ...OPTIONS, clock, ...overrides });
-  // The browser's local room runs without the carousel; the network server turns the rules' carousel on (server/main.ts).
-  // To cover that path through this client, swap in a lobby built the way the client builds its own, plus the carousel.
-  // The swapped lobby ignores the client's own wiring: pvpMode is fixed to two-sided and faultAtRound/poolCapacities are dropped.
-  if (carousel) {
-    const options = { ...OPTIONS, ...overrides };
-    (client as unknown as { lobby: Lobby }).lobby = new Lobby({ clock, resolver: new TwoSidedBattleResolver(new PlaceholderBattleResolver()), seed: options.seed,
-      timings: { preparationMs: options.preparationMs, choiceMs: options.choiceMs, settlementMs: options.settlementMs }, roomId: 'local-room', pvpMode: 'two-sided', carousel: CAROUSEL_RULES_BINDING });
-  }
+  // The browser's local room opens the rules' carousel like the network server (server/main.ts); most cases here keep it
+  // off (OPTIONS) so their rounds stay the pre-P7 ones, and `carousel` turns it on through the client's own option.
+  const client = new LocalRoomClient({ ...OPTIONS, clock, ...overrides, ...(carousel ? { carousel: true } : {}) });
   const log = { lobby: [] as LobbyView[], view: [] as PlayerView[], state: [] as MatchState[], replay: [] as CombatReplay[] };
   const listeners: ClientListeners = { lobby: v => log.lobby.push(v), view: v => log.view.push(v),
     state: s => log.state.push(s), replay: r => log.replay.push(r) };
@@ -55,6 +48,11 @@ describe('LocalRoomClient', () => {
     expect(view.seats.find(seat => seat.seatId === view.mySeatId)).toMatchObject({ kind: 'human', name: '测试', hp: 100 });
     expect(log.state).toHaveLength(1); expect(log.state[0]!.phase).toBe('preparation');
     expect(view.fault).toBeNull();
+  });
+  if (mode === 'fast') it('opens the shared carousel by default, like the network server; ?carousel=0 turns it off', () => {
+    expect(LOCAL_ROOM_DEFAULTS.carousel).toBe(true);
+    expect(readLocalRoomOptions('?mode=online').carousel).toBe(true);
+    expect(readLocalRoomOptions('?mode=online&carousel=0').carousel).toBe(false);
   });
   if (mode === 'fast') it('forwards commands to the room unchanged and keeps a refusal free of side effects', async () => {
     const { client, log, flush } = harness();

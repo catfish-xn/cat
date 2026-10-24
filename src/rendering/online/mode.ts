@@ -26,7 +26,7 @@ function poolCapsParam(raw: string | null): Readonly<Record<string, number>> | n
   const valid = entries.every(([id, count]) => id !== undefined && SHOP_CATALOG.includes(id) && /^\d+$/.test(count ?? ''));
   return valid ? Object.fromEntries(entries.map(([id, count]) => [id!, Number(count)])) : null;
 }
-/** URL parameters `prep/choice/settle/seed/name` (seconds) plus the debug-only `faultAt` round, `poolCaps` and `pvp=placeholder` (B1 test path; default is the real two-sided PvP). */
+/** URL parameters `prep/choice/settle/seed/name` (seconds) plus the debug-only `faultAt` round, `poolCaps`, `carousel=0` and `pvp=placeholder` (B1 test path; default is the real two-sided PvP). */
 export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions {
   const params = new URLSearchParams(search);
   const num = (key: string, fallback: number) => numberParam(params, key, fallback);
@@ -35,7 +35,7 @@ export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions
   return { seed: num('seed', LOCAL_ROOM_DEFAULTS.seed), preparationMs: Number.isFinite(prep) ? prep * 1000 : LOCAL_ROOM_DEFAULTS.preparationMs,
     choiceMs: num('choice', LOCAL_ROOM_DEFAULTS.choiceMs / 1000) * 1000, settlementMs: num('settle', LOCAL_ROOM_DEFAULTS.settlementMs / 1000) * 1000,
     myName: params.get('name') ?? LOCAL_ROOM_DEFAULTS.myName, faultAtRound: Number.isInteger(faultAt) && faultAt > 0 ? faultAt : null,
-    pvpMode: params.get('pvp') === 'placeholder' ? 'placeholder' : LOCAL_ROOM_DEFAULTS.pvpMode, poolCapacities: poolCapsParam(params.get('poolCaps')) };
+    pvpMode: params.get('pvp') === 'placeholder' ? 'placeholder' : LOCAL_ROOM_DEFAULTS.pvpMode, poolCapacities: poolCapsParam(params.get('poolCaps')), carousel: params.get('carousel') !== '0' };
 }
 /** Server address: `?ws=ws://127.0.0.1:8787` when given, else `ws(s)://<this host>/ws` (the dev server proxies it). */
 export function readWsOptions(search = currentSearch()): WsClientOptions {
