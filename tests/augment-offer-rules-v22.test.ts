@@ -44,7 +44,8 @@ describe('v22 content: data-driven offer rules', () => {
     expect(AUGMENT_OFFER_RULES.associatedTraits.TFT13_TeamupAugment_Sisters).toEqual(['ambusher', 'enforcer', 'pit-fighter', 'rebel']);
     expect(AUGMENT_OFFER_RULES.associatedTraits.TFT13_Augment_CabalCrest).toEqual(['black-rose']);
     // Batch 2 activates Family and Chembaron global offer rules.
-    expect(externallyBlockableAugments()).toEqual(['crimson-pact','welcome-to-the-playground']);
+    // Batch 3 adds All Out (PrimeCarry), the cross-player partner of Family.
+    expect(externallyBlockableAugments()).toEqual(['all-out','crimson-pact','welcome-to-the-playground']);
   });
 });
 
@@ -61,7 +62,7 @@ describe('v22 trait filter: 3-2 and 4-2 tailored, 2-1 not', () => {
       const enforcer = augmentCandidates('gold', [], [], null, filter(node, ['enforcer']));
       expect(TEAMUPS.filter(id => enforcer.includes(id)).sort()).toEqual(['mentorship', 'reunion', 'sisters']);
       // Untouched augments without AssociatedTraits are never filtered.
-      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - GOLD_TEAMUPS.length - 22 - 16); // 22 new trait-linked crests
+      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - GOLD_TEAMUPS.length - 22 - 16 - 3); // 22 new trait-linked crests; batch 3's three gold hero augments
     }
     const untailored = augmentCandidates('gold', [], [], null, filter('2-1'));
     for (const id of GOLD_TEAMUPS) expect(untailored).toContain(id);

@@ -42,7 +42,8 @@ describe('v22 node bans and external rules (re-mapped pool)', () => {
   it('Welcome to the Playground / Gloves Off: another live player owning one blocks the other, not itself', () => {
     const base = reachRound('2-1', false);
     const a = seat(base, 'A', { augments: own('reunion') }), b = seat(base, 'B');
-    expect(externalAugmentBlocks('B', [a, b])).toEqual(['geniuses']);
+    // v23 batch 3: All Out is the real PrimeCarry, so it shares the remapped apiName with Geniuses.
+    expect(externalAugmentBlocks('B', [a, b])).toEqual(['all-out', 'geniuses']);
     expect(externalAugmentBlocks('A', [a, b])).toEqual([]);
     expect(externalAugmentBlocks('B', [seat(base, 'A', { augments: own('reunion') }, 'eliminated'), b])).toEqual([]);
     expect(augmentCandidates('gold', [], [], null, filter('2-1', [], ['geniuses']))).not.toContain('geniuses');
@@ -59,7 +60,7 @@ describe('v22 node bans and external rules (re-mapped pool)', () => {
   });
 
   it('a reroll records its external blocks; restore replays them and rejects blocks no rule can produce', () => {
-    expect(externallyBlockableAugments()).toEqual(['crimson-pact','geniuses','menaces','reunion','welcome-to-the-playground']);
+    expect(externallyBlockableAugments()).toEqual(['all-out','crimson-pact','geniuses','menaces','reunion','welcome-to-the-playground']);
     let state: MatchState | null = null;
     for (let seed = 1; seed < 300 && !state; seed++) {
       const s = reachRound('2-1', false, seed);
