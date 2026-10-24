@@ -1,5 +1,11 @@
 > 当前规则纪元：**v22-online-rules**（`rulesVersion s13-g2-3-v22-online-rules`，基线 multiplayer 8715a2c1，PR #435）。下列标“已随 v22 录制”的条目都已进入该纪元。
 
+## 2026-10-25 技能 ignite 的历史状态身份与恢复认证（P）
+
+**P-IGNITE-RESTORE（P，2026-10-25，用户授权按推荐决定）**：保留 Powder／Rumble 的既有 ignite 输出：`combat-g2.ts` 的 `ignite` 顺序执行 `burn(ticks)` 两个声明，burn 与 wound 共用同一 ability source/effect key，显示锚点也共用。它与通用 `validateStatusGroups` 的跨组 key 唯一性假设不一致；Blistering Strikes 自身的 burn/wound effectIndex 不同，不是错误来源。为遵守本次“不改玩法、数值、存档格式、合法回放输出”的约束，不改写历史身份或放宽通用状态校验；由已经认证的开战 strategy 中的 Powder／Rumble 启用已有的完整战斗重放认证，仅在可信输入重建的整个 CombatState 与候选 canonical 内容完全相同时恢复。候选自己声明技能或重复 key 不能开启例外；任何贡献、显示投影、周期任务或账本篡改仍会失败。复用输入绑定、与候选运行态隔离的重放缓存。该决定只调整恢复认证路径，不改变规则身份或内容 digest。
+
+回归：`tests/blistering-restore.test.ts`。当前池 seed 234 公开选中 Blistering Strikes 并购买 Powder，seed 16／648 使用实际提供的强化、原商店的 Powder（648 正常付费购买三张合星后前排布阵），全部必须真实走到共享 key 的 burn/wound；另覆盖 Rumble 与双入口篡改拒绝。XP 提交 `206dbbda` 的池不同，Blistering+Powder 对照种子为 790；16／648 同样保留，不能用换种子掩盖故障。
+
 ## 2026-10-24 安蓓萨拳击眩晕、蔚冲击波击飞时长（用户批准）
 
 用户 10-24 批准“改”，依据 S13 第三方数据表（`/home/aiapps/workspace/augment-crossversion-research-2026-10-24/` 及调研第 4 节）：
