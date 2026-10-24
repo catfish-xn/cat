@@ -5,8 +5,12 @@ import type { AugmentGiftSpec } from '../augment-gift-plan';
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
 export interface Batch3Schedule {
- readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'; readonly every:string|number; readonly repeat:boolean;
- readonly gifts:readonly AugmentGiftSpec[]; readonly gold?:string; readonly max?:string;
+ readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'; readonly every:string|number; readonly repeat:boolean;
+ readonly gifts:readonly AugmentGiftSpec[]; readonly gold?:string; readonly max?:string|number;
+ /** round-start only: first entry this many rounds after acquisition (default 1). */
+ readonly from?:string|number;
+ /** Grant one more 1-star copy of the champion drawn by the acquisition gift at this index instead of `gifts`. */
+ readonly copyOf?:number;
 }
 interface Batch3Content {
  readonly apiName:string; readonly name:string; readonly tier:'silver'|'gold'|'prismatic'; readonly description:string;
@@ -16,6 +20,8 @@ interface Batch3Content {
  readonly freeRerolls?:{readonly now?:string;readonly perRound?:number};
  /** Superstars: team damage amp of BaseBonusDamage + BonusDamagePer3Star per 3-star ally on the board. */
  readonly superstars?:boolean; readonly gold?:string;
+ /** Flexible: every board ally gains HPPerEmblem for each emblem held across the board (P 2026-10-24). */
+ readonly flexible?:boolean;
 }
 /** classification.json batch 3, group 3a-1: grants scheduled by player-combat count, player-combat results or allied deaths.
  * Every count and reward is the 14.24 zh_cn/en_us source value. Three readings are project conventions (P 2026-10-24,
@@ -23,6 +29,152 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+ "building-a-collection-iii": {
+  "apiName": "TFT9_Augment_BuildingACollectionPlusPlus",
+  "name": "珍藏财宝 III",
+  "tier": "prismatic",
+  "description": "接下来的6个回合(包括这个回合)在开始时都会获得一件随机的基础装备。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": null,
+    "roundsofbonusitems": 6.0
+   },
+   "description_en_us": "Gain a random item component at the start of the next 6 rounds (including this round)."
+  },
+  "gifts": [
+   {
+    "kind": "random-item",
+    "pool": "component",
+    "count": 1
+   }
+  ],
+  "schedules": [
+   {
+    "counter": "round-start",
+    "every": 1,
+    "repeat": true,
+    "max": 5,
+    "gifts": [
+     {
+      "kind": "random-item",
+      "pool": "component",
+      "count": 1
+     }
+    ]
+   }
+  ]
+ },
+ "worth-the-wait": {
+  "apiName": "TFT_Augment_WorthTheWaitGold",
+  "name": "值得等待",
+  "tier": "gold",
+  "description": "获得1个随机的2星1费弈子。在2个回合后，每回合开始时都会获得该弈子的又一个1星版本，持续至本局游戏结束。\n\n弈子：〔对局动态值〕",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "AdditionalCopies": 99.0,
+    "Delay": 2.0,
+    "UnitTier": 1.0,
+    "{3a9ff59a}": 3.0
+   },
+   "description_en_us": "Gain a random two-star 1-cost champion. After 2 rounds, gain another copy of them at the start of each round for the rest of the game.\n\nChampion: 〔对局动态值〕"
+  },
+  "gifts": [
+   {
+    "kind": "random-unit",
+    "cost": 1,
+    "count": 1,
+    "starLevel": 2
+   }
+  ],
+  "schedules": [
+   {
+    "counter": "round-start",
+    "every": 1,
+    "repeat": true,
+    "from": "Delay",
+    "max": "AdditionalCopies",
+    "copyOf": 0,
+    "gifts": []
+   }
+  ]
+ },
+ "worth-the-wait-ii": {
+  "apiName": "TFT_Augment_WorthTheWaitPrismatic",
+  "name": "值得等待 II",
+  "tier": "prismatic",
+  "description": "获得1个随机的2费弈子。每回合开始时都会获得该弈子的又一个1星版本，持续至本局游戏结束。\n\n弈子：〔对局动态值〕",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "AdditionalCopies": 99.0,
+    "Delay": null,
+    "UnitTier": 2.0,
+    "{3a9ff59a}": 1.0
+   },
+   "description_en_us": "Gain a random 2-cost champion. Gain another copy of them at the start of each round for the rest of the game.\n\nChampion: 〔对局动态值〕"
+  },
+  "gifts": [
+   {
+    "kind": "random-unit",
+    "cost": 2,
+    "count": 1
+   }
+  ],
+  "schedules": [
+   {
+    "counter": "round-start",
+    "every": 1,
+    "repeat": true,
+    "max": "AdditionalCopies",
+    "copyOf": 0,
+    "gifts": []
+   }
+  ]
+ },
+ "flexible": {
+  "apiName": "TFT_Augment_Flexible",
+  "name": "灵活摇摆",
+  "tier": "prismatic",
+  "description": "获得1个随机纹章。在每个阶段开始时，获得一个随机纹章。每携带一个纹章，你的弈子们就会获得40生命值。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "BonusStages": 99.0,
+    "HPPerEmblem": 40.0,
+    "StartingEmblems": 1.0
+   },
+   "description_en_us": "Gain 1 random emblem. At the start of every Stage, gain a random emblem. Your team gains 40 Health for each emblem they are holding."
+  },
+  "gifts": [
+   {
+    "kind": "random-item",
+    "pool": "emblem",
+    "count": 1
+   }
+  ],
+  "schedules": [
+   {
+    "counter": "stage-start",
+    "every": 1,
+    "repeat": true,
+    "max": "BonusStages",
+    "gifts": [
+     {
+      "kind": "random-item",
+      "pool": "emblem",
+      "count": 1
+     }
+    ]
+   }
+  ],
+  "flexible": true
+ },
  "rolling-for-days-i": {
   "apiName": "TFT9_Augment_Commander_RollingForDays",
   "name": "D个痛快！ I",
@@ -483,6 +635,7 @@ export function batch3Count(row:Batch3Content,key:string|number):number {
 export const AUGMENT_BATCH3_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>>=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH3).map(([id,row]):[string,ChoiceDefinition]=>[id,{
  id,name:row.name,description:row.description,effects:[{kind:'mechanic',mechanic:'acquisitionBundle',values:{enabled:1}},
   ...(row.gold?[{kind:'mechanic' as const,mechanic:'acquisitionGold',values:{amount:batch3Count(row,row.gold)}}]:[]),
+  ...(row.flexible?[{kind:'mechanic' as const,mechanic:'flexible',values:{healthPerEmblem:batch3Count(row,'HPPerEmblem')}}]:[]),
   ...(row.superstars?[{kind:'mechanic' as const,mechanic:'superstars',values:{baseBps:Math.round(row.source.values.BaseBonusDamage!*10000),per3StarBps:Math.round(row.source.values.BonusDamagePer3Star!*10000)}}]:[])],
 }])));
 export const AUGMENT_BATCH3_TIERS=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH3).map(([id,row])=>[id,row.tier])));

@@ -1,3 +1,4 @@
+import { EMBLEM_ITEMS } from './content/emblems';
 import { TACTICIAN_SIZE_ITEMS } from './content/tactician-items';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
 import { scrapConversions, g22Equipment } from './strategy-g2-2';
@@ -39,6 +40,11 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
       const equipment=g22Equipment(state),converted=augment.definitionId==='scrap-recycling'?scrapConversions(board,traits,equipment,ITEM_DEFINITIONS):null;
       const marker=converted?{...effect,values:{enabled:1,converted:[...converted.keys()].filter(id=>equipment.some(e=>e.id===id&&e.unitId===unit.id)).length}}:effect;
       return [marker,...(augment.definitionId==='enforce'?[{kind:'statPercentBps' as const,stat:'attackDamage' as const,bps:Math.round(spec.source.values.BonusAD!*10000)}]:[]),...(augment.definitionId==='sentinel-slam'?(['armor','magicResist'] as const).map(stat=>({kind:'statPercentBps' as const,stat,bps:Math.round(spec.source.values.PercGain!*10000)})):[])];
+    }
+    case 'flexible': {
+      const ids=new Set(allies.filter(u=>u.location.kind==='board').map(u=>u.id));
+      const held=state.items.filter(i=>i.location.kind==='unit'&&ids.has(i.location.unitId)&&Object.hasOwn(EMBLEM_ITEMS,i.definitionId)).length;
+      return held?[flat('maxHp',held*v.healthPerEmblem)]:[];
     }
     case 'superstars': return [mechanic('damageAmp',{bps:v.baseBps+allies.filter(u=>u.location.kind==='board'&&u.starLevel===3).length*v.per3StarBps})];
     case 'acquisitionXp': return [];

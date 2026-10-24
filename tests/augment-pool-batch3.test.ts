@@ -11,7 +11,10 @@ import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import type { MatchState } from '../src/simulation/match-types';
-import { rerollShop, selectChoice } from '../src/simulation/match';
+import { rerollShop, selectChoice, startMatchCombat, nextRound } from '../src/simulation/match';
+import { drainBatch3RoundEntry } from '../src/simulation/augment-pool-batch3-progress';
+import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
+import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateSharedShop, rerollSharedShop } from '../src/server-entry';
@@ -19,7 +22,7 @@ import { freeRerollsAvailable, freeRerollsGranted, validateFreeRerolls, FREE_RER
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accept, room } from './tp-helpers';
-import { reachRound } from './match-helpers';
+import { reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 
 type Battle = readonly ['pvp'|'pve', G23BattleFacts['result']];
@@ -37,9 +40,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the fifteen batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the nineteen batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','latent-forge','living-forge','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','what-doesnt-kill-you']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['building-a-collection-iii','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','latent-forge','living-forge','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -163,5 +166,43 @@ it('Superstars I/II give 5%/7% team damage amp plus 2%/5% per 3-star ally on the
   const snap=buildStrategySnapshot({...base,preparation:{...base.preparation,units:board(stars)},augments:[{definitionId:id,choiceId:'t',acquiredRound:1}]});
   const amp=snap.units[0].mechanics?.filter(m=>m.mechanic==='damageAmp'&&m.source.definitionId===id).reduce((n,m)=>n+m.values.bps,0);
   expect(amp).toBe(b+p*stars.filter(x=>x===3).length);
+ }
+});
+
+const at=(definitionId:string,acquiredRound:number,round:number):MatchState=>({...createMatch(42),round,augments:[{definitionId,choiceId:'test',acquiredRound}]});
+it('Building a Collection III: one component now and at each of the next five round entries, then none', ()=>{
+ expect(batch3RewardPlan(at('building-a-collection-iii',5,5))).toEqual([]);
+ expect(batch3RewardPlan(at('building-a-collection-iii',5,20)).map(g=>[g.kind,g.acquiredRound])).toEqual([6,7,8,9,10].map(r=>['item',r]));
+ expect(batch1GiftPlan(at('building-a-collection-iii',5,20)).filter(g=>g.kind==='item')).toHaveLength(6);
+});
+it('Worth the Wait: a 2-star 1-cost now, 1-star copies of that champion from the second round entry on; II copies its 2-cost from the next entry', ()=>{
+ const gold=batch1GiftPlan(at('worth-the-wait',5,9)),first=gold.find(g=>g.acquiredRound===5)!;
+ expect(first).toMatchObject({kind:'unit',starLevel:2});
+ expect(gold.filter(g=>g.acquiredRound>5).map(g=>[g.definitionId,g.acquiredRound,g.starLevel])).toEqual([7,8,9].map(r=>[first.definitionId,r,undefined]));
+ const ii=batch1GiftPlan(at('worth-the-wait-ii',5,7)),base=ii.find(g=>g.acquiredRound===5)!;
+ expect(ii.filter(g=>g.acquiredRound>5).map(g=>[g.definitionId,g.acquiredRound])).toEqual([[base.definitionId,6],[base.definitionId,7]]);
+});
+it('Flexible: an emblem now and one at each later stage start; board allies gain 40 HP per emblem held on the board', ()=>{
+ const starts=Array.from({length:30},(_,i)=>i+1).filter(r=>r>3&&getMultiplayerRoundByOrdinal(r).subround===1);
+ expect(batch3RewardPlan(at('flexible',3,30)).map(g=>g.acquiredRound)).toEqual(starts);
+ expect(batch3RewardPlan(at('flexible',3,30)).every(g=>Object.hasOwn(EMBLEM_ITEMS,g.definitionId))).toBe(true);
+ const base=createMatch(42),unit=base.preparation.units[0],emblem=Object.keys(EMBLEM_ITEMS)[0];
+ const units=[0,1].map(i=>({...unit,id:'p'+i,location:{kind:'board' as const,cell:{col:i,row:4}}}));
+ const items=[...base.items,{id:'e1',definitionId:emblem,location:{kind:'unit',unitId:'p0',slot:0}},{id:'e2',definitionId:emblem,location:{kind:'unit',unitId:'p0',slot:1}}] as MatchState['items'];
+ const input={...base,preparation:{...base.preparation,units},items};
+ const zero=buildStrategySnapshot({...input,augments:[]}),snap=buildStrategySnapshot({...input,augments:[{definitionId:'flexible',choiceId:'t',acquiredRound:1}]});
+ for(const i of [0,1])expect(snap.units[i].stats.health-zero.units[i].stats.health).toBe(80);
+});
+it('round-start gifts arrive through real round entries, once, with receipts the restore accepts', ()=>{
+ let seed=0;while(!firstOffers(seed).includes('building-a-collection-iii'))seed++;
+ let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;expect(c.offers).toContain('building-a-collection-iii');
+ s=accept(selectChoice(s,c.choiceId,c.generation,'building-a-collection-iii') as any).state as MatchState;
+ const acquired=s.round,count=()=>s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch1'&&r.kind==='item').length;
+ expect(count()).toBe(1);
+ for(let n=0;n<3;n++){
+  s=resolveM5Choices(s);if(s.phase==='preparation')s=accept(startMatchCombat(emptyBoard(s)) as any).state;
+  s=resolveM5Choices(s);s=accept(nextRound(s,s.round) as any).state;
+  expect(count()).toBe(Math.min(6,1+s.round-acquired));expect(drainBatch3RoundEntry(s)).toBe(s);
+  validateBatch1Gifts(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  }
 });

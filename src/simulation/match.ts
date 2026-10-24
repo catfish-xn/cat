@@ -10,6 +10,7 @@ import { enterOpeningCrabs } from './opening-crabs';
 import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition';
 import { drainSetup } from './setup-work';
 import { spendFreeReroll } from './free-rerolls';
+import { drainBatch3RoundEntry } from './augment-pool-batch3-progress';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
@@ -571,7 +572,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const openingEvents: MatchEvent[] = [];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
-  prepared=applied.state;openingEvents.push(...applied.events);
+  prepared=drainBatch3RoundEntry(applied.state);openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,prepared));
   if (prepared.phase === 'gameOver') {
     const terminal = stampMatchEvents(prepared, carousel.events);
     return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
@@ -609,7 +610,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
-    const accepted=acceptEquipment(applied.state,[]);
+    const drained=drainBatch3RoundEntry(applied.state),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
