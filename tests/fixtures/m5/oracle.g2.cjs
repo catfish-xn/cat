@@ -222,7 +222,8 @@ function settlement(before,combat,goldBefore=before.gold+ungrantedLootGold(befor
  const survivingEnemyCount=combat?.units.filter(u=>u.team==='enemy'&&u.alive).length??0;
  let streakAfter=before.streak;
  if(roundKind!=='supply'){const kind=result==='playerWin'?'win':'loss';streakAfter={kind,count:before.streak.kind===kind?before.streak.count+1:1};}
- const base=stage===1?{2:2,3:3,4:4}[sub]:5 /* v22 10-23: next-entry 2/3/4G */,naturalXp=2 /* T11 signed opening: 2/2/2; opening XP unchanged; high-level XP68 is user custom 2026-10-22 */;
+ const roundGold=before.augments.filter(a=>['raining-gold','raining-gold-plus'].includes(a.definitionId)).length /* v23: RoundGold 1 each (14.24 records 157/158) */;
+ const base=stage===1?{2:2,3:3,4:4}[sub]:5+roundGold /* v22 10-23: next-entry 2/3/4G */,naturalXp=2 /* T11 signed opening: 2/2/2; opening XP unchanged; high-level XP68 is user custom 2026-10-22 */;
  const win=roundKind==='pvp'&&result==='playerWin'?1:0,interestBasis=goldBefore+win;
  const owned=new Set(before.augments.map(a=>a.definitionId));
  const cap=owned.has('going-long')?0:owned.has('hedge-fund')?10:owned.has('investment-strategy-ii')?7:5;
@@ -438,7 +439,7 @@ class Ledger {
   else if(command?.type==='sell'){const unit=before.preparation.units.find(u=>u.id===command.id),cost=COST[unit.definitionId],copies=3**(unit.starLevel-1),value=SELL[cost][unit.starLevel-1];this.gold+=value;costs.sales+=value;costs.saleLoss+=cost*copies-value;this.cards-=copies;units.delete(unit.id);}
   for(const [type,cost,key] of [['reroll',2,'rerolls'],['buyXp',4,'xp'],['anomalyReroll',1,'anomaly']])if(command?.type===type){this.gold-=cost;costs[key]+=cost;}
   for(const receipt of lootReceipts){if(receipt.payload.kind==='gold'){this.gold+=receipt.payload.quantity;costs.rewards+=receipt.payload.quantity;}
-   if(receipt.payload.kind==='unit'||receipt.payload.kind==='forge'){assert.deepEqual(receipt.grantedUnitIds,[`unit-${serial}`],'true loot candidate serial');units.set(`unit-${serial++}`,{definitionId:receipt.payload.definitionId,starLevel:1});this.cards++;}}
+   if(receipt.payload.kind==='unit'||receipt.payload.kind==='forge'){assert.deepEqual(receipt.grantedUnitIds,[`unit-${serial}`],'true loot candidate serial');units.set(`unit-${serial++}`,{definitionId:receipt.payload.definitionId,starLevel:receipt.payload.starLevel??1});this.cards+=3**((receipt.payload.starLevel??1)-1);}}
   const appendedMechanics=appended(before.seatMechanics?.receipts??[],after.seatMechanics?.receipts??[],'receiptId','mechanic gifts');
   const mechanicGifts=appendedMechanics.filter(r=>r.source==='s13-augments-p2'||r.source==='d11-fill'&&r.kind==='unit'),giftPlan=p2Gifts(after);
   for(const r of appendedMechanics.filter(r=>r.source==='d11-fill'&&r.kind==='gold')){
@@ -450,6 +451,8 @@ class Ledger {
   // G2-3/G2-4 battle payouts (item gold rolls, Conqueror chest gold, High Roller, Tactician's Crown) pay after the settlement record;
   // their amounts are audited by g2-4b-collector and the G2-3 conquest suites.
   for(const r of appendedMechanics.filter(r=>['g24-item-gold','conqueror-chest','high-roller','tacticians-crown'].includes(r.source)&&r.kind==='gold')){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
+  // G2-3 armory purchases (Junker King upgrades) pay their price; the price table is audited by the G2-3 junker suites.
+  for(const r of appendedMechanics.filter(r=>r.kind==='choice'&&Number.isSafeInteger(r.price)&&r.price>0)){this.gold-=r.price;costs.purchases+=r.price;}
   // v23 augment pool batches and G2-3 Conqueror chests book their grants the same way; their values are audited by
   // the augment-pool and G2-3 conquest suites.
   for(const r of appendedMechanics.filter(r=>r.source.startsWith('opening-')||r.source.startsWith('augment-pool')||r.source==='conqueror')){
