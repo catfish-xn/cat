@@ -14,6 +14,7 @@ import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { deriveTraits } from '../simulation/trait-snapshot';
 import { getUnitStats, getXpToNextLevel, getShopOdds, needsAnomalyRecruitment } from '../simulation/match';
+import { anomalyCandidates } from './anomaly-targets';
 import type { MatchEvent, MatchState } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
 import type { CombatOrigin } from '../simulation/combat-types';
@@ -961,7 +962,7 @@ export class StrategyPanel {
     // Consume the rest of the confirming pointer burst before exposing the
     // board below. Keyboard D/F/E still commit synchronously in preparation.
     this.modal.hidden = false; this.modal.replaceChildren();
-    this.modal.classList.add('dismissal-shield'); this.modal.removeAttribute('aria-hidden');
+    this.modal.classList.add('dismissal-shield'); this.modal.classList.remove('anomaly-overlay'); this.modal.removeAttribute('aria-hidden');
     this.modal.focus({ preventScroll: true });
     this.modal.dataset.debug = 'choice-dismissal-shield';
     this.dismissalTimer = window.setTimeout(() => {
@@ -982,12 +983,16 @@ export class StrategyPanel {
       return;
     }
     this.clearChoiceDismissal();
-    const token = `${choice.choiceId}:${choice.generation}:${choice.step}`;
-    if (token === this.choiceToken) return;
+    const anomaly = choice.kind === 'anomaly' && readLootView(state).pendingChoice?.choiceId !== choice.choiceId;
+    // Anomaly target step: the unit picked on the board (or in the list) is part of what the panel shows.
+    const token = `${choice.choiceId}:${choice.generation}:${choice.step}:${anomaly && choice.step === 'target' ? this.actions.selectedUnit() : ''}`;
+    if (token === this.choiceToken) { if (anomaly) this.syncAnomalyGold(state); return; }
     this.dropChoiceReopen();
     this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
     this.modal.inert = document.body.dataset.helpOpen === 'true';
-    const card = element('div', '', 'choice-dialog');
+    this.modal.classList.toggle('anomaly-overlay', anomaly); this.modal.setAttribute('aria-modal', String(!anomaly));
+    const card = element('div', '', anomaly ? 'choice-dialog anomaly-panel' : 'choice-dialog');
+    if (anomaly) { this.anomalyPanel(card, state, choice); this.modal.append(card); return; }
     // The domain names the loot pick (LootView.pendingChoice, approved addendum); supply/augment/anomaly keep their wording.
     const pendingLoot = readLootView(state).pendingChoice, loot = pendingLoot?.choiceId === choice.choiceId ? pendingLoot : null;
     card.dataset.choiceSource = loot ? 'loot' : choice.kind;
@@ -996,7 +1001,7 @@ export class StrategyPanel {
     const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
     // G2-3 prep: a kind this panel has no dedicated wording for renders generically (name + verbatim description) instead of throwing.
     const generic = !isKnownChoiceKind(choice.kind), extras = withMasterworkOffers(readChoiceExtras(choice), state, choice);
-    const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效` : '异常 · 单位永久进化';
+    const title = loot ? '野怪奖励 · 选择一件组件' : generic ? extras.title ?? '选择' : choice.kind === 'component' ? '补给 · 选择一件组件' : `选择强化${choice.augmentTier ? ` · ${AUGMENT_TIER_TEXT[choice.augmentTier]}` : ''} · 本局永久生效`;
     card.append(element('h2', title));
     // Online the shop and XP stay open through the choice window (contract §15.1); offline the choice blocks every other command.
     const blocking = isOnline() ? `选择期间仍可搜牌和购买经验：收起弹窗即可操作（D 刷新、F 购买经验）。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。';
@@ -1008,60 +1013,107 @@ export class StrategyPanel {
     const openingForges = (choice as { payload?: { source?: unknown } }).payload?.source === 'opening-encounter'
       ? forgeProgressText((state as { openingForgeProgress?: OpeningForgeProgressDisplay | null }).openingForgeProgress) : null;
     if (openingForges) { const line = element('p', openingForges, 'choice-forge-count'); line.dataset.debug = 'opening:forges-left'; card.append(line); }
-    if (choice.step === 'target') {
-      card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
-      const targets = element('div', '', 'choice-targets');
-      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
-      card.append(targets);
-      if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
-    } else {
-      if (choice.kind === 'anomaly') {
-        const target = state.preparation.units.find(unit => unit.id === choice.targetId);
-        card.append(element('p', `已锁定 ${target ? displayUnitName(target.definitionId) : ''} · 余额 ${state.gold} 金币 · 已刷新 ${choice.rerollCount} 次`, 'anomaly-target-lock'));
+    const offers = element('div', '', 'choice-cards');
+    // v15: one reroll button under each augment card, enabled by that card's own rerollAvailable (never the total left).
+    const rerollAugment = this.actions.rerollAugment, augmentOptions = choice.kind === 'augment' && rerollAugment ? readAugmentOptions(state) : [];
+    for (const [index, id] of choice.offers.entries()) {
+      if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
+      const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : AUGMENT_DEFINITIONS)[id];
+      const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : augmentEffectText(id);
+      // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
+      const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
+        : [itemDisplayName(id), 'description' in definition ? definition.description : '领取后可合成或装备', effects].filter(Boolean).join('\n');
+      const button = this.button(`choice:${id}`, label, () => {
+        this.actions.choose(choice.choiceId, choice.generation, id);
+        const after = this.actions.state().pendingChoice;
+        if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
+      });
+      if (choice.kind === 'augment') {
+        // Name and effect as their own blocks (the original card sets the name large); the text content stays the label.
+        const [name = '', ...rest] = label.split('\n');
+        button.replaceChildren(element('strong', name, 'augment-name'), element('span', rest.length ? `\n${rest.join('\n')}` : '', 'augment-desc'));
+        button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label;
       }
-      const offers = element('div', '', 'choice-cards');
-      // v15: one reroll button under each augment card, enabled by that card's own rerollAvailable (never the total left).
-      const rerollAugment = this.actions.rerollAugment, augmentOptions = choice.kind === 'augment' && rerollAugment ? readAugmentOptions(state) : [];
-      for (const [index, id] of choice.offers.entries()) {
-        if (generic) { offers.append(this.genericOfferButton(choice, genericOffer(id, extras), id === fallback)); continue; }
-        const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
-        // Anomalies: the zh client text already names every mechanic, so only the stat effects follow it.
-        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : choice.kind === 'augment' ? augmentEffectText(id)
-          : definition.effects.filter(effect => choice.kind !== 'anomaly' || effect.kind !== 'mechanic').map(describeEffect).join('；');
-        // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
-        const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
-          : [choice.kind === 'anomaly' ? anomalyDisplayName(id) : itemDisplayName(id), choice.kind === 'anomaly' ? anomalyPlayerDescription(id) : 'description' in definition ? definition.description : '领取后可合成或装备', effects].filter(Boolean).join('\n');
-        const button = this.button(`choice:${id}`, label, () => {
-          this.actions.choose(choice.choiceId, choice.generation, id);
-          const after = this.actions.state().pendingChoice;
-          if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
-        });
-        if (choice.kind === 'augment') {
-          // Name and effect as their own blocks (the original card sets the name large); the text content stays the label.
-          const [name = '', ...rest] = label.split('\n');
-          button.replaceChildren(element('strong', name, 'augment-name'), element('span', rest.length ? `\n${rest.join('\n')}` : '', 'augment-desc'));
-          button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label;
-        }
-        button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
-        const option = augmentOptions.find(entry => entry.optionIndex === index && entry.definitionId === id);
-        if (!option || !rerollAugment) { offers.append(button); continue; }
-        const slot = element('div', '', 'augment-slot');
-        const used = choice.rerolledSlots?.[index] === true;
-        const reroll = this.button(`augment-reroll:${index}`, used ? '已刷新' : '刷新这张', () => rerollAugment(choice.choiceId, choice.generation, index), !option.rerollAvailable);
-        reroll.className = 'augment-slot-reroll';
-        reroll.title = option.rerollAvailable ? '免费刷新这一张 · 等级不变 · 每张只能刷新 1 次，刷掉的强化本局不再出现'
-          : used ? '这张已经刷新过' : '同等级已没有可替换的强化';
-        slot.append(button, reroll); offers.append(slot);
-      }
-      card.append(offers);
-      if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
-      if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
+      button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
+      const option = augmentOptions.find(entry => entry.optionIndex === index && entry.definitionId === id);
+      if (!option || !rerollAugment) { offers.append(button); continue; }
+      const slot = element('div', '', 'augment-slot');
+      const used = choice.rerolledSlots?.[index] === true;
+      const reroll = this.button(`augment-reroll:${index}`, used ? '已刷新' : '刷新这张', () => rerollAugment(choice.choiceId, choice.generation, index), !option.rerollAvailable);
+      reroll.className = 'augment-slot-reroll';
+      reroll.title = option.rerollAvailable ? '免费刷新这一张 · 等级不变 · 每张只能刷新 1 次，刷掉的强化本局不再出现'
+        : used ? '这张已经刷新过' : '同等级已没有可替换的强化';
+      slot.append(button, reroll); offers.append(slot);
     }
+    card.append(offers);
+    if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
     this.modal.append(card);
     // Session replacement changes the mode at the end of this same task.
     // Focus after that commit so startup/import-hidden choices cannot steal it.
     if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
     this.focusFrame = requestAnimationFrame(() => { this.focusFrame = null; this.focusChoice(); });
+  }
+  /**
+   * S13 4-6 anomaly as the client shows it (non-modal): the board lights the units I may pick (BoardScene, BoardPiece.glow),
+   * this bottom panel carries the countdown, the anomaly, my gold, 锁定/进化 (grey until it can be sent) and 刷新 · 1 金币.
+   * Same commands as before: anomalyTarget, then choose / rerollAnomaly; the rules decide.
+   */
+  private anomalyPanel(card: HTMLElement, state: MatchState, choice: MatchState['pendingChoice'] & object): void {
+    const picking = choice.step === 'target', id = choice.offers[0], candidates = anomalyCandidates(state);
+    const name = (unitId: string | null | undefined) => { const unit = state.preparation.units.find(entry => entry.id === unitId); return unit ? displayUnitName(unit.definitionId) : ''; };
+    const pick = picking ? candidates.find(unit => unit.id === this.actions.selectedUnit()) : undefined;
+    card.dataset.choiceSource = 'anomaly'; card.dataset.step = choice.step;
+    // The room's phase countdown (choice deadline) mirrored as the panel's own bar; hidden offline (no deadline).
+    const timer = element('div', '', 'anomaly-timer'), bar = element('i'), seconds = element('b');
+    timer.append(bar, seconds);
+    const tick = () => {
+      const host = document.querySelector<HTMLElement>('.online-countdown'), left = host?.querySelector('.online-timer')?.textContent ?? '';
+      timer.hidden = !left; seconds.textContent = left; bar.style.setProperty('--left', host?.style.getPropertyValue('--countdown-left') || '0');
+      if (!card.isConnected) window.clearInterval(handle);
+    };
+    const handle = window.setInterval(tick, 250); tick();
+    card.append(timer, element('h2', picking ? '选择一名英雄进行进化' : `进化 ${name(choice.targetId)}`));
+    const effect = element('p', '', 'anomaly-effect');
+    if (id) {
+      const stats = ANOMALY_DEFINITIONS[id]?.effects.filter(entry => entry.kind !== 'mechanic').map(describeEffect).join('；');
+      effect.append(element('strong', anomalyDisplayName(id)), [anomalyPlayerDescription(id), stats].filter(Boolean).join('\n'));
+    } else effect.textContent = '锁定目标后揭晓异常效果。';
+    card.append(effect);
+    card.append(element('p', picking ? `${pick ? `已选 ${name(pick.id)}` : '点击棋盘上发光的英雄再锁定'}，或直接点名字锁定 · 锁定后不能更换，升星时保留` : `已刷新 ${choice.rerollCount} 次`, 'anomaly-hint'));
+    if (picking) {
+      // The list locks at once, as before (offline the board is locked during a choice; keyboard players need it too).
+      const units = element('div', '', 'anomaly-units');
+      for (const unit of candidates) {
+        const button = this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${starText(displayStarLevel(state, unit))}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id));
+        button.setAttribute('aria-pressed', String(unit === pick)); units.append(button);
+      }
+      card.append(units);
+    }
+    const side = element('div', '', 'anomaly-actions');
+    side.append(element('span', `${state.gold}`, 'anomaly-gold'));
+    const confirm = picking
+      ? this.button('anomaly-lock', pick ? `锁定 ${name(pick.id)}` : '锁定目标', () => { if (pick) this.actions.target(choice.choiceId, choice.generation, pick.id); }, !pick)
+      : this.button(`choice:${id}`, '进化', () => {
+        this.actions.choose(choice.choiceId, choice.generation, id!);
+        const after = this.actions.state().pendingChoice;
+        if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
+      }, !id);
+    confirm.className = 'anomaly-evolve';
+    const reroll = this.button('anomaly-reroll', '', () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), picking || state.gold < 1);
+    reroll.className = 'anomaly-reroll'; reroll.dataset.picking = String(picking);
+    reroll.append(element('span', '刷新'), element('small', '1 金币'));
+    side.append(confirm, reroll);
+    if (isOnline()) side.append(this.button('choice-collapse', '收起 · 去商店', () => this.collapseChoice('异常')));
+    card.append(side);
+    this.syncAnomalyGold(state);
+    if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
+    this.focusFrame = requestAnimationFrame(() => { this.focusFrame = null; this.focusChoice(); });
+  }
+  /** Gold changes (selling, buying) during the choice without rebuilding the panel. */
+  private syncAnomalyGold(state: MatchState): void {
+    const gold = this.modal.querySelector('.anomaly-gold'), reroll = this.modal.querySelector<HTMLButtonElement>('.anomaly-reroll');
+    if (gold) gold.textContent = `${state.gold}`;
+    if (reroll) { reroll.disabled = reroll.dataset.picking === 'true' || state.gold < 1; reroll.title = reroll.dataset.picking === 'true' ? '锁定目标后才能刷新' : state.gold < 1 ? '金币不足' : '刷新异常 · 扣除 1 金币'; }
   }
   /** The rules' D14 line while an Into the Unknown hero is away, on the board under the countdown; removed otherwise. */
   private syncAwayChip(state: MatchState): void {

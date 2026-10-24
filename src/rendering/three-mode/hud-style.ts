@@ -50,6 +50,9 @@ body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augm
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll::before { content: "⟳ "; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] button.augment-slot-reroll:disabled { opacity: .45; }
 body[data-online]:has(> .render3d-layer):has(.choice-overlay:not([hidden]) > .choice-dialog[data-choice-source="augment"]) .shop-dock .hud-pop { visibility: hidden; }
+/* S13 4-6 anomaly: the shared bottom panel (style.css) a little wider and see-through over the 3D board. */
+body[data-online]:has(> .render3d-layer) .choice-dialog.anomaly-panel { width: min(1040px, 92vw); background: linear-gradient(180deg, #0f1d44ee, #0a1129f5 75%); }
+body[data-online]:has(> .render3d-layer):has(.choice-overlay:not([hidden]) > .anomaly-panel) .shop-dock .hud-pop { visibility: hidden; }
 `;
 export function installHudStyle(): void {
   // Unit tests mount the renderer with a stub document that has no querySelector or head.

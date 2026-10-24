@@ -18,6 +18,7 @@ import { MatchSession } from './match-session';
 import { InputRouter, type Gesture } from './input-router';
 import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
+import { anomalyGlow } from './anomaly-targets';
 import { MatchApplication } from '../m6/application';
 import { createGameClient, isOnlineMode } from './online/mode';
 import { d14UnitNotes, displayStarLevel, fourStarBaseStats, starText } from '../presentation/d14-display';
@@ -154,6 +155,7 @@ export class BoardScene extends Phaser.Scene {
   private dropZones!: Phaser.GameObjects.Graphics;
   /** G2-3 prep: special-cell layer (trial cells) drawn above the board fill, below units; empty until the rules supply cells. */
   private specialCellLayer!: Phaser.GameObjects.Graphics;
+  private anomalyLayer!: Phaser.GameObjects.Graphics;
   private specialCells: readonly SpecialCell[] = [];
   private status!: Phaser.GameObjects.Text;
   /** C18: "本场：X / 下场：Y" above a hovered fighting unit whose equipment changed during the battle. */
@@ -212,7 +214,7 @@ export class BoardScene extends Phaser.Scene {
       graphics.fillPoints(this.layout.corners({ col, row }), true).strokePoints(this.layout.corners({ col, row }), true);
     }
     this.conquerorFlag = createConquerorFlag(this);
-    this.specialCellLayer = this.add.graphics();
+    this.specialCellLayer = this.add.graphics(); this.anomalyLayer = this.add.graphics();
     this.drawSpecialCells();
     this.add.text(-2000, 140, `${this.state.board.columns} 列 × ${this.state.board.rows} 行`, { fontSize: '14px', color: '#7e95a4' });
     for (const team of ['enemy', 'player'] as const) {
@@ -1046,6 +1048,20 @@ export class BoardScene extends Phaser.Scene {
     this.sellButton.setText(this.selectedId && selected ? `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
     for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : this.previewHighlight.has(unit.id) ? 'target' : 'normal', unit.team);
+    this.drawAnomalyGlow();
+  }
+  /** S13 4-6 anomaly: the cells of the units I may pick glow (the picked one gold), then only the locked unit's cell. */
+  private drawAnomalyGlow(): void {
+    const layer = this.anomalyLayer, glow = anomalyGlow(this.session.state, this.selectedId);
+    if (!layer?.active) return;
+    layer.clear();
+    for (const unit of glow ? this.state.units : []) {
+      if (!glow!.ids.includes(unit.id)) continue;
+      const lit = unit.id === glow!.lit, color = lit ? 0xffd76a : 0x4fe3ff;
+      layer.fillStyle(color, lit ? 0.38 : 0.18).lineStyle(lit ? 4 : 2, color, 0.95);
+      if (unit.location.kind === 'board') { const corners = this.layout.corners(unit.location.cell); layer.fillPoints(corners, true).strokePoints(corners, true); }
+      else { const p = this.benchCenter(unit.location.slot); layer.fillRoundedRect(p.x - 26, p.y - 30, 52, 60, 10).strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10); }
+    }
   }
   /** Offline ledger aggregate per session change; floats are fed by showEvents for both paths. */
   private observeStats(change: SessionChange) {
@@ -1286,7 +1302,7 @@ export class BoardScene extends Phaser.Scene {
   private boardFrame(): BoardFrame {
     const board = this.state.board, fallen = new Set(this.session.combatView?.units.filter(unit => !unit.alive).map(unit => unit.id));
     const bench = new Map(this.state.units.map(unit => [unit.id, unit.location.kind === 'bench' ? unit.location.slot : null]));
-    const result = this.session.state.roundResults?.at(-1);
+    const result = this.session.state.roundResults?.at(-1), glow = anomalyGlow(this.session.state, this.selectedId);
     return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
@@ -1295,7 +1311,8 @@ export class BoardScene extends Phaser.Scene {
         x: token.x, y: token.y, alive: !fallen.has(id),
         benchSlot: bench.get(id) ?? null,
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
-        visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id) })),
+        visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id),
+        ...(glow?.ids.includes(id) ? { glow: id === glow.lit ? 'lit' as const : 'on' as const } : {}) })),
       fighting: this.session.combatView !== null, dragging: this.draggingId,
       orbs: this.feedOrbs(),
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),

@@ -15,7 +15,7 @@ import { createRenataMissile, RENATA_LAUNCH_DELAY } from './renata-missile';
 import { planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
 import {
-  AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial,
+  AdditiveBlending, AmbientLight, LoopRepeat, Box3, BoxGeometry, CircleGeometry, Color, CylinderGeometry, DirectionalLight, Frustum, Group, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial,
   PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3, WebGLRenderer,
   type Object3D, type Texture,
 } from 'three';
@@ -318,6 +318,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const own = <T extends { dispose(): void }>(resource: T): T => { owned.push(resource); return resource; };
   const pawnBody = own(new CylinderGeometry(9, 13, 34, 16)), pawnHead = own(new SphereGeometry(10, 16, 12));
   const ringGeometry = own(new RingGeometry(18, 23, 32));
+  // S13 4-6 anomaly (BoardPiece.glow): a lit hex under each unit I may pick, gold under the picked or locked one.
+  const glowFill = own(new CircleGeometry(0.92, 6, Math.PI / 6)), glowEdge = own(new RingGeometry(0.84, 1, 6, 1, Math.PI / 6));
+  const glowMaterial = (color: string, opacity: number) => own(new MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, blending: AdditiveBlending }));
+  const glowLook = { on: [glowMaterial('#4fe3ff', 0.22), glowMaterial('#4fe3ff', 0.9)], lit: [glowMaterial('#ffd76a', 0.42), glowMaterial('#ffd76a', 1)] };
+  const glows = new Map<string, Group>();
   const teamMaterial = {
     player: own(new MeshStandardMaterial({ color: TEAM_COLOR.player, roughness: 0.6 })),
     enemy: own(new MeshStandardMaterial({ color: TEAM_COLOR.enemy, roughness: 0.6 })),
@@ -929,7 +934,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         ? piece.benchSlot ?? -1 : benchOf2d(frame, piece.x, piece.y)) : -1;
       if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
       if (!view.placed) { view.root.position.copy(view.target); view.placed = true; }
+      let glow = glows.get(piece.id);
+      if (piece.glow && shown) {
+        if (!glow) {
+          glow = new Group(); glow.add(new Mesh(glowFill), new Mesh(glowEdge)); glow.rotation.x = -Math.PI / 2;
+          scene.add(glow); glows.set(piece.id, glow);
+        }
+        glow.children.forEach((mesh, index) => { (mesh as Mesh).material = glowLook[piece.glow!][index]!; });
+        glow.scale.setScalar(frame.hexRadius); glow.position.set(view.target.x, 0.4, view.target.z);
+      } else if (glow) { scene.remove(glow); glows.delete(piece.id); }
     }
+    for (const [id, glow] of glows) if (!seen.has(id)) { scene.remove(glow); glows.delete(id); }
     for (const [id, view] of pieces) if (!seen.has(id)) { loadReport.dropped(id); removePiece(view); pieces.delete(id); }
     if (models.cache && matchShown && !loadReport.began) loadReport.frame([...pieces].filter(([, view]) => !view.lease).map(([id]) => id),
       [...pieces.values()].filter(view => warmup?.warmed(view.definitionId)).length);
