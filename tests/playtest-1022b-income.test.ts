@@ -9,9 +9,11 @@ import { getUnitSellPrice } from '../src/simulation/unit-stats';
 import { melCanSave } from '../src/simulation/mel-save';
 import { createG23Progress } from '../src/simulation/g2-3-match-progress';
 import { writeG23Progress } from '../src/simulation/g2-3-state';
+// Seed 29 draws the 'none' opening under v23 fmix32; seed 5 now opens Artifact Anvil (anvil holds bench slot 0).
+const SEED = 29;
 const ok = (r: {ok:true;state:MatchState}|{ok:false;reason:string}): MatchState => { if (!r.ok) throw Error(r.reason); return r.state; };
 function opening(resolveAugment=true) {
-  let s=createMatch(5);
+  let s=createMatch(SEED);
   while(s.roundDefinitionId!=='2-1') {
     if(s.phase==='settlement')s=ok(nextRound(s,s.round));
     else if(s.phase==='combat')s=stepMatch(s).state;
@@ -27,7 +29,7 @@ function settle(s:MatchState,result:'win'|'loss'='win') {
 }
 describe('10-22b income timing',()=>{
   it('opening settlement remains unpaid through restore; next entry pays once before augment choice',()=>{
-    let s=createMatch(5);
+    let s=createMatch(SEED);
     // Concede explicitly so immediate PvE loot cannot masquerade as deferred income.
     s=ok(deployMatchUnit(s,'unit-1',{kind:'bench',slot:0}));
     s=ok(startMatchCombat(s));while(s.phase==='combat')s=stepMatch(s).state;
