@@ -345,6 +345,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const seq = actionSeq++, beforeCount = events.length;
       const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.maxMana)!;
       spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
+      const sated = unit.mechanics?.find(m => m.mechanic === 'satedSpellweaver');
+      // Batch-3 Sated Spellweaver (P 2026-10-24): each cast (re)opens a Duration-long omnivamp window from this tick.
+      if (sated) unit.batch2 = { ...unit.batch2, satedUntil: tick + sated.values.durationTicks };
       if (champion(unit) !== 'viktor') unit.manaLockedUntilTick = tick + S13_COMBAT_RULES.castManaLockTicks;
       if(unit.unreavedMaxMana!==undefined&&unit.definitionId!=='viktor')unit.maxMana=unit.unreavedMaxMana;
       const oldInterval = interval(unit, tick, units);
@@ -494,6 +497,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       g23RumbleDeath(ctx,target,actionSeq++,defenses(target,true,tick,units)+defenses(target,false,tick,units));
       killed.set(target.id, packet.source); events.push({ type: 'kill', tick, unitId: target.id, source: packet.source });
       if(owner&&owner.team!==target.team)chainbladeKill(ctx,owner);
+      // Batch-3 A Golden Find (P 2026-10-24): killing blows by the anomaly-evolved champion on enemy non-summons.
+      if(owner&&owner.team!==target.team&&owner.mechanics?.some(m=>m.mechanic==='goldenFind')&&!target.itemSummon&&!target.anomalySummon&&!UNIT_DEFINITIONS[target.definitionId]?.summon)
+        owner.batch2={...owner.batch2,anomalyKills:(owner.batch2?.anomalyKills??0)+1};
       if(owner?.d11Kills&&owner.team!==target.team&&!target.itemSummon&&!target.anomalySummon
         &&UNIT_DEFINITIONS[target.definitionId]&&!UNIT_DEFINITIONS[target.definitionId].summon&&target.unitKind!=='neutral'){
         const m=owner.mechanics!.find(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='headhunter')!;
@@ -653,6 +659,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (owner.hp <= 0) continue;
     const fieldMedic = heroLive(owner)?.omnivampBps ?? 0;
     if (hpAmount > 0 && fieldMedic && source.sourceKind === 'ability') ctx.heals.push({ source, targetId: owner.id, amount: Math.floor(hpAmount * fieldMedic / 10000) });
+    const sated = owner.mechanics?.find(m => m.mechanic === 'satedSpellweaver');
+    if (hpAmount > 0 && sated && (owner.batch2?.satedUntil ?? -1) > tick) ctx.heals.push({ source: sated.source, targetId: owner.id, amount: Math.floor(hpAmount * sated.values.omnivampBps / 10000) });
     if (hpAmount > 0) for (const definition of positiveHeal ? [{ source, amount: positiveHeal }] : owner.mechanismDefinitions!.positiveDamageHeals ?? []) ctx.heals.push({ source: definition.source, targetId: owner.id,
       amount: evaluateAmount(definition.amount, { holder: hpSample(owner), attackDamage: ad(owner), abilityPower: ap(owner, tick) }) });
     for (const request of vampRequests(JSON.stringify([ctx.combatId, tick, owner.id, seq, 'vamp']), owner, outcomes, rates.get(owner.id)!, units.filter(u=>!isAttackProxy(u))))

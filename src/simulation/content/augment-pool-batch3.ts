@@ -6,7 +6,7 @@ import { TOWER_DEFENSE_SPELL } from './batch3-summons';
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
 export interface Batch3Schedule {
- readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'|'dummy-deaths'|'dummy-first-death'|'dummy-gold'|'golden-egg'|'adventure-quest'|'enemy-kills'; readonly every:string|number; readonly repeat:boolean;
+ readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'|'dummy-deaths'|'dummy-first-death'|'dummy-gold'|'golden-egg'|'adventure-quest'|'enemy-kills'|'pvp-enemy-deaths'|'itemless-deaths'|'anomaly-kills'; readonly every:string|number; readonly repeat:boolean;
  readonly gifts:readonly AugmentGiftSpec[]; readonly gold?:string; readonly max?:string|number;
  /** round-start only: first entry this many rounds after acquisition (default 1). */
  readonly from?:string|number;
@@ -14,13 +14,18 @@ export interface Batch3Schedule {
  readonly copyOf?:number;
  /** Support Mining: when this schedule fires, the augment's own training dummy is removed from the roster. */
  readonly retireDummy?:true;
+ /** pvp-enemy-deaths only: counts the acquisition round and the following rounds, this many round ordinals in all (a source value). */
+ readonly rounds?:string;
 }
 interface Batch3Content {
  readonly apiName:string; readonly name:string; readonly tier:'silver'|'gold'|'prismatic'; readonly description:string;
  readonly source:{readonly patch:string;readonly archive:string;readonly values:Readonly<Record<string,number|null>>;readonly description_en_us:string};
  readonly gifts:readonly AugmentGiftSpec[]; readonly schedules:readonly Batch3Schedule[];
- /** Free shop rerolls: `now` (a source value) at acquisition, `perRound` per round from the acquisition round. */
- readonly freeRerolls?:{readonly now?:string;readonly perRound?:number};
+ /** Free shop rerolls: `now` (a source value) at acquisition, `perRound` per round from the acquisition round,
+  * `perCraft` (a source value) per completed item crafted from the acquisition round on (Crafted Crafting). */
+ readonly freeRerolls?:{readonly now?:string;readonly perRound?:number;readonly perCraft?:string};
+ /** Category Five: the holder's Runaan's Hurricanes fire `additionalbolts` more bolts, each at TotalDamage of the bolt's damage. */
+ readonly categoryFive?:boolean;
  /** Superstars: team damage amp of BaseBonusDamage + BonusDamagePer3Star per 3-star ally on the board. */
  readonly superstars?:boolean; readonly gold?:string;
  /** Flexible: every board ally gains HPPerEmblem for each emblem held across the board (P 2026-10-24). */
@@ -34,7 +39,7 @@ interface Batch3Content {
  readonly spoilsTier?:1|2|3;
  readonly hero?:'steb'|'irelia'|'trundle'|'renni'|'vander'|'vladimir';
  /** Replay-authenticated combat mechanics (g2-4b-gold-restore BATCH3_REPLAYED_MECHANICS); values come from the source row. */
- readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck'|'goldForDummies'|'towerDefense';
+ readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck'|'goldForDummies'|'towerDefense'|'goodForSomething'|'goldenFind'|'longDistance'|'satedSpellweaver'|'sponging';
 }
 /** classification.json batch 3, group 3a-1: grants scheduled by player-combat count, player-combat results or allied deaths.
  * Every count and reward is the 14.24 zh_cn/en_us source value. Three readings are project conventions (P 2026-10-24,
@@ -42,6 +47,195 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+
+ "sponging": {
+  "apiName": "TFT_Augment_Sponging",
+  "name": "白蹭",
+  "tier": "prismatic",
+  "description": "战斗开始时：至多5个仅携带了1件及以下装备的弈子们会从相距最近的那个全装友军处随机获得一件成装的复制品。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "MaxItemsToBeEligible": 1.0,
+    "MaxUnits": 5.0
+   },
+   "description_en_us": "Combat start: Up to 5 champions with 1 or fewer items gain a copy of a random completed item from the nearest itemized ally."
+  },
+  "gifts": [],
+  "schedules": [],
+  "combat": "sponging"
+ },
+
+ "mirrored-monetization": {
+  "apiName": "TFT_Augment_MirroredMonetization",
+  "name": "恶意货币化",
+  "tier": "gold",
+  "description": "获得2金币。接下来的3个回合，敌方弈子在阵亡时会掉落2金币。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "GoldContained": 2,
+    "PercCost": 2.0,
+    "rounds": 3.0
+   },
+   "description_en_us": "Gain 2 gold. For the next 3 rounds, enemy champions drop 2 gold when killed."
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "pvp-enemy-deaths",
+    "every": 1,
+    "repeat": true,
+    "gold": "PercCost",
+    "gifts": [],
+    "rounds": "rounds"
+   }
+  ],
+  "gold": "GoldContained"
+ },
+
+ "good-for-something-i": {
+  "apiName": "TFT10_Augment_GoodForSomethingSilver",
+  "name": "有用之材 I",
+  "tier": "silver",
+  "description": "未携带装备的弈子们在阵亡时有50%几率掉落1金币。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "DropChance": 0.5,
+    "Gold": 1.0
+   },
+   "description_en_us": "Champions that aren't holding items have a 50% to drop 1 gold on death."
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "itemless-deaths",
+    "every": 1,
+    "repeat": true,
+    "gold": "Gold",
+    "gifts": []
+   }
+  ],
+  "combat": "goodForSomething"
+ },
+
+ "a-golden-find": {
+  "apiName": "TFT13_Augment_AGoldenFind",
+  "name": "金色收获",
+  "tier": "gold",
+  "description": "被【异常突变】进化的弈子每完成3次击杀就会掉落2金币。获得10次免费刷新。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "FreeRerolls": 10.0,
+    "GoldPerRequirement": 2.0,
+    "NumKillsRequirement": 3.0
+   },
+   "description_en_us": "Champions evolved by the Anomaly drop 2 gold every 3 kills. Gain 10 free rerolls."
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "anomaly-kills",
+    "every": "NumKillsRequirement",
+    "repeat": true,
+    "gold": "GoldPerRequirement",
+    "gifts": []
+   }
+  ],
+  "freeRerolls": {
+   "now": "FreeRerolls"
+  },
+  "combat": "goldenFind"
+ },
+
+ "long-distance-relationship": {
+  "apiName": "TFT9_Augment_LongDistanceRelationship2",
+  "name": "天涯若比邻",
+  "tier": "gold",
+  "description": "战斗开始时：你相距最远的那2个弈子会形成一个纽带，分享彼此的22%护甲、魔抗、攻击力和法术强度。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "PercentShare": 0.2199999988079071
+   },
+   "description_en_us": "Combat start: Your 2 units furthest from each other form a bond, sharing 22% of their Armor, Magic Resist, Attack Damage, and Ability Power with each other."
+  },
+  "gifts": [],
+  "schedules": [],
+  "combat": "longDistance"
+ },
+
+ "category-five": {
+  "apiName": "TFT_Augment_CategoryFive",
+  "name": "五级飓风",
+  "tier": "gold",
+  "description": "获得1个【卢安娜的飓风】。你的【卢安娜的飓风】发射1根额外弩箭，每根弩箭造成85%原伤害。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "AS": null,
+    "TotalDamage": 0.8500000238418579,
+    "additionalbolts": 1.0
+   },
+   "description_en_us": "Gain a Runaan's Hurricane. Your Runaan's Hurricanes shoot 1 extra bolts, each dealing 85% of the original damage."
+  },
+  "gifts": [
+   {
+    "kind": "item",
+    "definitionId": "runaans-hurricane"
+   }
+  ],
+  "schedules": [],
+  "categoryFive": true
+ },
+
+ "sated-spellweaver": {
+  "apiName": "TFT_Augment_SatedSpellweaver",
+  "name": "满意的织法者",
+  "tier": "gold",
+  "description": "在施放一个技能后，弈子们获得持续3秒的20%全能吸血。多余的治疗量会转化为护盾，至多至300。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Duration": 3.0,
+    "MaxShield": 300.0,
+    "Omnivamp": 0.20000000298023224
+   },
+   "description_en_us": "After casting an Ability, champions gain 20% Omnivamp for 3 seconds. Excess healing is converted to a shield up to 300 Health."
+  },
+  "gifts": [],
+  "schedules": [],
+  "combat": "satedSpellweaver"
+ },
+
+ "crafted-crafting": {
+  "apiName": "TFT_Augment_CraftedCrafting",
+  "name": "精心打造",
+  "tier": "silver",
+  "description": "每当你合成一件成装时，获得2次刷新。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Rerolls": 2.0
+   },
+   "description_en_us": "Whenever you craft a completed item, gain 2 rerolls."
+  },
+  "gifts": [],
+  "schedules": [],
+  "freeRerolls": {
+   "perCraft": "Rerolls"
+  }
+ },
  "spoils-of-war-i": {
   "apiName": "TFT9_Augment_DravenSpoilsOfWar",
   "name": "战争财宝 I",
@@ -1326,6 +1520,11 @@ function batch3CombatValues(row:Batch3Content):Record<string,number> {
   case 'towerDefense':{const t=TOWER_DEFENSE_SPELL;return {apRatio1:t.apRatio[0],apRatio2:t.apRatio[1],apRatio3:t.apRatio[2],upgrade1Stage:t.upgrade1Stage,upgrade1AsBps:t.upgrade1AsBps,upgrade2Stage:t.upgrade2Stage,upgrade2Bps:t.upgrade2Bps};}
   case 'goldForDummies':return {periodTicks:batch3Count(row,'GoldDuration')*20};
   case 'nobleSacrifice':return {baseResists:batch3Count(row,'BaseResists'),shareBps:bps('SharePerc')};
+  case 'goodForSomething':return {dropChanceBps:bps('DropChance')};
+  case 'goldenFind':return {killsPerGold:batch3Count(row,'NumKillsRequirement')};
+  case 'longDistance':return {shareBps:bps('PercentShare')};
+  case 'sponging':return {maxUnits:batch3Count(row,'MaxUnits'),maxItems:batch3Count(row,'MaxItemsToBeEligible')};
+  case 'satedSpellweaver':return {omnivampBps:bps('Omnivamp'),durationTicks:batch3Count(row,'Duration')*20,maxShield:batch3Count(row,'MaxShield')};
   default:return {omnivampBps:bps('Omnivamp')};
  }
 }

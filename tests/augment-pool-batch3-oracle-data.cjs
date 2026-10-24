@@ -27,6 +27,18 @@ module.exports={
  },
  "exclusive": [
   [
+   "category-five",
+   "not-today"
+  ],
+  [
+   "sated-spellweaver",
+   "wealthy-rehab-i"
+  ],
+  [
+   "sated-spellweaver",
+   "wealthy-rehab-ii"
+  ],
+  [
    "all-out",
    "betrayal"
   ],

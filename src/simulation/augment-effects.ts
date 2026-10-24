@@ -62,6 +62,13 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
       const stage=getMultiplayerRoundByOrdinal(state.round).stage,tier=stage>=v.upgrade2Stage?2:stage>=v.upgrade1Stage?1:0;
       return [mechanic('towerDefenseLive',{apRatio:[v.apRatio1,v.apRatio2,v.apRatio3][tier],extraBps:tier>=2?v.upgrade2Bps:0}),...(tier>=1?[speed(v.upgrade1AsBps)]:[])];
     }
+    // Batch 3 (P 2026-10-24): Good For Something marks only champions that hold no item at combat start (summons and
+    // training dummies are not champions); A Golden Find marks only the champion the Anomaly evolved.
+    case 'goodForSomething': {
+      const held=state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===unit.id)||state.temporaryEquipment.some(i=>i.holderId===unit.id);
+      return held||UNIT_DEFINITIONS[unit.definitionId]?.summon?[]:[effect];
+    }
+    case 'goldenFind': return state.anomalyBinding?.unitId===unit.id?[effect]:[];
     case 'superstars': return [mechanic('damageAmp',{bps:v.baseBps+allies.filter(u=>u.location.kind==='board'&&u.starLevel===3).length*v.per3StarBps})];
     case 'acquisitionXp': return [];
     case 's13P2Augment': return p2AugmentEffects(augment.definitionId,unit,board,state);

@@ -179,3 +179,52 @@ G2 其余 17 条暂缺：
 - `match-session` 的“五回合保留购买阵容”在基线 3a2e703d 也失败（随扩池变化），未改。
 - 第三批全部入池后再修一轮夹具：`quietAugmentRound`/`crestPick` 的“安静”名单扩到只给金币/散件/消耗品/未装备道具的强化（含第三批的 D个痛快、DD街区、战争财宝等），`task-mechanism-restore` 的黑玫瑰夹具固定在第 8 回合。
 - 当前已知失败 7 项（强化、恢复、商店、共享池、联机房间 43 文件 993 项中）：task-mechanism-restore 3（召唤物击杀 2 项基线即失败、Bulky Buddies 锻炉复活）、pr161 1、resists-restore 1、carousel-room 1（以上基线即失败），以及 explorer-bracer 压力子进程 1（种子 3151248 的公开路线不再选到 Glass Cannon II，附近 5 个可选到的种子数值不符，留待集成重找）。
+
+
+## 续做：G6 战斗内新行为 + G4 备战席/装备/弈子变换（分支 `claude/augment-pool-batch3-more`，2026-10-24）
+
+在 `claude/augment-pool-batch3` 之上继续，取前三批都未完成的两组：G6 剩余 16 条与 G4 全部 22 条。同期另有 `claude/augment-pool-shop`（G2 商店规则）与 `claude/augment-xp-batch3`（经验/玩家血量链、阶段标签），本分支不碰这两条线的内容。口径与 P 条目见 S13_RULES_GAP 2026-10-24 新增的 8 条。
+
+### 已完成（8 条）
+
+| 组 | 中文名 | 内部 id | 等级 | 14.24 数值 | 行为（P） |
+|---|---|---|---|---|---|
+| G6 | 恶意货币化 | `mirrored-monetization` | 金 | GoldContained=2, PercCost=2, rounds=3 | 即刻 2 金；获得回合起 3 个回合序号内，玩家对战每阵亡 1 名敌方开战弈子 +2 金 |
+| G6 | 有用之材 I | `good-for-something-i` | 银 | DropChance=0.5, Gold=1 | 开战未持装备的己方弈子阵亡时各自独立 50% 掉 1 金 |
+| G6 | 金色收获 | `a-golden-find` | 金 | FreeRerolls=10, GoldPerRequirement=2, NumKillsRequirement=3 | 10 次免费刷新；异常突变弈子每 3 次击杀 2 金（跨战累计） |
+| G6 | 天涯若比邻 | `long-distance-relationship` | 金 | PercentShare=0.22 | 开战最远两名友军互得对方 22% 护甲/魔抗/攻击力/法强 |
+| G6 | 五级飓风 | `category-five` | 金 | TotalDamage=0.85, additionalbolts=1（AS 为 None，文案未用） | 1 个卢安娜的飓风；飓风多 1 支弩箭，每支 55%×85% AD |
+| G6 | 满意的织法者 | `sated-spellweaver` | 金 | Omnivamp=0.2, Duration=3, MaxShield=300 | 施法后 3 秒 20% 全能吸血，其溢出治疗转护盾（≤300） |
+| G6 | 白蹭 | `sponging` | 彩 | MaxUnits=5, MaxItemsToBeEligible=1 | 开战至多 5 名持装 ≤1 的弈子复制最近全装友军的一件随机成装 |
+| G4 | 精心打造 | `crafted-crafting` | 银 | Rerolls=2 | 获得回合起每合成 1 件装备 +2 次免费刷新 |
+
+互斥（14.24 MutuallyExclusiveItems，池内）：满意的织法者 ↔ 健康就是财富 I/II，五级飓风 ↔ 不是今天（not-today）；独立 oracle 表 `tests/augment-pool-batch3-oracle-data.cjs` 同步加入。出牌池 193→201。
+
+接入点：结算事实新增 `batch3ItemlessDeaths`/`batch3AnomalyKills`（只在非零时出现，`validateG23BattleFacts` 校验 1–100 的整数）；`augment-pool-batch3-progress.ts` 新计数 `pvp-enemy-deaths`/`itemless-deaths`/`anomaly-kills`，金币走第三批金币收据并按战斗收据逐项重算；`free-rerolls.ts` 增加 `perCraft`（由 `item-combined` 资源记录推导）；五级飓风在 `s13-p3-programs.ts` 改写飓风物品程序（静态声明可校验）；天涯若比邻、满意的织法者、金色收获、白蹭四种机制加入 `BATCH3_REPLAYED_MECHANICS`，战斗中途存档整场回放比对；白蹭的复制品在 `strategy-snapshot.ts` 以强化来源编译，战斗中换装重算沿用开战结果。
+
+### 未做（30 条，原因）
+
+G6（9 条）：
+- 冲榜战士（`TFT11_Augment_ScoreboardScrapper`，金）：需要每回合 8 人排名（跨席位血量排序）事实与并列规则，本席状态里没有。
+- 月光（`TFT_Augment_Moonlight`，金）：数值冲突——官方 14.24 补丁说明写加成 20%→35%，归档描述与 map22 常量为 25%/25，实装值未确认；另 ItemBonus=None。
+- 高级月光（`TFT_Augment_GreaterMoonlight`，彩）：ItemBonus=None；任意 1 费临时升 4 星需要认证的 4 星基础面板（现只有家人团聚/异常路径）。
+- 过量治疗（`TFT_Augment_Overheal`，金）：Duration=3 不在文案里、含义未知；“回复该伤害的 50%”以额外伤害还是整次攻击为基数未确认。
+- 拾荒者（`TFT_Augment_Scavenger`，金）：临时成装的接收者与装备池未给出；战斗中途发装备的校验目前只认不稳定的宝箱（TFT_Item_UnstableTreasureChest）。
+- 幸运手套 / 幸运手套+（`TFT7_Augment_LuckyGloves` / `Plus`，彩）：“理想装备”的逐英雄装备表 14.24 资料里没有。
+- 交给运气（`TFT9_Augment_RollTheDice`，彩）：光明窃贼手套及其“随机光明武器”池项目里没有、资料未给。
+- 老友幽魂（`TFT_Augment_GhostOfUnitsPast`，彩）：角色→生命/攻击/法强的对应表缺失；法强单位冲突（模板 1 法强 vs 补丁说明 1%）。
+
+G4（21 条）：
+- 精致古董、潘朵拉的装备 I/II/III、神器工厂（另 Health=50 含义未知）、狂暴到底、重质不重量、打捞桶、打捞桶+（出售拆分成装）：都要把备战席/身上的装备改成另一件或拆成两件。现有资源记录里能改装备定义的只有征服者光明转换（`g23-item-converted`，在资源折叠与 b8 历史回放三处写死为 `g23:conqueror:15`）；需要一个通用、可在恢复时证明“哪些装备在当时备战席上、每件恰好变一次”的装备变换/移除记录，属于恢复校验链改造，本批未做。
+- 基础装备自助餐（`TFT9_Augment_CustomerIsAlwaysRight`）：要拦截所有基础装备来源（PvE 掉落、选秀、强化/异常发放）改发锻造器。
+- 运力不足（`TFT11_Augment_OverEncumbered`）：下一阶段备战席限 1 格的规则；Gold=None。
+- 变形重组器、潘朵拉的备战席、延迟开始、重启任务：移除/变形弈子，要处理联机共享池归还与装备去向。
+- 物尽其用、物尽其用+（基础版 XPNow=None）、清晰头脑、纷乱头脑：发经验，依赖 `claude/augment-xp-batch3` 的经验恢复校验链，本分支没有。
+- 不侦察，不变阵（`TFT_Augment_NoScoutNoPivot`）：参战后锁定不可回收/出售与逐单位永久成长；{eba92878}=None。
+- 最大规模（`TFT_Augment_MaxCap`）：金锅锅冠冕（小队规模 +1 的战术家装备）未实现，另需等级上限 7 的规则。
+
+### 测试
+
+- 新增 `tests/augment-pool-batch3-more.test.ts` 15 项：8 条的 apiName/等级/数值对照手抄的 14.24 表与研究 JSON，编译后系数；互斥；恶意货币化的窗口、PvE 不计、收据篡改被拒；有用之材只标记无装备弈子、结算事实、独立 50% 掉落（400 次统计与确定性）、非法事实被拒；金色收获的免费刷新、跨战余数、真实战斗击杀计数与结算事实；天涯若比邻首 tick 最远两人互得 22% 四项属性；五级飓风弩箭目标与伤害改写及发放；满意的织法者吸血窗口、溢出转盾等于累计溢出且 ≤300；精心打造按合成记录给刷新、获得前的合成不计；白蹭的接收者/最近全装供体/候选池/上限 5、换装重算沿用开战结果；天涯若比邻、满意的织法者、白蹭的真实公开选择 + 战斗中途存档严格恢复与篡改被拒。
+- 扩池（193→201）后只改了受种子影响的旧测试：`g2-augments-choice` 出牌总数 201；`g2-augments-combat` 爬梯子之外的血色打击种子 0→713；`s13-augments-p2-choice` 冠冕→三相→克格莫链种子 1736→15277、三相娜美 107→6590（均为顺序搜索所得，原断言不变）；第三批行列表测试加入 8 个新 id。
+- `tests/*augment*` 22 个文件 792/792 通过；typecheck 通过。

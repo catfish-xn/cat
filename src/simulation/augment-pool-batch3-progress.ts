@@ -50,6 +50,16 @@ function batch3Events(state:MatchState):Batch3Event[] {
     }
     return events;
    }
+   if(schedule.counter==='itemless-deaths'){
+    // Good For Something (P 2026-10-24): the k-th death (from acquisition) of an allied champion that held no item
+    // rolls word k of this seat/choice stream against DropChance; a hit pays the schedule's gold.
+    let deaths=0;
+    for(const r of battles){
+     if(r.kind!=='battle'||r.facts.round<augment.acquiredRound)continue;
+     for(let n=r.facts.batch3ItemlessDeaths??0;n>0;n--){deaths++;if(itemlessDrop(state,augment,row,deaths))events.push({augment,schedule:index,ordinal:deaths,round:r.facts.round});}
+    }
+    return events;
+   }
    if(schedule.counter==='golden-egg'||schedule.counter==='adventure-quest'){
     const due=schedule.counter==='golden-egg'?goldenEggHatch(state,augment,row,battles):adventureQuestRound(state,augment);
     return due!==undefined&&due<=state.round?[{augment,schedule:index,ordinal:0,round:due}]:[];
@@ -63,6 +73,10 @@ function batch3Events(state:MatchState):Batch3Event[] {
     else if(schedule.counter==='dummy-gold')count+=r.facts.batch3Dummy?.gold??0;
     else if(schedule.counter==='allied-deaths')count+=r.facts.alliedDeaths;
     else if(schedule.counter==='team-healing')count+=r.facts.batch3Healing??0;
+    else if(schedule.counter==='anomaly-kills')count+=r.facts.batch3AnomalyKills??0;
+    // Mirrored Monetization (P 2026-10-24): enemy champion deaths in player combats of the acquisition round and the
+    // next rounds-1 round ordinals (supply rounds use up a round of the window but hold no combat).
+    else if(schedule.counter==='pvp-enemy-deaths'){if(r.facts.roundKind!=='pvp'||r.facts.round>=augment.acquiredRound+batch3Count(row,schedule.rounds!))continue;count+=r.facts.openingDeaths?.length??0;}
     else if(r.facts.roundKind==='pvp'&&(schedule.counter==='pvp-combat'||r.facts.result===(schedule.counter==='pvp-win'?'win':'loss')))count++;
     else continue;
     const due=Math.min(schedule.repeat?Math.floor(count/every):count>=every?1:0,max);
@@ -71,6 +85,12 @@ function batch3Events(state:MatchState):Batch3Event[] {
    return events;
   });
  });
+}
+/** Word `ordinal` of a source/seat/choice-bound stream, compared with the row's DropChance in 1e8 units. */
+function itemlessDrop(state:MatchState,augment:MatchState['augments'][number],row:(typeof AUGMENT_BATCH3)[string],ordinal:number):boolean {
+ const namespace=JSON.stringify([AUGMENT_BATCH3_SOURCE,'itemless-drop',state.multiplayer?.seatId??'solo',augment.choiceId,augment.definitionId,ordinal]);
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;
+ return Math.floor(nextRandom((state.seed^rng)>>>0).word*1e8/4294967296)<Math.round(row.source.values.DropChance!*1e8);
 }
 /** One of the seven 14.24 tables per seat and augment, on its own stream (P 2026-10-24). */
 function spoilsTable(state:MatchState,augment:MatchState['augments'][number],tier:1|2|3):readonly (readonly [number,number])[] {

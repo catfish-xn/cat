@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
 import type { ItemProgram } from './m8/item-program';
 import type { Effect } from './m8/contracts';
 import { amount, modifier, stat, status, shield, survival, trigger, enemies, burn } from './content/item-programs';
@@ -50,6 +51,12 @@ export function p3ItemProgram(id: string, program: ItemProgram, augments: readon
     const extra: Effect[] = [stat(modifier('attackSpeed', Math.round(v.AttackSpeed * 10000), 'bps')),
       status('control-immunity', 0, v.CCImmunityDuration * 20, { activation: 'immediate' })];
     out = { ...out, survival: out.survival?.map(t => ({ ...t, effects: [...t.effects, ...extra] })) };
+  }
+  // Batch-3 Category Five (P 2026-10-24): additionalbolts more targets, each bolt at TotalDamage of the bolt's own damage.
+  if (id === 'runaans-hurricane' && augments.includes('category-five')) {
+    const v = AUGMENT_BATCH3['category-five'].source.values;
+    out = { ...out, triggers: out.triggers?.map(t => ({ ...t, selector: { ...t.selector, maxTargets: t.selector.maxTargets + v.additionalbolts! },
+      effects: t.effects.map(e => e.kind === 'damage' ? { ...e, amount: { ...e.amount, attackDamageBps: Math.round(e.amount.attackDamageBps * v.TotalDamage!) } } : e) })) };
   }
   return out;
 }

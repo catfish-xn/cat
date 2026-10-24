@@ -1,4 +1,6 @@
 import { drainSetup } from './setup-work';
+import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
+import { nextRandom } from './rng';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
 import { d14UnitBase } from './d14-anomalies/projection';
@@ -46,6 +48,39 @@ function stageProgram(program: ItemProgram, round: number): ItemProgram {
   const { byStage, ...rest } = structuredClone(program); if (!byStage) return rest;
   const flat = byStage.flat[Math.min(strategyStage(round), byStage.flat.length) - 1];
   return { ...rest, triggers: (rest.triggers ?? []).map(t => ({ ...t, effects: t.effects.map(e => e.kind === 'damage' ? { ...e, amount: { ...e.amount, flat } } : e) })) };
+}
+/** Batch-3 Sponging (P 2026-10-24), sampled from the frozen opening board: in id order, up to MaxUnits player champions
+ * holding at most MaxItemsToBeEligible items each copy one completed (crafted, non-emblem) item of the nearest itemized
+ * ally (items filling all three slots; hex distance, then id), drawn uniformly on a seed/round/choice/receiver stream.
+ * During battle-time equipment the opening copies are reused unchanged from the frozen basis. */
+function spongingCopies(state: CombatStrategyInputs, boardUnits: readonly import('./unit-types').Unit[], catalog: StrategyCatalog, equipmentBasis?: StrategySnapshot): Map<string, { definitionId: string; instanceId: string }> {
+  const copies = new Map<string, { definitionId: string; instanceId: string }>();
+  const augment = state.augments.find(a => a.definitionId === 'sponging');
+  if (!augment) return copies;
+  if (equipmentBasis) {
+    for (const u of equipmentBasis.units) for (const s of u.sources) if (s.source.sourceKind === 'augment' && s.source.sourceDefinitionId === 'sponging' && s.source.sourceInstanceId.startsWith('['))
+      copies.set(u.unitId, { definitionId: JSON.parse(s.source.sourceInstanceId)[2], instanceId: s.source.sourceInstanceId });
+    return copies;
+  }
+  const v = AUGMENT_BATCH3.sponging.source.values;
+  const champions = boardUnits.filter(u => u.team === 'player' && u.location.kind === 'board' && !UNIT_DEFINITIONS[u.definitionId]?.summon);
+  const held = (u: { id: string }) => state.items.filter(i => i.location.kind === 'unit' && i.location.unitId === u.id);
+  const slots = (u: { id: string }) => held(u).reduce((n, i) => n + (catalog.items[i.definitionId]?.slotCost ?? 1), 0);
+  const itemized = champions.filter(u => slots(u) >= 3);
+  let granted = 0;
+  for (const unit of champions) {
+    if (granted >= v.MaxUnits! || held(unit).length > v.MaxItemsToBeEligible! || unit.location.kind !== 'board') continue;
+    const cell = unit.location.cell;
+    const donor = itemized.filter(d => d.id !== unit.id).sort((a, b) => (a.location.kind === 'board' && b.location.kind === 'board' ? hexDistance(cell, a.location.cell) - hexDistance(cell, b.location.cell) : 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0];
+    const pool = donor ? held(donor).map(i => catalog.items[i.definitionId]).filter(d => d?.kind === 'completed' && d.recipe && !d.emblemTrait).map(d => d!.id).sort() : [];
+    if (!pool.length) continue;
+    const namespace = JSON.stringify(['augment-pool-batch3', 'sponging', state.round, augment.choiceId, unit.id]);
+    let h = 0x811c9dc5; for (let i = 0; i < namespace.length; i++) h = Math.imul(h ^ namespace.charCodeAt(i), 0x01000193) >>> 0;
+    const definitionId = pool[Math.floor(nextRandom(((state.g23?.seed ?? 0) ^ h) >>> 0).word * pool.length / 4294967296)];
+    copies.set(unit.id, { definitionId, instanceId: JSON.stringify([augment.choiceId, donor!.id, definitionId]) });
+    granted++;
+  }
+  return copies;
 }
 export interface StrategyCatalog {
   readonly traits: Readonly<Record<string, TraitDefinition>>;
@@ -104,6 +139,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     const owner=effect?boardUnits.find(other=>other.id===item.unitId):undefined;
     return owner&&effect?.kind==='mechanic'?[{item,owner,effect}]:[];
   });
+  const sponging=spongingCopies(state,boardUnits,catalog,equipmentBasis);
   const d11=new Map(state.augments.filter(a=>Object.hasOwn(D11_FILL_TIERS,a.definitionId)).map(a=>[a.choiceId,
     compileD11Augment(a.definitionId as D11AugmentId,boardUnits,state.playerHp??100,d11OpeningSeed(state.g23?.seed??0,state.round,a.choiceId))]));
   yield;
@@ -173,6 +209,13 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
           }
           return [effect];
         })));
+      }
+      // Batch-3 Sponging: the combat-start copy is an augment-sourced item, frozen with the opening (non-item) sources.
+      const copy = sponging.get(unit.id);
+      if (copy) {
+        const definition = lookup(catalog.items, copy.definitionId);
+        sources.push(...makeSourcedEffects(unit.id, 'augment', 'sponging', copy.instanceId, itemEffects(definition)));
+        if (definition.combatProgram) { validateItemProgram(definition.combatProgram); itemPrograms.push({ source: { ownerId: unit.id, sourceKind: 'augment', definitionId: 'sponging', instanceId: copy.instanceId, effectIndex: (definition.effects.length + 1) * 1024, parentItemInstanceId: null }, program: stageProgram(definition.combatProgram, state.round) }); }
       }
       const binding = state.anomalyBinding;
       if (binding?.unitId === unit.id) {

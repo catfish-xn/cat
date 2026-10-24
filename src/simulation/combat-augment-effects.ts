@@ -13,6 +13,8 @@ import { asSource } from './m8/s13-definitions';
 import { effectIdentity } from './m8/identity';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
 import { startingRows } from './m8/targeting';
+import { hexDistance } from './board';
+import { readCombatStats } from './combat-s13';
 
 /** Shared declarations also let restore validate exact source coefficients. */
 export function augmentCombatEffects(m: CombatMechanic, tick = 0): readonly Effect[] {
@@ -59,7 +61,30 @@ export function advanceAugmentCombat(ctx: AbilityContext): void {
   advanceCorrosion(ctx);
   advanceBlazingSoul(ctx);
   advanceDummyGold(ctx);
+  advanceLongDistance(ctx);
 }
+/** Long Distance Relationship (P 2026-10-24): on the first combat tick the two live allies furthest apart (hex distance,
+ * then the lexically smallest id pair) each gain PercentShare of the other's armor, magic resist, attack damage and
+ * ability power, all four sampled on that tick before either grant, as flat stats for the rest of the combat. */
+function advanceLongDistance(ctx: AbilityContext): void {
+  if (ctx.tick !== 1) return;
+  for (const team of ['player', 'enemy'] as const) {
+    const allies = ctx.units.filter(u => u.team === team && u.alive && u.hp > 0 && !isAttackProxy(u)).sort(byId);
+    if (allies.length < 2 || !allies.some(u => u.mechanics?.some(m => m.mechanic === 'longDistance'))) continue;
+    let pair: [S13Unit, S13Unit] | undefined, best = -1;
+    for (const [i, a] of allies.entries()) for (const b of allies.slice(i + 1)) {
+      const d = hexDistance(a.cell, b.cell); if (d > best) { best = d; pair = [a, b]; }
+    }
+    const [a, b] = pair!, stats = new Map([a, b].map(u => [u.id, readCombatStats(u, ctx)]));
+    for (const [self, other] of [[a, b], [b, a]] as const) {
+      const m = self.mechanics?.find(m => m.mechanic === 'longDistance'); if (!m) continue;
+      const o = stats.get(other.id)!, share = (n: number) => Math.floor(n * m.values.shareBps / 10000);
+      ([['armor', o.armor], ['magicResist', o.magicResist], ['attackDamage', o.attackDamage], ['abilityPower', o.abilityPower]] as const)
+        .forEach(([name, value], index) => grant(ctx, self, self, m, independent(stat(modifier(name, share(value)))), JSON.stringify(['longDistance', other.id, index])));
+    }
+  }
+}
+const independent = (effect: Effect): Effect => effect.kind === 'modify-stat' ? { ...effect, stackPolicy: { kind: 'independent-instances' } } : effect;
 /** Gold for Dummies: every GoldDuration, each live training dummy of a team owning the augment records one pulse. */
 function advanceDummyGold(ctx: AbilityContext): void {
   for (const team of ['player', 'enemy'] as const) {

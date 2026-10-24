@@ -9,6 +9,8 @@ import { selectTargets, startingRows, type TargetEnvironment } from './targeting
 import { targetingEnvironment } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference, S13Packet } from '../combat-s13-abilities';
+import { grantShield } from '../combat-s13-state';
+import { MAX_COMBAT_TICKS } from '../combat-types';
 import { byDistance, enemies, origin, ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
 import type { AmountSample } from './stats';
 import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safeNumber } from './stats';
@@ -351,6 +353,14 @@ export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['
   const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick), ctx.tick); target.hp += outcome.actual;
   // Batch-3 Wealthy Rehab counts all healing its team receives; the save is authenticated by exact replay.
   if (outcome.actual > 0 && target.mechanics?.some(m => m.mechanic === 'wealthyRehab')) target.batch2 = { ...target.batch2, healed: (target.batch2?.healed ?? 0) + outcome.actual };
+  // Batch-3 Sated Spellweaver (P 2026-10-24): the excess of its own omnivamp heal becomes one augment shield on the
+  // healed champion, topped up to at most MaxShield and lasting for the rest of the combat; replay-authenticated.
+  const sated = target.mechanics?.find(m => m.mechanic === 'satedSpellweaver');
+  if (sated && outcome.overheal > 0 && canonicalSource(asSource(entry.source)) === canonicalSource(asSource(sated.source))) {
+    const key = sourceKey(sated.source), held = target.shieldLayers.find(l => l.key === key && l.remaining > 0)?.remaining ?? 0;
+    const value = Math.min(sated.values.maxShield, held + outcome.overheal);
+    if (value > held) grantShield(target, sated.source, value, MAX_COMBAT_TICKS + 1, ctx.tick, ctx.events);
+  }
   if (ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, healing: [...ctx.resolutionFacts.healing, outcome] };
   if (entry.periodic && (outcome.actual < outcome.afterWound || target.hp === target.maxHp)) clearPeriodicAccount(ctx, entry.periodic, target.id);
   ctx.events.push({ type: 'heal', tick: ctx.tick, outcome });
