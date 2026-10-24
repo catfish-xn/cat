@@ -13,15 +13,17 @@ import {nearestItemCell} from './g2-4b-item-kernel';
 import {G24_VOIDSPAWN_POLICY} from './content/g2-4b-voidspawn';
 import {writeSeatMechanic} from './seat-mechanics/state';
 export const VOIDSPAWN_ITEM='TFT5_Item_ZzRotPortalRadiant';
+/** Saved preparation cells of movable summons: a Voidspawn's by its portal item instance (`item-N`), a Hextech Forge's by
+ * its Jayce (`unit-N`, P user 2026-10-24). Cells are in the owner's own deployment rows. */
 export type ItemSummonPositions=Readonly<Record<string,HexCell>>;
 export function readItemSummonPositions(state:Pick<MatchState,'seatMechanics'>):ItemSummonPositions|undefined {
  return state.seatMechanics?.seat.g24ItemPositions as ItemSummonPositions|undefined;
 }
-export function validateItemSummonPositions(value:unknown,nextItemSerial?:number):asserts value is ItemSummonPositions {
+export function validateItemSummonPositions(value:unknown,nextItemSerial?:number,nextUnitSerial?:number):asserts value is ItemSummonPositions {
  if(!value||typeof value!=='object'||Array.isArray(value))throw new RangeError('Invalid item summon positions');
  for(const [id,cell] of Object.entries(value)){
-  const match=/^item-([1-9][0-9]*)$/.exec(id);
-  if(!match||nextItemSerial!==undefined&&Number(match[1])>=nextItemSerial||!cell||typeof cell!=='object'
+  const match=/^(item|unit)-([1-9][0-9]*)$/.exec(id),next=match?.[1]==='unit'?nextUnitSerial:nextItemSerial;
+  if(!match||next!==undefined&&Number(match[2])>=next||!cell||typeof cell!=='object'
     ||Object.keys(cell).sort().join()!=='col,row'||!Number.isSafeInteger(cell.col)||!Number.isSafeInteger(cell.row)
     ||!isDeploymentCell(DEFAULT_BOARD,'player',cell))throw new RangeError('Invalid item summon cell');
  }
@@ -35,7 +37,7 @@ export function voidspawnStage(round:number){
  * Persisted cells belong to item instances, so moving/selling the holder does
  * not reset a still-equipped portal's chosen position on the next round. */
 export function projectVoidspawns(state:CombatStrategyInputs,traits?:readonly TraitSnapshot[]){
- const preparation=projectG23Summons(state.preparation,traits),units=[...preparation.units],origins:ItemSummonOrigin[]=[];
+ const preparation=projectG23Summons(state.preparation,traits,state.itemSummonPositions),units=[...preparation.units],origins:ItemSummonOrigin[]=[];
  const equipment=g22Equipment(state).filter(i=>i.definitionId===VOIDSPAWN_ITEM).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
  if(!equipment.length)return {preparation,origins};
  const stats=voidspawnStage(state.round);
@@ -54,14 +56,25 @@ export function projectVoidspawns(state:CombatStrategyInputs,traits?:readonly Tr
  }
  return {preparation:{...preparation,units},origins};
 }
+/** A movable preparation summon as its owner sees it. `forge`: Jayce's Hextech Forge, keyed by its Jayce (`itemInstanceId`
+ * is then the Jayce unit id); it is never a combat item summon. */
+export type MovableSummon=Pick<ItemSummonOrigin,'ownerId'|'itemInstanceId'|'unit'>&{readonly kind:ItemSummonOrigin['kind']|'forge'};
+function movableSummons(state:MatchState){
+ const projection=projectVoidspawns({...state,itemSummonPositions:readItemSummonPositions(state)});
+ const forges:MovableSummon[]=projection.preparation.units.filter(u=>u.definitionId==='g23-forge'&&u.team==='player'&&u.location.kind==='board').map(unit=>{
+  const ownerId=unit.id.slice(0,-':g23-forge'.length);
+  return {kind:'forge',ownerId,itemInstanceId:ownerId,unit};
+ });
+ return {projection,summons:[...projection.origins as readonly MovableSummon[],...forges]};
+}
 /** Owner-visible movable preparation summons. Rendering remains an adapter. */
-export function readItemSummons(state:MatchState){
- return projectVoidspawns({...state,itemSummonPositions:readItemSummonPositions(state)}).origins;
+export function readItemSummons(state:MatchState):readonly MovableSummon[] {
+ return movableSummons(state).summons;
 }
 export function moveItemSummon(state:MatchState,itemInstanceId:string,cell:HexCell):MatchCommandResult {
  if(state.phase!=='preparation'||isCombatRosterLocked(state)||!canOperateMatch(state))return {ok:false,state,reason:'wrong-phase'};
- const projection=projectVoidspawns({...state,itemSummonPositions:readItemSummonPositions(state)});
- const origin=projection.origins.find(o=>o.itemInstanceId===itemInstanceId&&o.unit.team==='player');
+ const {projection,summons}=movableSummons(state);
+ const origin=summons.find(o=>o.itemInstanceId===itemInstanceId&&o.unit.team==='player');
  if(!origin)return {ok:false,state,reason:'unknown-unit'};
  if(!Number.isSafeInteger(cell.col)||!Number.isSafeInteger(cell.row)||!isDeploymentCell(state.preparation.board,'player',cell))return {ok:false,state,reason:'outside-deployment-zone'};
  if(projection.preparation.units.some(u=>u.id!==origin.unit.id&&u.location.kind==='board'&&sameCell(u.location.cell,cell)))return {ok:false,state,reason:'occupied'};

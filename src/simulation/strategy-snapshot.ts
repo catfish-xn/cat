@@ -103,6 +103,9 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
   const d11=new Map(state.augments.filter(a=>Object.hasOwn(D11_FILL_TIERS,a.definitionId)).map(a=>[a.choiceId,
     compileD11Augment(a.definitionId as D11AugmentId,boardUnits,state.playerHp??100,d11OpeningSeed(state.g23?.seed??0,state.round,a.choiceId))]));
   const units = boardUnits.map(unit => {
+    // P (2026-10-24): a placed Hextech Forge carries its Jayce's saved cell, so the combat constructor lays it out the same way.
+    const forgeOwner = unit.definitionId === 'g23-forge' ? unit.id.slice(0, -':g23-forge'.length) : undefined;
+    const summonCell = forgeOwner && state.itemSummonPositions && Object.hasOwn(state.itemSummonPositions, forgeOwner) ? state.itemSummonPositions[forgeOwner] : undefined;
     const suppressFamily=teamups.get('menaces')?.[0]===unit.id;
     const itemSummon=voidspawn.origins.find(o=>o.unit.id===unit.id);
     const sources: SourcedEffect[] = [];
@@ -239,7 +242,7 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
     const gambler=mechanics.find(m=>m.mechanic==='g24Gambler'),avarice=anomaly==='avarice-incarnate';
     if((gambler||avarice)&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative combat bank');
-    return { unitId: unit.id, ...resolved, ...(reunionStar?{effectiveStarLevel:reunionStar,familyReunion:{originalStarLevel:unit.starLevel,combatStarLevel:reunionStar,unboostedStarLevel:promoted?4 as const:unit.starLevel}}:promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
+    return { unitId: unit.id, ...resolved, ...(reunionStar?{effectiveStarLevel:reunionStar,familyReunion:{originalStarLevel:unit.starLevel,combatStarLevel:reunionStar,unboostedStarLevel:promoted?4 as const:unit.starLevel}}:promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),...(summonCell?{summonCell:{col:summonCell.col,row:summonCell.row}}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
   return appendMirrorSummons(state.preparation,{ traits, units });
 }

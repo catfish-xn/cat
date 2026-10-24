@@ -98,7 +98,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     && basis.contentDigest === authority.contentDigest && input.round === authority.round);
   integer(basis.mechanicReceiptPrefixLength);
   requireBasis(equal(input.itemSummonPositions??null,authority.itemSummonPositions??null));
-  if(input.itemSummonPositions)validateItemSummonPositions(input.itemSummonPositions,authority.resources.nextItemSerial);
+  if(input.itemSummonPositions)validateItemSummonPositions(input.itemSummonPositions,authority.resources.nextItemSerial,authority.resources.nextUnitSerial);
   if(input.bankGold!==undefined){integer(input.bankGold);requireBasis(input.bankGold===authority.bankGold);}
   if(input.playerHp!==undefined){integer(input.playerHp);requireBasis(input.playerHp<=100&&input.playerHp===authority.playerHp);}
   if(authority.g23){

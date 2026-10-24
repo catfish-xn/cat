@@ -62,7 +62,9 @@ export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
 /** G2-4b: a summon has no bench slot; the only legal drop is a free cell of my rows. */
 /** Gesture owner id for the 3D layer's pointer; Phaser pointer ids are never negative. */
 const POINTER_3D = -3;
-const SUMMON_BOARD_ONLY = '虚空生物只能在我方棋盘区域移动，不能放入备战席';
+/** A movable preparation summon's name: 兹若特传送门's 虚空生物, or 杰斯's 海克斯科技锻炉 (kind 'forge'). */
+const summonName = (summon: Pick<ItemSummonView, 'kind'> | undefined) => summon?.kind === 'forge' ? '海克斯科技锻炉' : '虚空生物';
+const summonBoardOnly = (summon: Pick<ItemSummonView, 'kind'> | undefined) => `${summonName(summon)}只能在我方棋盘区域移动，不能放入备战席`;
 /** v15: success line of a per-card augment reroll; stays shown during the choice window. */
 const AUGMENT_REROLL_SUCCESS = '这张强化已刷新 · 等级不变，刷掉的强化本局不再出现';
 /** v15 claimOrb refusals (MULTIPLAYER_CONTRACT: already-claimed covers a second click on a queued orb). */
@@ -490,7 +492,8 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private sell(id: string) {
-    if (this.summonOf(id)) { this.setStatus('虚空生物由兹若特传送门召唤 · 不能出售'); return; }
+    const summon = this.summonOf(id);
+    if (summon) { this.setStatus(summon.kind === 'forge' ? '海克斯科技锻炉由杰斯召唤 · 不能出售' : '虚空生物由兹若特传送门召唤 · 不能出售'); return; }
     const result = this.session.sell(id);
     // A hover sale must also clear a different old selection: holding E must
     // never unexpectedly sell that unit once the hovered token disappears.
@@ -589,7 +592,7 @@ export class BoardScene extends Phaser.Scene {
     const centre = target && { kind: target.kind, ...this.position(target) };
     if (summon) {
       const reason = this.summonHint(summon, target);
-      this.setStatus(reason ?? '可放置 · 释放后虚空生物移到此格，之后每回合保持');
+      this.setStatus(reason ?? `可放置 · 释放后${summonName(summon)}移到此格，之后每回合保持`);
       this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
       if (target?.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
       return { target: centre, allowed: !reason };
@@ -610,8 +613,8 @@ export class BoardScene extends Phaser.Scene {
     const swap = !!target && this.swapsWith(token.getData('unitId'), target);
     const summon = this.summonOf(token.getData('unitId'));
     if (summon) {
-      if (target?.kind === 'board') this.command(this.session.moveItemSummon(summon.itemInstanceId, target.cell), '虚空生物已移动 · 之后每回合保持此位置');
-      else this.setStatus(SUMMON_BOARD_ONLY);
+      if (target?.kind === 'board') this.command(this.session.moveItemSummon(summon.itemInstanceId, target.cell), `${summonName(summon)}已移动 · 之后每回合保持此位置`);
+      else this.setStatus(summonBoardOnly(summon));
     } else if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
     else if (target) {
       const unit = this.displayedUnit(token.getData('unitId'));
@@ -672,7 +675,7 @@ export class BoardScene extends Phaser.Scene {
   }
   private dragPhase(): boolean { return this.session.phase === 'preparation' || this.benchOps(); }
   /**
-   * G2-4b: my movable preparation summons (兹若特传送门's 虚空生物) as the rules place them, shown on the board only while I
+   * G2-4b: my movable preparation summons (兹若特传送门's 虚空生物, 杰斯's 海克斯科技锻炉) as the rules place them, shown on the board only while I
    * prepare and no battle is on it. They are not assets: no bench, sale, equipment or population.
    */
   private shownSummons() { return this.session.phase === 'preparation' && !this.session.combatView ? this.session.itemSummons : []; }
@@ -680,11 +683,11 @@ export class BoardScene extends Phaser.Scene {
   private displayedUnit(id: string): Unit | undefined { return this.state.units.find(unit => unit.id === id) ?? this.summonOf(id)?.unit as Unit | undefined; }
   /** Display-only drag hint for a summon (board cell, my rows, free); the rules' moveItemSummon decides the move itself. */
   private summonHint(summon: ItemSummonView, target: UnitLocation | undefined): string | undefined {
-    if (target?.kind !== 'board') return SUMMON_BOARD_ONLY;
+    if (target?.kind !== 'board') return summonBoardOnly(summon);
     if (!isDeploymentCell(this.state.board, 'player', target.cell)) return this.failureMessage('outside-deployment-zone');
     const taken = [...this.state.units.filter(unit => unit.team === 'player'), ...this.shownSummons().map(other => other.unit as Unit)]
       .some(unit => unit.id !== summon.unit.id && unit.location.kind === 'board' && unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row);
-    return taken ? '该位置已有单位 · 虚空生物只能移到空格' : undefined;
+    return taken ? `该位置已有单位 · ${summonName(summon)}只能移到空格` : undefined;
   }
   private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.session.phase === 'preparation' || (this.benchOps() && unit.location.kind === 'bench')); }
   /** Display-only: an allied unit already at the target trades places with the dragged one (SR-C7-01); the rule itself is validateMatchDeployment. */
