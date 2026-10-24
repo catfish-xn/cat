@@ -14,7 +14,7 @@ import type { AugmentGiftSpec } from './augment-gift-plan';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { CONSUMABLE_DEFINITIONS } from './content/consumables';
-import { GOLDEN_EGG_LOOT, EXALTED_ADVENTURE_LOOT, type Batch3LootTable } from './content/augment-pool-batch3-loot';
+import { GOLDEN_EGG_LOOT, EXALTED_ADVENTURE_LOOT, SPOILS_OF_WAR_TABLES, type Batch3LootTable } from './content/augment-pool-batch3-loot';
 export const AUGMENT_BATCH3_SOURCE='augment-pool-batch3';
 const DUMMY_SOURCE='augment-pool-batch3-dummy';
 interface Batch3Event {readonly augment:MatchState['augments'][number];readonly schedule:number;readonly ordinal:number;readonly round:number}
@@ -41,6 +41,15 @@ function batch3Events(state:MatchState):Batch3Event[] {
     }
     return events;
    }
+   if(schedule.counter==='enemy-kills'){
+    // Spoils of War: the k-th enemy death in this seat's combats from acquisition reads its seat table's slot k.
+    const table=spoilsTable(state,augment,row.spoilsTier!);let kills=0;
+    for(const r of battles){
+     if(r.kind!=='battle'||r.facts.round<augment.acquiredRound)continue;
+     for(let n=r.facts.openingDeaths?.length??0;n>0;n--){kills++;if(spoilsGold(table,kills))events.push({augment,schedule:index,ordinal:kills,round:r.facts.round});}
+    }
+    return events;
+   }
    if(schedule.counter==='golden-egg'||schedule.counter==='adventure-quest'){
     const due=schedule.counter==='golden-egg'?goldenEggHatch(state,augment,row,battles):adventureQuestRound(state,augment);
     return due!==undefined&&due<=state.round?[{augment,schedule:index,ordinal:0,round:due}]:[];
@@ -63,6 +72,14 @@ function batch3Events(state:MatchState):Batch3Event[] {
   });
  });
 }
+/** One of the seven 14.24 tables per seat and augment, on its own stream (P 2026-10-24). */
+function spoilsTable(state:MatchState,augment:MatchState['augments'][number],tier:1|2|3):readonly (readonly [number,number])[] {
+ const tables=SPOILS_OF_WAR_TABLES[tier],namespace=JSON.stringify([AUGMENT_BATCH3_SOURCE,'spoils',state.multiplayer?.seatId??'solo',augment.choiceId,augment.definitionId]);
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;
+ return tables[Math.floor(nextRandom((state.seed^rng)>>>0).word*tables.length/4294967296)];
+}
+/** Kill ordinal k reads key 3×slot, slot cycling through the table's 83 positions. */
+const spoilsGold=(table:readonly (readonly [number,number])[],kill:number)=>table.find(([key])=>key===3*((kill-1)%83+1))?.[1]??0;
 /** The first non-supply round ordinal at or after `round` (nothing is born on a carousel round). */
 const nonSupply=(round:number)=>{let r=round;while(getMultiplayerRoundByOrdinal(r).kind==='supply')r++;return r;};
 /** Golden Egg (P 2026-10-24): EggTurns counts down once per round entry after acquisition and once more per player-
@@ -208,6 +225,7 @@ export function drainBatch3RoundEntry(initial:MatchState,policy?:UnitLootPolicy)
 function goldPlan(state:MatchState){
  return batch3Events(state).flatMap(e=>{
   const row=AUGMENT_BATCH3[e.augment.definitionId],schedule=row.schedules[e.schedule],key=schedule.gold;
+  if(schedule.counter==='enemy-kills')return [{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:spoilsGold(spoilsTable(state,e.augment,row.spoilsTier!),e.ordinal),round:e.round}];
   const tables=LOOT_TABLES[schedule.counter];
   if(tables){const gold=lootTable(state,e,tables).Gold??0;return gold?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:gold,round:e.round}]:[];}
   return key?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:batch3Count(row,key),round:e.round}]:[];

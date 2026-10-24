@@ -6,7 +6,7 @@ import { TOWER_DEFENSE_SPELL } from './batch3-summons';
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
 export interface Batch3Schedule {
- readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'|'dummy-deaths'|'dummy-first-death'|'dummy-gold'|'golden-egg'|'adventure-quest'; readonly every:string|number; readonly repeat:boolean;
+ readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'|'dummy-deaths'|'dummy-first-death'|'dummy-gold'|'golden-egg'|'adventure-quest'|'enemy-kills'; readonly every:string|number; readonly repeat:boolean;
  readonly gifts:readonly AugmentGiftSpec[]; readonly gold?:string; readonly max?:string|number;
  /** round-start only: first entry this many rounds after acquisition (default 1). */
  readonly from?:string|number;
@@ -30,6 +30,8 @@ interface Batch3Content {
  /** Wandering Trainer: this many random emblems (a source value) are permanently attached to the augment's dummy. */
  readonly dummyEmblems?:string;
  /** Hero augment: the champion whose strongest copy on the board gets the replacement ability (heroCarryLive). */
+ /** Spoils of War tier: which TFT9_Augment_Spoils_Tier{n} tables the enemy-kills schedule reads. */
+ readonly spoilsTier?:1|2|3;
  readonly hero?:'steb'|'irelia'|'trundle'|'renni'|'vander'|'vladimir';
  /** Replay-authenticated combat mechanics (g2-4b-gold-restore BATCH3_REPLAYED_MECHANICS); values come from the source row. */
  readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab'|'badLuck'|'goldForDummies'|'towerDefense';
@@ -40,6 +42,81 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+ "spoils-of-war-i": {
+  "apiName": "TFT9_Augment_DravenSpoilsOfWar",
+  "name": "战争财宝 I",
+  "tier": "silver",
+  "description": "敌人在被击杀时有25%几率掉落战利品。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "LootDropChance": 0.25,
+    "{ac7ef35a}": 0.25
+   },
+   "description_en_us": "Enemies have a 25% chance to drop loot when killed."
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "enemy-kills",
+    "every": 1,
+    "repeat": true,
+    "gifts": []
+   }
+  ],
+  "spoilsTier": 1
+ },
+ "spoils-of-war-ii": {
+  "apiName": "TFT9_Augment_DravenSpoilsOfWar2",
+  "name": "战争财宝 II",
+  "tier": "gold",
+  "description": "敌人在被击杀时有30%几率掉落战利品。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "LootDropChance": 0.30000001192092896,
+    "{ac7ef35a}": 0.30000001192092896
+   },
+   "description_en_us": "Enemies have a 30% chance to drop loot when killed."
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "enemy-kills",
+    "every": 1,
+    "repeat": true,
+    "gifts": []
+   }
+  ],
+  "spoilsTier": 2
+ },
+ "spoils-of-war-iii": {
+  "apiName": "TFT9_Augment_DravenSpoilsOfWar3",
+  "name": "战争财宝 III",
+  "tier": "prismatic",
+  "description": "敌人在被击杀时有40%几率掉落战利品。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "LootDropChance": 0.4000000059604645,
+    "{ac7ef35a}": 0.4000000059604645
+   },
+   "description_en_us": "Enemies have a 40% chance to drop loot when killed."
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "enemy-kills",
+    "every": 1,
+    "repeat": true,
+    "gifts": []
+   }
+  ],
+  "spoilsTier": 3
+ },
  "field-medic": {
   "apiName": "TFT13_Augment_FishCarry",
   "name": "战地医生",

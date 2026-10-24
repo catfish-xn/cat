@@ -65,7 +65,7 @@ export function reachRound(roundId:string, resolveChoices=true, seed=42): MatchS
 /** Public 2-1 pick that adds no combat mechanic of its own (a quiet economy card, else a trait crest), using the free
  * per-slot rerolls when needed, so augment pool growth cannot route a fixture's saves through exact replay. */
 export function quietAugmentRound(seed:number):MatchState {
-  const quiet=['big-grab-bag','heroic-grab-bag','raining-gold','raining-gold-plus','iron-assets'];
+  const quiet=['big-grab-bag','heroic-grab-bag','raining-gold','raining-gold-plus','iron-assets','item-grab-bag-i','team-building','rolling-for-days-i','trade-sector','what-doesnt-kill-you','spoils-of-war-i','spoils-of-war-ii','latent-forge','crown-guarded','not-today'];
   const wanted=(offers:readonly string[])=>offers.find(id=>quiet.includes(id))??offers.find(id=>id.endsWith('-crest'));
   let open=reachRound('2-1',false,seed);
   for(let slot=0;slot<3&&!wanted(open.pendingChoice!.offers);slot++){const c=open.pendingChoice!,r=rerollAugment(open,c.choiceId,c.generation,slot);if(r.ok)open=r.state;}

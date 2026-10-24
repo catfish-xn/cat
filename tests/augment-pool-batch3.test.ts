@@ -18,7 +18,7 @@ import { drainBatch3RoundEntry } from '../src/simulation/augment-pool-batch3-pro
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { startingRows } from '../src/simulation/m8/targeting';
-import { GOLDEN_EGG_LOOT, EXALTED_ADVENTURE_LOOT } from '../src/simulation/content/augment-pool-batch3-loot';
+import { GOLDEN_EGG_LOOT, EXALTED_ADVENTURE_LOOT, SPOILS_OF_WAR_TABLES } from '../src/simulation/content/augment-pool-batch3-loot';
 import { getMultiplayerRoundById } from '../src/simulation/multiplayer-round';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { generateChoices } from '../src/simulation/choices';
@@ -48,9 +48,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the forty-one batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the forty-four batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['all-out','an-exalted-adventure','bad-luck-protection','blade-dance','blazing-soul-i','blazing-soul-ii','blood-pact','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','field-medic','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','savage-revenge','scapegoat','shimmerscale-essence','shocking-troll','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['all-out','an-exalted-adventure','bad-luck-protection','blade-dance','blazing-soul-i','blazing-soul-ii','blood-pact','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','field-medic','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','savage-revenge','scapegoat','shimmerscale-essence','shocking-troll','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','tower-defense','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -586,4 +586,17 @@ it('Savage Revenge: 10 less mana; the cast pounces on the farthest enemy within 
  const base=runUntil(plain,e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='h0'&&e.outcome.context.delivery!=='basic-attack',1200);
  const first=(r:typeof hero)=>r.events.find(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='h0'&&e.outcome.context.delivery!=='basic-attack');
  expect(first(hero)).toBeDefined();expect(first(base)).toBeDefined();
+});
+it.each([['spoils-of-war-i',1],['spoils-of-war-ii',2],['spoils-of-war-iii',3]] as const)('P: %s pays its seat table\'s gold on the matching enemy-death ordinals (tier %i tables)', (id,tier)=>{
+ const deaths=(n:number,from:number)=>Array.from({length:n},(_,i)=>({victimId:'v'+(from+i),eventSeq:i+1}));
+ let s:MatchState={...createMatch(42),augments:[{definitionId:id,choiceId:'test',acquiredRound:1}]};
+ const perBattle=[10,0,40,33];let total=0;
+ for(const [i,n] of perBattle.entries()){s=writeG23Progress({...s,round:i+1},advanceG23Economy(readG23Progress(s)!,{...fact(i+1,[i===1?'pve':'pvp','win']),openingDeaths:deaths(n,total)}).progress);total+=n;s=drainBatch3Gold(s);}
+ const paid=s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch3').reduce((n,r)=>n+((r as any).amount??0),0);
+ const sums=SPOILS_OF_WAR_TABLES[tier].map(t=>t.reduce((n,[,g])=>n+g,0));
+ expect(sums).toContain(paid);validateBatch3Gold(s);
+ const drops=s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch3').length;
+ expect(drops/83).toBeGreaterThan([0,0.2,0.24,0.33][tier]);expect(drops/83).toBeLessThan([0,0.34,0.4,0.55][tier]);
+ const forged=structuredClone(s) as any;forged.seatMechanics.receipts.find((r:any)=>r.source==='augment-pool-batch3').amount+=1;
+ expect(()=>validateBatch3Gold(forged)).toThrow();
 });
