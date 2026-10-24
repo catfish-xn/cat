@@ -22,10 +22,10 @@ export type { CombatInputBasis, CombatStrategyInputs } from '../simulation/comba
 export type {
   StrategySnapshot, StrategyUnitSnapshot, ItemInstance, OwnedAugment, AnomalyBinding,
 } from '../simulation/strategy-types';
-export { snapshotForBattle, restorePlayerBattleSnapshot } from '../simulation/two-sided-snapshot';
+export { snapshotForBattle, snapshotForBattleSteps, restorePlayerBattleSnapshot, restorePlayerBattleSnapshotSteps } from '../simulation/two-sided-snapshot';
 export { priorPvpWins, G22_EMISSARY_WIN_CAP } from '../simulation/g2-2-pvp-history';
-export { compileBattle, restoreBattleInput, startTwoSidedCombat, startTwoSidedCombatWithEvents,
-  startTwoSidedBattle, resolveTwoSidedBattle, proposeSettlement, readBattleLiveGoldReaders } from '../simulation/two-sided-battle';
+export { compileBattle, compileBattleSteps, restoreBattleInput, restoreBattleInputSteps, startTwoSidedCombat, startTwoSidedCombatWithEvents,
+  startTwoSidedBattle, startTwoSidedBattleSteps, resolveTwoSidedBattle, proposeSettlement, readBattleLiveGoldReaders } from '../simulation/two-sided-battle';
 export type { BattleTask, BattleReplayTask, BattleReplayStep, BattleReplayOptions, BattleLiveGoldReader } from '../simulation/two-sided-battle';
 export type { BattleEquipmentInput, BattleTickInput, BattleTickInputSource, BattleEquipmentCommand } from '../simulation/battle-input-log';
 export { sampleD11CombatGold } from '../simulation/d11-fill';
@@ -71,6 +71,7 @@ export type { RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../simulat
 export { summarizeBattle } from '../simulation/combat-summary';
 export type { UnitBattleSummary } from '../simulation/combat-summary';
 
+export { drainSetup } from '../simulation/setup-work';
 export { applyBattleEquipment } from '../simulation/battle-equipment';
 export type { BattleEquipmentReceipt, BattleEquipmentFailure } from '../simulation/battle-equipment';
 export { queueMatchBattleEquipment } from '../simulation/match';

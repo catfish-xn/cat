@@ -565,7 +565,7 @@ export class StrategyPanel {
     const xpFill = element('i', '', 'hud-xp-fill'); xpFill.style.width = `${xp === null ? 100 : Math.min(100, Math.round(state.xp * 100 / xp))}%`; xpBar.append(xpFill);
     // Docked (online): gold and level lead, as at the bottom-left of a TFT screen. Offline keeps the original order.
     // As in TFT, hovering gold shows next round's income: base, interest, victory and streak gold, from the same preview.
-    const incomeTip = economy ? `本回合结算预计收入\n${economyIncomeText('胜', economy.ifWin)}\n${economyIncomeText('败/平', economy.ifLoss)}` : '';
+    const incomeTip = economy ? `可能的总收入（胜利金币当场到账，其余在下个准备阶段开始时到账）\n${economyIncomeText('胜', economy.ifWin)}\n${economyIncomeText('败/平', economy.ifLoss)}` : '';
     if (dock) chip('金币', `${state.gold}`, 'gold', pips, incomeTip); else chip('生命', String(state.playerHp), 'hp');
     if (!dock) chip('金币', `${state.gold}`, 'gold', pips, incomeTip);
     chip('等级', `${state.level}${xp === null ? ' · 满' : ` · ${state.xp}/${xp}`}`, 'level', xpBar);

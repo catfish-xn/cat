@@ -1,4 +1,5 @@
 import { MAX_COMBAT_TICKS } from './combat-types';
+import { drainSetup } from './setup-work';
 import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
 import { readsLiveGold } from './live-gold-readers';
@@ -11,18 +12,18 @@ import {countsG23SurvivorDamage} from './g2-3-summons';
 import {g23BattleFacts} from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
 import { DEFAULT_BOARD, type Team } from './board';
-import { canonicalContent, digestContent } from './content';
-import { createScopedContentFreezer, freezeContent } from './content/freeze';
-import { buildStrategySnapshot } from './strategy-snapshot';
-import { createCombatWithEvents, stepCombat, type CombatState, type CombatStep } from './combat';
+import { canonicalContent, canonicalContentSteps, digestContent } from './content';
+import { createScopedContentFreezer, freezeContent, freezeContentSteps } from './content/freeze';
+import { buildStrategySnapshotSteps } from './strategy-snapshot';
+import { createCombatWithEvents, createCombatWithEventsSteps, stepCombat, type CombatState, type CombatStep } from './combat';
 import { toLedgerEvents } from './combat-ledger';
 import { effectKey } from './effects';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { validateSeed } from './rng';
 import { selectPlayerBaseDamage } from './match-rules';
 import type { CombatStrategyInputs } from './combat-input';
-import type { EffectSource, SourcedEffect } from './strategy-types';
-import { restorePlayerBattleSnapshot } from './two-sided-snapshot';
+import type { EffectSource, SourcedEffect, StrategySnapshot } from './strategy-types';
+import { restorePlayerBattleSnapshotSteps } from './two-sided-snapshot';
 import {
   BattleValidationError, TWO_SIDED_BATTLE_VERSION, type PlayerBattleSnapshot, type BattleInput,
   type BattleIdMapping, type BattleIdentity, type BattleResult, type BattleSideResult, type SideProposal,
@@ -30,13 +31,16 @@ import {
 
 const order = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
 const localId = (seat: string, kind: string, id: string) => JSON.stringify(['t2', seat, kind, id]);
-function normalized(value: PlayerBattleSnapshot): PlayerBattleSnapshot {
-  const s = restorePlayerBattleSnapshot(value);
+function* normalizedSteps(value: PlayerBattleSnapshot): Generator<void, PlayerBattleSnapshot, void> {
+  const s = yield* restorePlayerBattleSnapshotSteps(value);
   return { ...s, units:[...s.units].sort((a,b)=>order(a.id,b.id)), items:[...s.items].sort((a,b)=>order(a.id,b.id)),
     temporaryEquipment:[...s.temporaryEquipment].sort((a,b)=>order(a.temporaryId,b.temporaryId)),
     augments:[...s.augments].sort((a,b)=>order(a.choiceId,b.choiceId)), persistentGrowth:[...s.persistentGrowth].sort((a,b)=>order(a.unitId,b.unitId)) };
 }
 function compileSide(s: PlayerBattleSnapshot, team: Team) {
+  return drainSetup(compileSideSteps(s, team));
+}
+function* compileSideSteps(s: PlayerBattleSnapshot, team: Team) {
   const mapping: BattleIdMapping[] = [];
   const map = (kind: BattleIdMapping['kind'], originalId: string) => {
     const combatId = localId(s.seatId, kind, originalId);
@@ -58,10 +62,9 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
     anomalyBinding:s.anomalyBinding ? {...s.anomalyBinding,unitId:map('unit',s.anomalyBinding.unitId),choiceId:map('anomaly',s.anomalyBinding.choiceId)} : null,
     persistentGrowth:s.persistentGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)})), augmentProgress:s.augmentProgress,
   };
-  const compiled = (() => {
-    try { return buildStrategySnapshot(inputs); }
-    catch { throw new BattleValidationError('invalid-snapshot'); }
-  })();
+  let compiled: StrategySnapshot;
+  try { compiled = yield* buildStrategySnapshotSteps(inputs); }
+  catch { throw new BattleValidationError('invalid-snapshot'); }
   // Trait instances also get a seat namespace (unit owners were already isolated).
   const source = (value: EffectSource): EffectSource => value.sourceKind === 'trait'
     ? {...value,sourceInstanceId:localId(s.seatId,'trait',value.sourceInstanceId)} : value;
@@ -83,7 +86,13 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
 
 /** The optional identity is required for production scheduling; the default is diagnostic only. */
 export function compileBattle(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, battleSeed: number, identity?: BattleIdentity): BattleInput {
-  const left = normalized(a), right = normalized(b);
+  return drainSetup(compileBattleSteps(a, b, battleSeed, identity));
+}
+export function* compileBattleSteps(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, battleSeed: number, identity?: BattleIdentity): Generator<void, BattleInput, void> {
+  const left = yield* normalizedSteps(a);
+  yield;
+  const right = yield* normalizedSteps(b);
+  yield;
   if (left.seatId === right.seatId) throw new BattleValidationError('seat-collision');
   if (left.roundId !== right.roundId) throw new BattleValidationError('round-mismatch');
   if (getMultiplayerRoundById(left.roundId).kind !== 'pvp') throw new BattleValidationError('round-kind');
@@ -92,10 +101,13 @@ export function compileBattle(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, 
   if (typeof battleId !== 'string' || battleId.length === 0) throw new BattleValidationError('invalid-battle-id');
   const mirrorOfSeatId = identity?.mirrorOfSeatId ?? null;
   if (mirrorOfSeatId !== null && mirrorOfSeatId !== right.seatId) throw new BattleValidationError('invalid-mirror');
-  const x = compileSide(left,'player'), y = compileSide(right,'enemy');
+  const x = yield* compileSideSteps(left,'player');
+  yield;
+  const y = yield* compileSideSteps(right,'enemy');
+  yield;
   // Restored snapshots are detached and deeply frozen; compilation owns every
   // new record. Re-cloning this entire derived graph would only copy owned data.
-  return freezeContent({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
+  return yield* freezeContentSteps({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
     mapping:[...x.mapping,...y.mapping].sort((a,b)=>order(a.combatId,b.combatId)),
     preparation:{board:DEFAULT_BOARD,benchSize:9,units:[...x.units,...y.units]},
     strategy:{traits:[...x.strategy.traits,...y.strategy.traits],units:[...x.strategy.units,...y.strategy.units]},
@@ -104,12 +116,18 @@ export function compileBattle(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, 
 
 /** Recompile descriptors and compare every derived field; never disable Match restore checks. */
 export function restoreBattleInput(input: unknown): BattleInput {
+  return drainSetup(restoreBattleInputSteps(input));
+}
+export function* restoreBattleInputSteps(input: unknown): Generator<void, BattleInput, void> {
   try {
     const value = (typeof input === 'string' ? JSON.parse(input) : input) as BattleInput;
-    canonicalContent(value);
+    yield* canonicalContentSteps(value);
+    yield;
     if (value?.version !== TWO_SIDED_BATTLE_VERSION) throw new BattleValidationError('battle-input');
-    const expected = compileBattle(value.a,value.b,value.battleSeed,{battleId:value.battleId,mirrorOfSeatId:value.mirrorOfSeatId ?? undefined});
-    if (canonicalContent(value) !== canonicalContent(expected)) throw new BattleValidationError('battle-input');
+    const expected = yield* compileBattleSteps(value.a,value.b,value.battleSeed,{battleId:value.battleId,mirrorOfSeatId:value.mirrorOfSeatId ?? undefined});
+    const actualText = yield* canonicalContentSteps(value);
+    yield;
+    if (actualText !== (yield* canonicalContentSteps(expected))) throw new BattleValidationError('battle-input');
     return expected;
   } catch (error) {
     if (error instanceof BattleValidationError) throw error;
@@ -224,11 +242,20 @@ export function startTwoSidedBattle(input: BattleInput, options: BattleReplayOpt
 export function startTwoSidedBattle(input: BattleInput): BattleTask;
 export function startTwoSidedBattle(input: BattleInput, options: BattleReplayOptions): BattleTask | BattleReplayTask;
 export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOptions): BattleTask | BattleReplayTask {
-  const checked = restoreBattleInput(input);
-  const start = createCombatWithEvents(checked.preparation,checked.strategy,checked.battleId,checked.battleSeed);
+  return drainSetup(startTwoSidedBattleSteps(input, options ?? {}));
+}
+export function startTwoSidedBattleSteps(input: BattleInput, options: BattleReplayOptions & { readonly captureReplay: true }): Generator<void, BattleReplayTask, void>;
+export function startTwoSidedBattleSteps(input: BattleInput): Generator<void, BattleTask, void>;
+export function startTwoSidedBattleSteps(input: BattleInput, options: BattleReplayOptions): Generator<void, BattleTask | BattleReplayTask, void>;
+export function* startTwoSidedBattleSteps(input: BattleInput, options?: BattleReplayOptions): Generator<void, BattleTask | BattleReplayTask, void> {
+  const checked = yield* restoreBattleInputSteps(input);
+  yield;
+  const start = yield* createCombatWithEventsSteps(checked.preparation,checked.strategy,checked.battleId,checked.battleSeed);
+  yield;
   const freezeBattle = createScopedContentFreezer();
   freezeBattle(start.state);
-  canonicalContent(start.state);
+  yield* canonicalContentSteps(start.state);
+  yield;
   const events: BattleResult['events'][number][] = [];
   const appendEvents = (step: CombatStep) => {
     for (const event of toLedgerEvents(step.events)) {
@@ -238,7 +265,9 @@ export function startTwoSidedBattle(input: BattleInput, options?: BattleReplayOp
     }
   };
   appendEvents(start);
+  yield;
   const recorder = options?.captureReplay ? createCombatReplayRecorder(start.state, events) : undefined;
+  yield;
   let replay: CombatReplay | null = null;
   let terminal = start.state;
   const bankSamples:CombatBankSample[]=[];

@@ -9,7 +9,7 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  openMatchCombatStream, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
+  openMatchCombatStreamSteps, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import { externalAugmentBlocks } from '../../simulation/augment-offers';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
@@ -1166,7 +1166,7 @@ export class Room {
         if (!locked.ok) throw new BattleResolveError(seat.seatId, locked.reason);
         match = locked.state;
       } else {
-        const opened = openMatchCombatStream(match);
+        const opened = yield* openMatchCombatStreamSteps(match);
         if (!opened.ok || !opened.streamInitial) throw new BattleResolveError(seat.seatId, opened.ok ? 'no-combat' : opened.reason);
         match = opened.state; events = [...events, ...opened.events];
         yield;
@@ -1622,10 +1622,11 @@ export class Room {
     let work = this.settlementWork;
     if (this.disposed || !work) return;
     const clock = this.options.clock, now = this.options.sliceNow ?? (() => clock.now());
-    const deadline = this.options.sliceMs === undefined ? Infinity : now() + this.options.sliceMs;
-    // One initialization rules call per callback: do not append a potentially 40 ms task
-    // to a slice that has already spent most of its time budget.
-    const limit = this.openingStreams ? 1 : this.options.sliceTicks ?? Infinity;
+    const deadline = this.options.sliceMs === undefined ? Infinity : now() + (this.openingStreams ? Math.min(5, this.options.sliceMs / 2) : this.options.sliceMs);
+    // Setup now yields inside rules calls. Reserve headroom for the next indivisible
+    // step and GC; settlement retains its existing full budget.
+    // Without a time budget, keep the old one-step-per-callback bound for openings.
+    const limit = this.openingStreams && this.options.sliceMs === undefined ? 1 : this.options.sliceTicks ?? Infinity;
     try {
       if (this.settlementCommands.length && !this.drainingSettlementCommands && !this.settlementFrozen) {
         const factory = this.settlementFactory;

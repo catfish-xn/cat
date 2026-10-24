@@ -272,3 +272,25 @@ createCombatReplayRecorder(initialState: CombatState,
 沿用奇数锁链/偶数拳击。锁链伤害前移到目标最近可达空邻格（不含当前占用格），距离平局沿普通 BFS；拳击在本 tick HP/存活屏障后向己方半场且远离施法时目标坐标后撤 1 格，几何首选格不可用则原地。复用占格、移动限制及本 tick 保留格；不增加 RNG 调用，不改伤害/短晕/耗蓝。精确口径、独立向量和回退见 [AMBESSA_DASH](AMBESSA_DASH.md)，原档缺距离来源见 [证据](AMBESSA_DASH_EVIDENCE.md)。
 
 既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，尚未录 epoch，不应以旧身份发布。
+
+## 单场初始化协作切片（2026-10-23；不变更 epoch）
+
+新增 `Generator<void, T, void>` 入口。每次 `next()` 只继续初始化，`yield` 不携带状态或事件；只有 `done: true` 返回完整结果。同步入口 drain 同一生成器，保留校验次序、错误归属、RNG 次序、JSON 字段及数组顺序。调用方必须在 continuation 存活期间保持输入不变；服务器用原有冻结写入/FIFO 屏障满足此约束。取消可调用 `return()`，未发布的任务直接丢弃，重新创建不消费调用方 RNG，不补发奖励。
+
+| 导出（规则模块） | 签名 / 返回值 |
+| --- | --- |
+| `two-sided-snapshot.ts` | `snapshotForBattleSteps(state: MatchState, seatId: string): Generator<void, PlayerBattleSnapshot, void>`；`restorePlayerBattleSnapshotSteps(input: unknown)` 同返回类型 |
+| `two-sided-battle.ts` | `compileBattleSteps(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, battleSeed: number, identity?: BattleIdentity): Generator<void, BattleInput, void>`；`restoreBattleInputSteps(input: unknown)` 同返回类型 |
+| `two-sided-battle.ts` | `startTwoSidedBattleSteps(input: BattleInput, options?: BattleReplayOptions)` 返回 `Generator<void, BattleTask, void>`；`captureReplay: true` 重载返回 `Generator<void, BattleReplayTask, void>`；联合选项返回联合任务 |
+| `strategy-snapshot.ts` | `buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog?: StrategyCatalog, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot): Generator<void, StrategySnapshot, void>` |
+| `combat.ts` | `createCombatWithEventsSteps(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState?: number, context?: TraitProjectionContext): Generator<void, CombatStep, void>` |
+| `match.ts` | `openMatchCombatStreamSteps(state: MatchState): Generator<void, MatchCommandResult & { readonly streamInitial?: CombatState }, void>` |
+| `setup-work.ts` | `drainSetup<T>(work: Generator<void, T, void>): T` |
+
+`buildStrategySnapshot` 同步入口向生成器原样传递 PR9 的 `equipmentBasis`；战斗中装备重编译沿用冻结羁绊与非装备来源，不重新计算开战选择。PvP 内部 `compileSide` 同步入口同样 drain `compileSideSteps`，供 PR9 的 `queueEquipment` 首次准备收据使用。
+
+PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校验与冻结按至多64个未命中缓存的对象节点分段；G23 经济历史按收据重演、逐字段比较；策略编译和战斗单位创建按原单位顺序分段。字符串解析、单个对象/数组枚举、原生 clone、单次 combatStart 等仍是不可抢占步骤。`freezeContentSteps` 只用于调用方拥有的数据图，可能在暂停前冻结已完成子树；它不保证取消时撤销冻结。canonical 同步/切片共用遍历器，切片模式不保留短命快照文本缓存，不跳过任何校验。
+
+失败枚举不新增：快照/编译/任务沿用 `BattleFailure` / `BattleValidationError`，包括 `snapshot-version`、`content-digest`、`invalid-snapshot`、`wrong-phase`、`round-mismatch`、`round-kind`、`seat-collision`、`invalid-seed`、`invalid-battle-id`、`invalid-mirror`、`battle-input`。PvE 仍返回原有 `MatchFailure`，失败保持原 state 引用，无事件、资源及 RNG 变更。异常可能在后续 `next()` 才抛出；服务器 `guardedSteps` 沿用 `BattleResolveError` 包装。
+
+服务器 `startLiveTaskSteps(envelope, beforeTick?)` 依次委派快照、编译、任务初始化；`openStreamSteps` 委派 PvE 初始化。所有流仍私有暂存，全部完成才原子发布并启动共同 tick0 时钟。`runSettlementSlice` 用注入的 `sliceNow`，初始化工作窗口为 `min(5ms, sliceMs/2)`，保留余量给下一不可抢占子步骤；同时遵守 `sliceTicks`。未配置 `sliceMs` 时沿用无时间预算语义。结算窗口、50ms 战斗 tick、RNG、内容身份、账本及录像格式不变；真实 GC/系统调度暂停不构成跨硬件硬实时保证。

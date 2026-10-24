@@ -13,7 +13,7 @@
  * PvE and supply rounds never reach this entry (§10.6 item 5); they go to the inner resolver.
  */
 import {
-  BattleValidationError, compileBattle, proposeSettlement, snapshotForBattle, startTwoSidedBattle,
+  BattleValidationError, compileBattleSteps, drainSetup, proposeSettlement, snapshotForBattleSteps, startTwoSidedBattle, startTwoSidedBattleSteps,
   type BattleIdentity, type BattleReplayTask, type BattleTask, type PlayerBattleSnapshot, type SharedPoolState,
   type BattleInput as RulesBattleInput,
 } from '../../server-entry';
@@ -101,14 +101,19 @@ function startTask(envelope: BattleInput, captureReplay: boolean): BattleTask | 
 
 /** D11 live bank: the same compiled battle as a frame-by-frame replay task, with the rules' input (for its live-gold readers). */
 export function startLiveTask(envelope: BattleInput, beforeTick?: import('../../server-entry').BattleTickInputSource): { readonly input: RulesBattleInput; readonly task: BattleReplayTask } {
-  const input = compileEnvelope(envelope);
-  return { input, task: guarded(envelope.battleId, () => startTwoSidedBattle(input, { captureReplay: true, beforeTick })) };
+  return drainSetup(startLiveTaskSteps(envelope, beforeTick));
 }
 
-/** Scheduling seam only: each rules call is unchanged and runs in its original order. */
-export function* startLiveTaskSteps(envelope: BattleInput): Generator<void, ReturnType<typeof startLiveTask>, void> {
+/** Preserve validation error attribution even when it is thrown after a yield. */
+function* guardedSteps<T>(subject: string, work: Generator<void, T, void>): Generator<void, T, void> {
+  try { return yield* work; }
+  catch (error) { return guarded(subject, () => { throw error; }); }
+}
+
+/** Same rules work as the synchronous entry, paused only at rules-owned boundaries. */
+export function* startLiveTaskSteps(envelope: BattleInput, beforeTick?: import('../../server-entry').BattleTickInputSource): Generator<void, ReturnType<typeof startLiveTask>, void> {
   const input = yield* compileEnvelopeSteps(envelope);
-  const task = guarded(envelope.battleId, () => startTwoSidedBattle(input, { captureReplay: true }));
+  const task = yield* guardedSteps(envelope.battleId, startTwoSidedBattleSteps(input, { captureReplay: true, beforeTick }));
   yield;
   return { input, task };
 }
@@ -131,12 +136,12 @@ function* compileEnvelopeSteps(envelope: BattleInput): Generator<void, RulesBatt
   for (const side of [first, opponent]) {
     if (side.state.roundDefinitionId !== envelope.roundId) throw new BattleResolveError(side.seatId, `round-mismatch:${side.state.roundDefinitionId}`);
   }
-  const a: PlayerBattleSnapshot = guarded(first.seatId, () => snapshotForBattle(first.state, first.seatId));
+  const a: PlayerBattleSnapshot = yield* guardedSteps(first.seatId, snapshotForBattleSteps(first.state, first.seatId));
   yield;
-  const b: PlayerBattleSnapshot = guarded(opponent.seatId, () => snapshotForBattle(opponent.state, opponent.seatId));
+  const b: PlayerBattleSnapshot = yield* guardedSteps(opponent.seatId, snapshotForBattleSteps(opponent.state, opponent.seatId));
   yield;
   const identity: BattleIdentity = envelope.mirrorOf === null ? { battleId: envelope.battleId } : { battleId: envelope.battleId, mirrorOfSeatId: envelope.mirrorOf.seatId };
-  const input = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
+  const input = yield* guardedSteps(envelope.battleId, compileBattleSteps(a, b, envelope.battleSeed, identity));
   yield;
   return input;
 }

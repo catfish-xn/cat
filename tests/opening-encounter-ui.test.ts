@@ -51,8 +51,8 @@ describe('PR8 opening-encounter texts', () => {
   });
   it('Mel progress: before and after the threshold, the reward always closed, never claimable', () => {
     const progress = readOpeningMelProgress(createMatch(seedFor('mels-blessing')))!;
-    expect(melProgressText(progress)).toBe('梅尔的祝福 · 生命值降到 40 及以下时触发（奖励尚未启用）');
-    expect(melProgressText({ ...progress, thresholdReached: true })).toBe('梅尔的祝福 · 已达门槛（奖励尚未启用）');
+    expect(melProgressText(progress)).toBe('梅尔的赐福 · 生命值降到 40 及以下时触发（奖励尚未启用）');
+    expect(melProgressText({ ...progress, thresholdReached: true })).toBe('梅尔的赐福 · 已达门槛（奖励尚未启用）');
     expect(melProgressText(null)).toBeNull();
     for (const text of [melProgressText(progress), melProgressText({ ...progress, thresholdReached: true })]) expect(text).not.toMatch(/领取|已获得/);
   });

@@ -1,9 +1,10 @@
+import { drainSetup } from './setup-work';
 import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {readG23Progress} from './g2-3-state';
-import { validateG23Progress } from './g2-3-match-progress';
-import { canonicalContent, CONTENT_DIGEST } from './content';
-import { freezeContent } from './content/freeze';
+import { validateG23ProgressSteps } from './g2-3-match-progress';
+import { canonicalContent, canonicalContentSteps, CONTENT_DIGEST } from './content';
+import { freezeContentSteps } from './content/freeze';
 import { DEFAULT_BOARD } from './board';
 import { createInputValidation, validateInputAssets } from './input-assets';
 import { crownTeamSizeBonus } from './deployment-cap';
@@ -36,16 +37,19 @@ const nextSerial = (ids: readonly string[]) => Math.max(0, ...ids.map(value => N
 
 /** Own-format structural validation, not client authentication or asset-history validation. */
 export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapshot {
+  return drainSetup(restorePlayerBattleSnapshotSteps(input));
+}
+export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<void, PlayerBattleSnapshot, void> {
   try {
     const value: unknown = typeof input === 'string' ? JSON.parse(input) : input;
-    canonicalContent(value); record(value);
+    yield* canonicalContentSteps(value); yield; record(value);
     if (value.version !== PLAYER_BATTLE_SNAPSHOT_VERSION) throw new BattleValidationError('snapshot-version');
     if (value.contentDigest !== CONTENT_DIGEST) throw new BattleValidationError('content-digest');
     const s = value as unknown as PlayerBattleSnapshot;
     if(s.itemSummonPositions)validateItemSummonPositions(s.itemSummonPositions);
     if(s.bankGold!==undefined)integer(s.bankGold);
     if(s.playerHp!==undefined){integer(s.playerHp);requireSnapshot(s.playerHp<=100);}
-    if(s.g23)validateG23Progress(s.g23,s.g23.seed,getMultiplayerRoundById(s.roundId).ordinal);
+    if(s.g23)yield* validateG23ProgressSteps(s.g23,s.g23.seed,getMultiplayerRoundById(s.roundId).ordinal);
     if(s.priorPvpWins!==undefined){integer(s.priorPvpWins,1);requireSnapshot(s.priorPvpWins<=priorPvpRoundLimit(getMultiplayerRoundById(s.roundId).ordinal));}
     id(s.seatId); id(s.roundId); integer(s.level, 1);
     const round = getMultiplayerRoundById(s.roundId);
@@ -120,8 +124,11 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
       persistentGrowth: s.persistentGrowth.map(g => ({unitId:g.unitId,attackDamageBps:g.attackDamageBps})),
       augmentProgress: { pumpingRounds:s.augmentProgress.pumpingRounds, investmentHp:s.augmentProgress.investmentHp },
     };
-    requireSnapshot(canonicalContent(clean) === canonicalContent(s));
-    return freezeContent(structuredClone(clean));
+    const cleanText = yield* canonicalContentSteps(clean);
+    yield;
+    requireSnapshot(cleanText === (yield* canonicalContentSteps(s)));
+    yield;
+    return yield* freezeContentSteps(structuredClone(clean));
   } catch (error) {
     if (error instanceof BattleValidationError) throw error;
     throw new BattleValidationError('invalid-snapshot');
@@ -130,6 +137,9 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
 
 /** Only called on server-owned preparation state; history/authentication remain upstream. */
 export function snapshotForBattle(state: MatchState, seatId: string): PlayerBattleSnapshot {
+  return drainSetup(snapshotForBattleSteps(state, seatId));
+}
+export function* snapshotForBattleSteps(state: MatchState, seatId: string): Generator<void, PlayerBattleSnapshot, void> {
   if ((state.phase !== 'preparation' || state.multiplayer?.combatRosterLocked)) throw new BattleValidationError('wrong-phase');
   if (state.contentDigest !== CONTENT_DIGEST) throw new BattleValidationError('content-digest');
   if ((['schemaVersion','rulesVersion','contentVersion','commandProtocolVersion','rngAlgorithm','tickMs'] as const)
@@ -142,7 +152,7 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   // A placed Hextech Forge travels with its deployed Jayce (keyed by the Jayce), a Voidspawn with its equipped portal.
   const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>units.some(u=>u.id===id&&u.definitionId==='jayce')||state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   const d14Combat=d14Certificate(state);
-  return restorePlayerBattleSnapshot({
+  return yield* restorePlayerBattleSnapshotSteps({
     ...(d14Combat&&ids.has(d14Combat.unitId)?{d14Combat}:{}),
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
     ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),

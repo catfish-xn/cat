@@ -19,6 +19,40 @@ function fixture(sliceTicks = 8) {
 const json = (value: unknown) => JSON.stringify(value);
 
 describe('terminal orb server integration', () => {
+  it('sliced opening publishes a tick-zero PvE pending terminal before any combat tick or settlement', () => {
+    const { room, clock } = fixture(1);
+    try {
+      runUntil(room, clock, s => s.phase === 'preparation');
+      for (const unit of room.state.seats[0].match.preparation.units.filter(u => u.team === 'player')) {
+        expect(room.handle('s0', { type: 'sell', unitId: unit.id })).toMatchObject({ ok: true });
+      }
+      const before = room.state.seats[0].match;
+      const publications: typeof room.state[] = [];
+      room.subscribe(state => { if (state.phase === 'battle') publications.push(state); });
+      // fireNext preserves each continuation boundary; runNext drains all same-time slices.
+      for (let n = 0; !room.combatInitializationPending && n < 100; n++) expect(clock.fireNext()).toBe(true);
+      expect(room.combatInitializationPending).toBe(true);
+      expect(room.hasCombatStreams).toBe(false);
+      expect(room.state.seats[0].match).not.toHaveProperty('pendingCombatTerminal');
+      expect(publications).toHaveLength(0);
+      for (let n = 0; publications.length === 0 && n < 2000; n++) expect(clock.fireNext()).toBe(true);
+      expect(publications).toHaveLength(1);
+      const published = publications[0], own = published.seats[0];
+      expect(own.match.pendingCombatTerminal).toMatchObject({ tick: 0, status: 'finished', result: 'enemyWin' });
+      expect(room.committedBattleTick).toBe(0);
+      expect(room.combatStreamFor('s0')!.terminal).toMatchObject({ tick: 0, status: 'finished' });
+      expect(published.battles).toHaveLength(0);
+      expect(published.settlements).toHaveLength(0);
+      expect(own.serverEvents!.events.some(e => e.type === 'lootForfeited')).toBe(true);
+      expect(own.serverEvents!.events.some(e => e.type === 'lootRevealed')).toBe(false);
+      expect(toSeatPrivateView(own.match).unclaimedOrbs).toEqual(readLootView(before).unclaimedOrbs);
+      for (const field of ['gold', 'items', 'playerHp', 'roundResults'] as const) expect(own.match[field]).toEqual(before[field]);
+      expect(() => validateMultiplayerOrbLedger(own.match)).not.toThrow();
+      expect(() => validateB8Loot(own.match)).not.toThrow();
+      expect(room.state.fault).toBeNull();
+    } finally { room.dispose(); }
+  });
+
   it('publishes the final PvE orb to its owner on the sealed terminal tick, before planning or settlement', () => {
     const { room, clock } = fixture(1);
     try {
@@ -36,6 +70,7 @@ describe('terminal orb server integration', () => {
       const orbs = toSeatPrivateView(own.match).unclaimedOrbs!;
       expect(orbs.length).toBeGreaterThan(readLootView(initial).unclaimedOrbs!.length);
       const peer = json(toPlayerView(published, 's1', clock.now()));
+      expect(orbs).toEqual(readLootView(own.match).unclaimedOrbs);
       for (const orb of orbs) expect(peer).not.toContain(orb.orbId);
       expect(json(toSeatPrivateView(own.match))).not.toContain('pendingCombatTerminal');
       for (const seat of published.seats) {
