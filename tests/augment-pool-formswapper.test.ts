@@ -1,3 +1,4 @@
+import type { MatchState } from '../src/simulation/match-types';
 import { grantMechanicConsumable } from '../src/simulation/seat-mechanics/grants';
 import { room, accept, conserved } from './tp-helpers';
 import { runSharedMatchCommand } from '../src/simulation/shared-pool';
@@ -93,7 +94,7 @@ it('real shop acquisitions restore after a triple, reject altered reward stars, 
  while(s.level<6)s=accepted(buyXp(s));
  for(let attempts=0;!formSwapperGiftPlan(s).length&&attempts<400;attempts++){
   for(let slot=0;slot<5;slot++){const offer=s.shop.slots[slot];if(offer.status==='available'&&offer.definitionId==='swain')s=accepted(buyUnit(s,slot,s.shop.generation));}
-  if(!formSwapperGiftPlan(s).length)s=accepted(rerollShop(s,s.shop.generation));
+  if(!formSwapperGiftPlan(s).length)s=accepted(rerollShop(s));
  }
  expect(formSwapperGiftPlan(s)).toHaveLength(1);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  const gift=formSwapperGiftPlan(s)[0],receipt=s.seatMechanics!.receipts.find(r=>r.receiptId===gift.receiptId)!;
@@ -116,7 +117,7 @@ it('online triple reward reserves three shared copies on orb claim and preserves
  // Isolated projection/claim vector; no claim of a complete multiplayer route.
  const initial=room(undefined,2,42),base=initial.states[0],choiceId='online-vector';
  const p=appendResourceProvenance(base.resourceProvenance,base.roundDefinitionId,[{kind:'form-swapper-selected',choiceId},{kind:'unit-upgraded',acquisitionSequence:0,event:upgrade()}]);
- let s=drainBatch1Gifts({...base,phase:'preparation',pendingChoice:null,augments:[{definitionId:'why-not-both',choiceId,acquiredRound:1}],resourceProvenance:p});
+ let s=drainBatch1Gifts({...base,phase:'preparation',pendingChoice:null,augments:[{definitionId:'why-not-both',choiceId,acquiredRound:1}],resourceProvenance:p} as MatchState);
  const gift=formSwapperGiftPlan(s)[0],receipt=s.seatMechanics!.receipts.find(r=>r.receiptId===gift.receiptId)!;
  expect(receipt).toMatchObject({resolution:'orb',starLevel:2});
  if(receipt.kind!=='unit'||receipt.resolution!=='orb')throw Error('missing orb');
