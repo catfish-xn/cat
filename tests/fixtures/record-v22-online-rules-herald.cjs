@@ -9,6 +9,9 @@ const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '../..');
 // T11 keeps the B9 raw inputs as historical evidence; regenerate current-rule inputs separately.
 const directory = path.join(root, 'tests/fixtures/v22-online-rules-herald-raw');
+// v22: seed 42 draws the Scuttle Puddle opening (every PvE round, including 6-7, becomes crabs).
+// Seed 2192 has no opening encounter, its 6-7 is the authored Rift Herald (rift-herald-v1), and every case builds.
+const HERALD_SEED = 2192;
 const args = process.argv.slice(2);
 const write = args.includes('--write');
 const baselineArgument = args.find(argument => argument.startsWith('--baseline-dir='));
@@ -34,11 +37,11 @@ async function main() {
       'tests/m8-b7-match-wiring.test.ts'].sort();
     const sources = Object.fromEntries(files.map(file => [file, sha256(fs.readFileSync(path.join(root, file)))]));
     const {Ledger}=require('./m5/oracle.g2.cjs');
-    const observedLedger=new Ledger(api.createMatch(42));
+    const observedLedger=new Ledger(api.createMatch(HERALD_SEED));
     let rawPrefix, prefixLedger;
     // Use the unchanged driver, including its independent economy/shop oracle.
     // No restored fixture or saved state is an input to this generation.
-    const route = await require('../../scripts/generate-m5-route.cjs').run(api, { build: 'sniper', seed: 42, reservedComponents:['cloak'],
+    const route = await require('../../scripts/generate-m5-route.cjs').run(api, { build: 'sniper', seed: HERALD_SEED, reservedComponents:['cloak'],
       onStep(before,result,command) {
         if (!rawPrefix && before.roundDefinitionId === '4-4' && before.phase === 'choice') {rawPrefix=before;prefixLedger=structuredClone(observedLedger);}
         observedLedger.apply(before,result.state,command,result.events);
@@ -151,10 +154,10 @@ async function main() {
         ...(baselineDirectory ? { fullOldPreparationStartAndFifteenTicksEqual: true } : {}) });
       console.log(JSON.stringify({ phase: 'production-restore-verified', ...validation.at(-1) }));
     }
-    const trace = { generationVersion: builder.HERALD_RAW_GENERATION_VERSION, seed: 42, prefix: prefixTrace,
+    const trace = { generationVersion: builder.HERALD_RAW_GENERATION_VERSION, seed: HERALD_SEED, prefix: prefixTrace,
       branches: generated.map(value => value.trace) };
     const traceBytes = canonicalContent(trace) + '\n';
-    const manifest = { generationVersion: builder.HERALD_RAW_GENERATION_VERSION, seed: 42, build: 'sniper',
+    const manifest = { generationVersion: builder.HERALD_RAW_GENERATION_VERSION, seed: HERALD_SEED, build: 'sniper',
       format: 'canonical-raw-match-json-before-production-restore', sourceSha256: canonicalHash(sources), sources,
       contentDigest: rawPrefix.contentDigest, schemaVersion: rawPrefix.schemaVersion,
       rulesVersion: rawPrefix.rulesVersion, contentVersion: rawPrefix.contentVersion,

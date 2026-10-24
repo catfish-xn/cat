@@ -8,12 +8,16 @@ import { restoreMatch, serializeMatch } from '../../src/simulation/serialization
 import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v22-online-rules-herald-support/generate';
 import { run } from '../../scripts/generate-m5-route.cjs';
 
+// v22: seed 42 draws the Scuttle Puddle opening, which replaces every authored PvE encounter
+// (including the 6-7 Rift Herald) with crabs. Seed 2192 has no opening encounter, its 6-7 is the
+// authored rift-herald-v1, and its route equips a genuinely acquired Ionic Spark by 6-7.
+const HERALD_ROUTE_SEED = 2192;
 const preparations = new Map<string, api.MatchState>();
 let equipmentFork: api.MatchState | undefined;
 // Execute the command-only driver once, retaining only the actual preparation
 // prefixes. No golden, injected result, resource, birth, star or receipt is used.
 // Generate once per test module; consumers restore independent graphs before use.
-const route = await run(api, { build: 'sniper', seed: 42,  onStep(before, result, command) {
+const route = await run(api, { build: 'sniper', seed: HERALD_ROUTE_SEED, onStep(before, result, command) {
   if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')
     preparations.set(before.roundDefinitionId, before);
   if (before.roundDefinitionId === '4-4' && before.phase === 'choice') equipmentFork ??= before;
@@ -22,7 +26,6 @@ const route = await run(api, { build: 'sniper', seed: 42,  onStep(before, result
 if (route.final.phase !== 'gameOver' || route.final.roundDefinitionId !== '6-7' || route.final.outcome !== 'victory')
   throw new Error('Public neutral fixture did not complete the actual 33-battle route');
 
-// v22: seed 42 draws the scuttle-crab opening, which replaces every authored PvE encounter with crabs.
 // Consumers that exercise the authored minion/monster encounters take prefixes from this second
 // command-only route; seed 7296 has no opening encounter (1-2 is Irelia against minions-a-v1).
 const AUTHORED_ENCOUNTER_SEED = 7296;
