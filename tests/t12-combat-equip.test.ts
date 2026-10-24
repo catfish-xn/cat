@@ -190,7 +190,8 @@ describe('T12 provenance with phase 2 live equipment', () => {
       Object.assign(corrupt.resourceProvenance.entries.at(-1)!.kind === 'item-combined' ?
         (corrupt.resourceProvenance.entries.at(-1)! as {event: object}).event : {}, {definitionId:'deathblade'});
       expect(()=>restoreMatch(corrupt)).toThrow(/combination/);
-    });
+      // The 3-7 route replays ~4.5 s of public rounds alone; give it room under parallel load.
+    }, 20_000);
   }
   it('running restore rejects free detachment, cross-unit combining, non-equipment mutation and illegal suffixes', () => {
     const acquired = publicInventory(['sword','rod']);

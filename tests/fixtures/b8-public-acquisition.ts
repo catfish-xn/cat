@@ -1,6 +1,7 @@
 import {lootPlan as independentLootPlan} from './orb-combo-oracle.cjs';
 import { shop as independentShop, COST } from './m5/oracle.g2.cjs';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
+import { createOpeningEncounter } from '../../src/simulation/opening-encounter';
 import { nextRound, buyUnit, combineItems, deployMatchUnit, rerollShop, sellUnit } from '../../src/simulation/match';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
 import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
@@ -26,6 +27,9 @@ export function publicInventory(definitions: readonly string[], late = false, se
   // Independent v17 oracle chooses a real route requiring at most two scheduled components.
   let routeSeed=seed??1;
   for(;routeSeed<100000;routeSeed++){
+    // v23 fmix32 opening word: the default search keeps the crab-rave opening every small seed drew before
+    // (Trainer Golem and anvil openings occupy board/bench cells); explicit caller seeds are kept as chosen.
+    if(seed===undefined&&createOpeningEncounter(routeSeed).selection.encounterId!=='crab-rave')continue;
     const drops=independentLootPlan(routeSeed,10).rounds.flatMap(r=>r.encounterPlan.drops);
     const available=drops.flatMap(d=>d.payload.kind==='item'?[d.payload.definitionId]:[]);
     let missing=0;for(const id of components){const i=available.indexOf(id);if(i<0)missing++;else available.splice(i,1);}
