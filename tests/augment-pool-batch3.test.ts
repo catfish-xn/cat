@@ -4,7 +4,7 @@ import { createMatch } from '../src/simulation/match';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
 import { advanceG23Economy, type G23BattleFacts } from '../src/simulation/g2-3-economy';
 import { AUGMENT_BATCH3 } from '../src/simulation/content/augment-pool-batch3';
-import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold } from '../src/simulation/augment-pool-batch3-progress';
+import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold, pickLootTable, lootSpecs } from '../src/simulation/augment-pool-batch3-progress';
 import { batch1GiftPlan, drainBatch1Gifts, validateBatch1Gifts, batch1AnvilSpecification } from '../src/simulation/augment-pool-grants';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
@@ -18,6 +18,9 @@ import { drainBatch3RoundEntry } from '../src/simulation/augment-pool-batch3-pro
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { startingRows } from '../src/simulation/m8/targeting';
+import { GOLDEN_EGG_LOOT, EXALTED_ADVENTURE_LOOT } from '../src/simulation/content/augment-pool-batch3-loot';
+import { getMultiplayerRoundById } from '../src/simulation/multiplayer-round';
+import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateSharedShop, rerollSharedShop } from '../src/server-entry';
@@ -44,9 +47,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the thirty-two batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the thirty-four batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['bad-luck-protection','blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','scapegoat','shimmerscale-essence','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['an-exalted-adventure','bad-luck-protection','blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','gold-for-dummies','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','scapegoat','shimmerscale-essence','superstars-i','superstars-ii','support-mining','support-mining-plus','team-building','the-golden-egg','trade-sector','wandering-trainer-i','wandering-trainer-ii','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -437,13 +440,52 @@ it('a real match with a training dummy restores mid-combat exactly and rejects a
   const edit=structuredClone(s) as any,d=edit.combat.units.find((u:any)=>u.definitionId==='training-dummy');d.hp=Math.max(1,d.hp-1);if(d.alive)expect(()=>restoreMatch(serializeMatch(edit))).toThrow();}}
  expect(checked).toBeGreaterThan(0);
 });
-it.each(['wandering-trainer-ii','support-mining','scapegoat'])('%s: a public selection saves and restores with its dummy (and emblems), through a real round', id=>{
+it.each(['wandering-trainer-ii','support-mining','scapegoat','the-golden-egg','an-exalted-adventure'])('%s: a public selection saves and restores through a real round', id=>{
  let seed=0;while(!firstOffers(seed).includes(id))seed++;
  let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;
  s=accept(selectChoice(s,c.choiceId,c.generation,id) as any).state as MatchState;
- expect(dummyOf(s)).toBeDefined();expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ if(AUGMENT_BATCH3[id].gifts.some(g=>g.kind==='unit'&&g.definitionId==='training-dummy'))expect(dummyOf(s)).toBeDefined();
+ expect(restoreMatch(serializeMatch(s))).toEqual(s);
  s=resolveM5Choices(s);if(s.phase==='preparation')s=accept(startMatchCombat(s) as any).state;
  while(s.phase==='combat')s=stepMatch(s).state;
  s=resolveM5Choices(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  s=accept(nextRound(s,s.round) as any).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
+});
+it('P: the Golden Egg hatches at the first round entry its 11-turn timer reaches 0, one extra turn per player-combat win', ()=>{
+ const hatch=(s:MatchState)=>[...new Set(batch3RewardPlan(s).map(g=>g.acquiredRound))];
+ expect(hatch(withBattles('the-golden-egg',pvp(11,'loss')))).toEqual([]);
+ expect(hatch(withBattles('the-golden-egg',pvp(12,'loss')))).toEqual([12]);
+ // Wins in rounds 1..6 bring round 7 to zero; 7 (2-4) is a supply round, so it hatches at 8.
+ expect(hatch(withBattles('the-golden-egg',pvp(7,'win')))).toEqual([]);
+ expect(hatch(withBattles('the-golden-egg',pvp(8,'win')))).toEqual([8]);
+ const s=withBattles('the-golden-egg',pvp(12,'loss')),again=withBattles('the-golden-egg',pvp(12,'loss'));
+ expect(batch3RewardPlan(s)).toEqual(batch3RewardPlan(again));
+ const hatched=drainBatch3RoundEntry(s);expect(hatched.seatMechanics!.receipts.length).toBeGreaterThan(s.seatMechanics!.receipts.length);
+ validateBatch1Gifts(hatched);expect(drainBatch3RoundEntry(hatched)).toBe(hatched);expect(()=>validateBatch1Gifts(s)).toThrow();
+});
+it('Golden Egg / Exalted Adventure loot tables are picked by their raw 14.24 weights and every content id resolves', ()=>{
+ for(const tables of [GOLDEN_EGG_LOOT,EXALTED_ADVENTURE_LOOT]){
+  const N=20000,counts=new Map<string,number>(),total=tables.reduce((n,t)=>n+t.weight,0);
+  for(let i=0;i<N;i++){const t=pickLootTable(42,'solo','c'+i,'x',tables);counts.set(t.name,(counts.get(t.name)??0)+1);}
+  for(const t of tables)expect(Math.abs((counts.get(t.name)??0)/N-t.weight/total)).toBeLessThan(0.015);
+  for(const t of tables)expect(lootSpecs(t).length).toBeGreaterThan(0);
+ }
+ expect(lootSpecs(GOLDEN_EGG_LOOT.find(t=>t.name==='GoldenEggLootG')!).filter(s=>s.kind==='random-unit')).toHaveLength(4);
+ expect(lootSpecs(GOLDEN_EGG_LOOT.find(t=>t.name==='GoldenEggLootF')!).filter(s=>s.kind==='random-item').map(s=>(s as any).pool)).toEqual(['artifact','radiant','completed']);
+});
+it('An Exalted Adventure: three different 2-costs and a lesser duplicator now and every stage start; the orb follows the second 3-star', ()=>{
+ const base:MatchState={...createMatch(42),round:4,augments:[{definitionId:'an-exalted-adventure',choiceId:'test',acquiredRound:4}]};
+ const gifts=batch1GiftPlan(base),units=gifts.filter(g=>g.kind==='unit');
+ expect(units).toHaveLength(3);expect(new Set(units.map(g=>g.definitionId)).size).toBe(3);expect(units.every(g=>UNIT_DEFINITIONS[g.definitionId].cost===2)).toBe(true);
+ expect(gifts.filter(g=>g.definitionId==='TFT_Consumable_ChampionDuplicator_III')).toHaveLength(1);
+ const later={...base,round:22};
+ const stages=batch3RewardPlan(later).filter(g=>g.definitionId==='TFT_Consumable_ChampionDuplicator_III').map(g=>g.acquiredRound);
+ expect(stages).toEqual(Array.from({length:22},(_,i)=>i+1).filter(r=>r>4&&getMultiplayerRoundByOrdinal(r).subround===1));
+ const upgraded=(defs:string[],roundId:string):MatchState=>({...later,resourceProvenance:{...later.resourceProvenance,entries:[...later.resourceProvenance.entries,
+  ...defs.map((definitionId,i)=>({kind:'unit-upgraded-after-combat',sequence:later.resourceProvenance.entries.length+i,roundId,event:{type:'unitUpgraded',survivorId:'x'+i,consumedIds:[],definitionId,fromStar:2,toStar:3,location:{kind:'bench',slot:0}}}))]} as any});
+ const defs=units.map(g=>g.definitionId);
+ const orb=(s:MatchState)=>batch3RewardPlan(s).filter(g=>g.definitionId!=='TFT_Consumable_ChampionDuplicator_III');
+ expect(orb(upgraded([defs[0]],'3-2'))).toEqual([]);
+ expect(orb(upgraded(['vex',defs[1]],'3-2'))).toEqual([]);
+ const o=orb(upgraded([defs[0],defs[2]],'3-2'));expect(o.length).toBeGreaterThan(0);expect(new Set(o.map(g=>g.acquiredRound))).toEqual(new Set([getMultiplayerRoundById('3-3').ordinal]));
 });

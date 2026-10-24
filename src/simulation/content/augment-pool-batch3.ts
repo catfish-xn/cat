@@ -5,7 +5,7 @@ import type { AugmentGiftSpec } from '../augment-gift-plan';
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
 export interface Batch3Schedule {
- readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'|'dummy-deaths'|'dummy-first-death'|'dummy-gold'; readonly every:string|number; readonly repeat:boolean;
+ readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'|'dummy-deaths'|'dummy-first-death'|'dummy-gold'|'golden-egg'|'adventure-quest'; readonly every:string|number; readonly repeat:boolean;
  readonly gifts:readonly AugmentGiftSpec[]; readonly gold?:string; readonly max?:string|number;
  /** round-start only: first entry this many rounds after acquisition (default 1). */
  readonly from?:string|number;
@@ -37,6 +37,75 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+ "the-golden-egg": {
+  "apiName": "TFT6_Augment_TheGoldenEgg",
+  "name": "金蛋",
+  "tier": "prismatic",
+  "description": "获得1个大金蛋，需要11个回合来孵化，在孵化时提供大量战利品。赢下玩家对战回合后会使孵化倒计时加快1个额外的回合。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "EggTurns": 11.0,
+    "{ecb4463d}": null
+   },
+   "description_en_us": "Gain a golden egg that hatches in 11 turns for a huge amount of loot. Winning player combat speeds up the hatch timer by an extra turn."
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "golden-egg",
+    "every": 1,
+    "repeat": false,
+    "gifts": []
+   }
+  ]
+ },
+ "an-exalted-adventure": {
+  "apiName": "TFT_Augment_AnExaltedAdventure",
+  "name": "崇高冒险",
+  "tier": "prismatic",
+  "description": "获得3名2费弈子。如果你将他们当中的两个升为3星，将获得一个充满战利品的法球。即刻获得1个【次级英雄复制器】，并在每个阶段开始时再获得1个。\n\n弈子：〔对局动态值〕，〔对局动态值〕，〔对局动态值〕",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "NumUnits": 3.0
+   },
+   "description_en_us": "Gain three 2-cost champions. If you 3-star two of them, gain an orb filled with loot. Gain a Lesser Champion Duplicator now and at the start of every stage.\n\nChampions: 〔对局动态值〕, 〔对局动态值〕, 〔对局动态值〕"
+  },
+  "gifts": [
+   {
+    "kind": "random-unit",
+    "cost": 2,
+    "count": 3,
+    "distinct": true
+   },
+   {
+    "kind": "consumable",
+    "definitionId": "TFT_Consumable_ChampionDuplicator_III"
+   }
+  ],
+  "schedules": [
+   {
+    "counter": "stage-start",
+    "every": 1,
+    "repeat": true,
+    "gifts": [
+     {
+      "kind": "consumable",
+      "definitionId": "TFT_Consumable_ChampionDuplicator_III"
+     }
+    ]
+   },
+   {
+    "counter": "adventure-quest",
+    "every": 1,
+    "repeat": false,
+    "gifts": []
+   }
+  ]
+ },
  "support-mining": {
   "apiName": "TFT_Augment_SupportMining",
   "name": "辅助挖矿",
