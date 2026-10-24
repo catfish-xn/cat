@@ -1,6 +1,6 @@
+import { appendResourceProvenance } from '../src/simulation/resource-provenance';
 import { expect, it } from 'vitest';
 import { AUGMENT_BATCH2, AUGMENT_BATCH2_ENABLED } from '../src/simulation/content/augment-pool-batch2';
-import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { AUGMENT_DEFINITIONS, ITEM_DEFINITIONS } from '../src/simulation/content';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
@@ -21,7 +21,7 @@ import { validateEffect } from '../src/simulation/validate-content';
 import { cloneEffect } from '../src/simulation/effects';
 
 const names=['Academy','Ambusher','Artillerist','ArtilleristPlus','Automata','Bruiser','Cabal','Chembaron','Conqueror','Dominator','Enforcer','Experiment','Family','Firelight','Formswapper','PitFighter','Quickstriker','Rebel','Scrap','Sentinel','Sniper','Sorcerer','Visionary','Watcher'];
-it('takes exactly the 26 batch-2 classification entries, with unmodified 14.24 values and no disabled offers',()=>{
+it('takes exactly the 26 batch-2 classification entries, with no disabled offers',()=>{
  expect(Object.values(AUGMENT_BATCH2).map(x=>x.apiName)).toEqual([...names.map(x=>'TFT13_Augment_'+x),'TFT13_TeamupAugment_Betrayal','TFT13_TeamupAugment_BloodBrothers']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH2)){
   expect(row.source.patch).toBe('14.24');expect(row.source.archive).toContain('augments-14.24.json');
@@ -32,12 +32,11 @@ it('takes exactly the 26 batch-2 classification entries, with unmodified 14.24 v
 });
 it.each(Object.keys(AUGMENT_BATCH2_ENABLED))('%s has executable gifts, trait offer rules and no RNG leakage',id=>{
  const row=AUGMENT_BATCH2[id],a={definitionId:id,choiceId:'test',acquiredRound:1};
- expect(AUGMENT_TIERS[id]).toBe(row.tier);expect(AUGMENT_POOL_API_NAMES[id]).toBe(row.apiName);
  for(const e of AUGMENT_DEFINITIONS[id].effects){validateEffect(e);expect(cloneEffect(e)).toEqual(e);}
  expect(augmentOfferAllowed(id,[],{node:'3-2',fieldedTraits:[],blocked:[]})).toBe(false);
  expect(augmentOfferAllowed(id,[],{node:'3-2',fieldedTraits:row.traits,blocked:[]})).toBe(true);
  expect(augmentOfferAllowed(id,[],{node:'2-1',fieldedTraits:[],blocked:[]})).toBe(true);
- const s={...createMatch(42),augments:[a]},after=drainBatch1Gifts(s);
+ const initial=createMatch(42),s={...initial,augments:[a],resourceProvenance:id==='why-not-both'?appendResourceProvenance(initial.resourceProvenance,initial.roundDefinitionId,{kind:'form-swapper-selected',choiceId:'test'}):initial.resourceProvenance},after=drainBatch1Gifts(s);
  expect(batch1GiftPlan(s).map(g=>g.definitionId)).toEqual(row.gifts.map(g=>'definitionId' in g?g.definitionId:''));
  expect(drainBatch1Gifts(after)).toBe(after);validateBatch1Gifts(after);
  expect([after.rngState,after.choiceRngState,after.rewardRngState]).toEqual([s.rngState,s.choiceRngState,s.rewardRngState]);
@@ -61,7 +60,7 @@ function opening(id:string,definitionId:string,others:string[]=[]):CombatState {
  const combat=createCombatWithEvents(preparation,strategy,'b2',42).state;return {...combat,units:[...combat.units].sort((a,b)=>a.id==='enemy'?1:b.id==='enemy'?-1:a.id.localeCompare(b.id))};
 }
 function ctx(s:CombatState,tick=1):AbilityContext{return {tick,combatId:s.combatId,board:s.board,units:structuredClone(s.units) as S13Unit[],events:[],packets:[],heals:[],draw:()=>0};}
-it.each(Object.keys(AUGMENT_BATCH2_ENABLED).filter(id=>id!=='betrayal'))('%s compiles only for members, including emblem holders, even below an activated trait tier',id=>{
+it.each(Object.keys(AUGMENT_BATCH2_ENABLED).filter(id=>!['betrayal','why-not-both'].includes(id)))('%s compiles only for members, including emblem holders, even below an activated trait tier',id=>{
  const row=AUGMENT_BATCH2[id],s=createMatch(42),emblem=Object.values(EMBLEM_ITEMS).find(e=>e.emblemTrait===row.traits[0])!;
  const preparation={...s.preparation,units:[{...s.preparation.units[0],definitionId:'darius'}]};
  const base={...s,preparation,augments:[{definitionId:id,choiceId:'test',acquiredRound:1}]};

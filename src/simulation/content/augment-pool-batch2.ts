@@ -388,8 +388,8 @@ export const AUGMENT_BATCH2:Readonly<Record<string,TraitAugmentContent>>=freezeC
       },
       "description_en_us": "While you field 2 of the same Form Swapper in different forms, both gain 24 Ability Power, Armor, and Magic Resist, and 24% Attack Damage. When you 3-star a Form Swapper, gain a 2-star copy. Gain a Swain and Gangplank."
     },
-    "gifts": [],
-    "enabled": false
+    "gifts": [{"kind":"unit","definitionId":"swain"},{"kind":"unit","definitionId":"gangplank"}],
+    "enabled": true
   },
   "pit-fighter-prizefighter": {
     "apiName": "TFT13_Augment_PitFighter",
@@ -683,16 +683,18 @@ export const AUGMENT_BATCH2_TIERS=freezeContent(Object.fromEntries(Object.entrie
 export const AUGMENT_BATCH2_API_NAMES=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH2_ENABLED).map(([id,row])=>[id,row.apiName])));
 export function batch2Values(id:string):Readonly<Record<string,number>> {return AUGMENT_BATCH2[id]?.source.values as Readonly<Record<string,number>>??{};}
 
-/** Disabled rows never enter definitions, tiers, gifts or API offer mappings. */
+/** Disabled rows never enter definitions, tiers, gifts or API offer mappings.
+ * Rechecked 2026-10-24 against augments-14.24.json (zero-based record indices),
+ * selection-augment-fields.json and the matching map22 node; unknown hashes are
+ * preserved as raw values, never guessed into a missing formula or unit stat. */
 export const AUGMENT_BATCH2_BLOCKED=freezeContent({
-  "academic-research": "源值 NumOptions=2、NumItems=1 齐；缺赞助装备在三件 sponsor 中的选项抽样/权重及“所合成装备本身已是赞助装”时的去重与补位规则。现有通用四选锻造器不能冒充本项二选定制锻造器。",
-  "loot-explosion": "缺暴击率→掉落概率公式、战利品奖励表/权重及战利品暴击的倍率/递归上限；不是只有一个待填掉落率。",
-  "forbidden-magic": "三名黑玫瑰弈子的具体候选/费用/抽样权重未给出；还缺跨战 Sion takedown→永久成长的独立认证接线。现有 g23-sion 已存在，不能沿用旧分类“没有 Sion”的过时原因。",
-  "natural-selection": "只有 Health=0.12；缺新增牺牲实验格的位置/选取规则、无合法格/空格处理，以及牺牲来源加成的传播目标规则。",
-  "aerial-warfare": "9%AD/9AP 与 Bonus=3 齐；缺“每格另外3%”作用于基础值还是累积值的精确定义，以及该战移动格数是否含普通移动/冲刺/传送、冲刺过程如何计格。",
-  "why-not-both": "24AP/双抗/24%AD、三星给二星复制的源值齐；实现仍缺“选择强化时的 provenance 前缀/升三星事件序号”认证字段与复制收据接线，不能把同轮选择前的三星升级补发为奖励。属于实现阻塞，不声称14.24缺数值。",
-  "rebel-resurgence": "5名/减400HP齐；缺一星死亡后的目标星级（原文低一星）、最低生命下限及召唤复制继承装备/永久成长/强化、是否能再触发复制的完整口径。",
-  "snipers-nest": "每次8%、上限32%齐；缺首战是否即有一层、换格/备战席/离场/重新购买时的层数重置规则及合星继承规则。",
-  "visionary-voidlings": "275法力、最多5只、阶段2–6生命400/450/500/550/600齐；缺虚灵基础AD/攻速/双抗/射程/技能与出生位置/无空格政策，不能只造一个有HP但其余数值自定的单位。",
-  "blood-brothers": "30永久HP/6永久AP、二星范德尔/希尔科/朔极之矛齐；缺多副本时的配对/受益实例范围及死亡/复活/出售/合星后永久成长归属；尚无本项的跨战成长认证字段与接线。"
+  "academic-research": "R[70]：源值 NumOptions=2、NumItems=1 齐；缺赞助装备在三件 sponsor 中的选项抽样/权重及“所合成装备本身已是赞助装”时的去重与补位规则。现有通用四选锻造器不能冒充本项二选定制锻造器。",
+  "loot-explosion": "R[132]：缺暴击率→掉落概率公式、战利品奖励表/权重及战利品暴击的倍率/递归上限；不是只有一个待填掉落率。",
+  "forbidden-magic": "R[115]：三名黑玫瑰弈子的具体候选/费用/抽样权重未给出；还缺跨战 Sion takedown→永久成长的独立认证接线。现有 g23-sion 已存在，不能沿用旧分类“没有 Sion”的过时原因。",
+  "natural-selection": "R[188]：只有 Health=0.12；缺新增牺牲实验格的位置/选取规则、无合法格/空格处理，以及牺牲来源加成的传播目标规则。",
+  "aerial-warfare": "R[73]：9%AD/9AP 与 Bonus=3 齐；缺“每格另外3%”作用于基础值还是累积值的精确定义，以及该战移动格数是否含普通移动/冲刺/传送、冲刺过程如何计格。",
+  "rebel-resurgence": "R[144]：5名/减400HP齐；缺一星死亡后的目标星级（原文低一星）、最低生命下限及召唤复制继承装备/永久成长/强化、是否能再触发复制的完整口径。",
+  "snipers-nest": "R[178]：每次8%、上限32%齐；缺首战是否即有一层、换格/备战席/离场/重新购买时的层数重置规则及合星继承规则。",
+  "visionary-voidlings": "R[208]：275法力、最多5只、阶段2–6生命400/450/500/550/600齐；缺虚灵基础AD/攻速/双抗/射程/技能与出生位置/无空格政策，不能只造一个有HP但其余数值自定的单位。",
+  "blood-brothers": "R[301]：30永久HP/6永久AP、二星范德尔/希尔科/朔极之矛齐；缺多副本时的配对/受益实例范围及死亡/复活/出售/合星后永久成长归属；尚无本项的跨战成长认证字段与接线。"
 });

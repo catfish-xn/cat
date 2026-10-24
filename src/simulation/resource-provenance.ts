@@ -37,6 +37,7 @@ export type ItemAcquisitionSource =
   | { readonly kind: 'mechanic'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
+  | {readonly kind:'form-swapper-selected';readonly choiceId:string}
   | {readonly kind:'d14-selected';readonly choiceId:string;readonly unitId:string;readonly heldItems:readonly import('./strategy-types').ItemInstance[]}
   | {readonly kind:'d14-returned';readonly choiceId:string;readonly unitId:string;readonly settledOrdinal:number}
   | {readonly kind:'g23-item-converted';readonly itemId:string;readonly from:string;readonly to:string;readonly receiptId:string}
@@ -416,7 +417,12 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
           && commit.combatStartProvenancePrefixLength < index, 'mechanic reward combat prefix');
       }
     }
-    if(entry.kind==='d14-selected'){
+    if(entry.kind==='form-swapper-selected'){
+      keys(entry,[...common,'choiceId']);
+      const receipt=context.scheduleReceipts.find(r=>r.eventId===entry.choiceId&&r.kind==='augment');
+      requireValue(receipt?.definitionId==='why-not-both'&&receipt.round===round.ordinal,'form swapper selection');
+      requireValue(!entries.slice(0,index).some(e=>e.kind==='form-swapper-selected'),'form swapper duplicate selection');
+    }else if(entry.kind==='d14-selected'){
       keys(entry,[...common,'choiceId','unitId','heldItems']);
       const receipt=context.scheduleReceipts.find(r=>r.eventId===entry.choiceId&&r.kind==='anomaly');
       const u=units.get(entry.unitId);requireValue(receipt&&receipt.unitId===entry.unitId&&receipt.round===round.ordinal&&u,'D14 selection');

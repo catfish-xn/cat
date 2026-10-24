@@ -12,7 +12,7 @@
 
 ## batch 2：严格取classification.json中batch="2"的26项
 
-16项已入池，10项禁用。所有26项的原始effects（含未解释哈希）、中英文解析描述、traits、等级与状态均保存于 `content/augment-pool-batch2.ts`；禁用项只做研究清单，不发部分奖励，也不出牌。
+17项已入池，9项禁用。所有26项的原始effects（含未解释哈希）、中英文解析描述、traits、等级与状态均保存于 `content/augment-pool-batch2.ts`；禁用项只做研究清单，不发部分奖励，也不出牌。
 
 | apiName | 内部id | 状态 | 14.24具名值 |
 | --- | --- | --- | --- |
@@ -30,7 +30,7 @@
 | `TFT13_Augment_Experiment` | `natural-selection` | 阻塞 | Health=0.11999999731779099 |
 | `TFT13_Augment_Family` | `welcome-to-the-playground` | 完成 | MinNumFamilyMembers=2.0, NumCopies=1.0, TimeRequirement=17.0 |
 | `TFT13_Augment_Firelight` | `aerial-warfare` | 阻塞 | Bonus=3.0, FirelightBonusAD=0.09000000357627869, FirelightBonusAP=9.0 |
-| `TFT13_Augment_Formswapper` | `why-not-both` | 阻塞 | BonusStats=24.0 |
+| `TFT13_Augment_Formswapper` | `why-not-both` | 完成 | BonusStats=24.0 |
 | `TFT13_Augment_PitFighter` | `pit-fighter-prizefighter` | 完成 | ADPerLoss=0.014999999664723873, HealthPerWin=45.0 |
 | `TFT13_Augment_Quickstriker` | `quickstriker-boost` | 完成 | AttackSpeed=0.8500000238418579, BuffDuration=2.5, TimeBetweenProcs=6.0 |
 | `TFT13_Augment_Rebel` | `rebel-resurgence` | 阻塞 | NumOfUnits=5.0, ReducedHealth=400 |
@@ -42,6 +42,13 @@
 | `TFT13_Augment_Watcher` | `watcher-growth` | 完成 | IncreaseADByTakeAttack=2.0, IncreaseAPByTakeSpell=4.0 |
 | `TFT13_TeamupAugment_Betrayal` | `betrayal` | 完成 | NumKills=2.0 |
 | `TFT13_TeamupAugment_BloodBrothers` | `blood-brothers` | 阻塞 | APGainPerDeath=6.0, MaxHealthGainPerCast=30.0 |
+
+## 2026-10-24 独立审查续修
+
+S1/S2/N1与本次逐项复核、最新测试见 [续修报告](AUGMENT_POOL_REVIEW_FOLLOWUP_REPORT.md)。历史测试小节保留此前结果，最新结果以续修报告为准。
+
+- 新完成 `why-not-both`：研究JSON零基记录[215]，24AP/双抗/24%AD、初始Swain/Gangplank与升三星给二星复制均有源；新增有序选择标记与事件序号认证，排除同轮选择前的升星。奖励沿既有容量/共享池与唯一收据，可连锁合星，不新增RNG。
+- 其余9项逐项重查研究JSON、selection字段和map22同名节点，缺字段未补齐，继续完整禁用；不以P擅自填未知值。
 
 ## 已交付行为与验收边界
 
@@ -58,7 +65,6 @@
 - `TFT13_Augment_Cabal`：三名黑玫瑰弈子的具体候选/费用/抽样权重未给出；还缺跨战 Sion takedown→永久成长的独立认证接线。现有 g23-sion 已存在，不能沿用旧分类“没有 Sion”的过时原因。
 - `TFT13_Augment_Experiment`：只有 Health=0.12；缺新增牺牲实验格的位置/选取规则、无合法格/空格处理，以及牺牲来源加成的传播目标规则。
 - `TFT13_Augment_Firelight`：9%AD/9AP 与 Bonus=3 齐；缺“每格另外3%”作用于基础值还是累积值的精确定义，以及该战移动格数是否含普通移动/冲刺/传送、冲刺过程如何计格。
-- `TFT13_Augment_Formswapper`：24AP/双抗/24%AD、三星给二星复制的源值齐；实现仍缺“选择强化时的 provenance 前缀/升三星事件序号”认证字段与复制收据接线，不能把同轮选择前的三星升级补发为奖励。属于实现阻塞，不声称14.24缺数值。
 - `TFT13_Augment_Rebel`：5名/减400HP齐；缺一星死亡后的目标星级（原文低一星）、最低生命下限及召唤复制继承装备/永久成长/强化、是否能再触发复制的完整口径。
 - `TFT13_Augment_Sniper`：每次8%、上限32%齐；缺首战是否即有一层、换格/备战席/离场/重新购买时的层数重置规则及合星继承规则。
 - `TFT13_Augment_Visionary`：275法力、最多5只、阶段2–6生命400/450/500/550/600齐；缺虚灵基础AD/攻速/双抗/射程/技能与出生位置/无空格政策，不能只造一个有HP但其余数值自定的单位。
@@ -70,7 +76,6 @@
 - 禁忌魔法三弈子：建议补原版候选/费用/权重；若改为项目政策，建议明确列出已有Black Rose成员池并沿用通用等权、共享池奖励规则。
 - 空战每格3%：建议取得脚本/历史释义确认加法还是乘法与移动计格，不把Bonus=3自行绑定到AD/AP或距离。
 - 试验品特殊格、一星蓝发复制、狙神层数重置、虚灵完整属性：建议继续禁用直到补齐上节字段，避免选择一个未经批准的坐标、下限或单位数值。
-- 双形战士：源值已齐，建议后续先补强化选择的provenance边界/升级序号，再接原子复制与恢复，不能靠轮次近似。
 - 本可发生之事：建议先确认多副本配对与永久成长继承；可选沿用已有V20“装备数/星级/id”单对政策，但它是项目政策，不能伪称本项14.24事实。
 
 ## 测试与结果

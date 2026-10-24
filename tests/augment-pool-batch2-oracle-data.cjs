@@ -5,6 +5,7 @@ module.exports={
     "branching-out"
   ],
   "gold": [
+    "why-not-both",
     "rocket-collection",
     "rocket-collection-plus",
     "fractured-crystals",
@@ -23,6 +24,7 @@ module.exports={
     "betrayal"
   ],
   "traits": {
+    "why-not-both": ["form-swapper"],
     "rocket-collection": [
       "artillerist"
     ],

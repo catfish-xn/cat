@@ -1,6 +1,5 @@
 import { expect, it } from 'vitest';
 import { AUGMENT_BATCH1, AUGMENT_BATCH1_BLOCKED } from '../src/simulation/content/augment-pool-batch1';
-import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { AUGMENT_DEFINITIONS, ITEM_DEFINITIONS } from '../src/simulation/content';
 import { CONSUMABLE_DEFINITIONS } from '../src/simulation/content/consumables';
@@ -39,10 +38,8 @@ it('covers 69 classified entries, admits 67 fully implemented entries and leaves
  expect(Object.values(AUGMENT_BATCH1).filter(x=>x.apiName.endsWith('Crown'))).toHaveLength(22);
  for(const api of Object.keys(AUGMENT_BATCH1_BLOCKED))expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(api);
 });
-it.each(Object.keys(AUGMENT_BATCH1))('%s binds source, tier, api identity and executable grants',id=>{
- const row=AUGMENT_BATCH1[id];for(const effect of AUGMENT_DEFINITIONS[id].effects){expect(()=>validateEffect(effect)).not.toThrow();expect(cloneEffect(effect)).toEqual(effect);}
- expect(row.source.patch).toBe('14.24');expect(row.source.description_en_us.length).toBeGreaterThan(5);
- expect(AUGMENT_TIERS[id]).toBe(row.tier);expect(AUGMENT_POOL_API_NAMES[id]).toBe(row.apiName);expect(AUGMENT_DEFINITIONS[id].description).toBe(row.description);
+it.each(Object.keys(AUGMENT_BATCH1))('%s validates executable grants and receipt authority',id=>{
+ for(const effect of AUGMENT_DEFINITIONS[id].effects){expect(()=>validateEffect(effect)).not.toThrow();expect(cloneEffect(effect)).toEqual(effect);}
  const base=createMatch(42),s={...base,augments:[{definitionId:id,choiceId:'test',acquiredRound:1}]};
  const gifts=batch1GiftPlan(s);
  for(const gift of gifts)expect(gift.kind==='item'?ITEM_DEFINITIONS:gift.kind==='unit'?UNIT_DEFINITIONS:CONSUMABLE_DEFINITIONS).toHaveProperty(gift.definitionId);

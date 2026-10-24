@@ -1,3 +1,4 @@
+import { formSwapperGiftPlan, validateFormSwapperSelection } from './augment-pool-formswapper';
 import { batch2RewardPlan, drainBatch2Gold, validateBatch2Gold } from './augment-pool-batch2-progress';
 import { AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
 import type { MatchState } from './match-types';
@@ -10,15 +11,15 @@ import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state),formSwapperGiftPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */
 export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):MatchState {
- let state=initial,progressed:boolean; const plan=batch1GiftPlan(state);
+ let state=initial,progressed:boolean;
  do {
   progressed=false;
-  for(const gift of plan){
+  for(const gift of batch1GiftPlan(state)){
    if(state.seatMechanics?.receipts.some(r=>r.receiptId===gift.receiptId))continue;
    const request={...gift,source:AUGMENT_GIFT_SOURCE};
    const result=gift.kind==='unit'?grantMechanicUnit(state,request,policy)
@@ -37,6 +38,7 @@ export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
 }
 export function validateBatch1Gifts(state:MatchState):void {
  validateBatch2Gold(state);
+ validateFormSwapperSelection(state);
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
  for(const r of receipts)if(r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')){

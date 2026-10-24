@@ -18,8 +18,12 @@ export interface AugmentGift {
 }
 export const AUGMENT_GIFT_SOURCE='augment-pool-batch1';
 /** Pure, source/seat/choice-bound stream; retry, restore and opening order never advance live RNG.
- * Random unit/item draws use the existing uniform sorted pools, with replacement.
- * Each spec owns a substream, so adding an item cannot change a hero draw. */
+ * P-AG1 (P, 2026-10-24; research omits weights/replacement): use existing sorted
+ * project pools, uniform independent draws with replacement. Sponsored items use
+ * the three existing sponsors uniformly; explicit family lists use the same policy.
+ * identical copies reuse the first pick (source describes copies of one component).
+ * Each array index owns a substream: changing one spec's count cannot affect another.
+ * Inserting/reordering specs changes their indices and therefore their draws. */
 export function planAugmentGifts(state:Pick<MatchState,'seed'|'multiplayer'>, a:OwnedAugment, specs:readonly AugmentGiftSpec[]):AugmentGift[] {
   return specs.flatMap((spec,index)=>{
     const namespace=JSON.stringify([AUGMENT_GIFT_SOURCE,state.multiplayer?.seatId??'solo',a.choiceId,a.definitionId,index]);
@@ -43,7 +47,9 @@ export function planAugmentGifts(state:Pick<MatchState,'seed'|'multiplayer'>, a:
     });
   });
 }
-/** All four existing bench anvil categories; no pending-choice queue or hidden inventory copy. */
+/** P-AG2 (P, 2026-10-24; research omits option weights): reuse existing project
+ * pools; four distinct uniform options without replacement. This is a project
+ * convention, not evidence of the original server's distribution. */
 export function augmentAnvilOffers(seed:number,receiptId:string,definitionId:keyof typeof G24_FORGE_POOLS):readonly string[] {
   const pool=[...G24_FORGE_POOLS[definitionId]];
   let rng=(seed^0x61323366)>>>0;

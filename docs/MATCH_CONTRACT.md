@@ -1,6 +1,19 @@
+## 2026-10-24 增强池奖励抽样与支付：项目约定 P（S2）
+
+来源：`/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json`。奖励数量、费用、指定对象与阈值按研究；下列研究未给出的语义明确标为 **P，2026-10-24**，理由是沿用已有项目池、确定性子流与唯一发奖账本，不宣称原服概率或精确支付顺序已获证。验收口径为“奖励数值匹配，抽样与时点按项目约定”。
+
+| 编号 | 项目约定与适用范围 | 缺失证据 / 沿用理由 |
+|---|---|---|
+| P-AG1 | batch 1 的所有 random-item/random-unit：既有组件/成装/辅助装池、指定费用商店目录排序后等权有放回；不按剩余共享卡池重加权。Duo Queue 从一次组件抽样复制两份；学院之冕从当前三件 sponsor 等权取一。Branching Out / Kitchen 从现有22纹章等权取一。batch 2 游乐场的 Vander/Powder/Violet 等权独立有放回；极客组件同前。 | 研究只列随机、费用、数量或名单，未列权重/有放回性/学院三者概率。沿用现有内容池及独立 seat/choice/spec LCG，避免改变可变 RNG 流。 |
+| P-AG2 | 本批奖励的四选锻造器沿用已有组件/成装/辅助装池，等权无放回选四个不同选项。 | 四选数量有描述/ArmoryChoiceCount；具体权重与抽样算法未给，沿用既有锻造器策略。不是学院研究的二选定制锻造器。 |
+| P-AG3 | 天降金币/天降金币+（研究记录[157]/[158]，零基索引）：立即8/18金；每回合1金随该回合基础收入冻结、下一准备入口支付，不增加本次利息基数。 | 8/18/1有源；相对利息与准备入口的支付顺序无源。沿用项目延迟基础收入与唯一结算收据。 |
+| P-AG4 | batch 1 初始物品/英雄在选中事务发放，容量不足走既有单人待发/联机法球。batch 2 火箭、执法、游乐场、极客、背叛奖励在权威战斗结算后按累计事实发放；底城争夺战保留微光成功/超时选择同次立即回4HP、6金。双形升三星复制随既有未锁定准备/结算发奖入口发放，战斗锁定期间延后。 | 描述给触发条件、数量，未给战斗帧内/结算内精确支付顺序；复用已认证事实、容量与收据，防止重复发奖。 |
+
+子流稳定性只承诺修改一个 spec 的抽样数量不影响其它 spec；插入/重排 spec 会改变 index 和对应抽样（N1）。上述约定不解除其它禁用项的证据门槛；未知战利品表、未知召唤物数值等仍禁用。
+
 ## v23候选：增强池续批（2026-10-24）
 
-本节接续batch 1，详见[续批报告](AUGMENT_POOL_BATCH2_REPORT.md)。Branching Out、Kitchen与Coronation开放，batch 1现为67项；batch 2的26项中16项开放、10项完整禁用。`AUGMENT_BATCH2`保存来源与原值，`AUGMENT_BATCH2_BLOCKED`保存缺字段。此内容进RULES_GAP_MANIFEST；正式身份仍待v23集成统一切换。
+本节接续batch 1，详见[续批报告](AUGMENT_POOL_BATCH2_REPORT.md)。Branching Out、Kitchen与Coronation开放，batch 1现为67项；batch 2的26项中17项开放、9项完整禁用。`AUGMENT_BATCH2`保存来源与原值，`AUGMENT_BATCH2_BLOCKED`保存缺字段。此内容进RULES_GAP_MANIFEST；正式身份仍待v23集成统一切换。
 
 新增Shield/Cape源值来自仓库保留raw map22与双语stringtable：人口各+1，Shield实际死亡10%掉1金，Cape第200tick存活10%掉1金；配方锅+锅/铲+锅，人口沿用既有冠冕取得后永久授予政策。Coronation每件Crown/Shield/Cape给携带者3000AD Bps/3000AS Bps/40AP。成功与失败抽取均在ItemGoldLedger留存，复用collector物品独立流；相关存档完整重演，不修改其他RNG流。
 
@@ -11,6 +24,14 @@ Match公共命令、失败reason不变。内部新增：
 - `drainBatch2Gold(state:MatchState):MatchState` / `validateBatch2Gold(state):void`：通缉每6次6金与黑市保留6金，唯一来源`augment-pool-batch2`，逐份认证身份/金额/发生轮次；重复排放原状态，非法来源或缺收据抛RangeError。已有机械金币统计与下一轮余额链照常读取收据。
 - `batch2HpAfterSettlement(state,round,hp)` / `batch2HpBeforeBattle(state,roundId,hp)`：认证过的黑市保留收据每次回4HP、上限100；战后治疗先于下一轮开局猴子扣血，准备期治疗再计入下一场hpBefore，不倒写已结算战损。成功选择/超时选择走相同finishG23Choice回调；重复命令仍按旧选择错误拒绝，无治疗或金币副作用。
 - `traitAugmentB2`仅编译给当前原生/纹章成员；战斗动态`CombatUnit.batch2`保留周期消耗、击中成长、处决、火箭、家人生存与伙伴击杀事实。相关战斗的恢复从已认证CombatInputBasis独立重演完整状态，比对全部运行态/事件序号；不信任候选counter，也不另设客户端战斗规则。随机发奖复用seat/choice/spec独立流，新增固定名单`random-unit-pool`，只用于解析文案明确列出的Vander/Powder/Violet。
+
+### 双形战士接线（v23候选，2026-10-24）
+
+研究 `/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json` 零基记录[215]（`TFT13_Augment_Formswapper`）已给全部所需奖励与属性值。`why-not-both`开放：初始给Swain/Gangplank；同一英雄两种形态同时上场时，两者各+24AP/护甲/魔抗、+2400AD Bps。形态沿现有已批准的开战前后两排行号规则，不新增形态算法。
+
+`selectChoice`在发初始英雄之前原子追加 `ResourceFact {kind:'form-swapper-selected',choiceId:string}`；其`sequence`是选择时点。provenance fold拒绝额外字段、错误强化/choiceId/回合或重复标记；奖励验证要求拥有该强化时恰好一条标记，不拥有时无标记。`formSwapperGiftPlan(state:MatchState):AugmentGift[]`仅扫描标记之后的真实`unit-upgraded`及选秀内嵌升级事实，天然双形英雄实际升至三星才按事件sequence/子序号生成二星复制；直接获得三星或选择前升级不触发。不满足条件返回空计划，不报客户端错误；`validateFormSwapperSelection(state):void`违反边界时抛`RangeError('Invalid form swapper selection authority')`。
+
+发放沿`drainBatch1Gifts`唯一收据，单人满席保留待发，联机法球领取占共享池3张。每次发奖后重派生计划，支持奖励本身促成的连锁合星；商店购买、复制器、选秀与法球升级共用provenance事实，战斗锁定期间继续按既有准备/结算边界处理。恢复先验证收据与完整资源事实，不接受客户端自报升星计数。该改变只属于v23候选，M1/M2身份与候选变化由后续v23纪元统一处理。
 
 ## v23 候选：增强池 batch 1（2026-10-24）
 

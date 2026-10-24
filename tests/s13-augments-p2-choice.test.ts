@@ -95,10 +95,9 @@ it('later gift triple revisits a previously blocked gift in the same drain',()=>
 });
 
 it('public Crown + Trifecta acquisition serializes and restores both entrances with historical shields',()=>{
-  // v20-traits adds five gold cards. Deterministic search found this unchanged
-  // Crown -> Trifecta -> Kog'Maw scenario at attempt 16003, beyond the old 10000 budget.
-  // v23 batch 2: independent offer/gift seed search retains Crown → Trifecta → Kog'Maw at 7329.
-  const seed=7329;
+  // v23 Form Swapper expansion: independent offer/gift arithmetic locates
+  // Crown → Trifecta → Kog'Maw at 14588; historical stat/shield assertions stay fixed.
+  const seed=14588;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){

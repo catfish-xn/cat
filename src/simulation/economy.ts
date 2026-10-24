@@ -70,6 +70,9 @@ export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
   const interestBasis = gold + win;
   nonnegativeInteger(interestBasis, 'interest basis');
   const interest = Math.min(readAugmentIncome(input.augments).interestCap, Math.floor(interestBasis / ECONOMY_RULES.interestDivisor));
+  // P-AG3 (P, 2026-10-24): research gives roundGold amounts, not payment order.
+  // Reuse deferred base income: freeze at settlement, pay next preparation;
+  // this increment does not enter the current interest basis.
   const incomeBreakdown = { base: MATCH_RULES.roundIncome + readAugmentIncome(input.augments).roundGold, win, interest, streak: streakGold };
   const income = incomeBreakdown.base + win + interest + streakGold;
   const goldAfter = gold + income;

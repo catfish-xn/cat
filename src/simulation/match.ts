@@ -614,7 +614,8 @@ export function useConsumable(state:MatchState,consumableId:string,target:Consum
   const used={...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
     {kind:'consumable-used',record:plan.record,...(state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {})})};
   const copied=grantConsumableCopy(used,plan.record);
-  return acceptEquipment(copied.state,[...plan.events,...copied.events]);
+  const gifted=copied.state.augments.some(a=>a.definitionId==='why-not-both')&&copied.state.phase!=='combat'&&!isCombatRosterLocked(copied.state)?drainP2Gifts(copied.state):copied.state;
+  return acceptEquipment(gifted,[...plan.events,...copied.events,...mechanicGrantEvents(copied.state,gifted)]);
 }
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
   const preview = previewCombine(state, aId, bId);
@@ -877,6 +878,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
   if(choice.kind==='augment'){
+    if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
     const gifted=drainP2Gifts(selected,unitLootPolicy);
     events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;
   }

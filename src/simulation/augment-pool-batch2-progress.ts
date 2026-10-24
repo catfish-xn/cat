@@ -24,7 +24,11 @@ export function batch2BattleFacts(combat:CombatState,team:Team):Batch2BattleFact
   return {definitionId,count};
  });return rows.length?rows:undefined;
 }
-/** Counter rewards are derived each time from immutable battle receipts; acquisition and reward share one grant ledger. */
+/** P-AG4 (P, 2026-10-24): research does not specify in-combat delivery order.
+ * Counter gifts/gold are paid after authoritative settlement; shimmer save is immediate.
+ * Reason: reuse authenticated battle facts and existing grant receipts without a
+ * second combat reward authority. Family/component draws follow P-AG1.
+ * Counter rewards are derived each time from immutable battle receipts; acquisition and reward share one grant ledger. */
 export function batch2RewardPlan(state:MatchState):AugmentGift[] {
  const battles=readG23Progress(state)?.economyReceipts.filter(r=>r.kind==='battle')??[];
  return state.augments.flatMap(a=>{

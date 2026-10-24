@@ -1,3 +1,4 @@
+import { getUnitForm } from './seat-mechanics/forms';
 import { TACTICIAN_SIZE_ITEMS } from './content/tactician-items';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
 import { scrapConversions, g22Equipment } from './strategy-g2-2';
@@ -31,6 +32,12 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
       const spec=AUGMENT_BATCH2_ENABLED[augment.definitionId];
       if(!spec||!traits.some(t=>t.team===unit.team&&spec.traits.includes(t.traitId)&&isTraitSnapshotMember(t,unit)))return [];
       if(augment.definitionId==='betrayal'&&!['maddie','ambessa'].includes(unit.definitionId))return [];
+      if(augment.definitionId==='why-not-both'){
+        const form=getUnitForm(unit,state.preparation.board);
+        if(!form||!allies.some(other=>other.id!==unit.id&&other.definitionId===unit.definitionId&&getUnitForm(other,state.preparation.board)!==null&&getUnitForm(other,state.preparation.board)!==form))return [];
+        const amount=spec.source.values.BonusStats!;
+        return [effect,flat('abilityPower',amount),flat('armor',amount),flat('magicResist',amount),{kind:'statPercentBps',stat:'attackDamage',bps:amount*100}];
+      }
       if(augment.definitionId==='pit-fighter-prizefighter'){
         const battles=state.g23?.economyReceipts.filter(r=>r.kind==='battle'&&r.facts.round>=augment.acquiredRound)??[];
         const wins=battles.filter(r=>r.kind==='battle'&&r.facts.result==='win').length,losses=battles.filter(r=>r.kind==='battle'&&r.facts.result==='loss').length;

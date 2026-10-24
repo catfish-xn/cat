@@ -97,10 +97,15 @@ describe('v22 one-per-match in the shared round advance and the room', () => {
     expect(tier).toBe('gold');
     const offers = seats.flatMap(s => s.match.pendingChoice!.offers);
     expect(new Set(offers).size).toBe(offers.length);
+    // The mock now aliases enabled batch-2 cards; onePerMatch is keyed by apiName.
+    // Independently close each known alias group when any internal ID was shown.
+    const blockedAliases=(ids:string[])=>[...new Set([...ids,...[
+      ['menaces','crimson-pact'],['reunion','welcome-to-the-playground'],['sisters','black-rose-crest'],
+    ].flatMap(group=>group.some(id=>ids.includes(id))?group:[])])].sort();
     const shownBefore: string[] = [];
     for (const s of seats) {
       const record = s.match.augmentOffers.at(-1)!;
-      expect(record.externalBlocks[0]).toEqual([...shownBefore].sort());
+      expect(record.externalBlocks[0]).toEqual(blockedAliases(shownBefore));
       shownBefore.push(...s.match.pendingChoice!.offers);
       expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(s.match))).toEqual(s.match);
     }
@@ -112,7 +117,7 @@ describe('v22 one-per-match in the shared round advance and the room', () => {
     expect(room.handle('s0', { type: 'rerollAugment', choiceId: c.choiceId, generation: c.generation, optionIndex: 1 })).toMatchObject({ ok: true });
     const after = room.state.seats.find(s => s.seatId === 's0')!.match;
     const others = seats.slice(1).flatMap(s => s.match.pendingChoice!.offers);
-    expect(after.augmentOffers.at(-1)!.externalBlocks[1]).toEqual([...others].sort());
+    expect(after.augmentOffers.at(-1)!.externalBlocks[1]).toEqual(blockedAliases(others));
     expect(others).not.toContain(after.pendingChoice!.offers[1]);
   });
 });
