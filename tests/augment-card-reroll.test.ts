@@ -90,11 +90,15 @@ it('draws the last candidate successfully, then refuses an empty pool without us
   const original=reachRound('2-1',false),c=original.pendingChoice!;
   const candidates=augmentCandidates(c.augmentTier!,[],c.offers);
   // Synthetic finite-catalog vector: exactly one ID remains after owned and removed filtering.
-  const owned=candidates.slice(0,1).map(definitionId=>({definitionId,choiceId:'prior',acquiredRound:1}));
+  // v22 mutual exclusions (e.g. team-ups) apply against owned augments, so pair the owned ID with
+  // the first candidate it does not exclude.
+  const ownedOf=(definitionId:string)=>[{definitionId,choiceId:'prior',acquiredRound:1}];
+  const [ownedId,lastId]=candidates.map(id=>[id,augmentCandidates(c.augmentTier!,ownedOf(id),c.offers)[0]] as const).find(([,last])=>last)!;
+  const owned=ownedOf(ownedId);
   // v22 invariant: the shown offers are part of the seen ledger.
-  const before=freeze({...original,augments:owned,removedAugmentIds:[...c.offers,...candidates.slice(2)]});
+  const before=freeze({...original,augments:owned,removedAugmentIds:[...c.offers,...candidates.filter(id=>id!==ownedId&&id!==lastId)]});
   const after=accepted(rerollAugment(before,c.choiceId,0,2));
-  expect(after.pendingChoice!.offers[2]).toBe(candidates[1]);
+  expect(after.pendingChoice!.offers[2]).toBe(lastId);
   expect(after.choiceRngState).toBe(nextRandom(before.choiceRngState).state);
   expect(after.pendingChoice!.rerolledSlots).toEqual([false,false,true]);
   const failed=rerollAugment(freeze(after),c.choiceId,1,0);
