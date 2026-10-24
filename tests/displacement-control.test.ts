@@ -141,6 +141,7 @@ it('sync / JSON resume / replay agree and keep the displacement reason', () => {
 describe('units that never move are not displaced', () => {
   const statics: [string, Partial<CombatUnit>][] = [
     ['Hextech Forge', { definitionId: 'g23-forge' }],
+    ['barrel', { definitionId: 'g23-barrel' }],
     ['bound Sion', { definitionId: 'g23-sion', runtime: { ...EMPTY_RUNTIME, buddyTriggered: false } }],
   ];
   it.each(statics)('%s: Sevika knockback, Sett grab and Mordekaiser pull all leave it in place', (_n, patch) => {

@@ -11,12 +11,12 @@ export function isControlled(unit: S13Unit, tick: number): boolean {
 }
 
 /** Units that never leave their cell: attack proxies, the Hextech Forge and a still-bound Sion. */
-export function isG23NonCombatant(unit: S13Unit): boolean {
+export function neverMoves(unit: S13Unit): boolean {
   return isAttackProxy(unit) || unit.definitionId === 'g23-forge' || g23Bound(unit);
 }
 
 /** Shared eligibility for ordinary movement and trait dashes; cooldown/range are caller-specific. */
 export function canMove(unit: S13Unit, tick: number): boolean {
-  return unit.alive && unit.hp > 0 && !isG23NonCombatant(unit) && !(isControlled(unit, tick) && !unit.sixCost?.permanentFrenzy)
+  return unit.alive && unit.hp > 0 && !neverMoves(unit) && !(isControlled(unit, tick) && !unit.sixCost?.permanentFrenzy)
     && active(unit, tick, 'channel').length === 0 && !g23Anomaly(unit, 'deep-roots');
 }
