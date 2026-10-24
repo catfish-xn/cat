@@ -27,7 +27,11 @@ export class UnitAnimationMixer {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
   }
-  resolvePlayback(state: 'cast' | 'attack', castIndex = 0, context: CastSelection = {}): ActionPlayback | null {
+  resolvePlayback(state: 'cast' | 'attack' | 'spawn', castIndex = 0, context: CastSelection = {}): ActionPlayback | null {
+    if (state === 'spawn') {
+      const clip = this.names.spawn ? this.clips.get(this.names.spawn) : undefined;
+      return clip && Number.isFinite(clip.duration) && clip.duration > 0 ? { clips: [this.names.spawn!], durationSeconds: clip.duration } : null;
+    }
     if (state === 'cast' && this.names.cast === null) return null;
     const sequence = state === 'cast' ? selectCastSequence(this.metadata, castIndex, context) : undefined;
     const main = sequence && (Array.isArray(sequence.main) ? sequence.main[castIndex % sequence.main.length] : sequence.main as string);
