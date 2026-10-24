@@ -2,8 +2,6 @@ import { expect, it } from 'vitest';
 import { createRequire } from 'node:module';
 import * as api from '../src/simulation/match';
 import { accepted, reachRound, resolveM5Choices } from './match-helpers';
-import { generateChoices } from '../src/simulation/choices';
-import { augmentCandidates, deriveAugmentTier } from '../src/simulation/augment-offers';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -13,10 +11,13 @@ import { drainAllD11Gifts, d11GiftPlan, d11PriorKills } from '../src/simulation/
 import { readG23Progress } from '../src/simulation/g2-3-state';
 import { toPrivateSeatView } from '../src/simulation/private-seat-view';
 import { toCombatViewState } from '../src/simulation/combat-replay-view';
+import { openingEncounterId } from '../src/simulation/opening-encounter';
 import type { MatchState, MatchCommandResult } from '../src/simulation/match';
 
 function seedFor(id:string){
-  for(let seed=0;seed<1000;seed++)if(generateChoices(augmentCandidates(deriveAugmentTier(seed,'round:2-1:augment'),[]),(seed^0x9e3779b9)>>>0).offers.includes(id))return seed;
+  // v23 (151+ offers, fmix32 openings): read the real public 2-1 offer instead of re-deriving it;
+  // Trainer Golems seeds are skipped because reachRound cannot bench the board-bound golem.
+  for(let seed=0;seed<1000;seed++)if(openingEncounterId(api.createMatch(seed))!=='trainer-golems'&&reachRound('2-1',false,seed).pendingChoice?.offers.includes(id))return seed;
   throw Error('D11 offer seed budget');
 }
 function observe(history:BattleHistory,before:MatchState,result:{state:MatchState;events:readonly api.MatchEvent[]}){

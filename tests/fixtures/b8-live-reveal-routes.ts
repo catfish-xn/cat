@@ -11,8 +11,9 @@ export const PARTIAL_REVEAL_SEEDS = {loris:2125,zyra:2125} as const;
 // loadout. Supply choices fund the recipes; every sale, reroll, removal and deployment
 // is a public Match command, preserving the exact tick/eventSeq assertions below.
 // v22: seed 242874 draws the Trainer Golem opening (an unsellable golem that cannot be benched and blocks the
-// board); seed 2274 has no opening encounter and still fields the eight two-star holders and four-item loadout.
-export const SIMULTANEOUS_REVEAL_SEED=2274;
+// board); v22's seed 2274 draws Wind-up Monkey under v23 fmix32. Seed 2634 has no opening encounter and still
+// fields the eight two-star holders and four-item loadout.
+export const SIMULTANEOUS_REVEAL_SEED=2634;
 export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<api.MatchState>{
  const equipmentTargets={'sunfire-cape':{definitionId:'irelia'},'ionic-spark':{definitionId:'loris'},gunblade:{definitionId:'zoe'},shojin:{definitionId:'zoe'}};
  const board=[

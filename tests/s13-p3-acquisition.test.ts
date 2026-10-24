@@ -7,6 +7,7 @@ import { P3_AUGMENT_ITEMS } from '../src/simulation/content/s13-p3';
 import { selectChoice, startMatchCombat, stepMatch, selectAnomalyTarget, rerollAnomaly, deployMatchUnit, sellUnit, nextRound } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted, reachRound } from './match-helpers';
+import { openingEncounterId } from '../src/simulation/opening-encounter';
 import * as matchApi from '../src/simulation/match';
 const anomalyPrefixes = new Map<number, Promise<ReturnType<typeof matchApi.createMatch>>>();
 function publicAnomalyPrefix(seed = 42) {
@@ -51,7 +52,8 @@ it('independently checks every new coefficient and Chinese label against compres
 }, 10_000);
 it.each(Object.entries(P3_AUGMENT_ITEMS))('%s grants exactly one %s using the existing schedule transaction; forged/missing births reject', (id, item) => {
   let seed = 0;
-  while (seed < 300 && !reachRound('2-1', false, seed).pendingChoice?.offers.includes(id)) seed++;
+  // v23 fmix32 openings: skip Trainer Golems seeds, whose board-bound golem the public emptyBoard route cannot bench.
+  while (seed < 300 && (openingEncounterId(matchApi.createMatch(seed)) === 'trainer-golems' || !reachRound('2-1', false, seed).pendingChoice?.offers.includes(id))) seed++;
   expect(seed).toBeLessThan(300);
   const before = reachRound('2-1', false, seed), c = before.pendingChoice!;
   const after = accepted(selectChoice(before, c.choiceId, c.generation, id));
