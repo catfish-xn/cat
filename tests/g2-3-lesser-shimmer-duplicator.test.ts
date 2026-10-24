@@ -2,7 +2,9 @@ import {expect,it} from 'vitest';
 import {deepStrictEqual} from 'node:assert/strict';
 import {gunzipSync} from 'node:zlib';
 import {readFileSync} from 'node:fs';
-import {createMatch,buyXp,deployMatchUnit,sellUnit,selectChoice,nextRound,startMatchCombat,stepMatch,claimG23Reward,type MatchState} from '../src/simulation/match';
+import {createMatch,buyXp,deployMatchUnit,sellUnit,selectChoice,nextRound,startMatchCombat,stepMatch,claimG23Reward,useConsumable,type MatchState} from '../src/simulation/match';
+import {CONSUMABLE_DEFINITIONS} from '../src/simulation/content/consumables';
+import {previewUseConsumable} from '../src/simulation/consumables';
 import {grantMechanicGold,grantMechanicUnit} from '../src/simulation/seat-mechanics';
 import {G23_BLACK_MARKETS,G23_CONQUEROR_CHESTS,G23_POLICY,g23ConquerorReward} from '../src/simulation/content/g2-3-policy';
 import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
@@ -16,6 +18,10 @@ import {createG23Progress} from '../src/simulation/g2-3-match-progress';
 import {augmentAcquisition} from '../src/simulation/augment-acquisition';
 import {P2_ITEM_GRANTS} from '../src/simulation/content/s13-augments-p2';
 
+/**
+ * Lesser Shimmer Duplicator (次级微光复制器), P 2026-10-25: 14.24 "Use on a 3 cost or lower Chem-Baron to create a
+ * 1-star copy of them" — a black-market consumable the player uses on a target unit (no automatic copy).
+ */
 const shimmer='TFT13_Crime_Consumable_LesserShimmerDuplicator';
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 const ok=<T extends {ok:boolean;state:MatchState}>(r:T):MatchState=>{if(!r.ok)throw Error('Public fixture command refused');return r.state;};
@@ -44,15 +50,20 @@ const bundle:G23RewardBundle={id:marketEntry.id,round:1,source:'black-market',ti
 function rewardVector():MatchState{
  const state=preparation(createMatch(42));
  const pending=drainG23Rewards(writeG23Progress(state,{...readG23Progress(state)!,rewards:[bundle]}));
- // Resolve LootA's single sampled item before isolating the duplicator vector.
- expect(readG23Progress(pending)!.rewardClaims).toMatchObject([{kind:'item'}]);
+ // LootA's single sampled item and its Lesser Shimmer Duplicator (a consumable on the shelf) are both claimed at once.
+ expect(readG23Progress(pending)!.rewardClaims).toMatchObject([{kind:'item'},{kind:'tool',definitionId:shimmer}]);
+ expect(pending.consumables.filter(c=>c.definitionId===shimmer)).toHaveLength(1);
  return pending;
 }
+const shimmerTool=(state:MatchState)=>state.consumables.find(c=>c.definitionId===shimmer)!;
+const unitTarget=(unitId:string)=>({kind:'unit' as const,unitId});
+const ownedId=(state:MatchState,definitionId:string)=>state.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId)!.id;
 
 it('keeps the official zh_cn identity, the three source packages, quantities and 35%/20% weights',()=>{
  const strings=JSON.parse(gunzipSync(readFileSync('src/simulation/content/source/s13-14.24b/raw/zh_cn.tft.stringtable.json.gz')).toString('utf8'));
- expect(G23_POLICY.duplicators[shimmer].name).toBe(strings.entries.tft_item_name_tft13_crime_consumable_lessershimmerduplicator);
- expect(G23_POLICY.duplicators[shimmer].name).toBe('次级微光复制器');
+ expect(CONSUMABLE_DEFINITIONS[shimmer].name).toBe(strings.entries.tft_item_name_tft13_crime_consumable_lessershimmerduplicator);
+ expect(CONSUMABLE_DEFINITIONS[shimmer]).toMatchObject({name:'次级微光复制器',effect:'duplicate-unit',targetKind:'unit',maxCost:3,traitId:'chem-baron'});
+ expect(Object.hasOwn(G23_POLICY.duplicators,shimmer)).toBe(false);
  const packages=G23_BLACK_MARKETS.flatMap(m=>m.options.filter(o=>Array.isArray(o.reward.Consumables)&&o.reward.Consumables.includes(shimmer)).map(o=>({tier:m.tier,id:o.id,weight:o.weightBps,ids:o.reward.Consumables})));
  expect(packages).toEqual([
   {tier:1,id:'TFT13_Crime_LootA',weight:2500,ids:[shimmer]},
@@ -61,9 +72,8 @@ it('keeps the official zh_cn identity, the three source packages, quantities and
  ]);
  for(const market of G23_BLACK_MARKETS)for(const option of market.options.filter(o=>packages.some(p=>p.id===o.id))){
   const atoms=g23RewardAtoms({id:option.id,round:1,source:'black-market',tier:market.tier,reward:option.reward},42);
-  const atom=atoms.find(a=>a.kind==='duplicator')!;
-  expect(atom).toMatchObject({duplicatorDefinitionId:shimmer,quantity:1});
-  expect([...atom.options].sort()).toEqual(['renata','renni','singed','smeech']);
+  expect(atoms.filter(a=>a.kind==='duplicator')).toEqual([]);
+  expect(atoms.filter(a=>a.kind==='tool'&&a.options.includes(shimmer))).toEqual([expect.objectContaining({options:[shimmer],quantity:1})]);
  }
  const chest=G23_CONQUEROR_CHESTS[3];
  expect(g23ConquerorReward(chest)).toEqual({Item:[lesser],ThreeCostUnit:1});
@@ -72,7 +82,7 @@ it('keeps the official zh_cn identity, the three source packages, quantities and
  expect(atom.options).toContain('irelia');expect(atom.options).toContain('swain');expect(atom.options).not.toContain('silco');
 });
 
-it.each(['singed','renata','renni','smeech'].flatMap(id=>['board','bench'].map(location=>({id,location}))))('copies the eligible $id on the $location exactly once',({id,location})=>{
+it.each(['singed','renata','renni','smeech'].flatMap(id=>['board','bench'].map(location=>({id,location}))))('copies the eligible $id on the $location it is used on, exactly once',({id,location})=>{
  let state=rewardVector();
  const unitId=`unit-${state.nextUnitSerial}`;
  state=ok(grantMechanicUnit(state,{receiptId:'fixture:target',source:'fixture',definitionId:id}));
@@ -81,27 +91,35 @@ it.each(['singed','renata','renni','smeech'].flatMap(id=>['board','bench'].map(l
   state=ok(deployMatchUnit(state,unitId,holder.location));
  }
  expect(state.preparation.units.find(u=>u.id===unitId)!.location.kind).toBe(location);
- const serial=state.nextUnitSerial;
- const claimed=drainG23Rewards(state),claims=readG23Progress(claimed)!.rewardClaims.filter(c=>c.kind==='duplicator');
- expect(claims).toMatchObject([{kind:'duplicator',definitionId:id,instanceId:`unit-${serial}`}]);
- expect(claimed.preparation.units.find(u=>u.id===`unit-${serial}`)).toMatchObject({definitionId:id,starLevel:1});
- expect(drainG23Rewards(claimed)).toBe(claimed);
+ // Nothing is copied by itself: the tool waits on the shelf until the player uses it on a unit.
+ expect(drainG23Rewards(state)).toBe(state);
+ const tool=shimmerTool(state),serial=state.nextUnitSerial;
+ expect(previewUseConsumable(state,tool.consumableId,unitTarget(unitId))).toMatchObject({ok:true,effect:'duplicate-unit'});
+ const used=ok(useConsumable(state,tool.consumableId,unitTarget(unitId)));
+ expect(used.preparation.units.find(u=>u.id===`unit-${serial}`)).toMatchObject({definitionId:id,starLevel:1,location:{kind:'bench'}});
+ expect(used.consumables.some(c=>c.consumableId===tool.consumableId)).toBe(false);
+ expect(useConsumable(used,tool.consumableId,unitTarget(unitId))).toMatchObject({ok:false,reason:'unknown-consumable'});
 });
 
-it('rejects non-Chem-Barons and Silco, retaining escrow until a legal bench target is owned',()=>{
+it('refuses non-Chem-Barons, Silco and Sevika, keeping the tool until it is used on a legal target',()=>{
  let state=rewardVector();
  state=ok(grantMechanicUnit(state,{receiptId:'fixture:ineligible',source:'fixture',definitionId:'silco'}));
- // Opening Irelia is on board; 4-cost Chem-Baron Silco is on the bench.
- expect(state.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId)).toEqual(['irelia','silco']);
- const before=JSON.stringify(state),atom=g23RewardAtoms(bundle,state.seed).find(a=>a.kind==='duplicator')!;
+ state=ok(grantMechanicUnit(state,{receiptId:'fixture:ineligible-5',source:'fixture',definitionId:'sevika'}));
+ // Opening Irelia is on board; 4-cost Silco and 5-cost Sevika (both Chem-Barons) are on the bench.
+ expect(state.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId)).toEqual(['irelia','silco','sevika']);
+ const before=JSON.stringify(state),tool=shimmerTool(state);
  expect(drainG23Rewards(state)).toBe(state);
- for(const id of ['irelia','silco','renni'])expect(claimG23Reward(state,atom.id,id)).toMatchObject({ok:false,reason:'stale-choice',state});
+ for(const id of ['irelia','silco','sevika']){
+  expect(previewUseConsumable(state,tool.consumableId,unitTarget(ownedId(state,id)))).toEqual({ok:false,reason:'invalid-consumable-target'});
+  expect(useConsumable(state,tool.consumableId,unitTarget(ownedId(state,id)))).toMatchObject({ok:false,reason:'invalid-consumable-target',state});
+ }
+ expect(useConsumable(state,tool.consumableId,unitTarget('unit-999'))).toMatchObject({ok:false,reason:'unknown-unit'});
  expect(JSON.stringify(state)).toBe(before);
- expect(readG23MechanismState(state)!.rewards).toContainEqual(expect.objectContaining({duplicatorDefinitionId:shimmer,remaining:1}));
+ expect(readG23MechanismState(state)!.rewards).toEqual([]);
  state=ok(grantMechanicUnit(state,{receiptId:'fixture:late-target',source:'fixture',definitionId:'renni'}));
- const claimed=drainG23Rewards(state);
- expect(readG23Progress(claimed)!.rewardClaims.filter(c=>c.kind==='duplicator')).toMatchObject([{definitionId:'renni'}]);
- expect(readG23MechanismState(claimed)!.rewards).toEqual([]);
+ const used=ok(useConsumable(state,tool.consumableId,unitTarget(ownedId(state,'renni'))));
+ expect(used.preparation.units.filter(u=>u.team==='player'&&u.definitionId==='renni')).toHaveLength(2);
+ expect(used.consumables).toEqual([]);
 });
 
 it.each(['TFT13_Crime_Consumable_ShimmerDuplicator'])('does not admit the unsupported large duplicator %s',id=>{
@@ -185,56 +203,67 @@ it('restores the sole naturally offered bundle without duplicate grants',()=>{
  }
 });
 
-const usedDuplicator=once(()=>{
- const pending=publicMarket(),choice=pending.pendingChoice!;
- const used=ok(selectChoice(pending,choice.choiceId,choice.generation,choice.offers[0]));
- const claim=readG23Progress(used)!.rewardClaims.find(c=>c.kind==='duplicator')!;
- expect(['singed','renata','renni','smeech']).toContain(claim.definitionId);
- expect(used.preparation.units.some(u=>u.id===claim.instanceId)).toBe(true);
- return used;
-});
-// One save entrance per case keeps each next-battle replay inside the default timeout under parallel load.
-it.each(ENTRIES)('restores the used lesser shimmer duplicator and the next battle tick for tick (%s)',entry=>{
- expectRoundTripAndNextBattle(usedDuplicator(),[entry]);
-});
-
-function usedMarket():MatchState{
+const takenMarket=once(()=>{
  const pending=publicMarket(),choice=pending.pendingChoice!;
  return ok(selectChoice(pending,choice.choiceId,choice.generation,choice.offers[0]));
-}
+});
+/** The taken market's tool used on the player's chosen target: the 3★ Renata (not the first Chem-Baron in any order). */
+const usedMarket=once(()=>{
+ const taken=takenMarket();
+ return ok(useConsumable(taken,shimmerTool(taken).consumableId,unitTarget(ownedId(taken,'renata'))));
+});
+const checkedTakenMarket=once(()=>{
+ const taken=takenMarket();
+ expect(readG23Progress(taken)!.rewardClaims.filter(c=>c.kind==='duplicator')).toEqual([]);
+ expect(taken.consumables.filter(c=>c.definitionId===shimmer)).toHaveLength(1);
+ expect(taken.consumables.length).toBe(publicMarket().consumables.length+1);
+ return taken;
+});
+// One save entrance per case keeps each next-battle replay inside the default timeout under parallel load.
+it.each(ENTRIES)('restores the taken market with its unused tool and the next battle tick for tick (%s)',entry=>{
+ expectRoundTripAndNextBattle(checkedTakenMarket(),[entry]);
+});
+const checkedUsedMarket=once(()=>{
+ const used=usedMarket(),record=used.resourceProvenance.entries.find(e=>e.kind==='consumable-used')!;
+ expect(record).toMatchObject({record:{definitionId:shimmer,effect:'duplicate-unit',copiedUnit:{definitionId:'renata'}}});
+ return used;
+});
+it.each(ENTRIES)('restores the tool used on a chosen Chem-Baron and the next battle tick for tick (%s)',entry=>{
+ expectRoundTripAndNextBattle(checkedUsedMarket(),[entry]);
+});
+
 function rejectsEveryEntry(state:MatchState,message?:string):void{
  expect(()=>serializeMatch(state)).toThrow(message);
  expect(()=>restoreMatch(state)).toThrow(message);
  expect(()=>restoreMatch(JSON.stringify(state))).toThrow(message);
 }
-it.each(['settlement','next preparation'].flatMap(phase=>['smeech','silco','irelia','renata','renni'].map(target=>({phase,target}))))('rejects jointly edited copy/receipt $target in $phase at all three save entries',({phase,target})=>{
- const pending=publicMarket(),used=usedMarket();
- const claim=readG23Progress(used)!.rewardClaims.find(c=>c.kind==='duplicator')!;
- expect(claim.definitionId).toBe('singed');
- expect(pending.preparation.units.some(u=>u.team==='player'&&u.definitionId==='smeech')).toBe(false);
- expect(used.preparation.units.some(u=>u.team==='player'&&u.definitionId==='smeech')).toBe(true);
- const base=phase==='settlement'?used:preparation(used);
+/** The copy's receipt, unit and use record of a used Lesser Shimmer Duplicator. */
+function copyOf(state:MatchState){
+ const fact=state.resourceProvenance.entries.find(e=>e.kind==='consumable-used')!;
+ if(fact.kind!=='consumable-used')throw Error('no use');
+ const receiptId=JSON.stringify(['consumable-copy',fact.record.consumableId]);
+ const receipt=state.seatMechanics!.receipts.find(r=>r.receiptId===receiptId)!;
+ return {fact,receipt,unitId:(receipt as {unitId:string}).unitId};
+}
+it.each(['settlement','next preparation'].flatMap(phase=>['smeech','silco','sevika','garen','singed'].map(target=>({phase,target}))))('rejects a copy jointly edited to $target in $phase at all three save entries',({phase,target})=>{
+ const used=usedMarket(),base=phase==='settlement'?used:preparation(used);
  if(phase!=='settlement'){expect(base.round).toBe(13);expect(base.combat).toBeNull();}
- const forged=structuredClone(base);
- Object.assign(forged.seatMechanics!.receipts.find(r=>r.receiptId===claim.id)!,{definitionId:target});
- Object.assign(forged.preparation.units.find(u=>u.id===claim.instanceId)!,{definitionId:target});
- rejectsEveryEntry(forged,['smeech','renata','renni'].includes(target)?'mechanic duplicator target':undefined);
+ expect(restoreMatch(serializeMatch(base))).toEqual(base);
+ const forged=structuredClone(base),{fact,receipt,unitId}=copyOf(forged);
+ expect(fact.record.copiedUnit!.definitionId).toBe('renata');
+ // The copy, its receipt and the use record all name the forged hero; the target stays the real Renata.
+ Object.assign(receipt,{definitionId:target});
+ Object.assign(forged.preparation.units.find(u=>u.id===unitId)!,{definitionId:target});
+ Object.assign(fact.record.copiedUnit!,{definitionId:target});
+ rejectsEveryEntry(forged);
 });
-
-it.each(['singed','renni'])('rejects moving the earning settlement and prefix past the forged %s birth',target=>{
- const forged=structuredClone(preparation(usedMarket()));
- const claim=readG23Progress(forged)!.rewardClaims.find(c=>c.kind==='duplicator')!;
- // v23: seed 42's fmix32 opening is Golden Gala (was Scuttle Puddle), which shifts the route's unit serials by two.
- expect(forged.round).toBe(13);expect(claim.instanceId).toBe('unit-41');
- Object.assign(forged.seatMechanics!.receipts.find(r=>r.receiptId===claim.id)!,{definitionId:target});
- Object.assign(forged.preparation.units.find(u=>u.id===claim.instanceId)!,{definitionId:target});
- const entries=[...forged.resourceProvenance.entries];
- const index=entries.findIndex(e=>e.kind==='combat-growth-committed'&&e.combatId==='round-12');
- expect(index).toBeGreaterThan(0);
- const [commit]=entries.splice(index,1);
- entries.splice(index+1,0,{...commit,combatStartProvenancePrefixLength:index+1} as typeof commit);
- Object.assign(forged.resourceProvenance,{entries:entries.map((entry,sequence)=>({...entry,sequence}))});
- rejectsEveryEntry(forged,'mechanic reward settlement order');
+it.each(['garen','irelia'])('rejects a use record retargeted to the owned non-Chem-Baron %s (the trait is checked again on restore)',target=>{
+ const forged=structuredClone(usedMarket()),{fact,receipt,unitId}=copyOf(forged);
+ const targetId=ownedId(forged,target);
+ Object.assign(fact.record,{target:{kind:'unit',unitId:targetId},copiedUnit:{id:targetId,definitionId:target}});
+ Object.assign(receipt,{definitionId:target});
+ Object.assign(forged.preparation.units.find(u=>u.id===unitId)!,{definitionId:target});
+ rejectsEveryEntry(forged,'Invalid consumable ledger');
 });
 
 it.each([15,17])('restores historical duplicator births at round %s and the next battle tick for tick',round=>{
@@ -265,27 +294,36 @@ function fullMarket():MatchState{
  expect(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench')).toHaveLength(9);
  const c=state.pendingChoice!;return ok(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
 }
-it('escrows a full-bench market and redeems its duplicator and later heroes in order as space is freed',()=>{
+it('a full-bench market hands the tool over at once, escrows its heroes in order, and the tool waits for a free slot',()=>{
  let state=fullMarket();
  const market=readG23Progress(state)!.rewards.find(b=>b.source==='black-market')!;
  const ids=()=>readG23Progress(state)!.rewardClaims.filter(c=>c.bundleId===market.id);
- expect(ids()).toEqual([]);
+ expect(ids()).toMatchObject([{kind:'tool',definitionId:shimmer}]);
  expectRoundTripAndNextBattle(state);
  state=preparation(state);
- for(const expected of ['singed','renni','smeech']){
+ // A full bench: the tool is refused and kept (無空位時不消耗).
+ const tool=shimmerTool(state),singed=ownedId(state,'singed');
+ expect(useConsumable(state,tool.consumableId,unitTarget(singed))).toMatchObject({ok:false,reason:'bench-full',state});
+ for(const expected of ['renni','smeech']){
   const previous=state.nextUnitSerial;
   const filler=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&['leona','lux','darius'].includes(u.definitionId))!;
   state=ok(sellUnit(state,filler.id));
   expect(ids().at(-1)).toMatchObject({definitionId:expected,instanceId:`unit-${previous}`});
-  expect(ids()).toHaveLength(['singed','renni','smeech'].indexOf(expected)+1);
+  expect(ids()).toHaveLength(['renni','smeech'].indexOf(expected)+2);
   expectRoundTripAndNextBattle(state);
  }
+ const filler=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&['leona','lux','darius'].includes(u.definitionId))!;
+ state=ok(sellUnit(state,filler.id));
+ const previous=state.nextUnitSerial;
+ state=ok(useConsumable(state,tool.consumableId,unitTarget(singed)));
+ expect(state.preparation.units.find(u=>u.id===`unit-${previous}`)).toMatchObject({definitionId:'singed',starLevel:1});
+ expectRoundTripAndNextBattle(state);
  const saved=serializeMatch(preparation(state));expect(serializeMatch(restoreMatch(saved))).toBe(saved);
 },20_000);
 
-const escrowedClaims=new Map<number,MatchState>();
-function escrowedClaim(round:number):MatchState{
- const cached=escrowedClaims.get(round);if(cached)return cached;
+const keptTools=new Map<number,MatchState>();
+function keptTool(round:number):MatchState{
+ const cached=keptTools.get(round);if(cached)return cached;
  let state=preparation(fullMarket());
  while(state.round<round){
   state=ok(startMatchCombat(state));
@@ -296,15 +334,14 @@ function escrowedClaim(round:number):MatchState{
  while(state.level<5)state=ok(buyXp(state));
  const filler=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&u.definitionId==='leona')!;
  state=ok(deployMatchUnit(state,filler.id,{kind:'board',cell:{col:4,row:4}}));
- const p=readG23Progress(state)!,market=p.rewards.find(b=>b.source==='black-market')!;
- const atom=g23RewardAtoms(market,p.seed).find(a=>a.kind==='duplicator')!;
- expect(atom.options.find(id=>state.preparation.units.some(u=>u.team==='player'&&u.definitionId===id))).toBe('singed');
- state=ok(claimG23Reward(state,atom.id,'renata'));
- expect(readG23Progress(state)!.rewardClaims.find(c=>c.atomId===atom.id)).toMatchObject({definitionId:'renata'});
- escrowedClaims.set(round,state);return state;
+ const previous=state.nextUnitSerial;
+ state=ok(useConsumable(state,shimmerTool(state).consumableId,unitTarget(ownedId(state,'renata'))));
+ expect(state.preparation.units.find(u=>u.id===`unit-${previous}`)).toMatchObject({definitionId:'renata',starLevel:1});
+ expect(state.consumables.filter(c=>c.definitionId===shimmer)).toEqual([]);
+ keptTools.set(round,state);return state;
 }
-it.each([13,15].flatMap(round=>ENTRIES.map(entry=>({round,entry}))))('preserves an escrowed public claim at round $round choosing another owned eligible target ($entry)',({round,entry})=>{
- expectRoundTripAndNextBattle(escrowedClaim(round),[entry]);
+it.each([13,15].flatMap(round=>ENTRIES.map(entry=>({round,entry}))))('keeps the tool to round $round and uses it on the player\'s chosen target ($entry)',({round,entry})=>{
+ expectRoundTripAndNextBattle(keptTool(round),[entry]);
 });
 
 it('keeps consecutive black-market RNG cursors and offers equal to the baseline stream',()=>{

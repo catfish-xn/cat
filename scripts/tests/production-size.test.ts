@@ -104,9 +104,9 @@ describe('production representation preserves runtime semantics', () => {
     const before = execute(original), after = execute(compact);
     expect(after).toBe(before);
     const parsed = JSON.parse(after);
-    // v23-online-rules identities (tests/v23-online-rules-content-baseline.json).
-    expect(parsed.content).toBe('fnv1a32-utf16:19a07434');
-    expect(parsed.loot).toBe('fnv1a32-utf16:0eb630e2');
+    // Current content identities (src/simulation/content/identity-constants.ts; P 2026-10-25 Lesser Shimmer Duplicator consumable).
+    expect(parsed.content).toBe('fnv1a32-utf16:1b4978e8');
+    expect(parsed.loot).toBe('fnv1a32-utf16:fcf9dc36');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
 });
