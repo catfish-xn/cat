@@ -73,7 +73,7 @@ const panelUnits = page => page.evaluate(() => [...document.querySelectorAll('#o
 const seatOf = page => page.evaluate(() => document.querySelector('.online-seat.me')?.dataset.debug?.replace('online:seat:', ''));
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: '8787', CAT_PREP_SEC: '3', CAT_CHOICE_SEC: '1', CAT_SETTLE_SEC: '1' }, /listening on/);
+  await start('node', ['dist-server/game/main.mjs'], { PORT: '8787', CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '1', CAT_SETTLE_SEC: '1' }, /listening on/);
   await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
   const browser = await chromium.launch({ executablePath });
   const errors = [];
@@ -130,29 +130,56 @@ async function main() {
     check(viewsA.length > 0 && viewsA.every(message => message.view.seats.every(seat => seat.publicBoard && Array.isArray(seat.publicBoard.units))) && leaks.length === 0,
       `${viewsA.length} view frames: every seat has publicBoard, no ${forbidden.join('/')} keys`);
 
-    // B keeps a unit; A sells everything it has deployed so it loses every round (bench units do not fight).
+    // B keeps a unit; A sells every unit it owns so it loses every round. Bench units are sold too: the deadline
+    // auto-deployment (contract §15.4) would otherwise move them onto the empty board.
+    const mine = state => state.preparation.units.filter(unit => unit.team === 'player');
     const sellAll = async () => {
-      const state = (await read(a)).state;
-      if (state.phase !== 'preparation') return 0;
-      const mine = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board');
-      if (!mine.length) return 0;
-      await a.click('[data-debug="panel:units"]').catch(() => {});
-      for (const unit of mine) {
-        await a.click(`[data-debug="mobile:unit:${unit.id}"]`, { timeout: 2_000 }).catch(() => {});
-        await a.click('[data-debug="mobile:sell"]', { timeout: 2_000 }).catch(() => {});
-        await a.waitForTimeout(150);
+      let sold = 0;
+      for (;;) {
+        const snapshot = await read(a);
+        if (snapshot.state.phase !== 'preparation' || snapshot.m6.phase?.kind !== 'preparation' || snapshot.m6.spectating) return sold;
+        const unit = mine(snapshot.state)[0];
+        if (!unit) return sold;
+        // Use the existing UI callbacks, as harness.click does. Pointer actionability/scrolling on the
+        // rerendered left panel can outlast the short preparation; never swallow a failed sale.
+        await a.evaluate(id => {
+          const click = debug => {
+            const button = document.querySelector(`[data-debug="${debug}"]`);
+            if (!button || button.disabled || button.closest('[inert]')) throw new Error(`unavailable sale control: ${debug}`);
+            button.click();
+          };
+          click('panel:units');
+          click(`mobile:unit:${id}`);
+          if (window.__CAT_DEBUG__.read().selectedId !== id) throw new Error(`unit not selected: ${id}`);
+          click('mobile:sell');
+        }, unit.id);
+        await waitRead(a, s => !mine(s.state).some(entry => entry.id === unit.id), `sale of ${unit.id}`, 5_000);
+        sold++;
       }
-      return mine.length;
     };
-    let sold = 0;
-    const onBoard = state => state.preparation.units.some(unit => unit.team === 'player' && unit.location.kind === 'board');
-    for (let tries = 0; tries < 12 && onBoard((await read(a)).state); tries++) {
-      sold += await sellAll();
-      await waitRead(a, s => s.state.phase === 'preparation', 'next preparation', 60_000);
-    }
-    check(!onBoard((await read(a)).state), `A sold its ${sold} deployed unit(s) and fights with an empty board`);
+    await waitRead(a, s => s.state.phase === 'preparation' && s.m6.phase?.kind === 'preparation', 'preparation to empty A', 60_000);
+    let sold = await sellAll();
+    check(mine((await read(a)).state).length === 0, `A sold its ${sold} unit(s); board and bench are empty`);
 
-    const spectating = await waitRead(a, s => s.m6.spectating === true || s.m6.phase?.kind === 'ended', 'A eliminated', 900_000);
+    // During carousel the private state can still say preparation; only the server preparation allows sales.
+    // Rewards and carousel picks may add units later. Keep selling them every preparation until A is
+    // eliminated, so deadline auto-deployment cannot repopulate its board from the bench.
+    const deadline = Date.now() + 900_000;
+    let spectating, emptyCombat = false;
+    for (;;) {
+      const snapshot = await read(a);
+      if (snapshot.m6.spectating === true || snapshot.m6.phase?.kind === 'ended') { spectating = snapshot; break; }
+      if (snapshot.state.phase === 'preparation' && snapshot.m6.phase?.kind === 'preparation') sold += await sellAll();
+      else if (snapshot.state.phase === 'combat') {
+        check(mine(snapshot.state).length === 0, `A fights with an empty board and bench (${snapshot.state.roundDefinitionId})`);
+        emptyCombat = true;
+        // Wait for a new phase rather than checking the same combat on every poll.
+        await waitRead(a, s => s.state.phase !== 'combat' || s.m6.spectating === true || s.m6.phase?.kind === 'ended', 'combat to finish', 60_000);
+      }
+      if (Date.now() > deadline) throw new Error('timed out waiting for A eliminated');
+      await a.waitForTimeout(100);
+    }
+    check(emptyCombat && sold > 0, `A sold its ${sold} unit(s) and fought with an empty board`);
     if (spectating.m6.spectating) {
       const me = spectating.m6.seats.find(seat => seat.seatId === seatA);
       const banner = await a.textContent('[data-debug="online:spectate"]');
