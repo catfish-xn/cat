@@ -190,7 +190,8 @@ describe('T12 provenance with phase 2 live equipment', () => {
       Object.assign(corrupt.resourceProvenance.entries.at(-1)!.kind === 'item-combined' ?
         (corrupt.resourceProvenance.entries.at(-1)! as {event: object}).event : {}, {definitionId:'deathblade'});
       expect(()=>restoreMatch(corrupt)).toThrow(/combination/);
-    });
+      // The 3-7 route replays ~4.5 s of public rounds alone; give it room under parallel load.
+    }, 20_000);
   }
   it('running restore rejects free detachment, cross-unit combining, non-equipment mutation and illegal suffixes', () => {
     const acquired = publicInventory(['sword','rod']);
@@ -393,7 +394,8 @@ describe('T12 supply choice input', () => {
       state=resolvePublicEquipmentChoices(state);state=accepted(nextRound(state,state.round));
     }
     supplyInput=prepareInput({ acquired, state });
-  });
+    // Plays the public route to 4-4; it exceeded the 10 s hook default under parallel load (empty-message file failure).
+  }, 30_000);
   afterAll(() => { supplyInput = undefined; });
   it('T12 supply choice permits fresh component transactions and single-save continuation',()=>{
     const input=copyInput(supplyInput!),acquired=input.acquired;let state=input.state;

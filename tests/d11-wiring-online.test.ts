@@ -101,7 +101,8 @@ it.each(['all-for-one-i','trifecta-i'].flatMap(id=>[false,true].map(exhausted=>(
   for(;seed<10000;seed++) {
     // v23: subscription openings carry seat-bound receipts the solo-prefix transplant below cannot reuse.
     if(['golden-gala','prismatic-party','prismatic-prelude','prismatic-finale','wind-up-monkey','component-anvils','artifact-anvil','loot-subscription','gold-subscription'].includes(openingEncounter(seed)))continue;
-    if(augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[]).offers.includes(id))break;
+    // v23: pass the 2-1 node so the oracle applies the node's offer rules (Black Rose exclusion) like the real offer.
+    if(augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[],[],'round:2-1:augment').offers.includes(id))break;
   }
   expect(seed).toBeLessThan(10000);
   let pool=createSharedPool('d11-pool',seed,{seatCount:1,...(exhausted?{capacities:{[selectOpeningUnit(seed,'A')]:1}}:{})});

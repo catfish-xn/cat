@@ -200,7 +200,9 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
   // v22 enables the Trainer Golem opening, whose golem must stay on the board; seeds 9605 and
   // 2563011894 draw it, so they are replaced by the first non-golem seeds rolling the identical pair.
   const TG_SEED_SUBSTITUTES = new Map([[1401181143, 47], [2654435761, 4113], [147926525, 9533],
-    [56502658, 1082], [3724842645, 4165], [1457683801, 113], [1844960718, 9534], [4168622220, 9340], [2563011894, 2062]]);
+    [56502658, 1082], [3724842645, 4165], [1457683801, 113], [1844960718, 9534], [4168622220, 9340], [2563011894, 2062],
+    // v23 fmix32 openings put an unbenchable opening structure on 387276917's board; 9341 rolls the same Sterak's/Tear pair.
+    [387276917, 9341]]);
   /** Pure planning only: the original greedy choice over 512 candidates (two unseen
    * children first, ties by ascending seed), computed afresh by each caller. */
   function plannedTemporaryRoutes() {

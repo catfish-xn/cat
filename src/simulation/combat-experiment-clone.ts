@@ -15,6 +15,7 @@ import { initializeBornUnits } from './combat-g2-4b-trench';
 import { occupiesCell } from './anomalies/availability';
 import { scaleItemSummonHp, type ItemSummonOrigin } from './g2-4b-summons';
 import type { CombatState } from './combat-types';
+import { compareUnitIds } from './unit-id-order';
 
 export const experimentCloneMechanic=(u:Pick<CombatUnit,'mechanics'|'itemSummon'|'anomalySummon'>):CombatMechanic|undefined=>
  u.itemSummon||u.anomalySummon?undefined:u.mechanics?.find(m=>m.mechanic==='g23ExperimentClone');
@@ -59,10 +60,11 @@ export function createExperimentClone(holder:CombatUnit,m:CombatMechanic,cell:He
 }
 
 /** Runs after death cleanup, before elimination. P-EX3: whichever of tick 160 or death comes first
- * fires once; the other is void. P-EX6: original cell first, else nearest empty cell anywhere on
+ * fires once; the other is void; same-tick triggers resolve in numeric unit id order (unit-9 before
+ * unit-10, as Sion attribution). P-EX6: original cell first, else nearest empty cell anywhere on
  * the board (distance, row, column); a trigger with no empty cell is consumed without a copy. */
 export function splitExperimentClones(ctx:AbilityContext,state:CombatState,roster:S13Unit[]):void {
- const holders=ctx.units.filter(u=>experimentCloneMechanic(u)&&u.experimentClone&&u.experimentClone.triggeredAtTick===null&&(!u.alive||ctx.tick>=experimentCloneMechanic(u)!.values.splitTick)).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
+ const holders=ctx.units.filter(u=>experimentCloneMechanic(u)&&u.experimentClone&&u.experimentClone.triggeredAtTick===null&&(!u.alive||ctx.tick>=experimentCloneMechanic(u)!.values.splitTick)).sort(compareUnitIds);
  if(!holders.length)return;
  let membership:CombatState={...state,units:roster};
  const born:CombatUnit[]=[];

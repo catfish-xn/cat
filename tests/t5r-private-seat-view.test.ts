@@ -25,7 +25,8 @@ function noReferences(a:unknown,b:unknown):void {
   for(const [key,value] of Object.entries(a)) if(b&&typeof b==='object') noReferences(value,(b as Record<string,unknown>)[key]);
 }
 function richSeat():MatchState {
-  let state=accepted(advanceMultiplayerRound(finalSettlement(),38));const id=state.preparation.units[0].id;
+  // v23 fmix32: seed 5 now opens Artifact Anvil (forge progress, anvil rewards); seed 29 has no opening, as before.
+  let state=accepted(advanceMultiplayerRound(finalSettlement(undefined,29),38));const id=state.preparation.units[0].id;
   state=accepted(equipItem({...state,items:[{id:'item-1',definitionId:'thiefs-gloves',location:{kind:'inventory'}}]},'item-1',id,0));
   return {...state,phase:'choice',combat:null,pendingChoice:{kind:'augment',step:'offer',choiceId:'round:4-2:augment',eventId:'secret-event',
     generation:1,offers:['placebo','manaflow-i','backup'],targetId:null,rerollCount:1,
@@ -128,8 +129,10 @@ describe('T5R private own-seat whitelist',()=>{
   });
   it('hidden RNG/future plans never affect output; nested sentinel additions never leak',()=>{
     const state=richSeat(),before=JSON.stringify(state),expected=toPrivateSeatView(state),hidden=structuredClone(state);
+    // v23 augment pool batch 1: crafted Tactician items (resourceProvenance entries) feed the earned G2-3 orb view, so the
+    // provenance ledger is kept and only an extra hidden key is added, as for equipmentState.
     Object.assign(hidden,{seed:999,rngState:123,battleSeedRngState:321,choiceRngState:444,rewardRngState:555,
-      combatInputBasis:{secret:'DO_NOT_SEND'},resourceProvenance:{secret:'DO_NOT_SEND'},equipmentState:{...hidden.equipmentState,equipment:{state:123,draws:999},secret:'DO_NOT_SEND'}});
+      combatInputBasis:{secret:'DO_NOT_SEND'},resourceProvenance:{...hidden.resourceProvenance,secret:'DO_NOT_SEND'},equipmentState:{...hidden.equipmentState,equipment:{state:123,draws:999},secret:'DO_NOT_SEND'}});
     // Loot now also supplies earned orb projections; preserve that ledger while changing only hidden data.
     Object.assign(hidden.m8.loot,{secret:'DO_NOT_SEND'});
     Object.assign(hidden.m8.loot.frozen.rng,{state:123,draws:999});

@@ -391,15 +391,16 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 describe('dead-holder public combat fixture', () => {
   let fixture: { state: MatchState; initial: MatchState; before: MatchState; ownerId: string };
   beforeAll(() => {
-    // v22 AD/mana rules moved the old seed's same-tick death; seed 207 at (3,7) has it at tick 352 after one earlier kill.
-    let state = frontRowRod(207);
+    // v22 AD/mana rules moved the old seed's same-tick death; seed 207 at (3,7) had it at tick 352 after one earlier kill.
+    // Later v23 combat changes (Sion rework, short CC/knock-up) let that Zyra survive; seed 28 at (6,7) trades at tick 323.
+    let state = frontRowRod(28);
     for (let i = 0; i < 9; i++) state = accepted(grantMechanicUnit(state, { receiptId: `boundary-zyra-${i}`, source: 'test', definitionId: 'zyra' }));
     const owner = state.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!;
     state = equipBracer(state, owner.id);
-    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 3, row: 7 } }));
+    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 6, row: 7 } }));
     const initial = accepted(startMatchCombat(state));
     let before = initial;
-    while (before.phase === 'combat' && before.combat!.tick < 351) before = stepMatch(before).state;
+    while (before.phase === 'combat' && before.combat!.tick < 322) before = stepMatch(before).state;
     fixture = freezeContent(structuredClone({ state, initial, before, ownerId: owner.id }));
   });
 
@@ -408,13 +409,13 @@ describe('dead-holder public combat fixture', () => {
     certifyFixture(copy.initial); certifyFixture(copy.before);
     const owner = state.preparation.units.find(u => u.id === copy.ownerId)!;
     expect(owner.starLevel).toBe(3);
-    const initial = copy.initial, before = stepTo(copy.before, 351);
+    const initial = copy.initial, before = stepTo(copy.before, 322);
     const result = stepMatch(before), after = result.state;
-    const targetId = 'enemy-r4-2';
-    expect(after.combat!.tick).toBe(352);
+    const targetId = 'enemy-r8-1';
+    expect(after.combat!.tick).toBe(323);
     expect(result.events.filter(e => e.type === 'kill')).toEqual([
-      expect.objectContaining({ type: 'kill', tick: 352, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r4-2' }) }),
-      expect.objectContaining({ type: 'kill', tick: 352, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
+      expect.objectContaining({ type: 'kill', tick: 323, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r8-1' }) }),
+      expect.objectContaining({ type: 'kill', tick: 323, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
     ]);
     expect(result.events.filter(e => e.type === 'packetDamage' && e.outcome.killingPacket)).toEqual([
       expect.objectContaining({ outcome: expect.objectContaining({ context: expect.objectContaining({ targetId: owner.id }) }) }),
@@ -441,7 +442,8 @@ describe('dead-holder public combat fixture', () => {
 describe.each([
   // v23: Black Rose owner is the lowest numeric unit serial (unit-9 before unit-10); on these public Manaflow
   // routes Morgana is that unit and owns Sion. Ticks moved with the v23 opening-encounter mixing.
-  { contribution: false, seed: 108, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 219, targetId: 'enemy-r4-1' },
+  // Later v23 combat changes (Sion rework, short CC/knock-up): seed 108's Sion kill now carries a Morgana assist; seed 153 keeps a summon-only kill.
+  { contribution: false, seed: 153, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
   { contribution: true, seed: 175, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 226, targetId: 'enemy-r4-1' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   let fixture: { state: MatchState; start: MatchCommandResult; before: MatchState; ownerId: string };

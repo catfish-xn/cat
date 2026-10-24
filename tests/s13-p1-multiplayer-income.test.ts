@@ -1,5 +1,6 @@
 import {expect,it} from 'vitest';
 import {accepted,reachRound} from './match-helpers';
+import {openingEncounter} from './fixtures/m5/oracle.g2.cjs';
 import {buyUnit,deployMatchUnit,selectChoice,nextRound} from '../src/simulation/match';
 import {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION} from '../src/simulation/round-settlement';
 import {snapshotForBattle} from '../src/simulation/two-sided-snapshot';
@@ -10,6 +11,7 @@ const onlineAccepted=(r:ReturnType<typeof applyRoundSettlement>)=>{if(!r.ok)thro
 it.each(['going-long','investment-strategy-ii'])('%s public board crosses Conqueror breakpoint and both real online receipts settle',id=>{
  let s=reachRound('2-1',false,0),found=false;
  for(let seed=0;seed<400;seed++){
+  if(openingEncounter(seed)==='trainer-golems')continue; // v23 fmix32 openings: the unbenchable golem blocks reachRound's empty board.
   s=reachRound('2-1',false,seed);
   const available=new Set([...s.shop.slots.filter(x=>x.status==='available').map(x=>x.definitionId),...s.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId)]);
   if(s.pendingChoice!.offers.includes(id)&&available.has('darius')&&available.has('draven')){found=true;break;}

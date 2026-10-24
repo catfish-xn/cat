@@ -1,8 +1,11 @@
 import {lootPlan as independentLootPlan} from './orb-combo-oracle.cjs';
 import { shop as independentShop, COST } from './m5/oracle.g2.cjs';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
+import { createOpeningEncounter } from '../../src/simulation/opening-encounter';
 import { nextRound, buyUnit, combineItems, deployMatchUnit, rerollShop, sellUnit } from '../../src/simulation/match';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
+import { isAnvil } from '../../src/simulation/content/anvils';
 import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicEquipmentChoices } from './b8-public-equipment';
 
 function accepted(result: MatchCommandResult): MatchState {
@@ -24,6 +27,9 @@ export function publicInventory(definitions: readonly string[], late = false, se
   // Independent v17 oracle chooses a real route requiring at most two scheduled components.
   let routeSeed=seed??1;
   for(;routeSeed<100000;routeSeed++){
+    // v23 fmix32 opening word: the default search keeps the crab-rave opening every small seed drew before
+    // (Trainer Golem and anvil openings occupy board/bench cells); explicit caller seeds are kept as chosen.
+    if(seed===undefined&&createOpeningEncounter(routeSeed).selection.encounterId!=='crab-rave')continue;
     const drops=independentLootPlan(routeSeed,10).rounds.flatMap(r=>r.encounterPlan.drops);
     const available=drops.flatMap(d=>d.payload.kind==='item'?[d.payload.definitionId]:[]);
     let missing=0;for(const id of components){const i=available.indexOf(id);if(i<0)missing++;else available.splice(i,1);}
@@ -56,7 +62,10 @@ export function publicRecursivePurchase(state: MatchState): {
   state: MatchState; slot: number; definitionId: string; survivorId: string; secondId: string; incomingId: string; purchaseIds: string[];
 } {
   const fundingState = state;
-  for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) state = accepted(sellUnit(state, unit.id));
+  // v22/v23 opening structures (Trainer Golem) and anvils are not cards: they cannot be sold, so they stay.
+  // Selling frees bench space, so loot heroes waiting for space can arrive mid-loop (v23 openings): sell until none remain.
+  const sellable = (s: MatchState) => s.preparation.units.find(unit => unit.team === 'player' && isSellableUnit(unit.definitionId) && !isAnvil(unit.definitionId));
+  for (let unit = sellable(state); unit; unit = sellable(state)) state = accepted(sellUnit(state, unit.id));
   // Expanded bags make nine fixed Irelias unaffordable. Select the cheapest
   // nine-card paid route using the independent shop oracle; never grant gold,
   // rewrite RNG or edit offers. All actual operations below remain public.

@@ -26,8 +26,10 @@ it('all seventeen API identities, names, tiers and coefficients match the retain
     if('tier' in source){expect(S13_P2_TIERS[id]).toBe(source.tier);expect(original.ItemTags).toContain(source.tier==='gold'?'{ce1fd21c}':'{cf1fd3af}');}
     expect((S13_P2_AUGMENTS[id]??S13_P2_ANOMALIES[id]).description).not.toMatch(/@[a-z0-9_*]+@/i);
   }
-});
-function seedFor(id:string){for(let seed=0;seed<1000;seed++){const state=createMatch(seed);if(generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers.includes(id))return seed;}throw Error('seed budget');}
+  // Parsing the raw map22 bin takes ~1.7 s alone and timed out at 5 s under parallel load (same as the Scrap raw-source test).
+},30_000);
+// v23 fmix32 openings: Trainer Golem seeds are skipped (the unbenchable golem blocks reachRound's empty board).
+function seedFor(id:string){for(let seed=0;seed<1000;seed++){const state=createMatch(seed);if(state.preparation.units.some(u=>u.definitionId==='trainer-golem'))continue;if(generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers.includes(id))return seed;}throw Error('seed budget');}
 it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restores strictly, and continues the same seeded combat',id=>{
   let s=reachRound('2-1',false,seedFor(id));const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
   s=accepted(selectChoice(s,c.choiceId,c.generation,id));
@@ -118,9 +120,9 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
 });
 
-it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('seed 6672 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
-  // v23 expanded pool: 6672 publicly offers Trifecta → Nami; the original stat/shield assertions remain unchanged.
-  let s=reachRound('2-1',false,6672),c=s.pendingChoice!;
+it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('seed 107 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
+  // v23 151-offer pool: 6672 no longer offers Trifecta; 107 publicly offers Trifecta → Nami first. Stat/shield assertions unchanged.
+  let s=reachRound('2-1',false,107),c=s.pendingChoice!;
   s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
   const gift=p2GiftPlan(s).find(g=>g.kind==='unit')!,birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.receiptId===gift.receiptId)!;
   if(birth.kind!=='unit'||!birth.unitId)throw Error('missing Nami receipt');

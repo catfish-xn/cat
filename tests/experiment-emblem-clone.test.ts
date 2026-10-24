@@ -92,6 +92,21 @@ it('a full board consumes the trigger without a copy or overlap',()=>{
  expect(units.find(u=>u.id==='h')!.experimentClone).toMatchObject({triggeredAtTick:SPLIT_TICK,cloneId:null});
 });
 
+it('P-EX3: same-tick triggers resolve in numeric unit id order (unit-9 before unit-10), as Sion attribution',()=>{
+ const s=stepCombat(combat(army(3))).state,units=structuredClone(s.units) as S13Unit[],enemy=units.find(u=>u.id==='enemy')!;
+ // Holder becomes unit-10, the Laboratory native unit-9: code-unit order would pick unit-10 first.
+ for(const u of units){if(u.id==='h')(u as {id:string}).id='unit-10';else if(u.id===natives[0])(u as {id:string}).id='unit-9';}
+ const empty:HexCell[]=[];
+ for(let row=0;row<s.board.rows;row++)for(let col=0;col<s.board.columns;col++)if(!units.some(u=>u.alive&&u.cell.col===col&&u.cell.row===row))empty.push({col,row});
+ // Leave exactly one empty cell so only the first-resolved trigger gets a copy.
+ for(const cell of empty.slice(1))units.push({...structuredClone(enemy),id:`filler-${cell.col}-${cell.row}`,cell});
+ const ctx:AbilityContext={units,board:s.board,combatId:s.combatId,tick:SPLIT_TICK,events:[],heals:[],packets:[],draw:()=>0};
+ splitExperimentClones(ctx,s,units);
+ expect(units.find(u=>u.id==='unit-9')!.experimentClone).toMatchObject({triggeredAtTick:SPLIT_TICK,cloneId:clone('unit-9')});
+ expect(units.find(u=>u.id==='unit-10')!.experimentClone).toMatchObject({triggeredAtTick:SPLIT_TICK,cloneId:null});
+ expect(units.filter(u=>u.itemSummon?.kind==='experiment').map(u=>u.itemSummon!.ownerId)).toEqual(['unit-9']);
+});
+
 function matchArmy():MatchState{
  let s=emptyBoard(reachRound('2-1'));
  const grant=(r:ReturnType<typeof grantMechanicUnit>)=>{expect(r.ok).toBe(true);return r.state;};

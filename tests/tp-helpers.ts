@@ -8,7 +8,9 @@ export const accept=(r:SharedPoolResult)=>{if(!r.ok)throw new Error(r.reason);re
 export const batch=(r:SharedPoolBatchResult)=>{if(!r.ok)throw new Error(r.reason);return r;};
 export function room(capacities?:Record<string,number>,count=2,seed=42) {
   // Explicit tiny-capacity vectors need two actual Irelia draws; do not force a hero in production.
-  if(capacities && seed===42) seed=3150966029;
+  // v23 fmix32 openings: 3150966029 now draws Artifact Anvil (an anvil on every seat's bench); 3150966076 keeps
+  // its Viktor's Vision opening and the two Irelia draws.
+  if(capacities && seed===42) seed=3150966076;
   let pool=createSharedPool('test-pool',seed,{seatCount:count,...(capacities?{capacities}: {})});const states:MatchState[]=[];
   for(let i=0;i<count;i++) {
     const r=accept(initializeSharedSeat(pool,createMatch(5, {mode:'shared-deferred'}),`seat-${i}`,i));pool=r.pool;states.push(r.state);

@@ -114,11 +114,10 @@ import { selectChoice, deployMatchUnit, buyUnit, startMatchCombat, stepMatch, ty
 import { accepted, reachRound } from './match-helpers';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
-// v22 augment tier table: Climb the Ladder I is offered at 2-1 only by seeds 108/109 below 600; seed 109's real battle has the ally death.
-// v23 fmix32 openings change each seed's 2-1 tier: the other four seeds are re-chosen so the first 2-1 offer
-// already holds the card (the fallback scan would otherwise reach Trainer Golem seed 2, whose golem blocks the route).
+// v23 151-offer pool and fmix32 openings: each seed is the first non-Trainer-Golem seed whose 2-1 offer holds the card
+// (the fallback scan would otherwise reach Trainer Golem seed 2, whose golem blocks the route); death cards still see an ally death.
 it.each([
- ['blistering-strikes',46],['clockwork-accelerator',11],['lone-hero',8],['climb-the-ladder-i',109],['inspiring-epitaph',4],
+ ['blistering-strikes',61],['clockwork-accelerator',58],['lone-hero',170],['climb-the-ladder-i',186],['inspiring-epitaph',39],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
  let s=reachRound('2-1',false,seed);
  for(let candidate=0;!s.pendingChoice!.offers.includes(id)&&candidate<300;candidate++)s=reachRound('2-1',false,candidate);

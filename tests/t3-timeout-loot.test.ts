@@ -10,9 +10,12 @@ import { freeze } from './combat-helpers';
 import { enterOpeningCrabs, openingCrabCarrier } from '../src/simulation/opening-crabs';
 const accept=(r:MultiplayerCommandResult)=>{if(!r.ok)throw new Error(r.reason);return r.state;};
 // Earned-loot vectors isolate timeout commits; normal command traversal is in t3-round-settlement.
-function fixture(roundId='1-2',seed=roundId==='2-7'?26:5):MatchState {
+// v23 fmix32 openings: seed 5 now draws Artifact Anvil (an anvil on bench slot 0); 68465 is a Crab Rave seed with
+// seed 5's identical 1-2 loot plan (tear, Maddie, Lux).
+const CRAB_SEED=68465;
+function fixture(roundId='1-2',seed=roundId==='2-7'?26:CRAB_SEED):MatchState {
   const base=accept(enableMultiplayerSettlement(createMatch(seed),'A')),round=getCatalogRoundById(roundId),enemies=createRoundEnemies(round.ordinal);
-  // v22 opening encounters: Crab Rave seeds (5, 26) fight crabs; loot keeps its
+  // v22 opening encounters: Crab Rave seeds (68465; 26 is Viktor's Vision since v23) fight crabs; loot keeps its
   // original carriers, mapped to the crab whose death earns it.
   const state:MatchState=enterOpeningCrabs({...base,round:round.ordinal,roundDefinitionId:roundId,
     m8:{...base.m8,round,loot:prepareMatchLoot(seed,round.ordinal),preparation:{...base.m8.preparation,roundId,encounterId:round.encounterId,enemies}},
@@ -53,7 +56,7 @@ describe('T3 earned loot timeout transaction',()=>{
     expect(next.m8.loot.direct[0].status).toBe('granted');expect(next.m8.loot.receipts[1]).toMatchObject({resolution:'capacity-sold',gold:1,grantedUnitIds:[]});expect(next.gold).toBe(state.gold+2);expect(next.m8.loot.receipts.map(r=>r.payload.kind)).toEqual(['item','unit','unit']);expect(next.consumables).toHaveLength(0);
     expect(next.preparation).toEqual(state.preparation);expect(next.items.map(i=>i.definitionId)).toEqual(['tear']);expect(next.nextUnitSerial).toBe(20);retry(next);
     // A real public settlement has the same blocker and can now advance.
-    let live=accept(startMatchCombat(fullBench(accept(enableMultiplayerSettlement(createMatch(5),'A')))));
+    let live=accept(startMatchCombat(fullBench(accept(enableMultiplayerSettlement(createMatch(CRAB_SEED),'A')))));
     while(live.phase==='combat') live=stepMatch(live).state;
     const cleared=accept(claimOrDiscardLoot(live,live.round));expect(nextRound(cleared,cleared.round).ok).toBe(true);
   });

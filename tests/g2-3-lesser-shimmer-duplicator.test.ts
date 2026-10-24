@@ -186,7 +186,7 @@ it('restores the used lesser shimmer duplicator and the next battle tick for tic
  expect(['singed','renata','renni','smeech']).toContain(claim.definitionId);
  expect(used.preparation.units.some(u=>u.id===claim.instanceId)).toBe(true);
  expectRoundTripAndNextBattle(used);
-});
+},15_000); // whole-route replay: 2.4-3.5 s alone, timed out at the 5 s default under parallel load
 
 function usedMarket():MatchState{
  const pending=publicMarket(),choice=pending.pendingChoice!;
@@ -214,7 +214,8 @@ it.each(['settlement','next preparation'].flatMap(phase=>['smeech','silco','irel
 it.each(['singed','renni'])('rejects moving the earning settlement and prefix past the forged %s birth',target=>{
  const forged=structuredClone(preparation(usedMarket()));
  const claim=readG23Progress(forged)!.rewardClaims.find(c=>c.kind==='duplicator')!;
- expect(forged.round).toBe(13);expect(claim.instanceId).toBe('unit-39');
+ // v23: seed 42's fmix32 opening is Golden Gala (was Scuttle Puddle), which shifts the route's unit serials by two.
+ expect(forged.round).toBe(13);expect(claim.instanceId).toBe('unit-41');
  Object.assign(forged.seatMechanics!.receipts.find(r=>r.receiptId===claim.id)!,{definitionId:target});
  Object.assign(forged.preparation.units.find(u=>u.id===claim.instanceId)!,{definitionId:target});
  const entries=[...forged.resourceProvenance.entries];
@@ -289,7 +290,7 @@ it.each([13,15])('preserves an escrowed public claim at round %s choosing anothe
  state=ok(claimG23Reward(state,atom.id,'renata'));
  expect(readG23Progress(state)!.rewardClaims.find(c=>c.atomId===atom.id)).toMatchObject({definitionId:'renata'});
  expectRoundTripAndNextBattle(state);
-});
+},15_000); // whole-route replay: 2.4-3.5 s alone, timed out at the 5 s default under parallel load
 
 it('keeps consecutive black-market RNG cursors and offers equal to the baseline stream',()=>{
  // Independent source-weight oracle for the single-word market stream.
@@ -390,4 +391,4 @@ it('restores an ordinary duplicator manually claimed from escrow and the next ba
  state=ok(claimG23Reward(state,atom.id,target));
  expect(readG23Progress(state)!.rewardClaims.find(c=>c.atomId===atom.id)).toMatchObject({definitionId:target});
  expectRoundTripAndNextBattle(state);
-});
+},15_000); // whole-route replay: 2.4-3.5 s alone, timed out at the 5 s default under parallel load
