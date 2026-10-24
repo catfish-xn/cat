@@ -14,7 +14,7 @@ v22 把 10-23、10-24 批准的联机规则一次性上线：战斗数值、五�
 | CONTENT_DIGEST | `fnv1a32-utf16:35273c97` | `fnv1a32-utf16:2ee7d9d2` |
 | LOOT_REPLAY_DIGEST | `fnv1a32-utf16:ef359464` | `fnv1a32-utf16:84b3b60c` |
 
-v22 两个 digest 是 PR #435 head `cefde414` 的值。PR 合入前如果又改了规则代码，以合入后 `/healthz` 显示的为准。
+v22 两个 digest 是 PR #435 head `cefde414` 的值，10-24 在 head `f917655c` 上本机起服复核过，没有变。PR 合入前如果又改了规则代码，以合入后 `/healthz` 显示的为准。
 
 ## 2. 规则变化
 
@@ -142,9 +142,9 @@ http://<IP>:5173/?mode=online&server=ws&render=3d&assets3d=http://<IP>:5190/asse
 
 ### 4.3 冒烟
 
-- `/healthz`：`status` 是 ok，`sha` 是 `<V22_SHA>`，`contentDigest` 是 `2ee7d9d2`，`lootReplayDigest` 是 `84b3b60c`。
+- `/healthz`：`status` 是 ok，`sha` 是 `<V22_SHA>`，`contentDigest` 是 `fnv1a32-utf16:2ee7d9d2`，`lootReplayDigest` 是 `fnv1a32-utf16:84b3b60c`（返回值带 `fnv1a32-utf16:` 前缀）。
 - 页面右下角两行（页面 / 服务器）的 sha 和内容 digest 一致。显示“版本不一致，请刷新”就是浏览器还在用旧前端，再强制刷新。
-- 能匹配、开局、买棋子、打完第一场。1-2 的准备只有 6 秒，1-3 是 15 秒。
+- 能匹配、开局、买棋子、打完第一场。一个人测试时，先点“匹配”，再点“开始对局”，空位自动补 7 个机器人；开局直接进 1-2。1-2 的准备只有 6 秒，1-3 是 15 秒。
 - `journalctl -u cat-playtest-game -n 20 -o cat` 里有 `config.seed`，没有 error。
 
 ### 4.4 验收清单
@@ -186,3 +186,19 @@ sudo systemctl restart cat-playtest-game && sudo systemctl reload cat-playtest-w
 ```
 
 `CAT_GIT_SHA` 改回 `920727234804a91cd8407cd506b9efd4fc3d67fe`。第 4.0 步改的 `CAT_CHOICE_SEC=30` 回滚后不用改回（上一版默认也是 30 秒）。素材没换，不用回滚素材。v22 开的对局不能在旧版恢复。
+
+### 4.6 上测试服前在别的机器演练（可选）
+
+不碰测试服、也不用 systemd 和 nginx，在一个新克隆里起包跑一局。端口换成本机没被占用的（下面用 18797 / 15283）：
+
+```bash
+git clone https://github.com/catfish-xn/cat.git cat-v22-try && cd cat-v22-try
+git checkout --detach <V22_SHA>
+npm ci && npm run build:game && VITE_CAT_SHA=$(git rev-parse HEAD) npm run build
+CAT_PORT=18797 CAT_GIT_SHA=$(git rev-parse HEAD) node dist-server/game/main.mjs > game.log 2>&1 &
+npx vite preview --host 127.0.0.1 --port 15283 --strictPort > web.log 2>&1 &
+curl -s http://127.0.0.1:18797/healthz
+```
+
+浏览器打开 `http://127.0.0.1:15283/?mode=online&server=ws&ws=ws://127.0.0.1:18797`。本机没有 nginx 转发 `/ws`，所以要用 `ws=` 直接指向对局服务；不带 `render=3d` 就是 2D，不需要素材服务。之后按 4.3 冒烟。用完 `kill %1 %2`（或按 pid 结束这两个进程）。
+
