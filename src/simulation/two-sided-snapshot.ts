@@ -2,6 +2,7 @@ import { drainSetup } from './setup-work';
 import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {readG23Progress} from './g2-3-state';
+import { isG23NonCombatant, isG23Summon } from './g2-3-summons';
 import { validateG23ProgressSteps } from './g2-3-match-progress';
 import { canonicalContent, canonicalContentSteps, CONTENT_DIGEST } from './content';
 import { freezeContentSteps } from './content/freeze';
@@ -55,7 +56,9 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     const round = getMultiplayerRoundById(s.roundId);
     if(s.itemSummonPositions)requireSnapshot(Object.keys(s.itemSummonPositions).every(id=>id.startsWith('unit-')?Array.isArray(s.units)&&s.units.some(u=>u.id===id&&u.definitionId==='jayce'):Array.isArray(s.items)&&s.items.some(i=>i.id===id)));
     list(s.units); list(s.items); list(s.temporaryEquipment); list(s.augments); list(s.persistentGrowth);
-    for (const unit of s.units) { record(unit); id(unit.id); requireSnapshot(unit.team === 'player' && unit.location?.kind === 'board' && !unit.encounterId); }
+    // Sion, the Forge and other combat-only skill bodies are spawned at combat start from the roster; a snapshot
+    // never carries one (a pre-placed Sion would bypass the Black Rose tier and its one-Sion projection).
+    for (const unit of s.units) { record(unit); id(unit.id); requireSnapshot(unit.team === 'player' && unit.location?.kind === 'board' && !unit.encounterId && !isG23Summon(unit) && !isG23NonCombatant(unit)); }
     for (const item of s.items) { record(item); id(item.id); requireSnapshot(item.location?.kind === 'unit'); }
     const units = validateInputAssets({ preparation: { board: DEFAULT_BOARD, benchSize: 9, units: s.units }, items: s.items },
       { playerLevel: s.level, nextUnitSerial: nextSerial(s.units.map(u => u.id)), nextItemSerial: nextSerial(s.items.map(i => i.id)), teamSizeBonus: crownTeamSizeBonus(s.g23) }, [], validation);

@@ -19,6 +19,18 @@
 | P-S8 | 5 档 Nova 不做（参数存在但没有伤害证据）。阶段生命倍率沿用原约定表，基础生命由 1000 改为 750。 |
 
 实现：`src/simulation/combat-g2-3-summons.ts`（挣脱、冲锋、复活）、`content/g2-3-summons.ts`（数值）、`strategy-snapshot.ts`（双抗、星级加成）。测试：`tests/sion-rework.test.ts`。需要随 v23 重录。
+
+## 2026-10-24 黑色玫瑰 7 档（v23 候选，无新增 P）
+
+本节覆盖下文“v18 高档位之后的下一版”里“黑色玫瑰7 `{2e45fc86}:100` 不猜数值意义、只开放档位、不声称完整顶档”的历史描述。依据同上 `control-sion-research-2026-10-24`：C5.1 `TFT13_Cabal` 的 `mConditionalTraitSets[3].minUnits=7`（5 档为 5–6 人）；C5.2 `{2e45fc86}` 经 FNV-1a 精确匹配为 `SionResistances`，7 档 100；C7 `TFT13_SionSpell_Unleashed` 的 `PercentReviveHealth=0.75`、`PercentAttackSpeed=3.0`、`PercentOmnivamp=0.4`，死亡段文本给出控制免疫且“for the rest of combat”。
+
+- 计数：按不同英雄计，同名重复不加；纹章持有者算一名成员。5 名原生黑玫（乐芙兰、弗拉基米尔、莫甘娜、卡西奥佩娅、伊莉丝）加 2 名纹章持有者即达 7 档；6 名仍是 5 档。
+- 7 档效果：3/4/5 档效果全部保留，另加赛恩双抗 100、每场一次复活（P-S5、P-S6）。复活在联机对战（两侧快照编译的战斗）和 PvE 的 Match 战斗里走同一套规则。
+- 沿用的已批准约定，不另立新 P：7 档挣脱护盾系数按 P-S4 用 75% AP；7 档阶段生命倍率按 P-S8 沿用 5 档表（研究 C5.4 的 7 档矩阵未确认）；复活延迟 1 秒和只复活一次按 P-S5。
+- 校验：玩家战斗快照（`restorePlayerBattleSnapshot`）现在拒绝带赛恩、锻炉等只在战斗中出现的召唤单位。以前快照里预先放一个赛恩可以绕开羁绊档位，并在开战投影时多出一个赛恩；Match 存档本来就会拒绝这种情况。合法快照不受影响。
+- 存档与篡改：Match 战斗存档带 7 档赛恩时，恢复后与原状态逐 tick 一致；伪造或改写 `g23Sion` 复活状态，会被黑玫 4 档以上已启用的完整重放比对拒绝（`Invalid authoritative V19 replay`）。联机对战输入改高黑玫档位或赛恩的 `g23Sion.tier`，`restoreBattleInput` 重新编译后不一致，拒绝。
+
+测试：`tests/black-rose-7.test.ts`。需要随 v23 重录。
 ## 2026-10-24 增强池复核状态（v23候选）
 
 S1改为独立手抄期待表：batch 1开放67项与阻塞2项、batch 2全部26项，逐条引用研究JSON文件与零基recordIndex。S2抽样/支付项目约定见下表；N1收窄为spec数量稳定性。新完成双形战士`why-not-both`（研究记录[215]）：有序选择标记+真实升三星事件认证，防止同轮取得前补发；17/26开放，9/26仍禁用。剩余项逐项缺字段与原记录索引见 [续修报告](AUGMENT_POOL_REVIEW_FOLLOWUP_REPORT.md)，不把哈希常量猜成未证实的公式/属性。批1仍67/69；M1/M2按用户要求留给v23身份切换，不做旧池兼容绕行。
