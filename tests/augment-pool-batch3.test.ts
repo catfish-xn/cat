@@ -11,7 +11,7 @@ import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import type { MatchState } from '../src/simulation/match-types';
-import { rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit } from '../src/simulation/match';
+import { rerollShop, selectChoice, startMatchCombat, nextRound, stepMatch, deployMatchUnit, buyUnit, buyXp } from '../src/simulation/match';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { drainBatch3RoundEntry } from '../src/simulation/augment-pool-batch3-progress';
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
@@ -42,9 +42,9 @@ function withBattles(id:string,battles:readonly Battle[],acquiredRound=1,drain?:
 const pvp=(n:number,result:G23BattleFacts['result']='win'):Battle[]=>Array.from({length:n},()=>['pvp',result] as const);
 const scheduled=(s:MatchState)=>batch3RewardPlan(s).map(g=>[g.definitionId,g.acquiredRound]);
 
-it('the twenty batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
+it('the twenty-five batch-3 rows carry their 14.24 zh_cn name, tier and description and are registered in the offer pool', ()=>{
  const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;tier:number;effects:Record<string,number>}[];
- expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','latent-forge','living-forge','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
+ expect(Object.keys(AUGMENT_BATCH3).sort()).toEqual(['blazing-soul-i','blazing-soul-ii','building-a-collection-iii','corrosion','dark-alley-dealings','eye-for-an-eye','eye-for-an-eye-plus','flexible','latent-forge','living-forge','noble-sacrifice','phreaky-friday','phreaky-friday-plus','prizefighter','rolling-for-days-i','shimmerscale-essence','superstars-i','superstars-ii','team-building','trade-sector','wealthy-rehab-i','wealthy-rehab-ii','what-doesnt-kill-you','worth-the-wait','worth-the-wait-ii']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   expect([row.name,row.description,row.tier,row.source.values]).toEqual([r.name_zh_cn,r.description_zh_cn,['silver','gold','prismatic'][r.tier-1],r.effects]);
@@ -243,3 +243,85 @@ it('Corrosion survives a real public selection, combat and strict mid-combat sav
  }
  expect(checked).toBeGreaterThan(0);expect(seen).toBe(true);
 });
+
+const contributions=(c:{units:readonly {id:string;mechanismState?:{statuses:readonly {contributions:readonly any[]}[]}}[]},id:string)=>c.units.flatMap(x=>(x.mechanismState?.statuses.flatMap(g=>g.contributions)??[]).filter(k=>k.source.definitionId===id).map(k=>({unit:x.id,...k})));
+function combatOf(id:string,player:number,enemy:readonly string[]=['garen']){
+ const s=createMatch(42),u=s.preparation.units[0];
+ const units=[...Array.from({length:player},(_,i)=>({...u,id:'p'+i,team:'player' as const,location:{kind:'board' as const,cell:{col:i*2,row:7}}})),
+  ...enemy.map((definitionId,i)=>({...u,id:'e'+i,definitionId,starLevel:2 as const,team:'enemy' as const,location:{kind:'board' as const,cell:{col:i*2,row:0}}}))];
+ const preparation={...s.preparation,units};
+ return createCombatWithEvents(preparation,buildStrategySnapshot({...s,preparation,augments:[{definitionId:id,choiceId:'t',acquiredRound:1}]}),'b3-'+id,42).state;
+}
+it.each([['blazing-soul-i',20,2000],['blazing-soul-ii',35,3000]] as const)('%s: a 3-second +%i AP buff moves every 3 seconds to the fastest ally other than the last recipient', (id,apAmount,bps)=>{
+ let c=combatOf(id,3);const seen:string[]=[];
+ for(const pulse of [1,61,121]){
+  while(c.tick<pulse&&c.status==='running')c=stepCombat(c).state;
+  const now=contributions(c,id).filter(g=>g.appliedAtTick===pulse);
+  expect(now.map(g=>[g.expiresAtTick,g.application.modifier?.stat,g.application.modifier?.value])).toEqual([[pulse+60,'abilityPower',{kind:'constant',amount:apAmount}],[pulse+60,'attackSpeed',{kind:'constant',amount:bps}]]);
+  expect(new Set(now.map(g=>g.unit)).size).toBe(1);seen.push(now[0].unit);
+ }
+ expect(seen[0]).not.toBe(seen[1]);expect(seen[1]).not.toBe(seen[2]);
+});
+it('Noble Sacrifice: the first ally death gives each survivor 25 + 10% of its opening armor and magic resist, once per combat', ()=>{
+ let c=combatOf('noble-sacrifice',3,['garen','garen','garen','garen']);
+ const opening=Object.fromEntries(c.units.map(u=>[u.id,[u.armor,u.magicResist]]));
+ let first:string|undefined;
+ while(c.status==='running'&&!first){c=stepCombat(c).state;first=c.units.filter(u=>u.team==='player'&&!u.alive).map(u=>u.id).sort()[0];}
+ expect(first).toBeDefined();
+ const grants=contributions(c,'noble-sacrifice');
+ const survivors=c.units.filter(u=>u.team==='player'&&u.alive).map(u=>u.id).sort();
+ expect([...new Set(grants.map(g=>g.unit))].sort()).toEqual(survivors);
+ for(const g of grants)expect(g.application.modifier?.value).toEqual({kind:'constant',amount:25+Math.floor(opening[first!][g.application.modifier?.stat==='armor'?0:1]*1000/10000)});
+ while(c.status==='running')c=stepCombat(c).state;
+ expect(contributions(c,'noble-sacrifice').every(g=>JSON.parse(g.key)[8].includes(first!))).toBe(true);
+});
+it('Wealthy Rehab: team omnivamp is declared, healing is counted into the battle fact, and the gold pays once when the total first reaches 10000', ()=>{
+ const c=combatOf('wealthy-rehab-ii',2);
+ for(const u of c.units.filter(u=>u.team==='player'))expect(u.mechanismDefinitions?.vamp.map(v=>v.modifier.value)).toContainEqual({kind:'constant',amount:1500});
+ let s:MatchState={...createMatch(42),augments:[{definitionId:'wealthy-rehab-i',choiceId:'test',acquiredRound:1}]};
+ for(const [i,heal] of [4000,5999,1,50000].entries())s=writeG23Progress({...s,round:i+1},advanceG23Economy(readG23Progress(s)!,{...fact(i+1,['pvp','win']),batch3Healing:heal}).progress);
+ expect(validateBatch3Gold).toBeDefined();
+ const p=readG23Progress(s)!;expect(()=>advanceG23Economy(p,{...fact(5,['pvp','win']),batch3Healing:0})).toThrow();
+ const gold=withBattles('wealthy-rehab-i',[]);expect(gold.gold).toBe(createMatch(42).gold);
+ const plan=(()=>{const x=drainBatch3Gold({...s,round:3});return x.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch3');})();
+ expect(plan.map(r=>[r.kind,(r as any).amount,r.round])).toEqual([['gold',8,3]]);
+});
+it.each(['blazing-soul-i','noble-sacrifice','wealthy-rehab-ii'])('%s: a real mid-combat save restores exactly, and edited augment runtime or contributions are rejected', id=>{
+ let seed=0;while(!firstOffers(seed).includes(id))seed++;
+ let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;
+ s=accept(selectChoice(s,c.choiceId,c.generation,id) as any).state as MatchState;
+ for(const unit of s.preparation.units.filter(u=>u.team==='player').slice(0,2))s=accept(deployMatchUnit(s,unit.id,{kind:'board',cell:{col:unit===s.preparation.units.find(u=>u.team==='player')?3:5,row:4}}) as any).state;
+ s=accept(startMatchCombat(s) as any).state;let checked=0,tampered=0;
+ while(s.phase==='combat'){
+  s=stepMatch(s).state;if(!s.combat||s.combat.tick%30!==2)continue;
+  expect(restoreMatch(serializeMatch(s))).toEqual(s);checked++;
+  const edit=structuredClone(s) as any,unit=edit.combat.units.find((u:any)=>u.mechanismState?.statuses.some((g:any)=>g.contributions.some((k:any)=>k.source.sourceKind==='augment')));
+  if(unit){const k=unit.mechanismState.statuses.flatMap((g:any)=>g.contributions).find((k:any)=>k.source.sourceKind==='augment');if(k.application.modifier)k.application.modifier.value.amount+=1;else k.appliedAtTick+=1;expect(()=>restoreMatch(serializeMatch(edit))).toThrow();tampered++;}
+  const runtime=structuredClone(s) as any,owner=runtime.combat.units.find((u:any)=>u.team==='player');owner.batch2={...owner.batch2,healed:(owner.batch2?.healed??0)+7,blazingLast:'nobody'};
+  expect(()=>restoreMatch(serializeMatch(runtime))).toThrow();
+ }
+ expect(checked).toBeGreaterThan(0);if(id==='blazing-soul-i')expect(tampered).toBeGreaterThan(0);
+});
+it('Noble Sacrifice grants from a real ally death restore exactly, and an edited grant amount is rejected', ()=>{
+ let found=false;
+ for(let seed=0;seed<3000&&!found;seed++){
+  if(!firstOffers(seed).includes('noble-sacrifice'))continue;
+  let s:MatchState;try{s=reachRound('2-1',false,seed);}catch{continue;}const c=s.pendingChoice!;if(!c.offers.includes('noble-sacrifice'))continue;
+  const chosen=selectChoice(s,c.choiceId,c.generation,'noble-sacrifice') as any;if(!chosen.ok)continue;s=chosen.state;
+  let placed=s,count=0;
+  for(let i=0;i<3;i++){const r=buyXp(placed) as any;if(r.ok)placed=r.state;}
+  for(let slot=0;slot<placed.shop.slots.length&&placed.preparation.units.filter(u=>u.team==='player').length<4;slot++){const r=buyUnit(placed,slot,placed.shop.generation) as any;if(r.ok)placed=r.state;}
+  for(const unit of placed.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'))for(let row=4;row<=7&&count<3;row++)for(let col=0;col<7;col++){if(placed.preparation.units.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===row))continue;const r=deployMatchUnit(placed,unit.id,{kind:'board',cell:{col,row}}) as any;if(r.ok){placed=r.state;count++;row=99;break;}}
+  count+=placed.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length-count;
+  if(count<2)continue;
+  const started=startMatchCombat(placed) as any;if(!started.ok)continue;s=started.state;
+  while(s.phase==='combat'&&!found){
+   s=stepMatch(s).state;const grants=s.combat?contributions(s.combat as any,'noble-sacrifice'):[];
+   if(!grants.length)continue;found=true;
+   expect(restoreMatch(serializeMatch(s))).toEqual(s);
+   const edit=structuredClone(s) as any;const k=edit.combat.units.flatMap((u:any)=>u.mechanismState?.statuses.flatMap((g:any)=>g.contributions)??[]).find((k:any)=>k.source.definitionId==='noble-sacrifice');
+   k.application.modifier.value.amount+=1;expect(()=>restoreMatch(serializeMatch(edit))).toThrow();
+  }
+ }
+ expect(found).toBe(true);
+},600000);

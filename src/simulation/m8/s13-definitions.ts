@@ -28,6 +28,8 @@ export function compileMechanismDefinitions(unit: CombatUnit, combatId: string):
     if (effects) periodicTasks.push({ ...effectIdentity(combatId, source, unit.id), nextPulseAtTick: v.periodTicks, periodTicks: v.periodTicks, endsAtTick: null,
       pulseOrdinal: 0, pulseLimit: null, remainders: [], finalPulse: 'none', onSourceDeath: 'cancel', onTargetDeath: 'cancel',
       program: { definitionId: JSON.stringify([source.definitionId, source.effectIndex, 'periodic']), selector: selfSelector(), targetSnapshot: 'once-per-pulse', effects } });
+    if (m.mechanic === 'wealthyRehab') vamp.push({ source, modifier: { stat: 'omnivamp', unit: 'bps', value: { kind: 'constant', amount: v.omnivampBps }, condition: { kind: 'always' }, damageFilter: null },
+      allyBps: 0, allyCondition: { kind: 'always' } });
     if (m.mechanic === 'gunblade') vamp.push({ source, modifier: { stat: 'omnivamp', unit: 'bps', value: { kind: 'constant', amount: v.selfHealBps }, condition: { kind: 'always' }, damageFilter: null },
       allyBps: v.allyHealBps, allyCondition: { kind: 'always' } });
   }

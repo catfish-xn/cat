@@ -5,7 +5,7 @@ import type { AugmentGiftSpec } from '../augment-gift-plan';
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
 export interface Batch3Schedule {
- readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'; readonly every:string|number; readonly repeat:boolean;
+ readonly counter:'pvp-combat'|'pvp-loss'|'pvp-win'|'allied-deaths'|'round-start'|'stage-start'|'team-healing'; readonly every:string|number; readonly repeat:boolean;
  readonly gifts:readonly AugmentGiftSpec[]; readonly gold?:string; readonly max?:string|number;
  /** round-start only: first entry this many rounds after acquisition (default 1). */
  readonly from?:string|number;
@@ -24,6 +24,8 @@ interface Batch3Content {
  readonly flexible?:boolean;
  /** Corrosion: every Time seconds, enemies in their own front two rows lose ResistLoss armor and magic resist. */
  readonly corrosion?:boolean;
+ /** Replay-authenticated combat mechanics (g2-4b-gold-restore BATCH3_REPLAYED_MECHANICS); values come from the source row. */
+ readonly combat?:'blazingSoul'|'nobleSacrifice'|'wealthyRehab';
 }
 /** classification.json batch 3, group 3a-1: grants scheduled by player-combat count, player-combat results or allied deaths.
  * Every count and reward is the 14.24 zh_cn/en_us source value. Three readings are project conventions (P 2026-10-24,
@@ -31,6 +33,116 @@ interface Batch3Content {
  * wins; Shimmerscale Essence's "in 5 rounds" (CombatNum) counts player combats.
  * This is v23 candidate content; no v22 identity, evidence or recording is changed. */
 export const AUGMENT_BATCH3:Readonly<Record<string,Batch3Content>>=freezeContent({
+ "blazing-soul-i": {
+  "apiName": "TFT_Augment_BlazingSoul",
+  "name": "炽热灵魂 I",
+  "tier": "gold",
+  "description": "战斗开始时：你攻击速度最高的那个弈子获得20法术强度和20%攻击速度。每过3秒，在另一名己方弈子身上重复此效果。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "AbilityPower": 20.0,
+    "AttackSpeed": 0.20000000298023224,
+    "TransferDuration": 3.0
+   },
+   "description_en_us": "Combat start: Your highest Attack Speed champion gains 20 Ability Power and 20% Attack Speed. Repeat on another ally every 3 seconds."
+  },
+  "gifts": [],
+  "schedules": [],
+  "combat": "blazingSoul"
+ },
+ "blazing-soul-ii": {
+  "apiName": "TFT_Augment_BlazingSoul2",
+  "name": "炽热灵魂 II",
+  "tier": "prismatic",
+  "description": "战斗开始时：你攻击速度最高的那个弈子获得35法术强度和30%攻击速度。每过3秒，在另一名己方弈子身上重复此效果。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "AbilityPower": 35.0,
+    "AttackSpeed": 0.30000001192092896,
+    "TransferDuration": 3.0
+   },
+   "description_en_us": "Combat start: Your highest Attack Speed champion gains 35 Ability Power and 30% Attack Speed. Repeat on another ally every 3 seconds."
+  },
+  "gifts": [],
+  "schedules": [],
+  "combat": "blazingSoul"
+ },
+ "noble-sacrifice": {
+  "apiName": "TFT_Augment_NobleSacrifice",
+  "name": "高贵牺牲",
+  "tier": "gold",
+  "description": "每当你的第一个友军在对战中阵亡时，给予己方弈子们25 + 该友军10%的护甲和魔抗。",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "BaseResists": 25.0,
+    "SharePerc": 0.10000000149011612
+   },
+   "description_en_us": "When your first ally dies each combat, grant your team 25 + 10% of that ally's Armor and Magic Resistance."
+  },
+  "gifts": [],
+  "schedules": [],
+  "combat": "nobleSacrifice"
+ },
+ "wealthy-rehab-i": {
+  "apiName": "TFT_Augment_WealthyRehab1",
+  "name": "健康就是财富 I",
+  "tier": "silver",
+  "description": "你的弈子们获得10%全能吸血。当己方的弈子总治疗量首次达到10000时，获得额外的8金币。\n\n累积总治疗量：〔对局动态值〕",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": 8.0,
+    "HealingThreshold": 10000.0,
+    "Omnivamp": 0.10000000149011612
+   },
+   "description_en_us": "Your team gains 10% Omnivamp.  Get a bonus of 8 gold when your team first accumulates 10000 total champion healing.\n\nTotal Healing: 〔对局动态值〕"
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "team-healing",
+    "every": "HealingThreshold",
+    "repeat": false,
+    "gold": "Gold",
+    "gifts": []
+   }
+  ],
+  "combat": "wealthyRehab"
+ },
+ "wealthy-rehab-ii": {
+  "apiName": "TFT_Augment_WealthyRehab2",
+  "name": "健康就是财富 II",
+  "tier": "gold",
+  "description": "你的弈子们获得15%全能吸血。当己方的弈子总治疗量首次达到10000时，获得额外的15金币。\n\n累积总治疗量：〔对局动态值〕",
+  "source": {
+   "patch": "14.24",
+   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
+   "values": {
+    "Gold": 15.0,
+    "HealingThreshold": 10000.0,
+    "Omnivamp": 0.15000000596046448
+   },
+   "description_en_us": "Your team gains 15% Omnivamp.  Get a bonus of 15 gold when your team first accumulates 10000 total champion healing.\n\nTotal Healing: 〔对局动态值〕"
+  },
+  "gifts": [],
+  "schedules": [
+   {
+    "counter": "team-healing",
+    "every": "HealingThreshold",
+    "repeat": false,
+    "gold": "Gold",
+    "gifts": []
+   }
+  ],
+  "combat": "wealthyRehab"
+ },
 
 
  "corrosion": {
@@ -654,9 +766,18 @@ export function batch3Count(row:Batch3Content,key:string|number):number {
  const n=typeof key==='number'?key:row.source.values[key];
  if(!Number.isSafeInteger(n)||n!<1)throw new RangeError(`Batch3 source value ${String(key)}`);return n!;
 }
+function batch3CombatValues(row:Batch3Content):Record<string,number> {
+ const bps=(key:string)=>Math.round(row.source.values[key]!*10000);
+ switch(row.combat){
+  case 'blazingSoul':return {abilityPower:batch3Count(row,'AbilityPower'),attackSpeedBps:bps('AttackSpeed'),periodTicks:batch3Count(row,'TransferDuration')*20};
+  case 'nobleSacrifice':return {baseResists:batch3Count(row,'BaseResists'),shareBps:bps('SharePerc')};
+  default:return {omnivampBps:bps('Omnivamp')};
+ }
+}
 export const AUGMENT_BATCH3_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>>=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH3).map(([id,row]):[string,ChoiceDefinition]=>[id,{
  id,name:row.name,description:row.description,effects:[{kind:'mechanic',mechanic:'acquisitionBundle',values:{enabled:1}},
   ...(row.gold?[{kind:'mechanic' as const,mechanic:'acquisitionGold',values:{amount:batch3Count(row,row.gold)}}]:[]),
+  ...(row.combat?[{kind:'mechanic' as const,mechanic:row.combat,values:batch3CombatValues(row)}]:[]),
   ...(row.corrosion?[{kind:'mechanic' as const,mechanic:'corrosion',values:{resistLoss:batch3Count(row,'ResistLoss'),periodTicks:batch3Count(row,'Time')*20}}]:[]),
   ...(row.flexible?[{kind:'mechanic' as const,mechanic:'flexible',values:{healthPerEmblem:batch3Count(row,'HPPerEmblem')}}]:[]),
   ...(row.superstars?[{kind:'mechanic' as const,mechanic:'superstars',values:{baseBps:Math.round(row.source.values.BaseBonusDamage!*10000),per3StarBps:Math.round(row.source.values.BonusDamagePer3Star!*10000)}}]:[])],
