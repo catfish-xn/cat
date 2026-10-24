@@ -45,7 +45,8 @@ const PRIVATE_KEYS = ['bankSamples', 'liveGold', 'currentItemBankGold', 'opening
 
 describe('v17 avarice: reconnect during and after a live battle', () => {
   it('a seat that left and came back is shown the settled live replay and settles once', async () => {
-    harness = await startServer({}, new TwoSidedBattleResolver());
+    // v23 (151-offer pool, fmix32 openings): with room seed 42 the first-offer seat now dies at 4-3; seed 11 lives to 4-6.
+    harness = await startServer({ seed: 11 }, new TwoSidedBattleResolver());
     const [a] = await seatTwo(harness);
     const room = harness.server.room!, seatId = a.seatId!, token = a.token!;
     // To the 4-6 anomaly node (orbs claimed and the seat's reward units fielded, so it lives that long under v22).

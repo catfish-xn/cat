@@ -63,7 +63,9 @@ export function publicRecursivePurchase(state: MatchState): {
 } {
   const fundingState = state;
   // v22/v23 opening structures (Trainer Golem) and anvils are not cards: they cannot be sold, so they stay.
-  for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && isSellableUnit(unit.definitionId) && !isAnvil(unit.definitionId))) state = accepted(sellUnit(state, unit.id));
+  // Selling frees bench space, so loot heroes waiting for space can arrive mid-loop (v23 openings): sell until none remain.
+  const sellable = (s: MatchState) => s.preparation.units.find(unit => unit.team === 'player' && isSellableUnit(unit.definitionId) && !isAnvil(unit.definitionId));
+  for (let unit = sellable(state); unit; unit = sellable(state)) state = accepted(sellUnit(state, unit.id));
   // Expanded bags make nine fixed Irelias unaffordable. Select the cheapest
   // nine-card paid route using the independent shop oracle; never grant gold,
   // rewrite RNG or edit offers. All actual operations below remain public.

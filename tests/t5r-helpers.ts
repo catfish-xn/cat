@@ -19,8 +19,8 @@ export const accepted = (result: MultiplayerCommandResult) => {
 };
 /** Late-game transaction fixture: a real opening record, then synthetic contiguous settled history.
  * Isolates advancement from 37 battles; deliberately not an offline restorable save. */
-export function finalSettlement(base?: MatchState): MatchState {
-  let state = accepted(enableMultiplayerSettlement(createMatch(5), 'A'));
+export function finalSettlement(base?: MatchState, seed = 5): MatchState {
+  let state = accepted(enableMultiplayerSettlement(createMatch(seed), 'A'));
   state = accepted(startMatchCombat(state));
   while (state.phase === 'combat') state = stepMatch(state).state;
   state = accepted(claimOrDiscardLoot(state, state.round));
