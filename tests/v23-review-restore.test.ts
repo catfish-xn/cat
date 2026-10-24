@@ -33,28 +33,28 @@ describe('v23 independent review: Match restore authority for new runtime fields
     }
   });
 
-  // BUG V23-R1: g23Sion is absent from structural validation and replay binding facts.
+  // Regression V23-R1: bind g23Sion structure, holder and replay history.
   // Forging a future reviveAtTick suspends any living unit, including a non-Sion.
   for (const [entrance, validate] of Object.entries(entrances)) {
-    it.fails.each(['g23-sion', 'morgana'])(`${entrance} must reject forged revive state on %s (V23-R1)`, definitionId => {
+    it.each(['g23-sion', 'morgana'])(`${entrance} must reject forged revive state on %s (V23-R1)`, definitionId => {
       const bad = structuredClone(opening), u = bad.combat!.units.find(u => u.definitionId === definitionId)!;
       Object.assign(u, { g23Sion: { reviveAtTick: 500, revived: false } });
       expect(() => validate(bad)).toThrow();
     });
-    it.fails(`${entrance} must reject malformed revive state (V23-R1)`, () => {
+    it(`${entrance} must reject malformed revive state (V23-R1)`, () => {
       const bad = structuredClone(opening), u = bad.combat!.units.find(u => u.definitionId === 'g23-sion')!;
       Object.assign(u, { g23Sion: { reviveAtTick: -1, revived: 'forged' } });
       expect(() => validate(bad)).toThrow();
     });
   }
 
-  it('forged revive clock actually changes a restored unit availability (V23-R1 impact)', () => {
+  it('forged revive clock changes availability but is rejected at restore (V23-R1 impact)', () => {
     const bad = structuredClone(opening), u = bad.combat!.units.find(u => u.definitionId === 'morgana')!;
     Object.assign(u, { g23Sion: { reviveAtTick: 500, revived: false } });
-    const restored = restoreMatch(JSON.stringify(bad));
+    expect(() => restoreMatch(JSON.stringify(bad))).toThrow();
     expect(isAbsent(opening.combat!.units.find(v => v.id === u.id)!, 1)).toBe(false);
-    expect(isAbsent(restored.combat!.units.find(v => v.id === u.id)!, 1)).toBe(true);
-    const next = stepMatch(restored);
+    expect(isAbsent(bad.combat!.units.find(v => v.id === u.id)!, 1)).toBe(true);
+    const next = stepMatch(bad);
     expect(next.state.combat!.units.find(v => v.id === u.id)!.g23Sion).toEqual({ reviveAtTick: 500, revived: false });
     expect(next.events.some(e => e.type === 'cast' && e.receipt.source.ownerId === u.id)).toBe(false);
   });
@@ -86,17 +86,17 @@ it('a legally acquired Vi knockup save round-trips and resumes', () => {
   expect(stepMatch(restored)).toEqual(stepMatch(knockupSave));
 });
 
-// BUG V23-R2: legacy status projection checks kind/timing but never binds the
+// Regression V23-R2: legacy status projection checks kind/timing but never binds the
 // knockup bit to the authenticated ability or its independently replayed status.
 for (const [entrance, validate] of Object.entries(entrances)) {
-  it.fails(`${entrance} rejects removal of a genuine knockup bit (V23-R2)`, () => {
+  it(`${entrance} rejects removal of a genuine knockup bit (V23-R2)`, () => {
     const bad = structuredClone(knockupSave);
     const contribution = bad.combat!.units.flatMap(u => u.mechanismState?.statuses ?? []).flatMap(g => g.contributions).find(c => c.application.knockup)!;
     const app = contribution.application as { knockup?: true };
     delete app.knockup;
     expect(() => validate(bad)).toThrow();
   });
-  it.fails(`${entrance} rejects adding knockup to a genuine plain stun (V23-R2)`, () => {
+  it(`${entrance} rejects adding knockup to a genuine plain stun (V23-R2)`, () => {
     const bad = structuredClone(knockupSave);
     const contribution = bad.combat!.units.flatMap(u => u.mechanismState?.statuses ?? []).filter(g => g.kind === 'stun').flatMap(g => g.contributions).find(c => !c.application.knockup)!;
     expect(contribution).toBeDefined();
@@ -117,10 +117,35 @@ beforeAll(() => {
   expect(releaseSave).toBeDefined();
 });
 
-// BUG V23-R3: charge statuses use ability origin(effectIndex=1); the existing
+// Regression V23-R3: charge statuses use ability origin(effectIndex=1); the existing
 // runtime source validator permits only effectIndex=0 for non-neutral abilities.
 for (const [entrance, validate] of Object.entries(entrances)) {
-  it.fails(`${entrance} accepts a legal Sion charge with pending knockup (V23-R3)`, () => {
+  it(`${entrance} accepts a legal Sion charge with pending knockup (V23-R3)`, () => {
     expect(() => validate(releaseSave)).not.toThrow();
+  });
+}
+
+it('legal Sion charge round-trips and continues through knockup expiry', () => {
+  let live = releaseSave, restored = restoreMatch(serializeMatch(releaseSave));
+  expect(restored).toEqual(live);
+  for (let n = 0; n < 12; n++) {
+    const a = stepMatch(live), b = stepMatch(restored);
+    expect(b).toEqual(a);
+    live = a.state; restored = b.state;
+  }
+});
+
+for (const [entrance, validate] of Object.entries(entrances)) {
+  it.each([
+    null,
+    {},
+    { reviveAtTick: 20, revived: false },
+    { reviveAtTick: 21.5, revived: false },
+    { reviveAtTick: 21, revived: true },
+    { reviveAtTick: 21, revived: false, forged: true },
+  ])(`${entrance} rejects invalid or unearned Sion revival %j`, revival => {
+    const bad = structuredClone(opening);
+    Object.assign(bad.combat!.units.find(u => u.definitionId === 'g23-sion')!, { g23Sion: revival });
+    expect(() => validate(bad)).toThrow();
   });
 }

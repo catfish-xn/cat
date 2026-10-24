@@ -36,6 +36,14 @@ export function validateTaskAndSummonFacts(combat: CombatState, basis: CombatInp
       throw new Error('Invalid Match save: Sion binding facts');
     if (unit.definitionId !== 'g23-sion' && unit.runtime?.buddyTriggered !== settledUnit.buddyTriggered)
       throw new Error('Invalid Match save: buddy trigger binding facts');
+    // Presence, death-derived clock and the one-time return are replay facts,
+    // including on units that have never died or cannot hold a Sion revival.
+    if (!same(unit.g23Sion ?? null, settledUnit.g23Sion ?? null))
+      throw new Error('Invalid Match save: Sion revive binding facts');
+    // Bind every stun contribution (also plain stuns) so either adding or
+    // removing knockup, or forging its source, cannot change the saved control.
+    if (!same(unit.mechanismState?.statuses.filter(s => s.kind === 'stun') ?? [], settledUnit.stunStatuses))
+      throw new Error('Invalid Match save: stun/knockup binding facts');
     // Reave lives on the target, independently of the caster's remaining queue.
     // Compare zero/absent values too, including targets never hit by a curse.
     if ((unit.g22?.reaveBps ?? 0) !== settledUnit.reaveBps

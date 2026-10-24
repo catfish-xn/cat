@@ -7,6 +7,7 @@ import { knockAway } from '../src/simulation/combat-displacement';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { DEFAULT_BOARD, hexDistance } from '../src/simulation/board';
 import { battle, unit, freeze } from './combat-helpers';
+import { AMBESSA_SLAM_STUN_TICKS, VI_ROW_KNOCKUP_TICKS } from '../src/simulation/combat-g2-2';
 
 const hero = (id: string, name: string, team: 'player'|'enemy', col: number, row = 3, patch: Partial<CombatUnit> = {}) => unit(id, team, col, row, {
   definitionId: name, ability: resolveAbility(name + '-ability', 1), hp: 100000, maxHp: 100000, mana: 0, maxMana: 100,
@@ -16,7 +17,7 @@ const hero = (id: string, name: string, team: 'player'|'enemy', col: number, row
 const activeStun = (u: CombatUnit, tick: number) => effectiveStatuses(u.mechanismState?.statuses ?? [], tick).filter(g => g.kind === 'stun');
 
 describe('v23 independent review: control timing and action gates', () => {
-  it.each([['vi', 'target', 30, false], ['vi', 'row', 5, true], ['violet', 'target', 5, true], ['sett', 'target', 30, false]] as const)(
+  it.each([['vi', 'target', 30, false], ['vi', 'row', VI_ROW_KNOCKUP_TICKS, true], ['violet', 'target', 5, true], ['sett', 'target', 30, false]] as const)(
     '%s → %s lasts exactly %i ticks (knockup=%s)', (name, targetId, duration, knockup) => {
       const r = stepCombat(freeze(battle([hero('p', name, 'player', 1, 3, { mana: 100 }), hero('target', 'garen', 'enemy', 2), hero('row', 'garen', 'enemy', 3)])));
       const t = r.state.units.find(u => u.id === targetId)!;
@@ -66,11 +67,12 @@ describe('v23 independent review: control timing and action gates', () => {
   });
 });
 
-it('Ambessa fist short stun remains 5 ticks and Vander adds no taunt or control', () => {
+// User 2026-10-24: Ambessa's slam stuns 1 s, Vi's row shockwave knocks up 0.5 s (dac13dc3).
+it('Ambessa slam stun lasts AMBESSA_SLAM_STUN_TICKS and Vander adds no taunt or control', () => {
   const ambessa = hero('p', 'ambessa', 'player', 1, 3, { mana: 100, runtime: { ...EMPTY_RUNTIME, castCount: 1 } });
   const r = stepCombat(battle([ambessa,hero('t','garen','enemy',2)]));
   const stun = r.state.units.find(u => u.id === 't')!.mechanismState!.statuses.find(g => g.kind === 'stun')!.contributions[0];
-  expect([stun.appliedAtTick,stun.expiresAtTick,stun.application.knockup]).toEqual([2,7,undefined]);
+  expect([stun.appliedAtTick,stun.expiresAtTick,stun.application.knockup]).toEqual([2,2+AMBESSA_SLAM_STUN_TICKS,undefined]);
   const v = stepCombat(battle([hero('p','vander','player',1,3,{mana:100}),hero('t','garen','enemy',2)]));
   expect(v.events.some(e => e.type === 'cast')).toBe(true);
   expect(v.events.filter(e => e.type === 'statusChanged' && e.group.targetId === 't')).toEqual([]);
