@@ -48,14 +48,31 @@ it('an Upward Mobility level-up bought through the room heals the ledger at once
   expect(room.state.fault).toBeNull();
 }, 60_000);
 
-it('an HP change with no explained source faults the room instead of moving the ledger', () => {
+it.each([['a rise', 5], ['a drop', -5]] as const)('%s in rules HP with no explained source faults the room (invalid-results) and leaves the ledger', (_label, delta) => {
   const { room, holder } = preparedRoom();
-  const before = seatOf(room.state, 's1');
+  patch(holder, 's1', match => ({ ...match, playerHp: 50 }), 50);
+  const faults: RoomState['fault'][] = [];
+  room.subscribe(state => { if (state.fault) faults.push(state.fault); });
   holder.replace({ ...holder.current, seats: holder.current.seats.map(seat => seat.seatId !== 's1' ? seat : {
-    ...seat, match: { ...seat.match, playerHp: seat.match.playerHp >= 100 ? 95 : seat.match.playerHp + 5 }, seatRevision: seat.seatRevision + 1 }) });
+    ...seat, match: { ...seat.match, playerHp: 50 + delta }, seatRevision: seat.seatRevision + 1 }) });
   expect(room.state.fault).toMatchObject({ kind: 'invalid-results' });
   expect((room.state.fault as { detail: string }).detail).toContain('no explained source');
-  expect(seatOf(room.state, 's1').hp).toBe(before.hp);
+  expect(faults[0]).toEqual(room.state.fault);
+  expect([seatOf(room.state, 's1').hp, seatOf(room.state, 's1').match.playerHp]).toEqual([50, 50]);
+}, 30_000);
+
+it('a seat command whose result carries an unexplained heal is refused to the caller, not reported ok', () => {
+  const { room, holder } = preparedRoom();
+  // The command path itself must report the refusal: inject 7 HP no rule explains into the command's result.
+  patch(holder, 's0', match => ({ ...match, playerHp: 50, gold: 60 }), 50);
+  const internal = room as unknown as { withPendingResolved(r: { pool: unknown; state: MatchState; events: unknown[] }): unknown };
+  const original = internal.withPendingResolved.bind(room);
+  internal.withPendingResolved = (r) => original({ ...r, state: { ...r.state, playerHp: r.state.playerHp + 7 } });
+  const result = room.handle('s0', { type: 'buyXp' });
+  internal.withPendingResolved = original;
+  expect(result).toMatchObject({ ok: false, reason: 'room-phase' });
+  expect(room.state.fault).toMatchObject({ kind: 'invalid-results' });
+  expect(seatOf(room.state, 's0').hp).toBe(50);
 }, 30_000);
 
 it('explainedHp: Crimson Pact heals only with a new skipped black-market receipt; levels heal only with Upward Mobility', () => {

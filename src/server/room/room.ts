@@ -510,7 +510,7 @@ export class Room {
     if (claimed.state === seat.match) return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
     const result = this.withPendingResolved({ pool: claimed.pool, state: claimed.state, events: claimed.events });
     const seatRevision = seat.seatRevision + 1;
-    this.commitSeat(seatId, result.state, result.pool);
+    if (!this.commitSeat(seatId, result.state, result.pool)) return { ok: false, reason: 'room-phase', state: seat.match };
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
   }
 
@@ -555,7 +555,7 @@ export class Room {
     // carousel units in, in the same publication.
     const result = this.withPendingResolved(operated);
     const seatRevision = seat.seatRevision + 1;
-    this.commitSeat(seatId, result.state, result.pool);
+    if (!this.commitSeat(seatId, result.state, result.pool)) return { ok: false, reason: 'room-phase', state: seat.match };
     if (phase === 'battle' && result.state.gold !== seat.match.gold) this.sampleLiveBank(seatId, result.state.gold);
     if (phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
@@ -1122,7 +1122,7 @@ export class Room {
   private applyTimeouts(stage: TimeoutStage): boolean {
     for (const seat of this.aliveSeats()) {
       const outcome = resolveSeatTimeouts(seat.match, this.current.pool, stage);
-      if (outcome.state !== seat.match) this.commitSeat(seat.seatId, outcome.state, outcome.pool);
+      if (outcome.state !== seat.match && !this.commitSeat(seat.seatId, outcome.state, outcome.pool)) return false;
       if (!outcome.ok) { this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: outcome.reason }); return false; }
     }
     return true;
@@ -1876,10 +1876,12 @@ export class Room {
   private releaseRound(): void { this.openingStreams = false; this.settlementWork = null; this.settlementFactory = null; this.settlementFrozen = false; this.drainingSettlementCommands = false; this.clearLive(); this.streams.clear(); this.streamBoundary = []; this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
-  /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */
-  private commitSeat(seatId: string, match: MatchState, pool: SharedPoolState): void {
+  /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). False when the
+   * room refused it instead (an unexplained HP change faults the room, syncedSeatHp): nothing of it was published. */
+  private commitSeat(seatId: string, match: MatchState, pool: SharedPoolState): boolean {
     this.replace({ ...this.current, pool, poolRevision: pool.revision,
       seats: this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, match, seatRevision: candidate.seatRevision + 1 } : candidate) });
+    return this.current.seats.find(candidate => candidate.seatId === seatId)?.match === match;
   }
   private replace(next: RoomState): void {
     if (this.disposed) return;
@@ -1997,7 +1999,7 @@ export class Room {
     const result = runSharedMatchCommand(this.current.pool, seat.match, { type: 'timeoutChoice', round: seat.match.round, choiceId, generation });
     if (!result.ok) return this.fail({ kind: 'seat-stuck', seatId, reason: `forfeit:${result.reason}` });
     const resolved = this.withPendingResolved(result);
-    this.commitSeat(seatId, resolved.state, resolved.pool);
+    if (!this.commitSeat(seatId, resolved.state, resolved.pool)) return;
     if (this.current.phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
   }
   /** B5 item 6: the published pool balances against every seat it binds; throws before anything is published. */

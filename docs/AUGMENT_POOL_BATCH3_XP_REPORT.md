@@ -57,3 +57,5 @@
 第三轮（评审 must-fix）：
 - 新增 `tests/server/room-hp-ledger.test.ts` 3 项：经房间买经验触发上进心升级，账本与规则同为52、每次扣3金，之后一整轮结算不报错；无来源的血量变化让房间以 invalid-results 终止且账本不动；`explainedHp` 对底城争夺战只认新增的跳过收据、对等级只认上进心、上限100。
 - 相关 30 个文件：除基线已有的 carousel-room 1 项和种子路线的 v17-avarice 1 项外全部通过；并发时超时的 battle-start-slices、pairing-room、projection-wire 与弑君突刺单机用例单独重跑通过。
+
+第四轮（评审非阻塞建议）：`commitSeat` 返回是否已发布，座位命令（`apply`、机器人领球）在房间因无来源血量终止时向调用方返回 `room-phase` 失败而不是 ok，超时与选择截止路径也随之停止。`room-hp-ledger` 增至 5 项：规则血量无来源上升/下降都以 invalid-results 终止并通知订阅者、账本不动；命令结果里带无来源回血时调用方收到失败。
