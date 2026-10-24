@@ -138,7 +138,7 @@
 
 ## 2026-10-24 位移类控制（莫德凯撒/瑟提/赛维卡）：P（待 GPT 调研 C3 回来后只改参数，归 v23）
 
-新增 `src/simulation/combat-displacement.ts`：施法当 tick 瞬时位移，不抽随机数，复用 `movement` 事件并加 `reason:'mordekaiser-pull'|'sett-grab'|'sevika-knockback'`，进入账本、回放和双方流式投影（对面座位按行翻转）。被控制免疫或“深根”的单位不被移动；落点不能是有单位或本 tick 已预留的格子。原伤害、晕眩数值和选目标不变。
+新增 `src/simulation/combat-displacement.ts`：施法当 tick 瞬时位移，不抽随机数，复用 `movement` 事件并加 `reason:'mordekaiser-pull'|'sett-grab'|'sevika-knockback'`，进入账本、回放和双方流式投影（对面座位按行翻转）。被控制免疫或“深根”的单位、海克斯锻炉、仍被锁着的赛恩（与普通移动同一判断 `isG23NonCombatant`）不被移动；落点不能是有单位或本 tick 已预留的格子。原伤害、晕眩数值和选目标不变。
 
 - **莫德凯撒**：原档 `Displacement=240`，按 14.24b `HexToRangeMap`（180=1 格、420=2 格）向下取整为 **1 格**（P）。只拉巨爪命中直线里最近的 `NearestEnemies`（4）名（P，`DISPLACEMENT_POLICY.mordekaiser.onlyLineHits`），近者先拉；每名朝莫德凯撒走 1 格，同距按行再列；已相邻或该步被占则原地。
 - **瑟提**：仍取最近的 2 名敌人（P，“两侧各一名”原档无选人参数，`sett.targets`）；每名拽到瑟提身边离它最近的空格，同距按行再列；第二名优先落在第一名旁边（P，“拽到一起”，`sett.secondBesideFirst`）。已相邻不动；瑟提周围满了就原地；无距离上限（P）。

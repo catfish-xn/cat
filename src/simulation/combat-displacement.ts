@@ -1,5 +1,6 @@
 import { occupiesCell } from './anomalies/availability';
 import { canDisplace } from './anomalies/shared';
+import { isG23NonCombatant } from './combat-movement';
 import { contains, getNeighbors, hexDistance, sameCell, type HexCell } from './board';
 import type { AbilityContext } from './combat-s13-abilities';
 import type { S13Unit } from './combat-s13-state';
@@ -38,7 +39,7 @@ function displace(ctx: AbilityContext, unit: S13Unit, to: HexCell, reason: Displ
   unit.cell = { ...to };
   (ctx.movementReservations ??= new Set()).add(key(to));
 }
-const movable = (ctx: AbilityContext, unit: S13Unit): boolean => unit.alive && unit.hp > 0 && canDisplace(unit, ctx.tick);
+const movable = (ctx: AbilityContext, unit: S13Unit): boolean => unit.alive && unit.hp > 0 && !isG23NonCombatant(unit) && canDisplace(unit, ctx.tick);
 
 /** Step each target up to `hexes` cells closer to the puller, nearest target first; a blocked step ends that pull. */
 export function pullToward(ctx: AbilityContext, puller: S13Unit, targets: readonly S13Unit[], hexes: number, reason: DisplacementReason): void {

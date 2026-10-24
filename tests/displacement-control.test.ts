@@ -137,3 +137,25 @@ it('sync / JSON resume / replay agree and keep the displacement reason', () => {
   const tampered = { initial, terminal: state, events: ledger.map(e => e.type === 'movement' && e.reason ? { ...e, reason: undefined } : e) };
   expect(() => toCombatReplay(tampered)).toThrow('replay-divergence');
 });
+
+describe('units that never move are not displaced', () => {
+  const statics: [string, Partial<CombatUnit>][] = [
+    ['Hextech Forge', { definitionId: 'g23-forge' }],
+    ['bound Sion', { definitionId: 'g23-sion', runtime: { ...EMPTY_RUNTIME, buddyTriggered: false } }],
+  ];
+  it.each(statics)('%s: Sevika knockback, Sett grab and Mordekaiser pull all leave it in place', (_n, patch) => {
+    const s = caster('sevika', c(3, 6)) as S13Unit, near = dummy('x', c(3, 5), patch) as S13Unit, ctx = context([s, near]);
+    knockAway(ctx, s, near, 10, 'sevika-knockback');
+    const far = dummy('y', c(3, 2), patch) as S13Unit, grab = context([s, far]);
+    grabAdjacent(grab, s, [far], 'sett-grab');
+    pullToward(grab, s, [far], 1, 'mordekaiser-pull');
+    expect([near.cell, far.cell]).toEqual([c(3, 5), c(3, 2)]);
+    expect([...ctx.events, ...grab.events]).toEqual([]);
+  });
+  it('released Sion is displaced like any unit', () => {
+    const s = caster('sevika', c(3, 6)) as S13Unit, sion = dummy('x', c(3, 5), { definitionId: 'g23-sion', runtime: { ...EMPTY_RUNTIME, buddyTriggered: true } }) as S13Unit;
+    const ctx = context([s, sion]);
+    knockAway(ctx, s, sion, 10, 'sevika-knockback');
+    expect(sion.cell).toEqual(c(6, 0));
+  });
+});
