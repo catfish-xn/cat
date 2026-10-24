@@ -9,6 +9,7 @@ import { asSource } from './m8/s13-definitions';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
 import { modifier, stat } from './content/item-programs';
 import { lineContains, lineDirections } from './combat-skill-lines';
+import { DISPLACEMENT_POLICY, grabAdjacent, pullToward, rawRangeToHexes } from './combat-displacement';
 export function g22(unit: S13Unit): G22State { return unit.g22 ??= {initialized:false,rebelTriggered:false,wanted:[],wantedDeaths:0,mordeUntilTick:0,reaveUntilTick:0,reaveBps:0,exposureFromTick:0,exposureUntilTick:0,exposureBps:0}; }
 function hit(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number,type:S13Packet['damageType']='magic',area=false,basic=false,source=origin(u)) {
   ctx.packets.push({source:basic?{...source,sourceKind:'attack'}:source,targetId:t.id,raw,damageType:type,actionSeq:seq,ordinal,
@@ -35,7 +36,8 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       strike(t,mag('Damage'));strike(t,Math.floor(mag('SecondaryDamage')*(10000+Math.round(v('TargetDamageAmp')*10000))/10000));
       Object.assign(g22(t),{exposureFromTick:ctx.tick+1,exposureUntilTick:ctx.tick+1+Math.round(v('Duration')*20),exposureBps:Math.round(v('TargetDamageAmp')*10000)});break;
     case 'sett': {
-      const targets=foes().slice(0,2),mult=targets.length===1?1+v('SoloBonus'):1;
+      const targets=foes().slice(0,DISPLACEMENT_POLICY.sett.targets),mult=targets.length===1?1+v('SoloBonus'):1;
+      grabAdjacent(ctx,u,targets,'sett-grab');
       for(const x of targets){strike(x,Math.floor(mag('Damage')*mult),'magic',true);applyStatus(x,origin(u),'stun',0,Math.round(v('StunDuration')*mult*20),ctx.tick,ctx.events);}break;
     }
     case 'draven':ids.push(u.id);break;
@@ -75,7 +77,9 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const lines=lineDirections(u.cell).map(direction=>({hits:targets.filter(x=>lineContains(u.cell,direction,x.cell,3,8)),target:lineContains(u.cell,direction,t.cell,3,8)}));
       // Stable sort preserves direction order after count and current-target ties.
       lines.sort((a,b)=>b.hits.length-a.hits.length||Number(b.target)-Number(a.target));
-      for(const x of lines[0].hits)strike(x,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),'magic',true);break;
+      for(const x of lines[0].hits)strike(x,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),'magic',true);
+      const nearest=targets.slice(0,v('NearestEnemies'));
+      pullToward(ctx,u,DISPLACEMENT_POLICY.mordekaiser.onlyLineHits?nearest.filter(x=>lines[0].hits.includes(x)):nearest,rawRangeToHexes(v('Displacement')),'mordekaiser-pull');break;
     }
     case 'morgana': {
       const target=foes().find(x=>(x.g22?.reaveUntilTick??0)<=ctx.tick)??t,total=mag('Damage'),pulses=Math.round(v('Duration'));
