@@ -839,3 +839,24 @@ it('Call to Chaos public pick at 4-2: the outcome is granted once and the save r
  forged.seatMechanics.receipts.push({kind:'gold',receiptId:JSON.stringify(['augment-pool-batch3',a.choiceId,9,9]),source:'augment-pool-batch3',amount:58,round:s.round});
  forged.gold+=58;expect(()=>restoreMatch(serializeMatch(forged))).toThrow();
 },120_000);
+
+it('Worth the Wait through a real carousel: the 2-4 copy waits for 2-5 and every save on the way restores', ()=>{
+ let s=publicOpen('worth-the-wait');const c=s.pendingChoice!;
+ s=accept(selectChoice(s,c.choiceId,c.generation,'worth-the-wait') as any).state as MatchState;
+ const acquired=s.round,copies=()=>s.seatMechanics!.receipts.filter(r=>r.kind==='unit'&&r.receiptId.includes('batch3'));
+ let crossed=false;
+ while(getMultiplayerRoundByOrdinal(s.round).roundId!=='2-6'){
+  s=resolveM5Choices(s);if(s.phase==='preparation')s=accept(startMatchCombat(emptyBoard(s)) as any).state;
+  while(s.phase==='combat')s=stepMatch(s).state;
+  s=resolveM5Choices(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
+  s=accept(nextRound(s,s.round) as any).state;s=resolveM5Choices(s);
+  expect(restoreMatch(serializeMatch(s))).toEqual(s);
+  const kind=getMultiplayerRoundByOrdinal(s.round).kind;
+  if(kind==='supply'){crossed=true;expect(copies().filter(r=>r.round===s.round)).toEqual([]);}
+ }
+ expect(crossed).toBe(true);
+ // One copy per round entry from acquisition + Delay, the carousel's own copy moved to the next round.
+ const rounds=copies().map(r=>r.round);
+ expect(rounds.every(r=>getMultiplayerRoundByOrdinal(r).kind!=='supply'&&r>=acquired+2)).toBe(true);
+ expect(rounds.length).toBe(Array.from({length:s.round-acquired-1},(_,i)=>acquired+2+i).length);
+},120_000);
