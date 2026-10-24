@@ -222,6 +222,8 @@ export class StrategyPanel {
   /** `tool` (C18-B): a consumable being dragged; its drop only names the target, no command is sent yet (§18.1). */
   private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement; target?: string; tool?: ConsumableInstance } | null = null;
   private choiceToken = '';
+  /** Anomaly offer step: online gold can change under one choice token, so the open popup repaints its balance in place. */
+  private anomalyGold?: ((gold: number) => void) | null;
   /** Mechanic popups (forge, armory) can be folded away to look at the board; this pill reopens the same choice. */
   private choiceReopen: HTMLButtonElement | null = null;
   /** v16 进入未知: a chip on the board while the hero is away (the panel line can be folded or scrolled out of view). */
@@ -988,9 +990,9 @@ export class StrategyPanel {
     }
     this.clearChoiceDismissal();
     const token = `${choice.choiceId}:${choice.generation}:${choice.step}`;
-    if (token === this.choiceToken) return;
+    if (token === this.choiceToken) { this.anomalyGold?.(state.gold); return; }
     this.dropChoiceReopen();
-    this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
+    this.choiceToken = token; this.anomalyGold = null; this.modal.hidden = false; this.modal.replaceChildren();
     this.modal.inert = document.body.dataset.helpOpen === 'true';
     const card = element('div', '', 'choice-dialog');
     // The domain names the loot pick (LootView.pendingChoice, approved addendum); supply/augment/anomaly keep their wording.
@@ -1027,10 +1029,8 @@ export class StrategyPanel {
       card.append(targets);
       if (isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
     } else {
-      if (choice.kind === 'anomaly') {
-        const target = state.preparation.units.find(unit => unit.id === choice.targetId);
-        card.append(element('p', `已锁定 ${target ? displayUnitName(target.definitionId) : ''} · 余额 ${state.gold} 金币 · 已刷新 ${choice.rerollCount} 次`, 'anomaly-target-lock'));
-      }
+      const lock = element('p', '', 'anomaly-target-lock');
+      if (choice.kind === 'anomaly') card.append(lock);
       const offers = element('div', '', 'choice-cards');
       // v15: one reroll button under each augment card, enabled by that card's own rerollAvailable (never the total left).
       const rerollAugment = this.actions.rerollAugment, augmentOptions = choice.kind === 'augment' && rerollAugment ? readAugmentOptions(state) : [];
@@ -1077,7 +1077,15 @@ export class StrategyPanel {
       }
       card.append(offers);
       if (generic || isOnline()) card.append(this.choiceExtras(choice, title, generic, extras));
-      if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
+      if (choice.kind === 'anomaly') {
+        const target = state.preparation.units.find(unit => unit.id === choice.targetId), name = target ? displayUnitName(target.definitionId) : '';
+        const reroll = this.button('anomaly-reroll', '', () => this.actions.rerollAnomaly(choice.choiceId, choice.generation));
+        card.append(reroll);
+        (this.anomalyGold = gold => {
+          lock.textContent = `已锁定 ${name} · 余额 ${gold} 金币 · 已刷新 ${choice.rerollCount} 次`;
+          reroll.textContent = `刷新异常 · 1 金币（余额 ${gold} 金币）`; reroll.disabled = gold < 1;
+        })(state.gold);
+      }
     }
     this.modal.append(card);
     // Session replacement changes the mode at the end of this same task.

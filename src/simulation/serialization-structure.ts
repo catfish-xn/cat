@@ -26,6 +26,7 @@ import { projectG23Summons } from './g2-3-summons';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import { validateP3State } from './s13-p3-combat';
 import { validateG23State } from './g2-3-combat';
+import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { G23_ABILITIES } from './content/g2-3-abilities';
 import { freezeCombatDeclarations } from './combat-static';
 import { isImmutableJson, shareParsedDeclaration, shareParsedJson } from './immutable-json';
@@ -470,6 +471,17 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     requireValue(unit.expansion.chainKills <= unit.expansion.chainTargets.length, 'G2 initial kill bound');
     requireValue(new Set(unit.expansion.chainTargets).size === unit.expansion.chainTargets.length && unit.expansion.chainTargets.every(id => combatUnits.some(u => u.id === id && u.team !== unit.team)) && unit.expansion.chainTargets.length <= (champion(unit) === 'leblanc' ? variable(unit, 'ChainTargets') : 0), 'G2 chain targets');
   }
+  if (unit.g23Sion !== undefined) {
+    const revival = unit.g23Sion;
+    record(revival);
+    requireValue(Object.keys(revival).sort().join(',') === 'reviveAtTick,revived', 'Sion revive structure');
+    integer(revival.reviveAtTick, G23_SUMMON_POLICY.sion.reviveDelayTicks + 1);
+    requireValue(typeof revival.revived === 'boolean' && unit.definitionId === 'g23-sion'
+      && unit.mechanics?.some(m => m.mechanic === 'g23Sion' && m.values.tier >= 7), 'Sion revive holder');
+    requireValue(revival.revived ? revival.reviveAtTick <= tick
+      : revival.reviveAtTick > tick && revival.reviveAtTick <= tick + G23_SUMMON_POLICY.sion.reviveDelayTicks,
+      'Sion revive clock');
+  }
   const runtime = unit.runtime, isKog = champion(unit) === 'kogmaw';
   requireValue(runtime.attackCount + runtime.castCount <= tick, 'action count bound');
   const itemSpeedAt=(at:number)=>(unit.mechanismDefinitions?.periodicTasks ?? []).reduce((n,t)=>n+t.program.effects.reduce((total,e)=>total+(e.kind==='modify-stat'&&e.modifier.stat==='attackSpeed'&&e.modifier.value.kind==='constant'&&e.duration.kind==='combat'&&e.stackPolicy.kind==='add-stacks'?e.modifier.value.amount*Math.max(0,Math.floor((Math.min(at,t.endsAtTick ?? at)-t.nextPulseAtTick)/t.periodTicks)+1):0),0),0);
@@ -504,12 +516,13 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     const largestCoefficient = Math.max(10000, ...Object.values(unit.ability.variables));
     requireValue(Number.isSafeInteger(largestCoefficient * (1 + Math.floor(numerator / 10000) + unit.maxHp + unit.abilityPower! + maximumAp)), 'ability arithmetic bound');
   }
-  const origin = (source: import('./combat-types').CombatOrigin, neutralStatus = false) => {
+  const origin = (source: import('./combat-types').CombatOrigin, neutralStatus = false, sionCharge = false) => {
     record(source); id(source.ownerId); id(source.definitionId); id(source.instanceId); integer(source.effectIndex);
     requireValue(combatIds.has(source.ownerId) && ['attack','ability','trait','item','augment','anomaly','enemyGrowth'].includes(source.sourceKind), 'runtime source');
     const owner = combatUnits.find(value => value.id === source.ownerId)!;
     if (source.sourceKind === 'ability' || source.sourceKind === 'attack') {
-      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && (source.effectIndex === 0 || neutralStatus) && source.parentItemInstanceId == null, 'ability source identity');
+      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && (source.effectIndex === 0 || neutralStatus
+        || sionCharge && source.sourceKind === 'ability' && owner.definitionId === 'g23-sion' && source.effectIndex === 1) && source.parentItemInstanceId == null, 'ability source identity');
     } else {
       requireValue(owner.sources?.some(entry => entry.source.ownerId === source.ownerId
         && entry.source.sourceKind === source.sourceKind && entry.source.sourceDefinitionId === source.definitionId
@@ -529,7 +542,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
   requireValue(total === unit.shield && unit.shieldExpiresAtTick === (total ? Math.max(...unit.shieldLayers.filter(l => l.remaining > 0).map(l => l.expiresAtTick)) : null), 'shield aggregate');
   list(unit.statuses); const statusKeys = new Set<string>();
   for (const status of unit.statuses) {
-    record(status); origin(status.source, neutralStatuses.has(status.key)); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
+    record(status); origin(status.source, neutralStatuses.has(status.key), status.kind === 'stun'); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
     requireValue(Number.isSafeInteger(status.amount) && (status.amount >= 0 || status.kind === 'resistanceFlat') && !statusKeys.has(status.key) && status.expiresAtTick > tick && status.startsAtTick <= tick + 1, 'status range');
     requireValue(['stun','damageReduction','armorReduction','resistanceFlat','attackSpeed','abilityPower','channel','redirect'].includes(status.kind), 'status kind');
     requireValue(status.kind !== 'abilityPower' && (status.kind !== 'attackSpeed' || status.source.definitionId === 'singed-ability' || status.source.definitionId === 'firelight' || status.source.definitionId === 'jayce-ranged-ability'), 'unsupported dynamic status source');
