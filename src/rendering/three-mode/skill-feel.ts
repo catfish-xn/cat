@@ -10,51 +10,36 @@
  */
 import { AdditiveBlending, CanvasTexture, Group, Mesh, MeshBasicMaterial, RingGeometry, SRGBColorSpace, Sprite, SpriteMaterial, Vector3, type Object3D, type Texture } from 'three';
 import type { PlannedEffect } from './action-effect-plan';
+import { SKILL_FX_DEFAULTS, SKILL_FX_TABLE, type SkillFxEffectTuning } from './skill-fx-table';
 
-export const SKILL_FEEL_SAMPLE: ReadonlySet<string> = new Set(['jinx', 'jayce', 'renata', 'vi']);
+/** The sample champions: every row of the skill feel table (skill-fx-table.ts). */
+export const SKILL_FEEL_SAMPLE: ReadonlySet<string> = new Set(Object.keys(SKILL_FX_TABLE));
 /** `?skillfx=off` in the page address draws the sample champions as before (for side-by-side review). */
 export function skillFeelFor(definitionId: string): boolean {
   if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('skillfx') === 'off') return false;
   return SKILL_FEEL_SAMPLE.has(definitionId);
 }
 /** The charge color per sample champion (its main skin color); anything else charges in warm gold. */
-const SKILL_COLOR: Readonly<Record<string, number>> = { jinx: 0xff4fb0, jayce: 0x58b8ff, renata: 0xc24dff, vi: 0xff6a5a };
-export const skillColor = (definitionId: string): number => SKILL_COLOR[definitionId] ?? 0xffc864;
+export const skillColor = (definitionId: string): number => SKILL_FX_TABLE[definitionId]?.color ?? SKILL_FX_DEFAULTS.color;
 
 /** Seconds of charge before a cast's own effects start. */
-export const WINDUP_SECONDS = 0.25;
+export const WINDUP_SECONDS = SKILL_FX_DEFAULTS.windup;
 /** Seconds the caster and its targets hold still at the impact. */
-export const HITSTOP_SECONDS = 0.07;
-/**
- * Casts whose impact read too weak on the GPU review (10-24: 蔚、烈娜塔命中力度不够): a ring in the champion's color
- * bursts at each target, the hold is longer and the camera kick stronger.
- */
-const STRONG_IMPACT: ReadonlySet<string> = new Set(['vi', 'renata']);
+export const HITSTOP_SECONDS = SKILL_FX_DEFAULTS.impact.hold;
+/** A sample cast's impact: hold seconds, camera kick strength, and whether a ring bursts at each target. */
 export const impactFeel = (definitionId: string): { hold: number; kick: number; ring: boolean } =>
-  STRONG_IMPACT.has(definitionId) ? { hold: 0.1, kick: 1.5, ring: true } : { hold: HITSTOP_SECONDS, kick: 1, ring: false };
-/**
- * Per-effect size and particle limit for sample casts, where the official one is too loud (10-24: 金克丝命中的粉色爆炸
- * 太亮太大). Size multiplies the effect's own scale; fewer live particles also make it fainter.
- */
-const EFFECT_TUNING: Readonly<Record<string, { readonly scale: number; readonly particles: number }>> = {
-  jinx_tft13_jinx_base_r_tar: { scale: 0.6, particles: 50 },
-};
+  ({ ...(SKILL_FX_TABLE[definitionId]?.impact ?? SKILL_FX_DEFAULTS.impact) });
 /** Live particles one cast effect of a sample champion may have (the shared budget still caps the whole board). */
-export const CAST_PARTICLE_CAP = 120;
+export const CAST_PARTICLE_CAP = SKILL_FX_DEFAULTS.effect.particles;
+/** Every row's per-effect overrides, by effect id (ids carry their champion's prefix, so they never collide). */
+const EFFECT_TUNING: ReadonlyMap<string, SkillFxEffectTuning> = new Map(Object.values(SKILL_FX_TABLE).flatMap(row => Object.entries(row.effects ?? {})));
 /** A sample cast effect's size factor and live-particle limit. */
-export const castEffectTuning = (id: string): { scale: number; particles: number } => EFFECT_TUNING[id] ?? { scale: 1, particles: CAST_PARTICLE_CAP };
+export const castEffectTuning = (id: string): { scale: number; particles: number } => ({ ...(EFFECT_TUNING.get(id) ?? SKILL_FX_DEFAULTS.effect) });
 const RELEASE_SECONDS = 0.14, SHAKE_SECONDS = 0.16, SHAKE_AMPLITUDE = 1.6, SHAKE_GAP = 0.35;
-
-/** The cast effects kept per sample champion (suffixes after the champion's prefix); unlisted ones keep their plan. */
-const KEEP_CAST: Readonly<Record<string, readonly string[]>> = {
-  jinx: ['jinx_tft13_jinx_base_r_muzzleflash', 'jinx_tft13_jinx_base_r_rocket_child', 'jinx_tft13_jinx_base_r_tar'],
-  jayce: ['jayce_tft13_jayce_base_r_ranged_recall_blast_cast', 'jayce_tft13_jayce_base_r_ranged_crystaldestroymissile', 'jayce_tft13_jayce_base_r_ranged_explosion'],
-  vi: ['vi_tft13_vi_base_q_activate_hands_r', 'vi_tft13_vi_base_q_landing_aoe', 'vi_tft13_vi_base_q_tar'],
-};
 
 /** A sample champion's cast plan: trimmed to its kept effects, none starting before the charge has finished. */
 export function simplifyCast(definitionId: string, plan: readonly PlannedEffect[]): PlannedEffect[] {
-  const keep = KEEP_CAST[definitionId];
+  const keep = SKILL_FX_TABLE[definitionId]?.keepCast;
   return (keep ? plan.filter(entry => keep.includes(entry.id)) : [...plan]).map(entry => entry.playback.delay >= WINDUP_SECONDS ? entry
     : { id: entry.id, playback: { ...entry.playback, delay: WINDUP_SECONDS } });
 }
