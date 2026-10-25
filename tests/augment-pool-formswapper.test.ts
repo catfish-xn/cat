@@ -4,7 +4,7 @@ import { room, accept, conserved } from './tp-helpers';
 import { runSharedMatchCommand } from '../src/simulation/shared-pool';
 import { expect, it } from 'vitest';
 import { createMatch, selectChoice, buyUnit, rerollShop, buyXp, sellUnit, useConsumable } from '../src/simulation/match';
-import { accepted, reachRound } from './match-helpers';
+import { accepted, reachRound, freeze } from './match-helpers';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { appendResourceProvenance } from '../src/simulation/resource-provenance';
@@ -13,14 +13,15 @@ import { drainBatch1Gifts } from '../src/simulation/augment-pool-grants';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 
+// First matching cheap 2-1 draw from the former bounded search; assert both the predicate and public offer.
+let acquired: ReturnType<typeof createMatch> | undefined;
 function acquire(){
- for(let seed=0;seed<10000;seed++){
-  const initial=createMatch(seed);
-  if(!generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState).offers.includes('why-not-both'))continue;
-  const before=reachRound('2-1',false,seed),c=before.pendingChoice!;
-  return accepted(selectChoice(before,c.choiceId,c.generation,'why-not-both'));
- }
- throw Error('missing seed');
+ if(acquired)return acquired;
+ const seed=4,id='why-not-both',initial=createMatch(seed);
+ expect(generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState).offers).toContain(id);
+ const before=reachRound('2-1',false,seed),c=before.pendingChoice!;
+ expect(c.offers).toContain(id);
+ return acquired=freeze(accepted(selectChoice(before,c.choiceId,c.generation,id)));
 }
 const upgrade=(id='swain',toStar=3 as 2|3)=>({type:'unitUpgraded' as const,definitionId:id,survivorId:'a',consumedIds:['b','c'],fromStar:(toStar-1) as 1|2,toStar,location:{kind:'bench' as const,slot:0}});
 it('public selection records its exact position, grants source champions and restores; missing/duplicate/misbound marker fails',()=>{
@@ -103,7 +104,7 @@ it('real shop acquisitions restore after a triple, reject altered reward stars, 
  expect(()=>restoreMatch(serializeMatch(changed))).toThrow();
  if(receipt.kind!=='unit'||!receipt.unitId)throw Error('missing reward unit');
  const after=accepted(sellUnit(s,receipt.unitId));expect(drainBatch1Gifts(after)).toBe(after);expect(restoreMatch(serializeMatch(after))).toEqual(after);
-},30000);
+});
 it('full bench escrows a fixed 2-star plan and freeing capacity pays it once',()=>{
  const base=acquire(),p=appendResourceProvenance(base.resourceProvenance,base.roundDefinitionId,{kind:'unit-upgraded',acquisitionSequence:0,event:upgrade()});
  const units=Array.from({length:9},(_,i)=>({id:`full${i}`,definitionId:'darius',team:'player' as const,starLevel:3 as const,location:{kind:'bench' as const,slot:i}}));

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, startTwoSidedBattle, startTwoSidedCombat,
   restoreBattleInput, restorePlayerBattleSnapshot, stepCombat, type MatchState } from '../src/server-entry';
 import type { CombatState } from '../src/simulation/combat';
@@ -10,7 +10,7 @@ import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { attackSpeedBonus, type S13Unit } from '../src/simulation/combat-s13-state';
 import { effectiveStatuses } from '../src/simulation/m8/status';
 import { vampRates } from '../src/simulation/m8/s13-mechanisms';
-import { reachRound, accepted } from './match-helpers';
+import { reachRound, accepted, freeze } from './match-helpers';
 
 // 14.24 TFT13_Cabal: tiers 3/4/5(5-6)/7, Sion resists 40/45/50/100; TFT13_SionSpell_Unleashed: 75% revive HP,
 // 300% AS, 40% omnivamp, control immunity for the rest of combat. Once per combat and the 1s delay are P-S5.
@@ -34,6 +34,13 @@ const pvp = (a: MatchState, b: MatchState = killers()) => compileBattle(snapshot
 const roseTier = (input: ReturnType<typeof pvp>) => input.strategy.traits.find(t => t.team === 'player' && t.traitId === 'black-rose')?.tier ?? 0;
 const sionOf = (c: CombatState) => c.units.find(u => u.definitionId === 'g23-sion' && u.team === 'player') as S13Unit | undefined;
 
+// Read-only input and reference run shared within this file; each consumer still verifies its own path.
+let seven: ReturnType<typeof pvp>, fullSeven: ReturnType<typeof resolveTwoSidedBattle>;
+beforeAll(() => {
+  seven = freeze(pvp(rose7()));
+  fullSeven = freeze(resolveTwoSidedBattle(seven, 1201));
+});
+
 describe('7 Black Rose breakpoint (online PvP)', () => {
   it('counts distinct champions and one emblem holder: 5 natives + 2 emblem holders reach 7; 6 members or a duplicate champion stay at 5', () => {
     expect(roseTier(pvp(rose7()))).toBe(7);
@@ -46,7 +53,7 @@ describe('7 Black Rose breakpoint (online PvP)', () => {
   });
 
   it('Sion revives once, 1s after its first death, at 75% HP with 300% AS, 40% omnivamp and control immunity; the second death is final', () => {
-    const input = pvp(rose7());
+    const input = seven;
     let c = startTwoSidedCombat(input);
     const id = sionOf(c)!.id;
     let firstDeath = -1, revivedAt = -1;
@@ -71,10 +78,10 @@ describe('7 Black Rose breakpoint (online PvP)', () => {
     }
     expect(firstDeath).toBeGreaterThan(0);
     expect(revivedAt).toBe(firstDeath + 20);
-    const full = resolveTwoSidedBattle(input, 1201);
+    const full = fullSeven;
     expect(full.events.filter(e => (e.type === 'unitRevived' || e.type === 'death') && e.unitId === id).map(e => e.type)).toEqual(['unitRevived', 'death']);
     expect(sionOf(full.terminal)).toMatchObject({ alive: false, g23Sion: { revived: true } });
-  }, 60000);
+  });
 
   it('below 7 the same Sion dies on its first death', () => {
     const six = pvp(seat(backRow([...NATIVE, 'garen']), [6]));
@@ -83,7 +90,7 @@ describe('7 Black Rose breakpoint (online PvP)', () => {
     expect(full.events.some(e => e.type === 'death' && e.unitId === id)).toBe(true);
     expect(full.events.some(e => e.type === 'unitRevived' && e.unitId === id)).toBe(false);
     expect(sionOf(full.terminal)!.g23Sion).toBeUndefined();
-  }, 60000);
+  });
 
   it('snapshot and battle input survive JSON save/restore; restored, sliced and full runs keep the same revive', () => {
     const a = snapshotForBattle(rose7(), 'A'), b = snapshotForBattle(killers(), 'B');
@@ -91,15 +98,20 @@ describe('7 Black Rose breakpoint (online PvP)', () => {
     const input = compileBattle(a, b, 42, { battleId: 'black-rose-7' });
     const restored = restoreBattleInput(JSON.stringify(input));
     expect(restored).toEqual(input);
-    const full = resolveTwoSidedBattle(input, 1201);
+    const full = fullSeven;
     expect(full.events.some(e => e.type === 'unitRevived')).toBe(true);
-    expect(resolveTwoSidedBattle(restored, 1201)).toEqual(full);
-    for (const budget of [1, 13]) {
+  });
+
+  // Each execution path keeps a separate default-budget case; input restoration is exercised in every path.
+  it.each(['full', 1, 13] as const)('restored battle matches the full reference (slice budget %s)', budget => {
+    const restored = restoreBattleInput(JSON.stringify(seven)), full = fullSeven;
+    if (budget === 'full') expect(resolveTwoSidedBattle(restored, 1201)).toEqual(full);
+    else {
       const task = startTwoSidedBattle(restored); let sliced = null;
       while (!sliced) sliced = task.advance(budget);
       expect(sliced).toEqual(full);
     }
-  }, 60000);
+  });
 
   it('rejects a battle input whose Black Rose tier or Sion tier was raised to 7, and a snapshot that pre-places Sion', () => {
     const six = pvp(seat(backRow([...NATIVE, 'garen']), [6]));
@@ -155,5 +167,5 @@ describe('7 Black Rose breakpoint (Match save)', () => {
         for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid authoritative V19 replay');
       }
     }
-  }, 60000);
+  });
 });

@@ -137,20 +137,22 @@ it('online two-star gifts enqueue reward orbs then claim through the conserved s
 });
 it.each(['black-rose-crest','black-rose-crown'])('%s can be publicly selected at 3-2 and restores its board snapshot',id=>{
  let found:MatchState|undefined;
- // Search the pure second-node stream first; play only routes whose actual 3-1 shop can buy Morgana.
+ // Pinned first successful searches; keep the pure second-node predicate and the real Morgana purchase checks.
  const traits=UNIT_DEFINITIONS.morgana.traits;
- for(let seed=0;seed<10000&&!found;seed++){
+ const seed=id==='black-rose-crest'?23:169;
+ {
   const initial=createMatch(seed),first=generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState);
   const chosen=first.offers.find(x=>x!=='placebo'&&x!=='glass-cannon-i')!;
   const candidates=augmentCandidates(resolveAugmentTier(initial,'round:3-2:augment'),[{definitionId:chosen,choiceId:'round:2-1:augment',acquiredRound:4}],first.offers,null,{node:'3-2',fieldedTraits:traits,blocked:[]});
-  if(!generateChoices(candidates,first.choiceRngState).offers.includes(id))continue;
+  expect(generateChoices(candidates,first.choiceRngState).offers).toContain(id);
   let s=reachRound('3-1',true,seed),hero=s.preparation.units.find(u=>u.team==='player'&&u.definitionId==='morgana');
   if(!hero){
    const slot=s.shop.slots.findIndex(x=>x.status==='available'&&x.definitionId==='morgana');
-   if(slot<0)continue;
+   expect(slot).toBeGreaterThanOrEqual(0);
    s=accepted(buyUnit(s,slot,s.shop.generation));hero=s.preparation.units.find(u=>u.team==='player'&&u.definitionId==='morgana');
   }
-  if(!hero)continue;
+  expect(hero).toBeDefined();
+  if(!hero)throw Error('pinned seed must buy Morgana');
   s=accepted(deployMatchUnit(s,hero.id,{kind:'board',cell:{col:0,row:7}}));
   s=accepted(startMatchCombat(s));while(s.phase==='combat')s=stepMatch(s).state;
   s=accepted(nextRound(resolveM5Choices(s),s.round));
@@ -161,7 +163,7 @@ it.each(['black-rose-crest','black-rose-crown'])('%s can be publicly selected at
  expect(after.augments.at(-1)?.definitionId).toBe(id);expect(restoreMatch(serializeMatch(after))).toEqual(after);
  const forged=structuredClone(after) as any;forged.augmentOffers.at(-1).fieldedTraits=[];
  expect(()=>restoreMatch(forged)).toThrow();
-},30000);
+});
 
 it('granted lesser duplicators can be consumed once and restore with their acquisition authority',()=>{
  let {state:s}=acquire('heroic-grab-bag');
