@@ -1263,3 +1263,14 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `content/round-income-policy.ts` 的细分版本参与共同规则 manifest，自动改变 content/loot digest；外层候选身份仍按 PR9 统一录制，不录 epoch、不迁移旧存档。
 
 梅尔核对：归档 `raw/map22.bin.json.gz` 的 `{85892f99}` / `TFT13_MissMageTrait` 明确 `MinimumCasts=12`、`ProcDamageAmp≈0.1`；英文 stringtable 说明整局玩家战斗施法累计。现有 `melCanSave` 包含本场第12次、排除PvE/镜像、整局仅一次。动画消费现有 `playerSaved{battleId,playerHp:1,source:'mel'}`（带 match eventSeq），累计进度读 `seatMechanics.seat.melRescue`；不自行累计、回血或触发扣血。
+
+## 2026-10-25 Batch 4 等级奖励（v23候选）
+
+新增开放 `caretakers-ally` / `lategame-specialist` / `caretakers-favor` / `birthday-presents` / `caretakers-chosen`。源值为14.24，时序与随机口径见 S13_RULES_GAP.md P-B4。不新增存档字段，不新增客户端索奖命令。
+
+- `buyXp(state:MatchState, unitLootPolicy?:UnitLootPolicy):MatchCommandResult`：原费用/XP校验不变；成功升级后同事务发放本组奖励和 mechanicGranted 事件。失败原因仍为 wrong-phase / max-level / insufficient-gold，失败保持原state。可选policy仅传递现有容量策略。
+- `batch4RewardPlan(state:MatchState):AugmentGift[]`：纯派生初始英雄及达到等级的奖励；复用既有取得等级、roundResults、Batch1 namespace。无拥有条目或未满足阈值返回空；满席由原有drain等待，联机英雄入法球。
+- `batch4LevelRound(state:MatchState, augment:OwnedAugment, level:number):number`：返回取得时已达等级的取得回合，或历史/当前首次达到该等级的回合；仅供已认证拥有条目及等级轨迹使用。
+- `drainBatch4Gold(state:MatchState):MatchState`：后期专家达到9级发33金，来源 augment-pool-batch4，唯一收据；重复排放无副作用。
+- `validateBatch4Gold(state:MatchState):void`：错误来源、金额、回合、重复/遗漏/孤儿收据抛 RangeError；通过原有 validateBatch1Gifts 进入恢复认证。英雄/锻造器礼物与取得等级继续通过既有验证；restoreSharedOrbSnapshot 对本组拥有条目及收据命名空间同样调用该验证，删除拥有者不能放过孤儿收据。
+- `TFT_ArmoryKeyRadiant` 为神选专属五选光明锻造器单位；openAnvil / selectChoice / timeoutChoice 公共命令不变，30秒超时第一项。选项由认证奖励收据重建，不能自行声明五选。其他锻造器仍四选。

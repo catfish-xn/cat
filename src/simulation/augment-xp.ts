@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import type { MatchState, RoundResult } from './match-types';
 import type { OwnedAugment } from './strategy-types';
 import { AUGMENT_BATCH3_XP, batch3XpValue } from './content/augment-pool-batch3-xp';
@@ -10,7 +11,7 @@ import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
 export const AUGMENT_ACQUISITION_LEVEL_KEY='augment-acquisition-levels';
 type AcquisitionLevels=Readonly<Record<string,number>>;
 const stageStart=(round:number)=>getMultiplayerRoundByOrdinal(round).subround===1;
-const countsLevels=(a:OwnedAugment)=>{const row=AUGMENT_BATCH3_XP[a.definitionId];return row?.levelUpRerolls!==undefined||row?.levelUpHealth!==undefined||row?.acquisitionHealthLoss!==undefined;};
+const countsLevels=(a:OwnedAugment)=>{const row=AUGMENT_BATCH3_XP[a.definitionId];return !!AUGMENT_BATCH4[a.definitionId]||row?.levelUpRerolls!==undefined||row?.levelUpHealth!==undefined||row?.acquisitionHealthLoss!==undefined;};
 
 /** XP granted on entering `round`, beside the passive round XP. Derived only from owned augments and settled history:
  * Epoch at each stage start after acquisition; Patient Study for the previous round's player combat if it was fought

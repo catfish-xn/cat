@@ -1,3 +1,5 @@
+import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
+import { drainBatch1Gifts } from './augment-pool-grants';
 import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { deferredRoundIncome } from './deferred-income';
@@ -173,6 +175,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const hookEvents:MatchEvent[]=[];
     // Kingslayer pays from the receipt itself, so a settlement without battle facts still gets its gold.
     let settled=drainSettlementGold(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
+    if(!r.g23Facts&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])){
+      const gifted=drainBatch1Gifts(settled,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(settled,gifted));settled=gifted;
+    }
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
     settled=applyLevelUpHealth(state,commitOpeningEncounterHealth(settled,hookEvents));
     const merged = resolveDeferredUpgrades(settled);

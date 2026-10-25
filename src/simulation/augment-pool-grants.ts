@@ -1,3 +1,4 @@
+import { batch4RewardPlan, drainBatch4Gold, validateBatch4Gold } from './augment-pool-batch4-progress';
 import { formSwapperGiftPlan, validateFormSwapperSelection } from './augment-pool-formswapper';
 import { batch2RewardPlan, drainBatch2Gold, validateBatch2Gold } from './augment-pool-batch2-progress';
 import { AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
@@ -16,7 +17,7 @@ import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */
@@ -34,7 +35,7 @@ export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):Matc
    else if(result.reason!=='bench-full')throw new RangeError(`Augment batch1 grant: ${result.reason} (${gift.definitionId})`);
   }
  }while(progressed);
- return drainBatch3Dummies(drainSettlementGold(drainBatch3Gold(drainBatch2Gold(state))));
+ return drainBatch3Dummies(drainBatch4Gold(drainSettlementGold(drainBatch3Gold(drainBatch2Gold(state)))));
 }
 /** Anvil options belong to the acquisition receipt; open order and current round do not affect them. */
 export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
@@ -43,6 +44,7 @@ export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
   ?{definitionId:gift.definitionId,offers:augmentAnvilOffers(state.seed,receiptId,gift.definitionId)}:undefined;
 }
 export function validateBatch1Gifts(state:MatchState):void {
+ validateBatch4Gold(state);
  validateBatch2Gold(state);
  validateFormSwapperSelection(state);
  validateBatch3Gold(state);
