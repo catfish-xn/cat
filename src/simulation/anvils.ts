@@ -27,7 +27,7 @@ export function openingAnvilOrbs(state:MatchState){
 export function g23AnvilOrbs(state:MatchState){
  const p=readG23Progress(state);if(!p)return [];
  return p.rewards.flatMap(b=>g23RewardAtoms(b,p.seed,!!state.multiplayer).flatMap(a=>{
-  if(!a.forgeDefinitionId||!isAnvil(a.forgeDefinitionId))return [];
+  if(!a.forgeDefinitionId||!isAnvil(a.forgeDefinitionId)||a.forgeDefinitionId==='TFT_ArmoryKeyRadiant')return []; // Batch4 radiant is a direct unit gift, never a loot payload.
   const copy=p.rewardClaims.filter(c=>c.atomId===a.id).length;if(copy>=a.quantity)return [];
   const orbId=`g23-anvil:${JSON.stringify([a.id,copy])}`,roundId=getMultiplayerRoundByOrdinal(b.round).roundId;
   return [{orbId,roundId,tier:'gray' as const,source:'mechanic' as const,entries:[{orbId,entryOrdinal:0,dropId:a.id,roundId,encounterId:b.source,sourceUnitId:b.id,slotOrdinal:0,status:'planned' as const,receiptId:null,revealCondition:'source-killed' as const,payload:{kind:'forge' as const,definitionId:a.forgeDefinitionId,quantity:1 as const}}]}];
@@ -52,7 +52,7 @@ function specification(state:MatchState,unitId:string) {
     if(p)for(const b of p.rewards)for(const a of g23RewardAtoms(b,p.seed,!!state.multiplayer))
       if(r.receiptId.startsWith(`${a.id}:copy:`)&&a.forgeDefinitionId===r.definitionId)offers=a.options;
   }
-  if(!offers||offers.length!==4)throw new RangeError('Invalid anvil source');
+  if(!offers||offers.length!==(r.definitionId==='TFT_ArmoryKeyRadiant'?5:4))throw new RangeError('Invalid anvil source');
   return {definitionId:r.definitionId,offers};
 }
 export function planOpenAnvil(state:MatchState,unitId:string):MatchCommandResult {

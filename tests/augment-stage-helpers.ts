@@ -23,6 +23,7 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * reachRound's empty boards; `fielded` entries through reachRoundFielded (4-2, and trait-tailored 3-2 cards).
  * Re-searched (first seed from 0 whose route reaches the node and offers the card) after the v23 integration
  * (fmix32 openings, Blood Brothers, Form Swapper) merged with the batch-3/XP/stage-ban line.
+ * Call to Chaos was re-searched after batch 4 level rewards expanded the pool to 213 (seed 74, same fielded route).
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
   "backup":{node:'3-2',seed:1},
@@ -40,7 +41,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "bulky-buddies-ii":{node:'3-2',seed:3},
   "bulky-buddies-iii":{node:'3-2',seed:98},
   "calculated-enhancement":{node:'3-2',seed:21},
-  "call-to-chaos":{node:'4-2',seed:8,fielded:true},
+  "call-to-chaos":{node:'4-2',seed:74,fielded:true},
   "climb-the-ladder-i":{node:'3-2',seed:17},
   "climb-the-ladder-ii":{node:'3-2',seed:10},
   "coronation":{node:'3-2',seed:66},

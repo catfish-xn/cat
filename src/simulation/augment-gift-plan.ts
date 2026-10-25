@@ -11,7 +11,7 @@ export type AugmentGiftSpec =
   | {readonly kind:'item'|'unit'|'consumable'; readonly definitionId:string; readonly count?:number; readonly starLevel?:1|2|3}
   | {readonly kind:'random-item'; readonly pool:'component'|'completed'|'support'|'sponsored'|'emblem'|'artifact'|'radiant'; readonly count:number; readonly identical?:boolean}
   | {readonly kind:'random-unit-pool';readonly definitions:readonly string[];readonly count:number}
-  | {readonly kind:'random-unit'; readonly cost:1|2|3|4|5; readonly count:number; readonly starLevel?:1|2|3; readonly distinct?:true}
+  | {readonly kind:'random-unit'; readonly cost:1|2|3|4|5|6; readonly count:number; readonly starLevel?:1|2|3; readonly distinct?:true}
   | {readonly kind:'all-units'; readonly cost:1|2|3|4|5};
 export interface AugmentGift {
   readonly receiptId:string; readonly kind:'item'|'unit'|'consumable'; readonly definitionId:string;
@@ -54,11 +54,13 @@ export function planAugmentGifts(state:Pick<MatchState,'seed'|'multiplayer'>, a:
 }
 /** P-AG2 (P, 2026-10-24; research omits option weights): reuse existing project
  * pools; four distinct uniform options without replacement. This is a project
- * convention, not evidence of the original server's distribution. */
-export function augmentAnvilOffers(seed:number,receiptId:string,definitionId:keyof typeof G24_FORGE_POOLS):readonly string[] {
-  const pool=[...G24_FORGE_POOLS[definitionId]];
+ * convention, not evidence of the original server's distribution. P-B4-3 (2026-10-25): the new radiant anvil alone
+ * draws five from the existing radiant item pool; original four-option draws and RNG order are unchanged. */
+export function augmentAnvilOffers(seed:number,receiptId:string,definitionId:keyof typeof G24_FORGE_POOLS|'TFT_ArmoryKeyRadiant'):readonly string[] {
+  const radiant=definitionId==='TFT_ArmoryKeyRadiant',count=radiant?5:4;
+  const pool=radiant?Object.values(ITEM_DEFINITIONS).filter(d=>d.kind==='radiant').map(d=>d.id).sort():[...G24_FORGE_POOLS[definitionId]];
   let rng=(seed^0x61323366)>>>0;
   for(let i=0;i<receiptId.length;i++)rng=Math.imul(rng^receiptId.charCodeAt(i),16777619)>>>0;
-  for(let i=0;i<4;i++){const draw=nextRandom(rng);rng=draw.state;const j=i+Math.floor(draw.word*(pool.length-i)/4294967296);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  return pool.slice(0,4);
+  for(let i=0;i<count;i++){const draw=nextRandom(rng);rng=draw.state;const j=i+Math.floor(draw.word*(pool.length-i)/4294967296);[pool[i],pool[j]]=[pool[j],pool[i]];}
+  return pool.slice(0,count);
 }

@@ -1,7 +1,7 @@
 import { freezeContent } from './freeze';
 import type { UnitDefinition } from '../unit-types';
 /** 14.24 client TftShopData / SellOverwriteTra; approved 2026-10-23. */
-export const ANVIL_KINDS = freezeContent({TFT_ArmoryKeyCompleted:'成装',TFT_ArmoryKeyComponent:'基础装备',TFT_ArmoryKeyOrnn:'神器装备',TFT_ArmoryKeySupport:'辅助装'});
+export const ANVIL_KINDS = freezeContent({TFT_ArmoryKeyCompleted:'成装',TFT_ArmoryKeyComponent:'基础装备',TFT_ArmoryKeyOrnn:'神器装备',TFT_ArmoryKeySupport:'辅助装',TFT_ArmoryKeyRadiant:'光明武器'});
 export type AnvilDefinitionId = keyof typeof ANVIL_KINDS;
 export const isAnvil = (id:string):id is AnvilDefinitionId => Object.hasOwn(ANVIL_KINDS,id);
 export const ANVIL_POLICY = freezeContent({version:'anvil-units-v2',choices:4,timeoutMs:30000,benchOnly:true,sellGold:0,component47:{roundId:'4-7',definitionId:'TFT_ArmoryKeyComponent',quantity:1,placement:'append-first-orb',rngDraws:0} as const});

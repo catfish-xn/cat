@@ -1,3 +1,5 @@
+import { drainBatch4Gold } from './augment-pool-batch4-progress';
+import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { planOpenAnvil } from './anvils';
 export { grantAnvilUnit } from './anvils';
 export { anvilDisplay, ANVIL_POLICY } from './content/anvils';
@@ -370,14 +372,17 @@ export function rerollShop(state: MatchState): MatchCommandResult {
   return accept({ ...spent.state, gold: state.gold - cost, ...generated,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
-export function buyXp(state: MatchState): MatchCommandResult {
+export function buyXp(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.level >= MATCH_RULES.maxLevel) return fail(state, 'max-level');
   const cost = xpPurchaseCost(state.augments, state.round);
   if (state.gold < cost) return fail(state, 'insufficient-gold');
   if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - cost)) return fail(state, 'insufficient-gold');
   const progression = grantXp(state.level, state.xp, xpPurchaseAmount(state.augments, state.round));
-  return accept(applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp }));
+  const leveled=applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp });
+  if(leveled.level===state.level||!state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]))return accept(leveled);
+  const gifted=isCombatRosterLocked(leveled)?drainBatch4Gold(leveled):drainP2Gifts(leveled,unitLootPolicy);
+  return accept(gifted,mechanicGrantEvents(leveled,gifted));
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
@@ -428,7 +433,10 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       levelBefore: state.level, levelAfter: plan.progression.level, xpBefore: state.xp, xpAfter: plan.progression.xp,
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
-  const committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
+  let committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
+  if(!combat&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])){
+    const gifted=drainP2Gifts(committed,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(committed,gifted));committed=gifted;
+  }
   return applyLevelUpHealth(state,commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed,hookEvents));
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
