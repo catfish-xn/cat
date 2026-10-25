@@ -17,6 +17,9 @@
 保留 `receipt order` 的 `ordinal >= sourceOrdinal` 防御条件。当前单人恢复路径中，该失败分支不可达：`restoreFrozenLootLedger` 先确定性重放认证槽位 `roundId` 与 `dropId`；随后 `validateResourceReceipts` 从相同 `dropId` 解出来源回合并要求领取 ordinal 不小于来源 ordinal；单人目录范围内两个查询器使用同一 `ROUND_CATALOG`。不带 claimedRoundId 时两者本来相等；带该字段时已满足前置下界。改槽位或 dropId 无法绕过冻结重放；联机在入口走独立验证并提前返回。因此不人为绕过前置校验制造该分支覆盖，保留真实流程提前领取、冻结来源篡改与领取顺序交换测试，后者仍精确触发 `receipt order`。
 
 回归：`tests/b8-late-claim-receipt-order.test.ts`、`tests/g2-4b-gambler-loot-gold-restore.test.ts`；覆盖真实单人金币收据改为 forfeited、真实联机领取／放弃收据双向翻转，以及严格的开战金币 ±1 与抵消篡改。
+## 2026-10-25 batch 3 免费刷新与辅助挖矿恢复（P）
+
+**P-B3-RESTORE（P，2026-10-25，用户授权按推荐决定）**：沿用现有存档字段与资源事实。免费刷新 `free-shop-rerolls.used` 必须与 `free-reroll` 资源事实数量完全相等；未消费时保持无记录，消费后不接受缺失、零、减少、增加或非整数记录，不通过恢复重建或补发额度。辅助挖矿／辅助挖矿+ 的退休由已认证战斗死亡事实与唯一退休收据认证；当前结算资源后缀须消费既有 `unit-removed` 事实，退休后的恢复与继续不能复活假人或重复发辅助装。仅认证持久化一致性，不改变 7／4 次死亡、奖励、刷新额度、数值、规则身份或存档格式。计数与后缀回放初步修复已有于基线 `87a013f1`；本次另要求达到退休阈值时必须存在退休事实且假人已移除，拒绝“删退休事实并补回假人”组合篡改，补全三入口篡改与退休后继续对照，详见 `tests/augment-batch3-verify-public.test.ts`。
 
 ## 2026-10-25 技能 ignite 的历史状态身份与恢复认证（P）
 
