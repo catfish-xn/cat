@@ -1062,3 +1062,14 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - **P-B4-3（P，2026-10-25）**：神选光明奖励复用现有光明装备目录，排序后等权无放回选5件；30秒超时取第一件，沿用锻造器控件公共命令。原有四选锻造器继续四选。初始与升级奖励在命令/结算事务内发放，单人满席延后，联机英雄入既有法球；战斗锁定期间金币立即发放，英雄/锻造器沿现有锁定政策延至解锁的发奖入口，保持战斗输入不变；重试/恢复按唯一收据去重。源有五选一和奖励时点，未给候选权重/超时/容量政策。
 
 候选内容进入 RULES_GAP_MANIFEST.augmentPoolBatch4，内容摘要随之变化；不改受保护身份常量、历史录制或存档 schema。盘点见 AUGMENT_BATCH4_PLAN.md，公共接口见 MATCH_CONTRACT.md。
+
+## 房间命令健壮性 QA（P，2026-10-25）
+
+- **P，2026-10-25，room-command-robustness-v1**：离线采样 RNG 使用独立 LCG32，不消耗领域随机流；默认 500 个连续 seed、4 个工作线程，每房间执行 120 次随机操作并用同一 seed 完整重跑，比较包含完整 Room 状态的逐步 SHA-256。这里的“房间”是有界操作会话，不声称完成 500 场终局。使用真实 Room、ManualClock、BotDriver、TwoSidedBattleResolver；每个 seed 另以本机回环随机端口的真实服务器及 TestClient 两次验证旧 round/revision、伪造席位、去重和冲突，不连接外部服务。固定混合人类和机器人座位，随机生成普通操作、过期商店/选择、未知座位、重复操作和畸形 JSON 参数。
+- **P，2026-10-25，room-command-fixtures**：沿用服务器测试 `seedSeat` 的状态替换接缝，公开 mechanic grant API 提供起始金币、装备、消耗品和英雄法球；征服者第9档奖励包沿用 `withChests` 的构造方式以覆盖锻造器法球，另一人类席位用公开 `openMechanicChoice` 打开免费/付费武器库。合成夹具只用于命令验证，不代表实际开局奖励、战斗数值或存档认证。单位及装备实例 ID 的唯一性按席位/类型作用域检查；计数器要求安全非负整数且单调，活跃 ID 唯一，已消失 ID 不复用。不同席位可以拥有同名局部实例 ID，不能把它本身判作越权。
+- **P，2026-10-25，room-validation-boundary**：畸形输入只通过真实消息解析器进入；`Room.handle` 仅接收已具备合法结构的命令。失败要求 Room 引用及完整 JSON 字节不变；公开投影递归禁止私有字段并检查法球 ID。连接认证、旧 round/revision、commandId 去重与冲突通过真实服务器、现有 TestClient 和 ManualClock 验证；定向回归另外复用网络房间 helpers，不另写模拟认证服务器。网络相同 commandId 重放应返回原收据，新的 commandId 重复命令仍按当前领域规则执行，不一概要求拒绝。
+- **P，2026-10-25，room-failure-reduction**：每个不同不变量失败自动做分块删除后逐条删除的 1-minimal 轨迹约简（固定 seed、夹具和时钟输入）；不声称全局最短。产品缺陷另以最小 `it.fails` 固化，夹具/驱动缺陷先修正后重新采样。驱动 `node scripts/room-command-robustness.cjs --rooms 500 --workers 4 -o /tmp/v23-room-command-robustness.md` 输出中文摘要及同名 JSON。新增回归使用 Vitest 默认超时，不修改 src、规则、数值、保存格式或内容身份。
+
+- **P，2026-10-25，room-choice-identity-scope**：增强/补给的 schedule choiceId 与合法选项可能在席位间相同；命令应解析为连接自身的选择，不能仅据 ID 相同判定越权。回归同时验证两席位同值合法选择各自生效且另一席位完整 Match 引用不变；有不同选择上下文时仍要求外来选择拒绝且完整 Room 字节不变。
+- **P，2026-10-25，room-choice-route-budget**：真实增强与补给选择路线复用同一个房间，用 `sliceTicks=100` 和 `ManualClock.fireNext` 按每例最多16个续调分段；每轮末明确断言已到目标回合和阶段。`runNext` 会清空同一时刻的所有续调，不能用它代替分段。保留旧代选择、错误上下文、重复发奖和合法选择的断言，不扩大 Vitest 默认超时。
+- **P，2026-10-25，room-stale-envelope-cases**：过期验证同时包含未来 round/revision 与合法非负但落后的 round/revision。落后 revision 用一次合法操作推进后，以新的 commandId 提交旧 revision，必须拒绝且完整 Room 不变；旧 commandId 的同一请求仍按去重合同返回原收据。500 seed 长跑执行过程中增加的这一检查，另对完全相同的500个seed双跑完整强化信封探针，原始随机轨迹不因此删减。实际长跑用16个工作线程，默认仍为4；不改变每房间120次随机操作或断言。
