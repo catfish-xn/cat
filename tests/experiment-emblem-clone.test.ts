@@ -136,4 +136,4 @@ it('Match combat restores across the split, continues identically and rejects a 
  expect(()=>restoreMatch(serializeMatch(forged))).toThrow();
  const unsplit=structuredClone(s) as any;unsplit.combat.units.find((u:any)=>u.id===holder.id).experimentClone.triggeredAtTick=null;
  expect(()=>restoreMatch(serializeMatch(unsplit))).toThrow();
-},60000);
+});

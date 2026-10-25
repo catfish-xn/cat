@@ -11,7 +11,7 @@ import { batch2Cast, batch2Kill } from '../src/simulation/augment-pool-batch2-co
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
-import { accepted, reachRound } from './match-helpers';
+import { accepted, reachRound, freeze } from './match-helpers';
 
 // Independent transcription of augments-14.24.json record [301] TFT13_TeamupAugment_BloodBrothers.
 const HP_PER_CAST=30,AP_PER_DEATH=6;
@@ -82,13 +82,15 @@ it('strict facts reject a lone, negative or fractional Blood Brothers counter',(
  for(const x of [[{definitionId:ID,count:1}],[{definitionId:'blood-brothers-deaths',count:1}],[{definitionId:ID,count:-1},{definitionId:'blood-brothers-deaths',count:0}],[{definitionId:ID,count:1},{definitionId:'blood-brothers-deaths',count:0.5}]])
   expect(()=>validateBatch2Facts(x)).toThrow();
 });
+// First matching cheap 2-1 draw from the former bounded search; assert both the predicate and public offer.
+let acquired: ReturnType<typeof createMatch> | undefined;
 function acquire(){
- for(let seed=0;seed<10000;seed++){
-  const s=createMatch(seed),filter={node:'2-1',fieldedTraits:[],blocked:[]};
-  if(!generateChoices(augmentCandidates(resolveAugmentTier(s,'round:2-1:augment'),[],[],null,filter),s.choiceRngState).offers.includes(ID))continue;
-  const before=reachRound('2-1',false,seed),c=before.pendingChoice!;return accepted(selectChoice(before,c.choiceId,c.generation,ID));
- }
- throw Error('missing seed');
+ if(acquired)return acquired;
+ const seed=178,id='blood-brothers',initial=createMatch(seed);
+ expect(generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState).offers).toContain(id);
+ const before=reachRound('2-1',false,seed),c=before.pendingChoice!;
+ expect(c.offers).toContain(id);
+ return acquired=freeze(accepted(selectChoice(before,c.choiceId,c.generation,id)));
 }
 it('Match grants 2-star Vander, Silco and Shojin, settles authoritative facts once, restores, and rejects tampered facts',()=>{
  let s=acquire();
@@ -113,4 +115,4 @@ it('Match grants 2-star Vander, Silco and Shojin, settles authoritative facts on
  expect(()=>restoreMatch(JSON.stringify(forged))).toThrow();
  const p=readG23Progress(s)!;
  expect(p.economyReceipts.length).toBe(battles+receipts.length);
-},60000);
+});
