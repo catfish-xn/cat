@@ -1107,10 +1107,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // once per 2D frame; a skinned body's bounds are its cached bind-pose box, so anchors stay still while it animates.
   const corner = new Vector3(), pieceBox = new Box3();
   const screenBox = (id: string): BoardScreenBox | undefined => {
-    const view = pieces.get(id), area = viewport();
-    if (!view?.root.visible || area.width <= 0 || area.height <= 0) return undefined;
+    const root = scout.active ? scout.inspectRoot(id) : pieces.get(id)?.root, area = viewport();
+    if (!root?.visible || area.width <= 0 || area.height <= 0) return undefined;
     camera.updateMatrixWorld();
-    pieceBox.setFromObject(view.root);
+    pieceBox.setFromObject(root);
     if (pieceBox.isEmpty()) return undefined;
     let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
     const { min, max } = pieceBox;
@@ -1128,7 +1128,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const onCarousel = (view: Parameters<typeof stage.show>[0]) => {
     if (view && !stage.active) {
       if (dragging) feed?.controls()?.dragCancel();
-      feed?.controls()?.hover(null); endDrag();
+      feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag();
     }
     if (!view && stage.active) { feed?.carouselControls?.()?.hover(null); canvas.style.cursor = ''; }
     stage.show(view);
@@ -1137,7 +1137,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const onScout = (view: Parameters<typeof scout.show>[0]) => {
     if (view && !visiting()) {
       if (dragging) feed?.controls()?.dragCancel();
-      feed?.controls()?.hover(null); endDrag(); canvas.style.cursor = '';
+      feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag(); canvas.style.cursor = '';
     }
     // Another battle on the board (a watched seat's, or mine again): nothing queued or playing belongs to it.
     const watched = view?.watching ? view.seatId : null;
@@ -1170,7 +1170,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     saveBurst.object.position.set(f.origin.x + (spanX - Math.sqrt(3) * f.hexRadius) / 2, 0, f.origin.y + spanZ / 2);
     scene.add(saveBurst.object); saveExpires = performance.now() + 2000; saveGoldLeft = .65;
   }, walkToOrb,
-    unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => mine() ? screenBox(id) : undefined }) ?? (() => {});
+    unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => !stage.active ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.
@@ -1301,7 +1301,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!press || event.pointerId !== press.pointerId) {
       if (press) return;
       const id = unitAt(event);
-      controls?.hover(id);
+      controls?.hover(id); controls?.look?.(id ?? pickUnit({ x: event.clientX, y: event.clientY }, true));
       canvas.style.cursor = id ? 'grab' : tabletop.orbAt({ x: event.clientX, y: event.clientY }, viewport()) ? 'pointer' : '';
       return;
     }
@@ -1330,7 +1330,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const onPointerLeave = () => {
     if (stage.active) { stage.hover(null); feed?.carouselControls?.()?.hover(null); canvas.style.cursor = ''; return; }
-    if (!press) { feed?.controls()?.hover(null); canvas.style.cursor = ''; }
+    if (!press) { feed?.controls()?.hover(null); feed?.controls()?.look?.(null); canvas.style.cursor = ''; }
   };
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointermove', onPointerMove);
@@ -1506,7 +1506,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     dispose() {
       closed = true; cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
       if (dragging) feed?.controls()?.dragCancel();
-      feed?.controls()?.hover(null); endDrag();
+      feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);

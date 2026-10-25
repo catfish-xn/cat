@@ -189,6 +189,7 @@ export class OpponentBoardPanel {
     const chip = element('div', '', `opponent-unit cost-${UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0}`);
     chip.dataset.debug = `online:opponent-unit:${place}`;
     const star = unit.effectiveStarLevel ?? unit.starLevel;
+    chip.dataset.inspectId = `scout:${this.openSeatId}:${place}:${unit.definitionId}:${star}`;
     chip.dataset.definition = unit.definitionId; chip.dataset.star = String(star);
     // G2-4b: a summon's card would show champion base stats, not its stage values; its title names it instead.
     const summon = 'summon' in unit && unit.summon === true;
