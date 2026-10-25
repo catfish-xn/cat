@@ -16,7 +16,9 @@ const accepted = (result: MatchCommandResult): MatchState => {
 export function startFight(seed: number): { state: MatchState; receiverId: string; chestHolderId: string } {
   // The PR9 recorder searches independently offered Manaflow I seeds because
   // seed554 now forces Prismatic Prelude. No combat stats or outcomes are patched.
-  let state = publicEquipmentPreparation(['rod'], { seed, augmentPriorities:['manaflow-i'], earliestRound:8, rerollForAugment:true });
+  // v23: the 14.24 stage bans keep Manaflow I out of 2-1 (augment-stage-bans.ts), so the trial takes the
+  // fixture's default silver pick instead; the chest/bracer obligations do not depend on the augment.
+  let state = publicEquipmentPreparation(['rod'], { seed, earliestRound:8 });
   // v22: anvils stay benched (selling opens them) and opening structures cannot be sold or hold the chest.
   const keepable = (u: MatchState['preparation']['units'][number]) => isSellableUnit(u.definitionId) && !isAnvil(u.definitionId);
   const chestHolderId = state.preparation.units.find(u => u.team === 'player' && u.definitionId !== 'lux' && keepable(u))!.id;

@@ -1,10 +1,10 @@
 {
   "epoch": "v23-online-rules",
   "seed": 4,
-  "contentDigest": "fnv1a32-utf16:1b4978e8",
+  "contentDigest": "fnv1a32-utf16:e0b6bb65",
   "donor": "unit-11",
   "survivor": "unit-22",
-  "reward": "unit-33",
+  "reward": "unit-32",
   "tg": "item-11",
   "acquisitions": [
     {
@@ -33,14 +33,14 @@
     }
   ],
   "provenanceCounts": [
-    31,
+    30,
     20,
     18,
     7,
     4,
-    5,
+    6,
     1
   ],
-  "provenanceLength": 89,
-  "nextUnitSerial": 32
+  "provenanceLength": 87,
+  "nextUnitSerial": 31
 }

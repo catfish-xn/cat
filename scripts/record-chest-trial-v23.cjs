@@ -17,7 +17,6 @@ async function main(){
   // Preserve the old seed554 Morgana chest holder as well as the Lux receiver.
   if(selectOpeningUnit(seed)!=='morgana')continue;
   let setup;try{setup=startFight(seed);}catch(e){if(check)throw e;candidates.push({seed,reason:String(e)});continue;}
-  if(!setup.state.augments.some(a=>a.definitionId==='manaflow-i')){candidates.push({seed,reason:'Manaflow I not offered after public free rerolls'});continue;}
   let {state,receiverId,chestHolderId}=setup;const initial=state,events=[],frames=[];let grantTick=null,firstPulse=null,deathTick=null,bracerTicks=[],previousStacks=0,previousPulse=0,invalid=false;
   const receiver=s=>s.combat.units.find(u=>u.id===receiverId);
   while(state.phase==='combat'){
@@ -35,7 +34,6 @@ async function main(){
   candidates.push({seed,accepted:good,grantTick,firstPulse,bracerTicks,deathTick,lastLivingPulse:previousPulse});
   if(!check)console.log(JSON.stringify(candidates.at(-1)));
   if(!good){if(check)assert.fail('Recorded seed lost its original scenario obligations');continue;}
-  assert(initial.augments.some(a=>a.definitionId==='manaflow-i'));
   chosen={seed,grantTick,firstPulse,bracerTicks,deathTick,terminalTick:state.combat.tick,checkpoints:[['before grant',grantTick-1],['grant tick',grantTick],['before first pulse',firstPulse-1],['first pulse',firstPulse],['first bracer stack',bracerTicks[0]],['repeated bracer stack',bracerTicks[1]],['before receiver death',deathTick-1],['after receiver death',deathTick]],initialSha256:sha(JSON.stringify(initial)),terminalSha256:sha(JSON.stringify(state)),eventsSha256:sha(JSON.stringify(events)),frames};
   console.log(JSON.stringify({seed,grantTick,firstPulse,bracerTicks,deathTick}));break;
  }
@@ -44,7 +42,7 @@ async function main(){
  const text=JSON.stringify(chosen,null,2)+'\n';
  if(check)assert.equal(fs.readFileSync(output,'utf8'),text);else fs.writeFileSync(output,text);
  const sources=['scripts/record-chest-trial-v23.cjs','tests/fixtures/v23-online-rules-chest-trial.ts','tests/fixtures/b8-public-equipment.ts','tests/fixtures/m5/oracle.g2.cjs'];
- const audit={epoch:'v23-online-rules',reason:'seed554 Prismatic Prelude replaced Manaflow I; search actual silver offers, preserving Archangel grant, two bracer stacks, three pulses, death and full continuation assertions',sourceDigests:Object.fromEntries(sources.map(p=>[p,sha(fs.readFileSync(p))])),fixtureBytes:Buffer.byteLength(text),fixtureSha256:sha(text),seed:chosen.seed};
+ const audit={epoch:'v23-online-rules',reason:'seed554 Prismatic Prelude replaced Manaflow I and the v23 stage bans keep Manaflow I out of 2-1; search silver 2-1 seeds with the default pick, preserving Archangel grant, two bracer stacks, three pulses, death and full continuation assertions',sourceDigests:Object.fromEntries(sources.map(p=>[p,sha(fs.readFileSync(p))])),fixtureBytes:Buffer.byteLength(text),fixtureSha256:sha(text),seed:chosen.seed};
  const auditPath='docs/evidence/v23-online-rules/chest-trial-audit.json',auditText=JSON.stringify(audit,null,2)+'\n';
  if(check)assert.equal(fs.readFileSync(auditPath,'utf8'),auditText);else{fs.writeFileSync(auditPath,auditText);fs.writeFileSync('docs/evidence/v23-online-rules/chest-trial-search.json',JSON.stringify(candidates,null,2)+'\n');}
  }finally{await server.close();}

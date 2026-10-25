@@ -1,10 +1,10 @@
 {
-  "seed": 13929,
+  "seed": 585,
   "grantTick": 80,
   "firstPulse": 180,
   "bracerTicks": [
-    193,
-    405
+    199,
+    375
   ],
   "deathTick": 452,
   "terminalTick": 452,
@@ -27,11 +27,11 @@
     ],
     [
       "first bracer stack",
-      193
+      199
     ],
     [
       "repeated bracer stack",
-      405
+      375
     ],
     [
       "before receiver death",
@@ -42,9 +42,9 @@
       452
     ]
   ],
-  "initialSha256": "4b7939635ce3d6137ca635368bbc0765bdcd6b4a0c8ad59c005b28880fa354c9",
-  "terminalSha256": "ecbe905c28ae782cfecee9bfc82d79bd6f4ac3169044a1d2364825ace9c61649",
-  "eventsSha256": "300558d6f304fbc68eba41441950313a343e659a5fa2354f0515793cd480ca60",
+  "initialSha256": "1a1f0c7a3d8b2a15e31d906cb267a9fb8679e168019fe5ed4a2c9077a318fe05",
+  "terminalSha256": "6375dedadcb5d5807c42413d268f467116455c7b3c1a5eb87695981f1a96d384",
+  "eventsSha256": "cdbf257cc99cb4fbb66088d2c9120bcca3448aec2daed7f5384ec1ebbd3825ac",
   "frames": [
     {
       "tick": 1,
@@ -1393,42 +1393,42 @@
     {
       "tick": 193,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 194,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 195,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 196,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 197,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 198,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
@@ -2667,210 +2667,210 @@
     {
       "tick": 375,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 376,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 377,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 378,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 379,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 380,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 381,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 382,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 383,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 384,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 385,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 386,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 387,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 388,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 389,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 390,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 391,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 392,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 393,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 394,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 395,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 396,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 397,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 398,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 399,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 400,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 401,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 402,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 403,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 404,
       "alive": true,
-      "stacks": 1,
+      "stacks": 2,
       "pulse": 3,
       "holderAlive": false
     },

@@ -1,13 +1,13 @@
 {
   "epoch": "v23-online-rules",
-  "reason": "seed554 Prismatic Prelude replaced Manaflow I; search actual silver offers, preserving Archangel grant, two bracer stacks, three pulses, death and full continuation assertions",
+  "reason": "seed554 Prismatic Prelude replaced Manaflow I and the v23 stage bans keep Manaflow I out of 2-1; search silver 2-1 seeds with the default pick, preserving Archangel grant, two bracer stacks, three pulses, death and full continuation assertions",
   "sourceDigests": {
-    "scripts/record-chest-trial-v23.cjs": "9de9f54b431a0e6493d7a665bea50115c6b8f949d0d8166bf9895e3ff3e0b6db",
-    "tests/fixtures/v23-online-rules-chest-trial.ts": "78fd36b6714e4c153ebc4b950675cccfe26ee870d740acd922ded7ce997c7d40",
-    "tests/fixtures/b8-public-equipment.ts": "200c6cbb67ac170252187956f00d3de79b3b486b40be1650eee01aea5edb440c",
-    "tests/fixtures/m5/oracle.g2.cjs": "838475d2ae5f6be7cbfe6e31c515ff8533c35c2d59d7e6c7b0715062a0983895"
+    "scripts/record-chest-trial-v23.cjs": "c4cac9c073dffa3b7b76a74da195d93ef9b61e39d3626a332e1f27edfc33360e",
+    "tests/fixtures/v23-online-rules-chest-trial.ts": "892873e050247d4148c92e51e05e57ace44312df1e0a6aa11c73d6a87a019f29",
+    "tests/fixtures/b8-public-equipment.ts": "8959cd26b4d087d3f365d849eae0fdd1c4062897863c8b0a9bff6118bf031403",
+    "tests/fixtures/m5/oracle.g2.cjs": "2af0b1a7ef11765492144faf3bfb2bfaada35af3249276204329dc5317ef34e2"
   },
-  "fixtureBytes": 53537,
-  "fixtureSha256": "dcb24e40cc4b5417f6dc1265b4c12816a30b6aedb4c4706650375acf462fe25b",
-  "seed": 13929
+  "fixtureBytes": 53535,
+  "fixtureSha256": "d055c04f82b8a35566dd4184327844d73c247522928079096a1de4eb1518b171",
+  "seed": 585
 }
