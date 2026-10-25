@@ -1263,3 +1263,12 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `content/round-income-policy.ts` 的细分版本参与共同规则 manifest，自动改变 content/loot digest；外层候选身份仍按 PR9 统一录制，不录 epoch、不迁移旧存档。
 
 梅尔核对：归档 `raw/map22.bin.json.gz` 的 `{85892f99}` / `TFT13_MissMageTrait` 明确 `MinimumCasts=12`、`ProcDamageAmp≈0.1`；英文 stringtable 说明整局玩家战斗施法累计。现有 `melCanSave` 包含本场第12次、排除PvE/镜像、整局仅一次。动画消费现有 `playerSaved{battleId,playerHp:1,source:'mel'}`（带 match eventSeq），累计进度读 `seatMechanics.seat.melRescue`；不自行累计、回血或触发扣血。
+
+## Batch 4：每轮金币／购买记录免费刷新（2026-10-25，P-B4R）
+
+本组仅三条：`patience-is-a-virtue`（2-1）、`invested-plus`（3-2）、`invested-plus-plus`（4-2）。14.24 原值、入轮取样与累计约定见 [S13_RULES_GAP.md 的 P-B4R](S13_RULES_GAP.md#p-b4r2026-10-25每轮按金币或购买记录发免费刷新)。不新增存档字段或公共命令。
+
+- `batch4RerollsGranted(state: MatchState): number`（`augment-pool-batch4-b4reroll-progress.ts`）：纯推导本组从取得后下一自然轮起的已到账累计免费刷新；耐心读前轮成功商店获取记录，投资读前轮结算余额与结算后收据。无 RNG、副作用或新失败 reason。
+- `batch4RerollEntryGold(state: MatchState, round: number): number`：返回该轮延期收入到账后、其他入轮奖励前的金币。缺少前轮结算记录抛 `RangeError('Missing batch4 reroll entry history')`。
+- 既有 `freeRerollsGranted` 的输入由局部 Pick 扩为 `MatchState`，汇总本组及旧额度。`rerollShop` / `rerollSharedShop` 优先扣免费额度、额度耗尽后沿用原金币费用与失败顺序；失败仍返回原 state，无事件、资源或 RNG 消耗。
+- 恢复在现有 `validateFreeRerolls` 内重推累计额度，并按每条免费刷新资源事实的轮次检查当时额度，不能提前消费未来轮奖励。非法账本仍抛 RangeError；JSON、对象、序列化三入口共用该认证。

@@ -1011,3 +1011,11 @@ Batch 2取分类中全部26项，完成16、禁用10；逐项apiName、14.24源�
 ## 2026-10-25 联机首屏与单人应用分包（P，用户委托按推荐决定）
 
 P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导出、历史回放及恢复校验的专用依赖）放到 `assets/solo/`，仅在非 `?mode=online` 启动时动态加载，完成后才创建 Phaser 场景。在线匹配、服务器状态投影与战斗回放不使用此应用，因此在线首次加载和首次交互均不请求此包；HTML 不允许预加载它。单人原入口与同步命令保持兼容。`combat-display` 直接引用领域的 `toCombatViewEvents`，避免通过服务器公开桶文件引入单人恢复校验。服务器入口、规则、数值、存档、回放输出和内容身份不变。顶层 `assets/*.js` 的 gzip-9 总和继续执行原 1.50 上限；单人包与 3D 包一样单列报告，不提高阈值。按需 UI 文本包仍沿用原边界。
+
+### P-B4R（2026-10-25）：每轮按金币或购买记录发免费刷新
+
+- 本组仅开放 `TFT_Augment_PatienceIsAVirtue`（2-1）、`TFT_Augment_InvestedPlus`（3-2）、`TFT_Augment_InvestedPlusPlus`（4-2）。阶段取 14.24 ItemTags，与 `augment-stage-bans.ts` 已采用的三阶段哈希解释一致；本组单独输出 node bans，避免平行施工修改共享表。保留 source.effects 的全部值与 null；数值分别为免费刷新 2 次、立即金币 26/45、GoldThreshold=50、GoldPerReroll=10、MaxGold=80。
+- P：选择当轮不追溯入轮奖励，首次检查在选择后下一自然轮；PvE、PvP、选秀/补给轮及联机加时均算一轮。耐心检查前一整轮成功的商店购买（包括战斗中购买、购买后出售或合星）；购买失败不算购买，赠送、战利品、选秀与其他非商店获取不算购买。
+- P：投资取上一轮结算余额加已冻结的延期收入，即上一轮 goldAfter + 结算后机制金币/折金/选择费用净额 + 结算容量出售金币；在新一轮选秀、开场奇遇和其他入轮奖励之前取值。公式 `floor(max(0,min(bank,80)-50)/10)`：50–59 为 0，60–69 为 1，70–79 为 2，80 及以上为 3。立即金币照现有 acquisitionGold 唯一收据发放，影响以后入轮的银行余额。
+- P：沿用 batch 3 免费刷新账本，额度永久累计，优先免费额度再支付 2 金；没有新增存档字段、收据种类或 RNG 消耗。恢复从 owned augments、roundResults、seatMechanics.receipts 与 resourceProvenance 重新推导额度；逐笔免费刷新还必须在当时轮次已有可用额度，不能借用未来轮的额度。
+- 服务端合同：新增 `batch4RerollsGranted(state: MatchState): number`、`batch4RerollEntryGold(state: MatchState, round: number): number`，前者汇总本组三条的全部已到期额度，后者重建指定入轮银行数；历史缺失抛 `RangeError('Missing batch4 reroll entry history')`。`freeRerollsGranted(state: MatchState): number` 接纳完整 MatchState，统一汇总本组与既有额度。命令仍由 `rerollShop` / `rerollSharedShop` 消耗，不新增公共命令或失败原因；存档认证失败仍抛 RangeError。
