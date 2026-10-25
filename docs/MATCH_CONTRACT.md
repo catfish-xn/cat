@@ -1,3 +1,106 @@
+## 2026-10-25 v23 当前合同索引（基线 2b434e28 → 0797f3fe）
+
+本节描述 `codex/v23-contract` 的实际行为，优先于下文保留的 v17–v22“当前／候选／待录制”身份说明；历史章节与既有接口结构保留。文档口径见 [P-CONTRACT-V23](S13_RULES_GAP.md#p-contract-v23p2026-10-25契约覆盖关系)。本次仅更新合同，不修改玩法、保存格式或录制。当前规则／内容身份为 `s13-g2-3-v23-online-rules` / `s13-14.24b-g2-3-v23-online-rules`，schema/save/replay/command＝**12/8/8/7**，NET＝**5**，`lcg32-v1`、50 ms/tick；精确内容摘要仍须与本分支生成常量相等，不能凭相同版本名接纳旧摘要。v23 epoch fixtures 正由独立任务重录，本节不宣布录制已验收。[src/simulation/m8/version.ts:3](../src/simulation/m8/version.ts#L3)、[src/simulation/content/identity-constants.ts:3](../src/simulation/content/identity-constants.ts#L3)。战斗事实、控制、位移、召唤及恢复细节见 [COMBAT_CONTRACT 的 v23 节](COMBAT_CONTRACT.md#2026-10-25-v23-当前战斗与恢复合同)。
+
+### 保存、历史与服务器权威
+
+`restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState`、`serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string` 不新增参数。结构合法不等于历史有证：提供 `battles` 时始终验证完整历史；需要历史却省略时抛 `Invalid Match save: missing historical evidence / ...`，不能从候选收据推断“已验证”，不能恢复时补发资源。[src/simulation/serialization.ts:12](../src/simulation/serialization.ts#L12)。
+
+| 持久化位置 | v23 使用的事实与认证要求 |
+| --- | --- |
+| `augments[]` 的 `definitionId/choiceId/acquiredRound`；`seatMechanics.receipts` | 决定拥有者、起算轮和唯一奖励身份；Batch 1/2/3/4 共用礼物派生和发放。初始、阈值、重复奖励逐项比对种类、数量、星级、来源、回合，拒绝遗漏、孤儿或伪造收据。英雄满席可待发，不能把暂未发出误作缺奖；非英雄礼物必须有收据。[src/simulation/augment-pool-grants.ts:20](../src/simulation/augment-pool-grants.ts#L20)、[src/simulation/augment-pool-grants.ts:48](../src/simulation/augment-pool-grants.ts#L48) |
+| `seatMechanics.seat['augment-acquisition-levels']` | `{[choiceId]: level}`，记录新强化自身取得 XP 后的等级，供按升级、扣血和 Batch 4 等级奖励使用；键集合必须恰好等于相关拥有条目，值为 1 至当前等级的整数。单人经验链再核对取得轮的真实等级，不能只做范围检查。[src/simulation/augment-xp.ts:10](../src/simulation/augment-xp.ts#L10)、[src/simulation/augment-xp.ts:100](../src/simulation/augment-xp.ts#L100)、[src/simulation/serialization-structure.ts:126](../src/simulation/serialization-structure.ts#L126) |
+| `seatMechanics.seat['free-shop-rerolls']` | 仅存 `{used:number}`；额度由拥有条目、等级、轮次、结算及购买历史重推，永久累计。每次成功免费刷新另存 `resourceProvenance` 的 `free-reroll {generation}`；计数必须与事实数相等且每笔在当轮已有额度，generation 必须早于当前商店。不得删除 counter 或提前借用未来额度。[src/simulation/free-rerolls.ts:10](../src/simulation/free-rerolls.ts#L10)、[src/simulation/free-rerolls.ts:27](../src/simulation/free-rerolls.ts#L27) |
+| `augmentProgress.forming` / `augmentProgress.magicRoll` | 前者为 `dummify/golemify` 各自 `{health,attack}` 基础总和；后者为三颗骰子。分别由完整移除来源事实和种子重建，不接受自报值；联机战斗快照也携带它们。见下述 Batch 3。[src/simulation/augment-pool-batch3-progress.ts:235](../src/simulation/augment-pool-batch3-progress.ts#L235)、[src/simulation/b8-restore.ts:397](../src/simulation/b8-restore.ts#L397) |
+| `roundResults[]` / G23 `economyReceipts` 的 `battle.facts` | 保存经验请求／实得、升级前后、金币方案、HP 与已认证的击杀／治疗／假人／玩家伤害事实；持续计数由这些事实派生，无第二套客户端进度。B4XP 的可选经验子集校验只作结构预检，必须另有历史证据。[src/simulation/serialization-structure.ts:278](../src/simulation/serialization-structure.ts#L278)、[src/simulation/g2-3-settlement.ts:18](../src/simulation/g2-3-settlement.ts#L18) |
+| 已有 `battles: BattleRecord[]` | 本可发生之事取得后任一非供给结算、B4XP 取得后任一 PvP 结算均要求历史，**零计数／零额外 XP 也要求**。战争财宝的单人旧战斗同样要求历史；当前仍保留终战的那场不单独触发此要求。冠冕、猎头者、家人、梅尔等原历史条件继续有效。[src/simulation/crown-history.ts:6](../src/simulation/crown-history.ts#L6) |
+
+完整历史必须与所有非供给 `roundResults` 一一对应，按同局、同顺序重演；逐场认证既有结算前缀、资源／装备延续、经济事实前缀、终态和结算结果，最后核对当前后缀。少战、重战、改战、删除零值事实都不能作为合法捷径。`validateBattleRecord(record, battles?)` 使用同一历史门槛；SaveEnvelope 已携带历史，无迁移。[src/simulation/battle-record-validation.ts:97](../src/simulation/battle-record-validation.ts#L97)、[src/simulation/battle-record-validation.ts:187](../src/simulation/battle-record-validation.ts#L187)。联机 PvP 的战斗事实由可信 resolver 提供，Match 只验收并提交；客户端不能通过索奖参数、投影或自报计数生成权威收据。`applyRoundSettlement` 失败保持原 state，无事件、资源或 RNG 消耗。[src/simulation/round-settlement.ts:90](../src/simulation/round-settlement.ts#L90)。
+
+### augment-xp：经验、等级、生命与战后金币
+
+| 内部 id | 当前执行口径 |
+| --- | --- |
+| `patient-study` | 从取得轮的玩家对战起，胜 +2 XP，负／平 +3 XP，**下一轮入口**发；PvE 不计。 |
+| `epoch` / `epoch-plus` | 取得即 6 XP＋2 刷新／8 XP＋3 刷新；取得后的每个阶段 x-1 入口再一份，取得轮不双发。 |
+| `level-up` | 取得即 12 XP；每次购买经验由 4 XP 变 6 XP，普通费用仍 4 金。 |
+| `shopping-spree` | 取得即 4 金；此后每升到 L 级给 L 次刷新，多级逐级求和；原匿名值 8 不作触发上限。 |
+| `upward-mobility` | 买经验减 1 金；取得后每升一级 +2 HP、+3 刷新。仅存活玩家回血，上限 100；入轮升级回血在开局奇遇扣血之后。 |
+| `kingslayer` | 取得即 1 金；取得轮起每次 PvP 胜利 1 金，可信对手开战 HP 高于本席该场 `hpBefore` 时改为 4 金；单人无对手 HP，只给 1。 |
+| `risky-moves` | 选择时扣 20 HP，最低留 1、已死亡不扣；取得轮起第 7 场 PvP（任意结果）结算给一次 30 金。 |
+
+数值和已有 P 边界：[src/simulation/content/augment-pool-batch3-xp.ts:31](../src/simulation/content/augment-pool-batch3-xp.ts#L31)。`batch3EntryXp(augments, history, round):number`、`xpPurchaseAmount(augments, round):number`、`xpPurchaseCost(augments, round):number` 为规则内部派生入口。入轮 XP 与自然经验一起授予；选择先给取得 XP、按升级回血，再扣选择 HP，之后记取得等级。所有升级点统一处理多级、封顶和回血；恢复按当轮购买增量而非固定 4 XP 校验，封顶另按正规化经验链处理。[src/simulation/augment-xp.ts:18](../src/simulation/augment-xp.ts#L18)、[src/simulation/augment-xp.ts:57](../src/simulation/augment-xp.ts#L57)、[src/simulation/match.ts:898](../src/simulation/match.ts#L898)、[src/simulation/serialization-structure.ts:118](../src/simulation/serialization-structure.ts#L118)。
+
+`buyXp(state, unitLootPolicy?)` 仍按 wrong-phase → max-level → insufficient-gold 校验；联机的 HP 账本只同步可解释来源，不接受任意升降。弑君突刺持有者的 `RoundSettlementReceipt.opponentHp` 必须存在且为 0–100 整数，非持有者不得携带；历史金币按 `augment-kingslayer` / `augment-risky-moves` 唯一收据精确认证。[src/simulation/match.ts:376](../src/simulation/match.ts#L376)、[src/simulation/round-settlement.ts:149](../src/simulation/round-settlement.ts#L149)、[src/simulation/augment-settlement-gold.ts:9](../src/simulation/augment-settlement-gold.ts#L9)、[src/simulation/player-hp.ts:1](../src/simulation/player-hp.ts#L1)。
+
+### Batch 3：调度、随机、战斗事实与资源延续
+
+本节覆盖实际已注册的组；旧批次报告里的“未做”不覆盖当前定义。逐条 apiName、等级、数量、阈值及源 `null` 保留在 [src/simulation/content/augment-pool-batch3.ts:1](../src/simulation/content/augment-pool-batch3.ts#L1)，战斗数值／时序见 COMBAT_CONTRACT。既有 Batch 1/2 奖励、双形来源标记与本可发生之事仍沿用下文合同。
+
+| 组／内部 id | 独立实现必须保留的计数与发放条件 |
+| --- | --- |
+| 玩家战斗调度：`team-building`、`latent-forge`、`phreaky-friday` / `-plus`、`dark-alley-dealings`、`living-forge`、`what-doesnt-kill-you`、`prizefighter`、`shimmerscale-essence` | 取得轮战斗起算；仅 PvP 场数／胜／负；平局不算负。按配置阈值、重复与上限派生每份奖励，不能用当前胜败连段代替累计值。 |
+| 阵亡调度：`eye-for-an-eye` / `-plus` | 读 `alliedDeaths`，PvE 也计，余数跨战保留，单战可跨多个阈值；+ 版初始 1 件与阵亡上限 3 件分开。 |
+| 刷新：`rolling-for-days-i`、`superstars-i` / `-ii`、`trade-sector` | 取得额度 11／2／4；DD 街区取得即 1 金，取得轮起每个自然轮加 1 次，未用保留。超级巨星开战按场上三星数量冻结增伤。 |
+| 入轮／阶段：`building-a-collection-iii`、`worth-the-wait` / `-ii`、`flexible` | 初始份与后续份分开；值得等待复制初抽的同名英雄，普通版第 2 次入轮起、II 次轮起；英雄在供给轮应发的一份顺延到下个非供给入口，保留原奖励序号。物品仍当轮发，灵活摇摆后续只在 x-1 发纹章。 |
+| 假人：`support-mining` / `-plus`、`scapegoat`、`wandering-trainer-i` / `-ii`、`gold-for-dummies`、`tower-defense` | 假人身份来自取得礼物的 unit 收据，不能任选同名假人。战斗事实 `batch3Dummy:{deaths:string[],first:string|null,gold:number}` 记录本队假人终战死亡、按 eventSeq 的本队首亡及金币脉冲数；挖矿第 7／4 死后发辅助装并退休。纹章直接绑定自己的假人槽位，专用来源 `augment-pool-batch3-dummy`，不进库存；恢复必须同时验证退休事实和单位确已移除。 |
+| 转换：`dummify`、`golemify` | 取得事务先移除场上及备战席全部非召唤英雄，装备归库存、异常绑定和永久 AD 成长结束、共享池归还所有份数，然后发新假人／魔像。`unit-removed` 带 definitionId/starLevel/receiptId，基础星级 HP/AD 总和重建 `forming`；不得少移、重移或保留幽灵弈子。后续新买英雄不再移除。 |
+| 金蛋／任务：`the-golden-egg`、`an-exalted-adventure` | 金蛋 11 次入轮计时，取得轮起 PvP 胜利额外减 1，首次达零的非供给入口孵化。冒险初抽三个不同 2 费并给次级复制器、后续阶段给复制器；取得轮起两个不同目标英雄升到三星后的下一非供给入口发一档奖励。升级事实兼容普通、战后和两类选秀内嵌 upgrades，不得只扫普通 unit-upgraded。 |
+| 玩家伤害：`warpath` | PvP 胜利的阶段基础伤害＋合资格存活单位数累计到 60；打镜像也计进攻方进度，镜像来源席不受伤／不结算。阈值一次发 4 个一星 5 费、1 个二星 4 费、1 成装锻造器。 |
+| 结果抽样：`magic-roll`、`call-to-chaos` | 前者三骰保存在 `augmentProgress.magicRoll` 并由种子认证，先判断有序 6-2-6 金蛋、再豹子、再总和区间；低豹子给 3 次级复制器＋6 金。后者十分支按已记录 P 等权，64 XP／40 刷新分别进取得经验链／刷新账本，假人装备走独立绑定来源。不能在重试或打开界面时重抽。 |
+| 战斗组：`corrosion`、`blazing-soul-i` / `-ii`、`noble-sacrifice`、`wealthy-rehab-i` / `-ii`、`bad-luck-protection` 及六个 `heroCarry` 强化 | 脉冲、受益者、已触发、实际治疗及施法事实留在战斗运行态；战后仅从权威战斗派生奖励，具体见 COMBAT_CONTRACT。 |
+
+调度判定及顺延：[src/simulation/augment-pool-batch3-progress.ts:24](../src/simulation/augment-pool-batch3-progress.ts#L24)；金蛋／三星任务：[src/simulation/augment-pool-batch3-progress.ts:96](../src/simulation/augment-pool-batch3-progress.ts#L96)；假人身份／装备／退休及 forming：[src/simulation/augment-pool-batch3-progress.ts:157](../src/simulation/augment-pool-batch3-progress.ts#L157)、[src/simulation/augment-pool-batch3-progress.ts:200](../src/simulation/augment-pool-batch3-progress.ts#L200)；玩家伤害和治疗／假人事实：[src/simulation/g2-3-settlement.ts:42](../src/simulation/g2-3-settlement.ts#L42)。
+
+随机不是另一个可变全局流。礼物 spec 子流用 `JSON.stringify(['augment-pool-batch1',seatId??'solo',choiceId,definitionId,specIndex])` 的 FNV-1a UTF-16（2166136261，逐字符 XOR 后 imul 16777619 取 uint32）与 seed XOR，再用显式 LCG；每抽 `floor(word*N/2^32)`。费用英雄池和明确名单排序，默认有放回；`distinct` 删除已选项；`identical` 复用首选但每份仍按现有算法抽词。礼物收据为 `JSON.stringify(['augment-pool-batch1',choiceId,definitionId,specIndex,copy])`。调度礼物用嵌套 choiceId `[原choiceId,'batch3',scheduleIndex,ordinal]`，重试身份不变。[src/simulation/augment-gift-plan.ts:21](../src/simulation/augment-gift-plan.ts#L21)、[src/simulation/augment-pool-batch3-progress.ts:148](../src/simulation/augment-pool-batch3-progress.ts#L148)。
+
+金蛋／冒险档位独立使用 `['augment-pool-batch3','loot',seat,choiceId,definitionId]` 命名空间；权重先 `round(weight*1e8)`，单词映射到总权重后按原表顺序累减。骰子／混沌命名空间分别用 `'dice'` / `'chaos'`，XOR 后先 fmix32，再 LCG；每骰 `floor(word*6/2^32)+1`，混沌按固定十项顺序映射。假人纹章对排序纹章池做部分洗牌、无放回；以上均不推进商店／战斗／掉落主流，沿用已记录 P 而非声称原服概率。[src/simulation/augment-pool-batch3-progress.ts:123](../src/simulation/augment-pool-batch3-progress.ts#L123)、[src/simulation/augment-pool-batch3-progress.ts:166](../src/simulation/augment-pool-batch3-progress.ts#L166)、[src/simulation/augment-pool-batch3-progress.ts:326](../src/simulation/augment-pool-batch3-progress.ts#L326)、[src/simulation/content/augment-pool-batch3.ts:1329](../src/simulation/content/augment-pool-batch3.ts#L1329)。
+
+`batch3RewardPlan(state):AugmentGift[]` 只派生计划；`drainBatch3RoundEntry(state, policy?)` 发当前入口的礼物／金币，其余阈值走共同 drain。普通单人英雄满席等待，联机英雄走共享池奖励法球；发放后重新派生以支持连锁合星。金币收据 `['augment-pool-batch3',choiceId,scheduleIndex,ordinal]` 严格比对来源、金额、发生轮次，不能恢复时补造。共同 drain 的顺序是 forming → 循环礼物 → Batch 2 金币 → Batch 3 金币 → 弑君／冒险举动金币 → Batch 4 金币 → 假人装备／退休。[src/simulation/augment-pool-batch3-progress.ts:276](../src/simulation/augment-pool-batch3-progress.ts#L276)、[src/simulation/augment-pool-batch3-progress.ts:301](../src/simulation/augment-pool-batch3-progress.ts#L301)、[src/simulation/augment-pool-grants.ts:26](../src/simulation/augment-pool-grants.ts#L26)。
+
+### 战争财宝：专用击杀事实和连续序号
+
+`spoils-of-war-i/ii/iii` 只有可信开战 strategy 的本席原开场单位来源含该强化时才投影专用 `batch2:[...,{definitionId:'spoils-of-war',count}]`，零击杀不写此行。数的是 `combat.openingDeaths` 中敌方开场非召唤单位首次死亡：**普通 PvE（石甲虫、狼、河蟹等）也计**；排除 item/anomaly/content summon、战中出生者及 PvP neutral。与沃里克的 `facts.openingDeaths` 资格不同，不可借用该字段计数；不持有者与取得前战斗不新增 Spoils 字节。双方分别投影，不向镜像来源席发奖。[src/simulation/g2-3-settlement.ts:33](../src/simulation/g2-3-settlement.ts#L33)。
+
+每席每强化用 `['augment-pool-batch3','spoils',seat,choiceId,definitionId]` 的 FNV XOR seed 后一个 LCG 词，从对应等级七张原表等权选一；取得后第 k 次敌人死亡查 key `3*((k-1)%83+1)`，缺 key 为 0，有则给原表金币，并以 k 作奖励 ordinal。不能每击杀再按 tooltip 的 25/30/40% 抽 Bernoulli，也不能按每场重置 k。无奖／零击杀的旧战仍属于连续序号认证范围，历史门槛见上表。[src/simulation/augment-pool-batch3-progress.ts:47](../src/simulation/augment-pool-batch3-progress.ts#L47)、[src/simulation/augment-pool-batch3-progress.ts:86](../src/simulation/augment-pool-batch3-progress.ts#L86)、[src/simulation/content/augment-pool-batch3-loot.ts:219](../src/simulation/content/augment-pool-batch3-loot.ts#L219)。
+
+### Batch 4：四个已交付组的持久化与权威
+
+等级奖励组的既有接口保留，补充完整行为如下；所有组继续使用现有字段，不新增保存格式或客户端索奖入口。
+
+| 组 | 规则／存储／认证 |
+| --- | --- |
+| 等级奖励 5 条 | `caretakers-ally` 初始随机 2 费，之后每升级复制同名；`lategame-specialist` 9 级 33 金；`caretakers-favor` 5/6/7/8 级各组件锻造器；`birthday-presents` 取得后每升 L 给 `max(1,L-4)` 费二星（10 级为 6 费）；`caretakers-chosen` 4/6/7 级分别组件／成装／五选光明锻造器。阈值型选择时补已达阈值，逐级型只数取得后升级。用取得等级与 `roundResults.levelBefore/After` 推首次发生轮次，礼物 choiceId 为 `[原choiceId,'batch4-level',L]`；后期专家金币独立来源 `augment-pool-batch4`，重复／遗漏／孤儿／错轮均拒绝。无新增奖励 counter。[src/simulation/content/augment-pool-batch4.ts:13](../src/simulation/content/augment-pool-batch4.ts#L13)、[src/simulation/augment-pool-batch4-progress.ts:11](../src/simulation/augment-pool-batch4-progress.ts#L11) |
+| B4XP 4 条 | `clear-mind` 空英雄席 +3 XP；`cluttered-mind` 满英雄席 +3 XP、初始 4 随机 1 费；`slammin` / `slammin-plus` 空装备库存 +2 XP、初始 1 组件，+ 版另立即 10 XP。**取得轮起 PvP 胜／负／平均检查实时席位**，早于战后奖励、法球、延迟合星和下一轮收入；不用开战快照替代。bench 仅数 player 非 summon 英雄，0 为空、等于 benchSize 为满；只查 items.inventory，consumables／未领法球不算装备库存。与普通结算 XP 一次 grantXp，统一跨级／封顶／回血。总 XP 仍写原 RoundResult；零奖励也要求 battles 重演当时条件。[src/simulation/content/augment-pool-batch4-b4xp.ts:12](../src/simulation/content/augment-pool-batch4-b4xp.ts#L12)、[src/simulation/augment-pool-batch4-b4xp-progress.ts:7](../src/simulation/augment-pool-batch4-b4xp-progress.ts#L7) |
+| B4Reroll 3 条 | `patience-is-a-virtue` 前一整轮无成功商店购买给 2 刷新；购买后出售／合星仍算买，失败购买与赠送不算。`invested-plus/plus-plus` 初始 26/45 金，后续入轮 `floor(max(0,min(bank,80)-50)/10)` 次刷新（50–59=0，60–69=1，70–79=2，80+=3）。首次均在选择后下一自然轮，PvE/PvP/供给/加时轮都计。bank＝前轮 goldAfter＋其机制收据前缀之后的同轮金币／折金／选择费净额＋结算容量出售金；在新轮选秀／奇遇／其他入轮奖之前取样。无需保存新 bank 或购买 flag，直接重推；额度／消费认证复用 free-shop-rerolls。[src/simulation/augment-pool-batch4-b4reroll-progress.ts:7](../src/simulation/augment-pool-batch4-b4reroll-progress.ts#L7)、[src/simulation/content/augment-pool-batch4-b4reroll.ts:5](../src/simulation/content/augment-pool-batch4-b4reroll.ts#L5) |
+| B4Combat 4 条 | `long-distance-pals`、`category-five`、`overheal`、`sated-spellweaver`；初始飓风走共同礼物收据，其余来源／贡献／普攻计数／窗口／护盾使用既有战斗状态，完整重演认证；无新增战后 counter 或 history 例外。详见 COMBAT_CONTRACT。[src/simulation/content/augment-pool-batch4-b4combat.ts:6](../src/simulation/content/augment-pool-batch4-b4combat.ts#L6)、[src/simulation/g2-4b-gold-restore.ts:12](../src/simulation/g2-4b-gold-restore.ts#L12) |
+
+`batch4B4xpSettlementXp(state):number`、`withBatch4B4xp(state,plan,extra):RoundEconomyPlan`、`batch4B4xpRecordedExtra(state,result,base):number`、`needsBatch4B4xpHistory(state):boolean` 是内部结算／恢复入口；非法经验差抛 `RangeError('Invalid batch4 b4xp settlement XP')`，合法子集也不能代替战斗历史。两条结算路径分别在 [src/simulation/match.ts:400](../src/simulation/match.ts#L400)、[src/simulation/round-settlement.ts:131](../src/simulation/round-settlement.ts#L131)。等级奖励战斗锁定时只立即排金币，英雄／锻造器在解锁发奖入口处理；神选五选光明使用排序光明池部分洗牌，原四选不变，30 秒超时第一项。[src/simulation/match.ts:376](../src/simulation/match.ts#L376)、[src/simulation/augment-gift-plan.ts:55](../src/simulation/augment-gift-plan.ts#L55)。
+
+### 全池阶段禁令
+
+14.24 三个未解码 ItemTags `{d02ae323}/{d12ae4b6}/{d22ae649}` 按已有 **P** 分别读作“不得在 2-1／3-2／4-2 出现”；不是允许节点。统一由 apiName 映射合并全池表与 Batch 3-XP、Batch 3、B4XP、B4Reroll、B4Combat 局部表；不能只套新强化或只在初次展示过滤。原有节点开场冻结羁绊过滤、seen 排除、对内互斥、跨席唯一仍同时成立，刷新继续使用该节点约束。[src/simulation/content/augment-stage-bans.ts:3](../src/simulation/content/augment-stage-bans.ts#L3)、[src/simulation/content/augment-offer-rules.ts:54](../src/simulation/content/augment-offer-rules.ts#L54)。
+
+例：耐心学习／新纪元仅 2-1，新纪元+ 仅 3-2；B4 等级奖励除后期专家仅 3-2 外均仅 2-1；B4XP 前三条仅 2-1、物尽其用+ 仅 3-2；耐心 2-1、投资+ 3-2、投资++ 4-2；五级飓风禁 4-2、过量治疗／满意织法者禁 2-1、天涯若比邻无本组节点禁令；`watcher-growth` 三节点全禁，存在定义不等于可出牌。[src/simulation/content/augment-stage-bans.ts:9](../src/simulation/content/augment-stage-bans.ts#L9)、[src/simulation/content/augment-pool-batch3-xp.ts:75](../src/simulation/content/augment-pool-batch3-xp.ts#L75)、[src/simulation/content/augment-pool-batch4-b4combat.ts:85](../src/simulation/content/augment-pool-batch4-b4combat.ts#L85)。
+
+### 次级微光复制器（Lesser Shimmer Duplicator）
+
+`TFT13_Crime_Consumable_LesserShimmerDuplicator` 是独立消耗品，黑市奖励保留源身份；不是普通装备或替代金币。沿用 `previewUseConsumable`／`useConsumable` 的 unit 目标：己方、商店目录内、**原生 chem-baron 且费用≤3** 的英雄（纹章不授予目标资格），获得一张一星同名复制，不继承目标星级／装备／异常／成长。战斗名单锁定拒绝，备战席无空位即 `bench-full`，即使潜在合星也不绕过预检；非法英雄／召唤／锻造器用 `invalid-consumable-target`，未知实例用原 unknown-consumable／unknown-unit。失败不消耗工具、金币或 RNG。[src/simulation/content/consumables.ts:13](../src/simulation/content/consumables.ts#L13)、[src/simulation/consumables.ts:23](../src/simulation/consumables.ts#L23)、[src/simulation/consumables.ts:42](../src/simulation/consumables.ts#L42)、[src/simulation/content/g2-3-policy.ts:39](../src/simulation/content/g2-3-policy.ts#L39)。
+
+成功先写 `consumable-used` 来源事实，后按 `['consumable-copy',consumableId]` 唯一收据授予，单人 held、联机 orb（领取再走共享池）；消耗品列表、nextConsumableSerial、use record、复制英雄来源均复用原保存结构。恢复从授予收据及使用时有序资源事实认证目标存在、原生羁绊／费用和唯一复制收据，`rngBefore/After` 无额外复制抽签。[src/simulation/consumables.ts:105](../src/simulation/consumables.ts#L105)、[src/simulation/consumables.ts:141](../src/simulation/consumables.ts#L141)。
+
+### 投机者之刃开战金币与法球收据顺序
+
+`CombatInputBasis.inputs.bankGold` 与 `openingItemBankGold` 必须认证**战斗时点**余额。单人已结算状态的 `RoundResult.goldBefore` 已含本场直发 PvE 掉落，因此恢复先减去实际在本轮领取的非 forfeited 掉落金币（优先 receipt.gold，旧单人纯金币取 payload.quantity）；有 claimedRoundId 按领取轮，无则按本场 frozen drop 集合。联机领取发生于经济结算之后，不减。该余额也用于逐 tick 装备历史来源复核；不能相信候选 bankGold，也不能把战后掉落当成投机者之刃本场开战攻速基数。[src/simulation/b8-restore.ts:183](../src/simulation/b8-restore.ts#L183)、[src/simulation/b8-restore.ts:240](../src/simulation/b8-restore.ts#L240)、[src/simulation/combat-input.ts:105](../src/simulation/combat-input.ts#L105)。
+
+`m8.loot.receipts` 是**事务追加顺序**：排序／认证用 `claimedRoundId ?? 源掉落roundId` 的轮序，必须不早于源轮、不早于前一收据；旧球晚领可排在新球之后，不能重新按源轮排序。各次 grantDirectLoot 批内仍用 frozen slot 顺序；身份、payload、death evidence、资源账本、组件保底及本场事务顺序检查全部保留。`forfeited` 不发任何资源，不能伪造为已领或把已领改 forfeited。[src/simulation/b8-restore.ts:289](../src/simulation/b8-restore.ts#L289)、[src/simulation/b8-restore.ts:332](../src/simulation/b8-restore.ts#L332)、[src/simulation/b8-restore.ts:598](../src/simulation/b8-restore.ts#L598)、[src/simulation/loot-runtime.ts:108](../src/simulation/loot-runtime.ts#L108)。
+
+### 开局确定性与单人按需加载
+
+开局选择先对 seed XOR selectionStream 的 FNV hash 作 **fmix32**，再将 `floor(word*10000/2^32)` 映射到完整权重表（不跳过 disabled 区间）；`selectionRng` 记混合词、draws=1，这不是推进商店 RNG。恢复按原 seed 和配置精确重建，不以客户端投影为证据。[src/simulation/opening-encounter.ts:85](../src/simulation/opening-encounter.ts#L85)。杰斯售出／合星消耗后删其 `g24ItemPositions` 的 unit 键；D14 暂存仍属持有，item 键保留。[src/simulation/forge-positions.ts:3](../src/simulation/forge-positions.ts#L3)。
+
+`loadSoloApplication():Promise<void>` 并发调用共用 pending，加载失败清 pending 以允许重试；`createSoloApplication(...ConstructorParameters<typeof MatchApplication>):MatchApplication` 在未加载时抛 `Solo application must be loaded before scene construction`。单人必须先 await，再创建场景；之后命令保持同步。在线启动／首次匹配无需单人保存、恢复和历史重演应用，仍消费服务器权威状态／回放；分包不改变规则、版本、保存或认证语义。生产动态包为 `assets/solo/application-[hash].js`，发布须完整部署该目录。[src/m6/application-loader.ts:1](../src/m6/application-loader.ts#L1)、[src/main.ts:21](../src/main.ts#L21)、[vite.config.ts:66](../vite.config.ts#L66)。
+
 ## 2026-10-25 V23-T1：本可发生之事历史事实认证
 
 `restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState` 与 `serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string` 的签名、返回值、存档格式和规则不变。本可发生之事的施法／范德尔死亡历史计数（包括零）必须由既有完整 `battles` 重演认证；取得该强化后有非补给结算时，即使两条事实都被删除，也必须提供历史。裸 Match 不携带独立历史时抛既有 `Invalid Match save: missing historical evidence / ...`；少战／重战、战斗档案或经济收据前缀不一致时由 `validateMatchHistory` 拒绝，不补计数或重发奖励。持久化封套已有 `battles`，无需迁移。兼容内部名称 `needsCrownHistory(state: MatchState): boolean` 的适用范围扩大；它只判断证据要求，不执行结算。决定见 `S13_RULES_GAP.md` 的 P-V23-T1-HISTORY；回归见 `tests/v23-tamper-mechanics.test.ts`。
@@ -17,7 +120,7 @@
 
 ## v23候选：增强池续批（2026-10-24）
 
-本节接续batch 1，详见[续批报告](AUGMENT_POOL_BATCH2_REPORT.md)。Branching Out、Kitchen与Coronation开放，batch 1现为67项；batch 2的26项中17项开放、9项完整禁用。`AUGMENT_BATCH2`保存来源与原值，`AUGMENT_BATCH2_BLOCKED`保存缺字段。此内容进RULES_GAP_MANIFEST；正式身份仍待v23集成统一切换。
+本节接续batch 1，详见[续批报告](AUGMENT_POOL_BATCH2_REPORT.md)。Branching Out、Kitchen与Coronation开放，batch 1现为67项；本分支再开放本可发生之事（blood-brothers），batch 2的26项现为18项开放、8项完整禁用（[src/simulation/content/augment-pool-batch2.ts:589](../src/simulation/content/augment-pool-batch2.ts#L589)、[src/simulation/content/augment-pool-batch2.ts:623](../src/simulation/content/augment-pool-batch2.ts#L623)）。`AUGMENT_BATCH2`保存来源与原值，`AUGMENT_BATCH2_BLOCKED`保存缺字段。此内容进RULES_GAP_MANIFEST；正式身份仍待v23集成统一切换。
 
 新增Shield/Cape源值来自仓库保留raw map22与双语stringtable：人口各+1，Shield实际死亡10%掉1金，Cape第200tick存活10%掉1金；配方锅+锅/铲+锅，人口沿用既有冠冕取得后永久授予政策。Coronation每件Crown/Shield/Cape给携带者3000AD Bps/3000AS Bps/40AP。成功与失败抽取均在ItemGoldLedger留存，复用collector物品独立流；相关存档完整重演，不修改其他RNG流。
 
