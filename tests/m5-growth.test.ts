@@ -1,7 +1,7 @@
 import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import {restoreMatch} from '../src/simulation/serialization';
-import {accepted,readyMatch} from './match-helpers';
+import {accepted,readyMatch,resolveM5Choices} from './match-helpers';
 import {finishPublicEquipmentBattle,publicEquipmentPreparation,resolvePublicEquipmentChoices} from './fixtures/b8-public-equipment';
 import type {MatchState} from '../src/simulation/match-types';
 import {shop as independentShop} from './fixtures/m5/oracle.g2.cjs';
@@ -93,7 +93,12 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
     const reserve=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!==fundingCarry.id).sort((a,b)=>a.starLevel-b.starLevel)[0];
     expect(reserve).toBeDefined();state=accepted(api.sellUnit(state,reserve.id));
    }
-   state=resolvePublicEquipmentChoices(accepted(api.nextRound(state,state.round)));
+   state=accepted(api.nextRound(state,state.round));
+   // Funding may now cross 4-6. Acquire its real anomaly on the existing roster, sold before Tristana is bought.
+   if(state.pendingChoice?.kind==='anomaly'){
+    state=resolveM5Choices(state);expect(state.anomalyBinding).not.toBeNull();
+    expect(state.preparation.units.find(u=>u.id===state.anomalyBinding!.unitId)!.definitionId).not.toBe('tristana');
+   }else state=resolvePublicEquipmentChoices(state);
   }
   route.state=state;return route;
  }

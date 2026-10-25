@@ -25,7 +25,8 @@ describe('v17 avarice: two human seats in one battle', () => {
     expect(seatA).not.toBe(seatB);
     const hp = { a: seatOf(room.state, seatA).hp, b: seatOf(room.state, seatB).hp };
     clock.advance(400);
-    const aGold = [spendGold(room, seatA)];
+    const aGold = [spendGold(room, seatA),spendGold(room,seatA),spendGold(room,seatA)];
+    expect(aGold.at(-1)).toBeLessThanOrEqual(8); // enough change to survive integer rounding on low-AD Vex
     clock.advance(200);
     const bGold = earnGold(room, seatB);
     clock.advance(200);

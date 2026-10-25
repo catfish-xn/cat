@@ -40,11 +40,10 @@ describe('B6 gate preparation and explicit dependency metadata',()=>{
     expect(state.phase).toBe('choice');expect(state.pendingChoice.kind).toBe('augment');expect(state.gold).toBe(11);
   });
   it('obtains one actual 2-4 supply component and reaches the next legal equipment phase',async()=>{
-    const state=await prepareB6Opening(pageAdapter(),'2-5');
-    // v23 151-offer pool: the first non-placebo 2-1 card was Thorn-Plated Armor (its own Bramble Vest); after the
-    // batch-3/XP merge it is Crimson Pact (a Renni, no item), so the 2-4 sword is the only item.
+    const state=await prepareB6Opening(pageAdapter(307),'2-5');
+    // Seed 307's Clear Mind grants no equipment; the real 2-4 sword remains the only item.
     expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');
-    expect(state.augments.map(augment=>augment.definitionId)).toEqual(['crimson-pact']);
+    expect(state.augments.map(augment=>augment.definitionId)).toEqual(['clear-mind']);
     expect(state.items.map(item=>item.definitionId)).toEqual(['sword']);
     expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([[state.items[0].id]]);
   });
