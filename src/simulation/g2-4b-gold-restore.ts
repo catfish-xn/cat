@@ -10,7 +10,7 @@ import {canonicalContent,equalValidatedContent} from './content';
 import {createRestoreCombatReplay} from './restore-combat-replay';
 
 /** Combat mechanics whose saves are authenticated only by exact replay (combat-augment-effects.ts). */
-export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['blazingSoul','nobleSacrifice','wealthyRehab','badLuck','goldForDummies','towerDefense','towerDefenseLive','heroCarry','heroCarryLive','forming'];
+export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['corrosion','blazingSoul','nobleSacrifice','wealthyRehab','badLuck','goldForDummies','towerDefense','towerDefenseLive','heroCarry','heroCarryLive','forming'];
 
 /** Opening HP is derived from authenticated inputs, never the saved owner HP. */
 export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
@@ -47,6 +47,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   }
   // Batch-3 timed or unit-dependent augment contributions (and their runtime counters) have no static
   // declaration to check against, so the whole combat must be reproduced from the frozen input instead.
+  // Corrosion must authenticate missing pulses too; never select replay from saved contributions.
   const batch2=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='traitAugmentB2'||m.mechanic==='g23Tactician'||BATCH3_REPLAYED_MECHANICS.includes(m.mechanic)))
     // A training dummy has no static combat contract of its own, so its combats are replay-authenticated too.
     ||basis.inputs.preparation.units.some(u=>u.definitionId==='training-dummy'||u.definitionId==='forming-dummy'||u.definitionId==='tower-dummy'||u.definitionId==='augment-golem');
