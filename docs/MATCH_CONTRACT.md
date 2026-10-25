@@ -1274,3 +1274,8 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `drainBatch4Gold(state:MatchState):MatchState`：后期专家达到9级发33金，来源 augment-pool-batch4，唯一收据；重复排放无副作用。
 - `validateBatch4Gold(state:MatchState):void`：错误来源、金额、回合、重复/遗漏/孤儿收据抛 RangeError；通过原有 validateBatch1Gifts 进入恢复认证。英雄/锻造器礼物与取得等级继续通过既有验证；restoreSharedOrbSnapshot 对本组拥有条目及收据命名空间同样调用该验证，删除拥有者不能放过孤儿收据。
 - `TFT_ArmoryKeyRadiant` 为神选专属五选光明锻造器单位；openAnvil / selectChoice / timeoutChoice 公共命令不变，30秒超时第一项。选项由认证奖励收据重建，不能自行声明五选。其他锻造器仍四选。
+
+### Batch 3 review B 进度事实（2026-10-25）
+
+- `g23BattleFacts(combat: CombatState, team: Team, round: number, roundKind: 'pve'|'pvp', openingUnits: readonly {id: string; team: Team}[]): G23BattleFacts` 签名不变。战争财宝开战敌方非召唤单位死亡（含石甲虫、狼、河蟹）作为专用 `{definitionId:'spoils-of-war',count:number}` 放入现有 `batch2` 数组；仅非零写入，`openingDeaths` 不变。双方分别提取，镜像结算沿既有契约。`validateG23BattleFacts` 对负数、非整数、超界、重复标识以 `RangeError('Invalid batch2 battle facts')` 拒绝；终战事实与真实战斗比较。持有战争财宝的已结算旧回合需现有 `battles` 历史参数以认证连续序号（连零击杀也不可伪造）；缺失仍走 `missing historical evidence`，提供历史后按完整事实重放比较。
+- `batch3RewardPlan(state: MatchState): AugmentGift[]` 与发放/验证接口签名不变；冒险任务从 `unit-upgraded`、`unit-upgraded-after-combat`、`carousel-unit-claimed.upgrades`、`carousel-preparation-settled.upgrades` 读取完成事实。只计取得后不同英雄的三星，第二名达标后的首个非选秀入口发一次；收据认证与资源来源认证保持分离，无新增保存字段、奖励或规则数值。
