@@ -47,7 +47,7 @@ export function previewUseConsumable(state:Readonly<MatchState>,consumableId:str
   if(!definition)throw new RangeError('Invalid consumable definition');
   if(!target||target.kind!=='unit')return {ok:false,reason:'invalid-consumable-target'};
   const unit=state.preparation.units.find(u=>u.id===target.unitId);
-  if(unit&&(unit.definitionId==='trainer-golem'||isAnvil(unit.definitionId)))return {ok:false,reason:'invalid-consumable-target'};
+  if(unit&&(unit.definitionId==='trainer-golem'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.definitionId==='tower-dummy'||unit.definitionId==='augment-golem'||isAnvil(unit.definitionId)))return {ok:false,reason:'invalid-consumable-target'};
   if(!unit)return {ok:false,reason:'unknown-unit'};
   if(unit.team!=='player')return {ok:false,reason:'invalid-consumable-target'};
   if (definition.effect !== 'masterwork-upgrade' && target.itemId !== undefined) return {ok:false,reason:'invalid-consumable-target'};

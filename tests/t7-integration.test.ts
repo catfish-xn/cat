@@ -36,7 +36,8 @@ describe('T7 public-command traversal',()=>{
     expect(state.roundResults.map(r=>r.round)).toEqual(Array.from({length:20},(_,i)=>i+1));
     expect(commands).toBeGreaterThan(30);expect(ticks).toBeGreaterThan(100);
     for(const kind of ['deploy','buy','buyXp','combine','equip','choose']) expect(actions.has(kind)).toBe(true);
-    expect([...choices].sort()).toEqual(['augment','component']);
+    // After the batch-3/XP merge seed 1's bot also opens a real forge choice; the set stays exact.
+    expect([...choices].sort()).toEqual(['augment','component','forge']);
   },30_000);
   it('eight bot seats use actual TP commands across opening rounds, conserving after every action',()=>{
     const initial=room(undefined,8),first=batch(api.refreshSharedShops(initial.pool,initial.states,1));

@@ -349,6 +349,8 @@ export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['
   const request = entry.request ?? makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(entry.source)), entry.targetId, 'direct', ctx.heals.indexOf(entry)]), entry.targetId, 'direct', null,
     [{ source: asSource(entry.source), numerator: late, denominator: 1 }]);
   const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick), ctx.tick); target.hp += outcome.actual;
+  // Batch-3 Wealthy Rehab counts all healing its team receives; the save is authenticated by exact replay.
+  if (outcome.actual > 0 && target.mechanics?.some(m => m.mechanic === 'wealthyRehab')) target.batch2 = { ...target.batch2, healed: (target.batch2?.healed ?? 0) + outcome.actual };
   if (ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, healing: [...ctx.resolutionFacts.healing, outcome] };
   if (entry.periodic && (outcome.actual < outcome.afterWound || target.hp === target.maxHp)) clearPeriodicAccount(ctx, entry.periodic, target.id);
   ctx.events.push({ type: 'heal', tick: ctx.tick, outcome });

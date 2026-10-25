@@ -41,11 +41,12 @@ describe('B6 gate preparation and explicit dependency metadata',()=>{
   });
   it('obtains one actual 2-4 supply component and reaches the next legal equipment phase',async()=>{
     const state=await prepareB6Opening(pageAdapter(),'2-5');
-    // v23 151-offer pool: the first non-placebo 2-1 card is now Thorn-Plated Armor, which grants its own Bramble Vest.
+    // v23 151-offer pool: the first non-placebo 2-1 card was Thorn-Plated Armor (its own Bramble Vest); after the
+    // batch-3/XP merge it is Crimson Pact (a Renni, no item), so the 2-4 sword is the only item.
     expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');
-    expect(state.augments.map(augment=>augment.definitionId)).toEqual(['thorn-plated-armor']);
-    expect(state.items.map(item=>item.definitionId)).toEqual(['bramble-vest','sword']);
-    expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([[state.items[1].id]]);
+    expect(state.augments.map(augment=>augment.definitionId)).toEqual(['crimson-pact']);
+    expect(state.items.map(item=>item.definitionId)).toEqual(['sword']);
+    expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([[state.items[0].id]]);
   });
   it('reproduces public opening setup for the same seed',async()=>{
     expect(await prepareB6Opening(pageAdapter(4294967295),'1-3')).toEqual(await prepareB6Opening(pageAdapter(4294967295),'1-3'));

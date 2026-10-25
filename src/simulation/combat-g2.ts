@@ -9,7 +9,7 @@ import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 import { hexDistance } from './board';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
-import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
+import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, heroLive, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
 import { asSource } from './m8/s13-definitions';
 import { executeMechanismEffect, executeOverTimeTask } from './m8/s13-mechanisms';
 import { burn, modifier, stat, status } from './content/item-programs';
@@ -39,8 +39,17 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
   const ticks = (k: string) => Math.round(v(k) * 20), ids: string[] = [];
   const strike = (t: S13Unit, raw: number, type: S13Packet['damageType'] = 'magic', area = false) => { hit(ctx, unit, t, raw, seq, ids.length, type, area); ids.push(t.id); };
   switch (champion(unit)) {
-    case 'vladimir':
-      ctx.heals.push({ source: origin(unit), targetId: unit.id, amount: mag('Heal') }); strike(target, mag('Damage')); break;
+    case 'vladimir': {
+      const hero = heroLive(unit);
+      if (!hero) { ctx.heals.push({ source: origin(unit), targetId: unit.id, amount: mag('Heal') }); strike(target, mag('Damage')); break; }
+      // Blood Pact (P): no heal; DamageBps × Damage on the target; the enemy nearest Vladimir (other than the target) takes
+      // an independent 90/135/205 AP, plus OverkillBps of the pre-mitigation excess when the target cannot survive it.
+      const main = Math.floor(mag('Damage') * hero.damageBps / 10000); strike(target, main);
+      const near = byDistance(unit, enemies(unit, ctx.units)).find(x => x.id !== target.id);
+      if (near) strike(near, amount(unit, ctx.tick, { ap: hero.near }) + Math.floor(Math.max(0, main - target.hp) * hero.overkillBps / 10000));
+      unit.batch2 = { ...unit.batch2, vladCasts: (unit.batch2?.vladCasts ?? 0) + 1 };
+      break;
+    }
     case 'singed': {
       applyStatus(unit, origin(unit), 'damageReduction', Math.min(10000, Math.round(v('DR') * ap(unit, ctx.tick) * 100)), ticks('Duration'), ctx.tick, ctx.events, true);
       const ally = ctx.units.filter(u => u.alive && !isAttackProxy(u) && u.team === unit.team).sort((a, b) => (b.expansion?.damageDealt ?? 0) - (a.expansion?.damageDealt ?? 0) || (a.id < b.id ? -1 : 1))[0];

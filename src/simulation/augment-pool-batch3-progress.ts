@@ -1,0 +1,370 @@
+import type { MatchState } from './match-types';
+import type { AugmentGift } from './augment-gift-plan';
+import { planAugmentGifts } from './augment-gift-plan';
+import { readG23Progress } from './g2-3-state';
+import { AUGMENT_BATCH3, batch3Count, magicRollKind, callToChaosOutcome, mixSeed } from './content/augment-pool-batch3';
+import { grantMechanicGold, grantMechanicItem, grantMechanicUnit, grantMechanicConsumable } from './seat-mechanics/grants';
+import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
+import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
+import { appendResourceProvenance } from './resource-provenance';
+import { EMBLEM_ITEMS } from './content/emblems';
+import { getUnitStats } from './unit-stats';
+import { UNIT_DEFINITIONS } from './units';
+import { returnUnitItems } from './inventory';
+import { nextRandom } from './rng';
+import type { UnitLootPolicy } from './loot-runtime';
+import type { AugmentGiftSpec } from './augment-gift-plan';
+import { getMultiplayerRoundById } from './multiplayer-round';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
+import { CONSUMABLE_DEFINITIONS } from './content/consumables';
+import { GOLDEN_EGG_LOOT, EXALTED_ADVENTURE_LOOT, SPOILS_OF_WAR_TABLES, type Batch3LootTable } from './content/augment-pool-batch3-loot';
+export const AUGMENT_BATCH3_SOURCE='augment-pool-batch3';
+const DUMMY_SOURCE='augment-pool-batch3-dummy';
+interface Batch3Event {readonly augment:MatchState['augments'][number];readonly schedule:number;readonly ordinal:number;readonly round:number}
+/** Every threshold crossing is derived from immutable battle receipts, never from a client counter.
+ * Counting starts with the acquisition round's own battle; draws are not losses. Allied deaths count every
+ * combat (PvE included) and carry their remainder; one battle may cross several thresholds. */
+function batch3Events(state:MatchState):Batch3Event[] {
+ const battles=readG23Progress(state)?.economyReceipts.filter(r=>r.kind==='battle')??[];
+ return state.augments.flatMap(augment=>{
+  const row=AUGMENT_BATCH3[augment.definitionId];if(!row)return [];
+  return row.schedules.flatMap((schedule,index)=>{
+   const every=batch3Count(row,schedule.every),max=schedule.max===undefined?Infinity:batch3Count(row,schedule.max),events:Batch3Event[]=[];let count=0;
+   if(schedule.counter==='round-start'||schedule.counter==='stage-start'){
+    // Round entries strictly after acquisition; the acquisition round's own share is an immediate gift.
+    const from=schedule.from===undefined?1:batch3Count(row,schedule.from);
+    // P 2026-10-24: a champion is never born on a supply (carousel) round; that entry's copy waits for the next
+    // non-supply round entry, keeping its own ordinal and receipt. Items still arrive on the supply round itself.
+    const units=schedule.copyOf!==undefined||schedule.gifts.some(g=>g.kind==='unit'||g.kind==='random-unit'||g.kind==='random-unit-pool'||g.kind==='all-units');
+    for(let round=augment.acquiredRound+1;round<=state.round&&events.length<max;round++){
+     if(!(schedule.counter==='round-start'?round-augment.acquiredRound>=from:getMultiplayerRoundByOrdinal(round).subround===1))continue;
+     let due=round;while(units&&getMultiplayerRoundByOrdinal(due).kind==='supply')due++;
+     if(due<=state.round)events.push({augment,schedule:index,ordinal:events.length,round:due});
+     else break;
+    }
+    return events;
+   }
+   if(schedule.counter==='enemy-kills'){
+    // Spoils of War: the k-th enemy death in this seat's combats from acquisition reads its seat table's slot k.
+    const table=spoilsTable(state,augment,row.spoilsTier!);let kills=0;
+    for(const r of battles){
+     if(r.kind!=='battle'||r.facts.round<augment.acquiredRound)continue;
+     for(let n=r.facts.openingDeaths?.length??0;n>0;n--){kills++;if(spoilsGold(table,kills))events.push({augment,schedule:index,ordinal:kills,round:r.facts.round});}
+    }
+    return events;
+   }
+   if(schedule.counter==='outcome')return [{augment,schedule:index,ordinal:0,round:augment.acquiredRound}];
+   if(schedule.counter==='magic-egg'){
+    // P 2026-10-24: the 6-2-6 egg hatches at the round entry EggTurns rounds after acquisition (never on a carousel).
+    if(magicRollKind(magicRollDice(state,augment))!=='egg')return [];
+    const due=nonSupply(augment.acquiredRound+batch3Count(row,'EggTurns'));
+    return due<=state.round?[{augment,schedule:index,ordinal:0,round:due}]:[];
+   }
+   if(schedule.counter==='golden-egg'||schedule.counter==='adventure-quest'){
+    const due=schedule.counter==='golden-egg'?goldenEggHatch(state,augment,row,battles):adventureQuestRound(state,augment);
+    return due!==undefined&&due<=state.round?[{augment,schedule:index,ordinal:0,round:due}]:[];
+   }
+   const dummy=schedule.counter.startsWith('dummy-')?ownDummyId(state,augment):undefined;
+   if(schedule.counter.startsWith('dummy-')&&schedule.counter!=='dummy-gold'&&!dummy)return events;
+   for(const r of battles){
+    if(r.kind!=='battle'||r.facts.round<augment.acquiredRound)continue;
+    if(schedule.counter==='dummy-deaths')count+=r.facts.batch3Dummy?.deaths.includes(dummy!)?1:0;
+    else if(schedule.counter==='dummy-first-death')count+=r.facts.roundKind==='pvp'&&r.facts.batch3Dummy?.first===dummy?1:0;
+    else if(schedule.counter==='dummy-gold')count+=r.facts.batch3Dummy?.gold??0;
+    else if(schedule.counter==='allied-deaths')count+=r.facts.alliedDeaths;
+    else if(schedule.counter==='team-healing')count+=r.facts.batch3Healing??0;
+    else if(schedule.counter==='damage-dealt')count+=r.facts.batch3DamageDealt??0;
+    else if(r.facts.roundKind==='pvp'&&(schedule.counter==='pvp-combat'||r.facts.result===(schedule.counter==='pvp-win'?'win':'loss')))count++;
+    else continue;
+    const due=Math.min(schedule.repeat?Math.floor(count/every):count>=every?1:0,max);
+    while(events.length<due)events.push({augment,schedule:index,ordinal:events.length,round:r.facts.round});
+   }
+   return events;
+  });
+ });
+}
+/** One of the seven 14.24 tables per seat and augment, on its own stream (P 2026-10-24). */
+function spoilsTable(state:MatchState,augment:MatchState['augments'][number],tier:1|2|3):readonly (readonly [number,number])[] {
+ const tables=SPOILS_OF_WAR_TABLES[tier],namespace=JSON.stringify([AUGMENT_BATCH3_SOURCE,'spoils',state.multiplayer?.seatId??'solo',augment.choiceId,augment.definitionId]);
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;
+ return tables[Math.floor(nextRandom((state.seed^rng)>>>0).word*tables.length/4294967296)];
+}
+/** Kill ordinal k reads key 3×slot, slot cycling through the table's 83 positions. */
+const spoilsGold=(table:readonly (readonly [number,number])[],kill:number)=>table.find(([key])=>key===3*((kill-1)%83+1))?.[1]??0;
+/** The first non-supply round ordinal at or after `round` (nothing is born on a carousel round). */
+const nonSupply=(round:number)=>{let r=round;while(getMultiplayerRoundByOrdinal(r).kind==='supply')r++;return r;};
+/** Golden Egg (P 2026-10-24): EggTurns counts down once per round entry after acquisition and once more per player-
+ * combat win from the acquisition round; it hatches at the first round entry where the count reaches 0. */
+function goldenEggHatch(state:MatchState,augment:MatchState['augments'][number],row:(typeof AUGMENT_BATCH3)[string],battles:readonly {readonly kind:string;readonly facts?:{readonly round:number;readonly roundKind:string;readonly result:string}}[]):number|undefined {
+ const turns=batch3Count(row,'EggTurns');
+ for(let round=augment.acquiredRound+1;round<=state.round;round++){
+  const wins=battles.filter(r=>r.kind==='battle'&&r.facts!.round>=augment.acquiredRound&&r.facts!.round<round&&r.facts!.roundKind==='pvp'&&r.facts!.result==='win').length;
+  if(turns-(round-augment.acquiredRound)-wins<=0)return nonSupply(round);
+ }
+ return undefined;
+}
+/** Exalted Adventure (P 2026-10-24): the orb arrives at the round entry after the second of the three acquired
+ * champions first reaches 3 stars (authenticated upgrade provenance from the acquisition round on). */
+function adventureQuestRound(state:MatchState,augment:MatchState['augments'][number]):number|undefined {
+ const defs=new Set(planAugmentGifts(state,augment,AUGMENT_BATCH3[augment.definitionId].gifts).filter(g=>g.kind==='unit').map(g=>g.definitionId)),done=new Set<string>();
+ for(const e of state.resourceProvenance.entries){
+  if(e.kind!=='unit-upgraded'&&e.kind!=='unit-upgraded-after-combat')continue;
+  const round=getMultiplayerRoundById(e.roundId).ordinal;
+  if(round<augment.acquiredRound||e.event.toStar!==3||!defs.has(e.event.definitionId))continue;
+  done.add(e.event.definitionId);if(done.size>=2)return nonSupply(round+1);
+ }
+ return undefined;
+}
+/** One weighted table per event on its own source/seat/choice stream; weights are the raw 14.24 floats. */
+export function pickLootTable(seed:number,seat:string,choiceId:string,definitionId:string,tables:readonly Batch3LootTable[]):Batch3LootTable {
+ const namespace=JSON.stringify([AUGMENT_BATCH3_SOURCE,'loot',seat,choiceId,definitionId]);
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;
+ const weights=tables.map(t=>Math.round(t.weight*1e8)),total=weights.reduce((a,b)=>a+b,0);
+ let ticket=Math.floor(nextRandom((seed^rng)>>>0).word*total/4294967296);
+ for(const [i,w] of weights.entries()){if(ticket<w)return tables[i];ticket-=w;}
+ return tables.at(-1)!;
+}
+const lootTable=(state:MatchState,e:Batch3Event,tables:readonly Batch3LootTable[])=>pickLootTable(state.seed,state.multiplayer?.seatId??'solo',e.augment.choiceId,e.augment.definitionId,tables);
+const LOOT_POOLS:Readonly<Record<string,'artifact'|'radiant'|'completed'>>={ORNNARTIFACTS_SET6:'artifact',RADIANTITEMS_SET5:'radiant',COMPLETEDITEMS:'completed'};
+/** apiName → project content id. Golden Item Remover is projected onto the project's item remover (P 2026-10-24). */
+export function lootSpecs(t:Batch3LootTable):AugmentGiftSpec[] {
+ const item=(api:string)=>{const d=Object.values(ITEM_DEFINITIONS).find(d=>(d.apiName??d.id)===api);if(!d)throw new RangeError('Unknown loot item '+api);return d.id;};
+ const consumable=(api:string)=>{const id=api==='TFT9_Consumable_GoldenItemRemover'?'TFT_Consumable_ItemRemover':api;
+  const d=Object.values(CONSUMABLE_DEFINITIONS).find(d=>d.apiName===id);if(!d)throw new RangeError('Unknown loot consumable '+api);return d.id;};
+ return [
+  ...(t.Item??[]).map(api=>Object.values(CONSUMABLE_DEFINITIONS).some(d=>d.apiName===api)?{kind:'consumable' as const,definitionId:consumable(api)}:{kind:'item' as const,definitionId:item(api)}),
+  ...(t.Consumable??[]).map(api=>({kind:'consumable' as const,definitionId:consumable(api)})),
+  ...(t.ItemByKey??[]).map(key=>({kind:'random-item' as const,pool:LOOT_POOLS[key],count:1})),
+  ...(t.MeepTypeUnit??[]).map(definitionId=>({kind:'unit' as const,definitionId})),
+  ...(t.RandomUnit??[]).map(key=>{if(key!=='FiveCostUnit')throw new RangeError('Unknown loot unit '+key);return {kind:'random-unit' as const,cost:5 as const,count:1};}),
+ ];
+}
+const LOOT_TABLES:Readonly<Record<string,readonly Batch3LootTable[]>>={'golden-egg':GOLDEN_EGG_LOOT,'adventure-quest':EXALTED_ADVENTURE_LOOT};
+function eventGifts(state:MatchState,e:Batch3Event):AugmentGift[] {
+ const row=AUGMENT_BATCH3[e.augment.definitionId],schedule=row.schedules[e.schedule];
+ if(schedule.counter==='outcome')return planAugmentGifts(state,{...e.augment,choiceId:JSON.stringify([e.augment.choiceId,'batch3',e.schedule,e.ordinal])},outcomeReward(state,e.augment).gifts);
+ const tables=LOOT_TABLES[schedule.counter];
+ if(tables)return planAugmentGifts(state,{...e.augment,choiceId:JSON.stringify([e.augment.choiceId,'batch3',e.schedule,e.ordinal]),acquiredRound:e.round},lootSpecs(lootTable(state,e,tables)));
+ // A copy repeats the champion drawn by the acquisition gift at that index (Worth the Wait).
+ const gifts=schedule.copyOf===undefined?schedule.gifts:[{kind:'unit' as const,definitionId:planAugmentGifts(state,e.augment,row.gifts)[schedule.copyOf].definitionId}];
+ return planAugmentGifts(state,{...e.augment,choiceId:JSON.stringify([e.augment.choiceId,'batch3',e.schedule,e.ordinal]),acquiredRound:e.round},gifts);
+}
+/** The training dummy born from the augment's own acquisition gift (gift index 0), once its receipt exists. */
+export function ownDummyId(state:MatchState,augment:MatchState['augments'][number]):string|undefined {
+ const row=AUGMENT_BATCH3[augment.definitionId],outcome=row?.schedules.findIndex(s=>s.counter==='outcome')??-1;
+ const planned=[...planAugmentGifts(state,augment,row?.gifts??[]),...(outcome>=0?planAugmentGifts(state,{...augment,choiceId:JSON.stringify([augment.choiceId,'batch3',outcome,0])},outcomeReward(state,augment).gifts):[])];
+ const gift=planned.find(g=>g.definitionId==='training-dummy'||g.definitionId==='forming-dummy'||g.definitionId==='tower-dummy');
+ const r=gift&&state.seatMechanics?.receipts.find(r=>r.receiptId===gift.receiptId);
+ return r?.kind==='unit'&&r.unitId?r.unitId:undefined;
+}
+const retireId=(augment:MatchState['augments'][number])=>JSON.stringify([AUGMENT_BATCH3_SOURCE,augment.choiceId,'retire-dummy']);
+/** Distinct emblems (an emblem cannot be held twice), drawn by a partial shuffle of the sorted emblem pool on a
+ * source/seat/choice-bound stream; P 2026-10-24. Own receipt namespace: never part of the batch-1 inventory plan. */
+const emblemGifts=(state:MatchState,augment:MatchState['augments'][number])=>{
+ const row=AUGMENT_BATCH3[augment.definitionId];
+ const fixed=chaosDummyItems(state,augment);
+ if(fixed.length)return fixed.map((definitionId,slot)=>({receiptId:JSON.stringify([DUMMY_SOURCE,augment.choiceId,slot]),definitionId}));
+ if(!row?.dummyEmblems)return [];
+ const namespace=JSON.stringify([DUMMY_SOURCE,state.multiplayer?.seatId??'solo',augment.choiceId,augment.definitionId]);
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;rng=(state.seed^rng)>>>0;
+ const pool=Object.keys(EMBLEM_ITEMS).sort(),n=batch3Count(row,row.dummyEmblems);
+ for(let i=0;i<n;i++){const draw=nextRandom(rng);rng=draw.state;const j=i+Math.floor(draw.word*(pool.length-i)/4294967296);[pool[i],pool[j]]=[pool[j],pool[i]];}
+ return pool.slice(0,n).map((definitionId,slot)=>({receiptId:JSON.stringify([DUMMY_SOURCE,augment.choiceId,slot]),definitionId}));
+};
+/** Wandering Trainer emblems go straight onto the augment's dummy (never inventory); Support Mining retires its dummy
+ * when the death threshold fires. Both run only outside combat, after the dummy's birth receipt exists. */
+export function drainBatch3Dummies(initial:MatchState):MatchState {
+ let state=initial;if(state.phase==='combat')return state;
+ for(const augment of state.augments){
+  const unitId=ownDummyId(state,augment);if(!unitId)continue;
+  for(const [slot,gift] of emblemGifts(state,augment).entries()){
+   if(state.seatMechanics?.receipts.some(r=>r.receiptId===gift.receiptId))continue;
+   const granted=grantMechanicItem(state,{receiptId:gift.receiptId,definitionId:gift.definitionId,source:DUMMY_SOURCE});
+   if(!granted.ok||granted.receipt.kind!=='item')throw new RangeError(`Augment batch3 dummy emblem: ${granted.ok?'kind':granted.reason}`);
+   const itemId=granted.receipt.itemId;
+   state={...granted.state,items:granted.state.items.map(i=>i.id===itemId?{...i,location:{kind:'unit',unitId,slot}}:i),
+    resourceProvenance:appendResourceProvenance(granted.state.resourceProvenance,state.roundDefinitionId,{kind:'item-equipped',itemId,unitId,slot})};
+  }
+  const retire=batch3Events(state).some(e=>e.augment===augment&&AUGMENT_BATCH3[augment.definitionId].schedules[e.schedule].retireDummy);
+  if(retire&&state.preparation.units.some(u=>u.id===unitId))
+   state={...state,preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.id!==unitId)},
+    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'unit-removed',unitId,receiptId:retireId(augment)})};
+ }
+ return state;
+}
+export function validateBatch3Dummies(state:MatchState):void {
+ const fail=(why:string)=>{throw new RangeError('Invalid batch3 dummy authority: '+why);};
+ const removals=state.resourceProvenance.entries.filter(e=>e.kind==='unit-removed') as readonly Extract<(typeof state.resourceProvenance.entries)[number],{kind:'unit-removed'}>[];
+ const expected=new Map<string,string>();
+ for(const augment of state.augments){
+  const unitId=ownDummyId(state,augment),row=AUGMENT_BATCH3[augment.definitionId];if(!row)continue;
+  if(emblemGifts(state,augment).length&&unitId){
+   const present=state.preparation.units.some(u=>u.id===unitId);
+   for(const [slot,gift] of emblemGifts(state,augment).entries()){
+    const r=state.seatMechanics?.receipts.find(r=>r.receiptId===gift.receiptId);
+    if(!r){if(present&&state.phase!=='combat')fail('missing emblem');continue;}
+    if(r.kind!=='item'||r.definitionId!==gift.definitionId||r.source!==DUMMY_SOURCE)fail('emblem receipt');
+    if(r.kind==='item'&&present&&!state.items.some(i=>i.id===r.itemId&&i.location.kind==='unit'&&i.location.unitId===unitId&&i.location.slot===slot))fail('emblem detached');
+   }
+  }
+  if(unitId&&batch3Events(state).some(e=>e.augment===augment&&row.schedules[e.schedule].retireDummy))expected.set(retireId(augment),unitId);
+ }
+ // Forming removals: only under an owned forming augment's receipt, all within its acquisition round.
+ const forming=new Map(state.augments.filter(a=>AUGMENT_BATCH3[a.definitionId]?.forming).map(a=>[formingRemovalId(a),a]));
+ for(const e of removals.filter(e=>e.definitionId!==undefined)){
+  const a=forming.get(e.receiptId);if(!a||getMultiplayerRoundById(e.roundId).ordinal!==a.acquiredRound)fail('unexpected forming removal');
+  expected.set(e.receiptId,e.unitId);
+ }
+ const emblems=new Set(state.augments.flatMap(a=>emblemGifts(state,a).map(g=>g.receiptId)));
+ for(const r of state.seatMechanics?.receipts??[])if((r.source===DUMMY_SOURCE||r.receiptId.startsWith(`["${DUMMY_SOURCE}",`))&&!emblems.has(r.receiptId))fail('unexpected emblem');
+ for(const e of removals)if(e.definitionId===undefined&&expected.get(e.receiptId)!==e.unitId)fail('unexpected removal');
+ const retired=removals.filter(e=>e.definitionId===undefined);
+ if(new Set(retired.map(e=>e.receiptId)).size!==retired.length||new Set(removals.map(e=>e.unitId)).size!==removals.length)fail('duplicate removal');
+}
+/** Dummify/Golemify: base health/attack (panel × star, no items or traits; P 2026-10-24) of the champions removed. */
+export type FormingTotals=Readonly<Partial<Record<'dummify'|'golemify',{readonly health:number;readonly attack:number}>>>;
+export const formingRemovalId=(augment:MatchState['augments'][number])=>JSON.stringify([AUGMENT_BATCH3_SOURCE,augment.choiceId,'forming']);
+export function formingTotals(state:Pick<MatchState,'augments'|'resourceProvenance'>):FormingTotals|undefined {
+ const out:Record<string,{health:number;attack:number}>={};
+ for(const augment of state.augments){
+  const kind=AUGMENT_BATCH3[augment.definitionId]?.forming;if(!kind)continue;
+  const id=formingRemovalId(augment);let health=0,attack=0;
+  for(const e of state.resourceProvenance.entries)if(e.kind==='unit-removed'&&e.receiptId===id&&e.definitionId){
+   const stats=getUnitStats(e.definitionId,e.starLevel!);health+=stats.health;attack+=stats.attack;
+  }
+  out[kind==='dummy'?'dummify':'golemify']={health,attack};
+ }
+ return Object.keys(out).length?out:undefined;
+}
+/** On acquisition (outside combat) every non-summon champion on the board and bench is removed once, like a sale
+ * without gold: items return to the inventory (P 2026-10-24, as when selling), an anomaly binding ends, AD growth is
+ * dropped; online the pool ledger returns every copy (shared-pool-ledger reconcileHoldings on unit-removed). */
+export function drainBatch3Forming(initial:MatchState):MatchState {
+ let state=initial;if(state.phase==='combat')return state;
+ for(const augment of state.augments){
+  const kind=AUGMENT_BATCH3[augment.definitionId]?.forming;if(!kind)continue;
+  const key=kind==='dummy'?'dummify':'golemify';if(state.augmentProgress.forming?.[key])continue;
+  const receiptId=formingRemovalId(augment);
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId]?.summon)){
+   const returned=returnUnitItems(state.items,unit.id);
+   state={...state,items:returned.items,anomalyBinding:state.anomalyBinding?.unitId===unit.id?null:state.anomalyBinding,
+    persistentGrowth:state.persistentGrowth.filter(g=>g.unitId!==unit.id),
+    preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.id!==unit.id)},
+    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'unit-removed',unitId:unit.id,receiptId,definitionId:unit.definitionId,starLevel:unit.starLevel})};
+  }
+  state={...state,augmentProgress:{...state.augmentProgress,forming:formingTotals(state)}};
+ }
+  for(const augment of state.augments)if(AUGMENT_BATCH3[augment.definitionId]?.outcome==='magic-roll'&&!state.augmentProgress.magicRoll)
+  state={...state,augmentProgress:{...state.augmentProgress,magicRoll:magicRollDice(state,augment)}};
+ return state;
+}
+/** The dice an owned Magic Roll must carry in augmentProgress (restore and snapshot authority). */
+export function expectedMagicRoll(state:Pick<MatchState,'seed'|'multiplayer'|'augments'>):readonly [number,number,number]|undefined {
+ const a=state.augments.find(a=>AUGMENT_BATCH3[a.definitionId]?.outcome==='magic-roll');return a&&magicRollDice(state,a);
+}
+export function batch3RewardPlan(state:MatchState):AugmentGift[] {
+ return batch3Events(state).flatMap(e=>eventGifts(state,e));
+}
+/** Round entry: grant this round's round/stage-start gifts at once, so item receipts carry the entry round.
+ * A unit refused for a full bench stays in the shared batch-1 plan and is retried by its later drains. */
+export function drainBatch3RoundEntry(initial:MatchState,policy?:UnitLootPolicy):MatchState {
+ let state=initial;
+ for(const e of batch3Events(state)){
+  const counter=AUGMENT_BATCH3[e.augment.definitionId].schedules[e.schedule].counter;
+  if(e.round!==state.round||!['round-start','stage-start','golden-egg','adventure-quest','magic-egg'].includes(counter))continue;
+  for(const gift of eventGifts(state,e)){
+   if(state.seatMechanics?.receipts.some(r=>r.receiptId===gift.receiptId))continue;
+   const request={...gift,source:AUGMENT_GIFT_SOURCE};
+   const result=gift.kind==='unit'?grantMechanicUnit(state,request,policy):gift.kind==='item'?grantMechanicItem(state,request):grantMechanicConsumable(state,request);
+   if(result.ok)state=result.state;
+   else if(result.reason!=='bench-full')throw new RangeError(`Augment batch3 round grant: ${result.reason} (${gift.definitionId})`);
+  }
+ }
+ // Loot-table gold on this round's entry events pays here too, so its receipt carries the entry round.
+ for(const p of goldPlan(state)){
+  if(p.round!==state.round||state.seatMechanics?.receipts.some(r=>r.receiptId===p.receiptId))continue;
+  const result=grantMechanicGold(state,p);if(!result.ok)throw new RangeError(result.reason);state=result.state;
+ }
+ return state;
+}
+function goldPlan(state:MatchState){
+ return batch3Events(state).flatMap(e=>{
+  const row=AUGMENT_BATCH3[e.augment.definitionId],schedule=row.schedules[e.schedule],key=schedule.gold;
+  if(schedule.counter==='enemy-kills')return [{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:spoilsGold(spoilsTable(state,e.augment,row.spoilsTier!),e.ordinal),round:e.round}];
+  if(schedule.counter==='outcome'){const gold=outcomeReward(state,e.augment).gold;return gold?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:gold,round:e.round}]:[];}
+  const tables=LOOT_TABLES[schedule.counter];
+  if(tables){const gold=lootTable(state,e,tables).Gold??0;return gold?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:gold,round:e.round}]:[];}
+  return key?[{receiptId:JSON.stringify([AUGMENT_BATCH3_SOURCE,e.augment.choiceId,e.schedule,e.ordinal]),source:AUGMENT_BATCH3_SOURCE,amount:batch3Count(row,key),round:e.round}]:[];
+ });
+}
+export function drainBatch3Gold(initial:MatchState):MatchState {
+ let state=initial;for(const p of goldPlan(state)){
+  if(state.seatMechanics?.receipts.some(r=>r.receiptId===p.receiptId))continue;
+  const result=grantMechanicGold(state,p);if(!result.ok)throw new RangeError(result.reason);state=result.state;
+ }return state;
+}
+export function validateBatch3Gold(state:MatchState):void {
+ const plan=goldPlan(state),receipts=state.seatMechanics?.receipts??[];
+ for(const r of receipts.filter(r=>r.source===AUGMENT_BATCH3_SOURCE||r.receiptId.startsWith(`["${AUGMENT_BATCH3_SOURCE}",`))){
+  const p=plan.find(p=>p.receiptId===r.receiptId);
+  if(!p||r.kind!=='gold'||r.source!==p.source||r.amount!==p.amount||r.round!==p.round)throw new RangeError('Invalid batch3 gold authority');
+ }
+ for(const p of plan)if(!receipts.some(r=>r.receiptId===p.receiptId))throw new RangeError('Missing batch3 gold receipt');
+}
+
+/** Magic Roll: three fair six-sided dice on a source/seat/choice-bound stream (P 2026-10-24, the S14 table's ratios). */
+export function magicRollDice(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):readonly [number,number,number] {
+ const namespace=JSON.stringify([AUGMENT_BATCH3_SOURCE,'dice',state.multiplayer?.seatId??'solo',augment.choiceId,augment.definitionId]);
+ let rng=0x811c9dc5;for(let i=0;i<namespace.length;i++)rng=Math.imul(rng^namespace.charCodeAt(i),0x01000193)>>>0;rng=mixSeed(state.seed^rng);
+ const die=()=>{const d=nextRandom(rng);rng=d.state;return Math.floor(d.word*6/4294967296)+1;};
+ return [die(),die(),die()];
+}
+/** Low triples pay 6 gold with the three Lesser Duplicators (P 2026-10-24: 14.24 has no text for this band; 6 is the fixed
+ * amount of the S14 ratio table, the other S14 table gives 4–6). */
+export const MAGIC_ROLL_LOW_TRIPLE_GOLD=6;
+/** The acquisition reward of an outcome augment; every count is a 14.24 source value. */
+export function outcomeReward(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):{readonly gifts:readonly AugmentGiftSpec[];readonly gold:number} {
+ const row=AUGMENT_BATCH3[augment.definitionId];
+ if(row?.outcome==='magic-roll'){
+  const n=(k:string)=>batch3Count(row,k);
+  switch(magicRollKind(magicRollDice(state,augment))){
+   case 'units':return {gold:0,gifts:[{kind:'random-unit',cost:3,count:n('{b0892e64}'),starLevel:2},{kind:'random-unit',cost:2,count:n('{c726cd82}'),starLevel:2}]};
+   case 'components':return {gold:0,gifts:[{kind:'random-item',pool:'component',count:n('{9a58ced6}'),identical:true}]};
+   case 'pan':return {gold:0,gifts:[{kind:'item',definitionId:'frying-pan'},{kind:'random-item',pool:'component',count:n('NumComponents')}]};
+   case 'high-triple':return {gold:0,gifts:[{kind:'item',definitionId:'TFT_Item_TacticiansRing'}]};
+   case 'low-triple':return {gold:MAGIC_ROLL_LOW_TRIPLE_GOLD,gifts:[{kind:'consumable',definitionId:'TFT_Consumable_ChampionDuplicator_III',count:n('{95ed8271}')}]};
+   default:return {gold:0,gifts:[]};
+  }
+ }
+ if(row?.outcome==='call-to-chaos'){
+  const n=(k:string)=>batch3Count(row,k),remover={kind:'consumable' as const,definitionId:'magnetic-remover'};
+  switch(callToChaosOutcome(state,augment)){
+   case 'gold':return {gold:n('Gold'),gifts:[]};
+   case 'three-star':return {gold:n('{5edfa63d}'),gifts:[{kind:'random-unit',cost:3,count:1,starLevel:3}]};
+   // P 2026-10-24: the two anonymous 3.0 counts are read as the Hullcrusher and Sniper's Focus counts (both 3), numtg as the gloves.
+   case 'hullbreakers':return {gold:0,gifts:[{kind:'item',definitionId:'TFT9_Item_OrnnHullbreaker',count:n('{8c58ac06}')},remover]};
+   case 'horizon-focus':return {gold:0,gifts:[{kind:'item',definitionId:'TFT9_Item_OrnnHorizonFocus',count:n('{8f15cad2}')},remover]};
+   case 'thiefs-gloves':return {gold:0,gifts:[{kind:'item',definitionId:'thiefs-gloves',count:n('numtg')},remover]};
+   case 'solari-dummy':case 'zeke-dummy':return {gold:0,gifts:[{kind:'unit',definitionId:'training-dummy'}]};
+   case 'emblems':return {gold:0,gifts:[{kind:'random-item',pool:'emblem',count:n('NumEmblems')}]};
+   default:return {gold:0,gifts:[]};
+  }
+ }
+ return {gold:0,gifts:[]};
+}
+/** Call to Chaos's XP branch, paid with the acquisition (the batch-3 XP line's acquisition XP chain). */
+export function outcomeAcquisitionXp(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):number {
+ const row=AUGMENT_BATCH3[augment.definitionId];
+ return row?.outcome==='call-to-chaos'&&callToChaosOutcome(state,augment)==='xp'?batch3Count(row,'XP'):0;
+}
+/** Call to Chaos's reroll branch: 40 free shop rerolls that never expire (the free-reroll ledger). */
+export function outcomeFreeRerolls(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):number {
+ const row=AUGMENT_BATCH3[augment.definitionId];
+ return row?.outcome==='call-to-chaos'&&callToChaosOutcome(state,augment)==='rerolls'?batch3Count(row,'Rerolls'):0;
+}
+/** The two items Call to Chaos's dummy branches carry (14.24 Locket of the Iron Solari / Zeke's Herald). */
+const chaosDummyItems=(state:Pick<MatchState,'seed'|'multiplayer'>,augment:MatchState['augments'][number]):readonly string[]=>{
+ if(AUGMENT_BATCH3[augment.definitionId]?.outcome!=='call-to-chaos')return [];
+ const o=callToChaosOutcome(state,augment);
+ return o==='solari-dummy'?['TFT_Item_LocketOfTheIronSolari','TFT_Item_LocketOfTheIronSolari']:o==='zeke-dummy'?['TFT_Item_ZekesHerald','TFT_Item_ZekesHerald']:[];
+};

@@ -11,7 +11,7 @@ import { executeShieldEnd } from './m8/s13-mechanisms';
 import { hexDistance, type Board, type HexCell } from './board';
 import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
 import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, areaEnemies, grantShield, lowestAlly, mechanic, neighborsOf,
-  origin, path, range, sourceKey, variable, type S13Unit } from './combat-s13-state';
+  origin, path, range, sourceKey, variable, heroLive, type S13Unit } from './combat-s13-state';
 import type { CritEligibility, DamageDelivery, DamageInput, Amount, HealRequest } from './m8/contracts';
 export interface PeriodicReference { taskKey: string; effectIndex: number; holderId: string }
 export interface PacketStatusEffect { source: import('./m8/contracts').Source; effect: Extract<import('./m8/contracts').Effect, { kind: 'apply-status' }>; ordinal: number }
@@ -48,7 +48,7 @@ function replaceEndTask(unit: S13Unit, kind: CombatTask['kind'], at: number, val
   unit.tasks = unit.tasks.filter(t => t.kind !== kind); addTask(unit, kind, at, null, value, seq);
 }
 export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number): string[] {
-  if(unit.definitionId==='trainer-golem'){packet(ctx,unit,target,amount(unit,ctx.tick,{ap:variable(unit,'Damage')}),'magic',seq);return [target.id];}
+  if(unit.definitionId==='trainer-golem'||unit.definitionId==='augment-golem'){packet(ctx,unit,target,amount(unit,ctx.tick,{ap:variable(unit,'Damage')}),'magic',seq);return [target.id];}
   const six=sixCostCast(ctx,unit,target,seq);if(six)return six;
   const { tick, units, events } = ctx, source = origin(unit), v = (key: string, fallback = 0) => variable(unit, key, fallback);
   const mag = (key: string) => amount(unit, tick, { ap: v(key) });
@@ -64,6 +64,14 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
   };
   switch (champion(unit)) {
     case 'irelia': {
+      const hero = heroLive(unit);
+      if (hero) {
+        // Blade Dance (P): dash to the farthest enemy within DashRange (other than the target), then back to the target;
+        // each dash deals DashAd × AD + DashAp × AP physical. No position change is simulated.
+        const far = byDistance(unit, enemies(unit, units), true).find(x => x.id !== target.id && hexDistance(unit.cell, x.cell) <= hero.dashRange) ?? target;
+        const dash = amount(unit, tick, { ad: hero.dashAd / 10000, ap: hero.dashAp });
+        hit(far, dash, 'physical'); hit(target, dash, 'physical'); break;
+      }
       const ticks = duration('ShieldDuration', 3); shield(unit, mag('ShieldHealth'), ticks, true);
       const layer = unit.shieldLayers.find(l => l.key === sourceKey(source))!;
       unit.shieldLayers = unit.shieldLayers.map(l => l !== layer ? l : { ...l, m8Grant: { ...l.m8Grant!, onEnd: ['depleted', 'expired'],
@@ -119,10 +127,12 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       replaceEndTask(unit, 'leonaEnd', tick + ticks, mag('Damage'), seq); break;
     }
     case 'vander': {
-      const ticks = duration('TauntDuration', 2.5);
+      const ticks = duration('TauntDuration', 2.5), hero = heroLive(unit);
       applyStatus(unit, source, 'channel', 0, ticks, tick, events, true, '', seq);
-      applyStatus(unit, source, 'resistanceFlat', mag('Resists'), ticks, tick, events, true);
-      unit.runtime.nextAttackPhysical = amount(unit, tick, { ad: v('PercentAttackDamage') + v('BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count') });
+      // All Out (P): no resists; DamageBps × PercentAttackDamage, and the empowered attack splashes SplashBps to adjacent enemies.
+      if (!hero) applyStatus(unit, source, 'resistanceFlat', mag('Resists'), ticks, tick, events, true);
+      unit.runtime.nextAttackPhysical = amount(unit, tick, { ad: v('PercentAttackDamage') * (hero?.damageBps ?? 10000) / 10000 + v('BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count') });
+      if (hero) unit.batch2 = { ...unit.batch2, primeSplash: true };
       targets.push(unit.id); break;
     }
     case 'kogmaw': {
@@ -248,6 +258,12 @@ export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Uni
     const ids = selectConeTargets(targetingEnvironment(ctx.board, ctx.units, unit, ctx.tick, { primaryId: target.id }));
     const raw = safeNumber(integer(base) * integer(unit.attackCone.secondaryDamageBps) / 10000n);
     for (const [index, id] of ids.entries()) ctx.packets.push({ source: origin(unit), targetId: id, raw, damageType: 'physical', actionSeq: seq, rootActionSeq: seq, parentPacketId: JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, unit.id, seq, target.id, 0]), ordinal: 100 + index, delivery: 'ability-direct', critEligibility: 'never', area: true, triggeringCastActionSeq: null });
+  }
+  const prime = heroLive(unit);
+  if (prime?.splashBps && unit.batch2?.primeSplash && unit.runtime.nextAttackPhysical > 0) {
+    for (const [index, enemy] of enemies(unit, ctx.units).filter(x => x.id !== target.id && hexDistance(x.cell, target.cell) <= 1).sort((a, b) => a.id < b.id ? -1 : 1).entries())
+      ctx.packets.push({ source: origin(unit), targetId: enemy.id, raw: Math.floor(base * prime.splashBps / 10000), damageType: 'physical', actionSeq: seq, ordinal: 300 + index, delivery: 'attack-extra', critEligibility: 'never', area: true, triggeringCastActionSeq: null });
+    unit.batch2 = { ...unit.batch2, primeSplash: false };
   }
   unit.runtime.nextAttackPhysical = 0;
   if (unit.runtime.nextAttackMagic > 0) {

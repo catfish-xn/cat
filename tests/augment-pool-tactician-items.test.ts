@@ -1,3 +1,4 @@
+import { acquireAugment, offeredAt } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
@@ -64,6 +65,7 @@ it('Coronation gives each Crown/Shield/Cape holder 30% AD, 30% AS and 40 AP per 
  expect(augmentOfferAllowed('coronation',[{definitionId:'tacticians-kitchen',choiceId:'old',acquiredRound:1}],{node:'2-1',fieldedTraits:[],blocked:[]})).toBe(false);
 });
 function acquire(id:string){
+ if(!offeredAt(id,'2-1'))return acquireAugment(id); // 14.24 stage tags: first offering round instead of 2-1
  for(let seed=0;seed<10000;seed++){
   const s=createMatch(seed);if(!generateChoices(augmentCandidates(resolveAugmentTier(s,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),s.choiceRngState).offers.includes(id))continue;
   const before=reachRound('2-1',false,seed),c=before.pendingChoice!;return accepted(selectChoice(before,c.choiceId,c.generation,id));

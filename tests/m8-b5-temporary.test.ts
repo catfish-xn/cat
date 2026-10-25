@@ -36,9 +36,9 @@ function mechanismInventory(level: number): MatchState {
 }
 const pair = (state: MatchState) => state.temporaryEquipment.map(i => i.definitionId);
 const otherRng = (state: MatchState) => [state.rngState, state.choiceRngState, state.rewardRngState, state.battleSeedRngState];
-// Seed 42 draws the scuttle-crab opening, whose 2-7 blue component (a bow) is item-2,
-// so the Thief's Gloves combined from the 2-4/3-4 gloves at 3-5 is item-4.
-const TG = 'item-4';
+// After the batch-3/XP merge the route takes Crimson Pact (a Renni) and Heroic Grab Bag (duplicators, gold): no item
+// births before the 2-4/3-4 gloves, so the Thief's Gloves combined at 3-5 is item-3.
+const TG = 'item-3';
 
 describe('B5 Match TG-01 lifecycle and save validation', () => {
   it.each([3, 6, 7, 9])('level %s preserves the 2-1 pool mechanism and its legal paid-XP restore control', level => {

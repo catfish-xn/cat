@@ -1,3 +1,4 @@
+import { isSellableUnit } from '../src/simulation/seat-mechanics/forms';
 import {expect,it} from 'vitest';
 import {mkdtempSync,writeFileSync,readFileSync,rmSync,existsSync,statSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -34,7 +35,7 @@ function nextDuplicatorPreparation(input:MatchState):MatchState{
   if(state.phase==='preparation')return state;
   if(state.phase==='choice'){
    const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
-  }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
+  }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&isSellableUnit(u.definitionId)&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
   else throw Error(`Unexpected duplicator fixture phase ${state.phase}`);
  }
  throw Error('Duplicator preparation budget');
@@ -205,7 +206,8 @@ function tier4WithoutOwnedTarget(fullBench=false):MatchState{
  expect(replay.conquest.stacks).toBe(99);
  expect(replay.rewards).toEqual(original.rewards);
  state=writeG23Progress(state,{...original,...replay});
- for(const unit of state.preparation.units.filter(u=>u.team==='player'&&M5_UNIT_DEFINITIONS[u.definitionId]!.cost<=3))
+ // v23 batch 3: augment summons (dummies, golems) are not sellable champions.
+ for(const unit of state.preparation.units.filter(u=>u.team==='player'&&Object.hasOwn(M5_UNIT_DEFINITIONS,u.definitionId)&&M5_UNIT_DEFINITIONS[u.definitionId]!.cost<=3&&isSellableUnit(u.definitionId)))
   state=accepted(sellUnit(state,unit.id));
  if(fullBench){
   const free=state.preparation.benchSize-state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length;
@@ -268,8 +270,9 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
  // multiplayer G2-4a restored the tier-12 crown; the tier-11 support anvil takes item-16 first, so the crown is item-17.
  // v22: four earlier item births precede it (2-1 Portable Forge from the gold 2-1 augment tier, the 4-2 augment item,
  // and scuttle-puddle's 2-7/3-7 component rewards), so the crown moves from item-20 to item-24.
- // v23: NATURAL_FORGE_SEED 20's 2-1 augment (Mentorship II) grants no item, so the crown is one serial earlier (item-23).
- expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-23',definitionId:'TFT_Item_ForceOfNature'});
+ // v23 integration + batch-3/XP/global 14.24 stage bans merged: NATURAL_FORGE_SEED 20 now takes Sentinel Crest at 2-1
+ // (its emblem is item-4), Menaces at 3-2 and Blinding Speed at 4-2 (three items, item-17..19), so the crown is item-27.
+ expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-27',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
   // The support trial grants four earlier items; birth must still use the exact frozen serial.
   // v23: seed 20's tier-14 radiant roll is Ionic Spark (seed 42/v22: Archangel's Staff).
@@ -292,8 +295,9 @@ it('rejects a duplicator receipt and matching hero forged to an unowned option a
  const receipt=state.seatMechanics!.receipts.find(r=>r.receiptId===receiptId);
  // v22 augment tier table: seed42's 2-1 node is gold, so the fixture takes Portable Forge instead of All For One I,
  // whose two filler heroes no longer take unit-66/67.
- // v23: seed 20's augments and duplicator roll give Irelia as unit-64 (seed 42/v22: Swain, unit-68).
- expect(receipt).toMatchObject({kind:'unit',definitionId:'irelia',unitId:'unit-64'});
+ // v23: seed 20's augments and duplicator roll give Irelia (seed 42/v22: Swain, unit-68); after the batch-3/XP merge the
+ // 2-1 Sentinel Crest also grants a Rell (unit-62), so Irelia is unit-65 (was unit-64).
+ expect(receipt).toMatchObject({kind:'unit',definitionId:'irelia',unitId:'unit-65'});
  expect(state.preparation.units.some(u=>u.definitionId==='zeri')).toBe(false);
  const progress=readG23Progress(state)!,bundle=progress.rewards.find(b=>b.id==='g23:conqueror:4')!;
  const atom=g23RewardAtoms(bundle,state.seed).find(a=>a.kind==='duplicator')!;

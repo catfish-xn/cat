@@ -1,4 +1,5 @@
 import { appendResourceProvenance } from '../src/simulation/resource-provenance';
+import { acquireAugment, offeredAt } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
 import { AUGMENT_BATCH2, AUGMENT_BATCH2_ENABLED } from '../src/simulation/content/augment-pool-batch2';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
@@ -33,9 +34,12 @@ it('takes exactly the 26 batch-2 classification entries, with no disabled offers
 it.each(Object.keys(AUGMENT_BATCH2_ENABLED))('%s has executable gifts, trait offer rules and no RNG leakage',id=>{
  const row=AUGMENT_BATCH2[id],a={definitionId:id,choiceId:'test',acquiredRound:1};
  for(const e of AUGMENT_DEFINITIONS[id].effects){validateEffect(e);expect(cloneEffect(e)).toEqual(e);}
- expect(augmentOfferAllowed(id,[],{node:'3-2',fieldedTraits:[],blocked:[]})).toBe(false);
- expect(augmentOfferAllowed(id,[],{node:'3-2',fieldedTraits:row.traits,blocked:[]})).toBe(true);
- expect(augmentOfferAllowed(id,[],{node:'2-1',fieldedTraits:[],blocked:[]})).toBe(true);
+ // Trait tailoring at each tailored round the card is offered at; a 14.24 stage ban refuses it even with the trait.
+ for(const node of ['3-2','4-2'] as const){
+  expect(augmentOfferAllowed(id,[],{node,fieldedTraits:[],blocked:[]})).toBe(false);
+  expect(augmentOfferAllowed(id,[],{node,fieldedTraits:row.traits,blocked:[]})).toBe(offeredAt(id,node));
+ }
+ expect(augmentOfferAllowed(id,[],{node:'2-1',fieldedTraits:[],blocked:[]})).toBe(offeredAt(id,'2-1'));
  const initial=createMatch(42),s={...initial,augments:[a],resourceProvenance:id==='why-not-both'?appendResourceProvenance(initial.resourceProvenance,initial.roundDefinitionId,{kind:'form-swapper-selected',choiceId:'test'}):initial.resourceProvenance},after=drainBatch1Gifts(s);
  expect(batch1GiftPlan(s).map(g=>g.definitionId)).toEqual(row.gifts.map(g=>'definitionId' in g?g.definitionId:''));
  expect(drainBatch1Gifts(after)).toBe(after);validateBatch1Gifts(after);
@@ -121,6 +125,7 @@ it('real combat steps reproduce exactly and preserve the prior checkpoint',()=>{
  expect(before).toEqual(copy);expect(a).toEqual(b);expect(stepCombat(JSON.parse(JSON.stringify(a.state)))).toEqual(stepCombat(a.state));
 });
 function acquire(id:string){
+ if(!offeredAt(id,'2-1'))return acquireAugment(id); // 14.24 stage tags: first offering round instead of 2-1
  for(let seed=0;seed<10000;seed++){
   const s=createMatch(seed),filter={node:'2-1',fieldedTraits:[],blocked:[]};
   // v23 fmix32 openings: skip Trainer Golem seeds; the unbenchable golem blocks reachRound's empty-board helper.
@@ -130,7 +135,8 @@ function acquire(id:string){
  }
  throw Error('missing seed '+id);
 }
-it.each(['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED)])('%s selects through Match, restores, and combat replay rejects altered runtime',id=>{
+// Watcher Growth carries all three 14.24 stage tags (S13 archive agrees): never offered, so no public selection.
+it.each(['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED).filter(id=>id!=='watcher-growth')])('%s selects through Match, restores, and combat replay rejects altered runtime',id=>{
  let s=acquire(id);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  const definition=AUGMENT_BATCH2[id]?.gifts.find(g=>g.kind==='unit');
  const gift=s.preparation.units.find(u=>u.location.kind==='bench'&&(!definition||'definitionId' in definition&&u.definitionId===definition.definitionId));if(gift)s=accepted(deployMatchUnit(s,gift.id,{kind:'board',cell:{col:2,row:4}}));

@@ -124,7 +124,7 @@ export function publicEquipmentPreparation(components: readonly string[],
     }
     if(state.phase==='preparation'&&state.round>=(options.earliestRound??4)&&!missing().length){
       while(state.preparation.units.filter(u=>u.team==='player').length>state.preparation.benchSize){
-        const excess=[...state.preparation.units].reverse().find(u=>u.team==='player'&&!['unit-1','unit-2','unit-3'].includes(u.id))!;
+        const excess=[...state.preparation.units].reverse().find(u=>u.team==='player'&&!['unit-1','unit-2','unit-3'].includes(u.id)&&isSellableUnit(u.definitionId))!;
         state=accepted(sellUnit(state,excess.id));
         // v23 routes can bank a v22 anvil here: "selling" it opens its forge choice; take the first offer publicly.
         while(state.phase==='choice'&&state.pendingChoice?.kind==='forge'&&state.pendingChoice.step==='offer')state=choose(state,state.pendingChoice.offers[0]);
@@ -155,7 +155,7 @@ export function publicEquipmentPreparation(components: readonly string[],
       // Random hero bundles can fill the reserve before all requested components arrive.
       // Use the public capacity recovery sale, retaining the original equipment holders.
       while(readLootView(state).pendingClaims.length){
-        const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!['unit-1','unit-2','unit-3'].includes(u.id));
+        const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!['unit-1','unit-2','unit-3'].includes(u.id)&&isSellableUnit(u.definitionId));
         if(!reserve)throw Error('Public equipment route has no expendable capacity reserve');
         state=accepted(sellUnit(state,reserve.id));
       }

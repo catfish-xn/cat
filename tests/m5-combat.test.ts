@@ -1,3 +1,4 @@
+import { BATCH3_SUMMON_UNITS, TRAINING_DUMMY_ID, TOWER_DUMMY_ID } from '../src/simulation/content/batch3-summons';
 import { S13_ANOMALY_SUMMON_UNITS } from '../src/simulation/content/s13-anomaly-summons';
 import { G23_UNITS } from '../src/simulation/content/g2-3-units';
 import { G23_SUMMON_UNITS } from '../src/simulation/content/g2-3-summons';
@@ -45,7 +46,10 @@ function withStatus(target: CombatUnit, src: CombatOrigin, kind: 'stun' | 'redir
 
 describe('M5 independent finite combat rules', () => {
   it('resolves all 70 admitted abilities as integer-only isolated snapshots', () => {
-    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS};
+    // v23 batch 3: the training and tower dummies own their abilities (the forming dummy and Golemify golem reuse
+    // the training-dummy and trainer-golem abilities).
+    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS,
+      [TRAINING_DUMMY_ID]: BATCH3_SUMMON_UNITS[TRAINING_DUMMY_ID], [TOWER_DUMMY_ID]: BATCH3_SUMMON_UNITS[TOWER_DUMMY_ID]};
     const expectedAbilityIds = [...new Set(Object.values(admitted).map(unit => unit.abilityId))].sort();
     expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual(expectedAbilityIds);
     for (const unit of Object.values(admitted)) expect(S13_ABILITY_DATA[unit.abilityId].championId).toBe(unit.id);
@@ -66,7 +70,7 @@ describe('M5 independent finite combat rules', () => {
     for (const name of Object.values(S13_ABILITY_DATA).map(a => a.championId)) {
       const state = battle([hero(name), dummy(), dummy('e2', 3, 3), dummy('e3', 3, 4)], { rngState: 42, rngDraws: 0 });
       const step = stepCombat(state);
-      expect(casts(step.events).some(c => c.sourceId === 'p'), name).toBe(!['amumu','zeri','g23-sion','g23-forge'].includes(name));
+      expect(casts(step.events).some(c => c.sourceId === 'p'), name).toBe(!['amumu','zeri','g23-sion','g23-forge','training-dummy'].includes(name)); // the training dummy never casts
       expect(stepCombat(JSON.parse(JSON.stringify(step.state)))).toEqual(stepCombat(step.state));
       expect(step.state.units.every(u => Number.isSafeInteger(u.hp) && Number.isSafeInteger(u.shield)), name).toBe(true);
     }

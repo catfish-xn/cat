@@ -56,9 +56,10 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
     expect(opening.m8.loot.receipts.map(r=>r.payload)).toEqual(expected.map(d=>d.payload));
     // v23: the 151-offer pool makes the 2-1 card Family Crest (Family emblem item-4 plus a Violet), and seed 27's
     // fmix32 opening is now Warwick's Hunger, so crab-rave's 2-7 cloak no longer arrives.
-    expect(opening.augments.map(a=>a.definitionId)).toEqual(['family-crest']);
-    expect(players(opening).map(u=>u.definitionId).sort()).toEqual(['irelia','lux','renata','sett','steb','violet']);
-    expect(opening.items.map(i=>i.definitionId).sort()).toEqual(['TFT13_Item_FamilyEmblemItem','belt','bow','gloves','rod','rod','rod','sword','tear']);
+    // After the batch-3/XP merge the route's first non-Placebo 2-1 offer is Trade Sector (no emblem, no hero).
+    expect(opening.augments.map(a=>a.definitionId)).toEqual(['trade-sector']);
+    expect(players(opening).map(u=>u.definitionId).sort()).toEqual(['irelia','lux','renata','sett','steb']);
+    expect(opening.items.map(i=>i.definitionId).sort()).toEqual(['belt','bow','gloves','rod','rod','rod','sword','tear']);
     expect(opening.consumables.map(c=>c.definitionId)).toEqual(Array(4).fill('magnetic-remover'));
     expect(api.readLootView(opening)).toEqual({ roundId: '3-1', revealedDrops: [], revealedOrbs: [], pendingClaims: [], canContinue: false, reason: 'unsettled-round', pendingChoice: null });
     roundTrip(opening);

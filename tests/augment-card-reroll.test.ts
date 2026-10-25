@@ -88,12 +88,14 @@ it.each([undefined,-1,3,0.5,NaN,Infinity,Number.MAX_SAFE_INTEGER+1])('rejects in
 
 it('draws the last candidate successfully, then refuses an empty pool without using the slot', () => {
   const original=reachRound('2-1',false),c=original.pendingChoice!;
-  const candidates=augmentCandidates(c.augmentTier!,[],c.offers);
+  // The reroll draws with the 2-1 node filter (14.24 stage tags), so the vector does too.
+  const node={node:'2-1',fieldedTraits:[],blocked:[]};
+  const candidates=augmentCandidates(c.augmentTier!,[],c.offers,null,node);
   // Synthetic finite-catalog vector: exactly one ID remains after owned and removed filtering.
   // v22 mutual exclusions (e.g. team-ups) apply against owned augments, so pair the owned ID with
   // the first candidate it does not exclude.
   const ownedOf=(definitionId:string)=>[{definitionId,choiceId:'prior',acquiredRound:1}];
-  const [ownedId,lastId]=candidates.map(id=>[id,augmentCandidates(c.augmentTier!,ownedOf(id),c.offers)[0]] as const).find(([,last])=>last)!;
+  const [ownedId,lastId]=candidates.map(id=>[id,augmentCandidates(c.augmentTier!,ownedOf(id),c.offers,null,node)[0]] as const).find(([,last])=>last)!;
   const owned=ownedOf(ownedId);
   // v22 invariant: the shown offers are part of the seen ledger.
   const before=freeze({...original,augments:owned,removedAugmentIds:[...c.offers,...candidates.filter(id=>id!==ownedId&&id!==lastId)]});

@@ -40,15 +40,17 @@ function checkpoint(seed: number, requireBlistering = false): MatchState {
   throw new Error(`Seed ${seed} did not reach Powder ignite`);
 }
 
-it.each([16, 648, 234])('real-command ignite restores exactly and continues with identical events/RNG/receipts (seed %i)', seed => {
-  const s = checkpoint(seed, seed === 234);
+// Seed 241 (was 234 before the XP/batch-3 line merged): the first seed whose real 2-1 offer holds Blistering Strikes
+// and whose 2-1 shop sells Powder (187/240 offer Blistering without Powder).
+it.each([16, 648, 241])('real-command ignite restores exactly and continues with identical events/RNG/receipts (seed %i)', seed => {
+  const s = checkpoint(seed, seed === 241);
   const groups = igniteGroups(s);
   const keys = groups.flatMap(g => g.contributions.filter(c => c.source.definitionId === 'powder-ability').map(c => c.key));
   expect(new Set(keys).size).toBeLessThan(keys.length);
   // The generic validator remains fail-closed: only trusted full replay can
   // authenticate this historical cross-category alias and its shared display.
   expect(() => validateStatusGroups(groups, s.combat!.tick, s.combat!.combatId)).toThrow('Invalid status contribution');
-  if (seed === 234) expect(s.augments.some(a => a.definitionId === 'blistering-strikes')).toBe(true);
+  if (seed === 241) expect(s.augments.some(a => a.definitionId === 'blistering-strikes')).toBe(true);
   let original = s, restored = restoreMatch(serializeMatch(s));
   expect(restored).toEqual(original);
   while (original.phase === 'combat') {
@@ -60,7 +62,7 @@ it.each([16, 648, 234])('real-command ignite restores exactly and continues with
 });
 
 it('rejects every changed ignite contribution, projection and attached burn clock on both restore entry paths', () => {
-  const s = checkpoint(234, true);
+  const s = checkpoint(241, true);
   const saved = serializeMatch(s);
   const mutations: ((raw: any, unit: any, burn: any, wound: any) => void)[] = [
     (_r, _u, b) => { b.application.magnitudeBps++; },

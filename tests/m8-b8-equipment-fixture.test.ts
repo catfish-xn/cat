@@ -21,8 +21,9 @@ describe('B8 public equipment fixture provenance', () => {
     ]);
     expect(state.resourceProvenance.entries.filter(entry=>entry.kind==='unit-acquired'&&['unit-1','unit-2','unit-3'].includes(entry.unitId)).map(entry=>entry.kind==='unit-acquired'?[entry.roundId,entry.unitId,entry.source.kind]:[])).toEqual([["1-2","unit-1","opening"],["1-2","unit-2","loot"],["1-3","unit-3","loot"]]);
     expect(state.m8.loot.receipts.filter(r=>r.payload.kind==='item').map(r=>[r.payload,r.grantedItemIds])).toEqual([[{"kind":"item","definitionId":"sword","quantity":1},["item-1"]],[{"kind":"item","definitionId":"cloak","quantity":1},["item-2"]],[{"kind":"item","definitionId":"sword","quantity":1},["item-3"]]]);
-    // v23 151-offer pool: seed 206 now takes Bulky Buddies II at 2-1 (no item), so the 2-4 sword is item-4.
-    expect(state.augments.map(augment => augment.definitionId)).toEqual(['bulky-buddies-ii']);
+    // v23 151-offer pool: seed 206 took Bulky Buddies II at 2-1 (no item), so the 2-4 sword is item-4. After the batch-3/XP
+    // merge the fixture's first non-P2 2-1 pick is Clockwork Accelerator, which grants no item either.
+    expect(state.augments.map(augment => augment.definitionId)).toEqual(['clockwork-accelerator']);
     expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'?[e.roundId,e.itemId,e.source.kind]:[])).toEqual([["1-2","item-1","loot"],["1-3","item-2","loot"],["1-4","item-3","loot"],["2-4","item-4","schedule"]]);
     expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-combined').map(e=>e.kind==='item-combined'?e.event:null)).toEqual([{"type":"itemCombined","consumedIds":["item-1","item-2"],"itemId":"item-5","definitionId":"bloodthirster"}]);
     expect(state.items).toEqual([{"id":"item-3","definitionId":"sword","location":{"kind":"inventory"}},{"id":"item-4","definitionId":"sword","location":{"kind":"inventory"}},{"id":"item-5","definitionId":"bloodthirster","location":{"kind":"unit","unitId":"unit-1","slot":0}}]);
@@ -45,13 +46,14 @@ describe('B8 public equipment fixture provenance', () => {
   it('obtains components three and four from real scheduled choices and starts two Bloodthirsters at 3-5', () => {
     const state = itemMatch(['bloodthirster', 'bloodthirster']);
     expect(state.roundDefinitionId).toBe('3-5');
-    // v23 151-offer pool and fmix32 opening: this route now takes Sentinel Crown (2-1: emblem item-4, Crownguard
-    // item-5, a Sentinel hero) and Final Polish (3-5: Redemption item-11, Zephyr item-12); no Investment HP.
-    expect(state.scheduleReceipts.filter(r=>r.kind==='component').map(r=>[r.definitionId,r.itemIds])).toEqual([["cloak",["item-6"]],["sword",["item-10"]]]);
-    expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'?[e.roundId,e.itemId,e.source.kind]:[])).toEqual([["1-2","item-1","loot"],["1-3","item-2","loot"],["1-4","item-3","loot"],["2-1","item-4","mechanic"],["2-1","item-5","mechanic"],["2-4","item-6","schedule"],["2-7","item-7","loot"],["2-7","item-8","loot"],["2-7","item-9","loot"],["3-4","item-10","schedule"],["3-5","item-11","mechanic"],["3-5","item-12","mechanic"]]);
-    expect(state.items.map(i=>[i.id,i.definitionId])).toEqual([["item-11","redemption"],["item-12","TFT_Item_Zephyr"],["item-13","bloodthirster"],["item-14","bloodthirster"],["item-3","sword"],["item-4","TFT13_Item_TitanEmblemItem"],["item-5","crownguard"],["item-7","gloves"],["item-8","bow"],["item-9","sword"]]);
-    expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-combined').map(e=>e.kind==='item-combined'?e.event:null)).toEqual([{"type":"itemCombined","consumedIds":["item-1","item-2"],"itemId":"item-13","definitionId":"bloodthirster"},{"type":"itemCombined","consumedIds":["item-10","item-6"],"itemId":"item-14","definitionId":"bloodthirster"}]);
-    expect(state.augments.map(augment => augment.definitionId)).toEqual(['sentinel-crown','final-polish']);
+    // v23 151-offer pool and fmix32 opening: this route takes Sentinel Crown (2-1: emblem item-4, Crownguard item-5, a
+    // Sentinel hero). The 14.24 stage tags (batch-3/XP merge) keep Final Polish to 4-2, so 3-2 now takes Conqueror Crown
+    // (Warband emblem item-10, Last Whisper item-11) and the 3-4 sword is item-12; no Investment HP.
+    expect(state.scheduleReceipts.filter(r=>r.kind==='component').map(r=>[r.definitionId,r.itemIds])).toEqual([["cloak",["item-6"]],["sword",["item-12"]]]);
+    expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'?[e.roundId,e.itemId,e.source.kind]:[])).toEqual([["1-2","item-1","loot"],["1-3","item-2","loot"],["1-4","item-3","loot"],["2-1","item-4","mechanic"],["2-1","item-5","mechanic"],["2-4","item-6","schedule"],["2-7","item-7","loot"],["2-7","item-8","loot"],["2-7","item-9","loot"],["3-2","item-10","mechanic"],["3-2","item-11","mechanic"],["3-4","item-12","schedule"]]);
+    expect(state.items.map(i=>[i.id,i.definitionId])).toEqual([["item-10","TFT13_Item_WarbandEmblemItem"],["item-11","last-whisper"],["item-13","bloodthirster"],["item-14","bloodthirster"],["item-3","sword"],["item-4","TFT13_Item_TitanEmblemItem"],["item-5","crownguard"],["item-7","gloves"],["item-8","bow"],["item-9","sword"]]);
+    expect(state.resourceProvenance.entries.filter(e=>e.kind==='item-combined').map(e=>e.kind==='item-combined'?e.event:null)).toEqual([{"type":"itemCombined","consumedIds":["item-1","item-2"],"itemId":"item-13","definitionId":"bloodthirster"},{"type":"itemCombined","consumedIds":["item-12","item-6"],"itemId":"item-14","definitionId":"bloodthirster"}]);
+    expect(state.augments.map(augment => augment.definitionId)).toEqual(['sentinel-crown','conqueror-crown']);
     expect(state.augmentProgress.investmentHp).toBe(0);
     expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit.maxHp])).toEqual([['unit-1', 700]]);
     const restored = restoreMatch(serializeMatch(state));

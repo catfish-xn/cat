@@ -1,7 +1,7 @@
 import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateResistsShields } from '../src/simulation/m8/resists-shield-restore';
 import { expect, it } from 'vitest';
-import { buyUnit, startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
+import { selectChoice, rerollAugment, buyUnit, startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -17,7 +17,8 @@ const crest = 'TFT_Item_Artifact_LightshieldCrest';
 // Maddie. Rebuild the intended Irelia + Maddie (3,7) + Lux (5,7) board here by definition, not serial.
 let maddieId = 'unit-2', luxId = 'unit-3';
 function threeHeroMatch(): MatchState {
-  let state = reachRound('2-1', true, 5);
+  // v23 batch 3: seed 5's first offer stopped being a quiet card (changes the shield numbers); pick one publicly.
+  let state = crestPick(5);
   state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
   for (const [id, col] of [['maddie', 3], ['lux', 5]] as const) {
     const slot = state.shop.slots.findIndex(s => s.status === 'available' && s.definitionId === id);
@@ -28,10 +29,27 @@ function threeHeroMatch(): MatchState {
   }
   return state;
 }
+// v23 batch 3: pool growth keeps moving the seeds' first 2-1 offer onto augments that change the board or route the
+// save through exact replay, so the resists validator no longer decides. Publicly pick the first offered trait crest
+// (an emblem plus a bench champion, no combat mechanic of its own), else a quiet economy card, instead of the first card.
+function crestPick(seed: number): MatchState {
+  const quiet = ['big-grab-bag', 'heroic-grab-bag', 'raining-gold', 'raining-gold-plus', 'iron-assets','item-grab-bag-i','team-building','rolling-for-days-i','trade-sector','what-doesnt-kill-you','spoils-of-war-i','spoils-of-war-ii','latent-forge','prizefighter','crown-guarded','not-today'];
+  const wanted = (offers: readonly string[]) => offers.find(id => quiet.includes(id)) ?? offers.find(id => id.endsWith('-crest'));
+  let open = reachRound('2-1', false, seed);
+  // Public free rerolls (one per slot) until a wanted card shows, so later pool growth cannot strand the fixture.
+  for (let slot = 0; slot < 3 && !wanted(open.pendingChoice!.offers); slot++) {
+    const c = open.pendingChoice!, rerolled = rerollAugment(open, c.choiceId, c.generation, slot);
+    if (rerolled.ok) open = rerolled.state;
+  }
+  const c = open.pendingChoice!, crest = wanted(c.offers);
+  if (!crest) throw Error(`seed ${seed} offers no crest or quiet economy card at 2-1: ${c.offers.join(',')}`);
+  return resolveM5Choices(accepted(selectChoice(open, c.choiceId, c.generation, crest)));
+}
+const pick42 = () => crestPick(42);
 function publicStart(dynamic = false, deathHolder = false, bracer = false): MatchState {
   // v22: seed 5 now fields opening-reward Powder+Silco (Dominator), which routes the save through the
   // earlier full V19 replay; seed 42 keeps a plain Irelia board so the resists validator decides.
-  let state = dynamic ? threeHeroMatch() : reachRound('2-1', true, 42);
+  let state = dynamic ? threeHeroMatch() : pick42();
   if (!dynamic) for (const [i, unit] of state.preparation.units.filter(u => u.team === 'player').entries())
     state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: { col: i * 2 + 1, row: 4 } }));
   if (deathHolder) {
@@ -76,7 +94,9 @@ function transfer(state: any) {
 }
 it('public equipped live shield restores unchanged and continues identically', () => {
   const state = atTick(60), text = JSON.stringify(state);
-  expect(active(state).layer).toMatchObject({ granted: 133, remaining: 133 });
+  // After the batch-3/XP merge seed 42's crest pick is Conqueror Crest (after one free reroll; Visionary Crest before),
+  // so the board and the crest's shield value change: 183 (was 133).
+  expect(active(state).layer).toMatchObject({ granted: 183, remaining: 183 });
   for (const input of [state, text]) {
     const restored = restoreMatch(input);
     expect(restored).toEqual(state); expect(stepMatch(restored)).toEqual(stepMatch(state));

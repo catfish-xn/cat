@@ -28,7 +28,8 @@ it('public anomaly selection grants two role items once, keeps equipment, restor
  expect(archived.contentDigest).not.toBe(CONTENT_DIGEST);
  // The archived command tape remains historical. Generate the current v16
  // tape from genuine paid commands and the independent route ledger.
- const trace:{seed:number;commands:unknown[]}={seed:23,commands:[]},stop=new Error('v16 dual offer');
+ // Route seed 26 (was 23): with the 14.24 stage bans, seed 23's bot route takes a unit-gift augment the independent ledger does not book.
+ const trace:{seed:number;commands:unknown[]}={seed:26,commands:[]},stop=new Error('v16 dual offer');
  let captured=false;
  try{await run(api,{build:'cannon',seed:trace.seed,goldReserveByRound:{'4-5':80},anomalyDefinitionId:'dual-wielding',onStep(_before:MatchState,result:{state:MatchState},command:unknown){
   trace.commands.push(command??{type:'step'});

@@ -5,12 +5,13 @@ import { createG23Progress } from './g2-3-match-progress';
 import { nextRandom } from './rng';
 import { G24_FORGE_POOLS } from './content/g2-4-forges';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 
 export type AugmentGiftSpec =
   | {readonly kind:'item'|'unit'|'consumable'; readonly definitionId:string; readonly count?:number; readonly starLevel?:1|2|3}
-  | {readonly kind:'random-item'; readonly pool:'component'|'completed'|'support'|'sponsored'|'emblem'; readonly count:number; readonly identical?:boolean}
+  | {readonly kind:'random-item'; readonly pool:'component'|'completed'|'support'|'sponsored'|'emblem'|'artifact'|'radiant'; readonly count:number; readonly identical?:boolean}
   | {readonly kind:'random-unit-pool';readonly definitions:readonly string[];readonly count:number}
-  | {readonly kind:'random-unit'; readonly cost:1|2|3|4|5; readonly count:number; readonly starLevel?:1|2|3}
+  | {readonly kind:'random-unit'; readonly cost:1|2|3|4|5; readonly count:number; readonly starLevel?:1|2|3; readonly distinct?:true}
   | {readonly kind:'all-units'; readonly cost:1|2|3|4|5};
 export interface AugmentGift {
   readonly receiptId:string; readonly kind:'item'|'unit'|'consumable'; readonly definitionId:string;
@@ -29,7 +30,9 @@ export function planAugmentGifts(state:Pick<MatchState,'seed'|'multiplayer'>, a:
     const namespace=JSON.stringify([AUGMENT_GIFT_SOURCE,state.multiplayer?.seatId??'solo',a.choiceId,a.definitionId,index]);
     let hash=0x811c9dc5; for(let i=0;i<namespace.length;i++)hash=Math.imul(hash^namespace.charCodeAt(i),0x01000193)>>>0;
     let rng=(state.seed^hash)>>>0;
-    const pool=spec.kind==='random-item' ? (spec.pool==='emblem'?Object.keys(EMBLEM_ITEMS).sort():spec.pool==='sponsored'?[...createG23Progress(state.seed).sponsored].sort():G24_FORGE_POOLS[spec.pool==='support'?'TFT_ArmoryKeySupport':spec.pool==='completed'?'TFT_ArmoryKeyCompleted':'TFT_ArmoryKeyComponent'])
+    const pool=spec.kind==='random-item' ? (spec.pool==='emblem'?Object.keys(EMBLEM_ITEMS).sort():spec.pool==='sponsored'?[...createG23Progress(state.seed).sponsored].sort()
+        :spec.pool==='radiant'?Object.values(ITEM_DEFINITIONS).filter(d=>d.kind==='radiant').map(d=>d.id).sort():spec.pool==='artifact'?[...G24_FORGE_POOLS.TFT_ArmoryKeyOrnn]
+        :G24_FORGE_POOLS[spec.pool==='support'?'TFT_ArmoryKeySupport':spec.pool==='completed'?'TFT_ArmoryKeyCompleted':'TFT_ArmoryKeyComponent'])
       :spec.kind==='random-unit-pool'?[...spec.definitions].sort():spec.kind==='random-unit'||spec.kind==='all-units' ? [...SHOP_CATALOG_BY_COST[spec.cost]].sort() : null;
     const count=spec.kind==='all-units'?pool!.length:spec.count??1;
     let first:string|undefined;
@@ -38,7 +41,9 @@ export function planAugmentGifts(state:Pick<MatchState,'seed'|'multiplayer'>, a:
       if(spec.kind==='all-units')definitionId=pool![copy];
       else if(pool){
         const draw=nextRandom(rng);rng=draw.state;
-        const pick=pool[Math.floor(draw.word*pool.length/4294967296)];
+        const index=Math.floor(draw.word*pool.length/4294967296),pick=pool[index];
+        // distinct: without replacement (batch-3 Exalted Adventure's three different 2-costs).
+        if(spec.kind==='random-unit'&&spec.distinct)pool.splice(index,1);
         definitionId=spec.kind==='random-item'&&spec.identical?(first??=pick):pick;
       }else definitionId=(spec as {definitionId:string}).definitionId;
       return {receiptId:JSON.stringify([AUGMENT_GIFT_SOURCE,a.choiceId,a.definitionId,index,copy]),

@@ -1,6 +1,9 @@
 import { TACTICIAN_ITEM_SOURCE } from './tactician-items';
 import { AUGMENT_BATCH2, AUGMENT_BATCH2_BLOCKED } from './augment-pool-batch2';
 import { AUGMENT_BATCH1, AUGMENT_BATCH1_BLOCKED } from './augment-pool-batch1';
+import { AUGMENT_BATCH3 } from './augment-pool-batch3';
+import { AUGMENT_BATCH3_XP, AUGMENT_BATCH3_XP_BLOCKED } from './augment-pool-batch3-xp';
+import { AUGMENT_STAGE_BANS } from './augment-stage-bans';
 import { ANVIL_POLICY } from './anvils';
 import { ROUND_INCOME_TIMING } from './round-income-policy';
 import { OPENING_ENCOUNTER_CONFIG } from './opening-encounters';
@@ -29,6 +32,10 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 /** One release manifest is included in both content and loot replay identities. */
 export const RULES_GAP_MANIFEST = freezeContent({
   tacticianItems:{source:TACTICIAN_ITEM_SOURCE,gold:'independent-item-collector-stream-10-percent-one-gold',population:'permanent-acquisition-and-crafted-receipts'},
+  // Offer stages are replay input: augment offers re-derive from these bans at restore (P, 14.24 stage tags).
+  augmentStageBans:{version:'augment-stage-bans-14.24-tags-v1',bans:AUGMENT_STAGE_BANS,reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2'},
+  augmentPoolBatch3Xp:{version:'augment-pool-batch3-xp-v23-candidate',content:AUGMENT_BATCH3_XP,blocked:AUGMENT_BATCH3_XP_BLOCKED,timing:'pvp-xp-next-round-entry-draw-as-loss-stage-start-after-acquisition',levels:'recorded-at-acquisition'},
+  augmentPoolBatch3:{version:'augment-pool-batch3-v23-candidate',content:AUGMENT_BATCH3,counting:'pvp-battle-receipts-from-acquisition-round-inclusive-draw-not-loss'},
   augmentPoolBatch2:{version:'augment-pool-batch2-v23-candidate',content:AUGMENT_BATCH2,blocked:AUGMENT_BATCH2_BLOCKED},
   augmentPoolBatch1:{version:'augment-pool-batch1-v23-candidate',content:AUGMENT_BATCH1,blocked:AUGMENT_BATCH1_BLOCKED,random:'source-seat-choice-spec-lcg32-uniform-sorted-with-replacement',anvilChoices:4,roundGold:'add-to-deferred-base-income-next-entry',unitEscrow:'solo-capacity-online-reward-orb'},
   openingEncounters: OPENING_ENCOUNTER_CONFIG,

@@ -443,7 +443,9 @@ describe.each([
   // v23: Black Rose owner is the lowest numeric unit serial (unit-9 before unit-10); on these public Manaflow
   // routes Morgana is that unit and owns Sion. Ticks moved with the v23 opening-encounter mixing.
   // Later v23 combat changes (Sion rework, short CC/knock-up): seed 108's Sion kill now carries a Morgana assist; seed 153 keeps a summon-only kill.
-  { contribution: false, seed: 153, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
+  // After the v23 integration merged the batch-3 pool, seed 153 no longer has a summon-only Sion kill; the first such seed
+  // is 26 (its 2-1 Manaflow I priority is not offered, so it takes Pyromaniac).
+  { contribution: false, seed: 26, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 305, targetId: 'enemy-r8-1' },
   { contribution: true, seed: 175, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 226, targetId: 'enemy-r4-1' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   let fixture: { state: MatchState; start: MatchCommandResult; before: MatchState; ownerId: string };

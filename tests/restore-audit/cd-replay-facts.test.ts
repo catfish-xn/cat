@@ -41,7 +41,7 @@ function until(initial: MatchState, found: (s: MatchState) => boolean): MatchSta
   return state;
 }
 const player = (s: MatchState) => s.combat!.units.find(u => u.team === 'player')!;
-function roster(definitions: readonly string[], cells?: readonly { col: number; row: number }[], seed = 5): MatchState {
+function roster(definitions: readonly string[], cells?: readonly { col: number; row: number }[], seed = 12): MatchState { // 12 (was 6, before that 5): the 14.24 stage bans changed seed 5's 2-1 pick, whose forge check then rejects first; after the v23 integration merge seed 6 takes Wandering Trainer II (exact Mirror-forge replay rejects first), seed 12 takes Heroic Grab Bag
   let state = emptyBoard(reachRound('2-1', true, seed));
   state = accepted(grantMechanicGold(state, { receiptId: 'cd-funding', source: 'test', amount: 200 }));
   while (state.level < definitions.length) state = accepted(buyXp(state));
@@ -144,9 +144,10 @@ it('G-C07 authenticates burn phase even when the group and task agree', () => {
 
 it('G-C08 rejects invented Experiment takedowns plus matching maximum health', () => {
   // Seed 1: after the augment pool grew, seed 5's route holds a sampled shield whose check fires before the G23 facts.
-  const seed = readG23Progress(reachRound('2-1', true, 1))!.seed;
+  // Route seed 2 (was 1) after the global 14.24 stage bans; 12 after the v23 integration merge (seed 2 opens with Trainer Golems).
+  const routeSeed = 12, seed = readG23Progress(reachRound('2-1', true, routeSeed))!.seed;
   const labs = g23Laboratories(seed, 'player', 3);
-  const initial = roster(['drmundo', 'urgot', 'nunu'], [labs[0], labs[1], { col: 3, row: 4 }], 1);
+  const initial = roster(['drmundo', 'urgot', 'nunu'], [labs[0], labs[1], { col: 3, row: 4 }], routeSeed);
   const eligible = (s: MatchState) => s.combat!.units.find(u => u.team === 'player' && u.mechanics?.some(m => m.mechanic === 'g23Experiment' && m.values.mundo > 0)
     && s.combat!.units.some(v => v.team === 'enemy' && !v.alive && !u.g23?.experimentTakedowns.includes(v.id)));
   const legal = until(initial, s => !!eligible(s));
@@ -230,7 +231,7 @@ it('G-C03 rejects Tristana growth that remains within the cast-count upper bound
 it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async anomalyDefinitionId => {
   // v19's expanded gold pool changes the paid route's economy. Reserve enough
   // gold to actually select Eagle Eye rather than silently accepting a fallback.
-  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: anomalyDefinitionId === 'eagle-eye' ? 1 : 2, anomalyDefinitionId,
+  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 2, anomalyDefinitionId, // eagle-eye route seed 2 (was 1) after the global 14.24 stage bans
     ...(anomalyDefinitionId==='eagle-eye'?{goldReserveByRound:{'4-5':80}}:{}) });
   expect(prep.anomalyBinding?.definitionId).toBe(anomalyDefinitionId);
   const id = prep.anomalyBinding!.unitId;

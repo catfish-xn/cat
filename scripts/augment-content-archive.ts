@@ -1,6 +1,8 @@
 // Offline only: rebuild the exact original identity roots, including all text/provenance.
 import { AUGMENT_BATCH1 } from '../src/simulation/content/augment-pool-batch1';
 import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
+import { AUGMENT_BATCH3 } from '../src/simulation/content/augment-pool-batch3';
+import { AUGMENT_BATCH3_XP } from '../src/simulation/content/augment-pool-batch3-xp';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { RULES_GAP_MANIFEST as runtimeManifest } from '../src/simulation/content/rules-manifest';
 import { AUGMENT_POOL_TEXT } from '../src/presentation/augment-pool-text';
@@ -287,6 +289,181 @@ const BATCH2_NOTES = {
     "description_en_us": "Vander gains 30 permanent max Health each time Silco casts. Silco gains 6 permanent Ability Power each time Vander dies.\n\nGain a 2-star Vander, a Silco, and a Spear of Shojin."
   }
 };
+const BATCH3_NOTES = {
+  "dummify": {
+    "description_en_us": "Lose all champions on your board and bench. Gain a Training Dummy with 100% of their combined health. The dummy gains 250 Health per stage."
+  },
+  "golemify": {
+    "description_en_us": "Lose all champions on your board and bench. Gain a Golem with 90% of their combined Health and 60% of their combined Attack Damage. The Golem gains 150 Health per stage."
+  },
+  "spoils-of-war-i": {
+    "description_en_us": "Enemies have a 25% chance to drop loot when killed."
+  },
+  "spoils-of-war-ii": {
+    "description_en_us": "Enemies have a 30% chance to drop loot when killed."
+  },
+  "spoils-of-war-iii": {
+    "description_en_us": "Enemies have a 40% chance to drop loot when killed."
+  },
+  "field-medic": {
+    "description_en_us": "Gain a Steb. Your strongest Steb's Ability's Mana cost is reduced by 10, but no longer heals. Steb's spell grants 30% Omnivamp and strikes 3 times, each dealing 65%."
+  },
+  "blade-dance": {
+    "description_en_us": "Gain an Irelia. Your strongest Irelia gains 40% Attack Speed and gains a brand new Ability that dashes her between two targets, dealing physical damage to both."
+  },
+  "shocking-troll": {
+    "description_en_us": "Gain a Trundle. Your strongest Trundle's Ability no longer heals, but grants him 140% Attack Speed for 5 seconds, and permanently grants him 1.5% Attack Damage. His maximum mana is reduced by 50."
+  },
+  "savage-revenge": {
+    "description_en_us": "Gain 2 Rennis. Your strongest Renni's Ability costs 10 less and causes her to lunge towards the farthest enemy within 2 hexes, dealing 110% damage to the target and reduced damage to enemies in her path."
+  },
+  "all-out": {
+    "description_en_us": "Gain a Vander. Your strongest Vander gains a brand new Ability that no longer grants resistances, but deals 85% increased damage and punches the target backwards, dealing 25% of the original damage to all enemies hit."
+  },
+  "blood-pact": {
+    "description_en_us": "Gain a Vladimir. Your strongest Vladimir gains +3 Range and gains 3 bonus Mana each attack. His Ability no longer heals but grants 10% Damage Amp, deals 80% bonus damage, and spreads additional damage to the nearest enemy."
+  },
+  "tower-defense": {
+    "description_en_us": "Gain a Training Dummy equipped with a random emblem that fires ranged attacks at enemies. It upgrades as the game goes on."
+  },
+  "the-golden-egg": {
+    "description_en_us": "Gain a golden egg that hatches in 11 turns for a huge amount of loot. Winning player combat speeds up the hatch timer by an extra turn."
+  },
+  "an-exalted-adventure": {
+    "description_en_us": "Gain three 2-cost champions. If you 3-star two of them, gain an orb filled with loot. Gain a Lesser Champion Duplicator now and at the start of every stage.\n\nChampions: 〔对局动态值〕, 〔对局动态值〕, 〔对局动态值〕"
+  },
+  "support-mining": {
+    "description_en_us": "Gain a Training Dummy. When it dies 7 times, gain a random Support Item and remove the Training Dummy."
+  },
+  "support-mining-plus": {
+    "description_en_us": "Gain a Training Dummy. When it dies 4 times, gain a random Support Item and remove the Training Dummy."
+  },
+  "scapegoat": {
+    "description_en_us": "Gain a Training Dummy and 4 gold. If it is the first to die each player combat, gain 1 gold."
+  },
+  "wandering-trainer-i": {
+    "description_en_us": "Gain 1 gold and a Training Dummy with 2 permanently attached Emblems."
+  },
+  "wandering-trainer-ii": {
+    "description_en_us": "Gain 6 gold and a Training Dummy with 3 permanently attached Emblems."
+  },
+  "gold-for-dummies": {
+    "description_en_us": "Gain a Training Dummy. Every 10 seconds, all Training Dummies grant 1 gold."
+  },
+  "bad-luck-protection": {
+    "description_en_us": "Your team can no longer critically strike. Convert each 1% Critical Strike Chance into 1% Attack Damage. Gain a Sparring Gloves."
+  },
+  "blazing-soul-i": {
+    "description_en_us": "Combat start: Your highest Attack Speed champion gains 20 Ability Power and 20% Attack Speed. Repeat on another ally every 3 seconds."
+  },
+  "blazing-soul-ii": {
+    "description_en_us": "Combat start: Your highest Attack Speed champion gains 35 Ability Power and 30% Attack Speed. Repeat on another ally every 3 seconds."
+  },
+  "noble-sacrifice": {
+    "description_en_us": "When your first ally dies each combat, grant your team 25 + 10% of that ally's Armor and Magic Resistance."
+  },
+  "wealthy-rehab-i": {
+    "description_en_us": "Your team gains 10% Omnivamp.  Get a bonus of 8 gold when your team first accumulates 10000 total champion healing.\n\nTotal Healing: 〔对局动态值〕"
+  },
+  "wealthy-rehab-ii": {
+    "description_en_us": "Your team gains 15% Omnivamp.  Get a bonus of 15 gold when your team first accumulates 10000 total champion healing.\n\nTotal Healing: 〔对局动态值〕"
+  },
+  "corrosion": {
+    "description_en_us": "Enemy champions in the first two rows lose 3 Armor and Magic Resist every 2 seconds."
+  },
+  "building-a-collection-iii": {
+    "description_en_us": "Gain a random item component at the start of the next 6 rounds (including this round)."
+  },
+  "worth-the-wait": {
+    "description_en_us": "Gain a random two-star 1-cost champion. After 2 rounds, gain another copy of them at the start of each round for the rest of the game.\n\nChampion: 〔对局动态值〕"
+  },
+  "worth-the-wait-ii": {
+    "description_en_us": "Gain a random 2-cost champion. Gain another copy of them at the start of each round for the rest of the game.\n\nChampion: 〔对局动态值〕"
+  },
+  "flexible": {
+    "description_en_us": "Gain 1 random emblem. At the start of every Stage, gain a random emblem. Your team gains 40 Health for each emblem they are holding."
+  },
+  "rolling-for-days-i": {
+    "description_en_us": "Gain 11 free Shop rerolls."
+  },
+  "superstars-i": {
+    "description_en_us": "Your team deals 5% more damage, increased by 2% for every 3-star champion on your team. Gain 2 rerolls.\n\nBonus: 〔对局动态值〕%"
+  },
+  "superstars-ii": {
+    "description_en_us": "Your team deals 7% more damage, increased by 5% for every 3-star champion on your team. Gain 4 rerolls.\n\nBonus: 〔对局动态值〕%"
+  },
+  "trade-sector": {
+    "description_en_us": "Gain a free Shop reroll every round. Gain 1 gold."
+  },
+  "eye-for-an-eye-plus": {
+    "description_en_us": "Gain a random component. For every 13 ally champions that die, gain another component (max 3).\n\nDeaths Remaining: 〔对局动态值〕"
+  },
+  "prizefighter": {
+    "description_en_us": "Gain 2 item components. Every 5 wins gives you an item component."
+  },
+  "shimmerscale-essence": {
+    "description_en_us": "Gain a Mogul's Mail. In 5 rounds, gain a Gamblers Blade.\n\nThese items give gold as well as combat power."
+  },
+  "eye-for-an-eye": {
+    "description_en_us": "For every 15 ally champions that die, gain a random component (max 4).\n\nDeaths Remaining: 〔对局动态值〕"
+  },
+  "team-building": {
+    "description_en_us": "Gain a Lesser Champion Duplicator. Gain another after 7 player combats.\n\nThis item allows you to copy a 3-cost or less champion."
+  },
+  "latent-forge": {
+    "description_en_us": "After 8 player combats, gain an Artifact anvil. \n\nThe anvil offers 4 choices. Artifacts are more powerful items with a unique effect."
+  },
+  "phreaky-friday": {
+    "description_en_us": "Gain an Infinity Force. After 5 player combats, gain another.\n\nInfinity Force: Artifact that offers tons of offensive and defensive stats"
+  },
+  "phreaky-friday-plus": {
+    "description_en_us": "Gain an Infinity Force. After 3 player combats, gain another.\n\nInfinity Force: Artifact that offers tons of offensive and defensive stats"
+  },
+  "dark-alley-dealings": {
+    "description_en_us": "Gain a Suspicious Trenchcoat. After 3 player combats, gain a Trickster's Glass."
+  },
+  "living-forge": {
+    "description_en_us": "Gain an Artifact anvil now and after every 9 player combats.\n\nArtifacts are more powerful items with a unique effect."
+  },
+  "what-doesnt-kill-you": {
+    "description_en_us": "Gain 2 gold after losing a player combat. Gain a random component after every 4 losses.\n\nLosses until next component: 〔对局动态值〕"
+  },
+  "warpath": {
+    "description_en_us": "After dealing 60 player damage, gain a chest of high cost champions and items.\n(Current: 〔对局动态值〕)"
+  },
+  "magic-roll": {
+    "description_en_us": "Roll 3 dice. Gain rewards based on their total.\n\nReward: 〔对局动态值〕"
+  },
+  "call-to-chaos": {
+    "description_en_us": "Gain a powerful and random reward.\n\nReward: 〔对局动态值〕"
+  }
+};
+const BATCH3_XP_NOTES = {
+  "patient-study": {
+    "description_en_us": "After player combat, gain 2 XP if you won or 3 XP if you lost."
+  },
+  "epoch": {
+    "description_en_us": "Now, and at the start of every stage, gain 6 XP and 2 free rerolls."
+  },
+  "epoch-plus": {
+    "description_en_us": "Now, and at the start of every stage, gain 8 XP and 3 free rerolls."
+  },
+  "level-up": {
+    "description_en_us": "When you buy XP, gain an additional 2. Gain 12 immediately."
+  },
+  "shopping-spree": {
+    "description_en_us": "When you level up, gain a number of free shop refreshes equal to your level. Gain 4 gold. "
+  },
+  "upward-mobility": {
+    "description_en_us": "Buying XP costs 1 less. Gain 2 Health and 3 free rerolls whenever you level up."
+  },
+  "kingslayer": {
+    "description_en_us": "After winning player combat, gain 1 gold. If they had more health than you, gain 4 Gold instead. Gain 1 gold now."
+  },
+  "risky-moves": {
+    "description_en_us": "Your Tactician loses 20 Health, but after 7 player combats, gain 30 gold."
+  }
+};
 function restoreBatch<T extends Record<string, { source: object }>>(runtime: T, notes: Record<string, object>) {
   if (Object.keys(runtime).length !== Object.keys(notes).length) throw new Error('Augment archive identities differ');
   return Object.fromEntries(Object.entries(runtime).map(([id, row]) => {
@@ -298,6 +475,8 @@ export const RULES_GAP_MANIFEST = {
   ...runtimeManifest,
   augmentPoolBatch1: { ...runtimeManifest.augmentPoolBatch1, content: restoreBatch(AUGMENT_BATCH1, BATCH1_NOTES) },
   augmentPoolBatch2: { ...runtimeManifest.augmentPoolBatch2, content: restoreBatch(AUGMENT_BATCH2, BATCH2_NOTES) },
+  augmentPoolBatch3Xp: { ...runtimeManifest.augmentPoolBatch3Xp, content: restoreBatch(AUGMENT_BATCH3_XP, BATCH3_XP_NOTES) },
+  augmentPoolBatch3: { ...runtimeManifest.augmentPoolBatch3, content: restoreBatch(AUGMENT_BATCH3, BATCH3_NOTES) },
 };
 export const ARCHIVED_AUGMENT_DEFINITIONS = Object.fromEntries(Object.entries(AUGMENT_DEFINITIONS).map(([id, row]) =>
   [id, Object.hasOwn(AUGMENT_POOL_TEXT, id) ? { ...row, ...AUGMENT_POOL_TEXT[id] } : row]));

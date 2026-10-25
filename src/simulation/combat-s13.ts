@@ -48,7 +48,7 @@ import { collectTriggers } from './effects';
 import type { Hook } from './strategy-types';
 import { nextRandom } from './rng';
 import { executeTask, planS13Attack, planS13Cast, type AbilityContext, type S13Packet } from './combat-s13-abilities';
-import { active, ad, ap, byDistance, champion, compareText, EMPTY_RUNTIME, enemies, grantShield, hasMechanic, interval,
+import { active, ad, ap, byDistance, champion, compareText, EMPTY_RUNTIME, enemies, grantShield, hasMechanic, heroLive, interval,
   mechanic, range, syncShield, variable, origin, hpSample, statusModifiers, frozenShield, shieldProjection, constantModifier, spellCrit, type S13Unit } from './combat-s13-state';
 import { allocateDamage, permissionsFor, prepareDamage, type DamageSample } from './m8/damage';
 import { rollCrit } from './m8/crit';
@@ -129,6 +129,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   if(owner&&g23Anomaly(owner,'bully')&&(target.effectiveStarLevel??target.starLevel)<(owner.effectiveStarLevel??owner.starLevel))amplifiers.push(constantModifier('damageAmp',2400,'bps'));
   if (owner) for (const m of owner.mechanics ?? []) {
     if (m.mechanic === 'damageAmp') amplifiers.push(constantModifier('damageAmp', m.values.bps, 'bps'));
+    if (m.mechanic === 'heroCarryLive' && m.values.ampBps && owner.batch2?.vladCasts) amplifiers.push(constantModifier('damageAmp', m.values.ampBps * owner.batch2.vladCasts, 'bps'));
     if (m.mechanic === 'sniper') amplifiers.push(constantModifier('damageAmp', m.values.damageBpsPerHex * hexDistance(owner.cell, target.cell), 'bps'));
     if (m.mechanic === 'glassCannon') amplifiers.push(constantModifier('damageAmp', m.values.damageAmpBps, 'bps'));
     if (m.mechanic === 'formSwapper' && startingRows(owner.team, owner.startingCell?.row ?? owner.cell.row)==='back-two') amplifiers.push(constantModifier('damageAmp',m.values.backAmpBps,'bps'));
@@ -146,7 +147,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   return { holder: hpSample(owner ?? target), target: { ...hpSample(target), hp }, attackDamage: owner ? ad(owner) : 0,
     abilityPower: owner ? ap(owner, tick) : 0, armor: defenses(target, true, tick, units), magicResist: defenses(target, false, tick, units),
     ...(champion(target) === 'amumu' ? { flatReduction: variable(target, 'FlatDamageReduction') } : {}),
-    amplifiers, reductions, prevention: effectiveStatuses(target.mechanismState?.statuses ?? [], tick).some(g => g.kind === 'damage-prevention'), ...(packet.delivery === 'item-burn' && champion(target) === 'neutral' ? { burnCap: 100 } : {}), critical: packet.critical ?? false,
+    amplifiers, reductions, prevention: effectiveStatuses(target.mechanismState?.statuses ?? [], tick).some(g => g.kind === 'damage-prevention'), ...(packet.delivery === 'item-burn' && champion(target) === 'neutral' ? { burnCap: 100 } : {}), critical: (packet.critical ?? false) && !(owner && hasMechanic(owner, 'badLuck')),
     critMultiplierBps: owner ? (packet.critMultiplierBps ?? p2PacketCrit(owner, target.id, units, spellCrit(owner)).multiplierBps) + chargedCritBps(owner, packet) : S13_COMBAT_RULES.critMultiplierBps,
     shields: [...target.shieldLayers].sort((a, b) => a.expiresAtTick - b.expiresAtTick || compareText(frozenShield(a, target).key, frozenShield(b, target).key)) };
 }
@@ -337,7 +338,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       }
     };
     if(isOpeningCrab(unit)){if(unit.alive&&!blocked.has(unit.id))crabJump(ctx,unit,()=>actionSeq++);rollPlannedPackets();continue;}
-    if (unit.definitionId==='g23-forge'||unit.anomalySummon?.kind==='crab'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(); continue; }
+    if (unit.definitionId==='g23-forge'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.anomalySummon?.kind==='crab'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(); continue; }
     const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
     const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie','warwick','viktor','mel'].includes(champion(unit));
     const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
@@ -651,6 +652,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const rates = new Map(units.map(unit => [unit.id, vampRates(unit, unit.hp)]));
   for (const { owner, source, seq, outcomes, hpAmount, heal: positiveHeal } of damageByAction.values()) {
     if (owner.hp <= 0) continue;
+    const fieldMedic = heroLive(owner)?.omnivampBps ?? 0;
+    if (hpAmount > 0 && fieldMedic && source.sourceKind === 'ability') ctx.heals.push({ source, targetId: owner.id, amount: Math.floor(hpAmount * fieldMedic / 10000) });
     if (hpAmount > 0) for (const definition of positiveHeal ? [{ source, amount: positiveHeal }] : owner.mechanismDefinitions!.positiveDamageHeals ?? []) ctx.heals.push({ source: definition.source, targetId: owner.id,
       amount: evaluateAmount(definition.amount, { holder: hpSample(owner), attackDamage: ad(owner), abilityPower: ap(owner, tick) }) });
     for (const request of vampRequests(JSON.stringify([ctx.combatId, tick, owner.id, seq, 'vamp']), owner, outcomes, rates.get(owner.id)!, units.filter(u=>!isAttackProxy(u))))

@@ -4,6 +4,11 @@ import { AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
 import type { MatchState } from './match-types';
 import type { UnitLootPolicy } from './loot-runtime';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
+import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
+import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold, drainBatch3Dummies, validateBatch3Dummies, drainBatch3Forming } from './augment-pool-batch3-progress';
+import { validateFreeRerolls } from './free-rerolls';
+import { validateAcquisitionLevels } from './augment-xp';
+import { drainSettlementGold, validateSettlementGold } from './augment-settlement-gold';
 import { planAugmentGifts, augmentAnvilOffers, AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { grantMechanicItem, grantMechanicUnit, grantMechanicConsumable } from './seat-mechanics/grants';
 import { isAnvil } from './content/anvils';
@@ -11,12 +16,13 @@ import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state),formSwapperGiftPlan(state));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */
 export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):MatchState {
- let state=initial,progressed:boolean;
+ // Dummify/Golemify first: their removal frees the bench for the dummy or golem they grant.
+ let state=drainBatch3Forming(initial),progressed:boolean;
  do {
   progressed=false;
   for(const gift of batch1GiftPlan(state)){
@@ -28,7 +34,7 @@ export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):Matc
    else if(result.reason!=='bench-full')throw new RangeError(`Augment batch1 grant: ${result.reason} (${gift.definitionId})`);
   }
  }while(progressed);
- return drainBatch2Gold(state);
+ return drainBatch3Dummies(drainSettlementGold(drainBatch3Gold(drainBatch2Gold(state))));
 }
 /** Anvil options belong to the acquisition receipt; open order and current round do not affect them. */
 export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
@@ -39,6 +45,11 @@ export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
 export function validateBatch1Gifts(state:MatchState):void {
  validateBatch2Gold(state);
  validateFormSwapperSelection(state);
+ validateBatch3Gold(state);
+ validateAcquisitionLevels(state);
+ validateSettlementGold(state);
+ validateFreeRerolls(state);
+ validateBatch3Dummies(state);
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
  for(const r of receipts)if(r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')){

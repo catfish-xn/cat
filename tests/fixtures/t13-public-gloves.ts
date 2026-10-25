@@ -4,6 +4,8 @@ import type { MatchCommandResult, MatchState } from '../../src/simulation/match-
 import { S13_P2_SOURCE } from '../../src/simulation/content/s13-augments-p2-source';
 import { P2_ITEM_GRANTS } from '../../src/simulation/content/s13-augments-p2';
 import { TEAMUP_IDS } from '../../src/simulation/content/v20-traits';
+import { AUGMENT_BATCH3 } from '../../src/simulation/content/augment-pool-batch3';
+import { AUGMENT_BATCH3_XP } from '../../src/simulation/content/augment-pool-batch3-xp';
 
 const accepted = (result: MatchCommandResult): MatchState => {
   if (!result.ok) throw Error(`Public TG supply route: ${result.reason}`);
@@ -14,7 +16,10 @@ const cached = new Map<string, MatchState>();
 const extraItemChoices = new Set(['high-voltage','pyromaniac','thorn-plated-armor','unleash-the-beast','portable-forge','radiant-relics','blinding-speed',
   // v22 tiers offer team-ups (two partner units) and Investment Strategy (max-HP growth) on this route;
   // both would change the bench and the independent holder stats, so keep them out as well.
-  ...TEAMUP_IDS,'investment-strategy-i','investment-strategy-ii']);
+  ...TEAMUP_IDS,'investment-strategy-i','investment-strategy-ii',
+  // v23 batch 3 / batch-3 XP cards remove or grant champions (Golemify, dummies), grant items or XP, or add replayed
+  // combat mechanics; keep the TG-only route free of them too.
+  ...Object.keys(AUGMENT_BATCH3),...Object.keys(AUGMENT_BATCH3_XP)]);
 /** T13's five supply choices remain guaranteed. Concede with an empty board to
  * obtain two gloves at 2-4/3-4 without depending on random PvE content. The level-9
  * control fights the opening to retain enough HP for 4-2. All battles, income,

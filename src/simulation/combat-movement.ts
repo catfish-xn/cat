@@ -12,7 +12,7 @@ export function isControlled(unit: S13Unit, tick: number): boolean {
 
 /** Units that never leave their cell: attack proxies, the Hextech Forge and a still-bound Sion. */
 export function neverMoves(unit: S13Unit): boolean {
-  return isAttackProxy(unit) || unit.definitionId === 'g23-forge' || g23Bound(unit);
+  return isAttackProxy(unit) || unit.definitionId === 'g23-forge' || unit.definitionId === 'training-dummy' || unit.definitionId === 'forming-dummy' || unit.definitionId === 'tower-dummy' || g23Bound(unit);
 }
 
 /** Shared eligibility for ordinary movement and trait dashes; cooldown/range are caller-specific. */

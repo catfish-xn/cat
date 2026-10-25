@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { createMatch, nextRound, startMatchCombat, selectAnomalyTarget, claimOrb, openAnvil, selectChoice, type MatchState } from '../src/simulation/match';
+import { createMatch, nextRound, startMatchCombat, selectAnomalyTarget, claimOrb, openAnvil, selectChoice, rerollAugment, type MatchState } from '../src/simulation/match';
 import { isAnvil } from '../src/simulation/content/anvils';
 import { createOpeningEncounter, planOpeningRound, applyOpeningEffects, commitOpeningEncounterHealth,
   validateOpeningEncounterState, isMelBlessingCrossing, readOpeningMelProgress } from '../src/simulation/opening-encounter';
@@ -336,7 +336,14 @@ it('crowded item inventory: Mel rewards stay in pending orbs without inventing a
   expect(claimed.items).toHaveLength(28);expect(openingRewardOrbs(claimed)).toHaveLength(0);
 });
 it('item subscription survives strict save before/after pickup and refuses repeated pickup',()=>{
-  const before=resolveM5Choices(reachRound('2-1',false,lootSeeds.get(8)!));
+  // Take a 2-1 augment that grants no items: the 14.24 stage bans changed this seed's offers to item augments, so the
+  // free card rerolls look further (public commands only).
+  let open=reachRound('2-1',false,lootSeeds.get(8)!),before:MatchState|undefined;
+  for(let slot=0;!before;slot++){
+   const c=open.pendingChoice!;
+   before=c.offers.map(id=>resolveM5Choices(accepted(selectChoice(open,c.choiceId,c.generation,id)))).find(s=>s.items.length===0);
+   if(!before){expect(slot).toBeLessThan(3);open=accepted(rerollAugment(open,c.choiceId,c.generation,slot));}
+  }
   const restored=restoreMatch(serializeMatch(before)),orb=openingRewardOrbs(restored)[0];
   expect(restored.items).toHaveLength(0);expect(crownTeamSizeBonus(readG23Progress(restored))).toBe(0);
   const result=claimOrb(restored,orb.orbId,restored.round);expect(result.ok).toBe(true);if(!result.ok)return;

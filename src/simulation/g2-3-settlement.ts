@@ -12,6 +12,8 @@ import type { CombatState } from './combat-types';
 import { advanceG23Economy,type G23BattleFacts } from './g2-3-economy';
 import type { Team } from './board';
 import { UNIT_DEFINITIONS } from './units';
+import { selectPlayerBaseDamage } from './match-rules';
+import { countsG23SurvivorDamage } from './g2-3-summons';
 import { TACTICIANS_CROWN_ID } from './deployment-cap';
 export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKind:'pve'|'pvp',openingUnits:readonly {readonly id:string;readonly team:Team}[]):G23BattleFacts{
  const tier=(id:string)=>combat.strategy?.traits.find(t=>t.traitId===id&&t.team===team)?.tier??0;
@@ -30,7 +32,16 @@ export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKi
  const melCasts=allies.filter(u=>owners.has(u.id)&&u.definitionId==='mel'&&!u.itemSummon&&!u.anomalySummon).reduce((n,u)=>n+(u.runtime?.castCount??0),0);
  const openingDeaths=(combat.openingDeaths??[]).filter(d=>{const u=combat.units.find(u=>u.id===d.unitId);return u&&u.team!==team&&openingUnits.some(o=>o.id===u.id)&&!u.itemSummon&&!u.anomalySummon&&!UNIT_DEFINITIONS[u.definitionId]?.summon&&(roundKind==='pvp'?u.unitKind!=='neutral':u.definitionId.startsWith('pve-scuttle-')||u.definitionId==='pve-giant-crab');}).map(d=>({victimId:d.unitId,eventSeq:d.eventSeq}));
  const batch2=batch2BattleFacts(combat,team);
- return {...(batch2?{batch2}:{}),openingDeaths,...(familyTrait&&familyIds.length?{family:{stage:getMultiplayerRoundByOrdinal(round).stage,eligible:familyTrait.tier>=5,openingIds:familyIds,survivorIds:familyIds.filter(id=>allies.some(u=>u.id===id&&u.alive&&u.hp>0))}}:{}),...(melCasts?{melCasts}:{}),...(hunter?{d11Headhunter:{combatId:combat.combatId!,holderId:hunter.id,kills:hunter.d11Kills!}}:{}),...(itemPayouts.length?{itemGoldPayouts:itemPayouts}:{}),battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
+ const batch3Healing=combat.units.filter(u=>u.team===team).reduce((n,u)=>n+(u.batch2?.healed??0),0);
+ const dummies=combat.units.filter(u=>u.team===team&&(u.definitionId==='training-dummy'||u.definitionId==='forming-dummy'||u.definitionId==='tower-dummy'));
+ const firstDeath=[...(combat.openingDeaths??[])].sort((a,b)=>a.eventSeq-b.eventSeq).find(d=>combat.units.some(u=>u.id===d.unitId&&u.team===team))?.unitId??null;
+ const batch3Dummy=dummies.length?{deaths:dummies.filter(u=>!u.alive).map(u=>u.id).sort(),first:firstDeath,gold:dummies.reduce((n,u)=>n+(u.batch2?.dummyGold??0),0)}:undefined;
+ // Batch-3 Warpath (P 2026-10-24): the player damage this side deals on a PvP win, by the frozen PvP rule
+ // (stage base damage + this side's surviving units, as economy.ts and two-sided-battle charge the loser). Damage to a
+ // mirror counts too (S14 14.2 fixed Warpath to count damage dealt to ghost armies); the source seat takes none.
+ const won=combat.result===(team==='player'?'playerWin':'enemyWin'),info=getMultiplayerRoundByOrdinal(round);
+ const batch3DamageDealt=roundKind==='pvp'&&won?selectPlayerBaseDamage(info.stage,'pvp',info.roundId)+combat.units.filter(u=>u.team===team&&countsG23SurvivorDamage(u)).length:0;
+ return {...(batch2?{batch2}:{}),...(batch3Healing?{batch3Healing}:{}),...(batch3DamageDealt?{batch3DamageDealt}:{}),...(batch3Dummy?{batch3Dummy}:{}),openingDeaths,...(familyTrait&&familyIds.length?{family:{stage:getMultiplayerRoundByOrdinal(round).stage,eligible:familyTrait.tier>=5,openingIds:familyIds,survivorIds:familyIds.filter(id=>allies.some(u=>u.id===id&&u.alive&&u.hp>0))}}:{}),...(melCasts?{melCasts}:{}),...(hunter?{d11Headhunter:{combatId:combat.combatId!,holderId:hunter.id,kills:hunter.d11Kills!}}:{}),...(itemPayouts.length?{itemGoldPayouts:itemPayouts}:{}),battleId:combat.combatId!,round,roundKind,result:combat.result==='draw'?'draw':combat.result===(team==='player'?'playerWin':'enemyWin')?'win':'loss',conquerorTier:tier('conqueror'),
  conquestTakedowns:[...new Set([...allies.flatMap(u=>u.g23?.conquestTakedowns??[]),...splits.flatMap(s=>s.g23?.conquestTakedowns??[])])].sort(),chemBaronTier:tier('chem-baron'),alliedDeaths:allies.filter(u=>!u.alive&&!u.itemSummon).length,
  rumbleStar:allies.filter(u=>u.definitionId==='rumble').reduce<0|1|2|3>((n,u)=>Math.max(n,u.starLevel) as 0|1|2|3,0),...(crowns?{crowns}:{}),highRollerGold:[...allies.map(u=>u.g23),...splits.map(s=>s.g23)].reduce((n,g)=>n+(g?.highRoller??[]).reduce((m,r)=>m+r.gold,0),0)};
 

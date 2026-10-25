@@ -1,3 +1,4 @@
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import { combineItems, createMatch, buyUnit, rerollShop, deployMatchUnit, selectChoice, startMatchCombat, stepMatch, nextRound, sellUnit } from '../../src/simulation/match';
 import type { MatchState, MatchCommandResult } from '../../src/simulation/match-types';
 import { isAnvil } from '../../src/simulation/content/anvils';
@@ -36,6 +37,6 @@ export function publicConsumables(seed=27566):MatchState {
   }
   const gloves=state.items.filter(i=>i.definitionId==='gloves'&&i.location.kind==='inventory');
   if(gloves.length>=2)state=accepted(combineItems(state,gloves[0].id,gloves[1].id));
-  while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,reserve.id));}
+  while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&isSellableUnit(u.definitionId)&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,reserve.id));}
   cached.set(seed,state);return structuredClone(state);
 }

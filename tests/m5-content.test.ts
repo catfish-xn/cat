@@ -1,3 +1,4 @@
+import { BATCH3_SUMMON_UNITS, TRAINING_DUMMY_ID, TOWER_DUMMY_ID } from '../src/simulation/content/batch3-summons';
 import { G23_UNITS } from '../src/simulation/content/g2-3-units';
 import { G23_SUMMON_UNITS } from '../src/simulation/content/g2-3-summons';
 import { G24_VOIDSPAWN_UNITS } from '../src/simulation/content/g2-4b-voidspawn';
@@ -45,7 +46,10 @@ describe('M5 frozen S13 slice',()=>{
     expect(M5_UNIT_DEFINITIONS.caitlyn.baseStats.attack).toBe(82);
   });
   it('retains the historically distinct skills and all their three-star coefficient slots',()=>{
-    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS};
+    // v23 batch 3: the training and tower dummies own their abilities (the forming dummy and Golemify golem reuse
+    // the training-dummy and trainer-golem abilities).
+    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS,
+      [TRAINING_DUMMY_ID]: BATCH3_SUMMON_UNITS[TRAINING_DUMMY_ID], [TOWER_DUMMY_ID]: BATCH3_SUMMON_UNITS[TOWER_DUMMY_ID]};
     const expectedAbilityIds = [...new Set(Object.values(admitted).map(unit => unit.abilityId))].sort();
     expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual(expectedAbilityIds);
     for (const unit of Object.values(admitted)) expect(S13_ABILITY_DATA[unit.abilityId].championId).toBe(unit.id);
@@ -62,9 +66,9 @@ describe('M5 frozen S13 slice',()=>{
     }
   });
   // Augments: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  it('freezes v23: 35 supported traits, 8 components, 36 recipes, 151 augments and 56 anomalies',()=>{
+  it('freezes v23: 35 supported traits, 8 components, 36 recipes, 208 augments and 56 anomalies',()=>{
     // v23: the approved augment pool batches grew the catalog from 66 to 151 definitions.
-    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,151,56]);
+    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,208,56]); // + batch 3 (49) and batch-3 XP (8)
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);

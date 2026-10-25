@@ -3,6 +3,7 @@
  * eight-seat sidebar and the ranking overlay, and routes server pushes into RemoteSession.
  * Nothing here decides rules; it only shows what the server sent.
  */
+import { freeRerollsUsed } from '../../simulation/free-rerolls';
 import type { SessionChange } from '../../m6/contracts';
 import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
@@ -239,7 +240,7 @@ export class OnlineApplication implements SceneApplication {
     let cue: SoundCue | null = null;
     if (after.level > before.level) cue = 'levelUp';
     else if (after.xp > before.xp && after.gold < before.gold) cue = 'xp';
-    else if (after.shop.generation !== before.shop.generation && after.gold < before.gold) cue = 'reroll';
+    else if (after.shop.generation !== before.shop.generation && (after.gold < before.gold || freeRerollsUsed(after) > freeRerollsUsed(before))) cue = 'reroll';
     else if (after.gold < before.gold) cue = 'buy';
     // Only a real sale: gold up and one of my units gone (a loot orb's gold keeps every unit).
     else if (after.gold > before.gold) {

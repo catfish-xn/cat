@@ -71,7 +71,9 @@ it.each([
   // v23: Black Rose owner is the lowest numeric unit serial (unit-9 before unit-10); on these public Manaflow
   // routes Morgana is that unit and owns Sion. Ticks moved with the v23 opening-encounter mixing.
   // Later v23 combat changes (Sion rework, short CC/knock-up): seed 108's Sion kill now carries a Morgana assist; seed 153 keeps a summon-only kill.
-  { contribution: false, seed: 153, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
+  // After the v23 integration merged the batch-3 pool, seed 153 no longer has a summon-only Sion kill; the first such seed
+  // is 26 (its 2-1 Manaflow I priority is not offered, so it takes Pyromaniac).
+  { contribution: false, seed: 26, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 305, targetId: 'enemy-r8-1' },
   { contribution: true, seed: 175, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 226, targetId: 'enemy-r4-1' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => {
   // Each route's public 2-1 augment is Manaflow I/II; the assertions only read Sion, curse and bracer facts.
@@ -195,7 +197,8 @@ it('restores the legal target reave and retains Irelia shielding at tick 104', (
 
 async function blackRoseSave(): Promise<MatchState> {
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
-  let state = prepare(['rod'], { seed: 42 });
+  // v23 batch 3: an economy augment now completes the rod sooner; keep the fixture at its original round 8.
+  let state = prepare(['rod'], { seed: 42, earliestRound: 8 });
   expect(state.round).toBe(8);
   for(const u of state.preparation.units.filter(u=>u.team==='player'))state=accepted(sellUnit(state,u.id));
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
@@ -285,7 +288,8 @@ it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce 
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
   // v15 seed 53 offered Bulky Buddies I at 2-1. Under the v22 augment tier table seed 22 is the first
   // public route (with card rerolls) whose Forge dies and is revived beside a living holder.
-  let state = prepare(['rod'], { seed: 22, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
+  // Global 14.24 stage bans: seed 100 is now the first such route (22 no longer reaches Bulky Buddies I).
+  let state = prepare(['rod'], { seed: 100, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
   expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
   for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
     for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));

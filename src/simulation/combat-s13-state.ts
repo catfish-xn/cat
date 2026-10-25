@@ -88,6 +88,10 @@ export function mechanic(unit: CombatUnit, name: string, key: string, fallback =
   return (unit.mechanics ?? []).filter(m => m.mechanic === name).reduce((sum, m) => sum + (m.values[key] ?? fallback), 0);
 }
 export function hasMechanic(unit: CombatUnit, name: string): boolean { return (unit.mechanics ?? []).some(m => m.mechanic === name); }
+/** Batch-3 hero augment coefficients on the strongest copy only (augment-effects heroCarry). */
+export function heroLive(unit: Pick<CombatUnit, 'mechanics'> | undefined): Readonly<Record<string, number>> | undefined {
+  return unit?.mechanics?.find(m => m.mechanic === 'heroCarryLive')?.values;
+}
 export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind']): CombatStatus[] {
   return (unit.statuses ?? []).filter(s => s.kind === kind && s.startsAtTick <= tick && s.expiresAtTick > tick);
 }
@@ -96,10 +100,16 @@ export function ap(unit: S13Unit, tick: number, units:readonly CombatUnit[]=[]):
     ...active(unit, tick, 'abilityPower').filter(s => !s.contributionKeys).map(s => constantModifier('abilityPower', s.amount)), ...statusModifiers(unit, 'abilityPower', tick)], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='magic-expert')?14000:10000)/10000);
 }
+/** Batch-3 Bad Luck Protection: the team never crits (damageSample) and gains AD bps equal to its crit chance bps
+ * (ADPerCrit 1% per CritChancePercent 1%), sampled live from the same authorization a roll would use. */
+function badLuckAdBps(unit: S13Unit): number {
+  const m = unit.mechanics?.find(m => m.mechanic === 'badLuck');
+  return m ? Math.floor(spellCrit(unit).chanceBps * m.values.ratioBps / 10000) : 0;
+}
 export function ad(unit: S13Unit, raw=false): number {
   if(unit.definitionId==='viktor'&&!raw)return STAR_ATTACK_PERCENT[unit.starLevel];
   const result = resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
-    [constantModifier('attackDamage', (unit.attackDamagePercentBps ?? 0)+batch2Bonus(unit,'adBps')+p2Bonus(unit,'attackDamageBps'), 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined },unit.definitionId===TRAINER_ID?TRAINER_ATTACK_CENTI[unit.starLevel-1]%100:0);
+    [constantModifier('attackDamage', (unit.attackDamagePercentBps ?? 0)+batch2Bonus(unit,'adBps')+p2Bonus(unit,'attackDamageBps')+badLuckAdBps(unit), 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined },unit.definitionId===TRAINER_ID?TRAINER_ATTACK_CENTI[unit.starLevel-1]%100:0);
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0)+(unit.anomalyState?.consumed?.attackDamage??0)+p2Bonus(unit,'attackDamageFlat')+(unit.v20Traits?.mentorshipGranted??0);
 }
 export function range(unit: S13Unit, firelightWindow = true): number {

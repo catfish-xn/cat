@@ -40,6 +40,7 @@ it('pins all eight unchanged source pools and every weighted boundary to exactly
 const ok=(result:api.MatchCommandResult):api.MatchState=>{if(!result.ok)throw Error(result.reason);return result.state;};
 // A funded test formation, granted through authoritative receipts; all battles,
 // shimmer, offers and save history below are real public-command transitions.
+// Seed 0 (was 9): the 14.24 stage bans changed seed 9's 2-1 pick, whose loot then fills the bench before the market.
 function pendingMarket():api.MatchState{
  // v23 fmix32: seed 9 now opens Gold Subscription, whose loot fills the bench so the 2-star Singed waits for capacity;
  // seed 4 keeps seed 9's old Crab Rave opening.

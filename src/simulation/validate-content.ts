@@ -1,5 +1,7 @@
 import { AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
+import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
+import { AUGMENT_BATCH3_XP } from './content/augment-pool-batch3-xp';
 import { validateItemProgram } from './m8/item-program';
 import { validateComponentPool } from './component-pool';
 import { ABILITY_DEFINITIONS, validateAbilityDefinitions } from './combat-abilities';
@@ -82,7 +84,7 @@ export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.f
   rageblade:['attackSpeedBps'],damageAmp:['bps'],extraAttackMana:['amount','backRowOnly'],archangel:['periodTicks','abilityPower'],
   dragonClaw:['periodTicks','healMaxHpBps'],gargoyle:['resistPerEnemy'],gunblade:['selfHealBps','allyHealBps'],
   coronation:['enabled'],g23Tactician:['goldChanceBps','timerTicks'],
-  traitAugmentB2:['enabled','converted'],
+  traitAugmentB2:['enabled','converted'],superstars:['baseBps','per3StarBps'],flexible:['healthPerEmblem'],corrosion:['resistLoss','periodTicks'],blazingSoul:['abilityPower','attackSpeedBps','periodTicks'],nobleSacrifice:['baseResists','shareBps'],wealthyRehab:['omnivampBps'],badLuck:['ratioBps'],goldForDummies:['periodTicks'],towerDefense:['apRatio1','apRatio2','apRatio3','upgrade1Stage','upgrade1AsBps','upgrade2Stage','upgrade2Bps'],towerDefenseLive:['apRatio','extraBps'],magicRoll:['health'],forming:['golem','healthBps','attackBps','healthPerStage'],heroCarry:['hero', 'manaReduction', 'hitBps', 'hits', 'omnivampBps', 'attackSpeedBps', 'dashAd1', 'dashAd2', 'dashAd3', 'dashAp1', 'dashAp2', 'dashAp3', 'dashRange', 'speedBps', 'speedTicks', 'permanentAdBps', 'mainBps', 'chargeBps', 'pounceRange', 'damageBps', 'splashBps', 'rangeBonus', 'attackMana', 'ampBps', 'overkillBps', 'near1', 'near2', 'near3'],heroCarryLive:['hero', 'star', 'manaReduction', 'hitBps', 'hits', 'omnivampBps', 'attackSpeedBps', 'dashAd', 'dashAp', 'dashRange', 'speedBps', 'speedTicks', 'permanentAdBps', 'mainBps', 'chargeBps', 'pounceRange', 'damageBps', 'splashBps', 'rangeBonus', 'attackMana', 'ampBps', 'overkillBps', 'near'],
   s13P3:['enabled','stage'],
   acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp','roundGold'], acquisitionXp:['amount'], acquisitionGold:['amount','stage3Amount','stage4Amount'],glassCannon:['startingHealthBps','damageAmpBps','backRowOnly'],pumpingUp:['attackSpeedBpsPerRound'],
   investment:['healthPerInterest'],bulkyBuddies:['health','shieldMaxHpBps','durationTicks'],titanic:['adBps','radius'],mageArmor:['apBps'],killStreak:['mana'],
@@ -140,7 +142,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
   // Augments: 30 historical + 6 P1 (blinding-speed, portable-forge, radiant-relics, going-long, hedge-fund,
   // investment-strategy-ii) + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 (dual-wielding) + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+6+Object.keys(AUGMENT_BATCH2_ENABLED).length+Object.keys(AUGMENT_BATCH1).length+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+6+Object.keys(AUGMENT_BATCH2_ENABLED).length+Object.keys(AUGMENT_BATCH1).length+Object.keys(AUGMENT_BATCH3).length+Object.keys(AUGMENT_BATCH3_XP).length+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

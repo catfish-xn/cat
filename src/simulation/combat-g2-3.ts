@@ -8,7 +8,8 @@ import { contains, hexDistance, type HexCell } from './board';
 import type { CombatTask } from './combat-types';
 import type { S13Unit } from './combat-s13-state';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
-import { amount, applyStatus, byDistance, champion, compareText, enemies, grantShield, origin, path, variable } from './combat-s13-state';
+import { amount, applyStatus, byDistance, champion, compareText, enemies, grantShield, heroLive, origin, path, variable } from './combat-s13-state';
+import { lineContains } from './combat-skill-lines';
 import { rollG23HighRoller } from './g2-3-progress';
 import { G23_POLICY } from './content/g2-3-policy';
 import { G23_SUMMON_POLICY } from './content/g2-3-summons';
@@ -84,13 +85,20 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=v('HexRadius')))later(ctx,u,x,'g23Magic',Math.round(v('DamageDuration')*20),mag('SecondDamage'),seq,ticks,ticks+1);break;
     }
     case 'renni':{
-      const n=Math.round(v('StunDuration')*20),healing=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('MaxHealthHealingPercent')}),damage=physical('ADPercent');
+      // Savage Revenge (P): pounce on the farthest enemy within PounceRange (else the target); enemies on the straight line
+      // before it take ChargeBps × ADPercent; the pounce target and the closing splash deal MainBps × their damage.
+      // Renni's position is not changed; the heal and stun are kept.
+      const hero=heroLive(u),pounce=hero?byDistance(u,foes(),true).find(x=>hexDistance(u.cell,x.cell)<=hero.pounceRange)??t:t;
+      if(hero){for(const x of foes().filter(x=>x.id!==pounce.id&&hexDistance(u.cell,x.cell)<hexDistance(u.cell,pounce.cell)&&lineContains(u.cell,pounce.cell,x.cell,1)))
+        later(ctx,u,x,'g23Physical',1,Math.floor(physical('ADPercent')*hero.chargeBps/10000),seq,0,1);t=pounce;}
+      const main=hero?.mainBps??10000;
+      const n=Math.round(v('StunDuration')*20),healing=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('MaxHealthHealingPercent')}),damage=Math.floor(physical('ADPercent')*main/10000);
       applyStatus(t,origin(u),'stun',0,n,ctx.tick,ctx.events);
       for(let i=0;i<n;i++){
         later(ctx,u,u,'g23Heal',i+1,split(healing,n,i),seq,i,n);
         later(ctx,u,t,'g23Physical',i+1,split(damage,n,i),seq,i,n);
       }
-      for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))later(ctx,u,x,'g23Physical',n,physical('FinalADPercent'),seq,n,n+1);break;
+      for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))later(ctx,u,x,'g23Physical',n,Math.floor(physical('FinalADPercent')*main/10000),seq,n,n+1);break;
     }
     case 'drmundo':{
       const total=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('PercentHealthHeal')}),initial=Math.floor(total*v('PercentofHealImmediately')),seconds=Math.round(v('Duration'));

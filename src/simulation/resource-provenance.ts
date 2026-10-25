@@ -48,6 +48,10 @@ export type ResourceFact =
   | { readonly kind: 'unit-upgraded'; readonly acquisitionSequence: number; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'anvil-opened'; readonly unitId:string; readonly choiceId:string }
+  /** Batch 3: a training dummy retired by its augment (Support Mining); the grant ledger authenticates receiptId. */
+  | { readonly kind: 'unit-removed'; readonly unitId:string; readonly receiptId:string; readonly definitionId?:string; readonly starLevel?:1|2|3 }
+  /** Batch 3: one free shop reroll spent at this shop generation; the free-reroll ledger must count exactly these. */
+  | { readonly kind: 'free-reroll'; readonly generation:number }
   | { readonly kind: 'unit-sold'; readonly unitId: string; readonly context: 'preparation' | 'settlement-capacity'; readonly goldGranted: number }
   | { readonly kind: 'item-acquired'; readonly itemId: string; readonly source: ItemAcquisitionSource }
   // tick is present exactly for operations issued during combat.
@@ -372,7 +376,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const units = new Map<string, ProvenanceUnit>(), items = new Map<string, ProvenanceItem>();
   let growth: readonly PersistentGrowth[] = [], nextUnitSerial = 1, nextItemSerial = 1, lastOrdinal = 1;
   let acquisition: { readonly sequence: number; readonly unitId: string; readonly definitionId: string; readonly roundId: string; survivorId: string; star: number } | null = null;
-  let lastShopGeneration = 0;
+  let lastShopGeneration = 0, lastFreeReroll = 0;
   const shopSlots = new Set<string>(), commits = new Map<string, ProvenanceCombatSettlement>();
   const firstLootBirth = new Map<string, number>();
   const starts = new Set(entries.filter(entry => entry?.kind === 'combat-growth-committed')
@@ -461,6 +465,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       } else if (entry.source.kind === 'mechanic') {
         keys(entry.source, ['kind', 'receiptId']); nonempty(entry.source.receiptId);
         definitionId = takeBirth(`mechanic:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
+        // Dummify/Golemify: their summon is born right after the removals, so nothing but summons (and carousel picks not
+        // yet placed, P 2026-10-24) may remain; this also covers an acquisition with no champion to remove.
+        if(definitionId==='forming-dummy'||definitionId==='augment-golem')
+          requireValue([...units.values()].every(unit=>absent.has(unit.id)||deferredCarouselIds.has(unit.id)||context.pendingCarouselUnitIds?.includes(unit.id)||UNIT_DEFINITIONS[unit.definitionId]?.summon),'forming removal completeness');
         const atom = duplicatorClaims.get(entry.source.receiptId);
         if (atom) {
           const owned = new Set([...units.values()].filter(unit => !deferredCarouselIds.has(unit.id)
@@ -510,6 +518,17 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       keys(entry,[...common,'unitId','choiceId']);
       requireValue(units.has(entry.unitId)&&isAnvil(units.get(entry.unitId)!.definitionId),'anvil ownership');
       nonempty(entry.choiceId);units.delete(entry.unitId);
+    } else if(entry.kind==='free-reroll'){
+      keys(entry,[...common,'generation']);integer(entry.generation,1);
+      requireValue(entry.generation>lastFreeReroll,'free reroll order');lastFreeReroll=entry.generation;
+    } else if(entry.kind==='unit-removed'){
+      // Support Mining retires its dummy; Dummify/Golemify remove champions and record what was removed.
+      const forming=Object.hasOwn(entry,'definitionId');
+      keys(entry,[...common,'unitId','receiptId',...(forming?['definitionId','starLevel']:[])]);nonempty(entry.receiptId);
+      const removed=units.get(entry.unitId);
+      requireValue(removed&&!absent.has(entry.unitId)&&(forming?removed.definitionId===entry.definitionId&&removed.starLevel===entry.starLevel&&!UNIT_DEFINITIONS[removed.definitionId]?.summon
+        &&entry.receiptId.endsWith(',"forming"]'):removed.definitionId==='training-dummy'),'mechanic removal ownership');
+      units.delete(entry.unitId);growth=growth.filter(value=>value.unitId!==entry.unitId);
     } else if (entry.kind === 'unit-sold') {
       keys(entry, [...common, 'unitId', 'context', 'goldGranted']); integer(entry.goldGranted);
       const unit = units.get(entry.unitId);

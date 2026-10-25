@@ -178,7 +178,8 @@ describe('match session commands and fixed clock', () => {
   });
 
   it('preserves the purchased player roster and unique results for five rounds', () => {
-    const session = new MatchSession(reachRound('1-3',true,7216));
+    // Seed 7226 (was 7216): the 14.24 stage bans changed 7216's 2-1 pick to one with a unit gift.
+    const session = new MatchSession(reachRound('1-3',true,7226));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
     const stale = session.state; rejected(session, session.buy(0, 0), 'stale-shop', stale);

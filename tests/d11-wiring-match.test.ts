@@ -1,3 +1,4 @@
+import { offerFor, offeredAt } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
 import { createRequire } from 'node:module';
 import * as api from '../src/simulation/match';
@@ -27,7 +28,8 @@ function observe(history:BattleHistory,before:MatchState,result:{state:MatchStat
 function command(history:BattleHistory,before:MatchState,result:MatchCommandResult){accepted(result);return observe(history,before,result.ok?result:{state:before,events:[]});}
 
 it.each(['all-for-one-i','trifecta-i','spirit-link'])('%s uses public acquisition, combat, settlement and strict resume without replaying gifts',id=>{
-  let s=reachRound('2-1',false,seedFor(id));const c=s.pendingChoice!,before=s;
+  // 14.24 stage tags keep Trifecta I off 2-1: take it at its first 3-2 offer (augment-stage-helpers).
+  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):offerFor(id);const c=s.pendingChoice!,before=s;
   const selected=api.selectChoice(s,c.choiceId,c.generation,id);s=accepted(selected);
   expect(s.augments.at(-1)?.definitionId).toBe(id);
   const gifts=d11GiftPlan(s,s.augments.at(-1)!);
