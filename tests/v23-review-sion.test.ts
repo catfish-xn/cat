@@ -50,6 +50,61 @@ describe('v23 independent review: Sion ownership, shield and revival', () => {
     expect(r.events.filter(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === u.id)).toHaveLength(1);
   });
 
+  it.each([1, 100])('Zephyr record ending at tick %i never duplicates a newly reviving Sion', untilTick => {
+    let c = army(7), u = sion(c);
+    const member = c.units.find(x => x.team === 'player' && x.id !== u.id)!;
+    c = patch(c, member.id, { itemBanish: { ownerId: 'enemy', itemInstanceId: 'zephyr', untilTick } });
+    c = patch(c, u.id, { hp: 0, runtime: { ...u.runtime, buddyTriggered: true } });
+    const ids = c.units.map(x => x.id).sort();
+    for (let tick = 1; tick <= 22; tick++) {
+      const r = stepCombat(c); c = r.state;
+      expect(c.units.map(x => x.id).sort()).toEqual(ids);
+      expect(c.units.filter(x => x.id === u.id)).toHaveLength(1);
+      expect(sion(c).g23Sion).toEqual({ reviveAtTick: 21, revived: tick >= 21 });
+      expect(r.events.filter(e => e.type === 'unitRevived' && e.unitId === u.id)).toHaveLength(tick === 21 ? 1 : 0);
+    }
+  });
+
+  it('ordinary movement may take the waiting cell; revival lands on the nearest free hex and resumes identically', () => {
+    let c = army(7), u = sion(c);
+    const member = c.units.find(x => x.team === 'player' && x.id !== u.id)!;
+    c = patch(c, u.id, { hp: 0, cell: { col: 3, row: 4 }, runtime: { ...u.runtime, buddyTriggered: true } });
+    c = patch(c, member.id, { cell: { col: 3, row: 5 }, moveCooldownTicks: 2, attackRange: 1 });
+    c = stepCombat(c).state;
+    let r = stepCombat(c); c = r.state;
+    expect(r.events.filter(e => e.type === 'movement').map(({ type, tick, unitId, from, to }) => ({ type, tick, unitId, from, to }))).toEqual([
+      { type: 'movement', tick: 2, unitId: member.id, from: { col: 3, row: 5 }, to: { col: 3, row: 4 } },
+    ]);
+    // Freeze only subsequent movement, preserving the real step into Sion's old cell.
+    c = patch(c, member.id, { moveCooldownTicks: 1200 });
+    while (c.tick < 20) c = stepCombat(c).state;
+    const resumed = JSON.parse(JSON.stringify(c)) as CombatState;
+    r = stepCombat(c);
+    expect(stepCombat(resumed)).toEqual(r);
+    expect(stepCombat({ ...c, units: [...c.units].reverse() })).toEqual(r);
+    expect(r.events.filter(e => e.type === 'movement').filter(e => e.unitId === u.id).map(({ type, tick, unitId, from, to }) => ({ type, tick, unitId, from, to }))).toEqual([
+      { type: 'movement', tick: 21, unitId: u.id, from: { col: 3, row: 4 }, to: { col: 2, row: 3 } },
+    ]);
+    expect(sion(r.state).cell).toEqual({ col: 2, row: 3 });
+    const cells = r.state.units.filter(x => x.alive && !isAbsent(x, 21)).map(x => `${x.cell.col},${x.cell.row}`);
+    expect(new Set(cells).size).toBe(cells.length);
+    expect(r.events.filter(e => e.type === 'unitRevived' && e.unitId === u.id)).toHaveLength(1);
+  });
+
+  it('simultaneous lethal attacks keep the waiting Sion alive when every opponent dies', () => {
+    const c = army(7), u = sion(c);
+    const live = { ...c, units: c.units.filter(x => x.id === u.id || x.id === 'enemy').map(x => ({ ...x,
+      hp: 1, armor: 0, shield: 0, shieldLayers: [], cooldownTicks: 0, attackRange: 20,
+      attackDamage: 10000, attackDamageBase: 10000, attackDamagePercentBps: 0, baseCritChanceBps: 0,
+      runtime: { ...x.runtime!, buddyTriggered: true },
+    })) };
+    const r = stepCombat(live);
+    expect(r.events.filter(e => e.type === 'kill').map(e => e.unitId).sort()).toEqual(['enemy', u.id].sort());
+    expect(r.events.filter(e => e.type === 'death').map(e => e.unitId)).toEqual(['enemy']);
+    expect(sion(r.state)).toMatchObject({ alive: true, hp: Math.floor(u.maxHp * 0.75), g23Sion: { reviveAtTick: 21, revived: false } });
+    expect(r.state.result).toBe('playerWin');
+  });
+
   it('revive absence lasts 20 ticks, denies targeting/actions, survives JSON resume and cannot repeat', () => {
     let c = army(7), u = sion(c);
     c = patch(c, u.id, { hp: 0, runtime: { ...u.runtime, buddyTriggered: true } });

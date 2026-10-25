@@ -8,6 +8,7 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { attackSpeedBonus, type S13Unit } from '../src/simulation/combat-s13-state';
+import { readCombatStats } from '../src/simulation/combat-s13';
 import { effectiveStatuses } from '../src/simulation/m8/status';
 import { vampRates } from '../src/simulation/m8/s13-mechanisms';
 import { reachRound, accepted, freeze } from './match-helpers';
@@ -81,6 +82,79 @@ describe('7 Black Rose breakpoint (online PvP)', () => {
     const full = fullSeven;
     expect(full.events.filter(e => (e.type === 'unitRevived' || e.type === 'death') && e.unitId === id).map(e => e.type)).toEqual(['unitRevived', 'death']);
     expect(sionOf(full.terminal)).toMatchObject({ alive: false, g23Sion: { revived: true } });
+  });
+
+  it('both sides at seven Black Rose retain unique Sions through staggered revival waits', () => {
+    let c = startTwoSidedCombat(pvp(rose7(), rose7()));
+    c = { ...c, units: c.units.map(u => ({ ...u, cooldownTicks: 1200, moveCooldownTicks: 1200, mana: 0, maxMana: 0,
+      runtime: { ...u.runtime!, buddyTriggered: true } })) };
+    const ids = c.units.map(u => u.id).sort();
+    const sions = c.units.filter(u => u.definitionId === 'g23-sion');
+    expect(sions.map(u => u.team).sort()).toEqual(['enemy', 'player']);
+    const reviveEvents: string[] = [];
+    for (let tick = 1; tick <= 23; tick++) {
+      if (tick <= 2) c = { ...c, units: c.units.map(u => u.id === sions[tick - 1].id ? { ...u, hp: 0 } : u) };
+      const r = stepCombat(c); c = r.state;
+      expect(c.units.map(u => u.id).sort()).toEqual(ids);
+      for (const u of sions) expect(c.units.filter(x => x.id === u.id)).toHaveLength(1);
+      reviveEvents.push(...r.events.flatMap(e => e.type === 'unitRevived' ? [e.unitId] : []));
+    }
+    expect(reviveEvents.sort()).toEqual(sions.map(u => u.id).sort());
+    expect(c.units.filter(u => u.definitionId === 'g23-sion').every(u => u.g23Sion?.revived)).toBe(true);
+  });
+
+  it('real Collector executions preserve kill rewards and ordinary holder-death triggers across Sion revival', () => {
+    const crest = 'TFT_Item_Artifact_LightshieldCrest';
+    const a = rose7(), b = seat(backRow(['garen', 'garen']));
+    const withItems = (state: MatchState, entries: readonly [number, string][]): MatchState => ({ ...state,
+      items: [...state.items, ...entries.map(([holder, definitionId], i) => ({ id: `item-${state.items.length + i + 1}`, definitionId,
+        location: { kind: 'unit' as const, unitId: `unit-${holder}`, slot: i as 0 | 1 | 2 } }))],
+    });
+    let c = startTwoSidedCombat(pvp(withItems(a, [[1, crest]]), withItems(b, [
+      [1, 'TFT4_Item_OrnnTheCollector'], [1, 'TFT_Item_Artifact_RapidFirecannon'],
+    ])));
+    const id = sionOf(c)!.id;
+    const holder = c.units.find(u => u.team === 'player' && u.definitionId === 'morgana')!;
+    const killers = c.units.filter(u => u.team === 'enemy');
+    expect(killers).toHaveLength(2);
+    c = { ...c, units: c.units.map(u => ({ ...u, mana: 0, maxMana: 0, cooldownTicks: 1200, moveCooldownTicks: 1200,
+      runtime: { ...u.runtime!, buddyTriggered: true },
+      ...(u.id === id || u.id === holder.id ? { hp: 10, armor: 0 } : {}),
+      ...(u.id === holder.id ? { cell: { col: 0, row: 6 } } : {}),
+      ...(u.id === killers[0].id ? { cell: { col: 3, row: 3 }, targetId: id, attackRange: 20, cooldownTicks: 0, attackDamage: 1,
+        attackDamageBase: 1, attackDamagePercentBps: 0, baseCritChanceBps: 0 } : {}),
+      ...(u.id === killers[1].id ? { cell: { col: 0, row: 5 }, targetId: holder.id, attackRange: 20, cooldownTicks: 0, attackDamage: 10000,
+        attackDamageBase: 10000, attackDamagePercentBps: 0, baseCritChanceBps: 0 } : {}),
+    })) };
+    const range = () => readCombatStats(c.units.find(u => u.id === killers[0].id)!, c).attackRange;
+    const initialRange = range();
+    let r = stepCombat(c); c = r.state;
+    const execution = r.events.filter(e => e.type === 'packetDamage' && e.outcome.context.targetId === id && e.outcome.killingPacket);
+    expect(execution).toHaveLength(1);
+    expect(execution[0]).toMatchObject({ outcome: { context: { damageType: 'true', source: { definitionId: 'TFT4_Item_OrnnTheCollector' } }, hpDamage: 9 } });
+    expect(r.events.filter(e => e.type === 'kill').map(e => e.unitId).sort()).toEqual([id, holder.id].sort());
+    expect(r.events.filter(e => e.type === 'death').map(e => e.unitId)).toEqual([holder.id]);
+    expect(c.itemGoldReceipts!.filter(x => x.kind === 'collector')).toHaveLength(1);
+    // The absent Sion is excluded; each of the six surviving present allies gets exactly one death shield.
+    expect(c.units.filter(u => u.team === 'player').map(u => ({ id: u.id,
+      shields: u.shieldLayers!.filter(x => x.source.definitionId === crest).map(x => x.remaining),
+    }))).toEqual(c.units.filter(u => u.team === 'player').map(u => ({ id: u.id,
+      shields: u.id === id || u.id === holder.id ? [] : [52],
+    })));
+    expect(range()).toBe(initialRange + 1);
+    c = { ...c, units: c.units.map(u => ({ ...u, cooldownTicks: 1200 })) };
+    while (c.tick < 21) c = stepCombat(c).state;
+    expect(sionOf(c)!.g23Sion?.revived).toBe(true);
+    expect(c.itemGoldReceipts!.filter(x => x.kind === 'collector')).toHaveLength(1);
+    expect(range()).toBe(initialRange + 1);
+    c = { ...c, units: c.units.map(u => u.id === id ? { ...u, hp: 10, shield: 0, shieldLayers: [] }
+      : u.id === killers[0].id ? { ...u, cooldownTicks: 0, targetId: id } : u) };
+    r = stepCombat(c); c = r.state;
+    expect(r.events.filter(e => e.type === 'death' && e.unitId === id)).toHaveLength(1);
+    expect(r.events.filter(e => e.type === 'kill' && e.unitId === id)).toHaveLength(1);
+    expect(c.itemGoldReceipts!.filter(x => x.kind === 'collector')).toHaveLength(2);
+    expect(sionOf(c)!.alive).toBe(false);
+    expect(range()).toBe(initialRange + 2);
   });
 
   it('below 7 the same Sion dies on its first death', () => {

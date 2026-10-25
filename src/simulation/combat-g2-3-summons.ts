@@ -1,3 +1,4 @@
+import { nearestFreeReturnCell } from './combat-g2-4b';
 import { occupiesCell } from './anomalies/availability';
 import type { AbilityContext } from './combat-s13-abilities';
 import { amount, applyStatus, byDistance, enemies, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -89,6 +90,9 @@ export function deathG23Sion(ctx:AbilityContext):void{
 }
 /** Returns with hostile control cleansed, then 300% attack speed, 40% omnivamp and control immunity to combat end. */
 function reviveG23Sion(ctx:AbilityContext,u:S13Unit,seq:number):void{
+ const to=nearestFreeReturnCell(ctx,u);
+ if(!to)throw new RangeError('No Sion revive cell');
+ if(!sameCell(to,u.cell)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:{...u.cell},to});u.cell=to;}
  u.g23Sion={...u.g23Sion!,revived:true};
  ctx.events.push({type:'unitRevived',tick:ctx.tick,unitId:u.id,source:origin(u,3),hp:u.hp});
  const context={applicationId:'g23-sion:revive',area:false,triggeringCastActionSeq:null};

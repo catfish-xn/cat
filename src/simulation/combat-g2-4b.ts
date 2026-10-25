@@ -21,13 +21,18 @@ export function initializeZephyr(units:readonly CombatUnit[],board:Board):Combat
   return result;
 }
 
+/** Shared return landing: nearest unoccupied hex, breaking ties by row then column. */
+export function nearestFreeReturnCell(ctx:AbilityContext,unit:CombatUnit) {
+  const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat();
+  return nearestItemCell(unit.cell,cells.filter(c=>!ctx.units.some(u=>u.id!==unit.id&&occupiesCell(u,ctx.tick)&&sameCell(u.cell,c))));
+}
+
 /** Missed periodic opportunities do not burst on return. Absolute buff expiry
  * keeps advancing; suspended holders emit no actions or passive pulses. */
 export function returnZephyrUnits(ctx:AbilityContext):void {
   for(const unit of ctx.units){
     if(unit.itemBanish?.untilTick!==ctx.tick)continue;
-    const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat();
-    const to=nearestItemCell(unit.cell,cells.filter(c=>!ctx.units.some(u=>u.id!==unit.id&&occupiesCell(u,ctx.tick)&&sameCell(u.cell,c))));
+    const to=nearestFreeReturnCell(ctx,unit);
     if(!to)throw new RangeError('No Zephyr return cell');
     if(!sameCell(to,unit.cell)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:unit.id,from:{...unit.cell},to});unit.cell=to;}
     if(unit.mechanismState)unit.mechanismState={...unit.mechanismState,periodicTasks:unit.mechanismState.periodicTasks.map(t=>{
