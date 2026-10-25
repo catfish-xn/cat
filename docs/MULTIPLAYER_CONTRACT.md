@@ -2287,3 +2287,13 @@ golden、B8/C19/Herald 与 recorded states 已在新目录独立生成；旧身�
 ## 安蓓萨位移事件增补（P，2026-10-23，待统一 v22）
 
 `CombatViewEvent` 既有 movement 形状增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`，包含 `tick,eventSeq,unitId,from,to`。普通移动字段不变；成功位移进完整账本，未发生位移不发空事件。`toCombatReplay`/首遍 recorder/`CombatStream.view`/`toCombatReplayFor` 均保留 reason；服务器既有 movement 镜像分支保留字符串并镜像 from/to，不另算落点。客户端沿既有 eventSeq 去重，以 unitUpdated/keyframe 的 cell 为终态。规则、时序、无位移分支和回退详见 [AMBESSA_DASH](AMBESSA_DASH.md)。本单无新公共命令或失败枚举，不修改服务器实现；未录 epoch，发布须等统一 v22。
+
+### Batch 4 B4XP（2026-10-25）：战后备战席经验
+
+仅新增 `clear-mind`、`cluttered-mind`、`slammin`、`slammin-plus`，阶段与互斥由公共选池 API 执行；不改命令协议、存档结构或服务器收据格式。`applyRoundSettlement(state, input, unitLootPolicy?, traitContext?)` 的既有成功结果中，`RoundResult.xpRequested/xpAwarded/levelAfter/xpAfter` 及席位 `level/xp` 已包含本组经验；服务器不要另发经验。检查实时席位，先于本次结算奖励和延迟合星。重复结算仍返回原 state、`duplicate-settlement`，其他既有失败原因不变。
+
+新增内部纯函数，位于 `src/simulation/augment-pool-batch4-b4xp-progress.ts`：
+- `batch4B4xpSettlementXp(state: MatchState): number`：返回本轮条件额外经验；PvE/supply 为 0；不改变 state、资源或 RNG。
+- `withBatch4B4xp(state: Pick<MatchState,'level'|'xp'>, plan: RoundEconomyPlan, extra: number): RoundEconomyPlan`：将额外经验合入结算 progression，统一封顶。
+- `batch4B4xpRecordedExtra(state: Pick<MatchState,'augments'>, result: RoundResult, base: number): number`：结构预检历史经验增量；非法增量抛出 `RangeError('Invalid batch4 b4xp settlement XP')`；结果本身不是历史条件证明。
+- `needsBatch4B4xpHistory(state: Pick<MatchState,'augments'|'roundResults'>): boolean`：本组持有者在玩家战斗后的恢复/独立回放准入需要现有完整 battles。`restoreMatch(input, battles?)`、`serializeMatch(state, battles?)` 签名不变；无历史证据抛出含 `missing historical evidence` 的错误；经验与历史条件不符由确定性回放拒绝。取得时尚无本组玩家战斗则不增加历史要求。其余 P 口径见 `docs/S13_RULES_GAP.md` 的 P-B4XP。

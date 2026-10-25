@@ -1,3 +1,5 @@
+import { B4XP_ARCHIVE } from './augment-pool-batch4-b4xp-archive';
+import { AUGMENT_BATCH4_B4XP } from '../src/simulation/content/augment-pool-batch4-b4xp';
 // Offline only: rebuild the exact original identity roots, including all text/provenance.
 import { AUGMENT_BATCH1 } from '../src/simulation/content/augment-pool-batch1';
 import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
@@ -471,12 +473,14 @@ function restoreBatch<T extends Record<string, { source: object }>>(runtime: T, 
     return [id, { ...row, ...AUGMENT_POOL_TEXT[id], source: { ...row.source, ...notes[id] } }];
   }));
 }
+
 export const RULES_GAP_MANIFEST = {
   ...runtimeManifest,
+  augmentPoolBatch4B4xp:{...runtimeManifest.augmentPoolBatch4B4xp,content:Object.fromEntries(Object.entries(AUGMENT_BATCH4_B4XP).map(([id,row])=>{const text=B4XP_ARCHIVE[id as keyof typeof B4XP_ARCHIVE];return [id,{...row,...text,source:{...row.source,...text.source}}];}))},
   augmentPoolBatch1: { ...runtimeManifest.augmentPoolBatch1, content: restoreBatch(AUGMENT_BATCH1, BATCH1_NOTES) },
   augmentPoolBatch2: { ...runtimeManifest.augmentPoolBatch2, content: restoreBatch(AUGMENT_BATCH2, BATCH2_NOTES) },
   augmentPoolBatch3Xp: { ...runtimeManifest.augmentPoolBatch3Xp, content: restoreBatch(AUGMENT_BATCH3_XP, BATCH3_XP_NOTES) },
   augmentPoolBatch3: { ...runtimeManifest.augmentPoolBatch3, content: restoreBatch(AUGMENT_BATCH3, BATCH3_NOTES) },
 };
 export const ARCHIVED_AUGMENT_DEFINITIONS = Object.fromEntries(Object.entries(AUGMENT_DEFINITIONS).map(([id, row]) =>
-  [id, Object.hasOwn(AUGMENT_POOL_TEXT, id) ? { ...row, ...AUGMENT_POOL_TEXT[id] } : row]));
+  [id, Object.hasOwn(B4XP_ARCHIVE,id) ? {...row,name:B4XP_ARCHIVE[id as keyof typeof B4XP_ARCHIVE].name,description:B4XP_ARCHIVE[id as keyof typeof B4XP_ARCHIVE].description} : Object.hasOwn(AUGMENT_POOL_TEXT, id) ? { ...row, ...AUGMENT_POOL_TEXT[id] } : row]));

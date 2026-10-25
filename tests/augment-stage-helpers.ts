@@ -40,7 +40,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "bulky-buddies-ii":{node:'3-2',seed:3},
   "bulky-buddies-iii":{node:'3-2',seed:98},
   "calculated-enhancement":{node:'3-2',seed:21},
-  "call-to-chaos":{node:'4-2',seed:8,fielded:true},
+  "call-to-chaos":{node:'4-2',seed:47,fielded:true},
   "climb-the-ladder-i":{node:'3-2',seed:17},
   "climb-the-ladder-ii":{node:'3-2',seed:10},
   "coronation":{node:'3-2',seed:66},

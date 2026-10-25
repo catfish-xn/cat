@@ -1,3 +1,4 @@
+import { batch4B4xpRecordedExtra, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
 import { formingTotals, expectedMagicRoll, outcomeAcquisitionXp } from './augment-pool-batch3-progress';
 import { batch2HpAfterSettlement } from './augment-pool-batch2-health';
 import { openingEncounterId } from './opening-encounter';
@@ -270,9 +271,10 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     requireValue(result.hpBefore === openingHpBeforeRound(state, result.roundId, i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(same(result.streakBefore, streak), 'history streak before');
     requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,result.round),result.levelBefore,result.xpBefore,xpPurchaseAmount(state.augments,result.round)), 'history XP preparation chain');
-    const expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
+    let expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
+    expected=withBatch4B4xp({level:result.levelBefore,xp:result.xpBefore},expected,batch4B4xpRecordedExtra(state,result,expected.progression.xpRequested));
     requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === expected.progression.xpRequested, 'history XP');
     const progress=readG23Progress(state),save=progress?.economyReceipts.find(r=>r.kind==='mel-save'&&r.round===result.round);
     const rescued=!!save&&expected.hpAfter===0&&result.roundKind==='pvp';

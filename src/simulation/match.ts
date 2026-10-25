@@ -1,3 +1,4 @@
+import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
 import { planOpenAnvil } from './anvils';
 export { grantAnvilUnit } from './anvils';
 export { anvilDisplay, ANVIL_POLICY } from './content/anvils';
@@ -397,6 +398,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   const survivingEnemyCount = combat?.units.filter(unit => countsG23SurvivorDamage(unit) && unit.team === 'enemy').length ?? 0;
   let plan = resolveRoundEconomy({ augments:state.augments, roundId, result: combat?.result ?? null, gold: state.gold,
     streak: state.streak, level: state.level, xp: state.xp, hp: state.playerHp, enemySurvivors: survivingEnemyCount });
+  plan=withBatch4B4xp(state,plan,batch4B4xpSettlementXp(state));
   const facts=combat?g23SoloFacts(state,combat):undefined,saved=melCanSave(state,facts,plan.hpAfter);
   if(saved)plan={...plan,hpAfter:1,hpLost:state.playerHp-1};
   const growth = new Map(state.persistentGrowth.map(entry => [entry.unitId, entry.attackDamageBps]));
