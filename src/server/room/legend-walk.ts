@@ -12,7 +12,7 @@ export const LEGEND_WALK_MIN_GAP_MS = 80;
 
 export class LegendWalkBook {
   private readonly walks = new Map<string, LegendWalk>();
-  private readonly arrivals = new Map<string, ClockHandle>();
+  private readonly arrivals = new Map<string, ClockHandle[]>();
   private readonly listeners = new Set<(walk: LegendWalk) => void>();
   constructor(private readonly clock: Clock) {}
 
@@ -35,8 +35,25 @@ export class LegendWalkBook {
     const id = key(walk.seatId, walk.scene);
     this.cancelArrival(id);
     this.walks.set(id, walk);
-    if (arrive) this.arrivals.set(id, this.clock.schedule(walk.arriveAt, () => { this.arrivals.delete(id); arrive(); }));
+    if (arrive) this.contacts(walk, [{ at: walk.arriveAt, arrive }]);
     for (const listener of this.listeners) listener(walk);
+  }
+  /** Contact timers belong to the same walk: a new destination cancels every remaining contact. */
+  contacts(walk: LegendWalk, contacts: readonly { at: number; arrive: () => void }[]): void {
+    const id = key(walk.seatId, walk.scene);
+    this.cancelArrival(id);
+    const handles: ClockHandle[] = [];
+    this.arrivals.set(id, handles);
+    for (const contact of contacts) {
+      const handle = this.clock.schedule(contact.at, () => {
+        const index = handles.indexOf(handle);
+        if (index >= 0) handles.splice(index, 1);
+        if (handles.length === 0) this.arrivals.delete(id);
+        contact.arrive();
+      });
+      handles.push(handle);
+    }
+    if (handles.length === 0) this.arrivals.delete(id);
   }
   /** Ends a seat's arrival without moving it (a pick that no longer applies). */
   stop(seatId: string, scene: LegendScene): void { this.cancelArrival(key(seatId, scene)); }
@@ -44,14 +61,14 @@ export class LegendWalkBook {
   clearScene(scene: LegendScene): void {
     for (const [id, walk] of [...this.walks]) if (walk.scene === scene) { this.cancelArrival(id); this.walks.delete(id); }
   }
-  get pendingArrivals(): number { return this.arrivals.size; }
+  get pendingArrivals(): number { return [...this.arrivals.values()].reduce((sum, handles) => sum + handles.length, 0); }
   dispose(): void {
     for (const id of [...this.arrivals.keys()]) this.cancelArrival(id);
     this.walks.clear(); this.listeners.clear();
   }
   private cancelArrival(id: string): void {
     const handle = this.arrivals.get(id);
-    if (handle !== undefined) { this.clock.cancel(handle); this.arrivals.delete(id); }
+    if (handle !== undefined) { for (const timer of handle) this.clock.cancel(timer); this.arrivals.delete(id); }
   }
 }
 

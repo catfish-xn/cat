@@ -34,7 +34,7 @@ import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type Liv
 import { useSeatConsumable } from './consumables';
 import { carouselReleased, carouselRoundOf, heldCarouselUnits, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
 import { ROOM_DEFAULT_LEGEND, ROOM_LITTLE_LEGENDS, type CarouselPickCommand, type LittleLegendId, type SeatKind } from '../protocol';
-import { BOARD_WALK_LIMIT, CAROUSEL_LEGEND_RADIUS, carouselHome, clampToRadius, interceptCarouselUnit, walkMs, type CellPoint, type LegendWalk, type LegendWalkRequest } from '../legend-motion';
+import { BOARD_WALK_LIMIT, CAROUSEL_LEGEND_RADIUS, CAROUSEL_CONTACT_CELLS, carouselUnitPoint, carouselHome, carouselWalkContact, clampToRadius, interceptCarouselUnit, walkMs, type CellPoint, type LegendWalk, type LegendWalkRequest } from '../legend-motion';
 import { LegendWalkBook } from './legend-walk';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
@@ -1001,8 +1001,8 @@ export class Room {
   }
   /**
    * A little-legend walk (legend-motion.ts). Changes no rule state and answers only whether it was taken. On the carousel
-   * the room plans it from where it left this legend (home on the seat's cradle), only for a released seat that has not
-   * picked, and a walk toward a standing unit asks the rules for that pick when it arrives (the same pick-and-grant as a
+   * the room plans it from where it left this legend (home on the seat's cradle), only for a released seat
+   * (including after its pick). Active walks pick on contact; a unit click aims at its future position (the same grant as a
    * click, decided on the carousel as it is then): the first legend to reach a unit takes it. A board walk is display
    * only: the room bounds it and relays it to the room, so an opponent can draw that legend.
    */
@@ -1027,14 +1027,24 @@ export class Room {
     if (elapsed >= room.state.deadlineMs) return { ok: false, reason: 'carousel-closed' };
     const at = room.state.releaseAtMs[seatId];
     if (at === undefined || at > elapsed) return { ok: false, reason: 'carousel-locked' };
-    if (room.state.receipts.some(receipt => receipt.seatId === seatId && receipt.status !== 'released')) return { ok: false, reason: 'already-picked' };
+    const alreadyPicked = room.state.receipts.some(receipt => receipt.seatId === seatId && receipt.status !== 'released');
+    if (alreadyPicked && request.slot !== undefined) return { ok: false, reason: 'already-picked' };
     const index = this.current.seats.findIndex(candidate => candidate.seatId === seatId);
     const from = this.legendWalks.position(seatId, 'carousel', now) ?? carouselHome(index, this.current.seats.length);
     if (request.slot === undefined) {
       if (!request.to) return { ok: false, reason: 'invalid-walk' };
       const to = clampToRadius(request.to, CAROUSEL_LEGEND_RADIUS);
       const walk: LegendWalk = { seatId, scene: 'carousel', from, to, startedAt: now, arriveAt: now + walkMs(from, to), slot: null };
+      const contacts = alreadyPicked ? [] : rules.listCarouselSlots(room.state)
+        .flatMap((slot, index, slots) => {
+          if (slot.pickedBy !== null) return [];
+          const at = carouselWalkContact(walk, index, slots.length, room.startedAt);
+          return at === null ? [] : [{ slot: slot.slot, at }];
+        }).sort((a, b) => a.at - b.at || a.slot - b.slot);
       this.legendWalks.start(walk);
+      const carouselId = room.state.id;
+      this.legendWalks.contacts(walk, contacts.map(contact => ({ at: contact.at,
+        arrive: () => this.arriveCarousel(seatId, carouselId, contact.slot, walk) })));
       return { ok: true, walk };
     }
     const slots = rules.listCarouselSlots(room.state), target = slots.findIndex(slot => slot.slot === request.slot);
@@ -1042,15 +1052,25 @@ export class Room {
     const meet = interceptCarouselUnit(from, target, slots.length, elapsed);
     const walk: LegendWalk = { seatId, scene: 'carousel', from, to: meet.to, startedAt: now, arriveAt: now + meet.ms, slot: request.slot };
     const carouselId = room.state.id;
-    this.legendWalks.start(walk, () => this.arriveCarousel(seatId, carouselId, walk.slot!));
+    const contactAt = carouselWalkContact(walk, target, slots.length, room.startedAt) ?? walk.arriveAt;
+    this.legendWalks.start(walk);
+    this.legendWalks.contacts(walk, [{ at: contactAt, arrive: () => this.arriveCarousel(seatId, carouselId, walk.slot!, walk) }]);
     return { ok: true, walk };
   }
   /** A legend reached its unit: the pick as a click on the carousel as it is now. Taken by someone else first: it stays there. */
-  private arriveCarousel(seatId: string, carouselId: string, slot: number): void {
-    if (this.deferDuringSettlement(() => this.arriveCarousel(seatId, carouselId, slot))) return;
+  private arriveCarousel(seatId: string, carouselId: string, slot: number, walk: LegendWalk): void {
+    if (this.deferDuringSettlement(() => this.arriveCarousel(seatId, carouselId, slot, walk))) return;
     const room = this.current.carousel, seat = this.current.seats.find(candidate => candidate.seatId === seatId);
     if (this.disposed || this.current.phase !== 'carousel' || !room || room.state.id !== carouselId || !seat) return;
-    this.pickCarousel(seat, { type: 'carousel-pick', carouselId, revision: room.state.revision, slot });
+    // Settlement may defer this callback. A replaced walk or a unit no longer touching cannot grant a pick.
+    if (!this.legendWalks.list().includes(walk)) return;
+    const slots = this.options.carousel!.listCarouselSlots(room.state), index = slots.findIndex(entry => entry.slot === slot);
+    if (index < 0 || slots[index]!.pickedBy !== null) return;
+    const now = this.options.clock.now(), position = this.legendWalks.position(seatId, 'carousel', now)!;
+    const unit = carouselUnitPoint(index, slots.length, now - room.startedAt);
+    if (Math.hypot(position.x - unit.x, position.y - unit.y) > CAROUSEL_CONTACT_CELLS + 1e-6) return;
+    const result = this.pickCarousel(seat, { type: 'carousel-pick', carouselId, revision: room.state.revision, slot });
+    if (result.ok) this.legendWalks.stop(seatId, 'carousel');
   }
   /**
    * Publishes one carousel transaction (§21.1 "原子发布"): the carousel, the pool it carries, the granted seat's state and
