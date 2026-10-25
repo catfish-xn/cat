@@ -319,19 +319,45 @@ it.each([['blazing-soul-i',20,2000],['blazing-soul-ii',35,3000]] as const)('G6 %
  expect(()=>restoreMatch(JSON.stringify(bad))).toThrow();
 });
 
-// B3-V1 (fixed): every free spend is a resource-provenance fact the counter must match.
+// All public persistence paths must reject the same tampering. The serialized path includes save preflight.
+function rejectPersistence(edit:MatchState,reason?:string) {
+ expect(()=>restoreMatch(JSON.stringify(edit))).toThrow(reason);
+ expect(()=>restoreMatch(edit)).toThrow(reason);
+ expect(()=>restoreMatch(serializeMatch(edit))).toThrow(reason);
+}
+
 it('G2 anti-tamper: spent free rerolls cannot be reset by deleting their counter',()=>{
  let s=pick('rolling-for-days-i').state;
  s=accepted(rerollShop(s));expect(freeRerollsAvailable(s)).toBe(10);
  const edit=JSON.parse(serializeMatch(s));delete edit.seatMechanics.seat['free-shop-rerolls'];
- expect(()=>restoreMatch(JSON.stringify(edit))).toThrow();
+ rejectPersistence(edit);
 });
-// B3-V1 (fixed): every free spend is a resource-provenance fact the counter must match.
 it('G2 anti-tamper: spent free rerolls cannot be refunded by lowering the counter within range',()=>{
  let s=pick('rolling-for-days-i').state;
  s=accepted(rerollShop(accepted(rerollShop(s))));expect(freeRerollsAvailable(s)).toBe(9);
  const edit=JSON.parse(serializeMatch(s));edit.seatMechanics.seat['free-shop-rerolls'].used=1;
- expect(()=>restoreMatch(JSON.stringify(edit))).toThrow();
+ rejectPersistence(edit);
+});
+
+it.each([0,2,11])('B3-V1 rejects every forged counter against %i actual spends across persistence entries',used=>{
+ let s=pick('rolling-for-days-i').state;
+ for(let i=0;i<used;i++)s=accepted(rerollShop(s));
+ const saved=serializeMatch(s);
+ for(const restored of [restoreMatch(JSON.stringify(s)),restoreMatch(s),restoreMatch(saved)]){
+  expect(restored).toEqual(s);
+  expect(rerollShop(restored)).toEqual(rerollShop(s));
+ }
+ // Exhaust the entitlement range, including zero and both out-of-range boundaries.
+ for(const forged of [-1,...Array.from({length:13},(_,i)=>i),Number.MAX_SAFE_INTEGER,0.5,'2',null,true,[],{},Number.MAX_SAFE_INTEGER+1]){
+  if(used>0&&forged===used)continue;
+  const edit=JSON.parse(saved);edit.seatMechanics.seat['free-shop-rerolls']={used:forged};
+  rejectPersistence(edit);
+ }
+ for(const record of [null,[],{}, {used,extra:0}]){
+  const edit=JSON.parse(saved);edit.seatMechanics.seat['free-shop-rerolls']=record;
+  rejectPersistence(edit);
+ }
+ if(used>0){const edit=JSON.parse(saved);delete edit.seatMechanics.seat['free-shop-rerolls'];rejectPersistence(edit);}
 });
 
 const mined=new Map<string,MatchState>();
@@ -381,4 +407,43 @@ it('G8 Golden Egg: actual public round entries hatch once at eleven without wins
 // B3-V2 (fixed): the valid public terminal also restores directly, independently of serializeMatch preflight.
 it.each([['support-mining',7],['support-mining-plus',4]] as const)('B3-V2 %s direct restore accepts legitimate retirement', (id,threshold)=>{
  const s=mine(id,threshold);expect(restoreMatch(JSON.stringify(s))).toEqual(s);
+});
+
+it.each([['support-mining',7],['support-mining-plus',4]] as const)('B3-V2 %s retired save continues exactly like uninterrupted play',(id,threshold)=>{
+ const s=mine(id,threshold),saved=serializeMatch(s);
+ const expectedNext=advance(s);
+ let expected=resolveM5Choices(expectedNext);
+ expect(expected.phase).toBe('preparation');
+ expected=accepted(startMatchCombat(emptyBoard(expected)));
+ while(expected.phase==='combat')expected=stepMatch(expected).state;
+ for(const restored of [restoreMatch(JSON.stringify(s)),restoreMatch(s),restoreMatch(saved)]){
+  expect(restored).toEqual(s);
+  const next=advance(restored);expect(next).toEqual(expectedNext);
+  // The next preparation also has to survive a fresh persistence boundary after retirement.
+  let actual=resolveM5Choices(restoreMatch(serializeMatch(next)));
+  expect(actual.phase).toBe('preparation');
+  actual=accepted(startMatchCombat(emptyBoard(actual)));
+  while(actual.phase==='combat')actual=stepMatch(actual).state;
+  expect(actual).toEqual(expected);
+  expect(actual.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch1'&&r.kind==='item'&&r.receiptId.includes('"'+id+'"'))).toHaveLength(1);
+  expect(actual.preparation.units.some(u=>u.definitionId==='training-dummy')).toBe(false);
+ }
+});
+
+it.each([['support-mining',7],['support-mining-plus',4]] as const)('B3-V2 %s rejects forged retirement across persistence entries',(id,threshold)=>{
+ const s=mine(id,threshold),saved=serializeMatch(s);
+ const missing=JSON.parse(saved);missing.resourceProvenance.entries=missing.resourceProvenance.entries.filter((e:{kind:string})=>e.kind!=='unit-removed');
+ rejectPersistence(missing);
+ for(const field of ['unitId','receiptId'] as const){
+  const edit=JSON.parse(saved);edit.resourceProvenance.entries.find((e:{kind:string})=>e.kind==='unit-removed')[field]+='-forged';
+  rejectPersistence(edit);
+ }
+ const resurrected=JSON.parse(saved);
+ resurrected.resourceProvenance.entries=resurrected.resourceProvenance.entries.filter((e:{kind:string})=>e.kind!=='unit-removed');
+ resurrected.resourceProvenance.entries.forEach((e:{sequence:number},i:number)=>e.sequence=i);
+ resurrected.preparation.units.push(s.combatInputBasis!.inputs.preparation.units.find(u=>u.definitionId==='training-dummy'));
+ rejectPersistence(resurrected,'missing retirement');
+ const missingReward=JSON.parse(saved);
+ missingReward.seatMechanics.receipts=missingReward.seatMechanics.receipts.filter((r:{source:string;kind:string;receiptId:string})=>!(r.source==='augment-pool-batch1'&&r.kind==='item'&&r.receiptId.includes('"'+id+'"')));
+ rejectPersistence(missingReward);
 });

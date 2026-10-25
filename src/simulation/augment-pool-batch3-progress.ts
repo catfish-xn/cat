@@ -209,6 +209,12 @@ export function validateBatch3Dummies(state:MatchState):void {
   }
   if(unitId&&batch3Events(state).some(e=>e.augment===augment&&row.schedules[e.schedule].retireDummy))expected.set(retireId(augment),unitId);
  }
+ // A reached threshold requires retirement, too: validating only the removals supplied by the save lets it
+ // delete the retirement fact and put the dummy back while retaining the already-granted support item.
+ for(const [receiptId,unitId] of expected){
+  if(!removals.some(e=>e.definitionId===undefined&&e.receiptId===receiptId&&e.unitId===unitId)
+   ||state.preparation.units.some(u=>u.id===unitId))fail('missing retirement');
+ }
  // Forming removals: only under an owned forming augment's receipt, all within its acquisition round.
  const forming=new Map(state.augments.filter(a=>AUGMENT_BATCH3[a.definitionId]?.forming).map(a=>[formingRemovalId(a),a]));
  for(const e of removals.filter(e=>e.definitionId!==undefined)){
