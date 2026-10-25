@@ -2,6 +2,7 @@
 /* Augment tier/reroll rules: user agreement 2026-10-19 08:15, documented in
  * docs/MATCH_CONTRACT.md. Independently implemented; never imports tested code. */
 const assert = require('node:assert/strict');
+const {validateRewards}=require('./augment-rewards-oracle.cjs');
 const {concreteMarketItems}=require('./black-market-oracle.cjs');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
 CATALOG.push(['mel','viktor','warwick']); // Approved v19 six-cost identities; raw historical recordings stay immutable.
@@ -12,7 +13,7 @@ const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:68,9:68};
 // No production content import; lexical ordering is the public choice contract.
 const AUGMENTS=["all-for-one-ii", "backup", "belt-overflow", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "calculated-enhancement", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "crown-guarded", "crownguard-spirit", "find-your-center", "flurry-of-blows", "glass-cannon-i", "glass-cannon-ii", "guardbreaker-spirit", "immovable-object", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "not-today", "pair-of-fours", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii", "shojin-spirit", "sword-overflow", "trifecta-ii", "wand-overflow"];
 // v22 anvil units (hand-copied ids).
-const ANVIL_IDS=new Set(['TFT_ArmoryKeyCompleted','TFT_ArmoryKeyComponent','TFT_ArmoryKeyOrnn','TFT_ArmoryKeySupport']);
+const ANVIL_IDS=new Set(['TFT_ArmoryKeyCompleted','TFT_ArmoryKeyComponent','TFT_ArmoryKeyOrnn','TFT_ArmoryKeySupport','TFT_ArmoryKeyRadiant']);
 const AUGMENT_GOLD={'placebo':8,'placebo-plus':15,'going-long':15,'hedge-fund':25,'investment-strategy-ii':5,
  // v23 batch 1 instant gold (14.24 records 40, 26, 124, 157, 158, 83, 233; hand transcription in tests/augment-pool-source-expectations.ts).
  'one-two-five':2,'iron-assets':4,'heroic-grab-bag':9,'raining-gold':8,'raining-gold-plus':18,'big-grab-bag':2,'build-a-bud':8,
@@ -110,6 +111,8 @@ batch3Offers.silver.push('kingslayer','risky-moves');batch3Offers.gold.push('pat
 // Batch 4 (14.24 tiers): level rewards, B4XP bench XP, B4reroll free rerolls, B4Combat combat-start effects.
 batch3Offers.silver.push('caretakers-ally','lategame-specialist','patience-is-a-virtue');batch3Offers.gold.push('caretakers-favor','clear-mind','cluttered-mind','slammin','slammin-plus','long-distance-pals','category-five','overheal','sated-spellweaver');batch3Offers.prismatic.push('birthday-presents','caretakers-chosen','invested-plus','invested-plus-plus');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
+// Independent 14.24 level-reward group tiers.
+for(const [tier,ids]of Object.entries({silver:['caretakers-ally','lategame-specialist'],gold:['caretakers-favor'],prismatic:['birthday-presents','caretakers-chosen']})){AUGMENT_POOLS[tier].push(...ids);AUGMENTS.push(...ids);}AUGMENTS.sort();
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).
@@ -158,6 +161,7 @@ const EXCLUSIVE_GROUPS=[['all-for-one-i','all-for-one-ii','pair-of-fours'],['bro
  ['bulky-buddies-iii','mentorship-i'],['bulky-buddies-iii','mentorship-ii'],['crown-guarded','not-today'],['high-voltage','not-today'],
  ['sisters','mentorship','reunion','geniuses','menaces','unlikely-duo'],['glass-cannon-i','glass-cannon-ii'],['manaflow-i','manaflow-ii'],
  ['piercing-lotus-i','piercing-lotus-ii'],['placebo','placebo-plus'],['pumping-up-i','pumping-up-ii','pumping-up-iii'],['trifecta-i','trifecta-ii']];
+EXCLUSIVE_GROUPS.push(['lategame-specialist','level-up']);
 const TEAMUP_TRAITS={sisters:['enforcer','rebel','pit-fighter','ambusher'],mentorship:['enforcer','conqueror','quickstriker','sniper'],
  reunion:['enforcer','pit-fighter','ambusher','firelight','scrap'],geniuses:['academy','firelight','ambusher','scrap','visionary'],
  menaces:['family','dominator','ambusher','scrap'],'unlikely-duo':['rebel','chem-baron','pit-fighter','ambusher']};
@@ -454,11 +458,12 @@ class Ledger {
   if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
   if(!events.some(e=>e.type==='choiceOpened'&&e.choice.kind==='augment'))assert.deepEqual(after.augmentOffers,before.augmentOffers,'augment history retained without draw');
   const lootReceipts=validateLootTransition(before,after,command,events);
+  const independentRewards=validateRewards(before,after,command,events,{CATALOG,COST,ROUNDS,lootReceipts,xp,entryXp});
   // Round income (base/interest/streak) and its investment growth are paid at the next round entry (deferred-income.ts); win gold is immediate.
   let paidInvestment=0;
   if(command?.type==='continue'){this.gold+=this.pending.gold;this.pending.gold=0;paidInvestment=this.pending.investmentHp;this.pending.investmentHp=0;}
   if(command?.type==='buyXp'){const expected=xp(before.level,before.xp,4+(before.augments.some(a=>a.definitionId==='level-up')?2:0));assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent purchased XP');}
-  if(command?.type==='select'&&before.pendingChoice?.kind==='augment'){const a=after.augments.find(a=>a.definitionId===command.definitionId),amount=({'silver-spoon':10,'epoch':6,'epoch-plus':8,'level-up':12}[command.definitionId]??0)+(command.definitionId==='call-to-chaos'&&chaosOutcome(after,a)==='xp'?64:0),expected=xp(before.level,before.xp,amount);assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent acquisition XP');const priorLevels=before.seatMechanics?.seat['augment-acquisition-levels']??{};assert.deepEqual(after.seatMechanics?.seat['augment-acquisition-levels']??{},['shopping-spree','upward-mobility','risky-moves'].includes(command.definitionId)?{...priorLevels,[a.choiceId]:expected.level}:priorLevels,'independent acquisition level baseline');}
+  if(command?.type==='select'&&before.pendingChoice?.kind==='augment'){const a=after.augments.find(a=>a.definitionId===command.definitionId),amount=({'silver-spoon':10,'epoch':6,'epoch-plus':8,'level-up':12}[command.definitionId]??0)+(command.definitionId==='call-to-chaos'&&chaosOutcome(after,a)==='xp'?64:0),expected=xp(before.level,before.xp,amount);assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent acquisition XP');const priorLevels=before.seatMechanics?.seat['augment-acquisition-levels']??{};assert.deepEqual(after.seatMechanics?.seat['augment-acquisition-levels']??{},['shopping-spree','upward-mobility','risky-moves','caretakers-ally','caretakers-favor','caretakers-chosen','birthday-presents','lategame-specialist'].includes(command.definitionId)?{...priorLevels,[a.choiceId]:expected.level}:priorLevels,'independent acquisition level baseline');}
   if(command?.type==='continue'){const expected=xp(before.level,before.xp,entryXp(before));assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent round-start XP');}
   let choice=before.choiceRngState,reward=before.rewardRngState,battle=before.battleSeedRngState;
   if(command?.type==='start')battle=word(battle);
@@ -509,7 +514,7 @@ class Ledger {
   // their amounts are audited by g2-4b-collector and the G2-3 conquest suites.
   for(const r of appendedMechanics.filter(r=>['g24-item-gold','conqueror-chest','high-roller','tacticians-crown'].includes(r.source)&&r.kind==='gold')){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
   // G2-3 armory purchases (Junker King upgrades) pay their price; the price table is audited by the G2-3 junker suites.
-  for(const r of appendedMechanics.filter(r=>r.kind==='choice'&&Number.isSafeInteger(r.price)&&r.price>0)){this.gold-=r.price;costs.purchases+=r.price;}
+  this.gold-=independentRewards.price;costs.purchases+=independentRewards.price;
   for(const r of appendedMechanics.filter(r=>['augment-kingslayer','augment-risky-moves'].includes(r.source))){
    const id=r.source==='augment-kingslayer'?'kingslayer':'risky-moves',a=after.augments.find(a=>a.definitionId===id);
    assert(a,'independent settlement-gold owner');assert.equal(r.kind,'gold');
@@ -524,29 +529,17 @@ class Ledger {
     assert.equal(r.receiptId,JSON.stringify(['augment-kingslayer',a.choiceId,r.round]));
    }
   }
-  // Batch-3 scheduled gold amounts: independent 14.24 source transcription (counter thresholds remain in their dedicated suites).
-  for(const r of appendedMechanics.filter(r=>r.source==='augment-pool-batch3'&&r.kind==='gold')){
-   const [,choiceId]=JSON.parse(r.receiptId),a=after.augments.find(a=>a.choiceId===choiceId);assert(a,'scheduled gold owner');
-   const fixed={'scapegoat':1,'gold-for-dummies':1,'wealthy-rehab-i':8,'wealthy-rehab-ii':15,'what-doesnt-kill-you':2}[a.definitionId];
-   if(fixed!==undefined)assert.equal(r.amount,fixed,'independent scheduled augment gold');
-   if(a.definitionId==='call-to-chaos'){
-    const outcome=chaosOutcome(after,a);assert(['gold','three-star'].includes(outcome));assert.equal(r.amount,outcome==='gold'?58:20);
-   }
-   if(a.definitionId==='magic-roll'){
-    const [, ,schedule]=JSON.parse(r.receiptId),dice=magicDice(after,a);
-    if(schedule===1)assert.equal(r.amount,5,'magic egg gold');
-    else {assert(dice.every(d=>d===dice[0])&&dice[0]<=3,'only low triples pay immediate gold');assert.equal(r.amount,6);}
-   }
+  // Augment amounts/identities come from the independent due plan, never from the received payload.
+  const p2ReceiptIds=new Set(mechanicGifts.map(r=>r.receiptId));
+  for(const r of appendedMechanics){
+   if(p2ReceiptIds.has(r.receiptId)){const receipt=r;const expected=giftPlan.get(receipt.receiptId);assert(expected,'independent P2 gift identity');assert.equal(receipt.kind,expected.kind);assert.equal(receipt.definitionId,expected.definitionId,'independent P2 gift definition');
+   if(receipt.kind==='unit'){if(receipt.resolution==='gold'){assert.equal(receipt.gold,COST[receipt.definitionId]);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}else{assert.equal(receipt.unitId,`unit-${serial}`);units.set(`unit-${serial++}`,{definitionId:receipt.definitionId,starLevel:1});this.cards++;}}continue;}
+   if(!(['opening-encounter-batch-a','opening-batch-b','opening-encounter-monkey','conqueror','augment-kingslayer','augment-risky-moves'].includes(r.source)||independentRewards.gold.has(r.receiptId)||independentRewards.gifts.has(r.receiptId)))continue;
+   const expected=independentRewards.gold.get(r.receiptId)??independentRewards.gifts.get(r.receiptId)??r;
+   if(r.kind==='gold'){this.gold+=expected.amount;costs.rewards+=expected.amount;lateGold+=expected.amount;}
+   else if(r.kind==='unit'&&r.resolution==='gold'){const gold=COST[expected.definitionId];this.gold+=gold;costs.rewards+=gold;lateGold+=gold;}
+   else if(r.kind==='unit'&&r.resolution!=='orb'){assert.equal(r.unitId,`unit-${serial}`,'reward unit serial');units.set(`unit-${serial++}`,{definitionId:expected.definitionId,starLevel:expected.starLevel??1});this.cards+=3**((expected.starLevel??1)-1);}
   }
-  // v23 augment pool batches and G2-3 Conqueror chests book their grants the same way; their values are audited by
-  // the augment-pool and G2-3 conquest suites.
-  for(const r of appendedMechanics.filter(r=>r.source.startsWith('opening-')||r.source.startsWith('augment-pool')||r.source==='conqueror'||['augment-kingslayer','augment-risky-moves'].includes(r.source))){
-   if(r.kind==='gold'){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
-   else if(r.kind==='unit'&&r.resolution==='gold'){this.gold+=r.gold;costs.rewards+=r.gold;lateGold+=r.gold;}
-   else if(r.kind==='unit'&&r.resolution!=='orb'){assert.equal(r.unitId,`unit-${serial}`,'reward unit serial');units.set(`unit-${serial++}`,{definitionId:r.definitionId,starLevel:r.starLevel??1});this.cards+=3**((r.starLevel??1)-1);}
-  }
-  for(const receipt of mechanicGifts){const expected=giftPlan.get(receipt.receiptId);assert(expected,'independent P2 gift identity');assert.equal(receipt.kind,expected.kind);assert.equal(receipt.definitionId,expected.definitionId,'independent P2 gift definition');
-   if(receipt.kind==='unit'){if(receipt.resolution==='gold'){assert.equal(receipt.gold,COST[receipt.definitionId]);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}else{assert.equal(receipt.unitId,`unit-${serial}`);units.set(`unit-${serial++}`,{definitionId:receipt.definitionId,starLevel:1});this.cards++;}}}
   // P 2026-10-24: forming consumes every owned hero once; Support Mining retires only its own dummy.
   if(command?.type==='select'&&before.pendingChoice?.kind==='augment'&&['dummify','golemify'].includes(command.definitionId)){
    for(const u of ownedUnits(before))if(COST[u.definitionId]!==undefined){this.cards-=3**(u.starLevel-1);units.delete(u.id);}

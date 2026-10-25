@@ -212,3 +212,50 @@ module.exports={
   ]
  ]
 };
+// Independent 14.24 description/effect transcription. No production content imports.
+module.exports.gifts={
+ dummify:[['U','forming-dummy']],golemify:[['U','augment-golem']],
+ 'field-medic':[['U','steb']], 'blade-dance':[['U','irelia']], 'shocking-troll':[['U','trundle']],
+ 'savage-revenge':[['U','renni',2]], 'all-out':[['U','vander']], 'blood-pact':[['U','vladimir']],
+ 'tower-defense':[['U','tower-dummy']], 'an-exalted-adventure':[['R',2,3,1,true],['C','TFT_Consumable_ChampionDuplicator_III']],
+ 'support-mining':[['U','training-dummy']], 'support-mining-plus':[['U','training-dummy']],
+ scapegoat:[['U','training-dummy']], 'wandering-trainer-i':[['U','training-dummy']],
+ 'wandering-trainer-ii':[['U','training-dummy']], 'gold-for-dummies':[['U','training-dummy']],
+ 'bad-luck-protection':[['I','gloves']], 'building-a-collection-iii':[['Q','component',1,false]],
+ 'worth-the-wait':[['R',1,1,2]], 'worth-the-wait-ii':[['R',2]], flexible:[['Q','emblem',1,false]],
+ 'eye-for-an-eye-plus':[['Q','component',1,false]], prizefighter:[['Q','component',2,false]],
+ 'shimmerscale-essence':[['I','TFT7_Item_ShimmerscaleMogulsMail']],
+ 'team-building':[['C','TFT_Consumable_ChampionDuplicator_III']],
+ 'phreaky-friday':[['I','TFT4_Item_OrnnInfinityForce']], 'phreaky-friday-plus':[['I','TFT4_Item_OrnnInfinityForce']],
+ 'dark-alley-dealings':[['I','TFT_Item_Artifact_SuspiciousTrenchCoat']], 'living-forge':[['U','TFT_ArmoryKeyOrnn']],
+};
+// [counter, threshold, repeat, maximum, gifts, gold, first-entry-offset].
+// Counter interpretation follows P-AG4, P-B3 (2026-10-24); values are literal archive values.
+module.exports.schedules={
+ 'spoils-of-war-i':[['kills',1,true]],'spoils-of-war-ii':[['kills',1,true]],'spoils-of-war-iii':[['kills',1,true]],
+ 'the-golden-egg':[['golden',1,false]],
+ 'an-exalted-adventure':[['stage',1,true,Infinity,[['C','TFT_Consumable_ChampionDuplicator_III']]],['adventure',1,false]],
+ 'support-mining':[['dummy-deaths',7,false,1,[['Q','support',1,false]]]],
+ 'support-mining-plus':[['dummy-deaths',4,false,1,[['Q','support',1,false]]]],
+ scapegoat:[['dummy-first',1,true,Infinity,[],1]],'gold-for-dummies':[['dummy-gold',1,true,Infinity,[],1]],
+ 'wealthy-rehab-i':[['healing',10000,false,1,[],8]],'wealthy-rehab-ii':[['healing',10000,false,1,[],15]],
+ 'building-a-collection-iii':[['round',1,true,5,[['Q','component',1,false]]]],
+ 'worth-the-wait':[['round',1,true,99,'copy',0,2]],'worth-the-wait-ii':[['round',1,true,99,'copy']],
+ flexible:[['stage',1,true,99,[['Q','emblem',1,false]]]],
+ 'eye-for-an-eye-plus':[['deaths',13,true,3,[['Q','component',1,false]]]],
+ prizefighter:[['wins',5,true,Infinity,[['Q','component',1,false]]]],
+ 'shimmerscale-essence':[['pvp',5,false,1,[['I','TFT7_Item_ShimmerscaleGamblersBlade']]]],
+ 'eye-for-an-eye':[['deaths',15,true,4,[['Q','component',1,false]]]],
+ 'team-building':[['pvp',7,false,1,[['C','TFT_Consumable_ChampionDuplicator_III']]]],
+ 'latent-forge':[['pvp',8,false,1,[['U','TFT_ArmoryKeyOrnn']]]],
+ 'phreaky-friday':[['pvp',5,false,1,[['I','TFT4_Item_OrnnInfinityForce']]]],
+ 'phreaky-friday-plus':[['pvp',3,false,1,[['I','TFT4_Item_OrnnInfinityForce']]]],
+ 'dark-alley-dealings':[['pvp',3,false,1,[['I','TFT9_Item_OrnnTrickstersGlass']]]],
+ 'living-forge':[['pvp',9,true,Infinity,[['U','TFT_ArmoryKeyOrnn']]]],
+ 'what-doesnt-kill-you':[['losses',1,true,Infinity,[],2],['losses',4,true,Infinity,[['Q','component',1,false]]]],
+ warpath:[['damage',60,false,1,[['R',5,4,1],['R',4,1,2],['U','TFT_ArmoryKeyCompleted']]]],
+ 'magic-roll':[['outcome',1,false],['egg',1,false,1,[['I','TFT_Item_ForceOfNature'],['R',5,2]],5]],
+ 'call-to-chaos':[['outcome',1,false]],
+};
+// XP-group raw mutual exclusions, independently resolved by map22_node in augments-14.24.json.
+module.exports.exclusive.push(['epoch','epoch-plus'],['shopping-spree','trade-sector']);
