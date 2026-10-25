@@ -334,27 +334,20 @@ describe('3D carousel stage', () => {
     stage.dispose(); bare.dispose();
   });
 
-  it("sends another seat's legend running for the unit it took at the legend pace, then home with it on the tether", async () => {
+  it('attaches a confirmed pick without pulling the legend toward it or sending it home', () => {
     const { stage } = setup();
     stage.show(carousel({ seats: seats(false) }));
-    stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 4 ? 's5' : null })) }));
     const legend = stage.scene.getObjectByName('render3d-carousel-seats')!.children[5]!;
-    const home = legend.position.clone();
-    expect(stage.debug().legends[5]).toMatch(/:chase$/);
-    // Cradle to ring (about 3.9 cells) at RUN_CELLS takes about 1.6 s, not a near-instant dash, then the grab burst.
-    for (let frame = 0; frame < 80; frame++) stage.update(1 / 60);
-    expect(stage.debug().fetched).toEqual({});
-    for (let frame = 0; frame < 60; frame++) stage.update(1 / 60);
+    legend.position.set(CAROUSEL_CELL, 0, CAROUSEL_CELL);
+    const position = legend.position.clone();
+    stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 4 ? 's5' : null })) }));
     expect(stage.debug().fetched).toEqual({ s5: 4 });
-    expect(stage.debug().legends[5]).toMatch(/:carry$/);
-    expect(stage.debug().effects).toContain('burst:standin');
     for (let frame = 0; frame < 360; frame++) stage.update(1 / 60);
-    expect(legend.position.distanceTo(home)).toBeLessThan(1);
+    expect(legend.position.distanceTo(position)).toBe(0);
     const unit = stage.scene.getObjectByName('render3d-carousel-taken')!.children.find(child => child.name === 'render3d-carousel-unit')!;
-    expect(unit.position.distanceTo(home) / CAROUSEL_CELL).toBeCloseTo(1.1, 0);
-    expect(stage.scene.getObjectByName('render3d-carousel-taken')!.children.filter(child => child.name === 'render3d-carousel-tether' && child.visible)).toHaveLength(1);
-    // Off the ring: never picked again.
+    expect(unit.position.distanceTo(position) / CAROUSEL_CELL).toBeCloseTo(1.1, 0);
     expect(stage.debug().units.filter(entry => entry.ring !== 'none').map(entry => entry.slot)).not.toContain(4);
+    stage.dispose();
   });
 
   it('walks my legend on a ground click only once released and with no pick out; my pick sends it running, a refusal stops it', () => {
@@ -376,13 +369,14 @@ describe('3D carousel stage', () => {
     // Refused (someone else got it first): it stops where it is.
     stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 3 ? 's6' : null })) }));
     expect(stage.debug().legends[2]).not.toMatch(/:chase$/);
-    expect(stage.debug().legends[6]).toMatch(/:chase$/);
-    // Mine is taken: it carries it home and walks no more.
+    expect(stage.debug().fetched).toMatchObject({ s6: 3 });
+    // Mine is taken: it carries it and may still walk.
     stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 3 ? 's6' : index === 5 ? 's2' : null })) }));
-    expect(stage.debug().legends[2]).toMatch(/:chase$/);
+    expect(stage.debug().legends[2]).toMatch(/:carry$/);
     for (let frame = 0; frame < 360; frame++) stage.update(1 / 60);
     expect(stage.debug().fetched).toMatchObject({ s2: 5, s6: 3 });
-    expect(stage.walkTo(middle, area)).toBeNull();
+    expect(stage.walkTo(middle, area)).not.toBeNull();
+    expect(stage.runTo(1)).toBe(false);
   });
 
   it('puts units already taken on the first view by their legends at home, with nothing to watch', async () => {
@@ -445,7 +439,7 @@ describe('3D carousel legends walk where the room has them', () => {
     });
   });
 
-  it('moves any seat along the room walk and lands it on time; a fetch in progress is left alone', () => {
+  it('moves any seat along the room walk, including while carrying a unit', () => {
     const { stage, tick } = setup();
     stage.show(carousel({ seats: seats(false) }));
     const other = stage.scene.getObjectByName('render3d-carousel-seats')!.children[5]!;
@@ -458,11 +452,14 @@ describe('3D carousel legends walk where the room has them', () => {
     tick(600); stage.update(0.6);
     expect(other.position.x / CAROUSEL_CELL).toBeCloseTo(1, 5); expect(other.position.z / CAROUSEL_CELL).toBeCloseTo(-2, 5);
     expect(stage.debug().legends[5]).not.toMatch(/:walk$/);
-    // s5 took slot 0: it fetches it, and a stray walk for it changes nothing until it is home.
+    // s5 took slot 0: subsequent walks still move it and its carried unit.
     stage.show(carousel({ seats: seats(false), slots: Array.from({ length: 9 }, (_, index) => slot(index, { pickedBy: index === 0 ? 's5' : null })) }));
-    expect(stage.debug().legends[5]).toMatch(/:chase$/);
-    stage.walk({ ...walk, startedAt: 1100, arriveAt: 2000 });
-    expect(stage.debug().legends[5]).toMatch(/:chase$/);
+    expect(stage.debug().fetched).toMatchObject({ s5: 0 });
+    stage.walk({ ...walk, to: { x: -2, y: 1 }, startedAt: 1100, arriveAt: 2000 });
+    tick(1000); stage.update(1);
+    expect(other.position.x / CAROUSEL_CELL).toBeCloseTo(-2);
+    expect(other.position.z / CAROUSEL_CELL).toBeCloseTo(1);
+    expect(stage.debug().fetched).toMatchObject({ s5: 0 });
   });
 
   it('runs my legend to a unit I may take at once, and not before release', () => {
@@ -514,34 +511,30 @@ describe('board-feed carousel channel', () => {
   });
 });
 
-describe('10-22 carousel pick is a movement lock until the carousel ends', () => {
-  it('rejects local and relayed walks after a receipt, even if a later view prunes the picked slot', () => {
+describe('carousel pick limits ownership without locking movement', () => {
+  it('keeps local and relayed movement after a pick, with the unit behind, and forbids another pick', () => {
     const { stage, tick } = setup();
     const area = { left: 0, top: 0, width: 1600, height: 900 };
-    stage.show(carousel({ seats: seats(false), slots: [slot(0, { pickedBy: 's2' })] }));
-    const mine = stage.scene.getObjectByName('render3d-carousel-seat-me')!, home = mine.position.clone();
-    const walk: BoardLegendWalk = { seatId: 's2', scene: 'carousel', from: { x: 0, y: 0 }, to: { x: 0, y: 0 }, startedAt: 0, arriveAt: 1000, slot: null, who: 'me' };
-    stage.walk(walk); tick(2000); stage.update(2);
-    expect(mine.position.distanceTo(home)).toBeCloseTo(0);
-    stage.show(carousel({ seats: seats(false), slots: [] }));
-    stage.walk(walk); tick(2000); stage.update(2);
-    expect(mine.position.distanceTo(home)).toBeCloseTo(0);
-    expect(stage.walkTo({ x: 800, y: 450 }, area)).toBeNull();
-    expect(stage.runTo(0)).toBe(false);
-    stage.show(null);
-    stage.show(carousel({ id: 'c2', seats: seats(false) }));
+    stage.show(carousel({ seats: seats(false) }));
+    const mine = stage.scene.getObjectByName('render3d-carousel-seat-me')!;
+    const walk: BoardLegendWalk = { seatId: 's2', scene: 'carousel', from: carouselHome(2, 8), to: { x: 0, y: 0 }, startedAt: 0, arriveAt: 2000, slot: null, who: 'me' };
+    stage.walk(walk); tick(1000); stage.update(1);
+    const halfway = mine.position.clone();
+    stage.show(carousel({ seats: seats(false), slots: [slot(0, { pickedBy: 's2' }), slot(1)] }));
+    expect(mine.position.equals(halfway)).toBe(true);
+    tick(1000); stage.update(1);
+    expect(Math.hypot(mine.position.x, mine.position.z)).toBeCloseTo(0);
+    expect(stage.debug().fetched).toEqual({ s2: 0 });
+    expect(stage.runTo(1)).toBe(false);
+    stage.walk({ ...walk, from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, startedAt: 2000, arriveAt: 3000 });
+    tick(1000); stage.update(1);
+    expect(mine.position.x / CAROUSEL_CELL).toBeCloseTo(1);
+    const unit = stage.scene.getObjectByName('render3d-carousel-taken')!.children.find(child => child.name === 'render3d-carousel-unit')!;
+    expect(unit.position.x).toBeLessThan(mine.position.x);
+    expect(stage.walkTo({ x: 800, y: 450 }, area)).not.toBeNull();
+    stage.show(carousel({ seats: seats(false), slots: [slot(1)] }));
+    expect(stage.runTo(1)).toBe(false); // receipt remains remembered even if its slot is pruned
     expect(stage.walkTo({ x: 800, y: 450 }, area)).not.toBeNull();
     stage.dispose();
-  });
-
-  it('returns home if the picked slot disappears while its legend is still fetching it', () => {
-    const { stage } = setup();
-    stage.show(carousel({ seats: seats(false) }));
-    const mine = stage.scene.getObjectByName('render3d-carousel-seat-me')!, home = mine.position.clone();
-    stage.show(carousel({ seats: seats(false), slots: [slot(0, { pickedBy: 's2' })] }));
-    stage.update(0.3); expect(mine.position.distanceTo(home)).toBeGreaterThan(1);
-    stage.show(carousel({ seats: seats(false), slots: [] }));
-    for (let frame = 0; frame < 120; frame++) stage.update(1 / 60);
-    expect(mine.position.distanceTo(home)).toBeCloseTo(0); stage.dispose();
   });
 });
