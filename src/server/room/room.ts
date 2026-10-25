@@ -1209,7 +1209,7 @@ export class Room {
         match = opened.state; events = [...events, ...opened.events];
         yield;
         const input = this.frozenInputs.find(input => input.seats[0]!.seatId === seat.seatId)!;
-        streams.set(input.battleId, new CombatStream(input, { initial: opened.streamInitial, events: opened.events }));
+        streams.set(input.battleId, new CombatStream(input, { initial: opened.streamInitial, events: opened.events, state: opened.state }));
       }
       const seatRevision = seat.seatRevision + 1;
       seats.push({ ...seat, match, seatRevision, serverEvents: { seatRevision, events } });

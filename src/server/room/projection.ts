@@ -232,6 +232,9 @@ export interface SeatReplay { readonly battleId: string; readonly replay: Combat
  * (§14.3). Keys are the room's own result objects, so a finished room's replays go with it.
  */
 const replays = new WeakMap<object, CombatReplay>();
+// Display enrichment stays separate from authenticated raw recordings and replay spot checks.
+const displayReplays = new WeakMap<object, CombatReplay>();
+export function primeDisplayReplay(key: object, replay: CombatReplay): void { displayReplays.set(key, replay); }
 const mirroredReplays = new WeakMap<object, CombatReplay>();
 /**
  * A replay the rules refused, kept with the same key: the refusal is a pure function of the immutable battle, so it is
@@ -278,10 +281,10 @@ function replayOf(battle: BattleResult, seatId: string): SeatReplay | null | und
     if (!outcome) return undefined;
     const combat = outcome.combat;
     if (combat === null) return null;
-    return { battleId: battle.battleId, replay: cached(replays, outcome, () => toCombatReplay(combat)), unitIds: [] };
+    return { battleId: battle.battleId, replay: displayReplays.get(outcome) ?? cached(replays, outcome, () => toCombatReplay(combat)), unitIds: [] };
   }
   if (!battle.participants.includes(seatId)) return undefined;
-  const replay = cached(replays, battle, () => toCombatReplay(battle.battle));
+  const replay = displayReplays.get(battle) ?? cached(replays, battle, () => toCombatReplay(battle.battle));
   if (battle.battle.a.seatId === seatId) return { battleId: battle.battleId, replay, unitIds: ownUnitIds(battle, seatId) };
   if (battle.battle.b.seatId === seatId) return { battleId: battle.battleId, replay: cached(mirroredReplays, battle, () => mirrorCombatReplay(replay)), unitIds: ownUnitIds(battle, seatId) };
   return null;
