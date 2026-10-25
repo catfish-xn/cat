@@ -84,6 +84,15 @@ async function worker(){
  const runs=[];
  const publish=()=>writeFileSync(option('--result'),JSON.stringify({index,runs},null,2));
  const add=run=>{runs.push(run);publish();console.log(JSON.stringify({worker:index,seed:run.seed,build:run.build,checkpoints:run.checkpoints,failures:run.failures.length}));};
+ const declaration=option('--declaration');
+ if(declaration!==undefined){
+  assert.ok(['blitzcrank','ekko'].includes(declaration));
+  const seed=Number(option('--seed',12)),run=api.declarationWalk(seed,declaration),p=run.probe;
+  add({seed,build:declaration,terminal:false,steps:run.declarationStep,round:run.state.round,
+   tick:run.state.combat.tick,predecessorTick:run.previous.combat.tick,
+   checkpoints:p.checkpoints,continuations:p.continuations,coverage:p.coverage,failures:p.failures});
+  return;
+ }
  if(args.includes('--server-only')){add(await serverMatch(api,Number(option('--seed',42))));return;}
  const replay=option('--replay-step');
  if(replay!==undefined){
@@ -127,7 +136,7 @@ async function main(){
  export {BotDriver} from './src/server/room/bot-driver';
  export {ManualClock} from './src/server/room/clock';
 `,resolveDir:resolve('.')},bundle:true,platform:'node',format:'esm',outfile:bundle,logLevel:'warning'});
- const extra=args.includes('--server-only')?['--server-only','--seed',option('--seed',42)]:args.includes('--replay-step')?['--replay-step',option('--replay-step'),'--seed',option('--seed',42),'--build',option('--build','cannon'),'--from-step',option('--from-step',0)]:[];
+ const extra=args.includes('--declaration')?['--declaration',option('--declaration'),'--seed',option('--seed',12)]:args.includes('--server-only')?['--server-only','--seed',option('--seed',42)]:args.includes('--replay-step')?['--replay-step',option('--replay-step'),'--seed',option('--seed',42),'--build',option('--build','cannon'),'--from-step',option('--from-step',0)]:[];
  const results=await Promise.all(Array.from({length:extra.length?1:workers},(_,index)=>new Promise((done,reject)=>{
   const file=join(directory,`worker-${index}.json`);
   const child=fork(__filename,['--worker','--bundle',bundle,'--index',String(index),'--target',String(Math.ceil(target/workers)),'--result',file,...extra,...(args.includes('--random-only')?['--random-only']:[]),'--checkpoint-rate',option('--checkpoint-rate',31)],{stdio:'inherit'});
@@ -135,7 +144,7 @@ async function main(){
  })));
  const runs=results.flatMap(r=>r.runs),checkpoints=runs.reduce((n,r)=>n+r.checkpoints,0),failures=runs.flatMap(r=>r.failures);
  if(!extra.length)assert.ok(checkpoints>=target,`only ${checkpoints}/${target} checkpoints`);
- const report={node:process.version,mode:args.includes('--random-only')?'random-only':'mixed',checkpointRate:Number(option('--checkpoint-rate',31)),workers:results.length,checkpoints,entranceAttempts:checkpoints*3,continuations:runs.reduce((n,r)=>n+r.continuations,0),runs,failures};
+ const report={node:process.version,mode:args.includes('--declaration')?'declaration':args.includes('--random-only')?'random-only':'mixed',checkpointRate:Number(option('--checkpoint-rate',31)),workers:results.length,checkpoints,entranceAttempts:checkpoints*3,continuations:runs.reduce((n,r)=>n+r.continuations,0),runs,failures};
  const output=resolve(option('-o','docs/V23_RESTORE_FUZZ_REPORT.md'));
  mkdirSync(require('node:path').dirname(output),{recursive:true});
  writeFileSync(output,`【完成】实现：tests/v23-restore-fuzz.test.ts:10、tests/fixtures/restore-fuzz.ts:28、scripts/fuzz-restore.cjs:1。\n【完成】模式 ${report.mode}，并行 ${results.length} 进程，${runs.filter(r=>r.terminal).length} 完整对局，${checkpoints} 检查点，${checkpoints*3} 恢复入口尝试，${report.continuations} 续跑比较。\n【未完成】${failures.length?'存在恢复失败，详见同名 JSON；需按 seed/step 回放定位。':'无。'}\n【需要我决定】无；约定见 docs/S13_RULES_GAP.md。\n【风险】${report.mode==='random-only'?'本次未覆盖构筑路线或 BotDriver；':''}结果仅覆盖本次种子与轨迹；真实联机席位不属于 Match 存档契约；服务器 BotDriver 使用单人薄适配器。\n【下一步】${failures.length?'最小化失败并补回归。':'保留命令与 JSON 供复跑。'}\n`);

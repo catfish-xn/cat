@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { isDeepStrictEqual } from 'node:util';
 import * as match from '../../src/simulation/match';
+import { grantMechanicUnit } from '../../src/simulation/seat-mechanics';
 import { canonicalContent } from '../../src/simulation/content';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
 import { needsCrownHistory } from '../../src/simulation/crown-history';
@@ -143,4 +144,59 @@ export function randomWalk(seed: number, maxSteps: number, failFast = true, chec
     probe.observe(state, result, operation); state = result.state;
   }
   return { state, probe };
+}
+
+/** Bounded public-command reduction: stop on the first identity-key skill declaration. */
+export function declarationWalk(seed: number, definitionId: 'blitzcrank' | 'ekko') {
+  const probe = new RestoreProbe(seed, definitionId);
+  let state = match.createMatch(seed);
+  const execute = (operation: Operation) => {
+    const before = state, result = operation(before);
+    assert.ok(!('ok' in result) || result.ok);
+    probe.observe(before, result, operation);
+    state = result.state;
+  };
+  const choices = () => {
+    while (state.phase === 'choice') {
+      const choice = state.pendingChoice!;
+      const id = choice.kind === 'augment'
+        ? choice.offers.find(id => id !== 'placebo' && id !== 'glass-cannon-i')!
+        : choice.offers[0];
+      execute(s => match.selectChoice(s, choice.choiceId, choice.generation, id));
+    }
+  };
+  const emptyBoard = () => {
+    for (const unit of state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board')) {
+      const used = new Set(state.preparation.units.flatMap(u => u.location.kind === 'bench' ? [u.location.slot] : []));
+      const slot = Array.from({ length: state.preparation.benchSize }, (_, i) => i).find(i => !used.has(i))!;
+      execute(s => match.deployMatchUnit(s, unit.id, { kind: 'bench', slot }));
+    }
+  };
+  // Empty-board opening losses reach the first augment without a fabricated save.
+  while (state.roundDefinitionId !== '2-1') {
+    choices();
+    emptyBoard();
+    execute(match.startMatchCombat);
+    choices();
+    execute(s => match.nextRound(s, s.round));
+  }
+  choices();
+  emptyBoard();
+  execute(s => grantMechanicUnit(s, { receiptId: `predecessor-${definitionId}`, source: 'test', definitionId }));
+  const unit = state.preparation.units.find(u => u.team === 'player' && u.definitionId === definitionId)!;
+  execute(s => match.deployMatchUnit(s, unit.id, { kind: 'board', cell: { col: 3, row: 4 } }));
+  execute(match.startMatchCombat);
+  while (state.phase === 'combat') {
+    const previous = state;
+    const next = match.stepMatch(previous).state;
+    const declares = next.combat!.units.some(u => u.statuses?.some(s => s.source.definitionId === `${definitionId}-ability`
+      && s.contributionKeys?.includes(s.key)));
+    if (declares) probe.checkpoint(previous);
+    execute(match.stepMatch);
+    if (declares) {
+      probe.checkpoint(state);
+      return { previous, state, probe, declarationStep: probe.step };
+    }
+  }
+  throw Error(`No ${definitionId} declaration for seed=${seed}`);
 }

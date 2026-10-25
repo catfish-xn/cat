@@ -1142,3 +1142,7 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 **P-SPOILS-FACT-OWNERSHIP（P，2026-10-25，用户授权按推荐决定）**：`spoils-of-war` 击杀事实只由该队开战 strategy 中的真实 Spoils 强化 source 开启；不读取候选事实行来判断持有情况，不以当前轮之后取得的强化回填旧轮。未持有者完全保留原 `batch2` 输出，既有无强化存档字节不变。持有者有有效击杀时必须写行；零击杀延续稀疏事实约定，但缺行本身不证明零：终局和完整历史恢复仍独立重建可信开战输入、重放战斗并逐项比较事实，删除、置零或增加真实击杀数均拒绝。PvP 两侧分别按开战单位所属队伍认证来源，不能借用敌方强化。无规则、数值、内容身份或存档格式变更。
 
 回归：`tests/augment-pool-batch3-progress.test.ts`；冻结兼容基线及其独立生成来源见 `tests/fixtures/compat/README.md`。当前内容配旧结算代码生成字节，避免把 pre2 内容 digest 漂移混入兼容判定；不手改历史 digest。
+## 技能声明旧夹具回归重建（P，2026-10-25）
+
+- **P，2026-10-25，restore-fuzz-current-declaration-witness**：旧 seed 2036／1039 的存档保留为历史证据，不改 digest，也不再作为当前内容回归输入。以 seed 12 从 createMatch、实际选择、空板开战／推进回合、公开 grantMechanicUnit（source=test）、部署及逐 tick 命令重建两条最小工程见证；这是技能状态恢复测试，不声称随机商店取得英雄。脚本新增 `--declaration blitzcrank|ekko --seed 12` 定向模式，首个声明分别为 step 115／tick 104、step 109／tick 98；前驱分别为 tick 103／97。随机旧种子原步号已漂移，单独回放通过不能充当命中声明的证明。
+- **P，2026-10-25，restore-fuzz-declaration-assertions**：两条前驱检查及六条恢复检查均断言实际声明存在，绑定 identity-key、单贡献键、来源、目标、effectIndex、负抗性数值和施加时间；布里茨验证 80 tick 期限，艾克验证永久贡献 null → 显示 1201 投影。保留三入口完整状态相等和下一步完整结果相等，不改回 it.fails、不增超时。当前 seed 12 下原篡改见证的拒绝原因统一为既有 ability status binding facts，继续精确断言原因；不再期待已随强化池漂移的 Mirror forge 错误。仅调整测试与离线驱动，不改变规则、数值、保存格式或内容身份。
