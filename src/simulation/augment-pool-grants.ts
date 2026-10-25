@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH4_B4COMBAT } from './content/augment-pool-batch4-b4combat';
 import { formSwapperGiftPlan, validateFormSwapperSelection } from './augment-pool-formswapper';
 import { batch2RewardPlan, drainBatch2Gold, validateBatch2Gold } from './augment-pool-batch2-progress';
 import { AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
@@ -16,7 +17,7 @@ import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */

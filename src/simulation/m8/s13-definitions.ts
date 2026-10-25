@@ -1,3 +1,4 @@
+import { categoryFiveTrigger } from '../augment-pool-batch4-b4combat';
 import { trigger, enemies, status } from '../content/item-programs';
 import { programEntries } from './item-program';
 import { conditionHolds } from './stats';
@@ -35,7 +36,7 @@ export function compileMechanismDefinitions(unit: CombatUnit, combatId: string):
   }
   for (const entry of programEntries(unit)) {
     const {source}=entry;
-    if(entry.kind==='trigger')eventTriggers.push({...entry.declaration,source});
+    if(entry.kind==='trigger')eventTriggers.push(categoryFiveTrigger(unit,{...entry.declaration,source}));
     if(entry.kind==='survival') {
       const {initialAlso,...d}=entry.declaration;
       survivalTriggers.push({...d,source});

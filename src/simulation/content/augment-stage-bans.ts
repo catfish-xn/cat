@@ -9,6 +9,9 @@ import { freezeContent } from './freeze';
  * Watcher Growth carries all three and is therefore never offered at an augment round.
  */
 export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = freezeContent({
+  "TFT_Augment_CategoryFive":['4-2'],
+  "TFT_Augment_Overheal":['2-1'],
+  "TFT_Augment_SatedSpellweaver":['2-1'],
   "TFT10_Augment_CrownGuarded":['4-2'],
   "TFT10_Augment_GoingLong":['3-2','4-2'],
   "TFT10_Augment_LittleBuddies":['2-1'],

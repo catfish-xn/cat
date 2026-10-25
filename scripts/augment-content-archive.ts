@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH4_B4COMBAT } from '../src/simulation/content/augment-pool-batch4-b4combat';
 // Offline only: rebuild the exact original identity roots, including all text/provenance.
 import { AUGMENT_BATCH1 } from '../src/simulation/content/augment-pool-batch1';
 import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
@@ -471,12 +472,37 @@ function restoreBatch<T extends Record<string, { source: object }>>(runtime: T, 
     return [id, { ...row, ...AUGMENT_POOL_TEXT[id], source: { ...row.source, ...notes[id] } }];
   }));
 }
+const B4COMBAT_NOTES = {
+  "long-distance-pals": {
+    "name": "天涯若比邻",
+    "description": "战斗开始时：你相距最远的那2个弈子会形成一个纽带，分享彼此的22%护甲、魔抗、攻击力和法术强度。",
+    "description_en_us": "Combat start: Your 2 units furthest from each other form a bond, sharing 22% of their Armor, Magic Resist, Attack Damage, and Ability Power with each other."
+  },
+  "category-five": {
+    "name": "五级飓风",
+    "description": "获得1个【卢安娜的飓风】。你的【卢安娜的飓风】发射1根额外弩箭，每根弩箭造成85%原伤害。",
+    "description_en_us": "Gain a Runaan's Hurricane. Your Runaan's Hurricanes shoot 1 extra bolts, each dealing 85% of the original damage."
+  },
+  "overheal": {
+    "name": "过量治疗",
+    "description": "每第三次攻击都会造成115%额外伤害，并回复相当于50%该伤害的生命值。多余的治疗量会转化为护盾，至多至300。",
+    "description_en_us": "Every third attack deals an additional 115% damage and heals 50% of the damage. Excess healing is converted to a shield up to 300 Health."
+  },
+  "sated-spellweaver": {
+    "name": "满意的织法者",
+    "description": "在施放一个技能后，弈子们获得持续3秒的20%全能吸血。多余的治疗量会转化为护盾，至多至300。",
+    "description_en_us": "After casting an Ability, champions gain 20% Omnivamp for 3 seconds. Excess healing is converted to a shield up to 300 Health."
+  }
+};
+const B4COMBAT_ARCHIVED=Object.fromEntries(Object.entries(AUGMENT_BATCH4_B4COMBAT).map(([id,row])=>{const n=B4COMBAT_NOTES[id as keyof typeof B4COMBAT_NOTES];return [id,{...row,name:n.name,description:n.description,source:{...row.source,description_en_us:n.description_en_us}}];}));
 export const RULES_GAP_MANIFEST = {
   ...runtimeManifest,
+  augmentPoolBatch4B4Combat:{...runtimeManifest.augmentPoolBatch4B4Combat,content:B4COMBAT_ARCHIVED},
+
   augmentPoolBatch1: { ...runtimeManifest.augmentPoolBatch1, content: restoreBatch(AUGMENT_BATCH1, BATCH1_NOTES) },
   augmentPoolBatch2: { ...runtimeManifest.augmentPoolBatch2, content: restoreBatch(AUGMENT_BATCH2, BATCH2_NOTES) },
   augmentPoolBatch3Xp: { ...runtimeManifest.augmentPoolBatch3Xp, content: restoreBatch(AUGMENT_BATCH3_XP, BATCH3_XP_NOTES) },
   augmentPoolBatch3: { ...runtimeManifest.augmentPoolBatch3, content: restoreBatch(AUGMENT_BATCH3, BATCH3_NOTES) },
 };
 export const ARCHIVED_AUGMENT_DEFINITIONS = Object.fromEntries(Object.entries(AUGMENT_DEFINITIONS).map(([id, row]) =>
-  [id, Object.hasOwn(AUGMENT_POOL_TEXT, id) ? { ...row, ...AUGMENT_POOL_TEXT[id] } : row]));
+  [id, Object.hasOwn(B4COMBAT_NOTES,id) ? {...row,...B4COMBAT_NOTES[id as keyof typeof B4COMBAT_NOTES]} : Object.hasOwn(AUGMENT_POOL_TEXT, id) ? { ...row, ...AUGMENT_POOL_TEXT[id] } : row]));

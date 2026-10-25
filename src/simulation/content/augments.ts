@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH4_B4COMBAT_DEFINITIONS } from './augment-pool-batch4-b4combat';
 import { AUGMENT_BATCH2_DEFINITIONS } from './augment-pool-batch2';
 import { AUGMENT_BATCH1_DEFINITIONS } from './augment-pool-batch1';
 import { AUGMENT_BATCH3_DEFINITIONS } from './augment-pool-batch3';
@@ -13,6 +14,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   ...AUGMENT_BATCH1_DEFINITIONS,
   ...AUGMENT_BATCH2_DEFINITIONS,
   ...AUGMENT_BATCH3_DEFINITIONS,
+  ...AUGMENT_BATCH4_B4COMBAT_DEFINITIONS,
   ...AUGMENT_BATCH3_XP_DEFINITIONS,
   ...V20_TEAMUP_AUGMENTS,
   sisters:{id:'sisters',name:'姐妹',description:'获得蔚和金克丝。两者在场时解锁姐妹：金克丝参与击杀使蔚获得40%攻击力7秒；蔚参与击杀使金克丝获得75%攻速5秒。',effects:[{kind:'mechanic',mechanic:'sistersUnlock',values:{enabled:1}}]},
