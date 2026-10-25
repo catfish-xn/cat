@@ -1,3 +1,4 @@
+import { reusedG23Validation, rememberG23Validation, readRestoreG23Replay, rememberRestoreG23Replay } from './g23-restore-reuse';
 import { drainSetup } from './setup-work';
 import { activateFamily, type FamilyTask } from './family-heist';
 import {recordG23GrantEvidence} from './g2-3-grant-evidence';
@@ -35,7 +36,9 @@ export function grantG23Academy(initial:MatchState):{state:MatchState;events:Mat
  return {state,events};
 }
 export function validateG23Progress(progress:G23MatchProgress,seed:number,round:number):void{
- return drainSetup(validateG23ProgressSteps(progress,seed,round));
+ if(reusedG23Validation(progress,seed,round))return;
+ drainSetup(validateG23ProgressSteps(progress,seed,round));
+ rememberG23Validation(progress,seed,round);
 }
 export function* validateG23ProgressSteps(progress:G23MatchProgress,seed:number,round:number):Generator<void,void,void>{
  const fail=(v:unknown)=>{if(!v)throw new RangeError('Invalid G2-3 match progression');};
@@ -76,9 +79,10 @@ export function replayG23Economy(seed:number,receipts:readonly G23EconomyReceipt
  return drainSetup(replayG23EconomySteps(seed,receipts));
 }
 export function* replayG23EconomySteps(seed:number,receipts:readonly G23EconomyReceipt[]):Generator<void,G23MatchProgress,void>{
+ const known=readRestoreG23Replay(receipts,seed);if(known){yield;return known;}
  const key=`${seed}:${yield* canonicalContentSteps(receipts)}`,cached=economyReplayCache.get(key);
  yield;
- if(cached)return cached;
+ if(cached){rememberRestoreG23Replay(receipts,seed,cached);return cached;}
  let replay=createG23Progress(seed),start=0;
  for(let n=receipts.length-1;n>0;n--){
   const prefix=economyReplayCache.get(`${seed}:${yield* canonicalContentSteps(receipts.slice(0,n))}`);
@@ -95,5 +99,5 @@ export function* replayG23EconomySteps(seed:number,receipts:readonly G23EconomyR
  }
  if(economyReplayCache.size>=128)economyReplayCache.delete(economyReplayCache.keys().next().value!);
  // Market reward descriptors can be shared content; never retain caller-owned receipts.
- const result=yield* freezeContentSteps(structuredClone(replay));economyReplayCache.set(key,result);return result;
+ const result=yield* freezeContentSteps(structuredClone(replay));economyReplayCache.set(key,result);rememberRestoreG23Replay(receipts,seed,result);return result;
 }

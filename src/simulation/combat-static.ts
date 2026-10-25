@@ -1,6 +1,6 @@
-import { isImmutableJson, shareGeneratedDeclaration, shareParsedDeclaration } from './immutable-json';
+import { equalOrderedJson, isImmutableJson, shareGeneratedDeclaration, shareParsedDeclaration } from './immutable-json';
 import { freezeContent, freezeTransientContent } from './content/freeze';
-import type { CombatUnit } from './combat-types';
+import type { CombatState, CombatUnit } from './combat-types';
 
 const fields = ['ability', 'sources', 'triggers', 'mechanics', 'itemPrograms', 'companionDefinitions', 'attackCone', 'mechanismDefinitions'] as const;
 /** Declarations are read-only; every dynamic runtime field still belongs to its tick. */
@@ -20,6 +20,24 @@ export function sharedCombatDeclarations(unit: CombatUnit): Partial<CombatUnit> 
     if (value && typeof value === 'object' && isImmutableJson(value)) (shared as Record<string, unknown>)[key] = value;
   }
   return shared;
+}
+
+/** Restore-only, after all candidate checks. Reuse only certified immutable
+ * declarations that also preserve every value AND native property order. No
+ * dynamic state escapes the replay, and a mismatch simply keeps the candidate. */
+export function shareValidatedCombatDeclarations(candidate: CombatState, expected: CombatState): void {
+  const expectedUnits = new Map(expected.units.map(unit => [unit.id, unit]));
+  for (const unit of candidate.units) {
+    const source = expectedUnits.get(unit.id);
+    if (!source) continue;
+    const declarations = sharedCombatDeclarations(source);
+    for (const key of fields) {
+      const value = declarations[key];
+      if (value && equalOrderedJson(unit[key], value)) (unit as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
+  if (expected.strategy && isImmutableJson(expected.strategy) && equalOrderedJson(candidate.strategy, expected.strategy))
+    Object.assign(candidate, { strategy: expected.strategy });
 }
 
 // These records are only read or replaced by the combat pipeline. Arrays that
