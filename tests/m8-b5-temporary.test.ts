@@ -36,9 +36,9 @@ function mechanismInventory(level: number): MatchState {
 }
 const pair = (state: MatchState) => state.temporaryEquipment.map(i => i.definitionId);
 const otherRng = (state: MatchState) => [state.rngState, state.choiceRngState, state.rewardRngState, state.battleSeedRngState];
-// After the batch-3/XP merge the route takes Crimson Pact (a Renni) and Heroic Grab Bag (duplicators, gold): no item
-// births before the 2-4/3-4 gloves, so the Thief's Gloves combined at 3-5 is item-3.
-const TG = 'item-3';
+// Seed42 takes Dominator Crest (one unequipped emblem), then Clockwork (unchanged opening HP/armor) Accelerator.
+// The two scheduled gloves are item-2/item-3, so their parent is item-4; HP/armor and roll vectors are unchanged.
+const TG = 'item-4';
 
 describe('B5 Match TG-01 lifecycle and save validation', () => {
   it.each([3, 6, 7, 9])('level %s preserves the 2-1 pool mechanism and its legal paid-XP restore control', level => {
@@ -200,9 +200,11 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
   // v22 enables the Trainer Golem opening, whose golem must stay on the board; seeds 9605 and
   // 2563011894 draw it, so they are replaced by the first non-golem seeds rolling the identical pair.
   const TG_SEED_SUBSTITUTES = new Map([[1401181143, 47], [2654435761, 4113], [147926525, 9533],
-    [56502658, 1082], [3724842645, 4165], [1457683801, 113], [1844960718, 9534], [4168622220, 9340], [2563011894, 2062],
+    [56502658, 1082], [3724842645, 4165], [1457683801, 113], [1844960718, 9574], [4168622220, 9340], [2563011894, 2062],
     // v23 fmix32 openings put an unbenchable opening structure on 387276917's board; 9341 rolls the same Sterak's/Tear pair.
-    [387276917, 9341]]);
+    [387276917, 9341],
+    // 224-card pool: preserve the same JG/Gloves and Rageblade/Sword pairs without replay-required XP cards.
+    [1070406884, 2108]]);
   /** Pure planning only: the original greedy choice over 512 candidates (two unseen
    * children first, ties by ascending seed), computed afresh by each caller. */
   function plannedTemporaryRoutes() {

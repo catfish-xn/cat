@@ -9,7 +9,7 @@ import type { Source } from './m8/contracts';
 import type { OpeningDefinition } from './m8/opening';
 import { attackInterval } from './m8/stats';
 import { compileUnitInputs, validateNeutralInputs } from './m8/unit-inputs';
-import { flatAmount } from './m8/s13-definitions';
+import { flatAmount } from './m8/amount';
 
 export interface CompiledNeutralEncounter {
   readonly roundId: string;

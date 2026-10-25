@@ -85,8 +85,8 @@ it.each(fieldedLegCases('final-polish'))('Final Polish fielded 4-2 route (seed %
  expect(STAGE_SEEDS['final-polish']).toMatchObject({node:'4-2',fielded:true});expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
 });
 it('Final Polish grants two bench anvils, opens in either order, restores and times out to the authenticated first option',()=>{
- const {state}=acquire('final-polish'),anvils=state.preparation.units.filter(u=>isAnvil(u.definitionId));
- expect(anvils.map(u=>u.definitionId)).toEqual(['TFT_ArmoryKeySupport','TFT_ArmoryKeyCompleted']);
+ const {before,state}=acquire('final-polish'),anvils=state.preparation.units.filter(u=>isAnvil(u.definitionId)&&!before.preparation.units.some(old=>old.id===u.id));
+ expect(anvils.map(u=>u.definitionId)).toEqual(['TFT_ArmoryKeyCompleted','TFT_ArmoryKeySupport']);
  for(const order of [anvils,[...anvils].reverse()]){
   let s=state;
   for(const unit of order){
@@ -139,7 +139,7 @@ it.each(['black-rose-crest','black-rose-crown'])('%s can be publicly selected at
  let found:MatchState|undefined;
  // Pinned first successful searches; keep the pure second-node predicate and the real Morgana purchase checks.
  const traits=UNIT_DEFINITIONS.morgana.traits;
- const seed=id==='black-rose-crest'?23:169;
+ const seed=id==='black-rose-crest'?51:176;
  {
   const initial=createMatch(seed),first=generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState);
   const chosen=first.offers.find(x=>x!=='placebo'&&x!=='glass-cannon-i')!;

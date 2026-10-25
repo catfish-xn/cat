@@ -32,7 +32,9 @@ const stop=new Error('captured genuine 3-7 preparation');
 // v22: seed 49 draws the scuttle-crab opening (crabs carry the 3-7 wolf orbs) and no longer reaches Radiant
 // Relics. v22's seed 2279 draws Artifact Anvil under v23 fmix32; seed 6019 has no opening encounter, two paid
 // 1-star Tristanas with prior growth, a real Giant Slayer and Gargoyle Stoneplate, and a 3-7 Tristana reward.
-try { await run(api,{seed:6019,build:'cannon',supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
+// Explicit All for One II keeps the original three parent-overkill growth events on the 224-card pool.
+try { await run(api,{seed:6019,build:'cannon',augmentPriorities:['all-for-one-ii'],supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
+ if(command?.type==='select'&&before.roundDefinitionId==='2-1'&&before.pendingChoice?.kind==='augment'){expect(before.pendingChoice.offers).toContain('all-for-one-ii');expect(command.definitionId).toBe('all-for-one-ii');}
  if(command?.type==='start'&&before.roundDefinitionId==='3-7'){captured=before;throw stop;}
  if('events' in result)priorFacts.push(...bounceFacts(before,result.state,result.events));
 }}); }catch(error){if(error!==stop)throw error;}

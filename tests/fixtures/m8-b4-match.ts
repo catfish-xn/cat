@@ -13,8 +13,8 @@ function accepted(result: MatchCommandResult): MatchState {
 // Independent v17 seed 206 selects Irelia and drops Lux as unit-3; all ingredients use real drops/supplies.
 // Baseline random rewards genuinely draw Maddie and Lux; no roster or raw state is patched.
 import { publicEquipmentPreparation as acquire } from './b8-public-equipment';
-// Avoid early item gifts so the independent component serials remain unchanged.
-const equipmentPreparation=(components:readonly string[])=>acquire(components,{seed:206,earliestRound:8,augmentPriorities:['inspiring-epitaph','clockwork-accelerator']});
+// Reroll the 224-card pool to Mentorship II: no gifts and no higher-cost adjacent ally in tested combats.
+const equipmentPreparation=(components:readonly string[])=>acquire(components,{seed:206,earliestRound:8,augmentPriorities:['mentorship-ii','inspiring-epitaph','clockwork-accelerator'],rerollForAugment:true});
 
 // Cache the public route + item compilation. Each caller owns its mutable copy;
 // negative/continuation tests cannot contaminate later test fixtures.
@@ -22,8 +22,8 @@ const compiledItems = new Map<string, MatchState>();
 /** Public provenance-complete equipment fixture: combat is 2-1 (one/two
  * components) or 3-5 (three/four), not the old synthetic 1-2 encounter.
  * unit-1 is the original Irelia; unit-3 is the Lux actually dropped in 1-3.
- * All non-holders stay benched. Front-row placement keeps both selected
- * augments inert, preserving the original independent item/stat assertions.
+ * All non-holders stay benched. Selected augments preserve the original
+ * independent opening HP/item-stat assertions.
  */
 export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): MatchState {
   const requested = typeof id === 'string' ? [id] : [...id];
@@ -40,10 +40,9 @@ export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): Ma
     return definition.recipe ? [...definition.recipe] : [definitionId];
   });
   if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
-  // Keep the original component births. In v20, reroll the second node
-  // once to publicly recover the inert back-row Glass Cannon II control.
+  // Keep the original component births; neither chosen card grants items or changes an isolated holder.
   let state = requested.length === 2 && requested.every(id => id === 'bloodthirster')
-    ? acquire(components, { seed: 76672, earliestRound:15, augmentPriorities: ['manaflow-i', 'glass-cannon-ii'], rerollForAugment: true })
+    ? acquire(components, { seed: 76672, earliestRound:15, augmentPriorities: ['going-long', 'bulky-buddies-iii'] })
     : equipmentPreparation(components);
   const available = state.items.filter(item => item.location.kind === 'inventory');
   for (const [slot, definitionId] of requested.entries()) {

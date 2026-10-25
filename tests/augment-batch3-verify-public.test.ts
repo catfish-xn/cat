@@ -5,7 +5,7 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { generateChoices } from '../src/simulation/choices';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { reachRound, accepted, resolveM5Choices, emptyBoard } from './match-helpers';
-import { UNIT_DEFINITIONS } from '../src/simulation/units';
+import { M5_UNIT_IDS, UNIT_DEFINITIONS } from '../src/simulation/units';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
@@ -51,15 +51,58 @@ function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
  }
  return state;
 }
-/** Public offer seeds, pinned from the original search (repeating it cost up to 24 s per card):
+/** Public offer seeds, re-pinned on the 224-card pool from the original search (repeating it cost up to 24 s per card):
  * - 2-1 cards: the first seed from 0 (Trainer Golem openings skipped, at most 20000) whose cheap 2-1 draw offers the card;
  * - later cards: the first seed from 0 (at most 600) whose reachNode route reaches the card's first allowed node and
  *   offers it there.
  * pick() re-proves the search condition for its seed on every run (the draw and the replayed route must offer the card);
  * re-run the search above if the pool, the openings or the route change. */
 const PUBLIC_SEEDS:Readonly<Record<string,number>>={
- 'team-building':100,'phreaky-friday':160,'shimmerscale-essence':10,'prizefighter':67,'building-a-collection-iii':14,'flexible':38,'living-forge':35,'superstars-i':194,'superstars-ii':75,'trade-sector':27,'support-mining':101,'scapegoat':85,'wandering-trainer-i':63,'wandering-trainer-ii':6,'gold-for-dummies':56,'tower-defense':5,'field-medic':109,'blade-dance':86,'shocking-troll':124,'all-out':18,'blood-pact':4,'worth-the-wait':27,'worth-the-wait-ii':7,'an-exalted-adventure':7,'latent-forge':31,'eye-for-an-eye':100,'what-doesnt-kill-you':41,'spoils-of-war-i':77,'spoils-of-war-ii':71,'spoils-of-war-iii':69,
- 'phreaky-friday-plus':7,'dark-alley-dealings':7,'bad-luck-protection':20,'eye-for-an-eye-plus':6,'rolling-for-days-i':9,'support-mining-plus':68,'savage-revenge':14,'the-golden-egg':12,'corrosion':1,'blazing-soul-i':45,'blazing-soul-ii':13,'noble-sacrifice':31,'wealthy-rehab-i':69,'wealthy-rehab-ii':10,
+ 'all-out':58,
+ 'an-exalted-adventure':14,
+ 'bad-luck-protection':10,
+ 'blade-dance':8,
+ 'blazing-soul-i':23,
+ 'blazing-soul-ii':5,
+ 'blood-pact':4,
+ 'building-a-collection-iii':35,
+ 'corrosion':6,
+ 'dark-alley-dealings':137,
+ 'eye-for-an-eye':31,
+ 'eye-for-an-eye-plus':9,
+ 'field-medic':296,
+ 'flexible':6,
+ 'gold-for-dummies':13,
+ 'latent-forge':61,
+ 'living-forge':6,
+ 'noble-sacrifice':15,
+ 'phreaky-friday':128,
+ 'phreaky-friday-plus':0,
+ 'prizefighter':25,
+ 'rolling-for-days-i':24,
+ 'savage-revenge':26,
+ 'scapegoat':4,
+ 'shimmerscale-essence':126,
+ 'shocking-troll':241,
+ 'spoils-of-war-i':94,
+ 'spoils-of-war-ii':21,
+ 'spoils-of-war-iii':38,
+ 'superstars-i':22,
+ 'superstars-ii':37,
+ 'support-mining':100,
+ 'support-mining-plus':22,
+ 'team-building':55,
+ 'the-golden-egg':12,
+ 'tower-defense':51,
+ 'trade-sector':18,
+ 'wandering-trainer-i':3,
+ 'wandering-trainer-ii':162,
+ 'wealthy-rehab-i':24,
+ 'wealthy-rehab-ii':11,
+ 'what-doesnt-kill-you':112,
+ 'worth-the-wait':29,
+ 'worth-the-wait-ii':89,
+
 };
 function pick(id:string) {
  const cached=selected.get(id);if(cached)return cached;
@@ -170,7 +213,12 @@ it.each([['field-medic','steb',1],['blade-dance','irelia',1],['shocking-troll','
  const {before,state}=pick(id);let s=state;
  expect(newUnits(before,s).map(u=>u.definitionId)).toEqual(Array(n).fill(hero));
  roundTrip(s);
- const gifted=newUnits(before,s)[0];
+ const gifts=newUnits(before,s),gifted=gifts[0];
+ // Retain every new champion while making actual reserve capacity for the isolated-holder vector.
+ while(s.preparation.units.filter(u=>u.team==='player').length>s.preparation.benchSize){
+  const reserve=s.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&M5_UNIT_IDS.includes(u.definitionId)&&!gifts.some(g=>g.id===u.id))!;
+  s=resolveM5Choices(accepted(sellUnit(s,reserve.id)));
+ }
  s=emptyBoard(s);s=accepted(deployMatchUnit(s,gifted.id,{kind:'board',cell:{col:3,row:4}}));
  s=accepted(startMatchCombat(s));expect(s.phase).toBe('combat');
  const live=s.combat!.units.find(u=>u.id===gifted.id)!;
@@ -291,12 +339,12 @@ it.each([
 it.each([['blazing-soul-i',20,2000],['blazing-soul-ii',35,3000]] as const)('G6 %s: first three-second transfer actually contributes AP and AS, continues identically after restore',(id,ap,speed)=>{
  let s=pick(id).state;
  // Buy through shop, increasing population through public XP purchases if needed.
- if(s.preparation.units.filter(u=>u.team==='player').length<2){
+ if(s.preparation.units.filter(u=>u.team==='player'&&M5_UNIT_IDS.includes(u.definitionId)).length<2){
   const slot=s.shop.slots.findIndex(x=>x.status==='available');s=accepted(buyUnit(s,slot,s.shop.generation));
  }
  if(s.level<2)s=accepted(buyXp(s));
  s=emptyBoard(s);
- for(const [i,u] of s.preparation.units.filter(u=>u.team==='player').slice(0,2).entries())s=accepted(deployMatchUnit(s,u.id,{kind:'board',cell:{col:1+i*4,row:7}}));
+ for(const [i,u] of s.preparation.units.filter(u=>u.team==='player'&&M5_UNIT_IDS.includes(u.definitionId)).slice(0,2).entries())s=accepted(deployMatchUnit(s,u.id,{kind:'board',cell:{col:1+i*4,row:7}}));
  s=accepted(startMatchCombat(s));
  const grants=(s:MatchState)=>s.combat!.units.flatMap(u=>u.mechanismState?.statuses.flatMap(g=>g.contributions.filter(c=>c.source.definitionId===id))??[]);
  expect(grants(s)).toHaveLength(0);

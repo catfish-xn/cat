@@ -12,7 +12,8 @@ const accepted = (result: MatchCommandResult): MatchState => {
   return result.state;
 };
 const cached = new Map<string, MatchState>();
-// Keep this TG-only route free of earlier item births, including P1/P3 gifts.
+// Keep TG-only routes free of replay-history cards and unintended gifts/XP.
+// Seed42 explicitly uses an unequipped Dominator emblem and Clockwork (unchanged opening HP/armor), preserving holder HP/armor.
 const extraItemChoices = new Set(['high-voltage','pyromaniac','thorn-plated-armor','unleash-the-beast','portable-forge','radiant-relics','blinding-speed',
   // v22 tiers offer team-ups (two partner units) and Investment Strategy (max-HP growth) on this route;
   // both would change the bench and the independent holder stats, so keep them out as well.
@@ -37,9 +38,10 @@ export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
       const choice = state.pendingChoice!;
       if (choice.kind === 'anomaly') throw Error('TG fixture must finish before the anomaly');
       const id = choice.kind === 'component' ? 'gloves'
-        : ['manaflow-i', 'pumping-up-i', 'backup', 'bulky-buddies-i'].find(id => choice.offers.includes(id))
-          ?? choice.offers.find(id => !(id in S13_P2_SOURCE) && !extraItemChoices.has(id))
-          ?? choice.offers.find(id => !(id in P2_ITEM_GRANTS) && !extraItemChoices.has(id));
+        : (seed===42?['dominator-crest','manaflow-i','manaflow-ii','glass-cannon-ii','clockwork-accelerator','inspiring-epitaph','mentorship-ii','backup','trade-sector','superstars-ii','raining-gold','raining-gold-plus','heroic-grab-bag','team-building','rolling-for-days-i']:['manaflow-i', 'pumping-up-i', 'backup', 'bulky-buddies-i']).find(id => choice.offers.includes(id))
+          ?? (seed===42?undefined:choice.offers.find(id => !(id in S13_P2_SOURCE) && !extraItemChoices.has(id)))
+          ?? (seed===42?undefined:choice.offers.find(id => !(id in P2_ITEM_GRANTS) && !extraItemChoices.has(id)));
+      if (!id && !choice.rerolledSlots?.some(used=>!used)) throw Error(`No inert TG augment at ${state.roundDefinitionId}: ${choice.offers.join(',')}`);
       if (!id) { state = accepted(rerollAugment(state, choice.choiceId, choice.generation,
         choice.rerolledSlots?.findIndex(used => !used))); continue; }
       state = accepted(selectChoice(state, choice.choiceId, choice.generation, id));

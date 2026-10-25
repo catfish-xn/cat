@@ -3,7 +3,7 @@ import { describe,it,expect } from 'vitest';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { AUGMENT_BATCH4_B4XP } from '../src/simulation/content/augment-pool-batch4-b4xp';
 import { generateChoices } from '../src/simulation/choices';
-import { createMatch,nextRound,rerollAugment,selectChoice,stepMatch,startMatchCombat } from '../src/simulation/match';
+import { createMatch,deployMatchUnit,nextRound,rerollAugment,selectChoice,stepMatch,startMatchCombat } from '../src/simulation/match';
 import { augmentTier,augmentPool,augmentDraw,validateAugmentReroll,openingEncounter } from './fixtures/m5/oracle.g2.cjs';
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { accepted,reachRound,resolveM5Choices,emptyBoard,freeze } from './match-helpers';
@@ -38,7 +38,10 @@ it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!Object.hasOwn(AUGMENT_BATCH
   const forged=JSON.parse(serializeMatch(after));forged.scheduleReceipts.find((r:{eventId:string})=>r.eventId===choice.eventId).gold++;
   expect(()=>restoreMatch(forged)).toThrow();
   if(after.pendingChoice){const blocked=startMatchCombat(after);expect(blocked.ok).toBe(false);expect(blocked.state).toBe(after);}
-  const started=accepted(startMatchCombat(resolveM5Choices(after)));expect(restoreMatch(serializeMatch(started))).toEqual(started);
+  let preparation=resolveM5Choices(after);
+  // Blood Brothers authenticates settled partner facts. Keep this acquisition case in a live battle.
+  if(id==='blood-brothers'){const hero=preparation.preparation.units.find(u=>u.team==='player')!;preparation=accepted(deployMatchUnit(preparation,hero.id,{kind:'board',cell:{col:3,row:4}}));}
+  const started=accepted(startMatchCombat(preparation));if(id==='blood-brothers')expect(started.phase).toBe('combat');expect(restoreMatch(serializeMatch(started))).toEqual(started);
   let live=started;for(let i=0;i<3&&live.phase==='combat';i++)live=stepMatch(live).state;
   expect(restoreMatch(serializeMatch(live))).toEqual(live);
  });

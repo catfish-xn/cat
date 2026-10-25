@@ -53,7 +53,7 @@ function advanceTo(input: MatchState, target: string): MatchState {
     if (state.phase === 'choice') {
       let c = state.pendingChoice!;
       if (c.kind === 'anomaly' && c.step === 'target') { state = accepted(selectAnomalyTarget(state, c.choiceId, c.generation, state.preparation.units.find(u => u.team === 'player')!.id)); c = state.pendingChoice!; }
-      const id = c.kind === 'augment' ? c.offers.find(id => !(id in P2_ITEM_GRANTS)) ?? c.offers[0] : c.offers[0];
+      const id = c.kind === 'augment' ? ['trade-sector'].find(id => c.offers.includes(id)) ?? c.offers.find(id => !(id in P2_ITEM_GRANTS)) ?? c.offers[0] : c.offers[0];
       state = accepted(selectChoice(state, c.choiceId, c.generation, id)); continue;
     }
     if (state.phase === 'combat') { state = stepMatch(state).state; continue; }

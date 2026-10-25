@@ -17,10 +17,11 @@ vi.setConfig({ testTimeout: 20_000 });
 // Seed 1589873 (was 229819): after the xp/batch-3 merge 229819's 2-1 offer is rocket-collection/crown-guarded/two-trick.
 // A scan of seeds 0-2,000,000 (no opening, gold 2-1 tier, independent 2-7 plan of three items plus 1G, Investment I
 // offered) found 1589873 as the first whose unchanged route reaches the same 66G/73HP/136; the constants are unchanged.
-const SEED=1589873;
+// 224-card pool: independently re-scanned for the unchanged 66G / 73HP / 136HP-growth vector.
+const SEED=924507;
 let preparation=api.createMatch(SEED);
 while(preparation.roundDefinitionId!=='2-7'){
- if(preparation.phase==='choice'){const c=preparation.pendingChoice!;preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}
+ if(preparation.phase==='choice'){const c=preparation.pendingChoice!;if(c.kind==='augment')expect(c.offers).toContain('investment-strategy-i');preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}
  else if(preparation.phase==='settlement')preparation=accepted(api.nextRound(preparation,preparation.round));
  else{if(preparation.round>3)preparation=reserveExcept(preparation,[]);
   else for(const u of players(preparation).filter(u=>u.location.kind==='bench')){const held=players(preparation).filter(u=>u.location.kind==='board');if(held.length>=preparation.level)break;const col=[3,5,1,0,6].find(col=>!held.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===7))!;preparation=accepted(api.deployMatchUnit(preparation,u.id,{kind:'board',cell:{col,row:7}}));}

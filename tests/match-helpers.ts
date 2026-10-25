@@ -6,7 +6,7 @@ export function freeze<T>(value: T): T {
   return value;
 }
 export function accepted(result: MatchCommandResult): MatchState {
-  expect(result.ok).toBe(true);
+  expect(result.ok, result.ok ? undefined : result.reason).toBe(true);
   if (!result.ok) throw new Error(result.reason);
   return result.state;
 }
@@ -27,12 +27,12 @@ export function finish(input: MatchState): MatchState {
 export function battle(): MatchState { return accepted(startMatchCombat(deployed())); }
 
 /** Completes only publicly offered opening/round choices, without injecting any resource. */
-export function resolveM5Choices(initial: MatchState): MatchState {
+export function resolveM5Choices(initial: MatchState, augmentPriorities: readonly string[] = []): MatchState {
   let state = initial;
   while (state.phase === 'choice') {
     const c = state.pendingChoice!;
     state = accepted(c.step === 'target' ? selectAnomalyTarget(state,c.choiceId,c.generation,state.preparation.units.find(u=>u.team==='player')!.id)
-      : selectChoice(state,c.choiceId,c.generation,c.kind === 'augment' ? c.offers.find(id=>id !== 'placebo' && id !== 'glass-cannon-i')! : c.offers[0]));
+      : selectChoice(state,c.choiceId,c.generation,c.kind === 'augment' ? augmentPriorities.find(id => c.offers.includes(id)) ?? c.offers.find(id=>id !== 'placebo' && id !== 'glass-cannon-i')! : c.offers[0]));
   }
   return state;
 }
@@ -48,16 +48,16 @@ export function emptyBoard(initial = readyMatch()): MatchState {
 }
 
 /** Real public commands reach a semantic node; no resources, heroes or receipts are injected. */
-export function reachRound(roundId:string, resolveChoices=true, seed=42): MatchState {
+export function reachRound(roundId:string, resolveChoices=true, seed=42, augmentPriorities: readonly string[] = []): MatchState {
   let state=createMatch(seed);
   while(state.roundDefinitionId!==roundId) {
-    state=resolveM5Choices(state);
+    state=resolveM5Choices(state, augmentPriorities);
     if(state.phase==='preparation') state=accepted(startMatchCombat(emptyBoard(state)));
-    state=resolveM5Choices(state);
+    state=resolveM5Choices(state, augmentPriorities);
     if(state.phase!=='settlement') throw new Error(`Cannot reach ${roundId} from ${state.roundDefinitionId}/${state.phase}`);
     state=accepted(nextRound(state,state.round));
   }
-  return resolveChoices?resolveM5Choices(state):state;
+  return resolveChoices?resolveM5Choices(state, augmentPriorities):state;
 }
 
 /** Deploys bench units to free front cells up to the population cap (public deploy commands only). */

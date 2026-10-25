@@ -1,3 +1,11 @@
+import { AUGMENT_BATCH1 } from '../src/simulation/content/augment-pool-batch1';
+import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
+import { AUGMENT_BATCH3 } from '../src/simulation/content/augment-pool-batch3';
+import { AUGMENT_BATCH3_XP } from '../src/simulation/content/augment-pool-batch3-xp';
+import { AUGMENT_BATCH4 } from '../src/simulation/content/augment-pool-batch4';
+import { AUGMENT_BATCH4_B4XP } from '../src/simulation/content/augment-pool-batch4-b4xp';
+import { AUGMENT_BATCH4_B4REROLL } from '../src/simulation/content/augment-pool-batch4-b4reroll';
+import { AUGMENT_BATCH4_B4COMBAT } from '../src/simulation/content/augment-pool-batch4-b4combat';
 import { BATCH3_SUMMON_UNITS, TRAINING_DUMMY_ID, TOWER_DUMMY_ID } from '../src/simulation/content/batch3-summons';
 import { G23_UNITS } from '../src/simulation/content/g2-3-units';
 import { G23_SUMMON_UNITS } from '../src/simulation/content/g2-3-summons';
@@ -66,9 +74,15 @@ describe('M5 frozen S13 slice',()=>{
     }
   });
   // Augments: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  it('freezes v23: 35 supported traits, 8 components, 36 recipes, 213 augments and 56 anomalies',()=>{
-    // v23: the approved augment pool batches grow the catalog from 66 through batches 1–4 to 213 definitions.
-    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,213,56]); // + batch 3 (49), batch-3 XP (8), and batch 4 levels (5)
+  it('freezes v23: 35 supported traits, 8 components, 36 recipes, source-derived augments and 56 anomalies',()=>{
+    // Frozen pre-expansion slice: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11 + 5 teamups + Sisters.
+    // Count admitted raw source rows, independently of the generated *_DEFINITIONS exports.
+    const augmentCount = 30 + 6 + 14 + 7 + 3 + 5 + 1
+      + [AUGMENT_BATCH1, AUGMENT_BATCH3, AUGMENT_BATCH3_XP, AUGMENT_BATCH4,
+        AUGMENT_BATCH4_B4XP, AUGMENT_BATCH4_B4REROLL, AUGMENT_BATCH4_B4COMBAT]
+        .reduce((sum, source) => sum + Object.keys(source).length, 0)
+      + Object.values(AUGMENT_BATCH2).filter(row => row.enabled).length;
+    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,augmentCount,56]);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);

@@ -7,7 +7,7 @@ import {augmentForgeOffers,grantAugmentAcquisition} from '../src/simulation/augm
 // Fixed public first-node seeds: the first non-Trainer-Golem seed whose 2-1 offer shows each card under the
 // v23 151-offer pool and fmix32 openings (re-chosen from v22's 6/5/323), re-chosen again after the batch-3/XP merge
 // (was 83/238). The 14.24 stage tags keep Blinding Speed off 2-1: it is taken at its first 3-2 offer (augment-stage-helpers).
-const acquisitionSeeds:Record<string,number>={'portable-forge':1,'radiant-relics':38};
+const acquisitionSeeds:Record<string,number>={'portable-forge':9,'radiant-relics':45};
 function select(id:string){
  const s=offeredAt(id,'2-1')?reachRound('2-1',false,acquisitionSeeds[id]):offerFor(id),c=s.pendingChoice!;
  expect(c.offers).toContain(id);

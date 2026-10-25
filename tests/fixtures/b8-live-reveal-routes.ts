@@ -57,7 +57,7 @@ export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<
 }
 // Recreate each bare two-star holder by public sales, purchases and an earned remover.
 export async function barePartialPrefix(name:'zyra'|'loris',seed:number,augmentPriorities:string[]):Promise<api.MatchState>{
- let state=await configuredPrefix('4-7',{build:'mage',seed,equipItems:false,goldReserves:{'4-7':0},augmentPriorities,anomalyDefinitionId:'protective-shielding'});
+ let state=await configuredPrefix('4-7',{build:'mage',seed,equipItems:false,goldReserves:{'4-7':0},augmentPriorities,augmentRerollPriorities:seed===2125?{'2-1':['bulky-buddies-i'],...(name==='loris'?{'3-2':['crownguard-spirit'],'4-2':['academy-crest']}:{})}:{},anomalyDefinitionId:'protective-shielding'});
  let target=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===name)!;
  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.id!==target.id))state=accepted(api.sellUnit(state,unit.id));
  for(let rolls=0;rolls<100&&target.starLevel!==2;rolls++){

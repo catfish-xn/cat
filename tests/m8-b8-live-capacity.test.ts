@@ -8,14 +8,9 @@ import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} f
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-// v22: seed 10 draws the crab-rave opening (crabs carry the wolf orbs); v22 used seed 2412, which v23's
-// fmix32 selection gives Prismatic Prelude. Seed 3155 has no opening encounter and keeps a lone Akali hero
-// sharing an orb, four components and a full bench. The v15 tick-preserving moves are no longer needed.
-// After the xp/batch-3 merge seed 3155 keeps that shape (same 3-7 drops, lone Akali) but its 2-1/3-2 augments
-// change: prepared gold is 13 (was 15) = 32 at the 3-7 prefix (checked on every command by the independent
-// oracle.g2.cjs gold ledger in generate-m5-route) - fillBench's seven cards (blitzcrank 3, swain 3, illaoi 4,
-// vander 2, vex 1, zeri 2, tristana 2 = 17) - one 2G reroll. The reveal/final ticks (36/97, were 61/98) are
-// recorded combat-program constants of this route, not independently derived.
+// Seed3155 has no opening encounter, a lone Akali reward sharing an orb, four components and a full bench.
+// The 224-card pool selects Family Crest + Backup. The independent driver ledger checks each paid command:
+// the actual reserve banks16G; first reveal/final ticks61/91 are recorded public-combat checkpoints, not rule constants.
 const prepared=fillBench(await publicPrefix('3-7',3155,'cannon',['bulky-buddies-i']),['akali']);
 const live=battle(prepared),waiting=live.ended;
 const hero=plan(prepared).encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
@@ -26,10 +21,11 @@ function reject(s:MatchState,message:string,change:(s:any)=>void){const saved=se
 const soldResult=command(waiting,s=>api.sellUnit(s,soldUnit.id)),sold=accepted(soldResult);
 describe('B8 live full-bench settlement and exact command resumption',()=>{
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
-  expect(prepared.gold).toBe(13);expect(bench(prepared)).toHaveLength(9);
+  expect(prepared.augments.map(a=>a.definitionId)).toEqual(['family-crest','backup']);
+  expect(prepared.gold).toBe(16);expect(bench(prepared)).toHaveLength(9);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'akali',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(36);expect(waiting.combat!.tick).toBe(97);
+  expect(live.revealed!.combat!.tick).toBe(61);expect(waiting.combat!.tick).toBe(91);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);
