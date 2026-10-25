@@ -1,5 +1,13 @@
 > 当前规则纪元：**v22-online-rules**（`rulesVersion s13-g2-3-v22-online-rules`，基线 multiplayer 8715a2c1，PR #435）。下列标“已随 v22 录制”的条目都已进入该纪元。
 
+## 2026-10-25 V23-T1 跨回合伙伴计数历史认证（P）
+
+**P-V23-T1-HISTORY（P，2026-10-25，用户授权按推荐决定）**：本可发生之事（`blood-brothers`）的希尔科施法数与范德尔死亡数沿用现有 `BattleRecord` 完整历史重演认证，不新增存档字段或版本，不改规则、数值、RNG、结算与事件。`restoreMatch(input, battles?)`／`serializeMatch(state, battles?)` 的签名不变；有这两项历史事实（包括零），或取得该强化后已有非补给回合结算时，必须提供现有完整 `battles`。依据强化与已结算回合另设门槛，防止同时删除两条事实绕过缺证拒绝。沿用 `needsCrownHistory` 这个兼容名称和既有缺历史错误文本；该函数目前已覆盖多类机制，不只冠冕。
+
+`validateMatchHistory` 从各战斗开战上下文独立执行公共开战／逐 tick 命令，认证事件与终战状态，并对结算所得经济收据逐场比对后续前缀；候选存档的计数、候选自带 hash、或进程内登记均不能代替重演。现有 SaveEnvelope 已包含 `battles`，存档导入与恢复活跃回放均复用该边界；裸 Match 有历史计数却不附战斗档案时严格拒绝，不推测或清零。当前战斗仍使用既有 `combatInputBasis`，下一轮仍按原规则清空。
+
+回归：`tests/v23-tamper-mechanics.test.ts` 原六条预期失败改为普通 `it`；真实命令录制完整伙伴路线，三入口携带历史的合法恢复逐 tick 比较状态、事件、RNG；两项 count 各 +1、删改重复、缺历史／缺战、同时删除两事实与 JSON 重建的历史均覆盖。该条是生产修复约定，覆盖 P-V23-TAMPER 中本缺陷暂留 `it.fails` 的历史状态。
+
 ## 2026-10-25 强化阶段禁用独立审计（P）
 
 **P-AUGMENT-STAGE-AUDIT（P，2026-10-25，用户授权按推荐决定）**：保留 `{d02ae323}` / `{d12ae4b6}` / `{d22ae649}` 为“排除 2-1 / 3-2 / 4-2”的现有推断，不宣称哈希原字符串或 Riot 过滤代码已经解码。独立脚本 `scripts/audit-augment-stage-bans.cjs` 只用 Node 内置模块，以文本读取生产内容，不导入或执行生产模块。重建范围是 `augment-pool*.ts` 中全部 `apiName`（含 enabled:false 的库存行）、`source-manifest.ts` 的 `augmentApiNames`、现有禁用表键的并集；研究中尚未进入该范围的记录另列 `outOfScope`，不擅自扩池。来源有记录且没有三个阶段标签时才明确列入 `explicitly-unrestricted`，缺记录不能视为无限制。按 API 名排序、按 2-1/3-2/4-2 排序后生成 JSON 字节比较；键重复、未知阶段、重复阶段或非字面量均拒绝。

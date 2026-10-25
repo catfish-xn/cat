@@ -1,3 +1,7 @@
+## 2026-10-25 V23-T1：本可发生之事历史事实认证
+
+`restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState` 与 `serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string` 的签名、返回值、存档格式和规则不变。本可发生之事的施法／范德尔死亡历史计数（包括零）必须由既有完整 `battles` 重演认证；取得该强化后有非补给结算时，即使两条事实都被删除，也必须提供历史。裸 Match 不携带独立历史时抛既有 `Invalid Match save: missing historical evidence / ...`；少战／重战、战斗档案或经济收据前缀不一致时由 `validateMatchHistory` 拒绝，不补计数或重发奖励。持久化封套已有 `battles`，无需迁移。兼容内部名称 `needsCrownHistory(state: MatchState): boolean` 的适用范围扩大；它只判断证据要求，不执行结算。决定见 `S13_RULES_GAP.md` 的 P-V23-T1-HISTORY；回归见 `tests/v23-tamper-mechanics.test.ts`。
+
 ## 2026-10-24 增强池奖励抽样与支付：项目约定 P（S2）
 
 来源：`/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json`。奖励数量、费用、指定对象与阈值按研究；下列研究未给出的语义明确标为 **P，2026-10-24**，理由是沿用已有项目池、确定性子流与唯一发奖账本，不宣称原服概率或精确支付顺序已获证。验收口径为“奖励数值匹配，抽样与时点按项目约定”。
