@@ -63,7 +63,8 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
           // isDeclaredStatus above and consumption below authenticate coefficients.
           check(c.source.ownerId===unit.id&&c.appliedAtTick===0&&c.expiresAtTick===null,'D11 opening status source/timing');
         } else if (c.source.sourceKind === 'augment' && units.find(u => u.id === c.source.ownerId)?.mechanics?.some(m => m.mechanic === 'corrosion' && canonicalSource(asSource(m.source)) === canonicalSource(c.source))) {
-          // Batch-3 Corrosion: an enemy-side, permanent pulse on the holder's combat clock (combat-augment-effects.ts).
+          // Local shape check only: validateDynamicCombat authenticates the complete Corrosion set
+          // from the trusted opening strategy, including contributions deleted from both projections.
           const owner = units.find(u => u.id === c.source.ownerId)!, m = owner.mechanics!.find(m => m.mechanic === 'corrosion')!;
           const [tickOf, index] = JSON.parse(JSON.parse(c.key)[8]).slice(1) as [number, number];
           check(owner.team !== unit.team && c.expiresAtTick === null && c.appliedAtTick > 0 && c.appliedAtTick <= tick && c.appliedAtTick % m.values.periodTicks === 0
