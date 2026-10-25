@@ -14,7 +14,10 @@ vi.setConfig({ testTimeout: 20_000 });
 // the scuttle-crab opening. The 2-6 loss keeps the 2-7 win's streak gold at 0.
 // v23: fmix32 gives 4867 the Golden Gala opening and the 151-offer pool drops its Investment I; 229819 is the next
 // no-opening seed with Investment I at 2-1 and the same 2-7 shape (three items plus 1G), reaching the same 66G/73HP/136.
-const SEED=229819;
+// Seed 1589873 (was 229819): after the xp/batch-3 merge 229819's 2-1 offer is rocket-collection/crown-guarded/two-trick.
+// A scan of seeds 0-2,000,000 (no opening, gold 2-1 tier, independent 2-7 plan of three items plus 1G, Investment I
+// offered) found 1589873 as the first whose unchanged route reaches the same 66G/73HP/136; the constants are unchanged.
+const SEED=1589873;
 let preparation=api.createMatch(SEED);
 while(preparation.roundDefinitionId!=='2-7'){
  if(preparation.phase==='choice'){const c=preparation.pendingChoice!;preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}

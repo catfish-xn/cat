@@ -33,9 +33,9 @@ const clone = (state: api.MatchState): api.MatchState => {
 describe('B8 real simultaneous loot-source deaths', () => {
   it('reveals both carrier entries while two neutral sources die on the same tick, then restores and grants each exactly once', () => {
     let state = accepted(api.startMatchCombat(clone(simultaneousB8Preparation(prefix))));
-    while (state.phase === 'combat' && state.combat.tick < 117) state = api.stepMatch(state).state;
+    while (state.phase === 'combat' && state.combat.tick < 114) state = api.stepMatch(state).state;
     expect(state.phase).toBe('combat');
-    expect(state.combat!.tick).toBe(117);
+    expect(state.combat!.tick).toBe(114);
     const before = state, resumedBefore = clone(before);
     const transition = api.stepMatch(before), resumedTransition = api.stepMatch(resumedBefore);
     expect(resumedTransition).toEqual(transition);
@@ -49,16 +49,17 @@ describe('B8 real simultaneous loot-source deaths', () => {
     ]);
     const deaths = state.combat!.neutralReceipts!.deaths;
     expect(deaths).toEqual([
-      // v23 seed 2634 with the lawful Lux/Nami position swap: three earlier deaths (r00/r01 no longer share a
-      // tick), then both hero carriers r03 and r04 die in the same tick-118 action batch.
+      // Seed 3549 (was 2634; after the xp/batch-3 merge 2634's mage route no longer reaches a two-star Zoe) with the
+      // lawful Lux/Nami position swap: three earlier single deaths, then both hero carriers r03 and r04 die in the
+      // same tick-115 action batch. Ticks/eventSeqs are recorded from this real combat, not independently derived.
       { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 56, eventSeq: 471 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 59, eventSeq: 509 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r02"]', tick: 103, eventSeq: 783 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r03"]', tick: 118, eventSeq: 921 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r04"]', tick: 118, eventSeq: 922 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 59, eventSeq: 506 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r02"]', tick: 100, eventSeq: 763 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r03"]', tick: 115, eventSeq: 889 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r04"]', tick: 115, eventSeq: 890 },
     ]);
     expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(deaths.slice(3).map(death => [death.unitId, death.tick, death.eventSeq]));
-    expect(revealed.map(event => event.death.eventSeq)).toEqual([921, 922, 922, 922]); // The two hero orbs belong to different killed carriers.
+    expect(revealed.map(event => event.death.eventSeq)).toEqual([889, 890, 890, 890]); // The two hero orbs belong to different killed carriers.
     for (const field of ['gold', 'items', 'preparation', 'persistentGrowth', 'nextUnitSerial', 'nextItemSerial',
       'resourceProvenance', 'rngState', 'choiceRngState', 'rewardRngState', 'equipmentState'] as const)
       expect(state[field]).toEqual(before[field]);
@@ -69,7 +70,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(duplicate).toEqual({ state: restoredReveal, events: [] });
     expect(duplicate.state).toBe(restoredReveal);
     const forged = JSON.parse(serializeMatch(state));
-    forged.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===revealed[0].dropId).death.eventSeq = 922; // Substitute r04's real death identity for r03's drop evidence.
+    forged.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===revealed[0].dropId).death.eventSeq = 890; // Substitute r04's real death identity for r03's drop evidence.
     expect(() => restoreMatch(forged)).toThrow('Invalid B8 Match: duplicate death identity');
     let resumed = restoredReveal;
     while (state.phase === 'combat') {
@@ -136,10 +137,10 @@ describe('B8 real simultaneous loot-source deaths', () => {
     const expected=independentLootPlan(prepared.seed,24).rounds.at(-1)!.encounterPlan.drops;
     expect(expected.filter(d=>d.sourceUnitId===carrier)).toEqual([]);
     let state=accepted(api.startMatchCombat(clone(prepared)));
-    while(state.phase==='combat'&&state.combat!.tick<137)state=api.stepMatch(state).state;
-    expect(state.combat!.tick).toBe(137);const before=state,copy=clone(before),result=api.stepMatch(before);
+    while(state.phase==='combat'&&state.combat!.tick<132)state=api.stepMatch(state).state;
+    expect(state.combat!.tick).toBe(132);const before=state,copy=clone(before),result=api.stepMatch(before);
     expect(api.stepMatch(copy)).toEqual(result);
-    expect(result.events.filter(e=>e.type==='death')).toEqual([expect.objectContaining({unitId:carrier,tick:138,eventSeq:1029})]);
+    expect(result.events.filter(e=>e.type==='death')).toEqual([expect.objectContaining({unitId:carrier,tick:133,eventSeq:1003})]);
     expect(result.events.filter(e=>e.type==='lootRevealed')).toEqual([]);
     expect(result.state.m8.loot.earnedEvidence).toEqual(before.m8.loot.earnedEvidence);
     // v23: withLoot (src/simulation/loot-runtime.ts) claims the new m8 without an intern-cache lookup, so a
@@ -148,9 +149,9 @@ describe('B8 real simultaneous loot-source deaths', () => {
     // This is the last death: settlement pays the nine already-earned entries (v22 adds the component anvil),
     // without inventing a receipt or qualification for the unloaded carrier.
     expect(result.state.m8.loot.receipts.slice(before.m8.loot.receipts.length).map(r=>[r.dropId,r.payload])).toEqual(expected.map(d=>[d.dropId,d.payload]));
-    expect(result.state.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===1029)).toBe(false);
+    expect(result.state.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===1003)).toBe(false);
     expect(clone(result.state)).toEqual(result.state);
-    const bad=JSON.parse(serializeMatch(result.state));bad.m8.loot.earnedEvidence.at(-1).death.eventSeq=1029;
+    const bad=JSON.parse(serializeMatch(result.state));bad.m8.loot.earnedEvidence.at(-1).death.eventSeq=1003;
     expect(()=>restoreMatch(bad)).toThrow('source death conflict');
   });
 

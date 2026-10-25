@@ -13,7 +13,10 @@ export const PARTIAL_REVEAL_SEEDS = {loris:2125,zyra:2125} as const;
 // v22: seed 242874 draws the Trainer Golem opening (an unsellable golem that cannot be benched and blocks the
 // board); v22's seed 2274 draws Wind-up Monkey under v23 fmix32. Seed 2634 has no opening encounter and still
 // fields the eight two-star holders and four-item loadout.
-export const SIMULTANEOUS_REVEAL_SEED=2634;
+// After the xp/batch-3 merge 2634's route ends one Zoe short of two stars. Seed 3549 is the first no-opening seed from
+// 2000 whose independent 4-7 plan keeps the shape (nine entries; r03 one hero; r04 three entries with a hero; r05
+// unloaded) and whose route fields all eight two-star holders and the four recipes.
+export const SIMULTANEOUS_REVEAL_SEED=3549;
 export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<api.MatchState>{
  const equipmentTargets={'sunfire-cape':{definitionId:'irelia'},'ionic-spark':{definitionId:'loris'},gunblade:{definitionId:'zoe'},shojin:{definitionId:'zoe'}};
  const board=[

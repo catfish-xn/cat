@@ -17,10 +17,14 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
+const AUGMENTS=['fractured-crystals'];
 function start(equipped = true, history?: BattleHistory): MatchState {
-  let state = publicEquipmentPreparation(['gloves', 'gloves'], { history, earliestRound:15 });
+  // xp/batch-3 merge: seed 42's 2-1 offer is now crimson-pact, crownguard-spirit, fractured-crystals and the default
+  // first pick (crimson-pact) leaves this army dead at 4-3. Prefer fractured-crystals (then the route's own 3-2/4-2
+  // picks): it reaches 4-5 at 14 HP (6 unequipped) with the unchanged level history and seed-42 equipment rolls.
+  let state = publicEquipmentPreparation(['gloves', 'gloves'], { history, earliestRound:15, augmentPriorities:AUGMENTS });
   if(history){
-    const shared=publicEquipmentPreparation(['gloves','gloves'],{earliestRound:15});
+    const shared=publicEquipmentPreparation(['gloves','gloves'],{earliestRound:15,augmentPriorities:AUGMENTS});
     expect(shared).toEqual(state); expect(shared).not.toBe(state);
   }
   const gloves = state.items.filter(item => item.definitionId === 'gloves');
