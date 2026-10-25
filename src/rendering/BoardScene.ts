@@ -116,6 +116,9 @@ export class BoardScene extends Phaser.Scene {
   /** ?render=3d gestures (boardControls): the unit the 3D pointer is over, and the drag it owns. */
   private hover3d: string | null = null;
   /** ?render=3d: any team's piece under the pointer (enemies too), only for the description card. */
+  private descriptionGeneration = 0;
+  private sceneDescription = false;
+  private sceneUnitDescription = false;
   private look3d: string | null = null;
   private gesture3d: Gesture | null = null;
   private strategyPanel: StrategyPanel | null = null;
@@ -287,7 +290,7 @@ export class BoardScene extends Phaser.Scene {
     this.inspect = installUnitInspect((point, target) => this.inspectAt(point, target), id => this.inspectData(id), () => Boolean(this.draggingId));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.inspect?.dispose(); this.inspect = undefined; });
     const withdrawControls = provideBoardControls(this.boardControls());
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.hover3d = null; this.look3d = null; this.gesture3d = null; this.loadoutTip3d?.remove(); this.loadoutTip3d = null; });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.descriptionGeneration++; this.hover3d = null; this.look3d = null; this.gesture3d = null; this.loadoutTip3d?.remove(); this.loadoutTip3d = null; });
     this.sync();
     this.statsPanel = createStatsPanel(document.getElementById('stats-root')!, id => {
       if (this.application?.debug().mode === 'replay') { this.application.selectReplayUnit(id); return; }
@@ -647,6 +650,19 @@ export class BoardScene extends Phaser.Scene {
     return {
       hover: id => { this.hover3d = id; },
       look: id => { this.look3d = id; },
+      describe: (target, box) => {
+        this.sceneDescription = target !== null; this.sceneUnitDescription = target?.kind === 'unit';
+        const ticket = ++this.descriptionGeneration;
+        this.look3d = null; this.unitCardOpen = false;
+        if (!target) { unitHoverCard().hide(); return; }
+        void import('../presentation/unit-panel').then(module => {
+          if (ticket !== this.descriptionGeneration || !boardFeedActive()) return;
+          module.showSceneDescription(target?.kind === 'unit' && this.inspect?.pinned ? null : target, box,
+            target?.kind === 'unit' ? this.inspectData(target.id) : null,
+            target?.kind === 'orb' ? this.orbDock?.shownOrb(target.id) : undefined,
+            { inBattle: this.orbsInBattle(), locked: document.body.dataset.onlineSpectating === 'true' || this.onlineEnded() });
+        });
+      },
       claimOrb: id => this.orbDock?.click(id),
       select: id => {
         const unit = this.displayedUnit(id);
@@ -1162,6 +1178,7 @@ export class BoardScene extends Phaser.Scene {
    * token; never while dragging. The card is shared with the DOM anchors and closed here only when this scene opened it.
    */
   private syncUnitCard() {
+    if (this.sceneDescription) { if (this.sceneUnitDescription && this.inspect?.pinned) unitHoverCard().hide(); return; }
     // The pinned inspect panel replaces the hover card while it is open (TFT shows one or the other).
     const look = boardFeedActive() && this.look3d && this.tokens.get(this.look3d)?.visible ? this.look3d : undefined;
     const id = this.draggingId || this.touchInspect || this.inspect?.pinned ? undefined : this.hoveredId() ?? look;

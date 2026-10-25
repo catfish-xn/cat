@@ -89,7 +89,7 @@ function recipeFor(a: string, b: string): Entry | undefined {
 }
 
 /** Popover body for one definition. */
-function describe(entry: Entry): HTMLElement {
+export function itemCardBody(entry: Entry): HTMLElement {
   const body = el('div', '', 'item-pop-body');
   const head = el('div', '', 'item-pop-head'); head.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.id, 36));
   const title = el('div'); title.append(nameNode(entry), ...tagNodes(entry));
@@ -145,7 +145,7 @@ export function attachItemPopover(scope: HTMLElement, id = 'item-popover'): () =
     const entry = catalogEntry(target.dataset.itemDef ?? ''); if (!entry) { hide(); return; }
     if (anchor === target && !pop.hidden) { via = how; place(target); return; }
     hide(); anchor = target; via = how; target.setAttribute('aria-describedby', pop.id);
-    pop.replaceChildren(describe(entry)); pop.dataset.itemDef = entry.id; pop.hidden = false;
+    pop.replaceChildren(itemCardBody(entry)); pop.dataset.itemDef = entry.id; pop.hidden = false;
     place(target);
     watcher.observe(scope, { childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'hidden', 'class', 'style'] });
   }

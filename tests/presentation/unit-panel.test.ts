@@ -20,6 +20,31 @@ beforeAll(async () => {
   await page.evaluate(async () => { await (window as any).Inspect.loadTooltipText(); });
 });
 afterAll(async () => { await browser?.close(); });
+it('shows projected scene unit/item cards and the shared orb body in Chromium, with public-only scout orbs', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect, box = { left: 400, top: 220, right: 460, bottom: 320 };
+    const context = { inBattle: true, locked: false };
+    const show = (target: any, unit: any = null, orb: any = undefined) => {
+      api.showSceneDescription(target, box, unit, orb, context);
+      return document.getElementById('unit-card')!;
+    };
+    const unit = show({ kind: 'unit', id: 'scout:other:2,4:lux:2' }, { definitionId: 'lux', starLevel: 2, items: ['sword'] });
+    const unitText = unit.textContent!, beside = parseFloat(unit.style.left) > box.right;
+    const item = show({ kind: 'item', id: 'sword' }).textContent!;
+    const orb = show({ kind: 'orb', id: 'mine' }, null, { orbId: 'mine', tier: 'gold', source: 'pve', roundId: '1-2', queued: false,
+      entries: [{ kind: 'gold', quantity: 7 }, { kind: 'unit', definitionId: 'lux', starLevel: 2, quantity: 1 }] });
+    const orbText = orb.textContent!, visible = orb.checkVisibility(), entriesVisible = orb.querySelector('ul')!.checkVisibility();
+    const publicText = show({ kind: 'public-orbs', count: 2, tiers: ['gold', 'blue'] }).textContent!;
+    show(null);
+    return { unitText, beside, item, orbText, visible, entriesVisible, publicText, hidden: document.getElementById('unit-card')!.hidden };
+  });
+  expect(result.unitText).toContain('拉克丝'); expect(result.unitText).toContain('★★'); expect(result.unitText).toContain('暴风大剑');
+  expect(result.beside).toBe(true); expect(result.item).toContain('暴风大剑'); expect(result.item).toContain('攻击');
+  expect(result.orbText).toContain('7 金币'); expect(result.orbText).toContain('拉克丝★★'); expect(result.orbText).toContain('战后结算');
+  expect(result.orbText).toContain('自动出售'); expect(result.visible).toBe(true); expect(result.entriesVisible).toBe(true);
+  expect(result.publicText).toContain('2 个'); expect(result.publicText).not.toContain('拉克丝'); expect(result.publicText).not.toContain('7 金币');
+  expect(result.hidden).toBe(true);
+});
 it.each([1, 2, 3])('renders rank %i with all ranks and current rank emphasis', async star => {
   const result = await page.evaluate(star => {
     const api = (window as any).Inspect;
@@ -99,7 +124,7 @@ it('refreshes battle totals, notes and equipment without rebuilding the pinned b
     panel.pin(() => data);
     const body = panel.root.querySelector('.unit-card'), hp = body.querySelector('[data-value=hp]');
     const line = body.querySelector('.unit-card-battle'), text = line.lastElementChild;
-    data = { ...data, items: ['bf-sword'], notes: ['终极英雄'], battle: { battle: { damageDealt: 123, damageTaken: 45, healingDone: 6, healingReceived: 7, kills: 1 }, match: null } };
+    data = { ...data, items: ['sword'], notes: ['终极英雄'], battle: { battle: { damageDealt: 123, damageTaken: 45, healingDone: 6, healingReceived: 7, kills: 1 }, match: null } };
     panel.refresh(performance.now() + 150);
     const result = { same: body === panel.root.querySelector('.unit-card') && hp === body.querySelector('[data-value=hp]') && text === line.lastElementChild,
       battle: line.textContent, visible: !line.hidden, note: body.querySelector('.unit-card-note').textContent };

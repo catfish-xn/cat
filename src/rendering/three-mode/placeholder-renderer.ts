@@ -1,3 +1,5 @@
+import { projectedBox } from './description-pick';
+import type { BoardDescription } from '../board-feed';
 /**
  * The 3D chunk's MountRenderer3d. The file keeps its original name because three-loader.ts imports it and
  * tests/rendering3d-mode.test.ts mocks that path; it is no longer only a placeholder.
@@ -1105,24 +1107,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Hover cards and combat floats: the drawn piece's bounds (ring and body as fitted) projected to CSS pixels, asked
   // once per 2D frame; a skinned body's bounds are its cached bind-pose box, so anchors stay still while it animates.
-  const corner = new Vector3(), pieceBox = new Box3();
   const screenBox = (id: string): BoardScreenBox | undefined => {
-    const root = scout.active ? scout.inspectRoot(id) : pieces.get(id)?.root, area = viewport();
-    if (!root?.visible || area.width <= 0 || area.height <= 0) return undefined;
-    camera.updateMatrixWorld();
-    pieceBox.setFromObject(root);
-    if (pieceBox.isEmpty()) return undefined;
-    let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
-    const { min, max } = pieceBox;
-    for (const x of [min.x, max.x]) for (const y of [min.y, max.y]) for (const z of [min.z, max.z]) {
-      corner.set(x, y, z).project(camera);
-      if (corner.z > 1) return undefined; // behind the camera
-      const cx = area.left + (corner.x + 1) / 2 * area.width, cy = area.top + (1 - corner.y) / 2 * area.height;
-      left = Math.min(left, cx); right = Math.max(right, cx); top = Math.min(top, cy); bottom = Math.max(bottom, cy);
-    }
-    // Off the 3D canvas: nothing to point at.
-    if (right < area.left || left > area.left + area.width || bottom < area.top || top > area.top + area.height) return undefined;
-    return { left, top, right, bottom };
+    const root = scout.active ? scout.inspectRoot(id) : pieces.get(id)?.root;
+    return root ? projectedBox(root, camera, viewport()) : undefined;
   };
   // The carousel replaces the board view: a board press or drag in progress is let go first.
   const onCarousel = (view: Parameters<typeof stage.show>[0]) => {
@@ -1131,6 +1118,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag();
     }
     if (!view && stage.active) { feed?.carouselControls?.()?.hover(null); canvas.style.cursor = ''; }
+    if (!!view !== stage.active) clearDescription();
     stage.show(view);
   };
   // Scouting replaces my board the same way: let go of a press or drag first.
@@ -1146,13 +1134,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       joined = true; rising.clear();
     }
     // Watching its battle: that battle is on my board (the frames carry it), so no static build is drawn over it.
+    if (view?.seatId !== scoutView?.seatId || view?.watching !== scoutView?.watching) clearDescription();
     scoutView = view; scout.show(view?.watching ? null : view, lastFrame);
     // My legend goes along to a drawn build: it leaves my board (no walk, no orb claims) and comes back to its own spot.
     tabletop.away(scout.active);
   };
   /** On another seat's board, its build drawn or its battle playing: the board takes no input. */
   const visiting = () => scout.active || scoutView?.watching === true;
-  const mine = () => !stage.active && !visiting();
   const onLegendWalk = (walk: BoardLegendWalk) => { if (walk.scene === 'carousel') stage.walk(walk); else tabletop.walk(walk); };
   /** My legend runs onto my orb, which it claims on arrival (TFT: no click opens an orb); false when it cannot go there now. */
   const walkToOrb = (orbId: string): boolean => {
@@ -1170,7 +1158,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     saveBurst.object.position.set(f.origin.x + (spanX - Math.sqrt(3) * f.hexRadius) / 2, 0, f.origin.y + spanZ / 2);
     scene.add(saveBurst.object); saveExpires = performance.now() + 2000; saveGoldLeft = .65;
   }, walkToOrb,
-    unitAt: client => mine() ? pickUnit(client, true) ?? undefined : undefined, screenBox: id => !stage.active ? screenBox(id) : undefined }) ?? (() => {});
+    unitAt: client => {
+      if (stage.active) return;
+      if (!scout.active) return pickUnit(client, true) ?? undefined;
+      const target = scout.descriptionAt(client, camera, viewport())?.target;
+      return target?.kind === 'unit' ? target.id : undefined;
+    }, screenBox: id => !stage.active ? screenBox(id) : undefined }) ?? (() => {});
 
   // Pointer → BoardControls. A press on my unit selects it; moving past the threshold drags it through BoardScene,
   // which moves the 2D token (this piece follows it via the frame) and answers where a release would land.
@@ -1249,7 +1242,39 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (press && canvas.hasPointerCapture(press.pointerId)) canvas.releasePointerCapture(press.pointerId);
     dragging = null; press = null; marker.visible = false; canvas.style.cursor = '';
   };
+  let hoverPoint: { x: number; y: number } | null = null, descriptionKey = '', lastLook = 0;
+  let touchLook: { event: PointerEvent; started: number; shown: boolean } | null = null;
+  const describeAt = (client: { x: number; y: number }) => {
+    if (stage.active) return stage.descriptionAt(client, viewport());
+    if (scout.active) return scout.descriptionAt(client, camera, viewport());
+    if (!visiting()) {
+      for (const [id, piece] of pieces) {
+        if (!piece.root.visible || piece.team !== 'player') continue;
+        const hit = piece.overhead.itemAt(client, camera, viewport());
+        const item = hit && lastFrame?.pieces.find(unit => unit.id === id)?.items?.[hit.index];
+        if (hit && item) return { target: { kind: 'item', id: item.id } as BoardDescription, box: hit.box };
+      }
+      const orb = tabletop.orbAt(client, viewport()), box = orb ? tabletop.orbBox(orb, viewport()) : undefined;
+      if (orb && box) return { target: { kind: 'orb', id: orb } as BoardDescription, box };
+    }
+    if (!visiting()) return;
+    const id = pickUnit(client, true), box = id ? screenBox(id) : undefined;
+    if (id && box) return { target: { kind: 'unit', id } as BoardDescription, box };
+  };
+  const showDescription = (client: { x: number; y: number } | null) => {
+    const hit = client ? describeAt(client) : undefined, key = JSON.stringify(hit ?? null);
+    if (descriptionKey === key) return;
+    descriptionKey = key;
+    feed?.controls()?.describe?.(hit?.target ?? null, hit?.box);
+  };
+  const clearDescription = () => { hoverPoint = null; touchLook = null; showDescription(null); };
   const onPointerDown = (event: PointerEvent) => {
+    if (event.pointerType === 'touch' && event.button === 0 && (stage.active || visiting() || ['orb', 'item'].includes(describeAt({ x: event.clientX, y: event.clientY })?.target.kind ?? ''))) {
+      clearDescription();
+      touchLook = { event, started: performance.now(), shown: false };
+      canvas.setPointerCapture?.(event.pointerId);
+      event.preventDefault(); return;
+    }
     if (stage.active) {
       if (event.button !== 0 && event.button !== 2) return;
       // Either button, as TFT's right click: on a unit I may take my legend runs to it and the room picks it when it gets
@@ -1290,6 +1315,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     event.preventDefault();
   };
   const onPointerMove = (event: PointerEvent) => {
+    if (touchLook) {
+      if (event.pointerId === touchLook.event.pointerId && Math.hypot(event.clientX - touchLook.event.clientX, event.clientY - touchLook.event.clientY) >= DRAG_THRESHOLD) clearDescription();
+      return;
+    }
+    if (event.pointerType !== 'touch' && !press) { descriptionKey = ''; hoverPoint = { x: event.clientX, y: event.clientY }; showDescription(hoverPoint); }
     if (stage.active) {
       const hit = stage.slotAt({ x: event.clientX, y: event.clientY }, viewport()), slot = hit?.slot ?? null;
       stage.hover(slot); feed?.carouselControls?.()?.hover(slot);
@@ -1311,12 +1341,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!dragging && Math.hypot(event.clientX - press.x, event.clientY - press.y) < DRAG_THRESHOLD) return;
     if (!dragging) {
       if (!controls?.dragStart(press.id)) { endDrag(); return; }
-      dragging = press.id; canvas.style.cursor = 'grabbing';
+      clearDescription(); dragging = press.id; canvas.style.cursor = 'grabbing';
     }
     const target = dragPoint(event);
     if (target && controls) showHint(controls.dragMove(target));
   };
   const onPointerUp = (event: PointerEvent) => {
+    if (touchLook?.event.pointerId === event.pointerId) {
+      const touch = touchLook; touchLook = null;
+      if (!touch.shown && performance.now() - touch.started >= 450) touch.shown = true;
+      if (touch.shown || visiting() || describeAt({ x: event.clientX, y: event.clientY })?.target.kind === 'item') {
+        hoverPoint = { x: event.clientX, y: event.clientY }; showDescription(hoverPoint);
+        hoverPoint = null; // Touch has no continuing hover: keep this card until the next gesture.
+      } else onPointerDown({ button: touch.event.button, pointerType: 'mouse', pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, preventDefault: () => event.preventDefault() } as PointerEvent);
+      canvas.releasePointerCapture?.(event.pointerId); return;
+    }
     if (!press || event.pointerId !== press.pointerId) return;
     const controls = feed?.controls();
     if (dragging) controls?.dragEnd(dragPoint(event), { x: event.clientX, y: event.clientY });
@@ -1324,11 +1363,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     endDrag();
   };
   const onPointerCancel = (event: PointerEvent) => {
+    if (touchLook?.event.pointerId === event.pointerId) { clearDescription(); return; }
     if (!press || event.pointerId !== press.pointerId) return;
+    clearDescription();
     if (dragging) feed?.controls()?.dragCancel();
     endDrag();
   };
-  const onPointerLeave = () => {
+  const onPointerLeave = (event: PointerEvent) => {
+    if (event.pointerType === 'touch' && !touchLook) return;
+    clearDescription();
     if (stage.active) { stage.hover(null); feed?.carouselControls?.()?.hover(null); canvas.style.cursor = ''; return; }
     if (!press) { feed?.controls()?.hover(null); feed?.controls()?.look?.(null); canvas.style.cursor = ''; }
   };
@@ -1468,6 +1511,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
     updateEffects(seconds);
     tabletop.update(seconds); traitProps.update(seconds); stage.update(seconds); scout.update(seconds); followBox();
+    if (touchLook && !touchLook.shown && performance.now() - touchLook.started >= 450) {
+      touchLook.shown = true;
+      showDescription({ x: touchLook.event.clientX, y: touchLook.event.clientY });
+    }
+    if (hoverPoint && !press && now - lastLook >= 100) { lastLook = now; showDescription(hoverPoint); }
     // The board camera's impact kick, put on for this frame's render only.
     const kick = stage.active || scout.active ? shakeOffset.set(0, 0, 0) : feel.shake(shakeOffset);
     camera.position.add(kick); camera.updateMatrixWorld();
@@ -1504,7 +1552,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
-      closed = true; cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
+      clearDescription(); closed = true; cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],

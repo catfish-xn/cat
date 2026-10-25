@@ -1,3 +1,5 @@
+import { contains, projectedBox, spritePick, type ScreenArea } from './description-pick';
+import type { BoardDescription, BoardScreenBox } from '../board-feed';
 /**
  * The online 选秀 drawn in 3D (docs/ASSETS3D_CAROUSEL.md 界面接线需求): its own scene and camera, shown by the renderer
  * instead of the board while board-feed carries a BoardCarousel. The platform pieces load as one group at the shared
@@ -125,6 +127,7 @@ export interface CarouselStage {
   /** The standing unit drawn under a CSS-pixel point. */
   slotAt(client: { x: number; y: number }, area: { left: number; top: number; width: number; height: number }): { slot: number; takable: boolean } | null;
   hover(slot: number | null): void;
+  descriptionAt(client: { x: number; y: number }, area: ScreenArea): { target: BoardDescription; box: BoardScreenBox } | undefined;
   /**
    * A press on the ground: my released legend, with no pick out, starts toward that point at once. The point in cells
    * (for the room), or null when it may not move.
@@ -846,6 +849,24 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     scene, camera,
     get active() { return current !== null; },
     show, update, slotAt, walkTo, runTo, walk: applyWalk,
+    descriptionAt(client, area) {
+      if (!current) return;
+      for (const view of unitViews.values()) {
+        const hit = spritePick(view.items, client, camera, area);
+        if (hit) return { target: { kind: 'item', id: view.data.items[hit.index]!.id }, box: hit.box };
+      }
+      const hit = slotAt(client, area), view = hit && unitViews.get(hit.slot);
+      if (!view) {
+        for (const carried of unitViews.values()) {
+          if (!carried.takenBy) continue;
+          const box = projectedBox(carried.root, camera, area);
+          if (box && contains(box, client)) return { target: { kind: 'carousel', unit: carried.data }, box };
+        }
+        return;
+      }
+      const box = projectedBox(view.root, camera, area);
+      if (box) return { target: { kind: 'carousel', unit: view.data }, box };
+    },
     resize(next) { if (next > 0) { camera.aspect = next; camera.updateProjectionMatrix(); frameCamera(); } },
     hover(slot) {
       if (hovered === slot) return;
