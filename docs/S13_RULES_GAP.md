@@ -1,5 +1,13 @@
 > 当前规则纪元：**v22-online-rules**（`rulesVersion s13-g2-3-v22-online-rules`，基线 multiplayer 8715a2c1，PR #435）。下列标“已随 v22 录制”的条目都已进入该纪元。
 
+## 2026-10-25 强化阶段禁用独立审计（P）
+
+**P-AUGMENT-STAGE-AUDIT（P，2026-10-25，用户授权按推荐决定）**：保留 `{d02ae323}` / `{d12ae4b6}` / `{d22ae649}` 为“排除 2-1 / 3-2 / 4-2”的现有推断，不宣称哈希原字符串或 Riot 过滤代码已经解码。独立脚本 `scripts/audit-augment-stage-bans.cjs` 只用 Node 内置模块，以文本读取生产内容，不导入或执行生产模块。重建范围是 `augment-pool*.ts` 中全部 `apiName`（含 enabled:false 的库存行）、`source-manifest.ts` 的 `augmentApiNames`、现有禁用表键的并集；研究中尚未进入该范围的记录另列 `outOfScope`，不擅自扩池。来源有记录且没有三个阶段标签时才明确列入 `explicitly-unrestricted`，缺记录不能视为无限制。按 API 名排序、按 2-1/3-2/4-2 排序后生成 JSON 字节比较；键重复、未知阶段、重复阶段或非字面量均拒绝。
+
+14.24 原始 map22、独立提取记录、研究目录的 item nodes 与主研究 JSON 的阶段标签逐项对照。跨版本 S13 静态表和可变社区表只报告差异，不覆盖 14.24；后续 13.4 / 13.8 补丁只解释同方向变动，不能充当 14.24 反证。补丁文字检查使用本地研究报告的官方 14.24 转述，明确保留该证据层级，不声称持有官方全文。名称不完全匹配或重名的社区行逐项警告，不做模糊映射；Rigged Shop 不映射成 RiggedShopPlus。源文件记录 SHA-256。默认读取任务指定的两份本地调研目录，可用 `--data` / `--crossversion` 覆盖；必须的主研究缺失报错，其余材料缺失逐项警告。
+
+初次结果：134 条现有记录全部匹配；并集应有 139 条。180 项库存/池身份中 68 项明确无限制；漏列 5 项：Academy 禁 4-2、Cabal 禁 2-1/4-2、Experiment 禁 2-1（以上未启用），Formswapper 禁 2-1、Teamup BloodBrothers 禁 2-1/4-2（以上已启用）。只提出修订，不改表、不改规则身份或存档。独立 CLI 因这 5 项返回 1；测试精确断言发现结果，不把发现清单当作忽略名单。S13 静态表 8 处差异（7 处对应后续补丁，TableScraps 未解释），社区表另有 CabalCrest、TableScraps 两处差异与 7 行无法唯一匹配。完整证据与建议见 `docs/AUGMENT_STAGE_BANS_AUDIT_REPORT.md`。外部调研不存在的 CI 仅跳过真实资料对照，合成反例测试仍运行；不新增任何测试超时。
+
 ## 2026-10-25 技能 ignite 的历史状态身份与恢复认证（P）
 
 **P-IGNITE-RESTORE（P，2026-10-25，用户授权按推荐决定）**：保留 Powder／Rumble 的既有 ignite 输出：`combat-g2.ts` 的 `ignite` 顺序执行 `burn(ticks)` 两个声明，burn 与 wound 共用同一 ability source/effect key，显示锚点也共用。它与通用 `validateStatusGroups` 的跨组 key 唯一性假设不一致；Blistering Strikes 自身的 burn/wound effectIndex 不同，不是错误来源。为遵守本次“不改玩法、数值、存档格式、合法回放输出”的约束，不改写历史身份或放宽通用状态校验；由已经认证的开战 strategy 中的 Powder／Rumble 启用已有的完整战斗重放认证，仅在可信输入重建的整个 CombatState 与候选 canonical 内容完全相同时恢复。候选自己声明技能或重复 key 不能开启例外；任何贡献、显示投影、周期任务或账本篡改仍会失败。复用输入绑定、与候选运行态隔离的重放缓存。该决定只调整恢复认证路径，不改变规则身份或内容 digest。
