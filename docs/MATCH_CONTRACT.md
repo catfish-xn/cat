@@ -1282,3 +1282,8 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `batch4RerollEntryGold(state: MatchState, round: number): number`：返回该轮延期收入到账后、其他入轮奖励前的金币。缺少前轮结算记录抛 `RangeError('Missing batch4 reroll entry history')`。
 - 既有 `freeRerollsGranted` 的输入由局部 Pick 扩为 `MatchState`，汇总本组及旧额度。`rerollShop` / `rerollSharedShop` 优先扣免费额度、额度耗尽后沿用原金币费用与失败顺序；失败仍返回原 state，无事件、资源或 RNG 消耗。
 - 恢复在现有 `validateFreeRerolls` 内重推累计额度，并按每条免费刷新资源事实的轮次检查当时额度，不能提前消费未来轮奖励。非法账本仍抛 RangeError；JSON、对象、序列化三入口共用该认证。
+
+### Batch 3 review B 进度事实（2026-10-25）
+
+- `g23BattleFacts(combat: CombatState, team: Team, round: number, roundKind: 'pve'|'pvp', openingUnits: readonly {id: string; team: Team}[]): G23BattleFacts` 签名不变。战争财宝开战敌方非召唤单位死亡（含石甲虫、狼、河蟹）作为专用 `{definitionId:'spoils-of-war',count:number}` 放入现有 `batch2` 数组；仅非零写入，`openingDeaths` 不变。双方分别提取，镜像结算沿既有契约。`validateG23BattleFacts` 对负数、非整数、超界、重复标识以 `RangeError('Invalid batch2 battle facts')` 拒绝；终战事实与真实战斗比较。持有战争财宝的已结算旧回合需现有 `battles` 历史参数以认证连续序号（连零击杀也不可伪造）；缺失仍走 `missing historical evidence`，提供历史后按完整事实重放比较。
+- `batch3RewardPlan(state: MatchState): AugmentGift[]` 与发放/验证接口签名不变；冒险任务从 `unit-upgraded`、`unit-upgraded-after-combat`、`carousel-unit-claimed.upgrades`、`carousel-preparation-settled.upgrades` 读取完成事实。只计取得后不同英雄的三星，第二名达标后的首个非选秀入口发一次；收据认证与资源来源认证保持分离，无新增保存字段、奖励或规则数值。

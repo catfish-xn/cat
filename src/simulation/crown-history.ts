@@ -4,6 +4,12 @@ import type { MatchState } from './match-types';
 
 /** Historical battle conditions need replay evidence, including zero rewards and losing battles. */
 export function needsCrownHistory(state: MatchState): boolean {
+  // Spoils has a continuous kill ordinal: old rounds must be replay-authenticated even
+  // if their own table slot paid nothing (including a claimed zero/missing counter).
+  const spoils=state.augments.filter(a=>a.definitionId.startsWith('spoils-of-war-'));
+  if(!state.multiplayer&&readG23Progress(state)!.economyReceipts.some(r=>r.kind==='battle'
+    &&spoils.some(a=>r.facts.round>=a.acquiredRound)
+    &&!(r.facts.round===state.round&&state.combat?.status==='finished')))return true;
   return needsBatch4B4xpHistory(state) || readG23Progress(state)!.economyReceipts.some(action =>
     action.kind === 'battle' && (action.facts.crowns !== undefined || action.crownGold !== undefined || action.facts.d11Headhunter !== undefined || action.facts.family?.eligible===true || action.facts.melCasts!==undefined));
 }

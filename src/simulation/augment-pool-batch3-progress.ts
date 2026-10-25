@@ -49,7 +49,7 @@ function batch3Events(state:MatchState):Batch3Event[] {
     const table=spoilsTable(state,augment,row.spoilsTier!);let kills=0;
     for(const r of battles){
      if(r.kind!=='battle'||r.facts.round<augment.acquiredRound)continue;
-     for(let n=r.facts.openingDeaths?.length??0;n>0;n--){kills++;if(spoilsGold(table,kills))events.push({augment,schedule:index,ordinal:kills,round:r.facts.round});}
+     for(let n=r.facts.batch2?.find(f=>f.definitionId==='spoils-of-war')?.count??0;n>0;n--){kills++;if(spoilsGold(table,kills))events.push({augment,schedule:index,ordinal:kills,round:r.facts.round});}
     }
     return events;
    }
@@ -108,10 +108,15 @@ function goldenEggHatch(state:MatchState,augment:MatchState['augments'][number],
 function adventureQuestRound(state:MatchState,augment:MatchState['augments'][number]):number|undefined {
  const defs=new Set(planAugmentGifts(state,augment,AUGMENT_BATCH3[augment.definitionId].gifts).filter(g=>g.kind==='unit').map(g=>g.definitionId)),done=new Set<string>();
  for(const e of state.resourceProvenance.entries){
-  if(e.kind!=='unit-upgraded'&&e.kind!=='unit-upgraded-after-combat')continue;
+  const upgrades=e.kind==='unit-upgraded'||e.kind==='unit-upgraded-after-combat'?[e.event]
+   :e.kind==='carousel-unit-claimed'||e.kind==='carousel-preparation-settled'?e.upgrades:[];
+  if(!upgrades.length)continue;
   const round=getMultiplayerRoundById(e.roundId).ordinal;
-  if(round<augment.acquiredRound||e.event.toStar!==3||!defs.has(e.event.definitionId))continue;
-  done.add(e.event.definitionId);if(done.size>=2)return nonSupply(round+1);
+  if(round<augment.acquiredRound)continue;
+  for(const event of upgrades){
+   if(event.toStar!==3||!defs.has(event.definitionId))continue;
+   done.add(event.definitionId);if(done.size>=2)return nonSupply(round+1);
+  }
  }
  return undefined;
 }

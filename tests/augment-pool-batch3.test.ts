@@ -607,7 +607,7 @@ it.each([['spoils-of-war-i',1],['spoils-of-war-ii',2],['spoils-of-war-iii',3]] a
  const deaths=(n:number,from:number)=>Array.from({length:n},(_,i)=>({victimId:'v'+(from+i),eventSeq:i+1}));
  let s:MatchState={...createMatch(42),augments:[{definitionId:id,choiceId:'test',acquiredRound:1}]};
  const perBattle=[10,0,40,33];let total=0;
- for(const [i,n] of perBattle.entries()){s=writeG23Progress({...s,round:i+1},advanceG23Economy(readG23Progress(s)!,{...fact(i+1,[i===1?'pve':'pvp','win']),openingDeaths:deaths(n,total)}).progress);total+=n;s=drainBatch3Gold(s);}
+ for(const [i,n] of perBattle.entries()){s=writeG23Progress({...s,round:i+1},advanceG23Economy(readG23Progress(s)!,{...fact(i+1,[i===1?'pve':'pvp','win']),openingDeaths:deaths(n,total),...(n?{batch2:[{definitionId:'spoils-of-war',count:n}]}:{})}).progress);total+=n;s=drainBatch3Gold(s);}
  const paid=s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch3').reduce((n,r)=>n+((r as any).amount??0),0);
  const sums=SPOILS_OF_WAR_TABLES[tier].map(t=>t.reduce((n,[,g])=>n+g,0));
  expect(sums).toContain(paid);validateBatch3Gold(s);
