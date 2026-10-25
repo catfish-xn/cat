@@ -22,7 +22,7 @@ import { MatchSession } from './match-session';
 import { InputRouter, type Gesture } from './input-router';
 import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
-import { MatchApplication } from '../m6/application';
+import { createSoloApplication } from '../m6/application-loader';
 import { createGameClient, isOnlineMode } from './online/mode';
 import { d14UnitNotes, displayStarLevel, fourStarBaseStats, starText } from '../presentation/d14-display';
 import { mountOnlineBoardFrame, type OnlineBoardMounts } from './app-shell';
@@ -313,7 +313,7 @@ export class BoardScene extends Phaser.Scene {
         this.releaseOrb(orbId);
         this.setStatus(`法球未能排队 · ${ORB_FAILURE_TEXT[reason] ?? '已放回，可再次点击领取'}`);
       },
-    }, mounts) : new MatchApplication(this.session, {
+    }, mounts) : createSoloApplication(this.session, {
       replace: session => {
         this.melSave?.reset();
         this.clearCombatEffects(); this.session = session; this.selectedId = null;

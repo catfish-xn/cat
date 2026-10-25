@@ -17,6 +17,7 @@ interface BudgetReport {
   baselineDirectories: { js: string; interactive: string };
   jsGzipBytes: { base: number; current: number };
   js3dGzipBytes: number;
+  jsSoloGzipBytes: number; jsSoloPreloadedByIndex: boolean;
   jsRatio: number; jsBudget: number;
   interactiveMs: { base: number[]; current: number[]; baseMedian: number; currentMedian: number };
   interactiveRatio: number; interactiveBudget: number; passed: boolean;
@@ -104,6 +105,7 @@ describe('3D gzip column and unchanged 2D/interaction budgets', () => {
   });
   it('reports zero when the optional 3D directory is absent', async () => {
     const { report, exitCode } = await runBudget();
+    expect(report.jsSoloGzipBytes).toBe(0); expect(report.jsSoloPreloadedByIndex).toBe(false);
     expect(report.js3dGzipBytes).toBe(0); expect(report.jsRatio).toBe(1); expect(exitCode).toBe(0);
     expect(report.baselineDirectories).toEqual({ js: '/synthetic-rendering3d-budget/base', interactive: '/synthetic-rendering3d-budget/base' });
   });
@@ -154,4 +156,26 @@ describe('3D gzip column and unchanged 2D/interaction budgets', () => {
     await expect(runBudget({ base: {} })).rejects.toThrow('ENOENT');
     await expect(runBudget({ jsBase: { 'index.html': 'no assets directory' } })).rejects.toThrow('ENOENT');
   });
+});
+
+
+describe('on-demand solo gzip reporting', () => {
+  it('reports solo bytes separately without changing the 2D limit', async () => {
+    const { report, exitCode } = await runBudget({ current: {
+      'assets/main.js': payload, 'assets/solo/restore.js': payload.repeat(100),
+    } });
+    expect(report.jsGzipBytes.current).toBe(gzipBytes(payload));
+    expect(report.jsSoloGzipBytes).toBe(gzipBytes(payload.repeat(100)));
+    expect(report.jsSoloPreloadedByIndex).toBe(false);
+    expect(report.jsBudget).toBe(1.5); expect(exitCode).toBe(0);
+  });
+  it.each(['<link rel="modulepreload" href="./assets/solo/restore.js">',
+    '<script type="module" src="./assets/solo/restore.js"></script>'])(
+    'rejects solo code referenced by index.html: %s', async html => {
+      const { report, exitCode } = await runBudget({ current: {
+        'index.html': html, 'assets/main.js': payload, 'assets/solo/restore.js': payload,
+      } });
+      expect(report.jsSoloPreloadedByIndex).toBe(true);
+      expect(report.passed).toBe(false); expect(exitCode).toBe(1);
+    });
 });
