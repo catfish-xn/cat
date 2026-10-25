@@ -1,5 +1,9 @@
 > 当前规则纪元：**v22-online-rules**（`rulesVersion s13-g2-3-v22-online-rules`，基线 multiplayer 8715a2c1，PR #435）。下列标“已随 v22 录制”的条目都已进入该纪元。
 
+## 2026-10-25 v23 防篡改测试夹具约定（P）
+
+**P-V23-TAMPER（P，2026-10-25，用户授权按推荐决定）**：仅补测试，不改变玩法、数值、存档格式或恢复实现。夹具可使用带唯一收据的 `grantMechanicUnit/Item/Gold/Consumable` 真实领域命令；强化必须从真实公开选项选择，布阵、装备、消耗品使用、战斗及跨轮都经实际命令。先序列化合法存档，再逐项伪造脱离引用的副本；JSON、对象及 `restoreMatch(serializeMatch(...))` 三条路径分别断言拒绝。合法续战按连续有界分段逐 tick 比较完整命令结果（状态、事件、RNG），不新增超时。若伪造被接受，保留严格拒绝断言并标为 `it.fails`，在测试旁和报告中标明生产缺陷，不通过修改规则或放宽断言掩盖。
+
 ## 2026-10-25 技能 ignite 的历史状态身份与恢复认证（P）
 
 **P-IGNITE-RESTORE（P，2026-10-25，用户授权按推荐决定）**：保留 Powder／Rumble 的既有 ignite 输出：`combat-g2.ts` 的 `ignite` 顺序执行 `burn(ticks)` 两个声明，burn 与 wound 共用同一 ability source/effect key，显示锚点也共用。它与通用 `validateStatusGroups` 的跨组 key 唯一性假设不一致；Blistering Strikes 自身的 burn/wound effectIndex 不同，不是错误来源。为遵守本次“不改玩法、数值、存档格式、合法回放输出”的约束，不改写历史身份或放宽通用状态校验；由已经认证的开战 strategy 中的 Powder／Rumble 启用已有的完整战斗重放认证，仅在可信输入重建的整个 CombatState 与候选 canonical 内容完全相同时恢复。候选自己声明技能或重复 key 不能开启例外；任何贡献、显示投影、周期任务或账本篡改仍会失败。复用输入绑定、与候选运行态隔离的重放缓存。该决定只调整恢复认证路径，不改变规则身份或内容 digest。
