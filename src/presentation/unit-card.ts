@@ -11,7 +11,7 @@ import { abilityText } from './ability-text';
 import type { RankTotals, UnitBattleStats } from './battle-ranking';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags } from './hero-identity';
 import { attachHoverCards, unitHoverCard } from './hover-card';
-import { heroPortraitHtml } from './s13-assets';
+import { abilityIconUrl, heroPortraitHtml, s13AssetUrl } from './s13-assets';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { itemDisplayName } from './g23-display';
 import { itemMarkHtml } from './item-codex';
@@ -19,6 +19,17 @@ import { readTooltipText } from './tooltip-text-loader';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
+}
+/** Shared inspect/hover heading; missing ability art uses the hero portrait. */
+export function abilityLabel(definitionId: string, text: string): HTMLElement {
+  const label = el('div', text, 'unit-card-label'), url = abilityIconUrl(UNIT_DEFINITIONS[definitionId].abilityId) ?? s13AssetUrl('champion', definitionId);
+  if (url) {
+    const image = el('img'); image.src = url; image.alt = ''; image.width = image.height = 36; image.loading = 'lazy';
+    image.style.cssText = 'border-radius:6px;float:left;margin-right:8px';
+    image.onerror = () => { image.hidden = true; };
+    label.prepend(image);
+  }
+  return label;
 }
 /** COMBAT tick is 50 ms: attacks per second from the attack interval when the content has no original speed. */
 const TICKS_PER_SECOND = 20;
@@ -131,7 +142,7 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
   const stats = fourStar ?? getUnitStats(definitionId, neutral ? 1 : star);
   const ability = abilityText(definitionId, fourStar ? 4 : star);
   const section = el('div', '', 'unit-card-ability'); section.dataset.debug = 'unit-card:ability';
-  section.append(el('div', `技能${ability ? ` · ${ability.name}` : ''} · 法力 ${stats.initialMana}/${stats.maxMana}${fourStar ? ' · 四星数值' : ''}`, 'unit-card-label'));
+  section.append(abilityLabel(definitionId, `技能${ability ? ` · ${ability.name}` : ''} · 法力 ${stats.initialMana}/${stats.maxMana}${fourStar ? ' · 四星数值' : ''}`));
   section.append(el('p', ability?.text || '无主动技能说明', 'unit-card-text'));
   body.append(section);
   const speed = stats.baseAttackSpeedBps !== undefined ? stats.baseAttackSpeedBps / 10_000 : TICKS_PER_SECOND / stats.attackIntervalTicks;

@@ -29,12 +29,12 @@ export function loadRootUiAssets(base: string | null, fetcher: typeof fetch = (.
       .finally(() => { clearTimeout(timer); resolve(); });
   });
 }
-/** Registers the manifest's champion/trait/augment entries whose path stays inside the root; anything else is ignored. */
+/** Registers root UI entries whose path stays inside the root; anything else is ignored. */
 export function registerRootUiAssets(base: string, manifest: unknown): void {
   const assets = (manifest as { assets?: unknown } | null)?.assets;
   if (!Array.isArray(assets)) return;
   for (const entry of assets as { kind?: unknown; id?: unknown; path?: unknown }[]) {
-    if ((entry?.kind !== 'champion' && entry?.kind !== 'trait' && entry?.kind !== 'augment') || typeof entry.id !== 'string' || typeof entry.path !== 'string'
+    if ((entry?.kind !== 'champion' && entry?.kind !== 'trait' && entry?.kind !== 'augment' && entry?.kind !== 'ability') || typeof entry.id !== 'string' || typeof entry.path !== 'string'
       || !/^[\w-]+(\/[\w.-]+)*$/.test(entry.path) || entry.path.split('/').includes('..')) continue;
     rootAssets.set(`${entry.kind}:${entry.id}`, new URL(entry.path, base).href);
   }
@@ -42,6 +42,8 @@ export function registerRootUiAssets(base: string, manifest: unknown): void {
 
 /** An augment icon carried by the asset root (augments missing from the bundled manifest), or null. */
 export const rootAugmentIconUrl = (id: string): string | null => rootAssets.get(`augment:${id}`) ?? null;
+/** Ability art is supplied only by the optional deployed root. */
+export const abilityIconUrl = (id: string): string | null => rootAssets.get(`ability:${id}`) ?? null;
 
 export function s13AssetUrl(kind: S13Asset['kind'], id: string): string | null {
   const asset = index.get(`${kind}:${id}`);
