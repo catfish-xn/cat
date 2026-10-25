@@ -544,7 +544,7 @@ export class StrategyPanel {
     const operable = this.operable(state);
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.eventList = null;
-    this.traitColumn.render(state.preparation, g23TraitRuntime(state));
+    this.traitColumn.render(state.preparation, g23TraitRuntime(state), state.items);
     // The bound anomaly sits after the augments (the online left column shows only this strip while the panel is folded).
     const anomaly = state.anomalyBinding, anomalyUnit = anomaly && state.preparation.units.find(unit => unit.id === anomaly.unitId);
     const augmentKey = [...state.augments.map(augment => augment.definitionId), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : ''].join();
@@ -745,7 +745,7 @@ export class StrategyPanel {
   }
   private renderTraits(state: MatchState): void {
     const list = element('section', '', 'trait-list'); list.dataset.debug = 'trait-panel';
-    for (const snapshot of deriveTraits(state.preparation, 'player')) {
+    for (const snapshot of deriveTraits(state.preparation, 'player', undefined, undefined, state.items)) {
       const definition = TRAIT_DEFINITIONS[snapshot.traitId], next = definition.tiers.find(tier => tier.threshold > snapshot.count);
       const row = element('article', '', snapshot.tier > 0 ? 'trait active' : 'trait'); row.dataset.debug = `trait:${snapshot.traitId}`;
       const title = element('h3', `${traitDisplayName(snapshot.traitId)} · ${snapshot.count} / ${next?.threshold ?? '已满'} · 档位 ${snapshot.tier}`);
@@ -1138,7 +1138,7 @@ export class StrategyPanel {
     const options = offer ? G23_BLACK_MARKETS[offer.tier - 1]?.options ?? [] : [];
     const payload = (choice as { payload?: { skippable?: boolean } }).payload;
     // A skip pays nothing now: every skip so far gives my 炼金男爵 heroes HealthPerSkip max health at the trait's current tier.
-    const tier = boardTraitRows(state.preparation).find(row => row.traitId === 'chem-baron')?.tier;
+    const tier = boardTraitRows(state.preparation, state.items).find(row => row.traitId === 'chem-baron')?.tier;
     const perSkip = G23_TRAIT_SOURCE['chem-baron']?.tiers.find(entry => entry.threshold === tier)?.values.HealthPerSkip;
     const item = (id: string) => Object.hasOwn(ITEM_DEFINITIONS, id);
     bar.append(element('span', `${offer ? `第 ${offer.tier} 档 · ` : ''}微光 ${chem?.shimmer ?? 0}${chem?.skips ? ` · 已跳过 ${chem.skips} 次` : ''} · 接受后微光清零`, 'market-meta'));
