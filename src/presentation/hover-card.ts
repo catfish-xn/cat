@@ -120,17 +120,17 @@ export function attachHoverCards(scope: HTMLElement, card: HoverCard, selector: 
   const menu = (event: Event) => { if (consumed) event.preventDefault(); };
   scope.addEventListener('contextmenu', menu);
   const scroll = () => { if (anchor && (!usable(anchor) || (!pinned && !anchor.contains(document.activeElement)))) close(); else if (anchor) open(anchor); };
-  window.addEventListener('scroll', scroll, true);
+  document.addEventListener('scroll', scroll, true);
   scope.addEventListener('click', click, true);
-  window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', end, true); window.addEventListener('pointercancel', end, true);
+  document.addEventListener('pointermove', move, true); document.addEventListener('pointerup', end, true); document.addEventListener('pointercancel', end, true);
   scope.addEventListener('pointerover', over); scope.addEventListener('pointerout', out);
   scope.addEventListener('focusin', focus); scope.addEventListener('focusout', blur);
   scope.addEventListener('pointerdown', press); document.addEventListener('keydown', key);
   return () => {
     scope.removeEventListener('contextmenu', menu);
-    window.removeEventListener('scroll', scroll, true);
+    document.removeEventListener('scroll', scroll, true);
     scope.removeEventListener('click', click, true);
-    window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', end, true); window.removeEventListener('pointercancel', end, true);
+    document.removeEventListener('pointermove', move, true); document.removeEventListener('pointerup', end, true); document.removeEventListener('pointercancel', end, true);
     scope.removeEventListener('pointerover', over); scope.removeEventListener('pointerout', out);
     scope.removeEventListener('focusin', focus); scope.removeEventListener('focusout', blur);
     scope.removeEventListener('pointerdown', press); document.removeEventListener('keydown', key);
