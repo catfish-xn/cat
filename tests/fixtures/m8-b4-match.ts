@@ -41,14 +41,18 @@ export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): Ma
   });
   if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
   // Keep the original component births; neither chosen card grants items or changes an isolated holder.
-  let state = requested.length === 2 && requested.every(id => id === 'bloodthirster')
+  const doubleBloodthirster = requested.length === 2 && requested.every(id => id === 'bloodthirster');
+  let state = doubleBloodthirster
     ? acquire(components, { seed: 76672, earliestRound:15, augmentPriorities: ['going-long', 'bulky-buddies-iii'] })
     : equipmentPreparation(components);
   const available = state.items.filter(item => item.location.kind === 'inventory');
+  // The second Bloodthirster must use both real supply choices, leaving extra PvE drops intact.
+  const supplyItemIds = new Set(state.scheduleReceipts.flatMap(receipt => receipt.kind === 'component' ? receipt.itemIds : []));
   for (const [slot, definitionId] of requested.entries()) {
     const definition = ITEM_DEFINITIONS[definitionId];
     const inputs = (definition.recipe ?? [definitionId]).map(component => {
-      const index = available.findIndex(item => item.definitionId === component);
+      const index = available.findIndex(item => item.definitionId === component
+        && (!doubleBloodthirster || slot !== 1 || supplyItemIds.has(item.id)));
       if (index < 0) throw new Error(`Public equipment fixture did not acquire ${component}`);
       return available.splice(index, 1)[0].id;
     });
