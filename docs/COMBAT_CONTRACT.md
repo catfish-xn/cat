@@ -302,3 +302,7 @@ PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校�
 `CombatUnit.g23Sion?: { reviveAtTick: number; revived: boolean }` 保持现有可选格式。只有黑玫档位至少7的 `g23-sion` 可持有；首次致死屏障记录返回 tick（死亡 tick + 20），等待时仍为存活但缺席单位。`revived=false` 时返回 tick 必须在当前 tick 之后、最多20 tick；`revived=true` 时返回 tick 不得晚于当前 tick，记录保留以禁止二次复活。字段结构、类型、持有者及完整历史事实（包括无字段的状态）均认证，不从候选 HP 或标记推断死亡史。
 
 赛恩 ability 来源 effectIndex：0 为主动技能，1 为解缚冲锋伤害/击飞，2 为高档解缚 AP，3 为复活清除/免控/攻速。旧状态来源校验仅对赛恩冲锋 stun 接纳 effectIndex=1，并用独立重放认证真实贡献；不普遍放宽其他技能、护盾或任务的 effectIndex。以上仅补存档支持与认证，不更改合法状态的格式、事件、回放或战斗推进。
+
+### Batch 4 B4Combat（P，2026-10-25）
+
+四条机制与推断边界见 [P-B4COMBAT](S13_RULES_GAP.md#p-b4combatp2026-10-25batch-4-四条战斗强化)。只增加声明与既有战斗事件，不增加存档字段/事件类型/公共命令/失败 reason；全程服务器权威，前端不得另算属性、弩箭、吸血或护盾。`augment-pool-batch4-b4combat.ts` 内部入口 `openingB4Combat(ctx):void`、`castB4Combat(ctx,unit,seq):void`、`attackB4Combat(ctx,unit,target,seq):void`、`damageB4Combat(ctx,owner,packet,dealt):void`、`overhealB4Combat(ctx,target,outcome):void` 使用冻结来源及既有状态；`b4Vamp(unit,tick):VampRate[]` 只返回当前窗口贡献，`categoryFiveTrigger(unit,definition):TriggerDefinition` 只派生飓风声明。恢复仍从可信 combatInputBasis 重放，对象/JSON/序列化入口不接受候选自报贡献。

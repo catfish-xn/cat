@@ -1,6 +1,7 @@
 import { AUGMENT_BATCH4_DEFINITIONS } from './augment-pool-batch4';
 import { AUGMENT_BATCH4_B4XP_DEFINITIONS } from './augment-pool-batch4-b4xp';
 import { AUGMENT_BATCH4_B4REROLL_DEFINITIONS } from './augment-pool-batch4-b4reroll';
+import { AUGMENT_BATCH4_B4COMBAT_DEFINITIONS } from './augment-pool-batch4-b4combat';
 import { AUGMENT_BATCH2_DEFINITIONS } from './augment-pool-batch2';
 import { AUGMENT_BATCH1_DEFINITIONS } from './augment-pool-batch1';
 import { AUGMENT_BATCH3_DEFINITIONS } from './augment-pool-batch3';
@@ -16,6 +17,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   ...AUGMENT_BATCH1_DEFINITIONS,
   ...AUGMENT_BATCH2_DEFINITIONS,
   ...AUGMENT_BATCH3_DEFINITIONS,
+  ...AUGMENT_BATCH4_B4COMBAT_DEFINITIONS,
   ...AUGMENT_BATCH3_XP_DEFINITIONS,
   ...AUGMENT_BATCH4_DEFINITIONS,
   ...AUGMENT_BATCH4_B4XP_DEFINITIONS,

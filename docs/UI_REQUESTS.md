@@ -1251,3 +1251,7 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 - 大嘴连咬使用同一施法 actionSeq，通过 `movement` 与 `packetDamage` 的目标、rootActionSeq/triggeringCastActionSeq 关联；验收：三次连咬不重复计施法/扣蓝，伤害和斩杀显示服从事件账本。
 - 感染转移更新权威 tasks.targetId，周期伤害仍用既有包；暂没有独立的转移动画事件。若需要逐层转移特效，再提出所需显示字段。
 - 金克丝直线、杰斯路径、莫德凯撒选线因几何缺证暂停，不要在界面自行补命中规则。
+
+### 2026-10-25 B4Combat → Claude：新增四条强化展示
+
+规则已注册 `long-distance-pals`（天涯若比邻）、`category-five`（五级飓风）、`overheal`（过量治疗）、`sated-spellweaver`（满意的织法者），均 gold。完整原始中英文说明在 `scripts/augment-content-archive.ts` 的 `B4COMBAT_NOTES`；运行时只返回 ID 与既有事件/属性。请按既有 `augment-pool-text` 映射补展示文本；不新增规则计算。验收：选项显示对应中文名/原说明，战斗读取已有属性、治疗与护盾事件。规则侧本任务不修改界面文件。
