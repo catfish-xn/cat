@@ -1,3 +1,5 @@
+import { spritePick, type ScreenArea } from './description-pick';
+import type { Camera } from 'three';
 /**
  * Over a 3D piece: its combat meters (HP in team color with the shield segment and 300-HP ticks, mana below) and its
  * worn item icons, drawn from the BoardFeed values the 2D piece shows (unit-view.ts drawCombat) — the 3D layer covers
@@ -25,6 +27,7 @@ export interface UnitOverhead {
   flashMana(on: boolean): void;
   /** True when something is drawn (the host skips placing an empty one). */
   readonly drawn: boolean;
+  itemAt(client: { x: number; y: number }, camera: Camera, area: ScreenArea): ReturnType<typeof spritePick>;
   dispose(): void;
 }
 
@@ -87,6 +90,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
 
   return {
     object,
+    itemAt: (client, camera, area) => object.visible ? spritePick(icons.children as Sprite[], client, camera, area) : undefined,
     get drawn() { return bar.visible || icons.children.length > 0; },
     set(team, meters, items) {
       if (disposed) return;

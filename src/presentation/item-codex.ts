@@ -90,7 +90,7 @@ function recipeFor(a: string, b: string): Entry | undefined {
 }
 
 /** Popover body for one definition. */
-function describe(entry: Entry): HTMLElement {
+export function itemCardBody(entry: Entry): HTMLElement {
   const body = el('div', '', 'item-pop-body');
   const head = el('div', '', 'item-pop-head'); head.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.id, 36));
   const title = el('div'); title.append(nameNode(entry), ...tagNodes(entry));
@@ -122,7 +122,7 @@ export function attachItemPopover(scope: HTMLElement, id = 'item-popover', optio
   card.root.classList.add('item-popover'); card.root.dataset.debugItemPopover = 'true';
   const detach = attachHoverCards(scope, card, '[data-item-def]', target => {
     const entry = catalogEntry(target.dataset.itemDef ?? '');
-    return entry ? { key: entry.id, build: () => { card.root.dataset.itemDef = entry.id; return describe(entry); } } : null;
+    return entry ? { key: entry.id, build: () => { card.root.dataset.itemDef = entry.id; return itemCardBody(entry); } } : null;
   }, options);
   return () => { detach(); card.dispose(); };
 }
