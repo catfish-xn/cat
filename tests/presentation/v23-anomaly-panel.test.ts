@@ -65,6 +65,23 @@ function panel(initial: MatchState) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('4-6 anomaly private view and rendered steps', () => {
+  it('keeps a trainer golem in the online target list and accepts the ordinary anomaly command', () => {
+    const base = targetStep();
+    const golem = { ...base.preparation.units[0], id: 'trainer', definitionId: 'trainer-golem', starLevel: 2 as const };
+    const state = { ...base, preparation: { ...base.preparation, units: [golem] } };
+    const ui = panel(state), choice = state.pendingChoice!;
+    ui.button('anomaly-target:trainer').click();
+    expect(ui.actions.target).toHaveBeenCalledExactlyOnceWith(choice.choiceId, 0, 'trainer');
+    const selected = accepted(selectAnomalyTarget(state, choice.choiceId, 0, 'trainer'));
+    expect(selected.pendingChoice).toMatchObject({ step: 'offer', targetId: 'trainer' });
+    // This records v23 behaviour only; it is not evidence of original 14.24 eligibility.
+    expect(selected.pendingChoice!.offers).toHaveLength(1);
+    expect(selected.pendingChoice!.offers).not.toContain('ultimate-hero');
+    expect(selected.pendingChoice!.offers).not.toContain('into-the-unknown');
+    const bound = accepted(selectChoice(selected, choice.choiceId, 1, selected.pendingChoice!.offers[0]));
+    expect(bound.anomalyBinding?.unitId).toBe('trainer');
+  });
+
   it('projects the target step and renders only own board/bench targets with the current command token', () => {
     const state = targetStep(), view = toSeatPrivateView(state), vm = display(state);
     expect(vm.pendingChoice).toEqual(view.pendingChoice);
