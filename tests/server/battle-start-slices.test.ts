@@ -17,7 +17,10 @@ type Seam = { current: RoomState; streams: Map<string, CombatStream>; frozenInpu
   freezeAndResolve(): void; openStreamSteps(): Generator<void, void, void>; clearTimer(): void };
 const seam = (room: Room) => room as unknown as Seam;
 
-function fixture(round: number, sliceNow = () => performance.now(), sliceMs = 20) {
+// A deterministic CPU budget source makes slice counts independent of host contention.
+// Explicit budget tests below advance their own CPU clock; ManualClock owns room time.
+function budgetClock() { let reads = 0; return () => ++reads / 10; }
+function fixture(round: number, sliceNow = budgetClock(), sliceMs = 20) {
   const cp = checkpoints.find(cp => cp.state.round === round)!;
   const clock = new ManualClock(cp.time);
   const room = new Room(cp.state.seats, { ...ROOM_TIMING_DEFAULTS, roomId: cp.state.roomId, seed: cp.seed,
@@ -29,8 +32,8 @@ function fixture(round: number, sliceNow = () => performance.now(), sliceMs = 20
 function finishOpening(room: Room, clock: ManualClock) {
   for (let n = 0; room.combatInitializationPending && n < 100; n++) expect(clock.fireNext()).toBe(true);
   expect(room.combatInitializationPending).toBe(false);
-  expect(room.state.phase).toBe('battle');
   expect(room.state.fault).toBeNull();
+  expect(room.state.phase).toBe('battle');
 }
 function fingerprint(room: Room) {
   return createHash('sha256').update(JSON.stringify({ state: room.state, inputs: seam(room).frozenInputs,
@@ -41,6 +44,27 @@ function fingerprint(room: Room) {
 }
 
 describe('battle opening slices', () => {
+  it('a fresh public room opens with the deterministic budget in at most 100 continuations', () => {
+    const counts: number[] = [];
+    for (let run = 0; run < 2; run++) {
+      const clock = new ManualClock();
+      const cp = checkpoints[0]!;
+      const room = new Room(cp.state.seats, { ...ROOM_TIMING_DEFAULTS, roomId: cp.state.roomId, seed: cp.seed,
+        clock, resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs: 20,
+        sliceNow: budgetClock(), assertPoolConservation: true, carousel: CAROUSEL_RULES_BINDING });
+      try {
+        room.start(); seam(room).freezeAndResolve();
+        let fired = 0;
+        while (room.combatInitializationPending && fired < 100) { expect(clock.fireNext()).toBe(true); fired++; }
+        expect(room.combatInitializationPending).toBe(false);
+        expect(room.state.fault).toBeNull(); expect(room.state.phase).toBe('battle');
+        expect(clock.now()).toBe(0);
+        counts.push(fired);
+      } finally { room.dispose(); }
+    }
+    expect(counts[0]).toBeGreaterThan(0); expect(counts[1]).toBe(counts[0]);
+  });
+
   it.each([3, 9, 23])('round %i: tick0/1 hashes equal the v23-online-rules synchronous baseline', round => {
     const { room, clock, cp } = fixture(round);
     const publications: number[] = [];

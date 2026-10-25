@@ -5,9 +5,9 @@ import {readG23Progress} from '../../src/simulation/g2-3-state';
 const {run}=createRequire(import.meta.url)('../../scripts/generate-m5-route.cjs');
 const accept=(r:api.MatchCommandResult)=>{if(!r.ok)throw Error(r.reason);return r.state;};
 /** Acquire and deploy a third Academy definition using actual shop/public commands. */
-export async function publicAcademyGrant():Promise<api.MatchState>{
+export async function publicAcademyGrant(onRound?:(state:api.MatchState)=>Promise<void>):Promise<api.MatchState>{
  let state:api.MatchState|undefined;const reached=Error('academy preparation');
- try{await run(api,{build:'cannon',seed:42,onStep(before:api.MatchState,_r:api.MatchCommandResult,c?:{type:string}){
+ try{await run(api,{build:'cannon',seed:42,onRound,onBattleProgress:onRound,onStep(before:api.MatchState,_r:api.MatchCommandResult,c?:{type:string}){
   if(c?.type==='start'&&before.roundDefinitionId==='5-1'){state=before;throw reached;}
  }});}catch(e){if(e!==reached)throw e;}
  if(!state)throw Error('Missing Academy public prefix');

@@ -1,31 +1,49 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
+import { RouteClock } from '../route-clock';
 import { TwoSidedBattleResolver } from '../../../src/server/room/two-sided-resolver';
 import type { ServerMessage } from '../../../src/server/net/messages';
 import { expectOk, messagesOfType, seatTwo, startServer, type NetHarness } from './helpers';
 
-// Split out of server.test.ts so the whole-match case runs on its own worker.
-let harness: NetHarness | null = null;
-afterEach(async () => { await harness?.close(); harness = null; });
-
+// One real wire route is shared by the round cases below.
 describe('game server: whole match over the wire', () => {
-  it('drives two clients from the queue to a full ranking with replays on the manual clock', async () => {
-    harness = await startServer({}, new TwoSidedBattleResolver());
-    const [a, b] = await seatTwo(harness);
+  let route: { harness: NetHarness; clients: Awaited<ReturnType<typeof seatTwo>> } | undefined;
+  afterAll(async () => { await route?.harness.close(); route = undefined; });
+  const clock = new RouteClock();
+  let guard = 0, groupEnd: number | undefined;
+  async function through(round: number, callbacks = 16) {
+    if (!route) {
+      const harness = await startServer({ clock, sliceTicks: 25 }, new TwoSidedBattleResolver());
+      route = { harness, clients: await seatTwo(harness) };
+    }
+    const { harness, clients: [a, b] } = route;
     const room = harness.server.room!;
     const phase = () => room.state.phase;
-    let guard = 0;
-    while (phase() !== 'ended' && guard++ < 2_000) {
-      // Answer choices like a player would; everything else idles.
-      for (const client of [a, b]) {
-        const seat = room.state.seats.find(candidate => candidate.seatId === client.seatId)!;
-        if (phase() === 'choice' && seat.alive && seat.match.phase === 'choice' && seat.match.pendingChoice?.step === 'offer') {
-          const pending = seat.match.pendingChoice;
-          const receipt = await client.command({ type: 'choose', choiceId: pending.choiceId, generation: pending.generation, definitionId: pending.offers[0]! }, { round: room.state.round, seatRevision: seat.seatRevision });
-          expectOk(receipt);
+    for (let fired = 0; fired < callbacks; fired++) {
+      if (groupEnd === undefined) {
+        if (phase() === 'ended' || room.state.round > round || guard++ >= 2_000) break;
+        // Answer choices like a player would; everything else idles.
+        for (const client of [a, b]) {
+          const seat = room.state.seats.find(candidate => candidate.seatId === client.seatId)!;
+          if (phase() === 'choice' && seat.alive && seat.match.phase === 'choice' && seat.match.pendingChoice?.step === 'offer') {
+            const pending = seat.match.pendingChoice;
+            const receipt = await client.command({ type: 'choose', choiceId: pending.choiceId, generation: pending.generation, definitionId: pending.offers[0]! }, { round: room.state.round, seatRevision: seat.seatRevision });
+            expectOk(receipt);
+          }
         }
+        const nextAt = clock.nextAt;
+        if (nextAt === undefined) break;
+        groupEnd = Math.max(clock.now(), nextAt);
       }
-      if (phase() !== 'ended' && !harness.clock.runNext()) break;
+      if (!clock.fireNext()) break;
+      if (clock.nextAt === undefined || clock.nextAt > groupEnd) groupEnd = undefined;
     }
+    return { harness, a, b, room, phase };
+  }
+  // One actual connection pair and one command/timer stream, cached across round cases.
+  for (let round = 1; round <= 60; round++) for (let part = 1; part <= 16; part++) it(`wire route toward round ${round}, part ${part}`, async () => { await through(round); });
+
+  it('drives two clients from the queue to a full ranking with replays on the manual clock', async () => {
+    const { a, b, room, phase } = await through(Infinity, Infinity);
     expect(phase()).toBe('ended');
     const [endedA, endedB] = await Promise.all([a, b].map(client => client.waitForView(view => view.phase.kind === 'ended', 20_000)));
     // B7: overtime runs until one seat is left, so the match ends with a full ranking.
@@ -50,5 +68,5 @@ describe('game server: whole match over the wire', () => {
     console.log(`[c6-wire] seat A whole match bytes by type ${JSON.stringify(byType)}`);
     expect(Math.max(...a.inbox.map(bytes))).toBeGreaterThan(0);
     // B6: the six fill-in bots now play (full boards, longer battles and frames), so the match takes longer on the wire.
-  }, 150_000);
+  });
 });
