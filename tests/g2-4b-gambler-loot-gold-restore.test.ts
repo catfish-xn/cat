@@ -4,6 +4,10 @@ import {isAnvil} from '../src/simulation/content/anvils';
 import {restoreMatch, serializeMatch} from '../src/simulation/serialization';
 import type {MatchState} from '../src/simulation/match-types';
 import {accepted} from './fixtures/r3r4-public';
+import {room, fight, accept} from './tp-helpers';
+import {runSharedMatchCommand, restoreSharedOrbSnapshot} from '../src/simulation/shared-pool';
+import {forfeitTerminalOrbs} from '../src/server-entry';
+import {readLootView} from '../src/simulation/loot-view';
 
 const blade = 'TFT7_Item_ShimmerscaleGamblersBlade';
 function prepare(equipped = true): MatchState {
@@ -49,6 +53,11 @@ it('restores real same-round PvE gold and Gambler in combat and settlement, then
   accepts(state);
   const opening = state.gold;
   state = finish(state);
+  expect(state.m8.loot.receipts.map(r => r.payload)).toEqual([
+    {kind:'item', definitionId:'sword', quantity:1},
+    {kind:'unit', definitionId:'scar', quantity:1},
+    {kind:'gold', quantity:3},
+  ]);
   expect(state.roundResults.at(-1)!.goldBefore).toBe(opening + 3);
   expect(state.combatInputBasis!.inputs.bankGold).toBe(opening);
   accepts(state);
@@ -60,6 +69,37 @@ it('restores real same-round PvE gold and Gambler in combat and settlement, then
   state = finish(state);
   expect(state.roundResults.at(-1)!.goldBefore).toBe(noLootOpening);
   accepts(state);
+});
+
+it('rejects changing paid solo gold to a structurally valid forfeited receipt', () => {
+  const state = finish(accepted(startMatchCombat(prepare()))), saved = serializeMatch(state);
+  const bad = structuredClone(state), receipt = bad.m8.loot.receipts.find(r => r.payload.kind === 'gold')!;
+  // Supply all resolution fields, so the structural receipt validator accepts
+  // the forgery and combat-bank authority must account for its zero payment.
+  Object.assign(receipt, {resolution:'forfeited', gold:0, claimedRoundId:state.roundDefinitionId});
+  rejects(bad);
+  for (const input of [bad, JSON.stringify(bad)])
+    expect(() => restoreMatch(input)).toThrowError(/^Invalid combat input basis$/);
+  expect(serializeMatch(state)).toBe(saved);
+});
+
+it('rejects both directions of real online receipt forfeiture flips', () => {
+  const initial = room(undefined, 1, 1), done = fight(initial.pool, initial.states[0]);
+  const orb = readLootView(done.state).unclaimedOrbs!.find(o => o.entries.some(e => e.kind === 'gold'))!;
+  expect(orb).toBeDefined();
+  const paid = accept(runSharedMatchCommand(done.pool, done.state, {type:'claimOrb', round:done.state.round, orbId:orb.orbId}));
+  const forfeited = forfeitTerminalOrbs(done.state).state;
+  for (const {state:original, pool} of [paid, {state:forfeited, pool:done.pool}]) {
+    expect(restoreSharedOrbSnapshot(pool, original)).toEqual(original);
+    expect(restoreSharedOrbSnapshot(pool, JSON.stringify(original))).toEqual(original);
+    const saved = JSON.stringify(original), bad = structuredClone(original);
+    const receipt = bad.m8.loot.receipts.find(r => r.payload.kind === 'gold')!;
+    expect(receipt.resolution).toBe(original === paid.state ? 'held' : 'forfeited');
+    Object.assign(receipt, original === paid.state ? {resolution:'forfeited', gold:0} : {resolution:'held', gold:receipt.payload.quantity});
+    for (const input of [bad, JSON.stringify(bad)])
+      expect(() => restoreSharedOrbSnapshot(pool, input)).toThrowError(/^Invalid multiplayer orb ledger: receipt status$/);
+    expect(JSON.stringify(original)).toBe(saved);
+  }
 });
 
 it('rejects blade +/-1 and shifting PvE loot into or out of its authenticated combat basis', () => {

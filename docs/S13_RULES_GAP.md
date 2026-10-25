@@ -1,5 +1,13 @@
 > 当前规则纪元：**v22-online-rules**（`rulesVersion s13-g2-3-v22-online-rules`，基线 multiplayer 8715a2c1，PR #435）。下列标“已随 v22 录制”的条目都已进入该纪元。
 
+## 2026-10-25 B8 恢复收据与赌徒之刃开战金币认证（P）
+
+**P-B8-RESTORE-RECEIPTS（P，2026-10-25，用户授权按推荐决定）**：仅加固恢复认证，不改玩法、数值、存档格式或内容身份。单人结算后的开战金币保持严格相等认证，从 `goldBefore` 扣除本回合实际交易且未 forfeited 的收据金币：显式收据使用 `gold`，旧式单人收据使用 gold payload 的 quantity；联机奖励在经济结算之后领取，不扣除。来源回合只用于定位旧式收据，不再作为发放金额的依据。
+
+保留 `receipt order` 的 `ordinal >= sourceOrdinal` 防御条件。当前单人恢复路径中，该失败分支不可达：`restoreFrozenLootLedger` 先确定性重放认证槽位 `roundId` 与 `dropId`；随后 `validateResourceReceipts` 从相同 `dropId` 解出来源回合并要求领取 ordinal 不小于来源 ordinal；单人目录范围内两个查询器使用同一 `ROUND_CATALOG`。不带 claimedRoundId 时两者本来相等；带该字段时已满足前置下界。改槽位或 dropId 无法绕过冻结重放；联机在入口走独立验证并提前返回。因此不人为绕过前置校验制造该分支覆盖，保留真实流程提前领取、冻结来源篡改与领取顺序交换测试，后者仍精确触发 `receipt order`。
+
+回归：`tests/b8-late-claim-receipt-order.test.ts`、`tests/g2-4b-gambler-loot-gold-restore.test.ts`；覆盖真实单人金币收据改为 forfeited、真实联机领取／放弃收据双向翻转，以及严格的开战金币 ±1 与抵消篡改。
+
 ## 2026-10-25 技能 ignite 的历史状态身份与恢复认证（P）
 
 **P-IGNITE-RESTORE（P，2026-10-25，用户授权按推荐决定）**：保留 Powder／Rumble 的既有 ignite 输出：`combat-g2.ts` 的 `ignite` 顺序执行 `burn(ticks)` 两个声明，burn 与 wound 共用同一 ability source/effect key，显示锚点也共用。它与通用 `validateStatusGroups` 的跨组 key 唯一性假设不一致；Blistering Strikes 自身的 burn/wound effectIndex 不同，不是错误来源。为遵守本次“不改玩法、数值、存档格式、合法回放输出”的约束，不改写历史身份或放宽通用状态校验；由已经认证的开战 strategy 中的 Powder／Rumble 启用已有的完整战斗重放认证，仅在可信输入重建的整个 CombatState 与候选 canonical 内容完全相同时恢复。候选自己声明技能或重复 key 不能开启例外；任何贡献、显示投影、周期任务或账本篡改仍会失败。复用输入绑定、与候选运行态隔离的重放缓存。该决定只调整恢复认证路径，不改变规则身份或内容 digest。

@@ -188,9 +188,14 @@ function combatBankGold(state: MatchState): number {
   const result = state.roundResults[state.round - 1];
   if (!result) return state.gold;
   const drops = state.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === result.roundId)?.encounterPlan.drops ?? [];
-  const granted = new Set(state.m8.loot.receipts.map(receipt => receipt.dropId));
-  const lootGold = state.multiplayer ? 0 : drops.reduce((sum, drop) =>
-    sum + (drop.payload.kind === 'gold' && granted.has(drop.dropId) ? drop.payload.quantity : 0), 0);
+  const currentDrops = new Set(drops.map(drop => drop.dropId));
+  const lootGold = state.multiplayer ? 0 : state.m8.loot.receipts.reduce((sum, receipt) => {
+    const current = receipt.claimedRoundId === undefined ? currentDrops.has(receipt.dropId) : receipt.claimedRoundId === result.roundId;
+    if (!current || receipt.resolution === 'forfeited') return sum;
+    // Explicit resolutions record the actual payment (including unit conversion);
+    // legacy solo receipts record gold directly in their authenticated payload.
+    return sum + (receipt.gold ?? (receipt.payload.kind === 'gold' ? receipt.payload.quantity : 0));
+  }, 0);
   return result.goldBefore - lootGold;
 }
 
@@ -288,6 +293,12 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     const slot = slots.get(receipt.dropId); check(slot, 'receipt identity');
     // Receipts are appended in transaction order: a retained orb claimed in a later round carries that round as
     // claimedRoundId, never earlier than the orb's own round.
+    // The source lower bound is defensive under the current validation order:
+    // restoreFrozenLootLedger authenticates slot.roundId and its dropId together;
+    // validateResourceReceipts above requires claim ordinal >= the source encoded
+    // in that same dropId (both selectors use ROUND_CATALOG for solo rounds).
+    // Thus ordinal < sourceOrdinal cannot reach this loop; transaction-order
+    // inversions between otherwise valid receipts still reach receiptRound.
     const sourceOrdinal = getCatalogRoundById(slot.roundId).ordinal;
     const ordinal = receipt.claimedRoundId === undefined ? sourceOrdinal : getCatalogRoundById(receipt.claimedRoundId).ordinal;
     check(ordinal >= sourceOrdinal && ordinal >= receiptRound, 'receipt order'); receiptRound = ordinal;
