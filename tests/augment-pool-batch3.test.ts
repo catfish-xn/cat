@@ -652,9 +652,9 @@ function openAt(id:string,seed:number):MatchState|undefined {
  const c=s.pendingChoice;return c?.kind==='augment'&&c.offers.includes(id)?s:undefined;
 }
 /** Pinned results of publicPick's seed search (the first seed from 0 whose openAt offers the card) for cards whose
- * search replays a slow route per seed: the Golden Egg's concede route to 4-2 (pool expansion re-searched 2026-10-25).
+ * search replays a slow route per seed: the Golden Egg's concede route to 4-2 (pool expansion re-searched 2026-10-25; seed 6 on the 224-card batch-4 pool).
  * The pinned seed must still open the offer; re-run the search if the pool, openings or route change. */
-const PINNED_OPEN_SEEDS:Readonly<Record<string,number>>={'the-golden-egg':0};
+const PINNED_OPEN_SEEDS:Readonly<Record<string,number>>={'the-golden-egg':6};
 function publicOpen(id:string):MatchState {
  const seed=PINNED_OPEN_SEEDS[id];if(seed===undefined)return publicPick(id,6000,0,false);
  const s=openAt(id,seed);expect(s?.pendingChoice?.offers,`${id} at seed ${seed}`).toContain(id);return s!;
@@ -873,7 +873,7 @@ it('Call to Chaos public pick at 4-2: the outcome is granted once and the save r
  expect(open.pendingChoice?.offers,'call-to-chaos at 4-2 seed '+STAGE_SEEDS['call-to-chaos'].seed).toContain('call-to-chaos');
  const s=accept(selectChoice(open,c.choiceId,c.generation,'call-to-chaos') as any).state as MatchState,a=s.augments.at(-1)!;
  const o=callToChaosOutcome(s,a);
- expect(o).toBe('xp'); // Batch4 pool seed 74 keeps this public route on the acquisition XP branch.
+ expect(o).toBe('xp'); // 224-card batch-4 pool: seed 115 keeps this public route on the acquisition XP branch.
  expect(restoreMatch(serializeMatch(s))).toEqual(s);
  if(o==='xp')expect(s.xp+s.level*1000).not.toBe(open.xp+open.level*1000);
  // Forging another outcome's reward is rejected: an extra 58-gold receipt has no plan behind it.

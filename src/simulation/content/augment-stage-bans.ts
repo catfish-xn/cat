@@ -15,6 +15,13 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT7_Augment_BirthdayPresents":["3-2", "4-2"],
   "TFT9_Augment_BardPlaybook3":["3-2", "4-2"],
 
+  "TFT6_Augment_ClearMind":['3-2','4-2'],
+  "TFT7_Augment_ClutteredMind":['3-2','4-2'],
+  "TFT11_Augment_Slammin":['3-2','4-2'],
+  "TFT11_Augment_Slammin_Plus":['2-1','4-2'],
+  "TFT_Augment_PatienceIsAVirtue":['3-2','4-2'],
+  "TFT_Augment_InvestedPlus":['2-1','4-2'],
+  "TFT_Augment_InvestedPlusPlus":['2-1','3-2'],
   "TFT_Augment_CategoryFive":['4-2'],
   "TFT_Augment_Overheal":['2-1'],
   "TFT_Augment_SatedSpellweaver":['2-1'],

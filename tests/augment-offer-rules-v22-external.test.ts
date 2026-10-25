@@ -102,7 +102,7 @@ describe('v22 one-per-match in the shared round advance and the room', () => {
     // The mock now aliases enabled batch-2 cards; onePerMatch is keyed by apiName.
     // Independently close each known alias group when any internal ID was shown.
     const blockedAliases=(ids:string[])=>[...new Set([...ids,...[
-      ['menaces','crimson-pact'],['reunion','welcome-to-the-playground'],['sisters','black-rose-crest'],
+      ['menaces','crimson-pact'],['reunion','welcome-to-the-playground'],['sisters','black-rose-crest'],['all-out','geniuses'],
     ].flatMap(group=>group.some(id=>ids.includes(id))?group:[])])].sort();
     const shownBefore: string[] = [];
     // A shown card blocks every pool id with its apiName; the remap above gives Crimson Pact and Menaces one apiName.

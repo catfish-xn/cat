@@ -30,13 +30,16 @@ function fight(context:MatchState,battles:BattleRecord[]):MatchState {
  return resolveM5Choices(s);
 }
 function opening(id:string):{state:MatchState;battles:BattleRecord[];before:MatchState} {
- const node=id==='slammin-plus'?'3-2':'2-1',seed=id==='slammin-plus'?PLUS_SEED:firstNodeSeed(id),battles:BattleRecord[]=[];
+ const node=id==='slammin-plus'?'3-2':'2-1',seed=id==='slammin-plus'?PLUS_SEED:OPEN_SEEDS[id]??firstNodeSeed(id),battles:BattleRecord[]=[];
  let s=createMatch(seed);
  while(s.roundDefinitionId!==node){s=resolveM5Choices(s);if(s.phase==='preparation')s=fight(emptyBoard(s),battles);s=accepted(nextRound(s,s.round));}
  const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
  s=accepted(selectChoice(s,c.choiceId,c.generation,id));return {state:s,battles,before};
 }
-const PLUS_SEED=18; // deterministic public 3-2 offer, searched on this pool
+const PLUS_SEED=19; // deterministic public 3-2 offer: first seed on the 224-card batch-4 pool
+/** firstNodeSeed('clear-mind') on the 224-card batch-4 pool, pinned so the 112-seed scan is not repeated per case;
+ * opening() still asserts the offer. Re-run firstNodeSeed if the pool or openings change. */
+const OPEN_SEEDS:Readonly<Record<string,number>>={'clear-mind':112};
 function emptyInventory(state:MatchState):MatchState {
  let s=state;
  for(let tries=0;s.items.some(i=>i.location.kind==='inventory')&&tries<30;tries++){

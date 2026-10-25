@@ -75,7 +75,7 @@ const targets=[['invested-plus','3-2'],['invested-plus-plus','4-2']] as const;
 for(const [id,node] of targets){
  describe(id,()=>{
   it('initializes its public stage route',()=>{
-   const seed=id==='invested-plus'?91:12;
+   const seed=id==='invested-plus'?54:8; // first fielded-route seeds offering the card on the 224-card batch-4 pool
    routes.set(id,createMatch(seed));
   });
   for(const stop of ['1-2','1-3','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','3-2',...(node==='4-2'?['3-3','3-4','3-5','3-6','3-7','4-1','4-2']:[])])it(`public route ${stop}`,()=>{
