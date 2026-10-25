@@ -9,7 +9,7 @@
  *
  * Nothing here computes a rule: the mapping only renames and drops fields.
  */
-import { toCombatViewEvents } from '../server-entry';
+import { toCombatViewEvents } from '../simulation/combat-replay-view';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import type { CombatViewEvent, CombatViewUnit } from '../simulation/combat-replay-view';
 import type { Source } from '../simulation/m8/contracts';
