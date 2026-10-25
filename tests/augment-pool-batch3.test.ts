@@ -1,9 +1,9 @@
 import { isAnvil } from '../src/simulation/content/anvils';
 import { AUGMENT_POOL_TEXT } from '../src/presentation/augment-pool-text';
 import { RULES_GAP_MANIFEST, ARCHIVED_AUGMENT_DEFINITIONS } from '../scripts/augment-content-archive';
-import { offerFor } from './augment-stage-helpers';
+import { offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import { readFileSync } from 'node:fs';
-import { expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
 import { advanceG23Economy, type G23BattleFacts } from '../src/simulation/g2-3-economy';
@@ -41,7 +41,7 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { ad, spellCrit, amount as amountAt } from '../src/simulation/combat-s13-state';
 const amountOf=(u:any,key:string)=>amountAt(u,0,{ap:u.ability.variables[key]/10000});
 import { accept, room } from './tp-helpers';
-import { reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
+import { reachRound, resolveM5Choices, emptyBoard, fieldBench, accepted } from './match-helpers';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { snapshotForBattle, restorePlayerBattleSnapshot } from '../src/simulation/two-sided-snapshot';
 
@@ -348,7 +348,7 @@ it('Noble Sacrifice grants from a real ally death restore exactly, and an edited
   }
  }
  expect(found).toBe(true);
-},600000);
+});
 
 it('Bad Luck Protection: the team never deals a critical hit and gains 1% AD per 1% crit chance; RNG consumption is unchanged', ()=>{
  const run=(augments:string[])=>{
@@ -651,7 +651,14 @@ function openAt(id:string,seed:number):MatchState|undefined {
  for(let slot=0;node!=='2-1'&&slot<3&&s.pendingChoice?.kind==='augment'&&!s.pendingChoice.offers.includes(id);slot++){const c=s.pendingChoice,r=rerollAugment(s,c.choiceId,c.generation,slot);if(r.ok)s=r.state;}
  const c=s.pendingChoice;return c?.kind==='augment'&&c.offers.includes(id)?s:undefined;
 }
-const publicOpen=(id:string)=>publicPick(id,6000,0,false);
+/** Pinned results of publicPick's seed search (the first seed from 0 whose openAt offers the card) for cards whose
+ * search replays a slow route per seed: the Golden Egg's concede route to 4-2 (about 0.4 s per seed, eight misses).
+ * The pinned seed must still open the offer; re-run the search if the pool, openings or route change. */
+const PINNED_OPEN_SEEDS:Readonly<Record<string,number>>={'the-golden-egg':8};
+function publicOpen(id:string):MatchState {
+ const seed=PINNED_OPEN_SEEDS[id];if(seed===undefined)return publicPick(id,6000,0,false);
+ const s=openAt(id,seed);expect(s?.pendingChoice?.offers,`${id} at seed ${seed}`).toContain(id);return s!;
+}
 /** A public offer of `id` at its first allowed augment node (14.24 stage tags); later nodes also use the free card rerolls. */
 function publicPick(id:string,maxSeed=6000,from=0,buy=true):MatchState {
  for(let seed=from;seed<maxSeed;seed++){
@@ -837,9 +844,33 @@ it('Call to Chaos: ten equal outcomes on a seat/choice stream, each granting its
  expect(outcomeAcquisitionXp(seen.get('gold')!,seen.get('gold')!.augments[0])).toBe(0);
 });
 
+// Global 14.24 stage bans: Call to Chaos's first public 4-2 offer is STAGE_SEEDS' fielded route (augment-stage-helpers
+// offerFor = reachRoundFielded('4-2', seed)). That route fights seventeen real battles, so it is played here in legs of
+// a few fights, one beforeAll hook per leg (so a filtered case gets the whole route, no hook or case plays it all);
+// each leg is reachRoundFielded's loop verbatim.
+const CHAOS_LEGS=['2-3','2-7','3-3','3-6','4-2'] as const;
+const chaosRoute=new Map<string,MatchState>();
+function chaosLeg(leg:typeof CHAOS_LEGS[number]):MatchState {
+ const cached=chaosRoute.get(leg);if(cached)return cached;
+ const i=CHAOS_LEGS.indexOf(leg);let state=i===0?createMatch(STAGE_SEEDS['call-to-chaos'].seed):chaosLeg(CHAOS_LEGS[i-1]);
+ while(state.roundDefinitionId!==leg){
+  state=resolveM5Choices(state);
+  if(state.phase==='preparation'){state=accepted(startMatchCombat(fieldBench(state)));while(state.phase==='combat')state=stepMatch(state).state;}
+  state=resolveM5Choices(state);
+  if(state.phase!=='settlement')throw new Error(`Cannot reach ${leg} from ${state.roundDefinitionId}/${state.phase}`);
+  state=accepted(nextRound(state,state.round));
+ }
+ chaosRoute.set(leg,state);return state;
+}
+describe('Call to Chaos at 4-2', ()=>{
+for(const leg of CHAOS_LEGS)beforeAll(()=>{chaosLeg(leg);});
+it.each(CHAOS_LEGS)('Call to Chaos fielded 4-2 route: the leg to %s settles every fight', leg=>{
+ expect(STAGE_SEEDS['call-to-chaos']).toMatchObject({node:'4-2',fielded:true});expect(offeredAt('call-to-chaos','2-1')).toBe(false);
+ expect(chaosLeg(leg).roundDefinitionId).toBe(leg);
+});
 it('Call to Chaos public pick at 4-2: the outcome is granted once and the save restores (XP branch through the acquisition XP chain)', ()=>{
- // Global 14.24 stage bans: its first public 4-2 offer is in tests/augment-stage-helpers.ts (fielded 4-2 route).
- const open=offerFor('call-to-chaos'),c=open.pendingChoice!;
+ const open=chaosLeg('4-2'),c=open.pendingChoice!;
+ expect(open.pendingChoice?.offers,'call-to-chaos at 4-2 seed '+STAGE_SEEDS['call-to-chaos'].seed).toContain('call-to-chaos');
  const s=accept(selectChoice(open,c.choiceId,c.generation,'call-to-chaos') as any).state as MatchState,a=s.augments.at(-1)!;
  const o=callToChaosOutcome(s,a);
  expect(restoreMatch(serializeMatch(s))).toEqual(s);
@@ -848,7 +879,8 @@ it('Call to Chaos public pick at 4-2: the outcome is granted once and the save r
  const forged=structuredClone(s) as any;
  forged.seatMechanics.receipts.push({kind:'gold',receiptId:JSON.stringify(['augment-pool-batch3',a.choiceId,9,9]),source:'augment-pool-batch3',amount:58,round:s.round});
  forged.gold+=58;expect(()=>restoreMatch(serializeMatch(forged))).toThrow();
-},120_000);
+});
+});
 
 it('Worth the Wait through a real carousel: the 2-4 copy waits for 2-5 and every save on the way restores', ()=>{
  let s=publicOpen('worth-the-wait');const c=s.pendingChoice!;
@@ -869,4 +901,4 @@ it('Worth the Wait through a real carousel: the 2-4 copy waits for 2-5 and every
  const rounds=copies().map(r=>r.round);
  expect(rounds.every(r=>getMultiplayerRoundByOrdinal(r).kind!=='supply'&&r>=acquired+2)).toBe(true);
  expect(rounds.length).toBe(Array.from({length:s.round-acquired-1},(_,i)=>acquired+2+i).length);
-},120_000);
+});

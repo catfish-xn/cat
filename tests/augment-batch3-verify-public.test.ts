@@ -1,7 +1,5 @@
 import { openingEncounter } from './fixtures/m5/oracle.g2.cjs';
-import { expect, it, vi } from 'vitest';
-// Public seed discovery and replay-authenticated restores are CPU-bound on shared runners.
-vi.setConfig({testTimeout:300000});
+import { expect, it } from 'vitest';
 import { createMatch, selectChoice, rerollShop, nextRound, startMatchCombat, stepMatch, deployMatchUnit, sellUnit, buyUnit, buyXp, type MatchState } from '../src/simulation/match';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
@@ -15,9 +13,7 @@ import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/c
 // Source for each expectation: augments-research-2026-10-23/data/augments-14.24.json,
 // identified by apiName in augment-batch3-verify-source.test.ts. No grant/planning internals used.
 // Public seed search only finds an offered card: never inject owned augments, resources or receipts.
-const offerSeeds=new Map<string,number>();
 const selected=new Map<string,{before:MatchState;state:MatchState}>();
-let nextSeed=0;
 // Batch 3 stage tags (14.24 ItemTags, after this review): cards never offered at 2-1 are picked at their first allowed node.
 const firstNode=(id:string)=>(['2-1','3-2','4-2'] as const).find(n=>!((AUGMENT_OFFER_RULES.nodeBans as Readonly<Record<string,readonly string[]>>)[AUGMENT_POOL_API_NAMES[id]]??[]).includes(n))!;
 // Hero cards at 3-2/4-2 are trait-tailored (record 89: Savage Revenge needs a fielded Bruiser).
@@ -55,29 +51,30 @@ function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
  }
  return state;
 }
-function pickLater(id:string,node:'3-2'|'4-2') {
- for(let seed=0;seed<600;seed++){
-  let before:MatchState;try{before=reachNode(node,seed,TAILORED[id]);}catch{continue;}
-  const c=before.pendingChoice;if(c?.kind!=='augment'||!c.offers.includes(id))continue;
-  const result={before,state:accepted(selectChoice(before,c.choiceId,c.generation,id))};
-  selected.set(id,result);return result;
- }
- throw new Error('No public '+node+' offer: '+id);
-}
+/** Public offer seeds, pinned from the original search (repeating it cost up to 24 s per card):
+ * - 2-1 cards: the first seed from 0 (Trainer Golem openings skipped, at most 20000) whose cheap 2-1 draw offers the card;
+ * - later cards: the first seed from 0 (at most 600) whose reachNode route reaches the card's first allowed node and
+ *   offers it there.
+ * pick() re-proves the search condition for its seed on every run (the draw and the replayed route must offer the card);
+ * re-run the search above if the pool, the openings or the route change. */
+const PUBLIC_SEEDS:Readonly<Record<string,number>>={
+ 'team-building':100,'phreaky-friday':160,'shimmerscale-essence':10,'prizefighter':67,'building-a-collection-iii':14,'flexible':38,'living-forge':35,'superstars-i':194,'superstars-ii':75,'trade-sector':27,'support-mining':101,'scapegoat':85,'wandering-trainer-i':63,'wandering-trainer-ii':6,'gold-for-dummies':56,'tower-defense':5,'field-medic':109,'blade-dance':86,'shocking-troll':124,'all-out':18,'blood-pact':4,'worth-the-wait':27,'worth-the-wait-ii':7,'an-exalted-adventure':7,'latent-forge':31,'eye-for-an-eye':100,'what-doesnt-kill-you':41,'spoils-of-war-i':77,'spoils-of-war-ii':71,'spoils-of-war-iii':69,
+ 'phreaky-friday-plus':7,'dark-alley-dealings':7,'bad-luck-protection':20,'eye-for-an-eye-plus':6,'rolling-for-days-i':9,'support-mining-plus':68,'savage-revenge':14,'the-golden-egg':12,'corrosion':1,'blazing-soul-i':45,'blazing-soul-ii':13,'noble-sacrifice':31,'wealthy-rehab-i':69,'wealthy-rehab-ii':10,
+};
 function pick(id:string) {
  const cached=selected.get(id);if(cached)return cached;
- const node=firstNode(id);if(node!=='2-1')return pickLater(id,node);
- while(!offerSeeds.has(id)&&nextSeed<20000){
-  const seed=nextSeed++;
+ const node=firstNode(id),seed=PUBLIC_SEEDS[id];
+ if(seed===undefined)throw new Error('No pinned public seed: '+id);
+ let before:MatchState;
+ if(node==='2-1'){
   // v23 fmix32 openings: Trainer Golem seeds are skipped (the unbenchable golem blocks reachRound's empty board).
-  if(openingEncounter(seed)==='trainer-golems')continue;
+  expect(openingEncounter(seed)).not.toBe('trainer-golems');
   const root=createMatch(seed);
-  const offers=generateChoices(augmentCandidates(resolveAugmentTier(root,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),root.choiceRngState).offers;
-  for(const offered of offers)if(!offerSeeds.has(offered))offerSeeds.set(offered,seed);
- }
- const seed=offerSeeds.get(id);if(seed===undefined)throw new Error('No public offer within 20000 seeds: '+id);
- const before=reachRound('2-1',false,seed),c=before.pendingChoice!;
- expect(c.offers).toContain(id);
+  expect(generateChoices(augmentCandidates(resolveAugmentTier(root,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),root.choiceRngState).offers).toContain(id);
+  before=reachRound('2-1',false,seed);
+ }else before=reachNode(node,seed,TAILORED[id]);
+ const c=before.pendingChoice!;
+ expect(c.kind).toBe('augment');expect(c.offers).toContain(id);
  const result={before,state:accepted(selectChoice(before,c.choiceId,c.generation,id))};
  selected.set(id,result);return result;
 }
@@ -251,7 +248,7 @@ it.each([
  const edited=JSON.parse(serializeMatch(s));
  edited.seatMechanics.receipts=edited.seatMechanics.receipts.filter((r:{receiptId:string})=>r.receiptId!==late.receiptId);
  expect(()=>restoreMatch(JSON.stringify(edited))).toThrow();
-},300000);
+});
 
 it('G1 What Doesnt Kill You: 2 gold for each real PvP loss, component exactly on the fourth (record 214)',()=>{
  let s=pick('what-doesnt-kill-you').state;const acquired=s.round;
@@ -360,10 +357,10 @@ it.each([['support-mining',7],['support-mining-plus',4]] as const)('G5 %s: actua
  const s=mine(id,threshold);
  const r=s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch1'&&r.kind==='item'&&r.receiptId.includes('"'+id+'"'));
  expect(r).toHaveLength(1);
-},300000);
+});
 // B3-V2 (fixed): the settlement suffix replay consumes the dummy's unit-removed retirement fact.
-it('G5 normal Support Mining retirement save restores',()=>roundTrip(mine('support-mining',7)),300000);
-it('G5 Support Mining Plus retirement save restores',()=>roundTrip(mine('support-mining-plus',4)),300000);
+it('G5 normal Support Mining retirement save restores',()=>roundTrip(mine('support-mining',7)));
+it('G5 Support Mining Plus retirement save restores',()=>roundTrip(mine('support-mining-plus',4)));
 
 it('G8 Golden Egg: actual public round entries hatch once at eleven without wins (record 296)',()=>{
  let s=pick('the-golden-egg').state;const acquired=s.round;
@@ -379,9 +376,9 @@ it('G8 Golden Egg: actual public round entries hatch once at eleven without wins
   if(entry===11){roundTrip(s);const bad=JSON.parse(serializeMatch(s));bad.seatMechanics.receipts=bad.seatMechanics.receipts.filter((r:{receiptId:string})=>!r.receiptId.includes('"the-golden-egg"'));expect(()=>restoreMatch(JSON.stringify(bad))).toThrow();}
  }
  expect(new Set(receipts().map(r=>r.round))).toEqual(new Set([acquired+11]));
-},300000);
+});
 
 // B3-V2 (fixed): the valid public terminal also restores directly, independently of serializeMatch preflight.
 it.each([['support-mining',7],['support-mining-plus',4]] as const)('B3-V2 %s direct restore accepts legitimate retirement', (id,threshold)=>{
  const s=mine(id,threshold);expect(restoreMatch(JSON.stringify(s))).toEqual(s);
-},300000);
+});
