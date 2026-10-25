@@ -721,7 +721,13 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   deathAnomalies(ctx);
   deathG23Sion(ctx);
   settleSixCostDeaths(ctx,killed);
-  if(hasBanish){const suspended=fullRoster.filter(u=>isAbsent(u,tick));fullRoster.splice(0,fullRoster.length,...units,...suspended);}
+  if(hasBanish){
+    // A first-death Sion is already in units when it becomes absent at this barrier.
+    // Active identities take precedence; only append missing suspended identities.
+    const rosterById=new Map(units.map(u=>[u.id,u]));
+    for(const unit of fullRoster)if(isAbsent(unit,tick)&&!rosterById.has(unit.id))rosterById.set(unit.id,unit);
+    fullRoster.splice(0,fullRoster.length,...rosterById.values());
+  }
   // G2-4b: only true zero-HP deaths notify item declarations before cleanup.
   // Trench replacement removes a surviving holder and must not emit holder-death.
   if (hasMechanismSubscriber(units, 'holder-death')) for (const unit of units.filter(u => u.alive && u.hp === 0))
