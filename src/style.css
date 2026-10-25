@@ -1541,3 +1541,24 @@ body[data-online]:has(> .render3d-layer) .fullscreen-toggle { right: auto; left:
   body[data-online]:has(> .render3d-layer) .shop-dock .shop-odds { max-width: 100%; }
   body[data-online]:has(> .render3d-layer) .fullscreen-toggle { left: auto; right: 8px; bottom: calc(var(--online-dock-h) + 16px); }
 }
+
+/* Online 3D encounter: a reserved 80px band above the left rails. Fixed positioning avoids
+   the board frame's clipping/stacking context; progress stays in the tooltip and detail card. */
+body[data-online]:has(> .render3d-layer) .opening-chip {
+  position: fixed; left: 64px; right: auto; top: max(52px, calc(20dvh - 80px));
+  width: 196px; max-width: 196px; min-height: 64px; box-sizing: border-box;
+  grid-template-columns: 32px minmax(0, 1fr); column-gap: 8px; align-content: center;
+  background: #221d10; z-index: 80;
+}
+.opening-chip-icon { display: none; }
+body[data-online]:has(> .render3d-layer) .opening-chip-icon { display: block; grid-row: 1 / 4; align-self: center; font-size: 28px; color: #ffd782; }
+body[data-online]:has(> .render3d-layer) .opening-chip-label,
+body[data-online]:has(> .render3d-layer) .opening-chip-name { grid-column: 2; overflow-wrap: anywhere; }
+body[data-online]:has(> .render3d-layer) .opening-chip-name { font-size: 14px; }
+body[data-online]:has(> .render3d-layer) .opening-chip-progress { display: none; }
+body[data-online]:has(> .render3d-layer) :is(#panels-root, .item-dock) { top: max(144px, 20dvh); }
+.opening-tooltip { position: fixed; z-index: 130; width: max-content; max-width: min(360px, calc(100vw - 16px));
+  box-sizing: border-box; padding: 12px; border: 1px solid #e8c36a; border-radius: 8px;
+  background: #161d26; color: #f6e7bd; font-size: 14px; line-height: 1.5; white-space: pre-line; pointer-events: none; }
+.opening-tooltip[hidden] { display: none; }
+body[data-online] .opening-card-close { min-width: 44px; min-height: 44px; }
