@@ -95,9 +95,21 @@ async function worker(){
   return;
  }
  const seed=42+index*997;
- const random=api.randomWalk(seed,100000,false,31);
+ const rate=Number(option('--checkpoint-rate',31));
+ assert.ok(Number.isSafeInteger(rate)&&rate>0);
+ const random=api.randomWalk(seed,100000,false,rate);
  assert.equal(random.state.phase,'gameOver');
  add({seed,build:'random',terminal:true,steps:random.probe.step,checkpoints:random.probe.checkpoints,continuations:random.probe.continuations,coverage:random.probe.coverage,failures:random.probe.failures});
+ // Explicit random-only mode keeps restore authentication independent of the
+ // separate economic route oracle. Default route coverage and assertions remain.
+ if(args.includes('--random-only')){
+  for(let n=1;runs.reduce((sum,r)=>sum+r.checkpoints,0)<target;n++){
+   const nextSeed=seed+n*17,next=api.randomWalk(nextSeed,100000,false,rate);
+   assert.equal(next.state.phase,'gameOver');
+   add({seed:nextSeed,build:'random',terminal:true,steps:next.probe.step,checkpoints:next.probe.checkpoints,continuations:next.probe.continuations,coverage:next.probe.coverage,failures:next.probe.failures});
+  }
+  return;
+ }
  // At least one full route per build across the four workers, plus real server bots.
  add(await routeMatch(api,seed,['cannon','sniper','mage'][index%3]));
  if(index===0)add(await serverMatch(api,seed));
@@ -118,15 +130,15 @@ async function main(){
  const extra=args.includes('--server-only')?['--server-only','--seed',option('--seed',42)]:args.includes('--replay-step')?['--replay-step',option('--replay-step'),'--seed',option('--seed',42),'--build',option('--build','cannon'),'--from-step',option('--from-step',0)]:[];
  const results=await Promise.all(Array.from({length:extra.length?1:workers},(_,index)=>new Promise((done,reject)=>{
   const file=join(directory,`worker-${index}.json`);
-  const child=fork(__filename,['--worker','--bundle',bundle,'--index',String(index),'--target',String(Math.ceil(target/workers)),'--result',file,...extra],{stdio:'inherit'});
+  const child=fork(__filename,['--worker','--bundle',bundle,'--index',String(index),'--target',String(Math.ceil(target/workers)),'--result',file,...extra,...(args.includes('--random-only')?['--random-only']:[]),'--checkpoint-rate',option('--checkpoint-rate',31)],{stdio:'inherit'});
   child.on('error',reject);child.on('exit',code=>{if(code!==0)return reject(Error(`worker ${index} exited ${code}; partial evidence: ${directory}`));done(JSON.parse(readFileSync(file,'utf8')));});
  })));
  const runs=results.flatMap(r=>r.runs),checkpoints=runs.reduce((n,r)=>n+r.checkpoints,0),failures=runs.flatMap(r=>r.failures);
  if(!extra.length)assert.ok(checkpoints>=target,`only ${checkpoints}/${target} checkpoints`);
- const report={node:process.version,workers:results.length,checkpoints,entranceAttempts:checkpoints*3,continuations:runs.reduce((n,r)=>n+r.continuations,0),runs,failures};
+ const report={node:process.version,mode:args.includes('--random-only')?'random-only':'mixed',checkpointRate:Number(option('--checkpoint-rate',31)),workers:results.length,checkpoints,entranceAttempts:checkpoints*3,continuations:runs.reduce((n,r)=>n+r.continuations,0),runs,failures};
  const output=resolve(option('-o','docs/V23_RESTORE_FUZZ_REPORT.md'));
  mkdirSync(require('node:path').dirname(output),{recursive:true});
- writeFileSync(output,`【完成】实现：tests/v23-restore-fuzz.test.ts:10、tests/fixtures/restore-fuzz.ts:28、scripts/fuzz-restore.cjs:1。\n【完成】并行 ${results.length} 进程，${runs.filter(r=>r.terminal).length} 完整对局，${checkpoints} 检查点，${checkpoints*3} 恢复入口尝试，${report.continuations} 续跑比较。\n【未完成】${failures.length?'存在恢复失败，详见同名 JSON；需按 seed/step 回放定位。':'无。'}\n【需要我决定】无；约定见 docs/S13_RULES_GAP.md。\n【风险】结果仅覆盖本次种子与构筑；真实联机席位不属于 Match 存档契约；服务器 BotDriver 使用单人薄适配器。\n【下一步】${failures.length?'最小化失败并补回归。':'保留命令与 JSON 供复跑。'}\n`);
+ writeFileSync(output,`【完成】实现：tests/v23-restore-fuzz.test.ts:10、tests/fixtures/restore-fuzz.ts:28、scripts/fuzz-restore.cjs:1。\n【完成】模式 ${report.mode}，并行 ${results.length} 进程，${runs.filter(r=>r.terminal).length} 完整对局，${checkpoints} 检查点，${checkpoints*3} 恢复入口尝试，${report.continuations} 续跑比较。\n【未完成】${failures.length?'存在恢复失败，详见同名 JSON；需按 seed/step 回放定位。':'无。'}\n【需要我决定】无；约定见 docs/S13_RULES_GAP.md。\n【风险】${report.mode==='random-only'?'本次未覆盖构筑路线或 BotDriver；':''}结果仅覆盖本次种子与轨迹；真实联机席位不属于 Match 存档契约；服务器 BotDriver 使用单人薄适配器。\n【下一步】${failures.length?'最小化失败并补回归。':'保留命令与 JSON 供复跑。'}\n`);
  writeFileSync(`${output}.json`,JSON.stringify(report,null,2));
  console.log(JSON.stringify({output,checkpoints,failures:failures.length}));
  rmSync(directory,{recursive:true,force:true});

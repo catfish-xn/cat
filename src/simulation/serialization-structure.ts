@@ -38,7 +38,7 @@ import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
 import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
-import { validateTaskAndSummonFacts } from './combat-runtime-facts';
+import { validateAbilityStatusFacts, validateTaskAndSummonFacts } from './combat-runtime-facts';
 import { createRestoreCombatReplay } from './restore-combat-replay';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
@@ -360,6 +360,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     if(!verifiedDynamic)validateMirrorOpening(combat,basis,expectedStrategy);
     const neutralStatuses = verifiedDynamic?new Set<string>():validateNeutralCombat(combat, combatPreparation, expectedStrategy, () => replay.atSaveTick().openingState);
     if(!verifiedDynamic)mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy, replay), 'resists shield replay');
+    const abilityStatuses = verifiedDynamic ? new Set<string>() : validateAbilityStatusFacts(combat, replay, same);
     const cells = new Set<string>();
     for (const unit of verifiedDynamic?[]:combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
@@ -398,9 +399,9 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }
       requireValue(unit.shield === 0 ? unit.shieldExpiresAtTick === null : Number.isSafeInteger(unit.shieldExpiresAtTick) && unit.shieldExpiresAtTick! > combat.tick, 'shield expiry');
       if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
-      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses, typeof input === 'string', expectedStrategy.traits);
+      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses, typeof input === 'string', expectedStrategy.traits, abilityStatuses);
       record(unit.ability); integer(unit.ability.amount); requireValue(['damage','selfShield','s13'].includes(unit.ability.kind), 'ability kind');
-      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses, same,combat.nextActionSeq!);
+      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses, same,combat.nextActionSeq!, abilityStatuses);
       list(unit.sources); list(unit.triggers); list(unit.effectRuntime);
       const sourceKeys = new Set<string>();
       for (const source of unit.sources) { requireValue(source.key === effectKey(source.source) && source.source.ownerId === unit.id && !sourceKeys.has(source.key), 'source key'); sourceKeys.add(source.key); cloneEffect(source.effect); }
@@ -455,7 +456,7 @@ export function validateMatchStructureForSerialization(state: MatchState): Match
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them.
  * Exported for unit-level checks of combat-only equipment before it has an acquisition route. */
-export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
+export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number, abilityStatuses: ReadonlySet<string> = new Set()): void {
   if (unit.ability.kind !== 's13') return;
   validateG23State(unit,combatUnits,tick,nextActionSeq);
   validateP3State(unit,combatUnits,tick,nextActionSeq);
@@ -539,12 +540,12 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     const largestCoefficient = Math.max(10000, ...Object.values(unit.ability.variables));
     requireValue(Number.isSafeInteger(largestCoefficient * (1 + Math.floor(numerator / 10000) + unit.maxHp + unit.abilityPower! + maximumAp)), 'ability arithmetic bound');
   }
-  const origin = (source: import('./combat-types').CombatOrigin, neutralStatus = false, sionCharge = false) => {
+  const origin = (source: import('./combat-types').CombatOrigin, neutralStatus = false, sionCharge = false, replayedAbility = false) => {
     record(source); id(source.ownerId); id(source.definitionId); id(source.instanceId); integer(source.effectIndex);
     requireValue(combatIds.has(source.ownerId) && ['attack','ability','trait','item','augment','anomaly','enemyGrowth'].includes(source.sourceKind), 'runtime source');
     const owner = combatUnits.find(value => value.id === source.ownerId)!;
     if (source.sourceKind === 'ability' || source.sourceKind === 'attack') {
-      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && (source.effectIndex === 0 || neutralStatus
+      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && (source.effectIndex === 0 || neutralStatus || replayedAbility && source.sourceKind === 'ability'
         || sionCharge && source.sourceKind === 'ability' && owner.definitionId === 'g23-sion' && source.effectIndex === 1) && source.parentItemInstanceId == null, 'ability source identity');
     } else {
       requireValue(owner.sources?.some(entry => entry.source.ownerId === source.ownerId
@@ -565,7 +566,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
   requireValue(total === unit.shield && unit.shieldExpiresAtTick === (total ? Math.max(...unit.shieldLayers.filter(l => l.remaining > 0).map(l => l.expiresAtTick)) : null), 'shield aggregate');
   list(unit.statuses); const statusKeys = new Set<string>();
   for (const status of unit.statuses) {
-    record(status); origin(status.source, neutralStatuses.has(status.key), status.kind === 'stun'); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
+    record(status); origin(status.source, neutralStatuses.has(status.key), status.kind === 'stun', abilityStatuses.has(status.key)); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
     requireValue(Number.isSafeInteger(status.amount) && (status.amount >= 0 || status.kind === 'resistanceFlat') && !statusKeys.has(status.key) && status.expiresAtTick > tick && status.startsAtTick <= tick + 1, 'status range');
     requireValue(['stun','damageReduction','armorReduction','resistanceFlat','attackSpeed','abilityPower','channel','redirect'].includes(status.kind), 'status kind');
     requireValue(status.kind !== 'abilityPower' && (status.kind !== 'attackSpeed' || status.source.definitionId === 'singed-ability' || status.source.definitionId === 'firelight' || status.source.definitionId === 'jayce-ranged-ability'), 'unsupported dynamic status source');

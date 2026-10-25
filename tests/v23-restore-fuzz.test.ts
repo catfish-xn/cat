@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { randomWalk, seeded, RestoreProbe } from './fixtures/restore-fuzz';
+import { bytes, randomWalk, seeded, RestoreProbe } from './fixtures/restore-fuzz';
 import { readFileSync } from 'node:fs';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { Room, ROOM_TIMING_DEFAULTS } from '../src/server/room/room';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { ManualClock } from '../src/server/room/clock';
-import { createMatch, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, deployMatchUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+
+import { accepted, emptyBoard, reachRound } from './match-helpers';
+import { validateMechanisms } from '../src/simulation/m8/restore';
+import { validateAbilityStatusFacts } from '../src/simulation/combat-runtime-facts';
+import { createRestoreCombatReplay } from '../src/simulation/restore-combat-replay';
+import { grantMechanicUnit } from '../src/simulation/seat-mechanics';
 
 describe('v23 deterministic legitimate save/restore fuzz', () => {
   it('sampling RNG repeats exactly and does not use the match stream', () => {
@@ -33,6 +39,103 @@ describe('v23 deterministic legitimate save/restore fuzz', () => {
   }
 });
 
+const entrances = {
+  json: (state: MatchState) => restoreMatch(JSON.stringify(state)),
+  object: (state: MatchState) => restoreMatch(state),
+  serialized: (state: MatchState) => restoreMatch(serializeMatch(state)),
+};
+function rejectAbilityForgeries(state: MatchState, restore: (state: MatchState) => MatchState, rejection: string): void {
+  const unitIndex = state.combat!.units.findIndex(u => u.statuses?.some(s => s.source.sourceKind === 'ability'
+    && s.contributionKeys?.includes(s.key)));
+  expect(unitIndex).toBeGreaterThanOrEqual(0);
+  const replay = createRestoreCombatReplay(state.combatInputBasis!, state.combat!.strategy!, state.combat!.tick);
+  const mutations = [
+    (u: NonNullable<MatchState['combat']>['units'][number]) => { Object.assign(u, { statuses: u.statuses!.filter(s => s.source.sourceKind !== 'ability') }); },
+    (u: NonNullable<MatchState['combat']>['units'][number]) => { Object.assign(u.mechanismState!, { statuses: u.mechanismState!.statuses.map(g => ({ ...g, contributions: g.contributions.filter(c => c.source.sourceKind !== 'ability') })) }); },
+    (u: NonNullable<MatchState['combat']>['units'][number]) => { const s = u.statuses!.find(s => s.source.sourceKind === 'ability')!; Object.assign(s, { amount: s.amount + 1 }); },
+    (u: NonNullable<MatchState['combat']>['units'][number]) => { const s = u.statuses!.find(s => s.source.sourceKind === 'ability')!; Object.assign(s, { expiresAtTick: s.expiresAtTick + 1 }); },
+    (u: NonNullable<MatchState['combat']>['units'][number]) => {
+      const c = u.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.source.sourceKind === 'ability')!;
+      Object.assign(c, { source: { ...c.source, effectIndex: c.source.effectIndex + 1 } });
+    },
+    (u: NonNullable<MatchState['combat']>['units'][number]) => {
+      const c = u.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.source.sourceKind === 'ability')!;
+      Object.assign(c, { application: { ...c.application, magnitudeBps: c.application.magnitudeBps + 1 } });
+    },
+    (u: NonNullable<MatchState['combat']>['units'][number]) => {
+      const c = u.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.source.sourceKind === 'ability')!;
+      Object.assign(c, { appliedAtTick: c.appliedAtTick + 1 });
+    },
+    (u: NonNullable<MatchState['combat']>['units'][number]) => {
+      const c = u.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.source.sourceKind === 'ability')!;
+      Object.assign(c, { expiresAtTick: (c.expiresAtTick ?? 1201) + 1 });
+    },
+    (u: NonNullable<MatchState['combat']>['units'][number]) => {
+      const c = u.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.source.sourceKind === 'ability')!;
+      const status = u.statuses!.find(s => s.contributionKeys?.includes(c.key))!;
+      expect(c.application.modifier?.value.kind).toBe('constant');
+      if (c.application.modifier?.value.kind !== 'constant') throw Error('expected constant declaration');
+      const amount = c.application.modifier.value.amount - 1;
+      Object.assign(c, { application: { ...c.application, modifier: { ...c.application.modifier, value: { kind: 'constant', amount } } } });
+      Object.assign(status, { amount });
+    },
+    (u: NonNullable<MatchState['combat']>['units'][number]) => {
+      const c = u.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.source.sourceKind === 'ability')!;
+      const status = u.statuses!.find(s => s.contributionKeys?.includes(c.key))!;
+      Object.assign(c, { expiresAtTick: (c.expiresAtTick ?? 1201) + 1 });
+      Object.assign(status, { expiresAtTick: c.expiresAtTick });
+    },
+  ];
+  for (const mutate of mutations) {
+    const forged = structuredClone(state);
+    mutate(forged.combat!.units[unitIndex]);
+    expect(() => validateAbilityStatusFacts(forged.combat!, replay, (a, b) => bytes(a) === bytes(b)))
+      .toThrow('Invalid Match save: ability status binding facts');
+    expect(() => restore(forged)).toThrow(rejection);
+  }
+  expect(restore(state)).toEqual(state);
+}
+
+// Current-content public-command witnesses do not depend on epoch fixture identity.
+for (const definitionId of ['blitzcrank', 'ekko']) {
+  let witness: MatchState | undefined;
+  const currentWitness = () => {
+    if (witness) return witness;
+    let state = emptyBoard(reachRound('2-1', true, 12));
+    state = accepted(grantMechanicUnit(state, { receiptId: `restore-${definitionId}`, source: 'test', definitionId }));
+    const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
+    state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: { col: 3, row: 4 } }));
+    state = accepted(startMatchCombat(state));
+    const hasDeclaration = (s: MatchState) => s.combat!.units.some(u => u.statuses?.some(status =>
+      status.source.definitionId === `${definitionId}-ability` && status.contributionKeys?.includes(status.key)));
+    while (state.phase === 'combat' && !hasDeclaration(state)) state = stepMatch(state).state;
+    expect(hasDeclaration(state)).toBe(true);
+    const combat = state.combat!, strategy = combat.strategy!;
+    const replay = createRestoreCombatReplay(state.combatInputBasis!, strategy, combat.tick);
+    const proven = validateAbilityStatusFacts(combat, replay, (a, b) => bytes(a) === bytes(b));
+    // Exercise the structural adapter even when this battle uses full replay admission.
+    for (const u of combat.units) if (u.statuses?.some(s => s.source.definitionId === `${definitionId}-ability`))
+      validateMechanisms(u, combat.units, combat.tick, combat.combatId!, false, combat.nextActionSeq!, new Set(), false, strategy.traits, proven);
+    return witness = state;
+  };
+  for (const [entry, restore] of Object.entries(entrances)) {
+    it(`current-content ${definitionId} ${entry} rejects ability tampering`, () => {
+      rejectAbilityForgeries(currentWitness(), restore, definitionId === 'blitzcrank' ? 'Invalid authoritative Mirror forge replay' : 'Invalid Match save: ability status binding facts');
+    });
+    it(`current-content ${definitionId} ${entry} restores and continues byte-identically through battle end`, () => {
+      const state = currentWitness();
+      let live = state, restored = restore(state);
+      expect(bytes(restored)).toBe(bytes(live));
+      // Include refreshes, stacks, expiration and cleanup through the battle end.
+      while (live.phase === 'combat') {
+        const a = stepMatch(live), b = stepMatch(restored);
+        expect(bytes(b)).toBe(bytes(a));
+        live = a.state; restored = b.state;
+      }
+    });
+  }
+}
+
 // Minimized from full public-command walks. Only the last known-good predecessor is
 // stored: the production step itself creates each rejected legitimate state.
 // Reproduce: --replay-step 1282 --from-step 1281 --seed 2036 --build random
@@ -55,7 +158,7 @@ for (const [seed, step, tick, reason] of [
     for (const restore of Object.values(entrances)) expect(stepMatch(restore(fixture.previous))).toEqual(live);
   });
   for (const [entry, restore] of Object.entries(entrances)) {
-    it.fails(`${entry} accepts legal seed=${seed} step=${step} (${reason})`, () => {
+    it(`${entry} accepts legal seed=${seed} step=${step} (${reason})`, () => {
       const state = stepMatch(fixture.previous).state;
       const restored = restore(state);
       expect(restored).toEqual(state);

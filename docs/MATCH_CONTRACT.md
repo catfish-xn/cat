@@ -1287,3 +1287,9 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 
 - `g23BattleFacts(combat: CombatState, team: Team, round: number, roundKind: 'pve'|'pvp', openingUnits: readonly {id: string; team: Team}[]): G23BattleFacts` 签名不变。战争财宝开战敌方非召唤单位死亡（含石甲虫、狼、河蟹）作为专用 `{definitionId:'spoils-of-war',count:number}` 放入现有 `batch2` 数组；仅非零写入，`openingDeaths` 不变。双方分别提取，镜像结算沿既有契约。`validateG23BattleFacts` 对负数、非整数、超界、重复标识以 `RangeError('Invalid batch2 battle facts')` 拒绝；终战事实与真实战斗比较。持有战争财宝的已结算旧回合需现有 `battles` 历史参数以认证连续序号（连零击杀也不可伪造）；缺失仍走 `missing historical evidence`，提供历史后按完整事实重放比较。
 - `batch3RewardPlan(state: MatchState): AugmentGift[]` 与发放/验证接口签名不变；冒险任务从 `unit-upgraded`、`unit-upgraded-after-combat`、`carousel-unit-claimed.upgrades`、`carousel-preparation-settled.upgrades` 读取完成事实。只计取得后不同英雄的三星，第二名达标后的首个非选秀入口发一次；收据认证与资源来源认证保持分离，无新增保存字段、奖励或规则数值。
+
+## 2026-10-25 技能声明状态恢复认证
+
+存档格式、公共 Match 命令与玩法数值不变。普通结构恢复在检查声明投影前，使用同一份已认证战斗输入的独立重放事实认证全部技能贡献及其非活动显示状态；既有完整战斗重放路径继续比较完整战斗。channel／redirect 仍由活动历史认证。
+
+内部接口 `validateAbilityStatusFacts(combat: CombatState, replay: RestoreCombatReplay, same: (a: unknown, b: unknown) => boolean): ReadonlySet<string>`：逐单位完整比较技能来源贡献、应用／叠层／时间与显示锚点，返回独立证据中的贡献键；无状态也必须一致。失败抛 `Invalid Match save: ability status fact tick` 或 `Invalid Match save: ability status binding facts`，不消费候选 RNG、不修改候选。`CombatReplayFacts.units[]` 仅在恢复内存事实中增加 `abilityContributions` 与 `abilityStatuses`，不进入保存结构。`validateMechanisms`、`validateM5Runtime` 末尾新增可选 `abilityStatuses: ReadonlySet<string>`（默认空集），只能传上述重放核对结果；前者据此验证声明身份键、唯一覆盖、来源、语义及既有 `null → 1201` 到期投影，后者据此准入技能来源的真实 effectIndex。其余校验与失败原因不变。
