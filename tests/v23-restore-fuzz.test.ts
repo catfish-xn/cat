@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bytes, randomWalk, seeded, RestoreProbe } from './fixtures/restore-fuzz';
-import { readFileSync } from 'node:fs';
+import { bytes, declarationWalk, randomWalk, seeded, RestoreProbe } from './fixtures/restore-fuzz';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { Room, ROOM_TIMING_DEFAULTS } from '../src/server/room/room';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
@@ -120,7 +119,7 @@ for (const definitionId of ['blitzcrank', 'ekko']) {
   };
   for (const [entry, restore] of Object.entries(entrances)) {
     it(`current-content ${definitionId} ${entry} rejects ability tampering`, () => {
-      rejectAbilityForgeries(currentWitness(), restore, definitionId === 'blitzcrank' ? 'Invalid authoritative Mirror forge replay' : 'Invalid Match save: ability status binding facts');
+      rejectAbilityForgeries(currentWitness(), restore, 'Invalid Match save: ability status binding facts');
     });
     it(`current-content ${definitionId} ${entry} restores and continues byte-identically through battle end`, () => {
       const state = currentWitness();
@@ -136,30 +135,61 @@ for (const definitionId of ['blitzcrank', 'ekko']) {
   }
 }
 
-// Minimized from full public-command walks. Only the last known-good predecessor is
-// stored: the production step itself creates each rejected legitimate state.
-// Reproduce: --replay-step 1282 --from-step 1281 --seed 2036 --build random
-//            --replay-step 7138 --from-step 7137 --seed 1039 --build random
-
-for (const [seed, step, tick, reason] of [
-  [2036, 1282, 109, 'status display identity'],
-  [1039, 7138, 122, 'status source/timing projection'],
+// Current-content reductions of the old seed-2036/1039 failures. Each route
+// stops immediately before the first identity-key skill declaration is produced;
+// no saved state or content identity is transplanted from an old epoch.
+for (const [definitionId, oldSeed, reason] of [
+  ['blitzcrank', 2036, 'status display identity'],
+  ['ekko', 1039, 'status source/timing projection'],
 ] as const) {
-  const fixture = JSON.parse(readFileSync(new URL(`./fixtures/restore-fuzz/seed-${seed}.json`, import.meta.url), 'utf8')) as { seed: number; step: number; previous: MatchState };
-  const entrances = {
-    json: (state: MatchState) => restoreMatch(JSON.stringify(state)),
-    object: (state: MatchState) => restoreMatch(state),
-    serialized: (state: MatchState) => restoreMatch(serializeMatch(state)),
+  let predecessor: MatchState | undefined;
+  const declarations = (state: MatchState) => state.combat!.units.flatMap(unit =>
+    (unit.statuses ?? []).filter(status => status.source.definitionId === `${definitionId}-ability`
+      && status.contributionKeys?.includes(status.key)).map(status => ({ unit, status })));
+  const currentPredecessor = () => {
+    if (predecessor) return predecessor;
+    const run = declarationWalk(12, definitionId);
+    expect([run.declarationStep, run.state.combat!.tick]).toEqual(definitionId === 'blitzcrank' ? [115, 104] : [109, 98]);
+    expect(run.probe.failures).toEqual([]);
+    expect(run.probe.checkpoints).toBe(2);
+    expect(run.probe.continuations).toBe(3);
+    return predecessor = run.previous;
   };
-  it(`public predecessor is accepted and deterministically produces seed=${seed} step=${step}`, () => {
-    expect([fixture.seed, fixture.step]).toEqual([seed, step]);
-    const live = stepMatch(fixture.previous);
-    expect(live.state.combat!.tick).toBe(tick);
-    for (const restore of Object.values(entrances)) expect(stepMatch(restore(fixture.previous))).toEqual(live);
+  const assertDeclaration = (state: MatchState) => {
+    const rows = declarations(state);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const { unit, status } of rows) {
+      expect(status.source.sourceKind).toBe('ability');
+      expect(status.source.effectIndex).toBe(0);
+      expect(status.kind).toBe('resistanceFlat');
+      expect(status.amount).toBe(definitionId === 'blitzcrank' ? -1000 : -5);
+      expect(status.startsAtTick).toBe(state.combat!.tick);
+      const contribution = unit.mechanismState!.statuses.flatMap(group => group.contributions)
+        .find(c => c.key === status.key)!;
+      expect(contribution).toBeDefined();
+      expect(contribution.source).toEqual(status.source);
+      expect(contribution.targetId).toBe(unit.id);
+      expect(contribution.appliedAtTick).toBe(status.startsAtTick);
+      // The two original defects: declaration identity and permanent timing projection.
+      expect(status.contributionKeys).toEqual([contribution.key]);
+      expect(status.expiresAtTick).toBe(definitionId === 'blitzcrank' ? status.startsAtTick + 80 : 1201);
+      expect(contribution.expiresAtTick).toBe(definitionId === 'blitzcrank' ? status.expiresAtTick : null);
+    }
+  };
+  it(`public predecessor is accepted and deterministically produces ${definitionId} (old seed=${oldSeed})`, () => {
+    const previous = currentPredecessor();
+    expect(declarations(previous)).toEqual([]);
+    const live = stepMatch(previous);
+    expect(live.state.combat!.tick).toBe(previous.combat!.tick + 1);
+    assertDeclaration(live.state);
+    for (const restore of Object.values(entrances)) expect(stepMatch(restore(previous))).toEqual(live);
   });
   for (const [entry, restore] of Object.entries(entrances)) {
-    it(`${entry} accepts legal seed=${seed} step=${step} (${reason})`, () => {
-      const state = stepMatch(fixture.previous).state;
+    it(`${entry} accepts legal ${definitionId} declaration (old seed=${oldSeed}, ${reason})`, () => {
+      const previous = currentPredecessor();
+      expect(declarations(previous)).toEqual([]);
+      const state = stepMatch(previous).state;
+      assertDeclaration(state);
       const restored = restore(state);
       expect(restored).toEqual(state);
       expect(stepMatch(restored)).toEqual(stepMatch(state));

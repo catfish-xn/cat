@@ -1127,3 +1127,8 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 
 - **P，2026-10-25，ability-status-restore-authentication**：技能声明贡献及其非活动显示／移除锚点由已认证战斗输入的独立重放逐字段、逐顺序核对；全量比较包括没有贡献的单位，不能按候选声明挑选认证对象。来源、effectIndex、应用身份、系数、叠层／刷新历史与时间均以重放为证。仅重放证明的 identity-key 技能状态进入已有声明投影校验，永久贡献继续沿既有 `null → 1201` 显示投影；旧状态、channel／redirect 活动及其专用历史校验保持原契约。此为工程认证修复，不改规则、数值、保存格式、版本或内容身份。
 - **P，2026-10-25，restore-fuzz-random-only**：混合构筑压测若被独立经济 Oracle 阻断，保留失败日志并单列报告，不能关闭 Oracle 或放宽断言。离线驱动新增显式 `--random-only` 与 `--checkpoint-rate N`：只以公开命令随机走完整局，保持三个恢复入口和完整字节续跑比较，直到达到原 `--checkpoints` 下限；默认仍执行原构筑路线与 BotDriver。纯随机通过不声称构筑或 BotDriver 本次通过，也不把旧摘要夹具阻断计作通过。
+
+## 技能声明旧夹具回归重建（P，2026-10-25）
+
+- **P，2026-10-25，restore-fuzz-current-declaration-witness**：旧 seed 2036／1039 的存档保留为历史证据，不改 digest，也不再作为当前内容回归输入。以 seed 12 从 createMatch、实际选择、空板开战／推进回合、公开 grantMechanicUnit（source=test）、部署及逐 tick 命令重建两条最小工程见证；这是技能状态恢复测试，不声称随机商店取得英雄。脚本新增 `--declaration blitzcrank|ekko --seed 12` 定向模式，首个声明分别为 step 115／tick 104、step 109／tick 98；前驱分别为 tick 103／97。随机旧种子原步号已漂移，单独回放通过不能充当命中声明的证明。
+- **P，2026-10-25，restore-fuzz-declaration-assertions**：两条前驱检查及六条恢复检查均断言实际声明存在，绑定 identity-key、单贡献键、来源、目标、effectIndex、负抗性数值和施加时间；布里茨验证 80 tick 期限，艾克验证永久贡献 null → 显示 1201 投影。保留三入口完整状态相等和下一步完整结果相等，不改回 it.fails、不增超时。当前 seed 12 下原篡改见证的拒绝原因统一为既有 ability status binding facts，继续精确断言原因；不再期待已随强化池漂移的 Mirror forge 错误。仅调整测试与离线驱动，不改变规则、数值、保存格式或内容身份。
