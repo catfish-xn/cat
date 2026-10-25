@@ -1,6 +1,6 @@
 import type { EventEmitter } from 'node:events';
-import { describe, expect, it, vi } from 'vitest';
-import { playBusyMatch } from './settlement-queue-harness';
+import { describe, vi } from 'vitest';
+import { registerBusyMatch } from './settlement-queue-harness';
 
 // Exercise the real parse/auth/dedupe/write queue with an in-memory transport; no listening port is required.
 const transport = vi.hoisted(() => ({ connect: null as ((socket: EventEmitter) => void) | null }));
@@ -22,11 +22,8 @@ vi.mock('node:http', async () => {
   }) };
 });
 
-// Split out of settlement-queue.test.ts so the two whole-match cases run on separate workers.
+// One route per file; each round continues its cached run under the default case timeout.
 // Legacy resolver path: PvE live-bank tails span many slices, so frozen arrivals are guaranteed.
 describe('commands arriving during sliced settlement', () => {
-  it('finishes deterministically with eight bot controllers and continuous authenticated human traffic (streaming=false)', async () => {
-    const play = () => playBusyMatch(socket => transport.connect!(socket), false, 10);
-    expect(await play()).toEqual(await play());
-  }, 600_000);
+  registerBusyMatch(socket => transport.connect!(socket), false, 10);
 });

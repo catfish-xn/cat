@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { createHash } from 'node:crypto';
-import { expect, vi } from 'vitest';
+import { afterAll, expect, it, vi } from 'vitest';
 import { createGameServer } from '../../../src/server/net/server';
 import { NET_PROTOCOL_VERSION, type ServerMessage } from '../../../src/server/net/messages';
 import { ManualClock } from '../../../src/server/room/clock';
@@ -20,7 +20,7 @@ export class Socket extends EventEmitter {
 }
 
 /** One whole eight-bot match with continuous authenticated human traffic; returns its evidence hashes. */
-export async function playBusyMatch(connect: (socket: EventEmitter) => void, combatStreaming: boolean, minFrozen: number) {
+async function* busyMatchSteps(connect: (socket: EventEmitter) => void, combatStreaming: boolean, minFrozen: number) {
   const clock = new ManualClock();
   const server = await createGameServer({ port: 0, host: '127.0.0.1', clock, seed: 42, roomId: 'busy-match',
     timings: TIMINGS, sliceTicks: 50, sliceMs: 20, spotCheckEveryRounds: 1_000_000, combatStreaming,
@@ -35,7 +35,12 @@ export async function playBusyMatch(connect: (socket: EventEmitter) => void, com
   holder.current = { ...room.state, seats: room.state.seats.map((seat, index) => index === 0 ? { ...seat, controller: 'bot' } : seat) };
   room.setConnected(room.state.seats[0]!.seatId, false); // Publish once so BotDriver observes the eighth controller.
   expect(room.state.seats.every(seat => seat.controller === 'bot')).toBe(true);
-  const botSteps = vi.spyOn(room, 'handleBot');
+  // Vitest clears mock.calls between cases; keep the original whole-route transcript separately.
+  const botCalls: Parameters<typeof room.handleBot>[] = [];
+  const handleBot = room.handleBot.bind(room);
+  const botSteps = vi.spyOn(room, 'handleBot').mockImplementation((...args) => {
+    botCalls.push(args); return handleBot(...args);
+  });
   const checkpoints: RoomState[] = [];
   let committed = 0, dirtiedRound = -1, arrivals = 0, commandId = 3, frozenArrivals = 0;
   const sent = createHash('sha256'), receipts = createHash('sha256');
@@ -79,23 +84,50 @@ export async function playBusyMatch(connect: (socket: EventEmitter) => void, com
         commandTypes.delete(result.commandId);
       }
       socket.messages.length = 0; // Keep full-match transport observations bounded, without trimming domain ledgers.
+      yield room.state.round;
     }
     expect(room.state.phase).toBe('ended');
     expect(room.state.fault).toBeNull();
     expect(room.state.ranking?.map(entry => entry.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(room.state.round).toBeGreaterThanOrEqual(31);
-    expect(new Set(botSteps.mock.calls.map(([id]) => id)).size).toBe(8);
+    expect(new Set(botCalls.map(([id]) => id)).size).toBe(8);
     expect(frozenArrivals).toBeGreaterThanOrEqual(minFrozen);
     expect(successful).toEqual(new Set(['buy', 'sell', 'reroll', 'shopLock']));
     expect(commandTypes.size).toBe(0); // Every admitted command receives a final receipt, including the terminal round.
     expect(room.retained.resolving).toBe(false);
     const ledger = createHash('sha256');
     // Hash whole RoomStates, including every battle event, pool/RNG, receipt, revision and deadline; omit nothing.
-    for (const checkpoint of checkpoints) ledger.update(JSON.stringify(checkpoint) + '\n');
+    for (const checkpoint of checkpoints) {
+      ledger.update(JSON.stringify(checkpoint) + '\n');
+      yield room.state.round;
+    }
     const result = { terminal: createHash('sha256').update(JSON.stringify(room.state)).digest('hex'),
       ledger: ledger.digest('hex'), commands: sent.digest('hex'), receipts: receipts.digest('hex'),
-      bots: createHash('sha256').update(JSON.stringify(botSteps.mock.calls)).digest('hex'), arrivals, round: room.state.round, frozenArrivals };
+      bots: createHash('sha256').update(JSON.stringify(botCalls)).digest('hex'), arrivals, round: room.state.round, frozenArrivals };
     console.info('settlement full-match evidence', JSON.stringify(result));
     return result;
   } finally { botSteps.mockRestore(); await server.close(); }
+}
+
+/** Two complete independent runs, continued per round with all original terminal evidence checks. */
+export function registerBusyMatch(connect: (socket: EventEmitter) => void, streaming: boolean, minFrozen: number) {
+  const runs = [busyMatchSteps(connect, streaming, minFrozen), busyMatchSteps(connect, streaming, minFrozen)];
+  const cursors: Awaited<ReturnType<typeof runs[number]['next']>>[] = [];
+  async function through(index: number, round: number, callbacks = streaming ? 16 : 2) {
+    const run = runs[index]!;
+    let cursor = cursors[index] ?? await run.next();
+    for (let fired = 0; !cursor.done && cursor.value <= round && fired < callbacks; fired++) cursor = await run.next();
+    cursors[index] = cursor;
+    return cursor;
+  }
+  afterAll(async () => { for (const run of runs) await run.return(undefined as never); });
+  // The route normally ends in stage 7; later cases also support overtime without replaying earlier rounds.
+  for (let index = 0; index < runs.length; index++) for (let round = 1; round <= 60; round++) for (let part = 1; part <= (streaming ? 32 : 64); part++) {
+    it(`streaming=${streaming}: run ${index + 1} toward round ${round}, part ${part}`, async () => { await through(index, round); });
+  }
+  it(`finishes deterministically with eight bot controllers and continuous authenticated human traffic (streaming=${streaming})`, async () => {
+    const first = await through(0, Infinity, Infinity), second = await through(1, Infinity, Infinity);
+    expect(first.done).toBe(true); expect(second.done).toBe(true);
+    expect(first.value).toEqual(second.value);
+  });
 }

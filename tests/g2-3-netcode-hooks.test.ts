@@ -19,6 +19,7 @@ import { CHOICE_SKIP_OPTION, alignReplayUnits, grantMechanicGold, grantMechanicI
 import { battle, freeze, unit } from './combat-helpers';
 import { room } from './tp-helpers';
 import { publicPendingArmory } from './fixtures/g2-3-armory-public';
+import { roundRouteCache } from './fixtures/round-route-cache';
 
 const ok = <T extends { ok: boolean }>(result: T): Extract<T, { ok: true }> => {
   if (!result.ok) throw new Error((result as unknown as { reason: string }).reason);
@@ -114,10 +115,16 @@ describe('G2-3 mechanic choices', () => {
     const strict = ok(openMechanicChoice(solo(), blackMarket(false))).state;
     expect(selectChoice(strict, 'market-1', 0, CHOICE_SKIP_OPTION)).toMatchObject({ ok: false, reason: 'choice-not-skippable', state: strict });
   });
+  const armoryRoute = roundRouteCache(onProgress => publicPendingArmory(3, onProgress));
+  for (let round = 1; round <= 27; round++) for (const tick of [300, 600, 900, 1200, 1201]) {
+    it(`offline armory route round ${round} through ${tick === 1201 ? 'settlement' : `tick ${tick}`}`, async () => {
+      await armoryRoute.through(round - 1 + tick / 1201);
+    });
+  }
   it('an offline save with a pending mechanic choice restores', async () => {
     // Buy Rumble from the shop and complete three real battles; Match opens the armory.
     // v22: the default seed 4 route no longer buys Rumble before 6-7; seed 3 is the first public route that does.
-    const state = await publicPendingArmory(3), progress = readG23Progress(state)!;
+    const state = await armoryRoute.finish(), progress = readG23Progress(state)!;
     const choice = state.pendingChoice!, menu = g23JunkerMenu(state)!;
     expect(state.multiplayer).toBeUndefined();
     expect(state.phase).toBe('choice');
@@ -134,8 +141,7 @@ describe('G2-3 mechanic choices', () => {
     const renamed = { ...state, pendingChoice: { ...choice, choiceId: 'armory-1', eventId: 'armory-1' } };
     for (const input of [renamed, JSON.stringify(renamed)]) expect(() => restoreMatch(input)).toThrow('G23 pending choice authority');
     expect(() => serializeMatch(renamed)).toThrow('G23 pending choice authority');
-    // 临时、用户 10-20 批准：只因 CI 机器计时超时或贴着上限（断言都过），按约 2 倍放宽；断言不变。20 秒 → 40 秒（#343 上超时，本机满负载约 13 秒）。
-  }, 40_000);
+  });
 });
 
 describe('G2-3 unit grants through the shared pool', () => {

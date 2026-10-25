@@ -5,11 +5,11 @@ import {createRequire} from 'node:module';
 const {run}=createRequire(import.meta.url)('../../scripts/generate-m5-route.cjs');
 const accept=(result:api.MatchCommandResult)=>{if(!result.ok)throw Error(result.reason);return result.state;};
 /** Actual shop purchase and three battles; never fabricates currency, units, progress or receipts. */
-export async function publicPendingArmory(seed=4):Promise<api.MatchState>{
+export async function publicPendingArmory(seed=4,onRound?:(state:api.MatchState)=>Promise<void>):Promise<api.MatchState>{
   let prefix:api.MatchState|undefined;
   const reached=Error('Public5-1 preparation');
   try{
-    await run(api,{build:'cannon',seed,onStep(before:api.MatchState,_result:api.MatchCommandResult,command?:{type:string}){
+    await run(api,{build:'cannon',seed,onRound,onBattleProgress:onRound,onStep(before:api.MatchState,_result:api.MatchCommandResult,command?:{type:string}){
       if(command?.type==='start'&&before.roundDefinitionId==='5-1'){prefix=before;throw reached;}
     }});
   }catch(error){if(error!==reached)throw error;}
@@ -36,7 +36,7 @@ export async function publicPendingArmory(seed=4):Promise<api.MatchState>{
         }
       }
       state=accept(api.startMatchCombat(state));
-    }else if(state.phase==='combat')state=api.stepMatch(state).state;
+    }else if(state.phase==='combat'){state=api.stepMatch(state).state;if(state.phase!=='combat'||state.combat!.tick%150===0)await onRound?.(state);}
     else state=accept(api.nextRound(state,state.round));
   }
   while(state.pendingChoice?.kind!=='armory'){
