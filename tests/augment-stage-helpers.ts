@@ -1,9 +1,9 @@
 import { expect } from 'vitest';
-import { createMatch, selectChoice, type MatchState } from '../src/simulation/match';
+import { createMatch, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
-import { accepted, reachRound, reachRoundFielded } from './match-helpers';
+import { accepted, fieldBench, reachRound, resolveM5Choices } from './match-helpers';
 
 /** 14.24 stage tags (augment-stage-bans.ts): the augment rounds a card can be offered at. */
 export function offeredAt(id: string, node: '2-1' | '3-2' | '4-2'): boolean {
@@ -92,12 +92,40 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "wealthy-rehab-i":{node:'3-2',seed:56},
   "wealthy-rehab-ii":{node:'3-2',seed:10},
 };
+/**
+ * reachRoundFielded's route (match-helpers.ts), step for step, cached per seed and resumable: every round entry it
+ * passes is kept, so a long 4-2 route can be played in legs over several cases (FIELDED_LEGS) and a later case
+ * reuses it instead of replaying the whole match. Returns the same state reachRoundFielded(roundId, seed) does.
+ */
+export const FIELDED_LEGS = ['2-2', '2-5', '2-7', '3-2', '3-3', '3-4', '3-6', '4-1', '4-2'] as const;
+/** [seed, leg] cases of `id`'s fielded STAGE_SEEDS route, up to and including its offering node. */
+export function fieldedLegCases(id: string): (readonly [number, string])[] {
+  const at = STAGE_SEEDS[id];
+  if (!at?.fielded) throw new Error(`${id} has no fielded stage route`);
+  return FIELDED_LEGS.slice(0, FIELDED_LEGS.indexOf(at.node) + 1).map(leg => [at.seed, leg] as const);
+}
+const fieldedRoutes = new Map<number, { entries: Map<string, MatchState>; last: MatchState }>();
+export function fieldedRoute(seed: number, roundId: string): MatchState {
+  let route = fieldedRoutes.get(seed);
+  if (!route) fieldedRoutes.set(seed, route = { entries: new Map(), last: createMatch(seed) });
+  route.entries.set(route.last.roundDefinitionId, route.last);
+  let state = route.entries.get(roundId) ?? route.last;
+  while (state.roundDefinitionId !== roundId) {
+    state = resolveM5Choices(state);
+    if (state.phase === 'preparation') { state = accepted(startMatchCombat(fieldBench(state))); while (state.phase === 'combat') state = stepMatch(state).state; }
+    state = resolveM5Choices(state);
+    if (state.phase !== 'settlement') throw new Error(`Cannot reach ${roundId} from ${state.roundDefinitionId}/${state.phase}`);
+    state = accepted(nextRound(state, state.round));
+    route.entries.set(state.roundDefinitionId, state); route.last = state;
+  }
+  return state;
+}
 /** The augment round state offering `id` before selection: 2-1 when the card is offered there, else its STAGE_SEEDS node. */
 export function offerFor(id: string): MatchState {
   if (offeredAt(id, '2-1')) return reachRound('2-1', false, firstNodeSeed(id));
   const at = STAGE_SEEDS[id];
   if (!at) throw new Error(`No stage seed for ${id}; re-run the stage seed search`);
-  const state = at.fielded ? reachRoundFielded(at.node, at.seed) : reachRound(at.node, false, at.seed);
+  const state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
   expect(state.pendingChoice?.offers, `${id} at ${at.node} seed ${at.seed}`).toContain(id);
   return state;
 }

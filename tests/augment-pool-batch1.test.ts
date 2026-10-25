@@ -17,7 +17,7 @@ import { grantXp } from '../src/simulation/progression';
 import { previewRoundEconomy } from '../src/simulation/economy-preview';
 import { readAugmentIncome } from '../src/simulation/augment-income';
 import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
-import { offerFor, offeredAt } from './augment-stage-helpers';
+import { fieldedLegCases, fieldedRoute, offerFor, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import type { MatchState } from '../src/simulation/match-types';
 import { room, accept, conserved } from './tp-helpers';
 import { runSharedMatchCommand } from '../src/simulation/shared-pool';
@@ -79,6 +79,11 @@ it('full bench escrows all fourteen one-cost gifts and selling retries a stable 
  expect(r).toMatchObject({kind:'unit',receiptId:batch1GiftPlan(s)[0].receiptId,definitionId:'amumu'});
  expect(drainBatch1Gifts(after)).toBe(after);
 });
+// Final Polish's first public offer is a fielded 4-2 route (STAGE_SEEDS); it is played in cached legs, one case each, so the
+// acquisition case below stays inside the default timeout (offerFor resumes the same cached route).
+it.each(fieldedLegCases('final-polish'))('Final Polish fielded 4-2 route (seed %s): the leg to %s settles every fight',(seed,leg)=>{
+ expect(STAGE_SEEDS['final-polish']).toMatchObject({node:'4-2',fielded:true});expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
+});
 it('Final Polish grants two bench anvils, opens in either order, restores and times out to the authenticated first option',()=>{
  const {state}=acquire('final-polish'),anvils=state.preparation.units.filter(u=>isAnvil(u.definitionId));
  expect(anvils.map(u=>u.definitionId)).toEqual(['TFT_ArmoryKeySupport','TFT_ArmoryKeyCompleted']);
@@ -94,7 +99,7 @@ it('Final Polish grants two bench anvils, opens in either order, restores and ti
    expect(openAnvil(s,unit.id)).toEqual({ok:false,state:s,reason:'unknown-unit'});
   }
  }
-},30_000);
+});
 it('Silver Spoon grants exactly ten XP, composes with purchased XP, restores across settlement, and respects level ten',()=>{
  const {before,state}=acquire('silver-spoon'),expected=grantXp(before.level,before.xp,10);
  expect([state.level,state.xp]).toEqual([expected.level,expected.xp]);expect(restoreMatch(serializeMatch(state))).toEqual(state);

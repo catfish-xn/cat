@@ -1,4 +1,4 @@
-import { offerFor } from './augment-stage-helpers';
+import { fieldedLegCases, fieldedRoute, offerFor, STAGE_SEEDS } from './augment-stage-helpers';
 import { describe, expect, it } from 'vitest';
 import { augmentCandidates, deriveAugmentTier, deriveAugmentTierSequence, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { AUGMENT_OFFER_POLICY, AUGMENT_TIER_COMBINATIONS, AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
@@ -49,6 +49,11 @@ it('offers Geniuses only at prismatic tier, preserving owned and removed exclusi
   expect(augmentCandidates('prismatic',[],['geniuses'])).not.toContain('geniuses');
 });
 
+// Geniuses's first public offer is a fielded 4-2 route (STAGE_SEEDS); it is played in cached legs, one case each, so the
+// acquisition case below stays inside the default timeout (offerFor resumes the same cached route).
+it.each(fieldedLegCases('geniuses'))('Geniuses fielded 4-2 route (seed %s): the leg to %s settles every fight',(seed,leg)=>{
+ expect(STAGE_SEEDS['geniuses']).toMatchObject({node:'4-2',fielded:true});expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
+});
 it('public prismatic Geniuses acquisition restores the same offer history, grants and RNG', () => {
   // 14.24 stage tags: Geniuses is a 4-2 card; take it at the first fielded 4-2 offer (tests/augment-stage-helpers.ts).
   const state = offerFor('geniuses'), c = state.pendingChoice!;
@@ -61,7 +66,7 @@ it('public prismatic Geniuses acquisition restores the same offer history, grant
   expect(restoreMatch(serializeMatch(selected))).toEqual(selected);
   const retry = selectChoice(selected,c.choiceId,c.generation,'geniuses');
   expect(retry.ok).toBe(false); expect(retry.state).toBe(selected);
-}, 60_000);
+});
 
 it('uses exactly the first word of the private stream, covers all ticket boundaries and ignores node access order', () => {
   const tickets = new Set<number>();

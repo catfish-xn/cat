@@ -1,5 +1,5 @@
 import { appendResourceProvenance } from '../src/simulation/resource-provenance';
-import { acquireAugment, offeredAt } from './augment-stage-helpers';
+import { acquireAugment, fieldedLegCases, fieldedRoute, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
 import { AUGMENT_BATCH2, AUGMENT_BATCH2_ENABLED } from '../src/simulation/content/augment-pool-batch2';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
@@ -135,6 +135,12 @@ function acquire(id:string){
  }
  throw Error('missing seed '+id);
 }
+// Trait-tailored 3-2 cards are acquired on a fielded route (STAGE_SEEDS); it is played in cached legs, one case each,
+// so each selection case below stays inside the default timeout (acquireAugment resumes the same cached route).
+const FIELDED_SELECTIONS=['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED)].filter(id=>!offeredAt(id,'2-1')&&STAGE_SEEDS[id]?.fielded);
+it.each(FIELDED_SELECTIONS.flatMap(id=>fieldedLegCases(id).map(([seed,leg])=>[id,seed,leg] as const)))('%s fielded route (seed %s): the leg to %s settles every fight',(_id,seed,leg)=>{
+ expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
+});
 // Watcher Growth carries all three 14.24 stage tags (S13 archive agrees): never offered, so no public selection.
 it.each(['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED).filter(id=>id!=='watcher-growth')])('%s selects through Match, restores, and combat replay rejects altered runtime',id=>{
  let s=acquire(id);expect(restoreMatch(serializeMatch(s))).toEqual(s);

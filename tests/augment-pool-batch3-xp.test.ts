@@ -197,7 +197,7 @@ it('Kingslayer offline: the AI opponent is not a player, so a player-combat win 
  expect(kingGold(drainSettlementGold(won))).toEqual([1]);
  expect(kingGold(drainSettlementGold({...won,roundResults:[...s.roundResults,{...won.roundResults.at(-1)!,result:'draw' as const}]}))).toEqual([]);
  s=advance(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
-}, 30_000);
+});
 
 const riskyGold=(s:MatchState)=>s.seatMechanics?.receipts.filter(r=>r.source===RISKY_MOVES_SOURCE).map(r=>r.kind==='gold'?r.amount:0)??[];
 it('Risky Moves: selecting it loses 20 HP (never below 1); the save restores and any other HP is rejected', ()=>{
@@ -210,7 +210,7 @@ it('Risky Moves: selecting it loses 20 HP (never below 1); the save restores and
  expect([applyAcquisitionHealthLoss({...s,playerHp:15},a).playerHp,applyAcquisitionHealthLoss({...s,playerHp:21},a).playerHp,applyAcquisitionHealthLoss({...s,playerHp:0},a).playerHp]).toEqual([1,1,0]);
  // A real later round keeps the chain: the loss belongs to the acquisition round only.
  const next=advance(s);expect(restoreMatch(serializeMatch(next))).toEqual(next);
-}, 30_000);
+});
 it('Risky Moves: 30 gold at the settlement of the 7th player combat from the acquisition round, once; PvE does not count', ()=>{
  const base=pick('risky-moves'),a=base.augments.at(-1)!,last=base.roundResults.at(-1)!;
  const history=(kinds:readonly ('pvp'|'pve')[])=>({...base,roundResults:[...base.roundResults.filter(r=>r.round<a.acquiredRound),...kinds.map((roundKind,i)=>({...last,round:a.acquiredRound+i,roundKind,result:'enemyWin' as const}))]});

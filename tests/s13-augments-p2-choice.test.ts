@@ -1,4 +1,4 @@
-import { offerFor, offeredAt } from './augment-stage-helpers';
+import { fieldedLegCases, fieldedRoute, offerFor, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import { grantMechanicItem } from '../src/simulation/seat-mechanics';
 import { expect, it } from 'vitest';
 import type { MatchState } from '../src/simulation/match-types';
@@ -32,6 +32,11 @@ it('all seventeen API identities, names, tiers and coefficients match the retain
 });
 // v23 fmix32 openings: Trainer Golem seeds are skipped (the unbenchable golem blocks reachRound's empty board).
 function seedFor(id:string){for(let seed=0;seed<1000;seed++){const state=createMatch(seed);if(state.preparation.units.some(u=>u.definitionId==='trainer-golem'))continue;if(generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers.includes(id))return seed;}throw Error('seed budget');}
+// Pair of Fours's first public offer is a fielded 4-2 route (STAGE_SEEDS); it is played in cached legs, one case each, so the
+// acquisition case below stays inside the default timeout (offerFor resumes the same cached route).
+it.each(fieldedLegCases('pair-of-fours'))('Pair of Fours fielded 4-2 route (seed %s): the leg to %s settles every fight',(seed,leg)=>{
+ expect(STAGE_SEEDS['pair-of-fours']).toMatchObject({node:'4-2',fielded:true});expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
+});
 it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restores strictly, and continues the same seeded combat',id=>{
   // 14.24 stage tags: a card not offered at 2-1 is taken at its first offering round instead.
   let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):offerFor(id);const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
@@ -57,7 +62,7 @@ it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restor
   for(let tick=0;tick<3&&s.phase==='combat';tick++)s=stepMatch(s).state;
   const restored=restoreMatch(serializeMatch(s));expect(restored).toEqual(s);expect(stepMatch(restored)).toEqual(stepMatch(s));
   if(gifts.length){const forged=structuredClone(s) as any;forged.seatMechanics.receipts.find((r:any)=>r.source==='s13-augments-p2').definitionId='lux';expect(()=>validateP2Gifts(forged)).toThrow();}
-},60_000);
+});
 it('full bench escrows all hero gifts, selling retries the same plan and never duplicates a receipt',()=>{
   let s=reachRound('2-1',false,seedFor('all-for-one-ii'));const c=s.pendingChoice!;
   const heroes=Object.keys(UNIT_DEFINITIONS).filter(id=>!UNIT_DEFINITIONS[id].summon).slice(0,9);
