@@ -44,6 +44,7 @@ import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
 import { isLegendModel } from './legend-load';
+import { registerGolemModels } from './summon-models';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -212,6 +213,7 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
       if (!legendUrls.has(url)) releaseAfterUpload(model.scene);
       return model;
     }));
+    registerGolemModels(cache.manifest);
     for (const [id, entry] of Object.entries(cache.manifest.models)) if (isLegendModel(id)) legendUrls.add(assetUrl(assetBase, entry.path));
     const list = readPrecacheList(await fetchIndex(`${assetBase}precache.json`), cache.manifest);
     // Optional: a root without packs.json (or with one that disagrees with precache) downloads file by file.
@@ -769,7 +771,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.control.clear(); setControl(view, null); setLiftOffset(view, 0); view.hop = null;
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
-    if (view.lease) {
+    if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);

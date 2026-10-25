@@ -268,7 +268,7 @@ export class StrategyPanel {
     this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
     this.augmentStrip.dataset.debug = 'augment-strip'; this.traitColumn.root.before(this.augmentStrip);
     this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root));
-    if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock));
+    if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock), attachItemPopover(this.shopDock, 'shop-item-popover'));
     const choiceVisible = () => !this.modal.hidden && getComputedStyle(this.modal).display !== 'none';
     // The help dialog sits above every game layer: while it is open the choice is inert and never takes focus.
     const helpOpen = () => document.body.dataset.helpOpen === 'true';
@@ -1150,7 +1150,10 @@ export class StrategyPanel {
       prize.className = 'shop-card shop-offer market-reward'; prize.dataset.debug = 'market:reward';
       const lines = reward ? g23RewardLines(reward, item(id) ? itemDisplayName(id) : undefined) : [item(id) ? itemDisplayName(id) : '黑市奖励'];
       const pictures = reward ? g23RewardIcons(reward) : [], icons = element('span', '', 'market-icons');
-      if (item(id)) icons.insertAdjacentHTML('beforeend', itemMarkHtml(id, 30));
+      if (item(id)) {
+        const mark = element('span', '', 'market-item'); mark.dataset.itemDef = id; mark.tabIndex = 0;
+        mark.innerHTML = itemMarkHtml(id, 30); icons.append(mark);
+      }
       for (const icon of pictures) {
         if (icon.kind === 'hero') {
           const hero = element('span', '', 'market-hero'); hero.title = `${icon.star} 星${icon.name}`;
@@ -1158,7 +1161,10 @@ export class StrategyPanel {
           hero.append(element('span', '★'.repeat(icon.star), `market-stars star-${icon.star}`));
           icons.append(hero);
         } else if (icon.kind === 'item') {
-          const mark = element('span', '', 'market-item'); mark.title = icon.name;
+          const mark = element('span', '', 'market-item');
+          const tool = Object.values(CONSUMABLE_DEFINITIONS).find(tool => tool.apiName === icon.source);
+          mark.title = [icon.name, tool?.description].filter(Boolean).join('\n');
+          if (icon.itemId) { mark.dataset.itemDef = icon.itemId; mark.tabIndex = 0; }
           mark.innerHTML = rewardItemMarkHtml(icon, 30);
           icons.append(mark);
         } else icons.append(element('span', String(icon.amount), 'market-gold'));
@@ -1190,8 +1196,10 @@ export class StrategyPanel {
     // Once the rules have drawn the items, the tooltips name the slots as shown rather than the source pools.
     if (reward && concrete?.length) lines.splice(0, lines.length, ...g23RewardIcons(reward, concrete).map(icon => icon.kind === 'gold' ? `${icon.amount} 金币` : icon.kind === 'hero' ? `${icon.star}星【${icon.name}】` : icon.name));
     const bundle = element('div', '', 'market-bundle'); bundle.dataset.debug = 'market:bundle'; bundle.title = lines.join('\n');
-    const slot = (picture: string | HTMLElement, caption: string) => {
+    const slot = (picture: string | HTMLElement, caption: string, itemId?: string | null, description?: string) => {
       const cell = element('span', '', 'market-slot'), art = element('span', '', 'market-slot-art');
+      cell.title = [caption, description].filter(Boolean).join('\n');
+      if (itemId) { cell.dataset.itemDef = itemId; cell.tabIndex = 0; }
       if (typeof picture === 'string') art.innerHTML = picture; else art.append(picture);
       cell.append(art, element('span', caption, 'market-slot-name')); bundle.append(cell);
     };
@@ -1199,12 +1207,15 @@ export class StrategyPanel {
     bundle.append(element('span', '黑市', 'market-tab'));
     const rank = { item: 0, gold: 1, hero: 2 } as const;
     const pictures = (reward ? g23RewardIcons(reward, concrete) : []).sort((a, b) => rank[a.kind] - rank[b.kind]);
-    if (!pictures.length && item(id)) slot(itemMarkHtml(id, 40), itemDisplayName(id));
+    if (!pictures.length && item(id)) slot(itemMarkHtml(id, 40), itemDisplayName(id), id);
     for (const icon of pictures) {
       if (icon.kind === 'hero') {
         const caption = `${icon.star}星【${icon.name}】`;
         if (icon.unitId) slot(heroPortraitHtml(icon.unitId, 40, heroEmblemSvg(icon.unitId, 40)), caption); else slot(element('span', '?', 'market-pool'), caption);
-      } else if (icon.kind === 'item') slot(rewardItemMarkHtml(icon, 40), icon.name);
+      } else if (icon.kind === 'item') {
+        const tool = Object.values(CONSUMABLE_DEFINITIONS).find(tool => tool.apiName === icon.source);
+        slot(rewardItemMarkHtml(icon, 40), icon.name, icon.itemId, tool?.description);
+      }
       else slot(element('span', '', 'market-coin'), `${icon.amount}金币`);
     }
     if (bundle.childElementCount === 1) for (const line of lines) bundle.append(element('span', line, 'market-line'));
