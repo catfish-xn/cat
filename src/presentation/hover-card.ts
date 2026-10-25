@@ -52,11 +52,21 @@ export class HoverCard {
  * `pin`: a click or tap on an anchor (TFT: tap to read on touch) keeps its card open until the same anchor is pressed again,
  * something outside the card is pressed, Escape, or the anchor goes away; hover and blur then leave it alone.
  */
+export interface HoverCardOptions {
+  readonly pin?: boolean;
+  /** Action anchors keep clicks; a stationary touch held for 450 ms pins instead. */
+  readonly longPress?: boolean | ((anchor: HTMLElement) => boolean);
+}
 export function attachHoverCards(scope: HTMLElement, card: HoverCard, selector: string, resolve: (anchor: HTMLElement) => { key: string; build: () => HTMLElement } | null,
-  { pin = false }: { readonly pin?: boolean } = {}): () => void {
-  let anchor: HTMLElement | null = null, pinned = false;
-  const watcher = new MutationObserver(() => { if (anchor && !anchor.isConnected) close(); });
-  function close(): void { anchor = null; pinned = false; watcher.disconnect(); card.hide(); document.removeEventListener('pointerdown', outside, true); }
+  { pin = false, longPress = false }: HoverCardOptions = {}): () => void {
+  let anchor: HTMLElement | null = null, pinned = false, touched = false;
+  let hold: { target: HTMLElement; id: number; x: number; y: number; timer: number } | null = null;
+  let consumed: HTMLElement | null = null;
+  const cancelHold = () => { if (hold) window.clearTimeout(hold.timer); hold = null; };
+  const action = (target: HTMLElement) => typeof longPress === 'function' ? longPress(target) : longPress;
+  const usable = (node: HTMLElement) => { const box = node.getBoundingClientRect(); return node.isConnected && box.height > 0 && box.bottom > 0 && box.top < window.innerHeight; };
+  const watcher = new MutationObserver(() => { if (anchor && !usable(anchor)) close(); });
+  function close(): void { cancelHold(); anchor?.removeAttribute('aria-describedby'); anchor = null; pinned = false; watcher.disconnect(); card.hide(); document.removeEventListener('pointerdown', outside, true); }
   // A press anywhere but the card or the pinned anchor (whose own press toggles it) closes a pinned card.
   function outside(event: PointerEvent): void {
     const node = event.target instanceof Node ? event.target : null;
@@ -66,9 +76,9 @@ export function attachHoverCards(scope: HTMLElement, card: HoverCard, selector: 
   function open(target: HTMLElement): void {
     const found = resolve(target);
     if (!found) { close(); return; }
-    anchor = target;
+    anchor?.removeAttribute('aria-describedby'); anchor = target; target.setAttribute('aria-describedby', card.root.id);
     card.showAt(target.getBoundingClientRect(), found.key, found.build);
-    watcher.disconnect(); watcher.observe(scope, { childList: true, subtree: true });
+    watcher.disconnect(); watcher.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'open', 'class'] });
   }
   const targetOf = (event: Event) => event.target instanceof Element ? event.target.closest<HTMLElement>(selector) : null;
   const over = (event: PointerEvent) => { if (event.pointerType !== 'mouse' || pinned) return; const target = targetOf(event); if (target && scope.contains(target) && target !== anchor) open(target); };
@@ -76,21 +86,51 @@ export function attachHoverCards(scope: HTMLElement, card: HoverCard, selector: 
     const target = targetOf(event);
     if (!pinned && target && target === anchor && !(event.relatedTarget instanceof Node && target.contains(event.relatedTarget))) close();
   };
-  const focus = (event: FocusEvent) => { if (pinned) return; const target = targetOf(event); if (target && scope.contains(target)) open(target); };
+  const focus = (event: FocusEvent) => { if (pinned) return; const target = targetOf(event); if (target && scope.contains(target) && !(touched && action(target))) open(target); };
   const blur = (event: FocusEvent) => { if (!pinned && targetOf(event) === anchor) close(); };
-  const key = (event: KeyboardEvent) => { if (event.key === 'Escape' && anchor) close(); };
+  const key = (event: KeyboardEvent) => { touched = false; if (event.key === 'Escape' && (anchor || hold)) close(); };
+  const keep = (target: HTMLElement) => {
+    open(target);
+    if (anchor === target) { pinned = true; document.addEventListener('pointerdown', outside, true); }
+  };
   const press = (event: PointerEvent) => {
-    const target = pin ? targetOf(event) : null;
+    cancelHold(); consumed = null; touched = event.pointerType === 'touch';
+    const target = targetOf(event);
+    if (target && scope.contains(target) && action(target)) {
+      close();
+      if (event.pointerType === 'touch' && resolve(target)) {
+        const timer = window.setTimeout(() => {
+          hold = null;
+          if (target.isConnected) { keep(target); consumed = target; target.dispatchEvent(new CustomEvent('hover-long-press', { bubbles: true })); }
+        }, 450);
+        hold = { target, id: event.pointerId, x: event.clientX, y: event.clientY, timer };
+      }
+      return;
+    }
+    if (!pin) { close(); return; }
     if (!target || !scope.contains(target)) { close(); return; }
     if (pinned && target === anchor) { close(); return; }
-    open(target);
-    if (anchor !== target) return;
-    pinned = true; document.addEventListener('pointerdown', outside, true);
+    keep(target);
   };
+  const move = (event: PointerEvent) => { if (hold && (event.pointerId !== hold.id || Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 8)) cancelHold(); };
+  const end = () => cancelHold();
+  const click = (event: MouseEvent) => {
+    if (consumed) { event.preventDefault(); event.stopImmediatePropagation(); consumed = null; }
+  };
+  const menu = (event: Event) => { if (consumed) event.preventDefault(); };
+  scope.addEventListener('contextmenu', menu);
+  const scroll = () => { if (anchor && (!usable(anchor) || (!pinned && !anchor.contains(document.activeElement)))) close(); else if (anchor) open(anchor); };
+  window.addEventListener('scroll', scroll, true);
+  scope.addEventListener('click', click, true);
+  window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', end, true); window.addEventListener('pointercancel', end, true);
   scope.addEventListener('pointerover', over); scope.addEventListener('pointerout', out);
   scope.addEventListener('focusin', focus); scope.addEventListener('focusout', blur);
   scope.addEventListener('pointerdown', press); document.addEventListener('keydown', key);
   return () => {
+    scope.removeEventListener('contextmenu', menu);
+    window.removeEventListener('scroll', scroll, true);
+    scope.removeEventListener('click', click, true);
+    window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', end, true); window.removeEventListener('pointercancel', end, true);
     scope.removeEventListener('pointerover', over); scope.removeEventListener('pointerout', out);
     scope.removeEventListener('focusin', focus); scope.removeEventListener('focusout', blur);
     scope.removeEventListener('pointerdown', press); document.removeEventListener('keydown', key);

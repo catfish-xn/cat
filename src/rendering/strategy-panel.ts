@@ -1,3 +1,4 @@
+import { attachTextCards, textCard, hoverAction } from '../presentation/text-card';
 import { onTooltipTextChanged } from '../presentation/tooltip-text-loader';
 import { onAugmentTextChanged } from '../presentation/augment-text-loader';
 import { d14AnomalyLine, d14UnitNotes, displayStarLevel, fourStarBaseStats, readD14Display, starText } from '../presentation/d14-display';
@@ -256,12 +257,12 @@ export class StrategyPanel {
     private readonly itemDock: HTMLElement | null = null) {
     this.root = document.getElementById('strategy-root')!; this.root.tabIndex = -1;
     if (this.shopDock) this.shopDock.classList.add('shop-dock');
-    if (this.itemDock) { this.tab = 'traits'; this.itemDock.classList.add('item-dock'); this.itemDock.dataset.items = 'true'; this.disposers.push(attachItemPopover(this.itemDock)); }
+    if (this.itemDock) { this.tab = 'traits'; this.itemDock.classList.add('item-dock'); this.itemDock.dataset.items = 'true'; this.disposers.push(attachItemPopover(this.itemDock, 'dock-item-popover', isOnline() ? { pin: true, longPress: hoverAction } : {})); }
     this.modal = element('section', '', 'choice-overlay');
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
     document.body.append(this.modal);
-    this.disposers.push(attachItemPopover(this.root), onAugmentTextChanged(() => this.render()), onTooltipTextChanged(() => {
+    this.disposers.push(attachItemPopover(this.root, 'item-popover', isOnline() ? { pin: true, longPress: hoverAction } : {}), onAugmentTextChanged(() => this.render()), onTooltipTextChanged(() => {
       const state = this.actions.state();
       if (state.augments.length || state.pendingChoice?.kind === 'augment') this.render();
     }));
@@ -269,6 +270,17 @@ export class StrategyPanel {
     this.augmentStrip.dataset.debug = 'augment-strip'; this.traitColumn.root.before(this.augmentStrip);
     this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root));
     if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock));
+    if (isOnline()) {
+      for (const scope of [this.root, this.modal, this.augmentStrip, this.shopDock, this.itemDock]) if (scope) {
+        this.disposers.push(attachTextCards(scope));
+      }
+      for (const scope of [this.modal, this.shopDock]) if (scope) this.disposers.push(attachItemPopover(scope, scope === this.modal ? 'modal-item-popover' : 'shop-item-popover', { pin: true, longPress: hoverAction }));
+      const cancelHold = () => { this.router.cancel(); this.cancel(); };
+      for (const scope of [this.modal, this.itemDock, this.root]) if (scope) {
+        scope.addEventListener('hover-long-press', cancelHold);
+        this.disposers.push(() => scope.removeEventListener('hover-long-press', cancelHold));
+      }
+    }
     const choiceVisible = () => !this.modal.hidden && getComputedStyle(this.modal).display !== 'none';
     // The help dialog sits above every game layer: while it is open the choice is inert and never takes focus.
     const helpOpen = () => document.body.dataset.helpOpen === 'true';
@@ -426,7 +438,8 @@ export class StrategyPanel {
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
   private augmentChip(id: string): HTMLElement {
     const chip = element('span', augmentDisplayName(id), 'augment-chip');
-    chip.dataset.augment = id; chip.title = [augmentDisplayName(id), augmentPlayerDescription(id), augmentEffectText(id)].filter(Boolean).join('\n');
+    chip.dataset.augment = id; const text = [augmentDisplayName(id), augmentPlayerDescription(id), augmentEffectText(id)].filter(Boolean).join('\n');
+    if (isOnline()) textCard(chip, text); else chip.title = text;
     chip.insertAdjacentHTML('afterbegin', augmentIconOrBadgeHtml(id, 20));
     return chip;
   }
@@ -435,7 +448,8 @@ export class StrategyPanel {
     const name = anomalyDisplayName(id), holder = unitDefinitionId ? displayUnitName(unitDefinitionId) : '';
     const chip = element('span', `${name}${holder ? ` → ${holder}` : ''}`, 'augment-chip anomaly-chip');
     chip.dataset.anomaly = id; chip.dataset.debug = 'anomaly-chip';
-    chip.title = [`异常：${name}${holder ? ` → ${holder}` : ''}`, anomalyPlayerDescription(id)].filter(Boolean).join('\n');
+    const text = [`异常：${name}${holder ? ` → ${holder}` : ''}`, anomalyPlayerDescription(id)].filter(Boolean).join('\n');
+    if (isOnline()) textCard(chip, text); else chip.title = text;
     chip.insertAdjacentHTML('afterbegin', anomalyIconHtml(20, 'augment-icon') || '<span class="augment-icon augment-badge anomaly-badge" style="width:20px;height:20px;font-size:10px" aria-hidden="true">异</span>');
     return chip;
   }
@@ -567,19 +581,24 @@ export class StrategyPanel {
     const help = this.button('help-open', '？帮助', () => this.actions.help()); help.classList.add('help-button'); title.append(help);
     head.append(title);
     const stats = element('div', '', 'hud-stats panel-hud');
-    const chip = (label: string, value: string, kind: string, extra?: HTMLElement, tip = '') => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); if (extra) node.append(extra); if (tip) node.append(element('span', tip, 'hud-tip')); stats.append(node); };
+    const chip = (label: string, value: string, kind: string, extra?: HTMLElement, tip = '') => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); if (extra) node.append(extra); if (tip && !online) node.append(element('span', tip, 'hud-tip')); if (online) textCard(node, [label, value, tip].filter(Boolean).join('\n')); stats.append(node); };
     const xpBar = element('span', '', 'hud-xp-bar'); xpBar.title = xp === null ? '已满级' : `经验 ${state.xp}/${xp}`;
-    const xpFill = element('i', '', 'hud-xp-fill'); xpFill.style.width = `${xp === null ? 100 : Math.min(100, Math.round(state.xp * 100 / xp))}%`; xpBar.append(xpFill);
+    const xpFill = element('i', '', 'hud-xp-fill'); xpFill.style.width = `${xp === null ? 100 : Math.min(100, Math.round(state.xp * 100 / xp))}%`; xpBar.append(xpFill); if (online) textCard(xpBar, `等级 ${state.level}\n${xpBar.title}`);
     // Docked (online): gold and level lead, as at the bottom-left of a TFT screen. Offline keeps the original order.
     // As in TFT, hovering gold shows next round's income card: base, interest, victory and streak gold, from the same preview.
+    const streakText = `${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count}`;
     const incomeTip = economy ? `可能的总收入\n${economyIncomeText('胜', economy.ifWin)}\n${economyIncomeText('败/平', economy.ifLoss)}\n胜利金币当场到账，其余在下个准备阶段开始时到账` : '';
-    if (dock) chip('金币', `${state.gold}`, 'gold', undefined, incomeTip); else chip('生命', String(state.playerHp), 'hp');
-    if (!dock) chip('金币', `${state.gold}`, 'gold', undefined, incomeTip);
+    if (dock) chip('金币', `${state.gold}`, 'gold', undefined, online ? `${streakText}\n${incomeTip}` : incomeTip); else chip('生命', String(state.playerHp), 'hp');
+    if (!dock) chip('金币', `${state.gold}`, 'gold', undefined, online ? `${streakText}\n${incomeTip}` : incomeTip);
     chip('等级', `${state.level}${xp === null ? ' · 满' : ` · ${state.xp}/${xp}`}`, 'level', xpBar);
     chip('人口', `${getPlayerDeploymentCount(state.preparation)}/${getDeploymentCap(state)}`, 'pop');
     if (dock) chip('生命', String(state.playerHp), 'hp');
     if (dock) dock.append(stats); else head.append(stats);
-    head.append(element('p', `${interest}${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : (online && ONLINE_PHASE_HINT[state.phase]) || PHASE_HINT[state.phase]}`, 'hud-hint'));
+    const hint = element('p', '', 'hud-hint');
+    hint.append(document.createTextNode(interest));
+    const streak = element('span', streakText);
+    if (online) textCard(streak, streak.textContent!);
+    hint.append(streak, document.createTextNode(` · ${ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : (online && ONLINE_PHASE_HINT[state.phase]) || PHASE_HINT[state.phase]}`)); head.append(hint);
     this.root.append(head);
     // One phase-appropriate primary action; the other lifecycle buttons stay reachable as secondary.
     const primary: ControlName = state.phase === 'settlement' ? 'continue' : state.phase === 'gameOver' ? 'new-match' : 'start-combat';
@@ -1048,6 +1067,9 @@ export class StrategyPanel {
           const after = this.actions.state().pendingChoice;
           if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
         });
+        if (isOnline() && choice.kind === 'component') {
+          button.dataset.itemDef = id; button.insertAdjacentHTML('afterbegin', itemMarkHtml(id, 40)); button.setAttribute('aria-label', label);
+        }
         if (choice.kind === 'augment') {
           // The original card's layers: icon, the tier ornament under it, the name set large, the effect description, then
           // the extra notes in their own block. Each text block keeps its leading line break, so the text reads as the label.
@@ -1229,10 +1251,14 @@ export class StrategyPanel {
     }));
     if (offer.price !== undefined) button.dataset.price = String(offer.price);
     // Name line, then the effect text in a smaller block so four offers fit one screen; the full label stays the tooltip.
-    button.classList.add('generic-offer'); button.title = label;
+    button.classList.add('generic-offer'); if (isOnline() && choice.kind !== 'blackMarket') textCard(button, label); else button.title = label;
     button.replaceChildren(element('strong', label.split('\n')[0]!, 'offer-name'));
     if (offer.description) button.append(element('span', offer.description, 'offer-desc'));
-    if (catalogEntry(offer.id)) button.insertAdjacentHTML('afterbegin', itemMarkHtml(offer.id, 40));
+    const itemId = isOnline() && isMasterworkChoice(choice) ? (this.actions.state() as { masterworkOptions?: readonly MasterworkOptionDisplay[] }).masterworkOptions?.find(option => option.itemId === offer.id)?.radiantDefinitionId ?? offer.id : offer.id;
+    if (catalogEntry(itemId)) {
+      button.insertAdjacentHTML('afterbegin', itemMarkHtml(itemId, 40));
+      if (isOnline() && choice.kind !== 'blackMarket') { button.dataset.itemDef = itemId; delete button.dataset.textCard; button.removeAttribute('title'); }
+    }
     else if (Object.hasOwn(AUGMENT_DEFINITIONS, offer.id)) button.insertAdjacentHTML('afterbegin', augmentIconHtml(offer.id, 40));
     if (timeoutPick) { button.dataset.timeoutPick = 'true'; button.append(element('span', '超时默认', 'choice-timeout-tag')); }
     button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation);
