@@ -31,11 +31,14 @@ export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKi
  const familyIds=allies.filter(u=>owners.has(u.id)&&!u.itemSummon&&!u.anomalySummon&&!UNIT_DEFINITIONS[u.definitionId]?.summon&&(familyTrait?.memberUnitIds?familyTrait.memberUnitIds.includes(u.id):familyTrait?.memberDefinitionIds.includes(u.definitionId))).map(u=>u.id).sort();
  const melCasts=allies.filter(u=>owners.has(u.id)&&u.definitionId==='mel'&&!u.itemSummon&&!u.anomalySummon).reduce((n,u)=>n+(u.runtime?.castCount??0),0);
  const openingDeaths=(combat.openingDeaths??[]).filter(d=>{const u=combat.units.find(u=>u.id===d.unitId);return u&&u.team!==team&&openingUnits.some(o=>o.id===u.id)&&!u.itemSummon&&!u.anomalySummon&&!UNIT_DEFINITIONS[u.definitionId]?.summon&&(roundKind==='pvp'?u.unitKind!=='neutral':u.definitionId.startsWith('pve-scuttle-')||u.definitionId==='pve-giant-crab');}).map(d=>({victimId:d.unitId,eventSeq:d.eventSeq}));
+ // Ownership comes from opening strategy sources, authenticated by battle replay on restore.
+ // Do not add counters to seats without Spoils (including their pre-acquisition rounds).
+ const ownsSpoils=combat.strategy.units.some(u=>owners.has(u.unitId)&&u.sources.some(s=>s.source.sourceKind==='augment'&&['spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii'].includes(s.source.sourceDefinitionId)));
  // Dedicated Spoils fact in the existing extensible counter envelope: no save schema change.
  // Opening enemy deaths include ordinary PvE, but exclude summons and spawned/non-opening units.
  const spoilsKills=(combat.openingDeaths??[]).filter(d=>{const u=combat.units.find(u=>u.id===d.unitId);return u&&u.team!==team&&openingUnits.some(o=>o.id===u.id)&&!u.itemSummon&&!u.anomalySummon&&!UNIT_DEFINITIONS[u.definitionId]?.summon&&(roundKind==='pve'||u.unitKind!=='neutral');}).length;
  const counters=batch2BattleFacts(combat,team);
- const batch2=spoilsKills?[...(counters??[]),{definitionId:'spoils-of-war',count:spoilsKills}]:counters;
+ const batch2=ownsSpoils&&spoilsKills?[...(counters??[]),{definitionId:'spoils-of-war',count:spoilsKills}]:counters;
  const batch3Healing=combat.units.filter(u=>u.team===team).reduce((n,u)=>n+(u.batch2?.healed??0),0);
  const dummies=combat.units.filter(u=>u.team===team&&(u.definitionId==='training-dummy'||u.definitionId==='forming-dummy'||u.definitionId==='tower-dummy'));
  const firstDeath=[...(combat.openingDeaths??[])].sort((a,b)=>a.eventSeq-b.eventSeq).find(d=>combat.units.some(u=>u.id===d.unitId&&u.team===team))?.unitId??null;

@@ -1127,3 +1127,9 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 
 - **P，2026-10-25，ability-status-restore-authentication**：技能声明贡献及其非活动显示／移除锚点由已认证战斗输入的独立重放逐字段、逐顺序核对；全量比较包括没有贡献的单位，不能按候选声明挑选认证对象。来源、effectIndex、应用身份、系数、叠层／刷新历史与时间均以重放为证。仅重放证明的 identity-key 技能状态进入已有声明投影校验，永久贡献继续沿既有 `null → 1201` 显示投影；旧状态、channel／redirect 活动及其专用历史校验保持原契约。此为工程认证修复，不改规则、数值、保存格式、版本或内容身份。
 - **P，2026-10-25，restore-fuzz-random-only**：混合构筑压测若被独立经济 Oracle 阻断，保留失败日志并单列报告，不能关闭 Oracle 或放宽断言。离线驱动新增显式 `--random-only` 与 `--checkpoint-rate N`：只以公开命令随机走完整局，保持三个恢复入口和完整字节续跑比较，直到达到原 `--checkpoints` 下限；默认仍执行原构筑路线与 BotDriver。纯随机通过不声称构筑或 BotDriver 本次通过，也不把旧摘要夹具阻断计作通过。
+
+## 2026-10-25 Spoils 战后事实兼容认证（P）
+
+**P-SPOILS-FACT-OWNERSHIP（P，2026-10-25，用户授权按推荐决定）**：`spoils-of-war` 击杀事实只由该队开战 strategy 中的真实 Spoils 强化 source 开启；不读取候选事实行来判断持有情况，不以当前轮之后取得的强化回填旧轮。未持有者完全保留原 `batch2` 输出，既有无强化存档字节不变。持有者有有效击杀时必须写行；零击杀延续稀疏事实约定，但缺行本身不证明零：终局和完整历史恢复仍独立重建可信开战输入、重放战斗并逐项比较事实，删除、置零或增加真实击杀数均拒绝。PvP 两侧分别按开战单位所属队伍认证来源，不能借用敌方强化。无规则、数值、内容身份或存档格式变更。
+
+回归：`tests/augment-pool-batch3-progress.test.ts`；冻结兼容基线及其独立生成来源见 `tests/fixtures/compat/README.md`。当前内容配旧结算代码生成字节，避免把 pre2 内容 digest 漂移混入兼容判定；不手改历史 digest。
