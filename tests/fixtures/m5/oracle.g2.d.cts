@@ -37,7 +37,7 @@ export class Ledger {
   costs: Record<string, number>;
   rows: RoundResult[];
   receipts: Set<string>;
-  apply(before: MatchState, after: MatchState, command?: OracleCommand, events?: readonly MatchEvent[]): void;
+  apply(before: MatchState, after: MatchState, command?: OracleCommand | null, events?: readonly MatchEvent[]): void;
   check(state: MatchState): void;
 }
 
@@ -59,3 +59,6 @@ export function freeRerollCredits(state: {
   readonly augments: readonly { readonly definitionId: string; readonly choiceId: string; readonly acquiredRound: number }[];
   readonly seatMechanics?: { readonly seat: Readonly<Record<string, unknown>> };
 }): number;
+
+export const CATALOG: readonly (readonly string[])[];
+export const ROUNDS: readonly { roundId: string; ordinal: number; stage: number; sub: number; kind: string }[];

@@ -17,6 +17,8 @@ exports.archivedBytes=(commit,file)=>{
 exports.sourceDigests=()=>{
  const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(dir+'/'+e.name):[dir+'/'+e.name]);
  const files=[...walk('src/simulation'),...fs.readdirSync('scripts').filter(p=>p.includes('v23-online-rules')&&p.endsWith('.cjs')).map(p=>'scripts/'+p),
+ ...walk('tests/fixtures/m5').filter(p=>p.endsWith('.cjs')),
+ ...fs.readdirSync('tests').filter(p=>/^augment-.*-oracle-data\.cjs$/.test(p)).map(p=>'tests/'+p),
  'tests/fixtures/m5/oracle.g2.cjs','scripts/content-digest.ts','scripts/loot-replay-digest.ts','scripts/generate-m5-route.cjs','scripts/verify-m8-herald-fixtures.cjs','scripts/offline-process-output.cjs',
  'tests/fixtures/record-v23-online-rules-herald.cjs','tests/fixtures/v23-online-rules-herald-support/generate.ts'];
  return Object.fromEntries([...new Set(files)].sort().map(p=>[p,sha(fs.readFileSync(p))]));
