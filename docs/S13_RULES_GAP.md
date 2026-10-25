@@ -1069,3 +1069,10 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - P：英雄席只数 player 队伍、location=bench 的非 summon 英雄；假人、魔像、锻造器不算英雄。空席为 0，满席为英雄数等于现有 benchSize；升级后的多份棋子只占其当前一个槽位。库存为空按永久 items 的 inventory 位置检查；装备在备战席英雄身上也不算库存，独立 consumables 不参与检查，未领取法球也不算库存装备。
 - P：经验与原有结算 XP 一并调用 grantXp，统一处理跨级、10 级封顶及升级回复；初始奖励复用 Batch 1/3 独立随机流、满席待发和联机共享池法球，不新增抽样概率或资源兜底。
 - P：不新增存档字段、收据种类或版本。RoundResult 原字段记录总请求/实际经验；结构校验仅允许合法经验奖励子集，不将候选存档自述视为历史条件证据。持有这四条强化且已经历玩家战斗后（包括本轮未获额外 XP），公开 restoreMatch/serializeMatch 及单条回放验证需要原有完整 battles 参数，由现有确定性重演认证战后条件；缺失回放一律拒绝。现有 SaveEnvelope 已携带 battles，格式保持不变。
+### P-B4R（2026-10-25）：每轮按金币或购买记录发免费刷新
+
+- 本组仅开放 `TFT_Augment_PatienceIsAVirtue`（2-1）、`TFT_Augment_InvestedPlus`（3-2）、`TFT_Augment_InvestedPlusPlus`（4-2）。阶段取 14.24 ItemTags，与 `augment-stage-bans.ts` 已采用的三阶段哈希解释一致；本组单独输出 node bans，避免平行施工修改共享表。保留 source.effects 的全部值与 null；数值分别为免费刷新 2 次、立即金币 26/45、GoldThreshold=50、GoldPerReroll=10、MaxGold=80。
+- P：选择当轮不追溯入轮奖励，首次检查在选择后下一自然轮；PvE、PvP、选秀/补给轮及联机加时均算一轮。耐心检查前一整轮成功的商店购买（包括战斗中购买、购买后出售或合星）；购买失败不算购买，赠送、战利品、选秀与其他非商店获取不算购买。
+- P：投资取上一轮结算余额加已冻结的延期收入，即上一轮 goldAfter + 结算后机制金币/折金/选择费用净额 + 结算容量出售金币；在新一轮选秀、开场奇遇和其他入轮奖励之前取值。公式 `floor(max(0,min(bank,80)-50)/10)`：50–59 为 0，60–69 为 1，70–79 为 2，80 及以上为 3。立即金币照现有 acquisitionGold 唯一收据发放，影响以后入轮的银行余额。
+- P：沿用 batch 3 免费刷新账本，额度永久累计，优先免费额度再支付 2 金；没有新增存档字段、收据种类或 RNG 消耗。恢复从 owned augments、roundResults、seatMechanics.receipts 与 resourceProvenance 重新推导额度；逐笔免费刷新还必须在当时轮次已有可用额度，不能借用未来轮的额度。
+- 服务端合同：新增 `batch4RerollsGranted(state: MatchState): number`、`batch4RerollEntryGold(state: MatchState, round: number): number`，前者汇总本组三条的全部已到期额度，后者重建指定入轮银行数；历史缺失抛 `RangeError('Missing batch4 reroll entry history')`。`freeRerollsGranted(state: MatchState): number` 接纳完整 MatchState，统一汇总本组与既有额度。命令仍由 `rerollShop` / `rerollSharedShop` 消耗，不新增公共命令或失败原因；存档认证失败仍抛 RangeError。

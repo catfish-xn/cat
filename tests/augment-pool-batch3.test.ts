@@ -652,9 +652,9 @@ function openAt(id:string,seed:number):MatchState|undefined {
  const c=s.pendingChoice;return c?.kind==='augment'&&c.offers.includes(id)?s:undefined;
 }
 /** Pinned results of publicPick's seed search (the first seed from 0 whose openAt offers the card) for cards whose
- * search replays a slow route per seed: the Golden Egg's concede route to 4-2 (about 0.4 s per seed, eight misses).
+ * search replays a slow route per seed: the Golden Egg's concede route to 4-2 (pool expansion re-searched 2026-10-25).
  * The pinned seed must still open the offer; re-run the search if the pool, openings or route change. */
-const PINNED_OPEN_SEEDS:Readonly<Record<string,number>>={'the-golden-egg':8};
+const PINNED_OPEN_SEEDS:Readonly<Record<string,number>>={'the-golden-egg':0};
 function publicOpen(id:string):MatchState {
  const seed=PINNED_OPEN_SEEDS[id];if(seed===undefined)return publicPick(id,6000,0,false);
  const s=openAt(id,seed);expect(s?.pendingChoice?.offers,`${id} at seed ${seed}`).toContain(id);return s!;

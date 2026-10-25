@@ -1,5 +1,6 @@
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { AUGMENT_BATCH4_B4XP } from './content/augment-pool-batch4-b4xp';
+import { AUGMENT_BATCH4_B4REROLL } from './content/augment-pool-batch4-b4reroll';
 import { AUGMENT_BATCH2_ENABLED } from './content/augment-pool-batch2';
 import { AUGMENT_BATCH1 } from './content/augment-pool-batch1';
 import { AUGMENT_BATCH3 } from './content/augment-pool-batch3';
@@ -144,7 +145,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
   // Augments: 30 historical + 6 P1 (blinding-speed, portable-forge, radiant-relics, going-long, hedge-fund,
   // investment-strategy-ii) + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 (dual-wielding) + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+6+Object.keys(AUGMENT_BATCH2_ENABLED).length+Object.keys(AUGMENT_BATCH1).length+Object.keys(AUGMENT_BATCH3).length+Object.keys(AUGMENT_BATCH3_XP).length+Object.keys(AUGMENT_BATCH4).length+Object.keys(AUGMENT_BATCH4_B4XP).length+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:30+6+Object.keys(AUGMENT_BATCH4_B4REROLL).length+Object.keys(AUGMENT_BATCH2_ENABLED).length+Object.keys(AUGMENT_BATCH1).length+Object.keys(AUGMENT_BATCH3).length+Object.keys(AUGMENT_BATCH3_XP).length+Object.keys(AUGMENT_BATCH4).length+Object.keys(AUGMENT_BATCH4_B4XP).length+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

@@ -1,5 +1,6 @@
 import { AUGMENT_BATCH4_TIERS } from './augment-pool-batch4';
 import { AUGMENT_BATCH4_B4XP_TIERS } from './augment-pool-batch4-b4xp';
+import { AUGMENT_BATCH4_B4REROLL_TIERS } from './augment-pool-batch4-b4reroll';
 import { AUGMENT_BATCH2_TIERS } from './augment-pool-batch2';
 import { AUGMENT_BATCH1_TIERS } from './augment-pool-batch1';
 import { AUGMENT_BATCH3_TIERS } from './augment-pool-batch3';
@@ -95,6 +96,7 @@ export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismat
   ...AUGMENT_BATCH3_XP_TIERS,
   ...AUGMENT_BATCH4_TIERS,
   ...AUGMENT_BATCH4_B4XP_TIERS,
+  ...AUGMENT_BATCH4_B4REROLL_TIERS,
   sisters:'gold', mentorship:'gold',reunion:'gold',geniuses:'prismatic',menaces:'gold','unlikely-duo':'gold',
   ...D11_FILL_TIERS,
   "blinding-speed": "prismatic",
