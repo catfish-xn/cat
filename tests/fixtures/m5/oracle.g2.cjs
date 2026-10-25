@@ -3,6 +3,7 @@
  * docs/MATCH_CONTRACT.md. Independently implemented; never imports tested code. */
 const assert = require('node:assert/strict');
 const {validateRewards}=require('./augment-rewards-oracle.cjs');
+const {battleGold}=require('./battle-gold-oracle.cjs');
 const {concreteMarketItems}=require('./black-market-oracle.cjs');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
 CATALOG.push(['mel','viktor','warwick']); // Approved v19 six-cost identities; raw historical recordings stay immutable.
@@ -538,9 +539,9 @@ class Ledger {
   }
   // v22 opening encounters (batch A/B, trainer golems…): rewards are audited by the opening-encounters suites; the ledger books them.
   let lateGold=0;
-  // G2-3/G2-4 battle payouts (item gold rolls, Conqueror chest gold, High Roller, Tactician's Crown) pay after the settlement record;
-  // their amounts are audited by g2-4b-collector and the G2-3 conquest suites.
-  for(const r of appendedMechanics.filter(r=>['g24-item-gold','conqueror-chest','high-roller','tacticians-crown'].includes(r.source)&&r.kind==='gold')){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
+  // Reconstruct the complete battle payout set from combat inputs/outcomes before booking it.
+  const battlePayouts=battleGold(before,after,command,events,{word,blackMarket,ROUNDS});
+  for(const r of battlePayouts){this.gold+=r.amount;costs.rewards+=r.amount;lateGold+=r.amount;}
   // G2-3 armory purchases (Junker King upgrades) pay their price; the price table is audited by the G2-3 junker suites.
   this.gold-=independentRewards.price;costs.purchases+=independentRewards.price;
   for(const r of appendedMechanics.filter(r=>['augment-kingslayer','augment-risky-moves'].includes(r.source))){
@@ -582,7 +583,17 @@ class Ledger {
   for(const event of events.filter(e=>e.type==='unitUpgraded')){assert.equal(event.consumedIds.length,2);assert.equal(new Set([event.survivorId,...event.consumedIds]).size,3);for(const id of [event.survivorId,...event.consumedIds])assert.deepEqual(units.get(id),{definitionId:event.definitionId,starLevel:event.fromStar},'upgrade consumes actual candidate lineage');assert.equal(event.toStar,event.fromStar+1);for(const id of event.consumedIds)units.delete(id);units.set(event.survivorId,{definitionId:event.definitionId,starLevel:event.toStar});}
   assert.deepEqual(new Map(ownedUnits(after).map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}])),units,'actual player unit lineage');
   const schedule=appended(before.scheduleReceipts,after.scheduleReceipts,'eventId','schedule receipts');
-  for(const receipt of schedule){if(before.pendingChoice?.kind==='augment'&&receipt.eventId===before.pendingChoice.eventId){assert.equal(command?.type,'select');assert.equal(receipt.gold,augmentGold(command.definitionId,before.roundDefinitionId),'independent once-only augment acquisition gold');const item=AUGMENT_ITEMS[command.definitionId];assert.deepEqual(receipt.itemIds,item?[`item-${before.nextItemSerial}`]:[],'independent exact augment item grant');if(item)assert.equal(after.items.find(i=>i.id===receipt.itemIds[0])?.definitionId,item,'independent augment item identity');}assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
+  const c=before.pendingChoice,scheduled=command?.type==='select'&&['augment','anomaly','component'].includes(c?.kind)&&c.eventId===`round:${before.roundDefinitionId}:${c.kind==='component'?'supply':c.kind}`;
+  const dueSchedule=[];
+  if(scheduled){
+   assert.equal(before.phase,'choice');assert.equal(c.step,'offer');assert.equal(command.choiceId,c.choiceId);assert.equal(command.generation,c.generation);assert(c.offers.includes(command.definitionId));
+   assert(events.some(e=>e.type==='choiceSelected'&&e.choiceId===c.choiceId&&e.definitionId===command.definitionId),'schedule requires current selection event');
+   const item=c.kind==='component'?command.definitionId:c.kind==='augment'?AUGMENT_ITEMS[command.definitionId]:null;
+   dueSchedule.push({eventId:c.eventId,round:before.round,kind:c.kind,itemIds:item?[`item-${before.nextItemSerial}`]:[],gold:c.kind==='augment'?augmentGold(command.definitionId,before.roundDefinitionId):0,unitId:c.targetId,definitionId:command.definitionId});
+   if(item)assert.equal(after.items.find(i=>i.id===`item-${before.nextItemSerial}`)?.definitionId,item,'independent schedule item identity');
+  }
+  assert.deepEqual(schedule,dueSchedule,'independent due schedule receipts (count, node, identity, reward)');
+  for(const receipt of dueSchedule){assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
   let itemSerial=before.nextItemSerial;
   for(const receipt of lootReceipts)for(const id of receipt.grantedItemIds)assert.equal(id,`item-${itemSerial++}`,'loot item serial');
   for(const receipt of schedule)for(const id of receipt.itemIds)assert.equal(id,`item-${itemSerial++}`,'schedule item serial');
