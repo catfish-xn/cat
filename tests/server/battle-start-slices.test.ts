@@ -104,6 +104,9 @@ describe('battle opening slices', () => {
       const { room, clock } = fixture(9);
       const results: unknown[] = [], order: string[] = [];
       try {
+        // The re-recorded human has zero gold and a bench anvil. Fund the FIFO commands with public sales.
+        for(const unit of room.state.seats[0]!.match.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'))
+          expect(room.handle('seat-1',{type:'sell',unitId:unit.id})).toMatchObject({ok:true});
         seam(room).freezeAndResolve();
         const frozen = room.state, inputs = seam(room).frozenInputs;
         const execute = (name: string, run: () => unknown) => {
@@ -113,8 +116,8 @@ describe('battle opening slices', () => {
         if (!queued) finishOpening(room, clock);
         const seatId = 'seat-1';
         const match = () => room.state.seats.find(s => s.seatId === seatId)!.match;
-        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available'), generation: match().shop.generation }));
-        execute('sell', () => room.handle(seatId, { type: 'sell', unitId: match().preparation.units.find(u => u.location.kind === 'bench')!.id }));
+        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available' && s.definitionId === 'amumu'), generation: match().shop.generation }));
+        execute('sell', () => room.handle(seatId, { type: 'sell', unitId: match().preparation.units.find(u => u.location.kind === 'bench' && !u.definitionId.startsWith('TFT_ArmoryKey'))!.id }));
         execute('reroll', () => room.handle(seatId, { type: 'reroll' }));
         const orb = readLootView(frozen.seats[0]!.match).unclaimedOrbs![0]!;
         expect(orb).toBeDefined();
@@ -186,7 +189,7 @@ describe('battle opening slices', () => {
     });
     try {
       expect(room.state.seats.filter(s => s.alive).map(s => s.match.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length))
-        .toEqual([8, 8, 8, 7, 7, 8, 8]); // v23 recording (battle-start.json checkpoint round 23)
+        .toEqual([8, 8, 8, 8, 7, 8, 8]); // v23 recording (battle-start.json checkpoint round 23)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;

@@ -41,8 +41,8 @@ export function naturalForgeStates():Map<number,MatchState>{
    if(c.kind==='anomaly'&&c.step==='target'){
     state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,state.preparation.units.find(u=>u.team==='player')!.id));c=state.pendingChoice!;
    }
-   // Prefer Going Long over Radiant Relics at seed42's v14 4-2 node to keep the forge item serials.
-   const augmentPriorities=['going-long'];
+   // Trade Sector avoids seed 20's new Slammin historical-XP requirement; Going Long keeps the late forge route.
+   const augmentPriorities=['trade-sector','going-long'];
    const id=c.kind==='augment'?augmentPriorities.find(id=>c.offers.includes(id))??c.offers.find(id=>!(id in P2_ITEM_GRANTS))??c.offers[0]:c.offers[0];
    state=accepted(selectChoice(state,c.choiceId,c.generation,id));continue;
   }
