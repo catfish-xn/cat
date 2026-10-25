@@ -5,8 +5,10 @@ import { needsCrownHistory, missingCrownHistory } from './crown-history';
 import type { MatchState } from './match-types';
 import { validateMatchStructure, validateMatchStructureForSerialization } from './serialization-structure';
 
-/** Restore a detached Match. Historical battle-condition claims require completed replays;
- * structural/RNG consistency alone is not evidence of eligibility (including zero-XP bench outcomes). */
+/** Restore a detached Match. Historical mechanic claims (including Blood Brothers)
+ * require the existing completed replays;
+ * structural/RNG consistency alone is not evidence of historical eligibility.
+ * Saves without history-dependent mechanics retain structural restoration. */
 export function restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState {
   return withHistory(validateMatchStructure(input), battles);
 }
@@ -16,7 +18,7 @@ function withHistory(state: MatchState, battles: readonly BattleRecord[] | undef
   return state;
 }
 
-/** Canonical Match text; supply the same historical evidence as restoreMatch. */
+/** Canonical Match text; supply the same history as restoreMatch for history-dependent mechanic claims. */
 export function serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string {
   return canonicalContent(withHistory(validateMatchStructureForSerialization(state), battles));
 }

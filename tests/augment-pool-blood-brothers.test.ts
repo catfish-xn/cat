@@ -11,7 +11,9 @@ import { batch2Cast, batch2Kill } from '../src/simulation/augment-pool-batch2-co
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
-import { accepted, reachRound, freeze } from './match-helpers';
+import { accepted } from './match-helpers';
+import { BattleHistory } from '../src/replay/history';
+import { recordCommand, recordedEmptyRoute } from './fixtures/recorded-empty-route';
 
 // Independent transcription of augments-14.24.json record [301] TFT13_TeamupAugment_BloodBrothers.
 const HP_PER_CAST=30,AP_PER_DEATH=6;
@@ -82,37 +84,37 @@ it('strict facts reject a lone, negative or fractional Blood Brothers counter',(
  for(const x of [[{definitionId:ID,count:1}],[{definitionId:'blood-brothers-deaths',count:1}],[{definitionId:ID,count:-1},{definitionId:'blood-brothers-deaths',count:0}],[{definitionId:ID,count:1},{definitionId:'blood-brothers-deaths',count:0.5}]])
   expect(()=>validateBatch2Facts(x)).toThrow();
 });
-// First matching cheap 2-1 draw from the former bounded search; assert both the predicate and public offer.
-let acquired: ReturnType<typeof createMatch> | undefined;
 function acquire(){
- if(acquired)return acquired;
- const seed=178,id='blood-brothers',initial=createMatch(seed);
- expect(generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState).offers).toContain(id);
- const before=reachRound('2-1',false,seed),c=before.pendingChoice!;
- expect(c.offers).toContain(id);
- return acquired=freeze(accepted(selectChoice(before,c.choiceId,c.generation,id)));
+  // Seed 178 is the first 2-1 Blood Brothers offer (pinned to avoid a per-test timeout; the loop asserts it still offers).
+ for(let seed=178;seed<10000;seed++){ // starts at the first offering seed; the predicate is still checked
+  const s=createMatch(seed),filter={node:'2-1',fieldedTraits:[],blocked:[]};
+  if(!generateChoices(augmentCandidates(resolveAugmentTier(s,'round:2-1:augment'),[],[],null,filter),s.choiceRngState).offers.includes(ID))continue;
+  const history=new BattleHistory('blood-brothers-regression');
+  const before=recordedEmptyRoute(seed,'2-1',history),c=before.pendingChoice!;return {state:accepted(selectChoice(before,c.choiceId,c.generation,ID)),history};
+ }
+ throw Error('missing seed');
 }
 it('Match grants 2-star Vander, Silco and Shojin, settles authoritative facts once, restores, and rejects tampered facts',()=>{
- let s=acquire();
+ const live=acquire(),history=live.history;let s=live.state;
  const vander=s.preparation.units.find(u=>u.definitionId==='vander'&&u.starLevel===2),silco=s.preparation.units.find(u=>u.definitionId==='silco');
  expect(vander).toBeDefined();expect(silco).toBeDefined();expect(s.items.some(i=>i.definitionId==='shojin')).toBe(true);
  for(const [i,u] of [vander!,silco!].entries())if(u.location.kind!=='board')s=accepted(deployMatchUnit(s,u.id,{kind:'board',cell:{col:i*3,row:7}}));
  const battles=readG23Progress(s)!.economyReceipts.length;
- s=accepted(startMatchCombat(s));
+ s=accepted(recordCommand(history,s,startMatchCombat(s)));
  expect(s.combat!.units.filter(marked).map(u=>u.definitionId).sort()).toEqual(['silco','vander']);
- for(let i=0;i<1200&&s.phase==='combat';i++)s=stepMatch(s).state;
+ for(let i=0;i<1200&&s.phase==='combat';i++)s=recordCommand(history,s,stepMatch(s)).state;
  expect(s.phase).toBe('settlement');
  const receipts=readG23Progress(s)!.economyReceipts.slice(battles),last=receipts.at(-1)!;
  expect(last.kind).toBe('battle');
  const rows=last.kind==='battle'?last.facts.batch2?.filter(x=>x.definitionId.startsWith(ID)):[];
  expect(rows?.map(r=>r.definitionId)).toEqual([ID,'blood-brothers-deaths']);
- expect(restoreMatch(serializeMatch(s))).toEqual(s);
- const again=serializeMatch(s);expect(serializeMatch(stepMatch(s).state)).toBe(again);
+ expect(restoreMatch(serializeMatch(s,history.completedRecords),history.completedRecords)).toEqual(s);
+ const again=serializeMatch(s,history.completedRecords);expect(serializeMatch(stepMatch(s).state,history.completedRecords)).toBe(again);
  const forged=JSON.parse(again);
  const walk=(o:any):boolean=>{if(!o||typeof o!=='object')return false;if(Array.isArray(o)){for(const x of o)if(walk(x))return true;return false;}
   if(o.definitionId==='blood-brothers-deaths'&&typeof o.count==='number'){o.count+=0.5;return true;}for(const k of Object.keys(o))if(walk(o[k]))return true;return false;};
  expect(walk(forged)).toBe(true);
- expect(()=>restoreMatch(JSON.stringify(forged))).toThrow();
+ expect(()=>restoreMatch(JSON.stringify(forged),history.completedRecords)).toThrow();
  const p=readG23Progress(s)!;
  expect(p.economyReceipts.length).toBe(battles+receipts.length);
 });

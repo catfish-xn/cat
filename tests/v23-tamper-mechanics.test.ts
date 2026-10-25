@@ -1,3 +1,4 @@
+import { recordCommand, recordedEmptyRoute } from './fixtures/recorded-empty-route';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { deepStrictEqual } from 'node:assert/strict';
 import { readLootView, buyXp, deployMatchUnit, equipItem, nextRound, rerollAugment, selectChoice, sellUnit,
@@ -13,6 +14,8 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { generateChoices } from '../src/simulation/choices';
 import { openingEncounterId } from '../src/simulation/opening-encounter';
 import { createMatch } from '../src/simulation/match';
+import { BattleHistory } from '../src/replay/history';
+import type { BattleRecord } from '../src/m6/contracts';
 import { reachRound, resolveM5Choices } from './match-helpers';
 
 function accepted<T extends { ok: boolean; state: MatchState; reason?: string }>(r: T): MatchState {
@@ -23,8 +26,16 @@ function accepted<T extends { ok: boolean; state: MatchState; reason?: string }>
 // Deliberately loose at the untrusted JSON boundary: missing/extra keys are attacks.
 type Json = any;
 const entries = ['JSON', 'object', 'serialized'] as const;
-const restore = (s: MatchState, entry: typeof entries[number]) => entry === 'JSON'
-  ? restoreMatch(JSON.stringify(s)) : entry === 'object' ? restoreMatch(s) : restoreMatch(serializeMatch(s));
+const restore = (s: MatchState, entry: typeof entries[number], battles?: readonly BattleRecord[]) => entry === 'JSON'
+  ? restoreMatch(JSON.stringify(s), battles) : entry === 'object' ? restoreMatch(s, battles) : restoreMatch(serializeMatch(s, battles), battles);
+let bloodHistory: BattleHistory;
+function recorded<T extends { state: MatchState; events?: readonly import('../src/simulation/match').MatchEvent[]; ok?: boolean }>(before: MatchState, result: T): T {
+  return recordCommand(bloodHistory, before, result);
+}
+function reachBloodRound(seed: number): MatchState {
+  bloodHistory = new BattleHistory('v23-blood-history');
+  return recordedEmptyRoute(seed, '2-1', bloodHistory);
+}
 const emblem = (trait: string) => Object.values(EMBLEM_ITEMS).find(e => e.emblemTrait === trait)!.id;
 const unit = (s: Json, id: string): Json => s.combat.units.find((u: Json) => u.definitionId === id && u.team === 'player');
 const mech = (s: Json, id: string, name: string): Json => unit(s, id).mechanics.find((m: Json) => m.mechanic === name);
@@ -62,7 +73,7 @@ function until(s: MatchState, predicate: (s: MatchState) => boolean): MatchState
 }
 function matrix(name: string, build: () => MatchState | Generator<void, MatchState>, edits: readonly [string, (s: Json) => void][]) {
   describe(name, () => {
-    let saved: string, legitimate: MatchState, work: Generator<void, MatchState> | undefined;
+    let saved: string, legitimate: MatchState, battles: readonly BattleRecord[] | undefined, work: Generator<void, MatchState> | undefined;
     beforeAll(() => {
       const result = build();
       if ('next' in result) work = result; else legitimate = result;
@@ -72,11 +83,11 @@ function matrix(name: string, build: () => MatchState | Generator<void, MatchSta
     for (let chunk = 0; chunk < 512; chunk++) beforeAll(() => {
       if (work && !legitimate) { const next = work.next(); if (next.done) legitimate = next.value; }
     });
-    beforeAll(() => { expect(legitimate).toBeDefined(); saved = serializeMatch(legitimate); });
+    beforeAll(() => { expect(legitimate).toBeDefined(); battles = name.startsWith('blood-brothers') ? bloodHistory.completedRecords : undefined; saved = serializeMatch(legitimate, battles); });
     for (const entry of entries) describe(`legitimate ${entry} continuation`, () => {
       let a: MatchState, b: MatchState;
       it('round-trips and starts the next battle when between rounds', () => {
-        a = JSON.parse(saved); b = restore(a, entry); deepStrictEqual(b, a);
+        a = JSON.parse(saved); b = restore(a, entry, battles); deepStrictEqual(b, a);
         if (a.phase === 'settlement') { a = accepted(nextRound(a, a.round)); b = accepted(nextRound(b, b.round)); }
         a = resolveM5Choices(a); b = resolveM5Choices(b);
         if (a.phase === 'preparation') {
@@ -95,18 +106,32 @@ function matrix(name: string, build: () => MatchState | Generator<void, MatchSta
       });
       it('reaches identical settlement', () => { expect(a.phase).not.toBe('combat'); deepStrictEqual(b, a); });
     });
+    if (name === 'blood-brothers between-round persisted facts') {
+      it.each(entries)('requires complete independent history (%s)', entry => {
+        const state = JSON.parse(saved);
+        expect(() => restore(state, entry)).toThrow('missing historical evidence');
+        expect(() => restore(state, entry, battles!.slice(0, -1))).toThrow('历史缺战或重战');
+        // JSON archives must authenticate in a fresh object graph too.
+        deepStrictEqual(restore(state, entry, JSON.parse(JSON.stringify(battles))), state);
+      });
+      it('cannot bypass history admission by deleting both historical counters', () => {
+        const state = JSON.parse(saved);
+        for (const receipt of state.seatMechanics.hidden.progress.economyReceipts) {
+          if (receipt.kind === 'battle' && receipt.facts.batch2) {
+            receipt.facts.batch2 = receipt.facts.batch2.filter((fact: Json) => !fact.definitionId.startsWith('blood-brothers'));
+            if (!receipt.facts.batch2.length) delete receipt.facts.batch2;
+          }
+        }
+        for (const entry of entries) expect(() => restore(state, entry)).toThrow('missing historical evidence');
+        for (const entry of entries) expect(() => restore(state, entry, battles)).toThrow();
+      });
+    }
     for (const [label, edit] of edits) {
-      // BUG V23-T1: g2-3-match-progress.ts validates these historical counts by
-      // replaying the submitted economy receipts, without authenticating them
-      // against the completed combat once nextRound clears combatInputBasis.
-      const knownBug = name === 'blood-brothers between-round persisted facts'
-        && ['battle fact.count changed', 'death fact.count changed'].includes(label);
-      const test = knownBug ? it.fails : it;
-      test.each(entries)(`rejects ${label} (%s)`, entry => {
+      it.each(entries)(`rejects ${label} (%s)`, entry => {
         const forged = JSON.parse(saved), before = JSON.stringify(forged);
         edit(forged);
         expect(JSON.stringify(forged)).not.toBe(before);
-        expect(() => restore(forged, entry)).toThrow();
+        expect(() => restore(forged, entry, battles)).toThrow();
       });
     }
   });
@@ -216,7 +241,7 @@ function acquire(id: string): MatchState {
     if (openingEncounterId(root) === 'trainer-golems') continue;
     if (!generateChoices(augmentCandidates(resolveAugmentTier(root, 'round:2-1:augment'), [], [], null,
       { node: '2-1', fieldedTraits: [], blocked: [] }), root.choiceRngState).offers.includes(id)) continue;
-    const s = reachRound('2-1', false, seed);
+    const s = id === 'blood-brothers' ? reachBloodRound(seed) : reachRound('2-1', false, seed);
     const c = s.pendingChoice!;
     if (c.offers.includes(id)) return resolveM5Choices(accepted(selectChoice(s, c.choiceId, c.generation, id)));
   }
@@ -249,12 +274,12 @@ function* partners(id: string): Generator<void, MatchState> {
   let s = clear(id === 'betrayal' ? yield* acquireBetrayal() : acquire(id));
   for (const [i, hero] of (id === 'blood-brothers' ? ['vander', 'silco'] : ['maddie', 'ambessa']).entries())
     s = add(s, hero, i * 3, i ? 7 : 4, id === 'betrayal' ? 3 : 1);
-  s = accepted(startMatchCombat(s));
+  s = accepted(id === 'blood-brothers' ? recorded(s, startMatchCombat(s)) : startMatchCombat(s));
   for (let tick = 0; tick < 1201; tick++) {
     if (s.combat!.units.some(u => id === 'blood-brothers' ? (u.batch2?.casts ?? 0) > 0 : (u.batch2?.kills ?? 0) > 0)) {
       partnerSaves.set(id, s); return s;
     }
-    expect(s.phase).toBe('combat'); s = stepMatch(s).state; if (tick % 50 === 0) yield;
+    expect(s.phase).toBe('combat'); s = (id === 'blood-brothers' ? recorded(s, stepMatch(s)) : stepMatch(s)).state; if (tick % 50 === 0) yield;
   }
   throw Error('No genuine partner runtime');
 }
@@ -357,7 +382,7 @@ matrix('Lesser Shimmer isolated use record', () => duplicator(true), [
 function* betweenPartners(id: string): Generator<void, MatchState> {
   let s = yield* partners(id);
   for (let tick = 0; s.phase === 'combat' && tick < 1201; tick++) {
-    s = stepMatch(s).state; if (tick % 50 === 0) yield;
+    s = (id === 'blood-brothers' ? recorded(s, stepMatch(s)) : stepMatch(s)).state; if (tick % 50 === 0) yield;
   }
   s = resolveM5Choices(s);
   return resolveM5Choices(accepted(nextRound(s, s.round)));
