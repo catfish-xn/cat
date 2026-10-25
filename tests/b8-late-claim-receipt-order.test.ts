@@ -133,7 +133,9 @@ describe('B8 late-claimed retained orb receipts (seed 20)', () => {
   /* Which check rejects each forgery: validateB8Loot first runs validateResourceReceipts, whose loot receipt identity
    * already requires claim round >= source round and a catalog round, so (a) and (d) stop there before the
    * B8 'receipt order' loop; the frozen ledger replay rejects a moved source round (b); the swap (c) passes the
-   * per-receipt identity and is rejected by 'receipt order'. */
+   * per-receipt identity and is rejected by 'receipt order'. These are also the proof that the source-ordinal
+   * half of that check is defensive: changing only the claim fails identity, while changing the slot or its
+   * dropId to escape that bound fails deterministic frozen-ledger replay before the receipt loop. */
   const TAMPERS: readonly { name: string; error: RegExp; change: (raw: Raw) => void }[] = [
     { name: 'claim round before the orb round (4-7 orb claimed at 4-6)', error: /^Invalid resource provenance: loot receipt identity$/, change: raw => { late(raw, '6-1').claimedRoundId = '4-6'; } },
     { name: 'claim round two stages early (4-7 orb claimed at 3-7)', error: /^Invalid resource provenance: loot receipt identity$/, change: raw => { late(raw, '6-1').claimedRoundId = '3-7'; } },

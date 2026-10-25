@@ -10,6 +10,13 @@
 ## 2026-10-25 v23 防篡改测试夹具约定（P）
 
 **P-V23-TAMPER（P，2026-10-25，用户授权按推荐决定）**：仅补测试，不改变玩法、数值、存档格式或恢复实现。夹具可使用带唯一收据的 `grantMechanicUnit/Item/Gold/Consumable` 真实领域命令；强化必须从真实公开选项选择，布阵、装备、消耗品使用、战斗及跨轮都经实际命令。先序列化合法存档，再逐项伪造脱离引用的副本；JSON、对象及 `restoreMatch(serializeMatch(...))` 三条路径分别断言拒绝。合法续战按连续有界分段逐 tick 比较完整命令结果（状态、事件、RNG），不新增超时。若伪造被接受，保留严格拒绝断言并标为 `it.fails`，在测试旁和报告中标明生产缺陷，不通过修改规则或放宽断言掩盖。
+## 2026-10-25 B8 恢复收据与赌徒之刃开战金币认证（P）
+
+**P-B8-RESTORE-RECEIPTS（P，2026-10-25，用户授权按推荐决定）**：仅加固恢复认证，不改玩法、数值、存档格式或内容身份。单人结算后的开战金币保持严格相等认证，从 `goldBefore` 扣除本回合实际交易且未 forfeited 的收据金币：显式收据使用 `gold`，旧式单人收据使用 gold payload 的 quantity；联机奖励在经济结算之后领取，不扣除。来源回合只用于定位旧式收据，不再作为发放金额的依据。
+
+保留 `receipt order` 的 `ordinal >= sourceOrdinal` 防御条件。当前单人恢复路径中，该失败分支不可达：`restoreFrozenLootLedger` 先确定性重放认证槽位 `roundId` 与 `dropId`；随后 `validateResourceReceipts` 从相同 `dropId` 解出来源回合并要求领取 ordinal 不小于来源 ordinal；单人目录范围内两个查询器使用同一 `ROUND_CATALOG`。不带 claimedRoundId 时两者本来相等；带该字段时已满足前置下界。改槽位或 dropId 无法绕过冻结重放；联机在入口走独立验证并提前返回。因此不人为绕过前置校验制造该分支覆盖，保留真实流程提前领取、冻结来源篡改与领取顺序交换测试，后者仍精确触发 `receipt order`。
+
+回归：`tests/b8-late-claim-receipt-order.test.ts`、`tests/g2-4b-gambler-loot-gold-restore.test.ts`；覆盖真实单人金币收据改为 forfeited、真实联机领取／放弃收据双向翻转，以及严格的开战金币 ±1 与抵消篡改。
 
 ## 2026-10-25 技能 ignite 的历史状态身份与恢复认证（P）
 
