@@ -25,3 +25,13 @@ it('counts emblems on a scouted public board', () => {
   expect(publicTraitRows(pub, board).map(row => row.traitId).sort()).toEqual(['chem-baron', 'quickstriker', 'watcher']);
   expect(publicTraits(pub, board).every(trait => trait.count === 1)).toBe(true);
 });
+
+it('draws an emblem with its trait icon (no bundled item icon)', async () => {
+  const { s13AssetUrl, TRAIT_API_NAMES } = await import('../src/presentation/s13-assets');
+  for (const [id, trait] of [['TFT13_Item_CrimeEmblemItem', 'chem-baron'], ['TFT13_Item_WatcherEmblemItem', 'watcher']] as const) {
+    const icon = s13AssetUrl('item', id);
+    expect(icon).toBeTruthy();
+    expect(icon).toBe(s13AssetUrl('trait', TRAIT_API_NAMES[trait] ?? trait));
+  }
+  expect(s13AssetUrl('item', 'constructor')).toBeNull();
+});
