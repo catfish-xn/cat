@@ -1,3 +1,4 @@
+import { withG23RestoreReuse, registerG23RestoreOwner } from './g23-restore-reuse';
 import { formingTotals, expectedMagicRoll, outcomeAcquisitionXp } from './augment-pool-batch3-progress';
 import { batch2HpAfterSettlement } from './augment-pool-batch2-health';
 import { openingEncounterId } from './opening-encounter';
@@ -31,7 +32,7 @@ import { validateG23State } from './g2-3-combat';
 import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { G23_ABILITIES } from './content/g2-3-abilities';
 import { freezeCombatDeclarations } from './combat-static';
-import { isImmutableJson, shareParsedDeclaration, shareParsedJson } from './immutable-json';
+import { decodeMatchJson, isImmutableJson, shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
@@ -45,7 +46,7 @@ import { asSource } from './m8/s13-definitions';
 import { validateComponentCandidates } from './component-pool';
 import { compileItemCrit } from './m8/item-program';
 import type { MatchState } from './match-types';
-import { CONTENT_DIGEST, assertParsedContent, canonicalContent, equalValidatedContent } from './content';
+import { CONTENT_DIGEST, withSynchronousRestoreEncoding, assertParsedContent, canonicalContent, equalValidatedContent } from './content';
 import { UNIT_DEFINITIONS } from './units';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
@@ -137,10 +138,13 @@ function preparationExperience(state:MatchState,after:number,round:number):numbe
  * Resist-scaled shields are checked by a trusted-input battle replay.
  */
 export function validateMatchStructure(input: unknown): MatchState {
-  return withItemRestoreCache(()=>withResourceReceiptReuse(typeof input === 'string',()=>restoreMatchWithinCall(input)));
+  const parsed = typeof input === 'string', shareDeclarations = typeof input === 'string' && !input.includes('-0');
+  return withG23RestoreReuse(shareDeclarations, () => withSynchronousRestoreEncoding(parsed, () =>
+    withItemRestoreCache(()=>withResourceReceiptReuse(parsed,()=>restoreMatchWithinCall(input,false,shareDeclarations)))));
 }
-function restoreMatchWithinCall(input: unknown, forSerialization = false): MatchState {
-  const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
+function restoreMatchWithinCall(input: unknown, forSerialization = false, parsedImmutable = typeof input === 'string' && !input.includes('-0')): MatchState {
+  const decoded = typeof input === 'string' ? decodeMatchJson(input, parsedImmutable) : { value: input };
+  const raw: unknown = decoded.value;
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
   if (typeof input === 'string') assertParsedContent(raw); else canonicalContent(raw);
@@ -156,6 +160,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   requireValue((raw.playerHp as number) <= 100, 'level/HP bounds');
   requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
   const state = raw as unknown as MatchState;
+  if(parsedImmutable)registerG23RestoreOwner(state);
   mechanicCheck(() => validateOpeningEncounterState(state), 'opening-context-mismatch');
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
@@ -315,13 +320,13 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     requireValue(combat.status === 'running' ? combat.result === null : ['playerWin','enemyWin','draw'].includes(combat.result!), 'combat result');
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
-    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'), forSerialization);
+    const expectedStrategy = compileRestoredStrategy(basis.inputs, parsedImmutable, forSerialization);
     const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation,undefined,basis.inputs.itemSummonPositions),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     const shroudOrigins=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud'))?combatPreparation.units.flatMap(u=>u.location.kind==='board'?[{
       team:u.team,cell:u.location.cell,mechanics:expectedStrategy.units.find(s=>s.unitId===u.id)?.mechanics,
     }]:[]):[];
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
-    const verifiedDynamic=validateDynamicCombat(combat,basis,expectedStrategy);
+    const verifiedDynamic=validateDynamicCombat(combat,basis,expectedStrategy,typeof input === 'string',parsedImmutable);
     const fishbones = expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Fishbones'));
     const collector=expectedStrategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Mogul'].includes(m.mechanic)));
     const gamblers=expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Gambler'));
@@ -408,6 +413,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
     if(!verifiedDynamic)validateCombatItemGold(combat,basis,expectedStrategy);
+    if(!verifiedDynamic&&parsedImmutable)replay.shareValidatedDeclarations(combat);
   }
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
@@ -420,8 +426,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   // Exact JSON bytes (including property order) key immutable metadata sharing.
   // Object inputs retain their independent clone. '-0' conservatively disables
   // sharing for text inputs because JSON.stringify normalizes its numeric sign.
-  const restored=typeof input === 'string' && !input.includes('-0') ? {
-    ...detached, m8: shareParsedJson(detached.m8),
+  const restored=parsedImmutable ? {
+    ...detached, m8: decoded.sharedM8 === detached.m8 && decoded.finishM8 ? decoded.finishM8() as MatchState['m8'] : shareParsedJson(detached.m8),
     resourceProvenance: shareParsedJson(detached.resourceProvenance),
     combatInputBasis: detached.combatInputBasis ? (() => {
       const basis = shareParsedJson(detached.combatInputBasis);
@@ -429,7 +435,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
       return { ...basis, inputs: { ...basis.inputs, preparation: { ...basis.inputs.preparation } } };
     })() : null,
   } : detached;
-  if (typeof input === 'string' && !input.includes('-0') && restored.combat) {
+  if (parsedImmutable && restored.combat) {
     restored.combat.units.forEach(unit => freezeCombatDeclarations(unit, true));
     if (restored.combat.strategy) Object.assign(restored.combat, { strategy: shareParsedDeclaration(restored.combat.strategy) });
   }
@@ -441,7 +447,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
 /** Structural validation for canonical serialization: identical checks, but immutable inputs may skip the
  * final freeze and reuse compiled strategy (B7 speedup). Not a restore/admission API either. */
 export function validateMatchStructureForSerialization(state: MatchState): MatchState {
-  return withItemRestoreCache(() => withResourceReceiptReuse(false, () => restoreMatchWithinCall(state, true)));
+  return withG23RestoreReuse(false, () => withSynchronousRestoreEncoding(false, () =>
+    withItemRestoreCache(() => withResourceReceiptReuse(false, () => restoreMatchWithinCall(state, true)))));
 }
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them.

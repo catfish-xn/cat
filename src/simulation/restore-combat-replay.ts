@@ -1,7 +1,8 @@
 import { createCombatWithEvents, stepCombat, type CombatState, type CombatUnit } from './combat';
 import type { CombatInputBasis } from './combat-input';
 import type { StrategySnapshot } from './strategy-types';
-import { canonicalContent, digestContent } from './content';
+import { canonicalContent, digestContent, equalValidatedContent } from './content';
+import { shareValidatedCombatDeclarations } from './combat-static';
 import { M8_VERSION } from './m8/version';
 
 export interface CombatReplayFacts {
@@ -37,6 +38,11 @@ export interface CombatReplayFacts {
 export interface RestoreCombatReplay {
   opening(): CombatState;
   stateAtSaveTick(): CombatState;
+  /** Internal restore comparison: candidate must be admitted finite plain JSON.
+   * Does not expose the private replay cursor or retain candidate admission. */
+  matchesValidatedAtSaveTick(candidate: CombatState, shareDeclarations?: boolean): boolean;
+  /** Internal: all ordinary candidate checks must have completed first. */
+  shareValidatedDeclarations(candidate: CombatState): void;
   p2Opening(): readonly Pick<CombatUnit, 'id' | 's13P2Opening'>[];
   atSaveTick(): CombatReplayFacts;
 }
@@ -131,6 +137,19 @@ export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: Str
   return {
     opening: () => openingCopy ??= structuredClone(privateOpening()),
     stateAtSaveTick: () => structuredClone(privateCursor()),
+    matchesValidatedAtSaveTick(candidate, shareDeclarations = false) {
+      const expected = privateCursor();
+      // Preserve the legacy canonical validation of independently generated
+      // evidence, including its errors. The caller has already validated the
+      // complete parsed candidate, so equality needs no second text encoding.
+      // Comparing here keeps the cursor private and avoids thawing/copying its
+      // immutable declarations just to discard the copy after comparison.
+      canonicalContent(expected);
+      const matches = equalValidatedContent(expected, candidate);
+      if (matches && shareDeclarations) shareValidatedCombatDeclarations(candidate, expected);
+      return matches;
+    },
+    shareValidatedDeclarations(candidate) { shareValidatedCombatDeclarations(candidate, privateCursor()); },
     // P2 reads only these facts. Copying the complete opening also copied all
     // declarations, histories and runtime containers on every restored tick.
     p2Opening: () => p2Copy ??= structuredClone(privateOpening().units.map(({ id, s13P2Opening }) => ({ id, s13P2Opening }))),
