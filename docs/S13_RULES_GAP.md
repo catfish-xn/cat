@@ -1236,3 +1236,9 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 ### P-CONTRACT-V23（P，2026-10-25）：契约覆盖关系
 
 文档整理采用顶部 v23 当前合同优先、下文保留历史章节的口径：以发布基线 `2b434e28` 至候选 `0797f3fe` 的实际源码说明 12/8/8/7、NET5、已交付强化组及恢复要求；历史“当前／候选／待录制”字样不作为本分支身份。既有抽样、支付、几何与时点 P 均保留原分类和日期，不因写入合同升为原服已证事实。本条只约定文档阅读优先级，不新增规则／数值／保存字段，不宣布独立任务的 v23 epoch 重录已通过。对应 `docs/MATCH_CONTRACT.md`、`docs/COMBAT_CONTRACT.md` 顶部的 2026-10-25 v23 节。
+
+## Batch 4 存档篡改与恢复 Fuzz（P，2026-10-25）
+
+- **P，2026-10-25，batch4-tamper-witnesses**：16 个强化逐个从真实公开选项取得；等级奖励／满备战席见证允许调用已有带唯一收据的测试授予命令，禁止直接改资源、等级、强化或战斗运行态。篡改仅发生在分离的存档副本；逐叶修改与删除，分别断言 JSON、object、serialized 三入口拒绝；合法档恢复后比较完整命令结果（状态、RNG、事件、收据），以一场真实战斗结束为续跑边界；战斗组同时攻击运行态和 strategy 中的来源／机制声明、状态贡献与显示投影，过量治疗两组必须先出现非零护盾，整容器移除也须拒绝。需要历史证明的存档携带真实命令录下的 BattleHistory，不伪造或裁剪历史来通过校验。
+- **P，2026-10-25，batch4-fuzz-priorities**：构筑 fuzz 把全部 16 个 batch-4 强化作为 augmentPriorities，按 seed 轮换优先级，仅从真实 offers 选择；沿用独立经济 oracle 的全部断言。报告额外记录实际取得强化及其检查点数，未取得的强化不冒充 fuzz 覆盖；随机路线和 BotDriver 原有覆盖保留。所有新用例沿用 Vitest 默认超时。
+- **P，2026-10-25，batch4-schedule-unitid-defect**：篡改矩阵发现所有强化取得 schedule receipt 的 unitId 从 null 改为任意字符串可通过三入口；serialization-structure.ts 的 choice 分支只校验金额／物品数，随后仅做 nullableString，未绑定此字段。以 Caretaker Ally 的真实 2-1 选择作最小复现，保留拒绝断言并用 it.fails 标出产品缺口；不修改 src、玩法、数值、保存格式或内容身份。

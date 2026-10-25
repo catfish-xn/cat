@@ -4,8 +4,9 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { Room, ROOM_TIMING_DEFAULTS } from '../src/server/room/room';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { ManualClock } from '../src/server/room/clock';
-import { createMatch, deployMatchUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, selectChoice, deployMatchUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 
+import { firstNodeSeed } from './augment-stage-helpers';
 import { accepted, emptyBoard, reachRound } from './match-helpers';
 import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateAbilityStatusFacts } from '../src/simulation/combat-runtime-facts';
@@ -207,4 +208,27 @@ it('real Room seats are explicitly outside the Match save contract (seed=42, ste
     expect(() => restoreMatch(JSON.stringify(state))).toThrow('multiplayer-state');
     expect(() => serializeMatch(state)).toThrow('multiplayer-state');
   } finally { room.dispose(); }
+});
+
+// Minimal batch-4 tamper reduction: no grant, battle tick, history attachment or
+// late-stage route is needed. serialization-structure.ts:222 checks choice gold
+// and item count, then :224 only checks nullableString(unitId); unlike reward and
+// component receipts (:217-221), augment receipts never bind unitId to null.
+// The forged string is therefore admitted by all three independent entrances.
+// Keep the required rejection as it.fails until the product validator is fixed.
+describe('batch-4 minimal augment schedule unitId admission defect', () => {
+  let legitimate: MatchState;
+  it('acquires Caretaker Ally through an actual offered choice and round-trips', () => {
+    const open = reachRound('2-1', false, firstNodeSeed('caretakers-ally')), c = open.pendingChoice!;
+    expect(c.offers).toContain('caretakers-ally');
+    legitimate = accepted(selectChoice(open, c.choiceId, c.generation, 'caretakers-ally'));
+    expect(legitimate.scheduleReceipts.find(r => r.definitionId === 'caretakers-ally')!.unitId).toBeNull();
+    for (const restore of Object.values(entrances)) expect(restore(legitimate)).toEqual(legitimate);
+  });
+  for (const [entry, restore] of Object.entries(entrances)) it.fails(`${entry} rejects a forged augment receipt unitId`, () => {
+    const forged = structuredClone(legitimate);
+    const receipt = forged.scheduleReceipts.find(r => r.definitionId === 'caretakers-ally')!;
+    Object.assign(receipt, { unitId: 'forged' });
+    expect(() => restore(forged)).toThrow();
+  });
 });
