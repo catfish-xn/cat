@@ -1274,3 +1274,9 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `drainBatch4Gold(state:MatchState):MatchState`：后期专家达到9级发33金，来源 augment-pool-batch4，唯一收据；重复排放无副作用。
 - `validateBatch4Gold(state:MatchState):void`：错误来源、金额、回合、重复/遗漏/孤儿收据抛 RangeError；通过原有 validateBatch1Gifts 进入恢复认证。英雄/锻造器礼物与取得等级继续通过既有验证；restoreSharedOrbSnapshot 对本组拥有条目及收据命名空间同样调用该验证，删除拥有者不能放过孤儿收据。
 - `TFT_ArmoryKeyRadiant` 为神选专属五选光明锻造器单位；openAnvil / selectChoice / timeoutChoice 公共命令不变，30秒超时第一项。选项由认证奖励收据重建，不能自行声明五选。其他锻造器仍四选。
+
+## 2026-10-25 技能声明状态恢复认证
+
+存档格式、公共 Match 命令与玩法数值不变。普通结构恢复在检查声明投影前，使用同一份已认证战斗输入的独立重放事实认证全部技能贡献及其非活动显示状态；既有完整战斗重放路径继续比较完整战斗。channel／redirect 仍由活动历史认证。
+
+内部接口 `validateAbilityStatusFacts(combat: CombatState, replay: RestoreCombatReplay, same: (a: unknown, b: unknown) => boolean): ReadonlySet<string>`：逐单位完整比较技能来源贡献、应用／叠层／时间与显示锚点，返回独立证据中的贡献键；无状态也必须一致。失败抛 `Invalid Match save: ability status fact tick` 或 `Invalid Match save: ability status binding facts`，不消费候选 RNG、不修改候选。`CombatReplayFacts.units[]` 仅在恢复内存事实中增加 `abilityContributions` 与 `abilityStatuses`，不进入保存结构。`validateMechanisms`、`validateM5Runtime` 末尾新增可选 `abilityStatuses: ReadonlySet<string>`（默认空集），只能传上述重放核对结果；前者据此验证声明身份键、唯一覆盖、来源、语义及既有 `null → 1201` 到期投影，后者据此准入技能来源的真实 effectIndex。其余校验与失败原因不变。

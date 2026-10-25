@@ -17,6 +17,8 @@ export interface CombatReplayFacts {
   readonly nextTriggerEventSeq: CombatState['nextTriggerEventSeq'];
   readonly units: readonly (Pick<CombatUnit, 'mana' | 'manaLockedUntilTick' | 'damageManaRemainderCenti' | 'runtime' | 'shieldLayers' | 'shield' | 'shieldExpiresAtTick' | 'g23' | 'g23Sion' | 'maxHp' | 'maxHpBasis'> & {
     readonly periodicTasks: NonNullable<CombatUnit['mechanismState']>['periodicTasks'];
+    readonly abilityContributions: readonly import('./m8/contracts').StatusContribution[];
+    readonly abilityStatuses: CombatUnit['statuses'];
     readonly stunStatuses: NonNullable<CombatUnit['mechanismState']>['statuses'];
     readonly burnStatuses: NonNullable<CombatUnit['mechanismState']>['statuses'];
     readonly activities: NonNullable<CombatUnit['mechanismState']>['activities'];
@@ -59,6 +61,8 @@ function facts(state: CombatState): CombatReplayFacts {
     runtime: unit.runtime, shieldLayers: unit.shieldLayers, shield: unit.shield, shieldExpiresAtTick: unit.shieldExpiresAtTick,
     g23: unit.g23, g23Sion: unit.g23Sion, maxHp: unit.maxHp, maxHpBasis: unit.maxHpBasis,
     periodicTasks: unit.mechanismState?.periodicTasks ?? [],
+    abilityContributions: unit.mechanismState?.statuses.flatMap(g => g.contributions).filter(c => c.source.sourceKind === 'ability') ?? [],
+    abilityStatuses: unit.statuses?.filter(s => s.source.sourceKind === 'ability' && !s.activity) ?? [],
     stunStatuses: unit.mechanismState?.statuses.filter(s => s.kind === 'stun') ?? [],
     burnStatuses: unit.mechanismState?.statuses.filter(s => s.kind === 'burn') ?? [],
     activities: unit.mechanismState?.activities ?? [],
