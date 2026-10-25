@@ -72,7 +72,7 @@ describe('multiplayer Scrap display projection', () => {
     const replayed = view.ticks.reduce(applyCombatReplayTick, view.initial);
     expect(replayed.units.find(u => u.definitionId === 'trundle')!.equipment?.[0].definitionId).toBe('bloodthirster');
     while (!stream.done) stream.advancePvp();
-    const complete = toCombatReplayFor({ battles: [stream.result!] } as RoomState, 'B')!;
+    const complete = toCombatReplayFor({ battles: [stream.result!] } as unknown as RoomState, 'B')!;
     expect(complete.replay.terminal).toEqual(stream.view('B')!.terminal);
     expect(complete.replay.initial).toEqual(stream.view('B')!.initial);
     expect(complete.replay.ticks).toEqual(stream.view('B')!.ticks);
