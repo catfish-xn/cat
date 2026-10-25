@@ -1,5 +1,6 @@
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { drainBatch1Gifts } from './augment-pool-grants';
+import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
 import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { deferredRoundIncome } from './deferred-income';
@@ -130,7 +131,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const result = r.result === 'win' ? 'playerWin' : r.result === 'loss' ? 'enemyWin' : 'draw';
     const economyInput = {result,gold:state.gold,streak:state.streak,
       level:state.level,xp:state.xp,hp:state.playerHp,enemySurvivors:r.opposingSurvivors} as const;
-    const plan = resolveRoundEconomy({augments:state.augments,roundId:r.roundId,...economyInput});
+    const plan = withBatch4B4xp(state,resolveRoundEconomy({augments:state.augments,roundId:r.roundId,...economyInput}),batch4B4xpSettlementXp(state));
     // Damage is forwarded verbatim, but reject mismatched/edited proposals at the rules boundary.
     if (r.baseDamage !== plan.baseDamage || r.damage !== plan.playerDamage) return fail(state,'invalid-receipt');
     const growth = new Map(state.persistentGrowth.map(g => [g.unitId,g.attackDamageBps]));

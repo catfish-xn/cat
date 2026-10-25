@@ -1,4 +1,5 @@
 import { AUGMENT_BATCH4, AUGMENT_BATCH4_BLOCKED } from './augment-pool-batch4';
+import { AUGMENT_BATCH4_B4XP } from './augment-pool-batch4-b4xp';
 import { TACTICIAN_ITEM_SOURCE } from './tactician-items';
 import { AUGMENT_BATCH2, AUGMENT_BATCH2_BLOCKED } from './augment-pool-batch2';
 import { AUGMENT_BATCH1, AUGMENT_BATCH1_BLOCKED } from './augment-pool-batch1';
@@ -36,6 +37,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   // Offer stages are replay input: augment offers re-derive from these bans at restore (P, 14.24 stage tags).
   augmentStageBans:{version:'augment-stage-bans-14.24-tags-v1',bans:AUGMENT_STAGE_BANS,reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2'},
   augmentPoolBatch4:{version:'augment-pool-batch4-levels-v23-candidate',content:AUGMENT_BATCH4,blocked:AUGMENT_BATCH4_BLOCKED,timing:'reached-thresholds-on-acquisition-later-levels-on-authoritative-transition',sampling:'existing-gift-stream-radiant-five-without-replacement',birthdayCost:'max-1-level-minus-4'},
+  augmentPoolBatch4B4xp:{version:'augment-pool-batch4-b4xp-v23-candidate',content:AUGMENT_BATCH4_B4XP,timing:'pvp-end-before-settlement-rewards-and-deferred-upgrades',authority:'completed-battles-replay'},
   augmentPoolBatch3Xp:{version:'augment-pool-batch3-xp-v23-candidate',content:AUGMENT_BATCH3_XP,blocked:AUGMENT_BATCH3_XP_BLOCKED,timing:'pvp-xp-next-round-entry-draw-as-loss-stage-start-after-acquisition',levels:'recorded-at-acquisition'},
   augmentPoolBatch3:{version:'augment-pool-batch3-v23-candidate',content:AUGMENT_BATCH3,counting:'pvp-battle-receipts-from-acquisition-round-inclusive-draw-not-loss'},
   augmentPoolBatch2:{version:'augment-pool-batch2-v23-candidate',content:AUGMENT_BATCH2,blocked:AUGMENT_BATCH2_BLOCKED},

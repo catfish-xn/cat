@@ -41,7 +41,8 @@ describe('v22 node bans and external rules (re-mapped pool)', () => {
 
   it('Welcome to the Playground / Gloves Off: another live player owning one blocks the other, not itself', () => {
     const base = reachRound('2-1', false);
-    const a = seat(base, 'A', { augments: own('reunion') }), b = seat(base, 'B');
+    // Pool growth may put an unrelated one-per-match card in the opening offers; this case tests ownership only.
+    const a = seat(base, 'A', { augments: own('reunion'), pendingChoice: null, removedAugmentIds: [] }), b = seat(base, 'B', { pendingChoice: null, removedAugmentIds: [] });
     // v23 batch 3: All Out is the real PrimeCarry, so it shares the remapped apiName with Geniuses.
     expect(externalAugmentBlocks('B', [a, b])).toEqual(['all-out', 'geniuses']);
     expect(externalAugmentBlocks('A', [a, b])).toEqual([]);
