@@ -1400,3 +1400,7 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 存档格式、公共 Match 命令与玩法数值不变。普通结构恢复在检查声明投影前，使用同一份已认证战斗输入的独立重放事实认证全部技能贡献及其非活动显示状态；既有完整战斗重放路径继续比较完整战斗。channel／redirect 仍由活动历史认证。
 
 内部接口 `validateAbilityStatusFacts(combat: CombatState, replay: RestoreCombatReplay, same: (a: unknown, b: unknown) => boolean): ReadonlySet<string>`：逐单位完整比较技能来源贡献、应用／叠层／时间与显示锚点，返回独立证据中的贡献键；无状态也必须一致。失败抛 `Invalid Match save: ability status fact tick` 或 `Invalid Match save: ability status binding facts`，不消费候选 RNG、不修改候选。`CombatReplayFacts.units[]` 仅在恢复内存事实中增加 `abilityContributions` 与 `abilityStatuses`，不进入保存结构。`validateMechanisms`、`validateM5Runtime` 末尾新增可选 `abilityStatuses: ReadonlySet<string>`（默认空集），只能传上述重放核对结果；前者据此验证声明身份键、唯一覆盖、来源、语义及既有 `null → 1201` 到期投影，后者据此准入技能来源的真实 effectIndex。其余校验与失败原因不变。
+
+## 2026-10-25 强化日程收据单位认证
+
+`restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState` 与 `serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string` 的输入输出、保存格式不变。强化日程收据 `unitId` 必须为 `null`；格式合法或真实存在的奖励单位 ID 也不允许写入，失败抛 `Invalid Match save: augment receipt unit`。来源账本的收据验证边界独立拒绝同类伪造（`Invalid resource provenance: augment receipt unit`）。实际奖励单位仍通过机制／法球收据与有序 `unit-acquired` 出生的 ID、来源、回合及连续序号认证，不要求单位仍存活于当前阵容；不重发、不修复坏档。三恢复入口一致，决定见 `S13_RULES_GAP.md` 的 P-V23-AUGMENT-RECEIPT-UNIT，回归见 `tests/v23-restore-fuzz.test.ts`、`tests/v23-tamper-batch4.test.ts`。
