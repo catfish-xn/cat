@@ -1242,3 +1242,10 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - **P，2026-10-25，batch4-tamper-witnesses**：16 个强化逐个从真实公开选项取得；等级奖励／满备战席见证允许调用已有带唯一收据的测试授予命令，禁止直接改资源、等级、强化或战斗运行态。篡改仅发生在分离的存档副本；逐叶修改与删除，分别断言 JSON、object、serialized 三入口拒绝；合法档恢复后比较完整命令结果（状态、RNG、事件、收据），以一场真实战斗结束为续跑边界；战斗组同时攻击运行态和 strategy 中的来源／机制声明、状态贡献与显示投影，过量治疗两组必须先出现非零护盾，整容器移除也须拒绝。需要历史证明的存档携带真实命令录下的 BattleHistory，不伪造或裁剪历史来通过校验。
 - **P，2026-10-25，batch4-fuzz-priorities**：构筑 fuzz 把全部 16 个 batch-4 强化作为 augmentPriorities，按 seed 轮换优先级，仅从真实 offers 选择；沿用独立经济 oracle 的全部断言。报告额外记录实际取得强化及其检查点数，未取得的强化不冒充 fuzz 覆盖；随机路线和 BotDriver 原有覆盖保留。所有新用例沿用 Vitest 默认超时。
 - **P，2026-10-25，batch4-schedule-unitid-defect**：篡改矩阵发现所有强化取得 schedule receipt 的 unitId 从 null 改为任意字符串可通过三入口；serialization-structure.ts 的 choice 分支只校验金额／物品数，随后仅做 nullableString，未绑定此字段。以 Caretaker Ally 的真实 2-1 选择作最小复现，保留拒绝断言并用 it.fails 标出产品缺口；不修改 src、玩法、数值、保存格式或内容身份。
+
+## Review F 独立奖励边界（P，2026-10-25）
+
+- **P，2026-10-25，oracle-f-due-set**：独立 oracle 从当前公开选择命令与当前节点推导 schedule 唯一应发收据，逐字段比较完整集合；非 schedule 选择及普通命令的新增集合为空。收据与余额同时删改也不得通过。只加强测试，不调整游戏规则或保存格式。
+- **P，2026-10-25，oracle-f-consumable-inventory**：按独立强化奖励计划、已验证的 loot 发放及其他来源收据形成消耗品增量，使用前态序号生成 ID；只有当前 useConsumable 命令（大师升级在后续选择完成时）可移除对应工具。每个转换核验完整库存和下一序号，空奖励、空命令及锁定路径也检查。手写无库存计数向量继续仅测试其显式提供的领域。
+- **P，2026-10-25，oracle-f-battle-payouts**：战后金币以已完成战斗作为事实边界；Sevika 的 coin/jackpot 固定 3 金，征服者按独立转录的阈值和金币表，冠冕按开战上场装备与市场之后的独立 LCG 词，装备金币按战斗机会、来源实例和独立随机词推导。实际 mechanic 收据只参与完整集合比较，不能决定应发来源或金额。本检查不替代战斗重放测试。
+- **P，2026-10-25，oracle-f-scan-budget**：0..300 × cannon/sniper 共 602 路线在单一 Node 进程中扫描，最多 4 个 worker thread，不启动子扫描进程；与 Vitest 路线测试分时执行。Vitest 最多 4 worker，保持既有／默认超时和全部断言。
