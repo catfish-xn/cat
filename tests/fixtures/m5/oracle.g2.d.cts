@@ -57,8 +57,12 @@ export function freeRerollCredits(state: {
   readonly seed?: number;
   readonly multiplayer?: { readonly seatId: string };
   readonly augments: readonly { readonly definitionId: string; readonly choiceId: string; readonly acquiredRound: number }[];
-  readonly seatMechanics?: { readonly seat: Readonly<Record<string, unknown>> };
+  readonly seatMechanics?: { readonly seat?: Readonly<Record<string, unknown>>; readonly receipts?: readonly unknown[] };
+  readonly resourceProvenance?: { readonly entries: readonly unknown[] };
+  readonly roundResults?: readonly unknown[];
 }): number;
 
 export const CATALOG: readonly (readonly string[])[];
 export const ROUNDS: readonly { roundId: string; ordinal: number; stage: number; sub: number; kind: string }[];
+
+export function benchXp(state: unknown): number;

@@ -18,7 +18,7 @@ const AUGMENT_GOLD={'placebo':8,'placebo-plus':15,'going-long':15,'hedge-fund':2
  // v23 batch 1 instant gold (14.24 records 40, 26, 124, 157, 158, 83, 233; hand transcription in tests/augment-pool-source-expectations.ts).
  'one-two-five':2,'iron-assets':4,'heroic-grab-bag':9,'raining-gold':8,'raining-gold-plus':18,'big-grab-bag':2,'build-a-bud':8,
  // 14.24 archive: Scapegoat InitialGold, trainer Gold, Trade Sector Gold; XP batch Gold.
- 'scapegoat':4,'wandering-trainer-i':1,'wandering-trainer-ii':6,'trade-sector':1,'shopping-spree':4,'kingslayer':1};
+ 'scapegoat':4,'wandering-trainer-i':1,'wandering-trainer-ii':6,'trade-sector':1,'shopping-spree':4,'kingslayer':1,'invested-plus':26,'invested-plus-plus':45};
 // User P 10-23: Placebo pays once by acquisition stage 8/11/15 (stage 2/3/4+); Placebo+ 15/18/22.
 const STAGED_AUGMENT_GOLD={'placebo':[8,11,15],'placebo-plus':[15,18,22]};
 function augmentGold(id,roundId){const staged=STAGED_AUGMENT_GOLD[id];if(!staged)return AUGMENT_GOLD[id]??0;return staged[Math.min(2,Math.max(0,Number(roundId.split('-')[0])-2))];}
@@ -46,11 +46,35 @@ function entryXp(state){
  }
  return amount;
 }
+// 14.24 Clear/Cluttered Mind XP=3, Slammin XP=2; P-B4XP combat-end sampling.
+function benchXp(state){
+ if(ROUNDS[state.round-1]?.kind!=='pvp'||!state.augments.some(a=>['clear-mind','cluttered-mind','slammin','slammin-plus'].includes(a.definitionId)&&a.acquiredRound<=state.round))return 0;
+ const champions=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&COST[u.definitionId]!==undefined).length;
+ let amount=0;
+ for(const a of state.augments.filter(a=>a.acquiredRound<=state.round)){
+  if(a.definitionId==='clear-mind'&&champions===0)amount+=3;
+  if(a.definitionId==='cluttered-mind'&&champions===state.preparation.benchSize)amount+=3;
+  if(['slammin','slammin-plus'].includes(a.definitionId)&&!state.items.some(i=>i.location.kind==='inventory'))amount+=2;
+ }
+ return amount;
+}
 function freeRerollCredits(state){
  let count=0;for(const a of state.augments){const id=a.definitionId;
   count+=({'rolling-for-days-i':11,'superstars-i':2,'superstars-ii':4}[id]??0);
   if(id==='trade-sector')count+=state.round-a.acquiredRound+1;
   if(id==='call-to-chaos'&&chaosOutcome(state,a)==='rerolls')count+=40;
+  if(['patience-is-a-virtue','invested-plus','invested-plus-plus'].includes(id))for(let r=a.acquiredRound;r<state.round;r++){
+   const roundId=ROUNDS[r-1].roundId;
+   if(id==='patience-is-a-virtue'){
+    if(!state.resourceProvenance.entries.some(e=>e.kind==='unit-acquired'&&e.source.kind==='shop'&&e.roundId===roundId))count+=2;
+   }else{
+    const result=state.roundResults.find(x=>x.round===r);assert(result,'independent invested entry history');
+    const deferred=(state.seatMechanics?.receipts??[]).slice(result.mechanicReceiptPrefixLength).filter(x=>x.round===r)
+     .reduce((n,x)=>n+(x.kind==='gold'?x.amount:x.kind==='unit'?x.gold:x.kind==='choice'?-x.price:0),0);
+    const sales=state.resourceProvenance.entries.filter(e=>e.kind==='unit-sold'&&e.context==='settlement-capacity'&&e.roundId===roundId).reduce((n,e)=>n+e.goldGranted,0);
+    count+=Math.floor(Math.max(0,Math.min(80,result.goldAfter+deferred+sales)-50)/10);
+   }
+  }
   const stageCredits={'epoch':2,'epoch-plus':3}[id];
   if(stageCredits)count+=stageCredits*(1+ROUNDS.filter(r=>r.ordinal>a.acquiredRound&&r.ordinal<=state.round&&r.sub===1).length);
   if(id==='shopping-spree'||id==='upward-mobility'){
@@ -111,8 +135,8 @@ batch3Offers.silver.push('kingslayer','risky-moves');batch3Offers.gold.push('pat
 // Batch 4 (14.24 tiers): level rewards, B4XP bench XP, B4reroll free rerolls, B4Combat combat-start effects.
 batch3Offers.silver.push('caretakers-ally','lategame-specialist','patience-is-a-virtue');batch3Offers.gold.push('caretakers-favor','clear-mind','cluttered-mind','slammin','slammin-plus','long-distance-pals','category-five','overheal','sated-spellweaver');batch3Offers.prismatic.push('birthday-presents','caretakers-chosen','invested-plus','invested-plus-plus');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
-// Independent 14.24 level-reward group tiers.
-for(const [tier,ids]of Object.entries({silver:['caretakers-ally','lategame-specialist'],gold:['caretakers-favor'],prismatic:['birthday-presents','caretakers-chosen']})){AUGMENT_POOLS[tier].push(...ids);AUGMENTS.push(...ids);}AUGMENTS.sort();
+assert.equal(AUGMENTS.length,224,'independent full augment catalog size');
+assert.equal(new Set(AUGMENTS).size,224,'independent catalog has no duplicates');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).
@@ -161,7 +185,11 @@ const EXCLUSIVE_GROUPS=[['all-for-one-i','all-for-one-ii','pair-of-fours'],['bro
  ['bulky-buddies-iii','mentorship-i'],['bulky-buddies-iii','mentorship-ii'],['crown-guarded','not-today'],['high-voltage','not-today'],
  ['sisters','mentorship','reunion','geniuses','menaces','unlikely-duo'],['glass-cannon-i','glass-cannon-ii'],['manaflow-i','manaflow-ii'],
  ['piercing-lotus-i','piercing-lotus-ii'],['placebo','placebo-plus'],['pumping-up-i','pumping-up-ii','pumping-up-iii'],['trifecta-i','trifecta-ii']];
-EXCLUSIVE_GROUPS.push(['lategame-specialist','level-up']);
+EXCLUSIVE_GROUPS.push(['lategame-specialist','level-up'],
+ ['clear-mind','cluttered-mind'],['slammin','slammin-plus'],['category-five','not-today'],
+ ['sated-spellweaver','wealthy-rehab-i'],['sated-spellweaver','wealthy-rehab-ii'],
+ ['invested-plus','invested-plus-plus']);
+for(const id of ['invested-plus','invested-plus-plus'])for(const other of ['raining-gold','raining-gold-plus','hedge-fund','going-long'])EXCLUSIVE_GROUPS.push([id,other]);
 const TEAMUP_TRAITS={sisters:['enforcer','rebel','pit-fighter','ambusher'],mentorship:['enforcer','conqueror','quickstriker','sniper'],
  reunion:['enforcer','pit-fighter','ambusher','firelight','scrap'],geniuses:['academy','firelight','ambusher','scrap','visionary'],
  menaces:['family','dominator','ambusher','scrap'],'unlikely-duo':['rebel','chem-baron','pit-fighter','ambusher']};
@@ -279,7 +307,7 @@ function settlement(before,combat,goldBefore=before.gold+ungrantedLootGold(befor
  let streakAfter=before.streak;
  if(roundKind!=='supply'){const kind=result==='playerWin'?'win':'loss';streakAfter={kind,count:before.streak.kind===kind?before.streak.count+1:1};}
  const roundGold=before.augments.filter(a=>['raining-gold','raining-gold-plus'].includes(a.definitionId)).length /* v23: RoundGold 1 each (14.24 records 157/158) */;
- const base=stage===1?{2:2,3:3,4:4}[sub]:5+roundGold /* v22 10-23: next-entry 2/3/4G */,naturalXp=2 /* T11 signed opening: 2/2/2; opening XP unchanged; high-level XP68 is user custom 2026-10-22 */;
+ const base=stage===1?{2:2,3:3,4:4}[sub]:5+roundGold /* v22 10-23: next-entry 2/3/4G */,naturalXp=2+benchXp(before) /* T11 signed opening: 2/2/2; opening XP unchanged; high-level XP68 is user custom 2026-10-22 */;
  const win=roundKind==='pvp'&&result==='playerWin'?1:0,interestBasis=goldBefore+win;
  const owned=new Set(before.augments.map(a=>a.definitionId));
  const cap=owned.has('going-long')?0:owned.has('hedge-fund')?10:owned.has('investment-strategy-ii')?7:5;
@@ -458,12 +486,12 @@ class Ledger {
   if(command?.type==='rerollAugment')validateAugmentReroll(before,{ok:true,state:after,events},command);
   if(!events.some(e=>e.type==='choiceOpened'&&e.choice.kind==='augment'))assert.deepEqual(after.augmentOffers,before.augmentOffers,'augment history retained without draw');
   const lootReceipts=validateLootTransition(before,after,command,events);
-  const independentRewards=validateRewards(before,after,command,events,{CATALOG,COST,ROUNDS,lootReceipts,xp,entryXp});
+  const independentRewards=validateRewards(before,after,command,events,{CATALOG,COST,ROUNDS,lootReceipts,xp,entryXp,benchXp});
   // Round income (base/interest/streak) and its investment growth are paid at the next round entry (deferred-income.ts); win gold is immediate.
   let paidInvestment=0;
   if(command?.type==='continue'){this.gold+=this.pending.gold;this.pending.gold=0;paidInvestment=this.pending.investmentHp;this.pending.investmentHp=0;}
   if(command?.type==='buyXp'){const expected=xp(before.level,before.xp,4+(before.augments.some(a=>a.definitionId==='level-up')?2:0));assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent purchased XP');}
-  if(command?.type==='select'&&before.pendingChoice?.kind==='augment'){const a=after.augments.find(a=>a.definitionId===command.definitionId),amount=({'silver-spoon':10,'epoch':6,'epoch-plus':8,'level-up':12}[command.definitionId]??0)+(command.definitionId==='call-to-chaos'&&chaosOutcome(after,a)==='xp'?64:0),expected=xp(before.level,before.xp,amount);assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent acquisition XP');const priorLevels=before.seatMechanics?.seat['augment-acquisition-levels']??{};assert.deepEqual(after.seatMechanics?.seat['augment-acquisition-levels']??{},['shopping-spree','upward-mobility','risky-moves','caretakers-ally','caretakers-favor','caretakers-chosen','birthday-presents','lategame-specialist'].includes(command.definitionId)?{...priorLevels,[a.choiceId]:expected.level}:priorLevels,'independent acquisition level baseline');}
+  if(command?.type==='select'&&before.pendingChoice?.kind==='augment'){const a=after.augments.find(a=>a.definitionId===command.definitionId),amount=({'silver-spoon':10,'epoch':6,'epoch-plus':8,'level-up':12,'slammin-plus':10}[command.definitionId]??0)+(command.definitionId==='call-to-chaos'&&chaosOutcome(after,a)==='xp'?64:0),expected=xp(before.level,before.xp,amount);assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent acquisition XP');const priorLevels=before.seatMechanics?.seat['augment-acquisition-levels']??{};assert.deepEqual(after.seatMechanics?.seat['augment-acquisition-levels']??{},['shopping-spree','upward-mobility','risky-moves','caretakers-ally','caretakers-favor','caretakers-chosen','birthday-presents','lategame-specialist'].includes(command.definitionId)?{...priorLevels,[a.choiceId]:expected.level}:priorLevels,'independent acquisition level baseline');}
   if(command?.type==='continue'){const expected=xp(before.level,before.xp,entryXp(before));assert.deepEqual([after.level,after.xp],[expected.level,expected.xp],'independent round-start XP');}
   let choice=before.choiceRngState,reward=before.rewardRngState,battle=before.battleSeedRngState;
   if(command?.type==='start')battle=word(battle);
@@ -591,4 +619,4 @@ class Ledger {
   const grants=state.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0)+state.m8.loot.receipts.reduce((n,r)=>n+r.grantedItemIds.length,0)+(state.seatMechanics?.receipts??[]).filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null).length;
   assert.equal(items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
-module.exports={entryXp,freeRerollCredits,augmentGold,ANVIL_IDS,blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,openingEncounter,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
+module.exports={benchXp,entryXp,freeRerollCredits,augmentGold,ANVIL_IDS,blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,openingEncounter,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { augmentGold, entryXp, freeRerollCredits } from './fixtures/m5/oracle.g2.cjs';
+import { augmentGold, benchXp, entryXp, freeRerollCredits } from './fixtures/m5/oracle.g2.cjs';
 
 it('transcribes acquisition gold independently, including seed 3044 Scapegoat', () => {
   for (const [id, amount] of Object.entries({scapegoat:4, 'wandering-trainer-i':1,
@@ -33,7 +33,7 @@ it('accumulates free rerolls from source grants, stage boundaries and every reac
 import { createMatch, rerollShop, deployMatchUnit } from '../src/simulation/match';
 import { Ledger, CATALOG, COST, ROUNDS, augmentPool, xp } from './fixtures/m5/oracle.g2.cjs';
 import { validateRewards, rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs';
-const env = { CATALOG, COST, ROUNDS, xp, entryXp };
+const env = { CATALOG, COST, ROUNDS, xp, entryXp, benchXp };
 const owner = (definitionId: string) => ({definitionId, choiceId:'round:2-1:augment', acquiredRound:4});
 function vector(definitionId: string, facts: Record<string, unknown> = {}) {
   const a=owner(definitionId);
@@ -251,4 +251,119 @@ it('cannot rewrite historical battle counters to mint a reward after an unrelate
   const after=structuredClone(before);
   (after.seatMechanics.hidden.progress.economyReceipts as unknown as {facts:{batch3Healing:number}}[])[0].facts.batch3Healing=10000;
   expect(()=>validateRewards(before,receipts(after,[{...gold('augment-pool-batch3',[0,0],8,4),roundId:'2-1'}]),{type:'reroll'},[],env)).toThrow(/battle counters append-only/);
+});
+
+it('contains exactly 224 independently tiered unique augment identities',()=>{
+  const pools=(['silver','gold','prismatic'] as const).map(tier=>augmentPool(tier,[]));
+  const all=pools.flat();expect(all).toHaveLength(224);expect(new Set(all).size).toBe(224);
+  const groups={silver:['patience-is-a-virtue'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal'],prismatic:['invested-plus','invested-plus-plus']};
+  for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);
+});
+it('retains batch-4 stage bans and all exclusions against the current pool in both directions',()=>{
+  const nodes=['2-1','3-2','4-2'];
+  const permitted:Record<string,string[]>={
+    'clear-mind':['2-1'],'cluttered-mind':['2-1'],slammin:['2-1'],'slammin-plus':['3-2'],
+    'patience-is-a-virtue':['2-1'],'invested-plus':['3-2'],'invested-plus-plus':['4-2'],
+    'category-five':['2-1','3-2'],'long-distance-pals':nodes,overheal:['3-2','4-2'],'sated-spellweaver':['3-2','4-2'],
+  };
+  for(const [id,allowed]of Object.entries(permitted))for(const node of nodes){
+    const all=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],`round:${node}:augment`));
+    expect(all.includes(id)).toBe(allowed.includes(node));
+  }
+  const pairs=[['clear-mind','cluttered-mind'],['slammin','slammin-plus'],['category-five','not-today'],
+    ['sated-spellweaver','wealthy-rehab-i'],['sated-spellweaver','wealthy-rehab-ii'],['invested-plus','invested-plus-plus']];
+  for(const id of ['invested-plus','invested-plus-plus'])for(const other of ['raining-gold','raining-gold-plus','hedge-fund','going-long'])pairs.push([id,other]);
+  for(const [a,b]of pairs)for(const [owned,blocked]of [[a,b],[b,a]]){
+    expect((['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[{definitionId:owned}]))).not.toContain(blocked);
+  }
+});
+const xpState=(id:string,champions=0,inventory=false,round=5)=>({round,augments:[owner(id)],
+  preparation:{benchSize:9,units:[...Array.from({length:champions},(_,slot)=>({team:'player',definitionId:'irelia',location:{kind:'bench',slot}})),
+    {team:'player',definitionId:'training-dummy',location:{kind:'bench',slot:8}},
+    {team:'enemy',definitionId:'irelia',location:{kind:'bench',slot:0}}]},
+  items:inventory?[{location:{kind:'inventory'}}]:[{location:{kind:'unit',unitId:'any'}}]});
+it('samples batch-4 XP from the live champion bench and item inventory only at PvP end',()=>{
+  expect(benchXp(xpState('clear-mind'))).toBe(3);
+  expect(benchXp(xpState('clear-mind',1))).toBe(0);
+  expect(benchXp(xpState('cluttered-mind',8))).toBe(0);
+  expect(benchXp(xpState('cluttered-mind',9))).toBe(3);
+  for(const id of ['slammin','slammin-plus']){
+    expect(benchXp(xpState(id))).toBe(2);expect(benchXp(xpState(id,0,true))).toBe(0);
+    expect(benchXp(xpState(id,0,false,10))).toBe(0); // 2-7 PvE
+    expect(benchXp(xpState(id,0,false,7))).toBe(0); // 2-4 supply
+  }
+  expect(benchXp({...xpState('clear-mind'),augments:[{...owner('clear-mind'),acquiredRound:6}]})).toBe(0);
+});
+it('rejects missing or co-forged batch-4 settlement XP even if the claimed result agrees',()=>{
+  const {before,after}=vector('clear-mind');
+  const real={...before,...xpState('clear-mind')};
+  expect(()=>validateRewards(real,{...after,...xpState('clear-mind'),phase:'settlement',xp:5},null,done,env)).not.toThrow();
+  expect(()=>validateRewards(real,after,null,done,env)).toThrow(/independent XP state/);
+  const blocked={...real,items:[{location:{kind:'inventory'}}],augments:[owner('slammin')]};
+  expect(()=>validateRewards(blocked,{...after,augments:blocked.augments,xp:4},null,done,env)).toThrow(/independent XP state/);
+});
+it('transcribes batch-4 initial gold, heroes, components and hurricane without importing production',()=>{
+  expect(augmentGold('invested-plus','3-2')).toBe(26);expect(augmentGold('invested-plus-plus','4-2')).toBe(45);
+  const plan=(id:string)=>rewardPlan(vector(id).before,{...env,pools:{component:['sword']}}).gifts;
+  expect(plan('cluttered-mind').map(g=>[g.kind,COST[g.definitionId],g.starLevel])).toEqual(Array.from({length:4},()=>['unit',1,1]));
+  for(const id of ['slammin','slammin-plus'])expect(plan(id).map(g=>[g.kind,g.definitionId])).toEqual([['item','sword']]);
+  expect(plan('category-five').map(g=>[g.kind,g.definitionId])).toEqual([['item','runaans-hurricane']]);
+  for(const id of ['long-distance-pals','sated-spellweaver','overheal'])expect(plan(id)).toEqual([]);
+});
+it('grants patience only after acquisition and detects any shop purchase even if its hero was sold',()=>{
+  const base={round:5,level:4,augments:[owner('patience-is-a-virtue')],resourceProvenance:{entries:[]}};
+  expect(freeRerollCredits({...base,round:4})).toBe(0);expect(freeRerollCredits(base)).toBe(2);
+  const bought={...base,resourceProvenance:{entries:[{kind:'unit-acquired',roundId:'2-1',source:{kind:'shop'}},
+    {kind:'unit-sold',roundId:'2-1'}]}};
+  expect(freeRerollCredits(bought)).toBe(0);
+  expect(freeRerollCredits({...base,resourceProvenance:{entries:[{kind:'unit-acquired',roundId:'2-1',source:{kind:'opening'}}]}})).toBe(2);
+});
+it('reconstructs invested entry credits across every bank boundary and deferred settlement adjustment',()=>{
+  const credits=(goldAfter:number,extra:unknown[]=[],entries:unknown[]=[])=>freeRerollCredits({round:5,level:4,
+    augments:[owner('invested-plus')],roundResults:[{round:4,roundId:'2-1',goldAfter,mechanicReceiptPrefixLength:1}],
+    seatMechanics:{receipts:[{kind:'gold',round:4,amount:999},...extra]},resourceProvenance:{entries}});
+  for(const [bank,n]of [[0,0],[49,0],[50,0],[59,0],[60,1],[69,1],[70,2],[79,2],[80,3],[180,3]])expect(credits(bank)).toBe(n);
+  expect(credits(50,[{kind:'gold',round:4,amount:12},{kind:'unit',round:4,gold:3},{kind:'choice',round:4,price:5}])).toBe(1);
+  expect(credits(59,[],[{kind:'unit-sold',context:'settlement-capacity',roundId:'2-1',goldGranted:1}])).toBe(1);
+  expect(credits(59,[{kind:'gold',round:5,amount:100}])).toBe(0);
+});
+it('requires Slammin Plus acquisition XP and its independently drawn component in the same selection',()=>{
+  const basis=vector('slammin-plus').before;
+  const pendingChoice={kind:'augment',step:'offer',choiceId:'round:3-2:augment',generation:0,offers:['slammin-plus']};
+  const before={...basis,phase:'choice',augments:[],pendingChoice};
+  const after={...before,phase:'preparation',level:5,xp:0,augments:[{definitionId:'slammin-plus',choiceId:pendingChoice.choiceId,acquiredRound:5}]};
+  const data = require('./augment-reward-pools-oracle-data.cjs');
+  const g=rewardPlan(after,{...env,pools:data.pools}).gifts[0];
+  const r={...g,round:5,roundId:'2-2',itemId:'item-1'};
+  const command={type:'select',choiceId:pendingChoice.choiceId,generation:0,definitionId:'slammin-plus'};
+  const events=[{type:'choiceSelected',choiceId:pendingChoice.choiceId,definitionId:'slammin-plus'}];
+  expect(()=>validateRewards(before,receipts(after,[r]),command,events,env)).not.toThrow();
+  expect(()=>validateRewards(before,receipts({...after,level:4,xp:0},[r]),command,events,env)).toThrow(/independent XP state/);
+  expect(()=>validateRewards(before,after,command,events,env)).toThrow(/item receipt existence/);
+  expect(()=>validateRewards(before,receipts(after,[{...r,definitionId:'invented'}]),command,events,env)).toThrow(/independent gift draw/);
+});
+it('independently binds Spoils counters to opening ownership and all ordinary PvE deaths',()=>{
+  const source={source:{sourceKind:'augment',sourceDefinitionId:'spoils-of-war-i'}};
+  const {before,after}=vector('spoils-of-war-i',{roundKind:'pve',battleId:'battle-10',openingDeaths:[],batch2:[{definitionId:'spoils-of-war',count:1}]});
+  const live={...before,round:10,roundDefinitionId:'2-7',preparation:{units:[
+    {id:'ally',team:'player',definitionId:'irelia',location:{kind:'board'}},
+    {id:'wolf',team:'enemy',definitionId:'pve-wolf',location:{kind:'board'}},
+  ]}};
+  const finished={...after,round:10,roundDefinitionId:'2-7',combat:{combatId:'battle-10',result:'enemyWin',
+    units:[{id:'ally',team:'player',definitionId:'irelia',alive:true},{id:'wolf',team:'enemy',definitionId:'pve-wolf',alive:false}],
+    openingDeaths:[{unitId:'wolf',eventSeq:7}],strategy:{units:[{unitId:'ally',sources:[source]}]}},
+    seatMechanics:{...after.seatMechanics,hidden:{progress:{economyReceipts:[{kind:'battle',facts:{round:10,roundKind:'pve',result:'loss',battleId:'battle-10',alliedDeaths:0,openingDeaths:[],batch2:[{definitionId:'spoils-of-war',count:1}]}}]}}}};
+  const spoils=(s:unknown)=>rewardPlan(s,{...env,pools:{},spoils:()=>({'3':1})}).gold;
+  expect(spoils(finished)).toEqual([{source:'augment-pool-batch3',receiptId:'["augment-pool-batch3","round:2-1:augment",0,1]',kind:'gold',amount:1,round:10}]);
+  // Seed 29 independently selects source table 4, slot 3 = 1 gold.
+  expect(()=>validateRewards(live,receipts(finished,[{...gold('augment-pool-batch3',[0,1],1,10),roundId:'2-7'}]),null,done,env)).not.toThrow();
+  // The source counter must be rejected even when an attacker supplies a matching reward.
+  for(const count of [0,2]){
+    const bad=structuredClone(finished);bad.seatMechanics.hidden.progress.economyReceipts[0].facts.batch2[0].count=count;
+    expect(()=>validateRewards(live,bad,null,done,env)).toThrow(/independent batch2 counter/);
+  }
+  const noOwner={...finished,combat:{...finished.combat,strategy:{units:[{unitId:'ally',sources:[]}]}}};
+  expect(()=>validateRewards(live,noOwner,null,done,env)).toThrow(/independent batch2 counter/);
+  const erased=structuredClone(noOwner);erased.seatMechanics.hidden.progress.economyReceipts[0].facts.batch2=[];
+  expect(()=>validateRewards({...live,combat:{strategy:finished.combat.strategy}},erased,null,done,env)).toThrow(/independent batch2 counter/);
 });

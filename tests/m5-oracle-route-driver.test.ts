@@ -6,7 +6,8 @@ import { ANVIL_IDS } from './fixtures/m5/oracle.g2.cjs';
 // One ordinary oracle-audited route, collected once as the existing replay files do.
 // No funded state, injected reward, skipped command, or enlarged test/hook timeout.
 const sold=new Set<string>(),anvilDeploys:string[]=[];
-const route=await run(api,{seed:25,build:'sniper',onStep(before,_result,command){
+// The 224-card pool offers Caretaker's Favor at seed 30 (seed 25 now offers Prizefighter).
+const route=await run(api,{seed:30,build:'sniper',onStep(before,_result,command){
   if(command?.type==='sell')sold.add(command.id as string);
   if(command?.type==='deploy'){
     const unit=before.preparation.units.find(u=>u.id===command.id);

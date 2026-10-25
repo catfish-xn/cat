@@ -12,6 +12,8 @@ const U=(id,n=1,star=1)=>['U',id,n,star],I=(id,n=1)=>['I',id,n],C=(id,n=1)=>['C'
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
+ 'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
+ 'category-five':[I('runaans-hurricane')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],
  'one-two-five':[Q('component'),R(5)],'band-of-thieves-i':[I('thiefs-gloves')],
@@ -107,7 +109,7 @@ function rewardPlan(s,env){
     for(const e of s.resourceProvenance.entries)if(['unit-upgraded','unit-upgraded-after-combat'].includes(e.kind)&&e.event.toStar===3&&defs.has(e.event.definitionId)&&env.ROUNDS.find(r=>r.roundId===e.roundId)?.ordinal>=a.acquiredRound){done.add(e.event.definitionId);if(done.size>=2){const due=nonSupply(env.ROUNDS.find(r=>r.roundId===e.roundId).ordinal+1);if(due<=s.round)emit(due);break;}}
    }else if(counter==='kills'){
     const table=env.spoils(s,a,Number(a.definitionId.endsWith('iii')?3:a.definitionId.endsWith('ii')?2:1));let k=0;
-    for(const f of facts)for(const _ of f.openingDeaths??[]){k++;const n=table[3*((k-1)%83+1)]??0;if(n)addGold('augment-pool-batch3',a,[si,k],n,f.round);}
+    for(const f of facts)for(let remaining=f.batch2?.find(x=>x.definitionId==='spoils-of-war')?.count??0;remaining>0;remaining--){k++;const n=table[3*((k-1)%83+1)]??0;if(n)addGold('augment-pool-batch3',a,[si,k],n,f.round);}
    }else{
     const dummy=start.find(g=>g.kind==='unit'&&['training-dummy','forming-dummy','tower-dummy'].includes(g.definitionId));
     const dummyId=dummy?s.seatMechanics?.receipts.find(r=>r.receiptId===dummy.receiptId)?.unitId:null;
@@ -195,6 +197,12 @@ function validateBattleCounters(before,after,f,base){
   if(id==='blood-brothers-deaths')count=team.filter(u=>u.definitionId==='vander').reduce((n,u)=>n+(u.batch2?.deaths??0),0);
   expected.push({definitionId:id,count:count??0});
  }
+ // P-SPOILS-FACT-OWNERSHIP: the legacy openingDeaths envelope only covers PvP/crabs;
+ // Spoils counts every opening ordinary PvE death as well, but needs our opening augment source.
+ const openingStrategy=before.phase==='combat'&&before.combat?.strategy?before.combat.strategy:combat.strategy;
+ const ownsSpoils=(openingStrategy?.units??[]).some(u=>opening.has(u.unitId)&&team.some(t=>t.id===u.unitId)&&u.sources.some(s=>s.source.sourceKind==='augment'&&['spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii'].includes(s.source.sourceDefinitionId)));
+ const spoilsKills=deaths.filter(d=>{const u=us.find(x=>x.id===d.unitId);return u&&u.team!=='player'&&opening.has(u.id)&&!u.itemSummon&&!u.anomalySummon&&(base.COST[u.definitionId]!==undefined||['elise-ranged','jayce-ranged','swain-ranged','gangplank-ranged'].includes(u.definitionId)||f.roundKind==='pve'&&u.definitionId.startsWith('pve-'));}).length;
+ if(ownsSpoils&&spoilsKills)expected.push({definitionId:'spoils-of-war',count:spoilsKills});
  assert.deepEqual(f.batch2??[],expected,'independent batch2 counter existence and values');
 }
 function validateRewards(before,after,command,events,base){
@@ -220,10 +228,10 @@ function validateRewards(before,after,command,events,base){
  assert.equal(after.roundDefinitionId,base.ROUNDS[after.round-1].roundId,'independent reward round identity');
  const supply=command?.type==='select'&&before.pendingChoice?.kind==='component'&&base.ROUNDS[before.round-1].kind==='supply';
  if(supply)assert(events.some(e=>e.type==='roundSettled'&&e.round===before.round),'supply XP needs its settlement event');
- let xpGain=terminal||supply?2:0;
+ let xpGain=terminal?2+base.benchXp(before):supply?2:0;
  if(command?.type==='buyXp')xpGain=before.augments.some(a=>a.definitionId==='level-up')?6:4;
  if(entry)xpGain=base.entryXp(before);
- if(select){xpGain=({'silver-spoon':10,epoch:6,'epoch-plus':8,'level-up':12})[command.definitionId]??0;
+ if(select){xpGain=({'silver-spoon':10,epoch:6,'epoch-plus':8,'level-up':12,'slammin-plus':10})[command.definitionId]??0;
   if(command.definitionId==='call-to-chaos'&&outcome(before,augments.at(-1))==='xp')xpGain+=64;}
  const progression=base.xp(before.level,before.xp,xpGain);
  assert.deepEqual([after.level,after.xp],[progression.level,progression.xp],'independent XP state before reward thresholds');
