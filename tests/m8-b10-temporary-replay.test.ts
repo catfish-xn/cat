@@ -38,6 +38,7 @@ describe('B10 temporary equipment replay rebuild', async () => {
   const { record, ticks, terminal } = recorded(prepared);
 
   it('records the temporary children in the battle context and rebuilds the identical terminal', () => {
+    expect(prepared.contentDigest, 'v23 transfer anchor requires re-recording for this content epoch').toBe(anchor.contentDigest);
     // M8B rules: Thief's Gloves rolls two temporary children for its holder each combat round (m8-b8-live-transfer).
     expect(prepared.temporaryEquipment.map(({ parentItemInstanceId, holderId, roundId }) => ({ parentItemInstanceId, holderId, roundId })))
       .toEqual([{ parentItemInstanceId: TG, holderId: DONOR, roundId: '4-7' }, { parentItemInstanceId: TG, holderId: DONOR, roundId: '4-7' }]);

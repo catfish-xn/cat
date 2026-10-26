@@ -1,22 +1,19 @@
 import * as api from '../../src/simulation/match';
 import { accepted, configuredPrefix } from './t13-loot-public';
 
-// #265 independent bonus stream restores the original v15 public acquisition vectors.
-// v23: selectionWord now mixes with fmix32, so 2116 no longer draws the "none" opening; 2125 does and keeps
-// the v22 partial vectors byte-for-byte (loris kills r00 at 456, zyra kills r01 at 212).
+// Seed 2125 retains the no-opening, one-carrier partial-defeat vectors under
+// v24: Loris kills r00 at 456; Zyra kills r01 at 212 with the current public choices.
 export const PARTIAL_REVEAL_SEEDS = {loris:2125,zyra:2125} as const;
 
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item
 // loadout. Supply choices fund the recipes; every sale, reroll, removal and deployment
 // is a public Match command, preserving the exact tick/eventSeq assertions below.
-// v22: seed 242874 draws the Trainer Golem opening (an unsellable golem that cannot be benched and blocks the
-// board); v22's seed 2274 draws Wind-up Monkey under v23 fmix32. Seed 2634 has no opening encounter and still
-// fields the eight two-star holders and four-item loadout.
-// After the xp/batch-3 merge 2634's route ends one Zoe short of two stars. Seed 3549 is the first no-opening seed from
-// 2000 whose independent 4-7 plan keeps the shape (nine entries; r03 one hero; r04 three entries with a hero; r05
-// unloaded) and whose route fields all eight two-star holders and the four recipes.
-export const SIMULTANEOUS_REVEAL_SEED=3549;
+// v24: first no-opening seed from 2000 whose independent 4-7 plan has nine
+// entries (r03 one hero, r04 three entries including a hero, r05 unloaded), whose
+// public route fields all eight two-star holders/four recipes, and whose lawful
+// Lux/Nami swap kills r03/r04 together after three earlier deaths, then r05 last.
+export const SIMULTANEOUS_REVEAL_SEED=3711;
 export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<api.MatchState>{
  const equipmentTargets={'sunfire-cape':{definitionId:'irelia'},'ionic-spark':{definitionId:'loris'},gunblade:{definitionId:'zoe'},shojin:{definitionId:'zoe'}};
  const board=[

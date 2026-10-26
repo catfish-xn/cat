@@ -1,3 +1,4 @@
+import {openingEncounter} from './fixtures/m5/oracle.g2.cjs';
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
@@ -11,14 +12,25 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 20_000 });
 
 const prefix=await simultaneousPrefix();
+expect(openingEncounter(prefix.seed)).toBe('none');
+expect(prefix.preparation.units.filter(u=>u.team==='player').map(u=>[u.definitionId,u.starLevel]).sort()).toEqual(
+ ['irelia','leona','loris','lux','nami','rell','zoe','zyra'].map(id=>[id,2]));
+expect(prefix.items.filter(i=>i.location.kind==='unit').map(i=>i.definitionId).sort()).toEqual(['gunblade','ionic-spark','shojin','sunfire-cape']);
+const independentDrops=independentLootPlan(prefix.seed,24).rounds.at(-1)!.encounterPlan.drops;
+expect(independentDrops).toHaveLength(9);
+const sourceDrops=(slot:string)=>independentDrops.filter(d=>d.sourceUnitId===JSON.stringify(['pve','4-7','razorbeaks-v1',slot]));
+expect(sourceDrops('r03').map(d=>d.payload.kind)).toEqual(['unit']);
+expect(sourceDrops('r04')).toHaveLength(3);expect(sourceDrops('r04').some(d=>d.payload.kind==='unit')).toBe(true);
+expect(sourceDrops('r05')).toEqual([]);
 const zyraPrefix=await barePartialPrefix('zyra',PARTIAL_REVEAL_SEEDS.zyra,['blistering-strikes','pumping-up-ii','bronze-for-life-ii']);
 const lorisPrefix=await barePartialPrefix('loris',PARTIAL_REVEAL_SEEDS.loris,['bronze-for-life-i','pumping-up-ii','bronze-for-life-ii']);
 for(const state of [zyraPrefix,lorisPrefix]){
+ expect(openingEncounter(state.seed)).toBe('none');
  expect(state.augments.find(a=>a.choiceId==='round:2-1:augment')?.definitionId).toBe('bulky-buddies-i');
  expect(state.augmentOffers.find(a=>a.choiceId==='round:2-1:augment')?.rerolledIndices).toEqual([0,1]);
 }
-expect(lorisPrefix.augments.map(a=>a.definitionId)).toEqual(['bulky-buddies-i','crownguard-spirit','academy-crest']);
-expect(zyraPrefix.augments.map(a=>a.definitionId)).toEqual(['bulky-buddies-i','clockwork-accelerator','trifecta-i']);
+expect(lorisPrefix.augments.map(a=>a.definitionId)).toEqual(['bulky-buddies-i','little-buddies','climb-the-ladder-ii']);
+expect(zyraPrefix.augments.map(a=>a.definitionId)).toEqual(['bulky-buddies-i','sentinel-slam','item-collector-ii']);
 function unchangedStep(state: api.MatchState): void {
   const saved = serializeMatch(state), result = api.stepMatch(state);
   expect(result).toEqual({ state, events: [] }); expect(result.state).toBe(state);
@@ -55,17 +67,17 @@ describe('B8 real simultaneous loot-source deaths', () => {
     ]);
     const deaths = state.combat!.neutralReceipts!.deaths;
     expect(deaths).toEqual([
-      // Seed 3549 (was 2634; after the xp/batch-3 merge 2634's mage route no longer reaches a two-star Zoe) with the
-      // lawful Lux/Nami position swap: three earlier deaths, then both hero carriers r03 and r04 die in the
-      // same tick-118 action batch. Ticks/eventSeqs are recorded from this real combat, not independently derived.
-      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 56, eventSeq: 474 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 56, eventSeq: 475 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r02"]', tick: 88, eventSeq: 678 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r03"]', tick: 118, eventSeq: 896 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r04"]', tick: 118, eventSeq: 897 },
+      // Seed 3711 with the lawful Lux/Nami swap: three earlier deaths, then
+      // hero carriers r03/r04 die in the same tick-118 action batch. These are
+      // recorded public-combat checkpoints, not independently derived constants.
+      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 56, eventSeq: 472 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 59, eventSeq: 507 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r02"]', tick: 110, eventSeq: 814 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r03"]', tick: 118, eventSeq: 902 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r04"]', tick: 118, eventSeq: 903 },
     ]);
     expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(deaths.slice(3).map(death => [death.unitId, death.tick, death.eventSeq]));
-    expect(revealed.map(event => event.death.eventSeq)).toEqual([896, 897, 897, 897]); // The two hero orbs belong to different killed carriers.
+    expect(revealed.map(event => event.death.eventSeq)).toEqual([902, 903, 903, 903]); // The two hero orbs belong to different killed carriers.
     for (const field of ['gold', 'items', 'preparation', 'persistentGrowth', 'nextUnitSerial', 'nextItemSerial',
       'resourceProvenance', 'rngState', 'choiceRngState', 'rewardRngState', 'equipmentState'] as const)
       expect(state[field]).toEqual(before[field]);
@@ -76,7 +88,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(duplicate).toEqual({ state: restoredReveal, events: [] });
     expect(duplicate.state).toBe(restoredReveal);
     const forged = JSON.parse(serializeMatch(state));
-    forged.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===revealed[0].dropId).death.eventSeq = 897; // Substitute r04's real death identity for r03's drop evidence.
+    forged.m8.loot.earnedEvidence.find((e:{dropId:string})=>e.dropId===revealed[0].dropId).death.eventSeq = 903; // Substitute r04's real death identity for r03's drop evidence.
     expect(() => restoreMatch(forged)).toThrow('Invalid B8 Match: duplicate death identity');
     let resumed = restoredReveal;
     while (state.phase === 'combat') {
@@ -94,9 +106,10 @@ describe('B8 real simultaneous loot-source deaths', () => {
 
   it.each([
     // v23 seed 2125 (no opening encounter; v22 used 2116). Loris kills r00, whose first 4-7 orb now also carries the
-    // component anvil: two receipts, one component item and one anvil unit birth. Zyra kills r01 (one component), now at the recorded tick211.
+    // component anvil: two receipts, one component item and one anvil unit birth. Under the v24 choices,
+    // Zyra still kills only r01 (one component), at the recorded tick212; Loris retains tick456.
     ['loris', 'r00', 456, 'settlement', 2, 1, 1],
-    ['zyra', 'r01', 211, 'settlement', 1, 1, 0],
+    ['zyra', 'r01', 212, 'settlement', 1, 1, 0],
   ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts, itemBirths, unitBirths) => {
     let state = clone(partialB8Preparation(survivor === 'zyra' ? zyraPrefix : lorisPrefix, survivor));
     const targetId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===survivor)!.id;
@@ -146,7 +159,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     while(state.phase==='combat'&&state.combat!.tick<137)state=api.stepMatch(state).state;
     expect(state.combat!.tick).toBe(137);const before=state,copy=clone(before),result=api.stepMatch(before);
     expect(api.stepMatch(copy)).toEqual(result);
-    expect(result.events.filter(e=>e.type==='death')).toEqual([expect.objectContaining({unitId:carrier,tick:138,eventSeq:1006})]);
+    expect(result.events.filter(e=>e.type==='death')).toEqual([expect.objectContaining({unitId:carrier,tick:138,eventSeq:1010})]);
     expect(result.events.filter(e=>e.type==='lootRevealed')).toEqual([]);
     expect(result.state.m8.loot.earnedEvidence).toEqual(before.m8.loot.earnedEvidence);
     // v23: withLoot (src/simulation/loot-runtime.ts) claims the new m8 without an intern-cache lookup, so a
@@ -155,9 +168,9 @@ describe('B8 real simultaneous loot-source deaths', () => {
     // This is the last death: settlement pays the nine already-earned entries (v22 adds the component anvil),
     // without inventing a receipt or qualification for the unloaded carrier.
     expect(result.state.m8.loot.receipts.slice(before.m8.loot.receipts.length).map(r=>[r.dropId,r.payload])).toEqual(expected.map(d=>[d.dropId,d.payload]));
-    expect(result.state.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===1006)).toBe(false);
+    expect(result.state.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===1010)).toBe(false);
     expect(clone(result.state)).toEqual(result.state);
-    const bad=JSON.parse(serializeMatch(result.state));bad.m8.loot.earnedEvidence.at(-1).death.eventSeq=1006;
+    const bad=JSON.parse(serializeMatch(result.state));bad.m8.loot.earnedEvidence.at(-1).death.eventSeq=1010;
     expect(()=>restoreMatch(bad)).toThrow('source death conflict');
   });
 

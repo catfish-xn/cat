@@ -44,7 +44,7 @@ const lootItem = (state: MatchState, definitionId: string) => state.m8.loot.rece
 const choiceViews: { roundId: string; kind: string; choiceId: string; view: ReturnType<typeof api.readLootView> }[] = [];
 const openingState = createOpening();
 function createOpening(): MatchState {
-  const current=ragebladeRoute.prefix(api,(before:MatchState,_after:MatchState,_pick:string)=>{const choice=before.pendingChoice!;choiceViews.push({roundId:before.roundDefinitionId,kind:choice.kind,choiceId:choice.choiceId,view:api.readLootView(before)});});
+  const current=ragebladeRoute.prefix(api,(before:MatchState,_after:MatchState,_pick:string)=>{const choice=before.pendingChoice!;choiceViews.push({roundId:before.roundDefinitionId,kind:choice.kind,choiceId:choice.choiceId,view:api.readLootView(before)});},['superstars-ii']);
   return current;
 }
 
@@ -56,8 +56,9 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
     expect(opening.m8.loot.receipts.map(r=>r.payload)).toEqual(expected.map(d=>d.payload));
     // v23: the 151-offer pool makes the 2-1 card Family Crest (Family emblem item-4 plus a Violet), and seed 27's
     // fmix32 opening is now Warwick's Hunger, so crab-rave's 2-7 cloak no longer arrives.
-    // The 224-card pool's first non-Placebo 2-1 offer is Inspiring Epitaph (no emblem or hero gift).
-    expect(opening.augments.map(a=>a.definitionId)).toEqual(['inspiring-epitaph']);
+    // v24 uses the public free slot rerolls for Superstars II. It grants no
+    // items/heroes, preserving the original independent loot/roster assertions.
+    expect(opening.augments.map(a=>a.definitionId)).toEqual(['superstars-ii']);
     expect(players(opening).map(u=>u.definitionId).sort()).toEqual(['irelia','lux','renata','sett','steb']);
     expect(opening.items.map(i=>i.definitionId).sort()).toEqual(['belt','bow','gloves','rod','rod','rod','sword','tear']);
     expect(opening.consumables.map(c=>c.definitionId)).toEqual(Array(4).fill('magnetic-remover'));

@@ -875,7 +875,7 @@ it('Call to Chaos public pick at 4-2: the outcome is granted once and the save r
  expect(open.pendingChoice?.offers,'call-to-chaos at 4-2 seed '+STAGE_SEEDS['call-to-chaos'].seed).toContain('call-to-chaos');
  const s=accept(selectChoice(open,c.choiceId,c.generation,'call-to-chaos') as any).state as MatchState,a=s.augments.at(-1)!;
  const o=callToChaosOutcome(s,a);
- expect(o).toBe('xp'); // 224-card batch-4 pool: seed 115 keeps this public route on the acquisition XP branch.
+ expect(o).toBe('xp'); // v24 shop pool: seed 512 is the first fielded offering seed with the acquisition XP outcome.
  expect(restoreMatch(serializeMatch(s))).toEqual(s);
  if(o==='xp')expect(s.xp+s.level*1000).not.toBe(open.xp+open.level*1000);
  // Forging another outcome's reward is rejected: an extra 58-gold receipt has no plan behind it.

@@ -66,8 +66,10 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
     expect(nextRandom(state.battleSeedRngState).word).toBe(890455596);
   });
   it('binds public later-round inputs, skips supply battle seeds and preserves original G12 children', () => {
-    // Under the v22 rules seed 6 also holds a cloak by 3-5; seed 65 is the first whose public route holds exactly the two gloves supplies.
-    let state = createMatch(65);
+    // v24: first seed from 0 whose unchanged public route holds exactly the
+    // two scheduled gloves at 3-5 and whose two TG children both contribute
+    // strategy sources. Seed 36 has the gloves but only one contributing child.
+    let state = createMatch(42);
     while (state.roundDefinitionId !== '3-5') {
       if (state.phase === 'choice') {
         const choice = state.pendingChoice!;
@@ -76,6 +78,8 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
       } else if (state.phase === 'preparation') state = accepted(startMatchCombat(emptyBoard(state)));
       else state = accepted(nextRound(state,state.round));
     }
+    expect(state.items.map(item => [item.id, item.definitionId])).toEqual([['item-1', 'gloves'], ['item-2', 'gloves']]);
+    expect(state.scheduleReceipts.filter(receipt => receipt.kind === 'component').map(receipt => receipt.definitionId)).toEqual(['gloves', 'gloves']);
     state = accepted(combineItems(state,'item-1','item-2'));
     state = accepted(equipItem(state,'item-3','unit-1',0));
     state = accepted(deployMatchUnit(state,'unit-1',{kind:'board',cell:{col:1,row:4}}));
@@ -87,6 +91,7 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
       equipmentRolls:state.equipmentState.rolls,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults };
     expect(restoreCombatInput(basis,authority)).toEqual(basis);
     expect(basis.inputs.temporaryEquipment).toHaveLength(2);
+    expect(basis.inputs.temporaryEquipment.map(child => child.definitionId)).toEqual(['bramble-vest', 'cloak']);
     const player = buildStrategySnapshot(basis.inputs).units.find(unit => unit.unitId === 'unit-1')!;
     expect([...new Set(player.sources.filter(effect => effect.source.parentItemInstanceId === 'item-3')
       .map(effect => effect.source.sourceInstanceId))].sort())

@@ -11,6 +11,9 @@ vi.setConfig({ testTimeout: 20_000 });
 import anchor from './fixtures/v23-online-rules-transfer-route.json';
 const {survivor:SURVIVOR,donor:DONOR,reward:REWARD,tg:TG}=anchor;
 const prepared=await transferPreparation();
+// These IDs/provenance counts are an archived epoch anchor. Diagnose the epoch
+// mismatch before a stale donor/survivor ID can masquerade as a command failure.
+expect(prepared.contentDigest, 'v23 transfer anchor requires re-recording for this content epoch').toBe(anchor.contentDigest);
 const make=(s:MatchState)=>{const l=battle(s);if(!l.revealed)throw Error('Missing live reveal');return {...l,revealed:l.revealed,selected:l.ended};};
 const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-13',SURVIVOR,0)));
 const scenarios=[{name:'TG migrates',live:migration,returned:false},{name:'conflicting TG returns',live:conflict,returned:true}];

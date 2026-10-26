@@ -27,15 +27,17 @@ if (route.final.phase !== 'gameOver' || route.final.roundDefinitionId !== '6-7' 
   throw new Error('Public neutral fixture did not complete the actual 33-battle route');
 
 // Consumers that exercise the authored minion/monster encounters take prefixes from this second
-// command-only route; seed 7298 has no opening encounter under the v23 fmix32 selection (v22 used 7296;
-// 1-2 is Irelia against minions-a-v1).
-const AUTHORED_ENCOUNTER_SEED = 7298;
+// command-only route; v24 seed 7301 is the first from 7296 with no opening
+// encounter whose sniper route still completes 6-7 (1-2 is Irelia against minions-a-v1).
+const AUTHORED_ENCOUNTER_SEED = 7301;
 const authoredPreparations = new Map<string, api.MatchState>();
-await run(api, { build: 'sniper', seed: AUTHORED_ENCOUNTER_SEED, onStep(before, result, command) {
+const authoredRoute = await run(api, { build: 'sniper', seed: AUTHORED_ENCOUNTER_SEED, onStep(before, result, command) {
   if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')
     authoredPreparations.set(before.roundDefinitionId, before);
   if (result.state.phase === 'preparation') authoredPreparations.set(result.state.roundDefinitionId, result.state);
 } });
+if (authoredRoute.final.phase !== 'gameOver' || authoredRoute.final.roundDefinitionId !== '6-7' || authoredRoute.final.outcome !== 'victory')
+  throw new Error('Public authored fixture did not complete the actual 33-battle route');
 
 /** A restored prefix of the crab-free route, for authored PvE encounter checks. */
 export function publicAuthoredPreparation(roundId: string): api.MatchState {

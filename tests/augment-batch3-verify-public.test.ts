@@ -51,57 +51,57 @@ function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
  }
  return state;
 }
-/** Public offer seeds, re-pinned on the 224-card pool from the original search (repeating it cost up to 24 s per card):
+/** Public offer seeds, re-pinned on the v24 232-card pool from the original search (repeating it cost up to 24 s per card):
  * - 2-1 cards: the first seed from 0 (Trainer Golem openings skipped, at most 20000) whose cheap 2-1 draw offers the card;
  * - later cards: the first seed from 0 (at most 600) whose reachNode route reaches the card's first allowed node and
  *   offers it there.
  * pick() re-proves the search condition for its seed on every run (the draw and the replayed route must offer the card);
  * re-run the search above if the pool, the openings or the route change. */
 const PUBLIC_SEEDS:Readonly<Record<string,number>>={
- 'all-out':58,
+ 'all-out':32,
  'an-exalted-adventure':14,
- 'bad-luck-protection':10,
+ 'bad-luck-protection':14,
  'blade-dance':8,
- 'blazing-soul-i':23,
- 'blazing-soul-ii':5,
- 'blood-pact':4,
- 'building-a-collection-iii':35,
- 'corrosion':6,
- 'dark-alley-dealings':137,
+ 'blazing-soul-i':20,
+ 'blazing-soul-ii':89,
+ 'blood-pact':23,
+ 'building-a-collection-iii':107,
+ 'corrosion':79,
+ 'dark-alley-dealings':5,
  'eye-for-an-eye':31,
- 'eye-for-an-eye-plus':9,
+ 'eye-for-an-eye-plus':17,
  'field-medic':296,
- 'flexible':6,
- 'gold-for-dummies':13,
+ 'flexible':105,
+ 'gold-for-dummies':27,
  'latent-forge':61,
- 'living-forge':6,
- 'noble-sacrifice':15,
- 'phreaky-friday':128,
- 'phreaky-friday-plus':0,
- 'prizefighter':25,
- 'rolling-for-days-i':24,
- 'savage-revenge':26,
- 'scapegoat':4,
- 'shimmerscale-essence':126,
+ 'living-forge':76,
+ 'noble-sacrifice':27,
+ 'phreaky-friday':54,
+ 'phreaky-friday-plus':28,
+ 'prizefighter':24,
+ 'rolling-for-days-i':9,
+ 'savage-revenge':19,
+ 'scapegoat':214,
+ 'shimmerscale-essence':107,
  'shocking-troll':241,
  'spoils-of-war-i':94,
- 'spoils-of-war-ii':21,
- 'spoils-of-war-iii':38,
+ 'spoils-of-war-ii':11,
+ 'spoils-of-war-iii':146,
  'superstars-i':22,
- 'superstars-ii':37,
+ 'superstars-ii':3,
  'support-mining':100,
- 'support-mining-plus':22,
+ 'support-mining-plus':25,
  'team-building':55,
- 'the-golden-egg':12,
- 'tower-defense':51,
- 'trade-sector':18,
- 'wandering-trainer-i':3,
- 'wandering-trainer-ii':162,
- 'wealthy-rehab-i':24,
- 'wealthy-rehab-ii':11,
- 'what-doesnt-kill-you':112,
- 'worth-the-wait':29,
- 'worth-the-wait-ii':89,
+ 'the-golden-egg':0,
+ 'tower-defense':43,
+ 'trade-sector':3,
+ 'wandering-trainer-i':17,
+ 'wandering-trainer-ii':7,
+ 'wealthy-rehab-i':22,
+ 'wealthy-rehab-ii':15,
+ 'what-doesnt-kill-you':13,
+ 'worth-the-wait':1,
+ 'worth-the-wait-ii':7,
 
 };
 function pick(id:string) {
@@ -116,6 +116,7 @@ function pick(id:string) {
   expect(generateChoices(augmentCandidates(resolveAugmentTier(root,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),root.choiceRngState).offers).toContain(id);
   before=reachRound('2-1',false,seed);
  }else before=reachNode(node,seed,TAILORED[id]);
+ expect(before.roundDefinitionId).toBe(node);
  const c=before.pendingChoice!;
  expect(c.kind).toBe('augment');expect(c.offers).toContain(id);
  const result={before,state:accepted(selectChoice(before,c.choiceId,c.generation,id))};

@@ -9,13 +9,18 @@ function openingDeployment(state){
  const col=[1,3,5,0,6,2,4].find(col=>!held.some(u=>u.location.cell.col===col&&u.location.cell.row===7));
  return {unitId:unit.id,cell:{col,row:7}};
 }
-function prefix(api,onChoice=()=>{}){
+function prefix(api,onChoice=()=>{},augmentPriorities=[]){
  const accept=r=>{if(!r.ok)throw Error('v17 Rageblade route: '+r.reason);return r.state;};
  let state=api.createMatch(SEED);
  for(let guard=0;guard<80;guard++){
   if(state.roundDefinitionId===ROUND&&state.phase==='preparation')return state;
   if(state.phase==='choice'){
-   const c=state.pendingChoice,pick=c.offers.find(id=>id!=='placebo'),next=accept(api.selectChoice(state,c.choiceId,c.generation,pick));
+   const c=state.pendingChoice;
+   if(c.kind==='augment'&&augmentPriorities.length&&!augmentPriorities.some(id=>c.offers.includes(id))){
+    const slot=c.rerolledSlots?.findIndex(used=>!used)??-1;
+    if(slot>=0){state=accept(api.rerollAugment(state,c.choiceId,c.generation,slot));continue;}
+   }
+   const pick=(c.kind==='augment'?augmentPriorities.find(id=>c.offers.includes(id)):undefined)??c.offers.find(id=>id!=='placebo'),next=accept(api.selectChoice(state,c.choiceId,c.generation,pick));
    onChoice(state,next,pick);state=next;continue;
   }
   if(state.phase==='settlement'){state=accept(api.nextRound(state,state.round));continue;}

@@ -1,4 +1,5 @@
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
+import {openingEncounter} from './fixtures/m5/oracle.g2.cjs';
 import {describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
@@ -8,17 +9,13 @@ import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-pu
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-// v22 seed: the first with no opening encounter whose independent 2-7 loot keeps the
-// original shape (three items plus 1G, no new unit) and whose public 2-1 offer has
-// Investment I; seed 11111 lost the offer under the v22 augment tiers and now draws
-// the scuttle-crab opening. The 2-6 loss keeps the 2-7 win's streak gold at 0.
-// v23: fmix32 gives 4867 the Golden Gala opening and the 151-offer pool drops its Investment I; 229819 is the next
-// no-opening seed with Investment I at 2-1 and the same 2-7 shape (three items plus 1G), reaching the same 66G/73HP/136.
-// Seed 1589873 (was 229819): after the xp/batch-3 merge 229819's 2-1 offer is rocket-collection/crown-guarded/two-trick.
-// A scan of seeds 0-2,000,000 (no opening, gold 2-1 tier, independent 2-7 plan of three items plus 1G, Investment I
-// offered) found 1589873 as the first whose unchanged route reaches the same 66G/73HP/136; the constants are unchanged.
-// 224-card pool: independently re-scanned for the unchanged 66G / 73HP / 136HP-growth vector.
-const SEED=924507;
+// v24: first seed from 0 with no opening encounter, Investment I offered at
+// 2-1 and an independent 2-7 plan of three items plus 1G whose unchanged public
+// route reaches 66G / 73HP / 136HP-growth. The 2-6 loss keeps win streak gold at 0.
+const SEED=7985;
+expect(openingEncounter(SEED)).toBe('none');
+expect(independentLootPlan(SEED,10).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload.kind).sort()).toEqual(['gold','item','item','item']);
+expect(independentLootPlan(SEED,10).rounds.at(-1)!.encounterPlan.drops.find(d=>d.payload.kind==='gold')!.payload).toEqual({kind:'gold',quantity:1});
 let preparation=api.createMatch(SEED);
 while(preparation.roundDefinitionId!=='2-7'){
  if(preparation.phase==='choice'){const c=preparation.pendingChoice!;if(c.kind==='augment')expect(c.offers).toContain('investment-strategy-i');preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}

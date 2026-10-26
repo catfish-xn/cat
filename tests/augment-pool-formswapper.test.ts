@@ -17,7 +17,7 @@ import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 let acquired: ReturnType<typeof createMatch> | undefined;
 function acquire(){
  if(acquired)return acquired;
- const seed=5,id='why-not-both',initial=createMatch(seed);
+ const seed=20,id='why-not-both',initial=createMatch(seed);
  expect(generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState).offers).toContain(id);
  const before=reachRound('2-1',false,seed),c=before.pendingChoice!;
  expect(c.offers).toContain(id);

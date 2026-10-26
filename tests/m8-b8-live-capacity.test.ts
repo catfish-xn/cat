@@ -1,4 +1,5 @@
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
+import {openingEncounter} from './fixtures/m5/oracle.g2.cjs';
 import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
@@ -9,8 +10,8 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 // Seed3155 has no opening encounter, a lone Akali reward sharing an orb, four components and a full bench.
-// The 224-card pool selects Family Crest + Backup. The independent driver ledger checks each paid command:
-// the actual reserve banks16G; first reveal/final ticks61/91 are recorded public-combat checkpoints, not rule constants.
+// The v24 pool selects All For One II + Lineup. The independent driver ledger checks each paid command:
+// the actual reserve banks12G; first reveal/final ticks61/86 are recorded public-combat checkpoints, not rule constants.
 const prepared=fillBench(await publicPrefix('3-7',3155,'cannon',['bulky-buddies-i']),['akali']);
 const live=battle(prepared),waiting=live.ended;
 const hero=plan(prepared).encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
@@ -21,11 +22,16 @@ function reject(s:MatchState,message:string,change:(s:any)=>void){const saved=se
 const soldResult=command(waiting,s=>api.sellUnit(s,soldUnit.id)),sold=accepted(soldResult);
 describe('B8 live full-bench settlement and exact command resumption',()=>{
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
-  expect(prepared.augments.map(a=>a.definitionId)).toEqual(['family-crest','backup']);
-  expect(prepared.gold).toBe(16);expect(bench(prepared)).toHaveLength(9);
+  expect(openingEncounter(prepared.seed)).toBe('none');
+  expect(prepared.augments.map(a=>a.definitionId)).toEqual(['all-for-one-ii','lineup']);
+  expect(prepared.gold).toBe(12);expect(bench(prepared)).toHaveLength(9);
+  expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual(independentLootPlan(prepared.seed,17).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
+  expect(plan(prepared).encounterPlan.drops.filter(d=>d.payload.kind==='item')).toHaveLength(4);
+  expect(plan(prepared).encounterPlan.drops.filter(d=>d.payload.kind==='unit')).toHaveLength(1);
+  expect(prepared.preparation.units.some(u=>u.team==='player'&&u.definitionId==='akali')).toBe(false);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'akali',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(61);expect(waiting.combat!.tick).toBe(91);
+  expect(live.revealed!.combat!.tick).toBe(61);expect(waiting.combat!.tick).toBe(86);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);
