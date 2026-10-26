@@ -47,6 +47,13 @@ describe('B6 gate preparation and explicit dependency metadata',()=>{
     expect(state.items.map(item=>item.definitionId)).toEqual(['sword']);
     expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([[state.items[0].id]]);
   });
+  it('selects a named real 2-1 augment: seed 42 Guardbreaker Spirit gloves are item-1 and the 2-4 sword item-2 (verify-m5-input itemReset)',async()=>{
+    const state=await prepareB6Opening(pageAdapter(),'2-5',{augment:'guardbreaker-spirit'});
+    expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');
+    expect(state.augments.map(augment=>augment.definitionId)).toEqual(['guardbreaker-spirit']);
+    expect(state.items.map(item=>[item.id,item.definitionId,item.location.kind])).toEqual([['item-1','gloves','inventory'],['item-2','sword','inventory']]);
+    await expect(prepareB6Opening(pageAdapter(),'2-5',{augment:'crown-guarded'})).rejects.toThrow('lacks crown-guarded');
+  });
   it('reproduces public opening setup for the same seed',async()=>{
     expect(await prepareB6Opening(pageAdapter(4294967295),'1-3')).toEqual(await prepareB6Opening(pageAdapter(4294967295),'1-3'));
   });

@@ -86,27 +86,42 @@ export function benchPublicEquipmentPlayers(input: MatchState): MatchState {
   return state;
 }
 
+type PublicEquipmentOptions = { seed?: number; history?: BattleHistory; augmentPriorities?: readonly string[]; rerollForAugment?: boolean; earliestRound?: number };
 const preparations = new Map<string, MatchState>();
+// A partially played history-free route, so a long acquisition can be played one round per test case.
+type PublicEquipmentRoute = { state: MatchState; budget: number };
+const partialRoutes = new Map<string, PublicEquipmentRoute>();
+function preparationKey(components: readonly string[], options: PublicEquipmentOptions) {
+  if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
+  // Seed 38 supplies gloves in the opening and 3-7. Use it for multi-item
+  // glove recipes, leaving real supply choices for their other ingredients.
+  const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42);
+  return {seed,key:JSON.stringify([seed,components,options.augmentPriorities??[],options.earliestRound??4,options.rerollForAugment??false])};
+}
 /** T13: requested assets come from random PvE drops plus the five real supply choices.
  * Extra drops are retained. Route timing and item IDs are discovered, never rewritten.
  * Original Irelia/Lux stay one star for independent equipment stat assertions.
  */
-export function publicEquipmentPreparation(components: readonly string[],
-  options: { seed?: number; history?: BattleHistory; augmentPriorities?: readonly string[]; rerollForAugment?: boolean; earliestRound?: number } = {}): MatchState {
-  if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
-  // Seed 38 supplies gloves in the opening and 3-7. Use it for multi-item
-  // glove recipes, leaving real supply choices for their other ingredients.
-  const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42),key=JSON.stringify([seed,components,options.augmentPriorities??[],options.earliestRound??4,options.rerollForAugment??false]);
+export function publicEquipmentPreparation(components: readonly string[], options: PublicEquipmentOptions = {}): MatchState {
+  return advancePublicEquipmentPreparation(components, options, Infinity)!;
+}
+/** Play the same public acquisition route only through `throughRound` (an ordinal), keeping its progress for a
+ * later call; returns the finished preparation once it is reached. Pausing between iterations changes nothing. */
+export function advancePublicEquipmentPreparation(components: readonly string[], options: PublicEquipmentOptions, throughRound: number): MatchState | undefined {
+  const {seed,key}=preparationKey(components,options);
   if (!options.history) {
     const cached = preparations.get(key) ?? readRunFixture<MatchState>('preparation', key);
-    if (cached) { preparations.set(key, cached); return copyFixture(cached); }
+    if (cached) { preparations.set(key, cached); partialRoutes.delete(key); return copyFixture(cached); }
   }
-  let state=createMatch(seed);
+  const route=(!options.history&&partialRoutes.get(key))||{state:createMatch(seed),budget:0};
+  if(!options.history)partialRoutes.set(key,route);
+  let state=route.state;
   const missing=()=>{
     const available=state.items.filter(i=>i.location.kind==='inventory').map(i=>i.definitionId);
     return components.filter(id=>{const index=available.indexOf(id);if(index<0)return true;available.splice(index,1);return false;});
   };
-  for(let budget=0;budget<80;budget++){
+  for(;route.budget<80;route.budget++){
+    if(state.round>throughRound){route.state=state;return undefined;}
     while(state.phase==='choice'){
       const choice=state.pendingChoice!;
       if(choice.kind==='augment'&&options.rerollForAugment&&!options.augmentPriorities?.some(id=>choice.offers.includes(id))){
@@ -132,7 +147,7 @@ export function publicEquipmentPreparation(components: readonly string[],
       state=benchPublicEquipmentPlayers(state);
       // A recorded route reaches the identical preparation. Publish it for
       // state-only consumers too, so they do not replay that acquisition again.
-      preparations.set(key,structuredClone(state)); writeRunFixture('preparation', key, state); return state;
+      partialRoutes.delete(key); preparations.set(key,structuredClone(state)); writeRunFixture('preparation', key, state); return state;
     }
     if(state.phase==='gameOver')throw Error(`Public equipment route ended before ${missing().join(',')}`);
     if(state.phase==='preparation'){

@@ -97,15 +97,47 @@ export async function transferPreparation({equipGloves=true}={}) {
 // deaths no longer name the frozen razorbeak slots. Seed 2253 has no opening encounter and the same
 // 4-7 shape (component, reforger at entry 1, heroes) with the identical 3 HP / 97 lost entry.
 const TERMINAL_SEED=2253;
+// A route that pauses after each complete battle (generate-m5-route's awaited onRound), so one long public
+// campaign can be played a round per test case. Pausing never changes a command or a state.
+export function pausableRoute(start:(onRound:(state:MatchState)=>Promise<void>)=>Promise<void>) {
+  let target=0,pausedAt=0,started:Promise<void>|undefined,resume:(()=>void)|undefined,paused:(()=>void)|undefined;
+  const onRound=(state:MatchState)=>state.round<target?Promise.resolve():new Promise<void>(resolve=>{pausedAt=state.round;resume=resolve;paused?.();});
+  /** Play every battle through round ordinal `round` (Infinity: to the end). A supply round has no battle, so the
+   * route may already be paused past it. */
+  return async (round:number)=>{
+    if(started&&pausedAt>=round)return;
+    target=round;
+    const reached=new Promise<void>(resolve=>{paused=resolve;});
+    if(!started)started=start(onRound);
+    else {const next=resume;resume=undefined;next?.();}
+    await Promise.race([reached,started]);
+  };
+}
 // v23: callers may name another crab-free terminal seed when 2253's roster cannot isolate their carriers.
+const terminalRoutes=new Map<number,(round:number)=>Promise<void>>();
+/** Play the shared terminal campaign through round ordinal `round` only; terminalPreparation finishes it. */
+export async function advanceTerminalRoute(round:number,seed=TERMINAL_SEED) {
+  const key=`terminal${seed}`;
+  if(prefixes.has(key))return;
+  let through=terminalRoutes.get(seed);
+  if(!through) {
+    const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
+    through=pausableRoute(async onRound=>{
+      const captured=new Error('terminal capture');let prefix:MatchState|undefined;
+      try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[],onRound});
+      }catch(e){if(e!==captured)throw e;}
+      if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
+    });
+    terminalRoutes.set(seed,through);
+  }
+  await through(round);
+}
 export async function terminalPreparation(keep:string|null,col=1,row=7,seed=TERMINAL_SEED) {
   const key=`terminal${seed}`;
   if(!prefixes.has(key)) {
-    const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
-    const captured=new Error('terminal capture');let prefix:MatchState|undefined;
-    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[]});
-    }catch(e){if(e!==captured)throw e;}
-    if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
+    await advanceTerminalRoute(Infinity,seed);
+    if(!prefixes.has(key))throw Error('Missing terminal prefix');
+    terminalRoutes.delete(seed);
   }
   let s=structuredClone(prefixes.get(key)!);
   if(keep) {const unit=players(s).find(u=>u.id===keep||u.definitionId===keep);if(!unit)throw Error(`Missing terminal target ${keep}`);s=accepted(api.deployMatchUnit(s,unit.id,{kind:'board',cell:{col,row}}));}
