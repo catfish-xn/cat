@@ -15,6 +15,8 @@ export const BROWSER_OPTIONS = { headless: true, ...(existsSync('/usr/bin/google
  * when no server is available (e.g. a sandbox that cannot listen on localhost).
  */
 export async function testBrowser(): Promise<Browser> {
+  // A supplied sandbox browser is authoritative: do not launch Chrome if connecting fails.
+  if (process.env.PLAYWRIGHT_WS_ENDPOINT) return chromium.connect(process.env.PLAYWRIGHT_WS_ENDPOINT);
   const endpoint = inject('playwrightEndpoint');
   if (endpoint) {
     try { return await chromium.connect(endpoint); } catch { /* fall back to a private browser */ }
