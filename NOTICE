@@ -1,0 +1,12 @@
+NOTICE
+
+The original source code of this project is licensed under the MIT License (see LICENSE).
+
+Files derived from LeagueToolkit ltk-manager (https://github.com/LeagueToolkit/ltk-manager),
+in particular its VFX particle engine (src/modules/workshop/bin/vfx/), are licensed under the
+GNU General Public License, version 3 (see COPYING). Each such file keeps its original copyright
+and license header and states the ltk-manager source path it was derived from.
+
+Because the distributed application combines MIT-licensed code with GPL-3.0 code, the combined
+work as distributed is licensed under the GNU General Public License, version 3. The MIT license
+of the original files is unchanged; they may still be used separately under the MIT License.
