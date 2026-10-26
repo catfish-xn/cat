@@ -34,6 +34,7 @@ import { LEGEND_MODEL, createTabletop } from './tabletop';
 import { createCarouselStage } from './carousel-stage';
 import { offerLegendPicker } from './legend-picker';
 import { createTraitProps } from './trait-props';
+import { createGoldMines, GOLD_MINE_MODEL } from './gold-mines';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
@@ -500,6 +501,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const boardEntry = models.cache?.manifest.boards?.[DEFAULT_BOARD];
   const arena: BoardArena | null = boardEntry && models.cache ? createBoardArena(arenaGroup, boardEntry.alignment,
     () => loadModel!(DEFAULT_BOARD), () => { boardKey = ''; if (lastFrame) buildBoard(lastFrame); }, boardEntry.grid) : null;
+  const goldMines = boardEntry && loadModel ? createGoldMines(arenaGroup, boardEntry.alignment, () => loadModel(GOLD_MINE_MODEL)) : null;
   let boardKey = '';
   /**
    * The arena's own bench cells (alignment.bench) while the arena is drawn, else null: bench pieces stand there instead
@@ -1056,7 +1058,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!frame.fighting) for (const view of pieces.values()) warmCast(view.definitionId);
     dancing = new Set(frame.fighting ? [] : frame.mechanics?.reunion ?? []);
     for (const [id, view] of pieces) setDance(view, id, dancing.has(id) && view.root.visible);
-    tabletop.frame(frame); traitProps.frame(frame);
+    tabletop.frame(frame); traitProps.frame(frame); goldMines?.frame(frame, !!arena?.ready, visiting());
   };
   const face = (sourceId: string, targetId: string | undefined) => {
     const source = pieces.get(sourceId);
@@ -1138,6 +1140,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     scoutView = view; scout.show(view?.watching ? null : view, lastFrame);
     // My legend goes along to a drawn build: it leaves my board (no walk, no orb claims) and comes back to its own spot.
     tabletop.away(scout.active);
+    goldMines?.away(!!view);
   };
   /** On another seat's board, its build drawn or its battle playing: the board takes no input. */
   const visiting = () => scout.active || scoutView?.watching === true;
@@ -1510,7 +1513,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);
-    tabletop.update(seconds); traitProps.update(seconds); stage.update(seconds); scout.update(seconds); followBox();
+    tabletop.update(seconds); traitProps.update(seconds); goldMines?.update(seconds); stage.update(seconds); scout.update(seconds); followBox();
     if (touchLook && !touchLook.shown && performance.now() - touchLook.started >= 450) {
       touchLook.shown = true;
       showDescription({ x: touchLook.event.clientX, y: touchLook.event.clientY });
@@ -1548,7 +1551,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, stage, scout };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, goldMines, stage, scout };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
@@ -1559,7 +1562,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
-      withdrawPicker(); clearEffects(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); goldMines?.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
