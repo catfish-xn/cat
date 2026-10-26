@@ -74,7 +74,7 @@ describe('M5 frozen S13 slice',()=>{
     }
   });
   // Augments: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  it('freezes v23: 35 supported traits, 8 components, 36 recipes, source-derived augments and 56 anomalies',()=>{
+  it('freezes v23: 35 supported traits, 8 components, 36 recipes, 224 augments and 56 anomalies',()=>{
     // Frozen pre-expansion slice: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11 + 5 teamups + Sisters.
     // Count admitted raw source rows, independently of the generated *_DEFINITIONS exports.
     const augmentCount = 30 + 6 + 14 + 7 + 3 + 5 + 1
@@ -83,6 +83,8 @@ describe('M5 frozen S13 slice',()=>{
         .reduce((sum, source) => sum + Object.keys(source).length, 0)
       + Object.values(AUGMENT_BATCH2).filter(row => row.enabled).length;
     expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,augmentCount,56]);
+    // Independent v23 frozen total: source-table additions/deletions must not update both sides.
+    expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(224);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);

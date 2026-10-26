@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import { RESEARCH_FILE } from './augment-pool-source-expectations';
+import { existsSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { createMatch, selectChoice, rerollAugment, buyUnit, equipItem, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { accepted, reachRound, resolveM5Choices, fieldBench } from './match-helpers';
@@ -27,8 +29,8 @@ function rejectAll(s:MatchState,mutate:(s:any)=>void):void {
  expect(()=>restoreMatch(forged)).toThrow();expect(()=>restoreMatch(JSON.stringify(forged))).toThrow();
  expect(()=>restoreMatch(serializeMatch(forged))).toThrow();
 }
-it.each(Object.keys(ROWS))('%s preserves the source row and respects every allowed/forbidden node',id=>{
- const source=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')).find((x:any)=>x.apiName===ROWS[id].apiName);
+it.skipIf(!existsSync(RESEARCH_FILE)).each(Object.keys(ROWS))('%s preserves the source row and respects every allowed/forbidden node',id=>{
+ const source=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((x:any)=>x.apiName===ROWS[id].apiName);
  expect(ROWS[id].source.values).toEqual(source.effects);expect(AUGMENT_POOL_API_NAMES[id]).toBe(source.apiName);
  for(const node of ['2-1','3-2','4-2']){
   const allowed=!(AUGMENT_STAGE_BANS[source.apiName]??({'TFT_Augment_CategoryFive':['4-2'],'TFT_Augment_Overheal':['2-1'],'TFT_Augment_SatedSpellweaver':['2-1']} as Record<string,string[]>)[source.apiName]??[]).includes(node);

@@ -246,7 +246,9 @@ describe('PR6 Mel threshold observation (reward enabled by batch A)',()=>{
     while(receipts(state).length===0 && steps++<200) {
       previous=state;
       if(state.phase==='choice') {
-        const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
+        const c=state.pendingChoice!;
+        const id=c.offers.find(id=>!['clear-mind','cluttered-mind','slammin','slammin-plus','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii'].includes(id))!;
+        expect(id).toBeDefined();state=accepted(selectChoice(state,c.choiceId,c.generation,id));
       } else if(state.phase==='preparation') state=accepted(startMatchCombat(state));
       else if(state.phase==='combat') state=stepMatch(state).state;
       else state=accepted(nextRound(state,state.round));

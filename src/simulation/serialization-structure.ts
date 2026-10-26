@@ -222,6 +222,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     } else requireValue(receipt.gold === (receipt.kind === 'augment' || receipt.kind === 'anomaly' ? choiceAcquisitionGold((receipt.kind==='augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[receipt.definitionId!], receipt.round) : 0) && receipt.itemIds.length === (receipt.kind === 'augment' && P3_AUGMENT_ITEMS[receipt.definitionId!] ? 1 : 0), 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
     for (const itemId of receipt.itemIds) checkSerial(itemId, 'item', state.nextItemSerial);
     nullableString(receipt.unitId); nullableString(receipt.definitionId);
+    // Augment choices have no target; their rewards have separate mechanic/loot births.
+    if (receipt.kind === 'augment') requireValue(receipt.unitId === null, 'augment receipt unit');
     if (receipt.kind === 'augment') requireValue(state.augments.some(a => a.choiceId === receipt.eventId && a.definitionId === receipt.definitionId), 'augment receipt');
     if (receipt.kind === 'anomaly') definitionId(receipt.definitionId, ANOMALY_DEFINITIONS, 'anomaly receipt');
   }

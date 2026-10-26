@@ -1,6 +1,6 @@
 /* U6 automated UI regression: the live loot panel through the real app (T13 orbs: no PvE loot pick).
  * States come only from public commands: a fresh seed-42 opening driven by native clicks,
- * and the seed-36 3-7 capacity / seed-2253 lethal 4-7 routes recorded headlessly with BattleHistory and
+ * and the seed-36 3-7 capacity / seed-2050 lethal 4-7 routes recorded headlessly with BattleHistory and
  * loaded through the real save-import control. After import every action is a native click.
  * At each checkpoint the DOM rows, statuses, receipts and Continue verdict must equal
  * readLootView() computed independently in Node from the page's own Match state.
@@ -13,6 +13,7 @@ const { readProcessOutput: execFileSync } = require('./offline-process-output.cj
 const { chromium } = require('playwright');
 const { lootPlan: independentLootPlan } = require('../tests/fixtures/orb-combo-oracle.cjs');
 const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot');
+const TERMINAL_SEED = 2050;
 
 (async () => {
   fs.mkdirSync(output, { recursive: true });
@@ -31,9 +32,12 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
 
     /* ---------- headless public routes recorded as ordinary save envelopes ---------- */
     // T13 orb loot has no PvE pick: the scenarios are the public ones of tests/m8-b8-live-capacity
-    // (seed-36 3-7 Nocturne / Ezreal at nine capacity; seed-2253 lethal 4-7 with Maddie killing two carriers).
-    // v22: seed 38 draws the scuttle-crab opening, whose 4-7 crabs carry the razorbeak orbs; seed 2253 is the
+    // (seed-36 3-7 Nocturne / Ezreal at nine capacity; a lethal 4-7 with a lone Maddie killing two carriers).
+    // v22: seed 38 draws the scuttle-crab opening, whose 4-7 crabs carry the razorbeak orbs; seed 2253 was the
     // crab-free terminal route of tests/fixtures/t13-loot-public.ts (same 3 HP entry after the same losses).
+    // v23 (224-card pool): seed 2253's route no longer keeps Maddie, and no lone unit of its roster kills exactly a
+    // component carrier and a hero carrier. Seed 2050 (no opening encounter, razorbeak 4-7, the same losses and 3 HP
+    // entry) keeps a 2-star Maddie; alone at (2,7) she kills r01 (sword) and r04 (Nocturne + 1G) and the board dies.
     const players = state => state.preparation.units.filter(unit => unit.team === 'player');
     const bench = state => players(state).filter(unit => unit.location.kind === 'bench');
     function reserveExcept(initial, keep) {
@@ -100,19 +104,24 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     const capacityState = fillBench(capacity.prefix, capacityHeroes.map(drop => drop.payload.definitionId));
     assert.equal(bench(capacityState).length, 9);
     const capacityFile = await envelopeFile('u6-capacity-3-7', 'u6-capacity', capacityState, capacity.history);
-    // Terminal: seed-2253 lethal 4-7 (3 HP after empty-board losses, full bench, only Maddie fielded at 2,7).
+    // Terminal: seed-2050 lethal 4-7 (3 HP after empty-board losses, full bench, only Maddie fielded at 2,7).
     const losses = ['1-3', '1-4', '2-1', '2-2', '2-3', '2-5', '2-6', '2-7', '3-1', '3-2', '3-3', '3-7', '4-1', '4-2', '4-7'];
-    const terminal = await recordedPrefix('4-7', { seed: 2253, emptyBoardRounds: losses, protectedUnitIds: [] }, 'u6-terminal');
+    const terminal = await recordedPrefix('4-7', { seed: TERMINAL_SEED, emptyBoardRounds: losses, protectedUnitIds: [] }, 'u6-terminal');
     const terminalDrops = oracleDrops(terminal.prefix);
     const terminalHeroes = heroDrops(terminal.prefix);
     assert.deepEqual(terminalHeroes.map(drop => drop.payload), [
-      { kind: 'unit', definitionId: 'ezreal', quantity: 1 },
-      { kind: 'unit', definitionId: 'gangplank', quantity: 1 },
-      { kind: 'unit', definitionId: 'garen', quantity: 1 },
-    ], 'seed-2253 4-7 orbs carry Ezreal, Gangplank and Garen');
+      // Read from the independent oracle (lootPlan(2050, 24)): r00 Nami + Smeech, r03 Loris, r04 Nocturne, r05 Swain + Nunu.
+      { kind: 'unit', definitionId: 'nami', quantity: 1 },
+      { kind: 'unit', definitionId: 'smeech', quantity: 1 },
+      { kind: 'unit', definitionId: 'loris', quantity: 1 },
+      { kind: 'unit', definitionId: 'nocturne', quantity: 1 },
+      { kind: 'unit', definitionId: 'swain', quantity: 1 },
+      { kind: 'unit', definitionId: 'nunu', quantity: 1 },
+    ], 'seed-2050 4-7 orbs carry Nami, Smeech, Loris, Nocturne, Swain and Nunu');
     const terminalExcluded = terminalHeroes.map(drop => drop.payload.definitionId);
     let terminalState = fillBench(reserveExcept(terminal.prefix, []), terminalExcluded);
     const maddie = players(terminalState).find(unit => unit.definitionId === 'maddie');
+    assert(maddie, `seed-${TERMINAL_SEED} public terminal roster keeps Maddie`);
     terminalState = fillBench(accepted(api.deployMatchUnit(terminalState, maddie.id, { kind: 'board', cell: { col: 2, row: 7 } })), terminalExcluded);
     assert.equal(bench(terminalState).length, 9); assert.equal(terminalState.playerHp, 3);
     const terminalFile = await envelopeFile('u6-terminal-4-7', 'u6-terminal', terminalState, terminal.history);
@@ -141,7 +150,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
       JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r04']),
     ]);
     assert.deepEqual(api.readLootView(terminalEnded).revealedDrops.map(drop => drop.status), ['granted', 'retained-terminal', 'granted']);
-    report.publicRoutePreflight = { capacityPendingHeroes: capacityHeroes.length, terminalRetainedHero: 'garen', passed: true };
+    report.publicRoutePreflight = { capacityPendingHeroes: capacityHeroes.length, terminalRetainedHero: 'nocturne', passed: true };
 
     /* ---------- the real app ---------- */
     await server.listen();
@@ -294,7 +303,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
       assert.deepEqual(killed, [
         JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r01']),
         JSON.stringify(['pve', '4-7', 'razorbeaks-v1', 'r04']),
-      ], 'Maddie kills the component and Garen carriers');
+      ], 'Maddie kills the component and Nocturne carriers');
       const earned = terminalDrops.filter(drop => killed.includes(drop.sourceUnitId));
       assert.deepEqual(view.revealedDrops.map(drop => ({ dropId: drop.dropId, payload: drop.payload, status: drop.status })),
         earned.map(drop => ({ dropId: drop.dropId, payload: drop.payload, status: drop.payload.kind === 'unit' ? 'retained-terminal' : 'granted' })), 'exact v17 terminal drops and statuses');
@@ -304,9 +313,9 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
       assert.equal(receipts.length, 1, 'earned component has exactly one loot receipt');
       assert.equal(component.receiptId, receipts[0].receiptId);
       assert.equal(receipts[0].grantedItemIds.length, 1);
-      assert(current.items.some(item => item.id === receipts[0].grantedItemIds[0] && item.definitionId === 'rod'), 'receipt creates the actual v17 component');
+      assert(current.items.some(item => item.id === receipts[0].grantedItemIds[0] && item.definitionId === 'sword'), 'receipt creates the actual v17 component');
       assert.deepEqual(api.stepMatch(current), { state: current, events: [] }, 'terminal step cannot grant loot again');
-      assert(view.revealedDrops.some(drop => drop.status === 'retained-terminal' && drop.receiptId === null && drop.payload.definitionId === 'garen'), 'retained hero shown without receipt');
+      assert(view.revealedDrops.some(drop => drop.status === 'retained-terminal' && drop.receiptId === null && drop.payload.definitionId === 'nocturne'), 'retained hero shown without receipt');
       assert(view.revealedDrops.filter(drop => drop.status === 'granted').every(drop => drop.receiptId), 'earned drops shown only via their receipts');
     });
     assert.deepEqual(report.errors, []);

@@ -1,3 +1,4 @@
+import {isSellableUnit} from '../src/simulation/seat-mechanics/forms';
 import { prepareInput, copyInput } from './fixtures/prepared-input';
 import { deepStrictEqual } from 'node:assert';
 import { syntheticSharedRound } from './tp-helpers';
@@ -355,9 +356,9 @@ describe('T12 latest assets survive death, settlement and upgrades', () => {
       state = accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col:i%7,row:i===0?4:7}}));
     state = accepted(startMatchCombat(state));
     let budget=1201;
-    while(state.phase==='combat' && !state.combat!.units.some(u=>u.team==='player'&&u.hp===0) && budget-->0) state=stepMatch(state).state;
+    while(state.phase==='combat' && !state.combat!.units.some(u=>u.team==='player'&&u.hp===0&&isSellableUnit(u.definitionId)&&state.preparation.units.some(p=>p.id===u.id)) && budget-->0) state=stepMatch(state).state;
     expect(state.phase).toBe('combat');
-    const dead=state.combat!.units.find(u=>u.team==='player'&&u.hp===0)!;
+    const dead=state.combat!.units.find(u=>u.team==='player'&&u.hp===0&&isSellableUnit(u.definitionId)&&state.preparation.units.some(p=>p.id===u.id))!;
     expect(dead).toBeDefined();
     let changed=accepted(equipItem(state,acquired.itemIds[0],dead.id,0));
     changed=accepted(equipItem(changed,acquired.itemIds[1],dead.id,0));
