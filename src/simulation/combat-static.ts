@@ -42,7 +42,7 @@ export function shareValidatedCombatDeclarations(candidate: CombatState, expecte
 
 // These records are only read or replaced by the combat pipeline. Arrays that
 // receive push/filter updates belong to the new tick; their entries can share.
-const tickRecords = new Set(['cell', 'maxHpBasis', 'spellCrit']);
+const tickRecords = new Set(['cell', 'maxHpBasis', 'spellCrit', 's13P2Opening']);
 const tickLists = new Set(['statuses', 'shieldLayers', 'tasks', 'effectRuntime', 'combatItemGrants']);
 // Records detached here stay out of the process-wide certification tables: a
 // replay creates thousands of them, and growing those weak tables while a large

@@ -85,7 +85,9 @@ export function variable(unit: CombatUnit, name: string, fallback = 0): number {
 }
 export function champion(unit: Pick<CombatUnit, 'ability'>): string { return unit.ability.kind === 's13' ? unit.ability.championId : ''; }
 export function mechanic(unit: CombatUnit, name: string, key: string, fallback = 0): number {
-  return (unit.mechanics ?? []).filter(m => m.mechanic === name).reduce((sum, m) => sum + (m.values[key] ?? fallback), 0);
+  let sum = 0;
+  for (const m of unit.mechanics ?? []) if (m.mechanic === name) sum += m.values[key] ?? fallback;
+  return sum;
 }
 export function hasMechanic(unit: CombatUnit, name: string): boolean { return (unit.mechanics ?? []).some(m => m.mechanic === name); }
 /** Batch-3 hero augment coefficients on the strongest copy only (augment-effects heroCarry). */

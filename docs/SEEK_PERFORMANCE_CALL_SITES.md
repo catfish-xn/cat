@@ -1,82 +1,70 @@
 # Seek 性能修复：调用点核对（2026-10-27）
 
-基线 `codex/seek-perf-2@1cbbd076`。下面穷举当前 `src/`、`scripts/`、`tests/` 内所改函数及新内部函数的直接调用表达式；同一行的多次调用合并列出。所有公开签名、异常消息、格式、digest 与规则版本不变。
+本轮基线 `codex/seek-perf-2@c2a61d8765b6`；该 HEAD 已包含上一轮 `1cbbd076` 之后的优化。本轮未提交。下表包含前后两轮所改函数及新增内部函数在 `src/`、`scripts/`、`tests/` 中的全部直接调用表达式，同一行的多次调用合并；按导入来源区分同名 `mechanic` / `isSelectable`。公开原签名、异常、格式、规则与 digest 常量不变。
 
-| 函数 | 直接调用点 | 核对结论 |
+## 逐函数直接调用点
+
+| 函数 | 全部直接调用点 | 核对结论 |
 | --- | --- | --- |
-| `equalContent` | [src/replay/history.ts:41](../src/replay/history.ts#L41) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/replay/history.ts:42](../src/replay/history.ts#L42) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/replay/history.ts:44](../src/replay/history.ts#L44) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/replay/history.ts:45](../src/replay/history.ts#L45) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/replay/playback-session.ts:44](../src/replay/playback-session.ts#L44) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:75](../src/simulation/battle-record-validation.ts#L75) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:87](../src/simulation/battle-record-validation.ts#L87) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:91](../src/simulation/battle-record-validation.ts#L91) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:92](../src/simulation/battle-record-validation.ts#L92) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:94](../src/simulation/battle-record-validation.ts#L94) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:97](../src/simulation/battle-record-validation.ts#L97) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:113](../src/simulation/battle-record-validation.ts#L113) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:125](../src/simulation/battle-record-validation.ts#L125) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:178](../src/simulation/battle-record-validation.ts#L178) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:183](../src/simulation/battle-record-validation.ts#L183) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:187](../src/simulation/battle-record-validation.ts#L187) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:231](../src/simulation/battle-record-validation.ts#L231) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:235](../src/simulation/battle-record-validation.ts#L235) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:237](../src/simulation/battle-record-validation.ts#L237) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:240](../src/simulation/battle-record-validation.ts#L240) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:255](../src/simulation/battle-record-validation.ts#L255) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:259](../src/simulation/battle-record-validation.ts#L259) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [src/simulation/battle-record-validation.ts:260](../src/simulation/battle-record-validation.ts#L260) | 已核对：结构、版本、事件、历史及结算仍逐项比较；特殊数据回退原编码器 |
-| `equalContent` | [tests/m6-replay-equality.test.ts:19](../tests/m6-replay-equality.test.ts#L19) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `equalContent` | [tests/m6-replay-equality.test.ts:22](../tests/m6-replay-equality.test.ts#L22) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `equalContent` | [tests/m6-replay-equality.test.ts:23](../tests/m6-replay-equality.test.ts#L23) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `equalContent` | [tests/m6-replay-equality.test.ts:25](../tests/m6-replay-equality.test.ts#L25) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `equalContent` | [tests/m6-replay-equality.test.ts:27](../tests/m6-replay-equality.test.ts#L27) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `equalContent` | [tests/m6-replay-equality.test.ts:36](../tests/m6-replay-equality.test.ts#L36) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `equalContent` | [tests/m6-replay-equality.test.ts:40](../tests/m6-replay-equality.test.ts#L40) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `equalContent` | [tests/m6-replay-equality.test.ts:44](../tests/m6-replay-equality.test.ts#L44) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `equalPlainContent` | [src/simulation/battle-record-validation.ts:58](../src/simulation/battle-record-validation.ts#L58) | 已核对：递归遍历完整数据；无跨调用验证缓存 |
-| `equalPlainContent` | [src/simulation/battle-record-validation.ts:65](../src/simulation/battle-record-validation.ts#L65) | 已核对：递归遍历完整数据；无跨调用验证缓存 |
-| `copyCombatUnitForTick` | [src/simulation/combat-s13.ts:159](../src/simulation/combat-s13.ts#L159) | 已核对：只读记录复制/冻结；可写 runtime 隔离；特殊值保留原生复制回退 |
-| `copyCombatUnitForTick` | [tests/mp-sim-perf.test.ts:88](../tests/mp-sim-perf.test.ts#L88) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `copyCombatUnitForTick` | [tests/mp-sim-perf.test.ts:98](../tests/mp-sim-perf.test.ts#L98) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `copyCombatUnitForTick` | [tests/mp-sim-perf.test.ts:116](../tests/mp-sim-perf.test.ts#L116) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `copyCombatUnitForTick` | [tests/mp-sim-perf.test.ts:118](../tests/mp-sim-perf.test.ts#L118) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `cloneTickRecord` | [src/simulation/combat-static.ts:91](../src/simulation/combat-static.ts#L91) | 已核对：只读记录复制/冻结；可写 runtime 隔离；特殊值保留原生复制回退 |
-| `immutableTickRecord` | [src/simulation/combat-static.ts:122](../src/simulation/combat-static.ts#L122) | 已核对：只读记录复制/冻结；可写 runtime 隔离；特殊值保留原生复制回退 |
-| `immutableTickRecord` | [src/simulation/combat-static.ts:123](../src/simulation/combat-static.ts#L123) | 已核对：只读记录复制/冻结；可写 runtime 隔离；特殊值保留原生复制回退 |
-| `updateG23Cells` | [src/simulation/match.ts:117](../src/simulation/match.ts#L117) | 已核对：只投影 Family/Experiment；仍使用同一成员与 tier 实现 |
-| `advanceS13Tick` | [src/simulation/combat-tick.ts:38](../src/simulation/combat-tick.ts#L38) | 已核对：50 ms tick、事件顺序、RNG、结算均不变 |
-| `p2Target` | [src/simulation/combat-s13.ts:294](../src/simulation/combat-s13.ts#L294) | 已核对：距离与 ID 决胜不变；移动冷却未就绪时不做无用目标计算 |
-| `p2Target` | [src/simulation/combat-s13.ts:323](../src/simulation/combat-s13.ts#L323) | 已核对：距离与 ID 决胜不变；移动冷却未就绪时不做无用目标计算 |
-| `p2Target` | [tests/s13-augments-p2-combat.test.ts:126](../tests/s13-augments-p2-combat.test.ts#L126) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `p2Target` | [tests/s13-augments-p2-combat.test.ts:193](../tests/s13-augments-p2-combat.test.ts#L193) | 已核对：测试调用；原有断言保留，新增边界/逐帧断言 |
-| `refreshMechanismAuras` | [src/simulation/combat-effects.ts:76](../src/simulation/combat-effects.ts#L76) | 已核对：每次刷新重建来源索引；不跨 tick 保存，不跳过贡献移除/状态归纳 |
-| `refreshMechanismAuras` | [src/simulation/combat-s13.ts:304](../src/simulation/combat-s13.ts#L304) | 已核对：每次刷新重建来源索引；不跨 tick 保存，不跳过贡献移除/状态归纳 |
-| `refreshMechanismAuras` | [src/simulation/m8/s13-mechanisms.ts:396](../src/simulation/m8/s13-mechanisms.ts#L396) | 已核对：每次刷新重建来源索引；不跨 tick 保存，不跳过贡献移除/状态归纳 |
+| `equalContent` | [src/replay/history.ts](../src/replay/history.ts#L41): 41, 42, 44, 45<br>[src/replay/playback-session.ts](../src/replay/playback-session.ts#L44): 44<br>[src/simulation/battle-record-validation.ts](../src/simulation/battle-record-validation.ts#L75): 75, 87, 91, 92, 94, 97, 113, 125, 178, 183, 187, 231, 235, 237, 240, 255, 259, 260<br>[tests/m6-replay-equality.test.ts](../tests/m6-replay-equality.test.ts#L19): 19, 22, 23, 25, 27, 36, 40, 44 | 已核对：完整比较与特殊数据回退不变；未改验证缓存边界 |
+| `equalPlainContent` | [src/simulation/battle-record-validation.ts](../src/simulation/battle-record-validation.ts#L58): 58, 65 | 已核对：完整递归比较不变 |
+| `copyCombatUnitForTick` | [src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L177): 177<br>[tests/m6-seek-tick-ownership.test.ts](../tests/m6-seek-tick-ownership.test.ts#L22): 22<br>[tests/mp-sim-perf.test.ts](../tests/mp-sim-perf.test.ts#L88): 88, 98, 116, 118 | 已核对：可写运行态仍隔离；新增只读 P2 开场事实的脱离/冻结复用 |
+| `cloneTickRecord` | [src/simulation/combat-static.ts](../src/simulation/combat-static.ts#L91): 91 | 已核对：保留原生特殊图回退和访问器语义 |
+| `immutableTickRecord` | [src/simulation/combat-static.ts](../src/simulation/combat-static.ts#L122): 122, 123 | 已核对：只共享已脱离的只读值；不保存验证结果 |
+| `updateG23Cells` | [src/simulation/match.ts](../src/simulation/match.ts#L117): 117 | 已核对：上一轮 Family/Experiment 投影优化保留 |
+| `advanceS13Tick` | [src/simulation/combat-tick.ts](../src/simulation/combat-tick.ts#L38): 38 | 已核对：动作/伤害/回蓝分段，顺序、RNG、事件及结算不变 |
+| `p2Target` | [src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L312): 312, 344<br>[tests/s13-augments-p2-combat.test.ts](../tests/s13-augments-p2-combat.test.ts#L126): 126, 193 | 已核对：线性选择；普通目标不构造完整候选数组；距离和 ID 决胜不变 |
+| `refreshMechanismAuras` | [src/simulation/combat-effects.ts](../src/simulation/combat-effects.ts#L76): 76<br>[src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L322): 322<br>[src/simulation/m8/s13-mechanisms.ts](../src/simulation/m8/s13-mechanisms.ts#L418): 418<br>[tests/m6-seek-tick-ownership.test.ts](../tests/m6-seek-tick-ownership.test.ts#L71): 71, 75 | 已核对：仅一次刷新内复用投影；效果/贡献移除后立即失效；仍执行贡献扫描 |
+| `move` | [src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L314): 314 | 已核对：同一 BFS 内延迟求一次不变攻击范围，邻居顺序不变 |
+| `rollPlannedPackets` | [src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L352): 352, 353, 407 | 已核对：每单位仍认证暴击授权；无 packet 时省去空排序/Map；穿透共享暴击与抽签顺序不变 |
+| `planActions` | [src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L410): 410 | 已核对：仅提取原动作阶段，tick 内闭包，无跨 tick 状态 |
+| `resolvePackets` | [src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L653): 653 | 已核对：仅提取原伤害阶段，保留每条 packet 与其派生事件 |
+| `settleMana` | [src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L743): 743 | 已核对：仅提取原回蓝阶段，零增量的原验证也完整执行 |
+| `mechanic` | [src/simulation/combat-g2.ts](../src/simulation/combat-g2.ts#L188): 188, 193<br>[src/simulation/combat-s13-abilities.ts](../src/simulation/combat-s13-abilities.ts#L134): 134<br>[src/simulation/combat-s13-state.ts](../src/simulation/combat-s13-state.ts#L134): 134<br>[src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L83): 83, 144, 202, 405, 616, 623, 706, 712, 725, 730, 732<br>[src/simulation/serialization-structure.ts](../src/simulation/serialization-structure.ts#L481): 481, 484, 491, 514, 533, 586, 587, 595, 599<br>[tests/g2-4b-unstable-chest.test.ts](../tests/g2-4b-unstable-chest.test.ts#L395): 395 | 已核对：按原顺序累加所有匹配项，无 filter/reduce 中间数组 |
+| `isControlled` | [src/simulation/combat-movement.ts](../src/simulation/combat-movement.ts#L20): 20<br>[src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L296): 296 | 已核对：保留 legacy stun 检查，仅查询相关冻结状态类型 |
+| `isSelectable` | [src/simulation/anomalies/summons.ts](../src/simulation/anomalies/summons.ts#L51): 51<br>[src/simulation/combat-replay-view.ts](../src/simulation/combat-replay-view.ts#L81): 81<br>[src/simulation/combat-s13-state.ts](../src/simulation/combat-s13-state.ts#L159): 159<br>[src/simulation/m8/s13-targeting.ts](../src/simulation/m8/s13-targeting.ts#L10): 10<br>[src/simulation/s13-augments-p2-combat.ts](../src/simulation/s13-augments-p2-combat.ts#L85): 85<br>[tests/s13-anomalies-b.test.ts](../tests/s13-anomalies-b.test.ts#L35): 35, 59, 60<br>[tests/s13-anomalies-c.test.ts](../tests/s13-anomalies-c.test.ts#L22): 22, 77<br>[tests/s13-anomalies-review.test.ts](../tests/s13-anomalies-review.test.ts#L76): 76<br>[tests/v23-review-sion.test.ts](../tests/v23-review-sion.test.ts#L118): 118 | 已核对：presence/proxy/invisible 条件不变，仅查询 untargetable 状态 |
+| `hasEffectiveStatus` | [src/simulation/anomalies/availability.ts](../src/simulation/anomalies/availability.ts#L22): 22<br>[src/simulation/combat-movement.ts](../src/simulation/combat-movement.ts#L10): 10<br>[tests/m6-seek-tick-ownership.test.ts](../tests/m6-seek-tick-ownership.test.ts#L40): 40, 72, 76 | 已核对：只对指定类型求有效来源；无验证缓存 |
+| `statusMagnitude` | [src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L86): 86<br>[src/simulation/m8/s13-mechanisms.ts](../src/simulation/m8/s13-mechanisms.ts#L383): 383<br>[tests/m6-seek-tick-ownership.test.ts](../tests/m6-seek-tick-ownership.test.ts#L41): 41<br>[tests/m8-b4-integration.test.ts](../tests/m8-b4-integration.test.ts#L50): 50, 52, 59<br>[tests/m8-b4-tear.test.ts](../tests/m8-b4-tear.test.ts#L27): 27 | 已核对：仍从当前 tick 贡献求最大有效幅度，保留零幅度有效状态 |
+| `summarizeGroup` | [src/simulation/m8/s13-mechanisms.ts](../src/simulation/m8/s13-mechanisms.ts#L257): 257, 288<br>[src/simulation/m8/status.ts](../src/simulation/m8/status.ts#L21): 21, 25, 31, 80, 98, 122 | 已核对：逐贡献重算；未改变时保留只读值，不信任旧摘要 |
+| `removeStatusContributions` | [src/simulation/m8/s13-mechanisms.ts](../src/simulation/m8/s13-mechanisms.ts#L327): 327, 399<br>[src/simulation/m8/status.ts](../src/simulation/m8/status.ts#L103): 103, 106<br>[tests/m6-seek-tick-ownership.test.ts](../tests/m6-seek-tick-ownership.test.ts#L44): 44 | 已核对：所有 predicate 仍依次调用；发生移除才复制贡献列表，仍重算有效摘要 |
+| `maintainMechanisms` | [src/simulation/combat-s13.ts](../src/simulation/combat-s13.ts#L277): 277<br>[tests/m8-b3-second-integration.test.ts](../tests/m8-b3-second-integration.test.ts#L116): 116 | 已核对：过期、末次 pulse、shield、排序与 nextSeq 调用保留 |
+| `replaceStatuses` | [src/simulation/m8/s13-mechanisms.ts](../src/simulation/m8/s13-mechanisms.ts#L288): 288, 302, 328 | 已核对：仅保持相同只读条目数组的身份，保留现有 tick 内 modifier 索引 |
+| `targetingEnvironment` | [src/simulation/combat-s13-abilities.ts](../src/simulation/combat-s13-abilities.ts#L235): 235, 258<br>[src/simulation/m8/s13-mechanisms.ts](../src/simulation/m8/s13-mechanisms.ts#L38): 38 | 已核对：显式提供当前投影时避免先生成一个即被覆盖的投影；其他环境字段不变 |
 
-内部闭包也已核对：`cloneTickRecord` 内的 `clone` 仅在 `src/simulation/combat-static.ts:77,84` 递归和入口调用；`equalPlainContent` 内的 `scalar` 仅在 `src/simulation/battle-record-validation.ts:40` 检查两侧；aura 的 `sourceKey` 仅在 `src/simulation/m8/s13-mechanisms.ts:310,316` 使用。均没有外部调用或跨调用验证结果缓存。
+共 132 个“函数/文件/行”调用位置；扫描同时核对了具名导入别名与命名空间导入，以上函数没有漏列的别名或命名空间调用。
+内部闭包：`cloneTickRecord.clone` 仅在该函数内递归；`equalPlainContent.scalar` 仅检查两侧；`refreshMechanismAuras.sourceKey` 仅在本次刷新扫描贡献与查重时调用。`planActions`、`resolvePackets`、`settleMana` 每 tick 各执行一次；均不跨 tick、PlaybackSession 或 restoreMatch 保留计划/验证结果。
 
-## 应用、在线回放及服务器
+## 单人、在线客户端及服务器
 
-- 单人回放：`src/m6/application.ts:265` 构造 `PlaybackSession(record, preceding)`；构造验证、检查点和 `read/seek/advance` API 未改。`src/replay/playback-session.ts:24,44` 分别进入完整验证和逐步事件比较。
-- 在线客户端：`src/rendering/online/remote-session.ts:120,191,212,230,245` 调用 `applyCombatReplayTick` 应用服务器帧，不构造 `PlaybackSession`，也不重新计算战斗。`src/rendering/online/ws-client.ts:222,381,429` 组合/修订已传输帧。上述文件均未改。
+- 单人：`src/m6/application.ts:265` 构造 `PlaybackSession(record, preceding)`；`src/replay/playback-session.ts:25` 调用完整 `validateBattlePlayback`，`:43,44` 继续通过 `stepCombat` 推进并完整比较事件。原检查点复用只属于该实例的验证结果。
+- 在线客户端：`src/rendering/online/remote-session.ts:120,191,212,230,245` 调用 `applyCombatReplayTick` 消费服务器帧；`ws-client.ts:222,381,429` 组合/修订已传输帧。没有新增客户端战斗规则，也不构造 `PlaybackSession`。上述文件未改。
 - 服务器 PvP：`src/server/room/two-sided-resolver.ts:99,116` 创建 `startTwoSidedBattle`/`startTwoSidedBattleSteps`，`:70` 推进任务；`src/simulation/two-sided-battle.ts:317,325` 调用 `stepCombat`，`:209` 为独立重演核对。服务器目录未改。
-- 服务器 PvE：`src/server/room/combat-stream.ts:103` 调用 `stepMatchCombatStream`；`src/simulation/match.ts:524,555` 的 `stepMatchCombatStream`/`stepMatch` 调用 `stepCombat`；`src/simulation/combat.ts:138` → `advanceCombatTick` → `src/simulation/combat-tick.ts:38` → `advanceS13Tick`，使用同一复制、目标和 aura 实现。
-- 在线帧接收路径已作只读核对；`tests/t5r-combat-replay.test.ts`、`tests/yieldable-battle-setup.test.ts` 对服务器生成的 PvP/PvE 帧、回放字节与分片推进做自动验证。没有运行浏览器或网络端到端测试。
+- 服务器 PvE：`src/server/room/combat-stream.ts:103` 调用 `stepMatchCombatStream`；`src/simulation/match.ts:524,555` 推进 `stepCombat`；`src/simulation/combat.ts:138` → `advanceCombatTick` → `src/simulation/combat-tick.ts:38` → `advanceS13Tick`，使用相同 tick 实现。
+- 展示属性仍由 `readCombatStats` 公开只读投影派生，其 `mechanic` 求和顺序不变；没有修改界面布局或展示代码。
+- 已运行 `tests/t5r-combat-replay.test.ts` 和 `tests/yieldable-battle-setup.test.ts`，覆盖服务器生成 PvP/PvE 帧与分片推进一致性；没有运行浏览器脚本。
 
 ## v23 源码证据失效范围
 
-- `src/simulation/battle-record-validation.ts`
+本轮相对 HEAD 共 9 个 `src/simulation` 文件有改动，完整清单：
+
+- `src/simulation/anomalies/availability.ts`
+- `src/simulation/combat-movement.ts`
+- `src/simulation/combat-s13-state.ts`
 - `src/simulation/combat-s13.ts`
 - `src/simulation/combat-static.ts`
-- `src/simulation/g2-3-state.ts`
 - `src/simulation/m8/s13-mechanisms.ts`
+- `src/simulation/m8/s13-targeting.ts`
+- `src/simulation/m8/status.ts`
 - `src/simulation/s13-augments-p2-combat.ts`
 
-以上六个文件使以下审计中的对应 `sourceDigests` 失效；未改这些录制证据、内容身份常量或历史 fixture，交由 Claude 重录：
+上一轮已在 HEAD 修改、此次未再次修改的文件（Claude 重录时同样纳入）：
 
-- `docs/evidence/v23-online-rules/battle-start-audit.json`：6 个修改源码 digest。
-- `docs/evidence/v23-online-rules/input-fixture-audit.json`：6 个修改源码 digest。
-- `docs/evidence/v23-online-rules/live-reveal-audit.json`：6 个修改源码 digest。
-- `docs/evidence/v23-online-rules/release-audit.json`：6 个修改源码 digest。
+- `src/simulation/battle-record-validation.ts`
+- `src/simulation/g2-3-state.ts`
+
+两轮合计 11 个唯一源码文件。以下审计均需 Claude 重录对应 sourceDigests；本轮没有修改任何审计 JSON、历史 fixture、格式、版本或内容 digest：
+
+- `docs/evidence/v23-online-rules/battle-start-audit.json`：两轮共 11 个源码 digest（本轮 9 个）。
+- `docs/evidence/v23-online-rules/input-fixture-audit.json`：两轮共 11 个源码 digest（本轮 9 个）。
+- `docs/evidence/v23-online-rules/live-reveal-audit.json`：两轮共 11 个源码 digest（本轮 9 个）。
+- `docs/evidence/v23-online-rules/release-audit.json`：两轮共 11 个源码 digest（本轮 9 个）。

@@ -7,7 +7,7 @@ import { canonicalContent } from '../content';
 import { emitMechanismSignal } from './s13-triggers';
 import { hexDistance, DEFAULT_BOARD } from '../board';
 import { selectTargets, startingRows, type TargetEnvironment } from './targeting';
-import { targetingEnvironment } from './s13-targeting';
+import { targetingEnvironment, targetUnit } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference, S13Packet } from '../combat-s13-abilities';
 import { byDistance, enemies, origin, variable, ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
@@ -22,6 +22,17 @@ import { consumeSurvivalTriggers, endShield, grantShieldState, maintainShield, s
 import { makeHealRequest, resolveHeal, type VampRate } from './heal';
 import { rollCrit } from './crit';
 import { grantCombatItem } from './combat-item-grants';
+/** Keep immutable status array identity when a scan produced the same values.
+ * This also retains the existing per-tick modifier index, without caching a scan. */
+function replaceStatuses(unit: S13Unit, statuses: readonly import('./contracts').StatusGroup[]): void {
+  const before = unit.mechanismState!.statuses;
+  if (before.length === statuses.length) {
+    let same = true;
+    for (let i = 0; i < before.length; i++) if (before[i] !== statuses[i]) { same = false; break; }
+    if (same) return;
+  }
+  unit.mechanismState = { ...unit.mechanismState!, statuses };
+}
 export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[], selector: TargetSelector, boundTargetId?: string, source?: Source, environment: Partial<TargetEnvironment> = {}): S13Unit[] {
   const tick = environment.tick ?? holder.mechanismState?.sampledAtTick ?? 0;
   const ids = selectTargets(selector, targetingEnvironment(environment.board ?? DEFAULT_BOARD, units, holder, tick,
@@ -273,7 +284,8 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
   for (const unit of ctx.units) {
     const expired = endStatuses(unit.mechanismState!.statuses, ctx.tick);
     ctx.events.push(...endedStatusEvents(ctx.tick, unit.id, expired.ended, 'expired'));
-    unit.mechanismState = { ...unit.mechanismState!, periodicTasks: cancelAttachedBurns(unit.mechanismState!.periodicTasks, expired.ended.map(e => e.contribution)), statuses: expired.groups.map(g => summarizeGroup(g, ctx.tick)) };
+    unit.mechanismState = { ...unit.mechanismState!, periodicTasks: cancelAttachedBurns(unit.mechanismState!.periodicTasks, expired.ended.map(e => e.contribution)) };
+    replaceStatuses(unit, expired.groups.map(g => summarizeGroup(g, ctx.tick)));
     for (const ended of expired.ended) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, ctx.units.find(u => u.id === ended.contribution.source.ownerId)!,
       { ...ended.contribution.source, effectIndex: ended.contribution.source.effectIndex + index + 1 }, unit, effect, nextSeq(), index);
     unit.statuses = unit.statuses.filter(s => !s.contributionKeys || s.contributionKeys.some(k => unit.mechanismState!.statuses.some(g => g.contributions.some(c => c.key === k))));
@@ -287,7 +299,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     }); syncShield(unit);
   }
   for (const unit of ctx.units) for (const task of [...unit.mechanismState!.periodicTasks].sort((a, b) => compareCodePoints(a.key, b.key))) executePulse(unit, task);
-  for (const unit of ctx.units) unit.mechanismState = { ...unit.mechanismState!, statuses: advanceBurnClock(unit.mechanismState!.statuses, unit.id, ctx.tick) };
+  for (const unit of ctx.units) replaceStatuses(unit, advanceBurnClock(unit.mechanismState!.statuses, unit.id, ctx.tick));
 }
 /** G10 each-tick selectors describe live auras, sampled after movement and
  * death cleanup. Removing one source never removes another source's debuff. */
@@ -295,6 +307,9 @@ export function refreshMechanismAuras(ctx: AbilityContext, applyNew = true): voi
   // Source identities are immutable during this invocation; no evidence or
   // derived data survives a refresh, tick, playback session or restore call.
   const sourceIds = new Map<Source, string>();
+  // A projection is shared only until this invocation changes a contribution
+  // or executes an effect. Later selectors must see those live changes.
+  let projectedUnits: TargetEnvironment['units'] | undefined;
   const sourceKey = (source: Source): string => {
     let key = sourceIds.get(source);
     if (key === undefined) { key = canonicalSource(source); sourceIds.set(source, key); }
@@ -302,19 +317,26 @@ export function refreshMechanismAuras(ctx: AbilityContext, applyNew = true): voi
   };
   for (const holder of ctx.units) for (const task of holder.mechanismDefinitions?.periodicTasks ?? []) {
     if (task.program.selector.sample !== 'each-tick') continue;
-    const targets = holder.alive && holder.hp > 0 ? selectMechanismTargets(holder, ctx.units, task.program.selector, undefined, task.source, {board:ctx.board,tick:ctx.tick}) : [];
+    const targets = holder.alive && holder.hp > 0 ? selectMechanismTargets(holder, ctx.units, task.program.selector, undefined, task.source,
+      {board:ctx.board,tick:ctx.tick,units:projectedUnits??=ctx.units.map(u=>targetUnit(u,ctx.tick))}) : [];
     const targetIds = new Set(targets.map(target => target.id));
     for (const [index,effect] of task.program.effects.entries()) {
       const source={...task.source,effectIndex:task.source.effectIndex+index}, sourceId=canonicalSource(source);
       for (const unit of ctx.units) {
-        const removed=removeStatusContributions(unit.mechanismState!.statuses,c=>sourceKey(c.source)===sourceId&&!targetIds.has(unit.id),holder.hp>0?'expired':'death-cleanup',ctx.tick);
-        unit.mechanismState={...unit.mechanismState!,statuses:removed.groups};
-        const keys=new Set(removed.ended.map(e=>e.contribution.key));
-        ctx.events.push(...endedStatusEvents(ctx.tick,unit.id,removed.ended,holder.hp>0?'expired':'death-cleanup'));
-        unit.statuses=unit.statuses.filter(s=>!s.contributionKeys?.some(k=>keys.has(k)));
+        const retained = targetIds.has(unit.id);
+        const removed=removeStatusContributions(unit.mechanismState!.statuses,c=>!retained&&sourceKey(c.source)===sourceId,holder.hp>0?'expired':'death-cleanup',ctx.tick);
+        replaceStatuses(unit, removed.groups);
+        if (removed.ended.length) {
+          projectedUnits = undefined;
+          const keys=new Set(removed.ended.map(e=>e.contribution.key));
+          ctx.events.push(...endedStatusEvents(ctx.tick,unit.id,removed.ended,holder.hp>0?'expired':'death-cleanup'));
+          unit.statuses=unit.statuses.filter(s=>!s.contributionKeys?.some(k=>keys.has(k)));
+        }
       }
-      for (const target of targets) if (applyNew && !target.mechanismState!.statuses.some(g=>g.contributions.some(c=>sourceKey(c.source)===sourceId)))
+      for (const target of targets) if (applyNew && !target.mechanismState!.statuses.some(g=>g.contributions.some(c=>sourceKey(c.source)===sourceId))) {
         executeMechanismEffect(ctx,holder,source,target,effect,0,index);
+        projectedUnits = undefined;
+      }
     }
   }
 }
