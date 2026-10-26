@@ -191,8 +191,6 @@ for (const id of [...levels, ...xp, ...rerolls, ...combat]) describe(id, () => {
  // no schema field is silently excluded because it is shared with another batch.
  for (let chunk = 0; chunk < 160; chunk++) it(`rejects persisted leaf slice ${chunk}`, () => {
   for (const path of targets.slice(chunk * 3, chunk * 3 + 3)) for (const action of ['change', 'delete']) {
-   // The shared schedule unitId hole has isolated expected-failure assertions below.
-   if (path[0] === 'scheduleReceipts' && path.at(-1) === 'unitId' && action === 'change') continue;
    const forged = JSON.parse(saved), parent = read(forged, path.slice(0, -1)), key = path.at(-1)!;
    const v = parent[key];
    if (action === 'delete') delete parent[key];
@@ -208,12 +206,12 @@ for (const id of [...levels, ...xp, ...rerolls, ...combat]) describe(id, () => {
    for (const entry of entries) expect(() => restore(forged, entry), `${id} remove ${path.join('.')} ${entry}`).toThrow();
   }
  });
- for (const entry of entries) it.fails(`${entry} rejects forged augment schedule unitId (known admission hole)`, () => {
+ for (const entry of entries) it(`${entry} rejects forged augment schedule unitId`, () => {
   const forged = JSON.parse(saved);
   const receipt = forged.scheduleReceipts.find((r: Json) => r.definitionId === id);
   receipt.unitId = 'forged';
   expect(() => restore(forged, entry)).toThrow();
  });
  it('all owned persisted leaves fit the attack matrix', () => { expect(targets.length).toBeLessThanOrEqual(480); expect(roots.length).toBeLessThanOrEqual(80);
-  console.info(JSON.stringify({ augment: id, leaves: targets.length, containers: roots.length, rejectedLeafAttempts: targets.length * 6 - 3, knownDefectAttempts: 3, containerAttempts: roots.length * 3 })); });
+  console.info(JSON.stringify({ augment: id, leaves: targets.length, containers: roots.length, rejectedLeafAttempts: targets.length * 6, dedicatedUnitIdAttempts: 3, containerAttempts: roots.length * 3 })); });
 });

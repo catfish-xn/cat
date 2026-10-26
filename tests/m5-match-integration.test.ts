@@ -28,11 +28,8 @@ describe('M5 Match atomic integration', () => {
     expect(restoreMatch(serializeMatch(initial))).toEqual(initial);
     const before=reachRound('2-1',false),c=before.pendingChoice!;
     expect(c.kind).toBe('augment');expect(restoreMatch(serializeMatch(before))).toEqual(before);
-    // v23 fmix32 openings: seed 42 now draws Golden Gala (gold 2-1 offers thorn-plated-armor/visionary-crest/little-buddies);
-    // the first two grant an item, so pick the item-free Little Buddies to keep the no-component-package check exact.
-    // After the batch-3/XP merge seed 42's 2-1 offer is crimson-pact/crownguard-spirit/fractured-crystals; Crimson Pact
-    // grants only a Renni, so it keeps the item-free check exact.
-    const pick='crimson-pact';expect(c.offers).toContain(pick);
+    // Built Different is actually offered and grants no items; keep the item-free acquisition invariant.
+    const pick='built-different';expect(c.offers).toContain(pick);
     const selected=selectChoice(before,c.choiceId,c.generation,pick);
     expect(selected.ok).toBe(true);if(!selected.ok)throw new Error(selected.reason);
     const stale=selectChoice(selected.state,c.choiceId,c.generation,pick);

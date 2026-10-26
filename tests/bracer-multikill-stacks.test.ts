@@ -440,19 +440,21 @@ describe('dead-holder public combat fixture', () => {
 });
 
 describe.each([
-  // v23: Black Rose owner is the lowest numeric unit serial (unit-9 before unit-10); on these public Manaflow
-  // routes Morgana is that unit and owns Sion. Ticks moved with the v23 opening-encounter mixing.
-  // Later v23 combat changes (Sion rework, short CC/knock-up): seed 108's Sion kill now carries a Morgana assist; seed 153 keeps a summon-only kill.
-  // After the v23 integration merged the batch-3 pool, seed 153 no longer has a summon-only Sion kill; the first such seed
-  // is 26 (its 2-1 Manaflow I priority is not offered, so it takes Pyromaniac).
-  { contribution: false, seed: 26, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 305, targetId: 'enemy-r8-1' },
+  // 224 augments: seed 59 publicly picks Long Distance Pals and yields a summon-only kill; seed 175 keeps the assist control.
+  { contribution: false, seed: 59, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 294, targetId: 'enemy-r8-4' },
   { contribution: true, seed: 175, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 226, targetId: 'enemy-r4-1' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   let fixture: { state: MatchState; start: MatchCommandResult; before: MatchState; ownerId: string };
   beforeAll(() => {
-    // v15 retains the same contribution cases with actual Manaflow offers.
+    // Keep the selected public route and require the exact Sion/holder contribution facts.
     let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
+    if(!contribution)expect(state.augments.map(a=>a.definitionId)).toEqual(['long-distance-pals']);
     for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
+      // New augment gifts can fill the reserve; sell an unused bench champion before the boundary grant.
+      if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length===state.preparation.benchSize){
+        const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!['morgana','cassiopeia','vladimir','irelia'].includes(u.definitionId))!;
+        expect(reserve).toBeDefined();state=accepted(sellUnit(state,reserve.id));
+      }
       state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
       const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
       state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: cells[i] }));
