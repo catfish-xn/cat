@@ -11,9 +11,14 @@ import { createBeams } from './rendering/components/Beams';
 import { createProjections } from './rendering/components/Projections';
 import { createMeshes } from './rendering/components/Meshes';
 import { meshBuffers } from './rendering/utils/buffers';
-import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail } from './rendering/utils/drawKind';
+import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment } from './rendering/utils/drawKind';
+import { createAttachedMeshes } from './rendering/components/AttachedMeshes';
 import { stencilOf, type StencilClaim } from './rendering/utils/stencil';
 import type { ParticleDraw, DrawFrameState } from './rendering/lifetime';
+import { meshPose } from './rendering/utils/meshPose';
+import { drawLayersOf } from './rendering/utils/frame';
+import { drawPhases } from './rendering/utils/drawKind';
+import { fades } from './rendering/utils/softParticle';
 
 /** League units -> board units. Shared across champions regardless of model fitting. */
 export const FX_SCALE = 0.44;
@@ -36,7 +41,9 @@ export function staticMeshGeometry(source: BufferGeometry): BufferGeometry {
 /** Capture current world bone pose as engine coordinates; missing bones bind to unit position. */
 export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string): Anchor {
   const point = new Vector3(), matrix = new Matrix4();
-  const node = () => bone ? body?.getObjectByName(bone) ?? root : root;
+  let attachment: Object3D | undefined;
+  if (bone) body?.traverse(node => { if (!attachment && node.name.toLowerCase() === bone.toLowerCase()) attachment = node; });
+  const node = () => attachment ?? root;
   return {
     originAt() { node().getWorldPosition(point); return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE]; },
     basisInto(_time, out) {
@@ -60,6 +67,7 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
 }
 export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
+  attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
   const object = new Group(); object.scale.setScalar(FX_SCALE);
   const driver = createDriver(options.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
@@ -73,6 +81,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   driver.swap(prepared.model); driver.steer(rig);
   const stencils: (StencilClaim & { material: ParticleDraw['material'] })[] = [];
   const draws: ParticleDraw[] = [], rootSources: Source[] = [driver];
+  const passes = { early: false, late: false, soft: false };
   try {
     for (const definition of prepared.drawn) {
       const emitter = definition.emitter;
@@ -81,20 +90,34 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       const samplers = prepared.samplers.get(definition.key)!;
       const props = { emitter, sources, samplers, rank: definition.rank, hidden: false, room: ROOT_PARTICLES };
       let draw: ParticleDraw | undefined;
-      if (drawsAsMesh(emitter)) {
+      if (drawsTheAttachment(emitter)) {
+        const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, options.attachment);
+        for (const held of attached) {
+          held.object.layers.disableAll(); for (const layer of drawLayersOf(emitter)) held.object.layers.enable(layer);
+          draws.push(held); object.add(held.object);
+          const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: held.material });
+        }
+      } else if (drawsAsMesh(emitter)) {
         const geometry = prepared.meshes.get(definition.key);
-        if (geometry) draw = createMeshes({ ...props, buffers: meshBuffers(staticMeshGeometry(geometry)) });
+        if (geometry) {
+          const pose = prepared.poses?.get(definition.key);
+          draw = createMeshes({ ...props, buffers: { ...meshBuffers(staticMeshGeometry(geometry)), ...(pose ? { pose: meshPose(pose) } : {}) } });
+        }
       } else if (drawsAsQuad(emitter)) draw = createQuads(props);
       else if (drawsAsTrail(emitter)) draw = createTrails(props);
       else if (drawsAsBeam(emitter)) draw = createBeams(props);
       else if (drawsAsProjection(emitter)) draw = createProjections(props);
-      if (draw) { draws.push(draw); object.add(draw.object); const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: draw.material }); }
+      if (draw) {
+        draw.object.layers.disableAll(); for (const layer of drawLayersOf(emitter)) draw.object.layers.enable(layer);
+        const phases = drawPhases(emitter); passes.early ||= phases.warpsEarly; passes.late ||= phases.warpsLate; passes.soft ||= fades(emitter);
+        draws.push(draw); object.add(draw.object); const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: draw.material });
+      }
     }
   } catch (error) { for (const draw of draws) draw.dispose(); throw error; }
   let elapsed = 0, closed = false;
   const eye = new Camera(), frameRenderer = { info: { render: { frame: 0 } } };
   return {
-    object, driver, draws, stencils,
+    object, driver, draws, stencils, passes,
     get finished() { return closed || elapsed >= options.duration; },
     stop() { if (!closed) { rig = { ...rig, stopAt: driver.time }; driver.steer(rig); } },
     update(seconds: number, camera: Camera) {

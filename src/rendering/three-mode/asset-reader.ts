@@ -23,6 +23,7 @@ export interface AssetReader {
   readModel(url: string): Promise<ModelTemplate>;
   readTexture(url: string): Promise<Texture>;
   readJson(url: string): Promise<unknown>;
+  readBinary?(url: string): Promise<ArrayBuffer>;
   /** Ends the KTX2 transcoder workers when nothing was decoded for KTX2_IDLE_MS; true when it did. */
   trim(): boolean;
   dispose(): void;
@@ -71,6 +72,7 @@ export function createAssetReader(renderer: WebGLRenderer, read: ReadBlob, onMod
       try { return await new TextureLoader().loadAsync(objectUrl); } finally { URL.revokeObjectURL(objectUrl); }
     },
     async readJson(url) { return JSON.parse(await (await read(url)).text()); },
+    async readBinary(url) { return (await read(url)).arrayBuffer(); },
     trim() {
       if (!ktx2 || decoding > 0 || performance.now() - idleSince < KTX2_IDLE_MS) return false;
       ktx2.dispose(); ktx2 = null;

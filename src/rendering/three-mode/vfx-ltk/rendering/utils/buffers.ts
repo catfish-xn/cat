@@ -14,12 +14,7 @@ import {
   InterleavedBufferAttribute,
 } from "three";
 
-/** Optional externally posed mesh palette; the runtime currently accepts static converted meshes only. */
-interface MeshPose {
-  readonly texture: import('three').DataTexture;
-  write(instance: number, time: number): void;
-  commit(instances: number): void;
-}
+import type { MeshPose } from "./meshPose";
 
 /** How many particles one emitter's buffers hold, which caps its share of the pool. */
 export const QUADS_PER_EMITTER = 4096;

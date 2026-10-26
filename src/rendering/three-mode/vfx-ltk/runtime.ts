@@ -1,18 +1,20 @@
-import type { Camera, Object3D } from 'three';
+import type { Camera, Object3D, Scene, WebGLRenderer } from 'three';
 import { applyStencil, stencilStates } from './rendering/utils/stencil';
 import { createLtkParticles, unitAnchor, unitJoints, ROOT_PARTICLES, CHILD_PARTICLES, type LtkParticles } from './particles';
 import type { VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineSpawn } from './timeline';
+import { createVfxPasses } from './rendering/passes';
 
 /** Per-renderer reservation: at most 6 x (150 root + 100 child) particle slots. */
 export const MAX_LTK_SYSTEMS = 6, MAX_LTK_QUEUED = 64;
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
 interface Waiting { at: number; spawn: TimelineSpawn }
 interface Running { source: string; target?: string; fx: LtkParticles }
-export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number } } = {}) {
+export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit: (id: string) => VfxUnit | undefined, options: { budget?: { live: number; max: number }; renderer?: WebGLRenderer } = {}) {
   let clock = 0, closed = false, seed = 1;
   const waiting: Waiting[] = [], running = new Set<Running>(), warming = new Set<string>();
   const slots = ROOT_PARTICLES + CHILD_PARTICLES;
+  const passes = options.renderer ? createVfxPasses(options.renderer) : null;
   const release = (run: Running) => { run.fx.dispose(); if (options.budget) options.budget.live -= slots; };
   const clear = () => { waiting.length = 0; for (const run of running) release(run); running.clear(); };
   const warm = (champion: string) => {
@@ -27,12 +29,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   return {
     warm,
     /** True means the converted cast owns this event; false means execute the existing fallback. */
-    play(champion: string, sourceId: string, targetIds: readonly string[]): boolean {
+    play(champion: string, sourceId: string, targetIds: readonly string[], castIndex = 0): boolean {
       if (closed) return false;
       warm(champion);
       const cues = selectTimeline(champion, library.index?.skills[champion as 'jinx' | 'vi'], id => !!library.get(id));
       if (!cues || !findUnit(sourceId)?.alive) return false;
-      const spawns = mapSkillTimeline(cues, sourceId, targetIds);
+      const spawns = mapSkillTimeline(cues, sourceId, targetIds, castIndex);
       if (!spawns.length || waiting.length + spawns.length > MAX_LTK_QUEUED) return false;
       // All targets are required before suppressing the old cast; later disappearance cancels its visual.
       if (spawns.some(spawn => spawn.targetId && !findUnit(spawn.targetId)?.alive)) return false;
@@ -60,12 +62,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (clock - when > 0.3 || running.size >= MAX_LTK_SYSTEMS || (options.budget && options.budget.live + slots > options.budget.max)) continue;
         const source = findUnit(spawn.sourceId), target = spawn.targetId ? findUnit(spawn.targetId) : undefined;
         if (!source?.alive || source.disposed || (spawn.targetId && (!target?.alive || target.disposed))) continue;
-        const prepared = library.get(spawn.system); if (!prepared) continue;
+        const prepared = library.get(spawn.system); if (!prepared || prepared.empty) continue;
         const host = spawn.event === 'hit' ? target! : source;
         let fx: LtkParticles | undefined;
         try {
           fx = createLtkParticles(prepared, { anchor: unitAnchor(host.root, host.body, spawn.bone),
-            target: target ? unitAnchor(target.root, target.body) : null, joints: unitJoints(host.root, host.body),
+            attachment: host,
+            target: target ? unitAnchor(target.root, target.body, spawn.targetBone) : null, joints: unitJoints(host.root, host.body),
             duration: spawn.duration, projectileSeconds: spawn.event === 'projectile' ? spawn.travelSeconds : undefined,
             stopAfter: spawn.stopAfter, seed: seed++ });
           scene.add(fx.object); fx.update(0, camera);
@@ -78,8 +81,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       claims.forEach((claim, index) => applyStencil(claim.material, states[index]));
     },
     clear,
+    render(camera: Camera) {
+      if (!passes) return;
+      const needs = { early: false, late: false, soft: false };
+      for (const { fx } of running) { needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft; }
+      passes.render(scene as Scene, camera, needs);
+    },
     get active() { return running.size; },
     get queued() { return waiting.length; },
-    dispose() { if (closed) return; closed = true; clear(); library.dispose(); },
+    dispose() { if (closed) return; closed = true; clear(); passes?.dispose(); library.dispose(); },
   };
 }

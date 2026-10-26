@@ -44,7 +44,7 @@ describe('LTK resolved JSON and asset boundary', () => {
     expect(() => parseIndex({ ...syntheticIndex(), systems: { sample: '../secret' } })).toThrow('asset-path');
   });
   it('reports missing files/textures and unsupported desktop-only shaders without preparing a replacement', async () => {
-    for (const doc of [syntheticSystem({ distortionDefinition: struct('VfxDistortionDefinitionData', {}) }), { ...syntheticSystem(), materials: [{}] }]) {
+    for (const doc of [{ ...syntheticSystem(), materials: [{}] }]) {
       const library = createVfxLibrary('/assets/', { readJson: async url => url.endsWith('index.json') ? syntheticIndex() : doc, readTexture: async () => new Texture() });
       await expect(library.load('sample')).rejects.toMatchObject({ reason: 'unsupported' });
       expect(library.get('sample')).toBeUndefined(); library.dispose();

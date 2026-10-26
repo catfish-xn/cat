@@ -1,5 +1,7 @@
 # LeagueToolkit VFX 移植方案与交付边界
 
+本文件保留首版交付边界。2026-10-26 的真实 Jinx／Vi 数据接入、补齐的绘制功能、当前测试与手工验收入口以 [VFX_PORT_REPORT.md](VFX_PORT_REPORT.md) 为准；对应 P 约定见 `S13_RULES_GAP.md:1269`。
+
 日期：2026-10-26。源检出：`/home/aiapps/workspcae/ltk-manager-src`，提交 `a3e5ef85ca4cf50486f2dcd9024831432ec9921b`，上游 package `ltk-manager-ui@1.30.5`，声明 `GPL-3.0-or-later`。本仓库起点 `385b62b8`（v23），只改可选 3D 模式及测试／文档；不改规则、事件投影、2D 表现。约定编号见 `S13_RULES_GAP.md` 的 P-VFX-LTK 系列。
 
 ## 源码模块图

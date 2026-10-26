@@ -583,11 +583,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   const pieces = new Map<string, PieceView>();
+  const ltkCastCounts = new Map<string, number>();
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
     readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
-  }), scene, id => pieces.get(id), { budget: effects?.budget }) : null;
+    readBinary: models.reader.readBinary ? url => models.reader!.readBinary!(url) : undefined,
+  }), scene, id => pieces.get(id), { budget: effects?.budget, renderer }) : null;
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
   const itemTextures = new Map<string, Promise<Texture | null>>();
   let closed = false;
@@ -814,7 +816,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = () => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; ltk?.clear();
+    generation++; queued.length = 0; ltk?.clear(); ltkCastCounts.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const fx of referenceEffects) fx.dispose();
@@ -859,10 +861,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       live.add(effect);
     }).catch(() => { /* a missing or invalid effect file just plays nothing */ });
   };
-  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : []) => {
+  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [], castIndex = 0) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
-    if (action === 'cast' && !reducedMotion() && ltk?.play(source.definitionId, sourceId, targetIds)) return;
+    if (action === 'cast' && !reducedMotion() && ltk?.play(source.definitionId, sourceId, targetIds, castIndex)) return;
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
     if (sample && action === 'attack') {
@@ -1100,8 +1102,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
       if (event.type === 'attack') { face(event.attackerId, event.targetId); if (current) playAction('attack', event.attackerId, event.targetId); }
       else if (event.type === 'cast') {
+        const castIndex = ltkCastCounts.get(event.sourceId) ?? 0;
+        ltkCastCounts.set(event.sourceId, castIndex + 1);
         face(event.sourceId, event.targetIds[0]);
-        if (current) { playAction('cast', event.sourceId, event.targetIds[0], event.targetIds); startLunge(event.sourceId, event.targetIds[0]); }
+        if (current) { playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, castIndex); startLunge(event.sourceId, event.targetIds[0]); }
         // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
         // own cast clip. A dead one ignores it; the revive that follows in the same cast plays its spawn instead.
         const forgeId = `${event.sourceId}:g23-forge`, forge = pieces.get(forgeId);
@@ -1493,9 +1497,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       } else if (timeUpload) {
         // A first-batch model was just attached: this frame uploads its geometry, textures and programs.
         const started = performance.now();
-        renderer.render(scene, camera);
+        if (ltk) ltk.render(camera); else renderer.render(scene, camera);
         loadReport.uploaded(performance.now() - started); timeUpload = false;
-      } else renderer.render(scene, camera);
+      } else if (ltk) ltk.render(camera); else renderer.render(scene, camera);
     }
     if (!reported && loadReport.report.wallMs !== null && !timeUpload) {
       reported = true;
@@ -1511,7 +1515,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, stage, scout };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, stage, scout, ltk };
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {

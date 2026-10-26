@@ -3,9 +3,13 @@ import { DataTexture, LinearFilter, NoColorSpace, type BufferGeometry, type Text
 import type { NamedAsset, VfxSystem, VfxValue } from './bindings';
 import { readVfxSystem } from './engine/parsing/readVfxSystem';
 import { drawnEmitters, type DrawnEmitter } from './rendering/utils/definitions';
-import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment, distorts } from './rendering/utils/drawKind';
+import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment } from './rendering/utils/drawKind';
 import type { EmitterSamplers } from './rendering/hooks/useVfxTextures';
 import type { TimelineCue } from './timeline';
+import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
+import type { Pose } from './assets/pose';
+import { reflectionCube } from './assets/reflectionCube';
+import { convertedTimelines } from './s13-timelines';
 
 export type LoadFailure = 'missing' | 'invalid' | 'unsupported' | 'closed';
 export class VfxLoadError extends Error {
@@ -24,12 +28,17 @@ export interface VfxReader {
   readTexture(url: string): Promise<Texture>;
   /** One static mesh in viewport (mirrored X), original game units, no board scale baked in. */
   readMesh?(url: string): Promise<BufferGeometry>;
+  /** Original converted LTKG/LTKS/LTKA bytes, through the host's local asset cache. */
+  readBinary?(url: string): Promise<ArrayBuffer>;
 }
 export interface PreparedVfx {
   model: ReturnType<typeof readVfxSystem>;
   drawn: readonly DrawnEmitter[];
   samplers: ReadonlyMap<string, EmitterSamplers>;
   meshes: ReadonlyMap<string, BufferGeometry>;
+  poses?: ReadonlyMap<string, Pose>;
+  /** An original empty definition is an intentional no-op, never a failed replacement. */
+  empty?: boolean;
 }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const finite = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
@@ -100,6 +109,9 @@ export function parseIndex(raw: unknown): VfxIndex {
         || !['cast-start', 'hit', 'projectile'].includes(String(cue.event)) || !finite(cue.delay) || Number(cue.delay) < 0 || Number(cue.delay) > 10
         || !finite(cue.duration) || Number(cue.duration) <= 0 || Number(cue.duration) > 10
         || (cue.bone !== undefined && typeof cue.bone !== 'string')
+        || (cue.targetBone !== undefined && typeof cue.targetBone !== 'string')
+        || (cue.phase !== undefined && (typeof cue.phase !== 'number' || ![0, 1, 2].includes(cue.phase)))
+        || (cue.primary !== undefined && typeof cue.primary !== 'boolean')
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
         throw new VfxLoadError('invalid', 'timeline-cue');
@@ -111,18 +123,25 @@ export function parseIndex(raw: unknown): VfxIndex {
     if (Object.hasOwn(assets, name.toLowerCase())) throw new VfxLoadError('invalid', 'duplicate-asset');
     assets[name.toLowerCase()] = path as string;
   }
-  return { version: 1, systems: raw.systems as Record<string, string>, assets, skills: raw.skills as VfxIndex['skills'] };
+  return { version: 1, systems: raw.systems as Record<string, string>, assets,
+    skills: { ...convertedTimelines(raw.systems as Record<string, string>), ...raw.skills as VfxIndex['skills'] } };
 }
 
 export function createVfxLibrary(root: string, reader: VfxReader) {
   let closed = false, current: VfxIndex | null = null;
   const documents = new Map<string, Promise<PreparedVfx>>(), textures = new Map<string, Promise<Texture>>(), meshes = new Map<string, Promise<BufferGeometry>>();
   const prepared = new Map<string, PreparedVfx>();
+  const converted = new Map<string, Promise<ConvertedMesh>>(), cubes = new Map<string, Promise<Texture>>();
   const black = new DataTexture(new Uint8Array(4), 1, 1); black.needsUpdate = true;
   const ensureOpen = () => { if (closed) throw new VfxLoadError('closed', 'library'); };
   const texture = (url: string) => {
     let held = textures.get(url);
     if (!held) { held = reader.readTexture(url).then(t => { if (closed) { t.dispose(); ensureOpen(); } t.colorSpace = NoColorSpace; t.flipY = false; t.minFilter = LinearFilter; t.needsUpdate = true; return t; }); textures.set(url, held); }
+    return held;
+  };
+  const cube = (url: string) => {
+    let held = cubes.get(url);
+    if (!held) { held = texture(url).then(reflectionCube).then(t => { if (closed) { t.dispose(); ensureOpen(); } return t; }); cubes.set(url, held); }
     return held;
   };
   const assetPath = (named: NamedAsset) => {
@@ -138,22 +157,36 @@ export function createVfxLibrary(root: string, reader: VfxReader) {
       const raw = await reader.readJson(vfxUrl(root, index.systems[id])); ensureOpen(); validateSystem(raw);
       const model = readVfxSystem(raw), drawn = drawnEmitters(model, true);
       if (drawn.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
-      if (!drawn.some(d => !d.emitter.disabled)) throw new VfxLoadError('unsupported', 'empty-system');
-      const samplers = new Map<string, EmitterSamplers>(), geometry = new Map<string, BufferGeometry>();
+      const empty = !drawn.some(d => !d.emitter.disabled);
+      const samplers = new Map<string, EmitterSamplers>(), geometry = new Map<string, BufferGeometry>(), poses = new Map<string, Pose>();
       for (const { key, emitter: e } of drawn) {
         if (e.disabled) continue;
-        if (e.childSet?.children.some(child => child === null) || e.emissionMesh || e.emissionSurface || e.distortion || e.soft || e.reflection || e.hudLayer || e.mesh?.skinned
-          || e.mesh?.submeshes.length || e.mesh?.submeshesAlways.length || drawsTheAttachment(e) || distorts(e)
-          || !(drawsAsQuad(e) || drawsAsProjection(e) || drawsAsTrail(e) || drawsAsBeam(e) || drawsAsMesh(e)) && !e.childSet) {
+        if (e.childSet?.children.some(child => child === null) || e.emissionMesh || e.emissionSurface || e.hudLayer
+          || !(drawsAsQuad(e) || drawsAsProjection(e) || drawsAsTrail(e) || drawsAsBeam(e) || drawsAsMesh(e) || drawsTheAttachment(e)) && !e.childSet) {
           throw new VfxLoadError('unsupported', `emitter:${e.name}`);
         }
-        const slots = { base: e.texture, mult: e.multTexture, color: e.colorTexture, palette: e.palette?.texture ?? null, erosion: e.erosion?.map ?? null };
+        const slots = { base: e.texture, mult: e.multTexture, color: e.colorTexture, palette: e.palette?.texture ?? null, erosion: e.erosion?.map ?? null,
+          normal: e.distortion?.map ?? null, reflection: e.reflection?.map ?? null };
         const bundle: EmitterSamplers = { base: black, mult: null, color: null, palette: null, erosion: null, normal: null, reflection: null };
         for (const [slot, named] of Object.entries(slots)) if (named) {
-          (bundle as unknown as Record<string, Texture | null>)[slot] = await texture(assetPath(named)); ensureOpen();
+          const url = assetPath(named);
+          (bundle as unknown as Record<string, Texture | null>)[slot] = slot === 'reflection' ? await cube(url) : await texture(url); ensureOpen();
         }
         samplers.set(key, bundle);
         if (e.mesh) {
+          if (reader.readBinary) {
+            const signature = JSON.stringify(e.mesh) + (e.mesh.animationVariants.length ? key : '');
+            let held = converted.get(signature);
+            if (!held) {
+              held = readConvertedMesh(e.mesh, path => reader.readBinary!(assetPath({ path, asset: null })), key)
+                .then(mesh => { if (closed) { mesh.geometry.dispose(); ensureOpen(); } return mesh; });
+              converted.set(signature, held);
+            }
+            const mesh = await held; ensureOpen(); geometry.set(key, mesh.geometry);
+            if (mesh.pose) poses.set(key, mesh.pose);
+            continue;
+          }
+          if (e.mesh.skinned || e.mesh.submeshes.length || e.mesh.submeshesAlways.length) throw new VfxLoadError('unsupported', 'binary-mesh-reader');
           if (!reader.readMesh || !e.mesh.path) throw new VfxLoadError('unsupported', 'mesh-reader');
           const url = assetPath({ path: e.mesh.path, asset: e.mesh.asset });
           let mesh = meshes.get(url);
@@ -161,7 +194,7 @@ export function createVfxLibrary(root: string, reader: VfxReader) {
           geometry.set(key, await mesh); ensureOpen();
         }
       }
-      const result = { model, drawn, samplers, meshes: geometry }; prepared.set(id, result); return result;
+      const result = { model, drawn, samplers, meshes: geometry, poses, empty }; prepared.set(id, result); return result;
     })().catch(error => {
       if (error instanceof VfxLoadError) throw error;
       throw new VfxLoadError('missing', error instanceof Error ? error.message : String(error));
@@ -175,6 +208,9 @@ export function createVfxLibrary(root: string, reader: VfxReader) {
       if (closed) return; closed = true; black.dispose();
       for (const t of textures.values()) void t.then(t => t.dispose(), () => {});
       for (const g of meshes.values()) void g.then(g => g.dispose(), () => {});
+      for (const g of converted.values()) void g.then(g => g.geometry.dispose(), () => {});
+      for (const t of cubes.values()) void t.then(t => t.dispose(), () => {});
+      converted.clear(); cubes.clear();
       textures.clear(); meshes.clear(); documents.clear(); prepared.clear(); current = null;
     },
   };

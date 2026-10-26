@@ -21,6 +21,7 @@ describe('upstream simulation in the bare Three.js host', () => {
     const root = new Group(), body = new Group(), bone = new Group(); bone.name = 'R_Hand';
     root.position.set(44, 11, 22); body.add(bone); root.add(body); bone.position.set(4.4, 8.8, 0);
     expect(unitAnchor(root, body, 'R_Hand').originAt(0)).toEqual([-110, 45, 50]);
+    expect(unitAnchor(root, body, 'r_hand').originAt(0)).toEqual([-110, 45, 50]);
     expect(unitAnchor(root, body, 'missing').originAt(0)).toEqual([-100, 25, 50]);
     root.position.x += 4.4;
     expect(unitAnchor(root, body, 'R_Hand').originAt(0)[0]).toBeCloseTo(-120);

@@ -1265,3 +1265,11 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 - **P-VFX-LTK-SPACE**：原 engine Y-up、X 镜像，统一 FX_SCALE=0.44；骨骼缺失回 unit root，不因模型 fit scale 二次放大。launch 捕获投射体终点；死亡 soft-stop 并取消待发 cue，阶段／销毁硬清理。
 - **P-VFX-LTK-BUDGET**：至多六套系统，每套根池150＋子池100槽、子系统最多8，合计活跃容量不超过1,500，并预留既有 effects.budget，与手写回退共享上限；沿用四层子递归。待发最多64，单帧最多启动6；长帧推进上限0.1秒，迟到超过0.3秒的待发显示丢弃；只节流显示，不删领域事件。
 - **P-VFX-LTK-SUPPORT**：首版接受五种已有 primitive 绘制及 child/stencil；未接入的桌面 shader、屏幕／深度 pass、反射、附着／骨骼粒子 mesh、surface emission／submesh 整条技能回退。纹理沿上游 NoColorSpace、flipY=false，静态 mesh 保留原游戏尺度且仅转换坐标镜像。全量视觉等价和真实14.24b素材仍需外部转换后验收。
+
+## 2026-10-26 真实 Jinx／Vi LTK 特效接入（P，用户授权按推荐决定）
+
+- **P-VFX-LTK-REAL-SUPPORT（P，2026-10-26）**：覆盖前述首版 SUPPORT 限制中与本批数据相关的部分：启用 `.sco`、LTKG/LTKS/LTKA 蒙皮粒子、submesh 过滤、角色 live skeleton 覆盖、reflection cubemap、原屏幕扭曲和软粒子深度通道；自定义 shader 服务、surface emission 仍拒绝。空 emitter 定义以 `PreparedVfx.empty=true` 成功加载，时间线跳过，不造替代效果、不占粒子预算。真素材仅挂到被忽略的 `assets3d-local/trial/`，原导出只读。
+- **P-VFX-LTK-REAL-TIMING（P，2026-10-26）**：原始 `event-mapping.json` / README 提供系统、骨骼和帧号，但未给全部动画图时钟和脚本触发。首次真素材接线统一用展示帧 1/30 秒换算（不是断言原服固定 30 FPS）；Jinx Zap 发射用 7.53000020980835 帧，枪口用 14→25 帧；火箭嘴部用5帧、发射闪光用20帧；Vi 发射用4.545000076293945帧、右手终止／落地用17帧。未声明的夹子发射用0.15秒，Zap／夹子／火箭视觉飞行为0.3／0.45／0.6秒，Vi飞行补到17帧；duration/stopAfter 为有限显示寿命，确值在 `s13-timelines.ts`。不改变权威伤害、眩晕、护盾和结算时点。
+- **P-VFX-LTK-REAL-MAPPING（P，2026-10-26）**：Jinx 按已收到的 cast 事件（包括追帧但不显示的事件）零基轮换 Zap→FlameChompers→DeathRocket；每次战斗／切换观看目标随已有动作重置清零。本地试装 manifest 的动画轮换同步为此顺序。未声明脚本时点的 Jinx 夹子爆炸、火箭爆炸及 Vi 落地 AoE／目标效果／自身护盾绑定为展示约定；火箭与 Vi 落地大 AoE 只在首目标地面播一次，其余目标 cue 按去重 targetIds 播。火箭终点暂取首目标，**不是原版棋盘中心落点的还原**；无需用户再拍板，后续显示合同提供中心锚点时再替换。不自行推算伤害范围。
+- **P-VFX-LTK-REAL-ATTACH（P，2026-10-26）**：保留源骨名及目标骨名，查找忽略大小写，缺失才回单位 root；Vi 右手、源地面、目标胸部独立，投射体用 source bone→targetBone。角色覆盖借用活骨架／几何，最多8层，不释放角色共享资源；独立蒙皮粒子以出生年龄采样上游循环 Pose，每1/60秒合并一次调色板计算。未提供角色时 attached emitter 不画，与上游预览相同。
+- **P-VFX-LTK-REAL-PASSES（P，2026-10-26）**：沿上游场景深度→早扭曲→前层→晚扭曲→后层，屏幕复制用RGB8；软粒子相机near/far除以统一FX_SCALE=0.44，让深度间距仍按游戏单位解释；pass结束／异常恢复宿主相机层、背景、清屏和render target，销毁释放离屏纹理。六套系统／1500槽及迟到丢显示约定不变。Node加载和驱动通过不等于GPU或观感验收；本任务遵照用户要求不运行浏览器脚本。

@@ -125,7 +125,7 @@ const MESH = {
 const NO_MESH = "doesnotexist.";
 
 /** The extensions `mSimpleMeshName` is read under, and under any other it is ignored. */
-const SIMPLE_MESH_EXTENSIONS = [".scb", ".tmesh", ".gmesh"] as const;
+const SIMPLE_MESH_EXTENSIONS = [".scb", ".sco", ".tmesh", ".gmesh"] as const;
 
 /** `VfxPaletteDefinitionData`'s own fields, `palleteSrcMixColor` spelled as the bin does. */
 const PALETTE = {

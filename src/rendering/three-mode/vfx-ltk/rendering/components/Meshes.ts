@@ -146,7 +146,7 @@ export function createMeshes({
 
   const instanced = new InstancedMesh(geometry, material, MESHES_PER_EMITTER);
   const pair = { solid: instanced };
-  cleanup(() => () => { geometry.dispose(); instanced.dispose(); });
+  cleanup(() => () => { buffers.pose?.texture.dispose(); geometry.dispose(); instanced.dispose(); });
   const drawn = !hidden && !emitter.disabled;
 
   eachFrame((state) => {

@@ -17,8 +17,13 @@ Changes (2026-10-26, catfish-xn/cat): browser asset adapter instead of Tauri;
 explicit Three.js draw lifetimes instead of React/R3F; optional child pool limits;
 uniform board-scale corrections for billboards/rays/projections. The runtime,
 validation and timeline adapters are supplied alongside the derived engine.
-Desktop editor UI, shader translation services and unsupported screen passes are
-not bundled. See `docs/VFX_PORT_PLAN.md` for the supported boundary.
+Desktop editor UI and shader translation services are not bundled.
+The follow-up port (2026-10-26) includes viewport LTKG/LTKS/LTKA buffer readers,
+pose evaluation, submesh filtering and particle bone palettes, the bare avatar
+overlay draw, and upstream frame/depth capture and phase ordering. Converted
+`.sco` meshes are accepted alongside `.scb`; cube PNG strips become CubeTextures.
+See `docs/VFX_PORT_REPORT.md` for current validation and remaining visual limits;
+`docs/VFX_PORT_PLAN.md` records the initial port's historical boundary.
 
 No League game assets or converted game data are included. The software license
 notice does not grant rights in separately supplied game assets.
