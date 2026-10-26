@@ -77,7 +77,7 @@ export interface PackFile { readonly path: string; readonly offset: number; read
 export interface AssetPack { readonly name: string; readonly path: string; readonly bytes: number; readonly sha256: string; readonly files: readonly PackFile[] }
 const MAX_PACKS = 256;
 
-/** Validates packs.json against the (versioned) precache list; anything inconsistent means no packs (per-file download). */
+/** Validates packs against precache. A superseded UI index is fetched separately; inconsistent model/FX entries reject packs. */
 export function readPackList(value: unknown, list: PrecacheList): AssetPack[] {
   const raw = value as { schemaVersion?: unknown; packs?: unknown } | null;
   if (!list.versioned || !raw || raw.schemaVersion !== 1 || !Array.isArray(raw.packs) || raw.packs.length > MAX_PACKS) return [];
@@ -91,10 +91,17 @@ export function readPackList(value: unknown, list: PrecacheList): AssetPack[] {
     const parts: PackFile[] = [];
     for (const file of files as { path?: unknown; offset?: unknown; bytes?: unknown; sha256?: unknown }[]) {
       const known = typeof file?.path === 'string' ? precache.get(file.path) : undefined;
-      if (!known || known.sha256 === null || packed.has(known.path) || file.bytes !== known.bytes || file.sha256 !== known.sha256
+      if (!known || known.sha256 === null || packed.has(known.path)
+        || !Number.isSafeInteger(file.bytes) || (file.bytes as number) < 0 || typeof file.sha256 !== 'string' || !SHA256.test(file.sha256)
         || !Number.isSafeInteger(file.offset) || (file.offset as number) < 0
-        || (file.offset as number) + known.bytes > (bytes as number)) return [];
+        || (file.offset as number) + (file.bytes as number) > (bytes as number)) return [];
       packed.add(known.path);
+      if (file.bytes !== known.bytes || file.sha256 !== known.sha256) {
+        // Seven-file asset deltas update ui-assets.json without rebuilding the base's packs.
+        // Never expose its old packed bytes: the new index remains queued for a verified per-file read.
+        if (known.path === 'ui-assets.json') continue;
+        return [];
+      }
       parts.push({ path: known.path, offset: file.offset as number, bytes: known.bytes, sha256: known.sha256 });
     }
     packs.push({ name, path, bytes: bytes as number, sha256, files: parts });

@@ -61,7 +61,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
-      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-cache
+      - run: node scripts/ci-m5-step.cjs browser-install bash .github/ci/install-playwright.sh
       - run: node scripts/ci-m5-step.cjs build npm run build
       - name: Native input and normal-time touch route
         env:
@@ -105,7 +106,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
-      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-cache
+      - run: node scripts/ci-m5-step.cjs browser-install bash .github/ci/install-playwright.sh
       - run: node scripts/ci-m5-step.cjs build npm run build
       - name: Signed-off M6 interaction and M7 JS budget builds
         run: |

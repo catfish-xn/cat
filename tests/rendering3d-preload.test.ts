@@ -182,6 +182,30 @@ describe('3D asset preloader', () => {
       expect(readPackList(packed, readPrecacheList(null, manifest))).toEqual([]);
     });
 
+    it('keeps model packs for an anvil delta while fetching the updated UI index separately and verifying it', async () => {
+      const index = list([['a', 3, 1], ['ui-assets.json', 3, 4]]);
+      const oldPack = { schemaVersion: 1, packs: [{ name: 'old', path: 'packs/old.bin', bytes: 5, sha256: sha(9),
+        files: [{ path: 'a', offset: 0, bytes: 3, sha256: sha(1) }, { path: 'ui-assets.json', offset: 3, bytes: 2, sha256: sha(2) }] }] };
+      const packs = readPackList(oldPack, index);
+      expect(packs[0]!.files.map(f => f.path)).toEqual(['a']);
+      const store = memoryStore(), { fetch, calls } = bodies({ 'packs/old.bin': 'AAABB', 'ui-assets.json': 'NEW' });
+      const result = await new AssetPreloader(ROOT, index, store, { fetch, packs,
+        digest: textDigest({ AAA: 1, BB: 2, NEW: 4, AAABB: 9 }), retries: 0 }).start();
+      expect(result).toMatchObject({ state: 'done', readyFiles: 2, failedFiles: 0 });
+      expect(calls).toEqual(['packs/old.bin', 'ui-assets.json']);
+      // A stale model hash, duplicate UI row or invalid range still rejects the pack.
+      const wrongModel = structuredClone(oldPack); wrongModel.packs[0]!.files[0]!.sha256 = sha(8);
+      expect(readPackList(wrongModel, index)).toEqual([]);
+      const duplicate = structuredClone(oldPack); duplicate.packs[0]!.files.push(duplicate.packs[0]!.files[1]!);
+      expect(readPackList(duplicate, index)).toEqual([]);
+      const unsafe = structuredClone(oldPack); unsafe.packs[0]!.files[1]!.offset = 5;
+      expect(readPackList(unsafe, index)).toEqual([]);
+      const corrupt = bodies({ 'packs/old.bin': 'AAABB', 'ui-assets.json': 'BAD' });
+      const failed = await new AssetPreloader(ROOT, index, memoryStore(), { fetch: corrupt.fetch, packs,
+        digest: textDigest({ AAA: 1, AAABB: 9, BAD: 5 }), retries: 0 }).start();
+      expect(failed).toMatchObject({ state: 'partial', failedFiles: 1 });
+    });
+
     it('fetches a pack once, cuts its files by offset, and downloads the rest one by one', async () => {
       const store = memoryStore(), { fetch, calls } = bodies({ 'packs/p.bin': 'AAABB', c: 'C' });
       const precache = list(files);

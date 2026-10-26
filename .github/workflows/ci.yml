@@ -202,7 +202,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
-      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-cache
+      - run: node scripts/ci-m5-step.cjs browser-install bash .github/ci/install-playwright.sh
       - run: node scripts/ci-m5-step.cjs build npm run build
       - name: Normal-time complete route
         env:
@@ -246,7 +247,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
-      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-cache
+      - run: node scripts/ci-m5-step.cjs browser-install bash .github/ci/install-playwright.sh
       - run: node scripts/ci-m5-step.cjs build npm run build
       - name: Native input
         if: ${{ matrix.entry.part == 'input' }}
@@ -309,7 +311,8 @@ jobs:
       - run: node scripts/ci-m5-step.cjs install npm ci
         env:
           M5_JOB_KEY: m8-u3-dynamic
-      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-cache
+      - run: node scripts/ci-m5-step.cjs browser-install bash .github/ci/install-playwright.sh
         env:
           M5_JOB_KEY: m8-u3-dynamic
       - name: Desktop equipment previews and native board drops (UR-U3-08)
@@ -352,7 +355,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-cache
+      - run: bash .github/ci/install-playwright.sh
       - name: Independent native resources through the real application
         run: npm run test:retention
       - uses: actions/upload-artifact@v4
@@ -382,7 +386,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
-      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-cache
+      - run: node scripts/ci-m5-step.cjs browser-install bash .github/ci/install-playwright.sh
       - run: node scripts/ci-m5-step.cjs build npm run build
       - name: Signed-off M6 interaction and M7 JS budget builds
         run: |

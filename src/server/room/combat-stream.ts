@@ -10,7 +10,8 @@ import type { ReplayUnitId } from '../protocol';
 import type { BattleInput, BattleSeatOutcome, TwoSidedBattleResult } from './types';
 import { BattleResolveError } from './battle-resolver';
 import { startLiveTask, startLiveTaskSteps, twoSidedResult, guardedBattle } from './two-sided-resolver';
-import { mirrorReplayTick, mirrorViewState, primeCombatReplay } from './projection';
+import { ScrapDisplay } from './scrap-display';
+import { mirrorReplayTick, mirrorViewState, primeCombatReplay, primeDisplayReplay } from './projection';
 
 export interface CombatStreamView {
   readonly battleId: string;
@@ -21,6 +22,7 @@ export interface CombatStreamView {
   readonly unitIds: readonly ReplayUnitId[];
 }
 export class CombatStream {
+  private readonly display: ScrapDisplay;
   readonly revision = 1;
   readonly initial: CombatViewState;
   readonly frames: CombatReplayTick[];
@@ -46,19 +48,21 @@ export class CombatStream {
     return new CombatStream(envelope, undefined, undefined, live);
   }
 
-  constructor(readonly envelope: BattleInput, pve?: { initial: CombatState; events: readonly MatchEvent[] },
+  constructor(readonly envelope: BattleInput, pve?: { initial: CombatState; events: readonly MatchEvent[]; state?: MatchState },
     private readonly beforeTick?: import('../../server-entry').BattleTickInputSource,
     liveTask?: ReturnType<typeof startLiveTask>) {
     if (pve) {
       this.opening = pve.initial; this.ledger = pve.events.filter((e): e is LedgerCombatEvent => 'tick' in e);
       this.recorder = createCombatReplayRecorder(pve.initial, this.ledger); this.task = null;
-      this.initial = this.recorder.initial; this.frames = [this.recorder.initialFrame];
+      this.display = ScrapDisplay.pve(pve.state ?? envelope.seats[0]!.state, pve.initial.strategy ?? { traits: [] }, envelope.round);
+      this.initial = this.display.state(this.recorder.initial); this.frames = [this.display.frame(this.recorder.initialFrame)];
       this.mapping = []; this.right = null;
-      if (pve.initial.status === 'finished') { this.terminal = pve.initial; this.completedReplay = this.recorder.finish(pve.initial); }
+      if (pve.initial.status === 'finished') { this.terminal = pve.initial; this.completedReplay = this.display.replay(this.recorder.finish(pve.initial)); }
     } else {
       const live = liveTask ?? startLiveTask(envelope, beforeTick);
       this.task = live.task; this.recorder = null; this.opening = null; this.ledger = [];
-      this.initial = live.task.initial; this.frames = [live.task.initialFrame];
+      this.display = ScrapDisplay.pvp(live.input, envelope.round);
+      this.initial = this.display.state(live.task.initial); this.frames = [this.display.frame(live.task.initialFrame)];
       this.mapping = live.input.mapping; this.right = live.input.b.seatId;
       // Tick-zero finishes still need the task to authenticate/finalize its result (without stepping).
       if (this.initial.status === 'finished') this.advancePvp();
@@ -73,9 +77,10 @@ export class CombatStream {
   get nextEffectiveTick(): number | null { return this.done ? null : this.tick + 1; }
   queueEquipment(input: import('../../simulation/battle-input-log').BattleEquipmentInput, before: MatchState, equipped: MatchState): MatchState {
     if (this.done) throw new RangeError('battle-unit-unavailable');
-    if (this.task) { this.task.queueEquipment(input, equipped); return equipped; }
+    if (this.task) { this.task.queueEquipment(input, equipped); this.display.queue(input.effectiveTick, input.seatId, equipped); return equipped; }
     const staged = queueMatchBattleEquipment(before, equipped, input);
     if (!staged.ok) throw new RangeError(staged.reason);
+    this.display.queue(input.effectiveTick, input.seatId, equipped);
     return staged.state;
   }
   sampleBank(seatId: string, gold: number): void {
@@ -84,10 +89,12 @@ export class CombatStream {
   advancePvp(): void {
     if (this.done || !this.task) return;
     const next = guardedBattle(this.envelope.battleId, () => this.task!.advanceTick());
-    if (next.frame) { this.frames.push(next.frame); this.tick = next.frame.tick; }
+    if (next.frame) { this.frames.push(this.display.frame(next.frame)); this.tick = next.frame.tick; }
     if (next.result) {
       this.result = twoSidedResult(this.envelope, next.result, this.task);
-      this.terminal = next.result.terminal; this.completedReplay = this.task.replay();
+      this.terminal = next.result.terminal; const replay = this.task.replay();
+      this.completedReplay = replay ? this.display.replay(replay) : null;
+      if (this.completedReplay) primeDisplayReplay(this.result, this.completedReplay);
     }
     this.checkLimit();
   }
@@ -96,12 +103,12 @@ export class CombatStream {
     const step = stepMatchCombatStream(state, this.beforeTick);
     const next = step.terminal ?? step.state.combat!;
     const events = step.events.filter((e): e is LedgerCombatEvent => 'tick' in e);
-    this.frames.push(this.recorder.record(state.combat, { state: next, events }));
+    this.frames.push(this.display.frame(this.recorder.record(state.combat, { state: next, events })));
     this.ledger.push(...events); this.tick = next.tick;
     if (step.terminal) {
       const revealed = revealMatchCombatStreamTerminal(step.state, step.terminal);
       if (!revealed.ok) throw new BattleResolveError(this.envelope.battleId, revealed.reason);
-      this.terminal = step.terminal; this.completedReplay = this.recorder.finish(step.terminal);
+      this.terminal = step.terminal; this.completedReplay = this.display.replay(this.recorder.finish(step.terminal));
       return { state: revealed.state, events: [...step.events.filter(e => !('tick' in e)), ...revealed.events] };
     }
     this.checkLimit();
@@ -112,7 +119,8 @@ export class CombatStream {
     if (!this.opening || !this.terminal || !this.completedReplay || record?.round !== state.round) throw new BattleResolveError(this.envelope.battleId, 'stream-unsettled');
     const outcome: BattleSeatOutcome = { seatId: this.envelope.seats[0]!.seatId, state, result: record.result,
       damage: record.playerDamage, combat: { initial: this.opening, terminal: this.terminal, events: this.ledger, ...(this.terminal.equipmentReceipts?.length ? { inputLog: this.terminal.equipmentReceipts.map(r => r.input) } : {}) } };
-    primeCombatReplay(outcome, this.completedReplay); return outcome;
+    primeCombatReplay(outcome, this.recorder!.finish(this.terminal));
+    primeDisplayReplay(outcome, this.completedReplay); return outcome;
   }
   /** Public projection only. No RNG, private input journal or full domain ledger enters the wire. */
   view(seatId: string): CombatStreamView | null {

@@ -49,11 +49,20 @@ export class HoverCard {
 /**
  * Opens `card` for the closest element of `scope` that `resolve` accepts, on mouse hover or keyboard focus; closes on leave,
  * blur, pointerdown, Escape, or when the anchor leaves the document (a panel rebuild).
+ * `pin`: a click or tap on an anchor (TFT: tap to read on touch) keeps its card open until the same anchor is pressed again,
+ * something outside the card is pressed, Escape, or the anchor goes away; hover and blur then leave it alone.
  */
-export function attachHoverCards(scope: HTMLElement, card: HoverCard, selector: string, resolve: (anchor: HTMLElement) => { key: string; build: () => HTMLElement } | null): () => void {
-  let anchor: HTMLElement | null = null;
+export function attachHoverCards(scope: HTMLElement, card: HoverCard, selector: string, resolve: (anchor: HTMLElement) => { key: string; build: () => HTMLElement } | null,
+  { pin = false }: { readonly pin?: boolean } = {}): () => void {
+  let anchor: HTMLElement | null = null, pinned = false;
   const watcher = new MutationObserver(() => { if (anchor && !anchor.isConnected) close(); });
-  function close(): void { anchor = null; watcher.disconnect(); card.hide(); }
+  function close(): void { anchor = null; pinned = false; watcher.disconnect(); card.hide(); document.removeEventListener('pointerdown', outside, true); }
+  // A press anywhere but the card or the pinned anchor (whose own press toggles it) closes a pinned card.
+  function outside(event: PointerEvent): void {
+    const node = event.target instanceof Node ? event.target : null;
+    if (node && (card.root.contains(node) || anchor?.contains(node))) return;
+    close();
+  }
   function open(target: HTMLElement): void {
     const found = resolve(target);
     if (!found) { close(); return; }
@@ -62,21 +71,29 @@ export function attachHoverCards(scope: HTMLElement, card: HoverCard, selector: 
     watcher.disconnect(); watcher.observe(scope, { childList: true, subtree: true });
   }
   const targetOf = (event: Event) => event.target instanceof Element ? event.target.closest<HTMLElement>(selector) : null;
-  const over = (event: PointerEvent) => { if (event.pointerType !== 'mouse') return; const target = targetOf(event); if (target && scope.contains(target) && target !== anchor) open(target); };
+  const over = (event: PointerEvent) => { if (event.pointerType !== 'mouse' || pinned) return; const target = targetOf(event); if (target && scope.contains(target) && target !== anchor) open(target); };
   const out = (event: PointerEvent) => {
     const target = targetOf(event);
-    if (target && target === anchor && !(event.relatedTarget instanceof Node && target.contains(event.relatedTarget))) close();
+    if (!pinned && target && target === anchor && !(event.relatedTarget instanceof Node && target.contains(event.relatedTarget))) close();
   };
-  const focus = (event: FocusEvent) => { const target = targetOf(event); if (target && scope.contains(target)) open(target); };
-  const blur = (event: FocusEvent) => { if (targetOf(event) === anchor) close(); };
+  const focus = (event: FocusEvent) => { if (pinned) return; const target = targetOf(event); if (target && scope.contains(target)) open(target); };
+  const blur = (event: FocusEvent) => { if (!pinned && targetOf(event) === anchor) close(); };
   const key = (event: KeyboardEvent) => { if (event.key === 'Escape' && anchor) close(); };
+  const press = (event: PointerEvent) => {
+    const target = pin ? targetOf(event) : null;
+    if (!target || !scope.contains(target)) { close(); return; }
+    if (pinned && target === anchor) { close(); return; }
+    open(target);
+    if (anchor !== target) return;
+    pinned = true; document.addEventListener('pointerdown', outside, true);
+  };
   scope.addEventListener('pointerover', over); scope.addEventListener('pointerout', out);
   scope.addEventListener('focusin', focus); scope.addEventListener('focusout', blur);
-  scope.addEventListener('pointerdown', close); document.addEventListener('keydown', key);
+  scope.addEventListener('pointerdown', press); document.addEventListener('keydown', key);
   return () => {
     scope.removeEventListener('pointerover', over); scope.removeEventListener('pointerout', out);
     scope.removeEventListener('focusin', focus); scope.removeEventListener('focusout', blur);
-    scope.removeEventListener('pointerdown', close); document.removeEventListener('keydown', key);
+    scope.removeEventListener('pointerdown', press); document.removeEventListener('keydown', key);
     close();
   };
 }

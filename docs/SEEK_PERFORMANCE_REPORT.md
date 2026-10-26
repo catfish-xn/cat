@@ -1,0 +1,12 @@
+【完成】Codex：在 `codex/seek-perf@adab7b3d` 完成工作区修复，未提交；未改 2000 ms ceiling、规则、存档/回放格式、内容身份常量或录制夹具。  
+【完成】Node 22.23.4 无浏览器复现 B9 五条完整路线、每条 33 战、按 JSON 字节选最大记录；旧版 `2b434e28` 为 round-34 / 558 ticks / 5215 events / 4171433 B，当前版为 round-32 / 741 ticks / 7240 events / 6040123 B（`scripts/verify-m6-seek-node.cjs:25`、`:52`）。  
+【完成】最终同机各三次 constructor＋seek(endTick)，单位 ms：旧版 **2868.7 / 2417.5 / 2475.5**；修前 **4206.1 / 3683.0 / 3435.0**；修后 **2355.0 / 1895.6 / 1907.5**。修后中位数降低 48.2%，三次均低于旧版三次；本机复现约 1.49 倍回归，未复现 CI 的约 3 倍。  
+【完成】`node --cpu-prof` 定位为完整验证后的二次战斗推进与事件规范编码；v23 路线/强化变化增加了所选战斗工作量，离子火花 statusChanged 2442→4212。该路径未调用 replay-view 投影，也没有逐 tick restore；规则推进、单位复制、规范编码和 GC 占主要采样（`src/simulation/battle-record-validation.ts:181`、`src/replay/playback-session.ts:43`）。  
+【完成】冷验证仅收集每 40 tick 的已有状态，全部事件、终点、hash、结算和历史检查成功后才深冻结返回；PlaybackSession 复用这些检查点，事件比较使用既有等价同步编码器，未跳过验证。已有验证缓存、战中装备命令、原生属性顺序不一致保留原推进路径（`src/simulation/battle-record-validation.ts:126`、`src/replay/playback-session.ts:24`；签名/失败合同 `docs/REPLAY_CONTRACT.md:53`）。  
+【完成】修后单独 seek(endTick) 为 0.858–1.783 ms；12 次 cached seek 最大 93.296 ms。新增测试逐帧核对 741 ticks、终态、完整事件与记录 JSON 字节，并验证冷终点无需再次 step、缓存回退、外部修改隔离、属性顺序及篡改拒绝（`tests/m6-playback-checkpoints.test.ts:46`）。修前/后终态 SHA-256 同为 `f265ef15caf7868410328d7e10bdb4b9b7659d5b4742b1408f9e743ccdb59a79`。  
+【完成】定向共 40 文件 / 6779 项通过：M5 六文件单独运行 6044 项，其余 Playback/replay/combat/epoch 身份相关 34 文件 735 项；最终 Playback 四文件另复验 60 项通过。均 `--maxWorkers=4`，未跑全套或浏览器；`npx tsc --noEmit -p .`、脚本语法和 `git diff --check` 通过。Vitest 用 `--configLoader runner` 避免写入只读 node_modules。  
+【完成】证据位于 `/tmp/cat-seek-perf/`：`node-final/{before,pre,after-final}/timings.json`、对应 record/terminal JSON、`original-final.cpuprofile`、`optimized-last.cpuprofile`、`{m5-replay,cannon,targeted,playback-last,tsc-final}.log`；旧树在 `pre-v23/`、原 multiplayer 树在 `multiplayer-original/`。复测命令：`node scripts/verify-m6-seek-node.cjs --record /tmp/cat-seek-perf/before.record.json --output /tmp/seek-check`；去掉 `--record` 可重新生成全部路线，`--root` 可指定旧树。  
+【未完成】Chromium 的 m6-performance / 浏览器 gate 未运行，按用户要求由用户验收；v23 epoch 源码审计未重录。  
+【需要我决定】无。  
+【风险】Node 冷进程首样本 2355 ms，仍高于 Chromium job 的 2000 ms 数值；Node 达到同机旧版目标不代表浏览器 gate 已通过。simulation 源文件变更使 `docs/evidence/v23-online-rules/{release-audit,input-fixture-audit,battle-start-audit,live-reveal-audit}.json` 的 sourceDigests 失效，未改这些证据或任何内容摘要常量。  
+【下一步】运行原浏览器 gate，确认 firstSeek≤2000 ms、cachedSeek≤100 ms 及生命周期门槛；随后按已授权流程重录上述四份 v23 源码审计。
