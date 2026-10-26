@@ -45,8 +45,8 @@ const PRIVATE_KEYS = ['bankSamples', 'liveGold', 'currentItemBankGold', 'opening
 
 describe('v17 avarice: reconnect during and after a live battle', () => {
   registerSlowRoute('a seat that left and came back is shown the settled live replay and settles once', async function* (env) {
-    // v23 (151-offer pool, fmix32 openings): with room seed 42 the first-offer seat now dies at 4-3; seed 11 lives to 4-6.
-    harness = await startServer({ seed: 11, clock: env.clock, sliceTicks: 25 }, env.resolver);
+    // 224-card pool: seed 11 no longer survives to the anomaly; seed 2 reaches 4-6 through the same public route.
+    harness = await startServer({ seed: 2, clock: env.clock, sliceTicks: 25 }, env.resolver);
     const [a] = await seatTwo(harness);
     const room = harness.server.room!, seatId = a.seatId!, token = a.token!;
     // To the 4-6 anomaly node (orbs claimed and the seat's reward units fielded, so it lives that long under v22).
@@ -86,8 +86,10 @@ describe('v17 avarice: reconnect during and after a live battle', () => {
     const hp = seatOf(room.state, seatId).hp;
     await a.waitFor(message => message.type === 'replay' && message.battleId === battleId, 10_000);
     harness.clock.advance(400);
-    await send(a, room, { type: 'reroll' });
-    const gold = seatOf(room.state, seatId).match.gold;
+    // Cross several 2G bonus steps so integer damage rounding cannot erase the live change.
+    const golds:number[]=[];
+    for(let i=0;i<6;i++){await send(a,room,{type:'reroll'});golds.push(seatOf(room.state,seatId).match.gold);}
+    expect(golds.at(-1)).toBeLessThanOrEqual(8);
     // Leave right after the sample, before the live run got to it.
     expect(room.liveFrames(battleId)).toBeNull();
     await a.close();
@@ -105,7 +107,7 @@ describe('v17 avarice: reconnect during and after a live battle', () => {
     expect(room.state.round).toBe(round);
     const settled = pvpBattleOf(room.state, seatId)!;
     expect(settled).not.toBe(frozen);
-    expect(settled.battle.bankSamples!.filter(sample => sample.team === (side === 'a' ? 'player' : 'enemy')).map(sample => sample.liveGold)).toEqual([gold]);
+    expect(settled.battle.bankSamples!.filter(sample => sample.team === (side === 'a' ? 'player' : 'enemy')).map(sample => sample.liveGold)).toEqual(golds);
     const final = plain(toCombatReplayFor(room.state, seatId)!.replay);
     expect(plain(shown(b.inbox, battleId))).toEqual(final);
     // The first connection's records agree with the settled replay as far as they go.

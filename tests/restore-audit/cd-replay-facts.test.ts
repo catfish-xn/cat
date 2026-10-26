@@ -29,9 +29,10 @@ function reject(legal: MatchState, corrupt: (state: MatchState) => void, reason:
   positive(legal);
   const bad = structuredClone(legal);
   corrupt(bad);
-  expect(() => restoreMatch(bad)).toThrow(`Invalid Match save: ${reason}`);
-  expect(() => restoreMatch(JSON.stringify(bad))).toThrow(`Invalid Match save: ${reason}`);
-  expect(() => serializeMatch(bad)).toThrow(`Invalid Match save: ${reason}`);
+  const message=reason.startsWith('Invalid ')?reason:`Invalid Match save: ${reason}`;
+  expect(() => restoreMatch(bad)).toThrow(message);
+  expect(() => restoreMatch(JSON.stringify(bad))).toThrow(message);
+  expect(() => serializeMatch(bad)).toThrow(message);
 }
 function until(initial: MatchState, found: (s: MatchState) => boolean): MatchState {
   let state = initial;
@@ -243,7 +244,8 @@ it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async
     const g = s.combat!.units.find(u => u.id === id)!.g23!;
     if (anomalyDefinitionId === 'eagle-eye') g.stationaryTicks--;
     else g.cuts[Object.keys(g.cuts)[0]]--;
-  }, 'G23 state/maximum health binding facts');
+    // Full dynamic replay rejects first (its legacy error label is 'Mirror forge'), before the narrower G23 guard.
+  }, 'Invalid authoritative Mirror forge replay');
 }, 60000);
 it('G-C08 binds Swain ascension timing', () => {
   const legal = until(roster(['swain']), s => s.combat!.units.some(u => !!u.g23?.ascension));
