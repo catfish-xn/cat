@@ -389,6 +389,10 @@ export function buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPo
   let leveled=applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp });
   const dual=state.augments.some(a=>a.definitionId==='dual-purpose');
   if(dual){
+    leveled={...leveled,resourceProvenance:appendResourceProvenance(leveled.resourceProvenance,state.roundDefinitionId,{
+      kind:'dual-purpose-xp-purchased',levelBefore:state.level,xpBefore:state.xp,generation:state.shop.generation+1,
+      settled:state.roundResults.some(r=>r.round===state.round),
+    })};
     // An XP-triggered regeneration costs neither gold nor a free-reroll credit; preserve the lock.
     if(state.sharedPool&&!refreshShop)return fail(state,'invalid-mechanic-state');
     if(refreshShop)leveled=refreshShop(leveled);
@@ -931,6 +935,9 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
     if(definitionId==='called-shot')selected={...selected,streak:batch5Streak(selected,selected.round,selected.streak)};
     selected=recordAcquisitionLevel(selected,selected.augments.at(-1)!);
+    if(definitionId==='dual-purpose')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{
+      kind:'dual-purpose-selected',choiceId,level:selected.level,xp:selected.xp,
+    })};
     const gifted=drainP2Gifts(selected,unitLootPolicy);
     events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;
   }

@@ -51,6 +51,10 @@ it('Dual Purpose pays only first successful XP purchase each round; each refresh
  expect(s.shop).toEqual(shop(before.rngState,before.shop.generation+1,s.level,true,s.round,{seed:s.seed,viktor:false}).shop);trip(s);
  reject(s,x=>{x.seatMechanics.receipts.find((r:any)=>r.source==='augment-pool-batch5').amount++;});
  reject(s,x=>{x.seatMechanics.receipts=x.seatMechanics.receipts.filter((r:any)=>r.source!=='augment-pool-batch5');});
+ reject(s,x=>{x.resourceProvenance.entries.find((e:any)=>e.kind==='dual-purpose-xp-purchased').xpBefore++;});
+ reject(s,x=>{x.resourceProvenance.entries=x.resourceProvenance.entries.filter((e:any)=>e.kind!=='dual-purpose-xp-purchased');});
+ reject(s,x=>{x.resourceProvenance.entries.find((e:any)=>e.kind==='dual-purpose-xp-purchased').settled=true;});
+ reject(s,x=>{x.resourceProvenance.entries.find((e:any)=>e.kind==='dual-purpose-selected').xp++;});
  const second=s;s=accepted(buyXp(s));expect(s.gold).toBe(second.gold-4);expect(s.shop.generation).toBe(second.shop.generation+1);expect(s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch5')).toHaveLength(1);trip(s);
  const noGold={...s,gold:0},failed=buyXp(noGold);expect(failed.ok).toBe(false);expect(failed.state).toBe(noGold);
  s=accepted(nextRound(accepted(startMatchCombat(emptyBoard(s))),s.round));s=resolveM5Choices(s);const next=s;s=accepted(buyXp(s));expect(s.gold).toBe(next.gold-2);expect(s.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch5')).toHaveLength(2);trip(s);

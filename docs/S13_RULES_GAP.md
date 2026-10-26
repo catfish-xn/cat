@@ -1260,10 +1260,19 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 ## P-B5（P，2026-10-25）：Batch 5 四条完整资料的执行适配
 
 - 范围：DualPurpose、CraftedCrafting、CalledShot、Grant6Cost_MissMage；专属数值均来自 14.24 原始 effects/描述，详见 `AUGMENT_BATCH5_GAPS.md` B5-11/14/41/62。不外推其余82条。
-- 双重目的：先执行正常买经验的阶段、等级、支付和招募保护，再升等，再按新等级刷新；强制刷新保留锁店，不消耗金币或已有免费刷新次数。首次回金在成功支付之后。同轮买经验次数从既有准备期经验差重建（扣除被动、入轮和取得经验，最后一笔满级截断用向上取整）；不添加计数存档字段。共享席必须经共享卡池事务。
+- 双重目的：先执行正常买经验的阶段、等级、支付和招募保护，再升等，再按新等级刷新；强制刷新保留锁店，不消耗金币或已有免费刷新次数。首次回金在成功支付之后。购买认证采用下述 P-B5-K 的有序事实，覆盖结算期；不添加可独立修改的计数器。共享席必须经共享卡池事务。
 - 精心打造：只认 `resourceProvenance` 中真实 `item-combined` 事实（库存合成与穿戴合成都计），取得轮起累计、未用次数沿现有免费刷新账本保留；同轮花费必须位于产生额度的合成之后。领取成装、重铸、转换均不构成合成。
 - 进攻宣告：取得时覆盖为胜4，原连胜即使大于4也降到4；随后 PvE/PvP/平局/选秀沿既有经济流程，不改变通用连胜规则。
 - 扭转命运：仅取得后的自然轮入口检查既有入轮 bank（前轮结算加结算后收据/容量出售，当前入轮奖励之前），阈值为至少60；取得前/取得当轮已经过的入口不追认。胜利只计取得轮及以后真实 PvP 的 playerWin，任意先后、两项保留。第二项完成立即给枪刃及梅尔；如完成于选秀入口，枪刃立即给，梅尔沿既有非选秀出生政策延至下一轮。满席/共享池奖励按既有批次礼物与 orb 协议，不新造容量规则。离线已完成历史需完整 battles 认证。
-- 阶段标签：CalledShot、CraftedCrafting、DualPurpose 禁3-2/4-2；Grant6Cost_MissMage 禁2-1/3-2。没有 UI、新存档字段或 schema/version 格式变更；内容身份由脚本重算。
+- 阶段标签：CalledShot、CraftedCrafting、DualPurpose 禁3-2/4-2；Grant6Cost_MissMage 禁2-1/3-2。不改 UI 或顶层 schema/version；购买来源的后续扩展见 P-B5-K。内容身份由脚本重算。
 
 - 验证约定（P，2026-10-25）：种子保持原测试路线，取从0起第一个能到达且原始选项含目标的种子；Call to Chaos额外满足XP分支。未触及epoch录制。离线任务获胜证据沿batch4已有的receipt-backed `source:test`公开授予命令建立强力友军，再完整模拟并重放胜利，不注入结果或任务计数。
+
+### P-B5-K（P，2026-10-26）：联机买经验与结算期购买认证
+
+- 房间所有 `buyXp` 均通过既有 `runSharedMatchCommand`；服务器只转发命令，不复制升级、返金或刷店规则。此处服务器接线由本次用户明确授权 Codex 修改。
+- 取得双重目的时向 `resourceProvenance.entries` 写入 `dual-purpose-selected{choiceId,level,xp}`；持有后每笔成功买经验写入 `dual-purpose-xp-purchased{levelBefore,xpBefore,generation,settled}`，沿既有 `sequence/roundId` 排序。`generation` 是此次强刷后的值；`settled` 表示该轮已有结算记录，包含返回结算期的选择阶段。失败不写事实、不返金、不耗 RNG；满级截断仍是一笔成功购买。
+- 每轮首次返2G仅由取得后真实成功购买触发；同轮准备、战中、选择与结算共用一个返金收据。取得前的买经验不追认成强化触发。只增加来源事实种类，不添加顶层计数字段，不修改历史 `RoundResult`、网络命令或数值。
+- 恢复逐轮核对取得边界、所有购买的经验与递增 generation、战前经验、结算 `xpRequested/xpAwarded/levelAfter/xpAfter` 和当前经验；将已认证结算购买后的经验带到下一轮，再加被动／入轮／取得经验。免费结算经验永不计为购买；准备期已返金后结算期不再返，次轮重新给一次。
+- 缺失／重复／换轮／改阶段／改经验／改 generation 的购买事实与错误返金收据一律拒绝。修复前的双重目的候选存档若缺新来源事实不补写、不猜测恢复；需从真实命令重新生成。旧 epoch 身份断言与证据文件不改，身份漂移失败留给集成时独立重录。
+- 验证约定：真实房间固定 seed 0、席 s1，仍断言2-1公开初始选项含双重目的；通过服务器现有 `makeRoom/runUntil` 和 `Room.handle` 运行。Vitest 均 `--maxWorkers=4 --no-file-parallelism`，不加测试／hook超时，不运行全套或浏览器脚本。

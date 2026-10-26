@@ -1,3 +1,5 @@
+历史交付报告（2026-10-25）；下列服务器接线与购买认证状态已由 [Review K 修复报告](V24_BATCH5_REVIEW_K_REPORT.md) 覆盖，epoch 遗留仍保留。
+
 【完成】实现双重目的、精心打造、进攻宣告、扭转命运四条14.24强化；资料、位阶、阶段禁选见 src/simulation/content/augment-pool-batch5.ts:6、:62、:65；无其他玩法/数值或存档格式变更。
 【完成】经验返金、强刷商店、真实合成额度、连胜覆盖、60G入轮银行＋PvP胜利任务及恢复校验：src/simulation/augment-pool-batch5-progress.ts:17、:29、:38、:69；src/simulation/match.ts:377；共享卡池原子入口 src/simulation/shared-pool.ts:211。
 【完成】新强化43条测试通过：tests/augment-pool-batch5.test.ts:17（11）、tests/augment-pool-batch5-fate.test.ts:21（31）、tests/augment-pool-batch5-shared.test.ts:7（1）；含真实命令、完成任务后的真实战斗回放、保存恢复及三种入口篡改拒绝；离线完成证据见 tests/augment-pool-batch5-fate.test.ts:78、:88、:92。

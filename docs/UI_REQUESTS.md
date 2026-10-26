@@ -1258,6 +1258,8 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 
 ## B5-DUAL-PURPOSE-XP（2026-10-25，Codex → Claude，v24 规则已接）
 
+**已完成（2026-10-26，Review K）：**本次用户授权 Codex 修复服务器接线，`applySeatCommand` 已使用共享事务。真实八席房间公开选取／准备期和结算期买经验／卡池守恒／恢复及篡改回归见 `tests/server/batch5-dual-purpose-room.test.ts`；结算期12→10及跨轮回归见 `tests/augment-pool-batch5-settlement.test.ts`。以下为原请求，已不待 Claude 接线。
+
 - `src/server/room/room.ts` 的 `applySeatCommand` 中 `buyXp` 分支需从 `plain(buyXp(state))` 换为 `runSharedMatchCommand(pool,state,{type:'buyXp'})`。协议不变；规则侧事务负责扣费、经验、首次回金、共享池释放旧商店并生成新预留以及奖励单位。禁止服务器自己刷新商店或扣池。
 - 普通 `buyXp` 对持有双重目的的共享席返回原 state、`invalid-mechanic-state`，避免普通路径把新商店与旧预留一起发布；其他普通调用保持原行为。
-- 验收：持有双重目的时，成功买经验刷新共享商店且守恒；同轮仅首笔回2金币；免费刷新额度不消耗；锁定保留；失败池/state 原引用不变。此为服务器接线，Codex 本任务不修改 `src/server/`。
+- 验收：持有双重目的时，成功买经验刷新共享商店且守恒；同轮仅首笔回2金币；免费刷新额度不消耗；锁定保留；失败池/state 原引用不变。原任务未修改服务器，本次 Review K 的用户授权覆盖此一处接线。
