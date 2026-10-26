@@ -1579,7 +1579,8 @@ body[data-online] .shop-dock:has([data-armory="anvil"]) .touch-shop { grid-colum
 body[data-online] .shop-dock:has([data-armory="anvil"]) :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"], [data-debug="shop-lock"], [data-debug="mobile:sell"]) { display: none; }
 body[data-online] .shop-dock [data-armory="anvil"] .shop-card { min-width: 44px; min-height: 44px; gap: 6px; }
 body[data-online] .shop-dock [data-armory="anvil"] .offer-name { white-space: normal; overflow-wrap: anywhere; text-align: center; }
-body[data-online] .shop-dock[data-anvil-choice] { grid-template-rows: 44px minmax(0, 1fr) minmax(0, 1fr); }
+/* The pending choice survives "view shop"; only the visible armory changes the grid. */
+body[data-online] .shop-dock:has([data-armory="anvil"]) { grid-template-rows: 44px minmax(0, 1fr) minmax(0, 1fr); }
 body[data-online] .shop-dock[data-anvil-choice] .shop-choice-toggle { min-width: 44px; min-height: 44px; }
 body[data-online] .shop-dock [data-armory="anvil"] .shop-choice-bar { max-width: 100%; overflow: visible; }
 body[data-online] .shop-dock [data-armory="anvil"] .choice-timeout { display: none; }
@@ -1592,12 +1593,12 @@ body[data-online]:has(> .render3d-layer) #panels-root > * { pointer-events: auto
 @media (max-width: 700px) and (orientation: portrait) {
   body[data-online]:has(.shop-choice[data-choice-source="armory"]) { --online-dock-h: 247px; }
   body[data-online] .shop-dock:has(.shop-choice[data-choice-source="armory"]) { grid-template-rows: 24px 44px minmax(112px, 1fr) 44px; }
-  body[data-online] .shop-dock[data-anvil-choice] {
+  body[data-online] .shop-dock:has([data-armory="anvil"]) {
     grid-template-areas: "level level gold gold" "top top top top" "cards cards cards cards";
     grid-template-rows: 24px 44px minmax(96px, 1fr);
   }
   body[data-online] .shop-dock:has([data-armory="anvil"]) .touch-shop { grid-row: 3 / -1; }
-  body[data-online] .shop-dock[data-anvil-choice] .hud-pop { display: none; }
+  body[data-online] .shop-dock:has([data-armory="anvil"]) .hud-pop { display: none; }
   body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar { width: calc(100vw - 96px); max-width: calc(100vw - 96px); }
   body[data-online]:has(> .render3d-layer) .shop-choice[data-choice-source="armory"] .shop-choice-bar { max-width: 100%; }
 }

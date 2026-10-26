@@ -22,8 +22,8 @@ beforeAll(async () => {
 }, 60000);
 
 for (const mode of ['2d', '3d']) for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
-  it(`${mode} choice rows fit the real board shell at ${viewport.width}x${viewport.height}`, async () => {
-    const page = await browser.newPage({ viewport });
+  it(`${mode} choice rows and anvil/shop/back controls fit the real board shell at ${viewport.width}x${viewport.height}`, async () => {
+    const page = await browser.newPage({ viewport, hasTouch: viewport.width === 390 });
     try {
       await page.route('**/shell-fixture', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><meta charset="UTF-8"><link rel="stylesheet" href="/src/style.css"><link rel="stylesheet" href="/src/rendering/reference-ui-2d.css"><div id="app"></div>' }));
       await page.route(/\.(png|webp|jpg)(\?.*)?$/, route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#685433"/></svg>' }));
@@ -60,6 +60,20 @@ for (const mode of ['2d', '3d']) for (const viewport of [{ width: 1440, height: 
           panel.renderShopChoice(which === 'anvil' ? anvil : { ...rumble, offers: rumble.offers.slice(0, count) }, which);
         };
         window.__showChoice('rumble');
+        window.__showAnvilShopFlow = async () => {
+          const { createMatch } = await load('/src/simulation/match.ts');
+          const state = { ...createMatch(1), pendingChoice: anvil, choiceDeadline: { choiceId: 'anvil', generation: 1, endsAt: 40000 } };
+          window.__shopControls = [];
+          panel.actions.state = () => state;
+          panel.shopChoiceAway = ''; panel.shopChoiceQuietUntil = 0;
+          // Keep fixture HUD/command targets; use production renderShop and its real away/back callbacks.
+          panel.render = () => {
+            shopDock.innerHTML = '<div class="hud-stats"><span class="hud-chip hud-level">Lv.1</span><span class="hud-chip hud-gold">50</span><span class="hud-chip hud-pop">1/1</span></div><div class="mobile-controls"><button data-debug="mobile:buy-xp">经验</button><button data-debug="mobile:reroll">刷新</button><button data-debug="shop-lock">锁定</button><button data-debug="mobile:sell">出售</button></div>';
+            for (const button of shopDock.querySelectorAll('button')) button.addEventListener('click', () => window.__shopControls.push(button.dataset.debug));
+            panel.renderShop(state, true);
+          };
+          panel.render();
+        };
       })()`);
       if (mode === '3d') {
         const hit = await page.evaluate(() => {
@@ -93,6 +107,43 @@ for (const mode of ['2d', '3d']) for (const viewport of [{ width: 1440, height: 
           for (const id of ['mobile:buy-xp', 'mobile:reroll', 'shop-lock', 'mobile:sell']) expect(await page.locator(`[data-debug="${id}"]`).isVisible()).toBe(false);
         }
       }
+      await page.evaluate(() => (window as any).__showAnvilShopFlow());
+      const activate = async (selector: string) => {
+        const button = page.locator(selector);
+        if (viewport.width === 390) await button.tap(); else await button.click();
+      };
+      await activate('[data-debug="shop-choice-away"]');
+      expect(await page.locator('.shop-card[data-debug^="mobile:buy-"]').count()).toBe(5);
+      expect(await page.locator('.shop-dock .hud-pop').isVisible()).toBe(true);
+      const ids = ['mobile:buy-xp', 'mobile:reroll', 'mobile:sell', 'shop-lock'];
+      const boxes = [];
+      for (const id of ids) {
+        const box = await page.locator(`[data-debug="${id}"]`).boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1);
+        expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height + 1);
+        boxes.push(box!);
+      }
+      for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i], b = boxes[j];
+        expect(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y,
+          `${ids[i]} overlaps ${ids[j]}`).toBe(true);
+      }
+      await page.screenshot({ path: `${shots}/${mode}-${viewport.width}-anvil-shop.png` });
+      for (const id of ids) await activate(`[data-debug="${id}"]`);
+      expect(await page.evaluate(() => (window as any).__shopControls)).toEqual(ids);
+      await activate('[data-debug="shop-choice-back"]');
+      expect(await page.locator('[data-armory="anvil"] .shop-card').count()).toBe(4);
+      for (const id of ids) expect(await page.locator(`[data-debug="${id}"]`).isVisible()).toBe(false);
+      const clock = (await page.locator('[data-debug="armory:clock"]').boundingBox())!;
+      const first = (await page.locator('[data-armory="anvil"] .shop-card').first().boundingBox())!;
+      expect(clock.y + clock.height).toBeLessThanOrEqual(first.y);
+      await page.screenshot({ path: `${shots}/${mode}-${viewport.width}-anvil-back.png` });
+      await activate('[data-armory="anvil"] .shop-card:nth-child(2)');
+      expect(await page.evaluate(() => (window as any).__shellPick)).toEqual(['anvil', 1, 'giants-belt']);
     } finally { await page.close(); }
   });
 }
