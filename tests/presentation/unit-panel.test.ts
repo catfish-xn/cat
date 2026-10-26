@@ -11,7 +11,7 @@ let bundle = '';
 beforeAll(async () => {
   const result = await build({ stdin: { contents: `export * from './src/presentation/unit-panel';
     export * from './src/presentation/unit-panel-loader';
-    export {attachUnitCards} from './src/presentation/unit-card';
+    export {attachUnitCards,unitCardBody} from './src/presentation/unit-card';
     export {loadTooltipText} from './src/presentation/tooltip-text-loader';
     export {UNIT_DEFINITIONS} from './src/simulation/units';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' } });
@@ -131,4 +131,25 @@ it('keeps shared mouse hover cards working and suppresses touch hover', async ()
     dispose(); scope.remove(); return { hovered, touchHidden };
   });
   expect(result).toEqual({ hovered: true, touchHidden: true });
+});
+
+it('refreshes independent Titan counters in the pinned panel and hover body, then clears them after combat', async () => {
+  const result = await page.evaluate(async () => {
+    const api = (window as any).Inspect, panel = await api.createUnitPanel();
+    const stacks = (a: number, b: number) => [a, b].map((value, slot) => ({ instanceId: `titan-${slot}`, definitionId: 'titans-resolve', stacks: value, maxStacks: 25, slot }));
+    let data: any = { id: 'steb', definitionId: 'steb', starLevel: 1, team: 'player', items: ['titans-resolve', 'titans-resolve'], combat: { itemStacks: stacks(1, 3), attackIntervalTicks: 20 } };
+    panel.pin(() => data);
+    const body = panel.root.querySelector('.unit-card'), line = body.querySelector('[data-debug="unit-card:item-stacks"]');
+    const before = line?.textContent;
+    data = { ...data, combat: { ...data.combat, itemStacks: stacks(7, 25) } };
+    panel.refresh(performance.now() + 150);
+    const after = line?.textContent, same = line === body.querySelector('[data-debug="unit-card:item-stacks"]');
+    const hover = api.unitCardBody('steb', 1, null, '', [], data.combat.itemStacks).textContent;
+    data = { ...data, combat: null }; panel.refresh(performance.now() + 300);
+    const cleared = line?.hidden && line?.textContent === '';
+    panel.dispose(); return { before, after, same, hover, cleared };
+  });
+  expect(result.before).toContain('1/25'); expect(result.before).toContain('3/25');
+  expect(result.after).toContain('7/25'); expect(result.after).toContain('25/25');
+  expect(result.hover).toContain(result.after); expect(result.same).toBe(true); expect(result.cleared).toBe(true);
 });

@@ -1583,3 +1583,24 @@ body[data-online] .shop-dock[data-anvil-choice] { grid-template-rows: 44px minma
 body[data-online] .shop-dock[data-anvil-choice] .shop-choice-toggle { min-width: 44px; min-height: 44px; }
 body[data-online] .shop-dock [data-armory="anvil"] .shop-choice-bar { max-width: 100%; overflow: visible; }
 body[data-online] .shop-dock [data-armory="anvil"] .choice-timeout { display: none; }
+
+/* Choice rows must reserve their actual height in the board grid, including the fixed 3D dock. */
+body[data-online]:has(.shop-choice[data-choice-source="armory"]) { --online-dock-h: clamp(168px, 19.5dvh, 220px); }
+/* Empty space below the 3D left rail must pass board clicks through; its controls still receive input. */
+body[data-online]:has(> .render3d-layer) #panels-root { pointer-events: none; }
+body[data-online]:has(> .render3d-layer) #panels-root > * { pointer-events: auto; }
+@media (max-width: 700px) and (orientation: portrait) {
+  body[data-online]:has(.shop-choice[data-choice-source="armory"]) { --online-dock-h: 247px; }
+  body[data-online] .shop-dock:has(.shop-choice[data-choice-source="armory"]) { grid-template-rows: 24px 44px minmax(112px, 1fr) 44px; }
+  body[data-online] .shop-dock[data-anvil-choice] {
+    grid-template-areas: "level level gold gold" "top top top top" "cards cards cards cards";
+    grid-template-rows: 24px 44px minmax(96px, 1fr);
+  }
+  body[data-online] .shop-dock:has([data-armory="anvil"]) .touch-shop { grid-row: 3 / -1; }
+  body[data-online] .shop-dock[data-anvil-choice] .hud-pop { display: none; }
+  body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar { width: calc(100vw - 96px); max-width: calc(100vw - 96px); }
+  body[data-online]:has(> .render3d-layer) .shop-choice[data-choice-source="armory"] .shop-choice-bar { max-width: 100%; }
+}
+/* Rumble's last paid upgrade and three-star reward have two or one options. */
+body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .touch-shop:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .touch-shop:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }

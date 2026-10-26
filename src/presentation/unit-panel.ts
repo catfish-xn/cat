@@ -11,7 +11,7 @@ import { heroTraitTagsWithIds } from './hero-identity';
 import { s13IconHtml } from './s13-assets';
 import { itemMarkHtml } from './item-codex';
 import { itemDisplayName } from './g23-display';
-import { unitCardBody, roleSection, battleLine } from './unit-card';
+import { unitCardBody, roleSection, battleLine, itemStackLine } from './unit-card';
 import { loadTooltipText, readTooltipText } from './tooltip-text-loader';
 import { PANEL_STYLE } from './unit-panel-style';
 
@@ -72,7 +72,7 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
   for (let slot = 0; slot < 3; slot++) {
     const cell = node('span', '', 'inspect-item'); cell.tabIndex = 0; cell.dataset.slot = String(slot); items.append(cell);
   }
-  body.append(items, node('div', '', 'inspect-stats-label'));
+  body.append(items, itemStackLine(data.combat?.itemStacks), node('div', '', 'inspect-stats-label'));
   const grid = node('dl', '', 'unit-card-stats');
   for (const [key, label] of Object.entries({ attack: '攻击力', ap: '法术强度', armor: '护甲', mr: '魔抗', speed: '攻击速度', crit: '暴击几率', critDamage: '暴击伤害', range: '射程' })) {
     const value = node('dd'); value.dataset.value = key; grid.append(node('dt', label), value);
@@ -123,6 +123,7 @@ export function updateUnitPanel(body: HTMLElement, data: UnitPanelData): void {
   battleLine(data.battle ?? { battle: null, match: null }, battle);
   battle.hidden = !data.battle || !(data.battle.battle || data.battle.match);
   const ids = data.items ?? [];
+  itemStackLine(live?.itemStacks, body.querySelector<HTMLElement>('[data-debug="unit-card:item-stacks"]')!);
   body.querySelectorAll<HTMLElement>('[data-slot]').forEach((cell, slot) => {
     const id = ids[slot] ?? ''; if (cell.dataset.item === id) return;
     cell.dataset.item = id; cell.title = id ? itemDisplayName(id) : '空装备栏'; cell.setAttribute('aria-label', cell.title);
