@@ -1,0 +1,12 @@
+【完成】移植上游48个engine文件及原粒子缓冲／GLSL，保留来源头、NOTICE和GPL原文；采用裸Three.js绘制。证据：src/rendering/three-mode/vfx-ltk/NOTICE.md:3、src/rendering/three-mode/vfx-ltk/rendering/components/Quads.ts:1、src/rendering/three-mode/vfx-ltk/particles.ts:61。
+【完成】中文模块图、真实VfxSystem数据格式、资源目录、外部转换接口已写入；六项P约定均标2026-10-26。证据：docs/VFX_PORT_PLAN.md:5、docs/VFX_PORT_PLAN.md:37、docs/VFX_PORT_PLAN.md:84、docs/S13_RULES_GAP.md:1260。
+【完成】Jinx／Vi的cast-start／projectile／hit接线、骨骼缺失回单位、FX_SCALE=0.44、软停止／阶段清理、完整加载后替换与旧效果回退。证据：src/rendering/three-mode/placeholder-renderer.ts:865、src/rendering/three-mode/vfx-ltk/timeline.ts:14、src/rendering/three-mode/vfx-ltk/particles.ts:37、src/rendering/three-mode/vfx-ltk/runtime.ts:30。
+【完成】局部验收去重共9文件115项通过：最终7文件100项，另isolation／budget两文件15项；npx tsc --noEmit -p .退出0，Vite构建通过，未跑全套。证据：tests/vfx-ltk-loader.test.ts:11、tests/vfx-ltk-timeline.test.ts:51、tests/vfx-ltk-particles.test.ts:13、tests/rendering3d-isolation.test.ts:21；日志/tmp/cat-vfx-targeted-final.log、/tmp/cat-vfx-validation.log、/tmp/cat-vfx-tsc-final.log。
+【完成】无监听端口的Chromium/SwiftShader：camera quad、arbitrary quad、ray、trail、beam、projection、静态mesh七例均有像素且无shader错误；样本JSON／1×1纹理／截图仅在/tmp。证据：scripts/assets3d/verify-vfx-ltk-webgl.mjs:24、scripts/assets3d/verify-vfx-ltk-webgl.mjs:49；结果/tmp/cat-vfx-ltk-webgl-YWLnT1/report.json。
+【完成】同一基线385b62b8对比，3D主包raw 884,084→1,040,138字节，gzip-9 255,614→308,408（+52,794，约20.65%）；含不变transcoder的3D JS合计270,757→323,551；2D顶层gzip-9 609,393→609,392。证据：/tmp/cat-vfx-size.json:1；构建输出/tmp/cat-vfx-baseline与/tmp/cat-vfx-current。
+【完成】git diff --check通过；未提交、未改.git、无原始／转换素材入仓库，试装React/R3F已卸载，package.json和lockfile无最终改动。证据：src/rendering/three-mode/vfx-ltk/NOTICE.md:23、docs/VFX_PORT_PLAN.md:31；最终git status仅代码／测试／脚本／文档。
+【未完成】真实14.24b Jinx／Vi转换与观感验收：本机无Rust／league-toolkit及可转换素材，遵照要求只交外部转换说明，未安装工具链。证据：docs/VFX_PORT_PLAN.md:84、docs/VFX_PORT_PLAN.md:126。
+【未完成】自定义shader、screen/depth／反射pass、附着或skinned粒子mesh、surface emission等未接入；遇到这些定义整条技能回退，不能宣称上游全量视觉等价。证据：src/rendering/three-mode/vfx-ltk/loader.ts:145、docs/VFX_PORT_PLAN.md:116。
+【需要我决定】无；按授权选裸Three.js。原R3F共享scene挂载探针在打包阶段遇33项桌面依赖错误，没有实际挂载成功；没有伪造Tauri服务。证据：docs/VFX_PORT_PLAN.md:33、/tmp/cat-vfx-r3f-probe.log:1。
+【风险】真实素材可能需要尚未支持的shader／pass而继续走旧效果；清单示意时间不是官方技能参数；高密度时只丢显示且与旧效果共享1500粒子预算。GPL-3.0-or-later来源已明确保留。证据：docs/VFX_PORT_PLAN.md:78、src/rendering/three-mode/vfx-ltk/runtime.ts:60、src/rendering/three-mode/vfx-ltk/NOTICE.md:5。
+【下一步】在已有工具链的外部机器导出Jinx／Vi到gitignore资源根，按现有action-bindings填skills，验证骨骼、轨迹、命中、停止与缺资源回退；真素材验收后再扩大英雄／绘制特性范围。证据：docs/VFX_PORT_PLAN.md:95、docs/VFX_PORT_PLAN.md:104。

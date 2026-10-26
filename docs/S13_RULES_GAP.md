@@ -1256,3 +1256,12 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 ### P-FRESID3-FIXTURES（P，2026-10-25）：224 强化池的回归夹具约定
 
 本轮只修测试与夹具，不改规则、数值、身份 digest 或保存格式。普通流程测试以公开命令取得与测试意图相符的真实强化：Blistering/Powder 用 seed 491，Sion 无持有者贡献控制用 seed 59（Long Distance Pals，294 tick 击杀 enemy-r8-4），风衣复制体/金币物品用 seed 307 的 Automata Crest，征服者恢复路线优先 Trade Sector；复制器存档路线选 Immovable Object，避免 Family Crown 的赠品填满备战席。开场事件的无历史单档控制排除战后备战席 XP 与 Spoils 强化；这些强化自身的历史要求不变。资金路线跨入 4-6 时按公开命令完成异常选择，不跳过节点。贪财联机控制必须跨过多个 2G 档位并足以改变整数伤害（双人连续三次支出、重连连续六次刷新），继续逐笔核对样本、真实回放差异和一次结算；重连 seed 2 需实际存活到 4-6。装备死亡控制只选择永久正式英雄；铁砧不作为可上场英雄或普通出售目标。所有旧断言保留强度，准确序号/轮次跟随新的真实路线。原有伪造保持不变：冠冕缺证据提示采用新增 XP 类别的完整文案；Mirror forge 的全运行态认证先于 G23/Sion 局部校验拒绝时，断言准确的更早错误，不移除伪造字段。D11 种子搜索先用现有首节点抽样器缩小候选，再逐个经真实开场确认，避免在测试体内重放每个未命中种子。没有新增测试超时，也不以重录 golden 或修改独立 oracle 消除失败。
+
+## 2026-10-26 LeagueToolkit 粒子引擎移植（P，用户授权按推荐决定）
+
+- **P-VFX-LTK-RENDER**：先按上游 React/R3F 版本尝试共享 scene 挂载；原组件在链接阶段产生 33 个桌面依赖错误，转用裸 Three.js 生命周期，保留原解析／模拟／缓冲／GLSL。只在独立 3D chunk 生效，不改玩法／数值／规则身份；上游来源及 GPL-3.0-or-later 文件头与 LICENSE 保留。
+- **P-VFX-LTK-DATA**：系统 JSON 保持 ltk-manager Rust `VfxSystem` 的原序列化值树（含解析后的 child）；`<assetBase>/vfx-ltk/index.json` 仅补 systems/assets/skills 的 HTTP 外壳，并非宣称上游存在同名目录。所有真转换素材只落 gitignore 的 assets3d-local/，开发样本只写 /tmp。外部转换接口见 `VFX_PORT_PLAN.md`，本机不装 Rust／league-toolkit。
+- **P-VFX-LTK-TIMELINE**：第一批仅 Jinx／Vi cast，cast-start→caster、projectile→首目标、hit→去重后的目标。沿现有显示时间线，用清单显式提供 delay/duration/bone；不从 packetDamage 推断技能，不重算命中。未加载完整或不支持的系统整条回退原手写效果，缩减动态模式仍走原实现。
+- **P-VFX-LTK-SPACE**：原 engine Y-up、X 镜像，统一 FX_SCALE=0.44；骨骼缺失回 unit root，不因模型 fit scale 二次放大。launch 捕获投射体终点；死亡 soft-stop 并取消待发 cue，阶段／销毁硬清理。
+- **P-VFX-LTK-BUDGET**：至多六套系统，每套根池150＋子池100槽、子系统最多8，合计活跃容量不超过1,500，并预留既有 effects.budget，与手写回退共享上限；沿用四层子递归。待发最多64，单帧最多启动6；长帧推进上限0.1秒，迟到超过0.3秒的待发显示丢弃；只节流显示，不删领域事件。
+- **P-VFX-LTK-SUPPORT**：首版接受五种已有 primitive 绘制及 child/stencil；未接入的桌面 shader、屏幕／深度 pass、反射、附着／骨骼粒子 mesh、surface emission／submesh 整条技能回退。纹理沿上游 NoColorSpace、flipY=false，静态 mesh 保留原游戏尺度且仅转换坐标镜像。全量视觉等价和真实14.24b素材仍需外部转换后验收。

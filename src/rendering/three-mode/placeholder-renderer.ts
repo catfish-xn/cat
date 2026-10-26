@@ -20,7 +20,7 @@ import {
   type Object3D, type Texture,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, assetUrl, createActionEffectResolver, createStarMark, hexCenter,
+  ModelCache, UnitActionState, UnitAnimationMixer, readParticleMesh, assetUrl, createActionEffectResolver, createStarMark, hexCenter,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
@@ -41,6 +41,9 @@ import { CastLunge, castLungeFor } from './cast-lunge';
 import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createStunHalo, displacementHop, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
+import { createVfxLibrary } from './vfx-ltk/loader';
+import { createLtkRuntime } from './vfx-ltk/runtime';
+import { FX_SCALE } from './vfx-ltk/particles';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
 import { isLegendModel } from './legend-load';
@@ -83,7 +86,7 @@ const ACTION_CONFIG = { durations: { move: 0.3 } };
 /** League game units -> board units for particle effects, the same for every champion so a shared effect keeps its
  * authored size. Median of 92 / model height over the 60 all-anim models (0.438; p10 0.31, p90 0.64), 2026-10-20.
  * Models are height-normalised, so following each body's own scale made small champions' effects up to 3x larger. */
-const FX_SCALE = 0.44;
+// FX_SCALE is shared with the ported engine (vfx-ltk/particles.ts).
 /**
  * PvE monsters (docs/ASSETS3D_NEUTRALS.md): target height and ground offset as fractions of MODEL_HEIGHT, scaled from
  * the GLB box once per lease with no width cap (wolves' tails and the dragon's wings span cells; visual only). Ranged
@@ -308,7 +311,7 @@ function fit(body: Object3D, height: number, width = Infinity): Object3D {
 
 export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   installHudStyle();
-  const renderer = new WebGLRenderer({ antialias: true });
+  const renderer = new WebGLRenderer({ antialias: true, stencil: true });
   // First-batch load report (model-warmup.ts): model reads are keyed back to their manifest id by path.
   // One report per match: a new match (body[data-m6-mode] turning active) starts it again.
   let loadReport = createLoadReport(), timeUpload = false, reported = false;
@@ -580,6 +583,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   const pieces = new Map<string, PieceView>();
+  // Optional converted LTK systems share the existing asset root, preloader and renderer.
+  const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
+    readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
+    readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
+  }), scene, id => pieces.get(id), { budget: effects?.budget }) : null;
   // Item icons are the 2D bundle's image URLs; one texture per URL for every piece, released with the renderer.
   const itemTextures = new Map<string, Promise<Texture | null>>();
   let closed = false;
@@ -806,7 +814,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = () => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0;
+    generation++; queued.length = 0; ltk?.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const fx of referenceEffects) fx.dispose();
@@ -854,6 +862,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : []) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
+    if (action === 'cast' && !reducedMotion() && ltk?.play(source.definitionId, sourceId, targetIds)) return;
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
     if (sample && action === 'attack') {
@@ -917,6 +926,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // first cast in combat does not stall a frame (the pooled materials then reuse those programs).
   const warmedCasts = new Set<string>();
   const warmCast = (definitionId: string) => {
+    ltk?.warm(definitionId);
     if (!effects || !actionEffects || !skillFeelFor(definitionId) || warmedCasts.has(definitionId)) return;
     warmedCasts.add(definitionId);
     const plan = simplifyCast(definitionId, planActionEffects(definitionId, 'cast', actionEffects.resolve(definitionId, 'cast'), actionEffects.playback));
@@ -942,7 +952,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   if (typeof renderer.compile === 'function') { feel.reveal(true); renderer.compile(feel.object, camera, scene); feel.reveal(false); }
   const updateEffects = (seconds: number) => {
     clock += seconds;
-    feel.update(seconds);
+    feel.update(seconds); ltk?.update(seconds, camera);
     for (const fx of referenceEffects) { fx.update(seconds, camera); if (fx.finished) { fx.dispose(); referenceEffects.delete(fx); } }
     if (saveBurst) {
       saveBurst.update(seconds);
@@ -1077,6 +1087,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
+      if (event.type === 'death') ltk?.stopUnit(event.unitId);
       if (!ANIMATION_EVENTS.has(event.type)) continue;
       // A forced move is no run: the moved unit hops along the slide and keeps its action (its stun stops that).
       if (event.type === 'movement' && DISPLACEMENT_REASONS.has((event as { reason?: string }).reason ?? '')) {
@@ -1511,7 +1522,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
-      withdrawPicker(); clearEffects(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); ltk?.dispose(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

@@ -1,0 +1,703 @@
+/*! @license GPL-3.0-or-later
+ * Derived from ltk-manager (GPL-3.0-or-later).
+ * Source: src/modules/workshop/bin/vfx/engine/simulation/driver.ts
+ * Port/adaptation: catfish-xn/cat, 2026-10-26. See NOTICE.md and LICENSE.
+ */
+import type { SystemModel } from "../model/model";
+import {
+  displacement,
+  facingAt,
+  FIRST_RIG,
+  flightTime,
+  landed,
+  missileDirectionAt,
+  type Motion,
+  originAt,
+  phaseAt,
+  type Point,
+  type RigModel,
+  type Joints,
+  runSpan,
+  targetAt,
+} from "../model/rig";
+import {
+  addressTheSame,
+  DEFAULT_STEPPING,
+  emptySystem,
+  lingerTail,
+  simulationEquals,
+  steppingEquals,
+  systemSpan,
+} from "../model/systemModel";
+import { flightInto, yawInto } from "../utils/basis";
+import { Rng } from "../utils/Rng";
+import { createCheckpoints } from "./checkpoints";
+import {
+  type ChildBirth,
+  type ChildrenSnapshot,
+  createChildren,
+  createLineage,
+  feedOf,
+  snapshotByteLength,
+} from "./children";
+import { type EmissionSurfaces, surfacesEquals } from "./emissionSurface";
+import {
+  copyEmitterStates,
+  createEmitterStates,
+  type EmitterState,
+  stepEmitters,
+  type SystemStep,
+  type World,
+  worldOf,
+} from "./integrate";
+import type { Source } from "./particleRead";
+import {
+  copyRows,
+  createPool,
+  FLEX_CHANNELS,
+  FRAME_SLOTS,
+  liveByteLength,
+  type Pool,
+  type PoolRows,
+  rowsByteLength,
+  writeRows,
+} from "./pool";
+import { type Stepper, stepperFor } from "./stepper";
+
+/** How many particles one system's pool holds, whatever its emitters ask for. */
+const POOL_CAP = 32_768;
+
+/** The step a seek replays at, which is a frame at 60 Hz. */
+const SEEK_STEP = 1 / 60;
+
+/** How far a seek replays, past which it lands on the pool it has reached. */
+const SEEK_STEPS = 60 * 60;
+
+/** How often a run keeps a checkpoint, in seconds of simulated time. */
+const MARK = 0.25;
+
+/** How many checkpoints one run holds, which covers the span a seek reaches over. */
+const MOST_MARKS = (SEEK_STEPS * SEEK_STEP) / MARK;
+
+/**
+ * The bytes one run's checkpoints hold at most.
+ *
+ * A particle's rows are 300 bytes. Every mark of a run under 3,500 particles fits, and a
+ * full pool keeps one checkpoint every four seconds, decided before each capture off the
+ * live bytes rather than after it.
+ */
+const CHECKPOINT_BYTES = 256 * 1024 * 1024;
+
+/** The most particles one bin of the lanes records, which is what a `Uint16Array` holds. */
+const MOST_COUNTED = 0xffff;
+
+/** Live particles per emitter at each step of one run, binned on the run's phase. */
+export interface Histogram {
+  /** Seconds one bin spans. */
+  readonly bin: number;
+  /** How many bins one run holds. */
+  readonly bins: number;
+  /** The live count of `emitter` at each bin, `bins` long, zero where no step has landed. */
+  counts(emitter: number): Uint16Array;
+  /** The last bin a step landed in this pass, and -1 before any. */
+  readonly reached: number;
+}
+
+/** The lanes' histogram as the run writes it. */
+interface Lanes extends Histogram {
+  /** Hold `emitters` lanes over a run of `length` seconds, every bin cleared. */
+  resize(emitters: number, length: number): void;
+  /** Record the live counts of `pool` at the bin `phase` falls in. */
+  tally(pool: Pool, phase: number): void;
+  /** Open a pass over the bins the last one wrote. */
+  wrap(): void;
+  /** Stand the pass at `phase`, recording nothing. */
+  reach(phase: number): void;
+}
+
+/** Lanes for no emitters over one bin, which a swap sizes to the system it opens. */
+function createLanes(): Lanes {
+  let bins = 1;
+  let lanes = 0;
+  let data = new Uint16Array(0);
+  let reached = -1;
+  const live: number[] = [];
+
+  function binOf(phase: number): number {
+    return Math.min(Math.max(Math.floor(phase / SEEK_STEP), 0), bins - 1);
+  }
+
+  return {
+    bin: SEEK_STEP,
+    get bins() {
+      return bins;
+    },
+    get reached() {
+      return reached;
+    },
+    counts(emitter) {
+      return data.subarray(emitter * bins, (emitter + 1) * bins);
+    },
+    resize(emitters, length) {
+      bins = Math.max(1, Math.ceil(Math.min(length, SEEK_STEPS * SEEK_STEP) / SEEK_STEP));
+      lanes = emitters;
+      if (data.length === bins * lanes) data.fill(0);
+      else data = new Uint16Array(bins * lanes);
+      live.length = lanes;
+      reached = -1;
+    },
+    tally(pool, phase) {
+      live.fill(0);
+      for (let at = 0; at < pool.count; at += 1) {
+        const emitter = pool.emitter[at];
+        if (emitter >= 0 && emitter < lanes) live[emitter] += 1;
+      }
+      reached = binOf(phase);
+      for (let emitter = 0; emitter < lanes; emitter += 1) {
+        data[emitter * bins + reached] = Math.min(live[emitter], MOST_COUNTED);
+      }
+    },
+    wrap() {
+      reached = -1;
+    },
+    reach(phase) {
+      reached = binOf(phase);
+    },
+  };
+}
+
+/** One moment of a run, deep copied, which a seek stands on in place of replaying to it. */
+interface Checkpoint {
+  /** The clock the run stood at, which the stepper is put back to. */
+  readonly time: number;
+  /** The seek step `time` lands on, from which a replay carries on. */
+  readonly step: number;
+  readonly rows: PoolRows;
+  readonly states: readonly EmitterState[];
+  readonly rng: Rng;
+  /** How far into its own run the run stood. */
+  readonly phase: number;
+  readonly origin: Point;
+  readonly children: ChildrenSnapshot;
+  readonly births: readonly ChildBirth[];
+  /** What its arrays hold, which the run's budget counts. */
+  readonly bytes: number;
+}
+
+/** The simulation as a viewport drives one: a pool, a clock, and a way back to zero. */
+export interface Driver extends Source {
+  readonly pool: Pool;
+  /** Where the simulation stands, in seconds since the system started. */
+  readonly time: number;
+  /** Seconds into the current run, which the timeline stands at and which wraps with a loop. */
+  readonly phase: number;
+  /** The emitters' own age, which is the phase plus the seconds the run built up before it. */
+  readonly elapsed: number;
+  /** Where the rig has the system at this moment. */
+  readonly origin: Point;
+  /** Where the rig aims the system at this moment, which a beam reaches for. */
+  readonly target: Point;
+  /**
+   * How the rig turns the system at this moment.
+   *
+   * The engine keeps this beside the definition's `transform`, which is what a particle
+   * of `particleIsLocalOrientation` stands on in place of the frame it was born in.
+   */
+  readonly orientation: Float32Array;
+  /** Live particles per emitter over the run, which the timeline's lanes draw. */
+  readonly histogram: Histogram;
+  /** Spend one frame's elapsed seconds. */
+  advance(frameTime: number): void;
+  /**
+   * Run to `time`, carrying on from the latest checkpoint at or before it.
+   *
+   * A seeded pool reaches a moment by running the seed forward, and a checkpoint is one
+   * moment of that run kept whole, decision 2.46 of docs/plans/vfx-particle-renderer.md.
+   * A checkpoint written during a play holds what that play reached, at the frames' own
+   * `dt`, and a seek through it is a run of the seed rather than the fixed-step replay a
+   * seek from zero writes.
+   */
+  seek(time: number): void;
+  restart(): void;
+  /**
+   * Starts the run over at zero on `seed`.
+   *
+   * The driver stays the same object, so the components that draw from it keep their props
+   * and nothing remounts.
+   */
+  reseed(seed: number): void;
+  /** Read every birth's tables at `chance` from here on, and at its own draw again for null. */
+  pin(chance: number | null): void;
+  setSurfaces(surfaces: EmissionSurfaces): void;
+  /** The emission samplers currently installed, which the viewport's birth overlay samples. */
+  surfaces(): EmissionSurfaces;
+  setMeshJoints(joints: ReadonlyMap<string, Joints>): void;
+  /**
+   * Binds the joints of a host character, which a bone child set spawns on when the rig
+   * carries no joints of its own. `null` unbinds them.
+   */
+  setHostJoints(joints: Joints | null): void;
+  /**
+   * Sets the three flex channels that gameplay would set on the live system, null for a
+   * channel nothing sets, which reads 0. Replays the run to its phase on a change.
+   */
+  setFlex(channels: readonly (number | null)[]): void;
+  /**
+   * Draw the next appearance pass from `next`, keeping the particles already alive.
+   *
+   * Returns true when `next` changes a field the simulation reads. The live particles were
+   * born under the previous definition, so an owner that shows the run seeks to its current
+   * phase after such a swap.
+   */
+  swap(next: SystemModel): boolean;
+  /** Carry the system on `next`, restarting the run where the motion itself changed. */
+  steer(next: RigModel): void;
+  /**
+   * The live children of the child definition at `path`.
+   *
+   * The driver keeps the list current in place, so a draw holds it and reads it every frame.
+   */
+  sources(path: string): readonly Source[];
+  /** How many child systems are live, at every depth of the lineage. */
+  liveChildren(): number;
+  /** Every child this pass has spawned, in the order they were spawned. */
+  births(): readonly ChildBirth[];
+}
+
+/** Where one driver departs from the shell's own run. */
+export interface DriverOptions {
+  /** Port: bounded child pools for a crowded board; defaults preserve upstream viewer behavior. */
+  readonly childBudget?: number;
+  readonly maxChildren?: number;
+  /** How many particles the pool holds, which is what a scene of many small systems lowers. */
+  readonly capacity?: number;
+  /** The run keeps the checkpoints a seek starts from, which one that only plays on drops. */
+  readonly seekable?: boolean;
+}
+
+/**
+ * One system simulated from a seed.
+ *
+ * A time is reached by advancing from zero rather than by moving a clock, so a scrub, a
+ * screenshot and a snapshot over the pool all agree (decision 2.6 of
+ * docs/plans/vfx-particle-renderer.md). The system's `stepping` picks the stepper, so a
+ * frame becomes the steps the client's own accumulator would take.
+ *
+ * The rig is the driver's rather than the model's, per decision 2.9, and it holds
+ * nothing about when it was bound: where a run stands is read off the clock, so the
+ * replay above reaches what a play reaches. The rig also faces the system, the way the
+ * engine yaws a missile toward its target. The definition's own transform is no part of
+ * where the rig has the system: it is a factor of each particle's own matrix.
+ */
+export function createDriver(
+  firstSeed: number,
+  { capacity = POOL_CAP, seekable = true, childBudget, maxChildren }: DriverOptions = {},
+): Driver {
+  let seed = firstSeed;
+  const lineage = createLineage(seed, childBudget, maxChildren);
+  const pool = createPool(capacity, lineage.flex);
+  let stepper: Stepper = stepperFor(DEFAULT_STEPPING);
+  let system = emptySystem(null);
+  let rig: RigModel = FIRST_RIG.rig;
+  let span = systemSpan(system);
+  let tail = lingerTail(system, flightTime(rig.motion, rig.height));
+  let world = worldOf(system);
+  let rng = new Rng(seed);
+  let states: EmitterState[] = [];
+  const yaw = new Float32Array(FRAME_SLOTS);
+  let hostJoints: Joints | null = null;
+  lineage.joints = rig.joints ?? null;
+  const children = createChildren(lineage, "", 0);
+  const lanes = createLanes();
+
+  /** The run's checkpoints, which a seek starts from. */
+  const marks = createCheckpoints<Checkpoint>(MOST_MARKS, CHECKPOINT_BYTES);
+
+  /** How far into its run the last step stood, which a wrap back past it is a loop. */
+  let phase = 0;
+
+  /** Where the origin stood at the end of the last step, so a step knows its own travel. */
+  let origin: Point = originAt(rig.motion, 0, rig.height);
+
+  /** The build-up's own clock and age while one runs, which the driver reports in their place. */
+  let building: { now: number; age: number } | null = null;
+
+  relane();
+
+  function run(frameTime: number): void {
+    for (const step of stepper.advance(frameTime)) {
+      const reached = phaseAt(rig, step.now, span, tail);
+      if (reached < phase) replay(step.now - step.dt);
+      phase = reached;
+
+      const now = originAt(rig.motion, reached, rig.height);
+      /* A path stands in for a missile's own game object, whose travel is its local `Y`,
+         where a unit's system is the look-at yaw of question 11. */
+      orientInto(reached);
+      const placed: SystemStep = {
+        dt: step.dt,
+        now: step.now,
+        origin: stand(world, now),
+        moved: displacement(origin, now),
+        yaw,
+        world,
+        stopped:
+          (rig.stopAt != null && reached >= rig.stopAt) || landed(rig.motion, reached, rig.height),
+        pinned: lineage.pinned,
+        surfaces: lineage.surfaces.get(""),
+      };
+
+      stepEmitters(pool, system, placed, rng, states);
+      origin = now;
+      /* shortcut: a child steps on its parent's steps, where the client steps each child
+         system on its own `stepping`; upgrade if a child's flags are found to differ. */
+      children.step(driver, system, step.dt, step.now);
+      lanes.tally(pool, reached);
+      keep(step.now);
+    }
+  }
+
+  /** The lanes sized for the emitters drawn and the run they are drawn over. */
+  function relane(): void {
+    lanes.resize(system.emitters.length, runSpan(rig, span, tail));
+  }
+
+  /** The run at `now` as a value, deep copied. */
+  function capture(now: number): Checkpoint {
+    const rows = copyRows(pool);
+    const snapshot = children.snapshot();
+    return {
+      time: now,
+      step: Math.round(now / SEEK_STEP),
+      rows,
+      states: copyEmitterStates(states),
+      rng: rng.clone(),
+      phase,
+      origin,
+      children: snapshot,
+      births: lineage.births.slice(),
+      bytes: rowsByteLength(rows) + snapshotByteLength(snapshot),
+    };
+  }
+
+  /** Keep the run at `now` where the quarter-second mark it has crossed holds none. */
+  function keep(now: number): void {
+    if (!seekable) return;
+    const at = Math.floor(now / MARK);
+    if (!marks.wants(at)) return;
+    const bytes = liveByteLength(pool) + children.byteLength();
+    marks.keep(at, bytes, () => capture(now));
+  }
+
+  /** The latest checkpoint at or before seek step `step`, and null for a time holding none. */
+  function checkpointAt(step: number): Checkpoint | null {
+    return marks.latest(Math.floor((step * SEEK_STEP) / MARK), step);
+  }
+
+  /**
+   * Stand the run where `held` stands.
+   *
+   * The rows are written into the pool rather than replacing it, which keeps the object
+   * every draw holds.
+   */
+  function restore(held: Checkpoint): void {
+    writeRows(pool, held.rows);
+    stepper.reset(held.time);
+    rng = held.rng.clone();
+    states = copyEmitterStates(held.states);
+    phase = held.phase;
+    origin = held.origin;
+    children.restore(held.children);
+    /* A checkpoint can predate an edit to what only the draw reads, which a swap keeps it
+       across, so the restored children take the definitions current now. */
+    children.repoint(system);
+    lineage.births.length = 0;
+    for (const birth of held.births) lineage.births.push(birth);
+    orientInto(phase);
+  }
+
+  /**
+   * The rig's own turn at `reached`, into the yaw.
+   *
+   * A missile stands in for a missile's own game object, whose travel is its local `Y`,
+   * where a unit's system is the look-at yaw of question 11.
+   * A bone takes its joint's whole turn, as a system attached to a bone does.
+   */
+  function orientInto(reached: number): void {
+    const motion = rig.motion;
+    if (motion.kind === "bone") motion.anchor.basisInto(reached, yaw);
+    else if (motion.kind === "missile") {
+      flightInto(missileDirectionAt(motion, reached, rig.height), yaw);
+    } else yawInto(facingAt(motion, reached), yaw);
+  }
+
+  /**
+   * The system's `buildUpTime` simulated up to `until`, the clock the run starts from.
+   *
+   * The system becomes visible where the run starts, so it has already played that long by
+   * its first drawn step. The rig stands where it is and faces as it does at `reached`
+   * throughout, and nothing is tallied or kept, so the timeline opens on what the build-up
+   * left.
+   */
+  function buildUp(until: number, reached: number): void {
+    const steps = Math.round(system.buildUpTime / SEEK_STEP);
+    if (steps === 0) return;
+
+    orientInto(reached);
+    const stood = stand(world, origin);
+    for (let at = 1; at <= steps; at += 1) {
+      const now = until - (steps - at) * SEEK_STEP;
+      building = { now, age: at * SEEK_STEP };
+      const placed: SystemStep = {
+        dt: SEEK_STEP,
+        now,
+        origin: stood,
+        moved: STILL,
+        yaw,
+        world,
+        stopped: false,
+        pinned: lineage.pinned,
+        surfaces: lineage.surfaces.get(""),
+      };
+      stepEmitters(pool, system, placed, rng, states);
+      children.step(driver, system, SEEK_STEP, now);
+    }
+    building = null;
+  }
+
+  /* A loop starts the effect over without touching the seed, so the run stays one
+     stream and a seek that crosses the boundary reproduces both passes. */
+  function replay(until: number): void {
+    pool.count = 0;
+    children.clear();
+    lineage.births.length = 0;
+    states = createEmitterStates(system.emitters, rng);
+    origin = originAt(rig.motion, 0, rig.height);
+    lanes.wrap();
+    buildUp(until, 0);
+  }
+
+  /* The serials start over with the stream, because a child's own stream is seeded off the
+     serial of the particle it rides and a seek has to reach the children a play reaches. */
+  function rewind(): void {
+    pool.count = 0;
+    pool.born = 0;
+    children.clear();
+    lineage.births.length = 0;
+    rng = new Rng(seed);
+    stepper.reset();
+    states = createEmitterStates(system.emitters, rng);
+    phase = 0;
+    origin = originAt(rig.motion, 0, rig.height);
+    buildUp(0, 0);
+    orientInto(0);
+    relane();
+  }
+
+  const driver: Driver = {
+    pool,
+    get time() {
+      return building?.now ?? stepper.now;
+    },
+    get phase() {
+      return phaseAt(rig, stepper.now, span, tail);
+    },
+    get elapsed() {
+      return building?.age ?? phaseAt(rig, stepper.now, span, tail) + system.buildUpTime;
+    },
+    get origin() {
+      return stand(world, origin);
+    },
+    get target() {
+      return targetAt(rig.motion, phaseAt(rig, stepper.now, span, tail), rig.height);
+    },
+    get orientation() {
+      return yaw;
+    },
+    get world() {
+      return world;
+    },
+    histogram: lanes,
+    advance: run,
+    seek(time) {
+      const wanted = Math.min(Math.max(time, 0), SEEK_STEPS * SEEK_STEP);
+      const steps = Math.round(wanted / SEEK_STEP);
+      const from = checkpointAt(steps);
+      if (from === null) rewind();
+      else restore(from);
+
+      for (let at = from?.step ?? 0; at < steps; at += 1) run(SEEK_STEP);
+      lanes.reach(phaseAt(rig, stepper.now, span, tail));
+    },
+    restart: rewind,
+    reseed(next) {
+      if (next === seed) return;
+
+      seed = next;
+      lineage.seed = next;
+      marks.clear();
+      rewind();
+    },
+
+    /* A checkpoint holds births drawn under the last pin, so a seek replays from the new one. */
+    pin(chance) {
+      lineage.pinned = chance;
+      marks.clear();
+    },
+    /* The checkpoints contain births drawn before the surfaces or joints landed, so both
+       setters drop them and replay to the current phase. */
+    setSurfaces(surfaces) {
+      if (surfacesEquals(lineage.surfaces, surfaces)) return;
+
+      lineage.surfaces = surfaces;
+      marks.clear();
+      driver.seek(driver.phase);
+    },
+    surfaces() {
+      return lineage.surfaces;
+    },
+    setFlex(channels) {
+      const next = Array.from({ length: FLEX_CHANNELS }, (_, at) => channels[at] ?? 0);
+      if (next.every((value, at) => lineage.flex[at] === value)) return;
+
+      lineage.flex.set(next);
+      marks.clear();
+      driver.seek(driver.phase);
+    },
+    setMeshJoints(joints) {
+      if (jointsEquals(lineage.meshJoints, joints)) return;
+
+      lineage.meshJoints = joints;
+      marks.clear();
+      driver.seek(driver.phase);
+    },
+    setHostJoints(joints) {
+      if (hostJoints === joints) return;
+
+      hostJoints = joints;
+      if (rig.joints != null) return;
+
+      lineage.joints = joints;
+      marks.clear();
+      driver.seek(driver.phase);
+    },
+
+    /*
+     * Decision 2.5: an edit replaces the definition the emitters point at and the
+     * particle pool is not consulted, so a live particle keeps its birth values and its
+     * position and the next appearance pass reads the new definition. An edit that moves
+     * what an index addresses is the one case that replays the run, because the pool's `emitter`
+     * column would otherwise evaluate a live particle against another emitter's curves.
+     * A child follows the same rule one level down.
+     */
+    swap(next) {
+      const same = addressTheSame(system.emitters, next.emitters);
+      /* An edit to what only the draw reads leaves every checkpoint as the new definition
+         would have written it, so a seek after it restores one rather than replaying. */
+      const drawOnly = same && simulationEquals(system, next);
+      if (!steppingEquals(system.stepping, next.stepping)) {
+        stepper = stepperFor(next.stepping, stepper.now);
+      }
+      system = next;
+      span = systemSpan(next);
+      tail = lingerTail(next, flightTime(rig.motion, rig.height));
+      world = worldOf(next);
+      /* The span is the run a still rig loops on, so the phase moves with an edit for the
+         same reason it moves with a tune. */
+      phase = phaseAt(rig, stepper.now, span, tail);
+      orientInto(phase);
+      if (drawOnly) {
+        children.repoint(next);
+        return false;
+      }
+
+      marks.clear();
+      relane();
+      if (same) {
+        children.repoint(next);
+        return true;
+      }
+
+      /* The pool's `emitter` column no longer addresses the new list, so the run replays to
+         the current phase, which keeps the clock, the lanes and the particles in one run. */
+      driver.seek(phase);
+      return true;
+    },
+
+    /*
+     * Asking for a different motion is asking to watch a different thing, so it restarts
+     * rather than dropping the effect part-way along a path it never travelled. Tuning
+     * one holds the run, and only re-reads the origin, so a drag along a slider moves
+     * what it is describing rather than pinning the run to its first frame.
+     *
+     * A bone on another anchor is the same joint under another pose. What is alive was born
+     * where the last pose had the joint, so the run replays to its phase on the new one.
+     */
+    steer(next) {
+      const turned = next.motion.kind !== rig.motion.kind;
+      const posed = reposed(rig.motion, next.motion);
+      rig = next;
+      tail = lingerTail(system, flightTime(next.motion, next.height));
+      lineage.joints = next.joints ?? hostJoints;
+      marks.clear();
+
+      if (turned) {
+        rewind();
+        return;
+      }
+
+      if (posed) {
+        driver.seek(phaseAt(next, stepper.now, span, tail));
+        return;
+      }
+      /* The phase moves with the rig, because a tune that shortens the run wraps it back
+         below what the last step reached and the next step would read that as a loop. */
+      phase = phaseAt(next, stepper.now, span, tail);
+      origin = originAt(next.motion, phase, next.height);
+      orientInto(phase);
+      relane();
+    },
+
+    sources(path) {
+      return feedOf(lineage, path);
+    },
+
+    liveChildren() {
+      return lineage.live;
+    },
+
+    births() {
+      return lineage.births;
+    },
+  };
+  return driver;
+}
+
+/** Both motions ride a bone and stand on different anchors, which is one joint under two poses. */
+function reposed(from: Motion, to: Motion): boolean {
+  if (from.kind !== "bone" || to.kind !== "bone") return false;
+
+  return from.anchor !== to.anchor || from.target !== to.target;
+}
+
+/**
+ * Where a system the rig has at `point` stands: the point itself, and for a HUD-layer
+ * system the point moved by its `transform`'s translation, which is all of it that layer reads.
+ */
+function stand(world: World, point: Point): Point {
+  if (!world.hud) return point;
+  return [point[0] + world.offset[0], point[1] + world.offset[1], point[2] + world.offset[2]];
+}
+
+/** The travel of a step that moves nothing, which every build-up step takes. */
+const STILL: Point = [0, 0, 0];
+
+/** The two maps resolve every mesh emitter's joints through the same lookup. */
+function jointsEquals(a: ReadonlyMap<string, Joints>, b: ReadonlyMap<string, Joints>): boolean {
+  if (a.size !== b.size) return false;
+
+  for (const [key, joints] of a) {
+    if (b.get(key) !== joints) return false;
+  }
+  return true;
+}
