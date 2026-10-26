@@ -19,7 +19,7 @@ import { validatePeriodicTask } from './periodic';
 import { validateShield } from './shield';
 import { integer } from './stats';
 function check(value: unknown, message: string): asserts value { if (!value) throw new Error(`Invalid Match save: ${message}`); }
-export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[], tick: number, combatId: string, finished: boolean, nextActionSeq: number, neutralStatuses: ReadonlySet<string> = new Set(), parsedJsonInput = false, traits?: readonly TraitSnapshot[]): void {
+export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[], tick: number, combatId: string, finished: boolean, nextActionSeq: number, neutralStatuses: ReadonlySet<string> = new Set(), parsedJsonInput = false, traits?: readonly TraitSnapshot[], abilityStatuses: ReadonlySet<string> = new Set()): void {
   const same = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   const state = unit.mechanismState, definitions = unit.mechanismDefinitions;
   check(state && definitions && state.initialized === true && state.combatId === combatId && state.sampledAtTick === tick, 'mechanism initialization/namespace');
@@ -46,7 +46,10 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
     check(Array.isArray(legacy.contributionKeys) && legacy.contributionKeys.length > 0, 'missing status contribution projection');
     for (const key of legacy.contributionKeys) {
       const c = contributions.find(c => c.key === key);
-      if(c && (neutralStatuses.has(c.key) || (c.source.sourceKind==='item'||c.source.sourceKind==='augment'||c.source.sourceKind==='anomaly'||c.source.sourceKind==='trait') && isDeclaredStatus(c.source,c.application,units,combatId))) {
+      // Frozen ability declarations use the same exact identity-key projection
+      // as item declarations; their historical source/application is replay-proven.
+      const replayedAbility = c?.source.sourceKind === 'ability' && legacy.key === c.key && abilityStatuses.has(c.key);
+      if(c && (neutralStatuses.has(c.key) || replayedAbility || (c.source.sourceKind==='item'||c.source.sourceKind==='augment'||c.source.sourceKind==='anomaly'||c.source.sourceKind==='trait') && isDeclaredStatus(c.source,c.application,units,combatId))) {
         check(!covered.has(key) && c.targetId===unit.id && same(c.source,asSource(legacy.source)) && legacy.key===c.key && c.appliedAtTick===legacy.startsAtTick && (c.expiresAtTick ?? 1201)===legacy.expiresAtTick, 'item status source/timing projection');
         if (c.source.sourceKind === 'augment' && c.source.definitionId === 'blistering-strikes') {
           const owner = units.find(u => u.id === c.source.ownerId)!;
@@ -62,6 +65,14 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
           // The D11 source compiler binds this static damage amplifier at tick 0.
           // isDeclaredStatus above and consumption below authenticate coefficients.
           check(c.source.ownerId===unit.id&&c.appliedAtTick===0&&c.expiresAtTick===null,'D11 opening status source/timing');
+        } else if (c.source.sourceKind === 'augment' && units.find(u => u.id === c.source.ownerId)?.mechanics?.some(m => m.mechanic === 'corrosion' && canonicalSource(asSource(m.source)) === canonicalSource(c.source))) {
+          // Local shape check only: validateDynamicCombat authenticates the complete Corrosion set
+          // from the trusted opening strategy, including contributions deleted from both projections.
+          const owner = units.find(u => u.id === c.source.ownerId)!, m = owner.mechanics!.find(m => m.mechanic === 'corrosion')!;
+          const [tickOf, index] = JSON.parse(JSON.parse(c.key)[8]).slice(1) as [number, number];
+          check(owner.team !== unit.team && c.expiresAtTick === null && c.appliedAtTick > 0 && c.appliedAtTick <= tick && c.appliedAtTick % m.values.periodTicks === 0
+            && tickOf === c.appliedAtTick && JSON.parse(c.key)[8] === JSON.stringify(['corrosion', c.appliedAtTick, index])
+            && same(statusDeclaration(augmentCombatEffects(m)[index], owner, c.source), c.application), 'augment corrosion pulse');
         } else if (c.source.sourceKind === 'augment') {
           const owner = units.find(u => u.id === c.source.ownerId)!;
           const m = owner.mechanics?.find(m => canonicalSource(asSource(m.source)) === canonicalSource(c.source));
@@ -82,7 +93,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
         const kind=app.kind==='stun'?'stun':app.kind==='sunder'?'armorReduction':'resistanceFlat';
         const amount=app.modifier?.value.kind==='constant'?app.modifier.value.amount:app.magnitudeBps;
         check(legacy.kind===kind && legacy.amount===amount && legacy.contributionKeys.length===1 && legacy.activity===undefined, 'item status semantic projection');
-        if (!neutralStatuses.has(c.key)) validateItemEffectConsumption(c.source,c.appliedAtTick,units,combatId);
+        if (!neutralStatuses.has(c.key) && !replayedAbility) validateItemEffectConsumption(c.source,c.appliedAtTick,units,combatId);
         covered.add(key);continue;
       }
       check(c && !covered.has(key) && c.targetId === unit.id && c.source.ownerId === legacy.source.ownerId

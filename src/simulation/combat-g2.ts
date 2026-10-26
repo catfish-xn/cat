@@ -1,3 +1,4 @@
+import { batch2AutomataBlast } from './augment-pool-batch2-combat';
 import { detonateMenaces, teamup } from './combat-v20-traits';
 import { canMove } from './combat-movement';
 import { occupiesCell } from './anomalies/availability';
@@ -8,7 +9,7 @@ import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 import { hexDistance } from './board';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
-import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
+import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, heroLive, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
 import { asSource } from './m8/s13-definitions';
 import { executeMechanismEffect, executeOverTimeTask } from './m8/s13-mechanisms';
 import { burn, modifier, stat, status } from './content/item-programs';
@@ -38,8 +39,17 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
   const ticks = (k: string) => Math.round(v(k) * 20), ids: string[] = [];
   const strike = (t: S13Unit, raw: number, type: S13Packet['damageType'] = 'magic', area = false) => { hit(ctx, unit, t, raw, seq, ids.length, type, area); ids.push(t.id); };
   switch (champion(unit)) {
-    case 'vladimir':
-      ctx.heals.push({ source: origin(unit), targetId: unit.id, amount: mag('Heal') }); strike(target, mag('Damage')); break;
+    case 'vladimir': {
+      const hero = heroLive(unit);
+      if (!hero) { ctx.heals.push({ source: origin(unit), targetId: unit.id, amount: mag('Heal') }); strike(target, mag('Damage')); break; }
+      // Blood Pact (P): no heal; DamageBps × Damage on the target; the enemy nearest Vladimir (other than the target) takes
+      // an independent 90/135/205 AP, plus OverkillBps of the pre-mitigation excess when the target cannot survive it.
+      const main = Math.floor(mag('Damage') * hero.damageBps / 10000); strike(target, main);
+      const near = byDistance(unit, enemies(unit, ctx.units)).find(x => x.id !== target.id);
+      if (near) strike(near, amount(unit, ctx.tick, { ap: hero.near }) + Math.floor(Math.max(0, main - target.hp) * hero.overkillBps / 10000));
+      unit.batch2 = { ...unit.batch2, vladCasts: (unit.batch2?.vladCasts ?? 0) + 1 };
+      break;
+    }
     case 'singed': {
       applyStatus(unit, origin(unit), 'damageReduction', Math.min(10000, Math.round(v('DR') * ap(unit, ctx.tick) * 100)), ticks('Duration'), ctx.tick, ctx.events, true);
       const ally = ctx.units.filter(u => u.alive && !isAttackProxy(u) && u.team === unit.team).sort((a, b) => (b.expansion?.damageDealt ?? 0) - (a.expansion?.damageDealt ?? 0) || (a.id < b.id ? -1 : 1))[0];
@@ -107,7 +117,7 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
     case 'violet':
       for (let n = 0; n < v('NumStrikes'); n++) strike(target, amount(unit, ctx.tick, { ad: v('PercentAttackDamage') }), 'physical');
       strike(target, amount(unit, ctx.tick, { ad: v('PercentIncreasedAttackDamage'), ap: v('APDamage') }), 'physical');
-      applyStatus(target, origin(unit), 'stun', 0, ticks('StunDuration'), ctx.tick, ctx.events); break;
+      applyStatus(target, origin(unit), 'stun', 0, ticks('StunDuration'), ctx.tick, ctx.events, false, '', undefined, true); break; // the uppercut knocks up
     case 'malzahar': {
       // The gate crosses the target row: two hexes on either side, clipped by the board.
       const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));
@@ -201,13 +211,17 @@ export function recordG2Damage(ctx: AbilityContext, owner: S13Unit | undefined, 
     if (champion(owner) === 'leblanc' && hp > 0 && survivingHp === 0 && packet.actionSeq === owner.expansion.chainCastSeq && packet.delivery === 'ability-direct') owner.expansion.chainKills++;
   }
   if (target.expansion) target.expansion.damageTaken += hp;
-  if (owner && hp + absorbed > 0 && packet.source.definitionId !== 'automata') {
+  if (owner && hp + absorbed > 0 && packet.source.definitionId !== 'automata' && packet.source.definitionId !== 'fractured-crystals') {
     const m = owner.mechanics?.find(m => m.mechanic === 'automata');
     if (m) {
       const state = expansion(owner); state.crystals++; state.crystalDamage += hp + absorbed;
       if (state.crystals === m.values.crystals) {
         const next = enemies(owner, ctx.units).find(u => u.id === owner.targetId) ?? byDistance(owner, enemies(owner, ctx.units))[0];
-        if (next) task(owner, 'g2Blast', ctx.tick + 1, next.id, m.values.damage + Math.floor(state.crystalDamage * m.values.conversionBps / 10000), packet.actionSeq, 0, 1, m.source);
+        if (next) {
+          const raw=m.values.damage + Math.floor(state.crystalDamage * m.values.conversionBps / 10000);
+          task(owner, 'g2Blast', ctx.tick + 1, next.id, raw, packet.actionSeq, 0, 1, m.source);
+          batch2AutomataBlast(ctx,owner,raw,packet.actionSeq);
+        }
         state.crystals = 0; state.crystalDamage = 0;
       }
     }

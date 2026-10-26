@@ -4,6 +4,7 @@ import {deriveEffectiveTrait,projectEffectiveMembership} from './traits/effectiv
 import type { TraitSnapshot } from './strategy-types';
 import { sameCell, contains, type Board, type HexCell, type Team } from './board';
 import { nearestItemCell } from './g2-4b-item-kernel';
+import { compareUnitIds } from './unit-id-order';
 export const isG23Summon=(unit:{readonly definitionId:string})=>unit.definitionId==='g23-sion'||unit.definitionId==='g23-forge';
 /** Forge and the reserved barrel identity are skill bodies, never an army's last fighter. */
 export const isG23NonCombatant=(unit:{readonly definitionId:string})=>unit.definitionId==='g23-forge'||unit.definitionId==='g23-barrel'||unit.definitionId==='v20-silco-minion';
@@ -18,7 +19,7 @@ export const g23ForgeId=(jayceId:string)=>jayceId+':g23-forge';
 export function projectG23Summons(preparation:GameState,traits?:readonly TraitSnapshot[],forgeCells?:Readonly<Record<string,HexCell>>):GameState{
  const units=[...preparation.units],added:Unit[]=[];
  for(const team of ['player','enemy'] as const){
-  const army=preparation.units.filter(u=>u.team===team&&u.location.kind==='board'&&!isG23Summon(u)).sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
+  const army=preparation.units.filter(u=>u.team===team&&u.location.kind==='board'&&!isG23Summon(u)).sort(compareUnitIds);
   const rose=traits?traits.find(t=>t.team===team&&t.traitId==='black-rose'):deriveEffectiveTrait(projectEffectiveMembership(preparation),team,'black-rose');
   const roses=army.filter(u=>rose?.memberUnitIds?rose.memberUnitIds.includes(u.id):rose?.memberDefinitionIds.includes(u.definitionId));
   const forges=army.filter(u=>u.definitionId==='jayce').map(u=>({id:g23ForgeId(u.id),definitionId:'g23-forge',placed:forgeCells&&Object.hasOwn(forgeCells,u.id)?forgeCells[u.id]:undefined,row:u.location.kind==='board'?Math.min(7,(team==='player'?u.location.cell.row:7-u.location.cell.row)+1):7,col:u.location.kind==='board'?u.location.cell.col:3}));

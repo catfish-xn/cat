@@ -1,4 +1,4 @@
-import {beforeAll,expect,it} from 'vitest';
+import {beforeAll,describe,expect,it} from 'vitest';
 import type {MatchState} from '../../src/simulation/match';
 import {createMatch,buyXp,deployMatchUnit,startMatchCombat,chooseG23Junker,sellUnit} from '../../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../../src/simulation/serialization';
@@ -7,14 +7,26 @@ import type {G23GrantEvidence} from '../../src/simulation/g2-3-grant-evidence';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
 import {publicPendingArmory} from '../fixtures/g2-3-armory-public';
 import {publicAcademyGrant} from '../fixtures/g2-3-academy-public';
+import {roundRouteCache} from '../fixtures/round-route-cache';
 let junker:MatchState,academy:MatchState;
+const armoryRoute=roundRouteCache(onRound=>publicPendingArmory(3,onRound));
+const academyRoute=roundRouteCache(onRound=>publicAcademyGrant(onRound));
+// Each case continues the same public route; a name-filtered case can build its missing prefix.
+for(const [name,route,lastRound] of [['armory',armoryRoute,27],['academy',academyRoute,24]] as const){
+ // A 300-tick case also bounds the expensive middle-stage cannon battles under load.
+ for(let round=1;round<=lastRound;round++)for(const tick of [300,600,900,1200,1201])it(`${name} public evidence route round ${round} through ${tick===1201?'settlement':`tick ${tick}`}`,async()=>{
+  await route.through(round-1+tick/1201);
+ });
+ it(`${name} public evidence route completes`,async()=>{await route.finish();});
+}
+describe('grant evidence at public route endpoints',()=>{
 beforeAll(async()=>{
- // Under v22 economy the seed-4 cannon route never buys Rumble before 6-7; seed 3 is the first that reaches the armory.
- const pending=await publicPendingArmory(3);
+ // Under v22 economy seed 3 reaches the armory through real Rumble purchases.
+ const pending=await armoryRoute.finish();
  const choice=chooseG23Junker(pending,pending.pendingChoice!.choiceId,'spare-parts');
  if(!choice.ok)throw Error(choice.reason);junker=choice.state;
- academy=await publicAcademyGrant();
-},30000);
+ academy=await academyRoute.finish();
+});
 const evidence=(s:MatchState)=>s.seatMechanics!.hidden.grantEvidence as G23GrantEvidence[];
 // Object, JSON and serializeMatch are all restore entries; each must reject the same save.
 const rejects=(s:MatchState,message?:string)=>{for(const input of [s,JSON.stringify(s)])expect(()=>restoreMatch(input)).toThrow(message);expect(()=>serializeMatch(s)).toThrow(message);};
@@ -107,4 +119,6 @@ it.each(['extra snapshot','identity','round','level','deployment collision'])('r
   else Object.assign(snapshot.units[1],{location:structuredClone(snapshot.units[0].location)});
   const before=JSON.stringify(bad);rejects(bad,'grant evidence');expect(JSON.stringify(bad)).toBe(before);
  }
+});
+
 });

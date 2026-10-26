@@ -1,3 +1,4 @@
+import { B4COMBAT_FIELDS } from './content/augment-pool-batch4-b4combat';
 import { S13_COMBAT_RULES } from './s13-rules';
 import { resolveStat, attackInterval } from './m8/stats';
 import type { Stat as M8Stat, StatModifier } from './m8/contracts';
@@ -13,12 +14,14 @@ const SOURCE_ORDER: Readonly<Record<SourceKind, number>> = {
   attack: -2, ability: -1, trait: 0, item: 1, augment: 2, anomaly: 3, enemyGrowth: 4,
 };
 const STAT_NAMES: readonly Stat[] = ['maxHp', 'attackDamage', 'armor', 'magicResist', 'initialMana', 'abilityAmount', 'abilityPower'];
-const MECHANICS = new Set(['d14Anomaly','d11Anomaly','d11Fill','s13P3','s13Anomaly','g23Junker','g23Experiment','quickstriker','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
-  'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'incomePolicy', 'acquisitionBundle', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance', 'g24Mirror', 'g24Trench', 'g24Collector', 'g24Gambler', 'g24Mogul','g24Zephyr']);
+const MECHANICS = new Set(['d14Anomaly','d11Anomaly','d11Fill','s13P3','s13Anomaly','g23Junker','g23Experiment','g23ExperimentClone','quickstriker','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
+  ...Object.keys(B4COMBAT_FIELDS), 'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionXp', 'acquisitionGold', 'incomePolicy', 'acquisitionBundle', 'traitAugmentB2', 'superstars', 'flexible', 'corrosion', 'blazingSoul', 'nobleSacrifice', 'wealthyRehab', 'badLuck', 'goldForDummies', 'towerDefense', 'towerDefenseLive', 'forming', 'magicRoll', 'heroCarry', 'heroCarryLive', 'g23Tactician', 'coronation', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance', 'g24Mirror', 'g24Trench', 'g24Collector', 'g24Gambler', 'g24Mogul','g24Zephyr']);
 const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   d14Anomaly:['enabled'],d11Anomaly:['enabled','priorKills'],d11Fill:['enabled'],
   s13P2Augment: ['enabled'], s13P2Anomaly: ['enabled'], s13P2ItemAugment: ['enabled'],
   s13Anomaly:['enabled'],
+  coronation:['enabled'],g23Tactician:['goldChanceBps','timerTicks'],
+  ...B4COMBAT_FIELDS,traitAugmentB2:['enabled','converted'],superstars:['baseBps','per3StarBps'],flexible:['healthPerEmblem'],corrosion:['resistLoss','periodTicks'],blazingSoul:['abilityPower','attackSpeedBps','periodTicks'],nobleSacrifice:['baseResists','shareBps'],wealthyRehab:['omnivampBps'],badLuck:['ratioBps'],goldForDummies:['periodTicks'],towerDefense:['apRatio1','apRatio2','apRatio3','upgrade1Stage','upgrade1AsBps','upgrade2Stage','upgrade2Bps'],towerDefenseLive:['apRatio','extraBps'],magicRoll:['health'],forming:['golem','healthBps','attackBps','healthPerStage'],heroCarry:['hero', 'manaReduction', 'hitBps', 'hits', 'omnivampBps', 'attackSpeedBps', 'dashAd1', 'dashAd2', 'dashAd3', 'dashAp1', 'dashAp2', 'dashAp3', 'dashRange', 'speedBps', 'speedTicks', 'permanentAdBps', 'mainBps', 'chargeBps', 'pounceRange', 'damageBps', 'splashBps', 'rangeBonus', 'attackMana', 'ampBps', 'overkillBps', 'near1', 'near2', 'near3'],heroCarryLive:['hero', 'star', 'manaReduction', 'hitBps', 'hits', 'omnivampBps', 'attackSpeedBps', 'dashAd', 'dashAp', 'dashRange', 'speedBps', 'speedTicks', 'permanentAdBps', 'mainBps', 'chargeBps', 'pounceRange', 'damageBps', 'splashBps', 'rangeBonus', 'attackMana', 'ampBps', 'overkillBps', 'near'],
   s13P3:['enabled','stage'],
   g24Zephyr:['durationTicks','allyAttackSpeedBps'],
   g24Fishbones:['rangeMultiplier'],
@@ -31,7 +34,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   v20Unlock:['enabled'],v20Teamup:['enabled'],v19Chainblade:['executeBps','pvp'],v19Garen:['healthBps'],formSwapper:['frontReductionBps','backAmpBps'],sisters:['adBps','speedBps','adTicks','speedTicks'],sistersUnlock:['enabled'],
   g24Gambler:['goldLimit','speedPerGoldBps'],
   g24Mogul:['stackCap','healthPerStack','resistPerStack','goldIntervalTicks'],
-  quickstriker:['minBps','maxBps','shield','durationTicks'],g23Experiment:['warwick','mundo','nunu','zyra','urgot','twitch'],visionary:['manaBps','allyHealingBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
+  quickstriker:['minBps','maxBps','shield','durationTicks'],g23Experiment:['warwick','mundo','nunu','zyra','urgot','twitch'],g23ExperimentClone:['healthBps','splitTick'],visionary:['manaBps','allyHealingBps'],g23Junker:['flame','rod','repair','death','tank','titan'],g23Sion:['tier'],g23Trait:['tier'], g23Anomaly:['enabled'],
   mentorship:['health', 'attackSpeedBps'],
   itemCollector:['baseHealth', 'healthPerItem', 'adBpsPerItem', 'apCentiPerItem'],
   backup:['minimum', 'attackSpeedBps'],
@@ -53,7 +56,7 @@ const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
   gargoyle: ['resistPerEnemy'], gunblade: ['selfHealBps', 'allyHealBps'], extraAttackMana: ['amount'], titanic: ['adBps', 'radius'],
   killStreak: ['mana'], bulkyBuddies: ['health', 'shieldMaxHpBps', 'durationTicks'], mageArmor: ['apBps'],
   glassCannon: ['startingHealthBps', 'damageAmpBps'], pumpingUp: ['attackSpeedBpsPerRound'], investment: ['healthPerInterest'],
-  damageAmp: ['bps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp'], acquisitionGold: ['amount','stage3Amount','stage4Amount'], lowCostAllies: ['count'],
+  damageAmp: ['bps'], acquisitionBundle:['enabled'], incomePolicy:['interestDisabled','interestCap','roundXp','roundGold'], acquisitionXp:['amount'], acquisitionGold: ['amount','stage3Amount','stage4Amount'], lowCostAllies: ['count'],
 };
 const HOOKS: readonly Hook[] = ['combatStart', 'onAttack', 'onCast', 'onHpLoss'];
 for(const name of ['v20Unlock','v20Teamup','v19Chainblade','v19Garen','formSwapper','sisters','sistersUnlock'])MECHANICS.add(name);
@@ -105,7 +108,7 @@ export function cloneEffect(effect: Effect): Effect {
     case 'mechanic': {
       if (!MECHANICS.has(effect.mechanic)) throw new RangeError('Unknown finite mechanic');
       const fields = MECHANIC_FIELDS[effect.mechanic];
-      if (fields.some(key => key!=='stage3Amount' && key!=='stage4Amount' && key!=='forcedPeriodTicks' && key!=='warwick' && !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
+      if (fields.some(key => key!=='converted' && key!=='roundGold' && key!=='stage3Amount' && key!=='stage4Amount' && key!=='forcedPeriodTicks' && key!=='warwick' && !Object.hasOwn(effect.values, key))) throw new RangeError('Missing mechanic parameter');
       if (Object.keys(effect.values).some(key => !fields.includes(key) && !['backRowOnly', 'buddyIndex'].includes(key))) throw new RangeError('Unknown mechanic parameter');
       for (const value of Object.values(effect.values)) integer(value);
       for (const key of ['everyN', 'periodTicks', 'durationTicks']) if (Object.hasOwn(effect.values, key)) integer(effect.values[key], 1);

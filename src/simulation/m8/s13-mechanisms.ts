@@ -1,3 +1,4 @@
+import { b4Vamp, overhealB4Combat } from '../augment-pool-batch4-b4combat';
 import { occupiesCell } from '../anomalies/availability';
 import { anomalyVamp } from '../anomalies/bonuses';
 import {scaleItemSummonHp} from '../g2-4b-summons';
@@ -9,7 +10,7 @@ import { selectTargets, startingRows, type TargetEnvironment } from './targeting
 import { targetingEnvironment } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference, S13Packet } from '../combat-s13-abilities';
-import { byDistance, enemies, origin, ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
+import { byDistance, enemies, origin, variable, ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
 import type { AmountSample } from './stats';
 import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safeNumber } from './stats';
 import type { AbilityTargeting, Effect, PeriodicTask, Source, StatusApplication, StatusContribution, SurvivalSample, TargetSelector } from './contracts';
@@ -338,7 +339,7 @@ export function settleSurvival(ctx: AbilityContext, before: readonly { id: strin
     executeMechanismEffect(ctx, holder, { ...definition.source, effectIndex: definition.source.effectIndex + index }, holder, effect, 0, index, sample);
 }
 export function vampRates(unit: S13Unit, hp: number): VampRate[] {
-  return [...(unit.definitionId==='warwick'&&(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>0&&(unit.sixCost?.frenzyUntil??0)>=(unit.mechanismState?.sampledAtTick??0))?[{source:asSource(origin(unit)),bps:1000+Math.floor((unit.ability.kind==='s13'?unit.ability.variables.Vamp:0)*ap(unit,unit.mechanismState?.sampledAtTick??0)/100),allyBps:0}]:[]),...anomalyVamp(unit), ...unit.mechanismDefinitions!.vamp.map(def => {
+  return [...b4Vamp(unit,unit.mechanismState?.sampledAtTick??0),...(unit.definitionId==='warwick'&&(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>0&&(unit.sixCost?.frenzyUntil??0)>=(unit.mechanismState?.sampledAtTick??0))?[{source:asSource(origin(unit)),bps:1000+Math.floor((unit.ability.kind==='s13'?unit.ability.variables.Vamp:0)*ap(unit,unit.mechanismState?.sampledAtTick??0)/100),allyBps:0}]:[]),...anomalyVamp(unit), ...(unit.g23Sion?.revived?[{source:asSource(origin(unit,3)),bps:Math.round(variable(unit,'PercentOmnivamp')*10000),allyBps:0}]:[]), ...unit.mechanismDefinitions!.vamp.map(def => {
     const sample = { holder: { id: unit.id, hp, maxHp: unit.maxHp } };
     return { source: def.source, bps: resolveStat('omnivamp', 0, [def.modifier], sample), allyBps: conditionHolds(def.allyCondition, sample) ? def.allyBps : 0, ...(def.damageTypes ? { damageTypes: def.damageTypes } : {}) };
   })];
@@ -349,6 +350,9 @@ export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['
   const request = entry.request ?? makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(entry.source)), entry.targetId, 'direct', ctx.heals.indexOf(entry)]), entry.targetId, 'direct', null,
     [{ source: asSource(entry.source), numerator: late, denominator: 1 }]);
   const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick), ctx.tick); target.hp += outcome.actual;
+  overhealB4Combat(ctx,target,outcome);
+  // Batch-3 Wealthy Rehab counts all healing its team receives; the save is authenticated by exact replay.
+  if (outcome.actual > 0 && target.mechanics?.some(m => m.mechanic === 'wealthyRehab')) target.batch2 = { ...target.batch2, healed: (target.batch2?.healed ?? 0) + outcome.actual };
   if (ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, healing: [...ctx.resolutionFacts.healing, outcome] };
   if (entry.periodic && (outcome.actual < outcome.afterWound || target.hp === target.maxHp)) clearPeriodicAccount(ctx, entry.periodic, target.id);
   ctx.events.push({ type: 'heal', tick: ctx.tick, outcome });

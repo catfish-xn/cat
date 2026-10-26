@@ -1,5 +1,7 @@
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import { combineItems, createMatch, buyUnit, rerollShop, deployMatchUnit, selectChoice, startMatchCombat, stepMatch, nextRound, sellUnit } from '../../src/simulation/match';
 import type { MatchState, MatchCommandResult } from '../../src/simulation/match-types';
+import { isAnvil } from '../../src/simulation/content/anvils';
 export function accepted(result:MatchCommandResult):MatchState { if(!result.ok) throw Error(result.reason); return result.state; }
 export function finish(state:MatchState):MatchState {
   state=accepted(startMatchCombat(state));
@@ -22,7 +24,8 @@ export function publicConsumables(seed=27566):MatchState {
         const result:MatchCommandResult=slot<0?rerollShop(state):buyUnit(state,slot,state.shop.generation);if(!result.ok)break;state=result.state;
       }
       for(const u of state.preparation.units.filter(u=>u.team==='player')){
-        if(u.location.kind==='board')continue;
+        // v23 fmix32 openings (seed 27566: component anvils) bench anvil units, which can never be fielded.
+        if(u.location.kind==='board'||isAnvil(u.definitionId))continue;
         const held=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');if(held.length>=state.level)break;
         const col=[3,2,4,1,5,0,6].find(col=>!held.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===7))!;
         state=accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col,row:7}}));
@@ -34,6 +37,6 @@ export function publicConsumables(seed=27566):MatchState {
   }
   const gloves=state.items.filter(i=>i.definitionId==='gloves'&&i.location.kind==='inventory');
   if(gloves.length>=2)state=accepted(combineItems(state,gloves[0].id,gloves[1].id));
-  while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;state=accepted(sellUnit(state,reserve.id));}
+  while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&isSellableUnit(u.definitionId)&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,reserve.id));}
   cached.set(seed,state);return structuredClone(state);
 }

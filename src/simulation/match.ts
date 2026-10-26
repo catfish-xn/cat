@@ -1,3 +1,6 @@
+import { drainBatch4Gold } from './augment-pool-batch4-progress';
+import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
+import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
 import { planOpenAnvil } from './anvils';
 export { grantAnvilUnit } from './anvils';
 export { anvilDisplay, ANVIL_POLICY } from './content/anvils';
@@ -7,8 +10,12 @@ export { readOpeningBatchBRewards } from './opening-batch-b-rewards';
 import { openingEncounterId } from './opening-encounter';
 import { growTrainerGolem } from './trainer-golems';
 import { enterOpeningCrabs } from './opening-crabs';
-import { choiceAcquisitionGold } from './choice-acquisition';
+import { choiceAcquisitionXp, choiceAcquisitionGold } from './choice-acquisition';
+import { outcomeAcquisitionXp } from './augment-pool-batch3-progress';
 import { drainSetup } from './setup-work';
+import { spendFreeReroll } from './free-rerolls';
+import { drainBatch3RoundEntry } from './augment-pool-batch3-progress';
+import { batch3EntryXp, xpPurchaseAmount, xpPurchaseCost, recordAcquisitionLevel, applyLevelUpHealth, applyAcquisitionHealthLoss } from './augment-xp';
 import { deferredRoundIncome, payPreviousRoundIncome } from './deferred-income';
 import { prepareBattleEquipment, installBattleEquipmentBatch } from './battle-equipment';
 
@@ -21,6 +28,7 @@ export { isMelBlessingCrossing, readOpeningMelProgress, applyWarwickHunger, crea
 export type { OpeningMelThresholdReceipt, OpeningMelProgress, OpeningForgeProgress, OpeningWarwickKillFact, OpeningEncounterId, OpeningEncounterContext, OpeningEncounterState, OpeningEncounterSelection, OpeningEncounterFailure, OpeningEncounterView, OpeningEffectFact, OpeningEffectReceipt } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { acquireD14, reconcileD14, eligibleD14Target } from './d14-runtime';
+import { pruneForgePositions } from './forge-positions';
 import { grantConsumableCopy } from './consumables';
 import { grantPveRemover } from './pve-remover';
 import {grantAnomalyAcquisition} from './anomaly-acquisition';
@@ -103,7 +111,7 @@ export { d14PublicUnitMark } from './d14-public-unit-mark';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
-  const d14Events:MatchEvent[]=[];state=reconcileD14(state,d14Events);events=[...events,...d14Events];
+  const d14Events:MatchEvent[]=[];state=pruneForgePositions(reconcileD14(state,d14Events));events=[...events,...d14Events];
   state=applyG23Radiant(state,new Set(events.flatMap(e=>e.type==='itemCombined'?[e.itemId]:[])));
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
@@ -358,19 +366,24 @@ export function setShopLock(state: MatchState, locked: boolean, expectedGenerati
 }
 export function rerollShop(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
-  if (state.gold < MATCH_RULES.rerollCost) return fail(state, 'insufficient-gold');
+  const spent = spendFreeReroll(state), cost = spent.free ? 0 : MATCH_RULES.rerollCost;
+  if (state.gold < cost) return fail(state, 'insufficient-gold');
   const generated = generateShop(state.rngState, state.shop.generation + 1, state.level, state.round, sixCostShopContext(state));
-  if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - MATCH_RULES.rerollCost)) return fail(state, 'insufficient-gold');
-  return accept({ ...state, gold: state.gold - MATCH_RULES.rerollCost, ...generated,
+  if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - cost)) return fail(state, 'insufficient-gold');
+  return accept({ ...spent.state, gold: state.gold - cost, ...generated,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
-export function buyXp(state: MatchState): MatchCommandResult {
+export function buyXp(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.level >= MATCH_RULES.maxLevel) return fail(state, 'max-level');
-  if (state.gold < MATCH_RULES.xpPurchaseCost) return fail(state, 'insufficient-gold');
-  if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - MATCH_RULES.xpPurchaseCost)) return fail(state, 'insufficient-gold');
-  const progression = grantXp(state.level, state.xp, MATCH_RULES.xpPurchaseAmount);
-  return accept({ ...state, gold: state.gold - MATCH_RULES.xpPurchaseCost, level: progression.level, xp: progression.xp });
+  const cost = xpPurchaseCost(state.augments, state.round);
+  if (state.gold < cost) return fail(state, 'insufficient-gold');
+  if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - cost)) return fail(state, 'insufficient-gold');
+  const progression = grantXp(state.level, state.xp, xpPurchaseAmount(state.augments, state.round));
+  const leveled=applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp });
+  if(leveled.level===state.level||!state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]))return accept(leveled);
+  const gifted=isCombatRosterLocked(leveled)?drainBatch4Gold(leveled):drainP2Gifts(leveled,unitLootPolicy);
+  return accept(gifted,mechanicGrantEvents(leveled,gifted));
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
@@ -390,6 +403,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   const survivingEnemyCount = combat?.units.filter(unit => countsG23SurvivorDamage(unit) && unit.team === 'enemy').length ?? 0;
   let plan = resolveRoundEconomy({ augments:state.augments, roundId, result: combat?.result ?? null, gold: state.gold,
     streak: state.streak, level: state.level, xp: state.xp, hp: state.playerHp, enemySurvivors: survivingEnemyCount });
+  plan=withBatch4B4xp(state,plan,batch4B4xpSettlementXp(state));
   const facts=combat?g23SoloFacts(state,combat):undefined,saved=melCanSave(state,facts,plan.hpAfter);
   if(saved)plan={...plan,hpAfter:1,hpLost:state.playerHp-1};
   const growth = new Map(state.persistentGrowth.map(entry => [entry.unitId, entry.attackDamageBps]));
@@ -409,6 +423,8 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
     augmentProgress: {
       pumpingRounds: state.augmentProgress.pumpingRounds + (state.augments.some(a => a.definitionId === 'pumping-up-i') ? 1 : 0),
       investmentHp: state.augmentProgress.investmentHp,
+      ...(state.augmentProgress.forming ? { forming: state.augmentProgress.forming } : {}),
+      ...(state.augmentProgress.magicRoll ? { magicRoll: state.augmentProgress.magicRoll } : {}),
     },
     roundResults: [...state.roundResults, { round: state.round, roundId, settlementId: `round-${state.round}-settled`, roundKind,
       result: combat?.result ?? 'supply', combatTicks: combat?.tick ?? 0, combatEventCount:combat?.nextEventSeq??0,
@@ -419,8 +435,11 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       levelBefore: state.level, levelAfter: plan.progression.level, xpBefore: state.xp, xpAfter: plan.progression.xp,
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
-  const committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
-  return commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed,hookEvents);
+  let committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
+  if(!combat&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])){
+    const gifted=drainP2Gifts(committed,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(committed,gifted));committed=gifted;
+  }
+  return applyLevelUpHealth(state,commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed,hookEvents));
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)
@@ -451,7 +470,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   }
   const equipment=planTemporaryEquipment(state); events.push(...equipment.events);
   const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy,events));
-  let settled=reconcileD14(settledPlan.state,events); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
+  let settled=pruneForgePositions(reconcileD14(settledPlan.state,events)); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
     const forfeited=forfeitUnclaimedOrbs(settled); return {state:forfeited.state,events:[...events,...forfeited.events]};
@@ -558,7 +577,8 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
-  const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
+  const entryLevel = state.level;
+  const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,round));
   state={...state,level:progression.level,xp:progression.xp};
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
@@ -569,7 +589,8 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const openingEvents: MatchEvent[] = [];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
-  prepared=applied.state;openingEvents.push(...applied.events);
+  // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
+  prepared=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,prepared));
   if (prepared.phase === 'gameOver') {
     const terminal = stampMatchEvents(prepared, carousel.events);
     return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
@@ -599,7 +620,8 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
-    const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp);
+    const entryLevel=state.level;
+    const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};
     const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
       : generateShop(state.rngState, state.shop.generation + 1, state.level, definition.ordinal, sixCostShopContext(state));
@@ -607,7 +629,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
-    const accepted=acceptEquipment(applied.state,[]);
+    const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state)),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
@@ -622,7 +644,8 @@ export function useConsumable(state:MatchState,consumableId:string,target:Consum
   const used={...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
     {kind:'consumable-used',record:plan.record,...(state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {})})};
   const copied=grantConsumableCopy(used,plan.record);
-  return acceptEquipment(copied.state,[...plan.events,...copied.events]);
+  const gifted=copied.state.augments.some(a=>a.definitionId==='why-not-both')&&copied.state.phase!=='combat'&&!isCombatRosterLocked(copied.state)?drainP2Gifts(copied.state):copied.state;
+  return acceptEquipment(gifted,[...plan.events,...copied.events,...mechanicGrantEvents(copied.state,gifted)]);
 }
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
   const preview = previewCombine(state, aId, bId);
@@ -875,15 +898,20 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? choiceAcquisitionGold((choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId], state.round) : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
-  let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold,
+  const acquisitionProgress = grantXp(state.level,state.xp,choice.kind==='augment'?choiceAcquisitionXp(AUGMENT_DEFINITIONS[definitionId])+outcomeAcquisitionXp(state,{definitionId,choiceId,acquiredRound:state.round}):0);
+  let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold, level:acquisitionProgress.level, xp:acquisitionProgress.xp,
     scheduleReceipts: [...state.scheduleReceipts, receipt],
     resourceProvenance:itemId?appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'item-acquired',itemId,source:{kind:'schedule',eventId:choice.eventId}}):state.resourceProvenance,
     items: granted?.ok ? granted.state.items : state.items,
     nextItemSerial: granted?.ok ? granted.state.nextItemSerial : state.nextItemSerial,
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
+  selected = applyLevelUpHealth(state, selected);
+  if (choice.kind === 'augment') selected = applyAcquisitionHealthLoss(selected, selected.augments.at(-1)!);
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
   if(choice.kind==='augment'){
+    if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
+    selected=recordAcquisitionLevel(selected,selected.augments.at(-1)!);
     const gifted=drainP2Gifts(selected,unitLootPolicy);
     events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;
   }

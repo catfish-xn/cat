@@ -30,8 +30,11 @@ const priorFacts:ReturnType<typeof bounceFacts>=[];
 let captured:MatchState|undefined;
 const stop=new Error('captured genuine 3-7 preparation');
 // v22: seed 49 draws the scuttle-crab opening (crabs carry the 3-7 wolf orbs) and no longer reaches Radiant
-// Relics. Seed 2279 has no opening encounter, two paid 1-star Tristanas with prior growth, and a 3-7 Tristana reward.
-try { await run(api,{seed:2279,build:'cannon',supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
+// Relics. v22's seed 2279 draws Artifact Anvil under v23 fmix32; seed 6019 has no opening encounter, two paid
+// 1-star Tristanas with prior growth, a real Giant Slayer and Gargoyle Stoneplate, and a 3-7 Tristana reward.
+// Explicit All for One II keeps the original three parent-overkill growth events on the 224-card pool.
+try { await run(api,{seed:6019,build:'cannon',augmentPriorities:['all-for-one-ii'],supplyChoices:['sword','bow'],reservedComponents:['sword','bow'],equipmentTargets:{'giant-slayer':{definitionId:'irelia'}},copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
+ if(command?.type==='select'&&before.roundDefinitionId==='2-1'&&before.pendingChoice?.kind==='augment'){expect(before.pendingChoice.offers).toContain('all-for-one-ii');expect(command.definitionId).toBe('all-for-one-ii');}
  if(command?.type==='start'&&before.roundDefinitionId==='3-7'){captured=before;throw stop;}
  if('events' in result)priorFacts.push(...bounceFacts(before,result.state,result.events));
 }}); }catch(error){if(error!==stop)throw error;}
@@ -69,7 +72,7 @@ const live = {...result,revealed:result.revealed,selected:result.ended};
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 const currentCommit=(s:MatchState)=>s.resourceProvenance.entries.find((e):e is Extract<ResourceProvenanceEntry,{kind:'combat-growth-committed'}>=>e.kind==='combat-growth-committed'&&e.combatId==='round-17')!;
 describe('B8 live growth plus immediate randomized loot merge',()=>{
- it('pins real v22 seed2279 prior stock and original-source current delta independently',()=>{
+ it('pins real v23 seed6019 prior stock and original-source current delta independently',()=>{
   expect(prepared.persistentGrowth).toEqual(priorBySource);
   const totals=new Map<string,number>();
   expect(live.events.filter(e=>e.type==='growth')).toEqual(currentFacts.map(f=>{const total=(totals.get(f.unitId)??0)+GAIN;totals.set(f.unitId,total);return {...f,totalBps:total};}));

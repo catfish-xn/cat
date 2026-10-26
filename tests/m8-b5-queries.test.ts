@@ -7,6 +7,8 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
 import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
 import { publicInventory } from './fixtures/b8-public-acquisition';
+import { isSellableUnit } from '../src/simulation/seat-mechanics/forms';
+import { isAnvil } from '../src/simulation/content/anvils';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -97,19 +99,21 @@ describe('B5 shared command previews and read-only equipment', () => {
     // Keep the full seven-item matrix above; split its independent ordinary and
     // exclusive holder views so no artificial component supply is introduced.
     const tg = publicInventory(['thiefs-gloves', 'sword']);
-    const tgState = freeze(accepted(equipItem(tg.state, tg.itemIds[0], 'unit-2', 2))), tgBefore = JSON.stringify(tgState);
+    // v23 fmix32 openings: the route's unit-2 can be an Artifact Anvil or Trainer Golem; hold TG on the next real hero.
+    const tgHolder = tg.state.preparation.units.find(u => u.team === 'player' && u.id !== 'unit-1' && isSellableUnit(u.definitionId) && !isAnvil(u.definitionId))!.id;
+    const tgState = freeze(accepted(equipItem(tg.state, tg.itemIds[0], tgHolder, 2))), tgBefore = JSON.stringify(tgState);
     expect(readUnitEquipment(tgState, 'missing')).toBeNull();
-    expect(readUnitEquipment(tgState, 'unit-2')).toEqual({ unitId: 'unit-2', slots: [
+    expect(readUnitEquipment(tgState, tgHolder)).toEqual({ unitId: tgHolder, slots: [
       { slot: 0, itemInstanceId: tg.itemIds[0], reservedByItemInstanceId: null },
       { slot: 1, itemInstanceId: null, reservedByItemInstanceId: tg.itemIds[0] },
       { slot: 2, itemInstanceId: null, reservedByItemInstanceId: tg.itemIds[0] },
-    ], temporaryItems: tgState.temporaryEquipment.filter(item => item.holderId === 'unit-2') });
+    ], temporaryItems: tgState.temporaryEquipment.filter(item => item.holderId === tgHolder) });
     const restored = restoreMatch(serializeMatch(tgState));
-    expect(readUnitEquipment(restored, 'unit-2')).toEqual(readUnitEquipment(tgState, 'unit-2'));
-    const temporaryView = readUnitEquipment(tgState, 'unit-2')!;
+    expect(readUnitEquipment(restored, tgHolder)).toEqual(readUnitEquipment(tgState, tgHolder));
+    const temporaryView = readUnitEquipment(tgState, tgHolder)!;
     Object.assign(temporaryView.slots[1], { reservedByItemInstanceId: 'tampered' });
     Object.assign(temporaryView.temporaryItems[0], { definitionId: 'tampered' });
-    for (let i = 0; i < 10; i++) { readItemCatalog(); readUnitEquipment(tgState, 'unit-2'); previewEquip(tgState, tg.itemIds[1], 'unit-3', 0); }
+    for (let i = 0; i < 10; i++) { readItemCatalog(); readUnitEquipment(tgState, tgHolder); previewEquip(tgState, tg.itemIds[1], 'unit-3', 0); }
     expect(JSON.stringify(tgState)).toBe(tgBefore);
     const ordinary = publicInventory(['blue-buff', 'vest']);
     let ordinaryState = accepted(equipItem(ordinary.state, ordinary.itemIds[0], 'unit-1', 0));

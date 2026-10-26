@@ -14,7 +14,7 @@ import { projectG23Summons } from './g2-3-summons';
 import { DEFAULT_BOARD, type Team } from './board';
 import { canonicalContent, canonicalContentSteps, digestContent } from './content';
 import { createScopedContentFreezer, freezeContent, freezeContentSteps } from './content/freeze';
-import { buildStrategySnapshotSteps } from './strategy-snapshot';
+import { buildStrategySnapshotSteps, enforcerConfiscates } from './strategy-snapshot';
 import { createCombatWithEvents, createCombatWithEventsSteps, stepCombat, type CombatState, type CombatStep } from './combat';
 import { toLedgerEvents } from './combat-ledger';
 import { effectKey } from './effects';
@@ -40,7 +40,7 @@ function* normalizedSteps(value: PlayerBattleSnapshot): Generator<void, PlayerBa
 function compileSide(s: PlayerBattleSnapshot, team: Team) {
   return drainSetup(compileSideSteps(s, team));
 }
-function* compileSideSteps(s: PlayerBattleSnapshot, team: Team) {
+function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = false) {
   const mapping: BattleIdMapping[] = [];
   const map = (kind: BattleIdMapping['kind'], originalId: string) => {
     const combatId = localId(s.seatId, kind, originalId);
@@ -63,7 +63,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team) {
     persistentGrowth:s.persistentGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)})), augmentProgress:s.augmentProgress,
   };
   let compiled: StrategySnapshot;
-  try { compiled = yield* buildStrategySnapshotSteps(inputs); }
+  try { compiled = yield* buildStrategySnapshotSteps(inputs, undefined, undefined, undefined, confiscated ? ['player'] : []); }
   catch { throw new BattleValidationError('invalid-snapshot'); }
   // Trait instances also get a seat namespace (unit owners were already isolated).
   const source = (value: EffectSource): EffectSource => value.sourceKind === 'trait'
@@ -101,10 +101,14 @@ export function* compileBattleSteps(a: PlayerBattleSnapshot, b: PlayerBattleSnap
   if (typeof battleId !== 'string' || battleId.length === 0) throw new BattleValidationError('invalid-battle-id');
   const mirrorOfSeatId = identity?.mirrorOfSeatId ?? null;
   if (mirrorOfSeatId !== null && mirrorOfSeatId !== right.seatId) throw new BattleValidationError('invalid-mirror');
-  const x = yield* compileSideSteps(left,'player');
+  let x = yield* compileSideSteps(left,'player');
   yield;
-  const y = yield* compileSideSteps(right,'enemy');
+  let y = yield* compileSideSteps(right,'enemy');
   yield;
+  // Enforcer 10 needs the opposing roster: each side's traits do not depend on its items being confiscated (emblems stay).
+  const confiscateLeft = enforcerConfiscates(y.strategy.traits,'player'), confiscateRight = enforcerConfiscates(x.strategy.traits,'enemy');
+  if (confiscateLeft) { x = yield* compileSideSteps(left,'player',true); yield; }
+  if (confiscateRight) { y = yield* compileSideSteps(right,'enemy',true); yield; }
   // Restored snapshots are detached and deeply frozen; compilation owns every
   // new record. Re-cloning this entire derived graph would only copy owned data.
   return yield* freezeContentSteps({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
@@ -182,13 +186,13 @@ function validateDynamicResult(result:BattleResult):void {
   if (result.initial.equipmentReceipts || result.initial.pendingEquipment || result.terminal.pendingEquipment
     || result.terminal.units.some(u => u.equipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
-  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
+  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
   if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null||!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
   if(!enabled){
-    if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'))throw new BattleValidationError('invalid-result');
+    if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');
     return;
   }
-  if(result.initial.tick!==0||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench')
+  if(result.initial.tick!==0||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment')
     ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>MAX_COMBAT_TICKS)throw new BattleValidationError('invalid-result');
   let expected=structuredClone(result.initial);
   let bankCursor=0;

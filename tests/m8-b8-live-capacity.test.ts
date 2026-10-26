@@ -4,17 +4,14 @@ import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {getUnitSellPrice} from '../src/simulation/unit-stats';
-import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
+import {accepted,advanceTerminalRoute,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-// v22: seed 10 draws the crab-rave opening (crabs carry the wolf orbs); seed 2412 has no opening
-// encounter and keeps a lone Zeri hero sharing an orb, four components and a full bench.
-const prefix=fillBench(await publicPrefix('3-7',2412,'cannon',['bulky-buddies-i']),['zeri']);
-// v15's expanded augment pool changes the real combat program. Two public
-// moves retain the merged exact reveal-117 / final-137 boundary and resources.
-const moved=accepted(api.deployMatchUnit(prefix,prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId==='urgot')!.id,{kind:'board',cell:{col:4,row:7}}));
-const prepared=accepted(api.deployMatchUnit(moved,'unit-1',{kind:'board',cell:{col:3,row:4}}));
+// Seed3155 has no opening encounter, a lone Akali reward sharing an orb, four components and a full bench.
+// The 224-card pool selects Family Crest + Backup. The independent driver ledger checks each paid command:
+// the actual reserve banks16G; first reveal/final ticks61/91 are recorded public-combat checkpoints, not rule constants.
+const prepared=fillBench(await publicPrefix('3-7',3155,'cannon',['bulky-buddies-i']),['akali']);
 const live=battle(prepared),waiting=live.ended;
 const hero=plan(prepared).encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 const soldUnit=bench(waiting).find(u=>!waiting.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
@@ -24,10 +21,11 @@ function reject(s:MatchState,message:string,change:(s:any)=>void){const saved=se
 const soldResult=command(waiting,s=>api.sellUnit(s,soldUnit.id)),sold=accepted(soldResult);
 describe('B8 live full-bench settlement and exact command resumption',()=>{
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
-  expect(prepared.gold).toBe(19);expect(bench(prepared)).toHaveLength(9);
-  expect(hero.payload).toEqual({kind:'unit',definitionId:'zeri',quantity:1});
+  expect(prepared.augments.map(a=>a.definitionId)).toEqual(['family-crest','backup']);
+  expect(prepared.gold).toBe(16);expect(bench(prepared)).toHaveLength(9);
+  expect(hero.payload).toEqual({kind:'unit',definitionId:'akali',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(50);expect(waiting.combat!.tick).toBe(85);
+  expect(live.revealed!.combat!.tick).toBe(61);expect(waiting.combat!.tick).toBe(91);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);
@@ -68,10 +66,17 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
   ] as const)reject(sold,message,change);
  });
 });
-// The lethal cases share the same full public campaign prefix.
-beforeAll(async () => { await terminalPreparation('loris', 1); });
+// The lethal cases share the same full public campaign prefix to the 4-7 start. It is played one battle per case
+// (no hook replays the whole campaign under CI load); a filtered lethal case plays it in its hook instead.
+describe('B8 lethal PvE public campaign',()=>{
+ for(let round=1;round<24;round++)it(`plays the public terminal campaign through round ${round}`,async()=>{await advanceTerminalRoute(round);});
+});
 describe('B8 live lethal PvE with randomized orbs',()=>{
- it.each([{name:'two killed carriers',keep:'loris',col:0,row:7,deaths:2,earned:true},{name:'only orb carrier killed',keep:'urgot',col:0,row:4,deaths:1,earned:true},{name:'no carrier killed',keep:null,col:1,row:7,deaths:0,earned:false}])('$name: strict terminal restore cannot resurrect unearned loot',async scenario=>{
+ beforeAll(async () => { await terminalPreparation('loris', 1); });
+ // Seed 2253's terminal 4-7 after the xp/batch-3 merge: its new augments (blinding-speed) let a lone Loris at (0,7)
+// clear all six razorbeaks, so the two-carrier case keeps Leona there instead (was Loris): it kills the same
+// r01 rod and r02 reforger/gold carriers the pre-merge Loris did, then dies at 3 HP.
+it.each([{name:'two killed carriers',keep:'leona',col:0,row:7,deaths:2,earned:true},{name:'only orb carrier killed',keep:'urgot',col:0,row:4,deaths:1,earned:true},{name:'no carrier killed',keep:null,col:1,row:7,deaths:0,earned:false}])('$name: strict terminal restore cannot resurrect unearned loot',async scenario=>{
   const preparation=await terminalPreparation(scenario.keep,scenario.col,scenario.row),l=battle(preparation),s=l.ended;
   expect(preparation.playerHp).toBe(3);expect(preparation.roundResults.reduce((n,r)=>n+r.hpLost,0)).toBe(97);
   expect(s.phase).toBe('gameOver');expect(s.outcome).toBe('defeat');expect(s.playerHp).toBe(0);

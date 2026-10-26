@@ -6,6 +6,8 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { transferUpgradeResources } from '../src/simulation/upgrades';
 import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
 import { publicInventory } from './fixtures/b8-public-acquisition';
+import { isSellableUnit } from '../src/simulation/seat-mechanics/forms';
+import { isAnvil } from '../src/simulation/content/anvils';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -50,7 +52,9 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     const legal = publicInventory([definitionId, definitionId], false, definitionId === 'blue-buff' ? 3 : undefined);
     const equipped = accepted(equipItem(legal.state, legal.itemIds[0], 'unit-1', 0));
     rejected(equipped, s => equipItem(s, legal.itemIds[1], 'unit-1', 1), 'unique-conflict');
-    const control = accepted(equipItem(equipped, legal.itemIds[1], 'unit-2', 2));
+    // v23 fmix32 openings: the route's unit-2 can be an Artifact Anvil or Trainer Golem; use the next real hero.
+    const other = legal.state.preparation.units.find(u => u.team === 'player' && u.id !== 'unit-1' && isSellableUnit(u.definitionId) && !isAnvil(u.definitionId))!.id;
+    const control = accepted(equipItem(equipped, legal.itemIds[1], other, 2));
     expect(restoreMatch(serializeMatch(control))).toEqual(control);
   });
   it('allows three nonunique copies but refuses a fourth without spending resources or event IDs', () => {

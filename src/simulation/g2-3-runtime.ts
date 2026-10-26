@@ -1,3 +1,5 @@
+import { drainBatch2Gold } from './augment-pool-batch2-progress';
+import { batch2Values } from './content/augment-pool-batch2';
 import { grantAnvilUnit } from './anvils';
 import {recordG23GrantEvidence} from './g2-3-grant-evidence';
 import {drainP2Gifts} from './s13-augments-p2-grants';
@@ -23,8 +25,6 @@ export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,
  if(!p||!bundle||!atom||atom.kind==='item'&&atom.options.length>1&&!atom.forgeDefinitionId)return {ok:false,state,reason:'stale-choice'};
  const copy=p.rewardClaims.filter(c=>c.atomId===atom.id).length;
  if(copy>=atom.quantity||atom.kind!=='gold'&&!(atom.forgeDefinitionId?definitionId===atom.forgeDefinitionId:atom.options.includes(definitionId))||atom.kind==='gold'&&definitionId!=='')return {ok:false,state,reason:'stale-choice'};
- if(atom.duplicatorDefinitionId==='TFT13_Crime_Consumable_LesserShimmerDuplicator'
-   &&!state.preparation.units.some(u=>u.team==='player'&&u.definitionId===definitionId))return {ok:false,state,reason:'stale-choice'};
  const request={receiptId:`${atom.id}:copy:${copy}`,source:bundle.source,definitionId,...(bundle.source==='family'?{immediate:true}:{}),...(atom.starLevel?{starLevel:atom.starLevel}:{})};
  if(atom.kind==='tool'){
   const consumableId=`consumable-${state.nextConsumableSerial}`;
@@ -87,6 +87,7 @@ export function finishG23Choice(before:MatchState,after:MatchState,optionId:stri
  }
  if(choice.kind==='blackMarket'&&p.chem.offer?.id===choice.choiceId){
   const next=writeG23Progress(after,decideG23Market(p,choice.choiceId,optionId!=='@skip',before.round,optionId));
+  if(optionId==='@skip'&&before.augments.some(a=>a.definitionId==='crimson-pact'))return drainBatch2Gold({...next,playerHp:Math.min(100,next.playerHp+batch2Values('crimson-pact').Heal)});
   return next;
  }
  return after;

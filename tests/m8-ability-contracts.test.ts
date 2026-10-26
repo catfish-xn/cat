@@ -12,7 +12,7 @@ const encoded = (name: Champion) => JSON.stringify(abilityPlans[name]);
 
 describe('all existing champion mechanisms remain representable (data contracts only)', () => {
   it('covers the nineteen historical plan contracts and expanded 70-entry ability roster exactly', () => {
-    expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual([...G2_HERO_IDS,'elise-ranged','swain-ranged','gangplank-ranged','jayce-ranged','g23-sion','g23-forge','g24-voidspawn','s13-crab','s13-wolf','s13-mini'].map(id => `${id}-ability`).sort());
+    expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual([...G2_HERO_IDS,'elise-ranged','swain-ranged','gangplank-ranged','jayce-ranged','g23-sion','g23-forge','g24-voidspawn','s13-crab','s13-wolf','s13-mini','training-dummy','tower-dummy'].map(id => `${id}-ability`).sort());
     expect(Object.keys(G24_VOIDSPAWN_ABILITIES)).toEqual(['g24-voidspawn-ability']);
     expect(S13_ABILITY_DATA['g24-voidspawn-ability']).toEqual(G24_VOIDSPAWN_ABILITIES['g24-voidspawn-ability']);
     expect(Object.keys(abilityPlans)).toHaveLength(19);

@@ -2,7 +2,7 @@ import { G24_FORGE_POLICY } from '../src/simulation/content/g2-4-forges';
 // Offline recomputation of the original full digest root; keep its coverage unchanged.
 import { EPIC_LOOT } from '../src/simulation/content/loot';
 import { SHOP_CATALOG_BY_COST } from '../src/simulation/match-rules';
-import { RULES_GAP_MANIFEST } from '../src/simulation/content/rules-manifest';
+import { RULES_GAP_MANIFEST } from './augment-content-archive';
 import { LOOT_FREEZE_ALGORITHM, ORB_BOXES, LOOT_POLICY_VERSION } from '../src/simulation/content/loot';
 import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from '../src/simulation/content/neutral-encounters';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';

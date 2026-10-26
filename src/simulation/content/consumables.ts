@@ -9,7 +9,11 @@ export const CONSUMABLE_DEFINITIONS = freezeContent({
   reforger:{id:'reforger',apiName:'TFT_Consumable_ItemReroller',effect:'reforge-all',target:'unit',targetKind:'unit',name:'装备重铸器',description:'拆下己方单位全部永久装备，每件随机重铸为同类别的另一件并放入库存；无其他候选则原样退回。'},
   TFT_Consumable_ChampionDuplicator_III:{id:'TFT_Consumable_ChampionDuplicator_III',apiName:'TFT_Consumable_ChampionDuplicator_III',effect:'duplicate-unit',target:'unit',targetKind:'unit',name:'次级英雄复制器',maxCost:3,description:'复制一名己方至多3费英雄，获得一张1星英雄；无空位时不消耗。'},
   TFT_Consumable_NeekosHelp:{id:'TFT_Consumable_NeekosHelp',apiName:'TFT_Consumable_NeekosHelp',effect:'duplicate-unit',target:'unit',targetKind:'unit',name:'英雄复制器',maxCost:null,description:'复制一名己方任意费用英雄，获得一张1星英雄；无空位时不消耗。'},
+  // 14.24: "Use on a 3 cost or lower Chem-Baron to create a 1-star copy of them" (black-market reward; P 2026-10-25).
+  TFT13_Crime_Consumable_LesserShimmerDuplicator:{id:'TFT13_Crime_Consumable_LesserShimmerDuplicator',apiName:'TFT13_Crime_Consumable_LesserShimmerDuplicator',effect:'duplicate-unit',target:'unit',targetKind:'unit',name:'次级微光复制器',maxCost:3,traitId:'chem-baron',description:'用在一名3费及以下的己方炼金男爵身上，获得一张该弈子的1星复制品；无空位时不消耗。'},
 } as const);
+/** The trait a duplicate-unit tool's target must carry (null: any hero). */
+export const consumableTraitId=(definition:(typeof CONSUMABLE_DEFINITIONS)[keyof typeof CONSUMABLE_DEFINITIONS]):string|null=>'traitId' in definition?definition.traitId:null;
 export const CONSUMABLE_RULES = freezeContent({version:'s13-consumables-project-v16',reforge:'s13-reforge-all-v16',seedXor:0x52454647,
   phases:['preparation','combat','choice','settlement'],excludeOriginal:true,destination:'inventory',quantity:1,
   remover:'all-permanent-original-ids',currentBattle:false,

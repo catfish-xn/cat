@@ -156,7 +156,13 @@ describe('PR6 Mel threshold observation (reward enabled by batch A)',()=>{
     expect(applyRoundSettlement(state,{...r,settlementEligible:false})).toMatchObject({ok:false,state,reason:'mirror-settlement'});
     const result=applyRoundSettlement(state,r),settled=accepted(result);
     expect(settled.playerHp).toBe(39);expect(receipts(settled)).toHaveLength(1);
-    expect(result.ok&&result.events.map(e=>e.type)).toEqual(['roundSettled','openingEffectApplied','openingRewardResolved','mechanicGranted']);
+    // The rolled Mel reward decides the tail: a seat mechanic grant emits mechanicGranted, an all-orb reward does not.
+    // v23 seed 21 (first mels-blessing seed) rolls two Thief's Gloves: both arrive as gray orbs, no seat mechanic grant.
+    expect(melSeed).toBe(21);
+    expect(openingRewardAtoms(settled).map(a=>a.payload)).toEqual([{kind:'item',definitionId:'thiefs-gloves',quantity:1},{kind:'item',definitionId:'thiefs-gloves',quantity:1}]);
+    expect(openingRewardOrbs(settled).map(o=>[o.orbId,o.tier,o.source])).toEqual(openingRewardAtoms(settled).map(a=>[a.id,'gray','mechanic']));
+    expect((settled.seatMechanics?.receipts??[]).filter(r=>r.source===BATCH_SOURCE)).toEqual([]);
+    expect(result.ok&&result.events.map(e=>e.type)).toEqual(['roundSettled','openingEffectApplied','openingRewardResolved']);
     expectMelRewardIssued(settled);
     for(const key of ['rngState','choiceRngState','rewardRngState','battleSeedRngState','equipmentState'] as const)
       expect(settled[key]).toEqual(state[key]);
@@ -240,7 +246,9 @@ describe('PR6 Mel threshold observation (reward enabled by batch A)',()=>{
     while(receipts(state).length===0 && steps++<200) {
       previous=state;
       if(state.phase==='choice') {
-        const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
+        const c=state.pendingChoice!;
+        const id=c.offers.find(id=>!['clear-mind','cluttered-mind','slammin','slammin-plus','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii'].includes(id))!;
+        expect(id).toBeDefined();state=accepted(selectChoice(state,c.choiceId,c.generation,id));
       } else if(state.phase==='preparation') state=accepted(startMatchCombat(state));
       else if(state.phase==='combat') state=stepMatch(state).state;
       else state=accepted(nextRound(state,state.round));

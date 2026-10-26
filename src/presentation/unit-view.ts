@@ -14,14 +14,20 @@ import { championPortraitKey, itemTextureKey, requestItemTexture } from './s13-a
 import { drawStatusIcons, statusIconY, statusIcons, type IconPen } from './status-icons';
 import { reducedMotion } from './preferences';
 import { NO_GEAR_EXTRAS, type GearExtras } from './equipment-feedback';
+import { DISPLACEMENT_SLIDE_2D, KNOCKUP_2D, knockupLift, type ControlKind } from './control-display';
+import { anvilIconUrl, isAnvilUnit } from './anvil-display';
 
 export const PIECE_RADIUS = 27;
+/** v22 anvil piece: icon size and disc colour (dark forge bronze). */
+const ANVIL_ICON = 38, ANVIL_DISC = 0x2a2118;
+const anvilTextureKey = (definitionId: string) => `s13-anvil-${definitionId}`;
 const C = THEME.color;
 export type RingState = 'normal' | 'selected' | 'target';
 /** Worn item icons: a row centred under the piece, over its lower rim (TFT style). */
 const ITEM_ICON = 16, ITEM_Y = 32;
 /** Cheap motion (presentation only): idle bob, attack lunge, hit flash/shake. */
 const BOB_PX = 1.8, BOB_PERIOD_MS = 520, LUNGE_MS = 180, HIT_MS = 200;
+const SHADOW_FLAT = 0.35;
 export interface MeterData { value: number; maxValue: number; ratio: number; width: number }
 
 export class UnitView {
@@ -35,6 +41,16 @@ export class UnitView {
   private lungeAt = -Infinity;
   private lunge = { x: 0, y: 0 };
   private hitAt = -Infinity;
+  /** Crowd control drawn now (control-display.ts): stunned pieces stop bobbing, knocked-up ones rise off a shadow. */
+  private controlKind: ControlKind | null = null;
+  private airborneAt: number | null = null;
+  private landedAt: number | null = null;
+  private landFrom = 0;
+  /** Forced skid (pull/grab/knockback): when it started and its lean sign (-1 left, 1 right). */
+  private slideAt = -Infinity;
+  private slideLean = 0;
+  /** Ground shadow under a knocked-up piece; outside `body`, so it stays on the cell. */
+  private readonly shadow: Phaser.GameObjects.Arc;
   readonly disc: Phaser.GameObjects.Arc;
   readonly hp: Phaser.GameObjects.Graphics;
   readonly mana: Phaser.GameObjects.Graphics;
@@ -55,6 +71,8 @@ export class UnitView {
   private portrait: Phaser.GameObjects.Image | null = null;
   private identity: HeroIdentity;
   private renderKey = '';
+  /** The unit and star of the last redraw, for a redraw when an anvil icon finishes loading. */
+  private lastDrawn: { readonly unit: Unit; readonly star: number } | null = null;
   /** Item definition ids whose pips are drawn now, in slot order (debug/acceptance read). */
   equipped: readonly string[] = [];
   /** Item definition ids worn for the next battle only (C18 tag; debug/acceptance read). */
@@ -86,7 +104,9 @@ export class UnitView {
       children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));
     }
     this.body = add.container(0, 0, children);
-    this.token = add.container(x, y, [this.body]).setSize(58, 58).setName(`unit:${unit.id}`);
+    // A flattened circle (the trimmed Phaser build has no Ellipse).
+    this.shadow = add.circle(0, PIECE_RADIUS * 0.55, PIECE_RADIUS * 0.85, 0x000000, 0.35).setScale(1, SHADOW_FLAT).setVisible(false);
+    this.token = add.container(x, y, [this.shadow, this.body]).setSize(58, 58).setName(`unit:${unit.id}`);
     this.bobPhase = [...unit.id].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 7;
     this.token.setData('unitId', unit.id);
     for (const meter of [this.hp, this.mana, this.shield]) meter.setData({ value: 0, maxValue: 0, ratio: 0, width: 0 });
@@ -106,29 +126,46 @@ export class UnitView {
   update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], extras: GearExtras = NO_GEAR_EXTRAS, star: number = unit.starLevel): void {
     const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}|${extras.reserved}|${extras.temporary.join(',')}`;
     if (key === this.renderKey) return;
-    this.renderKey = key;
+    this.renderKey = key; this.lastDrawn = { unit, star };
     this.identity = getHeroIdentity(unit.definitionId);
     this.disc.setFillStyle(this.identity.colorNumber);
     this.label.setText(this.identity.short).setColor(this.identity.ink);
+    // v22 anvil (锻造器): the client's square anvil icon on a dark forge disc; no star, no cost (it is not a hero).
+    const anvil = isAnvilUnit(unit.definitionId);
+    if (anvil) this.disc.setFillStyle(ANVIL_DISC);
     // Official S13 portrait when bundled; otherwise the code-drawn emblem and short name.
-    const portraitKey = championPortraitKey(unit.definitionId), hasPortrait = this.scene.textures.exists(portraitKey);
+    const portraitKey = anvil ? anvilTextureKey(unit.definitionId) : championPortraitKey(unit.definitionId), hasPortrait = this.scene.textures.exists(portraitKey);
+    if (anvil && !hasPortrait) this.requestAnvilTexture(unit.definitionId);
+    const size = anvil ? ANVIL_ICON : PIECE_RADIUS * 2 - 2;
     if (hasPortrait) {
       if (!this.portrait) { this.portrait = this.scene.add.image(0, 0, portraitKey); this.body.addAt(this.portrait, 1); }
-      this.portrait.setTexture(portraitKey).setDisplaySize(PIECE_RADIUS * 2 - 2, PIECE_RADIUS * 2 - 2).setVisible(true);
+      this.portrait.setTexture(portraitKey).setDisplaySize(size, size).setVisible(true);
     } else this.portrait?.setVisible(false);
     this.label.setVisible(!hasPortrait);
     const points = EMBLEM_POINTS[this.identity.shape].map(([px, py]) => new Phaser.Math.Vector2(px * PIECE_RADIUS * 0.82, py * PIECE_RADIUS * 0.82));
     this.emblem.clear().lineStyle(3, this.identity.inkNumber, 0.28).strokePoints(points, true, true);
-    this.emblem.setVisible(!hasPortrait);
-    this.star.setText('★'.repeat(star)).setColor(starColor(star));
+    this.emblem.setVisible(!hasPortrait && !anvil);
+    this.star.setText(anvil ? '' : '★'.repeat(star)).setColor(starColor(star)).setVisible(!anvil);
     // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
-    this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral);
-    this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral);
+    this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral && !anvil);
+    this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral && !anvil);
     this.equipped = [...equipped]; this.extras = extras; this.drawItems();
     this.pendingEquipped = [...pending];
     this.pendingTag.setText(pending.length ? `下场+${pending.length}` : '').setVisible(pending.length > 0);
     this.token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, effectiveStarLevel: star === 4 ? 4 : undefined, neutral: this.identity.neutral, cost: this.identity.cost, team: unit.team });
     this.applyRing(unit.team);
+  }
+
+  /** Loads the anvil icon once per scene; the piece redraws when it arrives. */
+  private requestAnvilTexture(definitionId: string): void {
+    const key = anvilTextureKey(definitionId), url = anvilIconUrl(definitionId);
+    if (!url || this.scene.textures.exists(key)) return;
+    this.scene.load.once(`filecomplete-image-${key}`, () => {
+      const last = this.lastDrawn;
+      if (this.token.active && last) { this.invalidate(); this.update(last.unit, this.equipped, this.pendingEquipped, this.extras, last.star); }
+    });
+    this.scene.load.image(key, url);
+    if (!this.scene.load.isLoading()) this.scene.load.start();
   }
 
   /**
@@ -172,7 +209,10 @@ export class UnitView {
   animate(now: number): void {
     if (!this.token.visible) return;
     const still = reducedMotion();
-    let x = 0, y = still ? 0 : Math.sin(now / BOB_PERIOD_MS + this.bobPhase) * BOB_PX;
+    const slide = now - this.slideAt, sliding = slide >= 0 && slide < DISPLACEMENT_SLIDE_2D.ms;
+    // A controlled or skidding piece holds still: no idle bob. The skid leans the body back against the slide.
+    let x = 0, y = still || this.controlKind || sliding ? 0 : Math.sin(now / BOB_PERIOD_MS + this.bobPhase) * BOB_PX;
+    this.body.setRotation(!still && sliding ? this.slideLean * DISPLACEMENT_SLIDE_2D.lean * Math.sin(Math.PI * slide / DISPLACEMENT_SLIDE_2D.ms) : 0);
     const lunge = now - this.lungeAt;
     if (!still && lunge >= 0 && lunge < LUNGE_MS) { const k = Math.sin((Math.PI * lunge) / LUNGE_MS); x += this.lunge.x * k; y += this.lunge.y * k; }
     const hit = now - this.hitAt;
@@ -180,6 +220,12 @@ export class UnitView {
       const fade = 1 - hit / HIT_MS; this.flash.setAlpha(0.7 * fade);
       if (!still) x += Math.sin(hit * 0.09) * 2.5 * fade;
     } else if (this.flash.alpha !== 0) this.flash.setAlpha(0);
+    // Knock-up: the body rises off its shadow (reduced motion: it stays down, the stun icon still says so).
+    const lift = still ? 0 : this.liftShare(now);
+    if (this.landedAt !== null && lift === 0) this.landedAt = null;
+    y -= lift * KNOCKUP_2D.height;
+    const shrink = 1 - lift * 0.3;
+    this.shadow.setVisible(lift > 0).setScale(shrink, shrink * SHADOW_FLAT);
     this.body.setPosition(x, y);
   }
   /** Death: a copy of the face that shrinks and fades where the piece fell; the caller owns its cleanup. */
@@ -201,6 +247,26 @@ export class UnitView {
     this.shieldLabel.setVisible(false).setText('');
     this.statusIcons.clear().setVisible(false); this.statusKey = ''; this.strip = { harmful: '', beneficial: '' };
     this.disc.setAlpha(1); this.flash.setAlpha(0); this.hitAt = this.lungeAt = -Infinity;
+    this.controlKind = null; this.airborneAt = this.landedAt = null; this.shadow.setVisible(false);
+    this.slideAt = -Infinity; this.body.setRotation(0);
+  }
+
+  /** The control drawn on the piece (null: none). Airborne lifts it until the control ends, then it drops back. */
+  setControl(kind: ControlKind | null, now = performance.now()): void {
+    if (kind === this.controlKind) return;
+    if (kind === 'airborne') { this.airborneAt = now; this.landedAt = null; }
+    else if (this.controlKind === 'airborne') { this.landFrom = this.liftShare(now); this.airborneAt = null; this.landedAt = now; }
+    this.controlKind = kind;
+  }
+  /** A forced move started: `dx` is the slide's screen x direction; the body leans back against it. */
+  skid(dx: number, now = performance.now()): void { this.slideAt = now; this.slideLean = dx < 0 ? 1 : -1; }
+  /** Debug/acceptance read: true while a forced skid is drawn. */
+  skidding(now = performance.now()): boolean { return now - this.slideAt >= 0 && now - this.slideAt < DISPLACEMENT_SLIDE_2D.ms; }
+  /** Debug/acceptance read of the drawn control. */
+  get control(): ControlKind | null { return this.controlKind; }
+  private liftShare(now: number): number {
+    const since = this.airborneAt === null ? null : (now - this.airborneAt) / 1000, landing = this.landedAt === null ? null : (now - this.landedAt) / 1000;
+    return knockupLift(since, landing, this.landFrom, KNOCKUP_2D.riseSeconds, KNOCKUP_2D.fallSeconds);
   }
 
   /**

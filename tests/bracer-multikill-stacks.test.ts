@@ -391,15 +391,16 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 describe('dead-holder public combat fixture', () => {
   let fixture: { state: MatchState; initial: MatchState; before: MatchState; ownerId: string };
   beforeAll(() => {
-    // v22 AD/mana rules moved the old seed's same-tick death; seed 207 at (3,7) has it at tick 352 after one earlier kill.
-    let state = frontRowRod(207);
+    // v22 AD/mana rules moved the old seed's same-tick death; seed 207 at (3,7) had it at tick 352 after one earlier kill.
+    // Later v23 combat changes (Sion rework, short CC/knock-up) let that Zyra survive; seed 28 at (6,7) trades at tick 323.
+    let state = frontRowRod(28);
     for (let i = 0; i < 9; i++) state = accepted(grantMechanicUnit(state, { receiptId: `boundary-zyra-${i}`, source: 'test', definitionId: 'zyra' }));
     const owner = state.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!;
     state = equipBracer(state, owner.id);
-    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 3, row: 7 } }));
+    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 6, row: 7 } }));
     const initial = accepted(startMatchCombat(state));
     let before = initial;
-    while (before.phase === 'combat' && before.combat!.tick < 351) before = stepMatch(before).state;
+    while (before.phase === 'combat' && before.combat!.tick < 322) before = stepMatch(before).state;
     fixture = freezeContent(structuredClone({ state, initial, before, ownerId: owner.id }));
   });
 
@@ -408,13 +409,13 @@ describe('dead-holder public combat fixture', () => {
     certifyFixture(copy.initial); certifyFixture(copy.before);
     const owner = state.preparation.units.find(u => u.id === copy.ownerId)!;
     expect(owner.starLevel).toBe(3);
-    const initial = copy.initial, before = stepTo(copy.before, 351);
+    const initial = copy.initial, before = stepTo(copy.before, 322);
     const result = stepMatch(before), after = result.state;
-    const targetId = 'enemy-r4-2';
-    expect(after.combat!.tick).toBe(352);
+    const targetId = 'enemy-r8-1';
+    expect(after.combat!.tick).toBe(323);
     expect(result.events.filter(e => e.type === 'kill')).toEqual([
-      expect.objectContaining({ type: 'kill', tick: 352, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r4-2' }) }),
-      expect.objectContaining({ type: 'kill', tick: 352, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
+      expect.objectContaining({ type: 'kill', tick: 323, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r8-1' }) }),
+      expect.objectContaining({ type: 'kill', tick: 323, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
     ]);
     expect(result.events.filter(e => e.type === 'packetDamage' && e.outcome.killingPacket)).toEqual([
       expect.objectContaining({ outcome: expect.objectContaining({ context: expect.objectContaining({ targetId: owner.id }) }) }),
@@ -439,16 +440,21 @@ describe('dead-holder public combat fixture', () => {
 });
 
 describe.each([
-  // v22: seeds whose public Manaflow route keeps unit serials single-digit, so Morgana's id sorts first
-  // and she owns Sion (string-sorted Black Rose owner, see S13_RULES_GAP known issue).
-  { contribution: false, seed: 108, cells: [{ col: 6, row: 7 }, { col: 0, row: 7 }, { col: 1, row: 7 }], tick: 174, targetId: 'enemy-r4-1' },
-  { contribution: true, seed: 104, cells: [{ col: 3, row: 7 }, { col: 0, row: 7 }, { col: 6, row: 7 }], tick: 210, targetId: 'enemy-r4-1' },
+  // 224 augments: seed 59 publicly picks Long Distance Pals and yields a summon-only kill; seed 175 keeps the assist control.
+  { contribution: false, seed: 59, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 294, targetId: 'enemy-r8-4' },
+  { contribution: true, seed: 175, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 226, targetId: 'enemy-r4-1' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   let fixture: { state: MatchState; start: MatchCommandResult; before: MatchState; ownerId: string };
   beforeAll(() => {
-    // v15 retains the same contribution cases with actual Manaflow offers.
+    // Keep the selected public route and require the exact Sion/holder contribution facts.
     let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
+    if(!contribution)expect(state.augments.map(a=>a.definitionId)).toEqual(['long-distance-pals']);
     for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
+      // New augment gifts can fill the reserve; sell an unused bench champion before the boundary grant.
+      if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length===state.preparation.benchSize){
+        const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!['morgana','cassiopeia','vladimir','irelia'].includes(u.definitionId))!;
+        expect(reserve).toBeDefined();state=accepted(sellUnit(state,reserve.id));
+      }
       state = accepted(grantMechanicUnit(state, { receiptId: `boundary-rose-${definitionId}`, source: 'test', definitionId }));
       const unit = state.preparation.units.find(u => u.definitionId === definitionId && u.team === 'player')!;
       state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: cells[i] }));

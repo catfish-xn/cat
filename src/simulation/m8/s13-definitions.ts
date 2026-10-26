@@ -1,14 +1,15 @@
+import { categoryFiveTrigger } from '../augment-pool-batch4-b4combat';
 import { trigger, enemies, status } from '../content/item-programs';
 import { programEntries } from './item-program';
 import { conditionHolds } from './stats';
 import { startingRows } from './targeting';
 import type { CombatOrigin, CombatUnit } from '../combat-types';
-import type { Amount, Effect, PeriodicTask, Source, TargetSelector, TriggerDefinition } from './contracts';
+import type { Effect, PeriodicTask, Source, TargetSelector, TriggerDefinition } from './contracts';
 import type { MechanismDefinitions } from './runtime-types';
 import { effectIdentity } from './identity';
+import { flatAmount } from './amount';
 export const asSource = (source: CombatOrigin): Source => ({ ...source, parentItemInstanceId: 'parentItemInstanceId' in source ? (source as Source).parentItemInstanceId : null });
-export const flatAmount = (flat = 0, patch: Partial<Amount> = {}): Amount => ({ flat, attackDamageBps: 0, abilityPowerBps: 0, maxHpBps: 0, missingHpBps: 0, actualManaSpentBps: 0,
-  actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'holder', sample: 'application', cap: null, ...patch });
+export { flatAmount } from './amount';
 export const selfSelector = (patch: Partial<TargetSelector> = {}): TargetSelector => ({ primary: 'normal', candidates: 'board', relation: 'self', anchor: 'holder', radius: null,
   maxTargets: 1, excludeSelf: false, excludePrimary: false, distinct: true, order: 'distance-id', sample: 'each-pulse', ...patch });
 export function compileMechanismDefinitions(unit: CombatUnit, combatId: string): MechanismDefinitions {
@@ -28,12 +29,14 @@ export function compileMechanismDefinitions(unit: CombatUnit, combatId: string):
     if (effects) periodicTasks.push({ ...effectIdentity(combatId, source, unit.id), nextPulseAtTick: v.periodTicks, periodTicks: v.periodTicks, endsAtTick: null,
       pulseOrdinal: 0, pulseLimit: null, remainders: [], finalPulse: 'none', onSourceDeath: 'cancel', onTargetDeath: 'cancel',
       program: { definitionId: JSON.stringify([source.definitionId, source.effectIndex, 'periodic']), selector: selfSelector(), targetSnapshot: 'once-per-pulse', effects } });
+    if (m.mechanic === 'wealthyRehab') vamp.push({ source, modifier: { stat: 'omnivamp', unit: 'bps', value: { kind: 'constant', amount: v.omnivampBps }, condition: { kind: 'always' }, damageFilter: null },
+      allyBps: 0, allyCondition: { kind: 'always' } });
     if (m.mechanic === 'gunblade') vamp.push({ source, modifier: { stat: 'omnivamp', unit: 'bps', value: { kind: 'constant', amount: v.selfHealBps }, condition: { kind: 'always' }, damageFilter: null },
       allyBps: v.allyHealBps, allyCondition: { kind: 'always' } });
   }
   for (const entry of programEntries(unit)) {
     const {source}=entry;
-    if(entry.kind==='trigger')eventTriggers.push({...entry.declaration,source});
+    if(entry.kind==='trigger')eventTriggers.push(categoryFiveTrigger(unit,{...entry.declaration,source}));
     if(entry.kind==='survival') {
       const {initialAlso,...d}=entry.declaration;
       survivalTriggers.push({...d,source});

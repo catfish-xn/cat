@@ -1,3 +1,4 @@
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import {sellUnit,createMatch,buyXp,deployMatchUnit,startMatchCombat,stepMatch,nextRound,selectChoice,selectAnomalyTarget,claimOrb,type MatchState} from '../../src/simulation/match';
 import {readLootView} from '../../src/simulation/loot-view';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
@@ -22,6 +23,9 @@ export function openConquerorAnvil(input:MatchState):{state:MatchState;receiptId
  }
  return null;
 }
+/** v23 fmix32: seed 42 now opens golden-gala (tier 10 at 5-2/654); seed 20 opens scuttle-puddle like v22's seed 42
+ * and reproduces its natural trajectory (tier 10 at 5-3/690). */
+export const NATURAL_FORGE_SEED=20;
 let cached:Map<number,MatchState>|undefined;
 let tier4Preparation:MatchState|undefined;
 export function naturalTier4Preparation():MatchState{
@@ -30,15 +34,15 @@ export function naturalTier4Preparation():MatchState{
 /** Real solo combats, explicit generic grants only: no forged progress/history/settlement. */
 export function naturalForgeStates():Map<number,MatchState>{
  if(cached)return cached;
- const states=new Map<number,MatchState>();let state=createMatch(42),recruited=false;
+ const states=new Map<number,MatchState>();let state=createMatch(NATURAL_FORGE_SEED),recruited=false;
  for(let guard=0;guard<60000;guard++){
   if(state.phase==='choice'){
    let c=state.pendingChoice!;
    if(c.kind==='anomaly'&&c.step==='target'){
     state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,state.preparation.units.find(u=>u.team==='player')!.id));c=state.pendingChoice!;
    }
-   // Prefer Going Long over Radiant Relics at seed42's v14 4-2 node to keep the forge item serials.
-   const augmentPriorities=['going-long'];
+   // Trade Sector avoids seed 20's new Slammin historical-XP requirement; Going Long keeps the late forge route.
+   const augmentPriorities=['trade-sector','going-long'];
    const id=c.kind==='augment'?augmentPriorities.find(id=>c.offers.includes(id))??c.offers.find(id=>!(id in P2_ITEM_GRANTS))??c.offers[0]:c.offers[0];
    state=accepted(selectChoice(state,c.choiceId,c.generation,id));continue;
   }
@@ -53,7 +57,7 @@ export function naturalForgeStates():Map<number,MatchState>{
    // Earlier Conqueror anvils (tier 9) resolve through the choice branch with their first offer, as the old popup did.
    const opened=openConquerorAnvil(state);
    if(opened){if(opened.receiptId==='g23:conqueror:10:atom:0:copy:0'){states.set(10,opened.state);cached=states;return states;}state=opened.state;continue;}
-   while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));continue;}
+   while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId)&&u.definitionId!=='training-dummy')!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));continue;}
   if(state.phase!=='preparation')throw Error(`Unexpected solo fixture phase ${state.phase} at ${state.round}, stacks ${readG23Progress(state)!.conquest.stacks}`);
   if(state.round===1&&!recruited){
    state=accepted(grantMechanicGold(state,{receiptId:'fixture:gold',source:'fixture',amount:150}));
@@ -66,7 +70,7 @@ export function naturalForgeStates():Map<number,MatchState>{
    }
    recruited=true;
   }
-  for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1'&&!isAnvil(u.definitionId)))state=accepted(sellUnit(state,u.id));
+  for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&u.id!=='unit-1'&&!isAnvil(u.definitionId)&&isSellableUnit(u.definitionId)))state=accepted(sellUnit(state,u.id));
   if(state.round===6)tier4Preparation=state;
   state=accepted(startMatchCombat(state));
  }

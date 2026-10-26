@@ -1,9 +1,13 @@
+import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
+import { drainBatch1Gifts } from './augment-pool-grants';
+import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
 import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { deferredRoundIncome } from './deferred-income';
 import { commitOpeningEncounterHealth } from './opening-encounter';
 import { melCanSave, commitMelSave } from './mel-save';
 import { reconcileD14 } from './d14-runtime';
+import { pruneForgePositions } from './forge-positions';
 import type {TraitProjectionContext} from './traits/effective-membership';
 import { forfeitUnclaimedOrbs, settleQueuedOrbClaims } from './orb-claim';
 import type {UnitLootPolicy} from './loot-runtime';
@@ -15,6 +19,8 @@ import {deriveTraits} from './trait-snapshot';
 import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canonicalContent } from './content';
 import { resolveRoundEconomy } from './round-economy';
+import { applyLevelUpHealth } from './augment-xp';
+import { needsOpponentHp, drainSettlementGold } from './augment-settlement-gold';
 import { MATCH_RULES } from './match-rules';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { FINAL_ROUND, getRoundSchedule } from './round-schedule';
@@ -38,6 +44,8 @@ export interface MultiplayerProgress {
 /** Trusted server receipt; income is calculated from seat resources, never supplied by a client. */
 export interface RoundSettlementReceipt {
   readonly g23Facts?:G23BattleFacts;
+  /** Opponent's frozen battle-start health; present exactly when this seat owns Kingslayer for the round. */
+  readonly opponentHp?:number;
   readonly version: typeof ROUND_SETTLEMENT_VERSION;
   readonly settlementId: string;
   readonly battleId: string;
@@ -123,7 +131,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const result = r.result === 'win' ? 'playerWin' : r.result === 'loss' ? 'enemyWin' : 'draw';
     const economyInput = {result,gold:state.gold,streak:state.streak,
       level:state.level,xp:state.xp,hp:state.playerHp,enemySurvivors:r.opposingSurvivors} as const;
-    const plan = resolveRoundEconomy({augments:state.augments,roundId:r.roundId,...economyInput});
+    const plan = withBatch4B4xp(state,resolveRoundEconomy({augments:state.augments,roundId:r.roundId,...economyInput}),batch4B4xpSettlementXp(state));
     // Damage is forwarded verbatim, but reject mismatched/edited proposals at the rules boundary.
     if (r.baseDamage !== plan.baseDamage || r.damage !== plan.playerDamage) return fail(state,'invalid-receipt');
     const growth = new Map(state.persistentGrowth.map(g => [g.unitId,g.attackDamageBps]));
@@ -141,6 +149,8 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const fields = ['version','settlementId','battleId','seatId','round','roundId','settlementEligible','result','damage',
       'baseDamage','opposingSurvivors','growth','combatTicks','combatEventCount'];
     if(r.g23Facts)fields.push('g23Facts');
+    if(r.opponentHp!==undefined)fields.push('opponentHp');
+    if((r.opponentHp!==undefined)!==needsOpponentHp(state.augments,r.round)||r.opponentHp!==undefined&&(!integer(r.opponentHp)||r.opponentHp>100)) return fail(state,'invalid-receipt');
     if (Object.keys(r).length !== fields.length || Object.keys(r).some(key => !fields.includes(key))) return fail(state,'invalid-receipt');
     const saved=melCanSave(state,r.g23Facts,Math.max(0,state.playerHp-r.damage)),hpAfter=saved?1:Math.max(0,state.playerHp-r.damage);
     const record: RoundResult = {
@@ -161,14 +171,18 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const next: MatchState = {...state,phase:'settlement',combat:null,combatInputBasis:null,outcome:null,
       gold:plan.goldAfter-deferredRoundIncome(plan),playerHp:hpAfter,level:plan.progression.level,xp:plan.progression.xp,streak:plan.streakAfter,
       persistentGrowth:[...growth].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([unitId,attackDamageBps])=>({unitId,attackDamageBps})),
-      augmentProgress,roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
+      augmentProgress:{...augmentProgress,...(state.augmentProgress.forming?{forming:state.augmentProgress.forming}:{}),...(state.augmentProgress.magicRoll?{magicRoll:state.augmentProgress.magicRoll}:{})},roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
     const hookEvents:MatchEvent[]=[];
-    let settled=r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next;
+    // Kingslayer pays from the receipt itself, so a settlement without battle facts still gets its gold.
+    let settled=drainSettlementGold(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
+    if(!r.g23Facts&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])){
+      const gifted=drainBatch1Gifts(settled,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(settled,gifted));settled=gifted;
+    }
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
-    settled=commitOpeningEncounterHealth(settled,hookEvents);
+    settled=applyLevelUpHealth(state,commitOpeningEncounterHealth(settled,hookEvents));
     const merged = resolveDeferredUpgrades(settled);
-    const d14State=reconcileD14(merged.state,hookEvents);
+    const d14State=pruneForgePositions(reconcileD14(merged.state,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
     const opened=openG23Choice(forfeited.state);
     const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...forfeited.events,...opened.events];

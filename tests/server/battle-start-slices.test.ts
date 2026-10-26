@@ -10,14 +10,17 @@ import { readLootView } from '../../src/simulation/match';
 import type { BattleInput, RoomState } from '../../src/server/room/types';
 
 interface Checkpoint { time: number; seed: number; state: RoomState; expected: { initialHash: string; firstHash: string } }
-// Recorded from public Room progression by scripts/record-v22-online-rules-battle-start.cjs
+// Recorded from public Room progression by scripts/record-v23-online-rules-battle-start.cjs
 // at integrated 3394f104; recorder checks sliced versus synchronous tick0/1 bytes.
 const checkpoints = (JSON.parse(readFileSync(new URL('./fixtures/battle-start.json', import.meta.url), 'utf8')) as { checkpoints: Checkpoint[] }).checkpoints;
 type Seam = { current: RoomState; streams: Map<string, CombatStream>; frozenInputs: BattleInput[];
   freezeAndResolve(): void; openStreamSteps(): Generator<void, void, void>; clearTimer(): void };
 const seam = (room: Room) => room as unknown as Seam;
 
-function fixture(round: number, sliceNow = () => performance.now(), sliceMs = 20) {
+// A deterministic CPU budget source makes slice counts independent of host contention.
+// Explicit budget tests below advance their own CPU clock; ManualClock owns room time.
+function budgetClock() { let reads = 0; return () => ++reads / 10; }
+function fixture(round: number, sliceNow = budgetClock(), sliceMs = 20) {
   const cp = checkpoints.find(cp => cp.state.round === round)!;
   const clock = new ManualClock(cp.time);
   const room = new Room(cp.state.seats, { ...ROOM_TIMING_DEFAULTS, roomId: cp.state.roomId, seed: cp.seed,
@@ -29,8 +32,8 @@ function fixture(round: number, sliceNow = () => performance.now(), sliceMs = 20
 function finishOpening(room: Room, clock: ManualClock) {
   for (let n = 0; room.combatInitializationPending && n < 100; n++) expect(clock.fireNext()).toBe(true);
   expect(room.combatInitializationPending).toBe(false);
-  expect(room.state.phase).toBe('battle');
   expect(room.state.fault).toBeNull();
+  expect(room.state.phase).toBe('battle');
 }
 function fingerprint(room: Room) {
   return createHash('sha256').update(JSON.stringify({ state: room.state, inputs: seam(room).frozenInputs,
@@ -41,7 +44,28 @@ function fingerprint(room: Room) {
 }
 
 describe('battle opening slices', () => {
-  it.each([3, 9, 23])('round %i: tick0/1 hashes equal the v22-online-rules synchronous baseline', round => {
+  it('a fresh public room opens with the deterministic budget in at most 100 continuations', () => {
+    const counts: number[] = [];
+    for (let run = 0; run < 2; run++) {
+      const clock = new ManualClock();
+      const cp = checkpoints[0]!;
+      const room = new Room(cp.state.seats, { ...ROOM_TIMING_DEFAULTS, roomId: cp.state.roomId, seed: cp.seed,
+        clock, resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs: 20,
+        sliceNow: budgetClock(), assertPoolConservation: true, carousel: CAROUSEL_RULES_BINDING });
+      try {
+        room.start(); seam(room).freezeAndResolve();
+        let fired = 0;
+        while (room.combatInitializationPending && fired < 100) { expect(clock.fireNext()).toBe(true); fired++; }
+        expect(room.combatInitializationPending).toBe(false);
+        expect(room.state.fault).toBeNull(); expect(room.state.phase).toBe('battle');
+        expect(clock.now()).toBe(0);
+        counts.push(fired);
+      } finally { room.dispose(); }
+    }
+    expect(counts[0]).toBeGreaterThan(0); expect(counts[1]).toBe(counts[0]);
+  });
+
+  it.each([3, 9, 23])('round %i: tick0/1 hashes equal the v23-online-rules synchronous baseline', round => {
     const { room, clock, cp } = fixture(round);
     const publications: number[] = [];
     room.subscribe(state => { if (state.phase === 'battle') publications.push(seam(room).streams.size); });
@@ -80,6 +104,9 @@ describe('battle opening slices', () => {
       const { room, clock } = fixture(9);
       const results: unknown[] = [], order: string[] = [];
       try {
+        // The re-recorded human has zero gold and a bench anvil. Fund the FIFO commands with public sales.
+        for(const unit of room.state.seats[0]!.match.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'))
+          expect(room.handle('seat-1',{type:'sell',unitId:unit.id})).toMatchObject({ok:true});
         seam(room).freezeAndResolve();
         const frozen = room.state, inputs = seam(room).frozenInputs;
         const execute = (name: string, run: () => unknown) => {
@@ -89,8 +116,8 @@ describe('battle opening slices', () => {
         if (!queued) finishOpening(room, clock);
         const seatId = 'seat-1';
         const match = () => room.state.seats.find(s => s.seatId === seatId)!.match;
-        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available'), generation: match().shop.generation }));
-        execute('sell', () => room.handle(seatId, { type: 'sell', unitId: match().preparation.units.find(u => u.location.kind === 'bench')!.id }));
+        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available' && s.definitionId === 'amumu'), generation: match().shop.generation }));
+        execute('sell', () => room.handle(seatId, { type: 'sell', unitId: match().preparation.units.find(u => u.location.kind === 'bench' && !u.definitionId.startsWith('TFT_ArmoryKey'))!.id }));
         execute('reroll', () => room.handle(seatId, { type: 'reroll' }));
         const orb = readLootView(frozen.seats[0]!.match).unclaimedOrbs![0]!;
         expect(orb).toBeDefined();
@@ -162,7 +189,7 @@ describe('battle opening slices', () => {
     });
     try {
       expect(room.state.seats.filter(s => s.alive).map(s => s.match.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length))
-        .toEqual([8, 8, 8, 7, 8, 8, 8]); // v22 recording (battle-start.json checkpoint round 23)
+        .toEqual([8, 8, 8, 8, 7, 8, 8]); // v23 recording (battle-start.json checkpoint round 23)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;

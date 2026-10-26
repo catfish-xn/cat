@@ -28,9 +28,8 @@ describe('M5 Match atomic integration', () => {
     expect(restoreMatch(serializeMatch(initial))).toEqual(initial);
     const before=reachRound('2-1',false),c=before.pendingChoice!;
     expect(c.kind).toBe('augment');expect(restoreMatch(serializeMatch(before))).toEqual(before);
-    // v22 augment tier table: seed 42 now offers crown-guarded first, which grants its own
-    // Crownguard item; pick the item-free Reunion so the no-component-package check stays exact.
-    const pick='reunion';expect(c.offers).toContain(pick);
+    // Built Different is actually offered and grants no items; keep the item-free acquisition invariant.
+    const pick='built-different';expect(c.offers).toContain(pick);
     const selected=selectChoice(before,c.choiceId,c.generation,pick);
     expect(selected.ok).toBe(true);if(!selected.ok)throw new Error(selected.reason);
     const stale=selectChoice(selected.state,c.choiceId,c.generation,pick);

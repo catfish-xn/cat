@@ -40,8 +40,11 @@ it('pins all eight unchanged source pools and every weighted boundary to exactly
 const ok=(result:api.MatchCommandResult):api.MatchState=>{if(!result.ok)throw Error(result.reason);return result.state;};
 // A funded test formation, granted through authoritative receipts; all battles,
 // shimmer, offers and save history below are real public-command transitions.
+// Seed 0 (was 9): the 14.24 stage bans changed seed 9's 2-1 pick, whose loot then fills the bench before the market.
 function pendingMarket():api.MatchState{
- let state=ok(grantMechanicGold(api.createMatch(9),{receiptId:'test:fund',source:'test',amount:100}));
+ // v23 fmix32: seed 9 now opens Gold Subscription, whose loot fills the bench so the 2-star Singed waits for capacity;
+ // seed 4 keeps seed 9's old Crab Rave opening.
+ let state=ok(grantMechanicGold(api.createMatch(4),{receiptId:'test:fund',source:'test',amount:100}));
  while(state.level<3)state=ok(api.buyXp(state));
  for(const unit of state.preparation.units.filter(u=>u.team==='player'))state=ok(api.deployMatchUnit(state,unit.id,{kind:'bench',slot:0}));
  for(const [col,definitionId]of ['singed','renata','renni'].entries()){

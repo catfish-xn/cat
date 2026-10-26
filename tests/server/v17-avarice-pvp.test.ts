@@ -4,33 +4,34 @@
  * enemy), each seat sees the battle from its own side, and nobody is sent a bank value. A mirror battle never samples
  * its frozen copy's side, while its real seat A still does.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect } from 'vitest';
 import { toCombatReplayFor, toPlayerView, toSeatPrivateView } from '../../src/server/room/projection';
 import { toCombatReplay, type CombatReplay } from '../../src/server-entry';
-import { runUntil } from './helpers';
-import { avariceRoom, earnGold, HUMANS, humanPair, nextBattle, nextMirrorBattle, PRIVATE_BANK, pvpBattleOf, seatOf, spendGold } from './v17-avarice-helpers';
+import { earnGold, HUMANS, humanPair, PRIVATE_BANK, pvpBattleOf, seatOf, spendGold } from './v17-avarice-helpers';
 
-const disposers: (() => void)[] = [];
-afterEach(() => { for (const dispose of disposers.splice(0)) dispose(); });
+import { avariceRoute, nextBattleRoute, mirrorBattleRoute } from './avarice-route';
+import { registerSlowRoute, routeUntil, RouteResolver } from './slow-route';
+const resolver = new RouteResolver();
 
 const teamCount = (replay: CombatReplay, team: string) => replay.initial.units.filter(unit => unit.team === team).length;
 
 describe('v17 avarice: two human seats in one battle', () => {
-  it('A\'s and B\'s gold changes reach only their own side, each seat sees its own side, and no bank leaves the room', () => {
-    const { room, clock } = avariceRoom(dispose => disposers.push(dispose));
-    nextBattle(room, clock, '4-6');
+  registerSlowRoute('A\'s and B\'s gold changes reach only their own side, each seat sees its own side, and no bank leaves the room', function* (env) {
+    const { room, clock } = yield* avariceRoute(env);
+    yield* nextBattleRoute(room, clock, '4-6');
     // The room's own 4-6 pairing of two avarice seats (s0 A, s1 B under seed 42).
     const { a: seatA, b: seatB, battle: frozen } = humanPair(room.state);
     expect(frozen.participants).toEqual([seatA, seatB]);
     expect(seatA).not.toBe(seatB);
     const hp = { a: seatOf(room.state, seatA).hp, b: seatOf(room.state, seatB).hp };
     clock.advance(400);
-    const aGold = [spendGold(room, seatA)];
+    const aGold = [spendGold(room, seatA),spendGold(room,seatA),spendGold(room,seatA)];
+    expect(aGold.at(-1)).toBeLessThanOrEqual(8); // enough change to survive integer rounding on low-AD Vex
     clock.advance(200);
     const bGold = earnGold(room, seatB);
     clock.advance(200);
     aGold.push(...earnGold(room, seatA));
-    runUntil(room, clock, state => state.roundName === '4-6' && state.phase !== 'battle');
+    yield* routeUntil(room, clock, state => state.roundName === '4-6' && state.phase !== 'battle');
     expect(room.state.fault).toBeNull();
     const published = pvpBattleOf(room.state, seatA)!;
     expect(published).not.toBe(frozen);
@@ -53,12 +54,12 @@ describe('v17 avarice: two human seats in one battle', () => {
     const outsider = HUMANS.find(seatId => seatId !== seatA && seatId !== seatB)!;
     for (const wire of [a, b, toSeatPrivateView(seatOf(room.state, seatA).match), toSeatPrivateView(seatOf(room.state, seatB).match),
       toPlayerView(room.state, seatA, clock.now()), toPlayerView(room.state, outsider, clock.now())]) expect(JSON.stringify(wire)).not.toMatch(PRIVATE_BANK);
-  }, 120_000);
+  }, resolver);
 
-  it('a mirror battle samples its real seat A and never the frozen copy\'s side', () => {
-    const { room, clock } = avariceRoom(dispose => disposers.push(dispose));
+  registerSlowRoute('a mirror battle samples its real seat A and never the frozen copy\'s side', function* (env) {
+    const { room, clock } = yield* avariceRoute(env);
     // The room's first mirror battle of two avarice seats (5-1 under seed 42: s1 against the frozen copy of s2).
-    const { a: seatA, copy, battle: mirror } = nextMirrorBattle(room, clock);
+    const { a: seatA, copy, battle: mirror } = yield* mirrorBattleRoute(room, clock);
     const round = room.state.roundName;
     // seatA fights the frozen copy of `copy`, who (with avarice too) fights its own real battle this round.
     expect(mirror.participants).toEqual([seatA]);
@@ -69,7 +70,7 @@ describe('v17 avarice: two human seats in one battle', () => {
     clock.advance(400);
     const aGold = spendGold(room, seatA);
     const copyGold = spendGold(room, copy);
-    runUntil(room, clock, state => state.roundName === round && state.phase !== 'battle');
+    yield* routeUntil(room, clock, state => state.roundName === round && state.phase !== 'battle');
     expect(room.state.fault).toBeNull();
     const published = room.state.battles.find(battle => battle.battleId === mirror.battleId)!;
     expect(published.kind).toBe('two-sided');
@@ -81,5 +82,5 @@ describe('v17 avarice: two human seats in one battle', () => {
     expect(ownPublished.kind === 'two-sided' && ownPublished.battle.bankSamples?.filter(sample => sample.liveGold === copyGold).length).toBe(1);
     const ownSide = ownPublished.kind === 'two-sided' && ownPublished.battle.a.seatId === copy ? 'a' : 'b';
     expect(seatOf(room.state, copy).hp).toBe(Math.max(0, hpCopy - (ownPublished.kind === 'two-sided' ? ownPublished.proposals[ownSide].damage : NaN)));
-  }, 120_000);
+  }, resolver);
 });

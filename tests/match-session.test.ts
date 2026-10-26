@@ -36,12 +36,12 @@ function rejected(session: MatchSession, result: MatchCommandResult, reason: str
   expect(result).toEqual({ ok: false, state: before, reason });
   expect(result.state).toBe(before); expect(session.state).toBe(before);
 }
-function resolveSessionChoices(session: MatchSession): void {
+function resolveSessionChoices(session: MatchSession, priorities:readonly string[]=[]): void {
   while (session.phase === 'choice') {
     const choice = session.state.pendingChoice!;
     const result = choice.step === 'target'
       ? session.anomalyTarget(choice.choiceId, choice.generation, players(session.state)[0].id)
-      : session.choose(choice.choiceId, choice.generation, choice.offers[0]);
+      : session.choose(choice.choiceId, choice.generation, priorities.find(id=>choice.offers.includes(id))??choice.offers[0]);
     expect(result.ok).toBe(true);
   }
 }
@@ -178,7 +178,8 @@ describe('match session commands and fixed clock', () => {
   });
 
   it('preserves the purchased player roster and unique results for five rounds', () => {
-    const session = new MatchSession(reachRound('1-3',true,7216));
+    // Seed 7226 + the offered Slammin component gift preserves the purchased roster (no augment unit gifts).
+    const session = new MatchSession(reachRound('1-3',true,7226));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
     const stale = session.state; rejected(session, session.buy(0, 0), 'stale-shop', stale);
@@ -195,11 +196,12 @@ describe('match session commands and fixed clock', () => {
       if (session.phase === 'choice') {
         const pending = session.state, before = structuredClone(pending);
         rejected(session, session.continue(round), 'wrong-phase', pending);expect(pending).toEqual(before);
-        resolveSessionChoices(session);
+        resolveSessionChoices(session,['slammin']);
       }
       expect(session.phase).toBe('settlement');
       expect(session.continue(round).ok).toBe(true);
-      resolveSessionChoices(session);
+      resolveSessionChoices(session,['slammin']);
+      if(session.state.augments.length)expect(session.state.augments.map(a=>a.definitionId)).toEqual(['slammin']);
       const next = session.state; rejected(session, session.continue(round), next.phase === 'settlement' ? 'stale-round' : 'wrong-phase', next);
       expect(players(session.state)).toEqual(expectedRoster); expect(session.combat).toBeNull();expect(session.state.nextUnitSerial).toBe(3);
     }
@@ -211,12 +213,14 @@ describe('match session commands and fixed clock', () => {
     const session=new MatchSession(prepared);
     const slot=session.state.shop.slots.findIndex(o=>o.status==='available'&&!['irelia','maddie','lux'].includes(o.definitionId));
     expect(session.buy(slot,session.state.shop.generation).ok).toBe(true);
-    for(let i=1;i<=3;i++) expect(session.deploy(`unit-${i}`,{kind:'board',cell:{col:i,row:6}}).ok).toBe(true);
-    const capped=session.state;rejected(session,session.deploy('unit-4',{kind:'board',cell:{col:4,row:7}}),'population-cap',capped);
+    // v23: seed 5 now opens with Artifact Anvil, whose anvil unit takes a serial; deploy real champions only.
+    const heroes=players(session.state).filter(u=>!u.definitionId.startsWith('TFT_')).map(u=>u.id);
+    for(let i=1;i<=3;i++) expect(session.deploy(heroes[i-1],{kind:'board',cell:{col:i,row:6}}).ok).toBe(true);
+    const capped=session.state;rejected(session,session.deploy(heroes[3],{kind:'board',cell:{col:4,row:7}}),'population-cap',capped);
     const shop=structuredClone(session.state.shop),rng=session.state.rngState,gold=session.state.gold;
     expect(session.buyXp().ok).toBe(true);
     expect(session.state).toMatchObject({level:4,xp:2,gold:gold-4,rngState:rng,shop});
-    expect(session.deploy('unit-4',{kind:'board',cell:{col:4,row:7}}).ok).toBe(true);
+    expect(session.deploy(heroes[3],{kind:'board',cell:{col:4,row:7}}).ok).toBe(true);
   });
 
   it('returns upgrade events without delaying the next sell or allocating a second purchase', () => {

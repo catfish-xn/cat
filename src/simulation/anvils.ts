@@ -1,3 +1,4 @@
+import { batch1AnvilSpecification } from './augment-pool-grants';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { isAnvil } from './content/anvils';
 import { canonicalContent } from './content';
@@ -26,7 +27,7 @@ export function openingAnvilOrbs(state:MatchState){
 export function g23AnvilOrbs(state:MatchState){
  const p=readG23Progress(state);if(!p)return [];
  return p.rewards.flatMap(b=>g23RewardAtoms(b,p.seed,!!state.multiplayer).flatMap(a=>{
-  if(!a.forgeDefinitionId||!isAnvil(a.forgeDefinitionId))return [];
+  if(!a.forgeDefinitionId||!isAnvil(a.forgeDefinitionId)||a.forgeDefinitionId==='TFT_ArmoryKeyRadiant')return []; // Batch4 radiant is a direct unit gift, never a loot payload.
   const copy=p.rewardClaims.filter(c=>c.atomId===a.id).length;if(copy>=a.quantity)return [];
   const orbId=`g23-anvil:${JSON.stringify([a.id,copy])}`,roundId=getMultiplayerRoundByOrdinal(b.round).roundId;
   return [{orbId,roundId,tier:'gray' as const,source:'mechanic' as const,entries:[{orbId,entryOrdinal:0,dropId:a.id,roundId,encounterId:b.source,sourceUnitId:b.id,slotOrdinal:0,status:'planned' as const,receiptId:null,revealCondition:'source-killed' as const,payload:{kind:'forge' as const,definitionId:a.forgeDefinitionId,quantity:1 as const}}]}];
@@ -39,7 +40,9 @@ function specification(state:MatchState,unitId:string) {
   const r=state.seatMechanics?.receipts.find(r=>r.kind==='unit'&&r.unitId===unitId);
   if(!r||r.kind!=='unit'||!isAnvil(r.definitionId))throw new RangeError('Invalid anvil birth');
   let offers:readonly string[]|undefined;
-  if(r.source==='opening-encounter')offers=openingForgeOffers(state,r.receiptId);
+  if(r.source==='augment-pool-batch1'){
+    const spec=batch1AnvilSpecification(state,r.receiptId);if(spec?.definitionId===r.definitionId)offers=spec.offers;
+  }else if(r.source==='opening-encounter')offers=openingForgeOffers(state,r.receiptId);
   else if(r.source==='opening-encounter-batch-a'){
     const a=openingRewardAtoms(state).find(a=>a.id===r.receiptId);if(a)offers=batchOffers(state,a);
   }else if(r.source==='opening-batch-b'){
@@ -49,7 +52,7 @@ function specification(state:MatchState,unitId:string) {
     if(p)for(const b of p.rewards)for(const a of g23RewardAtoms(b,p.seed,!!state.multiplayer))
       if(r.receiptId.startsWith(`${a.id}:copy:`)&&a.forgeDefinitionId===r.definitionId)offers=a.options;
   }
-  if(!offers||offers.length!==4)throw new RangeError('Invalid anvil source');
+  if(!offers||offers.length!==(r.definitionId==='TFT_ArmoryKeyRadiant'?5:4))throw new RangeError('Invalid anvil source');
   return {definitionId:r.definitionId,offers};
 }
 export function planOpenAnvil(state:MatchState,unitId:string):MatchCommandResult {

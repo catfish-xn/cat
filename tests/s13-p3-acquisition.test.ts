@@ -6,7 +6,9 @@ import { S13_P3_SOURCE } from '../src/simulation/content/s13-p3-source';
 import { P3_AUGMENT_ITEMS } from '../src/simulation/content/s13-p3';
 import { selectChoice, startMatchCombat, stepMatch, selectAnomalyTarget, rerollAnomaly, deployMatchUnit, sellUnit, nextRound } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { firstNodeSeed } from './augment-stage-helpers';
 import { accepted, reachRound } from './match-helpers';
+import { openingEncounterId } from '../src/simulation/opening-encounter';
 import * as matchApi from '../src/simulation/match';
 const anomalyPrefixes = new Map<number, Promise<ReturnType<typeof matchApi.createMatch>>>();
 function publicAnomalyPrefix(seed = 42) {
@@ -16,7 +18,7 @@ function publicAnomalyPrefix(seed = 42) {
     let prefix: ReturnType<typeof matchApi.createMatch> | undefined;
     const stop = new Error('Captured public 4-5 preparation prefix');
     try {
-      await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(matchApi, { build: 'sniper', seed,
+      await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(matchApi, { build: 'sniper', seed, augmentPriorities: ['flurry-of-blows'],
         onStep(_before: unknown, result: {state: ReturnType<typeof matchApi.createMatch>}) {
           if(result.state.roundDefinitionId==='4-5'&&result.state.phase==='preparation') {prefix=result.state;throw stop;}
         } });
@@ -50,10 +52,12 @@ it('independently checks every new coefficient and Chinese label against compres
   // 临时、用户 10-20 批准：只因 CI 机器计时贴着上限（断言都过），本用例 5 秒 → 10 秒（本机满负载约 3.3 秒）；断言不变。
 }, 10_000);
 it.each(Object.entries(P3_AUGMENT_ITEMS))('%s grants exactly one %s using the existing schedule transaction; forged/missing births reject', (id, item) => {
-  let seed = 0;
-  while (seed < 300 && !reachRound('2-1', false, seed).pendingChoice?.offers.includes(id)) seed++;
+  let seed = firstNodeSeed(id, 300);
+  // Search cheap draws and replay only the selected route; keep the same bounded non-Trainer-Golem predicate.
+  while (seed < 300 && openingEncounterId(matchApi.createMatch(seed)) === 'trainer-golems') seed = firstNodeSeed(id, 300 - seed - 1, seed + 1);
   expect(seed).toBeLessThan(300);
   const before = reachRound('2-1', false, seed), c = before.pendingChoice!;
+  expect(c.offers).toContain(id);
   const after = accepted(selectChoice(before, c.choiceId, c.generation, id));
   const receipt = after.scheduleReceipts.find(r => r.eventId === c.eventId)!;
   expect(receipt.itemIds).toEqual(['item-' + before.nextItemSerial]);

@@ -104,9 +104,9 @@ describe('production representation preserves runtime semantics', () => {
     const before = execute(original), after = execute(compact);
     expect(after).toBe(before);
     const parsed = JSON.parse(after);
-    // v22-online-rules identities (tests/v22-online-rules-content-baseline.json).
-    expect(parsed.content).toBe('fnv1a32-utf16:2ee7d9d2');
-    expect(parsed.loot).toBe('fnv1a32-utf16:84b3b60c');
+    // Current content identities (src/simulation/content/identity-constants.ts; P 2026-10-25 Lesser Shimmer Duplicator consumable, merged with the augment XP / batch-3 / stage-ban / batch-4 levels, B4XP, B4reroll and B4Combat line).
+    expect(parsed.content).toBe('fnv1a32-utf16:d61a28f2');
+    expect(parsed.loot).toBe('fnv1a32-utf16:3a378e3e');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
 });

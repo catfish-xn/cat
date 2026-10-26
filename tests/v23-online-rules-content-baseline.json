@@ -1,0 +1,28 @@
+{
+  "parentEpoch": "v22-online-rules",
+  "contentDigest": "fnv1a32-utf16:d61a28f2",
+  "lootReplayDigest": "fnv1a32-utf16:3a378e3e",
+  "rulesVersion": "s13-g2-3-v23-online-rules",
+  "contentVersion": "s13-14.24b-g2-3-v23-online-rules",
+  "schemaVersion": 12,
+  "saveFormatVersion": 8,
+  "replayFormatVersion": 8,
+  "commandProtocolVersion": 7,
+  "netProtocolVersion": 6,
+  "previousContentDigest": "fnv1a32-utf16:2ee7d9d2",
+  "previousLootReplayDigest": "fnv1a32-utf16:84b3b60c",
+  "traceHashes": {
+    "state": "5d3dc3b7c0758bf7e86e10d47246eede67aa638525cf2372564b2f2a23a76324",
+    "events": "b82d46fa16f39d98add3fb39ba8b0cd4446810b6594a882ca956c0a28bbec134",
+    "rng": "fcd99e36a4e5b97e5a84a6dc0700aeab0cf3605982935f79fb22d16429c16d04"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 107,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:ef7032f4",
+    "eventHash": "fnv1a32-utf16:88c54d08"
+  },
+  "reason": "v23 rules on v22-online-rules: fmix32 opening-encounter selection (batch-a-v2), Sion rework (14.24 stats, unshackle charge knock-up, 7 Black Rose revive), forced displacement (Mordekaiser pull, Sett grab, Sevika knockback), knock-up marks (Vi row shockwave, Ambessa slam stun), Black Rose 7, augment pool batches 1 and 2, Experiment emblem copy bonus, Scrap lucky/radiant, Enforcer confiscation, Hextech Forge cell pruning, bot anvil timing. New replay facts (knock-up status mark, displacement movement reasons, Sion revive): schema/save/replay/command 12/8/8/7, NET6. Old identities rejected without migration."
+}

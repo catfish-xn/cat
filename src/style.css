@@ -172,9 +172,13 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .hud-chip strong { font-size: var(--font-hud); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hud-label { font-size: var(--font-small); color: var(--c-text-muted); }
 .hud-hp strong { color: var(--c-danger); } .hud-gold strong { color: var(--c-gold); } .hud-pop strong { color: var(--c-accent); }
-.hud-interest-pips { display: flex; gap: 3px; align-items: center; height: 8px; }
-.hud-interest-pips .pip { width: 7px; height: 7px; border-radius: 50%; border: 1px solid #c9a24a99; background: transparent; box-sizing: border-box; }
-.hud-interest-pips .pip.on { border-color: #ffe08a; background: radial-gradient(circle at 35% 35%, #fff2b8, var(--c-gold) 60%, #a8781e); box-shadow: 0 0 3px #ffd36a99; }
+/* Gold's income card (TFT "Total Income Possible"). Fixed with auto offsets it stays at the gold and is not clipped by the
+   shop dock's overflow; it lifts itself above the gold and centres on it (gold chips are about 90px wide). */
+.hud-tip { display: none; position: fixed; z-index: 95; transform: translate(calc(45px - 50%), calc(-100% - 12px)); width: max-content; max-width: 360px; padding: 8px 12px;
+  border: 1px solid #785a28; border-radius: 6px; background: #0b151ff2; box-shadow: 0 6px 18px #000a; color: #e2eef1; font-size: 12px; font-weight: 400;
+  line-height: 1.7; text-align: left; white-space: pre-line; pointer-events: none; }
+.hud-tip::first-line { color: #f2c24f; font-weight: 700; }
+.hud-chip:hover > .hud-tip { display: block; }
 .hud-xp-bar { display: block; height: 5px; border-radius: 3px; background: #0c1820; border: 1px solid #2f5566; overflow: hidden; }
 .hud-xp-fill { display: block; height: 100%; background: linear-gradient(90deg, #2f8fd8, #6cd0ff); transition: width .25s ease-out; }
 .hud-hint { margin: 0 !important; font-size: var(--font-small) !important; color: var(--c-text-muted); }
@@ -651,7 +655,7 @@ body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
   background: rgba(14, 24, 33, .94); box-shadow: 0 10px 24px rgba(0, 0, 0, .45); display: none; }
 .carousel-panel[data-ring-3d]:is(:hover, :focus-within) .carousel-order { display: grid; }
 /* TFT hides the shop on the carousel (nothing can be bought there): in 3D it slides away while the carousel side is shown. */
-body[data-online-carousel="carousel"]:has(.render3d-layer) .shop-dock,
+body[data-online-carousel="carousel"]:has(> .render3d-layer) .shop-dock,
 /* TFT: on another player's board my shop is closed (it comes back with my board). */
 body:has(.opponent-board[data-scout-3d]:not([hidden])) .shop-dock,
 /* TFT: once eliminated the shop is gone; the board, traits, player list and minimap stay for watching. */
@@ -1068,6 +1072,7 @@ body[data-online] .online-countdown { justify-self: center; gap: 10px; padding: 
   background: linear-gradient(180deg, #0b151fe6, #14212ce6); box-shadow: 0 4px 14px #0007; }
 body[data-online] .online-countdown .online-timer { font-size: 24px; color: #f0e6d2; }
 body[data-online] .online-countdown .online-timer.urgent { color: #f08080; }
+body[data-online] .online-countdown .online-timer.overtime { font-size: 18px; color: #f0b45a; }
 body[data-online] .online-countdown .countdown-round { font-size: 14px; }
 body[data-online] .online-countdown .economy-chip { font-size: 11px; padding: 1px 7px; }
 body[data-online] .shop-dock { grid-template-columns: 128px minmax(0, 1fr) auto 64px; grid-template-rows: 24px minmax(0, 1fr) minmax(0, 1fr);
@@ -1175,7 +1180,9 @@ body[data-online]:has(> .render3d-layer) { --online-countdown-h: 44px; --online-
   --online-shop-left: max(11.6vw - 8px, 0px); --online-shop-w: min(67vw, 100vw - 236px);
   --online-board-h: calc(100dvh - 16px - var(--online-countdown-h) - var(--online-dock-h) - 2 * var(--online-gap)); }
 body[data-online]:has(> .render3d-layer) #app { max-width: none; padding: 8px; grid-template-columns: minmax(0, 1fr); }
-body[data-online]:has(> .render3d-layer) #board-frame { top: 8px; }
+/* overflow-y: clip: the shop sliding away (carousel, scouting, eliminated) must not make the page taller, or a wheel turn
+   scrolls the countdown and the round bar off the top. */
+body[data-online]:has(> .render3d-layer) #board-frame { top: 8px; overflow-y: clip; }
 body[data-online]:has(> .render3d-layer) #board-root { width: 100%; height: var(--online-board-h); }
 body[data-online]:has(> .render3d-layer) #shop-dock { width: var(--online-shop-w); justify-self: start; margin-left: var(--online-shop-left); background: #0b151fcc; }
 body[data-online]:has(> .render3d-layer) .item-dock { left: 248px; }
@@ -1243,9 +1250,10 @@ body[data-online]:has(> .render3d-layer) .online-countdown .economy-hint { posit
 /* Gold and streak meet at the shop's centre line, as one capsule pair over the cards. Gold is placed inside the dock
    (absolute, the dock is its containing block), not fixed: a filter or transform on the dock (eliminated, carousel, scouting)
    turns a fixed child's offsets dock-relative and pushed the gold out of the dock's clip, leaving only the streak.
-   grid-area: auto makes the whole dock (not the grid cell) the containing block for the 50%; 7px keeps it level with the streak. */
-body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { position: absolute; z-index: 2; grid-area: auto; left: calc(50% - 3px); top: 7px; transform: translateX(-100%); }
-body[data-online]:has(> .render3d-layer) .economy-interest { display: none; }
+   grid-area: auto makes the whole dock (not the grid cell) the containing block for the 50%; 7px keeps it level with the streak.
+   The right edge is set without a transform so the fixed income card inside it stays viewport-relative (a transform would
+   make the gold its containing block and the dock's overflow would clip the card). */
+body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { position: absolute; z-index: 2; grid-area: auto; right: calc(50% + 3px); top: 7px; }
 /* The odds stop short of the gold capsule, which ends at the shop's centre line. */
 body[data-online]:has(> .render3d-layer) .shop-dock .shop-odds { max-width: calc(var(--online-shop-w) / 2 - 270px); }
 body[data-online]:has(> .render3d-layer) #online-countdown { z-index: 2; }
@@ -1276,6 +1284,9 @@ body[data-online]:has(> .render3d-layer) .trait-column:not(:hover) .trait-rows:h
    the board count large over the board; lock at the shop's top right; the streak as a flame and its count beside the gold
    (hover for the income lines); inactive traits read "count / next"; list / stats tabs over the player column. */
 body[data-online]:has(> .render3d-layer) .item-dock { left: 0; }
+/* TFT: unclaimed orbs wait on the board (the 3D layer draws them; a click sends my legend there), so the right-gutter column,
+   which covered the lower half of the player list, is not drawn; its claim results still show. */
+body[data-online]:has(> .render3d-layer) .orb-dock-list { display: none; }
 body[data-online]:has(> .render3d-layer) #panels-root { left: 60px; }
 body[data-online]:has(> .render3d-layer) .shop-dock .hud-pop { position: fixed; z-index: 2; left: 50%; top: 11dvh; transform: translateX(-50%); padding: 0; border: 0; background: none; box-shadow: none; pointer-events: none; }
 body[data-online]:has(> .render3d-layer) .shop-dock .hud-pop .hud-label { display: none; }
@@ -1283,9 +1294,16 @@ body[data-online]:has(> .render3d-layer) .shop-dock .hud-pop strong { font-size:
 body[data-online]:has(> .render3d-layer) .left-panel-toast { top: 17dvh; }
 body[data-online]:has(> .render3d-layer) .economy-bonus { display: none; }
 body[data-online]:has(> .render3d-layer) .economy-hint { cursor: help; }
-body[data-online]:has(> .render3d-layer) .economy-streak { padding: 1px 8px; border: 1px solid #785a28; border-radius: 4px; background: #0b151fcc; font-size: 0; }
-body[data-online]:has(> .render3d-layer) .economy-streak::before { content: "🔥 " attr(data-value); font-size: 15px; font-weight: 700; color: #f0e6d2; }
-body[data-online]:has(> .render3d-layer) .economy-streak[data-kind="loss"]::before { filter: hue-rotate(180deg); }
+/* Streak and interest capsules beside the gold: a drawn flame (an emoji falls back to a box without an emoji font), orange
+   for a win streak, blue for a loss streak, dim without one; then "利息 +N" (the lost/drawn interest; the card has both). */
+body[data-online]:has(> .render3d-layer) :is(.economy-streak, .economy-interest) { padding: 1px 8px; border: 1px solid #785a28; border-radius: 4px; background: #0b151fcc; font-size: 0; }
+body[data-online]:has(> .render3d-layer) .economy-streak::before { content: attr(data-value); padding-left: 15px; font-size: 15px; font-weight: 700; color: #f0e6d2;
+  background: no-repeat 0 50% / 11px 14px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 14'%3E%3Cpath fill='%23ff9b3d' d='M5.5 0C6 3 9 4.5 10.5 7.5 11.6 10.7 9 14 5.5 14S-.6 10.7.5 7.5C1.2 5.6 2.5 5 3 3.5 4 5 4 6 3.8 7 5.5 5.8 6 3 5.5 0Z'/%3E%3C/svg%3E"); }
+body[data-online]:has(> .render3d-layer) .economy-streak[data-kind="loss"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 14'%3E%3Cpath fill='%235fb3ff' d='M5.5 0C6 3 9 4.5 10.5 7.5 11.6 10.7 9 14 5.5 14S-.6 10.7.5 7.5C1.2 5.6 2.5 5 3 3.5 4 5 4 6 3.8 7 5.5 5.8 6 3 5.5 0Z'/%3E%3C/svg%3E"); }
+body[data-online]:has(> .render3d-layer) .economy-streak[data-kind="none"]::before { opacity: .55; }
+body[data-online]:has(> .render3d-layer) .economy-interest { order: 1; }
+body[data-online]:has(> .render3d-layer) .economy-interest::before { content: "利息 +" attr(data-value); font-size: 13px; font-weight: 700; color: #f2c24f; }
 body[data-online]:has(> .render3d-layer) .trait-row.inactive :is(.trait-step:not(:first-child), .trait-sep) { display: none; }
 body[data-online]:has(> .render3d-layer) .trait-row.inactive .trait-steps::before { content: attr(data-count) " / "; }
 .online-tabs { display: none; }
@@ -1293,7 +1311,10 @@ body[data-online]:has(> .render3d-layer) #online-sidebar .online-tabs { display:
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-tab { min-height: 0; height: 22px; padding: 0 8px; font-size: 11px; border: 1px solid #3a5260; border-radius: 4px; background: #0b151fcc; color: #9aaeb9; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-tab[aria-selected="true"] { border-color: #785a28; color: #f0e6d2; }
 body[data-online]:has(> .render3d-layer) #online-sidebar[data-tab="players"] .battle-summary, body[data-online]:has(> .render3d-layer) #online-sidebar[data-tab="stats"] .online-seats { display: none; }
-@media (max-width: 1500px) { body[data-online]:has(> .render3d-layer) .item-dock { left: 0; } body[data-online]:has(> .render3d-layer) #panels-root { left: 56px; } }
+@media (max-width: 1500px) { body[data-online]:has(> .render3d-layer) .item-dock { left: 0; }
+/* TFT: unclaimed orbs wait on the board (the 3D layer draws them; a click sends my legend there), so the right-gutter column,
+   which covered the lower half of the player list, is not drawn; its claim results still show. */
+body[data-online]:has(> .render3d-layer) .orb-dock-list { display: none; } body[data-online]:has(> .render3d-layer) #panels-root { left: 56px; } }
 body[data-online]:has(> .render3d-layer) .trait-row.inactive { grid-template-columns: 36px minmax(0, 1fr); }
 body[data-online]:has(> .render3d-layer) .trait-row.inactive .trait-count { display: none; }
 body[data-online]:has(> .render3d-layer) .trait-row.inactive .trait-steps { grid-column: 2; }
@@ -1367,6 +1388,11 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .minimap-name { position: absolute; left: 3px; right: 22px; bottom: 1px; font-size: 10px; line-height: 13px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .minimap-hp { position: absolute; right: 3px; bottom: 1px; font-size: 10px; line-height: 13px; color: #8fe08a; }
 .choice-cards .augment-name { font-weight: 700; }
+/* 3D augment cards: the extra notes sit under a rule in a smaller face; the lettered badge (inline 56px) fills the 112px icon slot. */
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra { display: block; margin-top: 12px; padding-top: 8px; border-top: 1px solid #ffffff1f;
+  font-size: 12px; line-height: 1.5; color: #93a8b4; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra-line { display: block; white-space: normal; }
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-badge { width: 112px !important; height: 112px !important; font-size: 56px !important; }
 
 /* v19 six-costs (沃里克/维克托/梅尔): a prismatic frame on the shop card, as TFT sets its top tier apart from the gold five-costs. */
 .shop-card[data-cost="6"], .shop-dock .shop-card[data-cost="6"] { border-width: 3px; border-image: linear-gradient(135deg, #ff5fd2, #ffd23f, #3fe0ff, #a66bff, #ff5fd2) 1; }

@@ -1,3 +1,7 @@
+import { loadTooltipText } from '../../src/presentation/tooltip-text-loader';
+import { beforeAll } from 'vitest';
+import { loadAugmentText } from '../../src/presentation/augment-text-loader';
+beforeAll(() => Promise.all([loadAugmentText(), loadTooltipText()]));
 import { describe, expect, it } from 'vitest';
 import { genericOffer, isShopChoiceKind, readChoiceExtras, SKIP_OPTION, timeoutOption } from '../../src/presentation/choice-fallback';
 import { itemDisplayName } from '../../src/presentation/g23-display';

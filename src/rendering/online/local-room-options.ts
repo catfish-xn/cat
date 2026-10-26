@@ -3,7 +3,8 @@ import type { Clock, PvpMode } from '../../server/room';
 
 export interface LocalRoomOptions {
   readonly seed: number;
-  readonly preparationMs: number;
+  /** `per-round` (default): the rules' per-round table; `?prep=N` fixes every round to N seconds. */
+  readonly preparationMs: number | 'per-round';
   readonly choiceMs: number;
   readonly settlementMs: number;
   readonly myName: string;
@@ -14,7 +15,9 @@ export interface LocalRoomOptions {
   /** Debug only (`?poolCaps=irelia:8,darius:1`): a scarce shared pool so empty shop slots and pool-empty rerolls can be seen
    * (the room tops up the random opening heroes, `withOpeningCopies`); null = official sizes. */
   readonly poolCapacities?: Readonly<Record<string, number>> | null;
+  /** G1-P7 shared carousel at the opening and the x-4 rounds, as on the game server (CAT_CAROUSEL); `?carousel=0` turns it off. */
+  readonly carousel?: boolean;
   /** Injectable for tests; the browser uses the real clock. */
   readonly clock?: Clock;
 }
-export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'two-sided', poolCapacities: null };
+export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 'per-round', choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'two-sided', poolCapacities: null, carousel: true };

@@ -1,3 +1,4 @@
+import { validateBatch1Gifts } from './augment-pool-grants';
 import { familyDisplay } from './family-heist';
 import { validateEpicForges } from './epic-forges';
 import { validateAugmentAcquisition } from './augment-acquisition';
@@ -16,6 +17,7 @@ import {isMechanicChoice} from './seat-mechanics/choices';
 export function validateG23Restoration(state:MatchState,parsedJsonInput=false):void {
  validateEpicForges(state);
  validateP2Gifts(state);
+ validateBatch1Gifts(state);
  validateD11Acquisition(state);
  const equal=parsedJsonInput?equalValidatedContent:(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
  const check=(value:unknown,message:string)=>{if(!value)throw new RangeError('Invalid G23 restore: '+message);};

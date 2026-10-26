@@ -37,6 +37,7 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  readonly batch2?:import('./augment-pool-batch2-combat').Batch2CombatRuntime;
   /** New declarations whose one-time installation hooks run at the next tick. */
   pendingEquipmentSources?: readonly string[];
   equipment?: readonly { readonly definitionId: string; readonly slot: number; readonly temporary: boolean }[];
@@ -48,7 +49,11 @@ export interface CombatUnit {
   readonly anomalyState?: import('./anomalies/contracts').AnomalyRuntime;
   readonly anomalySummon?: import('./anomalies/contracts').AnomalySummon;
   readonly itemSummonOpeningMaxHp?:number;
+  /** Experiment emblem copy bonus (P-EX1..): opening max HP sample and the one-shot trigger. */
+  readonly experimentClone?: {readonly openingMaxHp:number;readonly triggeredAtTick:number|null;readonly cloneId:string|null};
   readonly itemBanish?: {readonly ownerId:string;readonly itemInstanceId:string;readonly untilTick:number};
+  /** 7 Black Rose Sion's one revive: absent until reviveAtTick, then revived for the rest of combat. */
+  readonly g23Sion?: {readonly reviveAtTick:number;readonly revived:boolean};
   readonly s13P3?: import('./s13-p3-combat').P3CombatState;
   readonly itemMogulHits?:readonly {readonly packetId:string;readonly tick:number}[];
   readonly openingItemBankGold?:number;
@@ -128,7 +133,7 @@ export type UnchangedCombatEventData = import('./combat-six-cost').SixCostEvent
   | { readonly type: 'kill'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin }
   | { readonly type: 'growth'; readonly tick: number; readonly unitId: string; readonly amountBps: number; readonly totalBps: number }
   | { readonly type: 'effectTriggered'; readonly tick: number; readonly source: EffectSource; readonly effectKey: string; readonly action: EffectAction; readonly targetId: string }
-  | { readonly type: 'movement'; readonly tick: number; readonly unitId: string; readonly from: HexCell; readonly to: HexCell; readonly reason?: 'ambessa-chain' | 'ambessa-fist-retreat' }
+  | { readonly type: 'movement'; readonly tick: number; readonly unitId: string; readonly from: HexCell; readonly to: HexCell; readonly reason?: 'ambessa-chain' | 'ambessa-fist-retreat' | import('./combat-displacement').DisplacementReason }
   | { readonly type: 'attack'; readonly tick: number; readonly attackerId: string; readonly targetId: string }
   | { readonly type: 'unitRevived'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly hp: number }
   | { readonly type: 'death'; readonly tick: number; readonly unitId: string }

@@ -1,5 +1,7 @@
+import { offeredAt } from './augment-stage-helpers';
 import { describe, expect, it } from 'vitest';
-import { createMatch, nextRound, rerollAugment, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, nextRound, rerollAugment, selectChoice, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { augmentCandidates, augmentOfferAllowed, deriveAugmentTier, externalAugmentBlocks, externallyBlockableAugments, fieldedTraitSnapshot,
   resolveAugmentTier, type AugmentOfferFilter } from '../src/simulation/augment-offers';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
@@ -25,6 +27,11 @@ function reachKeepingBoard(roundId: string, seed: number): MatchState {
       for (let i = 0; i < 1201 && state.phase === 'combat'; i++) state = stepMatch(state).state;
     }
     state = resolveM5Choices(state);
+    // v23: gift augments (e.g. One, Two, Three) can fill the bench; free a slot so pending loot settles.
+    while (state.m8.loot.direct.some(d => d.status === 'pending-capacity')) {
+      const extra = state.preparation.units.find(u => u.team === 'player' && u.location.kind === 'bench' && !UNIT_DEFINITIONS[u.definitionId]?.summon)!;
+      state = accepted(sellUnit(state, extra.id));
+    }
     state = accepted(nextRound(state, state.round));
   }
   return state;
@@ -37,8 +44,9 @@ describe('v22 content: data-driven offer rules', () => {
     for (const traits of Object.values(AUGMENT_OFFER_RULES.associatedTraits)) for (const trait of traits) expect(TRAIT_DEFINITIONS, trait).toHaveProperty(trait);
     expect(AUGMENT_OFFER_RULES.associatedTraits.TFT13_TeamupAugment_Sisters).toEqual(['ambusher', 'enforcer', 'pit-fighter', 'rebel']);
     expect(AUGMENT_OFFER_RULES.associatedTraits.TFT13_Augment_CabalCrest).toEqual(['black-rose']);
-    // None of the cross-player / one-per-match augments is in today's pool: those rules are inert, not missing.
-    expect(externallyBlockableAugments()).toEqual([]);
+    // Batch 2 activates Family and Chembaron global offer rules.
+    // Batch 3 adds All Out (PrimeCarry), the cross-player partner of Family.
+    expect(externallyBlockableAugments()).toEqual(['all-out','crimson-pact','welcome-to-the-playground']);
   });
 });
 
@@ -48,18 +56,25 @@ describe('v22 trait filter: 3-2 and 4-2 tailored, 2-1 not', () => {
     const GOLD_TEAMUPS = TEAMUPS.filter(id => AUGMENT_TIERS[id] === 'gold');
     expect(TEAMUPS.filter(id => !GOLD_TEAMUPS.includes(id))).toEqual(['geniuses']);
     expect(AUGMENT_TIERS.geniuses).toBe('prismatic');
-    for (const node of ['3-2', '4-2']) {
+    for (const node of ['3-2', '4-2'] as const) {
       const none = augmentCandidates('gold', [], [], null, filter(node));
       for (const id of TEAMUPS) expect(none, `${node} ${id}`).not.toContain(id);
       expect(augmentCandidates('prismatic', [], [], null, filter(node)), `${node} geniuses`).not.toContain('geniuses');
       const enforcer = augmentCandidates('gold', [], [], null, filter(node, ['enforcer']));
-      expect(TEAMUPS.filter(id => enforcer.includes(id)).sort()).toEqual(['mentorship', 'reunion', 'sisters']);
+      // 14.24 stage tags: Mentorship, Reunion and Sisters are 4-2 cards.
+      expect(TEAMUPS.filter(id => enforcer.includes(id)).sort()).toEqual(['mentorship', 'reunion', 'sisters'].filter(id => offeredAt(id, node)));
       // Untouched augments without AssociatedTraits are never filtered.
-      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold').length - GOLD_TEAMUPS.length);
+      // Stage-banned gold cards (14.24 stage tags) are absent at that node as well; the 22 crests and 16 batch-2 trait
+      // cards stay trait-linked whatever their stage.
+      const traitLinked = (id: string) => (AUGMENT_OFFER_RULES.associatedTraits[AUGMENT_POOL_API_NAMES[id]]?.length ?? 0) > 0;
+      expect(TEAMUPS.every(traitLinked)).toBe(true);
+      const heroGold = ['savage-revenge', 'all-out', 'blood-pact']; // batch 3's gold hero augments need their hero fielded
+      expect(none.length).toBe(Object.keys(AUGMENT_TIERS).filter(id => AUGMENT_TIERS[id] === 'gold' && !traitLinked(id) && !heroGold.includes(id) && offeredAt(id, node)).length);
     }
     const untailored = augmentCandidates('gold', [], [], null, filter('2-1'));
-    for (const id of GOLD_TEAMUPS) expect(untailored).toContain(id);
-    expect(augmentCandidates('prismatic', [], [], null, filter('2-1'))).toContain('geniuses');
+    // 2-1 is never tailored; the 14.24 stage tags keep every team-up out of 2-1.
+    for (const id of GOLD_TEAMUPS) expect(untailored.includes(id)).toBe(offeredAt(id, '2-1'));
+    expect(augmentCandidates('prismatic', [], [], null, filter('2-1')).includes('geniuses')).toBe(offeredAt('geniuses', '2-1'));
   });
 
   it('records the fielded-trait snapshot when 3-2 opens, reuses it for rerolls and restores from it', () => {
@@ -165,9 +180,13 @@ describe('v22 augment choice inside preparation (rules side)', () => {
     expect(previewRoundEconomy(state)).not.toBeNull();
   });
 
-  it('cross-player blocks are empty for the current pool, whatever the other seats hold', () => {
-    const a = reachRound('2-1', false, 7), b = reachRound('2-1', false, 9);
+  it('cross-player blocks track the enabled Chembaron card and ignore unrelated cards', () => {
+    // Seeds whose 2-1 offers hold no one-per-match card (batch 3 put Crimson Pact into seed 9's offer, batch 3 XP stage
+    // bans into seed 10's; 14 is the next seed without it).
+    const a = reachRound('2-1', false, 7), b = reachRound('2-1', false, 14);
     const seat = (s: MatchState, seatId: string) => ({ ...s, multiplayer: { version: 1, seatId, status: 'active', receipts: [], forfeitedChoices: [] } }) as unknown as MatchState;
-    expect(externalAugmentBlocks('A', [seat(a, 'A'), seat(b, 'B')])).toEqual([]);
+    const clean=(s:MatchState)=>({...s,pendingChoice:null,removedAugmentIds:[],augments:[]});
+    expect(externalAugmentBlocks('A', [seat(clean(a), 'A'), seat(clean(b), 'B')])).toEqual([]);
+    expect(externalAugmentBlocks('A', [seat(clean(a), 'A'), seat({...clean(b),removedAugmentIds:['crimson-pact']}, 'B')])).toEqual(['crimson-pact']);
   });
 });

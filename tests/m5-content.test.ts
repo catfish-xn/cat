@@ -1,3 +1,12 @@
+import { AUGMENT_BATCH1 } from '../src/simulation/content/augment-pool-batch1';
+import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
+import { AUGMENT_BATCH3 } from '../src/simulation/content/augment-pool-batch3';
+import { AUGMENT_BATCH3_XP } from '../src/simulation/content/augment-pool-batch3-xp';
+import { AUGMENT_BATCH4 } from '../src/simulation/content/augment-pool-batch4';
+import { AUGMENT_BATCH4_B4XP } from '../src/simulation/content/augment-pool-batch4-b4xp';
+import { AUGMENT_BATCH4_B4REROLL } from '../src/simulation/content/augment-pool-batch4-b4reroll';
+import { AUGMENT_BATCH4_B4COMBAT } from '../src/simulation/content/augment-pool-batch4-b4combat';
+import { BATCH3_SUMMON_UNITS, TRAINING_DUMMY_ID, TOWER_DUMMY_ID } from '../src/simulation/content/batch3-summons';
 import { G23_UNITS } from '../src/simulation/content/g2-3-units';
 import { G23_SUMMON_UNITS } from '../src/simulation/content/g2-3-summons';
 import { G24_VOIDSPAWN_UNITS } from '../src/simulation/content/g2-4b-voidspawn';
@@ -45,7 +54,10 @@ describe('M5 frozen S13 slice',()=>{
     expect(M5_UNIT_DEFINITIONS.caitlyn.baseStats.attack).toBe(82);
   });
   it('retains the historically distinct skills and all their three-star coefficient slots',()=>{
-    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS};
+    // v23 batch 3: the training and tower dummies own their abilities (the forming dummy and Golemify golem reuse
+    // the training-dummy and trainer-golem abilities).
+    const admitted = {...M5_UNIT_DEFINITIONS, ...G23_UNITS, ...G23_SUMMON_UNITS, ...G24_VOIDSPAWN_UNITS, ...S13_ANOMALY_SUMMON_UNITS,
+      [TRAINING_DUMMY_ID]: BATCH3_SUMMON_UNITS[TRAINING_DUMMY_ID], [TOWER_DUMMY_ID]: BATCH3_SUMMON_UNITS[TOWER_DUMMY_ID]};
     const expectedAbilityIds = [...new Set(Object.values(admitted).map(unit => unit.abilityId))].sort();
     expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual(expectedAbilityIds);
     for (const unit of Object.values(admitted)) expect(S13_ABILITY_DATA[unit.abilityId].championId).toBe(unit.id);
@@ -62,8 +74,17 @@ describe('M5 frozen S13 slice',()=>{
     }
   });
   // Augments: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  it('freezes v20: 35 supported traits, 8 components, 36 recipes, 66 augments and 56 anomalies',()=>{
-    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,66,56]);
+  it('freezes v23: 35 supported traits, 8 components, 36 recipes, 224 augments and 56 anomalies',()=>{
+    // Frozen pre-expansion slice: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11 + 5 teamups + Sisters.
+    // Count admitted raw source rows, independently of the generated *_DEFINITIONS exports.
+    const augmentCount = 30 + 6 + 14 + 7 + 3 + 5 + 1
+      + [AUGMENT_BATCH1, AUGMENT_BATCH3, AUGMENT_BATCH3_XP, AUGMENT_BATCH4,
+        AUGMENT_BATCH4_B4XP, AUGMENT_BATCH4_B4REROLL, AUGMENT_BATCH4_B4COMBAT]
+        .reduce((sum, source) => sum + Object.keys(source).length, 0)
+      + Object.values(AUGMENT_BATCH2).filter(row => row.enabled).length;
+    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,augmentCount,56]);
+    // Independent v23 frozen total: source-table additions/deletions must not update both sides.
+    expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(224);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);

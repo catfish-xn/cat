@@ -1,3 +1,4 @@
+import { formingTotals, expectedMagicRoll } from './augment-pool-batch3-progress';
 import { isAnvil } from './content/anvils';
 import { openingRewardOrbs } from './opening-batch-rewards';
 import { openingCrabCarrier } from './opening-crabs';
@@ -141,6 +142,14 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
           ? {...item,location:{kind:'inventory'}} : item);
         preparation = {...preparation,units:preparation.units.filter(unit => unit.id !== fact.unitId)};
         break;
+      case 'unit-removed':
+        // Dummify/Golemify forming removals (they record definitionId) return the unit's items to the inventory like
+        // a sale (drainBatch3Forming); a retired Support Mining dummy keeps its historical bindings.
+        if (fact.definitionId === undefined) break;
+        items = items.map(item => item.location.kind === 'unit' && item.location.unitId === fact.unitId
+          ? {...item,location:{kind:'inventory'}} : item);
+        preparation = {...preparation,units:preparation.units.filter(unit => unit.id !== fact.unitId)};
+        break;
       case 'unit-upgraded':
       case 'unit-upgraded-after-combat':
       case 'carousel-unit-claimed':
@@ -177,6 +186,25 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
   }
   checkOpening(next.resourceProvenance.entries.length);
   check(equipmentContinuation(items, d14OwnedItems(next)) && serial === next.nextItemSerial, 'historical equipment continuation');
+}
+
+/** Direct PvE loot is granted before solo economy records goldBefore, but
+ * after all battle equipment commands. Frozen slots and receipts are validated
+ * by validateB8Loot before this check; never trust the candidate bank itself.
+ * Multiplayer claims settle after economy and must not be subtracted here. */
+function combatBankGold(state: MatchState): number {
+  const result = state.roundResults[state.round - 1];
+  if (!result) return state.gold;
+  const drops = state.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === result.roundId)?.encounterPlan.drops ?? [];
+  const currentDrops = new Set(drops.map(drop => drop.dropId));
+  const lootGold = state.multiplayer ? 0 : state.m8.loot.receipts.reduce((sum, receipt) => {
+    const current = receipt.claimedRoundId === undefined ? currentDrops.has(receipt.dropId) : receipt.claimedRoundId === result.roundId;
+    if (!current || receipt.resolution === 'forfeited') return sum;
+    // Explicit resolutions record the actual payment (including unit conversion);
+    // legacy solo receipts record gold directly in their authenticated payload.
+    return sum + (receipt.gold ?? (receipt.payload.kind === 'gold' ? receipt.payload.quantity : 0));
+  }, 0);
+  return result.goldBefore - lootGold;
 }
 
 /** Authenticate the combat transcript from the already validated resource suffix.
@@ -220,7 +248,7 @@ function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBas
       .filter(r => r.parentItemInstanceId === item.id && r.roundId === basis.roundId)
       .flatMap(r => projectTemporaryEquipment(r, item.location.kind === 'unit' ? item.location.unitId : '')) : []);
     const source = { ...state, items, temporaryEquipment,
-      gold: state.roundResults.find(r => r.round === state.round)?.goldBefore ?? state.gold,
+      gold: combatBankGold(state),
       resourceProvenance: { ...state.resourceProvenance, entries: state.resourceProvenance.entries.slice(0, through + 1) } } as MatchState;
     const expected = prepareBattleEquipment(inputs, receipt.input, source, 'player', basis.battleSeed);
     check(equal(expected, receipt), 'battle equipment source evidence');
@@ -271,8 +299,17 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
   let receiptRound = 0;
   for (const receipt of loot.receipts) {
     const slot = slots.get(receipt.dropId); check(slot, 'receipt identity');
-    const ordinal = getCatalogRoundById(slot.roundId).ordinal;
-    check(ordinal >= receiptRound, 'receipt order'); receiptRound = ordinal;
+    // Receipts are appended in transaction order: a retained orb claimed in a later round carries that round as
+    // claimedRoundId, never earlier than the orb's own round.
+    // The source lower bound is defensive under the current validation order:
+    // restoreFrozenLootLedger authenticates slot.roundId and its dropId together;
+    // validateResourceReceipts above requires claim ordinal >= the source encoded
+    // in that same dropId (both selectors use ROUND_CATALOG for solo rounds).
+    // Thus ordinal < sourceOrdinal cannot reach this loop; transaction-order
+    // inversions between otherwise valid receipts still reach receiptRound.
+    const sourceOrdinal = getCatalogRoundById(slot.roundId).ordinal;
+    const ordinal = receipt.claimedRoundId === undefined ? sourceOrdinal : getCatalogRoundById(receipt.claimedRoundId).ordinal;
+    check(ordinal >= sourceOrdinal && ordinal >= receiptRound, 'receipt order'); receiptRound = ordinal;
     if ('payload' in slot) check(equal(receipt.payload,slot.payload), 'frozen receipt payload');
     else check(receipt.payload.kind === 'item' && makeLootPendingChoice(slot).offers.includes(receipt.payload.definitionId), 'choice receipt payload');
     receipts.set(receipt.dropId,receipt);
@@ -365,7 +402,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:state.roundResults[state.round-1]?.goldBefore??state.gold,g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
@@ -532,6 +569,11 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
         check(preparation.units.some(u=>u.id===fact.unitId&&isAnvil(u.definitionId)),'anvil consumption');
         preparation={...preparation,units:preparation.units.filter(u=>u.id!==fact.unitId)};
         take({kind:'anvil-opened',unitId:fact.unitId,choiceId:fact.choiceId});
+      }else if(fact?.kind==='unit-removed'&&fact.definitionId===undefined){
+        // Batch-3 Support Mining retires its own training dummy in the settlement drain; the dummy ledger authenticates it.
+        check(preparation.units.some(u=>u.id===fact.unitId&&u.definitionId==='training-dummy'),'dummy retirement');
+        preparation={...preparation,units:preparation.units.filter(u=>u.id!==fact.unitId)};
+        take({kind:'unit-removed',unitId:fact.unitId,receiptId:fact.receiptId});
       }else if(!mechanicBirth())break;
       combinations();
     }

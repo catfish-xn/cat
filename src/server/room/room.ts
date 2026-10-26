@@ -14,6 +14,9 @@ import {
 import { externalAugmentBlocks } from '../../simulation/augment-offers';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { selectOpeningUnit } from '../../simulation/opening-unit';
+import { needsOpponentHp } from '../../simulation/augment-settlement-gold';
+import { settlementLevelUpHealth } from '../../simulation/augment-xp';
+import { explainedHp, liveHpAfterSettlement } from '../../simulation/player-hp';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import { getRoundPreparationMs } from '../../simulation/round-schedule';
@@ -42,8 +45,8 @@ import {
 } from './types';
 
 export interface RoomTimings {
-  /** 30s selects the rules' per-round table; other values explicitly override all rounds (e.g. test clocks). */
-  readonly preparationMs: number;
+  /** `per-round` (the default) selects the rules' per-round table (`getRoundPreparationMs`); a number overrides every round (e.g. test clocks). */
+  readonly preparationMs: number | typeof PER_ROUND_PREPARATION;
   readonly choiceMs: number;
   /** v22: preparation at an augment round, the open augment choice included; AUGMENT_PREPARATION_MS when absent. */
   readonly augmentPreparationMs?: number;
@@ -104,7 +107,9 @@ export const SLICE_STEP_TICKS = 1;
 /** v22: total preparation at an augment round, the augment choice included (14.24: 30 s planning + 20 s armory bonus).
  * The augment pick no longer uses `choiceMs` (the earlier 48 s pick is superseded by this merged phase). */
 export const AUGMENT_PREPARATION_MS = 50_000;
-export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
+/** `RoomTimings.preparationMs`: the rules decide each round's preparation (6/15/20 s openings, PvE 20 s, anomaly 75 s, others 30 s). */
+export const PER_ROUND_PREPARATION = 'per-round';
+export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: PER_ROUND_PREPARATION, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
 /** `stale-seat`: a seat or the pool changed after the plan was made; plan again on the latest live states. */
 export type CommitFailure = 'settlement-pending' | 'duplicate-settlement' | 'stale-round' | 'stale-seat' | 'wrong-phase' | 'invalid-settlement';
@@ -133,12 +138,17 @@ const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'ano
 const PREPARATION_ONLY: readonly SeatCommand['type'][] = ['moveItemSummon'];
 /** v15: an orb claim passes wherever an operation does; the rules claim it at once or queue it until the battle settles. */
 const ORB: readonly SeatCommand['type'][] = ['claimOrb'];
-/** v22 anvil units: an anvil opened in settlement (the rules allow it there) is answered there too, before its deadline. */
-const SETTLEMENT_CHOICE: readonly SeatCommand['type'][] = ['choose'];
+/**
+ * v22 anvil units: wherever an anvil can be opened (a seat the rules settled, in settlement or already during the battle
+ * phase and its tail), its choice is answered there too, before its deadline. In battle and awaiting-settlement only the
+ * seat's own open anvil passes (see `apply`); settlement keeps passing every choice as before.
+ */
+const ANVIL_CHOICE: readonly SeatCommand['type'][] = ['choose'];
+const ANVIL_ONLY_CHOICE_PHASES: ReadonlySet<RoomPhase> = new Set(['battle', 'awaiting-settlement']);
 export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
   waiting: new Set(), carousel: new Set(['carousel-pick']), preparation: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]), choice: new Set([...OPS, ...ORB, ...CHOICES, ...PREPARATION_ONLY]),
   // The deadline, the automatic deployment and the freeze are one boundary no command may interleave with.
-  frozen: new Set(), battle: new Set([...OPS, ...ORB]), 'awaiting-settlement': new Set([...OPS, ...ORB]), settlement: new Set([...OPS, ...ORB, ...SETTLEMENT_CHOICE]), ended: new Set(),
+  frozen: new Set(), battle: new Set([...OPS, ...ORB, ...ANVIL_CHOICE]), 'awaiting-settlement': new Set([...OPS, ...ORB, ...ANVIL_CHOICE]), settlement: new Set([...OPS, ...ORB, ...ANVIL_CHOICE]), ended: new Set(),
 };
 /** Upper bound of rules steps when the room finishes a live PvE battle itself (the engine stops at 1200 ticks). */
 const LIVE_COMBAT_MAX_STEPS = 5_000;
@@ -244,7 +254,7 @@ export const ANVIL_PHASE_EXTENSION_MS = 30_000;
  * v22 anvil units: the open choice of an alive seat that runs on its own deadline (an opened anvil, whose rules payload
  * names `source: 'anvil-unit'` and its `timeoutMs`), or null.
  */
-function ownDeadlineChoice(seat: SeatState): { readonly choiceId: string; readonly generation: number; readonly timeoutMs: number } | null {
+export function ownDeadlineChoice(seat: SeatState): { readonly choiceId: string; readonly generation: number; readonly timeoutMs: number } | null {
   const choice = seat.alive && seat.match.phase === 'choice' ? seat.match.pendingChoice : null;
   const payload = choice?.payload;
   if (!choice || payload?.kind !== 'forge' || payload.source !== 'anvil-unit' || typeof payload.timeoutMs !== 'number') return null;
@@ -509,7 +519,7 @@ export class Room {
     if (claimed.state === seat.match) return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
     const result = this.withPendingResolved({ pool: claimed.pool, state: claimed.state, events: claimed.events });
     const seatRevision = seat.seatRevision + 1;
-    this.commitSeat(seatId, result.state, result.pool);
+    if (!this.commitSeat(seatId, result.state, result.pool)) return { ok: false, reason: 'room-phase', state: seat.match };
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
   }
 
@@ -520,6 +530,7 @@ export class Room {
     const allowed = !this.disposed && ROOM_COMMAND_GATE[phase].has(command.type);
     if (!allowed) return phase === 'frozen' && command.type === 'claimOrb' && !this.disposed ? this.holdFrozenClaim(seat, command) : { ok: false, reason: 'wrong-phase', state: seat.match };
     if (command.type === 'carousel-pick') return this.pickCarousel(seat, command);
+    if (command.type === 'choose' && ANVIL_ONLY_CHOICE_PHASES.has(phase) && ownDeadlineChoice(seat)?.choiceId !== command.choiceId) return { ok: false, reason: 'wrong-phase', state: seat.match };
     // D11 live bank: a PvE seat fighting its live battle first catches up to the live tick, so the operation's gold
     // reaches the rules at that tick (published together with the operation, nothing if it is refused).
     let live: LiveCatchUp | null = null;
@@ -554,7 +565,7 @@ export class Room {
     // carousel units in, in the same publication.
     const result = this.withPendingResolved(operated);
     const seatRevision = seat.seatRevision + 1;
-    this.commitSeat(seatId, result.state, result.pool);
+    if (!this.commitSeat(seatId, result.state, result.pool)) return { ok: false, reason: 'room-phase', state: seat.match };
     if (phase === 'battle' && result.state.gold !== seat.match.gold) this.sampleLiveBank(seatId, result.state.gold);
     if (phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
@@ -690,25 +701,26 @@ export class Room {
     // Fixed seat order, independent of result arrival order: each seat's transaction runs on the pool the previous one left.
     for (const seat of alive) {
       const job = jobs.get(seat.seatId)!;
+      // seat.hp already carries every explained heal since the last settlement (replace → syncedSeatHp), so HP before
+      // is exactly the room's; the only rules addition here is the settlement's own level-up health (Upward Mobility).
       const settled = (match: MatchState, damage: number, receipt: RoundSettlementReceipt | null, events: readonly MatchEvent[], hpAfter = Math.max(0, seat.hp - damage)): SettledSeat =>
         ({ seatId: seat.seatId, hpBefore: seat.hp, damage, hpAfterRaw: seat.hp - damage, hpAfter, match, receipt, events });
       if (job.kind === 'receipt') {
         yield;
+        const base = seat.hp;
         const applied = runSharedMatchCommand(pool, seat.match, { type: 'settleRound', receipt: job.receipt });
         if (!applied.ok) return { ok: false, detail: `seat ${seat.seatId}: ${applied.reason}` };
         // HP must match the room's damage unless exactly one Mel save from this battle explains a lethal rescue.
-        const expected = Math.max(0, seat.hp - job.damage);
-        if (applied.state.playerHp !== expected) {
-          const saves = applied.events.filter(event => event.type === 'playerSaved');
-          if (expected !== 0 || applied.state.playerHp !== 1 || saves.length !== 1
-            || saves[0]!.source !== 'mel' || saves[0]!.battleId !== job.receipt.battleId) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${applied.state.playerHp} disagrees with the room HP ${seat.hp} - ${job.damage}` };
-        }
+        const raw = Math.max(0, base - job.damage), saves = applied.events.filter(event => event.type === 'playerSaved');
+        const rescued = raw === 0 && saves.length === 1 && saves[0]!.source === 'mel' && saves[0]!.battleId === job.receipt.battleId;
+        const after = rescued ? 1 : raw;
+        if (applied.state.playerHp !== settlementLevelUpHealth(applied.state, state.round, after)) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${applied.state.playerHp} disagrees with the room HP ${base} - ${job.damage}` };
         // Also check the rules' receipt/record; raw damage remains unchanged for elimination tie-breaks.
         const record = applied.state.roundResults.at(-1);
         if (!record || record.round !== state.round || record.roundId !== state.roundId
-          || record.settlementId !== job.receipt.settlementId || record.hpBefore !== seat.hp
-          || record.playerDamage !== job.damage || record.hpAfter !== applied.state.playerHp
-          || record.hpLost !== seat.hp - applied.state.playerHp) return { ok: false, detail: `seat ${seat.seatId}: rules HP record disagrees with the room settlement` };
+          || record.settlementId !== job.receipt.settlementId || record.hpBefore !== base
+          || record.playerDamage !== job.damage || record.hpAfter !== after
+          || record.hpLost !== base - after) return { ok: false, detail: `seat ${seat.seatId}: rules HP record disagrees with the room settlement` };
         pool = applied.pool; seats.push(settled(applied.state, job.damage, job.receipt, applied.events, applied.state.playerHp));
         continue;
       }
@@ -716,23 +728,27 @@ export class Room {
       // The rules settled this seat themselves (PvE/supply): their HP is authoritative and must agree with the room's. A
       // placeholder outcome that left the state unsettled (test resolvers) is subtracted by the room as in B1.
       const settledByRules = outcome.state.roundResults.at(-1)?.round === state.round;
-      const expected = Math.max(0, seat.hp - outcome.damage);
+      const raw = Math.max(0, seat.hp - outcome.damage);
+      const expected = settledByRules ? settlementLevelUpHealth(outcome.state, state.round, raw) : raw;
       if (settledByRules && outcome.state.playerHp !== expected) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${outcome.state.playerHp} disagrees with the room HP ${seat.hp} - ${outcome.damage}` };
-      if (untouched) { seats.push(settled(outcome.state, outcome.damage, null, [])); continue; }
+      if (untouched) { seats.push(settled(outcome.state, outcome.damage, null, [], expected)); continue; }
       if (seat.match.phase === 'combat') {
         if (!settledByRules) return { ok: false, detail: `seat ${seat.seatId}: an unsettled placeholder outcome cannot settle a live battle` };
         const finished = yield* finishLiveCombatSteps(pool, seat.match);
         if (!finished.ok) return { ok: false, detail: `seat ${seat.seatId}: ${finished.reason}` };
-        if (finished.state.playerHp !== expected) return { ok: false, detail: `seat ${seat.seatId}: live HP ${finished.state.playerHp} disagrees with the resolved battle ${seat.hp} - ${outcome.damage}` };
-        pool = finished.pool; seats.push(settled(finished.state, outcome.damage, null, finished.events));
+        const live = settlementLevelUpHealth(finished.state, state.round, raw);
+        if (finished.state.playerHp !== live) return { ok: false, detail: `seat ${seat.seatId}: live HP ${finished.state.playerHp} disagrees with the resolved battle ${seat.hp} - ${outcome.damage}` };
+        pool = finished.pool; seats.push(settled(finished.state, outcome.damage, null, finished.events, live));
         continue;
       }
       // The rules already settled this round on the live seat at or before the freeze (an empty PvE board loses at once
       // when its battle starts; a supply round settles in its choice): that live seat, with whatever was operated since,
       // is the result. Its HP is the rules' own and must agree with the resolved battle.
       if (seat.match.roundResults.at(-1)?.round === state.round) {
-        if (seat.match.playerHp !== expected) return { ok: false, detail: `seat ${seat.seatId}: live HP ${seat.match.playerHp} disagrees with the resolved battle ${seat.hp} - ${outcome.damage}` };
-        seats.push(settled(seat.match, outcome.damage, null, []));
+        // Settled in place before the room resolved it: later commands may only have added explained heals.
+        const live = liveHpAfterSettlement(seat.match, state.round, raw);
+        if (seat.match.playerHp !== live) return { ok: false, detail: `seat ${seat.seatId}: live HP ${seat.match.playerHp} disagrees with the resolved battle ${seat.hp} - ${outcome.damage}` };
+        seats.push(settled(seat.match, outcome.damage, null, [], live));
         continue;
       }
       // Neither in a live battle nor settled by the rules (a state the resolver left as it was): only an unchanged seat may pass.
@@ -1104,8 +1120,8 @@ export class Room {
     if (committed) return this.setPhase('settlement', this.options.settlementMs);
     if (alive.every(seat => seat.match.phase === 'preparation')) {
       this.resolvePendingOnEntry();
-      return this.setPhase('preparation', this.options.preparationMs === ROOM_TIMING_DEFAULTS.preparationMs
-        ? getRoundPreparationMs(alive[0].match.roundDefinitionId) : this.options.preparationMs);
+      const preparationMs = this.options.preparationMs;
+      return this.setPhase('preparation', preparationMs === PER_ROUND_PREPARATION ? getRoundPreparationMs(alive[0].match.roundDefinitionId) : preparationMs);
     }
     // A supply round settles inside the choice itself; the rules left nothing to fight.
     if (alive.every(seat => seat.match.phase === 'settlement')) return this.freezeAndResolve();
@@ -1116,7 +1132,7 @@ export class Room {
   private applyTimeouts(stage: TimeoutStage): boolean {
     for (const seat of this.aliveSeats()) {
       const outcome = resolveSeatTimeouts(seat.match, this.current.pool, stage);
-      if (outcome.state !== seat.match) this.commitSeat(seat.seatId, outcome.state, outcome.pool);
+      if (outcome.state !== seat.match && !this.commitSeat(seat.seatId, outcome.state, outcome.pool)) return false;
       if (!outcome.ok) { this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: outcome.reason }); return false; }
     }
     return true;
@@ -1870,20 +1886,53 @@ export class Room {
   private releaseRound(): void { this.openingStreams = false; this.settlementWork = null; this.settlementFactory = null; this.settlementFrozen = false; this.drainingSettlementCommands = false; this.clearLive(); this.streams.clear(); this.streamBoundary = []; this.frozenClaims = []; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
-  /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */
-  private commitSeat(seatId: string, match: MatchState, pool: SharedPoolState): void {
+  /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). False when the
+   * room refused it instead (an unexplained HP change faults the room, syncedSeatHp): nothing of it was published. */
+  private commitSeat(seatId: string, match: MatchState, pool: SharedPoolState): boolean {
     this.replace({ ...this.current, pool, poolRevision: pool.revision,
       seats: this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, match, seatRevision: candidate.seatRevision + 1 } : candidate) });
+    return this.current.seats.find(candidate => candidate.seatId === seatId)?.match === match;
   }
   private replace(next: RoomState): void {
     if (this.disposed) return;
-    const published = { ...this.withChoiceDeadlines(next), roomRevision: this.current.roomRevision + 1 };
+    const synced = this.syncedSeatHp(next);
+    if (typeof synced === 'string') return this.fail({ kind: 'invalid-results', detail: synced });
+    const published = { ...this.withChoiceDeadlines(synced), roomRevision: this.current.roomRevision + 1 };
     // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
     this.current = published;
     for (const listener of this.listeners) listener(this.current);
     this.syncChoiceTimers();
     this.fitDeadlineToChoices();
+  }
+
+  /**
+   * Keeps the room's HP ledger (`seat.hp`, shown on SeatPublic) in step with every rules heal between settlements, in the
+   * same publication. A seat whose match changed without a settlement inside the change (a command, a round entry) and
+   * whose publication did not set its HP itself must end at exactly `explainedHp`: an Upward Mobility level-up or a
+   * Crimson Pact skip receipt. Any other HP change is refused (the room faults). Settlement and the opening resolution
+   * set `seat.hp` themselves and are checked there.
+   */
+  private syncedSeatHp(next: RoomState): RoomState | string {
+    if (next.seats === this.current.seats) return next;
+    let changed = false;
+    const seats = next.seats.map(seat => {
+      const prev = this.current.seats.find(candidate => candidate.seatId === seat.seatId);
+      if (!prev || seat.match === prev.match || seat.hp !== prev.hp || !seat.alive) return seat;
+      const before = prev.match, after = seat.match;
+      if (after.playerHp === before.playerHp) return seat;
+      const settledInside = after.roundResults.length !== before.roundResults.length;
+      if (settledInside) return seat;
+      const explained = explainedHp(before, after);
+      if (after.playerHp !== explained) return `seat ${seat.seatId}: rules HP ${after.playerHp} has no explained source (${before.playerHp} → ${explained})`;
+      // A seat the rules already settled this round keeps the pre-settlement ledger until the room resolves the round.
+      if (before.roundResults.at(-1)?.round === before.round && !next.settlements.includes(`${next.roomId}:round-${before.round}`)) return seat;
+      changed = true;
+      return { ...seat, hp: after.playerHp };
+    });
+    const bad = seats.find(seat => typeof seat === 'string');
+    if (typeof bad === 'string') return bad;
+    return changed ? { ...next, seats: seats as SeatState[] } : next;
   }
 
   /* ---------------- v22 anvil choice deadlines (docs/ANVIL_UNITS.md) ---------------- */
@@ -1906,7 +1955,10 @@ export class Room {
       // P 乙: inside a capped phase the anvil's own deadline is the cap at the latest, so the seat's countdown (endsAt)
       // shows when the choice is really forced, and its own timer answers it there.
       const own = this.options.clock.now() + open.timeoutMs;
-      const cap = CHOICE_TIMEOUT_PHASES.has(next.phase) && this.phaseDeadline !== null ? this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS : Infinity;
+      // A fill-in bot answers its anvil at its next step: its deadline never reaches past the phase deadline, so its
+      // opening never moves every player's countdown (v23 live pre-check: 6 s ↔ 30 s flicker at 1-2).
+      const extension = seat.controller === 'bot' ? 0 : ANVIL_PHASE_EXTENSION_MS;
+      const cap = CHOICE_TIMEOUT_PHASES.has(next.phase) && this.phaseDeadline !== null ? this.phaseDeadline + extension : Infinity;
       return { ...rest, choiceDeadline: { choiceId: open.choiceId, generation: open.generation, deadlineAt: Math.min(own, cap) } };
     });
     return changed ? { ...next, seats } : next;
@@ -1938,14 +1990,16 @@ export class Room {
    * choice or settlement phase ends at the later of its own deadline and every open anvil deadline of an alive seat
    * (published like any deadline, as the view's `endsAt`), capped at its own deadline + ANVIL_PHASE_EXTENSION_MS, and
    * goes back to its own deadline once those anvils are answered. The anvil timer, armed first, fires before the phase
-   * deadline at the same time; an anvil still open at the cap is answered by the phase timeouts.
+   * deadline at the same time; an anvil still open at the cap is answered by the phase timeouts. A fill-in bot seat's
+   * anvil never extends the phase (its deadline is capped at the phase's own; v23 live fix).
    */
   private fitDeadlineToChoices(): void {
     const state = this.current;
     if (this.extendingDeadline || this.timer === null || this.phaseDeadline === null || state.deadlineAt === null || !CHOICE_TIMEOUT_PHASES.has(state.phase)) return;
     // P (user 2026-10-24, option 乙): anvils extend a phase by at most ANVIL_PHASE_EXTENSION_MS in total; an anvil still open
     // at the capped deadline is answered by the phase's own timeouts (`timeoutChoice`, first offer).
-    const wanted = Math.min(this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS, Math.max(this.phaseDeadline, ...this.aliveSeats().map(seat => seat.choiceDeadline?.deadlineAt ?? -Infinity)));
+    // Fill-in bot seats (controller 'bot') never extend the phase; a takeover seat is still a player's and keeps 乙.
+    const wanted = Math.min(this.phaseDeadline + ANVIL_PHASE_EXTENSION_MS, Math.max(this.phaseDeadline, ...this.aliveSeats().map(seat => seat.controller === 'bot' ? -Infinity : seat.choiceDeadline?.deadlineAt ?? -Infinity)));
     if (wanted === state.deadlineAt) return;
     this.extendingDeadline = true;
     try {
@@ -1968,7 +2022,7 @@ export class Room {
     const result = runSharedMatchCommand(this.current.pool, seat.match, { type: 'timeoutChoice', round: seat.match.round, choiceId, generation });
     if (!result.ok) return this.fail({ kind: 'seat-stuck', seatId, reason: `forfeit:${result.reason}` });
     const resolved = this.withPendingResolved(result);
-    this.commitSeat(seatId, resolved.state, resolved.pool);
+    if (!this.commitSeat(seatId, resolved.state, resolved.pool)) return;
     if (this.current.phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
   }
   /** B5 item 6: the published pool balances against every seat it binds; throws before anything is published. */
@@ -2018,6 +2072,8 @@ function conservationProblem(pool: SharedPoolState, states: readonly MatchState[
 
 /** §11.3 receipt: a trusted hand-over built from the frozen envelope and the rules' own proposal, never from a client. */
 function buildReceipt(roomId: string, envelope: BattleInput, proposal: SideProposal, combatTicks: number, combatEventCount: number): RoundSettlementReceipt {
+  const own = envelope.seats.find(s => s.seatId === proposal.seatId)!.state;
+  const opponent = (envelope.mirrorOf ?? envelope.seats.find(s => s.seatId !== proposal.seatId))?.state;
   return {
     version: ROUND_SETTLEMENT_VERSION,
     settlementId: JSON.stringify([roomId, envelope.round, proposal.seatId]),
@@ -2028,6 +2084,8 @@ function buildReceipt(roomId: string, envelope: BattleInput, proposal: SidePropo
     growth: proposal.growth, combatTicks, combatEventCount,
     // G23-SERVER-FACTS: the rules' own battle facts, forwarded verbatim (a mirror copy has none and never settles).
     ...(proposal.g23Facts ? { g23Facts: proposal.g23Facts } : {}),
+    // Kingslayer: the opponent's battle-start health from the frozen snapshots, only for a seat that owns it.
+    ...(opponent && needsOpponentHp(own.augments, envelope.round) ? { opponentHp: opponent.playerHp } : {}),
   };
 }
 

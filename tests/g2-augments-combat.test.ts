@@ -1,3 +1,4 @@
+import { offeredAt } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
@@ -114,12 +115,15 @@ import { selectChoice, deployMatchUnit, buyUnit, startMatchCombat, stepMatch, ty
 import { accepted, reachRound } from './match-helpers';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
-// v22 augment tier table: Climb the Ladder I is offered at 2-1 only by seeds 108/109 below 600; seed 109's real battle has the ally death.
+// v23 integration (224-offer pool, fmix32 openings) and v23 batch 3 + global 14.24 stage bans (XP line) merged: each
+// seed is the first non-Trainer-Golem seed whose offer at the card's first node holds it (Trainer Golem openings block
+// the route's empty-board helper); death cards still see an ally death. Climb the Ladder I is a 3-2/4-2 card, so its seed
+// is a 3-2 seed. The Blistering Strikes 16/648 ignite restore regression lives in tests/blistering-restore.test.ts.
 it.each([
- ['blistering-strikes',0],['clockwork-accelerator',7],['lone-hero',20],['climb-the-ladder-i',109],['inspiring-epitaph',18],
+ ['blistering-strikes',163],['clockwork-accelerator',15],['lone-hero',8],['climb-the-ladder-i',32],['inspiring-epitaph',27],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
- let s=reachRound('2-1',false,seed);
- for(let candidate=0;!s.pendingChoice!.offers.includes(id)&&candidate<300;candidate++)s=reachRound('2-1',false,candidate);
+ // 14.24 stage tags: Climb the Ladder I is offered at 3-2/4-2; its seed column is a 3-2 seed.
+ let s=offeredAt(id,'2-1')?reachRound('2-1',false,seed):reachRound('3-2',false,seed);
  const choice=s.pendingChoice!;expect(choice.offers).toContain(id);
  s=accepted(selectChoice(s,choice.choiceId,choice.generation,id));
  const first=s.preparation.units.find(u=>u.team==='player')!;
@@ -128,7 +132,7 @@ it.each([
  s=accepted(deployMatchUnit(s,first.id,{kind:'board',cell:{col:3,row:4}}));
  if(id!=='lone-hero') {
   s=accepted(buyUnit(s,slot>=0?slot:0,s.shop.generation));
-  const second=s.preparation.units.find(u=>u.team==='player'&&u.id!==first.id)!;
+  const second=s.preparation.units.find(u=>u.team==='player'&&u.id!==first.id&&Object.hasOwn(M5_UNIT_DEFINITIONS,u.definitionId))!;
   s=accepted(deployMatchUnit(s,second.id,{kind:'board',cell:{col:0,row:7}}));
  }
  s=accepted(startMatchCombat(s));let triggered=false, deathCheckpoint=false, checks=0;

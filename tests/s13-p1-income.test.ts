@@ -5,6 +5,7 @@ import {readAugmentIncome,investmentGrowth} from '../src/simulation/augment-inco
 import {selectChoice,startMatchCombat,nextRound,deployMatchUnit} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {accepted,reachRound,emptyBoard,resolveM5Choices} from './match-helpers';
+import {augmentTier,augmentDraw,openingEncounter} from './fixtures/m5/oracle.g2.cjs';
 import {previewRoundEconomy} from '../src/simulation/economy-preview';
 import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
 const owned=(id:string)=>({definitionId:id,choiceId:id,acquiredRound:4});
@@ -15,12 +16,13 @@ it.each([['going-long',0,2,105],['hedge-fund',10,2,115],['investment-strategy-ii
  expect(plan.goldAfter).toBe(gold);expect(plan.progression.xpRequested).toBe(xp);
 });
 it('no-interest wins over both raised caps; investment growth is earned interest, not bank size',()=>{
- expect(readAugmentIncome([owned('going-long'),owned('hedge-fund'),owned('investment-strategy-ii')])).toEqual({interestCap:0,roundXp:4,healthPerInterest:9});
+ expect(readAugmentIncome([owned('going-long'),owned('hedge-fund'),owned('investment-strategy-ii')])).toEqual({interestCap:0,roundXp:4,roundGold:0,healthPerInterest:9}); // v23 augment pool: income also reports per-round gold
  expect(investmentGrowth([owned('investment-strategy-ii')],[{round:3,incomeBreakdown:{interest:7}},{round:4,incomeBreakdown:{interest:7}},{round:5,incomeBreakdown:{interest:3}}])).toBe(90);
 });
 it.each(['going-long','hedge-fund','investment-strategy-ii'])('%s public acquisition has one receipt, strict restore and actual settled effect', id=>{
- let seed=0,state=reachRound('2-1',false,seed);
- for(;seed<200&&!state.pendingChoice?.offers.includes(id);seed++)state=reachRound('2-1',false,seed+1);
+ // v23: the scan uses the first non-Trainer-Golem seed whose 2-1 offer holds the card (the golem blocks emptyBoard).
+ const seed=Array.from({length:600},(_,i)=>i).find(s=>openingEncounter(s)!=='trainer-golems'&&augmentDraw((s^0x9e3779b9)>>>0,augmentTier(s,'round:2-1:augment'),[],[],'round:2-1:augment').offers.includes(id))!;
+ let state=reachRound('2-1',false,seed);
  expect(state.pendingChoice?.offers).toContain(id);
  const choice=state.pendingChoice!,before=state.gold;
  state=accepted(selectChoice(state,choice.choiceId,choice.generation,id));

@@ -26,12 +26,13 @@ it('three Black Rose champions compile one Sion per side at 6-6 and after advanc
       sionHp.push(compiled.stats.health);
     }
   }
-  // The original five-entry growth table caps at stage 6, including overtime's stage 7.
-  expect(sionHp).toEqual([1450, 1450, 1450, 1450]);
+  // 750 base HP × (1 + 3 stars × 15%); the five-entry growth table caps at stage 6, including overtime's stage 7.
+  expect(sionHp).toEqual([1087, 1087, 1087, 1087]);
 });
 
 it('public production commands reach ordinal 39, resolve its earned armory, and settle real overtime combat once', () => {
-  let state = accepted(enableMultiplayerSettlement(createMatch(42), 'A'));
+  // Seed 43 (was 42): with the global 14.24 stage bans, seed 42's timeout picks no longer survive the PvE rounds to 39.
+  let state = accepted(enableMultiplayerSettlement(createMatch(43), 'A'));
   const receipts = [];
   let rumbleId: string | undefined;
   let armoryId: string | undefined;

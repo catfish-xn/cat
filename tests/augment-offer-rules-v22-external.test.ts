@@ -41,8 +41,10 @@ describe('v22 node bans and external rules (re-mapped pool)', () => {
 
   it('Welcome to the Playground / Gloves Off: another live player owning one blocks the other, not itself', () => {
     const base = reachRound('2-1', false);
-    const a = seat(base, 'A', { augments: own('reunion') }), b = seat(base, 'B');
-    expect(externalAugmentBlocks('B', [a, b])).toEqual(['geniuses']);
+    // Pool growth may put an unrelated one-per-match card in the opening offers; this case tests ownership only.
+    const a = seat(base, 'A', { augments: own('reunion'), pendingChoice: null, removedAugmentIds: [] }), b = seat(base, 'B', { pendingChoice: null, removedAugmentIds: [] });
+    // v23 batch 3: All Out is the real PrimeCarry, so it shares the remapped apiName with Geniuses.
+    expect(externalAugmentBlocks('B', [a, b])).toEqual(['all-out', 'geniuses']);
     expect(externalAugmentBlocks('A', [a, b])).toEqual([]);
     expect(externalAugmentBlocks('B', [seat(base, 'A', { augments: own('reunion') }, 'eliminated'), b])).toEqual([]);
     expect(augmentCandidates('gold', [], [], null, filter('2-1', [], ['geniuses']))).not.toContain('geniuses');
@@ -51,15 +53,15 @@ describe('v22 node bans and external rules (re-mapped pool)', () => {
 
   it('War for the Undercity: shown once to any other live player (offer, seen, owned) blocks it for everyone else', () => {
     const base = reachRound('2-1', false), b = seat(base, 'B');
-    expect(externalAugmentBlocks('B', [seat(base, 'A', { removedAugmentIds: ['menaces'] }), b])).toEqual(['menaces']);
-    expect(externalAugmentBlocks('B', [seat(base, 'A', { augments: own('menaces') }), b])).toEqual(['menaces']);
+    expect(externalAugmentBlocks('B', [seat(base, 'A', { removedAugmentIds: ['menaces'] }), b])).toEqual(['crimson-pact','menaces']);
+    expect(externalAugmentBlocks('B', [seat(base, 'A', { augments: own('menaces') }), b])).toEqual(['crimson-pact','menaces']);
     const offered = seat(base, 'A', { pendingChoice: { ...base.pendingChoice!, offers: ['menaces', 'x', 'y'] }, removedAugmentIds: [] });
-    expect(externalAugmentBlocks('B', [offered, b])).toEqual(['menaces']);
+    expect(externalAugmentBlocks('B', [offered, b])).toEqual(['crimson-pact','menaces']);
     expect(externalAugmentBlocks('B', [seat(base, 'A', { removedAugmentIds: ['menaces'] }, 'eliminated'), b])).toEqual([]);
   });
 
   it('a reroll records its external blocks; restore replays them and rejects blocks no rule can produce', () => {
-    expect(externallyBlockableAugments()).toEqual(['geniuses', 'menaces', 'reunion']);
+    expect(externallyBlockableAugments()).toEqual(['all-out','crimson-pact','geniuses','menaces','reunion','welcome-to-the-playground']);
     let state: MatchState | null = null;
     for (let seed = 1; seed < 300 && !state; seed++) {
       const s = reachRound('2-1', false, seed);
@@ -97,10 +99,18 @@ describe('v22 one-per-match in the shared round advance and the room', () => {
     expect(tier).toBe('gold');
     const offers = seats.flatMap(s => s.match.pendingChoice!.offers);
     expect(new Set(offers).size).toBe(offers.length);
+    // The mock now aliases enabled batch-2 cards; onePerMatch is keyed by apiName.
+    // Independently close each known alias group when any internal ID was shown.
+    const blockedAliases=(ids:string[])=>[...new Set([...ids,...[
+      ['menaces','crimson-pact'],['reunion','welcome-to-the-playground'],['sisters','black-rose-crest'],['all-out','geniuses'],
+    ].flatMap(group=>group.some(id=>ids.includes(id))?group:[])])].sort();
     const shownBefore: string[] = [];
+    // A shown card blocks every pool id with its apiName; the remap above gives Crimson Pact and Menaces one apiName.
+    const sameApi = (shown: readonly string[]) => { const apis = new Set(shown.map(augmentApiName)); return Object.keys(AUGMENT_TIERS).filter(id => apis.has(augmentApiName(id))).sort(); };
     for (const s of seats) {
       const record = s.match.augmentOffers.at(-1)!;
-      expect(record.externalBlocks[0]).toEqual([...shownBefore].sort());
+      expect(record.externalBlocks[0]).toEqual(blockedAliases(shownBefore));
+      expect(record.externalBlocks[0]).toEqual(sameApi(shownBefore));
       shownBefore.push(...s.match.pendingChoice!.offers);
       expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(s.match))).toEqual(s.match);
     }
@@ -112,7 +122,8 @@ describe('v22 one-per-match in the shared round advance and the room', () => {
     expect(room.handle('s0', { type: 'rerollAugment', choiceId: c.choiceId, generation: c.generation, optionIndex: 1 })).toMatchObject({ ok: true });
     const after = room.state.seats.find(s => s.seatId === 's0')!.match;
     const others = seats.slice(1).flatMap(s => s.match.pendingChoice!.offers);
-    expect(after.augmentOffers.at(-1)!.externalBlocks[1]).toEqual([...others].sort());
+    expect(after.augmentOffers.at(-1)!.externalBlocks[1]).toEqual(blockedAliases(others));
+    expect(after.augmentOffers.at(-1)!.externalBlocks[1]).toEqual(sameApi(others));
     expect(others).not.toContain(after.pendingChoice!.offers[1]);
   });
 });

@@ -9,15 +9,17 @@ import { toPrivateSeatView } from '../src/simulation/private-seat-view';
 import { finalSettlement, accepted } from './t5r-helpers';
 import { freeze } from './combat-helpers';
 
+// v23 fmix32: seed 2 now opens Trainer Golems, whose structure this synthetic board drops; seed 4 keeps seed 2's old Crab Rave.
+const SEED = 4;
 /** A transaction vector: six tier-3 wins bank 90 shimmer, then the first overtime win crosses 100.
  * Round history is a contiguous settlement fixture, not an offline save or a fabricated reward. */
 function overtimeMarket() {
-  const base = accepted(advanceMultiplayerRound(finalSettlement(accepted(enableMultiplayerSettlement(createMatch(2), 'bot-5'))), 38));
+  const base = accepted(advanceMultiplayerRound(finalSettlement(accepted(enableMultiplayerSettlement(createMatch(SEED), 'bot-5'))), 38));
   const round = getMultiplayerRoundByOrdinal(39);
   const facts = (ordinal: number): G23BattleFacts => ({ battleId: `chem:${ordinal}`, round: ordinal,
     roundKind: 'pvp', result: 'win', conquerorTier: 0, conquestTakedowns: [], chemBaronTier: 3,
     alliedDeaths: 0, rumbleStar: 0, highRollerGold: 0 });
-  let progress = readG23Progress(createMatch(2))!;
+  let progress = readG23Progress(createMatch(SEED))!;
   for (let ordinal = 33; ordinal <= 38; ordinal++) progress = advanceG23Economy(progress, facts(ordinal)).progress;
   expect(progress.chem).toMatchObject({ shimmer: 90, offer: null });
   const state: MatchState = writeG23Progress({ ...base, round: round.ordinal, roundDefinitionId: round.roundId,

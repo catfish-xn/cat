@@ -5,7 +5,7 @@ import { g23RadiantDefinitionId } from './g2-3-rewards';
 import { isTemporaryItemId } from './temporary-equipment';
 import { canonicalContent } from './content';
 import { validatePveRemover } from './pve-remover';
-import { CONSUMABLE_DEFINITIONS, CONSUMABLE_RULES, REFORGE_POOLS } from './content/consumables';
+import { CONSUMABLE_DEFINITIONS, CONSUMABLE_RULES, REFORGE_POOLS, consumableTraitId } from './content/consumables';
 import { canOperateEquipment, isCombatRosterLocked } from './operation-policy';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { planEquip } from './inventory';
@@ -20,6 +20,11 @@ import { planUnitAcquisition } from './unit-acquisition';
 import { grantMechanicUnit } from './seat-mechanics/grants';
 export type * from './consumable-types';
 const equal=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
+/** Lesser Shimmer Duplicator: the copied hero must carry the tool's trait (Chem-Baron). */
+const hasTargetTrait=(definition:(typeof CONSUMABLE_DEFINITIONS)[keyof typeof CONSUMABLE_DEFINITIONS],definitionId:string)=>{
+  const trait=consumableTraitId(definition);
+  return trait===null||(UNIT_DEFINITIONS[definitionId]?.traits as readonly string[]|undefined)?.includes(trait)===true;
+};
 export const consumableCopyReceiptId=(id:string)=>JSON.stringify(['consumable-copy',id]);
 
 /** Category membership is explicit. Reward-only completed identities never enter the ordinary 36 pool. */
@@ -42,13 +47,13 @@ export function previewUseConsumable(state:Readonly<MatchState>,consumableId:str
   if(!definition)throw new RangeError('Invalid consumable definition');
   if(!target||target.kind!=='unit')return {ok:false,reason:'invalid-consumable-target'};
   const unit=state.preparation.units.find(u=>u.id===target.unitId);
-  if(unit&&(unit.definitionId==='trainer-golem'||isAnvil(unit.definitionId)))return {ok:false,reason:'invalid-consumable-target'};
+  if(unit&&(unit.definitionId==='trainer-golem'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.definitionId==='tower-dummy'||unit.definitionId==='augment-golem'||isAnvil(unit.definitionId)))return {ok:false,reason:'invalid-consumable-target'};
   if(!unit)return {ok:false,reason:'unknown-unit'};
   if(unit.team!=='player')return {ok:false,reason:'invalid-consumable-target'};
   if (definition.effect !== 'masterwork-upgrade' && target.itemId !== undefined) return {ok:false,reason:'invalid-consumable-target'};
   if(definition.effect==='duplicate-unit'){
     if(isCombatRosterLocked(state))return {ok:false,reason:'wrong-phase'};
-    if(!SHOP_CATALOG.includes(unit.definitionId)||(definition.maxCost!==null&&UNIT_DEFINITIONS[unit.definitionId].cost>definition.maxCost))return {ok:false,reason:'invalid-consumable-target'};
+    if(!SHOP_CATALOG.includes(unit.definitionId)||(definition.maxCost!==null&&UNIT_DEFINITIONS[unit.definitionId].cost>definition.maxCost)||!hasTargetTrait(definition,unit.definitionId))return {ok:false,reason:'invalid-consumable-target'};
     if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length>=state.preparation.benchSize)return {ok:false,reason:'bench-full'};
     if(!planUnitAcquisition(state,unit.definitionId,{kind:'mechanic',receiptId:consumableCopyReceiptId(consumableId)},state.resourceProvenance.entries.length).ok)return {ok:false,reason:'bench-full'};
     return {ok:true,effect:definition.effect,affectedItemIds:[],destination:'inventory',affectsCurrentBattle:false};
@@ -159,7 +164,7 @@ export function validateConsumableState(state:MatchState):void {
     check(grant&&(settled.has(grant.roundId)||loot?.claimedRoundId||state.seatMechanics?.receipts.some(x=>x.kind==='consumable'&&x.consumableId===r.consumableId))&&getMultiplayerRoundById(grant.roundId).ordinal<=getMultiplayerRoundById(fact.roundId).ordinal);
     check(Array.isArray(r.affectedItems)&&Array.isArray(r.outputs)&&new Set(r.affectedItems.map(i=>i.id)).size===r.affectedItems.length);
     if(definition.effect==='duplicate-unit'){
-      check(r.affectedItems.length===0&&r.outputs.length===0&&r.output===null&&r.copiedUnit&&r.target.kind==='unit'&&r.copiedUnit.id===r.target.unitId&&SHOP_CATALOG.includes(r.copiedUnit.definitionId)&&(definition.maxCost===null||UNIT_DEFINITIONS[r.copiedUnit.definitionId].cost<=definition.maxCost));
+      check(r.affectedItems.length===0&&r.outputs.length===0&&r.output===null&&r.copiedUnit&&r.target.kind==='unit'&&r.copiedUnit.id===r.target.unitId&&SHOP_CATALOG.includes(r.copiedUnit.definitionId)&&(definition.maxCost===null||UNIT_DEFINITIONS[r.copiedUnit.definitionId].cost<=definition.maxCost)&&hasTargetTrait(definition,r.copiedUnit.definitionId));
       const id=consumableCopyReceiptId(r.consumableId),receipt=state.seatMechanics?.receipts.find(x=>x.receiptId===id);
       check(receipt?.kind==='unit'&&receipt.source==='consumable-copy'&&receipt.definitionId===r.copiedUnit?.definitionId&&receipt.resolution===(state.multiplayer?'orb':'held')&&receipt.roundId===fact.roundId);copies.add(id);
     }else{

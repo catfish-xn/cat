@@ -22,7 +22,7 @@ import { g22Equipment, scrapConversions, g22TraitEffects } from './strategy-g2-2
 import { validateItemProgram, type BoundItemProgram, type ItemProgram } from './m8/item-program';
 import {readCombatStrategyInputs,type CombatStrategyInputs } from './combat-input';
 import type {
-  Effect, ChoiceDefinition, ItemDefinition, SourcedEffect, StrategySnapshot, TraitDefinition,
+  Effect, ChoiceDefinition, ItemDefinition, SourcedEffect, StrategySnapshot, TraitDefinition, TraitSnapshot,
 } from './strategy-types';
 import { UNIT_DEFINITIONS } from './units';
 import { getUnitStats } from './unit-stats';
@@ -36,6 +36,8 @@ import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { compileSupportGrants, type G24HeldItem } from './g2-4-support';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
+import { ENFORCER_CONFISCATION_POLICY } from './content/enforcer-confiscation';
+import type { Team } from './board';
 
 /** Overtime ordinals lie past the catalog (after 6-7); they count as the stage after the last catalog stage. */
 function strategyStage(ordinal: number): number {
@@ -64,10 +66,15 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
 /** The only strategy compilation boundary. Combat receives JSON numbers and provenance,
  * with no links to Match or content records and no board/bench decisions left for the tick.
  */
-export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot): StrategySnapshot {
-  return drainSetup(buildStrategySnapshotSteps(state, catalog, context, equipmentBasis));
+export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot, confiscated?: readonly Team[]): StrategySnapshot {
+  return drainSetup(buildStrategySnapshotSteps(state, catalog, context, equipmentBasis, confiscated));
 }
-export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot): Generator<void, StrategySnapshot, void> {
+/** Enforcer 10 ({9edd4912}=1) on the other side confiscates this team's items for the whole combat. */
+export function enforcerConfiscates(traits: readonly TraitSnapshot[], victim: Team): boolean {
+  return traits.some(t => t.team !== victim && t.traitId === 'enforcer' && t.tier >= ENFORCER_CONFISCATION_POLICY.fromTier);
+}
+/** `confiscated` adds teams whose opposing Enforcer 10 is compiled elsewhere (two-sided sides, battle-time equipment). */
+export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot, confiscated: readonly Team[] = []): Generator<void, StrategySnapshot, void> {
   state=readCombatStrategyInputs(state);
   if(context&&context.round!==state.round)throw new RangeError('Trait projection round mismatch');
   const sisterAugment=state.augments.find(a=>a.definitionId==='sisters');
@@ -79,6 +86,16 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     ...(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[]).map(i=>({id:'enemy:'+i.unitId+':'+i.slot,definitionId:i.definitionId,location:{kind:'unit' as const,unitId:i.unitId,slot:i.slot}}))]);
   state={...state,preparation:projection.preparation};
   const openingTraits=[...deriveEffectiveTraits(projection,'player',catalog.traits),...deriveEffectiveTraits(projection,'enemy',catalog.traits)];
+  // P enforcer-confiscation-v1: confiscate first, from the combat projection only; emblems (membership already
+  // projected above) and non-champion holders keep their items. The permanent item ledger is never touched.
+  const victims = new Set<Team>([...confiscated, ...(['player', 'enemy'] as const).filter(team => enforcerConfiscates(equipmentBasis?.traits ?? openingTraits, team))]);
+  const keeps = (holderId: string, definitionId: string) => {
+    const holder = state.preparation.units.find(u => u.id === holderId), unit = holder && UNIT_DEFINITIONS[holder.definitionId];
+    return !holder || !victims.has(holder.team) || !!catalog.items[definitionId]?.emblemTrait || !unit || !!unit.summon || unit.unitKind === 'neutral';
+  };
+  const enemyItems = (state.preparation.units.some(u => u.team === 'enemy') ? readRoundEnemyProjection(state.round).items : []).filter(i => keeps(i.unitId, i.definitionId));
+  if (victims.size) state = { ...state, items: state.items.filter(i => i.location.kind !== 'unit' || keeps(i.location.unitId, i.definitionId)),
+    temporaryEquipment: state.temporaryEquipment.filter(i => keeps(i.holderId, i.definitionId)) };
   const voidspawn=projectVoidspawns(state,openingTraits);
   state={...state,preparation:voidspawn.preparation};
   const projected={...projection,preparation:state.preparation};
@@ -86,7 +103,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
   const reunion=new Set([...familyReunionParticipants(state,'player'),...familyReunionParticipants(state,'enemy')]);
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-  const equipment = g22Equipment(state), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items);
+  const equipment = g22Equipment(state, enemyItems), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items, { seed: state.g23?.seed ?? 0, round: state.round });
   // G2-4b: support items act on their holder's board neighbours, so every holder's items are known before any unit compiles.
   // Same item sources the per-unit loop binds below: player items/temporary equipment, and the round's enemy items.
   const onBoard = (team: 'player' | 'enemy') => new Set(boardUnits.filter(u => u.team === team).map(u => u.id)), players = onBoard('player'), enemyIds = onBoard('enemy');
@@ -94,7 +111,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     held.set(unitId, [...held.get(unitId) ?? [], { definition: lookup(catalog.items, conversions.get(instanceId) ?? definitionId), instanceId }]);
   for (const item of state.items) if (item.location.kind === 'unit' && players.has(item.location.unitId)) hold(item.location.unitId, item.definitionId, item.id);
   for (const child of state.temporaryEquipment) if (players.has(child.holderId)) hold(child.holderId, child.definitionId, child.temporaryId);
-  if (enemyIds.size) for (const item of readRoundEnemyProjection(state.round).items) if (enemyIds.has(item.unitId)) hold(item.unitId, item.definitionId, `enemy:${state.round}:${item.unitId}:${item.slot}`);
+  if (enemyIds.size) for (const item of enemyItems) if (enemyIds.has(item.unitId)) hold(item.unitId, item.definitionId, `enemy:${state.round}:${item.unitId}:${item.slot}`);
   const supportGrants = compileSupportGrants(boardUnits.flatMap(u => u.location.kind === 'board' ? [{ id: u.id, team: u.team, cell: u.location.cell }] : []),
     held, strategyStage(state.round),(holder,item,declaration)=>holder.team==='player'?p2SupportDeclaration(declaration,item.definition.id,state):declaration);
 
@@ -182,7 +199,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
         sources.push(...makeSourcedEffects(unit.id, 'anomaly', binding.definitionId, binding.choiceId, effects));
       }
     } else {
-      for (const item of readRoundEnemyProjection(state.round).items.filter(item => item.unitId === unit.id)) {
+      for (const item of enemyItems.filter(item => item.unitId === unit.id)) {
         const definition = lookup(catalog.items, conversions.get(`enemy:${state.round}:${unit.id}:${item.slot}`) ?? item.definitionId);
         sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, `enemy:${state.round}:${unit.id}:${item.slot}`, itemEffects(definition)));
         bindItem(definition, `enemy:${state.round}:${unit.id}:${item.slot}`);
@@ -197,8 +214,11 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     if(unit.definitionId==='g23-sion'){
       const rose=g23SionTeam(state.preparation,unit.team,traits,state.d14Combat?.phase==='promoted'?state.d14Combat.unitId:undefined),stage=strategyStage(state.round),index=Math.max(0,Math.min(4,stage-2));
       const stages=rose.tier>=5?G23_SUMMON_POLICY.sion.tier5StageBps:rose.tier===4?G23_SUMMON_POLICY.sion.tier4StageBps:G23_SUMMON_POLICY.sion.tier3StageBps;
-      const bps=Math.floor(stages[index]*(10000+rose.stars*1500)/10000)-10000;
-      sources.push(...makeSourcedEffects(unit.id,'trait','black-rose',unit.id,[{kind:'statFlat',stat:'maxHp',amount:Math.max(0,Math.floor(1000*bps/10000))},{kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));
+      const sion=G23_SUMMON_POLICY.sion,bps=Math.floor(stages[index]*(10000+rose.stars*sion.starHealthBps)/10000)-10000;
+      const resists=rose.tier>=7?sion.resistsByTier[7]:rose.tier>=5?sion.resistsByTier[5]:rose.tier===4?sion.resistsByTier[4]:sion.resistsByTier[3];
+      sources.push(...makeSourcedEffects(unit.id,'trait','black-rose',unit.id,[{kind:'statFlat',stat:'maxHp',amount:Math.max(0,Math.floor(sion.base.baseStats.health*bps/10000))},
+        {kind:'statPercentBps',stat:'attackDamage',bps:rose.stars*sion.starAttackBps},{kind:'statFlat',stat:'armor',amount:resists},{kind:'statFlat',stat:'magicResist',amount:resists},
+        {kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));
     }
     const growth = state.persistentGrowth.find(entry => entry.unitId === unit.id);
     if (growth) sources.push(...makeSourcedEffects(unit.id, 'ability', 'tristana-ability', `persistent:${unit.id}`, [{ kind: 'statPercentBps', stat: 'attackDamage', bps: growth.attackDamageBps }]));
@@ -217,9 +237,15 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     // During battle only item declarations change. Membership, tier effects and all
     // other opening bonuses stay frozen; use the same numerical compiler below.
     const frozen = equipmentBasis?.units.find(u => u.unitId === unit.id);
-    if (frozen) sources.splice(0, sources.length, ...frozen.sources.filter(s => s.source.sourceKind !== 'item'),
-      ...sources.filter(s => s.source.sourceKind === 'item'));
+    if (frozen) sources.splice(0, sources.length, ...frozen.sources.filter(s => s.source.sourceKind !== 'item' && !(s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation')),
+      ...sources.filter(s => s.source.sourceKind === 'item'||s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation'));
     let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
+    // Batch-3 hero augments: the strongest copy's ability costs ManaReduction less mana and Vladimir gains range.
+    const hero = (resolved.mechanics ?? []).find(m => m.mechanic === 'heroCarryLive');
+    if (hero && (hero.values.manaReduction || hero.values.rangeBonus)) {
+      const maxMana = Math.max(1, resolved.stats.maxMana - hero.values.manaReduction);
+      resolved = { ...resolved, stats: { ...resolved.stats, maxMana, initialMana: Math.min(resolved.stats.initialMana, maxMana), attackRange: resolved.stats.attackRange + hero.values.rangeBonus } };
+    }
     const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');
     if (family) {
       const maxMana = Math.floor(resolved.stats.maxMana * (10000 - family.values.manaReductionBps) / 10000);

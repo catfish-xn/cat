@@ -68,14 +68,15 @@ describe('PR8 public opening-encounter projection', () => {
     const { room } = openRoom(FORGE_SEED);
     room.start();
     expect(room.state.phase).toBe('preparation');
-    const offersBySeat = new Map<string, readonly string[]>();
+    const offersBySeat = new Map<string, readonly string[]>(), phaseDeadline = room.state.deadlineAt!;
     for (const seat of room.state.seats) {
       const anvils = benchAnvils(seat.match);
       expect(anvils.map(unit => unit.definitionId)).toEqual([ANVIL.component, ANVIL.component]);
       expect(seat.match.pendingChoice).toBeNull();
       expect((toSeatPrivateView(seat.match) as { openingForgeProgress?: unknown }).openingForgeProgress)
         .toMatchObject({ source: 'opening-encounter', forgesGranted: 2, forgesResolved: 0, forgesPending: 2 });
-      const choice = openAnvil(room, seat.seatId, anvils[0]!.id);
+      // v23: a fill-in bot's anvil deadline is capped at the phase's own deadline (it never extends the phase).
+      const choice = openAnvil(room, seat.seatId, anvils[0]!.id, false, seat.controller === 'bot' ? phaseDeadline : undefined);
       const mine = toSeatPrivateView(seatOf(room.state, seat.seatId).match, seatOf(room.state, seat.seatId).choiceDeadline) as ReturnType<typeof toSeatPrivateView> & { openingMelProgress?: unknown };
       expect(mine.pendingChoice).toMatchObject({ kind: 'forge', choiceId: anvilChoiceId(anvils[0]!.id), payload: { kind: 'forge', source: 'anvil-unit' } });
       expect(mine.pendingChoice!.offers).toHaveLength(4);

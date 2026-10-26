@@ -482,11 +482,10 @@ describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a lat
     expect(room.state.seats.filter(candidate => !candidate.alive).length).toBeGreaterThan(0);
   });
 
-  it('a seat eliminated at the first fight after a carousel, still holding that pick, returns its holdings to the pool', () => {
+  it('a seat eliminated after a carousel, still holding that pick, returns its holdings to the pool', () => {
     expect(death).not.toBeNull();
     const { state: atDeath, afterCarousel } = death!;
-    // Seed 24: s0 dies at 5-6, two fights after the 5-4 carousel. Only this line names the round; a content or rules change that
-    // moves the death fails here, and the rest follows from what the match recorded.
+    // 224-card pool: s0 dies at 5-6, two fights after 5-4; retain the exact death/holding vector.
     expect(atDeath.roundId).toBe('5-6');
     expect(death!.fightsSinceCarousel).toBe(2);
     const was = beforeDeath.seats.find(candidate => candidate.seatId === 's0')!.match;

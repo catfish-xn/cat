@@ -18,8 +18,12 @@ describe('toPlayerView', () => {
     // v15: unclaimed orbs show only as the rules' public count and tiers.
     for (const entry of view.seats) expect(Object.keys(entry.orbs!).sort()).toEqual(['count', 'tiers']);
     // `publicBoard` is the one public build (C5 + 2026-10-20 scouting); everything else stays private.
-    const serialized = JSON.stringify({ ...view, seats: view.seats.map(({ publicBoard: _board, ...seat }) => seat) });
+    // v23 fmix32: this room's seed opens with the public shared Golden Gala ("golden-gala", "GoldAll"), so the shared
+    // opening is checked on its own for a gold key instead of by substring.
+    const { openingEncounter, ...rest } = view;
+    const serialized = JSON.stringify({ ...rest, seats: view.seats.map(({ publicBoard: _board, ...seat }) => seat) });
     for (const forbidden of ['rngState', 'seed', 'shop', 'units', 'gold', 'pendingChoice']) expect(serialized).not.toContain(forbidden);
+    for (const forbidden of ['rngState', 'seed', 'shop', 'units', '"gold"', 'pendingChoice']) expect(JSON.stringify(openingEncounter)).not.toContain(forbidden);
     for (const forbidden of ['rngState', 'seed', 'shop', 'gold', 'pendingChoice', 'streak', 'xp', 'location', 'unit-', 'choiceId']) expect(JSON.stringify(view.seats.map(seat => seat.publicBoard))).not.toContain(forbidden);
     expect(view.opponentSeatId).toBeNull(); expect(view.ranking).toBeNull();
     expect(view.opponentCandidates).toEqual([]); // 1-2 is a PvE round

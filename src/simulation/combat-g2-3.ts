@@ -8,10 +8,13 @@ import { contains, hexDistance, type HexCell } from './board';
 import type { CombatTask } from './combat-types';
 import type { S13Unit } from './combat-s13-state';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
-import { amount, applyStatus, byDistance, champion, compareText, enemies, grantShield, origin, path, variable } from './combat-s13-state';
+import { amount, applyStatus, byDistance, champion, compareText, enemies, grantShield, heroLive, origin, path, variable } from './combat-s13-state';
+import { lineContains } from './combat-skill-lines';
 import { rollG23HighRoller } from './g2-3-progress';
 import { G23_POLICY } from './content/g2-3-policy';
+import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { isSupportAuraInstance } from './g2-4-support';
+import { knockAway } from './combat-displacement';
 
 function hit(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number,type:S13Packet['damageType']='magic',area=false){
   ctx.packets.push({source:origin(u),targetId:t.id,raw,damageType:type,actionSeq:seq,ordinal,
@@ -52,7 +55,8 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
   const foes=()=>byDistance(u,enemies(u,ctx.units));
   switch(champion(u)){
     case 'g23-sion':{
-      grantShield(u,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
+      const tier=u.mechanics?.find(m=>m.mechanic==='g23Sion')?.values.tier??3;
+      grantShield(u,origin(u),amount(u,ctx.tick,{ap:tier>=5?G23_SUMMON_POLICY.sion.tier5PlusShieldAp:v('Shield')}),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       const cells=path(ctx.board,u.cell,t.cell);
       for(const x of foes().filter(x=>cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row))){strike(x,physical('PercentAttackDamage'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);}break;
     }
@@ -81,13 +85,20 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=v('HexRadius')))later(ctx,u,x,'g23Magic',Math.round(v('DamageDuration')*20),mag('SecondDamage'),seq,ticks,ticks+1);break;
     }
     case 'renni':{
-      const n=Math.round(v('StunDuration')*20),healing=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('MaxHealthHealingPercent')}),damage=physical('ADPercent');
+      // Savage Revenge (P): pounce on the farthest enemy within PounceRange (else the target); enemies on the straight line
+      // before it take ChargeBps × ADPercent; the pounce target and the closing splash deal MainBps × their damage.
+      // Renni's position is not changed; the heal and stun are kept.
+      const hero=heroLive(u),pounce=hero?byDistance(u,foes(),true).find(x=>hexDistance(u.cell,x.cell)<=hero.pounceRange)??t:t;
+      if(hero){for(const x of foes().filter(x=>x.id!==pounce.id&&hexDistance(u.cell,x.cell)<hexDistance(u.cell,pounce.cell)&&lineContains(u.cell,pounce.cell,x.cell,1)))
+        later(ctx,u,x,'g23Physical',1,Math.floor(physical('ADPercent')*hero.chargeBps/10000),seq,0,1);t=pounce;}
+      const main=hero?.mainBps??10000;
+      const n=Math.round(v('StunDuration')*20),healing=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('MaxHealthHealingPercent')}),damage=Math.floor(physical('ADPercent')*main/10000);
       applyStatus(t,origin(u),'stun',0,n,ctx.tick,ctx.events);
       for(let i=0;i<n;i++){
         later(ctx,u,u,'g23Heal',i+1,split(healing,n,i),seq,i,n);
         later(ctx,u,t,'g23Physical',i+1,split(damage,n,i),seq,i,n);
       }
-      for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))later(ctx,u,x,'g23Physical',n,physical('FinalADPercent'),seq,n,n+1);break;
+      for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))later(ctx,u,x,'g23Physical',n,Math.floor(physical('FinalADPercent')*main/10000),seq,n,n+1);break;
     }
     case 'drmundo':{
       const total=amount(u,ctx.tick,{ap:v('APHeal'),hp:v('PercentHealthHeal')}),initial=Math.floor(total*v('PercentofHealImmediately')),seconds=Math.round(v('Duration'));
@@ -130,7 +141,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const forge=reviveG23Forge(ctx,u)??u;
       for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team)).slice(0,v('NumAlliesShield')))
         grantShield(ally,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
-      strike(t,physical('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('EnemyFlightDuration')*20),ctx.tick,ctx.events);
+      strike(t,physical('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('EnemyFlightDuration')*20),ctx.tick,ctx.events,false,'',undefined,true);
       // P (user 2026-10-23): the target is knocked to the gate 3 hexes behind it (away from Jayce, cut at the board edge)
       // and flies back to its own cell; other enemies within 1 hex of that flight path take the secondary hit once.
       const cells=path(ctx.board,jayceGate(ctx.board,u.cell,t.cell),t.cell);
@@ -153,7 +164,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
        ids.push(...flame(ctx,u,t,base,seq,0));
        applyStatus(u,origin(u),'channel',0,Math.round(v('Spell1_MinDuration')*20),ctx.tick,ctx.events,true,'',seq);
       }
-      else if(spell===1){strike(t,scaled('Spell2_Modifier'),'physical');leapG23(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=v('Spell2_HexRadius'))){strike(x,scaled('Spell2_SecondaryModifier'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('Spell2_StunDuration')*20),ctx.tick,ctx.events);}}
+      else if(spell===1){strike(t,scaled('Spell2_Modifier'),'physical');knockAway(ctx,u,t,v('Spell2_HexKnockback'),'sevika-knockback');leapG23(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=v('Spell2_HexRadius'))){strike(x,scaled('Spell2_SecondaryModifier'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('Spell2_StunDuration')*20),ctx.tick,ctx.events);}}
       else {chomp(ctx,u,t,scaled('Spell3_Modifier'),seq,0);ids.push(t.id);}
       if(mod.mod==='rocket'||mod.mod==='jackpot')for(let i=0;i<G23_POLICY.highRoller.rockets*(mod.enhanced?3:1);i++)strike(t,G23_POLICY.highRoller.rocketPhysicalDamage,'physical');
       if(mod.mod==='shield'||mod.mod==='jackpot')grantShield(u,origin(u),G23_POLICY.highRoller.shield*(mod.enhanced?3:1),ctx.tick+G23_POLICY.highRoller.shieldTicks,ctx.tick,ctx.events);

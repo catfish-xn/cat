@@ -1,4 +1,7 @@
+import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
+import { validateBatch1Gifts } from './augment-pool-grants';
 import { validateAugmentOfferHistory } from './augment-offers';
+import { spendFreeReroll } from './free-rerolls';
 import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 import { planSixCostShop, sixCostShopContext } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
@@ -40,6 +43,10 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):Mat
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
+  // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
+  // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
+  if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])||(state.seatMechanics?.receipts??[]).some(r=>
+    r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   return state;
 }
 
@@ -173,11 +180,12 @@ export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedG
   return transact(pool,state,(draft,_policy,events)=>{
     requirePool(canOperateMatch(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
-    requirePool(state.gold>=MATCH_RULES.rerollCost,'insufficient-gold');
+    const spent=spendFreeReroll(state),cost=spent.free?0:MATCH_RULES.rerollCost;
+    requirePool(state.gold>=cost,'insufficient-gold');
     releaseShop(draft,state.sharedPool!.seatId);
-    const next=drawShop(draft,state,events);
+    const next=drawShop(draft,spent.state,events);
     requirePool(next.shop.slots.some(s=>s.status==='available'),'pool-empty');
-    return {ok:true,...stamp({...next,gold:state.gold-MATCH_RULES.rerollCost})};
+    return {ok:true,...stamp({...next,gold:state.gold-cost})};
   });
 }
 export function setSharedShopLock(pool:SharedPoolState,state:MatchState,locked:boolean,expectedGeneration:number):SharedPoolResult {

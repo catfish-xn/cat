@@ -20,8 +20,8 @@ function equip(state:MatchState){
 }
 it('tracks real positive damage packets and restores exact HP/resist stacks without allowing forged hits',()=>{
  // v22 opening encounters: seed 42 rolls scuttle-puddle, whose 1-2 crabs never attack, so the holder would take no packet.
- // Seed 4242 rolls mels-blessing (no combat effect) and keeps the attacking 1-2 melee minions.
- const match=createMatch(4242);expect(match.openingEncounter?.mode==='solo'&&match.openingEncounter.context.selection.encounterId).toBe('mels-blessing');
+ // Seed 21 rolls mels-blessing (no combat effect) and keeps the attacking 1-2 melee minions (v23 fmix32: 4242 now rolls viktors-vision).
+ const match=createMatch(21);expect(match.openingEncounter?.mode==='solo'&&match.openingEncounter.context.selection.encounterId).toBe('mels-blessing');
  const equipped=equip(match),start=startMatchCombat(equipped.state);if(!start.ok)throw Error(start.reason);
  expect(start.state.combat!.units.filter(u=>u.team==='enemy').every(u=>u.definitionId==='pve-minion-melee-a')).toBe(true);
  let state=start.state;const initial=state.combat!.units.find(u=>u.id===equipped.ownerId)!;

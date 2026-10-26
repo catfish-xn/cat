@@ -1,8 +1,8 @@
+import { fieldedLegCases, fieldedRoute, offerFor, STAGE_SEEDS } from './augment-stage-helpers';
 import { describe, expect, it } from 'vitest';
 import { augmentCandidates, deriveAugmentTier, deriveAugmentTierSequence, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { AUGMENT_OFFER_POLICY, AUGMENT_TIER_COMBINATIONS, AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { createMatch, selectChoice } from '../src/simulation/match';
-import { generateChoices } from '../src/simulation/choices';
 import { createOpeningEncounter } from '../src/simulation/opening-encounter';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -41,21 +41,22 @@ it.each([[0,19,'SGG'],[1,33,'GSG'],[42,62,'GGG'],[0x80000000,36,'GSG'],[0xffffff
 
 it('offers Geniuses only at prismatic tier, preserving owned and removed exclusion', () => {
   expect(AUGMENT_TIERS.geniuses).toBe('prismatic');
-  expect(augmentCandidates('prismatic',[])).toContain('geniuses');
+  // 14.24 stage tags: Geniuses is offered only at 4-2, where it needs one of its traits fielded.
+  expect(augmentCandidates('prismatic',[],[],null,{node:'4-2',fieldedTraits:['academy'],blocked:[]})).toContain('geniuses');
+  expect(augmentCandidates('prismatic',[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]})).not.toContain('geniuses');
   for (const tier of ['silver','gold'] as const) expect(augmentCandidates(tier,[])).not.toContain('geniuses');
   expect(augmentCandidates('prismatic',[{definitionId:'geniuses',choiceId:nodes[0],acquiredRound:4}])).not.toContain('geniuses');
   expect(augmentCandidates('prismatic',[],['geniuses'])).not.toContain('geniuses');
 });
 
+// Geniuses's first public offer is a fielded 4-2 route (STAGE_SEEDS); it is played in cached legs, one case each, so the
+// acquisition case below stays inside the default timeout (offerFor resumes the same cached route).
+it.each(fieldedLegCases('geniuses'))('Geniuses fielded 4-2 route (seed %s): the leg to %s settles every fight',(seed,leg)=>{
+ expect(STAGE_SEEDS['geniuses']).toMatchObject({node:'4-2',fielded:true});expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
+});
 it('public prismatic Geniuses acquisition restores the same offer history, grants and RNG', () => {
-  let root = -1;
-  for (let seed=0; seed<20000; seed++) {
-    if (createOpeningEncounter(seed).selection.encounterId!=='none' || deriveAugmentTierSequence(seed)[0]!=='prismatic') continue;
-    const initial = createMatch(seed);
-    if (generateChoices(augmentCandidates('prismatic',[]),initial.choiceRngState).offers.includes('geniuses')) { root=seed; break; }
-  }
-  expect(root).toBeGreaterThanOrEqual(0);
-  const state = reachRound('2-1',false,root), c = state.pendingChoice!;
+  // 14.24 stage tags: Geniuses is a 4-2 card; take it at the first fielded 4-2 offer (tests/augment-stage-helpers.ts).
+  const state = offerFor('geniuses'), c = state.pendingChoice!;
   expect(c.augmentTier).toBe('prismatic'); expect(c.offers).toContain('geniuses');
   const selected = accepted(selectChoice(state,c.choiceId,c.generation,'geniuses'));
   expect(selected.augments.at(-1)?.definitionId).toBe('geniuses');

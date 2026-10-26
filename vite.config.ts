@@ -32,7 +32,10 @@ const stripAssetChecks: Plugin = {
   },
 };
 // 3D 单独加载模式：three.js 和 3D 渲染代码只经 three-loader.ts 动态 import，统一落在 assets/3d/。
-// scripts/m7-budget.cjs 只统计 assets/ 顶层的 JS 作为 2D 体积，assets/3d/ 单列报告。
+// scripts/m7-budget.cjs 统计 assets/ 顶层的 JS；按需 3D、单人应用分别单列。
+// application-loader.ts 只在单人模式动态加载 application.ts，在线启动不请求 assets/solo/。
+const AUGMENT_UI_DATA = /[\\/]src[\\/]presentation[\\/](?:augment-text-data|augment-pool-text|augment-zh|s13-augment-asset-manifest)\.ts$/;
+const TOOLTIP_UI_DATA = /[\\/]src[\\/]presentation[\\/](?:tooltip-text-data|ability-zh|trait-official-text|unit-roles|trait-display-text|trait-extra-text|special-item-templates)\.ts$/;
 const THREE_D_MODULE = /[\\/](?:node_modules[\\/]three[\\/]|src[\\/]rendering3d[\\/]|src[\\/]rendering[\\/]three-mode[\\/](?!three-loader\.ts$|contract\.ts$))/;
 
 // 正式构建不带浏览器内本地房间（`?mode=online` 不加 server=ws 时，在页面里跑 src/server/room 整个房间）：
@@ -62,8 +65,8 @@ export default defineConfig(({ mode }) => ({
   },
   build: { rollupOptions: { output: {
     // One build key: a second one silently replaced this whole block and dropped the Phaser chunk (v16 trim).
-    manualChunks: id => (THREE_D_MODULE.test(id) ? 'render3d' : /[\\/]node_modules[\\/]phaser[\\/]/.test(id) ? 'phaser' : undefined),
-    chunkFileNames: chunk => (chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+    manualChunks: id => (AUGMENT_UI_DATA.test(id) ? 'augment-text' : TOOLTIP_UI_DATA.test(id) ? 'tooltip-text' : THREE_D_MODULE.test(id) ? 'render3d' : /[\\/]node_modules[\\/]phaser[\\/]/.test(id) ? 'phaser' : undefined),
+    chunkFileNames: chunk => (chunk.name === 'application' ? 'assets/solo/[name]-[hash].js' : ['augment-text', 'tooltip-text'].includes(chunk.name) ? 'assets/ui/[name]-[hash].js' : chunk.moduleIds.some(id => THREE_D_MODULE.test(id)) ? 'assets/3d/[name]-[hash].js' : 'assets/[name]-[hash].js'),
     // The Basis transcoder (KTX2 textures) is referenced only from the 3D chunk and fetched on the first KTX2 decode.
     assetFileNames: asset => (asset.names.some(name => name.startsWith('basis_transcoder')) ? 'assets/3d/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
   } } },

@@ -38,6 +38,8 @@ import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOv
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, type Envelope } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
+import { CONTROL_3D, ControlMotion, DISPLACEMENT_HOP, DISPLACEMENT_REASONS, createStunHalo, displacementHop, type StunHalo } from './unit-control';
+import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
@@ -159,6 +161,12 @@ export function useMeterColors(next: MeterColors): void { meterColors = next; }
 let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
 let championIconFor: (id: string) => string | null = () => null;
+/**
+ * v22 anvils (锻造器) are bench units without a model or stars: their icon (championIconFor) stands in. The rules' isAnvil
+ * is injected by the 2D loader so this chunk imports nothing from the rules.
+ */
+let isAnvilPiece: (definitionId: string) => boolean = () => false;
+export function useAnvilTest(next: (definitionId: string) => boolean): void { isAnvilPiece = next; }
 export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }
@@ -252,6 +260,8 @@ interface PieceView {
   readonly overhead: UnitOverhead;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; target: Vector3; placed: boolean; disposed: boolean;
+  /** A summon that appeared or was revived in the shown combat: plays its spawn clip once its mixer is ready. */
+  rise: boolean;
   /** False while BoardScene reports the unit dead in the shown combat; a dead piece is never picked. */
   alive: boolean;
   starLevel: number; form: 'front' | 'back';
@@ -272,6 +282,13 @@ interface PieceView {
   lunge: CastLunge | null;
   /** The body-local (x, z) offset the lunge has put on `body`, taken off again before the body changes. */
   lungeOffset: { x: number; z: number };
+  /** Stun/knock-up drawn from BoardPiece.control (unit-control.ts): the lift curve and the star ring over the head. */
+  readonly control: ControlMotion;
+  halo: StunHalo | null;
+  /** The body-local y the knock-up has put on `body`, taken off again before the body changes. */
+  liftOffset: number;
+  /** Seconds into a forced move's hop (pulled, grabbed, knocked back), null when none. */
+  hop: number | null;
 }
 function deathSeconds(view: PieceView): number {
   const lease = view.lease, name = lease?.animationNames.death ?? 'death';
@@ -604,14 +621,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const body = new Mesh(pawnBody, teamMaterial[team]); body.position.y = 17;
     const head = new Mesh(pawnHead, teamMaterial[team]); head.position.y = 42;
     pawn.add(body, head);
-    const icon = definitionId.startsWith('g23-') ? championIconFor(definitionId) : null;
+    const anvil = isAnvilPiece(definitionId);
+    const icon = definitionId.startsWith('g23-') || anvil ? championIconFor(definitionId) : null;
     if (icon) {
       pawn.name = `render3d-fallback-${definitionId}`;
       const material = own(new SpriteMaterial({ color: '#ffffff' })), badge = new Sprite(material);
-      badge.position.y = 42; badge.scale.set(38, 38, 1); badge.visible = false; pawn.add(badge);
+      // v22 anvil: no model exists, so its client icon stands on the cell in place of the pawn.
+      badge.position.y = anvil ? 30 : 42; badge.scale.set(anvil ? 50 : 38, anvil ? 50 : 38, 1); badge.visible = false; pawn.add(badge);
       void overheadContext.itemTexture(icon).then(texture => {
         if (!texture || closed) return;
-        material.map = texture; material.needsUpdate = true; badge.visible = true; head.visible = false;
+        material.map = texture; material.needsUpdate = true; badge.visible = true; head.visible = false; if (anvil) body.visible = false;
       });
     }
     return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
@@ -635,6 +654,17 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     applied.x = localX; applied.z = localZ;
   };
   function cancelLunge(view: PieceView): void { view.lunge = null; setLungeOffset(view, 0, 0); }
+  // Knock-ups lift the body the same way: a change from what was applied, never its fitted y.
+  const setLiftOffset = (view: PieceView, y: number) => {
+    if (view.body) view.body.position.y += y - view.liftOffset;
+    view.liftOffset = y;
+  };
+  /** Shows or ends a piece's control; a new one stops its action at once (no swing finishes while it is stunned). */
+  const setControl = (view: PieceView, kind: BoardPiece['control'] | null) => {
+    if (view.control.set(kind ?? null)) { view.state.interrupt(); if (view.dance !== 'clip') view.mixer?.apply(view.state.output); }
+    if (kind && !view.halo) { view.halo = createStunHalo(); scene.add(view.halo.object); }
+    else if (!kind && view.halo) { view.halo.dispose(); view.halo = null; }
+  };
   const startLunge = (sourceId: string, targetId: string | undefined) => {
     const source = pieces.get(sourceId), spec = source && castLungeFor(source.definitionId);
     const target = targetId && targetId !== sourceId ? pieces.get(targetId) : undefined;
@@ -644,16 +674,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     source.lunge = new CastLunge(dx, dz, spec.seconds);
   };
   const attachBody = (view: PieceView) => {
-    cancelLunge(view);
+    cancelLunge(view); setLiftOffset(view, 0);
     if (view.body) { view.root.remove(view.body); view.body = null; }
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
-    if (!loadModel) return;
+    if (!loadModel || isAnvilPiece(view.definitionId)) return;
     const definitionId = view.definitionId;
     void loadModel(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
-      cancelLunge(view); // the stand-in pawn gives way: the lunge's offset never moves to the model
+      cancelLunge(view); setLiftOffset(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
       if (lease.placeholder) {
         // The loader's diagnostic magenta cube is never a player-facing model. Keep the visible, pickable stand-in.
@@ -697,6 +727,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);
+      flushRise(view);
       if (view.dyingFor === 'loading') view.dyingFor = deathSeconds(view); // the death clip starts now
       if (loadReport.waiting) for (const [id, other] of pieces) if (other === view) { loadReport.attached(id, definitionId); timeUpload = true; }
     }).catch(() => {
@@ -704,9 +735,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (view.dyingFor === 'loading') { view.dyingFor = 0; view.root.visible = false; }
     });
   };
-  // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get none.
+  // Effective stars from BoardFeed (a promoted 终极英雄 is 4); the mark only draws them. BoardFeed's `neutral` monsters get
+  // none, nor does Jayce's Hextech Forge (a summoned structure, always one star in the rules).
   const syncStars = (view: PieceView, piece: BoardPiece) => {
-    if (piece.neutral) { view.stars?.dispose(); view.stars = null; return; }
+    if (piece.neutral || piece.definitionId === 'g23-forge' || isAnvilPiece(piece.definitionId)) { view.stars?.dispose(); view.stars = null; return; }
     const level = piece.effectiveStarLevel ?? piece.starLevel;
     if (view.stars) { view.stars.setLevel(level); return; }
     view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });
@@ -721,8 +753,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, ring, stars: null, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
-      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null,
-      lunge: null, lungeOffset: { x: 0, z: 0 } };
+      starLevel: piece.starLevel, form: 'back', facing: null, turn: new HeadingTurn(restHeading(piece.team)), dance: null, rise: false,
+      lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, liftOffset: 0, hop: null };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     return view;
@@ -734,6 +766,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // next combat or preparation fresh. A new mixer too: the old one caches the last applied revision.
   const resetAction = (view: PieceView, id: string) => {
     held.delete(view); cancelLunge(view);
+    view.control.clear(); setControl(view, null); setLiftOffset(view, 0); view.hop = null;
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease) {
@@ -742,8 +775,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.mixer.apply(view.state.output);
     }
   };
+  // The spawn clip (a model naming one: the Hextech Forge) once the piece is drawn, after any reset of its action.
+  const flushRise = (view: PieceView) => {
+    if (!view.rise || !view.mixer || !view.alive) return;
+    view.rise = false; view.mixer.apply(view.state.spawn());
+  };
   const removePiece = (view: PieceView) => {
-    cancelLunge(view); view.disposed = true; held.delete(view);
+    cancelLunge(view); view.disposed = true; held.delete(view); view.halo?.dispose(); view.halo = null;
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
@@ -761,7 +799,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (referenceEffects.size >= MAX_EFFECTS) { fx.dispose(); return; }
     referenceEffects.add(fx);
   };
+  // Skill feel sample (skill-feel.ts): pooled attack tracers and cast charges, the impact hold and camera kick.
+  const feel = createSkillFeel(); scene.add(feel.object);
+  /** Seconds each piece's animation still holds still for a cast's impact. */
+  const holds = new Map<PieceView, number>();
+  const shakeOffset = new Vector3();
   const clearEffects = () => {
+    holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
     generation++; queued.length = 0;
     for (const effect of live) effect.fx.dispose();
     live.clear();
@@ -778,24 +822,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   /** Local scale that gives an effect `world` scale (FX_SCALE unless the caster has an official scale) under `parent`. */
   // abs: a mirrored parent decomposes with a negative X, which would flip the effect on every axis.
   const effectScale = (parent: Object3D, world = FX_SCALE): number => world / (Math.abs(parent.getWorldScale(new Vector3()).x) || 1);
-  const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3) => {
+  const playEffect = (id: string, spec: EffectPlayback, sourceId: string, targetId: string | undefined, owner: number, targetPoint?: Vector3,
+    tuning?: { scale: number; particles: number }) => {
     const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
     if (!source?.body || live.size >= MAX_EFFECTS || !effects) return;
     if (spec.anchor !== 'source' && !target) return; // no target: never fake a projectile with the caster's own motion
-    void effects.load(id, spec.maxDuration).then(fx => {
+    void effects.load(id, spec.maxDuration, tuning?.particles).then(fx => {
       const effect: LiveEffect = { fx, left: spec.maxDuration, elapsed: 0 };
       if (owner !== generation || source.disposed || !source.body || (target && target.disposed) || live.size >= MAX_EFFECTS) { fx.dispose(); return; }
       if (spec.anchor === 'source') {
         const node = spec.bone ? source.body.getObjectByName(spec.bone) : source.root;
         if (!node) { fx.dispose(); return; }
-        fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE));
+        fx.object.scale.setScalar(effectScale(node, source.modelScale ?? FX_SCALE) * (tuning?.scale ?? 1));
         node.add(fx.object);
       } else {
         const from = new Vector3();
         if (spec.anchor === 'target' && targetPoint) from.copy(targetPoint);
         else if (!worldPoint(spec.anchor === 'projectile' ? source : target!, spec.anchor === 'projectile' ? spec.bone : undefined, from)) { fx.dispose(); return; }
         // A projectile is the caster's (its scale); an effect on the target stays in world units (FX_SCALE).
-        fx.object.scale.setScalar(spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE);
+        fx.object.scale.setScalar((spec.anchor === 'projectile' ? source.modelScale ?? FX_SCALE : FX_SCALE) * (tuning?.scale ?? 1));
         fx.object.position.copy(from);
         scene.add(fx.object);
         if (spec.anchor === 'projectile') {
@@ -806,10 +851,42 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       live.add(effect);
     }).catch(() => { /* a missing or invalid effect file just plays nothing */ });
   };
-  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined) => {
+  const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : []) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
     const owner = generation;
+    const sample = skillFeelFor(source.definitionId);
+    if (sample && action === 'attack') {
+      // One small near-white tracer or spark instead of the champion's own attack effects.
+      const target = targetId && targetId !== sourceId ? pieces.get(targetId) : undefined;
+      if (!target?.alive) return;
+      const ranged = !!actionEffects?.resolve(source.definitionId, 'attack').some(({ id }) => actionEffects.playback[id]?.anchor === 'projectile');
+      const from = source.root.position.clone().setY(IMPACT_HEIGHT * 1.1), to = target.root.position.clone().setY(IMPACT_HEIGHT);
+      if (ranged) from.addScaledVector(to.clone().sub(from).setY(0).normalize(), 14);
+      feel.attack(from, to, ranged, ranged ? 0.1 : 0.18);
+      return;
+    }
+    let castPlan: ReturnType<typeof planActionEffects> | null = null;
+    if (sample && action === 'cast') {
+      // Charge, then the trimmed cast; at its impact the caster and its targets hold a moment and the camera kicks.
+      castPlan = actionEffects ? simplifyCast(source.definitionId, planActionEffects(source.definitionId, 'cast',
+        actionEffects.resolve(source.definitionId, 'cast'), actionEffects.playback)) : [];
+      feel.charge(source.root, skillColor(source.definitionId), (grid?.radius ?? 34) * 0.95, source.starHeight * 0.5);
+      source.overhead.flashMana(true);
+      queued.push({ at: clock + WINDUP_SECONDS, generation: owner, run: () => source.overhead.flashMana(false) });
+      queued.push({ at: clock + impactDelay(castPlan), generation: owner, run: () => {
+        const hit = impactFeel(source.definitionId), color = skillColor(source.definitionId);
+        for (const id of [sourceId, ...targetIds]) {
+          const view = pieces.get(id);
+          if (!view?.alive) continue;
+          holds.set(view, hit.hold);
+          if (!hit.ring || id === sourceId || !view.root.visible) continue;
+          const ring = () => { if (view.alive && view.root.visible) feel.impact(view.root.position, color, (grid?.radius ?? 34) * 1.3); };
+          if (hit.ringDelay) queued.push({ at: clock + hit.ringDelay, generation: owner, run: ring }); else ring();
+        }
+        if (!reducedMotion()) feel.kick(hit.kick);
+      } });
+    }
     let targetPoint: Vector3 | undefined;
     if (action === 'cast' && source.definitionId === 'renata') {
       if (!targetId || !pieces.has(targetId) || queued.length > MAX_QUEUED - 2) return;
@@ -830,13 +907,42 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Continue into the asset plan: ignition and tar complement the single procedural flight/area.
     }
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
-    for (const { id, playback: spec } of planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
+    for (const { id, playback: spec } of castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
       if (queued.length >= MAX_QUEUED) return;
-      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint) });
+      queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : undefined) });
     }
   };
+  // Shader prewarm for the sample casts: in preparation each sample champion on the board has its trimmed cast effects
+  // read, a moment of particles born far below the board and their programs and textures sent to the GPU once, so its
+  // first cast in combat does not stall a frame (the pooled materials then reuse those programs).
+  const warmedCasts = new Set<string>();
+  const warmCast = (definitionId: string) => {
+    if (!effects || !actionEffects || !skillFeelFor(definitionId) || warmedCasts.has(definitionId)) return;
+    warmedCasts.add(definitionId);
+    const plan = simplifyCast(definitionId, planActionEffects(definitionId, 'cast', actionEffects.resolve(definitionId, 'cast'), actionEffects.playback));
+    void Promise.all(plan.map(({ id, playback }) => effects.load(id, playback.maxDuration, castEffectTuning(id).particles).catch(() => null))).then(async loaded => {
+      const group = new Group(); group.position.y = -1e5; scene.add(group);
+      for (const fx of loaded) if (fx) { group.add(fx.object); fx.update(0.1, camera); }
+      try {
+        if (!closed) {
+          group.traverse(object => {
+            const material = (object as Mesh).material;
+            for (const one of material ? Array.isArray(material) ? material : [material] : [])
+              for (const value of [...Object.values(one), ...Object.values((one as { uniforms?: Record<string, { value: unknown }> }).uniforms ?? {}).map(u => u.value)])
+                if ((value as Texture | null)?.isTexture) renderer.initTexture(value as Texture);
+          });
+          await renderer.compileAsync(group, camera, scene);
+        }
+      } catch { /* a failed compile only means the first cast compiles as before */ }
+      for (const fx of loaded) fx?.dispose();
+      group.removeFromParent();
+    });
+  };
+  // The pool's own two programs, compiled up front (test renderers may not compile at all).
+  if (typeof renderer.compile === 'function') { feel.reveal(true); renderer.compile(feel.object, camera, scene); feel.reveal(false); }
   const updateEffects = (seconds: number) => {
     clock += seconds;
+    feel.update(seconds);
     for (const fx of referenceEffects) { fx.update(seconds, camera); if (fx.finished) { fx.dispose(); referenceEffects.delete(fx); } }
     if (saveBurst) {
       saveBurst.update(seconds);
@@ -863,6 +969,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
 
   let fighting: boolean | null = null, dancing: ReadonlySet<string> = new Set();
+  /**
+   * Rises only for what this round really brings in: pieces new on the frame a combat begins (after a preparation was
+   * shown since the last join), and units named by a current unitSpawned/unitRevived event. Joining a battle midway (the
+   * first frames after mounting, or another seat's battle on the board) shows what already stands without a spawn clip.
+   */
+  let joined = true;
+  const rising = new Set<string>();
   /** Starts or stops one piece's dance: the model's celebrate (dance) clip when the asset root mapped one, else a hop. */
   const setDance = (view: PieceView, id: string, on: boolean) => {
     if (!on) { if (view.dance === 'clip') resetAction(view, id); view.dance = null; return; }
@@ -883,6 +996,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // BoardScene cancelled the drag itself (blur, resize, D/F, phase change, a command): let go of the pointer too.
     if (dragging && frame.dragging !== dragging) endDrag();
     const combatStarted = fighting !== true && frame.fighting;
+    const combatBegan = combatStarted && fighting === false && !joined;
+    if (!frame.fighting) joined = false;
+    if (fighting !== frame.fighting) rising.clear();
     if (fighting !== null && fighting !== frame.fighting) { clearEffects(); for (const [id, view] of pieces) resetAction(view, id); }
     fighting = frame.fighting;
     // What the room says comes next (board-feed warm hints): queued once per change, after the preload, in a match.
@@ -899,7 +1015,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       seen.add(piece.id);
       let view = pieces.get(piece.id);
       const created = !view;
-      if (!view) { view = createPiece(piece); pieces.set(piece.id, view); }
+      if (!view) { view = createPiece(piece); pieces.set(piece.id, view); if (frame.fighting && (combatBegan || rising.has(piece.id))) view.rise = true; }
       view.starLevel = piece.effectiveStarLevel ?? piece.starLevel;
       // Form is chosen from deployment, then frozen while combat movement changes the drawn position.
       if (!frame.fighting || combatStarted || created) {
@@ -911,10 +1027,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       syncStars(view, piece);
       view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items);
+      setControl(view, frame.fighting && piece.alive ? piece.control : null);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
         // Revived or a new combat: never stay locked in a death pose that had not finished.
-        if (!view.alive) resetAction(view, piece.id);
+        if (!view.alive) { resetAction(view, piece.id); if (frame.fighting && rising.has(piece.id)) view.rise = true; }
         view.alive = true; view.dyingFor = null;
       } else if (view.alive) {
         view.alive = false; cancelLunge(view);
@@ -925,6 +1042,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const shown = piece.visible && (view.dyingFor === null || view.dyingFor === 'loading' || view.dyingFor > 0);
       if (shown && !view.root.visible) resetAction(view, piece.id);
       view.root.visible = shown;
+      if (shown) flushRise(view);
       const slot = benchSlots ? (piece.id !== frame.dragging && piece.benchSlot !== undefined
         ? piece.benchSlot ?? -1 : benchOf2d(frame, piece.x, piece.y)) : -1;
       if (slot >= 0 && benchSlots?.[slot]) view.target.copy(benchSlots[slot]!); else view.target.set(piece.x, 0, piece.y);
@@ -933,6 +1051,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     for (const [id, view] of pieces) if (!seen.has(id)) { loadReport.dropped(id); removePiece(view); pieces.delete(id); }
     if (models.cache && matchShown && !loadReport.began) loadReport.frame([...pieces].filter(([, view]) => !view.lease).map(([id]) => id),
       [...pieces.values()].filter(view => warmup?.warmed(view.definitionId)).length);
+    if (!frame.fighting) for (const view of pieces.values()) warmCast(view.definitionId);
     dancing = new Set(frame.fighting ? [] : frame.mechanics?.reunion ?? []);
     for (const [id, view] of pieces) setDance(view, id, dancing.has(id) && view.root.visible);
     tabletop.frame(frame); traitProps.frame(frame);
@@ -956,14 +1075,26 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         const fx = createRenataShield(grid?.radius ?? 34, reducedMotion());
         recipient.root.add(fx.object); addReference(fx);
       }
+      // A replay catching up names old spawns too: only the current ones rise.
+      if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
       if (!ANIMATION_EVENTS.has(event.type)) continue;
+      // A forced move is no run: the moved unit hops along the slide and keeps its action (its stun stops that).
+      if (event.type === 'movement' && DISPLACEMENT_REASONS.has((event as { reason?: string }).reason ?? '')) {
+        const view = pieces.get(event.unitId);
+        if (view) { cancelLunge(view); view.hop = 0; }
+        continue;
+      }
       // Display events carry the replay field names UnitActionState reads; each state ignores other units' events.
       for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
       if (event.type === 'attack') { face(event.attackerId, event.targetId); if (current) playAction('attack', event.attackerId, event.targetId); }
       else if (event.type === 'cast') {
         face(event.sourceId, event.targetIds[0]);
-        if (current) { playAction('cast', event.sourceId, event.targetIds[0]); startLunge(event.sourceId, event.targetIds[0]); }
+        if (current) { playAction('cast', event.sourceId, event.targetIds[0], event.targetIds); startLunge(event.sourceId, event.targetIds[0]); }
+        // Jayce's cast works through his Hextech Forge (it shields or speeds the allies nearest it): the forge plays its
+        // own cast clip. A dead one ignores it; the revive that follows in the same cast plays its spawn instead.
+        const forgeId = `${event.sourceId}:g23-forge`, forge = pieces.get(forgeId);
+        if (forge?.definitionId === 'g23-forge') forge.state.consume({ type: 'cast', sourceId: forgeId });
       } else if (event.type === 'movement' || event.type === 'death') {
         // A real step or death takes over from a lunge at once: the body is back on the root.
         const view = pieces.get((event as { unitId: string }).unitId); if (view) cancelLunge(view);
@@ -1010,7 +1141,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     }
     // Another battle on the board (a watched seat's, or mine again): nothing queued or playing belongs to it.
     const watched = view?.watching ? view.seatId : null;
-    if (watched !== (scoutView?.watching ? scoutView.seatId : null)) { clearEffects(); for (const [id, piece] of pieces) resetAction(piece, id); }
+    if (watched !== (scoutView?.watching ? scoutView.seatId : null)) {
+      clearEffects(); for (const [id, piece] of pieces) resetAction(piece, id);
+      joined = true; rising.clear();
+    }
     // Watching its battle: that battle is on my board (the frames carry it), so no static build is drawn over it.
     scoutView = view; scout.show(view?.watching ? null : view, lastFrame);
     // My legend goes along to a drawn build: it leaves my board (no walk, no orb claims) and comes back to its own spot.
@@ -1294,26 +1428,49 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (view.dance === 'hop') view.root.position.y += Math.abs(Math.sin(now / 1000 * Math.PI * 2 + view.root.position.x / 40)) * MODEL_HEIGHT * 0.14;
       }
       if (view.lunge) { const offset = view.lunge.update(seconds); if (offset) setLungeOffset(view, offset.x, offset.z); else cancelLunge(view); }
+      // Knock-up: the body (and its stars, bars and star ring below) rises by a share of its drawn height.
+      const height = view.starHeight - STAR_GAP;
+      let lift = view.control.active || view.liftOffset ? view.control.update(seconds) * height * CONTROL_3D.liftShare : 0;
+      if (view.hop !== null) {
+        view.hop += seconds;
+        if (view.hop >= DISPLACEMENT_HOP.seconds) view.hop = null;
+        else lift = Math.max(lift, displacementHop(view.hop) * height * DISPLACEMENT_HOP.liftShare);
+      }
+      if (lift !== view.liftOffset) setLiftOffset(view, lift);
       if (typeof view.dyingFor === 'number' && view.dyingFor > 0 && (view.dyingFor = Math.max(0, view.dyingFor - seconds)) === 0) view.root.visible = false;
       const output = view.state.update(seconds);
       if (view.mixer) {
         // Held time catches up only the action it was held for, on the same mixer: a new action starts from its own start.
         const kept = held.get(view), same = !!kept && kept.mixer === view.mixer && kept.revision === output.revision;
-        if (seen(view)) { view.mixer.update(seconds + (same ? kept!.seconds : 0)); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
+        // Controlled: the clip runs slow (a dazed sway rather than a frozen statue or a full idle).
+        const pace = view.control.control ? CONTROL_3D.clipTimeScale : 1;
+        // A cast's impact hold: the pose stays put and the held time is skipped, not caught up.
+        const hold = holds.get(view), step = hold === undefined ? seconds : 0;
+        if (hold !== undefined) { if (hold - seconds > 0) holds.set(view, hold - seconds); else holds.delete(view); }
+        if (seen(view)) { view.mixer.update((step + (same ? kept!.seconds : 0)) * pace); held.set(view, { seconds: 0, revision: output.revision, mixer: view.mixer }); }
         else held.set(view, { seconds: same ? kept!.seconds + seconds : 0, revision: output.revision, mixer: view.mixer });
         if (view.dance !== 'clip') view.mixer.apply(output); // a dance clip runs outside the action state
       }
       if (view.stars) {
-        view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight);
+        view.stars.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight + lift);
         view.stars.object.visible = view.root.visible;
       }
       // Above the star row; a monster has none, so its bar takes the stars' place.
       view.overhead.object.position.copy(view.root.position)
-        .setY(view.root.position.y + view.starHeight + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+        .setY(view.root.position.y + view.starHeight + lift + (view.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
+      // The star ring circles just over the head, under the star row.
+      if (view.halo) {
+        view.halo.update(seconds);
+        view.halo.object.position.copy(view.root.position).setY(view.root.position.y + view.starHeight - STAR_GAP / 2 + lift);
+        view.halo.object.visible = view.root.visible;
+      }
       view.overhead.object.visible = view.root.visible && view.overhead.drawn;
     }
     updateEffects(seconds);
     tabletop.update(seconds); traitProps.update(seconds); stage.update(seconds); scout.update(seconds); followBox();
+    // The board camera's impact kick, put on for this frame's render only.
+    const kick = stage.active || scout.active ? shakeOffset.set(0, 0, 0) : feel.shake(shakeOffset);
+    camera.position.add(kick); camera.updateMatrixWorld();
     if (width > 0) {
       if (stage.active) renderer.render(stage.scene, stage.camera);
       else if (scout.active) {
@@ -1336,6 +1493,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       console.info(`[3D] 首批 ${r.shown}/${r.pieces} 个棋子模型 ${ms(r.wallMs!)} ms 后出现；各模型合计：读取 ${ms(r.readMs)} ms，解析 ${ms(r.parseMs)} ms，`
         + `首帧上传与编译 ${ms(r.uploadMs)} ms；其中 ${r.warmed} 个已预热`);
     }
+    camera.position.sub(kick); camera.updateMatrixWorld();
   };
   resize(host.clientWidth, host.clientHeight);
   frameId = requestAnimationFrame(tick);
@@ -1353,7 +1511,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         ['pointercancel', onPointerCancel], ['lostpointercapture', onPointerCancel], ['pointerleave', onPointerLeave]] as const)
         canvas.removeEventListener(type, handler as EventListener);
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
-      withdrawPicker(); clearEffects(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
+      withdrawPicker(); clearEffects(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
       pieces.clear(); boardGroup.clear();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();

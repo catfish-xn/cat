@@ -8,9 +8,8 @@ import { S13_P2_SOURCE } from '../simulation/content/s13-augments-p2-source';
 import { S13_P3_SOURCE } from '../simulation/content/s13-p3-source';
 import type { Effect } from '../simulation/strategy-types';
 import { fillAbilityTemplate } from './ability-text';
-import { AUGMENT_ZH_TEMPLATES } from './augment-zh';
+import { readAugmentText, augmentTextPlaceholder } from './augment-text-loader';
 import { describeEffect } from './effect-text';
-import { S13_AUGMENT_ASSETS } from './s13-augment-asset-manifest';
 import { rootAugmentIconUrl } from './s13-assets';
 import { d11ChoiceDisplay } from '../simulation/d11-display';
 import { V20_TRAITS, TEAMUP_IDS } from '../simulation/content/v20-traits';
@@ -18,7 +17,7 @@ import { getHeroIdentity } from './hero-identity';
 import { traitSummary } from './trait-text';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
-const ICONS = new Map(S13_AUGMENT_ASSETS.map(asset => [asset.id, asset.path]));
+
 
 /** zh_CN client names (cdragon 14.24 zh_cn.json), keyed by repo augment id. */
 export const AUGMENT_ZH: Readonly<Record<string, string>> = Object.freeze({
@@ -34,11 +33,15 @@ export const AUGMENT_ZH: Readonly<Record<string, string>> = Object.freeze({
   'inspiring-epitaph': '激昂墓志铭',
 });
 
-export const augmentDisplayName = (id: string): string => AUGMENT_ZH[id] ?? AUGMENT_DEFINITIONS[id]?.name ?? '未知强化';
+export const augmentDisplayName = (id: string): string => {
+  const name = AUGMENT_ZH[id] ?? AUGMENT_DEFINITIONS[id]?.name;
+  if (name !== id) return name ?? '未知强化';
+  return readAugmentText()?.AUGMENT_POOL_TEXT[id]?.name ?? '强化名称加载中…';
+};
 
 /** Bundled icon, else one the 3D asset root's ui-assets.json carries (kind `augment`), else null. */
 export function augmentIconUrl(id: string): string | null {
-  const path = ICONS.get(id);
+  const path = readAugmentText()?.S13_AUGMENT_ASSETS.find(asset => asset.id === id)?.path;
   return path ? `${BASE}${path}` : rootAugmentIconUrl(id);
 }
 
@@ -80,6 +83,8 @@ const AUTHORED_DESCRIPTION = new Set(['placebo', 'manaflow-i', 'glass-cannon-i',
  * case-insensitively as the client does; `@Key*100@` is the source fraction shown as a percent. Formatting only.
  */
 function p3Description(id: string): string | null {
+  const AUGMENT_ZH_TEMPLATES = readAugmentText()?.AUGMENT_ZH_TEMPLATES;
+  if (!AUGMENT_ZH_TEMPLATES) return null;
   const sources: Readonly<Record<string, { readonly values: Readonly<Record<string, number>> }>> = S13_P3_SOURCE;
   if (!Object.hasOwn(AUGMENT_ZH_TEMPLATES, id) || !Object.hasOwn(sources, id)) return null;
   const values: Record<string, number> = {};
@@ -87,8 +92,12 @@ function p3Description(id: string): string | null {
   return fillAbilityTemplate(AUGMENT_ZH_TEMPLATES[id].replace(/@[^@<>\s]+@/g, token => token.toLowerCase()), values).text;
 }
 // v15 D11 choices use the rules' display text; other augments retain the P2/P3 player descriptions.
-export const augmentPlayerDescription = (id: string): string | null =>
-  d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? teamupDescription(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
+export const augmentPlayerDescription = (id: string): string | null => {
+  const data = readAugmentText();
+  if (!data) return augmentTextPlaceholder();
+  if (Object.hasOwn(data.AUGMENT_POOL_TEXT, id)) return data.AUGMENT_POOL_TEXT[id].description;
+  return d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? teamupDescription(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
+};
 /**
  * Effect lines of an augment for its card. Mechanics with no display text (they would print an internal code such as
  * `s13P2Augment`) are left out when the augment has a player description, which already says what they do; so is the
@@ -97,6 +106,19 @@ export const augmentPlayerDescription = (id: string): string | null =>
 export function augmentEffectText(id: string): string {
   const effects: readonly Effect[] = AUGMENT_DEFINITIONS[id]?.effects ?? [], described = augmentPlayerDescription(id) !== null;
   return effects.filter(effect => !(described && effect.kind === 'mechanic' && (describeEffect(effect) === effect.mechanic || effect.mechanic === 'acquisitionGold'))).map(describeEffect).join('；');
+}
+
+/**
+ * The choice card's two text areas, as the original card sets them: the effect description, then the extra notes in
+ * their own block (the project's 魔改执行 note of a team-up, and the effect lines once a description already says what the
+ * augment does). Without a description the effect lines are the description. Formatting only: the text is the same.
+ */
+export function augmentCardSections(id: string): { readonly body: string; readonly extra: readonly string[] } {
+  const description = augmentPlayerDescription(id), effects = augmentEffectText(id);
+  if (!description) return { body: effects, extra: [] };
+  const cut = description.indexOf(' 魔改执行：');
+  const body = cut < 0 ? description : description.slice(0, cut), note = cut < 0 ? '' : description.slice(cut + 1);
+  return { body, extra: [note, effects].filter(Boolean) };
 }
 
 /** Augment offer tier as the rules name it (pendingChoice.augmentTier); the in-game 银色/金色/彩色 wording. */

@@ -16,9 +16,9 @@ function executePool(pool:api.SharedPoolState,state:api.MatchState,a:ClientComma
   }
 }
 describe('T7 public-command traversal',()=>{
-  it('twenty consecutive real rounds from seed 1 accept every intention, with no synthetic gold, HP or choices',()=>{
-    // Seed 42 now picks Radiant Relics at 4-2; seed 1 keeps the two-choice traversal.
-    let state=api.createMatch(1),rng=1,steps=0,commands=0,ticks=0;
+  it('twenty consecutive real rounds from seed 42 accept every intention, with no synthetic gold, HP or choices',()=>{
+    // Seed 42 keeps the full augment/component/forge traversal under the 224-card pool.
+    let state=api.createMatch(42),rng=1,steps=0,commands=0,ticks=0;
     const actions=new Set<string>(),choices=new Set<string>();
     for(let budget=0;state.roundResults.length<20;budget++) {
       expect(budget).toBeLessThan(40000);expect(state.phase).not.toBe('gameOver');
@@ -36,7 +36,8 @@ describe('T7 public-command traversal',()=>{
     expect(state.roundResults.map(r=>r.round)).toEqual(Array.from({length:20},(_,i)=>i+1));
     expect(commands).toBeGreaterThan(30);expect(ticks).toBeGreaterThan(100);
     for(const kind of ['deploy','buy','buyXp','combine','equip','choose']) expect(actions.has(kind)).toBe(true);
-    expect([...choices].sort()).toEqual(['augment','component']);
+    // Require actual forge coverage as well as augment and supply choices.
+    expect([...choices].sort()).toEqual(['augment','component','forge']);
   },30_000);
   it('eight bot seats use actual TP commands across opening rounds, conserving after every action',()=>{
     const initial=room(undefined,8),first=batch(api.refreshSharedShops(initial.pool,initial.states,1));

@@ -7,6 +7,8 @@ import { applyThemeVariables } from './presentation/theme';
 import { installImageFallback } from './presentation/s13-assets';
 import { mountBuildBadge } from './rendering/build-badge';
 import { mountFullscreenToggle } from './rendering/fullscreen-toggle';
+import { isOnlineMode } from './rendering/online/mode';
+import { loadSoloApplication } from './m6/application-loader';
 import { mountThreeMode } from './rendering/three-mode/three-loader';
 applyThemeVariables();
 const removeImageFallback = installImageFallback();
@@ -16,7 +18,9 @@ const app = document.getElementById('app')!;
 const shell = createAppShell(app);
 const board = shell.board;
 const threeMode = mountThreeMode(board);
-new Phaser.Game({
+async function startGame(): Promise<void> {
+  if (!isOnlineMode()) await loadSoloApplication();
+  new Phaser.Game({
   type: Phaser.AUTO, parent: 'board-root', width: BOARD_LAYOUT.width, height: BOARD_LAYOUT.height, backgroundColor: '#101923',
   scene: [BoardScene], scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   // CSS touch-action:none controls canvas gestures. Phaser must still track
@@ -60,3 +64,5 @@ new Phaser.Game({
     },
   },
 });
+}
+void startGame();

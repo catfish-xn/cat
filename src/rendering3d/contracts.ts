@@ -1,8 +1,11 @@
 /** D7 -> D8 contract v1. Seconds, three world axes, normalized curve time [0,1]. */
 export type ActionState = 'idle' | 'move' | 'attack' | 'cast' | 'hit' | 'death';
-/** Clips a model may name beyond the combat states: little legends also celebrate, run and grab (carousel). */
-export type ModelAction = ActionState | 'celebrate' | 'run' | 'grab';
-export const MODEL_ACTIONS: readonly ModelAction[] = ['idle', 'move', 'attack', 'cast', 'hit', 'death', 'celebrate', 'run', 'grab'];
+/**
+ * Clips a model may name beyond the combat states: little legends also celebrate, run and grab (carousel); a summon
+ * may name the clip it rises with (`spawn`: the Hextech Forge when it appears or Jayce revives it).
+ */
+export type ModelAction = ActionState | 'celebrate' | 'run' | 'grab' | 'spawn';
+export const MODEL_ACTIONS: readonly ModelAction[] = ['idle', 'move', 'attack', 'cast', 'hit', 'death', 'celebrate', 'run', 'grab', 'spawn'];
 export type AnimationNames = Partial<Record<Exclude<ModelAction, 'cast'>, string>> & { cast?: string | null };
 /** Array main rotates between casts; the other stages each play once. */
 export interface CastSequence { in?: string; main: string | readonly string[]; hold?: string; out?: string }

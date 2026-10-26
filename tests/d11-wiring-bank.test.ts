@@ -3,7 +3,7 @@ import { reachRound } from './match-helpers';
 import { snapshotForBattle } from '../src/simulation/two-sided-snapshot';
 import { compileBattle, startTwoSidedBattle, proposeSettlement } from '../src/simulation/two-sided-battle';
 import { toCombatReplay, startCombatReplay } from '../src/simulation/combat-replay-view';
-import currentIdentity from './v22-online-rules-content-baseline.json';
+import currentIdentity from './v23-online-rules-content-baseline.json';
 
 function input(){
   const base=reachRound('2-1'),units=[{id:'unit-1',definitionId:'lux',team:'player' as const,starLevel:3 as const,location:{kind:'board' as const,cell:{col:0,row:4}}}];

@@ -1,3 +1,7 @@
+import { loadTooltipText } from '../src/presentation/tooltip-text-loader';
+import { beforeAll } from 'vitest';
+import { loadAugmentText } from '../src/presentation/augment-text-loader';
+beforeAll(() => Promise.all([loadAugmentText(), loadTooltipText()]));
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
@@ -96,11 +100,14 @@ describe('14.24 official trait text with executable values', () => {
     for (const part of parts) expect(row(id, threshold)).toContain(part);
   });
   it.each([
-    ['scrap', 6, '所有基础装备和成装都会成为幸运装备！'],
-    ['scrap', 9, '生成光明版装备！'], ['enforcer', 10, '没收敌人的所有装备！'],
-    ['black-rose', 7, '当【赛恩】阵亡时，他会带着超越死亡的能量重获生命！'],
-  ] as const)('%s %i appends the marker to the original deferred clause', (id, threshold, clause) => {
-    expect(row(id, threshold)).toContain(`${clause}（暂未实装）`);
+    ['scrap', 6, '所有基础装备和成装都会成为幸运装备！', '项目约定：6档起每件基础装备优先临时合成该弈子推荐装备'],
+    ['scrap', 9, '生成光明版装备！', '9档再把这些临时成装换成对应光明版'],
+    ['enforcer', 10, '没收敌人的所有装备！', '项目约定：10档开战时敌方英雄身上除纹章外的装备本场全部失效'],
+  ] as const)('%s %i keeps the official clause and states the P execution instead of a deferred marker', (id, threshold, clause, note) => {
+    expect(row(id, threshold)).toContain(clause);
+    expect(row(id, threshold)).toContain(note);
+    expect(row(id, threshold)).not.toContain('暂未实装');
+    expect(describeTraitTier(TRAIT_DEFINITIONS[id], TRAIT_DEFINITIONS[id].tiers.find(t => t.threshold === threshold)!)).not.toContain('暂未实装');
   });
   it.each([
     ['quickstriker', '移速 ×1.5；4 档当前目标阵亡后下一 tick 冲刺至新目标旁合法格（魔改执行）。'],
@@ -127,6 +134,7 @@ describe('14.24 official trait text with executable values', () => {
     expect(traitSummary('emissary', 4)).not.toContain('暂未实装');
     expect(row('rebel', 10)).not.toContain('暂未实装');
     expect(row('black-rose', 4)).not.toContain('暂未实装');
+    expect(row('black-rose', 7)).not.toContain('暂未实装');
     expect(traitSummary('emissary', 4)).toContain('【娜美】： 己方弈子的每次普攻提供2额外法力值。');
     expect(traitSummary('black-rose', 7)).toBe('【黑色玫瑰】弈子们的每个星级都会提升【赛恩】的强度');
   });

@@ -3,6 +3,7 @@
  * eight-seat sidebar and the ranking overlay, and routes server pushes into RemoteSession.
  * Nothing here decides rules; it only shows what the server sent.
  */
+import { freeRerollsUsed } from '../../simulation/free-rerolls';
 import type { SessionChange } from '../../m6/contracts';
 import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
@@ -33,6 +34,7 @@ import type { RemoteSession } from './remote-session';
 import type { SceneApplication } from './scene-application';
 import type { OnlineBoardMounts } from '../app-shell';
 import { OpeningEncounterHud } from '../opening-encounter-hud';
+import { forgetServerNow, noteServerNow } from '../../presentation/anvil-display';
 import { readOpeningDisplay, type OpeningForgeProgressDisplay, type OpeningMelProgressDisplay } from '../../presentation/opening-encounter-text';
 
 export interface OnlineHooks {
@@ -238,7 +240,7 @@ export class OnlineApplication implements SceneApplication {
     let cue: SoundCue | null = null;
     if (after.level > before.level) cue = 'levelUp';
     else if (after.xp > before.xp && after.gold < before.gold) cue = 'xp';
-    else if (after.shop.generation !== before.shop.generation && after.gold < before.gold) cue = 'reroll';
+    else if (after.shop.generation !== before.shop.generation && (after.gold < before.gold || freeRerollsUsed(after) > freeRerollsUsed(before))) cue = 'reroll';
     else if (after.gold < before.gold) cue = 'buy';
     // Only a real sale: gold up and one of my units gone (a loot orb's gold keeps every unit).
     else if (after.gold > before.gold) {
@@ -269,6 +271,7 @@ export class OnlineApplication implements SceneApplication {
   private onView(view: PlayerView) {
     if (this.mode !== 'online-lobby') this.viewSound(view);
     if (this.mode === 'active') this.noteOutcome(view);
+    noteServerNow(view.phase.serverNow); // the anvil armory counts the server's own deadline down
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
     // Cosmetic: the little legends the 3D layer stands beside the board (a seat from an older server names none).
     const legendOf = (seatId: string | null) => view.seats.find(seat => seat.seatId === seatId)?.legend ?? null;
@@ -305,7 +308,8 @@ export class OnlineApplication implements SceneApplication {
     const state = this.session.state as MatchState & { readonly openingEncounter?: unknown; readonly openingForgeProgress?: OpeningForgeProgressDisplay | null; readonly openingMelProgress?: OpeningMelProgressDisplay | null };
     const encounter = readOpeningDisplay(view.openingEncounter) ?? readOpeningDisplay(state.openingEncounter);
     this.opening.update({ encounter, matchKey: `${view.mySeatId}|${view.seats.map(seat => `${seat.seatId}:${seat.name}`).join(',')}`, round: view.phase.round,
-      forge: state.openingForgeProgress ?? null, mel: state.openingMelProgress ?? null, choiceOpen: state.pendingChoice != null });
+      // v22: the opening anvils are bench units now, so no "锻造器 剩余 N" count (it would never go down).
+      forge: null, mel: state.openingMelProgress ?? null, choiceOpen: state.pendingChoice != null });
   }
   private lastPhase = '';
   /** Remembers what the last push did to my seat (HP lost, eliminated); `flushOutcome` shows it once my battle stops playing. */
@@ -492,7 +496,7 @@ export class OnlineApplication implements SceneApplication {
   private backToLobby() {
     this.opening.hideAll(); this.opening.forgetMatch();
     this.ranking.hide(); this.elimination.hide(); this.outcome.clear(); this.watched = null; this.pendingHit = null; this.pendingRank = undefined; this.hitLanding = false;
-    this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null; setBoardLegends(null); setBoardWarmHints([]);
+    this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null; forgetServerNow(); setBoardLegends(null); setBoardWarmHints([]);
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
     this.carousel.hide(); this.syncCarouselMode();
     this.session.forgetBattles();
@@ -500,7 +504,8 @@ export class OnlineApplication implements SceneApplication {
   }
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
-    this.sidebar.tick(); this.carousel.tick(); this.syncSummary(); this.flushOutcome();
+    const shown = this.session.combatView;
+    this.sidebar.tick(shown?.status === 'running' ? shown.tick : null); this.carousel.tick(); this.syncSummary(); this.flushOutcome();
     // A 3D layer that subscribed after the last view (or a release time that passed) gets the carousel again.
     if (this.carousel.showing && (this.carouselFeedGeneration !== boardFeedGeneration() || this.carouselReleaseDue())) this.publishCarousel3d();
     if (this.opponentBoard.openSeatId && this.scoutFeedGeneration !== boardFeedGeneration()) this.syncScout();

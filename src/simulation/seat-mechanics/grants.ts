@@ -1,3 +1,4 @@
+import { CONSUMABLE_DEFINITIONS } from '../content/consumables';
 import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
 import { planPermanentItemGrant } from '../item-grants';
 import type { UnitLootPolicy } from '../loot-runtime';
@@ -11,6 +12,7 @@ import type { UnitUpgradedEvent } from '../unit-types';
 import { appendMechanicReceipt, findMechanicReceipt } from './state';
 import type { MechanicReceipt, MechanicSource } from './types';
 import { enqueueRewardOrb } from '../orb-claim';
+import { pruneForgePositions } from '../forge-positions';
 
 export interface MechanicGrantRequest { readonly receiptId: string; readonly source: MechanicSource }
 export type MechanicGrantResult =
@@ -31,7 +33,7 @@ function badRequest(state: MatchState, request: MechanicGrantRequest): MechanicG
   return findMechanicReceipt(state, request.receiptId) ? refuse(state, 'duplicate-mechanic-receipt') : null;
 }
 function commit(state: MatchState, receipt: MechanicReceipt, events: readonly MatchEvent[] = [], upgradeEvents: readonly UnitUpgradedEvent[] = []): MechanicGrantResult {
-  const next = appendMechanicReceipt(state, receipt);
+  const next = appendMechanicReceipt(pruneForgePositions(state), receipt);
   return { ok: true, state: next, receipt, upgradeEvents, events: [...events, { type: 'mechanicGranted', receipt }] };
 }
 
@@ -81,4 +83,14 @@ export function grantMechanicUnit(state: MatchState, request: MechanicGrantReque
     resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, plan.facts) };
   return commit(born, { ...identity(state, request), kind: 'unit', definitionId: request.definitionId,...(request.starLevel?{starLevel:request.starLevel}:{}), resolution: 'held', unitId: plan.unitId, gold: 0 },
     plan.events, plan.upgradeEvents);
+}
+
+/** Generic exactly-once consumable grant, including both champion duplicators. */
+export function grantMechanicConsumable(state: MatchState, request: MechanicGrantRequest & { readonly definitionId: string }): MechanicGrantResult {
+  const bad = badRequest(state, request); if (bad) return bad;
+  if (!Object.hasOwn(CONSUMABLE_DEFINITIONS, request.definitionId)) return refuse(state, 'invalid-mechanic-state');
+  const consumableId = `consumable-${state.nextConsumableSerial}`;
+  return commit({...state, nextConsumableSerial: state.nextConsumableSerial + 1,
+    consumables: [...state.consumables, {consumableId, definitionId: request.definitionId as keyof typeof CONSUMABLE_DEFINITIONS}]},
+    {...identity(state, request), kind:'consumable', definitionId:request.definitionId, consumableId});
 }

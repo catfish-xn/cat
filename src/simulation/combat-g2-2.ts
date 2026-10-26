@@ -4,11 +4,16 @@ import { dashAmbessaChain } from './combat-ambessa-dash';
 import { hexDistance, type HexCell } from './board';
 import type { CombatTask, G22State, CombatOrigin } from './combat-types';
 import type { AbilityContext, S13Packet, S13Heal } from './combat-s13-abilities';
-import { amount, ap, applyStatus, byDistance, champion, enemies, grantShield, origin, path, variable, type S13Unit } from './combat-s13-state';
+import { ad, amount, ap, applyStatus, byDistance, champion, enemies, grantShield, heroLive, origin, path, variable, type S13Unit } from './combat-s13-state';
 import { asSource } from './m8/s13-definitions';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
 import { modifier, stat } from './content/item-programs';
 import { lineContains, lineDirections } from './combat-skill-lines';
+/** User-approved 10-24 from the S13 third-party data table: Vi's row shockwave knocks up for 0.5 s (was 0.25 s). */
+export const VI_ROW_KNOCKUP_TICKS = 10;
+/** User-approved 10-24: Ambessa's gauntlet slam stuns its target for 1 s (was 0.25 s); the slam↔gauntlet link is inferred (P). */
+export const AMBESSA_SLAM_STUN_TICKS = 20;
+import { DISPLACEMENT_POLICY, grabAdjacent, pullToward, rawRangeToHexes } from './combat-displacement';
 export function g22(unit: S13Unit): G22State { return unit.g22 ??= {initialized:false,rebelTriggered:false,wanted:[],wantedDeaths:0,mordeUntilTick:0,reaveUntilTick:0,reaveBps:0,exposureFromTick:0,exposureUntilTick:0,exposureBps:0}; }
 function hit(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordinal:number,type:S13Packet['damageType']='magic',area=false,basic=false,source=origin(u)) {
   ctx.packets.push({source:basic?{...source,sourceKind:'attack'}:source,targetId:t.id,raw,damageType:type,actionSeq:seq,ordinal,
@@ -30,12 +35,13 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'vi':
       grantShield(u,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
       strike(t,ad('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);
-      for(const other of foes().filter(x=>x.id!==t.id&&x.cell.row===t.cell.row)) {strike(other,ad('PercentAttackDamage_SecondaryDamage'),'physical',true);applyStatus(other,origin(u),'stun',0,5,ctx.tick,ctx.events);}break;
+      for(const other of foes().filter(x=>x.id!==t.id&&x.cell.row===t.cell.row)) {strike(other,ad('PercentAttackDamage_SecondaryDamage'),'physical',true);applyStatus(other,origin(u),'stun',0,VI_ROW_KNOCKUP_TICKS,ctx.tick,ctx.events,false,'',undefined,true);}break; // the row shockwave knocks up
     case 'akali':
       strike(t,mag('Damage'));strike(t,Math.floor(mag('SecondaryDamage')*(10000+Math.round(v('TargetDamageAmp')*10000))/10000));
       Object.assign(g22(t),{exposureFromTick:ctx.tick+1,exposureUntilTick:ctx.tick+1+Math.round(v('Duration')*20),exposureBps:Math.round(v('TargetDamageAmp')*10000)});break;
     case 'sett': {
-      const targets=foes().slice(0,2),mult=targets.length===1?1+v('SoloBonus'):1;
+      const targets=foes().slice(0,DISPLACEMENT_POLICY.sett.targets),mult=targets.length===1?1+v('SoloBonus'):1;
+      grabAdjacent(ctx,u,targets,'sett-grab');
       for(const x of targets){strike(x,Math.floor(mag('Damage')*mult),'magic',true);applyStatus(x,origin(u),'stun',0,Math.round(v('StunDuration')*mult*20),ctx.tick,ctx.events);}break;
     }
     case 'draven':ids.push(u.id);break;
@@ -44,13 +50,26 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       for(let i=0;i<n;i++)strike(targets[Math.floor(ctx.draw()/2**32*targets.length)],mag('Damage'));break;
     }
     case 'trundle': {
-      const bps=10000+Math.floor((u.maxHp-u.hp)*Math.round(v('AmountIncreaseMax')*10000)/u.maxHp);
-      heal(Math.floor(mag('GainHealth')*bps/10000));strike(t,Math.floor(ad('PercentAttackDamage')*bps/10000),'physical');break;
+      const bps=10000+Math.floor((u.maxHp-u.hp)*Math.round(v('AmountIncreaseMax')*10000)/u.maxHp),hero=heroLive(u);
+      // Shocking Troll (P): no heal; the bite stays, then SpeedBps attack speed for SpeedTicks and permanent AD growth.
+      if(!hero)heal(Math.floor(mag('GainHealth')*bps/10000));strike(t,Math.floor(ad('PercentAttackDamage')*bps/10000),'physical');
+      if(hero){
+        applyStatus(u,origin(u),'attackSpeed',hero.speedBps,hero.speedTicks,ctx.tick,ctx.events,true);
+        u.runtime.permanentAdBps+=hero.permanentAdBps;
+        ctx.events.push({type:'growth',tick:ctx.tick,unitId:u.id,amountBps:hero.permanentAdBps,totalBps:u.runtime.permanentAdBps});
+      }
+      break;
     }
     case 'ziggs': {
       strike(t,mag('Damage'));const targets=foes();for(let i=0;i<v('NumBombs');i++)strike(targets[Math.floor(ctx.draw()/2**32*targets.length)],mag('MinibombDamage'));break;
     }
-    case 'steb':heal(mag('Heal'));strike(t,mag('Damage'));break;
+    case 'steb':{
+      // Field Medic (P): no heal; HITS strikes of HitBps × Damage on the current target in this cast.
+      const hero=heroLive(u);
+      if(hero){const each=Math.floor(mag('Damage')*hero.hitBps/10000);for(let i=0;i<hero.hits;i++)strike(t,each);}
+      else{heal(mag('Heal'));strike(t,mag('Damage'));}
+      break;
+    }
     case 'vex':strike(t,mag('Damage'));schedule(u,'g22Vex',ctx.tick+Math.round(v('DOTDuration')*20),t,mag('SecondaryDamage'),seq,0,1,t.cell);break;
     case 'twistedfate': {
       const ally=ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team).sort((a,b)=>a.hp-b.hp||(a.id<b.id?-1:1))[0];
@@ -67,7 +86,7 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'ambessa':
       if(u.runtime.castCount%2===1){dashAmbessaChain(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))strike(x,ad('PercentStrikeAD'),'physical',true);}
-      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,5,ctx.tick,ctx.events);(ctx.ambessaRetreats??=[]).push({unitId:u.id,targetCell:{...t.cell}});}break;
+      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,AMBESSA_SLAM_STUN_TICKS,ctx.tick,ctx.events);(ctx.ambessaRetreats??=[]).push({unitId:u.id,targetCell:{...t.cell}});}break;
     case 'mordekaiser': {
       g22(u).mordeUntilTick=ctx.tick+Math.round(v('EmpowerDuration')*20);
       applyStatus(u,origin(u),'damageReduction',Math.round(v('DR')*10000),20,ctx.tick,ctx.events,true);
@@ -75,7 +94,9 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const lines=lineDirections(u.cell).map(direction=>({hits:targets.filter(x=>lineContains(u.cell,direction,x.cell,3,8)),target:lineContains(u.cell,direction,t.cell,3,8)}));
       // Stable sort preserves direction order after count and current-target ties.
       lines.sort((a,b)=>b.hits.length-a.hits.length||Number(b.target)-Number(a.target));
-      for(const x of lines[0].hits)strike(x,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),'magic',true);break;
+      for(const x of lines[0].hits)strike(x,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),'magic',true);
+      const nearest=targets.slice(0,v('NearestEnemies'));
+      pullToward(ctx,u,DISPLACEMENT_POLICY.mordekaiser.onlyLineHits?nearest.filter(x=>lines[0].hits.includes(x)):nearest,rawRangeToHexes(v('Displacement')),'mordekaiser-pull');break;
     }
     case 'morgana': {
       const target=foes().find(x=>(x.g22?.reaveUntilTick??0)<=ctx.tick)??t,total=mag('Damage'),pulses=Math.round(v('Duration'));
@@ -89,6 +110,15 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
 }
 export function planG22Attack(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):boolean {
   const n=champion(u),v=(k:string)=>variable(u,k);
+  if(u.definitionId==='tower-dummy'){
+    // Batch-3 Tower Defense: 100% AD + APRatio×AP physical; from Upgrade2 a second arrow (50%) hits the nearest other enemy.
+    const m=u.mechanics?.find(m=>m.mechanic==='towerDefenseLive');
+    const raw=ad(u)+Math.floor(ap(u,ctx.tick,ctx.units)*(m?.values.apRatio??0)/100);
+    hit(ctx,u,t,raw,seq,0,'physical',false,true);
+    const extra=m?.values.extraBps??0,second=extra?byDistance(t,enemies(u,ctx.units)).find(x=>x.id!==t.id):undefined;
+    if(second)hit(ctx,u,second,Math.floor(raw*extra/10000),seq,1,'physical',false,true);
+    return true;
+  }
   if(n==='draven'&&u.runtime.castCount>0){hit(ctx,u,t,amount(u,ctx.tick,{ad:v('PercentAD'),flat:v('BaseDamage')}),seq,0,'physical',false,true);return true;}
   if(n==='ambessa'&&(u.runtime.castCount===0||u.runtime.castCount%2===1)){hit(ctx,u,t,amount(u,ctx.tick,{ad:v('PercentChainAttackAD')}),seq,0,'physical',false,true);return true;}
   if(n==='mordekaiser'&&(u.g22?.mordeUntilTick??0)>ctx.tick){

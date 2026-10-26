@@ -5,6 +5,8 @@ import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { selectChoice, nextRound, startMatchCombat, createMatch, deployMatchUnit, stepMatch, sellUnit, type MatchState } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
+import { openingEncounter } from './fixtures/m5/oracle.g2.cjs';
+import { firstNodeSeed, offeredAt } from './augment-stage-helpers';
 
 // v22 crab openings can fill all nine bench slots with loot heroes (e.g. seed 56);
 // then the board unit is sold instead of benched before conceding the round.
@@ -49,12 +51,17 @@ describe('10-23 project Placebo acquisition amounts', () => {
       expect(AUGMENT_DEFINITIONS[id].effects[0]).toEqual({ kind: 'attackSpeedBps', bps: 100 });
     }
   });
+  // 14.24 stage tags: Placebo is offered only at 2-1 and Placebo+ only at 3-2; the other stage amounts stay covered above.
   it.each(vectors.slice(0, 3).flatMap(([roundId, ordinary, plus]) => [
     [roundId, 'placebo', ordinary], [roundId, 'placebo-plus', plus],
-  ] as const))('%s %s public choice grants exactly %i once and authenticates its receipt', (roundId, id, gold) => {
+  ] as const).filter(([roundId, id]) => offeredAt(id, roundId as '2-1' | '3-2' | '4-2')))('%s %s public choice grants exactly %i once and authenticates its receipt', (roundId, id, gold) => {
     // Real public routes and offers; no forged schedule node or injected resources.
-    let state = reachChoice(roundId, 0), found = false;
-    for (let seed = 0; seed < 300; seed++) {
+    let state = roundId === '2-1' ? reachChoice(roundId, firstNodeSeed(id)) : reachChoice(roundId, 0), found = state.pendingChoice?.offers.includes(id) ?? false;
+    for (let seed = 0; !found && seed < 1500; seed++) {
+      // v23 fmix32 openings: Trainer Golem seeds are skipped; the golem can be neither benched nor sold to concede.
+      if (openingEncounter(seed) === 'trainer-golems') continue;
+      // Seed 56 (now Component Anvils) leaves pending loot capacity at 1-4 on the 4-2 route, which never sells.
+      if (roundId === '4-2' && seed === 56) continue;
       state = reachChoice(roundId, seed);
       if (state.pendingChoice?.offers.includes(id)) { found = true; break; }
     }

@@ -4,12 +4,12 @@
  * on, then once more after the battle. What each connection was sent (replay plus replay-tail records) adds up to the
  * replay the room settled; the settlement matches the live run; the +5 is paid once; no bank value is ever sent.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect } from 'vitest';
 import type { ServerMessage } from '../../../src/server/net/messages';
 import type { TestClient } from '../../../src/server/net/test-client';
 import { toCombatReplayFor } from '../../../src/server/room/projection';
 import type { Room } from '../../../src/server/room/room';
-import { TwoSidedBattleResolver } from '../../../src/server/room/two-sided-resolver';
+import { registerSlowRoute, clockGroup } from '../slow-route';
 import type { WireCommand } from '../../../src/server/protocol';
 import type { CombatReplay } from '../../../src/server-entry';
 import { answerOpenChoices, claimAllOrbs } from '../helpers';
@@ -17,7 +17,7 @@ import { AVARICE, avariceReceipts, boardTarget, DRAINED_GOLD, fieldBench, levelF
 import { expectOk, flush, hasKey, seatTwo, startServer, type NetHarness } from './helpers';
 
 let harness: NetHarness | null = null;
-afterEach(async () => { await harness?.close(); harness = null; });
+afterAll(async () => { await harness?.close(); harness = null; });
 
 /** Sends a command once the client holds the seat's current revision. */
 async function send(client: TestClient, room: Room, command: WireCommand) {
@@ -44,8 +44,9 @@ const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
 const PRIVATE_KEYS = ['bankSamples', 'liveGold', 'currentItemBankGold', 'openingItemBankGold', 'proposals', 'mapping', 'combat'];
 
 describe('v17 avarice: reconnect during and after a live battle', () => {
-  it('a seat that left and came back is shown the settled live replay and settles once', async () => {
-    harness = await startServer({}, new TwoSidedBattleResolver());
+  registerSlowRoute('a seat that left and came back is shown the settled live replay and settles once', async function* (env) {
+    // 224-card pool: seed 11 no longer survives to the anomaly; seed 2 reaches 4-6 through the same public route.
+    harness = await startServer({ seed: 2, clock: env.clock, sliceTicks: 25 }, env.resolver);
     const [a] = await seatTwo(harness);
     const room = harness.server.room!, seatId = a.seatId!, token = a.token!;
     // To the 4-6 anomaly node (orbs claimed and the seat's reward units fielded, so it lives that long under v22).
@@ -58,7 +59,7 @@ describe('v17 avarice: reconnect during and after a live battle', () => {
       claimAllOrbs(room);
       levelForBench(room, seatId);
       fieldBench(room, seatId);
-      expect(harness.clock.runNext()).toBe(true);
+      expect(yield* clockGroup(room, env.clock)).toBe(true);
     }
     // Over the wire: target, paid rerolls until avarice is offered, then choose it.
     let choice = seatOf(room.state, seatId).match.pendingChoice!;
@@ -67,43 +68,46 @@ describe('v17 avarice: reconnect during and after a live battle', () => {
       expect(rerolls).toBeLessThan(400);
       choice = seatOf(room.state, seatId).match.pendingChoice!;
       await send(a, room, { type: 'anomalyReroll', choiceId: choice.choiceId, generation: choice.generation });
+      yield room.state.round;
     }
     choice = seatOf(room.state, seatId).match.pendingChoice!;
     await send(a, room, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: AVARICE });
     expect(avariceReceipts(seatOf(room.state, seatId).match)).toHaveLength(1);
     // Spend down under the bonus cap (an idle seat holds 200-odd gold), so a gold change moves the fight.
-    while (seatOf(room.state, seatId).match.gold > DRAINED_GOLD) await send(a, room, { type: 'reroll' });
+    while (seatOf(room.state, seatId).match.gold > DRAINED_GOLD) { await send(a, room, { type: 'reroll' }); yield room.state.round; }
     // To the seat's next two-sided battle.
     for (let guard = 0; !inPvp(room, seatId); guard++) {
       expect(guard).toBeLessThan(5_000);
       claimAllOrbs(room);
-      expect(harness.clock.runNext()).toBe(true);
+      expect(yield* clockGroup(room, env.clock)).toBe(true);
     }
     const frozen = pvpBattleOf(room.state, seatId)!, battleId = frozen.battleId, round = room.state.round;
     const side = frozen.battle.a.seatId === seatId ? 'a' : 'b';
     const hp = seatOf(room.state, seatId).hp;
     await a.waitFor(message => message.type === 'replay' && message.battleId === battleId, 10_000);
     harness.clock.advance(400);
-    await send(a, room, { type: 'reroll' });
-    const gold = seatOf(room.state, seatId).match.gold;
+    // Cross several 2G bonus steps so integer damage rounding cannot erase the live change.
+    const golds:number[]=[];
+    for(let i=0;i<6;i++){await send(a,room,{type:'reroll'});golds.push(seatOf(room.state,seatId).match.gold);}
+    expect(golds.at(-1)).toBeLessThanOrEqual(8);
     // Leave right after the sample, before the live run got to it.
     expect(room.liveFrames(battleId)).toBeNull();
     await a.close();
     await flush();
-    for (let step = 0; step < 6; step++) { harness.clock.advance(200); await flush(5); }
+    for (let step = 0; step < 6; step++) { harness.clock.advance(200); await flush(5); yield room.state.round; }
     expect(room.state.phase).toBe('battle');
     expect(room.liveFrames(battleId)).not.toBeNull();
     // Back during the battle, then the battle plays out.
     const b = await harness.connect();
     expectOk(await b.resume(token));
     await b.waitFor(message => message.type === 'replay' && message.battleId === battleId, 10_000);
-    for (let guard = 0; phaseOf(room) === 'battle' && guard < 400; guard++) { harness.clock.advance(200); await flush(5); }
+    for (let guard = 0; phaseOf(room) === 'battle' && guard < 400; guard++) { harness.clock.advance(200); await flush(5); yield room.state.round; }
     await flush();
     expect(room.state.fault).toBeNull();
     expect(room.state.round).toBe(round);
     const settled = pvpBattleOf(room.state, seatId)!;
     expect(settled).not.toBe(frozen);
-    expect(settled.battle.bankSamples!.filter(sample => sample.team === (side === 'a' ? 'player' : 'enemy')).map(sample => sample.liveGold)).toEqual([gold]);
+    expect(settled.battle.bankSamples!.filter(sample => sample.team === (side === 'a' ? 'player' : 'enemy')).map(sample => sample.liveGold)).toEqual(golds);
     const final = plain(toCombatReplayFor(room.state, seatId)!.replay);
     expect(plain(shown(b.inbox, battleId))).toEqual(final);
     // The first connection's records agree with the settled replay as far as they go.
@@ -124,5 +128,5 @@ describe('v17 avarice: reconnect during and after a live battle', () => {
       expect(JSON.stringify(message)).not.toMatch(PRIVATE_BANK);
       if (message.type === 'replay' || message.type === 'replay-tail') for (const key of PRIVATE_KEYS) expect(hasKey(message, key)).toBe(false);
     }
-  }, 180_000);
+  });
 });

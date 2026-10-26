@@ -9,7 +9,8 @@ export function accepted(result: MatchCommandResult | MultiplayerCommandResult):
   if (!result.ok) throw new Error(result.reason); return result.state;
 }
 export function prepared(): MatchState {
-  const base = accepted(enableMultiplayerSettlement(createMatch(5),'A'));
+  // Seed 29 draws the 'none' opening under v23 fmix32; seed 5 now opens Artifact Anvil (bench unit-2 collides).
+  const base = accepted(enableMultiplayerSettlement(createMatch(29),'A'));
   return {...base,gold:100,level:3,xp:0,nextUnitSerial:10,nextItemSerial:3,
     items:[{id:'item-1',definitionId:'sword',location:{kind:'inventory'}},{id:'item-2',definitionId:'bow',location:{kind:'inventory'}}],
     preparation:{...base.preparation,units:[...base.preparation.units,hero('unit-2',bench(0)),hero('unit-3',bench(2),'tristana')]}};

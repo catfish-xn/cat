@@ -11,6 +11,7 @@ import type { MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import { accepted, freeze, readyMatch, reachRound } from './match-helpers';
 import { publicInventory, publicRecursivePurchase } from './fixtures/b8-public-acquisition';
+import { isSellableUnit } from '../src/simulation/seat-mechanics/forms';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -126,7 +127,8 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
   // while every upgrade/restore assertion and its original timeout stays in the case.
   for (const [definitions, seed] of [
     [['blue-buff', 'blue-buff'], 11], [['thiefs-gloves', 'sword']],
-    [['sword', 'thiefs-gloves']], [['sword', 'rod', 'vest', 'cloak']],
+    // v23 fmix32 openings: seed 1's late four-component route now loses out at 4-3; seed 3 is the next funded route.
+    [['sword', 'thiefs-gloves']], [['sword', 'rod', 'vest', 'cloak'], 3],
   ] as const) beforeAll(() => { publicInventory(definitions, true, seed); });
   it('chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling', () => {
     const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves']);
@@ -139,7 +141,9 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     const state = freeze(equipped), before = JSON.stringify(state), nextId = `unit-${state.nextUnitSerial}`;
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     const result = buyUnit(state, chain.slot, state.shop.generation), next = accepted(result);
-    expect(next.preparation.units.filter(u => u.team === 'player').map(u => [u.id, u.starLevel])).toEqual([[chain.survivorId, 3]]);
+    // v23 fmix32 openings: an unsellable opening structure (seed 2's Trainer Golem) stays beside the three-star survivor.
+    const structures = state.preparation.units.filter(u => u.team === 'player' && !isSellableUnit(u.definitionId)).map(u => [u.id, u.starLevel]);
+    expect(next.preparation.units.filter(u => u.team === 'player').map(u => [u.id, u.starLevel])).toEqual([[chain.survivorId, 3], ...structures]);
     expect(next.items.find(i => i.id === retained)).toEqual({ id: retained, definitionId: 'thiefs-gloves', location: { kind: 'unit', unitId: chain.survivorId, slot: 0 } });
     expect(next.items.find(i => i.id === returned)).toEqual({ id: returned, definitionId: 'thiefs-gloves', location: { kind: 'inventory' } });
     expect(next.equipmentState).toEqual(state.equipmentState);
@@ -171,7 +175,7 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1], 11],
     ['exclusive survivor', ['thiefs-gloves', 'sword'], [0, 1], [0, 0], [1], undefined],
     ['exclusive incoming', ['sword', 'thiefs-gloves'], [0, 1], [0, 0], [1], undefined],
-    ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1], undefined],
+    ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1], 3],
   ] as const)('returns %s conflicts and preserves permanent IDs across the complete command', (_label, definitions, holders, slots, fixedReturned, seed) => {
     const inventory = publicInventory(definitions, true, seed), chain = publicRecursivePurchase(inventory.state);
     let equipped = chain.state;

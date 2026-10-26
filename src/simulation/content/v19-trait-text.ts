@@ -1,6 +1,6 @@
 import { freezeContent } from './freeze';
 /** Exact local 14.24 zh_cn stringtable entries; display data only. */
-export const V19_OFFICIAL_TRAIT_TEXT = freezeContent({
+export const V19_OFFICIAL_TRAIT_TEXT = /* @__PURE__ */ freezeContent({
   "form-swapper": {
     "apiName": "TFT13_FormSwapper",
     "locale": "zh_cn",
@@ -12,4 +12,4 @@ export const V19_OFFICIAL_TRAIT_TEXT = freezeContent({
     "description": "当【金克丝】参与一次击杀后，【蔚】会获得持续@ViDuration@秒的@ADBuff*100@%额外攻击力。当【蔚】参与一次击杀后，【金克丝】会获得持续@JinxDuration@秒的@ASBuff*100@%额外攻速。"
   }
 });
-export const V19_SISTERS_DISPLAY_SOURCE = freezeContent({sisters:{tiers:[{threshold:2,values:{ADBuff:0.4,ASBuff:0.75,ViDuration:7,JinxDuration:5}}]}});
+export const V19_SISTERS_DISPLAY_SOURCE = /* @__PURE__ */ freezeContent({sisters:{tiers:[{threshold:2,values:{ADBuff:0.4,ASBuff:0.75,ViDuration:7,JinxDuration:5}}]}});

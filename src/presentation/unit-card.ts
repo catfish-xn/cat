@@ -4,6 +4,7 @@
  * functions (`abilityDisplayName` / `abilityDisplayValues`). Nothing is computed beyond formatting.
  */
 import { getUnitStats } from '../simulation/unit-stats';
+import { anvilIconUrl, anvilInfo, type AnvilInfo } from './anvil-display';
 import { fourStarBaseStats } from './d14-display';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { abilityText } from './ability-text';
@@ -14,7 +15,7 @@ import { heroPortraitHtml } from './s13-assets';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { itemDisplayName } from './g23-display';
 import { itemMarkHtml } from './item-codex';
-import { CHAMPION_ROLES, ROLE_DISPLAY } from './unit-roles';
+import { readTooltipText } from './tooltip-text-loader';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -34,6 +35,9 @@ const ITEM_ID_BY_API = new Map(Object.values(ITEM_DEFINITIONS).flatMap(item => '
  * for units without a client role (summons, neutrals). Display only (client data via `unit-roles.ts`).
  */
 export function unitRole(definitionId: string): { name: string; itemIds: string[] } | null {
+  const data = readTooltipText();
+  if (!data) return null;
+  const { CHAMPION_ROLES, ROLE_DISPLAY } = data;
   const hero = definitionId.replace(/-ranged$/, ''), role = Object.hasOwn(CHAMPION_ROLES, hero) ? ROLE_DISPLAY[CHAMPION_ROLES[hero]] : undefined;
   return role ? { name: role.name, itemIds: role.items.flatMap(api => ITEM_ID_BY_API.get(api) ?? []) } : null;
 }
@@ -81,7 +85,23 @@ function battleLine(stats: UnitBattleStats): HTMLElement {
  * Star 4 is a promoted Ultimate Hero (v16): the rules' 4★ base health/attack and 4★ ability values; `notes` are extra
  * lines (d14-display) under the title.
  */
+/** v22 anvil (锻造器): its icon, name, the client's hover text and what selling it does; no stars, cost or stats. */
+function anvilCardBody(definitionId: string, anvil: AnvilInfo): HTMLElement {
+  const body = el('div', '', 'unit-card unit-card-anvil'); body.dataset.unitDef = definitionId;
+  const head = el('div', '', 'unit-card-head'), portrait = el('span', '', 'unit-card-portrait anvil'), url = anvilIconUrl(definitionId);
+  if (url) portrait.innerHTML = `<img src="${url}" alt="" width="40" height="40">`;
+  const title = el('div', '', 'unit-card-title');
+  title.append(el('strong', anvil.name, 'unit-card-name'), el('span', '锻造器', 'unit-card-cost'));
+  head.append(portrait, title); body.append(head);
+  const section = el('div', '', 'unit-card-ability');
+  section.append(el('p', anvil.description, 'unit-card-text'), el('p', `拖到商店或按 E：${anvil.sellText}`, 'unit-card-text'));
+  body.append(section);
+  return body;
+}
+
 export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = '', notes: readonly string[] = []): HTMLElement | null {
+  const anvil = anvilInfo(definitionId);
+  if (anvil) return anvilCardBody(definitionId, anvil);
   const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
   if (!definition) return null;
   const fourStar = Math.trunc(starLevel) >= 4 ? fourStarBaseStats(definitionId) : null;

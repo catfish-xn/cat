@@ -20,12 +20,15 @@ import type { StatusKind } from './m8/contracts';
 export interface CombatViewStatus {
   readonly kind: StatusKind | 'channel' | 'redirect';
   readonly harmful: boolean;
+  /** Stun only: at least one stun in effect is a knock-up (击飞). */
+  readonly knockup?: true;
 }
 function statusView(state: CombatState, unitId: string): { readonly statuses?: readonly CombatViewStatus[] } {
   const statuses = new Map<string, CombatViewStatus>();
   for (const row of readUnitStatusRows(state, unitId)) {
     if (row.state === 'pending' || row.state === 'suppressed') continue;
-    statuses.set(JSON.stringify([row.kind, row.harmful]), { kind: row.kind, harmful: row.harmful });
+    const key = JSON.stringify([row.kind, row.harmful]), knockup = row.knockup || statuses.get(key)?.knockup;
+    statuses.set(key, { kind: row.kind, harmful: row.harmful, ...(knockup ? { knockup: true as const } : {}) });
   }
   // ASCII kind order, then beneficial (false) before harmful (true); no locale dependence.
   // Always emit [], including when the last status ends, so unitUpdated clears old icons.
@@ -42,7 +45,7 @@ function unitView(unit: CombatUnit, state: CombatState) {
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), ...statusView(state, unit.id), cell: cellView(unit.cell),
     ...(unit.equipment ? { equipment: unit.equipment.map(i => ({ ...i })) } : {}),
     ...(choiceEffects.length?{choiceEffects}:{}),
-    ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
+    ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined || unit.g23Sion ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
     ...(unit.anomalyState || unit.anomalySummon || unit.v20Traits?.minion ? {untargetable:unit.alive && !isSelectable(unit,state.tick)} : {}),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
 }

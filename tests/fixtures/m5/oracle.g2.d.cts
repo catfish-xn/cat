@@ -37,10 +37,32 @@ export class Ledger {
   costs: Record<string, number>;
   rows: RoundResult[];
   receipts: Set<string>;
-  apply(before: MatchState, after: MatchState, command?: OracleCommand, events?: readonly MatchEvent[]): void;
+  apply(before: MatchState, after: MatchState, command?: OracleCommand | null, events?: readonly MatchEvent[]): void;
   check(state: MatchState): void;
 }
 
 export function blackMarket(tier: number, rng: number): { offers: string[]; rng: number; draws: number };
 export function validateChemTransition(before: MatchState, after: MatchState): void;
 export const ANVIL_IDS: ReadonlySet<string>;
+
+export function augmentGold(id: string, roundId: string): number;
+export function entryXp(state: {
+  readonly round: number;
+  readonly augments: readonly { readonly definitionId: string; readonly acquiredRound: number }[];
+  readonly roundResults: readonly { readonly round: number; readonly roundKind: string; readonly result: string }[];
+}): number;
+export function freeRerollCredits(state: {
+  readonly round: number;
+  readonly level: number;
+  readonly seed?: number;
+  readonly multiplayer?: { readonly seatId: string };
+  readonly augments: readonly { readonly definitionId: string; readonly choiceId: string; readonly acquiredRound: number }[];
+  readonly seatMechanics?: { readonly seat?: Readonly<Record<string, unknown>>; readonly receipts?: readonly unknown[] };
+  readonly resourceProvenance?: { readonly entries: readonly unknown[] };
+  readonly roundResults?: readonly unknown[];
+}): number;
+
+export const CATALOG: readonly (readonly string[])[];
+export const ROUNDS: readonly { roundId: string; ordinal: number; stage: number; sub: number; kind: string }[];
+
+export function benchXp(state: unknown): number;

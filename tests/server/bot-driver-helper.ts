@@ -127,7 +127,7 @@ if (mode === 'fast') describe('BotDriver: scheduling', () => {
     const early = log.filter(record => record.round === room.state.round && record.action !== 'done');
     expect(early.length).toBeGreaterThan(0);
     expect(early.length).toBeLessThanOrEqual(8 * Math.ceil(10_499 / 500));
-    expect(clock.now() - opened).toBeLessThan(ROOM_TIMING_DEFAULTS.preparationMs);
+    expect(clock.now() - opened).toBeLessThan(30_000);
   }); }
 
   if (mode === 'fast') { it('caps every seat at maxSteps attempts per round and keeps the count across phases', () => {

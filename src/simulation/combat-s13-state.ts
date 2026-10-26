@@ -1,3 +1,5 @@
+import { batch2Bonus, batch2Mechanic } from './augment-pool-batch2-combat';
+import { batch2Values } from './content/augment-pool-batch2';
 import { TRAINER_ATTACK_CENTI, TRAINER_ID } from './content/opening-batch-b';
 import { STAR_ATTACK_PERCENT } from './content/unit-star-scaling';
 import { overtimeBonusBps } from './combat-overtime';
@@ -86,18 +88,28 @@ export function mechanic(unit: CombatUnit, name: string, key: string, fallback =
   return (unit.mechanics ?? []).filter(m => m.mechanic === name).reduce((sum, m) => sum + (m.values[key] ?? fallback), 0);
 }
 export function hasMechanic(unit: CombatUnit, name: string): boolean { return (unit.mechanics ?? []).some(m => m.mechanic === name); }
+/** Batch-3 hero augment coefficients on the strongest copy only (augment-effects heroCarry). */
+export function heroLive(unit: Pick<CombatUnit, 'mechanics'> | undefined): Readonly<Record<string, number>> | undefined {
+  return unit?.mechanics?.find(m => m.mechanic === 'heroCarryLive')?.values;
+}
 export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind']): CombatStatus[] {
   return (unit.statuses ?? []).filter(s => s.kind === kind && s.startsAtTick <= tick && s.expiresAtTick > tick);
 }
 export function ap(unit: S13Unit, tick: number, units:readonly CombatUnit[]=[]): number {
-  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat+(unit.definitionId==='viktor'?Math.max(0,ad(unit,true)-STAR_ATTACK_PERCENT[unit.starLevel])+Math.floor(Math.max(0,attackSpeedBonus(unit,tick,units))/100)+(unit.sixCost?.convertedMana??0):0)+p2Bonus(unit,'abilityPower')),
+  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat+batch2Bonus(unit,'ap')+(unit.definitionId==='viktor'?Math.max(0,ad(unit,true)-STAR_ATTACK_PERCENT[unit.starLevel])+Math.floor(Math.max(0,attackSpeedBonus(unit,tick,units))/100)+(unit.sixCost?.convertedMana??0):0)+p2Bonus(unit,'abilityPower')),
     ...active(unit, tick, 'abilityPower').filter(s => !s.contributionKeys).map(s => constantModifier('abilityPower', s.amount)), ...statusModifiers(unit, 'abilityPower', tick)], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='magic-expert')?14000:10000)/10000);
+}
+/** Batch-3 Bad Luck Protection: the team never crits (damageSample) and gains AD bps equal to its crit chance bps
+ * (ADPerCrit 1% per CritChancePercent 1%), sampled live from the same authorization a roll would use. */
+function badLuckAdBps(unit: S13Unit): number {
+  const m = unit.mechanics?.find(m => m.mechanic === 'badLuck');
+  return m ? Math.floor(spellCrit(unit).chanceBps * m.values.ratioBps / 10000) : 0;
 }
 export function ad(unit: S13Unit, raw=false): number {
   if(unit.definitionId==='viktor'&&!raw)return STAR_ATTACK_PERCENT[unit.starLevel];
   const result = resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
-    [constantModifier('attackDamage', (unit.attackDamagePercentBps ?? 0)+p2Bonus(unit,'attackDamageBps'), 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined },unit.definitionId===TRAINER_ID?TRAINER_ATTACK_CENTI[unit.starLevel-1]%100:0);
+    [constantModifier('attackDamage', (unit.attackDamagePercentBps ?? 0)+batch2Bonus(unit,'adBps')+p2Bonus(unit,'attackDamageBps')+badLuckAdBps(unit), 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined },unit.definitionId===TRAINER_ID?TRAINER_ATTACK_CENTI[unit.starLevel-1]%100:0);
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0)+(unit.anomalyState?.consumed?.attackDamage??0)+p2Bonus(unit,'attackDamageFlat')+(unit.v20Traits?.mentorshipGranted??0);
 }
 export function range(unit: S13Unit, firelightWindow = true): number {
@@ -123,7 +135,7 @@ export function attackSpeedBonus(unit:S13Unit,tick:number,units:readonly CombatU
   const signedSpeed = modifierValues('attackSpeed', statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   const quick = unit.mechanics?.find(m=>m.mechanic==='quickstriker'), target=units.find(u=>u.id===unit.targetId);
   const quickBps=quick ? quick.values.minBps+(target ? Math.floor((quick.values.maxBps-quick.values.minBps)*(target.maxHp-target.hp)/target.maxHp) : 0) : 0;
-  const speedBps = overtimeBonusBps(tick) + quickBps + bankSpeed + p2Bonus(unit,'attackSpeedBps') + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + signedSpeed.flat + signedSpeed.bps;
+  const speedBps = batch2Bonus(unit,'speed',tick)+(batch2Mechanic(unit,'dominate')&&unit.shield>0?Math.round(batch2Values('dominate').ShieldPercentAS*10000):0)+overtimeBonusBps(tick) + quickBps + bankSpeed + p2Bonus(unit,'attackSpeedBps') + (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + signedSpeed.flat + signedSpeed.bps;
   return speedBps;
 }
 export function interval(unit: S13Unit, tick: number, units: readonly CombatUnit[] = []): number {
@@ -185,7 +197,7 @@ export function endedStatusEvents(tick: number, targetId: string, ended: readonl
 }
 
 export function applyStatus(unit: S13Unit, source: CombatOrigin, kind: CombatStatus['kind'], value: number, duration: number,
-  tick: number, events: CombatEvent[], immediate = false, suffix = '', actionSeq?: number): void {
+  tick: number, events: CombatEvent[], immediate = false, suffix = '', actionSeq?: number, knockup = false): void {
   ensureMechanisms(unit, tick);
   const key = `${sourceKey(source)}:${kind}:${unit.id}:${suffix}`;
   const old = unit.statuses.find(s => s.key === key);
@@ -219,7 +231,8 @@ export function applyStatus(unit: S13Unit, source: CombatOrigin, kind: CombatSta
     const identity = effectIdentity(unit.mechanismState!.combatId, frozenSource, unit.id, applicationId);
     const application: StatusApplication = { activation: immediate ? 'immediate' : 'next-tick', kind: frozenKind, magnitudeBps: modifier ? 0 : value, duration: { kind: 'ticks', ticks: duration }, stackPolicy: policy,
       polarity: kind === 'stun' || kind === 'armorReduction' || value < 0 ? 'harmful' : 'beneficial', removable: kind !== 'damageReduction',
-      ...(modifier ? { modifier } : {}), damageFilter: kind === 'damageReduction' ? { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } : null, onEnd: null };
+      ...(modifier ? { modifier } : {}), damageFilter: kind === 'damageReduction' ? { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } : null, onEnd: null,
+      ...(knockup && kind === 'stun' ? { knockup: true as const } : {}) };
     const result = applyStatusContribution(groups, identity, application, tick); if (!result.accepted) return;
     groups = result.groups; contributionKeys.push(identity.key); refreshed &&= result.refreshed;
   }

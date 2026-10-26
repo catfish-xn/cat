@@ -1,8 +1,10 @@
+import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { describe,it,expect } from 'vitest';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
+import { AUGMENT_BATCH4_B4XP } from '../src/simulation/content/augment-pool-batch4-b4xp';
 import { generateChoices } from '../src/simulation/choices';
-import { createMatch,nextRound,rerollAugment,selectChoice,stepMatch,startMatchCombat } from '../src/simulation/match';
-import { augmentTier,augmentPool,augmentDraw,validateAugmentReroll } from './fixtures/m5/oracle.g2.cjs';
+import { createMatch,deployMatchUnit,nextRound,rerollAugment,selectChoice,stepMatch,startMatchCombat } from '../src/simulation/match';
+import { augmentTier,augmentPool,augmentDraw,validateAugmentReroll,openingEncounter } from './fixtures/m5/oracle.g2.cjs';
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { accepted,reachRound,resolveM5Choices,emptyBoard,freeze } from './match-helpers';
 
@@ -11,14 +13,19 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[])).sort(),pool=[...ids];
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(ids);let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  expect(ids).toHaveLength(66);expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
+  expect(ids).toHaveLength(224); // v23: Blood Brothers enabled (P-AG5, 10-24) plus batch 3 and the four batch-4 groups (5+4+3+4)
+  expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
- it.each(Object.keys(AUGMENT_DEFINITIONS))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
+ // Only cards offered at 2-1 (14.24 stage tags, augment-stage-bans.ts) can be selected there.
+// B4XP bench-XP cards (P-B4XP) make every later PvP settlement a historical claim, so their saves restore only with the
+ // completed battles; tests/augment-pool-batch4-b4xp.test.ts covers their public selection and replayed restore.
+it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!Object.hasOwn(AUGMENT_BATCH4_B4XP,id)).filter(id=>!((AUGMENT_OFFER_RULES.nodeBans as Readonly<Record<string,readonly string[]>>)[AUGMENT_POOL_API_NAMES[id]]??[]).includes('2-1')))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
   // Search the independent first-node offer oracle, then play only the chosen
   // public route. The expanded pool puts Portable Forge at seed 236; replaying
   // three opening combats for every candidate needlessly hits CI time limits.
   let selectedSeed=-1;
-  for(let seed=0;seed<1000;seed++){const draw=augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[]);if(draw.offers.includes(id)){selectedSeed=seed;break;}}
+  // v23: skip Trainer Golem openings; the unbenchable golem blocks this route's empty-board helper.
+  for(let seed=0;seed<1000;seed++){if(openingEncounter(seed)==='trainer-golems')continue;const draw=augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[],[],'round:2-1:augment');if(draw.offers.includes(id)){selectedSeed=seed;break;}}
   expect(selectedSeed).toBeGreaterThanOrEqual(0);const state=reachRound('2-1',false,selectedSeed),choice=state.pendingChoice!;
   expect(choice.offers).toContain(id);
   const invalid=selectChoice(state,choice.choiceId,choice.generation+1,id);expect(invalid.ok).toBe(false);expect(invalid.state).toBe(state);expect("events" in invalid).toBe(false);
@@ -31,7 +38,10 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   const forged=JSON.parse(serializeMatch(after));forged.scheduleReceipts.find((r:{eventId:string})=>r.eventId===choice.eventId).gold++;
   expect(()=>restoreMatch(forged)).toThrow();
   if(after.pendingChoice){const blocked=startMatchCombat(after);expect(blocked.ok).toBe(false);expect(blocked.state).toBe(after);}
-  const started=accepted(startMatchCombat(resolveM5Choices(after)));expect(restoreMatch(serializeMatch(started))).toEqual(started);
+  let preparation=resolveM5Choices(after);
+  // Blood Brothers authenticates settled partner facts. Keep this acquisition case in a live battle.
+  if(id==='blood-brothers'){const hero=preparation.preparation.units.find(u=>u.team==='player')!;preparation=accepted(deployMatchUnit(preparation,hero.id,{kind:'board',cell:{col:3,row:4}}));}
+  const started=accepted(startMatchCombat(preparation));if(id==='blood-brothers')expect(started.phase).toBe('combat');expect(restoreMatch(serializeMatch(started))).toEqual(started);
   let live=started;for(let i=0;i<3&&live.phase==='combat';i++)live=stepMatch(live).state;
   expect(restoreMatch(serializeMatch(live))).toEqual(live);
  });
@@ -40,7 +50,7 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
 describe('independent augment card-reroll oracle',()=>{
  it.each([0,1,42,123456789,4294967295])('strictly checks tier, three words, free reroll and failures for seed %i',seed=>{
   const state=freeze(reachRound('2-1',false,seed)),c=state.pendingChoice!,tier=augmentTier(seed,c.choiceId);
-  const draw=augmentDraw((seed^0x9e3779b9)>>>0,tier,[]);
+  const draw=augmentDraw((seed^0x9e3779b9)>>>0,tier,[],[],'round:2-1:augment');
   expect(c).toMatchObject({offers:draw.offers,augmentTier:tier,rerollCount:0,generation:0,rerollsRemaining:3,rerolledSlots:[false,false,false]});
   expect(state.choiceRngState).toBe(draw.rng);
   const command={type:'rerollAugment',choiceId:c.choiceId,generation:0,optionIndex:1},result=rerollAugment(state,c.choiceId,0,1);

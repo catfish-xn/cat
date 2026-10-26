@@ -1,3 +1,5 @@
+import { onTooltipTextChanged } from '../../presentation/tooltip-text-loader';
+import { onAugmentTextChanged } from '../../presentation/augment-text-loader';
 /**
  * Read-only "对方阵容" panel (work order C5): opened by clicking a seat in the right column, it floats over
  * the top of my board without replacing it. It shows what the server published as that seat's public
@@ -59,12 +61,17 @@ export function avatarUnit(board: PublicBoard | undefined): PublicBoardUnit | nu
 export class OpponentBoardPanel {
   readonly root: HTMLElement;
   private seatId: string | null = null;
+  private lastView: { seat: SeatPublic; mine: boolean } | undefined;
   private rows: readonly TraitRow[] = [];
   private readonly detach: (() => void)[] = [];
   constructor(host: HTMLElement, private readonly layout: () => Board, private readonly onClose: () => void) {
     this.root = element('section', '', 'opponent-board'); this.root.id = 'opponent-board'; this.root.hidden = true;
     this.root.dataset.debug = 'online:opponent-board'; this.root.setAttribute('role', 'dialog'); this.root.setAttribute('aria-label', '对方阵容');
     host.append(this.root);
+    const redraw = () => {
+      if (this.seatId !== null && this.lastView) this.render(this.lastView.seat, this.lastView.mine);
+    };
+    this.detach.push(onAugmentTextChanged(redraw), onTooltipTextChanged(redraw));
     document.addEventListener('keydown', this.onKey);
     // G2: the same trait, unit and item descriptions as on my own side; read-only.
     this.detach.push(attachTraitCards(this.root, traitHoverCard(), traitId => this.rows.find(row => row.traitId === traitId)?.members ?? []),
@@ -100,6 +107,7 @@ export class OpponentBoardPanel {
   };
 
   private render(seat: SeatPublic, mine: boolean): void {
+    this.lastView = { seat, mine };
     const board = seat.publicBoard ?? { units: [] }, layout = this.layout();
     this.root.dataset.seat = seat.seatId;
     const head = element('header', '', 'opponent-head');

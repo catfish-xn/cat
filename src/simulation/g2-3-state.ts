@@ -1,3 +1,5 @@
+import { readRestoreG23Progress, rememberReadG23Progress, reusedG23Sources, rememberG23Sources } from './g23-restore-reuse';
+import { TACTICIAN_SIZE_ITEMS } from './content/tactician-items';
 import { activateFamily, familyDisplay } from './family-heist';
 import { getCatalogRoundById } from './round-selectors';
 import {g23SoloFacts} from './g2-3-settlement';
@@ -19,7 +21,8 @@ export function readG23EconomyReceipts(state:Pick<MatchState,'seatMechanics'>):G
  return (m.hidden.progress as {economyReceipts?:G23MatchProgress['economyReceipts']}|undefined)?.economyReceipts??[];
 }
 /** The DTO is reconstructed from disjoint container fields; never persisted alongside them. */
-export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatMechanics'];readonly g23?:G23MatchProgress;readonly multiplayer?:MatchState['multiplayer'];readonly m8?:MatchState['m8']}):G23MatchProgress|undefined{
+export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatMechanics'];readonly g23?:G23MatchProgress;readonly multiplayer?:MatchState['multiplayer'];readonly m8?:MatchState['m8'];readonly resourceProvenance?:MatchState['resourceProvenance']}):G23MatchProgress|undefined{
+ const known=readRestoreG23Progress(state);if(known)return known;
  if(state.g23)return state.g23; // immutable combat-input DTO, never a MatchState field
  const m=state.seatMechanics;if(!m?.seat.academy||!m.seat.junkerKing||!m.seat.alchemist)return undefined;
  const h=(m.hidden.progress??{version:'g2-3-progress-v1',seed:0,rngState:0,rngDraws:0,economyReceipts:[]}) as Omit<G23MatchProgress,'conquest'|'sponsored'|'chem'|'junkerRounds'|'junkerPurchases'|'itemReceipts'|'rewardClaims'|'rewards'>;
@@ -39,9 +42,9 @@ export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatM
    rewardClaims.push({id:r.receiptId,bundleId:b.id,atomId:atom.id,copy,round:r.round,kind:atom.kind,definitionId,instanceId,gold:atom.gold});
   }
  }
- const epicCrowns=[...(state.m8?.loot.receipts.filter(r=>r.payload.kind==='item'&&r.payload.definitionId==='TFT_Item_ForceOfNature'&&r.resolution!=='forfeited').map(r=>({receiptId:r.receiptId,round:getCatalogRoundById(r.claimedRoundId??JSON.parse(JSON.parse(r.dropId)[0])[1]).ordinal}))??[]),...m.receipts.filter(r=>r.source==='opening-encounter-batch-a'&&r.kind==='item'&&r.definitionId==='TFT_Item_ForceOfNature').map(r=>({receiptId:r.receiptId,round:r.round}))];
- return {...h,...(epicCrowns?.length?{epicCrowns}:{}),rewards,rewardClaims,conquest:{...c,radiantConversion:m.seat.radiantConversion as boolean},sponsored:a.sponsored,chem:m.seat.alchemist as G23MatchProgress['chem'],junkerRounds:j.rounds,junkerPurchases:j.purchases,
- itemReceipts:m.receipts.flatMap(r=>r.kind==='item'&&(r.source==='academy'||r.receiptId.startsWith('g23:academy:'))?[{id:r.receiptId,kind:'academy' as const,tier:Number(r.receiptId.split(':').at(-1)),round:r.round,itemId:r.itemId,definitionId:r.definitionId}]:[])};
+ const epicCrowns=[...(state.m8?.loot.receipts.filter(r=>r.payload.kind==='item'&&r.payload.definitionId==='TFT_Item_ForceOfNature'&&r.resolution!=='forfeited').map(r=>({receiptId:r.receiptId,round:getCatalogRoundById(r.claimedRoundId??JSON.parse(JSON.parse(r.dropId)[0])[1]).ordinal}))??[]),...m.receipts.filter(r=>r.kind==='item'&&TACTICIAN_SIZE_ITEMS.includes(r.definitionId)&&!rewardClaims.some(c=>c.id===r.receiptId&&c.definitionId==='TFT_Item_ForceOfNature')).map(r=>({receiptId:r.receiptId,round:r.round})),...(state.resourceProvenance?.entries.flatMap(e=>e.kind==='item-combined'&&TACTICIAN_SIZE_ITEMS.includes(e.event.definitionId)?[{receiptId:JSON.stringify(['crafted-tactician',e.sequence]),round:getCatalogRoundById(e.roundId).ordinal}]:[])??[])];
+ return rememberReadG23Progress(state,{...h,...(epicCrowns?.length?{epicCrowns}:{}),rewards,rewardClaims,conquest:{...c,radiantConversion:m.seat.radiantConversion as boolean},sponsored:a.sponsored,chem:m.seat.alchemist as G23MatchProgress['chem'],junkerRounds:j.rounds,junkerPurchases:j.purchases,
+ itemReceipts:m.receipts.flatMap(r=>r.kind==='item'&&(r.source==='academy'||r.receiptId.startsWith('g23:academy:'))?[{id:r.receiptId,kind:'academy' as const,tier:Number(r.receiptId.split(':').at(-1)),round:r.round,itemId:r.itemId,definitionId:r.definitionId}]:[])});
 }
 export function writeG23Progress<T extends Pick<MatchState,'seatMechanics'>>(state:T,p:G23MatchProgress):T{
  const m=state.seatMechanics??emptySeatMechanics();
@@ -102,6 +105,7 @@ export function validateG23MechanicLinks(state:MatchState):void{
 /** No DTO/atom construction may precede this restore admission. The replay only
  * reads bounded battle facts and frozen reward tables, never candidate rewards. */
 export function validateG23RewardSources(state:MatchState):void{
+ if(reusedG23Sources(state))return;
  const m=state.seatMechanics;
  const h=m?.hidden.progress as {seed:number;economyReceipts:G23MatchProgress['economyReceipts']}|undefined;
  const c=m?.seat.conqueror as {rewards:G23MatchProgress['rewards']}|undefined;
@@ -121,10 +125,11 @@ export function validateG23RewardSources(state:MatchState):void{
  const replay=replayG23Economy(state.seed,h.economyReceipts);
  if(canonicalContent(h.economyReceipts)!==canonicalContent(replay.economyReceipts))throw new RangeError('Invalid G23 reward facts');
  if(canonicalContent(c.rewards)!==canonicalContent(replay.rewards))throw new RangeError('Invalid G23 reward authority');
+ rememberG23Sources(state);
 }
 
 /** Receipt-backed permanent population at an authenticated resource prefix, including same-round online claims. */
 export function epicCrownsAtResourcePrefix(state:MatchState,prefixLength:number):NonNullable<G23MatchProgress['epicCrowns']>{
- const granted=new Set(state.resourceProvenance.entries.slice(0,prefixLength).flatMap(e=>e.kind==='item-acquired'&&(e.source.kind==='loot'||e.source.kind==='mechanic')?[e.source.receiptId]:[]));
+ const granted=new Set(state.resourceProvenance.entries.slice(0,prefixLength).flatMap(e=>e.kind==='item-combined'&&TACTICIAN_SIZE_ITEMS.includes(e.event.definitionId)?[JSON.stringify(['crafted-tactician',e.sequence])]:e.kind==='item-acquired'&&(e.source.kind==='loot'||e.source.kind==='mechanic')?[e.source.receiptId]:[]));
  return (readG23Progress(state)?.epicCrowns??[]).filter(c=>granted.has(c.receiptId));
 }

@@ -1,9 +1,9 @@
+import { isAnvil } from '../src/simulation/content/anvils';
+import { firstNodeSeed, offerFor, offeredAt } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
 import { createRequire } from 'node:module';
 import * as api from '../src/simulation/match';
 import { accepted, reachRound, resolveM5Choices } from './match-helpers';
-import { generateChoices } from '../src/simulation/choices';
-import { augmentCandidates, deriveAugmentTier } from '../src/simulation/augment-offers';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -13,10 +13,16 @@ import { drainAllD11Gifts, d11GiftPlan, d11PriorKills } from '../src/simulation/
 import { readG23Progress } from '../src/simulation/g2-3-state';
 import { toPrivateSeatView } from '../src/simulation/private-seat-view';
 import { toCombatViewState } from '../src/simulation/combat-replay-view';
+import { openingEncounterId } from '../src/simulation/opening-encounter';
 import type { MatchState, MatchCommandResult } from '../src/simulation/match';
 
 function seedFor(id:string){
-  for(let seed=0;seed<1000;seed++)if(generateChoices(augmentCandidates(deriveAugmentTier(seed,'round:2-1:augment'),[]),(seed^0x9e3779b9)>>>0).offers.includes(id))return seed;
+  // Draw cheap 2-1 candidates first, then verify each candidate through the real public opening.
+  // Replaying every non-offering seed inside a case exceeds the default timeout with 224 augments.
+  for(let from=0;from<1000;){
+    const seed=firstNodeSeed(id,1000-from,from);from=seed+1;
+    if(openingEncounterId(api.createMatch(seed))!=='trainer-golems'&&reachRound('2-1',false,seed).pendingChoice?.offers.includes(id))return seed;
+  }
   throw Error('D11 offer seed budget');
 }
 function observe(history:BattleHistory,before:MatchState,result:{state:MatchState;events:readonly api.MatchEvent[]}){
@@ -26,7 +32,8 @@ function observe(history:BattleHistory,before:MatchState,result:{state:MatchStat
 function command(history:BattleHistory,before:MatchState,result:MatchCommandResult){accepted(result);return observe(history,before,result.ok?result:{state:before,events:[]});}
 
 it.each(['all-for-one-i','trifecta-i','spirit-link'])('%s uses public acquisition, combat, settlement and strict resume without replaying gifts',id=>{
-  let s=reachRound('2-1',false,seedFor(id));const c=s.pendingChoice!,before=s;
+  // 14.24 stage tags keep Trifecta I off 2-1: take it at its first 3-2 offer (augment-stage-helpers).
+  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):offerFor(id);const c=s.pendingChoice!,before=s;
   const selected=api.selectChoice(s,c.choiceId,c.generation,id);s=accepted(selected);
   expect(s.augments.at(-1)?.definitionId).toBe(id);
   const gifts=d11GiftPlan(s,s.augments.at(-1)!);
@@ -35,7 +42,7 @@ it.each(['all-for-one-i','trifecta-i','spirit-link'])('%s uses public acquisitio
   expect(selected.ok&&selected.events.filter(e=>e.type==='mechanicGranted')).toHaveLength(gifts.length);
   for(const key of ['rngState','choiceRngState','rewardRngState','battleSeedRngState'] as const)expect(s[key]).toBe(before[key]);
   expect(drainAllD11Gifts(s)).toBe(s);expect(restoreMatch(serializeMatch(s))).toEqual(s);
-  const heroes=s.preparation.units.filter(u=>u.team==='player').sort((a,b)=>UNIT_DEFINITIONS[b.definitionId].cost-UNIT_DEFINITIONS[a.definitionId].cost).slice(0,s.level);
+  const heroes=s.preparation.units.filter(u=>u.team==='player'&&!isAnvil(u.definitionId)).sort((a,b)=>UNIT_DEFINITIONS[b.definitionId].cost-UNIT_DEFINITIONS[a.definitionId].cost).slice(0,s.level);
   for(const [i,u] of heroes.entries())s=accepted(api.deployMatchUnit(s,u.id,{kind:'board',cell:{col:i*2,row:7}}));
   const strategy=buildStrategySnapshot(s);
   if(id==='all-for-one-i'){

@@ -1,3 +1,11 @@
+import { AUGMENT_BATCH4_DEFINITIONS } from './augment-pool-batch4';
+import { AUGMENT_BATCH4_B4XP_DEFINITIONS } from './augment-pool-batch4-b4xp';
+import { AUGMENT_BATCH4_B4REROLL_DEFINITIONS } from './augment-pool-batch4-b4reroll';
+import { AUGMENT_BATCH4_B4COMBAT_DEFINITIONS } from './augment-pool-batch4-b4combat';
+import { AUGMENT_BATCH2_DEFINITIONS } from './augment-pool-batch2';
+import { AUGMENT_BATCH1_DEFINITIONS } from './augment-pool-batch1';
+import { AUGMENT_BATCH3_DEFINITIONS } from './augment-pool-batch3';
+import { AUGMENT_BATCH3_XP_DEFINITIONS } from './augment-pool-batch3-xp';
 import { V20_TEAMUP_AUGMENTS } from './v20-traits';
 import { S13_P1_AUGMENTS } from './s13-p1-augments';
 import { D11_AUGMENTS } from './d11-fill';
@@ -6,6 +14,14 @@ import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 import { S13_P2_AUGMENTS } from './s13-augments-p2';
 export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  ...AUGMENT_BATCH1_DEFINITIONS,
+  ...AUGMENT_BATCH2_DEFINITIONS,
+  ...AUGMENT_BATCH3_DEFINITIONS,
+  ...AUGMENT_BATCH4_B4COMBAT_DEFINITIONS,
+  ...AUGMENT_BATCH3_XP_DEFINITIONS,
+  ...AUGMENT_BATCH4_DEFINITIONS,
+  ...AUGMENT_BATCH4_B4XP_DEFINITIONS,
+  ...AUGMENT_BATCH4_B4REROLL_DEFINITIONS,
   ...V20_TEAMUP_AUGMENTS,
   sisters:{id:'sisters',name:'姐妹',description:'获得蔚和金克丝。两者在场时解锁姐妹：金克丝参与击杀使蔚获得40%攻击力7秒；蔚参与击杀使金克丝获得75%攻速5秒。',effects:[{kind:'mechanic',mechanic:'sistersUnlock',values:{enabled:1}}]},
   ...D11_AUGMENTS,

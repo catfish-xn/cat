@@ -8,7 +8,7 @@ import type { CombatStrategyInputs } from './combat-input';
 import type { MatchState } from './match-types';
 import type { StrategySnapshot } from './strategy-types';
 import type { BattleEquipmentInput } from './battle-input-log';
-import { buildStrategySnapshot } from './strategy-snapshot';
+import { buildStrategySnapshot, enforcerConfiscates } from './strategy-snapshot';
 import { canonicalContent } from './content';
 import { freezeContent } from './content/freeze';
 import { initializeEffectRuntime } from './effects';
@@ -59,7 +59,8 @@ function strategy(inputs: CombatStrategyInputs, opening: StrategySnapshot, team:
   const ids = new Set(inputs.preparation.units.map(u => u.id));
   const frozen = { traits: opening.traits.filter(t => t.team === team).map(t => ({ ...t, team: 'player' as const })),
     units: opening.units.filter(u => ids.has(u.unitId)) };
-  const compiled = buildStrategySnapshot(inputs, undefined, undefined, frozen);
+  // Enforcer 10 confiscation is frozen with the opening roster: later equipment on the victim side stays inert.
+  const compiled = buildStrategySnapshot(inputs, undefined, undefined, frozen, enforcerConfiscates(opening.traits, team) ? ['player'] : []);
   return { ...compiled, traits: compiled.traits.map(t => ({ ...t, team })) };
 }
 const hpParts = (unit: StrategySnapshot['units'][number]) => ({
@@ -144,7 +145,7 @@ export function applyBattleEquipment(state: CombatState, receipt: BattleEquipmen
       ].sort((a, b) => a.slot - b.slot);
       return freezeCombatDeclarations(result);
     });
-    const randomItems = units.some(u => u.mechanics?.some(m => ['g24Fishbones','g24Collector','g24Gambler','g24Mogul','v19Chainblade'].includes(m.mechanic)));
+    const randomItems = units.some(u => u.mechanics?.some(m => ['g24Fishbones','g24Collector','g24Gambler','g24Mogul','v19Chainblade','g23Tactician'].includes(m.mechanic)));
     return { ok: true, state: { ...state, units, ...(randomItems && !state.itemRandomStreams ? { itemRandomStreams: createItemRandomStreams(receipt.battleSeed), itemGoldReceipts: [] } : {}),
       equipmentReceipts: [...state.equipmentReceipts ?? [], receipt] } };
   } catch { return refuse('battle-input-invalid'); }

@@ -94,13 +94,17 @@ it.each(ids)('%s survives online snapshot JSON, both combat sides, authoritative
   expect(proposeSettlement(mirror).b.g23Facts).toBeUndefined();
 });
 
-it.each(['all-for-one-i','trifecta-i'].flatMap(id=>[false,true].map(exhausted=>({id,exhausted}))))('$id routes gifts through the actual shared transaction (pool exhausted $exhausted)',({id,exhausted})=>{
+// 14.24 stage tags put Trifecta I at 3-2/4-2 only; this 2-1 shared-seat fixture keeps All for One I, which takes the same
+// two-receipt orb route (d11-fill gifts).
+it.each(['all-for-one-i'].flatMap(id=>[false,true].map(exhausted=>({id,exhausted}))))('$id routes gifts through the actual shared transaction (pool exhausted $exhausted)',({id,exhausted})=>{
   // Search independent literal-table offers; shared root and solo prefix must
   // bind the same encounter/tier. Keep a genuinely offered card for strict restore.
   let seed=0;
   for(;seed<10000;seed++) {
-    if(['golden-gala','prismatic-party','prismatic-prelude','prismatic-finale','wind-up-monkey','component-anvils','artifact-anvil'].includes(openingEncounter(seed)))continue;
-    if(augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[]).offers.includes(id))break;
+    // v23: subscription openings carry seat-bound receipts the solo-prefix transplant below cannot reuse.
+    if(['golden-gala','prismatic-party','prismatic-prelude','prismatic-finale','wind-up-monkey','component-anvils','artifact-anvil','loot-subscription','gold-subscription'].includes(openingEncounter(seed)))continue;
+    // v23: pass the 2-1 node so the oracle applies the node's offer rules (Black Rose exclusion) like the real offer.
+    if(augmentDraw((seed^0x9e3779b9)>>>0,augmentTier(seed,'round:2-1:augment'),[],[],'round:2-1:augment').offers.includes(id))break;
   }
   expect(seed).toBeLessThan(10000);
   let pool=createSharedPool('d11-pool',seed,{seatCount:1,...(exhausted?{capacities:{[selectOpeningUnit(seed,'A')]:1}}:{})});

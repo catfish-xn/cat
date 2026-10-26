@@ -101,7 +101,8 @@ describe('B8 shared pure unit acquisition', () => {
   });
 
   it('commits the same shop facts and keeps a full-bench buy entirely unchanged', () => {
-    const base = createMatch(5);
+    // Seed 29 draws the 'none' opening under v23 fmix32; seed 5's bench anvil breaks the benchSize-0 roster.
+    const base = createMatch(29);
     const state: MatchState = freeze({ ...base, phase: 'preparation', combat: null, gold: 10,
       shop: { generation: 7, slots: [{ status: 'available', definitionId: 'tristana' }] },
     });

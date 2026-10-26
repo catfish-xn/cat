@@ -1,3 +1,68 @@
+## 2026-10-25 v23 当前战斗与恢复合同
+
+本节以发布基线 `2b434e28` 至候选 `0797f3fe` 的实际实现为准，优先于下文保留的历史版本／WIP 说明；Match、经验、资源发放、历史门槛和单人按需包见 [MATCH_CONTRACT 的 v23 节](MATCH_CONTRACT.md#2026-10-25-v23-当前合同索引基线-2b434e28--0797f3fe)。当前 schema/save/replay/command＝**12/8/8/7**，rules/content＝`s13-g2-3-v23-online-rules` / `s13-14.24b-g2-3-v23-online-rules`，NET5、50 ms、lcg32-v1；精确摘要必须一致，旧身份拒绝，无迁移。本次文档更新不改变这些版本，epoch 重录／验收由独立任务负责。[src/simulation/m8/version.ts:3](../src/simulation/m8/version.ts#L3)。
+
+### Replay 8：击飞、位移和赛恩事实
+
+`StatusApplication.knockup?:true` 仅可附在 stun 上，普通眩晕省略，`false` 或非 stun 标记非法；禁行动／打断及加时控制时长仍用原 stun 管线。`CombatViewStatus` 按 `[kind,harmful]` 汇总，同组只要一份带 knockup 就输出 true；因此显示汇总不能反向充当完整控制贡献证据。领域 `statusChanged` 沿用 application，回放保留标记，首遍与重演一致。[src/simulation/m8/contracts.ts:177](../src/simulation/m8/contracts.ts#L177)、[src/simulation/m8/status.ts:34](../src/simulation/m8/status.ts#L34)、[src/simulation/combat-replay-view.ts:21](../src/simulation/combat-replay-view.ts#L21)。
+
+`movement.reason?` 完整枚举仍为 `ambessa-chain | ambessa-fist-retreat | mordekaiser-pull | sett-grab | sevika-knockback`，普通移动、赛恩冲锋／复活换格不另造 reason。只在实际换格时发送 `{type:'movement',tick,unitId,from,to,reason?}`，领域封套 combatId/eventSeq 保持，公开回放白名单保留 reason，终态 cell 仍随 unitUpdated/keyframe；动画不得回写位移或抽随机数。[src/simulation/combat-types.ts:136](../src/simulation/combat-types.ts#L136)、[src/simulation/combat-replay-view.ts:67](../src/simulation/combat-replay-view.ts#L67)、[src/simulation/combat-g2-3-summons.ts:79](../src/simulation/combat-g2-3-summons.ts#L79)。
+
+强制位移是同 tick 瞬时操作，无 RNG；目标须存活、有 HP、可位移且非固定对象（包括海克斯熔炉、未解缚赛恩、酒桶）。占格读取 occupiesCell 与本 tick movementReservations；成功落点加入保留集，不能穿过单位／越界。莫德凯撒只拉爪击线命中的目标，源 Displacement=240 按 HexToRangeMap 映为 1 格，向自己最近一步（距离降 1，平局 row/col）；瑟提抓最近两人到自己邻格，第二人优先邻接第一人，平局按目标到落点距离、row/col；赛薇卡拳击沿源→目标直线逐格推出，遇阻即止，精确 cube 取整与 nudge 见实现。无落点只取消位移，技能原伤害／控制仍执行。[src/simulation/combat-displacement.ts:14](../src/simulation/combat-displacement.ts#L14)、[src/simulation/combat-displacement.ts:30](../src/simulation/combat-displacement.ts#L30)、[src/simulation/combat-displacement.ts:75](../src/simulation/combat-displacement.ts#L75)。这些落点／阻挡细则沿用已记录 P；安蓓萨的既有 BFS 与撤步口径保留下文。
+
+黑玫 3/4/5/7 召唤赛恩；归属用 **numeric-aware unit ID**（unit-9 在 unit-10 前），不是普通字典序，也不因输入数组顺序变化。星级总和、阶段／档位倍率及双抗按开战输入编译；基础 HP750、AD50、0 双抗、120/120 Mana、AS7000Bps，双抗档位 40/45/50/100，完整阶段表及盾／冲锋／复活源值见 [src/simulation/content/g2-3-summons.ts:4](../src/simulation/content/g2-3-summons.ts#L4)、[src/simulation/strategy-snapshot.ts:215](../src/simulation/strategy-snapshot.ts#L215)、[src/simulation/g2-3-summons.ts:19](../src/simulation/g2-3-summons.ts#L19)、[src/simulation/unit-id-order.ts:1](../src/simulation/unit-id-order.ts#L1)。
+
+- 绑定期间可受伤但不行动；黑玫有效成员累计施法达到 5，或赛恩 HP **严格低于 65%**，或仍绑定时已复活，首次设置 `runtime.buddyTriggered=true` 并发 bindingChanged。5 档以上先排满血治疗并给 +100 AP，再冲锋；实际治疗仍受原存活／重伤规则约束。[src/simulation/combat-g2-3-summons.ts:44](../src/simulation/combat-g2-3-summons.ts#L44)。
+- 解缚冲锋选最近敌人（距离、ID），按 hex path 命中路径敌人，每个 100% AD 物理包和 10 tick 击飞；只有这些实际命中者获得黑玫受伤标记。落点为目标邻格中距冲锋起点最远的空格，平局 row/col；无空位原地。主动技能仍 300% AD 路径伤害＋20 tick 普通眩晕、60 tick 护盾；盾在 3/4 档为 175% AP，5/7 档为 75% AP。[src/simulation/combat-g2-3-summons.ts:63](../src/simulation/combat-g2-3-summons.ts#L63)、[src/simulation/combat-g2-3.ts:57](../src/simulation/combat-g2-3.ts#L57)。
+- 7 档首次致死屏障写 `g23Sion:{reviveAtTick:deathTick+20,revived:false}`，HP 设 `max(1,floor(maxHp*7500/10000))`，清 target／冷却／可取消任务；保持 alive 但缺席，不行动／不占格／不可被选中，仍阻止己方被判全灭。返回时找最近空格（必要时 movement），保留时钟并设 revived=true，发 unitRevived；清可移除敌对控制／DOT／减益、获得免控和 +300% AS，复活后 40% 全能吸血持续本场。不能再次复活。[src/simulation/combat-g2-3-summons.ts:81](../src/simulation/combat-g2-3-summons.ts#L81)、[src/simulation/anomalies/availability.ts:14](../src/simulation/anomalies/availability.ts#L14)、[src/simulation/m8/s13-mechanisms.ts:341](../src/simulation/m8/s13-mechanisms.ts#L341)。
+- 缺席赛恩与其他出生单位合并 roster 时不再重复追加相同 ID；待复活不会丢单位或生成两份单位事件。ability effectIndex 0＝主动，1＝冲锋伤害／击飞，2＝高档 AP，3＝复活清除／免控／攻速；不得把 effectIndex=1 的合法来源扩成所有技能任意索引准入。[src/simulation/combat-s13.ts:727](../src/simulation/combat-s13.ts#L727)、[src/simulation/combat-runtime-facts.ts:52](../src/simulation/combat-runtime-facts.ts#L52)。
+
+### 恢复认证：输入决定应有事实，包括缺失／零值
+
+独立实现先认证完整 `CombatInputBasis`、资源／装备前缀和重编译 strategy，再从该输入重建到候选 tick；不能以候选“带了某字段”来决定是否验证。恢复计算只作比较，不把其事件、RNG 或奖励提交给 Match。普通结构路径也认证完整 task 队列、openingDeaths、damageContributors、触发／动作／事件序号、RNG state/draws、Mana／余数、黑玫施法数、buddyTriggered、g23Sion（包括完全无字段）、所有 stun 分组和贡献（包括普通 stun、knockup 存在性）、burn／periodic／activity 历史。不同 HP 或合法范围内的计数不能作为等价证明。[src/simulation/combat-runtime-facts.ts:30](../src/simulation/combat-runtime-facts.ts#L30)、[src/simulation/restore-combat-replay.ts:8](../src/simulation/restore-combat-replay.ts#L8)。
+
+技能声明状态另用 `validateAbilityStatusFacts(combat,replay,same):ReadonlySet<string>`：逐单位对比**全部 ability 来源贡献**及非 activity 的 `unit.statuses` 显示／移除锚点，包含来源、effectIndex、applicationId、系数、叠层、刷新、时序、贡献键及无状态情况；仅把独立证据中的键交给声明投影／运行态校验。channel／redirect 仍由 activity 历史认证；既有 `null → 1201` 到期显示投影保持。失败为 `Invalid Match save: ability status fact tick` / `ability status binding facts`，不接受候选自报键或 effectIndex；`abilityContributions/abilityStatuses` 仅为恢复内存证据，不是新增存档字段。[src/simulation/combat-runtime-facts.ts:7](../src/simulation/combat-runtime-facts.ts#L7)、[src/simulation/restore-combat-replay.ts:63](../src/simulation/restore-combat-replay.ts#L63)、[src/simulation/m8/restore.ts:22](../src/simulation/m8/restore.ts#L22)。
+
+以下路径必须比对**完整战斗**，不能只验声明边界：Batch 2／战术家效果，Batch 3/B4 的动态机制（明确包括 corrosion、longDistancePals、categoryFive、overheal、satedSpellweaver、blazingSoul、nobleSacrifice、wealthyRehab、badLuck、goldForDummies、towerDefense/Live、heroCarry/Live、forming），假人／魔像，以及既有 Zephyr、Trench、Experiment clone、异常等。**腐蚀由可信 strategy 选中重演，即使候选把全部减抗贡献都删光也要拒绝。** Powder/Rumble 的 ignite 从可信英雄能力判断整场认证：旧 burn 和 wound 共用 ability identity／显示锚点的合法格式保留，不能放松通用 status 唯一键校验来接纳伪造重复项。[src/simulation/g2-4b-gold-restore.ts:12](../src/simulation/g2-4b-gold-restore.ts#L12)、[src/simulation/g2-4b-gold-restore.ts:48](../src/simulation/g2-4b-gold-restore.ts#L48)。这覆盖下文“非金币存档不重演”和“恢复不执行 combatStart”的历史概括：**不重发开战副作用，但可在私有证据中重新执行开战／战斗**。
+
+重演缓存只存认证输入生成的证据；完整 version＋basis＋strategy 的 canonical 内容绑定身份，摘要命中还要整段内容相等；返回证据脱离引用，每次仍比较当前候选。Zephyr／改变 roster／异常路径保留冷重演，战中装备日志按 effectiveTick/seq 原顺序注入并认证 pending，不能丢日志或消费候选 RNG。[src/simulation/restore-combat-replay.ts:75](../src/simulation/restore-combat-replay.ts#L75)、[src/simulation/g2-4b-gold-restore.ts:30](../src/simulation/g2-4b-gold-restore.ts#L30)。
+
+### Batch 3：冻结声明、运行态与战后事实
+
+Batch 3 继续复用 `CombatUnit.batch2` 和原 mechanismState／shieldLayers／tasks／runtime，不另建规则引擎。可选 `batch2.blazingLast/nobleSpent/healed/dummyGold/vladCasts/primeSplash` 分别保留转移受益者、已牺牲、实际治疗、假人金币脉冲、弗拉基米尔施法和范德尔溅射门控；完整重演必须认证它们的存在和数值。[src/simulation/augment-pool-batch2-combat.ts:10](../src/simulation/augment-pool-batch2-combat.ts#L10)。
+
+| 机制 | 同结果所需的顺序与计量 |
+| --- | --- |
+| 腐蚀 | 每队 tick40/80/…，取 ID 最小的存活拥有者，给**开战 startingCell 在己方前两排**的存活敌人各 -3 双抗；每脉冲／属性有独立 applicationId，永久叠加，本轮站位移动不改变资格。 |
+| 炽热灵魂 I/II | tick1 起每 60 tick；每队 ID 最小存活拥有者给攻速最高（最短 interval、再 ID）的另一受益者 +20/35 AP、+2000/3000 AS Bps，60 tick。排除上一受益者并把 blazingLast 写在全部拥有者上；无可选者不发。 |
+| 高贵牺牲 | 全部死亡先结算，第一批本队合资格死者取最小 ID，一次给存活友军 `25+floor(死者开场双抗*1000/10000)`；同 tick 死者不能受益，所有拥有者记 nobleSpent。 |
+| 健康就是财富 I/II | 全队 1000/1500Bps 全能吸血，战斗累计的是 actual healing received，非请求值／过量；战后跨战首次累计 10000 给 8/15 金。 |
+| 厄运保护 | 禁止暴击，暴击率按源比例换 AD；仍保留普通攻击计划原 RNG 消耗，不能因必不暴击跳过抽词。初始拳套按 Match 礼物收据。 |
+| 训练假人／塔防／forming | 召唤目录声明固定不移动／普通假人不攻击，塔防按阶段3/5派生强化，永久纹章仍影响冻结羁绊；formation HP/AD 从来源总和编译，不读取候选战斗面板作基底。 |
+
+周期、同 tick 死亡与来源标识：[src/simulation/combat-augment-effects.ts:49](../src/simulation/combat-augment-effects.ts#L49)、[src/simulation/combat-augment-effects.ts:109](../src/simulation/combat-augment-effects.ts#L109)；计量与派生：[src/simulation/combat-s13-state.ts:105](../src/simulation/combat-s13-state.ts#L105)、[src/simulation/m8/s13-mechanisms.ts:346](../src/simulation/m8/s13-mechanisms.ts#L346)、[src/simulation/augment-effects.ts:76](../src/simulation/augment-effects.ts#L76)、[src/simulation/content/batch3-summons.ts:1](../src/simulation/content/batch3-summons.ts#L1)。战后事实分别为 `batch3Healing`、`batch3Dummy`、`batch3DamageDealt` 和 Spoils 专用 batch2 行，零数值按既有条件省略；Match 在唯一结算后才发奖励，视图不自行累计。[src/simulation/g2-3-settlement.ts:33](../src/simulation/g2-3-settlement.ts#L33)。
+
+六个英雄强化是 `field-medic/steb`、`blade-dance/irelia`、`shocking-troll/trundle`、`savage-revenge/renni`、`all-out/vander`、`blood-pact/vladimir`。开战从本队同名棋子中按星级降序、永久装备数降序、ID 升序选“最强者”，仅该实例得到 `heroCarryLive`，星级系数提前冻结；不是每次施法重新选最强。精确系数集（含零字段）、星级映射与开战范围／Mana 改写见 [src/simulation/content/augment-pool-batch3.ts:1353](../src/simulation/content/augment-pool-batch3.ts#L1353)、[src/simulation/augment-effects.ts:97](../src/simulation/augment-effects.ts#L97)。斯特卜三次技能伤害替代治疗；艾瑞莉娅向远目标／原目标各打一包且不改 cell；特朗德尔施法攻速／永久 AD、范德尔强化普攻及溅射、弗拉基米尔施法增伤计数均用既有任务／来源／runtime。荏妮按两格内最远目标（无则原目标）计划沿线额外包，**不实际改变荏妮 cell**，保留原治疗与眩晕；不能按“猛扑”文案自行加位移事件。[src/simulation/combat-g2-3.ts:87](../src/simulation/combat-g2-3.ts#L87)、[src/simulation/combat-s13-abilities.ts:1](../src/simulation/combat-s13-abilities.ts#L1)。未确认时点／几何仍为既有 P，本文不将其提升为原服事实。
+
+### Batch 4 B4Combat：四条共享原战斗状态
+
+| 强化 | 当前权威执行与持久化事实 |
+| --- | --- |
+| 天涯若比邻 `longDistancePals` | tick1、在普通周期／动作前，按起始坐标取最远两个存活非 proxy 友军；ID 排序遍历，距离平局保留首对，少于两人无贡献。双方先同时采 AD/AP/护甲/魔抗，再各给对方对应值的 2200Bps 向下取整 flat 贡献，effectIndex 分别偏移 0–3，不反馈放大，不改冻结羁绊。 |
+| 五级飓风 `categoryFive` | 初始给普通飓风；每个普通／光明飓风实例分别派生原触发声明：maxTargets＋1，原 attackDamageBps×8500/10000 后 floor，保留实例来源、选目标及 proc permissions；不是只改第一件或改普攻本体。 |
+| 过量治疗 `overheal` | 每第三次普攻按原 attackCount 门控，额外 `floor(AD*11500/10000)` 物理 attack-extra 包、不能暴击；只按**本强化额外包实际伤害**的 50% 发自疗。转盾只取该来源在 HealOutcome.shares 的过量，不把普通攻击回血并入。 |
+| 满意的织法者 `satedSpellweaver` | 施法成功授 2000Bps 全能吸血 60 tick，按有效贡献判断窗口，重复施法续窗不叠成倍吸血。窗口内对本单位 HealOutcome 的总过量转盾；与过量治疗并持时两条各自处理。 |
+
+两种转盾先用经重伤处理的过量，再走正常护盾削减（含加时）；每来源一层，未到期剩余＋本次过量，上限300，期限当前 tick＋60；零过量／死亡不造新盾。原 shieldLayers、来源、计数及 timed modifier 就是全部保存事实，恢复从可信输入完整重演，不能只验盾≤300或攻次可整除。实现和实际接入顺序：[src/simulation/augment-pool-batch4-b4combat.ts:14](../src/simulation/augment-pool-batch4-b4combat.ts#L14)、[src/simulation/augment-pool-batch4-b4combat.ts:34](../src/simulation/augment-pool-batch4-b4combat.ts#L34)、[src/simulation/augment-pool-batch4-b4combat.ts:45](../src/simulation/augment-pool-batch4-b4combat.ts#L45)、[src/simulation/augment-pool-batch4-b4combat.ts:56](../src/simulation/augment-pool-batch4-b4combat.ts#L56)、[src/simulation/combat-s13.ts:269](../src/simulation/combat-s13.ts#L269)。数值归一化来自 `round(raw*10000)`、秒×20；原始 float／null 仍保留于 [src/simulation/content/augment-pool-batch4-b4combat.ts:69](../src/simulation/content/augment-pool-batch4-b4combat.ts#L69)。
+
+### 同基线以来的召唤、极客与执法边界
+
+实验格上的纹章携带者把复制能力分享给该队所有实验格上的试验品；复制在战斗全部开场效果后保存 `experimentClone:{openingMaxHp,triggeredAtTick:null,cloneId:null}`；tick160 或首次死亡先到者只触发一次，在死亡清理后、淘汰判定前按 numeric-aware ID 顺序处理。复制体同星／同形态，HP 用开场样本×声明比例（60%×档位 Scaling 1.15/1.3/1.5＝69/78/90%，7档不再翻倍），0 Mana；不继承装备／强化／实验室或复制能力，不重算羁绊计数，不发永久成长／战后存活伤害。先选原格、再最近空格（距离/row/col），无空格也消耗触发并保留 cloneId:null。复制体的 `itemSummon.kind='experiment'`、origin、出生 tick、HP 基底、roster 和触发事实均由冷重演认证，不能从快照导入战斗专用召唤。[src/simulation/g2-3-experiment.ts:11](../src/simulation/g2-3-experiment.ts#L11)、[src/simulation/g2-3-experiment.ts:26](../src/simulation/g2-3-experiment.ts#L26)、[src/simulation/combat-experiment-clone.ts:20](../src/simulation/combat-experiment-clone.ts#L20)、[src/simulation/combat-experiment-clone.ts:62](../src/simulation/combat-experiment-clone.ts#L62)、[src/simulation/g2-4b-gold-restore.ts:55](../src/simulation/g2-4b-gold-restore.ts#L55)。
+
+极客6按携带者源角色推荐表的客户端顺序选第一个合法成装，否则按 seed/round/itemId 独立词从合法候选选；极客9再映射到光明，无映射保留普通；6+ 排除锅／铲，不影响永久装备或护盾组件计数。执法10在战斗快照编译时先没收敌方英雄除纹章外所有装备作用（含临时／神器／光明／辅助），早于极客转换／光环／装备召唤；双方独立没收，不转移或销毁永久装备，不更改原羁绊成员，战中后来装入的装备在该战仍无效。恢复按冻结编译结果认证，不接受候选客户端重选。[src/simulation/content/scrap-lucky.ts:3](../src/simulation/content/scrap-lucky.ts#L3)、[src/simulation/strategy-g2-2.ts:38](../src/simulation/strategy-g2-2.ts#L38)、[src/simulation/content/enforcer-confiscation.ts:8](../src/simulation/content/enforcer-confiscation.ts#L8)。以上未核实抽样／顺序继续沿用已有 P-EX 与极客／执法 P，不在本次文档任务中新增玩法。
+
+投机者之刃开战银行数修正与法球领取时序见 MATCH_CONTRACT：单人终战 goldBefore 必须减本场战后直发金才可认证 bankGold，战中已认证装备安装也用该余额；金币机会包括成功／失败词和序号，独立 itemRandomStreams／itemGoldReceipts 逐项认证。战斗内金币增加只更新同队合法银行持有者的当前采样，Match 到唯一结算才发资源，不能据动画提前发金。[src/simulation/b8-restore.ts:183](../src/simulation/b8-restore.ts#L183)、[src/simulation/g2-4b-gold-restore.ts:112](../src/simulation/g2-4b-gold-restore.ts#L112)、[src/simulation/combat-s13.ts:177](../src/simulation/combat-s13.ts#L177)。
+
 ## 2026-10-23 战斗法力与暴击率溢出（已随 v22 录制）
 
 用户10-23批准第1–4条：受伤每包 `min(4250, pre + 3×post)` 百分之一法力（pre含暴击/增伤，post含护盾与原包延迟伤害），同单位tick末合计取整、余数跨tick；受伤回蓝封顶当前最大法力，其他来源可超过上限。施法消耗最大法力并保留溢出，普通单位施法开始 `manaLockedUntilTick=tick+20`，`tick<截止`阻挡普通法力来源，绑定本次施法退款沿原特例。阿木木/维克托专用资源保持。暴击率超100%部分每2Bps转1Bps暴伤，转换时向下取整，授权和RNG抽取数不变。旧M3/M4独立测试引擎不切换。内部签名、事件字段语义、分摊、恢复与失败枚举见 [法力规则报告](COMBAT_MANA_RULES.md)。本节覆盖下文旧“仅hpLoss×3%/同tick上限20/清空法力”描述；第5条减伤叠加不变。已随 v22-online-rules 纪元录制。
@@ -271,7 +336,7 @@ createCombatReplayRecorder(initialState: CombatState,
 
 沿用奇数锁链/偶数拳击。锁链伤害前移到目标身边距自己最近的可达空格；已与目标相邻时原地不动、不发位移事件（不相邻且无可达空格时也原地，见 S13_RULES_GAP 同名条目），距离平局沿普通 BFS；拳击在本 tick HP/存活屏障后向己方半场且远离施法时目标坐标后撤 1 格，几何首选格不可用则原地。复用占格、移动限制及本 tick 保留格；不增加 RNG 调用，不改伤害/短晕/耗蓝。精确口径、独立向量和回退见 [AMBESSA_DASH](AMBESSA_DASH.md)，原档缺距离来源见 [证据](AMBESSA_DASH_EVIDENCE.md)。
 
-既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，尚未录 epoch，不应以旧身份发布。
+既有 `CombatEventData` 的 movement 增加可选 `reason?: 'ambessa-chain' | 'ambessa-fist-retreat' | 'mordekaiser-pull' | 'sett-grab' | 'sevika-knockback'`；其余 `{type:'movement',tick,unitId,from,to}` 不变。只有实际换格才发；普通移动不带 reason。领域封套仍是 domain/combatId/eventSeq；公开 `CombatViewEvent` 保留 reason，终态 cell 仍由 unitUpdated/keyframe 下发。无新命令/失败 reason；无落点只取消位移，原施法照常。此为 P 项目决定，已随 v22-online-rules 录制。
 
 ## 单场初始化协作切片（2026-10-23；不变更 epoch）
 
@@ -294,3 +359,15 @@ PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校�
 失败枚举不新增：快照/编译/任务沿用 `BattleFailure` / `BattleValidationError`，包括 `snapshot-version`、`content-digest`、`invalid-snapshot`、`wrong-phase`、`round-mismatch`、`round-kind`、`seat-collision`、`invalid-seed`、`invalid-battle-id`、`invalid-mirror`、`battle-input`。PvE 仍返回原有 `MatchFailure`，失败保持原 state 引用，无事件、资源及 RNG 变更。异常可能在后续 `next()` 才抛出；服务器 `guardedSteps` 沿用 `BattleResolveError` 包装。
 
 服务器 `startLiveTaskSteps(envelope, beforeTick?)` 依次委派快照、编译、任务初始化；`openStreamSteps` 委派 PvE 初始化。所有流仍私有暂存，全部完成才原子发布并启动共同 tick0 时钟。`runSettlementSlice` 用注入的 `sliceNow`，初始化工作窗口为 `min(5ms, sliceMs/2)`，保留余量给下一不可抢占子步骤；同时遵守 `sliceTicks`。未配置 `sliceMs` 时沿用无时间预算语义。结算窗口、50ms 战斗 tick、RNG、内容身份、账本及录像格式不变；真实 GC/系统调度暂停不构成跨硬件硬实时保证。
+
+## v23 控制与赛恩存档恢复（P，2026-10-25）
+
+`StatusApplication.knockup?: true` 只给击飞的 stun 贡献附加标记；普通眩晕省略。两者仍按原 stun 规则禁行动、打断，不改变伤害或持续时间。恢复从认证开战输入独立重放，比较全部 stun 分组和贡献（含来源、目标、时序与 knockup 的存在性）；添加、删除或伪造标记均拒绝。
+
+`CombatUnit.g23Sion?: { reviveAtTick: number; revived: boolean }` 保持现有可选格式。只有黑玫档位至少7的 `g23-sion` 可持有；首次致死屏障记录返回 tick（死亡 tick + 20），等待时仍为存活但缺席单位。`revived=false` 时返回 tick 必须在当前 tick 之后、最多20 tick；`revived=true` 时返回 tick 不得晚于当前 tick，记录保留以禁止二次复活。字段结构、类型、持有者及完整历史事实（包括无字段的状态）均认证，不从候选 HP 或标记推断死亡史。
+
+赛恩 ability 来源 effectIndex：0 为主动技能，1 为解缚冲锋伤害/击飞，2 为高档解缚 AP，3 为复活清除/免控/攻速。旧状态来源校验仅对赛恩冲锋 stun 接纳 effectIndex=1，并用独立重放认证真实贡献；不普遍放宽其他技能、护盾或任务的 effectIndex。以上仅补存档支持与认证，不更改合法状态的格式、事件、回放或战斗推进。
+
+### Batch 4 B4Combat（P，2026-10-25）
+
+四条机制与推断边界见 [P-B4COMBAT](S13_RULES_GAP.md#p-b4combatp2026-10-25batch-4-四条战斗强化)。只增加声明与既有战斗事件，不增加存档字段/事件类型/公共命令/失败 reason；全程服务器权威，前端不得另算属性、弩箭、吸血或护盾。`augment-pool-batch4-b4combat.ts` 内部入口 `openingB4Combat(ctx):void`、`castB4Combat(ctx,unit,seq):void`、`attackB4Combat(ctx,unit,target,seq):void`、`damageB4Combat(ctx,owner,packet,dealt):void`、`overhealB4Combat(ctx,target,outcome):void` 使用冻结来源及既有状态；`b4Vamp(unit,tick):VampRate[]` 只返回当前窗口贡献，`categoryFiveTrigger(unit,definition):TriggerDefinition` 只派生飓风声明。恢复仍从可信 combatInputBasis 重放，对象/JSON/序列化入口不接受候选自报贡献。

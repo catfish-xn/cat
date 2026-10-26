@@ -1,3 +1,4 @@
+import {isSellableUnit} from '../src/simulation/seat-mechanics/forms';
 import { prepareInput, copyInput } from './fixtures/prepared-input';
 import { deepStrictEqual } from 'node:assert';
 import { syntheticSharedRound } from './tp-helpers';
@@ -155,24 +156,43 @@ function restored(state: MatchState): MatchState {
   const value = restoreMatch(serializeMatch(freeze(state)));
   deepStrictEqual(value, state); return value;
 }
-function compareTicks(initial: MatchState, changed: MatchState) {
-  let a = initial, b = changed, resume = restored(changed), budget = 1201;
-  const installs = changed.combat?.pendingEquipment?.length ?? 0;
-  while (b.phase === 'combat' && budget-- > 0) {
-    const x = stepMatch(a), y = stepMatch(b), z = stepMatch(resume);
+/** Live/initial/resumed tick comparison, resumable in windows so a long battle can span several cases. */
+type TickRun = { a: MatchState; b: MatchState; resume: MatchState; budget: number; installs: number; tick: number };
+function startTickRun(initial: MatchState, changed: MatchState): TickRun {
+  return { a: initial, b: changed, resume: restored(changed), budget: 1201, installs: changed.combat?.pendingEquipment?.length ?? 0, tick: 0 };
+}
+function advanceTicks(run: TickRun, untilTick = Infinity): boolean {
+  while (run.b.phase === 'combat' && run.budget > 0 && run.tick < untilTick) {
+    run.budget--; run.tick++;
+    // With pending installations the unchanged initial battle is never compared, so it is not stepped either.
+    const x = run.installs ? null : stepMatch(run.a), y = stepMatch(run.b), z = stepMatch(run.resume);
     deepStrictEqual(z, y);
-    if (!installs) {
+    if (x) {
       deepStrictEqual(y.state.combat, x.state.combat);
       deepStrictEqual(y.events.filter(e => e.domain === 'combat'), x.events.filter(e => e.domain === 'combat'));
-    } else expect(y.state.combat!.equipmentReceipts!.length).toBeGreaterThanOrEqual(installs);
-    a = x.state; b = y.state; resume = z.state;
+      run.a = x.state;
+    } else expect(y.state.combat!.equipmentReceipts!.length).toBeGreaterThanOrEqual(run.installs);
+    run.b = y.state; run.resume = z.state;
   }
-  expect(budget).toBeGreaterThan(0); restored(b); return b;
+  return run.b.phase !== 'combat' || run.budget <= 0;
+}
+function finishTickRun(run: TickRun): MatchState {
+  advanceTicks(run); expect(run.budget).toBeGreaterThan(0); restored(run.b); return run.b;
+}
+function compareTicks(initial: MatchState, changed: MatchState) {
+  return finishTickRun(startTickRun(initial, changed));
 }
 
 describe('T12 provenance with phase 2 live equipment', () => {
+  // A 3-7 battle runs ~900 ticks; the live/resumed comparison is split into tick windows that continue one cached run
+  // (a filtered case replays the earlier windows with the same assertions first).
+  const WINDOW = 300, WINDOWS = 4;
   for (const roundId of ['3-5','3-7']) for (const pair of [['sword','rod'],['gloves','gloves']]) {
-    it(`${roundId} ${pair.join('+')}: consumed opening component survives restoration; live and resumed ticks agree`, () => {
+    const label = `${roundId} ${pair.join('+')}`;
+    let setup: { acquired: ReturnType<typeof publicInventory>; start: MatchState; changed: MatchState } | undefined;
+    let run: TickRun | undefined;
+    const provenanceSetup = () => {
+      if (setup) return setup;
       const acquired = publicInventory(pair);
       let state = atRound(acquired.state, roundId);
       state = accepted(deployMatchUnit(state, 'unit-1', board(3)));
@@ -182,14 +202,29 @@ describe('T12 provenance with phase 2 live equipment', () => {
       expect(start.phase).toBe('combat');
       const changed = accepted(equipItem(start, acquired.itemIds[1], 'unit-1', 0));
       unchangedBeforeTick(start, changed);
+      return setup = { acquired, start, changed };
+    };
+    const ticksThrough = (window: number) => {
+      const { start, changed } = provenanceSetup();
+      if (!run || run.tick > window * WINDOW) run = startTickRun(start, changed);
+      advanceTicks(run, window * WINDOW);
+      return run;
+    };
+    it(`${label}: consumed opening component survives restoration and a forged combination is rejected`, () => {
+      const { acquired, changed } = provenanceSetup();
       expect(changed.items.some(item => item.id === acquired.itemIds[0])).toBe(false);
       expect(changed.combatInputBasis!.inputs.items.some(item => item.id === acquired.itemIds[0])).toBe(true);
-      const end = compareTicks(start, changed);
-      expect(end.items.some(item => item.definitionId === (pair[0] === 'gloves' ? 'thiefs-gloves' : 'gunblade'))).toBe(true);
       const corrupt = structuredClone(changed);
       Object.assign(corrupt.resourceProvenance.entries.at(-1)!.kind === 'item-combined' ?
         (corrupt.resourceProvenance.entries.at(-1)! as {event: object}).event : {}, {definitionId:'deathblade'});
       expect(()=>restoreMatch(corrupt)).toThrow(/combination/);
+    });
+    for (let window = 1; window < WINDOWS; window++) it(`${label}: live and resumed ticks agree (ticks ${(window - 1) * WINDOW + 1}-${window * WINDOW})`, () => {
+      ticksThrough(window);
+    });
+    it(`${label}: live and resumed ticks agree to the end and the combined item survives`, () => {
+      const end = finishTickRun(ticksThrough(WINDOWS - 1));
+      expect(end.items.some(item => item.definitionId === (pair[0] === 'gloves' ? 'thiefs-gloves' : 'gunblade'))).toBe(true);
     });
   }
   it('running restore rejects free detachment, cross-unit combining, non-equipment mutation and illegal suffixes', () => {
@@ -321,9 +356,9 @@ describe('T12 latest assets survive death, settlement and upgrades', () => {
       state = accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col:i%7,row:i===0?4:7}}));
     state = accepted(startMatchCombat(state));
     let budget=1201;
-    while(state.phase==='combat' && !state.combat!.units.some(u=>u.team==='player'&&u.hp===0) && budget-->0) state=stepMatch(state).state;
+    while(state.phase==='combat' && !state.combat!.units.some(u=>u.team==='player'&&u.hp===0&&isSellableUnit(u.definitionId)&&state.preparation.units.some(p=>p.id===u.id)) && budget-->0) state=stepMatch(state).state;
     expect(state.phase).toBe('combat');
-    const dead=state.combat!.units.find(u=>u.team==='player'&&u.hp===0)!;
+    const dead=state.combat!.units.find(u=>u.team==='player'&&u.hp===0&&isSellableUnit(u.definitionId)&&state.preparation.units.some(p=>p.id===u.id))!;
     expect(dead).toBeDefined();
     let changed=accepted(equipItem(state,acquired.itemIds[0],dead.id,0));
     changed=accepted(equipItem(changed,acquired.itemIds[1],dead.id,0));
@@ -381,25 +416,34 @@ describe('T12 latest assets survive death, settlement and upgrades', () => {
 
 
 describe('T12 supply choice input', () => {
+  // The public route to the 4-4 supply plays one round per case (each fits the default timeout under parallel load);
+  // a filtered case replays the earlier rounds first. Only the acquisition stays in the hook.
+  const ROUTE = ['3-2', '3-3', '3-4', '3-5', '3-6', '3-7', '4-1', '4-2', '4-3', '4-4'];
+  let acquired: ReturnType<typeof publicInventory> | undefined, route: MatchState | undefined;
   let supplyInput: { acquired: ReturnType<typeof publicInventory>; state: MatchState } | undefined;
-  beforeAll(() => {
-    const acquired=publicInventory(['gloves','gloves'],false,9);let state=acquired.state;
-    while(state.roundDefinitionId!=='4-4'){
+  beforeAll(() => { acquired = publicInventory(['gloves','gloves'],false,9); });
+  afterAll(() => { acquired = undefined; route = undefined; supplyInput = undefined; });
+  const routeTo = (roundId: string): MatchState => {
+    let state = route ?? acquired!.state;
+    for (let budget = 0; state.roundDefinitionId !== roundId; budget++) {
+      expect(budget).toBeLessThan(ROUTE.length);
       state=resolvePublicEquipmentChoices(state);
       if(state.phase==='preparation'){
         for(const [i,u]of state.preparation.units.filter(u=>u.team==='player').sort((a,b)=>b.starLevel-a.starLevel).slice(0,state.level).entries())state=accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col:[1,3,5,0,6,2,4][i],row:7}}));
         state=finishPublicEquipmentBattle(state);
       }
       state=resolvePublicEquipmentChoices(state);state=accepted(nextRound(state,state.round));
+      route = state;
     }
-    supplyInput=prepareInput({ acquired, state });
-  });
-  afterAll(() => { supplyInput = undefined; });
+    return state;
+  };
+  for (const roundId of ROUTE) it(`public route reaches ${roundId}`, () => { expect(routeTo(roundId).roundDefinitionId).toBe(roundId); });
   it('T12 supply choice permits fresh component transactions and single-save continuation',()=>{
-    const input=copyInput(supplyInput!),acquired=input.acquired;let state=input.state;
+    supplyInput ??= prepareInput({ acquired: acquired!, state: routeTo('4-4') });
+    const input=copyInput(supplyInput),acquiredInput=input.acquired;let state=input.state;
     expect(state.pendingChoice!.kind).toBe('component');
-    state=accepted(equipItem(state,acquired.itemIds[0],'unit-1',0));restored(state);
-    state=accepted(equipItem(state,acquired.itemIds[1],'unit-1',1));
+    state=accepted(equipItem(state,acquiredInput.itemIds[0],'unit-1',0));restored(state);
+    state=accepted(equipItem(state,acquiredInput.itemIds[1],'unit-1',1));
     deepStrictEqual(resolvePublicEquipmentChoices(restored(state)), resolvePublicEquipmentChoices(state));
   });
 });

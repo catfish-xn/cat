@@ -65,10 +65,10 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
     expect(api.stepMatch(state)).toEqual({ state, events: [] });
     if (roundId === '6-7') {
       expect(state.phase).toBe('gameOver');
-      // Seed 2192 (v22: the public route moved off seed 42's crab opening) after the independent
-      // additive bonus stream: both literal-table BigInt oracles (epic-loot-oracle.cjs and
-      // m5/oracle.g2.cjs) give this order.
-      expect(receipts.map(r => r.payload)).toEqual(independentLootPlan(2192,38).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
+      // Seed 2423 (v23: the public Herald route's crab-free seed with no opening encounter under fmix32; 42 now
+      // draws golden-gala and 2192 loot-subscription) after the independent additive bonus stream: both literal-table
+      // BigInt oracles (epic-loot-oracle.cjs and m5/oracle.g2.cjs) give this order.
+      expect(receipts.map(r => r.payload)).toEqual(independentLootPlan(2423,38).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
     }
   });
 });

@@ -1,4 +1,13 @@
+import { AUGMENT_BATCH4_API_NAMES } from './augment-pool-batch4';
+import { AUGMENT_BATCH4_B4XP_API_NAMES, AUGMENT_BATCH4_B4XP_NODE_BANS } from './augment-pool-batch4-b4xp';
+import { AUGMENT_BATCH4_B4REROLL_API_NAMES, AUGMENT_BATCH4_B4REROLL_NODE_BANS } from './augment-pool-batch4-b4reroll';
+import { AUGMENT_BATCH4_B4COMBAT_API_NAMES, AUGMENT_BATCH4_B4COMBAT_NODE_BANS } from './augment-pool-batch4-b4combat';
+import { AUGMENT_BATCH2_API_NAMES } from './augment-pool-batch2';
+import { AUGMENT_BATCH1_API_NAMES } from './augment-pool-batch1';
+import { AUGMENT_BATCH3_API_NAMES, AUGMENT_BATCH3_NODE_BANS } from './augment-pool-batch3';
+import { AUGMENT_BATCH3_XP_API_NAMES, AUGMENT_BATCH3_XP_NODE_BANS } from './augment-pool-batch3-xp';
 import { freezeContent } from './freeze';
+import { AUGMENT_STAGE_BANS } from './augment-stage-bans';
 import { AUGMENT_ASSOCIATED_TRAITS, AUGMENT_MUTUALLY_EXCLUSIVE } from './augment-offer-source';
 
 /**
@@ -7,6 +16,14 @@ import { AUGMENT_ASSOCIATED_TRAITS, AUGMENT_MUTUALLY_EXCLUSIVE } from './augment
  * so pool expansion only adds a row here.
  */
 export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeContent({
+  ...AUGMENT_BATCH1_API_NAMES,
+  ...AUGMENT_BATCH2_API_NAMES,
+  ...AUGMENT_BATCH3_API_NAMES,
+  ...AUGMENT_BATCH4_B4COMBAT_API_NAMES,
+  ...AUGMENT_BATCH3_XP_API_NAMES,
+  ...AUGMENT_BATCH4_API_NAMES,
+  ...AUGMENT_BATCH4_B4XP_API_NAMES,
+  ...AUGMENT_BATCH4_B4REROLL_API_NAMES,
   sisters:'TFT13_TeamupAugment_Sisters', mentorship:'TFT13_TeamupAugment_Mentorship', reunion:'TFT13_TeamupAugment_Reunion',
   geniuses:'TFT13_TeamupAugment_Geniuses', menaces:'TFT13_TeamupAugment_Menaces', 'unlikely-duo':'TFT13_TeamupAugment_UnlikelyDuo',
   'all-for-one-i':'TFT_Augment_AllForOneI', 'all-for-one-ii':'TFT_Augment_AllForOneII', 'trifecta-i':'TFT_Augment_Trifecta1',
@@ -38,7 +55,7 @@ export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeCo
  * v22 offer rules (user approval 2026-10-23; docs/S13_RULES_GAP.md P decisions "强化选择过滤"):
  * - traitFilterNodes: an augment with AssociatedTraits is offered only while a fielded player unit carries one of them,
  *   read from the board when the node opens and reused by that node's rerolls. 2-1 is never tailored to the comp.
- * - nodeBans: 14.24 notes — Black Rose emblem/crown never at 2-1.
+ * - nodeBans: 14.24 notes — Black Rose emblem/crown never at 2-1; v23 candidate: every 14.24 stage tag (augment-stage-bans.ts, P).
  * - crossPlayerExclusive: once another live player owns one member, the others are not offered (14.24 notes).
  * - onePerMatch: offered to at most one live player per match (14.24 notes: "offered", not "taken").
  * - mutuallyExclusive: 14.24 MutuallyExclusiveItems, applied (symmetrically) against the player's own augments.
@@ -50,7 +67,7 @@ export const AUGMENT_OFFER_RULES = freezeContent({
   traitFilterNodes:['3-2','4-2'],
   traitFilter:'any-associated-trait-on-a-fielded-player-unit-including-emblems-snapshot-at-open',
   seen:'initial-and-reroll-results-excluded-for-the-rest-of-the-match',
-  nodeBans:{TFT13_Augment_CabalCrest:['2-1'], TFT13_Augment_CabalCrown:['2-1']},
+  nodeBans:{...AUGMENT_BATCH4_B4COMBAT_NODE_BANS,...AUGMENT_BATCH4_B4REROLL_NODE_BANS, ...AUGMENT_STAGE_BANS, ...AUGMENT_BATCH4_B4XP_NODE_BANS, TFT13_Augment_CabalCrest:['2-1'], TFT13_Augment_CabalCrown:['2-1'], ...AUGMENT_BATCH3_XP_NODE_BANS, ...AUGMENT_BATCH3_NODE_BANS},
   crossPlayerExclusive:[['TFT13_Augment_Family','TFT13_Augment_PrimeCarry']],
   onePerMatch:['TFT13_Augment_Chembaron'],
   externalScope:'live-seats-other-than-self',

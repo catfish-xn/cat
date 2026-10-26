@@ -4,6 +4,25 @@ import type { CombatInputBasis } from './combat-input';
 import type { StrategySnapshot } from './strategy-types';
 import { EMPTY_TRIGGER_LEDGER } from './m8/triggers';
 
+/** Authenticate complete ability contributions AND their display/removal anchors.
+ * The independently replayed trajectory binds coefficients, refresh/stack history,
+ * effect offsets and application IDs; candidate source labels never grant trust.
+ * Channel/redirect activities retain their separate complete replay validation. */
+export function validateAbilityStatusFacts(combat: CombatState, replay: ReturnType<typeof createRestoreCombatReplay>,
+  same: (a: unknown, b: unknown) => boolean): ReadonlySet<string> {
+  const expected = replay.atSaveTick(), keys = new Set<string>();
+  if (expected.tick !== combat.tick) throw new Error('Invalid Match save: ability status fact tick');
+  for (const unit of combat.units) {
+    const settled = expected.units.find(u => u.id === unit.id);
+    const contributions = unit.mechanismState?.statuses.flatMap(g => g.contributions).filter(c => c.source.sourceKind === 'ability') ?? [];
+    if (!settled || !same(contributions, settled.abilityContributions)
+      || !same(unit.statuses?.filter(s => s.source.sourceKind === 'ability' && !s.activity) ?? [], settled.abilityStatuses))
+      throw new Error('Invalid Match save: ability status binding facts');
+    for (const c of settled.abilityContributions) keys.add(c.key);
+  }
+  return keys;
+}
+
 /** Tasks and one-time flags are historical facts, including after source death,
  * cleanse or Forge revival. Reconstruct from the authenticated opening; no
  * candidate kind/amount/flag decides which facts must exist. Never commit the
@@ -36,6 +55,14 @@ export function validateTaskAndSummonFacts(combat: CombatState, basis: CombatInp
       throw new Error('Invalid Match save: Sion binding facts');
     if (unit.definitionId !== 'g23-sion' && unit.runtime?.buddyTriggered !== settledUnit.buddyTriggered)
       throw new Error('Invalid Match save: buddy trigger binding facts');
+    // Presence, death-derived clock and the one-time return are replay facts,
+    // including on units that have never died or cannot hold a Sion revival.
+    if (!same(unit.g23Sion ?? null, settledUnit.g23Sion ?? null))
+      throw new Error('Invalid Match save: Sion revive binding facts');
+    // Bind every stun contribution (also plain stuns) so either adding or
+    // removing knockup, or forging its source, cannot change the saved control.
+    if (!same(unit.mechanismState?.statuses.filter(s => s.kind === 'stun') ?? [], settledUnit.stunStatuses))
+      throw new Error('Invalid Match save: stun/knockup binding facts');
     // Reave lives on the target, independently of the caster's remaining queue.
     // Compare zero/absent values too, including targets never hit by a curse.
     if ((unit.g22?.reaveBps ?? 0) !== settledUnit.reaveBps

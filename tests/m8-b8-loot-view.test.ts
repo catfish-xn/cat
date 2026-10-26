@@ -7,9 +7,10 @@ import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} f
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-// v22: seed 10 draws the crab-rave opening (crabs carry the wolf orbs); seed 2412 has no opening
-// encounter and the same 3-7 shape: one Zeri sharing an orb with other entries, four components, a reforger.
-const prepared=fillBench(await publicPrefix('3-7',2412),['zeri']),live=battle(prepared),frozen=plan(prepared);
+// v22: seed 10 draws the crab-rave opening (crabs carry the wolf orbs); v22's seed 2412 draws Prismatic Prelude
+// under v23 fmix32. Seed 3155 has no opening encounter and the same 3-7 shape: one Akali sharing an orb with
+// other entries, components and a full bench.
+const prepared=fillBench(await publicPrefix('3-7',3155),['akali']),live=battle(prepared),frozen=plan(prepared);
 const hero=frozen.encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
 function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);expect(api.readLootView(s)).toEqual(v);expect(api.readLootView(restoreMatch(saved))).toEqual(v);expect(serializeMatch(s)).toBe(saved);
  expect(Object.isFrozen(v)&&Object.isFrozen(v.revealedDrops)&&Object.isFrozen(v.revealedOrbs)).toBe(true);
@@ -20,6 +21,8 @@ function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);
 function hiddenIndependent(s:MatchState,mutate:(s:any)=>void){const raw=JSON.parse(serializeMatch(s));mutate(raw);expect(api.readLootView(raw)).toEqual(api.readLootView(s));}
 beforeAll(async () => { await terminalPreparation('loris', 1); });
 beforeAll(async () => { await terminalPreparation('rell', 1); });
+// The hero case's seed-2146 terminal prefix is warmed in its own hook too, so that case stays far inside the default timeout.
+beforeAll(async () => { await terminalPreparation(null, 1, 7, 2146); });
 describe('B8 readLootView over real randomized public routes',()=>{
  it('exposes no future orb content and hidden payloads cannot leak before a death',()=>{
   const v=view(prepared);expect(v).toEqual({roundId:'3-7',revealedDrops:[],revealedOrbs:[],pendingClaims:[],canContinue:false,reason:'unsettled-round',pendingChoice:null});
@@ -56,8 +59,12 @@ describe('B8 readLootView over real randomized public routes',()=>{
   const ids=new Set(frozen.encounterPlan.drops.map(d=>d.dropId));expect(v.revealedDrops.map(d=>d.receiptId).sort()).toEqual(s.m8.loot.receipts.filter(r=>ids.has(r.dropId)).map(r=>r.receiptId).sort());
   const next=accepted(api.nextRound(s,17));expect(view(next).revealedDrops).toEqual([]);expect(view(next).revealedOrbs).toEqual([]);
  });
- it.each([{name:'two source deaths including a hero',keep:'maddie',col:2,row:7,deaths:2},{name:'only component carrier',keep:'urgot',col:0,row:4,deaths:1},{name:'tool carrier',keep:'loris',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths})=>{
-  const terminal=battle(await terminalPreparation(keep,col,row)),s=terminal.ended,v=view(s);expect(s.phase).toBe('gameOver');
+ // v23: seed 2253 no longer fields Maddie and every hero-carrier kill there also kills the first-orb anvil carrier;
+ // crab-free seed 2146 (3 HP / 97 lost) has Maddie at (2,7) killing the sword and Ezreal carriers only.
+// Tool carrier: Leona (was Loris) at (0,7). After the xp/batch-3 merge seed 2253's augments let a lone Loris there
+// clear all six razorbeaks; Leona kills the same r01 rod and r02 reforger carriers and dies.
+ it.each([{name:'two source deaths including a hero',keep:'maddie',col:2,row:7,deaths:2,seed:2146},{name:'only component carrier',keep:'urgot',col:0,row:4,deaths:1},{name:'tool carrier',keep:'leona',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths,seed})=>{
+  const terminal=battle(await terminalPreparation(keep,col,row,seed)),s=terminal.ended,v=view(s);expect(s.phase).toBe('gameOver');
   expect(s.combat!.neutralReceipts!.deaths).toHaveLength(deaths);
   expect(v).toMatchObject({canContinue:false,reason:'game-over',pendingClaims:[],pendingChoice:null});
   const killed=new Set(s.combat!.neutralReceipts!.deaths.map(d=>d.unitId));

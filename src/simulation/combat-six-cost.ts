@@ -49,7 +49,7 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
   if(u.definitionId==='warwick'){frenzy(ctx,u);return [u.id];}
   if(u.definitionId==='viktor'){
     const targets=enemies(u,ctx.units),ticks=Math.round(variable(u,'StunSeconds')*20);
-    for(const t of targets)applyStatus(t,origin(u),'stun',0,ticks,ctx.tick,ctx.events);
+    for(const t of targets)applyStatus(t,origin(u),'stun',0,ticks,ctx.tick,ctx.events,false,'',undefined,true); // knocks up every enemy
     s.storm={due:ctx.tick+ticks,targetIds:targets.map(t=>t.id),actionSeq:seq};
     ctx.events.push({type:'chaosEnergyChanged',tick:ctx.tick,unitId:u.id,before:s.energy,after:0});s.energy=0;
     return targets.map(t=>t.id);

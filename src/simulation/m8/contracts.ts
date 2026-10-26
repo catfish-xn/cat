@@ -173,6 +173,8 @@ export interface StatusApplication {
   readonly modifier?: StatModifier;
   readonly damageFilter: DamageFilter | null;
   readonly onEnd: StatusEndEffects | null;
+  /** Stun only: a knock-up (击飞). The rules treat it exactly as a stun; views draw the target airborne while it lasts. */
+  readonly knockup?: true;
 }
 export interface StatusContribution extends EffectIdentity {
   readonly application: StatusApplication;
@@ -491,11 +493,11 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 12;
-  readonly rulesVersion: 's13-g2-3-v22-online-rules';
-  readonly contentVersion: 's13-14.24b-g2-3-v22-online-rules';
+  readonly rulesVersion: 's13-g2-3-v23-online-rules';
+  readonly contentVersion: 's13-14.24b-g2-3-v23-online-rules';
   readonly contentDigest: string;
   readonly saveFormatVersion: 8;
-  readonly replayFormatVersion: 7;
+  readonly replayFormatVersion: 8;
   readonly commandProtocolVersion: 7;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;

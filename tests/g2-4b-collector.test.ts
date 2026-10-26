@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {reachRound,accepted} from './match-helpers';
+import {quietAugmentRound,accepted} from './match-helpers';
 import {deployMatchUnit,equipItem,startMatchCombat,stepMatch} from '../src/simulation/match';
 import {grantMechanicItem,grantMechanicUnit} from '../src/simulation/seat-mechanics';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
@@ -12,8 +12,10 @@ vi.setConfig({ testTimeout: 20_000 });
 
 it('executes through real combat, settles only successful independent rolls, and restores exact gold authority',()=>{
  let executions=0,awards=0;
- for(const seed of [42,1,7,19]){
-  let entered=reachRound('2-1',true,seed);
+ // After the v23 integration merge seed 7 offers no quiet 2-1 card even with the three free rerolls (nor does 8); 9 is the next.
+ for(const seed of [42,1,9,19]){
+  // v23 batch 3: seed 7's first card became replay-validated Wealthy Rehab; pick a quiet card so the item gold validator is the one that rejects.
+  let entered=quietAugmentRound(seed);
   for(let n=0;n<9;n++){const unit=grantMechanicUnit(entered,{receiptId:`singed-${n}`,source:'test',definitionId:'singed'});if(!unit.ok)throw Error(unit.reason);entered=unit.state;}
   const singed=entered.preparation.units.find(u=>u.team==='player'&&u.definitionId==='singed'&&u.starLevel===3)!;
   const deployed=accepted(deployMatchUnit(entered,singed.id,{kind:'board',cell:{col:3,row:4}}));

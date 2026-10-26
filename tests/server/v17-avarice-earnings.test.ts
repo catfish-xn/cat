@@ -7,13 +7,13 @@
  * the three gold items (Mogul's Mail, the Collector, Gambler's Blade), granted through the legal test entry
  * (tests/helpers/grant-test-items.ts, docs/TEST_GOLD_ITEMS.md), so item gold and High Roller gold stack with avarice.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect } from 'vitest';
 import type { Room } from '../../src/server/room/room';
 import type { RoomState } from '../../src/server/room/types';
 import type { CombatState } from '../../src/simulation/combat-types';
 import { grantTestItems, TEST_GOLD_ITEMS } from '../helpers/grant-test-items';
-import { claimAllOrbs, runUntil } from './helpers';
-import { avariceRoom, fieldBench, HUMANS, levelForBench, nextBattle, pvpBattleOf, seatOf, spendGold } from './v17-avarice-helpers';
+import { claimAllOrbs } from './helpers';
+import { fieldBench, HUMANS, levelForBench, pvpBattleOf, seatOf, spendGold } from './v17-avarice-helpers';
 
 /**
  * The earning seat. Under seed 42 with the v17 orb combinations s2 fights a bot as side A at 4-6, PvE at 4-7 and the
@@ -22,8 +22,8 @@ import { avariceRoom, fieldBench, HUMANS, levelForBench, nextBattle, pvpBattleOf
  */
 const EARNER = 's2';
 
-const disposers: (() => void)[] = [];
-afterEach(() => { for (const dispose of disposers.splice(0)) dispose(); });
+import { avariceRoute, nextBattleRoute } from './avarice-route';
+import { registerSlowRoute, routeUntil } from './slow-route';
 
 /** Buys Sevika (levelling to 8 for the 5-cost odds) and puts her on the board, all through the room. */
 function fieldSevika(room: Room, seatId: string): void {
@@ -71,8 +71,8 @@ const highRoller = (combat: CombatState, team: 'player' | 'enemy') =>
   combat.units.filter(unit => unit.team === team).reduce((sum, unit) => sum + (unit.g23?.highRoller ?? []).reduce((total, roll) => total + roll.gold, 0), 0);
 
 describe('v17 avarice: in-combat earnings on its team', () => {
-  it('the room samples only the bank; the rules add the team\'s earnings once; the settlement pays them once', () => {
-    const { room, clock } = avariceRoom(dispose => disposers.push(dispose), opened => { fieldSevika(opened, EARNER); grantGoldItems(opened, EARNER); });
+  registerSlowRoute('the room samples only the bank; the rules add the team\'s earnings once; the settlement pays them once', function* (env) {
+    const { room, clock } = yield* avariceRoute(env, opened => { fieldSevika(opened, EARNER); grantGoldItems(opened, EARNER); });
     const holder = seatOf(room.state, EARNER).match.preparation.units.find(unit => unit.id === seatOf(room.state, EARNER).match.anomalyBinding!.unitId)!;
     expect(holder.location.kind).toBe('board');
     expect(seatOf(room.state, EARNER).match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === holder.id).map(item => item.definitionId).sort())
@@ -89,13 +89,13 @@ describe('v17 avarice: in-combat earnings on its team', () => {
     const fieldIdle = () => { for (const seatId of HUMANS) if (seatId !== EARNER) { levelForBench(room, seatId, 0); fieldBench(room, seatId); } };
     for (let roundName = '4-6'; checked.length < 2 || paid.highRoller === 0 || !kinds.has('gamblers') || !kinds.has('collector') || !sideBAgainstAvarice;) {
       expect(checked.length).toBeLessThan(20);
-      if (checked.length) roundName = runUntil(room, clock, state => { claimAllOrbs(room); fieldIdle(); return state.phase === 'battle' && state.roundName !== checked.at(-1)!.roundId; }).roundName;
-      else nextBattle(room, clock, roundName);
+      if (checked.length) roundName = (yield* routeUntil(room, clock, state => { claimAllOrbs(room); fieldIdle(); return state.phase === 'battle' && state.roundName !== checked.at(-1)!.roundId; })).roundName;
+      else yield* nextBattleRoute(room, clock, roundName);
       const own = pvpBattleOf(room.state, EARNER);
       if (own?.battle.b.seatId === EARNER && (HUMANS as readonly string[]).includes(own.battle.a.seatId)) sideBAgainstAvarice = true;
       clock.advance(400);
       const gold = spendGold(room, EARNER);
-      runUntil(room, clock, state => state.roundName === roundName && state.phase !== 'battle');
+      yield* routeUntil(room, clock, state => state.roundName === roundName && state.phase !== 'battle');
       expect(room.state.fault).toBeNull();
       const record = seatOf(room.state, EARNER).match.roundResults.at(-1)!;
       expect(record.roundId).toBe(roundName);
@@ -131,11 +131,11 @@ describe('v17 avarice: in-combat earnings on its team', () => {
     expect(mogulStacks).toBeGreaterThan(0);
     // A later round pays none of them again.
     clock.advance(1);
-    runUntil(room, clock, state => { fieldIdle(); return state.phase === 'preparation' && state.roundName !== checked.at(-1)!.roundId; });
+    yield* routeUntil(room, clock, state => { fieldIdle(); return state.phase === 'preparation' && state.roundName !== checked.at(-1)!.roundId; });
     for (const entry of checked) { expectPaidOnce(room, entry.roundId, entry.highRoller); expectItemGoldPaidOnce(room, entry.roundId, entry.items); }
     // A re-pay under a later round would carry the same receipt id: across all rounds every earnings receipt id is unique.
     const ids = (seatOf(room.state, EARNER).match.seatMechanics?.receipts ?? []).filter(receipt => receipt.source === 'high-roller' || receipt.source === 'g24-item-gold').map(receipt => receipt.receiptId);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.length).toBeGreaterThanOrEqual(paid.items + checked.filter(entry => entry.highRoller).length);
-  }, 180_000);
+  });
 });

@@ -769,14 +769,16 @@ export const OPENING_ENCOUNTERS = freezeContent([
 ] as const);
 export type OpeningEncounterId = typeof OPENING_ENCOUNTERS[number]['id'];
 export const OPENING_ENCOUNTER_CONFIG = freezeContent({
-  version: 'opening-encounters-14.24b-batch-a-v1',
+  version: 'opening-encounters-14.24b-batch-a-v2',
   batchA: OPENING_BATCH_A,
   batchB: OPENING_BATCH_B_POLICY,
   trainerGolems: TRAINER_GOLEMS_POLICY,
   entries: OPENING_ENCOUNTERS,
+  // v2 keeps the stream name: the name is only the FNV salt, and the version bump above is what makes
+  // every v1 context fail `configVersion` instead of silently re-deriving a different encounter.
   selectionStream: 'opening-encounter-v1/select',
   derivation: 'uint32(matchSeed XOR fnv1a32-utf16(streamName))',
-  selection: 'one-lcg32-v1-word/floor(word*10000/4294967296)/fixed-cumulative-order',
+  selection: 'murmur3-fmix32-word/floor(word*10000/4294967296)/fixed-cumulative-order',
   sharedEffectStream: 'opening-encounter-v1/shared/<effectKey>',
   seatEffectStream: 'opening-encounter-v1/seat/<seatId>/<effectKey>',
   displayStream: 'opening-encounter-v1/display',

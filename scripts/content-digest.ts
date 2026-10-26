@@ -13,7 +13,7 @@ import { G23_ANOMALY_SOURCE } from '../src/simulation/content/g2-3-anomaly-sourc
 import { G24_ARTIFACT_SOURCE } from '../src/simulation/content/g2-4-artifact-source';
 import { AUGMENT_OFFER_POLICY, AUGMENT_BRONZE_THRESHOLDS, AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from '../src/simulation/carousel-policy';
-import { RULES_GAP_MANIFEST } from '../src/simulation/content/rules-manifest';
+import { RULES_GAP_MANIFEST } from './augment-content-archive';
 import { EQUIPMENT_OPERATION_RULES_VERSION, MULTIPLAYER_OPERATION_RULES } from '../src/simulation/operation-policy';
 import { M8_VERSION } from '../src/simulation/m8/version';
 import { LOOT_RUNTIME_REVISION, LOOT_FREEZE_ALGORITHM, LOOT_POLICY_VERSION, ORB_BOXES, EPIC_LOOT } from '../src/simulation/content/loot';
@@ -35,7 +35,7 @@ import { ROUND_CATALOG, ROUND_SEMANTIC_NODES } from '../src/simulation/content/r
 import { SOURCE_MANIFEST } from '../src/simulation/content/source-manifest';
 import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
-import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
+import { ARCHIVED_AUGMENT_DEFINITIONS as AUGMENT_DEFINITIONS } from './augment-content-archive';
 import { ANOMALY_DEFINITIONS, ANOMALY_OFFER_POLICY } from '../src/simulation/content/anomalies';
 import { ORB_RULES, ORB_STAGE_PLAN } from '../src/simulation/content/orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from '../src/simulation/content/consumables';

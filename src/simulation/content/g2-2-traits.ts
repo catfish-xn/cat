@@ -29,7 +29,7 @@ export const G22_CONVENTIONS = freezeContent({
   revision:'g2-2-finite-v1', blockedForms:['swain','jayce','gangplank'],
   conqueror:'base AD/AP only; no chests, conquest progression or chest scaling',
   academy:{sponsored:['archangel','deathblade','warmog'],grants:'none',selection:'fixed project pool',stacking:'one bonus per holder'},
-  scrap:{selection:'component instances by id; lexicographically first legal ordinary recipe respecting unique/slot rules',lucky:'not modeled',radiant:'excluded'},
+  scrap:{selection:'component instances by id; lexicographically first legal ordinary recipe respecting unique/slot rules',lucky:'tier 6+: scrap-lucky-v1 (content/scrap-lucky.ts)',radiant:'tier 9: scrap-lucky-v1 temporary radiant mapping'},
   emissary:{ambessa:'2 resist per prior PvP victory, capped at 7; no distinct-opponent identity in solo inputs',garen:'12% actual frozen opening max HP after all other opening contributions; broadcast once, no feedback'},
   geometry:'finite hex paths; no animation travel time except source Vex DOTDuration; detailed per-skill audit',
 });

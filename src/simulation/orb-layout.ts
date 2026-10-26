@@ -100,7 +100,10 @@ function replayUncached(seed: number, ordinal: number): OrbLayoutLedger {
 export function restoreOrbLayout(value: unknown, parsedJsonInput = false): OrbLayoutLedger {
   if (!value || typeof value !== 'object') throw new RangeError('Invalid orb layout');
   const input = value as OrbLayoutLedger;
-  if (generatedLayouts.has(input)) return input;
+  // Parsed admission always checks the complete layout, even when decoding
+  // reused an immutable constructor representation. Internal generated callers
+  // can still reuse their own constructor proof within the current operation.
+  if (generatedLayouts.has(input) && !parsedJsonInput) return input;
   if (!Number.isSafeInteger(input.throughRoundOrdinal) || input.throughRoundOrdinal < 0 || input.throughRoundOrdinal > ROUND_CATALOG.length)
     throw new RangeError('Invalid orb layout');
   const expected = replay(input.seed, input.throughRoundOrdinal);

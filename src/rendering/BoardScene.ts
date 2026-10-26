@@ -1,4 +1,7 @@
+import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
 import { combatEquipmentDisplay } from '../presentation/battle-equipment';
+import { freeRerollsAvailable } from '../simulation/free-rerolls';
+import { xpPurchaseAmount, xpPurchaseCost } from '../simulation/augment-xp';
 import { createMelSaveFeedback } from './mel-save-feedback';
 import Phaser from 'phaser';
 import { createConquerorFlag } from './conqueror-flag';
@@ -10,7 +13,8 @@ import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToN
 import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
-import { asDisplayEvents, type DisplayCombat, type SceneCombatEvent } from '../presentation/combat-display';
+import { asDisplayEvents, type DisplayCombat, type DisplayCombatEvent, type SceneCombatEvent } from '../presentation/combat-display';
+import { DISPLACEMENT_SLIDE_2D, isDisplacement, unitControl, type ControlKind } from '../presentation/control-display';
 import { boardFeedActive, boardFeedScreenBox, boardFeedUnitAt, boardFeedWalkToOrb, provideBoardControls, publishPlayerSaved, publishBoardFrame, publishCombatEvents, type BoardControls, type BoardDropHint, type BoardFrame, type BoardMechanics } from './board-feed';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
@@ -18,7 +22,7 @@ import { MatchSession } from './match-session';
 import { InputRouter, type Gesture } from './input-router';
 import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
-import { MatchApplication } from '../m6/application';
+import { createSoloApplication } from '../m6/application-loader';
 import { createGameClient, isOnlineMode } from './online/mode';
 import { d14UnitNotes, displayStarLevel, fourStarBaseStats, starText } from '../presentation/d14-display';
 import { mountOnlineBoardFrame, type OnlineBoardMounts } from './app-shell';
@@ -122,6 +126,9 @@ export class BoardScene extends Phaser.Scene {
   private views = new Map<string, UnitView>();
   private tokens = new Map<string, Phaser.GameObjects.Container>();
   private renderedCells = new Map<string, string>();
+  /** 眩晕 vs 击飞 as drawn (control-display.ts), for the 2D pieces and the 3D feed; cleared with each shown combat. */
+  private controlCombat: unknown = null;
+  private readonly controls = new Map<string, ControlKind>();
   private effects = new Set<Phaser.GameObjects.GameObject>();
   private namedObjects = new Map<string, Phaser.GameObjects.Text | Phaser.GameObjects.Container>();
   private draggingId: string | null = null;
@@ -306,7 +313,7 @@ export class BoardScene extends Phaser.Scene {
         this.releaseOrb(orbId);
         this.setStatus(`法球未能排队 · ${ORB_FAILURE_TEXT[reason] ?? '已放回，可再次点击领取'}`);
       },
-    }, mounts) : new MatchApplication(this.session, {
+    }, mounts) : createSoloApplication(this.session, {
       replace: session => {
         this.melSave?.reset();
         this.clearCombatEffects(); this.session = session; this.selectedId = null;
@@ -478,7 +485,8 @@ export class BoardScene extends Phaser.Scene {
    */
   private watchSellZone(unit: Unit) {
     this.stopSellZone();
-    const hint = `松手出售 · +${getUnitSellPrice(unit)} 金币`;
+    const anvil = anvilInfo(unit.definitionId);
+    const hint = anvil ? anvilSellHint(anvil) : `松手出售 · +${getUnitSellPrice(unit)} 金币`;
     let marked: HTMLElement | null = null;
     const mark = (zone: HTMLElement | null) => {
       if (zone === marked) return;
@@ -494,11 +502,12 @@ export class BoardScene extends Phaser.Scene {
   private sell(id: string) {
     const summon = this.summonOf(id);
     if (summon) { this.setStatus(summon.kind === 'forge' ? '海克斯科技锻炉由杰斯召唤 · 不能出售' : '虚空生物由兹若特传送门召唤 · 不能出售'); return; }
+    const anvil = anvilInfo(this.state.units.find(unit => unit.id === id)?.definitionId ?? '');
     const result = this.session.sell(id);
     // A hover sale must also clear a different old selection: holding E must
     // never unexpectedly sell that unit once the hovered token disappears.
     if (result.ok) this.selectedId = null;
-    this.command(result, '出售成功 · 金币已到账');
+    this.command(result, anvil ? `已打开${anvil.name} · 在商店栏 30 秒内选择一件` : '出售成功 · 金币已到账');
   }
 
   private setStatus(message: string) { this.status.setText(message); this.strategyPanel?.status(message); }
@@ -1001,8 +1010,9 @@ export class BoardScene extends Phaser.Scene {
     const canContinue = readLootView(match).canContinue;
     this.continueButton.setData('round', match.round).setAlpha(canContinue ? 1 : 0.4);
     if (canContinue) this.continueButton.setInteractive({ useHandCursor: true }); else this.continueButton.disableInteractive();
-    this.rerollButton.setAlpha(operable ? 1 : 0.4);
-    this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`).setAlpha(operable && threshold !== null ? 1 : 0.4);
+    const freeRerolls = freeRerollsAvailable(match);
+    this.rerollButton.setText(freeRerolls > 0 ? `D · 免费刷新 · 剩 ${freeRerolls} 次` : `D · 刷新 · ${MATCH_RULES.rerollCost} 金币`).setAlpha(operable ? 1 : 0.4);
+    this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${xpPurchaseCost(match.augments, match.round)} 金币 → ${xpPurchaseAmount(match.augments, match.round)} 经验`).setAlpha(operable && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {
       const offer = match.shop.slots[slot], button = this.shopButtons[slot];
       const frame = this.shopFrames[slot].clear().setVisible(false);
@@ -1037,13 +1047,16 @@ export class BoardScene extends Phaser.Scene {
     if (!selected) this.selectedId = null;
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
     const displayed = this.session.phase === 'preparation' || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
-    if (displayed) {
+    const anvil = displayed ? anvilInfo(displayed.definitionId) : null;
+    if (displayed && anvil) this.selectionLabel.setText(`${anvil.name}\n${anvil.description}\n拖到商店或按 E：${anvil.sellText}`);
+    else if (displayed) {
       const definition = getDefinition(displayed), star = displayStarLevel(this.session.state, displayed);
       // v16 Ultimate Hero: the rules' certified 4★ base (physically 3★, so the sell price stays the rules' 3★ price).
       const stats = (star === 4 ? fourStarBaseStats(displayed.definitionId) : null) ?? getUnitStats(displayed.definitionId, displayed.starLevel);
       this.selectionLabel.setText(`${displayUnitName(displayed.definitionId)} ${starText(star)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}${star === 4 ? ' · 终极英雄' : ''}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币${star === 4 ? '（按物理 3 星）' : ''}`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
-    this.sellButton.setText(this.selectedId && selected ? `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
+    const selectedAnvil = selected ? anvilInfo(selected.definitionId) : null;
+    this.sellButton.setText(this.selectedId && selected ? selectedAnvil ? 'E · 打开武器库' : `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
     for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : this.previewHighlight.has(unit.id) ? 'target' : 'normal', unit.team);
   }
@@ -1227,6 +1240,7 @@ export class BoardScene extends Phaser.Scene {
    */
   private syncCombat() {
     const view = this.session.combatView, runtime = this.session.combatRuntime;
+    this.followControlCombat();
     if (!view) return;
     const combat: DisplayCombat & { readonly tick: number; readonly maxTicks: number } = runtime ?? view;
     for (const unit of this.state.units) {
@@ -1258,6 +1272,9 @@ export class BoardScene extends Phaser.Scene {
         this.renderedCells.set(unit.id, key);
       }
       this.views.get(unit.id)?.drawCombat(unit, runtime);
+      const control = unitControl(runtime, unit);
+      if (control) this.controls.set(unit.id, control); else this.controls.delete(unit.id);
+      this.views.get(unit.id)?.setControl?.(control);
     }
     this.timer.setText(`${(combat.tick * COMBAT_TICK_MS / 1000).toFixed(1)}s / ${(combat.maxTicks * COMBAT_TICK_MS / 1000).toFixed(0)}s`);
   }
@@ -1266,6 +1283,8 @@ export class BoardScene extends Phaser.Scene {
     const combat = this.session.combatView;
     if (!combat || !events.length) return;
     this.strategyPanel?.observeEvents(events);
+    this.followControlCombat();
+    this.skidDisplaced(asDisplayEvents(events));
     this.recentCombatEvents.push(...structuredClone(events));
     publishCombatEvents(() => asDisplayEvents(events));
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
@@ -1276,6 +1295,35 @@ export class BoardScene extends Phaser.Scene {
     this.fx.show(events, this.session.combatRuntime ?? combat);
     this.renderedCastCount += this.fx.casts - casts;
     if (!this.quietBoard()) this.feedback?.push(events, performance.now());
+  }
+  /**
+   * Forced moves (pulled, grabbed, knocked back) skid: syncCombat has just started the ordinary walk to the new cell,
+   * so this swaps it for a short ease-out slide with a dust streak on the floor. Reduced motion keeps the jump.
+   */
+  private skidDisplaced(events: readonly DisplayCombatEvent[]) {
+    if (reducedMotion()) return;
+    for (const event of events) {
+      if (!isDisplacement(event) || this.renderedCells.get(event.unitId) !== `${event.to.col},${event.to.row}`) continue;
+      const token = this.tokens.get(event.unitId), view = this.views.get(event.unitId);
+      if (!token?.visible || !view) continue;
+      const from = this.layout.center(event.from), to = this.layout.center(event.to);
+      this.tweens.killTweensOf(token); token.setPosition(from.x, from.y);
+      this.tweens.add({ targets: token, x: to.x, y: to.y, duration: DISPLACEMENT_SLIDE_2D.ms, ease: 'Cubic.easeOut' });
+      view.skid(to.x - from.x);
+      if (this.fx.drawn) {
+        const streak = this.add.graphics().setDepth(token.depth);
+        // Dust puffs along the floor, thicker toward where the skid stops.
+        for (let i = 1; i <= 5; i++) streak.fillStyle(0xd8c8a8, 0.08 + 0.06 * i).fillCircle(from.x + (to.x - from.x) * i / 6, from.y + (to.y - from.y) * i / 6 + PIECE_RADIUS * 0.55, 4 + 1.6 * i);
+        this.children.moveBelow(streak, token); // on the floor, under the piece that skids over it
+        this.fadeEffect(streak, DISPLACEMENT_SLIDE_2D.streakMs);
+      }
+    }
+  }
+  /** A different shown combat (a new round, or another seat's battle): no control carries over. */
+  private followControlCombat() {
+    const view = this.session.combatView, key = view ? `${view.combatId}` : null;
+    if (key === this.controlCombat) return;
+    this.controlCombat = key; this.controls.clear();
   }
   private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc | Phaser.GameObjects.Container, duration: number) {
     this.effects.add(effect);
@@ -1295,7 +1343,8 @@ export class BoardScene extends Phaser.Scene {
         x: token.x, y: token.y, alive: !fallen.has(id),
         benchSlot: bench.get(id) ?? null,
         // The 2D token hides at death (syncCombat); the 3D piece stays up for its death action.
-        visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id) })),
+        visible: (token.visible || fallen.has(id)) && token.alpha > 0, ...this.feedGear(id),
+        ...(this.controls.has(id) && this.session.combatView ? { control: this.controls.get(id)! } : {}) })),
       fighting: this.session.combatView !== null, dragging: this.draggingId,
       orbs: this.feedOrbs(),
       openedOrbs: grantedOrbIds(readOrbClaimReceipts(this.session.state)),
@@ -1356,7 +1405,7 @@ export class BoardScene extends Phaser.Scene {
       tokens: [...this.tokens].map(([id, token]) => ({ id, x: token.x, y: token.y, screenX: client(token).x, screenY: client(token).y,
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
-        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip,
+        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip, control: this.views.get(id)!.control,
         equipped: this.views.get(id)!.equipped, pendingEquipped: this.views.get(id)!.pendingEquipped, owner: this.equipmentOwner(id) })),
       loadoutTip: this.loadoutTip?.visible ? this.loadoutTip.text : '',
       health: meters('hp'), mana: meters('mana'),

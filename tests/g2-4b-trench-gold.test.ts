@@ -5,7 +5,7 @@ import {readG23Progress} from '../src/simulation/g2-3-state';
 import type {CombatEvent} from '../src/simulation/combat-types';
 import {expect,it} from 'vitest';
 import {reachRound,accepted} from './match-helpers';
-import {deployMatchUnit,equipItem,startMatchCombat,stepMatch,selectChoice,rerollAugment} from '../src/simulation/match';
+import {deployMatchUnit,equipItem,startMatchCombat,stepMatch,selectChoice} from '../src/simulation/match';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
@@ -13,13 +13,10 @@ vi.setConfig({ testTimeout: 20_000 });
 const items=['TFT_Item_Artifact_SuspiciousTrenchCoat','TFT7_Item_ShimmerscaleGamblersBlade','TFT4_Item_OrnnTheCollector'];
 function prepare(seed:number){
  let state=reachRound('2-1',false,seed);
- // Golden Gala forces gold at seed307. Under v22 augment flow (every shown card is never offered again) the two
- // public free card rerolls (slots 0, 1) now give not-today/mentorship-ii/spirit-link and Manaflow II is no longer
- // reachable. Mentorship II only buffs a unit adjacent to a higher-cost ally; Darius fights alone and his Trench
- // copies share his cost, so it stays inert like Manaflow II on the front row and the combat oracle is unaffected.
- for(const slot of [0,1]) {const c=state.pendingChoice!;state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));}
- const choice=state.pendingChoice!;expect(choice.offers).toContain('mentorship-ii');
- state=accepted(selectChoice(state,choice.choiceId,choice.generation,'mentorship-ii'));
+ // Automata Crest grants a bench champion/emblem; lone Darius activates no Automata trait or augment combat bonus.
+ const choice=state.pendingChoice!;expect(choice.offers).toContain('automata-crest');
+ state=accepted(selectChoice(state,choice.choiceId,choice.generation,'automata-crest'));
+ expect(state.augments.map(a=>a.definitionId)).toEqual(['automata-crest']);
  const owner=state.preparation.units.find(u=>u.team==='player')!;
  state=accepted(deployMatchUnit(state,owner.id,{kind:'board',cell:{col:3,row:4}}));
  expect(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').map(u=>u.id)).toEqual([owner.id]);
@@ -31,9 +28,7 @@ function prepare(seed:number){
 }
 
 it('real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts',()=>{
- // Seed 307 selects inert Mentorship II (v21 used front-row Manaflow II): the original Darius and copies all
- // attack, with positive Gambler payouts on both sides of the split and
- // two successful Collector executions by copies. No combat state is edited.
+ // Seed 307 keeps the exact independent Gambler/Collector receipt vector with the publicly offered Automata Crest.
  const {state,ownerId}=prepare(307);
  const equippedItems=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===ownerId);
  const gamblerId=equippedItems.find(i=>i.definitionId===items[1])!.id;

@@ -1,0 +1,603 @@
+/** Player-only 14.24 names/descriptions. Loaded on demand; never imported by the domain or server. */
+export const AUGMENT_POOL_TEXT: Readonly<Record<string, { readonly name: string; readonly description: string }>> = {
+  "coronation": {
+    "description": "获得1个【金铲铲冠冕】。【金铲铲冠冕】、【金锅锅冠冕】和【金锅铲冠冕】将为携带者提供额外的30%攻击速度、30%攻击力和40法术强度。",
+    "name": "加冕礼"
+  },
+  "tacticians-kitchen": {
+    "description": "获得1个【金锅铲冠冕】和1个随机纹章。",
+    "name": "锅铲厨房"
+  },
+  "branching-out": {
+    "description": "提供1个随机【纹章】和1个【装备重铸器】。\n\n【装备重铸器】允许你将任一装备随机成另一件装备。",
+    "name": "节外生枝"
+  },
+  "item-grab-bag-i": {
+    "description": "提供1件随机成装。",
+    "name": "百宝袋 I"
+  },
+  "one-two-five": {
+    "description": "获得1个随机的基础装备、2金币、和1个随机的5费弈子。",
+    "name": "一，二，五！"
+  },
+  "band-of-thieves-i": {
+    "description": "提供1个【窃贼手套】。",
+    "name": "窃贼帮派 I"
+  },
+  "teaming-up-i": {
+    "description": "获得1件随机基础装备和2个随机3阶英雄。",
+    "name": "成群结队 I"
+  },
+  "iron-assets": {
+    "description": "获得1个【基础装备锻造器】和4金币。\n\n这个锻造器提供4个选项。",
+    "name": "黑铁资产"
+  },
+  "missed-connections": {
+    "description": "获得每个1费弈子各1个。",
+    "name": "别再错过"
+  },
+  "ones-twos-three": {
+    "description": "获得2个1费弈子，2个2费弈子和1个3费弈子。",
+    "name": "一二二三"
+  },
+  "silver-spoon": {
+    "description": "获得10经验值。\n",
+    "name": "银汤匙"
+  },
+  "heroic-grab-bag": {
+    "description": "获得2个【次级英雄复制器】和9金币。\n\n这个物品允许你能复制一个3费或以下的弈子。",
+    "name": "英勇福袋"
+  },
+  "raining-gold": {
+    "description": "即刻获得8金币，并且每回合获得1金币。",
+    "name": "天降金币"
+  },
+  "raining-gold-plus": {
+    "description": "即刻获得18金币，并且每回合获得1金币。",
+    "name": "天降金币+"
+  },
+  "academy-crest": {
+    "description": "获得1个【皮城学院纹章】和1个【蕾欧娜】。",
+    "name": "皮城学院之徽"
+  },
+  "ambusher-crest": {
+    "description": "获得1个【伏击专家纹章】和1个【卡蜜尔】。",
+    "name": "伏击专家之徽"
+  },
+  "artillerist-crest": {
+    "description": "获得1个【炮手纹章】和1个【崔丝塔娜】。",
+    "name": "炮手之徽"
+  },
+  "automata-crest": {
+    "description": "获得1个【海克斯机械纹章】和1个【魔腾】。",
+    "name": "海克斯机械之徽"
+  },
+  "bruiser-crest": {
+    "description": "获得1个【格斗家纹章】和1个【瑟提】。",
+    "name": "格斗家之徽"
+  },
+  "black-rose-crest": {
+    "description": "获得1个【黑色玫瑰纹章】。",
+    "name": "黑色玫瑰之徽"
+  },
+  "chem-baron-crest": {
+    "description": "获得1个【炼金男爵纹章】和1个【烈娜塔】。",
+    "name": "炼金男爵之徽"
+  },
+  "conqueror-crest": {
+    "description": "获得1个【铁血征服者纹章】和1个【芮尔】。",
+    "name": "铁血征服者之徽"
+  },
+  "dominator-crest": {
+    "description": "获得1个【统领纹章】和1个【布里茨】。",
+    "name": "统领之徽"
+  },
+  "enforcer-crest": {
+    "description": "获得1个【执法官纹章】。",
+    "name": "执法官之徽"
+  },
+  "experiment-crest": {
+    "description": "获得1个【试验品纹章】和1个【厄加特】。",
+    "name": "试验品之徽"
+  },
+  "family-crest": {
+    "description": "获得1个【家人纹章】和1个【蔚奥莱】。",
+    "name": "家人之徽"
+  },
+  "firelight-crest": {
+    "description": "获得1个【野火帮纹章】和1个【泽丽】。",
+    "name": "野火帮之徽"
+  },
+  "pit-fighter-crest": {
+    "description": "获得1个【搏击手纹章】和1个【厄加特】。",
+    "name": "搏击手之徽"
+  },
+  "quickstriker-crest": {
+    "description": "获得1个【迅击战士纹章】和1个【阿卡丽】。",
+    "name": "迅击战士之徽"
+  },
+  "rebel-crest": {
+    "description": "获得1个【蓝发小队纹章】和1个【阿卡丽】。",
+    "name": "蓝发小队之徽"
+  },
+  "scrap-crest": {
+    "description": "获得1个【极客纹章】和1个【吉格斯】。",
+    "name": "极客之徽"
+  },
+  "sentinel-crest": {
+    "description": "获得1个【哨兵纹章】和1个【芮尔】。",
+    "name": "哨兵之徽"
+  },
+  "sniper-crest": {
+    "description": "获得1个【狙神纹章】和1个【泽丽】。",
+    "name": "狙神之徽"
+  },
+  "sorcerer-crest": {
+    "description": "获得1个【法师纹章】和1个【弗拉基米尔】。",
+    "name": "法师之徽"
+  },
+  "visionary-crest": {
+    "description": "获得1个【先知纹章】和1个【烈娜塔】。",
+    "name": "先知之徽"
+  },
+  "watcher-crest": {
+    "description": "获得1个【监察纹章】和1个【范德尔】。",
+    "name": "监察之徽"
+  },
+  "big-grab-bag": {
+    "description": "获得3件随机基础装备、2金币和1个【装备重铸器】。\n\n【装备重铸器】允许你将任一装备随机成另一件装备。",
+    "name": "大百宝袋"
+  },
+  "teaming-up-ii": {
+    "description": "获得1件随机辅助装和2个随机4阶弈子。",
+    "name": "成群结队 II"
+  },
+  "support-cache": {
+    "description": "从4件辅助装中选出1件。",
+    "name": "辅助宝库"
+  },
+  "duo-queue": {
+    "description": "获得2个随机的5费弈子和2件相同的随机基础装备。",
+    "name": "双排"
+  },
+  "two-trick": {
+    "description": "获得1个随机的2星2费英雄和2个随机的2星1费英雄。",
+    "name": "两把刷子"
+  },
+  "build-a-bud": {
+    "description": "获得1个随机3星1费弈子和8金币。",
+    "name": "来个好伙计！"
+  },
+  "radiant-refactor": {
+    "description": "获得1个【杰作升级】和1个【基础装备锻造器】。\n\n【杰作升级】可将装备升级为光明版！",
+    "name": "光明重构器"
+  },
+  "academy-crown": {
+    "description": "获得1个【皮城学院纹章】和一个随机的赞助版装备。",
+    "name": "皮城学院之冕"
+  },
+  "ambusher-crown": {
+    "description": "获得1个【伏击专家纹章】、1个【正义之手】和1个【卡蜜尔】。",
+    "name": "伏击专家之冕"
+  },
+  "artillerist-crown": {
+    "description": "获得1个【炮手纹章】、1个【卢安娜的飓风】和1个【崔丝塔娜】。",
+    "name": "炮手之冕"
+  },
+  "automata-crown": {
+    "description": "获得1个【海克斯机械纹章】、1个【破防者】和1个【魔腾】。",
+    "name": "海克斯机械之冕"
+  },
+  "bruiser-crown": {
+    "description": "获得1个【格斗家纹章】、1个【救赎】和1个【瑟提】。",
+    "name": "格斗家之冕"
+  },
+  "black-rose-crown": {
+    "description": "获得1个【黑色玫瑰纹章】和1个【朔极之矛】。",
+    "name": "黑色玫瑰之冕"
+  },
+  "chem-baron-crown": {
+    "description": "获得1个【炼金男爵纹章】、1个【纳什之牙】和1个【史密奇】。",
+    "name": "炼金男爵之冕"
+  },
+  "conqueror-crown": {
+    "description": "获得1个【铁血征服者纹章】、1个【最后的轻语】和1个【芮尔】。",
+    "name": "铁血征服者之冕"
+  },
+  "dominator-crown": {
+    "description": "获得1个【统领纹章】、1个【圣盾使的誓约】和1个【布里茨】。",
+    "name": "统领之冕"
+  },
+  "enforcer-crown": {
+    "description": "获得1个【执法官纹章】、1个【无尽之刃】和1个【麦迪】。",
+    "name": "执法官之冕"
+  },
+  "experiment-crown": {
+    "description": "获得1个【试验品纹章】、1个【饮血剑】和1个【厄加特】。",
+    "name": "试验品之冕"
+  },
+  "family-crown": {
+    "description": "获得1个【家人纹章】、1个【救赎】、1个【范德尔】和1个【蔚奥莱】。",
+    "name": "家人之冕"
+  },
+  "firelight-crown": {
+    "description": "获得1个【野火帮纹章】、1个【圣盾使的誓约】和1个【刀疤】。",
+    "name": "野火帮之冕"
+  },
+  "pit-fighter-crown": {
+    "description": "获得1个【搏击手纹章】、1个【斯特拉克的挑战护手】和1个【普朗克】。",
+    "name": "搏击手之冕"
+  },
+  "quickstriker-crown": {
+    "description": "获得1个【迅击战士纹章】、1个【鬼索的狂暴之刃】和1个【魔腾】。",
+    "name": "迅击战士之冕"
+  },
+  "rebel-crown": {
+    "description": "获得1个【蓝发小队纹章】、1个【珠光护手】和1个【阿卡丽】。",
+    "name": "蓝发小队之冕"
+  },
+  "scrap-crown": {
+    "description": "获得1个【极客纹章】、1个【吉格斯】和2件随机基础装备。",
+    "name": "极客之冕"
+  },
+  "sentinel-crown": {
+    "description": "获得1个【哨兵纹章】、1个【冕卫】和1个【洛里斯】。",
+    "name": "哨兵之冕"
+  },
+  "sniper-crown": {
+    "description": "获得1个【狙神纹章】、1个【无尽之刃】和1个【泽丽】。",
+    "name": "狙神之冕"
+  },
+  "sorcerer-crown": {
+    "description": "获得1个【法师纹章】、1个【适应性头盔】和1个【弗拉基米尔】。",
+    "name": "法师之冕"
+  },
+  "visionary-crown": {
+    "description": "获得1个【先知纹章】、1个【朔极之矛】和1个【烈娜塔】。",
+    "name": "先知之冕"
+  },
+  "watcher-crown": {
+    "description": "获得1个【监察纹章】、1个【坚定之心】和1个【刀疤】。",
+    "name": "监察之冕"
+  },
+  "final-polish": {
+    "description": "获得1个【辅助装锻造器】和1个【成装锻造器】。",
+    "name": "最终润色"
+  },
+  "one-buff-two-buff": {
+    "description": "获得1个【红霸符】、1个【蓝霸符】和1个【英雄复制器】。",
+    "name": "1个霸符，2个霸符"
+  },
+  "academic-research": {
+    "description": "每当你合成一件装备时，转而获得1个【成装锻造器】。该锻造器总是提供一件【皮城学院】装备以及已合成的装备。获得1件随机基础装备。获得1个【拉克丝】和1个【伊泽瑞尔】。",
+    "name": "学术研究"
+  },
+  "loot-explosion": {
+    "description": "【伏击专家】击杀敌人时有几率掉落战利品，掉落几率受益于暴击几率。所获战利品的价值也可以触发暴击，从而提供更多战利品。获得1个【卡蜜尔】和1个【爆爆】。",
+    "name": "战利品爆炸"
+  },
+  "rocket-collection": {
+    "description": "【炮手】火箭的伤害提升15%。你的【炮手】每发射75枚火箭，就会获得一个【收集者】(最多2个)。获得1个【崔丝塔娜】和1个【厄加特】。(已发射火箭的数量：〔对局动态值〕)",
+    "name": "火箭收藏"
+  },
+  "rocket-collection-plus": {
+    "description": "【炮手】火箭的伤害提升15%。你的【炮手】每发射65枚火箭，就会获得一个【收集者】(最多2个)。获得1个【崔丝塔娜】和1个【厄加特】。(已发射火箭的数量：〔对局动态值〕)",
+    "name": "火箭收藏+"
+  },
+  "fractured-crystals": {
+    "description": "【海克斯机械】弈子发射其震波时，会向相距最近的那个敌人发射第二道震波，造成70%原伤害。获得1个【阿木木】和1个【魔腾】。",
+    "name": "碎裂水晶"
+  },
+  "heavy-hitters": {
+    "description": "每4秒，【格斗家】的下一次攻击会造成7%额外最大生命值的额外物理伤害。获得1个【斯特卜】和1个【特朗德尔】。",
+    "name": "强力重击"
+  },
+  "forbidden-magic": {
+    "description": "【黑色玫瑰】弈子或【赛恩】每参与击杀3次，【赛恩】就会永久获得1.5%攻击力和10最大生命值。获得3个【黑色玫瑰】弈子。(层数：〔对局动态值〕)",
+    "name": "禁忌魔法"
+  },
+  "crimson-pact": {
+    "description": "每当你在黑市上选择【保留微光】时，都会回复4玩家生命值并获得6金币。获得1个【荏妮】。",
+    "name": "底城争夺战"
+  },
+  "noxian-guillotine": {
+    "description": "【铁血征服者】处决生命值低于12%的敌人。在他们触发此效果时，他们会获得持续至战斗结束的5护甲与魔抗。获得1个【德莱厄斯】和1个【德莱文】。",
+    "name": "诺克萨斯断头台"
+  },
+  "dominate": {
+    "description": "【统领】们在有护盾值时获得10%攻击速度。一名【统领】完成击杀时，所有【统领】都将获得持续3秒的100护盾值。获得1个【卡西奥佩娅】。",
+    "name": "统领全场"
+  },
+  "enforce": {
+    "description": "【执法官】们获得10%攻击力。每有6个被通缉的敌人阵亡，就会获得6金币。获得1个【斯特卜】和1个【麦迪】。",
+    "name": "执法"
+  },
+  "natural-selection": {
+    "description": "【试验品】弈子们获得12%生命值并提供一个特殊格子。这个格子内的【试验品】弈子在战斗开始时会被击杀，从而将其【试验品】加成提供给其它的试验格。获得3个【试验品】弈子。",
+    "name": "物竞天择"
+  },
+  "welcome-to-the-playground": {
+    "description": "如果在战斗17秒后或战斗结束时还有至少2个【家人】存活，则随机获得【范德尔】、【爆爆】或【蔚奥莱】的一个弈子。获得1个【爆爆】和1个【蔚奥莱】。",
+    "name": "欢迎来到游乐场"
+  },
+  "aerial-warfare": {
+    "description": "在【野火帮】弈子们开始一次【野火帮】冲刺时，会获得9%攻击力和9法术强度。他们在该战斗中每移动一格还会获得另外的3%。获得1个【刀疤】和1个【泽丽】。",
+    "name": "空战"
+  },
+  "why-not-both": {
+    "description": "当你派2名相同但却处于不同形态的【双形战士】上场时，两者都会获得24法术强度、护甲和魔抗，以及24%攻击力。当你将一名【双形战士】升到3星时，获得该弈子的1个2星版本。获得1个【斯维因】和1个【普朗克】。",
+    "name": "为何不上两个？"
+  },
+  "pit-fighter-prizefighter": {
+    "description": "如果【搏击手】输掉了上一场战斗，他们将永久获得1.5%攻击力。如果赢了，则转而获得45生命值。获得1个【厄加特】。",
+    "name": "训练篇"
+  },
+  "quickstriker-boost": {
+    "description": "战斗开始和之后每6秒，全体【迅击战士】的攻击变快85%，持续2.5秒。获得1个【魔腾】和1个【阿卡丽】。",
+    "name": "肾上腺爆发"
+  },
+  "rebel-resurgence": {
+    "description": "每场对战中的前5个【蓝发小队】阵亡时，召唤该弈子的一个比自身低一星级、生命值少400的版本。获得1个【阿卡丽】和1个【艾瑞莉娅】。",
+    "name": "爆蓝之城"
+  },
+  "scrap-recycling": {
+    "description": "【极客】们每转化6次基础装备，就会获得一件随机基础装备(最多5件)。获得1个【爆爆】和1个【特朗德尔】。\n\n已转化：〔对局动态值〕/6次",
+    "name": "极客宝藏之顶"
+  },
+  "sentinel-slam": {
+    "description": "【哨兵】们获得5%额外护甲与魔抗。每过4秒，他们的下一次攻击将造成其75%总双抗的魔法伤害。获得1个【洛里斯】。",
+    "name": "护盾猛击"
+  },
+  "snipers-nest": {
+    "description": "【狙神】们每在相同的初始格战斗过一回合，就会获得+8%伤害增幅 (最多+32%)。获得1个【泽丽】。",
+    "name": "狙神之巢"
+  },
+  "sorcerer-explosion": {
+    "description": "当【法师】阵亡时，对所有邻格的弈子们造成其300%法术强度的魔法伤害。获得1个【弗拉基米尔】和1个【拉克丝】。",
+    "name": "奥术之惩"
+  },
+  "visionary-voidlings": {
+    "description": "战斗期间，【先知】们每消耗275法力值，就会召唤一个虚灵，至多至5个虚灵。获得1个【芮尔】和1个【莫甘娜】。\n\n虚灵拥有400-600生命值(基于阶段)。",
+    "name": "虚空召唤者"
+  },
+  "watcher-growth": {
+    "description": "【监察】们每次受到攻击时，就会获得2%攻击力。【监察】每次被技能命中时，就会获得4法术强度。获得1个【范德尔】。",
+    "name": "战斗伤疤"
+  },
+  "betrayal": {
+    "description": "【麦迪】的技能和攻击总会瞄准【安蓓萨】的目标。在每一回合中，只要有一方获得至少2次击杀，就能获得1个【麦迪】。\n\n获得1个【麦迪】和1个【安蓓萨】。",
+    "name": "羁绊：背叛"
+  },
+  "blood-brothers": {
+    "description": "【希尔科】每次施放技能时，【范德尔】就会获得30永久最大生命值。【范德尔】每次阵亡时，【希尔科】就会获得6永久法术强度。\n\n获得1个2星【范德尔】、1个【希尔科】和1个【朔极之矛】。",
+    "name": "羁绊：本可发生之事"
+  },
+  "dummify": {
+    "description": "失去你场上和备战席上的所有弈子。获得1个【训练假人】，其生命值为失去所有弈子的100%总生命值。这个假人每阶段获得250生命值。",
+    "name": "假人化"
+  },
+  "golemify": {
+    "description": "失去你场上和备战席上的所有弈子。获得1个【魔像】，【魔像】拥有失去弈子90%的总生命值和60%的总攻击力。这个魔像每阶段获得150生命值。",
+    "name": "魔像化"
+  },
+  "spoils-of-war-i": {
+    "description": "敌人在被击杀时有25%几率掉落战利品。",
+    "name": "战争财宝 I"
+  },
+  "spoils-of-war-ii": {
+    "description": "敌人在被击杀时有30%几率掉落战利品。",
+    "name": "战争财宝 II"
+  },
+  "spoils-of-war-iii": {
+    "description": "敌人在被击杀时有40%几率掉落战利品。",
+    "name": "战争财宝 III"
+  },
+  "field-medic": {
+    "description": "获得1个【斯特卜】。你最强大的那个【斯特卜】的技能的法力消耗降低10，但不再回复生命值。【斯特卜】的技能提供30%全能吸血并进行3次打击，每次造成65%伤害。",
+    "name": "战地医生"
+  },
+  "blade-dance": {
+    "description": "获得1个【艾瑞莉娅】。你最强大的那个【艾瑞莉娅】获得40%攻击速度，并获得一个全新技能：在两个目标之间冲刺，对两个目标都造成物理伤害。",
+    "name": "刀锋之舞"
+  },
+  "shocking-troll": {
+    "description": "获得1个【特朗德尔】。你最强大的那个【特朗德尔】的技能不再回复生命值，但会提供持续5秒的140%攻击速度，并为他永久提供1.5%攻击力。他的最大法力值降低50。",
+    "name": "震惊巨魔"
+  },
+  "savage-revenge": {
+    "description": "获得2个【荏妮】。你最强大的那个【荏妮】的技能的消耗降低10，并使她朝2格内相距最远的那个敌人猛扑，对该目标造成110%伤害，并对途经的敌人造成削减过的伤害。",
+    "name": "残暴复仇"
+  },
+  "all-out": {
+    "description": "获得1个【范德尔】。你最强大的那个【范德尔】获得一个全新技能：不再提供双抗，但造成的伤害提升85%，并且会将目标击退，对所有被命中的敌人造成25%原伤害。",
+    "name": "卯足全力"
+  },
+  "blood-pact": {
+    "description": "获得1个【弗拉基米尔】。你最强大的那个【弗拉基米尔】获得+3距离并且每次普攻获得3额外法力值。他的技能不再回复生命值，但会提供10%伤害增幅，造成80%额外伤害，并将额外伤害传播给相距最近的那个敌人。",
+    "name": "血色契约"
+  },
+  "tower-defense": {
+    "description": "获得1个装备随机纹章的训练假人，它可向敌人发动远程攻击。训练假人会随着游戏的进行而升级。",
+    "name": "塔防游戏"
+  },
+  "the-golden-egg": {
+    "description": "获得1个大金蛋，需要11个回合来孵化，在孵化时提供大量战利品。赢下玩家对战回合后会使孵化倒计时加快1个额外的回合。",
+    "name": "金蛋"
+  },
+  "an-exalted-adventure": {
+    "description": "获得3名2费弈子。如果你将他们当中的两个升为3星，将获得一个充满战利品的法球。即刻获得1个【次级英雄复制器】，并在每个阶段开始时再获得1个。\n\n弈子：〔对局动态值〕，〔对局动态值〕，〔对局动态值〕",
+    "name": "崇高冒险"
+  },
+  "support-mining": {
+    "description": "获得1个【训练假人】。当它阵亡7次时，获得1个随机辅助装并移除该训练假人。",
+    "name": "辅助挖矿"
+  },
+  "support-mining-plus": {
+    "description": "获得1个【训练假人】。当它阵亡4次时，获得1个随机辅助装并移除该训练假人。",
+    "name": "辅助挖矿+"
+  },
+  "scapegoat": {
+    "description": "获得1个【训练假人】和4金币。如果这个假人在玩家对战回合中第一个阵亡，就会获得1金币。",
+    "name": "替罪羊"
+  },
+  "wandering-trainer-i": {
+    "description": "获得1金币和1个携带着2个永久附着的纹章的【训练假人】。",
+    "name": "漫游训练师 I"
+  },
+  "wandering-trainer-ii": {
+    "description": "获得6金币和1个携带着3个永久附着的纹章的【训练假人】。",
+    "name": "漫游训练师 II"
+  },
+  "gold-for-dummies": {
+    "description": "获得1个【训练假人】。每10秒，所有【训练假人】提供1金币.",
+    "name": "假人金币"
+  },
+  "bad-luck-protection": {
+    "description": "己方弈子们无法再造成暴击。将每1%暴击几率转化为1%攻击力。获得1个【拳套】。",
+    "name": "厄运保护"
+  },
+  "blazing-soul-i": {
+    "description": "战斗开始时：你攻击速度最高的那个弈子获得20法术强度和20%攻击速度。每过3秒，在另一名己方弈子身上重复此效果。",
+    "name": "炽热灵魂 I"
+  },
+  "blazing-soul-ii": {
+    "description": "战斗开始时：你攻击速度最高的那个弈子获得35法术强度和30%攻击速度。每过3秒，在另一名己方弈子身上重复此效果。",
+    "name": "炽热灵魂 II"
+  },
+  "noble-sacrifice": {
+    "description": "每当你的第一个友军在对战中阵亡时，给予己方弈子们25 + 该友军10%的护甲和魔抗。",
+    "name": "高贵牺牲"
+  },
+  "wealthy-rehab-i": {
+    "description": "你的弈子们获得10%全能吸血。当己方的弈子总治疗量首次达到10000时，获得额外的8金币。\n\n累积总治疗量：〔对局动态值〕",
+    "name": "健康就是财富 I"
+  },
+  "wealthy-rehab-ii": {
+    "description": "你的弈子们获得15%全能吸血。当己方的弈子总治疗量首次达到10000时，获得额外的15金币。\n\n累积总治疗量：〔对局动态值〕",
+    "name": "健康就是财富 II"
+  },
+  "corrosion": {
+    "description": "前两排的敌方弈子们每2秒损失3护甲和魔抗。",
+    "name": "腐蚀"
+  },
+  "building-a-collection-iii": {
+    "description": "接下来的6个回合(包括这个回合)在开始时都会获得一件随机的基础装备。",
+    "name": "珍藏财宝 III"
+  },
+  "worth-the-wait": {
+    "description": "获得1个随机的2星1费弈子。在2个回合后，每回合开始时都会获得该弈子的又一个1星版本，持续至本局游戏结束。\n\n弈子：〔对局动态值〕",
+    "name": "值得等待"
+  },
+  "worth-the-wait-ii": {
+    "description": "获得1个随机的2费弈子。每回合开始时都会获得该弈子的又一个1星版本，持续至本局游戏结束。\n\n弈子：〔对局动态值〕",
+    "name": "值得等待 II"
+  },
+  "flexible": {
+    "description": "获得1个随机纹章。在每个阶段开始时，获得一个随机纹章。每携带一个纹章，你的弈子们就会获得40生命值。",
+    "name": "灵活摇摆"
+  },
+  "rolling-for-days-i": {
+    "description": "获得11次免费刷新。",
+    "name": "D个痛快！ I"
+  },
+  "superstars-i": {
+    "description": "己方弈子造成5%额外伤害，并且队伍中每拥有1个3星英雄，此加成就会提升2%。获得2次刷新。\n\n加成：〔对局动态值〕%",
+    "name": "超级巨星 I"
+  },
+  "superstars-ii": {
+    "description": "己方弈子造成7%额外伤害，并且队伍中每拥有1个3星英雄，此加成就会提升5%。获得4次刷新。\n\n加成：〔对局动态值〕%",
+    "name": "超级巨星 II"
+  },
+  "trade-sector": {
+    "description": "每回合获得1次免费的商店刷新。获得1金币。",
+    "name": "DD街区"
+  },
+  "eye-for-an-eye-plus": {
+    "description": "获得1件随机基础装备。每阵亡13名己方弈子，获得另一件基础装备(最多3件)。\n\n剩余阵亡数：〔对局动态值〕",
+    "name": "以眼还眼+"
+  },
+  "prizefighter": {
+    "description": "获得2件基础装备。每赢得5场胜利，你就会获得1件基础装备。",
+    "name": "赏金战士"
+  },
+  "shimmerscale-essence": {
+    "description": "获得1个【大亨之铠】。在5回合内，获得1个【投机者之刃】。\n\n这些装备会在提供战斗力的同时给予金币。",
+    "name": "金鳞精粹"
+  },
+  "eye-for-an-eye": {
+    "description": "每阵亡15名己方弈子，获得一件随机基础装备(最多4件)。\n\n剩余阵亡数：〔对局动态值〕",
+    "name": "以眼还眼"
+  },
+  "team-building": {
+    "description": "获得1个【次级英雄复制器】。在7个玩家对战回合后获得另一个。\n\n这个物品允许你能复制一个3费或以下的弈子。",
+    "name": "团队建设"
+  },
+  "latent-forge": {
+    "description": "在8个玩家对战后，获得1个【神器锻造器】。\n\n这个锻造器提供4个选项。神器是可以提供独特效果的强力装备。",
+    "name": "休眠锻炉"
+  },
+  "phreaky-friday": {
+    "description": "获得1个【三相之力】。在5个玩家对战回合后，获得另一个【三相之力】。\n\n【三相之力】：一件神器，可以提供成吨的攻击和防御属性。",
+    "name": "成吨的伤害"
+  },
+  "phreaky-friday-plus": {
+    "description": "获得1个【三相之力】。在3个玩家对战回合后，获得另一个【三相之力】。\n\n【三相之力】：一件神器，可以提供成吨的攻击和防御属性。",
+    "name": "成吨的伤害+"
+  },
+  "dark-alley-dealings": {
+    "description": "获得1个【迷离风衣】。在3个玩家对战回合后，获得一个【诡术师之镜】。",
+    "name": "暗巷交易"
+  },
+  "living-forge": {
+    "description": "立刻以及之后的每9个玩家对战回合后获得1个【神器锻造器】。\n\n神器是可以提供独特效果的强力装备。",
+    "name": "活体锻炉"
+  },
+  "what-doesnt-kill-you": {
+    "description": "在输掉一个玩家对战回合后获得2金币。每4次失败之后，获得1个随机基础装备。\n\n下一件基础装备还需要的失败次数：〔对局动态值〕",
+    "name": "在失败中变强"
+  },
+  "warpath": {
+    "description": "造成60玩家伤害后，获得一个装有高费弈子和装备的宝箱。\n(当前：〔对局动态值〕)",
+    "name": "征战之路"
+  },
+  "magic-roll": {
+    "description": "投掷3个骰子，根据总点数获得奖励。\n\n奖励：〔对局动态值〕",
+    "name": "魔法投掷"
+  },
+  "call-to-chaos": {
+    "description": "获得1个强大的随机奖励。\n\n奖励：〔对局动态值〕",
+    "name": "混沌召唤"
+  },
+  "patient-study": {
+    "description": "在与玩家的战斗后，如果你赢了则获得2经验，如果你输了则获得3经验。",
+    "name": "耐心学习"
+  },
+  "epoch": {
+    "description": "现在以及每个阶段开始时，获得6经验值和2次免费刷新。",
+    "name": "新纪元"
+  },
+  "epoch-plus": {
+    "description": "现在以及每个阶段开始时，获得8经验值和3次免费刷新。",
+    "name": "新纪元+"
+  },
+  "level-up": {
+    "description": "在你购买经验值的时候，获得额外的2经验值。立刻获得12经验值。",
+    "name": "升级咯！"
+  },
+  "shopping-spree": {
+    "description": "在你升级时，获得相当于你等级数的免费商店刷新次数。获得4金币。 ",
+    "name": "大买特买"
+  },
+  "upward-mobility": {
+    "description": "购买经验的费用降低1。每当你升级时，获得2生命值和3次免费刷新。",
+    "name": "上进心"
+  },
+  "kingslayer": {
+    "description": "在赢得玩家对战回合后，获得1金币。如果该玩家的生命值高于你，则获得4金币作为替代。即刻获得1金币。",
+    "name": "弑君突刺"
+  },
+  "risky-moves": {
+    "description": "你的小小英雄损失20生命值，但在7个与玩家的战斗回合后，获得30金币。",
+    "name": "冒险举动"
+  }
+};

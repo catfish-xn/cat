@@ -1,3 +1,7 @@
+import { withG23RestoreReuse, registerG23RestoreOwner } from './g23-restore-reuse';
+import { batch4B4xpRecordedExtra, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
+import { formingTotals, expectedMagicRoll, outcomeAcquisitionXp } from './augment-pool-batch3-progress';
+import { batch2HpAfterSettlement } from './augment-pool-batch2-health';
 import { openingEncounterId } from './opening-encounter';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { choiceAcquisitionGold } from './choice-acquisition';
@@ -6,6 +10,8 @@ import { openingHpBeforeRound } from './opening-monkey';
 import { validateOpeningEncounterState } from './opening-encounter';
 import { validateAugmentOfferHistory } from './augment-offers';
 import { withResourceReceiptReuse } from './resource-provenance';
+import { augmentAcquisitionXpAtRound } from './choice-acquisition';
+import { batch3EntryXp, xpPurchaseAmount, acquisitionLevels, levelAtExperience } from './augment-xp';
 import { investmentGrowth, readAugmentIncome } from './augment-income';
 import { validateP2Opening } from './s13-augments-p2-combat';
 import {readG23Progress,validateG23RewardSources} from './g2-3-state';
@@ -24,14 +30,15 @@ import { projectG23Summons } from './g2-3-summons';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import { validateP3State } from './s13-p3-combat';
 import { validateG23State } from './g2-3-combat';
+import { G23_SUMMON_POLICY } from './content/g2-3-summons';
 import { G23_ABILITIES } from './content/g2-3-abilities';
 import { freezeCombatDeclarations } from './combat-static';
-import { isImmutableJson, shareParsedDeclaration, shareParsedJson } from './immutable-json';
+import { decodeMatchJson, isImmutableJson, shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { withItemRestoreCache, declaredEffects, abilityPowerCandidates, attackDamageCandidates, triggeredAbilityPowerGrowth } from './m8/item-restore';
 import { validateSampledStatTriggerFacts } from './m8/sampled-stat-facts';
-import { validateTaskAndSummonFacts } from './combat-runtime-facts';
+import { validateAbilityStatusFacts, validateTaskAndSummonFacts } from './combat-runtime-facts';
 import { createRestoreCombatReplay } from './restore-combat-replay';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
@@ -40,7 +47,7 @@ import { asSource } from './m8/s13-definitions';
 import { validateComponentCandidates } from './component-pool';
 import { compileItemCrit } from './m8/item-program';
 import type { MatchState } from './match-types';
-import { CONTENT_DIGEST, assertParsedContent, canonicalContent, equalValidatedContent } from './content';
+import { CONTENT_DIGEST, withSynchronousRestoreEncoding, assertParsedContent, canonicalContent, equalValidatedContent } from './content';
 import { UNIT_DEFINITIONS } from './units';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
@@ -112,9 +119,19 @@ function totalExperience(level:number,xp:number):number {
   grantXp(level,xp,0); // Validate normalized values before using them as indices.
   return xp+Object.entries(XP_TO_NEXT_LEVEL).filter(([from])=>Number(from)<level).reduce((sum,[,amount])=>sum+amount,0);
 }
-function validPreparationExperience(before:number,level:number,xp:number):boolean {
+function validPreparationExperience(before:number,level:number,xp:number,purchase:number=MATCH_RULES.xpPurchaseAmount):boolean {
   const after=totalExperience(level,xp),cap=totalExperience(MATCH_RULES.maxLevel,0);
-  return after>=before && (after===cap || (after-before)%MATCH_RULES.xpPurchaseAmount===0);
+  return after>=before && (after===cap || (after-before)%purchase===0);
+}
+/** Experience on entering `round` and taking its augment, before any purchase; also fixes recorded acquisition levels
+ * (offline purchases wait for the round's augment choice). */
+function preparationExperience(state:MatchState,after:number,round:number):number {
+  const before=Math.min(totalExperience(MATCH_RULES.maxLevel,0),after+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<round)).roundXp
+    +batch3EntryXp(state.augments,state.roundResults,round)+augmentAcquisitionXpAtRound(state.augments,round)
+    +state.augments.filter(a=>a.acquiredRound===round).reduce((n,a)=>n+outcomeAcquisitionXp(state,a),0));
+  const levels=acquisitionLevels(state);
+  for(const a of state.augments)if(a.acquiredRound===round&&Object.hasOwn(levels,a.choiceId))requireValue(levels[a.choiceId]===levelAtExperience(before),'augment acquisition level');
+  return before;
 }
 /** Internal staging validator, NOT a restore/admission API. Callers must check
  * historical authority before resuming. It validates plain JSON and persistent
@@ -122,10 +139,13 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
  * Resist-scaled shields are checked by a trusted-input battle replay.
  */
 export function validateMatchStructure(input: unknown): MatchState {
-  return withItemRestoreCache(()=>withResourceReceiptReuse(typeof input === 'string',()=>restoreMatchWithinCall(input)));
+  const parsed = typeof input === 'string', shareDeclarations = typeof input === 'string' && !input.includes('-0');
+  return withG23RestoreReuse(shareDeclarations, () => withSynchronousRestoreEncoding(parsed, () =>
+    withItemRestoreCache(()=>withResourceReceiptReuse(parsed,()=>restoreMatchWithinCall(input,false,shareDeclarations)))));
 }
-function restoreMatchWithinCall(input: unknown, forSerialization = false): MatchState {
-  const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
+function restoreMatchWithinCall(input: unknown, forSerialization = false, parsedImmutable = typeof input === 'string' && !input.includes('-0')): MatchState {
+  const decoded = typeof input === 'string' ? decodeMatchJson(input, parsedImmutable) : { value: input };
+  const raw: unknown = decoded.value;
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
   if (typeof input === 'string') assertParsedContent(raw); else canonicalContent(raw);
@@ -141,6 +161,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   requireValue((raw.playerHp as number) <= 100, 'level/HP bounds');
   requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
   const state = raw as unknown as MatchState;
+  if(parsedImmutable)registerG23RestoreOwner(state);
   mechanicCheck(() => validateOpeningEncounterState(state), 'opening-context-mismatch');
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
@@ -201,6 +222,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     } else requireValue(receipt.gold === (receipt.kind === 'augment' || receipt.kind === 'anomaly' ? choiceAcquisitionGold((receipt.kind==='augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[receipt.definitionId!], receipt.round) : 0) && receipt.itemIds.length === (receipt.kind === 'augment' && P3_AUGMENT_ITEMS[receipt.definitionId!] ? 1 : 0), 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
     for (const itemId of receipt.itemIds) checkSerial(itemId, 'item', state.nextItemSerial);
     nullableString(receipt.unitId); nullableString(receipt.definitionId);
+    // Augment choices have no target; their rewards have separate mechanic/loot births.
+    if (receipt.kind === 'augment') requireValue(receipt.unitId === null, 'augment receipt unit');
     if (receipt.kind === 'augment') requireValue(state.augments.some(a => a.choiceId === receipt.eventId && a.definitionId === receipt.definitionId), 'augment receipt');
     if (receipt.kind === 'anomaly') definitionId(receipt.definitionId, ANOMALY_DEFINITIONS, 'anomaly receipt');
   }
@@ -254,10 +277,11 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === openingHpBeforeRound(state, result.roundId, i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(same(result.streakBefore, streak), 'history streak before');
-    requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<result.round)).roundXp),result.levelBefore,result.xpBefore), 'history XP preparation chain');
-    const expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
+    requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,result.round),result.levelBefore,result.xpBefore,xpPurchaseAmount(state.augments,result.round)), 'history XP preparation chain');
+    let expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
+    expected=withBatch4B4xp({level:result.levelBefore,xp:result.xpBefore},expected,batch4B4xpRecordedExtra(state,result,expected.progression.xpRequested));
     requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === expected.progression.xpRequested, 'history XP');
     const progress=readG23Progress(state),save=progress?.economyReceipts.find(r=>r.kind==='mel-save'&&r.round===result.round);
     const rescued=!!save&&expected.hpAfter===0&&result.roundKind==='pvp';
@@ -274,11 +298,13 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   const pump = state.augments.find(a => a.definitionId === 'pumping-up-i');
   requireValue(state.augmentProgress.pumpingRounds === (pump ? state.roundResults.filter(r => r.round >= pump.acquiredRound).length : 0), 'pumping progress');
   requireValue(state.augmentProgress.investmentHp === investmentGrowth(state.augments,state.roundResults.filter(r => r.round < state.round)), 'investment progress');
+  requireValue(Object.keys(state.augmentProgress).every(k => ['pumpingRounds','investmentHp','forming','magicRoll'].includes(k)) && same(state.augmentProgress.forming ?? null, formingTotals(state) ?? null), 'forming progress');
+  requireValue(same(state.augmentProgress.magicRoll ?? null, expectedMagicRoll(state) ?? null), 'magic roll progress');
   list(state.persistentGrowth); const growthIds = new Set<string>();
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
-  requireValue(state.playerHp === (settled ? state.roundResults.at(-1)!.hpAfter : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
-  if (!settled) requireValue(validPreparationExperience(Math.min(totalExperience(MATCH_RULES.maxLevel,0),experienceAfter+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<state.round)).roundXp),state.level,state.xp), 'current XP preparation chain');
+  requireValue(state.playerHp === (settled ? batch2HpAfterSettlement(state,state.round,state.roundResults.at(-1)!.hpAfter) : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
+  if (!settled) requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,state.round),state.level,state.xp,xpPurchaseAmount(state.augments,state.round)), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial,state.nextUnitSerial);
   validateMatchEquipment(state);
@@ -298,13 +324,13 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     requireValue(combat.status === 'running' ? combat.result === null : ['playerWin','enemyWin','draw'].includes(combat.result!), 'combat result');
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
-    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'), forSerialization);
+    const expectedStrategy = compileRestoredStrategy(basis.inputs, parsedImmutable, forSerialization);
     const combatPreparation = projectItemSummons(projectG23Summons(basis.inputs.preparation,undefined,basis.inputs.itemSummonPositions),expectedStrategy), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     const shroudOrigins=expectedStrategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Shroud'))?combatPreparation.units.flatMap(u=>u.location.kind==='board'?[{
       team:u.team,cell:u.location.cell,mechanics:expectedStrategy.units.find(s=>s.unitId===u.id)?.mechanics,
     }]:[]):[];
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
-    const verifiedDynamic=validateDynamicCombat(combat,basis,expectedStrategy);
+    const verifiedDynamic=validateDynamicCombat(combat,basis,expectedStrategy,typeof input === 'string',parsedImmutable);
     const fishbones = expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Fishbones'));
     const collector=expectedStrategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Mogul'].includes(m.mechanic)));
     const gamblers=expectedStrategy.units.filter(u=>u.mechanics?.some(m=>m.mechanic==='g24Gambler'));
@@ -336,6 +362,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     if(!verifiedDynamic)validateMirrorOpening(combat,basis,expectedStrategy);
     const neutralStatuses = verifiedDynamic?new Set<string>():validateNeutralCombat(combat, combatPreparation, expectedStrategy, () => replay.atSaveTick().openingState);
     if(!verifiedDynamic)mechanicCheck(() => validateResistsShields(combat, basis, expectedStrategy, replay), 'resists shield replay');
+    const abilityStatuses = verifiedDynamic ? new Set<string>() : validateAbilityStatusFacts(combat, replay, same);
     const cells = new Set<string>();
     for (const unit of verifiedDynamic?[]:combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
@@ -374,9 +401,9 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }
       requireValue(unit.shield === 0 ? unit.shieldExpiresAtTick === null : Number.isSafeInteger(unit.shieldExpiresAtTick) && unit.shieldExpiresAtTick! > combat.tick, 'shield expiry');
       if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
-      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses, typeof input === 'string', expectedStrategy.traits);
+      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses, typeof input === 'string', expectedStrategy.traits, abilityStatuses);
       record(unit.ability); integer(unit.ability.amount); requireValue(['damage','selfShield','s13'].includes(unit.ability.kind), 'ability kind');
-      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses, same,combat.nextActionSeq!);
+      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses, same,combat.nextActionSeq!, abilityStatuses);
       list(unit.sources); list(unit.triggers); list(unit.effectRuntime);
       const sourceKeys = new Set<string>();
       for (const source of unit.sources) { requireValue(source.key === effectKey(source.source) && source.source.ownerId === unit.id && !sourceKeys.has(source.key), 'source key'); sourceKeys.add(source.key); cloneEffect(source.effect); }
@@ -391,6 +418,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
     if(!verifiedDynamic)validateCombatItemGold(combat,basis,expectedStrategy);
+    if(!verifiedDynamic&&parsedImmutable)replay.shareValidatedDeclarations(combat);
   }
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
@@ -403,8 +431,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
   // Exact JSON bytes (including property order) key immutable metadata sharing.
   // Object inputs retain their independent clone. '-0' conservatively disables
   // sharing for text inputs because JSON.stringify normalizes its numeric sign.
-  const restored=typeof input === 'string' && !input.includes('-0') ? {
-    ...detached, m8: shareParsedJson(detached.m8),
+  const restored=parsedImmutable ? {
+    ...detached, m8: decoded.sharedM8 === detached.m8 && decoded.finishM8 ? decoded.finishM8() as MatchState['m8'] : shareParsedJson(detached.m8),
     resourceProvenance: shareParsedJson(detached.resourceProvenance),
     combatInputBasis: detached.combatInputBasis ? (() => {
       const basis = shareParsedJson(detached.combatInputBasis);
@@ -412,7 +440,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
       return { ...basis, inputs: { ...basis.inputs, preparation: { ...basis.inputs.preparation } } };
     })() : null,
   } : detached;
-  if (typeof input === 'string' && !input.includes('-0') && restored.combat) {
+  if (parsedImmutable && restored.combat) {
     restored.combat.units.forEach(unit => freezeCombatDeclarations(unit, true));
     if (restored.combat.strategy) Object.assign(restored.combat, { strategy: shareParsedDeclaration(restored.combat.strategy) });
   }
@@ -424,12 +452,13 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false): Match
 /** Structural validation for canonical serialization: identical checks, but immutable inputs may skip the
  * final freeze and reuse compiled strategy (B7 speedup). Not a restore/admission API either. */
 export function validateMatchStructureForSerialization(state: MatchState): MatchState {
-  return withItemRestoreCache(() => withResourceReceiptReuse(false, () => restoreMatchWithinCall(state, true)));
+  return withG23RestoreReuse(false, () => withSynchronousRestoreEncoding(false, () =>
+    withItemRestoreCache(() => withResourceReceiptReuse(false, () => restoreMatchWithinCall(state, true)))));
 }
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them.
  * Exported for unit-level checks of combat-only equipment before it has an acquisition route. */
-export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
+export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number, abilityStatuses: ReadonlySet<string> = new Set()): void {
   if (unit.ability.kind !== 's13') return;
   validateG23State(unit,combatUnits,tick,nextActionSeq);
   validateP3State(unit,combatUnits,tick,nextActionSeq);
@@ -468,6 +497,17 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     requireValue(unit.expansion.chainKills <= unit.expansion.chainTargets.length, 'G2 initial kill bound');
     requireValue(new Set(unit.expansion.chainTargets).size === unit.expansion.chainTargets.length && unit.expansion.chainTargets.every(id => combatUnits.some(u => u.id === id && u.team !== unit.team)) && unit.expansion.chainTargets.length <= (champion(unit) === 'leblanc' ? variable(unit, 'ChainTargets') : 0), 'G2 chain targets');
   }
+  if (unit.g23Sion !== undefined) {
+    const revival = unit.g23Sion;
+    record(revival);
+    requireValue(Object.keys(revival).sort().join(',') === 'reviveAtTick,revived', 'Sion revive structure');
+    integer(revival.reviveAtTick, G23_SUMMON_POLICY.sion.reviveDelayTicks + 1);
+    requireValue(typeof revival.revived === 'boolean' && unit.definitionId === 'g23-sion'
+      && unit.mechanics?.some(m => m.mechanic === 'g23Sion' && m.values.tier >= 7), 'Sion revive holder');
+    requireValue(revival.revived ? revival.reviveAtTick <= tick
+      : revival.reviveAtTick > tick && revival.reviveAtTick <= tick + G23_SUMMON_POLICY.sion.reviveDelayTicks,
+      'Sion revive clock');
+  }
   const runtime = unit.runtime, isKog = champion(unit) === 'kogmaw';
   requireValue(runtime.attackCount + runtime.castCount <= tick, 'action count bound');
   const itemSpeedAt=(at:number)=>(unit.mechanismDefinitions?.periodicTasks ?? []).reduce((n,t)=>n+t.program.effects.reduce((total,e)=>total+(e.kind==='modify-stat'&&e.modifier.stat==='attackSpeed'&&e.modifier.value.kind==='constant'&&e.duration.kind==='combat'&&e.stackPolicy.kind==='add-stacks'?e.modifier.value.amount*Math.max(0,Math.floor((Math.min(at,t.endsAtTick ?? at)-t.nextPulseAtTick)/t.periodTicks)+1):0),0),0);
@@ -502,12 +542,13 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     const largestCoefficient = Math.max(10000, ...Object.values(unit.ability.variables));
     requireValue(Number.isSafeInteger(largestCoefficient * (1 + Math.floor(numerator / 10000) + unit.maxHp + unit.abilityPower! + maximumAp)), 'ability arithmetic bound');
   }
-  const origin = (source: import('./combat-types').CombatOrigin, neutralStatus = false) => {
+  const origin = (source: import('./combat-types').CombatOrigin, neutralStatus = false, sionCharge = false, replayedAbility = false) => {
     record(source); id(source.ownerId); id(source.definitionId); id(source.instanceId); integer(source.effectIndex);
     requireValue(combatIds.has(source.ownerId) && ['attack','ability','trait','item','augment','anomaly','enemyGrowth'].includes(source.sourceKind), 'runtime source');
     const owner = combatUnits.find(value => value.id === source.ownerId)!;
     if (source.sourceKind === 'ability' || source.sourceKind === 'attack') {
-      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && (source.effectIndex === 0 || neutralStatus) && source.parentItemInstanceId == null, 'ability source identity');
+      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && (source.effectIndex === 0 || neutralStatus || replayedAbility && source.sourceKind === 'ability'
+        || sionCharge && source.sourceKind === 'ability' && owner.definitionId === 'g23-sion' && source.effectIndex === 1) && source.parentItemInstanceId == null, 'ability source identity');
     } else {
       requireValue(owner.sources?.some(entry => entry.source.ownerId === source.ownerId
         && entry.source.sourceKind === source.sourceKind && entry.source.sourceDefinitionId === source.definitionId
@@ -527,7 +568,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
   requireValue(total === unit.shield && unit.shieldExpiresAtTick === (total ? Math.max(...unit.shieldLayers.filter(l => l.remaining > 0).map(l => l.expiresAtTick)) : null), 'shield aggregate');
   list(unit.statuses); const statusKeys = new Set<string>();
   for (const status of unit.statuses) {
-    record(status); origin(status.source, neutralStatuses.has(status.key)); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
+    record(status); origin(status.source, neutralStatuses.has(status.key), status.kind === 'stun', abilityStatuses.has(status.key)); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
     requireValue(Number.isSafeInteger(status.amount) && (status.amount >= 0 || status.kind === 'resistanceFlat') && !statusKeys.has(status.key) && status.expiresAtTick > tick && status.startsAtTick <= tick + 1, 'status range');
     requireValue(['stun','damageReduction','armorReduction','resistanceFlat','attackSpeed','abilityPower','channel','redirect'].includes(status.kind), 'status kind');
     requireValue(status.kind !== 'abilityPower' && (status.kind !== 'attackSpeed' || status.source.definitionId === 'singed-ability' || status.source.definitionId === 'firelight' || status.source.definitionId === 'jayce-ranged-ability'), 'unsupported dynamic status source');

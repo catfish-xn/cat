@@ -1,3 +1,4 @@
+import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { selectOpeningUnit } from '../src/simulation/opening-unit';
 import {must,supplySeats,atSupply} from './p7-carousel-helper';
 import { createMatch } from '../src/simulation/match';
@@ -86,7 +87,8 @@ describe('P7 carousel rule transactions', () => {
             }
         expect(state.status).toBe('closed');
         expect(state.pool.carouselReservations).toHaveLength(0);
-        expect(state.pool.holdings).toHaveLength(a.states.reduce((n,s)=>n+s.preparation.units.filter(u=>u.team==='player').length,0));
+        // Only shop-pool champions hold pool copies (a Gold for Dummies training dummy does not).
+        expect(state.pool.holdings).toHaveLength(a.states.reduce((n,s)=>n+s.preparation.units.filter(u=>u.team==='player'&&SHOP_CATALOG.includes(u.definitionId)).length,0));
         expect(state.pool.carouselReceipts.every(r => r.status === 'granted')).toBe(true);
         const invalid = JSON.parse(JSON.stringify(state)) as CarouselState;
         Object.assign(invalid.slots[0], { pickedBy: 'absent' });
