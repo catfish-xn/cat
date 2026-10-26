@@ -24,6 +24,8 @@ export function requirePool(condition:unknown, reason:SharedPoolFailure='invalid
 export const safe = (n:number,min=0) => Number.isSafeInteger(n) && n>=min;
 export const sourceKey=(...parts:(string|number)[])=>JSON.stringify(parts);
 export const shopSource=(r:ShopReservation)=>sourceKey('shop',r.seatId,r.generation,r.slot);
+/** One key per reserved copy; a 2-star offer holds three. */
+export const shopSources=(r:ShopReservation)=>r.starLevel===2?[0,1,2].map(i=>i?sourceKey('shop',r.seatId,r.generation,r.slot,i):shopSource(r)):[shopSource(r)];
 export const rewardSource=(r:RewardReservation)=>sourceKey('loot',r.seatId,r.receiptId);
 const rewardSources=(r:RewardReservation)=>Array.from({length:3**((r.starLevel??1)-1)},(_,i)=>r.starLevel?sourceKey('loot',r.seatId,r.receiptId,i):rewardSource(r));
 const rewardSalePrice=(definitionId:string,starLevel:1|2|3)=>getUnitSellPrice({id:'orb',team:'player',location:{kind:'bench',slot:0},definitionId,starLevel});
@@ -42,7 +44,7 @@ export function returnHolding(pool:PoolDraft, seatId:string, unitId:string):void
   pool.holdings=pool.holdings.filter(h=>h!==held);
 }
 export function releaseShop(pool:PoolDraft,seatId:string):void {
-  for (const slot of pool.shops.filter(r=>r.seatId===seatId)) pool.available[slot.definitionId]++;
+  for (const slot of pool.shops.filter(r=>r.seatId===seatId)) pool.available[slot.definitionId]+=shopSources(slot).length;
   pool.shops=pool.shops.filter(r=>r.seatId!==seatId);
 }
 
@@ -79,7 +81,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     for(const [slot,offer] of seat.shop.slots.entries()) {
       requirePool(['available','purchased'].includes(offer.status));
       const reserved=(reservations.get(seat.seatId)?.get(slot) ?? []);
-      requirePool(offer.status==='available'?reserved.length===1&&reserved[0].generation===seat.shop.generation&&reserved[0].definitionId===offer.definitionId:reserved.length===0);
+      requirePool(offer.status==='available'?reserved.length===1&&reserved[0].generation===seat.shop.generation&&reserved[0].definitionId===offer.definitionId&&reserved[0].starLevel===offer.starLevel:reserved.length===0);
     }
     if(seat.released) requirePool(!pool.holdings.some(h=>h.seatId===seat.seatId)&&!pool.pending.some(p=>p.seatId===seat.seatId)&&!pool.shops.some(r=>r.seatId===seat.seatId));
   }
@@ -93,7 +95,8 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
   for(const r of pool.shops) {
     const seat=seats.get(r.seatId);
     requirePool(seat && !seat.released && r.generation===seat.shop.generation&&safe(r.slot)&&r.slot<MATCH_RULES.shopSize);
-    count(r.seatId,r.definitionId,[shopSource(r)]);
+    requirePool(r.starLevel===undefined||r.starLevel===2&&UNIT_DEFINITIONS[r.definitionId].cost<=2);
+    count(r.seatId,r.definitionId,shopSources(r));
   }
   for(const h of pool.holdings) {
     const key=sourceKey(h.seatId,h.unitId);requirePool(!units.has(key)&&[1,3,9].includes(h.sources.length));units.add(key);
@@ -162,7 +165,8 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
       if(fact.source.kind==='shop') {
         const origin=fact.source,r=pool.shops.find(r=>r.seatId===seatId&&r.generation===origin.generation&&r.slot===origin.slotIndex);
         requirePool(r&&r.definitionId===origin.definitionId,'invalid-seat-state');
-        definitionId=r.definitionId;source=shopSource(r);pool.shops=pool.shops.filter(s=>s!==r);
+        requirePool((origin.starLevel??1)===(r.starLevel??1),'invalid-seat-state');
+        definitionId=r.definitionId;source=shopSource(r);sources=shopSources(r);pool.shops=pool.shops.filter(s=>s!==r);
       } else if(fact.source.kind==='mechanic') {
         // G2-3 mechanic grant: summons never enter the pool; heroes consume the same-transaction reservation.
         const mechanicReceipt=findMechanicReceipt(after,fact.source.receiptId);

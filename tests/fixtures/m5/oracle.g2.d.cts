@@ -66,3 +66,7 @@ export const CATALOG: readonly (readonly string[])[];
 export const ROUNDS: readonly { roundId: string; ordinal: number; stage: number; sub: number; kind: string }[];
 
 export function benchXp(state: unknown): number;
+
+export function shopWord(state: Pick<MatchState, 'seed' | 'multiplayer'>, parts: readonly (string | number)[]): bigint;
+export function shopForState(state: MatchState, round?: number, subscription?: boolean): { rngState: number; shop: MatchState['shop'] };
+export function shopTransition(state: MatchState, command: unknown): { rngState: number; shop: MatchState['shop']; stolen?: {definitionId: string; starLevel?:2; slot: number} };

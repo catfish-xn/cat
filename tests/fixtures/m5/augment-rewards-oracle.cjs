@@ -163,7 +163,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
  return tables[weights.findIndex(w=>{if(ticket<w)return true;ticket-=w;return false;})];},
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
-const admitted=new Set(['s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
+const admitted=new Set(['augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
  'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel']);
@@ -276,6 +276,29 @@ function validateRewardsCore(before,after,command,events,base){
   assert.equal(r.price,price,'independent mechanic choice price');
  }else if(command?.type==='select'&&['forge','blackMarket','armory'].includes(before.pendingChoice?.kind))assert.fail('missing mechanic choice receipt');
  for(const r of appended)if(r.receiptId.startsWith('[\"augment-pool-batch'))assert.equal(r.source,JSON.parse(r.receiptId)[0],'reward source/namespace binding');
+ const shopGold=new Map(),shopGifts=new Map();
+ const shopId=(rule,a,n)=>JSON.stringify(['augment-pool-shop',rule,a.choiceId,n]);
+ for(const a of augments){
+  if(a.definitionId==='subscription-service'&&entry&&after.round>a.acquiredRound&&base.ROUNDS[after.round-1].sub===1)shopGold.set(shopId('subscription',a,after.round),{amount:6});
+  if(a.definitionId==='dual-purpose'&&command?.type==='buyXp'&&!prior.some(r=>r.receiptId===shopId('dual-purpose',a,before.round)))shopGold.set(shopId('dual-purpose',a,before.round),{amount:2});
+  if(a.definitionId==='firesale'&&entry&&after.round>a.acquiredRound){
+   const {shopTransition}=require('./oracle.g2.cjs'),offer=shopTransition(before,command).stolen;
+   if(offer)shopGifts.set(shopId('firesale',a,after.round),{definitionId:offer.definitionId,starLevel:offer.starLevel??1});
+  }
+  if(a.definitionId==='reinfourcement'&&command?.type==='buy'&&base.COST[before.shop.slots[command.slot].definitionId]===4&&!prior.some(r=>r.receiptId===shopId('reinfourcement',a,0)))for(let i=0;i<2;i++)shopGifts.set(shopId('reinfourcement',a,i),{definitionId:before.shop.slots[command.slot].definitionId,starLevel:1});
+ }
+ const shopActual=appended.filter(r=>r.source==='augment-pool-shop');
+ assert.deepEqual(shopActual.map(r=>r.receiptId).sort(),[...shopGold.keys(),...shopGifts.keys()].sort(),'independent due shop rewards');
+ for(const r of shopActual){
+  assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,r)),'shop reward requires actual grant event');
+  assert.equal(r.round,after.round);assert.equal(r.roundId,after.roundDefinitionId);
+  const expected=shopGold.get(r.receiptId)??shopGifts.get(r.receiptId);
+  if(shopGold.has(r.receiptId)){assert.equal(r.kind,'gold');assert.equal(r.amount,expected.amount);}
+  else {assert.equal(r.kind,'unit');assert.equal(r.definitionId,expected.definitionId);assert.equal(r.starLevel??1,expected.starLevel);if(r.resolution==='orb'){
+   const orbId=JSON.stringify(['orb',after.roundDefinitionId,'mechanic',r.receiptId,0]),dropId=JSON.stringify([orbId,0]);
+   assert.equal(r.orbId,orbId);assert.deepEqual(after.m8.loot.rewardOrbs.find(o=>o.orbId===orbId),{orbId,roundId:after.roundDefinitionId,tier:'gray',source:'mechanic',entries:[{orbId,entryOrdinal:0,dropId,roundId:after.roundDefinitionId,encounterId:'mechanic',sourceUnitId:r.receiptId,slotOrdinal:0,status:'planned',receiptId:null,revealCondition:'source-killed',payload:{kind:'unit',definitionId:expected.definitionId,quantity:1,starLevel:expected.starLevel}}]},'shop gift orb payload derived from the command');
+  }assert.equal(r.gold,r.resolution==='gold'?base.COST[expected.definitionId]*3**(expected.starLevel-1):0);}
+ }
  const activeDrain=command!=null||terminal;
  if(!activeDrain){assert.equal(appended.filter(r=>r.source.startsWith('augment-pool-')).length,0,'no reward without a draining command');return {gold:new Map(),gifts:new Map(),price};}
  const ctx={...after,seed:before.seed,augments,level:progression.level,xp:progression.xp,multiplayer:before.multiplayer?{...after.multiplayer,seatId:before.multiplayer.seatId}:undefined,
@@ -290,7 +313,7 @@ function validateRewardsCore(before,after,command,events,base){
  const locked=Boolean(before.multiplayer&&(before.multiplayer.combatRosterLocked||before.phase==='combat'&&!terminal));
  if(locked||before.phase==='combat'&&!terminal){
   assert.equal(appended.filter(r=>['augment-pool-batch1','augment-pool-batch3-dummy'].includes(r.source)).length,0,'locked roster defers unit and item rewards');
-  return {gold:new Map(dueGold.map(g=>[g.receiptId,g])),gifts:new Map(),price};
+  return {gold:new Map([...dueGold.map(g=>[g.receiptId,g]),...shopGold]),gifts:new Map([...shopGifts]),price};
  }
 
  const pending=plan.gifts.filter(p=>!claimed.has(p.receiptId));
@@ -346,14 +369,14 @@ function validateRewardsCore(before,after,command,events,base){
   if(candidate){const occupied=new Set(working.filter(u=>u.location?.kind==='bench').map(u=>u.location.slot)),slot=Array.from({length:9},(_,i)=>i).find(i=>!occupied.has(i));if(slot===undefined)return false;candidate.location={kind:'bench',slot};}
   roster.splice(0,roster.length,...working);return true;
  }
- if(command?.type==='buy')assert(birth({definitionId:before.shop.slots[command.slot].definitionId,starLevel:1}),'independent purchased birth capacity');
+ if(command?.type==='buy')assert(birth({definitionId:before.shop.slots[command.slot].definitionId,starLevel:before.shop.slots[command.slot].starLevel??1}),'independent purchased birth capacity');
  // Include non-augment direct births already independently checked by the outer loot/P2 ledger.
  for(const r of appended.filter(r=>r.kind==='unit'&&r.source!=='augment-pool-batch1'&&r.resolution==='held'))birth({definitionId:r.definitionId,starLevel:r.starLevel??1});
  for(const r of base.lootReceipts??[])if(['unit','forge'].includes(r.payload.kind)&&r.grantedUnitIds.length)assert(birth({definitionId:r.payload.definitionId,starLevel:r.payload.starLevel??1}),'independent loot birth capacity');
  const required=new Set(pending.filter(g=>g.kind!=='unit').map(g=>g.receiptId));let progress;
  do{progress=false;for(const g of pending.filter(g=>g.kind==='unit'&&!required.has(g.receiptId)))if(before.multiplayer&&base.COST[g.definitionId]||birth(g)){required.add(g.receiptId);progress=true;}}while(progress);
  for(const g of pending)assert.equal(actual.some(r=>r.receiptId===g.receiptId),required.has(g.receiptId),'independent '+g.kind+' receipt existence '+g.receiptId);
- return {gold:new Map(dueGold.map(g=>[g.receiptId,g])),gifts:new Map(pending.map(g=>[g.receiptId,g])),price};
+ return {gold:new Map([...dueGold.map(g=>[g.receiptId,g]),...shopGold]),gifts:new Map([...pending.map(g=>[g.receiptId,g]),...shopGifts]),price};
 }
 // Inventory is a complete transition, including commands with no reward receipt.
 function validateRewards(before,after,command,events,base){

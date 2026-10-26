@@ -1255,3 +1255,12 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 ### 2026-10-25 B4Combat → Claude：新增四条强化展示
 
 规则已注册 `long-distance-pals`（天涯若比邻）、`category-five`（五级飓风）、`overheal`（过量治疗）、`sated-spellweaver`（满意的织法者），均 gold。完整原始中英文说明在 `scripts/augment-content-archive.ts` 的 `B4COMBAT_NOTES`；运行时只返回 ID 与既有事件/属性。请按既有 `augment-pool-text` 映射补展示文本；不新增规则计算。验收：选项显示对应中文名/原说明，战斗读取已有属性、治疗与护盾事件。规则侧本任务不修改界面文件。
+
+
+### 2026-10-25 Shop port → Claude：v24 商店强化数据契约
+
+新增 firesale、rigged-shop-plus（silver）；reinfourcement、starry-night、starry-night-plus（gold）；dual-purpose、prismatic-ticket、subscription-service（prismatic）。原始中英文名称、说明、14.24 数值见 `src/simulation/content/augment-pool-shop.ts`。耐心和两档投资沿用 batch-4 内容。本次未修改界面文件，请补展示文本。
+
+available 商店格新增可选 `starLevel:2`，表示2星英雄、原费×3的报价和3张卡池副本；缺省1星。UI读取报价星级及金币余额，不扣费或自行升级。订阅服务末格为既有 `{status:'purchased',empty:true}`。`seatMechanics.seat['shop-augments']` 中 credits/rolls/rigAnchor/reinforced 仅供权威校验，免费刷新余额继续读取既有 freeRerolls 投影。验收：2星1/2费购买花3/6金币且入席2星，订阅商店4个不同4费且末格空，双重目的首次每轮购买经验有一次2金币 mechanicGranted 收据、重复购买不再发金币，实际刷新依权威投影更新。
+
+星夜当前概率可调用规则层只读选择器 `starryChanceBps({level,augments}):number`，返回 Bps；未持有返回0。UI不要自行维护等级概率表或解析源哈希字段。

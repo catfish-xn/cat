@@ -1404,3 +1404,16 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 ## 2026-10-25 强化日程收据单位认证
 
 `restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState` 与 `serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string` 的输入输出、保存格式不变。强化日程收据 `unitId` 必须为 `null`；格式合法或真实存在的奖励单位 ID 也不允许写入，失败抛 `Invalid Match save: augment receipt unit`。来源账本的收据验证边界独立拒绝同类伪造（`Invalid resource provenance: augment receipt unit`）。实际奖励单位仍通过机制／法球收据与有序 `unit-acquired` 出生的 ID、来源、回合及连续序号认证，不要求单位仍存活于当前阵容；不重发、不修复坏档。三恢复入口一致，决定见 `S13_RULES_GAP.md` 的 P-V23-AUGMENT-RECEIPT-UNIT，回归见 `tests/v23-restore-fuzz.test.ts`、`tests/v23-tamper-batch4.test.ts`。
+
+
+### v24 商店强化移植（P-SHOPPORT，2026-10-25）
+
+新增公共事务 `buySharedXp(pool:SharedPoolState,state:MatchState):SharedPoolResult`；输入为当前有效席位和共享池，成功输出新的 `pool/state/events/poolEvents`；失败沿用 `SharedPoolFailure`（含 `wrong-phase`、`max-level`、`insufficient-gold`、`invalid-seat-state`、`invalid-pool`），保持原 pool/state、不发事件、不消费随机。房间的 buyXp 只在 `dualPurposeOwner(state:MatchState):OwnedAugment|undefined` 返回拥有者时转到该共享事务；费用和经验仍由 Match 的 buyXp 决定。首次每轮2金币收据由 Match 发放并盖事件序号，共享事务只编排真实商店的卡池释放和重新保留。
+
+`ShopSlot` available 报价可带 `starLevel?:2`；缺省1星，2星花费原费用乘3、保留3张卡。`shopOfferCost(offer:{definitionId:string;starLevel?:2}):number` 返回权威购买价，私有投影保留报价星级。`buyUnit` 的来源账本保存同一可选星级；共享保留/释放/购买/淘汰按3张守恒，失败不得扣金币或改池。存档版本不变；门票累计和刷新数、操纵商店锚点、四费增援购买标记使用既有 seatMechanics 扩展机制。耐心及两档投资只有 batch-4 实现，不新增余额快照。阶段与时序按 `S13_RULES_GAP.md` 的 P-SHOPPORT。
+
+只读选择器 `starryChanceBps(state:Pick<MatchState,'augments'|'level'>):number` 输入有效等级及拥有条目，无持有者返回0，持有者返回14.24等级表的 Bps（1800至10000）；不改变状态、随机流或事件。显示层直接调用该选择器，不另算概率。
+
+商店赠品容量：单人火爆甩卖/四费增援满备战席时，复用既有 `rewardOrbs` mechanic 封装和 `resolution: orb` 收据；`claimOrb(state, orbId, expectedRound)` 在非战斗可领取，仍满席返回原 state 和空事件，重复领取为 `already-claimed`。不新增存档版本或字段，旧 PvE 冻结账本不接受未绑定商店收据的额外条目。
+
+`restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):MatchState` 亦执行商店强化计数与收据校验，无持有者的 credits/rolls/rigAnchor/reinforced 或伪造收据抛出 `Invalid shop augment authority: …`；仍只接受与权威共享池匹配的快照，签名和保存格式不变。

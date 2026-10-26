@@ -11,7 +11,8 @@ export type MatchEvent = LedgerCombatEvent | (({readonly type:'openingRewardReso
   | {readonly type:'carouselGranted';readonly receipt:import('./carousel-types').CarouselReceipt}
   | {readonly type:'choiceTimedOut';readonly choiceId:string;readonly resolution:'first-offer'|'empty-anomaly'|'default-option'}
   | import('./seat-mechanics/types').SeatMechanicMatchEvent) & { readonly domain?: 'match'; readonly eventSeq?: number });
-export type ShopSlot = { readonly status: 'available'; readonly definitionId: string } | { readonly status: 'purchased'; readonly empty?: true };
+/** `starLevel: 2` (Starry Night) is three pool copies sold at three times the unit cost. */
+export type ShopSlot = { readonly status: 'available'; readonly definitionId: string; readonly starLevel?: 2 } | { readonly status: 'purchased'; readonly empty?: true };
 export interface Shop { readonly generation: number; readonly slots: readonly ShopSlot[]; readonly locked?: boolean }
 export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: number }
 export type RoundKind = 'pvp' | 'pve' | 'supply';

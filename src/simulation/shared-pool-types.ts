@@ -14,6 +14,8 @@ export interface PoolSeat {
 }
 export interface ShopReservation {
   readonly seatId:string; readonly generation:number; readonly slot:number; readonly definitionId:string;
+  /** A 2-star offer reserves three copies. */
+  readonly starLevel?:2;
 }
 export interface PoolHolding {
   readonly seatId:string; readonly unitId:string; readonly definitionId:string;

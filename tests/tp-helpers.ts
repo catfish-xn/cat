@@ -20,7 +20,7 @@ export function room(capacities?:Record<string,number>,count=2,seed=42) {
 // Independent ledger oracle: sum one copy per reservation/source without production selectors.
 export function conserved(pool:SharedPoolState,states?:readonly MatchState[]) {
   for(const [id,initial] of Object.entries(pool.initial)) {
-    const available=pool.available[id],shop=pool.shops.filter(r=>r.definitionId===id).length;
+    const available=pool.available[id],shop=pool.shops.filter(r=>r.definitionId===id).reduce((n,r)=>n+(r.starLevel===2?3:1),0);
     const held=pool.holdings.filter(h=>h.definitionId===id).reduce((n,h)=>n+h.sources.length,0);
     const pending=pool.pending.filter(r=>r.definitionId===id).length;
     expect(available).toBeGreaterThanOrEqual(0);expect(available+shop+held+pending).toBe(initial);

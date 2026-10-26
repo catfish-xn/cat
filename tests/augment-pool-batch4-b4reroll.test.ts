@@ -77,7 +77,7 @@ const targets=[['invested-plus','3-2'],['invested-plus-plus','4-2']] as const;
 for(const [id,node] of targets){
  describe(id,()=>{
   it('initializes its public stage route',()=>{
-   const seed=id==='invested-plus'?54:8; // first fielded-route seeds offering the card on the 224-card batch-4 pool
+   const seed=id==='invested-plus'?29:6; // first fielded-route seeds offering the card (including the three public rerolls) on the 232-card shop pool
    routes.set(id,createMatch(seed));
   });
   for(const stop of ['1-2','1-3','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','3-2',...(node==='4-2'?['3-3','3-4','3-5','3-6','3-7','4-1','4-2']:[])])it(`public route ${stop}`,()=>{
@@ -95,3 +95,11 @@ for(const [id,node] of targets){
   });
  });
 }
+
+it.each(['invested-plus','invested-plus-plus'])('%s accumulates the source-line 55/60/79/140 entry example from settled history only',definitionId=>{
+ const base=createMatch(42),state={...base,round:5,augments:[{definitionId,choiceId:'source-port',acquiredRound:1}],
+  roundResults:[55,60,79,140].map((goldAfter,i)=>({round:i+1,roundId:['1-1','1-2','1-3','2-1'][i],goldAfter,mechanicReceiptPrefixLength:0}))} as unknown as MatchState;
+ expect(batch4RerollsGranted(state)).toBe(6);
+ expect(batch4RerollsGranted({...state,gold:9999})).toBe(6);
+ expect(()=>batch4RerollsGranted({...state,roundResults:state.roundResults.slice(0,-1)})).toThrow('Missing batch4 reroll entry history');
+});

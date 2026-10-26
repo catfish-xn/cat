@@ -1,3 +1,5 @@
+import { soloShopOrb } from './shop-orbs';
+import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost, drawSoloAugmentShop, dualPurposeOwner, grantDualPurposeGold, planFiresale, stealFiresaleUnit, subscriptionAcquired, subscriptionStageStart } from './shop-augments';
 import { drainBatch4Gold } from './augment-pool-batch4-progress';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -68,7 +70,7 @@ import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, createCombatWithEventsSteps, stepCombat, validateCombatStart, type CombatState } from './combat';
 import { toLedgerEvents } from './combat-ledger';
 import { deployUnit, getPlayerDeploymentCount } from './game';
-import { UNIT_DEFINITIONS, type UnitLocation } from './units';
+import { type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 import { nextRandom, validateSeed } from './rng';
 import { DEFAULT_BOARD, sameCell } from './board';
@@ -159,7 +161,7 @@ export function needsAnomalyRecruitment(state: MatchState): boolean {
       && !state.multiplayer?.forfeitedChoices.includes(event.id));
 }
 function affordableOffer(state: MatchState, gold = state.gold): boolean {
-  return state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost <= gold);
+  return state.shop.slots.some(slot => slot.status === 'available' && shopOfferCost(slot) <= gold);
 }
 /** v22: the candidate filter of an augment node opening now (trait snapshot only where the node is tailored). */
 function openingOfferFilter(state: MatchState, choiceId: string, blocked: readonly string[]): AugmentOfferFilter {
@@ -317,19 +319,20 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
   const offer = state.shop.slots[slotIndex];
   if (offer.status !== 'available') return fail(state, 'purchased-slot');
-  const cost = UNIT_DEFINITIONS[offer.definitionId].cost;
+  const cost = shopOfferCost(offer);
   if (state.gold < cost) return fail(state, 'insufficient-gold');
   const plan = planUnitAcquisition(state, offer.definitionId,
-    { kind: 'shop', generation: expectedGeneration, slotIndex, definitionId: offer.definitionId }, state.resourceProvenance.entries.length, isCombatRosterLocked(state));
+    { kind: 'shop', generation: expectedGeneration, slotIndex, definitionId: offer.definitionId,...(offer.starLevel?{starLevel:offer.starLevel}:{}) }, state.resourceProvenance.entries.length, isCombatRosterLocked(state), offer.starLevel ?? 1);
   if (!plan.ok) return fail(state, plan.reason);
   const purchased: MatchState = { ...state, items: plan.items, anomalyBinding: plan.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, plan.upgradeEvents), gold: state.gold - cost, nextUnitSerial: plan.nextUnitSerial,
     resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, plan.facts),
     preparation: plan.preparation,
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
   };
-  const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
+  const reinforced = applyReinfourcement(state, purchased, unitLootPolicy);
+  const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(reinforced.state) : { state: reinforced.state, events: [] };
   const gifted=entered.state.phase!=='combat'&&!isCombatRosterLocked(entered.state)?drainP2Gifts(entered.state,unitLootPolicy):entered.state;
-  return acceptEquipment(gifted, [...plan.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
+  return acceptEquipment(gifted, [...plan.events, ...reinforced.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
 }
 export function openAnvil(state:MatchState,unitId:string):MatchCommandResult {
   const result=planOpenAnvil(state,unitId);
@@ -368,9 +371,9 @@ export function rerollShop(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   const spent = spendFreeReroll(state), cost = spent.free ? 0 : MATCH_RULES.rerollCost;
   if (state.gold < cost) return fail(state, 'insufficient-gold');
-  const generated = generateShop(state.rngState, state.shop.generation + 1, state.level, state.round, sixCostShopContext(state));
+  const generated = drawSoloAugmentShop(recordShopReroll(spent.state),sixCostShopContext(state));
   if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - cost)) return fail(state, 'insufficient-gold');
-  return accept({ ...spent.state, gold: state.gold - cost, ...generated,
+  return accept({ ...generated, gold: state.gold - cost,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
 export function buyXp(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
@@ -381,8 +384,13 @@ export function buyXp(state: MatchState, unitLootPolicy?: UnitLootPolicy): Match
   if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - cost)) return fail(state, 'insufficient-gold');
   const progression = grantXp(state.level, state.xp, xpPurchaseAmount(state.augments, state.round));
   const leveled=applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp });
-  if(leveled.level===state.level||!state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]))return accept(leveled);
-  const gifted=isCombatRosterLocked(leveled)?drainBatch4Gold(leveled):drainP2Gifts(leveled,unitLootPolicy);
+  let rewarded=leveled;
+  if(dualPurposeOwner(rewarded)){
+    rewarded=grantDualPurposeGold(rewarded);
+    if(!rewarded.shop.locked){rewarded=recordShopReroll(rewarded);if(!rewarded.sharedPool)rewarded=drawSoloAugmentShop(rewarded,sixCostShopContext(rewarded));}
+  }
+  const gifted=leveled.level===state.level||!state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])?rewarded
+    :isCombatRosterLocked(rewarded)?drainBatch4Gold(rewarded):drainP2Gifts(rewarded,unitLootPolicy);
   return accept(gifted,mechanicGrantEvents(leveled,gifted));
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
@@ -582,19 +590,22 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   state={...state,level:progression.level,xp:progression.xp};
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
-  const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level, round, sixCostShopContext(state));
-  const carousel = resolveCarouselPreparation({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
-    preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
+  const refresh = state.shop.locked && !subscriptionStageStart(state,round) && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : drawSoloAugmentShop({...state,round},sixCostShopContext(state),subscriptionStageStart(state,round));
+  const carousel = resolveCarouselPreparation({ ...state, ...refresh, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
+    preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] } });
   let prepared = growTrainerGolem(enterOpeningCrabs(carousel.state));
   const openingEvents: MatchEvent[] = [];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
-  prepared=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,prepared));
+  const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));
+  const shopEntry=enterShopAugmentRound(drained),shopEvents=stampMatchEvents(shopEntry,mechanicGrantEvents(drained,shopEntry));
+  prepared=shopEvents.state;openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,drained),...shopEvents.events);
   if (prepared.phase === 'gameOver') {
     const terminal = stampMatchEvents(prepared, carousel.events);
     return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
   }
+  if(prepared.m8.loot.layoutBinding.mode!=='shared'){const steal=planFiresale(prepared,round);if(steal){const result=stealFiresaleUnit(prepared,steal.owner,steal.slot);const stamped=stampMatchEvents(result.state,result.events);prepared=stamped.state;openingEvents.push(...stamped.events);}}
   const entered = enterScheduledEvents(prepared, 'before', augmentBlocked);
   const accepted = acceptEquipment(entered.state, [...carousel.events,...entered.events]);
   return accepted.ok ? {...accepted, events: [...openingEvents, ...accepted.events]} : accepted;
@@ -623,13 +634,13 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const entryLevel=state.level;
     const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};
-    const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
-      : generateShop(state.rngState, state.shop.generation + 1, state.level, definition.ordinal, sixCostShopContext(state));
+    const refresh = state.shop.locked && !subscriptionStageStart(state,definition.ordinal) ? { shop: state.shop, rngState: state.rngState }
+      : drawSoloAugmentShop({...state,round:definition.ordinal},sixCostShopContext(state),subscriptionStageStart(state,definition.ordinal));
     const applied=applyOpeningRoundEntry({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
-    const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state)),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
+    const drained=enterShopAugmentRound(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state))),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
@@ -820,7 +831,7 @@ export function claimOrb(state: MatchState, orbId: string, expectedRound: number
     const result=planOrbClaim(state,orbId,expectedRound,unitLootPolicy);
     if(!result.ok)return result;
     // Queue acceptance must not run resource/equipment/choice hooks during combat.
-    if(isCombatRosterLocked(state))return result;
+    if(isCombatRosterLocked(state)||result.state===state&&soloShopOrb(state,orbId)&&!result.events.length)return result;
     const events=[...result.events],drained=drainG23Rewards(result.state,unitLootPolicy,events);
     events.push(...mechanicGrantEvents(result.state,drained));
     return acceptEquipment(drained,events);
@@ -921,6 +932,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   }
   if(choice.kind==='anomaly'){selected=acquireD14(selected);const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);}
   if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);}
+  if(!selected.sharedPool&&subscriptionAcquired(state,selected))selected=drawSoloAugmentShop(selected,sixCostShopContext(selected),true);
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
   const forge=openAugmentForge(entered.state);
   return acceptEquipment(forge.state, [...events, ...entered.events,...forge.events]);

@@ -1,3 +1,4 @@
+import { AUGMENT_SHOP_API_NAMES } from './augment-pool-shop';
 import { AUGMENT_BATCH4_API_NAMES } from './augment-pool-batch4';
 import { AUGMENT_BATCH4_B4XP_API_NAMES, AUGMENT_BATCH4_B4XP_NODE_BANS } from './augment-pool-batch4-b4xp';
 import { AUGMENT_BATCH4_B4REROLL_API_NAMES, AUGMENT_BATCH4_B4REROLL_NODE_BANS } from './augment-pool-batch4-b4reroll';
@@ -19,6 +20,7 @@ export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeCo
   ...AUGMENT_BATCH1_API_NAMES,
   ...AUGMENT_BATCH2_API_NAMES,
   ...AUGMENT_BATCH3_API_NAMES,
+  ...AUGMENT_SHOP_API_NAMES,
   ...AUGMENT_BATCH4_B4COMBAT_API_NAMES,
   ...AUGMENT_BATCH3_XP_API_NAMES,
   ...AUGMENT_BATCH4_API_NAMES,

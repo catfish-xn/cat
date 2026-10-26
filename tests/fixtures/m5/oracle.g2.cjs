@@ -15,7 +15,7 @@ const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:68,9:68};
 const AUGMENTS=["all-for-one-ii", "backup", "belt-overflow", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "calculated-enhancement", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "crown-guarded", "crownguard-spirit", "find-your-center", "flurry-of-blows", "glass-cannon-i", "glass-cannon-ii", "guardbreaker-spirit", "immovable-object", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "not-today", "pair-of-fours", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii", "shojin-spirit", "sword-overflow", "trifecta-ii", "wand-overflow"];
 // v22 anvil units (hand-copied ids).
 const ANVIL_IDS=new Set(['TFT_ArmoryKeyCompleted','TFT_ArmoryKeyComponent','TFT_ArmoryKeyOrnn','TFT_ArmoryKeySupport','TFT_ArmoryKeyRadiant']);
-const AUGMENT_GOLD={'placebo':8,'placebo-plus':15,'going-long':15,'hedge-fund':25,'investment-strategy-ii':5,
+const AUGMENT_GOLD={'firesale':1,'reinfourcement':12,'subscription-service':6,'starry-night':6,'starry-night-plus':8,'placebo':8,'placebo-plus':15,'going-long':15,'hedge-fund':25,'investment-strategy-ii':5,
  // v23 batch 1 instant gold (14.24 records 40, 26, 124, 157, 158, 83, 233; hand transcription in tests/augment-pool-source-expectations.ts).
  'one-two-five':2,'iron-assets':4,'heroic-grab-bag':9,'raining-gold':8,'raining-gold-plus':18,'big-grab-bag':2,'build-a-bud':8,
  // 14.24 archive: Scapegoat InitialGold, trainer Gold, Trade Sector Gold; XP batch Gold.
@@ -61,6 +61,8 @@ function benchXp(state){
 }
 function freeRerollCredits(state){
  let count=0;for(const a of state.augments){const id=a.definitionId;
+  if(id==='rigged-shop-plus')count+=5;
+  if(id==='prismatic-ticket')for(let i=0;i<(state.seatMechanics?.seat['shop-augments']?.rolls??0);i++)if(shopWord(state,['ticket',a.choiceId,i])*100n/4294967296n<45n)count++;
   count+=({'rolling-for-days-i':11,'superstars-i':2,'superstars-ii':4}[id]??0);
   if(id==='trade-sector')count+=state.round-a.acquiredRound+1;
   if(id==='call-to-chaos'&&chaosOutcome(state,a)==='rerolls')count+=40;
@@ -128,6 +130,8 @@ AUGMENT_POOLS.silver.push('item-grab-bag-i','one-two-five','band-of-thieves-i','
 AUGMENT_POOLS.gold.push('heroic-grab-bag','raining-gold','raining-gold-plus','academy-crest','ambusher-crest','artillerist-crest','automata-crest','bruiser-crest','black-rose-crest','chem-baron-crest','conqueror-crest','dominator-crest','enforcer-crest','experiment-crest','family-crest','firelight-crest','pit-fighter-crest','quickstriker-crest','rebel-crest','scrap-crest','sentinel-crest','sniper-crest','sorcerer-crest','visionary-crest','watcher-crest','big-grab-bag','teaming-up-ii','support-cache','duo-queue','two-trick');
 AUGMENT_POOLS.prismatic.push('build-a-bud','radiant-refactor','academy-crown','ambusher-crown','artillerist-crown','automata-crown','bruiser-crown','black-rose-crown','chem-baron-crown','conqueror-crown','dominator-crown','enforcer-crown','experiment-crown','family-crown','firelight-crown','pit-fighter-crown','quickstriker-crown','rebel-crown','scrap-crown','sentinel-crown','sniper-crown','sorcerer-crown','visionary-crown','watcher-crown','final-polish','one-buff-two-buff');
 AUGMENTS.push('item-grab-bag-i','one-two-five','band-of-thieves-i','teaming-up-i','iron-assets','missed-connections','ones-twos-three','silver-spoon','heroic-grab-bag','raining-gold','raining-gold-plus','academy-crest','ambusher-crest','artillerist-crest','automata-crest','bruiser-crest','black-rose-crest','chem-baron-crest','conqueror-crest','dominator-crest','enforcer-crest','experiment-crest','family-crest','firelight-crest','pit-fighter-crest','quickstriker-crest','rebel-crest','scrap-crest','sentinel-crest','sniper-crest','sorcerer-crest','visionary-crest','watcher-crest','big-grab-bag','teaming-up-ii','support-cache','duo-queue','two-trick','build-a-bud','radiant-refactor','academy-crown','ambusher-crown','artillerist-crown','automata-crown','bruiser-crown','black-rose-crown','chem-baron-crown','conqueror-crown','dominator-crown','enforcer-crown','experiment-crown','family-crown','firelight-crown','pit-fighter-crown','quickstriker-crown','rebel-crown','scrap-crown','sentinel-crown','sniper-crown','sorcerer-crown','visionary-crown','watcher-crown','final-polish','one-buff-two-buff');AUGMENTS.sort();
+// 14.24 shop augment IDs/tiers, transcribed without importing runtime content.
+for(const [tier,ids] of Object.entries({silver:['firesale','rigged-shop-plus'],gold:['reinfourcement','starry-night','starry-night-plus'],prismatic:['dual-purpose','prismatic-ticket','subscription-service']})){AUGMENT_POOLS[tier].push(...ids);AUGMENTS.push(...ids);}
 const batch2Offers=require('../../augment-pool-batch2-oracle-data.cjs');
 // Batch 3 (14.24 tiers): player-combat scheduled grants and free shop rerolls.
 const batch3Offers={silver:['team-building','latent-forge','eye-for-an-eye','eye-for-an-eye-plus','rolling-for-days-i','superstars-i','corrosion','wealthy-rehab-i','support-mining','support-mining-plus','field-medic','blade-dance','shocking-troll','spoils-of-war-i','dummify'],gold:['what-doesnt-kill-you','prizefighter','superstars-ii','trade-sector','worth-the-wait','blazing-soul-i','noble-sacrifice','wealthy-rehab-ii','bad-luck-protection','scapegoat','wandering-trainer-i','gold-for-dummies','tower-defense','savage-revenge','all-out','blood-pact','spoils-of-war-ii','golemify','warpath','magic-roll'],prismatic:['blazing-soul-ii','spoils-of-war-iii','wandering-trainer-ii','the-golden-egg','an-exalted-adventure','phreaky-friday','phreaky-friday-plus','dark-alley-dealings','living-forge','shimmerscale-essence','building-a-collection-iii','worth-the-wait-ii','flexible','call-to-chaos']};
@@ -136,8 +140,8 @@ batch3Offers.silver.push('kingslayer','risky-moves');batch3Offers.gold.push('pat
 // Batch 4 (14.24 tiers): level rewards, B4XP bench XP, B4reroll free rerolls, B4Combat combat-start effects.
 batch3Offers.silver.push('caretakers-ally','lategame-specialist','patience-is-a-virtue');batch3Offers.gold.push('caretakers-favor','clear-mind','cluttered-mind','slammin','slammin-plus','long-distance-pals','category-five','overheal','sated-spellweaver');batch3Offers.prismatic.push('birthday-presents','caretakers-chosen','invested-plus','invested-plus-plus');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
-assert.equal(AUGMENTS.length,224,'independent full augment catalog size');
-assert.equal(new Set(AUGMENTS).size,224,'independent catalog has no duplicates');
+assert.equal(AUGMENTS.length,232,'independent full augment catalog size');
+assert.equal(new Set(AUGMENTS).size,232,'independent catalog has no duplicates');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).
@@ -186,7 +190,7 @@ const EXCLUSIVE_GROUPS=[['all-for-one-i','all-for-one-ii','pair-of-fours'],['bro
  ['bulky-buddies-iii','mentorship-i'],['bulky-buddies-iii','mentorship-ii'],['crown-guarded','not-today'],['high-voltage','not-today'],
  ['sisters','mentorship','reunion','geniuses','menaces','unlikely-duo'],['glass-cannon-i','glass-cannon-ii'],['manaflow-i','manaflow-ii'],
  ['piercing-lotus-i','piercing-lotus-ii'],['placebo','placebo-plus'],['pumping-up-i','pumping-up-ii','pumping-up-iii'],['trifecta-i','trifecta-ii']];
-EXCLUSIVE_GROUPS.push(['lategame-specialist','level-up'],
+EXCLUSIVE_GROUPS.push(['firesale','patience-is-a-virtue'],['rigged-shop-plus','subscription-service'],['starry-night','starry-night-plus'],['lategame-specialist','level-up'],
  ['clear-mind','cluttered-mind'],['slammin','slammin-plus'],['category-five','not-today'],
  ['sated-spellweaver','wealthy-rehab-i'],['sated-spellweaver','wealthy-rehab-ii'],
  ['invested-plus','invested-plus-plus']);
@@ -206,7 +210,7 @@ function excludedByOwned(id,owned){return owned.some(a=>a.definitionId!==id&&EXC
 function traitAllowed(id,node,traits){return !['round:3-2:augment','round:4-2:augment'].includes(node)||!TEAMUP_TRAITS[id]||TEAMUP_TRAITS[id].some(t=>traits.includes(t));}
 // 14.24 stage tags (item_tags_raw {d02ae323}/{d12ae4b6}/{d22ae649} = not at 2-1/3-2/4-2, P inference), written out by id
 // from the research JSON independently of src/simulation/content/augment-stage-bans.ts.
-const STAGE_BANS={"caretakers-ally":["3-2","4-2"],"lategame-specialist":["2-1","4-2"],"caretakers-favor":["3-2","4-2"],"birthday-presents":["3-2","4-2"],"caretakers-chosen":["3-2","4-2"],"clear-mind":["3-2","4-2"],"cluttered-mind":["3-2","4-2"],"slammin":["3-2","4-2"],"slammin-plus":["2-1","4-2"],"patience-is-a-virtue":["3-2","4-2"],"invested-plus":["2-1","4-2"],"invested-plus-plus":["2-1","3-2"],"category-five":["4-2"],"overheal":["2-1"],"sated-spellweaver":["2-1"],"all-for-one-i":["3-2","4-2"],"all-for-one-ii":["3-2","4-2"],"all-out":["3-2","4-2"],"an-exalted-adventure":["3-2","4-2"],"backup":["2-1"],"bad-luck-protection":["2-1"],"belt-overflow":["2-1"],"betrayal":["2-1","4-2"],"big-grab-bag":["2-1"],"black-rose-crest":["2-1"],"black-rose-crown":["2-1"],"blade-dance":["3-2","4-2"],"blazing-soul-i":["2-1"],"blazing-soul-ii":["2-1"],"blinding-speed":["2-1"],"blood-pact":["3-2","4-2"],"branching-out":["4-2"],"bronze-for-life-i":["2-1"],"bronze-for-life-ii":["2-1"],"build-a-bud":["3-2","4-2"],"building-a-collection-iii":["4-2"],"built-different":["3-2","4-2"],"bulky-buddies-ii":["2-1"],"bulky-buddies-iii":["2-1"],"calculated-enhancement":["2-1"],"call-to-chaos":["2-1","3-2"],"climb-the-ladder-i":["2-1"],"climb-the-ladder-ii":["2-1"],"coronation":["2-1"],"corrosion":["2-1"],"crimson-pact":["4-2"],"crown-guarded":["4-2"],"dark-alley-dealings":["2-1","4-2"],"defense-call":["2-1"],"dummify":["2-1","4-2"],"duo-queue":["2-1","3-2"],"enforce":["4-2"],"epoch":["3-2","4-2"],"epoch-plus":["2-1","4-2"],"eye-for-an-eye":["3-2","4-2"],"eye-for-an-eye-plus":["2-1","4-2"],"field-medic":["3-2","4-2"],"final-polish":["2-1","3-2"],"find-your-center":["2-1"],"flexible":["3-2","4-2"],"geniuses":["2-1","3-2"],"going-long":["3-2","4-2"],"gold-for-dummies":["3-2","4-2"],"golemify":["2-1","4-2"],"hedge-fund":["3-2","4-2"],"high-voltage":["4-2"],"investment-strategy-i":["3-2","4-2"],"investment-strategy-ii":["3-2","4-2"],"iron-assets":["3-2","4-2"],"item-collector-i":["2-1"],"item-collector-ii":["2-1"],"kingslayer":["4-2"],"latent-forge":["3-2","4-2"],"level-up":["3-2","4-2"],"lineup":["2-1"],"little-buddies":["2-1"],"living-forge":["3-2","4-2"],"magic-roll":["2-1","4-2"],"manaflow-i":["2-1"],"manaflow-ii":["2-1"],"menaces":["2-1","4-2"],"mentorship":["2-1","3-2"],"missed-connections":["2-1"],"noble-sacrifice":["2-1"],"one-buff-two-buff":["2-1"],"one-two-five":["2-1","3-2"],"ones-twos-three":["3-2","4-2"],"pair-of-fours":["2-1","3-2"],"patient-study":["3-2","4-2"],"phreaky-friday":["3-2","4-2"],"phreaky-friday-plus":["2-1"],"piercing-lotus-i":["2-1"],"piercing-lotus-ii":["2-1"],"pit-fighter-prizefighter":["3-2","4-2"],"placebo":["3-2","4-2"],"placebo-plus":["2-1","4-2"],"prizefighter":["3-2","4-2"],"pumping-up-i":["3-2","4-2"],"pumping-up-ii":["3-2","4-2"],"pumping-up-iii":["3-2","4-2"],"pyromaniac":["4-2"],"radiant-refactor":["2-1"],"raining-gold":["3-2","4-2"],"raining-gold-plus":["2-1","4-2"],"reunion":["2-1","3-2"],"risky-moves":["3-2","4-2"],"rocket-collection":["3-2","4-2"],"rocket-collection-plus":["2-1","4-2"],"rolling-for-days-i":["2-1"],"savage-revenge":["2-1","4-2"],"scapegoat":["3-2","4-2"],"scrap-recycling":["3-2","4-2"],"shimmerscale-essence":["3-2","4-2"],"shocking-troll":["3-2","4-2"],"shopping-spree":["3-2","4-2"],"silver-spoon":["3-2","4-2"],"sisters":["2-1","3-2"],"spoils-of-war-i":["3-2","4-2"],"spoils-of-war-ii":["3-2","4-2"],"spoils-of-war-iii":["3-2","4-2"],"superstars-i":["3-2","4-2"],"superstars-ii":["3-2","4-2"],"support-mining":["3-2","4-2"],"support-mining-plus":["2-1","4-2"],"sword-overflow":["2-1"],"tacticians-kitchen":["3-2","4-2"],"team-building":["4-2"],"teaming-up-i":["2-1"],"teaming-up-ii":["2-1","3-2"],"the-golden-egg":["2-1","3-2"],"thorn-plated-armor":["4-2"],"tower-defense":["4-2"],"trade-sector":["3-2","4-2"],"trifecta-i":["2-1"],"trifecta-ii":["2-1"],"two-trick":["3-2","4-2"],"unleash-the-beast":["4-2"],"unlikely-duo":["2-1","3-2"],"wand-overflow":["2-1"],"wandering-trainer-i":["3-2","4-2"],"wandering-trainer-ii":["3-2","4-2"],"warpath":["3-2","4-2"],"watcher-growth":["2-1","3-2","4-2"],"wealthy-rehab-i":["2-1"],"wealthy-rehab-ii":["2-1"],"welcome-to-the-playground":["4-2"],"what-doesnt-kill-you":["3-2","4-2"],"worth-the-wait":["3-2","4-2"],"worth-the-wait-ii":["3-2","4-2"]};
+const STAGE_BANS={"firesale":["2-1","4-2"],"rigged-shop-plus":["2-1","4-2"],"reinfourcement":["2-1","3-2"],"starry-night":["3-2","4-2"],"starry-night-plus":["2-1","4-2"],"dual-purpose":["3-2","4-2"],"prismatic-ticket":["4-2"],"subscription-service":["3-2","4-2"],"caretakers-ally":["3-2","4-2"],"lategame-specialist":["2-1","4-2"],"caretakers-favor":["3-2","4-2"],"birthday-presents":["3-2","4-2"],"caretakers-chosen":["3-2","4-2"],"clear-mind":["3-2","4-2"],"cluttered-mind":["3-2","4-2"],"slammin":["3-2","4-2"],"slammin-plus":["2-1","4-2"],"patience-is-a-virtue":["3-2","4-2"],"invested-plus":["2-1","4-2"],"invested-plus-plus":["2-1","3-2"],"category-five":["4-2"],"overheal":["2-1"],"sated-spellweaver":["2-1"],"all-for-one-i":["3-2","4-2"],"all-for-one-ii":["3-2","4-2"],"all-out":["3-2","4-2"],"an-exalted-adventure":["3-2","4-2"],"backup":["2-1"],"bad-luck-protection":["2-1"],"belt-overflow":["2-1"],"betrayal":["2-1","4-2"],"big-grab-bag":["2-1"],"black-rose-crest":["2-1"],"black-rose-crown":["2-1"],"blade-dance":["3-2","4-2"],"blazing-soul-i":["2-1"],"blazing-soul-ii":["2-1"],"blinding-speed":["2-1"],"blood-pact":["3-2","4-2"],"branching-out":["4-2"],"bronze-for-life-i":["2-1"],"bronze-for-life-ii":["2-1"],"build-a-bud":["3-2","4-2"],"building-a-collection-iii":["4-2"],"built-different":["3-2","4-2"],"bulky-buddies-ii":["2-1"],"bulky-buddies-iii":["2-1"],"calculated-enhancement":["2-1"],"call-to-chaos":["2-1","3-2"],"climb-the-ladder-i":["2-1"],"climb-the-ladder-ii":["2-1"],"coronation":["2-1"],"corrosion":["2-1"],"crimson-pact":["4-2"],"crown-guarded":["4-2"],"dark-alley-dealings":["2-1","4-2"],"defense-call":["2-1"],"dummify":["2-1","4-2"],"duo-queue":["2-1","3-2"],"enforce":["4-2"],"epoch":["3-2","4-2"],"epoch-plus":["2-1","4-2"],"eye-for-an-eye":["3-2","4-2"],"eye-for-an-eye-plus":["2-1","4-2"],"field-medic":["3-2","4-2"],"final-polish":["2-1","3-2"],"find-your-center":["2-1"],"flexible":["3-2","4-2"],"geniuses":["2-1","3-2"],"going-long":["3-2","4-2"],"gold-for-dummies":["3-2","4-2"],"golemify":["2-1","4-2"],"hedge-fund":["3-2","4-2"],"high-voltage":["4-2"],"investment-strategy-i":["3-2","4-2"],"investment-strategy-ii":["3-2","4-2"],"iron-assets":["3-2","4-2"],"item-collector-i":["2-1"],"item-collector-ii":["2-1"],"kingslayer":["4-2"],"latent-forge":["3-2","4-2"],"level-up":["3-2","4-2"],"lineup":["2-1"],"little-buddies":["2-1"],"living-forge":["3-2","4-2"],"magic-roll":["2-1","4-2"],"manaflow-i":["2-1"],"manaflow-ii":["2-1"],"menaces":["2-1","4-2"],"mentorship":["2-1","3-2"],"missed-connections":["2-1"],"noble-sacrifice":["2-1"],"one-buff-two-buff":["2-1"],"one-two-five":["2-1","3-2"],"ones-twos-three":["3-2","4-2"],"pair-of-fours":["2-1","3-2"],"patient-study":["3-2","4-2"],"phreaky-friday":["3-2","4-2"],"phreaky-friday-plus":["2-1"],"piercing-lotus-i":["2-1"],"piercing-lotus-ii":["2-1"],"pit-fighter-prizefighter":["3-2","4-2"],"placebo":["3-2","4-2"],"placebo-plus":["2-1","4-2"],"prizefighter":["3-2","4-2"],"pumping-up-i":["3-2","4-2"],"pumping-up-ii":["3-2","4-2"],"pumping-up-iii":["3-2","4-2"],"pyromaniac":["4-2"],"radiant-refactor":["2-1"],"raining-gold":["3-2","4-2"],"raining-gold-plus":["2-1","4-2"],"reunion":["2-1","3-2"],"risky-moves":["3-2","4-2"],"rocket-collection":["3-2","4-2"],"rocket-collection-plus":["2-1","4-2"],"rolling-for-days-i":["2-1"],"savage-revenge":["2-1","4-2"],"scapegoat":["3-2","4-2"],"scrap-recycling":["3-2","4-2"],"shimmerscale-essence":["3-2","4-2"],"shocking-troll":["3-2","4-2"],"shopping-spree":["3-2","4-2"],"silver-spoon":["3-2","4-2"],"sisters":["2-1","3-2"],"spoils-of-war-i":["3-2","4-2"],"spoils-of-war-ii":["3-2","4-2"],"spoils-of-war-iii":["3-2","4-2"],"superstars-i":["3-2","4-2"],"superstars-ii":["3-2","4-2"],"support-mining":["3-2","4-2"],"support-mining-plus":["2-1","4-2"],"sword-overflow":["2-1"],"tacticians-kitchen":["3-2","4-2"],"team-building":["4-2"],"teaming-up-i":["2-1"],"teaming-up-ii":["2-1","3-2"],"the-golden-egg":["2-1","3-2"],"thorn-plated-armor":["4-2"],"tower-defense":["4-2"],"trade-sector":["3-2","4-2"],"trifecta-i":["2-1"],"trifecta-ii":["2-1"],"two-trick":["3-2","4-2"],"unleash-the-beast":["4-2"],"unlikely-duo":["2-1","3-2"],"wand-overflow":["2-1"],"wandering-trainer-i":["3-2","4-2"],"wandering-trainer-ii":["3-2","4-2"],"warpath":["3-2","4-2"],"watcher-growth":["2-1","3-2","4-2"],"wealthy-rehab-i":["2-1"],"wealthy-rehab-ii":["2-1"],"welcome-to-the-playground":["4-2"],"what-doesnt-kill-you":["3-2","4-2"],"worth-the-wait":["3-2","4-2"],"worth-the-wait-ii":["3-2","4-2"]};
 const stageBanned=(id,node)=>node!==null&&(STAGE_BANS[id]??[]).some(n=>node==='round:'+n+':augment');
 function augmentPool(tier,owned,excluded=[],node=null,traits=[]){return AUGMENT_POOLS[tier].filter(id=>!(node==='round:2-1:augment'&&['black-rose-crest','black-rose-crown'].includes(id))&&!stageBanned(id,node)&&!owned.some(a=>a.definitionId===id)&&!excluded.includes(id)&&!excludedByOwned(id,owned)&&traitAllowed(id,node,traits)).sort();}
 function augmentDraw(rng,tier,owned,excluded=[],node=null,traits=[]){
@@ -339,8 +343,21 @@ function validateLoot(state){
  assert.equal(frozen.version,'s13-orb-freeze-v17');assert.equal(frozen.seed,state.seed);assert.equal(frozen.throughRoundOrdinal,state.round);
  assert.deepEqual(frozen.rounds,expected.rounds,'independent frozen loot source/payload/fallback');assert.deepEqual(frozen.rng,expected.rng,'independent loot RNG conservation');
  const direct=expected.rounds.flatMap(r=>r.encounterPlan.drops),choices=expected.rounds.flatMap(r=>r.choices);
+ const mechanicIds=new Set();
+ for(const orb of loot.rewardOrbs??[]){
+  const r=state.seatMechanics?.receipts.find(r=>r.source==='augment-pool-shop'&&r.kind==='unit'&&r.resolution==='orb'&&r.orbId===orb.orbId);
+  assert(r,'solo mechanic orb requires a shop gift receipt');
+  const orbId=JSON.stringify(['orb',r.roundId,'mechanic',r.receiptId,0]),dropId=JSON.stringify([orbId,0]);
+  const e={orbId,entryOrdinal:0,dropId,roundId:r.roundId,encounterId:'mechanic',sourceUnitId:r.receiptId,slotOrdinal:0,status:'planned',receiptId:null,revealCondition:'source-killed',payload:{kind:'unit',definitionId:r.definitionId,quantity:1,starLevel:r.starLevel??1}};
+  assert.deepEqual(orb,{orbId,roundId:r.roundId,tier:'gray',source:'mechanic',entries:[e]},'independent shop orb envelope');
+  assert(!mechanicIds.has(dropId),'unique shop orb');mechanicIds.add(dropId);direct.push(e);
+ }
+ for(const r of state.seatMechanics?.receipts??[])if(r.kind==='unit'&&r.resolution==='orb'){assert.equal(r.orbId,JSON.stringify(['orb',r.roundId,'mechanic',r.receiptId,0]),'shop receipt orb binding');assert((loot.rewardOrbs??[]).some(o=>o.orbId===r.orbId),'shop orb coverage');}
+
  const entries=new Map([...direct,...choices].map(d=>[d.dropId,d]));
- assert.deepEqual(loot.direct.map(d=>d.dropId),direct.map(d=>d.dropId),'direct loot identity');
+ assert.deepEqual(loot.direct.filter(d=>!mechanicIds.has(d.dropId)).map(d=>d.dropId),direct.filter(d=>!mechanicIds.has(d.dropId)).map(d=>d.dropId),'direct loot identity');
+ assert.equal(loot.direct.length,direct.length,'all direct loot identity');
+ for(const id of mechanicIds)assert.equal(loot.direct.filter(d=>d.dropId===id).length,1,'shop direct coverage');
  assert.deepEqual(loot.choiceEligibility.map(d=>d.dropId),choices.map(d=>d.dropId),'choice loot identity');
  for(const [records,key,label] of [[loot.receipts,'receiptId','loot receipt'],[loot.receipts,'dropId','loot drop receipt'],[loot.earnedEvidence,'dropId','earned loot'],[loot.choiceResolutions,'dropId','choice resolution']])assert.equal(new Set(records.map(r=>r[key])).size,records.length,`${label} unique identity`);
  const earned=new Map(loot.earnedEvidence.map(e=>[e.dropId,e]));
@@ -359,7 +376,8 @@ function validateLoot(state){
  const receipts=new Map(loot.receipts.map(r=>[r.dropId,r]));
  const resolutions=new Map(loot.choiceResolutions.map(r=>[r.dropId,r]));
  for(const drop of loot.direct){assert(['planned','revealed','pending-capacity','retained-terminal','forfeited','granted'].includes(drop.status));
-  assert.equal(earned.has(drop.dropId),!['planned','forfeited'].includes(drop.status),'direct earned-only status');
+  if(mechanicIds.has(drop.dropId))assert(['revealed','granted'].includes(drop.status),'shop orb lifecycle');
+  else assert.equal(earned.has(drop.dropId),!['planned','forfeited'].includes(drop.status),'direct earned-only status');
   assert.equal(receipts.has(drop.dropId),drop.status==='granted','direct actual receipt');
   assert.equal(drop.receiptId,drop.status==='granted'?receiptId(drop.dropId):null);
   if(['pending-capacity','retained-terminal'].includes(drop.status))assert.equal(entries.get(drop.dropId).payload.kind,'unit','only heroes wait for capacity');
@@ -369,7 +387,7 @@ function validateLoot(state){
   if(resolutions.has(choice.dropId))assert.equal(choice.status,'revealed','resolved choice is earned');
  }
  const itemIds=[],unitIds=[],counters=Object.fromEntries(LOOT_TABLE.map(([id])=>[counterKey(id),0]));
- for(const receipt of loot.receipts){const entry=entries.get(receipt.dropId);assert(entry,'receipt must have approved source');assert(earned.has(receipt.dropId),'receipt must be earned');
+ for(const receipt of loot.receipts){const entry=entries.get(receipt.dropId);assert(entry,'receipt must have approved source');assert(earned.has(receipt.dropId)||mechanicIds.has(receipt.dropId),'receipt must be earned');
   assert.equal(receipt.receiptId,receiptId(receipt.dropId),'canonical loot receipt');
   if(entry.payload)assert.deepEqual(receipt.payload,entry.payload,'independent loot receipt payload');
   else{const resolution=resolutions.get(receipt.dropId);assert(resolution,'choice resolution required');assert.equal(resolution.receiptId,receipt.receiptId);
@@ -411,7 +429,13 @@ function validateLootTransition(before,after,command,events){
  assert.deepEqual(events.filter(e=>e.type==='lootForfeited').map(e=>e.dropId),newlyForfeited.map(d=>d.dropId),'exactly one event per loot forfeit');
  for(const drop of newlyForfeited){assert.equal(after.combat?.status,'finished','forfeit only after combat');assert.equal(entries.get(drop.dropId).roundId,after.roundDefinitionId,'forfeit only current round');}
  for(const evidence of earned){const entry=entries.get(evidence.dropId);assert(events.some(e=>e.domain==='combat'&&e.type==='death'&&e.unitId===lootCarrier(after.combat,entry.sourceUnitId)&&e.tick===evidence.death.tick&&e.eventSeq===evidence.death.eventSeq),'reveal requires this transition actual source death');}
- for(const receipt of receipts){assert.equal(after.combat?.status,'finished','loot only after combat');const entry=entries.get(receipt.dropId);assert.equal(entry.roundId,after.roundDefinitionId,'grant only current round');
+ for(const receipt of receipts){const entry=entries.get(receipt.dropId);
+  if(entry.encounterId==='mechanic'){
+   assert.equal(command?.type,'claimOrb','shop orb claim requires a command');assert.equal(command.orbId,entry.orbId);
+   assert(['preparation','settlement','choice'].includes(before.phase),'solo shop orb claim phase');
+   assert(roundOrdinal(entry.roundId)<=after.round,'shop orb claim timing');
+  }else {assert.equal(after.combat?.status,'finished','loot only after combat');assert.equal(entry.roundId,after.roundDefinitionId,'grant only current round');}
+
   for(const id of receipt.grantedItemIds)assert.equal(after.items.find(i=>i.id===id)?.definitionId,receipt.payload.definitionId,'actual granted component definition');
  }
  for(const resolution of resolved){if(resolution.method==='terminal-fallback')assert.equal(after.phase,'gameOver','fallback only terminal');
@@ -521,7 +545,7 @@ class Ledger {
   const domain=events.filter(e=>e.domain==='match');assert.deepEqual(domain.map(e=>e.eventSeq),domain.map((_,i)=>before.nextMatchEventSeq+i),'match event sequence');assert.equal(after.nextMatchEventSeq,before.nextMatchEventSeq+domain.length);
   const costs=this.costs,units=new Map(ownedUnits(before).map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}]));
   let serial=before.nextUnitSerial;
-  if(command?.type==='buy'){const definitionId=before.shop.slots[command.slot].definitionId,cost=COST[definitionId];this.gold-=cost;costs.purchases+=cost;this.cards++;units.set(`unit-${serial++}`,{definitionId,starLevel:1});}
+  if(command?.type==='buy'){const offer=before.shop.slots[command.slot],definitionId=offer.definitionId,starLevel=offer.starLevel??1,copies=3**(starLevel-1),cost=COST[definitionId]*copies;this.gold-=cost;costs.purchases+=cost;this.cards+=copies;units.set(`unit-${serial++}`,{definitionId,starLevel});}
   // v22: selling an anvil opens its four-pick for 0 gold; the anvil unit leaves the bench.
   if(command?.type==='sell'&&ANVIL_IDS.has(before.preparation.units.find(u=>u.id===command.id)?.definitionId)){this.cards-=1;units.delete(command.id);}
   else if(command?.type==='sell'){const unit=before.preparation.units.find(u=>u.id===command.id),cost=COST[unit.definitionId],copies=3**(unit.starLevel-1),value=SELL[cost][unit.starLevel-1];this.gold+=value;costs.sales+=value;costs.saleLoss+=cost*copies-value;this.cards-=copies;units.delete(unit.id);}
@@ -631,3 +655,50 @@ class Ledger {
   assert.equal(items.length,grants-this.combinations,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
 module.exports={benchXp,entryXp,freeRerollCredits,augmentGold,ANVIL_IDS,blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,openingEncounter,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
+
+// Shop stream implemented with bigint arithmetic; no runtime RNG/content imports.
+function shopWord(state,parts){
+ let hash=2166136261n;
+ const text=JSON.stringify(['augment-pool-shop',state.multiplayer?.seatId??'solo',...parts]);
+ for(let i=0;i<text.length;i++)hash=((hash^BigInt(text.charCodeAt(i)))*16777619n)%4294967296n;
+ return BigInt(word(Number(BigInt(state.seed)^hash)));
+}
+function shopForState(state,round=state.round,subscription=false){
+ const generation=state.shop.generation+1;
+ if(subscription){
+  let rng=state.rngState;const candidates=[...CATALOG[4]],slots=[];
+  for(let i=0;i<4;i++){rng=word(rng);const j=Number(BigInt(rng)*BigInt(candidates.length)/4294967296n);slots.push({status:'available',definitionId:candidates.splice(j,1)[0]});}
+  return {rngState:rng,shop:{generation,slots:[...slots,{status:'purchased',empty:true}],locked:Boolean(state.shop.locked)}};
+ }
+ const draw=shop(state.rngState,generation,state.level,false,round,{seed:state.augmentTierSeed,viktor:openingEncounter(state.augmentTierSeed)==='viktors-vision'});
+ const rig=state.augments.find(a=>a.definitionId==='rigged-shop-plus');
+ const first=state.seatMechanics?.seat['shop-augments']?.rigAnchor??generation;
+ if(rig&&(generation-first)%4===0){let rng=state.rngState;draw.shop.slots=Array.from({length:5},()=>{rng=word(word(rng));return {status:'available',definitionId:CATALOG[3][Number(BigInt(rng)*BigInt(CATALOG[3].length)/4294967296n)]};});}
+ const star=state.augments.find(a=>['starry-night','starry-night-plus'].includes(a.definitionId));
+ const chance=[1800,2000,2200,2500,3000,5000,8000,10000][Math.max(3,Math.min(10,state.level))-3];
+ if(star)draw.shop.slots=draw.shop.slots.map((offer,slot)=>COST[offer.definitionId]<=2&&shopWord(state,['starry',star.choiceId,generation,slot])*10000n/4294967296n<BigInt(chance)?{...offer,starLevel:2}:offer);
+ return draw;
+}
+// Derive an entire public shop transition from pre-command inputs. No new receipt is consulted.
+function shopTransition(before,command){
+ const type=command?.type,entry=type==='continue',round=before.round+(entry?1:0);
+ const subscription=before.augments.some(a=>a.definitionId==='subscription-service'&&a.acquiredRound<round)&&entry&&ROUNDS[round-1].sub===1;
+ const acquisition=type==='select'&&before.pendingChoice?.kind==='augment'&&command.definitionId==='subscription-service';
+ const dual=type==='buyXp'&&before.augments.some(a=>a.definitionId==='dual-purpose')&&!before.shop.locked;
+ let next={shop:structuredClone(before.shop),rngState:before.rngState};
+ if(type==='reroll'||entry&&(!before.shop.locked||subscription)||acquisition||dual){
+  const gain=entry?entryXp(before):dual?(before.augments.some(a=>a.definitionId==='level-up')?6:4):0;
+  const state={...before,level:xp(before.level,before.xp,gain).level};
+  next=shopForState(state,round,subscription||acquisition);
+  if(type==='reroll'||dual)next.shop.locked=Boolean(before.shop.locked);
+ }
+ if(type==='buy')next.shop.slots[command.slot]={status:'purchased'};
+ if(type==='lock')next.shop.locked=command.locked;
+ if(entry){
+  const a=before.augments.find(a=>a.definitionId==='firesale'&&a.acquiredRound<round);
+  const open=next.shop.slots.flatMap((offer,i)=>offer.status==='available'?[i]:[]);
+  if(a&&open.length){const slot=open[Number(shopWord(before,['firesale',a.choiceId,round])*BigInt(open.length)/4294967296n)];next.stolen={...next.shop.slots[slot],slot};next.shop.slots[slot]={status:'purchased'};}
+ }
+ return next;
+}
+module.exports.shopWord=shopWord;module.exports.shopForState=shopForState;module.exports.shopTransition=shopTransition;

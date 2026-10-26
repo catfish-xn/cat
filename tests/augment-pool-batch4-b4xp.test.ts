@@ -38,10 +38,10 @@ function opening(id:string):{state:MatchState;battles:BattleRecord[];before:Matc
  const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
  s=accepted(selectChoice(s,c.choiceId,c.generation,id));return {state:s,battles,before};
 }
-const PLUS_SEED=19; // deterministic public 3-2 offer: first seed on the 224-card batch-4 pool
-/** firstNodeSeed('clear-mind') on the 224-card batch-4 pool, pinned so the 112-seed scan is not repeated per case;
+const PLUS_SEED=14; // deterministic public 3-2 offer: first seed on the 232-card shop pool
+/** firstNodeSeed('clear-mind') on the 232-card shop pool, pinned so the 15-seed scan is not repeated per case;
  * opening() still asserts the offer. Re-run firstNodeSeed if the pool or openings change. */
-const OPEN_SEEDS:Readonly<Record<string,number>>={'clear-mind':112};
+const OPEN_SEEDS:Readonly<Record<string,number>>={'clear-mind':15};
 function emptyInventory(state:MatchState):MatchState {
  let s=state;
  for(let tries=0;s.items.some(i=>i.location.kind==='inventory')&&tries<30;tries++){

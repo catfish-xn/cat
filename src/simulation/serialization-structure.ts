@@ -184,6 +184,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
     if (slot.status === 'available') definitionId(slot.definitionId, M5_UNIT_DEFINITIONS, 'shop definition');
+    if (slot.status === 'available' && Object.hasOwn(slot, 'starLevel')) requireValue(slot.starLevel === 2 && M5_UNIT_DEFINITIONS[slot.definitionId].cost <= 2, 'shop star');
   }
   record(raw.equipmentState); record(raw.equipmentState.equipment); list(raw.equipmentState.rolls); list(raw.temporaryEquipment);
   list(raw.augments); requireValue(state.augments.length <= 3, 'augment count'); const augmentIds = new Set<string>();
@@ -260,7 +261,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   for (let round = 1; round <= state.round; round++) for (const event of getRoundSchedule(round)) {
     if (state.pendingChoice?.eventId === event.id) stopped = true;
     if (round === state.round && event.kind === 'anomaly' && !receipts.has(event.id) && state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')) {
-      requireValue(state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost <= state.gold), 'anomaly recruitment affordability');
+      requireValue(state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost * (slot.starLevel === 2 ? 3 : 1) <= state.gold), 'anomaly recruitment affordability');
       stopped = true;
     }
     if ((event.timing ?? 'before') === 'after' && state.roundResults.length < round || state.outcome !== null && round === state.round && event.timing === 'after') continue;

@@ -1,3 +1,4 @@
+import { validateShopAugments } from './shop-augments';
 import { batch4RewardPlan, drainBatch4Gold, validateBatch4Gold } from './augment-pool-batch4-progress';
 import { AUGMENT_BATCH4_B4XP } from './content/augment-pool-batch4-b4xp';
 import { AUGMENT_BATCH4_B4COMBAT } from './content/augment-pool-batch4-b4combat';
@@ -52,6 +53,7 @@ export function validateBatch1Gifts(state:MatchState):void {
  validateBatch3Gold(state);
  validateAcquisitionLevels(state);
  validateSettlementGold(state);
+ validateShopAugments(state);
  validateFreeRerolls(state);
  validateBatch3Dummies(state);
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
