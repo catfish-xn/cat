@@ -90,6 +90,8 @@ export interface RoomOptions extends RoomTimings {
   readonly sliceMs?: number;
   /** Optional monotonic budget clock; defaults to clock.now. Lets headless probes measure CPU with virtual phase timers. */
   readonly sliceNow?: () => number;
+  /** Optional CPU observer: combat stepping plus replay recording, excluding scheduled waits and network projection. */
+  readonly onCombatWork?: (ms: number) => void;
   /** G1-P6: how recent opponents are avoided; DEFAULT_PAIRING_POLICY (placeholder, S13_RULES_GAP §10) when omitted. */
   readonly pairingPolicy?: PairingPolicy;
   /**
@@ -1233,10 +1235,10 @@ export class Room {
     try {
       for (let count = 0; this.streamBoundary.length && count < budget; count++) {
         const stream = this.streams.get(this.streamBoundary.shift()!)!;
-        if (this.current.roundKind === 'pvp') stream.advancePvp();
+        if (this.current.roundKind === 'pvp') this.combatWork(() => stream.advancePvp());
         else {
           const seat = this.current.seats.find(s => s.seatId === stream.envelope.seats[0]!.seatId)!;
-          const step = stream.advancePve(seat.match);
+          const step = this.combatWork(() => stream.advancePve(seat.match));
           // Combat tick progress stays private; do not broadcast full seat/view snapshots at 20 Hz.
           if (step.events.length) {
             const seatRevision = seat.seatRevision + 1;
@@ -1392,13 +1394,19 @@ export class Room {
   }
 
   /** One slice of `job`: `sliceTicks` at once, or, with `sliceMs`, steps of SLICE_STEP_TICKS until the budget runs out. */
+  private combatWork<T>(work: () => T): T {
+    if (!this.options.onCombatWork) return work();
+    const now = this.options.sliceNow ?? (() => this.options.clock.now()), started = now();
+    try { return work(); } finally { this.options.onCombatWork(now() - started); }
+  }
+
   private advanceSlice(job: BattleJob): BattleResult | null {
     const ticks = this.options.sliceTicks ?? Number.POSITIVE_INFINITY, budgetMs = this.options.sliceMs;
-    if (budgetMs === undefined) return job.advance(ticks);
+    if (budgetMs === undefined) return this.combatWork(() => job.advance(ticks));
     const now = this.options.sliceNow ?? (() => this.options.clock.now()), deadline = now() + budgetMs;
     for (let spent = 0; ;) {
       const step = Math.min(SLICE_STEP_TICKS, ticks - spent);
-      const result = job.advance(step);
+      const result = this.combatWork(() => job.advance(step));
       spent += step;
       if (result || spent >= ticks || now() >= deadline) return result;
     }
