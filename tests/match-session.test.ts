@@ -36,12 +36,12 @@ function rejected(session: MatchSession, result: MatchCommandResult, reason: str
   expect(result).toEqual({ ok: false, state: before, reason });
   expect(result.state).toBe(before); expect(session.state).toBe(before);
 }
-function resolveSessionChoices(session: MatchSession): void {
+function resolveSessionChoices(session: MatchSession, priorities:readonly string[]=[]): void {
   while (session.phase === 'choice') {
     const choice = session.state.pendingChoice!;
     const result = choice.step === 'target'
       ? session.anomalyTarget(choice.choiceId, choice.generation, players(session.state)[0].id)
-      : session.choose(choice.choiceId, choice.generation, choice.offers[0]);
+      : session.choose(choice.choiceId, choice.generation, priorities.find(id=>choice.offers.includes(id))??choice.offers[0]);
     expect(result.ok).toBe(true);
   }
 }
@@ -178,7 +178,7 @@ describe('match session commands and fixed clock', () => {
   });
 
   it('preserves the purchased player roster and unique results for five rounds', () => {
-    // Seed 7226 (was 7216): the 14.24 stage bans changed 7216's 2-1 pick to one with a unit gift.
+    // Seed 7226 + the offered Slammin component gift preserves the purchased roster (no augment unit gifts).
     const session = new MatchSession(reachRound('1-3',true,7226));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
@@ -196,11 +196,12 @@ describe('match session commands and fixed clock', () => {
       if (session.phase === 'choice') {
         const pending = session.state, before = structuredClone(pending);
         rejected(session, session.continue(round), 'wrong-phase', pending);expect(pending).toEqual(before);
-        resolveSessionChoices(session);
+        resolveSessionChoices(session,['slammin']);
       }
       expect(session.phase).toBe('settlement');
       expect(session.continue(round).ok).toBe(true);
-      resolveSessionChoices(session);
+      resolveSessionChoices(session,['slammin']);
+      if(session.state.augments.length)expect(session.state.augments.map(a=>a.definitionId)).toEqual(['slammin']);
       const next = session.state; rejected(session, session.continue(round), next.phase === 'settlement' ? 'stale-round' : 'wrong-phase', next);
       expect(players(session.state)).toEqual(expectedRoster); expect(session.combat).toBeNull();expect(session.state.nextUnitSerial).toBe(3);
     }

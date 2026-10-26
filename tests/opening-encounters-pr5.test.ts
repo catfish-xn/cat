@@ -11,7 +11,12 @@ import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
 import { grantMechanicItem } from '../src/simulation/seat-mechanics/grants';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { validateConsumableState, previewUseConsumable } from '../src/simulation/consumables';
-import { accepted, freeze, reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
+import { accepted, freeze, reachRound as originalReachRound, resolveM5Choices as originalResolveChoices, emptyBoard } from './match-helpers';
+
+// These empty-board opening controls do not exercise post-battle bench XP.
+const excludedAugments=['clear-mind','cluttered-mind','slammin','slammin-plus','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii'];
+const resolveM5Choices=(state:MatchState)=>originalResolveChoices(state,[],excludedAugments);
+const reachRound=(id:string,resolve=true,seed=42)=>originalReachRound(id,resolve,seed,[],excludedAugments);
 
 const seeds = new Map<string,number>();
 for(let seed=0; seed<200000 && seeds.size<4; seed++) if(createOpeningEncounter(seed).selection.encounterId==='wind-up-monkey') seeds.set(monkeyOutcome(seed),seed);
@@ -74,6 +79,7 @@ describe('PR5 solo public lifecycle',()=>{
     if(outcome==='masterwork')expect(after.consumables.filter(c=>c.definitionId==='masterwork-upgrade')).toHaveLength(1);
     const retried=applyOpeningEffects(after,plan.facts);
     expect(retried).toEqual({ok:true,state:after,events:[]});expect(retried.state).toBe(after);
+    expect(after.augments.filter(a=>excludedAugments.includes(a.definitionId))).toEqual([]);
     const restored=restoreMatch(serializeMatch(after));expect(restored).toEqual(after);
     expect(applyOpeningEffects(restored,plan.facts)).toEqual({ok:true,state:restored,events:[]});
     expect(()=>restoreMatch({...after,openingEncounter:{...after.openingEncounter,receipts:[]}})).toThrow();

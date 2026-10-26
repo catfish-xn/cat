@@ -1,4 +1,6 @@
 import { enableMultiplayerSettlement } from '../src/simulation/round-settlement';
+import { RESEARCH_FILE } from './augment-pool-source-expectations';
+import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { AUGMENT_BATCH4_B4REROLL } from '../src/simulation/content/augment-pool-batch4-b4reroll';
@@ -13,8 +15,8 @@ import { accepted, emptyBoard, fieldBench, reachRound, resolveM5Choices } from '
 import { firstNodeSeed } from './augment-stage-helpers';
 
 const ids=Object.keys(AUGMENT_BATCH4_B4REROLL) as (keyof typeof AUGMENT_BATCH4_B4REROLL)[];
-const source=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8'));
-it.each(ids)('%s registers exactly the 14.24 values and only its allowed offering node',id=>{
+const source=(existsSync(RESEARCH_FILE)?JSON.parse(readFileSync(RESEARCH_FILE,'utf8')):[]);
+it.skipIf(!existsSync(RESEARCH_FILE)).each(ids)('%s registers exactly the 14.24 values and only its allowed offering node',id=>{
  const row=AUGMENT_BATCH4_B4REROLL[id],r=source.find((r:any)=>r.apiName===row.apiName);
  expect(row.source.values).toEqual(r.effects);expect(AUGMENT_TIERS[id]).toBe(['silver','gold','prismatic'][r.tier-1]);
  expect(AUGMENT_DEFINITIONS[id]).toBeDefined();

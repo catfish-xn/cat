@@ -1,0 +1,328 @@
+{
+  "node": "v22.23.4",
+  "mode": "mixed",
+  "checkpointRate": 31,
+  "workers": 4,
+  "checkpoints": 3764,
+  "entranceAttempts": 11292,
+  "continuations": 338790,
+  "runs": [
+    {
+      "seed": 42,
+      "build": "random",
+      "terminal": true,
+      "steps": 8084,
+      "checkpoints": 280,
+      "continuations": 24252,
+      "coverage": {
+        "preparation": 11,
+        "settlement": 2,
+        "combat": 267
+      },
+      "failures": []
+    },
+    {
+      "seed": 42,
+      "build": "cannon",
+      "terminal": true,
+      "augmentPriorities": [
+        "invested-plus",
+        "invested-plus-plus",
+        "category-five",
+        "long-distance-pals",
+        "sated-spellweaver",
+        "overheal",
+        "caretakers-ally",
+        "lategame-specialist",
+        "caretakers-favor",
+        "birthday-presents",
+        "caretakers-chosen",
+        "clear-mind",
+        "cluttered-mind",
+        "slammin",
+        "slammin-plus",
+        "patience-is-a-virtue"
+      ],
+      "augments": [],
+      "augmentCheckpoints": {},
+      "steps": 8374,
+      "checkpoints": 290,
+      "continuations": 25122,
+      "coverage": {
+        "preparation": 7,
+        "combat": 282,
+        "settlement": 1
+      },
+      "failures": []
+    },
+    {
+      "seed": 42,
+      "build": "bot",
+      "terminal": true,
+      "steps": 7915,
+      "checkpoints": 269,
+      "continuations": 23745,
+      "coverage": {
+        "preparation": 13,
+        "combat": 255,
+        "settlement": 1
+      },
+      "failures": []
+    },
+    {
+      "seed": 1039,
+      "build": "random",
+      "terminal": true,
+      "steps": 8928,
+      "checkpoints": 289,
+      "continuations": 26784,
+      "coverage": {
+        "preparation": 7,
+        "combat": 281,
+        "settlement": 1
+      },
+      "failures": []
+    },
+    {
+      "seed": 1039,
+      "build": "sniper",
+      "terminal": true,
+      "augmentPriorities": [
+        "overheal",
+        "caretakers-ally",
+        "lategame-specialist",
+        "caretakers-favor",
+        "birthday-presents",
+        "caretakers-chosen",
+        "clear-mind",
+        "cluttered-mind",
+        "slammin",
+        "slammin-plus",
+        "patience-is-a-virtue",
+        "invested-plus",
+        "invested-plus-plus",
+        "category-five",
+        "long-distance-pals",
+        "sated-spellweaver"
+      ],
+      "augments": [
+        "caretakers-favor"
+      ],
+      "augmentCheckpoints": {
+        "caretakers-favor": 462
+      },
+      "steps": 14415,
+      "checkpoints": 470,
+      "continuations": 43245,
+      "coverage": {
+        "preparation": 10,
+        "combat": 460
+      },
+      "failures": []
+    },
+    {
+      "seed": 2036,
+      "build": "random",
+      "terminal": true,
+      "steps": 8602,
+      "checkpoints": 287,
+      "continuations": 25806,
+      "coverage": {
+        "preparation": 9,
+        "combat": 277,
+        "choice": 1
+      },
+      "failures": []
+    },
+    {
+      "seed": 2036,
+      "build": "mage",
+      "terminal": true,
+      "augmentPriorities": [
+        "caretakers-chosen",
+        "clear-mind",
+        "cluttered-mind",
+        "slammin",
+        "slammin-plus",
+        "patience-is-a-virtue",
+        "invested-plus",
+        "invested-plus-plus",
+        "category-five",
+        "long-distance-pals",
+        "sated-spellweaver",
+        "overheal",
+        "caretakers-ally",
+        "lategame-specialist",
+        "caretakers-favor",
+        "birthday-presents"
+      ],
+      "augments": [],
+      "augmentCheckpoints": {},
+      "steps": 13984,
+      "checkpoints": 457,
+      "continuations": 41952,
+      "coverage": {
+        "preparation": 7,
+        "combat": 448,
+        "choice": 2
+      },
+      "failures": []
+    },
+    {
+      "seed": 2053,
+      "build": "cannon",
+      "terminal": true,
+      "augmentPriorities": [
+        "clear-mind",
+        "cluttered-mind",
+        "slammin",
+        "slammin-plus",
+        "patience-is-a-virtue",
+        "invested-plus",
+        "invested-plus-plus",
+        "category-five",
+        "long-distance-pals",
+        "sated-spellweaver",
+        "overheal",
+        "caretakers-ally",
+        "lategame-specialist",
+        "caretakers-favor",
+        "birthday-presents",
+        "caretakers-chosen"
+      ],
+      "augments": [],
+      "augmentCheckpoints": {},
+      "steps": 8308,
+      "checkpoints": 308,
+      "continuations": 24924,
+      "coverage": {
+        "preparation": 5,
+        "combat": 302,
+        "settlement": 1
+      },
+      "failures": []
+    },
+    {
+      "seed": 3033,
+      "build": "random",
+      "terminal": true,
+      "steps": 8882,
+      "checkpoints": 287,
+      "continuations": 26646,
+      "coverage": {
+        "preparation": 15,
+        "combat": 272
+      },
+      "failures": []
+    },
+    {
+      "seed": 3033,
+      "build": "cannon",
+      "terminal": true,
+      "augmentPriorities": [
+        "patience-is-a-virtue",
+        "invested-plus",
+        "invested-plus-plus",
+        "category-five",
+        "long-distance-pals",
+        "sated-spellweaver",
+        "overheal",
+        "caretakers-ally",
+        "lategame-specialist",
+        "caretakers-favor",
+        "birthday-presents",
+        "caretakers-chosen",
+        "clear-mind",
+        "cluttered-mind",
+        "slammin",
+        "slammin-plus"
+      ],
+      "augments": [
+        "patience-is-a-virtue"
+      ],
+      "augmentCheckpoints": {
+        "patience-is-a-virtue": 342
+      },
+      "steps": 11125,
+      "checkpoints": 353,
+      "continuations": 33375,
+      "coverage": {
+        "preparation": 7,
+        "combat": 345,
+        "choice": 1
+      },
+      "failures": []
+    },
+    {
+      "seed": 3050,
+      "build": "sniper",
+      "terminal": true,
+      "augmentPriorities": [
+        "invested-plus",
+        "invested-plus-plus",
+        "category-five",
+        "long-distance-pals",
+        "sated-spellweaver",
+        "overheal",
+        "caretakers-ally",
+        "lategame-specialist",
+        "caretakers-favor",
+        "birthday-presents",
+        "caretakers-chosen",
+        "clear-mind",
+        "cluttered-mind",
+        "slammin",
+        "slammin-plus",
+        "patience-is-a-virtue"
+      ],
+      "augments": [],
+      "augmentCheckpoints": {},
+      "steps": 14313,
+      "checkpoints": 474,
+      "continuations": 42939,
+      "coverage": {
+        "preparation": 6,
+        "combat": 466,
+        "settlement": 2
+      },
+      "failures": []
+    }
+  ],
+  "failures": [],
+  "batch4RouteCoverage": {
+    "caretakers-favor": 462,
+    "patience-is-a-virtue": 342
+  },
+  "verification": {
+    "command": "npm test -- --configLoader runner tests/v23-tamper-batch4.test.ts tests/v23-restore-fuzz.test.ts",
+    "testFilesPassed": 2,
+    "normalPassed": 4605,
+    "expectedFailures": 51,
+    "distinctKnownProductDefects": 1,
+    "durationSeconds": 590.28,
+    "typecheck": "passed",
+    "scriptSyntax": "passed",
+    "gitDiffCheck": "passed",
+    "fullSuiteRun": false,
+    "srcChanged": false,
+    "committed": false
+  },
+  "knownProductDefects": [
+    {
+      "field": "augment scheduleReceipt.unitId",
+      "forgery": "null -> forged",
+      "entries": [
+        "JSON",
+        "object",
+        "serialized"
+      ],
+      "matrixAugments": 16,
+      "sourceEvidence": [
+        "src/simulation/serialization-structure.ts:222",
+        "src/simulation/serialization-structure.ts:224"
+      ],
+      "minimalRegression": "tests/v23-restore-fuzz.test.ts:219",
+      "status": "it.fails; source fix outside tests-only scope"
+    }
+  ]
+}

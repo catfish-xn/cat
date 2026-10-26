@@ -1,6 +1,7 @@
 /* Test preparation only: native public UI commands, unchanged combat wall clock.
  * Empty-board opening losses earn the real v22 2/3/4G base plus 0/1/1G loss streak. No state/resource injection. */
-async function prepareB6Opening(page, roundId, { resolveChoices = true, redeploy = true } = {}) {
+// `augment` names the 2-1 augment to select explicitly (it must be a real offer); otherwise the first non-placebo offer.
+async function prepareB6Opening(page, roundId, { resolveChoices = true, redeploy = true, augment } = {}) {
   if (!['1-3', '1-4', '2-1', '2-5'].includes(roundId)) throw Error('Unsupported B6 preparation target');
   const read = () => page.evaluate(() => window.__CAT_DEBUG__.read().state);
   const click = async id => {
@@ -22,7 +23,8 @@ async function prepareB6Opening(page, roundId, { resolveChoices = true, redeploy
       const choice = state.pendingChoice;
       if (choice.step !== 'offer') throw Error('Unexpected target choice in opening preparation');
       // Keep the 11G shortcut vector deterministic rather than selecting +8G placebo.
-      const offer = choice.offers.find(id => id !== 'placebo');
+      if (augment && choice.kind === 'augment' && !choice.offers.includes(augment)) throw Error(`The opening augment offer lacks ${augment}: ${choice.offers.join(',')}`);
+      const offer = augment && choice.kind === 'augment' ? augment : choice.offers.find(id => id !== 'placebo');
       if (!offer) throw Error('No non-gold-changing opening offer');
       await click(`choice:${offer}`);
     } else if (state.phase === 'preparation') {

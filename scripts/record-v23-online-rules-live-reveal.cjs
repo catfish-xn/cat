@@ -20,24 +20,24 @@ async function main(){
  return {deaths:state.combat.neutralReceipts.deaths,reveals:events.filter(e=>e.type==='lootRevealed').map(e=>({dropId:e.dropId,death:e.death})),result:state.combat.result,phase:state.phase,eventHash:sha(events),terminalHash:sha(state),receipts:state.m8.loot.receipts.length-base.m8.loot.receipts.length,unitSerialDelta:state.nextUnitSerial-base.nextUnitSerial,itemSerialDelta:state.nextItemSerial-base.nextItemSerial};
  }
  const branches={full:resolve(prefix),simultaneous:resolve(helpers.simultaneousB8Preparation(prefix))};
- // v23 seed 3549 (no opening encounter; 2634 lost its 2-star Zoe after the augment-xp merge): hero carriers r03 and r04 die in the same tick-115 action batch (tests/m8-b8-live-reveal.test.ts).
- const sameTick=branches.simultaneous.deaths.slice(3,5);assert.deepEqual(sameTick,[{unitId:'["pve","4-7","razorbeaks-v1","r03"]',tick:115,eventSeq:889},{unitId:'["pve","4-7","razorbeaks-v1","r04"]',tick:115,eventSeq:890}]);
+ // v23 seed 3549 (no opening encounter; 2634 lost its 2-star Zoe after the augment-xp merge): hero carriers r03 and r04 die in the same tick-118 action batch (seed 3549 after the batch-4 pool growth) (tests/m8-b8-live-reveal.test.ts).
+ const sameTick=branches.simultaneous.deaths.slice(3,5);assert.deepEqual(sameTick,[{unitId:'["pve","4-7","razorbeaks-v1","r03"]',tick:118,eventSeq:896},{unitId:'["pve","4-7","razorbeaks-v1","r04"]',tick:118,eventSeq:897}]);
  for(const definitionId of ['loris','zyra']){
  const base=partialPrefixes[definitionId],target=base.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId);assert(target);
  branches[definitionId]={...resolve(helpers.partialB8Preparation(base,definitionId),base),star:target.starLevel,prefixHash:sha(base)};
  }
  // v23 seed 2125 (no opening; v22 used 2116): Loris kills r00 whose first 4-7 orb also carries the component anvil (item + anvil unit); Zyra kills r01.
  assert.equal(branches.loris.deaths.length,1);assert.equal(branches.loris.deaths[0].tick,456);assert.equal(branches.loris.receipts,2);assert.equal(branches.loris.unitSerialDelta,1);assert.equal(branches.loris.itemSerialDelta,1);
- assert.equal(branches.zyra.deaths.length,1);assert.equal(branches.zyra.deaths[0].tick,212);assert.equal(branches.zyra.receipts,1);assert.equal(branches.zyra.unitSerialDelta,0);assert.equal(branches.zyra.itemSerialDelta,1);
+ assert.equal(branches.zyra.deaths.length,1);assert.equal(branches.zyra.deaths[0].tick,211);assert.equal(branches.zyra.receipts,1);assert.equal(branches.zyra.unitSerialDelta,0);assert.equal(branches.zyra.itemSerialDelta,1);
  let checkpoint=accept(api.startMatchCombat(helpers.simultaneousB8Preparation(prefix)));
- while(checkpoint.phase==='combat'&&checkpoint.combat.tick<132)checkpoint=api.stepMatch(checkpoint).state;
+ while(checkpoint.phase==='combat'&&checkpoint.combat.tick<137)checkpoint=api.stepMatch(checkpoint).state;
  const unloaded=api.stepMatch(checkpoint),carrier='["pve","4-7","razorbeaks-v1","r05"]';
- assert.deepEqual(unloaded.events.filter(e=>e.type==='death').map(e=>({unitId:e.unitId,tick:e.tick,eventSeq:e.eventSeq})),[{unitId:carrier,tick:133,eventSeq:1003}]);
+ assert.deepEqual(unloaded.events.filter(e=>e.type==='death').map(e=>({unitId:e.unitId,tick:e.tick,eventSeq:e.eventSeq})),[{unitId:carrier,tick:138,eventSeq:1006}]);
  assert.equal(unloaded.events.filter(e=>e.type==='lootRevealed').length,0);assert.deepEqual(unloaded.state.m8.loot.earnedEvidence,checkpoint.m8.loot.earnedEvidence);
- branches.unloadedCarrier={unitId:carrier,tick:133,eventSeq:1003,newReveals:0,newEarnedEvidence:0,terminalReceipts:unloaded.state.m8.loot.receipts.length-checkpoint.m8.loot.receipts.length};
+ branches.unloadedCarrier={unitId:carrier,tick:138,eventSeq:1006,newReveals:0,newEarnedEvidence:0,terminalReceipts:unloaded.state.m8.loot.receipts.length-checkpoint.m8.loot.receipts.length};
  const previousAudit=JSON.parse(migration.archivedBytes(baseCommit,'docs/evidence/v22-online-rules/live-reveal-audit.json'));
  const previousAssertions=previousAudit.currentAssertions;
- const currentAssertions={simultaneous:sameTick,partialDrops:{definitionId:'zyra',tick:212,receipts:1},unloadedCarrier:branches.unloadedCarrier};
+ const currentAssertions={simultaneous:sameTick,partialDrops:{definitionId:'zyra',tick:211,receipts:1},unloadedCarrier:branches.unloadedCarrier};
  const evidence=(value)=>({bytes:Buffer.byteLength(JSON.stringify(value)),sha256:sha(value)});
  const oldTest=require('./offline-process-output.cjs').readProcessOutput('git',['cat-file','--filters',`${baseCommit}:tests/m8-b8-live-reveal.test.ts`]);
  const newTest=fs.readFileSync('tests/m8-b8-live-reveal.test.ts');let first=0;

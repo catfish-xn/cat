@@ -3,7 +3,9 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 // v22: seed 1 draws Crab Rave, whose 6-7 giant crab outlasts R4's one-periodic-save final battle (80 < end < 120).
 // v23: v22's seed 2192 (now Loot Subscription) ends at tick 122; seed 2199 (no opening encounter) is the first seed
 // from 2192 whose cannon route reaches every sampled phase and ends its final battle at tick 117. The page's fixed starts use the same seed.
-const ROUTE_SEED=2199;
+// v23 224-card pool: seed 2199's final battle now ends at tick 120 (no periodic-save window); seed 2325 has no opening
+// encounter, reaches every sampled phase and ends its final battle at tick 107 (2307, the first such seed from 2192, ends at 119).
+const ROUTE_SEED=2325;
 const {execFileSync}=require('node:child_process'),{randomUUID}=require('node:crypto'),{chromium}=require('playwright');
 const {sourceFingerprint}=require('../scripts/m5-evidence.cjs');
 (async()=>{
@@ -24,7 +26,7 @@ const {sourceFingerprint}=require('../scripts/m5-evidence.cjs');
   for(const label of ['augment','anomaly_target','anomaly_offer','preparation','combat_39','combat_40','combat_41','settlement','supply_settlement','supply_choice','game_over'])assert(phaseSamples.has(label),`legal route missing phase ${label}`);
   const ledgerFor=state=>{const record=records.find(r=>r.combatId===state.combat?.combatId);return record?record.events.filter(e=>e.tick<=state.combat.tick):[];};
   const sampleEnvelope=sample=>{const runId=`phase-${sample.label}`,match=sample.state;const battles=match.roundResults.filter(r=>r.result!=='supply').map(r=>({...records.find(record=>record.context.round===r.round),runId}));let currentBattle=null;if(match.combat?.status==='running'){const original=records.find(r=>r.combatId===match.combat.combatId),events=ledgerFor(match);currentBattle={...original,runId,events,endTick:match.combat.tick,nextEventSeq:match.combat.nextEventSeq,result:null,stateHash:digestContent(match.combat),eventHash:digestContent(events)};}return{...finished,runId,match,battles,currentBattle};};
-  report.fixture={seed:1,build:'cannon',commands:route.actions.length,battles:records.length,finalEndTick:finalRecord.endTick,round:beforeFinal.round,prefixTick:prefix.endTick,prefixNextEventSeq:prefix.nextEventSeq,completedBytes:Buffer.byteLength(JSON.stringify(finished)),ids};
+  report.fixture={seed:ROUTE_SEED,build:'cannon',commands:route.actions.length,battles:records.length,finalEndTick:finalRecord.endTick,round:beforeFinal.round,prefixTick:prefix.endTick,prefixNextEventSeq:prefix.nextEventSeq,completedBytes:Buffer.byteLength(JSON.stringify(finished)),ids};
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox']});report.browser=browser.version();
   const openPage=async()=>{const context=await browser.newContext({viewport:{width:1440,height:1000}});const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')report.errors.push(m.text());});page.on('dialog',dialog=>dialog.accept());await page.goto(url);return{context,page};};
   const boot=async(page,initializeHold=false)=>page.evaluate(async initializeHold=>{
