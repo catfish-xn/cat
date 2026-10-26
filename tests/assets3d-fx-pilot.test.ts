@@ -1,5 +1,6 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { readFile, readdir, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { assertManifest } from '../src/rendering3d/contracts';
@@ -127,12 +128,12 @@ describe('latest approximate pilot', () => {
   });
   it('indexes every synthetic merged payload and refreshes sizes/hashes on a forced merge', async () => {
     const pilot = resolve('assets3d-local/fx-pilot');
-    await mkdir(pilot, { recursive: true });
-    const root = await mkdtemp(join(pilot, 'merge-test-'));
+    mkdirSync(pilot, { recursive: true });
+    const root = mkdtempSync(join(pilot, 'merge-test-'));
     try {
       const put = async (dir: string, path: string, data: string | Buffer) => {
-        await mkdir(join(dir, path, '..'), { recursive: true });
-        await writeFile(join(dir, path), data);
+        mkdirSync(join(dir, path, '..'), { recursive: true });
+        writeFileSync(join(dir, path), data);
       };
       const glb = writeGlb({ asset: { version: '2.0' }, buffers: [{ byteLength: 0 }] }, Buffer.alloc(0));
       const effect = { schemaVersion: 2, limits: { maxParticles: 10, maxDuration: 2 }, emitters: [

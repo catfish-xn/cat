@@ -132,20 +132,23 @@ it('admits the full ordinary duplicator policy without admitting a forged frozen
  expect(()=>g23RewardAtoms({...bundle,reward:{...bundle.reward,Consumables:['TFT_Consumable_NeekosHelp']}},42)).toThrow('frozen reward descriptor');
 });
 
-let pendingMarket:MatchState|undefined;
+let pendingMarket:MatchState|undefined, marketRoute:MatchState|undefined, marketBattles=0;
 /** Seed1's first real 100-Shimmer market draws LootA4. No fabricated progress or receipts. */
-function publicMarket():MatchState{
+function advanceMarket(throughBattle:number):MatchState|undefined{
  if(pendingMarket)return pendingMarket;
- let state=preparation(createMatch(1));
+ let state=marketRoute;
+ if(!state){
+ state=preparation(createMatch(1));
  state=ok(grantMechanicGold(state,{receiptId:'fixture:gold',source:'fixture',amount:120}));
  while(state.level<4)state=ok(buyXp(state));
  for(const unit of state.preparation.units.filter(u=>u.team==='player'))state=ok(deployMatchUnit(state,unit.id,{kind:'bench',slot:0}));
  for(const [col,definitionId]of ['singed','renata','renni','garen'].entries()){
   for(let copy=0;copy<9;copy++)state=ok(grantMechanicUnit(state,{receiptId:`fixture:${definitionId}:${copy}`,source:'fixture',definitionId}));
-  const target=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId&&u.starLevel===3)!;
+  const target:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId&&u.starLevel===3)!;
   state=ok(deployMatchUnit(state,target.id,{kind:'board',cell:{col,row:4}}));
  }
- for(let battle=0;battle<12;battle++){
+ }
+ for(;marketBattles<throughBattle;marketBattles++){
   state=ok(startMatchCombat(state));
   for(let tick=0;state.phase==='combat'&&tick<1200;tick++)state=stepMatch(state).state;
   for(let choices=0;state.phase==='choice'&&choices<10;choices++){
@@ -155,10 +158,15 @@ function publicMarket():MatchState{
    }
    state=choose(state);
   }
-  state=preparation(state);
+  state=preparation(state);marketRoute=state;
  }
- throw Error('Public market battle budget');
+ return pendingMarket;
 }
+
+function publicMarket():MatchState{const state=advanceMarket(12);if(!state)throw Error('Public market battle budget');return state;}
+for(let battle=1;battle<=12;battle++)it(`natural black-market public route through battle ${battle}`,()=>{
+ const state=advanceMarket(battle);if(battle===12)expect(state).toBeDefined();
+});
 
 /** The three save entrances; a long replay can check one entrance per case. */
 const ENTRIES=['serialized save','state object','JSON string'] as const;
@@ -182,12 +190,11 @@ function expectRoundTripAndNextBattle(state:MatchState,entries:readonly Entry[]=
 /** Built once per file; the first case to use it also runs its assertions. */
 function once<T>(build:()=>T):()=>T{let value:T|undefined;return ()=>value??=build();}
 
-it('restores the naturally obtained pending black-market reward and the next battle tick for tick',()=>{
+it.each(ENTRIES)('restores the naturally obtained pending black-market reward and the next battle tick for tick (%s)',entry=>{
  const state=publicMarket();
  expect(state.pendingChoice).toMatchObject({kind:'blackMarket',payload:{source:'black-market',grantItem:false}});
- expectRoundTripAndNextBattle(state);
- // 临时、用户 10-21 批准：只因 CI 机器计时超时（断言都过），按约 2 倍放宽；断言不变。5 秒 → 11 秒（原因：首个黑市移到第 12 回合，路线变长；按 CI 实测 5.19 秒取约 2 倍，本机 2.611 秒）。
-},11_000);
+ expectRoundTripAndNextBattle(state,[entry]);
+});
 
 it('restores the sole naturally offered bundle without duplicate grants',()=>{
  const pending=publicMarket(),choice=pending.pendingChoice!;
@@ -294,12 +301,13 @@ function fullMarket():MatchState{
  expect(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench')).toHaveLength(9);
  const c=state.pendingChoice!;return ok(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
 }
-it('a full-bench market hands the tool over at once, escrows its heroes in order, and the tool waits for a free slot',()=>{
+const checkedFullMarket=once(()=>{
+ const checkpoints:MatchState[]=[];
  let state=fullMarket();
  const market=readG23Progress(state)!.rewards.find(b=>b.source==='black-market')!;
  const ids=()=>readG23Progress(state)!.rewardClaims.filter(c=>c.bundleId===market.id);
  expect(ids()).toMatchObject([{kind:'tool',definitionId:shimmer}]);
- expectRoundTripAndNextBattle(state);
+ checkpoints.push(state);
  state=preparation(state);
  // A full bench: the tool is refused and kept (無空位時不消耗).
  const tool=shimmerTool(state),singed=ownedId(state,'singed');
@@ -310,16 +318,23 @@ it('a full-bench market hands the tool over at once, escrows its heroes in order
   state=ok(sellUnit(state,filler.id));
   expect(ids().at(-1)).toMatchObject({definitionId:expected,instanceId:`unit-${previous}`});
   expect(ids()).toHaveLength(['renni','smeech'].indexOf(expected)+2);
-  expectRoundTripAndNextBattle(state);
+  checkpoints.push(state);
  }
  const filler=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&['leona','lux','darius'].includes(u.definitionId))!;
  state=ok(sellUnit(state,filler.id));
  const previous=state.nextUnitSerial;
  state=ok(useConsumable(state,tool.consumableId,unitTarget(singed)));
  expect(state.preparation.units.find(u=>u.id===`unit-${previous}`)).toMatchObject({definitionId:'singed',starLevel:1});
- expectRoundTripAndNextBattle(state);
+ checkpoints.push(state);
  const saved=serializeMatch(preparation(state));expect(serializeMatch(restoreMatch(saved))).toBe(saved);
-},20_000);
+ return checkpoints;
+});
+it('a full-bench market hands the tool over at once, escrows its heroes in order, and the tool waits for a free slot',()=>{
+ expect(checkedFullMarket()).toHaveLength(4);
+});
+it.each([0,1,2,3].flatMap(checkpoint=>ENTRIES.map(entry=>({checkpoint,entry}))))('full-bench market checkpoint $checkpoint resumes the entire next battle ($entry)',({checkpoint,entry})=>{
+ expectRoundTripAndNextBattle(checkedFullMarket()[checkpoint],[entry]);
+});
 
 const keptTools=new Map<number,MatchState>();
 function keptTool(round:number):MatchState{
@@ -393,7 +408,7 @@ function publicConqueror():MatchState{
  state=ok(deployMatchUnit(state,state.preparation.units.find(u=>u.team==='player')!.id,{kind:'bench',slot:0}));
  for(const [col,definitionId]of ['darius','draven','swain','ambessa'].entries()){
   for(let copy=0;copy<9;copy++)state=ok(grantMechanicUnit(state,{receiptId:`fixture:${definitionId}:${copy}`,source:'fixture',definitionId}));
-  const target=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId&&u.starLevel===3)!;
+  const target:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId&&u.starLevel===3)!;
   state=ok(deployMatchUnit(state,target.id,{kind:'board',cell:{col,row:4}}));
  }
  for(let battle=0;battle<20;battle++){

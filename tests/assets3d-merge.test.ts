@@ -1,5 +1,6 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile, symlink } from 'node:fs/promises';
+import { readFile, rm, stat, symlink } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createHash } from 'node:crypto';
 // @ts-expect-error Pure Node utility.
@@ -16,8 +17,8 @@ afterEach(async () => {
   }
 });
 async function fixture() {
-  await mkdir(resolve('assets3d-local'), { recursive: true });
-  const root = await mkdtemp(resolve('assets3d-local/merge-test-')); roots.push(root);
+  mkdirSync(resolve('assets3d-local'), { recursive: true });
+  const root = mkdtempSync(resolve('assets3d-local/merge-test-')); roots.push(root);
   return root;
 }
 async function unit(root: string, batch: string, id: string, effects: Record<string, { path: string }> = {}) {
@@ -28,8 +29,8 @@ async function unit(root: string, batch: string, id: string, effects: Record<str
   return { dir, manifest };
 }
 async function put(root: string, path: string, bytes: string) {
-  await mkdir(join(root, path, '..'), { recursive: true });
-  await writeFile(join(root, path), bytes);
+  mkdirSync(join(root, path, '..'), { recursive: true });
+  writeFileSync(join(root, path), bytes);
 }
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8'));
 

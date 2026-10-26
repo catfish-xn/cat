@@ -47,10 +47,21 @@ it('Laboratories share Mundo 120 health and retain unique 60-health kill receipt
 });
 import {startMatchCombat,stepMatch} from '../src/simulation/match';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
-import {publicPaidArmorySettlement} from './fixtures/g2-3-armory-public';
+import {publicPendingArmory} from './fixtures/g2-3-armory-public';
+import {roundRouteCache} from './fixtures/round-route-cache';
+import {g23JunkerMenu} from '../src/simulation/g2-3-junker';
+import {chooseG23Junker} from '../src/simulation/match';
+const paidRoute=roundRouteCache(onRound=>publicPendingArmory(3,onRound));
+for(let round=1;round<=27;round++)for(const tick of [300,600,900,1200,1201])it(`paid armory public route round ${round} through ${tick}`,async()=>{
+ await paidRoute.through(round-1+tick/1201);
+});
 it('restores a real paid armory purchase after settlement without deducting its preparation cost twice',async()=>{
  // v15 catalog used seed 5; under v22 its Crab Rave loot fills the bench before Rumble. Seed 3 reaches the same 5-5 settlement.
- const state=await publicPaidArmorySettlement(3);
+ const pending=await paidRoute.finish(),menu=g23JunkerMenu(pending)!;
+ const purchased=chooseG23Junker(pending,menu.id,menu.choices.find(c=>c!=='spare-parts')!);
+ expect(purchased.ok).toBe(true);
+ const started=startMatchCombat(purchased.state);expect(started.ok).toBe(true);
+ let state=started.state;while(state.phase==='combat')state=stepMatch(state).state;
  expect(readG23Progress(state)!.junkerPurchases).toHaveLength(1);
  expect(readG23Progress(state)!.junkerPurchases[0].cost).toBe(5);
  expect(state.roundDefinitionId).toBe('5-5');
@@ -60,7 +71,7 @@ it('restores a real paid armory purchase after settlement without deducting its 
  expect(restoreMatch(structuredClone(state))).toEqual(state);
  for(const offset of [-5,5])expect(()=>restoreMatch({...state,gold:state.gold+offset})).toThrow();
  expect(stepMatch(state).state).toEqual(state);
-},30000);
+});
 it('canonical-text restore retains actual public opening and G23 settlement receipts byte-for-byte',()=>{
  const initial=createMatch(42),started=startMatchCombat(initial);expect(started.ok).toBe(true);if(!started.ok)throw Error(started.reason);
  let state=started.state;
