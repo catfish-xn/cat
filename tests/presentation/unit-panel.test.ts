@@ -5,6 +5,8 @@ import { chromium, type Browser, type Page } from 'playwright';
 import { build } from 'esbuild';
 import { existsSync, readFileSync } from 'node:fs';
 let browser: Browser, page: Page;
+// Bundling, browser launch and page setup are separate hooks so each stays within the default hook limit on slow CI runners.
+let bundle = '';
 beforeAll(async () => {
   const result = await build({ stdin: { contents: `export * from './src/presentation/unit-panel';
     export * from './src/presentation/unit-panel-loader';
@@ -12,11 +14,16 @@ beforeAll(async () => {
     export {loadTooltipText} from './src/presentation/tooltip-text-loader';
     export {UNIT_DEFINITIONS} from './src/simulation/units';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' } });
+  bundle = result.outputFiles[0].text;
+});
+beforeAll(async () => {
   browser = await chromium.launch({ headless: true, ...(existsSync('/usr/bin/google-chrome') ? { channel: 'chrome' } : {}), args: ['--no-sandbox'] }); page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setContent('<div id="shop-dock" style="position:fixed;top:740px;height:160px"></div><ol class="online-seats" style="position:fixed;left:1100px;width:170px;height:500px"></ol>');
   await page.addStyleTag({ content: readFileSync('src/style.css', 'utf8') });
-  await page.addScriptTag({ content: result.outputFiles[0].text });
+});
+beforeAll(async () => {
+  await page.addScriptTag({ content: bundle });
   await page.evaluate(async () => { await (window as any).Inspect.loadTooltipText(); });
 });
 afterAll(async () => { await browser?.close(); });
