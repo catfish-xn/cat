@@ -1,3 +1,5 @@
+import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
+import type { ShopDrawCause } from './shop-history-types';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { validateBatch1Gifts } from './augment-pool-grants';
 import { validateAugmentOfferHistory } from './augment-offers';
@@ -45,7 +47,7 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):Mat
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
-  validateShopAugments(state);
+  validateShopAugments(state);validateShopHistory(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
   if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])||(state.seatMechanics?.receipts??[]).some(r=>
@@ -126,7 +128,8 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
 }
 
 /** Two words per nonempty slot. Empty slots consume no words; positive-odds stocked tiers renormalize. */
-function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):MatchState {
+function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[],cause:ShopDrawCause='natural',before=state,audit=true):MatchState {
+  const stock={...pool.available};
   requirePool(safe(state.shop.generation+1,1));
   const seatId=state.sharedPool!.seatId,generation=state.shop.generation+1,odds=getShopOdds(state.level);
   // Rigged Shop+ forces a single tier; with that tier out of stock the slot falls back to the level odds.
@@ -163,15 +166,18 @@ function drawShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):
     slots[six.slot]={status:'available',definitionId};
   }
   poolEvents.push({type:'sharedShopGenerated',seatId,generation,rngDraws});
-  return {...state,rngState,shop:{generation,slots,locked:Boolean(state.shop.locked)}};
+  const next={...state,rngState,shop:{generation,slots,locked:Boolean(state.shop.locked)}};
+  return audit?recordShopDraw(before,next,cause,stock):next;
 }
 /** Subscription Service: replaces the seat's shop (locked or not) with its 4-cost shop; the caller released the old one. */
-function drawSubscriptionShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[]):MatchState {
+function drawSubscriptionShop(pool:PoolDraft,state:MatchState,poolEvents:SharedPoolEvent[],audit=true):MatchState {
+  const stock={...pool.available};
   requirePool(safe(state.shop.generation+1,1));
   const seatId=state.sharedPool!.seatId,generation=state.shop.generation+1;
   const drawn=drawSubscriptionSlots(state,pool.available,(definitionId,slot)=>{pool.available[definitionId]--;pool.shops.push({seatId,generation,slot,definitionId});});
   poolEvents.push({type:'sharedShopGenerated',seatId,generation,rngDraws:drawn.rngDraws});
-  return {...state,rngState:drawn.rngState,shop:{generation,slots:drawn.slots,locked:Boolean(state.shop.locked)}};
+  const next={...state,rngState:drawn.rngState,shop:{generation,slots:drawn.slots,locked:Boolean(state.shop.locked)}};
+  return audit?recordShopDraw(state,next,'subscription',stock):next;
 }
 /** Firesale: return the stolen slot's reserved copy, then grant it through the transaction's reward policy. */
 function applyFiresale(pool:PoolDraft,state:MatchState,round:number,poolEvents:SharedPoolEvent[]):{state:MatchState;events:readonly MatchEvent[]} {
@@ -211,7 +217,7 @@ export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedG
     const spent=spendFreeReroll(state),cost=spent.free?0:MATCH_RULES.rerollCost;
     requirePool(state.gold>=cost,'insufficient-gold');
     releaseShop(draft,state.sharedPool!.seatId);
-    const next=drawShop(draft,recordShopReroll(spent.state),events);
+    const next=drawShop(draft,recordShopReroll(spent.state),events,'reroll',state);
     requirePool(next.shop.slots.some(s=>s.status==='available'),'pool-empty');
     return {ok:true,...stamp({...next,gold:state.gold-cost})};
   });
@@ -222,7 +228,7 @@ export function buySharedXp(pool:SharedPoolState,state:MatchState):SharedPoolRes
     const bought=buyXp(state);
     if(!bought.ok||!dualPurposeOwner(bought.state))return bought;
     let next=bought.state;
-    if(!next.shop.locked){releaseShop(draft,state.sharedPool!.seatId);next=drawShop(draft,next,events);}
+    if(!next.shop.locked){releaseShop(draft,state.sharedPool!.seatId);next=drawShop(draft,next,events,'dual-purpose');}
     return {ok:true,state:next,events:bought.events};
   });
 }
@@ -288,6 +294,7 @@ export function releaseSeatOnElimination(pool:SharedPoolState,state:MatchState):
     requirePool(safe(state.nextMatchEventSeq+events.length),'invalid-seat-state');
     let next:MatchState={...forfeited.state,nextMatchEventSeq:state.nextMatchEventSeq+events.length,shop:{...state.shop,locked:false,slots:state.shop.slots.map(()=>({status:'purchased' as const,empty:true as const}))},
       m8:{...forfeited.state.m8,loot:{...forfeited.state.m8.loot,direct:forfeited.state.m8.loot.direct.map(d=>pendingIds.has(d.dropId)?{dropId:d.dropId,status:'forfeited' as const,receiptId:null}:d)}}};
+    next=recordShopRelease(forfeited.state,next);
     reconcileHoldings(draft,state,next,poolEvents);
     // Keep the terminal army only as an archived display snapshot, never as owned pool stock.
     draft.seats=draft.seats.map(s=>s.seatId===seatId?{...s,released:true}:s);
@@ -405,4 +412,10 @@ export function nextSharedRound(pool:SharedPoolState,states:readonly MatchState[
 /** G23 gifts consume real pool copies; an empty pool resolves the gift to cost gold. */
 export function sharedClaimG23Reward(pool:SharedPoolState,state:MatchState,atomId:string,definitionId:string):SharedPoolResult{
  return transact(pool,state,(_draft,policy)=>claimG23Reward(state,atomId,definitionId,policy));
+}
+
+/** Replay a single finite-pool draw from its recorded pre-reservation inventory. No live pool is mutated. */
+export function replaySharedShop(state:MatchState,stock:Readonly<Record<string,number>>,subscription:boolean):MatchState {
+ const pool={available:{...stock},shops:[]} as unknown as PoolDraft;
+ return subscription?drawSubscriptionShop(pool,state,[],false):drawShop(pool,state,[],'natural',state,false);
 }

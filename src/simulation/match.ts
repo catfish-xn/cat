@@ -1,3 +1,4 @@
+import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
 import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost, drawSoloAugmentShop, dualPurposeOwner, grantDualPurposeGold, planFiresale, stealFiresaleUnit, subscriptionAcquired, subscriptionStageStart } from './shop-augments';
 import { drainBatch4Gold } from './augment-pool-batch4-progress';
@@ -329,7 +330,7 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
     preparation: plan.preparation,
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
   };
-  const reinforced = applyReinfourcement(state, purchased, unitLootPolicy);
+  const reinforced = applyReinfourcement(state, recordShopBuy(state,purchased,slotIndex), unitLootPolicy);
   const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(reinforced.state) : { state: reinforced.state, events: [] };
   const gifted=entered.state.phase!=='combat'&&!isCombatRosterLocked(entered.state)?drainP2Gifts(entered.state,unitLootPolicy):entered.state;
   return acceptEquipment(gifted, [...plan.events, ...reinforced.events, ...entered.events,...mechanicGrantEvents(entered.state,gifted)]);
@@ -365,13 +366,13 @@ export function setShopLock(state: MatchState, locked: boolean, expectedGenerati
   if (typeof locked !== 'boolean') return fail(state, 'invalid-choice');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
   if (Boolean(state.shop.locked) === locked) return { ok: true, state, events: [] };
-  return accept({ ...state, shop: { ...state.shop, locked } });
+  return accept(recordShopLock(state,{ ...state, shop: { ...state.shop, locked } }));
 }
 export function rerollShop(state: MatchState): MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   const spent = spendFreeReroll(state), cost = spent.free ? 0 : MATCH_RULES.rerollCost;
   if (state.gold < cost) return fail(state, 'insufficient-gold');
-  const generated = drawSoloAugmentShop(recordShopReroll(spent.state),sixCostShopContext(state));
+  const generated = drawSoloAugmentShop(recordShopReroll(spent.state),sixCostShopContext(state),false,'reroll',state);
   if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - cost)) return fail(state, 'insufficient-gold');
   return accept({ ...generated, gold: state.gold - cost,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
@@ -384,10 +385,10 @@ export function buyXp(state: MatchState, unitLootPolicy?: UnitLootPolicy): Match
   if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - cost)) return fail(state, 'insufficient-gold');
   const progression = grantXp(state.level, state.xp, xpPurchaseAmount(state.augments, state.round));
   const leveled=applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp });
-  let rewarded=leveled;
+  let rewarded=recordShopXp(state,leveled);
   if(dualPurposeOwner(rewarded)){
     rewarded=grantDualPurposeGold(rewarded);
-    if(!rewarded.shop.locked){rewarded=recordShopReroll(rewarded);if(!rewarded.sharedPool)rewarded=drawSoloAugmentShop(rewarded,sixCostShopContext(rewarded));}
+    if(!rewarded.shop.locked){rewarded=recordShopReroll(rewarded);if(!rewarded.sharedPool)rewarded=drawSoloAugmentShop(rewarded,sixCostShopContext(rewarded),false,'dual-purpose');}
   }
   const gifted=leveled.level===state.level||!state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])?rewarded
     :isCombatRosterLocked(rewarded)?drainBatch4Gold(rewarded):drainP2Gifts(rewarded,unitLootPolicy);
@@ -588,6 +589,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const entryLevel = state.level;
   const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,round));
   state={...state,level:progression.level,xp:progression.xp};
+  state=recordShopRound({...state,round});
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
   const refresh = state.shop.locked && !subscriptionStageStart(state,round) && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : drawSoloAugmentShop({...state,round},sixCostShopContext(state),subscriptionStageStart(state,round));
@@ -634,6 +636,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const entryLevel=state.level;
     const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};
+    state=recordShopRound({...state,round:definition.ordinal});
     const refresh = state.shop.locked && !subscriptionStageStart(state,definition.ordinal) ? { shop: state.shop, rngState: state.rngState }
       : drawSoloAugmentShop({...state,round:definition.ordinal},sixCostShopContext(state),subscriptionStageStart(state,definition.ordinal));
     const applied=applyOpeningRoundEntry({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
@@ -753,8 +756,8 @@ export function rerollAnomaly(state: MatchState, choiceId: string, generation: n
   if (!state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
   if (state.gold < 1) return fail(state, 'insufficient-gold');
   const draw = generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id => !choice.offers.includes(id)&&eligibleD14Target(state.preparation.units.find(u=>u.id===choice.targetId),id)), state.choiceRngState);
-  return accept({ ...state, gold: state.gold - 1, choiceRngState: draw.choiceRngState,
-    pendingChoice: { ...choice, offers: draw.offers, generation: generation + 1, rerollCount: choice.rerollCount + 1 } },
+  return accept(recordShopAnomalyReroll(state,{ ...state, gold: state.gold - 1, choiceRngState: draw.choiceRngState,
+    pendingChoice: { ...choice, offers: draw.offers, generation: generation + 1, rerollCount: choice.rerollCount + 1 } }),
     [{ type: 'anomalyRerolled', choiceId, generation: generation + 1, cost: 1 }]);
 }
 function generateAnomalyOffer(ids: readonly string[], rngState: number): { offers: string[]; choiceRngState: number } {
@@ -932,6 +935,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   }
   if(choice.kind==='anomaly'){selected=acquireD14(selected);const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);}
   if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);}
+  if(choice.kind==='augment')selected=recordShopAcquisition(state,selected);
   if(!selected.sharedPool&&subscriptionAcquired(state,selected))selected=drawSoloAugmentShop(selected,sixCostShopContext(selected),true);
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
   const forge=openAugmentForge(entered.state);

@@ -1,3 +1,5 @@
+import { recordShopDraw, recordShopFiresale } from './shop-history';
+import type { ShopDrawCause } from './shop-history-types';
 import { generateShop } from './shop';
 import type { SixCostShopContext } from './six-cost-shop';
 import type { MatchEvent, MatchState, ShopSlot } from './match-types';
@@ -55,7 +57,7 @@ function ticketCredits(state:Pick<MatchState,'seed'|'multiplayer'|'augments'>,ro
 }
 /** Every free shop reroll credit from this table: Rigged Shop+'s Rerolls on acquisition plus the recorded credits. */
 export function shopAugmentFreeRerolls(state:Pick<MatchState,'augments'|'seatMechanics'>):number {
- return owned(state,'rigged').reduce((n,a)=>n+shopAugmentValue(a.definitionId,'Rerolls'),0)+(record(state)?.credits??0);
+ return owned(state,'rigged').reduce((n,a)=>n+shopAugmentValue(a.definitionId,'Rerolls'),0)+(owned(state,'ticket').length?(record(state)?.credits??0):0);
 }
 /** Prismatic Ticket: every shop reroll while owned rolls RerollPercent for one more free reroll. */
 export function recordShopReroll(state:MatchState):MatchState {
@@ -151,7 +153,7 @@ export function stealFiresaleUnit(state:MatchState,owner:OwnedAugment,slot:numbe
  const emptied:MatchState={...state,shop:{...state.shop,slots:state.shop.slots.map((s,i)=>i===slot?{status:'purchased' as const}:s)}};
  const result=grantUnit(emptied,{receiptId:receiptId('firesale',owner,state.round),definitionId:offer.definitionId,...(offer.starLevel?{starLevel:offer.starLevel}:{})},policy);
  if(!result.ok)throw new RangeError(`Firesale grant: ${result.reason}`);
- return {state:result.state,events:result.events};
+ return {state:recordShopFiresale(state,result.state,slot,receiptId('firesale',owner,state.round)),events:result.events};
 }
 /** ReinFOURcement: the first REINFORCED_COST-cost shop purchase after acquisition arrives at 2 stars. The upgrade is two
  * more copies of the same champion from the pool, so the purchase combines exactly like buying three. */
@@ -220,12 +222,13 @@ export function validateShopAugments(state:MatchState):void {
 }
 
 /** Infinite-pool shop uses the same cadence and independent upgrade stream as shared seats. */
-export function drawSoloAugmentShop(initial:MatchState,context:SixCostShopContext,subscription=false):MatchState {
+export function drawSoloAugmentShop(initial:MatchState,context:SixCostShopContext,subscription=false,cause:ShopDrawCause=subscription?'subscription':'natural',before=initial,audit=true):MatchState {
  const generation=initial.shop.generation+1,rigged=planRiggedShop(initial,generation),state=rigged.state;
  if(subscription){
   const available=Object.fromEntries(SHOP_CATALOG.map(id=>[id,1]));
   const draw=drawSubscriptionSlots(state,available,()=>{});
-  return {...state,rngState:draw.rngState,shop:{generation,slots:draw.slots,locked:Boolean(state.shop.locked)}};
+  const next={...state,rngState:draw.rngState,shop:{generation,slots:draw.slots,locked:Boolean(state.shop.locked)}};
+  return audit?recordShopDraw(before,next,cause):next;
  }
  const drawn=generateShop(state.rngState,generation,state.level,state.round,context);
  let rng=state.rngState;
@@ -233,5 +236,6 @@ export function drawSoloAugmentShop(initial:MatchState,context:SixCostShopContex
   if(rigged.tier!==undefined){const draw=nextRandom(nextRandom(rng).state);rng=draw.state;const catalog=SHOP_CATALOG_BY_COST[rigged.tier];offer={status:'available',definitionId:catalog[Math.floor(draw.word*catalog.length/4294967296)]};}
   return offer.status==='available'&&starryUpgrade(state,generation,slot,offer.definitionId)?{...offer,starLevel:2}:offer;
  });
- return {...state,...drawn,shop:{...drawn.shop,slots}};
+ const next={...state,...drawn,shop:{...drawn.shop,slots}};
+ return audit?recordShopDraw(before,next,cause):next;
 }

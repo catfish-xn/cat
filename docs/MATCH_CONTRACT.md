@@ -1417,3 +1417,36 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 商店赠品容量：单人火爆甩卖/四费增援满备战席时，复用既有 `rewardOrbs` mechanic 封装和 `resolution: orb` 收据；`claimOrb(state, orbId, expectedRound)` 在非战斗可领取，仍满席返回原 state 和空事件，重复领取为 `already-claimed`。不新增存档版本或字段，旧 PvE 冻结账本不接受未绑定商店收据的额外条目。
 
 `restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):MatchState` 亦执行商店强化计数与收据校验，无持有者的 credits/rolls/rigAnchor/reinforced 或伪造收据抛出 `Invalid shop augment authority: …`；仍只接受与权威共享池匹配的快照，签名和保存格式不变。
+
+## 2026-10-27 Review-Q：条件式商店历史认证（用户方案 A）
+
+本节覆盖上节仅凭 `shop-augments.rolls/credits` 与购买 `starLevel` 恢复的口径。新增可选的 `MatchState.shopHistory`，内部版本严格为 `shop-history-v1`。首次通过 `selectChoice` 取得 `AUGMENT_SHOP` 八项之一时，在同一事务开始记录；其余强化取得、XP 购买、锁店、真实生成、购买、Firesale、入轮、异常刷新费用和联机淘汰清店继续追加。失败命令不追加、不消费资源或 RNG。没有持有这八项的对局不创建空字段，旧无商店强化存档仍原样读取、序列化。
+
+历史初始点保存取得前的商店、商店 RNG、回合、等级/XP、金币、持有强化 choiceId 顺序及资源/机制/掉落/日程/经济前缀。单人取得发生在选择阶段、交易之前，初始金币及 XP 另与上一轮已校验结算绑定。`entries` 的每个点保存上述上下文前缀；每次生成记录原因 `natural | subscription | reroll | dual-purpose`、生成结果、RNG、各槽星夜随机命中布尔值，以及消费的 `{choiceId, ordinal}` 免费额度或金币价格。免费额度按持有强化顺序、该强化额度序号分配；这只为认证既有总余额确定唯一来源，不改变可用次数。Ticket 的命中在触发刷新后才可消费。共享池生成另保存释放旧商店之后、预留新卡之前的库存；恢复按相同有限池抽取算法重演，池不足三张时仍为一星。
+
+`validateShopHistory(state:MatchState):void` 是只读检查，抛 `RangeError('Invalid shop history: …')`。它重演持有边界、入轮/经验、刷新原因、逐次额度消费、Ticket 命中和累计、Rigged 锚点、星夜生成与购买星级；将生成及购买与当前商店、RNG、唯一资源序号、免费消费事实、Firesale 收据绑定。金币变化另由已有机制/掉落/出售/日程/收入收据折叠，不能仅在历史中写一个“已付款”。有战斗档案时，还必须延续已经重演认证的商店历史前缀。联机 `restoreSharedOrbSnapshot` 先通过外部权威池守恒，再检查同一历史；它仍不等同于离线 `restoreMatch`。
+
+兼容规则：同 rules/content/digest 的旧档，若持有 `AUGMENT_SHOP` 八项之一而没有历史，一律报 `Invalid shop history: missing shop-history-v1; legacy shop augment saves cannot be authenticated`，不猜测、不补造、不迁移；须保留原文件并开始新局。未知历史版本、丢失/重排/联合伪造记录均不接纳。没有星夜的二星报价，以及没有生成/购买证据的二星购买，三个离线入口与联机快照入口均拒绝。历史是与现有资源/战斗账本一致的确定性规则证明，不是文件签名；不能声称识别将全部输入改写成另一条完整合法轨迹的文件作者。
+
+外层 **schema/save/replay/command = 12/8/8/7，规则联机版本=5，WebSocket 封套版本=6** 不变，rules/content/digest 不变：这是按需附加的认证证据，沿用本合同 A2/A4/A5 的“相关收据缺证据拒绝、未触发不增加空字段、各版本不变”规则，而非替换封套或战斗事实格式。此次无需重录无商店强化的 golden、oracle、回放；以前持有这些商店强化且缺历史的保存及其战斗 context 必须经真实命令重新录制。候选 v24 内容本身的统一 epoch 录制仍按原发布计划执行，本修复不宣布其已完成。
+
+生产调用点核对（所有新记录均在领域层，服务器和界面没有新命令）：
+
+| 调用点 | 改动及确认 |
+| --- | --- |
+| `src/simulation/match.ts:938`（selectChoice） | 全部强化取得在首次商店强化后追加 acquire；订阅即时生成共用记录；超时选择仍调用此入口。 |
+| `src/simulation/match.ts:333`（buyUnit） | 在出生事实后、ReinFOURcement 追加奖励前记录购买槽位、实际星级和价格；单人及 `buySharedUnit` 共用。 |
+| `src/simulation/match.ts:375`（rerollShop） | 在扣费/免费消费前取上下文，记录 paid/free 来源；锁店位保留。 |
+| `src/simulation/match.ts:388`（buyXp） | 记录购买前 XP/费用；Dual Purpose 的真实刷新另记一次；锁店时只有 XP 事件。 |
+| `src/simulation/match.ts:369`、`:759`（setShopLock / rerollAnomaly） | 记录成功锁店和异常刷新费用；无操作锁店不追加。 |
+| `src/simulation/match.ts:592`、`:639`（nextRound / advanceMultiplayerRound） | 在被动 XP 后记录入轮；自然/订阅生成共用记录；共享模式丢弃的无限池提案不写生成历史。 |
+| `src/simulation/shop-augments.ts:225`、`:151`（drawSoloAugmentShop / stealFiresaleUnit） | 保存真实单人抽取、槽位随机命中及赠送所取槽位；只读重演关闭记录。 |
+| `src/simulation/shared-pool.ts:131`、`:173`（drawShop / drawSubscriptionShop） | 初次、自然、主动、Dual Purpose、订阅取得及阶段开始均保存真实池库存/结果；同一函数供只读重演。 |
+| `src/simulation/shared-pool.ts:297`（releaseSeatOnElimination） | 清空商店与释放库存的原事务内追加 release。 |
+| `src/simulation/serialization-structure.ts:313`、`src/simulation/shared-pool.ts:50` | 对象、JSON、序列化和权威共享快照均执行历史认证。 |
+| `src/simulation/battle-record-validation.ts:178`（checkHistoryCarry） | 已重演的历史初始点和事件前缀不可被后续存档改写。 |
+| `src/server/room/room.ts:171`、`:178`、`:180`、`:183`、`:541`（分派/handle） | 无源码改动；choose、buy、reroll、buyXp、shopLock 既有分派已核对，并通过真实 Room.handle 和共享池续算测试。 |
+| `src/server/protocol.ts`、`src/server/net/messages.ts:249`（validateClientCommand） | 无新 wire 命令、参数或协议版本；既有 command 校验/分派保持。已逐项核对 buy、shopLock、reroll、buyXp、choose 严格参数白名单。 |
+| 单人 `src/m6` / `src/rendering/match-session.ts:86` | 无源码改动；既有公共命令写入历史，M6 封套 export/validateFile 经完整战斗历史验证往返。 |
+
+内部记录/重演接口（不是客户端可调用的新游戏命令）：`recordShopAcquisition(before,after)`、`recordShopXp(before,after)`、`recordShopLock(before,after)`、`recordShopRelease(before,after)`、`recordShopAnomalyReroll(before,after)` 的参数和返回值均为 `MatchState`；`recordShopRound(state)` 同理；`recordShopBuy(before,after,slot:number)`、`recordShopFiresale(before,after,slot:number,receiptId:string)`、`recordShopDraw(before,after,cause:ShopDrawCause,stock?:Readonly<Record<string,number>>)` 返回附加证据的 `MatchState`，无历史时保持原 after。调用方只在成功事务内提交。`freeRerollGrants(state:MatchState):readonly {choiceId:string;count:number}[]` 提供稳定额度分配顺序。`replaySharedShop(state:MatchState,stock:Readonly<Record<string,number>>,subscription:boolean):MatchState` 在副本池上重演，绝不改变传入池/状态。`drawSoloAugmentShop(initial,context,subscription=false,cause=subscription?'subscription':'natural',before=initial,audit=true):MatchState` 的后三个参数仅供领域接线和只读重演，既有三个参数调用保持原行为；历史类型和输入输出完整定义见 `src/simulation/shop-history-types.ts:4`。这些内部入口使用原有合法领域前置条件，不新增公共失败 reason；恢复错误前缀及旧档策略如上。

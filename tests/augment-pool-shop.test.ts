@@ -1,3 +1,6 @@
+import { shopOwner } from './fixtures/shop-history-match';
+import { accepted } from './match-helpers';
+import { grantMechanicGold } from '../src/simulation/seat-mechanics/grants';
 import { validateB8Loot, validateB8Resources } from '../src/simulation/b8-restore';
 import { soloPveLoot } from '../src/simulation/shop-orbs';
 import * as oracle from './fixtures/m5/oracle.g2.cjs';
@@ -196,10 +199,14 @@ it('Starry Night: 1- and 2-cost offers become 2-star at the level chance, reserv
  expect(plain.state.shop.slots.some(s=>s.status==='available'&&s.starLevel===2)).toBe(false);
 });
 it('a 2-star shop purchase folds to a 2-star unit on restore; a forged star on a 3-cost is rejected', ()=>{
- const base=createMatch(42),one=SHOP_CATALOG_BY_COST[1][0],three=SHOP_CATALOG_BY_COST[3][0];
- const s:MatchState={...base,gold:50,shop:{...base.shop,slots:[{status:'available',definitionId:one,starLevel:2},...base.shop.slots.slice(1)]}};
- const bought=accept(buyUnit(s,0,s.shop.generation) as any).state as MatchState;
- expect(bought.gold).toBe(50-3);expect(bought.preparation.units.find(u=>u.id===`unit-${bought.nextUnitSerial-1}`)!.starLevel).toBe(2);
+ const three=SHOP_CATALOG_BY_COST[3][0];
+ let s=accepted(grantMechanicGold(shopOwner(18,'starry-night'),{receiptId:'starry-test',source:'test',amount:100}));
+ const eligible=()=>s.shop.slots.findIndex(x=>x.status==='available'&&x.starLevel===2&&UNIT_DEFINITIONS[x.definitionId].cost===1);
+ for(let i=0;i<40&&eligible()<0;i++)s=accepted(rerollShop(s));
+ const slot=eligible();expect(slot).toBeGreaterThanOrEqual(0);
+ const gold=s.gold;
+ const bought=accepted(buyUnit(s,slot,s.shop.generation));
+ expect(bought.gold).toBe(gold-3);expect(bought.preparation.units.find(u=>u.id===`unit-${bought.nextUnitSerial-1}`)!.starLevel).toBe(2);
  expect(restoreMatch(serializeMatch(bought))).toEqual(bought);
  const forged={...bought,shop:{...bought.shop,slots:[{status:'available' as const,definitionId:three,starLevel:2 as const},...bought.shop.slots.slice(1)]}};
  expect(()=>restoreMatch(serializeMatch(forged))).toThrow();

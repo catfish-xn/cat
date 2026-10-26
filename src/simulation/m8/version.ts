@@ -8,6 +8,8 @@ export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
  * knock-up marks, Black Rose 7, augment pool batches 1-2, Experiment emblem, Scrap/Enforcer). New replay facts (knock-up
  * status mark, displacement movement reasons) and no new command: schema12/save8 unchanged, replay8/command7; exact
  * rules/content identity rejects v22. */
+/** Conditional shop-history-v1 evidence follows MATCH_CONTRACT A2/A4/A5: outer identity unchanged.
+ * Missing history rejects shop owners only; unaffected saves remain byte-identical. */
 export const M8_VERSION = {
   schemaVersion: 12, rulesVersion: 's13-g2-3-v23-online-rules', contentVersion: 's13-14.24b-g2-3-v23-online-rules',
   saveFormatVersion: 8, replayFormatVersion: 8, commandProtocolVersion: 7, rngAlgorithm: 'lcg32-v1', tickMs: 50,

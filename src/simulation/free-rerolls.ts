@@ -42,3 +42,9 @@ export function validateFreeRerolls(state:MatchState):void {
  if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).join(',')!=='used'||!Number.isSafeInteger(r.used)||r.used<1||r.used>freeRerollsGranted(state)||r.used!==spends.length)
   throw new RangeError('Invalid free shop reroll ledger');
 }
+
+/** Stable allocation order for auditing an individual spend. Credits are identified by owner and ordinal;
+ * Ticket's next hit is unavailable until AFTER the triggering reroll. */
+export function freeRerollGrants(state:MatchState):readonly {choiceId:string;count:number}[] {
+ return state.augments.map(a=>({choiceId:a.choiceId,count:freeRerollsGranted({...state,augments:[a]})}));
+}

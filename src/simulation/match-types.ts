@@ -79,6 +79,7 @@ export interface MatchBase {
   readonly scheduleReceipts: readonly ScheduleReceipt[]; readonly choiceRngState: number; readonly rewardRngState: number; readonly nextMatchEventSeq: number;
   readonly seed: number; readonly rngState: number; readonly round: number; readonly gold: number;
   readonly level: number; readonly xp: number; readonly playerHp: number;
+  readonly shopHistory?: import('./shop-history-types').ShopHistory;
   readonly shop: Shop; readonly nextUnitSerial: number; readonly preparation: GameState; readonly roundResults: readonly RoundResult[];
 }
 export type RunningCombat = CombatState & { readonly status: 'running'; readonly result: null };
