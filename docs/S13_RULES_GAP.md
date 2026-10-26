@@ -1,10 +1,14 @@
 > 当前规则纪元：**v22-online-rules**（`rulesVersion s13-g2-3-v22-online-rules`，基线 multiplayer 8715a2c1，PR #435）。下列标“已随 v22 录制”的条目都已进入该纪元。
 
+## 2026-10-26 v24 M5 路线筛选与换序初始化（P）
+
+**P-V24-M5-SETUP（P，2026-10-26，用户授权按推荐决定）**：`tests/m5-route.test.ts` 每个阵容的 `describe` 显式注册真实路线分段 `beforeAll`；每个 hook 只推进原有的连续 tick 段，最后一个 hook 收尾，全部沿用默认 hook 时限。普通路线、Caitlyn seed44 与 sniper seed782 均由消费它们的 describe 准备，`-t` 筛选仍会执行这些初始化，换序不依赖其它测试预热。8 个原验收用例只读完成后的路线，不在测试内续跑冷缓存；原 1,140 个无断言的预热用例改为初始化，不删除任何原有 golden、战斗、资源、严格恢复或失败命令断言。只改测试和审计文档，不改生产代码、玩法、状态、超时或断言强度。验收限定单文件、`--maxWorkers=4`、单一驱动，覆盖整文件、固定种子的 `--sequence.shuffle` 与 Caitlyn 冷启动 `-t`，详见 `V24_FLAKE_K_REPORT.md`。
+
 ## 2026-10-25 v24 偶发失败测试约定（P）
 
 **P-V24-FLAKE（P，2026-10-25，用户授权按推荐决定）**：本任务只改测试及审计文档，不改生产代码、玩法、数值、身份常量、历史证据或存档格式。超时用例按种子、篡改种类、存档入口、回合和连续 tick 窗口拆分；公共路线沿用 `roundRouteCache` 的真实命令暂停点，不伪造状态，不缓存恢复认证结论。独立 oracle 只复用同一种子的独立计算，不导入生产实现。网络正向检查等待具体消息，不用固定睡眠推测送达。合成磁盘夹具的准备可使用同步小文件写入，避免占用共享异步文件线程池；真实转换及合并仍调用原实现。禁止增加测试、文件或 hook 超时，禁止放宽断言。
 
-逐条保留失败和通过的输入证据；不同开发提交的先红后绿只算候选，不直接宣称是同提交偶发失败。内容 digest／golden contentDigest 漂移按用户指令单列忽略，不重录。每个本次改动的测试文件以 `--maxWorkers=4` 连续验证三次，始终只启动一个 Vitest 驱动，不跑全套或浏览器脚本。当前挂载的依赖目录只读，验证使用 `--configLoader runner` 避免 Vite 向共享 `node_modules/.vite-temp` 写入。完整清单及结论见 `V24_FLAKE_INVENTORY.json`、`V24_FLAKE_REPORT.md`。
+逐条保留失败和通过的输入证据；不同开发提交的先红后绿只算候选，不直接宣称是同提交偶发失败。内容 digest／golden contentDigest 漂移按用户指令单列忽略，不重录。每个本次改动的测试文件以 `--maxWorkers=4` 连续验证三次，始终只启动一个 Vitest 驱动，不跑全套或浏览器脚本。当前挂载的依赖目录只读，验证使用 `--configLoader runner` 避免 Vite 向共享 `node_modules/.vite-temp` 写入。原始完整清单 `V24_FLAKE_INVENTORY.json` 不随仓库提供；仓库内候选和结论见 `V24_FLAKE_CASES.md`、`V24_FLAKE_REPORT.md`。
 
 ## 2026-10-25 强化收据单位身份恢复认证（P）
 
