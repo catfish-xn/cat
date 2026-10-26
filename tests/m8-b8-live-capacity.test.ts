@@ -66,12 +66,10 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
   ] as const)reject(sold,message,change);
  });
 });
-// The lethal cases share the same full public campaign prefix to the 4-7 start. It is played one battle per case
-// (no hook replays the whole campaign under CI load); a filtered lethal case plays it in its hook instead.
-describe('B8 lethal PvE public campaign',()=>{
- for(let round=1;round<24;round++)it(`plays the public terminal campaign through round ${round}`,async()=>{await advanceTerminalRoute(round);});
-});
+// The consuming suite owns its prefix. Ordered hooks play one real round each,
+// including when a lethal case is filtered or suites/tests are shuffled.
 describe('B8 live lethal PvE with randomized orbs',()=>{
+ for(let round=1;round<24;round++)beforeAll(async()=>{await advanceTerminalRoute(round);});
  beforeAll(async () => { await terminalPreparation('loris', 1); });
  // Seed 2253's terminal 4-7 after the xp/batch-3 merge: its new augments (blinding-speed) let a lone Loris at (0,7)
 // clear all six razorbeaks, so the two-carrier case keeps Leona there instead (was Loris): it kills the same
