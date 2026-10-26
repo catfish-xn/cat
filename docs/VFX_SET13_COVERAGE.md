@@ -70,6 +70,8 @@ node scripts/assets3d/vfx-ltk-browser-review.mjs --root=assets3d-local/trial-set
 
 63 名英雄均已调用现成 Rust CLI。逐目录合计 674 个系统，按系统 ID 去重为 550；当前 loader 接受 658 个（640 个非空、18 个原始空定义），拒绝 16 个。全局命中／暴击在每份英雄包中各有一份，因此目录合计包含重复资源。可接管技能 55/63、普攻 62/63；其余动作保留手写效果。
 
+Review R 补充：上述 55/63、62/63 是资源就绪条件，不代表任意目标列表都能接管。自身命中必须保留，自身投射或缺目标的有效 cue 必须整动作回退；全部 63 英雄的目标覆盖复核及调用点见 [VFX_REVIEW_R.md](VFX_REVIEW_R.md)。
+
 本表使用真实棋盘的 `groundPass: true` 配置，默认未授权宿主仍拒绝地面层。接受数包含 empty-noop；「技能／普攻」表示完整动作的接管条件是否具备，并不表示该英雄所有导出系统都参与这两个动作。未使用的被动、庆祝或其他系统也逐一审计；原系统及每条拒绝详情见 `/tmp/vfx4-set13/<source>/validation-current.json`，总表见 `/tmp/vfx4-set13/coverage.json`。每系统实际读取纹理／几何／骨架／动画并推进 60 帧后释放；此表是 Node loader/driver 验证，GPU 视觉验收范围为 Jinx、Vi。
 
 | 英雄 | 源目录 | 导出 | 接受（空定义） | 技能／普攻 | 不支持功能或回退原因 |

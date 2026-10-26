@@ -30,18 +30,24 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   };
   return {
     warm,
-    /** True means the converted cast owns this event; false means execute the existing fallback. */
+    /** True means every active cue is covered and queued. Partial/unsupported actions
+     * return false without enqueueing anything, so the host runs its entire fallback. */
     play(champion: string, sourceId: string, targetIds: readonly string[], castIndex = 0, action: 'cast' | 'attack' = 'cast'): boolean {
       if (closed) return false;
       void warm(champion);
       const catalog = catalogs.get(champion) ?? library;
       const available = catalog.index?.skills[champion];
       const cues = selectTimeline(champion, available?.filter(cue => (cue.action ?? 'cast') === action), id => !!catalog.get(id), !!available);
-      if (!cues || !findUnit(sourceId)?.alive) return false;
-      const spawns = mapSkillTimeline(cues, sourceId, targetIds, castIndex);
-      if (!spawns.length || waiting.length + spawns.length > MAX_LTK_QUEUED) return false;
+      const source = findUnit(sourceId);
+      if (!cues || !source?.alive || source.disposed) return false;
+      const { spawns, unsupported } = mapSkillTimeline(cues, sourceId, targetIds, castIndex);
+      if (unsupported.length || !spawns.length || waiting.length + spawns.length > MAX_LTK_QUEUED) return false;
       // All targets are required before suppressing the old cast; later disappearance cancels its visual.
-      if (spawns.some(spawn => spawn.targetId && !findUnit(spawn.targetId)?.alive)) return false;
+      if (spawns.some(spawn => {
+        if (spawn.targetId === undefined) return false;
+        const target = findUnit(spawn.targetId);
+        return !target?.alive || target.disposed;
+      })) return false;
       for (const spawn of spawns) waiting.push({ at: clock + spawn.delay, spawn, library: catalog });
       return true;
     },

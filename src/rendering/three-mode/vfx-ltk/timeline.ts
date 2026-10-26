@@ -15,12 +15,28 @@ export interface TimelineCue {
   readonly stopAfter?: number;
 }
 export interface TimelineSpawn extends TimelineCue { readonly sourceId: string; readonly targetId?: string }
-/** Cast start attaches to caster, projectile flies to primary target, hit fans out to unique targets. */
-export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], castIndex = 0): TimelineSpawn[] {
-  const unique = [...new Set(targets)].filter(id => id !== sourceId);
-  return cues.filter(cue => cue.phase === undefined || cue.phase === castIndex % 3).flatMap(cue => cue.event === 'cast-start' ? [{ ...cue, sourceId }]
-    : cue.event === 'projectile' || cue.primary ? unique.slice(0, 1).map(targetId => ({ ...cue, sourceId, targetId }))
-    : unique.map(targetId => ({ ...cue, sourceId, targetId })));
+export interface TimelineMapping {
+  readonly spawns: readonly TimelineSpawn[];
+  /** A partial plan is diagnostic only; never enqueue it or suppress the old action. */
+  readonly unsupported: readonly { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' }[];
+}
+/** Hits preserve authoritative self/ally targets. Projectiles need a distinct primary
+ * endpoint; never skip self and silently retarget to a later member of the list. */
+export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], castIndex = 0): TimelineMapping {
+  const unique = [...new Set(targets)], spawns: TimelineSpawn[] = [];
+  const unsupported: { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' }[] = [];
+  for (const cue of cues) {
+    if (cue.phase !== undefined && cue.phase !== castIndex % 3) continue;
+    if (cue.event === 'cast-start') { spawns.push({ ...cue, sourceId }); continue; }
+    if (!unique.length) { unsupported.push({ cue, reason: 'missing-target' }); continue; }
+    if (cue.event === 'projectile' && unique[0] === sourceId) {
+      unsupported.push({ cue, reason: 'self-projectile' }); continue;
+    }
+    for (const targetId of cue.event === 'projectile' || cue.primary ? unique.slice(0, 1) : unique) {
+      spawns.push({ ...cue, sourceId, targetId });
+    }
+  }
+  return { spawns, unsupported };
 }
 /** Replacement is atomic: a missing/not-yet-loaded system keeps the entire old action.
  * Legacy callers know the two built-in timelines; catalogues explicitly register other champions. */

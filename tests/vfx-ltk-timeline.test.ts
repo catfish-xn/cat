@@ -30,13 +30,13 @@ describe('cast timeline replacement and fallback', () => {
   });
   it('binds the real export IDs, cast rotation and original source/target bones with explicit visual timing', () => {
     const jinx = S13_TIMELINES.jinx;
-    expect(mapSkillTimeline(jinx, 'j', ['a', 'b'], 0).map(c => c.system)).toEqual(['a6a2b1cc', '3496e112', '10fede7e', '10fede7e']);
-    expect(mapSkillTimeline(jinx, 'j', ['a', 'b'], 1).map(c => c.system)).toEqual(['9bd80364', 'cd05488e', 'cd05488e']);
-    const rocket = mapSkillTimeline(jinx, 'j', ['a', 'b'], 2);
+    expect(mapSkillTimeline(jinx, 'j', ['a', 'b'], 0).spawns.map(c => c.system)).toEqual(['a6a2b1cc', '3496e112', '10fede7e', '10fede7e']);
+    expect(mapSkillTimeline(jinx, 'j', ['a', 'b'], 1).spawns.map(c => c.system)).toEqual(['9bd80364', 'cd05488e', 'cd05488e']);
+    const rocket = mapSkillTimeline(jinx, 'j', ['a', 'b'], 2).spawns;
     expect(rocket.map(c => c.system)).toEqual(['7e6f06b5', '449d6617', '8b59c09d', '809da1b1']);
     expect(rocket.find(c => c.system === '8b59c09d')).toMatchObject({ bone: 'Cstm_Buffbone_Rocket_Launcher', targetBone: 'BUFFBONE_GLB_GROUND_LOC', targetId: 'a' });
     expect(mapSkillTimeline(jinx, 'j', ['a', 'b'], 3)).toEqual(mapSkillTimeline(jinx, 'j', ['a', 'b'], 0));
-    const vi = mapSkillTimeline(S13_TIMELINES.vi, 'v', ['a', 'b']);
+    const vi = mapSkillTimeline(S13_TIMELINES.vi, 'v', ['a', 'b']).spawns;
     expect(vi.find(c => c.system === 'c11e6814')).toMatchObject({ bone: 'R_Buffbone_Glb_Hand_Loc', stopAfter: 17 / 30 });
     expect(vi.find(c => c.system === '18e22631')).toMatchObject({ bone: 'BUFFBONE_GLB_GROUND_LOC', delay: 17 / 30 });
     expect(vi.filter(c => c.system === 'd27b3044').map(c => c.targetId)).toEqual(['a']);
@@ -55,11 +55,14 @@ describe('cast timeline replacement and fallback', () => {
   });
   it('maps cast start, primary projectile, unique per-target impacts without creating gameplay commands', () => {
     const mapped = mapSkillTimeline(cues, 'caster', ['target', 'target', 'other', 'caster']);
-    expect(mapped.map(c => [c.event, c.sourceId, c.targetId, c.delay])).toEqual([
+    expect(mapped.spawns.map(c => [c.event, c.sourceId, c.targetId, c.delay])).toEqual([
       ['cast-start', 'caster', undefined, 0], ['projectile', 'caster', 'target', 0.2],
-      ['hit', 'caster', 'target', 0.7], ['hit', 'caster', 'other', 0.7],
+      ['hit', 'caster', 'target', 0.7], ['hit', 'caster', 'other', 0.7], ['hit', 'caster', 'caster', 0.7],
     ]);
-    expect(mapSkillTimeline(cues, 'caster', [])).toHaveLength(1);
+    expect(mapped.unsupported).toEqual([]);
+    const empty = mapSkillTimeline(cues, 'caster', []);
+    expect(empty.spawns).toHaveLength(1);
+    expect(empty.unsupported).toEqual(cues.slice(1).map(cue => ({ cue, reason: 'missing-target' })));
   });
   it.each(['jinx', 'vi'])('%s replaces only a fully prepared timeline', champion => {
     expect(selectTimeline(champion, cues, id => id !== 'missile')).toBeNull();
