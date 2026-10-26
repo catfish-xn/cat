@@ -15,6 +15,7 @@ import { G23_LOOT } from './s13-g23-manifest';
 import { G24_FORGE_POOLS } from '../simulation/content/g2-4-forges';
 import { augmentDisplayName, augmentEffectText, augmentPlayerDescription } from './augment-display';
 import { isAnvilArmory } from './anvil-display';
+import { s13AssetUrl } from './s13-assets';
 
 export interface GenericChoiceOffer { readonly id: string; readonly name: string; readonly description: string; readonly price?: number; readonly iconUrl?: string }
 export interface GenericChoiceExtras {
@@ -52,6 +53,14 @@ const FORGE_POOL_NAMES: readonly (readonly [readonly string[], string])[] = [
   [G24_FORGE_POOLS.TFT_ArmoryKeyOrnn, '神器装备锻造器'], [G24_FORGE_POOLS.TFT_ArmoryKeySupport, '辅助装锻造器'],
   [G24_FORGE_POOLS.TFT_ArmoryKeyCompleted, '成装锻造器'], [G24_FORGE_POOLS.TFT_ArmoryKeyComponent, '基础装备锻造器'],
 ];
+/** Optional original anvil portrait in the shop bar. The existing offer pools identify the source for display only. */
+export function anvilChoiceIconUrl(choice: { readonly offers: readonly string[]; readonly kind?: string; readonly payload?: unknown }): string | null {
+  if (!isAnvilArmory(choice) || !choice.offers.length) return null;
+  for (const id of ['TFT_ArmoryKeyComponent', 'TFT_ArmoryKeyCompleted'] as const) {
+    if (choice.offers.every(offer => G24_FORGE_POOLS[id].includes(offer))) return s13AssetUrl('champion', id);
+  }
+  return null;
+}
 const FORGE_NAMES: Readonly<Record<string, string>> = { completed: '成装锻造器', artifact: '神器装备锻造器', support: '辅助装锻造器' };
 function forgeName(offers: readonly unknown[]): string {
   const pooled = FORGE_POOL_NAMES.find(([pool]) => offers.length > 0 && offers.every(id => typeof id === 'string' && pool.includes(id)));
