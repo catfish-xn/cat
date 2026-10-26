@@ -2,18 +2,22 @@ import { afterAll, beforeAll, expect, it } from 'vitest';
 import { chromium, type Browser } from 'playwright';
 import { createServer, type ViteDevServer } from 'vite';
 import { mkdir, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 // Real StrategyPanel renderer + production CSS, with an authoritative-choice fixture.
 // No match simulation, assets or server commands are changed by this browser harness.
 let server: ViteDevServer, browser: Browser, origin: string;
-const shots = '/home/aiapps/workspcae/codex-briefs/shots';
+// Screenshots are local evidence only; RUMBLE_SHOTS_DIR picks a folder, otherwise the OS temp dir (CI has no home checkout).
+const shots = process.env.RUMBLE_SHOTS_DIR ?? join(tmpdir(), 'rumble-shop-layout-shots');
 beforeAll(async () => {
   server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: ['phaser'] }, cacheDir: '/tmp/rumble-vite-cache', server: { host: '127.0.0.1', port: 0 }, logLevel: 'error' });
   await server.listen();
   const address = server.httpServer!.address();
   if (!address || typeof address === 'string') throw Error('Missing Vite address');
   origin = `http://127.0.0.1:${address.port}`;
-  browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
+  browser = await chromium.launch({ headless: true, ...(existsSync('/usr/bin/google-chrome') ? { channel: 'chrome' } : {}), args: ['--no-sandbox'] });
   await mkdir(shots, { recursive: true });
 }, 60000);
 afterAll(async () => { await browser?.close(); await server?.close(); });
