@@ -56,6 +56,8 @@ const display = vi.hoisted(() => {
 });
 vi.mock('phaser', () => ({ default: { Scene: class {} } }));
 vi.mock('../src/presentation/unit-view', () => ({ UnitView: display.View }));
+import { OnlineApplication } from '../src/rendering/online/online-application';
+import type { BoardFrame } from '../src/rendering/board-feed';
 import { BoardScene } from '../src/rendering/BoardScene';
 
 type Token = InstanceType<typeof display.Token>;
@@ -63,6 +65,8 @@ type View = InstanceType<typeof display.View>;
 /** Narrow test bridge to the actual private methods; never an alternative renderer. */
 interface SceneBridge {
   session: MatchSession;
+  application: unknown;
+  boardFrame(): BoardFrame;
   tokens: Map<string, Token>;
   views: Map<string, View>;
   namedObjects: Map<string, Token>;
@@ -290,5 +294,29 @@ describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser c
     expect(scene.namedObjects.has('unit:unit-4')).toBe(false);
     expect(scene.renderedCells.has('unit-4')).toBe(false);
     expect(scene.session.preparation.units.some(unit => unit.id === 'unit-4')).toBe(false);
+  });
+});
+
+
+describe('BoardScene online interest feed', () => {
+  it('omits mines offline/before the private view, caps banked gold, and keys only income already paid on next entry', () => {
+    const scene = makeScene();
+    // No unit meters are needed for this frame-only check.
+    scene.tokens.clear();
+    expect(scene.boardFrame().goldMines).toBeUndefined();
+    scene.application = Object.create(OnlineApplication.prototype);
+    const active = vi.spyOn(OnlineApplication.prototype, 'isActive', 'get').mockReturnValue(false);
+    expect(scene.boardFrame().goldMines).toBeUndefined();
+    active.mockReturnValue(true);
+    const initial = scene.session.state;
+    const result = { round: 1, roundId: 'one', hpLost: 0 } as MatchState['roundResults'][number];
+    for (const [gold, expected] of [[0, 0], [9, 0], [10, 1], [29, 2], [30, 3], [50, 5], [99, 5]]) {
+      scene.session = new MatchSession({ ...initial, gold, round: 1, roundResults: [result] });
+      expect(scene.boardFrame()).toMatchObject({ goldMines: expected, goldMineIncomeKey: null });
+    }
+    scene.session = new MatchSession({ ...initial, gold: 30, round: 2, roundResults: [result] });
+    expect(scene.boardFrame().goldMineIncomeKey).toBe('round:1:one');
+    scene.session = new MatchSession({ ...initial, gold: 29, round: 2, roundResults: [result] });
+    expect(scene.boardFrame()).toMatchObject({ goldMines: 2, goldMineIncomeKey: 'round:1:one' });
   });
 });
