@@ -48,6 +48,7 @@ export class OpeningEncounterHud {
   readonly chip = element('button', '', 'opening-chip');
   readonly card = element('section', '', 'opening-card');
   readonly toast = element('div', '', 'opening-toast');
+  readonly tooltip = element('div', '', 'opening-tooltip');
   private readonly introduced = new Set<string>();
   private introTimer: number | null = null;
   private toastTimer: number | null = null;
@@ -56,10 +57,19 @@ export class OpeningEncounterHud {
   /** The monkey fact already accounted for in this match (a view that already carries it on first sight shows no toast). */
   private factSeen: string | null = null;
   private input: OpeningHudInput | null = null;
-  constructor(frame: HTMLElement) {
+  constructor(frame: HTMLElement, private readonly online = false) {
     this.banner.dataset.debug = 'opening:banner'; this.banner.hidden = true; this.banner.setAttribute('role', 'status');
     this.chip.type = 'button'; this.chip.dataset.debug = 'opening:chip'; this.chip.hidden = true;
-    this.chip.addEventListener('click', () => this.openCard(false));
+    this.chip.addEventListener('click', () => { this.tooltip.hidden = true; this.openCard(false); });
+    this.tooltip.hidden = true; this.tooltip.id = 'opening-encounter-tooltip';
+    this.tooltip.dataset.debug = 'opening:tooltip'; this.tooltip.setAttribute('role', 'tooltip');
+    if (online) {
+      this.chip.setAttribute('aria-describedby', this.tooltip.id);
+      for (const event of ['mouseenter', 'focus'] as const) this.chip.addEventListener(event, () => this.showTooltip());
+      for (const event of ['mouseleave', 'blur'] as const) this.chip.addEventListener(event, () => { this.tooltip.hidden = true; });
+      this.chip.addEventListener('keydown', event => { if (event.key === 'Escape') this.tooltip.hidden = true; });
+      document.body.append(this.tooltip);
+    }
     this.card.dataset.debug = 'opening:card'; this.card.hidden = true; this.card.setAttribute('role', 'dialog'); this.card.setAttribute('aria-label', '本局奇遇');
     this.toast.dataset.debug = 'opening:toast'; this.toast.hidden = true; this.toast.setAttribute('role', 'status');
     frame.append(this.banner, this.chip, this.toast);
@@ -121,11 +131,11 @@ export class OpeningEncounterHud {
     return { banner: shown(this.banner), chip: shown(this.chip), card: shown(this.card), toast: shown(this.toast) };
   }
   hideAll(): void {
-    this.key = ''; this.banner.hidden = true; this.chip.hidden = true; this.closeCard();
+    this.tooltip.hidden = true; this.key = ''; this.banner.hidden = true; this.chip.hidden = true; this.closeCard();
   }
   dispose(): void {
     if (this.toastTimer !== null) window.clearTimeout(this.toastTimer);
-    this.closeCard(); this.banner.remove(); this.chip.remove(); this.card.remove(); this.toast.remove();
+    this.closeCard(); this.banner.remove(); this.chip.remove(); this.card.remove(); this.toast.remove(); this.tooltip.remove();
   }
 
   private renderBanner(encounter: OpeningEncounterDisplay, opening: boolean): void {
@@ -140,10 +150,21 @@ export class OpeningEncounterHud {
     const text = openingBannerText(encounter);
     const lines = [forgeProgressText(input.forge), melProgressText(input.mel)].filter((line): line is string => line !== null);
     this.chip.dataset.closed = String(text.closed);
-    this.chip.replaceChildren(element('span', '本局奇遇', 'opening-chip-label'), element('span', text.title, 'opening-chip-name'),
+    const icon = element('span', '✦', 'opening-chip-icon'); icon.setAttribute('aria-hidden', 'true');
+    this.chip.replaceChildren(...(this.online ? [icon] : []), element('span', '本局奇遇', 'opening-chip-label'), element('span', text.title, 'opening-chip-name'),
       ...lines.map(line => element('span', line, 'opening-chip-progress')));
-    this.chip.title = `${openingBannerLine(encounter)}\n${text.description}\n${text.status}${lines.length ? `\n${lines.join('\n')}` : ''}\n点击查看说明`;
+    const description = `${openingBannerLine(encounter)}\n${text.description}\n${text.status}${lines.length ? `\n${lines.join('\n')}` : ''}\n点击查看说明`;
+    this.tooltip.textContent = description;
+    this.chip.title = this.online ? '' : description;
     this.chip.hidden = false;
+  }
+  private showTooltip(): void {
+    if (this.chip.hidden) return;
+    this.tooltip.hidden = false;
+    const rect = this.chip.getBoundingClientRect();
+    const width = this.tooltip.offsetWidth;
+    this.tooltip.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))}px`;
+    this.tooltip.style.top = `${Math.max(8, Math.min(rect.bottom + 8, window.innerHeight - this.tooltip.offsetHeight - 8))}px`;
   }
   private renderCard(encounter: OpeningEncounterDisplay, input: OpeningHudInput, intro: boolean): void {
     const text = openingBannerText(encounter);

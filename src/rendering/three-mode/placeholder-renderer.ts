@@ -1,3 +1,4 @@
+import { unitModelId } from './unit-model';
 /**
  * The 3D chunk's MountRenderer3d. The file keeps its original name because three-loader.ts imports it and
  * tests/rendering3d-mode.test.ts mocks that path; it is no longer only a placeholder.
@@ -45,6 +46,7 @@ import { createEffectLibrary } from './effect-library';
 import { createLoadReport, createModelWarmup } from './model-warmup';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
 import { isLegendModel } from './legend-load';
+import { registerGolemModels } from './summon-models';
 
 const MANIFEST_TIMEOUT_MS = 4000;
 /** precache.json (~0.5 MB) and packs.json over a slow tunnel can take several seconds; timing out would silently
@@ -163,7 +165,7 @@ let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
 let championIconFor: (id: string) => string | null = () => null;
 /**
- * v22 anvils (锻造器) are bench units without a model or stars: their icon (championIconFor) stands in. The rules' isAnvil
+ * Anvils (锻造器) are bench units without stars; their own icon stands in until their optional model loads. The rules' isAnvil
  * is injected by the 2D loader so this chunk imports nothing from the rules.
  */
 let isAnvilPiece: (definitionId: string) => boolean = () => false;
@@ -213,6 +215,7 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
       if (!legendUrls.has(url)) releaseAfterUpload(model.scene);
       return model;
     }));
+    registerGolemModels(cache.manifest);
     for (const [id, entry] of Object.entries(cache.manifest.models)) if (isLegendModel(id)) legendUrls.add(assetUrl(assetBase, entry.path));
     const list = readPrecacheList(await fetchIndex(`${assetBase}precache.json`), cache.manifest);
     // Optional: a root without packs.json (or with one that disagrees with precache) downloads file by file.
@@ -534,6 +537,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     });
     return best;
   };
+  // Board geometry has a shorter lifetime than the renderer (scouting/arena/layout changes).
+  // Keep it out of `owned`, which deliberately retains shared resources until unmount.
+  const boardOwned: { dispose(): void }[] = [];
+  const ownBoard = <T extends { dispose(): void }>(resource: T): T => { boardOwned.push(resource); return resource; };
+  const clearBoard = () => {
+    boardGroup.clear();
+    for (const resource of boardOwned) resource.dispose();
+    boardOwned.length = 0;
+  };
   const buildBoard = (frame: BoardFrame) => {
     lastFrame = frame;
     arena?.place(frame);
@@ -542,13 +554,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (key === boardKey) return;
     boardKey = key;
     benchSlots = overlay && boardEntry ? arenaBench(boardEntry.alignment, frame) : null;
-    boardGroup.clear();
-    const tile = own(new CylinderGeometry(frame.hexRadius * 0.95, frame.hexRadius * 0.95, 6, 6)); // six segments start at +z: pointy-top
+    clearBoard();
+    const tile = ownBoard(new CylinderGeometry(frame.hexRadius * 0.95, frame.hexRadius * 0.95, 6, 6)); // six segments start at +z: pointy-top
     // Over the arena the tiles only mark the cells (thin, translucent, above its floor); without it they are the board.
     const tileLook = (color: string) => overlay
       ? { color, roughness: 0.85, transparent: true, opacity: 0.22, depthWrite: false } : { color, roughness: 0.85 };
-    const own0 = own(new MeshStandardMaterial(tileLook('#2d5c7a')));
-    const foe = own(new MeshStandardMaterial(tileLook('#5a3a48')));
+    const own0 = ownBoard(new MeshStandardMaterial(tileLook('#2d5c7a')));
+    const foe = ownBoard(new MeshStandardMaterial(tileLook('#5a3a48')));
     const grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     for (let row = 0; row < frame.rows; row++) for (let col = 0; col < frame.columns; col++) {
       const mesh = new Mesh(tile, row < frame.rows / 2 ? foe : own0);
@@ -557,7 +569,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       boardGroup.add(mesh);
     }
     // The arena has its own bench strip; the slot boxes are only drawn on the procedural board.
-    const slot = own(new BoxGeometry(48, 4, 56)), slotMaterial = own(new MeshStandardMaterial({ color: '#25313d', roughness: 0.9 }));
+    const slot = ownBoard(new BoxGeometry(48, 4, 56)), slotMaterial = ownBoard(new MeshStandardMaterial({ color: '#25313d', roughness: 0.9 }));
     for (const point of overlay ? [] : frame.bench) {
       const mesh = new Mesh(slot, slotMaterial);
       mesh.position.set(point.x, -2, point.y);
@@ -566,7 +578,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Over the arena's own bench cells: a faint square per cell (as the hexes above are marked), sized to the cell spacing.
     if (benchSlots && benchSlots.length > 1) {
       const side = Math.hypot(benchSlots[1]!.x - benchSlots[0]!.x, benchSlots[1]!.z - benchSlots[0]!.z) * BENCH_CELL_FILL;
-      const square = own(new BoxGeometry(side, 1.2, side)), squareMaterial = own(new MeshStandardMaterial(tileLook('#2d5c7a')));
+      const square = ownBoard(new BoxGeometry(side, 1.2, side)), squareMaterial = ownBoard(new MeshStandardMaterial(tileLook('#2d5c7a')));
       for (const point of benchSlots) {
         const mesh = new Mesh(square, squareMaterial);
         mesh.position.set(point.x, point.y + 1, point.z);
@@ -628,7 +640,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (icon) {
       pawn.name = `render3d-fallback-${definitionId}`;
       const material = own(new SpriteMaterial({ color: '#ffffff' })), badge = new Sprite(material);
-      // v22 anvil: no model exists, so its client icon stands on the cell in place of the pawn.
+      // Anvil icon stands in while its optional model is unavailable or still loading.
       badge.position.y = anvil ? 30 : 42; badge.scale.set(anvil ? 50 : 38, anvil ? 50 : 38, 1); badge.visible = false; pawn.add(badge);
       void overheadContext.itemTexture(icon).then(texture => {
         if (!texture || closed) return;
@@ -681,8 +693,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
-    if (!loadModel || isAnvilPiece(view.definitionId)) return;
-    const definitionId = view.definitionId;
+    const definitionId = unitModelId(view.definitionId, isAnvilPiece(view.definitionId));
+    if (!loadModel || !definitionId) return;
     void loadModel(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
       cancelLunge(view); setLiftOffset(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
@@ -771,7 +783,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.control.clear(); setControl(view, null); setLiftOffset(view, 0); view.hop = null;
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.mixer?.dispose(); view.mixer = null;
-    if (view.lease) {
+    if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);
@@ -783,7 +795,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.rise = false; view.mixer.apply(view.state.spawn());
   };
   const removePiece = (view: PieceView) => {
-    cancelLunge(view); view.disposed = true; held.delete(view); view.halo?.dispose(); view.halo = null;
+    cancelLunge(view); view.disposed = true; held.delete(view); holds.delete(view); view.halo?.dispose(); view.halo = null;
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
@@ -1028,7 +1040,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
       syncStars(view, piece);
-      view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items);
+      view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted);
       setControl(view, frame.fighting && piece.alive ? piece.control : null);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
@@ -1503,11 +1515,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, goldMines, stage, scout };
+  const debug = { scene, camera, renderer, live, pieces, tabletop, traitProps, goldMines, stage, scout };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = debug;
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
-      closed = true; cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
+      closed = true;
+      if (typeof window !== 'undefined' && (window as unknown as { __render3d?: unknown }).__render3d === debug) delete (window as unknown as { __render3d?: unknown }).__render3d;
+      cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); feed?.controls()?.look?.(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
@@ -1516,7 +1531,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
       withdrawPicker(); clearEffects(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); goldMines?.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
-      pieces.clear(); boardGroup.clear();
+      pieces.clear(); clearBoard();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
       for (const resource of owned) resource.dispose();
       renderer.domElement.remove();
