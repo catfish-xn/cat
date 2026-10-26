@@ -21,7 +21,7 @@ function fight(state: MatchState) {
   while (state.phase === 'combat') state = stepMatch(state).state;
   return choices(state);
 }
-describe('M5 Match atomic integration', () => {
+describe('M5 Match atomic integration', { concurrent: false }, () => {
   it('starts with the approved single hero, then restores the first real augment without an old component package', () => {
     const initial=createMatch(42);
     expect(initial.preparation.benchSize).toBe(9);
@@ -55,32 +55,43 @@ describe('M5 Match atomic integration', () => {
   // Cache the live cursor only. Every restored tick and settlement assertion
   // still executes, with one live step reused instead of calculating it twice.
   let restoreCursor: MatchState | undefined;
+  let expectedRound = 1;
   function restoreThrough(round: number, untilTick: number): MatchState {
     let state = restoreCursor ?? choices(createMatch(42));
-    while (state.round <= round) {
+    while (expectedRound <= round) {
+      expect(state.round).toBe(expectedRound);
       if (state.phase === 'preparation') {
         const started = startMatchCombat(state); if (!started.ok) throw new Error(started.reason);
         state = started.state;
       }
       while (state.phase === 'combat') {
-        if (state.round === round && state.combat!.tick >= untilTick) {
+        if (expectedRound === round && state.combat!.tick >= untilTick) {
           restoreCursor = freezeContent(state); return restoreCursor;
         }
         const restored = restoreMatch(serializeMatch(state)), live = stepMatch(state);
         expect(stepMatch(restored)).toEqual(live); state = live.state;
       }
-      state = choices(state); expect(state.roundResults).toHaveLength(state.round);
+      state = choices(state); expect(state.roundResults).toHaveLength(expectedRound);
       expect(restoreMatch(serializeMatch(state))).toEqual(state);
-      const next = nextRound(state, state.round); if (!next.ok) throw new Error(next.reason);
+      const next = nextRound(state, expectedRound); if (!next.ok) throw new Error(next.reason);
+      expect(next.state.round).toBe(expectedRound + 1);
+      expectedRound++;
       state = next.state;
       if (state.pendingChoice?.kind === 'augment') state = choices(state);
     }
     restoreCursor = freezeContent(state); return restoreCursor;
   }
-  for (const round of ROUND_CATALOG.filter(r => r.ordinal < getCatalogRoundById('2-4').ordinal))
-    for (const tick of [150, 300, 450, 600, 750, 900, 1050, 1201])
-      it(`restores each real tick in ${round.roundId} through ${tick}`, () => { restoreThrough(round.ordinal, tick); });
-  it('restores each real tick, then supply without creating combat or consuming battle RNG', () => {
+  const boundaries = ROUND_CATALOG.filter(r => r.ordinal < getCatalogRoundById('2-4').ordinal).flatMap(round =>
+    [150, 300, 450, 600, 750, 900, 1050, 1201].map(tick => ({ round: round.ordinal, tick })));
+  // Shuffle may reorder slots; each claims the next bounded restoration job.
+  let nextSegment = 0;
+  for (let slot = 0; slot <= boundaries.length; slot++)
+    it(`restores every real tick then supply: work slot ${slot + 1}`, () => {
+      const boundary = boundaries[nextSegment++];
+      if (boundary) restoreThrough(boundary.round, boundary.tick);
+      else checkSupply();
+    });
+  function checkSupply() {
     let state = restoreThrough(getCatalogRoundById('2-4').ordinal - 1, 1201);
     expect(state.roundDefinitionId).toBe('2-4');expect(state.pendingChoice?.kind).toBe('component');
     const battleSeed=state.battleSeedRngState, gold=state.gold, c=state.pendingChoice!;
@@ -90,5 +101,5 @@ describe('M5 Match atomic integration', () => {
     const paid=nextRound(state,state.round);expect(paid.ok).toBe(true);
     expect(paid.state.gold).toBe(state.roundResults.at(-1)!.goldAfter);expect(paid.state.gold).toBeGreaterThan(gold);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
-  });
+  }
 });

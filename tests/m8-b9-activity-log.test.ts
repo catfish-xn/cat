@@ -14,30 +14,36 @@ import type { LedgerCombatEvent } from '../src/simulation/combat-types';
 type Activity = Extract<LedgerCombatEvent, { type: 'activityChanged' }>;
 const isVander = (e: LedgerCombatEvent): e is Activity => e.type === 'activityChanged' && e.activity.source.definitionId === 'vander-ability';
 
-// Only the first completed Vander record is consumed. Keep that original
-// selection rule, but stop before generating unrelated later battles.
+// Select the first Vander record only AFTER the complete public route, so the
+// driver's ledger/shop/RNG and every battle's terminal assertions still run.
 let activityRecord: BattleRecord | undefined;
 const activityRoute = roundRouteCache(async onRound => {
-  const history = new BattleHistory('activity-log'), stop = new Error('first Vander record');
+  const history = new BattleHistory('activity-log');
   const combat = (events: readonly { domain?: string }[]) => events.filter(e => e.domain === 'combat') as LedgerCombatEvent[];
-  let last = api.createMatch(42);
-  try {
-    await run(api, { build: 'sniper', seed: 42, onRound, onStep(before, result, command) {
+  const route = await run(api, { build: 'sniper', seed: 42, onRound, onBattleProgress: onRound, onStep(before, result, command) {
       if (!('events' in result)) throw new Error('route command rejected');
-      last = result.state;
       history.observe({ before, after: result.state, events: combat(result.events), reason: command ? 'command' : 'tick' });
-      const record = history.completedRecords.find(r => r.events.some(isVander));
-      if (record) { activityRecord = prepareInput(record); throw stop; }
-    } });
-  } catch (error) { if (error !== stop) throw error; }
-  expect(activityRecord).toBeDefined(); return last;
+  } });
+  const record = history.completedRecords.find(r => r.events.some(isVander));
+  expect(record).toBeDefined();
+  activityRecord = prepareInput(record!);
+  expect(route.final.phase).toBe('gameOver');
+  return route.final;
 });
 
-describe('N2-P2-3 activity log consumers', () => {
-  for (const round of ROUND_CATALOG.filter(r => r.kind !== 'supply'))
-    it(`public Vander route through ${round.roundId}`, async () => { await activityRoute.through(round.ordinal); });
-  it('a real Vander channel is logged once per lifecycle event, live and in replay', async () => {
-    await activityRoute.finish();
+describe('N2-P2-3 activity log consumers', { concurrent: false }, () => {
+  // Slots claim the next boundary in execution order, including under shuffle.
+  // No randomly selected late slot can force a whole match into one test.
+  const boundaries = ROUND_CATALOG.filter(r => r.kind !== 'supply').flatMap(r =>
+    [150, 300, 450, 600, 750, 900, 1050, 1201].map(tick => r.ordinal - 1 + tick / 1201));
+  let nextSegment = 0;
+  for (let slot = 0; slot <= boundaries.length; slot++)
+    it(`complete Vander route and live/replay lifecycle checks: work slot ${slot + 1}`, async () => {
+      const segment = nextSegment++;
+      if (segment < boundaries.length) await activityRoute.through(boundaries[segment]);
+      else { await activityRoute.finish(); checkActivityLog(); }
+    });
+  function checkActivityLog() {
     const record = activityRecord!;
     expect(record).toBeDefined();
     const live = record.events.filter(isVander);
@@ -61,5 +67,5 @@ describe('N2-P2-3 activity log consumers', () => {
       expect(ledger.filter(e => e.type === 'statusChanged').map(e => combatEventText(e, name)).filter(line => line?.includes('引导'))).toEqual([]);
     }
     playback.dispose();
-  });
+  }
 });

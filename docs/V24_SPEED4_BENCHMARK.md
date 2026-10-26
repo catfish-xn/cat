@@ -2,7 +2,7 @@
 
 【完成】
 
-基线：`codex/v24-speed4`，HEAD `f36fa7a59a17c6df50a11283c332c95fe1ff462b`。未提交、未推送。
+原始基线：`codex/v24-speed4`，提交 `f36fa7a59a17c6df50a11283c332c95fe1ff462b`。Review I 修复时 HEAD 为 `8a0f096f1dbb6dd981e0c0396cc0b41cfb093f5c`，结果包含工作区修复；未提交、未推送。下文三处修复文件的“后”数据已替换为 2026-10-26 覆盖恢复后的重测，其余保留历史记录。
 
 测量：Node 22.23.4、Vitest 5.0.3；fast 非服务器测试按原分片器分四批，顺序执行，每批 `--maxWorkers=4`。不运行完整测试套件、浏览器脚本或服务器测试。
 
@@ -56,32 +56,55 @@ npx vitest run --project fast --reporter=json --outputFile=/tmp/fast-N.json test
 
 | 文件 | 用例数 前→后 | 文件秒 前→后 | 最大用例秒 前→后 | 处理 |
 |---|---:|---:|---:|---|
-| `tests/anvil-rewards.test.ts` | 17→48 | 17.415→14.528 | 10.067→1.155 | 保留 |
+| `tests/anvil-rewards.test.ts` | 17→49 | 17.415→11.848 | 10.067→0.789 | 原覆盖完整，另加 1 例乱序缓存回归 |
 | `tests/g2-4a-crown-history.test.ts` | 56→56 | 53.534→57.121 | 3.830→3.803 | 回退，最终保留原版 |
 | `tests/g2-4b-unstable-chest.test.ts` | 39→209 | 38.792→37.888 | 17.519→2.842 | 保留 |
-| `tests/m5-match-integration.test.ts` | 3→51 | 27.125→24.230 | 27.030→3.004 | 保留 |
+| `tests/m5-match-integration.test.ts` | 3→51 | 27.125→22.502 | 27.030→2.817 | 恢复独立回合游标 |
 | `tests/m5-replay-mage.test.ts` | 1647→1647 | 370.439→376.290 | 0.546→0.469 | 保留 |
 | `tests/m5-replay-sniper-caitlyn.test.ts` | 1672→1672 | 396.376→402.980 | 0.670→0.501 | 保留 |
 | `tests/m5-replay.test.ts` | 1671→1671 | 395.962→401.497 | 0.626→0.523 | 保留 |
 | `tests/m8-b8-input-evidence.test.mjs` | 32→32 | 66.816→1.294 | 3.094→0.076 | 保留 |
 | `tests/m8-b8-oracle.test.ts` | 25→553 | 65.164→61.919 | 25.772→14.848 | 保留 |
-| `tests/m8-b9-activity-log.test.ts` | 1→34 | 46.976→2.379 | 46.976→0.867 | 保留 |
+| `tests/m8-b9-activity-log.test.ts` | 1→265 | 46.976→45.275 | 46.976→1.052 | 完整 run 后选首条 Vander 记录 |
 | `tests/restore-audit/cd-replay-facts.test.ts` | 34→514 | 40.916→39.959 | 12.662→0.640 | 保留 |
 | `tests/rules-placebo-stage.test.ts` | 7→7 | 4.175→0.247 | 3.824→0.127 | 保留 |
 | `tests/s13-p1-dual-wielding.test.ts` | 2→322 | 22.802→25.359 | 22.795→0.832 | 保留 |
 | `tests/task-mechanism-restore.test.ts` | 20→20 | 25.349→26.304 | 9.960→10.419 | 回退，最终保留原版 |
 
+Review I 修复重测（2026-10-26）：只测这三个文件，每个文件分别以默认顺序和 `--sequence.shuffle --sequence.seed=20261026` 运行，六次运行严格串行，每次 `--maxWorkers=4`，无完整套件、浏览器脚本或额外扫描进程。默认与乱序各 365 例全部通过（共 730 次用例执行），没有跳过或失败。Node 22.23.4、Vitest 5.0.3。
+
+| 文件 | 用例数 | 默认文件秒 | 默认用例总和秒 | 默认最大用例秒 | 乱序文件秒 | 乱序用例总和秒 | 乱序最大用例秒 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `tests/m8-b9-activity-log.test.ts` | 265 | 45.275 | 45.258 | 1.052 | 44.461 | 44.443 | 0.970 |
+| `tests/m5-match-integration.test.ts` | 51 | 22.502 | 22.499 | 2.817 | 22.612 | 22.610 | 2.854 |
+| `tests/anvil-rewards.test.ts` | 49 | 11.848 | 11.842 | 0.789 | 11.357 | 11.352 | 0.748 |
+
+```sh
+export PATH=$HOME/.local/bin:$PATH
+# FILE 分别取上表三个文件；每条命令完成后再执行下一条。
+node_modules/.bin/vitest run --project fast --config /tmp/speed4fix-vitest.config.ts "$FILE" --maxWorkers=4 --reporter=json --outputFile=/tmp/speed4fix-NAME-default.json
+node_modules/.bin/vitest run --project fast --config /tmp/speed4fix-vitest.config.ts "$FILE" --maxWorkers=4 --sequence.shuffle --sequence.seed=20261026 --reporter=json --outputFile=/tmp/speed4fix-NAME-shuffle.json
+```
+
+临时配置沿用仓库 `vitest.config.ts` 的项目、setup 与 sequencer，只将根目录和依赖导入设为本工作树绝对路径、缓存改为 `/tmp/speed4fix-vite`，避免写入共享只读 node_modules；没有新增超时或替换测试源码。原始 JSON／日志为 `/tmp/speed4fix-{activity,match,anvil}-{default,shuffle}.{json,log}`，摘要为 `/tmp/speed4fix-summary.json`。类型检查与 `git diff --check` 均通过。
+
+独立游标另做只读故障注入：在临时 transform 中让 1-2 的 nextRound 额外完成 1-3 战斗并进入 1-4，只运行前两个恢复工作槽。结果第一槽通过、第二槽在 `tests/m5-match-integration.test.ts:77` 按预期失败（实际回合 3，独立预期 2），重现并拦截 review I 所述跳轮缺口；其余 49 例因过滤未运行，不计入上表的正常验收或基准。命令为 `node_modules/.bin/vitest run --project fast --config /tmp/speed4fix-skip-probe.config.ts tests/m5-match-integration.test.ts --maxWorkers=4 --testNamePattern='work slot [12]$' --reporter=json --outputFile=/tmp/speed4fix-skip-probe.json`，故障只存在于临时配置，不修改任何受跟踪测试或产品源码。
+
+等价覆盖口径：Vander 完整执行原驱动的 ledger.apply、每次商店／RNG 对照、每场战斗完整事件序号与唯一终局事件检查，最后才选择第一条 Vander 记录并执行全部原 live/replay 断言。旧 2.379 秒文件／2.378 秒整组数据因提前停止而作废，不能作为提速证据；恢复后文件总耗时与原基线接近，收益主要是把最大用例分摊到约 1 秒。原子集成的独立预期游标恢复，结算数、nextRound 参数和恰好推进一轮都由它检查；全部真实 tick 恢复及补给断言保留。铁砧初始入口在首次推进前缓存，新增回归按 1-4→1-2→1-3 及重复请求，与正序完整状态对照，默认耗时 0.405 秒；该额外覆盖单列，不算作原覆盖的加速收益。
+
+三个长路线组按实际执行顺序领取有界工作槽，显式串行，最后工作槽执行原最终断言。shuffle 改变工作槽的执行顺序但不改变全部工作的集合；铁砧两条消费者共用只读前缀，各自仍复制状态执行全部恢复／开锻造器断言。下表的两条铁砧原用例合并报告共享前缀及两个消费者总和，避免重复计时。历史基线来自四 worker 分片测量，本次逐文件运行且负载不同，不能据墙钟推断纯 CPU 加速倍数。
+
 实现证据：
 
 - `tests/m5-replay-helper.ts:33`：let chunk: Chunk。
 - `tests/m8-b8-input-evidence.test.mjs:23`：const roots =。
-- `tests/anvil-rewards.test.ts:94`：const anvilEntries=。
+- `tests/anvil-rewards.test.ts:94`：createPublicAnvilPrefix，包含初始入口和乱序回归。
 - `tests/s13-p1-dual-wielding.test.ts:32`：const dualRoute=。
 - `tests/m8-b9-activity-log.test.ts:20`：const activityRoute =。
 - `tests/restore-audit/cd-replay-facts.test.ts:64`：const anomalyRoutes =。
 - `tests/g2-4b-unstable-chest.test.ts:123`：function poolInputs。
 - `tests/rules-placebo-stage.test.ts:61`：const seed = id。
-- `tests/m5-match-integration.test.ts:58`：function restoreThrough。
+- `tests/m5-match-integration.test.ts:58`：独立 expectedRound 与 restoreThrough。
 - `tests/m8-b8-oracle.test.ts:186`：const progress = roundRouteCache。
 - `docs/S13_RULES_GAP.md:1260`：## v24 非服务器测试提速。
 
@@ -92,23 +115,23 @@ npx vitest run --project fast --reporter=json --outputFile=/tmp/fast-N.json test
 
 | 文件 / 原用例 | 前秒 | 后整组秒 | 后最大分段秒 |
 |---|---:|---:|---:|
-| `tests/anvil-rewards.test.ts` / 5-7 epic claim gives persistent units, no popup or terminal conversion | 0.014 | 0.019 | 0.019 |
-| `tests/anvil-rewards.test.ts` / 6-7 epic claim gives persistent units, no popup or terminal conversion | 0.013 | 0.018 | 0.018 |
-| `tests/anvil-rewards.test.ts` / completed pool retains Thief’s Gloves | 0.000 | 0.000 | 0.000 |
-| `tests/anvil-rewards.test.ts` / subscription bucket 3 stays in orb until claim, uses old offers, is not auto-opened | 0.022 | 0.021 | 0.021 |
-| `tests/anvil-rewards.test.ts` / subscription bucket 4 stays in orb until claim, uses old offers, is not auto-opened | 0.014 | 0.015 | 0.015 |
-| `tests/anvil-rewards.test.ts` / 4-7 full bench keeps forge orb; retry grants once and preserves shared pool | 0.068 | 0.055 | 0.055 |
-| `tests/anvil-rewards.test.ts` / 5-7 full bench keeps forge orb; retry grants once and preserves shared pool | 0.036 | 0.034 | 0.034 |
-| `tests/anvil-rewards.test.ts` / portable-forge still opens immediately with its original offers | 0.006 | 0.005 | 0.005 |
-| `tests/anvil-rewards.test.ts` / radiant-relics still opens immediately with its original offers | 0.005 | 0.005 | 0.005 |
-| `tests/anvil-rewards.test.ts` / conqueror forge atoms grant units, preserve sample order, remain unopened | 0.012 | 0.011 | 0.011 |
-| `tests/anvil-rewards.test.ts` / public 4-7 combat: save/replay before and after opening an anvil | 7.063 | 8.092 | 0.762 |
-| `tests/anvil-rewards.test.ts` / public 5-7 combat: save/replay before and after opening an anvil | 10.067 | 13.476 | 1.155 |
-| `tests/anvil-rewards.test.ts` / crab-rave 5-7 grants two anvil units with the original batch B offers | 0.014 | 0.015 | 0.015 |
-| `tests/anvil-rewards.test.ts` / crab-rave 6-7 grants two anvil units with the original batch B offers | 0.012 | 0.009 | 0.009 |
-| `tests/anvil-rewards.test.ts` / Mel branch 9 gives two claimable component anvils, no automatic choice | 0.017 | 0.021 | 0.021 |
-| `tests/anvil-rewards.test.ts` / G2-3 full bench retains anvil orb; freeing capacity never auto-claims it | 0.030 | 0.033 | 0.033 |
-| `tests/anvil-rewards.test.ts` / mixed orb allocation pays other entries once and retains its full-bench anvil | 0.021 | 0.023 | 0.023 |
+| `tests/anvil-rewards.test.ts` / 5-7 epic claim gives persistent units, no popup or terminal conversion | 0.014 | 0.044 | 0.044 |
+| `tests/anvil-rewards.test.ts` / 6-7 epic claim gives persistent units, no popup or terminal conversion | 0.013 | 0.019 | 0.019 |
+| `tests/anvil-rewards.test.ts` / completed pool retains Thief’s Gloves | 0.000 | 0.001 | 0.001 |
+| `tests/anvil-rewards.test.ts` / subscription bucket 3 stays in orb until claim, uses old offers, is not auto-opened | 0.022 | 0.019 | 0.019 |
+| `tests/anvil-rewards.test.ts` / subscription bucket 4 stays in orb until claim, uses old offers, is not auto-opened | 0.014 | 0.038 | 0.038 |
+| `tests/anvil-rewards.test.ts` / 4-7 full bench keeps forge orb; retry grants once and preserves shared pool | 0.068 | 0.063 | 0.063 |
+| `tests/anvil-rewards.test.ts` / 5-7 full bench keeps forge orb; retry grants once and preserves shared pool | 0.036 | 0.041 | 0.041 |
+| `tests/anvil-rewards.test.ts` / portable-forge still opens immediately with its original offers | 0.006 | 0.007 | 0.007 |
+| `tests/anvil-rewards.test.ts` / radiant-relics still opens immediately with its original offers | 0.005 | 0.006 | 0.006 |
+| `tests/anvil-rewards.test.ts` / conqueror forge atoms grant units, preserve sample order, remain unopened | 0.012 | 0.010 | 0.010 |
+| `tests/anvil-rewards.test.ts` / public 4-7 与 5-7 combat：共享完整前缀及两条原 save/replay 用例 | 17.130 | 11.092 | 0.789 |
+| `tests/anvil-rewards.test.ts` / 新增 later-first/reverse/repeated 缓存回归（额外覆盖） | — | 0.405 | 0.405 |
+| `tests/anvil-rewards.test.ts` / crab-rave 5-7 grants two anvil units with the original batch B offers | 0.014 | 0.014 | 0.014 |
+| `tests/anvil-rewards.test.ts` / crab-rave 6-7 grants two anvil units with the original batch B offers | 0.012 | 0.011 | 0.011 |
+| `tests/anvil-rewards.test.ts` / Mel branch 9 gives two claimable component anvils, no automatic choice | 0.017 | 0.023 | 0.023 |
+| `tests/anvil-rewards.test.ts` / G2-3 full bench retains anvil orb; freeing capacity never auto-claims it | 0.030 | 0.025 | 0.025 |
+| `tests/anvil-rewards.test.ts` / mixed orb allocation pays other entries once and retains its full-bench anvil | 0.021 | 0.024 | 0.024 |
 | `tests/g2-4a-crown-history.test.ts`（已回退实验） / rejects the crowns:84/+5 coordinated forgery in text and object restoration, with or without genuine history | 0.233 | 0.459 | 0.459 |
 | `tests/g2-4a-crown-history.test.ts`（已回退实验） / rejects the unchanged genuine replay collection paired with the forgery, synchronously and asynchronously | 0.501 | 0.504 | 0.504 |
 | `tests/g2-4a-crown-history.test.ts`（已回退实验） / does not let a later record context authorize its own forged historical prefix | 0.520 | 0.511 | 0.511 |
@@ -204,9 +227,9 @@ npx vitest run --project fast --reporter=json --outputFile=/tmp/fast-N.json test
 | `tests/g2-4b-unstable-chest.test.ts` / A holds the chest: grants go to the holder's own seat and every tick restores | 2.677 | 2.842 | 2.842 |
 | `tests/g2-4b-unstable-chest.test.ts` / B holds the chest: grants go to the holder's own seat and every tick restores | 1.773 | 1.882 | 1.882 |
 | `tests/g2-4b-unstable-chest.test.ts` / a mirror copy of the chest seat fights the identical battle | 0.899 | 0.915 | 0.915 |
-| `tests/m5-match-integration.test.ts` / starts with the approved single hero, then restores the first real augment without an old component package | 0.073 | 0.146 | 0.146 |
-| `tests/m5-match-integration.test.ts` / locks natural refresh while allowing paid D and immediate F, rejected commands retain identity | 0.022 | 0.034 | 0.034 |
-| `tests/m5-match-integration.test.ts` / restores each real tick, then supply without creating combat or consuming battle RNG | 27.030 | 24.046 | 3.004 |
+| `tests/m5-match-integration.test.ts` / starts with the approved single hero, then restores the first real augment without an old component package | 0.073 | 0.130 | 0.130 |
+| `tests/m5-match-integration.test.ts` / locks natural refresh while allowing paid D and immediate F, rejected commands retain identity | 0.022 | 0.035 | 0.035 |
+| `tests/m5-match-integration.test.ts` / restores each real tick, then supply without creating combat or consuming battle RNG | 27.030 | 22.334 | 2.817 |
 | `tests/m5-replay-mage.test.ts` 全部逐步恢复用例 | 370.132 | 376.003 | 0.469 |
 | `tests/m5-replay-sniper-caitlyn.test.ts` 全部逐步恢复用例 | 396.040 | 402.704 | 0.501 |
 | `tests/m5-replay.test.ts` 全部逐步恢复用例 | 395.627 | 401.206 | 0.523 |
@@ -267,7 +290,7 @@ npx vitest run --project fast --reporter=json --outputFile=/tmp/fast-N.json test
 | `tests/m8-b8-oracle.test.ts` / rejects obsolete PvE fallback resolutions and a second schedule grant | 0.003 | 0.003 | 0.003 |
 | `tests/m8-b8-oracle.test.ts` / runs the complete real cannon route, seed 42, through the unchanged public-command driver | 19.779 | 18.454 | 0.553 |
 | `tests/m8-b8-oracle.test.ts` / runs the complete real cannon route, seed 230, through the unchanged public-command driver | 25.772 | 24.345 | 0.665 |
-| `tests/m8-b9-activity-log.test.ts` / a real Vander channel is logged once per lifecycle event, live and in replay | 46.976 | 2.378 | 0.867 |
+| `tests/m8-b9-activity-log.test.ts` / a real Vander channel is logged once per lifecycle event, live and in replay | 46.976 | 45.258 | 1.052 |
 | `tests/restore-audit/cd-replay-facts.test.ts` / G-C02 rejects invented processed keys on a holder without triggers | 0.060 | 0.058 | 0.058 |
 | `tests/restore-audit/cd-replay-facts.test.ts` / G-C02 rejects invented actionCounts keys on a holder without triggers | 0.051 | 0.046 | 0.046 |
 | `tests/restore-audit/cd-replay-facts.test.ts` / G-C03 authenticates every unit attackCount even within the one-tick bound | 0.048 | 0.049 | 0.049 |
@@ -332,9 +355,9 @@ npx vitest run --project fast --reporter=json --outputFile=/tmp/fast-N.json test
 | `tests/task-mechanism-restore.test.ts`（已回退实验） / bounds replay evidence, separates complete input contents and detaches every returned graph | 0.073 | 0.091 | 0.091 |
 | `tests/task-mechanism-restore.test.ts`（已回退实验） / reuses verified hashes and incrementally hashes appended events against the full-ledger oracle | 0.305 | 0.314 | 0.314 |
 
-锻造器两条原用例共享的路线前缀，在各自整组行中均计入，不能把这两行相加；文件行是无重复的实际总数。重放逐例原名保持不变，完整逐例数值另存 `/tmp/speed4-before-after.json`。
+锻造器两条原用例已合并为整组报告，包含一次完整共享路线及两个消费者；新增乱序回归另列。文件行是无重复的实际总数。重放逐例原名保持不变；其余历史逐例数值另存 `/tmp/speed4-before-after.json`，本次三文件数值以 `/tmp/speed4fix-summary.json` 和上述六份原始 JSON 为准。
 
-验证与清理：基线 546 文件 / 19,601 用例：19,600 通过、1 跳过、0 失败；首批限定复测 12 文件 / 6,232 用例全部通过。炮手 timing 入口单独执行，1,047 用例全部通过。最后补测 4 文件 / 869 用例全部通过；`npm run typecheck`、`git diff --check` 均通过。基线唯一跳过为原有 `tests/five-cost-comparison.test.ts` 的 original reproduction。现有 `tests/playtest-1022b-bench.test.ts:35` 自动写入的计时输出已恢复 HEAD，`docs/evidence/**` 无差异。
+历史验证与清理（Review I 修复前的通过记录，不作为上述三项覆盖等价的证明）：基线 546 文件 / 19,601 用例：19,600 通过、1 跳过、0 失败；首批限定复测 12 文件 / 6,232 用例全部通过。炮手 timing 入口单独执行，1,047 用例全部通过。最后补测 4 文件 / 869 用例全部通过；`npm run typecheck`、`git diff --check` 均通过。基线唯一跳过为原有 `tests/five-cost-comparison.test.ts` 的 original reproduction。现有 `tests/playtest-1022b-bench.test.ts:35` 自动写入的计时输出已恢复 HEAD，`docs/evidence/**` 无差异。
 
 【未完成】
 
@@ -342,11 +365,11 @@ npx vitest run --project fast --reporter=json --outputFile=/tmp/fast-N.json test
 
 【需要我决定】
 
-无。按用户委托采用只读输入缓存、真实路线分段、固定搜索成功种子的推荐方案；约定记录于 `docs/S13_RULES_GAP.md` 的 speed4 四条 P（2026-10-25）。
+无。按用户委托采用推荐方案；本次覆盖修复及乱序工作槽约定记录于 `docs/S13_RULES_GAP.md` 的 Review I 四条 P（2026-10-26），覆盖旧 Vander 提前停止约定。
 
 【风险】
 
-单次墙钟受机器负载和 worker 内共享缓存影响。单独过滤晚期分段会补跑前缀，耗时可能高于按整文件运行。未调整游戏规则、数值、保存格式、身份版本、独立 oracle、受保护夹具、前端或服务器。
+单次墙钟受机器负载和 worker 内共享缓存影响。本次三文件的工作槽按实际执行顺序领取任务，单独按槽名过滤不代表固定回合或完整原用例验收，必须运行整个文件；其余历史分段若单独过滤晚期用例仍可能补跑前缀。未调整游戏规则、数值、保存格式、身份版本、独立 oracle、受保护夹具、前端或服务器。
 
 【下一步】
 

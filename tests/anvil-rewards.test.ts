@@ -91,15 +91,19 @@ describe('anvil reward paths',()=>{
 
 // Cache actual preparation entrances, one public round per case. Mutating an
 // anvil or restoring a candidate remains local to each original test below.
-const anvilEntries=new Map<string,MatchState>();
-let anvilCursor:MatchState|undefined;
-async function publicAnvilPrefix(node:string):Promise<MatchState>{
+function createPublicAnvilPrefix(){
+ const anvilEntries=new Map<string,MatchState>();
+ let anvilCursor:MatchState|undefined;
+ return async function publicAnvilPrefix(node:string):Promise<MatchState>{
+ // Cache the initial entrance before moving the cursor: a later-first request
+ // must leave 1-2 available without replaying from an already advanced state.
+ if(!anvilCursor){anvilCursor=prepareInput(createMatch(42));anvilEntries.set(anvilCursor.roundDefinitionId,anvilCursor);}
  const cached=anvilEntries.get(node);if(cached)return cached;
  const {battle}=await import('./fixtures/t13-loot-public');
  const api=await import('../src/simulation/match');
  const {decideBotAction}=await import('../src/simulation/bot');
  const {context,execute}=await import('./t7-helpers');
- let before=anvilCursor??createMatch(42);
+ let before=anvilCursor;
  while(before.roundDefinitionId!==node){
    for(let n=0;n<64;n++){const d=decideBotAction(before,context(before,n),0);if(d.action==='done')break;before=accepted(execute(before,d.action));}
    if(before.phase==='preparation')before=battle(before).ended;
@@ -111,11 +115,30 @@ async function publicAnvilPrefix(node:string):Promise<MatchState>{
    const next=api.nextRound(before,before.round);if(!next.ok)throw Error(`${before.roundDefinitionId}: ${next.reason}`);before=next.state;
    anvilCursor=prepareInput(before);anvilEntries.set(before.roundDefinitionId,anvilCursor);
  }
- anvilCursor=anvilEntries.get(node)??prepareInput(before);anvilEntries.set(node,anvilCursor);return anvilCursor;
+ return anvilEntries.get(node)!;
+ };
 }
+const publicAnvilPrefix=createPublicAnvilPrefix();
+it('public anvil cache supports later-first, reverse and repeated entrance requests',async()=>{
+ const forward=createPublicAnvilPrefix(),prefix=createPublicAnvilPrefix();
+ const expected=[];
+ for(const node of ['1-2','1-3','1-4'])expected.push(await forward(node));
+ // Run the route cases in a different order, with the very first request
+ // crossing two entrances, then compare entire states against forward order.
+ const third=await prefix('1-4'),initial=await prefix('1-2'),second=await prefix('1-3');
+ expect([initial,second,third]).toEqual(expected);
+ expect(second.roundDefinitionId).toBe('1-3');
+ expect(initial).toEqual(createMatch(42));expect(Object.isFrozen(initial)).toBe(true);
+ expect(third.roundDefinitionId).toBe('1-4');
+ expect(await prefix('1-3')).toBe(second);expect(await prefix('1-2')).toBe(initial);
+ expect(await prefix('1-4')).toBe(third);
+});
+// Claim one round/consumer job per executed slot. Random test order must not
+// turn the first consumer into a full-route job exceeding the default timeout.
+const anvilRouteWork:{name:string;run:()=>Promise<void>}[]=[];
 for(const round of ROUND_CATALOG.filter(r=>r.ordinal<=getCatalogRoundById('5-7').ordinal))
- it(`public anvil route reaches ${round.roundId}`,async()=>{expect((await publicAnvilPrefix(round.roundId)).roundDefinitionId).toBe(round.roundId);});
-it.each(['4-7','5-7'])('public %s combat: save/replay before and after opening an anvil',async node=>{
+ anvilRouteWork.push({name:`public anvil route reaches ${round.roundId}`,run:async()=>{expect((await publicAnvilPrefix(round.roundId)).roundDefinitionId).toBe(round.roundId);}});
+for(const node of ['4-7','5-7'])anvilRouteWork.push({name:`public ${node} combat: save/replay before and after opening an anvil`,run:async()=>{
  const {battle}=await import('./fixtures/t13-loot-public');
  const api=await import('../src/simulation/match');
  const {decideBotAction}=await import('../src/simulation/bot');
@@ -136,6 +159,13 @@ it.each(['4-7','5-7'])('public %s combat: save/replay before and after opening a
  expect(units(s).length).toBeGreaterThan(0);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  s=accepted(openAnvil(s,units(s)[0].id));expect(restoreMatch(serializeMatch(s))).toEqual(s);
  const c:NonNullable<MatchState['pendingChoice']>=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,c.offers[0]));expect(restoreMatch(serializeMatch(s))).toEqual(s);
+}});
+describe('public anvil route and save/replay',{concurrent:false},()=>{
+ let nextWork=0;
+ for(let slot=0;slot<anvilRouteWork.length;slot++)it(`complete route and both anvil consumers: work slot ${slot+1}`,async()=>{
+   const work=anvilRouteWork[nextWork++];
+   try{await work.run();}catch(error){throw new Error(work.name,{cause:error});}
+ });
 });
 
 it.each(['5-7','6-7'])('crab-rave %s grants two anvil units with the original batch B offers',async node=>{
