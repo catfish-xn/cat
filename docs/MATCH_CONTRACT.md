@@ -1404,3 +1404,12 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 ## 2026-10-25 强化日程收据单位认证
 
 `restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState` 与 `serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string` 的输入输出、保存格式不变。强化日程收据 `unitId` 必须为 `null`；格式合法或真实存在的奖励单位 ID 也不允许写入，失败抛 `Invalid Match save: augment receipt unit`。来源账本的收据验证边界独立拒绝同类伪造（`Invalid resource provenance: augment receipt unit`）。实际奖励单位仍通过机制／法球收据与有序 `unit-acquired` 出生的 ID、来源、回合及连续序号认证，不要求单位仍存活于当前阵容；不重发、不修复坏档。三恢复入口一致，决定见 `S13_RULES_GAP.md` 的 P-V23-AUGMENT-RECEIPT-UNIT，回归见 `tests/v23-restore-fuzz.test.ts`、`tests/v23-tamper-batch4.test.ts`。
+
+### v24 Batch 5：四条资料已闭合强化（P-B5，2026-10-25）
+
+- 内容注册：`content/augment-pool-batch5.ts`；`called-shot`／`crafted-crafting`（银）、`dual-purpose`（彩）仅2-1，`a-change-of-fate`（彩）仅4-2。保留14.24原始 effects，行为适配详见 `S13_RULES_GAP.md` 的 P-B5。没有存档 schema/协议变更；新增内容使旧 digest 失效。
+- 既有 `buyXp(state, unitLootPolicy?) -> MatchCommandResult`：双重目的成功支付后按新等级强刷商店、不消耗免费次数、保留锁定，每轮首次返2G；失败保留原state/RNG/事件原子性。共享席持有双重目的时，普通入口拒绝 `invalid-mechanic-state`，应使用下述事务，不能把本地商店与旧共享预留一起发布。
+- `runSharedMatchCommand(pool: SharedPoolState, state: MatchState, {type:'buyXp'}) -> SharedPoolResult`：成功返回新 pool/state、领域events及poolEvents；事务内先检验普通买经验资格，再释放本席旧商店预留、以共享剩余权重生成新商店、结算返金及等级奖励。失败返回原 pool/state；reason 沿用 `SharedPoolFailure`，包括 `wrong-phase`、`insufficient-gold`、`max-level`、池/席绑定校验失败。服务器只需改变buyXp分派入口，不自行计算规则。
+- 精心打造：既有 `combineItems` 和 `equipItem` 产生的真实合成事实，每件给2次额度；`freeRerollsAvailable` 读取，`rerollShop`／`rerollSharedShop` 消费。恢复拒绝伪造合成、消费计数、缺失消费记录及借用后续合成额度。
+- 进攻宣告：既有 `selectChoice` 取得时设胜4、给4G；结算与恢复使用同一连胜入口，之后不重复设置。
+- 扭转命运：取得给蓝霸符；取得后入轮银行至少60与取得轮起PvP胜利可任意顺序完成。`batch5RewardPlan(state: MatchState) -> AugmentGift[]` 只从既有历史推导枪刃/梅尔的唯一礼物计划，沿用批次1收据、满席重试、共享orb和卡池政策。界面可读取既有 owned augment／收据；本任务不新增展示字段。离线历史用现有 `restoreMatch(input,battles?)`／`serializeMatch(state,battles?)` 完整回放认证，不从当前余额或自报任务计数发奖。

@@ -1,3 +1,5 @@
+import { BATCH5_ARCHIVE } from './augment-pool-batch5-archive';
+import { AUGMENT_BATCH5 } from '../src/simulation/content/augment-pool-batch5';
 import { B4XP_ARCHIVE } from './augment-pool-batch4-b4xp-archive';
 import { AUGMENT_BATCH4_B4XP } from '../src/simulation/content/augment-pool-batch4-b4xp';
 import { B4REROLL_ARCHIVE } from './augment-pool-batch4-b4reroll-archive';
@@ -500,6 +502,7 @@ const B4COMBAT_NOTES = {
 const B4COMBAT_ARCHIVED=Object.fromEntries(Object.entries(AUGMENT_BATCH4_B4COMBAT).map(([id,row])=>{const n=B4COMBAT_NOTES[id as keyof typeof B4COMBAT_NOTES];return [id,{...row,name:n.name,description:n.description,source:{...row.source,description_en_us:n.description_en_us}}];}));
 export const RULES_GAP_MANIFEST = {
   ...runtimeManifest,
+  augmentPoolBatch5:{...runtimeManifest.augmentPoolBatch5,content:Object.fromEntries(Object.entries(AUGMENT_BATCH5).map(([id,row])=>{const t=BATCH5_ARCHIVE[id as keyof typeof BATCH5_ARCHIVE];return [id,{...row,name:t.name,description:t.description,source:{...row.source,description_en_us:t.description_en_us}}];}))},
   augmentPoolBatch4B4Combat:{...runtimeManifest.augmentPoolBatch4B4Combat,content:B4COMBAT_ARCHIVED},
   augmentPoolBatch4B4xp:{...runtimeManifest.augmentPoolBatch4B4xp,content:Object.fromEntries(Object.entries(AUGMENT_BATCH4_B4XP).map(([id,row])=>{const text=B4XP_ARCHIVE[id as keyof typeof B4XP_ARCHIVE];return [id,{...row,...text,source:{...row.source,...text.source}}];}))},
 
@@ -510,4 +513,4 @@ export const RULES_GAP_MANIFEST = {
   augmentPoolBatch3: { ...runtimeManifest.augmentPoolBatch3, content: restoreBatch(AUGMENT_BATCH3, BATCH3_NOTES) },
 };
 export const ARCHIVED_AUGMENT_DEFINITIONS = Object.fromEntries(Object.entries(AUGMENT_DEFINITIONS).map(([id, row]) =>
-  [id, Object.hasOwn(B4XP_ARCHIVE,id) ? {...row,name:B4XP_ARCHIVE[id as keyof typeof B4XP_ARCHIVE].name,description:B4XP_ARCHIVE[id as keyof typeof B4XP_ARCHIVE].description} : Object.hasOwn(B4REROLL_ARCHIVE,id) ? {...row,name:B4REROLL_ARCHIVE[id].name,description:B4REROLL_ARCHIVE[id].description} : Object.hasOwn(B4COMBAT_NOTES,id) ? {...row,...B4COMBAT_NOTES[id as keyof typeof B4COMBAT_NOTES]} : Object.hasOwn(AUGMENT_POOL_TEXT, id) ? { ...row, ...AUGMENT_POOL_TEXT[id] } : row]));
+  [id, Object.hasOwn(BATCH5_ARCHIVE,id) ? {...row,name:BATCH5_ARCHIVE[id as keyof typeof BATCH5_ARCHIVE].name,description:BATCH5_ARCHIVE[id as keyof typeof BATCH5_ARCHIVE].description} : Object.hasOwn(B4XP_ARCHIVE,id) ? {...row,name:B4XP_ARCHIVE[id as keyof typeof B4XP_ARCHIVE].name,description:B4XP_ARCHIVE[id as keyof typeof B4XP_ARCHIVE].description} : Object.hasOwn(B4REROLL_ARCHIVE,id) ? {...row,name:B4REROLL_ARCHIVE[id].name,description:B4REROLL_ARCHIVE[id].description} : Object.hasOwn(B4COMBAT_NOTES,id) ? {...row,...B4COMBAT_NOTES[id as keyof typeof B4COMBAT_NOTES]} : Object.hasOwn(AUGMENT_POOL_TEXT, id) ? { ...row, ...AUGMENT_POOL_TEXT[id] } : row]));

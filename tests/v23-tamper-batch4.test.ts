@@ -21,8 +21,8 @@ const rerolls = ['patience-is-a-virtue', 'invested-plus', 'invested-plus-plus'];
 const combat = ['category-five', 'long-distance-pals', 'sated-spellweaver', 'overheal'];
 const late: Record<string, [number, string]> = {
  'lategame-specialist': [87, '3-2'], 'slammin-plus': [19, '3-2'],
- 'invested-plus': [54, '3-2'], 'invested-plus-plus': [8, '4-2'],
- 'long-distance-pals': [31, '3-2'], 'sated-spellweaver': [19, '3-2'], 'overheal': [37, '3-2'],
+ 'invested-plus': [53, '3-2'], 'invested-plus-plus': [0, '4-2'],
+ 'long-distance-pals': [8, '3-2'], 'sated-spellweaver': [19, '3-2'], 'overheal': [37, '3-2'],
 };
 const entries = ['JSON', 'object', 'serialized'] as const;
 const read = (s: Json, path: Path): Json => path.reduce((v, k) => v[k], s);

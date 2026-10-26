@@ -1,3 +1,4 @@
+import { firstNodeSeed } from './augment-stage-helpers';
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { needsCrownHistory } from '../src/simulation/crown-history';
@@ -93,7 +94,7 @@ it('Spoils uses one continuous ordinal across PvE/PvP and reward restoration; mo
 });
 it.each(['terminal','historical'] as const)('real owned Spoils %s kill fact restores exactly and forged or omitted counts are rejected',boundary=>{
  const history=new BattleHistory('spoils-restore');
- let s=recordedEmptyRoute(94,'2-1',history);
+ let s=recordedEmptyRoute(firstNodeSeed('spoils-of-war-i'),'2-1',history);
  const c=s.pendingChoice!;expect(c.offers).toContain('spoils-of-war-i');
  s=resolveM5Choices(accepted(selectChoice(s,c.choiceId,c.generation,'spoils-of-war-i')));
  // A receipt-backed fixture champion guarantees a real kill without changing the reward oracle.

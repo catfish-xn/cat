@@ -130,8 +130,8 @@ it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14
   const p = spawnSync(process.execPath, [script], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
-  // 196 pool apiNames after the four batch-4 groups (levels, B4XP, B4reroll, B4Combat); still exactly the five defects.
-  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 196, shippedRows: 149, regeneratedRows: 154, unrestricted: 69, errors: 5, crossVersionDifferences: 8 });
+  // 200 pool apiNames after batch 5 adds four restricted rows; still exactly the five pre-existing defects.
+  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 200, shippedRows: 153, regeneratedRows: 158, unrestricted: 69, errors: 5, crossVersionDifferences: 8 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
     ['TABLE_MISMATCH', 'TFT13_Augment_Academy', ['4-2']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Cabal', ['2-1', '4-2']],

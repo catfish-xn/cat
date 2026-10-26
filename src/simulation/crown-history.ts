@@ -13,9 +13,10 @@ export function needsCrownHistory(state: MatchState): boolean {
   if(!state.multiplayer&&readG23Progress(state)!.economyReceipts.some(r=>r.kind==='battle'
     &&spoils.some(a=>r.facts.round>=a.acquiredRound)
     &&!(r.facts.round===state.round&&state.combat?.status==='finished')))return true;
+  if(!state.multiplayer&&state.augments.some(a=>a.definitionId==='a-change-of-fate'&&state.roundResults.some(r=>r.round>=a.acquiredRound)))return true;
   return needsBatch4B4xpHistory(state) || readG23Progress(state)!.economyReceipts.some(action =>
     action.kind === 'battle' && (action.facts.crowns !== undefined || action.crownGold !== undefined || action.facts.d11Headhunter !== undefined || action.facts.family?.eligible===true || action.facts.melCasts!==undefined || action.facts.batch2?.some(fact => fact.definitionId === 'blood-brothers' || fact.definitionId === 'blood-brothers-deaths')));
 }
 export function missingCrownHistory(): never {
-  throw new Error('Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔或战后备战席经验历史证据，请提供完整 battles 回放');
+  throw new Error('Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放');
 }

@@ -1,3 +1,4 @@
+import { batch5Streak, drainBatch5Gold } from './augment-pool-batch5-progress';
 import { drainBatch4Gold } from './augment-pool-batch4-progress';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -374,16 +375,33 @@ export function rerollShop(state: MatchState): MatchCommandResult {
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
 export function buyXp(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if(state.sharedPool&&state.augments.some(a=>a.definitionId==='dual-purpose'))return fail(state,'invalid-mechanic-state');
+  return buyXpWithShopRefresh(state,unitLootPolicy);
+}
+/** Shared-pool transactions supply their authoritative shop generator; direct shared Dual Purpose is refused. */
+export function buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPolicy,refreshShop?:(leveled:MatchState)=>MatchState):MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.level >= MATCH_RULES.maxLevel) return fail(state, 'max-level');
   const cost = xpPurchaseCost(state.augments, state.round);
   if (state.gold < cost) return fail(state, 'insufficient-gold');
   if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - cost)) return fail(state, 'insufficient-gold');
   const progression = grantXp(state.level, state.xp, xpPurchaseAmount(state.augments, state.round));
-  const leveled=applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp });
-  if(leveled.level===state.level||!state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]))return accept(leveled);
+  let leveled=applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp });
+  const dual=state.augments.some(a=>a.definitionId==='dual-purpose');
+  if(dual){
+    // An XP-triggered regeneration costs neither gold nor a free-reroll credit; preserve the lock.
+    if(state.sharedPool&&!refreshShop)return fail(state,'invalid-mechanic-state');
+    if(refreshShop)leveled=refreshShop(leveled);
+    else {
+      const generated=generateShop(leveled.rngState,leveled.shop.generation+1,leveled.level,leveled.round,sixCostShopContext(leveled));
+      leveled={...leveled,...generated,shop:{...generated.shop,locked:Boolean(state.shop.locked)}};
+    }
+    leveled=drainBatch5Gold(leveled);
+    if(needsAnomalyRecruitment(state)&&!affordableOffer(leveled))return fail(state,'insufficient-gold');
+  }
+  if(leveled.level===state.level||!state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]))return accept(leveled,mechanicGrantEvents(state,leveled));
   const gifted=isCombatRosterLocked(leveled)?drainBatch4Gold(leveled):drainP2Gifts(leveled,unitLootPolicy);
-  return accept(gifted,mechanicGrantEvents(leveled,gifted));
+  return accept(gifted,mechanicGrantEvents(state,gifted));
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
@@ -590,7 +608,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
-  prepared=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,prepared));
+  prepared=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));if(prepared.augments.some(a=>a.definitionId==='a-change-of-fate'))prepared=drainP2Gifts(prepared);openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,prepared));
   if (prepared.phase === 'gameOver') {
     const terminal = stampMatchEvents(prepared, carousel.events);
     return {ok: true, state:terminal.state, events: [...openingEvents, ...terminal.events]};
@@ -629,7 +647,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
-    const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state)),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
+    const entry=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state)),drained=entry.augments.some(a=>a.definitionId==='a-change-of-fate')?drainP2Gifts(entry):entry,accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
@@ -911,6 +929,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
   if(choice.kind==='augment'){
     if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
+    if(definitionId==='called-shot')selected={...selected,streak:batch5Streak(selected,selected.round,selected.streak)};
     selected=recordAcquisitionLevel(selected,selected.augments.at(-1)!);
     const gifted=drainP2Gifts(selected,unitLootPolicy);
     events.push(...mechanicGrantEvents(selected,gifted));selected=gifted;

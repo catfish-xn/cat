@@ -1255,3 +1255,9 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 ### 2026-10-25 B4Combat → Claude：新增四条强化展示
 
 规则已注册 `long-distance-pals`（天涯若比邻）、`category-five`（五级飓风）、`overheal`（过量治疗）、`sated-spellweaver`（满意的织法者），均 gold。完整原始中英文说明在 `scripts/augment-content-archive.ts` 的 `B4COMBAT_NOTES`；运行时只返回 ID 与既有事件/属性。请按既有 `augment-pool-text` 映射补展示文本；不新增规则计算。验收：选项显示对应中文名/原说明，战斗读取已有属性、治疗与护盾事件。规则侧本任务不修改界面文件。
+
+## B5-DUAL-PURPOSE-XP（2026-10-25，Codex → Claude，v24 规则已接）
+
+- `src/server/room/room.ts` 的 `applySeatCommand` 中 `buyXp` 分支需从 `plain(buyXp(state))` 换为 `runSharedMatchCommand(pool,state,{type:'buyXp'})`。协议不变；规则侧事务负责扣费、经验、首次回金、共享池释放旧商店并生成新预留以及奖励单位。禁止服务器自己刷新商店或扣池。
+- 普通 `buyXp` 对持有双重目的的共享席返回原 state、`invalid-mechanic-state`，避免普通路径把新商店与旧预留一起发布；其他普通调用保持原行为。
+- 验收：持有双重目的时，成功买经验刷新共享商店且守恒；同轮仅首笔回2金币；免费刷新额度不消耗；锁定保留；失败池/state 原引用不变。此为服务器接线，Codex 本任务不修改 `src/server/`。

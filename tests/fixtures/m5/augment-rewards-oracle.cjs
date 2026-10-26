@@ -13,7 +13,7 @@ const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
- 'category-five':[I('runaans-hurricane')],
+ 'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],
  'one-two-five':[Q('component'),R(5)],'band-of-thieves-i':[I('thiefs-gloves')],
@@ -79,6 +79,29 @@ function expand(s,a,specs,env){return specs.flatMap((spec,index)=>{
  });
 });}
 const owner=(a,part,round=a.acquiredRound)=>({...a,choiceId:JSON.stringify([a.choiceId,...part]),acquiredRound:round});
+// Batch 5: independent literal 14.24 tasks; P-B5 pre-entry bank and no retroactive entry.
+function b5Entry(s,round){
+ const p=s.roundResults.find(r=>r.round===round-1);assert(p,'independent fate entry history');
+ let bank=p.goldAfter;
+ for(const r of (s.seatMechanics?.receipts??[]).slice(p.mechanicReceiptPrefixLength))if(r.round===p.round)bank+=r.kind==='gold'?r.amount:r.kind==='unit'?r.gold:r.kind==='choice'?-r.price:0;
+ for(const e of s.resourceProvenance.entries)if(e.kind==='unit-sold'&&e.context==='settlement-capacity'&&e.roundId===p.roundId)bank+=e.goldGranted;
+ return bank;
+}
+function b5Purchases(s,round){
+ const costs=[2,2,6,10,20,36,48,68,68],total=(l,x)=>costs.slice(0,l-1).reduce((a,b)=>a+b,x);
+ const p=s.roundResults.find(r=>r.round===round-1),r=s.roundResults.find(r=>r.round===round);
+ let start=p?total(p.levelAfter,p.xpAfter):0;
+ if(s.augments.some(a=>a.definitionId==='going-long'&&a.acquiredRound<round))start+=4;
+ for(const a of s.augments){
+  if(a.acquiredRound<round){
+   if((round-4)%7===0)start+=({'epoch':6,'epoch-plus':8}[a.definitionId]??0);
+   if(a.definitionId==='patient-study'&&p?.roundKind==='pvp'&&p.round>=a.acquiredRound)start+=p.result==='playerWin'?2:3;
+  }else if(a.acquiredRound===round){start+=({'silver-spoon':10,'epoch':6,'epoch-plus':8,'level-up':12,'slammin-plus':10}[a.definitionId]??0);if(a.definitionId==='call-to-chaos'&&outcome(s,a)==='xp')start+=64;}
+ }
+ start=Math.min(260,start);
+ const end=r?total(r.levelBefore,r.xpBefore):total(s.level,s.xp),amount=s.augments.some(a=>a.definitionId==='level-up'&&a.acquiredRound<=round)?6:4;
+ return Math.max(0,Math.ceil((end-start)/amount));
+}
 function rewardPlan(s,env){
  const gifts=[],batch2=[],batch3=[],forms=[],levelsOut=[],gold=[],battles=s.seatMechanics?.hidden?.progress?.economyReceipts.filter(r=>r.kind==='battle').map(r=>r.facts)??[];
  const addGold=(source,a,parts,amount,round)=>{if(amount)gold.push({receiptId:JSON.stringify([source,a.choiceId,...parts]),source,kind:'gold',amount,round});};
@@ -86,6 +109,15 @@ function rewardPlan(s,env){
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
   const facts=battles.filter(f=>f.round>=a.acquiredRound);
+  if(a.definitionId==='dual-purpose')for(let r=a.acquiredRound;r<=s.round;r++)if(b5Purchases(s,r)>0)addGold('augment-pool-batch5',a,[r],2,r);
+  if(a.definitionId==='a-change-of-fate'){
+   let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
+   const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
+   if(bank!==undefined&&win!==undefined){const due=Math.max(bank,win),hero=nonSupply(due);
+    levelsOut.push(...expand(s,owner(a,['batch5-fate','item'],due),[I('gunblade')],env));
+    if(hero<=s.round)levelsOut.push(...expand(s,owner(a,['batch5-fate','unit'],hero),[U('mel')],env));
+   }
+  }
   const counts=b2.rewards[a.definitionId];
   if(counts){let total=0,paid=0;for(const f of facts){total+=f.batch2?.find(x=>x.definitionId===a.definitionId)?.count??0;
    const due=Math.min(counts.max??Infinity,Math.floor(total/counts.every));
@@ -164,7 +196,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
 const admitted=new Set(['s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
- 'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4',
+ 'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel']);
 // Project only the counters needed by these rewards from the finished combat, not reward receipts.
@@ -282,7 +314,7 @@ function validateRewardsCore(before,after,command,events,base){
   seatMechanics:{...after.seatMechanics,seat:{...after.seatMechanics?.seat,'augment-acquisition-levels':levels},receipts:[...prior,...choiceReceipts]}};
  const env=environment(before,base),plan=rewardPlan(ctx,env),claimed=new Set(prior.map(r=>r.receiptId));
  const dueGold=plan.gold.filter(p=>!claimed.has(p.receiptId));
- const actualGold=appended.filter(r=>['augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-kingslayer','augment-risky-moves'].includes(r.source));
+ const actualGold=appended.filter(r=>['augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves'].includes(r.source));
  const goldKey=r=>({receiptId:r.receiptId,source:r.source,kind:r.kind,amount:r.amount,round:r.round});
  const sorted=xs=>xs.map(goldKey).sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
  assert.deepEqual(sorted(actualGold),sorted(dueGold),'independent due augment gold receipts (count, identity, amount, round)');
