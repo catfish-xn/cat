@@ -31,7 +31,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-cache
+      - run: bash .github/ci/install-playwright.sh
       - run: npm run build
       - name: Original two-warmup, thirty-cycle probe with snapshots
         env:
