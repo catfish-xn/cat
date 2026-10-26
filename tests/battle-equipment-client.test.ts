@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMatch, deployMatchUnit, openMatchCombatStream } from '../src/simulation/match';
 import { toCombatViewState, applyCombatReplayTick, type CombatReplay, type CombatViewUnit } from '../src/presentation/combat-display';
-import { combatEquipmentDisplay } from '../src/presentation/battle-equipment';
+import { combatEquipmentDisplay, combatItemStackBadges, itemStackBadgeText } from '../src/presentation/battle-equipment';
 import { BATTLE_EQUIPMENT_SUBMITTED, equipSuccessText, equipmentFailureText, NO_GEAR_EXTRAS } from '../src/presentation/equipment-feedback';
 import { RemoteSession, REPLAY_OPENING_MS } from '../src/rendering/online/remote-session';
 import { MatchSession } from '../src/rendering/match-session';
@@ -129,4 +129,30 @@ describe('battle equipment public frames', () => {
     expect(session.combatView!.units.find(unit => unit.id === id)!.equipment).toEqual([{ definitionId: 'giant-slayer', slot: 0, temporary: false }]);
     session.dispose();
   });
+});
+
+it('Titan badges use only played public frames, distinguish full stacks and clear for legacy or removed items', () => {
+  const { session, replay, combatId, mapping } = fixture('b');
+  const itemStacks = [{ instanceId: 'one', definitionId: 'titans-resolve', stacks: 25, maxStacks: 25 },
+    { instanceId: 'two', definitionId: 'titans-resolve', stacks: 7, maxStacks: 25 }];
+  const frame = { tick: 1, events: [{ type: 'unitUpdated' as const, unitId: combatId, changes: { itemStacks, enforcerWanted: true } }] };
+  session.receiveReplay({ ...replay, ticks: [frame], terminal: applyCombatReplayTick(replay.initial, frame) }, mapping);
+  expect(session.combatView!.units.find(u => u.id === combatId)!.itemStacks).toEqual([]);
+  session.advanceDisplay(REPLAY_OPENING_MS);
+  const shown = session.combatView!.units.find(u => u.id === combatId)!;
+  expect(shown.itemStacks).toEqual(itemStacks); expect(shown.enforcerWanted).toBe(true);
+  const badges = combatItemStackBadges(['sword', 'titans-resolve', 'titans-resolve'], shown.itemStacks);
+  expect(badges).toEqual([undefined, { stacks: 25, maxStacks: 25 }, { stacks: 7, maxStacks: 25 }]);
+  expect(badges.slice(1).map(row => itemStackBadgeText(row!))).toEqual(['25满', '7']);
+  expect(combatItemStackBadges(['titans-resolve'], undefined)).toEqual([undefined]);
+  expect(combatItemStackBadges(['titans-resolve'], [])).toEqual([undefined]);
+  const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+  const items = badges.slice(1).map(badge => ({ id: 'titans-resolve', icon: null, ...badge }));
+  overhead.set('player', undefined, items);
+  const group = overhead.object.getObjectByName('render3d-item-stacks')!;
+  expect(group.children.map(child => child.userData.full)).toEqual([true, false]);
+  overhead.set('player', undefined, [{ ...items[0], stacks: 8 }]);
+  expect(group.children.map(child => child.userData)).toEqual([{ stacks: 8, maxStacks: 25, full: false }]);
+  overhead.set('player', undefined, [{ id: 'titans-resolve', icon: null }]); expect(group.children).toHaveLength(0);
+  overhead.dispose(); session.dispose();
 });

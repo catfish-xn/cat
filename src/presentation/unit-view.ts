@@ -6,6 +6,8 @@
 import Phaser from 'phaser';
 import type { Unit } from '../simulation/units';
 import type { CombatState } from '../simulation/combat-types';
+import { combatItemStackBadges, itemStackBadgeText } from './battle-equipment';
+import type { CombatViewUnit } from './combat-display';
 import type { DisplayUnit } from './combat-display';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
@@ -36,6 +38,8 @@ export class UnitView {
   private readonly body: Phaser.GameObjects.Container;
   /** White overlay for the hit flash. */
   private readonly flash: Phaser.GameObjects.Arc;
+  private readonly stackLabels: Phaser.GameObjects.Text[] = [];
+  private itemStacks: CombatViewUnit['itemStacks'];
   private readonly itemIcons: Phaser.GameObjects.Image[] = [];
   private readonly bobPhase: number;
   private lungeAt = -Infinity;
@@ -123,8 +127,8 @@ export class UnitView {
    * next battle while `equipped` shows the battle on the board; drawn as a separate corner tag, never as a pip.
    * `star` is the star level drawn (v16: 4 for a promoted Ultimate Hero, physically 3★).
    */
-  update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], extras: GearExtras = NO_GEAR_EXTRAS, star: number = unit.starLevel): void {
-    const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}|${extras.reserved}|${extras.temporary.join(',')}`;
+  update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], extras: GearExtras = NO_GEAR_EXTRAS, star: number = unit.starLevel, itemStacks?: CombatViewUnit['itemStacks']): void {
+    const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}|${extras.reserved}|${extras.temporary.join(',')}|${JSON.stringify(itemStacks)}`;
     if (key === this.renderKey) return;
     this.renderKey = key; this.lastDrawn = { unit, star };
     this.identity = getHeroIdentity(unit.definitionId);
@@ -149,7 +153,7 @@ export class UnitView {
     // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
     this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral && !anvil);
     this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral && !anvil);
-    this.equipped = [...equipped]; this.extras = extras; this.drawItems();
+    this.itemStacks = itemStacks; this.equipped = [...equipped]; this.extras = extras; this.drawItems();
     this.pendingEquipped = [...pending];
     this.pendingTag.setText(pending.length ? `下场+${pending.length}` : '').setVisible(pending.length > 0);
     this.token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, effectiveStarLevel: star === 4 ? 4 : undefined, neutral: this.identity.neutral, cost: this.identity.cost, team: unit.team });
@@ -178,6 +182,8 @@ export class UnitView {
       ...Array.from({ length: this.extras.reserved }, () => ({ definitionId: null, temporary: false })),
       ...this.extras.temporary.map(definitionId => ({ definitionId, temporary: true }))];
     const step = ITEM_ICON + 2, left = -((tiles.length - 1) * step) / 2;
+    const badges = combatItemStackBadges(tiles.map(tile => tile.definitionId ?? ''), this.itemStacks);
+    this.stackLabels.forEach(label => label.setVisible(false));
     let icons = 0;
     tiles.forEach(({ definitionId, temporary }, index) => {
       const completed = Boolean(definitionId && ITEM_DEFINITIONS[definitionId]?.recipe), x = left + index * step, half = ITEM_ICON / 2;
@@ -185,6 +191,12 @@ export class UnitView {
         .lineStyle(1.5, temporary ? 0x68ddd0 : !definitionId ? 0x5c6d79 : completed ? toNumber(C.gold) : 0x9fb4c2)
         .fillRect(x - half - 1, ITEM_Y - half - 1, ITEM_ICON + 2, ITEM_ICON + 2).strokeRect(x - half - 1, ITEM_Y - half - 1, ITEM_ICON + 2, ITEM_ICON + 2);
       if (!definitionId) { this.items.lineBetween(x - half + 2, ITEM_Y + half - 2, x + half - 2, ITEM_Y - half + 2); return; }
+      const badge = badges[index];
+      if (badge) {
+        let label = this.stackLabels[index];
+        if (!label) { label = this.scene.add.text(0, 0, '', { fontSize: '10px', fontStyle: 'bold', backgroundColor: '#091219', resolution: 2 }).setOrigin(1, 1); this.stackLabels[index] = label; this.body.add(label); }
+        label.setText(itemStackBadgeText(badge)).setColor(badge.stacks >= badge.maxStacks ? '#ffd84d' : '#ffffff').setPosition(x + half, ITEM_Y + half).setVisible(true);
+      }
       const slot = icons++, key = itemTextureKey(definitionId);
       if (!this.scene.textures.exists(key)) {
         this.itemIcons[slot]?.setVisible(false);
@@ -195,6 +207,7 @@ export class UnitView {
       if (!icon) { icon = this.scene.add.image(0, 0, key); this.itemIcons[slot] = icon; this.body.addAt(icon, this.body.getIndex(this.items) + 1); }
       icon.setTexture(key).setDisplaySize(ITEM_ICON, ITEM_ICON).setPosition(x, ITEM_Y).setAlpha(temporary ? 0.8 : 1).setVisible(true);
     });
+    this.stackLabels.forEach(label => this.body.bringToTop(label));
     for (let index = icons; index < this.itemIcons.length; index++) this.itemIcons[index].setVisible(false);
   }
 

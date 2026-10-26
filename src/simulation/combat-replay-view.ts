@@ -1,3 +1,4 @@
+import { itemPrograms } from './m8/item-program';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { isPresent, isSelectable } from './anomalies/availability';
 import { installBattleEquipmentBatch, validateBattleEquipmentLog } from './battle-equipment';
@@ -36,13 +37,44 @@ function statusView(state: CombatState, unitId: string): { readonly statuses?: r
     || Number(a.harmful) - Number(b.harmful)) };
 }
 
+/** Display facts only: each source instance keeps its own authoritative counter and declared cap. */
+export interface CombatViewItemStack {
+  readonly instanceId: string;
+  readonly definitionId: string;
+  readonly stacks: number;
+  readonly maxStacks: number;
+  /** Supplied by the online equipment projection when the held slot is known. */
+  readonly slot?: number;
+  readonly temporary?: boolean;
+}
+function itemStackView(unit: CombatUnit): { readonly itemStacks?: readonly CombatViewItemStack[] } {
+  const itemStacks: CombatViewItemStack[] = [];
+  for (const { source, program } of itemPrograms(unit)) {
+    if (source.sourceKind !== 'item' || source.definitionId !== 'titans-resolve') continue;
+    const counter = program.triggers?.flatMap(t => t.counters).find(c => c.id === 'stacks');
+    if (!counter || counter.cap === null) continue;
+    const runtime = unit.triggerLedger?.runtimes.find(r => r.source.sourceKind === source.sourceKind
+      && r.source.instanceId === source.instanceId && r.source.definitionId === source.definitionId
+      && r.source.parentItemInstanceId === source.parentItemInstanceId && r.counters[counter.id] !== undefined);
+    itemStacks.push({ instanceId: source.instanceId, definitionId: source.definitionId,
+      stacks: runtime?.counters[counter.id] ?? 0, maxStacks: counter.cap });
+  }
+  // Explicit [] clears removed equipment; optional in the wire type for legacy replays.
+  return { itemStacks };
+}
+function wantedView(unit: CombatUnit, state: CombatState): { readonly enforcerWanted?: boolean } {
+  // Wanted lists survive their owners' deaths. Never reselect targets in the display layer.
+  return { enforcerWanted: unit.alive && state.units.some(owner => owner.team !== unit.team
+    && owner.g22?.wanted.includes(unit.id)) };
+}
+
 export const COMBAT_REPLAY_KEYFRAME_INTERVAL = 20;
 const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'effectiveStarLevel', 'hp', 'maxHp', 'mana', 'maxMana', 'shield',
   'alive', 'targetId', 'attackDamage', 'attackRange', 'attackIntervalTicks', 'armor', 'magicResist',
   'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {
   const choiceEffects=d11CombatDisplay(unit);
-  return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), ...statusView(state, unit.id), cell: cellView(unit.cell),
+  return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), ...statusView(state, unit.id), ...itemStackView(unit), ...wantedView(unit, state), cell: cellView(unit.cell),
     ...(unit.equipment ? { equipment: unit.equipment.map(i => ({ ...i })) } : {}),
     ...(choiceEffects.length?{choiceEffects}:{}),
     ...(unit.itemBanish || unit.anomalyState?.absentUntilTick !== undefined || unit.g23Sion ? {banished:unit.alive && !isPresent(unit,state.tick)} : {}),
