@@ -367,3 +367,104 @@ it('independently binds Spoils counters to opening ownership and all ordinary Pv
   const erased=structuredClone(noOwner);erased.seatMechanics.hidden.progress.economyReceipts[0].facts.batch2=[];
   expect(()=>validateRewards({...live,combat:{strategy:finished.combat.strategy}},erased,null,done,env)).toThrow(/independent batch2 counter/);
 });
+
+// Stop the genuine seed-48 public route immediately after its offered Heroic Grab Bag.
+// Keep the pre-command independent ledger so co-forged balances exercise Ledger.apply.
+import * as matchApi from '../src/simulation/match';
+import { run } from '../scripts/generate-m5-route.cjs';
+const heroicCase: {before:any;after:any;command:any;events:any;ledger:any}[]=[];
+const routeLedger=new Ledger(createMatch(48));
+const stopHeroic=Symbol('heroic selection reached');
+try {
+  await run(matchApi,{seed:48,build:'cannon',augmentPriorities:['heroic-grab-bag'],onStep(before,result,command){
+    if(!('events' in result))throw Error(result.reason);
+    if(command?.type==='select'&&command.definitionId==='heroic-grab-bag'){
+      heroicCase.push({before,after:result.state,command,events:result.events,ledger:routeLedger});throw stopHeroic;
+    }
+    routeLedger.apply(before,result.state,command,result.events);
+  }});
+} catch(error) {if(error!==stopHeroic)throw error;}
+const forkLedger=(ledger:any)=>Object.assign(Object.create(Ledger.prototype),structuredClone(ledger));
+it('rejects seed-48 omitted acquisition receipt and gold together, and binds the complete due schedule set',()=>{
+  expect(heroicCase).toHaveLength(1);
+  const {before,after,command,events,ledger}=heroicCase[0];
+  const suffix=after.scheduleReceipts.slice(before.scheduleReceipts.length);
+  expect(suffix).toHaveLength(1);expect(suffix[0].gold).toBe(9);
+  expect(()=>forkLedger(ledger).apply(before,after,command,events)).not.toThrow();
+  const missing={...after,gold:after.gold-9,scheduleReceipts:before.scheduleReceipts};
+  expect(()=>forkLedger(ledger).apply(before,missing,command,events)).toThrow(/independent due schedule/);
+  for(const patch of [{definitionId:'raining-gold'},{round:5},{eventId:'round:3-2:augment'},
+    {kind:'component'},{unitId:'unit-1'},{gold:132},{itemIds:['item-999']}]){
+    const forged={...after,scheduleReceipts:[...before.scheduleReceipts,{...suffix[0],...patch}]};
+    expect(()=>forkLedger(ledger).apply(before,forged,command,events)).toThrow();
+  }
+  const duplicate={...after,scheduleReceipts:[...after.scheduleReceipts,suffix[0]]};
+  expect(()=>forkLedger(ledger).apply(before,duplicate,command,events)).toThrow();
+});
+it('rejects seed-48 missing duplicators while keeping reward receipts, wrong IDs, definitions and serials',()=>{
+  const {before,after,command,events,ledger}=heroicCase[0];
+  expect(after.consumables.filter((c:any)=>c.definitionId==='TFT_Consumable_ChampionDuplicator_III')).toHaveLength(2);
+  for(const patch of [
+    {consumables:before.consumables},
+    {consumables:after.consumables.slice(0,-1)},
+    {consumables:after.consumables.map((c:any,i:number)=>i===after.consumables.length-1?{...c,consumableId:'consumable-999'}:c)},
+    {consumables:after.consumables.map((c:any,i:number)=>i===after.consumables.length-1?{...c,definitionId:'reforger'}:c)},
+    {nextConsumableSerial:after.nextConsumableSerial+1},
+  ])expect(()=>forkLedger(ledger).apply(before,{...after,...patch},command,events)).toThrow(/independent consumable/);
+});
+it('rejects future schedule grants, unreceipted tools and all four forged battle-gold sources on deploy',()=>{
+  const before=createMatch(29),command={type:'deploy',id:'unit-1',target:{kind:'board' as const,cell:{col:3,row:4}}};
+  const result=deployMatchUnit(before,command.id,command.target);if(!result.ok)throw Error(result.reason);
+  const check=(after:any)=>new Ledger(before).apply(before,after,command,result.events);
+  expect(()=>check(result.state)).not.toThrow();
+  expect(()=>check({...result.state,gold:result.state.gold+123,scheduleReceipts:[...before.scheduleReceipts,
+    {eventId:'round:2-1:augment',round:4,kind:'augment',definitionId:'heroic-grab-bag',unitId:null,itemIds:[],gold:123}]})).toThrow(/independent due schedule/);
+  expect(()=>check({...result.state,consumables:[...result.state.consumables,
+    {consumableId:`consumable-${before.nextConsumableSerial}`,definitionId:'TFT_Consumable_ChampionDuplicator_III'}],nextConsumableSerial:before.nextConsumableSerial+1})).toThrow(/independent consumable/);
+  for(const source of ['high-roller','tacticians-crown','g24-item-gold','conqueror-chest']){
+    const r={source,kind:'gold',amount:123,receiptId:'forged:'+source,round:before.round,roundId:before.roundDefinitionId};
+    expect(()=>check({...result.state,gold:result.state.gold+123,seatMechanics:{...result.state.seatMechanics!,receipts:[...result.state.seatMechanics!.receipts,r]}})).toThrow(/independent due battle gold/);
+  }
+});
+it('independently removes exactly the commanded tool and preserves all other inventory on use and idle ticks',()=>{
+  const base=vector('overheal').before;
+  const before={...base,phase:'preparation',consumables:[{consumableId:'consumable-1',definitionId:'reforger'},
+    {consumableId:'consumable-2',definitionId:'magnetic-remover'}],nextConsumableSerial:3};
+  const command={type:'useConsumable',consumableId:'consumable-1'};
+  const after={...before,consumables:before.consumables.slice(1)};
+  expect(()=>validateRewards(before,after,command,[],env)).not.toThrow();
+  for(const consumables of [before.consumables,[],before.consumables.slice(0,1)])
+    expect(()=>validateRewards(before,{...after,consumables},command,[],env)).toThrow(/independent consumable/);
+  expect(()=>validateRewards(before,before,null,[],env)).not.toThrow();
+  expect(()=>validateRewards(before,after,null,[],env)).toThrow(/independent consumable/);
+  const locked={...before,phase:'combat',multiplayer:{seatId:'seat-0',combatRosterLocked:true}};
+  expect(()=>validateRewards(locked,{...locked,consumables:[]},{type:'equip'},[],env)).toThrow(/independent consumable/);
+});
+
+const {battleGold}=require('./fixtures/m5/battle-gold-oracle.cjs');
+import { blackMarket } from './fixtures/m5/oracle.g2.cjs';
+const {word}=require('./fixtures/m5/oracle.g2.cjs');
+it.each(['high-roller','tacticians-crown','conqueror-chest','g24-item-gold'])('derives %s gold from completed combat and rejects missing/extra/mistimed/altered receipts',(source)=>{
+  const base=createMatch(29),battleId='battle:independent',round=5;
+  const crown={unitId:'ally',itemPrograms:[{source:{ownerId:'ally',sourceKind:'item',definitionId:'TFT_Item_ForceOfNature'}}]};
+  const strategy={units:source==='tacticians-crown'?[crown]:[],traits:source==='conqueror-chest'?[{team:'player',traitId:'conqueror',tier:2}]:[]};
+  const ally={id:'ally',mechanics:[{mechanic:'v19Chainblade',source:{instanceId:'item-1'}}],definitionId:source==='high-roller'?'sevika':'irelia',team:'player',location:{kind:'board'},g23:{
+    highRoller:source==='high-roller'?[{mod:'coin',gold:3}]:[],conquestTakedowns:source==='conqueror-chest'?Array.from({length:10},(_,i)=>'enemy-'+i):[]}};
+  // Search the independent LCG for a Crown success; no production reward receipt input.
+  let crownSeed=0;while(BigInt(word(crownSeed))*10n>=4294967296n)crownSeed++;
+  const before={...base,phase:'combat',round,roundDefinitionId:'2-2',roundResults:[],preparation:{units:[ally]},combat:{strategy},
+    seatMechanics:{...base.seatMechanics!,hidden:{progress:{rngState:crownSeed}},seat:{...base.seatMechanics!.seat}}};
+  const itemId=JSON.stringify(['g24-item-gold',battleId,'ally','item-1','perfected-chainblade',0]);
+  const combat={status:'finished',combatId:battleId,result:'playerWin',strategy,units:[ally],
+    itemGoldReceipts:source==='g24-item-gold'?[{id:itemId,battleId,ownerId:'ally',itemInstanceId:'item-1',kind:'perfected-chainblade',ordinal:0,word:null,gold:3}]:[]};
+  const receiptId=source==='high-roller'?`g23:high-roller:${battleId}`:source==='tacticians-crown'?`g23:crown:${battleId}`:source==='conqueror-chest'?'g23:conqueror:1:gold':itemId;
+  const amount=source==='tacticians-crown'?1:source==='conqueror-chest'?2:3;
+  const r={source,receiptId,amount,kind:'gold',round,roundId:'2-2'};
+  const after={...before,combat,roundResults:[{}],seatMechanics:{...before.seatMechanics,receipts:[...base.seatMechanics!.receipts,r]}};
+  const check=(state:any,events=done)=>battleGold(before,state,null,events,{word,blackMarket,ROUNDS});
+  expect(check(after)).toEqual([r]);
+  for(const rs of [[],[r,r],[{...r,amount:amount+123}],[{...r,round:round+1}],[{...r,receiptId:'forged'}],[{...r,source:source==='high-roller'?'tacticians-crown':'high-roller'}]]){
+    expect(()=>check({...after,seatMechanics:{...after.seatMechanics,receipts:[...base.seatMechanics!.receipts,...rs]}})).toThrow(/independent due battle gold/);
+  }
+  expect(()=>check(after,[])).toThrow(/independent due battle gold/);
+});

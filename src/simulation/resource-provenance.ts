@@ -230,6 +230,8 @@ export function validateResourceReceipts(context: ReceiptContext): Map<string, B
     requireValue(round.ordinal <= context.throughRoundOrdinal
       && getRoundSchedule(round.ordinal).some(event => event.id === receipt.eventId && event.kind === receipt.kind), 'schedule identity');
     requireValue(Array.isArray(receipt.itemIds), 'schedule items');
+    // A schedule choice never grants a unit: actual augment units are mechanic/loot births.
+    if (receipt.kind === 'augment') requireValue(receipt.unitId === null, 'augment receipt unit');
     if (receipt.kind === 'component') {
       requireValue(receipt.itemIds.length === 1 && receipt.unitId === null && receipt.gold === 0
         && typeof receipt.definitionId === 'string' && ITEM_DEFINITIONS[receipt.definitionId]?.kind === 'component', 'schedule component');

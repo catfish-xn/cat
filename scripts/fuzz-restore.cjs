@@ -11,22 +11,29 @@ const {pathToFileURL}=require('node:url');
 const assert=require('node:assert/strict');
 const route=require('./generate-m5-route.cjs');
 const args=process.argv.slice(2);
+// P-B4-TAMPER 2026-10-25: preference changes command selection only; all
+// offers, rewards and economic assertions still come from the normal route.
+const BATCH4_AUGMENTS=['caretakers-ally','lategame-specialist','caretakers-favor','birthday-presents','caretakers-chosen',
+ 'clear-mind','cluttered-mind','slammin','slammin-plus','patience-is-a-virtue','invested-plus','invested-plus-plus',
+ 'category-five','long-distance-pals','sated-spellweaver','overheal'];
+const batch4Priorities=seed=>{const offset=(seed>>>0)%BATCH4_AUGMENTS.length;return [...BATCH4_AUGMENTS.slice(offset),...BATCH4_AUGMENTS.slice(0,offset)];};
 const option=(name,fallback)=>{const i=args.indexOf(name);return i<0?fallback:args[i+1];};
 
 async function load(bundle){return import(pathToFileURL(bundle).href);}
 async function routeMatch(api,seed,build,rate=31,stopStep){
  const probe=new api.RestoreProbe(seed,build,false),draw=api.seeded(seed^0x51a7);
- const stop={};
+ const stop={},augments=new Set(),augmentCheckpoints={};
  let terminal=false;
  try {
-  const result=await route.run(api.match,{seed,build,onStep(before,result,command){
+  const result=await route.run(api.match,{seed,build,augmentPriorities:batch4Priorities(seed),onStep(before,result,command){
+   for(const a of result.state.augments)if(BATCH4_AUGMENTS.includes(a.definitionId))augments.add(a.definitionId);
    if(stopStep!==undefined&&probe.step>stopStep)throw stop;
-   if(probe.step===0||stopStep!==undefined||draw(rate)===0)probe.checkpoint(before);
+   if(probe.step===0||stopStep!==undefined||draw(rate)===0){probe.checkpoint(before);for(const a of before.augments)if(BATCH4_AUGMENTS.includes(a.definitionId))augmentCheckpoints[a.definitionId]=(augmentCheckpoints[a.definitionId]??0)+1;}
    probe.observe(before,result,command?s=>route.dispatch(api.match,s,command):api.match.stepMatch);
   }});
   terminal=result.final.phase==='gameOver';
  } catch(error){if(error!==stop)throw error;}
- return {seed,build,terminal,steps:probe.step,checkpoints:probe.checkpoints,continuations:probe.continuations,coverage:probe.coverage,failures:probe.failures};
+ return {seed,build,terminal,augmentPriorities:batch4Priorities(seed),augments:[...augments],augmentCheckpoints,steps:probe.step,checkpoints:probe.checkpoints,continuations:probe.continuations,coverage:probe.coverage,failures:probe.failures};
 }
 // Match persistence deliberately rejects Room seat envelopes. Reuse the real B6 scheduler
 // through a solo command/clock adapter; it computes no rules and never strips server fields.
@@ -120,9 +127,9 @@ async function worker(){
   return;
  }
  // At least one full route per build across the four workers, plus real server bots.
- add(await routeMatch(api,seed,['cannon','sniper','mage'][index%3]));
+ add(await routeMatch(api,seed,['cannon','sniper','mage'][index%3],rate));
  if(index===0)add(await serverMatch(api,seed));
- for(let n=1;runs.reduce((sum,r)=>sum+r.checkpoints,0)<target;n++)add(await routeMatch(api,seed+n*17,['cannon','sniper','mage'][(index+n)%3]));
+ for(let n=1;runs.reduce((sum,r)=>sum+r.checkpoints,0)<target;n++)add(await routeMatch(api,seed+n*17,['cannon','sniper','mage'][(index+n)%3],rate));
 }
 async function main(){
  if(args.includes('--worker'))return worker();

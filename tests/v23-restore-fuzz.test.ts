@@ -4,13 +4,15 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { Room, ROOM_TIMING_DEFAULTS } from '../src/server/room/room';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { ManualClock } from '../src/server/room/clock';
-import { createMatch, deployMatchUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, selectChoice, deployMatchUnit, startMatchCombat, stepMatch, sellUnit, type MatchState } from '../src/simulation/match';
 
+import { firstNodeSeed } from './augment-stage-helpers';
 import { accepted, emptyBoard, reachRound } from './match-helpers';
 import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateAbilityStatusFacts } from '../src/simulation/combat-runtime-facts';
 import { createRestoreCombatReplay } from '../src/simulation/restore-combat-replay';
 import { grantMechanicUnit } from '../src/simulation/seat-mechanics';
+import { validateResourceReceipts } from '../src/simulation/resource-provenance';
 
 describe('v23 deterministic legitimate save/restore fuzz', () => {
   it('sampling RNG repeats exactly and does not use the match stream', () => {
@@ -207,4 +209,77 @@ it('real Room seats are explicitly outside the Match save contract (seed=42, ste
     expect(() => restoreMatch(JSON.stringify(state))).toThrow('multiplayer-state');
     expect(() => serializeMatch(state)).toThrow('multiplayer-state');
   } finally { room.dispose(); }
+});
+
+// Minimal reduction: schedule receipts carry no augment unit; actual rewards
+// are authenticated separately through mechanic receipts and ordered resource births.
+describe('batch-4 minimal augment schedule unitId admission defect', () => {
+  let legitimate: MatchState;
+  it('acquires Caretaker Ally through an actual offered choice and round-trips', () => {
+    const open = reachRound('2-1', false, firstNodeSeed('caretakers-ally')), c = open.pendingChoice!;
+    expect(c.offers).toContain('caretakers-ally');
+    legitimate = accepted(selectChoice(open, c.choiceId, c.generation, 'caretakers-ally'));
+    expect(legitimate.scheduleReceipts.find(r => r.definitionId === 'caretakers-ally')!.unitId).toBeNull();
+    for (const restore of Object.values(entrances)) expect(restore(legitimate)).toEqual(legitimate);
+  });
+  for (const [entry, restore] of Object.entries(entrances)) it(`${entry} rejects a forged augment receipt unitId`, () => {
+    const forged = structuredClone(legitimate);
+    const receipt = forged.scheduleReceipts.find(r => r.definitionId === 'caretakers-ally')!;
+    Object.assign(receipt, { unitId: 'forged' });
+    expect(() => restore(forged)).toThrow();
+  });
+});
+
+// A serial-shaped ID, even one belonging to a real reward, cannot authorize a
+// schedule unit. Held reward identities must match their own acquisition fact.
+describe('batch-4 reward unit serial and provenance admission', () => {
+  let legitimate: MatchState;
+  it('records a real Caretaker Ally unit reward with its acquisition source', () => {
+    const open = reachRound('2-1', false, firstNodeSeed('caretakers-ally')), c = open.pendingChoice!;
+    legitimate = accepted(selectChoice(open, c.choiceId, c.generation, 'caretakers-ally'));
+    const reward = legitimate.seatMechanics!.receipts.find(r => r.kind === 'unit' && r.receiptId.includes('caretakers-ally'));
+    expect(reward?.kind).toBe('unit');
+    if (!reward || reward.kind !== 'unit') throw Error('missing actual augment unit reward');
+    expect(reward.resolution).toBe('held');
+    expect(legitimate.resourceProvenance.entries).toContainEqual(expect.objectContaining({
+      kind: 'unit-acquired', unitId: reward.unitId, source: { kind: 'mechanic', receiptId: reward.receiptId },
+    }));
+    for (const restore of Object.values(entrances)) expect(restore(legitimate)).toEqual(legitimate);
+  });
+  it('independently rejects schedule unit substitution at the provenance receipt boundary', () => {
+    const context = { scheduleReceipts: legitimate.scheduleReceipts, lootReceipts: [], throughRoundOrdinal: legitimate.round };
+    expect(() => validateResourceReceipts(context)).not.toThrow();
+    const scheduleReceipts = structuredClone(legitimate.scheduleReceipts);
+    Object.assign(scheduleReceipts.find(r => r.definitionId === 'caretakers-ally')!, { unitId: 'unit-1' });
+    expect(() => validateResourceReceipts({ ...context, scheduleReceipts })).toThrow('augment receipt unit');
+  });
+  it('authenticates the reward birth after its unit has been sold', () => {
+    const reward = legitimate.seatMechanics!.receipts.find(r => r.kind === 'unit' && r.receiptId.includes('caretakers-ally'));
+    if (!reward || reward.kind !== 'unit' || !reward.unitId) throw Error('missing actual augment unit reward');
+    const sold = accepted(sellUnit(legitimate, reward.unitId));
+    expect(sold.preparation.units.some(u => u.id === reward.unitId)).toBe(false);
+    for (const restore of Object.values(entrances)) expect(restore(sold)).toEqual(sold);
+  });
+  for (const [entry, restore] of Object.entries(entrances)) {
+    for (const attack of ['schedule-existing', 'schedule-next', 'reward-existing', 'reward-next', 'birth-id', 'birth-source'] as const) {
+      it(`${entry} rejects ${attack} unit identity substitution`, () => {
+        const forged = structuredClone(legitimate);
+        const reward = forged.seatMechanics!.receipts.find(r => r.kind === 'unit' && r.receiptId.includes('caretakers-ally'));
+        if (!reward || reward.kind !== 'unit') throw Error('missing actual augment unit reward');
+        const birth = forged.resourceProvenance.entries.find(e => e.kind === 'unit-acquired'
+          && e.source.kind === 'mechanic' && e.source.receiptId === reward.receiptId);
+        expect(birth).toBeDefined();
+        const other = forged.resourceProvenance.entries.find(e => e.kind === 'unit-acquired' && e.unitId !== reward.unitId);
+        if (!other || other.kind !== 'unit-acquired') throw Error('missing other unit acquisition');
+        const schedule = forged.scheduleReceipts.find(r => r.definitionId === 'caretakers-ally')!;
+        if (attack === 'schedule-existing') Object.assign(schedule, { unitId: reward.unitId });
+        if (attack === 'schedule-next') Object.assign(schedule, { unitId: `unit-${forged.nextUnitSerial}` });
+        if (attack === 'reward-existing') Object.assign(reward, { unitId: other.unitId });
+        if (attack === 'reward-next') Object.assign(reward, { unitId: `unit-${forged.nextUnitSerial}` });
+        if (attack === 'birth-id') Object.assign(birth!, { unitId: other.unitId });
+        if (attack === 'birth-source') Object.assign(birth!, { source: other.source });
+        expect(() => restore(forged)).toThrow();
+      });
+    }
+  }
 });

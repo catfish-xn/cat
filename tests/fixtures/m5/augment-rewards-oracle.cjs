@@ -205,7 +205,7 @@ function validateBattleCounters(before,after,f,base){
  if(ownsSpoils&&spoilsKills)expected.push({definitionId:'spoils-of-war',count:spoilsKills});
  assert.deepEqual(f.batch2??[],expected,'independent batch2 counter existence and values');
 }
-function validateRewards(before,after,command,events,base){
+function validateRewardsCore(before,after,command,events,base){
  assert.equal(after.seed,before.seed,'immutable reward seed');
  assert.equal(after.augmentTierSeed,before.augmentTierSeed,'immutable opening seed');
  assert.equal(after.multiplayer?.seatId,before.multiplayer?.seatId,'immutable reward seat');
@@ -354,5 +354,35 @@ function validateRewards(before,after,command,events,base){
  do{progress=false;for(const g of pending.filter(g=>g.kind==='unit'&&!required.has(g.receiptId)))if(before.multiplayer&&base.COST[g.definitionId]||birth(g)){required.add(g.receiptId);progress=true;}}while(progress);
  for(const g of pending)assert.equal(actual.some(r=>r.receiptId===g.receiptId),required.has(g.receiptId),'independent '+g.kind+' receipt existence '+g.receiptId);
  return {gold:new Map(dueGold.map(g=>[g.receiptId,g])),gifts:new Map(pending.map(g=>[g.receiptId,g])),price};
+}
+// Inventory is a complete transition, including commands with no reward receipt.
+function validateRewards(before,after,command,events,base){
+ const result=validateRewardsCore(before,after,command,events,base);
+ // Hand-written counter vectors may omit the inventory entirely.
+ if(before.consumables===undefined&&after.consumables===undefined)return result;
+ const inventory=[...before.consumables];let serial=before.nextConsumableSerial;
+ const add=(definitionId,id)=>{const expected=`consumable-${serial++}`;assert.equal(id,expected,'independent consumable grant ID');inventory.push({consumableId:expected,definitionId});};
+ for(const r of base.lootReceipts??[]){
+  const ids=r.grantedConsumableIds??[];assert.equal(ids.length,r.payload.kind==='consumable'?1:0,'independent loot consumable count');
+  if(r.payload.kind==='consumable')add(r.payload.definitionId,ids[0]);
+ }
+ for(const r of (after.seatMechanics?.receipts??[]).slice(before.seatMechanics?.receipts.length??0))if(r.kind==='consumable'){
+  const g=result.gifts.get(r.receiptId);
+  if(r.source==='augment-pool-batch1')assert(g&&g.kind==='consumable','independent consumable reward plan');
+  add(g?.definitionId??r.definitionId,r.consumableId);
+ }
+ let used=null;
+ if(command?.type==='useConsumable'){
+  const tool=before.consumables.find(c=>c.consumableId===command.consumableId);assert(tool,'independent consumed tool exists');
+  if(tool.definitionId!=='masterwork-upgrade')used=tool.consumableId;
+ }
+ if(command?.type==='select'&&before.pendingChoice?.payload?.source==='masterwork-upgrade'){
+  used=before.pendingChoice.payload.masterwork.consumableId;
+  assert(before.consumables.some(c=>c.consumableId===used&&c.definitionId==='masterwork-upgrade'),'independent masterwork tool exists');
+ }
+ if(used!==null)inventory.splice(inventory.findIndex(c=>c.consumableId===used),1);
+ assert.deepEqual(after.consumables,inventory,'independent consumable inventory additions/removals');
+ assert.equal(after.nextConsumableSerial,serial,'independent consumable serial');
+ return result;
 }
 module.exports.validateRewards=validateRewards;

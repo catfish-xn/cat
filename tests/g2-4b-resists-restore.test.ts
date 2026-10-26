@@ -94,9 +94,9 @@ function transfer(state: any) {
 }
 it('public equipped live shield restores unchanged and continues identically', () => {
   const state = atTick(60), text = JSON.stringify(state);
-  // After the batch-3/XP merge seed 42's crest pick is Conqueror Crest (after one free reroll; Visionary Crest before),
-  // so the board and the crest's shield value change: 183 (was 133).
-  expect(active(state).layer).toMatchObject({ granted: 183, remaining: 183 });
+  // Seed 42 now selects Dominator Crest: the live 70% resistance shield is exactly 133.
+  expect(state.augments.map(a=>a.definitionId)).toEqual(['dominator-crest']);
+  expect(active(state).layer).toMatchObject({ granted: 133, remaining: 133 });
   for (const input of [state, text]) {
     const restored = restoreMatch(input);
     expect(restored).toEqual(state); expect(stepMatch(restored)).toEqual(stepMatch(state));
