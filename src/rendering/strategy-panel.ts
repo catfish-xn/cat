@@ -48,7 +48,7 @@ import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView, readMasterworkOptions } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
-import { genericOffer, isKnownChoiceKind, isMasterworkChoice, isShopChoice, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
+import { anvilChoiceIconUrl, genericOffer, isKnownChoiceKind, isMasterworkChoice, isShopChoice, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
 import { armorySecondsLeft, isAnvilArmory } from '../presentation/anvil-display';
 import { forgeProgressText, masterworkOffer, type MasterworkOptionDisplay, type OpeningForgeProgressDisplay } from '../presentation/opening-encounter-text';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
@@ -1447,6 +1447,11 @@ export class StrategyPanel {
       this.actions.choose(choice.choiceId, choice.generation, id);
     };
     const bar = element('p', '', 'shop-choice-bar');
+    const anvilIcon = anvilChoiceIconUrl(choice);
+    if (anvilIcon) {
+      const portrait = document.createElement('img'); portrait.src = anvilIcon; portrait.alt = ''; portrait.width = 28; portrait.height = 28;
+      portrait.dataset.debug = 'armory:icon'; portrait.addEventListener('error', () => portrait.remove(), { once: true }); bar.append(portrait);
+    }
     bar.append(element('strong', title));
     if (choice.kind === 'blackMarket') this.blackMarket(cards, bar, choice, answer);
     else for (const id of choice.offers) {
@@ -1468,7 +1473,7 @@ export class StrategyPanel {
         clock.textContent = left === null ? '' : `剩余 ${left} 秒`; clock.classList.toggle('urgent', left !== null && left <= 5);
       };
       tick(); this.armoryTimer = globalThis.setInterval(tick, 250) as unknown as number;
-      bar.insertBefore(clock, bar.children[1] ?? null);
+      bar.insertBefore(clock, bar.querySelector('.choice-timeout'));
     }
     // Offline the choice blocks the shop (contract §15.1 is online only), so there is nothing to switch to.
     if (online) {
