@@ -290,8 +290,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const intents = units.map(unit => {
     if (!canMove(unit, tick)) return undefined;
     if(isOpeningCrab(unit))return crabMove(ctx,unit,occupied);
+    if (unit.mechanics?.some(m=>m.mechanic==='quickstriker')?unit.moveCooldownTicks>5||(unit.v20Traits?.moveTenths??0)<10:unit.moveCooldownTicks>0) return undefined;
     const target = p2Target(unit,units,tick);
-    if (!target || (unit.mechanics?.some(m=>m.mechanic==='quickstriker')?unit.moveCooldownTicks>5||(unit.v20Traits?.moveTenths??0)<10:unit.moveCooldownTicks>0) || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
+    if (!target || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
     return move(state, unit, target, occupied);
   });
   units.forEach((unit, n) => {

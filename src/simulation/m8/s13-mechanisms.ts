@@ -292,19 +292,28 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
 /** G10 each-tick selectors describe live auras, sampled after movement and
  * death cleanup. Removing one source never removes another source's debuff. */
 export function refreshMechanismAuras(ctx: AbilityContext, applyNew = true): void {
+  // Source identities are immutable during this invocation; no evidence or
+  // derived data survives a refresh, tick, playback session or restore call.
+  const sourceIds = new Map<Source, string>();
+  const sourceKey = (source: Source): string => {
+    let key = sourceIds.get(source);
+    if (key === undefined) { key = canonicalSource(source); sourceIds.set(source, key); }
+    return key;
+  };
   for (const holder of ctx.units) for (const task of holder.mechanismDefinitions?.periodicTasks ?? []) {
     if (task.program.selector.sample !== 'each-tick') continue;
     const targets = holder.alive && holder.hp > 0 ? selectMechanismTargets(holder, ctx.units, task.program.selector, undefined, task.source, {board:ctx.board,tick:ctx.tick}) : [];
+    const targetIds = new Set(targets.map(target => target.id));
     for (const [index,effect] of task.program.effects.entries()) {
       const source={...task.source,effectIndex:task.source.effectIndex+index}, sourceId=canonicalSource(source);
       for (const unit of ctx.units) {
-        const removed=removeStatusContributions(unit.mechanismState!.statuses,c=>canonicalSource(c.source)===sourceId&&!targets.some(t=>t.id===unit.id),holder.hp>0?'expired':'death-cleanup',ctx.tick);
+        const removed=removeStatusContributions(unit.mechanismState!.statuses,c=>sourceKey(c.source)===sourceId&&!targetIds.has(unit.id),holder.hp>0?'expired':'death-cleanup',ctx.tick);
         unit.mechanismState={...unit.mechanismState!,statuses:removed.groups};
         const keys=new Set(removed.ended.map(e=>e.contribution.key));
         ctx.events.push(...endedStatusEvents(ctx.tick,unit.id,removed.ended,holder.hp>0?'expired':'death-cleanup'));
         unit.statuses=unit.statuses.filter(s=>!s.contributionKeys?.some(k=>keys.has(k)));
       }
-      for (const target of targets) if (applyNew && !target.mechanismState!.statuses.some(g=>g.contributions.some(c=>canonicalSource(c.source)===sourceId)))
+      for (const target of targets) if (applyNew && !target.mechanismState!.statuses.some(g=>g.contributions.some(c=>sourceKey(c.source)===sourceId)))
         executeMechanismEffect(ctx,holder,source,target,effect,0,index);
     }
   }

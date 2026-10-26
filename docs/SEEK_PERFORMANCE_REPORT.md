@@ -1,12 +1,14 @@
-【完成】Codex：在 `codex/seek-perf@adab7b3d` 完成工作区修复，未提交；未改 2000 ms ceiling、规则、存档/回放格式、内容身份常量或录制夹具。  
-【完成】Node 22.23.4 无浏览器复现 B9 五条完整路线、每条 33 战、按 JSON 字节选最大记录；旧版 `2b434e28` 为 round-34 / 558 ticks / 5215 events / 4171433 B，当前版为 round-32 / 741 ticks / 7240 events / 6040123 B（`scripts/verify-m6-seek-node.cjs:25`、`:52`）。  
-【完成】最终同机各三次 constructor＋seek(endTick)，单位 ms：旧版 **2868.7 / 2417.5 / 2475.5**；修前 **4206.1 / 3683.0 / 3435.0**；修后 **2355.0 / 1895.6 / 1907.5**。修后中位数降低 48.2%，三次均低于旧版三次；本机复现约 1.49 倍回归，未复现 CI 的约 3 倍。  
-【完成】`node --cpu-prof` 定位为完整验证后的二次战斗推进与事件规范编码；v23 路线/强化变化增加了所选战斗工作量，离子火花 statusChanged 2442→4212。该路径未调用 replay-view 投影，也没有逐 tick restore；规则推进、单位复制、规范编码和 GC 占主要采样（`src/simulation/battle-record-validation.ts:181`、`src/replay/playback-session.ts:43`）。  
-【完成】冷验证仅收集每 40 tick 的已有状态，全部事件、终点、hash、结算和历史检查成功后才深冻结返回；PlaybackSession 复用这些检查点，事件比较使用既有等价同步编码器，未跳过验证。已有验证缓存、战中装备命令、原生属性顺序不一致保留原推进路径（`src/simulation/battle-record-validation.ts:126`、`src/replay/playback-session.ts:24`；签名/失败合同 `docs/REPLAY_CONTRACT.md:53`）。  
-【完成】修后单独 seek(endTick) 为 0.858–1.783 ms；12 次 cached seek 最大 93.296 ms。新增测试逐帧核对 741 ticks、终态、完整事件与记录 JSON 字节，并验证冷终点无需再次 step、缓存回退、外部修改隔离、属性顺序及篡改拒绝（`tests/m6-playback-checkpoints.test.ts:46`）。修前/后终态 SHA-256 同为 `f265ef15caf7868410328d7e10bdb4b9b7659d5b4742b1408f9e743ccdb59a79`。  
-【完成】定向共 40 文件 / 6779 项通过：M5 六文件单独运行 6044 项，其余 Playback/replay/combat/epoch 身份相关 34 文件 735 项；最终 Playback 四文件另复验 60 项通过。均 `--maxWorkers=4`，未跑全套或浏览器；`npx tsc --noEmit -p .`、脚本语法和 `git diff --check` 通过。Vitest 用 `--configLoader runner` 避免写入只读 node_modules。  
-【完成】证据位于 `/tmp/cat-seek-perf/`：`node-final/{before,pre,after-final}/timings.json`、对应 record/terminal JSON、`original-final.cpuprofile`、`optimized-last.cpuprofile`、`{m5-replay,cannon,targeted,playback-last,tsc-final}.log`；旧树在 `pre-v23/`、原 multiplayer 树在 `multiplayer-original/`。复测命令：`node scripts/verify-m6-seek-node.cjs --record /tmp/cat-seek-perf/before.record.json --output /tmp/seek-check`；去掉 `--record` 可重新生成全部路线，`--root` 可指定旧树。  
-【未完成】Chromium 的 m6-performance / 浏览器 gate 未运行，按用户要求由用户验收；v23 epoch 源码审计未重录。  
-【需要我决定】无。  
-【风险】Node 冷进程首样本 2355 ms，仍高于 Chromium job 的 2000 ms 数值；Node 达到同机旧版目标不代表浏览器 gate 已通过。simulation 源文件变更使 `docs/evidence/v23-online-rules/{release-audit,input-fixture-audit,battle-start-audit,live-reveal-audit}.json` 的 sourceDigests 失效，未改这些证据或任何内容摘要常量。  
-【下一步】运行原浏览器 gate，确认 firstSeek≤2000 ms、cachedSeek≤100 ms 及生命周期门槛；随后按已授权流程重录上述四份 v23 源码审计。
+【完成】在 `codex/seek-perf-2@1cbbd076` 完成一轮降耗并保留工作区改动，未提交；没有删除断言、提高 timeout/预算、改规则、格式或 digest 常量；原 `scripts/verify-m6-performance.cjs:162` 的 2000 ms ceiling 未动。\
+【完成】`node --cpu-prof` 确认剩余热点：三次构造合计采样中，事件 compare **592.4→173.7 ms**、单位复制 **711.0→530.8 ms**、实验格更新 **379.5→137.4 ms**；最终 `stepCombat` 仍占 **3471.5 ms**，是主要剩余成本（`/tmp/cat-seek-perf-2/profile-summary.json`；各函数包含子调用，不能相加）。\
+【完成】普通有限数据改为完整递归比较，特殊数据仍走原编码器；只读 tick 记录复制与冻结合并、复用已认证不可变子图，保留原生异常与隔离（`src/simulation/battle-record-validation.ts:37`、`src/simulation/combat-static.ts:54`；失败合同 `docs/REPLAY_CONTRACT.md:57`）。\
+【完成】实验格只计算 Family/Experiment；最近目标改为线性选择，移动冷却未就绪时不再计算无用目标；aura 仅在一次刷新内索引来源与目标（`src/simulation/g2-3-state.ts:55`、`src/simulation/s13-augments-p2-combat.ts:76`、`src/simulation/combat-s13.ts:293`、`src/simulation/m8/s13-mechanisms.ts:294`）。\
+【完成】最终同机 Node 22.23.4、同一外部 JSON、串行三次 constructor＋seek(endTick)：修前 **2387.594 / 1904.772 / 1797.408 ms**；修后 **1857.334 / 1582.170 / 1414.051 ms**，中位数下降 **16.9%**；修后 cached seek 最大 **71.278 ms**（`scripts/verify-m6-seek-node.cjs:52`，证据 `final-before/timings.json`、`final-after/timings.json`）。\
+【完成】原脚本五条公开路线均完成 33 战，最大记录仍为 sniper / round-32 / 741 ticks / 7240 events / **6040123 B**；与修前记录及终态逐字节相同，SHA-256 分别为 `c3f8d44e2c43e0d0555458e3a0d33b67dfa876bb426decd76ee3f46a293e3273`、`f265ef15caf7868410328d7e10bdb4b9b7659d5b4742b1408f9e743ccdb59a79`。\
+【完成】新增旧 HEAD 独立生成的全部 742 帧摘要、终态、完整事件和录像字节断言；相同外部记录连续建立两次 PlaybackSession 均完整推进 endTick 次，重新计算 hash 的事件篡改仍拒绝；未新增跨实例/restoreMatch 验证结果缓存（`tests/m6-playback-checkpoints.test.ts:49`、`tests/m6-replay-equality.test.ts:48`、`tests/mp-sim-perf.test.ts:114`）。\
+【完成】定向组 **27 文件 / 696 项**通过，含全部 M6 `.test.ts`、六份 restore-audit 与在线回放生成对照；M5 replay 单独运行 **5 文件 / 4997 项**，cannon 再独立运行 **1047 项**；最后边界复验 **5 文件 / 28 项**通过。均 `--maxWorkers=4`；`npx tsc --noEmit -p .`、`git diff --check` 通过，未提高任何门槛。\
+【完成】已逐项核对全部直接调用点及在线客户端、服务器入口；公开函数签名不变。在线客户端使用 `applyCombatReplayTick`，服务器 PvP/PvE 进入同一战斗实现，未修改界面或服务器目录（[调用清单](SEEK_PERFORMANCE_CALL_SITES.md)）。\
+【完成】原始证据在 `/tmp/cat-seek-perf-2/`：`before-profile/`、`final-profile/` CPU profiles，`final-{before,after}/` timings/record/terminal，`generated-after.log` 五路线记录，`baseline-trajectory.json` 旧 HEAD 摘要及 `targeted-final.log`、`m5-replay-final.log`、`m5-cannon-final.log`、`boundaries-final.log`、`tsc-final.log`。复测：`node scripts/verify-m6-seek-node.cjs --record /tmp/cat-seek-perf-2/before/record.json --output /tmp/seek-recheck`。\
+【未完成】**尚未达到“Node firstSeek 明显低于 1.5 秒”的目标**：最终中位数 1.582 秒、冷进程首样本 1.857 秒，不能宣称已稳定修复 CI gate；按要求没有运行浏览器脚本。\
+【需要我决定】无；没有需要放宽的断言、timeout 或预算。\
+【风险】六个 simulation 修改使 v23 的 `battle-start-audit.json`、`input-fixture-audit.json`、`live-reveal-audit.json`、`release-audit.json` 各六个 `sourceDigests` 失效；完整源文件清单见调用文档末尾，录制证据未改，留给 Claude 重录。\
+【下一步】继续压低固定 tick 战斗推进成本，达到所要求的余量后再验收原 gate；最终源码稳定后由 Claude 重录四份 v23 审计。当前补丁应作为已验证的部分优化，不应标记为性能目标已完成。

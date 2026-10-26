@@ -111,4 +111,15 @@ describe('simulation performance preserves bytes and snapshot ownership', () => 
     expect(first.expansion!.chainTargets).toEqual(['e']);
     expect(first.runtime!.attackCount).toBe(0);
   });
+  it('detaches native fallback roots when they later appear inside another read-only record', () => {
+    const input = unit('p', 'player', 1, 3);
+    const first = copyCombatUnitForTick({ ...input, cell: new Date(1234) as unknown as typeof input.cell });
+    const date = first.cell as unknown as Date;
+    const nested = copyCombatUnitForTick({ ...input, cell: { ...input.cell, date } as typeof input.cell });
+    const copiedDate = (nested.cell as typeof input.cell & { date: Date }).date;
+    expect(copiedDate).toBeInstanceOf(Date);
+    expect(copiedDate).not.toBe(date);
+    copiedDate.setTime(5678);
+    expect(date.getTime()).toBe(1234);
+  });
 });

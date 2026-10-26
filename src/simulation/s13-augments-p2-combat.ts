@@ -3,7 +3,7 @@ import { batch2Target } from './augment-pool-batch2-combat';
  * Sharing reads every donor before writing any recipient, so broadcasts cannot feed each other. */
 import type { CombatOrigin, CombatUnit, CombatState } from './combat-types';
 import type { AbilityContext } from './combat-s13-abilities';
-import { byDistance, enemies, range, type S13Unit } from './combat-s13-state';
+import { enemies, range, type S13Unit } from './combat-s13-state';
 import { readCombatStats } from './combat-s13';
 import { scaleItemSummonHp } from './g2-4b-summons';
 import { hexDistance } from './board';
@@ -75,7 +75,14 @@ export function p2Stoneskin(u: CombatUnit,tick:number):number {
 }
 export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number):S13Unit|undefined {
   const forced=batch2Target(u,units);if(forced)return forced;
-  const candidates=enemies(u,units),normal=byDistance(u,candidates)[0];
+  const candidates=enemies(u,units);
+  // Only the nearest candidate is consumed; preserve distance/id tie-breaking
+  // without sorting a copy of the roster for every unit on every tick.
+  let normal:S13Unit|undefined, distance=Infinity;
+  for (const candidate of candidates) {
+    const next=hexDistance(u.cell,candidate.cell);
+    if (next<distance || next===distance && (!normal || candidate.id<normal.id)) { normal=candidate;distance=next; }
+  }
   if(!p2HasAnomaly(u,'cull-the-weak'))return normal;
   const inRange=candidates.filter(t=>hexDistance(u.cell,t.cell)<=range(u));
   if(tick%(p2Values('cull-the-weak').Period*20)===0)return inRange.sort((a,b)=>a.hp*b.maxHp-b.hp*a.maxHp||(a.id<b.id?-1:a.id>b.id?1:0))[0]??normal;
