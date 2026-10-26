@@ -1139,6 +1139,13 @@
       "currentSha256": "b9edbc4105387db397c1fec6af736e025f8f955f0938436f32ddf82e283b63e2",
       "firstDifferentByte": 697
     },
+    "tests/m8-b8-token-lifecycle.test.ts": {
+      "previousBytes": 15804,
+      "currentBytes": 17428,
+      "previousSha256": "08b961f366424673e835683e4cda8e93494ef1faffa2072c11ab7c3cad77ad27",
+      "currentSha256": "b12f5061fce8b786d2b269474609918c02ac5d6d4a129bf0708b84fbf572bc5c",
+      "firstDifferentByte": 2914
+    },
     "tests/m8-content-equivalence.test.ts": {
       "previousBytes": 4252,
       "currentBytes": 4252,
@@ -1305,6 +1312,14 @@
       "currentSha256": "c2015d34977386934ee270e3c679f53f0b97341028cbba59c258493297b729d3",
       "firstDifferentByte": 9
     },
+    "tests/presentation/hover-card-pin.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3066,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "f676a45d3983143108ec6e34c0ef850f3bfdfb0ad2916a84638150db16f29385",
+      "firstDifferentByte": 0
+    },
     "tests/presentation/overtime-display.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -1386,6 +1401,14 @@
       "previousSha256": "613fdb33f9eb2d2a9129a8c402391a3bee6954b1ead24381f93ca62bb37413e7",
       "currentSha256": "02030feb588f12ae5cdb97b3c3e6d2623798c845aee3607b72f72723966ad51e",
       "firstDifferentByte": 22026
+    },
+    "tests/rendering3d-gold-mines.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5489,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "d04a319af190cc99fe667ac8dcf161e44635504cf4beb56001130e539db225e3",
+      "firstDifferentByte": 0
     },
     "tests/rendering3d-golem-models.test.ts": {
       "previousExists": false,
