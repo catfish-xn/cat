@@ -219,7 +219,7 @@ export function attachTraitCards(scope: HTMLElement, card: HoverCard, membersOf:
   return attachHoverCards(scope, card, '.trait-row[data-trait]', anchor => {
     const traitId = anchor.dataset.trait!, count = Number(anchor.dataset.count ?? 0), members = membersOf(traitId), runtime = runtimeOf(traitId);
     return { key: `trait:${traitId}:${count}:${members.join(',')}:${runtimeText(runtime, true)}`, build: () => traitCardBody(traitId, count, members, runtime) ?? el('div', traitId) };
-  });
+  }, { pin: true });
 }
 
 /** The always-visible column at the top of the left panels; re-rendered with the panel. */
