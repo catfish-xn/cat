@@ -10,6 +10,7 @@ import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
 import { convertedTimelines } from './s13-timelines';
+import { RENDER_PHASE } from './engine/model/enums';
 
 export type LoadFailure = 'missing' | 'invalid' | 'unsupported' | 'closed';
 export class VfxLoadError extends Error {
@@ -157,6 +158,17 @@ export function createVfxLibrary(root: string, reader: VfxReader) {
       const raw = await reader.readJson(vfxUrl(root, index.systems[id])); ensureOpen(); validateSystem(raw);
       const model = readVfxSystem(raw), drawn = drawnEmitters(model, true);
       if (drawn.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
+      // Check the entire child tree before reading assets or publishing a replacement.
+      // Upstream's negative ground order assumes its stage draws earlier. Our opaque
+      // hex tiles use order 0 and the arena grid can be transparent: neither path has
+      // a compatible ground/character pass yet. Keep the complete hand-written cast.
+      // The host has no particle shadow-map pass either; a shadow-only system must
+      // not become a successful but invisible replacement (or leak into colour).
+      for (const { emitter: e } of drawn) {
+        if (e.disabled) continue;
+        if (e.groundLayer || e.renderPhaseOverride === RENDER_PHASE.groundLayer) throw new VfxLoadError('unsupported', 'ground-layer');
+        if (e.renderPhaseOverride === RENDER_PHASE.shadow) throw new VfxLoadError('unsupported', 'shadow-only');
+      }
       const empty = !drawn.some(d => !d.emitter.disabled);
       const samplers = new Map<string, EmitterSamplers>(), geometry = new Map<string, BufferGeometry>(), poses = new Map<string, Pose>();
       for (const { key, emitter: e } of drawn) {

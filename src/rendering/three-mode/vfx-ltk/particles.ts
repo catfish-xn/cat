@@ -86,6 +86,10 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     for (const definition of prepared.drawn) {
       const emitter = definition.emitter;
       if (emitter.disabled) continue;
+      // Simulation may still feed children, but only colour/warp phases get a draw.
+      // In particular, castsShadow alone is not permission to join the colour pass.
+      const layers = drawLayersOf(emitter);
+      if (!layers.length) continue;
       const sources = definition.path ? driver.sources(definition.path) : rootSources;
       const samplers = prepared.samplers.get(definition.key)!;
       const props = { emitter, sources, samplers, rank: definition.rank, hidden: false, room: ROOT_PARTICLES };
@@ -93,7 +97,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       if (drawsTheAttachment(emitter)) {
         const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, options.attachment);
         for (const held of attached) {
-          held.object.layers.disableAll(); for (const layer of drawLayersOf(emitter)) held.object.layers.enable(layer);
+          held.object.layers.disableAll(); for (const layer of layers) held.object.layers.enable(layer);
           draws.push(held); object.add(held.object);
           const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: held.material });
         }
@@ -108,7 +112,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       else if (drawsAsBeam(emitter)) draw = createBeams(props);
       else if (drawsAsProjection(emitter)) draw = createProjections(props);
       if (draw) {
-        draw.object.layers.disableAll(); for (const layer of drawLayersOf(emitter)) draw.object.layers.enable(layer);
+        draw.object.layers.disableAll(); for (const layer of layers) draw.object.layers.enable(layer);
         const phases = drawPhases(emitter); passes.early ||= phases.warpsEarly; passes.late ||= phases.warpsLate; passes.soft ||= fades(emitter);
         draws.push(draw); object.add(draw.object); const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: draw.material });
       }
