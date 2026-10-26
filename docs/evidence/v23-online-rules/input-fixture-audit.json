@@ -104,7 +104,7 @@
     "src/simulation/combat-skill-lines.ts": "f4d0ad24426f392fae085fad0c4b86240c772b17259992b33898ba093f9585c1",
     "src/simulation/combat-static.ts": "eb91072f13b473615024521bc9c7dbb0edf32a3280c401dffd89c28617b5e810",
     "src/simulation/combat-stream-terminal.ts": "4c933b425868e0fb032f01575be01afe116b023220c62c40559abaf42895aca3",
-    "src/simulation/combat-summary.ts": "4b8a4ae4567a975f32ef45c7529d85c460a502aa8d24af8106acd62e1b6c6426",
+    "src/simulation/combat-summary.ts": "35203c097ff09c1a92a982df89a37d58cf14443c001f506ae21a034eceebc93d",
     "src/simulation/combat-tick.ts": "98ff95ffa1d8f042361006eef70a02c1c21207308b9b495b0916045de16ae143",
     "src/simulation/combat-types.ts": "fa988bf636e467fcffb151a836b378aaad80f5957bf5e8399879f10ab5c553bc",
     "src/simulation/combat-v19.ts": "ef5d9f4b57557e3f0b849f8273275181e9f330691a09f0d96237b97e494f74ba",
@@ -503,7 +503,7 @@
       "previousBytes": 43595,
       "currentBytes": 47625,
       "previousSha256": "50ffbfbe03b12721b79300b7f3de8a7b1ff6b2b447fea06c5be292353da5a5f2",
-      "currentSha256": "a6307b973c79e63b69260772c83490aaa6ace1791017570c9dbe6c12c8443c76",
+      "currentSha256": "56120ce65d9a24fa775de97b7b82e661ed9dcaf544bb4c97fad62d4fac25bb92",
       "firstDifferentByte": 136
     },
     "tests/fixtures/v23-online-rules-herald-raw/trajectory.json": {
