@@ -57,6 +57,9 @@ beforeAll(async () => {
     };
   ` }, bundle: true, write: false, format: 'iife', loader: { '.css': 'empty' } });
   bundle = result.outputFiles[0].text;
+});
+// Separate hook: bundling and browser launch each stay within the default hook limit on slow CI runners.
+beforeAll(async () => {
   browser = await chromium.launch({ headless: true, ...(existsSync('/usr/bin/google-chrome') ? { channel: 'chrome' } : {}), args: ['--no-sandbox'] });
   page = await browser.newPage({ viewport: { width: 1600, height: 1200 }, hasTouch: true });
   await page.clock.install();
@@ -88,7 +91,13 @@ async function hold(selector: string, duration = 450, move = 0) {
   const box = await page.locator(selector).first().boundingBox(); if (!box) throw new Error(selector);
   const client = await page.context().newCDPSession(page), x = box.x + box.width / 2, y = box.y + box.height / 2;
   await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  if (move) await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + move, y }] });
+  if (move) {
+    // Touch moves reach the page asynchronously (frame-aligned); wait until the page has seen the pointermove
+    // before advancing the fake clock, or a loaded runner can fire the 450 ms timer first.
+    await page.evaluate(() => { (window as any).__moved = new Promise(resolve => document.addEventListener('pointermove', () => resolve(true), { once: true, capture: true })); });
+    await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + move, y }] });
+    await page.evaluate(() => (window as any).__moved);
+  }
   await page.clock.runFor(duration);
   await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await client.detach();
 }
