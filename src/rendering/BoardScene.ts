@@ -1,5 +1,6 @@
 import { installUnitInspect } from '../presentation/unit-panel-loader';
 import type { UnitPanelData } from '../presentation/unit-panel';
+import { ECONOMY_RULES } from '../simulation/match-rules';
 import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
 import { combatEquipmentDisplay } from '../presentation/battle-equipment';
 import { freeRerollsAvailable } from '../simulation/free-rerolls';
@@ -1386,7 +1387,11 @@ export class BoardScene extends Phaser.Scene {
     const board = this.state.board, fallen = new Set(this.session.combatView?.units.filter(unit => !unit.alive).map(unit => unit.id));
     const bench = new Map(this.state.units.map(unit => [unit.id, unit.location.kind === 'bench' ? unit.location.slot : null]));
     const result = this.session.state.roundResults?.at(-1);
-    return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
+    // A result freezes income before it is paid; entering a later round is the authoritative payment boundary.
+    const paid = [...this.session.state.roundResults].reverse().find(record => record.round < this.session.state.round);
+    const online = this.application instanceof OnlineApplication && this.application.isActive;
+    return { ...(online ? { goldMines: Math.min(ECONOMY_RULES.interestCap, Math.floor(this.session.state.gold / ECONOMY_RULES.interestDivisor)),
+      goldMineIncomeKey: paid ? `round:${paid.round}:${paid.roundId}` : null } : {}), rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
         starLevel: token.getData('starLevel'), ...(token.getData('effectiveStarLevel') === 4 ? { effectiveStarLevel: 4 as const } : {}),
