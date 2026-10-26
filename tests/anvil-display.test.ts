@@ -30,3 +30,18 @@ it('accepts each own portrait from the optional configured root without borrowin
   expect(anvilIconUrl('TFT_ArmoryKeyCompleted')).toBe('https://assets.example.test/ui/Completed.png');
   vi.resetModules();
 });
+it('uses only the matching optional original shop-bar icon; no root or other forge retains the existing UI', async () => {
+  vi.resetModules();
+  const { registerRootUiAssets } = await import('../src/presentation/s13-assets');
+  const { anvilChoiceIconUrl } = await import('../src/presentation/choice-fallback');
+  const { G24_FORGE_POOLS } = await import('../src/simulation/content/g2-4-forges');
+  const choice = (id: keyof typeof G24_FORGE_POOLS) => ({ kind: 'forge', payload: { source: 'anvil-unit' }, offers: G24_FORGE_POOLS[id].slice(0, 4) });
+  expect(anvilChoiceIconUrl(choice('TFT_ArmoryKeyComponent'))).toBeNull();
+  registerRootUiAssets('https://assets.example.test/', { assets: ['Component', 'Completed'].map(kind => ({ kind: 'champion', id: `TFT_ArmoryKey${kind}`, path: `ui/${kind}.png` })) });
+  expect(anvilChoiceIconUrl(choice('TFT_ArmoryKeyComponent'))).toBe('https://assets.example.test/ui/Component.png');
+  expect(anvilChoiceIconUrl(choice('TFT_ArmoryKeyCompleted'))).toBe('https://assets.example.test/ui/Completed.png');
+  expect(anvilChoiceIconUrl(choice('TFT_ArmoryKeyOrnn'))).toBeNull();
+  expect(anvilChoiceIconUrl({ ...choice('TFT_ArmoryKeyComponent'), payload: { source: 'other' } })).toBeNull();
+  expect(anvilChoiceIconUrl({ ...choice('TFT_ArmoryKeyComponent'), offers: [] })).toBeNull();
+  vi.resetModules();
+});
