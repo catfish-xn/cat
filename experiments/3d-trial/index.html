@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>3D 渲染试验</title>
+<link rel="icon" href="data:," />
+<style>
+  html, body { margin: 0; height: 100%; background: #0d1724; color: #e6eef5; font: 14px/1.4 system-ui, "PingFang SC", "Microsoft YaHei", sans-serif; overflow: hidden; }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  .bar { position: absolute; left: 0; top: 0; width: 64px; }
+  .bar .stars { text-align: center; color: #c9d6e2; font-size: 11px; letter-spacing: -1px; text-shadow: 0 1px 2px #000; }
+  .bar .hp, .bar .mp { background: #0b0f14; border: 1px solid #000; }
+  .bar .hp { height: 7px; background-image: repeating-linear-gradient(90deg, transparent 0 9px, #000a 9px 10px); }
+  .bar .mp { height: 3px; margin-top: 1px; }
+  .bar .hp i, .bar .mp i { display: block; height: 100%; }
+  .bar.ally .hp i { background: #3fd65b; }
+  .bar.enemy .hp i { background: #e0473e; }
+  .bar .mp i { background: #4aa3ff; }
+  .bar .stars { color: #d0d8e0; }
+  .bar.ally .stars { color: #e7e7f0; }
+  #panel { position: fixed; left: 12px; top: 12px; background: #0b121bcc; border: 1px solid #2a3a4c; border-radius: 8px; padding: 10px 12px; max-width: 340px; }
+  #panel h1 { font-size: 15px; margin: 0 0 6px; }
+  #panel .row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  button { background: #1d2c3d; color: #e6eef5; border: 1px solid #3a5068; border-radius: 5px; padding: 4px 9px; cursor: pointer; font: inherit; }
+  button.on { background: #2f5a86; border-color: #5c8fc2; }
+  #comparison { color: #9fd2ff; }
+  #vfx-info { font-size: 12px; color: #9fb2c4; margin-top: 6px; }
+  #note { font-size: 12px; color: #9fb2c4; }
+  #missing { position: fixed; inset: 0; display: grid; place-items: center; background: #0d1724; font-size: 16px; }
+  #missing[hidden] { display: none; }
+  body.shot #panel { display: none; }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hud"></div>
+<div id="panel">
+  <h1>3D 渲染试验（S13 14.24）</h1>
+  <div id="note">正在载入素材…</div>
+  <div class="row"><a id="comparison" href="?animation=procedural">对比程序动画</a></div>
+  <div class="row">
+    <button data-unit="ally-jinx" class="on">己方金克丝</button>
+    <button data-unit="ally-vi">己方蔚</button>
+    <button data-unit="enemy-vi">敌方蔚</button>
+    <button data-unit="enemy-jinx">敌方金克丝</button>
+  </div>
+  <div class="row">
+    <button data-anim="idle">待机</button>
+    <button data-anim="move">移动</button>
+    <button data-anim="attack">普攻</button>
+    <button data-anim="cast">施法</button>
+    <button data-anim="death">死亡</button>
+  </div>
+  <div class="row">
+    <button id="vfx-only">只播命中特效</button>
+    <button id="demo">自动演示</button>
+  </div>
+  <div id="vfx-info"></div>
+</div>
+<div id="missing" hidden>缺少素材：在 experiments/3d-trial 里运行 <code>npm run fetch-assets</code></div>
+<script>if (new URLSearchParams(location.search).has('shot')) document.body.classList.add('shot');</script>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
