@@ -142,11 +142,13 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       return prepared;
     }
     async function itemReset() {
-      await reset(); const prepared = await prepareB6Opening(page, '2-5');
-      // Under the v22 augment tiers the first non-placebo 2-1 offer for seed 42 is Crown Guarded; its crownguard is
-      // item-1. The real 2-4 supply component is item-2, the item used by the native item-input tests.
+      // Seed 42's 2-1 gold offer (224-card pool) is Guardbreaker Spirit / Built Different / Dominator Crest; no per-slot
+      // reroll reaches Crown Guarded. Select Guardbreaker Spirit explicitly: its real gloves are item-1. The real 2-4
+      // supply component is item-2, the item used by the native item-input tests.
+      await reset(); const prepared = await prepareB6Opening(page, '2-5', { augment: 'guardbreaker-spirit' });
+      assert.deepEqual(prepared.augments.map(augment => augment.definitionId), ['guardbreaker-spirit']);
       assert.deepEqual(prepared.items.map(item => [item.id, item.location.kind]), [['item-1', 'inventory'], ['item-2', 'inventory']]);
-      assert.equal(prepared.items[0].definitionId, 'crownguard', 'the 2-1 Crown Guarded augment grants item-1');
+      assert.equal(prepared.items[0].definitionId, 'gloves', 'the 2-1 Guardbreaker Spirit augment grants item-1');
       assert.equal(prepared.items[1].definitionId, 'sword', 'real 2-4 supply grants the item used by native item-input tests');
       return prepared;
     }

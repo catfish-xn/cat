@@ -4,7 +4,7 @@ import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {getUnitSellPrice} from '../src/simulation/unit-stats';
-import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
+import {accepted,advanceTerminalRoute,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -66,9 +66,13 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
   ] as const)reject(sold,message,change);
  });
 });
-// The lethal cases share the same full public campaign prefix.
-beforeAll(async () => { await terminalPreparation('loris', 1); });
+// The lethal cases share the same full public campaign prefix to the 4-7 start. It is played one battle per case
+// (no hook replays the whole campaign under CI load); a filtered lethal case plays it in its hook instead.
+describe('B8 lethal PvE public campaign',()=>{
+ for(let round=1;round<24;round++)it(`plays the public terminal campaign through round ${round}`,async()=>{await advanceTerminalRoute(round);});
+});
 describe('B8 live lethal PvE with randomized orbs',()=>{
+ beforeAll(async () => { await terminalPreparation('loris', 1); });
  // Seed 2253's terminal 4-7 after the xp/batch-3 merge: its new augments (blinding-speed) let a lone Loris at (0,7)
 // clear all six razorbeaks, so the two-carrier case keeps Leona there instead (was Loris): it kills the same
 // r01 rod and r02 reforger/gold carriers the pre-merge Loris did, then dies at 3 HP.

@@ -4,8 +4,8 @@
   "sourceDigests": {
     "scripts/record-chest-trial-v23.cjs": "c4cac9c073dffa3b7b76a74da195d93ef9b61e39d3626a332e1f27edfc33360e",
     "tests/fixtures/v23-online-rules-chest-trial.ts": "892873e050247d4148c92e51e05e57ace44312df1e0a6aa11c73d6a87a019f29",
-    "tests/fixtures/b8-public-equipment.ts": "8959cd26b4d087d3f365d849eae0fdd1c4062897863c8b0a9bff6118bf031403",
-    "tests/fixtures/m5/oracle.g2.cjs": "4c1a4d6790fcf2030924e2473abfd7adaf429a6a00468cd5d386cbce12c6bee1"
+    "tests/fixtures/b8-public-equipment.ts": "5d79e2974bb31b9b5e0800e91940bcbc0e39a2563f8f15a8c6a032d693065e8d",
+    "tests/fixtures/m5/oracle.g2.cjs": "3651c2a9ecf26c6e74fbbadcfc7caf8ea48f8518b302eae2a302552c23cd2c43"
   },
   "fixtureBytes": 53535,
   "fixtureSha256": "87b55a70b2bd965c84296fab078d2e4769652bbc5ebd095767178be14f9f97df",
