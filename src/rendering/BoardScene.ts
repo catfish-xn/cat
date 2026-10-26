@@ -1254,10 +1254,11 @@ export class BoardScene extends Phaser.Scene {
     for (const unit of view.units) {
       const drawn = this.views.get(unit.id);
       if (!drawn) continue;
-      const gear = combatEquipmentDisplay(unit.equipment, drawn.equipped, drawn.extras);
+      // No loadout in this frame (offline/legacy): keep the drawn unit, so a settlement upgrade is not overwritten by the battle's copy.
+      if (unit.equipment === undefined) continue;
+      const gear = combatEquipmentDisplay(unit.equipment, [], NO_GEAR_EXTRAS);
       drawn.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
-        gear.equipped, unit.equipment === undefined ? drawn.pendingEquipped : [], gear.extras,
-        unit.effectiveStarLevel ?? unit.starLevel, unit.itemStacks);
+        gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel, unit.itemStacks);
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
