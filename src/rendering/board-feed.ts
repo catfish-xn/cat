@@ -51,6 +51,10 @@ export interface BoardFrame {
   readonly hit?: BoardHit | null;
   /** My own 征服层数 and 微光 (owner-only, like the trait column's counters; never another seat's), for the 3D chest and flask. */
   readonly mechanics?: BoardMechanics;
+  /** Online owner-only banked-gold light count; absent offline and before my first private view. Display only. */
+  readonly goldMines?: number;
+  /** Latest settled round whose deferred income has reached my bank (next round entered); null before any payment. */
+  readonly goldMineIncomeKey?: string | null;
 }
 /** Absent parts are not in play (trait not fielded and nothing gathered yet). */
 export interface BoardMechanics {
