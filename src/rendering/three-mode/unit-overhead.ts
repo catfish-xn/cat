@@ -20,7 +20,7 @@ export interface UnitOverhead {
   /** Scene child: the host moves it to the piece's head each frame. Its origin is the bar's bottom edge. */
   readonly object: Group;
   /** Meters show while `meters` is given; items whenever the piece wears any. */
-  set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items']): void;
+  set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items'], enforcerWanted?: boolean): void;
   /** A cast's charge: the mana bar shows full and bright until it is switched off, then the meters as they are. */
   flashMana(on: boolean): void;
   /** True when something is drawn (the host skips placing an empty one). */
@@ -46,6 +46,15 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   object.add(bar);
   const icons = new Group(); icons.name = 'render3d-overhead-items';
   object.add(icons);
+  const wantedCanvas = typeof document === 'undefined' ? null : document.createElement('canvas');
+  if (wantedCanvas) { wantedCanvas.width = 128; wantedCanvas.height = 40; }
+  const wantedTexture = wantedCanvas ? new CanvasTexture(wantedCanvas) : null;
+  if (wantedTexture) { wantedTexture.colorSpace = SRGBColorSpace; wantedTexture.minFilter = LinearFilter; wantedTexture.generateMipmaps = false; }
+  const wantedMaterial = new SpriteMaterial({ map: wantedTexture, depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
+  const wanted = new Sprite(wantedMaterial); wanted.name = 'render3d-enforcer-wanted'; wanted.scale.set(42, 14, 1);
+  wanted.renderOrder = RENDER_ORDER; wanted.visible = false; object.add(wanted);
+  const label = wantedCanvas?.getContext('2d');
+  if (label?.fillText) { label.fillStyle = '#291b0a'; label.fillRect(0, 0, 128, 40); label.fillStyle = '#ffd84d'; label.font = 'bold 30px sans-serif'; label.textAlign = 'center'; label.fillText('通缉', 64, 31); wantedTexture!.needsUpdate = true; }
   let barKey = '', itemKey = '', disposed = false, flashing = false;
   let shown: { team: BoardPiece['team']; meters: BoardMeters } | null = null;
 
@@ -87,8 +96,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
 
   return {
     object,
-    get drawn() { return bar.visible || icons.children.length > 0; },
-    set(team, meters, items) {
+    get drawn() { return bar.visible || wanted.visible || icons.children.length > 0; },
+    set(team, meters, items, enforcerWanted = false) {
       if (disposed) return;
       const nextBar = meters ? `${team}:${meters.hp}/${meters.maxHp}:${meters.mana}/${meters.maxMana}:${meters.shield}` : '';
       shown = meters ? { team, meters } : null;
@@ -97,6 +106,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       if (nextItems !== itemKey) { itemKey = nextItems; placeItems(items ?? []); }
       // Icons sit above the bar while it shows, in its place otherwise.
       icons.position.y = bar.visible ? BAR_HEIGHT + ITEM_GAP : 0;
+      wanted.visible = enforcerWanted && Boolean(meters);
+      wanted.position.y = icons.position.y + (icons.children.length ? ITEM_SIZE + ITEM_GAP : 0) + 8;
     },
     flashMana(on) {
       if (disposed || flashing === on) return;
@@ -108,7 +119,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       disposed = true;
       for (const sprite of icons.children as Sprite[]) sprite.material.dispose();
       icons.clear(); object.removeFromParent(); object.clear();
-      barMaterial.dispose(); texture?.dispose();
+      barMaterial.dispose(); texture?.dispose(); wantedMaterial.dispose(); wantedTexture?.dispose();
     },
   };
 }

@@ -25,6 +25,8 @@ export interface BoardPiece {
   readonly alive: boolean;
   /** The 2D combat meters while BoardScene draws them (a shown combat, alive); absent otherwise. */
   readonly meters?: BoardMeters;
+  /** Server-projected Enforcer wanted target; display only. */
+  readonly enforcerWanted?: boolean;
   /** Worn items in slot order, then this round's temporary (窃贼手套) items, with the 2D icon URL (null when there is none); absent when it has none. */
   readonly items?: readonly { readonly id: string; readonly icon: string | null }[];
   /** Crowd control on it in the shown combat (presentation/control-display.ts): 'airborne' is a knock-up; absent when none. */

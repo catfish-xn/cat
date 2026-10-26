@@ -1,3 +1,4 @@
+import { unitModelId } from './unit-model';
 /**
  * The 3D chunk's MountRenderer3d. The file keeps its original name because three-loader.ts imports it and
  * tests/rendering3d-mode.test.ts mocks that path; it is no longer only a placeholder.
@@ -162,7 +163,7 @@ let itemIconFor: (id: string) => string | null = () => null;
 export function useItemIcon(next: (id: string) => string | null): void { itemIconFor = next; }
 let championIconFor: (id: string) => string | null = () => null;
 /**
- * v22 anvils (锻造器) are bench units without a model or stars: their icon (championIconFor) stands in. The rules' isAnvil
+ * Anvils (锻造器) are bench units without stars; their own icon stands in until their optional model loads. The rules' isAnvil
  * is injected by the 2D loader so this chunk imports nothing from the rules.
  */
 let isAnvilPiece: (definitionId: string) => boolean = () => false;
@@ -626,7 +627,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (icon) {
       pawn.name = `render3d-fallback-${definitionId}`;
       const material = own(new SpriteMaterial({ color: '#ffffff' })), badge = new Sprite(material);
-      // v22 anvil: no model exists, so its client icon stands on the cell in place of the pawn.
+      // Anvil icon stands in while its optional model is unavailable or still loading.
       badge.position.y = anvil ? 30 : 42; badge.scale.set(anvil ? 50 : 38, anvil ? 50 : 38, 1); badge.visible = false; pawn.add(badge);
       void overheadContext.itemTexture(icon).then(texture => {
         if (!texture || closed) return;
@@ -679,8 +680,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
-    if (!loadModel || isAnvilPiece(view.definitionId)) return;
-    const definitionId = view.definitionId;
+    const definitionId = unitModelId(view.definitionId, isAnvilPiece(view.definitionId));
+    if (!loadModel || !definitionId) return;
     void loadModel(definitionId).then(lease => {
       if (view.disposed || view.definitionId !== definitionId) { lease.release(); return; }
       cancelLunge(view); setLiftOffset(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
@@ -1026,7 +1027,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         view.definitionId = piece.definitionId; view.team = piece.team; view.ring.material = ringMaterial[piece.team]; attachBody(view);
       }
       syncStars(view, piece);
-      view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items);
+      view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted);
       setControl(view, frame.fighting && piece.alive ? piece.control : null);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {

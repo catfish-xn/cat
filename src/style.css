@@ -1541,3 +1541,13 @@ body[data-online]:has(> .render3d-layer) .fullscreen-toggle { right: auto; left:
   body[data-online]:has(> .render3d-layer) .shop-dock .shop-odds { max-width: 100%; }
   body[data-online]:has(> .render3d-layer) .fullscreen-toggle { left: auto; right: 8px; bottom: calc(var(--online-dock-h) + 16px); }
 }
+
+/* Online anvil armory: four equal item cards replace the shop row, with the server's clock above. */
+body[data-online] .shop-dock:has([data-armory="anvil"]) .touch-shop { grid-column: 1 / -1; grid-row: 2 / -1; }
+body[data-online] .shop-dock:has([data-armory="anvil"]) :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"], [data-debug="shop-lock"], [data-debug="mobile:sell"]) { display: none; }
+body[data-online] .shop-dock [data-armory="anvil"] .shop-card { min-width: 44px; min-height: 44px; gap: 6px; }
+body[data-online] .shop-dock [data-armory="anvil"] .offer-name { white-space: normal; overflow-wrap: anywhere; text-align: center; }
+body[data-online] .shop-dock[data-anvil-choice] { grid-template-rows: 44px minmax(0, 1fr) minmax(0, 1fr); }
+body[data-online] .shop-dock[data-anvil-choice] .shop-choice-toggle { min-width: 44px; min-height: 44px; }
+body[data-online] .shop-dock [data-armory="anvil"] .shop-choice-bar { max-width: 100%; overflow: visible; }
+body[data-online] .shop-dock [data-armory="anvil"] .choice-timeout { display: none; }

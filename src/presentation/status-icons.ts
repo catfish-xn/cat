@@ -11,7 +11,7 @@ import { readUnitStatusRows, statusBadge } from './combat-status';
 import type { ViewUnitStatuses } from './control-display';
 import { THEME, toNumber } from './theme';
 
-export type StatusIconKind = StatusKind | CombatActivity['kind'] | 'shield';
+export type StatusIconKind = StatusKind | CombatActivity['kind'] | 'shield' | 'enforcer-wanted';
 export interface StatusIcon { readonly kind: StatusIconKind; readonly harmful: boolean; readonly badge: string }
 
 /** Icons per piece; harmful first, the rest are still listed in the unit panel. */
@@ -31,7 +31,9 @@ export const statusIconY = (pieceY: number): number => pieceY + STATUS_ICON_Y - 
  */
 export function statusIcons(runtime: CombatState | null, unit: DisplayUnit | ViewUnitStatuses): StatusIcon[] {
   if (!unit.alive) return [];
-  const harmful: StatusIcon[] = [], beneficial: StatusIcon[] = [], seen = new Set<string>();
+  const wanted = (unit as { readonly enforcerWanted?: boolean }).enforcerWanted === true;
+  const harmful: StatusIcon[] = wanted ? [{ kind: 'enforcer-wanted', harmful: true, badge: '缉' }] : [];
+  const beneficial: StatusIcon[] = [], seen = new Set<string>();
   const rows = runtime ? readUnitStatusRows(runtime, unit.id)
     : ((unit as ViewUnitStatuses).statuses ?? []).filter(status => status.kind in ICONS)
       .map(status => ({ kind: status.kind as StatusIconKind, harmful: status.harmful === true, badge: statusBadge(status.kind), state: 'effective' as const }));
@@ -86,6 +88,7 @@ const ICONS: Readonly<Record<StatusIconKind, readonly Shape[]>> = {
   'damage-reduction': [{ path: SHIELD, closed: true, fill: 0x7fb2e6 }],
   channel: [{ circle: [0, 0, 0.68], stroke: 0xc5a0ff, width: 0.22 }, { circle: [0, 0, 0.26], fill: 0xc5a0ff }],
   redirect: [{ circle: [-0.38, 0, 0.36], stroke: 0x68ddd0, width: 0.22 }, { circle: [0.38, 0, 0.36], stroke: 0x68ddd0, width: 0.22 }],
+  'enforcer-wanted': [{ circle: [0, 0, 0.65], stroke: 0xffd84d, width: 0.2 }, { path: [-0.95, 0, 0.95, 0, 0, 0, 0, -0.95, 0, 0.95], stroke: 0xffd84d, width: 0.2 }],
   shield: [{ path: SHIELD, closed: true, fill: toNumber(THEME.color.shield) }],
 };
 

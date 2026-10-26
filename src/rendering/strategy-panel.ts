@@ -1370,6 +1370,7 @@ export class StrategyPanel {
   private renderShop(state: MatchState, ready: boolean): void {
     if (this.armoryTimer != null) { globalThis.clearInterval(this.armoryTimer); this.armoryTimer = null; }
     const choice = state.pendingChoice, token = choice ? `${choice.choiceId}:${choice.generation}` : '';
+    this.shopDock?.toggleAttribute('data-anvil-choice', Boolean(choice && isAnvilArmory(choice)));
     if (choice && isShopChoice(choice) && !isOnlineSpectating()) {
       if (this.shopChoiceAway !== token) { this.renderShopChoice(choice, token); return; }
     } else this.shopChoiceAway = '';
@@ -1425,6 +1426,10 @@ export class StrategyPanel {
     const extras = readChoiceExtras(choice), title = extras.title ?? '选择', online = isOnline();
     const section = element('section', '', 'shop-panel shop-choice'), cards = element('div', '', 'touch-shop');
     section.dataset.choiceSource = choice.kind;
+    if (isAnvilArmory(choice)) {
+      section.dataset.armory = 'anvil';
+      cards.style.gridTemplateColumns = `repeat(${choice.offers.length}, minmax(0, 1fr))`;
+    }
     const fallback = online ? timeoutOption(choice) : undefined;
     const answer = (id: string) => {
       this.shopChoiceQuietUntil = performance.now() + CHOICE_POINTER_QUIET_MS;
@@ -1437,9 +1442,10 @@ export class StrategyPanel {
       const offer = genericOffer(id, extras);
       const card = this.genericOfferButton(choice, offer, id === fallback, () => answer(id));
       card.classList.add('shop-card', 'shop-offer');
+      if (isAnvilArmory(choice)) card.querySelector('.offer-desc')?.remove();
       // Shop-card style: the name alone, the price as its own gold line (the tooltip keeps the full label).
       if (offer.price !== undefined) { card.querySelector('.offer-name')!.textContent = offer.name; card.append(element('span', offer.price ? `${offer.price} 金币` : '免费', 'offer-price')); }
-      if (offer.iconUrl) card.insertAdjacentHTML('afterbegin', `<img class="offer-icon" src="${offer.iconUrl}" alt="" width="40" height="40">`);
+      if (offer.iconUrl && !card.querySelector('.item-mark, .augment-icon')) card.insertAdjacentHTML('afterbegin', `<img class="offer-icon" src="${offer.iconUrl}" alt="" width="40" height="40">`);
       cards.append(card);
     }
     if (fallback) bar.append(element('span', fallback === SKIP_OPTION ? '倒计时结束自动保留' : `倒计时结束自动选「${genericOffer(fallback, extras).name}」`, 'choice-timeout'));

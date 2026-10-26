@@ -8,7 +8,7 @@ export function annotate(id: string, text: string): string {
   if (id === 'family') text += ' 家人5：16项等权随机任务；PvP按阶段推进，每战最多完成一次，余量结转；奖励以可部分领取的法球发放。训练假人替代：10金（魔改）。';
   if (id === 'machine-herald') text += ' 额外属性1:1转法强为魔改约定。';
   if (id === 'scrap') text += ' 项目约定：6档起每件基础装备优先临时合成该弈子推荐装备（客户端顺序）里首个含此组件的合法成装，没有则按对局种子等权抽取，金铲铲和金锅锅不转换；9档再把这些临时成装换成对应光明版，没有光明版的保持原样；只在本场战斗有效，护盾计数不变。';
-  if (id === 'enforcer') text += ' 项目约定：10档开战时敌方英雄身上除纹章外的装备本场全部失效（非英雄单位不受影响），装备不转给执法官，战后原样留在原位。';
+  if (id === 'enforcer') text += ' 开战时通缉最大生命值最高的敌人，头顶通缉标记表示该单位被执法官通缉；被通缉目标阵亡时，执法官们每个目标获得30%攻击速度。标记只表示通缉，不表示眩晕或持续伤害。 项目约定：10档开战时敌方英雄身上除纹章外的装备本场全部失效（非英雄单位不受影响），装备不转给执法官，战后原样留在原位。';
   if (id === 'firelight') text += ' 魔改执行：每 6 秒冲刺，1 秒窗口内无限射程，攻速 +350%（工程取值），按实际承伤回复，撤离到 2 格内落点。';
   if (id === 'quickstriker') text += ' 移速 ×1.5；4 档当前目标阵亡后下一 tick 冲刺至新目标旁合法格（魔改执行）。';
   // Team-ups need the augment plus both named champions on the board; follow-ups land one tick later (project timing).
