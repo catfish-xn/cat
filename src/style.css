@@ -1130,8 +1130,12 @@ body[data-online] > .render3d-layer .render3d-bar { top: auto; left: auto; right
 body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .touch-shop:has(> :nth-child(3):last-child) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .shop-offer { min-width: 44px; min-height: 44px; }
-body[data-online] .shop-dock:has(.shop-choice[data-choice-source="armory"]) { min-height: 156px; grid-template-rows: 44px minmax(0, 1fr) minmax(0, 1fr); }
+body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .shop-offer { min-width: 44px; min-height: 44px; gap: 1px; }
+/* Icon, name, two description lines and the price must fit the card: nothing clipped at either edge. */
+body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .shop-offer :is(.offer-icon, .item-mark) { width: 24px !important; height: 24px !important; }
+body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .shop-offer :is(.offer-desc, .market-line) {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; line-height: 1.25; }
+body[data-online] .shop-dock:has(.shop-choice[data-choice-source="armory"]) { min-height: 168px; grid-template-rows: 44px minmax(0, 1fr) minmax(0, 1fr); }
 body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .shop-choice-toggle { min-width: 44px; min-height: 44px; }
 .shop-offer :is(.offer-icon, .item-mark) { width: 36px !important; height: 36px !important; flex: none; border-radius: 6px; }
 .shop-offer :is(.offer-name, .market-name) { font-size: 13px; color: #fff3d6; }

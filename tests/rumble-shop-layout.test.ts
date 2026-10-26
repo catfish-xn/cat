@@ -57,6 +57,8 @@ for (const width of [1440, 1920]) it(`distributes online 3D Rumble choices at ${
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
   }
+  // Icon, name, description and price fit inside each card (nothing clipped at the top or bottom).
+  for (const card of await cards.all()) expect(await card.evaluate(node => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `${shots}/rumble-after-${width}.png` });
   await cards.nth(1).click();
   expect(await page.evaluate(() => (window as any).__picked)).toEqual(['fixture-rumble', 7, 'petricite-rod']);
