@@ -1,4 +1,6 @@
 import { AUGMENT_POOL_TEXT } from '../src/presentation/augment-pool-text';
+import { RESEARCH_FILE } from './augment-pool-source-expectations';
+import { existsSync } from 'node:fs';
 import { RULES_GAP_MANIFEST, ARCHIVED_AUGMENT_DEFINITIONS } from '../scripts/augment-content-archive';
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
@@ -42,8 +44,8 @@ function advance(s:MatchState):MatchState {
  s=resolveM5Choices(s);return resolveM5Choices(accept(nextRound(s,s.round) as any).state);
 }
 
-it('the eight batch rows carry their 14.24 zh_cn name, tier, description and values and are registered in the offer pool', ()=>{
- const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;description_en_us:string;tier:number;effects:Record<string,number>}[];
+it.skipIf(!existsSync(RESEARCH_FILE))('the eight batch rows carry their 14.24 zh_cn name, tier, description and values and are registered in the offer pool', ()=>{
+ const research=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;description_en_us:string;tier:number;effects:Record<string,number>}[];
  expect(Object.keys(AUGMENT_BATCH3_XP).sort()).toEqual(['epoch','epoch-plus','kingslayer','level-up','patient-study','risky-moves','shopping-spree','upward-mobility']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH3_XP)){
   const r=research.find(x=>x.apiName===row.apiName)!;
@@ -231,8 +233,8 @@ it('Risky Moves with Upward Mobility: entry level-ups heal before the loss, late
  expect(explainedHp(prior,{...prior,playerHp:40})).toBe(60);
  expect(explainedHp({...prior,playerHp:10},{...s,playerHp:1})).toBe(1);
 });
-it('offer nodes follow the 14.24 stage tags: {d02ae323}/{d12ae4b6}/{d22ae649} mean not at 2-1/3-2/4-2; Risky Moves only at 2-1', ()=>{
- const research=JSON.parse(readFileSync('/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json','utf8')) as {apiName:string;item_tags_raw:string[]}[];
+it.skipIf(!existsSync(RESEARCH_FILE))('offer nodes follow the 14.24 stage tags: {d02ae323}/{d12ae4b6}/{d22ae649} mean not at 2-1/3-2/4-2; Risky Moves only at 2-1', ()=>{
+ const research=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')) as {apiName:string;item_tags_raw:string[]}[];
  const tag:Record<string,string>={'{d02ae323}':'2-1','{d12ae4b6}':'3-2','{d22ae649}':'4-2'};
  // The same reading reproduces the patch-note ban already in the rules: Black Rose crest/crown never at 2-1.
  for(const api of ['TFT13_Augment_CabalCrest','TFT13_Augment_CabalCrown'])expect(research.find(r=>r.apiName===api)!.item_tags_raw.filter(t=>tag[t]).map(t=>tag[t])).toEqual(['2-1']);
