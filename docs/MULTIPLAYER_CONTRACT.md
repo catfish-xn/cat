@@ -1429,7 +1429,7 @@ interface UnitBattleSummary {
 
 - damageDealt：packetDamage 的 hpDamage+absorbed 按 sourceId 求和；damageTaken：同一和按 targetId 求和。shieldAbsorbed 单列其中 absorbed，不计护盾授予、衰减、过期或清理。
 - healingDone：heal.shares.actual 按 sourceId 求和；healingReceived：heal.actual 按 targetId 求和，不计 overheal/requested，不把全部治疗归给第一条来源。
-- kills：kill 事件按 sourceId 计数，不重复统计 death/killingPacket。alive：terminal 的单位 alive，不由伤害推测。
+- kills：kill 事件按 sourceId 计数，不重复统计 death/killingPacket。alive：terminal 的单位 alive，不由伤害推测；开场召唤物已离场、terminal 不再包含该 ID 时为 false，仍保留该行和已发生的贡献。在线排行把已播放前缀及当前视图作为统计边界时，沿用同一约定（2026-10-27，第 5 阶段离场回归）。这只是只读显示汇总，不新增死亡事件或改变战斗结算。
 - unitUpdated/关键帧不重复累计统计量。没有本场单位行的外部来源不虚构单位行。镜像席不可结算不影响完整战斗展示。
 
 `src/presentation/battle-ranking.ts` 应改用此函数作为本场排行口径；治疗主列用 healingDone，受治疗提示用 healingReceived，跨场累计展示由界面负责。B 视角只交换单位队伍，所有 ID/统计量不变。本包不改服务器投影与界面接线。字节变化见 [G5 验收证据](evidence/g5/REPORT.md)。

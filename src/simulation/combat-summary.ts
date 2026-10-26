@@ -19,7 +19,8 @@ export function summarizeBattle(replay: CombatReplay): readonly UnitBattleSummar
   const terminal = new Map(replay.terminal.units.map(unit => [unit.id, unit]));
   const rows = replay.initial.units.map(unit => ({ unitId: unit.id, definitionId: unit.definitionId,
     team: unit.team, starLevel: unit.starLevel, damageDealt: 0, damageTaken: 0, shieldAbsorbed: 0,
-    healingDone: 0, healingReceived: 0, kills: 0, alive: terminal.get(unit.id)!.alive }));
+    // Removed summons keep their earned totals, but are absent from the current/terminal roster.
+    healingDone: 0, healingReceived: 0, kills: 0, alive: terminal.get(unit.id)?.alive ?? false }));
   const units = new Map(rows.map(row => [row.unitId, row]));
   for (const frame of replay.ticks) for (const event of frame.events) {
     if (event.type === 'packetDamage') {
