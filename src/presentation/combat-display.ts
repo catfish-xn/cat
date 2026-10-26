@@ -55,7 +55,7 @@ export function asDisplayEvents(events: readonly SceneCombatEvent[]): DisplayCom
 }
 
 /** What the board needs of a unit; a CombatViewUnit and an engine CombatUnit both satisfy it. */
-export type DisplayUnit = Pick<CombatViewUnit, 'id' | 'definitionId' | 'team' | 'starLevel' | 'hp' | 'maxHp' | 'mana' | 'maxMana' | 'shield' | 'alive' | 'targetId' | 'cell' | 'attackRange'>;
+export type DisplayUnit = Pick<CombatViewUnit, 'id' | 'definitionId' | 'team' | 'starLevel' | 'hp' | 'maxHp' | 'mana' | 'maxMana' | 'shield' | 'alive' | 'targetId' | 'cell' | 'attackRange'> & Pick<CombatViewUnit, 'enforcerWanted' | 'itemStacks'>;
 export interface DisplayCombat { readonly units: readonly DisplayUnit[] }
 
 /** Display-only tally of one battle from view events (online stats): damage and absorption by the event's own numbers. */

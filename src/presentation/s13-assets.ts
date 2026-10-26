@@ -7,6 +7,7 @@ import type Phaser from 'phaser';
 import { S13_ASSETS, type S13Asset } from './s13-asset-manifest';
 import { heroEmblemSvg } from './hero-identity';
 import { g23ChampionAssets, g23IconUrl } from './g23-display';
+import { EMBLEM_ITEMS } from '../simulation/content/emblems';
 import { neutralPortrait, neutralPortraitAssets, neutralPortraitPath } from './s13-neutral-assets';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
@@ -50,7 +51,10 @@ export function s13AssetUrl(kind: S13Asset['kind'], id: string): string | null {
   if (root) return root;
   const neutral = kind === 'champion' ? neutralPortrait(id) : undefined;
   // G2-3 icons live in their own manifest keyed by apiName (s13-g23-manifest.ts); monsters in s13-neutral-assets.ts.
-  return neutral ? `${BASE}${neutralPortraitPath(neutral)}` : g23IconUrl(kind, id);
+  const url = neutral ? `${BASE}${neutralPortraitPath(neutral)}` : g23IconUrl(kind, id);
+  // Emblems have no bundled item icon (playtest 10-25: 魔像训练师's golem showed three blank squares): their trait's icon.
+  const emblemTrait = kind === 'item' && !url ? (Object.hasOwn(EMBLEM_ITEMS, id) ? EMBLEM_ITEMS[id]!.emblemTrait : undefined) : undefined;
+  return emblemTrait ? s13AssetUrl('trait', TRAIT_API_NAMES[emblemTrait] ?? emblemTrait) : url;
 }
 /** Every portrait by content id: the generated manifest, G2-3 heroes/summons present in content, neutral monsters, then the asset root's. */
 const championAssets = (): readonly { readonly id: string; readonly url: string }[] => [
