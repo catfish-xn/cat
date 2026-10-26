@@ -61,7 +61,7 @@
     "src/simulation/b8-restore.ts": "de9efbe1c9da077186d91ee0b7f1f5d107e1042bd60312813536349d02baf61f",
     "src/simulation/battle-equipment.ts": "7c00a2c20cf6aeab7c540d97e22f7a1270e72703d5398c3bdd2557e09bc32b22",
     "src/simulation/battle-input-log.ts": "33b5e48d58c69c294f1a0f7c7426905dac536a2243ce711efbfc996033984fcd",
-    "src/simulation/battle-record-validation.ts": "80f2580a2bb74eaea2c0c7cdc5035ab762f36f0594f7c25083c56977e7d33eef",
+    "src/simulation/battle-record-validation.ts": "b77bb600eed83d776afd7ac17b5b8b5695c195433fb8827400bed7d4d5e0f843",
     "src/simulation/board.ts": "7712e502a393e6dd54340dabb2738907775f14288f38ec60a568b4be12bfe77c",
     "src/simulation/bot/formation.ts": "d6e7405620f95d18d20770a4d05d378a64c2ad1deb10d4d5a9ca671ce30d5435",
     "src/simulation/bot/index.ts": "c87e4ba3fcdb3d4332c3228c4207df0480adc5edef3d36d08c5338f43e061744",
@@ -503,7 +503,7 @@
       "previousBytes": 43595,
       "currentBytes": 47625,
       "previousSha256": "50ffbfbe03b12721b79300b7f3de8a7b1ff6b2b447fea06c5be292353da5a5f2",
-      "currentSha256": "3a25f5193bac4a9d22810c28670e5d7501369474f651d65fb5bd6c3d7333be22",
+      "currentSha256": "a6307b973c79e63b69260772c83490aaa6ace1791017570c9dbe6c12c8443c76",
       "firstDifferentByte": 136
     },
     "tests/fixtures/v23-online-rules-herald-raw/trajectory.json": {

@@ -731,7 +731,7 @@
       "previousBytes": 0,
       "currentBytes": 47625,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "3a25f5193bac4a9d22810c28670e5d7501369474f651d65fb5bd6c3d7333be22",
+      "currentSha256": "a6307b973c79e63b69260772c83490aaa6ace1791017570c9dbe6c12c8443c76",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v23-online-rules-herald-raw/quicksilver.json": {
@@ -1005,6 +1005,14 @@
       "previousSha256": "c0209804eb3ec79b6e554dbfebcc63f9ecd0f6477a86b535a246131f9a1a6783",
       "currentSha256": "cd32bbdaed5922cf760519b96ee78def79dca13582134907927f47d7fa0dfe07",
       "firstDifferentByte": 2486
+    },
+    "tests/m6-playback-checkpoints.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6373,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "32d49c003bdc9277cd69e4289d4f1b69bdfe0e41004d027d03023f74b212ca74",
+      "firstDifferentByte": 0
     },
     "tests/m8-ability-contracts.test.ts": {
       "previousBytes": 8538,
