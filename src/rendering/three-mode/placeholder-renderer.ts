@@ -535,6 +535,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     });
     return best;
   };
+  // Board geometry has a shorter lifetime than the renderer (scouting/arena/layout changes).
+  // Keep it out of `owned`, which deliberately retains shared resources until unmount.
+  const boardOwned: { dispose(): void }[] = [];
+  const ownBoard = <T extends { dispose(): void }>(resource: T): T => { boardOwned.push(resource); return resource; };
+  const clearBoard = () => {
+    boardGroup.clear();
+    for (const resource of boardOwned) resource.dispose();
+    boardOwned.length = 0;
+  };
   const buildBoard = (frame: BoardFrame) => {
     lastFrame = frame;
     arena?.place(frame);
@@ -543,13 +552,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (key === boardKey) return;
     boardKey = key;
     benchSlots = overlay && boardEntry ? arenaBench(boardEntry.alignment, frame) : null;
-    boardGroup.clear();
-    const tile = own(new CylinderGeometry(frame.hexRadius * 0.95, frame.hexRadius * 0.95, 6, 6)); // six segments start at +z: pointy-top
+    clearBoard();
+    const tile = ownBoard(new CylinderGeometry(frame.hexRadius * 0.95, frame.hexRadius * 0.95, 6, 6)); // six segments start at +z: pointy-top
     // Over the arena the tiles only mark the cells (thin, translucent, above its floor); without it they are the board.
     const tileLook = (color: string) => overlay
       ? { color, roughness: 0.85, transparent: true, opacity: 0.22, depthWrite: false } : { color, roughness: 0.85 };
-    const own0 = own(new MeshStandardMaterial(tileLook('#2d5c7a')));
-    const foe = own(new MeshStandardMaterial(tileLook('#5a3a48')));
+    const own0 = ownBoard(new MeshStandardMaterial(tileLook('#2d5c7a')));
+    const foe = ownBoard(new MeshStandardMaterial(tileLook('#5a3a48')));
     const grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
     for (let row = 0; row < frame.rows; row++) for (let col = 0; col < frame.columns; col++) {
       const mesh = new Mesh(tile, row < frame.rows / 2 ? foe : own0);
@@ -558,7 +567,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       boardGroup.add(mesh);
     }
     // The arena has its own bench strip; the slot boxes are only drawn on the procedural board.
-    const slot = own(new BoxGeometry(48, 4, 56)), slotMaterial = own(new MeshStandardMaterial({ color: '#25313d', roughness: 0.9 }));
+    const slot = ownBoard(new BoxGeometry(48, 4, 56)), slotMaterial = ownBoard(new MeshStandardMaterial({ color: '#25313d', roughness: 0.9 }));
     for (const point of overlay ? [] : frame.bench) {
       const mesh = new Mesh(slot, slotMaterial);
       mesh.position.set(point.x, -2, point.y);
@@ -567,7 +576,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Over the arena's own bench cells: a faint square per cell (as the hexes above are marked), sized to the cell spacing.
     if (benchSlots && benchSlots.length > 1) {
       const side = Math.hypot(benchSlots[1]!.x - benchSlots[0]!.x, benchSlots[1]!.z - benchSlots[0]!.z) * BENCH_CELL_FILL;
-      const square = own(new BoxGeometry(side, 1.2, side)), squareMaterial = own(new MeshStandardMaterial(tileLook('#2d5c7a')));
+      const square = ownBoard(new BoxGeometry(side, 1.2, side)), squareMaterial = ownBoard(new MeshStandardMaterial(tileLook('#2d5c7a')));
       for (const point of benchSlots) {
         const mesh = new Mesh(square, squareMaterial);
         mesh.position.set(point.x, point.y + 1, point.z);
@@ -784,7 +793,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.rise = false; view.mixer.apply(view.state.spawn());
   };
   const removePiece = (view: PieceView) => {
-    cancelLunge(view); view.disposed = true; held.delete(view); view.halo?.dispose(); view.halo = null;
+    cancelLunge(view); view.disposed = true; held.delete(view); holds.delete(view); view.halo?.dispose(); view.halo = null;
     view.mixer?.dispose(); view.lease?.release(); view.stars?.dispose(); view.stars = null; view.overhead.dispose();
     view.root.removeFromParent();
   };
@@ -1503,11 +1512,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
 
   // Opt-in inspection hook (?debug3d) for checking live action effects in a browser.
   // Guarded: unit tests mount this renderer without a `location` global.
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = { scene, camera, live, pieces, tabletop, traitProps, stage, scout };
+  const debug = { scene, camera, renderer, live, pieces, tabletop, traitProps, stage, scout };
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug3d')) (window as unknown as { __render3d?: unknown }).__render3d = debug;
   const renderer3d: Renderer3d = {
     status: models.status, detail: models.detail, resize,
     dispose() {
-      closed = true; cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
+      closed = true;
+      if (typeof window !== 'undefined' && (window as unknown as { __render3d?: unknown }).__render3d === debug) delete (window as unknown as { __render3d?: unknown }).__render3d;
+      cancelAnimationFrame(frameId); unsubscribe(); fpsLabel?.remove();
       if (dragging) feed?.controls()?.dragCancel();
       feed?.controls()?.hover(null); endDrag();
       for (const [type, handler] of [['pointerdown', onPointerDown], ['pointermove', onPointerMove], ['pointerup', onPointerUp],
@@ -1516,7 +1528,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const root of menuRoots) root.removeEventListener('contextmenu', onContextMenu);
       withdrawPicker(); clearEffects(); feel.dispose(); saveBurst?.dispose(); saveBurst = null; tabletop.dispose(); traitProps.dispose(); stage.dispose(); scout.dispose(); arena?.dispose(); clearTimeout(calloutTimer); callout?.remove();
       for (const view of pieces.values()) removePiece(view);
-      pieces.clear(); boardGroup.clear();
+      pieces.clear(); clearBoard();
       warmup?.dispose(); effects?.dispose(); models.cache?.dispose(); models.preloader?.dispose(); models.reader?.dispose();
       for (const resource of owned) resource.dispose();
       renderer.domElement.remove();

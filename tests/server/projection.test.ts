@@ -1,9 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
-import { toCombatReplayFor, toPlayerView, toPublicBoard } from '../../src/server/room/projection';
+import { toCombatReplayFor, toPlayerView, toPublicBoard, toSeatPublic, toSeatPrivateView } from '../../src/server/room/projection';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import type { MatchState } from '../../src/simulation/match-types';
 import { DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
+
+describe('immutable projection reuse', () => {
+  it('reuses an unchanged seat across recipients, and invalidates public metadata and private state independently', () => {
+    const { room, clock } = makeRoom(new DamageResolver(() => 0)); room.start();
+    const seat = room.state.seats[0]!;
+    const publicView = toSeatPublic(seat), privateView = toSeatPrivateView(seat.match);
+    const a = toPlayerView(room.state, 's0', clock.now()), b = toPlayerView(room.state, 's1', clock.now() + 5);
+    expect(a.seats[0]).toBe(publicView); expect(b.seats[0]).toBe(publicView);
+    expect(b.mySeatId).toBe('s1'); expect(b.phase.serverNow).toBe(clock.now() + 5);
+    expect(toSeatPrivateView(seat.match)).toBe(privateView);
+    expect(toSeatPublic({ ...seat, connected: !seat.connected })).toMatchObject({ connected: !seat.connected });
+    const nextMatch = { ...seat.match, gold: seat.match.gold + 1 };
+    const next = toSeatPrivateView(nextMatch);
+    expect(next).not.toBe(privateView); expect(next.gold).toBe(privateView.gold + 1);
+    expect(toSeatPrivateView(nextMatch)).toBe(next);
+    expect(toSeatPublic({ ...seat, match: nextMatch })).not.toBe(publicView);
+  });
+});
 
 describe('toPlayerView', () => {
   it('is a whitelist: no rule state, rng or other seats\' private data leaks', () => {
