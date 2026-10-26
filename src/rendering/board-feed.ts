@@ -86,6 +86,8 @@ export interface BoardDropHint {
  */
 export interface BoardControls {
   hover(id: string | null): void;
+  /** The piece of any team under the pointer, for its description card only (never a command target). */
+  look?(id: string | null): void;
   select(id: string): void;
   /** False when the 2D board would not let this unit be dragged now. */
   dragStart(id: string): boolean;

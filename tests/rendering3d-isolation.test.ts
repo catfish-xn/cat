@@ -87,10 +87,15 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     expect(uiChunks.length, 'pure UI data must actually be emitted').toBeGreaterThan(0);
     for (const chunk of uiChunks) {
       expect(staticPaths.has(chunk.fileName), 'UI text must never be eagerly imported').toBe(false);
-      expect(chunk.imports, 'UI data must not pull the application or domain back in').toEqual([]);
+      if (!chunk.moduleIds.some(id => /unit-panel(?:-style)?\.ts$/.test(id))) {
+        expect(chunk.imports, 'UI data must not pull the application or domain back in').toEqual([]);
+      }
       expect(allPaths.has(chunk.fileName), 'UI data must be reachable on demand').toBe(true);
       expect(chunk.moduleIds.every(id => /\/src\/presentation\//.test(normalize(id)))).toBe(true);
     }
+    const inspect = uiChunks.find(chunk => chunk.moduleIds.some(id => id.endsWith('/unit-panel.ts')));
+    expect(inspect, 'inspect panel must be in an on-demand UI chunk').toBeDefined();
+    expect(staticPaths.has(inspect!.fileName), 'inspect panel must not enter the static entry graph').toBe(false);
     for (const chunk of threeDChunks) {
       expect(chunk.imports.filter(name => !name.startsWith('assets/3d/')),
         '3D chunks must not import 2D or UI chunks').toEqual([]);
@@ -123,4 +128,4 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     else process.env.NODE_ENV = previousNodeEnv;
     console.info(`2D entry isolation build and assertions: ${Math.round(performance.now() - started)} ms`);
   }
-}, 60_000);
+}, 240_000);

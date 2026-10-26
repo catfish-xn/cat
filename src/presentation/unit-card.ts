@@ -41,7 +41,7 @@ export function unitRole(definitionId: string): { name: string; itemIds: string[
   const hero = definitionId.replace(/-ranged$/, ''), role = Object.hasOwn(CHAMPION_ROLES, hero) ? ROLE_DISPLAY[CHAMPION_ROLES[hero]] : undefined;
   return role ? { name: role.name, itemIds: role.items.flatMap(api => ITEM_ID_BY_API.get(api) ?? []) } : null;
 }
-function roleSection(definitionId: string): HTMLElement | null {
+export function roleSection(definitionId: string): HTMLElement | null {
   const role = unitRole(definitionId);
   if (!role) return null;
   const section = el('div', '', 'unit-card-role'); section.dataset.debug = 'unit-card:role';
@@ -67,14 +67,18 @@ export function unitBattleStatsKey(stats: UnitBattleStats | null | undefined): s
  * G5: one line of the unit's damage / damage taken / healing done in my last battle (本场) and its kind's match total
  * (累计), the ranking panel's own numbers (battle-ranking `unitBattleStats`); healing received is in the line's title.
  */
-function battleLine(stats: UnitBattleStats): HTMLElement {
-  const line = el('p', '', 'unit-card-battle'); line.dataset.debug = 'unit-card:battle';
+export function battleLine(stats: UnitBattleStats, line: HTMLElement = el('p', '', 'unit-card-battle')): HTMLElement {
+  line.dataset.debug = 'unit-card:battle';
   const part = (label: string, row: RankTotals | null) => row ? `${label} ${row.damageDealt}/${row.damageTaken}/${row.healingDone}` : `${label} —`;
-  line.append(el('span', '伤害/承伤/治疗', 'unit-card-label'), el('span', ` ${part('本场', stats.battle)} · ${part('累计', stats.match)}`));
+  if (!line.childElementCount) line.append(el('span', '伤害/承伤/治疗', 'unit-card-label'), el('span'));
+  line.lastElementChild!.textContent = ` ${part('本场', stats.battle)} · ${part('累计', stats.match)}`;
   line.title = [stats.battle && `本场受治疗 ${stats.battle.healingReceived} · 击杀 ${stats.battle.kills}`,
     stats.match && `累计 ${stats.match.battles} 场 · 受治疗 ${stats.match.healingReceived} · 击杀 ${stats.match.kills}`].filter(Boolean).join('\n');
   for (const [key, row] of [['battle', stats.battle], ['match', stats.match]] as const) {
-    if (row) Object.assign(line.dataset, { [`${key}Dealt`]: String(row.damageDealt), [`${key}Taken`]: String(row.damageTaken), [`${key}Healed`]: String(row.healingDone), [`${key}Received`]: String(row.healingReceived) });
+    for (const [suffix, value] of [['Dealt', row?.damageDealt], ['Taken', row?.damageTaken], ['Healed', row?.healingDone], ['Received', row?.healingReceived]] as const) {
+      if (value === undefined) delete line.dataset[`${key}${suffix}`];
+      else line.dataset[`${key}${suffix}`] = String(value);
+    }
   }
   return line;
 }

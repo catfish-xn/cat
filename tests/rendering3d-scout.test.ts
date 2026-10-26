@@ -110,6 +110,9 @@ describe('3D scouting stage', () => {
       leases.push(lease); return Promise.resolve(lease as unknown as ModelLease);
     });
     stage.show(scoutOf(), frame);
+    expect(stage.inspectRoot('scout:seat-3:2,6:unit-a:4')).toBeInstanceOf(Group);
+    expect(stage.inspectRoot('scout:seat-3:bench-4:unit-d:2')).toBeInstanceOf(Group);
+    expect(stage.inspectRoot('scout:other:2,6:unit-a:4')).toBeUndefined();
     stage.show(scoutOf(), frame); // same seat and layout: no rebuild
     await new Promise(resolve => setTimeout(resolve, 0));
     // The four units still load exactly once; adding legends must not hide duplicate unit loads.
@@ -117,6 +120,7 @@ describe('3D scouting stage', () => {
     expect(leases.every(lease => lease.release.mock.calls.length === 0)).toBe(true);
     expect(stage.debug().units.every(entry => entry.endsWith(':model'))).toBe(true);
     stage.show(null, null);
+    expect(stage.inspectRoot('scout:seat-3:2,6:unit-a:4')).toBeUndefined();
     for (const lease of leases) expect(lease.release, lease.id).toHaveBeenCalledTimes(1);
     stage.show(null, null);
     for (const lease of leases) expect(lease.release, lease.id).toHaveBeenCalledTimes(1);
