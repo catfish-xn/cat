@@ -1,8 +1,9 @@
 /** Production presenters in real Chromium; no emulated DOM or game commands. */
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
-import { chromium, type Browser, type Page } from 'playwright';
+import type { Browser, Page } from 'playwright';
+import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 let browser: Browser, page: Page, bundle: string;
 beforeAll(async () => {
   const result = await build({ stdin: { resolveDir: process.cwd(), contents: `
@@ -60,7 +61,7 @@ beforeAll(async () => {
 });
 // Separate hook: bundling and browser launch each stay within the default hook limit on slow CI runners.
 beforeAll(async () => {
-  browser = await chromium.launch({ headless: true, ...(existsSync('/usr/bin/google-chrome') ? { channel: 'chrome' } : {}), args: ['--no-sandbox'] });
+  browser = await testBrowser();
   page = await browser.newPage({ viewport: { width: 1600, height: 1200 }, hasTouch: true });
   await page.clock.install();
 });

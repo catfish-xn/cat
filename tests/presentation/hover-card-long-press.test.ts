@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
-import { chromium, type Browser, type Page, type CDPSession } from 'playwright';
+import type { Browser, Page, CDPSession } from 'playwright';
+import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
-import { existsSync } from 'node:fs';
 let browser: Browser, page: Page, client: CDPSession;
 beforeAll(async () => {
   const result = await build({ stdin: { contents: `export { attachHoverCards, HoverCard } from './src/presentation/hover-card';`, resolveDir: process.cwd() }, bundle: true, write: false, format: 'iife', globalName: 'Hover' });
-  browser = await chromium.launch({ headless: true, ...(existsSync('/usr/bin/google-chrome') ? { channel: 'chrome' } : {}), args: ['--no-sandbox'] });
+  browser = await testBrowser();
   page = await browser.newPage({ hasTouch: true }); client = await page.context().newCDPSession(page);
   await page.setContent('<section id="scope"><button style="width:100px;height:100px" id="action">领取</button></section>');
   await page.addScriptTag({ content: result.outputFiles[0].text }); await page.clock.install();

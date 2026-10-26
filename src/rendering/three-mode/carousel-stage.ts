@@ -13,7 +13,7 @@ import type { BoardDescription, BoardScreenBox } from '../board-feed';
  * walk (src/server/legend-motion.ts) and sends it to all seats, so every legend is drawn where the room has it; with a
  * room that walks, a unit is picked when its legend reaches it, first come first served. Without one (an in-browser room)
  * a unit click is still the panel's pick at once. A unit leaves the ring only when the view names the seat that took it:
- * that seat's legend runs to it (a bot's too, at the same pace), and the unit follows it back on a tether to its cradle. A held seat
+ * the unit follows that legend on a tether as it moves freely. A held seat
  * counts down over its head and its chains break at release; the stage opens with a short push-in.
  * Missing models or effects draw stand-ins; the timer ring is not drawn (its extracted effect is incomplete).
  */
@@ -81,11 +81,10 @@ const UNIT_SIZE = 1.7;
 const RING_SIZE = 1.35;
 /**
  * Legend motion, display only (cells, seconds): every legend runs for its unit at RUN_CELLS a second (another seat's too,
- * so the scramble can be watched even when the room picked for it at once); a legend with its unit walks home at
- * WALK_CELLS. It grabs within GRAB_CELLS; the unit trails TETHER_CELLS behind. Ground clicks stay inside the cradles' ring.
+ * until the room confirms contact). It waits within GRAB_CELLS; the unit trails TETHER_CELLS behind. Ground clicks stay inside the cradles' ring.
  */
 export const RUN_CELLS = 2.5;
-const WALK_CELLS = 1.6, GRAB_CELLS = 0.7, TETHER_CELLS = 1.1, ROAM_RADIUS = LEGEND_RADIUS;
+const GRAB_CELLS = 0.25, TETHER_CELLS = 1.1, ROAM_RADIUS = LEGEND_RADIUS;
 /** Opening push-in: the camera starts this much farther and higher and settles on the fixed view. */
 const INTRO_SECONDS = 1.5, INTRO_PULL = 0.45, INTRO_LIFT = 0.5;
 const COUNTDOWN_SIZE = 32;
@@ -166,7 +165,7 @@ interface SeatView extends Body {
   releaseAtMs: number; locked: boolean;
   /** Running to a unit (mine while my pick is out, or the seat's taken unit), or to a ground point / home; else standing. */
   chase: UnitView | null; goal: Vector3 | null; speed: number;
-  /** The room's walk (performance.now() times): drawn along its line, arriving on time; a chase or a carry goes first. */
+  /** The room's walk (performance.now() times), followed even while carrying a unit. */
   path: { from: Vector3; to: Vector3; start: number; end: number } | null;
   /** The unit it took, trailing on the tether. */
   carry: UnitView | null;
@@ -587,38 +586,27 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       if (!first) burst(FX.wallEnd, WALL_END_SECONDS, new Vector3(0, 0.3 * cell, 0), COLOR.lock);
     }
   };
-  /** Where a unit trails its legend: behind it while it walks home, in front of it (toward the center) once there. */
+  /** Where a unit trails its legend: behind it, both while walking and standing. */
   const trailPoint = (seat: SeatView, out: Vector3) => {
     const facing = new Vector3(0, 0, 1).applyAxisAngle(new Vector3(0, 1, 0), seat.root.rotation.y);
-    return out.copy(seat.root.position).addScaledVector(facing, (seat.goal ? -1 : 1) * TETHER_CELLS * cell);
+    return out.copy(seat.root.position).addScaledVector(facing, -TETHER_CELLS * cell);
   };
-  /**
-   * The view named `seat` as taker: the unit leaves the turning ring (keeping where it stood) and that seat's legend runs
-   * for it at the running pace (mine may be on its way already). `settled` (the first view of
-   * a carousel already taken) puts the unit by its legend at home with nothing to watch.
-   */
+  /** A confirmed pick attaches the unit to its legend without changing that legend's destination. */
   const take = (unit: UnitView, seat: SeatView, settled: boolean) => {
     claimedSeats.add(seat.seatId);
-    unit.takenBy = seat.seatId; seat.path = null;
+    unit.takenBy = seat.seatId;
     endLoop(unit.tier); unit.tier = null; unit.ring.visible = false; if (unit.costRing) unit.costRing.visible = false;
     taken.attach(unit.holder);
     for (const other of seatViews.values()) if (other !== seat && other.chase === unit) { other.chase = null; other.goal = null; }
-    if (settled) {
-      seat.chase = null; seat.goal = null; seat.root.position.copy(seat.anchor); seat.root.rotation.y = Math.atan2(-seat.anchor.x, -seat.anchor.z);
-      grab(seat, unit, false);
-      trailPoint(seat, unit.holder.position).setY(seat.anchor.y);
-      return;
-    }
-    seat.chase = unit; seat.goal = null; seat.speed = RUN_CELLS * cell;
-    const at = unit.holder.getWorldPosition(new Vector3());
-    if (Math.hypot(at.x - seat.root.position.x, at.z - seat.root.position.z) <= GRAB_CELLS * cell) grab(seat, unit);
+    // A receipt confirms contact on the server. Never start another chase or replace the walk with a trip home.
+    grab(seat, unit, !settled);
+    if (settled) trailPoint(seat, unit.holder.position).setY(seat.root.position.y);
   };
-  /** The legend reached its unit: the selection burst (not on a settled view) and the walk home with it. */
   const grab = (seat: SeatView, unit: UnitView, feedback = true) => {
     seat.chase = null; seat.carry = unit; seat.tether.visible = true;
-    seat.goal = seat.anchor.clone(); seat.speed = WALK_CELLS * cell;
     if (feedback) burst(FX.selected, SELECTED_SECONDS, unit.holder.getWorldPosition(new Vector3()), COLOR.pending);
   };
+
   const show = (view: BoardCarousel | null) => {
     if (!view) { if (current) clear(); return; }
     if (current && current.id !== view.id) clear();
@@ -676,7 +664,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     if (mine && !mine.carry) {
       const pending = standing.find(slot => slot.pending && !slot.pickedBy);
       const target = pending ? unitViews.get(pending.slot) : undefined;
-      if (target && !target.takenBy) { mine.chase = target; mine.goal = null; mine.speed = RUN_CELLS * cell; }
+      if (target && !target.takenBy && !mine.path) { mine.chase = target; mine.goal = null; mine.speed = RUN_CELLS * cell; }
       else if (mine.chase && !mine.chase.takenBy) { mine.chase = null; mine.goal = null; }
     }
   };
@@ -684,8 +672,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   function releaseTaken(unit: UnitView) {
     for (const seat of seatViews.values()) {
       if (seat.chase === unit) {
-        seat.chase = null; seat.goal = claimedSeats.has(seat.seatId) ? seat.anchor.clone() : null;
-        if (seat.goal) seat.speed = WALK_CELLS * cell;
+        seat.chase = null;
       }
       if (seat.carry === unit) { seat.carry = null; seat.tether.visible = false; }
     }
@@ -703,7 +690,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     else if (seat.goal) target = aim.copy(seat.goal);
     let moving = false;
     const path = seat.path;
-    if (path && !target && !seat.carry) {
+    if (path && !target) {
       // The room's walk: on its line, arriving when the room says (its pick, if any, follows from the view).
       const span = path.end - path.start, t = span <= 0 ? 1 : Math.min(1, Math.max(0, (now() - path.start) / span));
       seat.root.position.lerpVectors(path.from, path.to, t);
@@ -792,27 +779,28 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     mine.goal = groundHit.clone().setY(mine.root.position.y); mine.speed = RUN_CELLS * cell;
     return { x: groundHit.x / cell, y: groundHit.z / cell };
   };
-  /** My legend when it may walk: released, nothing picked or asked for, nothing being fetched. */
+  /** Ground movement remains available after a pick. */
   const movable = () => {
     const mine = [...seatViews.values()].find(entry => entry.me);
     // A panel pick still out (a client without walks) holds it too, as before walks.
     const out = current?.slots.some(slot => slot.pending && !slot.pickedBy);
-    return current && mine && !out && !mine.locked && !mine.carry && !claimedSeats.has(mine.seatId) && !pickedBy(mine.seatId) && !(mine.chase && mine.chase.takenBy === mine.seatId) ? mine : null;
+    return current && mine && !out && !mine.locked ? mine : null;
   };
   const runTo = (slot: number) => {
     const mine = movable(), unit = unitViews.get(slot);
-    if (!mine || !unit || unit.takenBy) return false;
+    if (!mine || !unit || unit.takenBy || mine.carry || claimedSeats.has(mine.seatId) || pickedBy(mine.seatId)) return false;
     mine.chase = unit; mine.goal = null; mine.path = null; mine.speed = RUN_CELLS * cell;
     return true;
   };
-  /** The room's walk for one seat; ignored while that legend fetches or carries its unit (the view drives that). */
+  /** The room's walk for one seat, including a seat already carrying its unit. */
   const applyWalk = (walk: BoardLegendWalk) => {
     const seat = seatViews.get(walk.seatId);
-    if (!current || walk.scene !== 'carousel' || !seat || claimedSeats.has(seat.seatId) || pickedBy(seat.seatId) || seat.carry || (seat.chase && seat.chase.takenBy === seat.seatId)) return;
+    if (!current || walk.scene !== 'carousel' || !seat) return;
     seat.chase = null; seat.goal = null;
     const to = new Vector3(walk.to.x * cell, seat.root.position.y, walk.to.y * cell);
-    // From where it is drawn now, so a walk I already started bends onto the room's line instead of jumping.
-    seat.path = { from: seat.root.position.clone(), to, start: now(), end: Math.max(now(), walk.arriveAt) };
+    // Draw the authoritative line and timing; easing from a predicted position can make a valid contact look remote.
+    seat.path = { from: new Vector3(walk.from.x * cell, seat.root.position.y, walk.from.y * cell),
+      to, start: walk.startedAt, end: walk.arriveAt };
   };
 
   const pointer = new Raycaster();

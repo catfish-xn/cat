@@ -1,13 +1,13 @@
 /** Native Chromium DOM (the repository has no jsdom): trait rows open their card on click or tap and keep it pinned. */
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { chromium, type Browser, type Page } from 'playwright';
+import type { Browser, Page } from 'playwright';
+import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
-import { existsSync } from 'node:fs';
 let browser: Browser, page: Page;
 beforeAll(async () => {
   const result = await build({ stdin: { contents: `export { attachHoverCards, HoverCard } from './src/presentation/hover-card';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'iife', globalName: 'Hover' });
-  browser = await chromium.launch({ headless: true, ...(existsSync('/usr/bin/google-chrome') ? { channel: 'chrome' } : {}), args: ['--no-sandbox'] });
+  browser = await testBrowser();
   page = await browser.newPage({ viewport: { width: 800, height: 600 }, hasTouch: true });
   await page.setContent(`<style>.row{display:block;width:200px;height:40px}</style><section id="scope"><span class="row" id="a" data-k="a" tabindex="0">A</span>
     <span class="row" id="b" data-k="b">B</span></section><div id="else" style="position:fixed;left:500px;top:400px;width:100px;height:100px"></div>`);
