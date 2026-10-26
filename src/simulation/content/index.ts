@@ -51,6 +51,28 @@ export function canonicalContent(value: unknown): string {
   return canonicalLeaf(value) ?? (synchronousRestoreEncoding ? canonicalSync(value, true)
     : drainSetup(canonicalSteps(value, { remaining: 64, retainFrozen: true })));
 }
+/** Validation-only canonical traversal for independently generated replay evidence.
+ * Visit every field with the same finite/plain/dense checks and key/read order,
+ * without allocating text that the subsequent full comparison would discard.
+ * Unusual arrays retain canonicalContent's native map/species behavior. */
+export function assertCanonicalContent(value: unknown): void {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean'
+    || typeof value === 'number' && Number.isFinite(value)) return;
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) if (!Object.hasOwn(value, i)) throw new TypeError('Content cannot contain sparse arrays');
+    if (Object.hasOwn(value, 'map') || Object.hasOwn(value, 'constructor') || Object.getPrototypeOf(value) !== Array.prototype) {
+      canonicalContent(value); return;
+    }
+    const length = value.length;
+    for (let i = 0; i < length; i++) if (i in value) assertCanonicalContent(value[i]);
+    return;
+  }
+  if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
+    for (const key of Object.keys(value).sort()) assertCanonicalContent((value as Record<string, unknown>)[key]);
+    return;
+  }
+  throw new TypeError('Content must be finite plain JSON data');
+}
 /** Setup uses bounded traversal without retaining short-lived snapshot text. */
 export function* canonicalContentSteps(value: unknown): Generator<void, string, void> {
   if (synchronousRestoreEncoding) return canonicalSync(value, false);

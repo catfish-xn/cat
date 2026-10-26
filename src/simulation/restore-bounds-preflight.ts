@@ -3,7 +3,7 @@ import { MAX_COMBAT_TICKS } from './combat-types';
 import type { GameState } from './game';
 import type { StrategySnapshot } from './strategy-types';
 import { canonicalSource } from './m8/identity';
-import { compileMechanismDefinitions } from './m8/s13-definitions';
+import { compileRestoreMechanisms } from './m8/item-restore';
 import { sampledGrowth, validateSampledStatTriggerCount } from './m8/sampled-stat-facts';
 
 function authenticate(value: unknown, reason: string): asserts value {
@@ -49,7 +49,7 @@ export function validateRestoreBoundsPreflight(combat: CombatState, preparation:
     + combat.tick * roster.filter(u => u.definitionId === 'g23-forge').length;
   for (const unit of combat.units) {
     if (unit.ability.kind !== 's13') continue;
-    const compiled = compileMechanismDefinitions(unit, combat.combatId!);
+    const compiled = compileRestoreMechanisms(unit, combat.combatId!);
     authenticate(same(unit.mechanismDefinitions, compiled), 'uncompiled mechanism definitions');
     authenticate(unit.mechanismState?.sampledAtTick === combat.tick, 'mechanism initialization/namespace');
     count(unit.runtime?.attackCount, combat.tick, 'attackCount');

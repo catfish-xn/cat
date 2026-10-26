@@ -1404,3 +1404,14 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 ## 2026-10-25 强化日程收据单位认证
 
 `restoreMatch(input: unknown, battles?: readonly BattleRecord[]): MatchState` 与 `serializeMatch(state: MatchState, battles?: readonly BattleRecord[]): string` 的输入输出、保存格式不变。强化日程收据 `unitId` 必须为 `null`；格式合法或真实存在的奖励单位 ID 也不允许写入，失败抛 `Invalid Match save: augment receipt unit`。来源账本的收据验证边界独立拒绝同类伪造（`Invalid resource provenance: augment receipt unit`）。实际奖励单位仍通过机制／法球收据与有序 `unit-acquired` 出生的 ID、来源、回合及连续序号认证，不要求单位仍存活于当前阵容；不重发、不修复坏档。三恢复入口一致，决定见 `S13_RULES_GAP.md` 的 P-V23-AUGMENT-RECEIPT-UNIT，回归见 `tests/v23-restore-fuzz.test.ts`、`tests/v23-tamper-batch4.test.ts`。
+
+### v24 单次恢复派生复用（P，2026-10-25）
+
+`restoreMatch`／`serializeMatch` 公共签名、返回值、失败消息和保存字段保持不变；没有新增命令失败 reason。以下是领域内部优化接口，界面／服务器继续只调用原有公共入口：
+
+- `assertCanonicalContent(value: unknown): void`（`content/index.ts`）：完整校验可信重放证据，接受集合与规范编码相同，不生成规范文本。稀疏数组抛 `TypeError('Content cannot contain sparse arrays')`，非有限数值或非普通 JSON 值抛 `TypeError('Content must be finite plain JSON data')`；特殊数组保留原编码器分派。此函数不认证候选状态，随后仍须全字段比较。
+- `withItemRestoreCache<T>(run: () => T, parsedJsonInput = false): T`、`compileRestoreMechanisms(unit: CombatUnit, combatId: string): MechanismDefinitions`（`m8/item-restore.ts`）：仅私有解析图在同步作用域内按单位引用＋combatId 复用纯编译输出；退出／异常恢复原作用域，object／serialize 不启用新编译缓存。编译错误原样传播，不能把编译输出当成验证成功标志。
+- `RestoreCombatReplay.itemGoldAtSaveTick(): Pick<CombatState, 'tick' | 'itemGoldReceipts' | 'itemRandomStreams'> & { readonly units: readonly Pick<CombatUnit, 'id' | 'currentItemBankGold' | 'itemMogulHits'>[] }`：从现有独立游标返回深拷贝的小投影；修改返回值不能修改游标或下次投影，不返回可续跑的战斗。
+- `validateCombatItemGold(candidate: CombatState, basis: CombatInputBasis, strategy: StrategySnapshot, replay?: RestoreCombatReplay): void`：内部可传入本次恢复从同一已认证 basis／strategy／tick 建立的可信 replay，不能传候选构造的 replay；省略时保留原冷重放。仍逐字段比较全部金币收据、随机流、单位余额及 Mogul hit 记录。原 `RangeError` 消息保持 `Unexpected item gold receipts`、`Invalid item gold checkpoint`、`Invalid authoritative item gold replay`，底层编译／重放错误原样传播。
+
+金币冷重放补充：`needsCombatItemGoldReplay(strategy: StrategySnapshot): boolean` 只按原可信机制集合选择认证路径，不读取候选收据。`createRestoreCombatReplay(basis: CombatInputBasis, strategy: StrategySnapshot, tick: number, parsedJsonInput = false, fresh = false): RestoreCombatReplay` 的内部 `fresh=true` 模式不读写既有证据／身份 LRU，每次调用都从开场完整模拟至目标 tick，调用内仍只构建一次；金币 JSON 路径使用该模式，保留 `g2-4b-restore-authority.test.ts` 的每次一次构建、逐 tick 重放断言。

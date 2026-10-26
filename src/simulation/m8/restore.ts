@@ -5,14 +5,14 @@ import { p2Bonus } from '../s13-augments-p2-combat';
 import { g23FormStats } from '../g2-3-forms';
 import type { TraitSnapshot } from '../strategy-types';
 import { augmentCombatEffects, shareAugmentTraits } from '../combat-augment-effects';
-import { statusDeclaration, isDeclaredStatus, validateItemEffectConsumption, declaredEffects, validateItemRuntime, abilityPowerCandidates, maxHpCandidates } from './item-restore';
+import { compileRestoreMechanisms, statusDeclaration, isDeclaredStatus, validateItemEffectConsumption, declaredEffects, validateItemRuntime, abilityPowerCandidates, maxHpCandidates } from './item-restore';
 import { canonicalSource } from './identity';
 import { grantedMaxHpBasis } from './combat-item-programs';
 /** Development saves may only contain programs produced by the enabled content compiler. */
 import type { CombatUnit } from '../combat-types';
 import { canonicalContent, equalValidatedContent } from '../content';
 import { sourceKey } from '../combat-s13-state';
-import { asSource, compileMechanismDefinitions, flatAmount, selfSelector } from './s13-definitions';
+import { asSource, flatAmount, selfSelector } from './s13-definitions';
 import { validateIdentity } from './identity';
 import { validateStatusGroups } from './status';
 import { validatePeriodicTask } from './periodic';
@@ -23,7 +23,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   const same = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   const state = unit.mechanismState, definitions = unit.mechanismDefinitions;
   check(state && definitions && state.initialized === true && state.combatId === combatId && state.sampledAtTick === tick, 'mechanism initialization/namespace');
-  const compiled = compileMechanismDefinitions(unit, combatId);
+  const compiled = compileRestoreMechanisms(unit, combatId);
   check(same(definitions, compiled), 'uncompiled mechanism definitions');
   check(Array.isArray(state.statuses) && Array.isArray(state.periodicTasks) && Array.isArray(state.runtimes) && Array.isArray(state.activities), 'mechanism arrays');
   validateItemRuntime(unit,combatId,tick,compiled);
@@ -41,11 +41,13 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   check(same({...basis,bonusBps:0}, expectedBasis), 'resolved maximum health basis');
   validateStatusGroups(state.statuses, tick, combatId);
   const contributions = state.statuses.flatMap(g => g.contributions), covered = new Set<string>();
+  // validateStatusGroups has already rejected duplicate keys across all groups.
+  const contributionsByKey = parsedJsonInput ? new Map(contributions.map(c => [c.key, c])) : undefined;
   for (const legacy of unit.statuses ?? []) {
     if (legacy.kind === 'channel' || legacy.kind === 'redirect') { check(legacy.activity !== undefined, 'missing activity projection'); continue; }
     check(Array.isArray(legacy.contributionKeys) && legacy.contributionKeys.length > 0, 'missing status contribution projection');
     for (const key of legacy.contributionKeys) {
-      const c = contributions.find(c => c.key === key);
+      const c = contributionsByKey ? contributionsByKey.get(key) : contributions.find(c => c.key === key);
       // Frozen ability declarations use the same exact identity-key projection
       // as item declarations; their historical source/application is replay-proven.
       const replayedAbility = c?.source.sourceKind === 'ability' && legacy.key === c.key && abilityStatuses.has(c.key);

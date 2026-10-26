@@ -144,3 +144,36 @@ it('authenticates a blade equipped during combat against the same pre-loot bank'
     rejects(bad);
   }
 });
+
+it('reuses the same trusted trajectory for gold without exposing its cursor or accepting altered receipts', async () => {
+  const { createRestoreCombatReplay } = await import('../src/simulation/restore-combat-replay');
+  const { validateCombatItemGold } = await import('../src/simulation/g2-4b-gold-restore');
+  const combat = await import('../src/simulation/combat');
+  const { vi } = await import('vitest');
+  let state = accepted(startMatchCombat(prepare()));
+  for (let n = 0; n < 10 && state.phase === 'combat'; n++) state = stepMatch(state).state;
+  const basis = state.combatInputBasis!, strategy = state.combat!.strategy!, candidate = state.combat!;
+  const replay = createRestoreCombatReplay(basis, strategy, candidate.tick, true);
+  replay.atSaveTick();
+  const create = vi.spyOn(combat, 'createCombatWithEvents'), step = vi.spyOn(combat, 'stepCombat');
+  try {
+    validateCombatItemGold(candidate, basis, strategy, replay);
+    expect(create).not.toHaveBeenCalled(); expect(step).not.toHaveBeenCalled();
+    const detached = replay.itemGoldAtSaveTick();
+    Object.assign(detached.units[0], { currentItemBankGold: -100 });
+    validateCombatItemGold(candidate, basis, strategy, replay);
+    expect(replay.itemGoldAtSaveTick()).not.toEqual(detached);
+    const bad = structuredClone(candidate);
+    Object.assign(bad, { itemGoldReceipts: [...bad.itemGoldReceipts!, { invented: true }] });
+    const failure = (run: () => unknown) => {
+      try { run(); } catch (error) {
+        if (error instanceof Error) return { name: error.name, message: error.message };
+        throw error;
+      }
+      throw new Error('Expected gold forgery rejection');
+    };
+    expect(failure(() => validateCombatItemGold(bad, basis, strategy, replay)))
+      .toEqual(failure(() => validateCombatItemGold(bad, basis, strategy)));
+    validateCombatItemGold(candidate, basis, strategy, replay);
+  } finally { create.mockRestore(); step.mockRestore(); }
+});

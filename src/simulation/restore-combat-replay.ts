@@ -1,7 +1,7 @@
 import { createCombatWithEvents, stepCombat, type CombatState, type CombatUnit } from './combat';
 import type { CombatInputBasis } from './combat-input';
 import type { StrategySnapshot } from './strategy-types';
-import { canonicalContent, digestContent, equalValidatedContent } from './content';
+import { assertCanonicalContent, canonicalContent, digestContent, equalValidatedContent } from './content';
 import { shareValidatedCombatDeclarations } from './combat-static';
 import { M8_VERSION } from './m8/version';
 
@@ -47,6 +47,10 @@ export interface RestoreCombatReplay {
   shareValidatedDeclarations(candidate: CombatState): void;
   p2Opening(): readonly Pick<CombatUnit, 'id' | 's13P2Opening'>[];
   atSaveTick(): CombatReplayFacts;
+  /** Detached gold evidence from this call's existing private replay cursor. */
+  itemGoldAtSaveTick(): Pick<CombatState, 'tick' | 'itemGoldReceipts' | 'itemRandomStreams'> & {
+    readonly units: readonly Pick<CombatUnit, 'id' | 'currentItemBankGold' | 'itemMogulHits'>[];
+  };
 }
 function facts(state: CombatState): CombatReplayFacts {
   return structuredClone({ openingDeaths:state.openingDeaths, openingState: state.openingState, tick: state.tick, rngState: state.rngState, rngDraws: state.rngDraws,
@@ -91,11 +95,15 @@ const identities = new Map<string, { identity: string; key: string }>();
  * The full authenticated basis, resolved strategy and every format/rules version
  * identify a trajectory. Returned states are detached, including on exact hits.
  * Validators must still compare the current candidate on every invocation. */
-export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: StrategySnapshot, tick: number, parsedJsonInput = false): RestoreCombatReplay {
+export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: StrategySnapshot, tick: number, parsedJsonInput = false, fresh = false): RestoreCombatReplay {
   let initial: CombatState | undefined, openingCopy: CombatState | undefined, result: CombatReplayFacts | undefined;
   let p2Copy: readonly Pick<CombatUnit, 'id' | 's13P2Opening'>[] | undefined;
   let cached: Evidence | undefined, key: string | undefined, identity: string | undefined;
   const lookup = () => {
+    // Gold authority requires one complete cold reconstruction on EVERY
+    // restore, including warm JSON calls. Share that cursor only within this
+    // call; neither read nor populate the process-local evidence/identity LRU.
+    if (fresh) return;
     if (identity !== undefined) return;
     const inputs = { version: M8_VERSION, basis, strategy };
     // Only the restore boundary's own parsed graph can take the native JSON
@@ -148,7 +156,7 @@ export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: Str
       // complete parsed candidate, so equality needs no second text encoding.
       // Comparing here keeps the cursor private and avoids thawing/copying its
       // immutable declarations just to discard the copy after comparison.
-      canonicalContent(expected);
+      assertCanonicalContent(expected);
       const matches = equalValidatedContent(expected, candidate);
       if (matches && shareDeclarations) shareValidatedCombatDeclarations(candidate, expected);
       return matches;
@@ -166,6 +174,12 @@ export function createRestoreCombatReplay(basis: CombatInputBasis, strategy: Str
       // returned opening/facts can never alter a later invocation's evidence.
       // Copy the compared facts, avoiding an unused clone of all declarations.
       return result = facts(privateCursor());
+    },
+    itemGoldAtSaveTick() {
+      const state = privateCursor();
+      return structuredClone({ tick: state.tick, itemGoldReceipts: state.itemGoldReceipts,
+        itemRandomStreams: state.itemRandomStreams, units: state.units.map(({ id, currentItemBankGold, itemMogulHits }) =>
+          ({ id, currentItemBankGold, itemMogulHits })) });
     },
   };
 }

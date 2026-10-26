@@ -6,8 +6,8 @@ import type {CombatState} from './combat-types';
 import type {CombatInputBasis} from './combat-input';
 import type {StrategySnapshot} from './strategy-types';
 import {shareValidatedCombatDeclarations} from './combat-static';
-import {canonicalContent,equalValidatedContent} from './content';
-import {createRestoreCombatReplay} from './restore-combat-replay';
+import {assertCanonicalContent,canonicalContent,equalValidatedContent} from './content';
+import {createRestoreCombatReplay,type RestoreCombatReplay} from './restore-combat-replay';
 
 /** Combat mechanics whose saves are authenticated only by exact replay (combat-augment-effects.ts). */
 export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['corrosion','longDistancePals','categoryFive','overheal','satedSpellweaver','blazingSoul','nobleSacrifice','wealthyRehab','badLuck','goldForDummies','towerDefense','towerDefenseLive','heroCarry','heroCarryLive','forming'];
@@ -102,22 +102,30 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
 /** Expected evidence retains canonical validation; private parsed candidates
  * have already passed the full JSON walk and still compare every field. */
 function sameCombat(expected:CombatState,candidate:CombatState,parsedJsonInput:boolean):boolean {
-  const text=canonicalContent(expected);
-  return parsedJsonInput?equalValidatedContent(expected,candidate):text===canonicalContent(candidate);
+  if(parsedJsonInput){assertCanonicalContent(expected);return equalValidatedContent(expected,candidate);}
+  return canonicalContent(expected)===canonicalContent(candidate);
 }
 
 /** Money authority cannot be the candidate's own receipt list. Independently
  * replay only gold-item combats from the validated frozen input, without
  * settling or granting anything. Existing non-gold saves take no replay path. */
-export function validateCombatItemGold(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
-  const enabled=strategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul','v19Chainblade','g23Tactician'].includes(m.mechanic)));
+export function needsCombatItemGoldReplay(strategy:StrategySnapshot):boolean {
+  return strategy.units.some(u=>u.mechanics?.some(m=>['g24Collector','g24Gambler','g24Mogul','v19Chainblade','g23Tactician'].includes(m.mechanic)));
+}
+export function validateCombatItemGold(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot,replay?:RestoreCombatReplay):void {
+  const enabled=needsCombatItemGoldReplay(strategy);
   if(!enabled){
     if(candidate.itemGoldReceipts!==undefined)throw new RangeError('Unexpected item gold receipts');
     return;
   }
   if(!Array.isArray(candidate.itemGoldReceipts)||!Number.isSafeInteger(candidate.tick)||candidate.tick<0||candidate.tick>MAX_COMBAT_TICKS)throw new RangeError('Invalid item gold checkpoint');
-  let expected=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
-  while(expected.tick<candidate.tick&&expected.status==='running')expected=stepCombat(expected).state;
+  // The parsed restore already reconstructed this exact battle for the other
+  // runtime facts. Reuse its detached projection, never candidate receipts.
+  const expected=replay?replay.itemGoldAtSaveTick():(()=>{
+    let state=createCombatWithEvents(basis.inputs.preparation,strategy,basis.combatId,basis.battleSeed).state;
+    while(state.tick<candidate.tick&&state.status==='running')state=stepCombat(state).state;
+    return state;
+  })();
   if(expected.tick!==candidate.tick||canonicalContent(expected.itemGoldReceipts)!==canonicalContent(candidate.itemGoldReceipts)
     ||canonicalContent(expected.itemRandomStreams)!==canonicalContent(candidate.itemRandomStreams)
     ||expected.units.some(u=>candidate.units.find(c=>c.id===u.id)?.currentItemBankGold!==u.currentItemBankGold||canonicalContent(candidate.units.find(c=>c.id===u.id)?.itemMogulHits??null)!==canonicalContent(u.itemMogulHits??null)))throw new RangeError('Invalid authoritative item gold replay');

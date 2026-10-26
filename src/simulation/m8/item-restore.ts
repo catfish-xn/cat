@@ -22,13 +22,24 @@ type Declaration= {source:Source;effect:Effect;survivalSource?:Source;trigger?:T
 // Lifetime is exactly one synchronous restore. Mutable external objects are
 // never trusted between calls, even when their object identity is unchanged.
 let restoreDeclarations:WeakMap<CombatUnit,Map<string,Declaration[]>>|undefined;
-export function withItemRestoreCache<T>(run:()=>T):T{
- const previous=restoreDeclarations;restoreDeclarations=new WeakMap();
- try{return withGrantedItemRestoreCache(run);}finally{restoreDeclarations=previous;}
+let restoreCompiled:WeakMap<CombatUnit,Map<string,MechanismDefinitions>>|undefined;
+export function withItemRestoreCache<T>(run:()=>T,parsedJsonInput=false):T{
+ const previous=restoreDeclarations,previousCompiled=restoreCompiled;restoreDeclarations=new WeakMap();
+ // Only the private JSON.parse graph cannot change between validators. Object
+ // input and serialization keep every compilation/read, including accessors.
+ restoreCompiled=parsedJsonInput?new WeakMap():undefined;
+ try{return withGrantedItemRestoreCache(run);}finally{restoreDeclarations=previous;restoreCompiled=previousCompiled;}
+}
+/** Pure derived declarations, scoped to this restore; never a validation result. */
+export function compileRestoreMechanisms(unit:CombatUnit,combatId:string):MechanismDefinitions {
+ const cached=restoreCompiled?.get(unit)?.get(combatId);if(cached)return cached;
+ const compiled=compileMechanismDefinitions(unit,combatId);
+ if(restoreCompiled){let entries=restoreCompiled.get(unit);if(!entries){entries=new Map();restoreCompiled.set(unit,entries);}entries.set(combatId,compiled);}
+ return compiled;
 }
 export function declaredEffects(unit:CombatUnit,combatId:string):Declaration[] {
  const cached=restoreDeclarations?.get(unit)?.get(combatId);if(cached)return cached;
- const compiled=compileMechanismDefinitions(unit,combatId),result:Declaration[]=[];
+ const compiled=compileRestoreMechanisms(unit,combatId),result:Declaration[]=[];
  const collect=(source:Source,effects:readonly Effect[],survivalSource?:Source,trigger?:TargetLimitedTrigger)=>effects.forEach((effect,i)=>{
   const bound={...source,effectIndex:source.effectIndex+i};result.push({source:bound,effect,survivalSource,trigger});
   if(effect.kind==='grant-shield')collect({...bound,effectIndex:bound.effectIndex+1},effect.endEffects,survivalSource,trigger);
@@ -128,7 +139,7 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  for(const d of declaredEffects(unit,combatId)){
   const key=canonicalSource(d.source);
   if(d.effect.kind!=='change-max-hp'||seen.has(key))continue;seen.add(key);
-  const periodic=compileMechanismDefinitions(unit,combatId).periodicTasks.find(p=>canonicalSource(p.source)===key);
+  const periodic=compileRestoreMechanisms(unit,combatId).periodicTasks.find(p=>canonicalSource(p.source)===key);
   if(periodic){
     const pulses=Math.max(0,Math.floor((Math.min(at,periodic.endsAtTick===null?at:periodic.endsAtTick-1)-periodic.nextPulseAtTick)/periodic.periodTicks)+1),bonus=d.effect.bonusBps;
     bonuses=new Set([...bonuses].flatMap(n=>Array.from({length:pulses+1},(_,i)=>n+i*bonus)));continue;
@@ -153,7 +164,7 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  * exactly, even though an earlier spell may have sampled fewer stacks. */
 export function triggeredAbilityPowerGrowth(unit:CombatUnit,combatId:string):number {
  let total=0;
- for(const d of compileMechanismDefinitions(unit,combatId).eventTriggers ?? []) {
+ for(const d of compileRestoreMechanisms(unit,combatId).eventTriggers ?? []) {
   if(d.selector.relation!=='self')continue;
   const count=unit.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(d.source))?.triggerCount ?? 0;
   for(const effect of d.effects) {
@@ -209,7 +220,7 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
  const base=stat==='abilityPower'?p2Bonus(unit,'abilityPower')+(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
  const augmentGrowth=(unit.mechanismState?.statuses ?? []).flatMap(g=>g.contributions).filter(c=>c.source.sourceKind==='augment'&&c.application.modifier?.stat===stat&&(at===0||c.appliedAtTick<=at)).sort((a,b)=>a.appliedAtTick-b.appliedAtTick);
  if(!p2Bonus(unit,'attackDamageFlat')&&!augmentGrowth.length&&!unit.itemPrograms?.length&&!unit.combatItemGrants?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+p2Bonus(unit,'attackDamageBps')+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
- const compiled=compileMechanismDefinitions(unit,combatId);
+ const compiled=compileRestoreMechanisms(unit,combatId);
  let values=[{fixed:stat==='attackDamage'?p2Bonus(unit,'attackDamageFlat'):0,flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+p2Bonus(unit,'attackDamageBps')+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
   if(d.source.sourceKind==='augment'||d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;

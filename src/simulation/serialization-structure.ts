@@ -20,7 +20,7 @@ import { validateResistsShields } from './m8/resists-shield-restore';
 import { validateRestoreBoundsPreflight } from './restore-bounds-preflight';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
 import {projectItemSummons} from './g2-4b-summons';
-import {validateCombatItemGold,validateDynamicCombat,validateMirrorOpening} from './g2-4b-gold-restore';
+import {needsCombatItemGoldReplay,validateCombatItemGold,validateDynamicCombat,validateMirrorOpening} from './g2-4b-gold-restore';
 import {getUnitForm} from './seat-mechanics/forms';
 import {validateItemRandomStreams,manaReavedMaximum} from './g2-4b-item-kernel';
 import {shroudBpsAtCell,validateDefianceDebts} from './combat-g2-4b';
@@ -141,7 +141,7 @@ function preparationExperience(state:MatchState,after:number,round:number):numbe
 export function validateMatchStructure(input: unknown): MatchState {
   const parsed = typeof input === 'string', shareDeclarations = typeof input === 'string' && !input.includes('-0');
   return withG23RestoreReuse(shareDeclarations, () => withSynchronousRestoreEncoding(parsed, () =>
-    withItemRestoreCache(()=>withResourceReceiptReuse(parsed,()=>restoreMatchWithinCall(input,false,shareDeclarations)))));
+    withItemRestoreCache(()=>withResourceReceiptReuse(parsed,()=>restoreMatchWithinCall(input,false,shareDeclarations)),parsed)));
 }
 function restoreMatchWithinCall(input: unknown, forSerialization = false, parsedImmutable = typeof input === 'string' && !input.includes('-0')): MatchState {
   const decoded = typeof input === 'string' ? decodeMatchJson(input, parsedImmutable) : { value: input };
@@ -355,7 +355,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
     // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
     if(!verifiedDynamic)validateCombatItemGrants(combat.units, combat.tick, unit => unit.mechanismDefinitions?.eventTriggers ?? []);
-    const replay = createRestoreCombatReplay(basis, expectedStrategy, combat.tick, typeof input === 'string');
+    const replay = createRestoreCombatReplay(basis, expectedStrategy, combat.tick, typeof input === 'string',
+      typeof input === 'string' && !verifiedDynamic && needsCombatItemGoldReplay(expectedStrategy));
     if(!verifiedDynamic)validateP2Opening(combat,replay);
     if(!verifiedDynamic)validateRestoreBoundsPreflight(combat,combatPreparation,expectedStrategy,same);
     if(!verifiedDynamic)validateSampledStatTriggerFacts(combat,basis,expectedStrategy,same,replay);
@@ -417,7 +418,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     const eliminated = eliminationResult(combat.units);
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
-    if(!verifiedDynamic)validateCombatItemGold(combat,basis,expectedStrategy);
+    if(!verifiedDynamic)validateCombatItemGold(combat,basis,expectedStrategy,typeof input === 'string'?replay:undefined);
     if(!verifiedDynamic&&parsedImmutable)replay.shareValidatedDeclarations(combat);
   }
   // JSON.parse already owns an independent graph. Object callers still receive
