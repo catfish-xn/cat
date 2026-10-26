@@ -1355,6 +1355,8 @@ Claude 可在本地显示适配器给缺失字段填占位，但只允许以下�
 
 ### 14.2 SR-B1-07：回放接口与显示更新规则
 
+2026-10-26 显示字段补充（不改规则、版本或 epoch）：`CombatViewUnit.itemStacks?` 为只读数组，每行 `{ instanceId, definitionId, stacks, maxStacks, slot?, temporary? }`，目前只投影泰坦的坚决；当前层数读取该装备实例的 `triggerLedger` 计数，上限读取其冻结声明，未触发为 0。服务器装备显示投影补充已知的槽位和临时装备标志，2D/3D 按穿戴装备、临时装备的槽位顺序匹配角标。`CombatViewUnit.enforcerWanted?` 为布尔值，读取敌方已有通缉名单；目标死亡为 false，名单持有者死亡不另选目标。字段均随 initial、每 tick 的 unitUpdated、keyframe、terminal 传递；`[]` / `false` 清除旧显示，旧回放缺字段时不显示新角标或标记。无新增命令、失败原因或客户端规则计算。
+
 以下均为纯函数，由 `src/server-entry` 导出：
 
 ```ts
