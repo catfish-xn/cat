@@ -1126,6 +1126,13 @@ body[data-online] > .render3d-layer .render3d-bar { top: auto; left: auto; right
 .shop-choice .shop-card.shop-offer { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 6px !important;
   line-height: 1.3; text-align: center; overflow: hidden; border-color: #6c5733; background: linear-gradient(180deg, #2d2618, #1b2026); }
 .shop-choice .shop-offer:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 0 0 1px #ffd782, 0 4px 14px #0008; }
+/* Online three-offer armories (Junker King): fill the card row instead of inheriting five shop slots. */
+body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .touch-shop:has(> :nth-child(3):last-child) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .shop-offer { min-width: 44px; min-height: 44px; }
+body[data-online] .shop-dock:has(.shop-choice[data-choice-source="armory"]) { min-height: 156px; grid-template-rows: 44px minmax(0, 1fr) minmax(0, 1fr); }
+body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .shop-choice-toggle { min-width: 44px; min-height: 44px; }
 .shop-offer :is(.offer-icon, .item-mark) { width: 36px !important; height: 36px !important; flex: none; border-radius: 6px; }
 .shop-offer :is(.offer-name, .market-name) { font-size: 13px; color: #fff3d6; }
 .shop-offer :is(.offer-desc, .market-line) { font-size: 11px; line-height: 1.3; color: #d9c8ec; white-space: normal; }
