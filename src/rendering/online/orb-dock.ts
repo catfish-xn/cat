@@ -130,6 +130,24 @@ export function orbOverflowHint(orb: Pick<UnclaimedOrbView, 'source' | 'entries'
   return orb.source === 'family' ? '备战席放不下的英雄留在法球里，腾出位置后可再领取' : '备战席放不下的英雄按原售价自动出售';
 }
 
+/** Shared by the dock and the 3D look-only card; private entries come only from my view. */
+export function orbCardBody(orb: UnclaimedOrbView, context: OrbDockContext, dock = true): HTMLElement {
+  const tier = ORB_TIER_TEXT[orb.tier] ?? orb.tier, source = orbSourceText(orb);
+  const hint = orb.queued ? '已排队 · 战斗结束后结算' : context.locked ? '当前不能领取' : context.inBattle ? '点击领取 · 战斗中领取会在战后结算' : '点击领取';
+  const tip = element('span', '', dock ? 'orb-tip' : '');
+  if (!dock) tip.style.cssText = 'display:grid;gap:4px';
+  tip.setAttribute('role', 'tooltip');
+  tip.append(element('strong', `${tier} · ${source}`));
+  const entries = element('ul', '', 'orb-tip-entries');
+  for (const payload of orb.entries) {
+    const row = element('li'); row.insertAdjacentHTML('afterbegin', payloadLabel(payload).icon); row.append(element('span', orbPayloadName(payload))); entries.append(row);
+  }
+  tip.append(entries, element('span', hint, 'orb-tip-hint'));
+  const overflow = orbOverflowHint(orb);
+  if (overflow) tip.append(element('span', overflow, 'orb-tip-hint'));
+  return tip;
+}
+
 /** Renders into the board-frame mount; one instance per scene. */
 export class OrbDock {
   private key = '';
@@ -182,15 +200,7 @@ export class OrbDock {
     button.append(element('span', '', 'orb-token-gem'));
     if (orb.source === 'mechanic') button.append(element('span', '奖', 'orb-token-mark'));
     // Hover card: the orb's contents are visible once it dropped (contract: private unclaimedOrbs.entries).
-    const tip = element('span', '', 'orb-tip'); tip.setAttribute('role', 'tooltip');
-    tip.append(element('strong', `${tier} · ${source}`));
-    const entries = element('ul', '', 'orb-tip-entries');
-    for (const payload of orb.entries) {
-      const row = element('li'); row.insertAdjacentHTML('afterbegin', payloadLabel(payload).icon); row.append(element('span', orbPayloadName(payload))); entries.append(row);
-    }
-    tip.append(entries, element('span', hint, 'orb-tip-hint'));
-    const overflow = orbOverflowHint(orb);
-    if (overflow) tip.append(element('span', overflow, 'orb-tip-hint'));
+    const tip = orbCardBody(orb, context);
     button.append(tip);
     button.addEventListener('click', () => {
       if (button.disabled) return;
@@ -199,6 +209,11 @@ export class OrbDock {
       button.classList.add('orb-opening');
     });
     return button;
+  }
+  /** Same pending-claim projection as the dock button, for a look-only card elsewhere. */
+  shownOrb(id: string): UnclaimedOrbView | undefined {
+    const orb = this.last && readUnclaimedOrbs(this.last.state).find(orb => orb.orbId === id);
+    return orb ? this.held.has(id) ? { ...orb, queued: true } : orb : undefined;
   }
   /** A click on this orb drawn elsewhere (the 3D board): the same as its dock button, ignored while that is disabled. */
   click(orbId: string): void {

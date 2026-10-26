@@ -88,6 +88,8 @@ export interface BoardControls {
   hover(id: string | null): void;
   /** The piece of any team under the pointer, for its description card only (never a command target). */
   look?(id: string | null): void;
+  /** Read-only scene description. Boxes are projected CSS pixels; null dismisses it. */
+  describe?(target: BoardDescription | null, box?: BoardScreenBox): void;
   select(id: string): void;
   /** False when the 2D board would not let this unit be dragged now. */
   dragStart(id: string): boolean;
@@ -97,6 +99,12 @@ export interface BoardControls {
   /** v15: the same as clicking that orb on the 2D orb dock (the dock decides whether it can be claimed now). */
   claimOrb?(orbId: string): void;
 }
+export type BoardDescription =
+  | { readonly kind: 'unit'; readonly id: string }
+  | { readonly kind: 'carousel'; readonly unit: BoardCarouselSlot }
+  | { readonly kind: 'item'; readonly id: string }
+  | { readonly kind: 'orb'; readonly id: string }
+  | { readonly kind: 'public-orbs'; readonly count: number; readonly tiers: readonly string[] };
 export interface BoardFeedListener {
   playerSaved?(event: MelSaveReceipt): void;
   frame(frame: BoardFrame): void; events(events: readonly DisplayCombatEvent[]): void;

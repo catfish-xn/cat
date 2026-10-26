@@ -7,6 +7,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { overtimeIndicator } from '../../src/presentation/overtime-display';
 import { S13_COMBAT_RULES } from '../../src/simulation/s13-rules';
+import * as textCards from '../../src/presentation/text-card';
 import { PlayersSidebar } from '../../src/rendering/online/players-sidebar';
 import type { PlayerView } from '../../src/rendering/online/protocol';
 
@@ -36,6 +37,8 @@ class FakeNode {
     toggle: (name: string, on?: boolean) => { const want = on ?? !this.classes.has(name); if (want) this.classes.add(name); else this.classes.delete(name); return want; },
     contains: (name: string) => this.classes.has(name) };
   readonly style = { setProperty: () => {} };
+  matches() { return false; }
+  removeAttribute(name: string) { this.attributes.delete(name); }
   setAttribute(name: string, value: string) { this.attributes.set(name, value); }
   toggleAttribute(name: string, on: boolean) { if (on) this.attributes.set(name, ''); else this.attributes.delete(name); }
   append(...nodes: FakeNode[]) { this.children.push(...nodes); }
@@ -43,10 +46,12 @@ class FakeNode {
   addEventListener() {}
   remove() {}
 }
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('PlayersSidebar countdown: overtime indicator', () => {
   it('shows 加时 N in combat from 30 s on, keeps it across view pushes, and clears it once the battle stops', () => {
+    // This recorder tests only the countdown; hover-dom.test.ts mounts the real tooltip listeners.
+    vi.spyOn(textCards, 'attachTextCards').mockReturnValue(() => {});
     vi.stubGlobal('document', { createElement: () => new FakeNode() });
     const host = new FakeNode(), countdown = new FakeNode();
     const sidebar = new PlayersSidebar(host as unknown as HTMLElement, countdown as unknown as HTMLElement);
