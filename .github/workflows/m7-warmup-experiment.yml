@@ -36,8 +36,10 @@ jobs:
           cache-dependency-path: target/package-lock.json
       - run: npm ci
         working-directory: target
-      - uses: ./.github/actions/playwright-cache
-      - run: bash .github/ci/install-playwright.sh
+      - uses: ./harness/.github/actions/playwright-cache
+        with:
+          working-directory: target
+      - run: bash ../harness/.github/ci/install-playwright.sh
         working-directory: target
       - run: npm run build
         working-directory: target
