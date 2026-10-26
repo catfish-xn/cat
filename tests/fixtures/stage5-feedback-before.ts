@@ -1,0 +1,69 @@
+// Frozen pre-optimization oracle from 014476f; keep independent of the optimized renderer.
+import { appliedStatusFloat } from '../../src/presentation/combat-status';
+import { asDisplayEvents, type SceneCombatEvent } from '../../src/presentation/combat-display';
+export interface FeedbackAnchor { readonly x: number; readonly y: number; readonly radius: number }
+/** A centred rect in the same CSS coordinates as anchors (e.g. a canvas text label) that floats must not cover. */
+export interface FeedbackObstacle { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
+export interface CombatFeedbackRenderer { push(events: readonly SceneCombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>, obstacles?: readonly FeedbackObstacle[]): void; reset(): void; dispose(): void }
+type FloatKind = 'physical' | 'magic' | 'true' | 'shield' | 'heal' | 'status';
+interface Float { key: string; unitId: string; kind: FloatKind; amount: number; text: string; at: number; label: HTMLSpanElement }
+/** Damage type is told apart by color and by a suffix, so color is never the only cue. */
+const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ffc58f', magic: '#c9a8ff', true: '#ffffff', shield: '#a7dcff', heal: '#78efab', status: '#ff9d8a' };
+const SUFFIX: Readonly<Record<FloatKind, string>> = { physical: '', magic: ' 魔', true: ' 真', shield: '', heal: '', status: '' };
+/** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
+export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
+  const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
+  Object.assign(root.style, { position: 'absolute', inset: '0', overflow: 'hidden', pointerEvents: 'none' }); host.append(root);
+  let floats: Float[] = [], disposed = false;
+  function reset(): void { for (const item of floats) item.label.remove(); floats = []; }
+  /** Floats of one tick and unit merge; reset() runs on every new battle, so the tick identifies the batch. */
+  function add(tick: number, unitId: string, kind: FloatKind, amount: number, at: number, text = ''): void {
+    if (amount <= 0) return;
+    const key = `${tick}/${unitId}/${kind}${text}`;
+    const old = floats.find(item => item.key === key);
+    if (old) { if (kind !== 'status') old.amount += amount; return; }
+    const perUnit = floats.filter(item => item.unitId === unitId);
+    if (perUnit.length >= 3) { const first = perUnit[0]; first.label.remove(); floats = floats.filter(item => item !== first); }
+    while (floats.length >= 24) floats.shift()!.label.remove();
+    const label = document.createElement('span'); Object.assign(label.style, { position: 'absolute', fontSize: '14px', fontWeight: '700', whiteSpace: 'nowrap', textShadow: '0 1px 3px #000', color: COLORS[kind], pointerEvents: 'none' }); root.append(label);
+    floats.push({ key, unitId, kind, amount, text, at, label });
+  }
+  return {
+    push(events, at) {
+      if (disposed) return;
+      // Local ledger and §14.2 wire events read through the same display whitelist (event-carried numbers only).
+      for (const event of asDisplayEvents(events)) {
+        if (event.type === 'packetDamage') { add(event.tick, event.targetId, event.damageType, event.hpDamage, at); add(event.tick, event.targetId, 'shield', event.absorbed, at); }
+        else if (event.type === 'heal') add(event.tick, event.targetId, 'heal', event.actual, at);
+        else { const status = appliedStatusFloat(event); if (status && event.type === 'statusChanged') add(event.tick, event.targetId, 'status', 1, at, status); }
+      }
+    },
+    render(now, anchors, obstacles = []) {
+      if (disposed) return;
+      floats = floats.filter(item => { if (now - item.at >= 850) { item.label.remove(); return false; } return true; });
+      const lanes = new Map<string, number>();
+      const occupied: { x: number; y: number; half: number }[] = [];
+      for (const item of floats) {
+        const anchor = anchors.get(item.unitId); item.label.hidden = !anchor; if (!anchor) continue;
+        const lane = lanes.get(item.unitId) ?? 0; lanes.set(item.unitId, lane + 1);
+        const age = Math.max(0, now - item.at); item.label.textContent = item.kind === 'status' ? item.text : `${item.kind === 'heal' ? '+' : item.kind === 'shield' ? '盾 ' : '−'}${item.amount}${SUFFIX[item.kind]}`;
+        const half = Math.max(20, item.label.offsetWidth / 2); const width = root.clientWidth, height = root.clientHeight;
+        const x = Math.max(half, Math.min(width - half, anchor.x));
+        let y = Math.max(16, Math.min(height - 16, anchor.y - anchor.radius - 22 - lane * 17 - age / 70));
+        let placed = false;
+        for (let attempt = 0; attempt < 7; attempt++) {
+          const candidate = y - attempt * 21;
+          if (candidate < 12) break;
+          const overlapsFloat = occupied.some(rect => Math.abs(rect.x - x) < rect.half + half + 3 && Math.abs(rect.y - candidate) < 21);
+          const overlapsPiece = [...anchors.values()].some(point => Math.abs(point.x - x) < point.radius + half && Math.abs(point.y - candidate) < point.radius + 10);
+          const overlapsLabel = obstacles.some(rect => Math.abs(rect.x - x) < rect.w / 2 + half + 2 && Math.abs(rect.y - candidate) < rect.h / 2 + 12);
+          if (!overlapsFloat && !overlapsPiece && !overlapsLabel) { y = candidate; placed = true; occupied.push({ x, y, half }); break; }
+        }
+        item.label.hidden = !placed; if (!placed) continue;
+        item.label.style.left = `${x}px`; item.label.style.top = `${y}px`; item.label.style.transform = 'translate(-50%, -50%)'; item.label.style.opacity = String(Math.min(1, (850 - age) / 250));
+      }
+    },
+    reset,
+    dispose() { disposed = true; reset(); root.remove(); },
+  };
+}

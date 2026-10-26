@@ -1110,8 +1110,7 @@ export class BoardScene extends Phaser.Scene {
   private quietBoard(): boolean { return this.online && boardFeedActive(); }
   private renderFeedback() {
     if (this.quietBoard()) return;
-    const canvas = this.game.canvas.getBoundingClientRect(), host = document.getElementById('feedback-root')!.getBoundingClientRect();
-    const scale = canvas.width / this.scale.gameSize.width;
+    const host = document.getElementById('feedback-root')!.getBoundingClientRect();
     if (boardFeedActive()) {
       // ?render=3d: anchor floats to each model as the 3D layer projects it; the 2D canvas and its fx labels are covered.
       const anchors = new Map<string, { x: number; y: number; radius: number }>();
@@ -1125,6 +1124,7 @@ export class BoardScene extends Phaser.Scene {
       this.feedback?.render(performance.now(), anchors);
       return;
     }
+    const canvas = this.game.canvas.getBoundingClientRect(), scale = canvas.width / this.scale.gameSize.width;
     this.feedback?.render(performance.now(), new Map([...this.tokens].filter(([, token]) => token.visible).map(([id,token]) => [id,
       { x: canvas.left - host.left + token.x * scale, y: canvas.top - host.top + token.y * scale, radius: 27 * scale }])),
       this.fx.labelRects().map(rect => ({ x: canvas.left - host.left + rect.x * scale, y: canvas.top - host.top + rect.y * scale, w: rect.w * scale, h: rect.h * scale })));
