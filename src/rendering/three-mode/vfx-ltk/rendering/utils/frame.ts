@@ -22,6 +22,7 @@ import {
 import type { EmitterModel } from "../../engine/model/model";
 
 import { drawPhases } from "./drawKind";
+import { RENDER_PHASE } from '../../engine/model/enums';
 
 /** The layer everything but a particle draws on: the stage, the grid and the character. */
 export const SCENE_LAYER = 0;
@@ -46,11 +47,14 @@ export const UNDER_LAYER = 4;
 
 /** The layer an emitter warping the frame ahead of every particle draws on. */
 export const EARLY_DISTORTION_LAYER = 5;
+/** Optional board host passes: floor/grid, then ground particles, then characters. */
+export const FLOOR_LAYER = 6, GROUND_LAYER = 7;
 
 /** Let `camera` see every particle drawing colour, in either colour phase. */
 export function seeParticles(camera: Camera): void {
   camera.layers.enable(PARTICLE_LAYER);
   camera.layers.enable(UNDER_LAYER);
+  camera.layers.enable(GROUND_LAYER);
 }
 
 const OVER_LAYERS = [PARTICLE_LAYER] as const;
@@ -65,6 +69,7 @@ const WARP_LAYERS = [
 /** The layers the draws of `emitter` sit on, by the render phases it is in. */
 export function drawLayersOf(emitter: EmitterModel): readonly number[] {
   const phases = drawPhases(emitter);
+  if (phases.colour && (emitter.groundLayer || emitter.renderPhaseOverride === RENDER_PHASE.groundLayer)) return [GROUND_LAYER];
   if (phases.colour === "under") return UNDER_LAYERS;
   if (phases.colour === "over") return OVER_LAYERS;
   return WARP_LAYERS[Number(phases.warpsEarly) + 2 * Number(phases.warpsLate)];

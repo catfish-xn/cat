@@ -1,6 +1,7 @@
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
 export interface TimelineCue {
   readonly system: string;
+  readonly action?: 'cast' | 'attack';
   readonly event: 'cast-start' | 'projectile' | 'hit';
   readonly delay: number;
   readonly duration: number;
@@ -21,8 +22,9 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
     : cue.event === 'projectile' || cue.primary ? unique.slice(0, 1).map(targetId => ({ ...cue, sourceId, targetId }))
     : unique.map(targetId => ({ ...cue, sourceId, targetId })));
 }
-/** Replacement is atomic: a missing/not-yet-loaded system keeps the entire old cast. */
-export function selectTimeline(champion: string, cues: readonly TimelineCue[] | undefined, ready: (id: string) => boolean): readonly TimelineCue[] | null {
-  if (!['jinx', 'vi'].includes(champion) || !cues?.length || cues.some(cue => !ready(cue.system))) return null;
+/** Replacement is atomic: a missing/not-yet-loaded system keeps the entire old action.
+ * Legacy callers know the two built-in timelines; catalogues explicitly register other champions. */
+export function selectTimeline(champion: string, cues: readonly TimelineCue[] | undefined, ready: (id: string) => boolean, registered = ['jinx', 'vi'].includes(champion)): readonly TimelineCue[] | null {
+  if (!registered || !cues?.length || cues.some(cue => !ready(cue.system))) return null;
   return cues;
 }

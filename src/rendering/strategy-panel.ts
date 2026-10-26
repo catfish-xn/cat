@@ -48,7 +48,7 @@ import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView, readMasterworkOptions } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
-import { genericOffer, isKnownChoiceKind, isMasterworkChoice, isShopChoice, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
+import { anvilChoiceIconUrl, genericOffer, isKnownChoiceKind, isMasterworkChoice, isShopChoice, readChoiceExtras, SKIP_OPTION, timeoutOption, type GenericChoiceOffer } from '../presentation/choice-fallback';
 import { armorySecondsLeft, isAnvilArmory } from '../presentation/anvil-display';
 import { forgeProgressText, masterworkOffer, type MasterworkOptionDisplay, type OpeningForgeProgressDisplay } from '../presentation/opening-encounter-text';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
@@ -268,7 +268,7 @@ export class StrategyPanel {
     this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
     this.augmentStrip.dataset.debug = 'augment-strip'; this.traitColumn.root.before(this.augmentStrip);
     this.disposers.push(() => this.traitColumn.dispose(), () => this.augmentStrip.remove(), attachUnitCards(this.root));
-    if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock));
+    if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock), attachItemPopover(this.shopDock, 'shop-item-popover'));
     const choiceVisible = () => !this.modal.hidden && getComputedStyle(this.modal).display !== 'none';
     // The help dialog sits above every game layer: while it is open the choice is inert and never takes focus.
     const helpOpen = () => document.body.dataset.helpOpen === 'true';
@@ -544,7 +544,7 @@ export class StrategyPanel {
     const operable = this.operable(state);
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.itemDock?.replaceChildren(); this.eventList = null;
-    this.traitColumn.render(state.preparation, g23TraitRuntime(state));
+    this.traitColumn.render(state.preparation, g23TraitRuntime(state), state.items);
     // The bound anomaly sits after the augments (the online left column shows only this strip while the panel is folded).
     const anomaly = state.anomalyBinding, anomalyUnit = anomaly && state.preparation.units.find(unit => unit.id === anomaly.unitId);
     const augmentKey = [...state.augments.map(augment => augment.definitionId), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : ''].join();
@@ -745,7 +745,7 @@ export class StrategyPanel {
   }
   private renderTraits(state: MatchState): void {
     const list = element('section', '', 'trait-list'); list.dataset.debug = 'trait-panel';
-    for (const snapshot of deriveTraits(state.preparation, 'player')) {
+    for (const snapshot of deriveTraits(state.preparation, 'player', undefined, undefined, state.items)) {
       const definition = TRAIT_DEFINITIONS[snapshot.traitId], next = definition.tiers.find(tier => tier.threshold > snapshot.count);
       const row = element('article', '', snapshot.tier > 0 ? 'trait active' : 'trait'); row.dataset.debug = `trait:${snapshot.traitId}`;
       const title = element('h3', `${traitDisplayName(snapshot.traitId)} · ${snapshot.count} / ${next?.threshold ?? '已满'} · 档位 ${snapshot.tier}`);
@@ -1138,7 +1138,7 @@ export class StrategyPanel {
     const options = offer ? G23_BLACK_MARKETS[offer.tier - 1]?.options ?? [] : [];
     const payload = (choice as { payload?: { skippable?: boolean } }).payload;
     // A skip pays nothing now: every skip so far gives my 炼金男爵 heroes HealthPerSkip max health at the trait's current tier.
-    const tier = boardTraitRows(state.preparation).find(row => row.traitId === 'chem-baron')?.tier;
+    const tier = boardTraitRows(state.preparation, state.items).find(row => row.traitId === 'chem-baron')?.tier;
     const perSkip = G23_TRAIT_SOURCE['chem-baron']?.tiers.find(entry => entry.threshold === tier)?.values.HealthPerSkip;
     const item = (id: string) => Object.hasOwn(ITEM_DEFINITIONS, id);
     bar.append(element('span', `${offer ? `第 ${offer.tier} 档 · ` : ''}微光 ${chem?.shimmer ?? 0}${chem?.skips ? ` · 已跳过 ${chem.skips} 次` : ''} · 接受后微光清零`, 'market-meta'));
@@ -1150,7 +1150,10 @@ export class StrategyPanel {
       prize.className = 'shop-card shop-offer market-reward'; prize.dataset.debug = 'market:reward';
       const lines = reward ? g23RewardLines(reward, item(id) ? itemDisplayName(id) : undefined) : [item(id) ? itemDisplayName(id) : '黑市奖励'];
       const pictures = reward ? g23RewardIcons(reward) : [], icons = element('span', '', 'market-icons');
-      if (item(id)) icons.insertAdjacentHTML('beforeend', itemMarkHtml(id, 30));
+      if (item(id)) {
+        const mark = element('span', '', 'market-item'); mark.dataset.itemDef = id; mark.tabIndex = 0;
+        mark.innerHTML = itemMarkHtml(id, 30); icons.append(mark);
+      }
       for (const icon of pictures) {
         if (icon.kind === 'hero') {
           const hero = element('span', '', 'market-hero'); hero.title = `${icon.star} 星${icon.name}`;
@@ -1158,7 +1161,10 @@ export class StrategyPanel {
           hero.append(element('span', '★'.repeat(icon.star), `market-stars star-${icon.star}`));
           icons.append(hero);
         } else if (icon.kind === 'item') {
-          const mark = element('span', '', 'market-item'); mark.title = icon.name;
+          const mark = element('span', '', 'market-item');
+          const tool = Object.values(CONSUMABLE_DEFINITIONS).find(tool => tool.apiName === icon.source);
+          mark.title = [icon.name, tool?.description].filter(Boolean).join('\n');
+          if (icon.itemId) { mark.dataset.itemDef = icon.itemId; mark.tabIndex = 0; }
           mark.innerHTML = rewardItemMarkHtml(icon, 30);
           icons.append(mark);
         } else icons.append(element('span', String(icon.amount), 'market-gold'));
@@ -1190,8 +1196,10 @@ export class StrategyPanel {
     // Once the rules have drawn the items, the tooltips name the slots as shown rather than the source pools.
     if (reward && concrete?.length) lines.splice(0, lines.length, ...g23RewardIcons(reward, concrete).map(icon => icon.kind === 'gold' ? `${icon.amount} 金币` : icon.kind === 'hero' ? `${icon.star}星【${icon.name}】` : icon.name));
     const bundle = element('div', '', 'market-bundle'); bundle.dataset.debug = 'market:bundle'; bundle.title = lines.join('\n');
-    const slot = (picture: string | HTMLElement, caption: string) => {
+    const slot = (picture: string | HTMLElement, caption: string, itemId?: string | null, description?: string) => {
       const cell = element('span', '', 'market-slot'), art = element('span', '', 'market-slot-art');
+      cell.title = [caption, description].filter(Boolean).join('\n');
+      if (itemId) { cell.dataset.itemDef = itemId; cell.tabIndex = 0; }
       if (typeof picture === 'string') art.innerHTML = picture; else art.append(picture);
       cell.append(art, element('span', caption, 'market-slot-name')); bundle.append(cell);
     };
@@ -1199,12 +1207,15 @@ export class StrategyPanel {
     bundle.append(element('span', '黑市', 'market-tab'));
     const rank = { item: 0, gold: 1, hero: 2 } as const;
     const pictures = (reward ? g23RewardIcons(reward, concrete) : []).sort((a, b) => rank[a.kind] - rank[b.kind]);
-    if (!pictures.length && item(id)) slot(itemMarkHtml(id, 40), itemDisplayName(id));
+    if (!pictures.length && item(id)) slot(itemMarkHtml(id, 40), itemDisplayName(id), id);
     for (const icon of pictures) {
       if (icon.kind === 'hero') {
         const caption = `${icon.star}星【${icon.name}】`;
         if (icon.unitId) slot(heroPortraitHtml(icon.unitId, 40, heroEmblemSvg(icon.unitId, 40)), caption); else slot(element('span', '?', 'market-pool'), caption);
-      } else if (icon.kind === 'item') slot(rewardItemMarkHtml(icon, 40), icon.name);
+      } else if (icon.kind === 'item') {
+        const tool = Object.values(CONSUMABLE_DEFINITIONS).find(tool => tool.apiName === icon.source);
+        slot(rewardItemMarkHtml(icon, 40), icon.name, icon.itemId, tool?.description);
+      }
       else slot(element('span', '', 'market-coin'), `${icon.amount}金币`);
     }
     if (bundle.childElementCount === 1) for (const line of lines) bundle.append(element('span', line, 'market-line'));
@@ -1370,6 +1381,7 @@ export class StrategyPanel {
   private renderShop(state: MatchState, ready: boolean): void {
     if (this.armoryTimer != null) { globalThis.clearInterval(this.armoryTimer); this.armoryTimer = null; }
     const choice = state.pendingChoice, token = choice ? `${choice.choiceId}:${choice.generation}` : '';
+    this.shopDock?.toggleAttribute('data-anvil-choice', Boolean(choice && isAnvilArmory(choice)));
     if (choice && isShopChoice(choice) && !isOnlineSpectating()) {
       if (this.shopChoiceAway !== token) { this.renderShopChoice(choice, token); return; }
     } else this.shopChoiceAway = '';
@@ -1425,21 +1437,31 @@ export class StrategyPanel {
     const extras = readChoiceExtras(choice), title = extras.title ?? '选择', online = isOnline();
     const section = element('section', '', 'shop-panel shop-choice'), cards = element('div', '', 'touch-shop');
     section.dataset.choiceSource = choice.kind;
+    if (isAnvilArmory(choice)) {
+      section.dataset.armory = 'anvil';
+      cards.style.gridTemplateColumns = `repeat(${choice.offers.length}, minmax(0, 1fr))`;
+    }
     const fallback = online ? timeoutOption(choice) : undefined;
     const answer = (id: string) => {
       this.shopChoiceQuietUntil = performance.now() + CHOICE_POINTER_QUIET_MS;
       this.actions.choose(choice.choiceId, choice.generation, id);
     };
     const bar = element('p', '', 'shop-choice-bar');
+    const anvilIcon = anvilChoiceIconUrl(choice);
+    if (anvilIcon) {
+      const portrait = document.createElement('img'); portrait.src = anvilIcon; portrait.alt = ''; portrait.width = 28; portrait.height = 28;
+      portrait.dataset.debug = 'armory:icon'; portrait.addEventListener('error', () => portrait.remove(), { once: true }); bar.append(portrait);
+    }
     bar.append(element('strong', title));
     if (choice.kind === 'blackMarket') this.blackMarket(cards, bar, choice, answer);
     else for (const id of choice.offers) {
       const offer = genericOffer(id, extras);
       const card = this.genericOfferButton(choice, offer, id === fallback, () => answer(id));
       card.classList.add('shop-card', 'shop-offer');
+      if (isAnvilArmory(choice)) card.querySelector('.offer-desc')?.remove();
       // Shop-card style: the name alone, the price as its own gold line (the tooltip keeps the full label).
       if (offer.price !== undefined) { card.querySelector('.offer-name')!.textContent = offer.name; card.append(element('span', offer.price ? `${offer.price} 金币` : '免费', 'offer-price')); }
-      if (offer.iconUrl) card.insertAdjacentHTML('afterbegin', `<img class="offer-icon" src="${offer.iconUrl}" alt="" width="40" height="40">`);
+      if (offer.iconUrl && !card.querySelector('.item-mark, .augment-icon')) card.insertAdjacentHTML('afterbegin', `<img class="offer-icon" src="${offer.iconUrl}" alt="" width="40" height="40">`);
       cards.append(card);
     }
     if (fallback) bar.append(element('span', fallback === SKIP_OPTION ? '倒计时结束自动保留' : `倒计时结束自动选「${genericOffer(fallback, extras).name}」`, 'choice-timeout'));
@@ -1451,7 +1473,7 @@ export class StrategyPanel {
         clock.textContent = left === null ? '' : `剩余 ${left} 秒`; clock.classList.toggle('urgent', left !== null && left <= 5);
       };
       tick(); this.armoryTimer = globalThis.setInterval(tick, 250) as unknown as number;
-      bar.insertBefore(clock, bar.children[1] ?? null);
+      bar.insertBefore(clock, bar.querySelector('.choice-timeout'));
     }
     // Offline the choice blocks the shop (contract §15.1 is online only), so there is nothing to switch to.
     if (online) {

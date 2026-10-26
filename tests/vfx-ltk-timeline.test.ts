@@ -100,3 +100,21 @@ describe('cast timeline replacement and fallback', () => {
     expect(runtime.active).toBe(0); runtime.dispose();
   });
 });
+
+it('expires Vi flight at landing even after a frame-quantized start, leaving room for every impact', async () => {
+  const cues = S13_TIMELINES.vi, systems = Object.fromEntries(cues.map(c => [c.system, `systems/${c.system}.json`]));
+  const library = createVfxLibrary('/root/', {
+    readJson: async url => {
+      if (url.endsWith('index.json')) return { version: 1, systems, assets: { 'synthetic.tex': 'texture.png' }, skills: { vi: cues } };
+      const doc = syntheticSystem(); if (url.includes('25afa6a6')) doc.root = struct('VfxSystemDefinitionData', {}); return doc;
+    }, readTexture: async () => new Texture(),
+  });
+  const scene = new Scene(), source = { root: new Group(), body: null, alive: true }, budget = { live: 0, max: 1500 };
+  const runtime = createLtkRuntime(library, scene, () => source, { budget });
+  await runtime.warm('vi'); expect(runtime.play('vi', 'source', ['target'])).toBe(true);
+  for (let frame = 0; frame < 17; frame++) runtime.update(1 / 30, new Camera());
+  const live = scene.children.map(o => o.userData.ltkSystem);
+  expect(live).toContain('66c600e8'); expect(live).toContain('d27b3044'); expect(live).toContain('18e22631');
+  expect(live).not.toContain('84b969e0'); expect(runtime.active).toBe(6); expect(budget.live).toBe(1500);
+  runtime.dispose(); expect(budget.live).toBe(0); expect(scene.children).toHaveLength(0);
+});

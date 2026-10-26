@@ -1,3 +1,5 @@
+> 2026-10-27：已实现按英雄延迟目录和显式地面绘制通道，当前协议、运行命令及覆盖见 [VFX_SET13_COVERAGE.md](VFX_SET13_COVERAGE.md)；下文为首版方案。
+
 # LeagueToolkit VFX 移植方案与交付边界
 
 本文件保留首版交付边界。2026-10-26 的真实 Jinx／Vi 数据接入、补齐的绘制功能、当前测试与手工验收入口以 [VFX_PORT_REPORT.md](VFX_PORT_REPORT.md) 为准；对应 P 约定见 `S13_RULES_GAP.md:1269`。

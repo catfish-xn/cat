@@ -69,7 +69,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   anchor: Anchor; target: Anchor | null; joints: Joints; projectileSeconds?: number; duration: number; stopAfter?: number; seed: number;
   attachment?: { root: Object3D; body: Object3D | null; disposed?: boolean };
 }) {
-  const object = new Group(); object.scale.setScalar(FX_SCALE);
+  const object = new Group(); object.name = 'ltk-vfx'; object.scale.setScalar(FX_SCALE);
   const driver = createDriver(options.seed, { capacity: ROOT_PARTICLES, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
   const from = options.anchor.originAt(0), to = options.target?.originAt(0) ?? from;
   const distance = Math.hypot(...from.map((value, index) => value - to[index]));

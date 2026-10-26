@@ -126,6 +126,41 @@ describe('Hextech Forge summon in the real mountRenderer3d', () => {
   }
   const cast = (tick: number) => listener.events([{ type: 'cast', tick, eventSeq: tick, sourceId: 'j', targetIds: ['foe'] } as unknown as DisplayCombatEvent]);
 
+  it('keeps a missing trainer golem as a team pawn across combat resets, death and revival', async () => {
+    await mount();
+    const golem = piece({ definitionId: 'trainer-golem' });
+    await publish([golem], false);
+    await vi.dynamicImportSettled();
+    await publish([golem]);
+    await publish([{ ...golem, alive: false }]); advance(2000);
+    await publish([golem], false);
+    await publish([golem]);
+    expect(scene.getObjectByName('rendering3d-placeholder')).toBeUndefined();
+    const magenta: unknown[] = [], pawns: unknown[] = [];
+    scene.traverse(object => {
+      if (!(object instanceof three.Mesh)) return;
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        if ('color' in material && material.color instanceof three.Color) {
+          if (material.color.getHex() === 0xff00ff) magenta.push(object);
+          if (object.geometry.type === 'CylinderGeometry') pawns.push(object);
+        }
+      }
+    });
+    expect(magenta).toEqual([]); expect(pawns.length).toBeGreaterThan(0);
+    expect(apply.mock.contexts.some(mixer => (mixer as unknown as { root: Group }).root.name === 'rendering3d-placeholder')).toBe(false);
+  });
+
+  it.each(['TFT_ArmoryKeyComponent', 'TFT_ArmoryKeyCompleted'])('loads %s by its own manifest key and hides champion stars', async definitionId => {
+    const renderer = await import('../src/rendering/three-mode/placeholder-renderer');
+    renderer.useAnvilTest(id => id.startsWith('TFT_ArmoryKey'));
+    const lease = model(definitionId, { idle: 'anvil_idle' }, [['anvil_idle', 2]]);
+    const load = vi.spyOn(core.ModelCache.prototype, 'load').mockResolvedValue(lease);
+    await mount(); await publish([piece({ definitionId })], false);
+    expect(load).toHaveBeenCalledWith(definitionId);
+    expect(scene.getObjectByName(`model-${definitionId}`)).toBe(lease.scene);
+    expect(scene.getObjectByName('render3d-stars')).toBeUndefined();
+  });
+
   it('rises with its spawn clip when it appears in combat, then stands in idle', async () => {
     const { forgeLease } = useModels();
     await mount(); await publish([jayce()], false); await publish([jayce(), forge()]);

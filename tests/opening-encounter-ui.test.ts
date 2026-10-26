@@ -83,6 +83,8 @@ class Node {
   setAttribute() {} append(...nodes: Node[]) { this.children.push(...nodes); for (const node of nodes) node.parent = this; this.syncText(); }
   replaceChildren(...nodes: Node[]) { this.children = nodes; this.syncText(); } remove() {}
   addEventListener(type: string, handler: () => void) { this.listeners[type] = handler; }
+  style: Record<string, string> = {};
+  getBoundingClientRect() { return { left: 64, bottom: 128 }; }
   parent: Node | null = null;
   private syncText() { if (this.children.length) this.textContent = this.children.map(child => child.textContent).join(' '); }
 }
@@ -98,6 +100,31 @@ function stubDom() {
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('PR8 opening-encounter HUD', () => {
+  it('online chip has an icon and an immediate tooltip for hover/focus; hidden on click and missing view', () => {
+    stubDom();
+    const view = viewFor('component-anvils');
+    const hud = new OpeningEncounterHud(new Node() as unknown as HTMLElement, true);
+    hud.update({ encounter: view, matchKey: 'online', round: 2, forge: { forgesGranted: 2, forgesPending: 1 } });
+    const chip = hud.chip as unknown as Node;
+    expect(chip.children[0].className).toBe('opening-chip-icon');
+    expect(chip.title).toBe('');
+    expect(hud.tooltip.hidden).toBe(true);
+    chip.listeners.mouseenter();
+    expect(hud.tooltip.hidden).toBe(false);
+    expect(hud.tooltip.textContent).toContain(view.descriptionZh);
+    expect(hud.tooltip.textContent).toContain('锻造器 剩余 1');
+    chip.listeners.mouseleave();
+    expect(hud.tooltip.hidden).toBe(true);
+    chip.listeners.focus();
+    expect(hud.tooltip.hidden).toBe(false);
+    chip.listeners.blur();
+    expect(hud.tooltip.hidden).toBe(true);
+    chip.listeners.focus(); chip.listeners.click();
+    expect(hud.tooltip.hidden).toBe(true);
+    expect(hud.debug().card).toContain(view.descriptionZh);
+    chip.listeners.focus(); hud.update({ encounter: null, matchKey: 'online', round: 2 });
+    expect(hud.tooltip.hidden).toBe(true);
+  });
   it('shows the intro once per match (not again on a later view or a reconnect), the banner in the opening round, the chip always', () => {
     stubDom();
     const view = viewFor('trainer-golems');

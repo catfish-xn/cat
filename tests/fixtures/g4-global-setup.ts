@@ -1,9 +1,16 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { TestProject } from 'vitest/node';
+import { chromium, type BrowserServer } from 'playwright';
+import { BROWSER_OPTIONS } from './shared-browser';
 
-export default function setup() {
+export default async function setup(project: TestProject) {
   const directory = mkdtempSync(join(tmpdir(), 'g4-fixtures-'));
   process.env.G4_FIXTURE_CACHE = directory;
-  return () => { delete process.env.G4_FIXTURE_CACHE; rmSync(directory, { recursive: true, force: true }); };
+  // One shared browser server for the in-process browser tests (tests/fixtures/shared-browser.ts);
+  // if it cannot start, those tests launch their own browser as before.
+  let server: BrowserServer | undefined;
+  try { server = await chromium.launchServer(BROWSER_OPTIONS); project.provide('playwrightEndpoint', server.wsEndpoint()); } catch { server = undefined; }
+  return async () => { await server?.close(); delete process.env.G4_FIXTURE_CACHE; rmSync(directory, { recursive: true, force: true }); };
 }

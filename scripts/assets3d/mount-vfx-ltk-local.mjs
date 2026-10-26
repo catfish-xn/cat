@@ -4,7 +4,7 @@ import { resolve, join, sep } from 'node:path';
 import { execFileSync } from 'node:child_process';
 const args = Object.fromEntries(process.argv.slice(2).map(arg => arg.replace(/^--/, '').split('=')));
 if (!args.export || !args.models) throw new Error('--export=<vfx-tool/out> --models=<existing 3D root> required');
-const trial = resolve('assets3d-local/trial'), ignored = resolve('assets3d-local') + sep;
+const trial = resolve(args.trial ?? 'assets3d-local/trial'), ignored = resolve('assets3d-local') + sep;
 await mkdir(trial, { recursive: true });
 if (!(await realpath(trial)).startsWith(ignored)) throw new Error('trial must be a real directory under ignored assets3d-local');
 execFileSync('git', ['check-ignore', '--quiet', join(trial, 'vfx-ltk')]);

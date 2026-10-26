@@ -25,8 +25,10 @@ export interface BoardPiece {
   readonly alive: boolean;
   /** The 2D combat meters while BoardScene draws them (a shown combat, alive); absent otherwise. */
   readonly meters?: BoardMeters;
+  /** Server-projected Enforcer wanted target; display only. */
+  readonly enforcerWanted?: boolean;
   /** Worn items in slot order, then this round's temporary (窃贼手套) items, with the 2D icon URL (null when there is none); absent when it has none. */
-  readonly items?: readonly { readonly id: string; readonly icon: string | null }[];
+  readonly items?: readonly { readonly id: string; readonly icon: string | null; readonly stacks?: number; readonly maxStacks?: number }[];
   /** Crowd control on it in the shown combat (presentation/control-display.ts): 'airborne' is a knock-up; absent when none. */
   readonly control?: 'stun' | 'airborne';
 }
@@ -49,6 +51,10 @@ export interface BoardFrame {
   readonly hit?: BoardHit | null;
   /** My own 征服层数 and 微光 (owner-only, like the trait column's counters; never another seat's), for the 3D chest and flask. */
   readonly mechanics?: BoardMechanics;
+  /** Online owner-only banked-gold light count; absent offline and before my first private view. Display only. */
+  readonly goldMines?: number;
+  /** Latest settled round whose deferred income has reached my bank (next round entered); null before any payment. */
+  readonly goldMineIncomeKey?: string | null;
 }
 /** Absent parts are not in play (trait not fielded and nothing gathered yet). */
 export interface BoardMechanics {
@@ -80,6 +86,8 @@ export interface BoardDropHint {
  */
 export interface BoardControls {
   hover(id: string | null): void;
+  /** The piece of any team under the pointer, for its description card only (never a command target). */
+  look?(id: string | null): void;
   select(id: string): void;
   /** False when the 2D board would not let this unit be dragged now. */
   dragStart(id: string): boolean;

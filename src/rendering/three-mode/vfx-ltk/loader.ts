@@ -22,7 +22,9 @@ export interface VfxIndex {
   /** Original, case-insensitive League path -> converted file relative to vfx-ltk/. */
   assets: Record<string, string>;
   /** Presentation seconds relative to cast, not authoritative damage scheduling. */
-  skills: Partial<Record<'jinx' | 'vi', readonly TimelineCue[]>>;
+  skills: Record<string, readonly TimelineCue[] | undefined>;
+  /** Small root catalogue; each champion retains the existing per-index limits. */
+  champions?: Record<string, string>;
 }
 export interface VfxReader {
   readJson(url: string): Promise<unknown>;
@@ -104,7 +106,7 @@ export function parseIndex(raw: unknown): VfxIndex {
     if (typeof path !== 'string') throw new VfxLoadError('invalid', 'index-path'); vfxUrl('', path);
   }
   for (const [champion, cues] of Object.entries(raw.skills)) {
-    if (!['jinx', 'vi'].includes(champion) || !Array.isArray(cues) || cues.length === 0 || cues.length > 12) throw new VfxLoadError('invalid', 'skill');
+    if (!/^[a-z][a-z0-9-]{0,63}$/.test(champion) || !Array.isArray(cues) || cues.length === 0 || cues.length > 12) throw new VfxLoadError('invalid', 'skill');
     for (const cue of cues) {
       if (!record(cue) || typeof cue.system !== 'string' || !Object.hasOwn(raw.systems, cue.system)
         || !['cast-start', 'hit', 'projectile'].includes(String(cue.event)) || !finite(cue.delay) || Number(cue.delay) < 0 || Number(cue.delay) > 10
@@ -113,10 +115,18 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.targetBone !== undefined && typeof cue.targetBone !== 'string')
         || (cue.phase !== undefined && (typeof cue.phase !== 'number' || ![0, 1, 2].includes(cue.phase)))
         || (cue.primary !== undefined && typeof cue.primary !== 'boolean')
+        || (cue.action !== undefined && cue.action !== 'attack' && cue.action !== 'cast')
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
         throw new VfxLoadError('invalid', 'timeline-cue');
       }
+    }
+  }
+  if (raw.champions !== undefined) {
+    if (!record(raw.champions) || Object.keys(raw.champions).length > 128) throw new VfxLoadError('invalid', 'champions');
+    for (const [id, path] of Object.entries(raw.champions)) {
+      if (!/^[a-z][a-z0-9-]{0,63}$/.test(id) || typeof path !== 'string' || !path.endsWith('/index.json')) throw new VfxLoadError('invalid', 'champion-path');
+      vfxUrl('', path);
     }
   }
   const assets: Record<string, string> = Object.create(null);
@@ -125,29 +135,34 @@ export function parseIndex(raw: unknown): VfxIndex {
     assets[name.toLowerCase()] = path as string;
   }
   return { version: 1, systems: raw.systems as Record<string, string>, assets,
-    skills: { ...convertedTimelines(raw.systems as Record<string, string>), ...raw.skills as VfxIndex['skills'] } };
+    skills: { ...convertedTimelines(raw.systems as Record<string, string>), ...raw.skills as VfxIndex['skills'] },
+    ...(raw.champions ? { champions: raw.champions as Record<string, string> } : {}) };
 }
 
-export function createVfxLibrary(root: string, reader: VfxReader) {
+export interface VfxLibraryOptions { groundPass?: boolean; directory?: string }
+export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLibraryOptions = {}): VfxLibrary {
   let closed = false, current: VfxIndex | null = null;
   const documents = new Map<string, Promise<PreparedVfx>>(), textures = new Map<string, Promise<Texture>>(), meshes = new Map<string, Promise<BufferGeometry>>();
   const prepared = new Map<string, PreparedVfx>();
+  const ownedTextures = new Set<Texture>(), ownedGeometry = new Set<BufferGeometry>();
+  const children = new Map<string, VfxLibrary>();
+  const urlOf = (path: string) => vfxUrl(root, (options.directory ?? '') + path);
   const converted = new Map<string, Promise<ConvertedMesh>>(), cubes = new Map<string, Promise<Texture>>();
   const black = new DataTexture(new Uint8Array(4), 1, 1); black.needsUpdate = true;
   const ensureOpen = () => { if (closed) throw new VfxLoadError('closed', 'library'); };
   const texture = (url: string) => {
     let held = textures.get(url);
-    if (!held) { held = reader.readTexture(url).then(t => { if (closed) { t.dispose(); ensureOpen(); } t.colorSpace = NoColorSpace; t.flipY = false; t.minFilter = LinearFilter; t.needsUpdate = true; return t; }); textures.set(url, held); }
+    if (!held) { held = reader.readTexture(url).then(t => { if (closed) { t.dispose(); ensureOpen(); } ownedTextures.add(t); t.colorSpace = NoColorSpace; t.flipY = false; t.minFilter = LinearFilter; t.needsUpdate = true; return t; }); textures.set(url, held); }
     return held;
   };
   const cube = (url: string) => {
     let held = cubes.get(url);
-    if (!held) { held = texture(url).then(reflectionCube).then(t => { if (closed) { t.dispose(); ensureOpen(); } return t; }); cubes.set(url, held); }
+    if (!held) { held = texture(url).then(reflectionCube).then(t => { if (closed) { t.dispose(); ensureOpen(); } ownedTextures.add(t); return t; }); cubes.set(url, held); }
     return held;
   };
   const assetPath = (named: NamedAsset) => {
     const path = current?.assets[named.path.toLowerCase()];
-    if (!path) throw new VfxLoadError('missing', `asset:${named.path}`); return vfxUrl(root, path);
+    if (!path) throw new VfxLoadError('missing', `asset:${named.path}`); return urlOf(path);
   };
   async function load(id: string): Promise<PreparedVfx> {
     ensureOpen(); const index = await ready; ensureOpen();
@@ -155,18 +170,18 @@ export function createVfxLibrary(root: string, reader: VfxReader) {
     let held = documents.get(id);
     if (held) return held;
     held = (async () => {
-      const raw = await reader.readJson(vfxUrl(root, index.systems[id])); ensureOpen(); validateSystem(raw);
+      const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
       const model = readVfxSystem(raw), drawn = drawnEmitters(model, true);
       if (drawn.length > 64 || model.buildUpTime > 2 || !Number.isFinite(model.buildUpTime)) throw new VfxLoadError('unsupported', 'system-budget');
       // Check the entire child tree before reading assets or publishing a replacement.
-      // Upstream's negative ground order assumes its stage draws earlier. Our opaque
-      // hex tiles use order 0 and the arena grid can be transparent: neither path has
-      // a compatible ground/character pass yet. Keep the complete hand-written cast.
+      // Upstream's negative ground order alone cannot sort against both opaque hexes
+      // and a transparent arena grid. Only a host providing the separate floor,
+      // ground and character passes opts in; other consumers keep legacy intact.
       // The host has no particle shadow-map pass either; a shadow-only system must
       // not become a successful but invisible replacement (or leak into colour).
       for (const { emitter: e } of drawn) {
         if (e.disabled) continue;
-        if (e.groundLayer || e.renderPhaseOverride === RENDER_PHASE.groundLayer) throw new VfxLoadError('unsupported', 'ground-layer');
+        if (!options.groundPass && (e.groundLayer || e.renderPhaseOverride === RENDER_PHASE.groundLayer)) throw new VfxLoadError('unsupported', 'ground-layer');
         if (e.renderPhaseOverride === RENDER_PHASE.shadow) throw new VfxLoadError('unsupported', 'shadow-only');
       }
       const empty = !drawn.some(d => !d.emitter.disabled);
@@ -191,7 +206,7 @@ export function createVfxLibrary(root: string, reader: VfxReader) {
             let held = converted.get(signature);
             if (!held) {
               held = readConvertedMesh(e.mesh, path => reader.readBinary!(assetPath({ path, asset: null })), key)
-                .then(mesh => { if (closed) { mesh.geometry.dispose(); ensureOpen(); } return mesh; });
+                .then(mesh => { if (closed) { mesh.geometry.dispose(); ensureOpen(); } ownedGeometry.add(mesh.geometry); return mesh; });
               converted.set(signature, held);
             }
             const mesh = await held; ensureOpen(); geometry.set(key, mesh.geometry);
@@ -202,7 +217,7 @@ export function createVfxLibrary(root: string, reader: VfxReader) {
           if (!reader.readMesh || !e.mesh.path) throw new VfxLoadError('unsupported', 'mesh-reader');
           const url = assetPath({ path: e.mesh.path, asset: e.mesh.asset });
           let mesh = meshes.get(url);
-          if (!mesh) { mesh = reader.readMesh(url).then(g => { if (closed) { g.dispose(); ensureOpen(); } return g; }); meshes.set(url, mesh); }
+          if (!mesh) { mesh = reader.readMesh(url).then(g => { if (closed) { g.dispose(); ensureOpen(); } ownedGeometry.add(g); return g; }); meshes.set(url, mesh); }
           geometry.set(key, await mesh); ensureOpen();
         }
       }
@@ -213,19 +228,35 @@ export function createVfxLibrary(root: string, reader: VfxReader) {
     });
     documents.set(id, held); return held;
   }
-  const ready = reader.readJson(vfxUrl(root, 'index.json')).then(parseIndex).then(index => { ensureOpen(); current = index; return index; }).catch(() => null);
+  const ready = reader.readJson(urlOf('index.json')).then(parseIndex).then(index => { ensureOpen(); current = index; return index; }).catch(() => null);
   return {
     ready, load, get: (id: string) => prepared.get(id), get index() { return current; },
+    async champion(id: string): Promise<VfxLibrary | null> {
+      const index = await ready; if (closed || !index) return null;
+      const path = index.champions?.[id];
+      if (!path) return Object.hasOwn(index.skills, id) ? this : null;
+      let child = children.get(id);
+      if (!child) {
+        child = createVfxLibrary(root, reader, { ...options, directory: (options.directory ?? '') + path.slice(0, -'index.json'.length) });
+        children.set(id, child);
+      }
+      await child.ready; return closed ? null : child;
+    },
     dispose() {
       if (closed) return; closed = true; black.dispose();
-      for (const t of textures.values()) void t.then(t => t.dispose(), () => {});
-      for (const g of meshes.values()) void g.then(g => g.dispose(), () => {});
-      for (const g of converted.values()) void g.then(g => g.geometry.dispose(), () => {});
-      for (const t of cubes.values()) void t.then(t => t.dispose(), () => {});
+      for (const child of children.values()) child.dispose(); children.clear();
+      // Release settled GPU resources before the host resets renderer.properties.
+      // Pending reads release themselves in their closed checks when they arrive.
+      for (const t of ownedTextures) t.dispose();
+      for (const g of ownedGeometry) g.dispose();
+      ownedTextures.clear(); ownedGeometry.clear();
       converted.clear(); cubes.clear();
       textures.clear(); meshes.clear(); documents.clear(); prepared.clear(); current = null;
     },
   };
 }
-export type VfxLibrary = ReturnType<typeof createVfxLibrary>;
+export interface VfxLibrary {
+  ready: Promise<VfxIndex | null>; load(id: string): Promise<PreparedVfx>; get(id: string): PreparedVfx | undefined;
+  readonly index: VfxIndex | null; champion(id: string): Promise<VfxLibrary | null>; dispose(): void;
+}
 export type { VfxValue };

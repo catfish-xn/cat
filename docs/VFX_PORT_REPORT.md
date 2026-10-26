@@ -1,3 +1,5 @@
+> 2026-10-27 更新：合并冲突、全 Set 13 转换目录、地面通道、真实浏览器截图与逐英雄覆盖以 [VFX_SET13_COVERAGE.md](VFX_SET13_COVERAGE.md) 为准；下文保留历史验收记录。
+
 > 以下为 984bb10d 的历史移植报告；review J 修复后的支持范围、回退影响与验证结果见 [VFX_REVIEW_J.md](VFX_REVIEW_J.md)，其中新的地面层拒绝会使当前真实 Jinx／Vi 时间线回退。
 【完成】补齐本批数据所需的 .sco、LTKG/LTKS/LTKA 蒙皮与 submesh、角色骨架覆盖、反射立方图、软粒子与早／晚屏幕扭曲通道；保留上游 GPL 来源。证据：src/rendering/three-mode/vfx-ltk/loader.ts:160、src/rendering/three-mode/vfx-ltk/assets/mesh.ts:18、src/rendering/three-mode/vfx-ltk/rendering/components/AttachedMeshes.ts:19、src/rendering/three-mode/vfx-ltk/rendering/passes.ts:17、src/rendering/three-mode/vfx-ltk/NOTICE.md:20。
 【完成】真实合并导出 47/47 加载：45 个非空系统成功、2 个 empty-noop、0 拒绝；每系统用实际纹理／几何／骨架／动画推进60帧再释放，无 GPU 渲染。空定义不占运行时槽位。证据：/tmp/cat-vfx-local-audit-final.json:2、scripts/assets3d/verify-vfx-ltk-local.mjs:27、src/rendering/three-mode/vfx-ltk/runtime.ts:65。

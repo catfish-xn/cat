@@ -8,7 +8,7 @@
 import type { GameState } from '../simulation/game';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { SHOP_CATALOG } from '../simulation/match-rules';
-import type { TraitSnapshot } from '../simulation/strategy-types';
+import type { ItemInstance, TraitSnapshot } from '../simulation/strategy-types';
 import { deriveTraits } from '../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import type { MatchState } from '../simulation/match-types';
@@ -106,7 +106,7 @@ const nextMarket = (shimmer: number) => { const market = (Math.floor(shimmer / 1
 export function g23BoardMechanics(state: MatchState): BoardMechanics | undefined {
   let progress; try { progress = readG23Progress(state); } catch { return undefined; }
   if (!progress) return undefined;
-  const traits = new Set(boardTraitRows(state.preparation).map(row => row.traitId));
+  const traits = new Set(boardTraitRows(state.preparation, state.items).map(row => row.traitId));
   const { stacks, chestsOpened } = progress.conquest, chem = progress.chem;
   const conquest = traits.has('conqueror') || stacks > 0 ? { stacks, opened: chestsOpened,
     from: G23_CONQUEROR_CHESTS[chestsOpened - 1]?.threshold ?? 0, next: G23_CONQUEROR_CHESTS[chestsOpened]?.threshold ?? null } : undefined;
@@ -121,9 +121,12 @@ export function traitRows(snapshots: readonly TraitSnapshot[]): TraitRow[] {
     return { traitId: snapshot.traitId, name: traitDisplayName(snapshot.traitId), count: snapshot.count, tier: snapshot.tier, thresholds: definition.tiers.map(tier => tier.threshold), members: snapshot.memberDefinitionIds };
   }).sort((a, b) => Number(b.tier > 0) - Number(a.tier > 0) || b.tier - a.tier || b.count - a.count || a.name.localeCompare(b.name, 'zh'));
 }
-/** Player rows of a preparation state; an unknown definition (content mismatch) shows no rows instead of throwing. */
-export function boardTraitRows(preparation: GameState): TraitRow[] {
-  try { return traitRows(deriveTraits(preparation, 'player')); } catch { return []; }
+/**
+ * Player rows of a preparation state; an unknown definition (content mismatch) shows no rows instead of throwing.
+ * `items`: the owner's item instances, so emblems held by board units (魔像训练师's golem included) count like the rules count them.
+ */
+export function boardTraitRows(preparation: GameState, items: readonly ItemInstance[] = []): TraitRow[] {
+  try { return traitRows(deriveTraits(preparation, 'player', undefined, undefined, items)); } catch { return []; }
 }
 
 /** Trait icon, or a letter badge (first character of the name) when the icon is not bundled. */
@@ -219,7 +222,7 @@ export function attachTraitCards(scope: HTMLElement, card: HoverCard, membersOf:
   return attachHoverCards(scope, card, '.trait-row[data-trait]', anchor => {
     const traitId = anchor.dataset.trait!, count = Number(anchor.dataset.count ?? 0), members = membersOf(traitId), runtime = runtimeOf(traitId);
     return { key: `trait:${traitId}:${count}:${members.join(',')}:${runtimeText(runtime, true)}`, build: () => traitCardBody(traitId, count, members, runtime) ?? el('div', traitId) };
-  });
+  }, { pin: true });
 }
 
 /** The always-visible column at the top of the left panels; re-rendered with the panel. */
@@ -233,7 +236,7 @@ export class TraitColumn {
   private runtime: TraitRuntime | undefined;
   private key = '';
   private readonly detach: () => void;
-  private own: [GameState, TraitRuntime | undefined] | null = null;
+  private own: [GameState, TraitRuntime | undefined, readonly ItemInstance[]] | null = null;
   private shown: readonly TraitRow[] | null = null;
   constructor(host: HTMLElement, before: HTMLElement | null, card: HoverCard) {
     this.root = el('section', '', 'trait-column'); this.root.id = 'trait-column'; this.root.setAttribute('aria-label', '羁绊');
@@ -243,15 +246,15 @@ export class TraitColumn {
     columns.add(this);
   }
   /** `runtime`: optional counter lines per trait (G2-3 prep); omitted, the column renders exactly as before. */
-  render(preparation: GameState, runtime?: TraitRuntime): void {
-    this.own = [preparation, runtime];
-    if (!this.shown) this.draw(boardTraitRows(preparation), runtime);
+  render(preparation: GameState, runtime?: TraitRuntime, items: readonly ItemInstance[] = []): void {
+    this.own = [preparation, runtime, items];
+    if (!this.shown) this.draw(boardTraitRows(preparation, items), runtime);
   }
   /** Rows to show instead of my board's (another seat's while scouting, no counter lines); null goes back to mine. */
   showRows(rows: readonly TraitRow[] | null): void {
     this.shown = rows;
     if (rows) { this.root.dataset.scout = ''; this.draw(rows, undefined); }
-    else { delete this.root.dataset.scout; if (this.own) this.draw(boardTraitRows(this.own[0]), this.own[1]); }
+    else { delete this.root.dataset.scout; if (this.own) this.draw(boardTraitRows(this.own[0], this.own[2]), this.own[1]); }
   }
   private draw(rows: readonly TraitRow[], runtime: TraitRuntime | undefined): void {
     const key = `${this.shown ? 's' : ''}${rows.map(row => `${row.traitId}:${row.count}:${row.tier}:${runtimeText(runtime?.get(row.traitId), true)}`).join('|')}`;

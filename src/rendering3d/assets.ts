@@ -9,7 +9,7 @@ export interface ModelLease extends ModelTemplate, CastMetadata {
   animationNames: AnimationNames;
   release(): void;
 }
-interface Entry { promise: Promise<ModelTemplate>; refs: number; retired: boolean; placeholder: boolean }
+interface Entry { promise: Promise<ModelTemplate>; model?: ModelTemplate; refs: number; retired: boolean; placeholder: boolean }
 export type ReadModel = (url: string) => Promise<ModelTemplate>;
 
 function placeholder(): ModelTemplate {
@@ -86,7 +86,7 @@ export class ModelCache {
         const definition = Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id] : undefined;
         if (!definition) throw new Error('unknown-model');
         return this.read(assetUrl(this.root, definition.path));
-      }).catch(() => { created.placeholder = true; return placeholder(); });
+      }).catch(() => { created.placeholder = true; return placeholder(); }).then(model => { created.model = model; return model; });
       entry = created;
       this.entries.set(id, entry);
     }
@@ -111,7 +111,11 @@ export class ModelCache {
     if (!entry) return;
     this.entries.delete(id);
     entry.retired = true;
-    if (entry.refs === 0) void entry.promise.then(disposeModel);
+    if (entry.refs === 0) {
+      // Settled templates must release GPU textures before the host disposes its
+      // renderer allocation records. Late loads retain the existing promise path.
+      if (entry.model) disposeModel(entry.model); else void entry.promise.then(disposeModel);
+    }
   }
   dispose(): void { this.closed = true; for (const id of this.entries.keys()) this.evict(id); }
 }

@@ -1,5 +1,8 @@
+import { installUnitInspect } from '../presentation/unit-panel-loader';
+import type { UnitPanelData } from '../presentation/unit-panel';
+import { ECONOMY_RULES } from '../simulation/match-rules';
 import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
-import { combatEquipmentDisplay } from '../presentation/battle-equipment';
+import { combatEquipmentDisplay, combatItemStackBadges } from '../presentation/battle-equipment';
 import { freeRerollsAvailable } from '../simulation/free-rerolls';
 import { xpPurchaseAmount, xpPurchaseCost } from '../simulation/augment-xp';
 import { createMelSaveFeedback } from './mel-save-feedback';
@@ -113,6 +116,8 @@ export class BoardScene extends Phaser.Scene {
   private inputRouter = new InputRouter();
   /** ?render=3d gestures (boardControls): the unit the 3D pointer is over, and the drag it owns. */
   private hover3d: string | null = null;
+  /** ?render=3d: any team's piece under the pointer (enemies too), only for the description card. */
+  private look3d: string | null = null;
   private gesture3d: Gesture | null = null;
   private strategyPanel: StrategyPanel | null = null;
   private help: HelpPanel | null = null;
@@ -280,8 +285,10 @@ export class BoardScene extends Phaser.Scene {
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
     this.installKeyboardHandlers();
+    this.inspect = installUnitInspect((point, target) => this.inspectAt(point, target), id => this.inspectData(id), () => Boolean(this.draggingId));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.inspect?.dispose(); this.inspect = undefined; });
     const withdrawControls = provideBoardControls(this.boardControls());
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.hover3d = null; this.gesture3d = null; this.loadoutTip3d?.remove(); this.loadoutTip3d = null; });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.hover3d = null; this.look3d = null; this.gesture3d = null; this.loadoutTip3d?.remove(); this.loadoutTip3d = null; });
     this.sync();
     this.statsPanel = createStatsPanel(document.getElementById('stats-root')!, id => {
       if (this.application?.debug().mode === 'replay') { this.application.selectReplayUnit(id); return; }
@@ -367,9 +374,9 @@ export class BoardScene extends Phaser.Scene {
   private installKeyboardHandlers() {
     const mousemove = (event: MouseEvent) => {
       const capabilities = (event as MouseEvent & { sourceCapabilities?: { firesTouchEvents?: boolean } }).sourceCapabilities;
-      if (!capabilities?.firesTouchEvents) this.mouseClient = { x: event.clientX, y: event.clientY };
+      if (!capabilities?.firesTouchEvents) { this.touchInspect = false; this.mouseClient = { x: event.clientX, y: event.clientY }; }
     };
-    const touch = (event: PointerEvent) => { if (event.pointerType === 'touch') this.mouseClient = null; };
+    const touch = (event: PointerEvent) => { if (event.pointerType === 'touch') { this.mouseClient = null; this.touchInspect = true; unitHoverCard().hide(); } };
     const clearHover = () => { this.mouseClient = null; };
     const mouseout = (event: MouseEvent) => { if (event.relatedTarget === null) clearHover(); };
     window.addEventListener('mousemove', mousemove, true);
@@ -640,6 +647,7 @@ export class BoardScene extends Phaser.Scene {
     const token = (id: string) => this.draggingId === id && this.gesture3d && this.inputRouter.owns(this.gesture3d) ? this.tokens.get(id) : undefined;
     return {
       hover: id => { this.hover3d = id; },
+      look: id => { this.look3d = id; },
       claimOrb: id => this.orbDock?.click(id),
       select: id => {
         const unit = this.displayedUnit(id);
@@ -921,7 +929,7 @@ export class BoardScene extends Phaser.Scene {
       const opening = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
       const extras = unit.team === 'player' ? gearExtras(readUnitEquipment(fighting.has(unit.id) ? this.battleItems!.state : this.session.state, owner)) : NO_GEAR_EXTRAS;
       const gear = combatEquipmentDisplay(view?.units.find(entry => entry.id === unit.id)?.equipment, opening, extras);
-      this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || view?.units.find(entry => entry.id === unit.id)?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit));
+      this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || view?.units.find(entry => entry.id === unit.id)?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit), view?.units.find(entry => entry.id === unit.id)?.itemStacks);
     }
   }
   /**
@@ -1133,7 +1141,9 @@ export class BoardScene extends Phaser.Scene {
     const camera = this.cameras?.main;
     if (camera && camera.visible === feeding) camera.setVisible(!feeding);
     if (feeding) publishBoardFrame(() => this.boardFrame());
-    if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
+    const advance = this.application?.frame(delta) ?? true;
+    this.inspect?.refresh(now);
+    if (!advance) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
     this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
@@ -1153,7 +1163,9 @@ export class BoardScene extends Phaser.Scene {
    * token; never while dragging. The card is shared with the DOM anchors and closed here only when this scene opened it.
    */
   private syncUnitCard() {
-    const id = this.draggingId ? undefined : this.hoveredId();
+    // The pinned inspect panel replaces the hover card while it is open (TFT shows one or the other).
+    const look = boardFeedActive() && this.look3d && this.tokens.get(this.look3d)?.visible ? this.look3d : undefined;
+    const id = this.draggingId || this.touchInspect || this.inspect?.pinned ? undefined : this.hoveredId() ?? look;
     const token = id ? this.tokens.get(id) : undefined;
     const unit = id ? this.state.units.find(candidate => candidate.id === id) ?? this.session.combatView?.units.find(candidate => candidate.id === id) : undefined;
     if (!token || !unit || !UNIT_DEFINITIONS[unit.definitionId]) {
@@ -1172,7 +1184,47 @@ export class BoardScene extends Phaser.Scene {
       () => unitCardBody(unit.definitionId, star, battle, gear, notes)!);
     this.unitCardOpen = true;
   }
+  private inspect?: ReturnType<typeof installUnitInspect>;
+  private inspectData(id: string): UnitPanelData | null {
+    if (document.body.dataset.m6Mode === 'startup') return null;
+    if (id.startsWith('scout:')) {
+      const chip = Array.from(document.querySelectorAll<HTMLElement>('.opponent-unit[data-unit-def]')).find(el => el.dataset.inspectId === id);
+      if (!chip || chip.closest<HTMLElement>('.opponent-board')?.hidden) return null;
+      if (!boardFeedActive() && chip.getClientRects().length === 0) return null;
+      if (boardFeedActive() && !boardFeedScreenBox(id)) return null;
+      return { id, definitionId: chip.dataset.unitDef!, starLevel: Number(chip.dataset.unitStar), team: 'enemy',
+        items: Array.from(chip.querySelectorAll<HTMLElement>('[data-item-def]')).map(item => item.dataset.itemDef!) };
+    }
+    const token = this.tokens.get(id);
+    if (!token?.visible || !this.tokenScreenBox(id, token)) return null;
+    const combat = this.session.combatView?.units.find(unit => unit.id === id);
+    const unit = combat ?? this.state.units.find(unit => unit.id === id) ?? this.summonOf(id)?.unit;
+    if (!unit) return null;
+    const remote = this.session instanceof RemoteSession ? this.session : null, history = remote?.battleHistory ?? [];
+    const view = this.views.get(id);
+    return { id, definitionId: unit.definitionId, starLevel: displayStarLevel(this.session.state, unit), team: remote?.watchedSeat != null ? 'enemy' : unit.team,
+      combat, items: view ? [...view.equipped, ...view.extras.temporary] : [],
+      notes: unit.team === 'player' ? d14UnitNotes(this.session.state, unit.id) : [],
+      battle: history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null };
+  }
+  private inspectAt(point: { x: number; y: number }, target: EventTarget | null): UnitPanelData | null | undefined {
+    if (!(target instanceof Element) || target.closest('.unit-inspect')) return;
+    const chip = target.closest<HTMLElement>('.opponent-unit[data-unit-def]');
+    if (chip?.dataset.inspectId) return this.inspectData(chip.dataset.inspectId);
+    if (target.closest('.opponent-cell')) return null;
+    if (target !== this.game.canvas && !target.closest('.render3d-layer')) return;
+    const projected = boardFeedUnitAt(point);
+    if (projected) return this.inspectData(projected);
+    const ids = [...this.tokens.keys(), ...Array.from(document.querySelectorAll<HTMLElement>('.opponent-unit[data-inspect-id]')).map(el => el.dataset.inspectId!)];
+    for (const id of ids.reverse()) {
+      const token = this.tokens.get(id);
+      const box = token?.visible ? this.tokenScreenBox(id, token) : boardFeedScreenBox(id);
+      if (box && point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom) return this.inspectData(id);
+    }
+    return null;
+  }
   private unitCardOpen = false;
+  private touchInspect = false;
   /**
    * Where the hovered piece is on screen (CSS pixels): the 2D token's box, or under ?render=3d the box the 3D layer
    * projects for its model (undefined when that piece is not drawn), since the 3D canvas covers this one.
@@ -1252,10 +1304,13 @@ export class BoardScene extends Phaser.Scene {
     }
     // Replay reducers and offline ticks both expose the authoritative full loadout here.
     for (const unit of view.units) {
+      const drawn = this.views.get(unit.id);
+      if (!drawn) continue;
+      // No loadout in this frame (offline/legacy): keep the drawn unit, so a settlement upgrade is not overwritten by the battle's copy.
       if (unit.equipment === undefined) continue;
       const gear = combatEquipmentDisplay(unit.equipment, [], NO_GEAR_EXTRAS);
-      this.views.get(unit.id)?.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
-        gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel);
+      drawn.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
+        gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel, unit.itemStacks);
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
@@ -1335,7 +1390,11 @@ export class BoardScene extends Phaser.Scene {
     const board = this.state.board, fallen = new Set(this.session.combatView?.units.filter(unit => !unit.alive).map(unit => unit.id));
     const bench = new Map(this.state.units.map(unit => [unit.id, unit.location.kind === 'bench' ? unit.location.slot : null]));
     const result = this.session.state.roundResults?.at(-1);
-    return { rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
+    // A result freezes income before it is paid; entering a later round is the authoritative payment boundary.
+    const paid = [...this.session.state.roundResults].reverse().find(record => record.round < this.session.state.round);
+    const online = this.application instanceof OnlineApplication && this.application.isActive;
+    return { ...(online ? { goldMines: Math.min(ECONOMY_RULES.interestCap, Math.floor(this.session.state.gold / ECONOMY_RULES.interestDivisor)),
+      goldMineIncomeKey: paid ? `round:${paid.round}:${paid.roundId}` : null } : {}), rows: board.rows, columns: board.columns, hexRadius: BOARD_LAYOUT.hexRadius, origin: BOARD_LAYOUT.origin,
       bench: Array.from({ length: this.state.benchSize }, (_, slot) => this.benchCenter(slot)),
       pieces: [...this.tokens].map(([id, token]) => ({ id, definitionId: token.getData('definitionId'), team: token.getData('team'),
         starLevel: token.getData('starLevel'), ...(token.getData('effectiveStarLevel') === 4 ? { effectiveStarLevel: 4 as const } : {}),
@@ -1377,14 +1436,17 @@ export class BoardScene extends Phaser.Scene {
     return Object.fromEntries(this.orbRefusals);
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
-  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items'> {
+  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted'> {
     const view = this.views.get(id);
     if (!view) return {};
     const hp = view.meter('hp'), mana = view.meter('mana');
-    return { ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
+    const combatUnit = this.session.combatView?.units.find(unit => unit.id === id);
+    const ids = [...view.equipped, ...view.extras.temporary];
+    const badges = combatItemStackBadges(ids, combatUnit?.alive ? combatUnit.itemStacks : undefined);
+    return { ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
       // 窃贼手套: the round's stolen items follow the worn ones, as the original shows them over the unit.
       ...(view.equipped.length || view.extras.temporary.length
-        ? { items: [...view.equipped, ...view.extras.temporary].map(item => ({ id: item, icon: s13AssetUrl('item', item) })) } : {}) };
+        ? { items: ids.map((item, index) => ({ id: item, icon: s13AssetUrl('item', item), ...badges[index] })) } : {}) };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
   debugSnapshot() {

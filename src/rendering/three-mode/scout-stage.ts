@@ -103,6 +103,7 @@ export interface ScoutStage {
   show(scout: BoardScout | null, frame: BoardFrame | null): void;
   /** My legend, which came along, walks toward a board-space point on this board (display only: nothing is sent). */
   walkVisitor(point: { x: number; y: number }): boolean;
+  inspectRoot(id: string): Group | undefined;
   update(seconds: number): void;
   debug(): { seatId: string | null; units: string[]; bench: string[]; orbs: string[]; legend: string; visitor: string };
   dispose(): void;
@@ -255,6 +256,13 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       if (key === layoutKey) return;
       layoutKey = key;
       build(view, frame);
+    },
+    inspectRoot(id) {
+      if (!current) return;
+      const prefix = `scout:${current.seatId}:`;
+      if (!id.startsWith(prefix)) return;
+      const place = id.slice(prefix.length).split(':')[0], key = place.startsWith('bench-') ? `bench:${place.slice(6)}` : `board:${place}`;
+      return pieces.find(piece => piece.key === key)?.root;
     },
     update(seconds) {
       if (!current) return;
