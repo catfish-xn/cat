@@ -36,7 +36,8 @@ jobs:
           cache-dependency-path: target/package-lock.json
       - run: npm ci
         working-directory: target
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright-cache
+      - run: bash .github/ci/install-playwright.sh
         working-directory: target
       - run: npm run build
         working-directory: target
