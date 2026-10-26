@@ -1,4 +1,8 @@
 import {expect,it} from 'vitest';
+import {deepStrictEqual} from 'node:assert/strict';
+import {roundRouteCache} from './fixtures/round-route-cache';
+import {prepareInput,copyInput} from './fixtures/prepared-input';
+import {ROUND_CATALOG} from '../src/simulation/content/round-catalog';
 import {createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
@@ -22,23 +26,47 @@ it('raw role pools are eight actual completed items and all 63 v19 real heroes h
  const expected=dualWieldingItems(42,'round-4-6:anomaly','lux');expect(expected).toHaveLength(2);expect(new Set(expected).size).toBe(2);
  expect(expected.every(id=>DUAL_WIELDING_POOLS.APCASTER.includes(id))).toBe(true);
 });
+// One oracle-checked public tape per file. Both generation and the independent
+// replay pause at genuine tick/round boundaries; no state is fabricated.
+const trace:unknown[]=[];
+const dualRoute=roundRouteCache(async onRound=>{
+ const stop=new Error('dual offer');let captured=false,entrance:MatchState|undefined;
+ try{await run(api,{build:'cannon',seed:26,goldReserveByRound:{'4-5':80},anomalyDefinitionId:'dual-wielding',
+  onRound,onBattleProgress:onRound,
+  onStep(_before:MatchState,result:{state:MatchState},command:unknown){
+   trace.push(command);
+   const c=result.state.pendingChoice;
+   if(c?.kind==='anomaly'&&c.step==='offer'&&c.offers.includes('dual-wielding')){
+    captured=true;entrance=prepareInput(result.state);throw stop;
+   }
+  }});}catch(error){if(error!==stop)throw error;}
+ expect(captured).toBe(true);return entrance!;
+});
+const routeRounds=ROUND_CATALOG.filter(r=>r.ordinal<=ROUND_CATALOG.find(r=>r.roundId==='4-6')!.ordinal&&r.kind!=='supply');
+const boundaries=[150,300,450,600,750,900,1050,1201];
+for(const round of routeRounds) for(const tick of boundaries)
+ it(`dual public route ${round.roundId} through tick ${tick}`,async()=>{await dualRoute.through(round.ordinal-1+tick/1201);});
+let replay:MatchState|undefined,replayed=0;
+async function replayThrough(target:number){
+ const expected=await dualRoute.finish();let current=replay??api.createMatch(26);
+ while(replayed<trace.length){
+  const command=trace[replayed++] as {type:string}|undefined;
+  const result=command?dispatch(api,current,command):api.stepMatch(current);
+  if(result.ok===false)throw Error(result.reason);current=result.state;replay=current;
+  const reached=current.phase==='combat'?current.round-1+current.combat!.tick/1201:current.round;
+  if(reached>=target)break;
+ }
+ if(replayed===trace.length)deepStrictEqual(current,expected);
+ return current;
+}
+for(const round of routeRounds) for(const tick of boundaries)
+ it(`dual tape replay ${round.roundId} through tick ${tick}`,async()=>{await replayThrough(round.ordinal-1+tick/1201);});
 it('public anomaly selection grants two role items once, keeps equipment, restores after target sale and rejects altered grant',async()=>{
  const archived=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/s13-p1-dual-commands.json.gz',import.meta.url))).toString());
  expect(archived.seed).toBe(23);expect(archived.contentDigest).toBe(historicalIdentity.contentDigest);
  expect(archived.contentDigest).not.toBe(CONTENT_DIGEST);
- // The archived command tape remains historical. Generate the current v16
- // tape from genuine paid commands and the independent route ledger.
- // Route seed 26 (was 23): with the 14.24 stage bans, seed 23's bot route takes a unit-gift augment the independent ledger does not book.
- const trace:{seed:number;commands:unknown[]}={seed:26,commands:[]},stop=new Error('v16 dual offer');
- let captured=false;
- try{await run(api,{build:'cannon',seed:trace.seed,goldReserveByRound:{'4-5':80},anomalyDefinitionId:'dual-wielding',onStep(_before:MatchState,result:{state:MatchState},command:unknown){
-  trace.commands.push(command??{type:'step'});
-  const c=result.state.pendingChoice;
-  if(c?.kind==='anomaly'&&c.step==='offer'&&c.offers.includes('dual-wielding')){captured=true;throw stop;}
- }});}catch(error){if(error!==stop)throw error;}
- expect(captured).toBe(true);
- let s:MatchState=api.createMatch(trace.seed);
- for(const command of trace.commands){const c=command as {type:string};const result=c.type==='step'?api.stepMatch(s):dispatch(api,s,c);if(result.ok===false)throw Error(result.reason);s=result.state;}
+ let s:MatchState=copyInput(await replayThrough(Infinity));
+ expect(replayed).toBe(trace.length);
  expect(s.contentDigest).toBe(CONTENT_DIGEST);
  expect(s).toBeDefined();const target=s.preparation.units.find(u=>u.id===s.pendingChoice!.targetId)!;
  const before=s,c=s.pendingChoice!,expected=dualWieldingItems(s.seed,c.choiceId,target.definitionId);
@@ -56,8 +84,4 @@ it('public anomaly selection grants two role items once, keeps equipment, restor
  expect(other).toBeDefined();Object.assign(swapped.scheduleReceipts.find(r=>r.eventId===c.choiceId)!,{unitId:other!.id});expect(()=>restoreMatch(swapped)).toThrow();
  const forged=structuredClone(s),r=forged.seatMechanics!.receipts.find(r=>r.source==='s13-anomaly-acquisition')!;Object.assign(r,{definitionId:'deathblade'});expect(()=>restoreMatch(forged)).toThrow();
  s=resolveM5Choices(s);s=accepted(sellUnit(s,target.id));expect(s.anomalyBinding).toBe(null);expect(restoreMatch(serializeMatch(s))).toEqual(s);
-// Temporary, user-approved (04:22, #265): isolated full workload measured 12.66 s;
-// 30 s rounds about twice that up to allow worker contention. Assertions and
-// public command generation/replay/strict restore workloads remain unchanged.
- // 临时、用户 10-20 批准：只因 CI 机器计时超时或贴着上限（断言都过），按约 2 倍放宽；断言不变。30 秒 → 60 秒（本机满负载约 19 秒，CI 上贴着上限）。
-},60_000);
+});

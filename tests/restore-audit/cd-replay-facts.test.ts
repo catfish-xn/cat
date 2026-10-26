@@ -1,3 +1,6 @@
+import { roundRouteCache } from '../fixtures/round-route-cache';
+import { prepareInput, copyInput } from '../fixtures/prepared-input';
+import { ROUND_CATALOG } from '../../src/simulation/content/round-catalog';
 import { deepStrictEqual } from 'node:assert';
 import { beforeAll, expect, it, vi } from 'vitest';
 import * as engine from '../../src/simulation/combat';
@@ -56,6 +59,21 @@ function roster(definitions: readonly string[], cells?: readonly { col: number; 
 const emptyG23 = (u: CombatUnit): NonNullable<CombatUnit['g23']> => ({ ascension: null, conquestTakedowns: [], experimentTakedowns: [], cuts: {},
   stationaryTicks: 0, lastCell: { ...u.cell }, absorbed: [], highRoller: [] });
 
+// These three public anomaly acquisitions dominate this file. Keep their exact
+// paid command routes, pausing at real combat boundaries instead of one long case.
+const anomalyRoutes = new Map(['power-absorption', 'one-thousand-cuts', 'eagle-eye'].map(anomalyDefinitionId => {
+  const options = anomalyDefinitionId === 'power-absorption'
+    ? { build: 'cannon', seed: 66, goldReserveByRound: { '4-5': 40 }, anomalyDefinitionId, anomalyTargetDefinitionId: 'irelia' }
+    : { build: 'cannon', seed: 2, anomalyDefinitionId, ...(anomalyDefinitionId === 'eagle-eye' ? { goldReserveByRound: { '4-5': 80 } } : {}) };
+  return [anomalyDefinitionId, roundRouteCache(async onRound => prepareInput(await configuredPrefix('4-7', {
+    ...options, onRound, onBattleProgress: onRound,
+  })))] as const;
+}));
+for (const [id, route] of anomalyRoutes)
+  for (const round of ROUND_CATALOG.filter(r => r.ordinal <= ROUND_CATALOG.find(r => r.roundId === '4-6')!.ordinal && r.kind !== 'supply'))
+    for (const tick of [150, 300, 450, 600, 750, 900, 1050, 1201])
+      it(`public ${id} acquisition ${round.roundId} through tick ${tick}`, async () => { await route.through(round.ordinal - 1 + tick / 1201); });
+
 it.each(['processed', 'actionCounts'] as const)('G-C02 rejects invented %s keys on a holder without triggers', field => {
   const legal = battle();
   expect(player(legal).mechanismDefinitions!.eventTriggers ?? []).toHaveLength(0);
@@ -101,7 +119,7 @@ it('G-C06 binds the real absorption value even when its status is forged coheren
   // with Crab Rave, whose 4-7 crabs never kill the ally the absorption needs;
   // seed 66 (Golden Gala, ordinary 4-7 neutrals) and the normal 4-5 gold
   // reserve acquire the same anomaly through public commands.
-  let prep = await configuredPrefix('4-7', { build: 'cannon', seed: 66, goldReserveByRound: { '4-5': 40 }, anomalyDefinitionId: 'power-absorption', anomalyTargetDefinitionId:'irelia' });
+  let prep = copyInput(await anomalyRoutes.get('power-absorption')!.finish());
   const ownerId = prep.anomalyBinding!.unitId;
   expect(prep.anomalyBinding!.definitionId).toBe('power-absorption');
   // Public bench sales leave room to move the seeded roster off the board.
@@ -123,7 +141,7 @@ it('G-C06 binds the real absorption value even when its status is forged coheren
     Object.assign(modifier.value, { amount: receipt.value });
     for (const status of u.statuses ?? []) if (status.contributionKeys?.includes(c.key)) Object.assign(status, { amount: receipt.value });
   }, 'G23 absorption binding facts');
-}, 60000);
+});
 
 it('G-C07 authenticates a live periodic fractional account', () => {
   const legal = until(itemMatch('sunfire-cape'), s => s.combat!.units.some(u => u.mechanismState?.periodicTasks.some(t => t.remainders.length > 0)));
@@ -232,8 +250,7 @@ it('G-C03 rejects Tristana growth that remains within the cast-count upper bound
 it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async anomalyDefinitionId => {
   // v19's expanded gold pool changes the paid route's economy. Reserve enough
   // gold to actually select Eagle Eye rather than silently accepting a fallback.
-  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 2, anomalyDefinitionId, // eagle-eye route seed 2 (was 1) after the global 14.24 stage bans
-    ...(anomalyDefinitionId==='eagle-eye'?{goldReserveByRound:{'4-5':80}}:{}) });
+  const prep = copyInput(await anomalyRoutes.get(anomalyDefinitionId)!.finish());
   expect(prep.anomalyBinding?.definitionId).toBe(anomalyDefinitionId);
   const id = prep.anomalyBinding!.unitId;
   const legal = until(accepted(startMatchCombat(prep)), s => {
@@ -246,7 +263,7 @@ it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async
     else g.cuts[Object.keys(g.cuts)[0]]--;
     // Full dynamic replay rejects first (its legacy error label is 'Mirror forge'), before the narrower G23 guard.
   }, 'Invalid authoritative Mirror forge replay');
-}, 60000);
+});
 it('G-C08 binds Swain ascension timing', () => {
   const legal = until(roster(['swain']), s => s.combat!.units.some(u => !!u.g23?.ascension));
   reject(legal, s => { s.combat!.units.find(u => u.g23?.ascension)!.g23!.ascension!.untilTick++; }, 'G23 state/maximum health binding facts');

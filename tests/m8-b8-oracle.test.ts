@@ -1,3 +1,6 @@
+import { roundRouteCache } from './fixtures/round-route-cache';
+import { freezeContent } from '../src/simulation/content/freeze';
+import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import type { MatchEvent, MatchState } from '../src/simulation/match-types';
@@ -178,8 +181,17 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     expect(()=>validateLoot(doubled)).toThrow('approved schedule receipt source');
   });
 
-  it.each([42, 230])('runs the complete real cannon route, seed %i, through the unchanged public-command driver', async seed => {
-    const route = await run(api, { seed, build: 'cannon' });
+  for (const seed of [42, 230]) {
+    let input: Awaited<ReturnType<typeof run>> | undefined;
+    const progress = roundRouteCache(async onRound => {
+      input = freezeContent(await run(api, { seed, build: 'cannon', onRound, onBattleProgress: onRound }));
+      return input.final;
+    });
+    for (const round of ROUND_CATALOG.filter(r => r.kind !== 'supply'))
+      for (const tick of [150, 300, 450, 600, 750, 900, 1050, 1201])
+        it(`cannon oracle seed ${seed} public route ${round.roundId} through tick ${tick}`, async () => { await progress.through(round.ordinal - 1 + tick / 1201); });
+    it(`runs the complete real cannon route, seed ${seed}, through the unchanged public-command driver`, async () => {
+    await progress.finish(); const route = input!;
     expect(route.final.roundDefinitionId).toBe('6-7');
     expect(route.final.roundResults).toHaveLength(38);
     expect(route.rounds).toHaveLength(33);
@@ -188,5 +200,6 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     expect(route.final.scheduleReceipts.filter((r:MatchState['scheduleReceipts'][number])=>r.kind==='component')).toHaveLength(5);
     expect(Object.values(route.final.m8.loot.guaranteeCounters)).toEqual(lootPlan(seed,38).rounds.map(r=>r.encounterPlan.drops.reduce((n,d)=>n+(d.payload.kind==='item'?(d.payload.definitionId==='thiefs-gloves'?2:1):0),0)));
     expect(route.final.m8.loot.receipts.filter((r:MatchState['m8']['loot']['receipts'][number])=>r.payload.kind==='unit').map((r:MatchState['m8']['loot']['receipts'][number])=>r.payload)).toEqual(expected.filter(d=>d.payload.kind==='unit').map(d=>d.payload));
-  }, 120000);
+    });
+  }
 });

@@ -1,3 +1,5 @@
+import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
+import { freezeContent } from '../src/simulation/content/freeze';
 import { reachRound } from './match-helpers';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
@@ -50,19 +52,36 @@ describe('M5 Match atomic integration', () => {
     expect(next.state.shop).toBe(before.shop);expect(next.state.rngState).toBe(before.rngState);
     expect(nextRound(next.state,before.round).state).toBe(next.state);
   });
-  it('restores each real tick, then supply without creating combat or consuming battle RNG', () => {
-    let state=choices(createMatch(42));
-    for(let round=1;round<getCatalogRoundById('2-4').ordinal;round++) {
-      const started=startMatchCombat(state); if(!started.ok) throw new Error(started.reason);state=started.state;
-      while(state.phase==='combat') {
-        const restored=restoreMatch(serializeMatch(state));
-        expect(stepMatch(restored)).toEqual(stepMatch(state));state=stepMatch(state).state;
+  // Cache the live cursor only. Every restored tick and settlement assertion
+  // still executes, with one live step reused instead of calculating it twice.
+  let restoreCursor: MatchState | undefined;
+  function restoreThrough(round: number, untilTick: number): MatchState {
+    let state = restoreCursor ?? choices(createMatch(42));
+    while (state.round <= round) {
+      if (state.phase === 'preparation') {
+        const started = startMatchCombat(state); if (!started.ok) throw new Error(started.reason);
+        state = started.state;
       }
-      state=choices(state);expect(state.roundResults).toHaveLength(round);
+      while (state.phase === 'combat') {
+        if (state.round === round && state.combat!.tick >= untilTick) {
+          restoreCursor = freezeContent(state); return restoreCursor;
+        }
+        const restored = restoreMatch(serializeMatch(state)), live = stepMatch(state);
+        expect(stepMatch(restored)).toEqual(live); state = live.state;
+      }
+      state = choices(state); expect(state.roundResults).toHaveLength(state.round);
       expect(restoreMatch(serializeMatch(state))).toEqual(state);
-      const next=nextRound(state,round);if(!next.ok)throw new Error(next.reason);state=next.state;
-      if(state.pendingChoice?.kind==='augment') state=choices(state);
+      const next = nextRound(state, state.round); if (!next.ok) throw new Error(next.reason);
+      state = next.state;
+      if (state.pendingChoice?.kind === 'augment') state = choices(state);
     }
+    restoreCursor = freezeContent(state); return restoreCursor;
+  }
+  for (const round of ROUND_CATALOG.filter(r => r.ordinal < getCatalogRoundById('2-4').ordinal))
+    for (const tick of [150, 300, 450, 600, 750, 900, 1050, 1201])
+      it(`restores each real tick in ${round.roundId} through ${tick}`, () => { restoreThrough(round.ordinal, tick); });
+  it('restores each real tick, then supply without creating combat or consuming battle RNG', () => {
+    let state = restoreThrough(getCatalogRoundById('2-4').ordinal - 1, 1201);
     expect(state.roundDefinitionId).toBe('2-4');expect(state.pendingChoice?.kind).toBe('component');
     const battleSeed=state.battleSeedRngState, gold=state.gold, c=state.pendingChoice!;
     const selected=selectChoice(state,c.choiceId,c.generation,c.offers[0]);if(!selected.ok)throw new Error(selected.reason);state=selected.state;
@@ -71,6 +90,5 @@ describe('M5 Match atomic integration', () => {
     const paid=nextRound(state,state.round);expect(paid.ok).toBe(true);
     expect(paid.state.gold).toBe(state.roundResults.at(-1)!.goldAfter);expect(paid.state.gold).toBeGreaterThan(gold);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
-    // 临时、用户 10-20 批准：CI 上约 31 秒（原限 30 秒，本机约 17 秒，断言都过），按约 2 倍放宽到 60 秒；断言不变。
-  }, 60000);
+  });
 });

@@ -1,4 +1,5 @@
 import { prepareInput, copyInput } from './fixtures/prepared-input';
+import { freezeContent } from '../src/simulation/content/freeze';
 /** G2-4b Unstable Treasure Chest (user 2026-10-17, option A "完整原版"; conventions G24-CHEST-01…04 in
  * docs/evidence/g2-4/SUPPORT_ITEMS.md): pool, targeting, items gained mid-combat (stats, start effects, legacy
  * mechanic rewrites), restore validation of every mid-combat state, and two-sided/mirror determinism. */
@@ -25,9 +26,6 @@ import {
 import type { CombatEvent, CombatItemGrant, CombatState, CombatUnit } from '../src/simulation/combat-types';
 import type { Unit } from '../src/simulation/unit-types';
 import { itemMatch } from './fixtures/m8-b4-match';
-import { vi } from 'vitest';
-// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
-vi.setConfig({ testTimeout: 20_000 });
 
 const CHEST = 'TFT_Item_UnstableTreasureChest';
 type Place = readonly [id: string, definitionId: string, col: number, row: number];
@@ -76,6 +74,14 @@ function untilGranted(combat: CombatState, each = false): Granted {
   }
   throw new Error('Chest never opened');
 }
+// Genuine grant entrances shared by the two full-pool tests. Never cache a
+// validation decision: each test checks its own subsequent states and stats.
+const seededGrants = new Map<number, Granted>();
+function seededChestGrant(seed: number): Granted {
+  let input = seededGrants.get(seed);
+  if (!input) { input = prepareInput(untilGranted(chestFight(seed * 7919))); seededGrants.set(seed, input); }
+  return input;
+}
 const unitOf = (state: CombatState, id: string) => state.units.find(u => u.id === id)!;
 const grantsOf = (state: CombatState) => state.units.flatMap(u => (u.combatItemGrants ?? []).map(g => ({ unitId: u.id, ...g })));
 
@@ -111,6 +117,21 @@ describe('G2-4b chest content', () => {
     expect(trigger.selector).toMatchObject({ relation: 'ally', excludeSelf: true, maxTargets: 4, order: 'hp-ratio-desc-id', excludeSummons: true });
   });
 });
+
+// Reconstruct the original first-occurrence selection from immutable inputs.
+// Earlier cases need not have passed (or even run) to select a later segment.
+function poolInputs(lastSeed: number) {
+  const seen = new Set<string>();
+  const inputs: { seed: number; granted: Granted; fresh: ReturnType<typeof grantsOf> }[] = [];
+  for (let seed = 1; seen.size < G24_CHEST_POOL.length && seed <= lastSeed && seed < 400; seed++) {
+    const granted = seededChestGrant(seed);
+    const fresh = grantsOf(granted.after).filter(g => !seen.has(g.definitionId));
+    fresh.forEach(g => seen.add(g.definitionId));
+    if (fresh.length) inputs.push({ seed, granted, fresh });
+  }
+  return { inputs, seen };
+}
+const poolSegments = Array.from({ length: 80 }, (_, i) => [i * 5 + 1, Math.min(i * 5 + 5, 399)] as const);
 
 describe('G2-4b chest in combat', () => {
   it('the four healthiest allies by ratio each gain one item when the holder dies; ties break by id; full units still receive', () => {
@@ -150,12 +171,9 @@ describe('G2-4b chest in combat', () => {
     expect(() => validateCombatItemGrants(forged, after.tick, u => u.mechanismDefinitions?.eventTriggers ?? [])).toThrow('Invalid Match save: combat item summon receiver');
   });
 
-  it('every pool item gained mid-combat applies its stats and start effects at once and passes restore validation for the rest of the fight', { timeout: 120000 }, () => {
-    const seen = new Set<string>();
-    for (let seed = 1; seen.size < G24_CHEST_POOL.length && seed < 400; seed++) {
-      const granted = untilGranted(chestFight(seed * 7919));
-      const fresh = grantsOf(granted.after).filter(g => !seen.has(g.definitionId));
-      if (!fresh.length) continue;
+  it.each(poolSegments)('every pool item gained mid-combat: stats, start effects and restore (seeds %i-%i)', (firstSeed, lastSeed) => {
+    const { inputs, seen } = poolInputs(lastSeed);
+    for (const { granted, fresh } of inputs.filter(input => input.seed >= firstSeed)) {
       for (const grant of fresh) {
         seen.add(grant.definitionId);
         const item = ITEM_DEFINITIONS[grant.definitionId], payload = G24_CHEST_PAYLOADS[grant.definitionId];
@@ -178,14 +196,14 @@ describe('G2-4b chest in combat', () => {
       let state = granted.after;
       for (let i = 0; i < 120 && state.status === 'running'; i++) { state = stepCombat(state).state; validate(state); }
     }
-    expect([...seen].sort()).toEqual(G24_CHEST_POOL.map(p => p.definitionId).sort());
+    if (lastSeed === 399) expect([...seen].sort()).toEqual(G24_CHEST_POOL.map(p => p.definitionId).sort());
   });
 
   it('granted periodic and stacking items keep working after the grant', () => {
     let found: { state: CombatState; unitId: string; id: string } | undefined;
     const wanted = new Set(['archangels-staff', 'dragons-claw']);
     for (let seed = 1; !found && seed < 400; seed++) {
-      const { after } = untilGranted(chestFight(seed * 7919));
+      const { after } = seededChestGrant(seed);
       const g = grantsOf(after).find(x => wanted.has(x.definitionId) || ITEM_DEFINITIONS[x.definitionId].effects.some(e => e.kind === 'mechanic' && (e.mechanic === 'archangel' || e.mechanic === 'dragonClaw')));
       if (g) found = { state: after, unitId: g.unitId, id: g.definitionId };
     }
@@ -342,13 +360,9 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
     expectSampledRestore(state, 'nextAttackMagic', 4752);
   });
 
-  it('every AP and AD a receiver had since the grant is among the restore candidates for that sample', { timeout: 180000 }, () => {
-    const seen = new Set<string>();
-    for (let seed = 1; seen.size < G24_CHEST_POOL.length && seed < 400; seed++) {
-      const { before, after } = untilGranted(chestFight(seed * 7919));
-      const receivers = grantsOf(after).filter(g => !seen.has(g.definitionId));
-      if (!receivers.length) continue;
-      receivers.forEach(g => seen.add(g.definitionId));
+  it.each(poolSegments)('every AP and AD a receiver had since the grant is among restore candidates (seeds %i-%i)', (firstSeed, lastSeed) => {
+    const { inputs, seen } = poolInputs(lastSeed);
+    for (const { granted: { before, after }, fresh: receivers } of inputs.filter(input => input.seed >= firstSeed)) {
       const history = new Map<string, { tick: number; ap: number; ad: number }[]>(receivers.map(g => [g.unitId, []]));
       const sample = (state: CombatState) => { for (const g of receivers) { const u = unitOf(state, g.unitId), s = readCombatStats(u, state); history.get(g.unitId)!.push({ tick: state.tick, ap: s.abilityPower, ad: s.attackDamage }); } };
       sample(before); sample(after);
@@ -365,7 +379,7 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
         }
       }
     }
-    expect(seen.size).toBe(G24_CHEST_POOL.length);
+    if (lastSeed === 399) expect(seen.size).toBe(G24_CHEST_POOL.length);
   });
 
   let receiverInput: CombatState | undefined;
@@ -375,29 +389,43 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
   });
   afterAll(() => { receiverInput = undefined; });
 
-  it('receivers that attack and cast after the grant keep every mid-combat save valid', { timeout: 180000 }, () => {
-    let magic = 0, physical = 0;
-    for (let seed = 1; seed <= 12; seed++) {
+  // Cache complete read-only live trajectories, not their validation results.
+  const receiverTrajectories = new Map<number, readonly CombatState[]>();
+  function receiverStates(seed: number): readonly CombatState[] {
+    const cached = receiverTrajectories.get(seed); if (cached) return cached;
       const combat = copyInput(receiverInput!);
       const start: CombatState = { ...combat, rngState: seed * 104729, units: combat.units.map(u => u.id === 'holder' ? { ...u, hp: 1, cooldownTicks: 100000, moveCooldownTicks: 100000 }
         : u.team === 'player' ? { ...u, cooldownTicks: 100000, moveCooldownTicks: 100000 } : u) };
       const { after } = untilGranted(start);
       // Wake the receivers, nearly full of mana, so they cast with the item they just gained.
       let state: CombatState = { ...after, units: after.units.map(u => u.team === 'player' && u.alive ? { ...u, cooldownTicks: 0, moveCooldownTicks: 0, mana: Math.max(u.mana, u.maxMana - 1) } : u) };
+      const states: CombatState[] = [];
       for (let i = 0; i < 300 && state.status === 'running'; i++) {
-        state = stepCombat(state).state; validate(state);
+        state = stepCombat(state).state; states.push(state);
+      }
+      const input = freezeContent(states); receiverTrajectories.set(seed, input); return input;
+  }
+  it.each(Array.from({ length: 12 }, (_, i) => i + 1))('receivers that attack and cast keep every mid-combat save valid (seed %i)', seed => {
+      for (const state of receiverStates(seed)) {
+        validate(state);
         const parsed = JSON.parse(JSON.stringify(state)) as CombatState;
         for (const u of parsed.units.filter(x => x.combatItemGrants?.length)) {
           // The Match restore's checks of cast-time stats (serialization.ts: derived empowered magic / physical).
-          if (u.runtime!.nextAttackMagic > 0) { magic++; expect([...abilityPowerCandidates(u, 0, parsed.combatId!)].some(ap => Math.floor(ap * variable(u, 'Damage') / 100) === u.runtime!.nextAttackMagic), `${u.id} magic @${parsed.tick}`).toBe(true); }
+          if (u.runtime!.nextAttackMagic > 0) { expect([...abilityPowerCandidates(u, 0, parsed.combatId!)].some(ap => Math.floor(ap * variable(u, 'Damage') / 100) === u.runtime!.nextAttackMagic), `${u.id} magic @${parsed.tick}`).toBe(true); }
           if (u.runtime!.nextAttackPhysical > 0) {
-            physical++;
             const coefficient = variable(u, 'PercentAttackDamage') + variable(u, 'BonusDamageADRatio') * mechanic(u, 'lowCostAllies', 'count');
             expect([...attackDamageCandidates(u, parsed.tick, parsed.combatId!)].some(ad => u.runtime!.nextAttackPhysical === Math.floor(ad * Math.round(coefficient * 10000) / 10000)), `${u.id} physical @${parsed.tick}`).toBe(true);
           }
         }
       }
-    }
+  });
+  it('receivers exercise both empowered magic and physical attacks after the grant', () => {
+    let magic = 0, physical = 0;
+    for (let seed = 1; seed <= 12; seed++) for (const state of receiverStates(seed))
+      for (const u of state.units.filter(x => x.combatItemGrants?.length)) {
+        if (u.runtime!.nextAttackMagic > 0) magic++;
+        if (u.runtime!.nextAttackPhysical > 0) physical++;
+      }
     expect(magic).toBeGreaterThan(0);
     expect(physical).toBeGreaterThan(0);
   });

@@ -2,27 +2,43 @@
  * m8EventText) for a real Vander channel, identically live and through the replay path, with no duplicate lines
  * and every lifecycle event (applied and its end) shown. */
 import { describe, expect, it } from 'vitest';
+import { roundRouteCache } from './fixtures/round-route-cache';
+import { prepareInput } from './fixtures/prepared-input';
+import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
+import type { BattleRecord } from '../src/m6/contracts';
 import * as api from '../src/simulation/match';
 import { run } from '../scripts/generate-m5-route.cjs';
 import { BattleHistory, PlaybackSession } from '../src/replay';
 import { combatEventText } from '../src/rendering/combat-feedback';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';
-import { vi } from 'vitest';
-// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
-vi.setConfig({ testTimeout: 20_000 });
 type Activity = Extract<LedgerCombatEvent, { type: 'activityChanged' }>;
 const isVander = (e: LedgerCombatEvent): e is Activity => e.type === 'activityChanged' && e.activity.source.definitionId === 'vander-ability';
-import type { MatchState } from '../src/simulation/match-types';
+
+// Only the first completed Vander record is consumed. Keep that original
+// selection rule, but stop before generating unrelated later battles.
+let activityRecord: BattleRecord | undefined;
+const activityRoute = roundRouteCache(async onRound => {
+  const history = new BattleHistory('activity-log'), stop = new Error('first Vander record');
+  const combat = (events: readonly { domain?: string }[]) => events.filter(e => e.domain === 'combat') as LedgerCombatEvent[];
+  let last = api.createMatch(42);
+  try {
+    await run(api, { build: 'sniper', seed: 42, onRound, onStep(before, result, command) {
+      if (!('events' in result)) throw new Error('route command rejected');
+      last = result.state;
+      history.observe({ before, after: result.state, events: combat(result.events), reason: command ? 'command' : 'tick' });
+      const record = history.completedRecords.find(r => r.events.some(isVander));
+      if (record) { activityRecord = prepareInput(record); throw stop; }
+    } });
+  } catch (error) { if (error !== stop) throw error; }
+  expect(activityRecord).toBeDefined(); return last;
+});
 
 describe('N2-P2-3 activity log consumers', () => {
+  for (const round of ROUND_CATALOG.filter(r => r.kind !== 'supply'))
+    it(`public Vander route through ${round.roundId}`, async () => { await activityRoute.through(round.ordinal); });
   it('a real Vander channel is logged once per lifecycle event, live and in replay', async () => {
-    const history = new BattleHistory('activity-log');
-    const combat = (events: readonly { domain?: string }[]) => events.filter(e => e.domain === 'combat') as LedgerCombatEvent[];
-    await run(api, { build: 'sniper', seed: 42, onStep: (before: MatchState, result, command) => {
-      if (!('events' in result)) throw new Error('route command rejected');
-      history.observe({ before, after: result.state, events: combat(result.events), reason: command ? 'command' : 'tick' });
-    } });
-    const record = history.completedRecords.find(r => r.events.some(e => e.type === 'activityChanged' && e.activity.source.definitionId === 'vander-ability'))!;
+    await activityRoute.finish();
+    const record = activityRecord!;
     expect(record).toBeDefined();
     const live = record.events.filter(isVander);
     expect(live.some(e => e.reason === 'applied')).toBe(true);
@@ -45,5 +61,5 @@ describe('N2-P2-3 activity log consumers', () => {
       expect(ledger.filter(e => e.type === 'statusChanged').map(e => combatEventText(e, name)).filter(line => line?.includes('引导'))).toEqual([]);
     }
     playback.dispose();
-  }, 180000);
+  });
 });

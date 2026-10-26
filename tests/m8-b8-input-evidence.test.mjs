@@ -3,13 +3,11 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import * as api from '../src/simulation/match';
+import * as matchApi from '../src/simulation/match';
+import { freezeContent } from '../src/simulation/content/freeze';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { validateB8RagebladeEvidence } from '../scripts/b8-input-evidence.cjs';
 import { hash } from '../scripts/m4-evidence.cjs';
-import { vi } from 'vitest';
-// Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
-vi.setConfig({ testTimeout: 20_000 });
 
 /* Audit P2-2 negative controls for the final comparator's B8 Rageblade gate. A genuine
  * evidence set is produced from public commands exactly as the input gate records it
@@ -20,6 +18,23 @@ const accepted = result => { if (!result.ok) throw new Error(result.reason); ret
 // The gate's recorded shape for one native mouse operation per control (pointer then compatibility mouse events).
 const clicks = targets => targets.flatMap((target, index) => [['pointerdown', 'mouse'], ['mousedown', null], ['pointerup', 'mouse'], ['mouseup', null], ['click', 'mouse']]
   .map(([type, pointerType], offset) => ({ type, time: 1000 + index * 100 + offset, trusted: true, pointerType, target })));
+// Deterministic reference transitions only: candidate artifacts never populate
+// this cache, and the evidence validator still checks each candidate in full.
+const roots = new Map(), transitions = new WeakMap();
+const api = { ...matchApi };
+for (const name of ['createMatch', 'selectChoice', 'nextRound', 'deployMatchUnit',
+  'startMatchCombat', 'stepMatch', 'combineItems', 'equipItem']) {
+  api[name] = (...args) => {
+    let cache = roots;
+    if (name !== 'createMatch') {
+      cache = transitions.get(args[0]);
+      if (!cache) { cache = new Map(); transitions.set(args[0], cache); }
+    }
+    const key = JSON.stringify([name, ...(name === 'createMatch' ? args : args.slice(1))]);
+    if (!cache.has(key)) cache.set(key, freezeContent(matchApi[name](...args)));
+    return cache.get(key);
+  };
+}
 function genuine() {
   const steps = [];
   let state=ragebladeRoute.prefix(api,(before,expected,pick)=>{steps.push({name:`b8-opening-${before.pendingChoice.kind}-${pick}`,before,expected,targets:[`choice:${pick}`]});});

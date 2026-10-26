@@ -23,9 +23,6 @@ function pack(state: api.MatchState): Buffer {
   checkpointMilliseconds += performance.now() - started;
   return packed;
 }
-function unpack(bytes: Buffer): api.MatchState {
-  return JSON.parse(gunzipSync(bytes).toString());
-}
 
 export async function defineReplayTests(build: string) {
   const started = performance.now();
@@ -33,18 +30,24 @@ export async function defineReplayTests(build: string) {
   console.log(`M5 replay ${build}: cache oracle route`);
   const chunks: Chunk[] = [];
   let commands = 0, ticks = 0, steps = 0;
-  let chunk: Chunk | undefined;
+  let chunk: Chunk | undefined, boundary: Buffer | undefined;
   let last: api.MatchState = api.createMatch(42);
   // Collection builds this route once per file, outside all test/hook timeouts.
   // run still performs its independent ledger/shop/RNG assertions on every step.
   await run(api, { build, seed: 42, onStep(before, result, command) {
-    if (!chunk) chunk = { first: steps, before: pack(before), after: Buffer.alloc(0), inputs: [] };
+    if (!chunk) {
+      // Consecutive segments meet at the same immutable route state. Compress
+      // it once; assert identity before sharing the preceding boundary bytes.
+      if (boundary) assert.equal(before, last);
+      chunk = { first: steps, before: boundary ?? pack(before), after: Buffer.alloc(0), inputs: [] };
+    }
     chunk.inputs.push(command);
     last = result.state;
     steps++;
     if (command) commands++; else ticks++;
     if (chunk.inputs.length === STEPS_PER_CASE) {
       chunk.after = pack(last);
+      boundary = chunk.after;
       chunks.push(chunk);
       chunk = undefined;
     }
@@ -67,11 +70,14 @@ export async function defineReplayTests(build: string) {
       // The reference advances through ordinary commands from the exact cached
       // route boundary. The restored path advances separately through restoreMatch.
       const first = entry.first === 0, last = entry === chunks.at(-1);
-      let before = unpack(entry.before);
+      const beforeText = gunzipSync(entry.before).toString();
+      let before = JSON.parse(beforeText) as api.MatchState;
+      const afterText = gunzipSync(entry.after).toString();
+      const after = JSON.parse(afterText) as api.MatchState;
       // Assign the preceding segment's final restore to this case. This keeps
       // every rejected insertion on a real restored state (including frozen
       // metadata), with exactly one restore per original command/tick overall.
-      let restored = first ? api.createMatch(42) : restoreMatch(JSON.stringify(before));
+      let restored = first ? api.createMatch(42) : restoreMatch(beforeText);
       for (const [index, command] of entry.inputs.entries()) {
         const result = command ? dispatch(api, before, command) : api.stepMatch(before);
         assert.deepEqual(restored, before);
@@ -87,7 +93,7 @@ export async function defineReplayTests(build: string) {
         if (index === entry.inputs.length - 1 && !last) {
           // The next case restores these exact bytes, independently of this
           // case passing. Bind its cached candidate to the dispatched result.
-          assert.equal(JSON.stringify(second.state), gunzipSync(entry.after).toString());
+          assert.equal(JSON.stringify(second.state), afterText);
           restored = second.state;
         } else {
           restored = restoreMatch(JSON.stringify(second.state));
@@ -96,8 +102,8 @@ export async function defineReplayTests(build: string) {
         before = result.state;
       }
       // Bind the independently replayed chunk back to the original oracle route.
-      assert.deepEqual(before, unpack(entry.after));
-      assert.deepEqual(restored, unpack(entry.after));
+      assert.deepEqual(before, after);
+      assert.deepEqual(restored, after);
       if (last) {
         assert.equal(restored.phase, 'gameOver'); assert(commands > 100); assert(ticks > 1000);
         console.log(JSON.stringify({ replay: build, commands, ticks,

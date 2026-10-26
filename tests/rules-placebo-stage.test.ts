@@ -6,7 +6,7 @@ import { selectChoice, nextRound, startMatchCombat, createMatch, deployMatchUnit
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
 import { openingEncounter } from './fixtures/m5/oracle.g2.cjs';
-import { firstNodeSeed, offeredAt } from './augment-stage-helpers';
+import { offeredAt } from './augment-stage-helpers';
 
 // v22 crab openings can fill all nine bench slots with loot heroes (e.g. seed 56);
 // then the board unit is sold instead of benched before conceding the round.
@@ -56,15 +56,14 @@ describe('10-23 project Placebo acquisition amounts', () => {
     [roundId, 'placebo', ordinary], [roundId, 'placebo-plus', plus],
   ] as const).filter(([roundId, id]) => offeredAt(id, roundId as '2-1' | '3-2' | '4-2')))('%s %s public choice grants exactly %i once and authenticates its receipt', (roundId, id, gold) => {
     // Real public routes and offers; no forged schedule node or injected resources.
-    let state = roundId === '2-1' ? reachChoice(roundId, firstNodeSeed(id)) : reachChoice(roundId, 0), found = state.pendingChoice?.offers.includes(id) ?? false;
-    for (let seed = 0; !found && seed < 1500; seed++) {
-      // v23 fmix32 openings: Trainer Golem seeds are skipped; the golem can be neither benched nor sold to concede.
-      if (openingEncounter(seed) === 'trainer-golems') continue;
-      // Seed 56 (now Component Anvils) leaves pending loot capacity at 1-4 on the 4-2 route, which never sells.
-      if (roundId === '4-2' && seed === 56) continue;
-      state = reachChoice(roundId, seed);
-      if (state.pendingChoice?.offers.includes(id)) { found = true; break; }
-    }
+    // Pins from the original bounded search. Assert its acceptance predicate
+    // on the actual public route; content drift must fail instead of re-searching.
+    const seed = id === 'placebo' ? 46 : 56;
+    expect(seed).toBeLessThan(1500);
+    expect(openingEncounter(seed)).not.toBe('trainer-golems');
+    const state = reachChoice(roundId, seed);
+    expect(state.roundDefinitionId).toBe(roundId);
+    const found = state.pendingChoice?.offers.includes(id) ?? false;
     expect(found).toBe(true);
     const c = state.pendingChoice!, before = serializeMatch(state);
     const rejected = selectChoice(state, c.choiceId, c.generation + 1, id);
@@ -93,5 +92,5 @@ describe('10-23 project Placebo acquisition amounts', () => {
     }
     expect(continued.scheduleReceipts.find(r => r.eventId === c.eventId)?.gold).toBe(gold);
     expect(restoreMatch(serializeMatch(continued))).toEqual(continued);
-  }, 60000);
+  });
 });

@@ -1,3 +1,5 @@
+import { prepareInput, copyInput } from './fixtures/prepared-input';
+import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import {openingCrabCarrier,enterOpeningCrabs} from '../src/simulation/opening-crabs';
 import {describe,it,expect} from 'vitest';
 import {createMatch,openAnvil,selectChoice,claimOrb,type MatchState} from '../src/simulation/match';
@@ -87,13 +89,17 @@ describe('anvil reward paths',()=>{
  });
 });
 
-it.each(['4-7','5-7'])('public %s combat: save/replay before and after opening an anvil',async node=>{
+// Cache actual preparation entrances, one public round per case. Mutating an
+// anvil or restoring a candidate remains local to each original test below.
+const anvilEntries=new Map<string,MatchState>();
+let anvilCursor:MatchState|undefined;
+async function publicAnvilPrefix(node:string):Promise<MatchState>{
+ const cached=anvilEntries.get(node);if(cached)return cached;
  const {battle}=await import('./fixtures/t13-loot-public');
  const api=await import('../src/simulation/match');
  const {decideBotAction}=await import('../src/simulation/bot');
  const {context,execute}=await import('./t7-helpers');
- const {serializeMatch,restoreMatch}=await import('../src/simulation/serialization');
- const seed=42;let before=createMatch(seed);
+ let before=anvilCursor??createMatch(42);
  while(before.roundDefinitionId!==node){
    for(let n=0;n<64;n++){const d=decideBotAction(before,context(before,n),0);if(d.action==='done')break;before=accepted(execute(before,d.action));}
    if(before.phase==='preparation')before=battle(before).ended;
@@ -103,7 +109,19 @@ it.each(['4-7','5-7'])('public %s combat: save/replay before and after opening a
      const u:import('../src/simulation/unit-types').Unit|undefined=before.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId));if(!u)throw Error('capacity reserve');before=accepted(api.sellUnit(before,u.id));
    }
    const next=api.nextRound(before,before.round);if(!next.ok)throw Error(`${before.roundDefinitionId}: ${next.reason}`);before=next.state;
+   anvilCursor=prepareInput(before);anvilEntries.set(before.roundDefinitionId,anvilCursor);
  }
+ anvilCursor=anvilEntries.get(node)??prepareInput(before);anvilEntries.set(node,anvilCursor);return anvilCursor;
+}
+for(const round of ROUND_CATALOG.filter(r=>r.ordinal<=getCatalogRoundById('5-7').ordinal))
+ it(`public anvil route reaches ${round.roundId}`,async()=>{expect((await publicAnvilPrefix(round.roundId)).roundDefinitionId).toBe(round.roundId);});
+it.each(['4-7','5-7'])('public %s combat: save/replay before and after opening an anvil',async node=>{
+ const {battle}=await import('./fixtures/t13-loot-public');
+ const api=await import('../src/simulation/match');
+ const {decideBotAction}=await import('../src/simulation/bot');
+ const {context,execute}=await import('./t7-helpers');
+ const {serializeMatch,restoreMatch}=await import('../src/simulation/serialization');
+ let before=copyInput(await publicAnvilPrefix(node));
  for(let n=0;n<64;n++){const d=decideBotAction(before,context(before,n),0);if(d.action==='done')break;before=accepted(execute(before,d.action));}
  let s:MatchState=battle(before).ended;
  expect(restoreMatch(serializeMatch(s))).toEqual(s);
@@ -118,7 +136,7 @@ it.each(['4-7','5-7'])('public %s combat: save/replay before and after opening a
  expect(units(s).length).toBeGreaterThan(0);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  s=accepted(openAnvil(s,units(s)[0].id));expect(restoreMatch(serializeMatch(s))).toEqual(s);
  const c:NonNullable<MatchState['pendingChoice']>=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,c.offers[0]));expect(restoreMatch(serializeMatch(s))).toEqual(s);
-},60000);
+});
 
 it.each(['5-7','6-7'])('crab-rave %s grants two anvil units with the original batch B offers',async node=>{
  const {commitG23Settlement}=await import('../src/simulation/g2-3-settlement');
