@@ -1,6 +1,6 @@
 import { ECONOMY_RULES } from '../simulation/match-rules';
 import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
-import { combatEquipmentDisplay } from '../presentation/battle-equipment';
+import { combatEquipmentDisplay, combatItemStackBadges } from '../presentation/battle-equipment';
 import { freeRerollsAvailable } from '../simulation/free-rerolls';
 import { xpPurchaseAmount, xpPurchaseCost } from '../simulation/augment-xp';
 import { createMelSaveFeedback } from './mel-save-feedback';
@@ -922,7 +922,7 @@ export class BoardScene extends Phaser.Scene {
       const opening = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
       const extras = unit.team === 'player' ? gearExtras(readUnitEquipment(fighting.has(unit.id) ? this.battleItems!.state : this.session.state, owner)) : NO_GEAR_EXTRAS;
       const gear = combatEquipmentDisplay(view?.units.find(entry => entry.id === unit.id)?.equipment, opening, extras);
-      this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || view?.units.find(entry => entry.id === unit.id)?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit));
+      this.views.get(unit.id)!.update(unit, gear.equipped, this.session.phase === 'combat' || view?.units.find(entry => entry.id === unit.id)?.equipment !== undefined ? [] : loadout?.pending ?? [], gear.extras, displayStarLevel(this.session.state, unit), view?.units.find(entry => entry.id === unit.id)?.itemStacks);
     }
   }
   /**
@@ -1253,10 +1253,13 @@ export class BoardScene extends Phaser.Scene {
     }
     // Replay reducers and offline ticks both expose the authoritative full loadout here.
     for (const unit of view.units) {
+      const drawn = this.views.get(unit.id);
+      if (!drawn) continue;
+      // No loadout in this frame (offline/legacy): keep the drawn unit, so a settlement upgrade is not overwritten by the battle's copy.
       if (unit.equipment === undefined) continue;
       const gear = combatEquipmentDisplay(unit.equipment, [], NO_GEAR_EXTRAS);
-      this.views.get(unit.id)?.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
-        gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel);
+      drawn.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
+        gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel, unit.itemStacks);
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
@@ -1382,14 +1385,17 @@ export class BoardScene extends Phaser.Scene {
     return Object.fromEntries(this.orbRefusals);
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
-  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items'> {
+  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted'> {
     const view = this.views.get(id);
     if (!view) return {};
     const hp = view.meter('hp'), mana = view.meter('mana');
-    return { ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
+    const combatUnit = this.session.combatView?.units.find(unit => unit.id === id);
+    const ids = [...view.equipped, ...view.extras.temporary];
+    const badges = combatItemStackBadges(ids, combatUnit?.alive ? combatUnit.itemStacks : undefined);
+    return { ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
       // 窃贼手套: the round's stolen items follow the worn ones, as the original shows them over the unit.
       ...(view.equipped.length || view.extras.temporary.length
-        ? { items: [...view.equipped, ...view.extras.temporary].map(item => ({ id: item, icon: s13AssetUrl('item', item) })) } : {}) };
+        ? { items: ids.map((item, index) => ({ id: item, icon: s13AssetUrl('item', item), ...badges[index] })) } : {}) };
   }
   /** Plain copies and client-space coordinates only; no commands or mutable objects. */
   debugSnapshot() {

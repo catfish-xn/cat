@@ -139,7 +139,7 @@ export class OnlineApplication implements SceneApplication {
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.outcome = new BattleOutcome(frame);
     this.elimination = new EliminationCard(document.body, () => this.again());
-    this.opening = new OpeningEncounterHud(frame);
+    this.opening = new OpeningEncounterHud(frame, true);
     this.session.pause('lobby');
     this.unsubscribe = this.session.subscribe(change => { this.hooks.changed?.(change); this.syncBattleViews(); this.commandSound(change); });
     document.addEventListener('visibilitychange', this.visibility);

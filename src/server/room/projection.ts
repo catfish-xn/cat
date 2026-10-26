@@ -21,9 +21,16 @@ const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
   waiting: 'lobby', carousel: 'carousel', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', 'awaiting-settlement': 'settlement', settlement: 'settlement', ended: 'ended',
 };
 
+// Room snapshots are immutable. A single changed seat is broadcast to several recipients;
+// project unchanged seats once, with weak ownership so old rounds can be collected.
+const publicSeats = new WeakMap<SeatState, SeatPublic>();
 export function toSeatPublic(seat: SeatState): SeatPublic {
-  return { seatId: seat.seatId, name: seat.name, kind: seat.kind, legend: seat.legend, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected, controller: seat.controller,
+  const cached = publicSeats.get(seat);
+  if (cached) return cached;
+  const view: SeatPublic = { seatId: seat.seatId, name: seat.name, kind: seat.kind, legend: seat.legend, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected, controller: seat.controller,
     publicBoard: toPublicBoard(seat.match), orbs: toPublicOrbs(seat.match) };
+  publicSeats.set(seat, view);
+  return view;
 }
 
 /** v15: the rules' public orb summary (count and tiers only), copied field by field; ids, contents and the queue stay private. */
@@ -167,8 +174,13 @@ const swapResult = (result: CombatResult | null): CombatResult | null => result 
  * as it returns it. It is set in preparation and while my battle runs (a PvP seat stays in preparation under the roster
  * lock, a PvE seat is in combat) and null in choice, settlement, supply rounds, game over and for an eliminated seat.
  */
+const privateSeats = new WeakMap<MatchState, SeatStateView>();
 export function toSeatPrivateView(match: MatchState, choiceDeadline?: SeatChoiceDeadline): SeatStateView {
-  const view: SeatStateView = { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match), itemSummons: toItemSummonViews(match) };
+  let view = privateSeats.get(match);
+  if (!view) {
+    view = { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match), itemSummons: toItemSummonViews(match) };
+    privateSeats.set(match, view);
+  }
   // v22 anvil units: the seat's own anvil deadline, only while it still names the open choice.
   const pending = match.pendingChoice;
   return choiceDeadline && pending && pending.choiceId === choiceDeadline.choiceId && pending.generation === choiceDeadline.generation
@@ -232,6 +244,9 @@ export interface SeatReplay { readonly battleId: string; readonly replay: Combat
  * (§14.3). Keys are the room's own result objects, so a finished room's replays go with it.
  */
 const replays = new WeakMap<object, CombatReplay>();
+// Display enrichment stays separate from authenticated raw recordings and replay spot checks.
+const displayReplays = new WeakMap<object, CombatReplay>();
+export function primeDisplayReplay(key: object, replay: CombatReplay): void { displayReplays.set(key, replay); }
 const mirroredReplays = new WeakMap<object, CombatReplay>();
 /**
  * A replay the rules refused, kept with the same key: the refusal is a pure function of the immutable battle, so it is
@@ -278,10 +293,10 @@ function replayOf(battle: BattleResult, seatId: string): SeatReplay | null | und
     if (!outcome) return undefined;
     const combat = outcome.combat;
     if (combat === null) return null;
-    return { battleId: battle.battleId, replay: cached(replays, outcome, () => toCombatReplay(combat)), unitIds: [] };
+    return { battleId: battle.battleId, replay: displayReplays.get(outcome) ?? cached(replays, outcome, () => toCombatReplay(combat)), unitIds: [] };
   }
   if (!battle.participants.includes(seatId)) return undefined;
-  const replay = cached(replays, battle, () => toCombatReplay(battle.battle));
+  const replay = displayReplays.get(battle) ?? cached(replays, battle, () => toCombatReplay(battle.battle));
   if (battle.battle.a.seatId === seatId) return { battleId: battle.battleId, replay, unitIds: ownUnitIds(battle, seatId) };
   if (battle.battle.b.seatId === seatId) return { battleId: battle.battleId, replay: cached(mirroredReplays, battle, () => mirrorCombatReplay(replay)), unitIds: ownUnitIds(battle, seatId) };
   return null;

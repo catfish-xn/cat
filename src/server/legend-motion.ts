@@ -69,3 +69,30 @@ export function interceptCarouselUnit(from: CellPoint, index: number, count: num
   }
   return { to, ms: walkMs(from, to) };
 }
+
+/** Contact footprint in cells, deliberately separate from the much larger pointer hit box. */
+export const CAROUSEL_CONTACT_CELLS = 0.25;
+/** First physical contact during an active ground walk. Standing still never attracts a rotating unit.
+ * Sample at most 10 ms apart (under .03 cells of relative motion), then refine the entry time.
+ * This plans interaction geometry only; ownership and grants still go through the carousel rules.
+ */
+export function carouselWalkContact(walk: LegendWalk, index: number, count: number, openedAt: number): number | null {
+  const span = walk.arriveAt - walk.startedAt;
+  if (span <= 0) return null;
+  const touches = (at: number) => {
+    const legend = walkPoint(walk, at), unit = carouselUnitPoint(index, count, at - openedAt);
+    return Math.hypot(legend.x - unit.x, legend.y - unit.y) <= CAROUSEL_CONTACT_CELLS;
+  };
+  const steps = Math.ceil(span / 10);
+  for (let i = 0; i <= steps; i++) {
+    const at = walk.startedAt + span * i / steps;
+    if (!touches(at)) continue;
+    let lo = walk.startedAt + span * Math.max(0, i - 1) / steps, hi = at;
+    for (let refine = 0; refine < 24; refine++) {
+      const mid = (lo + hi) / 2;
+      if (touches(mid)) hi = mid; else lo = mid;
+    }
+    return hi;
+  }
+  return null;
+}
