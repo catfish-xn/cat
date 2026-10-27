@@ -1,3 +1,4 @@
+import { encodePrimitiveTuple } from './primitive-tuple';
 import { validateOpeningEncounterContext, validateOpeningEncounterState } from './opening-encounter';
 import { d14OwnedUnits } from './d14-runtime';
 import {findMechanicReceipt} from './seat-mechanics/state';
@@ -22,7 +23,7 @@ export function requirePool(condition:unknown, reason:SharedPoolFailure='invalid
   if (!condition) throw new PoolError(reason);
 }
 export const safe = (n:number,min=0) => Number.isSafeInteger(n) && n>=min;
-export const sourceKey=(...parts:(string|number)[])=>JSON.stringify(parts);
+export const sourceKey=(...parts:(string|number)[])=>encodePrimitiveTuple(parts);
 export const shopSource=(r:ShopReservation)=>sourceKey('shop',r.seatId,r.generation,r.slot);
 /** One key per reserved copy; a 2-star offer holds three. */
 export const shopSources=(r:ShopReservation)=>r.starLevel===2?[0,1,2].map(i=>i?sourceKey('shop',r.seatId,r.generation,r.slot,i):shopSource(r)):[shopSource(r)];

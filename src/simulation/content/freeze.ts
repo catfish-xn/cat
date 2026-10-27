@@ -1,4 +1,3 @@
-import { drainSetup } from '../setup-work';
 // Only objects recursively frozen here are trusted; Object.isFrozen alone would
 // also accept a shallow-frozen wrapper around mutable children.
 const frozenContent = new WeakSet<object>();
@@ -8,7 +7,19 @@ export function isFrozenContent(value: unknown): value is object {
 /** Content is immutable data. Runtime snapshots receive their own copies. */
 export function freezeContent<T>(value: T): T {
   if (value === null || typeof value !== 'object' || frozenContent.has(value)) return value;
-  return drainSetup(freezeSteps(value, { remaining: 64, skipFrozen: true }));
+  return freezeOwned(value);
+}
+// Synchronous callers have no scheduling boundary to expose. Keep the same
+// value-read/freeze order without allocating one generator for every child.
+function freezeOwned<T>(value: T): T {
+  if (value !== null && typeof value === 'object' && !frozenContent.has(value)) {
+    for (const child of Object.values(value)) {
+      if (child !== null && typeof child === 'object') freezeOwned(child);
+    }
+    Object.freeze(value);
+    frozenContent.add(value);
+  }
+  return value;
 }
 /** Pause only between owned JSON nodes; never certify an unfinished subtree. */
 export function* freezeContentSteps<T>(value: T): Generator<void, T, void> {

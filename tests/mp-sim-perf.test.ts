@@ -111,6 +111,33 @@ describe('simulation performance preserves bytes and snapshot ownership', () => 
     expect(first.expansion!.chainTargets).toEqual(['e']);
     expect(first.runtime!.attackCount).toBe(0);
   });
+  it('detaches writable plain graphs with native bytes, aliases, cycles and fallback reads', () => {
+    const shared = { n: -0, text: '\ud800', absent: undefined };
+    const graph: Record<string, unknown> = { a: shared, b: shared, sparse: [1, , 3], nullPrototype: Object.assign(Object.create(null), { n: 1 }) };
+    graph.self = graph;
+    Object.defineProperty(graph, '__proto__', { value: { safe: true }, enumerable: true });
+    Object.defineProperty(graph, 'hidden', { value: 9 });
+    const input = Object.assign(unit('p', 'player', 1, 3), { probe: graph });
+    const copied = copyCombatUnitForTick(input) as typeof input;
+    expect(copied.probe).toEqual(structuredClone(graph));
+    expect(Object.keys(copied.probe)).toEqual(Object.keys(graph));
+    expect(copied.probe.self).toBe(copied.probe);
+    expect(copied.probe.a).toBe(copied.probe.b);
+    expect(copied.probe.a).not.toBe(shared);
+    expect(Object.getPrototypeOf(copied.probe)).toBe(Object.prototype);
+    expect(Object.hasOwn(copied.probe.sparse as object, 1)).toBe(false);
+    (copied.probe.a as typeof shared).text = 'changed';
+    expect(shared.text).toBe('\ud800');
+    const make = () => {
+      const reads: string[] = [];
+      return { reads, graph: { first: { get value() { reads.push('value'); return 7; } }, last: new Map([['key', new Date(1234)]]) } };
+    };
+    const actual = make(), expected = make();
+    const fallback = copyCombatUnitForTick(Object.assign(unit('p', 'player', 1, 3), { probe: actual.graph })) as typeof input;
+    expect(fallback.probe).toEqual(structuredClone(expected.graph));
+    expect(actual.reads).toEqual(expected.reads);
+    expect(actual.reads).toEqual(['value']);
+  });
   it('detaches native fallback roots when they later appear inside another read-only record', () => {
     const input = unit('p', 'player', 1, 3);
     const first = copyCombatUnitForTick({ ...input, cell: new Date(1234) as unknown as typeof input.cell });

@@ -37,13 +37,13 @@ export function augmentDeathsFromEvents(events: readonly object[], includeKiller
 }
 export function carryAugmentCombatDeaths(before: CombatState, step: CombatStep): CombatStep {
   const added = augmentDeathsFromEvents(step.events), previous = histories.get(before) ?? [];
-  if (added.length || previous.length) histories.set(step.state, [...previous, ...added]);
+  if (added.length || previous.length) histories.set(step.state, added.length ? [...previous, ...added] : previous);
   const attributions = step.events.flatMap(event => {
     if (!killers.has(event) || typeof event.combatId !== 'string' || typeof event.eventSeq !== 'number') return [];
     return [{ combatId: event.combatId, eventSeq: event.eventSeq, killer: structuredClone(killers.get(event)!), ...(takedowns.has(event)?{takedowns:structuredClone(takedowns.get(event)!)}:{}) }];
   });
   const oldAttributions = attributionHistories.get(before) ?? [];
-  if (attributions.length || oldAttributions.length) attributionHistories.set(step.state, [...oldAttributions, ...attributions]);
+  if (attributions.length || oldAttributions.length) attributionHistories.set(step.state, attributions.length ? [...oldAttributions, ...attributions] : oldAttributions);
   return step;
 }
 export function readAugmentCombatDeaths(terminal: CombatState, includeKiller = false, includeTakedowns = false): readonly AugmentDeath[] {

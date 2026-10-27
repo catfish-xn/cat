@@ -1,3 +1,4 @@
+import { encodePrimitiveTuple } from './primitive-tuple';
 import { batch2Bonus, batch2Mechanic } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
 import { TRAINER_ATTACK_CENTI, TRAINER_ID } from './content/opening-batch-b';
@@ -71,7 +72,7 @@ export function spellCrit(unit: Pick<CombatUnit, 'id' | 'ability' | 'spellCrit' 
   return authorizeSpellCrit([], [], unit.baseCritChanceBps ?? (champion(unit) === 'neutral' ? 0 : S13_COMBAT_RULES.attackCritBps), unit.baseCritMultiplierBps ?? S13_COMBAT_RULES.critMultiplierBps);
 }
 export const compareText = (a: string, b: string): number => a < b ? -1 : a > b ? 1 : 0;
-export const sourceKey = (s: CombatOrigin): string => JSON.stringify([s.ownerId, s.sourceKind, s.definitionId, s.instanceId, s.effectIndex]);
+export const sourceKey = (s: CombatOrigin): string => encodePrimitiveTuple([s.ownerId, s.sourceKind, s.definitionId, s.instanceId, s.effectIndex]);
 export function compareOrigins(a: CombatOrigin, b: CombatOrigin): number {
   const kinds: CombatOrigin['sourceKind'][] = ['attack', 'ability', 'trait', 'item', 'augment', 'anomaly', 'enemyGrowth'];
   return compareText(a.ownerId, b.ownerId) || kinds.indexOf(a.sourceKind) - kinds.indexOf(b.sourceKind)

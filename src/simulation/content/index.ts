@@ -1,4 +1,3 @@
-import { drainSetup } from '../setup-work';
 import { TRAIT_DEFINITIONS } from './traits';
 import { ITEM_DEFINITIONS } from './g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './augments';
@@ -16,8 +15,8 @@ var frozenDigests: WeakMap<object, string> | undefined;
 var canonicalKeys: Map<string, string> | undefined;
 var scalarPrototype: object | undefined;
 // No memo or admission result: synchronous restore drains all setup work before
-// returning. Keep cooperative callers and external object inputs on their
-// original generator path; nested scopes (including failures) restore it.
+// returning. Cooperative callers retain their generator path; nested scopes
+// (including failures) restore it.
 var synchronousRestoreEncoding: boolean | undefined;
 export function withSynchronousRestoreEncoding<T>(enabled: boolean, run: () => T): T {
   const previous = synchronousRestoreEncoding;
@@ -48,8 +47,9 @@ function rememberFrozen(value: object, text: string, keys: readonly string[]): s
 }
 /** JSON canonicalization preserves semantic array order and sorts object keys by ASCII. */
 export function canonicalContent(value: unknown): string {
-  return canonicalLeaf(value) ?? (synchronousRestoreEncoding ? canonicalSync(value, true)
-    : drainSetup(canonicalSteps(value, { remaining: 64, retainFrozen: true })));
+  // This API never exposes a scheduling boundary. Use the identical synchronous
+  // traversal rather than allocating/delegating a generator for every child.
+  return canonicalSync(value, true);
 }
 /** Setup uses bounded traversal without retaining short-lived snapshot text. */
 export function* canonicalContentSteps(value: unknown): Generator<void, string, void> {
@@ -114,8 +114,7 @@ function* canonicalSteps(value: unknown, budget: { remaining: number; retainFroz
   throw new TypeError('Content must be finite plain JSON data');
 }
 /** Identical traversal, key order, array fallback, finite-data checks and
- * frozen-text policy, without generator allocation/delegation when the owning
- * restore will synchronously drain every chunk anyway. */
+ * frozen-text policy, without generator allocation/delegation. */
 function canonicalSync(value: unknown, retainFrozen: boolean): string {
   const leaf = canonicalLeaf(value);
   if (leaf !== undefined) return leaf;

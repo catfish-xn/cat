@@ -234,8 +234,9 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
     if (!next.multiplayer) next = drainBatch5H8Gold(next);
     if (!next.multiplayer || next.m8.round.kind === 'pve') next = drainBatch5H8Deaths(next);
   }
-  const priorReceipts=new Set((rewarded.state.seatMechanics?.receipts??[]).map(r=>r.receiptId));
-  const newReceipts=(next.seatMechanics?.receipts??[]).filter(r=>!priorReceipts.has(r.receiptId));
+  const prior = rewarded.state.seatMechanics?.receipts, current = next.seatMechanics?.receipts;
+  const priorReceipts = current === prior ? undefined : new Set((prior ?? []).map(r => r.receiptId));
+  const newReceipts = priorReceipts ? (current ?? []).filter(r => !priorReceipts.has(r.receiptId)) : [];
   const payoutEvents:MatchEvent[]=newReceipts.map((receipt,index)=>({type:'mechanicGranted',receipt,domain:'match',eventSeq:next.nextMatchEventSeq+index}));
   if(payoutEvents.length)next={...next,nextMatchEventSeq:next.nextMatchEventSeq+payoutEvents.length};
   let effectEvents: readonly MatchEvent[] = [];

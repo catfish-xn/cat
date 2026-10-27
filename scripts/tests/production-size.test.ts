@@ -106,8 +106,8 @@ describe('production representation preserves runtime semantics', () => {
     const parsed = JSON.parse(after);
     // Current content identities (src/simulation/content/identity-constants.ts;
     // v25 integrated content, 2026-10-27).
-    expect(parsed.content).toBe('fnv1a32-utf16:b029f325');
-    expect(parsed.loot).toBe('fnv1a32-utf16:54b9a76a');
+    expect(parsed.content).toBe('fnv1a32-utf16:93d57139');
+    expect(parsed.loot).toBe('fnv1a32-utf16:5a53934e');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
 });

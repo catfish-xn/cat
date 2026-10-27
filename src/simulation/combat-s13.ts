@@ -177,13 +177,15 @@ function rollPlannedPackets(ctx: AbilityContext, unit: S13Unit, firstPacket: num
 export function advanceS13Tick(state: CombatState): CombatStep {
   const tick = state.tick + 1, events: CombatEvent[] = [];
   const units: S13Unit[] = state.units.map(unit => {
-    const copy = copyCombatUnitForTick(unit);
-    return Object.assign(copy, {
-      startingCell: unit.startingCell ?? { ...unit.cell },
-      runtime: { ...EMPTY_RUNTIME, ...copy.runtime }, statuses: (copy.statuses ?? []) as S13Unit['statuses'],
-      shieldLayers: (copy.shieldLayers ?? []) as S13Unit['shieldLayers'], tasks: (copy.tasks ?? []) as S13Unit['tasks'],
-      cooldownTicks: unit.alive ? Math.max(0, unit.cooldownTicks - 1) : 0,
-      moveCooldownTicks: unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0 });
+    const copy = copyCombatUnitForTick(unit) as S13Unit;
+    copy.startingCell = unit.startingCell ?? { ...unit.cell };
+    copy.runtime = { ...EMPTY_RUNTIME, ...copy.runtime };
+    copy.statuses = copy.statuses ?? [];
+    copy.shieldLayers = copy.shieldLayers ?? [];
+    copy.tasks = copy.tasks ?? [];
+    copy.cooldownTicks = unit.alive ? Math.max(0, unit.cooldownTicks - 1) : 0;
+    copy.moveCooldownTicks = unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0;
+    return copy;
   }).sort(compareIds);
   const hasBanish=units.some(u=>u.itemBanish || u.anomalyState?.absentUntilTick !== undefined || u.g23Sion);
   const fullRoster=hasBanish?[...units]:units;
