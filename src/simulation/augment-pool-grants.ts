@@ -1,3 +1,5 @@
+import { AUGMENT_BATCH5_H13 } from './content/augment-pool-batch5-h13';
+import { recordH13Settlements, salvageRewardPlan } from './augment-pool-batch5-h13-salvage';
 import { validateShopAugments } from './shop-augments';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
 import { batch5RewardPlan, validateBatch5Gold } from './augment-pool-batch5-progress';
@@ -22,13 +24,13 @@ import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH5_H13[a.definitionId]??AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(salvageRewardPlan(state),batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */
 export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):MatchState {
  // Dummify/Golemify first: their removal frees the bench for the dummy or golem they grant.
- let state=drainBatch3Forming(initial),progressed:boolean;
+ let state=drainBatch3Forming(recordH13Settlements(initial)),progressed:boolean;
  do {
   progressed=false;
   for(const gift of batch1GiftPlan(state)){

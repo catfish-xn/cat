@@ -1,6 +1,9 @@
 /** Reserved integration IDs only. This registry does NOT enable offers or implement effects.
  * Future jobs must use these IDs (or update this registry in the same change). */
 export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>> = {
+  'pandoras-items-iii': ['round-entry','augment-item-transform','inventory-transform-entry'],
+  'artifactory': ['round-entry','augment-item-transform','inventory-transform-entry'],
+  'salvage-bin-plus': ['augment-item-transform', 'settled-combat'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],

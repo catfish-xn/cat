@@ -1,3 +1,25 @@
+## 2026-10-27 v25 B5-H13 装备强化
+
+规则/content 身份为 `s13-g2-3-v25-online-rules` / `s13-14.24b-g2-3-v25-online-rules`；精确摘要以生成常量为准。外层 schema/save/replay/command=12/8/8/7，NET=5 不变，不重录旧 epoch。P-B5-H13-EXEC 授权以下实际开放行为。
+
+| 强化 | 报价与效果 |
+| --- | --- |
+| 打捞桶+ `salvage-bin-plus` | 黄金，3-2/4-2；立即1随机普通成装，选择轮起第4场已结算PvP后1组件。出售只拆普通永久成装为配方两组件，特殊装备原样归库存，临时件不产资源。 |
+| 神器工厂 `artifactory` | 棱彩，3-2/4-2；1神器锻造器+2拆卸器；后续每自然轮入口将普通库存成装转现有29件神器池。原始Health=50不解释为加血。 |
+| 潘朵拉III `pandoras-items-iii` | 棱彩，全部三个节点；取得即1随机光明装备；后续入轮只重掷普通库存8组件/36成装，类别保持、允许原样。特殊装备/工具及已装备物品不变。 |
+
+本批不新增命令或失败枚举。`selectChoice`、`sellUnit`、`nextRound/advanceMultiplayerRound` 使用原参数和失败原子性；联机已有 `Room.handle` → `applySeatCommand` → 公共规则/共享池事务执行。锻造器沿用 `openAnvil` 与 `selectChoice`，拆卸器沿用 `useConsumable`，无需修改 `src/server`。服务器推进结算与入轮，奖励和转换全部在 simulation。
+
+新增规则内部接口（不向客户端暴露）：
+
+- `recordH13Settlements(state: MatchState): MatchState`、`salvageRewardPlan(state: MatchState): AugmentGift[]`：记录已结算事实并派生第四场奖励；无持有者无动作，重复结算无新收据。
+- `salvageRecipe(definitionId: string): readonly [string,string] | null`、`salvageSoldItems(before: MatchState, after: MatchState, unitId: string): MatchState`：识别普通配方并在合法出售返回装备后转换。
+- `enterH13ItemRound(state: MatchState): MatchState`：只能接在已记录入轮快照后、其他本轮资源授予前；以历史完成标记保证幂等，取得当轮无动作。
+- `h13RoundItemPool(augmentId: string, definitionId: string): readonly string[] | null`、`h13ItemDraw(state: MatchState, choiceId: string, itemId: string, pool: readonly string[]): string`：显式类别白名单和独立确定性随机流，算法见P条目。
+- `transformH13Item(state: MatchState, choiceId: string, input: ItemInstance, definitions: readonly string[]): MatchState`：原实例消耗、1/2个新实例与历史/资源行同事务；重复同收据返回原对象，冲突抛错。`replayH13Transform(items, nextItemSerial, fact)` 仅供恢复折叠有序物品。
+
+历史扩展仍归 `augment-history-v1`，新增 `settled-combat`、`augment-item-transform`、`inventory-transform-entry`，详见 `AUGMENT_HISTORY_DESIGN.md`。内部不满足边界时抛 `RangeError('Invalid augment history: ...')`：空池、错误持有者/输出数、收据冲突、输入所有权/位置、输出序号、结算收据、结构界限；恢复缺历史或缺独立服务器authority继续拒绝，不迁移、不自签。公开失败沿用原reason，不消费资源/RNG。
+
 ## 2026-10-27 v24 纪元身份
 
 当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。

@@ -54,7 +54,7 @@ export function validateMatchEquipment(state: Readonly<MatchState>): void {
   let previousRound = -1;
   for (const roll of state.equipmentState.rolls) {
     const parent = state.items.find(item => item.id === roll.parentItemInstanceId)
-      ?? state.resourceProvenance.entries.flatMap(f=>f.kind==='consumable-used'?f.record.affectedItems:[]).find(i=>i.id===roll.parentItemInstanceId), round = roundIds.indexOf(roll.roundId);
+      ?? state.resourceProvenance.entries.flatMap(f=>f.kind==='consumable-used'?f.record.affectedItems:f.kind==='augment-item-transform'?[f.input]:[]).find(i=>i.id===roll.parentItemInstanceId), round = roundIds.indexOf(roll.roundId);
     if (!parent || !grantsTemporaryEquipment(ITEM_DEFINITIONS[parent.definitionId]) || ITEM_DEFINITIONS[parent.definitionId].slotCost !== 3
       || round < 0 || round < previousRound || roll.playerLevelSnapshot < MATCH_RULES.initialLevel || roll.playerLevelSnapshot > state.level) {
       throw new Error('Invalid equipment parent/round/level');

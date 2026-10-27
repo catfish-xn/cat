@@ -250,6 +250,7 @@ function anomalyRecovery(state:MatchState,cursor:MatchState,p:ShopHistoryPoint):
  if(state.sharedPool||cursor.round>FINAL_ROUND||!getRoundSchedule(cursor.round).some(e=>e.kind==='anomaly')
   ||cursor.shop.slots.some(s=>s.status==='available'&&shopOfferCost(s)<=cursor.gold))return false;
  const folded=foldResourceProvenance(state.resourceProvenance,{
+  augmentHistory:state.augmentHistory,
   g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),scheduleReceipts:state.scheduleReceipts,
   lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
   throughRoundOrdinal:state.round,prefixLength:p.resourcePrefix,

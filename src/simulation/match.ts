@@ -1,3 +1,5 @@
+import { enterH13ItemRound } from './augment-pool-batch5-h13-entry';
+import { salvageSoldItems } from './augment-pool-batch5-h13-salvage';
 import { initializeAugmentTrace, traceHistoryCommand, recordAugmentRoundEntry, recordAugmentAcquisition } from './augment-history';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
@@ -358,6 +360,7 @@ function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Un
     resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
       {kind:'unit-sold',unitId,context:capacity?'settlement-capacity':'preparation',goldGranted}),
     preparation:{...state.preparation,units:state.preparation.units.filter(unit=>unit.id!==unitId)} };
+  sold=salvageSoldItems(state,sold,unitId);
   const events: MatchEvent[] = [...returned.events,...(removesBinding?[{type:'anomalyRemoved' as const,unitId}]:[])];
   if (capacity) { const granted = grantDirectLoot(sold,false,unitLootPolicy); sold=granted.state; events.push(...granted.events); }
   if(sold.phase!=='combat'&&!isCombatRosterLocked(sold)){const drained=drainG23Rewards(sold,unitLootPolicy,events);events.push(...mechanicGrantEvents(sold,drained));sold=drained;}
@@ -605,7 +608,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
-  state = recordAugmentRoundEntry({...state, round});
+  state = enterH13ItemRound(recordAugmentRoundEntry({...state, round}));
   const entryLevel = state.level;
   const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,round));
   state={...state,level:progression.level,xp:progression.xp};
@@ -654,7 +657,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
-    state = recordAugmentRoundEntry({...state, round: definition.ordinal});
+    state = enterH13ItemRound(recordAugmentRoundEntry({...state, round: definition.ordinal}));
     const entryLevel=state.level;
     const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};
