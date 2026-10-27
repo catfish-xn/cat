@@ -42,6 +42,25 @@ function setup(overrides: Partial<CarouselStageContext> = {}) {
 }
 
 describe('3D carousel stage', () => {
+  it('separates the item sprite description from its hero, with projected boxes and no take', () => {
+    const { stage } = setup();
+    stage.show(carousel({ slots: [slot(0, { takable: true })] }));
+    const area = { left: 30, top: 40, width: 960, height: 540 };
+    const holder = stage.scene.getObjectByName('render3d-carousel-units')!.children[0]!;
+    holder.updateWorldMatrix(true, true); stage.camera.updateMatrixWorld();
+    const sprite = holder.children.find(child => (child as any).isSprite)!;
+    expect(sprite).toBeDefined();
+    const screen = (point: Vector3) => { point.project(stage.camera); return { x: area.left + (point.x + 1) * area.width / 2, y: area.top + (1 - point.y) * area.height / 2 }; };
+    const itemPoint = screen(sprite.getWorldPosition(new Vector3()));
+    const item = stage.descriptionAt(itemPoint, area)!;
+    expect(item.target).toEqual({ kind: 'item', id: 'item-0' });
+    expect(item.box.left).toBeLessThan(itemPoint.x); expect(item.box.right).toBeGreaterThan(itemPoint.x);
+    expect(item.box.top).toBeLessThan(itemPoint.y); expect(item.box.bottom).toBeGreaterThan(itemPoint.y);
+    const unit = stage.descriptionAt(screen(holder.getWorldPosition(new Vector3()).add(new Vector3(0, 10, 0))), area)!;
+    expect(unit.target).toEqual({ kind: 'carousel', unit: slot(0, { takable: true }) });
+    expect(stage.debug().fetched).toEqual({}); expect(stage.debug().legends.every(entry => !entry.includes(':walk') && !entry.includes(':chase'))).toBe(true);
+    stage.show(null); expect(stage.descriptionAt(itemPoint, area)).toBeUndefined(); stage.dispose();
+  });
   it('draws stand-ins without an asset root: platform, eight seat legends, the units with their items and no timer ring', () => {
     const { stage } = setup();
     stage.show(carousel());

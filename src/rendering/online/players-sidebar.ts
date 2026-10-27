@@ -1,3 +1,4 @@
+import { attachTextCards, textCard } from '../../presentation/text-card';
 import { heroEmblemSvg } from '../../presentation/hero-identity';
 import { heroPortraitHtml } from '../../presentation/s13-assets';
 import { avatarUnit } from './opponent-board';
@@ -18,6 +19,7 @@ const PHASE_TEXT = { lobby: '等待', preparation: '准备阶段', choice: '选�
  *  Each seat shows an avatar (its most expensive deployed unit) and opens that seat's public board when clicked. */
 export class PlayersSidebar {
   readonly root: HTMLElement;
+  private readonly detach: () => void;
   private phaseBadge: HTMLElement;
   private roundLabel: HTMLElement;
   private timerLabel: HTMLElement;
@@ -61,7 +63,7 @@ export class PlayersSidebar {
     top.append(tabs); this.tabs = tabs; this.setTab('players');
     this.root.append(top);
     this.list = element('ol', '', 'online-seats'); this.list.dataset.debug = 'online:seats'; this.root.append(this.list);
-    host.append(this.root);
+    host.append(this.root); this.detach = attachTextCards(this.root);
   }
   render(view: PlayerView): void {
     this.view = view; this.clockOffset = performance.now() - view.phase.serverNow;
@@ -130,6 +132,8 @@ export class PlayersSidebar {
       const chip = element('span', `-${hit.from - seat.hp}`, 'seat-damage'); chip.dataset.debug = `online:seat-damage:${seat.seatId}`;
       chip.style.animationDelay = row.style.animationDelay = elapsed; foot.insertBefore(chip, foot.lastChild); row.classList.add('hit');
     }
+    textCard(row, [seat.name, `生命 ${seat.hp}`, `等级 ${seat.level}`, kind.title, offline ? '玩家断线，等待重新连接' : ''].filter(Boolean).join('\n'));
+    for (const node of Array.from(head.querySelectorAll<HTMLElement>('[title]'))) { node.setAttribute('aria-label', node.title); node.removeAttribute('title'); }
     bar.append(fill);
     // TFT player list: round portrait on the left, name and bar in the middle, HP and level on the right.
     const main = element('div', '', 'seat-main'); main.append(head, bar);
@@ -176,7 +180,7 @@ export class PlayersSidebar {
     this.connectionBadge.textContent = text ?? ''; this.connectionBadge.hidden = !text; this.connectionBadge.dataset.tone = tone;
   }
   show(visible: boolean) { this.root.hidden = !visible; }
-  dispose() { this.root.remove(); this.countdownHost?.replaceChildren(); }
+  dispose() { this.detach(); this.stageTrack?.dispose(); this.root.remove(); this.countdownHost?.replaceChildren(); }
 }
 function compareSeats(a: SeatPublic, b: SeatPublic): number {
   if (a.alive !== b.alive) return a.alive ? -1 : 1;

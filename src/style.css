@@ -1553,6 +1553,12 @@ body[data-online]:has(> .render3d-layer) .fullscreen-toggle { right: auto; left:
   body[data-online]:has(> .render3d-layer) .fullscreen-toggle { left: auto; right: 8px; bottom: calc(var(--online-dock-h) + 16px); }
 }
 
+/* Hover descriptions share the existing card skin; touch anchors retain a 44px hit area. */
+@media (pointer: coarse) {
+  body[data-online] :is([data-text-card], .carousel-item, .carousel-holding-sell) { min-width: 44px; min-height: 44px; }
+  body[data-online] :is(.augment-chip, .carousel-item) { display: inline-flex; align-items: center; justify-content: center; }
+}
+
 /* Online 3D encounter: a reserved 80px band above the left rails. Fixed positioning avoids
    the board frame's clipping/stacking context; progress stays in the tooltip and detail card. */
 body[data-online]:has(> .render3d-layer) .opening-chip {
