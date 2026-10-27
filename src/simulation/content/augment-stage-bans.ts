@@ -15,7 +15,8 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT_Augment_Survivor":["3-2","4-2"],
   "TFT_Augment_DiversifiedPortfolio2":["2-1","4-2"],
   "TFT_Augment_DiversifiedPortfolio1":["3-2","4-2"],
-  "TFT_Augment_TableScraps":['2-1','3-2','4-2'],
+  // U 2026-10-27: allow Table Scraps at 2-1 despite the 14.24 tag.
+  "TFT_Augment_TableScraps":['3-2','4-2'],
   "TFT9_Augment_YoungAndWildAndFree":['4-2'],
   'TFT11_Augment_ScoreboardScrapper':['3-2','4-2'],
   'TFT_Augment_Contested':['2-1','4-2'],
