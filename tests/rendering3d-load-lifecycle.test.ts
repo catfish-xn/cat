@@ -85,6 +85,29 @@ describe('3D model warm-up and first-batch mount lifecycle', () => {
     vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.doUnmock('three'); vi.resetModules();
   });
 
+  it('releases each old board at rebuild and the last board at unmount, without accumulating GPU resources', async () => {
+    browserMode('active');
+    await mount([]);
+    const three = await import('three');
+    const disposed: Map<object, ReturnType<typeof vi.fn>> = new Map();
+    for (let i = 0; i < 12; i++) {
+      listener.frame({ ...frame, rows: i % 2 ? 8 : 4, pieces: [] }); await draw();
+      // All older board geometries/materials should already be disposed, even while 3D stays mounted.
+      for (const spy of disposed.values()) expect(spy).toHaveBeenCalledTimes(1);
+      const scene = gpu[0].render.mock.calls.at(-1)![0] as import('three').Scene;
+      const tiles = scene.children.find(node => node.children.some(child => child instanceof three.Mesh && child.geometry instanceof three.CylinderGeometry))!;
+      const resources = new Set<import('three').BufferGeometry | import('three').Material>();
+      for (const mesh of tiles.children as import('three').Mesh[]) {
+        resources.add(mesh.geometry);
+        for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) resources.add(material);
+      }
+      expect(resources.size).toBeGreaterThan(0);
+      for (const resource of resources) disposed.set(resource, vi.spyOn(resource, 'dispose'));
+    }
+    mounted!.dispose(); mounted = undefined;
+    for (const spy of disposed.values()) expect(spy).toHaveBeenCalledTimes(1);
+  });
+
   it('remounts the same layer on context restoration, rereads stored models and discards a stale mount completion', async () => {
     // IndexedDB is substituted at its public store seam; preloading, reading, parsing, caching and mounting remain real.
     const preload = await import('../src/rendering/three-mode/asset-preload');

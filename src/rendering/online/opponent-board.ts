@@ -9,6 +9,7 @@ import { onAugmentTextChanged } from '../../presentation/augment-text-loader';
  */
 import type { Board } from '../../simulation/board';
 import type { GameState } from '../../simulation/game';
+import type { ItemInstance } from '../../simulation/strategy-types';
 import { deriveTraits } from '../../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS, type Unit } from '../../simulation/units';
 import { getHeroIdentity, heroEmblemSvg, traitDisplayName } from '../../presentation/hero-identity';
@@ -36,13 +37,19 @@ function publicPreparation(board: PublicBoard, layout: Board): GameState {
     id: `public-${index}`, definitionId: unit.definitionId, team: 'player', starLevel: unit.starLevel as Unit['starLevel'], location: { kind: 'board', cell: unit.cell },
   })) };
 }
+/** The public board units' held items, so emblems count toward the scouted traits as they do on my own column. */
+function publicItems(board: PublicBoard): ItemInstance[] {
+  return board.units.filter(unit => !unit.summon).flatMap((unit, index) => (unit.items ?? []).map((definitionId, slot) => ({
+    id: `public-${index}-${slot}`, definitionId, location: { kind: 'unit' as const, unitId: `public-${index}`, slot },
+  })));
+}
 /** G2: the trait column rows of a public board (same rows and order as my own column). */
 export function publicTraitRows(board: PublicBoard, layout: Board): TraitRow[] {
-  try { return traitRows(deriveTraits(publicPreparation(board, layout), 'player')); } catch { return []; }
+  try { return traitRows(deriveTraits(publicPreparation(board, layout), 'player', undefined, undefined, publicItems(board))); } catch { return []; }
 }
 /** Traits a public board activates; deriveTraits only reads definition ids and board locations. */
 export function publicTraits(board: PublicBoard, layout: Board): { traitId: string; name: string; count: number; tier: number }[] {
-  return deriveTraits(publicPreparation(board, layout), 'player').filter(trait => trait.count > 0)
+  return deriveTraits(publicPreparation(board, layout), 'player', undefined, undefined, publicItems(board)).filter(trait => trait.count > 0)
     .map(trait => ({ traitId: trait.traitId, name: traitDisplayName(trait.traitId), count: trait.count, tier: trait.tier }))
     .sort((a, b) => b.tier - a.tier || b.count - a.count || a.name.localeCompare(b.name, 'zh'));
 }

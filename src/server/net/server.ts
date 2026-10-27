@@ -17,6 +17,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 import { WebSocketServer, type WebSocket, type RawData } from 'ws';
 import { textLogger, type Logger } from '../log';
+import { RoundPerf } from './round-perf';
 import { PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import { replayTail } from '../room/live-bank';
@@ -233,6 +234,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   }
   const log: Logger = options.logger ?? (options.log ? textLogger(options.log) : () => {});
   const clock = options.clock;
+  const perf = new RoundPerf(() => clock.now(), log);
   const queue = new WriteQueue(error => log('error', 'task.failed', { roomId: room?.state.roomId, error: error instanceof Error ? error.stack ?? error.message : String(error) }));
   const sessions = new SessionRegistry(limits.dedupeWindow);
   const connections = new Map<number, Connection>();
@@ -254,9 +256,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
    */
   const slowTasks = new Map<string, { count: number; longestMs: number; lastMs: number; loggedAt: number }>();
   function timed(task: string, fn: () => void): void {
+    if (room) perf.enter(room.state);
     const started = clock.now();
     try { fn(); } finally {
       const now = clock.now(), ms = now - started;
+      if (task === 'room') perf.add('room', ms);
       if (ms >= SLOW_TASK_MS) {
         const slow = slowTasks.get(task) ?? { count: 0, longestMs: 0, lastMs: 0, loggedAt: -Infinity };
         slow.count++; slow.longestMs = Math.max(slow.longestMs, ms); slow.lastMs = ms; slowTasks.set(task, slow);
@@ -285,7 +289,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   const sliceMs = options.sliceMs === null ? null : options.sliceMs ?? DEFAULT_SLICE_MS;
   const spotCheckEvery = options.spotCheckEveryRounds ?? SPOT_CHECK_EVERY_ROUNDS;
   const lobby = new Lobby({
-    clock: roomClock, sliceTicks, combatStreaming,
+    clock: roomClock, sliceTicks, combatStreaming, onCombatWork: ms => perf.add('combat', ms),
     ...(sliceMs === null ? {} : { sliceMs }), seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
@@ -311,7 +315,9 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       log('warn', 'connection.backpressure', { connection: conn.id, seatId: conn.session?.seatId, bufferedAmount: conn.socket.bufferedAmount });
       conn.socket.terminate(); return;
     }
-    try { conn.socket.send(JSON.stringify(message)); } catch { conn.socket.terminate(); }
+    try { perf.measure('broadcast', () => {
+      const json = JSON.stringify(message); perf.sent(Buffer.byteLength(json)); conn.socket.send(json);
+    }); } catch { conn.socket.terminate(); }
   }
   function sendError(conn: Connection, code: ErrorCode, message: string, commandId: number | null = null): void {
     send(conn, { type: 'error', code, message, commandId });
@@ -336,13 +342,13 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     if (state.roomRevision < conn.sentRoomRevision) return;
     if (conn.sentRoomRevision !== state.roomRevision) {
       conn.sentRoomRevision = state.roomRevision;
-      send(conn, { type: 'view', roomId: state.roomId, roomRevision: state.roomRevision, view: toPlayerView(state, seat.seatId, clock.now()) });
+      send(conn, { type: 'view', roomId: state.roomId, roomRevision: state.roomRevision, view: perf.measure('projection', () => toPlayerView(state, seat.seatId, clock.now())) });
     }
     const receivesState = seat.alive || seat.eliminatedRound === state.round;
     if (receivesState && conn.sentSeatRevision !== seat.seatRevision) {
       conn.sentSeatRevision = seat.seatRevision;
       const events = seatPushEvents(seat);
-      send(conn, { type: 'state', roomId: state.roomId, round: state.round, seatRevision: seat.seatRevision, state: toSeatPrivateView(seat.match, seat.choiceDeadline), ...(events.length ? { events } : {}) });
+      send(conn, { type: 'state', roomId: state.roomId, round: state.round, seatRevision: seat.seatRevision, state: perf.measure('projection', () => toSeatPrivateView(seat.match, seat.choiceDeadline)), ...(events.length ? { events } : {}) });
     }
     if (room && room.state.round === state.round && pushStream(conn, room)) return;
     const battle = state.battles.find(candidate => candidate.kind === 'two-sided' ? candidate.participants.includes(seat.seatId) : candidate.outcomes.some(outcome => outcome.seatId === seat.seatId));
@@ -354,7 +360,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         conn.sentCombatKey = key;
         // A replay failure is a server fault (§14.2): logged, never turned into a result; settlement still follows.
         let replay: ReturnType<typeof toCombatReplayFor> = null;
-        try { replay = toCombatReplayFor(state, seat.seatId); }
+        try { replay = perf.measure('projection', () => toCombatReplayFor(state, seat.seatId)); }
         catch (error) { log('error', 'replay.failed', { roomId: state.roomId, seatId: seat.seatId, round: state.round, battleId: battle.battleId, error: error instanceof Error ? error.message : String(error) }); }
         if (replay && sent) {
           conn.sentCombat = { battle, replay: replay.replay };
@@ -381,7 +387,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const battle = state.battles.find(candidate => candidate.kind === 'two-sided' ? candidate.participants.includes(watched) : candidate.outcomes.some(outcome => outcome.seatId === watched));
     if (!battle || conn.sentWatch?.battle === battle) return;
     let replay: ReturnType<typeof toCombatReplayFor> = null;
-    try { replay = toCombatReplayFor(state, watched); }
+    try { replay = perf.measure('projection', () => toCombatReplayFor(state, watched)); }
     catch (error) { log('error', 'replay.failed', { roomId: state.roomId, seatId: watched, round: state.round, battleId: battle.battleId, error: error instanceof Error ? error.message : String(error) }); }
     if (!replay) { conn.sentWatch = null; return; }
     const key = `${state.round}:${battle.battleId}:${watched}`, sent = conn.sentWatch?.key === key ? conn.sentWatch : null;
@@ -397,7 +403,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     if (owner.streamingBoundaryPending) return owner.combatStreamFor(session.seatId) !== null;
     const chunks: CombatChunk[] = [], ends: ServerMessage[] = [];
     const append = (seatId: string, watch: boolean): boolean => {
-      const stream = owner.combatStreamFor(seatId);
+      const stream = perf.measure('projection', () => owner.combatStreamFor(seatId));
       if (!stream) return false;
       const envelope = { roomId: state.roomId, round: state.round, battleId: stream.battleId, revision: stream.revision, seatId, watch };
       const field = watch ? 'watchCursor' : 'streamCursor';
@@ -464,6 +470,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   function attachRoom(opened: Room): void {
     unsubscribeRoom?.();
     room = opened;
+    perf.enter(opened.state);
     const roomId = opened.state.roomId;
     const seated = new Set(opened.state.seats.map(seat => seat.seatId));
     // Credentials of a finished match die with it: a seat id that is not in the new room has no session.
@@ -487,9 +494,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       queue.push(() => { streamPushQueued = false; timed('push', () => pushAll(opened.state)); });
     };
     const unsubscribeState = opened.subscribe(state => {
+      // Final push and the current room task finish before reporting the round.
       logPhase(state); scheduleSpotCheck(opened, state);
       if (opened.hasCombatStreams) queueStreamPush();
       else queue.push(() => timed('push', () => pushAll(state)));
+      if (state.phase === 'ended') queue.push(() => perf.flush());
     });
     const unsubscribeLive = opened.subscribeLive(battleId => queue.push(() => pushLive(opened, battleId)));
     const unsubscribeStreams = opened.subscribeStreams(queueStreamPush);
@@ -963,7 +972,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
           if (heartbeatHandle !== null) { clock.cancel(heartbeatHandle); heartbeatHandle = null; }
           if (loopLagHandle !== null) { clock.cancel(loopLagHandle); loopLagHandle = null; }
           loopDelay?.disable();
-          flushSlowTasks(clock.now(), true);
+          flushSlowTasks(clock.now(), true); perf.flush();
           for (const conn of connections.values()) {
             // onClose skips a connection marked closed, so a pending superseded close is cancelled here.
             if (conn.closeHandle !== null) { clock.cancel(conn.closeHandle); conn.closeHandle = null; }

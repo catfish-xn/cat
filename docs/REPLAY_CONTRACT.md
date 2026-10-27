@@ -48,6 +48,14 @@ v1正式文件不导出检查点；包装/记录使用严格key白名单，额�
 
 回放仅准备/结算/终局进入。主控暂停活动计时和全部命令入口，退出清accumulator，不触发存储或结算；active Match/RNG/revision逐字段不变。ReplayPanel挂replay-root，B不直接改main/BoardScene。
 
+### 2026-10-26：复用已验证的回放检查点
+
+内部接线导出 `validateBattlePlayback(record: BattleRecord, battles?: readonly BattleRecord[]): { readonly terminal: CombatState; readonly checkpoints: readonly CombatState[] }`，位于 `src/simulation/battle-record-validation.ts`。输入与 `validateBattleRecord` 相同；版本、结构、开战、逐事件、终点、两个 hash、结算及所需历史前缀均通过后，才返回深冻结的终态和本次冷验证生成的每 40 tick 状态（含 tick0、终点）。不存在外部回调或可导入的检查点字段，不改变 BattleRecord、存档、事件或摘要。
+
+已有私有验证缓存、非空战中装备命令、或开场原生属性顺序不一致时，检查点列表为空，PlaybackSession 保留原逐 tick 推进路径。检查点只由当前选中战斗持有，不加入历史集合的验证缓存，dispose 时释放。恢复到终态沿用逐 tick 到达终态的暂停语义。
+
+失败仍抛出既有验证异常（不新增失败枚举）：不兼容版本、非法结构/上下文、事件缺失/内容错误、非法装备命令、终点/游标/结果/hash 不符、缺少或不一致的历史证据；未完成记录仍由 PlaybackSession 拒绝。验证及回放逐步事件比较局部使用既有同步规范编码器，保留相同的有限 plain JSON 检查，作用域在返回或抛错时恢复。
+
 ## 统计合同与反馈
 
 按来源ownerId累加packetDamage.hpDamage；按受击unitId累加packetDamage.absorbed；按heal.source.ownerId累加heal.actual，heal.overheal单列。不累计汇总damage，不把shieldLayerChanged/granted当吸收；洛里斯分担保留原来源与实际受击单位，各包一次。

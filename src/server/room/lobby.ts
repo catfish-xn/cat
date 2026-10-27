@@ -44,6 +44,7 @@ export interface LobbyOptions {
   readonly combatStreaming?: boolean;
   /** Forwarded to every Room as `sliceMs` (wall budget of one slice). */
   readonly sliceMs?: number;
+  readonly onCombatWork?: (ms: number) => void;
   /**
    * Bot scheduling of every opened room (B6); defaults to BOT_DRIVER_DEFAULTS. `null` leaves bot seats idle and never
    * takes a seat over (room-mechanics tests only).
@@ -128,6 +129,7 @@ export class Lobby {
     this.current = new Room(seats, { ...ROOM_TIMING_DEFAULTS, ...this.options.timings, roomId: this.options.roomId ?? 'room-1', seed, clock: this.options.clock, resolver: this.options.resolver, ...(this.options.pvpMode ? { pvpMode: this.options.pvpMode } : {}),
       ...(this.options.poolCapacities ? { poolCapacities: this.options.poolCapacities } : {}), ...(this.options.sliceTicks ? { sliceTicks: this.options.sliceTicks } : {}),
       combatStreaming: this.options.combatStreaming,
+      onCombatWork: this.options.onCombatWork,
       ...(this.options.sliceMs !== undefined ? { sliceMs: this.options.sliceMs } : {}),
       ...(this.options.carousel ? { carousel: this.options.carousel } : {}) });
     // The driver subscribes before the first round opens so it sees the first phase entry.

@@ -1,9 +1,10 @@
 /** Native Chromium DOM: the repository uses DOM recorders rather than a jsdom dependency.
  * Use the real DOM here to verify node identity, focus, native pointer dispatch and bar styles. */
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { chromium, type Browser, type Page } from 'playwright';
+import type { Browser, Page } from 'playwright';
+import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 let browser: Browser, page: Page;
 // Bundling, browser launch and page setup are separate hooks so each stays within the default hook limit on slow CI runners.
 let bundle = '';
@@ -19,7 +20,7 @@ beforeAll(async () => {
   bundle = result.outputFiles[0].text;
 });
 beforeAll(async () => {
-  browser = await chromium.launch({ headless: true, ...(existsSync('/usr/bin/google-chrome') ? { channel: 'chrome' } : {}), args: ['--no-sandbox'] }); page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  browser = await testBrowser(); page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setContent('<div id="shop-dock" style="position:fixed;top:740px;height:160px"></div><ol class="online-seats" style="position:fixed;left:1100px;width:170px;height:500px"></ol>');
   await page.addStyleTag({ content: readFileSync('src/style.css', 'utf8') });

@@ -1,5 +1,5 @@
 import type { BattleRecord, BattleRecordVersion } from '../m6/contracts';
-import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
+import { CHECKPOINT_INTERVAL_TICKS, MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { M8_VERSION } from './m8/version';
 import { combineItems, equipItem, useConsumable, startMatchCombat, stepMatch } from './match';
 import type { MatchState } from './match-types';
@@ -8,9 +8,9 @@ import { MAX_COMBAT_TICKS } from './combat-types';
 import { validateMatchStructure } from './serialization-structure';
 import { readG23Progress } from './g2-3-state';
 import { needsCrownHistory, missingCrownHistory } from './crown-history';
-import { canonicalContent, digestContent } from './content';
+import { canonicalContent, digestContent, withSynchronousRestoreEncoding } from './content';
 import { validateHistoricalEquipment } from './b8-restore';
-import { isImmutableJson } from './immutable-json';
+import { equalOrderedJson, isImmutableJson } from './immutable-json';
 
 // The recorder establishes detached, deeply immutable record ownership here.
 // Weak branding never keeps an old battle alive and cannot be forged by freezing input.
@@ -75,7 +75,7 @@ function checkShape(record: BattleRecord) {
 }
 export interface VerifiedReplay { readonly terminal: CombatState; readonly settledMatch: MatchState }
 /** Version routing first (M8_RULES §10): only the exact M8 replay2 record has a validator; anything else is refused. */
-function validatorFor(record: BattleRecord): (record: BattleRecord) => VerifiedReplay {
+function validatorFor(record: BattleRecord): (record: BattleRecord, checkpoints?: CombatState[]) => VerifiedReplay {
   const version = record && typeof record === 'object' ? (record as { version?: unknown }).version : undefined;
   check(version !== null && typeof version === 'object' && !Array.isArray(version) && equalContent(Object.keys(version).sort(), [...VERSION_KEYS].sort()), '记录版本');
   const v = version as BattleRecordVersion;
@@ -108,17 +108,38 @@ export function replayBattleRecord(record: BattleRecord): VerifiedReplay {
   // may read the private immutable proof without copying every completed Match.
   return isOwnedBattleRecord(record) ? structuredClone(verified) : verified;
 }
-function replaySnapshot(record: BattleRecord): VerifiedReplay {
+function replaySnapshot(record: BattleRecord, checkpoints?: CombatState[]): VerifiedReplay {
   const cached = verifiedRecords.get(record);
   if (cached) return cached;
-  const verified = validatorFor(record)(record);
+  const verified = validatorFor(record)(record, checkpoints);
   // Only recorder-owned, detached immutable records qualify, after full replay.
   // Reconstruction already owns this detached graph. Freeze it directly;
   // replayBattleRecord copies it at the public boundary, never inside the walk.
   if (isOwnedBattleRecord(record)) verifiedRecords.set(record, deepFreeze(verified));
   return verified;
 }
-function validateM8Record(record: BattleRecord): VerifiedReplay {
+/** Playback can retain the states produced by its mandatory cold validation.
+ * No callback sees provisional evidence, and nothing escapes until every event,
+ * hash, settlement and required historical-prefix check has succeeded. Cached
+ * proofs have no trajectory: playback then builds checkpoints by normal stepping.
+ * Only this selected battle retains checkpoints; archive validation does not. */
+export function validateBattlePlayback(record: BattleRecord, battles?: readonly BattleRecord[]): {
+  readonly terminal: CombatState; readonly checkpoints: readonly CombatState[];
+} {
+  return withSynchronousRestoreEncoding(true, () => {
+    const checkpoints: CombatState[] = [];
+    const verified = replaySnapshot(record, checkpoints);
+    if (battles !== undefined) validateMatchHistory(record.context, battles);
+    else if (needsCrownHistory(record.context)) missingCrownHistory();
+    // A hand-reordered opening is canonically valid, but normal playback keeps
+    // its native property order. Equipment-command playback also keeps its
+    // existing step/event checks rather than jumping over a command boundary.
+    if (record.equipmentCommands?.length || (checkpoints.length > 0 && !equalOrderedJson(record.initial, checkpoints[0]))) checkpoints.length = 0;
+    if (checkpoints.length) checkpoints.push(verified.terminal);
+    return deepFreeze({ terminal: verified.terminal, checkpoints });
+  });
+}
+function validateM8Record(record: BattleRecord, checkpoints?: CombatState[]): VerifiedReplay {
   checkShape(record);
   let state = validateMatchStructure(record.context);
   check(equalContent(record.version, recordVersion(state)) && record.roundId === state.m8.round.roundId, '记录版本与开战上下文');
@@ -154,10 +175,12 @@ function validateM8Record(record: BattleRecord): VerifiedReplay {
     }
   };
   replayEquipment();
+  checkpoints?.push(state.combat!);
   while (state.combat!.tick < record.endTick) {
     check(state.phase === 'combat', '终点超过战斗结束');
     const step = stepMatch(state); state = step.state; compare(step.events);
     replayEquipment();
+    if (checkpoints && state.combat!.tick % CHECKPOINT_INTERVAL_TICKS === 0) checkpoints.push(state.combat!);
   }
   check(equipmentCursor === (record.equipmentCommands?.length ?? 0), '未重演穿戴命令');
   const terminal = state.combat!;

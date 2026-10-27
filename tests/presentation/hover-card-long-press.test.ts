@@ -1,14 +1,17 @@
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
-import { chromium, type Browser, type Page, type CDPSession } from 'playwright';
+import type { Browser, Page, CDPSession } from 'playwright';
+import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
-import { existsSync } from 'node:fs';
 let browser: Browser, page: Page, client: CDPSession;
 beforeAll(async () => {
   const result = await build({ stdin: { contents: `export { attachHoverCards, HoverCard } from './src/presentation/hover-card';`, resolveDir: process.cwd() }, bundle: true, write: false, format: 'iife', globalName: 'Hover' });
-  browser = await chromium.launch({ headless: true, ...(existsSync('/usr/bin/google-chrome') ? { channel: 'chrome' } : {}), args: ['--no-sandbox'] });
+  browser = await testBrowser();
   page = await browser.newPage({ hasTouch: true }); client = await page.context().newCDPSession(page);
   await page.setContent('<section id="scope"><button style="width:100px;height:100px" id="action">领取</button></section>');
-  await page.addScriptTag({ content: result.outputFiles[0].text }); await page.clock.install();
+  await page.addScriptTag({ content: result.outputFiles[0].text });
+  // Keep CDP transport / scheduling latency out of the 449/450 ms boundary assertions.
+  await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-01-02T00:00:00Z'));
 });
 beforeEach(async () => {
   await page.evaluate(() => {
@@ -20,7 +23,7 @@ beforeEach(async () => {
     (window as any).detach = api.attachHoverCards(document.getElementById('scope'), card, '#action', () => ({key:'领取',build:()=>Object.assign(document.createElement('p'),{textContent:'领取说明'})}), {pin:true,longPress:true});
   });
 });
-afterAll(async () => { await browser?.close(); });
+afterAll(async () => { await client?.detach(); await page?.context().close(); await browser?.close(); });
 async function start() { await client.send('Input.dispatchTouchEvent', { type:'touchStart',touchPoints:[{x:40,y:40}] }); }
 async function end(type: 'touchEnd' | 'touchCancel' = 'touchEnd') { await client.send('Input.dispatchTouchEvent', { type,touchPoints:[] }); }
 const clicks = () => page.evaluate(() => (window as any).clicks);

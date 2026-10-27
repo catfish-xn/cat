@@ -1,8 +1,9 @@
 /** Production presenters in real Chromium; no emulated DOM or game commands. */
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
-import { chromium, type Browser, type Page } from 'playwright';
+import type { Browser, Page } from 'playwright';
+import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 let browser: Browser, page: Page, bundle: string;
 beforeAll(async () => {
   const result = await build({ stdin: { resolveDir: process.cwd(), contents: `
@@ -60,9 +61,12 @@ beforeAll(async () => {
 });
 // Separate hook: bundling and browser launch each stay within the default hook limit on slow CI runners.
 beforeAll(async () => {
-  browser = await chromium.launch({ headless: true, ...(existsSync('/usr/bin/google-chrome') ? { channel: 'chrome' } : {}), args: ['--no-sandbox'] });
+  browser = await testBrowser();
   page = await browser.newPage({ viewport: { width: 1600, height: 1200 }, hasTouch: true });
-  await page.clock.install();
+  // install() alone keeps wall time flowing between CDP calls (including after runFor()).
+  // Pause before mounting presenters so 449/450 ms describes the entire gesture, even under load.
+  await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-01-02T00:00:00Z'));
 });
 beforeEach(async () => {
   await page.evaluate(() => (window as any).dispose?.());
@@ -78,7 +82,7 @@ beforeEach(async () => {
   await page.evaluate(() => (window as any).setup());
   await page.clock.runFor(1000);
 });
-afterAll(async () => { await browser?.close(); });
+afterAll(async () => { await page?.context().close(); await browser?.close(); });
 const visible = () => page.locator('.hover-card:not([hidden])');
 const clean = (text: string) => text.replace(/\n+/g, '\n');
 async function hover(selector: string) {
@@ -88,18 +92,33 @@ async function hover(selector: string) {
   return clean(await page.locator(`[id="${id}"]`).innerText());
 }
 async function hold(selector: string, duration = 450, move = 0) {
+  // CDP touch input does not move the mouse. A cursor left over an offer by another test
+  // can emit mouse pointerover after touchEnd and reopen an ordinary (unpinned) hover card.
+  await page.mouse.move(1590, 10);
   const box = await page.locator(selector).first().boundingBox(); if (!box) throw new Error(selector);
   const client = await page.context().newCDPSession(page), x = box.x + box.width / 2, y = box.y + box.height / 2;
+  const started = await page.evaluate(() => performance.now());
   await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
   if (move) {
     // Touch moves reach the page asynchronously (frame-aligned); wait until the page has seen the pointermove
     // before advancing the fake clock, or a loaded runner can fire the 450 ms timer first.
-    await page.evaluate(() => { (window as any).__moved = new Promise(resolve => document.addEventListener('pointermove', () => resolve(true), { once: true, capture: true })); });
+    await page.evaluate(({ x, y }) => {
+      (window as any).__moved = new Promise<void>(resolve => {
+        const moved = (event: PointerEvent) => {
+          if (event.pointerType !== 'touch' || Math.abs(event.clientX - x) > 0.01 || Math.abs(event.clientY - y) > 0.01) return;
+          document.removeEventListener('pointermove', moved, true);
+          // The production document capture handler was installed before this observer.
+          queueMicrotask(resolve);
+        };
+        document.addEventListener('pointermove', moved, true);
+      });
+    }, { x: x + move, y });
     await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + move, y }] });
     await page.evaluate(() => (window as any).__moved);
   }
   await page.clock.runFor(duration);
   await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await client.detach();
+  expect(await page.evaluate(() => performance.now()) - started).toBe(duration);
 }
 it('item offers in body modal and shop dock hover; long press pins without choosing, short tap chooses', async () => {
   await page.evaluate(() => (window as any).offer());
@@ -119,9 +138,17 @@ it('item offers in body modal and shop dock hover; long press pins without choos
 });
 it('moving more than 8px, cancellation and short touches do not long-press', async () => {
   await page.evaluate(() => (window as any).offer());
+  const offer = page.locator('.choice-overlay [data-item-def]');
+  await offer.evaluate(node => {
+    node.setAttribute('data-long-presses', '0');
+    node.addEventListener('hover-long-press', () => node.setAttribute('data-long-presses', String(Number(node.getAttribute('data-long-presses')) + 1)));
+  });
   await hold('.choice-overlay [data-item-def]', 449);
+  expect(await offer.getAttribute('data-long-presses')).toBe('0');
   expect(await page.evaluate(() => (window as any).calls.choose)).toBe(1);
   await hold('.choice-overlay [data-item-def]', 450, 9);
+  expect(await offer.getAttribute('data-long-presses')).toBe('0');
+  expect(await page.evaluate(() => (window as any).calls.choose)).toBe(2);
   await page.mouse.move(1500, 1100); expect(await page.locator('#modal-item-popover:not([hidden])').count()).toBe(0);
 });
 it('carousel hero uses slot stars, item has its own card, holding unit includes its rule; picking stays intact', async () => {
