@@ -237,6 +237,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   const perf = new RoundPerf(() => clock.now(), log);
   const queue = new WriteQueue(error => log('error', 'task.failed', { roomId: room?.state.roomId, error: error instanceof Error ? error.stack ?? error.message : String(error) }));
   const sessions = new SessionRegistry(limits.dedupeWindow);
+  // A resumed connection keeps the seat's receipt delivery history for this room.
+  const pushedMechanicReceipts = new WeakMap<SeatSession, { roomId: string; ids: Set<string> }>();
   const connections = new Map<number, Connection>();
   let room: Room | null = null;
   let unsubscribeRoom: (() => void) | null = null;
@@ -307,7 +309,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
 
   /* ---------------- outbound ---------------- */
 
-  function send(conn: Connection, message: ServerMessage): void {
+  function send(conn: Connection, message: ServerMessage, onSent?: () => void): void {
     if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
     // Never await a slow peer or keep an unbounded socket queue. Its seat resumes from the committed stream.
     // Only streamed rooms have that stream; the legacy replay path keeps its unbounded queue as before NET6.
@@ -317,7 +319,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     }
     try { perf.measure('broadcast', () => {
       const json = JSON.stringify(message); perf.sent(Buffer.byteLength(json)); conn.socket.send(json);
-    }); } catch { conn.socket.terminate(); }
+    }); onSent?.(); } catch { conn.socket.terminate(); }
   }
   function sendError(conn: Connection, code: ErrorCode, message: string, commandId: number | null = null): void {
     send(conn, { type: 'error', code, message, commandId });
@@ -347,8 +349,15 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const receivesState = seat.alive || seat.eliminatedRound === state.round;
     if (receivesState && conn.sentSeatRevision !== seat.seatRevision) {
       conn.sentSeatRevision = seat.seatRevision;
-      const events = seatPushEvents(seat);
-      send(conn, { type: 'state', roomId: state.roomId, round: state.round, seatRevision: seat.seatRevision, state: perf.measure('projection', () => toSeatPrivateView(seat.match, seat.choiceDeadline)), ...(events.length ? { events } : {}) });
+      const previous = pushedMechanicReceipts.get(session);
+      const ids = new Set(previous?.roomId === state.roomId ? previous.ids : []);
+      const events = seatPushEvents(seat).filter(event => {
+        if (event.type !== 'mechanicGranted') return true;
+        if (ids.has(event.receipt.receiptId)) return false;
+        ids.add(event.receipt.receiptId); return true;
+      });
+      send(conn, { type: 'state', roomId: state.roomId, round: state.round, seatRevision: seat.seatRevision, state: perf.measure('projection', () => toSeatPrivateView(seat.match, seat.choiceDeadline)), ...(events.length ? { events } : {}) },
+        () => pushedMechanicReceipts.set(session, { roomId: state.roomId, ids }));
     }
     if (room && room.state.round === state.round && pushStream(conn, room)) return;
     const battle = state.battles.find(candidate => candidate.kind === 'two-sided' ? candidate.participants.includes(seat.seatId) : candidate.outcomes.some(outcome => outcome.seatId === seat.seatId));

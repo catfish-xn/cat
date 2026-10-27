@@ -5,6 +5,7 @@ import { initializeAugmentTrace, traceHistoryCommand, recordAugmentRoundEntry, r
 import { augmentExtraRerolls, canRerollAugmentSlot } from './augment-pool-batch5-s1a';
 import { atWhatCostGrant, skipsFutureAugment } from './augment-pool-batch5-s1b';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
+import type { HistorySeat } from './augment-history-types';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
 import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost, drawSoloAugmentShop, planFiresale, stealFiresaleUnit, subscriptionAcquired, subscriptionStageStart } from './shop-augments';
@@ -138,6 +139,15 @@ function stampMatchEvents(state: MatchState, events: readonly MatchEvent[]): Mat
   let seq = state.nextMatchEventSeq;
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
   return { state: { ...state, nextMatchEventSeq: seq }, events: stamped };
+}
+/** Record the authoritative whole-table settlement and publish only its new mechanic receipts.
+ * Repeated publication, including a restored settlement, preserves state and event numbering. */
+export function recordAugmentSettlementTable(state: MatchState, seats: readonly HistorySeat[]): MatchStep {
+  if (!state.augmentHistory || state.roundResults.at(-1)?.round !== state.round
+    || state.augmentHistory.facts.some(f => f.kind === 'table' && f.stage === 'settlement' && f.round === state.round))
+    return { state, events: [] };
+  const recorded = recordAugmentTable(state, 'settlement', seats);
+  return stampMatchEvents(recorded, mechanicGrantEvents(state, recorded));
 }
 function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): MatchCommandResult {
   // Choice-phase trading can consume/sell the currently selected anomaly target.

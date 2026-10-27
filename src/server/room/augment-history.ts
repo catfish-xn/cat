@@ -1,6 +1,6 @@
 /** Server orchestration only: freeze authoritative table/roster/settlement observations.
  * No rewards, growth amounts, player damage formula or random draws live here. */
-import { appendAugmentFact, recordAugmentTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
+import { appendAugmentFact, recordAugmentTable, recordAugmentSettlementTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
   type HistorySeat } from '../../server-entry';
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput } from './types';
@@ -56,7 +56,11 @@ export function recordRoomBattleFacts(seats: readonly SettledSeat[], results: re
 export function recordRoomSettlementTable(seats: readonly SeatState[]): readonly SeatState[] {
   if (!seats.some(s => s.match.augmentHistory)) return seats;
   const table = tableFacts(seats);
-  return seats.map(s => s.match.augmentHistory && s.match.roundResults.at(-1)?.round === s.match.round
-    && !s.match.augmentHistory.facts.some(f => f.kind === 'table' && f.stage === 'settlement' && f.round === s.match.round)
-    ? { ...s, match: recordAugmentTable(s.match, 'settlement', table) } : s);
+  return seats.map(seat => {
+    const recorded = recordAugmentSettlementTable(seat.match, table);
+    if (recorded.state === seat.match) return seat;
+    const events = seat.serverEvents?.seatRevision === seat.seatRevision ? seat.serverEvents.events : [];
+    return { ...seat, match: recorded.state,
+      serverEvents: { seatRevision: seat.seatRevision, events: [...events, ...recorded.events] } };
+  });
 }

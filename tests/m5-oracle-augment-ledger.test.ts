@@ -260,7 +260,7 @@ it('contains exactly 267 independently tiered identities, with two restricted to
   const shared=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true));
   expect(shared).toHaveLength(267);expect(new Set(shared).size).toBe(267);
   expect(shared.filter(id=>!all.includes(id)).sort()).toEqual(['table-scraps','young-and-wild-and-free']);
-  const groups={silver:['patience-is-a-virtue'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal'],prismatic:['invested-plus','invested-plus-plus']};
+  const groups={silver:['patience-is-a-virtue','survivor','diversified-portfolio','diversified-portfolio-plus'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal'],prismatic:['invested-plus','invested-plus-plus']};
   for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);
 });
 it('retains batch-4 stage bans and all exclusions against the current pool in both directions',()=>{

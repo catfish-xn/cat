@@ -5,7 +5,7 @@ export {
   selectAnomalyTarget, rerollAugment, deriveAugmentTier, augmentRerollLimit, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
   forfeitPendingChoice, claimOrDiscardLoot, claimOrb, forfeitTerminalOrbs, advanceMultiplayerRound,
-  readItemSummons, moveItemSummon, d14PublicUnitMark,
+  readItemSummons, moveItemSummon, d14PublicUnitMark, recordAugmentSettlementTable,
 } from '../simulation/match';
 export type { ItemSummonOrigin } from '../simulation/g2-4b-summons';
 export type { MovableSummon } from '../simulation/g2-4b-voidspawn';

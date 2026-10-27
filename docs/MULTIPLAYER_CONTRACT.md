@@ -2305,3 +2305,14 @@ golden、B8/C19/Herald 与 recorded states 已在新目录独立生成；旧身�
 `augmentDynamicValues(state: MatchState): AugmentDynamicValues` 返回按强化 ID 索引的只读显示值；`values` 按描述占位符顺序提供数字、`{unit: definitionId}`、`{outcome: string, gifts?, gold?, xp?, rerolls?, health?}` 或 `null`（尚未确定），攻速、伤害增幅和坚韧使用 `attackSpeedBps`、`damageAmpBps`、`durabilityBps`。无对应显示值时不提供该键，无失败枚举、不改变状态或随机数。持有强化和当前强化候选均可投影；随机奖励仅在获得后揭示。战斗计数使用已经结算的战斗收据，棋盘数值表示当前布阵对下一场战斗的效果；当前战斗冻结输入不随它更新。被禁用且缺少认证账本的禁忌魔法显示未确定。
 
 `toPrivateSeatView` 增加 `augmentDynamicValues`；`src/server/room/projection.ts` 的 `toSeatPrivateView` 经既有私有推送、重连和故障快照传输。公共 `toPublicBoard` 和其他席位不包含此字段，侦察他人强化时未知动态值不冒充本席数据；不增加存档字段。`pumpingUpRounds` 与战斗编译共享原有回合口径，不更改 II/III 的累计规则。
+## B5-34 结算事件接线（2026-10-27，h4w）
+
+新增规则公开导出 `recordAugmentSettlementTable(state: MatchState, seats: readonly HistorySeat[]): MatchStep`，经 `src/server-entry/index.ts` 提供给房间。输入为规则已结算的本席状态和整轮淘汰/名次已确定的服务器全桌快照，不能接受客户端提交的全桌事实。输出 `{state, events}`：复用 `recordAugmentTable` 记录历史和既有幸存者奖励逻辑，复用单人 `mechanicGrantEvents` 按 receiptId 比较前后收据，再由同一个 `stampMatchEvents` 分配 `domain:'match'` / `eventSeq` 并推进 `nextMatchEventSeq`。服务器不计算奖励资格、金币或事件序号。
+
+没有 augmentHistory、本席尚未结算当前轮、或已有当前轮 settlement table 时，返回原 state 引用和空 events，不改变金币、收据、RNG 或事件序号。不存在新增 command/wire 失败 reason；非法权威历史、越界或缺少应付款等沿用既有 `RangeError`，不返回部分结果。该接口是服务器可信事实入口，不替代 `restoreSharedOrbSnapshot(pool,input,authority?)` 的独立权威认证。
+
+`Room.commitSettlement` 仍先确定整桌淘汰，再调用 `recordRoomSettlementTable`；后者将新接口的 events 追加到该 seatRevision 的原结算 events，匹配 state 与收据一起原子发布。重复 settlementId 仍拒绝 `duplicate-settlement`；已恢复的 settlement table 不重发事件，后续轮也由唯一收据阻止再次付款。同轮出局的持有者不发金币、不产出幸存者事件。选择时已满足条件的既有付款路径不变。
+
+网络 `pushRoom` 仅对 `state.events` 中的 `mechanicGranted` 按 session/room/receiptId 去重；同一消息重复项和同席后续重复发布都只发送一次。发送成功才登记，旧连接关闭后，同凭证重连沿用登记；从未发送过且仍在当前 serverEvents 中的事件可随首次恢复快照发送一次。其他类型事件、完整领域账本、状态快照和原命令回执的去重/重放合同保持原行为。此处“发送成功”是传输层接受写入，不是客户端 ACK；当前系统无跨进程 Room/session 持久化，恢复 Match 不重建瞬时推送队列。
+
+未改变玩法、数值、事件形状、保存封套或协议版本；内容/loot digest 保持原身份。验收覆盖真实房间公开出售/选择/战斗自然致死、存活/同轮出局持有者、事件顺序与编号、重复提交、对象/JSON 权威恢复及篡改、回放、跨轮、重连和发送失败重试，见 `B5_H4W_REPORT.md`。
