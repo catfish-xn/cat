@@ -1,3 +1,5 @@
+import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
+import { carryRestoredAugmentTrace } from './augment-history';
 import { validateShopHistory } from './shop-history';
 import { batch5Streak } from './augment-pool-batch5-progress';
 import { withG23RestoreReuse, registerG23RestoreOwner } from './g23-restore-reuse';
@@ -148,6 +150,7 @@ export function validateMatchStructure(input: unknown): MatchState {
 function restoreMatchWithinCall(input: unknown, forSerialization = false, parsedImmutable = typeof input === 'string' && !input.includes('-0')): MatchState {
   const decoded = typeof input === 'string' ? decodeMatchJson(input, parsedImmutable) : { value: input };
   const raw: unknown = decoded.value;
+  if (raw && typeof raw === 'object' && 'augmentHistory' in raw) preflightAugmentHistory(raw as MatchState);
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
   if (typeof input === 'string') assertParsedContent(raw); else canonicalContent(raw);
@@ -314,6 +317,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial,state.nextUnitSerial);
   validateMatchEquipment(state);
   validateShopHistory(state);
+  validateAugmentHistory(state);
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string', typeof input === 'string');
   if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
   // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
@@ -453,7 +457,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   freezeContent(restored.m8);
   if (restored.combatInputBasis) freezeContent(restored.combatInputBasis);
   freezeContent(restored.resourceProvenance);
-  return restored;
+  return carryRestoredAugmentTrace(state,restored);
 }
 /** Structural validation for canonical serialization: identical checks, but immutable inputs may skip the
  * final freeze and reuse compiled strategy (B7 speedup). Not a restore/admission API either. */

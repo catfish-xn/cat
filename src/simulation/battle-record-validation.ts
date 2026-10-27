@@ -1,3 +1,4 @@
+import { validateAugmentHistoryCarry } from './augment-history';
 import type { BattleRecord, BattleRecordVersion } from '../m6/contracts';
 import { CHECKPOINT_INTERVAL_TICKS, MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { M8_VERSION } from './m8/version';
@@ -231,6 +232,7 @@ function checkHistoryCarry(previous: MatchState | null, next: MatchState): void 
   check(equalContent(after.slice(0, before.length), before), '历史经济收据前缀不一致');
   check(after.slice(before.length).every(action => action.kind !== 'battle'&&action.kind!=='mel-save'), '缺少历史证据：未验证的战斗经济收据');
   if (!previous) { validateHistoricalEquipment(null, next); return; }
+  validateAugmentHistoryCarry(previous,next);
   if(previous.shopHistory){
     check(next.shopHistory?.version===previous.shopHistory.version
       &&equalContent(next.shopHistory.initial,previous.shopHistory.initial)

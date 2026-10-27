@@ -119,7 +119,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
   }
   const receiptKeys=new Set<string>();
   for(const r of pool.carouselReceipts) {
-    requirePool(r.id===`${r.carouselId}:${r.seatId}`&&r.holdingSource===r.id&&!receiptKeys.has(r.id)&&seatIds.has(r.seatId)&&Object.hasOwn(totals,r.definitionId)&&['reserved','granted','released'].includes(r.status));receiptKeys.add(r.id);
+    requirePool((r.id===`${r.carouselId}:${r.seatId}`||Array.from({length:8},(_,i)=>`${r.carouselId}:${r.seatId}:extra:${i+1}`).includes(r.id))&&r.holdingSource===r.id&&!receiptKeys.has(r.id)&&seatIds.has(r.seatId)&&Object.hasOwn(totals,r.definitionId)&&['reserved','granted','released'].includes(r.status));receiptKeys.add(r.id);
     const reservation=pool.carouselReservations.find(p=>p.carouselId===r.carouselId&&p.slot===r.slot);
     requirePool(r.status==='reserved'?!!reservation&&reservation.seatId===r.seatId&&reservation.definitionId===r.definitionId:!reservation);
     requirePool(r.status==='granted'?typeof r.unitId==='string'&&typeof r.itemInstanceId==='string':r.unitId===null&&r.itemInstanceId===null);

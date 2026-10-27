@@ -1,3 +1,5 @@
+import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomSettlementTable, tableFacts } from './augment-history';
+import { captureAugmentHistoryAuthority, prepareAugmentAcquisition, advanceAugmentPreparationTime, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
 /**
  * Eight-seat room state machine (pipeline B, work orders B1–B7). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
@@ -353,6 +355,9 @@ export class Room {
    */
   private frozenClaims: { readonly seatId: string; readonly command: Extract<SeatCommand, { type: 'claimOrb' }> }[] = [];
   private disposed = false;
+  private augmentHistoryTimer: ClockHandle | null = null;
+  private augmentPreparationStartedAt = 0;
+  private readonly previousAugmentBattles = new Map<string, PreviousAugmentBattle>();
   private extensions = 0;
   /** Clock time the current battle phase began (tick 0 of every battle's playback); null outside it. */
   private battleStartedAt: number | null = null;
@@ -447,6 +452,7 @@ export class Room {
    */
   dispose(): void {
     this.disposed = true;
+    if (this.augmentHistoryTimer !== null) this.options.clock.cancel(this.augmentHistoryTimer);
     this.clearTimer();
     this.clearChoiceTimers();
     this.listeners.clear();
@@ -527,6 +533,9 @@ export class Room {
   }
 
   private apply(seat: SeatState, command: SeatCommand): RoomCommandResult {
+    this.advanceAugmentClock();
+    seat = this.current.seats.find(s => s.seatId === seat.seatId)!;
+    this.prepareAugmentAcquisition(seat);
     const seatId = seat.seatId;
     if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
     const phase = this.current.phase;
@@ -758,6 +767,7 @@ export class Room {
       if (outcome.state !== job.frozen) return { ok: false, detail: `seat ${seat.seatId} changed after the freeze but its battle was not run on the live state` };
       seats.push(settled(seat.match, outcome.damage, null, []));
     }
+    seats = [...recordRoomBattleFacts(seats, results)];
     // The staged states must be exactly the ones the chained pool knows (a resolver that awarded a unit outside the pool fails here).
     const unbalanced = conservationProblem(pool, seats.map(seat => seat.match));
     if (unbalanced) return { ok: false, detail: `shared pool: ${unbalanced}` };
@@ -816,7 +826,7 @@ export class Room {
       return { ...seat, hp: outcome.hpAfter, alive: stillAlive, rank, eliminatedRound: stillAlive ? null : settlement.round, match: outcome.match, seatRevision: seat.seatRevision + 1,
         serverEvents: { seatRevision: seat.seatRevision + 1, events: outcome.events } };
     });
-    this.replace({ ...state, seats, pool: settlement.pool, poolRevision: settlement.pool.revision, settlements: [...state.settlements, settlement.settlementId], ranking: settlement.finalRanking });
+    this.replace({ ...state, seats: recordRoomSettlementTable(seats), pool: settlement.pool, poolRevision: settlement.pool.revision, settlements: [...state.settlements, settlement.settlementId], ranking: settlement.finalRanking });
     return { ok: true, state: this.current };
   }
 
@@ -1154,6 +1164,7 @@ export class Room {
   /** Runs the rules' timeout commands for every alive seat (§11.4), one seat transaction after the other on the latest pool; a refusal is a seat-stuck fault. */
   private applyTimeouts(stage: TimeoutStage): boolean {
     for (const seat of this.aliveSeats()) {
+      this.prepareAugmentAcquisition(seat);
       const outcome = resolveSeatTimeouts(seat.match, this.current.pool, stage);
       if (outcome.state !== seat.match && !this.commitSeat(seat.seatId, outcome.state, outcome.pool)) return false;
       if (!outcome.ok) { this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: outcome.reason }); return false; }
@@ -1168,6 +1179,7 @@ export class Room {
    * the complete tick-zero state is published; the legacy resolver retains its frozen-phase refusals.
    */
   private freezeAndResolve(): void {
+    this.advanceAugmentClock();
     this.setPhase('frozen', null);
     if (!this.applyTimeouts('preparation')) return;
     // §15.4: deploy every human seat up to its cap, freeze every input on the deployed states, then lock the live seats.
@@ -1177,7 +1189,10 @@ export class Room {
     if (!deployed) return;
     this.deployed = deployed;
     this.drawRound();
-    this.frozenInputs = this.buildInputs(deployed);
+    const inputs = this.buildInputs(deployed);
+    if (this.current.roundKind !== 'supply') for (const input of inputs) for (const seat of input.seats) this.previousAugmentBattles.set(seat.seatId, {status:'recorded',round:input.round,roundId:input.roundId,battleId:input.battleId,roster:historyRoster(seat.state)});
+    this.deployed = recordRoomPvpRosters(this.current, deployed, inputs);
+    this.frozenInputs = inputs.map(input => ({ ...input, seats: input.seats.map(seat => ({ ...seat, state: this.deployed.get(seat.seatId)?.match ?? seat.state })) }));
     if (this.options.combatStreaming && this.current.roundKind !== 'supply') return this.openStreams();
     // §12.4: one unpublished proposal for the whole round; a battle that awards a unit hands its pool to the next battle.
     this.resolution = { results: [], pool: this.current.pool, job: null };
@@ -1918,18 +1933,52 @@ export class Room {
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). False when the
    * room refused it instead (an unexplained HP change faults the room, syncedSeatHp): nothing of it was published. */
   private commitSeat(seatId: string, match: MatchState, pool: SharedPoolState): boolean {
+    const revision = this.current.seats.find(s => s.seatId === seatId)!.seatRevision + 1;
     this.replace({ ...this.current, pool, poolRevision: pool.revision,
       seats: this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, match, seatRevision: candidate.seatRevision + 1 } : candidate) });
-    return this.current.seats.find(candidate => candidate.seatId === seatId)?.match === match;
+    const published = this.current.seats.find(candidate => candidate.seatId === seatId);
+    return published?.match === match || !!match.augmentHistory && this.current.pool === pool && published?.seatRevision === revision;
+  }
+  private advanceAugmentClock(): void {
+    if (this.current.phase !== 'preparation') return;
+    const elapsed = Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt;
+    let changed = false;
+    const seats = this.current.seats.map(seat => {
+      if (!seat.alive || !seat.match.augmentHistory || !needsAugmentPreparationClock(seat.match)) return seat;
+      const match = advanceAugmentPreparationTime(seat.match, elapsed);
+      if (match === seat.match) return seat;
+      changed = true; return { ...seat, match, seatRevision: seat.seatRevision + 1 };
+    });
+    if (changed) this.replace({ ...this.current, seats });
+  }
+  private prepareAugmentAcquisition(seat: SeatState): void {
+    if (!seat.match.multiplayer || seat.match.pendingChoice?.kind !== 'augment') return;
+    prepareAugmentAcquisition(seat.match, this.previousAugmentBattles.get(seat.seatId) ?? {status:this.current.round===1?'none':'unavailable'},
+      Math.max(0, Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt), tableFacts(this.current.seats));
+  }
+  private scheduleAugmentClock(): void {
+    if (this.augmentHistoryTimer !== null) { this.options.clock.cancel(this.augmentHistoryTimer); this.augmentHistoryTimer = null; }
+    if (this.disposed || this.current.phase !== 'preparation' || !this.current.seats.some(s => s.alive && s.match.augmentHistory && needsAugmentPreparationClock(s.match))) return;
+    this.augmentHistoryTimer = this.options.clock.schedule(this.options.clock.now() + 50, () => {
+      this.augmentHistoryTimer = null; this.advanceAugmentClock();
+    });
+  }
+  /** For server persistence/reconnect verification; never accept this handle from a client. */
+  augmentHistoryAuthority(seatId: string): AugmentHistoryAuthority {
+    const seat = this.current.seats.find(s => s.seatId === seatId);
+    if (!seat) throw new RangeError('Unknown seat');
+    return captureAugmentHistoryAuthority(seat.match);
   }
   private replace(next: RoomState): void {
     if (this.disposed) return;
     const synced = this.syncedSeatHp(next);
     if (typeof synced === 'string') return this.fail({ kind: 'invalid-results', detail: synced });
-    const published = { ...this.withChoiceDeadlines(synced), roomRevision: this.current.roomRevision + 1 };
+    const published = { ...this.withChoiceDeadlines(recordRoomPublication(this.current, synced)), roomRevision: this.current.roomRevision + 1 };
     // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
+    if (published.phase === 'preparation' && (this.current.phase !== 'preparation' || this.current.round !== published.round)) this.augmentPreparationStartedAt = Math.floor(this.options.clock.now());
     this.current = published;
+    this.scheduleAugmentClock();
     for (const listener of this.listeners) listener(this.current);
     this.syncChoiceTimers();
     this.fitDeadlineToChoices();
@@ -2048,6 +2097,7 @@ export class Room {
     const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
     const pending = seat?.alive && seat.match.phase === 'choice' ? seat.match.pendingChoice : null;
     if (!seat || !pending || pending.choiceId !== choiceId || pending.generation !== generation) { this.syncChoiceTimers(); return; }
+    this.prepareAugmentAcquisition(seat);
     const result = runSharedMatchCommand(this.current.pool, seat.match, { type: 'timeoutChoice', round: seat.match.round, choiceId, generation });
     if (!result.ok) return this.fail({ kind: 'seat-stuck', seatId, reason: `forfeit:${result.reason}` });
     const resolved = this.withPendingResolved(result);

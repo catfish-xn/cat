@@ -1472,3 +1472,15 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 `buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPolicy,refreshShop?:(leveled:MatchState)=>MatchState):MatchCommandResult` 是领域内部接线入口。共享事务传入真实有限池生成回调；失败仍返回原state与原reason。单人 `buyXp` 使用同一实现，直接对共享双重目的调用 `buyXp` 仍拒绝 `invalid-mechanic-state`。
 
 `buySharedXp(pool:SharedPoolState,state:MatchState):SharedPoolResult` 只转发 `runSharedMatchCommand(pool,state,{type:'buyXp'})`，不存在第二套返金/刷新逻辑；房间所有 `buyXp` 直接使用后者。共享事务保留订阅取得和超时取得的即时开店包装。其他签名、失败reason、外层schema、客户端命令和网络封套不变；内容身份按指定脚本统一重算，历史epoch尚未重录。
+
+## 2026-10-27 条件式强化历史（方案 A，基础设施）
+
+新增唯一可选 `MatchState.augmentHistory`，版本 `augment-history-v1`；完整模型、上下界、触发时点、失败规则和全部接线点见 [AUGMENT_HISTORY_DESIGN.md](AUGMENT_HISTORY_DESIGN.md)。只在取得登记的历史依赖强化时写入，其余存档不增加字段、保持基线字节。登记仅是后续任务的 ID 合同，本次不开放任何强化、不修改既有规则/数值。外层 schema/save/replay/command 仍 **12/8/8/7**，规则联机/WebSocket 仍 **5/6**，rules/content/digest 不变，沿用商店历史 A2/A4/A5 的按需证据规则。
+
+事实覆盖取得前本金与上一战阵容、入轮棋盘/备战席/装备、PvP 全桌名单、累计淘汰和排名、普通英雄永久 HP/AD/AP 成长、多笔选秀收据及来源/落位/资格、准备期逻辑时间、每次真实死亡及当刻装备（复活再死不去重）、对手实际玩家扣血，以及最大 HP 变更的扩展事实类型。`abilityPowerCenti` 是百分之一 AP，百分比仍为 Bps。单人没有敌方玩家 HP 账本时实际扣血为 null；缺失历史行不能作0。旧普通准备期档也不能凭当前棋盘补造前一战；取得事实的 previousBattle 明确标记 unavailable，读取时拒绝。
+
+`restoreMatch` 的对象/JSON入口和 `serializeMatch` 共用 `validateAugmentHistory`：以无相关持有者的已认证 origin 重演白名单成功公共命令，重建完整事实和最终 Match。外部战斗档案另认证事实及命令前缀。`restoreSharedOrbSnapshot(pool,input,authority?)` 与 `restoreCarouselSeat(carousel,input,authority?)` 对相关联机席位要求独立服务器 authority；通过 `Room.augmentHistoryAuthority(seatId)` 从真实房间捕获，不能把候选 JSON 自己当证明。恢复不认证完整未知作者身份，也不新增全桌重启存档协议。
+
+缺节统一拒绝：`Invalid augment history: missing augment-history-v1; history-dependent augment saves cannot be authenticated`；缺联机权威对象为 `missing independent server authority`，其它错误使用同一前缀。无自动迁移。`requireAugmentFacts(state,kind,round)` 没有记录即抛错；带完整 tick 边界的 `deaths:[]` 才代表零死亡。
+
+后续强化只调用领域内部的 `recordAugmentGrowth`/`readAugmentGrowth`、`recordAugmentPlayerHealth`、`readPreviousAugmentBattle`、`requireAugmentFacts`、`advanceAugmentPreparationTime`、`appendAugmentFact` 或 `grantAdditionalCarouselPick`。这些接口不向客户端开放，不自行决定受益人/数值/随机选择。普通选秀仍一席一次；附加授予要求正常领取已完成、独占剩余槽、明确持有来源，ID 为 `<carouselId>:<seatId>:extra:<1..8>`，按现有保留/领取/held/返池流程守恒。失败沿用 CarouselFailure、返回原状态。具体函数签名及成功/失败语义以设计文档接口表和导出 TypeScript 类型为准。

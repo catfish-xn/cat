@@ -1,3 +1,6 @@
+import { augmentNeedsHistory } from './augment-history-owners';
+import { validateAugmentHistory } from './augment-history-restore';
+import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
 import { placeCarouselUnit, resolveCarouselPreparation } from './carousel-units';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/items';
@@ -239,7 +242,7 @@ function planAutoPickFromCarousel(state: CarouselState, seatId: string, match: M
 const cost = (id: string) => UNIT_DEFINITIONS[id].cost;
 export function listCarouselSlots(state: CarouselState) { return state.slots.map(s => ({ slot: s.slot, definitionId: s.definitionId, starLevel: 1 as const, items: [s.itemId], pickedBy: s.pickedBy })); }
 export { createCarouselMatch };
-function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: string): {
+function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: string, receiptId?: string, pickSource: 'manual' | 'bot' | 'timeout' | 'disconnected' | 'augment' = 'manual', choiceId: string | null = null): {
     ok: true;
     state: CarouselState;
     match: MatchState;
@@ -260,7 +263,7 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     catch {
         return failure('invalid-match');
     }
-    const receipt = state.receipts.find(r => r.seatId === seatId), seat = state.pool.seats.find(s => s.seatId === seatId);
+    const receipt = state.receipts.find(r => r.seatId === seatId && (receiptId === undefined || r.id === receiptId)), seat = state.pool.seats.find(s => s.seatId === seatId);
     if (!receipt || receipt.status === 'released')
         return failure('receipt-mismatch');
     if (match.sharedPool?.seatId !== seatId || !seat || seat.released)
@@ -285,9 +288,11 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     const nextPool: SharedPoolState = { ...state.pool, revision: state.pool.revision + 1, holdings, carouselReceipts: poolReceipts, carouselReservations: state.pool.carouselReservations.filter(r => r.reservationId !== state.slots[receipt.slot].reservationId), seats: state.pool.seats.map(s => s.seatId === seatId ? { ...s, revision: s.revision + 1 } : s) };
     const events: MatchEvent[] = [{ type: 'carouselGranted', receipt: granted }];
     const stamped: MatchEvent[] = events.map((e, i) => ({ ...e, domain: 'match', eventSeq: match.nextMatchEventSeq + i }) as MatchEvent);
-    const nextMatch: MatchState = { ...match, preparation:preparation??match.preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
+    let nextMatch: MatchState = { ...match, preparation:preparation??match.preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
         items: [...match.items, { id: itemInstanceId, definitionId: receipt.itemId, location: { kind: 'inventory' } }],
         carousel: { ...metadata, receipts: [...metadata.receipts, granted], heldCarouselUnits:held, pendingUnits:held }, sharedPool: { ...match.sharedPool, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length };
+    nextMatch = appendAugmentFact(nextMatch, { kind: 'carousel', receipt: granted, source: pickSource, choiceId,
+      ordinal: metadata.receipts.filter(r => r.carouselId === state.id).length, roster: historyRoster(nextMatch), releaseAtMs: state.releaseAtMs[seatId], eligibilityChoiceIds: match.augments.map(a => a.choiceId) });
     const nextState = { ...state, receipts, pool: nextPool, revision: state.revision + 1 };
     try {
         validateCarousel(nextState);
@@ -299,14 +304,14 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     return { ok: true, state: nextState, match: nextMatch, events: stamped };
 }
 /** A single public transaction for the server: a failed grant rolls back the slot too. */
-export function pickCarouselForSeat(pool: SharedPoolState, carousel: CarouselState, match: MatchState, seatId: string, slot: number) {
+export function pickCarouselForSeat(pool: SharedPoolState, carousel: CarouselState, match: MatchState, seatId: string, slot: number, source: 'manual' | 'bot' | 'timeout' | 'disconnected' = 'manual') {
     const bad = (reason: CarouselFailure) => ({ ok: false as const, pool, carousel, state: match, reason, events: [] as readonly (MatchEvent | CarouselEvent)[] });
     if (!equal(pool, carousel.pool))
         return bad('stale-pool');
     const picked = pickFromCarousel(carousel, seatId, slot);
     if (!picked.ok)
         return bad(picked.reason);
-    const granted = grantCarouselPick(picked.state, match, seatId);
+    const granted = grantCarouselPick(picked.state, match, seatId, undefined, source);
     if (!granted.ok)
         return bad(granted.reason);
     return { ok: true as const, pool: granted.state.pool, carousel: granted.state, state: granted.match, events: [...picked.events, ...granted.events] };
@@ -316,7 +321,7 @@ export function autoPickCarouselForSeat(pool: SharedPoolState, carousel: Carouse
     if (!picked.ok)
         return { ok: false as const, pool, carousel, state: match, reason: picked.reason, events: [] as readonly (MatchEvent | CarouselEvent)[] };
     const slot = picked.state.receipts.find(r => r.seatId === seatId)!.slot;
-    return pickCarouselForSeat(pool, carousel, match, seatId, slot);
+    return pickCarouselForSeat(pool, carousel, match, seatId, slot, _reason);
 }
 /** Commit x-4 natural income once, only after the fixed cutoff. 1-1 has no income. */
 export function completeCarouselForSeat(state: CarouselState, match: MatchState, seatId: string) {
@@ -446,9 +451,9 @@ export function releaseCarouselParticipant(state: CarouselState, match: MatchSta
     }
     return { ok: true as const, state: nextState, match: released.state, events: [...released.events, {type:'carousel-seat-released' as const,carouselId:state.id,seatId}], poolEvents: released.poolEvents };
 }
-export function grantCarouselPick(state: CarouselState, match: MatchState, seatId: string): ReturnType<typeof planGrantCarouselPick> {
+export function grantCarouselPick(state: CarouselState, match: MatchState, seatId: string, receiptId?: string, pickSource: 'manual' | 'bot' | 'timeout' | 'disconnected' | 'augment' = 'manual', choiceId: string | null = null): ReturnType<typeof planGrantCarouselPick> {
     try {
-        return planGrantCarouselPick(state, match, seatId);
+        return planGrantCarouselPick(state, match, seatId, receiptId, pickSource, choiceId);
     }
     catch {
         return { ok: false, state, match, reason: 'invalid-match', events: [] };
@@ -465,7 +470,7 @@ export function autoPickFromCarousel(state: CarouselState, seatId: string, match
 
 /** Restore a server-owned seat alongside its carousel. Offline restoreMatch continues
  * rejecting server metadata; this boundary checks the pool and every carousel birth. */
-export function restoreCarouselSeat(carousel: CarouselState, input: unknown): MatchState {
+export function restoreCarouselSeat(carousel: CarouselState, input: unknown, authority?: AugmentHistoryAuthority): MatchState {
     validateCarousel(carousel);
     if (typeof input !== 'string') canonicalContent(input);
     const match = JSON.parse(typeof input === 'string' ? input : JSON.stringify(input)) as MatchState;
@@ -493,5 +498,42 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown): Ma
         pendingIds.add(pending.unitId);
     }
     for (const fact of match.resourceProvenance.entries) if ((fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'carousel' && !ids.has(fact.source.receiptId)) throw Error('receipt-mismatch');
+    validateAugmentHistory(match, authority);
     return match;
+}
+
+/** Internal award primitive: the future augment chooses the remaining slot using its explicit RNG.
+ * Normal picks remain one per seat. Multiple receipts consume distinct remaining cards, never copies.
+ * No client command calls this entry. The history owns the source/ordinal, so no new receipt fields exist. */
+export function grantAdditionalCarouselPick(pool: SharedPoolState, carousel: CarouselState, match: MatchState,
+  seatId: string, slot: number, choiceId: string): ReturnType<typeof pickCarouselForSeat> {
+  const bad = (reason: CarouselFailure) => ({ ok: false as const, pool, carousel, state: match, reason, events: [] as readonly (MatchEvent | CarouselEvent)[] });
+  try {
+    if (!equal(pool, carousel.pool)) return bad('stale-pool');
+    validateCarousel(carousel); assertSharedPoolConservation(pool, [match]);
+    if (!match.augmentHistory || !match.augments.some(a => a.choiceId === choiceId && augmentNeedsHistory(a.definitionId)) || match.sharedPool?.seatId !== seatId
+      || match.multiplayer?.status !== 'active' || !carousel.participants.every(p => carousel.receipts.some(r => r.seatId === p.seatId && r.status !== 'reserved')))
+      return bad('invalid-match');
+    const ordinal = carousel.receipts.filter(r => r.seatId === seatId).length;
+    if (ordinal < 1 || ordinal > 8) return bad('receipt-mismatch');
+    const s = carousel.slots[slot];
+    if (!Number.isInteger(slot) || !s) return bad('invalid-slot');
+    if (s.pickedBy !== null) return bad('slot-taken');
+    const id = `${carousel.id}:${seatId}:extra:${ordinal}`;
+    const receipt: CarouselReceipt = { id, carouselId: carousel.id, seatId, slot, definitionId: s.definitionId, itemId: s.itemId,
+      holdingSource: id, unitId: null, itemInstanceId: null, status: 'reserved' };
+    const closed = carousel.status === 'closed';
+    if (closed && pool.available[s.definitionId] < 1) return bad('pool-exhausted');
+    const reservation = { carouselId: carousel.id, reservationId: s.reservationId, slot, definitionId: s.definitionId, seatId };
+    const reservedPool = { ...pool, revision: pool.revision+1,
+      available: closed ? { ...pool.available, [s.definitionId]: pool.available[s.definitionId]-1 } : pool.available,
+      carouselReceipts: [...pool.carouselReceipts, receipt], carouselReservations: closed ? [...pool.carouselReservations, reservation]
+        : pool.carouselReservations.map(r => r.reservationId === s.reservationId ? reservation : r) };
+    const reserved: CarouselState = { ...carousel, pool: reservedPool, revision: carousel.revision+1,
+      receipts: [...carousel.receipts, receipt], slots: carousel.slots.map(x => x.slot === slot ? { ...x, pickedBy: seatId } : x) };
+    const granted = grantCarouselPick(reserved, match, seatId, id, 'augment', choiceId);
+    if (!granted.ok) return bad(granted.reason);
+    return { ok: true, pool: granted.state.pool, carousel: granted.state, state: granted.match,
+      events: [{type:'carousel-picked', receipt}, ...granted.events] };
+  } catch { return bad('invalid-match'); }
 }
