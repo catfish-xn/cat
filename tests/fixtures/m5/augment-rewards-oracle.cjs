@@ -8,6 +8,7 @@ const {isDeepStrictEqual}=require('node:util');
 const b2=require('../../augment-pool-batch2-oracle-data.cjs');
 const b3=require('../../augment-pool-batch3-oracle-data.cjs');
 const b4=require('../../augment-pool-batch4-oracle-data.cjs');
+const h4=require('./h4-rewards-oracle.cjs');
 const U=(id,n=1,star=1)=>['U',id,n,star],I=(id,n=1)=>['I',id,n],C=(id,n=1)=>['C',id,n],R=(cost,n=1,star=1,distinct=false)=>['R',cost,n,star,distinct],Q=(pool,n=1,identical=false)=>['Q',pool,n,identical];
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
@@ -168,7 +169,7 @@ function rewardPlan(s,env){
    if(levels.gold&&s.level>=levels.gold[0])addGold('augment-pool-batch4',a,['level',levels.gold[0]],levels.gold[1],levelRound(levels.gold[0]));
   }
  }
- return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut],gold};
+ return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut],gold:[...gold,...h4.goldPlan(s)]};
 }
 module.exports={rewardPlan,expand,salt,pick,word,outcome,initial};
 const data=require('../../augment-reward-pools-oracle-data.cjs');
@@ -182,7 +183,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
 const admitted=new Set(['augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
  'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
- 's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel']);
+ 's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel',...h4.sources]);
 // Project only the counters needed by these rewards from the finished combat, not reward receipts.
 function validateBattleCounters(before,after,f,base){
  const combat=after.combat;if(!combat)return; // Hand-written unit vectors supply facts explicitly.
@@ -237,6 +238,7 @@ function validateRewardsCore(before,after,command,events,base){
  if(select){const c=before.pendingChoice;assert.equal(before.phase,'choice');assert.equal(command.choiceId,c.choiceId);assert.equal(command.generation,c.generation);assert(c.offers.includes(command.definitionId),'acquired augment was actually offered');assert(events.some(e=>e.type==='choiceSelected'&&e.choiceId===c.choiceId&&e.definitionId===command.definitionId),'augment reward needs selection event');}
  const augments=select?[...before.augments,{choiceId:before.pendingChoice.choiceId,definitionId:command.definitionId,acquiredRound:before.round}]:before.augments;
  assert.deepEqual(after.augments,augments,'independent owned augment transition');
+ h4.validateTransition(before,after,command,events,base);
  const terminal=after.phase!=='combat'&&(before.phase==='combat'||command?.type==='start');
  if(command==null&&!terminal)assert.equal(appended.length,0,'no mechanic reward without command/combat settlement');
  const entry=command?.type==='continue';
@@ -331,7 +333,7 @@ function validateRewardsCore(before,after,command,events,base){
   const receiptId=JSON.stringify(['augment-pool-batch5',dual.choiceId,before.round]);
   if(!claimed.has(receiptId))dueGold.push({receiptId,source:'augment-pool-batch5',kind:'gold',amount:2,round:before.round});
  }else assert.equal(facts.filter(f=>f.kind==='dual-purpose-xp-purchased').length,0,'no Dual Purpose fact without purchase');
- const actualGold=appended.filter(r=>['augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves'].includes(r.source));
+ const actualGold=appended.filter(r=>['augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
  const goldKey=r=>({receiptId:r.receiptId,source:r.source,kind:r.kind,amount:r.amount,round:r.round});
  const sorted=xs=>xs.map(goldKey).sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
  assert.deepEqual(sorted(actualGold),sorted(dueGold),'independent due augment gold receipts (count, identity, amount, round)');

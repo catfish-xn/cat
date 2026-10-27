@@ -8,6 +8,8 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import type { RoundSettlement, SeatCommand, SeatState } from '../../src/server/room/types';
 import type { MatchEvent, MatchState } from '../../src/simulation/match-types';
 import { runUntil, SEATS, TIMINGS } from './helpers';
+import { validateRewards } from '../fixtures/m5/augment-rewards-oracle.cjs';
+import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from '../fixtures/m5/oracle.g2.cjs';
 
 const SOURCE = 'augment-pool-batch5-h4-survivor';
 const grants = (events: readonly MatchEvent[]) => events.filter(e => e.type === 'mechanicGranted' && e.receipt.source === SOURCE);
@@ -118,6 +120,15 @@ describe.each([
     expect(published).toEqual([{ type: 'mechanicGranted', receipt, domain: 'match', eventSeq: before.match.nextMatchEventSeq }]);
     expect(seat.serverEvents).toEqual({ seatRevision: seat.seatRevision, events: [...before.events, ...published] });
     expect(seat.match.nextMatchEventSeq).toBe(before.match.nextMatchEventSeq + 1);
+    const command = { type: 'recordAugmentSettlementTable', seats: tableFacts(room.state.seats) };
+    const env = { CATALOG, COST, ROUNDS, xp, entryXp, benchXp };
+    expect(() => validateRewards(before.match, seat.match, command, published, env)).not.toThrow();
+    // Co-forged balance/receipt/event must still disagree with the independently derived 60 gold.
+    const forgedReceipt = { ...receipt, amount: 61 };
+    const forged = { ...seat.match, gold: seat.match.gold + 1, seatMechanics: { ...seat.match.seatMechanics!,
+      receipts: seat.match.seatMechanics!.receipts.map(r => r.source === SOURCE ? forgedReceipt : r) } };
+    expect(() => validateRewards(before.match, forged, command,
+      published.map(e => e.type === 'mechanicGranted' ? { ...e, receipt: forgedReceipt } : e), env)).toThrow(/independent H4/);
     const state = room.state;
     expect(room.commitSettlement(payoutPlan!)).toMatchObject({ ok: false, reason: 'duplicate-settlement' });
     expect(room.state).toBe(state);
