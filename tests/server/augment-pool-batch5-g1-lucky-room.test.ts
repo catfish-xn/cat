@@ -8,7 +8,12 @@ import { generateChoices } from '../../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../../src/simulation/augment-offers';
 import { restoreSharedOrbSnapshot, assertSharedPoolConservation } from '../../src/simulation/shared-pool';
 import { canonicalContent } from '../../src/simulation/content';
-import { luckyGlovesPair, validateLuckyGlovesEquipment } from '../fixtures/m5/oracle.g2.cjs';
+import { luckyGlovesPair, validateLuckyGlovesEquipment, CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from '../fixtures/m5/oracle.g2.cjs';
+import { validateRewards } from '../fixtures/m5/augment-rewards-oracle.cjs';
+import { createRequire } from 'node:module';
+const { validateTransition } = createRequire(import.meta.url)('../fixtures/m5/lucky-gloves-oracle.cjs') as {
+  validateTransition(before: MatchState, after: MatchState, command: unknown): void;
+};
 import type { MatchState } from '../../src/simulation/match-types';
 
 let found:{seed:number;seatId:string}|undefined;
@@ -30,16 +35,56 @@ for(const round of ['1-3','1-4','2-1'])it(`reaches ${round} through real room co
   runUntilClaiming(room,clock,s=>s.roundId===round&&s.phase==='preparation');
 });
 it('chooses B5-53, combines its two gloves and equips the parent through Room.handle',()=>{
-  const c=current().pendingChoice!;expect(c.offers).toContain('lucky-gloves');
-  expect(room.handle(seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'lucky-gloves'})).toMatchObject({ok:true});
+  const beforeChoice=current(),c=beforeChoice.pendingChoice!;expect(c.offers).toContain('lucky-gloves');
+  const choose={type:'choose' as const,choiceId:c.choiceId,generation:c.generation,definitionId:'lucky-gloves'};
+  expect(room.handle(seatId,choose)).toMatchObject({ok:true});
+  expect(()=>validateTransition(beforeChoice,current(),choose)).not.toThrow();
   expect(rewards(current())).toHaveLength(2);
   const receipts=rewards(current());expect(receipts.every(r=>r.kind==='item'&&r.definitionId==='gloves')).toBe(true);
   claimAllOrbs(room,[seatId]);
   const gloves=current().items.filter(i=>i.definitionId==='gloves'&&i.location.kind==='inventory');
   expect(room.handle(seatId,{type:'combine',a:gloves[0].id,b:gloves[1].id})).toMatchObject({ok:true});
   const parent=current().items.find(i=>i.definitionId==='thiefs-gloves')!,holder=current().preparation.units.find(u=>u.team==='player')!;
-  expect(room.handle(seatId,{type:'equip',itemId:parent.id,unitId:holder.id,slot:0})).toMatchObject({ok:true});
+  const beforeEquip=current(), command={type:'equip' as const,itemId:parent.id,unitId:holder.id,slot:0 as const};
+  const equip=room.handle(seatId,command);expect(equip).toMatchObject({ok:true});
+  if(!equip.ok)throw Error(equip.reason);
   const state=current(),roll=state.equipmentState.rolls.at(-1)!;
+  expect(found).toEqual({seed:7,seatId:'s1'});
+  expect(beforeEquip.equipmentState.rolls).toHaveLength(0);
+  expect(roll.rngDrawStart).toBe(0);
+  const env={CATALOG,COST,ROUNDS,xp,entryXp,benchXp};
+  const check=(candidate:MatchState)=>{
+    validateRewards(beforeEquip,candidate,command,equip.events,env);
+    validateTransition(beforeEquip,candidate,command);
+  };
+  expect(()=>check(state)).not.toThrow();
+  const wrongLevel=structuredClone(state) as any;wrongLevel.equipmentState.rolls.at(-1).playerLevelSnapshot++;
+  expect(wrongLevel.equipmentState.rolls.at(-1).playerLevelSnapshot).toBe(state.level+1);
+  expect(()=>validateRewards(beforeEquip,wrongLevel,command,equip.events,env)).toThrow(/independent command equipment level/);
+  expect(()=>validateTransition(beforeEquip,wrongLevel,command)).toThrow(/independent command equipment level/);
+  const missing=structuredClone(state) as any;
+  missing.equipmentState=structuredClone(beforeEquip.equipmentState);
+  const duplicated=structuredClone(state) as any;
+  duplicated.equipmentState.rolls.push(structuredClone(duplicated.equipmentState.rolls.at(-1)));
+  const skipped=structuredClone(state) as any;
+  const shifted=luckyGlovesPair((state.seed^0x243f6a88)>>>0,8,roll.lucky!.role);
+  expect(shifted.children).not.toEqual(roll.children);
+  Object.assign(skipped.equipmentState.rolls.at(-1),{rngDrawStart:8,rngDrawEnd:shifted.draws,children:shifted.children});
+  skipped.equipmentState.equipment={state:shifted.state,draws:shifted.draws};
+  skipped.temporaryEquipment.forEach((child:any,index:number)=>{child.definitionId=shifted.children[index];});
+  const erased=structuredClone(missing);erased.temporaryEquipment=[];
+  const missingChild=structuredClone(state) as any;missingChild.temporaryEquipment.pop();
+  for(const [bad,reason] of [
+    [missing,/independent required lucky caches/],
+    [duplicated,/duplicate independent equipment cache/],
+    [skipped,/independent equipment draw start/],
+    [erased,/independent required lucky caches/],
+    [missingChild,/independent current temporary equipment/],
+  ] as const){
+    // The complete rewards entry point itself must reach and reject each forged equipment field.
+    expect(()=>validateRewards(beforeEquip,bad,command,equip.events,env)).toThrow(reason);
+    expect(()=>validateTransition(beforeEquip,bad,command)).toThrow(reason);
+  }
   expect(roll.poolVersion).toBe('lucky-gloves-v1');expect(roll.lucky?.holderId).toBe(holder.id);
   expect(roll.children).toEqual(luckyGlovesPair((state.seed^0x243f6a88)>>>0,roll.rngDrawStart,roll.lucky!.role).children);
   expect(state.temporaryEquipment.map(t=>t.definitionId)).toEqual(roll.children);

@@ -422,7 +422,7 @@ function validateRewardsCore(before,after,command,events,base){
 // Inventory is a complete transition, including commands with no reward receipt.
 function validateRewards(before,after,command,events,base){
  const result=validateRewardsCore(before,after,command,events,base);
- require('./lucky-gloves-oracle.cjs').validate(after);
+ require('./lucky-gloves-oracle.cjs').validateTransition(before,after,command);
  // Hand-written counter vectors may omit the inventory entirely.
  if(before.consumables===undefined&&after.consumables===undefined)return result;
  const inventory=[...before.consumables];let serial=before.nextConsumableSerial;
