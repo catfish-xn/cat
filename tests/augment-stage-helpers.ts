@@ -28,6 +28,8 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
+  "all-that-shimmers-plus":{node:'3-2',seed:49},
+  "roll-the-dice":{node:'3-2',seed:7},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -37,7 +39,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "black-rose-crown":{node:'3-2',seed:106,fielded:true},
   "blazing-soul-i":{node:'3-2',seed:20},
   "blazing-soul-ii":{node:'3-2',seed:89},
-  "blinding-speed":{node:'3-2',seed:35},
+  "blinding-speed":{node:'3-2',seed:67},
   "bronze-for-life-i":{node:'3-2',seed:50},
   "bronze-for-life-ii":{node:'3-2',seed:0},
   "bulky-buddies-ii":{node:'3-2',seed:43},
@@ -54,7 +56,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "duo-queue":{node:'4-2',seed:78,fielded:true},
   "epoch-plus":{node:'3-2',seed:10},
   "eye-for-an-eye-plus":{node:'3-2',seed:17},
-  "final-polish":{node:'4-2',seed:2,fielded:true},
+  "final-polish":{node:'4-2',seed:6,fielded:true},
   "find-your-center":{node:'3-2',seed:56},
   "geniuses":{node:'4-2',seed:16,fielded:true},
   "golemify":{node:'3-2',seed:18},

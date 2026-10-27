@@ -1,3 +1,4 @@
+import { SHIMMERS_FORGE_ITEMS } from './augment-pool-batch5-b5a';
 import {openG23Choice} from './g2-3-runtime';
 import { G24_FORGE_POOLS } from './content/g2-4-forges';
 import type { MatchState, MatchEvent } from './match-types';
@@ -9,8 +10,10 @@ import type { OwnedAugment } from './strategy-types';
 
 const SOURCE = 's13-augment-acquisition';
 const prefix = (a: OwnedAugment) => `s13-augment:${a.choiceId}:${a.definitionId}`;
-export function augmentAcquisition(a: OwnedAugment): {items: readonly string[]; remover:boolean; forge:'artifact'|'radiant'|null; offers:number} {
+export function augmentAcquisition(a: OwnedAugment): {items: readonly string[]; remover:boolean; forge:'artifact'|'radiant'|'shimmers'|null; offers:number} {
   switch(a.definitionId) {
+    case 'all-that-shimmers':
+    case 'all-that-shimmers-plus': return {items:[],remover:true,forge:'shimmers',offers:3};
     case 'blinding-speed': return {items:['red-buff','rageblade','bow'],remover:true,forge:null,offers:0};
     case 'portable-forge': return {items:[],remover:false,forge:'artifact',offers:4};
     case 'radiant-relics': return {items:[],remover:true,forge:'radiant',offers:5};
@@ -20,6 +23,7 @@ export function augmentAcquisition(a: OwnedAugment): {items: readonly string[]; 
 /** Independent explicit, reproducible choice stream. Does not consume the 3-word augment offer stream. */
 export function augmentForgeOffers(seed:number,a:OwnedAugment): readonly string[] {
   const p=augmentAcquisition(a);if(!p.forge)return [];
+  if(p.forge==='shimmers')return SHIMMERS_FORGE_ITEMS;
   const pool=p.forge==='artifact'?[...G24_FORGE_POOLS.TFT_ArmoryKeyOrnn]:Object.values(ITEM_DEFINITIONS).filter(d=>d.kind==='radiant').map(d=>d.id).sort();
   if(pool.length<p.offers)throw new RangeError('Augment forge pool too small');
   let rng=(seed^0x513f0421)>>>0;

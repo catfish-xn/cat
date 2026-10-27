@@ -46,6 +46,7 @@ for(const [id,api,hero,item,crownHero]of families){
 }
 initial['academy-crown'].push(Q('sponsored'));initial['family-crown'].push(U('violet'));initial['scrap-crown'].push(Q('component',2));
 Object.assign(initial,b2.gifts,b3.gifts);
+initial['roll-the-dice']=[I('TFT5_Item_ThiefsGlovesRadiant')];
 const MOD=4294967296n;
 const word=n=>Number((BigInt(n)*1664525n+1013904223n)%MOD);
 function salt(seed,parts,mix=false){let h=2166136261n;for(const c of JSON.stringify(parts))h=((h^BigInt(c.charCodeAt(0)))*16777619n)%MOD;let n=Number(BigInt(seed)^h)>>>0;if(mix){n^=n>>>16;n=Math.imul(n,0x85ebca6b);n^=n>>>13;n=Math.imul(n,0xc2b2ae35);n^=n>>>16;}return n>>>0;}

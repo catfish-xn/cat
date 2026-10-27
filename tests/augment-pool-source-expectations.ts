@@ -96,9 +96,9 @@ export const BATCH2_SOURCE:SourceExpectation[]=[
  r('betrayal',196,'TFT13_TeamupAugment_Betrayal','gold',{NumKills:2},['u:maddie','u:ambessa'],0,0,0,true,'either partner 2 kills -> maddie'),
  r('blood-brothers',301,'TFT13_TeamupAugment_BloodBrothers','prismatic',{APGainPerDeath:6,MaxHealthGainPerCast:30},['u:vander:2','u:silco','i:shojin'],0,0,0,true,'silco cast -> vander +30 max HP; vander death -> silco +6 AP; player-owned totals'),
 ];
-// The two remaining batch-1 exclusions have no executable row; keep their known
-// source amounts explicit without pretending that the unresolved artifact pool exists.
-export const BATCH1_BLOCKED_SOURCE:SourceExpectation[]=[
- r('all-that-shimmers',74,'TFT9_Augment_AllThatShimmers','gold',{ArmoryChoiceCount:3,InterestCap:5},['c:magnetic-remover:1'],0,0,0,false,'choose 1 of 3 gold-generating artifacts; pool/InterestCap unresolved'),
- r('all-that-shimmers-plus',75,'TFT_Augment_AllThatShimmersPlus','gold',{ArmoryChoiceCount:3,GoldGranted:4,InterestCap:5},['c:magnetic-remover:1'],4,0,0,false,'choose 1 of 3 gold-generating artifacts; pool/InterestCap unresolved'),
+// Former batch-1 exclusions, reclassified by P-B5-50/51 on 2026-10-27.
+export const BATCH1_BLOCKED_SOURCE:SourceExpectation[]=[];
+export const BATCH1_RECLASSIFIED_SOURCE:SourceExpectation[]=[
+ r('all-that-shimmers',74,'TFT9_Augment_AllThatShimmers','gold',{ArmoryChoiceCount:3,InterestCap:5},['c:magnetic-remover:1'],0,0,0,false,'P-B5-50/51: choose 1 of 3 fixed artifacts, existing interest policy'),
+ r('all-that-shimmers-plus',75,'TFT_Augment_AllThatShimmersPlus','gold',{ArmoryChoiceCount:3,GoldGranted:4,InterestCap:5},['c:magnetic-remover:1'],4,0,0,false,'P-B5-50/51: choose 1 of 3 fixed artifacts, existing interest policy'),
 ];
