@@ -51,7 +51,9 @@ describe('root UI manifest path containment', () => {
   ])('rejects %j without discarding adjacent valid entries', path => {
     assets.registerRootUiAssets(ROOT, { assets: [
       entry('icons/before.png', 'synthetic-before'), entry(path), entry('icons/after.png', 'synthetic-after'),
+      entry(path, 'synthetic-ability', 'ability'),
     ] });
+    expect(assets.abilityIconUrl('synthetic-ability')).toBeNull();
     expect(assets.s13AssetUrl('champion', HERO)).toBeNull();
     expect(assets.s13AssetUrl('champion', 'synthetic-before')).toBe(`${ROOT}icons/before.png`);
     expect(assets.s13AssetUrl('champion', 'synthetic-after')).toBe(`${ROOT}icons/after.png`);
@@ -96,6 +98,15 @@ describe('root UI manifest path containment', () => {
 });
 
 describe('root UI manifest failure isolation', () => {
+  it('registers ability art independently without preloading it as a champion', () => {
+    expect(assets.abilityIconUrl('synthetic-ability')).toBeNull();
+    assets.registerRootUiAssets(ROOT, { assets: [entry('icons/spell.png', 'synthetic-ability', 'ability')] });
+    expect(assets.abilityIconUrl('synthetic-ability')).toBe(`${ROOT}icons/spell.png`);
+    expect(assets.s13AssetUrl('champion', 'synthetic-ability')).toBeNull();
+    const { scene, load } = sceneStub();
+    assets.loadS13Portraits(scene, vi.fn());
+    expect(load.image.mock.calls.some(([key]) => key.includes('synthetic-ability'))).toBe(false);
+  });
   it.each([null, false, 42, 'text', [], {}, { assets: null }, { assets: {} }, { assets: 'wrong' }])(
     'quietly ignores malformed manifest %j', async manifest => {
       const fetcher = vi.fn<typeof fetch>().mockResolvedValue(response(manifest));

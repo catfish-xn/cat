@@ -12,6 +12,8 @@ beforeAll(async () => {
   const result = await build({ stdin: { contents: `export * from './src/presentation/unit-panel';
     export * from './src/presentation/unit-panel-loader';
     export {attachUnitCards} from './src/presentation/unit-card';
+    export {unitCardBody} from './src/presentation/unit-card';
+    export {registerRootUiAssets} from './src/presentation/s13-assets';
     export {loadTooltipText} from './src/presentation/tooltip-text-loader';
     export {UNIT_DEFINITIONS} from './src/simulation/units';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' } });
@@ -63,6 +65,23 @@ it.each([1, 2, 3])('renders rank %i with all ranks and current rank emphasis', a
   expect(result.text).toContain('360/540/900');
   expect(result.bold).toContain(String([360, 540, 900][star - 1]));
   expect(result.stars).toBe(String(star)); expect(result.slots).toBe(3);
+});
+it('uses optional ability art in inspect and hover, keeps portrait fallback and hides broken art', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect, data = { id: 'lux', definitionId: 'lux', starLevel: 1, team: 'player' };
+    const fallback = api.buildUnitPanel(data);
+    const fallbackImage = fallback.querySelector('.unit-card-ability img') as HTMLImageElement;
+    const missing = !!fallbackImage && fallbackImage.src === (fallback.querySelector('.unit-card-portrait img') as HTMLImageElement).src;
+    api.registerRootUiAssets('https://synthetic.invalid/', { assets: [{ kind: 'ability', id: api.UNIT_DEFINITIONS.lux.abilityId, path: 'icons/synthetic.png' }] });
+    const panel = api.buildUnitPanel(data), hover = api.unitCardBody('lux', 1);
+    const image = panel.querySelector('.unit-card-ability img') as HTMLImageElement;
+    const shown = { src: image.src, width: image.width, height: image.height, loading: image.loading, rounded: image.style.borderRadius, first: image === image.parentElement!.firstElementChild, hover: !!hover.querySelector('.unit-card-ability img') };
+    image.dispatchEvent(new Event('error'));
+    return { missing, shown, hidden: image.hidden, text: panel.querySelector('.unit-card-ability').textContent };
+  });
+  expect(result.missing).toBe(true);
+  expect(result.shown).toEqual({ src: 'https://synthetic.invalid/icons/synthetic.png', width: 36, height: 36, loading: 'lazy', rounded: '6px', first: true, hover: true });
+  expect(result.hidden).toBe(true); expect(result.text).toContain('360/540/900');
 });
 it('renders four-star, neutral and simple anvil bodies', async () => {
   const result = await page.evaluate(() => {

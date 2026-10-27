@@ -14,7 +14,7 @@ import { heroTraitTagsWithIds } from './hero-identity';
 import { s13IconHtml } from './s13-assets';
 import { catalogEntry, itemCardBody, itemMarkHtml } from './item-codex';
 import { itemDisplayName } from './g23-display';
-import { unitCardBody, roleSection, battleLine } from './unit-card';
+import { unitCardBody, roleSection, battleLine, abilityLabel } from './unit-card';
 import { loadTooltipText, readTooltipText } from './tooltip-text-loader';
 import { PANEL_STYLE } from './unit-panel-style';
 
@@ -84,7 +84,7 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
   const stats = data.starLevel === 4 ? fourStarBaseStats(data.definitionId) : null;
   const base = stats ?? getUnitStats(data.definitionId, def.unitKind === 'neutral' ? 1 : Math.min(3, data.starLevel) as StarLevel);
   const ability = node('div', '', 'unit-card-ability');
-  ability.append(node('div', `技能 · ${abilityText(data.definitionId, data.starLevel)?.name ?? '无主动技能'} · 法力 ${base.initialMana}/${base.maxMana}`, 'unit-card-label'), abilityRanks(data.definitionId, data.starLevel));
+  ability.append(abilityLabel(data.definitionId, `技能 · ${abilityText(data.definitionId, data.starLevel)?.name ?? '无主动技能'} · 法力 ${base.initialMana}/${base.maxMana}`), abilityRanks(data.definitionId, data.starLevel));
   body.append(ability);
   const role = roleSection(data.definitionId); if (role) body.append(role);
   body.append(node('div', '', 'inspect-notes'), battleLine(data.battle ?? { battle: null, match: null }));
