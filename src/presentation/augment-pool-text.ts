@@ -684,6 +684,10 @@ export const AUGMENT_EXTRA_TEXT: Readonly<Record<string, { readonly name: string
 
 /** Official 14.24 text for audited descriptions whose implemented effects match. */
 export const AUGMENT_AUDITED_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  "manaflow-i": "战斗开始时，你后2排的弈子的每次攻击都会获得2额外法力值。",
+  "glass-cannon-i": "在后排开始战斗的弈子，在战斗开始时的生命值为80%，但会获得12%的伤害增幅。",
+  "manaflow-ii": "战斗开始时，你后2排的弈子的每次攻击都会获得4额外法力值。",
+  "glass-cannon-ii": "在后排开始战斗的弈子，在战斗开始时的生命值为80%，但会获得20%的伤害增幅。",
   "sisters": "获得【姐妹】羁绊。当【蔚】参与一次击杀后，【金克丝】会获得持续5秒的75%额外攻速。当【金克丝】参与一次击杀后，【蔚】会获得持续7秒的40%额外攻击力。\n\n获得1个【金克丝】和1个【蔚】。",
   "all-for-one-i": "你的场上每有一个独特的1费弈子，己方弈子们就会获得2%最大生命值和1.5%伤害增幅。获得2个1费。",
   "trifecta-i": "获得2个3费英雄。战斗开始时：3个随机3费英雄获得250生命值和18%攻击速度。",

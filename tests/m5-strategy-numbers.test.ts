@@ -170,11 +170,14 @@ describe('M5 six augments and permanent accumulation', () => {
   it.each([
     ['manaflow-i', 'extraAttackMana', { amount: 2, backRowOnly: 1 }],
     ['glass-cannon-i', 'glassCannon', { startingHealthBps: 8000, damageAmpBps: 1200, backRowOnly: 1 }],
-  ] as const)('%s freezes its last-row condition on the board', (id, mechanic, values) => {
+  ] as const)('%s freezes its back-two-row condition on the board', (id, mechanic, values) => {
     const state = augment(fixture(['lux', 'maddie']), id);
     const positioned = { ...state, preparation: { ...state.preparation, units: [placed('lux', 'lux', 0, 7), placed('maddie', 'maddie', 1, 6)] } };
     expect(mechanisms(positioned)).toEqual([{ mechanic, values }]);
-    expect(mechanisms(positioned, 'maddie')).toEqual([]);
+    expect(mechanisms(positioned, 'maddie')).toEqual([{ mechanic, values }]);
+    const front = { ...positioned, preparation: { ...positioned.preparation, units: [placed('lux', 'lux', 0, 5), placed('maddie', 'maddie', 1, 4)] } };
+    expect(mechanisms(front)).toEqual([]);
+    expect(mechanisms(front, 'maddie')).toEqual([]);
     expect(resolved(positioned).stats.health).toBe(500); // Glass changes starting HP in Combat, not max HP.
   });
   it('Pumping adds 6% plus 0.5 percentage points per completed owned round', () => {

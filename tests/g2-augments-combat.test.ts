@@ -213,3 +213,62 @@ it('Singed self-speed and durability use distinct identities and strict restore 
  c.application.modifier.value.amount=20000;unit.statuses.find((s:any)=>s.kind==='attackSpeed').amount=20000;
  expect(()=>validate(raw)).toThrow('status modifier projection');
 });
+
+it.each([
+  ['manaflow-i', 'mana', 2], ['manaflow-ii', 'mana', 4],
+  ['glass-cannon-i', 'glass', 12], ['glass-cannon-ii', 'glass', 20],
+] as const)('%s applies in actual combat to both back rows only', (id, kind, amount) => {
+  for (const row of [4, 5, 6, 7]) {
+    const base = createMatch(42);
+    const preparation = { ...base.preparation, units: [
+      { id: 'hero', definitionId: 'lux', starLevel: 1 as const, team: 'player' as const, location: { kind: 'board' as const, cell: { col: 0, row } } },
+      { id: 'enemy', definitionId: 'garen', starLevel: 1 as const, team: 'enemy' as const, location: { kind: 'board' as const, cell: { col: 0, row: 0 } } },
+    ] };
+    const strategy = buildStrategySnapshot({ ...base, preparation, augments: [{ definitionId: id, choiceId: 'choice', acquiredRound: 1 }] });
+    let combat = createCombatWithEvents(preparation, strategy, 'rows').state;
+    const hero = combat.units.find(u => u.id === 'hero')!;
+    expect(hero.hp).toBe(kind === 'glass' && row >= 6 ? Math.floor(hero.maxHp * 0.8) : hero.maxHp);
+    combat = { ...combat, units: combat.units.map(u => u.id === 'hero'
+      ? { ...u, mana: 0, cooldownTicks: 0, attackRange: 20, attackDamageBase: 100, attackDamage: 100, attackDamagePercentBps: 0, baseCritChanceBps: 0 }
+      : { ...u, armor: 0, cooldownTicks: 2000, moveCooldownTicks: 2000 }) };
+    const enemyHp = combat.units.find(u => u.id === 'enemy')!.hp;
+    const after = stepCombat(combat).state;
+    expect(after.units.find(u => u.id === 'hero')!.mana).toBe(10 + (kind === 'mana' && row >= 6 ? amount : 0));
+    expect(enemyHp - after.units.find(u => u.id === 'enemy')!.hp).toBe(100 + (kind === 'glass' && row >= 6 ? amount : 0));
+  }
+});
+
+it.each([
+  ['pumping-up-i', 600, 50], ['pumping-up-ii', 800, 100], ['pumping-up-iii', 1200, 200],
+] as const)('%s carries its base and three completed-round gains into combat', (id, baseSpeed, gain) => {
+  const base = createMatch(42);
+  const preparation = { ...base.preparation, units: [
+    { id: 'hero', definitionId: 'lux', starLevel: 1 as const, team: 'player' as const, location: { kind: 'board' as const, cell: { col: 0, row: 6 } } },
+    { id: 'enemy', definitionId: 'garen', starLevel: 1 as const, team: 'enemy' as const, location: { kind: 'board' as const, cell: { col: 0, row: 0 } } },
+  ] };
+  const input = { ...base, round: 8, preparation, augmentProgress: { pumpingRounds: 3, investmentHp: 0 }, augments: [{ definitionId: id, choiceId: 'choice', acquiredRound: 4 }] };
+  const combat = createCombatWithEvents(preparation, buildStrategySnapshot(input), 'pumping').state;
+  expect(combat.units.find(u => u.id === 'hero')!.attackSpeedBonusBps).toBe(baseSpeed + 3 * gain);
+});
+
+it.each([['bronze-for-life-i', 300, 0], ['bronze-for-life-ii', 350, 150]] as const)(
+  '%s compiles an actual bronze trait into combat damage and durability', (id, amp, reduction) => {
+    const base = createMatch(42);
+    const preparation = { ...base.preparation, units: [
+      { id: 'hero', definitionId: 'lux', starLevel: 1 as const, team: 'player' as const, location: { kind: 'board' as const, cell: { col: 0, row: 6 } } },
+      { id: 'ally', definitionId: 'vladimir', starLevel: 1 as const, team: 'player' as const, location: { kind: 'board' as const, cell: { col: 2, row: 6 } } },
+      { id: 'enemy', definitionId: 'garen', starLevel: 1 as const, team: 'enemy' as const, location: { kind: 'board' as const, cell: { col: 0, row: 0 } } },
+    ] };
+    const input = { ...base, preparation, augments: [{ definitionId: id, choiceId: 'choice', acquiredRound: 1 }] };
+    const strategy = buildStrategySnapshot(input);
+    expect(strategy.traits.find(t => t.team === 'player' && t.traitId === 'sorcerer')?.tier).toBe(2);
+    let combat = createCombatWithEvents(preparation, strategy, 'bronze').state;
+    const hero = combat.units.find(u => u.id === 'hero')!;
+    expect(hero.mechanics?.find(m => m.mechanic === 'damageAmp' && m.source.definitionId === id)?.values.bps).toBe(amp);
+    if (reduction) expect(hero.mechanics?.find(m => m.mechanic === 'watcher' && m.source.definitionId === id)?.values.reductionBps).toBe(reduction);
+    combat = { ...combat, units: combat.units.map(u => u.id === 'hero'
+      ? { ...u, mana: 0, cooldownTicks: 0, attackRange: 20, attackDamageBase: 100, attackDamage: 100, attackDamagePercentBps: 0, baseCritChanceBps: 0 }
+      : u.id === 'enemy' ? { ...u, armor: 0, cooldownTicks: 2000, moveCooldownTicks: 2000 } : { ...u, cooldownTicks: 2000, moveCooldownTicks: 2000 }) };
+    const hp = combat.units.find(u => u.id === 'enemy')!.hp;
+    expect(hp - stepCombat(combat).state.units.find(u => u.id === 'enemy')!.hp).toBe(103);
+  });

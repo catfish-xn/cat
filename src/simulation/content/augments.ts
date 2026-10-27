@@ -55,7 +55,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   "manaflow-i": {
     "id": "manaflow-i",
     "name": "法力流 I",
-    "description": "开战时最后一排单位每次普攻额外获得2法力。",
+    "description": "战斗开始时，你后2排的弈子的每次攻击都会获得2额外法力值。",
     "effects": [
       {
         "kind": "mechanic",
@@ -70,7 +70,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   "glass-cannon-i": {
     "id": "glass-cannon-i",
     "name": "玻璃大炮 I",
-    "description": "开战时最后一排单位以80%最大生命开始，获得12%伤害增幅。",
+    "description": "在后排开始战斗的弈子，在战斗开始时的生命值为80%，但会获得12%的伤害增幅。",
     "effects": [
       {
         "kind": "mechanic",
@@ -134,7 +134,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   "manaflow-ii": {
     "id": "manaflow-ii",
     "name": "Manaflow II",
-    "description": "开战最后一排；每次普攻额外4法力。",
+    "description": "战斗开始时，你后2排的弈子的每次攻击都会获得4额外法力值。",
     "effects": [
       {
         "kind": "mechanic",
@@ -149,7 +149,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   "glass-cannon-ii": {
     "id": "glass-cannon-ii",
     "name": "Glass Cannon II",
-    "description": "开战最后一排；80%初始生命，20%增伤。",
+    "description": "在后排开始战斗的弈子，在战斗开始时的生命值为80%，但会获得20%的伤害增幅。",
     "effects": [
       {
         "kind": "mechanic",

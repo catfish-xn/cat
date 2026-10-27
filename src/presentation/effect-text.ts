@@ -22,7 +22,7 @@ export function describeEffect(effect: Effect): string {
     const v = effect.values, pct = (key: string) => `${v[key] / 100}%`;
     const descriptions: Record<string, string> = {
       rageblade: `每次普攻叠加 ${pct('attackSpeedBps')} 攻速`, damageAmp: `伤害增幅 ${pct('bps')}`,
-      extraAttackMana: `每次普攻额外 ${v.amount} 法力${v.backRowOnly ? '（最后一排）' : ''}`,
+      extraAttackMana: `每次普攻额外 ${v.amount} 法力${v.backRowOnly ? '（后两排）' : ''}`,
       archangel: `每 ${v.periodTicks * .05} 秒增加 ${v.abilityPower} 法强`, dragonClaw: `每 ${v.periodTicks * .05} 秒治疗 ${pct('healMaxHpBps')} 最大生命`,
       gargoyle: `每个以持有者为目标的敌人增加 ${v.resistPerEnemy} 双抗`, gunblade: `实际伤害的 ${pct('selfHealBps')} 自疗、${pct('allyHealBps')} 治疗最低生命比例友军`,
       artillery: `每 ${v.everyN} 次普攻造成 ${pct('adBps')} 攻击力 范围物理伤害`, sniper: `每格距离增加 ${pct('damageBpsPerHex')} 伤害`,
@@ -31,7 +31,7 @@ export function describeEffect(effect: Effect): string {
         + (v.shield ? `；当前目标阵亡时（包括队友击杀）获得 ${v.shield} 护盾，持续 ${v.durationTicks * .05} 秒` : ''),
       visionary: `法力获取 +${pct('manaBps')}`
         + (v.allyHealingBps ? `；技能造成的实际生命伤害的 ${pct('allyHealingBps')} 治疗生命比例最低的其他友军` : ''),
-      acquisitionGold: `立即获得 ${v.amount} 金币`, glassCannon: `最后一排初始生命 ${pct('startingHealthBps')}、伤害增加 ${pct('damageAmpBps')}`,
+      acquisitionGold: `立即获得 ${v.amount} 金币`, glassCannon: `后两排初始生命 ${pct('startingHealthBps')}、伤害增加 ${pct('damageAmpBps')}`,
       pumpingUp: `每轮增加 ${pct('attackSpeedBpsPerRound')} 攻速`, investment: `每点利息永久增加 ${v.healthPerInterest} 生命`,
       bulkyBuddies: `相邻双人组获得 ${v.health} 生命，触发 ${pct('shieldMaxHpBps')} 最大生命护盾，持续 ${v.durationTicks * .05} 秒`,
       // W4 augments: values exactly as authored in AUGMENT_DEFINITIONS (Centi → /100), wording per MATCH_CONTRACT augment section.

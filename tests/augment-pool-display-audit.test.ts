@@ -72,10 +72,13 @@ it('shows the audited official descriptions through the lazy player and card dis
 it('retains descriptions for known project-specific rules and missing dynamic values', async () => {
   await Promise.all([loadAugmentText(), loadTooltipText()]);
   expect(augmentPlayerDescription('placebo')).toBe('获得时按阶段一次性获得金币：2阶段8、3阶段11、4阶段及以后15；全队获得1%攻速。');
-  expect(augmentPlayerDescription('manaflow-i')).toBe('开战时最后一排单位每次普攻额外获得2法力。');
+  expect(augmentPlayerDescription('manaflow-i')).toBe('战斗开始时，你后2排的弈子的每次攻击都会获得2额外法力值。');
+  expect(augmentPlayerDescription('manaflow-ii')).toBe('战斗开始时，你后2排的弈子的每次攻击都会获得4额外法力值。');
+  expect(augmentPlayerDescription('glass-cannon-i')).toBe('在后排开始战斗的弈子，在战斗开始时的生命值为80%，但会获得12%的伤害增幅。');
+  expect(augmentPlayerDescription('glass-cannon-ii')).toBe('在后排开始战斗的弈子，在战斗开始时的生命值为80%，但会获得20%的伤害增幅。');
   expect(augmentPlayerDescription('bulky-buddies-i')).toBe('开战时恰与一个友军相邻的单位获得100生命；该邻居死亡时，获得10%最大生命的10秒盾。');
   expect(augmentPlayerDescription('mentorship')).toContain('魔改执行：');
-  for (const id of ['starry-night', 'built-different', 'placebo-plus', 'manaflow-ii', 'bronze-for-life-i']) {
+  for (const id of ['starry-night', 'built-different', 'placebo-plus', 'bronze-for-life-i']) {
     expect(augmentPlayerDescription(id), id).toBeNull();
   }
 });

@@ -102,10 +102,11 @@ describe('G2 static augment selectors and hand-calculated totals', () => {
     expect(resolved(id, twoNeighbors).stats.health).toBe(500);
     expect(resolved(id).stats.health).toBe(500);
   });
-  it('manaflow II and glass cannon II are restricted to the last row by the real snapshot', () => {
+  it('manaflow II and glass cannon II select the back two rows by the real snapshot', () => {
     for (const [id, mechanic] of [['manaflow-ii', 'extraAttackMana'], ['glass-cannon-ii', 'glassCannon']] as const) {
       expect(resolved(id, fixture([unit('lux', 'lux', 0, 7)])).mechanics?.some(m => m.mechanic === mechanic)).toBe(true);
-      expect(resolved(id, fixture([unit('lux', 'lux', 0, 6)])).mechanics?.some(m => m.mechanic === mechanic)).toBe(false);
+      expect(resolved(id, fixture([unit('lux', 'lux', 0, 6)])).mechanics?.some(m => m.mechanic === mechanic)).toBe(true);
+      expect(resolved(id, fixture([unit('lux', 'lux', 0, 5)])).mechanics?.some(m => m.mechanic === mechanic)).toBe(false);
     }
   });
   it.each([['mentorship-i', 150, 1200], ['mentorship-ii', 220, 1800]] as const)('%s only requires one higher-cost neighbor', (id, health, as) => {
