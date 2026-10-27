@@ -6,6 +6,11 @@ on:
 permissions:
   contents: read
 
+# The measurement driver as of the commit that added this experiment. Later drivers load
+# modules (b6-public-preparation.cjs, ...) that the pinned M6/M7 targets do not have.
+env:
+  WARMUP_DRIVER_SHA: 4e687db1df765aaaaae504586884d84aa6ecaed2
+
 jobs:
   measure:
     name: warmup-${{ matrix.revision }}-${{ matrix.mode }}
@@ -29,6 +34,12 @@ jobs:
         with:
           ref: ${{ matrix.ref }}
           path: target
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.WARMUP_DRIVER_SHA }}
+          path: driver
+          sparse-checkout: scripts/verify-m5-browser.cjs
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -51,8 +62,8 @@ jobs:
           test "$(git -C target rev-parse HEAD)" = "$TARGET_SHA"
           test -z "$(git -C target status --porcelain)"
           mkdir -p target/artifacts/experiment
-          cp harness/scripts/verify-m5-browser.cjs target/scripts/.m7-warmup-experiment.cjs
-          node -e 'const fs=require("fs"),crypto=require("crypto"); fs.writeFileSync("target/artifacts/experiment/provenance.json",JSON.stringify({targetSha:process.env.TARGET_SHA,harnessSha:process.env.HARNESS_SHA,driverSha256:crypto.createHash("sha256").update(fs.readFileSync("target/scripts/.m7-warmup-experiment.cjs")).digest("hex"),targetCleanBeforeDriver:true,driverIsUntrackedExperiment:true},null,2))'
+          cp driver/scripts/verify-m5-browser.cjs target/scripts/.m7-warmup-experiment.cjs
+          node -e 'const fs=require("fs"),crypto=require("crypto"); fs.writeFileSync("target/artifacts/experiment/provenance.json",JSON.stringify({targetSha:process.env.TARGET_SHA,harnessSha:process.env.HARNESS_SHA,driverSourceSha:process.env.WARMUP_DRIVER_SHA,driverSha256:crypto.createHash("sha256").update(fs.readFileSync("target/scripts/.m7-warmup-experiment.cjs")).digest("hex"),targetCleanBeforeDriver:true,driverIsUntrackedExperiment:true},null,2))'
       - name: Twelve warmups, thirty measured cycles, two follow-up windows
         working-directory: target
         env:
@@ -77,6 +88,12 @@ jobs:
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.WARMUP_DRIVER_SHA }}
+          path: driver
+          sparse-checkout: scripts/verify-m5-browser.cjs
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -85,6 +102,8 @@ jobs:
           pattern: warmup-*
           path: artifacts/warmup
       - run: node scripts/compare-m7-warmup.cjs artifacts/warmup
+        env:
+          WARMUP_DRIVER: driver/scripts/verify-m5-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

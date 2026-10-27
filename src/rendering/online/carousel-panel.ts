@@ -1,3 +1,6 @@
+import { attachHoverCards, HoverCard } from '../../presentation/hover-card';
+import { unitCardBody } from '../../presentation/unit-card';
+import { hoverAction } from '../../presentation/text-card';
 /**
  * G1-P7 shared carousel (选秀) panel. A ring of the units standing on the carousel, each with the item it carries,
  * floating over the enemy half of my board so the bench below stays visible (a picked unit lands there at once).
@@ -16,7 +19,7 @@
  */
 import { UNIT_DEFINITIONS } from '../../simulation/units';
 import { getHeroIdentity, heroEmblemSvg } from '../../presentation/hero-identity';
-import { itemMarkHtml } from '../../presentation/item-codex';
+import { attachItemPopover, itemMarkHtml } from '../../presentation/item-codex';
 import { heroPortraitHtml } from '../../presentation/s13-assets';
 import type { CarouselSlotView, CarouselView, SeatPublic } from './protocol';
 import { itemDisplayName } from '../../presentation/g23-display';
@@ -62,8 +65,23 @@ export type CarouselSide = 'carousel' | 'board';
 /** Space switches sides, unless the key goes to a control or a text field (a focused slot button takes Space as a click). */
 const SWITCH_KEY = 'Space';
 
+const HOLDING_RULE = '临时位：只保管，不参战 · 备战席或场上有空位时自动移入';
+function attachCarouselCards(scope: HTMLElement): () => void {
+  const card = new HoverCard(`${scope.className}-unit-card`, 'hover:carousel');
+  const detach = attachHoverCards(scope, card, '[data-carousel-unit], [data-item-def], .carousel-holding-sell', anchor => {
+    const id = anchor.dataset.carouselUnit;
+    if (!id) return null;
+    const star = Number(anchor.dataset.star ?? 1) as 1 | 2 | 3;
+    const notes = anchor.dataset.holding ? [HOLDING_RULE] : [];
+    return { key: `${id}:${star}:${notes}`, build: () => unitCardBody(id, star, null, '', notes)! };
+  }, { pin: true, longPress: hoverAction });
+  const items = attachItemPopover(scope, `${scope.className}-item-card`, { pin: true, longPress: hoverAction });
+  return () => { detach(); items(); card.dispose(); };
+}
+
 export class CarouselPanel {
   readonly root: HTMLElement;
+  private readonly detach: () => void;
   private title: HTMLElement;
   private status: HTMLElement;
   private timer: HTMLElement;
@@ -111,6 +129,7 @@ export class CarouselPanel {
     back.addEventListener('click', () => this.setSide('carousel'));
     this.bar.append(element('strong', '选秀', 'carousel-bar-title'), this.barTimer, element('span', '秒', 'carousel-timer-unit'), this.barStatus, back);
     host.append(this.root, this.bar);
+    this.detach = attachCarouselCards(this.root);
     document.addEventListener('keydown', this.onKey);
   }
   get open(): boolean { return this.view !== null; }
@@ -189,7 +208,7 @@ export class CarouselPanel {
     const now = performance.now() - this.clockOffset;
     const seconds = `${Math.max(0, Math.ceil((view.startedAt + view.deadlineMs - now) / 1000))}`;
     if (this.timer.textContent !== seconds) this.timer.textContent = seconds;
-    const hovered = this.hovered === null ? null : this.chip(this.hovered)?.title ?? null;
+    const hovered = this.hovered === null ? null : this.chip(this.hovered)?.getAttribute('aria-label') ?? null;
     const status = this.pending !== null && view.eligible ? '选取中…' : hovered ?? carouselStatusText(view, this.mySeatId, now);
     if (this.status.textContent !== status) this.status.textContent = status;
     if (this.side === 'board') {
@@ -224,18 +243,18 @@ export class CarouselPanel {
     const chip = element('button', '', `carousel-slot cost-${cost}${taken ? ' taken' : ''}${mine ? ' mine' : ''}${takable ? ' takable' : ''}`);
     chip.type = 'button'; chip.disabled = !takable;
     chip.style.setProperty('--angle', `${(360 / Math.max(1, count)) * index - 90}deg`);
-    chip.dataset.debug = `online:carousel-slot:${slot.slot}`; chip.dataset.slot = String(slot.slot); chip.dataset.definition = slot.definitionId;
+    chip.dataset.debug = `online:carousel-slot:${slot.slot}`; chip.dataset.slot = String(slot.slot); chip.dataset.definition = slot.definitionId; chip.dataset.carouselUnit = slot.definitionId; chip.dataset.star = String(slot.starLevel);
     if (slot.pickedBy) chip.dataset.pickedBy = slot.pickedBy;
     const holder = slot.pickedBy ? this.seats.find(seat => seat.seatId === slot.pickedBy) : undefined;
     const auto = slot.pickedBy !== null && view.autoPicked.includes(slot.pickedBy);
     const label = `${unitName(slot.definitionId)} · 携带 ${slot.items.map(itemName).join('、')}`;
-    chip.title = taken ? `${label} · 已被 ${holder?.name ?? slot.pickedBy}${auto ? '（自动）' : ''} 选走` : label;
-    chip.setAttribute('aria-label', chip.title);
+    const description = taken ? `${label} · 已被 ${holder?.name ?? slot.pickedBy}${auto ? '（自动）' : ''} 选走` : label;
+    chip.setAttribute('aria-label', description);
     const portrait = element('span', '', 'carousel-portrait');
     portrait.innerHTML = heroPortraitHtml(slot.definitionId, 44, heroEmblemSvg(slot.definitionId, 44));
     chip.append(portrait, element('span', unitName(slot.definitionId), 'carousel-name'));
     const held = element('span', '', 'carousel-items'); held.dataset.debug = `online:carousel-items:${slot.slot}`; held.dataset.item = slot.items.join(',');
-    for (const itemId of slot.items) held.insertAdjacentHTML('beforeend', itemMarkHtml(itemId, 16));
+    for (const itemId of slot.items) { const item = element('span', '', 'carousel-item'); item.dataset.itemDef = itemId; item.setAttribute('aria-label', itemName(itemId)); held.append(item); item.innerHTML = itemMarkHtml(itemId, 16); }
     chip.append(held);
     if (taken) chip.append(element('span', `${mine ? '我' : holder?.name ?? '已选'}${auto ? ' · 自动' : ''}`, `carousel-taker${auto ? ' auto' : ''}`));
     chip.addEventListener('click', () => { this.pickSlot(slot.slot); });
@@ -262,7 +281,7 @@ export class CarouselPanel {
     });
     this.order.replaceChildren(...rows);
   }
-  dispose(): void { document.removeEventListener('keydown', this.onKey); this.root.remove(); this.bar.remove(); }
+  dispose(): void { this.detach(); document.removeEventListener('keydown', this.onKey); this.root.remove(); this.bar.remove(); }
 }
 
 /**
@@ -284,11 +303,12 @@ export function readHeldCarouselUnits(state: object): readonly HeldCarouselUnitV
  */
 export class CarouselHoldingSlot {
   readonly root: HTMLElement;
+  private readonly detach: () => void;
   private key = '';
   constructor(host: HTMLElement, private readonly onSell: (unitId: string) => void) {
     this.root = element('aside', '', 'carousel-holding'); this.root.hidden = true; this.root.dataset.debug = 'online:carousel-holding';
     this.root.setAttribute('aria-label', '临时位 · 不参战');
-    host.append(this.root);
+    host.append(this.root); this.detach = attachCarouselCards(this.root);
   }
   render(units: readonly HeldCarouselUnitView[], operable: boolean): void {
     const key = `${operable}|${units.map(unit => unit.unitId).join(',')}`;
@@ -299,7 +319,8 @@ export class CarouselHoldingSlot {
       const cost = UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0;
       const card = element('div', '', `carousel-holding-unit cost-${cost}`); card.dataset.unit = unit.unitId; card.dataset.definition = unit.definitionId;
       card.dataset.debug = `online:carousel-holding-unit:${unit.unitId}`;
-      card.title = `${unitName(unit.definitionId)} · 临时位：只保管，不参战 · 备战席或场上有空位时自动移入`;
+      card.dataset.carouselUnit = unit.definitionId; card.dataset.holding = 'true'; card.tabIndex = 0;
+      card.setAttribute('aria-label', `${unitName(unit.definitionId)} · ${HOLDING_RULE}`);
       const portrait = element('span', '', 'carousel-holding-portrait');
       portrait.innerHTML = heroPortraitHtml(unit.definitionId, 40, heroEmblemSvg(unit.definitionId, 40));
       const sell = element('button', `出售 +${cost}`, 'carousel-holding-sell'); sell.type = 'button'; sell.disabled = !operable;
@@ -309,9 +330,9 @@ export class CarouselHoldingSlot {
       card.append(portrait, element('span', unitName(unit.definitionId), 'carousel-holding-name'), element('span', '不参战', 'carousel-holding-idle'), sell);
       return card;
     });
-    const head = element('header', '', 'carousel-holding-head'); head.title = '临时位：只保管，不参战 · 备战席或场上有空位时自动移入';
+    const head = element('header', '', 'carousel-holding-head'); head.setAttribute('aria-label', HOLDING_RULE);
     head.append(element('strong', '临时位', 'carousel-holding-title'), element('span', '只保管不参战 · 有空位自动移入', 'carousel-holding-note'));
     this.root.replaceChildren(head, ...cards);
   }
-  dispose(): void { this.root.remove(); }
+  dispose(): void { this.detach(); this.root.remove(); }
 }

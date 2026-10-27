@@ -12,5 +12,5 @@ export function targetUnit(unit:CombatUnit,tick:number):TargetUnit{
     ...(unit.anomalySummon||isG23Summon(unit)||isG23NonCombatant(unit)?{summon:true}:{})};
 }
 export function targetingEnvironment(board:Board,units:readonly CombatUnit[],holder:CombatUnit,tick:number,patch:Partial<TargetEnvironment>={}):TargetEnvironment{
-  return{board,units:units.map(u=>targetUnit(u,tick)),holderId:holder.id,primaryId:holder.targetId,tick,...patch};
+  return{board,units:patch.units??units.map(u=>targetUnit(u,tick)),holderId:holder.id,primaryId:holder.targetId,tick,...patch};
 }

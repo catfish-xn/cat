@@ -1,9 +1,10 @@
 import { batch2Target } from './augment-pool-batch2-combat';
+import { isSelectable } from './anomalies/availability';
 /** Frozen opening facts. Random choices share Combat's lcg32 stream after existing opening consumers.
  * Sharing reads every donor before writing any recipient, so broadcasts cannot feed each other. */
 import type { CombatOrigin, CombatUnit, CombatState } from './combat-types';
 import type { AbilityContext } from './combat-s13-abilities';
-import { byDistance, enemies, range, type S13Unit } from './combat-s13-state';
+import { range, type S13Unit } from './combat-s13-state';
 import { readCombatStats } from './combat-s13';
 import { scaleItemSummonHp } from './g2-4b-summons';
 import { hexDistance } from './board';
@@ -75,8 +76,18 @@ export function p2Stoneskin(u: CombatUnit,tick:number):number {
 }
 export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number):S13Unit|undefined {
   const forced=batch2Target(u,units);if(forced)return forced;
-  const candidates=enemies(u,units),normal=byDistance(u,candidates)[0];
-  if(!p2HasAnomaly(u,'cull-the-weak'))return normal;
+  const cull=p2HasAnomaly(u,'cull-the-weak');
+  const candidates:S13Unit[]=[];
+  // Only the nearest candidate is consumed; preserve distance/id tie-breaking
+  // without sorting a copy of the roster for every unit on every tick.
+  let normal:S13Unit|undefined, distance=Infinity;
+  for (const candidate of units) {
+    if(candidate.team===u.team||!isSelectable(candidate,u.mechanismState?.sampledAtTick??0))continue;
+    if(cull)candidates.push(candidate);
+    const next=hexDistance(u.cell,candidate.cell);
+    if (next<distance || next===distance && (!normal || candidate.id<normal.id)) { normal=candidate;distance=next; }
+  }
+  if(!cull)return normal;
   const inRange=candidates.filter(t=>hexDistance(u.cell,t.cell)<=range(u));
   if(tick%(p2Values('cull-the-weak').Period*20)===0)return inRange.sort((a,b)=>a.hp*b.maxHp-b.hp*a.maxHp||(a.id<b.id?-1:a.id>b.id?1:0))[0]??normal;
   return inRange.find(t=>t.id===u.targetId)??normal;
