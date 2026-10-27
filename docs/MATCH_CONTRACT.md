@@ -1516,3 +1516,9 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 精致古董按每一次装备操作后的库存连续性计龄，故同轮装备后卖出也清零；取得前已在库存的成装从取得轮开始计龄。普通组件移动/拆卸不是新组件；重铸新实例是新组件。潘朵拉只对取得后的自然轮入口、入轮前已有的库存普通组件/普通配方成装抽样，允许抽中原物品；保持实例 ID、类别及物品序号，按 `seed xor FNV1a32(JSON([source, seat, choice, round, item]))` 后一个 `lcg32-v1` 字抽取有序池，不推进任何 live RNG。普通重掷不触发基础装备自助餐；两个原有互斥强化仍按既有源表过滤。
 
 单人 `restoreMatch(JSON)`、`restoreMatch(object)`、`serializeMatch(candidate)` 以及在线 `restoreSharedOrbSnapshot(pool, input)` 均重放库存规则。共享入口另外核对所有物品出生收据的覆盖及串号，不把 PvP 的服务器结算收据冒充单人战斗 growth commit。历史战斗装备认证沿用 `battle-record-validation.ts` 调用的 `validateHistoricalEquipment`，不新增 epoch 或复录 golden。
+
+### H6 审查修复（2026-10-27）
+
+`readAugmentGrowth(state: MatchState, unitId: string, provenancePrefixLength?: number): AugmentGrowth` 沿给定来源前缀追溯合星血缘，包含 `unit-upgraded`、`unit-upgraded-after-combat` 及 `carousel-preparation-settled.upgrades`、`carousel-unit-claimed.upgrades`。来源记录与嵌套合星事件都逆序读取，先找到被最终三星消耗的二星，再展开其一星来源；同一来源 ID 仅计一次，不把出售后重新购买的同名英雄当作同一实例。两张分别有 150 Bps AD／150 centi AP 成长的英雄合星后累计 300。返回结构、失败原因和成长数值约定不变；本次补齐既定合星继承行为，不新增内容或改变 schema、内容版本和 digest。
+
+独立测试 oracle 从结算前的 `pvp-roster` 计算纷争金币，并要求既有历史事实前缀不可改写。冲榜战士按后续自然轮的入轮排名与正式阵容推导成长：5–8 名每名普通英雄 150 Bps AD／150 centi AP，唯一收据绑定强化选择与轮次；1–4 名仅有本轮 1000 Bps HP，不写入永久成长。备战席包含在正式阵容中，召唤物和未落位选秀单位不包含；新入轮阵容还与命令前正式阵容核对。战斗输入／联机快照另外核对累积成长、合星继承和临时 HP。oracle 不导入生产成长计算器，联合篡改、缺失／重复／错主收据和无操作伪造 999999 成长均须拒绝。

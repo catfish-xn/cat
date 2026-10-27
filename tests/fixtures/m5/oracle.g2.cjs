@@ -4,6 +4,7 @@ const {buffetPlan,validatePandoraEntry}=require('./augment-inventory-oracle.cjs'
  * docs/MATCH_CONTRACT.md. Independently implemented; never imports tested code. */
 const assert = require('node:assert/strict');
 const {validateRewards}=require('./augment-rewards-oracle.cjs');
+const {validateScoreboardCombat:checkScoreboardCombat}=require('./augment-h6-oracle.cjs');
 const {battleGold}=require('./battle-gold-oracle.cjs');
 const {concreteMarketItems}=require('./black-market-oracle.cjs');
 const h3=require('./h3-growth-oracle.cjs');
@@ -748,3 +749,5 @@ function shopTransition(before,command){
  return next;
 }
 module.exports.shopWord=shopWord;module.exports.shopForState=shopForState;module.exports.shopTransition=shopTransition;
+// Shared with multiplayer room tests; amounts/recipients come from independent history inputs.
+module.exports.validateScoreboardCombat=(state,input,prefix)=>checkScoreboardCombat(state,input,{COST,ROUNDS},prefix);

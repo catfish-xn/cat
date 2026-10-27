@@ -6,6 +6,7 @@ import { canonicalContent } from '../../src/simulation/content';
 import { scoreboardCombatGrowth } from '../../src/simulation/augment-pool-batch5-h6-scoreboard';
 import { snapshotForBattle } from '../../src/simulation/two-sided-snapshot';
 import { compileBattle } from '../../src/simulation/two-sided-battle';
+import { validateScoreboardCombat } from '../fixtures/m5/oracle.g2.cjs';
 
 describe('scoreboard real room',()=>{
  // First integrated-pool seed offering Scoreboard to s0 within three rerolls.
@@ -34,7 +35,13 @@ describe('scoreboard real room',()=>{
   expect(growth.every(g=>g.healthBps===(rank<=4?1000:0))).toBe(true);
   if(rank>=5)expect(growth.every(g=>g.attackDamageBps===150&&g.abilityPowerCenti===150)).toBe(true);
   const opponent=room.state.seats.find(s=>s.seatId!==seatId&&s.alive)!;
-  const input=compileBattle(snapshotForBattle(match,seatId),snapshotForBattle(opponent.match,opponent.seatId),123);
+  const snapshot=snapshotForBattle(match,seatId);
+  expect(()=>validateScoreboardCombat(match,snapshot)).not.toThrow();
+  expect(snapshot.h6Growth!.length).toBeGreaterThan(0);
+  const badSnapshot=structuredClone(snapshot);
+  (badSnapshot.h6Growth![0] as {healthBps:number}).healthBps+=1000;
+  expect(()=>validateScoreboardCombat(match,badSnapshot)).toThrow(/scoreboard combat/);
+  const input=compileBattle(snapshot,snapshotForBattle(opponent.match,opponent.seatId),123);
   expect(input.a.h6Growth).toBeDefined();
   const authority=room.augmentHistoryAuthority(seatId);
   for(const form of ['object','json','serialized'] as const){

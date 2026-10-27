@@ -7,6 +7,7 @@ const {buffetPlan}=require('./augment-inventory-oracle.cjs');
 const assert=require('node:assert/strict');
 const {isDeepStrictEqual}=require('node:util');
 const s3b=require('./augment-batch5-s3b-oracle.cjs');
+const {validateH6Transition}=require('./augment-h6-oracle.cjs');
 const b2=require('../../augment-pool-batch2-oracle-data.cjs');
 const b3=require('../../augment-pool-batch3-oracle-data.cjs');
 const b4=require('../../augment-pool-batch4-oracle-data.cjs');
@@ -284,6 +285,7 @@ function validateRewardsCore(before,after,command,events,base){
  const augments=select?[...before.augments,{choiceId:before.pendingChoice.choiceId,definitionId:command.definitionId,acquiredRound:before.round}]:before.augments;
  assert.deepEqual(after.augments,augments,'independent owned augment transition');
  h4.validateTransition(before,after,command,events,base);
+ validateH6Transition(before,after,command,base);
  const terminal=after.phase!=='combat'&&(before.phase==='combat'||command?.type==='start');
  if(command==null&&!terminal)assert.equal(appended.length,0,'no mechanic reward without command/combat settlement');
  const entry=command?.type==='continue';
@@ -388,8 +390,9 @@ function validateRewardsCore(before,after,command,events,base){
  const contested=before.augments.find(a=>a.definitionId==='contested');
  const newResult=(after.roundResults??[]).find(r=>r.round===before.round&&!(before.roundResults??[]).some(old=>old.round===r.round));
  if(contested&&newResult?.roundKind==='pvp'){
-  const f=after.augmentHistory.facts.find(f=>f.kind==='pvp-roster'&&f.round===before.round);
-  assert(f,'contested frozen roster');const self=f.seats.find(s=>s.seatId===f.seatId);assert(self,'contested own roster');
+  const frozen=(before.augmentHistory?.facts??[]).filter(f=>f.kind==='pvp-roster'&&f.round===before.round);
+  assert.equal(frozen.length,1,'contested unique pre-settlement frozen roster');
+  const f=frozen[0];const self=f.seats.find(s=>s.seatId===f.seatId);assert(self,'contested own roster');
   const bench=self.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&base.COST[u.definitionId]).sort((a,b)=>a.location.slot-b.location.slot);
   const count=bench.length?f.seats.filter(s=>s.alive&&s.seatId!==f.seatId&&s.units.some(u=>u.team==='player'&&u.location.kind==='board'&&u.definitionId===bench[0].definitionId)).length:0;
   const amount=2*Math.floor(count/2),receiptId=JSON.stringify(['augment-pool-batch5-h6',contested.choiceId,before.round]);
