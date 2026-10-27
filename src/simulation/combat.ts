@@ -1,3 +1,4 @@
+import { carryAugmentCombatDeaths } from './augment-death-samples';
 import { drainSetup } from './setup-work';
 import { installBattleEquipmentBatch } from './battle-equipment';
 import { familyCombatBase } from './family-reunion';
@@ -130,10 +131,11 @@ export function* createCombatWithEventsSteps(preparation: GameState, strategy: S
   return started;
 }
 export function stepCombat(state: CombatState): CombatStep {
+  const original = state;
   if (state.status === 'finished') return { state, events: [] };
   if (state.pendingEquipment?.length) {
     const { pendingEquipment, ...base } = state;
     state = installBattleEquipmentBatch(base, pendingEquipment);
   }
-  return recordNeutralReceipts(advanceCombatTick(state));
+  return carryAugmentCombatDeaths(original, recordNeutralReceipts(advanceCombatTick(state)));
 }

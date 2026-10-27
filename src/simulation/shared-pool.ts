@@ -1,3 +1,5 @@
+import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
+import type { AugmentHistoryAuthority } from './augment-history';
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
 import type { ShopDrawCause } from './shop-history-types';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
@@ -44,12 +46,13 @@ export { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, assertSharedPoolConservatio
 export type * from './shared-pool-types';
 
 /** Restore only against the matching authoritative pool snapshot; offline restoreMatch remains offline-only. */
-export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):MatchState {
+export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,authority?:AugmentHistoryAuthority):MatchState {
   const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
+  preflightAugmentHistory(state);
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
-  validateShopAugments(state);validateShopHistory(state);
+  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
   if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>

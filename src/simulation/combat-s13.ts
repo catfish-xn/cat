@@ -1,3 +1,4 @@
+import { sampleAugmentDeath } from './augment-death-samples';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
 import { isOpeningCrab, crabMove, crabJump } from './combat-opening-crabs';
@@ -764,7 +765,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       unit.shieldLayers = []; unit.shield = 0; unit.shieldExpiresAtTick = null; unit.statuses = [];
       if (unit.deferredItemDamage) unit.deferredItemDamage=[];
       unit.tasks = unit.tasks.filter(t => !t.cancellable && (t.attachedDot || t.kind === 'tristanaBounce'));
-      events.push({ type: 'death', tick, unitId: unit.id });
+      events.push(sampleAugmentDeath({ type: 'death', tick, unitId: unit.id }, unit));
     }
     // Keep depleted protective layers only until their independent end task has consumed absorption.
     unit.shieldLayers = unit.shieldLayers.filter(layer => layer.remaining > 0 || unit.tasks.some(t => t.shieldEndKey === layer.key));

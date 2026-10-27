@@ -1,3 +1,4 @@
+import { sampleAugmentDeath } from './augment-death-samples';
 import { collectTriggers } from './effects';
 import { invocationEvent, stampCombatStep } from './combat-effects';
 import type { EffectInvocation } from './strategy-types';
@@ -174,7 +175,7 @@ export function advanceCombatTick(state: CombatState): CombatStep {
     unit.mana = 0;
     unit.shield = 0;
     unit.shieldExpiresAtTick = null;
-    events.push({ type: 'death', tick, unitId: unit.id });
+    events.push(sampleAugmentDeath({ type: 'death', tick, unitId: unit.id }, unit));
   }
   const eliminated = eliminationResult(units);
   const result = eliminated ?? (tick >= state.maxTicks ? 'draw' : null);

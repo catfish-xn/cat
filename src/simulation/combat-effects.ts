@@ -1,3 +1,4 @@
+import { carryAugmentDeathSample } from './augment-death-samples';
 import { startExperimentClones } from './combat-experiment-clone';
 import { startV20Traits } from './combat-v20-traits';
 import { startSixCost } from './combat-six-cost';
@@ -18,7 +19,7 @@ export function stampCombatStep(state: CombatState, events: readonly CombatEvent
   if (!state.strategy) return { state, events };
   const first = state.nextEventSeq ?? 0;
   return { state: { ...state, nextEventSeq: first + events.length },
-    events: events.map((event, i) => ({ ...event, domain: 'combat', combatId: state.combatId!, eventSeq: first + i })) };
+    events: events.map((event, i) => carryAugmentDeathSample(event, { ...event, domain: 'combat', combatId: state.combatId!, eventSeq: first + i })) };
 }
 export function invocationEvent(invocation: EffectInvocation, tick: number): CombatEvent {
   return { type: 'effectTriggered', tick, source: { ...invocation.trigger.source }, effectKey: invocation.trigger.key,
