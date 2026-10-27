@@ -9,7 +9,7 @@
  * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
-  openMatchCombatStreamSteps, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
+  openMatchCombatStreamSteps, combineItems, createMatch, deployMatchUnit, equipItem, isAugmentPreparationChoice, nextRound, readLootView, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import { externalAugmentBlocks } from '../../simulation/augment-offers';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
@@ -22,7 +22,7 @@ import { readRoundInfo } from '../../simulation/round-selectors';
 import { getRoundPreparationMs } from '../../simulation/round-schedule';
 import {
   assertSharedPoolConservation, autoDeployToCap, buySharedUnit, claimBotPreparationOrbs, forfeitTerminalOrbs, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound, readMatchLiveGoldReaders,
-  moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, buySharedXp, dualPurposeOwner, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
+  moveItemSummon, refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
   type CarouselEvent, type CarouselRoundId, type CarouselState, type OpeningRoundResolution, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { CombatStream, type CombatStreamView } from './combat-stream';
@@ -162,7 +162,8 @@ export type SeatCommandOutcome =
 
 /**
  * Pure dispatch to the rules; the room adds nothing. Shop commands and choices (which may award a unit) go through the
- * TP shared-pool transactions (§12.4); commands that move no unit between owners stay on the plain public commands.
+ * TP shared-pool transactions (§12.4), as does XP (shop refresh and possible level rewards); the remaining commands
+ * that move no unit between owners stay on the plain public commands.
  */
 export function applySeatCommand(pool: SharedPoolState, state: MatchState, command: SeatCommand, augmentBlocked: readonly string[] = []): SeatCommandOutcome {
   const plain = (result: MatchCommandResult): SeatCommandOutcome => result.ok
@@ -178,8 +179,7 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'shopLock': return setSharedShopLock(pool, state, command.locked, command.generation);
     // The wire command has no generation (protocol unchanged); under the single-writer queue the seat's current shop is the expected one.
     case 'reroll': return rerollSharedShop(pool, state, state.shop.generation);
-    // Dual Purpose rerolls the shop on an XP purchase, so only its owner needs the shared-pool transaction.
-    case 'buyXp': return dualPurposeOwner(state) ? buySharedXp(pool, state) : plain(buyXp(state));
+    case 'buyXp': return runSharedMatchCommand(pool, state, { type: 'buyXp' });
     case 'combine': return plain(combineItems(state, command.a, command.b));
     case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot, { deferBattleEquipment: true }));
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });

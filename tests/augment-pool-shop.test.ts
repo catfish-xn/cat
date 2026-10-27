@@ -1,3 +1,5 @@
+import { AUGMENT_BATCH5 } from '../src/simulation/content/augment-pool-batch5';
+import { BATCH5_SOURCE } from '../src/simulation/augment-pool-batch5-progress';
 import { shopOwner } from './fixtures/shop-history-match';
 import { accepted } from './match-helpers';
 import { grantMechanicGold } from '../src/simulation/seat-mechanics/grants';
@@ -46,9 +48,10 @@ it('the eight additional shop-rule rows carry their 14.24 zh_cn name, tier, desc
  const research=JSON.parse(readFileSync(new URL('./fixtures/m5/augment-shop-source-14.24.json',import.meta.url),'utf8')) as {apiName:string;name_zh_cn:string;description_zh_cn:string;description_en_us:string;tier:number;effects:Record<string,number>;item_tags_raw:string[]}[];
  const archive='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
  const external=existsSync(archive)?JSON.parse(readFileSync(archive,'utf8')):null;
+ const rows={...AUGMENT_SHOP,'dual-purpose':AUGMENT_BATCH5['dual-purpose']};
  const tags:Readonly<Record<string,string>>={'{d02ae323}':'2-1','{d12ae4b6}':'3-2','{d22ae649}':'4-2'};
- expect(Object.keys(AUGMENT_SHOP).sort()).toEqual(['dual-purpose','firesale','prismatic-ticket','reinfourcement','rigged-shop-plus','starry-night','starry-night-plus','subscription-service']);
- for(const [id,row] of Object.entries(AUGMENT_SHOP)){
+ expect(Object.keys(rows).sort()).toEqual(['dual-purpose','firesale','prismatic-ticket','reinfourcement','rigged-shop-plus','starry-night','starry-night-plus','subscription-service']);
+ for(const [id,row] of Object.entries(rows)){
   const r=research.find(x=>x.apiName===row.apiName)!;
   if(external){const original=external.find((x:any)=>x.apiName===row.apiName);expect(Object.fromEntries(Object.keys(r).map(k=>[k,original[k]]))).toEqual(r);}
   expect(row.source.description_en_us).toBe(r.description_en_us);
@@ -114,7 +117,7 @@ it('ReinFOURcement: the first 4-cost bought arrives at 2 stars as two more pool 
  expect(()=>validateShopAugments(writeSeatMechanic(r.state,SHOP_AUGMENT_KEY,{credits:0}))).toThrow();
 });
 
-it('Dual Purpose: an XP purchase rerolls the unlocked shop for free and the first one each round pays 2 gold', ()=>{
+it('Dual Purpose: an XP purchase rerolls the shop (including locked shops) for free and the first one each round pays 2 gold', ()=>{
  const {pool,states}=room(undefined,1);
  let r=accept(generateSharedShop(pool,{...owning(states[0],'dual-purpose'),gold:30},0));
  const gen=r.state.shop.generation,gold=r.state.gold;
@@ -124,7 +127,7 @@ it('Dual Purpose: an XP purchase rerolls the unlocked shop for free and the firs
  expect([second.state.gold,second.state.shop.generation]).toEqual([gold-8+2,gen+2]);
  conserved(second.pool,[second.state]);validateShopAugments(second.state);
  const locked={...second.state,shop:{...second.state.shop,locked:true}},pool2:SharedPoolState={...second.pool,seats:second.pool.seats.map(s=>({...s,shop:locked.shop}))};
- const third=accept(buySharedXp(pool2,locked));expect(third.state.shop.generation).toBe(gen+2);
+ const third=accept(buySharedXp(pool2,locked));expect(third.state.shop.generation).toBe(gen+3);expect(third.state.shop.locked).toBe(true);
  // Without the augment the XP purchase never touches the pool.
  const plain=applySeatCommand(r.pool,states[0],{type:'buyXp'});expect(plain.pool).toBe(r.pool);
 });
@@ -226,13 +229,13 @@ it('Dual Purpose pays an independently audited first purchase receipt, then only
  const before={...owning(createMatch(42),'dual-purpose'),gold:30};
  const first=buyXp(before);expect(first.ok).toBe(true);if(!first.ok)throw Error(first.reason);
  expect([first.state.gold,first.state.shop.generation]).toEqual([28,before.shop.generation+1]);
- expect(first.events).toContainEqual(expect.objectContaining({type:'mechanicGranted',domain:'match',eventSeq:before.nextMatchEventSeq,receipt:expect.objectContaining({kind:'gold',amount:2,source:SHOP_AUGMENT_SOURCE})}));
+ expect(first.events).toContainEqual(expect.objectContaining({type:'mechanicGranted',domain:'match',eventSeq:before.nextMatchEventSeq,receipt:expect.objectContaining({kind:'gold',amount:2,source:BATCH5_SOURCE})}));
  expect([...validateRewards(before,first.state,{type:'buyXp'},first.events,{...oracle,lootReceipts:[]}).gold.values()].map((x:any)=>x.amount)).toEqual([2]);
  const second=buyXp(first.state);expect(second.ok).toBe(true);if(!second.ok)throw Error(second.reason);
  expect(second.state.gold).toBe(24);expect(second.events.filter(e=>e.type==='mechanicGranted')).toHaveLength(0);
- const forged={...structuredClone(first.state),gold:first.state.gold+1};const receipt=forged.seatMechanics!.receipts.find(r=>r.source===SHOP_AUGMENT_SOURCE)!;
+ const forged={...structuredClone(first.state),gold:first.state.gold+1};const receipt=forged.seatMechanics!.receipts.find(r=>r.source===BATCH5_SOURCE)!;
  (receipt as any).amount=3;
- const forgedEvents=first.events.map(e=>e.type==='mechanicGranted'&&e.receipt.source===SHOP_AUGMENT_SOURCE?{...e,receipt}:e);
+ const forgedEvents=first.events.map(e=>e.type==='mechanicGranted'&&e.receipt.source===BATCH5_SOURCE?{...e,receipt}:e);
  expect(()=>validateRewards(before,forged,{type:'buyXp'},forgedEvents,{...oracle,lootReceipts:[]})).toThrow();
  const deleted={...structuredClone(first.state),gold:first.state.gold-2};(deleted.seatMechanics as any).receipts=[];
  expect(()=>validateRewards(before,deleted,{type:'buyXp'},[],{...oracle,lootReceipts:[]})).toThrow();
@@ -297,8 +300,10 @@ it('Dual Purpose makes one Ticket decision per actual XP refresh without spendin
  }
  r=accept(setSharedShopLock(r.pool,r.state,true,r.state.shop.generation));
  const before=r.state;r=accept(buySharedXp(r.pool,r.state));
- expect([r.state.shop.generation,r.state.rngState]).toEqual([before.shop.generation,before.rngState]);
- expect(record(r.state)).toMatchObject({rolls:3,credits});expect(freeRerollsAvailable(r.state)).toBe(credits);
+ let rng=BigInt(before.rngState);for(let i=0;i<10;i++)rng=(rng*1664525n+1013904223n)%4294967296n;
+ if(shopWord(before,['ticket',ticket.choiceId,3])*100n/4294967296n<45n)credits++;
+ expect([r.state.shop.generation,r.state.rngState]).toEqual([before.shop.generation+1,Number(rng)]);expect(r.state.shop.locked).toBe(true);
+ expect(record(r.state)).toMatchObject({rolls:4,credits});expect(freeRerollsAvailable(r.state)).toBe(credits);
  expect(r.state.gold).toBe(before.gold-4);conserved(r.pool,[r.state]);
 });
 

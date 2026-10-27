@@ -24,15 +24,15 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Re-searched (first seed from 0 whose route reaches the node and offers the card) after the v23 integration
  * (fmix32 openings, Blood Brothers, Form Swapper) merged with the batch-3/XP/stage-ban line.
  * Call to Chaos was re-searched after batch 4 level rewards expanded the pool to 213 (seed 74, same fielded route).
- * Re-searched after the v24 shop pool expansion (232 cards), retaining the same routes and first-seed rule.
+ * Re-searched after the v24 shop / batch-5 merge (235 cards, P 2026-10-27), retaining the same routes and first-seed rule.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
   "backup":{node:'3-2',seed:9},
-  "bad-luck-protection":{node:'3-2',seed:14},
+  "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
   "betrayal":{node:'3-2',seed:27,fielded:true},
-  "big-grab-bag":{node:'3-2',seed:8},
+  "big-grab-bag":{node:'3-2',seed:26},
   "black-rose-crest":{node:'3-2',seed:74,fielded:true},
   "black-rose-crown":{node:'3-2',seed:106,fielded:true},
   "blazing-soul-i":{node:'3-2',seed:20},
@@ -43,7 +43,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "bulky-buddies-ii":{node:'3-2',seed:43},
   "bulky-buddies-iii":{node:'3-2',seed:114},
   "calculated-enhancement":{node:'3-2',seed:89},
-  "call-to-chaos":{node:'4-2',seed:512,fielded:true},
+  "call-to-chaos":{node:'4-2',seed:576,fielded:true},
   "climb-the-ladder-i":{node:'3-2',seed:17},
   "climb-the-ladder-ii":{node:'3-2',seed:41},
   "coronation":{node:'3-2',seed:29},
@@ -51,18 +51,18 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "dark-alley-dealings":{node:'3-2',seed:5},
   "defense-call":{node:'3-2',seed:39},
   "dummify":{node:'3-2',seed:56},
-  "duo-queue":{node:'4-2',seed:163,fielded:true},
+  "duo-queue":{node:'4-2',seed:78,fielded:true},
   "epoch-plus":{node:'3-2',seed:10},
   "eye-for-an-eye-plus":{node:'3-2',seed:17},
-  "final-polish":{node:'4-2',seed:8,fielded:true},
+  "final-polish":{node:'4-2',seed:2,fielded:true},
   "find-your-center":{node:'3-2',seed:56},
-  "geniuses":{node:'4-2',seed:2,fielded:true},
+  "geniuses":{node:'4-2',seed:16,fielded:true},
   "golemify":{node:'3-2',seed:18},
   "item-collector-i":{node:'3-2',seed:25},
   "item-collector-ii":{node:'3-2',seed:3},
   "lineup":{node:'3-2',seed:6},
   "little-buddies":{node:'3-2',seed:4},
-  "magic-roll":{node:'3-2',seed:8},
+  "magic-roll":{node:'3-2',seed:51},
   "manaflow-i":{node:'3-2',seed:46},
   "manaflow-ii":{node:'3-2',seed:15},
   "menaces":{node:'3-2',seed:84,fielded:true},
@@ -82,17 +82,17 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "rocket-collection-plus":{node:'3-2',seed:155,fielded:true},
   "rolling-for-days-i":{node:'3-2',seed:9},
   "savage-revenge":{node:'3-2',seed:82,fielded:true},
-  "sisters":{node:'4-2',seed:22,fielded:true},
+  "sisters":{node:'4-2',seed:30,fielded:true},
   "support-mining-plus":{node:'3-2',seed:25},
   "sword-overflow":{node:'3-2',seed:7},
   "teaming-up-i":{node:'3-2',seed:1},
   "teaming-up-ii":{node:'4-2',seed:13,fielded:true},
-  "the-golden-egg":{node:'4-2',seed:27,fielded:true},
+  "the-golden-egg":{node:'4-2',seed:99,fielded:true},
   "trifecta-i":{node:'3-2',seed:18},
   "trifecta-ii":{node:'3-2',seed:59},
   "unlikely-duo":{node:'4-2',seed:3,fielded:true},
   "wand-overflow":{node:'3-2',seed:13},
-  "wealthy-rehab-i":{node:'3-2',seed:22},
+  "wealthy-rehab-i":{node:'3-2',seed:38},
   "wealthy-rehab-ii":{node:'3-2',seed:15},
 };
 /**

@@ -6,7 +6,7 @@ import type { ChoiceDefinition } from '../strategy-types';
  * is a P entry in docs/S13_RULES_GAP.md. Shop Glitch (real-time refresh timer) and Two Much Value (no fielded-units battle
  * fact) are not in this table. Starry Night's per-level chances are the 14.24 values stored under hashed field names
  * (decoded in perf-1022/augment-pool/missing-values-triage-2026-10-24.md). v24 candidate content; historical evidence and recordings remain unchanged. */
-export type ShopAugmentRule='starry'|'firesale'|'rigged'|'reinfourcement'|'dual-purpose'|'ticket'|'subscription';
+export type ShopAugmentRule='starry'|'firesale'|'rigged'|'reinfourcement'|'ticket'|'subscription';
 export interface ShopAugmentContent {
  readonly apiName:string; readonly name:string; readonly tier:'silver'|'gold'|'prismatic'; readonly description:string;
  readonly source:{readonly patch:string;readonly archive:string;readonly values:Readonly<Record<string,number|null>>;readonly description_en_us:string};
@@ -62,21 +62,6 @@ export const AUGMENT_SHOP:Readonly<Record<string,ShopAugmentContent>>=freezeCont
   },
   "rule": "reinfourcement",
   "gold": "Gold"
- },
- "dual-purpose": {
-  "apiName": "TFT_Augment_DualPurpose",
-  "name": "双重目的",
-  "tier": "prismatic",
-  "description": "你在每回合首次购买经验值时，获得2金币。每当你购买经验值时，刷新你的商店。",
-  "source": {
-   "patch": "14.24",
-   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
-   "values": {
-    "goldtogive": 2.0
-   },
-   "description_en_us": "The first time you buy XP each round, gain 2 gold. Whenever you buy XP, reroll your Shop."
-  },
-  "rule": "dual-purpose"
  },
  "prismatic-ticket": {
   "apiName": "TFT6_Augment_GachaAddict",

@@ -1,0 +1,80 @@
+{
+  "date": "2026-10-26",
+  "branch": "codex/v24-b4four",
+  "head": "35eadf4ef9b6cfb59e9d74e68cd768f58b6f4780",
+  "scope": "定向复验范围内全部身份/epoch失败；未运行全套，未声称未执行的用例通过。",
+  "currentContentDigest": "fnv1a32-utf16:ea87d498",
+  "recordedContentDigest": "fnv1a32-utf16:d61a28f2",
+  "currentLootReplayDigest": "fnv1a32-utf16:c68ff41f",
+  "recordedLootReplayDigest": "fnv1a32-utf16:3a378e3e",
+  "epochRun": {
+    "passed": 19,
+    "failed": 7,
+    "filteredOut": 151
+  },
+  "commands": [
+    "node node_modules/vitest/vitest.mjs run tests/augment-pool-batch3-progress.test.ts tests/d11-wiring-bank.test.ts tests/d14-anomalies-source.test.ts tests/ur-i3-combat-statuses.test.ts --configLoader runner --maxWorkers=4 --no-file-parallelism --reporter=json --outputFile=/tmp/batch5-k-epoch-results.json",
+    "node node_modules/vitest/vitest.mjs run tests/opening-random-identity.test.ts -t 'binds v23-online-rules to fresh public rules|recomputes the first battle terminal' --configLoader runner --maxWorkers=4 --no-file-parallelism --reporter=json --outputFile=/tmp/batch5-k-epoch-opening.json"
+  ],
+  "identityOnlyDiagnostic": {
+    "preSpoilsDiffPaths": [
+      "$.combatInputBasis.contentDigest",
+      "$.contentDigest",
+      "$.m8.loot.frozen.replayDigest"
+    ],
+    "normalizedFirstBattleTraceMatches": true,
+    "eventTraceUnchanged": true
+  },
+  "diagnosticMethod": "仅在内存比较 pre-Spoils 实际/录制 JSON 的叶子差异，并将新 contentDigest/lootReplayDigest 映射为录制身份后比较首战状态轨迹 SHA256；事件轨迹原值即相同。临时诊断测试通过后移除，原测试和录制文件未改。",
+  "failures": [
+    {
+      "file": "tests/augment-pool-batch3-progress.test.ts",
+      "line": 139,
+      "test": "pre-Spoils baseline bytes restore and continue round 1 with full history",
+      "classification": "identity/epoch only",
+      "firstFailure": "AssertionError: expected '{\"anomalyBinding\":null,\"augmentOffers…' to be '{\"anomalyBinding\":null,\"augmentOffers…' // Object.is equality"
+    },
+    {
+      "file": "tests/augment-pool-batch3-progress.test.ts",
+      "line": 139,
+      "test": "pre-Spoils baseline bytes restore and continue round 2 with full history",
+      "classification": "identity/epoch only",
+      "firstFailure": "AssertionError: expected '{\"anomalyBinding\":null,\"augmentOffers…' to be '{\"anomalyBinding\":null,\"augmentOffers…' // Object.is equality"
+    },
+    {
+      "file": "tests/d11-wiring-bank.test.ts",
+      "line": 36,
+      "test": "a resumable online task consumes live bank samples, replays the exact same ledger and keeps bank values private",
+      "classification": "identity/epoch only",
+      "firstFailure": "AssertionError: expected 'fnv1a32-utf16:ea87d498' to be 'fnv1a32-utf16:d61a28f2' // Object.is equality"
+    },
+    {
+      "file": "tests/d14-anomalies-source.test.ts",
+      "line": 58,
+      "test": "retains the two D14 anomalies in the current epoch without overwriting source values",
+      "classification": "identity/epoch only",
+      "firstFailure": "AssertionError: expected 'fnv1a32-utf16:ea87d498' to be 'fnv1a32-utf16:d61a28f2' // Object.is equality"
+    },
+    {
+      "file": "tests/ur-i3-combat-statuses.test.ts",
+      "line": 84,
+      "test": "UR-I3-01 current combat status kinds preserves the pre-view-change battle, ledger and RNG and binds the current epoch identity",
+      "classification": "identity/epoch only",
+      "firstFailure": "AssertionError: expected 'fnv1a32-utf16:ea87d498' to be 'fnv1a32-utf16:d61a28f2' // Object.is equality"
+    },
+    {
+      "file": "tests/opening-random-identity.test.ts",
+      "line": 682,
+      "test": "binds v23-online-rules to fresh public rules and preserved v22-online-rules byte evidence",
+      "classification": "identity/epoch only",
+      "firstFailure": "AssertionError: expected 'fnv1a32-utf16:ea87d498' to be 'fnv1a32-utf16:d61a28f2' // Object.is equality"
+    },
+    {
+      "file": "tests/opening-random-identity.test.ts",
+      "line": 793,
+      "test": "recomputes the first battle terminal and every event hash from public commands",
+      "classification": "identity/epoch only",
+      "firstFailure": "AssertionError: expected '8202f2118ef9bb4b5c596d3abb1c83e4ceeb0…' to be '5d3dc3b7c0758bf7e86e10d47246eede67aa6…' // Object.is equality"
+    }
+  ]
+}

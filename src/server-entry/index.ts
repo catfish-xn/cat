@@ -42,7 +42,6 @@ export type { RoundSettlementReceipt, MultiplayerProgress, MultiplayerCommandRes
 export { createSharedPool, initializeSharedSeat, generateSharedShop, buySharedUnit, buySharedXp, rerollSharedShop,
   setSharedShopLock, sellSharedUnit, releaseSeatOnElimination, refreshSharedShops, nextSharedRound,
   runSharedMatchCommand, restoreSharedOrbSnapshot, assertSharedPoolConservation, SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST } from '../simulation/shared-pool';
-export { dualPurposeOwner } from '../simulation/shop-augments';
 export type { SharedPoolState, SharedPoolBinding, SharedPoolResult, SharedPoolBatchResult, SharedPoolFailure,
   SharedPoolEvent, SharedMatchCommand, PoolHolding, ShopReservation, RewardReservation, PoolRewardReceipt } from '../simulation/shared-pool-types';
 

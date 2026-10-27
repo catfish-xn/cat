@@ -13,7 +13,7 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { ad, ap } from '../src/simulation/combat-s13-state';
 
-// First public-route seeds offering each card (no reroll needed), re-searched on the 232-card shop pool.
+// First public-route seeds offering each card (no reroll needed), re-searched on the 235-card merged pool.
 const routes:Record<string,{seed:number;node:string;reroll?:number}>={
  'category-five':{seed:30,node:'2-1'},'long-distance-pals':{seed:18,node:'3-2'},
  'sated-spellweaver':{seed:36,node:'3-2'},overheal:{seed:11,node:'3-2'}

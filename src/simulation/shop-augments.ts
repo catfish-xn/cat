@@ -169,16 +169,6 @@ export function applyReinfourcement(before:MatchState,after:MatchState,policy?:U
  }
  return {state,events};
 }
-/** Dual Purpose: the first XP purchase of each round while owned pays goldtogive; the caller rerolls the shop. */
-export function dualPurposeOwner(state:MatchState):OwnedAugment|undefined { return owned(state,'dual-purpose')[0]; }
-export function grantDualPurposeGold(state:MatchState):MatchState {
- const a=dualPurposeOwner(state);if(!a)return state;
- const id=receiptId('dual-purpose',a,state.round);
- if(state.seatMechanics?.receipts.some(r=>r.receiptId===id))return state;
- const result=grantMechanicGold(state,{receiptId:id,source:SHOP_AUGMENT_SOURCE,amount:shopAugmentValue(a.definitionId,'goldtogive')});
- if(!result.ok)throw new RangeError(`Dual Purpose gold: ${result.reason}`);return result.state;
-}
-
 /* ---------------- restore ---------------- */
 
 export function validateShopAugments(state:MatchState):void {
@@ -211,7 +201,6 @@ export function validateShopAugments(state:MatchState):void {
   if(receipt.source!==SHOP_AUGMENT_SOURCE||source!==SHOP_AUGMENT_SOURCE||!Array.isArray(parts)||parts.length!==4||!a||!int(n))fail('receipt');
   const own=a!;
   if(rule==='subscription'){if(receipt.kind!=='gold'||receipt.amount!==shopAugmentValue(own.definitionId,'GoldPerStage')||receipt.round!==n||n<=own.acquiredRound||n>state.round||!isStageStart(n))fail('subscription gold');}
-  else if(rule==='dual-purpose'){if(receipt.kind!=='gold'||receipt.amount!==shopAugmentValue(own.definitionId,'goldtogive')||receipt.round!==n||n<own.acquiredRound||n>state.round)fail('dual purpose gold');}
   else if(rule==='firesale'){if(receipt.kind!=='unit'||![1,2].includes(receipt.starLevel??1)||receipt.starLevel===2&&UNIT_DEFINITIONS[receipt.definitionId]?.cost>2||!SHOP_CATALOG.includes(receipt.definitionId)||receipt.round!==n||n<=own.acquiredRound||n>state.round)fail('firesale');}
   else if(rule==='reinfourcement'){if(receipt.kind!=='unit'||(receipt.starLevel??1)!==1||n>1||receipt.definitionId!==reinforced)fail('reinfourcement');}
   else fail('receipt rule');
@@ -236,6 +225,6 @@ export function drawSoloAugmentShop(initial:MatchState,context:SixCostShopContex
   if(rigged.tier!==undefined){const draw=nextRandom(nextRandom(rng).state);rng=draw.state;const catalog=SHOP_CATALOG_BY_COST[rigged.tier];offer={status:'available',definitionId:catalog[Math.floor(draw.word*catalog.length/4294967296)]};}
   return offer.status==='available'&&starryUpgrade(state,generation,slot,offer.definitionId)?{...offer,starLevel:2}:offer;
  });
- const next={...state,...drawn,shop:{...drawn.shop,slots}};
+ const next={...state,...drawn,shop:{...drawn.shop,slots,...(cause==='dual-purpose'?{locked:Boolean(state.shop.locked)}:{})}};
  return audit?recordShopDraw(before,next,cause):next;
 }

@@ -1,3 +1,4 @@
+import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { NET_PROTOCOL_VERSION, parseClientMessage } from '../src/server/net/messages';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { accept as sharedAccept } from './tp-helpers';
@@ -8,10 +9,10 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { deepStrictEqual } from 'node:assert/strict';
-import { buyUnit, buyXp, createMatch, nextRound, rerollShop, selectChoice, setShopLock, startMatchCombat, type MatchState } from '../src/simulation/match';
+import { buyUnit, buyXp, combineItems, createMatch, nextRound, rerollShop, selectChoice, setShopLock, startMatchCombat, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { grantMechanicGold } from '../src/simulation/seat-mechanics/grants';
-import { accepted, emptyBoard, resolveM5Choices } from './match-helpers';
+import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
 import { validateShopHistory } from '../src/simulation/shop-history';
 import { SHOP_AUGMENT_KEY } from '../src/simulation/shop-augments';
 import { readSeatMechanic, writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
@@ -116,7 +117,7 @@ describe('online room',()=>{
 });
 
 it.each([
- [0,'dual-purpose','2-1'],[105,'subscription-service','2-1'],[22,'rigged-shop-plus','3-2'],
+ [0,'dual-purpose','2-1'],[105,'subscription-service','2-1'],[63,'rigged-shop-plus','3-2'],
  [23,'starry-night-plus','3-2'],[63,'firesale','3-2'],
 ] as const)('real %s %s at %s authenticates XP, lock, reroll and round continuation',(seed,id,node)=>{
  let state=rich(shopOwner(seed,id,node));validateShopHistory(state);
@@ -182,4 +183,25 @@ it('the unchanged WebSocket command grammar carries shop commands and rejects cl
   expect(parseClientMessage(JSON.stringify({...envelope,command:{...command,shopHistory:{version:'shop-history-v1',entries:[]}}}))).toMatchObject({ok:false,code:'invalid-message'});
   expect(parseClientMessage(JSON.stringify({...envelope,command:{...command,free:true}}))).toMatchObject({ok:false,code:'invalid-message'});
  }
+});
+
+
+it('Crafted Crafting cannot lend a later same-round combination credit to an earlier shop-history refresh',()=>{
+ const open=reachRound('3-2',false,648,['crafted-crafting']),choice=open.pendingChoice!;
+ expect(open.augments.some(a=>a.definitionId==='crafted-crafting')).toBe(true);
+ expect(choice.offers).toContain('starry-night-plus');
+ let state=rich(accepted(selectChoice(open,choice.choiceId,choice.generation,'starry-night-plus')));
+ while(freeRerollsAvailable(state)>0)state=accepted(rerollShop(state));
+ const paid=state;state=accepted(rerollShop(state));expect(state.gold).toBe(paid.gold-2);
+ validateShopHistory(state);
+ const components=state.items.filter(i=>i.location.kind==='inventory'&&['sword','bow','rod','tear','vest','cloak','belt','gloves'].includes(i.definitionId));
+ expect(components.length).toBeGreaterThanOrEqual(2);
+ state=accepted(combineItems(state,components[0].id,components[1].id));
+ expect(freeRerollsAvailable(state)).toBe(2);validateShopHistory(state);
+ const combined=state;state=accepted(rerollShop(state));expect(state.gold).toBe(combined.gold);expect(freeRerollsAvailable(state)).toBe(1);
+ for(const entry of entries)expect(restore(state,entry)).toEqual(state);
+ // Removing the real combination cannot preserve the free draw or its claimed credit.
+ const forged=structuredClone(state) as any;
+ forged.resourceProvenance.entries=forged.resourceProvenance.entries.filter((e:any)=>e.kind!=='item-combined');
+ for(const entry of entries)expect(()=>restore(forged,entry)).toThrow();
 });

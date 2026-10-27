@@ -1,11 +1,13 @@
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
 import type { ShopDrawCause } from './shop-history-types';
+import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
+import { buyXpWithShopRefresh } from './match';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { validateBatch1Gifts } from './augment-pool-grants';
 import { validateAugmentOfferHistory } from './augment-offers';
 import { spendFreeReroll } from './free-rerolls';
 import { planRiggedShop, drawSubscriptionSlots, subscriptionAcquired, subscriptionStageStart, planFiresale, stealFiresaleUnit,
-  recordShopReroll, dualPurposeOwner, starryUpgrade, validateShopAugments } from './shop-augments';
+  recordShopReroll, starryUpgrade, validateShopAugments } from './shop-augments';
 import { createOpeningEncounter, bindSharedOpeningEncounter, applyOpeningEffects, planOpeningRound } from './opening-encounter';
 import { planSixCostShop, sixCostShopContext } from './six-cost-shop';
 import { validateEpicForges } from './epic-forges';
@@ -23,7 +25,7 @@ import { canOperateMatch } from './operation-policy';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { M8_VERSION } from './m8/version';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
-import { openAnvil, buyUnit, buyXp, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
+import { openAnvil, buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, settleMatchCombatStream, selectChoice,
   forfeitPendingChoice, claimOrDiscardLoot, rerollAugment } from './match';
 import { externalAugmentBlocks } from './augment-offers';
 import { enableMultiplayerSettlement, applyRoundSettlement } from './round-settlement';
@@ -50,8 +52,8 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):Mat
   validateShopAugments(state);validateShopHistory(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
-  if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])||(state.seatMechanics?.receipts??[]).some(r=>
-    r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
+  if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
+    r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   return state;
 }
 
@@ -222,15 +224,9 @@ export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedG
     return {ok:true,...stamp({...next,gold:state.gold-cost})};
   });
 }
-/** XP purchase; Dual Purpose pays its first-per-round gold and rerolls an unlocked shop for free. */
+/** Compatibility entry: every XP purchase uses the same shared transaction. */
 export function buySharedXp(pool:SharedPoolState,state:MatchState):SharedPoolResult {
-  return transact(pool,state,(draft,_policy,events)=>{
-    const bought=buyXp(state);
-    if(!bought.ok||!dualPurposeOwner(bought.state))return bought;
-    let next=bought.state;
-    if(!next.shop.locked){releaseShop(draft,state.sharedPool!.seatId);next=drawShop(draft,next,events,'dual-purpose');}
-    return {ok:true,state:next,events:bought.events};
-  });
+  return runSharedMatchCommand(pool,state,{type:'buyXp'});
 }
 export function setSharedShopLock(pool:SharedPoolState,state:MatchState,locked:boolean,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,()=>setShopLock(state,locked,expectedGeneration));
@@ -249,14 +245,15 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 /** All original Match paths that may award a unit use this transaction-local pool policy. */
 export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult {
   return transact(pool,state,(_draft,policy,poolEvents)=>{
-    const result=matchCommand(_draft,policy);
+    const result=matchCommand(_draft,policy,poolEvents);
     // Subscription Service opens its shop the moment it is acquired (a pick or a timed-out pick).
     if(!result.ok||!subscriptionAcquired(state,result.state))return result;
     releaseShop(_draft,state.sharedPool!.seatId);
     return {...result,state:drawSubscriptionShop(_draft,result.state,poolEvents)};
   });
-  function matchCommand(_draft:PoolDraft,policy:UnitLootPolicy):MultiplayerCommandResult {
+  function matchCommand(_draft:PoolDraft,policy:UnitLootPolicy,poolEvents:SharedPoolEvent[]):MultiplayerCommandResult {
     switch(command.type) {
+      case 'buyXp': return buyXpWithShopRefresh(state,policy,leveled=>{releaseShop(_draft,state.sharedPool!.seatId);return drawShop(_draft,leveled,poolEvents,'dual-purpose');});
       case 'openAnvil': return openAnvil(state,command.unitId);
       case 'rerollAugment': return rerollAugment(state,command.choiceId,command.generation,command.optionIndex,command.augmentBlocked);
       case 'useConsumable': {

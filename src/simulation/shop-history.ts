@@ -20,10 +20,11 @@ import { AUGMENT_DEFINITIONS } from './content/augments';
 import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
 import { SHOP_CATALOG, MATCH_RULES } from './match-rules';
 
+const shopOwner=(id:string)=>Boolean(AUGMENT_SHOP[id])||id==='dual-purpose';
 const point=(s:MatchState):ShopHistoryPoint=>({round:s.round,level:s.level,xp:s.xp,resourcePrefix:s.resourceProvenance.entries.length,owners:s.augments.map(a=>a.choiceId),gold:s.gold,mechanicPrefix:s.seatMechanics?.receipts.length??0,lootPrefix:s.m8.loot.receipts.length,schedulePrefix:s.scheduleReceipts.length,economyPrefix:s.roundResults.length});
 const append=(s:MatchState,e:ShopHistoryEntry):MatchState=>s.shopHistory?{...s,shopHistory:{...s.shopHistory,entries:[...s.shopHistory.entries,e]}}:s;
 export function recordShopAcquisition(before:MatchState,after:MatchState):MatchState {
- if(!after.shopHistory&&!after.augments.some(a=>AUGMENT_SHOP[a.definitionId]))return after;
+ if(!after.shopHistory&&!after.augments.some(a=>shopOwner(a.definitionId)))return after;
  const started:MatchState=after.shopHistory?after:{...after,shopHistory:{version:SHOP_HISTORY_VERSION,initial:{...point(before),shop:before.shop,rngState:before.rngState},entries:[]}};
  return append(started,{kind:'acquire',point:point(after),choiceId:after.augments.at(-1)!.choiceId});
 }
@@ -49,7 +50,8 @@ export function recordShopFiresale(before:MatchState,after:MatchState,slot:numbe
 }
 function baselineSpends(state:MatchState):Map<string,number> {
  const h=state.shopHistory!,initial=h.initial,owners=state.augments.filter(a=>initial.owners.includes(a.choiceId));
- const view={...state,augments:owners,round:initial.round,level:initial.level,xp:initial.xp};
+ const view={...state,augments:owners,round:initial.round,level:initial.level,xp:initial.xp,
+  resourceProvenance:{...state.resourceProvenance,entries:state.resourceProvenance.entries.slice(0,initial.resourcePrefix)}};
  let left=state.resourceProvenance.entries.slice(0,initial.resourcePrefix).filter(e=>e.kind==='free-reroll').length;
  const used=new Map<string,number>();
  for(const g of freeRerollGrants(view)){const n=Math.min(left,g.count);used.set(g.choiceId,n);left-=n;}
@@ -94,7 +96,7 @@ function checkPoint(p:ShopHistoryPoint,state:MatchState):void {
 /** Replays the shop subdomain. Summaries and purchase provenance are outputs, never sources of Ticket or star decisions.
  * Like the existing unsigned resource/battle logs, this proves rule consistency, not authorship of a file. */
 export function validateShopHistory(state:MatchState):void {
- const held=state.augments.some(a=>AUGMENT_SHOP[a.definitionId]),h=state.shopHistory;
+ const held=state.augments.some(a=>shopOwner(a.definitionId)),h=state.shopHistory;
  const shopPurchases=state.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&e.source.kind==='shop');
  if(!h){
   check(!held,'missing shop-history-v1; legacy shop augment saves cannot be authenticated');
@@ -104,11 +106,11 @@ export function validateShopHistory(state:MatchState):void {
  check(held,'history without owner');keys(h,['version','initial','entries']);check(h.version===SHOP_HISTORY_VERSION&&Array.isArray(h.entries),'version');
  keys(h.initial,[...POINT_KEYS,'shop','rngState']);
  const {shop:initialShop,rngState:initialRng,...initialPoint}=h.initial;checkPoint(initialPoint,state);
- check(!state.augments.some(a=>initialPoint.owners.includes(a.choiceId)&&AUGMENT_SHOP[a.definitionId]),'initial owner');
+ check(!state.augments.some(a=>initialPoint.owners.includes(a.choiceId)&&shopOwner(a.definitionId)),'initial owner');
  check(int(initialRng)&&initialRng<=0xffffffff&&int(initialShop.generation,state.sharedPool?0:1)&&initialShop.generation<=state.shop.generation
   &&Array.isArray(initialShop.slots)&&initialShop.slots.length===MATCH_RULES.shopSize&&!initialShop.slots.some(s=>s.status==='available'&&s.starLevel===2),'initial shop');
  check(h.entries[0]?.kind==='acquire'&&h.entries[0].point.round===initialPoint.round,'acquisition boundary');
- const firstChoice=h.entries[0].choiceId;check(AUGMENT_SHOP[state.augments.find(a=>a.choiceId===firstChoice)!.definitionId],'first shop acquisition');
+ const firstChoice=h.entries[0].choiceId;check(shopOwner(state.augments.find(a=>a.choiceId===firstChoice)!.definitionId),'first shop acquisition');
  check(initialPoint.economyPrefix===initialPoint.round-1,'initial economy boundary');
  keys(initialShop,['generation','slots',...(Object.hasOwn(initialShop,'locked')?['locked']:[])]);
  check(initialShop.locked===undefined||typeof initialShop.locked==='boolean','initial lock');
@@ -146,6 +148,8 @@ export function validateShopHistory(state:MatchState):void {
  };
  for(const e of h.entries){
   check(e&&typeof e==='object','entry');checkPoint(e.point,state);check(e.point.resourcePrefix>=prefix,'resource order');prefix=e.point.resourcePrefix;
+  // Crafted Crafting credits exist only after their real combination, including within the same round.
+  cursor={...cursor,resourceProvenance:{...state.resourceProvenance,entries:state.resourceProvenance.entries.slice(0,prefix)}};
   sync(e.point);
   const expectedOwners=e.kind==='acquire'?[...cursor.augments.map(a=>a.choiceId),e.choiceId]:cursor.augments.map(a=>a.choiceId);
   check(same(e.point.owners,expectedOwners),'ownership chronology');
@@ -169,7 +173,7 @@ export function validateShopHistory(state:MatchState):void {
   }else if(e.kind==='xp'){
    keys(e,['kind','point','goldCost']);check(cursor.level<10&&e.goldCost===xpPurchaseCost(cursor.augments,cursor.round),'XP cost');
    check(cursor.gold>=e.goldCost,'XP bank');cursor={...cursor,gold:cursor.gold-e.goldCost,...grantXp(cursor.level,cursor.xp,xpPurchaseAmount(cursor.augments,cursor.round))};
-   needDual=!cursor.shop.locked&&cursor.augments.some(a=>AUGMENT_SHOP[a.definitionId]?.rule==='dual-purpose');
+   needDual=cursor.augments.some(a=>a.definitionId==='dual-purpose');
   }else if(e.kind==='release'){
    keys(e,['kind','point']);check(state.multiplayer?.status==='eliminated'&&state.playerHp===0&&e===h.entries.at(-1),'seat release');needNatural=false;
    cursor={...cursor,shop:{...cursor.shop,locked:false,slots:cursor.shop.slots.map(()=>({status:'purchased',empty:true}))}};

@@ -1450,3 +1450,21 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 | 单人 `src/m6` / `src/rendering/match-session.ts:86` | 无源码改动；既有公共命令写入历史，M6 封套 export/validateFile 经完整战斗历史验证往返。 |
 
 内部记录/重演接口（不是客户端可调用的新游戏命令）：`recordShopAcquisition(before,after)`、`recordShopXp(before,after)`、`recordShopLock(before,after)`、`recordShopRelease(before,after)`、`recordShopAnomalyReroll(before,after)` 的参数和返回值均为 `MatchState`；`recordShopRound(state)` 同理；`recordShopBuy(before,after,slot:number)`、`recordShopFiresale(before,after,slot:number,receiptId:string)`、`recordShopDraw(before,after,cause:ShopDrawCause,stock?:Readonly<Record<string,number>>)` 返回附加证据的 `MatchState`，无历史时保持原 after。调用方只在成功事务内提交。`freeRerollGrants(state:MatchState):readonly {choiceId:string;count:number}[]` 提供稳定额度分配顺序。`replaySharedShop(state:MatchState,stock:Readonly<Record<string,number>>,subscription:boolean):MatchState` 在副本池上重演，绝不改变传入池/状态。`drawSoloAugmentShop(initial,context,subscription=false,cause=subscription?'subscription':'natural',before=initial,audit=true):MatchState` 的后三个参数仅供领域接线和只读重演，既有三个参数调用保持原行为；历史类型和输入输出完整定义见 `src/simulation/shop-history-types.ts:4`。这些内部入口使用原有合法领域前置条件，不新增公共失败 reason；恢复错误前缀及旧档策略如上。
+
+### v24 Batch 5：四条资料已闭合强化（P-B5，2026-10-25）
+
+- 内容注册：`content/augment-pool-batch5.ts`；`called-shot`／`crafted-crafting`（银）、`dual-purpose`（彩）仅2-1，`a-change-of-fate`（彩）仅4-2。保留14.24原始 effects，行为适配详见 `S13_RULES_GAP.md` 的 P-B5。没有存档 schema/协议变更；新增内容使旧 digest 失效。
+- 既有 `buyXp(state, unitLootPolicy?) -> MatchCommandResult`：双重目的成功支付后按新等级强刷商店、不消耗免费次数、保留锁定，每轮首次返2G；失败保留原state/RNG/事件原子性。共享席持有双重目的时，普通入口拒绝 `invalid-mechanic-state`，应使用下述事务，不能把本地商店与旧共享预留一起发布。
+- `runSharedMatchCommand(pool: SharedPoolState, state: MatchState, {type:'buyXp'}) -> SharedPoolResult`：成功返回新 pool/state、领域events及poolEvents；事务内先检验普通买经验资格，再释放本席旧商店预留、以共享剩余权重生成新商店、结算返金及等级奖励。失败返回原 pool/state；reason 沿用 `SharedPoolFailure`，包括 `wrong-phase`、`insufficient-gold`、`max-level`、池/席绑定校验失败。服务器只需改变buyXp分派入口，不自行计算规则。
+- Review K 修复（P-B5-K，2026-10-26）：`applySeatCommand(pool,state,{type:'buyXp'})` 已接上述共享事务。`batch5XpPurchases(state:MatchState,round:number):number` 读取该轮取得后成功购买的有序来源事实，包含所有合法操作阶段。取得时写 `dual-purpose-selected{choiceId,level,xp}`，购买时写 `dual-purpose-xp-purchased{levelBefore,xpBefore,generation,settled}`（均沿用 `sequence/roundId`）；generation为强刷后的值，settled为本轮是否已有结算记录。`validateBatch5Gold(state:MatchState):void` 逐轮认证购买、结算免费经验与次轮起点，再核对唯一2G收据；失败抛 `Invalid batch5 XP authority`／`Invalid batch5 gold authority`（经验非法值也可由既有 progression 校验拒绝）。离线三恢复入口及共享 `restoreSharedOrbSnapshot(pool,input)` 均执行认证；删除持有者与收据也不能绕过来源事实检查。失败购买不记录事实。缺新事实的旧双重目的候选存档不做推测迁移；没有顶层格式版本、内容身份或 epoch 证据变更。
+- 精心打造：既有 `combineItems` 和 `equipItem` 产生的真实合成事实，每件给2次额度；`freeRerollsAvailable` 读取，`rerollShop`／`rerollSharedShop` 消费。恢复拒绝伪造合成、消费计数、缺失消费记录及借用后续合成额度。
+- 进攻宣告：既有 `selectChoice` 取得时设胜4、给4G；结算与恢复使用同一连胜入口，之后不重复设置。
+- 扭转命运：取得给蓝霸符；取得后入轮银行至少60与取得轮起PvP胜利可任意顺序完成。`batch5RewardPlan(state: MatchState) -> AugmentGift[]` 只从既有历史推导枪刃/梅尔的唯一礼物计划，沿用批次1收据、满席重试、共享orb和卡池政策。界面可读取既有 owned augment／收据；本任务不新增展示字段。离线历史用现有 `restoreMatch(input,battles?)`／`serializeMatch(state,battles?)` 完整回放认证，不从当前余额或自报任务计数发奖。
+
+### v24 商店 / Batch 5 合并（P-V24-MERGE，2026-10-27）
+
+本节覆盖上述历史商店合同中“双重目的锁店时只有XP事件”的约定。唯一内容行在 `content/augment-pool-batch5.ts`；返金及有序购买认证使用 Batch 5 / Review K，商店生成和 `shop-history-v1` 使用商店分支。每笔成功XP购买（含锁店）强刷一次，保留锁店开关，判定一次棱彩门票，按同一生成器应用操纵商店/星夜；每轮仅第一笔返2G，不消费免费次数。
+
+`buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPolicy,refreshShop?:(leveled:MatchState)=>MatchState):MatchCommandResult` 是领域内部接线入口。共享事务传入真实有限池生成回调；失败仍返回原state与原reason。单人 `buyXp` 使用同一实现，直接对共享双重目的调用 `buyXp` 仍拒绝 `invalid-mechanic-state`。
+
+`buySharedXp(pool:SharedPoolState,state:MatchState):SharedPoolResult` 只转发 `runSharedMatchCommand(pool,state,{type:'buyXp'})`，不存在第二套返金/刷新逻辑；房间所有 `buyXp` 直接使用后者。共享事务保留订阅取得和超时取得的即时开店包装。其他签名、失败reason、外层schema、客户端命令和网络封套不变；内容身份按指定脚本统一重算，历史epoch尚未重录。

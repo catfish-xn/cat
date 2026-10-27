@@ -1,4 +1,5 @@
 import { validateShopHistory } from './shop-history';
+import { batch5Streak } from './augment-pool-batch5-progress';
 import { withG23RestoreReuse, registerG23RestoreOwner } from './g23-restore-reuse';
 import { batch4B4xpRecordedExtra, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
 import { formingTotals, expectedMagicRoll, outcomeAcquisitionXp } from './augment-pool-batch3-progress';
@@ -278,6 +279,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     record(result); integer(result.mechanicReceiptPrefixLength); requireValue(result.mechanicReceiptPrefixLength!<=(state.seatMechanics?.receipts.length??0), 'mechanic receipt prefix'); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === openingHpBeforeRound(state, result.roundId, i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
+    streak=batch5Streak(state,result.round,streak);
     requireValue(same(result.streakBefore, streak), 'history streak before');
     requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,result.round),result.levelBefore,result.xpBefore,xpPurchaseAmount(state.augments,result.round)), 'history XP preparation chain');
     let expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
@@ -293,6 +295,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     experienceAfter=totalExperience(result.levelAfter,result.xpAfter);
     requireValue(result.combatTicks <= MAX_COMBAT_TICKS && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
   }
+  if(!settled)streak=batch5Streak(state,state.round,streak);
   requireValue(same(state.streak, streak), 'current streak');
   requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
   requireValue(state.phase === 'gameOver' ? state.outcome === (roundDefinition.isFinal && state.playerHp > 0 && state.roundResults.at(-1)?.result === 'playerWin' ? 'victory' : 'defeat') : state.outcome === null, 'outcome');

@@ -115,12 +115,12 @@ import { selectChoice, deployMatchUnit, buyUnit, startMatchCombat, stepMatch, ty
 import { accepted, reachRound } from './match-helpers';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
-// v24 shop pool (232 offers), fmix32 openings and 14.24 stage bans: each
+// v24 merged pool (235 offers), fmix32 openings and 14.24 stage bans: each
 // seed is the first non-Trainer-Golem seed whose offer at the card's first node holds it (Trainer Golem openings block
 // the route's empty-board helper); death cards still see an ally death. Climb the Ladder I is a 3-2/4-2 card, so its seed
 // is a 3-2 seed. The Blistering Strikes 16/648 ignite restore regression lives in tests/blistering-restore.test.ts.
 it.each([
- ['blistering-strikes',163],['clockwork-accelerator',58],['lone-hero',8],['climb-the-ladder-i',17],['inspiring-epitaph',63],
+ ['blistering-strikes',61],['clockwork-accelerator',58],['lone-hero',94],['climb-the-ladder-i',17],['inspiring-epitaph',63],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
  // 14.24 stage tags: Climb the Ladder I is offered at 3-2/4-2; its seed column is a 3-2 seed.
  expect(createMatch(seed).preparation.units.some(u=>u.definitionId==='trainer-golem')).toBe(false);
