@@ -187,7 +187,10 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   if (after === before) return after;
   let next = recordAugmentAcquisition(before, after);
   if (!next.augmentHistory) return next;
-  if (!same(historyRoster(before), historyRoster(after)) && !same(next.augmentHistory!.facts.filter(f => f.kind === 'positions').at(-1)?.roster ?? null, historyRoster(after))) next = appendAugmentFact(next, { kind: 'positions', roster: historyRoster(after) });
+  // Identical preparation/item containers have the same roster. Combat ticks usually keep
+  // both references, so avoid cloning/canonicalizing that unchanged roster on every tick.
+  if ((before.preparation !== after.preparation || before.items !== after.items)
+    && !same(historyRoster(before), historyRoster(after)) && !same(next.augmentHistory!.facts.filter(f => f.kind === 'positions').at(-1)?.roster ?? null, historyRoster(after))) next = appendAugmentFact(next, { kind: 'positions', roster: historyRoster(after) });
   // Streaming PvE can finish at tick zero without exposing a CombatState until settlement.
   // The frozen input basis, not a later editable board, is the authoritative opening roster.
   if (!before.combatInputBasis && after.combatInputBasis) {

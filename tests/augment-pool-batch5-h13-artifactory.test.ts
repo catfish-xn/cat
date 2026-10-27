@@ -1,3 +1,4 @@
+import { offerFor } from './augment-stage-helpers';
 import {existsSync,readFileSync} from 'node:fs';
 import {it,expect,beforeAll} from 'vitest';
 import {AUGMENT_BATCH5_H13} from '../src/simulation/content/augment-pool-batch5-h13';
@@ -6,7 +7,7 @@ import {AUGMENT_TIERS} from '../src/simulation/content/augment-policy';
 import {augmentOfferAllowed} from '../src/simulation/augment-offers';
 import {augmentPool} from './fixtures/m5/oracle.g2.cjs';
 import {selectChoice,combineItems,startMatchCombat,nextRound,openAnvil,type MatchState} from '../src/simulation/match';
-import {accepted,reachRound,resolveM5Choices,emptyBoard} from './match-helpers';
+import {accepted,resolveM5Choices,emptyBoard} from './match-helpers';
 import {requireAugmentFacts} from '../src/simulation/augment-history';
 import {enterH13ItemRound,h13RoundItemPool} from '../src/simulation/augment-pool-batch5-h13-entry';
 import {G24_FORGE_POOLS} from '../src/simulation/content/g2-4-forges';
@@ -17,7 +18,7 @@ import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 let acquired:MatchState,ready:MatchState,advanced:MatchState;
 beforeAll(()=>{
  // Seed 47 has the real 3-2 offer; selecting a quiet first augment yields ordinary components through public choices.
- const open=reachRound('3-2',false,47),c=open.pendingChoice!;expect(c.offers).toContain('artifactory');
+ const open=offerFor('artifactory'),c=open.pendingChoice!;expect(c.offers).toContain('artifactory');
  acquired=accepted(selectChoice(open,c.choiceId,c.generation,'artifactory'));ready=acquired;
 });
 it.skipIf(!existsSync(RESEARCH_FILE))('B5-22 retains source counts and unused Health=50',()=>{

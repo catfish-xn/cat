@@ -29,7 +29,8 @@ for (let round = 2; round <= 12; round++) beforeAll(() => {
   });
 });
 beforeAll(() => {
-  for (const seat of room.state.seats.filter(s => s.alive)) {
+  // Seed 0 / s7 has the three-item donor vector; s6's expanded-pool offer has only two.
+  for (const seat of [...room.state.seats].sort((a,b)=>Number(b.seatId==='s7')-Number(a.seatId==='s7')).filter(s => s.alive)) {
     for (let slot = 0; slot < 3; slot++) {
       const c = room.state.seats.find(s => s.seatId === seat.seatId)!.match.pendingChoice!;
       if (c.offers.includes('sponging')) { seatId = seat.seatId; break; }
@@ -54,6 +55,12 @@ beforeAll(() => {
   const donor = current().preparation.units.find(u => u.team === 'player' && u.location.kind === 'board')!;
   expect(donor).toBeDefined();
   for (const [slot,item] of completed().slice(0,3).entries()) expect(room.handle(seatId,{type:'equip',itemId:item.id,unitId:donor.id,slot})).toMatchObject({ok:true});
+  // Human seats keep purchased heroes on the bench until an explicit deploy command.
+  for (const unit of current().preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench').slice(0,3)) {
+    const used = new Set(current().preparation.units.flatMap(u => u.team === 'player' && u.location.kind === 'board' ? [`${u.location.cell.col},${u.location.cell.row}`] : []));
+    const cell = Array.from({length:28},(_,i)=>({col:i%7,row:4+Math.floor(i/7)})).find(c => !used.has(`${c.col},${c.row}`))!;
+    expect(room.handle(seatId,{type:'deploy',unitId:unit.id,target:{kind:'board',cell}})).toMatchObject({ok:true});
+  }
   prepared = {match:current(),pool:room.state.pool,authority:room.augmentHistoryAuthority(seatId)};
 });
 beforeAll(() => { runUntil(room,clock,s => s.round === 12 && s.phase === 'settlement'); });

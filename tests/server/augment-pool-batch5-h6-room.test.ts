@@ -5,7 +5,7 @@ import { canonicalContent } from '../../src/simulation/content';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 
 describe('contested real room',()=>{
- const {room,clock}=makeRoom(new TwoSidedBattleResolver());
+ const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:3});
  afterAll(()=>room.dispose());
  for(const round of ['1-2','1-3','1-4','2-1','2-3','2-5','2-7','3-2']) it(`reaches ${round} through the room`,()=>{
   if(round==='1-2')room.start();

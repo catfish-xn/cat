@@ -10,6 +10,7 @@ import { makeRoom } from './server/helpers';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { CAROUSEL_RULES_BINDING } from '../src/server/room/carousel';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
+import { openingEncounterId } from '../src/simulation/opening-encounter';
 
 export const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 export function firstOffer(id:string):MatchState {return reachRound('2-1',false,firstNodeSeed(id,10000));}
@@ -28,13 +29,13 @@ export function roomOffer(id:string,node='2-1',allowReroll=false) {
  for(let seed=0;seed<=100;seed++){
   const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed,carousel:CAROUSEL_RULES_BINDING});
   for(const seat of room.state.seats.filter(s=>s.kind==='human')) {
-   const s=seat.match,tier=resolveAugmentTier(s,`round:${node}:augment`),filter={node,fieldedTraits:[],blocked:[]};
-   const choice=generateChoices(augmentCandidates(tier,[],[],null,filter),s.choiceRngState);
+   const s=seat.match,tier=resolveAugmentTier(s,`round:${node}:augment`),filter={node,fieldedTraits:[],blocked:[],sharedCarousel:!!s.carousel};
+   const choice=generateChoices(augmentCandidates(tier,[],[],openingEncounterId(s),filter),s.choiceRngState);
    let offers=[...choice.offers],rng=choice.choiceRngState;const removed=[...offers];
    for(let rerolls=0;rerolls<=(allowReroll?3:0);rerolls++){
     if(offers.includes(id)){room.start();return {room,clock,seatId:seat.seatId,rerolls};}
     if(rerolls===3)break;
-    const draw=drawAugmentCard(augmentCandidates(tier,[],removed,null,filter),rng);offers[rerolls]=draw.definitionId;
+    const draw=drawAugmentCard(augmentCandidates(tier,[],removed,openingEncounterId(s),filter),rng);offers[rerolls]=draw.definitionId;
     removed.push(draw.definitionId);rng=draw.choiceRngState;
    }
   }

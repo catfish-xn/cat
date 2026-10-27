@@ -8,7 +8,7 @@ const offers = new Map<string, MatchState>();
 export function offered(id: string): MatchState {
   const cached = offers.get(id); if (cached) return cached;
   // Bounded cheap offer scan only; no full match/seed sweeps.
-  for(let seed=0;seed<=100;seed++) {
+  for(let seed=0;seed<1000;seed++) {
     const s=createMatch(seed),tier=resolveAugmentTier(s,'round:2-1:augment');
     if (tier !== 'silver') continue;
     const filter = {node:'2-1',fieldedTraits:[],blocked:[]}, encounter = openingEncounterId(s);
@@ -25,6 +25,6 @@ export function offered(id: string): MatchState {
     }
     expect(open.pendingChoice!.offers).toContain(id);offers.set(id,open);return open;
   }
-  throw Error(`No first-node seed 0..100 for ${id}`);
+  throw Error(`No first-node seed 0..999 for ${id}`);
 }
 export function acquire(id: string) {const s=offered(id),c=s.pendingChoice!;return accepted(selectChoice(s,c.choiceId,c.generation,id));}

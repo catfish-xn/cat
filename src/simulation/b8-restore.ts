@@ -1,4 +1,5 @@
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
+import { pilferRewardPlan } from './augment-pool-batch5-s8a';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { batch5InventoryPlan, projectBatch5Items, validateBatch5Inventory } from './augment-pool-batch5-s3a';
@@ -396,7 +397,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   validateG23Restoration(state,parsedJsonInput);
   const opening = state.resourceProvenance.entries[0];
   check(opening?.kind === 'unit-acquired' && opening.source.kind === 'opening' && opening.source.seatId === (state.sharedPool?.seatId ?? 'solo') && (state.sharedPool || opening.source.seed === state.seed), 'opening stream identity');
-  const context: ResourceProvenanceContext = { augmentHistory:state.augmentHistory, s3bState:state, batch5Inventory:batch5InventoryPlan(state), g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
+  const context: ResourceProvenanceContext = { pilferRewards:pilferRewardPlan(state),augmentHistory:state.augmentHistory, s3bState:state, batch5Inventory:batch5InventoryPlan(state), g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
   const inventoryPlan=batch5InventoryPlan(state);validateBatch5Inventory(state,inventoryPlan);

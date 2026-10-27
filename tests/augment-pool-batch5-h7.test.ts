@@ -149,8 +149,12 @@ describe('B5-42 Good for Something',()=>{
       const {room}=setup;
       for(const unit of room.state.seats.find(s=>s.seatId===seatId)!.match.preparation.units.filter(u=>u.team==='player'))
         expect(room.handle(seatId,{type:'sell',unitId:unit.id})).toMatchObject({ok:true});
-      const match=room.state.seats.find(s=>s.seatId===seatId)!.match;
-      const slot=match.shop.slots.findIndex(o=>o.status==='available'&&shopOfferCost(o)===1);
+      let match=room.state.seats.find(s=>s.seatId===seatId)!.match;
+      for(let rolls=0;rolls<10&&!match.shop.slots.some(o=>o.status==='available'&&o.definitionId==='powder');rolls++){
+        expect(room.handle(seatId,{type:'reroll'})).toMatchObject({ok:true});
+        match=room.state.seats.find(s=>s.seatId===seatId)!.match;
+      }
+      const slot=match.shop.slots.findIndex(o=>o.status==='available'&&o.definitionId==='powder');
       expect(slot).toBeGreaterThanOrEqual(0);
       expect(room.handle(seatId,{type:'buy',slot,generation:match.shop.generation})).toMatchObject({ok:true});
       const hero=room.state.seats.find(s=>s.seatId===seatId)!.match.preparation.units.find(u=>u.team==='player')!;

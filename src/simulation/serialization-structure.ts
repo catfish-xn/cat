@@ -153,6 +153,9 @@ export function validateMatchStructure(input: unknown): MatchState {
 function restoreMatchWithinCall(input: unknown, forSerialization = false, parsedImmutable = typeof input === 'string' && !input.includes('-0')): MatchState {
   const decoded = typeof input === 'string' ? decodeMatchJson(input, parsedImmutable) : { value: input };
   const raw: unknown = decoded.value;
+  // Online snapshots are outside this format even when their seat-bound history is invalid.
+  if (raw && typeof raw === 'object')
+    requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool') && !Object.hasOwn(raw,'carousel'), 'multiplayer-state');
   if (raw && typeof raw === 'object' && 'augmentHistory' in raw) preflightAugmentHistory(raw as MatchState);
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
@@ -160,7 +163,6 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   const same = typeof input === 'string' ? equalValidatedContent
     : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   record(raw);
-  requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool') && !Object.hasOwn(raw,'carousel'), 'multiplayer-state');
   requireValue(raw.schemaVersion === M8_VERSION.schemaVersion && raw.rulesVersion === M8_VERSION.rulesVersion && raw.contentVersion === M8_VERSION.contentVersion && raw.commandProtocolVersion === M8_VERSION.commandProtocolVersion && raw.rngAlgorithm === M8_VERSION.rngAlgorithm && raw.tickMs === M8_VERSION.tickMs, 'unsupported-version');
   requireValue(raw.contentDigest === CONTENT_DIGEST, 'content-digest');
   for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);

@@ -83,7 +83,7 @@ describe('B5-44 real online selection, battle and early carousel pick',()=>{
   beforeAll(()=>{
     for(let seed=0;seed<=100;seed++){
       const candidate=makeRoom(new TwoSidedBattleResolver(),{seed,carousel:CAROUSEL_RULES_BINDING});
-      const possible=candidate.room.state.seats.filter(s=>s.kind==='human').some(({match:s})=>generateChoices(augmentCandidates(resolveAugmentTier(s,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),s.choiceRngState).offers.includes('titanic-titan'));
+      const possible=candidate.room.state.seats.filter(s=>s.kind==='human').some(({match:s})=>generateChoices(augmentCandidates(resolveAugmentTier(s,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[],sharedCarousel:!!s.carousel}),s.choiceRngState).offers.includes('titanic-titan'));
       if(possible){setup=candidate;setup.room.start();return;}candidate.room.dispose();
     }
     throw Error('No human room seed in 0..100');

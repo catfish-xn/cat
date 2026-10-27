@@ -1,3 +1,4 @@
+import { roomOfferFor } from './augment-offer-helpers';
 import {HISTORY_AUGMENT_ROOM_ROUTES} from '../augment-stage-helpers';
 import {afterAll,beforeAll,describe,expect,it} from 'vitest';
 import {Room,ROOM_TIMING_DEFAULTS} from '../../src/server/room/room';
@@ -9,17 +10,28 @@ import {requireAugmentFacts} from '../../src/simulation/augment-history';
 import {restoreSharedOrbSnapshot,assertSharedPoolConservation} from '../../src/simulation/shared-pool';
 import {claimAllOrbs,answerOpenChoices} from './helpers';
 import {goldenFindGoldPlan,GOLDEN_FIND_SOURCE} from '../../src/simulation/augment-pool-batch5-h9';
+import {getDeploymentCap} from '../../src/simulation/match';
+import {isAnvil} from '../../src/simulation/content/anvils';
+import {ITEM_DEFINITIONS} from '../../src/simulation/content/items';
 for(const streaming of [false,true])describe(`a-golden-find streaming=${streaming}`,()=>{
 const clock=new ManualClock();
 const room=new Room(Array.from({length:8},(_,i)=>({seatId:`s${i}`,name:`s${i}`,kind:'human' as const})),
  {...ROOM_TIMING_DEFAULTS,combatStreaming:streaming,preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,roomId:'h9',seed:HISTORY_AUGMENT_ROOM_ROUTES['a-golden-find'].seed,clock,resolver:new TwoSidedBattleResolver()});
 let anomalyTarget='unit-1';
 const mine=()=>room.state.seats[0].match;
+function deployHeroes():void{
+ for(const unit of mine().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))){
+  const board=mine().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');if(board.length>=getDeploymentCap(mine()))break;
+  const used=new Set(board.flatMap(u=>u.location.kind==='board'?[`${u.location.cell.col},${u.location.cell.row}`]:[]));
+  const cell=Array.from({length:28},(_,i)=>({col:i%7,row:4+Math.floor(i/7)})).find(c=>!used.has(`${c.col},${c.row}`))!;
+  expect(room.handle('s0',{type:'deploy',unitId:unit.id,target:{kind:'board',cell}})).toMatchObject({ok:true});answerOpenChoices(room,['s0']);
+ }
+}
 beforeAll(()=>room.start());
 for(const round of [2,3,4,5,6,8,9,10,11,12,13,15,16,17,18,19])beforeAll(()=>runUntil(room,clock,s=>s.round===round&&s.phase==='preparation'));
 afterAll(()=>room.dispose());
 it('room choose and reroll use the real Golden Find credits and record authoritative two-sided kills',()=>{
- const c=mine().pendingChoice!;expect(c.offers).toContain('a-golden-find');
+ roomOfferFor(room,'s0','a-golden-find');const c=mine().pendingChoice!;expect(c.offers).toContain('a-golden-find');
  expect(room.handle('s0',{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'a-golden-find'})).toMatchObject({ok:true});
  expect(freeRerollsAvailable(mine())).toBe(10);const before=mine();
  expect(room.handle('s0',{type:'reroll'})).toMatchObject({ok:true});expect(mine().gold).toBe(before.gold);expect(freeRerollsAvailable(mine())).toBe(9);
@@ -47,8 +59,20 @@ it('settles actual room PvP and authenticates attributed deaths against independ
 it('builds the anomaly army through room XP, orb, shop and equipment commands',()=>{
  runUntil(room,clock,s=>s.round===20&&s.phase==='preparation');
  claimAllOrbs(room,['s0']);answerOpenChoices(room,['s0']);
+ for(const unit of mine().preparation.units.filter(u=>u.team==='player'&&isAnvil(u.definitionId))){
+  expect(room.handle('s0',{type:'openAnvil',unitId:unit.id})).toMatchObject({ok:true});answerOpenChoices(room,['s0']);
+ }
  while(mine().gold>=4&&mine().level<8)expect(room.handle('s0',{type:'buyXp'})).toMatchObject({ok:true});
- for(let slot=0;slot<5;slot++)if(mine().shop.slots[slot].status==='available'&&mine().gold>=5)expect(room.handle('s0',{type:'buy',slot,generation:mine().shop.generation})).toMatchObject({ok:true});
+ deployHeroes();
+ for(let slot=0;slot<5;slot++)if(mine().shop.slots[slot].status==='available'&&mine().gold>=5){expect(room.handle('s0',{type:'buy',slot,generation:mine().shop.generation})).toMatchObject({ok:true});answerOpenChoices(room,['s0']);}
+ deployHeroes();
+ for(let n=0;n<20;n++){
+  const inventory=mine().items.filter(i=>i.location.kind==='inventory');
+  const pair=inventory.flatMap((a,i)=>inventory.slice(i+1).map(b=>[a,b] as const)).find(([a,b])=>Object.values(ITEM_DEFINITIONS).some(d=>d.recipe?.slice().sort().join()===[a.definitionId,b.definitionId].sort().join()));
+  if(!pair)break;
+  expect(room.handle('s0',{type:'combine',a:pair[0].id,b:pair[1].id})).toMatchObject({ok:true});
+ }
+ expect(room.handle('s0',{type:'deploy',unitId:'unit-1',target:{kind:'board',cell:{col:1,row:7}}})).toMatchObject({ok:true});
  for(const item of mine().items.filter(i=>i.location.kind==='inventory'))for(let slot=0;slot<3;slot++)if(room.handle('s0',{type:'equip',itemId:item.id,unitId:'unit-1',slot}).ok)break;
 });
 for(const round of [22,23])it(`reaches online round ${round} through real room timers`,()=>{

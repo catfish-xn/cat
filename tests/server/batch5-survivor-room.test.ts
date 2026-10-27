@@ -28,9 +28,9 @@ describe.each([
     }
   }
   const clock = new ManualClock();
-  const room = new ObservedRoom(SEATS.map(s => s.seatId === 's4' ? { ...s, kind: 'human' } : s),
+  const room = new ObservedRoom(SEATS.map(s => s.seatId === 's7' ? { ...s, kind: 'human' } : s),
     { ...TIMINGS, roomId: 'test-room', seed: 8, clock, combatStreaming, resolver: new TwoSidedBattleResolver() });
-  const holder = () => room.state.seats.find(s => s.seatId === 's4')!;
+  const holder = () => room.state.seats.find(s => s.seatId === 's7')!;
   const published: MatchEvent[] = [];
   const finalRound = holderDies ? 25 : 24;
   let lastRevision = -1;
@@ -38,7 +38,7 @@ describe.each([
   let disconnected = false;
   beforeAll(() => {
     room.subscribe(state => {
-      const seat = state.seats.find(s => s.seatId === 's4')!;
+      const seat = state.seats.find(s => s.seatId === 's7')!;
       if (seat.seatRevision === lastRevision) return;
       lastRevision = seat.seatRevision;
       published.push(...grants(seatPushEvents(seat)));
@@ -64,7 +64,8 @@ describe.each([
       if (room.state.round === round && room.state.phase === 'preparation') {
         for (const seat of room.state.seats) {
           if (!seat.alive) continue;
-          const sell = ['s0', 's2', ...(round >= 2 ? ['s1'] : []), ...(holderDies && round >= 3 ? ['s4'] : [])].includes(seat.seatId);
+          // In the dying-holder vector, one opening win keeps s0 in the same final elimination batch.
+          const sell = ['s2', ...(!holderDies || round >= 2 ? ['s0'] : []), ...(round >= 2 ? ['s1'] : []), ...(holderDies && round >= 3 ? ['s7'] : [])].includes(seat.seatId);
           if (sell) for (const unit of seat.match.preparation.units.filter(u => u.team === 'player'))
             command(seat, { type: 'sell', unitId: unit.id });
         }
@@ -80,7 +81,7 @@ describe.each([
         }
       }
       if (room.state.round === finalRound && !disconnected) {
-        expect(room.setConnected('s4', false)).toBe(true);
+        expect(room.setConnected('s7', false)).toBe(true);
         disconnected = true;
       }
       if (!combatStreaming && round === 24 && !holderDies && room.state.round === round && room.state.phase === 'battle' && !payoutPlan) {
@@ -104,7 +105,7 @@ describe.each([
     if (holderDies) {
       expect(seat.alive).toBe(false);
       expect(seat.eliminatedRound).toBe(25);
-      expect(room.state.seats.filter(s => s.eliminatedRound === 25).map(s => s.seatId)).toEqual(['s0', 's1', 's2', 's4']);
+      expect(room.state.seats.filter(s => s.eliminatedRound === 25).map(s => s.seatId)).toEqual(['s0', 's1', 's2', 's7']);
       expect(receipts(seat.match)).toEqual([]);
       expect(grants(seat.serverEvents?.events ?? [])).toEqual([]);
       return;

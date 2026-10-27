@@ -8,7 +8,7 @@ import { applyRoundSettlement, enableMultiplayerSettlement, ROUND_SETTLEMENT_VER
 import { deferredRoundIncome } from '../src/simulation/deferred-income';
 import { resolveRoundEconomy } from '../src/simulation/round-economy';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import { validateBatch5S6cGold } from '../src/simulation/augment-pool-batch5-s6c';
+import { batch5S6cSettlementHealth, validateBatch5S6cGold } from '../src/simulation/augment-pool-batch5-s6c';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
 import { firstNodeSeed, offerFor } from './augment-stage-helpers';
 import { emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
@@ -103,6 +103,11 @@ it('B5-49 authentic multiplayer PvP pays recurring 2 HP and 1 gold only for surv
  expect(settled.gold).toBe(settled.roundResults.at(-1)!.goldAfter-deferredRoundIncome(settled.roundResults.at(-1)!)+1);
  expect(settled.seatMechanics!.receipts.filter(v=>v.source==='augment-pool-batch5-s6c')).toHaveLength(1);
  expect(()=>validateBatch5S6cGold(settled)).not.toThrow();
+ // Pure health vectors: the caller authenticates prior Titanic Titan ownership.
+ // S6C must use that cap, and a non-holder must keep HP above the old cap.
+ const titan={...settled,augments:[{definitionId:'titanic-titan',choiceId:'round:2-1:augment',acquiredRound:4},...settled.augments.filter(a=>a.acquiredRound!==4)]};
+ expect(batch5S6cSettlementHealth(titan,r.round,119)).toBe(120);
+ expect(batch5S6cSettlementHealth({...titan,augments:titan.augments.filter(a=>a.definitionId!==plus)},r.round,119)).toBe(119);
  const dead={...s,playerHp:1},deadResult=accepted(applyRoundSettlement(dead,receipt(dead)));
  expect(deadResult.playerHp).toBe(0);expect(deadResult.seatMechanics?.receipts.filter(v=>v.source==='augment-pool-batch5-s6c')??[]).toHaveLength(0);
 });

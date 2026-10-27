@@ -1,3 +1,4 @@
+import { roomOfferFor } from './augment-offer-helpers';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import { PER_ROUND_PREPARATION } from '../../src/server/room/room';
@@ -19,8 +20,8 @@ class DelayedClock extends ManualClock {
   }
 }
 const clock = new DelayedClock();
-// Independent offer oracle search: seed 158 offers Shop Glitch to s1 and s3 at 2-1.
-const { room } = makeRoom(new TwoSidedBattleResolver(), { seed: 158, clock, preparationMs: 31_000 });
+// Independent offer oracle search: seed 537 offers Shop Glitch to s1 and s3 at 2-1.
+const { room } = makeRoom(new TwoSidedBattleResolver(), { seed: 537, clock, preparationMs: 31_000 });
 const owners = ['s1', 's3'];
 const seat = (id = owners[0]!) => room.state.seats.find(s => s.seatId === id)!;
 const mine = () => seat().match;
@@ -69,7 +70,7 @@ it('starts a real room', () => { room.start(); });
 for (const id of ['1-3', '1-4', '2-1']) it(`reaches initial ${id}`, () => { reach(id); });
 it('selects the two offered augments through room.handle', () => {
   for (const id of owners) {
-    const c = seat(id).match.pendingChoice!;
+    roomOfferFor(room,id,'shop-glitch');const c = seat(id).match.pendingChoice!;
     expect(c.offers).toContain('shop-glitch');
     expect(room.handle(id, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: 'shop-glitch' })).toMatchObject({ ok: true });
   }
@@ -211,14 +212,14 @@ it('discards every staged seat and pool if a later seat clock transaction refuse
 for (const deliveryLag of [0, 5000]) describe(`default preparation, deadline delivery lag ${deliveryLag}ms`, () => {
 const deadlineClock = new DelayedClock();
 const deadlineRoom = makeRoom(new TwoSidedBattleResolver(), {
-  seed: 158, clock: deadlineClock, preparationMs: PER_ROUND_PREPARATION,
+  seed: 537, clock: deadlineClock, preparationMs: PER_ROUND_PREPARATION,
 }).room;
 afterAll(() => deadlineRoom.dispose());
 it('starts a room with the existing per-round preparation durations', () => { deadlineRoom.start(); });
 for (const id of ['1-3', '1-4', '2-1']) it(`reaches default-duration ${id}`, () => { reach(id, deadlineRoom, deadlineClock); });
 it('acquires Shop Glitch in the default-duration room', () => {
   for (const id of owners) {
-    const c = deadlineRoom.state.seats.find(s => s.seatId === id)!.match.pendingChoice!;
+    roomOfferFor(deadlineRoom,id,'shop-glitch');const c = deadlineRoom.state.seats.find(s => s.seatId === id)!.match.pendingChoice!;
     expect(c.offers).toContain('shop-glitch');
     expect(deadlineRoom.handle(id, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: 'shop-glitch' })).toMatchObject({ ok: true });
   }

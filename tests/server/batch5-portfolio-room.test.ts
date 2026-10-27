@@ -1,3 +1,4 @@
+import { roomOfferFor } from './augment-offer-helpers';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { restoreSharedOrbSnapshot } from '../../src/server-entry';
 import type { SeatCommand } from '../../src/server/room/types';
@@ -11,8 +12,8 @@ import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from '../fixtures/m5/orac
 const SOURCE='augment-pool-batch5-h4';
 const env={CATALOG,COST,ROUNDS,xp,entryXp,benchXp};
 describe.each([
-  {id:'diversified-portfolio',seed:8,seatId:'s2',acquire:4,build:9,initial:1},
-  {id:'diversified-portfolio-plus',seed:17,seatId:'s6',acquire:12,build:12,initial:4},
+  {id:'diversified-portfolio',seed:55,seatId:'s2',acquire:4,build:9,initial:1},
+  {id:'diversified-portfolio-plus',seed:1,seatId:'s3',acquire:12,build:12,initial:4},
 ])('$id through a real eight-seat room',({id,seed,seatId,acquire,build,initial})=>{
   const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed});
   const seat=()=>room.state.seats.find(s=>s.seatId===seatId)!;
@@ -27,7 +28,7 @@ describe.each([
     if(ROUNDS[round-1].kind!=='supply')runUntil(room,clock,s=>s.round===round&&s.phase==='preparation');
     expect(room.state.fault).toBeNull();
     if(round===acquire){
-      const before=seat().match,c=before.pendingChoice!;expect(c.offers).toContain(id);
+      roomOfferFor(room,seatId,id);const before=seat().match,c=before.pendingChoice!;expect(c.offers).toContain(id);
       command({type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:id});
       expect(seat().match.gold).toBe(before.gold+initial);
       expect(seat().match.seatMechanics!.receipts.filter(r=>r.source===SOURCE)).toEqual([]);

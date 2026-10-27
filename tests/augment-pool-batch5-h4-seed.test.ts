@@ -6,8 +6,8 @@ import { expect, it } from 'vitest';
 import { nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, buyXp, rerollShop, deployMatchUnit, getDeploymentCap, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { AUGMENT_BATCH5_H4 } from '../src/simulation/content/augment-pool-batch5-h4';
-import { offeredAt } from './augment-stage-helpers';
-import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
+import { offerFor, offeredAt } from './augment-stage-helpers';
+import { accepted, emptyBoard, resolveM5Choices } from './match-helpers';
 const id='diversified-portfolio-plus';
 const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 it.skipIf(!existsSync(RESEARCH_FILE))('B5-33 source numbers',()=>{
@@ -16,7 +16,7 @@ it.skipIf(!existsSync(RESEARCH_FILE))('B5-33 source numbers',()=>{
 });
 it('B5-33 offer, public selection, next natural round and authenticated restore',()=>{
  expect(['2-1','3-2','4-2'].filter(n=>offeredAt(id,n as '2-1'|'3-2'|'4-2'))).toEqual(['3-2']);
- let s=reachRound('3-2',false,17),c=s.pendingChoice!;expect(c.offers).toContain(id);
+ let s=offerFor(id),c=s.pendingChoice!;expect(c.offers).toContain(id);
  const gold=s.gold;s=accepted(selectChoice(s,c.choiceId,c.generation,id));expect(s.gold).toBe(gold+4);
  s=resolveM5Choices(s);s=accepted(startMatchCombat(emptyBoard(s)));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
  expect(s.augmentHistory!.facts.filter(f=>f.kind==='round-entry'&&f.round===s.round)).toHaveLength(1);
@@ -30,7 +30,7 @@ it('B5-33 offer, public selection, next natural round and authenticated restore'
 });
 let rewarded:MatchState;
 it('B5-33 pays its first recurring gold from an actual three-trait board',()=>{
- let s=reachRound('3-2',false,17),c=s.pendingChoice!;
+ let s=offerFor(id),c=s.pendingChoice!;
  s=accepted(selectChoice(s,c.choiceId,c.generation,id));s=resolveM5Choices(s);
  // The merged first augment changes the gifted heroes. Build the same three-trait
  // witness with paid public shop commands instead of relying on incidental gifts.

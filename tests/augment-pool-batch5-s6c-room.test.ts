@@ -4,7 +4,7 @@ import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 import { makeRoom, runUntil } from './server/helpers';
 
 // Fixed public 2-1 offer (seed in 0..100); legs keep each real room battle in its own test.
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:6});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:104});
 afterAll(()=>room.dispose());
 it('B5-48 room opens and advances the first PvE round',()=>{
  room.start();runUntil(room,clock,s=>s.roundId==='1-2'&&s.phase==='preparation');expect(room.state.fault).toBeNull();

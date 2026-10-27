@@ -9,8 +9,8 @@ import { drawSubscriptionSlots, enterShopAugmentRound } from '../src/simulation/
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { SHOP_CATALOG_BY_COST } from '../src/simulation/match-rules';
 import { restoreMatch } from '../src/simulation/serialization';
-import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
-import { pick, trip, reject, RESEARCH_FILE } from './augment-pool-batch5-h12-helpers';
+import { accepted, emptyBoard, resolveM5Choices } from './match-helpers';
+import { firstOffer, pick, trip, reject, RESEARCH_FILE } from './augment-pool-batch5-h12-helpers';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 
 it('B5-86 is prismatic and only offered at 2-1 in production and independent oracle',()=>{
@@ -28,8 +28,8 @@ it.skipIf(!existsSync(RESEARCH_FILE))('B5-86 source is independently checked aga
 describe('B5-86 public commands and authenticated saves',()=>{
  let before:MatchState,chosen:MatchState,stage:MatchState;
  beforeAll(()=>{
-  before=restoreMatch(reachRound('2-1',false,14));const c=before.pendingChoice!;
-  before=accepted(rerollAugment(before,c.choiceId,c.generation,0));chosen=pick(before,'subscription-service');stage=chosen;
+  before=restoreMatch(firstOffer('subscription-service'));const c=before.pendingChoice!;
+  before=accepted(rerollAugment(before,c.choiceId,c.generation,c.offers.findIndex(id=>id!=='subscription-service')));chosen=pick(before,'subscription-service');stage=chosen;
  });
  it('acquisition opens four unique paid 4-costs, leaves one empty slot and pays six once',()=>{
   expect(chosen.gold).toBe(before.gold+6);

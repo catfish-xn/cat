@@ -1,3 +1,4 @@
+import { offerFor } from './augment-stage-helpers';
 import { canonicalContent } from '../src/simulation/content';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -9,7 +10,7 @@ import { historyRoster } from '../src/simulation/augment-history';
 import { AUGMENT_BATCH5_H10 } from '../src/simulation/content/augment-pool-batch5-h10';
 import { augmentCandidates } from '../src/simulation/augment-offers';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
-import { accepted, reachRound, resolveM5Choices, finish } from './match-helpers';
+import { accepted, resolveM5Choices, finish } from './match-helpers';
 import type { HistoryRoster } from '../src/simulation/augment-history-types';
 const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 const { rewardPlan } = createRequire(import.meta.url)('./fixtures/m5/augment-rewards-oracle.cjs');
@@ -17,17 +18,18 @@ const TARGET=['draven','gangplank','maddie','nami','steb','swain','trundle'];
 let acquired:MatchState, state:MatchState, triggered:MatchState, beforeTrigger:MatchState;
 let rewardEvents:readonly unknown[];
 beforeAll(()=>{
- const s=reachRound('3-2',false,39,['heavy-hitters']),c=s.pendingChoice!;expect(c.offers).toContain('trait-tracker');
+ const s=offerFor('trait-tracker'),c=s.pendingChoice!;expect(c.offers).toContain('trait-tracker');
  acquired=state=accepted(selectChoice(s,c.choiceId,c.generation,'trait-tracker'));
 });
-function prepare(s:MatchState):MatchState {
+function prepare(s:MatchState,allowTrigger=true):MatchState {
  for(const u of s.preparation.units.filter(u=>u.team==='player'&&!TARGET.includes(u.definitionId)))s=accepted(sellUnit(s,u.id));
- while(s.level<7&&s.gold>=20)s=accepted(buyXp(s));
  for(let roll=0;roll<30;roll++){
   for(let i=0;i<5;i++){const o=s.shop.slots[i];if(o.status==='available'&&TARGET.includes(o.definitionId)&&!s.preparation.units.some(u=>u.team==='player'&&u.definitionId===o.definitionId)){const r=buyUnit(s,i,s.shop.generation);if(r.ok)s=r.state;}}
-  if(s.preparation.units.filter(u=>u.team==='player').length===7||s.gold<12||s.level<7)break;
+  if(s.preparation.units.filter(u=>u.team==='player').length>=(allowTrigger?7:6)||s.gold<12)break;
   s=accepted(rerollShop(s));
  }
+ if(allowTrigger&&s.preparation.units.filter(u=>u.team==='player').length===7)
+  while(s.level<7&&s.gold>=4)s=accepted(buyXp(s));
  for(const u of s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench')){
   const used=new Set(s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').map(u=>u.location.kind==='board'?`${u.location.cell.col},${u.location.cell.row}`:''));
   if(used.size>=s.level)break;
@@ -37,9 +39,17 @@ function prepare(s:MatchState):MatchState {
  }
  return s;
 }
-beforeAll(()=>{state=prepare(state);expect(trackerGiftPlan(state)).toHaveLength(0);});
+beforeAll(()=>{state=prepare(state,false);expect(trackerGiftPlan(state)).toHaveLength(0);});
 beforeAll(()=>{state=accepted(nextRound(resolveM5Choices(finish(accepted(startMatchCombat(state)))),state.round));});
-beforeAll(()=>{state=prepare(state);expect(triggered).toBeDefined();});
+beforeAll(()=>{state=prepare(state);});
+for(let leg=0;leg<8;leg++)beforeAll(()=>{
+ if(triggered)return;
+ state=resolveM5Choices(state);
+ if(state.phase==='preparation')state=resolveM5Choices(finish(accepted(startMatchCombat(state))));
+ state=resolveM5Choices(accepted(nextRound(state,state.round)));
+ if(state.phase==='preparation')state=prepare(state);
+});
+beforeAll(()=>{expect(triggered,JSON.stringify({round:state.round,level:state.level,gold:state.gold,units:state.preparation.units.map(u=>[u.definitionId,u.location]),traits:trackerActiveTraits(historyRoster(state))})).toBeDefined();});
 
 it.skipIf(!existsSync(RESEARCH_FILE))('matches source 8 traits / 6 emblems',()=>{
  const row=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((r:any)=>r.apiName==='TFT_Augment_TraitTracker');

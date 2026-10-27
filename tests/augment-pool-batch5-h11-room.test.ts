@@ -8,7 +8,7 @@ import { toPlayerView } from '../src/server/room/projection';
 import { proposeSettlement } from '../src/simulation/two-sided-battle';
 import { startCombatReplay } from '../src/simulation/combat-replay-view';
 
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 3, combatStreaming: true });
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 19, combatStreaming: true });
 let seatId: string;
 beforeAll(() => room.start());
 for (const round of [2, 3, 4]) beforeAll(() => { runUntil(room, clock, s => s.round === round && s.phase === 'preparation'); });

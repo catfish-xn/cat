@@ -27,7 +27,7 @@ it('eight room seats share tiers across all three nodes and forward free rerolls
     expect(new Set(choices.map(c => c.augmentTier))).toEqual(new Set([tier]));
     for (const seat of room.state.seats) {
       const c = seat.match.pendingChoice!;
-      expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(seat.match))).toEqual(seat.match);
+      expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(seat.match),room.augmentHistoryAuthority(seat.seatId))).toEqual(seat.match);
       expect(c.offers.every(id => AUGMENT_TIERS[id] === tier)).toBe(true);
       // v15: each of the three cards has its own free reroll; only the card named by optionIndex changes.
       expect(c.rerollsRemaining).toBe(3);
@@ -36,7 +36,7 @@ it('eight room seats share tiers across all three nodes and forward free rerolls
       const rerolled = room.handle(seat.seatId,command);
       expect(rerolled.ok).toBe(true); if (!rerolled.ok) throw new Error(rerolled.reason);
       const next = rerolled.state.pendingChoice!;
-      expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(rerolled.state))).toEqual(rerolled.state);
+      expect(restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(rerolled.state),room.augmentHistoryAuthority(seat.seatId))).toEqual(rerolled.state);
       expect([next.offers[0], next.offers[2]]).toEqual([c.offers[0], c.offers[2]]);
       expect(c.offers.includes(next.offers[1]!)).toBe(false);
       expect(AUGMENT_TIERS[next.offers[1]!]).toBe(tier);

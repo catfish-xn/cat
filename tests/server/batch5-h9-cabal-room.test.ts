@@ -1,4 +1,6 @@
 import {HISTORY_AUGMENT_ROOM_ROUTES} from '../augment-stage-helpers';
+import {roomOfferFor} from './augment-offer-helpers';
+import {getDeploymentCap} from '../../src/simulation/match';
 import {afterAll,beforeAll,describe,expect,it} from 'vitest';
 import {Room,ROOM_TIMING_DEFAULTS} from '../../src/server/room/room';
 import {ManualClock} from '../../src/server/room/clock';
@@ -17,23 +19,42 @@ for(const streaming of [false,true])describe(`forbidden-magic streaming=${stream
 
 const clock=new ManualClock(),room=new Room(Array.from({length:8},(_,i)=>({seatId:`s${i}`,name:`s${i}`,kind:'human' as const})),
  {...ROOM_TIMING_DEFAULTS,combatStreaming:streaming,preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,roomId:'h9-cabal',seed:HISTORY_AUGMENT_ROOM_ROUTES['forbidden-magic'].seed,clock,resolver:new TwoSidedBattleResolver()});
-const seatId='s2',mine=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
+const seatId=HISTORY_AUGMENT_ROOM_ROUTES['forbidden-magic'].seatId,mine=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
+function fieldBlackRose(id:string,count:number):void {
+ const current=()=>room.state.seats.find(s=>s.seatId===id)!.match;
+ for(let roll=0;roll<=30;roll++){
+  for(const unit of current().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&CABAL_HEROES.includes(u.definitionId))){
+   let m=current();const board=m.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');
+   if(board.some(u=>u.definitionId===unit.definitionId))continue;
+   if(board.length>=getDeploymentCap(m)){
+    const move=board.find(u=>!CABAL_HEROES.includes(u.definitionId));
+    const used=new Set(m.preparation.units.flatMap(u=>u.location.kind==='bench'?[u.location.slot]:[]));
+    const slot=Array.from({length:m.preparation.benchSize},(_,i)=>i).find(i=>!used.has(i));
+    expect(move).toBeDefined();expect(slot).toBeDefined();
+    expect(room.handle(id,{type:'deploy',unitId:move!.id,target:{kind:'bench',slot:slot!}})).toMatchObject({ok:true});
+   }
+   m=current();const used=new Set(m.preparation.units.flatMap(u=>u.team==='player'&&u.location.kind==='board'?[`${u.location.cell.col},${u.location.cell.row}`]:[]));
+   const cell=Array.from({length:28},(_,i)=>({col:i%7,row:4+Math.floor(i/7)})).find(c=>!used.has(`${c.col},${c.row}`))!;
+   expect(room.handle(id,{type:'deploy',unitId:unit.id,target:{kind:'board',cell}})).toMatchObject({ok:true});
+  }
+  if(new Set(current().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&CABAL_HEROES.includes(u.definitionId)).map(u=>u.definitionId)).size>=count)return;
+  const m=current(),slot=m.shop.slots.findIndex(s=>s.status==='available'&&CABAL_HEROES.includes(s.definitionId!)&&!m.preparation.units.some(u=>u.team==='player'&&u.definitionId===s.definitionId));
+  if(slot>=0){expect(room.handle(id,{type:'buy',slot,generation:m.shop.generation})).toMatchObject({ok:true});continue;}
+  if(roll===30||m.gold<2)break;
+  expect(room.handle(id,{type:'reroll'})).toMatchObject({ok:true});
+ }
+ expect(new Set(current().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&CABAL_HEROES.includes(u.definitionId)).map(u=>u.definitionId)).size).toBeGreaterThanOrEqual(count);
+}
 let acquired:MatchState,paid:MatchState,authority:AugmentHistoryAuthority,pool:SharedPoolState;
 beforeAll(()=>room.start());
 for(const round of [2,3,4,5,6,8,9,10,11])beforeAll(()=>runUntil(room,clock,s=>s.round===round&&s.phase==='preparation'));
 afterAll(()=>room.dispose());
 it('fields real shop Black Rose heroes before the tailored 3-2 offer',()=>{
- for(const seat of room.state.seats){
-  const slot=seat.match.shop.slots.findIndex(s=>s.status==='available'&&CABAL_HEROES.includes(s.definitionId!));
-  if(slot<0)continue;
-  expect(room.handle(seat.seatId,{type:'buy',slot,generation:seat.match.shop.generation})).toMatchObject({ok:true});
-  const m=room.state.seats.find(s=>s.seatId===seat.seatId)!.match,u=m.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&CABAL_HEROES.includes(u.definitionId));
-  if(u)expect(room.handle(seat.seatId,{type:'deploy',unitId:u.id,target:{kind:'board',cell:{col:0,row:4}}})).toMatchObject({ok:true});
- }
+ for(const seat of room.state.seats)fieldBlackRose(seat.seatId,1);
 });
 it('chooses Cabal through the room, queues three exact gifts and claims them without minting shared-pool copies',()=>{
  runUntil(room,clock,s=>s.round===12&&s.phase==='preparation');
- const c=mine().pendingChoice!;expect(c.offers).toContain('forbidden-magic');
+ roomOfferFor(room,seatId,'forbidden-magic');const c=mine().pendingChoice!;expect(c.offers).toContain('forbidden-magic');
  expect(room.handle(seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'forbidden-magic'})).toMatchObject({ok:true});
  acquired=mine();const gifts=cabalGiftPlan(acquired);expect(gifts).toHaveLength(3);
  const receipts=acquired.seatMechanics!.receipts.filter(r=>gifts.some(g=>g.receiptId===r.receiptId));
@@ -44,6 +65,7 @@ it('chooses Cabal through the room, queues three exact gifts and claims them wit
  expect(()=>assertSharedPoolConservation(room.state.pool,room.state.seats.map(s=>s.match))).not.toThrow();
  expect(room.handle(seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'forbidden-magic'})).toMatchObject({ok:false});
  expect(readCabalGrowth(mine())).toEqual({healthFlat:0,attackDamageBps:0});
+ fieldBlackRose(seatId,3);
 });
 for(const round of [12,13,15,16,17])it(`round ${round} records actual participants and exactly-once permanent Sion growth`,()=>{
  runUntil(room,clock,s=>s.round===round&&s.phase==='settlement');expect(room.state.fault).toBeNull();

@@ -1,5 +1,5 @@
-import { grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
 import { equipItem, deployMatchUnit } from '../src/simulation/match';
+import { grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
 import { expect, it } from 'vitest';
 import { createMatch, nextRound, rerollAugment, selectChoice, startMatchCombat, stepMatch, type MatchState, type MatchEvent } from '../src/simulation/match';
 import { enableMultiplayerSettlement, applyRoundSettlement, ROUND_SETTLEMENT_VERSION, type RoundSettlementReceipt } from '../src/simulation/round-settlement';
@@ -12,8 +12,8 @@ import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
 import { rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs';
 import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from './fixtures/m5/oracle.g2.cjs';
 
-// Merged 250-card pool: seed 16 reaches Fate after two public rerolls, retaining enough HP for the loss-first case.
-let route=createMatch(16);const battles:BattleRecord[]=[];
+// The combined v25 pool offers Fate directly at seed 4, retaining enough HP for the loss-first case.
+let route=createMatch(4),afterFinalBattle:MatchState;const battles:BattleRecord[]=[];
 function fight(context:MatchState,archive:BattleRecord[]=battles):MatchState {
  const started=startMatchCombat(context);let s=accepted(started);const initial=s.combat!,events:MatchEvent[]=[...(started.ok?started.events:[])];
  while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
@@ -23,11 +23,12 @@ function fight(context:MatchState,archive:BattleRecord[]=battles):MatchState {
  return resolveM5Choices(s);
 }
 for(const stop of ['1-2','1-3','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','3-2','3-3','3-4','3-5','3-6','3-7','4-1','4-2'])it(`Fate public route ${stop}`,()=>{
- while(route.roundDefinitionId!==stop){route=resolveM5Choices(route);if(route.phase==='preparation')route=fight(fieldBench(route));route=resolveM5Choices(route);route=accepted(nextRound(route,route.round));}
+ while(route.roundDefinitionId!==stop){route=resolveM5Choices(route);if(route.phase==='preparation')route=fight(fieldBench(route));route=resolveM5Choices(route);if(route.roundDefinitionId==='4-1')afterFinalBattle=route;route=accepted(nextRound(route,route.round));}
+ if(stop==='4-1')route=restoreMatch(serializeMatch(route,battles),battles);
 });
 let selected:MatchState;
 it('Fate selects its actual offered card and grants exactly Blue Buff, with no retroactive entry/victory credit',()=>{
- for(let slot=0;slot<2;slot++){const c=route.pendingChoice!;route=accepted(rerollAugment(route,c.choiceId,c.generation,slot));}
+ for(let slot=0;slot<3&&!route.pendingChoice!.offers.includes('a-change-of-fate');slot++){const c=route.pendingChoice!;route=accepted(rerollAugment(route,c.choiceId,c.generation,slot));}
  const c=route.pendingChoice!;expect(c.offers).toContain('a-change-of-fate');selected=resolveM5Choices(accepted(selectChoice(route,c.choiceId,c.generation,'a-change-of-fate')));
  expect(selected.playerHp).toBeGreaterThan(8);
  expect(selected.items.filter(i=>i.definitionId==='blue-buff').length-route.items.filter(i=>i.definitionId==='blue-buff').length).toBe(1);
@@ -74,15 +75,19 @@ it('Fate uses the entry bank at the exact 59/60 boundary, ignores current/combat
  expect(batch5RewardPlan(next).map(g=>[g.definitionId,g.acquiredRound])).toEqual([['gunblade',21],['mel',22]]);
  expect(batch5FateRound({...state,roundResults:[r(18,999,'playerWin'),r(19,59,'enemyWin'),r(20,60,'enemyWin')]} as unknown as MatchState,a)).toBeUndefined();
 });
-// Like the existing batch-4 tamper witnesses: only a receipted public test grant strengthens the allied roster.
-// No Match resource, battle result or task counter is directly injected; the victory is a real simulated battle.
+// Place the receipted test witness before H12 starts the 4-2 offer proof. All subsequent history is replayed.
 const completedHistory:BattleRecord[]=[];let completed:MatchState,completedText:string;
 it('offline Fate completes from a real player-combat victory plus a subsequent 60-gold entry',()=>{
  completedHistory.push(...battles);
- const grant=grantMechanicUnit(selected,{receiptId:'batch5-victory-witness',source:'test',definitionId:'viktor',starLevel:3});expect(grant.ok).toBe(true);if(!grant.ok)throw Error(grant.reason);
- let s=fieldBench(grant.state);const unit=s.preparation.units.find(u=>u.definitionId==='viktor')!,item=s.items.find(i=>i.definitionId==='blue-buff')!;
- if(unit.location.kind!=='board'){const front=s.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board')!;s=accepted(deployMatchUnit(s,unit.id,front.location));}
- s=accepted(equipItem(s,item.id,unit.id,0));s=fight(s,completedHistory);expect(s.roundResults.at(-1)?.result).toBe('playerWin');
+ const grant=grantMechanicUnit(afterFinalBattle,{receiptId:'batch5-victory-witness',source:'test',definitionId:'viktor',starLevel:3});expect(grant.ok).toBe(true);if(!grant.ok)throw Error(grant.reason);
+ let s=restoreMatch(serializeMatch(grant.state,completedHistory),completedHistory);
+ const unit=s.preparation.units.find(u=>u.definitionId==='viktor')!;
+ s=accepted(nextRound(s,s.round));
+ for(let slot=0;slot<3&&!s.pendingChoice!.offers.includes('a-change-of-fate');slot++){const c=s.pendingChoice!;s=accepted(rerollAugment(s,c.choiceId,c.generation,slot));}
+ const c=s.pendingChoice!;expect(c.offers).toContain('a-change-of-fate');s=resolveM5Choices(accepted(selectChoice(s,c.choiceId,c.generation,'a-change-of-fate')));
+ const front=s.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board')!;
+ s=accepted(deployMatchUnit(s,unit.id,front.location));
+ const item=s.items.find(i=>i.definitionId==='blue-buff')!;s=accepted(equipItem(s,item.id,unit.id,0));s=fight(s,completedHistory);expect(s.roundResults.at(-1)?.result).toBe('playerWin');
  completed=resolveM5Choices(accepted(nextRound(s,s.round)));expect(batch5RewardPlan(completed).map(g=>g.definitionId)).toEqual(['gunblade','mel']);
  for(const g of batch5RewardPlan(completed))expect(completed.seatMechanics!.receipts.filter(r=>r.receiptId===g.receiptId)).toHaveLength(1);
  expect(completed.preparation.units.some(u=>u.definitionId==='mel')).toBe(true);

@@ -1,3 +1,4 @@
+import { roomOfferFor } from './server/augment-offer-helpers';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { makeRoom, runUntil, answerOpenChoices, claimAllOrbs } from './server/helpers';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
@@ -8,14 +9,14 @@ import { compileBattle } from '../src/simulation/two-sided-battle';
 import { canonicalContent } from '../src/simulation/content';
 import { readSniperOpening } from '../src/simulation/augment-pool-batch5-h10-sniper';
 describe.each([false,true])('sniper online streaming=%s', combatStreaming=>{
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:29,combatStreaming});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:41,combatStreaming});
 const seat=()=>room.state.seats.find(s=>s.seatId==='s0')!;
 let zeri:string;
 beforeAll(()=>{room.start();});
 for(const round of [2,3,4])beforeAll(()=>{runUntil(room,clock,s=>s.round===round&&s.phase==='preparation');});
 afterAll(()=>room.dispose());
 it('real room choose/claim/deploy freezes sniper damage for both-side compilation and commits history',()=>{
- const c=seat().match.pendingChoice!;expect(c.offers).toContain('snipers-nest');
+ roomOfferFor(room,'s0','snipers-nest');const c=seat().match.pendingChoice!;expect(c.offers).toContain('snipers-nest');
  expect(room.handle('s0',{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'snipers-nest'})).toMatchObject({ok:true});
  answerOpenChoices(room);claimAllOrbs(room,['s0']);
  zeri=seat().match.preparation.units.find(u=>u.definitionId==='zeri')!.id;

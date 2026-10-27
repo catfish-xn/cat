@@ -25,11 +25,11 @@ it('B5-34 awards previously eliminated seats in the real room acquisition',()=>{
  }},{seed:8});
  try {
   room.start();runUntil(room,clock,s=>s.round===4&&s.phase==='preparation');
-  const seat=room.state.seats.find(s=>s.seatId==='s4')!,choice=seat.match.pendingChoice!;expect(choice.offers).toContain('survivor');
-  expect(room.handleBot('s4',seat.controlEpoch,{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'survivor'})).toMatchObject({ok:true});
-  const picked=room.state.seats.find(s=>s.seatId==='s4')!.match;expect(picked.gold).toBe(seat.match.gold+60);
+  const seat=room.state.seats.find(s=>s.seatId==='s7')!,choice=seat.match.pendingChoice!;expect(choice.offers).toContain('survivor');
+  expect(room.handleBot('s7',seat.controlEpoch,{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'survivor'})).toMatchObject({ok:true});
+  const picked=room.state.seats.find(s=>s.seatId==='s7')!.match;expect(picked.gold).toBe(seat.match.gold+60);
   expect(picked.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch5-h4-survivor')).toMatchObject([{kind:'gold',amount:60}]);
-  const authority=room.augmentHistoryAuthority('s4');
+  const authority=room.augmentHistoryAuthority('s7');
   for(const format of ['object','json'] as const){
    const input=(v:typeof picked)=>format==='object'?v:JSON.stringify(v);
    expect(restoreSharedOrbSnapshot(room.state.pool,input(picked),authority)).toEqual(picked);
@@ -54,9 +54,9 @@ describe('B5-34 simultaneous elimination publication',()=>{
  beforeAll(()=>{room.start();runUntil(room,clock,s=>s.round===4&&s.phase==='preparation');});
  afterAll(()=>room.dispose());
  it('selects survivor through the real bot command without paying early',()=>{
-  const seat=room.state.seats.find(s=>s.seatId==='s4')!,choice=seat.match.pendingChoice!;expect(choice.offers).toContain('survivor');
-  expect(room.handleBot('s4',seat.controlEpoch,{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'survivor'})).toMatchObject({ok:true});
-  const picked=room.state.seats.find(s=>s.seatId==='s4')!.match;expect(picked.gold).toBe(seat.match.gold);
+  const seat=room.state.seats.find(s=>s.seatId==='s7')!,choice=seat.match.pendingChoice!;expect(choice.offers).toContain('survivor');
+  expect(room.handleBot('s7',seat.controlEpoch,{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'survivor'})).toMatchObject({ok:true});
+  const picked=room.state.seats.find(s=>s.seatId==='s7')!.match;expect(picked.gold).toBe(seat.match.gold);
  });
  it('publishes a controlled simultaneous three-seat elimination once and excludes a dying holder',()=>{
   runUntil(room,clock,s=>s.round===4&&s.phase==='battle');
@@ -65,17 +65,17 @@ describe('B5-34 simultaneous elimination publication',()=>{
   const staged=plan.settlement.seats.map(row=>dying.includes(row.seatId)?{...row,hpAfter:0,match:{...row.match,playerHp:0,multiplayer:{...row.match.multiplayer!,status:'eliminated' as const}}}:row);
   const ranked=dying.map((seatId,i)=>({seatId,rank:8-i}));
   // Verify the same simultaneous batch with the holder also dead, before publishing the living-holder case.
-  const hypothetical=room.state.seats.map(seat=>{const row=staged.find(r=>r.seatId===seat.seatId)!;const dead=dying.includes(seat.seatId)||seat.seatId==='s4';
+  const hypothetical=room.state.seats.map(seat=>{const row=staged.find(r=>r.seatId===seat.seatId)!;const dead=dying.includes(seat.seatId)||seat.seatId==='s7';
    return {...seat,match:row.match,alive:!dead,hp:dead?0:row.hpAfter,rank:dead?8-seat.index:null,eliminatedRound:dead?4:null};});
-  const dead=recordRoomSettlementTable(hypothetical).find(s=>s.seatId==='s4')!.match;
+  const dead=recordRoomSettlementTable(hypothetical).find(s=>s.seatId==='s7')!.match;
   expect((dead.seatMechanics?.receipts??[]).filter(r=>r.source==='augment-pool-batch5-h4-survivor')).toHaveLength(0);
   const settlement={...plan.settlement,seats:staged,eliminated:ranked};
   expect(room.commitSettlement(settlement)).toMatchObject({ok:true});expect(room.commitSettlement(settlement)).toMatchObject({ok:false,reason:'duplicate-settlement'});
-  const picked=room.state.seats.find(s=>s.seatId==='s4')!.match;
+  const picked=room.state.seats.find(s=>s.seatId==='s7')!.match;
   expect(picked.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch5-h4-survivor')).toMatchObject([{kind:'gold',amount:60}]);
  });
  it('authenticates the independently captured online state in object and JSON restore',()=>{
-  const picked=room.state.seats.find(s=>s.seatId==='s4')!.match,authority=room.augmentHistoryAuthority('s4');
+  const picked=room.state.seats.find(s=>s.seatId==='s7')!.match,authority=room.augmentHistoryAuthority('s7');
   for(const format of ['object','json'] as const){
    const input=(v:typeof picked)=>format==='object'?v:JSON.stringify(v);
    expect(restoreSharedOrbSnapshot(room.state.pool,input(picked),authority)).toEqual(picked);

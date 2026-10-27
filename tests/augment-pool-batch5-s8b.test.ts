@@ -2,9 +2,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { AUGMENT_BATCH5_S8B } from '../src/simulation/content/augment-pool-batch5-s8b';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
-import { createMatch, selectChoice, sellUnit, startMatchCombat, stepMatch, nextRound, type MatchState, type MatchEvent } from '../src/simulation/match';
+import { createMatch, selectChoice, sellUnit, buyUnit, rerollShop, startMatchCombat, stepMatch, nextRound, type MatchState, type MatchEvent } from '../src/simulation/match';
+import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { gloriousEvolutionRewardPlan, gloriousEvolutionProgress } from '../src/simulation/augment-pool-batch5-s8b';
-import { grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
+import { grantMechanicUnit, grantMechanicGold } from '../src/simulation/seat-mechanics/grants';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
 import { ownBattleRecord, deepFreeze, recordVersion, replayBattleRecord } from '../src/simulation/battle-record-validation';
@@ -37,6 +38,10 @@ function fight(context:MatchState):MatchState {
 }
 for(const stop of ['1-2','1-3','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','3-2','3-3','3-4','3-5','3-6','3-7','4-1','4-2'])it(`public route to ${stop}`,()=>{
  while(route.roundDefinitionId!==stop){route=resolveM5Choices(route);if(route.phase==='preparation')route=fight(fieldBench(route));route=resolveM5Choices(route);route=accepted(nextRound(route,route.round));}
+ if(stop==='4-1'){
+  const funded=grantMechanicGold(route,{receiptId:'s8b-public-shop-budget',source:'test',amount:300});expect(funded.ok).toBe(true);if(!funded.ok)throw Error(funded.reason);
+  route=restoreMatch(serializeMatch(funded.state,battles),battles);
+ }
 });
 let selected:MatchState, offered:MatchState;
 it('selects the real offered augment and grants exactly one Adaptive Helm',()=>{
@@ -47,23 +52,37 @@ it('selects the real offered augment and grants exactly one Adaptive Helm',()=>{
  expect(gloriousEvolutionRewardPlan(selected)).toEqual([]);expect(gloriousEvolutionProgress(selected).count).toBe(0);
  const text=serializeMatch(selected,battles);expect(restoreMatch(text,battles)).toEqual(selected);expect(restoreMatch(selected,battles)).toEqual(selected);
 });
-let completed:MatchState;
-it('nine real permanent merges award Viktor and Jeweled Gauntlet once',()=>{
+let completed:MatchState,merging:MatchState;
+it('prepares a public shop witness with no earlier one-cost copies',()=>{
  let s=selected;
  // Free bench slots and ensure the chosen witness has no earlier copies.
  for(const u of [...s.preparation.units].filter(u=>u.team==='player' && (u.location.kind==='bench'||u.definitionId==='maddie'))) {
-  const r=sellUnit(s,u.id);if(r.ok)s=r.state;
+  const r=sellUnit(s,u.id);if(r.ok)s=resolveM5Choices(r.state);
  }
- for(let i=0;i<9;i++){
-  for(let n=0;n<3;n++){
-   const r=grantMechanicUnit(s,{receiptId:`s8b-merge-${i}-${n}`,source:'test',definitionId:'maddie'});
-   expect(r.ok).toBe(true);if(!r.ok)throw Error(r.reason);s=r.state;
+ for(const u of s.preparation.units.filter(u=>u.team==='player'&&UNIT_DEFINITIONS[u.definitionId]?.cost===1)){const r=sellUnit(s,u.id);if(r.ok)s=r.state;}
+ merging=s;
+});
+for(let i=0;i<9;i++)it(`public shop merge ${i+1} counts once and pays only at nine`,()=>{
+ let s=merging;
+ for(let roll=0;roll<100&&gloriousEvolutionProgress(s).count===i;roll++){
+  for(let slot=0;slot<5&&gloriousEvolutionProgress(s).count===i;slot++){
+   const offer=s.shop.slots[slot];if(offer.status!=='available'||UNIT_DEFINITIONS[offer.definitionId].cost!==1)continue;
+   let bought=buyUnit(s,slot,s.shop.generation);
+   if(!bought.ok&&bought.reason==='bench-full'){
+    s=fieldBench(s);bought=buyUnit(s,slot,s.shop.generation);
+   }
+   if(bought.ok)s=resolveM5Choices(bought.state);
   }
-  const merged=s.preparation.units.find(u=>u.definitionId==='maddie'&&u.starLevel===2)!;expect(merged).toBeTruthy();
-  s=accepted(sellUnit(s,merged.id));
-  expect(gloriousEvolutionProgress(s).count).toBe(i+1);expect(gloriousEvolutionRewardPlan(s).length).toBe(i===8?2:0);
+  s=resolveM5Choices(fieldBench(s));
+  if(gloriousEvolutionProgress(s).count===i)s=accepted(rerollShop(s));
  }
- completed=s;
+ const merged=s.preparation.units.find(u=>u.team==='player'&&UNIT_DEFINITIONS[u.definitionId]?.cost===1&&u.starLevel===2)!;expect(merged).toBeTruthy();
+ s=accepted(sellUnit(s,merged.id));
+ expect(gloriousEvolutionProgress(s).count).toBe(i+1);expect(gloriousEvolutionRewardPlan(s).length).toBe(i===8?2:0);
+ merging=s;
+});
+it('nine real permanent merges award Viktor and Jeweled Gauntlet once',()=>{
+ const s=completed=merging;
  const gifts=gloriousEvolutionRewardPlan(s);expect(gifts.map(g=>g.definitionId)).toEqual(['jeweled-gauntlet','viktor']);
  for(const gift of gifts)expect(s.seatMechanics!.receipts.filter(r=>r.receiptId===gift.receiptId)).toHaveLength(1);
  const oracle=rewardPlan(s,{CATALOG,COST,ROUNDS,xp,entryXp,benchXp});
@@ -83,9 +102,9 @@ for(const mode of ['object','json','serialize'] as const)it(`completed quest ${m
 
 it('direct two-star grant is excluded and a cascading real merge counts each upgrade',()=>{
  let s=selected;
- for(const u of [...s.preparation.units].filter(u=>u.team==='player'&&(u.location.kind==='bench'||u.definitionId==='maddie'))) {const r=sellUnit(s,u.id);if(r.ok)s=r.state;}
+ for(const u of [...s.preparation.units].filter(u=>u.team==='player'&&(u.location.kind==='bench'||u.definitionId==='maddie'))) {const r=sellUnit(s,u.id);if(r.ok)s=resolveM5Choices(r.state);}
  const high=grantMechanicUnit(s,{receiptId:'s8b-direct-high',source:'test',definitionId:'maddie',starLevel:2});expect(high.ok).toBe(true);if(!high.ok)throw Error(high.reason);s=high.state;
- expect(gloriousEvolutionProgress(s).count).toBe(0);s=accepted(sellUnit(s,s.preparation.units.find(u=>u.definitionId==='maddie')!.id));
+ expect(gloriousEvolutionProgress(s).count).toBe(0);s=resolveM5Choices(accepted(sellUnit(s,s.preparation.units.find(u=>u.definitionId==='maddie')!.id)));
  for(let n=0;n<9;n++){const r=grantMechanicUnit(s,{receiptId:`s8b-chain-${n}`,source:'test',definitionId:'maddie'});expect(r.ok).toBe(true);if(!r.ok)throw Error(r.reason);s=r.state;}
  expect(gloriousEvolutionProgress(s).count).toBe(4);
  expect(s.preparation.units.find(u=>u.definitionId==='maddie')?.starLevel).toBe(3);

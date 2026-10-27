@@ -4,7 +4,7 @@ import { RESEARCH_FILE } from './augment-pool-source-expectations';
 import { AUGMENT_BATCH5_S8A } from '../src/simulation/content/augment-pool-batch5-s8a';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { augmentCandidates, augmentOfferAllowed } from '../src/simulation/augment-offers';
-import { createMatch, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState, type MatchEvent } from '../src/simulation/match';
+import { createMatch, nextRound, sellUnit, selectChoice, startMatchCombat, stepMatch, type MatchState, type MatchEvent } from '../src/simulation/match';
 import { grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
 import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { pilferBattleCount, pilferRewardPlan } from '../src/simulation/augment-pool-batch5-s8a';
@@ -68,4 +68,40 @@ it('death-order filtering excludes summons and neutrals, admits six-costs and re
  expect(pilferBattleCount(combat,'player',combat.units.filter(u=>u.id!=='six'))).toBe(SHOP_CATALOG.indexOf('amumu')+1);
  expect(pilferBattleCount({...combat,openingDeaths:combat.openingDeaths.slice(0,2)},'player',combat.units)).toBe(0);
  expect(pilferBattleCount({...combat,openingDeaths:[combat.openingDeaths[3],combat.openingDeaths[2]]},'player',combat.units)).toBe(SHOP_CATALOG.indexOf('amumu')+1);
+});
+
+// P-B5-59 says next natural round: the 3-3 victim must also arrive during 3-4 supply.
+for(let target=6;target<=14;target++)it(`Pilfer supply-boundary route to round ${target}`,()=>{
+ state=resolveM5Choices(state);
+ if(state.phase==='preparation'){
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&!['irelia','viktor'].includes(u.definitionId))) {
+   const sold=sellUnit(state,unit.id);if(sold.ok)state=sold.state;
+  }
+  state=fight(state);
+ }
+ state=resolveM5Choices(accepted(nextRound(resolveM5Choices(state),state.round)));
+ expect(state.round).toBe(target);
+});
+let supplyText:string;
+it('grants exactly the authenticated 3-3 victim once at the 3-4 supply entry',()=>{
+ expect(state.roundDefinitionId).toBe('3-4');
+ const battle=readG23Progress(state)!.economyReceipts.find(r=>r.kind==='battle'&&r.facts.round===13)!;
+ if(battle.kind!=='battle')throw Error('missing 3-3 battle');
+ const count=battle.facts.batch2!.find(f=>f.definitionId==='pilfer')!.count;
+ expect(count).toBeGreaterThan(0);
+ const gift=pilferRewardPlan(state).find(g=>g.acquiredRound===14)!;
+ expect(gift).toMatchObject({kind:'unit',definitionId:SHOP_CATALOG[count-1],starLevel:1});
+ expect(state.seatMechanics!.receipts.filter(r=>r.receiptId===gift.receiptId)).toHaveLength(1);
+ expect(state.resourceProvenance.entries.some(e=>e.kind==='unit-acquired'&&e.roundId==='3-4'&&e.source.kind==='mechanic'&&e.source.receiptId===gift.receiptId)).toBe(true);
+});
+it('serializes the authenticated supply-round copy with complete battle evidence',()=>{supplyText=serializeMatch(state,battles);});
+it.each(['object','JSON','serialized'] as const)('restores the supply-round copy from %s',kind=>{
+ expect(restoreMatch(kind==='object'?state:kind==='JSON'?JSON.stringify(state):supplyText,battles)).toEqual(state);
+});
+it('still refuses an unrelated co-forged mechanic birth during supply',()=>{
+ const gift=pilferRewardPlan(state).find(g=>g.acquiredRound===14)!;
+ const bad=structuredClone(state) as any,receipt=bad.seatMechanics.receipts.find((r:any)=>r.receiptId===gift.receiptId);
+ receipt.receiptId='unrelated-supply-birth';receipt.source='test';
+ bad.resourceProvenance.entries.find((e:any)=>e.kind==='unit-acquired'&&e.source.receiptId===gift.receiptId).source.receiptId=receipt.receiptId;
+ expect(()=>restoreMatch(bad,battles)).toThrow();
 });

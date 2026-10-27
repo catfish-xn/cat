@@ -5,7 +5,7 @@ import { readG23Progress } from '../src/simulation/g2-3-state';
 import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:1});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:17});
 afterAll(()=>room.dispose());
 it('room advances to 1-3',()=>{room.start();runUntilClaiming(room,clock,s=>s.roundId==='1-3'&&s.phase==='preparation');});
 it('room advances to 1-4',()=>{runUntilClaiming(room,clock,s=>s.roundId==='1-4'&&s.phase==='preparation');});

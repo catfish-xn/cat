@@ -1,3 +1,4 @@
+import { getUnitSellPrice } from '../src/simulation/unit-stats';
 import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { describe,it,expect } from 'vitest';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
@@ -13,7 +14,7 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true)).sort(),pool=[...ids];
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(ids);let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  expect(ids).toHaveLength(283); // Integrated catalog, including shared-carousel augments and Shop Glitch.
+  expect(ids).toHaveLength(285); // Integrated catalog, including shared-carousel augments and Shop Glitch.
   expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
  // Only cards offered at 2-1 (14.24 stage tags, augment-stage-bans.ts) can be selected there.
@@ -36,7 +37,8 @@ it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!Object.hasOwn(AUGMENT_BATCH
   const invalid=selectChoice(state,choice.choiceId,choice.generation+1,id);expect(invalid.ok).toBe(false);expect(invalid.state).toBe(state);expect("events" in invalid).toBe(false);
   const gold=AUGMENT_DEFINITIONS[id].effects.reduce((sum,e)=>sum+(e.kind==='mechanic'&&e.mechanic==='acquisitionGold'?e.values.amount:0),0);
   const result=selectChoice(state,choice.choiceId,choice.generation,id),after=accepted(result);
-  expect(after.gold-state.gold).toBe(gold);expect(after.choiceRngState).toBe(state.choiceRngState);
+  const saleGold=id==='head-start'?state.preparation.units.filter(u=>u.team==='player').reduce((sum,u)=>sum+getUnitSellPrice(u),0):0;
+  expect(after.gold-state.gold).toBe(gold+saleGold);expect(after.choiceRngState).toBe(state.choiceRngState);
   expect(after.scheduleReceipts.filter(r=>r.eventId===choice.eventId)).toHaveLength(1);
   expect(restoreMatch(serializeMatch(after))).toEqual(after);
   const duplicate=selectChoice(after,choice.choiceId,choice.generation,id);expect(duplicate.ok).toBe(false);expect(duplicate.state).toBe(after);expect("events" in duplicate).toBe(false);

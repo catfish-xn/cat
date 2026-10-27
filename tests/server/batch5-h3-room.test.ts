@@ -1,3 +1,4 @@
+import { roomOfferFor } from './augment-offer-helpers';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { makeRoom, runUntil } from './helpers';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
@@ -12,7 +13,7 @@ let fighterId:string;
 beforeAll(()=>room.start());
 for(const round of ['1-3','1-4','2-1'])beforeAll(()=>{runUntil(room,clock,s=>s.roundId===round&&s.phase==='preparation');});
 beforeAll(()=>{
- const choice=mine().match.pendingChoice!;expect(choice.offers).toContain('no-scout-no-pivot');
+ roomOfferFor(room,'s3','no-scout-no-pivot');const choice=mine().match.pendingChoice!;expect(choice.offers).toContain('no-scout-no-pivot');
  expect(room.handle('s3',{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'no-scout-no-pivot'})).toMatchObject({ok:true});
 });
 beforeAll(()=>{runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='settlement');});

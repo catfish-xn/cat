@@ -6,7 +6,7 @@ import { CONSUMABLE_DEFINITIONS } from '../src/simulation/content/consumables';
 import { validateEffect } from '../src/simulation/validate-content';
 import { cloneEffect } from '../src/simulation/effects';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
-import { createMatch, selectChoice, openAnvil, forfeitPendingChoice, startMatchCombat, nextRound, sellUnit, buyXp, buyUnit, deployMatchUnit, stepMatch, useConsumable } from '../src/simulation/match';
+import { createMatch, selectChoice, openAnvil, forfeitPendingChoice, startMatchCombat, nextRound, rerollAugment, sellUnit, buyXp, buyUnit, deployMatchUnit, stepMatch, useConsumable } from '../src/simulation/match';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier, augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { batch1GiftPlan, drainBatch1Gifts, validateBatch1Gifts } from '../src/simulation/augment-pool-grants';
@@ -16,7 +16,7 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { grantXp } from '../src/simulation/progression';
 import { previewRoundEconomy } from '../src/simulation/economy-preview';
 import { readAugmentIncome } from '../src/simulation/augment-income';
-import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
+import { accepted, emptyBoard, reachRound, resolveM5Choices, finish } from './match-helpers';
 import { fieldedLegCases, fieldedRoute, offerFor, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import type { MatchState } from '../src/simulation/match-types';
 import { room, accept, conserved } from './tp-helpers';
@@ -84,14 +84,32 @@ it('full bench escrows all fourteen one-cost gifts and selling retries a stable 
 it.each(fieldedLegCases('final-polish'))('Final Polish fielded 4-2 route (seed %s): the leg to %s settles every fight',(seed,leg)=>{
  expect(STAGE_SEEDS['final-polish']).toMatchObject({node:'4-2',fielded:true});expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
 });
-it('Final Polish grants two bench anvils, opens in either order, restores and times out to the authenticated first option',()=>{
- const {before,state}=acquire('final-polish'),anvils=state.preparation.units.filter(u=>isAnvil(u.definitionId)&&!before.preparation.units.some(old=>old.id===u.id));
- // Preparation is sorted by unit ID; this route crosses unit-9/unit-10, so
- // its two gifts appear in reverse birth order. Still exercise both open orders.
- expect(anvils.map(u=>u.definitionId)).toEqual(['TFT_ArmoryKeySupport','TFT_ArmoryKeyCompleted']);
- for(const order of [anvils,[...anvils].reverse()]){
-  let s=state;
-  for(const unit of order){
+let polishState:MatchState,polishAnvils:MatchState['preparation']['units'];
+it('Final Polish grants exactly two bench anvils with the source birth order',()=>{
+ let before=fieldedRoute(STAGE_SEEDS['final-polish'].seed,'4-1');
+ while(before.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length>before.preparation.benchSize-2){
+  const unit=before.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;
+  before=accepted(sellUnit(before,unit.id));
+ }
+ before=resolveM5Choices(finish(accepted(startMatchCombat(before))));
+ before=accepted(nextRound(before,before.round));
+ const rerolls=STAGE_SEEDS['final-polish'].rerolls;
+ for(const slot of typeof rerolls==='number'?Array.from({length:rerolls},(_,i)=>i):rerolls??[]){const c=before.pendingChoice!;before=accepted(rerollAugment(before,c.choiceId,c.generation,slot));}
+ expect(before.pendingChoice!.offers).toContain('final-polish');
+ const choice=before.pendingChoice!,state=accepted(selectChoice(before,choice.choiceId,choice.generation,'final-polish')),anvils=state.preparation.units.filter(u=>isAnvil(u.definitionId)&&!before.preparation.units.some(old=>old.id===u.id));
+ // Source gift birth order is support then completed; preparation is sorted by textual unit ID.
+ // Derive the expected order from the before-state serial, including unit-9/unit-10 crossings.
+ const expectedAnvils=[{id:`unit-${before.nextUnitSerial}`,definitionId:'TFT_ArmoryKeySupport'},
+  {id:`unit-${before.nextUnitSerial+1}`,definitionId:'TFT_ArmoryKeyCompleted'}].sort((a,b)=>a.id<b.id?-1:1);
+ expect(anvils.map(u=>u.definitionId)).toEqual(expectedAnvils.map(u=>u.definitionId));
+ expect(anvils.map(u=>u.id)).toEqual(expectedAnvils.map(u=>u.id));
+ polishState=state;polishAnvils=anvils;
+});
+for(const reverse of [false,true]){
+ let s:MatchState;
+ for(const index of [0,1])it(`Final Polish ${reverse?'reverse':'source'} opening ${index+1} restores and times out to its authenticated first option`,()=>{
+   if(index===0)s=polishState;
+   const unit=polishAnvils[reverse?1-index:index];
    const birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.unitId===unit.id)!;
    s=accepted(openAnvil(s,unit.id));const c=s.pendingChoice!;
    expect(c.offers).toEqual(augmentAnvilOffers(s.seed,birth.receiptId,unit.definitionId as 'TFT_ArmoryKeySupport'));
@@ -99,9 +117,8 @@ it('Final Polish grants two bench anvils, opens in either order, restores and ti
    const timeout=forfeitPendingChoice(s,s.round,c.choiceId,c.generation);if(!timeout.ok)throw new Error(timeout.reason);s=timeout.state;
    expect(s.items.at(-1)?.definitionId).toBe(c.offers[0]);expect(restoreMatch(serializeMatch(s))).toEqual(s);
    expect(openAnvil(s,unit.id)).toEqual({ok:false,state:s,reason:'unknown-unit'});
-  }
- }
-});
+ });
+}
 it('Silver Spoon grants exactly ten XP, composes with purchased XP, restores across settlement, and respects level ten',()=>{
  const {before,state}=acquire('silver-spoon'),expected=grantXp(before.level,before.xp,10);
  expect([state.level,state.xp]).toEqual([expected.level,expected.xp]);expect(restoreMatch(serializeMatch(state))).toEqual(state);
@@ -141,7 +158,7 @@ it.each(['black-rose-crest','black-rose-crown'])('%s can be publicly selected at
  let found:MatchState|undefined;
  // Pinned first successful searches; keep the pure second-node predicate and the real Morgana purchase checks.
  const traits=UNIT_DEFINITIONS.morgana.traits;
- const seed=id==='black-rose-crest'?42:304;
+ const seed=id==='black-rose-crest'?42:599;
  {
   const initial=createMatch(seed),first=generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState);
   const chosen=first.offers.find(x=>x!=='placebo'&&x!=='glass-cannon-i')!;

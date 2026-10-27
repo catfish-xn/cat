@@ -44,7 +44,7 @@ describe('B5-84 real solo trajectory',()=>{
  for(const target of ['2-1','2-4','3-1','3-2','3-5','4-1','4-2'])beforeAll(()=>{
   while(state.roundDefinitionId!==target){
    state=resolveM5Choices(state,['worth-the-wait-ii','clockwork-accelerator']);
-   if(state.phase==='preparation'){state=accepted(startMatchCombat(['3-1','4-1'].includes(state.roundDefinitionId)?smallEmptyBoard(state):fieldBench(state)));while(state.phase==='combat')state=stepMatch(state).state;}
+   if(state.phase==='preparation'){state=accepted(startMatchCombat(fieldBench(state)));while(state.phase==='combat')state=stepMatch(state).state;}
    state=resolveM5Choices(state);state=accepted(nextRound(state,state.round));
   }
   // A legal existing checkpoint bounds subsequent command replay, without editing state or resources.

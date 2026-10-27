@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { SEATS, TIMINGS, runUntil } from './server/helpers';
+import { SEATS, TIMINGS, runUntil, claimAllOrbs, answerOpenChoices } from './server/helpers';
+import { getDeploymentCap } from '../src/simulation/match';
+import { isAnvil } from '../src/simulation/content/anvils';
 import { Room, ROOM_TIMING_DEFAULTS } from '../src/server/room/room';
 import { ManualClock } from '../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
@@ -26,6 +28,27 @@ it('selects Malicious Monetization through the room',()=>{
   expect(room.state.seats.find(s=>s.seatId===candidate)!.match.gold).toBe(gold+2);id=candidate;break;
  }
  expect(id).not.toBe('');
+});
+it('fields and equips a real purchased army before the kill witness',()=>{
+ const mine=()=>room.state.seats.find(s=>s.seatId===id)!.match;
+ claimAllOrbs(room,[id]);answerOpenChoices(room,[id]);
+ while(mine().level<8&&mine().gold>=4)expect(room.handle(id,{type:'buyXp'})).toMatchObject({ok:true});
+ for(let slot=0;slot<5;slot++)if(mine().shop.slots[slot].status==='available')room.handle(id,{type:'buy',slot,generation:mine().shop.generation});
+ answerOpenChoices(room,[id]);
+ for(const unit of mine().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))){
+  const board=mine().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');if(board.length>=getDeploymentCap(mine()))break;
+  const used=new Set(board.flatMap(u=>u.location.kind==='board'?[`${u.location.cell.col},${u.location.cell.row}`]:[]));
+  const cell=Array.from({length:28},(_,i)=>({col:i%7,row:4+Math.floor(i/7)})).find(c=>!used.has(`${c.col},${c.row}`))!;
+  expect(room.handle(id,{type:'deploy',unitId:unit.id,target:{kind:'board',cell}})).toMatchObject({ok:true});answerOpenChoices(room,[id]);
+ }
+ for(const item of mine().items.filter(i=>i.location.kind==='inventory')){
+  let equipped=false;
+  for(const unit of mine().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board')){
+   for(let slot=0;slot<3;slot++)if(room.handle(id,{type:'equip',itemId:item.id,unitId:unit.id,slot}).ok){equipped=true;break;}
+   if(equipped)break;
+  }
+ }
+ expect(mine().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length).toBeGreaterThan(1);
 });
 it('records and pays the authoritative room battle deaths',()=>{
  runUntil(room,clock,s=>s.round===19&&s.phase==='settlement');

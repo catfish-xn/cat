@@ -1,5 +1,5 @@
 import type { MatchState } from './match-types';
-import { MATCH_RULES } from './match-rules';
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { AUGMENT_BATCH5_S6C } from './content/augment-pool-batch5-s6c';
 import { grantMechanicGold } from './seat-mechanics/grants';
 
@@ -13,7 +13,8 @@ function owners(state:MatchState,round:number) {
   ?state.augments.filter(a=>Object.hasOwn(rows,a.definitionId)&&a.acquiredRound<=round):[];
 }
 export function batch5S6cSettlementHealth(state:MatchState,round:number,hp:number):number {
- return hp>0?Math.min(MATCH_RULES.initialHp,hp+owners(state,round).reduce((n,a)=>n+rows[a.definitionId].source.values.Heal,0)):hp;
+ const amount=owners(state,round).reduce((n,a)=>n+rows[a.definitionId].source.values.Heal,0);
+ return hp>0&&amount>0?Math.min(maximumPlayerHp(state.augments,round),hp+amount):hp;
 }
 function goldPlan(state:MatchState) {
  return state.roundResults.flatMap(r=>owners(state,r.round).map(a=>({receiptId:JSON.stringify([BATCH5_S6C_SOURCE,a.choiceId,r.round]),

@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_H10 } from '../src/simulation/content/augment-pool-batch5-h10';
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { BATCH1_SOURCE, BATCH2_SOURCE, BATCH1_BLOCKED_SOURCE, BATCH1_RECLASSIFIED_SOURCE, RESEARCH_FILE } from './augment-pool-source-expectations';
@@ -24,11 +25,11 @@ it('covers both tables completely with independent indexed expectations',()=>{
  expect(RESEARCH_FILE).toMatch(/augments-14\.24\.json$/);
  expect(BATCH1_SOURCE).toHaveLength(67);expect(BATCH2_SOURCE).toHaveLength(26);
  expect(BATCH1_SOURCE.map(x=>x.id).sort()).toEqual(Object.keys(AUGMENT_BATCH1).sort());
- expect(BATCH2_SOURCE.map(x=>x.id).sort()).toEqual(Object.keys(AUGMENT_BATCH2).sort());
+ expect(BATCH2_SOURCE.map(x=>x.id).sort()).toEqual([...Object.keys(AUGMENT_BATCH2),'snipers-nest'].sort());
  expect(new Set([...BATCH1_SOURCE,...BATCH2_SOURCE].map(x=>x.recordIndex)).size).toBe(93);
 });
 it.each([...BATCH1_SOURCE,...BATCH2_SOURCE])('$id matches research record [$recordIndex]: identity, raw constants and reward plan',e=>{
- const row=AUGMENT_BATCH5_S3B[e.id]??AUGMENT_BATCH1[e.id]??AUGMENT_BATCH2[e.id];
+ const row=AUGMENT_BATCH5_H10[e.id]??AUGMENT_BATCH5_S3B[e.id]??AUGMENT_BATCH1[e.id]??AUGMENT_BATCH2[e.id];
  expect(row.apiName).toBe(e.apiName);expect(row.tier).toBe(e.tier);expect(row.source.values).toEqual(e.values);
  // This inventory row remains in batch 2; executable content moved to B5-58.
  if(e.id==='forbidden-magic'){
@@ -37,7 +38,8 @@ it.each([...BATCH1_SOURCE,...BATCH2_SOURCE])('$id matches research record [$reco
   expect(batch1GiftPlan({...createMatch(42),augments:[{definitionId:e.id,choiceId:'oracle',acquiredRound:1}]})).toHaveLength(3);
   return;
  }
- if(!e.enabled){
+ // H10 moved Sniper's Nest out of the old disabled table and enabled its full implementation.
+ if(!e.enabled&&e.id!=='snipers-nest'){
   expect(AUGMENT_BATCH2[e.id].enabled).toBe(false);expect(row.gifts).toEqual([]);
   expect(AUGMENT_DEFINITIONS[e.id]).toBeUndefined();expect(AUGMENT_POOL_API_NAMES[e.id]).toBeUndefined();
   expect(batch1GiftPlan({...createMatch(42),augments:[{definitionId:e.id,choiceId:'oracle',acquiredRound:1}]})).toEqual([]);

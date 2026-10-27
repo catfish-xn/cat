@@ -85,6 +85,8 @@ export interface ProvenanceCombatSettlement {
   readonly roundId: string; readonly combatId: string; readonly settlementId: string;
 }
 export interface ResourceProvenanceContext {
+  /** P-B5-59: authenticated Pilfer copies arrive at the next natural round, including supply. */
+  readonly pilferRewards?: readonly import('./augment-gift-plan').AugmentGift[];
   readonly batch5Inventory?:InventoryPlan;
   readonly s3bState?: Pick<import('./match-types').MatchState,'augments'|'resourceProvenance'|'seed'>;
   readonly augmentHistory?: import('./augment-history-types').AugmentHistory;
@@ -464,8 +466,11 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       absent.delete(entry.unitId);
     }else if (entry.kind === 'unit-acquired') {
       keys(entry, [...common, 'unitId', 'source']); record(entry.source);
+      const source=entry.source;
+      const pilferBirth=source.kind==='mechanic'&&context.pilferRewards?.some(gift=>gift.kind==='unit'
+        &&gift.receiptId===source.receiptId&&gift.acquiredRound===round.ordinal);
       requireValue(round.kind !== 'supply'||entry.source.kind==='carousel'||entry.source.kind==='loot'
-        &&explicitOrbReceipt?.resolution==='held', 'unit birth in supply');
+        &&explicitOrbReceipt?.resolution==='held'||pilferBirth, 'unit birth in supply');
       requireValue(entry.unitId === `unit-${nextUnitSerial}`, 'unit serial'); integer(nextUnitSerial + 1, 1);
       let definitionId: string;
       if (entry.source.kind === 'opening') {

@@ -9,7 +9,7 @@ import { requireAugmentFacts } from '../src/simulation/augment-history';
 import { assertSharedPoolConservation, restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 
 describe('B5-84 actual Room',()=>{
- const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:14,carousel:CAROUSEL_RULES_BINDING});
+ const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:2,carousel:CAROUSEL_RULES_BINDING});
  let seatId:string;
  const get=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
  beforeAll(()=>{room.start();});
@@ -24,7 +24,7 @@ describe('B5-84 actual Room',()=>{
    }
    if(get().pendingChoice?.offers.includes('max-cap'))return;
   }
-  throw new Error('seed 14 real room has no Max Cap after three rerolls per human');
+  throw new Error('seed 2 real room has no Max Cap after three rerolls per human');
  });
  afterAll(()=>room.dispose());
  it('XP bought while the offered choice is pending remains legal before acquisition',()=>{

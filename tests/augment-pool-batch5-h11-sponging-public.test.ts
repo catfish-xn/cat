@@ -1,12 +1,12 @@
 import { beforeAll, expect, it } from 'vitest';
-import { createMatch, buyUnit, combineItems, equipItem, startMatchCombat, stepMatch, nextRound, selectChoice, type MatchState } from '../src/simulation/match';
+import { createMatch, buyUnit, combineItems, equipItem, startMatchCombat, stepMatch, nextRound, rerollAugment, selectChoice, type MatchState } from '../src/simulation/match';
 import { accepted, fieldBench, finish, resolveM5Choices } from './match-helpers';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { requireAugmentFacts } from '../src/simulation/augment-history';
 
 // Bounded 0..7 search found this public route; every item comes from actual PvE
 // rewards. Three pairs become ordinary completed items via combineItems.
-let route = createMatch(7), acquired: MatchState, opening: MatchState, permanent: MatchState['items'];
+let route = createMatch(5), acquired: MatchState, opening: MatchState, permanent: MatchState['items'];
 const priorities = ['item-grab-bag-i','big-grab-bag','heroic-grab-bag','iron-assets'];
 function choices(s: MatchState) { return resolveM5Choices(s, priorities, ['spoils-of-war-i','spoils-of-war-ii','blood-brothers','caretakers-chosen']); }
 for (let round = 1; round < 12; round++) beforeAll(() => {
@@ -23,6 +23,7 @@ for (let round = 1; round < 12; round++) beforeAll(() => {
   route = choices(route); route = accepted(nextRound(route, route.round));
 });
 beforeAll(() => {
+  for(let slot=0;slot<3&&!route.pendingChoice!.offers.includes('sponging');slot++){const c=route.pendingChoice!;route=accepted(rerollAugment(route,c.choiceId,c.generation,slot));}
   expect(route.roundDefinitionId).toBe('3-2'); expect(route.pendingChoice!.offers).toContain('sponging');
   // Exercise recovery of an ordinary checkpoint BEFORE acquiring history ownership.
   route = restoreMatch(JSON.stringify(route));
@@ -31,7 +32,7 @@ beforeAll(() => {
   let s = acquired;
   const donor = s.preparation.units.find(u => u.id === 'unit-1')!;
   for (const [a,b] of [['item-1','item-2'], ['item-3','item-4'], ['item-5','item-6']]) s = accepted(combineItems(s,a,b));
-  const ids = s.items.filter(i => ['titans-resolve','shojin','dragons-claw'].includes(i.definitionId));
+  const ids = s.items.filter(i => ['archangel','shojin','sunfire-cape'].includes(i.definitionId));
   expect(ids).toHaveLength(3);
   for (const [slot, item] of ids.entries()) s = accepted(equipItem(s, item.id, donor.id, slot));
   permanent = s.items;
@@ -45,7 +46,7 @@ it('B5-79 actual choose/combine/equip/start commands copy from the nearest full 
   expect(recipients).toHaveLength(3);
   for (const u of recipients) {
     expect(u.id).not.toBe('unit-1'); expect(u.combatItemGrants).toHaveLength(1);
-    expect(['titans-resolve','shojin','dragons-claw']).toContain(u.combatItemGrants![0].definitionId);
+    expect(['archangel','shojin','sunfire-cape']).toContain(u.combatItemGrants![0].definitionId);
   }
   expect(opening.items).toEqual(permanent);
   const roster = requireAugmentFacts(opening,'combat-roster',opening.round)[0].roster;

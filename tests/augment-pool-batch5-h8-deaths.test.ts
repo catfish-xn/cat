@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { FIELDED_LEGS, fieldedRoute } from './augment-stage-helpers';
-import { rerollAugment, selectChoice, startMatchCombat, stepMatch, buyUnit, equipItem, nextRound, buyXp } from '../src/simulation/match';
+import { rerollAugment, selectChoice, startMatchCombat, stepMatch, buyUnit, nextRound, buyXp, deployMatchUnit } from '../src/simulation/match';
 import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
 import { drainBatch5H8Deaths } from '../src/simulation/augment-pool-batch5-h8-deaths';
 import { requireAugmentFacts } from '../src/simulation/augment-history';
@@ -9,6 +9,8 @@ import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { augmentCandidates } from '../src/simulation/augment-offers';
 import { AUGMENT_BATCH5_H8 } from '../src/simulation/content/augment-pool-batch5-h8';
+import { equipArmyItems } from './fixtures/army-items';
+import { grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
 const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 it.skipIf(!existsSync(RESEARCH_FILE))('Malicious Monetization archive numbers',()=>{
  const rows=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')) as any[];
@@ -19,10 +21,13 @@ it.skipIf(!existsSync(RESEARCH_FILE))('Malicious Monetization archive numbers',(
 it.each(['2-1','3-2','4-2'])('only offers Monetization at the allowed node %s',node=>{
  expect(augmentCandidates('gold',[],[],null,{node,fieldedTraits:[],blocked:[]}).includes('mirrored-monetization')).toBe(node==='4-2');
 });
-it.each(FIELDED_LEGS)('reaches %s with real commands',leg=>{expect(fieldedRoute(9,leg).roundDefinitionId).toBe(leg);});
+it.each(FIELDED_LEGS)('reaches %s with real commands',leg=>{expect(fieldedRoute(37,leg).roundDefinitionId).toBe(leg);});
 let state:import('../src/simulation/match').MatchState;
 let checkpoint:string;
-it('serializes the 4-2 checkpoint',()=>{checkpoint=serializeMatch(fieldedRoute(9,'4-2'));});
+it('serializes the 4-2 checkpoint',()=>{
+ const grant=grantMechanicUnit(fieldedRoute(37,'4-2'),{receiptId:'h8-kill-witness',source:'test',definitionId:'viktor',starLevel:3});
+ expect(grant.ok).toBe(true);if(!grant.ok)throw Error(grant.reason);checkpoint=serializeMatch(grant.state);
+});
 it('finds and selects the 4-2 offer',()=>{
  let s=restoreMatch(checkpoint);for(let slot=0;slot<3&&!s.pendingChoice!.offers.includes('mirrored-monetization');slot++){const c=s.pendingChoice!;s=accepted(rerollAugment(s,c.choiceId,c.generation,slot));}
  expect(s.pendingChoice!.offers).toContain('mirrored-monetization');
@@ -34,9 +39,17 @@ it('pays 2 for each real enemy champion death after the fight',()=>{
  for(let n=0;n<3;n++){
   state=resolveM5Choices(state);
   for(let i=0;i<state.shop.slots.length;i++){const r=buyUnit(state,i,state.shop.generation);if(r.ok)state=r.state;}
-  for(let i=0;i<8;i++){const r=buyXp(state);if(!r.ok)break;state=r.state;}
-  for(const item of [...state.items]) for(const unit of state.preparation.units.filter(u=>u.team==='player')) for(let slot=0;slot<3;slot++){const r=equipItem(state,item.id,unit.id,slot);if(r.ok){state=r.state;break;}}
-  const started=startMatchCombat(fieldBench(state));if(started.ok)events.push(...started.events);state=accepted(started);while(state.phase==='combat'){const step=stepMatch(state);events.push(...step.events);state=step.state;}
+  while(state.level<8&&state.gold>=4){const r=buyXp(state);if(!r.ok)break;state=r.state;}
+  state=resolveM5Choices(state);
+  state=equipArmyItems(resolveM5Choices(fieldBench(state)));
+  const witness=state.preparation.units.find(u=>u.definitionId==='viktor')!;
+  if(witness.location.kind!=='board'){
+   const front=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board')!;
+   state=resolveM5Choices(accepted(deployMatchUnit(state,witness.id,front.location)));
+  }
+  if(state.phase==='preparation'){
+   const started=startMatchCombat(state);if(started.ok)events.push(...started.events);state=accepted(started);while(state.phase==='combat'){const step=stepMatch(state);events.push(...step.events);state=step.state;}
+  }
   const paid=state.seatMechanics?.receipts.some(r=>r.source==='augment-batch5-h8-monetization');
   if(paid||state.phase==='gameOver'||state.round>=acquiredRound+2)break;
   state=resolveM5Choices(state);state=accepted(nextRound(state,state.round));

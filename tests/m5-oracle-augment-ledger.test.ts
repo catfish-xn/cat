@@ -253,14 +253,14 @@ it('cannot rewrite historical battle counters to mint a reward after an unrelate
   expect(()=>validateRewards(before,receipts(after,[{...gold('augment-pool-batch3',[0,0],8,4),roundId:'2-1'}]),{type:'reroll'},[],env)).toThrow(/battle counters append-only/);
 });
 
-it('contains exactly 283 independently tiered identities, with two restricted to shared carousel',()=>{
+it('contains exactly 285 independently tiered identities, with two restricted to shared carousel',()=>{
   const pools=(['silver','gold','prismatic'] as const).map(tier=>augmentPool(tier,[]));
-  const all=pools.flat();expect(all).toHaveLength(281);expect(new Set(all).size).toBe(281);
-  // Independently transcribed integrated catalog, including Shop Glitch.
+  const all=pools.flat();expect(all).toHaveLength(283);expect(new Set(all).size).toBe(283);
+  // Independently transcribed integrated catalog, including Shop Glitch and the two H9 identities.
   const shared=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true));
-  expect(shared).toHaveLength(283);expect(new Set(shared).size).toBe(283);
+  expect(shared).toHaveLength(285);expect(new Set(shared).size).toBe(285);
   expect(shared.filter(id=>!all.includes(id)).sort()).toEqual(['table-scraps','young-and-wild-and-free']);
-  const groups={silver:['patience-is-a-virtue','survivor','diversified-portfolio','diversified-portfolio-plus'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal'],prismatic:['invested-plus','invested-plus-plus']};
+  const groups={silver:['patience-is-a-virtue','survivor','diversified-portfolio','diversified-portfolio-plus'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal','forbidden-magic','a-golden-find'],prismatic:['invested-plus','invested-plus-plus']};
   for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);
 });
 it('retains batch-4 stage bans and all exclusions against the current pool in both directions',()=>{

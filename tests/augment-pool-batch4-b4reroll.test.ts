@@ -13,6 +13,7 @@ import { createMatch, buyUnit, sellUnit, lockMatchCombatRoster, nextRound, rerol
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, emptyBoard, fieldBench, reachRound, resolveM5Choices } from './match-helpers';
 import { firstNodeSeed } from './augment-stage-helpers';
+import { equipArmyItems } from './fixtures/army-items';
 
 const ids=Object.keys(AUGMENT_BATCH4_B4REROLL) as (keyof typeof AUGMENT_BATCH4_B4REROLL)[];
 const source=(existsSync(RESEARCH_FILE)?JSON.parse(readFileSync(RESEARCH_FILE,'utf8')):[]);
@@ -76,22 +77,33 @@ const targets=[['invested-plus','3-2'],['invested-plus-plus','4-2']] as const;
 // Seeds are discovered offline after pool expansion; no resource injection in these routes.
 for(const [id,node] of targets){
  describe(id,()=>{
+  let paid:MatchState,text:string;
   it('initializes its public stage route',()=>{
-   const seed=id==='invested-plus'?5:16; // first fielded-route seeds offering the card (including the three public rerolls) on the 250-card merged pool
+   const seed=id==='invested-plus'?99:217; // Actual public offers, with no earlier history owner and enough HP.
    routes.set(id,createMatch(seed));
   });
   for(const stop of ['1-2','1-3','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','3-2',...(node==='4-2'?['3-3','3-4','3-5','3-6','3-7','4-1','4-2']:[])])it(`public route ${stop}`,()=>{
    let s=routes.get(id)!;
    while(s.roundDefinitionId!==stop){s=resolveM5Choices(s);if(s.phase==='preparation'){s=accepted(startMatchCombat(fieldBench(s)));while(s.phase==='combat')s=stepMatch(s).state;}s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));}
+   if(stop==='4-1')s=restoreMatch(serializeMatch(s));
    routes.set(id,s);
   });
   it('pays acquisition gold once and grants spendable next-entry credits; all restore entries reject tampering',()=>{
    const open=routes.get(id)!,gold=open.gold;let s=select(open,id);
    expect(s.gold-gold).toBe(id==='invested-plus'?26:45);expect(batch4RerollsGranted(s)).toBe(0);
    const c=open.pendingChoice!,repeated=selectChoice(s,c.choiceId,c.generation,id);expect(repeated.ok).toBe(false);expect(repeated.state).toBe(s);expect(s.scheduleReceipts.filter(r=>r.definitionId===id)).toHaveLength(1);
+   if(id==='invested-plus-plus')s=equipArmyItems(fieldBench(s),'unit-2');
    s=advance(s,true);const expected=Math.floor(Math.max(0,Math.min(batch4RerollEntryGold(s,s.round),80)-50)/10);
    expect(expected).toBeGreaterThan(0);expect(batch4RerollsGranted(s)).toBe(expected);expect(batch4RerollsGranted({...s,gold:0})).toBe(expected);
-   const before=s;s=accepted(rerollShop(s));expect(s.gold).toBe(before.gold);roundTripAndTamper(s);
+   const before=s;s=accepted(rerollShop(s));expect(s.gold).toBe(before.gold);paid=s;
+  });
+  it('serializes the authenticated paid credits',()=>{text=serializeMatch(paid);});
+  it('restores paid credits from JSON',()=>{expect(restoreMatch(text)).toEqual(paid);});
+  it('restores paid credits from a detached object',()=>{expect(restoreMatch(structuredClone(paid))).toEqual(paid);});
+  const mutations=[(x:any)=>{x.scheduleReceipts.find((r:any)=>r.definitionId===id).gold++;},(x:any)=>{x.seatMechanics.seat[FREE_REROLL_KEY].used++;},(x:any)=>{delete x.seatMechanics.seat[FREE_REROLL_KEY];},(x:any)=>{const e=x.resourceProvenance.entries.find((e:any)=>e.kind==='free-reroll');e.generation=x.shop.generation;}];
+  for(const [index,mutate] of mutations.entries())for(const entry of ['object','JSON','serialize'])it(`rejects mutation ${index+1} at ${entry} entry`,()=>{
+   const bad=JSON.parse(text);mutate(bad);
+   expect(()=>entry==='object'?restoreMatch(bad):entry==='JSON'?restoreMatch(JSON.stringify(bad)):serializeMatch(bad)).toThrow();
   });
  });
 }

@@ -32,16 +32,13 @@ function fight(context:MatchState,battles:BattleRecord[]):MatchState {
  return resolveM5Choices(s);
 }
 function opening(id:string):{state:MatchState;battles:BattleRecord[];before:MatchState} {
- const node=id==='slammin-plus'?'3-2':'2-1',seed=id==='slammin-plus'?PLUS_SEED:OPEN_SEEDS[id]??firstNodeSeed(id),battles:BattleRecord[]=[];
+ const node=id==='slammin-plus'?'3-2':'2-1',seed=id==='slammin-plus'?PLUS_SEED:firstNodeSeed(id),battles:BattleRecord[]=[];
  let s=createMatch(seed);
  while(s.roundDefinitionId!==node){s=resolveM5Choices(s);if(s.phase==='preparation')s=fight(emptyBoard(s),battles);s=accepted(nextRound(s,s.round));}
  const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
  s=accepted(selectChoice(s,c.choiceId,c.generation,id));return {state:s,battles,before};
 }
-const PLUS_SEED=14; // deterministic public 3-2 offer: first seed on the 250-card merged pool
-/** First-node routes on the 250-card merged pool with movable/sellable champion benches;
- * opening() still asserts the offer. Re-run firstNodeSeed if the pool or openings change. */
-const OPEN_SEEDS:Readonly<Record<string,number>>={'clear-mind':181,'cluttered-mind':32,'slammin':117};
+const PLUS_SEED=4; // First public 3-2 offering seed on the v25 integrated pool.
 function emptyInventory(state:MatchState):MatchState {
  let s=state;
  for(let tries=0;s.items.some(i=>i.location.kind==='inventory')&&tries<30;tries++){

@@ -1,3 +1,4 @@
+import { needsOpponentHp } from '../src/simulation/augment-settlement-gold';
 import { expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { contestedAmount } from '../src/simulation/augment-pool-batch5-h6';
@@ -42,7 +43,9 @@ it('settlement pays once per two other live players from the frozen roster, igno
  expect(contestedAmount(s,s.round)).toBe(2);
  const {resolveRoundEconomy}=await import('../src/simulation/round-economy');
  const plan=resolveRoundEconomy({augments:s.augments,roundId:s.roundDefinitionId,result:'playerWin',gold:s.gold,streak:s.streak,level:s.level,xp:s.xp,hp:s.playerHp,enemySurvivors:0});
- const result=applyRoundSettlement(s,{version:ROUND_SETTLEMENT_VERSION,settlementId:'settlement-1',battleId:'battle-1',seatId:'s0',round:s.round,roundId:s.roundDefinitionId,settlementEligible:true,result:'win',damage:plan.playerDamage,baseDamage:plan.baseDamage,opposingSurvivors:0,growth:[],combatTicks:1,combatEventCount:1});
+ const {openingEncounterId}=await import('../src/simulation/opening-encounter');
+ const openingFacts=openingEncounterId(s)==='warwicks-hunger'?{g23Facts:{battleId:'battle-1',round:s.round,roundKind:'pvp' as const,result:'win' as const,conquerorTier:0,chemBaronTier:0,conquestTakedowns:[],alliedDeaths:0,rumbleStar:0 as const,highRollerGold:0,openingDeaths:[]}}:{};
+ const result=applyRoundSettlement(s,{version:ROUND_SETTLEMENT_VERSION,settlementId:'settlement-1',battleId:'battle-1',seatId:'s0',round:s.round,roundId:s.roundDefinitionId,settlementEligible:true,result:'win',damage:plan.playerDamage,baseDamage:plan.baseDamage,opposingSurvivors:0,growth:[],combatTicks:1,combatEventCount:1,...(needsOpponentHp(s.augments,s.round)?{opponentHp:90}:{}),...openingFacts});
  expect(result.ok, result.ok?undefined:result.reason).toBe(true);if(!result.ok)throw new Error(result.reason);
  expect(result.state.seatMechanics?.receipts.filter(r=>r.source==='augment-pool-batch5-h6')).toMatchObject([{kind:'gold',amount:2}]);
  expect(result.events.some(e=>e.type==='mechanicGranted'&&e.receipt.source==='augment-pool-batch5-h6')).toBe(true);
@@ -77,7 +80,7 @@ it('scoreboard entry records 150 bps AD and 150 centi AP on every current ordina
  prepareAugmentAcquisition(s,{status:'none'},0,[{...historyRoster(s),seatId:'s0',index:0,hp:s.playerHp,alive:true,rank:5,eliminatedRound:null}]);
  const c=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,'scoreboard-scrapper'));s=resolveM5Choices(s);
  const plan=resolveRoundEconomy({augments:s.augments,roundId:s.roundDefinitionId,result:'playerWin',gold:s.gold,streak:s.streak,level:s.level,xp:s.xp,hp:s.playerHp,enemySurvivors:0});
- const settled=applyRoundSettlement(s,{version:ROUND_SETTLEMENT_VERSION,settlementId:'score-1',battleId:'battle-1',seatId:'s0',round:s.round,roundId:s.roundDefinitionId,settlementEligible:true,result:'win',damage:plan.playerDamage,baseDamage:plan.baseDamage,opposingSurvivors:0,growth:[],combatTicks:1,combatEventCount:1});
+ const settled=applyRoundSettlement(s,{version:ROUND_SETTLEMENT_VERSION,settlementId:'score-1',battleId:'battle-1',seatId:'s0',round:s.round,roundId:s.roundDefinitionId,settlementEligible:true,result:'win',damage:plan.playerDamage,baseDamage:plan.baseDamage,opposingSurvivors:0,growth:[],combatTicks:1,combatEventCount:1,...(needsOpponentHp(s.augments,s.round)?{opponentHp:90}:{})});
  expect(settled.ok).toBe(true);if(!settled.ok)throw new Error(settled.reason);s=settled.state;
  s=accepted(nextRound(s,s.round));const roster=historyRoster(s);
  s=recordAugmentTable(s,'entry',[{...roster,seatId:'s0',index:0,hp:s.playerHp,alive:true,rank:5,eliminatedRound:null}]);

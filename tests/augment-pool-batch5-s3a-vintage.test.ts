@@ -1,3 +1,4 @@
+import { firstNodeSeed } from './augment-stage-helpers';
 import { expect,it } from 'vitest';
 import { accepted,resolveM5Choices,emptyBoard,reachRoundFielded } from './match-helpers';
 import { selectChoice,combineItems,equipItem,sellUnit,nextRound,startMatchCombat,openAnvil,type MatchState } from '../src/simulation/match';
@@ -6,8 +7,8 @@ import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 function trip(s:MatchState){const text=serializeMatch(s);expect(restoreMatch(text)).toEqual(s);expect(restoreMatch(JSON.parse(text))).toEqual(s);expect(restoreMatch(s)).toEqual(s);}
 function reject(s:MatchState,mutate:(x:any)=>void){const x=JSON.parse(serializeMatch(s));mutate(x);expect(()=>restoreMatch(x)).toThrow();expect(()=>restoreMatch(JSON.stringify(x))).toThrow();expect(()=>serializeMatch(x)).toThrow();}
 function advance(s:MatchState){s=resolveM5Choices(s);if(s.phase==='preparation')s=accepted(startMatchCombat(emptyBoard(s)));s=resolveM5Choices(s);return resolveM5Choices(accepted(nextRound(s,s.round)));}
-function offer(){const open=reachRoundFielded('2-1',22);expect(open.roundDefinitionId).toBe('2-1');expect(open.pendingChoice?.kind).toBe('augment');expect(open.pendingChoice?.offers).toContain('fine-vintage');return open;}
-it('offers Fine Vintage at 2-1 for production seed 22',()=>{offer();});
+function offer(){const open=reachRoundFielded('2-1',firstNodeSeed('fine-vintage',10000,0,true));expect(open.roundDefinitionId).toBe('2-1');expect(open.pendingChoice?.kind).toBe('augment');expect(open.pendingChoice?.offers).toContain('fine-vintage');return open;}
+it('offers Fine Vintage at 2-1 through the public route',()=>{offer();});
 function prepared(){const open=offer(),c=open.pendingChoice!;let s=accepted(selectChoice(open,c.choiceId,c.generation,'fine-vintage'));expect(s.items.length).toBeGreaterThanOrEqual(2);s=accepted(combineItems(s,s.items[0].id,s.items[1].id));return s;}
 it('B5-15 real combine and four entries (including supply) produce a support anvil, with all restore entries authenticated',()=>{
  let s=prepared();const id=s.items.at(-1)!.id,round=s.round;trip(s);

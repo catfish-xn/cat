@@ -14,7 +14,7 @@ it.skipIf(!existsSync(RESEARCH_FILE))('B5-32 source numbers',()=>{
 });
 it('B5-32 offer nodes, public selection and next natural round, restore and tamper rejection',()=>{
  expect(['2-1','3-2','4-2'].filter(n=>offeredAt(id,n as '2-1'|'3-2'|'4-2'))).toEqual(['2-1']);
- let s=reachRound('2-1',false,firstNodeSeed(id,101)),c=s.pendingChoice!;
+ let s=reachRound('2-1',false,firstNodeSeed(id)),c=s.pendingChoice!;
  const gold=s.gold;s=accepted(selectChoice(s,c.choiceId,c.generation,id));expect(s.gold).toBe(gold+1);
  s=resolveM5Choices(s);s=accepted(startMatchCombat(emptyBoard(s)));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
  expect(s.augmentHistory!.facts.filter(f=>f.kind==='round-entry'&&f.round===s.round)).toHaveLength(1);

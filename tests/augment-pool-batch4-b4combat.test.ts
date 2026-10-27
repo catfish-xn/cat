@@ -13,10 +13,10 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { ad, ap } from '../src/simulation/combat-s13-state';
 
-// First public-route seeds offering each card (no reroll needed), re-searched on the 250-card merged pool.
+// Public routes offering each card without rerolls, re-searched on the v25 integrated pool.
 const routes:Record<string,{seed:number;node:string;reroll?:number}>={
- 'category-five':{seed:180,node:'2-1'},'long-distance-pals':{seed:18,node:'3-2'},
- 'sated-spellweaver':{seed:12,node:'3-2'},overheal:{seed:11,node:'3-2'}
+ 'category-five':{seed:23,node:'2-1'},'long-distance-pals':{seed:26,node:'3-2'},
+ 'sated-spellweaver':{seed:37,node:'3-2'},overheal:{seed:104,node:'3-2'}
 };
 function acquire(id:string):MatchState {
  const r=routes[id];let s=reachRound(r.node,false,r.seed);

@@ -4,20 +4,28 @@ import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/c
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, drawAugmentCard, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { accepted, fieldBench, reachRound, reachRoundFielded, resolveM5Choices } from './match-helpers';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { needsAugmentHistory } from '../src/simulation/augment-history';
+import { needsCrownHistory } from '../src/simulation/crown-history';
 
-/** H12's public 4-2 route: ordinary fights, empty formations for 3-1/4-1, checkpoint at 4-1. */
-export const H12_MAX_CAP_SEED = 94;
+/** H12's public fielded 4-2 route, with a validated checkpoint at 4-1. */
+export const H12_MAX_CAP_SEED = 16;
 
 /** 14.24 stage tags (augment-stage-bans.ts): the augment rounds a card can be offered at. */
 export function offeredAt(id: string, node: '2-1' | '3-2' | '4-2'): boolean {
   return !((AUGMENT_OFFER_RULES.nodeBans as Readonly<Record<string, readonly string[]>>)[AUGMENT_POOL_API_NAMES[id]] ?? []).includes(node);
 }
 /** First seed whose public 2-1 offer holds `id`, by the cheap first-node draw; bounded, never spins. */
-export function firstNodeSeed(id: string, limit = 10000, from = 0): number {
+export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = false): number {
   if (!offeredAt(id, '2-1')) throw new Error(`${id} is not offered at 2-1 (14.24 stage tags); use acquireAugment`);
   for (let seed = from; seed < from + limit; seed++) {
     const state = createMatch(seed);
-    if (generateChoices(augmentCandidates(resolveAugmentTier(state, 'round:2-1:augment'), [], [], null, { node: '2-1', fieldedTraits: [], blocked: [] }), state.choiceRngState).offers.includes(id)) return seed;
+    if (!generateChoices(augmentCandidates(resolveAugmentTier(state, 'round:2-1:augment'), [], [], null, { node: '2-1', fieldedTraits: [], blocked: [] }), state.choiceRngState).offers.includes(id)) continue;
+    // Openings can constrain the real offer or leave an unbenchable trainer.
+    // Validate the public route as well as the cheap candidate draw.
+    if (state.preparation.units.some(unit => unit.definitionId === 'trainer-golem')) continue;
+    const actual=fielded?reachRoundFielded('2-1',seed):reachRound('2-1',false,seed);
+    if (actual.pendingChoice?.offers.includes(id)) return seed;
   }
   throw new Error(`No 2-1 offer seed for ${id} in [${from}, ${from + limit})`);
 }
@@ -30,92 +38,94 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0): number {
  * Re-searched after the v24 shop / batch-5 merge (235 cards, P 2026-10-27), retaining the same routes and first-seed rule.
  * v25 integration B refreshes the exercised B5A/Raining Gold+/Final Polish routes for 250 cards;
  * Final Polish uses one public slot reroll. Other entries retain their earlier fixture scope.
+ * v25 final integration: non-fielded 3-2 routes re-searched on 285 admitted cards,
+ * ascending seeds 0..299, then public slot rerolls 0/1/2, without editing state.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
-  "all-that-shimmers-plus":{node:'3-2',seed:18},
-  "roll-the-dice":{node:'3-2',seed:7},
-  "diversified-portfolio-plus":{node:'3-2',seed:1},
-  'contested':{node:'3-2',seed:52},
-  "tiniest-titan-plus":{node:'3-2',seed:5},
-  // Integrated 267-card catalog: use the same public routes for these merged fixtures.
-  "glorious-evolution":{node:'4-2',seed:47,fielded:true},
-  'moonlight':{node:'4-2',seed:19,fielded:true,rerolls:[0]},
-  'greater-moonlight':{node:'4-2',seed:16,fielded:true},
-  "forward-thinking":{node:'3-2',seed:8,fielded:true,rerollSlots:[0,1,2]},
-  "mirrored-monetization":{node:'4-2',seed:9,fielded:true,rerollSlots:[0,1,2]},
-  "dhampyr":{node:'3-2',seed:3,rerollSlots:[0,1,2]},
-  "trait-tracker":{node:'3-2',seed:39},
-  'sponging':{node:'3-2',seed:0,rerolls:[0]},
-  "artifactory":{node:'3-2',seed:47},
-  "salvage-bin-plus":{node:'3-2',seed:23},
-  "a-golden-find":{node:'4-2',seed:19,fielded:true},
-  "backup":{node:'3-2',seed:9},
-  "bad-luck-protection":{node:'3-2',seed:8},
-  "belt-overflow":{node:'3-2',seed:21},
-  "betrayal":{node:'3-2',seed:27,fielded:true},
-  "big-grab-bag":{node:'3-2',seed:26},
-  "black-rose-crest":{node:'3-2',seed:74,fielded:true},
-  "black-rose-crown":{node:'3-2',seed:106,fielded:true},
-  "blazing-soul-i":{node:'3-2',seed:20},
-  "blazing-soul-ii":{node:'3-2',seed:89},
-  "blinding-speed":{node:'3-2',seed:67},
-  "bronze-for-life-i":{node:'3-2',seed:50},
-  "bronze-for-life-ii":{node:'3-2',seed:0},
-  "bulky-buddies-ii":{node:'3-2',seed:43},
-  "bulky-buddies-iii":{node:'3-2',seed:114},
-  "calculated-enhancement":{node:'3-2',seed:89},
+  'all-that-shimmers-plus':{node:'3-2',seed:3},
+  'roll-the-dice':{node:'3-2',seed:7,rerolls:[0]},
+  'diversified-portfolio-plus':{node:'3-2',seed:6},
+  'contested':{node:'3-2',seed:12},
+  'tiniest-titan-plus':{node:'3-2',seed:5},
+  // v25 integrated catalog: verified public routes; rerolls are existing per-slot commands.
+  'glorious-evolution':{node:'4-2',seed:86,fielded:true},
+  'moonlight':{node:'4-2',seed:1,fielded:true},
+  'greater-moonlight':{node:'4-2',seed:16,fielded:true,rerolls:[0,1]},
+  'forward-thinking':{node:'3-2',seed:27,fielded:true},
+  'mirrored-monetization':{node:'4-2',seed:37,fielded:true,rerolls:[0]},
+  'dhampyr':{node:'3-2',seed:14},
+  'trait-tracker':{node:'3-2',seed:20,rerolls:[0,1]},
+  'sponging':{node:'3-2',seed:16,rerolls:[0,1,2]},
+  'artifactory':{node:'3-2',seed:13,rerolls:[0,1,2]},
+  'salvage-bin-plus':{node:'3-2',seed:3,rerolls:[0,1,2]},
+  'a-golden-find':{node:'4-2',seed:11,fielded:true,rerolls:[0,1,2]},
+  'backup':{node:'3-2',seed:1},
+  'bad-luck-protection':{node:'3-2',seed:15,rerolls:[0]},
+  'belt-overflow':{node:'3-2',seed:0},
+  'betrayal':{node:'3-2',seed:27,fielded:true,rerolls:[0,1]},
+  'big-grab-bag':{node:'3-2',seed:12,rerolls:[0]},
+  'black-rose-crest':{node:'3-2',seed:147,fielded:true},
+  'black-rose-crown':{node:'3-2',seed:28,fielded:true},
+  'blazing-soul-i':{node:'3-2',seed:4},
+  'blazing-soul-ii':{node:'3-2',seed:0,rerolls:[0]},
+  'blinding-speed':{node:'3-2',seed:0,rerolls:[0,1]},
+  'bronze-for-life-i':{node:'3-2',seed:30},
+  'bronze-for-life-ii':{node:'3-2',seed:16},
+  'bulky-buddies-ii':{node:'3-2',seed:52,rerolls:[0,1]},
+  'bulky-buddies-iii':{node:'3-2',seed:21},
+  'calculated-enhancement':{node:'3-2',seed:0},
   "call-to-chaos":{node:'4-2',seed:576,fielded:true},
-  "climb-the-ladder-i":{node:'3-2',seed:17},
-  "climb-the-ladder-ii":{node:'3-2',seed:41},
-  "coronation":{node:'3-2',seed:29},
-  "corrosion":{node:'3-2',seed:79},
-  "dark-alley-dealings":{node:'3-2',seed:5},
-  "defense-call":{node:'3-2',seed:39},
-  "dummify":{node:'3-2',seed:56},
-  "duo-queue":{node:'4-2',seed:78,fielded:true},
-  "epoch-plus":{node:'3-2',seed:10},
-  "eye-for-an-eye-plus":{node:'3-2',seed:17},
-  "final-polish":{node:'4-2',seed:35,fielded:true,rerolls:1},
-  "find-your-center":{node:'3-2',seed:56},
-  "geniuses":{node:'4-2',seed:38,fielded:true},
-  "golemify":{node:'3-2',seed:18},
-  "item-collector-i":{node:'3-2',seed:25},
-  "item-collector-ii":{node:'3-2',seed:3},
-  "lineup":{node:'3-2',seed:6},
-  "little-buddies":{node:'3-2',seed:4},
-  "magic-roll":{node:'3-2',seed:51},
-  "manaflow-i":{node:'3-2',seed:46},
-  "manaflow-ii":{node:'3-2',seed:15},
-  "menaces":{node:'3-2',seed:84,fielded:true},
-  "mentorship":{node:'4-2',seed:10,fielded:true},
-  "missed-connections":{node:'3-2',seed:38},
-  "noble-sacrifice":{node:'3-2',seed:27},
-  "one-buff-two-buff":{node:'3-2',seed:5},
-  "one-two-five":{node:'4-2',seed:59,fielded:true},
-  "pair-of-fours":{node:'4-2',seed:24,fielded:true},
-  "phreaky-friday-plus":{node:'3-2',seed:28},
-  "piercing-lotus-i":{node:'3-2',seed:4},
-  "piercing-lotus-ii":{node:'3-2',seed:0},
-  "placebo-plus":{node:'3-2',seed:24},
-  "radiant-refactor":{node:'3-2',seed:13},
-  "raining-gold-plus":{node:'3-2',seed:30},
-  "reunion":{node:'4-2',seed:21,fielded:true},
-  "rocket-collection-plus":{node:'3-2',seed:155,fielded:true},
-  "rolling-for-days-i":{node:'3-2',seed:9},
-  "savage-revenge":{node:'3-2',seed:82,fielded:true},
-  "sisters":{node:'4-2',seed:30,fielded:true},
-  "support-mining-plus":{node:'3-2',seed:25},
-  "sword-overflow":{node:'3-2',seed:7},
-  "teaming-up-i":{node:'3-2',seed:1},
-  "teaming-up-ii":{node:'4-2',seed:13,fielded:true},
-  "the-golden-egg":{node:'4-2',seed:99,fielded:true},
-  "trifecta-i":{node:'3-2',seed:18},
-  "trifecta-ii":{node:'3-2',seed:59},
-  "unlikely-duo":{node:'4-2',seed:3,fielded:true},
-  "wand-overflow":{node:'3-2',seed:13},
-  "wealthy-rehab-i":{node:'3-2',seed:38},
-  "wealthy-rehab-ii":{node:'3-2',seed:15},
+  'climb-the-ladder-i':{node:'3-2',seed:76},
+  'climb-the-ladder-ii':{node:'3-2',seed:15,rerolls:[0,1]},
+  'coronation':{node:'3-2',seed:0},
+  'corrosion':{node:'3-2',seed:25},
+  'dark-alley-dealings':{node:'3-2',seed:13,rerolls:[0]},
+  'defense-call':{node:'3-2',seed:3,rerolls:[0,1]},
+  'dummify':{node:'3-2',seed:25,rerolls:[0,1,2]},
+  'duo-queue':{node:'4-2',seed:24,fielded:true,rerolls:[0,1,2]},
+  'epoch-plus':{node:'3-2',seed:11},
+  'eye-for-an-eye-plus':{node:'3-2',seed:17,rerolls:[0]},
+  'final-polish':{node:'4-2',seed:54,fielded:true,rerolls:[0,1]},
+  'find-your-center':{node:'3-2',seed:1,rerolls:[0]},
+  'geniuses':{node:'4-2',seed:12,fielded:true,rerolls:[0,1,2]},
+  'golemify':{node:'3-2',seed:18,rerolls:[0]},
+  'item-collector-i':{node:'3-2',seed:40},
+  'item-collector-ii':{node:'3-2',seed:4},
+  'lineup':{node:'3-2',seed:32,rerolls:[0]},
+  'little-buddies':{node:'3-2',seed:10,rerolls:[0,1,2]},
+  'magic-roll':{node:'3-2',seed:4,rerolls:[0,1]},
+  'manaflow-i':{node:'3-2',seed:9},
+  'manaflow-ii':{node:'3-2',seed:20,rerolls:[0]},
+  'menaces':{node:'3-2',seed:42,fielded:true,rerolls:[0,1]},
+  'mentorship':{node:'4-2',seed:11,fielded:true,rerolls:[0,1]},
+  'missed-connections':{node:'3-2',seed:71,rerolls:[0]},
+  'noble-sacrifice':{node:'3-2',seed:31,rerolls:[0,1,2]},
+  'one-buff-two-buff':{node:'3-2',seed:16,rerolls:[0,1]},
+  'one-two-five':{node:'4-2',seed:59,fielded:true},
+  'pair-of-fours':{node:'4-2',seed:10,fielded:true},
+  'phreaky-friday-plus':{node:'3-2',seed:44,rerolls:[0,1]},
+  'piercing-lotus-i':{node:'3-2',seed:15},
+  'piercing-lotus-ii':{node:'3-2',seed:0,rerolls:[0,1,2]},
+  'placebo-plus':{node:'3-2',seed:56,rerolls:[0,1,2]},
+  'radiant-refactor':{node:'3-2',seed:21,rerolls:[0,1,2]},
+  'raining-gold-plus':{node:'3-2',seed:51},
+  'reunion':{node:'4-2',seed:21,fielded:true,rerolls:[0,1,2]},
+  'rocket-collection-plus':{node:'3-2',seed:300,fielded:true},
+  'rolling-for-days-i':{node:'3-2',seed:17,rerolls:[0,1]},
+  'savage-revenge':{node:'3-2',seed:62,fielded:true,rerolls:[0,1]},
+  'sisters':{node:'4-2',seed:3,fielded:true},
+  'support-mining-plus':{node:'3-2',seed:1},
+  'sword-overflow':{node:'3-2',seed:16},
+  'teaming-up-i':{node:'3-2',seed:6,rerolls:[0,1,2]},
+  'teaming-up-ii':{node:'4-2',seed:60,fielded:true,rerolls:[0,1,2]},
+  'the-golden-egg':{node:'4-2',seed:27,fielded:true,rerolls:[0]},
+  'trifecta-i':{node:'3-2',seed:39},
+  'trifecta-ii':{node:'3-2',seed:7,rerolls:[0,1]},
+  'unlikely-duo':{node:'4-2',seed:1,fielded:true,rerolls:[0]},
+  'wand-overflow':{node:'3-2',seed:7},
+  'wealthy-rehab-i':{node:'3-2',seed:6},
+  'wealthy-rehab-ii':{node:'3-2',seed:18,rerolls:[0,1,2]},
 };
 /**
  * reachRoundFielded's route (match-helpers.ts), step for step, cached per seed and resumable: every round entry it
@@ -141,6 +151,8 @@ export function fieldedRoute(seed: number, roundId: string): MatchState {
     state = resolveM5Choices(state);
     if (state.phase !== 'settlement') throw new Error(`Cannot reach ${roundId} from ${state.roundDefinitionId}/${state.phase}`);
     state = accepted(nextRound(state, state.round));
+    if(state.roundDefinitionId==='4-1'&&!needsAugmentHistory(state)&&!needsCrownHistory(state))
+      state=restoreMatch(serializeMatch(state));
     route.entries.set(state.roundDefinitionId, state); route.last = state;
   }
   return state;
@@ -191,6 +203,6 @@ export function boundedFirstNodeOffer(id:string,fielded=false):MatchState {
 export const batch5S3bSeed=(id:string):number=>firstNodeSeed(id,10000);
 /** Fixed real-room routes for history augments; no seed scan in regression tests. */
 export const HISTORY_AUGMENT_ROOM_ROUTES = {
-  'a-golden-find': { seed: 9, seatId: 's0', node: '4-2' },
-  'forbidden-magic': { seed: 14, seatId: 's2', node: '3-2' },
+  'a-golden-find': { seed: 3, seatId: 's0', node: '4-2' },
+  'forbidden-magic': { seed: 3, seatId: 's1', node: '3-2' },
 } as const;

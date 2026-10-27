@@ -7,7 +7,7 @@ import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
 
 // First integrated-pool seed offering the card to s2 within two rerolls.
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:5});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:1});
 const mine=()=>room.state.seats.find(s=>s.seatId==='s2')!.match;
 let target:string;
 beforeAll(()=>room.start());

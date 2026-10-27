@@ -24,6 +24,7 @@ const entries=['JSON','object','serialized'] as const;
 const restore=(s:MatchState,entry:typeof entries[number])=>entry==='JSON'?restoreMatch(JSON.stringify(s)):entry==='object'?restoreMatch(s):restoreMatch(serializeMatch(s));
 const rich=(s:MatchState)=>accepted(grantMechanicGold(s,{receiptId:'shop-history-test-gold',source:'test',amount:200}));
 import { shopOwner } from './fixtures/shop-history-match';
+import { firstNodeSeed } from './augment-stage-helpers';
 // Detached saves are the only values modified in the attack matrix.
 type Json=any;
 let ticket:MatchState,starry:MatchState,bought:MatchState;
@@ -132,7 +133,7 @@ it.each([
 });
 it('M6 envelope round-trips the versioned history and carries authenticated prefixes across a recorded battle',async()=>{
  const history=new BattleHistory('shop-history-persistence');
- let state=recordedEmptyRoute(95,'2-1',history),c=state.pendingChoice!;
+ let state=recordedEmptyRoute(firstNodeSeed('starry-night'),'2-1',history),c=state.pendingChoice!;
  state=rich(accepted(selectChoice(state,c.choiceId,c.generation,'starry-night')));
  state=accepted(rerollShop(state));state=emptyBoard(state);
  state=accepted(recordCommand(history,state,startMatchCombat(state)));state=resolveM5Choices(state);
@@ -145,8 +146,8 @@ it('M6 envelope round-trips the versioned history and carries authenticated pref
 });
 
 it('online finite-pool Starry Night purchases authenticate both shared restore entries and room dispatch continuation',()=>{
- let pool=createSharedPool('shop-history-online',95,{seatCount:1});
- let result=sharedAccept(initializeSharedSeat(pool,createMatch(95,{mode:'shared-deferred'}),'audit',0));pool=result.pool;
+ let pool=createSharedPool('shop-history-online',34,{seatCount:1});
+ let result=sharedAccept(initializeSharedSeat(pool,createMatch(34,{mode:'shared-deferred'}),'audit',0));pool=result.pool;
  result=sharedAccept(generateSharedShop(pool,result.state,0));let state=result.state;pool=result.pool;
  for(let round=1;round<=3;round++){
   for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board')){
@@ -187,7 +188,7 @@ it('the unchanged WebSocket command grammar carries shop commands and rejects cl
 
 
 it('Crafted Crafting cannot lend a later same-round combination credit to an earlier shop-history refresh',()=>{
- let open=reachRoundFielded('2-1',8);
+ let open=reachRoundFielded('2-1',1212);
  for(const slot of [0,1]){const c=open.pendingChoice!;open=accepted(rerollAugment(open,c.choiceId,c.generation,slot));}
  expect(open.pendingChoice!.offers).toContain('crafted-crafting');
  while(open.roundDefinitionId!=='3-2'){
@@ -195,10 +196,10 @@ it('Crafted Crafting cannot lend a later same-round combination credit to an ear
   if(open.phase==='preparation')open=resolveM5Choices(accepted(startMatchCombat(emptyBoard(open))));
   open=accepted(nextRound(open,open.round));
  }
- const choice=open.pendingChoice!;
  expect(open.augments.some(a=>a.definitionId==='crafted-crafting')).toBe(true);
- expect(choice.offers).toContain('starry-night-plus');
- let state=rich(accepted(selectChoice(open,choice.choiceId,choice.generation,'starry-night-plus')));
+ for(const slot of [0,1]){const c=open.pendingChoice!;open=accepted(rerollAugment(open,c.choiceId,c.generation,slot));}
+ const actual=open.pendingChoice!;expect(actual.offers).toContain('starry-night-plus');
+ let state=rich(accepted(selectChoice(open,actual.choiceId,actual.generation,'starry-night-plus')));
  // This opening grants genuine component anvils; claim a second component before testing the later craft credit.
  const anvil=state.preparation.units.find(u=>u.definitionId==='TFT_ArmoryKeyComponent');expect(anvil).toBeDefined();
  state=accepted(openAnvil(state,anvil!.id));const component=state.pendingChoice!;

@@ -1,3 +1,4 @@
+import {roomOfferFor} from './server/augment-offer-helpers';
 import {beforeAll,afterAll,it,expect} from 'vitest';
 import {makeRoom,runUntil,answerOpenChoices} from './server/helpers';
 import {TwoSidedBattleResolver} from '../src/server/room/two-sided-resolver';
@@ -5,14 +6,14 @@ import {restoreSharedOrbSnapshot,assertSharedPoolConservation} from '../src/simu
 import {salvageRecipe} from '../src/simulation/augment-pool-batch5-h13-salvage';
 import {requireAugmentFacts} from '../src/simulation/augment-history';
 import {drainBatch1Gifts} from '../src/simulation/augment-pool-grants';
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:23});
-const seatId='s5',match=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:15});
+const seatId='s0',match=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
 beforeAll(()=>room.start());
 for(let round=2;round<=12;round++)beforeAll(()=>{runUntil(room,clock,s=>s.round===round&&(s.phase==='preparation'||s.roundKind==='supply'));});
 afterAll(()=>room.dispose());
 function onlineTrip(){const s=match(),authority=room.augmentHistoryAuthority(seatId);for(const input of [s,JSON.stringify(s)])expect(restoreSharedOrbSnapshot(room.state.pool,input,authority)).toEqual(s);return {s,authority};}
 it('B5-20 room choose/equip/sell uses the rules and preserves the shared pool; online authority rejects altered transforms',()=>{
- const c=match().pendingChoice!;expect(c.offers).toContain('salvage-bin-plus');
+ roomOfferFor(room,seatId,'salvage-bin-plus');const c=match().pendingChoice!;expect(c.offers).toContain('salvage-bin-plus');
  expect(room.handle(seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'salvage-bin-plus'}).ok).toBe(true);
  const s=match(),item=s.items.find(i=>i.location.kind==='inventory'&&salvageRecipe(i.definitionId))!,unit=s.preparation.units.find(u=>u.team==='player'&&u.definitionId!=='trainer-golem')!;
  expect(room.handle(seatId,{type:'equip',itemId:item.id,unitId:unit.id,slot:0}).ok).toBe(true);

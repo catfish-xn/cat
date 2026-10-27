@@ -1,3 +1,4 @@
+import { offerFor } from './augment-stage-helpers';
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { AUGMENT_BATCH5_H13 } from '../src/simulation/content/augment-pool-batch5-h13';
@@ -30,7 +31,7 @@ import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 import { equipItem,sellUnit,selectChoice,nextRound,startMatchCombat,type MatchState } from '../src/simulation/match';
-import { accepted,reachRound,resolveM5Choices,emptyBoard } from './match-helpers';
+import { accepted,resolveM5Choices,emptyBoard } from './match-helpers';
 import { trip,reject } from './augment-pool-batch5-h13-helpers';
 import { restoreMatch,serializeMatch } from '../src/simulation/serialization';
 import { requireAugmentFacts } from '../src/simulation/augment-history';
@@ -38,7 +39,7 @@ import { salvageSoldItems } from '../src/simulation/augment-pool-batch5-h13-salv
 import { validateHistoricalEquipment } from '../src/simulation/b8-restore';
 let chosen:MatchState,sold:MatchState;
 beforeAll(()=>{
- const open=reachRound('3-2',false,23),c=open.pendingChoice!;
+ const open=offerFor('salvage-bin-plus'),c=open.pendingChoice!;
  expect(c.offers).toContain('salvage-bin-plus');chosen=accepted(selectChoice(open,c.choiceId,c.generation,'salvage-bin-plus'));
  const item=chosen.items.find(i=>salvageRecipe(i.definitionId))!,holder=chosen.preparation.units.find(u=>u.team==='player')!;
  expect(item).toBeDefined();const equipped=accepted(equipItem(chosen,item.id,holder.id,0));sold=accepted(sellUnit(equipped,holder.id));

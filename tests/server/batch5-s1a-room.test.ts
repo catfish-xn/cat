@@ -1,13 +1,14 @@
+import { roomOfferFor } from './augment-offer-helpers';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { makeRoom, runUntil } from './helpers';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:8});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:22});
 let sid:string;
 beforeAll(()=>{
  room.start();runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='preparation');
- const seat=room.state.seats.find(s=>s.match.pendingChoice?.offers.includes('beggars-can-be-choosers'));
+ roomOfferFor(room,'s0','beggars-can-be-choosers');const seat=room.state.seats.find(s=>s.match.pendingChoice?.offers.includes('beggars-can-be-choosers'));
  expect(seat).toBeDefined();sid=seat!.seatId;const c=seat!.match.pendingChoice!;
  expect(room.handle(sid,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'beggars-can-be-choosers'})).toMatchObject({ok:true});
 });
@@ -20,6 +21,6 @@ it('room routes a real Beggars pick and repeated-slot rerolls',()=>{
   expect(room.handle(sid,{type:'rerollAugment',choiceId:choice.choiceId,generation:choice.generation,optionIndex:0})).toMatchObject({ok:true});
  }
  const match=room.state.seats.find(s=>s.seatId===sid)!.match;
- expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(match))).toEqual(match);
+ expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(match),room.augmentHistoryAuthority(sid))).toEqual(match);
  expect(room.state.fault).toBeNull();
 });

@@ -13,7 +13,7 @@ const TARGET=['draven','gangplank','maddie','nami','steb','swain','trundle'];
 describe.each(['deploy','reroll-after-auto-deploy'])('tracker online via %s',trigger=>{
 const clock=new ManualClock();
 // Documented Room test pool narrows availability, but purchases, XP, payment, draws and holdings all use real commands.
-const room=new Room(SEATS.map(s=>({...s,kind:'human'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h10-tracker',seed:39,clock,resolver:new TwoSidedBattleResolver(),poolCapacities:Object.fromEntries(TARGET.map(id=>[id,['gangplank','nami','swain'].includes(id)?18:30]))});
+const room=new Room(SEATS.map(s=>({...s,kind:'human'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h10-tracker',seed:8,clock,resolver:new TwoSidedBattleResolver(),poolCapacities:Object.fromEntries(TARGET.map(id=>[id,['gangplank','nami','swain'].includes(id)?18:30]))});
 let seatId='s1';
 const seat=()=>room.state.seats.find(s=>s.seatId===seatId)!;
 const command=(c:WireCommand)=>{const r=room.handle(seatId,c);expect(r,r.ok?'':JSON.stringify(r)).toMatchObject({ok:true});if(!r.ok)throw new Error(r.reason);return r;};

@@ -1,3 +1,4 @@
+import { firstNodeSeed } from './augment-stage-helpers';
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
@@ -19,7 +20,7 @@ it('offers only at 2-1 and keeps levels at and above six',()=>{
 });
 let state:MatchState;
 for(const stop of ['1-2','1-3','2-1'])it(`public route to ${stop}`,()=>{
- state ??= createMatch(123); // First direct offer on the merged 250-card pool; no runtime seed scan.
+ state ??= createMatch(firstNodeSeed('at-what-cost',10000,0,true)); // Verify the fielded route used below.
  while(state.roundDefinitionId!==stop){state=resolveM5Choices(state);if(state.phase==='preparation'){state=accepted(startMatchCombat(fieldBench(state)));while(state.phase==='combat')state=stepMatch(state).state;}state=resolveM5Choices(state);state=accepted(nextRound(state,state.round));}
 });
 it('real selection reaches level six plus four XP and authenticates the acquisition',()=>{

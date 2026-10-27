@@ -5,15 +5,15 @@ import {restoreSharedOrbSnapshot} from '../src/simulation/shared-pool';
 import {requireAugmentFacts} from '../src/simulation/augment-history';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/items';
 import {G24_FORGE_POOLS} from '../src/simulation/content/g2-4-forges';
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:47});
-const seatId='s1',match=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:13});
+const seatId='s0',match=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
 beforeAll(()=>room.start());
 for(let round=2;round<=12;round++)beforeAll(()=>{runUntil(room,clock,s=>s.round===round&&(s.phase==='preparation'||s.roundKind==='supply'));});
 afterAll(()=>room.dispose());
 let originalId:string;
 it('B5-22 room chooses, claims components and combines through public commands',()=>{
  const hp=match().playerHp;
- let c=match().pendingChoice!;expect(room.handle(seatId,{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:0}).ok).toBe(true);
+ let c=match().pendingChoice!;expect(room.handle(seatId,{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:c.offers.findIndex(x=>x!=='artifactory')}).ok).toBe(true);
  c=match().pendingChoice!;expect(c.offers).toContain('artifactory');expect(room.handle(seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'artifactory'}).ok).toBe(true);
  expect(match().consumables.filter(c=>c.definitionId==='magnetic-remover').length).toBeGreaterThanOrEqual(2);
  expect(match().playerHp).toBe(hp);

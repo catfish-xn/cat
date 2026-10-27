@@ -1,3 +1,4 @@
+import { salvageRecipe } from '../src/simulation/augment-pool-batch5-h13-salvage';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { makeRoom, runUntil, claimAllOrbs } from './server/helpers';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
@@ -8,7 +9,7 @@ import { requireAugmentFacts } from '../src/simulation/augment-history';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 
 for (const [id, seed, at, supply] of [
-  ['salvage-bin-plus', 23, 12, 14], ['artifactory', 47, 12, 14], ['pandoras-items-iii', 76, 4, 7],
+  ['salvage-bin-plus', 4, 12, 14], ['artifactory', 0, 12, 14], ['pandoras-items-iii', 76, 4, 7],
 ] as const) describe(`${id} with the production carousel binding`, () => {
   const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed, carousel: CAROUSEL_RULES_BINDING });
   let seatId: string;
@@ -39,7 +40,8 @@ for (const [id, seed, at, supply] of [
     expect(components.length).toBeGreaterThanOrEqual(2);
     expect(room.handle(seatId, { type: 'combine', a: components[0].id, b: components[1].id }).ok).toBe(true);
     if (id === 'salvage-bin-plus') {
-      const item = match().items.at(-1)!;
+      const item = match().items.find(item=>item.location.kind==='inventory'&&salvageRecipe(item.definitionId))!;
+      expect(item).toBeDefined();
       const unit = match().preparation.units.find(u => u.team === 'player' && u.definitionId !== 'trainer-golem')!;
       const slot = [0, 1, 2].find(slot => !match().items.some(i => i.location.kind === 'unit' && i.location.unitId === unit.id && i.location.slot === slot))!;
       expect(room.handle(seatId, { type: 'equip', itemId: item.id, unitId: unit.id, slot }).ok).toBe(true);

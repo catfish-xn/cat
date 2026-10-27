@@ -13,7 +13,7 @@ import { recordRoomBattleFacts } from '../src/server/room/augment-history';
 import type { SettledSeat, TwoSidedBattleResult } from '../src/server/room/types';
 import { checkH8CarouselRestore } from './augment-pool-batch5-h8-restore-helpers';
 const clock=new ManualClock();
-const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-health-room',seed:4,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
+const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-health-room',seed:10,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
 beforeAll(()=>{room.start();});
 for(let round=2;round<=12;round++)beforeAll(()=>{runUntil(room,clock,s=>s.round>=round&&s.phase==='preparation');});
 afterAll(()=>room.dispose());

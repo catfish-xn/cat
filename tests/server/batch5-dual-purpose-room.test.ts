@@ -1,3 +1,4 @@
+import { roomOfferFor } from './augment-offer-helpers';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import type { Room } from '../../src/server/room/room';
 import type { ManualClock } from '../../src/server/room/clock';
@@ -10,10 +11,10 @@ import { makeRoom, runUntil } from './helpers';
 let room:Room,clock:ManualClock;
 const mine=()=>room.state.seats.find(s=>s.seatId==='s1')!.match;
 beforeEach(()=>{
- // Room seed 16, seat s1: first public 2-1 initial offer with Dual Purpose on the merged 235-card pool.
- ({room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:16}));room.start();
+ // Room seed 6, seat s1: first public 2-1 initial offer with Dual Purpose on the merged 235-card pool.
+ ({room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:6}));room.start();
  runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='preparation');
- const choice=mine().pendingChoice!;expect(choice.offers).toContain('dual-purpose');
+ roomOfferFor(room,'s1','dual-purpose');const choice=mine().pendingChoice!;expect(choice.offers).toContain('dual-purpose');
  expect(room.handle('s1',{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'dual-purpose'})).toMatchObject({ok:true});
 });
 afterEach(()=>room?.dispose());

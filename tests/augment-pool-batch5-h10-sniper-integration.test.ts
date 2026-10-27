@@ -1,3 +1,4 @@
+import { firstNodeSeed } from './augment-stage-helpers';
 import { canonicalContent } from '../src/simulation/content';
 import { existsSync, readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -11,7 +12,7 @@ import { requireAugmentFacts } from '../src/simulation/augment-history';
 const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 let acquired:MatchState, opening:MatchState, advanced:MatchState, zeri:string;
 beforeAll(()=>{
- const s=reachRound('2-1',false,3),c=s.pendingChoice!;expect(c.offers).toContain('snipers-nest');
+ const s=reachRound('2-1',false,firstNodeSeed('snipers-nest')),c=s.pendingChoice!;expect(c.offers).toContain('snipers-nest');
  acquired=accepted(selectChoice(s,c.choiceId,c.generation,'snipers-nest'));
  zeri=acquired.preparation.units.find(u=>u.definitionId==='zeri')!.id;
  opening=accepted(startMatchCombat(accepted(deployMatchUnit(acquired,zeri,{kind:'board',cell:{col:1,row:7}}))));
