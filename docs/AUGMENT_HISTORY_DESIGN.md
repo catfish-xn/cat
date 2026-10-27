@@ -63,7 +63,7 @@
 - `appendAugmentFact(state,fact)`：内部领域扩展入口，不向网络开放。未来 player-health 等事实必须在可重演的真实领域事务内产生，不能把此函数当认证器。
 - `advanceAugmentPreparationTime(state,elapsedMs): MatchState`：仅 preparation 或返回 preparation 的选择阶段；累计毫秒0～600000、单调，重复同值无动作，倒退/越界/错阶段抛错。单人驱动可直接调用并进入重演证据；房间只对 Shop Glitch 持有者在命令前、冻结前和50ms计时回调采样注入。取得事实记录选择时的准备期偏移，未来刷新效果从该偏移计算；不实现免费刷新本身。暂停时调用方不推进逻辑时钟；战斗/选秀时钟不能冒充它。
 - `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)`：未来奖励路由指定剩余槽，要求全部正常领取已结束且真实持有来源；复用保留/授予/卡池守恒与满席 held 流程，不负责抽签或选择获奖者。正常领取仍一人一次。额外 ID 为 `<carouselId>:<seatId>:extra:<1..8>`，来源、序号写在同一个 augmentHistory 节中，没有第二个版本节。关闭后已归还的剩余卡先重新保留再授予；失败返回原 pool/carousel/state，无 RNG 消耗。
-- `recordAugmentTable`、`recordAugmentPvpRoster`：房间冻结和结算调用的规则接口，不供客户端提交事实。
+- `recordAugmentTable`、`recordAugmentPvpRoster`：房间取得/入轮和战斗冻结调用的规则接口，不供客户端提交事实。整桌结算改经 `recordAugmentSettlementTable(state,seats): MatchStep`（`match.ts` / `server-entry`），保留历史去重并返回新增收据对应的已编号事件；房间与原结算事件一起发布，详见联机合同 B5-34 节。
 
 记录 API 的错误统一前缀 `Invalid augment history:`。选秀事务沿用现有 `CarouselFailure`（invalid-match、stale-pool、slot-taken、invalid-slot、pool-exhausted、receipt-mismatch 等），不新增 wire reason。普通成功命令原事件/资源序号不变。
 
