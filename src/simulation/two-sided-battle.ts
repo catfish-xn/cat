@@ -1,4 +1,5 @@
 import { MAX_COMBAT_TICKS } from './combat-types';
+import { isR3Copy, projectR3Preparation } from './augment-pool-batch5-r3';
 import { drainSetup } from './setup-work';
 import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
 import { sampleD11CombatGold, validateD11BankSamples } from './d11-fill';
@@ -71,18 +72,23 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
   const source = (value: EffectSource): EffectSource => value.sourceKind === 'trait'
     ? {...value,sourceInstanceId:localId(s.seatId,'trait',value.sourceInstanceId)} : value;
   const sourced = (value: SourcedEffect): SourcedEffect => { const mapped = source(value.source); return {...value,source:mapped,key:effectKey(mapped)}; };
+  const sideUnit = (unit: typeof preparation.units[number]) => ({ ...unit, team, location: unit.location.kind === 'board'
+    ? {kind:'board' as const,cell:{col:unit.location.cell.col,row:team === 'player' ? unit.location.cell.row : DEFAULT_BOARD.rows - 1 - unit.location.cell.row}} : unit.location });
+  const sideStrategy = (compiled: StrategySnapshot): StrategySnapshot => ({
+    ...(compiled.r3Original?.length ? { r3Original: compiled.r3Original.map(a => ({ team, preparation: { ...a.preparation, units: a.preparation.units.map(sideUnit) }, strategy: sideStrategy(a.strategy) })) } : {}),
+    traits:compiled.traits.filter(trait=>trait.team === 'player').map(trait=>({...trait,team})),
+    units:compiled.units.map(unit=>({...unit,...(unit.itemSummon?{itemSummon:{...unit.itemSummon,
+      unit:sideUnit(unit.itemSummon.unit),
+      formCell:{col:unit.itemSummon.formCell.col,row:team==='player'?unit.itemSummon.formCell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.formCell.row}}}:{}),
+      ...(unit.r3Mirror ? {r3Mirror:{...unit.r3Mirror,unit:sideUnit(unit.r3Mirror.unit)}} : {}),sources:unit.sources.map(sourced),triggers:unit.triggers.map(trigger=>{
+      const mapped=source(trigger.source); return {...trigger,source:mapped,key:effectKey(mapped)};
+    }), mechanics:unit.mechanics?.map(mechanic=>mechanic.source.sourceKind === 'trait'
+      ? {...mechanic,source:{...mechanic.source,instanceId:localId(s.seatId,'trait',mechanic.source.instanceId)}} : mechanic)})),
+  });
   return {
     mapping, inputs,
-    units:projectItemSummons(projectG23Summons(preparation,undefined,inputs.itemSummonPositions),compiled).units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
-      ? {kind:'board' as const,cell:{col:unit.location.cell.col,row:team === 'player' ? unit.location.cell.row : DEFAULT_BOARD.rows - 1 - unit.location.cell.row}}
-      : unit.location})),
-    strategy:{ traits:compiled.traits.filter(trait=>trait.team === 'player').map(trait=>({...trait,team})),
-      units:compiled.units.map(unit=>({...unit,...(unit.itemSummon?{itemSummon:{...unit.itemSummon,
-        unit:{...unit.itemSummon.unit,team,location:unit.itemSummon.unit.location.kind==='board'?{kind:'board' as const,cell:{col:unit.itemSummon.unit.location.cell.col,row:team==='player'?unit.itemSummon.unit.location.cell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.unit.location.cell.row}}:unit.itemSummon.unit.location},
-        formCell:{col:unit.itemSummon.formCell.col,row:team==='player'?unit.itemSummon.formCell.row:DEFAULT_BOARD.rows-1-unit.itemSummon.formCell.row}}}:{}),sources:unit.sources.map(sourced),triggers:unit.triggers.map(trigger=>{
-        const mapped=source(trigger.source); return {...trigger,source:mapped,key:effectKey(mapped)};
-      }), mechanics:unit.mechanics?.map(mechanic=>mechanic.source.sourceKind === 'trait'
-        ? {...mechanic,source:{...mechanic.source,instanceId:localId(s.seatId,'trait',mechanic.source.instanceId)}} : mechanic)})) },
+    units:projectItemSummons(projectG23Summons(projectR3Preparation(preparation,compiled),compiled.r3Original?.length||compiled.units.some(u=>isR3Copy(u.itemSummon))?compiled.traits:undefined,inputs.itemSummonPositions),compiled).units.map(sideUnit),
+    strategy:sideStrategy(compiled),
   };
 }
 
@@ -116,7 +122,7 @@ export function* compileBattleSteps(a: PlayerBattleSnapshot, b: PlayerBattleSnap
   return yield* freezeContentSteps({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
     mapping:[...x.mapping,...y.mapping].sort((a,b)=>order(a.combatId,b.combatId)),
     preparation:{board:DEFAULT_BOARD,benchSize:9,units:[...x.units,...y.units]},
-    strategy:{traits:[...x.strategy.traits,...y.strategy.traits],units:[...x.strategy.units,...y.strategy.units]},
+    strategy:{...((x.strategy.r3Original?.length || y.strategy.r3Original?.length) ? { r3Original: [...x.strategy.r3Original ?? [],...y.strategy.r3Original ?? []] } : {}),traits:[...x.strategy.traits,...y.strategy.traits],units:[...x.strategy.units,...y.strategy.units]},
   });
 }
 
@@ -172,7 +178,7 @@ function sideResult(seatId: string, mapping: readonly BattleIdMapping[], termina
     const split=terminal.trenchSplits?.find(split=>split.ownerId===entry.combatId);
     if(!unit&&(!split||!terminal.removedUnitIds?.includes(entry.combatId)))throw new BattleValidationError('invalid-result');
     if(unit&&split)throw new BattleValidationError('invalid-result');
-    return {originalId:entry.originalId,unit,growth:unit?.runtime?.permanentAdBps??split?.permanentAdBps??0};
+    return {originalId:entry.originalId,unit,growth:unit?.r3Mirror ? 0 : unit?.runtime?.permanentAdBps??split?.permanentAdBps??0};
   }).sort((a,b)=>order(a.originalId,b.originalId));
   return { seatId, survivors:units.flatMap(({originalId,unit})=>unit&&countsG23SurvivorDamage(unit)?[{unitId:originalId,definitionId:unit.definitionId,starLevel:unit.starLevel,hp:unit.hp}]:[]),
     growth:isMirror ? [] : units.filter(({growth})=>growth>0).map(({originalId,growth})=>({unitId:originalId,attackDamageBps:growth})),
@@ -188,7 +194,7 @@ function validateDynamicResult(result:BattleResult):void {
   if (result.initial.equipmentReceipts || result.initial.pendingEquipment || result.terminal.pendingEquipment
     || result.terminal.units.some(u => u.equipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
-  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
+  const enabled=!!result.inputLog?.length || !!result.initial.strategy?.r3Original?.length || result.initial.strategy?.units.some(u=>isR3Copy(u.itemSummon)||u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
   if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null||!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
   if(!enabled){
     if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');

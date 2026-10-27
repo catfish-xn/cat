@@ -476,7 +476,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   return applyLevelUpHealth(state,commitOpeningEncounterHealth(saved?commitMelSave(committed,combat!.combatId!,hookEvents):committed,hookEvents));
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
-  const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && (unit.runtime?.permanentAdBps??0)>0)
+  const growth=combat.units.filter(unit=>unit.team==='player' && !unit.itemSummon && !unit.r3Mirror && (unit.runtime?.permanentAdBps??0)>0)
     .map(unit=>({unitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps}));
   for(const split of combat.trenchSplits??[])if(split.permanentAdBps>0&&split.copyIds.some(id=>combat.units.some(u=>u.id===id&&u.team==='player')))
     growth.push({unitId:split.ownerId,attackDamageBps:split.permanentAdBps});

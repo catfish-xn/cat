@@ -1,4 +1,6 @@
 import { drainSetup } from './setup-work';
+import { projectR3Roster, r3Traits, bindR3Copies, isR3Augment } from './augment-pool-batch5-r3';
+import { projectHallOfMirrors, bindHallOfMirrors, type R3OriginalArmy } from './augment-pool-batch5-r3-mirrors';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
 import { d14UnitBase } from './d14-anomalies/projection';
@@ -29,7 +31,7 @@ import { getUnitStats } from './unit-stats';
 import { readRoundEnemyProjection } from './round-enemies';
 import { hexDistance } from './board';
 import { resolveAbility } from './combat-abilities';
-import { deriveEffectiveTraits, projectEffectiveMembership, type TraitProjectionContext } from './traits/effective-membership';
+import { projectEffectiveMembership, type TraitProjectionContext } from './traits/effective-membership';
 import { makeSourcedEffects, resolveEffects } from './effects';
 import { TRAIT_DEFINITIONS } from './content/traits';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
@@ -76,6 +78,13 @@ export function enforcerConfiscates(traits: readonly TraitSnapshot[], victim: Te
 /** `confiscated` adds teams whose opposing Enforcer 10 is compiled elsewhere (two-sided sides, battle-time equipment). */
 export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG, context?: TraitProjectionContext, equipmentBasis?: StrategySnapshot, confiscated: readonly Team[] = []): Generator<void, StrategySnapshot, void> {
   state=readCombatStrategyInputs(state);
+  const hall = projectHallOfMirrors(state);
+  let original: R3OriginalArmy | undefined;
+  if (hall.mirrors.length) original = equipmentBasis?.r3Original?.[0] ?? { team: 'player', preparation: state.preparation,
+    strategy: yield* buildStrategySnapshotSteps({ ...state, augments: state.augments.filter(a => a.definitionId !== 'hall-of-mirrors') }, catalog, context, undefined, confiscated) };
+  state = hall.state;
+  const r3 = projectR3Roster(state);
+  state = r3.state;
   if(context&&context.round!==state.round)throw new RangeError('Trait projection round mismatch');
   const sisterAugment=state.augments.find(a=>a.definitionId==='sisters');
   const sisterUnits=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&['jinx','vi'].includes(u.definitionId));
@@ -85,7 +94,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
   const projection=projectEffectiveMembership(state.preparation,traitContext,catalog.traits,[...state.items,
     ...(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[]).map(i=>({id:'enemy:'+i.unitId+':'+i.slot,definitionId:i.definitionId,location:{kind:'unit' as const,unitId:i.unitId,slot:i.slot}}))]);
   state={...state,preparation:projection.preparation};
-  const openingTraits=[...deriveEffectiveTraits(projection,'player',catalog.traits),...deriveEffectiveTraits(projection,'enemy',catalog.traits)];
+  const openingTraits=[...r3Traits(projection,'player',catalog.traits,r3.copies,hall.mirrors),...r3Traits(projection,'enemy',catalog.traits,r3.copies,hall.mirrors)];
   // P enforcer-confiscation-v1: confiscate first, from the combat projection only; emblems (membership already
   // projected above) and non-champion holders keep their items. The permanent item ledger is never touched.
   const victims = new Set<Team>([...confiscated, ...(['player', 'enemy'] as const).filter(team => enforcerConfiscates(equipmentBasis?.traits ?? openingTraits, team))]);
@@ -99,8 +108,10 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
   const voidspawn=projectVoidspawns(state,openingTraits);
   state={...state,preparation:voidspawn.preparation};
   const projected={...projection,preparation:state.preparation};
-  const traits = equipmentBasis?.traits ?? [...deriveEffectiveTraits(projected,'player',catalog.traits),...deriveEffectiveTraits(projected,'enemy',catalog.traits)];
-  const reunion=new Set([...familyReunionParticipants(state,'player'),...familyReunionParticipants(state,'enemy')]);
+  const traits = equipmentBasis?.traits ?? [...r3Traits(projected,'player',catalog.traits,r3.copies,hall.mirrors),...r3Traits(projected,'enemy',catalog.traits,r3.copies,hall.mirrors)];
+  const reunionState = r3.copies.length ? { ...state, preparation: { ...state.preparation,
+    units: state.preparation.units.filter(u => !r3.copies.some(c => c.unit.id === u.id)) } } : state;
+  const reunion=new Set([...familyReunionParticipants(reunionState,'player'),...familyReunionParticipants(reunionState,'enemy')]);
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const equipment = g22Equipment(state, enemyItems), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items, { seed: state.g23?.seed ?? 0, round: state.round });
@@ -171,6 +182,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {
+        if (isR3Augment(augment.definitionId)) continue;
         const definition = lookup(catalog.augments, augment.definitionId);
         const grant=d11.get(augment.choiceId)?.grants.find(g=>g.unitId===unit.id);
         if(grant){
@@ -238,7 +250,8 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
       :anomaly==='comeback-story'?Math.floor((100-(state.playerHp??100))/10)*500:0;
     if(bonus&&state.anomalyBinding)sources.push(...makeSourcedEffects(unit.id,'anomaly',anomaly!,state.anomalyBinding.choiceId+':scaling',[{kind:'mechanic',mechanic:'damageAmp',values:{bps:bonus}}]));
     if(unit.definitionId==='mel'&&state.g23?.mel?.savedBattleId)sources.push(...makeSourcedEffects(unit.id,'trait','banished-mage',unit.id,[{kind:'mechanic',mechanic:'damageAmp',values:{bps:1000}}]));
-    const base = unit.location.kind==='board'?g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row):getUnitStats(unit.definitionId,unit.starLevel);
+    const formRow = r3.copies.find(c => c.unit.id === unit.id)?.formCell.row;
+    const base = unit.location.kind==='board'?g23FormStats(unit.definitionId, unit.starLevel,unit.team,formRow ?? unit.location.cell.row):getUnitStats(unit.definitionId,unit.starLevel);
     const promoted=state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='promoted';
     if(state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='returned')sources.push(...makeSourcedEffects(unit.id,'anomaly','into-the-unknown',state.anomalyBinding!.choiceId+':return',[{kind:'statPercentBps',stat:'attackDamage',bps:5000},{kind:'statFlat',stat:'abilityPower',amount:50}]));
     // Keep the death-linked reunion membership even when Menaces suppresses the extra star.
@@ -287,5 +300,5 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
   };
   const units: ReturnType<typeof compileUnit>[] = [];
   for (const unit of boardUnits) { units.push(compileUnit(unit)); yield; }
-  return appendMirrorSummons(state.preparation,{ traits, units });
+  return appendMirrorSummons(state.preparation,bindR3Copies(bindHallOfMirrors({ traits, units },hall.mirrors,original),r3.copies,equipmentBasis));
 }

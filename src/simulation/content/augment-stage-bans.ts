@@ -9,6 +9,8 @@ import { freezeContent } from './freeze';
  * Watcher Growth carries all three and is therefore never offered at an augment round.
  */
 export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = freezeContent({
+  // Raw 14.24 tags; P-B5-78 (2026-10-27) explicitly overrides availability in augment-offer-rules.
+  TFT_Augment_HallOfMirrors: ['2-1','3-2','4-2'],
   "TFT_Augment_NoScoutNoPivot":["3-2", "4-2"],
   "TFT_Augment_CookingPot":["3-2", "4-2"],
   "TFT_Augment_Survivor":["3-2","4-2"],

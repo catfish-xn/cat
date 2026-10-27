@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_R3_API_NAMES, AUGMENT_BATCH5_R3_NODE_BANS } from './augment-pool-batch5-r3';
 import { AUGMENT_BATCH5_H1_API_NAMES } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3_API_NAMES } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4_API_NAMES } from './augment-pool-batch5-h4';
@@ -36,6 +37,7 @@ export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeCo
   ...AUGMENT_BATCH5_H4_API_NAMES,
   ...AUGMENT_BATCH5_H5_API_NAMES,
   ...AUGMENT_BATCH5_H6_API_NAMES,
+  ...AUGMENT_BATCH5_R3_API_NAMES,
   ...AUGMENT_BATCH4_B4XP_API_NAMES,
   ...AUGMENT_BATCH4_B4REROLL_API_NAMES,
   sisters:'TFT13_TeamupAugment_Sisters', mentorship:'TFT13_TeamupAugment_Mentorship', reunion:'TFT13_TeamupAugment_Reunion',
@@ -81,7 +83,7 @@ export const AUGMENT_OFFER_RULES = freezeContent({
   traitFilterNodes:['3-2','4-2'],
   traitFilter:'any-associated-trait-on-a-fielded-player-unit-including-emblems-snapshot-at-open',
   seen:'initial-and-reroll-results-excluded-for-the-rest-of-the-match',
-  nodeBans:{...AUGMENT_BATCH4_B4COMBAT_NODE_BANS,...AUGMENT_BATCH4_B4REROLL_NODE_BANS, ...AUGMENT_STAGE_BANS, ...AUGMENT_BATCH4_B4XP_NODE_BANS, TFT13_Augment_CabalCrest:['2-1'], TFT13_Augment_CabalCrown:['2-1'], ...AUGMENT_BATCH3_XP_NODE_BANS, ...AUGMENT_BATCH3_NODE_BANS},
+  nodeBans:{...AUGMENT_BATCH4_B4COMBAT_NODE_BANS,...AUGMENT_BATCH4_B4REROLL_NODE_BANS, ...AUGMENT_STAGE_BANS, ...AUGMENT_BATCH4_B4XP_NODE_BANS, TFT13_Augment_CabalCrest:['2-1'], TFT13_Augment_CabalCrown:['2-1'], ...AUGMENT_BATCH3_XP_NODE_BANS, ...AUGMENT_BATCH3_NODE_BANS, ...AUGMENT_BATCH5_R3_NODE_BANS},
   crossPlayerExclusive:[['TFT13_Augment_Family','TFT13_Augment_PrimeCarry']],
   onePerMatch:['TFT13_Augment_Chembaron'],
   externalScope:'live-seats-other-than-self',

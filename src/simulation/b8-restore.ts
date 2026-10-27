@@ -429,7 +429,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
     check(equipmentContinuation(items, state.items) && serial === state.nextItemSerial, 'running equipment projection');
     return {basis,saleGold:0};
   }
-  const deltas = combat.units.filter(unit => unit.team === 'player' && !unit.itemSummon && (unit.runtime?.permanentAdBps ?? 0) > 0)
+  const deltas = combat.units.filter(unit => unit.team === 'player' && !unit.itemSummon && !unit.r3Mirror && (unit.runtime?.permanentAdBps ?? 0) > 0)
     .map(unit => ({sourceUnitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps}));
   for(const split of combat.trenchSplits??[])if(split.permanentAdBps>0&&basis.inputs.preparation.units.some(u=>u.id===split.ownerId&&u.team==='player'))
     deltas.push({sourceUnitId:split.ownerId,attackDamageBps:split.permanentAdBps});

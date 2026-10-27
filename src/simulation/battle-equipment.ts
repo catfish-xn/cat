@@ -57,7 +57,9 @@ export function prepareBattleEquipment(before: CombatStrategyInputs, input: Batt
 }
 function strategy(inputs: CombatStrategyInputs, opening: StrategySnapshot, team: Team): StrategySnapshot {
   const ids = new Set(inputs.preparation.units.map(u => u.id));
-  const frozen = { traits: opening.traits.filter(t => t.team === team).map(t => ({ ...t, team: 'player' as const })),
+  for (const unit of opening.units) if (unit.itemSummon?.kind === 'cloning-facility' && ids.has(unit.itemSummon.ownerId)) ids.add(unit.unitId);
+  const original = opening.r3Original?.filter(a => a.team === team);
+  const frozen = { ...(original?.length ? { r3Original: original } : {}), traits: opening.traits.filter(t => t.team === team).map(t => ({ ...t, team: 'player' as const })),
     units: opening.units.filter(u => ids.has(u.unitId)) };
   // Enforcer 10 confiscation is frozen with the opening roster: later equipment on the victim side stays inert.
   const compiled = buildStrategySnapshot(inputs, undefined, undefined, frozen, enforcerConfiscates(opening.traits, team) ? ['player'] : []);
@@ -139,7 +141,7 @@ export function applyBattleEquipment(state: CombatState, receipt: BattleEquipmen
       }
       if (next.mechanics?.some(m => m.mechanic === 'g24Mogul')) result.itemMogulHits ??= [];
       if (next.mechanics?.some(m => m.mechanic === 'g24DeathsDefiance')) result.deferredItemDamage ??= [];
-      if (unit.id === receipt.combatUnitId) result.equipment = [
+      if (unit.id === receipt.combatUnitId) result.equipment = unit.r3Mirror ? [] : [
         ...receipt.after.items.flatMap(i => i.location.kind === 'unit' && i.location.unitId === unit.id ? [{ definitionId: i.definitionId, slot: i.location.slot, temporary: false }] : []),
         ...receipt.after.temporaryEquipment.filter(i => i.holderId === unit.id).map(i => ({ definitionId: i.definitionId, slot: i.slot, temporary: true })),
       ].sort((a, b) => a.slot - b.slot);
