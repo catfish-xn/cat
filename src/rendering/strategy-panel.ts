@@ -37,6 +37,7 @@ import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { augmentOptionViews } from '../simulation/augment-offers';
 import { d11PrivateDisplay } from '../simulation/d11-display';
 import { AUGMENT_TIER_TEXT, augmentCardSections, augmentDisplayName, augmentEffectText, augmentIconHtml, augmentIconOrBadgeHtml, augmentPlayerDescription } from '../presentation/augment-display';
+import { augmentDynamicValues, type AugmentDynamicValues } from '../simulation/augment-dynamic-values';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitSummary, traitTierText } from '../presentation/trait-text';
 import { traitHoverCard } from '../presentation/hover-card';
@@ -436,9 +437,9 @@ export class StrategyPanel {
     this.root.dispatchEvent(new CustomEvent<string>(PANEL_STATUS_EVENT, { detail: message, bubbles: true }));
   }
   /** Owned augment: icon + zh name; hovering shows the authored effect text. */
-  private augmentChip(id: string): HTMLElement {
+  private augmentChip(id: string, values: AugmentDynamicValues): HTMLElement {
     const chip = element('span', augmentDisplayName(id), 'augment-chip');
-    chip.dataset.augment = id; const text = [augmentDisplayName(id), augmentPlayerDescription(id), augmentEffectText(id)].filter(Boolean).join('\n');
+    chip.dataset.augment = id; const text = [augmentDisplayName(id), augmentPlayerDescription(id, values[id]), augmentEffectText(id)].filter(Boolean).join('\n');
     if (isOnline()) textCard(chip, text); else chip.title = text;
     chip.insertAdjacentHTML('afterbegin', augmentIconOrBadgeHtml(id, 20));
     return chip;
@@ -552,6 +553,10 @@ export class StrategyPanel {
   }
   /** Only the deployment tab shows bench positions. A pure bench swap changes no shop, inventory or combat data. */
   refreshBench(): void { if (this.tab === 'units') this.render(); }
+  private dynamicValues(state: MatchState): AugmentDynamicValues {
+    if (isOnline()) return (state as MatchState & { augmentDynamicValues?: AugmentDynamicValues }).augmentDynamicValues ?? {};
+    return augmentDynamicValues(state);
+  }
   render(): void {
     const spectating = isOnlineSpectating();
     const state = this.actions.state(), ready = state.phase === 'preparation' && !spectating;
@@ -561,10 +566,11 @@ export class StrategyPanel {
     this.traitColumn.render(state.preparation, g23TraitRuntime(state), state.items);
     // The bound anomaly sits after the augments (the online left column shows only this strip while the panel is folded).
     const anomaly = state.anomalyBinding, anomalyUnit = anomaly && state.preparation.units.find(unit => unit.id === anomaly.unitId);
-    const augmentKey = [...state.augments.map(augment => augment.definitionId), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : ''].join();
+    const values = this.dynamicValues(state);
+    const augmentKey = JSON.stringify([state.augments.map(augment => [augment.definitionId, augmentPlayerDescription(augment.definitionId, values[augment.definitionId])]), anomaly ? `${anomaly.definitionId}>${anomalyUnit?.definitionId ?? ''}` : '']);
     if (augmentKey !== this.augmentKey) {
       this.augmentKey = augmentKey;
-      this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId)), ...(anomaly ? [this.anomalyChip(anomaly.definitionId, anomalyUnit?.definitionId)] : []));
+      this.augmentStrip.replaceChildren(...state.augments.map(augment => this.augmentChip(augment.definitionId, values)), ...(anomaly ? [this.anomalyChip(anomaly.definitionId, anomalyUnit?.definitionId)] : []));
     }
     this.syncAwayChip(state);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
@@ -695,7 +701,7 @@ export class StrategyPanel {
     if (this.tab === 'events') { this.eventList = element('section', '', 'battle-record'); this.eventList.dataset.debug = 'battle-record'; this.root.append(this.eventList); this.renderEventList(); }
     const owned = element('section', '', 'owned-modifiers'); owned.append(element('h3', '永久构筑'));
     const augments = element('p', state.augments.length ? '强化：' : '强化： 尚未选择', 'owned-augments');
-    for (const augment of state.augments) augments.append(this.augmentChip(augment.definitionId));
+    for (const augment of state.augments) augments.append(this.augmentChip(augment.definitionId, values));
     owned.append(augments);
     if (needsAnomalyRecruitment(state)) owned.append(element('p', '4-6 异常等待招募：先购买一名棋子，再选择异常目标。刷新与经验购买必须保留招募资金。', 'anomaly-recruitment'));
     const binding = state.anomalyBinding;
@@ -1008,7 +1014,8 @@ export class StrategyPanel {
       return;
     }
     this.clearChoiceDismissal();
-    const token = `${choice.choiceId}:${choice.generation}:${choice.step}`;
+    const values = choice.kind === 'augment' ? this.dynamicValues(state) : {};
+    const token = `${choice.choiceId}:${choice.generation}:${choice.step}:${choice.kind === 'augment' ? JSON.stringify(choice.offers.map(id => augmentPlayerDescription(id, values[id]))) : ''}`;
     if (token === this.choiceToken) { this.anomalyGold?.(state.gold); return; }
     this.dropChoiceReopen();
     this.choiceToken = token; this.anomalyGold = null; this.modal.hidden = false; this.modal.replaceChildren();
@@ -1060,7 +1067,7 @@ export class StrategyPanel {
         const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : choice.kind === 'augment' ? augmentEffectText(id)
           : definition.effects.filter(effect => choice.kind !== 'anomaly' || effect.kind !== 'mechanic').map(describeEffect).join('；');
         // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
-        const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
+        const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id, values[id]), effects].filter(Boolean).join('\n')
           : [choice.kind === 'anomaly' ? anomalyDisplayName(id) : itemDisplayName(id), choice.kind === 'anomaly' ? anomalyPlayerDescription(id) : 'description' in definition ? definition.description : '领取后可合成或装备', effects].filter(Boolean).join('\n');
         const button = this.button(`choice:${id}`, label, () => {
           this.actions.choose(choice.choiceId, choice.generation, id);
@@ -1073,7 +1080,7 @@ export class StrategyPanel {
         if (choice.kind === 'augment') {
           // The original card's layers: icon, the tier ornament under it, the name set large, the effect description, then
           // the extra notes in their own block. Each text block keeps its leading line break, so the text reads as the label.
-          const { body, extra } = augmentCardSections(id);
+          const { body, extra } = augmentCardSections(id, values[id]);
           const ornament = element('span', '', 'augment-tier-mark'); ornament.setAttribute('aria-hidden', 'true');
           if (choice.augmentTier) ornament.dataset.tier = choice.augmentTier;
           button.replaceChildren(ornament, element('strong', augmentDisplayName(id), 'augment-name'), element('span', body ? `\n${body}` : '', 'augment-desc'));

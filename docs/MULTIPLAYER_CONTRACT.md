@@ -2299,3 +2299,9 @@ golden、B8/C19/Herald 与 recorded states 已在新目录独立生成；旧身�
 - `withBatch4B4xp(state: Pick<MatchState,'level'|'xp'>, plan: RoundEconomyPlan, extra: number): RoundEconomyPlan`：将额外经验合入结算 progression，统一封顶。
 - `batch4B4xpRecordedExtra(state: Pick<MatchState,'augments'>, result: RoundResult, base: number): number`：结构预检历史经验增量；非法增量抛出 `RangeError('Invalid batch4 b4xp settlement XP')`；结果本身不是历史条件证明。
 - `needsBatch4B4xpHistory(state: Pick<MatchState,'augments'|'roundResults'>): boolean`：本组持有者在玩家战斗后的恢复/独立回放准入需要现有完整 battles。`restoreMatch(input, battles?)`、`serializeMatch(state, battles?)` 签名不变；无历史证据抛出含 `missing historical evidence` 的错误；经验与历史条件不符由确定性回放拒绝。取得时尚无本组玩家战斗则不增加历史要求。其余 P 口径见 `docs/S13_RULES_GAP.md` 的 P-B4XP。
+
+### v25 动态强化只读显示投影（2026-10-27）
+
+`augmentDynamicValues(state: MatchState): AugmentDynamicValues` 返回按强化 ID 索引的只读显示值；`values` 按描述占位符顺序提供数字、`{unit: definitionId}`、`{outcome: string, gifts?, gold?, xp?, rerolls?, health?}` 或 `null`（尚未确定），攻速、伤害增幅和坚韧使用 `attackSpeedBps`、`damageAmpBps`、`durabilityBps`。无对应显示值时不提供该键，无失败枚举、不改变状态或随机数。持有强化和当前强化候选均可投影；随机奖励仅在获得后揭示。战斗计数使用已经结算的战斗收据，棋盘数值表示当前布阵对下一场战斗的效果；当前战斗冻结输入不随它更新。被禁用且缺少认证账本的禁忌魔法显示未确定。
+
+`toPrivateSeatView` 增加 `augmentDynamicValues`；`src/server/room/projection.ts` 的 `toSeatPrivateView` 经既有私有推送、重连和故障快照传输。公共 `toPublicBoard` 和其他席位不包含此字段，侦察他人强化时未知动态值不冒充本席数据；不增加存档字段。`pumpingUpRounds` 与战斗编译共享原有回合口径，不更改 II/III 的累计规则。

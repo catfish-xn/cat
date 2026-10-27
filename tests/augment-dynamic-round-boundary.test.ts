@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { selectChoice, nextRound, type MatchState } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, reachRound } from './match-helpers';
+import type { MatchState } from '../src/simulation/match-types';
 
 it.each([['pumping-up-i', 50], ['pumping-up-ii', 0], ['pumping-up-iii', 0]] as const)(
   '%s current project behavior across a real 2-4 supply settlement', (id, expectedGrowth) => {
