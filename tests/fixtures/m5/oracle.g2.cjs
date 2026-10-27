@@ -3,6 +3,7 @@
  * docs/MATCH_CONTRACT.md. Independently implemented; never imports tested code. */
 const assert = require('node:assert/strict');
 const {validateRewards}=require('./augment-rewards-oracle.cjs');
+const {validateScoreboardCombat:checkScoreboardCombat}=require('./augment-h6-oracle.cjs');
 const {battleGold}=require('./battle-gold-oracle.cjs');
 const {concreteMarketItems}=require('./black-market-oracle.cjs');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
@@ -710,3 +711,5 @@ function shopTransition(before,command){
  return next;
 }
 module.exports.shopWord=shopWord;module.exports.shopForState=shopForState;module.exports.shopTransition=shopTransition;
+// Shared with multiplayer room tests; amounts/recipients come from independent history inputs.
+module.exports.validateScoreboardCombat=(state,input,prefix)=>checkScoreboardCombat(state,input,{COST,ROUNDS},prefix);

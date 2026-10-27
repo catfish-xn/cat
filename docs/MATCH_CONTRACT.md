@@ -1484,3 +1484,9 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 缺节统一拒绝：`Invalid augment history: missing augment-history-v1; history-dependent augment saves cannot be authenticated`；缺联机权威对象为 `missing independent server authority`，其它错误使用同一前缀。无自动迁移。`requireAugmentFacts(state,kind,round)` 没有记录即抛错；带完整 tick 边界的 `deaths:[]` 才代表零死亡。
 
 后续强化只调用领域内部的 `recordAugmentGrowth`/`readAugmentGrowth`、`recordAugmentPlayerHealth`、`readPreviousAugmentBattle`、`requireAugmentFacts`、`advanceAugmentPreparationTime`、`appendAugmentFact` 或 `grantAdditionalCarouselPick`。这些接口不向客户端开放，不自行决定受益人/数值/随机选择。普通选秀仍一席一次；附加授予要求正常领取已完成、独占剩余槽、明确持有来源，ID 为 `<carouselId>:<seatId>:extra:<1..8>`，按现有保留/领取/held/返池流程守恒。失败沿用 CarouselFailure、返回原状态。具体函数签名及成功/失败语义以设计文档接口表和导出 TypeScript 类型为准。
+
+### H6 审查修复（2026-10-27）
+
+`readAugmentGrowth(state: MatchState, unitId: string, provenancePrefixLength?: number): AugmentGrowth` 沿给定来源前缀追溯合星血缘，包含 `unit-upgraded`、`unit-upgraded-after-combat` 及 `carousel-preparation-settled.upgrades`、`carousel-unit-claimed.upgrades`。来源记录与嵌套合星事件都逆序读取，先找到被最终三星消耗的二星，再展开其一星来源；同一来源 ID 仅计一次，不把出售后重新购买的同名英雄当作同一实例。两张分别有 150 Bps AD／150 centi AP 成长的英雄合星后累计 300。返回结构、失败原因和成长数值约定不变；本次补齐既定合星继承行为，不新增内容或改变 schema、内容版本和 digest。
+
+独立测试 oracle 从结算前的 `pvp-roster` 计算纷争金币，并要求既有历史事实前缀不可改写。冲榜战士按后续自然轮的入轮排名与正式阵容推导成长：5–8 名每名普通英雄 150 Bps AD／150 centi AP，唯一收据绑定强化选择与轮次；1–4 名仅有本轮 1000 Bps HP，不写入永久成长。备战席包含在正式阵容中，召唤物和未落位选秀单位不包含；新入轮阵容还与命令前正式阵容核对。战斗输入／联机快照另外核对累积成长、合星继承和临时 HP。oracle 不导入生产成长计算器，联合篡改、缺失／重复／错主收据和无操作伪造 999999 成长均须拒绝。

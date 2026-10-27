@@ -67,8 +67,14 @@ export function readAugmentGrowth(s: MatchState, unitId: string, provenancePrefi
   historyCheck(s.augmentHistory, 'missing growth history');
   // Follow the existing acquisition/merge lineage; never transfer a sold unit to an unrelated instance.
   const ids = new Set([unitId]);
-  for (const e of s.resourceProvenance.entries.slice(0,provenancePrefixLength).reverse()) if ((e.kind === 'unit-upgraded' || e.kind === 'unit-upgraded-after-combat') && ids.has(e.event.survivorId))
-    for (const id of e.event.consumedIds) ids.add(id);
+  for (const e of s.resourceProvenance.entries.slice(0,provenancePrefixLength).reverse()) {
+    const upgrades = e.kind === 'unit-upgraded' || e.kind === 'unit-upgraded-after-combat' ? [e.event]
+      : e.kind === 'carousel-preparation-settled' || e.kind === 'carousel-unit-claimed' ? e.upgrades : [];
+    // One carousel transaction can merge 1 -> 2 -> 3 stars. Discover the consumed
+    // intermediate survivor before following its own earlier merge.
+    for (let i = upgrades.length - 1; i >= 0; i--) if (ids.has(upgrades[i].survivorId))
+      for (const id of upgrades[i].consumedIds) ids.add(id);
+  }
   const result: { -readonly [K in keyof AugmentGrowth]: AugmentGrowth[K] } = { unitId, healthFlat: 0, healthBps: 0, attackDamageBps: 0, abilityPowerCenti: 0 };
   for (const f of s.augmentHistory.facts) if (f.kind === 'growth') for (const d of f.deltas) if (ids.has(d.unitId))
     for (const k of ['healthFlat','healthBps','attackDamageBps','abilityPowerCenti'] as const) { result[k] += d[k]; historyCheck(Number.isSafeInteger(result[k]), 'growth overflow'); }
