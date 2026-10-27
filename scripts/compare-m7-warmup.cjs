@@ -8,7 +8,7 @@ const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const refs = { 'm6-main': 'a8be9fc151b9ebb895eb4097828bb74c590e2559', m7: '67527610063802d995c4f95044d82c7ad4afe9dc' };
 const report = { experimentOnly: true, warmupCycles: 12, measuredCycles: 30, ceilingBytes: 1024 * 1024,
   runId: process.env.GITHUB_RUN_ID ?? null, harnessSha: process.env.GITHUB_SHA ?? null, samples: [], errors: [], passed: false };
-const driverHash = hash(fs.readFileSync('scripts/verify-m5-browser.cjs'));
+const driverHash = hash(fs.readFileSync(process.env.WARMUP_DRIVER ?? 'scripts/verify-m5-browser.cjs'));
 for (const [revision, sha] of Object.entries(refs)) for (const mode of ['dev', 'preview']) {
   const name = `warmup-${revision}-${mode}`, folder = path.join(root, name);
   const sample = { revision, mode, sha };
@@ -23,6 +23,7 @@ for (const [revision, sha] of Object.entries(refs)) for (const mode of ['dev', '
     assert.equal(provenance.targetCleanBeforeDriver, true);
     assert.equal(provenance.driverSha256, driverHash, 'same measurement driver for every target');
     if (report.harnessSha) assert.equal(provenance.harnessSha, report.harnessSha);
+    if (process.env.WARMUP_DRIVER_SHA) assert.equal(provenance.driverSourceSha, process.env.WARMUP_DRIVER_SHA);
     assert.equal(manifest.sha, sha);
     assert.equal(manifest.mode, mode);
     assert.equal(manifest.sourceFingerprint, manifest.finalSourceFingerprint, 'application sources unchanged');
