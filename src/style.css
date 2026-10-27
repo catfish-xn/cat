@@ -1601,6 +1601,10 @@ body[data-online]:has(.shop-choice[data-choice-source="armory"]) { --online-dock
 /* Empty space below the 3D left rail must pass board clicks through; its controls still receive input. */
 body[data-online]:has(> .render3d-layer) #panels-root { pointer-events: none; }
 body[data-online]:has(> .render3d-layer) #panels-root > * { pointer-events: auto; }
+/* The column itself has delegated card listeners, but only its rows are controls. Keeping the
+   transparent wrapper out of hit testing also prevents mobile touch adjustment from selecting it. */
+body[data-online]:has(> .render3d-layer) #panels-root > .trait-column { pointer-events: none; }
+body[data-online]:has(> .render3d-layer) .trait-column .trait-row[data-trait] { pointer-events: auto; }
 @media (max-width: 700px) and (orientation: portrait) {
   body[data-online]:has(.shop-choice[data-choice-source="armory"]) { --online-dock-h: 247px; }
   body[data-online] .shop-dock:has(.shop-choice[data-choice-source="armory"]) { grid-template-rows: 24px 44px minmax(112px, 1fr) 44px; }

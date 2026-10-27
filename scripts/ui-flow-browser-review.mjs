@@ -145,6 +145,17 @@ try {
           && await page.evaluate(() => window.__railCanvasInput.length) === 1);
         await activate('[data-debug="online:left-toggle"]');
         assert.equal(await page.locator('body').getAttribute('data-online-left'), collapsed);
+        // The transparent trait wrapper must not steal nearby touches, while its visible rows still open cards.
+        const trait = page.locator('#trait-column .trait-row[data-trait]').first();
+        const traitId = await trait.getAttribute('data-trait');
+        assert.ok(traitId, `${tag}: a trait row is available`);
+        await activate(`#trait-column .trait-row[data-trait="${traitId}"]`);
+        const traitCard = page.locator('[data-debug="hover:trait"]');
+        check('left-rail', 'trait row opens its card without passing input to canvas', await traitCard.isVisible()
+          && (await traitCard.getAttribute('data-key'))?.startsWith(`trait:${traitId}:`)
+          && await page.evaluate(() => window.__railCanvasInput.length) === 1);
+        await activate(`#trait-column .trait-row[data-trait="${traitId}"]`);
+        assert.equal(await traitCard.isVisible(), false, `${tag}: trait card closes on a second activation`);
         await shot('left-rail-input');
       }
       const room = game.room;
