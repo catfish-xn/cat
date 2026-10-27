@@ -98,6 +98,7 @@ function p3Description(id: string): string | null {
 export const augmentPlayerDescription = (id: string): string | null => {
   const data = readAugmentText();
   if (!data) return augmentTextPlaceholder();
+  if (Object.hasOwn(data.AUGMENT_AUDITED_DESCRIPTIONS, id)) return data.AUGMENT_AUDITED_DESCRIPTIONS[id];
   if (Object.hasOwn(data.AUGMENT_POOL_TEXT, id)) return data.AUGMENT_POOL_TEXT[id].description;
   if (Object.hasOwn(data.AUGMENT_EXTRA_TEXT, id)) return data.AUGMENT_EXTRA_TEXT[id].description;
   return d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? teamupDescription(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
