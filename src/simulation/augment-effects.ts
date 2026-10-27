@@ -20,6 +20,12 @@ const flat = (stat: 'maxHp'|'armor'|'magicResist'|'abilityPower', amount:number)
 const speed = (bps:number):Effect => ({kind:'attackSpeedBps',bps});
 const mechanic = (name:string,values:Record<string,number>):Effect => ({kind:'mechanic',mechanic:name,values});
 const serialOf=(id:string)=>{const m=/(\d+)$/.exec(id);return m?Number(m[1]):Number.MAX_SAFE_INTEGER;};
+/** The established Pumping Up counter, shared by combat and the owner-only display. */
+export function pumpingUpRounds(state:Pick<CombatStrategyInputs,'round'|'augmentProgress'>, augment:OwnedAugment):number {
+  return augment.definitionId==='pumping-up-i'?state.augmentProgress.pumpingRounds
+    :ROUND_CATALOG.filter(r=>r.ordinal>=augment.acquiredRound&&r.ordinal<state.round&&r.kind!=='supply').length
+      +Math.max(0,state.round-Math.max(ROUND_CATALOG.at(-1)!.ordinal+1,augment.acquiredRound));
+}
 /** P-AG5 (P, 2026-10-24): one Vander and one Silco on board bind; with several copies
  * the earliest acquired (lowest unit serial, then ID) of each binds. */
 export function bloodBrothersPair(allies:readonly Unit[]):readonly [string,string]|undefined {
@@ -116,9 +122,7 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
     case 'pumpingUp': {
       // I retains its established receipt-validated counter; II/III count completed
       // combat nodes from acquisition, including online overtime, never supply nodes.
-      const count=augment.definitionId==='pumping-up-i'?state.augmentProgress.pumpingRounds
-        :ROUND_CATALOG.filter(r=>r.ordinal>=augment.acquiredRound&&r.ordinal<state.round&&r.kind!=='supply').length
-          +Math.max(0,state.round-Math.max(ROUND_CATALOG.at(-1)!.ordinal+1,augment.acquiredRound));
+      const count=pumpingUpRounds(state,augment);
       return [speed(count*v.attackSpeedBpsPerRound)];
     }
     case 'mentorship': return allies.some(other=>other.id!==unit.id&&UNIT_DEFINITIONS[other.definitionId].cost>UNIT_DEFINITIONS[unit.definitionId].cost&&other.location.kind==='board'&&unit.location.kind==='board'&&hexDistance(other.location.cell,unit.location.cell)===1)?[flat('maxHp',v.health),speed(v.attackSpeedBps)]:[];

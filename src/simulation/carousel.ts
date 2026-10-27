@@ -2,6 +2,8 @@ import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
+import { drainBatch1Gifts } from './augment-pool-grants';
+import { mechanicGrantEvents } from './g2-3-runtime';
 import { placeCarouselUnit, resolveCarouselPreparation } from './carousel-units';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/items';
@@ -379,8 +381,8 @@ export function resolvePendingCarouselUnits(pool: SharedPoolState, match: MatchS
         if (!match.carousel || match.phase !== 'preparation' || match.multiplayer?.combatRosterLocked)
             return bad();
         const resolved = resolveCarouselPreparation(match);
-        let next = resolved.state;
-        const draft = draftPool(pool), events = [...resolved.events], poolEvents: SharedPoolEvent[] = [];
+        let next = resolved.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainBatch1Gifts(resolved.state) : resolved.state;
+        const draft = draftPool(pool), events = [...resolved.events, ...mechanicGrantEvents(resolved.state,next)], poolEvents: SharedPoolEvent[] = [];
         reconcileHoldings(draft, match, next, poolEvents);
         if (next === match)
             return { ok: true, pool, state: match, events: [], poolEvents: [] };

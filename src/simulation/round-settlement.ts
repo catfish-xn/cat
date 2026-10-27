@@ -1,6 +1,7 @@
 import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import { drainContestedGold } from './augment-pool-batch5-h6';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
+import { batch5S6cSettlementHealth, drainBatch5S6cGold } from './augment-pool-batch5-s6c';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -186,12 +187,16 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
     settled=applyLevelUpHealth(state,commitOpeningEncounterHealth(settled,hookEvents));
     if (state.m8.round.kind === 'pvp') settled = settleNoScoutGrowth(settled,r.battleId);
+    settled={...settled,playerHp:batch5S6cSettlementHealth(settled,r.round,settled.playerHp)};
+    const beforeS6cGold=settled;settled=drainBatch5S6cGold(settled);
+    hookEvents.push(...mechanicGrantEvents(beforeS6cGold,settled));
     const merged = resolveDeferredUpgrades(settled);
-    const d14State=pruneForgePositions(reconcileD14(merged.state,hookEvents));
+    const rewarded=merged.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainBatch1Gifts(merged.state,unitLootPolicy) : merged.state;
+    const d14State=pruneForgePositions(reconcileD14(rewarded,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
     const inventory=drainBatch5Inventory(forfeited.state);hookEvents.push(...mechanicGrantEvents(forfeited.state,inventory));
     const opened=openG23Choice(inventory);
-    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...forfeited.events,...opened.events];
+    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,rewarded),...forfeited.events,...opened.events];
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
       ...extra.map((event,index) => ('tick' in event?event:{...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
     return {ok:true,state:{...opened.state,nextMatchEventSeq:next.nextMatchEventSeq+extra.length},events};

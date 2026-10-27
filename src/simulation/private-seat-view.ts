@@ -18,6 +18,7 @@ import type { MechanicChoicePayload } from './seat-mechanics/types';
 import { augmentOptionViews } from './augment-offers';
 import { familyReunionView } from './family-reunion';
 import { sixCostOddsBps, sixCostShopContext } from './six-cost-shop';
+import { augmentDynamicValues } from './augment-dynamic-values';
 
 function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
   // G2-3 form swappers only: the form the unit would take if combat started now (seat-mechanics/forms.ts).
@@ -118,6 +119,7 @@ export function toPrivateSeatView(state: MatchState) {
     consumableTargets,
     familyReunion: familyReunionView(state),
     shopOdds: { sixCostBps: sixCostOddsBps(state.round, state.level, sixCostShopContext(state).viktor) },
+    augmentDynamicValues: augmentDynamicValues(state),
     streak: pick(state.streak, ['kind', 'count']),
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId', 'starLevel']) : pick(slot, ['status', 'empty'])) },

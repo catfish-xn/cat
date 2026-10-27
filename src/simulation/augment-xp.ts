@@ -1,3 +1,4 @@
+import { batch5S6cSettlementHealth } from './augment-pool-batch5-s6c';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import type { MatchState, RoundResult } from './match-types';
 import type { OwnedAugment } from './strategy-types';
@@ -70,7 +71,7 @@ export function applyLevelUpHealth(before:Pick<MatchState,'level'>,after:MatchSt
 /** Restore: level-up health during round `round`'s settlement (settlement XP), applied to the settled HP. */
 export function settlementLevelUpHealth(state:MatchState,round:number,hp:number):number {
  const result=state.roundResults.find(r=>r.round===round);if(!result)return hp;
- return heal(hp,state.augments.filter(a=>a.acquiredRound<=round).reduce((n,a)=>n+healthPerLevel(a),0)*(result.levelAfter-result.levelBefore));
+ return batch5S6cSettlementHealth(state,round,heal(hp,state.augments.filter(a=>a.acquiredRound<=round).reduce((n,a)=>n+healthPerLevel(a),0)*(result.levelAfter-result.levelBefore)));
 }
 /** Restore: level-up health from the previous settlement to round `round`'s battle (entry XP, acquisition XP, purchases).
  * Levels before an acquisition in this round never heal: offline, the recorded level is the round-entry level. */

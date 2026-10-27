@@ -1,3 +1,4 @@
+import { pilferBattleCount } from './augment-pool-batch5-s8a';
 import { batch2BattleFacts } from './augment-pool-batch2-progress';
 import { settleOpeningBatchB } from './opening-batch-b-rewards';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
@@ -38,7 +39,9 @@ export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKi
  // Opening enemy deaths include ordinary PvE, but exclude summons and spawned/non-opening units.
  const spoilsKills=(combat.openingDeaths??[]).filter(d=>{const u=combat.units.find(u=>u.id===d.unitId);return u&&u.team!==team&&openingUnits.some(o=>o.id===u.id)&&!u.itemSummon&&!u.anomalySummon&&!UNIT_DEFINITIONS[u.definitionId]?.summon&&(roundKind==='pve'||u.unitKind!=='neutral');}).length;
  const counters=batch2BattleFacts(combat,team);
- const batch2=ownsSpoils&&spoilsKills?[...(counters??[]),{definitionId:'spoils-of-war',count:spoilsKills}]:counters;
+ const pilfer=pilferBattleCount(combat,team,openingUnits);
+ const extra=[...(ownsSpoils&&spoilsKills?[{definitionId:'spoils-of-war',count:spoilsKills}]:[]),...(pilfer===undefined?[]:[{definitionId:'pilfer',count:pilfer}])];
+ const batch2=extra.length?[...(counters??[]),...extra]:counters;
  const batch3Healing=combat.units.filter(u=>u.team===team).reduce((n,u)=>n+(u.batch2?.healed??0),0);
  const dummies=combat.units.filter(u=>u.team===team&&(u.definitionId==='training-dummy'||u.definitionId==='forming-dummy'||u.definitionId==='tower-dummy'));
  const firstDeath=[...(combat.openingDeaths??[])].sort((a,b)=>a.eventSeq-b.eventSeq).find(d=>combat.units.some(u=>u.id===d.unitId&&u.team===team))?.unitId??null;

@@ -29,11 +29,16 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Final Polish uses one public slot reroll. Other entries retain their earlier fixture scope.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
-export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number }>> = {
-  "all-that-shimmers-plus":{node:'3-2',seed:52},
-  "roll-the-dice":{node:'3-2',seed:60},
-  "diversified-portfolio-plus":{node:'3-2',seed:17},
-  'contested':{node:'3-2',seed:18},
+export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[] }>> = {
+  "all-that-shimmers-plus":{node:'3-2',seed:18},
+  "roll-the-dice":{node:'3-2',seed:7},
+  "diversified-portfolio-plus":{node:'3-2',seed:1},
+  'contested':{node:'3-2',seed:52},
+  "tiniest-titan-plus":{node:'3-2',seed:5},
+  // Integrated 267-card catalog: use the same public routes for these merged fixtures.
+  "glorious-evolution":{node:'4-2',seed:47,fielded:true},
+  'moonlight':{node:'4-2',seed:19,fielded:true,rerolls:[0]},
+  'greater-moonlight':{node:'4-2',seed:16,fielded:true},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -62,7 +67,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "eye-for-an-eye-plus":{node:'3-2',seed:17},
   "final-polish":{node:'4-2',seed:35,fielded:true,rerolls:1},
   "find-your-center":{node:'3-2',seed:56},
-  "geniuses":{node:'4-2',seed:16,fielded:true},
+  "geniuses":{node:'4-2',seed:38,fielded:true},
   "golemify":{node:'3-2',seed:18},
   "item-collector-i":{node:'3-2',seed:25},
   "item-collector-ii":{node:'3-2',seed:3},
@@ -135,10 +140,8 @@ export function offerFor(id: string): MatchState {
   const at = STAGE_SEEDS[id];
   if (!at) throw new Error(`No stage seed for ${id}; re-run the stage seed search`);
   let state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
-  for (let slot = 0; slot < (at.rerolls ?? 0); slot++) {
-    const choice = state.pendingChoice!;
-    state = accepted(rerollAugment(state, choice.choiceId, choice.generation, slot));
-  }
+  const slots = typeof at.rerolls === 'number' ? Array.from({length:at.rerolls},(_,slot)=>slot) : at.rerolls ?? [];
+  for (const slot of slots) { const choice=state.pendingChoice!; state=accepted(rerollAugment(state,choice.choiceId,choice.generation,slot)); }
   expect(state.roundDefinitionId).toBe(at.node);
   expect(state.pendingChoice?.kind).toBe('augment');
   expect(state.pendingChoice?.offers, `${id} at ${at.node} seed ${at.seed}`).toContain(id);

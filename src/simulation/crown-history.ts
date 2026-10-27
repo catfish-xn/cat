@@ -14,7 +14,7 @@ export function needsCrownHistory(state: MatchState): boolean {
   if(!state.multiplayer&&readG23Progress(state)!.economyReceipts.some(r=>r.kind==='battle'
     &&spoils.some(a=>r.facts.round>=a.acquiredRound)
     &&!(r.facts.round===state.round&&state.combat?.status==='finished')))return true;
-  if(!state.multiplayer&&state.augments.some(a=>a.definitionId==='a-change-of-fate'&&state.roundResults.some(r=>r.round>=a.acquiredRound)))return true;
+  if(!state.multiplayer&&state.augments.some(a=>(a.definitionId==='a-change-of-fate'||a.definitionId==='pilfer')&&state.roundResults.some(r=>r.round>=a.acquiredRound)))return true;
   return needsBatch4B4xpHistory(state) || readG23Progress(state)!.economyReceipts.some(action =>
     action.kind === 'battle' && (action.facts.crowns !== undefined || action.crownGold !== undefined || action.facts.d11Headhunter !== undefined || action.facts.family?.eligible===true || action.facts.melCasts!==undefined || action.facts.batch2?.some(fact => fact.definitionId === 'blood-brothers' || fact.definitionId === 'blood-brothers-deaths')));
 }

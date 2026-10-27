@@ -23,6 +23,8 @@ const initial={
  'two-much-value':[R(2,2)],
  'cooking-pot':[I('frying-pan')],
  'quality-over-quantity':[C('magnetic-remover',2)], 'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
+ 'hard-commit':[Q('emblem')],
+ 'glorious-evolution':[I('adaptive-helm')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],
  'one-two-five':[Q('component'),R(5)],'band-of-thieves-i':[I('thiefs-gloves')],
@@ -116,6 +118,24 @@ function rewardPlan(s,env){
    const chosen=(s.seatMechanics?.receipts??[]).find(r=>r.receiptId===`s13-augment:${a.choiceId}:replication:forge`&&r.kind==='choice');
    if(chosen)for(let n=1;n<=2;n++)if(a.acquiredRound+n<=s.round)levelsOut.push(...expand(s,owner(a,['replication',n],a.acquiredRound+n),[I(chosen.optionId)],env));
   }
+  if(a.definitionId==='glorious-evolution'){
+   const helm=start[0],marker=s.resourceProvenance.entries.find(e=>e.kind==='item-acquired'&&e.source.kind==='mechanic'&&e.source.receiptId===helm.receiptId);
+   let count=0,due;
+   for(const e of s.resourceProvenance.entries){if(!marker||e.sequence<=marker.sequence)continue;
+    const upgrades=e.kind==='unit-upgraded'||e.kind==='unit-upgraded-after-combat'?[e.event]:e.kind==='carousel-unit-claimed'||e.kind==='carousel-preparation-settled'?e.upgrades:[];
+    for(const u of upgrades){count+=u.toStar-u.fromStar;if(count>=9){due=env.ROUNDS.findIndex(r=>r.roundId===e.roundId)+1;break;}}if(due)break;
+   }
+   if(due){levelsOut.push(...expand(s,owner(a,['glorious-evolution','item'],due),[I('jeweled-gauntlet')],env));const hero=nonSupply(due);
+    if(hero<=s.round)levelsOut.push(...expand(s,owner(a,['glorious-evolution','unit'],hero),[U('viktor')],env));}
+  }
+  if(a.definitionId==='hard-commit'){
+   const roster=require('./hard-commit-roster.cjs')[start[0].definitionId];assert(roster,'independent emblem roster');
+   for(let round=a.acquiredRound;round<=s.round;round++){
+    const row=env.ROUNDS[round-1];if(!row||round!==a.acquiredRound&&row.sub!==1)continue;
+    const target=Math.min(row.stage,5),costs=[...Array.from({length:target},(_,i)=>target-i),...Array.from({length:5-target},(_,i)=>target+i+1)];
+    const cost=costs.find(c=>roster[c-1].length);if(cost)levelsOut.push(...expand(s,owner(a,['hard-commit',round],round),[['F',roster[cost-1],1]],env));
+   }
+  }
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
@@ -124,6 +144,7 @@ function rewardPlan(s,env){
     if(hero<=s.round)levelsOut.push(...expand(s,owner(a,['batch5-fate','unit'],hero),[U('mel')],env));
    }
   }
+  if(a.definitionId==='pilfer')for(const f of facts){const count=f.batch2?.find(x=>x.definitionId==='pilfer')?.count??0;if(count&&f.round+1<=s.round)levelsOut.push(...expand(s,owner(a,['pilfer',f.round],f.round+1),[U([...env.CATALOG.flat(), 'mel','viktor','warwick'][count-1])],env));}
   const counts=b2.rewards[a.definitionId];
   if(counts){let total=0,paid=0;for(const f of facts){total+=f.batch2?.find(x=>x.definitionId===a.definitionId)?.count??0;
    const due=Math.min(counts.max??Infinity,Math.floor(total/counts.every));
@@ -241,6 +262,8 @@ function validateBattleCounters(before,after,f,base){
  const ownsSpoils=(openingStrategy?.units??[]).some(u=>opening.has(u.unitId)&&team.some(t=>t.id===u.unitId)&&u.sources.some(s=>s.source.sourceKind==='augment'&&['spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii'].includes(s.source.sourceDefinitionId)));
  const spoilsKills=deaths.filter(d=>{const u=us.find(x=>x.id===d.unitId);return u&&u.team!=='player'&&opening.has(u.id)&&!u.itemSummon&&!u.anomalySummon&&(base.COST[u.definitionId]!==undefined||['elise-ranged','jayce-ranged','swain-ranged','gangplank-ranged'].includes(u.definitionId)||f.roundKind==='pve'&&u.definitionId.startsWith('pve-'));}).length;
  if(ownsSpoils&&spoilsKills)expected.push({definitionId:'spoils-of-war',count:spoilsKills});
+ const ownsPilfer=(openingStrategy?.units??[]).some(u=>team.some(t=>t.id===u.unitId)&&u.sources.some(s=>s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='pilfer'));
+ if(ownsPilfer){const catalog=[...base.CATALOG.flat(),'mel','viktor','warwick'];const d=deaths.find(d=>{const u=us.find(x=>x.id===d.unitId);return u&&u.team!=='player'&&opening.has(u.id)&&!u.itemSummon&&!u.anomalySummon&&catalog.includes(u.definitionId);});const victim=d&&us.find(u=>u.id===d.unitId);expected.push({definitionId:'pilfer',count:victim?catalog.indexOf(victim.definitionId)+1:0});}
  assert.deepEqual(f.batch2??[],expected,'independent batch2 counter existence and values');
 }
 function validateRewardsCore(before,after,command,events,base){

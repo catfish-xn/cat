@@ -10,16 +10,21 @@ import { accepted,reachRound,resolveM5Choices,emptyBoard,freeze } from './match-
 
 describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
  it.each([0,1,42,123456789,4294967295])('seed %i consumes exactly three independently calculated LCG words',seed=>{
-  const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[])).sort(),pool=[...ids];
+  const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true)).sort(),pool=[...ids];
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(ids);let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  expect(ids).toHaveLength(250); // v24 235 + merged B5A/S1A/S1B/S3A/S3B/S3D: 3+2+2+3+3+2.
+  expect(ids).toHaveLength(267); // 260 integrated identities plus seven from S6C/S8/S11A.
   expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
  // Only cards offered at 2-1 (14.24 stage tags, augment-stage-bans.ts) can be selected there.
 // B4XP bench-XP cards (P-B4XP) make every later PvP settlement a historical claim, so their saves restore only with the
  // completed battles; tests/augment-pool-batch4-b4xp.test.ts covers their public selection and replayed restore.
 it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!Object.hasOwn(AUGMENT_BATCH4_B4XP,id)).filter(id=>!((AUGMENT_OFFER_RULES.nodeBans as Readonly<Record<string,readonly string[]>>)[AUGMENT_POOL_API_NAMES[id]]??[]).includes('2-1')))('%s can be publicly selected and strictly restored from a fixed seed',id=>{
+  if(id==='young-and-wild-and-free'){
+    expect(augmentPool('silver',[])).not.toContain(id);
+    expect(augmentPool('silver',[],[],null,[],true)).toContain(id);
+    return;
+  }
   // Search the independent first-node offer oracle, then play only the chosen
   // public route. The expanded pool puts Portable Forge at seed 236; replaying
   // three opening combats for every candidate needlessly hits CI time limits.
@@ -39,9 +44,9 @@ it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!Object.hasOwn(AUGMENT_BATCH
   expect(()=>restoreMatch(forged)).toThrow();
   if(after.pendingChoice){const blocked=startMatchCombat(after);expect(blocked.ok).toBe(false);expect(blocked.state).toBe(after);}
   let preparation=resolveM5Choices(after);
-  // Blood Brothers authenticates settled partner facts. Keep this acquisition case in a live battle.
-  if(id==='blood-brothers'){const hero=preparation.preparation.units.find(u=>u.team==='player')!;preparation=accepted(deployMatchUnit(preparation,hero.id,{kind:'board',cell:{col:3,row:4}}));}
-  const started=accepted(startMatchCombat(preparation));if(id==='blood-brothers')expect(started.phase).toBe('combat');expect(restoreMatch(serializeMatch(started))).toEqual(started);
+  // Blood Brothers and Pilfer authenticate settled combat facts. Keep acquisition checks in a live battle.
+  if(id==='blood-brothers'||id==='pilfer'){const hero=preparation.preparation.units.find(u=>u.team==='player')!;preparation=accepted(deployMatchUnit(preparation,hero.id,{kind:'board',cell:{col:3,row:4}}));}
+  const started=accepted(startMatchCombat(preparation));if(id==='blood-brothers'||id==='pilfer')expect(started.phase).toBe('combat');expect(restoreMatch(serializeMatch(started))).toEqual(started);
   let live=started;for(let i=0;i<3&&live.phase==='combat';i++)live=stepMatch(live).state;
   expect(restoreMatch(serializeMatch(live))).toEqual(live);
  });

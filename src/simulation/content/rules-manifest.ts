@@ -9,6 +9,11 @@ import { AUGMENT_BATCH5_S3D } from './augment-pool-batch5-s3d';
 import { AUGMENT_SHOP } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S1A } from './augment-pool-batch5-s1a';
 import { AUGMENT_BATCH5_S3B } from './augment-pool-batch5-s3b';
+import { AUGMENT_BATCH5_S6C } from './augment-pool-batch5-s6c';
+import { AUGMENT_BATCH5_S8B } from './augment-pool-batch5-s8b';
+import { AUGMENT_BATCH5_S8C } from './augment-pool-batch5-s8c';
+import { AUGMENT_BATCH5_S11A } from './augment-pool-batch5-s11a';
+import { AUGMENT_BATCH5_S8A } from './augment-pool-batch5-s8a';
 import { AUGMENT_BATCH5 } from './augment-pool-batch5';
 import { AUGMENT_BATCH5_H5 } from './augment-pool-batch5-h5';
 import { AUGMENT_BATCH4, AUGMENT_BATCH4_BLOCKED } from './augment-pool-batch4';
@@ -61,6 +66,11 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch5H3:{version:'augment-pool-batch5-h3-v1',content:AUGMENT_BATCH5_H3,convention:'P-B5-2026-10-27'},
   augmentPoolBatch5H4:{version:'augment-pool-batch5-h4-v1',content:AUGMENT_BATCH5_H4,source:AUGMENT_BATCH5_H4_SOURCE,convention:'P-B5-2026-10-27'},
   augmentPoolBatch5H6:{version:'augment-pool-batch5-h6-v1',content:AUGMENT_BATCH5_H6,convention:'P-B5-37-38-2026-10-27'},
+  augmentPoolBatch5S6c:{version:'augment-pool-batch5-s6c-v25',content:AUGMENT_BATCH5_S6C,convention:'P-B5-48-49-2026-10-27'},
+  augmentPoolBatch5S8a:{version:'augment-pool-batch5-s8a-v1',content:AUGMENT_BATCH5_S8A,convention:'P-B5-59-2026-10-27',victim:'first-formal-shop-hero-death',grant:'next-natural-round'},
+  augmentPoolBatch5S8b:{version:'augment-pool-batch5-s8b-v25',content:AUGMENT_BATCH5_S8B,convention:'P-B5-64-2026-10-27'},
+  augmentPoolBatch5S8c:{version:'augment-pool-batch5-s8c-v1',content:AUGMENT_BATCH5_S8C,convention:'P-B5-65-2026-10-27'},
+  augmentPoolBatch5S11a:{version:'augment-pool-batch5-s11a-v1',content:AUGMENT_BATCH5_S11A,convention:'P-B5-75-77-2026-10-27'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch5H5:{version:'augment-pool-batch5-h5-v1',content:AUGMENT_BATCH5_H5,convention:'P-B5-35-36-H5-2026-10-27',
     selection:'carousel-rng-after-xor-42533535-seat-index-choice-id-fnv-lcg32-rejection-v1',

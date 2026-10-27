@@ -9,8 +9,14 @@ import { hasS3bInventory } from './augment-pool-batch5-s3b-restore';
 import { validateHistoricalEquipment } from './b8-restore';
 import { validateAnvils } from './anvils';
 import { AUGMENT_BATCH5_S3D } from './content/augment-pool-batch5-s3d';
+import { liveHpAfterSettlement } from './player-hp';
+import { AUGMENT_BATCH5_S6C } from './content/augment-pool-batch5-s6c';
+import { BATCH5_S6C_SOURCE } from './augment-pool-batch5-s6c';
+import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
+import { AUGMENT_BATCH5_S8C } from './content/augment-pool-batch5-s8c';
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
 import type { ShopDrawCause } from './shop-history-types';
+import { AUGMENT_BATCH5_S8A } from './content/augment-pool-batch5-s8a';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
 import { AUGMENT_BATCH5_H1 } from './content/augment-pool-batch5-h1';
 import { buyXpWithShopRefresh } from './match';
@@ -65,13 +71,17 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
-  if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S3D,a.definitionId))||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
-    Object.keys(AUGMENT_BATCH5_S3D).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5-h6'||r.receiptId.startsWith('["augment-pool-batch5-h6",')||r.source.startsWith('augment-pool-batch5-h4')||Object.keys(AUGMENT_BATCH5_H3).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
+  if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S3D,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8B,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8C,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId)||AUGMENT_BATCH5_S8A[a.definitionId as keyof typeof AUGMENT_BATCH5_S8A])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
+    r.receiptId.includes('hard-commit')||r.source===BATCH5_S6C_SOURCE||r.receiptId.startsWith(`["${BATCH5_S6C_SOURCE}",`)||Object.keys(AUGMENT_BATCH5_S8B).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S8A).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S3D).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5-h6'||r.receiptId.startsWith('["augment-pool-batch5-h6",')||r.source.startsWith('augment-pool-batch5-h4')||Object.keys(AUGMENT_BATCH5_H3).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   if(state.augments.some(a=>AUGMENT_BATCH5_S3A[a.definitionId])||state.seatMechanics?.receipts.some(r=>r.source===BATCH5_S3A_SOURCE||r.receiptId.includes(BATCH5_S3A_SOURCE)||Object.keys(AUGMENT_BATCH5_S3A).some(id=>r.receiptId.includes(id)))){
     validateBatch1Gifts(state);validateBatch5Inventory(state,batch5InventoryPlan(state));validateHistoricalEquipment(null,state);validateAnvils(state);
   }
   if(hasS3bInventory(state)){
     validateBatch1Gifts(state);validateAnvils(state);validateHistoricalEquipment(null,state);
+  }
+  if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId))){
+    const result=state.roundResults.find(r=>r.round===state.round);
+    if(result&&state.playerHp!==liveHpAfterSettlement(state,state.round,result.hpAfter))throw new RangeError('Invalid S6C settlement health');
   }
   return state;
 }

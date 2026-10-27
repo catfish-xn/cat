@@ -15,6 +15,9 @@ import { d11ChoiceDisplay } from '../simulation/d11-display';
 import { V20_TRAITS, TEAMUP_IDS } from '../simulation/content/v20-traits';
 import { getHeroIdentity } from './hero-identity';
 import { traitSummary } from './trait-text';
+import { AUGMENT_SHOP } from '../simulation/content/augment-pool-shop';
+import type { AugmentDynamicValue, DynamicValue } from '../simulation/augment-dynamic-values';
+import { itemDisplayName } from './g23-display';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 
@@ -80,6 +83,7 @@ function teamupDescription(id: string): string | null {
  * implementation note, so the choice card shows only the effect text for those.
  */
 const AUTHORED_DESCRIPTION = new Set(['placebo', 'manaflow-i', 'glass-cannon-i', 'pumping-up-i', 'investment-strategy-i', 'bulky-buddies-i',
+  'pumping-up-ii', 'pumping-up-iii', 'bronze-for-life-i', 'bronze-for-life-ii',
   'blinding-speed', 'portable-forge', 'radiant-relics', 'going-long', 'hedge-fund', 'investment-strategy-ii', ...Object.keys(S13_P2_SOURCE)]);
 /**
  * P3 augments: the zh_cn client template (`augment-zh.ts`) filled with the rules' source values. Tokens match keys
@@ -95,13 +99,39 @@ function p3Description(id: string): string | null {
   return fillAbilityTemplate(AUGMENT_ZH_TEMPLATES[id].replace(/@[^@<>\s]+@/g, token => token.toLowerCase()), values).text;
 }
 // v15 D11 choices use the rules' display text; other augments retain the P2/P3 player descriptions.
-export const augmentPlayerDescription = (id: string): string | null => {
+const outcomeNames: Readonly<Record<string,string>> = {
+  'magic:egg':'金蛋', 'magic:high-triple':'战术师之戒', 'magic:low-triple':'英雄复制器与金币',
+  'magic:health':'全队生命值', 'magic:units':'2星弈子', 'magic:components':'基础装备', 'magic:pan':'金锅铲与基础装备',
+  'chaos:gold':'金币', 'chaos:three-star':'3星弈子与金币', 'chaos:hullbreakers':'大亨之铠', 'chaos:horizon-focus':'狙击手的专注',
+  'chaos:thiefs-gloves':'窃贼手套', 'chaos:solari-dummy':'钢铁烈阳之匣假人', 'chaos:zeke-dummy':'基克的先驱假人',
+  'chaos:emblems':'纹章', 'chaos:xp':'经验', 'chaos:rerolls':'免费刷新',
+};
+function dynamicText(value: DynamicValue | undefined): string {
+  if (value == null) return '未确定';
+  if (typeof value === 'number') return String(value);
+  if ('unit' in value) return getHeroIdentity(value.unit).name;
+  const label = outcomeNames[value.outcome] ?? '未确定';
+  const gifts = value.gifts?.map(g => g.kind === 'unit' ? `${g.starLevel && g.starLevel > 1 ? `${g.starLevel}星` : ''}${getHeroIdentity(g.definitionId).name}`
+    : g.kind === 'item' ? itemDisplayName(g.definitionId)
+      : g.definitionId === 'TFT_Consumable_ChampionDuplicator_III' ? '次级英雄复制器' : g.definitionId === 'magnetic-remover' ? '装备拆卸器' : g.definitionId) ?? [];
+  const details = [...gifts, ...(value.gold ? [`${value.gold}金币`] : []), ...(value.xp ? [`${value.xp}经验`] : []),
+    ...(value.rerolls ? [`${value.rerolls}次免费刷新`] : []), ...(value.health ? [`全队${value.health}生命值`] : [])];
+  return details.length ? `${label}（${details.join('、')}）` : label;
+}
+const percent = (bps: number) => `${bps / 100}%`;
+export const augmentPlayerDescription = (id: string, dynamic?: AugmentDynamicValue): string | null => {
   const data = readAugmentText();
   if (!data) return augmentTextPlaceholder();
-  if (Object.hasOwn(data.AUGMENT_AUDITED_DESCRIPTIONS, id)) return data.AUGMENT_AUDITED_DESCRIPTIONS[id];
-  if (Object.hasOwn(data.AUGMENT_POOL_TEXT, id)) return data.AUGMENT_POOL_TEXT[id].description;
-  if (Object.hasOwn(data.AUGMENT_EXTRA_TEXT, id)) return data.AUGMENT_EXTRA_TEXT[id].description;
-  return d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? teamupDescription(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
+  let description = data.AUGMENT_AUDITED_DESCRIPTIONS[id] ?? data.AUGMENT_POOL_TEXT[id]?.description ?? data.AUGMENT_EXTRA_TEXT[id]?.description
+    ?? (AUGMENT_SHOP[id]?.rule === 'starry' ? AUGMENT_SHOP[id].description : undefined) ?? d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? teamupDescription(id)
+    ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
+  let index = 0;
+  if (description) description = description.replace(/〔对局动态值〕/g, () => dynamicText(dynamic?.values?.[index++]));
+  const lines: string[] = [];
+  if (dynamic?.attackSpeedBps !== undefined) lines.push(`当前攻击速度：${percent(dynamic.attackSpeedBps)}`);
+  if (dynamic?.damageAmpBps !== undefined) lines.push(`当前伤害增幅：${percent(dynamic.damageAmpBps)}`);
+  if (dynamic?.durabilityBps !== undefined && id === 'bronze-for-life-ii') lines.push(`当前坚韧：${percent(dynamic.durabilityBps)}`);
+  return [description, ...lines].filter(Boolean).join('\n\n') || null;
 };
 /**
  * Effect lines of an augment for its card. Mechanics with no display text (they would print an internal code such as
@@ -118,8 +148,8 @@ export function augmentEffectText(id: string): string {
  * their own block (the project's 魔改执行 note of a team-up, and the effect lines once a description already says what the
  * augment does). Without a description the effect lines are the description. Formatting only: the text is the same.
  */
-export function augmentCardSections(id: string): { readonly body: string; readonly extra: readonly string[] } {
-  const description = augmentPlayerDescription(id), effects = augmentEffectText(id);
+export function augmentCardSections(id: string, dynamic?: AugmentDynamicValue): { readonly body: string; readonly extra: readonly string[] } {
+  const description = augmentPlayerDescription(id, dynamic), effects = augmentEffectText(id);
   if (!description) return { body: effects, extra: [] };
   const cut = description.indexOf(' 魔改执行：');
   const body = cut < 0 ? description : description.slice(0, cut), note = cut < 0 ? '' : description.slice(cut + 1);
