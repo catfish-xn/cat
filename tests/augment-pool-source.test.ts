@@ -30,6 +30,13 @@ it('covers both tables completely with independent indexed expectations',()=>{
 it.each([...BATCH1_SOURCE,...BATCH2_SOURCE])('$id matches research record [$recordIndex]: identity, raw constants and reward plan',e=>{
  const row=AUGMENT_BATCH5_S3B[e.id]??AUGMENT_BATCH1[e.id]??AUGMENT_BATCH2[e.id];
  expect(row.apiName).toBe(e.apiName);expect(row.tier).toBe(e.tier);expect(row.source.values).toEqual(e.values);
+ // This inventory row remains in batch 2; executable content moved to B5-58.
+ if(e.id==='forbidden-magic'){
+  expect(AUGMENT_BATCH2[e.id].enabled).toBe(false);expect(row.gifts).toEqual([]);
+  expect(AUGMENT_DEFINITIONS[e.id].id).toBe(e.id);expect(AUGMENT_POOL_API_NAMES[e.id]).toBe(e.apiName);
+  expect(batch1GiftPlan({...createMatch(42),augments:[{definitionId:e.id,choiceId:'oracle',acquiredRound:1}]})).toHaveLength(3);
+  return;
+ }
  if(!e.enabled){
   expect(AUGMENT_BATCH2[e.id].enabled).toBe(false);expect(row.gifts).toEqual([]);
   expect(AUGMENT_DEFINITIONS[e.id]).toBeUndefined();expect(AUGMENT_POOL_API_NAMES[e.id]).toBeUndefined();

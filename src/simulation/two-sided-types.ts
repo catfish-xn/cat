@@ -11,6 +11,7 @@ export const TWO_SIDED_BATTLE_VERSION = 'two-sided-battle-v1';
 export interface PlayerBattleSnapshot {
   readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[];
   readonly sniperOpening?: Readonly<Record<string, number>>;
+  readonly cabalGrowth?: import('./augment-pool-batch5-h9-cabal').CabalGrowth;
   readonly d14Combat?:import('./d14-runtime').D14CombatCertificate;
   /** Bank frozen for Gambler mechanics; not a mutable economy authority. */
   readonly bankGold?:number;

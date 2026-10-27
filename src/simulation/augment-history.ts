@@ -6,6 +6,7 @@ import { drainBatch5H8Deaths } from './augment-pool-batch5-h8-deaths';
 import { drainBatch5H8Gold } from './augment-pool-batch5-h8';
 import { completeTraitTrackerCommand } from './augment-pool-batch5-h10-tracker';
 import { maxCapOfferNeedsHistory } from './augment-pool-batch5-h12-progression';
+import { settleBatch5H9History } from './augment-pool-batch5-h9';
 import type { MatchState, MatchEvent } from './match-types';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -47,7 +48,9 @@ export function recordAugmentTable(s: MatchState, stage: 'acquire' | 'entry' | '
 }
 export function recordAugmentPvpRoster(s: MatchState, battleId: string, seats: readonly HistorySeat[], mirrorOfSeatId: string | null): MatchState {
   if (s.augmentHistory?.facts.some(f => f.kind === 'pvp-roster' && f.battleId === battleId)) return s;
-  return appendAugmentFact(s, { kind: 'pvp-roster', battleId, seats, mirrorOfSeatId });
+  const recorded = appendAugmentFact(s, { kind: 'pvp-roster', battleId, seats, mirrorOfSeatId });
+  return s.augments.some(a => a.definitionId === 'a-golden-find') && !recorded.augmentHistory?.facts.some(f => f.kind === 'combat-binding' && f.battleId === battleId)
+    ? appendAugmentFact(recorded, { kind: 'combat-binding', battleId, binding: s.anomalyBinding }) : recorded;
 }
 /** Internal domain hook, called in the same successful transaction as the future augment's effect.
  * It records integer amounts; it does not select recipients or invent a growth formula. */
@@ -192,12 +195,16 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
     const battleId = after.combat?.combatId ?? after.pendingCombatTerminal?.combatId ?? `round-${after.round}`;
     if (!next.augmentHistory?.facts.some(f=>f.kind==='combat-roster'&&f.battleId===battleId))
       next = appendAugmentFact(next, {kind:'combat-roster',battleId,roster:historyRoster({...after,preparation:basis.preparation,items:basis.items})});
+    if (next.augments.some(a => a.definitionId === 'a-golden-find') && (!after.multiplayer || after.m8.round.kind !== 'pvp') && !next.augmentHistory?.facts.some(f=>f.kind==='combat-binding'&&f.battleId===battleId))
+      next = appendAugmentFact(next, {kind:'combat-binding',battleId,binding:basis.anomalyBinding});
   }
   if (!before.combat && after.combat && after.m8.round.kind === 'pvp' && !after.multiplayer)
     next = recordAugmentPvpRoster(next, after.combat.combatId!, [{ ...historyRoster(before), seatId: 'solo', index: 0, hp: before.playerHp, alive: true, rank: 1, eliminatedRound: null }], null);
-  const currentDeaths = augmentDeathsFromEvents(events);
-  const recorded = new Set(next.augmentHistory!.facts.flatMap(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId ? f.deaths.map(d => d.eventSeq) : []));
-  const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
+  const captureKiller = next.augments.some(a => a.definitionId === 'a-golden-find');
+  const captureTakedowns = next.augments.some(a => a.definitionId === 'forbidden-magic');
+  const currentDeaths = augmentDeathsFromEvents(events, captureKiller, captureTakedowns);
+  const recorded = new Set(after.combat?.status === 'finished' ? next.augmentHistory!.facts.flatMap(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId ? f.deaths.map(d => d.eventSeq) : []) : []);
+  const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat, captureKiller, captureTakedowns), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
   if (after.combat && (deaths.length || before.combat?.tick !== after.combat.tick || !before.combat))
     next = appendAugmentFact(next, { kind: 'deaths', battleId: after.combat.combatId!, completeThroughTick: after.combat.tick,
       deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null })) });
@@ -228,6 +235,10 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
   const newReceipts=(next.seatMechanics?.receipts??[]).filter(r=>!priorReceipts.has(r.receiptId));
   const payoutEvents:MatchEvent[]=newReceipts.map((receipt,index)=>({type:'mechanicGranted',receipt,domain:'match',eventSeq:next.nextMatchEventSeq+index}));
   if(payoutEvents.length)next={...next,nextMatchEventSeq:next.nextMatchEventSeq+payoutEvents.length};
+  let effectEvents: readonly MatchEvent[] = [];
+  if (next.roundResults.length > before.roundResults.length && (!next.multiplayer || next.m8.round.kind !== 'pvp')) {
+    const settled = settleBatch5H9History(next); next = settled.state; effectEvents = settled.events;
+  }
   if (!before.multiplayer && before.openingEncounter.mode !== 'shared-deferred') {
     const stored = before.augmentHistory?.proof;
     let trace: Trace = traces.get(before) ?? { ...(stored?.kind === 'solo' ? stored : {origin:before,commands:[]}), previousBattle:{status:'unavailable'} };
@@ -245,7 +256,7 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
     traces.set(next, { ...proof, previousBattle: !before.combat && after.combat ? {status:'recorded',round:before.round,roundId:before.roundDefinitionId,battleId:after.combat.combatId!,roster:historyRoster(before)} : trace.previousBattle });
   }
   preparationTimes.set(next,{round:next.round,elapsedMs:next.round===before.round?Math.max(preparationElapsed(before),preparationElapsed(after)):0});
-  const extraEvents = [...tracker.events, ...rewarded.events, ...payoutEvents];
+  const extraEvents = [...tracker.events, ...rewarded.events, ...payoutEvents, ...effectEvents];
   return (envelope.state ? { ...envelope, state: next, ...(extraEvents.length ? { events: [...(envelope.events ?? []), ...extraEvents] } : {}) } : next) as T;
 }
 

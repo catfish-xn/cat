@@ -54,6 +54,10 @@ B5-42／43／44 已开放；函数签名、失败原因和全部接线见 [H7 �
 
 历史扩展仍归 `augment-history-v1`，新增 `settled-combat`、`augment-item-transform`、`inventory-transform-entry`，详见 `AUGMENT_HISTORY_DESIGN.md`。内部不满足边界时抛 `RangeError('Invalid augment history: ...')`：空池、错误持有者/输出数、收据冲突、输入所有权/位置、输出序号、结算收据、结构界限；恢复缺历史或缺独立服务器authority继续拒绝，不迁移、不自签。公开失败沿用原reason，不消费资源/RNG。
 
+## 2026-10-27 v25 B5-56／B5-58
+
+规则／内容为 `s13-g2-3-v25-online-rules`／`s13-14.24b-g2-3-v25-online-rules`；schema/save/replay/command 保持 12/8/8/7，网络规则协议 5。金色收获（4-2）与禁忌魔法（3-2、黑玫棋盘）按 P-B5-56／58 开放。唯一历史证据为按持有者写入的 `augment-history-v1`：开战异常绑定、真实致死来源、实际参与者与玩家级赛恩成长。每三杀发二金和每三次参与击杀 +150 AD 基点／10 生命均由规则层战后唯一收据执行，成长从下一战生效。无新增玩家命令，旧身份拒绝续玩，未重录 epoch。接口、失败语义与全部接线点以 [强化历史合同](AUGMENT_HISTORY_DESIGN.md) 的 B5-56／B5-58 节为准。
+
 ## 2026-10-27 v24 纪元身份
 
 当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。

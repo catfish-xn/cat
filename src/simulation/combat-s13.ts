@@ -1,4 +1,5 @@
 import { settleH11Deaths } from './augment-pool-batch5-h11';
+import { tracksCabalTakedowns, sampleCabalTakedowns } from './augment-pool-batch5-h9-cabal';
 import { sampleAugmentDeath } from './augment-death-samples';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -455,7 +456,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     }
     const damageByAction = new Map<string, { owner: S13Unit; source: CombatOrigin; seq: number; outcomes: DamageOutcome[]; hpAmount: number; heal?: Amount }>();
     const allOutcomes: DamageOutcome[] = [];
-    const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist')||units.some(u=>champion(u)==='swain'||u.mechanics?.some(m=>m.mechanic==='s13Anomaly'||m.mechanic==='sisters')||u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'));
+    const trackAssists = tracksCabalTakedowns(units)||hasMechanismSubscriber(units, 'kill-or-assist')||units.some(u=>champion(u)==='swain'||u.mechanics?.some(m=>m.mechanic==='s13Anomaly'||m.mechanic==='sisters')||u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'));
     const damageContributors = { ...state.damageContributors };
 
     ctx.virtualHp = virtualHp;
@@ -766,7 +767,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       unit.shieldLayers = []; unit.shield = 0; unit.shieldExpiresAtTick = null; unit.statuses = [];
       if (unit.deferredItemDamage) unit.deferredItemDamage=[];
       unit.tasks = unit.tasks.filter(t => !t.cancellable && (t.attachedDot || t.kind === 'tristanaBounce'));
-      events.push(sampleAugmentDeath({ type: 'death', tick, unitId: unit.id }, unit));
+      events.push(sampleAugmentDeath({ type: 'death', tick, unitId: unit.id }, unit, killed.get(unit.id) ?? null,
+        tracksCabalTakedowns(units)?sampleCabalTakedowns(units,unit.id,[...(killed.has(unit.id)?[killed.get(unit.id)!.ownerId]:[]),...(damageContributors[unit.id]??[])]):undefined));
     }
     // Keep depleted protective layers only until their independent end task has consumed absorption.
     unit.shieldLayers = unit.shieldLayers.filter(layer => layer.remaining > 0 || unit.tasks.some(t => t.shieldEndKey === layer.key));

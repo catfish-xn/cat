@@ -45,6 +45,8 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT9_Augment_PandorasRadiantBox":[],
   "TFT_Augment_Artifactory":["2-1"],
   "TFT8_Augment_SalvageBinPlus":["2-1"],
+  "TFT13_Augment_Cabal":["2-1", "4-2"],
+  "TFT13_Augment_AGoldenFind":["2-1", "3-2"],
   "TFT_Augment_FiresalePlus":["2-1", "4-2"],
   "TFT_Augment_RiggedShopPlus":["2-1", "4-2"],
   "TFT11_Augment_Reinfourcement":["2-1", "3-2"],

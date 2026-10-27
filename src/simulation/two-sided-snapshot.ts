@@ -2,6 +2,7 @@ import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { readSniperOpening, validSniperOpeningSnapshot } from './augment-pool-batch5-h10-sniper';
+import { readCabalGrowth } from './augment-pool-batch5-h9-cabal';
 import { drainSetup } from './setup-work';
 import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
@@ -56,6 +57,10 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     if(s.playerHp!==undefined){integer(s.playerHp);requireSnapshot(s.playerHp<=maximumPlayerHp(s.augments,getMultiplayerRoundById(s.roundId).ordinal));}
     if(s.g23)yield* validateG23ProgressSteps(s.g23,s.g23.seed,getMultiplayerRoundById(s.roundId).ordinal);
     if(s.priorPvpWins!==undefined){integer(s.priorPvpWins,1);requireSnapshot(s.priorPvpWins<=priorPvpRoundLimit(getMultiplayerRoundById(s.roundId).ordinal));}
+    if(s.cabalGrowth){record(s.cabalGrowth);integer(s.cabalGrowth.healthFlat);integer(s.cabalGrowth.attackDamageBps);
+      requireSnapshot(s.augments.some(a=>a.definitionId==='forbidden-magic')&&Object.keys(s.cabalGrowth).length===2
+        &&s.cabalGrowth.healthFlat%10===0&&s.cabalGrowth.attackDamageBps===s.cabalGrowth.healthFlat*15);}
+    else requireSnapshot(!s.augments.some(a=>a.definitionId==='forbidden-magic'));
     id(s.seatId); id(s.roundId); integer(s.level, 1);
     const round = getMultiplayerRoundById(s.roundId);
     if(s.itemSummonPositions)requireSnapshot(Object.keys(s.itemSummonPositions).every(id=>id.startsWith('unit-')?Array.isArray(s.units)&&s.units.some(u=>u.id===id&&u.definitionId==='jayce'):Array.isArray(s.items)&&s.items.some(i=>i.id===id)));
@@ -141,6 +146,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     const clean: PlayerBattleSnapshot = {
       ...(s.h6Growth?{h6Growth:s.h6Growth.map(g=>({...g}))}:{}),
       ...(s.sniperOpening ? { sniperOpening: structuredClone(s.sniperOpening) } : {}),
+      ...(s.cabalGrowth?{cabalGrowth:structuredClone(s.cabalGrowth)}:{}),
       ...(s.d14Combat?{d14Combat:structuredClone(s.d14Combat)}:{}),
       ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),
       ...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),...(s.playerHp===undefined?{}:{playerHp:s.playerHp}),...(s.g23===undefined?{}:{g23:structuredClone(s.g23)}),
@@ -185,6 +191,7 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
   requireSnapshot(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9);
   const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
   const ids = new Set(units.map(unit => unit.id));
+  const cabalGrowth = readCabalGrowth(state);
   const wins = priorPvpWins(state.roundResults, state.round);
   // A placed Hextech Forge travels with its deployed Jayce (keyed by the Jayce), a Voidspawn with its equipped portal.
   const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>units.some(u=>u.id===id&&u.definitionId==='jayce')||state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
@@ -194,6 +201,7 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
   return yield* restorePlayerBattleSnapshotSteps({
     ...(h6Growth?{h6Growth}:{}),
     ...(sniperOpening ? { sniperOpening } : {}),
+    ...(cabalGrowth?{cabalGrowth}:{}),
     ...(d14Combat&&ids.has(d14Combat.unitId)?{d14Combat}:{}),
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
     ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),

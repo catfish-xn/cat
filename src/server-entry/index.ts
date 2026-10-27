@@ -98,3 +98,5 @@ export { grantAdditionalCarouselPick } from '../simulation/carousel';
 export { applyDhampyrSettlement } from '../simulation/augment-pool-batch5-h8-health';
 export { drainBatch5H8Deaths } from '../simulation/augment-pool-batch5-h8-deaths';
 export { readAugmentPlayerHealth } from '../simulation/augment-history';
+
+export { settleBatch5H9History } from '../simulation/augment-pool-batch5-h9';

@@ -11,6 +11,7 @@ import { AUGMENT_BATCH5_H8, DHAMPYR_RULES } from './augment-pool-batch5-h8';
 import { AUGMENT_BATCH5_H10 } from './augment-pool-batch5-h10';
 import { AUGMENT_BATCH5_H11 } from './augment-pool-batch5-h11';
 import { AUGMENT_BATCH5_H12 } from './augment-pool-batch5-h12';
+import { AUGMENT_BATCH5_H9 } from './augment-pool-batch5-h9';
 import { AUGMENT_SHOP } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S1A } from './augment-pool-batch5-s1a';
 import { AUGMENT_BATCH5_S3B } from './augment-pool-batch5-s3b';
@@ -86,6 +87,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
     timing:'pre-grant-round-entry-snapshot;after-acquisition-round;zero-input-marker;one-transform-per-instance',
     sampling:'sorted-existing-category-pools;uniform-with-replacement;unchanged-allowed;fnv1a32-seat-choice-round-item-lcg32-v1',
     salvage:'sale-returned-permanent-recipe-items-only;four-settled-pvp-including-acquisition-round;one-component'},
+  augmentPoolBatch5H9:{version:'augment-pool-batch5-h9-v25',content:AUGMENT_BATCH5_H9,convention:'P-B5-56-58-2026-10-27',gold:'original-anomaly-owner-kills-cross-battle-every-three-two-gold-post-settlement',history:'augment-history-v1',cabal:'sorted-full-black-rose-catalog-uniform-three-with-replacement-per-participant-victim-once-per-battle-next-battle-sion-150bps-10hp'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch5H5:{version:'augment-pool-batch5-h5-v1',content:AUGMENT_BATCH5_H5,convention:'P-B5-35-36-H5-2026-10-27',
     selection:'carousel-rng-after-xor-42533535-seat-index-choice-id-fnv-lcg32-rejection-v1',

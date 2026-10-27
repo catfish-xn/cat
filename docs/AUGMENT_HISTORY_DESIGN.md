@@ -165,7 +165,7 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 | `src/server/room/room.ts / Room.prepareAugmentAcquisition` | 调用 `tableFacts(this.current.seats)`，随上一战和时钟一起传给规则；原 `apply`（手选／handleBot）、`applyTimeouts`、`onChoiceDeadline` 三个入口复用此方法 |
 | `src/server/room/room.ts / Room.replace` | `recordRoomPublication` 调用移除上一战和时间参数，获取事实不再延迟到发布 |
 | `src/server/room/augment-history.ts / recordRoomPublication` | 移除获取时的补写 table／previousBattle；保留成功转换及入轮事实 |
-| `tests/augment-history.test.ts` | 获取效果内部读取三席已淘汰事实并记录结果（手选／机器人／超时）；普通／流式真实联机 PvE、恢复继续、复活再死与终战旁路；持有者投影隔离；两联机恢复入口对象／JSON 篡改矩阵 |
+| `tests/augment-history.test.ts`、`tests/augment-stage-bans-audit.test.ts` | 获取效果内部读取三席已淘汰事实并记录结果（手选／机器人／超时）；普通／流式真实联机 PvE、恢复继续、复活再死与终战旁路；持有者投影隔离；两联机恢复入口对象／JSON 篡改矩阵 |
 
 `src/simulation/match.ts`、`augment-death-samples.ts` 和 server-entry 的原导出本次无需修改：前者已在专属效果前调用 `recordAugmentAcquisition`，采样器仍只观察战斗现场，server-entry 自动导出更新后的函数签名。未修改界面、素材、现有断言或超时限制。最终验证结果见根目录 `-o`。
 
@@ -222,3 +222,35 @@ B5-80 `head-start` 使用 `requireAugmentFacts(...,'acquire',...)` 的正式阵�
 转换在资源来源账本中保留同名有序行，必须与本节事实的 `resourcePrefix`、回合、收据、输入输出完全一致；它只用于装备来源与顺序重建，不是另一份可自签的奖励证明。`preflightH13Fact` 限制持有者、轮次、1/2件输出、最多1024个唯一入轮物品 ID，并绑定真实结算。最终认证仍由原有单人命令重演或独立房间 authority 完成；修改两份账本和最终物品也不能绕过。
 
 本批新增调用点：`match.sellUnit`；`match.nextRound/advanceMultiplayerRound`；`augment-pool-grants.batch1GiftPlan/drainBatch1Gifts`；`resource-provenance.foldResourceProvenance`；`b8-restore.validateHistoricalEquipment/validateB8Resources/replayCurrentSuffix`；`temporary-equipment.validateMatchEquipment`（已拆掉/转换的窃贼手套仍保留历史父物品）；`shop-history.anomalyRecovery`（转交同节证据）；`augment-history-restore.preflightAugmentHistory`。`src/server`、`src/server-entry` 无修改，房间现有 choose/sell/combine/equip/openAnvil/useConsumable、settlement 和 advance 流程即为生产调用路径；服务器不计算新规则。
+
+## B5-56／B5-58 已开放（2026-10-27）
+
+采用用户授权 P-B5-56／P-B5-58。运行规则／内容身份升为 v25；外层 schema/save/replay/command 仍为 12/8/8/7，历史节仍为 augment-history-v1，不重录旧 epoch。新增字段均按持有者写入；不改变没有这两项强化的公开战斗事件形状。
+
+- 金色收获：仅 4-2 提供；选择即有 10 次免费商店刷新。`combat-binding` 冻结每场开战时原始异常绑定；`deaths.killer` 保存真实致死来源。正式绑定英雄本人每累计 3 次敌方击杀给 2 金，余数跨 PvP／PvE，战后 `augment-b5-golden-find` 唯一机制收据发放。代理、异常复制体和助攻不计入。
+- 禁忌魔法：仅 3-2 且正式棋盘有黑色玫瑰成员时提供。完整英雄目录为 Cassiopeia、Elise、LeBlanc、Morgana、Vladimir；沿既有 choice／seat／spec 绑定的礼物 RNG 等权有放回抽三次，联机发三份奖励球，领取沿有限共享卡池账本。旧 batch2 行保留为资料索引，移出 blocked 表，实际定义和规则在 batch5-h9。
+- `deaths.takedowns` 是现场观测的参与者数组 `{unitId,definitionId,team,eligible}`，只对禁忌魔法持有者存储。沿战斗现有正伤害／护盾吸收贡献和致死来源，正式英雄与赛恩按冻结的有效羁绊身份判资格；转职和未达到激活门槛的黑玫成员也计入。代理自身不计；现有攻击代理为主人记录的助攻沿用。每名参与者对每个敌方实例每场最多一次，复活再死不重复；同一敌人的不同参与者分别计数。不是按命中次数或整队击杀次数推断。
+- `summon-growth` 是同一 v1 节中的玩家级永久成长事实 `{choiceId,receiptId,definitionId:'g23-sion',stacks,healthFlat,attackDamageBps}`。每满 3 次参与击杀写一次唯一来源／回合收据，每层 +10 平面生命、+150 AD 基点；余数跨战。无需将战斗召唤体伪造成永久正式英雄，也不依赖赛恩每战变化的实例 ID。
+- `cabalGrowthPlan(state: MatchState)` 根据 `requireAugmentFacts` 导出逐轮增量；`settleCabalGrowth(state)` 幂等写入同节；`readCabalGrowth(state)` 仅汇总严格早于当前轮的成长，返回 `CabalGrowth | undefined`。只有这项强化的战斗输入／双方私有快照附带 `cabalGrowth:{healthFlat,attackDamageBps}`，由规则层从历史导出，进入唯一属性编译器。恢复 Match 时重新核对输入与历史，再执行命令重演／独立服务器 authority 验证；快照结构校验本身不是客户端授权。
+- `goldenFindGoldPlan(state)` 导出金币收据计划；`settleBatch5H9History(state: MatchState): MatchStep` 统一执行战后金币和成长，返回 state/events。没有新增公共玩家命令或 wire reason。内部缺事实／冲突错误仍以 `Invalid augment history:` 开头；失败不补零、不修复坏档。恢复预检检查参与者、成长与绑定结构；对象、JSON、规范序列化输入均需原来的独立服务器权威句柄，不能自行签名。
+
+| 本单修改的实际接线点 | 职责 |
+| --- | --- |
+| `content/augment-pool-batch5-h9.ts`；`augment-pool-batch5-h9.ts`；`augment-pool-batch5-h9-cabal.ts` | 两项独立内容、免费次数、金币计划、三英雄计划、参与者采样、成长及编译效果 |
+| `content/augments.ts`、`augment-policy.ts`、`augment-offer-rules.ts`、`augment-stage-bans.ts`、`rules-manifest.ts`、`augment-pool-batch2.ts`；`validate-content.ts` | 定义／等级／API／节点与 trait 过滤、约定身份、移除旧 blocked 原因、计数 |
+| `free-rerolls.ts / freeRerollCredits`；`augment-pool-grants.ts / batch1GiftPlan` | 真实 rerollShop／rerollSharedShop 消费额度；selectChoice／runSharedMatchCommand 领取既有奖励球 |
+| `augment-history-owners.ts`、`augment-history-types.ts`、`augment-history-restore.ts / preflightAugmentHistory` | 持有者声明、v1 条件事实、结构上限与三入口前置拒绝 |
+| `augment-history.ts / recordAugmentPvpRoster, recordAugmentTransition, traceHistoryCommand` | 开战绑定；普通／流式 PvE 的死亡终战采样、战后事务与可重演命令链 |
+| `augment-death-samples.ts / sampleAugmentDeath, carryAugmentDeathSample, augmentDeathsFromEvents, carryAugmentCombatDeaths, readAugmentCombatDeaths`；`combat-s13.ts / advanceS13Tick` | 完整致死来源／参与者旁路，保持 stamped event／终战交接，不截断死亡事件 |
+| `combat-input.ts / readCombatStrategyInputs, restoreCombatInput`；`b8-restore.ts / validateB8Resources` | 从历史冻结下战成长，保存恢复时核对输入 |
+| `two-sided-types.ts`；`two-sided-snapshot.ts / snapshotForBattleSteps, restorePlayerBattleSnapshotSteps`；`two-sided-battle.ts / compileSideSteps`；`strategy-snapshot.ts / buildStrategySnapshotSteps` | 双边私有快照携带成长；唯一规则编译器给实际赛恩加属性 |
+| `src/server-entry/index.ts`；`src/server/room/augment-history.ts / recordRoomBattleFacts` | 服务器只按公共导出请求带归属的死亡事实，再调用统一规则结算并发布事件；没有服务器奖励公式或新命令 |
+| `m8/version.ts`、`m8/contracts.ts`、`content/identity-constants.ts`；`scripts/tests/production-size.test.ts` | v25 规则／内容身份及自然重算摘要；未重录 epoch |
+| `tests/fixtures/m5/oracle.g2.cjs`、`tests/augment-stage-helpers.ts`、`tests/augment-pool-batch2.test.ts`、`tests/augment-pool-source.test.ts`、`tests/augment-history.test.ts`、`tests/augment-stage-bans-audit.test.ts` | 独立节点／次数／候选表、固定房间路线、旧资料索引的实现迁移断言；原四份无持有者 SHA-256 只规范化显式升级的身份后比较，保留原断言／原散列；阶段审计确认 Cabal 旧缺口已消除 |
+| `tests/augment-pool-batch5-h9-{attribution,golden,cabal}.test.ts`；`tests/server/batch5-h9-{golden,cabal}-room.test.ts` | 真命令、共享池、真实 PvP／PvE、普通及流式路径、下战属性、恢复继续和篡改矩阵 |
+
+本单没有修改 `src/server/room/room.ts` 或协议命令分派：已有冻结、结算和 `applySeatCommand` 的 choose/reroll/claimOrb/buy/deploy/anomalyTarget 路由直接复用。服务器变更文件没有新增计时器或浏览器全局；仓库原有 `real-clock.ts`、`net/test-client.ts` 的系统计时适配不在本单强化接线范围。最终验证计数及摘要见根目录 `-o`。
+
+本单最终验证：所有 Vitest 调用均为指定文件／用例、`--maxWorkers=3`，累计去重 369 项通过（其中金色收获 63 项、禁忌魔法 93 项，覆盖普通及流式真实 Room、对象／JSON／规范序列化恢复和篡改拒绝）。其余通过项为历史 77 项、源资料及双边快照 123 项、内容身份／生产大小 12 项、batch2 分类迁移 1 项；没有跑完整套件或超过 0..100 的种子扫描。`npm run typecheck`、`npm run build -- --configLoader runner`、身份重算 `--write`／校验 `--check` 和 `git diff --check` 通过。最终摘要为 CONTENT `fnv1a32-utf16:5dd52c60`、LOOT `fnv1a32-utf16:85985e18`，生产大小断言已同步。
+
+额外阶段审计的 10 个自动用例受沙盒 `spawnSync node EPERM` 阻断；直接运行同一审计 CLI 后确认本单两个节点无差异，仍报告 Academy、Experiment、Formswapper、BloodBrothers 四项范围外既有差异。没有删除断言、增加超时、修改 epoch 或写入 Git。严格全目录禁词检查仍会命中未修改的 `src/server/room/real-clock.ts:4` 和 `src/server/net/test-client.ts:13` 等既有计时适配；本单服务器新增行不含 `setTimeout`、`Date.now`、`performance.now` 或 `window`。

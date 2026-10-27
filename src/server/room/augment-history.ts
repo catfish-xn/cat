@@ -1,6 +1,6 @@
 /** Server orchestration only: freeze authoritative table/roster/settlement observations.
  * No rewards, growth amounts, player damage formula or random draws live here. */
-import { drainBatch5H7Gold, applyDhampyrSettlement, drainBatch5H8Deaths, appendAugmentFact, recordAugmentTable, recordAugmentSettlementTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
+import { drainBatch5H7Gold, applyDhampyrSettlement, drainBatch5H8Deaths, appendAugmentFact, recordAugmentTable, recordAugmentSettlementTable, settleBatch5H9History, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
   type HistorySeat } from '../../server-entry';
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput } from './types';
@@ -38,7 +38,7 @@ export function recordRoomBattleFacts(seats: readonly SettledSeat[], results: re
     const result = results.find(r => r.kind === 'two-sided' ? r.participants.includes(seat.seatId) : r.outcomes.some(s => s.seatId === seat.seatId));
     if (!result || result.kind !== 'two-sided') return seat; // PvE samples are recorded by the Match commands.
     const battle = result.battle;
-    const deaths = augmentDeathsFromEvents(battle.events).map(d => { const mapped = battle.mapping.find(m => m.kind === 'unit' && m.combatId === d.unitId);
+    const deaths = augmentDeathsFromEvents(battle.events, match.augments.some(a => a.definitionId === 'a-golden-find'), match.augments.some(a => a.definitionId === 'forbidden-magic')).map(d => { const mapped = battle.mapping.find(m => m.kind === 'unit' && m.combatId === d.unitId);
       return { ...d, ownerSeatId: d.team === 'player' ? battle.a.seatId : battle.b.seatId, originalUnitId: mapped?.originalId ?? d.unitId }; });
     // A resolver supplying a terminal reconstructed outside the rules runner must replay it first.
     if (deaths.length !== battle.events.filter(e => e.type === 'death').length) throw new RangeError('Invalid augment history: missing executed death samples');
@@ -59,7 +59,8 @@ export function recordRoomBattleFacts(seats: readonly SettledSeat[], results: re
     const payoutEvents:MatchEvent[]=receipts.map((receipt,index)=>({type:'mechanicGranted',receipt,domain:'match',eventSeq:match.nextMatchEventSeq+index}));
     if(payoutEvents.length)match={...match,nextMatchEventSeq:match.nextMatchEventSeq+payoutEvents.length};
     match = applyDhampyrSettlement(match);
-    return { ...seat, match, hpAfter: match.playerHp, events:[...seat.events,...rewarded.events,...payoutEvents] };
+    const effect = settleBatch5H9History(match);
+    return { ...seat, match: effect.state, hpAfter: effect.state.playerHp, events:[...seat.events,...rewarded.events,...payoutEvents,...effect.events] };
   });
 }
 export function recordRoomSettlementTable(seats: readonly SeatState[]): readonly SeatState[] {

@@ -49,6 +49,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'sponging':{node:'3-2',seed:0,rerolls:[0]},
   "artifactory":{node:'3-2',seed:47},
   "salvage-bin-plus":{node:'3-2',seed:23},
+  "a-golden-find":{node:'4-2',seed:19,fielded:true},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -188,3 +189,8 @@ export function boundedFirstNodeOffer(id:string,fielded=false):MatchState {
 }
 /** Search actual first-node offers after catalog expansion; fail explicitly if no route exists. */
 export const batch5S3bSeed=(id:string):number=>firstNodeSeed(id,10000);
+/** Fixed real-room routes for history augments; no seed scan in regression tests. */
+export const HISTORY_AUGMENT_ROOM_ROUTES = {
+  'a-golden-find': { seed: 9, seatId: 's0', node: '4-2' },
+  'forbidden-magic': { seed: 14, seatId: 's2', node: '3-2' },
+} as const;

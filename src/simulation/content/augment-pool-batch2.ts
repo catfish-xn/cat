@@ -611,13 +611,12 @@ export const AUGMENT_BATCH2_TIERS=freezeContent(Object.fromEntries(Object.entrie
 export const AUGMENT_BATCH2_API_NAMES=freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH2_ENABLED).map(([id,row])=>[id,row.apiName])));
 export function batch2Values(id:string):Readonly<Record<string,number>> {return AUGMENT_BATCH2[id]?.source.values as Readonly<Record<string,number>>??{};}
 
-/** Disabled rows never enter definitions, tiers, gifts or API offer mappings.
+/** Disabled rows stay outside batch 2 execution. Forbidden Magic is implemented independently in batch5-h9.
  * Rechecked 2026-10-24 against augments-14.24.json (zero-based record indices),
  * selection-augment-fields.json and the matching map22 node; unknown hashes are
  * preserved as raw values, never guessed into a missing formula or unit stat. */
 export const AUGMENT_BATCH2_BLOCKED=freezeContent({
   "loot-explosion": "R[132]：缺暴击率→掉落概率公式、战利品奖励表/权重及战利品暴击的倍率/递归上限；不是只有一个待填掉落率。",
-  "forbidden-magic": "R[115]：三名黑玫瑰弈子的具体候选/费用/抽样权重未给出；还缺跨战 Sion takedown→永久成长的独立认证接线。现有 g23-sion 已存在，不能沿用旧分类“没有 Sion”的过时原因。",
   "natural-selection": "R[188]：只有 Health=0.12；缺新增牺牲实验格的位置/选取规则、无合法格/空格处理，以及牺牲来源加成的传播目标规则。",
   "aerial-warfare": "R[73]：9%AD/9AP 与 Bonus=3 齐；缺“每格另外3%”作用于基础值还是累积值的精确定义，以及该战移动格数是否含普通移动/冲刺/传送、冲刺过程如何计格。",
   "rebel-resurgence": "R[144]：5名/减400HP齐；缺一星死亡后的目标星级（原文低一星）、最低生命下限及召唤复制继承装备/永久成长/强化、是否能再触发复制的完整口径。",

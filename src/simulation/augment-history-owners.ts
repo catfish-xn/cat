@@ -11,6 +11,8 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'pandoras-items-iii': ['round-entry','augment-item-transform','inventory-transform-entry'],
   'artifactory': ['round-entry','augment-item-transform','inventory-transform-entry'],
   'salvage-bin-plus': ['augment-item-transform', 'settled-combat'],
+  'forbidden-magic': ['deaths', 'summon-growth'],
+  'a-golden-find': ['combat-roster', 'combat-binding', 'deaths'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],

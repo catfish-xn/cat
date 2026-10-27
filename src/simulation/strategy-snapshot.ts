@@ -3,6 +3,7 @@ import { d14UnitBase } from './d14-anomalies/projection';
 import { moonlightSelection } from './augment-pool-batch5-s11a';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { compileH11HistoryEquipment } from './augment-pool-batch5-h11-history';
+import { cabalEffects } from './augment-pool-batch5-h9-cabal';
 import { drainSetup } from './setup-work';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
@@ -178,6 +179,10 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {
+        if(augment.definitionId==='forbidden-magic'){
+          if(!state.cabalGrowth)throw new RangeError('Invalid augment history: missing cabal combat growth');
+          sources.push(...makeSourcedEffects(unit.id,'augment',augment.definitionId,augment.choiceId,cabalEffects(unit,traits,state.cabalGrowth)));continue;
+        }
         const definition = lookup(catalog.augments, augment.definitionId);
         if(augment.definitionId==='quality-over-quantity' && qualityHealth(state,unit.id)) sources.push(...makeSourcedEffects(unit.id,'augment',augment.definitionId,augment.choiceId+':health',[{kind:'statPercentBps',stat:'maxHp',bps:1200}]));
         if (augment.definitionId === 'snipers-nest') {

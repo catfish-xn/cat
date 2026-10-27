@@ -1,8 +1,8 @@
 import type { MatchState } from './match-types';
 import type { Unit } from './unit-types';
-import type { ItemInstance } from './strategy-types';
+import type { AnomalyBinding, ItemInstance } from './strategy-types';
 import type { CarouselReceipt } from './carousel-types';
-import type { CombatItemGrant } from './combat-types';
+import type { CombatItemGrant, CombatOrigin } from './combat-types';
 
 export const AUGMENT_HISTORY_VERSION = 'augment-history-v1' as const;
 export const AUGMENT_HISTORY_LIMITS = { rounds: 256, facts: 65536, commands: 16384, steps: 256 * 900,
@@ -13,12 +13,16 @@ export interface HistorySeat extends HistoryRoster {
   /** Current full-table position (1..8), including eliminated seats. */
   readonly rank: number; readonly eliminatedRound: number | null;
 }
+export interface AugmentTakedownActor { readonly unitId: string; readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly eligible: boolean }
 export interface AugmentDeath {
   readonly combatId: string; readonly eventSeq: number; readonly tick: number; readonly unitId: string;
   readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly ownerSeatId: string | null; readonly originalUnitId: string; readonly ordinaryHero: boolean;
   readonly equipment: readonly { readonly definitionId: string; readonly slot: number; readonly temporary: boolean }[];
   /** Chest-generated combat items have no equipment slot; retain their real source/ordinal/tick. */
   readonly combatItemGrants: readonly CombatItemGrant[];
+  /** Present only when a history owner requires killing-source attribution. */
+  readonly killer?: CombatOrigin | null;
+  readonly takedowns?: readonly AugmentTakedownActor[];
 }
 export interface AugmentGrowth {
   readonly unitId: string; readonly healthFlat: number; readonly healthBps: number;
@@ -39,6 +43,7 @@ export type AugmentFactData =
   | { readonly kind: 'round-entry'; readonly roster: HistoryRoster }
   | { readonly kind: 'positions'; readonly roster: HistoryRoster }
   | { readonly kind: 'combat-roster'; readonly battleId: string; readonly roster: HistoryRoster }
+  | { readonly kind: 'combat-binding'; readonly battleId: string; readonly binding: AnomalyBinding | null }
   | { readonly kind: 'pvp-roster'; readonly battleId: string; readonly seats: readonly HistorySeat[]; readonly mirrorOfSeatId: string | null }
   | { readonly kind: 'table'; readonly stage: 'acquire' | 'entry' | 'settlement'; readonly seats: readonly HistorySeat[] }
   | { readonly kind: 'deaths'; readonly battleId: string; readonly completeThroughTick: number; readonly deaths: readonly AugmentDeath[] }
@@ -46,6 +51,7 @@ export type AugmentFactData =
   | { readonly kind: 'carousel'; readonly receipt: CarouselReceipt; readonly source: 'manual' | 'bot' | 'timeout' | 'disconnected' | 'augment'; readonly choiceId: string | null; readonly ordinal: number; readonly roster: HistoryRoster; readonly releaseAtMs: number; readonly eligibilityChoiceIds: readonly string[] }
   | { readonly kind: 'preparation-time'; readonly elapsedMs: number }
   | { readonly kind: 'player-health'; readonly choiceId: string; readonly receiptId: string; readonly hpBefore: number; readonly hpAfter: number; readonly maxHpBefore: number; readonly maxHpAfter: number }
+  | { readonly kind: 'summon-growth'; readonly choiceId: string; readonly receiptId: string; readonly definitionId: 'g23-sion'; readonly stacks: number; readonly healthFlat: number; readonly attackDamageBps: number }
   | { readonly kind: 'growth'; readonly choiceId: string; readonly receiptId: string; readonly deltas: readonly AugmentGrowth[] };
 export type AugmentHistoryFact = AugmentFactData & {
   readonly sequence: number; readonly seatId: string; readonly round: number; readonly roundId: string; readonly resourcePrefix: number;

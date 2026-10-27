@@ -1,6 +1,6 @@
 import type { MatchState } from './match-types';
 import { preflightH13Fact } from './augment-pool-batch5-h13-history';
-import type { AugmentDeath, HistorySeat } from './augment-history-types';
+import type { AugmentDeath, AugmentTakedownActor, HistorySeat } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
 import { canonicalContent } from './content';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
@@ -18,6 +18,7 @@ export function preflightAugmentHistory(s: MatchState): void {
   historyCheck(same(Object.keys(h).sort(), ['facts','proof','seatId','version']) && h.version === AUGMENT_HISTORY_VERSION && h.seatId === historySeatId(s), 'version/seat/fields');
   historyCheck(Array.isArray(h.facts) && h.facts.length <= LIMIT.facts && s.round <= LIMIT.rounds, 'fact bounds');
   let round = 0, prefix = 0;
+  const attributedBattles = new Set<string>();
   for (const [i,f] of h.facts.entries()) {
     historyCheck(f && f.sequence === i && f.seatId === h.seatId && Number.isSafeInteger(f.round) && f.round >= round && f.round <= s.round && f.roundId === getMultiplayerRoundByOrdinal(f.round).roundId, 'fact sequence/seat/round');
     historyCheck(Number.isSafeInteger(f.resourcePrefix) && f.resourcePrefix >= prefix && f.resourcePrefix <= s.resourceProvenance.entries.length, 'resource prefix');
@@ -26,8 +27,30 @@ export function preflightAugmentHistory(s: MatchState): void {
     if ('roster' in f) historyCheck(f.roster && Array.isArray(f.roster.units) && f.roster.units.length <= LIMIT.units && Array.isArray(f.roster.items) && f.roster.items.length <= 1024, 'roster bounds');
     if ('seats' in f) historyCheck(Array.isArray(f.seats) && f.seats.length > 0 && f.seats.length <= LIMIT.seats && new Set(f.seats.map((x: HistorySeat) => x.seatId)).size === f.seats.length && f.seats.every((x:HistorySeat) => Array.isArray(x.units) && x.units.length <= LIMIT.units && Array.isArray(x.items) && x.items.length <= 1024 && Number.isSafeInteger(x.rank) && x.rank >= 1 && x.rank <= LIMIT.seats), 'table bounds');
     if (f.kind === 'offer-level') historyCheck(f.choiceId==='round:4-2:augment' && Number.isSafeInteger(f.generation) && f.generation>=0 && f.generation<=3 && Number.isSafeInteger(f.level) && f.level>=1 && f.level<=10 && Number.isSafeInteger(f.xp) && f.xp>=0, 'offer level');
+    if (f.kind === 'combat-binding') {
+      const b = f.binding;
+      historyCheck(typeof f.battleId === 'string' && f.battleId.length > 0 && f.battleId.length <= 256 &&
+        (b === null || !!b && typeof b === 'object' && typeof b.unitId === 'string' && b.unitId.length > 0 &&
+          typeof b.definitionId === 'string' && b.definitionId.length > 0 && typeof b.choiceId === 'string' && b.choiceId.length > 0 &&
+          Number.isSafeInteger(b.boundRound) && b.boundRound > 0 && b.boundRound <= f.round) && !attributedBattles.has(f.battleId), 'combat binding');
+      attributedBattles.add(f.battleId);
+    }
+    if (f.kind === 'summon-growth') {
+      historyCheck(s.augments.some(a=>a.definitionId==='forbidden-magic'&&a.choiceId===f.choiceId)&&f.definitionId==='g23-sion'
+        && typeof f.receiptId==='string'&&f.receiptId.length<=256
+        && [f.stacks,f.healthFlat,f.attackDamageBps].every(n=>Number.isSafeInteger(n)&&n>0&&n<=1000000000), 'summon growth');
+    }
     if (f.kind === 'deaths') {
       historyCheck(Array.isArray(f.deaths) && f.deaths.length <= LIMIT.deaths, 'death bounds');
+      if(s.augments.some(a=>a.definitionId==='forbidden-magic'&&a.acquiredRound<=f.round))
+        historyCheck(f.deaths.every((d: AugmentDeath)=>Array.isArray(d.takedowns)&&d.takedowns.length<=LIMIT.units&&new Set(d.takedowns.map((a: AugmentTakedownActor)=>a.unitId)).size===d.takedowns.length
+          &&d.takedowns.every((a: AugmentTakedownActor)=>typeof a.unitId==='string'&&a.unitId.length>0&&a.unitId.length<=1024&&typeof a.definitionId==='string'&&['player','enemy'].includes(a.team)&&typeof a.eligible==='boolean')), 'death takedowns');
+      if (attributedBattles.has(f.battleId))
+        historyCheck(f.deaths.every((d: AugmentDeath) => !!d && typeof d === 'object' && Object.hasOwn(d, 'killer') && (d.killer === null || !!d.killer &&
+          typeof d.killer.ownerId === 'string' && d.killer.ownerId.length > 0 && d.killer.ownerId.length <= 1024 &&
+          typeof d.killer.definitionId === 'string' && typeof d.killer.instanceId === 'string' &&
+          ['attack','ability','trait','item','augment','anomaly','enemyGrowth'].includes(d.killer.sourceKind) &&
+          Number.isSafeInteger(d.killer.effectIndex) && d.killer.effectIndex >= 0)), 'death killer');
       if (!s.multiplayer || getMultiplayerRoundByOrdinal(f.round).kind === 'pve')
         historyCheck(f.deaths.every((d: AugmentDeath) => d && (d.team === 'player' || d.team === 'enemy') && d.ownerSeatId === (d.team === 'player' ? h.seatId : null)), 'death owner');
     }

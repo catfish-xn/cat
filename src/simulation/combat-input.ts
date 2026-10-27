@@ -2,6 +2,7 @@ import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { readSniperOpening } from './augment-pool-batch5-h10-sniper';
+import { readCabalGrowth, type CabalGrowth } from './augment-pool-batch5-h9-cabal';
 import { createOpeningEncounter } from './opening-encounter';
 import { d14Certificate, type D14CombatCertificate } from './d14-runtime';
 import { investmentGrowth } from './augment-income';
@@ -32,7 +33,7 @@ export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'it
   | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number }
   /** Online two-sided only: the frozen snapshot's priorPvpWins; solo inputs never set it and read roundResults. */
   & { readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[] }
-  & { readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[]; readonly sniperOpening?: Readonly<Record<string, number>>; readonly d14Combat?:D14CombatCertificate; readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
+  & { readonly cabalGrowth?: CabalGrowth; readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[]; readonly sniperOpening?: Readonly<Record<string, number>>; readonly d14Combat?:D14CombatCertificate; readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
 export interface CombatInputBasis {
   readonly mechanicReceiptPrefixLength:number;
   readonly version: typeof COMBAT_INPUT_VERSION;
@@ -53,6 +54,7 @@ export interface CombatInputAuthority {
   readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[];
   readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[];
   readonly sniperOpening?: Readonly<Record<string, number>>;
+  readonly cabalGrowth?: CabalGrowth;
   readonly d14Combat?:D14CombatCertificate;
   readonly heldUnitIds?:readonly string[];readonly heldItemIds?:readonly string[];
   readonly epicCrownsBeforeCombat?:NonNullable<import('./g2-3-match-progress').G23MatchProgress['epicCrowns']>;
@@ -72,6 +74,7 @@ export interface CombatInputAuthority {
 }
 export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase): CombatStrategyInputs {
   const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [],playerHp } = state;
+  const cabalGrowth='resourceProvenance' in state?readCabalGrowth(state):state.cabalGrowth;
   const needsBank=anomalyBinding?.definitionId==='avarice-incarnate'||items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade');
   const bankGold='bankGold' in state?state.bankGold:needsBank&&'gold' in state?state.gold:undefined;
   const itemSummonPositions='seatMechanics' in state?readItemSummonPositions(state):('itemSummonPositions' in state?state.itemSummonPositions:undefined);
@@ -82,7 +85,7 @@ export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase
   const d14='d14' in state?d14Certificate(state as MatchBase):'d14Combat' in state?state.d14Combat:undefined;
   const absent='d14' in state&&state.d14&&'held' in state.d14&&state.d14.held;
   const historyGrowth = 'resourceProvenance' in state && 'augmentHistory' in state ? combatHistoryGrowth(state as import('./match-types').MatchState,preparation.units.filter(u=>u.team==='player').map(u=>u.id),!!('combatInputBasis' in state && state.combatInputBasis)) : ('augmentHistoryGrowth' in state ? state.augmentHistoryGrowth : undefined);
-  return { ...(sniperOpening ? { sniperOpening } : {}), ...(h6Growth?{h6Growth}:{}),...(historyGrowth?.length?{augmentHistoryGrowth:historyGrowth}:{}),...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
+  return { ...(cabalGrowth?{cabalGrowth}:{}), ...(sniperOpening ? { sniperOpening } : {}), ...(h6Growth?{h6Growth}:{}),...(historyGrowth?.length?{augmentHistoryGrowth:historyGrowth}:{}),...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
     ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
@@ -113,6 +116,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   integer(basis.mechanicReceiptPrefixLength);
   requireBasis(equal(input.h6Growth??null,authority.h6Growth??null));
   requireBasis(equal(input.sniperOpening ?? null, authority.sniperOpening ?? null));
+  requireBasis(equal(input.cabalGrowth??null,authority.cabalGrowth??null));
   requireBasis(equal(input.itemSummonPositions??null,authority.itemSummonPositions??null));
   if(input.itemSummonPositions)validateItemSummonPositions(input.itemSummonPositions,authority.resources.nextItemSerial,authority.resources.nextUnitSerial);
   if(input.bankGold!==undefined){integer(input.bankGold);requireBasis(input.bankGold===authority.bankGold);}
