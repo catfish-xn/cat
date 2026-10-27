@@ -12,7 +12,7 @@ import { initializeBornUnits } from './combat-g2-4b-trench';
 
 /** One pool per team, surviving caster death/banishment. Rebuilt by combat replay on restore. */
 export interface B5VoidcallerCounter { team: Team; remainder: number; summoned: number }
-export interface B5VoidlingBirth { readonly unit: CombatUnit; readonly source: CombatOrigin }
+export interface B5VoidlingBirth { readonly unit: CombatUnit; readonly source: CombatOrigin; readonly preferredCell: HexCell }
 export function b5VoidlingHealth(round: number): number {
   return B5_G4_VOID_POLICY.smallHealth[Math.max(0, Math.min(4, getMultiplayerRoundByOrdinal(round).stage - 2))];
 }
@@ -35,17 +35,27 @@ export function castB5Voidcaller(ctx: AbilityContext, caster: S13Unit, spent: nu
   counter.remainder += spent;
   while (counter.remainder >= m.values.mana) {
     counter.remainder -= m.values.mana;
-    if (counter.summoned >= m.values.maxVoidlings) continue;
+    const queued = pending.filter(p => p.unit.team === caster.team).length;
+    if (counter.summoned + queued >= m.values.maxVoidlings) continue;
     const cell = freeCell(ctx, caster.cell, pending.map(p => p.unit));
     if (!cell) continue;
-    pending.push({ unit: createVoidling(caster, m.source, m.values.health, ++counter.summoned, cell), source: m.source });
+    pending.push({ unit: createVoidling(caster, m.source, m.values.health, counter.summoned + queued + 1, cell),
+      source: m.source, preferredCell: { ...caster.cell } });
   }
 }
 /** Publish births after existing actors planned their actions: newborns first act next tick. */
-export function spawnB5Voidlings(ctx: AbilityContext, state: CombatState, pending: readonly B5VoidlingBirth[]): void {
-  for (const { unit, source } of pending) {
-    const spawned = spawnCombatUnit({ ...state, units: ctx.units }, unit, source, ctx.tick);
-    ctx.units.push(unit as S13Unit); ctx.events.push(...spawned.events);
+export function spawnB5Voidlings(ctx: AbilityContext, state: CombatState, pending: readonly B5VoidlingBirth[], counters: B5VoidcallerCounter[]): void {
+  const born: CombatUnit[] = [];
+  for (const { unit, source, preferredCell } of pending) {
+    // Later casts can jump into a planned cell. Publish against current occupancy,
+    // including earlier births, using the triggering caster's frozen position.
+    const cell = freeCell(ctx, preferredCell, []);
+    // No later birth can fit at this barrier either; successful ordinals stay contiguous.
+    if (!cell) break;
+    const body = { ...unit, cell, startingCell: { ...cell } };
+    const spawned = spawnCombatUnit({ ...state, units: ctx.units }, body, source, ctx.tick);
+    ctx.units.push(body as S13Unit); ctx.events.push(...spawned.events); born.push(body);
+    counters.find(c => c.team === unit.team)!.summoned++;
   }
-  if (pending.length) initializeBornUnits(ctx, pending.map(p => p.unit));
+  if (born.length) initializeBornUnits(ctx, born);
 }

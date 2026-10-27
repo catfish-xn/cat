@@ -27,6 +27,7 @@ export const B5_G4_VOID_POLICY = freezeContent({
   attackSpeedBps: 8000, armor: 30, magicResist: 30, range: 1,
   swarmAttackSpeedBps: 4000, swarmOmnivampBps: 4000, portalEveryPvp: 11, tauntRadius: 2,
   placement: 'nearest-free-distance-row-column', noSpace: 'consume-threshold-without-summoning',
+  placementBarrier: 'after-existing-actors-plan-actions', summonCount: 'successful-births-only',
   portalPlacement: 'combat-start-nearest-free-in-front-of-holder', taunt: 'opening-target-lock-until-target-unavailable',
 });
 export const AUGMENT_BATCH5_G4_DEFINITIONS = freezeContent<Readonly<Record<string, ChoiceDefinition>>>({

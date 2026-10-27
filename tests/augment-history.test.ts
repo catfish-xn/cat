@@ -1,4 +1,3 @@
-import { firstNodeSeed } from './augment-stage-helpers';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { CONTENT_DIGEST, LOOT_REPLAY_DIGEST } from '../src/simulation/content/identity-constants';
 import * as historyApi from '../src/simulation/augment-history';
@@ -6,7 +5,7 @@ import { validateAugmentHistory } from '../src/simulation/augment-history-restor
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import * as acquisition from '../src/simulation/augment-acquisition';
-import { createMatch, deployMatchUnit, startMatchCombat, nextRound, selectChoice, rerollShop, openMatchCombatStream, stepMatchCombatStream, revealMatchCombatStreamTerminal, type MatchState } from '../src/simulation/match';
+import { createMatch, deployMatchUnit, startMatchCombat, nextRound, selectChoice, rerollAugment, rerollShop, openMatchCombatStream, stepMatchCombatStream, revealMatchCombatStreamTerminal, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { advanceAugmentPreparationTime, requireAugmentFacts, readPreviousAugmentBattle, recordAugmentGrowth, readAugmentGrowth, captureAugmentHistoryAuthority } from '../src/simulation/augment-history';
 import { restoreSharedOrbSnapshot, runSharedMatchCommand } from '../src/simulation/shared-pool';
@@ -18,6 +17,9 @@ import { CAROUSEL_RULES_BINDING } from '../src/server/room/carousel';
 import { createCarousel, advanceCarousel, pickCarouselForSeat, grantAdditionalCarouselPick, restoreCarouselSeat } from '../src/simulation/carousel';
 import { supplySeats, must } from './p7-carousel-helper';
 import { assertSharedPoolConservation } from '../src/simulation/shared-pool';
+import { augmentCandidates, drawAugmentCard, resolveAugmentTier } from '../src/simulation/augment-offers';
+import { generateChoices } from '../src/simulation/choices';
+import { openingEncounterId } from '../src/simulation/opening-encounter';
 
 // Infrastructure fixture: real existing offers/commands, with only the history capability mocked.
 // No new augment definition/effect is installed, no production content/offer pool is changed.
@@ -29,12 +31,41 @@ vi.mock('../src/simulation/augment-history-owners', async importOriginal => {
 // Preserve the immutable baseline assertion while normalizing only the deliberately updated content identities.
 const baselineBytes=(text:string)=>text.replaceAll(CONTENT_DIGEST,'fnv1a32-utf16:db662e0b').replaceAll(LOOT_REPLAY_DIGEST,'fnv1a32-utf16:18c876b2');
 let acquired: MatchState, advanced: MatchState;
+let starryNightSeed: number;
+// Cheap seed lookahead only: acquisition below still traverses real rounds and public commands.
+function canOfferStarryNight(seed: number): boolean {
+  const state = createMatch(seed);
+  const pool = augmentCandidates(resolveAugmentTier(state, 'round:2-1:augment'), [], [], openingEncounterId(state), { node: '2-1', fieldedTraits: [], blocked: [] });
+  const initial = generateChoices(pool, state.choiceRngState), seen = [...initial.offers];
+  let rng = initial.choiceRngState;
+  for (let slot = 0; slot < 3 && !seen.includes('starry-night'); slot++) {
+    const draw = drawAugmentCard(pool.filter(id => !seen.includes(id)), rng);
+    seen.push(draw.definitionId); rng = draw.choiceRngState;
+  }
+  return seen.includes('starry-night');
+}
+// Exercise the real public rerolls as well as the initial offer; never inject offers or ownership.
+function starryNightOffer(initial = reachRound('2-1', false, starryNightSeed)): MatchState {
+  let open = initial;
+  for (let slot = 0; slot < 3 && !open.pendingChoice!.offers.includes('starry-night'); slot++) {
+    const c = open.pendingChoice!;
+    open = accepted(rerollAugment(open, c.choiceId, c.generation, slot));
+  }
+  return open;
+}
 const baselineIdentity=(text:string)=>text.replaceAll('s13-g2-3-v25-online-rules','s13-g2-3-v24-online-rules')
   .replaceAll('s13-14.24b-g2-3-v25-online-rules','s13-14.24b-g2-3-v24-online-rules')
   .replaceAll('fnv1a32-utf16:2cfdbb54','fnv1a32-utf16:db662e0b')
   .replaceAll('fnv1a32-utf16:722ab6e2','fnv1a32-utf16:18c876b2');
 beforeAll(() => {
-  const open = reachRound('2-1', false, firstNodeSeed('starry-night', 101)), c = open.pendingChoice!;
+  let open: MatchState | undefined;
+  for (let seed = 0; seed <= 100; seed++) {
+    if (!canOfferStarryNight(seed)) continue;
+    const candidate = starryNightOffer(reachRound('2-1', false, seed));
+    if (candidate.pendingChoice!.offers.includes('starry-night')) { starryNightSeed = seed; open = candidate; break; }
+  }
+  if (!open) throw new Error('No public starry-night offer after initial draw and legal rerolls in seed 0..100');
+  const c = open.pendingChoice!;
   expect(c.offers).toContain('starry-night');
   acquired = accepted(selectChoice(open, c.choiceId, c.generation, 'starry-night'));
   let s = advanceAugmentPreparationTime(acquired, 2500);
@@ -380,7 +411,7 @@ it('authenticates generic HP/AP growth written inside an acquisition transaction
       {unitId,healthFlat:20,healthBps:0,attackDamageBps:150,abilityPowerCenti:150}])};
   });
   try{
-    const open=reachRound('2-1',false,firstNodeSeed('starry-night', 101)),c=open.pendingChoice!;
+    const open=starryNightOffer(),c=open.pendingChoice!;
     const grown=accepted(selectChoice(open,c.choiceId,c.generation,'starry-night'));
     const row=requireAugmentFacts(grown,'growth',grown.round)[0];
     expect(readAugmentGrowth(grown,row.deltas[0].unitId)).toEqual(row.deltas[0]);
@@ -470,7 +501,7 @@ it('preserves slotted temporary items and unslotted chest grants independently a
 });
 
 it('records logical time before acquisition without adding bytes to an unowned save',()=>{
-  const open=reachRound('2-1',false,firstNodeSeed('starry-night', 101)),timed=advanceAugmentPreparationTime(open,10000);
+  const open=starryNightOffer(),timed=advanceAugmentPreparationTime(open,10000);
   expect(serializeMatch(timed)).toBe(serializeMatch(open));
   const c=timed.pendingChoice!,picked=accepted(selectChoice(timed,c.choiceId,c.generation,'starry-night'));
   expect(requireAugmentFacts(picked,'acquire',picked.round)[0].preparationElapsedMs).toBe(10000);
@@ -510,7 +541,7 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 
 it('keeps the existing save/replay envelope versions and authenticates a carried history through BattleRecord',async()=>{
   const history=new BattleHistory('augment-history-envelope');
-  let s=recordedEmptyRoute(firstNodeSeed('starry-night', 101),'2-1',history),c=s.pendingChoice!;
+  let s=starryNightOffer(recordedEmptyRoute(starryNightSeed,'2-1',history)),c=s.pendingChoice!;
   s=accepted(selectChoice(s,c.choiceId,c.generation,'starry-night'));
   s=accepted(recordCommand(history,s,startMatchCombat(emptyBoard(s))));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
   const envelope:SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,

@@ -71,7 +71,7 @@ it('B5-73 two portals reserve different empty cells; a completely full board get
 });
 it('B5-73 grants the same 40% AS and omnivamp to small Visionary voidlings, with real healing', () => {
   const { ctx, initial, rell } = voidFixture(4,['voidcaller','void-swarm']), counters:B5VoidcallerCounter[] = [], births:B5VoidlingBirth[] = [];
-  castB5Voidcaller(ctx,rell,275,counters,births); spawnB5Voidlings(ctx,initial.state,births);
+  castB5Voidcaller(ctx,rell,275,counters,births); spawnB5Voidlings(ctx,initial.state,births,counters);
   const small = ctx.units.find(u=>u.definitionId==='b5-voidling')!;
   expect(small).toMatchObject({maxHp:400,attackDamage:60,baseAttackSpeedBps:8000,attackSpeedBonusBps:4000,attackIntervalTicks:18});
   expect(b5VoidSwarmVamp(small)).toMatchObject([{bps:4000,allyBps:0}]);

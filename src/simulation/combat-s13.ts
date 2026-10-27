@@ -412,7 +412,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     }
   }
   planActions();
-  spawnB5Voidlings(ctx,state,voidlings);
+  spawnB5Voidlings(ctx,state,voidlings,voidcaller);
   scheduleAnomalyAttacks(ctx,()=>actionSeq++);
   // Coin/Jackpot is earned by the cast before this tick's damage samples.
   if(hasD11Bank)for(const team of ['player','enemy'] as const){

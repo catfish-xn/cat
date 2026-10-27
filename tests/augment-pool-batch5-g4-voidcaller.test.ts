@@ -37,7 +37,7 @@ it('B5-72 pools all Visionary costs, carries excess, births nearest to the trigg
   castB5Voidcaller(ctx, rell, 200, counters, births);
   expect(births).toHaveLength(0);
   castB5Voidcaller(ctx, morgana, 100, counters, births);
-  expect(counters).toEqual([{ team: 'player', remainder: 25, summoned: 1 }]);
+  expect(counters).toEqual([{ team: 'player', remainder: 25, summoned: 0 }]);
   expect(births[0].source.ownerId).toBe('morgana');
   expect(hexDistance(morgana.cell, births[0].unit.cell)).toBe(1);
   expect(births[0].unit).toMatchObject({ maxHp: 400, hp: 400, attackDamage: 60, attackRange: 1,
@@ -47,13 +47,15 @@ it('B5-72 pools all Visionary costs, carries excess, births nearest to the trigg
   const terminal={...initial.state,result:'enemyWin' as const,units:[{...rell,team:'enemy' as const},{...births[0].unit,team:'enemy' as const}]};
   expect(settlement(state,terminal,state.gold).survivingEnemyCount).toBe(1);
   expect(settlement(state,terminal,state.gold).playerDamage).toBe(3);
-  spawnB5Voidlings(ctx, initial.state, births);
+  spawnB5Voidlings(ctx, initial.state, births, counters);
+  expect(counters).toEqual([{ team: 'player', remainder: 25, summoned: 1 }]);
   expect(ctx.events.filter(e => e.type === 'unitSpawned')).toHaveLength(1);
   births.length = 0;
   // Dying does not return a slot in the per-combat limit.
   const first = ctx.units.find(u => u.definitionId === 'b5-voidling')!; first.alive = false; first.hp = 0;
   castB5Voidcaller(ctx, rell, 2000, counters, births);
   const expected = voidcallerModel([200, 100, 2000]);
+  spawnB5Voidlings(ctx, initial.state, births, counters);
   expect(counters[0]).toMatchObject(expected);
   expect(births).toHaveLength(4); expect(new Set(births.map(b => b.unit.id)).size).toBe(4);
   const other = { ...rell, mechanics: [] }; castB5Voidcaller(ctx, other, 999, counters, births);
