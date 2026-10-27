@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_G1 } from '../../src/simulation/content/augment-pool-batch5-g1';
 import { createMatch, buyUnit, deployMatchUnit, nextRound, selectChoice, rerollAugment, startMatchCombat, combineItems } from '../../src/simulation/match';
 import { finishPublicEquipmentBattle, benchPublicEquipmentPlayers, resolvePublicEquipmentChoices } from './b8-public-equipment';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
@@ -27,7 +28,7 @@ const extraItemChoices = new Set(['high-voltage','pyromaniac','thorn-plated-armo
   // combat mechanics; keep the TG-only route free of them too.
   ...Object.keys(AUGMENT_BATCH3),...Object.keys(AUGMENT_BATCH3_XP),
   ...Object.keys(AUGMENT_BATCH4),...Object.keys(AUGMENT_BATCH4_B4XP),...Object.keys(AUGMENT_BATCH4_B4REROLL),
-  ...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP)]);
+  ...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP),...Object.keys(AUGMENT_BATCH5_G1)]);
 /** T13's five supply choices remain guaranteed. Concede with an empty board to
  * obtain two gloves at 2-4/3-4 without depending on random PvE content. The level-9
  * control fights the opening to retain enough HP for 4-2. All battles, income,

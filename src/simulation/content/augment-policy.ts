@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_G1_TIERS } from './augment-pool-batch5-g1';
 import { AUGMENT_BATCH5_H1_TIERS } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3_TIERS } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4_TIERS } from './augment-pool-batch5-h4';
@@ -107,6 +108,7 @@ export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismat
   ...AUGMENT_BATCH4_TIERS,
   ...AUGMENT_BATCH5_TIERS,
   ...AUGMENT_BATCH5_H1_TIERS,
+  ...AUGMENT_BATCH5_G1_TIERS,
   ...AUGMENT_BATCH5_H3_TIERS,
   ...AUGMENT_BATCH5_H4_TIERS,
   ...AUGMENT_BATCH5_H5_TIERS,

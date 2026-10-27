@@ -1354,3 +1354,16 @@ P-BUNDLE-1：生产客户端把单人 `MatchApplication`（含存档、导入导
 ### P-B5-36-H5（P，2026-10-27）：不拘一格
 
 采用 P-B5-36：仅共享选秀，arrival 结束即取得领取资格，仍使用同一共享槽和原子抢占；单人补给不开放。现行选秀领域时钟从 arrival 结束开始，故持有者放行时间为逻辑 0 ms。
+
+
+### P-B5-53（P，2026-10-27，用户批准）：幸运手套
+
+- **已证实**：14.24归档 `TFT7_Augment_LuckyGloves` 数值 `NumGloves=2 / NumRounds=5`，取得给2拳套，5回合后给1拳套。[13.23官方补丁](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-13-23-notes/)明确来自英雄8件推荐装备且结果不同；这是跨版本旁证，不证明14.24执行器。GPT轮 B5-53 结论“基本未找到”，Gemini轮将部分社区材料评为已证实，两轮不能据此抹平证据分歧。
+- **社区推测**：S13–S14的普通/+选装一致、适用于光明窃贼手套；[S14社区讨论](https://www.reddit.com/r/CompetitiveTFT/comments/1lfzd1t/lucky_gloves_set_14_augment_discussion_75/)只作社区依据，不充当官方S13规则。研究归档：`s13-augment-b5-research-2026-10-27/package/research/report_data.json` B5-53 与 `s13-augment-b5-gemini-research-2026-10-27/GEMINI_REPORT.txt` B5-53/54。
+- **约定**：使用14.24角色卡的8件推荐装，按客户端列表顺序，显式装备 `lcg32-v1` 流以拒绝采样等概率无放回抽2件不同成装，光明手套逐件映射对应光明版；不读取LuckyGlovesLootTable Tier1/2，也不依等级/星级切池。双形态沿既有前二/后二排开战形态，近战用原角色，远程Elise/Swain用APCaster、Gangplank/Jayce用ADCaster（形态角色接线为本约定的工程落实，不声称找到了原服选择器）；六费沿14.24角色，Viktor第7个哈希推荐项解析为Morellonomicon。
+- **约定**：仅2-1提供，选择事务立即发2拳套，第5个后续自然轮入口再发1拳套，选秀自然轮也计数。使用既有礼物唯一收据，恢复、重复公共命令不重发；沿原始3-2/4-2禁选。缓存按父装备/自然轮/英雄实例/角色/普通或光明保存，返还同形态复用结果；追加不可变roll，不改冻结战斗或旧账本前缀。英雄/位置/取得/全桌证据只用 `augment-history-v1` API，在线恢复要求独立服务器authority。
+
+### P-B5-54（P，2026-10-27，用户批准）：幸运手套+
+
+- **已证实**：14.24独立条目 `TFT7_Augment_LuckyGlovesPlus` 为 `NumGloves=3`，描述没有延迟字段；不得套用普通版延迟。13.23推荐池规则只作跨版本旁证。GPT轮 B5-54 仍为“基本未找到”，Gemini轮普通/+及光明适用来自社区材料，按**社区推测**保留标签；研究路径和链接同 P-B5-53。
+- **约定**：取得立即给3拳套；推荐8件等概率无放回抽2件、光明映射、开战形态、缓存和历史认证全部与P-B5-53相同，无额外延迟奖励。保留14.24的2-1禁选，3-2和4-2可提供；与普通版沿原始互斥。两项均可在允许节点正常选择，本任务没有解除任何原有禁选、没有重录epoch、没有修改服务器规则或界面。

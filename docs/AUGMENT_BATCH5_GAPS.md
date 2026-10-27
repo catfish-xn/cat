@@ -1,5 +1,7 @@
 # 强化池 Batch 5：Batch 4 未闭合组逐条缺口核查（2026-10-25）
 
+2026-10-27 G1更新：B5-53/54已按用户批准的推荐装约定实现，详见各卡“分类与后续”和 `S13_RULES_GAP.md` P-B5-53/54；以下覆盖汇总保留2026-10-25资料审计口径。
+
 基线：`codex/v23-b4gaps`，HEAD `0797f3fe6fbf8ead34fc256edbdef99aceb98b31`。本次为 **Codex 文档审计**。任务文字称13组，但当前计划逐项核对实际为12组（10组“部分”＋2组“不完整”）；以文件为准，不虚构第13组。只核对 `AUGMENT_BATCH4_PLAN.md` 标为“部分／不完整”的 **12组、86条**；不纳入已标完整的组及HR变体，不以旧基线的未实现总数代替本次范围。没有联网、没有改规则/数值/保存格式、没有开放任何强化。
 
 ## 分类和证据口径
@@ -494,21 +496,21 @@
 - 本地补查结果：A.effects roundsofbonusitems=2，描述明确3选1及接下来2轮复制；N 普通8组件定义可填成员，未找到专属抽样/时序。
 - 分类与后续：**需要项目约定**。**P-B5-52（P，2026-10-25，用户提案）**：提案：现有8组件等权无放回选3，选择立即给该组件，后续两个自然轮入口各复制一件；初选与续发各有唯一收据。
 
-#### B5-53 幸运手套（需要外部研究）
+#### B5-53 幸运手套（已实现，用户约定）
 
 - 身份：`TFT7_Augment_LuckyGloves`。
 - 已有原文／字段：`A[267].apiName=TFT7_Augment_LuckyGloves`，`description_zh_cn`：“【窃贼手套】总会为你的弈子们提供理想的装备。获得2个【拳套】。在5回合后，获得另1个【拳套】。” `effects={"NumGloves":2.0,"NumRounds":5.0}`；原始map22定位为 `A[267].map22_node={3ca0ce8a}`，对应 `data/map22-augment-item-nodes.json.nodes["{3ca0ce8a}"].constants`（无constants则不以空对象推测隐藏值）。
 - 原计划缺口／本次细化：英雄角色→理想装备表映射、Tier1/2选择条件、组合抽样权重、双形/推荐变化以及是否影响光明手套。
 - 本地补查结果：新找到 M 中11个 LuckyGlovesLootTable_* 表，例如 {459316d0}=AD_Tier1、{48931b89}=AD_Tier2、{1b1ba180}=APCaster_Tier1、{d8ba8470}=Tank_Tier2；每个 mConstants.<序号>.mValue 是具体装备对。{072bb1c0}.mConstants.1.mValue=[TFT_Item_NeedlesslyLargeRod,TFT_Item_RabadonsDeathcap]。它们证明有候选组合，不证明按哪个英雄/阶段调用；未找到完整映射/概率。
-- 分类与后续：**需要外部研究**。外研：找14.24b英雄角色与推荐装备路由、Tier1/2阈值及权重；查Support/APNonCaster/ADBruiser等角色缺表时回退，以及与光明手套的关系。不能把11表等权混合称作“理想”。
+- 分类与后续：**已实现（P-B5-53，P，2026-10-27，用户批准）**。14.24英雄推荐装8件等概率无放回抽2件不同装备，光明手套映射对应光明版，双形态按开战形态，不用Tier1/2表；2-1 先给2拳套，第5个后续自然轮入口再给1拳套；3-2/4-2禁选。研究状态：13.23官方“推荐池8选2且不同”为**已证实（跨版本）**；S13–S14普通/+同规则及光明适用为**社区推测**，GPT轮未找到14.24独立执行证据，Gemini轮有较强推断；本仓库执行明确为**约定**，不将资料分歧写成S13已证实。实现/公开命令/恢复/独立oracle测试见 `augment-pool-batch5-g1*.ts` 和 `MATCH_CONTRACT.md`。
 
-#### B5-54 幸运手套+（需要外部研究）
+#### B5-54 幸运手套+（已实现，用户约定）
 
 - 身份：`TFT7_Augment_LuckyGlovesPlus`。
 - 已有原文／字段：`A[268].apiName=TFT7_Augment_LuckyGlovesPlus`，`description_zh_cn`：“【窃贼手套】总会为你的弈子们提供理想的装备。获得3个【拳套】。” `effects={"NumGloves":3.0}`；原始map22定位为 `A[268].map22_node={0f18ebce}`，对应 `data/map22-augment-item-nodes.json.nodes["{0f18ebce}"].constants`（无constants则不以空对象推测隐藏值）。
 - 原计划缺口／本次细化：英雄角色→理想装备表映射、Tier1/2选择条件、组合抽样权重、双形/推荐变化以及是否影响光明手套。
 - 本地补查结果：新找到 M 中11个 LuckyGlovesLootTable_* 表，例如 {459316d0}=AD_Tier1、{48931b89}=AD_Tier2、{1b1ba180}=APCaster_Tier1、{d8ba8470}=Tank_Tier2；每个 mConstants.<序号>.mValue 是具体装备对。{072bb1c0}.mConstants.1.mValue=[TFT_Item_NeedlesslyLargeRod,TFT_Item_RabadonsDeathcap]。它们证明有候选组合，不证明按哪个英雄/阶段调用；未找到完整映射/概率。
-- 分类与后续：**需要外部研究**。外研：找14.24b英雄角色与推荐装备路由、Tier1/2阈值及权重；查Support/APNonCaster/ADBruiser等角色缺表时回退，以及与光明手套的关系。不能把11表等权混合称作“理想”。
+- 分类与后续：**已实现（P-B5-54，P，2026-10-27，用户批准）**。14.24英雄推荐装8件等概率无放回抽2件不同装备，光明手套映射对应光明版，双形态按开战形态，不用Tier1/2表；立即给3拳套；2-1禁选，3-2/4-2沿原始阶段标签开放。研究状态：13.23官方“推荐池8选2且不同”为**已证实（跨版本）**；S13–S14普通/+同规则及光明适用为**社区推测**，GPT轮未找到14.24独立执行证据，Gemini轮有较强推断；本仓库执行明确为**约定**，不将资料分歧写成S13已证实。实现/公开命令/恢复/独立oracle测试见 `augment-pool-batch5-g1*.ts` 和 `MATCH_CONTRACT.md`。
 
 #### B5-55 交给运气（需要项目约定）
 

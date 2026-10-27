@@ -14,6 +14,8 @@ const lesser='TFT_Consumable_ChampionDuplicator_III';
 const initial={
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
+ 'lucky-gloves':[I('gloves',2)],
+ 'lucky-gloves-plus':[I('gloves',3)],
  'cooking-pot':[I('frying-pan')],
  'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
@@ -96,6 +98,7 @@ function rewardPlan(s,env){
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
   const facts=battles.filter(f=>f.round>=a.acquiredRound);
+  if(a.definitionId==='lucky-gloves'&&s.round>=a.acquiredRound+5)levelsOut.push(...expand(s,owner(a,['lucky-gloves-delayed'],a.acquiredRound+5),[I('gloves')],env));
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
@@ -419,6 +422,7 @@ function validateRewardsCore(before,after,command,events,base){
 // Inventory is a complete transition, including commands with no reward receipt.
 function validateRewards(before,after,command,events,base){
  const result=validateRewardsCore(before,after,command,events,base);
+ require('./lucky-gloves-oracle.cjs').validate(after);
  // Hand-written counter vectors may omit the inventory entirely.
  if(before.consumables===undefined&&after.consumables===undefined)return result;
  const inventory=[...before.consumables];let serial=before.nextConsumableSerial;

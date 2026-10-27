@@ -1,3 +1,5 @@
+import { AUGMENT_BATCH5_G1 } from './content/augment-pool-batch5-g1';
+import { validateMatchEquipment } from './temporary-equipment';
 import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
 import { AUGMENT_BATCH5_H6 } from './content/augment-pool-batch5-h6';
@@ -57,9 +59,10 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   preflightAugmentHistory(state);
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
   validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);
+  if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)) || state.equipmentState.rolls.some(r=>r.lucky))validateMatchEquipment(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
-  if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId))||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
+  if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)||AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId))||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
     r.source==='augment-pool-batch5-h6'||r.receiptId.startsWith('["augment-pool-batch5-h6",')||r.source.startsWith('augment-pool-batch5-h4')||Object.keys(AUGMENT_BATCH5_H3).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   return state;
 }

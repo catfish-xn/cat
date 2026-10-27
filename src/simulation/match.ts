@@ -633,7 +633,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
   const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));
-  const gifted=drained.augments.some(a=>a.definitionId==='a-change-of-fate')?drainP2Gifts(drained):drained;
+  const gifted=drained.augments.some(a=>a.definitionId==='a-change-of-fate'||a.definitionId==='lucky-gloves')?drainP2Gifts(drained):drained;
   const shopEntry=enterShopAugmentRound(gifted),shopEvents=stampMatchEvents(shopEntry,mechanicGrantEvents(drained,shopEntry));
   prepared=shopEvents.state;openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,drained),...shopEvents.events);
   if (prepared.phase === 'gameOver') {
@@ -678,7 +678,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
     const entry=drainPortfolioGold(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state)));
-    const gifted=entry.augments.some(a=>a.definitionId==='a-change-of-fate')?drainP2Gifts(entry):entry;
+    const gifted=entry.augments.some(a=>a.definitionId==='a-change-of-fate'||a.definitionId==='lucky-gloves')?drainP2Gifts(entry):entry;
     const drained=enterShopAugmentRound(gifted),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }

@@ -1,3 +1,4 @@
+import { equipmentRollFor } from './augment-pool-batch5-g1-equipment';
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { createOpeningEncounter } from './opening-encounter';
@@ -174,7 +175,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   const rolls = authority.equipmentRolls.slice(0, basis.equipmentRollPrefixLength);
   const expectedChildren = sorted(input.items).filter(item => item.location.kind === 'unit' && grantsTemporaryEquipment(ITEM_DEFINITIONS[item.definitionId])).flatMap(item => {
     requireBasis(item.location.kind === 'unit');
-    const roll = rolls.find(entry => entry.parentItemInstanceId === item.id && entry.roundId === basis.roundId);
+    const roll = equipmentRollFor(rolls,basis.roundId,item,input);
     requireBasis(roll && roll.playerLevelSnapshot <= basis.playerLevel);
     return projectTemporaryEquipment(roll, item.location.unitId);
   });

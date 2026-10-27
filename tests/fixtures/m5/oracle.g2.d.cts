@@ -4,6 +4,8 @@ import type { FrozenDirectDrop, FrozenLootRound, LootChoiceDescriptor } from '..
 import type { RngStream, LootReceipt } from '../../../src/simulation/m8/contracts';
 
 export const COST: Record<string, number>;
+export function luckyGlovesPair(seed:number,start:number,role:string,radiant?:boolean): {children:string[];state:number;draws:number};
+export function validateLuckyGlovesEquipment(state:MatchState): void;
 export const SELL: Record<number, number[]>;
 export const COMPONENTS: readonly string[];
 export type OracleCommand = Readonly<{ type: string; [key: string]: unknown }>;

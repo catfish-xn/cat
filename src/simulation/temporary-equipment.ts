@@ -1,3 +1,5 @@
+import { equipmentRollFor, generateLuckyGlovesRolls, validateLuckyGlovesEquipment } from './augment-pool-batch5-g1-equipment';
+import { AUGMENT_BATCH5_G1 } from './content/augment-pool-batch5-g1';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { ITEM_DEFINITIONS as ORDINARY_ITEMS } from './content/items';
 import { freezeContent } from './content/freeze';
@@ -9,6 +11,7 @@ import { FINAL_ROUND } from './round-schedule';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { MATCH_RULES } from './match-rules';
 import type { ItemDefinition, StrategyEvent } from './strategy-types';
+import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 
 export const grantsTemporaryEquipment = (definition: ItemDefinition): boolean =>
   definition.combatProgram?.effects?.some(effect => effect.kind === 'temporary-equipment') ?? false;
@@ -21,7 +24,7 @@ function projectCurrent(state: Readonly<MatchState>): TemporaryEquipment[] {
   return state.items.filter(item => item.location.kind === 'unit' && grantsTemporaryEquipment(ITEM_DEFINITIONS[item.definitionId]))
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).flatMap(parent => {
       if (parent.location.kind !== 'unit') throw new Error('Expected equipped parent');
-      const roll = state.equipmentState.rolls.find(roll => roll.parentItemInstanceId === parent.id && roll.roundId === state.roundDefinitionId);
+      const roll = equipmentRollFor(state.equipmentState.rolls,state.roundDefinitionId,parent,state);
       if (!roll) throw new Error('Missing equipped parent round roll');
       return projectTemporaryEquipment(roll, parent.location.unitId);
     });
@@ -31,7 +34,9 @@ function projectCurrent(state: Readonly<MatchState>): TemporaryEquipment[] {
 export function planTemporaryEquipment(state: MatchState): { state: MatchState; events: readonly StrategyEvent[] } {
   const requests = state.items.filter(item => item.location.kind === 'unit' && grantsTemporaryEquipment(ITEM_DEFINITIONS[item.definitionId]))
     .map(item => ({ parentItemInstanceId: item.id, roundId: state.roundDefinitionId, playerLevel: state.level }));
-  const equipmentState = generateRoundRolls(state.equipmentState, requests, TEMPORARY_EQUIPMENT_POOL);
+  const equipmentState = state.augments.some(a => Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId))
+    ? generateLuckyGlovesRolls(state,requests,TEMPORARY_EQUIPMENT_POOL)
+    : generateRoundRolls(state.equipmentState, requests, TEMPORARY_EQUIPMENT_POOL);
   const desired = projectCurrent({ ...state, equipmentState });
   const changes = reconcileTemporaryEquipment(state.temporaryEquipment, desired);
   const events: StrategyEvent[] = equipmentState.rolls.slice(state.equipmentState.rolls.length).map(roll => ({ type: 'equipmentRolled', roll: structuredClone(roll) }));
@@ -48,9 +53,12 @@ export function isTemporaryItemId(state: Readonly<MatchState>, id: string): bool
 
 /** Strict local restore after round-history validation: replay RNG, check round levels and exact bindings. */
 export function validateMatchEquipment(state: Readonly<MatchState>): void {
-  validateEquipmentState(state.equipmentState, TEMPORARY_EQUIPMENT_POOL, initializeStreams(state.seed).equipment);
-  if (!Number.isInteger(state.round) || state.round < 1 || state.round > FINAL_ROUND) throw new Error('Invalid equipment round');
-  const roundIds = ROUND_CATALOG.slice(0,state.round).map(round => round.roundId);
+  if (state.augments.some(a => Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)) || state.equipmentState.rolls.some(r => r.lucky))
+    validateLuckyGlovesEquipment(state,TEMPORARY_EQUIPMENT_POOL);
+  else validateEquipmentState(state.equipmentState, TEMPORARY_EQUIPMENT_POOL, initializeStreams(state.seed).equipment);
+  if (!Number.isInteger(state.round) || state.round < 1 || state.round > (state.multiplayer ? 256 : FINAL_ROUND)) throw new Error('Invalid equipment round');
+  const roundIds = state.multiplayer ? Array.from({length:state.round},(_,i)=>getMultiplayerRoundByOrdinal(i+1).roundId)
+    : ROUND_CATALOG.slice(0,state.round).map(round => round.roundId);
   let previousRound = -1;
   for (const roll of state.equipmentState.rolls) {
     const parent = state.items.find(item => item.id === roll.parentItemInstanceId)
@@ -68,7 +76,10 @@ export function validateMatchEquipment(state: Readonly<MatchState>): void {
     }
     previousRound = round;
   }
-  validateTemporaryEquipment(state.temporaryEquipment, state.equipmentState.rolls);
+  validateTemporaryEquipment(state.temporaryEquipment, state.items.flatMap(parent => {
+    const roll = equipmentRollFor(state.equipmentState.rolls,state.roundDefinitionId,parent,state);
+    return roll ? [roll] : [];
+  }));
   const expected = projectCurrent(state), actual = state.temporaryEquipment;
   if (actual.length !== expected.length || expected.some(child => !actual.some(other =>
     child.temporaryId === other.temporaryId && child.parentItemInstanceId === other.parentItemInstanceId
