@@ -16,7 +16,7 @@ import {trip,reject} from './augment-pool-batch5-h13-helpers';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 let acquired:MatchState,advanced:MatchState;
-beforeAll(()=>{const open=reachRoundFielded('2-1',firstNodeSeed('pandoras-items-iii',101)),c=open.pendingChoice!;expect(c.offers).toContain('pandoras-items-iii');acquired=accepted(selectChoice(open,c.choiceId,c.generation,'pandoras-items-iii'));});
+beforeAll(()=>{const open=reachRoundFielded('2-1',firstNodeSeed('pandoras-items-iii',10000)),c=open.pendingChoice!;expect(c.offers).toContain('pandoras-items-iii');acquired=accepted(selectChoice(open,c.choiceId,c.generation,'pandoras-items-iii'));});
 it.skipIf(!existsSync(RESEARCH_FILE))('B5-23 preserves all source fields including empty effects',()=>{
  const row=AUGMENT_BATCH5_H13['pandoras-items-iii'],raw=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((r:any)=>r.apiName===row.apiName);
  expect(row.source.values).toEqual(raw.effects);expect([row.name,row.description,row.source.description_en_us]).toEqual([raw.name_zh_cn,raw.description_zh_cn,raw.description_en_us]);

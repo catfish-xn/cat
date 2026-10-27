@@ -12,7 +12,7 @@ import { CAROUSEL_RULES_BINDING } from '../src/server/room/carousel';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 
 export const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
-export function firstOffer(id:string):MatchState {return reachRound('2-1',false,firstNodeSeed(id,101));}
+export function firstOffer(id:string):MatchState {return reachRound('2-1',false,firstNodeSeed(id,10000));}
 export function pick(s:MatchState,id:string):MatchState {const c=s.pendingChoice!;expect(c.offers).toContain(id);return accepted(selectChoice(s,c.choiceId,c.generation,id));}
 export function trip(s:MatchState):void {
  const serialized=serializeMatch(s);

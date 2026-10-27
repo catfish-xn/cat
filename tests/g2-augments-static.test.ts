@@ -1,3 +1,20 @@
+import { AUGMENT_BATCH5_H1_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h1';
+import { AUGMENT_BATCH5_H3_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h3';
+import { AUGMENT_BATCH5_H4_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h4';
+import { AUGMENT_BATCH5_H5_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h5';
+import { AUGMENT_BATCH5_H6_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h6';
+import { AUGMENT_BATCH5_H7_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h7';
+import { AUGMENT_BATCH5_H8_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h8';
+import { AUGMENT_BATCH5_H10_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h10';
+import { AUGMENT_BATCH5_H11_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h11';
+import { AUGMENT_BATCH5_H12_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h12';
+import { AUGMENT_BATCH5_H13_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-h13';
+import { AUGMENT_BATCH5_B5A_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-b5a';
+import { AUGMENT_BATCH5_S1A_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-s1a';
+import { AUGMENT_BATCH5_S1B_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-s1b';
+import { AUGMENT_BATCH5_S3A_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-s3a';
+import { AUGMENT_BATCH5_S3B_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-s3b';
+import { AUGMENT_BATCH5_S3D_DEFINITIONS } from '../src/simulation/content/augment-pool-batch5-s3d';
 import { AUGMENT_BATCH5_S6C } from '../src/simulation/content/augment-pool-batch5-s6c';
 import { AUGMENT_BATCH5_S8A } from '../src/simulation/content/augment-pool-batch5-s8a';
 import { AUGMENT_BATCH5_S8C } from '../src/simulation/content/augment-pool-batch5-s8c';
@@ -93,7 +110,7 @@ const expected: Record<string, Effect[]> = {
   'inspiring-epitaph': [mech('inspiringEpitaph', { shieldMaxHpBps: 2000, attackSpeedBps: 1000 })],
 };
 describe('G2, P1 and S13 P2 augments: independent exact source parameters', () => {
-  it('contains exactly the existing, P1/P2/P3, D11, v19/v20, batch-4, v24 shop and v25 batch-5 source rows', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(AUGMENT_BATCH1),...Object.keys(AUGMENT_BATCH2_ENABLED),...Object.keys(AUGMENT_BATCH3),...Object.keys(AUGMENT_BATCH3_XP),...Object.keys(AUGMENT_BATCH4),...Object.keys(AUGMENT_BATCH4_B4XP),...Object.keys(AUGMENT_BATCH4_B4REROLL),...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP),...Object.keys(AUGMENT_BATCH5),...Object.keys(AUGMENT_BATCH5_S8B),...Object.keys(AUGMENT_BATCH5_S6C),...Object.keys(AUGMENT_BATCH5_S8A),...Object.keys(AUGMENT_BATCH5_S8C),...Object.keys(AUGMENT_BATCH5_S11A),...Object.keys(expected),'mentorship','reunion','geniuses','menaces','unlikely-duo','sisters','defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
+  it('contains exactly the existing, P1/P2/P3, D11, v19/v20, batch-4, v24 shop and v25 batch-5 source rows', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(AUGMENT_BATCH1),...Object.keys(AUGMENT_BATCH2_ENABLED),...Object.keys(AUGMENT_BATCH3),...Object.keys(AUGMENT_BATCH3_XP),...Object.keys(AUGMENT_BATCH4),...Object.keys(AUGMENT_BATCH4_B4XP),...Object.keys(AUGMENT_BATCH4_B4REROLL),...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP),...Object.keys(AUGMENT_BATCH5),...Object.keys(AUGMENT_BATCH5_H1_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H3_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H4_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H5_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H6_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H7_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H8_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H10_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H11_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_H12_DEFINITIONS).filter(id => id !== 'subscription-service'),...Object.keys(AUGMENT_BATCH5_H13_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_B5A_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S1A_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S1B_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S3A_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S3B_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S3D_DEFINITIONS),...Object.keys(AUGMENT_BATCH5_S8B),...Object.keys(AUGMENT_BATCH5_S6C),...Object.keys(AUGMENT_BATCH5_S8A),...Object.keys(AUGMENT_BATCH5_S8C),...Object.keys(AUGMENT_BATCH5_S11A),...Object.keys(expected),'mentorship','reunion','geniuses','menaces','unlikely-duo','sisters','defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
   it.each(Object.keys(expected))('%s keeps exact normalized source values', id => expect(AUGMENT_DEFINITIONS[id].effects).toEqual(expected[id]));
 });
 

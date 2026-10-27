@@ -12,12 +12,12 @@ import { restoreSharedOrbSnapshot, assertSharedPoolConservation } from '../../sr
 import { academicGiftPlan } from '../../src/simulation/augment-pool-batch5-s3b';
 
 function seedFor(id:string){
- for(let seed=0;seed<=100;seed++)for(const index of id==='salvage-bin'?[0,1,2,3]:[1]){
+ for(let seed=0;seed<10000;seed++)for(const index of id==='salvage-bin'?[0,1,2,3]:[1]){
   let seatSeed=seed;for(let i=0;i<=index;i++)seatSeed=nextRandom(seatSeed).word;
   const s={...createMatch(seatSeed),augmentTierSeed:seed,openingEncounter:createSoloOpeningEncounter(seed)};
   if(generateChoices(augmentCandidates(resolveAugmentTier(s,'round:2-1:augment'),[],[],openingEncounterId(s),{node:'2-1',fieldedTraits:[],blocked:[]}),s.choiceRngState).offers.includes(id))return {seed,seatId:`s${index}`};
  }
- throw Error('No room seed in 0..100');
+ throw Error(`No room seed in 0..9999 for ${id}`);
 }
 describe('academic-research real room',()=>{
  let room:Room,clock:ManualClock,sid:string;

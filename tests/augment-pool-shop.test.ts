@@ -1,3 +1,4 @@
+import { firstNodeSeed } from './augment-stage-helpers';
 import { recordAugmentAcquisition } from '../src/simulation/augment-history';
 import { AUGMENT_BATCH5 } from '../src/simulation/content/augment-pool-batch5';
 import { BATCH5_SOURCE } from '../src/simulation/augment-pool-batch5-progress';
@@ -204,7 +205,7 @@ it('Starry Night: 1- and 2-cost offers become 2-star at the level chance, reserv
 });
 it('a 2-star shop purchase folds to a 2-star unit on restore; a forged star on a 3-cost is rejected', ()=>{
  const three=SHOP_CATALOG_BY_COST[3][0];
- let s=accepted(grantMechanicGold(shopOwner(95,'starry-night'),{receiptId:'starry-test',source:'test',amount:100}));
+ let s=accepted(grantMechanicGold(shopOwner(firstNodeSeed('starry-night', 10000),'starry-night'),{receiptId:'starry-test',source:'test',amount:100}));
  const eligible=()=>s.shop.slots.findIndex(x=>x.status==='available'&&x.starLevel===2&&UNIT_DEFINITIONS[x.definitionId].cost===1);
  for(let i=0;i<40&&eligible()<0;i++)s=accepted(rerollShop(s));
  const slot=eligible();expect(slot).toBeGreaterThanOrEqual(0);

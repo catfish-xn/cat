@@ -109,12 +109,13 @@ describe('T5R private own-seat whitelist',()=>{
   });
   it('keeps exact Match names/nesting, shown choices, empty slots, own inventory and history',()=>{
     const state=richSeat(),view=toPrivateSeatView(freeze(state));expect(asSubset(view)).toBe(view);
+    // This synthetic choice has no corresponding offer history, so no slot is rerollable.
     expect(view.shop).toEqual(state.shop);expect(view.pendingChoice).toEqual({kind:'augment',step:'offer',choiceId:'round:4-2:augment',
       generation:1,offers:['placebo','manaflow-i','backup'],targetId:null,rerollCount:1,
       augmentTier:'silver',rerollsRemaining:2,rerolledSlots:[true,false,false],augmentOptions:[
         {optionIndex:0,definitionId:'placebo',rerollAvailable:false},
-        {optionIndex:1,definitionId:'manaflow-i',rerollAvailable:true},
-        {optionIndex:2,definitionId:'backup',rerollAvailable:true},
+        {optionIndex:1,definitionId:'manaflow-i',rerollAvailable:false},
+        {optionIndex:2,definitionId:'backup',rerollAvailable:false},
       ]});
     expect(view.temporaryEquipment).toEqual(state.temporaryEquipment);expect(view.augments).toEqual(state.augments);
     expect(view.anomalyBinding).toEqual(state.anomalyBinding);expect(view.roundResults).toHaveLength(38);

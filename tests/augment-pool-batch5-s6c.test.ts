@@ -32,7 +32,7 @@ it('B5-48 tier, offer nodes and independent offer table',()=>{
  }
 });
 function choose():MatchState {
- const open=reachRound('2-1',false,firstNodeSeed(id,101)),choice=open.pendingChoice!;
+ const open=reachRound('2-1',false,firstNodeSeed(id,10000)),choice=open.pendingChoice!;
  expect(choice.offers).toContain(id);
  return resolveM5Choices(accepted(selectChoice(open,choice.choiceId,choice.generation,id)));
 }

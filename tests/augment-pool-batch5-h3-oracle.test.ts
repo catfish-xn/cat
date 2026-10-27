@@ -4,6 +4,10 @@ import { readAugmentGrowth } from '../src/simulation/augment-history';
 import { applyRoundSettlement } from '../src/simulation/round-settlement';
 import { snapshotForBattle } from '../src/simulation/two-sided-snapshot';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
+import { createSoloOpeningEncounter, openingEncounterId } from '../src/simulation/opening-encounter';
+import { nextRandom } from '../src/simulation/rng';
+import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
+import { generateChoices } from '../src/simulation/choices';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { makeRoom, runUntil } from './server/helpers';
 import { COST, Ledger, createH3Ledger, checkH3Growth, h3GrowthForUnit, type H3Ledger } from './fixtures/m5/oracle.g2.cjs';
@@ -16,16 +20,27 @@ const routes:Record<string,Route>={};
 
 // All observations precede the checked transition. Expected growth never comes
 // from a production planner, history reader, deserializer, or authority token.
-for(const [id,seed,seatId,rerolls] of [['no-scout-no-pivot',1,'s3',0],['cooking-pot',3,'s2',2]] as const) {
+function roomSeedFor(id:string) {
+  for (let seed=0;seed<10000;seed++) {
+    let seatSeed=seed;
+    for (let index=0;index<4;index++) {
+      seatSeed=nextRandom(seatSeed).word;
+      const state={...createMatch(seatSeed),augmentTierSeed:seed,openingEncounter:createSoloOpeningEncounter(seed)};
+      const tier=resolveAugmentTier(state,'round:2-1:augment');
+      const offers=generateChoices(augmentCandidates(tier,[],[],openingEncounterId(state),{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers;
+      if (offers.includes(id)) return {seed,seatId:`s${index}`};
+    }
+  }
+  throw new Error(`No room offer for ${id} in 0..9999`);
+}
+for(const id of ['no-scout-no-pivot','cooking-pot'] as const) {
   beforeAll(()=>{
+    const {seed,seatId}=roomSeedFor(id);
     const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed});
     const mine=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
     const trace:Transition[]=[];
     try {
       room.start();runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='preparation');
-      for(let optionIndex=0;optionIndex<rerolls;optionIndex++) {
-        const c=mine().pendingChoice!;expect(room.handle(seatId,{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex})).toMatchObject({ok:true});
-      }
       const c=mine().pendingChoice!;expect(c.offers).toContain(id);
       let memory=createH3Ledger(mine());
       const command={type:'choose' as const,choiceId:c.choiceId,generation:c.generation,definitionId:id},before=mine();
@@ -235,6 +250,6 @@ it('inherits Cooking Pot growth through an independently checked shop merge with
 it('rejects a forged PvP freeze before there is any growth receipt to compare',()=>{
   const t=routes['no-scout-no-pivot'].trace.find(t=>t.after.augmentHistory!.facts.some(f=>f.kind==='pvp-roster')&&!t.before.augmentHistory!.facts.some(f=>f.kind==='pvp-roster'))!;
   const after=copy(t.after),f=after.augmentHistory!.facts.find(f=>f.kind==='pvp-roster')!;
-  if(f.kind!=='pvp-roster')throw Error('missing freeze');f.seats.find(s=>s.seatId==='s3')!.units=[];
+  if(f.kind!=='pvp-roster')throw Error('missing freeze');f.seats.find(s=>s.seatId===t.before.multiplayer!.seatId)!.units=[];
   expect(()=>checkH3Growth(t.memory,t.before,after)).toThrow(/H3 independent frozen roster/);
 });

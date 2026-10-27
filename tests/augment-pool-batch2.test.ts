@@ -26,7 +26,8 @@ it('takes exactly the 25 remaining batch-2 classification entries (Sniper migrat
  expect(Object.values(AUGMENT_BATCH2).map(x=>x.apiName)).toEqual([...names.map(x=>'TFT13_Augment_'+x),'TFT13_TeamupAugment_Betrayal','TFT13_TeamupAugment_BloodBrothers']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH2)){
   expect(row.source.patch).toBe('14.24');expect(row.source.archive).toContain('augments-14.24.json');
-  if(!row.enabled){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(row.apiName);}
+  if(!row.enabled && id !== 'academic-research'){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(row.apiName);}
+  if(id === 'academic-research') { expect(AUGMENT_DEFINITIONS[id]).toBeDefined(); expect(Object.values(AUGMENT_POOL_API_NAMES)).toContain(row.apiName); }
  }
  expect(AUGMENT_BATCH2['heavy-hitters'].source.values).toMatchObject({RefreshSeconds:4,SlamPercentHealth:expect.closeTo(.07,6)});
  expect(AUGMENT_BATCH2['quickstriker-boost'].source.values).toMatchObject({AttackSpeed:expect.closeTo(.85,6),BuffDuration:2.5,TimeBetweenProcs:6});

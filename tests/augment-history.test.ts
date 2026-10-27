@@ -20,6 +20,8 @@ import { assertSharedPoolConservation } from '../src/simulation/shared-pool';
 
 // Infrastructure fixture: real existing offers/commands, with only the history capability mocked.
 // No new augment definition/effect is installed, no production content/offer pool is changed.
+// Discover a real Starry Night offer so catalog expansion cannot invalidate this fixture.
+const starryNightSeed = () => firstNodeSeed('starry-night', 10000);
 const fixture = vi.hoisted(() => ({ allOwners: false }));
 vi.mock('../src/simulation/augment-history-owners', async importOriginal => {
   const actual = await importOriginal<typeof import('../src/simulation/augment-history-owners')>();
@@ -37,7 +39,7 @@ const baselineIdentity=(text:string)=>text.replaceAll('s13-g2-3-v25-online-rules
   .replaceAll('fnv1a32-utf16:2cfdbb54','fnv1a32-utf16:db662e0b')
   .replaceAll('fnv1a32-utf16:722ab6e2','fnv1a32-utf16:18c876b2');
 beforeAll(() => {
-  const open = reachRound('2-1', false, firstNodeSeed('starry-night', 101)), c = open.pendingChoice!;
+  const open = reachRound('2-1', false, starryNightSeed()), c = open.pendingChoice!;
   expect(c.offers).toContain('starry-night');
   acquired = accepted(selectChoice(open, c.choiceId, c.generation, 'starry-night'));
   let s = advanceAugmentPreparationTime(acquired, 2500);
@@ -383,7 +385,7 @@ it('authenticates generic HP/AP growth written inside an acquisition transaction
       {unitId,healthFlat:20,healthBps:0,attackDamageBps:150,abilityPowerCenti:150}])};
   });
   try{
-    const open=reachRound('2-1',false,firstNodeSeed('starry-night', 101)),c=open.pendingChoice!;
+    const open=reachRound('2-1',false,starryNightSeed()),c=open.pendingChoice!;
     const grown=accepted(selectChoice(open,c.choiceId,c.generation,'starry-night'));
     const row=requireAugmentFacts(grown,'growth',grown.round)[0];
     expect(readAugmentGrowth(grown,row.deltas[0].unitId)).toEqual(row.deltas[0]);
@@ -474,7 +476,7 @@ it('preserves slotted temporary items and unslotted chest grants independently a
 });
 
 it('records logical time before acquisition without adding bytes to an unowned save',()=>{
-  const open=reachRound('2-1',false,firstNodeSeed('starry-night', 101)),timed=advanceAugmentPreparationTime(open,10000);
+  const open=reachRound('2-1',false,starryNightSeed()),timed=advanceAugmentPreparationTime(open,10000);
   expect(serializeMatch(timed)).toBe(serializeMatch(open));
   const c=timed.pendingChoice!,picked=accepted(selectChoice(timed,c.choiceId,c.generation,'starry-night'));
   expect(requireAugmentFacts(picked,'acquire',picked.round)[0].preparationElapsedMs).toBe(10000);
@@ -514,7 +516,7 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 
 it('keeps the existing save/replay envelope versions and authenticates a carried history through BattleRecord',async()=>{
   const history=new BattleHistory('augment-history-envelope');
-  let s=recordedEmptyRoute(firstNodeSeed('starry-night', 101),'2-1',history),c=s.pendingChoice!;
+  let s=recordedEmptyRoute(starryNightSeed(),'2-1',history),c=s.pendingChoice!;
   s=accepted(selectChoice(s,c.choiceId,c.generation,'starry-night'));
   s=accepted(recordCommand(history,s,startMatchCombat(emptyBoard(s))));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
   const envelope:SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,
