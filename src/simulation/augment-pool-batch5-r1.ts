@@ -26,18 +26,20 @@ export interface TombRaiderOpportunity {
 }
 
 /** Pure interpretation of authenticated history. The settlement table must retain each
- * eliminated player's pre-release roster. An empty candidate list consumes an opportunity. */
-export function tombRaiderOpportunities(state: MatchState, choiceId: string): readonly TombRaiderOpportunity[] {
+ * eliminated player's pre-release roster. An empty candidate list consumes an opportunity.
+ * `missingTable` is not yet an authenticated baseline: a public selectChoice dry-run records
+ * the acquire fact before the server attaches the table, and must not abort that command. */
+function listedOpportunities(state: MatchState, choiceId: string):
+  { readonly opportunities: readonly TombRaiderOpportunity[] } | { readonly missingTable: true } {
   const owner = state.augments.find(a => a.choiceId === choiceId && (a.definitionId === 'tomb-raider-1' || a.definitionId === 'tomb-raider-2'));
   if (!owner) throw new RangeError('Invalid tomb raider owner');
   const acquire = readAugmentFacts(state, 'acquire').find(f => f.choiceId === choiceId);
   if (!acquire) throw new RangeError('Invalid tomb raider acquisition');
   const tables = readAugmentFacts(state, 'table').filter(f => f.sequence > acquire.sequence);
   const initial = tables.find(f => f.stage === 'acquire');
-  if (!initial && !state.multiplayer) return [];
-  if (!initial) throw new RangeError('Invalid tomb raider acquisition table');
+  if (!initial) return { missingTable: true };
   const alive = new Set(initial.seats.filter(s => s.alive && s.seatId !== initial.seatId).map(s => s.seatId));
-  const result: TombRaiderOpportunity[] = [];
+  const opportunities: TombRaiderOpportunity[] = [];
   for (const table of tables) {
     if (table.sequence <= initial.sequence || table.stage === 'acquire') continue;
     const self = table.seats.find(s => s.seatId === table.seatId);
@@ -45,11 +47,20 @@ export function tombRaiderOpportunities(state: MatchState, choiceId: string): re
     const eliminated = table.seats.filter(s => alive.has(s.seatId) && !s.alive).sort((a, b) => b.rank - a.rank);
     for (const seat of eliminated) {
       alive.delete(seat.seatId);
-      if (self.alive && (owner.definitionId !== 'tomb-raider-1' || result.length < 3))
-        result.push({ seatId: seat.seatId, rank: seat.rank, round: table.round, candidates: tombRaiderCandidates(seat) });
+      if (self.alive && (owner.definitionId !== 'tomb-raider-1' || opportunities.length < 3))
+        opportunities.push({ seatId: seat.seatId, rank: seat.rank, round: table.round, candidates: tombRaiderCandidates(seat) });
     }
   }
-  return result;
+  return { opportunities };
+}
+
+export function tombRaiderOpportunities(state: MatchState, choiceId: string): readonly TombRaiderOpportunity[] {
+  const listed = listedOpportunities(state, choiceId);
+  if ('missingTable' in listed) {
+    if (!state.multiplayer) return [];
+    throw new RangeError('Invalid tomb raider acquisition table');
+  }
+  return listed.opportunities;
 }
 
 export function tombRaiderCandidates(seat: HistorySeat): TombRaiderOpportunity['candidates'] {
@@ -69,7 +80,10 @@ export function tombRaiderChoiceId(choiceId: string, seatId: string): string {
 
 function pendingOpportunity(state: MatchState) {
   for (const owner of state.augments.filter(a => isOwner(a.definitionId))) {
-    for (const opportunity of tombRaiderOpportunities(state, owner.choiceId)) {
+    const listed = listedOpportunities(state, owner.choiceId);
+    // No acquisition table yet: nothing authenticated to open. Validation still rejects a saved seat.
+    if ('missingTable' in listed) continue;
+    for (const opportunity of listed.opportunities) {
       const choiceId = tombRaiderChoiceId(owner.choiceId, opportunity.seatId);
       if (opportunity.candidates.length && !state.seatMechanics?.receipts.some(r => r.receiptId === choiceId))
         return { choiceId, opportunity };
