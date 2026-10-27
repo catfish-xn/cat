@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_G3 } from '../src/simulation/content/augment-pool-batch5-g3';
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { BATCH1_SOURCE, BATCH2_SOURCE, BATCH1_BLOCKED_SOURCE, RESEARCH_FILE } from './augment-pool-source-expectations';
@@ -29,6 +30,15 @@ it('covers both tables completely with independent indexed expectations',()=>{
 it.each([...BATCH1_SOURCE,...BATCH2_SOURCE])('$id matches research record [$recordIndex]: identity, raw constants and reward plan',e=>{
  const row=AUGMENT_BATCH1[e.id]??AUGMENT_BATCH2[e.id];
  expect(row.apiName).toBe(e.apiName);expect(row.tier).toBe(e.tier);expect(row.source.values).toEqual(e.values);
+ // The batch-2 row is preserved as an archived disabled inventory; executable G3 content now owns these IDs.
+ const migrated=(AUGMENT_BATCH5_G3 as Readonly<Record<string,{apiName:string;source:{values:unknown};gifts:readonly AugmentGiftSpec[]}>>)[e.id];
+ if(migrated){
+  expect(migrated.apiName).toBe(e.apiName);expect(migrated.source.values).toEqual(e.values);
+  expect(AUGMENT_TIERS[e.id]).toBe(e.tier);expect(AUGMENT_POOL_API_NAMES[e.id]).toBe(e.apiName);
+  expect(AUGMENT_DEFINITIONS[e.id]).toBeDefined();
+  expect(batch1GiftPlan({...createMatch(42),augments:[{definitionId:e.id,choiceId:'oracle',acquiredRound:1}]})).toHaveLength(e.id==='aerial-warfare'?2:3);
+  return;
+ }
  if(!e.enabled){
   expect(AUGMENT_BATCH2[e.id].enabled).toBe(false);expect(row.gifts).toEqual([]);
   expect(AUGMENT_DEFINITIONS[e.id]).toBeUndefined();expect(AUGMENT_POOL_API_NAMES[e.id]).toBeUndefined();

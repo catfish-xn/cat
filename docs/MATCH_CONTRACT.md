@@ -1500,3 +1500,10 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
 - `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
 - 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。
+
+
+## 2026-10-27 Batch 5 G3：空战与物竞天择
+
+正式内部 ID 为 `aerial-warfare`（B5-68）与 `natural-selection`（B5-71），来源与约定分别见 S13_RULES_GAP 的 P-B5-68-G3／P-B5-71-G3。两者为金色；前者三节点按原规则报价，后者保留 14.24 的 2-1 禁令，后两节点均按对应羁绊过滤。新内容位于 `content/augment-pool-batch5-g3.ts`，其礼物由既有 `batch1GiftPlan → drainBatch1Gifts` 的共享池奖励事务发放和独立计划验证，不新增公共命令、金币来源或第二套服务器结算。
+
+这两项不需要跨轮事实，不登记 augmentHistory 持有者，也不读候选存档重造历史。既有持有者仍只通过 `augment-history.ts` API 获取历史。物竞天择的献祭单位和装备始终留在正式准备阵容；战斗投影缺席不构成资源售出、阵亡或卡池返还。`readG23MechanismState(state)` 的 owner-only 视图可额外返回 `mutationSacrificeCell:{col:3,row:6}`；`laboratories` 保留普通实验室的含义。不新增布局或视觉实现。外层 schema/save/replay/command 和 NET 版本沿用基线；新内容摘要必须精确匹配，不重录旧 epoch。

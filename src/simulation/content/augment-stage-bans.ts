@@ -63,6 +63,7 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT13_Augment_CabalCrown":['2-1'],
   "TFT13_Augment_ChainsawCarry":['2-1','4-2'],
   "TFT13_Augment_Chembaron":['4-2'],
+  "TFT13_Augment_Experiment":['2-1'],
   "TFT13_Augment_Enforcer":['4-2'],
   "TFT13_Augment_Family":['4-2'],
   "TFT13_Augment_FishCarry":['3-2','4-2'],

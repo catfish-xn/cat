@@ -37,6 +37,7 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  readonly aerialWarfare?: import('./augment-pool-batch5-g3').AerialWarfareRuntime;
   readonly batch2?:import('./augment-pool-batch2-combat').Batch2CombatRuntime;
   /** New declarations whose one-time installation hooks run at the next tick. */
   pendingEquipmentSources?: readonly string[];

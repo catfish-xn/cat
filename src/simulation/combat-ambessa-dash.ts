@@ -1,3 +1,4 @@
+import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import { occupiesCell } from './anomalies/availability';
 import { getNeighbors, hexDistance, sameCell, type HexCell } from './board';
 import { canMove } from './combat-movement';
@@ -11,7 +12,7 @@ function blockedCells(ctx: AbilityContext, unit: S13Unit): Set<string> {
 }
 function dash(ctx: AbilityContext, unit: S13Unit, to: HexCell, reason: 'ambessa-chain' | 'ambessa-fist-retreat'): void {
   if (sameCell(unit.cell, to)) return;
-  ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: unit.id, from: { ...unit.cell }, to, reason });
+  ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: unit.id, from: { ...unit.cell }, to, reason }); recordAerialMovement(ctx, unit, to);
   unit.cell = to;
   (ctx.movementReservations ??= new Set()).add(key(to));
 }

@@ -1,3 +1,4 @@
+import { recordAerialMovement } from '../augment-pool-batch5-g3-combat';
 import { b4Vamp, overhealB4Combat } from '../augment-pool-batch4-b4combat';
 import { occupiesCell } from '../anomalies/availability';
 import { anomalyVamp } from '../anomalies/bonuses';
@@ -151,7 +152,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
         .filter(c => hexDistance(c, target.cell) === 1 && !ctx.units.some(u => occupiesCell(u, ctx.tick) && u.hp > 0 && u.cell.col === c.col && u.cell.row === c.row))
         .sort((a, b) => hexDistance(holder.cell, a) - hexDistance(holder.cell, b) || a.row - b.row || a.col - b.col)[0];
       if (!free) break;
-      ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: holder.id, from: holder.cell, to: free }); holder.cell = free; break;
+      ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: holder.id, from: holder.cell, to: free }); recordAerialMovement(ctx, holder, free); holder.cell = free; break;
     }
     case 'damage': ctx.packets.push({ source, targetId: target.id, raw: value, damageType: effect.damageType, actionSeq: seq, ordinal,
       delivery: effect.delivery, critEligibility: effect.critEligibility, area: damageContext?.area ?? false, triggeringCastActionSeq: damageContext?.triggeringCastActionSeq ?? null, ...(damageContext?.facts?.damage[0] ? { parentPacketId: damageContext.facts.damage[0].context.packetId, rootActionSeq: damageContext.facts.damage[0].context.rootActionSeq } : {}), ...(periodic ? { periodic } : {}) }); break;

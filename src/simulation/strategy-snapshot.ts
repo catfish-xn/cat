@@ -1,3 +1,4 @@
+import { mutationEquipmentProjection } from './augment-pool-batch5-g3-mutation';
 import { drainSetup } from './setup-work';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
@@ -86,6 +87,8 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     ...(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[]).map(i=>({id:'enemy:'+i.unitId+':'+i.slot,definitionId:i.definitionId,location:{kind:'unit' as const,unitId:i.unitId,slot:i.slot}}))]);
   state={...state,preparation:projection.preparation};
   const openingTraits=[...deriveEffectiveTraits(projection,'player',catalog.traits),...deriveEffectiveTraits(projection,'enemy',catalog.traits)];
+  const experimentInput = state;
+  state = mutationEquipmentProjection(state, openingTraits);
   // P enforcer-confiscation-v1: confiscate first, from the combat projection only; emblems (membership already
   // projected above) and non-champion holders keep their items. The permanent item ledger is never touched.
   const victims = new Set<Team>([...confiscated, ...(['player', 'enemy'] as const).filter(team => enforcerConfiscates(equipmentBasis?.traits ?? openingTraits, team))]);
@@ -210,7 +213,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
       if (grant.program) { validateItemProgram(grant.program); itemPrograms.push({ source: { ownerId: unit.id, sourceKind: 'item', definitionId: grant.definitionId, instanceId: grant.instanceId, effectIndex: (grant.effects.length + 1) * 1024, parentItemInstanceId: null }, program: structuredClone(grant.program) }); }
     }
     if(unit.definitionId==='rumble'&&unit.team==='player')sources.push(...makeSourcedEffects(unit.id,'trait','junker-king',unit.id+':junker',(unit.definitionId==='rumble'?g23JunkerEffects(state,unit.id):[])));
-    sources.push(...makeSourcedEffects(unit.id,'trait','experiment',unit.id+':laboratory',g23ExperimentEffects(state,unit,traits)));
+    sources.push(...makeSourcedEffects(unit.id,'trait','experiment',unit.id+':laboratory',g23ExperimentEffects(experimentInput,unit,traits)));
     if(unit.definitionId==='g23-sion'){
       const rose=g23SionTeam(state.preparation,unit.team,traits,state.d14Combat?.phase==='promoted'?state.d14Combat.unitId:undefined),stage=strategyStage(state.round),index=Math.max(0,Math.min(4,stage-2));
       const stages=rose.tier>=5?G23_SUMMON_POLICY.sion.tier5StageBps:rose.tier===4?G23_SUMMON_POLICY.sion.tier4StageBps:G23_SUMMON_POLICY.sion.tier3StageBps;

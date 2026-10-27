@@ -371,3 +371,12 @@ PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校�
 ### Batch 4 B4Combat（P，2026-10-25）
 
 四条机制与推断边界见 [P-B4COMBAT](S13_RULES_GAP.md#p-b4combatp2026-10-25batch-4-四条战斗强化)。只增加声明与既有战斗事件，不增加存档字段/事件类型/公共命令/失败 reason；全程服务器权威，前端不得另算属性、弩箭、吸血或护盾。`augment-pool-batch4-b4combat.ts` 内部入口 `openingB4Combat(ctx):void`、`castB4Combat(ctx,unit,seq):void`、`attackB4Combat(ctx,unit,target,seq):void`、`damageB4Combat(ctx,owner,packet,dealt):void`、`overhealB4Combat(ctx,target,outcome):void` 使用冻结来源及既有状态；`b4Vamp(unit,tick):VampRate[]` 只返回当前窗口贡献，`categoryFiveTrigger(unit,definition):TriggerDefinition` 只派生飓风声明。恢复仍从可信 combatInputBasis 重放，对象/JSON/序列化入口不接受候选自报贡献。
+
+
+## 2026-10-27 Batch 5 G3 战斗接线
+
+P-B5-68-G3 的空战：每次野火帮起飞调用 `startAerialDash(ctx,unit):void`；所有 S13 行走、技能、强制位移、传送及开场移动提交后、下一个动作前调用 `recordAerialMovement(ctx,unit,to,from?):void`。只对已编译 `aerialWarfare` 的成员生效。`CombatUnit.aerialWarfare?:{hexes:number,dashes:number}` 是本战可重演状态，hexes 封顶 99，两个计数分别派生 AD Bps／AP 后参与原有加法属性池；每次变化发已有 `statChanged`，没有新事件类别或时钟。
+
+P-B5-71-G3 的物竞天择：`mutationSacrificeCell(team?:Team,board?:Board):HexCell` 返回固定献祭坐标；`mutationDonor(state:CombatStrategyInputs,traits:readonly TraitSnapshot[]):Unit|undefined` 用开战前的正式成员快照判断资格（无持有者、空格或非成员均 undefined）。`compileMutationEffect` 编译 1200 Bps HP 和仅献祭者的 `mutationSacrifice` 标记；`mutationEquipmentProjection` 过滤战斗投影的装备／异常，保留原输入供加成分享。`addMutationDonation` 把额外自身试验品加成叠到普通实验室成员；7 档加倍；原生／纹章成员和克隆能力沿用既有羁绊规则。
+
+`excludeMutationSacrifice(units:readonly Unit[],strategy?:StrategySnapshot):readonly Unit[]` 在召唤和任何开战钩子前排除明确标记的献祭者及其 Jayce Forge；没有死亡、单位资源移除或奖励。双边 `sideResult` 仅允许 `isMutationSacrifice(strategy,id)` 明确认可的原始单位缺席，其余缺席仍报 `invalid-result`，献祭者不进入存活者与成长结算。新辅助函数只供已验证领域数据内部调用，无新增公共失败枚举或客户端参数。相关 Match 战斗恢复及双边结果使用已有 `invalid-result`／权威 replay 拒绝错误的计数、捐赠、增删字段或缺席。服务器无需增加规则或编排调用。

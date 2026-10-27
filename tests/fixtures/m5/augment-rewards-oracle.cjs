@@ -14,6 +14,8 @@ const lesser='TFT_Consumable_ChampionDuplicator_III';
 const initial={
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
+ 'aerial-warfare':[U('scar'),U('zeri')],
+ 'natural-selection':[['F',['zyra','urgot','nunu','drmundo','twitch','warwick'],3]],
  'cooking-pot':[I('frying-pan')],
  'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
@@ -447,3 +449,27 @@ function validateRewards(before,after,command,events,base){
  return result;
 }
 module.exports.validateRewards=validateRewards;
+
+// P-B5-68-G3: independent offset-to-cube distance and literal additive coefficients.
+// Takes movement facts and independently scheduled dash count, never production stacks/stat receipts.
+module.exports.aerialWarfareExpected = function(moves,dashes) {
+ const distance=(a,b)=>{const q=a.col-Math.floor(a.row/2)-b.col+Math.floor(b.row/2),r=a.row-b.row;return Math.max(Math.abs(q),Math.abs(r),Math.abs(q+r));};
+ const hexes=Math.min(99,moves.reduce((sum,m)=>sum+distance(m.from,m.to),0));
+ return {hexes,adBps:hexes*300+dashes*900,ap:hexes*3+dashes*9};
+};
+
+// P-B5-71-G3: derive Laboratory effects from the frozen donor identities, not receipts or compiled effects.
+module.exports.mutationLaboratoryExpected = function(tier,donor,normalDonors) {
+ const factor=tier>=7?2:1,all=[...new Set(normalDonors),...(donor?[donor]:[])];
+ const count=id=>all.filter(d=>d===id).length;
+ const values={mundo:count('drmundo')*60*factor,nunu:count('nunu')*300*factor,zyra:count('zyra')*5000*factor,urgot:count('urgot')*2000*factor,twitch:count('twitch')*2000*factor};
+ if(count('warwick'))values.warwick=count('warwick')*20*factor;
+ return {healthFlat:(tier>=5?300:100)+count('drmundo')*120*factor,values};
+};
+module.exports.mutationLabsExpected = function(seed,tier) {
+ if(tier<3)return [];
+ const pool=[];for(let row=4;row<=7;row++)for(let col=0;col<7;col++)if(row!==6||col!==3)pool.push({col,row});
+ let rng=Number(BigInt(seed)^0x6c616273n),result=[];
+ for(let n=0;n<(tier>=5?3:2);n++){rng=word(rng);result.push(...pool.splice(pick(rng,pool.length),1));}
+ return result;
+};

@@ -1,3 +1,4 @@
+import { isMutationSacrifice } from './augment-pool-batch5-g3-mutation';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { drainSetup } from './setup-work';
 import { createCombatReplayRecorder, type CombatReplay, type CombatReplayTick, type CombatViewState } from './combat-replay-view';
@@ -165,7 +166,7 @@ export function readBattleLiveGoldReaders(input: Pick<BattleInput, 'a' | 'b' | '
   ];
 }
 function sideResult(seatId: string, mapping: readonly BattleIdMapping[], terminal: CombatState, initial: CombatState, isMirror = false): BattleSideResult {
-  const units = mapping.filter(entry=>entry.kind === 'unit' && entry.seatId === seatId).map(entry=>{
+  const units = mapping.filter(entry=>entry.kind === 'unit' && entry.seatId === seatId && !isMutationSacrifice(initial.strategy, entry.combatId)).map(entry=>{
     const origin=initial.units.find(unit=>unit.id===entry.combatId);
     if(!origin||origin.itemSummon)throw new BattleValidationError('invalid-result');
     const unit=terminal.units.find(unit=>unit.id === entry.combatId);
@@ -188,7 +189,7 @@ function validateDynamicResult(result:BattleResult):void {
   if (result.initial.equipmentReceipts || result.initial.pendingEquipment || result.terminal.pendingEquipment
     || result.terminal.units.some(u => u.equipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
-  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
+  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='mutationSacrifice'||m.mechanic==='aerialWarfare'||m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
   if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null||!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
   if(!enabled){
     if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');
