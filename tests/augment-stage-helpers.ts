@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { createMatch, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, nextRound, selectChoice, rerollAugment, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
@@ -28,6 +28,8 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
+  // Seed 20 requires the existing free reroll of slot 0 at 4-2.
+  "glorious-evolution":{node:'4-2',seed:20,fielded:true},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -128,7 +130,8 @@ export function offerFor(id: string): MatchState {
   if (offeredAt(id, '2-1')) return reachRound('2-1', false, firstNodeSeed(id));
   const at = STAGE_SEEDS[id];
   if (!at) throw new Error(`No stage seed for ${id}; re-run the stage seed search`);
-  const state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
+  let state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
+  if (id === 'glorious-evolution') { const c = state.pendingChoice!; state = accepted(rerollAugment(state,c.choiceId,c.generation,0)); }
   expect(state.roundDefinitionId).toBe(at.node);
   expect(state.pendingChoice?.kind).toBe('augment');
   expect(state.pendingChoice?.offers, `${id} at ${at.node} seed ${at.seed}`).toContain(id);

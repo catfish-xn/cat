@@ -497,7 +497,8 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   }
   const equipment=planTemporaryEquipment(state); events.push(...equipment.events);
   const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents),unitLootPolicy,events));
-  let settled=pruneForgePositions(reconcileD14(settledPlan.state,events)); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
+  const afterUpgrades=settledPlan.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainP2Gifts(settledPlan.state,unitLootPolicy) : settledPlan.state;
+  let settled=pruneForgePositions(reconcileD14(afterUpgrades,events)); events.push(...settledPlan.events,...mechanicGrantEvents(initial,settled));
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') {
     const forfeited=forfeitUnclaimedOrbs(settled); return {state:forfeited.state,events:[...events,...forfeited.events]};
@@ -619,7 +620,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
   const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));
-  const gifted=drained.augments.some(a=>a.definitionId==='a-change-of-fate')?drainP2Gifts(drained):drained;
+  const gifted=drained.augments.some(a=>a.definitionId==='a-change-of-fate'||a.definitionId==='glorious-evolution')?drainP2Gifts(drained):drained;
   const shopEntry=enterShopAugmentRound(gifted),shopEvents=stampMatchEvents(shopEntry,mechanicGrantEvents(drained,shopEntry));
   prepared=shopEvents.state;openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,drained),...shopEvents.events);
   if (prepared.phase === 'gameOver') {
