@@ -18,6 +18,12 @@ var scalarPrototype: object | undefined;
 // returning. Cooperative callers retain their generator path; nested scopes
 // (including failures) restore it.
 var synchronousRestoreEncoding: boolean | undefined;
+// Nodes the running cooperative traversal has charged: every non-leaf it recursed
+// into (leaves are null, booleans, strings and finite numbers; its budget never
+// consulted the frozen-text cache). Children of non-plain arrays are encoded
+// natively and not charged. Its budget started at 64 and paused on every charged
+// node that brought it to zero, i.e. once per 64 charged nodes.
+var chargedNodes = 0;
 export function withSynchronousRestoreEncoding<T>(enabled: boolean, run: () => T): T {
   const previous = synchronousRestoreEncoding;
   synchronousRestoreEncoding = enabled;
@@ -54,7 +60,35 @@ export function canonicalContent(value: unknown): string {
 /** Setup uses bounded traversal without retaining short-lived snapshot text. */
 export function* canonicalContentSteps(value: unknown): Generator<void, string, void> {
   if (synchronousRestoreEncoding) return canonicalSync(value, false);
-  return yield* canonicalSteps(value, { remaining: 64, retainFrozen: false });
+  // Cooperative slice counts are observable by the room's command queue, the
+  // encoding work between them is not. Produce the identical text without one
+  // generator per node, then pause exactly as often as the former stepwise
+  // traversal: its budget started at 64 and paused on every non-leaf node that
+  // brought it to zero, i.e. once per 64 charged nodes.
+  // The single traversal also charges nodes exactly as the stepwise one did (a
+  // failure still pauses as often as it had before throwing), so property reads
+  // happen once and in the same order.
+  const outer = chargedNodes;
+  chargedNodes = 0;
+  let text: string;
+  try { text = canonicalSync(value, false, true); }
+  catch (error) {
+    const pauses = Math.floor(chargedNodes / 64);
+    chargedNodes = outer;
+    for (let n = pauses; n > 0; n--) yield;
+    throw error;
+  }
+  const pauses = Math.floor(chargedNodes / 64);
+  chargedNodes = outer;
+  for (let n = pauses; n > 0; n--) yield;
+  return text;
+}
+/** `Object.keys(value).sort()` without the sort's scratch allocations when the
+ * insertion order is already ascending (the common case for literal records). */
+function sortedKeys(value: object): string[] {
+  const keys = Object.keys(value);
+  for (let i = 1; i < keys.length; i++) if (keys[i - 1] > keys[i]) return keys.sort();
+  return keys;
 }
 function canonicalLeaf(value: unknown, readFrozen = true): string | undefined {
   if (value === null) return 'null';
@@ -64,11 +98,12 @@ function canonicalLeaf(value: unknown, readFrozen = true): string | undefined {
   if (readFrozen && value !== null && typeof value === 'object') return (frozenCanonical ??= new WeakMap()).get(value);
   return undefined;
 }
-function* canonicalSteps(value: unknown, budget: { remaining: number; retainFrozen: boolean }): Generator<void, string, void> {
-  // Cooperative slice counts are observable by the room's command queue. A warmed text cache must not skip work.
-  const leaf = canonicalLeaf(value, budget.retainFrozen);
+/** Canonical traversal: sorted keys, native fallback for non-plain arrays,
+ * finite-data checks and the frozen-text policy. */
+function canonicalSync(value: unknown, retainFrozen: boolean, charge = false): string {
+  const readFrozen = !charge, leaf = canonicalLeaf(value, readFrozen);
   if (leaf !== undefined) return leaf;
-  if (--budget.remaining === 0) { budget.remaining = 64; yield; }
+  if (charge) chargedNodes++;
   if (Array.isArray(value)) {
     for (let i = 0; i < value.length; i++) if (!Object.hasOwn(value, i)) throw new TypeError('Content cannot contain sparse arrays');
     // Preserve the synchronous API's native map/species behavior for non-plain arrays.
@@ -77,67 +112,18 @@ function* canonicalSteps(value: unknown, budget: { remaining: number; retainFroz
     const length = value.length, parts = new Array<string>(length);
     for (let i = 0; i < length; i++) if (i in value) {
       const child: unknown = value[i];
-      parts[i] = canonicalLeaf(child, budget.retainFrozen) ?? (yield* canonicalSteps(child, budget));
-    }
-    const text = `[${parts.join(',')}]`;
-    return !budget.retainFrozen || !Object.isFrozen(value) ? text : rememberFrozen(value, text, Array.from({ length: value.length }, (_, i) => String(i)));
-  }
-  if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
-    const keys = Object.keys(value).sort();
-    if (keys.some(key => key.charCodeAt(0) >= 48 && key.charCodeAt(0) <= 57)) {
-      const parts: string[] = [];
-      for (const key of keys) {
-        const quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
-        parts.push(`${quoted}:${canonicalLeaf(child, budget.retainFrozen) ?? (yield* canonicalSteps(child, budget))}`);
-      }
-      const text = `{${parts.join(',')}}`;
-      return budget.retainFrozen ? rememberFrozen(value, text, keys) : text;
-    }
-    const scalars = Object.create(scalarPrototype ??= Object.freeze(Object.create(null))) as Record<string, unknown>;
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i], child = (value as Record<string, unknown>)[key];
-      if (child === null || typeof child === 'string' || typeof child === 'boolean' || typeof child === 'number' && Number.isFinite(child)) {
-        scalars[key] = child; continue;
-      }
-      const parts = keys.slice(0, i).map(key => `${quoteKey(key)}:${canonicalContent(scalars[key])}`);
-      parts.push(`${quoteKey(key)}:${canonicalLeaf(child, budget.retainFrozen) ?? (yield* canonicalSteps(child, budget))}`);
-      for (let rest = i + 1; rest < keys.length; rest++) {
-        const key = keys[rest], quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
-        parts.push(`${quoted}:${canonicalLeaf(child, budget.retainFrozen) ?? (yield* canonicalSteps(child, budget))}`);
-      }
-      const text = `{${parts.join(',')}}`;
-      return budget.retainFrozen ? rememberFrozen(value, text, keys) : text;
-    }
-    const text = JSON.stringify(scalars);
-    return budget.retainFrozen ? rememberFrozen(value, text, keys) : text;
-  }
-  throw new TypeError('Content must be finite plain JSON data');
-}
-/** Identical traversal, key order, array fallback, finite-data checks and
- * frozen-text policy, without generator allocation/delegation. */
-function canonicalSync(value: unknown, retainFrozen: boolean): string {
-  const leaf = canonicalLeaf(value);
-  if (leaf !== undefined) return leaf;
-  if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i++) if (!Object.hasOwn(value, i)) throw new TypeError('Content cannot contain sparse arrays');
-    // Preserve the synchronous API's native map/species behavior for non-plain arrays.
-    if (Object.hasOwn(value, 'map') || Object.hasOwn(value, 'constructor') || Object.getPrototypeOf(value) !== Array.prototype)
-      return `[${value.map(canonicalContent).join(',')}]`;
-    const length = value.length, parts = new Array<string>(length);
-    for (let i = 0; i < length; i++) if (i in value) {
-      const child: unknown = value[i];
-      parts[i] = canonicalLeaf(child) ?? canonicalSync(child, retainFrozen);
+      parts[i] = canonicalLeaf(child, readFrozen) ?? canonicalSync(child, retainFrozen, charge);
     }
     const text = `[${parts.join(',')}]`;
     return !retainFrozen || !Object.isFrozen(value) ? text : rememberFrozen(value, text, Array.from({ length: value.length }, (_, i) => String(i)));
   }
   if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
-    const keys = Object.keys(value).sort();
+    const keys = sortedKeys(value);
     if (keys.some(key => key.charCodeAt(0) >= 48 && key.charCodeAt(0) <= 57)) {
       const parts: string[] = [];
       for (const key of keys) {
         const quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
-        parts.push(`${quoted}:${canonicalLeaf(child) ?? canonicalSync(child, retainFrozen)}`);
+        parts.push(`${quoted}:${canonicalLeaf(child, readFrozen) ?? canonicalSync(child, retainFrozen, charge)}`);
       }
       const text = `{${parts.join(',')}}`;
       return retainFrozen ? rememberFrozen(value, text, keys) : text;
@@ -149,10 +135,10 @@ function canonicalSync(value: unknown, retainFrozen: boolean): string {
         scalars[key] = child; continue;
       }
       const parts = keys.slice(0, i).map(key => `${quoteKey(key)}:${canonicalContent(scalars[key])}`);
-      parts.push(`${quoteKey(key)}:${canonicalLeaf(child) ?? canonicalSync(child, retainFrozen)}`);
+      parts.push(`${quoteKey(key)}:${canonicalLeaf(child, readFrozen) ?? canonicalSync(child, retainFrozen, charge)}`);
       for (let rest = i + 1; rest < keys.length; rest++) {
         const key = keys[rest], quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
-        parts.push(`${quoted}:${canonicalLeaf(child) ?? canonicalSync(child, retainFrozen)}`);
+        parts.push(`${quoted}:${canonicalLeaf(child, readFrozen) ?? canonicalSync(child, retainFrozen, charge)}`);
       }
       const text = `{${parts.join(',')}}`;
       return retainFrozen ? rememberFrozen(value, text, keys) : text;

@@ -1,4 +1,4 @@
-import { freezeContent } from './content/freeze';
+import { createScopedContentFreezer, freezeContent, type ScopedContentFreezer } from './content/freeze';
 
 // Byte-preserving interning of immutable JSON metadata, never a validation cache.
 // Interning callers enter AFTER all authority/resource/runtime checks succeed.
@@ -91,6 +91,64 @@ export function createImmutableJsonChecker(): (value: object) => boolean {
     if (!plainData(value, new Set(), owned, true, scoped) || !owned.every(Object.isFrozen)) return false;
     for (const object of owned) scoped.add(object);
     return true;
+  };
+}
+
+/** One battle's ledger certification: freeze every owned node and prove the
+ * complete finite plain-data graph in the same traversal. The result and the
+ * frozen state are exactly those of `createScopedContentFreezer` followed by
+ * `createImmutableJsonChecker`; a graph the single pass cannot certify (an
+ * accessor, an exotic prototype, a cycle, a non-finite number) is handed to
+ * those two original steps unchanged. */
+export function createScopedLedgerCertifier(): { freeze: ScopedContentFreezer; certify(value: object): boolean } {
+  const freeze = createScopedContentFreezer();
+  const scoped = new WeakSet<object>();
+  const check = (value: object): boolean => {
+    if (scoped.has(value) || dataObjects.has(value)) return true;
+    if (!Object.isFrozen(value)) return false;
+    const owned: object[] = [];
+    if (!plainData(value, new Set(), owned, true, scoped) || !owned.every(Object.isFrozen)) return false;
+    for (const object of owned) scoped.add(object);
+    return true;
+  };
+  const ancestors = new Set<object>();
+  const walk = (value: unknown): boolean => {
+    if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+    if (typeof value === 'number') return Number.isFinite(value) && !Object.is(value, -0);
+    if (typeof value !== 'object') return false;
+    if (dataObjects.has(value) || scoped.has(value)) return true;
+    if (ancestors.has(value) || Object.getOwnPropertySymbols(value).length) return false;
+    const array = Array.isArray(value), keys = Object.keys(value);
+    if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype)) return false;
+    if (Object.getOwnPropertyNames(value).length !== keys.length + (array ? 1 : 0)) return false;
+    if (array && (keys.length !== value.length || keys.some((key, i) => key !== String(i)))) return false;
+    ancestors.add(value);
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+      if (!('value' in descriptor) || !walk(descriptor.value)) return false;
+    }
+    ancestors.delete(value);
+    // Children freeze before their parent, exactly as the scoped freezer orders it.
+    Object.freeze(value);
+    return true;
+  };
+  return {
+    freeze,
+    certify(value) {
+      // Certified graphs are already deeply frozen plain data; walking them again changes nothing.
+      if (scoped.has(value) || dataObjects.has(value)) { freeze.adopt(value); return true; }
+      const plain = walk(value);
+      ancestors.clear();
+      if (plain) {
+        // Every node is frozen; remember the root (ledger entries are revisited
+        // by the final result check, their fresh children are not).
+        scoped.add(value);
+        freeze.adopt(value);
+        return true;
+      }
+      freeze(value);
+      return check(value);
+    },
   };
 }
 
