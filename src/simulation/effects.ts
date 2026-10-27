@@ -1,5 +1,6 @@
 import { H11_FIELDS } from './content/augment-pool-batch5-h11';
 import { B5_G3_FIELDS } from './content/augment-pool-batch5-g3';
+import { B5_G4_MECHANIC_FIELDS } from './content/augment-pool-batch5-g4';
 import { B4COMBAT_FIELDS } from './content/augment-pool-batch4-b4combat';
 import { S13_COMBAT_RULES } from './s13-rules';
 import { resolveStat, attackInterval } from './m8/stats';
@@ -16,9 +17,10 @@ const SOURCE_ORDER: Readonly<Record<SourceKind, number>> = {
   attack: -2, ability: -1, trait: 0, item: 1, augment: 2, anomaly: 3, enemyGrowth: 4,
 };
 const STAT_NAMES: readonly Stat[] = ['maxHp', 'attackDamage', 'armor', 'magicResist', 'initialMana', 'abilityAmount', 'abilityPower'];
-const MECHANICS = new Set(['rebelResurgence','ghostFriends','madChemist','d14Anomaly','d11Anomaly','d11Fill','s13P3','s13Anomaly','g23Junker','g23Experiment','g23ExperimentClone','quickstriker','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
+const MECHANICS = new Set([...Object.keys(B5_G4_MECHANIC_FIELDS),'rebelResurgence','ghostFriends','madChemist','d14Anomaly','d11Anomaly','d11Fill','s13P3','s13Anomaly','g23Junker','g23Experiment','g23ExperimentClone','quickstriker','visionary','g23Sion','g23Trait','g23Anomaly','mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
   ...Object.keys(H11_FIELDS), ...Object.keys(B5_G3_FIELDS), ...Object.keys(B4COMBAT_FIELDS), 'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionXp', 'acquisitionGold', 'incomePolicy', 'acquisitionBundle', 'traitAugmentB2', 'superstars', 'flexible', 'corrosion', 'blazingSoul', 'nobleSacrifice', 'wealthyRehab', 'badLuck', 'goldForDummies', 'towerDefense', 'towerDefenseLive', 'forming', 'magicRoll', 'heroCarry', 'heroCarryLive', 'g23Tactician', 'coronation', 'lowCostAllies', 'g24Fishbones', 'g24SpectralCutlass', 'g24Shroud', 'g24DeathsDefiance', 'g24Mirror', 'g24Trench', 'g24Collector', 'g24Gambler', 'g24Mogul','g24Zephyr']);
 const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  ...B5_G4_MECHANIC_FIELDS,
   madChemist:['enabled'],
   rebelResurgence:['count','reducedHealth'],
   ghostFriends:['healthFlat','attackDamageBps','abilityPower'],

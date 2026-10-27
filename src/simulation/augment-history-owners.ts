@@ -22,6 +22,8 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'lucky-gloves': ['acquire','positions','combat-roster','pvp-roster'],
   'lucky-gloves-plus': ['acquire','positions','combat-roster','pvp-roster'],
   'ghost-of-friends-past': ['deaths'], 'rebel-resurgence': ['deaths'],
+  'void-swarm': ['pvp-roster'],
+  'voidcaller': ['acquire'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],

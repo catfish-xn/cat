@@ -1,4 +1,5 @@
 import { openingH11 } from './augment-pool-batch5-h11';
+import { startB5VoidSwarm } from './augment-pool-batch5-g4-swarm';
 import { carryAugmentDeathSample } from './augment-death-samples';
 import { initializeR3Copies } from './augment-pool-batch5-r3';
 import { initializeHallOfMirrors } from './augment-pool-batch5-r3-mirrors';
@@ -90,6 +91,8 @@ export function applyCombatStart(state: CombatState): CombatStep {
     openingH11({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{
       const next=nextRandom(rngState);rngState=next.state;rngDraws++;return next.word;
     }}, state);
+    startB5VoidSwarm({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Void Swarm opening cannot draw RNG');}},state);
+    for (const unit of mechanismUnits) if (!units.some(u=>u.id===unit.id)) units.push(unit);
     // Final owner HP is frozen only after all opening boosts and broadcasts.
     initializeMirrorHealth(mechanismUnits,shields);
     initializeHallOfMirrors(mechanismUnits,shields);

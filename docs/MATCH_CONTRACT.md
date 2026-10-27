@@ -1688,3 +1688,11 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 `restoreSharedOrbSnapshot(pool,input,authority?)` 对 G3 持有者调用同一礼物计划验证；即使没有持有者，只要收据来源为 `augment-pool-batch1` 或身份处于该 JSON 数组命名空间，也必须认证。非法礼物索引、孤儿收据或来源不符抛 `RangeError('Invalid augment batch1 gift authority')`；同步篡改关联法球、掉落、领取收据及资源来源不能绕过此认证。对象、JSON 和规范 JSON 文本遵循相同入口，合法档恢复后重复发奖仍保持原收据数。
 
 这两项不需要跨轮事实，不登记 augmentHistory 持有者，也不读候选存档重造历史。既有持有者仍只通过 `augment-history.ts` API 获取历史。物竞天择的献祭单位和装备始终留在正式准备阵容；战斗投影缺席不构成资源售出、阵亡或卡池返还。`readG23MechanismState(state)` 的 owner-only 视图可额外返回 `mutationSacrificeCell:{col:3,row:6}`；`laboratories` 保留普通实验室的含义。不新增布局或视觉实现。外层 schema/save/replay/command 和 NET 版本沿用基线；新内容摘要必须精确匹配，不重录旧 epoch。
+
+## Batch 5 G4：B5-72／73（P，2026-10-27）
+
+内部赠物入口继续为 `batch1GiftPlan(state:MatchState):AugmentGift[]`、`drainBatch1Gifts(state,policy?):MatchState`，新增规则计划 `b5VoidSwarmGiftPlan(state:MatchState):AugmentGift[]`。B5-72取得时赠芮尔、莫甘娜各1名；在线沿已有有限共享卡池奖励法球，满席继续沿已有领取／held策略。B5-73取得时赠传送门，此后从取得当轮起每11个已结算PvP再赠1个；读取 `roundResults` 并由 `requireAugmentFacts` 认证每个 `pvp-roster`，不计PvE／选秀。阈值收据绑定原choiceId及第几次11战，原资源／赠物校验器重算应发结果。
+
+两张卡使用现有 `augment-history-v1`：voidcaller登记acquire，void-swarm登记pvp-roster；事实全部通过已有API记录，联机恢复须由 `Room.augmentHistoryAuthority(seatId)` 提供独立authority。没有新增网络命令、wire失败reason、第二套保存版本或服务器规则；源文件 `augment-pool-batch5-g4*.ts`。缺历史／缺PvP边界／无独立authority沿历史合同拒绝；赠物仍沿原失败枚举和失败原state／无事件／无资源及RNG消耗规则。候选：B5-72三节点、后两次按冻结先知成员过滤；B5-73仅2-1，保留原14.24禁用语义。数值证据和运行约定见S13_RULES_GAP的P-B5-72、P-B5-73。
+
+G4 出生修订 `augment-pool-batch5-g4-v25-spawn-1`：内部 `castB5Voidcaller(ctx,caster,spent,counters,pending):void` 消费实际耗蓝阈值、冻结触发者格子并排队，累计成功数加同队待出生数共同限制上限；`spawnB5Voidlings(ctx,state,pending,counters):void` 在所有既有行动者完成规划后，逐只按触发格和当时占格重选最近空格（距离／row／col），包含更早成功出生的虚灵。无空格则跳过余下出生，阈值已消费但不累计召唤数、不发布出生事件；成功后才累计并初始化，首次行动仍为下一 tick。没有新增命令失败原因，合法的同 tick 跳跃占格不再抛 `Spawn cell unavailable`。

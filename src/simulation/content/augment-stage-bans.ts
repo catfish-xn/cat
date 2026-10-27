@@ -20,6 +20,7 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT7_Augment_LuckyGloves":["3-2","4-2"],
   "TFT7_Augment_LuckyGlovesPlus":["2-1"],
   "TFT_Augment_GhostOfUnitsPast":["3-2", "4-2"],
+  TFT_Augment_Voidborne:['3-2','4-2'],
   "TFT_Augment_NoScoutNoPivot":["3-2", "4-2"],
   "TFT_Augment_CookingPot":["3-2", "4-2"],
   "TFT_Augment_Survivor":["3-2","4-2"],

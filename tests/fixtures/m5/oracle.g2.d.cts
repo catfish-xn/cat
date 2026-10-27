@@ -100,3 +100,6 @@ export function batch5TransformPlan(before: MatchState, augmentId: string, stock
 
 export { ghostFriendsGrowth } from './augment-rewards-oracle.cjs';
 export { rebelCopyStats, rebelCopyDeaths } from './augment-rewards-oracle.cjs';
+
+export function voidcallerModel(costs: readonly number[]): {remainder:number;summoned:number};
+export function voidSwarmPortals(completed: readonly {round:number;roundKind:string}[], acquiredRound:number): number;

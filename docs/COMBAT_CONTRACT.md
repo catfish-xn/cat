@@ -417,3 +417,10 @@ P-B5-68-G3 的空战：每次野火帮起飞调用 `startAerialDash(ctx,unit):vo
 P-B5-71-G3 的物竞天择：`mutationSacrificeCell(team?:Team,board?:Board):HexCell` 返回固定献祭坐标；`mutationDonor(state:CombatStrategyInputs,traits:readonly TraitSnapshot[]):Unit|undefined` 用开战前的正式成员快照判断资格（无持有者、空格或非成员均 undefined）。`compileMutationEffect` 编译 1200 Bps HP 和仅献祭者的 `mutationSacrifice` 标记；`mutationEquipmentProjection` 过滤战斗投影的装备／异常，保留原输入供加成分享。`addMutationDonation` 把额外自身试验品加成叠到普通实验室成员；7 档加倍；原生／纹章成员和克隆能力沿用既有羁绊规则。
 
 召唤描述的身份与占格先按献祭前的正式阵容投影，与策略编译使用同一依据；献祭最早获得的黑玫瑰成员时，仍保留以它命名且已经编译的唯一赛恩，不按剩余成员重命名或追加第二个赛恩。单边、双边及镜像均沿用此顺序。`excludeMutationSacrifice(units:readonly Unit[],strategy?:StrategySnapshot):readonly Unit[]` 随后在实际战斗单位生成及任何开战钩子前排除明确标记的献祭者及其 Jayce Forge；没有死亡、单位资源移除或奖励。双边 `sideResult` 仅允许 `isMutationSacrifice(strategy,id)` 明确认可的原始单位缺席，其余缺席仍报 `invalid-result`，献祭者不进入存活者与成长结算。新辅助函数只供已验证领域数据内部调用，无新增公共失败枚举或客户端参数。相关 Match 战斗恢复及双边结果使用已有 `invalid-result`／权威 replay 拒绝错误的计数、捐赠、增删字段或缺席。服务器无需增加规则或编排调用。
+## Batch 5 G4 虚灵（P，2026-10-27）
+
+`augment-pool-batch5-g4.ts` 内部入口 `castB5Voidcaller(ctx,caster,spent,counters,pending):void` 只接成功施法实际扣蓝；冻结有效先知成员（含纹章，无需激活2档）共享每队池，每275扣除阈值、结转余数；每战累计成功出生最多5只，死亡不返名额，满格不召唤且该阈值已消费。`spawnB5Voidlings(ctx,state,pending):void` 在原演员规划动作后发布既有unitSpawned事件，新生儿下一tick行动。生命2–6+为400/450/500/550/600，AD60、AS0.8、双抗30、近战无技能；不进入永久资源或卡池，不计玩家伤害。
+
+`augment-pool-batch5-g4-swarm.ts / b5PortalEffects(state,itemId,effects):readonly Effect[]` 只给持有本强化的已装备、未被执法没收传送门编译开战声明；`startB5VoidSwarm(ctx,state):void` 在完整双方开战阵容就绪后按持有者前方最近空格生成，HP1000/1500/2000/2500/3000、AD80/80/115/150/180（2–6+），基础AS0.8／双抗30／射程1，无空格跳过。2格开战嘲讽为目标锁（最近召唤物、同距ID），目标失效即释放；`b5VoidSwarmTarget(unit,units,tick)` 供既有目标入口调用；不编造持续秒数。`b5VoidSwarmVamp(unit):VampRate[]` 通过原伤害／治疗管线给大小虚灵4000Bps全能吸血，AS额外4000Bps，小虚灵不继承大型数表／嘲讽，普通英雄不获这两项加成。无本强化的旧传送门继续原规则。
+
+可选 `CombatState.voidcaller` 为每队 `{team,remainder,summoned}` 数组；`CombatUnit.voidSwarmTaunt?:string` 为开战锁定目标。可信strategy包含voidcaller／voidSwarm／b5VoidPortal时，恢复从可信开战输入完整重演到保存tick，比较全部单位、属性、计数、目标锁、事件序号及RNG；删除字段／虚构合法范围内数值／少一个出生同样拒绝，无该来源却添字段亦拒绝。没有新增战斗事件类型、tick长度或随机词；失败仍为既有恢复异常及规则入口失败语义。保存／协议纪元不重录；本任务末统一重算content／loot identities。
