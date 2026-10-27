@@ -1,3 +1,4 @@
+import { applyRecordedDhampyrHealing } from './augment-pool-batch5-h8-health';
 import type { MatchState } from './match-types';
 import { getCatalogRoundById } from './round-selectors';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -13,7 +14,7 @@ export function batch2HpAfterSettlement(state:MatchState,round:number,hp:number)
  const result=state.roundResults.find(r=>r.round===round);if(!result)return hp;
  const receipts=state.seatMechanics?.receipts??[];
  const end=receipts.findIndex(r=>r.round>round);
- return settlementLevelUpHealth(state,round,healBetween(state,hp,result.mechanicReceiptPrefixLength??0,end<0?receipts.length:end));
+ return applyRecordedDhampyrHealing(state,round,settlementLevelUpHealth(state,round,healBetween(state,hp,result.mechanicReceiptPrefixLength??0,end<0?receipts.length:end)));
 }
 export function batch2HpBeforeBattle(state:MatchState,roundId:string,hp:number):number {
  const round=getCatalogRoundById(roundId).ordinal,result=state.roundResults.find(r=>r.round===round),receipts=state.seatMechanics?.receipts??[];

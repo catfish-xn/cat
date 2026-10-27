@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { createMatch, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, nextRound, selectChoice, rerollAugment, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
@@ -27,7 +27,10 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Re-searched after the v24 shop / batch-5 merge (235 cards, P 2026-10-27), retaining the same routes and first-seed rule.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
-export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
+export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerollSlots?: readonly number[] }>> = {
+  "forward-thinking":{node:'3-2',seed:8,fielded:true,rerollSlots:[0,1,2]},
+  "mirrored-monetization":{node:'4-2',seed:9,fielded:true,rerollSlots:[0,1,2]},
+  "dhampyr":{node:'3-2',seed:3,rerollSlots:[0,1,2]},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -128,7 +131,11 @@ export function offerFor(id: string): MatchState {
   if (offeredAt(id, '2-1')) return reachRound('2-1', false, firstNodeSeed(id));
   const at = STAGE_SEEDS[id];
   if (!at) throw new Error(`No stage seed for ${id}; re-run the stage seed search`);
-  const state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
+  let state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
+  for (const slot of at.rerollSlots ?? []) {
+    const choice=state.pendingChoice!;if(choice.offers.includes(id))break;
+    state=accepted(rerollAugment(state,choice.choiceId,choice.generation,slot));
+  }
   expect(state.roundDefinitionId).toBe(at.node);
   expect(state.pendingChoice?.kind).toBe('augment');
   expect(state.pendingChoice?.offers, `${id} at ${at.node} seed ${at.seed}`).toContain(id);

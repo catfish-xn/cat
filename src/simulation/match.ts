@@ -1,3 +1,4 @@
+import { applyBatch5H8Acquisition } from './augment-pool-batch5-h8';
 import { initializeAugmentTrace, traceHistoryCommand, recordAugmentRoundEntry, recordAugmentAcquisition } from './augment-history';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
@@ -945,6 +946,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   if (choice.kind === 'augment') selected = recordAugmentAcquisition(state, selected);
+  if (choice.kind === 'augment') selected = applyBatch5H8Acquisition(selected, definitionId);
   selected = applyLevelUpHealth(state, selected);
   if (choice.kind === 'augment') selected = applyAcquisitionHealthLoss(selected, selected.augments.at(-1)!);
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];

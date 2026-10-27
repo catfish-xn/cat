@@ -138,3 +138,28 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 验证：`npm test -- --configLoader runner --maxWorkers=4` 指定 augment-history、server/projection、server/combat-stream、server/augment-preparation-room、server/anvil-choice-deadline、server/bot-driver、server/round-commit、tp-shared-pool、p7-carousel，共 9 文件 155 项通过、1 项受限（anvil-choice-deadline 的 WebSocket 重连用例：沙盒 `listen EPERM 127.0.0.1`）。其中 augment-history 的 77 项全部通过；末次补充 death owner／authority 联合篡改后，普通和流式两个定向用例再次通过。`npm run typecheck`、`npm run build -- --configLoader runner`、`git diff --check` 通过。
 
 反证：在 `/tmp` 独立解包只读 HEAD `4fbb08f3`，仅复制新增测试，以相同 Vitest 参数筛选获取时序和 PvE 归属；5 个用例全部复现失败（手选／机器人／超时三项无法完成选择，普通／流式两项死亡 owner 不等于 s0）。工作区修复未回滚、Git 未写入。
+
+## B5-45／46／47 调用约定（2026-10-27）
+
+本批规则与内容标识为 `augment-pool-batch5-h8-v25`，现行规则／内容身份为 `s13-g2-3-v25-h8-rules` / `s13-14.24b-g2-3-v25-h8-rules`；外层 schema/save/replay/command 仍为 12/8/8/7，旧内容摘要不迁移或重录 epoch。
+
+- `forward-thinking` 在取得事务读取 `acquire.goldBefore` 后仅把当前金币移出；第六个已结算 PvP 的冻结 `pvp-roster` 证据到位时，以 choiceId 唯一收据返还本金加70。随后收入和利息正常，重复提交不返两次。
+- `mirrored-monetization` 取得时2金币；从取得轮起三个自然轮，结算时按同轮 `deaths` 的正式敌方英雄死亡次数每次支付2。每个 eventSeq 视为一次死亡，召唤物不计，复活再死计两次；联机 PvP 使用 ownerSeatId，PvE／单人使用敌方 team。战后同轮唯一收据支付；房间在双边事实齐备后调用规则的 `drainBatch5H8Deaths`，将新增收据事件并入同轮账本。
+- `applyDhampyrSettlement(state: MatchState): MatchState` 为服务端内部规则入口：须先完成双方真实伤害结算并通过 `appendAugmentFact` 写入本席 `player-damage`，再调用并在排名前把返回的 Match HP 同步到房间席位；镜像、未知对手 HP、零治疗或已淘汰席返回原状态。存活席以实际扣血20%向下取整，封顶当前最大HP（默认100，已有健康事实时读最新 maxHpAfter）；有效治疗调用 `recordAugmentPlayerHealth`，以 choiceId 与 battleId 的唯一收据防重。`batch2HpAfterSettlement → applyRecordedDhampyrHealing` 依已认证事实重建历史治疗链并保留封顶。12%全能吸血通过既有战斗机制编译。
+
+`src/server/room/augment-history.ts` 只在取得双方的结算事实后调用规则入口并同步席位 HP；不计算治疗或改写伤害。没有新增客户端命令或 wire reason。对象、JSON 和序列化恢复继续由 solo 重演或独立 server authority 验证，候选事实不能自证。
+
+新增只读 API：`readAugmentPlayerHealth(state: MatchState): readonly Extract<AugmentHistoryFact, {kind:'player-health'}>[]`，返回脱离对象的健康收据；没有健康变更时返回空数组，缺历史节则抛 `Invalid augment history: missing player health history`。这是已有 v1 字段的读取器，不增加持久字段或放宽认证，不能代替 `requireAugmentFacts` 对完整死亡／伤害边界的要求。
+
+| 本批实际接线 | 职责／输入输出与失败 |
+| --- | --- |
+| `match.ts / execute_selectChoice → applyBatch5H8Acquisition(state, definitionId): MatchState` | 先冻结 acquire，再仅对前瞻思维清空当前金币；沿原 choose/reroll 的失败 reason，无新增客户端参数 |
+| `round-settlement.ts / applyRoundSettlement → drainBatch5H8Gold(state): MatchState` | 联机第六战产生一次本金+70的 mechanic gold 收据，沿原完整事件发布；领域异常映射既有 invalid-receipt |
+| `augment-history.ts / traceHistoryCommand` | 单人及联机 PvE 的死亡采样完成后发放所需金币并追加有序事件；单人只保持最简单行为，不虚构对手HP |
+| `server-entry/index.ts` | 导出 drainBatch5H8Deaths、applyDhampyrSettlement、readAugmentPlayerHealth 内部接口；没有网络命令 |
+| `src/server/room/augment-history.ts / recordRoomBattleFacts` | 双方实际结果到位后记录死亡／扣血，调用 drainBatch5H8Deaths 和 applyDhampyrSettlement，同步 hpAfter 与新增金币事件；Room.planSteps 的现有调用在排名前完成此事务 |
+| `augment-pool-grants.ts / validateBatch1Gifts` | 调用 validateBatch5H8Gold/Deaths；应发集合与实际收据逐项匹配，错误为 Invalid forward thinking gold / Invalid monetization gold，缺历史沿通用 API 错误 |
+| `shared-pool.ts / restoreSharedOrbSnapshot` | 三项持有者均进入奖励校验；独立服务器 authority 精确比较仍先于规则收据检查 |
+| `augment-pool-batch2-health.ts / batch2HpAfterSettlement` | 使用 applyRecordedDhampyrHealing(state, round, hp): number，供既有恢复与房间 HP 账本复算 |
+
+三项均已加入 definitions、tiers、API 名称、rules manifest、validate-content、stage bans 和独立 m5 oracle；黄金档，提供节点分别为3-2、4-2、3-2。研究原始值测试按本机档案是否存在决定是否运行；候选池／真实命令／房间／认证测试始终运行。旧 epoch 未重录，历史无持有者字节测试仅归一化版本名与 content/loot 身份，其原始 SHA-256 和战斗账本断言保持不变。

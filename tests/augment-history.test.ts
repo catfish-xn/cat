@@ -15,6 +15,7 @@ import { CAROUSEL_RULES_BINDING } from '../src/server/room/carousel';
 import { createCarousel, advanceCarousel, pickCarouselForSeat, grantAdditionalCarouselPick, restoreCarouselSeat } from '../src/simulation/carousel';
 import { supplySeats, must } from './p7-carousel-helper';
 import { assertSharedPoolConservation } from '../src/simulation/shared-pool';
+import { CONTENT_DIGEST, LOOT_REPLAY_DIGEST } from '../src/simulation/content/identity-constants';
 
 // Infrastructure fixture: real existing offers/commands, with only the history capability mocked.
 // No new augment definition/effect is installed, no production content/offer pool is changed.
@@ -35,9 +36,19 @@ beforeAll(() => {
   advanced = accepted(nextRound(s, s.round));
 });
 
+// Compare historical payload bytes with only the release identity restored; old epoch hashes remain unchanged.
+function priorIdentityBytes(text:string):string {
+ // A read-only HEAD comparison also locates the release identity in each frozen loot checkpoint.
+ // Preserve all payload fields and the independently recorded hashes, including nested combat input snapshots.
+ return canonicalContent(JSON.parse(text,(key,value)=>
+  key==='rulesVersion'&&value===M8_VERSION.rulesVersion?'s13-g2-3-v24-online-rules':
+  key==='contentVersion'&&value===M8_VERSION.contentVersion?'s13-14.24b-g2-3-v24-online-rules':
+  key==='contentDigest'&&value===CONTENT_DIGEST?'fnv1a32-utf16:db662e0b':
+  key==='replayDigest'&&value===LOOT_REPLAY_DIGEST?'fnv1a32-utf16:18c876b2':value));
+}
 it('keeps four no-owner saves byte-identical to HEAD ee2b019c (independent baseline SHA-256)', () => {
   let s = createMatch(42); const hashes: string[] = [];
-  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text); hashes.push(createHash('sha256').update(text).digest('hex')); };
+  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text); hashes.push(createHash('sha256').update(priorIdentityBytes(text)).digest('hex')); };
   check(); const u = s.preparation.units.find(u => u.team === 'player')!;
   s = accepted(deployMatchUnit(s, u.id, {kind:'bench',slot:0})); check();
   s = resolveM5Choices(accepted(startMatchCombat(s))); check();
@@ -384,7 +395,7 @@ it('keeps a real battle ledger and terminal save byte-identical to the independe
   while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
   expect(s.combat!.tick).toBe(164);expect(events).toHaveLength(113);
   expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324');
-  expect(createHash('sha256').update(serializeMatch(s)).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
+  expect(createHash('sha256').update(priorIdentityBytes(serializeMatch(s))).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
 });
 it('records a Forge death, a real Jayce revival and its second death with equipment at each death',()=>{
   const combatUnit=(id:string,definitionId:string,team:'player'|'enemy',col:number,row:number,patch:Partial<CombatUnit>={})=>unit(id,team,col,row,{
