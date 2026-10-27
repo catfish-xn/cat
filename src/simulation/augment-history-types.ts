@@ -26,6 +26,7 @@ export interface AugmentGrowth {
 }
 export type PreviousAugmentBattle = { readonly status: 'unavailable' | 'none' } | { readonly status: 'recorded'; readonly round: number; readonly roundId: string; readonly battleId: string; readonly roster: HistoryRoster };
 export type AugmentFactData =
+  | { readonly kind: 'orb-opened'; readonly choiceId: string; readonly orbId: string; readonly tier: 'prismatic' }
   | { readonly kind: 'acquire'; readonly choiceId: string; readonly definitionId: string; readonly goldBefore: number; readonly hpBefore: number; readonly roster: HistoryRoster; readonly previousBattle: PreviousAugmentBattle; readonly preparationElapsedMs: number }
   | { readonly kind: 'round-entry'; readonly roster: HistoryRoster }
   | { readonly kind: 'positions'; readonly roster: HistoryRoster }

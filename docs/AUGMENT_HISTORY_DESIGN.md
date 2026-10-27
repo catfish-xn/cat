@@ -142,3 +142,9 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 ## Batch 5 H3 接入（2026-10-27）
 
 新增只读 `readAugmentFacts(state, kind)`：返回该类型全部事实的独立副本，缺少历史节仍报错；指定轮仍使用 `requireAugmentFacts`。B5-31 从 PvP 阵容读取本人出战英雄，结算调用 `recordAugmentGrowth` 并沿资源合星血缘继承锁和成长。B5-57 从入轮快照读取棋盘英雄和原始锅铲，使用 `recordAugmentGrowth` 按携带者产生生命成长。战斗输入和双边冻结快照携带已认证历史的累计成长，离线战斗恢复对照历史开战前缀；联机席位保存仍由独立服务器 authority 认证。未向网络开放记录事实的命令。
+
+## 2026-10-27 B5-82／B5-85 集成（G5）
+
+`expected-unexpectedness` 使用现有 `acquire` 持有者登记，确保联机存档整体金币与奖励状态也必须匹配独立服务器 authority；骰子结果仍独立重算，不从历史收据读金额。`prismatic-pipeline` 登记为 `orb-opened` 历史持有者。沿用 `augment-history-v1`，增加事实 `{kind:'orb-opened',choiceId,orbId,tier:'prismatic'}`，其连续 sequence、席位、自然轮、roundId、resourcePrefix 由现有 `appendAugmentFact` 填写。仅在通用开球命令把最后一项实际授予后写入，领取前已持有来源才有效；排队、部分领取、弃置、失败和重复均不写。规则通过 `readAugmentFacts(state,'orb-opened')` 读取，不能从当前金币或 receipt.claimedRoundId 推测同轮取得前后顺序。
+
+金币及礼物均由事实中的 orbId、来源 choiceId、取得节点、席位和种子重算；事实不携带奖励金额或抽样结果。在线仍由 `Room.augmentHistoryAuthority` 的独立品牌句柄认证完整候选状态；缺历史／缺 authority／改事实拒绝，不自签名、不迁移补零。无需新增客户端命令、协议或 epoch 录制。

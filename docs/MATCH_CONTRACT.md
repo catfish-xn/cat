@@ -1500,3 +1500,18 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
 - `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
 - 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。
+
+## G5：B5-82／B5-85 奖励接口（2026-10-27，P）
+
+公共命令、传输与存档外层版本不变；新规则由 `src/simulation/augment-pool-batch5-g5*.ts` 实现，静态内容为 `content/augment-pool-batch5-g5.ts`。三次掷骰接到现有 `selectChoice` 和自然轮入口，管道接到通用 `claimOrb`／结算 FIFO；服务器继续只调用现有共享池事务，无 `src/server/` 调用点变更。
+
+| 导出 | 输入／输出与失败 |
+| --- | --- |
+| `expectedUnexpectednessRolls(state: MatchState)` | 从已拥有来源重算已到期的阶段、round、三骰、档位、奖励和唯一金币键；无来源返回空数组。`expectedDiceBand(dice: readonly number[]): ExpectedDiceBand` 对非三个 1–6 整数抛 `RangeError('Invalid expected dice')`。 |
+| `expectedUnexpectednessRerolls(state: MatchState): number` | 只返回该强化已确定的免费刷新额度，不读取生产奖励收据；现有账本负责消费。 |
+| `pipelineExtraOrbs(state: MatchState): OrbPlan[]` | 联机下一 PvE 到期后重算一球；选择前／尚未到期／单人返回空数组。标准球内容使用现有 `sampleOrbBox(...,'ultraPlus')`。 |
+| `pipelineBonusPlan(state: MatchState)` | 经 `readAugmentFacts` 读取已实际完全开球的证据，重算 `round/orbId/reward/giftOwner/receiptId`；无来源返回空数组，缺历史沿用历史 API 的明确拒绝。 |
+| `batch5G5GiftPlan(state: MatchState): AugmentGift[]` | 合并三次骰子和已开棱彩球的礼物，复用 P-AG1；英雄排入现有共享池奖励球，锻造器仍受备战席容量约束。 |
+| `drainBatch5G5Gold(state: MatchState): MatchState` | 由已确定计划调用 `grantMechanicGold`，同键不重发；内部非法授权抛 RangeError。`validateBatch5G5Rewards(state): void` 检查完整金币计划、唯一性、金额、回合、礼物覆盖和历史，篡改抛 RangeError。 |
+
+`claimOrb` 失败原因继续使用原枚举 `stale-round / unknown-orb / already-claimed / wrong-phase / shared-pool-required / seat-eliminated / invalid-loot`，失败返回原状态和原池，无事件与随机消耗。额外球未杀载体时不可领取；部分领取返回原有成功语义并保留未领条目，全部领取后才产生一次管道历史事实和加奖。金币收据 namespace 为 `augment-pool-batch5-g5`；物品／英雄／工具沿用独立礼物计划的 `augment-pool-batch1` namespace。全部数值、证据级别和主表保留项见 S13_RULES_GAP 的 P-B5-82／P-B5-85。

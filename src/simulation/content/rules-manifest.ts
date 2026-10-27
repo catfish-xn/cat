@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_G5, EXPECTED_UNEXPECTEDNESS_REWARDS, PRISMATIC_PIPELINE_REWARDS } from './augment-pool-batch5-g5';
 import { AUGMENT_BATCH5_H1 } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3 } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H4_SOURCE } from './augment-pool-batch5-h4';
@@ -48,6 +49,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch5H1:{version:'augment-pool-batch5-h1-v25',content:AUGMENT_BATCH5_H1,convention:'P-B5-07-and-10-2026-10-27'},
   augmentPoolBatch5H3:{version:'augment-pool-batch5-h3-v1',content:AUGMENT_BATCH5_H3,convention:'P-B5-2026-10-27'},
   augmentPoolBatch5H4:{version:'augment-pool-batch5-h4-v1',content:AUGMENT_BATCH5_H4,source:AUGMENT_BATCH5_H4_SOURCE,convention:'P-B5-2026-10-27'},
+  augmentPoolBatch5G5:{version:'augment-pool-batch5-g5-v1',content:AUGMENT_BATCH5_G5,dice:EXPECTED_UNEXPECTEDNESS_REWARDS,pipeline:PRISMATIC_PIPELINE_REWARDS,history:'augment-history-v1/acquire+orb-opened/independent-server-authority',convention:'P-B5-82-85-2026-10-27',random:'fnv1a32-source-seat-choice-stage/lcg32-rejection-high-buckets'},
   augmentPoolBatch5H6:{version:'augment-pool-batch5-h6-v1',content:AUGMENT_BATCH5_H6,convention:'P-B5-37-38-2026-10-27'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch5H5:{version:'augment-pool-batch5-h5-v1',content:AUGMENT_BATCH5_H5,convention:'P-B5-35-36-H5-2026-10-27',

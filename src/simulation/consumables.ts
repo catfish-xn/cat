@@ -1,3 +1,4 @@
+import { pipelineExtraOrbs } from './augment-pool-batch5-g5-pipeline';
 import { isAnvil } from './content/anvils';
 import { validateMasterworkChoice } from './masterwork-choice';
 import { ITEM_DEFINITIONS as ORDINARY_ITEMS } from './content/items';
@@ -149,7 +150,7 @@ export function validateConsumableState(state:MatchState):void {
   for(const receipt of state.m8.loot.receipts){
     if(receipt.payload.kind!=='consumable'||receipt.resolution==='forfeited'){check(!receipt.grantedConsumableIds);continue;}
     const ids=receipt.grantedConsumableIds;check(ids?.length===1&&receipt.payload.quantity===1&&Object.hasOwn(CONSUMABLE_DEFINITIONS,receipt.payload.definitionId));
-    const drop=state.m8.loot.frozen.rounds.flatMap(r=>r.encounterPlan.drops).find(d=>d.dropId===receipt.dropId);check(drop);
+    const drop=[...state.m8.loot.frozen.rounds.flatMap(r=>r.encounterPlan.drops),...pipelineExtraOrbs(state).flatMap(o=>o.entries)].find(d=>d.dropId===receipt.dropId);check(drop);
     all.push({id:ids![0],definitionId:receipt.payload.definitionId,roundId:receipt.claimedRoundId??drop!.roundId});
   }
   all.sort((a,b)=>Number(a.id.slice(11))-Number(b.id.slice(11)));

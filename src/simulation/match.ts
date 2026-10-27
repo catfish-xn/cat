@@ -633,7 +633,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
   const drained=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));
-  const gifted=drained.augments.some(a=>a.definitionId==='a-change-of-fate')?drainP2Gifts(drained):drained;
+  const gifted=drained.augments.some(a=>a.definitionId==='a-change-of-fate'||a.definitionId==='expected-unexpectedness'||a.definitionId==='prismatic-pipeline')?drainP2Gifts(drained):drained;
   const shopEntry=enterShopAugmentRound(gifted),shopEvents=stampMatchEvents(shopEntry,mechanicGrantEvents(drained,shopEntry));
   prepared=shopEvents.state;openingEvents.push(...applied.events,...mechanicGrantEvents(applied.state,drained),...shopEvents.events);
   if (prepared.phase === 'gameOver') {

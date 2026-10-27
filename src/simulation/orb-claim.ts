@@ -1,3 +1,4 @@
+import { pipelineExtraOrbs, recordPipelineOpening } from './augment-pool-batch5-g5-pipeline';
 import { soloShopOrb } from './shop-orbs';
 import { openingAnvilOrbs, g23AnvilOrbs, grantAnvilUnit } from './anvils';
 import { openingRewardOrbs, claimOpeningReward, isOpeningRewardOrb } from './opening-batch-rewards';
@@ -18,6 +19,7 @@ export const ORB_CLAIM_PHASES: readonly MatchState['phase'][] = ['preparation', 
 export const REWARD_ORB_TIER = 'gray' as const;
 export function allClaimableOrbPlans(state: MatchState) {
   return [...state.m8.loot.frozen.rounds.flatMap(r=>r.orbs.map(o=>({...o,source:'pve' as const}))),
+    ...pipelineExtraOrbs(state).map(o=>({...o,source:'pve' as const})),
     ...state.m8.loot.rewardOrbs??[]];
 }
 export function unclaimedOrbPlans(state: MatchState) {
@@ -40,6 +42,13 @@ export function enqueueRewardOrb(state: MatchState, receiptId: string, definitio
 
 /** Match owns stamping and equipment commits. Shared pool policy is transaction-local. */
 export function planOrbClaim(state: MatchState, orbId: string, expectedRound: number, policy?:UnitLootPolicy): MultiplayerCommandResult {
+  const orb = unclaimedOrbPlans(state).find(o => o.orbId === orbId);
+  const result = executeOrbClaim(state, orbId, expectedRound, policy);
+  if (!result.ok || !orb || orb.tier !== 'prismatic') return result;
+  return { ...result, state: recordPipelineOpening(state, result.state, orb,
+    unclaimedOrbPlans(result.state).some(o => o.orbId === orbId)) };
+}
+function executeOrbClaim(state: MatchState, orbId: string, expectedRound: number, policy?:UnitLootPolicy): MultiplayerCommandResult {
   const fail=(reason:Extract<MultiplayerCommandResult,{ok:false}>['reason']):MultiplayerCommandResult=>({ok:false,state,reason});
   if (!state.multiplayer&&!soloShopOrb(state,orbId)&&!orbId.startsWith('g23-anvil:')&&!orbId.startsWith('opening-anvil:')&&!allClaimableOrbPlans(state).some(o=>o.orbId===orbId&&o.entries.some(e=>e.payload.kind==='forge'))&&!orbId.startsWith('family:orb:')&&!isOpeningRewardOrb(orbId)&&!orbId.startsWith('opening-batch-b/')) return fail('multiplayer-required');
   if (state.multiplayer?.status==='eliminated') return fail('seat-eliminated');
