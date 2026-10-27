@@ -1,6 +1,7 @@
 import { projectBatch5Items, type InventoryPlan } from './augment-pool-batch5-s3a';
 import { isS3bConversion, validS3bConversion } from './augment-pool-batch5-s3b-conversions';
 import { academicCraft } from './augment-pool-batch5-s3b';
+import { canonicalContent } from './content';
 import { isAnvil } from './content/anvils';
 import { trainerStar, TRAINER_ID } from './content/opening-batch-b';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
@@ -40,6 +41,7 @@ export type ItemAcquisitionSource =
   | { readonly kind: 'mechanic'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
+  | import('./augment-history-types').AugmentItemTransform
   | {readonly kind:'dual-purpose-selected';readonly choiceId:string;readonly level:number;readonly xp:number}
   | {readonly kind:'dual-purpose-xp-purchased';readonly levelBefore:number;readonly xpBefore:number;readonly generation:number;readonly settled:boolean}
   | {readonly kind:'form-swapper-selected';readonly choiceId:string}
@@ -85,6 +87,7 @@ export interface ProvenanceCombatSettlement {
 export interface ResourceProvenanceContext {
   readonly batch5Inventory?:InventoryPlan;
   readonly s3bState?: Pick<import('./match-types').MatchState,'augments'|'resourceProvenance'|'seed'>;
+  readonly augmentHistory?: import('./augment-history-types').AugmentHistory;
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
   readonly g23RadiantRound?:number;
   readonly carouselReceipts?:readonly import('./carousel-types').CarouselReceipt[];
@@ -566,6 +569,17 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       const key = source.kind === 'schedule' ? `schedule:${source.eventId}` : source.kind==='carousel'?`carousel-item:${source.receiptId}`:source.kind==='mechanic'?`mechanic:${source.receiptId}`:`loot:${source.receiptId}`;
       const definitionId = takeBirth(key, 'item', entry.itemId, entry.roundId);
       items.set(entry.itemId, { id: entry.itemId, definitionId }); nextItemSerial++;
+    } else if(entry.kind==='augment-item-transform'){
+      keys(entry,[...common,'choiceId','receiptId','input','outputs']);
+      const proof=context.augmentHistory?.facts.find(f=>f.kind==='augment-item-transform'&&f.receiptId===entry.receiptId);
+      requireValue(proof&&proof.kind==='augment-item-transform'&&proof.resourcePrefix===index&&proof.roundId===entry.roundId
+        &&canonicalContent([proof.choiceId,proof.input,proof.outputs])===canonicalContent([entry.choiceId,entry.input,entry.outputs]),'augment transform history');
+      requireValue(items.get(entry.input.id)?.definitionId===entry.input.definitionId&&Array.isArray(entry.outputs)&&entry.outputs.length>0&&entry.outputs.length<=2,'augment transform input');
+      items.delete(entry.input.id);
+      for(const output of entry.outputs){
+        requireValue(output.id===`item-${nextItemSerial}`&&!!ITEM_DEFINITIONS[output.definitionId]&&output.location.kind==='inventory','augment transform output');
+        items.set(output.id,{id:output.id,definitionId:output.definitionId});nextItemSerial++;
+      }
     } else if(entry.kind==='g23-item-converted'){
       keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(isS3bConversion(entry)?!!context.s3bState&&items.get(entry.itemId)?.definitionId===entry.from&&validS3bConversion(context.s3bState,entry,entry.roundId):context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
     } else if (entry.kind === 'item-equipped') {

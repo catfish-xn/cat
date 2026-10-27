@@ -9,6 +9,8 @@ import type { HistorySeat } from './augment-history-types';
 import { applyBatch5H8Acquisition } from './augment-pool-batch5-h8';
 import { augmentLevelCap, grantMatchXp, h12SelectionAllowed } from './augment-pool-batch5-h12-progression';
 import { recordAugmentOfferLevel } from './augment-history';
+import { enterH13ItemRound } from './augment-pool-batch5-h13-entry';
+import { salvageSoldItems } from './augment-pool-batch5-h13-salvage';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
 import { applyHeadStart, headStartShopDisabled, sellPreparedUnit } from './augment-pool-batch5-h12';
@@ -382,6 +384,7 @@ function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Un
   if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
   let { state: sold, events } = sellPreparedUnit(state, unit, capacity);
   const returnedState=sold; sold=salvageSale(state,sold,unitId);
+  sold=salvageSoldItems(state,sold,unitId);
   events.unshift(...mechanicGrantEvents(returnedState,sold));
   if (capacity) { const granted = grantDirectLoot(sold,false,unitLootPolicy); sold=granted.state; events.push(...granted.events); }
   if(sold.phase!=='combat'&&!isCombatRosterLocked(sold)){const drained=drainG23Rewards(sold,unitLootPolicy,events);events.push(...mechanicGrantEvents(sold,drained));sold=drained;}
@@ -635,7 +638,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   state=pandoraRoundEntry(state,round,definition.roundId);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
-  state = grantCookingPotGrowth(recordAugmentRoundEntry({...state, round}));
+  state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round})));
   if(!state.multiplayer&&state.augments.some(a=>a.definitionId==='scoreboard-scrapper'))
     state=recordAugmentTable(state,'entry',[{...historyRoster(state),seatId:'solo',index:0,hp:state.playerHp,alive:true,rank:1,eliminatedRound:null}]);
   const entryLevel = state.level;
@@ -689,7 +692,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
     state=pandoraRoundEntry(state,definition.ordinal,definition.roundId);
-    state = grantCookingPotGrowth(recordAugmentRoundEntry({...state, round: definition.ordinal}));
+    state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round: definition.ordinal})));
     const entryLevel=state.level;
     const progression=grantMatchXp(state,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};

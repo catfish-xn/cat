@@ -47,6 +47,8 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "dhampyr":{node:'3-2',seed:3,rerollSlots:[0,1,2]},
   "trait-tracker":{node:'3-2',seed:39},
   'sponging':{node:'3-2',seed:0,rerolls:[0]},
+  "artifactory":{node:'3-2',seed:47},
+  "salvage-bin-plus":{node:'3-2',seed:23},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},

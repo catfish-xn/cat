@@ -19,6 +19,7 @@ import { AUGMENT_BATCH5_S8B } from './augment-pool-batch5-s8b';
 import { AUGMENT_BATCH5_S8C } from './augment-pool-batch5-s8c';
 import { AUGMENT_BATCH5_S11A } from './augment-pool-batch5-s11a';
 import { AUGMENT_BATCH5_S8A } from './augment-pool-batch5-s8a';
+import { AUGMENT_BATCH5_H13 } from './augment-pool-batch5-h13';
 import { AUGMENT_BATCH5 } from './augment-pool-batch5';
 import { AUGMENT_BATCH5_H5 } from './augment-pool-batch5-h5';
 import { AUGMENT_BATCH4, AUGMENT_BATCH4_BLOCKED } from './augment-pool-batch4';
@@ -81,6 +82,10 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch5H10: { content: AUGMENT_BATCH5_H10, convention: 'P-B5-60/61-2026-10-27', tracker: 'successful-preparation-command-8-nonunique-traits-6-of-22-emblems-without-replacement-once', sniper: 'first-opening-8-cap-32-cell-or-absence-reset-main-instance-merge', history: 'augment-history-v1' },
   augmentPoolBatch5H11:{version:'augment-pool-batch5-h11-v25',content:AUGMENT_BATCH5_H11,convention:'P-B5-76-79-2026-10-27',pool:'G24-CHEST-01',rng:'combat-lcg32-rejection-uniform',deaths:'ordered-first-ordinary-hero-deaths-item-then-live-recipient-skip-without-rng',opening:'permanent-slots-before-scrap-nearest-hex-then-id-sample-all-before-grants'},
   augmentPoolBatch5H12:{version:'augment-pool-batch5-h12-v25',content:AUGMENT_BATCH5_H12,convention:'P-B5-80-84-86-2026-10-27',history:'augment-history-v1'},
+  augmentPoolBatch5H13:{version:'augment-pool-batch5-h13-v1',content:AUGMENT_BATCH5_H13,convention:'P-B5-H13-2026-10-27',transforms:'permanent-ordinary-only;new-serials;history-v1-authenticated',
+    timing:'pre-grant-round-entry-snapshot;after-acquisition-round;zero-input-marker;one-transform-per-instance',
+    sampling:'sorted-existing-category-pools;uniform-with-replacement;unchanged-allowed;fnv1a32-seat-choice-round-item-lcg32-v1',
+    salvage:'sale-returned-permanent-recipe-items-only;four-settled-pvp-including-acquisition-round;one-component'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch5H5:{version:'augment-pool-batch5-h5-v1',content:AUGMENT_BATCH5_H5,convention:'P-B5-35-36-H5-2026-10-27',
     selection:'carousel-rng-after-xor-42533535-seat-index-choice-id-fnv-lcg32-rejection-v1',

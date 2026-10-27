@@ -34,6 +34,7 @@ import { restoreFrozenLootLedger } from './loot-freeze';
 import { lootReceiptId, compareLootChoices } from './loot-identity';
 import { makeLootPendingChoice, orderedUnresolvedLootChoices } from './loot-choice';
 import { readCombatStrategyInputs, restoreCombatInput, type CombatInputBasis } from './combat-input';
+import { replayH13Transform } from './augment-pool-batch5-h13-transforms';
 import { foldResourceProvenance, validateResourceReceipts, type ResourceFact, type ResourceProvenanceContext } from './resource-provenance';
 import { getCatalogRoundById } from './round-selectors';
 import { transferUpgradeResources } from './upgrades';
@@ -191,6 +192,9 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         const plan = replayCombination(items, preparation, serial, fact, next);
         items = plan.items; serial = plan.nextItemSerial;
         break;
+      }
+      case 'augment-item-transform': {
+        const plan=replayH13Transform(items,serial,fact);items=plan.items;serial=plan.nextItemSerial;break;
       }
       case 'g23-item-converted':
         items = items.map(item => item.id === fact.itemId ? {...item,definitionId:fact.to} : item);
@@ -391,7 +395,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   validateG23Restoration(state,parsedJsonInput);
   const opening = state.resourceProvenance.entries[0];
   check(opening?.kind === 'unit-acquired' && opening.source.kind === 'opening' && opening.source.seatId === (state.sharedPool?.seatId ?? 'solo') && (state.sharedPool || opening.source.seed === state.seed), 'opening stream identity');
-  const context: ResourceProvenanceContext = { s3bState:state, batch5Inventory:batch5InventoryPlan(state), g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
+  const context: ResourceProvenanceContext = { augmentHistory:state.augmentHistory, s3bState:state, batch5Inventory:batch5InventoryPlan(state), g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
   const inventoryPlan=batch5InventoryPlan(state);validateBatch5Inventory(state,inventoryPlan);
@@ -477,8 +481,9 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   let inventoryPrefix=basis.provenancePrefixLength;
   const combinations = () => {
     items=projectBatch5Items(items,inventoryPlan,cursor,state.round,inventoryPrefix,state.round);inventoryPrefix=cursor;
-    while (entries[cursor]?.kind==='item-equipped'||entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
+    while (entries[cursor]?.kind==='augment-item-transform'||entries[cursor]?.kind==='item-equipped'||entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
       const tool=entries[cursor];
+      if(tool.kind==='augment-item-transform'){const plan=replayH13Transform(items,nextItem,tool);items=plan.items;nextItem=plan.nextItemSerial;cursor++;continue;}
       if(tool.kind==='item-equipped'){
         check(!committed||state.phase!=='gameOver','terminal equipment operation');
         items=replayEquipment(items,preparation,nextItem,tool).items;
@@ -631,6 +636,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     saleGold += sale.goldGranted;
     preparation = {...preparation,units:preparation.units.filter(value => value.id !== sale.unitId)};
     items = items.map(item => item.location.kind === 'unit' && item.location.unitId === sale.unitId ? {...item,location:{kind:'inventory'}} : item);
+    combinations();
     if (binding?.unitId === sale.unitId) binding = null;
     for (const slot of direct) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
   }

@@ -21,6 +21,8 @@ import { validateBatch5H8Gold } from './augment-pool-batch5-h8';
 import { trackerGiftPlan } from './augment-pool-batch5-h10-tracker';
 import { AUGMENT_BATCH5_H10 } from './content/augment-pool-batch5-h10';
 import { AUGMENT_BATCH5_H12 } from './content/augment-pool-batch5-h12';
+import { AUGMENT_BATCH5_H13 } from './content/augment-pool-batch5-h13';
+import { recordH13Settlements, salvageRewardPlan as h13SalvageRewardPlan } from './augment-pool-batch5-h13-salvage';
 import { validateShopAugments } from './shop-augments';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
 import { batch5RewardPlan, validateBatch5Gold } from './augment-pool-batch5-progress';
@@ -45,13 +47,13 @@ import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH5_H12[a.definitionId]??AUGMENT_BATCH5_H1[a.definitionId as keyof typeof AUGMENT_BATCH5_H1]??(AUGMENT_BATCH5_H3 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_B5A[a.definitionId as keyof typeof AUGMENT_BATCH5_B5A]??AUGMENT_BATCH5_S3A[a.definitionId]??AUGMENT_BATCH5_S3B[a.definitionId]??(AUGMENT_BATCH5_S3D as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_S8B as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_H10[a.definitionId]??AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(trackerGiftPlan(state),academicGiftPlan(state),salvageRewardPlan(state),batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state),replicationGiftPlan(state),pilferRewardPlan(state),gloriousEvolutionRewardPlan(state),hardCommitRewardPlan(state));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH5_H13[a.definitionId]??AUGMENT_BATCH5_H12[a.definitionId]??AUGMENT_BATCH5_H1[a.definitionId as keyof typeof AUGMENT_BATCH5_H1]??(AUGMENT_BATCH5_H3 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_B5A[a.definitionId as keyof typeof AUGMENT_BATCH5_B5A]??AUGMENT_BATCH5_S3A[a.definitionId]??AUGMENT_BATCH5_S3B[a.definitionId]??(AUGMENT_BATCH5_S3D as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_S8B as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_H10[a.definitionId]??AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(trackerGiftPlan(state),academicGiftPlan(state),salvageRewardPlan(state),h13SalvageRewardPlan(state),batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state),replicationGiftPlan(state),pilferRewardPlan(state),gloriousEvolutionRewardPlan(state),hardCommitRewardPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */
 export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):MatchState {
  // Dummify/Golemify first: their removal frees the bench for the dummy or golem they grant.
- let state=drainBatch3Forming(initial),progressed:boolean;
+ let state=drainBatch3Forming(recordH13Settlements(initial)),progressed:boolean;
  do {
   progressed=false;
   for(const gift of batch1GiftPlan(state)){

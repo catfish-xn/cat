@@ -24,6 +24,9 @@ const initial={
  'academic-research':[Q('component'),U('lux'),U('ezreal')],
  'snipers-nest':[U('zeri')],
  'head-start':[R(1,4,2)],'max-cap':[I('TFT_Item_TacticiansScepter')],
+ 'pandoras-items-iii':[Q('radiant')],
+ 'artifactory':[U('TFT_ArmoryKeyOrnn'),C('magnetic-remover',2)],
+ 'salvage-bin-plus':[Q('completed')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
  'cooking-pot':[I('frying-pan')],
@@ -150,6 +153,7 @@ function rewardPlan(s,env){
     gifts.push(...expand(s,owner(a,['trait-tracker'],fact.round),pool.slice(0,6).map(id=>I(id)),env));
    }
   }
+  if(a.definitionId==='salvage-bin-plus'){const due=s.roundResults.filter(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp')[3];if(due)gifts.push(...expand(s,owner(a,['h13-four-pvp'],due.round),[Q('component')],env));}
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;

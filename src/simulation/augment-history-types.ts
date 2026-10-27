@@ -25,8 +25,15 @@ export interface AugmentGrowth {
   readonly attackDamageBps: number; readonly abilityPowerCenti: number;
 }
 export type PreviousAugmentBattle = { readonly status: 'unavailable' | 'none' } | { readonly status: 'recorded'; readonly round: number; readonly roundId: string; readonly battleId: string; readonly roster: HistoryRoster };
+export type AugmentItemTransform = {
+  readonly kind: 'augment-item-transform'; readonly choiceId: string; readonly receiptId: string;
+  readonly input: ItemInstance; readonly outputs: readonly ItemInstance[];
+};
 export type AugmentFactData =
   | { readonly kind: 'offer-level'; readonly choiceId: string; readonly generation: number; readonly level: number; readonly xp: number }
+  | AugmentItemTransform
+  | { readonly kind: 'inventory-transform-entry'; readonly choiceId: string; readonly itemIds: readonly string[] }
+  | { readonly kind: 'settled-combat'; readonly settlementId: string; readonly roundKind: 'pve'|'pvp' }
   | { readonly kind: 'acquire'; readonly choiceId: string; readonly definitionId: string; readonly goldBefore: number; readonly hpBefore: number; readonly roster: HistoryRoster; readonly previousBattle: PreviousAugmentBattle; readonly preparationElapsedMs: number }
   | { readonly kind: 'trait-activation'; readonly choiceId: string; readonly roster: HistoryRoster }
   | { readonly kind: 'round-entry'; readonly roster: HistoryRoster }

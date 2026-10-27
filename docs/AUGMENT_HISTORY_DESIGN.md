@@ -210,3 +210,15 @@ B5-80 `head-start` 使用 `requireAugmentFacts(...,'acquire',...)` 的正式阵�
 `recordedOfferFilter(record,drawIndex,state?)` 的恢复调用通过 requireAugmentFacts 读取恰好一个同 generation 的报价等级，重建当时的候选池；现场重抽使用当前等级，选取事务再次拒绝已升至八级的旧报价（invalid-choice），超时选择跳过失效项。单人继续从合法起点重演全部公共命令，联机继续逐字段比较独立服务器 authority；缺节、删改报价事实或缺 generation 均拒绝。原有外层 schema/save/replay/command 和网络封套不变，不迁移缺证旧档、不重录 epoch。
 
 调用点：`match.ts / enterScheduledEvents, execute_rerollAugment` 记录报价等级；`augment-offers.ts / augmentOfferAllowed, augmentOptionViews, validateAugmentOfferHistory` 过滤、投影与验证；`augment-history.ts / needsAugmentHistory, recordAugmentOfferLevel`、types/owners/restore 扩展事实及预检。房间沿现有 `Room.handle/apply/applyTimeouts/onChoiceDeadline → runSharedMatchCommand` 和 `nextSharedRound` 调用，不新增服务器状态或网络命令。对象、JSON、序列化离线恢复，以及对象/JSON/canonicalContent 联机恢复均有篡改测试；联机恢复始终要求权威句柄，`serializeMatch` 本来只支持离线存档。
+
+## B5-H13 装备强化扩展（2026-10-27）
+
+实际开放 B5-20/22/23 后，三者加入持有者表；外层仍为 schema/save/replay/command=12/8/8/7，节内仍为 `augment-history-v1`。规则和内容身份升到 v25 并重算摘要；不重录 epoch。无持有者仍不写本节。
+
+- `settled-combat {settlementId,roundKind}`：B5-20 取得轮起，在真实结算奖励 drain 中记录一次，与 `roundResults` 的同轮结算 ID 和 PvP/PvE 类型严格对应；供给轮不写。奖励通过 `requireAugmentFacts` 读取并核对完整结算行，第四场 PvP 只发一次组件，不另存计数器。
+- `augment-item-transform {choiceId,receiptId,input,outputs}`：出售归还后的库存成装拆解、入轮神器转换或分类重掷，在同一规则事务中用 `appendAugmentFact` 写入。输入是带位置的永久实例，输出为递增新实例；唯一 ID 为 `['batch5-h13',choiceId,round,input.id]`。同收据同输入/输出幂等，冲突拒绝。
+- `inventory-transform-entry {choiceId,itemIds}`：B5-22/23 从既有 `round-entry.roster` 冻结本轮符合资格的库存物品，按实例 ID 排序，转换后写完成标记。零符合项也写标记；取得当轮不重掷，后续普通、选秀、PvE 和加时自然轮同口径。装备在英雄上（包括备战席英雄）不等于库存。
+
+转换在资源来源账本中保留同名有序行，必须与本节事实的 `resourcePrefix`、回合、收据、输入输出完全一致；它只用于装备来源与顺序重建，不是另一份可自签的奖励证明。`preflightH13Fact` 限制持有者、轮次、1/2件输出、最多1024个唯一入轮物品 ID，并绑定真实结算。最终认证仍由原有单人命令重演或独立房间 authority 完成；修改两份账本和最终物品也不能绕过。
+
+本批新增调用点：`match.sellUnit`；`match.nextRound/advanceMultiplayerRound`；`augment-pool-grants.batch1GiftPlan/drainBatch1Gifts`；`resource-provenance.foldResourceProvenance`；`b8-restore.validateHistoricalEquipment/validateB8Resources/replayCurrentSuffix`；`temporary-equipment.validateMatchEquipment`（已拆掉/转换的窃贼手套仍保留历史父物品）；`shop-history.anomalyRecovery`（转交同节证据）；`augment-history-restore.preflightAugmentHistory`。`src/server`、`src/server-entry` 无修改，房间现有 choose/sell/combine/equip/openAnvil/useConsumable、settlement 和 advance 流程即为生产调用路径；服务器不计算新规则。

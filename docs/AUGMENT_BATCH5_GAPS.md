@@ -224,6 +224,8 @@
 
 #### B5-20 打捞桶+（需要项目约定）
 
+- **2026-10-27 已实现并开放**：用户授权采用下述推荐，执行与存档认证见 `S13_RULES_GAP.md` 的 P-B5-H13-EXEC、`MATCH_CONTRACT.md` 的 v25 B5-H13 节；保留下述原始缺口作为依据。
+
 - 身份：`TFT8_Augment_SalvageBinPlus`。
 - 已有原文／字段：`A[166].apiName=TFT8_Augment_SalvageBinPlus`，`description_zh_cn`：“立刻获得1件随机成装，并在4个玩家对战回合之后提供1个基础装备。出售弈子会将其携带的成装拆分成基础装备(冠冕系装备和纹章除外)。” `effects={"NumRounds":4.0}`；原始map22定位为 `A[166].map22_node={6ea94f15}`，对应 `data/map22-augment-item-nodes.json.nodes["{6ea94f15}"].constants`（无constants则不以空对象推测隐藏值）。
 - 原计划缺口／本次细化：非普通合成成装如何拆；临时装备、神器/辅助/光明装备例外；累计PvP从选择当轮算否。
@@ -240,6 +242,8 @@
 
 #### B5-22 神器工厂（需要项目约定）
 
+- **2026-10-27 已实现并开放**：用户授权采用下述推荐，执行与存档认证见 `S13_RULES_GAP.md` 的 P-B5-H13-EXEC、`MATCH_CONTRACT.md` 的 v25 B5-H13 节；保留下述原始缺口作为依据。
+
 - 身份：`TFT_Augment_Artifactory`。
 - 已有原文／字段：`A[222].apiName=TFT_Augment_Artifactory`，`description_zh_cn`：“每回合开始时，你备战席上的各个成装都将转变为一件随机的神器装备。获得1个【神器锻造器】和2个【拆卸器】。” `effects={"Health":50.0,"NumItems":1.0,"NumRemovers":2}`；原始map22定位为 `A[222].map22_node={76eab04f}`，对应 `data/map22-augment-item-nodes.json.nodes["{76eab04f}"].constants`（无constants则不以空对象推测隐藏值）。
 - 原计划缺口／本次细化：可转换成装类别、神器是否再变、候选权重及是否同物品回滚；Health=50是否被使用。
@@ -247,6 +251,8 @@
 - 分类与后续：**需要项目约定**。**P-B5-22（P，2026-10-25，用户提案）**：提案：仅普通库存成装转现有已支持神器池，神器/其他特殊类不再转；等权有放回，忽略未绑定描述的Health字段且原值保留；不据孤立常量给队伍加50HP。
 
 #### B5-23 潘朵拉的装备 III（需要项目约定）
+
+- **2026-10-27 已实现并开放**：用户授权采用下述推荐，执行与存档认证见 `S13_RULES_GAP.md` 的 P-B5-H13-EXEC、`MATCH_CONTRACT.md` 的 v25 B5-H13 节；保留下述原始缺口作为依据。
 
 - 身份：`TFT9_Augment_PandorasRadiantBox`。
 - 已有原文／字段：`A[271].apiName=TFT9_Augment_PandorasRadiantBox`，`description_zh_cn`：“回合开始时：你备战席上的装备会随机变化。  获得1件随机光明武器。” `effects={}`；原始map22定位为 `A[271].map22_node={d0aaffea}`，对应 `data/map22-augment-item-nodes.json.nodes["{d0aaffea}"].constants`（无constants则不以空对象推测隐藏值）。
