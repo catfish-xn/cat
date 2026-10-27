@@ -17,7 +17,7 @@ import { createScopedContentFreezer, freezeContent, freezeContentSteps } from '.
 import { buildStrategySnapshotSteps, enforcerConfiscates } from './strategy-snapshot';
 import { createCombatWithEvents, createCombatWithEventsSteps, stepCombat, type CombatState, type CombatStep } from './combat';
 import { toLedgerEvents } from './combat-ledger';
-import { createImmutableJsonChecker } from './immutable-json';
+import { createScopedLedgerCertifier } from './immutable-json';
 import { effectKey } from './effects';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { validateSeed } from './rng';
@@ -261,20 +261,19 @@ export function* startTwoSidedBattleSteps(input: BattleInput, options?: BattleRe
   yield;
   const start = yield* createCombatWithEventsSteps(checked.preparation,checked.strategy,checked.battleId,checked.battleSeed);
   yield;
-  const freezeBattle = createScopedContentFreezer();
-  const immutableJson = createImmutableJsonChecker();
+  const ledger = createScopedLedgerCertifier();
+  const freezeBattle = ledger.freeze;
   freezeBattle(start.state);
   yield* canonicalContentSteps(start.state);
   yield;
   const events: BattleResult['events'][number][] = [];
   const appendEvents = (step: CombatStep) => {
     for (const event of toLedgerEvents(step.events)) {
-      freezeBattle(event);
-      // The complete deeply frozen plain-data proof checks every field (and
-      // rejects accessors, sparse arrays and non-finite values). Encoding an
-      // unused canonical string adds no evidence. Exotic graphs still take the
-      // original encoder after the immutable-data check.
-      if (!immutableJson(event)) canonicalContent(event);
+      // One traversal freezes the event and proves the complete deeply frozen
+      // plain-data graph (rejecting accessors, sparse arrays and non-finite
+      // values). Encoding an unused canonical string adds no evidence. Exotic
+      // graphs still take the original encoder after the immutable-data check.
+      if (!ledger.certify(event)) canonicalContent(event);
       events.push(event);
     }
   };
@@ -344,7 +343,7 @@ export function* startTwoSidedBattleSteps(input: BattleInput, options?: BattleRe
     // Initial and each ledger element were fully checked and frozen before
     // scheduling pauses. Check every remaining field now, without regenerating
     // a whole-battle string. Array ordering and all settlement checks stay below.
-    if (!immutableJson(candidate)) canonicalContent({...candidate,initial:null,events:[]});
+    if (!ledger.certify(candidate)) canonicalContent({...candidate,initial:null,events:[]});
     const candidateReplay = recorder ? recorder.finish(terminal) : null;
     // Publish only after validation and replay finalization both succeed.
     result = candidate;
