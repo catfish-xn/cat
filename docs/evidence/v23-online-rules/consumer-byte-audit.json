@@ -693,6 +693,22 @@
       "currentSha256": "5b1a5460553e698e1e182efaef535413a46e989df273d715a97e368108e4ff77",
       "firstDifferentByte": 0
     },
+    "tests/fixtures/stage5-feedback-before.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5914,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "61a5052f47a275bc4391d4480188fb7697eb6225ff81cea91435c76ac2f79d23",
+      "firstDifferentByte": 0
+    },
+    "tests/fixtures/stage5-feedback-sequence.json": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 50018,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b537a30a1897db698046fb02848efaba846658a69d828fac795e1d9a0b181d37",
+      "firstDifferentByte": 0
+    },
     "tests/fixtures/t13-loot-public.ts": {
       "previousBytes": 7635,
       "currentBytes": 9424,
@@ -2134,6 +2150,14 @@
       "currentBytes": 1412,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "c8329bd0f086edb033ef6fe7bfa09f474913ff816ed7a158c16342dd59bd5a7e",
+      "firstDifferentByte": 0
+    },
+    "tests/stage5-feedback.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6965,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "a504a5b827d1c4b2e476aadeb0814ede06d1b80c26adf4d1ec64dcc52038570b",
       "firstDifferentByte": 0
     },
     "tests/stage5-summary-removal.test.ts": {
