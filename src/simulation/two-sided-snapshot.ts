@@ -1,3 +1,4 @@
+import { UNIT_DEFINITIONS } from './units';
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { drainSetup } from './setup-work';
@@ -111,7 +112,8 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     const growthIds = new Set<string>();
     for (const growth of s.persistentGrowth) {
       record(growth); integer(growth.attackDamageBps, 1);
-      requireSnapshot(units.get(growth.unitId)?.definitionId === 'tristana' && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
+      requireSnapshot(units.has(growth.unitId) && !UNIT_DEFINITIONS[units.get(growth.unitId)!.definitionId]?.summon
+        && (units.get(growth.unitId)!.definitionId === 'tristana' || augmentIds.has('pandoras-bench') || augmentIds.has('recombobulator')) && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
       growthIds.add(growth.unitId);
     }
     if (s.augmentHistoryGrowth) {

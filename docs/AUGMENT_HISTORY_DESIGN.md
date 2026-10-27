@@ -142,3 +142,9 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 ## Batch 5 H3 接入（2026-10-27）
 
 新增只读 `readAugmentFacts(state, kind)`：返回该类型全部事实的独立副本，缺少历史节仍报错；指定轮仍使用 `requireAugmentFacts`。B5-31 从 PvP 阵容读取本人出战英雄，结算调用 `recordAugmentGrowth` 并沿资源合星血缘继承锁和成长。B5-57 从入轮快照读取棋盘英雄和原始锅铲，使用 `recordAugmentGrowth` 按携带者产生生命成长。战斗输入和双边冻结快照携带已认证历史的累计成长，离线战斗恢复对照历史开战前缀；联机席位保存仍由独立服务器 authority 认证。未向网络开放记录事实的命令。
+
+## Batch 5 R6 接入（2026-10-27）
+
+`pandoras-bench` 登记 round-entry/positions，`recombobulator` 登记 acquire/positions。规则只经 `requireAugmentFacts` / `readAugmentFacts` 读取取得前阵容和自然轮入口，不复制另一份历史节；保持实例ID，已有成长API与资源合星血缘继续工作。`preflightAugmentHistory` 增加两卡变形来源及完整批次检查，涵盖共享法球、选秀和离线三个恢复入口；联机最终状态仍须匹配独立服务器authority。资源有序账本新增 unit-transformed 与 augment-transform-completed，后者覆盖空批次，不新增网络命令或封套版本。
+
+R6 验证：两卡22项专项测试及相关卡池、双边战斗、消耗品、强化历史／报价、身份／体积回归，共12文件182项通过；全部 `--maxWorkers=3`，未跑全套、未放宽断言或超时。类型检查及生产构建通过。content=`fnv1a32-utf16:d473c202`，loot=`fnv1a32-utf16:c50b81d2`；旧epoch未重录。具体调用签名与失败边界见 `MATCH_CONTRACT.md` 的 Batch 5 R6 节，逐卡结果见根目录 `-o`。

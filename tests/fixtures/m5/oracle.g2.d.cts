@@ -70,3 +70,5 @@ export function benchXp(state: unknown): number;
 export function shopWord(state: Pick<MatchState, 'seed' | 'multiplayer'>, parts: readonly (string | number)[]): bigint;
 export function shopForState(state: MatchState, round?: number, subscription?: boolean): { rngState: number; shop: MatchState['shop'] };
 export function shopTransition(state: MatchState, command: unknown): { rngState: number; shop: MatchState['shop']; stolen?: {definitionId: string; starLevel?:2; slot: number} };
+
+export function batch5TransformPlan(before: MatchState, augmentId: string, stock: Readonly<Record<string,number>>): ReturnType<typeof import('./augment-rewards-oracle.cjs').batch5Transforms>;

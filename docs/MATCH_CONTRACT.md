@@ -1500,3 +1500,18 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
 - `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
 - 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。
+
+
+## Batch 5 R6：潘朵拉的备战席与变形重组器（2026-10-27）
+
+只新增 `pandoras-bench`（白银，三个节点，取得2金）和 `recombobulator`（白银，3-2/4-2，取得2拆卸器）。数值、研究状态和用户批准的继承／库存边界见 `S13_RULES_GAP.md` 的 P-B5-27-R6、P-B5-28-R6。规则和内容分别在 `augment-pool-batch5-r6.ts`、`content/augment-pool-batch5-r6.ts`。联机为执行目标；单人选择保留基础金币／工具并正常运行，不模拟无限卡池变形。
+
+| 规则接口／接线 | 输入、输出与失败语义 |
+| --- | --- |
+| `transformPandorasBench(state: MatchState, stock?: Readonly<Record<string,number>>): {state: MatchState; events: readonly MatchEvent[]}` | 在 `nextRound` 与加时 `advanceMultiplayerRound` 的历史入轮快照后、经验／商店／选秀迁入前调用；共享推进传入事务草稿库存。读取 `requireAugmentFacts(state,'round-entry',round)`；无拥有者／取得轮／已完成／非联机返回原对象。 |
+| `transformRecombobulator(state: MatchState, policy?: UnitLootPolicy): {state: MatchState; events: readonly MatchEvent[]}` | `selectChoice` 记录 acquire 后、礼物发放前调用；读取同次取得历史。`rewardPolicy` 经 `bindBatch5R6Stock` 在WeakMap提供草稿库存，无保存字段／客户端参数；共享席缺策略抛错，外层共享事务回退。 |
+| 事务与账本 | 在私有库存副本上选定全部替换，再统一合星；资源事实为 `unit-transformed {choiceId,unitId,from,to,starLevel}`，末尾 `augment-transform-completed {choiceId}`（即使空棋盘或缺货）。实例ID不变，成长和装备按既有合星血缘转移；异常仅在成功变形时清除。`reconcileHoldings` 按同序事实扣返，保留来源份额身份并检查完整星级；失败不发布任何席位／卡池变化。 |
+| `validateBatch5R6Transforms(state): void` / 保存 | `restoreSharedOrbSnapshot` 在既有校验链中检查变形所有者／历史，两个强化注册为 `augment-history-v1` 持有者；整个候选必须匹配独立服务器authority。`restoreCarouselSeat` 沿现有同一history authority认证。缺历史、伪造来源／星级／成长／工具、缺失完成事实均拒绝；无需新封套或重录旧epoch。 |
+| 卡池失败枚举 | 无完整候选是成功事务中的单位不变，不补金、不降星；不增加wire reason。共享事务仍返回既有 `invalid-pool`／`invalid-seat-state` 等失败并保留原pool/state。 |
+
+`src/server/` 无改动：`Room.apply` 的 choose／timeoutChoice、入轮的 `nextSharedRound`、独立 `augmentHistoryAuthority` 继续调用现有公共规则入口；服务器不计算费用、库存或变形。战斗快照仅在持有上述变形强化时允许普通英雄继承原Tristana永久AD；新增成长来源仍只能由既有Tristana战斗事件认证。两个卡片测试的变形、星级库存和合星预期由独立M5 oracle根据变形前阵容、真实库存与种子推导，不读取生产收据作为预期；工具数量另用独立礼物计划核验。

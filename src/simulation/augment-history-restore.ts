@@ -1,3 +1,4 @@
+import { validateBatch5R6Transforms } from './augment-pool-batch5-r6';
 import type { MatchState } from './match-types';
 import type { AugmentDeath, HistorySeat } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -10,6 +11,7 @@ import { validateMatchStructure } from './serialization-structure';
 const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
 
 export function preflightAugmentHistory(s: MatchState): void {
+  validateBatch5R6Transforms(s);
   const h = s.augmentHistory;
   if (h === undefined) { historyCheck(!needsAugmentHistory(s), 'missing augment-history-v1; history-dependent augment saves cannot be authenticated'); return; }
   historyCheck(h && typeof h === 'object' && !Array.isArray(h), 'section shape');
