@@ -253,9 +253,9 @@ it('cannot rewrite historical battle counters to mint a reward after an unrelate
   expect(()=>validateRewards(before,receipts(after,[{...gold('augment-pool-batch3',[0,0],8,4),roundId:'2-1'}]),{type:'reroll'},[],env)).toThrow(/battle counters append-only/);
 });
 
-it('contains exactly 235 independently tiered unique augment identities',()=>{
+it('contains exactly 237 independently tiered unique augment identities',()=>{
   const pools=(['silver','gold','prismatic'] as const).map(tier=>augmentPool(tier,[]));
-  const all=pools.flat();expect(all).toHaveLength(235);expect(new Set(all).size).toBe(235);
+  const all=pools.flat();expect(all).toHaveLength(237);expect(new Set(all).size).toBe(237);
   const groups={silver:['patience-is-a-virtue'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal'],prismatic:['invested-plus','invested-plus-plus']};
   for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);
 });
@@ -368,13 +368,13 @@ it('independently binds Spoils counters to opening ownership and all ordinary Pv
   expect(()=>validateRewards({...live,combat:{strategy:finished.combat.strategy}},erased,null,done,env)).toThrow(/independent batch2 counter/);
 });
 
-// First public 2-1 Heroic Grab Bag offer with no prior lesser duplicator: seed 80.
+// Public 2-1 Heroic Grab Bag offer with no prior lesser duplicator: seed 27.
 // Seed 4 already earns one from its opening, so it does not satisfy this vector's two-tool premise.
 // Keep the pre-command independent ledger so co-forged balances exercise Ledger.apply.
 import * as matchApi from '../src/simulation/match';
 import { run } from '../scripts/generate-m5-route.cjs';
 const heroicCase: {before:any;after:any;command:any;events:any;ledger:any}[]=[];
-const HEROIC_SEED=80;
+const HEROIC_SEED=27;
 const routeLedger=new Ledger(createMatch(HEROIC_SEED));
 const stopHeroic=Symbol('heroic selection reached');
 try {

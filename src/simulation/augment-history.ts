@@ -1,3 +1,4 @@
+import { grantScoreboardEntry } from './augment-pool-batch5-h6-scoreboard';
 import type { MatchState, MatchEvent } from './match-types';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -30,7 +31,8 @@ export function recordAugmentRoundEntry(s: MatchState): MatchState {
   return appendAugmentFact(s, { kind: 'round-entry', roster: historyRoster(s) });
 }
 export function recordAugmentTable(s: MatchState, stage: 'acquire' | 'entry' | 'settlement', seats: readonly HistorySeat[]): MatchState {
-  return appendAugmentFact(s, { kind: 'table', stage, seats });
+  const recorded=appendAugmentFact(s, { kind: 'table', stage, seats });
+  return stage==='entry'?grantScoreboardEntry(recorded):recorded;
 }
 export function recordAugmentPvpRoster(s: MatchState, battleId: string, seats: readonly HistorySeat[], mirrorOfSeatId: string | null): MatchState {
   if (s.augmentHistory?.facts.some(f => f.kind === 'pvp-roster' && f.battleId === battleId)) return s;
@@ -45,7 +47,9 @@ export function recordAugmentGrowth(s: MatchState, choiceId: string, receiptId: 
   if (old) { historyCheck(old.kind === 'growth' && same(old.deltas, deltas) && old.choiceId === choiceId, 'growth receipt conflict'); return s; }
   historyCheck(deltas.length <= LIMIT.units && new Set(deltas.map(d => d.unitId)).size === deltas.length, 'growth recipients');
   for (const d of deltas) {
-    const unit = s.preparation.units.find(u => u.id === d.unitId && u.team === 'player');
+    const owner = s.augments.find(a=>a.choiceId===choiceId);
+    const entry = owner?.definitionId==='scoreboard-scrapper' ? s.augmentHistory!.facts.find(f=>f.kind==='round-entry' && f.round===s.round) : undefined;
+    const unit = s.preparation.units.find(u => u.id === d.unitId && u.team === 'player') ?? (entry?.kind==='round-entry'?entry.roster.units.find(u=>u.id===d.unitId&&u.team==='player'):undefined);
     historyCheck(unit && UNIT_DEFINITIONS[unit.definitionId] && !UNIT_DEFINITIONS[unit.definitionId].summon && UNIT_DEFINITIONS[unit.definitionId].unitKind !== 'neutral', 'growth ordinary hero');
     historyCheck(same(Object.keys(d).sort(), ['abilityPowerCenti','attackDamageBps','healthBps','healthFlat','unitId']) &&
       Object.entries(d).every(([k,v]) => k === 'unitId' || Number.isSafeInteger(v) && (v as number) >= 0 && (v as number) <= 1000000), 'growth amount');
@@ -58,11 +62,12 @@ export function requireAugmentFacts<K extends AugmentFactData['kind']>(s: MatchS
   const rows = s.augmentHistory.facts.filter(f => f.kind === kind && f.round === round) as Extract<AugmentHistoryFact, {kind: K}>[];
   historyCheck(rows.length > 0, `missing ${kind} for round ${round}`); return structuredClone(rows);
 }
-export function readAugmentGrowth(s: MatchState, unitId: string): AugmentGrowth {
+export function readAugmentGrowth(s: MatchState, unitId: string, provenancePrefixLength = s.resourceProvenance.entries.length): AugmentGrowth {
+  historyCheck(Number.isSafeInteger(provenancePrefixLength)&&provenancePrefixLength>=0&&provenancePrefixLength<=s.resourceProvenance.entries.length, 'growth provenance prefix');
   historyCheck(s.augmentHistory, 'missing growth history');
   // Follow the existing acquisition/merge lineage; never transfer a sold unit to an unrelated instance.
   const ids = new Set([unitId]);
-  for (const e of [...s.resourceProvenance.entries].reverse()) if ((e.kind === 'unit-upgraded' || e.kind === 'unit-upgraded-after-combat') && ids.has(e.event.survivorId))
+  for (const e of s.resourceProvenance.entries.slice(0,provenancePrefixLength).reverse()) if ((e.kind === 'unit-upgraded' || e.kind === 'unit-upgraded-after-combat') && ids.has(e.event.survivorId))
     for (const id of e.event.consumedIds) ids.add(id);
   const result: { -readonly [K in keyof AugmentGrowth]: AugmentGrowth[K] } = { unitId, healthFlat: 0, healthBps: 0, attackDamageBps: 0, abilityPowerCenti: 0 };
   for (const f of s.augmentHistory.facts) if (f.kind === 'growth') for (const d of f.deltas) if (ids.has(d.unitId))
