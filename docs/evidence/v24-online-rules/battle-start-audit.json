@@ -149,7 +149,7 @@
     "src/simulation/content/augment-pool-batch5.ts": "96a979f97773aee4164c0faf03f10a2eda27de4ec20632cd20fc0a185ec53d06",
     "src/simulation/content/augment-pool-shop.ts": "5ca5b9d022f133e86d5af821edc34dba849089d48758b78dfb1ace27a46f9e77",
     "src/simulation/content/augment-stage-bans.ts": "bd438d5f9e6d83d175bb9ff7c5cc4cac9bb1c15ac8bbb4de9a24c6fa7fba1d83",
-    "src/simulation/content/augments.ts": "0a46ef2a0cd772c933328084577d61f4ad32ef8396c17c45b4871d7d57a0ed2c",
+    "src/simulation/content/augments.ts": "cb04a15dd5c5759d53070368bb9a4863c73aa09dfa5b36a429bb18ec747185db",
     "src/simulation/content/batch3-summons.ts": "11da9c84cb8d5e2105a080ebcd1400232ac476e95dc97ceace696d416f454178",
     "src/simulation/content/chem-baron-b-overrides.ts": "b438c234b19276f9f821845081bf3d9435c4f421e1f0972a69da02d0ba2e8d51",
     "src/simulation/content/consumables.ts": "b85f0cdb398433d72dd6ccf32e969a6c4c6932e41fe7c3e40c115cc3e24145d5",
@@ -191,7 +191,7 @@
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
-    "src/simulation/content/identity-constants.ts": "0622c3cee5af17da7d01ee7f0883cffec28ed2aa60b8eb367d28bcfce8120c6b",
+    "src/simulation/content/identity-constants.ts": "ebce9556c50c463102b643dac07382a7f7a62634134b8063af736a6b1ffb42af",
     "src/simulation/content/index.ts": "deae0f85c30b6f4ce0394a9f69ff657515e21378eac6fe587440cbd52a9c57dc",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -436,7 +436,7 @@
     "src/simulation/shop.ts": "40b8c8f379a9cd1d4d7362a07eafc0354d8b838289e2df7e65f14f7d0c7d3031",
     "src/simulation/six-cost-shop.ts": "56df681f640f3fa58e30407668fe20165f832896d949f5b63c7b0f2b680fe722",
     "src/simulation/strategy-g2-2.ts": "64006209185c090003a6c53251bcfb530bbd3a9287f6e7e63d2bc8d9ac1e4055",
-    "src/simulation/strategy-snapshot.ts": "649324286b31c2f261191334830aab3159b4aa399afa498cacf026be6deebcc4",
+    "src/simulation/strategy-snapshot.ts": "23e8a3ac9801008058eb199e87aee29f817a0f45caee3953c2d8240364dd0f16",
     "src/simulation/strategy-types.ts": "b3a2b4f1e8d5858f33df19ca3de0bac1a886c1f9f42d2940110cf5ea5fdafc2a",
     "src/simulation/temporary-equipment.ts": "81ac16dfd751c09975a3aad996aa6fda82831bd0b1f721bd494b7ee4cd2ec424",
     "src/simulation/trainer-golems.ts": "ba6c0d13da15a9ef9eb992ccc078121f318247bde524265f12afa83233c53dfa",
@@ -458,14 +458,14 @@
   "previousBytes": 1572249,
   "currentBytes": 1715837,
   "previousSha256": "bf3313639c10feb02daafef84653fe90cee081de2172126b066dff7128048498",
-  "currentSha256": "b20be55c3b8415ffd23b2173c05dbaafb419812dadb4867855e66165cd0e194c",
+  "currentSha256": "29e0b1dc6a7bfd3c74e2e10611ef066999a8c6157e464b4cbb1bae1825276a43",
   "firstDifferentByte": 13,
   "checkpoints": [
     {
       "round": 3,
       "time": 75800,
-      "initialHash": "62afe2ab47074278c0b2540e5e8142829dd67b2b0fd45868cf6f3f06108e5b79",
-      "firstHash": "a297e8310751fbea10ebda0c4f61faca494d38be81d80cc24d144038fdfb77ed",
+      "initialHash": "f8496e8d269f8b627f74f8641c0fd1da17ba779cdba99248932a339e154c22c3",
+      "firstHash": "4e7a99430d15ab4b8d21d9d1858de355bef8dd796329924c7dee869b418a8346",
       "boardCounts": [
         1,
         3,
@@ -481,8 +481,8 @@
     {
       "round": 9,
       "time": 407250,
-      "initialHash": "20bdf588f51917f1ad22fd3cd479da7386ce1cc53be4650f1a55570ba3e8a87b",
-      "firstHash": "aca7104840c8718e1acbcf20ebe9b29413b70c0cacc43347de2506753586be8f",
+      "initialHash": "efdfb072e99252688a6c1cb36a2c035987e622d6efb9c0e07a3b3a700873c39c",
+      "firstHash": "40d0d4bb9b7a81e1af30ff49cfa87c0013a908d8c3672807e2080bf4332c0660",
       "boardCounts": [
         2,
         5,
@@ -498,8 +498,8 @@
     {
       "round": 23,
       "time": 1275687,
-      "initialHash": "c43b61906e5aa30329f39dc78841b41cb797b68074917d805587266e023f8634",
-      "firstHash": "7505f641aa256c980abc50d6004582b6a7f0df662c3005e7a968d8b973a93008",
+      "initialHash": "52be5e8f2a4b55b2a5c47b23ecac763a93800ee858515d3ade398ab5ff303806",
+      "firstHash": "d8f76a59ea295d08f3c827699b62309778422e654aa4d8f256760f7af4dbc1cf",
       "boardCounts": [
         7,
         8,

@@ -134,7 +134,7 @@
     "src/simulation/content/augment-pool-batch5.ts": "96a979f97773aee4164c0faf03f10a2eda27de4ec20632cd20fc0a185ec53d06",
     "src/simulation/content/augment-pool-shop.ts": "5ca5b9d022f133e86d5af821edc34dba849089d48758b78dfb1ace27a46f9e77",
     "src/simulation/content/augment-stage-bans.ts": "bd438d5f9e6d83d175bb9ff7c5cc4cac9bb1c15ac8bbb4de9a24c6fa7fba1d83",
-    "src/simulation/content/augments.ts": "0a46ef2a0cd772c933328084577d61f4ad32ef8396c17c45b4871d7d57a0ed2c",
+    "src/simulation/content/augments.ts": "cb04a15dd5c5759d53070368bb9a4863c73aa09dfa5b36a429bb18ec747185db",
     "src/simulation/content/batch3-summons.ts": "11da9c84cb8d5e2105a080ebcd1400232ac476e95dc97ceace696d416f454178",
     "src/simulation/content/chem-baron-b-overrides.ts": "b438c234b19276f9f821845081bf3d9435c4f421e1f0972a69da02d0ba2e8d51",
     "src/simulation/content/consumables.ts": "b85f0cdb398433d72dd6ccf32e969a6c4c6932e41fe7c3e40c115cc3e24145d5",
@@ -176,7 +176,7 @@
     "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
-    "src/simulation/content/identity-constants.ts": "0622c3cee5af17da7d01ee7f0883cffec28ed2aa60b8eb367d28bcfce8120c6b",
+    "src/simulation/content/identity-constants.ts": "ebce9556c50c463102b643dac07382a7f7a62634134b8063af736a6b1ffb42af",
     "src/simulation/content/index.ts": "deae0f85c30b6f4ce0394a9f69ff657515e21378eac6fe587440cbd52a9c57dc",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -421,7 +421,7 @@
     "src/simulation/shop.ts": "40b8c8f379a9cd1d4d7362a07eafc0354d8b838289e2df7e65f14f7d0c7d3031",
     "src/simulation/six-cost-shop.ts": "56df681f640f3fa58e30407668fe20165f832896d949f5b63c7b0f2b680fe722",
     "src/simulation/strategy-g2-2.ts": "64006209185c090003a6c53251bcfb530bbd3a9287f6e7e63d2bc8d9ac1e4055",
-    "src/simulation/strategy-snapshot.ts": "649324286b31c2f261191334830aab3159b4aa399afa498cacf026be6deebcc4",
+    "src/simulation/strategy-snapshot.ts": "23e8a3ac9801008058eb199e87aee29f817a0f45caee3953c2d8240364dd0f16",
     "src/simulation/strategy-types.ts": "b3a2b4f1e8d5858f33df19ca3de0bac1a886c1f9f42d2940110cf5ea5fdafc2a",
     "src/simulation/temporary-equipment.ts": "81ac16dfd751c09975a3aad996aa6fda82831bd0b1f721bd494b7ee4cd2ec424",
     "src/simulation/trainer-golems.ts": "ba6c0d13da15a9ef9eb992ccc078121f318247bde524265f12afa83233c53dfa",
@@ -456,14 +456,14 @@
     "tests/fixtures/record-v24-online-rules-herald.cjs": "0e98778d9cb4fcb3846de0bbd091bd94f4858f69696d767bba2a14e7ccfae6be",
     "tests/fixtures/v24-online-rules-herald-support/generate.ts": "9587c37bcb673c704cce02708d69d94498edfdae4b2dacda1dd3c25401bfe83a"
   },
-  "contentDigest": "fnv1a32-utf16:db662e0b",
+  "contentDigest": "fnv1a32-utf16:1b86447c",
   "files": {
     "tests/fixtures/v24-online-rules-c19-seed-9-minimal.json": {
       "previousBytes": 32276,
       "currentBytes": 32276,
       "previousSha256": "78e8d1bb20ca955c3e8548f6cea446cb1433f8c9aff97a6357ef981a0b197ab2",
-      "currentSha256": "5bae4d2bd2110e5215ff3c759c5a5dafb668f68a806c02619ecb08af71b52482",
-      "firstDifferentByte": 208
+      "currentSha256": "74b0b169bbd1c01bdf9865e478853e88135ad8cda5e1143594286d3880330672",
+      "firstDifferentByte": 207
     },
     "tests/fixtures/v24-online-rules-b8-fingerprints.json": {
       "previousBytes": 474,
@@ -476,49 +476,49 @@
       "previousBytes": 184514,
       "currentBytes": 184474,
       "previousSha256": "d3b03562451c58457949dcd8badf3733d213e21060e31734df119ee034584704",
-      "currentSha256": "661ea0fce5323083a24c42dfa7e69028264b48c0f7c7e96dac4762f435f53c0f",
+      "currentSha256": "27c38ea5396b952486cd45f8bcc7d733f5b5224841ff3588175224a296062217",
       "firstDifferentByte": 837
     },
     "tests/fixtures/v24-online-rules-herald-raw/evenshroud.json": {
       "previousBytes": 184513,
       "currentBytes": 184473,
       "previousSha256": "b89a3dc0327b81b4aec7b210d18333fc137cdd3d5980c40547c06f8bf1cd079a",
-      "currentSha256": "9078e1ba9edf3a8cea0e1f7c22c8c2741406f4524f94bec832bb5e842e22b99c",
+      "currentSha256": "2749f765b69a211ac504ac737159a1d6aa033bc750ceb5b9a10feb24bc8b8670",
       "firstDifferentByte": 837
     },
     "tests/fixtures/v24-online-rules-herald-raw/ionic-spark--evenshroud.json": {
       "previousBytes": 184120,
       "currentBytes": 183584,
       "previousSha256": "f04ed8eb30fbe78789a7ffad9bf4a5ba3218bf8bd4fb8773261af4fb52000afe",
-      "currentSha256": "b9f020f54738cec93a614e02a7ccced72676e76db9c4e8c913070305306c021e",
+      "currentSha256": "91aa499a382ada7caf5d4ea690b07b75838c78933b3f19b25daccffa2aa4f8be",
       "firstDifferentByte": 837
     },
     "tests/fixtures/v24-online-rules-herald-raw/quicksilver.json": {
       "previousBytes": 184517,
       "currentBytes": 184477,
       "previousSha256": "22a0440cd0e77713c65edae5eac4f083478393a2ef891dbf7ddbac42a053bbef",
-      "currentSha256": "586039d5004c977a1e737fcf33ac2300e99818b79e680585b93dbe9b50a3ef4e",
+      "currentSha256": "a5103867484a0d2f547a068a58b666738881745cded4364e4a7e1f675e7a6e3a",
       "firstDifferentByte": 837
     },
     "tests/fixtures/v24-online-rules-herald-raw/edge-of-night.json": {
       "previousBytes": 184517,
       "currentBytes": 184285,
       "previousSha256": "68f551dece569355c4a040b8d5ef437c231ac838a1be15b02dc9667c55773706",
-      "currentSha256": "c80ac41988cb199940e0449e2e1b5477fc4fbaa0f89194ba88c0cd78b09853f9",
+      "currentSha256": "69de89be64c5a99a449241973d49cd22e2c61ce73cad1c1a3cd4bbb451308bc2",
       "firstDifferentByte": 837
     },
     "tests/fixtures/v24-online-rules-herald-raw/manifest.json": {
       "previousBytes": 47625,
       "currentBytes": 48373,
       "previousSha256": "a1b7a6a6054df3c6b06ee30ad485c772827337b4b554f50b01f27f710afdb9ba",
-      "currentSha256": "6be41a1cdaca3100422658c52ed6e693deda2f14d1239a446d8c0524ad9c6930",
+      "currentSha256": "2647356330030c2c67c46129d9efa70e290b4665d8787fb4aa49ca6cf63f8e22",
       "firstDifferentByte": 153
     },
     "tests/fixtures/v24-online-rules-herald-raw/trajectory.json": {
       "previousBytes": 334854,
       "currentBytes": 334888,
       "previousSha256": "5b39bf55aac102fea6dd2f32f99f8555d64424f84ffbf9ed01684a8190e76a43",
-      "currentSha256": "37f2ab3dc7f44dd97df0ad2810fe6d25de5f455260ecf1ada4354df3da8d7ef3",
+      "currentSha256": "3f30bb3eca7b6db24c57ac499737de03a5c8b8acc192a895ea8fb938ce4561a7",
       "firstDifferentByte": 42
     }
   },
