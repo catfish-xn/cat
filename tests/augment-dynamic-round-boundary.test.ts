@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { selectChoice, nextRound } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, reachRound } from './match-helpers';
+import type { MatchState } from '../src/simulation/match-types';
 
 it.each([['pumping-up-i', 50], ['pumping-up-ii', 0], ['pumping-up-iii', 0]] as const)(
   '%s current project behavior across a real 2-4 supply settlement', (id, expectedGrowth) => {
@@ -12,7 +13,7 @@ it.each([['pumping-up-i', 50], ['pumping-up-ii', 0], ['pumping-up-iii', 0]] as c
     const settled = accepted(selectChoice(state, choice.choiceId, choice.generation, choice.offers[0]));
     expect(settled.roundResults.at(-1)?.result).toBe('supply');
     const next = accepted(nextRound(settled, settled.round));
-    const speed = (s: typeof state) => buildStrategySnapshot(s).units.find(u => u.unitId === 'unit-1')!.stats.attackSpeedBonusBps!;
+    const speed = (s: MatchState) => buildStrategySnapshot(s).units.find(u => u.unitId === 'unit-1')!.stats.attackSpeedBonusBps!;
     expect(speed(next) - speed(state)).toBe(expectedGrowth);
     if (id === 'pumping-up-i') expect(settled.augmentProgress.pumpingRounds).toBe(4);
   });
