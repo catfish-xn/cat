@@ -13,6 +13,8 @@ export const CARRY_GOLEM = freezeContent({
   healthPerStage: 475,
   attackDamageBpsPerStage: 2000,
   maximumStar: 4,
+  survivorDamage: 'excluded',
+  fixedEquipmentConversion: 'excluded',
 } as const);
 export const CARRY_GOLEM_UNIT: UnitDefinition = freezeContent({
   id: CARRY_GOLEM_ID, name: '魔像', symbol: '像', color: 9993582, cost: 1, traits: [],

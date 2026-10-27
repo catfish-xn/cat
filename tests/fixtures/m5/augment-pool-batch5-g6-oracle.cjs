@@ -5,9 +5,13 @@ const ID = 'im-the-carry-now', UNIT = 'carry-golem', SOURCE = 'augment-pool-batc
 const ITEMS = ['crownguard', 'bloodthirster', 'titans-resolve'];
 function panel(stage, acquisitionStage = 2) {
   const growth = Math.max(0, stage - acquisitionStage), star = Math.min(4, 1 + growth), rank = BigInt(star - 1);
-  return { star, health: Number(600n * 18n ** rank / 10n ** rank),
-    attackCenti: Number(5500n * 15n ** rank / 10n ** rank), damage: [300, 480, 750, 1125][star - 1],
-    healthFlat: growth * 475, attackDamageBps: growth * 2000 };
+  const health = Number(600n * 18n ** rank / 10n ** rank), attackCenti = 5500n * 15n ** rank / 10n ** rank;
+  return { star, health,
+    attackCenti: Number(attackCenti), damage: [300, 480, 750, 1125][star - 1],
+    healthFlat: growth * 475, attackDamageBps: growth * 2000,
+    // Literal equipment totals: Crownguard 100 HP; Bloodthirster 15% AD; Titan starts at zero stacks.
+    equippedHealth: health + growth * 475 + 100,
+    equippedAttack: Number(attackCenti * BigInt(11500 + growth * 2000) / 1000000n) };
 }
 function validateState(state, strategy) {
   const owner = state.augments.find(a => a.definitionId === ID);

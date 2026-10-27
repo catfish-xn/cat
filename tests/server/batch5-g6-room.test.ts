@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { afterAll, describe, expect, it } from 'vitest';
-import { makeRoom, runUntilClaiming } from './helpers';
+import { answerOpenChoices, makeRoom, runUntilClaiming } from './helpers';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { restoreSharedOrbSnapshot, assertSharedPoolConservation } from '../../src/simulation/shared-pool';
 import { canonicalContent } from '../../src/simulation/content';
@@ -8,6 +8,10 @@ import { serializeMatch } from '../../src/simulation/serialization';
 import { buildStrategySnapshot } from '../../src/simulation/strategy-snapshot';
 import { readCombatStrategyInputs } from '../../src/simulation/combat-input';
 import { getDeploymentCap, sellUnit, deployMatchUnit, useConsumable } from '../../src/simulation/match';
+import { snapshotForBattle } from '../../src/simulation/two-sided-snapshot';
+import { compileBattle, proposeSettlement, resolveTwoSidedBattle } from '../../src/simulation/two-sided-battle';
+import { applyRoundSettlement, type RoundSettlementReceipt } from '../../src/simulation/round-settlement';
+import { M5_UNIT_IDS } from '../../src/simulation/units';
 const require = createRequire(import.meta.url);
 const oracle = require('../fixtures/m5/augment-pool-batch5-g6-oracle.cjs');
 const id='im-the-carry-now';
@@ -31,6 +35,7 @@ describe('B5-83 real online room',()=>{
     const selected=room.handle(seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:id});
     expect(selected).toMatchObject({ok:true});if(!selected.ok)throw Error(selected.reason);
     const state=room.state.seats.find(s=>s.seatId===seatId)!.match;
+    expect(state.augments.map(a=>a.definitionId)).toEqual([id]);
     oracle.validateTransition(before,state,{type:'select',definitionId:id},selected.events);
     oracle.validateState(state,buildStrategySnapshot(readCombatStrategyInputs(state)));
     golemId=state.preparation.units.find(u=>u.definitionId==='carry-golem')!.id;
@@ -56,12 +61,56 @@ describe('B5-83 real online room',()=>{
       s=>{s.seatMechanics.receipts.find((r:any)=>r.source==='augment-pool-batch5-g6').source='test';},
       s=>{s.resourceProvenance.entries=s.resourceProvenance.entries.filter((e:any)=>e.kind!=='unit-acquired'||e.unitId!==golem.id);},
       s=>{s.resourceProvenance.entries.find((e:any)=>e.kind==='item-equipped'&&e.unitId===golem.id).slot=2;},
+      s=>{s.preparation.units.find((u:any)=>u.id===golem.id).location.cell={col:99,row:99};},
+      s=>{s.preparation.units.find((u:any)=>u.id===golem.id).location.cell={col:0,row:3};},
+      s=>{s.preparation.units.find((u:any)=>u.id===golem.id).location.cell={col:1.5,row:4};},
+      s=>{s.preparation.units.find((u:any)=>u.id!==golem.id).location=structuredClone(golem.location);},
+      s=>{
+        const kit=s.items.filter((i:any)=>i.location.kind==='unit'&&i.location.unitId===golem.id);
+        for(const [slot,item] of kit.entries()){
+          const old=item.id,next=`item-${20000+slot}`;item.id=next;
+          for(const r of s.seatMechanics.receipts)if(r.kind==='item'&&r.itemId===old)r.itemId=next;
+          for(const f of s.resourceProvenance.entries)if('itemId' in f&&f.itemId===old)f.itemId=next;
+        }
+        s.nextItemSerial=20003;
+      },
+      s=>{s.nextItemSerial+=1000;},
     ];
     for(const edit of mutations)for(const form of ['object','json','canonical']){
       const bad=structuredClone(state);edit(bad);const input=form==='object'?bad:form==='json'?JSON.stringify(bad):canonicalContent(bad);
       expect(()=>restoreSharedOrbSnapshot(room.state.pool,input,authority)).toThrow();
     }
     expect(()=>serializeMatch(state)).toThrow(); // Existing offline boundary refuses shared saves.
+  });
+  it.each(Array.from({length:11},(_,count)=>count))('%i champions plus the free golem settle on either side with only champion survivor damage',count=>{
+    const state=room.state.seats.find(s=>s.seatId===seatId)!.match;
+    const golem=state.preparation.units.find(u=>u.definitionId==='carry-golem')!;
+    const other=room.state.seats.find(s=>s.seatId!==seatId)!;
+    answerOpenChoices(room,[other.seatId]);
+    const opponent=room.state.seats.find(s=>s.seatId===other.seatId)!.match;
+    const cells=[4,5,6,7].flatMap(row=>[0,1,2,3,4,5,6].map(col=>({col,row})))
+      .filter(c=>golem.location.kind!=='board'||c.col!==golem.location.cell.col||c.row!==golem.location.cell.row);
+    // Legal maximum-population combat assets; acquisition history remains in the real room checkpoint.
+    const champions=M5_UNIT_IDS.slice(0,count).map((definitionId,i)=>({id:`unit-${100+i}`,definitionId,
+      starLevel:1 as const,team:'player' as const,location:{kind:'board' as const,cell:cells[i]}}));
+    const army=snapshotForBattle({...state,level:10,preparation:{...state.preparation,units:[golem,...champions]},
+      items:state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===golem.id),temporaryEquipment:[],persistentGrowth:[]},seatId);
+    const empty=snapshotForBattle({...opponent,preparation:{...opponent.preparation,units:[]},items:[],temporaryEquipment:[],persistentGrowth:[]},other.seatId);
+    for(const swapped of [false,true]){
+      const battle=resolveTwoSidedBattle(compileBattle(swapped?empty:army,swapped?army:empty,42),1200);
+      const proposals=proposeSettlement(battle),loss=swapped?proposals.a:proposals.b,win=swapped?proposals.b:proposals.a;
+      expect(battle.terminal.units.filter(u=>u.alive)).toHaveLength(count+1);
+      expect(swapped?battle.b.survivors:battle.a.survivors).toHaveLength(count);
+      expect(loss).toMatchObject({result:'loss',opposingSurvivors:count,baseDamage:2,damage:2+count});
+      expect(win).toMatchObject({result:'win',opposingSurvivors:0,damage:0});
+      const receipt:RoundSettlementReceipt={version:'multiplayer-settlement-v1',settlementId:'g6-cap-regression',
+        battleId:loss.battleId,seatId:other.seatId,round:opponent.round,roundId:opponent.roundDefinitionId,
+        settlementEligible:true,result:loss.result,damage:loss.damage,baseDamage:loss.baseDamage,opposingSurvivors:loss.opposingSurvivors,
+        growth:loss.growth,combatTicks:battle.terminal.tick,combatEventCount:battle.events.length};
+      const result=applyRoundSettlement(opponent,receipt);
+      expect(result.ok,result.ok?undefined:result.reason).toBe(true);
+      expect(result.state.playerHp).toBe(opponent.playerHp-2-count);
+    }
   });
   it('fixed equipment cannot be removed, reforged, upgraded or swapped through ordinary controls',()=>{
     const state=room.state.seats.find(s=>s.seatId===seatId)!.match,golem=state.preparation.units.find(u=>u.definitionId==='carry-golem')!;
@@ -70,6 +119,10 @@ describe('B5-83 real online room',()=>{
     }
     const remover=state.consumables.find(c=>c.definitionId==='magnetic-remover');expect(remover).toBeDefined();if(!remover)throw Error('real PvE remover missing');
     const result=useConsumable(state,remover.consumableId,{kind:'unit',unitId:golem.id});expect(result.ok).toBe(false);expect(result.state).toBe(state);
+    const moved=deployMatchUnit(state,golem.id,{kind:'board',cell:{col:6,row:7}});
+    expect(moved.ok).toBe(true);
+    for(const input of [moved.state,JSON.stringify(moved.state),canonicalContent(moved.state)])
+      expect(restoreSharedOrbSnapshot(room.state.pool,input,room.augmentHistoryAuthority(seatId))).toEqual(moved.state);
   });
   it('freezes its fixed items and rank in the real PvP input and runs a golem cast',()=>{
     runUntilClaiming(room,clock,s=>s.roundId==='2-1'&&s.phase==='settlement',5000);

@@ -5,13 +5,21 @@ import { AUGMENT_BATCH5_G6, CARRY_GOLEM } from '../src/simulation/content/augmen
 import { augmentCandidates } from '../src/simulation/augment-offers';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { carryGolemEffects, carryGolemStar, growCarryGolem } from '../src/simulation/augment-pool-batch5-g6';
-import { createMatch, selectChoice } from '../src/simulation/match';
+import { carryGolemEffects, carryGolemStar, growCarryGolem, validateCarryGolem } from '../src/simulation/augment-pool-batch5-g6';
+import { createMatch, selectChoice, startMatchCombat, stepMatch, useConsumable, combineItems, equipItem } from '../src/simulation/match';
 import { getMultiplayerRoundById } from '../src/simulation/multiplayer-round';
 import { validateContent } from '../src/simulation/validate-content';
 import { accepted, reachRound } from './match-helpers';
 import { firstNodeSeed } from './augment-stage-helpers';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { applyG23Radiant } from '../src/simulation/g2-3-radiant';
+import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state';
+import { EMPTY_G23_CONQUEST, planG23Conquest } from '../src/simulation/g2-3-progress';
+import { masterworkCandidates, previewUseConsumable } from '../src/simulation/consumables';
+import { grantMechanicItem, grantMechanicConsumable } from '../src/simulation/seat-mechanics';
+import { canonicalContent } from '../src/simulation/content';
+import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
+import { readCombatStrategyInputs } from '../src/simulation/combat-input';
 const require = createRequire(import.meta.url);
 const oracle = require('./fixtures/m5/augment-pool-batch5-g6-oracle.cjs');
 const id = 'im-the-carry-now';
@@ -47,6 +55,11 @@ describe('prototype and stage arithmetic, independent of receipts', () => {
     expect(carryGolemEffects(round,owner,unit)).toEqual([{kind:'statFlat',stat:'maxHp',amount:expected.healthFlat},{kind:'statPercentBps',stat:'attackDamage',bps:expected.attackDamageBps}]);
     const s = {...createMatch(0),round,augments:[owner],preparation:{...createMatch(0).preparation,units:[unit]}};
     expect(growCarryGolem(s)).toBe(s);
+    const equipped={...s,items:['crownguard','bloodthirster','titans-resolve'].map((definitionId,slot)=>({
+      id:`item-${slot+1}`,definitionId,location:{kind:'unit' as const,unitId:unit.id,slot},
+    }))};
+    expect(buildStrategySnapshot(readCombatStrategyInputs(equipped)).units.find(u=>u.unitId===unit.id)?.stats)
+      .toMatchObject({health:expected.equippedHealth,attack:expected.equippedAttack,armor:80,magicResist:60});
     expect(CARRY_GOLEM.items).toEqual(['crownguard','bloodthirster','titans-resolve']);
     expect(carryGolemEffects(round,owner,{...unit,definitionId:'irelia'})).toEqual([]);
   });
@@ -68,6 +81,34 @@ describe('prototype and stage arithmetic, independent of receipts', () => {
   });
 });
 
+it('derives the grant serial from a resource prefix containing combination, replacement and unchanged consumable outputs',()=>{
+  let state=reachRound('2-1',false,firstNodeSeed(id,101));
+  const c=state.pendingChoice!,champion=state.preparation.units[0];
+  const componentIds:string[]=[];
+  for(const definitionId of ['rod','vest']){
+    const grant=grantMechanicItem(state,{receiptId:`g6-prefix:${definitionId}`,source:'test',definitionId});
+    expect(grant.ok).toBe(true);if(!grant.ok||grant.receipt.kind!=='item')throw Error('missing prefix component');
+    state=grant.state;componentIds.push(grant.receipt.itemId);
+  }
+  const combined=combineItems(state,componentIds[0],componentIds[1]);state=accepted(combined);
+  expect(combined.ok&&combined.events.some(e=>e.type==='itemCombined')).toBe(true);
+  state=accepted(equipItem(state,`item-${state.nextItemSerial-1}`,champion.id,0));
+  for(const definitionId of ['reforger','magnetic-remover']){
+    const grant=grantMechanicConsumable(state,{receiptId:`g6-prefix:${definitionId}`,source:'test',definitionId});
+    expect(grant.ok).toBe(true);if(!grant.ok||grant.receipt.kind!=='consumable')throw Error('missing prefix tool');
+    state=grant.state;
+    if(definitionId==='magnetic-remover')state=accepted(equipItem(state,`item-${state.nextItemSerial-1}`,champion.id,0));
+    state=accepted(useConsumable(state,grant.receipt.consumableId,{kind:'unit',unitId:champion.id}));
+  }
+  const prefixSerial=state.nextItemSerial;
+  state=accepted(selectChoice(state,c.choiceId,c.generation,id));
+  const golem=state.preparation.units.find(u=>u.definitionId==='carry-golem')!;
+  expect(state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===golem.id).map(i=>i.id))
+    .toEqual([0,1,2].map(slot=>`item-${prefixSerial+slot}`));
+  expect(()=>validateCarryGolem(state)).not.toThrow();
+  for(const input of [state,JSON.stringify(state),canonicalContent(state)])expect(restoreMatch(input)).toEqual(state);
+});
+
 it('solo smoke: real selection, exactly-once grant, and the three existing restore inputs',()=>{
   const seed=firstNodeSeed(id,101),before=reachRound('2-1',false,seed),c=before.pendingChoice!;
   const result=selectChoice(before,c.choiceId,c.generation,id),state=accepted(result);
@@ -84,7 +125,70 @@ it('solo smoke: real selection, exactly-once grant, and the three existing resto
   for(const input of [state,JSON.stringify(state),serializeMatch(state)])expect(restoreMatch(input)).toEqual(state);
   for(const mutate of [(s:any)=>{s.preparation.units.find((u:any)=>u.definitionId==='carry-golem').starLevel=2;},
     (s:any)=>{s.items.find((i:any)=>i.definitionId==='crownguard').definitionId='rageblade';},
-    (s:any)=>{s.seatMechanics.receipts=s.seatMechanics.receipts.filter((r:any)=>r.source!=='augment-pool-batch5-g6');}]){
+    (s:any)=>{s.seatMechanics.receipts=s.seatMechanics.receipts.filter((r:any)=>r.source!=='augment-pool-batch5-g6');},
+    (s:any)=>{s.preparation.units.find((u:any)=>u.definitionId==='carry-golem').location.cell={col:99,row:99};},
+    (s:any)=>{
+      const golem=s.preparation.units.find((u:any)=>u.definitionId==='carry-golem');
+      for(const [slot,item] of s.items.filter((i:any)=>i.location.kind==='unit'&&i.location.unitId===golem.id).entries()){
+        const old=item.id,next=`item-${20000+slot}`;item.id=next;
+        for(const r of s.seatMechanics.receipts)if(r.kind==='item'&&r.itemId===old)r.itemId=next;
+        for(const f of s.resourceProvenance.entries)if('itemId' in f&&f.itemId===old)f.itemId=next;
+      }
+      s.nextItemSerial=20003;
+    }]){
     const bad=structuredClone(state);mutate(bad);expect(()=>restoreMatch(bad)).toThrow();expect(()=>restoreMatch(JSON.stringify(bad))).toThrow();
   }
+});
+
+it.each([false,true])('conqueror tier 15 preserves the fixed loadout for new-item filtering=%s while converting ordinary equipment',newItemsOnly=>{
+  const before=reachRound('2-1',false,firstNodeSeed(id,101)),c=before.pendingChoice!;
+  let state=accepted(selectChoice(before,c.choiceId,c.generation,id));
+  const golem=state.preparation.units.find(u=>u.definitionId==='carry-golem')!;
+  const champion=state.preparation.units.find(u=>u.definitionId!=='carry-golem')!;
+  const granted=grantMechanicItem(state,{receiptId:'g6-conversion-control',source:'test',definitionId:'crownguard'});
+  expect(granted.ok).toBe(true);if(!granted.ok||granted.receipt.kind!=='item')throw Error('missing control item');
+  const ordinaryId=granted.receipt.itemId;
+  state={...granted.state,items:granted.state.items.map(i=>i.id===ordinaryId?{...i,location:{kind:'unit',unitId:champion.id,slot:0}}:i)};
+  const conquest=planG23Conquest(EMPTY_G23_CONQUEST,'conversion',9,Array.from({length:75},(_,i)=>`victim-${i}`));
+  expect(conquest.radiantConversion).toBe(true);
+  state=writeG23Progress(state,{...readG23Progress(state)!,conquest});
+  const converted=applyG23Radiant(state,newItemsOnly?new Set(state.items.map(i=>i.id)):undefined);
+  const kit=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===golem.id);
+  expect(converted.items.filter(i=>kit.some(k=>k.id===i.id))).toEqual(kit);
+  expect(converted.items.find(i=>i.id===ordinaryId)?.definitionId).toBe('TFT5_Item_CrownguardRadiant');
+  expect(converted.resourceProvenance.entries.slice(state.resourceProvenance.entries.length)).toEqual([
+    {kind:'g23-item-converted',itemId:ordinaryId,from:'crownguard',to:'TFT5_Item_CrownguardRadiant',receiptId:'g23:conqueror:15',
+      sequence:state.resourceProvenance.entries.length,roundId:state.roundDefinitionId},
+  ]);
+  expect(()=>validateCarryGolem(converted)).not.toThrow();
+  expect(applyG23Radiant(converted,newItemsOnly?new Set(state.items.map(i=>i.id)):undefined)).toBe(converted);
+});
+
+it('all consumable conversions reject the fixed set atomically, including the masterwork candidate query',()=>{
+  const before=reachRound('2-1',false,firstNodeSeed(id,101)),c=before.pendingChoice!;
+  let state=accepted(selectChoice(before,c.choiceId,c.generation,id));
+  const golem=state.preparation.units.find(u=>u.definitionId==='carry-golem')!;
+  for(const definitionId of ['magnetic-remover','reforger','masterwork-upgrade','TFT_Consumable_NeekosHelp'] as const){
+    const grant=grantMechanicConsumable(state,{receiptId:`g6-tool:${definitionId}`,source:'test',definitionId});
+    expect(grant.ok).toBe(true);if(!grant.ok||grant.receipt.kind!=='consumable')throw Error('missing tool');
+    state=grant.state;
+    expect(previewUseConsumable(state,grant.receipt.consumableId,{kind:'unit',unitId:golem.id})).toEqual({ok:false,reason:'invalid-consumable-target'});
+    const result=useConsumable(state,grant.receipt.consumableId,{kind:'unit',unitId:golem.id});
+    expect(result.ok).toBe(false);expect(result.state).toBe(state);expect('events' in result?result.events:[]).toEqual([]);
+  }
+  expect(masterworkCandidates(state,golem.id)).toEqual([]);
+});
+
+it('restoring mid-combat preserves the continued terminal state and complete event suffix',()=>{
+  const before=reachRound('2-1',false,firstNodeSeed(id,101)),c=before.pendingChoice!;
+  let state=accepted(startMatchCombat(accepted(selectChoice(before,c.choiceId,c.generation,id))));
+  for(let tick=0;tick<8;tick++)state=stepMatch(state).state;
+  expect(state.phase).toBe('combat');
+  const continueBattle=(input:typeof state)=>{
+    let next=input;const events=[];
+    while(next.phase==='combat'){const result=stepMatch(next);events.push(...result.events);next=result.state;}
+    return {state:next,events};
+  };
+  const expected=continueBattle(state);
+  for(const input of [state,JSON.stringify(state),canonicalContent(state)])expect(continueBattle(restoreMatch(input))).toEqual(expected);
 });

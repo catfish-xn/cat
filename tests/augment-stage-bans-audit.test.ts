@@ -142,8 +142,8 @@ it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14
   const p = runAudit([], root);
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
-  // Integrated H1/H3/H4/H5/H6 inventory (including disabled Shop Glitch); retain all discrepancy assertions.
-  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 218, shippedRows: 171, regeneratedRows: 176, unrestricted: 69, errors: 5, crossVersionDifferences: 8 });
+  // Integrated H1/H3/H4/H5/H6/G6 inventory (including disabled Shop Glitch); retain all discrepancy assertions.
+  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 219, shippedRows: 171, regeneratedRows: 176, unrestricted: 70, errors: 5, crossVersionDifferences: 8 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
     ['TABLE_MISMATCH', 'TFT13_Augment_Academy', ['4-2']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Cabal', ['2-1', '4-2']],

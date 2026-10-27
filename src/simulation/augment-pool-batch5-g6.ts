@@ -6,6 +6,7 @@ import type { MatchEvent, MatchState } from './match-types';
 import { carryGolemStar } from './augment-pool-batch5-g6-stats';
 import type { OwnedAugment } from './strategy-types';
 import { canonicalContent } from './content';
+import { DEFAULT_BOARD, isDeploymentCell, sameCell } from './board';
 
 export const CARRY_GOLEM_SOURCE = 'augment-pool-batch5-g6';
 const receiptId = (owner: OwnedAugment, part: string) => JSON.stringify([CARRY_GOLEM_SOURCE, owner.choiceId, part]);
@@ -60,6 +61,9 @@ export function validateCarryGolem(state: MatchState): void {
   if (unit.team !== 'player' || unit.location.kind !== 'board' || unit.starLevel !== carryGolemStar(state.round, owner.acquiredRound)
     || !birth || birth.kind !== 'unit' || birth.resolution !== 'held' || birth.unitId !== unit.id || birth.gold !== 0
     || birth.definitionId !== CARRY_GOLEM_ID || (birth.starLevel ?? 1) !== 1 || birth.orbId !== undefined) fail();
+  if (unit.location.kind !== 'board' || !unit.location.cell || !isDeploymentCell(DEFAULT_BOARD, 'player', unit.location.cell)
+    || state.preparation.units.some(other => other !== unit && other.location.kind === 'board'
+      && unit.location.kind === 'board' && sameCell(other.location.cell, unit.location.cell))) fail();
   for (const r of receipts) if (r.source !== CARRY_GOLEM_SOURCE || r.round !== owner.acquiredRound
     || r.roundId !== getMultiplayerRoundByOrdinal(owner.acquiredRound).roundId) fail();
   for (const [slot, definitionId] of CARRY_GOLEM.items.entries()) {
@@ -68,6 +72,16 @@ export function validateCarryGolem(state: MatchState): void {
       && i.definitionId === definitionId && i.location.kind === 'unit' && i.location.unitId === unit.id && i.location.slot === slot)) fail();
   }
   if (state.items.filter(i => i.location.kind === 'unit' && i.location.unitId === unit.id).length !== 3) fail();
+  // Replay allocation counts from the resource prefix, never from item IDs, receipts or nextItemSerial.
+  // Acquisitions, combinations and replacement consumable outputs are the only permanent item births.
+  let itemSerial = 1;
+  for (const entry of state.resourceProvenance.entries) {
+    const allocated = entry.kind === 'item-acquired' ? [entry.itemId]
+      : entry.kind === 'item-combined' ? [entry.event.itemId]
+      : entry.kind === 'consumable-used' ? entry.record.outputs.filter((output, index) => output.id !== entry.record.affectedItems[index]?.id).map(output => output.id) : [];
+    for (const itemId of allocated) if (itemId !== `item-${itemSerial++}`) fail();
+  }
+  if (state.nextItemSerial !== itemSerial) fail();
   // The fixed grant has seven ordered resource facts. Receipts alone cannot replace birth/equipment evidence.
   const start = state.resourceProvenance.entries.findIndex(e => e.kind === 'unit-acquired' && e.unitId === unit.id);
   if (unit.id !== `unit-${1 + state.resourceProvenance.entries.slice(0, start).filter(e => e.kind === 'unit-acquired').length}`) fail();
