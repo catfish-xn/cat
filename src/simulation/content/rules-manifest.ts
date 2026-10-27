@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_R5, BATCH5_R5_STARRY_POLICY } from './augment-pool-batch5-r5';
 import { AUGMENT_BATCH5_H1 } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3 } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H4_SOURCE } from './augment-pool-batch5-h4';
@@ -59,6 +60,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch3Xp:{version:'augment-pool-batch3-xp-v23-candidate',content:AUGMENT_BATCH3_XP,blocked:AUGMENT_BATCH3_XP_BLOCKED,timing:'pvp-xp-next-round-entry-draw-as-loss-stage-start-after-acquisition',levels:'recorded-at-acquisition'},
   augmentPoolBatch4B4Combat:{version:'augment-pool-batch4-b4combat-v23',content:AUGMENT_BATCH4_B4COMBAT,convention:'P-B4COMBAT-2026-10-25'},
   augmentPoolBatch3:{version:'augment-pool-batch3-v23-candidate',content:AUGMENT_BATCH3,counting:'pvp-battle-receipts-from-acquisition-round-inclusive-draw-not-loss'},
+  augmentPoolBatch5R5:{content:AUGMENT_BATCH5_R5,policy:BATCH5_R5_STARRY_POLICY,convention:'P-B5-08-09-2026-10-27'},
   augmentPoolShop:{version:'augment-pool-shop-v24-candidate',content:AUGMENT_SHOP,credits:'rigged-acquisition-and-ticket-seed-stream'},
   augmentPoolBatch2:{version:'augment-pool-batch2-v23-candidate',content:AUGMENT_BATCH2,blocked:AUGMENT_BATCH2_BLOCKED},
   augmentPoolBatch1:{version:'augment-pool-batch1-v23-candidate',content:AUGMENT_BATCH1,blocked:AUGMENT_BATCH1_BLOCKED,random:'source-seat-choice-spec-lcg32-uniform-sorted-with-replacement',anvilChoices:4,roundGold:'add-to-deferred-base-income-next-entry',unitEscrow:'solo-capacity-online-reward-orb'},

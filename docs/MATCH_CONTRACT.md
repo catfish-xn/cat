@@ -1500,3 +1500,12 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
 - `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
 - 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。
+
+### B5-R5：星夜与星夜+（2026-10-27）
+
+- 内容位于 `content/augment-pool-batch5-r5.ts`，通过 `AUGMENT_SHOP` 的既有 definitions/tier/API-name 聚合注册，避免重复候选。普通版获取6金且仅2-1提供；+版获取8金且仅3-2提供；彼此互斥。阶段标签不变。
+- `starryChanceBps(state: Pick<MatchState,'augments'|'level'>): number`：返回整数基点；未持有返回0；等级1–10分别为0/0/1800/2000/2200/2500/3000/5000/8000/10000。两版及1/2费同率。
+- `starryUpgrade(state: Pick<MatchState,'augments'|'level'|'seed'|'multiplayer'>, generation: number, slot: number, definitionId: string): boolean`：对有效领域输入纯计算，不修改状态或主RNG；3费及以上返回false。调用方仍须检查是否能预留3份共享库存。既有 `shop-augments.ts` 保留兼容导出。
+- `generateSharedShop` / `rerollSharedShop` / 自然换轮沿用共享池事务：命中且至少3份库存则生成二星报价、一次预留3份，否则保留一星；刷新/淘汰退回所有未买份额，锁店自然换轮保留预留。`buySharedUnit` 支付3倍基础费用，将3份来源转为自有持有份额，不二次扣池；既有合星按一星等价份额守恒，9份可合三星。失败沿用 `stale-shop`、`insufficient-gold`、`bench-full`、`purchased-slot`、`empty-slot` 等原枚举，原state/pool引用、事件和RNG不变。
+- `validateBatch5R5ShopAcquisition(state: MatchState): void`：`shop-history.ts` 恢复入口调用；按内容核对唯一获取收据及金币、选择身份、回合，错误抛 `RangeError('Invalid Starry Night acquisition')`。其余抽取/星级/库存/购买由现有 `shop-history-v1` 重演；不新建事实格式，缺历史不推测迁移。有其它历史强化的联机档仍须使用 `Room.augmentHistoryAuthority(seatId)` 与既有恢复API。
+- 服务器调用链复用 `Room.handle` → `applySeatCommand` → 共享池领域入口，无 `src/server` 改动；规则身份纳入 `rules-manifest.ts` 的 `augmentPoolBatch5R5` 和重算digest，外层schema/save/replay/command及历史epoch不变。证据状态与明确约定见 `S13_RULES_GAP.md` 的 P-B5-08/09。

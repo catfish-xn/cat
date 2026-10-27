@@ -181,7 +181,7 @@ it('Subscription Service: a stage start replaces the shop with 4 unique 4-costs 
 
 it('Starry Night: 1- and 2-cost offers become 2-star at the level chance, reserve three copies and cost three times the base price', ()=>{
  expect(starryChanceBps({augments:[{definitionId:'starry-night',choiceId:'x',acquiredRound:1}],level:9})).toBe(8000);
- expect([1,2,3,4,5,6,7,8,10].map(level=>starryChanceBps({augments:[{definitionId:'starry-night-plus',choiceId:'x',acquiredRound:1}],level}))).toEqual([1800,1800,1800,2000,2200,2500,3000,5000,10000]);
+ expect([1,2,3,4,5,6,7,8,10].map(level=>starryChanceBps({augments:[{definitionId:'starry-night-plus',choiceId:'x',acquiredRound:1}],level}))).toEqual([0,0,1800,2000,2200,2500,3000,5000,10000]);
  const {pool,states}=room(undefined,1);
  let r=accept(generateSharedShop(pool,{...owning(states[0],'starry-night'),gold:300,level:10,xp:0},0));
  for(let i=0;i<30&&!r.state.shop.slots.some(s=>s.status==='available'&&s.starLevel===2);i++)r=accept(rerollSharedShop(r.pool,r.state,r.state.shop.generation));
@@ -203,7 +203,7 @@ it('Starry Night: 1- and 2-cost offers become 2-star at the level chance, reserv
 });
 it('a 2-star shop purchase folds to a 2-star unit on restore; a forged star on a 3-cost is rejected', ()=>{
  const three=SHOP_CATALOG_BY_COST[3][0];
- let s=accepted(grantMechanicGold(shopOwner(18,'starry-night'),{receiptId:'starry-test',source:'test',amount:100}));
+ let s=accepted(grantMechanicGold(shopOwner(5,'starry-night'),{receiptId:'starry-test',source:'test',amount:100}));
  const eligible=()=>s.shop.slots.findIndex(x=>x.status==='available'&&x.starLevel===2&&UNIT_DEFINITIONS[x.definitionId].cost===1);
  for(let i=0;i<40&&eligible()<0;i++)s=accepted(rerollShop(s));
  const slot=eligible();expect(slot).toBeGreaterThanOrEqual(0);

@@ -696,7 +696,7 @@ function shopForState(state,round=state.round,subscription=false){
  const first=state.seatMechanics?.seat['shop-augments']?.rigAnchor??generation;
  if(rig&&(generation-first)%4===0){let rng=state.rngState;draw.shop.slots=Array.from({length:5},()=>{rng=word(word(rng));return {status:'available',definitionId:CATALOG[3][Number(BigInt(rng)*BigInt(CATALOG[3].length)/4294967296n)]};});}
  const star=state.augments.find(a=>['starry-night','starry-night-plus'].includes(a.definitionId));
- const chance=[1800,2000,2200,2500,3000,5000,8000,10000][Math.max(3,Math.min(10,state.level))-3];
+ const chance=starryChanceBps(state.level);
  if(star)draw.shop.slots=draw.shop.slots.map((offer,slot)=>COST[offer.definitionId]<=2&&shopWord(state,['starry',star.choiceId,generation,slot])*10000n/4294967296n<BigInt(chance)?{...offer,starLevel:2}:offer);
  return draw;
 }
@@ -723,3 +723,29 @@ function shopTransition(before,command){
  return next;
 }
 module.exports.shopWord=shopWord;module.exports.shopForState=shopForState;module.exports.shopTransition=shopTransition;
+
+// P-B5-08/09 (2026-10-27), independent integer transcription; no content imports.
+function starryChanceBps(level){return [0,0,1800,2000,2200,2500,3000,5000,8000,10000][level-1];}
+module.exports.starryChanceBps=starryChanceBps;
+// Finite-pool Starry Night shop oracle, from pre-draw stock (old offers already returned).
+// Deliberately scoped to pre-stage-4 shops, where six-cost replacement is zero.
+function starrySharedShop(state,stock){
+ assert(state.round<=17,'Starry oracle fixture is before stage 4');
+ const available={...stock},slots=[],generation=state.shop.generation+1;
+ const a=state.augments.find(x=>['starry-night','starry-night-plus'].includes(x.definitionId));
+ let rng=state.rngState;
+ const pick=(w,n)=>Number(BigInt(w)*BigInt(n)/4294967296n);
+ for(let slot=0;slot<5;slot++){
+  const tiers=[1,2,3,4,5].filter(t=>ODDS[state.level][t-1]>0&&CATALOG[t].some(id=>available[id]>0));
+  if(!tiers.length){slots.push({status:'purchased',empty:true});continue;}
+  rng=word(rng);let roll=pick(rng,tiers.reduce((n,t)=>n+ODDS[state.level][t-1],0));
+  const tier=tiers.find(t=>{if(roll<ODDS[state.level][t-1])return true;roll-=ODDS[state.level][t-1];return false;});
+  rng=word(rng);let copy=pick(rng,CATALOG[tier].reduce((n,id)=>n+(available[id]??0),0));
+  const id=CATALOG[tier].find(id=>{if(copy<(available[id]??0))return true;copy-=available[id]??0;return false;});
+  const hit=a&&tier<=2&&shopWord(state,['starry',a.choiceId,generation,slot])*10000n/4294967296n<BigInt(starryChanceBps(state.level));
+  const star=hit&&available[id]>=3;available[id]-=star?3:1;
+  slots.push({status:'available',definitionId:id,...(star?{starLevel:2}:{})});
+ }
+ return {rngState:rng,shop:{generation,slots,locked:Boolean(state.shop.locked)},available};
+}
+module.exports.starrySharedShop=starrySharedShop;

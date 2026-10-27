@@ -1,3 +1,5 @@
+import { starryUpgrade } from './augment-pool-batch5-r5';
+export { starryChanceBps, starryUpgrade } from './augment-pool-batch5-r5';
 import { recordShopDraw, recordShopFiresale } from './shop-history';
 import type { ShopDrawCause } from './shop-history-types';
 import { generateShop } from './shop';
@@ -84,21 +86,6 @@ export function enterShopAugmentRound(initial:MatchState):MatchState {
 export function shopOfferCost(offer:{readonly definitionId:string;readonly starLevel?:2}):number {
  return UNIT_DEFINITIONS[offer.definitionId].cost*(offer.starLevel===2?3:1);
 }
-/** Starry Night: 14.24 chance by player level, under the archive's hashed field names (triage 2026-10-24). Levels 1-2
- * use the level-3 chance and 1- and 2-cost share one chance (P). MaxTier ({0d14760d}) bounds the cost. */
-const STARRY_CHANCE_KEYS:Readonly<Record<number,string>>={3:'{4abd7204}',4:'{49c43705}',5:'{99dcb7a2}',6:'{020fb2eb}',7:'{7083c200}',8:'{ca771d21}',9:'{019b80fe}',10:'{4885b8ce}'};
-export function starryChanceBps(state:Pick<MatchState,'augments'|'level'>):number {
- const a=owned(state,'starry')[0];if(!a)return 0;
- const v=AUGMENT_SHOP[a.definitionId].source.values[STARRY_CHANCE_KEYS[Math.min(10,Math.max(3,state.level))]];
- return Math.round(v!*10000);
-}
-/** Whether this freshly drawn 1-star offer becomes 2-star. Seat/generation/slot-bound, so the shop RNG stream is unchanged;
- * the caller reserves the two extra copies and keeps a 1-star offer when the pool lacks them. */
-export function starryUpgrade(state:MatchState,generation:number,slot:number,definitionId:string):boolean {
- const a=owned(state,'starry')[0];if(!a||UNIT_DEFINITIONS[definitionId].cost>shopAugmentValue(a.definitionId,'{0d14760d}'))return false;
- return Math.floor(word(state,['starry',a.choiceId,generation,slot])*10000/4294967296)<starryChanceBps(state);
-}
-
 /** Rigged Shop+: the first shop drawn after acquisition and every Numrolls-th one after it hold only 3-cost champions.
  * The anchor is fixed by that first draw. Returns the tier to force, if any. */
 export function planRiggedShop(state:MatchState,generation:number):{readonly state:MatchState;readonly tier?:CostTier} {
