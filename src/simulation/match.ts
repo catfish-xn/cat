@@ -1,3 +1,4 @@
+import { drainPortfolioGold } from './augment-pool-batch5-h4';
 import { initializeAugmentTrace, traceHistoryCommand, recordAugmentRoundEntry, recordAugmentAcquisition } from './augment-history';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
@@ -616,7 +617,9 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   const carousel = resolveCarouselPreparation({ ...state, ...refresh, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] } });
   let prepared = growTrainerGolem(enterOpeningCrabs(carousel.state));
-  const openingEvents: MatchEvent[] = [];
+  const portfolio = drainPortfolioGold(prepared), portfolioEvents = stampMatchEvents(portfolio, mechanicGrantEvents(prepared,portfolio));
+  prepared = portfolioEvents.state;
+  const openingEvents: MatchEvent[] = [...portfolioEvents.events];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
@@ -665,7 +668,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
-    const entry=drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state));
+    const entry=drainPortfolioGold(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state)));
     const gifted=entry.augments.some(a=>a.definitionId==='a-change-of-fate')?drainP2Gifts(entry):entry;
     const drained=enterShopAugmentRound(gifted),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
@@ -944,10 +947,11 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     nextItemSerial: granted?.ok ? granted.state.nextItemSerial : state.nextItemSerial,
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
+  const beforeHistoryAcquisition = selected;
   if (choice.kind === 'augment') selected = recordAugmentAcquisition(state, selected);
   selected = applyLevelUpHealth(state, selected);
   if (choice.kind === 'augment') selected = applyAcquisitionHealthLoss(selected, selected.augments.at(-1)!);
-  const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
+  const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }, ...mechanicGrantEvents(beforeHistoryAcquisition,selected)];
   if(choice.kind==='augment'){
     if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
     if(definitionId==='called-shot')selected={...selected,streak:batch5Streak(selected,selected.round,selected.streak)};

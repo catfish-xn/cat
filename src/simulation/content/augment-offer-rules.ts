@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_H4_API_NAMES } from './augment-pool-batch5-h4';
 import { AUGMENT_SHOP_API_NAMES } from './augment-pool-shop';
 import { AUGMENT_BATCH5_API_NAMES } from './augment-pool-batch5';
 import { AUGMENT_BATCH4_API_NAMES } from './augment-pool-batch4';
@@ -26,6 +27,7 @@ export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeCo
   ...AUGMENT_BATCH3_XP_API_NAMES,
   ...AUGMENT_BATCH4_API_NAMES,
   ...AUGMENT_BATCH5_API_NAMES,
+  ...AUGMENT_BATCH5_H4_API_NAMES,
   ...AUGMENT_BATCH4_B4XP_API_NAMES,
   ...AUGMENT_BATCH4_B4REROLL_API_NAMES,
   sisters:'TFT13_TeamupAugment_Sisters', mentorship:'TFT13_TeamupAugment_Mentorship', reunion:'TFT13_TeamupAugment_Reunion',
