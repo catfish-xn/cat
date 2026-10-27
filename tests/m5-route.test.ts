@@ -3,28 +3,51 @@ import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 const FINAL_ROUND=ROUND_CATALOG.at(-1)!.ordinal;
 const BATTLE_COUNT=ROUND_CATALOG.filter(r=>r.kind!=='supply').length;
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import assertGolden from './fixtures/m5/assert-golden.cjs';
 import { run } from '../scripts/generate-m5-route.cjs';
+import { roundRouteCache } from './fixtures/round-route-cache';
 
-const routes=new Map<string, Awaited<ReturnType<typeof run>>>();
+// Every consuming describe owns its setup. Hooks run even with -t and are not
+// shuffled with tests; each hook advances only one bounded live-tick segment.
+// Assertion cases can only read completed routes, never finish a cold route.
+function routeFixture(build:string,seed=42){
+ let result:Awaited<ReturnType<typeof run>>|undefined;
+ const progress=roundRouteCache(async onRound=>{
+  // The existing driver implements these callbacks; its older declaration only lists onStep.
+  const options={build,seed,onRound,onBattleProgress:onRound};
+  result=await run(api,options);return result.final;
+ });
+ for(let round=1;round<=FINAL_ROUND;round++)for(const tick of [300,600,900,1200,1201])beforeAll(async()=>{
+  await progress.through(round-1+tick/1201);
+ });
+ beforeAll(async()=>{await progress.finish();});
+ return ()=>{
+  if(!result)throw new Error(`Route fixture not completed: ${build}:${seed}`);
+  return result;
+ };
+}
 describe('M5 ordinary three-build routes and independent resource ledger',()=>{
- it('normally buys five-cost Caitlyn and fields her for at least two real battles',async()=>{
-  const goldenRoute=await run(api,{build:'sniper-caitlyn',seed:42});routes.set('sniper-caitlyn',goldenRoute);assertGolden(goldenRoute);
+ for(const build of ['sniper-caitlyn','cannon','sniper','mage'])describe(build,()=>{
+  const ordinary=routeFixture(build);
+  const alternate=build==='sniper-caitlyn'?routeFixture(build,44):build==='sniper'?routeFixture(build,782):ordinary;
+ if(build==='sniper-caitlyn'){
+ it('normally buys five-cost Caitlyn and fields her for at least two real battles',()=>{
+  const goldenRoute=ordinary();assertGolden(goldenRoute);
   expect(goldenRoute.summary.outcome).toBe('victory');expect(goldenRoute.summary.round).toBe(FINAL_ROUND);
   // #265 restores the v15 loot cursor. Seed42 no longer fields Caitlyn;
   // retain its entire golden and use a second ordinary paid route for the
   // unchanged two-battle spell/damage assertions (seed44: four battles, six casts).
-  const route=await run(api,{build:'sniper-caitlyn',seed:44});
+  const route=alternate();
   expect(route.summary.outcome).toBe('victory');expect(route.summary.round).toBe(FINAL_ROUND);
   expect(route.summary.caitlynBattles).toBeGreaterThanOrEqual(2);expect(route.summary.caitlynCasts).toBeGreaterThanOrEqual(2);
   expect(route.final.preparation.units.some(u=>u.team==='player'&&u.definitionId==='caitlyn')).toBe(true);
   expect(route.rounds.filter(r=>r.events.some((e:unknown)=>{const event=e as {type:string;outcome?:{context:{source:{definitionId:string}};hpDamage:number}};return event.type==='packetDamage'&&event.outcome?.context.source.definitionId==='caitlyn-ability'&&(event.outcome?.hpDamage??0)>0;})).length).toBeGreaterThanOrEqual(2);
- },120000);
- for(const build of ['cannon','sniper','mage'])it(`${build}: ordinary purchases/rewards to 6-7 with a complete build`,async()=>{
-  const route=await run(api,{build,seed:42});routes.set(build,route);assertGolden(route);
+ });
+ }else it(`${build}: ordinary purchases/rewards to 6-7 with a complete build`,()=>{
+  const route=ordinary();assertGolden(route);
   expect(route.summary.outcome).toBe('victory');expect(route.summary.round).toBe(FINAL_ROUND);
   expect(route.summary.boundBattles).toBeGreaterThanOrEqual(2);
   expect(route.ledger.rounds).toHaveLength(ROUND_CATALOG.length);
@@ -40,11 +63,11 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
   }
   expect(api.stepMatch(end)).toEqual({state:end,events:[]});
   expect(api.createMatch(42)).toEqual(route.initial);
- },120000);
+ });
  // Signed R3/R4: 2–3 opening component value + four 2-value PvE packages + five supply choices.
  // Prismatic packages substitute a completed item (value 2); 6-7 grants gold/tool only.
- for(const build of ['sniper-caitlyn','cannon','sniper','mage'])it(`[B8] ${build}: complete-build battles and full component grant chain`,async()=>{
-  const route=routes.get(build)!;
+ it(`[B8] ${build}: complete-build battles and full component grant chain`,()=>{
+  const route=ordinary();
   expect(route.summary.formedBattles).toBeGreaterThanOrEqual(3);
   // Terminal victory: the final 6-7 drop is already granted in the same gameOver state (no later award),
   // read-only, and identical after strict restore.
@@ -56,7 +79,7 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
   expect(api.readLootView(restoreMatch(serializeMatch(end)))).toEqual(view);
   if(build!=='sniper-caitlyn'){
    expect(route.summary.transitioned).toBe(true);
-   const transferRoute=build==='sniper'?await run(api,{build,seed:782}):route;
+   const transferRoute=build==='sniper'?alternate():route;
    expect(transferRoute.actions.some(a=>a.command.type==='sell'&&a.events.some((e:unknown)=>{const event=e as {type:string;itemIds?:string[]};return event.type==='itemsReturned'&&(event.itemIds?.length??0)>0;}))).toBe(true);
    const supply=route.final.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0);
    const loot=route.final.m8.loot.receipts.filter(r=>r.payload.kind==='item');
@@ -77,6 +100,6 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
    expect(forges.map(isOpened)).toEqual([true,false]);expect(componentAnvils.every(isOpened)).toBe(true);
    expect(readComponentEquivalent(route.final)).toBe(20-2+componentAnvils.length);
   }
- // Temporary 70s: 34.78s measured at four workers for the extra real transfer route; user approved ~2x on 2026-10-21.
- },70000);
+ });
+ });
 });

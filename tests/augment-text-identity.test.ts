@@ -23,12 +23,10 @@ it('shows every batch description after the UI chunk arrives, without putting pr
     expect(augmentPlayerDescription(id)).toBe(AUGMENT_POOL_TEXT[id].description);
   }
 });
-it('keeps both server bundles independent of lazy UI and offline archive data', async () => {
+it.each(['src/server/main.ts', 'src/server-entry/index.ts'])('keeps server bundle %s independent of lazy UI and offline archive data', async entry => {
   const { build } = await import('esbuild');
-  for (const entry of ['src/server/main.ts', 'src/server-entry/index.ts']) {
     const result = await build({ entryPoints: [entry], bundle: true, platform: 'node', format: 'esm',
       packages: 'external', write: false, metafile: true, logLevel: 'silent' });
     expect(Object.keys(result.metafile!.inputs).filter(path =>
       /augment-(?:pool-text|text-(?:data|loader))|tooltip-text-(?:data|loader)|augment-content-archive/.test(path)), entry).toEqual([]);
-  }
 });

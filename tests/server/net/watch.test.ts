@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { NET_PROTOCOL_VERSION, parseClientMessage, type ServerMessage } from '../../../src/server/net/messages';
 import type { TestClient } from '../../../src/server/net/test-client';
 import { TwoSidedBattleResolver } from '../../../src/server/room/two-sided-resolver';
@@ -13,10 +13,12 @@ import { expectOk, flush, hasKey, messagesOfType, seatTwo, startServer, type Net
 type WatchReplay = Extract<ServerMessage, { type: 'watch-replay' }>;
 let harness: NetHarness | null = null;
 const browserClients: WsGameClient[] = [];
-afterEach(async () => {
+const cleanup = async () => {
   for (const client of browserClients.splice(0)) client.dispose();
   await harness?.close(); harness = null;
-});
+};
+afterEach(cleanup);
+afterAll(cleanup);
 
 /** Watch is connection-level: never use TestClient.send, which waits for a receipt. */
 function watch(client: TestClient, seatId: string | null, roomId = 'net-room'): number {
@@ -94,12 +96,16 @@ describe('watch wire contract', () => {
     expect(parseClientMessage(JSON.stringify(envelope)).ok).toBe(false);
   });
 
-  it('sends the watched replay once, without a receipt, rule mutation or dedupe entry', async () => {
-    harness = await startServer();
-    const [observer, target] = await seatTwo(harness), room = harness.server.room!;
-    runUntil(room, harness.clock, state => state.phase === 'battle');
+  describe('sends the watched replay once, without a receipt, rule mutation or dedupe entry fixture', () => {
+    let observer: TestClient, target: TestClient, room: Room;
+    beforeAll(async () => { harness = await startServer(); });
+    beforeAll(async () => {
+      [observer, target] = await seatTwo(harness!); room = harness!.server.room!;
+      runUntil(room, harness!.clock, state => state.phase === 'battle');
+    });
+    it('sends the watched replay once, without a receipt, rule mutation or dedupe entry', async () => {
     await observer.waitFor(message => message.type === 'replay'); await flush();
-    const before = room.state, dedupe = harness.server.retained.dedupeEntries;
+    const before = room.state, dedupe = harness!.server.retained.dedupeEntries;
     const from = observer.inbox.length, targetFrom = target.inbox.length;
     const commandId = watch(observer, target.seatId!);
     const replay = await observer.waitFor<WatchReplay>(message => message.type === 'watch-replay', 5_000, from);
@@ -111,8 +117,9 @@ describe('watch wire contract', () => {
     expect(observer.inbox.some(message => message.type === 'receipt' && message.commandId === commandId)).toBe(false);
     expect(target.inbox.slice(targetFrom)).toEqual([]);
     expect(room.state).toBe(before);
-    expect(harness.server.retained.dedupeEntries).toBe(dedupe);
+    expect(harness!.server.retained.dedupeEntries).toBe(dedupe);
     expect(hasKey(replay, 'unitIds')).toBe(false);
+  });
   });
 
   it('ignores invalid rooms, self/nonexistent seats and unauthenticated watches without affecting another watcher', async () => {
@@ -133,10 +140,14 @@ describe('watch wire contract', () => {
     await a.waitFor(message => message.type === 'watch-replay', 5_000, from); // invalid seat cleared the old watch
   });
 
-  it('sends nothing for an identical battle replacement and sends a whole replay again for the next battle', async () => {
-    harness = await startServer({}, new TwoSidedBattleResolver());
-    const [observer, target] = await seatTwo(harness), room = harness.server.room!;
-    runUntil(room, harness.clock, state => state.phase === 'battle');
+  describe('sends nothing for an identical battle replacement and sends a whole replay again for the next battle fixture', () => {
+    let observer: TestClient, target: TestClient, room: Room;
+    beforeAll(async () => { harness = await startServer({}, new TwoSidedBattleResolver()); });
+    beforeAll(async () => {
+      [observer, target] = await seatTwo(harness!); room = harness!.server.room!;
+      runUntil(room, harness!.clock, state => state.phase === 'battle');
+    });
+    it('sends nothing for an identical battle replacement and sends a whole replay again for the next battle', async () => {
     const opening = await watchReplay(observer, target.seatId!);
     const from = observer.inbox.length;
     // A publication with new battle identities but identical public records must exercise replayTail's null path.
@@ -145,7 +156,7 @@ describe('watch wire contract', () => {
     expect(messagesOfType(observer.inbox.slice(from), 'watch-replay')).toEqual([]);
     expect(messagesOfType(observer.inbox.slice(from), 'watch-tail')).toEqual([]);
 
-    runUntil(room, harness.clock, state => state.round > opening.round && state.phase === 'battle');
+    runUntil(room, harness!.clock, state => state.round > opening.round && state.phase === 'battle');
     const next = await observer.waitFor<WatchReplay>(message => message.type === 'watch-replay' && message.round === room.state.round, 5_000, from);
     await flush();
     expect(next).toEqual({ type: 'watch-replay', roomId: room.state.roomId, round: room.state.round,
@@ -154,6 +165,7 @@ describe('watch wire contract', () => {
     expect(next.battleId).not.toBe(opening.battleId);
     expect(messagesOfType(observer.inbox.slice(from), 'watch-replay')).toEqual([next]);
     expect(messagesOfType(observer.inbox.slice(from), 'watch-tail')).toEqual([]);
+  });
   });
 
   it('WsGameClient resends its current watch after disconnect/resume and receives a fresh replay', async () => {
