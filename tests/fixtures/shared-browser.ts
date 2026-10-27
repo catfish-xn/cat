@@ -17,6 +17,7 @@ export const BROWSER_OPTIONS = { headless: true, ...(existsSync('/usr/bin/google
  */
 export async function testBrowser(): Promise<Browser> {
   if (process.env.CODEX_BROWSER_CLIENT) return createRequire(import.meta.url)(process.env.CODEX_BROWSER_CLIENT).connect();
+  // A supplied sandbox browser is authoritative: do not launch Chrome if connecting fails.
   if (process.env.PLAYWRIGHT_WS_ENDPOINT) return chromium.connect(process.env.PLAYWRIGHT_WS_ENDPOINT);
   const endpoint = inject('playwrightEndpoint');
   if (endpoint) {

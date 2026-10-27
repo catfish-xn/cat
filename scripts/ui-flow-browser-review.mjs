@@ -62,6 +62,32 @@ try {
         bots: { stepMs: 300 }, limits: { maxMessagesPerWindow: 10000 } });
       context = await browser.newContext({ viewport, ...(viewport.width === 390 ? { isMobile: true, hasTouch: true } : {}) });
       const page = await context.newPage();
+      const commands = [], receipts = [], activations = [];
+      page.on('websocket', socket => {
+        socket.on('framesent', ({ payload }) => {
+          const message = JSON.parse(String(payload));
+          if (message.type === 'command') commands.push({ commandId: message.commandId, seatRevision: message.seatRevision, command: message.command });
+        });
+        socket.on('framereceived', ({ payload }) => {
+          const message = JSON.parse(String(payload));
+          if (message.type === 'receipt' && commands.some(command => command.commandId === message.commandId)) receipts.push(message);
+        });
+      });
+      const activate = async selector => {
+        const button = page.locator(selector);
+        await button.scrollIntoViewIfNeeded();
+        // Record a real exposed hit point: existing floating gold can cover a choice toggle's centre.
+        const position = await button.evaluate(node => {
+          const b = node.getBoundingClientRect();
+          for (const y of [0.5, 0.8, 0.2]) for (const x of [0.5, 0.2, 0.8]) {
+            if (node.contains(document.elementFromPoint(b.x + b.width * x, b.y + b.height * y))) return { x: b.width * x, y: b.height * y };
+          }
+          return null;
+        });
+        assert.ok(position, `${tag}: ${selector} has an exposed hit target`);
+        activations.push({ selector, position, input: viewport.width === 390 ? 'touch' : 'mouse' });
+        if (viewport.width === 390) await button.tap({ position }); else await button.click({ position });
+      };
       const errors = [];
       page.on('pageerror', e => errors.push(e.message));
       const ws = `ws://127.0.0.1:${game.port}`;
@@ -79,14 +105,41 @@ try {
       if (await closeOpening.isVisible()) await closeOpening.click();
       await page.evaluate(() => document.querySelector('.opening-card-close')?.click());
       if (mode === '3d') await page.waitForFunction(expected => document.querySelector('.render3d-layer')?.dataset.state === expected, assetRoot ? 'assets' : 'placeholder');
-      const sample = { tag, viewport, mode, seed: forgeSeed, assetRoot, screenshots: [], checks: [], errors };
+      const sample = { tag, viewport, mode, seed: forgeSeed, assetRoot, screenshots: [], checks: [], errors, commands, receipts, activations };
       results.push(sample);
       const check = (flow, name, pass, detail) => sample.checks.push({ flow, name, pass: Boolean(pass), ...(detail === undefined ? {} : { detail }) });
       const shot = async name => { const path = join(out, `${tag}-${name}.png`); await page.screenshot({ path }); sample.screenshots.push(path); };
       await shot('start');
       console.log('START', tag, game.room.state.seats.map(s => ({ id: s.seatId, kind: s.kind, controller: s.controller })), await page.locator('.opening-card').count());
+      if (mode === '3d') {
+        const blank = await page.evaluate(() => {
+          const canvas = document.querySelector('.render3d-canvas'), rail = document.querySelector('#panels-root').getBoundingClientRect();
+          window.__railCanvasInput = [];
+          canvas.addEventListener('pointerdown', event => window.__railCanvasInput.push({ trusted: event.isTrusted, type: event.pointerType }));
+          for (let y = rail.bottom - 4; y >= rail.top + 4; y -= 8) for (let x = rail.left + 4; x < rail.right - 4; x += 8) {
+            if (document.elementFromPoint(x, y) === canvas) return { x, y, rail: { x: rail.x, y: rail.y, width: rail.width, height: rail.height } };
+          }
+          return null;
+        });
+        assert.ok(blank, `${tag}: find a blank area within the left rail`);
+        if (viewport.width === 390) await page.touchscreen.tap(blank.x, blank.y); else await page.mouse.click(blank.x, blank.y);
+        const input = await page.evaluate(() => window.__railCanvasInput);
+        sample.leftRail = { blank, input };
+        check('left-rail', 'blank-area input reaches the canvas', input.length === 1 && input[0].trusted && input[0].type === (viewport.width === 390 ? 'touch' : 'mouse'), sample.leftRail);
+        const collapsed = await page.locator('body').getAttribute('data-online-left');
+        await activate('[data-debug="online:left-toggle"]');
+        check('left-rail', 'left-rail control handles input without passing it to canvas', await page.locator('body').getAttribute('data-online-left') !== collapsed
+          && await page.evaluate(() => window.__railCanvasInput.length) === 1);
+        await activate('[data-debug="online:left-toggle"]');
+        assert.equal(await page.locator('body').getAttribute('data-online-left'), collapsed);
+        await shot('left-rail-input');
+      }
       const room = game.room;
       const me = room.state.seats.find(s => s.kind === 'human');
+      const myMatch = () => room.state.seats.find(s => s.seatId === me.seatId).match;
+      const normalGrid = await page.locator('#shop-dock').evaluate(node => ({
+        areas: getComputedStyle(node).gridTemplateAreas, rows: getComputedStyle(node).gridTemplateRows,
+      }));
       const anvil = me.match.preparation.units.find(u => u.definitionId === 'TFT_ArmoryKeyComponent');
       assert.ok(anvil);
       check('room', 'one human and seven active bot controllers', room.state.seats.filter(s => s.controller === 'bot').length === 7);
@@ -140,7 +193,71 @@ try {
       check('anvil', 'XP/reroll/lock/sell hidden', sample.anvil.hidden.every(b => !b.visible));
       if (assetRoot) check('assets', 'original shop-bar icon decoded', sample.anvil.icon?.src.includes('/anvils/icons/TFT_ArmoryKeyComponent.png') && sample.anvil.icon.width > 0);
       await shot('anvil-open');
-      await page.locator('[data-armory="anvil"] .shop-card').nth(1).click();
+      // Regression V: pending anvil survives view-shop; normal controls must regain separate grid cells.
+      const beforeShopActions = myMatch(), choiceBeforeShop = beforeShopActions.pendingChoice;
+      seedSeat(room, match => ({ ...match, gold: 50 }));
+      await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.gold === 50);
+      await activate('[data-debug="shop-choice-away"]');
+      const controlIds = ['mobile:buy-xp', 'mobile:reroll', 'mobile:sell', 'shop-lock'];
+      sample.anvil.shopView = await page.evaluate(ids => {
+        const dock = document.querySelector('#shop-dock'), style = getComputedStyle(dock);
+        return { areas: style.gridTemplateAreas, rows: style.gridTemplateRows,
+          populationVisible: !!dock.querySelector('.hud-pop').getClientRects().length,
+          controls: ids.map(id => {
+            const button = dock.querySelector(`[data-debug="${id}"]`), b = button.getBoundingClientRect();
+            return { id, x: b.x, y: b.y, width: b.width, height: b.height,
+              target: document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)?.closest('button')?.dataset.debug };
+          }) };
+      }, controlIds);
+      const shopView = sample.anvil.shopView;
+      check('anvil-shop', 'normal shop grid and population restored while choice pending', shopView.areas === normalGrid.areas && shopView.rows === normalGrid.rows && shopView.populationVisible);
+      const controlsSeparate = shopView.controls.every((a, i, boxes) => boxes.slice(i + 1).every(b =>
+        a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y));
+      check('anvil-shop', 'four controls have non-overlapping bounding boxes and correct hit targets', controlsSeparate && shopView.controls.every(b =>
+        b.width >= 44 && b.height >= 44 && b.x >= 0 && b.y >= 0 && b.x + b.width <= viewport.width + 1 && b.y + b.height <= viewport.height + 1 && b.target === b.id), shopView.controls);
+      await shot('anvil-view-shop');
+      assert.ok(controlsSeparate, `${tag}: shop controls overlap: ${JSON.stringify(shopView.controls)}`);
+      // Only affordability is seeded; all four actual DOM taps/clicks go through the online client and server.
+      const xpBefore = { level: myMatch().level, xp: myMatch().xp, gold: myMatch().gold };
+      await activate('[data-debug="mobile:buy-xp"]');
+      await page.waitForFunction(before => {
+        const state = window.__CAT_DEBUG__.read().state;
+        return state.level !== before.level || state.xp !== before.xp;
+      }, xpBefore);
+      check('anvil-shop', 'XP tap confirmed by server', myMatch().gold < xpBefore.gold && (myMatch().level !== xpBefore.level || myMatch().xp > xpBefore.xp));
+      const generation = myMatch().shop.generation;
+      await activate('[data-debug="mobile:reroll"]');
+      await page.waitForFunction(before => window.__CAT_DEBUG__.read().state.shop.generation > before, generation);
+      check('anvil-shop', 'reroll tap confirmed by server', myMatch().shop.generation > generation);
+      const locked = myMatch().shop.locked;
+      await activate('[data-debug="shop-lock"]');
+      await page.waitForFunction(before => window.__CAT_DEBUG__.read().state.shop.locked !== before, locked);
+      check('anvil-shop', 'lock tap confirmed by server', myMatch().shop.locked === !locked);
+      const unitIds = myMatch().preparation.units.map(u => u.id);
+      const buySlot = myMatch().shop.slots.findIndex(s => s.status === 'available' && !myMatch().preparation.units.some(u => u.definitionId === s.definitionId));
+      assert.ok(buySlot >= 0, 'A distinct shop unit is available for the sell-button regression');
+      await activate(`[data-debug="mobile:buy-${buySlot}"]`);
+      await page.waitForFunction(ids => window.__CAT_DEBUG__.read().state.preparation.units.some(u => !ids.includes(u.id)), unitIds);
+      const bought = myMatch().preparation.units.find(u => !unitIds.includes(u.id));
+      // Select the newly purchased sale target without moving the board camera or answering the pending choice.
+      await page.evaluate(id => { window.__reviewScene.selectedId = id; }, bought.id);
+      await activate('[data-debug="mobile:sell"]');
+      await page.waitForFunction(id => !window.__CAT_DEBUG__.read().state.preparation.units.some(u => u.id === id), bought.id);
+      check('anvil-shop', 'sell tap confirmed by server', !myMatch().preparation.units.some(u => u.id === bought.id));
+      await activate('[data-debug="shop-choice-back"]');
+      const backCards = page.locator('[data-armory="anvil"] .shop-card');
+      await backCards.first().waitFor();
+      assert.deepEqual(myMatch().pendingChoice, choiceBeforeShop);
+      assert.deepEqual(myMatch().choiceDeadline, beforeShopActions.choiceDeadline);
+      const backClock = await page.locator('[data-debug="armory:clock"]').boundingBox(), backFirst = await backCards.first().boundingBox();
+      check('anvil-shop', 'back preserves choice/deadline and restores four cards above hidden controls', await backCards.count() === 4
+        && backClock.y + backClock.height <= backFirst.y + 1
+        && (await Promise.all(controlIds.map(id => page.locator(`[data-debug="${id}"]`).isVisible()))).every(visible => !visible));
+      await shot('anvil-back-to-choice');
+      // Reset only the affordability/progression fixture; retain the live shared-pool binding after buy/sell.
+      seedSeat(room, match => ({ ...match, gold: beforeShopActions.gold, level: beforeShopActions.level, xp: beforeShopActions.xp }));
+      await page.waitForFunction(gold => window.__CAT_DEBUG__.read().state.gold === gold, beforeShopActions.gold);
+      await activate('[data-armory="anvil"] .shop-card:nth-child(2)');
       await page.waitForFunction(() => !window.__CAT_DEBUG__.read().state.pendingChoice);
       check('anvil', 'pick restores all five shop slots', await page.locator('.shop-card[data-debug^="mobile:buy-"]').count() === 5);
       await shot('anvil-picked');

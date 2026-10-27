@@ -1,3 +1,5 @@
+import { projectedBox, type ScreenArea } from './description-pick';
+import type { BoardScreenBox } from '../board-feed';
 /**
  * The 3D board's surroundings (docs/ASSETS3D_TFT_EXTRAS.md 界面接线需求): my 河灵 (little legend) beside the board, an
  * opponent's on the far side while a PvP battle is shown, my unclaimed orbs where their monster fell (else in a column
@@ -84,6 +86,7 @@ export interface Tabletop {
   frame(frame: BoardFrame): void;
   update(seconds: number): void;
   /** My orb drawn under a CSS-pixel point, by its projected center. */
+  orbBox(id: string, area: ScreenArea): BoardScreenBox | undefined;
   orbAt(client: { x: number; y: number }, area: { left: number; top: number; width: number; height: number }): string | null;
   /**
    * Walks my legend toward a board-space point (BoardScene x/y), or to my orb `orbId`, kept within the roaming area.
@@ -560,6 +563,7 @@ export function createTabletop(ctx: TabletopContext): Tabletop {
 
   return {
     layout, frame: onFrame, update, orbAt, walkTo,
+    orbBox(id, area) { const view = orbs.get(id); return view && reachable(view) ? projectedBox(view.root, ctx.camera, area) : undefined; },
     saved() {
       const view = legends.get('me');
       if (view && !away) {

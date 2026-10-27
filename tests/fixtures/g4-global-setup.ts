@@ -12,8 +12,10 @@ export default async function setup(project: TestProject) {
     return () => { delete process.env.G4_FIXTURE_CACHE; rmSync(directory, { recursive: true, force: true }); };
   }
   // One shared browser server for the in-process browser tests (tests/fixtures/shared-browser.ts);
-  // if it cannot start, those tests launch their own browser as before.
+  // An externally supplied browser is owned by the caller; otherwise retain the local launch/fallback.
   let server: BrowserServer | undefined;
-  try { server = await chromium.launchServer(BROWSER_OPTIONS); project.provide('playwrightEndpoint', server.wsEndpoint()); } catch { server = undefined; }
+  if (!process.env.PLAYWRIGHT_WS_ENDPOINT) {
+    try { server = await chromium.launchServer(BROWSER_OPTIONS); project.provide('playwrightEndpoint', server.wsEndpoint()); } catch { server = undefined; }
+  }
   return async () => { await server?.close(); delete process.env.G4_FIXTURE_CACHE; rmSync(directory, { recursive: true, force: true }); };
 }
