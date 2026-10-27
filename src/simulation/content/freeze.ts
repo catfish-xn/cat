@@ -24,19 +24,22 @@ function freezeOwned<T>(value: T): T {
 /** Pause only between owned JSON nodes; never certify an unfinished subtree. */
 export function* freezeContentSteps<T>(value: T): Generator<void, T, void> {
   // Keep the same cooperative boundaries on cold and warm data; prior matches must not change room scheduling.
-  return yield* freezeSteps(value, { remaining: 64, skipFrozen: false });
-}
-function* freezeSteps<T>(value: T, budget: { remaining: number; skipFrozen: boolean }): Generator<void, T, void> {
-  if (value !== null && typeof value === 'object') {
-    if (budget.skipFrozen && frozenContent.has(value)) return value;
-    if (--budget.remaining === 0) { budget.remaining = 64; yield; }
-    for (const child of Object.values(value)) {
-      if (child !== null && typeof child === 'object') yield* freezeSteps(child, budget);
-    }
-    Object.freeze(value);
-    frozenContent.add(value);
-  }
+  // Only the pause count is observable: freeze in one synchronous pass (children
+  // first, warm nodes included) and pause once per 64 object nodes, as the former
+  // stepwise traversal did (its budget started at 64 and paused when it hit zero).
+  const nodes = freezeCounting(value);
+  for (let pauses = Math.floor(nodes / 64); pauses > 0; pauses--) yield;
   return value;
+}
+function freezeCounting(value: unknown): number {
+  if (value === null || typeof value !== 'object') return 0;
+  let count = 1;
+  for (const child of Object.values(value)) {
+    if (child !== null && typeof child === 'object') count += freezeCounting(child);
+  }
+  Object.freeze(value);
+  frozenContent.add(value);
+  return count;
 }
 
 // Short-lived view/ledger graphs must not grow the process-wide certification
@@ -52,11 +55,17 @@ function freezeTree<T>(value: T, roots?: WeakSet<object>): T {
   return value;
 }
 export function freezeTransientContent<T>(value: T): T { return freezeTree(value); }
-export function createScopedContentFreezer() {
+export interface ScopedContentFreezer {
+  <T>(value: T): T;
+  /** Register a root the caller has already deeply frozen, without walking it again. */
+  adopt(value: object): void;
+}
+export function createScopedContentFreezer(): ScopedContentFreezer {
   const roots = new WeakSet<object>();
-  return <T>(value: T): T => {
+  const freeze = <T>(value: T): T => {
     freezeTree(value, roots);
     if (value !== null && typeof value === 'object') roots.add(value);
     return value;
   };
+  return Object.assign(freeze, { adopt: (value: object): void => { roots.add(value); } });
 }
