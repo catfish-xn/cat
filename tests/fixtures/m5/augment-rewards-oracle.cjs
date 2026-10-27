@@ -102,6 +102,7 @@ function rewardPlan(s,env){
     if(hero<=s.round)levelsOut.push(...expand(s,owner(a,['batch5-fate','unit'],hero),[U('mel')],env));
    }
   }
+  if(a.definitionId==='pilfer')for(const f of facts){const count=f.batch2?.find(x=>x.definitionId==='pilfer')?.count??0;if(count&&f.round+1<=s.round)levelsOut.push(...expand(s,owner(a,['pilfer',f.round],f.round+1),[U([...env.CATALOG.flat(), 'mel','viktor','warwick'][count-1])],env));}
   const counts=b2.rewards[a.definitionId];
   if(counts){let total=0,paid=0;for(const f of facts){total+=f.batch2?.find(x=>x.definitionId===a.definitionId)?.count??0;
    const due=Math.min(counts.max??Infinity,Math.floor(total/counts.every));
@@ -219,6 +220,8 @@ function validateBattleCounters(before,after,f,base){
  const ownsSpoils=(openingStrategy?.units??[]).some(u=>opening.has(u.unitId)&&team.some(t=>t.id===u.unitId)&&u.sources.some(s=>s.source.sourceKind==='augment'&&['spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii'].includes(s.source.sourceDefinitionId)));
  const spoilsKills=deaths.filter(d=>{const u=us.find(x=>x.id===d.unitId);return u&&u.team!=='player'&&opening.has(u.id)&&!u.itemSummon&&!u.anomalySummon&&(base.COST[u.definitionId]!==undefined||['elise-ranged','jayce-ranged','swain-ranged','gangplank-ranged'].includes(u.definitionId)||f.roundKind==='pve'&&u.definitionId.startsWith('pve-'));}).length;
  if(ownsSpoils&&spoilsKills)expected.push({definitionId:'spoils-of-war',count:spoilsKills});
+ const ownsPilfer=(openingStrategy?.units??[]).some(u=>team.some(t=>t.id===u.unitId)&&u.sources.some(s=>s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='pilfer'));
+ if(ownsPilfer){const catalog=[...base.CATALOG.flat(),'mel','viktor','warwick'];const d=deaths.find(d=>{const u=us.find(x=>x.id===d.unitId);return u&&u.team!=='player'&&opening.has(u.id)&&!u.itemSummon&&!u.anomalySummon&&catalog.includes(u.definitionId);});const victim=d&&us.find(u=>u.id===d.unitId);expected.push({definitionId:'pilfer',count:victim?catalog.indexOf(victim.definitionId)+1:0});}
  assert.deepEqual(f.batch2??[],expected,'independent batch2 counter existence and values');
 }
 function validateRewardsCore(before,after,command,events,base){

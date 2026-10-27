@@ -140,10 +140,11 @@ const batch3Offers={silver:['team-building','latent-forge','eye-for-an-eye','eye
 batch3Offers.silver.push('kingslayer','risky-moves');batch3Offers.gold.push('patient-study','epoch','epoch-plus');batch3Offers.prismatic.push('level-up','shopping-spree','upward-mobility');
 // Batch 4 (14.24 tiers): level rewards, B4XP bench XP, B4reroll free rerolls, B4Combat combat-start effects.
 batch3Offers.silver.push('caretakers-ally','lategame-specialist','patience-is-a-virtue');batch3Offers.gold.push('caretakers-favor','clear-mind','cluttered-mind','slammin','slammin-plus','long-distance-pals','category-five','overheal','sated-spellweaver');batch3Offers.prismatic.push('birthday-presents','caretakers-chosen','invested-plus','invested-plus-plus');
+batch3Offers.gold.push('pilfer');
 batch3Offers.silver.push('called-shot','crafted-crafting');batch3Offers.prismatic.push('dual-purpose','a-change-of-fate','tiniest-titan','tiniest-titan-plus');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
-assert.equal(AUGMENTS.length,237,'independent full augment catalog size');
-assert.equal(new Set(AUGMENTS).size,237,'independent catalog has no duplicates');
+assert.equal(AUGMENTS.length,238,'independent full augment catalog size');
+assert.equal(new Set(AUGMENTS).size,238,'independent catalog has no duplicates');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).
