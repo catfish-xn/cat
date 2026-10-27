@@ -1,3 +1,4 @@
+import { atWhatCostGrant, skipsFutureAugment } from './augment-pool-batch5-s1b';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
 import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost, drawSoloAugmentShop, planFiresale, stealFiresaleUnit, subscriptionAcquired, subscriptionStageStart } from './shop-augments';
@@ -177,6 +178,7 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
   const schedule = state.multiplayer && state.round > FINAL_ROUND ? [] : getRoundSchedule(state.round);
   for (const event of schedule.filter(event => (event.timing ?? 'before') === timing)) {
     if (state.scheduleReceipts.some(receipt => receipt.eventId === event.id)) continue;
+    if (event.kind === 'augment' && skipsFutureAugment(state, state.round)) continue;
     if (state.multiplayer?.forfeitedChoices.includes(event.id)) continue;
     if (state.carousel && event.kind==='component' && getRoundKind(state.round)==='supply') continue;
     if (event.kind === 'reward') {
@@ -933,7 +935,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? choiceAcquisitionGold((choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId], state.round) : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
-  const acquisitionProgress = grantXp(state.level,state.xp,choice.kind==='augment'?choiceAcquisitionXp(AUGMENT_DEFINITIONS[definitionId])+outcomeAcquisitionXp(state,{definitionId,choiceId,acquiredRound:state.round}):0);
+  const acquisitionProgress = grantXp(state.level,state.xp,choice.kind==='augment'?choiceAcquisitionXp(AUGMENT_DEFINITIONS[definitionId])+outcomeAcquisitionXp(state,{definitionId,choiceId,acquiredRound:state.round})+(definitionId==='at-what-cost'?atWhatCostGrant(state.level,state.xp):0):0);
   let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold, level:acquisitionProgress.level, xp:acquisitionProgress.xp,
     scheduleReceipts: [...state.scheduleReceipts, receipt],
     resourceProvenance:itemId?appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'item-acquired',itemId,source:{kind:'schedule',eventId:choice.eventId}}):state.resourceProvenance,

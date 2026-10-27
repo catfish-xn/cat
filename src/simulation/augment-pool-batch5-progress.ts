@@ -1,3 +1,4 @@
+import { atWhatCostHistoricalXp } from './augment-pool-batch5-s1b';
 import { planCombatStreak } from './economy';
 import type { MatchState } from './match-types';
 import type { OwnedAugment } from './strategy-types';
@@ -49,7 +50,7 @@ function validateXpPurchases(state:MatchState):void {
   if(checkedXp(e.levelBefore,e.xpBefore)>=cap)fail();
   generation=e.generation;sequence=e.sequence;lastRound=round;
  }
- const acquisitionXp=(round:number)=>augmentAcquisitionXpAtRound(state.augments,round)
+ const acquisitionXp=(round:number)=>atWhatCostHistoricalXp(state,round)+augmentAcquisitionXpAtRound(state.augments,round)
   +state.augments.filter(a=>a.acquiredRound===round).reduce((n,a)=>n+outcomeAcquisitionXp(state,a),0);
  const entryXp=(round:number)=>readAugmentIncome(state.augments.filter(a=>a.acquiredRound<round)).roundXp+batch3EntryXp(state.augments,state.roundResults,round);
  const previous=state.roundResults.find(r=>r.round===owner.acquiredRound-1);
