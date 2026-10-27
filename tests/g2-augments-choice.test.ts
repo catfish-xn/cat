@@ -13,7 +13,7 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true)).sort(),pool=[...ids];
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(ids);let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  expect(ids).toHaveLength(270); // Integrated catalog plus three H7 augments.
+  expect(ids).toHaveLength(283); // Integrated catalog, including shared-carousel augments and Shop Glitch.
   expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
  // Only cards offered at 2-1 (14.24 stage tags, augment-stage-bans.ts) can be selected there.

@@ -36,8 +36,8 @@ const baselineBytes=(text:string)=>canonicalContent(JSON.parse(text, (key, value
 let acquired: MatchState, advanced: MatchState;
 const baselineIdentity=(text:string)=>text.replaceAll('s13-g2-3-v25-online-rules','s13-g2-3-v24-online-rules')
   .replaceAll('s13-14.24b-g2-3-v25-online-rules','s13-14.24b-g2-3-v24-online-rules')
-  .replaceAll('fnv1a32-utf16:2cfdbb54','fnv1a32-utf16:db662e0b')
-  .replaceAll('fnv1a32-utf16:722ab6e2','fnv1a32-utf16:18c876b2');
+  .replaceAll('fnv1a32-utf16:5e8ea7cd','fnv1a32-utf16:db662e0b')
+  .replaceAll('fnv1a32-utf16:6546f4ff','fnv1a32-utf16:18c876b2');
 beforeAll(() => {
   const open = reachRound('2-1', false, starryNightSeed()), c = open.pendingChoice!;
   expect(c.offers).toContain('starry-night');

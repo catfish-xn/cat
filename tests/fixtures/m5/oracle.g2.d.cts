@@ -77,3 +77,10 @@ export function shopWord(state: Pick<MatchState, 'seed' | 'multiplayer'>, parts:
 export function shopForState(state: MatchState, round?: number, subscription?: boolean): { rngState: number; shop: MatchState['shop'] };
 export function shopTransition(state: MatchState, command: unknown): { rngState: number; shop: MatchState['shop']; stolen?: {definitionId: string; starLevel?:2; slot: number} };
 export function validateScoreboardCombat(state: MatchState, input: unknown, provenancePrefixLength?: number): void;
+
+export function shopGlitchCount(state: MatchState, previousMs: number, elapsedMs: number, acquiredAt?: number): number;
+export function shopGlitchSolo(state: MatchState, previousMs: number, elapsedMs: number, acquiredAt?: number): {shop: MatchState['shop']; rngState: number};
+export function shopGlitchShared(pool: import('../../../src/simulation/shared-pool-types').SharedPoolState, state: MatchState, previousMs: number, elapsedMs: number, acquiredAt?: number): {
+  shop: MatchState['shop']; rngState: number; available: Record<string, number>;
+  shops: import('../../../src/simulation/shared-pool-types').SharedPoolState['shops'];
+};

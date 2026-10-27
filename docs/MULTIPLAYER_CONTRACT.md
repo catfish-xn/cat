@@ -1,3 +1,15 @@
+## 2026-10-27 B5-07 商店故障房间计时器
+
+B5-07 已开放（2-1、3-2 可投放，4-2 禁用）。采用 P-B5-07：仅 PvE 准备期，每2500ms跨界免费刷新，至30000ms最多12次；锁店时消费该边界且不补刷，离开准备期停止。沿用原准备期时长，未延长 PvE 默认20000ms；在该默认时长下最多8次。房间不计算次数、金币或随机数。
+
+公共领域导出 `advanceSharedAugmentPreparationTime(pool: SharedPoolState, state: MatchState, elapsedMs: number): SharedPoolResult` 位于 `src/simulation/shared-pool.ts`。输入为同一权威快照的池、席位及本轮单调整数逻辑毫秒（0～600000）。成功返回 `{ok:true,pool,state,events,poolEvents}`：旧商店返池、有限抽卡、RNG、商店历史、准备期事实同一事务提交；不扣金币、不消耗免费刷新额度。重复同值返回原 pool/state 与空事件。失败返回 `{ok:false,pool,state,reason}`，保留原引用、不消耗资源/RNG；沿用 `SharedPoolFailure`，此路径主要为 `invalid-pool`（含时钟倒退/越界/错误阶段）、`invalid-seat-state`、`stale-seat`、`seat-eliminated`，不新增网络失败枚举。
+
+`src/server/room/room.ts` 的 `advanceAugmentClock()` 经上述公共导出，按席序暂存全部结果，成功后一次 `replace({pool,poolRevision,seats})` 发布。`apply()`、`freezeAndResolve()` 和 `scheduleAugmentClock()` 复用房间注入时钟；50ms采样对齐准备期入口，其他命令、断线状态发布保留已排定的回调，不能推迟边界。同刻命令先采样后的无变化回调仍续排；换轮或离开准备期取消旧回调。采样时间不超过房间当前准备期截止点，延迟交付不会多算已结束的准备时间；截止点本身的刷新在冻结前完成。失败按 `seat-stuck / augment-clock:<reason>` 结束房间且不发布任何该批池/席位变更；命令和冻结入口随即返回。
+
+断线与重连保留计时及席位，断线期间照常刷新。持久化须成对保存共享池与席位，再以 `restoreSharedOrbSnapshot(pool,input,authority)` 恢复；`input` 可为 object 或 JSON，`authority` 必须是独立保留的服务端 `room.augmentHistoryAuthority(seatId)`，不得从候选存档生成。重复逻辑时间不得重刷，时钟/取得事实/商店/RNG/金币/池或缺失历史的篡改必须拒绝。单人继续使用 `restoreMatch/serializeMatch`，不能以它们绕过多人权威。
+
+内容身份：`fnv1a32-utf16:5e8ea7cd`；战利品回放身份：`fnv1a32-utf16:6546f4ff`。沿用本分支 v25 规则/内容版本及 schema12/save8/replay8/command7 封套，未录制新纪元，不接受旧 digest 续玩。
+
 ## 2026-10-23 锻造器单位覆盖合同（待 v22 统一录制）
 
 本节覆盖下文以及 Batch A/B 报告中锻造器“自动弹窗/终局自动选择”的旧语义。四种 `TFT_ArmoryKeyCompleted/Component/Ornn/Support` 为备战席单位：不占人口、不可上阵/合星/装备、可挪位并跨回合保存。满席锻造器保留在未领取法球，其他条目可部分领取。蔚给 2 基础、杰斯给 1 神器；法球、史诗奖励、订阅/梅尔/巨蟹和 G2-3 forge atom 均改发单位。光明遗物 5 选 1、便携锻炉 4 选 1 仍立即选择。
@@ -1479,6 +1491,14 @@ previewRoundEconomy(state: MatchState): RoundEconomyPreview | null;
 ifWin 假设 playerWin，ifLoss 假设 enemyWin；PvP 平局经济与失败相同。gold 是调用时金币，不含基础收入或掉落；正常 PvP 利息基数含胜利金币，streakAfter 是胜负更新后的 streak。若金币/streak 直到结算未变，对应分支的 base/interest/win/streakGold 精确等于 roundResults 最后一条 incomeBreakdown.base/interest/win/streak，streakAfter 也相等。base 是本回合结算的基础金币，1-2/1-3/1-4 分别为 2/3/5，后续普通战斗及加时为 5；两种胜负分支相同，直接读取共用经济规划器，不含掉落或额外奖励。不承诺掉落、XP、HP 或敌方奖励。此字段仅为只读预览输出，不改变结算、存档或协议版本；无新增失败原因。
 
 Claude 负责接入私有席位投影及经济提示，界面不得重写开局/目录/加时和 streak 公式。本包不增加 toPrivateSeatView 字段，不改 wire 版本、digest 或玩法。
+
+### 14.5 v25 H1 可用免费刷新次数私有投影（2026-10-27）
+
+`server-entry` 新增导出 `freeRerollsAvailable(state: MatchState): number`，只接受权威席位状态，原样调用领域查询。返回所有来源累计授予次数减去已消费次数，不推进回合、不消费次数、金币或 RNG。无新增业务失败枚举；所需历史缺失等非法状态仍抛出领域异常（如 `missing augment-history-v1`），不降级为零。
+
+`toSeatPrivateView(match, choiceDeadline?)` 的 `SeatStateView` 新增必填白名单字段 `freeRerollsAvailable: number`，所有阶段均取同一权威状态的查询结果。仅发给本席，公共 `PlayerView` / `SeatPublic` 不携带；`augmentHistory`、事实与证明仍不下发。初始、增量、重连、拒绝后的状态同步共用此入口，缓存按不可变 MatchState 更新。
+
+客户端 `toDisplayMatch` 保留字段，`readFreeRerollsAvailable(state: MatchState): number | null` 只读取投影中的非负安全整数。在线 `BoardScene.syncHud` 使用该读取函数；私有状态尚未到达或字段缺失/非法时返回 null，按钮只显示“D · 刷新”，不推算费用、不调用领域历史查询。单人原有读取不变。协议版本维持 1；客户端与服务器应一起交付本次字段变更，规则、内容版本与 digest 不变。
 
 ## 15 T10：战斗运营与准备截止自动上场（2026-10-13）
 

@@ -158,7 +158,7 @@ batch3Offers.silver.push('caretakers-ally','lategame-specialist','patience-is-a-
 batch3Offers.silver.push('good-for-something','lunch-money','titanic-titan');
 batch3Offers.gold.push('contested','scoreboard-scrapper');
 batch3Offers.gold.push('no-scout-no-pivot','cooking-pot');
-batch3Offers.gold.push('two-much-value');
+batch3Offers.gold.push('two-much-value','shop-glitch');
 batch3Offers.gold.push('all-that-shimmers','all-that-shimmers-plus','academic-research','pandoras-items-ii','salvage-bin','replication');
 batch3Offers.prismatic.push('roll-the-dice','at-what-cost','quality-over-quantity');
 batch3Offers.silver.push('power-up','beggars-can-be-choosers','reroll-transfer','pandoras-items','fine-vintage','component-buffet');
@@ -170,8 +170,8 @@ batch3Offers.prismatic.push('artifactory','pandoras-items-iii');
 batch3Offers.gold.push('salvage-bin-plus');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
 AUGMENT_POOLS.gold.push('snipers-nest','trait-tracker'); AUGMENTS.push('snipers-nest','trait-tracker'); AUGMENTS.sort();
-assert.equal(AUGMENTS.length,280,'independent full augment catalog size');
-assert.equal(new Set(AUGMENTS).size,280,'independent catalog has no duplicates');
+assert.equal(AUGMENTS.length,281,'independent full augment catalog size');
+assert.equal(new Set(AUGMENTS).size,281,'independent catalog has no duplicates');
 AUGMENT_POOLS.prismatic.push('max-cap');AUGMENT_POOLS.silver.push('head-start');AUGMENTS.push('max-cap','head-start');AUGMENTS.sort();
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
@@ -769,3 +769,46 @@ function shopTransition(before,command){
 module.exports.shopWord=shopWord;module.exports.shopForState=shopForState;module.exports.shopTransition=shopTransition;
 // Shared with multiplayer room tests; amounts/recipients come from independent history inputs.
 module.exports.validateScoreboardCombat=(state,input,prefix)=>checkScoreboardCombat(state,input,{COST,ROUNDS},prefix);
+
+// P-B5-07, 2026-10-27: enumerate the twelve boundaries from caller-owned clock observations.
+// No production clock facts, shop history or reward receipts determine the expected refresh count.
+function shopGlitchCount(state, previousMs, elapsedMs, acquiredAt=0) {
+ if (!state.augments.some(a=>a.definitionId==='shop-glitch') || state.shop.locked ||
+     !['preparation','choice'].includes(state.phase) || ROUNDS[state.round-1]?.kind!=='pve') return 0;
+ return Array.from({length:12},(_,i)=>acquiredAt+(i+1)*2500)
+  .filter(at=>previousMs<at&&at<=elapsedMs).length;
+}
+function shopGlitchSolo(state, previousMs, elapsedMs, acquiredAt=0) {
+ let next={shop:state.shop,rngState:state.rngState};
+ for(let i=0;i<shopGlitchCount(state,previousMs,elapsedMs,acquiredAt);i++)next=shopForState({...state,...next});
+ return next;
+}
+// Independent finite-copy draw for early PvE test routes; fail closed outside that scope.
+function shopGlitchShared(pool,state,previousMs,elapsedMs,acquiredAt=0) {
+ assert(state.round<=10 && state.augments.every(a=>a.definitionId==='shop-glitch'), 'early Shop Glitch oracle scope');
+ const available={...pool.available};let reservations=structuredClone(pool.shops);
+ let rng=state.rngState,shop=state.shop;
+ const seatId=state.sharedPool.seatId;
+ const pick=(entries)=>{
+  rng=word(rng);const total=entries.reduce((sum,[,weight])=>sum+weight,0);
+  const roll=Number(BigInt(rng)*BigInt(total)/4294967296n);
+  let cumulative=0;return entries.find(([,weight])=>(cumulative+=weight)>roll)[0];
+ };
+ for(let n=0;n<shopGlitchCount(state,previousMs,elapsedMs,acquiredAt);n++){
+  for(const r of reservations.filter(r=>r.seatId===seatId))available[r.definitionId]+=r.starLevel===2?3:1;
+  reservations=reservations.filter(r=>r.seatId!==seatId);
+  const generation=shop.generation+1,slots=[];
+  for(let slot=0;slot<5;slot++){
+   const tiers=[1,2,3,4,5].filter(t=>ODDS[state.level][t-1]>0&&CATALOG[t].some(id=>available[id]>0));
+   if(!tiers.length){slots.push({status:'purchased',empty:true});continue;}
+   const tier=pick(tiers.map(t=>[t,ODDS[state.level][t-1]]));
+   const id=pick(CATALOG[tier].map(id=>[id,available[id]]));available[id]--;
+   slots.push({status:'available',definitionId:id});reservations.push({seatId,generation,slot,definitionId:id});
+  }
+  shop={generation,locked:false,slots};
+ }
+ return {shop,rngState:rng,available,shops:reservations};
+}
+module.exports.shopGlitchCount=shopGlitchCount;
+module.exports.shopGlitchSolo=shopGlitchSolo;
+module.exports.shopGlitchShared=shopGlitchShared;

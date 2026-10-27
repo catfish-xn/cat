@@ -4,7 +4,7 @@ import type { ChoiceDefinition } from '../strategy-types';
 /** 14.24 source row; execution follows P-B5-07 (2026-10-27). */
 export const AUGMENT_BATCH5_H1 = freezeContent({
   'shop-glitch': {
-    enabled: false, apiName: 'TFT_Augment_ShopGlitch', name: '商店故障', tier: 'gold',
+    enabled: true, apiName: 'TFT_Augment_ShopGlitch', name: '商店故障', tier: 'gold',
     description: '在非玩家对战回合期间，你的商店每2.5秒进行一次免费刷新，共持续30秒。',
     source: { patch: '14.24', archive: 'augments-research-2026-10-23/data/augments-14.24.json',
       values: { RefreshTimer: 2.5, TotalTimer: 30 } }, gifts: [],

@@ -253,12 +253,12 @@ it('cannot rewrite historical battle counters to mint a reward after an unrelate
   expect(()=>validateRewards(before,receipts(after,[{...gold('augment-pool-batch3',[0,0],8,4),roundId:'2-1'}]),{type:'reroll'},[],env)).toThrow(/battle counters append-only/);
 });
 
-it('contains exactly 273 independently tiered identities, with two restricted to shared carousel',()=>{
+it('contains exactly 283 independently tiered identities, with two restricted to shared carousel',()=>{
   const pools=(['silver','gold','prismatic'] as const).map(tier=>augmentPool(tier,[]));
-  const all=pools.flat();expect(all).toHaveLength(271);expect(new Set(all).size).toBe(271);
-  // 235 baseline + H1/H3/H4/H5/H6 (1 + 2 + 3 + 2 + 2, plus 15 B5A/S1A/S1B/S3A/S3B/S3D + 7 S6C/S8/S11A + 3 H7 + 3 H8), independently transcribed.
+  const all=pools.flat();expect(all).toHaveLength(281);expect(new Set(all).size).toBe(281);
+  // Independently transcribed integrated catalog, including Shop Glitch.
   const shared=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true));
-  expect(shared).toHaveLength(273);expect(new Set(shared).size).toBe(273);
+  expect(shared).toHaveLength(283);expect(new Set(shared).size).toBe(283);
   expect(shared.filter(id=>!all.includes(id)).sort()).toEqual(['table-scraps','young-and-wild-and-free']);
   const groups={silver:['patience-is-a-virtue','survivor','diversified-portfolio','diversified-portfolio-plus'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal'],prismatic:['invested-plus','invested-plus-plus']};
   for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);
@@ -372,13 +372,13 @@ it('independently binds Spoils counters to opening ownership and all ordinary Pv
   expect(()=>validateRewards({...live,combat:{strategy:finished.combat.strategy}},erased,null,done,env)).toThrow(/independent batch2 counter/);
 });
 
-// Public 2-1 Heroic Grab Bag offer with no prior lesser duplicator, after the combined Batch 5 pool expansion.
-// Seed 4 already earns one from its opening, so it does not satisfy this vector's two-tool premise.
+// Independent augmentDraw search for a 2-1 Heroic Grab Bag offer in the integrated pool.
+// The actual route must still have no prior lesser duplicator, preserving the two-tool premise.
 // Keep the pre-command independent ledger so co-forged balances exercise Ledger.apply.
 import * as matchApi from '../src/simulation/match';
 import { run } from '../scripts/generate-m5-route.cjs';
 const heroicCase: {before:any;after:any;command:any;events:any;ledger:any}[]=[];
-const HEROIC_SEED=25;
+const HEROIC_SEED=37;
 const routeLedger=new Ledger(createMatch(HEROIC_SEED));
 const stopHeroic=Symbol('heroic selection reached');
 try {

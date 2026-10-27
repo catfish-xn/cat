@@ -23,6 +23,8 @@ import type { ItemSummonView, RoundEconomyPreview, SeatStateView } from '../../s
  * round economy preview (SR-G5-02).
  */
 export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary; readonly economyPreview?: RoundEconomyPreview | null;
+  /** Server-computed shop rerolls; absent until a room's private state arrives. */
+  readonly freeRerollsAvailable?: number;
   /** G2-4b (§26): my movable preparation summons as the server placed them; RemoteSession.itemSummons reads them. */
   readonly itemSummons?: readonly ItemSummonView[];
   /** v19: the rules' 家人团聚 view of my seat and the six-cost chance per shop slot (basis points). */
@@ -38,6 +40,12 @@ export function readFamilyReunion(state: MatchState): { readonly eligible: boole
 export function readSixCostBps(state: MatchState): number | null {
   const bps = (state as DisplayMatch).shopOdds?.sixCostBps;
   return Number.isFinite(bps) ? bps! : null;
+}
+
+/** The room's remaining free shop rerolls. Missing data is unknown, never reconstructed from display placeholders. */
+export function readFreeRerollsAvailable(state: MatchState): number | null {
+  const count = (state as DisplayMatch).freeRerollsAvailable;
+  return typeof count === 'number' && Number.isSafeInteger(count) && count >= 0 ? count : null;
 }
 
 /**
