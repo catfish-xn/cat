@@ -1,3 +1,4 @@
+import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { placeCarouselUnit, resolveCarouselPreparation } from './carousel-units';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/items';
@@ -285,9 +286,9 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     const nextPool: SharedPoolState = { ...state.pool, revision: state.pool.revision + 1, holdings, carouselReceipts: poolReceipts, carouselReservations: state.pool.carouselReservations.filter(r => r.reservationId !== state.slots[receipt.slot].reservationId), seats: state.pool.seats.map(s => s.seatId === seatId ? { ...s, revision: s.revision + 1 } : s) };
     const events: MatchEvent[] = [{ type: 'carouselGranted', receipt: granted }];
     const stamped: MatchEvent[] = events.map((e, i) => ({ ...e, domain: 'match', eventSeq: match.nextMatchEventSeq + i }) as MatchEvent);
-    const nextMatch: MatchState = { ...match, preparation:preparation??match.preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
+    const nextMatch: MatchState = drainBatch5Inventory({ ...match, preparation:preparation??match.preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
         items: [...match.items, { id: itemInstanceId, definitionId: receipt.itemId, location: { kind: 'inventory' } }],
-        carousel: { ...metadata, receipts: [...metadata.receipts, granted], heldCarouselUnits:held, pendingUnits:held }, sharedPool: { ...match.sharedPool, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length };
+        carousel: { ...metadata, receipts: [...metadata.receipts, granted], heldCarouselUnits:held, pendingUnits:held }, sharedPool: { ...match.sharedPool, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length });
     const nextState = { ...state, receipts, pool: nextPool, revision: state.revision + 1 };
     try {
         validateCarousel(nextState);

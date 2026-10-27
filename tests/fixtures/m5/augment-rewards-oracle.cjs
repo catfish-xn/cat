@@ -1,3 +1,4 @@
+const {buffetPlan}=require('./augment-inventory-oracle.cjs');
 /* Independent reward ledger. Only test data and raw archive inputs; no production modules.
  * Specs use tuples: U fixed unit, I fixed item, C consumable, R random hero,
  * Q random item, A all heroes. All counts/thresholds are literal source transcriptions.
@@ -12,6 +13,8 @@ const U=(id,n=1,star=1)=>['U',id,n,star],I=(id,n=1)=>['I',id,n],C=(id,n=1)=>['C'
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
+ 'pandoras-items':[Q('component')],
+ 'component-buffet':[Q('component')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
@@ -179,7 +182,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
  return tables[weights.findIndex(w=>{if(ticket<w)return true;ticket-=w;return false;})];},
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
-const admitted=new Set(['augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
+const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
  'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel']);
@@ -305,8 +308,15 @@ function validateRewardsCore(before,after,command,events,base){
   }
   if(a.definitionId==='reinfourcement'&&command?.type==='buy'&&base.COST[before.shop.slots[command.slot].definitionId]===4&&!prior.some(r=>r.receiptId===shopId('reinfourcement',a,0)))for(let i=0;i<2;i++)shopGifts.set(shopId('reinfourcement',a,i),{definitionId:before.shop.slots[command.slot].definitionId,starLevel:1});
  }
+ const inventoryPlan=buffetPlan(after);
+ for(const r of appended.filter(r=>r.source==='augment-pool-batch5-s3a')){
+  const gift=inventoryPlan.gifts.get(r.receiptId);assert(gift,'independent component conversion entitlement');
+  assert.equal(r.kind,'unit');assert.equal(r.definitionId,gift.definitionId);assert.equal(r.resolution,'held');assert.equal(r.gold,0);
+  assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,r)),'conversion anvil grant event');
+  shopGifts.set(r.receiptId,gift);
+ }
  const shopActual=appended.filter(r=>r.source==='augment-pool-shop');
- assert.deepEqual(shopActual.map(r=>r.receiptId).sort(),[...shopGold.keys(),...shopGifts.keys()].sort(),'independent due shop rewards');
+ assert.deepEqual(shopActual.map(r=>r.receiptId).sort(),[...shopGold.keys(),...[...shopGifts.keys()].filter(id=>!inventoryPlan.gifts.has(id))].sort(),'independent due shop rewards');
  for(const r of shopActual){
   assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,r)),'shop reward requires actual grant event');
   assert.equal(r.round,after.round);assert.equal(r.roundId,after.roundDefinitionId);

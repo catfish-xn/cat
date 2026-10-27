@@ -1,3 +1,4 @@
+import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -184,7 +185,8 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const merged = resolveDeferredUpgrades(settled);
     const d14State=pruneForgePositions(reconcileD14(merged.state,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
-    const opened=openG23Choice(forfeited.state);
+    const inventory=drainBatch5Inventory(forfeited.state);hookEvents.push(...mechanicGrantEvents(forfeited.state,inventory));
+    const opened=openG23Choice(inventory);
     const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...forfeited.events,...opened.events];
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
       ...extra.map((event,index) => ('tick' in event?event:{...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
