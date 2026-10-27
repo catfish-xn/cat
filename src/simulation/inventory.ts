@@ -1,3 +1,4 @@
+import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
 import { isAnvil } from './content/anvils';
 import { itemRestrictionAllows } from './seat-mechanics/items';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
@@ -64,7 +65,7 @@ export function planCombine(
 
 /** Identity checks precede placement; the public phase guard lives in item-selectors. */
 export function validateEquip(
-  items: readonly ItemInstance[], preparation: GameState, itemId: string, unitId: string, slot: number,
+  items: readonly ItemInstance[], preparation: GameState, itemId: string, unitId: string, slot: number, angerIssues=false,
 ): EquipPreview {
   const item = items.find(candidate => candidate.id === itemId);
   if (!item) return { allowed: false, reason: 'unknown-item', conflictingItemIds: [] };
@@ -91,8 +92,9 @@ export function validateEquip(
     if (!recipe.allowed) return { ...recipe, conflictingItemIds: [] };
     if (!itemRestrictionAllows(ITEM_DEFINITIONS[recipe.resultDefinitionId].restriction,unit.definitionId)) return {allowed:false,reason:'item-restricted',conflictingItemIds:[]};
     const remaining = items.filter(other => other.id !== itemId && other.id !== target.id);
+    const resultDefinition=angerIssues&&isAngerIssuesConvertibleItem(recipe.resultDefinitionId)?'rageblade':recipe.resultDefinitionId;
     const placement = checkEquipmentPlacement(remaining,
-      { ...item, definitionId: recipe.resultDefinitionId }, unitId, slot);
+      { ...item, definitionId: resultDefinition }, unitId, slot);
     return placement.allowed ? { ...placement, combination: {
       resultDefinitionId: recipe.resultDefinitionId, consumedItemIds: recipe.consumedItemIds,
     } } : placement;
@@ -108,9 +110,9 @@ export function validateEquip(
 /** An inventory component combines at the first worn component's actual slot. */
 export function planEquip(
   items: readonly ItemInstance[], preparation: GameState, itemId: string, unitId: string, slot: number,
-  nextItemSerial: number,
+  nextItemSerial: number, angerIssues=false,
 ): EquipPlanResult {
-  const placement = validateEquip(items, preparation, itemId, unitId, slot);
+  const placement = validateEquip(items, preparation, itemId, unitId, slot,angerIssues);
   if (!placement.allowed) return { ok: false, reason: placement.reason };
   // Three-slot parents always occupy slot 0; slots 1/2 are reserved for children.
   slot = placement.occupiedSlots[0];

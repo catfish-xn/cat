@@ -26,7 +26,7 @@ export function g23BattleFacts(combat:CombatState,team:Team,round:number,roundKi
  const splits=(combat.trenchSplits??[]).filter(split=>split.copyIds.some(id=>allyIds.has(id)));
  for(const split of splits)allyIds.add(split.ownerId);
  const itemPayouts=combat.itemGoldReceipts&&combat.itemRandomStreams?itemGoldPayouts({receipts:combat.itemGoldReceipts,streams:combat.itemRandomStreams},allyIds):[];
- const hunter=combat.units.find(u=>u.team===team&&u.d11Kills!==undefined&&!u.itemSummon);
+ const hunter=combat.units.find(u=>u.team===team&&u.d11Kills!==undefined&&!u.itemSummon&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='headhunter'&&!m.source.parentItemInstanceId));
  const familyTrait=combat.strategy.traits.find(t=>t.team===team&&t.traitId==='family');
  const familyIds=allies.filter(u=>owners.has(u.id)&&!u.itemSummon&&!u.anomalySummon&&!UNIT_DEFINITIONS[u.definitionId]?.summon&&(familyTrait?.memberUnitIds?familyTrait.memberUnitIds.includes(u.id):familyTrait?.memberDefinitionIds.includes(u.definitionId))).map(u=>u.id).sort();
  const melCasts=allies.filter(u=>owners.has(u.id)&&u.definitionId==='mel'&&!u.itemSummon&&!u.anomalySummon).reduce((n,u)=>n+(u.runtime?.castCount??0),0);

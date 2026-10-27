@@ -1500,3 +1500,9 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
 - `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
 - 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。
+
+## Batch 5 R2（P，2026-10-27；沿用 v25）
+
+开放 `anger-issues`（棱彩，3-2/4-2）和 `another-anomaly`（黄金，4-2）；规则、研究状态及完整内部签名见 [AUGMENT_BATCH5_R2](AUGMENT_BATCH5_R2.md)。沿用现有 `selectChoice`、装备、合成、消耗品和重掷命令/失败枚举，不增加客户端提交事实的命令。普通成装转换追加有选择来源绑定的 `anger-item-converted` 资源事实；便携异常以不可变物品定义携带复制身份，共用唯一 apiName，4-6选择事务内即时授予，失败仍返回原 state、无事件和 RNG 消耗。
+
+强化历史 API 新增 `recordAugmentCopyKills(state,fact)` / `readAugmentCopyKills(state,itemId,beforeRound?)`，同 `augment-history-v1` 保存 `anomaly-copy-kills`，复制品独立于原英雄的历史。联机采样入口 `recordR2PortableBattle(state,combat,team,mapping?)` 只接受服务器已经认证的终战及既有身份映射；房间只编排调用。持有者的对象/JSON恢复仍必须取得独立 authority；伪造选择、来源、复制定义、位置、成长、旧手套收据或历史节均拒绝。无 epoch 重录。

@@ -1,3 +1,4 @@
+export { recordR2PortableBattle } from '../simulation/augment-pool-batch5-r2-history';
 /** Pure rule boundary for Node callers. No scheduler, transport or browser adapters. */
 export {
   openAnvil, grantAnvilUnit, anvilDisplay, ANVIL_POLICY, createMatch, deployMatchUnit, autoDeployToCap, lockMatchCombatRoster, buyUnit, sellUnit, setShopLock, rerollShop, buyXp,

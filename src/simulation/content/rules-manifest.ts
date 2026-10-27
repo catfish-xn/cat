@@ -1,3 +1,5 @@
+import { PORTABLE_ANOMALY_ITEMS } from './augment-pool-batch5-r2-items';
+import { AUGMENT_BATCH5_R2, ANGER_RAGEBLADE, PORTABLE_ANOMALY_EXCLUDED } from './augment-pool-batch5-r2';
 import { AUGMENT_BATCH5_H1 } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3 } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H4_SOURCE } from './augment-pool-batch5-h4';
@@ -45,6 +47,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   tacticianItems:{source:TACTICIAN_ITEM_SOURCE,gold:'independent-item-collector-stream-10-percent-one-gold',population:'permanent-acquisition-and-crafted-receipts'},
   // Offer stages are replay input: augment offers re-derive from these bans at restore (P, 14.24 stage tags).
   augmentStageBans:{version:'augment-stage-bans-14.24-tags-v1',bans:AUGMENT_STAGE_BANS,reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2'},
+  augmentPoolBatch5R2:{version:'augment-pool-batch5-r2-v25',content:AUGMENT_BATCH5_R2,rageblade:ANGER_RAGEBLADE,portableItems:PORTABLE_ANOMALY_ITEMS,excludedAnomalies:PORTABLE_ANOMALY_EXCLUDED,convention:'P-B5-21-and-81-2026-10-27'},
   augmentPoolBatch5H1:{version:'augment-pool-batch5-h1-v25',content:AUGMENT_BATCH5_H1,convention:'P-B5-07-and-10-2026-10-27'},
   augmentPoolBatch5H3:{version:'augment-pool-batch5-h3-v1',content:AUGMENT_BATCH5_H3,convention:'P-B5-2026-10-27'},
   augmentPoolBatch5H4:{version:'augment-pool-batch5-h4-v1',content:AUGMENT_BATCH5_H4,source:AUGMENT_BATCH5_H4_SOURCE,convention:'P-B5-2026-10-27'},

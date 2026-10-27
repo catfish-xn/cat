@@ -1,3 +1,4 @@
+import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
@@ -295,6 +296,7 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     let nextMatch: MatchState = { ...match, preparation:preparation??match.preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
         items: [...match.items, { id: itemInstanceId, definitionId: receipt.itemId, location: { kind: 'inventory' } }],
         carousel: { ...metadata, receipts: [...metadata.receipts, granted], heldCarouselUnits:held, pendingUnits:held }, sharedPool: { ...match.sharedPool, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length };
+    nextMatch = applyAngerIssues(nextMatch);
     nextMatch = appendAugmentFact(nextMatch, { kind: 'carousel', receipt: granted, source: pickSource, choiceId,
       ordinal: metadata.receipts.filter(r => r.carouselId === state.id).length, roster: historyRoster(nextMatch), releaseAtMs: state.releaseAtMs[seatId], eligibilityChoiceIds: match.augments.map(a => a.choiceId) });
     const nextState = { ...state, receipts, pool: nextPool, revision: state.revision + 1 };

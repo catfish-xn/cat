@@ -62,6 +62,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
     augments:s.augments.map(augment=>({...augment,choiceId:map('augment',augment.choiceId)})),
     anomalyBinding:s.anomalyBinding ? {...s.anomalyBinding,unitId:map('unit',s.anomalyBinding.unitId),choiceId:map('anomaly',s.anomalyBinding.choiceId)} : null,
     persistentGrowth:s.persistentGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)})), augmentProgress:s.augmentProgress,
+    ...(s.augmentCopyKills?{augmentCopyKills:s.augmentCopyKills.map(g=>({...g,itemId:map('item',g.itemId)}))}:{}),
     ...(s.augmentHistoryGrowth?{augmentHistoryGrowth:s.augmentHistoryGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)}))}:{}),
   };
   let compiled: StrategySnapshot;
@@ -158,7 +159,7 @@ export interface BattleLiveGoldReader {
 /** Trusted snapshots or a compiled input. B is always frozen in a mirror battle. */
 export function readBattleLiveGoldReaders(input: Pick<BattleInput, 'a' | 'b' | 'mirrorOfSeatId'>): readonly BattleLiveGoldReader[] {
   const reads = (side: PlayerBattleSnapshot) => readsLiveGold(side.anomalyBinding, side.units
-    .filter(u => u.team === 'player' && u.location.kind === 'board').map(u => u.id));
+    .filter(u => u.team === 'player' && u.location.kind === 'board').map(u => u.id),side.items);
   return [
     { seatId: input.a.seatId, team: 'player', readsLiveGold: reads(input.a) },
     { seatId: input.b.seatId, team: 'enemy', readsLiveGold: input.mirrorOfSeatId === null && reads(input.b) },

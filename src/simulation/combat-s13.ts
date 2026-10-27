@@ -1,3 +1,4 @@
+import { startR2PortableCopies } from './augment-pool-batch5-r2-combat';
 import { sampleAugmentDeath } from './augment-death-samples';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -213,6 +214,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if(state.tick>0)suspendBanished();
   }
   const installedSources = new Set(units.flatMap(u => u.pendingEquipmentSources ?? []));
+  startR2PortableCopies({...ctx,anomalySeed:state.rngState});
   initializeMechanisms(ctx);
   if (state.tick > 0 && installedSources.size) for (const unit of units) emitMechanismSignal(ctx,
     { event: 'combat-start', tick, actionSeq: 0, actorId: unit.id, targetId: unit.id, cast: null }, EMPTY_FACTS, 'event', installedSources);

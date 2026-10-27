@@ -29,6 +29,7 @@ export interface PlayerBattleSnapshot {
   readonly augments: readonly OwnedAugment[];
   readonly anomalyBinding: AnomalyBinding | null;
   readonly persistentGrowth: readonly PersistentGrowth[];
+  readonly augmentCopyKills?:readonly import('./augment-pool-batch5-r2-history').AugmentCopyKills[];
   readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[];
   readonly augmentProgress: MatchBase['augmentProgress'];
 }

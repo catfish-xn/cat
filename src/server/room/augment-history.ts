@@ -1,6 +1,6 @@
 /** Server orchestration only: freeze authoritative table/roster/settlement observations.
  * No rewards, growth amounts, player damage formula or random draws live here. */
-import { appendAugmentFact, recordAugmentTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
+import { recordR2PortableBattle, appendAugmentFact, recordAugmentTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
   type HistorySeat } from '../../server-entry';
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput } from './types';
@@ -42,6 +42,7 @@ export function recordRoomBattleFacts(seats: readonly SettledSeat[], results: re
       return { ...d, ownerSeatId: d.team === 'player' ? battle.a.seatId : battle.b.seatId, originalUnitId: mapped?.originalId ?? d.unitId }; });
     // A resolver supplying a terminal reconstructed outside the rules runner must replay it first.
     if (deaths.length !== battle.events.filter(e => e.type === 'death').length) throw new RangeError('Invalid augment history: missing executed death samples');
+    match = recordR2PortableBattle(match,battle.terminal,battle.a.seatId===seat.seatId?'player':'enemy',battle.mapping);
     match = appendAugmentFact(match, { kind: 'deaths', battleId: result.battleId, completeThroughTick: battle.terminal.tick, deaths });
     const opponentId = battle.a.seatId === seat.seatId ? battle.b.seatId : battle.a.seatId;
     const opponent = seats.find(s => s.seatId === opponentId);

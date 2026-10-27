@@ -1,3 +1,6 @@
+import { portableAnomalyId } from './content/augment-pool-batch5-r2';
+import { r2CopyKills } from './augment-pool-batch5-r2-history';
+import { replayAngerConversion } from './augment-pool-batch5-r2';
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { soloPveLoot } from './shop-orbs';
@@ -60,14 +63,14 @@ const allChoices = (state: MatchState) => state.m8.loot.frozen.rounds.flatMap(ro
 /** Replay only the legal inventory/in-place combination. Frozen equipped inputs
  * cannot be freely detached or borrowed from another unit during restoration. */
 function replayCombination(items: readonly ItemInstance[], preparation: GameState, nextItemSerial: number,
-  fact: Extract<ResourceFact, { kind: 'item-combined' }>) {
+  fact: Extract<ResourceFact, { kind: 'item-combined' }>,angerIssues=false) {
   const inputs = fact.event.consumedIds.map(id => items.find(item => item.id === id));
   check(inputs.length === 2 && inputs.every(item => item), 'combination ownership');
   const held = inputs.filter(item => item!.location.kind === 'unit');
   check(held.length <= 1, 'combination requires inventory input');
   const target = held[0], incoming = inputs.find(item => item!.location.kind === 'inventory')!;
   const plan = target?.location.kind === 'unit'
-    ? planEquip(items, preparation, incoming.id, target.location.unitId, target.location.slot, nextItemSerial)
+    ? planEquip(items, preparation, incoming.id, target.location.unitId, target.location.slot, nextItemSerial,angerIssues)
     : planCombine(items, nextItemSerial, inputs[0]!.id, inputs[1]!.id);
   check(plan.ok && equal(plan.events.find(event => event.type === 'itemCombined'), fact.event), 'combination transaction');
   return plan;
@@ -91,6 +94,7 @@ function replayEquipment(items: readonly ItemInstance[], preparation: GameState,
 export function validateHistoricalEquipment(previous: MatchState | null, next: MatchState): void {
   let items: readonly ItemInstance[] = previous?d14OwnedItems(previous):[], serial = previous?.nextItemSerial ?? 1;
   let preparation = previous?.preparation ?? {...next.preparation, units:[]};
+  let historicalBinding=previous?.anomalyBinding??null;
   const births = validateResourceReceipts({scheduleReceipts:next.scheduleReceipts,
     lootReceipts:next.m8.loot.receipts, carouselReceipts:next.carousel?.receipts,
     mechanicReceipts:next.seatMechanics?.receipts, throughRoundOrdinal:next.round});
@@ -135,12 +139,14 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
       case 'item-acquired': {
         const birth = birthById.get(fact.itemId);
         check(birth, 'historical item birth');
+        if(portableAnomalyId(birth.definitionId)!==null){const chosen=next.scheduleReceipts.find(r=>r.kind==='anomaly')!;historicalBinding={definitionId:chosen.definitionId!,choiceId:chosen.eventId,unitId:chosen.unitId!,boundRound:chosen.round};}
         items = [...items, {id:fact.itemId,definitionId:birth.definitionId,location:{kind:'inventory'}}];
         serial++;
         break;
       }
       case 'anvil-opened':
       case 'unit-sold':
+        if(historicalBinding?.unitId===fact.unitId)historicalBinding=null;
         items = items.map(item => item.location.kind === 'unit' && item.location.unitId === fact.unitId
           ? {...item,location:{kind:'inventory'}} : item);
         preparation = {...preparation,units:preparation.units.filter(unit => unit.id !== fact.unitId)};
@@ -161,7 +167,7 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         // current bindings until their ordered resource fact changes them; using
         // next.items here would let future equips occupy the migration slots.
         const upgrades = 'event' in fact ? [fact.event] : fact.upgrades;
-        items = transferUpgradeResources(items, null, upgrades).items;
+        const transfer=transferUpgradeResources(items,historicalBinding,upgrades);items=transfer.items;historicalBinding=transfer.anomalyBinding;
         for (const event of upgrades) preparation = {...preparation,units:preparation.units
           .filter(unit => !event.consumedIds.includes(unit.id))
           .map(unit => unit.id === event.survivorId ? {...unit,starLevel:event.toStar} : unit)};
@@ -173,14 +179,16 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
         break;
       }
       case 'item-equipped': {
+        check(!items.some(i=>i.id===fact.itemId&&portableAnomalyId(i.definitionId)!==null)||historicalBinding?.unitId!==fact.unitId,'portable anomaly original equipment');
         items = replayEquipment(items, preparation, serial, fact).items;
         break;
       }
       case 'item-combined': {
-        const plan = replayCombination(items, preparation, serial, fact);
+        const plan = replayCombination(items, preparation, serial, fact,next.resourceProvenance.entries[fact.sequence+1]?.kind==='anger-item-converted');
         items = plan.items; serial = plan.nextItemSerial;
         break;
       }
+      case 'anger-item-converted':
       case 'g23-item-converted':
         items = items.map(item => item.id === fact.itemId ? {...item,definitionId:fact.to} : item);
         break;
@@ -221,10 +229,10 @@ function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBas
     const before = items;
     if (fact.kind === 'item-equipped') items = replayEquipment(items, basis.inputs.preparation, serial, fact).items;
     else if (fact.kind === 'item-combined') {
-      const plan = replayCombination(items, basis.inputs.preparation, serial, fact); items = plan.items; serial = plan.nextItemSerial;
+      const plan = replayCombination(items, basis.inputs.preparation, serial, fact,basis.inputs.augments.some(a=>a.definitionId==='anger-issues')); items = plan.items; serial = plan.nextItemSerial;
     } else if (fact.kind === 'consumable-used') {
       const plan = replayConsumableItems(items, serial, fact.record, basis.inputs.preparation); items = plan.items; serial = plan.nextItemSerial;
-    } else if (fact.kind === 'g23-item-converted') items = replayG23Conversion(items, fact);
+    } else if ((fact.kind === 'anger-item-converted'||fact.kind === 'g23-item-converted')) items = replayG23Conversion(items, fact);
     else continue;
     const equippedId = fact.kind === 'item-equipped' ? fact.itemId : fact.kind === 'item-combined' ? fact.event.itemId : null;
     const equipped = items.find(i => i.id === equippedId);
@@ -239,12 +247,12 @@ function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBas
       : fact.kind === 'item-combined' && fact.event.consumedIds.includes(receipt.input.itemId)
         && before.find(i => i.id === receipt.input.itemId)?.location.kind === 'inventory', 'battle equipment command ownership');
     const plan = planEquip(before, basis.inputs.preparation, receipt.input.itemId, unitId, receipt.input.slot,
-      fact.kind === 'item-combined' ? serial - 1 : serial);
+      fact.kind === 'item-combined' ? serial - 1 : serial,basis.inputs.augments.some(a=>a.definitionId==='anger-issues'));
     check(plan.ok && equal(plan.items, items), 'battle equipment command slot');
     // acceptEquipment may immediately convert the new permanent item to radiant.
     let through = fact.sequence;
     const converted = state.resourceProvenance.entries[through + 1];
-    if (converted?.kind === 'g23-item-converted' && converted.itemId === equippedId) {
+    if ((converted?.kind === 'anger-item-converted'||converted?.kind === 'g23-item-converted') && converted.itemId === equippedId) {
       items = replayG23Conversion(items, converted); through++;
     }
     const temporaryEquipment = items.flatMap(item => item.location.kind === 'unit' ? state.equipmentState.rolls
@@ -405,11 +413,12 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{h6Growth:scoreboardCombatGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),{provenancePrefixLength:prefixLength,definitions:Object.fromEntries(candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId]))}),augmentHistoryGrowth:combatHistoryGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),true),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const openingResources=parsedJsonInput&&prefixLength===entries.length?current:foldResourceProvenance(state.resourceProvenance,{...context,prefixLength},parsedJsonInput);
+  const basis = restoreCombatInput(state.combatInputBasis,{augmentCopyKills:r2CopyKills(state,openingResources.items),h6Growth:scoreboardCombatGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),{provenancePrefixLength:prefixLength,definitions:Object.fromEntries(candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId]))}),augmentHistoryGrowth:combatHistoryGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),true),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
-    resources:parsedJsonInput && prefixLength === entries.length ? current : foldResourceProvenance(state.resourceProvenance,{...context,prefixLength},parsedJsonInput),equipmentRolls:state.equipmentState.rolls,
+    resources:openingResources,equipmentRolls:state.equipmentState.rolls,
     equipmentRollPrefixLength:rollPrefix,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults}, parsedJsonInput, deferInputFreeze);
   check(state.equipmentState.rolls.slice(rollPrefix).every(roll => roll.roundId === state.roundDefinitionId
     && !basis.inputs.items.some(item => item.id === roll.parentItemInstanceId && item.location.kind === 'unit')), 'post-freeze equipment rolls');
@@ -421,9 +430,9 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
     check(equal(live, frozenInputs), 'running input mutation');
     let items = originalItems, serial = basis.nextItemSerial;
     for (const fact of entries.slice(prefixLength)) {
-      check((fact.kind==='g23-item-converted'||fact.kind === 'item-equipped'||fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
-      if(fact.kind==='g23-item-converted'){items=replayG23Conversion(items,fact);continue;}
-      const plan = fact.kind==='item-equipped'?replayEquipment(items,state.preparation,serial,fact):fact.kind==='consumable-used'?replayConsumableItems(items,serial,fact.record,state.preparation):replayCombination(items, state.preparation, serial, fact);
+      check(((fact.kind==='anger-item-converted'||fact.kind==='g23-item-converted')||fact.kind === 'item-equipped'||fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
+      if((fact.kind==='anger-item-converted'||fact.kind==='g23-item-converted')){items=replayG23Conversion(items,fact);continue;}
+      const plan = fact.kind==='item-equipped'?replayEquipment(items,state.preparation,serial,fact):fact.kind==='consumable-used'?replayConsumableItems(items,serial,fact.record,state.preparation):replayCombination(items, state.preparation, serial, fact,basis.inputs.augments.some(a=>a.definitionId==='anger-issues'));
       items = plan.items; serial = plan.nextItemSerial;
     }
     check(equipmentContinuation(items, state.items) && serial === state.nextItemSerial, 'running equipment projection');
@@ -455,7 +464,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     check(equal(entries[cursor],{...fact,sequence:cursor,roundId:state.roundDefinitionId}), 'ordered resource transaction'); cursor++;
   };
   const combinations = () => {
-    while (entries[cursor]?.kind==='item-equipped'||entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
+    while (entries[cursor]?.kind==='item-equipped'||entries[cursor]?.kind==='anger-item-converted'||entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
       const tool=entries[cursor];
       if(tool.kind==='item-equipped'){
         check(!committed||state.phase!=='gameOver','terminal equipment operation');
@@ -463,7 +472,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
         take({kind:tool.kind,itemId:tool.itemId,unitId:tool.unitId,slot:tool.slot,
           ...(tool.tick === undefined ? {} : {tick:tool.tick})});continue;
       }
-      if(tool.kind==='g23-item-converted'){items=replayG23Conversion(items,tool);take({kind:tool.kind,itemId:tool.itemId,from:tool.from,to:tool.to,receiptId:tool.receiptId});continue;}
+      if((tool.kind==='anger-item-converted'||tool.kind==='g23-item-converted')){items=replayG23Conversion(items,tool);take({kind:tool.kind,itemId:tool.itemId,from:tool.from,to:tool.to,receiptId:tool.receiptId});continue;}
       if(tool.kind==='consumable-used') {
         check(!committed||state.phase!=='gameOver','terminal consumable operation');
         const plan=replayConsumableItems(items,nextItem,tool.record,state.preparation);take({kind:'consumable-used',record:tool.record,...(tool.tick === undefined ? {} : {tick:tool.tick})});
@@ -471,7 +480,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       }
       check(!committed || state.phase !== 'gameOver', 'terminal equipment operation');
       const fact = entries[cursor] as Extract<ResourceFact, { kind: 'item-combined' }>;
-      const plan = replayCombination(items, preparation, nextItem, fact);
+      const plan = replayCombination(items, preparation, nextItem, fact,basis.inputs.augments.some(a=>a.definitionId==='anger-issues'));
       take({ kind: 'item-combined', event: fact.event, ...(fact.tick === undefined ? {} : {tick:fact.tick}) });
       items = plan.items; nextItem = plan.nextItemSerial;
     }
@@ -622,7 +631,8 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   return saleGold;
 }
 
-function replayG23Conversion(items:readonly import('./strategy-types').ItemInstance[],fact:Extract<ResourceFact,{kind:'g23-item-converted'}>){
+function replayG23Conversion(items:readonly import('./strategy-types').ItemInstance[],fact:Extract<ResourceFact,{kind:'g23-item-converted'|'anger-item-converted'}>){
+ if(fact.kind==='anger-item-converted')return replayAngerConversion(items,fact);
  check(items.some(i=>i.id===fact.itemId&&i.definitionId===fact.from)&&g23RadiantDefinitionId(fact.from)===fact.to,'G23 conversion source');
  return items.map(i=>i.id===fact.itemId?{...i,definitionId:fact.to}:i);
 }

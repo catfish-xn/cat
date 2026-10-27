@@ -142,3 +142,9 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 ## Batch 5 H3 接入（2026-10-27）
 
 新增只读 `readAugmentFacts(state, kind)`：返回该类型全部事实的独立副本，缺少历史节仍报错；指定轮仍使用 `requireAugmentFacts`。B5-31 从 PvP 阵容读取本人出战英雄，结算调用 `recordAugmentGrowth` 并沿资源合星血缘继承锁和成长。B5-57 从入轮快照读取棋盘英雄和原始锅铲，使用 `recordAugmentGrowth` 按携带者产生生命成长。战斗输入和双边冻结快照携带已认证历史的累计成长，离线战斗恢复对照历史开战前缀；联机席位保存仍由独立服务器 authority 认证。未向网络开放记录事实的命令。
+
+## Batch5 R2 扩展（2026-10-27，沿用 augment-history-v1）
+
+`anger-issues` 与 `another-anomaly` 登记为历史持有者；不为未持有者写空节。B5-81 增加 `anomaly-copy-kills`：`{battleId,itemId,unitId,kills:[{eventSeq,victimId}]}`，另带通用 sequence/seat/round/resourcePrefix。使用 `recordAugmentCopyKills(state,fact)` 和 `readAugmentCopyKills(state,itemId,beforeRound?)`；同一战斗/物品同内容幂等、冲突拒绝，复活后再次死亡不按 victimId 去重。采样只读取已认证终战，原异常持有者与召唤物/装备克隆不进入复制品账本。
+
+战斗输入的可选 `augmentCopyKills` 由上述 API 读取此前回合的自身记录，绝不复制原英雄累计值；恢复用已认证资源前缀选择开战物品，运行中读取开战历史，避免后续卸下、重铸抹去冻结输入。PvP 装备 ID 沿既有命名空间映射。全部事实仍走同一界限检查、单人公共命令重演及联机独立 authority，不创建第二个保存节、不重录 epoch。规则、接口与接线点见 [AUGMENT_BATCH5_R2](AUGMENT_BATCH5_R2.md)。
