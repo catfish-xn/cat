@@ -1,17 +1,25 @@
 /** Native Chromium DOM (the repository has no jsdom): trait rows open their card on click or tap and keep it pinned. */
-import { afterAll, beforeAll, expect, it } from 'vitest';
-import type { Browser, Page } from 'playwright';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
+import type { Browser, BrowserContext, Page } from 'playwright';
 import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
-let browser: Browser, page: Page;
+let browser: Browser, context: BrowserContext | undefined, page: Page, bundle: string;
+// Compilation and the shared-browser connection have independent default hook budgets.
 beforeAll(async () => {
   const result = await build({ stdin: { contents: `export { attachHoverCards, HoverCard } from './src/presentation/hover-card';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'iife', globalName: 'Hover' });
-  browser = await testBrowser();
-  page = await browser.newPage({ viewport: { width: 800, height: 600 }, hasTouch: true });
+  bundle = result.outputFiles[0].text;
+});
+beforeAll(async () => { browser = await testBrowser(); });
+// A removed row, a pinned card or the last mouse position must never reach another case.
+beforeEach(async () => {
+  context = await browser.newContext({ viewport: { width: 800, height: 600 }, hasTouch: true });
+  page = await context.newPage();
   await page.setContent(`<style>.row{display:block;width:200px;height:40px}</style><section id="scope"><span class="row" id="a" data-k="a" tabindex="0">A</span>
     <span class="row" id="b" data-k="b">B</span></section><div id="else" style="position:fixed;left:500px;top:400px;width:100px;height:100px"></div>`);
-  await page.addScriptTag({ content: result.outputFiles[0].text });
+});
+beforeEach(async () => {
+  await page.addScriptTag({ content: bundle });
   await page.evaluate(() => {
     const { attachHoverCards, HoverCard } = (window as any).Hover, card = new HoverCard('trait-card', 'hover:trait');
     const scope = document.getElementById('scope')!;
@@ -19,6 +27,7 @@ beforeAll(async () => {
     (window as any).shown = () => { const root = document.getElementById('trait-card')!; return root.hidden ? null : root.dataset.key; };
   });
 });
+afterEach(async () => { await context?.close(); context = undefined; });
 afterAll(async () => { await browser?.close(); });
 const shown = () => page.evaluate(() => (window as any).shown());
 

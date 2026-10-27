@@ -1,3 +1,6 @@
+import { contains, projectedBox, type ScreenArea } from './description-pick';
+import type { Camera } from 'three';
+import type { BoardDescription, BoardScreenBox } from '../board-feed';
 /**
  * 3D 看对手 (planning/3d/tft-parity-carousel-scout-ui-2026-10-21.md S1/S2/S4): another seat's public build drawn on the
  * board instead of mine while board-feed carries a BoardScout. Only what `readScout` copies from the seat's public view
@@ -104,6 +107,7 @@ export interface ScoutStage {
   /** My legend, which came along, walks toward a board-space point on this board (display only: nothing is sent). */
   walkVisitor(point: { x: number; y: number }): boolean;
   inspectRoot(id: string): Group | undefined;
+  descriptionAt(client: { x: number; y: number }, camera: Camera, area: ScreenArea): { target: BoardDescription; box: BoardScreenBox } | undefined;
   update(seconds: number): void;
   debug(): { seatId: string | null; units: string[]; bench: string[]; orbs: string[]; legend: string; visitor: string };
   dispose(): void;
@@ -176,6 +180,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       piece.overhead.object.position.copy(at).setY(height + STAR_GAP + (piece.stars ? STAR_SIZE / 2 + 3 : -STAR_GAP / 2));
     };
     const piece = createPiece(key, unit.definitionId, ctx.championHeight, ctx.championWidth, pawn, ctx.loadModel, height => place(height));
+    piece.root.userData.inspectId = `scout:${current!.seatId}:${key.startsWith('bench:') ? `bench-${key.slice(6)}` : key.slice(6)}:${unit.definitionId}:${unit.effectiveStarLevel ?? unit.starLevel}`;
     piece.root.position.copy(at); piece.root.rotation.y = Math.PI; // models face +z; the owner's side looks up the board
     if (!unit.summon) {
       piece.stars = createStarMark({ effectiveStarLevel: unit.effectiveStarLevel ?? unit.starLevel, colorFor: ctx.starColor });
@@ -256,6 +261,21 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       if (key === layoutKey) return;
       layoutKey = key;
       build(view, frame);
+    },
+    descriptionAt(client, camera, area) {
+      if (!current) return;
+      for (const orb of orbs) {
+        const box = projectedBox(orb, camera, area);
+        if (box && contains(box, client)) return { target: { kind: 'public-orbs', count: current.orbs.count, tiers: current.orbs.tiers }, box };
+      }
+      let best: { target: BoardDescription; box: BoardScreenBox } | undefined, distance = Infinity;
+      for (const piece of pieces) {
+        const box = projectedBox(piece.root, camera, area);
+        if (!box || !contains(box, client)) continue;
+        const d = Math.abs(client.x - (box.left + box.right) / 2);
+        if (d < distance) { distance = d; best = { target: { kind: 'unit', id: piece.root.userData.inspectId }, box }; }
+      }
+      return best;
     },
     inspectRoot(id) {
       if (!current) return;

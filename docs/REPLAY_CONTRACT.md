@@ -56,6 +56,8 @@ v1正式文件不导出检查点；包装/记录使用严格key白名单，额�
 
 失败仍抛出既有验证异常（不新增失败枚举）：不兼容版本、非法结构/上下文、事件缺失/内容错误、非法装备命令、终点/游标/结果/hash 不符、缺少或不一致的历史证据；未完成记录仍由 PlaybackSession 拒绝。验证及回放逐步事件比较局部使用既有同步规范编码器，保留相同的有限 plain JSON 检查，作用域在返回或抛错时恢复。
 
+2026-10-27 第二轮性能修复：`equalContent(a: unknown, b: unknown): boolean` 对普通有限数据直接递归比较完整键集合和数组顺序，同时检查两侧全部子值，不生成两份规范字符串；访问器、特殊容器、稀疏数组或非法数据仍交由原规范编码器处理，保留其读取顺序和异常。每次比较重新遍历，不新增跨 PlaybackSession 或 restoreMatch 的验证结果缓存。完整调用点、在线客户端和服务器链路见 [SEEK_PERFORMANCE_CALL_SITES](SEEK_PERFORMANCE_CALL_SITES.md)。
+
 ## 统计合同与反馈
 
 按来源ownerId累加packetDamage.hpDamage；按受击unitId累加packetDamage.absorbed；按heal.source.ownerId累加heal.actual，heal.overheal单列。不累计汇总damage，不把shieldLayerChanged/granted当吸收；洛里斯分担保留原来源与实际受击单位，各包一次。

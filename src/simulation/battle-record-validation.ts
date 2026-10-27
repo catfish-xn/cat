@@ -30,7 +30,40 @@ export function deepFreeze<T>(value: T): T {
   return value;
 }
 function check(value: unknown, message: string): asserts value { if (!value) throw new Error(`战斗档案无效：${message}`); }
-export function equalContent(a: unknown, b: unknown): boolean { return canonicalContent(a) === canonicalContent(b); }
+// Compare ordinary finite data without materializing two canonical strings.
+// Read descriptors only: accessors and exotic arrays/objects keep the original
+// encoder (including its read order and errors). Every child is visited, even
+// after a value mismatch; equality never certifies an unvisited subtree.
+function equalPlainContent(a: unknown, b: unknown): boolean | undefined {
+  const scalar = (value: unknown) => value === null || typeof value === 'string' || typeof value === 'boolean'
+    || typeof value === 'number' && Number.isFinite(value);
+  if (scalar(a) && scalar(b)) return a === b;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return undefined;
+  const array = Array.isArray(a);
+  if (array !== Array.isArray(b) || Object.getPrototypeOf(a) !== (array ? Array.prototype : Object.prototype)
+    || Object.getPrototypeOf(b) !== (array ? Array.prototype : Object.prototype)) return undefined;
+  let keys: string[];
+  if (array) {
+    if ((a as unknown[]).length !== (b as unknown[]).length || Object.hasOwn(a, 'map') || Object.hasOwn(b, 'map')
+      || Object.hasOwn(a, 'constructor') || Object.hasOwn(b, 'constructor')) return undefined;
+    keys = Array.from({ length: (a as unknown[]).length }, (_, i) => String(i));
+  } else {
+    keys = Object.keys(a);
+    if (keys.length !== Object.keys(b).length) return undefined;
+  }
+  let equal = true;
+  for (const key of keys) {
+    const left = Object.getOwnPropertyDescriptor(a, key), right = Object.getOwnPropertyDescriptor(b, key);
+    if (!left || !right || !('value' in left) || !('value' in right) || (!array && !right.enumerable)) return undefined;
+    const child = equalPlainContent(left.value, right.value);
+    if (child === undefined) return undefined;
+    if (!child) equal = false;
+  }
+  return equal;
+}
+export function equalContent(a: unknown, b: unknown): boolean {
+  return equalPlainContent(a, b) ?? (canonicalContent(a) === canonicalContent(b));
+}
 const keys = ['version','roundId','runId','combatId','context','initial','events','endTick','nextEventSeq','result','stateHash','eventHash'].sort();
 const VERSION_KEYS = ['schemaVersion','rulesVersion','contentVersion','contentDigest','replayFormatVersion'] as const;
 /** The version block a record made from this context must carry. */

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { Room, ROOM_TIMING_DEFAULTS, type RoomOptions } from '../../src/server/room/room';
@@ -25,7 +25,9 @@ function botRoom(seats: readonly SeatSpec[] = BOTS, driver: Partial<BotDriverOpt
   return { room, clock, bots, log };
 }
 const disposers: (() => void)[] = [];
-afterEach(() => { for (const dispose of disposers.splice(0)) dispose(); });
+const disposeRooms = () => { for (const dispose of disposers.splice(0)) dispose(); };
+afterEach(disposeRooms);
+afterAll(disposeRooms); // Also release fixtures when an ordered setup hook fails.
 
 const actionsOf = (log: readonly Logged[]) => log.filter(record => record.action !== 'done');
 const budgetsHold = (log: readonly Logged[], limit: number) => {
@@ -90,18 +92,28 @@ if (mode === 'timing') describe('BotDriver: whole matches (§13.3)', () => {
 });
 
 if (mode === 'fast') describe('BotDriver: scheduling', () => {
-  if (mode === 'fast') { it('behaves the same for the same input: identical intentions, policy streams and seat states', () => {
-    const run = () => {
-      const { room, clock, bots, log } = botRoom();
-      room.start();
-      runUntil(room, clock, state => state.round >= 7, 20_000);
-      return { log: JSON.stringify(log), seats: JSON.stringify(room.state.seats.map(seat => seat.match)), rng: BOTS.map(seat => bots.inspect(seat.seatId)!.rng) };
-    };
-    const first = run(), second = run();
-    expect(second.log).toBe(first.log);
-    expect(second.seats).toBe(first.seats);
-    expect(second.rng).toEqual(first.rng);
-  }, 30_000); }
+  describe('independent deterministic runs', () => {
+    const snapshots: { log: string; seats: string; rng: number[] }[] = [];
+    // Two genuine runs, with a separate bounded hook for each real round.
+    // Consumers never depend on another assertion case warming this fixture.
+    for (let run = 0; run < 2; run++) {
+      let ctx: ReturnType<typeof botRoom>;
+      beforeAll(() => { ctx = botRoom(); ctx.room.start(); });
+      for (let round = 1; round <= 7; round++) beforeAll(() => {
+        runUntil(ctx.room, ctx.clock, state => state.round >= round, 20_000);
+      });
+      beforeAll(() => {
+        snapshots.push({ log: JSON.stringify(ctx.log), seats: JSON.stringify(ctx.room.state.seats.map(seat => seat.match)),
+          rng: BOTS.map(seat => ctx.bots.inspect(seat.seatId)!.rng) });
+      });
+    }
+    it('behaves the same for the same input: identical intentions, policy streams and seat states', () => {
+      const [first, second] = snapshots;
+      expect(second.log).toBe(first.log);
+      expect(second.seats).toBe(first.seats);
+      expect(second.rng).toEqual(first.rng);
+    }, 30_000);
+  });
 
   if (mode === 'fast') { it('draws the policy stream from its own derivation, never from the room stream', () => {
     const plain = new Room(BOTS, { ...ROOM_TIMING_DEFAULTS, roomId: 'bot-room', seed: 42, clock: new ManualClock(), resolver: headlessResolver() });
@@ -169,17 +181,22 @@ if (mode === 'fast') describe('BotDriver: scheduling', () => {
 });
 
 if (mode === 'fast') describe('BotDriver: no takeover by default (P2, TFT behaviour)', () => {
+  let ctx: ReturnType<typeof botRoom>, round: number;
+  const seat = () => ctx.room.state.seats.find(candidate => candidate.seatId === 's0')!;
+  beforeAll(() => {
+    ctx = botRoom(SEATS, { stepMs: 300 });
+    ctx.room.start();
+    runUntil(ctx.room, ctx.clock, state => state.phase === 'preparation');
+    expect(ctx.room.setConnected('s0', false)).toBe(true);
+    expect(ctx.bots.inspect('s0')!.takeoverPending).toBe(false);
+    round = ctx.room.state.round;
+  });
+  // Advance the same disconnected seat across both genuine rounds, independently of test order.
+  for (const offset of [1, 2]) beforeAll(() => {
+    runUntil(ctx.room, ctx.clock, state => state.round >= round + offset && state.phase === 'preparation', 20_000);
+  });
   if (mode === 'fast') { it('leaves a disconnected human seat alone: no takeover timer, no bot step, the seat stays human and its board still fights', () => {
-    const ctx = botRoom(SEATS, { stepMs: 300 });
-    const { room, clock, bots, log } = ctx;
-    room.start();
-    runUntil(room, clock, state => state.phase === 'preparation');
-    const seat = () => room.state.seats.find(candidate => candidate.seatId === 's0')!;
-    expect(room.setConnected('s0', false)).toBe(true);
-    expect(bots.inspect('s0')!.takeoverPending).toBe(false);
-    // Far beyond the old 60 s takeover delay, across rounds: still human-controlled, never driven by a bot.
-    const round = room.state.round;
-    runUntil(room, clock, state => state.round >= round + 2 && state.phase === 'preparation', 20_000);
+    const { room, bots, log } = ctx;
     expect(seat()).toMatchObject({ controller: 'human', controlEpoch: 0, connected: false });
     expect(bots.inspect('s0')!.takeoverPending).toBe(false);
     expect(log.some(record => record.seatId === 's0')).toBe(false);

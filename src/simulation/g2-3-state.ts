@@ -13,7 +13,7 @@ import type {MatchState} from './match-types';
 import type {G23MatchProgress} from './g2-3-match-progress';
 import {emptySeatMechanics} from './seat-mechanics/state';
 import {g23Laboratories} from './g2-3-experiment';
-import {deriveTraits} from './trait-snapshot';
+import { deriveEffectiveTrait, projectEffectiveMembership } from './traits/effective-membership';
 /** Settled economy receipts only. Expands no reward atoms, so restore-time readers that run before
  * validateG23RewardSources never sample an unauthenticated reward descriptor. */
 export function readG23EconomyReceipts(state:Pick<MatchState,'seatMechanics'>):G23MatchProgress['economyReceipts']{
@@ -54,8 +54,10 @@ export function writeG23Progress<T extends Pick<MatchState,'seatMechanics'>>(sta
 }
 export function updateG23Cells(state:MatchState):MatchState{
  let p=readG23Progress(state);if(!p)return state;
- if(!p.family&&state.phase==='preparation'&&!state.multiplayer?.combatRosterLocked&&(deriveTraits(state.preparation,'player',undefined,undefined,state.items).find(t=>t.traitId==='family')?.tier??0)>=5){p=activateFamily(p,state.round);state=writeG23Progress(state,p);}
- const tier=deriveTraits(state.preparation,'player',undefined,undefined,state.items).find(t=>t.traitId==='experiment')?.tier??0;
+ // Both consumers need one trait, not the full catalog on every combat tick.
+ const projection = projectEffectiveMembership(state.preparation, undefined, undefined, state.items);
+ if(!p.family&&state.phase==='preparation'&&!state.multiplayer?.combatRosterLocked&&deriveEffectiveTrait(projection,'player','family').tier>=5){p=activateFamily(p,state.round);state=writeG23Progress(state,p);}
+ const tier=deriveEffectiveTrait(projection,'player','experiment').tier;
  return {...state,seatMechanics:{...state.seatMechanics!,seat:{...state.seatMechanics!.seat,experimentCells:g23Laboratories(p.seed,'player',tier)}}};
 }
 /** Generic receipts authorize every grant; internal selectors can never mint a second resource birth. */

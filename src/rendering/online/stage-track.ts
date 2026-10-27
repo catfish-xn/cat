@@ -1,3 +1,4 @@
+import { attachTextCards, textCard } from '../../presentation/text-card';
 /**
  * TFT-style stage tracker in the countdown strip above the board: one icon per round of the current stage (对战, 野怪,
  * 选秀, 强化, 异常), the current one lit, the finished ones dimmed. Hovering a 野怪 round names its monsters.
@@ -61,10 +62,13 @@ export function stageTrackRounds(ordinal: number): StageTrackRound[] {
 export class StageTrack {
   readonly root: HTMLElement;
   private ordinal = -1;
+  private readonly detach: () => void;
   constructor() {
     this.root = document.createElement('ol'); this.root.className = 'stage-track'; this.root.dataset.debug = 'online:stage-track';
+    this.detach = attachTextCards(this.root);
     this.root.setAttribute('aria-label', '本阶段回合'); this.root.hidden = true;
   }
+  dispose(): void { this.detach(); this.root.remove(); }
   render(ordinal: number): void {
     if (ordinal === this.ordinal) return;
     this.ordinal = ordinal;
@@ -73,7 +77,7 @@ export class StageTrack {
     this.root.replaceChildren(...rounds.map(round => {
       const item = document.createElement('li');
       item.className = `stage-round ${round.state}`; item.dataset.icon = round.icon; item.dataset.debug = `online:stage-round:${round.roundId}`;
-      item.title = round.title; item.setAttribute('aria-label', round.title);
+      textCard(item, round.title);
       if (round.state === 'current') item.setAttribute('aria-current', 'step');
       item.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${PATH[round.icon]}"/></svg>`;
       return item;

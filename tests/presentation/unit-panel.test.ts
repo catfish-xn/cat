@@ -12,6 +12,8 @@ beforeAll(async () => {
   const result = await build({ stdin: { contents: `export * from './src/presentation/unit-panel';
     export * from './src/presentation/unit-panel-loader';
     export {attachUnitCards} from './src/presentation/unit-card';
+    export {unitCardBody} from './src/presentation/unit-card';
+    export {registerRootUiAssets} from './src/presentation/s13-assets';
     export {loadTooltipText} from './src/presentation/tooltip-text-loader';
     export {UNIT_DEFINITIONS} from './src/simulation/units';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' } });
@@ -28,6 +30,31 @@ beforeAll(async () => {
   await page.evaluate(async () => { await (window as any).Inspect.loadTooltipText(); });
 });
 afterAll(async () => { await browser?.close(); });
+it('shows projected scene unit/item cards and the shared orb body in Chromium, with public-only scout orbs', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect, box = { left: 400, top: 220, right: 460, bottom: 320 };
+    const context = { inBattle: true, locked: false };
+    const show = (target: any, unit: any = null, orb: any = undefined) => {
+      api.showSceneDescription(target, box, unit, orb, context);
+      return document.getElementById('unit-card')!;
+    };
+    const unit = show({ kind: 'unit', id: 'scout:other:2,4:lux:2' }, { definitionId: 'lux', starLevel: 2, items: ['sword'] });
+    const unitText = unit.textContent!, beside = parseFloat(unit.style.left) > box.right;
+    const item = show({ kind: 'item', id: 'sword' }).textContent!;
+    const orb = show({ kind: 'orb', id: 'mine' }, null, { orbId: 'mine', tier: 'gold', source: 'pve', roundId: '1-2', queued: false,
+      entries: [{ kind: 'gold', quantity: 7 }, { kind: 'unit', definitionId: 'lux', starLevel: 2, quantity: 1 }] });
+    const orbText = orb.textContent!, visible = orb.checkVisibility(), entriesVisible = orb.querySelector('ul')!.checkVisibility();
+    const publicText = show({ kind: 'public-orbs', count: 2, tiers: ['gold', 'blue'] }).textContent!;
+    show(null);
+    return { unitText, beside, item, orbText, visible, entriesVisible, publicText, hidden: document.getElementById('unit-card')!.hidden };
+  });
+  expect(result.unitText).toContain('拉克丝'); expect(result.unitText).toContain('★★'); expect(result.unitText).toContain('暴风大剑');
+  expect(result.beside).toBe(true); expect(result.item).toContain('暴风大剑'); expect(result.item).toContain('攻击');
+  expect(result.orbText).toContain('7 金币'); expect(result.orbText).toContain('拉克丝★★'); expect(result.orbText).toContain('战后结算');
+  expect(result.orbText).toContain('自动出售'); expect(result.visible).toBe(true); expect(result.entriesVisible).toBe(true);
+  expect(result.publicText).toContain('2 个'); expect(result.publicText).not.toContain('拉克丝'); expect(result.publicText).not.toContain('7 金币');
+  expect(result.hidden).toBe(true);
+});
 it.each([1, 2, 3])('renders rank %i with all ranks and current rank emphasis', async star => {
   const result = await page.evaluate(star => {
     const api = (window as any).Inspect;
@@ -38,6 +65,23 @@ it.each([1, 2, 3])('renders rank %i with all ranks and current rank emphasis', a
   expect(result.text).toContain('360/540/900');
   expect(result.bold).toContain(String([360, 540, 900][star - 1]));
   expect(result.stars).toBe(String(star)); expect(result.slots).toBe(3);
+});
+it('uses optional ability art in inspect and hover, keeps portrait fallback and hides broken art', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect, data = { id: 'lux', definitionId: 'lux', starLevel: 1, team: 'player' };
+    const fallback = api.buildUnitPanel(data);
+    const fallbackImage = fallback.querySelector('.unit-card-ability img') as HTMLImageElement;
+    const missing = !!fallbackImage && fallbackImage.src === (fallback.querySelector('.unit-card-portrait img') as HTMLImageElement).src;
+    api.registerRootUiAssets('https://synthetic.invalid/', { assets: [{ kind: 'ability', id: api.UNIT_DEFINITIONS.lux.abilityId, path: 'icons/synthetic.png' }] });
+    const panel = api.buildUnitPanel(data), hover = api.unitCardBody('lux', 1);
+    const image = panel.querySelector('.unit-card-ability img') as HTMLImageElement;
+    const shown = { src: image.src, width: image.width, height: image.height, loading: image.loading, rounded: image.style.borderRadius, first: image === image.parentElement!.firstElementChild, hover: !!hover.querySelector('.unit-card-ability img') };
+    image.dispatchEvent(new Event('error'));
+    return { missing, shown, hidden: image.hidden, text: panel.querySelector('.unit-card-ability').textContent };
+  });
+  expect(result.missing).toBe(true);
+  expect(result.shown).toEqual({ src: 'https://synthetic.invalid/icons/synthetic.png', width: 36, height: 36, loading: 'lazy', rounded: '6px', first: true, hover: true });
+  expect(result.hidden).toBe(true); expect(result.text).toContain('360/540/900');
 });
 it('renders four-star, neutral and simple anvil bodies', async () => {
   const result = await page.evaluate(() => {
@@ -107,7 +151,7 @@ it('refreshes battle totals, notes and equipment without rebuilding the pinned b
     panel.pin(() => data);
     const body = panel.root.querySelector('.unit-card'), hp = body.querySelector('[data-value=hp]');
     const line = body.querySelector('.unit-card-battle'), text = line.lastElementChild;
-    data = { ...data, items: ['bf-sword'], notes: ['终极英雄'], battle: { battle: { damageDealt: 123, damageTaken: 45, healingDone: 6, healingReceived: 7, kills: 1 }, match: null } };
+    data = { ...data, items: ['sword'], notes: ['终极英雄'], battle: { battle: { damageDealt: 123, damageTaken: 45, healingDone: 6, healingReceived: 7, kills: 1 }, match: null } };
     panel.refresh(performance.now() + 150);
     const result = { same: body === panel.root.querySelector('.unit-card') && hp === body.querySelector('[data-value=hp]') && text === line.lastElementChild,
       battle: line.textContent, visible: !line.hidden, note: body.querySelector('.unit-card-note').textContent };

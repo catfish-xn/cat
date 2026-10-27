@@ -1,3 +1,4 @@
+import { textCard } from './text-card';
 /**
  * C18-B: R3/R4 loot presentation over the signed contract (MULTIPLAYER_CONTRACT §18.4/§18.8). Pure renderers: the orb
  * cards of the round's revealed loot (tier, the server's aggregate status, entries incl. forfeited ones) and the
@@ -98,7 +99,8 @@ function orbEntryRow(drop: RevealedDropView): HTMLElement {
   const note = drop.status === 'forfeited' ? FORFEIT_TEXT[drop.reason] ?? status.note
     : awaiting ? '法球留在棋盘右侧，点击法球领取' : status.note;
   const title = [description, note].filter(Boolean).join('\n');
-  if (title) row.title = title;
+  if (drop.payload.kind === 'consumable' && document.body.dataset.online !== undefined) textCard(row, `${consumableName(drop.payload.definitionId)}\n${title}`);
+  else if (title) row.title = title;
   return row;
 }
 
@@ -167,6 +169,7 @@ export function consumableShelf(consumables: readonly ConsumableInstance[], sele
     button.append(node('span', consumableName(definitionId)));
     if (stack.length > 1) { button.dataset.count = String(stack.length); button.append(node('span', `×${stack.length}`, 'consumable-count')); }
     button.title = CONSUMABLE_DEFINITIONS[tool.definitionId]?.description ?? tool.definitionId;
+    if (document.body.dataset.online !== undefined) { textCard(button, `${consumableName(definitionId)}\n${button.title}`); button.dataset.hoverAction = 'true'; }
     bind(button, tool);
     row.append(button);
   }

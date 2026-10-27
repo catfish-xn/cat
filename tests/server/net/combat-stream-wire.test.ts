@@ -11,11 +11,13 @@ describe('NET6 combat stream', () => {
   it('opens before resolution, streams contiguous frames, resumes a cursor and reuses the same source for watch', async () => {
     harness = await startServer({ combatStreaming: true }, new TwoSidedBattleResolver());
     const [a, b] = await seatTwo(harness), room = harness.server.room!;
-    harness.clock.advance(1_000); await flush();
+    harness.clock.advance(1_000);
+    await a.waitFor(message => message.type === 'combat-open');
     const open = messagesOfType(a.inbox, 'combat-open').at(-1)!;
     expect(open.frame.tick).toBe(0); expect(room.state.battles).toHaveLength(0);
     expect(messagesOfType(a.inbox, 'replay')).toHaveLength(0);
-    harness.clock.advance(250); await flush();
+    harness.clock.advance(250);
+    await a.waitFor(message => message.type === 'combat-chunk');
     const chunks = messagesOfType(a.inbox, 'combat-chunk');
     let next = 1;
     for (const chunk of chunks.flatMap(packet => packet.chunks)) { expect(chunk.fromTick).toBe(next); expect(chunk.ticks.map(f => f.tick)).toEqual(Array.from({ length: chunk.ticks.length }, (_, i) => next + i)); next = chunk.throughTick + 1; }
@@ -24,15 +26,21 @@ describe('NET6 combat stream', () => {
     harness.clock.advance(150); await flush();
     const resumed = await harness.connect();
     expectOk(await resumed.send({ type: 'resume', token, combat: { battleId: open.battleId, revision: open.revision, nextTick: next, seatId: a.seatId! } }));
-    await flush();
+    await resumed.waitFor(message => message.type === 'combat-chunk');
     expect(messagesOfType(resumed.inbox, 'combat-open')).toHaveLength(0);
     const resumedChunk = messagesOfType(resumed.inbox, 'combat-chunk')[0]!.chunks[0]!;
     expect(resumedChunk.fromTick).toBe(next);
     expectOk(await b.send({ type: 'watch', roomId: room.state.roomId, seatId: a.seatId! }));
     await flush();
+    await b.waitFor(message => message.type === 'combat-open' && message.battleId === open.battleId);
     const watched = messagesOfType(b.inbox, 'combat-open').at(-1)!;
     expect(watched.battleId).toBe(open.battleId); expect(watched.unitIds).toEqual([]);
-    harness.clock.advance(50); await flush();
+    const viewerFrom = b.inbox.length, playerFrom = resumed.inbox.length;
+    harness.clock.advance(50);
+    await Promise.all([
+      b.waitFor(message => message.type === 'combat-chunk' && message.chunks.some(chunk => chunk.watch), undefined, viewerFrom),
+      resumed.waitFor(message => message.type === 'combat-chunk', undefined, playerFrom),
+    ]);
     const viewerChunk = messagesOfType(b.inbox, 'combat-chunk').at(-1)!.chunks.find(chunk => chunk.watch)!;
     const playerChunk = messagesOfType(resumed.inbox, 'combat-chunk').at(-1)!.chunks[0]!;
     expect(viewerChunk.ticks).toEqual(playerChunk.ticks);
@@ -44,7 +52,8 @@ describe('NET6 combat stream', () => {
     expect(end.terminal).toEqual(toCombatReplayFor(room.state, a.seatId!)!.replay.terminal);
     expect(room.state.settlements).toHaveLength(0);
     const snapshot = await harness.connect();
-    expectOk(await snapshot.resume(token)); await flush();
+    expectOk(await snapshot.resume(token));
+    await snapshot.waitFor(message => message.type === 'combat-open');
     const keyframe = messagesOfType(snapshot.inbox, 'combat-open').at(-1)!;
     expect(keyframe.initial.tick).toBe(end.throughTick);
     harness.clock.advance(800); await flush();
@@ -60,8 +69,9 @@ describe('NET6 combat stream', () => {
       slow ??= this;
       return this === slow ? 1_048_577 : 0;
     });
-    harness.clock.advance(1_250); await flush();
+    harness.clock.advance(1_250);
     await a.closed;
+    await b.waitFor(message => message.type === 'combat-chunk');
     expect(slow).not.toBeNull();
     expect(messagesOfType(b.inbox, 'combat-chunk').length).toBeGreaterThan(0);
     expect(harness.server.room!.state.fault).toBeNull();

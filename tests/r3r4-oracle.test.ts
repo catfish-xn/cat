@@ -9,22 +9,26 @@ const rounds=['1-2','1-3','1-4','2-7','3-7','4-7','5-7','6-7'];
 const oracle=(seed:number,roomSeed=seed)=>{const p=v17Plan(seed,38,roomSeed);return {plans:p.rounds.map(r=>({tiers:r.orbs.map(o=>o.tier),payloads:r.orbs.map(o=>o.entries.map(e=>e.payload))})),layoutRng:p.layoutRng,lootRng:p.rng};};
 function stream(seed:number){let state=BigInt(seed>>>0),draws=0;return {draw(n:number){const size=BigInt(n),limit=4294967296n/size*size;do{state=(1664525n*state+1013904223n)%4294967296n;draws++;}while(state>=limit);return Number(state%size);},value:()=>({state:Number(state),draws})};}
 describe('signed R3/R4 independent loot oracle',()=>{
-  it('matches every PvE entry and both independent RNG cursors for 512 seeds',()=>{
-    const seen=new Set<string>();
-    for(let seed=0;seed<512;seed++) {
-      const expected=oracle(seed),actual=freezeLootThroughRound(seed,38);
+  it.each(Array.from({length:16},(_,i)=>i*32))('matches every PvE entry and both independent RNG cursors for seeds %i..+31 (512 total)',first=>{
+    for(let seed=first;seed<first+32;seed++) {
+      // One independent plan per seed; reuse its literal rounds, never production output.
+      const plan=v17Plan(seed,38),expected={plans:plan.rounds.map(r=>({tiers:r.orbs.map(o=>o.tier),payloads:r.orbs.map(o=>o.entries.map(e=>e.payload))})),layoutRng:plan.layoutRng,lootRng:plan.rng},actual=freezeLootThroughRound(seed,38);
       const layout=freezeOrbLayoutThroughRound(createOrbLayout(seed),38);if(!layout.ok)throw Error(layout.reason);
       expect(actual.rng).toEqual(expected.lootRng);expect(layout.layout.rng).toEqual(expected.layoutRng);
       for(const [r,round] of actual.rounds.entries()) {
         expect(round.encounterPlan.roundId).toBe(rounds[r]);
         expect(round.orbs.map(o=>o.tier)).toEqual(expected.plans[r].tiers);
         expect(round.orbs.map(o=>o.entries.map(e=>e.payload))).toEqual(expected.plans[r].payloads);
-        expect(round.orbs.map(o=>JSON.parse(o.sourceUnitId)[3])).toEqual(v17Plan(seed,38).rounds[r].orbs.map(o=>JSON.parse(o.sourceUnitId)[3]));
-        expect(round.orbs.map(o=>o.slotOrdinal)).toEqual(v17Plan(seed,38).rounds[r].orbs.map(o=>o.slotOrdinal));
-        round.orbs.forEach(o=>seen.add(o.tier));
+        expect(round.orbs.map(o=>JSON.parse(o.sourceUnitId)[3])).toEqual(plan.rounds[r].orbs.map(o=>JSON.parse(o.sourceUnitId)[3]));
+        expect(round.orbs.map(o=>o.slotOrdinal)).toEqual(plan.rounds[r].orbs.map(o=>o.slotOrdinal));
       }
-      expect(actual.rounds).toEqual(v17Plan(seed,38).rounds);
+      expect(actual.rounds).toEqual(plan.rounds);
     }
+  });
+  it('covers all four tiers across the complete 512-seed corpus',()=>{
+    const seen=new Set<string>();
+    for(let seed=0;seed<512;seed++) for(const round of freezeLootThroughRound(seed,38).rounds)
+      round.orbs.forEach(orb=>seen.add(orb.tier));
     expect([...seen].sort()).toEqual(['blue','gold','gray','prismatic']);
   });
   it('uses the room stream for eight seats while each seat uses its own content stream',()=>{
