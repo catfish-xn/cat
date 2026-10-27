@@ -63,10 +63,12 @@ let harness: NetHarness | null = null;
 afterEach(async () => { await harness?.close(); harness = null; });
 
 describe('B7 private seat view on every state path', () => {
-  it('sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot', async () => {
-    harness = await startServer({}, new TwoSidedBattleResolver());
-    const [a, b] = await seatTwo(harness);
-    const room = harness.server.room!;
+  describe('private wire snapshots', () => {
+    let a: TestClient, b: TestClient, room: Room;
+    beforeAll(async () => { harness = await startServer({}, new TwoSidedBattleResolver()); });
+    beforeAll(async () => { [a, b] = await seatTwo(harness!); room = harness!.server.room!; });
+    afterAll(async () => { await harness?.close(); harness = null; });
+    it('sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot', async () => {
     const seatOf = (client: TestClient) => room.state.seats.find(seat => seat.seatId === client.seatId)!;
     // First snapshot.
     const first = stateMessages(a.inbox)[0]!;
@@ -83,13 +85,14 @@ describe('B7 private seat view on every state path', () => {
     // Resume snapshot on a new connection.
     const token = a.token!;
     await a.close();
-    const a2 = await harness.connect();
+    const a2 = await harness!.connect();
     expectOk(await a2.resume(token));
     const resumed = await a2.waitFor<Extract<ServerMessage, { type: 'state' }>>(message => message.type === 'state');
     expect(resumed.state).toEqual(JSON.parse(JSON.stringify(toSeatPrivateView(seatOf(a2).match))));
     for (const client of [a, a2, b]) for (const message of client.inbox) {
       expect(privateKeysIn(message.type === 'state' ? message.state : message.type === 'view' ? message.view : null), `${message.type} leaked`).toEqual([]);
     }
+  });
   });
 
   it('keeps the fault snapshot projected', async () => {

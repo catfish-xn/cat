@@ -109,18 +109,21 @@ it('authenticates every owner before checking an earlier owner count', () => {
   rejected(bad, 'combat unit identity');
 });
 
-function continueEveryTick(legal: MatchState, liveSteps?: readonly ReturnType<typeof stepMatch>[]) {
+function continueEveryTick(legal: MatchState, liveSteps?: readonly ReturnType<typeof stepMatch>[], entry?: 'object' | 'JSON') {
   const text = serializeMatch(legal);
-  let object = restoreMatch(structuredClone(legal)), json = restoreMatch(text), live = legal;
-  expect(object).toEqual(live); expect(json).toEqual(live);
-  expect(serializeMatch(object)).toBe(text); expect(serializeMatch(json)).toBe(text);
+  const inputs = entry === 'object' ? [structuredClone(legal)] : entry === 'JSON' ? [text] : [structuredClone(legal),text];
+  const branches = inputs.map(input => restoreMatch(input));
+  let live = legal;
+  for (const branch of branches) { expect(branch).toEqual(live); expect(serializeMatch(branch)).toBe(text); }
   let index = 0;
   while (live.phase === 'combat') {
-    const next = liveSteps ? liveSteps[index++] : stepMatch(live), fromObject = stepMatch(object), fromJson = stepMatch(json);
-    // Compare the complete result (including state, events and RNG). Native
-    // equality skips shared immutable metadata instead of walking it each tick.
-    deepStrictEqual(fromObject, next); deepStrictEqual(fromJson, next);
-    live = next.state; object = fromObject.state; json = fromJson.state;
+    const next = liveSteps ? liveSteps[index++] : stepMatch(live);
+    for (let i = 0; i < branches.length; i++) {
+      const restored = stepMatch(branches[i]);
+      // The complete state, events and RNG still equal the independently stepped live branch.
+      deepStrictEqual(restored, next); branches[i] = restored.state;
+    }
+    live = next.state;
   }
   return live;
 }
@@ -149,15 +152,15 @@ describe('public single-player late fight', () => {
     }
   });
 
-  it('preserves many legitimately acquired rewards in a single-player 6-7 save', () => {
+  it.each(['object','JSON'] as const)('preserves many legitimately acquired rewards in a single-player 6-7 save (%s)', entry => {
     expect(initial.m8.loot.receipts.length).toBeGreaterThan(15);
     expect(initial.resourceProvenance.entries.length).toBeGreaterThan(80);
-    continueEveryTick(initial, liveSteps);
+    continueEveryTick(initial, liveSteps, entry);
   });
 
-  it('preserves a single-player 6-7 save at the actual maximum pending-task checkpoint', () => {
+  it.each(['object','JSON'] as const)('preserves a single-player 6-7 save at the actual maximum pending-task checkpoint (%s)', entry => {
     expect(maximum).toBeGreaterThanOrEqual(5);
-    continueEveryTick(busiest, liveSteps.slice(busiestIndex));
+    continueEveryTick(busiest, liveSteps.slice(busiestIndex), entry);
   });
 });
 

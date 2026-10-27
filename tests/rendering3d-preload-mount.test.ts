@@ -1,6 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BoardFeedListener, BoardFrame } from '../src/rendering/board-feed';
 import type { Renderer3d } from '../src/rendering/three-mode/contract';
+
+vi.mock('three', async importOriginal => ({
+      ...await importOriginal<typeof import('three')>(),
+      WebGLRenderer: class {
+        domElement = { className: '', style: { cursor: '' }, addEventListener() {}, removeEventListener() {}, remove() {},
+          getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
+        setPixelRatio(): void {} setSize(): void {} render(): void {} dispose(): void {} forceContextLoss(): void {}
+      },
+    }));
+import * as three from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as renderer from '../src/rendering/three-mode/placeholder-renderer';
+afterAll(() => { vi.doUnmock('three'); vi.resetModules(); });
 
 /**
  * The real mount path (mountRenderer3d → openModels → openAssetStore → AssetPreloader) with IndexedDB unusable.
@@ -13,7 +26,7 @@ const SHA = '0'.repeat(64);
 describe('3D mount keeps assets when IndexedDB is unusable', () => {
   let mounted: Renderer3d | undefined, listener: BoardFeedListener | undefined, requests: string[], parsed: string[];
   beforeEach(() => {
-    vi.resetModules(); requests = []; parsed = [];
+    requests = []; parsed = [];
     vi.stubGlobal('window', { devicePixelRatio: 1 });
     vi.stubGlobal('requestAnimationFrame', () => 1);
     vi.stubGlobal('cancelAnimationFrame', () => {});
@@ -26,29 +39,19 @@ describe('3D mount keeps assets when IndexedDB is unusable', () => {
     }));
     // Synthetic hash: the list's sha256 matches the synthetic body.
     vi.stubGlobal('crypto', { subtle: { digest: async () => new Uint8Array(32).buffer } });
-    vi.doMock('three', async importOriginal => ({
-      ...await importOriginal<typeof import('three')>(),
-      WebGLRenderer: class {
-        domElement = { className: '', style: { cursor: '' }, addEventListener() {}, removeEventListener() {}, remove() {},
-          getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
-        setPixelRatio(): void {} setSize(): void {} render(): void {} dispose(): void {} forceContextLoss(): void {}
-      },
-    }));
+
   });
   afterEach(() => {
     mounted?.dispose(); mounted = undefined; listener = undefined;
-    vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.doUnmock('three'); vi.resetModules();
+    vi.restoreAllMocks(); vi.unstubAllGlobals();
   });
 
   async function mountWith(indexedDB: unknown): Promise<string[]> {
     vi.stubGlobal('indexedDB', indexedDB);
-    const three = await import('three');
-    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
     vi.spyOn(GLTFLoader.prototype, 'parseAsync').mockImplementation(async (data) => {
       parsed.push(new TextDecoder().decode(data as ArrayBuffer));
       return { scene: new three.Group(), animations: [] } as never;
     });
-    const renderer = await import('../src/rendering/three-mode/placeholder-renderer');
     const progress: string[] = [];
     let finished!: () => void;
     const done = new Promise<void>(resolve => { finished = resolve; });
