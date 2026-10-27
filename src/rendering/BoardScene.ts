@@ -104,6 +104,7 @@ export class BoardScene extends Phaser.Scene {
   private online = isOnlineMode();
   private statsPanel: StatsPanel | null = null;
   private feedback: CombatFeedbackRenderer | null = null;
+  private feedbackQuiet = false;
   private melSave: ReturnType<typeof createMelSaveFeedback> | null = null;
   private activeStats: BattleStats | null = null;
   /** C17: item icons of the battle on the board, as they stood when it was first shown (null when none is shown). */
@@ -1123,7 +1124,11 @@ export class BoardScene extends Phaser.Scene {
    * Online 3D: no floating damage/heal numbers over the board. They were the busiest DOM layer of a battle and fought the
    * models' own hit and cast animations for the frame; the combat panel still lists every event.
    */
-  private quietBoard(): boolean { return this.online && boardFeedActive(); }
+  private quietBoard(): boolean {
+    const quiet = this.online && boardFeedActive();
+    if (quiet !== this.feedbackQuiet) { this.feedback?.reset(); this.feedbackQuiet = quiet; }
+    return quiet;
+  }
   private renderFeedback() {
     if (this.quietBoard()) return;
     const host = document.getElementById('feedback-root')!.getBoundingClientRect();
@@ -1152,6 +1157,7 @@ export class BoardScene extends Phaser.Scene {
     // With a 3D layer drawing the board, the 2D one is covered or hidden: Phaser keeps updating it (tweens feed the
     // frame) but no longer draws it, which was about a fifth of the main thread during a 3D match (2026-10-21).
     const feeding = boardFeedActive();
+    this.quietBoard();
     this.syncConquerorFlag();
     // No camera (a scene that never booted its camera manager) leaves nothing to stop.
     const camera = this.cameras?.main;

@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import { createCombatFeedbackRenderer, type FeedbackAnchor } from '../src/stats/combat-feedback-renderer';
 import { createCombatFeedbackRenderer as before } from './fixtures/stage5-feedback-before';
 import type { SceneCombatEvent } from '../src/presentation/combat-display';
+import { subscribeBoardFeed, type BoardFeedListener } from '../src/rendering/board-feed';
+vi.mock('phaser', () => ({ default: { Scene: class {} } }));
+import { BoardScene } from '../src/rendering/BoardScene';
 const sequence: { units: { id: string; cell: { col: number; row: number } }[]; ticks: { tick: number; events: SceneCombatEvent[] }[] } =
   JSON.parse(readFileSync(new URL('./fixtures/stage5-feedback-sequence.json', import.meta.url), 'utf8'));
 
@@ -98,5 +101,52 @@ describe('stage5 floating text equivalence and DOM work', () => {
     expect(created).toBe(24);
     renderer.dispose(); renderer.push([damage(100)], 0); renderer.render(0, anchors);
     expect(snapshot(h)).toEqual([]); expect(created).toBe(24);
+  });
+
+  it('keeps the last 24 floats and evicts the oldest of four for one unit', () => {
+    setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+    const anchors = new Map(Array.from({ length: 30 }, (_, i) => [`u${i}`, { x: 40 + i * 12, y: 300, radius: 10 }]));
+    renderer.push(Array.from({ length: 30 }, (_, i) => damage(i, `u${i}`, i + 1)), 0);
+    renderer.render(0, anchors);
+    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(Array.from({ length: 24 }, (_, i) => `−${i + 7}`));
+    renderer.reset();
+    renderer.push(Array.from({ length: 4 }, (_, i) => damage(i, 'u0', i + 1)), 1);
+    renderer.render(1, anchors);
+    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['−2', '−3', '−4']);
+    renderer.dispose();
+  });
+
+  it('clears online floats on 2D → 3D → 2D during combat and displays new events after return', () => {
+    setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+    vi.stubGlobal('document', { createElement: (tag: string) => new Element(tag), getElementById: () => ({ getBoundingClientRect: () => ({ left: 0, top: 0 }) }) });
+    type SceneBridge = {
+      online: boolean; feedback: typeof renderer; session: { combatView: unknown; combatRuntime: null; dispose(): void };
+      tokens: Map<string, { visible: boolean; x: number; y: number }>;
+      game: { canvas: { getBoundingClientRect(): { left: number; top: number; width: number } } };
+      scale: { gameSize: { width: number } }; fx: { casts: number; drawn: boolean; show(): void; labelRects(): never[] };
+      renderFeedback(): void; showEvents(events: readonly SceneCombatEvent[]): void;
+    };
+    const scene = new BoardScene() as unknown as SceneBridge;
+    scene.session.dispose(); scene.session = { combatView: { combatId: 'online-battle' }, combatRuntime: null, dispose() {} };
+    scene.online = true; scene.feedback = renderer;
+    scene.tokens = new Map([['a', { visible: true, x: 200, y: 300 }]]);
+    scene.game = { canvas: { getBoundingClientRect: () => ({ left: 0, top: 0, width: 480 }) } };
+    scene.scale = { gameSize: { width: 480 } };
+    scene.fx = { casts: 0, drawn: true, show() {}, labelRects: () => [] };
+    const resets = vi.spyOn(renderer, 'reset');
+    scene.showEvents([damage(1, 'a', 10)]); scene.renderFeedback();
+    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['−10']);
+    const stop = subscribeBoardFeed({ events() {} } as unknown as BoardFeedListener);
+    try {
+      scene.renderFeedback();
+      expect(snapshot(h)[0].children).toEqual([]);
+      scene.showEvents([damage(2, 'a', 20)]); scene.renderFeedback();
+      expect(snapshot(h)[0].children).toEqual([]);
+    } finally { stop(); }
+    // A new event can arrive before the first 2D render; it must survive the transition reset.
+    scene.showEvents([damage(3, 'a', 30)]); scene.renderFeedback();
+    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['−30']);
+    expect(resets).toHaveBeenCalledTimes(2);
+    renderer.dispose();
   });
 });
