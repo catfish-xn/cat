@@ -1,5 +1,11 @@
 import { AUGMENT_SHOP } from '../src/simulation/content/augment-pool-shop';
 import { AUGMENT_BATCH5 } from '../src/simulation/content/augment-pool-batch5';
+import { AUGMENT_BATCH5_B5A } from '../src/simulation/content/augment-pool-batch5-b5a';
+import { AUGMENT_BATCH5_S1A } from '../src/simulation/content/augment-pool-batch5-s1a';
+import { AUGMENT_BATCH5_S1B } from '../src/simulation/content/augment-pool-batch5-s1b';
+import { AUGMENT_BATCH5_S3A } from '../src/simulation/content/augment-pool-batch5-s3a';
+import { AUGMENT_BATCH5_S3B } from '../src/simulation/content/augment-pool-batch5-s3b';
+import { AUGMENT_BATCH5_S3D } from '../src/simulation/content/augment-pool-batch5-s3d';
 import { AUGMENT_BATCH1 } from '../src/simulation/content/augment-pool-batch1';
 import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
 import { AUGMENT_BATCH3 } from '../src/simulation/content/augment-pool-batch3';
@@ -76,17 +82,18 @@ describe('M5 frozen S13 slice',()=>{
     }
   });
   // Augments: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  it('freezes v24: 35 supported traits, 8 components, 36 recipes, 235 augments and 56 anomalies',()=>{
+  it('freezes the current catalog: 35 supported traits, 8 components, 36 recipes, 250 augments and 56 anomalies',()=>{
     // Frozen pre-expansion slice: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11 + 5 teamups + Sisters.
     // Count admitted raw source rows, independently of the generated *_DEFINITIONS exports.
     const augmentCount = 30 + 6 + 14 + 7 + 3 + 5 + 1
       + [AUGMENT_BATCH1, AUGMENT_BATCH3, AUGMENT_BATCH3_XP, AUGMENT_BATCH4,
-        AUGMENT_BATCH4_B4XP, AUGMENT_BATCH4_B4REROLL, AUGMENT_BATCH4_B4COMBAT, AUGMENT_SHOP, AUGMENT_BATCH5]
+        AUGMENT_BATCH4_B4XP, AUGMENT_BATCH4_B4REROLL, AUGMENT_BATCH4_B4COMBAT, AUGMENT_SHOP, AUGMENT_BATCH5,
+        AUGMENT_BATCH5_B5A, AUGMENT_BATCH5_S1A, AUGMENT_BATCH5_S1B, AUGMENT_BATCH5_S3A, AUGMENT_BATCH5_S3B, AUGMENT_BATCH5_S3D]
         .reduce((sum, source) => sum + Object.keys(source).length, 0)
       + Object.values(AUGMENT_BATCH2).filter(row => row.enabled).length;
     expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,augmentCount,56]);
-    // Independent v24 frozen total (224 + 6 shop-rule + 5 batch-5): source-table additions/deletions must not update both sides.
-    expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(235);
+    // Independent merged total: 235 baseline + 3 B5A + 2 S1A + 2 S1B + 3 S3A + 3 S3B + 2 S3D; source-table additions/deletions must not update both sides.
+    expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(250);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);

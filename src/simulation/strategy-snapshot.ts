@@ -1,3 +1,4 @@
+import { qualityProjection, qualityHealth } from './augment-pool-batch5-s3d';
 import { drainSetup } from './setup-work';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
@@ -96,6 +97,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
   const enemyItems = (state.preparation.units.some(u => u.team === 'enemy') ? readRoundEnemyProjection(state.round).items : []).filter(i => keeps(i.unitId, i.definitionId));
   if (victims.size) state = { ...state, items: state.items.filter(i => i.location.kind !== 'unit' || keeps(i.location.unitId, i.definitionId)),
     temporaryEquipment: state.temporaryEquipment.filter(i => keeps(i.holderId, i.definitionId)) };
+  state=qualityProjection(state,equipmentBasis);
   const voidspawn=projectVoidspawns(state,openingTraits);
   state={...state,preparation:voidspawn.preparation};
   const projected={...projection,preparation:state.preparation};
@@ -172,6 +174,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
       }
       for (const augment of state.augments) {
         const definition = lookup(catalog.augments, augment.definitionId);
+        if(augment.definitionId==='quality-over-quantity' && qualityHealth(state,unit.id)) sources.push(...makeSourcedEffects(unit.id,'augment',augment.definitionId,augment.choiceId+':health',[{kind:'statPercentBps',stat:'maxHp',bps:1200}]));
         const grant=d11.get(augment.choiceId)?.grants.find(g=>g.unitId===unit.id);
         if(grant){
           sources.push(...makeSourcedEffects(unit.id,'augment',augment.definitionId,augment.choiceId,grant.effects));

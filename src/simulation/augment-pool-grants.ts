@@ -3,6 +3,8 @@ import { AUGMENT_BATCH5_S3A } from './content/augment-pool-batch5-s3a';
 import { AUGMENT_BATCH5_S3B } from './content/augment-pool-batch5-s3b';
 import { salvageRewardPlan } from './augment-pool-batch5-s3b-salvage';
 import { academicGiftPlan, academicAnvilOffers, validateAcademicGifts } from './augment-pool-batch5-s3b';
+import { replicationGiftPlan } from './augment-pool-batch5-s3d';
+import { AUGMENT_BATCH5_S3D } from './content/augment-pool-batch5-s3d';
 import { validateShopAugments } from './shop-augments';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
 import { batch5RewardPlan, validateBatch5Gold } from './augment-pool-batch5-progress';
@@ -27,7 +29,7 @@ import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH5_B5A[a.definitionId as keyof typeof AUGMENT_BATCH5_B5A]??AUGMENT_BATCH5_S3A[a.definitionId]??AUGMENT_BATCH5_S3B[a.definitionId]??AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(academicGiftPlan(state),salvageRewardPlan(state),batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,(AUGMENT_BATCH5_B5A[a.definitionId as keyof typeof AUGMENT_BATCH5_B5A]??AUGMENT_BATCH5_S3A[a.definitionId]??AUGMENT_BATCH5_S3B[a.definitionId]??(AUGMENT_BATCH5_S3D as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(academicGiftPlan(state),salvageRewardPlan(state),batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state),replicationGiftPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */

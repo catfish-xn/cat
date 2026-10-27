@@ -2,6 +2,7 @@ import { AUGMENT_BATCH5_B5A_TIERS } from './augment-pool-batch5-b5a';
 import { AUGMENT_BATCH5_S1A_TIERS } from './augment-pool-batch5-s1a';
 import { AUGMENT_BATCH5_S1B_TIERS } from './augment-pool-batch5-s1b';
 import { AUGMENT_BATCH5_S3A_TIERS } from './augment-pool-batch5-s3a';
+import { AUGMENT_BATCH5_S3D_TIERS } from './augment-pool-batch5-s3d';
 import { AUGMENT_SHOP_TIERS } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S3B_TIERS } from './augment-pool-batch5-s3b';
 import { AUGMENT_BATCH5_TIERS } from './augment-pool-batch5';
@@ -111,6 +112,7 @@ export const AUGMENT_TIERS: Readonly<Record<string, 'silver' | 'gold' | 'prismat
   ...AUGMENT_BATCH5_S1B_TIERS,
   ...AUGMENT_BATCH5_S3A_TIERS,
   ...AUGMENT_BATCH5_S3B_TIERS,
+  ...AUGMENT_BATCH5_S3D_TIERS,
   ...AUGMENT_BATCH4_B4XP_TIERS,
   ...AUGMENT_BATCH4_B4REROLL_TIERS,
   sisters:'gold', mentorship:'gold',reunion:'gold',geniuses:'prismatic',menaces:'gold','unlikely-duo':'gold',
