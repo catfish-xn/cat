@@ -4,6 +4,7 @@ import { startR2PortableCopies } from './augment-pool-batch5-r2-combat';
 import { advanceMadChemist, isMadChemist, leaveMadChemistCloud, madChemistMoveInterval, moveMadChemist } from './augment-pool-batch5-r4';
 import { summonRebelCopies } from './augment-pool-batch5-g2-rebel';
 import { settleGhostFriendsDeaths, observeBatch5RevivalDeaths } from './augment-pool-batch5-g2-combat';
+import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import { sampleAugmentDeath } from './augment-death-samples';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -247,6 +248,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const committed = commitOpening(openingState, units); openingState = committed.state;
     for (const u of units) u.cell = committed.units.find(next => next.id === u.id)!.cell;
     events.push(...committed.movements);
+    for (const movement of committed.movements) recordAerialMovement({ ...ctx, tick: 0 }, units.find(u => u.id === movement.unitId)!, movement.to, movement.from);
   }
   const companionDefinitions = fullRoster.flatMap(u => u.companionDefinitions ?? []);
   let companionState = state.companionState ?? (companionDefinitions.length ? freezeCompanions(ctx.combatId!, fullRoster.filter(u => u.alive), companionDefinitions) : undefined);
@@ -331,7 +333,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   });
   units.forEach((unit, n) => {
     const destination = intents[n]; if (!destination || reserved.has(key(destination))) return;
-    reserved.add(key(destination)); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination });
+    reserved.add(key(destination)); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination }); recordAerialMovement(ctx, unit, destination);
     if(unit.mechanics?.some(m=>m.mechanic==='quickstriker'))unit.v20Traits={...unit.v20Traits,moveTenths:unit.v20Traits!.moveTenths!-10};
     if (isMadChemist(unit)) leaveMadChemistCloud(unit, chemistPaths.get(unit.id)!, tick);
     unit.cell = destination; unit.moveCooldownTicks = isMadChemist(unit) ? madChemistMoveInterval(unit, tick) : movementIntervalTicks(unit.definitionId==='warwick'&&Boolean(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>=tick), tick);

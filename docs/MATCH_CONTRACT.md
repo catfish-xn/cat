@@ -1680,3 +1680,11 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 报价／选择沿用现有命令，不新增 wire failure：老友幽魂为棱彩且仅 2-1，爆蓝之城为黄金、无额外阶段禁令，3-2／4-2 沿用蓝发羁绊筛选。爆蓝之城通过既有强化奖励法球各授予一个阿卡丽、艾瑞莉娅，重复选择保持失败原子性；战斗复制体不进入资源谱系、正式棋盘或共享卡池。服务器继续只编排 `snapshotForBattle`、双边战斗和原有死亡采样，无新服务器规则或计时器。
 
 两条 G2 均为 deaths 历史持有者，恢复继续使用独立服务器 authority 认证整份 Match，并核对原有资源／奖励；外部双边结果按冻结输入冷重演核对完整数值、复制体、额度和事件。错误沿用 Match 验证错误及 `BattleValidationError('invalid-result'|'battle-input-invalid')`，不新增客户端失败枚举。内容身份重算，现有 schema/save/replay/command 和 epoch 均不重录。
+
+## 2026-10-27 Batch 5 G3：空战与物竞天择
+
+正式内部 ID 为 `aerial-warfare`（B5-68）与 `natural-selection`（B5-71），来源与约定分别见 S13_RULES_GAP 的 P-B5-68-G3／P-B5-71-G3。两者为金色；前者三节点按原规则报价，后者保留 14.24 的 2-1 禁令，后两节点均按对应羁绊过滤。新内容位于 `content/augment-pool-batch5-g3.ts`，其礼物由既有 `batch1GiftPlan → drainBatch1Gifts` 的共享池奖励事务发放和独立计划验证，不新增公共命令、金币来源或第二套服务器结算。
+
+`restoreSharedOrbSnapshot(pool,input,authority?)` 对 G3 持有者调用同一礼物计划验证；即使没有持有者，只要收据来源为 `augment-pool-batch1` 或身份处于该 JSON 数组命名空间，也必须认证。非法礼物索引、孤儿收据或来源不符抛 `RangeError('Invalid augment batch1 gift authority')`；同步篡改关联法球、掉落、领取收据及资源来源不能绕过此认证。对象、JSON 和规范 JSON 文本遵循相同入口，合法档恢复后重复发奖仍保持原收据数。
+
+这两项不需要跨轮事实，不登记 augmentHistory 持有者，也不读候选存档重造历史。既有持有者仍只通过 `augment-history.ts` API 获取历史。物竞天择的献祭单位和装备始终留在正式准备阵容；战斗投影缺席不构成资源售出、阵亡或卡池返还。`readG23MechanismState(state)` 的 owner-only 视图可额外返回 `mutationSacrificeCell:{col:3,row:6}`；`laboratories` 保留普通实验室的含义。不新增布局或视觉实现。外层 schema/save/replay/command 和 NET 版本沿用基线；新内容摘要必须精确匹配，不重录旧 epoch。

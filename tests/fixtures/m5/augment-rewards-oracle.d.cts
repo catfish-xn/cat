@@ -35,3 +35,8 @@ export function rebelCopyStats(base: {health:number;attack:number}, star: number
 export function rebelCopyDeaths(events: readonly unknown[], originals: readonly unknown[]): readonly {ownerId:string;team:string;ordinal:number}[];
 
 export function validateGhostCombatInputs(state: unknown): void;
+
+export function aerialWarfareExpected(moves: readonly {from:{col:number;row:number};to:{col:number;row:number}}[], dashes:number): {hexes:number;adBps:number;ap:number};
+
+export function mutationLaboratoryExpected(tier:number, donor:string|null, normalDonors:readonly string[]): {healthFlat:number;values:Record<string,number>};
+export function mutationLabsExpected(seed:number,tier:number): {col:number;row:number}[];

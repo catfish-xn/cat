@@ -1,3 +1,4 @@
+import { hasMutationSurvives, mutationSacrificeCell } from './augment-pool-batch5-g3-mutation';
 import { readRestoreG23Progress, rememberReadG23Progress, reusedG23Sources, rememberG23Sources } from './g23-restore-reuse';
 import { TACTICIAN_SIZE_ITEMS } from './content/tactician-items';
 import { activateFamily, familyDisplay } from './family-heist';
@@ -58,7 +59,7 @@ export function updateG23Cells(state:MatchState):MatchState{
  const projection = projectEffectiveMembership(state.preparation, undefined, undefined, state.items);
  if(!p.family&&state.phase==='preparation'&&!state.multiplayer?.combatRosterLocked&&deriveEffectiveTrait(projection,'player','family').tier>=5){p=activateFamily(p,state.round);state=writeG23Progress(state,p);}
  const tier=deriveEffectiveTrait(projection,'player','experiment').tier;
- return {...state,seatMechanics:{...state.seatMechanics!,seat:{...state.seatMechanics!.seat,experimentCells:g23Laboratories(p.seed,'player',tier)}}};
+ return {...state,seatMechanics:{...state.seatMechanics!,seat:{...state.seatMechanics!.seat,experimentCells:g23Laboratories(p.seed,'player',tier,hasMutationSurvives(state.augments)?mutationSacrificeCell():undefined)}}};
 }
 /** Generic receipts authorize every grant; internal selectors can never mint a second resource birth. */
 export function validateG23MechanicLinks(state:MatchState):void{

@@ -1,3 +1,4 @@
+import { excludeMutationSacrifice } from './augment-pool-batch5-g3-mutation';
 import { carryAugmentCombatDeaths } from './augment-death-samples';
 import { initializeR3Copies, projectR3Preparation } from './augment-pool-batch5-r3';
 import { initializeHallOfMirrors } from './augment-pool-batch5-r3-mirrors';
@@ -47,7 +48,12 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
 }
 function combatPreparation(preparationState: GameState, strategy?: StrategySnapshot): GameState {
   const forgeCells=strategy?.units.some(u=>u.summonCell)?Object.fromEntries(strategy.units.flatMap(u=>u.summonCell?[[u.unitId.slice(0,-':g23-forge'.length),u.summonCell]]:[])):undefined;
-  return projectItemSummons(projectG23Summons(projectR3Preparation(preparationState,strategy),strategy?.traits,forgeCells),strategy);
+  // Freeze summon identities/placement from the same formal army as the strategy compiler.
+  // A sacrificed Black Rose may still name Sion; excluding it first would request a second, uncompiled Sion.
+  preparationState=projectG23Summons(projectR3Preparation(preparationState,strategy),strategy?.traits,forgeCells);
+  const participants = excludeMutationSacrifice(preparationState.units, strategy);
+  if (participants !== preparationState.units) preparationState = { ...preparationState, units: participants };
+  return projectItemSummons(preparationState,strategy);
 }
 function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42,
   originalHealth?: ReadonlyMap<string, number>): Generator<void, CombatStep, void> {

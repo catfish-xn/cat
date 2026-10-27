@@ -410,3 +410,10 @@ PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校�
 爆蓝之城每队每战前5次原始蓝发英雄死亡各消耗一次：按低一星（最低1星）重编译非装备／非异常声明，再减400最大生命、保底100。保留冻结有效羁绊和永久强化；已触发的蓝发羁绊继承永久收益及剩余爆发时长，不重新对全队发奖。复制体不继承原单位临时施法、装备、异常或冷却状态；原格优先，冲突按六角距离／行／列取最近空格；满盘时消费该次额度而不出生。复制体不占五次额度、不递归，但其死亡进入其他死亡触发链。
 
 出生使用既有 `unitSpawned`／回放 `unitEntered`；在本 tick 死亡效果结算后、胜负判断前加入，下一 tick 才行动。无随机抽取。`rebelCopy`、`batch5RebelSummons`、`ghostFriends` 和必要的蓝发脉冲时点均为规则内部战斗状态，由整份 Match 的独立服务器 authority 及外部战斗的完整冷重演认证，不靠候选收据自证。数字及证据分级以 S13_RULES_GAP 的 P-B5-63-G2／P-B5-70-G2 为准。
+## 2026-10-27 Batch 5 G3 战斗接线
+
+P-B5-68-G3 的空战：每次野火帮起飞调用 `startAerialDash(ctx,unit):void`；所有 S13 行走、技能、强制位移、传送及开场移动提交后、下一个动作前调用 `recordAerialMovement(ctx,unit,to,from?):void`。只对已编译 `aerialWarfare` 的成员生效。`CombatUnit.aerialWarfare?:{hexes:number,dashes:number}` 是本战可重演状态，hexes 封顶 99，两个计数分别派生 AD Bps／AP 后参与原有加法属性池；每次变化发已有 `statChanged`，没有新事件类别或时钟。
+
+P-B5-71-G3 的物竞天择：`mutationSacrificeCell(team?:Team,board?:Board):HexCell` 返回固定献祭坐标；`mutationDonor(state:CombatStrategyInputs,traits:readonly TraitSnapshot[]):Unit|undefined` 用开战前的正式成员快照判断资格（无持有者、空格或非成员均 undefined）。`compileMutationEffect` 编译 1200 Bps HP 和仅献祭者的 `mutationSacrifice` 标记；`mutationEquipmentProjection` 过滤战斗投影的装备／异常，保留原输入供加成分享。`addMutationDonation` 把额外自身试验品加成叠到普通实验室成员；7 档加倍；原生／纹章成员和克隆能力沿用既有羁绊规则。
+
+召唤描述的身份与占格先按献祭前的正式阵容投影，与策略编译使用同一依据；献祭最早获得的黑玫瑰成员时，仍保留以它命名且已经编译的唯一赛恩，不按剩余成员重命名或追加第二个赛恩。单边、双边及镜像均沿用此顺序。`excludeMutationSacrifice(units:readonly Unit[],strategy?:StrategySnapshot):readonly Unit[]` 随后在实际战斗单位生成及任何开战钩子前排除明确标记的献祭者及其 Jayce Forge；没有死亡、单位资源移除或奖励。双边 `sideResult` 仅允许 `isMutationSacrifice(strategy,id)` 明确认可的原始单位缺席，其余缺席仍报 `invalid-result`，献祭者不进入存活者与成长结算。新辅助函数只供已验证领域数据内部调用，无新增公共失败枚举或客户端参数。相关 Match 战斗恢复及双边结果使用已有 `invalid-result`／权威 replay 拒绝错误的计数、捐赠、增删字段或缺席。服务器无需增加规则或编排调用。

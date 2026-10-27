@@ -1,3 +1,4 @@
+import { recordAerialMovement } from '../augment-pool-batch5-g3-combat';
 import type { Board, HexCell } from '../board';
 import { hexDistance, sameCell } from '../board';
 import type { CombatUnit } from '../combat-types';
@@ -18,7 +19,7 @@ export function nearestLanding(ctx: AbilityContext, desired: HexCell, movingId: 
 }
 export function relocate(ctx: AbilityContext, unit: S13Unit, to: HexCell | undefined): void {
   if (!to || sameCell(unit.cell, to)) return;
-  ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: unit.id, from: { ...unit.cell }, to: { ...to } });
+  ctx.events.push({ type: 'movement', tick: ctx.tick, unitId: unit.id, from: { ...unit.cell }, to: { ...to } }); recordAerialMovement(ctx, unit, to);
   unit.cell = { ...to }; unit.moveCooldownTicks = 5;
 }
 export function canDisplace(unit: CombatUnit, tick: number): boolean {

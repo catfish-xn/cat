@@ -41,6 +41,7 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = fal
  * v25 final integration: non-fielded 3-2 routes re-searched on 285 admitted cards,
  * ascending seeds 0..299, then public slot rerolls 0/1/2, without editing state.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
+ * G3 pool expansion: betrayal was re-searched through public fielded routes in 0..100; first offer is seed 34.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
   'all-that-shimmers-plus':{node:'3-2',seed:3},

@@ -172,9 +172,8 @@ it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
   // Integrated inventories, including Golden Find and Cabal.
-  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 254, shippedRows: 206, regeneratedRows: 207, unrestricted: 74, errors: 4, crossVersionDifferences: 8 });
+  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 254, shippedRows: 207, regeneratedRows: 207, unrestricted: 74, errors: 3, crossVersionDifferences: 8 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
-    ['TABLE_MISMATCH', 'TFT13_Augment_Experiment', ['2-1']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Formswapper', ['2-1']],
     ['TABLE_MISMATCH', 'TFT13_TeamupAugment_BloodBrothers', ['2-1', '4-2']],
     ['TABLE_MISMATCH', 'TFT_Augment_TableScraps', ['2-1', '3-2', '4-2']],

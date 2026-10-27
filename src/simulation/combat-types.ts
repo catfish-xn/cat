@@ -43,6 +43,7 @@ export interface CombatUnit {
   readonly rebelCopy?: import('./augment-pool-batch5-g2-rebel').RebelCopy;
   /** Batch-5 team growth earned during this combat; cold replay authenticates every counter. */
   readonly ghostFriends?: import('./augment-pool-batch5-g2').GhostFriendsGrowth;
+  readonly aerialWarfare?: import('./augment-pool-batch5-g3').AerialWarfareRuntime;
   readonly batch2?:import('./augment-pool-batch2-combat').Batch2CombatRuntime;
   /** New declarations whose one-time installation hooks run at the next tick. */
   pendingEquipmentSources?: readonly string[];

@@ -1,4 +1,6 @@
 import { AUGMENT_BATCH5_H10 } from '../src/simulation/content/augment-pool-batch5-h10';
+import { AUGMENT_BATCH5_G3 } from '../src/simulation/content/augment-pool-batch5-g3';
+import { AUGMENT_BATCH5_G2 } from '../src/simulation/content/augment-pool-batch5-g2';
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { BATCH1_SOURCE, BATCH2_SOURCE, BATCH1_BLOCKED_SOURCE, BATCH1_RECLASSIFIED_SOURCE, RESEARCH_FILE } from './augment-pool-source-expectations';
@@ -36,6 +38,15 @@ it.each([...BATCH1_SOURCE,...BATCH2_SOURCE])('$id matches research record [$reco
   expect(AUGMENT_BATCH2[e.id].enabled).toBe(false);expect(row.gifts).toEqual([]);
   expect(AUGMENT_DEFINITIONS[e.id].id).toBe(e.id);expect(AUGMENT_POOL_API_NAMES[e.id]).toBe(e.apiName);
   expect(batch1GiftPlan({...createMatch(42),augments:[{definitionId:e.id,choiceId:'oracle',acquiredRound:1}]})).toHaveLength(3);
+  return;
+ }
+ // The batch-2 row is preserved as an archived disabled inventory; executable G2/G3 content now owns these IDs.
+ const migrated=(AUGMENT_BATCH5_G3 as Readonly<Record<string,{apiName:string;source:{values:unknown};gifts:readonly AugmentGiftSpec[]}>>)[e.id]??(AUGMENT_BATCH5_G2 as Readonly<Record<string,{apiName:string;source:{values:unknown};gifts:readonly AugmentGiftSpec[]}>>)[e.id];
+ if(migrated){
+  expect(migrated.apiName).toBe(e.apiName);expect(migrated.source.values).toEqual(e.values);
+  expect(AUGMENT_TIERS[e.id]).toBe(e.tier);expect(AUGMENT_POOL_API_NAMES[e.id]).toBe(e.apiName);
+  expect(AUGMENT_DEFINITIONS[e.id]).toBeDefined();
+  expect(batch1GiftPlan({...createMatch(42),augments:[{definitionId:e.id,choiceId:'oracle',acquiredRound:1}]})).toHaveLength(e.id==='aerial-warfare'||e.id==='rebel-resurgence'?2:3);
   return;
  }
  // H10 moved Sniper's Nest out of the old disabled table and enabled its full implementation.

@@ -11,7 +11,7 @@ import {canonicalContent,equalValidatedContent} from './content';
 import {createRestoreCombatReplay} from './restore-combat-replay';
 
 /** Combat mechanics whose saves are authenticated only by exact replay (combat-augment-effects.ts). */
-export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['rebelResurgence','ghostFriends','madChemist','sponging','scavenger','corrosion','longDistancePals','categoryFive','overheal','satedSpellweaver','blazingSoul','nobleSacrifice','wealthyRehab','badLuck','goldForDummies','towerDefense','towerDefenseLive','heroCarry','heroCarryLive','forming'];
+export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['aerialWarfare','mutationSacrifice','rebelResurgence','ghostFriends','madChemist','sponging','scavenger','corrosion','longDistancePals','categoryFive','overheal','satedSpellweaver','blazingSoul','nobleSacrifice','wealthyRehab','badLuck','goldForDummies','towerDefense','towerDefenseLive','heroCarry','heroCarryLive','forming'];
 
 /** Opening HP is derived from authenticated inputs, never the saved owner HP. */
 export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
@@ -79,6 +79,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
     if(candidate.units.some(u=>u.madChemist!==undefined))throw new RangeError('Unexpected Mad Chemist runtime');
     if(candidate.batch5RebelSummons!==undefined||candidate.units.some(u=>u.rebelCopy!==undefined))throw new RangeError('Unexpected Rebel copy runtime');
     if(candidate.units.some(u=>u.ghostFriends!==undefined))throw new RangeError('Unexpected Ghost Friends runtime');
+    if(candidate.units.some(u=>u.aerialWarfare!==undefined))throw new RangeError('Unexpected aerial warfare runtime');
     if(candidate.units.some(u=>u.batch2!==undefined))throw new RangeError('Unexpected batch2 runtime');
     if(candidate.units.some(u=>u.v20Traits!==undefined))throw new RangeError('Unexpected V20 runtime');
     if(candidate.units.some(u=>u.v19!==undefined||u.sixCost!==undefined||u.familyReunion!==undefined))throw new RangeError('Unexpected V19 runtime');

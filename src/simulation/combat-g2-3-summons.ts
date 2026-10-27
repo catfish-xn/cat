@@ -1,3 +1,4 @@
+import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import { nearestFreeReturnCell } from './combat-g2-4b';
 import { occupiesCell } from './anomalies/availability';
 import type { AbilityContext } from './combat-s13-abilities';
@@ -76,7 +77,7 @@ function chargeG23Sion(ctx:AbilityContext,u:S13Unit,tier:number,seq:number):void
  }
  const occupied=(c:HexCell)=>ctx.units.some(x=>x.id!==u.id&&occupiesCell(x,ctx.tick)&&sameCell(x.cell,c));
  const landing=getNeighbors(ctx.board,target.cell).filter(c=>!occupied(c)).sort((a,b)=>hexDistance(start,b)-hexDistance(start,a)||a.row-b.row||a.col-b.col)[0];
- if(landing&&!sameCell(landing,start)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:start,to:landing});u.cell=landing;}
+ if(landing&&!sameCell(landing,start)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:start,to:landing}); recordAerialMovement(ctx, u, landing);u.cell=landing;}
 }
 /** P (user 2026-10-24): 7 Black Rose Sion revives once per combat. At the death barrier it stays a living, absent
  * roster unit (so its team is not eliminated) holding its revive health; it returns 1s later. */
@@ -92,7 +93,7 @@ export function deathG23Sion(ctx:AbilityContext):void{
 function reviveG23Sion(ctx:AbilityContext,u:S13Unit,seq:number):void{
  const to=nearestFreeReturnCell(ctx,u);
  if(!to)throw new RangeError('No Sion revive cell');
- if(!sameCell(to,u.cell)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:{...u.cell},to});u.cell=to;}
+ if(!sameCell(to,u.cell)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:{...u.cell},to}); recordAerialMovement(ctx, u, to);u.cell=to;}
  u.g23Sion={...u.g23Sion!,revived:true};
  ctx.events.push({type:'unitRevived',tick:ctx.tick,unitId:u.id,source:origin(u,3),hp:u.hp});
  const context={applicationId:'g23-sion:revive',area:false,triggeringCastActionSeq:null};
@@ -108,7 +109,7 @@ export function reviveG23Forge(ctx:AbilityContext,jayce:S13Unit):S13Unit|undefin
   if(occupied(forge.cell.col,forge.cell.row)){
    const cells=Array.from({length:ctx.board.rows},(_,localRow)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row:jayce.team==='player'?localRow:ctx.board.rows-1-localRow}))).flat();
    const cell=cells.find(c=>!occupied(c.col,c.row));if(!cell)return;
-   ctx.events.push({type:'movement',tick:ctx.tick,unitId:forge.id,from:forge.cell,to:cell});forge.cell=cell;
+   ctx.events.push({type:'movement',tick:ctx.tick,unitId:forge.id,from:forge.cell,to:cell}); recordAerialMovement(ctx, forge, cell);forge.cell=cell;
   }
   forge.alive=true;forge.hp=forge.maxHp;
   ctx.events.push({type:'unitRevived',tick:ctx.tick,unitId:forge.id,source:origin(jayce),hp:forge.hp});

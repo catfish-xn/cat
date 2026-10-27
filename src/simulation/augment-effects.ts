@@ -1,5 +1,7 @@
 import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
 import { compileMadChemist } from './augment-pool-batch5-r4';
+import { compileMutationEffect } from './augment-pool-batch5-g3-mutation';
+import { compileBatch5G3Effect } from './augment-pool-batch5-g3';
 import { getUnitForm } from './seat-mechanics/forms';
 import { EMBLEM_ITEMS } from './content/emblems';
 import { HERO_UNITS, magicRollKind } from './content/augment-pool-batch3';
@@ -52,6 +54,8 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
   const row=(u:Unit)=>u.location.kind==='board'?u.location.cell.row:-1;
   switch(effect.mechanic){
     case 'madChemist': return compileMadChemist(state,unit,board,effect);
+    case 'mutationSurvives': return compileMutationEffect(effect, state, unit, traits);
+    case 'aerialWarfare': return compileBatch5G3Effect(effect, unit, traits);
     case 'coronation': {
       const count=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length+state.temporaryEquipment.filter(i=>i.holderId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length;
       const v=AUGMENT_BATCH1.coronation.source.values;

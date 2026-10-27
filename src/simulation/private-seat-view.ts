@@ -19,6 +19,7 @@ import { augmentOptionViews } from './augment-offers';
 import { familyReunionView } from './family-reunion';
 import { sixCostOddsBps, sixCostShopContext } from './six-cost-shop';
 import { augmentDynamicValues } from './augment-dynamic-values';
+import { readG23MechanismState } from './g2-3-view';
 
 function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
   // G2-3 form swappers only: the form the unit would take if combat started now (seat-mechanics/forms.ts).
@@ -84,6 +85,7 @@ export function toPrivateSeatView(state: MatchState) {
   const items = state.items.filter(item => item.location.kind === 'inventory' || ids.has(item.location.unitId));
   const revealedLoot = revealedLootView(state);
   const seatMechanics = seatMechanicsView(state);
+  const mutationCell = readG23MechanismState(state)?.mutationSacrificeCell;
   const d11Display = d11PrivateDisplay(state);
   // Candidate ownership is filtered before authority preview; never reveal foreign targets or rolls.
   const candidates: ConsumableTarget[] = [
@@ -113,6 +115,7 @@ export function toPrivateSeatView(state: MatchState) {
     ...(revealedLoot ? { revealedLoot } : {}),
     // G2-3: the whole owner-visible mechanic container; `hidden` always empty. Same key as MatchState, so display states keep it.
     ...(seatMechanics ? { seatMechanics } : {}),
+    ...(mutationCell ? { mutationSacrificeCell: cellView(mutationCell) } : {}),
     ...(state.pendingChoice?.payload?.kind === 'armory' && state.pendingChoice.payload.masterwork
       ? {masterworkOptions:readMasterworkOptions(state,state.pendingChoice.payload.masterwork.unitId)} : {}),
     consumables:state.consumables.map(c=>pick(c,['consumableId','definitionId'])),

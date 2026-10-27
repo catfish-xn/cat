@@ -1,3 +1,4 @@
+import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import type { CombatTask, CombatOrigin, CombatUnit } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { ad, amount, ap, byDistance, enemies, variable, type S13Unit, EMPTY_RUNTIME } from './combat-s13-state';
@@ -80,7 +81,7 @@ export function quickDashV20(ctx:AbilityContext,u:S13Unit):void {
     .filter(c=>hexDistance(c,target.cell)===1&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(c,t.cell)===0))
     .sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
   if(u.targetId!==target.id)ctx.events.push({type:'targetChanged',tick:ctx.tick,unitId:u.id,before:u.targetId,after:target.id});u.targetId=target.id;
-  if(cells[0]&&hexDistance(cells[0],u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]});u.cell=cells[0];}
+  if(cells[0]&&hexDistance(cells[0],u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]}); recordAerialMovement(ctx, u, cells[0]);u.cell=cells[0];}
 }
 /** Menaces monsters use the existing Silco attack-agent convention: no health/body collision or jar hit. */
 export function detonateMenaces(ctx:AbilityContext,powder:S13Unit,seq:number,cell:import('./board').HexCell):void {
