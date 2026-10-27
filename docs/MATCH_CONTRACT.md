@@ -1624,3 +1624,13 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 开放 `anger-issues`（棱彩，3-2/4-2）和 `another-anomaly`（黄金，4-2）；规则、研究状态及完整内部签名见 [AUGMENT_BATCH5_R2](AUGMENT_BATCH5_R2.md)。沿用现有 `selectChoice`、装备、合成、消耗品和重掷命令/失败枚举，不增加客户端提交事实的命令。普通成装转换追加有选择来源绑定的 `anger-item-converted` 资源事实；便携异常以不可变物品定义携带复制身份，共用唯一 apiName，4-6选择事务内即时授予，失败仍返回原 state、无事件和 RNG 消耗。
 
 强化历史 API 新增 `recordAugmentCopyKills(state,fact)` / `readAugmentCopyKills(state,itemId,beforeRound?)`，同 `augment-history-v1` 保存 `anomaly-copy-kills`，复制品独立于原英雄的历史。联机采样入口 `recordR2PortableBattle(state,combat,team,mapping?)` 只接受服务器已经认证的终战及既有身份映射；房间只编排调用。持有者的对象/JSON恢复仍必须取得独立 authority；伪造选择、来源、复制定义、位置、成长、旧手套收据或历史节均拒绝。无 epoch 重录。
+
+## B5-67 炼金术士（v25，2026-10-27）
+
+`mad-chemist` / `TFT13_Augment_SingedCarry` 为 2-1 白银强化；3-2/4-2 禁止，沿用 AssociatedTraits 与互斥表。`selectChoice`、联机 `runSharedMatchCommand(...,{type:'choose',...})` 共用既有 `batch1GiftPlan → drainBatch1Gifts`，选择事务只授予一次一星辛吉德；在线使用共享卡池奖励法球，`claimOrb` 领取后可正常部署、合星。失败、重试和重复旧 choice 不发第二份奖励，不新增公共命令或 wire reason。
+
+开战编译只给本方最强的一个棋盘辛吉德附加 `madChemist`（星级降序、正式装备数降序、实例 ID 升序），不从当前余额推测历史。其运行状态仅在 `CombatUnit.madChemist?: MadChemistRuntime`：整数回蓝余数、技能到期 tick、唯一格毒云和同源目标毒伤。完整结构见 `augment-pool-batch5-r4.ts`；数值和离散语义见 COMBAT_CONTRACT 与 S13_RULES_GAP P-B5-67。
+
+`restoreSharedOrbSnapshot(pool,input,authority?) → MatchState` 与 `restoreCarouselSeat(carousel,input,authority?) → MatchState` 保留签名。独立服务器共享池（选秀入口使用 `carousel.pool`）中的本席 B5-67 待发奖励或已结算奖励收据要求现有独立 `AugmentHistoryAuthority`；该要求不随候选档删除强化、选择记录、奖励收据或法球而消失，奖励合星、卖出、折金或放弃后仍成立。候选仍带 B5-67 强化/奖励/战斗标记时也要求认证。句柄由 `Room.augmentHistoryAuthority(seatId)` 从服务器私有席位捕获，不能从候选 JSON 自签；只要提供句柄，无论是否持有本卡或历史节，都必须认证完整席位。缺失/伪造句柄报 `Invalid augment history: missing independent server authority`，任何完整席位差异报 `Invalid augment history: server facts/state mismatch`；额外复核既有奖励计划。B5-67 无跨回合历史事实，不新增空 `augmentHistory` 节。离线战斗恢复按已认证输入完整重演并比较毒云/毒伤/回蓝/移动状态；离线入口仍拒绝多人文件。无服务器编排或接口接线变化。
+
+展示数据沿现有 `d11ChoiceDisplay(definitionId)` / `d11PrivateDisplay(state)` 提供公开的中文名称、描述和白银级别，内容取自 R4 定义；既有界面无需新增规则计算，不改表现目录。

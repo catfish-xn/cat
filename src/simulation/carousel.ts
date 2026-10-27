@@ -1,5 +1,6 @@
 import { maximumPlayerHp, titanicTitanChoiceId, h7CarouselRelease, h7CarouselParticipantValid } from './augment-pool-batch5-h7-health';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
+import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
 import { validateTombRaider } from './augment-pool-batch5-r1';
@@ -543,6 +544,7 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     if (participant && participant.titanicTitanChoiceId !== titanicTitanChoiceId(match)) throw Error('invalid-participants');
     for (const f of match.augmentHistory?.facts ?? []) if(f.kind==='carousel' && f.receipt.carouselId===carousel.id && f.releaseAtMs!==carousel.releaseAtMs[f.seatId]) throw Error('invalid-carousel');
     validateTombRaider(match);
+    validateMadChemistOnlineSave(carousel.pool, match, authority);
     return match;
 }
 

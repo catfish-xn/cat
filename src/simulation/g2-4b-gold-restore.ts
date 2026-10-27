@@ -11,7 +11,7 @@ import {canonicalContent,equalValidatedContent} from './content';
 import {createRestoreCombatReplay} from './restore-combat-replay';
 
 /** Combat mechanics whose saves are authenticated only by exact replay (combat-augment-effects.ts). */
-export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['sponging','scavenger','corrosion','longDistancePals','categoryFive','overheal','satedSpellweaver','blazingSoul','nobleSacrifice','wealthyRehab','badLuck','goldForDummies','towerDefense','towerDefenseLive','heroCarry','heroCarryLive','forming'];
+export const BATCH3_REPLAYED_MECHANICS:readonly string[]=['madChemist','sponging','scavenger','corrosion','longDistancePals','categoryFive','overheal','satedSpellweaver','blazingSoul','nobleSacrifice','wealthyRehab','badLuck','goldForDummies','towerDefense','towerDefenseLive','heroCarry','heroCarryLive','forming'];
 
 /** Opening HP is derived from authenticated inputs, never the saved owner HP. */
 export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot):void {
@@ -76,6 +76,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   // Select from the trusted strategy, never from candidate contribution fields.
   const ignite = strategy.units.some(u => u.ability.kind === 's13' && ['powder', 'rumble'].includes(u.ability.championId));
   if(!batch2&&!zephyr&&!trench&&!mirrorForge&&!r3&&!anomaly&&!d11&&!v19&&!v20&&!overtime&&!ignite){
+    if(candidate.units.some(u=>u.madChemist!==undefined))throw new RangeError('Unexpected Mad Chemist runtime');
     if(candidate.units.some(u=>u.batch2!==undefined))throw new RangeError('Unexpected batch2 runtime');
     if(candidate.units.some(u=>u.v20Traits!==undefined))throw new RangeError('Unexpected V20 runtime');
     if(candidate.units.some(u=>u.v19!==undefined||u.sixCost!==undefined||u.familyReunion!==undefined))throw new RangeError('Unexpected V19 runtime');

@@ -106,6 +106,7 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT13_Augment_PitFighter":['3-2','4-2'],
   "TFT13_Augment_PrimeCarry":['3-2','4-2'],
   "TFT13_Augment_Scrap":['3-2','4-2'],
+  "TFT13_Augment_SingedCarry":["3-2","4-2"],
   "TFT13_Augment_TrundleCarry":['3-2','4-2'],
   "TFT13_Augment_VladCarry":['3-2','4-2'],
   "TFT13_Augment_Watcher":['2-1','3-2','4-2'],

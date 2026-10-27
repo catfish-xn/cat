@@ -319,8 +319,8 @@ export function carryRestoredAugmentTrace(validated: MatchState, restored: Match
 /** Restore-only trust check. The handle must come from an independently owned server checkpoint. */
 export function validateAugmentAuthority(s: MatchState, authority: AugmentHistoryAuthority | undefined, required: boolean): void {
   const expected=authority && authorities.get(authority);
-  if(required)historyCheck(expected,'missing independent server authority');
-  if(expected && (required || expected.augmentHistory))historyCheck(same(s,expected),'server facts/state mismatch');
+  if(required || authority!==undefined)historyCheck(expected,'missing independent server authority');
+  if(expected)historyCheck(same(s,expected),'server facts/state mismatch');
 }
 
 /** Evidence for a future maximum-HP effect, after its real domain transaction changed playerHp.

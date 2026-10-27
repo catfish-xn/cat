@@ -11,7 +11,7 @@ export type OracleAugmentTier = 'silver' | 'gold' | 'prismatic';
 export function openingEncounter(seed: number): string;
 export function augmentTier(seed: number, node: string): OracleAugmentTier;
 export function augmentPool(tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[], sharedCarousel?: boolean): string[];
-export function augmentDraw(rng: number, tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[]): { offers: string[]; rng: number };
+export function augmentDraw(rng: number, tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[], sharedCarousel?: boolean): { offers: string[]; rng: number };
 export function validateAugmentReroll(before: MatchState, result: unknown, command: OracleCommand): void;
 export type EconomyInput = Pick<MatchState, 'round' | 'gold' | 'level' | 'xp' | 'playerHp' | 'streak'> & Partial<Pick<MatchState, 'seed' | 'm8'>>;
 export type EconomyCombat = Pick<CombatState, 'result' | 'tick' | 'nextEventSeq'> & {
@@ -86,3 +86,5 @@ export function shopGlitchShared(pool: import('../../../src/simulation/shared-po
 };
 export function tombRaiderPlan(state: MatchState): readonly { readonly choiceId: string; readonly seatId: string; readonly round: number; readonly offers: readonly string[] }[];
 export function validateTombRaiderTransition(before: MatchState, after: MatchState, command: unknown, events: readonly unknown[]): void;
+
+export function madChemistExpected(star: number, abilityPower: number, attackSpeedBps: number, ticks?: number): { total: number; pulses: number[]; mana: number };

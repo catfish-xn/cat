@@ -38,6 +38,7 @@ export interface G23State {
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
   readonly r3Mirror?: import('./augment-pool-batch5-r3-mirrors').HallMirrorOrigin;
+  readonly madChemist?: import('./augment-pool-batch5-r4').MadChemistRuntime;
   readonly batch2?:import('./augment-pool-batch2-combat').Batch2CombatRuntime;
   /** New declarations whose one-time installation hooks run at the next tick. */
   pendingEquipmentSources?: readonly string[];

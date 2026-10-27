@@ -392,3 +392,14 @@ PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校�
 ### Batch 4 B4Combat（P，2026-10-25）
 
 四条机制与推断边界见 [P-B4COMBAT](S13_RULES_GAP.md#p-b4combatp2026-10-25batch-4-四条战斗强化)。只增加声明与既有战斗事件，不增加存档字段/事件类型/公共命令/失败 reason；全程服务器权威，前端不得另算属性、弩箭、吸血或护盾。`augment-pool-batch4-b4combat.ts` 内部入口 `openingB4Combat(ctx):void`、`castB4Combat(ctx,unit,seq):void`、`attackB4Combat(ctx,unit,target,seq):void`、`damageB4Combat(ctx,owner,packet,dealt):void`、`overhealB4Combat(ctx,target,outcome):void` 使用冻结来源及既有状态；`b4Vamp(unit,tick):VampRate[]` 只返回当前窗口贡献，`categoryFiveTrigger(unit,definition):TriggerDefinition` 只派生飓风声明。恢复仍从可信 combatInputBasis 重放，对象/JSON/序列化入口不接受候选自报贡献。
+
+
+## B5-67 炼金术士（v25，2026-10-27）
+
+依据 `research/report_data.json` 的 B5-67（总量、AP 与回蓝公式已证实）及 P-B5-67 / P-B5-67-EXEC（约定）。最强辛吉德不再普攻，也不派生普攻计数/普攻回蓝；奔跑继续服从既有控制、存活、落点占用与共享预留。朝最近可选敌人跑，等距按 ID；接敌穿过目标格并落在另一侧可用格，沿途格各留下宽1格的毒云，不扩成邻格范围。云留存60 tick，同格只刷新；云接触按 `areaEnemies` 的在场资格判定，隐身/不可选中仍可接触，死亡/缺席/攻击代理不接触；寻敌保持可选目标资格。每个目标只保留一份同源毒伤，重入不重置跳相位或叠层。
+
+1–4星5秒总毒伤140/210/315/420，乘首次接触时AP/100后取整；每10 tick跳一次，首跳接触+10，末跳+100，用累计差分分摊整数余数。云与既存毒伤在来源死亡后持续，来源不能再移动、落新云或回蓝。毒伤走既有 `ability-periodic` 魔法包、抗性/盾/技能暴击授权/吸血链，绝不直接扣HP。回蓝在幸存者法力屏障逐tick提交10×当前原始攻速/20，携带有界整数余数，遵守施法锁蓝；施法仅以自己为目标，持续80 tick的20%全能吸血与平坦+250移速替换原始减伤和友军攻速。网格映射细节见 P-B5-67-EXEC，未声称原版逐帧路径已证实。
+
+附着毒伤服从既有 G11 净化：净化同步移除该目标的所有敌方辛吉德附着毒伤，来源已死亡时也移除；不清除云、其他目标的毒伤或友方来源，不回滚本 tick 已规划的包。若后续仍接触云，可重新附着，首跳从新接触后10 tick开始。夜之锋刃的不可选中与伤害防止仍各自判定，不代替净化。
+
+现有签名 `advanceS13Tick(state) → CombatStep`、`planS13Cast(ctx,unit,target,seq) → string[]` 不变；新增规则内部入口为 `compileMadChemist(state,unit,board,effect) → Effect[]`、`moveMadChemist(ctx,unit,occupied) → readonly HexCell[] | undefined`、`advanceMadChemist(ctx,unit,nextSeq) → void`。本强化战斗必须按可信输入完整重演验证；删除/插入毒云、改跳次/伤害/目标/回蓝余数/施法到期、改冻结 mechanic 均不能通过恢复。保持 v25 候选规则/格式号，R4 内部清单版本升为 `augment-pool-batch5-r4-v25-r1`，重算内容和战利品身份；不重录历史 epoch。

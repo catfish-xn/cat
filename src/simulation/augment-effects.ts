@@ -1,4 +1,5 @@
 import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
+import { compileMadChemist } from './augment-pool-batch5-r4';
 import { getUnitForm } from './seat-mechanics/forms';
 import { EMBLEM_ITEMS } from './content/emblems';
 import { HERO_UNITS, magicRollKind } from './content/augment-pool-batch3';
@@ -50,6 +51,7 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
   const v=effect.values, allies=board.filter(u=>u.team===unit.team), zone=state.preparation.board.deploymentZones.player;
   const row=(u:Unit)=>u.location.kind==='board'?u.location.cell.row:-1;
   switch(effect.mechanic){
+    case 'madChemist': return compileMadChemist(state,unit,board,effect);
     case 'coronation': {
       const count=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length+state.temporaryEquipment.filter(i=>i.holderId===unit.id&&TACTICIAN_SIZE_ITEMS.includes(i.definitionId)).length;
       const v=AUGMENT_BATCH1.coronation.source.values;

@@ -259,3 +259,7 @@ B5-80 `head-start` 使用 `requireAugmentFacts(...,'acquire',...)` 的正式阵�
 `anger-issues` 与 `another-anomaly` 登记为历史持有者；不为未持有者写空节。B5-81 增加 `anomaly-copy-kills`：`{battleId,itemId,unitId,kills:[{eventSeq,victimId}]}`，另带通用 sequence/seat/round/resourcePrefix。使用 `recordAugmentCopyKills(state,fact)` 和 `readAugmentCopyKills(state,itemId,beforeRound?)`；同一战斗/物品同内容幂等、冲突拒绝，复活后再次死亡不按 victimId 去重。采样只读取已认证终战，原异常持有者与召唤物/装备克隆不进入复制品账本。
 
 战斗输入的可选 `augmentCopyKills` 由上述 API 读取此前回合的自身记录，绝不复制原英雄累计值；恢复用已认证资源前缀选择开战物品，运行中读取开战历史，避免后续卸下、重铸抹去冻结输入。PvP 装备 ID 沿既有命名空间映射。全部事实仍走同一界限检查、单人公共命令重演及联机独立 authority，不创建第二个保存节、不重录 epoch。规则、接口与接线点见 [AUGMENT_BATCH5_R2](AUGMENT_BATCH5_R2.md)。
+
+## B5-67 在线恢复接入（2026-10-27）
+
+炼金术士不读取跨回合事实，不登记为 history owner，不生成空历史节。其单席在线保存仍不能独立证明敌方阵容与毒伤轨迹，故规则内部 `augment-pool-batch5-r4-restore.ts / validateMadChemistOnlineSave(pool,state,authority?)` 从独立服务器 `pool.pending/rewards` 核对本席固定 2-1 奖励身份；即使候选组合删除强化、选择记录、奖励收据和法球，仍复用 `validateAugmentAuthority(state,authority,true)` 强制独立服务器完整检查点，并校验既有奖励计划。候选残留的本卡标记也要求认证；所有已提供句柄一律认证完整状态，不能因本卡或历史节缺失而跳过。选秀入口传入 `carousel.pool`，两个公开恢复入口签名不变。调用者继续使用 `Room.augmentHistoryAuthority(seatId)`；无 `src/server` 改动、无候选自签、无新持久格式。离线战斗的可选 `CombatUnit.madChemist` 则使用现有可信输入全量重演。新增测试覆盖真实八席选取/领取/部署/PvP、真实选秀恢复、对象和JSON往返、恢复后命令一致，以及句柄、组合删除、奖励、阵容、毒伤与回蓝篡改拒绝。

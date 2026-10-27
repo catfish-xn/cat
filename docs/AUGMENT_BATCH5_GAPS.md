@@ -618,13 +618,13 @@
 
 ### 9. 英雄技能替换
 
-#### B5-67 炼金术士（需要外部研究）
+#### B5-67 炼金术士（已按项目约定实现并开放）
 
 - 身份：`TFT13_Augment_SingedCarry`。
 - 已有原文／字段：`A[35].apiName=TFT13_Augment_SingedCarry`，`description_zh_cn`：“获得1个【辛吉德】。你最强大的那个【辛吉德】无法攻击，但会不断奔跑并留下剧毒踪迹，造成持续魔法伤害。他的技能将始终以自己为目标，提供20%的全能吸血和移动速度。” `effects={"TOOLTIPONLYOmnivamp":20.0}`；原始map22定位为 `A[35].map22_node={55848d10}`，对应 `data/map22-augment-item-nodes.json.nodes["{55848d10}"].constants`（无constants则不以空对象推测隐藏值）。
 - 原计划缺口／本次细化：毒迹每跳间隔/伤害分摊、碰撞宽度/覆盖形状、重入刷新/叠伤、移动路径/寻敌、云雾寿命与DOT时长关系；AP缩放、持续施法与法力执行细节。
 - 本地补查结果：已补数值：V.data/C3-singed-hero.raw.json 顶层{3a8f72f9}.mSpell.mDataValues中HEROSpellBaseDamage=[0,140,210,315,420,0,0]、HERODuration=5、HEROCloudDuration=3、HEROMoveSpeed=250、Duration=4、HEROOmnivamp≈0.2；mSpellCalculations.HEROModifiedDamage为AP缩放、HEROManaPerSec含系数10，mTargetingTypeData.__type=Self。V.report §C3.3支持5秒伤害与主动+250移速4秒；X.unknowns.records[question=9]仍列宽度/跳频/路径未确认。不能把普通技能AttackSpeed/DR常量自动移植。
-- 分类与后续：**需要外部研究**。外研：取14.24b持续毒迹脚本或可逐帧解码的受控实战，测每跳、首次跳、进出/重入、云消散及行动轨迹；核实基于AP的每秒回蓝运行公式。保留已找回的总伤害/移速，不再笼统报“全数值缺失”。
+- 分类与后续：**已按项目约定实现并开放**（2-1 白银；原始标签禁止3-2/4-2）。**P-B5-67 / P-B5-67-EXEC（P，2026-10-27）**：每0.5秒一跳、5秒总伤害平分，宽1格，同格刷新不叠伤，朝最近敌人跑；140/210/315/420的5秒总量与每秒回蓝10×当前攻速为**已证实**，跳频、分摊、宽度、刷新、路径和离散执行为**约定**，没有冒用社区推测。实现位于 `content/augment-pool-batch5-r4.ts` / `augment-pool-batch5-r4*.ts`；定向数值、公共命令、真实八席/选秀房间、存档往返与篡改拒绝见 `tests/augment-pool-batch5-r4*.test.ts` / `tests/server/augment-pool-batch5-r4-room.test.ts`。
 
 ### 10. 羁绊战斗增强／召唤
 

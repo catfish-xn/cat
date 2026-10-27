@@ -28,6 +28,7 @@ const initial={
  'pandoras-items-iii':[Q('radiant')],
  'artifactory':[U('TFT_ArmoryKeyOrnn'),C('magnetic-remover',2)],
  'salvage-bin-plus':[Q('completed')],
+ 'mad-chemist':[U('singed')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
  'cooking-pot':[I('frying-pan')],
