@@ -1,4 +1,5 @@
 import { validateH11Grant } from '../augment-pool-batch5-h11-validation';
+import { angerCombatItem } from '../augment-pool-batch5-r2-combat';
 /** G2-4b Unstable Treasure Chest executor and its restore receipt. A grant appends one record to the receiver; the item's
  * program comes from the frozen pool (combat-item-programs.ts) and joins the receiver's compiled mechanisms, so every later
  * tick, save and restore treats it exactly like an item compiled at combat start. Conventions G24-CHEST-01…04. */
@@ -26,7 +27,7 @@ const maxHpOf = (basis: NonNullable<CombatUnit['maxHpBasis']>, unit: CombatUnit)
 export function grantCombatItem(ctx: AbilityContext, chest: Source, target: S13Unit, seq: number): void {
   const word = ctx.draw(); integer(word);
   if (word > 0xffffffff) throw new RangeError('Invalid combat random word');
-  grantCombatItemDefinition(ctx, chest, target, seq, G24_CHEST_POOL[word % G24_CHEST_POOL.length].definitionId);
+  grantCombatItemDefinition(ctx, chest, target, seq, angerCombatItem(target, G24_CHEST_POOL[word % G24_CHEST_POOL.length].definitionId));
 }
 
 /** Internal rule transaction; the caller owns item selection and eligibility. */

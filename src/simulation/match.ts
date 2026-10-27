@@ -1,3 +1,5 @@
+import { r2AnomalyAllowed, grantPortableAnomaly } from './augment-pool-batch5-r2-anomaly';
+import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { grantCookingPotGrowth, noScoutLockedUnits } from './augment-pool-batch5-h3';
 import { drainPortfolioGold } from './augment-pool-batch5-h4';
 import { drainContestedGold } from './augment-pool-batch5-h6';
@@ -132,9 +134,11 @@ export { d14PublicUnitMark } from './d14-public-unit-mark';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
+  state=applyAngerIssues(state);
   const inventory=drainBatch5Inventory(state);events=[...events,...mechanicGrantEvents(state,inventory)];state=inventory;
   const d14Events:MatchEvent[]=[];state=pruneForgePositions(reconcileD14(state,d14Events));events=[...events,...d14Events];
   state=applyG23Radiant(state,new Set(events.flatMap(e=>e.type==='itemCombined'?[e.itemId]:[])));
+  if(state.augments.some(a=>a.definitionId==='anger-issues')){const temp=planTemporaryEquipment(state);state=temp.state;events=[...events,...temp.events];}
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
   const forge=openAugmentForge(state);state=forge.state;events=[...events,...forge.events];
@@ -181,6 +185,7 @@ function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): Matc
       choiceEvents.push({ type: 'choiceOpened', choice: pendingChoice });
     }
   }
+  state=applyAngerIssues(state);
   const planned = planTemporaryEquipment(state);
   return accept(planned.state, [...events, ...choiceEvents, ...planned.events]);
 }
@@ -739,7 +744,7 @@ function execute_combineItems(state: MatchState, aId: string, bId: string): Matc
 function execute_equipItem(state: MatchState, itemId: string, unitId: string, slot: number, options?: { readonly deferBattleEquipment?: boolean }): MatchCommandResult {
   const preview = previewEquip(state, itemId, unitId, slot);
   if (!preview.allowed) return fail(state, preview.reason);
-  const plan = planEquip(state.items, state.preparation, itemId, unitId, slot, state.nextItemSerial);
+  const plan = planEquip(state.items, state.preparation, itemId, unitId, slot, state.nextItemSerial,state.augments.some(a=>a.definitionId==='anger-issues'));
   if (!plan.ok) return fail(state, plan.reason);
   const combined = plan.events.filter((event): event is Extract<import('./strategy-types').StrategyEvent, {type:'itemCombined'}> => event.type === 'itemCombined');
   const timing = state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {};
@@ -788,7 +793,7 @@ function execute_selectAnomalyTarget(state: MatchState, choiceId: string, genera
   if(state.multiplayer&&choice.offers.some(id=>!eligibleD14Target(target,id)))return fail(state,'invalid-target');
   const draw = state.multiplayer && choice.offers.length
     ? {offers:choice.offers,choiceRngState:state.choiceRngState}
-    : generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id=>eligibleD14Target(target,id)), state.choiceRngState);
+    : generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id=>r2AnomalyAllowed(state.augments,id)&&eligibleD14Target(target,id)), state.choiceRngState);
   return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }
@@ -824,7 +829,7 @@ function execute_rerollAnomaly(state: MatchState, choiceId: string, generation: 
   if (choice.kind !== 'anomaly' || choice.step !== 'offer') return fail(state, 'invalid-choice');
   if (!state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
   if (state.gold < 1) return fail(state, 'insufficient-gold');
-  const draw = generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id => !choice.offers.includes(id)&&eligibleD14Target(state.preparation.units.find(u=>u.id===choice.targetId),id)), state.choiceRngState);
+  const draw = generateAnomalyOffer(anomalyCandidates(!!state.multiplayer).filter(id => r2AnomalyAllowed(state.augments,id)&&!choice.offers.includes(id)&&eligibleD14Target(state.preparation.units.find(u=>u.id===choice.targetId),id)), state.choiceRngState);
   return accept(recordShopAnomalyReroll(state,{ ...state, gold: state.gold - 1, choiceRngState: draw.choiceRngState,
     pendingChoice: { ...choice, offers: draw.offers, generation: generation + 1, rerollCount: choice.rerollCount + 1 } }),
     [{ type: 'anomalyRerolled', choiceId, generation: generation + 1, cost: 1 }]);
@@ -972,6 +977,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     return acceptEquipment(entered.state,[...events,...capacity.events,...entered.events]);
   }
   if (!getRoundSchedule(state.round).some(event=>event.id===choice.eventId && event.kind===choice.kind)) return fail(state,'invalid-choice');
+  if(choice.kind==='anomaly'&&!r2AnomalyAllowed(state.augments,definitionId))return fail(state,'invalid-choice');
   if(choice.kind==='anomaly'&&!eligibleD14Target(state.preparation.units.find(u=>u.id===choice.targetId),definitionId))return fail(state,'invalid-target');
   if (choice.kind === 'anomaly' && !state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
   if(choice.kind==='augment'&&!h12SelectionAllowed(state,definitionId))return fail(state,'invalid-choice');
@@ -1012,8 +1018,8 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     selected = settleRound(selected, null); events.push({ type: 'roundSettled', round: state.round });
     return accept(selected, events);
   }
-  if(choice.kind==='anomaly'){selected=acquireD14(selected);const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);}
-  if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);}
+  if(choice.kind==='anomaly'){selected=acquireD14(selected);const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);const portable=grantPortableAnomaly(selected);selected=portable.state;events.push(...portable.events);}
+  if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);const portable=grantPortableAnomaly(selected);selected=portable.state;events.push(...portable.events);}
   if(choice.kind==='augment')selected=recordShopAcquisition(state,selected);
   if(!selected.sharedPool&&subscriptionAcquired(state,selected))selected=drawSoloAugmentShop(selected,sixCostShopContext(selected),true);
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');

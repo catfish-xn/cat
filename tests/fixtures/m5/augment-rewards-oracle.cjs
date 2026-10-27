@@ -9,6 +9,7 @@ const assert=require('node:assert/strict');
 const {isDeepStrictEqual}=require('node:util');
 const s3b=require('./augment-batch5-s3b-oracle.cjs');
 const {validateH6Transition}=require('./augment-h6-oracle.cjs');
+const {portableGrant,validateAngerChoice,validateAngerTransitions}=require('./augment-r2-oracle.cjs');
 const b2=require('../../augment-pool-batch2-oracle-data.cjs');
 const b3=require('../../augment-pool-batch3-oracle-data.cjs');
 const b4=require('../../augment-pool-batch4-oracle-data.cjs');
@@ -240,7 +241,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
  return tables[weights.findIndex(w=>{if(ticket<w)return true;ticket-=w;return false;})];},
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
-const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-batch5-r1','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
+const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-batch5-r1','augment-pool-batch5-r2','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
  'augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel',...h4.sources]);
@@ -289,8 +290,11 @@ function validateRewardsCore(before,after,command,events,base){
  assert.equal(after.seed,before.seed,'immutable reward seed');
  assert.equal(after.augmentTierSeed,before.augmentTierSeed,'immutable opening seed');
  assert.equal(after.multiplayer?.seatId,before.multiplayer?.seatId,'immutable reward seat');
+ validateAngerChoice(before,after,command);
  const prior=before.seatMechanics?.receipts??[],appended=(after.seatMechanics?.receipts??[]).slice(prior.length);
  for(const r of appended)assert(admitted.has(r.source),'unknown mechanic reward source '+r.source);
+ const portable=portableGrant(before,command),portableActual=appended.filter(r=>r.source==='augment-pool-batch5-r2');
+ assert.deepEqual(portableActual,portable?[portable]:[],'independent immediate Portable Anomaly grant');
  if(command?.type==='select'){
   const c=before.pendingChoice;assert.equal(before.phase,'choice');assert(c,'selection needs a pending choice');
   assert.equal(command.choiceId,c.choiceId,'selection identity');assert.equal(command.generation,c.generation,'selection generation');assert.equal(c.step,'offer');
@@ -509,6 +513,7 @@ function validateRewards(before,after,command,events,base){
  const result=validateRewardsCore(before,after,command,events,base);
  s3b.validatePandora(before,after,command);
  for(const [id,gift] of s3b.validateSalvage(before,after,command,events))result.gifts.set(id,gift);
+ validateAngerTransitions(before,after,command,result,base.lootReceipts);
  // Hand-written counter vectors may omit the inventory entirely.
  if(before.consumables===undefined&&after.consumables===undefined)return result;
  const inventory=[...before.consumables];let serial=before.nextConsumableSerial;

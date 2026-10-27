@@ -38,6 +38,7 @@ export type AugmentFactData =
   | AugmentItemTransform
   | { readonly kind: 'inventory-transform-entry'; readonly choiceId: string; readonly itemIds: readonly string[] }
   | { readonly kind: 'settled-combat'; readonly settlementId: string; readonly roundKind: 'pve'|'pvp' }
+  | { readonly kind:'anomaly-copy-kills'; readonly battleId:string; readonly itemId:string; readonly unitId:string; readonly kills:readonly {readonly eventSeq:number;readonly victimId:string}[] }
   | { readonly kind: 'acquire'; readonly choiceId: string; readonly definitionId: string; readonly goldBefore: number; readonly hpBefore: number; readonly roster: HistoryRoster; readonly previousBattle: PreviousAugmentBattle; readonly preparationElapsedMs: number }
   | { readonly kind: 'trait-activation'; readonly choiceId: string; readonly roster: HistoryRoster }
   | { readonly kind: 'round-entry'; readonly roster: HistoryRoster }

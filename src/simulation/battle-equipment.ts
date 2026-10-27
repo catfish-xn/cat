@@ -1,3 +1,5 @@
+import { r2CopyKills } from './augment-pool-batch5-r2-history';
+import { portableAnomalyId } from './content/augment-pool-batch5-r2';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { scaleItemSummonHp } from './g2-4b-summons';
 /** Battle-time equipment uses the opening strategy compiler and preserves runtime.
@@ -49,11 +51,12 @@ export function prepareBattleEquipment(before: CombatStrategyInputs, input: Batt
     .map(i => ({ ...i, id: id('item', i.id), location: { ...i.location, kind: 'unit' as const, unitId: combatUnitId, slot: i.location.kind === 'unit' ? i.location.slot : 0 } }));
   const temporaryEquipment = equipped.temporaryEquipment.filter(i => i.holderId === input.unitId).map(i => ({ ...i,
     temporaryId: id('temporary-item', i.temporaryId), parentItemInstanceId: id('item', i.parentItemInstanceId), holderId: combatUnitId }));
+  const copyKills=r2CopyKills(equipped).map(g=>({...g,itemId:id('item',g.itemId)})).filter(g=>items.some(i=>i.id===g.itemId)||before.augmentCopyKills?.some(old=>old.itemId===g.itemId));
   return freezeContent(structuredClone({ input, team, combatUnitId, before, battleSeed, resourceSequence: equipped.resourceProvenance.entries.length - 1,
-    after: { ...before, items: [...before.items.filter(i => i.id !== id('item', input.itemId) && (i.location.kind !== 'unit' || i.location.unitId !== combatUnitId)), ...items],
+    after: { ...before, ...(copyKills.length?{augmentCopyKills:copyKills}:{}), items: [...before.items.filter(i => i.id !== id('item', input.itemId) && (i.location.kind !== 'unit' || i.location.unitId !== combatUnitId)), ...items],
       temporaryEquipment: [...before.temporaryEquipment.filter(i => i.holderId !== combatUnitId), ...temporaryEquipment],
       // A newly equipped Gambler needs the authenticated bank, even when absent at opening.
-      ...(items.some(i => i.definitionId === 'TFT7_Item_ShimmerscaleGamblersBlade') ? { bankGold: equipped.gold } : {}) } }));
+      ...(items.some(i => i.definitionId === 'TFT7_Item_ShimmerscaleGamblersBlade'||portableAnomalyId(i.definitionId)==='avarice-incarnate') ? { bankGold: equipped.gold } : {}) } }));
 }
 function strategy(inputs: CombatStrategyInputs, opening: StrategySnapshot, team: Team): StrategySnapshot {
   const ids = new Set(inputs.preparation.units.map(u => u.id));
@@ -77,8 +80,8 @@ export function applyBattleEquipment(state: CombatState, receipt: BattleEquipmen
   const target = state.units.find(u => u.id === receipt.combatUnitId && u.team === receipt.team && !u.itemSummon && !u.anomalySummon);
   if (!target || !state.strategy) return refuse('battle-unit-unavailable');
   try {
-    const { items: _beforeItems, temporaryEquipment: _beforeTemporary, bankGold: _beforeBank, ...beforeBasis } = receipt.before;
-    const { items: _afterItems, temporaryEquipment: _afterTemporary, bankGold: _afterBank, ...afterBasis } = receipt.after;
+    const { items: _beforeItems, temporaryEquipment: _beforeTemporary, bankGold: _beforeBank, augmentCopyKills:_beforeCopyKills, ...beforeBasis } = receipt.before;
+    const { items: _afterItems, temporaryEquipment: _afterTemporary, bankGold: _afterBank, augmentCopyKills:_afterCopyKills, ...afterBasis } = receipt.after;
     if (canonicalContent(beforeBasis) !== canonicalContent(afterBasis)
       || ![input.unitId, battleLocalId(input.seatId, 'unit', input.unitId)].includes(receipt.combatUnitId)) return refuse('battle-input-invalid');
     const prior = state.equipmentReceipts?.filter(r => r.team === receipt.team).at(-1);
@@ -120,6 +123,7 @@ export function applyBattleEquipment(state: CombatState, receipt: BattleEquipmen
       }
       result.sources = next.sources; result.triggers = next.triggers; result.mechanics = next.mechanics;
       result.itemPrograms = next.itemPrograms ?? [];
+      if(next.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='headhunter'))result.d11Kills??=[];
       result.effectRuntime = initializeEffectRuntime(next.triggers).map(r => unit.effectRuntime?.find(old => old.key === r.key) ?? r);
       const itemIds = (s: typeof old) => [...s.sources.filter(e => e.source.sourceKind === 'item').map(e => e.source.sourceInstanceId),
         ...s.itemPrograms?.filter(p => p.source.sourceKind === 'item').map(p => p.source.instanceId) ?? []];

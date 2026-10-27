@@ -1619,3 +1619,8 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 - `validateTombRaider(state: MatchState): void`：从历史重建全部合法机会、顺序、候选、收据身份和装备出生来源，错项抛 `Invalid tomb raider authority`。已接入普通恢复、`restoreSharedOrbSnapshot`、`restoreCarouselSeat`；多人对象、JSON与规范文本恢复均仍要求 `captureAugmentHistoryAuthority`／`Room.augmentHistoryAuthority` 的独立品牌句柄，缺节、伪造权威、修改历史／候选／装备／收据全部拒绝。
 
 规则与内容位于 `augment-pool-batch5-r1*.ts` 和同名 content 文件。`src/server/room/augment-history.ts` 只冻结／传递全桌和发布事件，`room.ts` 只增加回收前一次调用；没有新增网络命令、真实时钟或服务器奖励公式。独立 M5 oracle 按原始全桌事实、独立英雄费用表和普通成装转录重建预期，不以生产奖励收据决定资格或奖品。单人取得不产生淘汰奖励且保持可运行；沿用同版12/8/8/7格式，重算内容与loot身份，不重录epoch。
+## Batch 5 R2（P，2026-10-27；沿用 v25）
+
+开放 `anger-issues`（棱彩，3-2/4-2）和 `another-anomaly`（黄金，4-2）；规则、研究状态及完整内部签名见 [AUGMENT_BATCH5_R2](AUGMENT_BATCH5_R2.md)。沿用现有 `selectChoice`、装备、合成、消耗品和重掷命令/失败枚举，不增加客户端提交事实的命令。普通成装转换追加有选择来源绑定的 `anger-item-converted` 资源事实；便携异常以不可变物品定义携带复制身份，共用唯一 apiName，4-6选择事务内即时授予，失败仍返回原 state、无事件和 RNG 消耗。
+
+强化历史 API 新增 `recordAugmentCopyKills(state,fact)` / `readAugmentCopyKills(state,itemId,beforeRound?)`，同 `augment-history-v1` 保存 `anomaly-copy-kills`，复制品独立于原英雄的历史。联机采样入口 `recordR2PortableBattle(state,combat,team,mapping?)` 只接受服务器已经认证的终战及既有身份映射；房间只编排调用。持有者的对象/JSON恢复仍必须取得独立 authority；伪造选择、来源、复制定义、位置、成长、旧手套收据或历史节均拒绝。无 epoch 重录。

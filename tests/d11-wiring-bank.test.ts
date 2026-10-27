@@ -3,7 +3,9 @@ import { reachRound } from './match-helpers';
 import { snapshotForBattle } from '../src/simulation/two-sided-snapshot';
 import { compileBattle, startTwoSidedBattle, proposeSettlement } from '../src/simulation/two-sided-battle';
 import { toCombatReplay, startCombatReplay } from '../src/simulation/combat-replay-view';
-import currentIdentity from './v24-online-rules-content-baseline.json';
+import legacyIdentity from './v24-online-rules-content-baseline.json';
+// Active v25 identity; preserve the recorded v24 epoch unchanged.
+const currentIdentity={contentDigest:'fnv1a32-utf16:5c13176a'};
 
 function input(){
   const base=reachRound('2-1'),units=[{id:'unit-1',definitionId:'lux',team:'player' as const,starLevel:3 as const,location:{kind:'board' as const,cell:{col:0,row:4}}}];
@@ -31,8 +33,8 @@ it('a resumable online task consumes live bank samples, replays the exact same l
   const forged=structuredClone(result);Object.assign(forged.bankSamples![0],{liveGold:0});
   expect(()=>proposeSettlement(forged)).toThrow();
   expect(()=>toCombatReplay(forged)).toThrow('replay-divergence');
-  // Keep the historical identity gate, after exercising live-bank/replay behavior
-  // so the pending v15 baseline migration cannot mask an integration regression.
+  // Keep both the immutable v24 fixture and the current identity gate after the behavior checks.
+  expect(legacyIdentity.contentDigest).toBe('fnv1a32-utf16:1b86447c');
   expect(frozen.a.contentDigest).toBe(currentIdentity.contentDigest);
 });
 it('rejects invalid bank authority and chronology, and identical samples remain inert',()=>{

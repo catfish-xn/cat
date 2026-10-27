@@ -1,3 +1,4 @@
+import { portableAnomalyId } from './content/augment-pool-batch5-r2';
 import { isBatch3Dummy } from './content/batch3-summons';
 import { isAnvil } from './content/anvils';
 import { contains, isDeploymentCell } from './board';
@@ -130,6 +131,9 @@ export function transferUpgradeResources(
       events.push({ type: 'anomalyTransferred', fromId: anomalyBinding.unitId, toId: upgrade.survivorId });
       anomalyBinding = { ...anomalyBinding, unitId: upgrade.survivorId };
     }
+    // An original anomaly follows merge lineage; its survivor cannot inherit the portable copy.
+    const returned=nextItems.filter(i=>portableAnomalyId(i.definitionId)!==null&&i.location.kind==='unit'&&i.location.unitId===anomalyBinding?.unitId);
+    if(returned.length){const ids=new Set(returned.map(i=>i.id));nextItems=nextItems.map(i=>ids.has(i.id)?{...i,location:{kind:'inventory' as const}}:i);events.push({type:'itemsReturned',itemIds:[...ids].sort(),unitId:anomalyBinding!.unitId});}
   }
   return { items: nextItems.sort(compareIds), anomalyBinding, events };
 }

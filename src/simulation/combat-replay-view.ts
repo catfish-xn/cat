@@ -241,8 +241,9 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   let state = battle.initial;
   const bankSamples = battle.bankSamples ?? battle.terminal.bankSamples;
   validateD11BankSamples(bankSamples,battle.terminal.tick);
-  if (bankSamples?.some(sample => sample.team === 'enemy' && battle.mirrorOfSeatId != null || !battle.initial.units.some(unit => unit.team === sample.team
-    && unit.mechanics?.some(m => m.mechanic === 'd11Anomaly' && m.source.definitionId === 'avarice-incarnate'))))
+  // Holder eligibility is authenticated at each sample, after earlier equipment
+  // receipts have been replayed. A portable Avarice need not exist at tick zero.
+  if (bankSamples?.some(sample => sample.team === 'enemy' && battle.mirrorOfSeatId != null))
     throw new RangeError('invalid-replay-input');
   if (battle.bankSamples && battle.terminal.bankSamples
     && canonicalContent(battle.bankSamples) !== canonicalContent(battle.terminal.bankSamples)) throw new RangeError('replay-divergence');

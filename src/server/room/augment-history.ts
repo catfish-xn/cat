@@ -1,7 +1,7 @@
 /** Server orchestration only: freeze authoritative table/roster/settlement observations.
  * No rewards, growth amounts, player damage formula or random draws live here. */
 import { drainBatch5H7Gold, applyDhampyrSettlement, drainBatch5H8Deaths, appendAugmentFact, recordAugmentTable, recordAugmentSettlementTable, settleBatch5H9History, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
-  hasTombRaider, recordTombRaiderEliminations, publishTombRaiderChoice, type HistorySeat } from '../../server-entry';
+  hasTombRaider, recordTombRaiderEliminations, publishTombRaiderChoice, recordR2PortableBattle, type HistorySeat } from '../../server-entry';
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput, RankEntry } from './types';
 
@@ -61,6 +61,7 @@ export function recordRoomBattleFacts(seats: readonly SettledSeat[], results: re
       return { ...d, ownerSeatId: d.team === 'player' ? battle.a.seatId : battle.b.seatId, originalUnitId: mapped?.originalId ?? d.unitId }; });
     // A resolver supplying a terminal reconstructed outside the rules runner must replay it first.
     if (deaths.length !== battle.events.filter(e => e.type === 'death').length) throw new RangeError('Invalid augment history: missing executed death samples');
+    match = recordR2PortableBattle(match,battle.terminal,battle.a.seatId===seat.seatId?'player':'enemy',battle.mapping);
     match = appendAugmentFact(match, { kind: 'deaths', battleId: result.battleId, completeThroughTick: battle.terminal.tick, deaths });
     const opponentId = battle.a.seatId === seat.seatId ? battle.b.seatId : battle.a.seatId;
     const opponent = seats.find(s => s.seatId === opponentId);

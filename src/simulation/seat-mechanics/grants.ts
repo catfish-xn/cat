@@ -1,3 +1,4 @@
+import { applyAngerIssues } from '../augment-pool-batch5-r2';
 import { CONSUMABLE_DEFINITIONS } from '../content/consumables';
 import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
 import { planPermanentItemGrant } from '../item-grants';
@@ -33,7 +34,7 @@ function badRequest(state: MatchState, request: MechanicGrantRequest): MechanicG
   return findMechanicReceipt(state, request.receiptId) ? refuse(state, 'duplicate-mechanic-receipt') : null;
 }
 function commit(state: MatchState, receipt: MechanicReceipt, events: readonly MatchEvent[] = [], upgradeEvents: readonly UnitUpgradedEvent[] = []): MechanicGrantResult {
-  const next = appendMechanicReceipt(pruneForgePositions(state), receipt);
+  const next = applyAngerIssues(appendMechanicReceipt(pruneForgePositions(state), receipt));
   return { ok: true, state: next, receipt, upgradeEvents, events: [...events, { type: 'mechanicGranted', receipt }] };
 }
 

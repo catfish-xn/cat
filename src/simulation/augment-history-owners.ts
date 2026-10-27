@@ -15,6 +15,8 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'a-golden-find': ['combat-roster', 'combat-binding', 'deaths'],
   'tomb-raider-1': ['table'],
   'tomb-raider-2': ['table'],
+  'another-anomaly': ['acquire', 'positions', 'anomaly-copy-kills'],
+  'anger-issues': ['acquire', 'positions'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],

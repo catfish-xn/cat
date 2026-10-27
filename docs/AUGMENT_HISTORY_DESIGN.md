@@ -254,3 +254,8 @@ B5-80 `head-start` 使用 `requireAugmentFacts(...,'acquire',...)` 的正式阵�
 本单最终验证：所有 Vitest 调用均为指定文件／用例、`--maxWorkers=3`，累计去重 369 项通过（其中金色收获 63 项、禁忌魔法 93 项，覆盖普通及流式真实 Room、对象／JSON／规范序列化恢复和篡改拒绝）。其余通过项为历史 77 项、源资料及双边快照 123 项、内容身份／生产大小 12 项、batch2 分类迁移 1 项；没有跑完整套件或超过 0..100 的种子扫描。`npm run typecheck`、`npm run build -- --configLoader runner`、身份重算 `--write`／校验 `--check` 和 `git diff --check` 通过。最终摘要为 CONTENT `fnv1a32-utf16:5dd52c60`、LOOT `fnv1a32-utf16:85985e18`，生产大小断言已同步。
 
 额外阶段审计的 10 个自动用例受沙盒 `spawnSync node EPERM` 阻断；直接运行同一审计 CLI 后确认本单两个节点无差异，仍报告 Academy、Experiment、Formswapper、BloodBrothers 四项范围外既有差异。没有删除断言、增加超时、修改 epoch 或写入 Git。严格全目录禁词检查仍会命中未修改的 `src/server/room/real-clock.ts:4` 和 `src/server/net/test-client.ts:13` 等既有计时适配；本单服务器新增行不含 `setTimeout`、`Date.now`、`performance.now` 或 `window`。
+## Batch5 R2 扩展（2026-10-27，沿用 augment-history-v1）
+
+`anger-issues` 与 `another-anomaly` 登记为历史持有者；不为未持有者写空节。B5-81 增加 `anomaly-copy-kills`：`{battleId,itemId,unitId,kills:[{eventSeq,victimId}]}`，另带通用 sequence/seat/round/resourcePrefix。使用 `recordAugmentCopyKills(state,fact)` 和 `readAugmentCopyKills(state,itemId,beforeRound?)`；同一战斗/物品同内容幂等、冲突拒绝，复活后再次死亡不按 victimId 去重。采样只读取已认证终战，原异常持有者与召唤物/装备克隆不进入复制品账本。
+
+战斗输入的可选 `augmentCopyKills` 由上述 API 读取此前回合的自身记录，绝不复制原英雄累计值；恢复用已认证资源前缀选择开战物品，运行中读取开战历史，避免后续卸下、重铸抹去冻结输入。PvP 装备 ID 沿既有命名空间映射。全部事实仍走同一界限检查、单人公共命令重演及联机独立 authority，不创建第二个保存节、不重录 epoch。规则、接口与接线点见 [AUGMENT_BATCH5_R2](AUGMENT_BATCH5_R2.md)。

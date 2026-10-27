@@ -1,3 +1,5 @@
+import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
+import { canEquipPortableAnomaly } from './augment-pool-batch5-r2-anomaly';
 import { canOperateEquipment } from './operation-policy';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { validateCombine, validateEquip } from './inventory';
@@ -21,13 +23,20 @@ export function readItemInventory(state: Readonly<MatchState>): readonly Invento
 export function previewCombine(state: Readonly<MatchState>, aId: string, bId: string): CombinePreview {
   if (!canOperateEquipment(state)) return { allowed: false, reason: 'wrong-phase' };
   if (isTemporaryItemId(state, aId) || isTemporaryItemId(state, bId)) return { allowed: false, reason: 'temporary-item' };
-  return validateCombine(state.items, aId, bId);
+  const preview=validateCombine(state.items,aId,bId);
+  return preview.allowed&&state.augments.some(a=>a.definitionId==='anger-issues')&&isAngerIssuesConvertibleItem(preview.resultDefinitionId)
+    ?{...preview,resultDefinitionId:'rageblade'}:preview;
 }
 
 export function previewEquip(state: Readonly<MatchState>, itemId: string, unitId: string, slot: number): EquipPreview {
   if (!canOperateEquipment(state)) return { allowed: false, reason: 'wrong-phase', conflictingItemIds: [] };
   if (isTemporaryItemId(state, itemId)) return { allowed: false, reason: 'temporary-item', conflictingItemIds: [] };
-  return validateEquip(state.items, state.preparation, itemId, unitId, slot);
+  const item=state.items.find(i=>i.id===itemId);
+  if(item&&!canEquipPortableAnomaly(state,item,unitId))return {allowed:false,reason:'item-restricted',conflictingItemIds:[]};
+  const anger=state.augments.some(a=>a.definitionId==='anger-issues');
+  const preview=validateEquip(state.items,state.preparation,itemId,unitId,slot,anger);
+  return preview.allowed&&preview.combination&&anger&&isAngerIssuesConvertibleItem(preview.combination.resultDefinitionId)
+    ?{...preview,combination:{...preview.combination,resultDefinitionId:'rageblade'}}:preview;
 }
 
 /** Detached projection in every phase; reading never repairs or generates equipment. */

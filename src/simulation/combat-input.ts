@@ -1,3 +1,5 @@
+import { portableAnomalyId } from './content/augment-pool-batch5-r2';
+import { r2FrozenCopyKills, type AugmentCopyKills } from './augment-pool-batch5-r2-history';
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
@@ -32,7 +34,7 @@ export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'items' | 'temporaryEquipment'
   | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number }
   /** Online two-sided only: the frozen snapshot's priorPvpWins; solo inputs never set it and read roundResults. */
-  & { readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[] }
+  & { readonly augmentCopyKills?:readonly AugmentCopyKills[]; readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[] }
   & { readonly cabalGrowth?: CabalGrowth; readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[]; readonly sniperOpening?: Readonly<Record<string, number>>; readonly d14Combat?:D14CombatCertificate; readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
 export interface CombatInputBasis {
   readonly mechanicReceiptPrefixLength:number;
@@ -51,7 +53,7 @@ export interface CombatResourcePrefix {
   readonly nextUnitSerial: number; readonly nextItemSerial: number;
 }
 export interface CombatInputAuthority {
-  readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[];
+  readonly augmentCopyKills?:readonly AugmentCopyKills[]; readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[];
   readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[];
   readonly sniperOpening?: Readonly<Record<string, number>>;
   readonly cabalGrowth?: CabalGrowth;
@@ -75,7 +77,7 @@ export interface CombatInputAuthority {
 export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase): CombatStrategyInputs {
   const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [],playerHp } = state;
   const cabalGrowth='resourceProvenance' in state?readCabalGrowth(state):state.cabalGrowth;
-  const needsBank=anomalyBinding?.definitionId==='avarice-incarnate'||items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade');
+  const needsBank=anomalyBinding?.definitionId==='avarice-incarnate'||items.some(i=>portableAnomalyId(i.definitionId)==='avarice-incarnate')||items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade');
   const bankGold='bankGold' in state?state.bankGold:needsBank&&'gold' in state?state.gold:undefined;
   const itemSummonPositions='seatMechanics' in state?readItemSummonPositions(state):('itemSummonPositions' in state?state.itemSummonPositions:undefined);
   const g23='seatMechanics' in state?readG23Progress(state):('g23' in state?state.g23:undefined);
@@ -85,7 +87,8 @@ export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase
   const d14='d14' in state?d14Certificate(state as MatchBase):'d14Combat' in state?state.d14Combat:undefined;
   const absent='d14' in state&&state.d14&&'held' in state.d14&&state.d14.held;
   const historyGrowth = 'resourceProvenance' in state && 'augmentHistory' in state ? combatHistoryGrowth(state as import('./match-types').MatchState,preparation.units.filter(u=>u.team==='player').map(u=>u.id),!!('combatInputBasis' in state && state.combatInputBasis)) : ('augmentHistoryGrowth' in state ? state.augmentHistoryGrowth : undefined);
-  return { ...(cabalGrowth?{cabalGrowth}:{}), ...(sniperOpening ? { sniperOpening } : {}), ...(h6Growth?{h6Growth}:{}),...(historyGrowth?.length?{augmentHistoryGrowth:historyGrowth}:{}),...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
+  const copyKills='resourceProvenance' in state?r2FrozenCopyKills(state as import('./match-types').MatchState):('augmentCopyKills' in state?state.augmentCopyKills:undefined);
+  return { ...(copyKills?.length?{augmentCopyKills:copyKills}:{}),...(cabalGrowth?{cabalGrowth}:{}), ...(sniperOpening ? { sniperOpening } : {}), ...(h6Growth?{h6Growth}:{}),...(historyGrowth?.length?{augmentHistoryGrowth:historyGrowth}:{}),...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
     ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
@@ -164,6 +167,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
       && receipts.some(receipt => receipt.kind === 'anomaly' && receipt.eventId === binding.choiceId
         && receipt.definitionId === binding.definitionId && receipt.round === binding.boundRound));
   }
+  requireBasis(equal(input.augmentCopyKills??[],authority.augmentCopyKills??[]));
   requireBasis(equal(input.augmentHistoryGrowth ?? [],authority.augmentHistoryGrowth ?? []));
   requireBasis(Array.isArray(input.persistentGrowth) && equal(input.persistentGrowth, authority.resources.persistentGrowth.filter(g=>!authority.heldUnitIds?.includes(g.unitId))));
   const growthIds = new Set<string>();

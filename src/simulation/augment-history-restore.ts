@@ -40,6 +40,7 @@ export function preflightAugmentHistory(s: MatchState): void {
         && typeof f.receiptId==='string'&&f.receiptId.length<=256
         && [f.stacks,f.healthFlat,f.attackDamageBps].every(n=>Number.isSafeInteger(n)&&n>0&&n<=1000000000), 'summon growth');
     }
+    if(f.kind==='anomaly-copy-kills')historyCheck(typeof f.battleId==='string'&&typeof f.itemId==='string'&&typeof f.unitId==='string'&&Array.isArray(f.kills)&&f.kills.length<=LIMIT.deaths&&f.kills.every((k:{eventSeq:number;victimId:string})=>Number.isSafeInteger(k.eventSeq)&&k.eventSeq>=0&&typeof k.victimId==='string'),'anomaly copy bounds');
     if (f.kind === 'deaths') {
       historyCheck(Array.isArray(f.deaths) && f.deaths.length <= LIMIT.deaths, 'death bounds');
       if(s.augments.some(a=>a.definitionId==='forbidden-magic'&&a.acquiredRound<=f.round))

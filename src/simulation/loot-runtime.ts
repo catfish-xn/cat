@@ -1,3 +1,4 @@
+import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { openingCrabCarrier } from './opening-crabs';
 import { claimGeneratedJson } from './immutable-json';
 import { createOrbLayout, freezeOrbLayoutThroughRound, type LootInitialization, type OrbLayoutLedger, type LootLayoutBinding } from './orb-layout';
@@ -170,8 +171,8 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
 function grantItem(state: MatchState, definitionId: string, receiptId: string) {
   const grant = planPermanentItemGrant(state, { definitionId, receiptId }, state.m8.loot.receipts.map(value => value.receiptId));
   if (!grant.ok) throw new RangeError(`Invalid loot item grant: ${grant.reason}`);
-  return { ...grant, state: { ...grant.state, resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId,
-    { kind: 'item-acquired', itemId: grant.grantedItemIds[0], source: { kind: 'loot', receiptId } }) } };
+  return { ...grant, state: applyAngerIssues({ ...grant.state, resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId,
+    { kind: 'item-acquired', itemId: grant.grantedItemIds[0], source: { kind: 'loot', receiptId } }) }) };
 }
 
 export function unresolvedLootChoices(state: MatchState): readonly LootChoiceDescriptor[] {

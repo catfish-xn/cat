@@ -1,4 +1,5 @@
 import { AUGMENT_BATCH5_R1_DEFINITIONS } from './augment-pool-batch5-r1';
+import { AUGMENT_BATCH5_R2_DEFINITIONS } from './augment-pool-batch5-r2';
 import { AUGMENT_BATCH5_H1_DEFINITIONS } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3_DEFINITIONS } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4_DEFINITIONS } from './augment-pool-batch5-h4';
@@ -40,6 +41,7 @@ import type { ChoiceDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 import { S13_P2_AUGMENTS } from './s13-augments-p2';
 export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = freezeContent({
+  ...AUGMENT_BATCH5_R2_DEFINITIONS,
   ...AUGMENT_BATCH1_DEFINITIONS,
   ...AUGMENT_BATCH2_DEFINITIONS,
   ...AUGMENT_BATCH3_DEFINITIONS,

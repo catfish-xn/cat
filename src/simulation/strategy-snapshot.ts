@@ -4,6 +4,9 @@ import { moonlightSelection } from './augment-pool-batch5-s11a';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { compileH11HistoryEquipment } from './augment-pool-batch5-h11-history';
 import { cabalEffects } from './augment-pool-batch5-h9-cabal';
+import { portableBinding } from './augment-pool-batch5-r2-anomaly';
+import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
+import { r2ItemDefinition } from './augment-pool-batch5-r2';
 import { drainSetup } from './setup-work';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
@@ -112,6 +115,9 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
   const openingStars=new Map(boardUnits.map(u=>[u.id,reunion.has(u.id)?Math.min(4,(state.d14Combat?.unitId===u.id&&state.d14Combat.phase==='promoted'?4:u.starLevel)+(teamups.get('menaces')?.[0]===u.id?0:1)):(state.d14Combat?.unitId===u.id&&state.d14Combat.phase==='promoted'?4:u.starLevel)]));
   const moonlight=moonlightSelection(boardUnits,state.augments,state.round,state.g23?.seed??0,openingStars);
   const equipment = g22Equipment(state, enemyItems), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items, { seed: state.g23?.seed ?? 0, round: state.round });
+  if(state.augments.some(a=>a.definitionId==='anger-issues'))for(const item of equipment){
+    if(boardUnits.some(u=>u.id===item.unitId&&u.team==='player')&&isAngerIssuesConvertibleItem(conversions.get(item.id)??item.definitionId))conversions.set(item.id,'rageblade');
+  }
   // G2-4b: support items act on their holder's board neighbours, so every holder's items are known before any unit compiles.
   // Same item sources the per-unit loop binds below: player items/temporary equipment, and the round's enemy items.
   const onBoard = (team: 'player' | 'enemy') => new Set(boardUnits.filter(u => u.team === team).map(u => u.id)), players = onBoard('player'), enemyIds = onBoard('enemy');
@@ -144,6 +150,9 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
       sources.push(...makeSourcedEffects(unit.id,'ability','g24-voidspawn-ability',unit.id+':stage',[
         {kind:'statFlat',stat:'maxHp',amount:stage.health-1000},{kind:'statFlat',stat:'attackDamage',amount:stage.attack-80}]));
     }
+    const copyBinding=unit.team==='player'?portableBinding(state.items,unit.id):null;
+    const binding=state.anomalyBinding?.unitId===unit.id?state.anomalyBinding:copyBinding;
+    const copyItem=copyBinding?state.items.find(i=>`portable:${i.id}`===copyBinding.choiceId):undefined;
     const itemPrograms: BoundItemProgram[] = [];
     for(const {item,owner,effect} of shrouds) if(owner.team===unit.team)
       sources.push(...makeSourcedEffects(unit.id,'item',item.definitionId,item.id+(effect.mechanic==='g24Shroud'?':team-health':':team-speed'),[
@@ -169,12 +178,12 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     if (unit.team === 'player') {
       for (const item of state.items) {
         if (item.location.kind !== 'unit' || item.location.unitId !== unit.id) continue;
-        const definition = p2ItemDefinition(lookup(catalog.items, conversions.get(item.id) ?? item.definitionId),state);
+        const definition = r2ItemDefinition(p2ItemDefinition(lookup(catalog.items, conversions.get(item.id) ?? item.definitionId),state),state.augments);
         sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, itemEffects(definition)));
         bindItem(definition, item.id);
       }
       for (const child of state.temporaryEquipment.filter(item => item.holderId === unit.id)) {
-        const definition = p2ItemDefinition(lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId),state);
+        const definition = r2ItemDefinition(p2ItemDefinition(lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId),state),state.augments);
         sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, itemEffects(definition), child.parentItemInstanceId));
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
@@ -211,12 +220,11 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
           return [effect];
         })));
       }
-      const binding = state.anomalyBinding;
       if (binding?.unitId === unit.id) {
         const definition = lookup(catalog.anomalies, binding.definitionId);
         const effects:readonly Effect[]=binding.definitionId==='avarice-incarnate'||binding.definitionId==='headhunter'
-          ?[{kind:'mechanic',mechanic:'d11Anomaly',values:{enabled:1,priorKills:binding.definitionId==='headhunter'?d11PriorKills(state.g23,binding.boundRound):0}}]:definition.effects;
-        sources.push(...makeSourcedEffects(unit.id, 'anomaly', binding.definitionId, binding.choiceId, effects));
+          ?[{kind:'mechanic',mechanic:'d11Anomaly',values:{enabled:1,priorKills:binding.definitionId==='headhunter'?(copyBinding?(state.augmentCopyKills?.find(g=>g.itemId===copyItem!.id)?.count??0):d11PriorKills(state.g23,binding.boundRound)):0}}]:definition.effects;
+        sources.push(...makeSourcedEffects(unit.id, 'anomaly', binding.definitionId, binding.choiceId, effects,copyItem?.id));
       }
     } else {
       for (const item of enemyItems.filter(item => item.unitId === unit.id)) {
@@ -252,11 +260,11 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     ]));
     const growth = state.persistentGrowth.find(entry => entry.unitId === unit.id);
     if (growth) sources.push(...makeSourcedEffects(unit.id, 'ability', 'tristana-ability', `persistent:${unit.id}`, [{ kind: 'statPercentBps', stat: 'attackDamage', bps: growth.attackDamageBps }]));
-    const anomaly=state.anomalyBinding?.unitId===unit.id?state.anomalyBinding.definitionId:null;
+    const anomaly=binding?.definitionId??null;
     const bonus=anomaly==='freestyling'?Math.round(traits.filter(t=>t.team===unit.team&&t.tier>0&&lookup(catalog.traits,t.traitId).tiers[0].threshold>1).length*450)
       :anomaly==='force-of-friendship'?boardUnits.filter(x=>x.team===unit.team).reduce((n,x)=>n+((state.d14Combat?.unitId===x.id&&state.d14Combat.phase==='promoted')?400:x.starLevel===3?800:x.starLevel*100),0)
       :anomaly==='comeback-story'?Math.floor((maximumPlayerHp(state.augments,state.round)-(state.playerHp??100))/10)*500:0;
-    if(bonus&&state.anomalyBinding)sources.push(...makeSourcedEffects(unit.id,'anomaly',anomaly!,state.anomalyBinding.choiceId+':scaling',[{kind:'mechanic',mechanic:'damageAmp',values:{bps:bonus}}]));
+    if(bonus&&binding)sources.push(...makeSourcedEffects(unit.id,'anomaly',anomaly!,binding.choiceId+':scaling',[{kind:'mechanic',mechanic:'damageAmp',values:{bps:bonus}}],copyItem?.id));
     if(unit.definitionId==='mel'&&state.g23?.mel?.savedBattleId)sources.push(...makeSourcedEffects(unit.id,'trait','banished-mage',unit.id,[{kind:'mechanic',mechanic:'damageAmp',values:{bps:1000}}]));
     const base = unit.location.kind==='board'?g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row):getUnitStats(unit.definitionId,unit.starLevel);
     const promoted=state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='promoted';
@@ -271,8 +279,8 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     const certified=moon?.star===4?d14UnitBase({...unit,starLevel:3},true):moon?familyCombatBase(unit,moon.star):reunionStar?familyCombatBase(unit,reunionStar):promoted?d14UnitBase(unit,true):null;
     // During battle only item declarations change. Membership, tier effects and all
     // other opening bonuses stay frozen; use the same numerical compiler below.
-    if (frozen) sources.splice(0, sources.length, ...frozen.sources.filter(s => s.source.sourceKind !== 'item' && !(s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation')),
-      ...sources.filter(s => s.source.sourceKind === 'item'||s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation'));
+    if (frozen) sources.splice(0, sources.length, ...frozen.sources.filter(s => s.source.sourceKind !== 'item' && !(s.source.sourceKind==='anomaly'&&s.source.parentItemInstanceId) && !(s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation')),
+      ...sources.filter(s => s.source.sourceKind === 'item'||s.source.sourceKind==='anomaly'&&!!s.source.parentItemInstanceId||s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation'));
     let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
     // Batch-3 hero augments: the strongest copy's ability costs ManaReduction less mana and Vladimir gains range.
     const hero = (resolved.mechanics ?? []).find(m => m.mechanic === 'heroCarryLive');
@@ -286,14 +294,15 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
       resolved = { ...resolved, stats: { ...resolved.stats, maxMana, initialMana: Math.min(resolved.stats.initialMana, maxMana) } };
     }
     for(const m of resolved.mechanics ?? []) {
+      const parentItemInstanceId=m.source.sourceKind==='anomaly'?m.source.parentItemInstanceId??null:null;
       const program=m.mechanic==='s13P3'?p3Program(m.source.definitionId,strategyStage(state.round)):m.mechanic==='g23Junker'?{modifiers:m.values.titan?[modifier('damageReduction',9000,'bps')]:[]}:m.mechanic==='g23Experiment'?g23ExperimentProgram(m.values):m.mechanic==='g23Trait'?g23TraitProgram(m.source.definitionId,m.values.tier,resolved.stats.maxMana):m.mechanic==='g23Anomaly'?g23AnomalyProgram(m.source.definitionId,resolved.stats.maxMana):null;
       if(m.mechanic==='g23Anomaly'){
         const conversion=g23ConversionProgramValues(m.source.definitionId,resolved.stats.armor,resolved.stats.magicResist);
-        if(conversion)itemPrograms.push({source:{...m.source,parentItemInstanceId:null},program:{modifiers:[modifier(conversion.stat,conversion.amount)]}});
+        if(conversion)itemPrograms.push({source:{...m.source,parentItemInstanceId},program:{modifiers:[modifier(conversion.stat,conversion.amount)]}});
         if(['power-absorption','energy-absorption'].includes(m.source.definitionId))for(const ally of boardUnits.filter(x=>x.id!==unit.id&&x.team===unit.team))
-          itemPrograms.push({source:{...m.source,instanceId:JSON.stringify([m.source.instanceId,'absorb',ally.id]),parentItemInstanceId:null},program:{triggers:[trigger({id:'absorb',event:'counter-updated',effects:[stat({...modifier(m.source.definitionId==='power-absorption'?'attackDamage':'abilityPower',0),value:{kind:'counter',counterId:'g23Absorb',perCount:1}})]})]}});
+          itemPrograms.push({source:{...m.source,instanceId:JSON.stringify([m.source.instanceId,'absorb',ally.id]),parentItemInstanceId},program:{triggers:[trigger({id:'absorb',event:'counter-updated',effects:[stat({...modifier(m.source.definitionId==='power-absorption'?'attackDamage':'abilityPower',0),value:{kind:'counter',counterId:'g23Absorb',perCount:1}})]})]}});
       }
-      if(program&&Object.keys(program).length){validateItemProgram(program);itemPrograms.push({source:{...m.source,parentItemInstanceId:null},program});}
+      if(program&&Object.keys(program).length){validateItemProgram(program);itemPrograms.push({source:{...m.source,parentItemInstanceId},program});}
     }
     const mechanics = (resolved.mechanics ?? []).map(mechanic => {
       if (mechanic.mechanic !== 'bulkyBuddies') return mechanic;

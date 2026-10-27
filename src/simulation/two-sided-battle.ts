@@ -64,6 +64,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
     augments:s.augments.map(augment=>({...augment,choiceId:map('augment',augment.choiceId)})),
     anomalyBinding:s.anomalyBinding ? {...s.anomalyBinding,unitId:map('unit',s.anomalyBinding.unitId),choiceId:map('anomaly',s.anomalyBinding.choiceId)} : null,
     persistentGrowth:s.persistentGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)})), augmentProgress:s.augmentProgress,
+    ...(s.augmentCopyKills?{augmentCopyKills:s.augmentCopyKills.map(g=>({...g,itemId:map('item',g.itemId)}))}:{}),
     ...(s.augmentHistoryGrowth?{augmentHistoryGrowth:s.augmentHistoryGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)}))}:{}),
   };
   let compiled: StrategySnapshot;
@@ -157,10 +158,10 @@ export interface BattleLiveGoldReader {
   readonly team: Team;
   readonly readsLiveGold: boolean;
 }
-/** Trusted snapshots or a compiled input. B is always frozen in a mirror battle. */
+/** Opening eligibility from trusted snapshots or a compiled input. Later installations are sampled from the live combat. B is frozen in a mirror battle. */
 export function readBattleLiveGoldReaders(input: Pick<BattleInput, 'a' | 'b' | 'mirrorOfSeatId'>): readonly BattleLiveGoldReader[] {
   const reads = (side: PlayerBattleSnapshot) => readsLiveGold(side.anomalyBinding, side.units
-    .filter(u => u.team === 'player' && u.location.kind === 'board').map(u => u.id));
+    .filter(u => u.team === 'player' && u.location.kind === 'board').map(u => u.id),side.items);
   return [
     { seatId: input.a.seatId, team: 'player', readsLiveGold: reads(input.a) },
     { seatId: input.b.seatId, team: 'enemy', readsLiveGold: input.mirrorOfSeatId === null && reads(input.b) },
@@ -190,8 +191,8 @@ function validateDynamicResult(result:BattleResult):void {
   if (result.initial.equipmentReceipts || result.initial.pendingEquipment || result.terminal.pendingEquipment
     || result.terminal.units.some(u => u.equipment && !result.initial.strategy?.units.find(s => s.unitId === u.id)?.augmentEquipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
-  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='scavenger'||m.mechanic==='sponging'||m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
-  if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null||!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
+  const enabled=!!result.bankSamples?.length || !!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='scavenger'||m.mechanic==='sponging'||m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
+  if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null))throw new BattleValidationError('invalid-result');
   if(!enabled){
     if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');
     return;
@@ -212,7 +213,7 @@ function validateDynamicResult(result:BattleResult):void {
     expected=installBattleEquipmentBatch(expected, result.terminal.equipmentReceipts?.filter(r => r.input.effectiveTick === expected.tick + 1) ?? []);
     const next=stepCombat(expected);expected=next.state;events.push(...toLedgerEvents(next.events));
   }
-  if(canonicalContent(expected)!==canonicalContent(result.terminal)
+  if(bankCursor!==(result.bankSamples?.length??0)||canonicalContent(expected)!==canonicalContent(result.terminal)
     ||canonicalContent(events)!==canonicalContent(result.events.slice(result.initial.nextEventSeq??0)))throw new BattleValidationError('invalid-result');
 }
 
@@ -279,7 +280,6 @@ export function* startTwoSidedBattleSteps(input: BattleInput, options?: BattleRe
   let replay: CombatReplay | null = null;
   let terminal = start.state;
   const bankSamples:CombatBankSample[]=[];
-  const readers = readBattleLiveGoldReaders(checked);
   let latestFrame: CombatReplayTick | null = null;
   let result: BattleResult | null = null;
   const pending: BattleEquipmentReceipt[] = [];
@@ -305,8 +305,10 @@ export function* startTwoSidedBattleSteps(input: BattleInput, options?: BattleRe
   }, sampleBankGold(seatId,liveGold){
     if(result||terminal.status!=='running')throw new BattleValidationError('wrong-phase');
     if(!Number.isSafeInteger(liveGold)||liveGold<0||bankSamples.length>=100000||seatId!==checked.a.seatId&&seatId!==checked.b.seatId)throw new BattleValidationError('invalid-bank-sample');
-    if(!readers.find(reader=>reader.seatId===seatId)!.readsLiveGold)return false;
+    if(seatId===checked.b.seatId&&checked.mirrorOfSeatId!==null)return false;
     const team=seatId===checked.a.seatId?'player':'enemy';
+    // Installed equipment can introduce the first Avarice reader after tick zero.
+    // The sampler checks current mechanics; opening roster eligibility is stale here.
     const sampled=sampleD11CombatGold(terminal,team,liveGold);
     if(sampled===terminal)return false;
     bankSamples.push({tick:terminal.tick,team,liveGold});terminal=sampled;

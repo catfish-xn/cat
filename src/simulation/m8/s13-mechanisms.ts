@@ -229,7 +229,7 @@ export function initializeMechanisms(ctx: AbilityContext): void {
     if (unit.pendingEquipmentSources?.length) {
       const added = new Set(unit.pendingEquipmentSources);
       const definitions = unit.mechanismDefinitions!;
-      const own = (s: Source) => s.sourceKind === 'item' && added.has(s.instanceId);
+      const own = (s: Source) => s.sourceKind === 'item' && added.has(s.instanceId)||!!s.parentItemInstanceId&&added.has(s.parentItemInstanceId);
       const survival = definitions.survivalTriggers.filter(d => own(d.source));
       const sample: SurvivalSample = { unitId: unit.id, tick: ctx.tick, hpBeforeDamage: unit.hp, hpAfterDamage: unit.hp,
         maxHpBeforeThresholdEffects: unit.maxHp, survivedDamageBatch: unit.alive, receivedPositiveDamage: false };

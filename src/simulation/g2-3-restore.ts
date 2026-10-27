@@ -1,3 +1,4 @@
+import { validatePortableAnomaly } from './augment-pool-batch5-r2-anomaly';
 import { validateBatch1Gifts } from './augment-pool-grants';
 import { familyDisplay } from './family-heist';
 import { validateEpicForges } from './epic-forges';
@@ -15,6 +16,7 @@ import {isMechanicChoice} from './seat-mechanics/choices';
 /** Shared restore checks for G23 escrow, pending offers, receipts and settlement history.
  * Runs no grant hooks and consumes no live RNG; callers still validate the surrounding seat/save. */
 export function validateG23Restoration(state:MatchState,parsedJsonInput=false):void {
+ validatePortableAnomaly(state);
  validateEpicForges(state);
  validateP2Gifts(state);
  validateBatch1Gifts(state);

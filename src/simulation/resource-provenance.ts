@@ -2,6 +2,7 @@ import { projectBatch5Items, type InventoryPlan } from './augment-pool-batch5-s3
 import { isS3bConversion, validS3bConversion } from './augment-pool-batch5-s3b-conversions';
 import { academicCraft } from './augment-pool-batch5-s3b';
 import { canonicalContent } from './content';
+import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
 import { isAnvil } from './content/anvils';
 import { trainerStar, TRAINER_ID } from './content/opening-batch-b';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
@@ -47,6 +48,7 @@ export type ResourceFact =
   | {readonly kind:'form-swapper-selected';readonly choiceId:string}
   | {readonly kind:'d14-selected';readonly choiceId:string;readonly unitId:string;readonly heldItems:readonly import('./strategy-types').ItemInstance[]}
   | {readonly kind:'d14-returned';readonly choiceId:string;readonly unitId:string;readonly settledOrdinal:number}
+  | {readonly kind:'anger-item-converted';readonly itemId:string;readonly from:string;readonly to:string;readonly receiptId:string}
   | {readonly kind:'g23-item-converted';readonly itemId:string;readonly from:string;readonly to:string;readonly receiptId:string}
   | {readonly kind:'carousel-preparation-settled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[];readonly upgrades:readonly UnitUpgradedEvent[]}
   | {readonly kind:'carousel-unit-claimed';readonly unitId:string;readonly receiptId:string;readonly upgrades:readonly UnitUpgradedEvent[]}
@@ -585,6 +587,11 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         requireValue(output.id===`item-${nextItemSerial}`&&!!ITEM_DEFINITIONS[output.definitionId]&&output.location.kind==='inventory','augment transform output');
         items.set(output.id,{id:output.id,definitionId:output.definitionId});nextItemSerial++;
       }
+    } else if(entry.kind==='anger-item-converted'){
+      keys(entry,[...common,'itemId','from','to','receiptId']);
+      const owner=context.scheduleReceipts.find(r=>r.kind==='augment'&&r.definitionId==='anger-issues'&&r.eventId===entry.receiptId);
+      requireValue(owner&&owner.round<=round.ordinal&&items.get(entry.itemId)?.definitionId===entry.from&&entry.from!=='rageblade'&&isAngerIssuesConvertibleItem(entry.from)&&entry.to==='rageblade','anger issues conversion');
+      items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
     } else if(entry.kind==='g23-item-converted'){
       keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(isS3bConversion(entry)?!!context.s3bState&&items.get(entry.itemId)?.definitionId===entry.from&&validS3bConversion(context.s3bState,entry,entry.roundId):context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
     } else if (entry.kind === 'item-equipped') {
@@ -650,7 +657,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       requireValue(start <= index && Array.isArray(entry.sourceDeltas), 'combat start prefix');
       requireValue(start <= (firstLootBirth.get(entry.roundId) ?? index), 'loot before combat start');
       const suffix = entries.slice(start, index);
-      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind==='g23-item-converted'||fact.kind === 'item-equipped' || fact.kind === 'item-combined' || fact.kind === 'consumable-used' || fact.kind === 'unit-upgraded'
+      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind==='anger-item-converted'||fact.kind==='g23-item-converted'||fact.kind === 'item-equipped' || fact.kind === 'item-combined' || fact.kind === 'consumable-used' || fact.kind === 'unit-upgraded'
         || (fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'loot')), 'combat resource suffix');
       requireValue(start === entries.length || entries[start]?.kind !== 'unit-upgraded', 'combat start transaction boundary');
       const originalUnits = unitPrefixes.get(start)!;
@@ -675,6 +682,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     if (index + 1 === prefixLength) result = projection();
   }
   finishAcquisition();
+  if(context.scheduleReceipts.some(r=>r.kind==='augment'&&r.definitionId==='anger-issues'))requireValue([...items.values()].every(i=>i.definitionId==='rageblade'||!isAngerIssuesConvertibleItem(i.definitionId)),'missing anger issues conversion');
   requireValue(usedBirths.size === births.size, 'missing receipt birth');
   {
     requireValue(Array.isArray(context.combatSettlements) && context.combatSettlements.length === commits.size, 'missing combat growth commit');

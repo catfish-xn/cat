@@ -55,8 +55,10 @@ export function validateMatchEquipment(state: Readonly<MatchState>): void {
   let previousRound = -1;
   for (const roll of state.equipmentState.rolls) {
     const current = state.items.find(item => item.id === roll.parentItemInstanceId);
-    const parent = (current && grantsTemporaryEquipment(ITEM_DEFINITIONS[current.definitionId]) ? current : s3bHistoricalEquipmentParent(state,roll.parentItemInstanceId,roll.roundId) ?? current)
+    let parent = (current && grantsTemporaryEquipment(ITEM_DEFINITIONS[current.definitionId]) ? current : s3bHistoricalEquipmentParent(state,roll.parentItemInstanceId,roll.roundId) ?? current)
       ?? state.resourceProvenance.entries.flatMap(f=>f.kind==='consumable-used'?f.record.affectedItems:f.kind==='augment-item-transform'?[f.input]:[]).find(i=>i.id===roll.parentItemInstanceId), round = roundIds.indexOf(roll.roundId);
+    const converted=state.resourceProvenance.entries.find(e=>e.kind==='anger-item-converted'&&e.itemId===roll.parentItemInstanceId&&ROUND_CATALOG.find(r=>r.roundId===e.roundId)!.ordinal>=round+1);
+    if(parent&&converted?.kind==='anger-item-converted')parent={...parent,definitionId:converted.from};
     if (!parent || !grantsTemporaryEquipment(ITEM_DEFINITIONS[parent.definitionId]) || ITEM_DEFINITIONS[parent.definitionId].slotCost !== 3
       || round < 0 || round < previousRound || roll.playerLevelSnapshot < MATCH_RULES.initialLevel || roll.playerLevelSnapshot > state.level) {
       throw new Error('Invalid equipment parent/round/level');

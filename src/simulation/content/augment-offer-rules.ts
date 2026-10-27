@@ -1,4 +1,5 @@
 import { AUGMENT_BATCH5_R1_API_NAMES } from './augment-pool-batch5-r1';
+import { AUGMENT_BATCH5_R2_API_NAMES } from './augment-pool-batch5-r2';
 import { AUGMENT_BATCH5_H1_API_NAMES } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3_API_NAMES } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4_API_NAMES } from './augment-pool-batch5-h4';
@@ -42,6 +43,7 @@ import { AUGMENT_ASSOCIATED_TRAITS, AUGMENT_MUTUALLY_EXCLUSIVE } from './augment
  * so pool expansion only adds a row here.
  */
 export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeContent({
+  ...AUGMENT_BATCH5_R2_API_NAMES,
   ...AUGMENT_BATCH1_API_NAMES,
   ...AUGMENT_BATCH2_API_NAMES,
   ...AUGMENT_BATCH3_API_NAMES,
