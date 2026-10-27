@@ -7,6 +7,8 @@ const crypto = require('node:crypto');
 const STAGES = ['2-1', '3-2', '4-2'];
 // P 2026-10-25: preserve the documented inference, not a decoded Riot identifier.
 const TAGS = ['{d02ae323}', '{d12ae4b6}', '{d22ae649}'];
+// P-FINE-VINTAGE-STAGE (user decision 2026-10-27): retain source checks, override production expectation only.
+const OVERRIDES = { TFT11_Augment_FineVintage: { source: STAGES, expected: ['3-2', '4-2'], decision: 'P-FINE-VINTAGE-STAGE' } };
 const DEFAULT_DATA = '/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 const DEFAULT_CROSS = '/home/aiapps/workspace/augment-crossversion-research-2026-10-24';
 const KNOWN = {
@@ -17,7 +19,8 @@ const KNOWN = {
 };
 const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const bans = tags => STAGES.filter((_, i) => tags.includes(TAGS[i]));
-const canonical = table => JSON.stringify(Object.fromEntries(Object.keys(table).sort().map(k => [k, STAGES.filter(s => table[k].includes(s))])));
+// An explicit empty row and an omitted row both mean no stage restriction.
+const canonical = table => JSON.stringify(Object.fromEntries(Object.keys(table).filter(k => table[k].length).sort().map(k => [k, STAGES.filter(s => table[k].includes(s))])));
 function tokens(text) {
   const result = [];
   const re = /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[A-Za-z_$][\w$]*|-?\d+(?:\.\d+)?|[^\s]/g;
@@ -67,7 +70,7 @@ function audit(options = {}) {
   const root = options.root || path.resolve(__dirname, '..');
   const data = options.data || DEFAULT_DATA;
   const cross = options.crossversion || DEFAULT_CROSS;
-  const result = { errors: [], warnings: [], sources: [], knownCases: [], coverage: [], crossVersionDifferences: [], proposedChanges: [] };
+  const result = { errors: [], warnings: [], sources: [], knownCases: [], coverage: [], overrides: [], crossVersionDifferences: [], proposedChanges: [] };
   const error = (code, detail) => result.errors.push({ code, ...detail });
   function json(file, required = false, decode = bytes => JSON.parse(bytes)) {
     if (!fs.existsSync(file)) {
@@ -86,7 +89,7 @@ function audit(options = {}) {
     if (start < 0) throw Error('missing freezeContent object');
     shipped = literal(ts, start + 2);
     for (const [apiName, nodes] of Object.entries(shipped)) {
-      if (!Array.isArray(nodes) || !nodes.length || nodes.some(n => !STAGES.includes(n)) || new Set(nodes).size !== nodes.length) {
+      if (!Array.isArray(nodes) || nodes.some(n => !STAGES.includes(n)) || new Set(nodes).size !== nodes.length) {
         error('INVALID_TABLE_ROW', { apiName, nodes });
       }
     }
@@ -139,7 +142,10 @@ function audit(options = {}) {
   for (const apiName of scope) {
     const r = source.get(apiName);
     if (!r) { error('SOURCE_AUGMENT_MISSING', { apiName }); continue; }
-    const expected = bans(r.item_tags_raw);
+    const sourceBans = bans(r.item_tags_raw), override = OVERRIDES[apiName];
+    if (override && !equal(sourceBans, override.source)) error('OVERRIDE_SOURCE_MISMATCH', { apiName, expected: override.source, actual: sourceBans });
+    const expected = override ? override.expected : sourceBans;
+    if (override) result.overrides.push({ apiName, source: sourceBans, expected, decision: override.decision });
     if (expected.length) generated[apiName] = expected;
     const actual = shipped[apiName] || [];
     if (!equal(expected, STAGES.filter(s => actual.includes(s)))) {
@@ -274,6 +280,8 @@ function report(r) {
   const lines = ['【完成】独立离线阶段禁用审计（P，2026-10-25）；不修改生产表、规则或存档。', `统计：${JSON.stringify(r.summary || {})}`, ''];
   lines.push(`规范化字节一致：${r.canonical?.equal ?? false}；范围外研究记录：${r.outOfScope?.length ?? 0}。`, '', '已知案例（独立预期）：');
   for (const c of r.knownCases) lines.push(`- ${JSON.stringify(c)}`);
+  lines.push('', '已记录的产品覆盖：');
+  for (const override of r.overrides || []) lines.push(`- ${JSON.stringify(override)}`);
   lines.push('', '【未完成】禁用表修订按任务仅列提案，未应用：');
   for (const e of r.errors) lines.push(`- ${e.code}: ${JSON.stringify(e)}`);
   if (!r.errors.length) lines.push('- 无。');

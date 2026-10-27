@@ -43,7 +43,8 @@ function choose(id:string):MatchState {
 function trip(s:MatchState){const text=serializeMatch(s);expect(restoreMatch(text)).toEqual(s);expect(restoreMatch(JSON.parse(text))).toEqual(s);expect(restoreMatch(s)).toEqual(s);}
 function reject(s:MatchState,mutate:(x:any)=>void){const x=JSON.parse(serializeMatch(s));mutate(x);expect(()=>restoreMatch(x)).toThrow();expect(()=>restoreMatch(JSON.stringify(x))).toThrow();expect(()=>serializeMatch(x)).toThrow();}
 it('Called Shot sets exactly four wins, pays four once and survives a subsequent economy settlement',()=>{
- const open=reachRound('2-1',false,firstNodeSeed('called-shot')),c=open.pendingChoice!,s=accepted(selectChoice(open,c.choiceId,c.generation,'called-shot'));
+ // Seed 288 offers Called Shot with movable champions; the earlier seed 233 opens with an immovable golem.
+ const open=reachRound('2-1',false,288),c=open.pendingChoice!,s=accepted(selectChoice(open,c.choiceId,c.generation,'called-shot'));
  expect(s.streak).toEqual({kind:'win',count:4});expect(s.gold-open.gold).toBe(4);expect(augmentGold('called-shot','2-1')).toBe(4);trip(s);
  expect(batch5Streak(s,s.round,{kind:'win',count:9})).toEqual({kind:'win',count:4});
  for(const streak of [{kind:'loss',count:3},{kind:null,count:0},{kind:'win',count:3}])reject(s,x=>{x.streak=streak;});

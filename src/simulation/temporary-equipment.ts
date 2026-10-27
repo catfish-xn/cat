@@ -1,3 +1,4 @@
+import { s3bHistoricalEquipmentParent } from './augment-pool-batch5-s3b-restore';
 import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { ITEM_DEFINITIONS as ORDINARY_ITEMS } from './content/items';
 import { freezeContent } from './content/freeze';
@@ -53,7 +54,8 @@ export function validateMatchEquipment(state: Readonly<MatchState>): void {
   const roundIds = ROUND_CATALOG.slice(0,state.round).map(round => round.roundId);
   let previousRound = -1;
   for (const roll of state.equipmentState.rolls) {
-    const parent = state.items.find(item => item.id === roll.parentItemInstanceId)
+    const current = state.items.find(item => item.id === roll.parentItemInstanceId);
+    const parent = (current && grantsTemporaryEquipment(ITEM_DEFINITIONS[current.definitionId]) ? current : s3bHistoricalEquipmentParent(state,roll.parentItemInstanceId,roll.roundId) ?? current)
       ?? state.resourceProvenance.entries.flatMap(f=>f.kind==='consumable-used'?f.record.affectedItems:[]).find(i=>i.id===roll.parentItemInstanceId), round = roundIds.indexOf(roll.roundId);
     if (!parent || !grantsTemporaryEquipment(ITEM_DEFINITIONS[parent.definitionId]) || ITEM_DEFINITIONS[parent.definitionId].slotCost !== 3
       || round < 0 || round < previousRound || roll.playerLevelSnapshot < MATCH_RULES.initialLevel || roll.playerLevelSnapshot > state.level) {

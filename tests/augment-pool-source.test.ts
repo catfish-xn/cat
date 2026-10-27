@@ -1,8 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { BATCH1_SOURCE, BATCH2_SOURCE, BATCH1_BLOCKED_SOURCE, RESEARCH_FILE } from './augment-pool-source-expectations';
+import { BATCH1_SOURCE, BATCH2_SOURCE, BATCH1_BLOCKED_SOURCE, BATCH1_RECLASSIFIED_SOURCE, RESEARCH_FILE } from './augment-pool-source-expectations';
 import { AUGMENT_BATCH1, AUGMENT_BATCH1_BLOCKED } from '../src/simulation/content/augment-pool-batch1';
 import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
+import { AUGMENT_BATCH5_S3B } from '../src/simulation/content/augment-pool-batch5-s3b';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content';
@@ -27,7 +28,7 @@ it('covers both tables completely with independent indexed expectations',()=>{
  expect(new Set([...BATCH1_SOURCE,...BATCH2_SOURCE].map(x=>x.recordIndex)).size).toBe(93);
 });
 it.each([...BATCH1_SOURCE,...BATCH2_SOURCE])('$id matches research record [$recordIndex]: identity, raw constants and reward plan',e=>{
- const row=AUGMENT_BATCH1[e.id]??AUGMENT_BATCH2[e.id];
+ const row=AUGMENT_BATCH5_S3B[e.id]??AUGMENT_BATCH1[e.id]??AUGMENT_BATCH2[e.id];
  expect(row.apiName).toBe(e.apiName);expect(row.tier).toBe(e.tier);expect(row.source.values).toEqual(e.values);
  if(!e.enabled){
   expect(AUGMENT_BATCH2[e.id].enabled).toBe(false);expect(row.gifts).toEqual([]);
@@ -62,11 +63,15 @@ it.each(BATCH1_BLOCKED_SOURCE)('$apiName record [$recordIndex] stays completely 
  expect(AUGMENT_DEFINITIONS[e.id]).toBeUndefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(e.apiName);
  expect(batch1GiftPlan({...createMatch(42),augments:[{definitionId:e.id,choiceId:'oracle',acquiredRound:1}]})).toEqual([]);
 });
+it.each(BATCH1_RECLASSIFIED_SOURCE)('$apiName is now enabled by P-B5',e=>{
+ expect(AUGMENT_BATCH1_BLOCKED).not.toHaveProperty(e.apiName);
+ expect(AUGMENT_DEFINITIONS[e.id]).toBeDefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).toContain(e.apiName);
+});
 // Optional provenance audit when the external archive is available. CI needs only
 // the checked-in literals above; no download or production-derived oracle.
 it.skipIf(!existsSync(RESEARCH_FILE))('all 95 citations point to the independently transcribed source identities, tiers and constants',()=>{
  const research=JSON.parse(readFileSync(RESEARCH_FILE,'utf8'));
- for(const e of [...BATCH1_SOURCE,...BATCH2_SOURCE,...BATCH1_BLOCKED_SOURCE]){
+ for(const e of [...BATCH1_SOURCE,...BATCH2_SOURCE,...BATCH1_BLOCKED_SOURCE,...BATCH1_RECLASSIFIED_SOURCE]){
   const source=research[e.recordIndex];expect(source.apiName).toBe(e.apiName);
   expect(['silver','gold','prismatic'][source.tier-1]).toBe(e.tier);expect(source.effects).toEqual(e.values);
  }

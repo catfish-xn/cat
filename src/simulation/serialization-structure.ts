@@ -1,5 +1,6 @@
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
 import { carryRestoredAugmentTrace } from './augment-history';
+import { atWhatCostHistoricalXp, skipsFutureAugment } from './augment-pool-batch5-s1b';
 import { validateShopHistory } from './shop-history';
 import { batch5Streak } from './augment-pool-batch5-progress';
 import { withG23RestoreReuse, registerG23RestoreOwner } from './g23-restore-reuse';
@@ -131,7 +132,7 @@ function validPreparationExperience(before:number,level:number,xp:number,purchas
  * (offline purchases wait for the round's augment choice). */
 function preparationExperience(state:MatchState,after:number,round:number):number {
   const before=Math.min(totalExperience(MATCH_RULES.maxLevel,0),after+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<round)).roundXp
-    +batch3EntryXp(state.augments,state.roundResults,round)+augmentAcquisitionXpAtRound(state.augments,round)
+    +batch3EntryXp(state.augments,state.roundResults,round)+augmentAcquisitionXpAtRound(state.augments,round)+atWhatCostHistoricalXp(state,round)
     +state.augments.filter(a=>a.acquiredRound===round).reduce((n,a)=>n+outcomeAcquisitionXp(state,a),0));
   const levels=acquisitionLevels(state);
   for(const a of state.augments)if(a.acquiredRound===round&&Object.hasOwn(levels,a.choiceId))requireValue(levels[a.choiceId]===levelAtExperience(before),'augment acquisition level');
@@ -264,6 +265,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   requireValue(same(receiptOrder, expectedReceiptOrder), 'receipt order');
   let stopped = false;
   for (let round = 1; round <= state.round; round++) for (const event of getRoundSchedule(round)) {
+    if (event.kind === 'augment' && skipsFutureAugment(state, round)) { requireValue(!receipts.has(event.id) && state.pendingChoice?.eventId !== event.id, 'skipped augment'); continue; }
     if (state.pendingChoice?.eventId === event.id) stopped = true;
     if (round === state.round && event.kind === 'anomaly' && !receipts.has(event.id) && state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')) {
       requireValue(state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost * (slot.starLevel === 2 ? 3 : 1) <= state.gold), 'anomaly recruitment affordability');

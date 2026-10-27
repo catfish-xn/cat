@@ -2,6 +2,12 @@ import { AUGMENT_BATCH5_H1_DEFINITIONS } from './content/augment-pool-batch5-h1'
 import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
 import { AUGMENT_BATCH5_H6 } from './content/augment-pool-batch5-h6';
+import { AUGMENT_BATCH5_B5A } from './content/augment-pool-batch5-b5a';
+import { AUGMENT_BATCH5_S1A } from './content/augment-pool-batch5-s1a';
+import { AUGMENT_BATCH5_S1B } from './content/augment-pool-batch5-s1b';
+import { AUGMENT_BATCH5_S3A } from './content/augment-pool-batch5-s3a';
+import { AUGMENT_BATCH5_S3B } from './content/augment-pool-batch5-s3b';
+import { AUGMENT_BATCH5_S3D } from './content/augment-pool-batch5-s3d';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
 import { AUGMENT_BATCH5_H5 } from './content/augment-pool-batch5-h5';
 import { AUGMENT_SHOP } from './content/augment-pool-shop';
@@ -153,7 +159,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
   // Augments: 30 historical + 6 P1 (blinding-speed, portable-forge, radiant-relics, going-long, hedge-fund,
   // investment-strategy-ii) + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 (dual-wielding) + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:Object.keys(AUGMENT_BATCH5_H6).length+Object.keys(AUGMENT_BATCH5_H4).length+Object.keys(AUGMENT_BATCH5_H3).length+Object.keys(AUGMENT_BATCH5_H1_DEFINITIONS).length+Object.keys(AUGMENT_BATCH5_H5).length+Object.keys(AUGMENT_BATCH5).length+Object.keys(AUGMENT_BATCH4_B4COMBAT).length+30+6+Object.keys(AUGMENT_BATCH4_B4REROLL).length+Object.keys(AUGMENT_BATCH2_ENABLED).length+Object.keys(AUGMENT_BATCH1).length+Object.keys(AUGMENT_BATCH3).length+Object.keys(AUGMENT_SHOP).length+Object.keys(AUGMENT_BATCH3_XP).length+Object.keys(AUGMENT_BATCH4).length+Object.keys(AUGMENT_BATCH4_B4XP).length+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:63,traits:35,items:Object.keys(ITEM_DEFINITIONS).length,augments:Object.keys(AUGMENT_BATCH5_B5A).length+Object.keys(AUGMENT_BATCH5_S1A).length+Object.keys(AUGMENT_BATCH5_S1B).length+Object.keys(AUGMENT_BATCH5_S3A).length+Object.keys(AUGMENT_BATCH5_S3B).length+Object.keys(AUGMENT_BATCH5_S3D).length+Object.keys(AUGMENT_BATCH5_H6).length+Object.keys(AUGMENT_BATCH5_H4).length+Object.keys(AUGMENT_BATCH5_H3).length+Object.keys(AUGMENT_BATCH5_H1_DEFINITIONS).length+Object.keys(AUGMENT_BATCH5_H5).length+Object.keys(AUGMENT_BATCH5).length+Object.keys(AUGMENT_BATCH4_B4COMBAT).length+30+6+Object.keys(AUGMENT_BATCH4_B4REROLL).length+Object.keys(AUGMENT_BATCH2_ENABLED).length+Object.keys(AUGMENT_BATCH1).length+Object.keys(AUGMENT_BATCH3).length+Object.keys(AUGMENT_SHOP).length+Object.keys(AUGMENT_BATCH3_XP).length+Object.keys(AUGMENT_BATCH4).length+Object.keys(AUGMENT_BATCH4_B4XP).length+Object.keys(S13_P2_AUGMENTS).length+Object.keys(P3_AUGMENTS).length+9,anomalies:30+1+Object.keys(S13_P2_ANOMALIES).length+11+Object.keys(P3_ANOMALIES).length+4})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

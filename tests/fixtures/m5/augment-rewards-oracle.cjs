@@ -1,3 +1,4 @@
+const {buffetPlan}=require('./augment-inventory-oracle.cjs');
 /* Independent reward ledger. Only test data and raw archive inputs; no production modules.
  * Specs use tuples: U fixed unit, I fixed item, C consumable, R random hero,
  * Q random item, A all heroes. All counts/thresholds are literal source transcriptions.
@@ -5,6 +6,7 @@
  */
 const assert=require('node:assert/strict');
 const {isDeepStrictEqual}=require('node:util');
+const s3b=require('./augment-batch5-s3b-oracle.cjs');
 const b2=require('../../augment-pool-batch2-oracle-data.cjs');
 const b3=require('../../augment-pool-batch3-oracle-data.cjs');
 const b4=require('../../augment-pool-batch4-oracle-data.cjs');
@@ -12,10 +14,15 @@ const U=(id,n=1,star=1)=>['U',id,n,star],I=(id,n=1)=>['I',id,n],C=(id,n=1)=>['C'
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
+ 'pandoras-items':[Q('component')],
+ 'component-buffet':[Q('component')],
+ 'pandoras-items-ii':[Q('component',2)],
+ 'salvage-bin':[Q('completed')],
+ 'academic-research':[Q('component'),U('lux'),U('ezreal')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
  'cooking-pot':[I('frying-pan')],
- 'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
+ 'quality-over-quantity':[C('magnetic-remover',2)], 'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],
  'one-two-five':[Q('component'),R(5)],'band-of-thieves-i':[I('thiefs-gloves')],
@@ -48,6 +55,7 @@ for(const [id,api,hero,item,crownHero]of families){
 }
 initial['academy-crown'].push(Q('sponsored'));initial['family-crown'].push(U('violet'));initial['scrap-crown'].push(Q('component',2));
 Object.assign(initial,b2.gifts,b3.gifts);
+initial['roll-the-dice']=[I('TFT5_Item_ThiefsGlovesRadiant')];
 const MOD=4294967296n;
 const word=n=>Number((BigInt(n)*1664525n+1013904223n)%MOD);
 function salt(seed,parts,mix=false){let h=2166136261n;for(const c of JSON.stringify(parts))h=((h^BigInt(c.charCodeAt(0)))*16777619n)%MOD;let n=Number(BigInt(seed)^h)>>>0;if(mix){n^=n>>>16;n=Math.imul(n,0x85ebca6b);n^=n>>>13;n=Math.imul(n,0xc2b2ae35);n^=n>>>16;}return n>>>0;}
@@ -96,6 +104,18 @@ function rewardPlan(s,env){
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
   const facts=battles.filter(f=>f.round>=a.acquiredRound);
+  if(a.definitionId==='academic-research'){
+   const anchor=s.resourceProvenance.entries.find(e=>e.kind==='item-acquired'&&e.source.kind==='mechanic'&&e.source.receiptId===JSON.stringify(['augment-pool-batch1',a.choiceId,a.definitionId,0,0]));
+   for(const e of s.resourceProvenance.entries)if(e.kind==='item-combined'&&anchor&&e.sequence>anchor.sequence&&env.pools.completed.includes(e.event.definitionId))gifts.push({receiptId:JSON.stringify(['augment-pool-batch1',a.choiceId,a.definitionId,'craft',e.sequence]),source:'augment-pool-batch1',kind:'unit',definitionId:'TFT_ArmoryKeyCompleted',starLevel:1,acquiredRound:a.acquiredRound});
+  }
+  if(a.definitionId==='salvage-bin'){
+   const seventh=s.roundResults.filter(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp')[6];
+   if(seventh)gifts.push(...expand(s,{...a,choiceId:JSON.stringify([a.choiceId,'salvage',7]),acquiredRound:seventh.round},[Q('component')],env));
+  }
+  if(a.definitionId==='replication'){
+   const chosen=(s.seatMechanics?.receipts??[]).find(r=>r.receiptId===`s13-augment:${a.choiceId}:replication:forge`&&r.kind==='choice');
+   if(chosen)for(let n=1;n<=2;n++)if(a.acquiredRound+n<=s.round)levelsOut.push(...expand(s,owner(a,['replication',n],a.acquiredRound+n),[I(chosen.optionId)],env));
+  }
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
@@ -181,7 +201,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
  return tables[weights.findIndex(w=>{if(ticket<w)return true;ticket-=w;return false;})];},
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
-const admitted=new Set(['augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
+const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
  'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel']);
@@ -307,8 +327,15 @@ function validateRewardsCore(before,after,command,events,base){
   }
   if(a.definitionId==='reinfourcement'&&command?.type==='buy'&&base.COST[before.shop.slots[command.slot].definitionId]===4&&!prior.some(r=>r.receiptId===shopId('reinfourcement',a,0)))for(let i=0;i<2;i++)shopGifts.set(shopId('reinfourcement',a,i),{definitionId:before.shop.slots[command.slot].definitionId,starLevel:1});
  }
+ const inventoryPlan=buffetPlan(after);
+ for(const r of appended.filter(r=>r.source==='augment-pool-batch5-s3a')){
+  const gift=inventoryPlan.gifts.get(r.receiptId);assert(gift,'independent component conversion entitlement');
+  assert.equal(r.kind,'unit');assert.equal(r.definitionId,gift.definitionId);assert.equal(r.resolution,'held');assert.equal(r.gold,0);
+  assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,r)),'conversion anvil grant event');
+  shopGifts.set(r.receiptId,gift);
+ }
  const shopActual=appended.filter(r=>r.source==='augment-pool-shop');
- assert.deepEqual(shopActual.map(r=>r.receiptId).sort(),[...shopGold.keys(),...shopGifts.keys()].sort(),'independent due shop rewards');
+ assert.deepEqual(shopActual.map(r=>r.receiptId).sort(),[...shopGold.keys(),...[...shopGifts.keys()].filter(id=>!inventoryPlan.gifts.has(id))].sort(),'independent due shop rewards');
  for(const r of shopActual){
   assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,r)),'shop reward requires actual grant event');
   assert.equal(r.round,after.round);assert.equal(r.roundId,after.roundDefinitionId);
@@ -419,6 +446,8 @@ function validateRewardsCore(before,after,command,events,base){
 // Inventory is a complete transition, including commands with no reward receipt.
 function validateRewards(before,after,command,events,base){
  const result=validateRewardsCore(before,after,command,events,base);
+ s3b.validatePandora(before,after,command);
+ for(const [id,gift] of s3b.validateSalvage(before,after,command,events))result.gifts.set(id,gift);
  // Hand-written counter vectors may omit the inventory entirely.
  if(before.consumables===undefined&&after.consumables===undefined)return result;
  const inventory=[...before.consumables];let serial=before.nextConsumableSerial;

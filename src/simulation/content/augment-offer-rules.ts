@@ -2,7 +2,13 @@ import { AUGMENT_BATCH5_H1_API_NAMES } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3_API_NAMES } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4_API_NAMES } from './augment-pool-batch5-h4';
 import { AUGMENT_BATCH5_H6_API_NAMES } from './augment-pool-batch5-h6';
+import { AUGMENT_BATCH5_B5A_API_NAMES } from './augment-pool-batch5-b5a';
+import { AUGMENT_BATCH5_S1A_API_NAMES } from './augment-pool-batch5-s1a';
+import { AUGMENT_BATCH5_S1B_API_NAMES } from './augment-pool-batch5-s1b';
+import { AUGMENT_BATCH5_S3A_API_NAMES } from './augment-pool-batch5-s3a';
+import { AUGMENT_BATCH5_S3D_API_NAMES } from './augment-pool-batch5-s3d';
 import { AUGMENT_SHOP_API_NAMES } from './augment-pool-shop';
+import { AUGMENT_BATCH5_S3B_API_NAMES } from './augment-pool-batch5-s3b';
 import { AUGMENT_BATCH5_API_NAMES } from './augment-pool-batch5';
 import { AUGMENT_BATCH5_H5_API_NAMES } from './augment-pool-batch5-h5';
 import { AUGMENT_BATCH4_API_NAMES } from './augment-pool-batch4';
@@ -36,6 +42,12 @@ export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeCo
   ...AUGMENT_BATCH5_H4_API_NAMES,
   ...AUGMENT_BATCH5_H5_API_NAMES,
   ...AUGMENT_BATCH5_H6_API_NAMES,
+  ...AUGMENT_BATCH5_B5A_API_NAMES,
+  ...AUGMENT_BATCH5_S1A_API_NAMES,
+  ...AUGMENT_BATCH5_S1B_API_NAMES,
+  ...AUGMENT_BATCH5_S3A_API_NAMES,
+  ...AUGMENT_BATCH5_S3B_API_NAMES,
+  ...AUGMENT_BATCH5_S3D_API_NAMES,
   ...AUGMENT_BATCH4_B4XP_API_NAMES,
   ...AUGMENT_BATCH4_B4REROLL_API_NAMES,
   sisters:'TFT13_TeamupAugment_Sisters', mentorship:'TFT13_TeamupAugment_Mentorship', reunion:'TFT13_TeamupAugment_Reunion',
@@ -69,7 +81,7 @@ export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeCo
  * v22 offer rules (user approval 2026-10-23; docs/S13_RULES_GAP.md P decisions "强化选择过滤"):
  * - traitFilterNodes: an augment with AssociatedTraits is offered only while a fielded player unit carries one of them,
  *   read from the board when the node opens and reused by that node's rerolls. 2-1 is never tailored to the comp.
- * - nodeBans: 14.24 notes — Black Rose emblem/crown never at 2-1; v23 candidate: every 14.24 stage tag (augment-stage-bans.ts, P).
+ * - nodeBans: 14.24 notes — Black Rose emblem/crown never at 2-1; v23 candidate: 14.24 stage tags with the Fine Vintage user override (augment-stage-bans.ts, P).
  * - crossPlayerExclusive: once another live player owns one member, the others are not offered (14.24 notes).
  * - onePerMatch: offered to at most one live player per match (14.24 notes: "offered", not "taken").
  * - mutuallyExclusive: 14.24 MutuallyExclusiveItems, applied (symmetrically) against the player's own augments.

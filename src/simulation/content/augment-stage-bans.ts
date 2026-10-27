@@ -6,6 +6,7 @@ import { freezeContent } from './freeze';
  * The reading reproduces every known case: Black Rose crest/crown carry only the 2-1 tag (patch notes: never at 2-1),
  * Risky Moves carries 3-2 and 4-2 (user 2026-10-24: only at 2-1), Epoch is 2-1 only and Epoch+ 3-2 only.
  * Generated once from augments-research-2026-10-23/data/augments-14.24.json (item_tags_raw); apiName -> banned nodes.
+ * Fine Vintage is the documented P 2026-10-27 user override: offered only at 2-1.
  * Watcher Growth carries all three and is therefore never offered at an augment round.
  */
 export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = freezeContent({
@@ -18,6 +19,18 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT9_Augment_YoungAndWildAndFree":['4-2'],
   'TFT11_Augment_ScoreboardScrapper':['3-2','4-2'],
   'TFT_Augment_Contested':['2-1','4-2'],
+  "TFT9_Augment_RollTheDice":["2-1"],
+  "TFT9_Augment_AllThatShimmers":["3-2", "4-2"],
+  "TFT_Augment_AllThatShimmersPlus":["2-1", "4-2"],
+  TFT_Augment_BeggarsCanBeChoosers:['3-2','4-2'],
+  TFT_Augment_PowerUp:['4-2'],
+  "TFT11_Augment_FineVintage":["3-2","4-2"],
+  "TFT9_Augment_CustomerIsAlwaysRight":["3-2","4-2"],
+  "TFT6_Augment_SalvageBin":["3-2","4-2"],
+  "TFT9_Augment_PandorasItems2":[],
+  "TFT13_Augment_Academy":["4-2"],
+  'TFT_Augment_QualityOverQuantity':['4-2'],
+  'TFT_Augment_Replication':['4-2'],
   "TFT_Augment_FiresalePlus":["2-1", "4-2"],
   "TFT_Augment_RiggedShopPlus":["2-1", "4-2"],
   "TFT11_Augment_Reinfourcement":["2-1", "3-2"],
@@ -178,6 +191,8 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT_Augment_WealthyRehab2":['2-1'],
   "TFT_Augment_WorthTheWaitGold":['3-2','4-2'],
   "TFT_Augment_WorthTheWaitPrismatic":['3-2','4-2'],
+  TFT11_Augment_AtWhatCost:['3-2','4-2'],
+  TFT_Augment_RerollTransfer:['3-2','4-2'],
   TFT_Augment_CalledShot:['3-2','4-2'],
   TFT_Augment_CraftedCrafting:['3-2','4-2'],
   TFT13_Augment_Grant6Cost_MissMage:['2-1','3-2'],

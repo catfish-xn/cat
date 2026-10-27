@@ -1,3 +1,5 @@
+import { augmentExtraRerolls, canRerollAugmentSlot, promoteNextAugmentTier } from './augment-pool-batch5-s1a';
+import { skipsFutureAugment } from './augment-pool-batch5-s1b';
 import { WARWICK_EXCLUDED_AUGMENTS } from './content/opening-batch-b';
 import { openingEncounterId } from './opening-encounter';
 import { AUGMENT_DEFINITIONS } from './content/augments';
@@ -57,18 +59,19 @@ export function deriveAugmentTier(seed: number, choiceId: string): AugmentTier {
 }
 
 /** One resolver for initial offers, rerolls, projection and restore. Encounters override only their specified positions. */
-export function resolveAugmentTier(state: Pick<MatchState, 'openingEncounter' | 'augmentTierSeed'>, choiceId: string): AugmentTier {
+export function resolveAugmentTier(state: Pick<MatchState, 'openingEncounter' | 'augmentTierSeed'> & Partial<Pick<MatchState, 'augments'>>, choiceId: string): AugmentTier {
   const id = openingEncounterId(state);
   const node = /^round:(2-1|3-2|4-2):augment$/.exec(choiceId)?.[1];
+  let tier = deriveAugmentTier(state.augmentTierSeed, choiceId);
   if (node) {
-    if (id === 'golden-gala') return 'gold';
-    if (id === 'prismatic-party' || id === 'prismatic-prelude' && node === '2-1'
-      || id === 'prismatic-finale' && node === '4-2') return 'prismatic';
+    if (id === 'golden-gala') tier = 'gold';
+    else if (id === 'prismatic-party' || id === 'prismatic-prelude' && node === '2-1'
+      || id === 'prismatic-finale' && node === '4-2') tier = 'prismatic';
   }
-  return deriveAugmentTier(state.augmentTierSeed, choiceId);
+  return promoteNextAugmentTier(tier, state.augments ?? [], choiceId);
 }
 
-/** One use per slot per node. ExtraRolls is not admitted by the current card-reroll rule. */
+/** Base allowance per slot; Beggars shared uses are tracked separately in the offer history. */
 export function augmentRerollLimit(_augments: readonly OwnedAugment[]): number {
   return 1;
 }
@@ -158,7 +161,7 @@ export function augmentOptionViews(state: MatchState) {
   return choice.offers.map((definitionId, optionIndex) => ({ definitionId, optionIndex,
     rerollAvailable: state.phase === 'choice' && choice.step === 'offer' && !isCombatRosterLocked(state)
       && state.multiplayer?.status !== 'eliminated'
-      && choice.rerolledSlots?.[optionIndex] === false && candidates.length > 0 }));
+      && !!record && canRerollAugmentSlot(state.augments, choice.choiceId, record.rerolledIndices, optionIndex) && candidates.length > 0 }));
 }
 
 /** Restore from seed and node history, never from saved candidate IDs or a saved RNG checkpoint.
@@ -179,13 +182,13 @@ export function validateAugmentOfferHistory(state: MatchState): void {
     if (node.kind !== 'augment') continue;
     const selected = state.augments.find(a => a.choiceId === node.id);
     const pending = state.pendingChoice?.kind === 'augment' && state.pendingChoice.choiceId === node.id ? state.pendingChoice : null;
+    if (skipsFutureAugment({augments:owned}, round)) { check(!selected && !pending); continue; }
     if (!selected && !pending) continue;
     const record = state.augmentOffers[index++];
-    const tier = resolveAugmentTier(state, node.id);
+    const tier = resolveAugmentTier({...state, augments: owned}, node.id);
     check(!!record && record.choiceId === node.id && record.tier === tier
-      && Number.isSafeInteger(record.rerollCount) && record.rerollCount >= 0 && record.rerollCount <= 3
-      && Array.isArray(record.rerolledIndices) && record.rerolledIndices.length === record.rerollCount
-      && new Set(record.rerolledIndices).size === record.rerollCount);
+      && Number.isSafeInteger(record.rerollCount) && record.rerollCount >= 0 && record.rerollCount <= 3 + augmentExtraRerolls(owned, node.id)
+      && Array.isArray(record.rerolledIndices) && record.rerolledIndices.length === record.rerollCount);
     const sortedUnique = (list: unknown) => Array.isArray(list) && list.every((value, i) => typeof value === 'string' && (i === 0 || list[i - 1] < value));
     check(sortedUnique(record.fieldedTraits) && record.fieldedTraits.every(trait => Object.hasOwn(TRAIT_DEFINITIONS, trait))
       && (isTraitTailoredNode(augmentNodeOf(node.id)) || record.fieldedTraits.length === 0));
@@ -196,13 +199,14 @@ export function validateAugmentOfferHistory(state: MatchState): void {
     removed.push(...offers);
     rng = initial.choiceRngState;
     record.rerolledIndices.forEach((slot, rerollIndex) => {
-      check(Number.isSafeInteger(slot) && slot >= 0 && slot < 3);
+      check(Number.isSafeInteger(slot) && slot >= 0 && slot < 3
+        && canRerollAugmentSlot(owned, node.id, record.rerolledIndices.slice(0, rerollIndex), slot));
       const draw = drawAugmentCard(augmentCandidates(tier, owned, [...removed, ...offers],openingEncounterId(state), recordedOfferFilter(record, rerollIndex + 1, !!state.carousel && !!state.multiplayer && state.openingEncounter.mode === 'shared')), rng);
       offers[slot] = draw.definitionId; removed.push(draw.definitionId);
       rng = draw.choiceRngState; rerolledSlots[slot] = true;
     });
     if (pending) check(pending.augmentTier === tier && pending.rerollCount === record.rerollCount
-      && pending.generation === record.rerollCount && pending.rerollsRemaining === 3 - record.rerollCount
+      && pending.generation === record.rerollCount && pending.rerollsRemaining === 3 + augmentExtraRerolls(owned, node.id) - record.rerollCount
       && JSON.stringify(pending.rerolledSlots) === JSON.stringify(rerolledSlots)
       && JSON.stringify(pending.offers) === JSON.stringify(offers));
     if (selected) { check(selected.acquiredRound === round && offers.includes(selected.definitionId)); owned.push(selected); }

@@ -1,3 +1,7 @@
+## 2026-10-27 Batch5 S3B
+
+学术研究、潘朵拉的装备 II、打捞桶已接入现有命令和保存封套；具体数值、内部签名、触发边界、失败与恢复认证见 [S3B合同](AUGMENT_BATCH5_S3B_CONTRACT.md)。`src/server` 无改动，schema/save/replay/command 仍为12/8/8/7。
+
 ## 2026-10-27 v24 纪元身份
 
 当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。
@@ -1500,3 +1504,15 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
 - `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
 - 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。
+
+### Batch 5 S3a：库存转换（P，2026-10-27）
+
+B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内容在 `content/augment-pool-batch5-s3a.ts`，规则在 `augment-pool-batch5-s3a*.ts`。来源和项目边界见 `S13_RULES_GAP.md` 的 P-B5-S3A。基础装备自助餐仅 2-1 可选；潘朵拉三个节点可选；精致古董按用户确认的 P-FINE-VINTAGE-STAGE 仅在 2-1 提供，保留对原始三个禁选标签的审计。
+
+内部纯接口 `batch5InventoryPlan(state: MatchState): InventoryPlan` 从原始物品收据、按序装备/合成/消耗品/合星事实及自然轮号派生转换和锻造器权益。`projectBatch5Items(items, plan, prefix, round, afterPrefix?, afterRound?)` 只应用指定历史区间的删除/换型；`drainBatch5Inventory(state): MatchState` 支付可放入备战席的锻造器并更新库存；`validateBatch5Inventory(state, plan?)` 对非法收据、序号、出生覆盖和转换权益抛出 `RangeError`。上述函数均为规则内部接口，服务器继续只调用 Match/shared-pool 公共命令。
+
+无需新命令或保存字段。选择仍走 `selectChoice`/在线 `choose`，领取仍走 `claimOrb`，开锻造器仍走 `openAnvil`（或出售锻造器）及原四选一选择；失败枚举、原 state 返回和失败不耗 RNG 的语义不变。`nextRound`、联机 `applyRoundSettlement`、选秀发放及成功操作统一接入规则；`src/server/` 无需修改。锻造器满席时保留可推导的待发权益；战斗锁定和选秀轮不创建备战席单位，之后有空位即发，原组件/成装不能继续使用。原物品出生收据不删除，现有 mechanic unit/anvil choice 收据认证新锻造器与选出物品。
+
+精致古董按每一次装备操作后的库存连续性计龄，故同轮装备后卖出也清零；取得前已在库存的成装从取得轮开始计龄。普通组件移动/拆卸不是新组件；重铸新实例是新组件。潘朵拉只对取得后的自然轮入口、入轮前已有的库存普通组件/普通配方成装抽样，允许抽中原物品；保持实例 ID、类别及物品序号，按 `seed xor FNV1a32(JSON([source, seat, choice, round, item]))` 后一个 `lcg32-v1` 字抽取有序池，不推进任何 live RNG。普通重掷不触发基础装备自助餐；两个原有互斥强化仍按既有源表过滤。
+
+单人 `restoreMatch(JSON)`、`restoreMatch(object)`、`serializeMatch(candidate)` 以及在线 `restoreSharedOrbSnapshot(pool, input)` 均重放库存规则。共享入口另外核对所有物品出生收据的覆盖及串号，不把 PvP 的服务器结算收据冒充单人战斗 growth commit。历史战斗装备认证沿用 `battle-record-validation.ts` 调用的 `validateHistoricalEquipment`，不新增 epoch 或复录 golden。

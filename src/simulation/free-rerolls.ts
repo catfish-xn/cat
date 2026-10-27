@@ -1,4 +1,5 @@
 import { twoMuchValueRerolls } from './augment-pool-batch5-h1-rerolls';
+import { rerollTransferCredits } from './augment-pool-batch5-s1b';
 import { shopAugmentFreeRerolls } from './shop-augments';
 import { batch5RerollsGranted } from './augment-pool-batch5-progress';
 import { batch4RerollsGranted } from './augment-pool-batch4-b4reroll-progress';
@@ -16,7 +17,7 @@ interface FreeRerollRecord {readonly used:number}
 
 /** Credits accumulate and never expire. `perRound` counts every round ordinal from the acquisition round inclusive. */
 export function freeRerollsGranted(state:MatchState):number {
- return twoMuchValueRerolls(state)+batch5RerollsGranted(state)+shopAugmentFreeRerolls(state)+batch4RerollsGranted(state)+batch3XpFreeRerolls(state)+state.augments.reduce((sum,a)=>{
+ return twoMuchValueRerolls(state)+rerollTransferCredits(state)+batch5RerollsGranted(state)+shopAugmentFreeRerolls(state)+batch4RerollsGranted(state)+batch3XpFreeRerolls(state)+state.augments.reduce((sum,a)=>{
   const row=AUGMENT_BATCH3[a.definitionId],f=row?.freeRerolls;if(!f)return sum+outcomeFreeRerolls(state,a);
   return sum+(f.now?batch3Count(row,f.now):0)+(f.perRound?f.perRound*Math.max(0,state.round-a.acquiredRound+1):0);
  },0);

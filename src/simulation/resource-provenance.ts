@@ -1,3 +1,6 @@
+import { projectBatch5Items, type InventoryPlan } from './augment-pool-batch5-s3a';
+import { isS3bConversion, validS3bConversion } from './augment-pool-batch5-s3b-conversions';
+import { academicCraft } from './augment-pool-batch5-s3b';
 import { isAnvil } from './content/anvils';
 import { trainerStar, TRAINER_ID } from './content/opening-batch-b';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
@@ -80,6 +83,8 @@ export interface ProvenanceCombatSettlement {
   readonly roundId: string; readonly combatId: string; readonly settlementId: string;
 }
 export interface ResourceProvenanceContext {
+  readonly batch5Inventory?:InventoryPlan;
+  readonly s3bState?: Pick<import('./match-types').MatchState,'augments'|'resourceProvenance'|'seed'>;
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
   readonly g23RadiantRound?:number;
   readonly carouselReceipts?:readonly import('./carousel-types').CarouselReceipt[];
@@ -386,8 +391,9 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const starts = new Set(entries.filter(entry => entry?.kind === 'combat-growth-committed')
     .map(entry => (entry as Extract<ResourceProvenanceEntry, { kind: 'combat-growth-committed' }>).combatStartProvenancePrefixLength));
   const unitPrefixes = new Map<number, ReadonlyMap<string, ProvenanceUnit>>();
+  let inventoryPrefix=-1,inventoryRound=0;
   const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit,...(unit.definitionId===TRAINER_ID?{starLevel:trainerStar(getCatalogRoundByOrdinal(context.throughRoundOrdinal).stage)}:{}) })).sort(compareIds),
-    items: [...items.values()].map(item => ({ ...item })).sort(compareIds), persistentGrowth: growth.map(entry => ({ ...entry })), nextUnitSerial, nextItemSerial });
+    items: projectBatch5Items([...items.values()],context.batch5Inventory??{conversions:[],anvils:[]},prefixLength,context.throughRoundOrdinal,inventoryPrefix,inventoryRound).map(item => ({ ...item })).sort(compareIds), persistentGrowth: growth.map(entry => ({ ...entry })), nextUnitSerial, nextItemSerial });
   let result = projection();
   const deferredCarouselIds = new Set<string>(), preparationReceipts = new Set<string>(), claimedCarouselIds = new Set<string>();
   const finishAcquisition = () => {
@@ -406,6 +412,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     requireValue(entry.sequence === index, 'sequence');
     const round = getCatalogRoundById(entry.roundId);
     requireValue(round.ordinal >= lastOrdinal && round.ordinal <= context.throughRoundOrdinal, 'round order/boundary');
+    if(context.batch5Inventory){const projected=projectBatch5Items([...items.values()],context.batch5Inventory,index,round.ordinal,inventoryPrefix,inventoryRound);inventoryPrefix=index;inventoryRound=round.ordinal;items.clear();for(const item of projected)items.set(item.id,item);}
     lastOrdinal = round.ordinal;
     if (starts.has(index)) unitPrefixes.set(index, new Map([...units].filter(([id])=>!absent.has(id))));
     if (entry.kind !== 'unit-upgraded') finishAcquisition();
@@ -560,7 +567,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       const definitionId = takeBirth(key, 'item', entry.itemId, entry.roundId);
       items.set(entry.itemId, { id: entry.itemId, definitionId }); nextItemSerial++;
     } else if(entry.kind==='g23-item-converted'){
-      keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
+      keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(isS3bConversion(entry)?!!context.s3bState&&items.get(entry.itemId)?.definitionId===entry.from&&validS3bConversion(context.s3bState,entry,entry.roundId):context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
     } else if (entry.kind === 'item-equipped') {
       keys(entry, [...common, 'itemId', 'unitId', 'slot', ...(Object.hasOwn(entry, 'tick') ? ['tick'] : [])]); integer(entry.slot);
       if (Object.hasOwn(entry, 'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'equipment tick'); }
@@ -579,7 +586,9 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         && recipe?.kind === 'completed' && recipe.recipe && (recipe.recipe[0] === a.definitionId && recipe.recipe[1] === b.definitionId
           || recipe.recipe[0] === b.definitionId && recipe.recipe[1] === a.definitionId), 'combination recipe/ownership');
       requireValue(event.itemId === `item-${nextItemSerial}`, 'combined item serial'); integer(nextItemSerial + 1, 1);
-      event.consumedIds.forEach(id => items.delete(id)); items.set(event.itemId, { id: event.itemId, definitionId: event.definitionId }); nextItemSerial++;
+      event.consumedIds.forEach(id => items.delete(id));
+      if(!context.s3bState||!academicCraft(context.s3bState,entry))items.set(event.itemId, { id: event.itemId, definitionId: event.definitionId });
+      nextItemSerial++;
     } else if(entry.kind==='consumable-used') {
       keys(entry,[...common,'record',...(Object.hasOwn(entry,'tick') ? ['tick'] : [])]);
       if (Object.hasOwn(entry,'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'consumable tick'); }

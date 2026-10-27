@@ -5,6 +5,12 @@ import { AUGMENT_BATCH5_H3 } from '../src/simulation/content/augment-pool-batch5
 import { AUGMENT_BATCH5_H4 } from '../src/simulation/content/augment-pool-batch5-h4';
 import { AUGMENT_BATCH5_H5 } from '../src/simulation/content/augment-pool-batch5-h5';
 import { AUGMENT_BATCH5_H6 } from '../src/simulation/content/augment-pool-batch5-h6';
+import { AUGMENT_BATCH5_B5A } from '../src/simulation/content/augment-pool-batch5-b5a';
+import { AUGMENT_BATCH5_S1A } from '../src/simulation/content/augment-pool-batch5-s1a';
+import { AUGMENT_BATCH5_S1B } from '../src/simulation/content/augment-pool-batch5-s1b';
+import { AUGMENT_BATCH5_S3A } from '../src/simulation/content/augment-pool-batch5-s3a';
+import { AUGMENT_BATCH5_S3B } from '../src/simulation/content/augment-pool-batch5-s3b';
+import { AUGMENT_BATCH5_S3D } from '../src/simulation/content/augment-pool-batch5-s3d';
 import { AUGMENT_BATCH1 } from '../src/simulation/content/augment-pool-batch1';
 import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
 import { AUGMENT_BATCH3 } from '../src/simulation/content/augment-pool-batch3';
@@ -81,19 +87,19 @@ describe('M5 frozen S13 slice',()=>{
     }
   });
   // Augments: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11; anomalies: 30 historical + 1 P1 + 3 P2 + 11 P4 + 7 P3 + 2 D11.
-  it('freezes the integrated catalog: 35 supported traits, 8 components, 36 recipes, 245 augments and 56 anomalies',()=>{
+  it('freezes the integrated catalog: 35 supported traits, 8 components, 36 recipes, 260 augments and 56 anomalies',()=>{
     // Frozen pre-expansion slice: 30 historical + 6 P1 + 14 P2 + 7 P3 + 3 D11 + 5 teamups + Sisters.
     // Count admitted raw source rows, independently of the generated *_DEFINITIONS exports.
     const augmentCount = 30 + 6 + 14 + 7 + 3 + 5 + 1
       + [AUGMENT_BATCH1, AUGMENT_BATCH3, AUGMENT_BATCH3_XP, AUGMENT_BATCH4,
-        AUGMENT_BATCH4_B4XP, AUGMENT_BATCH4_B4REROLL, AUGMENT_BATCH4_B4COMBAT, AUGMENT_SHOP, AUGMENT_BATCH5, AUGMENT_BATCH5_H3, AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H5, AUGMENT_BATCH5_H6]
+        AUGMENT_BATCH4_B4XP, AUGMENT_BATCH4_B4REROLL, AUGMENT_BATCH4_B4COMBAT, AUGMENT_SHOP, AUGMENT_BATCH5, AUGMENT_BATCH5_H3, AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H5, AUGMENT_BATCH5_H6, AUGMENT_BATCH5_B5A, AUGMENT_BATCH5_S1A, AUGMENT_BATCH5_S1B, AUGMENT_BATCH5_S3A, AUGMENT_BATCH5_S3B, AUGMENT_BATCH5_S3D]
         .reduce((sum, source) => sum + Object.keys(source).length, 0)
       + Object.values(AUGMENT_BATCH2).filter(row => row.enabled).length
       + Object.values(AUGMENT_BATCH5_H1).filter(row => row.enabled).length;
     expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([35,44,augmentCount,56]);
-    // Independent integrated total (235 + 1 H1 + 2 H3 + 3 H4 + 2 H5 + 2 H6).
+    // Independent integrated total (235 + 10 H + 15 B5A/S1A/S1B/S3A/S3B/S3D).
     // Shop Glitch remains disabled; Table Scraps is registered but banned at all offer nodes.
-    expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(245);
+    expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(260);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);

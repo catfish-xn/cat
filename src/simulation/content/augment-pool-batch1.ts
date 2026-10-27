@@ -1413,6 +1413,4 @@ export const AUGMENT_BATCH1_DEFINITIONS:Readonly<Record<string,ChoiceDefinition>
 export const AUGMENT_BATCH1_TIERS = freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH1).map(([id,row])=>[id,row.tier])));
 export const AUGMENT_BATCH1_API_NAMES = freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH1).map(([id,row])=>[id,row.apiName])));
 export const AUGMENT_BATCH1_BLOCKED = freezeContent({
-  "TFT9_Augment_AllThatShimmers": "尚缺已认证生金神器候选池与InterestCap=5语义；3选1不能套用4选锻造器。",
-  "TFT_Augment_AllThatShimmersPlus": "同闪若金鳞：生金池/InterestCap语义未认证、3选管线待接。",
 });
