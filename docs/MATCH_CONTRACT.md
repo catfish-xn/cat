@@ -28,6 +28,9 @@ B5-42／43／44 已开放；函数签名、失败原因和全部接线见 [H7 �
 - `trackerGiftPlan(state:MatchState): AugmentGift[]`：未完成返回空；完成后按首次事实和独立 LCG 子流重推六份唯一收据，不按已持有纹章过滤。重试和恢复不重发。`Room.apply / claimBotOrbs → completeAugmentCommand` 经 `src/server-entry/index.ts` 调同一规则覆盖共享刷新／经验等入口，服务器仅合并结果与事件。
 
 历史与存档认证见 [AUGMENT_HISTORY_DESIGN](AUGMENT_HISTORY_DESIGN.md#2026-10-27-h10-使用与扩展)。object、JSON、序列化文本均经同一恢复检查；联机文本用 canonicalContent，restoreSharedOrbSnapshot 仍要求独立 authority，离线 serializeMatch/restoreMatch 仍拒绝联机档。
+## 2026-10-27 H11 强化接入（候选）
+
+`scavenger`（黄金，2-1／3-2／4-2）和 `sponging`（棱彩，3-2／4-2）经已有 `selectChoice`／共享池choose开放；无新Match或服务器命令。两项均需 `augment-history-v1`，缺失不迁移；联机恢复仍要求独立服务器authority。精确内容摘要由本分支重算，不修改历史epoch。数值、约定、内部API及所有接线点见 [H11实现与验收](AUGMENT_BATCH5_H11.md)。
 
 ## 2026-10-27 v24 纪元身份
 

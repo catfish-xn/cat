@@ -11,6 +11,9 @@ B5-42 从 `augment-history-v1` 的死亡现场装备判定资格，复活后的�
 P-B5-60：取得后每个实际参战的狙神（含正式装备纹章）首次以某格开战即获得 800 Bps，连续相同开战格每战 +800，封顶 3200；换开战格或离场后重上回到 800，合星继承主实例，出售重买清零。PvE/PvP 均计，供给轮／未参战不加层，准备期移格再移回不改变开战格。
 
 `augment-pool-batch5-h10-sniper.ts` 只读已认证历史，`readCombatStrategyInputs` 和 `snapshotForBattleSteps` 冻结可选 `sniperOpening`；`compileSideSteps` 按各席单位命名空间映射，`buildStrategySnapshotSteps` 为相应玩家单位绑定已有 `damageAmp` mechanic。战斗沿用整数增伤及伤害流水线，没有新 tick 逻辑。每场只算一次，同轮开战后的 positions 不改写冻结输入；`restoreCombatInput` 以历史重推值精确认证，双边 snapshot 校验拥有者、单位 ID 和 800/1600/2400/3200 范围。结构化双边 snapshot 不是客户端历史认证接口，联机保存仍需独立服务器 authority。
+## 2026-10-27 H11 临时成装（候选；不重录 epoch）
+
+开放拾荒者／白蹭，分别在真实死亡清理后和tick0开场执行。永久装备由历史roster API冻结，死亡使用 `augment-history-v1` 同源采样；临时成装复用现有装备载荷、事件和收据，完整重演认证，下一轮不进入永久物品账本。无新命令或wire类型；内部函数签名、失败原因及完整联机调用点见 [H11合同补充](AUGMENT_BATCH5_H11.md)。本次内容摘要重算，旧摘要拒绝；用户要求保留历史epoch录制。
 
 ## 2026-10-25 v23 当前战斗与恢复合同
 

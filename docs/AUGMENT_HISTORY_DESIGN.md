@@ -40,6 +40,10 @@ B5-61 羁绊追踪者在同一个 `augment-history-v1` 内新增事实 `{kind:'t
 
 ## 数据与归属
 
+### H11 实际持有者接入（2026-10-27）
+
+`scavenger`、`sponging` 已开放并登记，继续使用本节的开战阵容与完整死亡事实。`historyRoster` 的输入收窄为 `Pick<MatchState,'preparation'|'items'>`，允许从已认证的双边战斗输入采样同一永久阵容；保存结构不变。新增战中读取器 `augment-death-samples.readAugmentFirstHeroDeaths(state,events)`，在事实对外发布前读取同源真实死亡样本及已重演认证的首次死亡前缀，恢复后无需私有缓存即可继续。每次真实死亡事实仍完整保留，去重仅属于读取视图。详细接口、时序、三入口认证和服务端复用点见 [H11说明](AUGMENT_BATCH5_H11.md)。没有新增版本节或补造历史。
+
 完整 TypeScript 定义在 `src/simulation/augment-history-types.ts`。顶层为 `{version,seatId,facts,proof}`；单人席位 ID 为 `solo`，联机为服务器凭证对应的实际席位 ID。每个 fact 都包含连续 `sequence`、`seatId`、自然轮 `round/roundId` 与 `resourcePrefix`。单位始终使用实例 ID；板上格、备战席槽位、星级、定义 ID、装备实例和位置均保留。位置不是按数组顺序猜测。
 
 | 事实 | 记录时点与含义 | 需求 |

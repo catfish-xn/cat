@@ -171,8 +171,8 @@ it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14
   const p = runAudit([], root);
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
-  // Integrated H and S inventories, including disabled Shop Glitch and the Fine Vintage override.
-  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 239, shippedRows: 191, regeneratedRows: 194, unrestricted: 72, errors: 4, crossVersionDifferences: 8 });
+  // Integrated inventories plus unrestricted Scavenger and 2-1-banned Sponging.
+  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 248, shippedRows: 199, regeneratedRows: 202, unrestricted: 73, errors: 4, crossVersionDifferences: 8 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
     ['TABLE_MISMATCH', 'TFT13_Augment_Cabal', ['2-1', '4-2']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Experiment', ['2-1']],

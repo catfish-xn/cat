@@ -17,7 +17,6 @@ import { CAROUSEL_RULES_BINDING } from '../src/server/room/carousel';
 import { createCarousel, advanceCarousel, pickCarouselForSeat, grantAdditionalCarouselPick, restoreCarouselSeat } from '../src/simulation/carousel';
 import { supplySeats, must } from './p7-carousel-helper';
 import { assertSharedPoolConservation } from '../src/simulation/shared-pool';
-import { CONTENT_DIGEST, LOOT_REPLAY_DIGEST } from '../src/simulation/content/identity-constants';
 
 // Infrastructure fixture: real existing offers/commands, with only the history capability mocked.
 // No new augment definition/effect is installed, no production content/offer pool is changed.
@@ -27,7 +26,11 @@ vi.mock('../src/simulation/augment-history-owners', async importOriginal => {
   return {...actual,augmentNeedsHistory:(id:string)=>actual.augmentNeedsHistory(id)||id==='starry-night'||fixture.allOwners};
 });
 // Preserve the immutable baseline assertion while normalizing only the deliberately updated content identities.
-const baselineBytes=(text:string)=>text.replaceAll(CONTENT_DIGEST,'fnv1a32-utf16:db662e0b').replaceAll(LOOT_REPLAY_DIGEST,'fnv1a32-utf16:18c876b2');
+const baselineBytes=(text:string)=>canonicalContent(JSON.parse(text, (key, value) => {
+  if (key === 'replayDigest') { expect(value).toBe(LOOT_REPLAY_DIGEST); return 'fnv1a32-utf16:18c876b2'; }
+  if (key === 'contentDigest') { expect(value).toBe(CONTENT_DIGEST); return 'fnv1a32-utf16:db662e0b'; }
+  return value;
+}));
 let acquired: MatchState, advanced: MatchState;
 const baselineIdentity=(text:string)=>text.replaceAll('s13-g2-3-v25-online-rules','s13-g2-3-v24-online-rules')
   .replaceAll('s13-14.24b-g2-3-v25-online-rules','s13-14.24b-g2-3-v24-online-rules')
@@ -397,7 +400,8 @@ it('authenticates generic HP/AP growth written inside an acquisition transaction
   }finally{hook.mockRestore();}
 });
 
-import { canonicalContent } from '../src/simulation/content';
+import { canonicalContent, CONTENT_DIGEST } from '../src/simulation/content';
+import { LOOT_REPLAY_DIGEST } from '../src/simulation/loot-freeze';
 import { stepMatch } from '../src/simulation/match';
 import { augmentDeathsFromEvents, sampleAugmentDeath } from '../src/simulation/augment-death-samples';
 import { stepCombat, type CombatUnit } from '../src/simulation/combat';

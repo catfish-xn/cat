@@ -56,7 +56,7 @@ function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySn
     const ability = resolved ? structuredClone(resolved.ability) : resolveAbility(stats.abilityId, unit.starLevel);
     const neutral = stats.unitKind === 'neutral' ? readNeutralCombatUnit(unit.id) : undefined;
     if (stats.unitKind === 'neutral' && (!neutral || neutral.definitionId !== unit.definitionId || neutral.encounterId !== unit.encounterId || unit.team !== 'enemy')) throw new RangeError('Invalid neutral combat identity');
-    return [{ ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
+    return [{ ...(resolved?.augmentEquipment ? {equipment: structuredClone(resolved.augmentEquipment)} : {}), ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
       ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel, ...(resolved?.familyReunion?{familyReunion:resolved.familyReunion}:{}), ...(resolved?.effectiveStarLevel?{effectiveStarLevel:resolved.effectiveStarLevel}:{}),
       ...(getUnitForm(formUnit,preparationState.board)?{form:getUnitForm(formUnit,preparationState.board)!}:{}),
       ...(resolved?.itemSummon?{itemSummon:structuredClone(resolved.itemSummon),startingCell:{...unit.location.cell}}:{}),cell: { ...unit.location.cell },

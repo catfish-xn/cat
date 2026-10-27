@@ -1,3 +1,4 @@
+import { openingH11 } from './augment-pool-batch5-h11';
 import { carryAugmentDeathSample } from './augment-death-samples';
 import { startExperimentClones } from './combat-experiment-clone';
 import { startV20Traits } from './combat-v20-traits';
@@ -84,6 +85,9 @@ export function applyCombatStart(state: CombatState): CombatStep {
     startSixCost({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Six-cost opening cannot draw RNG');}});
     startV19({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V19 opening cannot draw RNG');}});
     startV20Traits({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('V20 opening cannot draw RNG');}});
+    openingH11({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{
+      const next=nextRandom(rngState);rngState=next.state;rngDraws++;return next.word;
+    }}, state);
     // Final owner HP is frozen only after all opening boosts and broadcasts.
     initializeMirrorHealth(mechanismUnits,shields);
     startExperimentClones(mechanismUnits);

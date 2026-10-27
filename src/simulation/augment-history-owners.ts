@@ -3,6 +3,8 @@
 export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>> = {
   'trait-tracker': ['trait-activation'],
   'snipers-nest': ['positions', 'combat-roster', 'pvp-roster'],
+  'sponging': ['combat-roster', 'pvp-roster'],
+  'scavenger': ['combat-roster', 'deaths'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],

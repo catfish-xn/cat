@@ -9,7 +9,7 @@ import { p2GrantedItemProgram } from '../s13-augments-p2-strategy';
 
 export const GRANTED_ITEM_EFFECT_INDEX = 1024;
 export const grantedItemInstanceId = (grant: CombatItemGrant): string =>
-  JSON.stringify(['chest', grant.chest.ownerId, grant.chest.instanceId, grant.chest.effectIndex, grant.ordinal]);
+  JSON.stringify([grant.chest.sourceKind === 'augment' ? 'augment-h11' : 'chest', grant.chest.ownerId, grant.chest.instanceId, grant.chest.effectIndex, grant.ordinal]);
 export function grantedItemSource(unitId: string, grant: CombatItemGrant): Source {
   return { ownerId: unitId, sourceKind: 'item', definitionId: grant.definitionId, instanceId: grantedItemInstanceId(grant), effectIndex: GRANTED_ITEM_EFFECT_INDEX, parentItemInstanceId: null };
 }

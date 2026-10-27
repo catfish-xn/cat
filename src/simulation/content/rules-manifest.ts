@@ -9,6 +9,7 @@ import { AUGMENT_BATCH5_S3D } from './augment-pool-batch5-s3d';
 import { AUGMENT_BATCH5_H7 } from './augment-pool-batch5-h7';
 import { AUGMENT_BATCH5_H8, DHAMPYR_RULES } from './augment-pool-batch5-h8';
 import { AUGMENT_BATCH5_H10 } from './augment-pool-batch5-h10';
+import { AUGMENT_BATCH5_H11 } from './augment-pool-batch5-h11';
 import { AUGMENT_SHOP } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S1A } from './augment-pool-batch5-s1a';
 import { AUGMENT_BATCH5_S3B } from './augment-pool-batch5-s3b';
@@ -77,6 +78,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch5H7:{version:'augment-pool-batch5-h7-v25',content:AUGMENT_BATCH5_H7,convention:'P-B5-H7-2026-10-27',deathRandom:'fnv1a32-utf16-source-seat-choice-combat-event-xor-seed-lcg32-word-less-than-2^31'},
   augmentPoolBatch5H8:{version:'augment-pool-batch5-h8-v25',content:AUGMENT_BATCH5_H8,dhampyr:DHAMPYR_RULES,convention:'P-B5-2026-10-27'},
   augmentPoolBatch5H10: { content: AUGMENT_BATCH5_H10, convention: 'P-B5-60/61-2026-10-27', tracker: 'successful-preparation-command-8-nonunique-traits-6-of-22-emblems-without-replacement-once', sniper: 'first-opening-8-cap-32-cell-or-absence-reset-main-instance-merge', history: 'augment-history-v1' },
+  augmentPoolBatch5H11:{version:'augment-pool-batch5-h11-v25',content:AUGMENT_BATCH5_H11,convention:'P-B5-76-79-2026-10-27',pool:'G24-CHEST-01',rng:'combat-lcg32-rejection-uniform',deaths:'ordered-first-ordinary-hero-deaths-item-then-live-recipient-skip-without-rng',opening:'permanent-slots-before-scrap-nearest-hex-then-id-sample-all-before-grants'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch5H5:{version:'augment-pool-batch5-h5-v1',content:AUGMENT_BATCH5_H5,convention:'P-B5-35-36-H5-2026-10-27',
     selection:'carousel-rng-after-xor-42533535-seat-index-choice-id-fnv-lcg32-rejection-v1',

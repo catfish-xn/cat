@@ -25,7 +25,7 @@ const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalConten
 export const historySeatId = (s: MatchState): string => s.multiplayer?.seatId ?? 'solo';
 export const needsAugmentHistory = (s: MatchState): boolean => s.augments.some(a => augmentNeedsHistory(a.definitionId));
 export const needsAugmentPreparationClock = (s: MatchState): boolean => s.augments.some(a => AUGMENT_HISTORY_OWNERS[a.definitionId]?.includes('preparation-time'));
-export function historyRoster(s: MatchState): HistoryRoster {
+export function historyRoster(s: Pick<MatchState, 'preparation' | 'items'>): HistoryRoster {
   return structuredClone({ units: s.preparation.units.filter(u => u.team === 'player'), items: s.items });
 }
 export function appendAugmentFact(s: MatchState, fact: AugmentFactData): MatchState {

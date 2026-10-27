@@ -206,6 +206,7 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   TFT11_Augment_BloodBank:['4-2'],
   TFT10_Augment_GoodForSomethingSilver:['3-2','4-2'],
   TFT_Augment_TraitTracker:['2-1','4-2'],
+  TFT_Augment_Sponging:['2-1'],
   TFT_Augment_CalledShot:['3-2','4-2'],
   TFT_Augment_CraftedCrafting:['3-2','4-2'],
   TFT13_Augment_Grant6Cost_MissMage:['2-1','3-2'],
