@@ -34,7 +34,7 @@ it('transcribes only B5-69 source values and registers the gold Ambusher augment
   expect(AUGMENT_BATCH5_G7[ID].description).toBe(source.description_zh_cn);
   expect(AUGMENT_DEFINITIONS[ID].name).toBe('战利品爆炸');
   expect(AUGMENT_TIERS[ID]).toBe('gold');expect(AUGMENT_POOL_API_NAMES[ID]).toBe(source.apiName);
-  expect(AUGMENT_STAGE_BANS[source.apiName as keyof typeof AUGMENT_STAGE_BANS]).toBeUndefined();
+  expect(AUGMENT_STAGE_BANS[source.apiName as keyof typeof AUGMENT_STAGE_BANS]).toEqual(['4-2']);
   expect(LOOT_EXPLOSION_BASE_DROP_CHANCE).toBe(1100);
   expect(LOOT_EXPLOSION_RULES.components).toEqual(pools.component);
   expect(LOOT_EXPLOSION_RULES.completed).toEqual(pools.completed);
@@ -43,7 +43,7 @@ it('transcribes only B5-69 source values and registers the gold Ambusher augment
 });
 it.each(['2-1','3-2','4-2'])('respects %s offers, tailoring and built-different exclusivity, with an independent pool',node=>{
   for(const traits of [[],['ambusher']])for(const owned of [[],[{definitionId:'built-different',choiceId:'prior',acquiredRound:1}]]){
-    const expected=!owned.length&&(node==='2-1'||traits.includes('ambusher'));
+    const expected=node!=='4-2'&&!owned.length&&(node==='2-1'||traits.includes('ambusher'));
     expect(augmentCandidates('gold',owned,[],null,{node,fieldedTraits:traits,blocked:[]}).includes(ID)).toBe(expected);
     expect(augmentPool('gold',owned,[],`round:${node}:augment`,traits).includes(ID)).toBe(expected);
   }
