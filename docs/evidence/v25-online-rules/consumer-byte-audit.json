@@ -1430,7 +1430,7 @@
       "previousBytes": 0,
       "currentBytes": 61860,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "3fa1c478889c0672f97b38da6496745f40d670dce59ab34083eb3b63787b6b89",
+      "currentSha256": "29ca6e1cd9cbd2655b4c400db5ba1c96d58714fb2945bed2f67e7bf8839e6be0",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v25-online-rules-herald-raw/quicksilver.json": {
@@ -1753,9 +1753,9 @@
     "tests/server/augment-pool-batch5-r1-room.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23801,
+      "currentBytes": 33591,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "755cea7a7e03983049d5c1d1aa76f0f3c7828300ca2675a6f6cabddf664332a1",
+      "currentSha256": "bf8a144ec0a1f260a76abdcd817436c9e53e5ba943021497a3a475620934fc80",
       "firstDifferentByte": 0
     },
     "tests/server/augment-pool-batch5-r3-cloning-room.test.ts": {

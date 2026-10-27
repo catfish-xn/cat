@@ -107,7 +107,7 @@
     "src/simulation/augment-pool-batch5-h9-cabal.ts": "55f07b02af7a94b92a90607d494a8057ddd58440e564acf5bd2f0e3012d4f8f2",
     "src/simulation/augment-pool-batch5-h9.ts": "5c753707a5c5a80bd3fcb9063a0ddcd37a139a7ca88d35928906a6d3cd3701b5",
     "src/simulation/augment-pool-batch5-progress.ts": "0e7689d7bc8dd396a19472cd69f042d8bd5bd06029e69bc961da894a08fdb5ee",
-    "src/simulation/augment-pool-batch5-r1.ts": "684c8b4cca4dfd15d8496bf0a5dc530866845195619414b967456e2e8113d111",
+    "src/simulation/augment-pool-batch5-r1.ts": "b47dd38cdd53e0eb9d7eea0c3e62e44c50ef19d966326327e7c145ce04bb427f",
     "src/simulation/augment-pool-batch5-r2-anomaly.ts": "67c7d79bfff626425e3928c2ce7db9b94be15ee16e31eebef76d2288e914014a",
     "src/simulation/augment-pool-batch5-r2-combat.ts": "35eafaa4cda6a2ada4b35c63321a44dc498683abbcf1b935c59a48421de26957",
     "src/simulation/augment-pool-batch5-r2-history.ts": "bfc9af1d16ec819b4a68de00647c83e2d60400c9c95b2acb696f4bf7d0cad6b1",
