@@ -27,10 +27,12 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Re-searched after the v24 shop / batch-5 merge (235 cards, P 2026-10-27), retaining the same routes and first-seed rule.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
-export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
+export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: readonly number[] }>> = {
   "tiniest-titan-plus":{node:'3-2',seed:0},
   // Seed 20 requires the existing free reroll of slot 0 at 4-2.
-  "glorious-evolution":{node:'4-2',seed:20,fielded:true},
+  "glorious-evolution":{node:'4-2',seed:20,fielded:true,rerolls:[0]},
+  'moonlight':{node:'4-2',seed:9,fielded:true},
+  'greater-moonlight':{node:'4-2',seed:20,fielded:true,rerolls:[0]},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -132,7 +134,7 @@ export function offerFor(id: string): MatchState {
   const at = STAGE_SEEDS[id];
   if (!at) throw new Error(`No stage seed for ${id}; re-run the stage seed search`);
   let state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
-  if (id === 'glorious-evolution') { const c = state.pendingChoice!; state = accepted(rerollAugment(state,c.choiceId,c.generation,0)); }
+  for (const slot of at.rerolls ?? []) { const c=state.pendingChoice!; state=accepted(rerollAugment(state,c.choiceId,c.generation,slot)); }
   expect(state.roundDefinitionId).toBe(at.node);
   expect(state.pendingChoice?.kind).toBe('augment');
   expect(state.pendingChoice?.offers, `${id} at ${at.node} seed ${at.seed}`).toContain(id);
