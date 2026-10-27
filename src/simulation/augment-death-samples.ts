@@ -8,8 +8,8 @@ const samples = new WeakMap<object, Omit<AugmentDeath, 'combatId' | 'eventSeq'>>
 const histories = new WeakMap<CombatState, readonly AugmentDeath[]>();
 export function sampleAugmentDeath<E extends CombatEvent>(event: E, unit: CombatUnit): E {
   samples.set(event, { tick: event.tick, unitId: unit.id, definitionId: unit.definitionId, team: unit.team, ownerSeatId: unit.team === 'player' ? 'solo' : null, originalUnitId: unit.id,
-    ordinaryHero: !!UNIT_DEFINITIONS[unit.definitionId] && !UNIT_DEFINITIONS[unit.definitionId].summon && unit.unitKind !== 'neutral' && !unit.itemSummon && !unit.anomalySummon,
-    equipment: structuredClone(unit.equipment ?? []), combatItemGrants: structuredClone(unit.combatItemGrants ?? []) });
+    ordinaryHero: !!UNIT_DEFINITIONS[unit.definitionId] && !UNIT_DEFINITIONS[unit.definitionId].summon && unit.unitKind !== 'neutral' && !unit.itemSummon && !unit.anomalySummon && !unit.rebelCopy,
+    ...(unit.form ? { form: unit.form } : {}), ...((unit.rebelCopy || unit.itemSummon) && UNIT_DEFINITIONS[unit.definitionId] && !UNIT_DEFINITIONS[unit.definitionId].summon && unit.unitKind !== 'neutral' ? { championCopy: true as const } : {}), equipment: structuredClone(unit.equipment ?? []), combatItemGrants: structuredClone(unit.combatItemGrants ?? []) });
   return event;
 }
 export function carryAugmentDeathSample<E extends CombatEvent>(before: CombatEvent, after: E): E {

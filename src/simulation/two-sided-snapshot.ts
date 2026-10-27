@@ -1,3 +1,4 @@
+import { ghostFriendsGrowth } from './augment-pool-batch5-g2';
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { drainSetup } from './setup-work';
@@ -100,6 +101,11 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       requireSnapshot(c.phase!=='returned'||round.ordinal>=b!.boundRound+3);
       requireSnapshot(Object.keys(c).length===3);
     }
+    if (s.ghostFriendsGrowth !== undefined) {
+      requireSnapshot(augmentIds.has('ghost-of-friends-past')); record(s.ghostFriendsGrowth);
+      requireSnapshot(Object.keys(s.ghostFriendsGrowth).sort().join(',') === 'abilityPower,attackDamageBps,healthFlat');
+      for (const v of Object.values(s.ghostFriendsGrowth)) integer(v);
+    } else requireSnapshot(!augmentIds.has('ghost-of-friends-past'));
     if(s.h6Growth!==undefined){
       requireSnapshot(augmentIds.has('scoreboard-scrapper') && Array.isArray(s.h6Growth) && s.h6Growth.length===s.units.length);
       const ids=new Set<string>();
@@ -136,6 +142,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       && ((augmentIds.has('investment-strategy-i') || augmentIds.has('investment-strategy-ii')) || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
+      ...(s.ghostFriendsGrowth?{ghostFriendsGrowth:{...s.ghostFriendsGrowth}}:{}),
       ...(s.h6Growth?{h6Growth:s.h6Growth.map(g=>({...g}))}:{}),
       ...(s.d14Combat?{d14Combat:structuredClone(s.d14Combat)}:{}),
       ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),
@@ -187,6 +194,7 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
   const d14Combat=d14Certificate(state);
   const h6Growth=scoreboardCombatGrowth(state,units.map(u=>u.id));
   return yield* restorePlayerBattleSnapshotSteps({
+    ...(ghostFriendsGrowth(state)?{ghostFriendsGrowth:ghostFriendsGrowth(state)}:{}),
     ...(h6Growth?{h6Growth}:{}),
     ...(d14Combat&&ids.has(d14Combat.unitId)?{d14Combat}:{}),
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),

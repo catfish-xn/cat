@@ -1,3 +1,4 @@
+import { rebelTraitIdentity, type RebelCopy } from './augment-pool-batch5-g2-rebel';
 import { isTraitSnapshotMember } from './traits/effective-membership';
 import type { TraitSnapshot } from './strategy-types';
 import { isAttackProxy } from './anomalies/availability';
@@ -100,9 +101,9 @@ function advanceCorrosion(ctx: AbilityContext): void {
 }
 /** The opening strategy, including inactive rows, owns runtime membership.
  * Plain standalone callers without a strategy retain native eligibility. */
-export function shareAugmentTraits(a: Pick<S13Unit,'id'|'definitionId'|'team'>,
-  b: Pick<S13Unit,'id'|'definitionId'|'team'>, traits?: readonly TraitSnapshot[]): boolean {
-  return traits !== undefined ? traits.some(t => isTraitSnapshotMember(t,a) && isTraitSnapshotMember(t,b))
+export function shareAugmentTraits(a: Pick<S13Unit,'id'|'definitionId'|'team'> & {readonly rebelCopy?:RebelCopy},
+  b: Pick<S13Unit,'id'|'definitionId'|'team'> & {readonly rebelCopy?:RebelCopy}, traits?: readonly TraitSnapshot[]): boolean {
+  return traits !== undefined ? traits.some(t => isTraitSnapshotMember(t,rebelTraitIdentity(a)) && isTraitSnapshotMember(t,rebelTraitIdentity(b)))
     : (M5_UNIT_DEFINITIONS[a.definitionId]?.traits ?? []).some(t => (M5_UNIT_DEFINITIONS[b.definitionId]?.traits ?? []).includes(t));
 }
 /** All deaths settle first: a simultaneously dying unit cannot receive a reward. */

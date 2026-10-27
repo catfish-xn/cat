@@ -1,3 +1,4 @@
+import { REBEL_COPY_RULES, AUGMENT_BATCH5_G2 } from './content/augment-pool-batch5-g2';
 import type { GameState } from './game';
 import type { Unit } from './unit-types';
 import type { HexCell } from './board';
@@ -38,9 +39,10 @@ export interface ItemSummonOrigin {
   readonly formCell:HexCell;
   readonly healthBps:number;
 }
-export function scaleItemSummonHp(unit:{readonly itemSummon?:ItemSummonOrigin;readonly anomalyState?:import('./anomalies/contracts').AnomalyRuntime;readonly v19?:import('./combat-types').V19CombatFacts}, health:number):number {
-  return (unit.itemSummon ? Math.max(1,Number(BigInt(health)*BigInt(unit.itemSummon.healthBps)/10000n)) : health)
+export function scaleItemSummonHp(unit:{readonly rebelCopy?:import('./augment-pool-batch5-g2-rebel').RebelCopy;readonly itemSummon?:ItemSummonOrigin;readonly anomalyState?:import('./anomalies/contracts').AnomalyRuntime;readonly v19?:import('./combat-types').V19CombatFacts}, health:number):number {
+  const maximum = (unit.itemSummon ? Math.max(1,Number(BigInt(health)*BigInt(unit.itemSummon.healthBps)/10000n)) : health)
     + (unit.anomalyState?.consumed?.health??0) + (unit.v19?.sharedHealth??0);
+  return unit.rebelCopy ? Math.max(REBEL_COPY_RULES.minimumHealth, maximum - AUGMENT_BATCH5_G2['rebel-resurgence'].source.values.ReducedHealth) : maximum;
 }
 
 /** Approved convention: other stats use naked same-star/form + active traits.

@@ -14,6 +14,10 @@ export interface HistorySeat extends HistoryRoster {
   readonly rank: number; readonly eliminatedRound: number | null;
 }
 export interface AugmentDeath {
+  /** A summoned champion identity (distinct from ordinaryHero, which existing consumers retain). */
+  readonly championCopy?: true;
+  /** Frozen form at this actual death; absent for champions without a form. */
+  readonly form?: import('./seat-mechanics/types').UnitForm;
   readonly combatId: string; readonly eventSeq: number; readonly tick: number; readonly unitId: string;
   readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly ownerSeatId: string | null; readonly originalUnitId: string; readonly ordinaryHero: boolean;
   readonly equipment: readonly { readonly definitionId: string; readonly slot: number; readonly temporary: boolean }[];

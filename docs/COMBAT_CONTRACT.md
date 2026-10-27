@@ -371,3 +371,11 @@ PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校�
 ### Batch 4 B4Combat（P，2026-10-25）
 
 四条机制与推断边界见 [P-B4COMBAT](S13_RULES_GAP.md#p-b4combatp2026-10-25batch-4-四条战斗强化)。只增加声明与既有战斗事件，不增加存档字段/事件类型/公共命令/失败 reason；全程服务器权威，前端不得另算属性、弩箭、吸血或护盾。`augment-pool-batch4-b4combat.ts` 内部入口 `openingB4Combat(ctx):void`、`castB4Combat(ctx,unit,seq):void`、`attackB4Combat(ctx,unit,target,seq):void`、`damageB4Combat(ctx,owner,packet,dealt):void`、`overhealB4Combat(ctx,target,outcome):void` 使用冻结来源及既有状态；`b4Vamp(unit,tick):VampRate[]` 只返回当前窗口贡献，`categoryFiveTrigger(unit,definition):TriggerDefinition` 只派生飓风声明。恢复仍从可信 combatInputBasis 重放，对象/JSON/序列化入口不接受候选自报贡献。
+
+## Batch 5 G2 死亡与复制体（P，2026-10-27）
+
+老友幽魂使用实际死亡事件而非击杀归属；坦克／其他角色给5生命，AD类给80 Bps AD，AP类给1 AP。非英雄召唤物不贡献；英雄复制体及同实例复活后的再次死亡贡献。死亡屏障更新同队当前单位，死亡单位不被该加成复活；后续战斗的当前／未来英雄从强化历史获得全队永久累计，合星不重复相加这份全队值。后出生的英雄复制体继承本战已累积的AD／AP；复制体已把原单位当前最大生命写入基础时，不再次叠入同一份生命成长。
+
+爆蓝之城每队每战前5次原始蓝发英雄死亡各消耗一次：按低一星（最低1星）重编译非装备／非异常声明，再减400最大生命、保底100。保留冻结有效羁绊和永久强化；已触发的蓝发羁绊继承永久收益及剩余爆发时长，不重新对全队发奖。复制体不继承原单位临时施法、装备、异常或冷却状态；原格优先，冲突按六角距离／行／列取最近空格；满盘时消费该次额度而不出生。复制体不占五次额度、不递归，但其死亡进入其他死亡触发链。
+
+出生使用既有 `unitSpawned`／回放 `unitEntered`；在本 tick 死亡效果结算后、胜负判断前加入，下一 tick 才行动。无随机抽取。`rebelCopy`、`batch5RebelSummons`、`ghostFriends` 和必要的蓝发脉冲时点均为规则内部战斗状态，由整份 Match 的独立服务器 authority 及外部战斗的完整冷重演认证，不靠候选收据自证。数字及证据分级以 S13_RULES_GAP 的 P-B5-63-G2／P-B5-70-G2 为准。

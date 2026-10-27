@@ -52,6 +52,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
   const preparation = { board:structuredClone(DEFAULT_BOARD), benchSize:9, units:s.units.map(unit => ({...unit,id:map('unit',unit.id)})) };
   const inputs: CombatStrategyInputs = {
     round:getMultiplayerRoundById(s.roundId).ordinal, preparation,
+    ...(s.ghostFriendsGrowth?{ghostFriendsGrowth:s.ghostFriendsGrowth}:{}),
     ...(s.h6Growth?{h6Growth:s.h6Growth.map(g=>({...g,unitId:map('unit',g.unitId)}))}:{}),
     ...(s.d14Combat?{d14Combat:{...s.d14Combat,unitId:map('unit',s.d14Combat.unitId)}}:{}),
     ...(s.itemSummonPositions?{itemSummonPositions:Object.fromEntries(Object.entries(s.itemSummonPositions).map(([id,cell])=>[map(id.startsWith('unit-')?'unit':'item',id),cell]))}:{}),...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,
@@ -186,15 +187,15 @@ function validateDynamicResult(result:BattleResult):void {
   try { validateBattleEquipmentLog(result.inputLog, result.terminal.equipmentReceipts, result.terminal.tick); }
   catch { throw new BattleValidationError('battle-input-invalid'); }
   if (result.initial.equipmentReceipts || result.initial.pendingEquipment || result.terminal.pendingEquipment
-    || result.terminal.units.some(u => u.equipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
+    || result.terminal.units.some(u => u.equipment && (!u.rebelCopy || u.equipment.length > 0)) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
-  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
+  const enabled=!!result.inputLog?.length || result.initial.strategy?.units.some(u=>u.mechanics?.some(m=>m.mechanic==='ghostFriends'||m.mechanic==='rebelResurgence'||m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
   if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null||!result.initial.units.some(u=>u.team===s.team&&u.mechanics?.some(m=>m.mechanic==='d11Anomaly'&&m.source.definitionId==='avarice-incarnate'))))throw new BattleValidationError('invalid-result');
   if(!enabled){
-    if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');
+    if(result.terminal.batch5RebelSummons!==undefined||result.terminal.units.some(u=>u.rebelCopy||u.ghostFriends)||result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');
     return;
   }
-  if(result.initial.tick!==0||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment')
+  if(result.initial.tick!==0||result.initial.batch5RebelSummons!==undefined||result.initial.units.some(u=>u.rebelCopy)||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment')
     ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>MAX_COMBAT_TICKS)throw new BattleValidationError('invalid-result');
   let expected=structuredClone(result.initial);
   let bankCursor=0;

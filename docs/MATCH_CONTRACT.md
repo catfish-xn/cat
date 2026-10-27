@@ -1500,3 +1500,11 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
 - `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
 - 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。
+
+## Batch 5 G2 联机接口（P，2026-10-27）
+
+`src/simulation/augment-pool-batch5-g2.ts` 导出 `ghostFriendsGrowth(state: MatchState): GhostFriendsGrowth | undefined`；`GhostFriendsGrowth={healthFlat:number,attackDamageBps:number,abilityPower:number}`，均为非负整数。未持有老友幽魂返回 undefined；持有者缺强化历史按现有 API 抛 `Invalid augment history: missing augment-history-v1`，不得补零。永久值仅从当前席位已完成前序自然轮的真实死亡事实推导，战斗输入冻结为 `ghostFriendsGrowth`，不接受客户端提交成长。形态及英雄复制体证据见 AUGMENT_HISTORY_DESIGN。
+
+报价／选择沿用现有命令，不新增 wire failure：老友幽魂为棱彩且仅 2-1，爆蓝之城为黄金、无额外阶段禁令，3-2／4-2 沿用蓝发羁绊筛选。爆蓝之城通过既有强化奖励法球各授予一个阿卡丽、艾瑞莉娅，重复选择保持失败原子性；战斗复制体不进入资源谱系、正式棋盘或共享卡池。服务器继续只编排 `snapshotForBattle`、双边战斗和原有死亡采样，无新服务器规则或计时器。
+
+两条 G2 均为 deaths 历史持有者，恢复继续使用独立服务器 authority 认证整份 Match，并核对原有资源／奖励；外部双边结果按冻结输入冷重演核对完整数值、复制体、额度和事件。错误沿用 Match 验证错误及 `BattleValidationError('invalid-result'|'battle-input-invalid')`，不新增客户端失败枚举。内容身份重算，现有 schema/save/replay/command 和 epoch 均不重录。

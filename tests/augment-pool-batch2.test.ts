@@ -1,6 +1,7 @@
 import { appendResourceProvenance } from '../src/simulation/resource-provenance';
 import { acquireAugment, fieldedLegCases, fieldedRoute, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
+import { AUGMENT_BATCH5_G2 } from '../src/simulation/content/augment-pool-batch5-g2';
 import { AUGMENT_BATCH2, AUGMENT_BATCH2_ENABLED } from '../src/simulation/content/augment-pool-batch2';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { AUGMENT_DEFINITIONS, ITEM_DEFINITIONS } from '../src/simulation/content';
@@ -26,7 +27,8 @@ it('takes exactly the 26 batch-2 classification entries, with no disabled offers
  expect(Object.values(AUGMENT_BATCH2).map(x=>x.apiName)).toEqual([...names.map(x=>'TFT13_Augment_'+x),'TFT13_TeamupAugment_Betrayal','TFT13_TeamupAugment_BloodBrothers']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH2)){
   expect(row.source.patch).toBe('14.24');expect(row.source.archive).toContain('augments-14.24.json');
-  if(!row.enabled){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(row.apiName);}
+  if(!row.enabled && !Object.hasOwn(AUGMENT_BATCH5_G2,id)){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(row.apiName);}
+  if(id==='rebel-resurgence'){expect(AUGMENT_DEFINITIONS[id]?.name).toBe('爆蓝之城');expect(AUGMENT_POOL_API_NAMES[id]).toBe(row.apiName);}
  }
  expect(AUGMENT_BATCH2['heavy-hitters'].source.values).toMatchObject({RefreshSeconds:4,SlamPercentHealth:expect.closeTo(.07,6)});
  expect(AUGMENT_BATCH2['quickstriker-boost'].source.values).toMatchObject({AttackSpeed:expect.closeTo(.85,6),BuffDuration:2.5,TimeBetweenProcs:6});
