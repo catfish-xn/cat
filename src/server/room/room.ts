@@ -1,4 +1,4 @@
-import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomSettlementTable } from './augment-history';
+import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomSettlementTable, tableFacts } from './augment-history';
 import { captureAugmentHistoryAuthority, prepareAugmentAcquisition, advanceAugmentPreparationTime, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
 /**
  * Eight-seat room state machine (pipeline B, work orders B1–B7). Pure TypeScript: no network,
@@ -1954,7 +1954,7 @@ export class Room {
   private prepareAugmentAcquisition(seat: SeatState): void {
     if (!seat.match.multiplayer || seat.match.pendingChoice?.kind !== 'augment') return;
     prepareAugmentAcquisition(seat.match, this.previousAugmentBattles.get(seat.seatId) ?? {status:this.current.round===1?'none':'unavailable'},
-      Math.max(0, Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt));
+      Math.max(0, Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt), tableFacts(this.current.seats));
   }
   private scheduleAugmentClock(): void {
     if (this.augmentHistoryTimer !== null) { this.options.clock.cancel(this.augmentHistoryTimer); this.augmentHistoryTimer = null; }
@@ -1973,7 +1973,7 @@ export class Room {
     if (this.disposed) return;
     const synced = this.syncedSeatHp(next);
     if (typeof synced === 'string') return this.fail({ kind: 'invalid-results', detail: synced });
-    const published = { ...this.withChoiceDeadlines(recordRoomPublication(this.current, synced, this.previousAugmentBattles, Math.max(0, Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt))), roomRevision: this.current.roomRevision + 1 };
+    const published = { ...this.withChoiceDeadlines(recordRoomPublication(this.current, synced)), roomRevision: this.current.roomRevision + 1 };
     // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
     if (published.phase === 'preparation' && (this.current.phase !== 'preparation' || this.current.round !== published.round)) this.augmentPreparationStartedAt = Math.floor(this.options.clock.now());

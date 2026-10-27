@@ -21,7 +21,7 @@
 | `positions` | 成功公共命令或房间原子发布改变正式单位/装备后；覆盖手动部署、购买/合星、售出、装备、选秀后放置 | B5-26/29/30、37 |
 | `combat-roster` | 单人真实开战时，包含 PvE 和 PvP；取得时还携带之前一场的冻结快照 | B5-10 的“上一对战”不局限 PvP |
 | `pvp-roster` | 联机自动布阵后、锁名单及编译战斗前；全桌八席含已淘汰席，另存本战 ID、mirrorOfSeatId；单人为实际自身阵容 | B5-31、37；镜像源不会作为额外真人重复计数 |
-| `table` | 首次取得、后续入轮、整轮淘汰/排名原子提交后；每席 HP、存活、名次、淘汰轮、阵容 | B5-34、37、38；取得时即可读取以前淘汰席，不凭缺行判断存活 |
+| `table` | 每次取得历史依赖强化的事务内、专属获取效果前，以及后续入轮、整轮淘汰/排名原子提交后；每席 HP、存活、名次、淘汰轮、阵容 | B5-34、37、38；取得时即可读取以前淘汰席，不凭缺行判断存活 |
 | `growth` | 未来强化领域事务调用通用 API；唯一 receiptId、choiceId、每普通英雄的 HP flat/Bps、AD Bps、AP **百分之一点** `abilityPowerCenti` | B5-31、38、57；150 centi=1.5 AP，150 Bps=1.5%，没有浮点保存 |
 | `carousel` | 每笔真实选取并授予完成后；完整收据、同轮 ordinal、manual/bot/timeout/disconnected/augment 来源、可选来源 choiceId、落位快照、放行逻辑毫秒及持有资格 choiceId 列表 | B5-26/29/30、35/36、44；同席同轮可有多笔且独占不同槽 |
 | `preparation-time` | 显式、单调的整数准备期逻辑时间；不读取墙钟，不复用战斗 tick | B5-07 |
@@ -54,7 +54,7 @@
 ## 时钟、成长、选秀的通用接口
 
 - `recordAugmentAcquisition(before,after): MatchState`：初始化节及获取证据；已接 selectChoice，专属效果调用通用 API 时节已存在。
-- `prepareAugmentAcquisition(state,previousBattle,elapsedMs): void`：房间在手选/机器人/超时选取前注入自身私有上一战与时钟上下文，仅写 WeakMap；取得效果执行期间已经可读，不能延迟到发布后才提供。非房间调用不可把候选档当可信上下文。
+- `prepareAugmentAcquisition(state: MatchState, previousBattle: PreviousAugmentBattle, elapsedMs: number, seats: readonly HistorySeat[]): void`：房间在手选/机器人/超时选取前注入自身私有上一战、时钟及完整全桌上下文，复制后仅写 WeakMap；`recordAugmentAcquisition` 在专属获取效果前把 acquire 和 table 写入同一成功事务。全桌须为 1～8 个唯一席位且包含当前席位，错误为 `Invalid augment history: server acquisition table`；时钟或多人身份错误仍为 `server acquisition context`。取得效果执行期间即可读取此前淘汰席，不能延迟到发布后才提供。非房间调用不可把候选档当可信上下文；失败选择不写持久事实、不改变资源或 RNG。
 - `recordAugmentRoundEntry(state): MatchState`、`recordAugmentTransition(before,after,events?): MatchState`：只记录成功事务；失败保持原 state，不发事件、不用 RNG。
 - `requireAugmentFacts(state,kind,round)`：返回指定族的脱离对象副本；没有该轮记录即抛 `missing <kind> for round <n>`。空 `deaths:[]` 是有完整性边界的零，缺失一整行不是零。
 - `readPreviousAugmentBattle(state,choiceId)`：读取取得前上一战证据；不把 unavailable 当 none。
@@ -74,6 +74,8 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 事实、命令参数、authority 和查询返回均有明确的独立所有权。死亡现场的旁路样本只用 WeakMap 关联真实事件，不向 `CombatState`、事件 JSON、回放帧或 UI 投影塞入新字段。房间只有在整轮结果被验证、排名确定后才发布事实；同 ID 重复结算沿既有逻辑拒绝。普通存档/无相关席位的房间不新增空字段。
 
 死亡装备快照同时保留带槽位的 `equipment`（含临时标记）和没有装备槽的 `combatItemGrants`（不稳定财宝箱生成物，含真实来源、序号和取得 tick），不会漏掉战中获得的装备，也不为它们虚构槽位。
+
+联机 PvE 的低层战斗采样没有席位上下文；Match 接收实时事件和终战旁路样本时，统一把玩家侧 `ownerSeatId` 绑定为 `multiplayer.seatId`，敌方野怪保持 `null`。单人仍使用 `solo`；PvP 双边归属仍由服务器的 battle mapping 绑定，不使用此单席规则。恢复预检对单人/PvE 死亡行逐一核对 team 与 owner，错误为 `Invalid augment history: death owner`；随后照常比较独立服务器 authority 的完整状态。旧错误 PvE 行即使配有同样错误的 authority 也拒绝，不猜测修补。按 combatId/eventSeq 去重，复活后再次死亡保留独立行。
 
 ## 本次变更的全部接线点
 
@@ -98,10 +100,10 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 | `carousel.ts / grantAdditionalCarouselPick, restoreCarouselSeat` | 多收据事务及权威恢复 |
 | `carousel-units.ts / validateCarouselMetadata` | 附加收据必须有同节来源证据 |
 | `shared-pool-ledger.ts / assertSharedPoolConservation` | 认可有界附加收据 ID，既有单份库存守恒不变 |
-| `src/server/room/room.ts / apply, freezeAndResolve, replace, dispose` | 准备期逻辑时间；完整全桌冻结；发布时获取/入轮表；条件计时器释放 |
+| `src/server/room/room.ts / apply, freezeAndResolve, replace, dispose` | 准备期逻辑时间；完整全桌冻结；发布时入轮表；条件计时器释放 |
 | `room.ts / planSteps, commitSettlement` | 先取得双方实际结算，再写死亡/实际扣血；整轮排名确定后写表 |
 | `room.ts / commitSeat, augmentHistoryAuthority` | 历史附加后的原子提交识别及独立恢复句柄 |
-| `room.ts / prepareAugmentAcquisition, applyTimeouts, onChoiceDeadline` | 取得事务开始前提供私有上一战与逻辑时间，覆盖手选、机器人和超时 |
+| `room.ts / prepareAugmentAcquisition, applyTimeouts, onChoiceDeadline` | 取得事务开始前提供私有上一战、逻辑时间和全桌事实，覆盖手选、机器人和超时 |
 | `src/server/room/augment-history.ts`（新增） | 全桌采样、冻结名单、真实死亡映射、扣血记录及发布适配；不计算奖励 |
 | `src/server-entry/index.ts` | 导出内部历史接口、类型、选秀额外授予入口 |
 | `src/simulation/augment-history*.ts, augment-death-samples.ts`（新增） | 类型、归属登记、记录/读取、只读认证与旁路采样 |
@@ -115,3 +117,24 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 - `npm run build -- --configLoader runner` 通过，包含 `tsc --noEmit`；双摘要 `--check` 与 `git diff --check` 通过。content=`fnv1a32-utf16:db662e0b`，loot=`fnv1a32-utf16:18c876b2` 未变。
 - `tests/server/lifecycle.test.ts` 的监听端口用例被沙盒 `listen EPERM 127.0.0.1` 阻断；该文件其余5项已通过。未声称真实网络端到端通过。
 - `npm run build:server` 的打包完成，但既有目录边界检查失败：`combat-replay-view.ts` 导入 `src/presentation/combat-status.ts`。对 HEAD `ee2b019c` 独立解包并构建也命中同一依赖；本任务未修改该依赖或放宽断言，不将其记为新增历史回归。
+
+## Review Y 修复调用点（2026-10-27）
+
+本次基线 `4fbb08f345c01e6301c24daa45467bea6c4765b3`，只修复历史归属、取得时序和验证，不开放 Survivor 等预留强化，不改奖励数值、保存版本或内容摘要。
+
+| 本次实际修改的文件／函数 | 接线变化 |
+| --- | --- |
+| `src/simulation/augment-history.ts / prepareAugmentAcquisition` | 新增必填全桌参数；独立复制、验证席位集合后保存在事务上下文 |
+| `src/simulation/augment-history.ts / recordAugmentAcquisition` | 取得事实后立即追加选择前全桌事实，供 `match.ts / selectChoice → grantAugmentAcquisition` 同事务读取；外层重复记录不会追加第二份 |
+| `src/simulation/augment-history.ts / recordAugmentTransition` | 合并实时／终战旁路死亡样本后绑定真实玩家席位，野怪保持 null |
+| `src/simulation/augment-history-restore.ts / preflightAugmentHistory` | 单人／PvE death owner 的独立语义检查；离线及两个联机恢复入口沿用此预检 |
+| `src/server/room/room.ts / Room.prepareAugmentAcquisition` | 调用 `tableFacts(this.current.seats)`，随上一战和时钟一起传给规则；原 `apply`（手选／handleBot）、`applyTimeouts`、`onChoiceDeadline` 三个入口复用此方法 |
+| `src/server/room/room.ts / Room.replace` | `recordRoomPublication` 调用移除上一战和时间参数，获取事实不再延迟到发布 |
+| `src/server/room/augment-history.ts / recordRoomPublication` | 移除获取时的补写 table／previousBattle；保留成功转换及入轮事实 |
+| `tests/augment-history.test.ts` | 获取效果内部读取三席已淘汰事实并记录结果（手选／机器人／超时）；普通／流式真实联机 PvE、恢复继续、复活再死与终战旁路；持有者投影隔离；两联机恢复入口对象／JSON 篡改矩阵 |
+
+`src/simulation/match.ts`、`augment-death-samples.ts` 和 server-entry 的原导出本次无需修改：前者已在专属效果前调用 `recordAugmentAcquisition`，采样器仍只观察战斗现场，server-entry 自动导出更新后的函数签名。未修改界面、素材、现有断言或超时限制。最终验证结果见根目录 `-o`。
+
+验证：`npm test -- --configLoader runner --maxWorkers=4` 指定 augment-history、server/projection、server/combat-stream、server/augment-preparation-room、server/anvil-choice-deadline、server/bot-driver、server/round-commit、tp-shared-pool、p7-carousel，共 9 文件 155 项通过、1 项受限（anvil-choice-deadline 的 WebSocket 重连用例：沙盒 `listen EPERM 127.0.0.1`）。其中 augment-history 的 77 项全部通过；末次补充 death owner／authority 联合篡改后，普通和流式两个定向用例再次通过。`npm run typecheck`、`npm run build -- --configLoader runner`、`git diff --check` 通过。
+
+反证：在 `/tmp` 独立解包只读 HEAD `4fbb08f3`，仅复制新增测试，以相同 Vitest 参数筛选获取时序和 PvE 归属；5 个用例全部复现失败（手选／机器人／超时三项无法完成选择，普通／流式两项死亡 owner 不等于 s0）。工作区修复未回滚、Git 未写入。

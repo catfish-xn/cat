@@ -1,7 +1,7 @@
 /** Server orchestration only: freeze authoritative table/roster/settlement observations.
  * No rewards, growth amounts, player damage formula or random draws live here. */
-import { appendAugmentFact, bindAugmentPreviousBattle, recordAugmentTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
-  type HistorySeat, type PreviousAugmentBattle } from '../../server-entry';
+import { appendAugmentFact, recordAugmentTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
+  type HistorySeat } from '../../server-entry';
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput } from './types';
 
@@ -11,15 +11,14 @@ export function tableFacts(seats: readonly SeatState[], matches?: ReadonlyMap<st
   return [...seats].sort((a,b) => a.index-b.index).map(s => ({ ...historyRoster(matches?.get(s.seatId)?.match ?? s.match),
     seatId: s.seatId, index: s.index, hp: s.hp, alive: s.alive, rank: s.rank ?? order.indexOf(s)+1, eliminatedRound: s.eliminatedRound }));
 }
-export function recordRoomPublication(before: RoomState, next: RoomState, prior: ReadonlyMap<string,PreviousAugmentBattle>, preparationElapsedMs: number): RoomState {
+export function recordRoomPublication(before: RoomState, next: RoomState): RoomState {
   if (before.seats === next.seats) return next;
   let changed = false; const table = next.seats.some(s => s.match.augmentHistory) ? tableFacts(next.seats) : [];
   const seats = next.seats.map(seat => {
     const previous = before.seats.find(s => s.seatId === seat.seatId); if (!previous || previous.match === seat.match) return seat;
     let match = recordAugmentTransition(previous.match, seat.match);
-    if (match.augmentHistory && !previous.match.augmentHistory) match = recordAugmentTable(bindAugmentPreviousBattle(match, prior.get(seat.seatId) ?? {status:before.round===1?'none':'unavailable'}, preparationElapsedMs), 'acquire', table.length ? table : tableFacts(next.seats));
-    else if (match.augmentHistory && match.augments.length !== previous.match.augments.length) match = bindAugmentPreviousBattle(match, prior.get(seat.seatId) ?? {status:'unavailable'}, preparationElapsedMs);
-    else if (match.augmentHistory && previous.match.round !== match.round) match = recordAugmentTable(match, 'entry', table);
+    // Acquisition facts already belong to the choice transaction, before its effects execute.
+    if (match.augmentHistory && previous.match.round !== match.round) match = recordAugmentTable(match, 'entry', table);
     if (match === seat.match) return seat; changed = true; return { ...seat, match };
   });
   return changed ? { ...next, seats } : next;

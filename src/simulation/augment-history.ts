@@ -85,11 +85,12 @@ export function advanceAugmentPreparationTime(s: MatchState, elapsedMs: number):
 }
 
 const preparationTimes = new WeakMap<MatchState,{round:number;elapsedMs:number}>();
-const acquisitionContexts = new WeakMap<MatchState,PreviousAugmentBattle>();
+const acquisitionContexts = new WeakMap<MatchState,{previousBattle:PreviousAugmentBattle;seats:readonly HistorySeat[]}>();
 /** Server-owned observations made available before selectChoice executes acquisition effects. No save fields. */
-export function prepareAugmentAcquisition(s: MatchState, previousBattle: PreviousAugmentBattle, elapsedMs: number): void {
+export function prepareAugmentAcquisition(s: MatchState, previousBattle: PreviousAugmentBattle, elapsedMs: number, seats: readonly HistorySeat[]): void {
   historyCheck(s.multiplayer && Number.isSafeInteger(elapsedMs) && elapsedMs >= 0 && elapsedMs <= LIMIT.preparationMs, 'server acquisition context');
-  acquisitionContexts.set(s, structuredClone(previousBattle));
+  historyCheck(seats.length > 0 && seats.length <= LIMIT.seats && new Set(seats.map(seat=>seat.seatId)).size === seats.length && seats.some(seat=>seat.seatId === s.multiplayer!.seatId), 'server acquisition table');
+  acquisitionContexts.set(s, structuredClone({previousBattle,seats}));
   preparationTimes.set(s,{round:s.round,elapsedMs});
 }
 function preparationElapsed(s:MatchState):number {
@@ -116,8 +117,12 @@ export function recordAugmentAcquisition(before: MatchState, after: MatchState):
     historyCheck(!needsAugmentHistory(before), 'missing augment-history-v1; history-dependent augment saves cannot be authenticated');
     next = { ...next, augmentHistory: { version: AUGMENT_HISTORY_VERSION, seatId: historySeatId(next), facts: [], proof: { kind: 'server' } } };
   }
-  for (const a of after.augments.filter(a => augmentNeedsHistory(a.definitionId) && !before.augments.some(b => b.choiceId === a.choiceId) && !next.augmentHistory!.facts.some(f => f.kind === 'acquire' && f.choiceId === a.choiceId)))
-    next = appendAugmentFact(next, { kind: 'acquire', choiceId: a.choiceId, definitionId: a.definitionId, goldBefore: before.gold, hpBefore: before.playerHp, roster: historyRoster(before), preparationElapsedMs: preparationElapsed(before), previousBattle: acquisitionContexts.get(before) ?? traces.get(before)?.previousBattle ?? {status:'unavailable'} });
+  const context = acquisitionContexts.get(before);
+  const acquired = after.augments.filter(a => augmentNeedsHistory(a.definitionId) && !before.augments.some(b => b.choiceId === a.choiceId) && !next.augmentHistory!.facts.some(f => f.kind === 'acquire' && f.choiceId === a.choiceId));
+  for (const a of acquired)
+    next = appendAugmentFact(next, { kind: 'acquire', choiceId: a.choiceId, definitionId: a.definitionId, goldBefore: before.gold, hpBefore: before.playerHp, roster: historyRoster(before), preparationElapsedMs: preparationElapsed(before), previousBattle: context?.previousBattle ?? traces.get(before)?.previousBattle ?? {status:'unavailable'} });
+  // The effect may need prior eliminations immediately, before the room publishes this choice.
+  if (acquired.length && context) next = recordAugmentTable(next, 'acquire', context.seats);
   return next;
 }
 export function recordAugmentTransition(before: MatchState, after: MatchState, events: readonly MatchEvent[] = []): MatchState {
@@ -132,7 +137,8 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   const recorded = new Set(next.augmentHistory!.facts.flatMap(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId ? f.deaths.map(d => d.eventSeq) : []));
   const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
   if (after.combat && (deaths.length || before.combat?.tick !== after.combat.tick || !before.combat))
-    next = appendAugmentFact(next, { kind: 'deaths', battleId: after.combat.combatId!, completeThroughTick: after.combat.tick, deaths });
+    next = appendAugmentFact(next, { kind: 'deaths', battleId: after.combat.combatId!, completeThroughTick: after.combat.tick,
+      deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null })) });
   // Solo PvP has no opposing player's HP account. Unknown is explicit, never fabricated as zero.
   if (!after.multiplayer && after.roundResults.length > before.roundResults.length && after.m8.round.kind === 'pvp')
     next = appendAugmentFact(next, { kind: 'player-damage', battleId: after.combat!.combatId!, opponentSeatId: null, mirror: false, hpBefore: null, hpAfterDamage: null, actualDamage: null });

@@ -3,12 +3,13 @@ import { validateAugmentHistory } from '../src/simulation/augment-history-restor
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import * as acquisition from '../src/simulation/augment-acquisition';
-import { createMatch, deployMatchUnit, startMatchCombat, nextRound, selectChoice, rerollShop, type MatchState } from '../src/simulation/match';
+import { createMatch, deployMatchUnit, startMatchCombat, nextRound, selectChoice, rerollShop, openMatchCombatStream, stepMatchCombatStream, revealMatchCombatStreamTerminal, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { advanceAugmentPreparationTime, requireAugmentFacts, readPreviousAugmentBattle, recordAugmentGrowth, readAugmentGrowth, captureAugmentHistoryAuthority } from '../src/simulation/augment-history';
-import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
+import { restoreSharedOrbSnapshot, runSharedMatchCommand } from '../src/simulation/shared-pool';
 import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
-import { makeRoom, runUntil, answerOpenChoices } from './server/helpers';
+import { makeRoom, runUntil, answerOpenChoices, DamageResolver } from './server/helpers';
+import { toPlayerView, toSeatPrivateView, toCombatReplayFor } from '../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { CAROUSEL_RULES_BINDING } from '../src/server/room/carousel';
 import { createCarousel, advanceCarousel, pickCarouselForSeat, grantAdditionalCarouselPick, restoreCarouselSeat } from '../src/simulation/carousel';
@@ -44,6 +45,24 @@ it('keeps four no-owner saves byte-identical to HEAD ee2b019c (independent basel
   expect(hashes).toEqual(['b2241cbf3f5f15734341fbf8ed2f1de589ab77a8ff4b53cffd8b194ad0510e31','318c884b3bc964bb0c225eabc73ed58b665078266ca5f7b3519f714deb7a814f','39c02c0190fa9395576008c55fea45ad3b514407363b0c335376174d3b497f2d','2c29384cb16d144c3036b460ed03093634c8ac0fc4ff5a2b29d56915ea350692']);
 });
 const entries = ['object','JSON','serialized'] as const;
+const onlineAttacks: readonly [string, (s: any) => void][] = [
+  ['missing section',s=>{delete s.augmentHistory;}],
+  ['wrong version',s=>{s.augmentHistory.version='augment-history-v2';}],
+  ['wrong seat',s=>{s.augmentHistory.seatId='s7';}],
+  ['wrong fact seat',s=>{s.augmentHistory.facts[0].seatId='s7';}],
+  ['wrong round',s=>{s.augmentHistory.facts[0].round++;}],
+  ['wrong round identity',s=>{s.augmentHistory.facts[0].roundId='3-1';}],
+];
+function onlineTamperMatrix(s: MatchState, restore: (input: unknown) => MatchState): void {
+  for (const entry of ['object','JSON'] as const) {
+    const input = (value: MatchState) => entry === 'object' ? value : JSON.stringify(value);
+    expect(restore(input(s))).toEqual(s);
+    for (const [name,edit] of onlineAttacks) {
+      const bad = structuredClone(s); edit(bad);
+      expect(()=>restore(input(bad)),`${entry}: ${name}`).toThrow(/augment history/);
+    }
+  }
+}
 function restore(s: MatchState, entry: typeof entries[number]): MatchState {
   return entry === 'object' ? restoreMatch(s) : entry === 'JSON' ? restoreMatch(JSON.stringify(s)) : restoreMatch(serializeMatch(s));
 }
@@ -134,6 +153,7 @@ describe('online authority',()=>{
   it('records real room acquisition, all-seat PvP roster, deaths, damage and ranking, and rejects independent-authority attacks',()=>{
 
     const seat=room.state.seats.find(s=>s.seatId===first.seatId)!,s=seat.match,authority=room.augmentHistoryAuthority(seat.seatId);
+    onlineTamperMatrix(s,input=>restoreSharedOrbSnapshot(room.state.pool,input,authority));
     expect(requireAugmentFacts(s,'pvp-roster',4)[0].seats).toHaveLength(8);
     expect(requireAugmentFacts(s,'table',4).at(-1)!.stage).toBe('settlement');
     expect(requireAugmentFacts(s,'deaths',4)).not.toHaveLength(0);
@@ -149,9 +169,144 @@ describe('online authority',()=>{
     }
     expect(()=>restoreSharedOrbSnapshot(room.state.pool,s)).toThrow('missing independent server authority');
     expect(()=>restoreSharedOrbSnapshot(room.state.pool,s,{kind:'server-augment-history-authority'})).toThrow('missing independent server authority');
+    expect(()=>restoreSharedOrbSnapshot(room.state.pool,s,room.augmentHistoryAuthority('s1'))).toThrow('server facts/state mismatch');
     const missing:any=structuredClone(s);delete missing.augmentHistory;expect(()=>restoreSharedOrbSnapshot(room.state.pool,missing,authority)).toThrow('missing augment-history-v1');
     const detached=structuredClone(s);(detached as any).augmentHistory.facts[0].goldBefore++;
     expect(()=>restoreSharedOrbSnapshot(room.state.pool,detached,authority)).toThrow();
+  });
+  it('keeps held augment history out of every public/private/replay projection',()=>{
+    const seat=room.state.seats.find(s=>s.seatId===first.seatId)!;
+    expect(seat.match.augmentHistory!.facts.some(f=>f.kind==='table'&&f.seats.length===8)).toBe(true);
+    const before=canonicalContent(room.state);
+    const withoutHistory={...room.state,seats:room.state.seats.map(s=>{const {augmentHistory:_history,...match}=s.match;return {...s,match:match as MatchState};})};
+    for(const recipient of room.state.seats){
+      const view=toPlayerView(room.state,recipient.seatId,clock.now());
+      expect(view.seats.find(s=>s.seatId===seat.seatId)!.publicBoard!.augments).toContain(seat.match.augments[0].definitionId);
+      const privateView=toSeatPrivateView(recipient.match),replay=toCombatReplayFor(room.state,recipient.seatId);
+      expect(view).toEqual(toPlayerView(withoutHistory,recipient.seatId,clock.now()));
+      expect(privateView).toEqual(toSeatPrivateView(withoutHistory.seats.find(s=>s.seatId===recipient.seatId)!.match));
+      expect(replay).toEqual(toCombatReplayFor(withoutHistory,recipient.seatId));
+      const projected=JSON.stringify({view,private:privateView,replay});
+      for(const key of ['augmentHistory','augment-history-v1','previousBattle','resourcePrefix','ownerSeatId'])expect(projected).not.toContain(`"${key}"`);
+      // Own roundResults legitimately expose economy.goldBefore; public projections do not.
+      expect(JSON.stringify(view)).not.toContain('"goldBefore"');
+    }
+    expect(canonicalContent(room.state)).toBe(before);
+  });
+});
+
+for(const mode of ['manual','bot','timeout'] as const)it(`makes three prior eliminations readable inside the ${mode} acquisition effect`,()=>{
+  fixture.allOwners=true;
+  const inner=new TwoSidedBattleResolver();
+  // Same lethal-result fixture as round-commit tests: mark the rules seat eliminated so pool shares release.
+  const {room,clock}=makeRoom({resolveBattle(input,pool){
+    const seat=input.seats[0];
+    if(input.round===1&&['s1','s2','s3'].includes(seat.seatId))return {kind:'placeholder',battleId:input.battleId,round:input.round,roomRevision:input.roomRevision,outcomes:[{
+      seatId:seat.seatId,state:{...seat.state,playerHp:0,multiplayer:{...seat.state.multiplayer!,status:'eliminated'}},result:null,damage:100,combat:null}]};
+    return inner.resolveBattle(input,pool);
+  }});
+  const grant=acquisition.grantAugmentAcquisition,seen:string[]=[];
+  const hook=vi.spyOn(acquisition,'grantAugmentAcquisition').mockImplementation((state,augment)=>{
+    const tables=requireAugmentFacts(state,'table',state.round);
+    expect(tables).toHaveLength(1);expect(tables[0].stage).toBe('acquire');
+    expect(tables[0].seats).toHaveLength(8);
+    const eliminated=tables[0].seats.filter(s=>!s.alive);
+    expect(eliminated.map(s=>s.seatId)).toEqual(['s1','s2','s3']);
+    expect(eliminated.every(s=>s.hp===0&&s.eliminatedRound===1&&s.rank>=6)).toBe(true);
+    seen.push(state.multiplayer!.seatId);
+    const granted=grant(state,augment);
+    // Infrastructure probe: a history consumer executes and records its result within acquisition.
+    return {...granted,state:recordAugmentGrowth(granted.state,augment.choiceId,`elimination-probe:${augment.choiceId}`,[{
+      unitId:state.preparation.units.find(u=>u.team==='player')!.id,healthFlat:eliminated.length,healthBps:0,attackDamageBps:0,abilityPowerCenti:0}])};
+  });
+  try {
+    room.start();runUntil(room,clock,s=>s.round===4&&s.phase==='preparation');
+    const id=mode==='bot'?'s4':'s0',seat=room.state.seats.find(s=>s.seatId===id)!,c=seat.match.pendingChoice!;
+    expect(seat.match.augmentHistory).toBeUndefined();
+    const before=room.state;
+    expect(room.handle(id,{type:'choose',choiceId:c.choiceId,generation:c.generation+1,definitionId:c.offers[0]})).toMatchObject({ok:false,reason:'stale-choice'});
+    expect(room.state).toBe(before);expect(seen).toEqual([]);
+    const command={type:'choose' as const,choiceId:c.choiceId,generation:c.generation,definitionId:c.offers[0]};
+    if(mode==='manual')expect(room.handle(id,command)).toMatchObject({ok:true});
+    else if(mode==='bot')expect(room.handleBot(id,seat.controlEpoch,command)).toMatchObject({ok:true});
+    else runUntil(room,clock,s=>!!s.seats.find(s=>s.seatId===id)!.match.augmentHistory);
+    expect(seen).toContain(id);
+    const picked=room.state.seats.find(s=>s.seatId===id)!.match;
+    expect(requireAugmentFacts(picked,'table',4).filter(f=>f.stage==='acquire')).toHaveLength(1);
+    expect(requireAugmentFacts(picked,'growth',4)[0].deltas[0].healthFlat).toBe(3);
+    expect(restoreSharedOrbSnapshot(room.state.pool,picked,room.augmentHistoryAuthority(id))).toEqual(picked);
+  } finally {hook.mockRestore();room.dispose();fixture.allOwners=false;}
+});
+
+for(const streaming of [false,true])describe(`online PvE deaths (${streaming?'stream':'ordinary'})`,()=>{
+  const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:18,carousel:CAROUSEL_RULES_BINDING,combatStreaming:streaming});
+  beforeAll(()=>{fixture.allOwners=true;room.start();});
+  for(let round=2;round<=10;round++)beforeAll(()=>{
+    runUntil(room,clock,s=>s.round>=round&&s.phase==='preparation');
+  });
+  afterAll(()=>{room.dispose();fixture.allOwners=false;});
+  it('binds live and terminal samples, authenticates them and resumes object/JSON snapshots identically',()=>{
+    const seat=room.state.seats.find(s=>s.seatId==='s0')!;
+    expect(seat.match.roundDefinitionId).toBe('2-7');expect(seat.match.augmentHistory).toBeDefined();
+    let pool=room.state.pool;
+    let state:MatchState;
+    if(streaming)state=accepted(openMatchCombatStream(seat.match));
+    else {const opened=must(runSharedMatchCommand(pool,seat.match,{type:'startCombat'}));pool=opened.pool;state=opened.state;}
+    for(let tick=0;tick<4;tick++){
+      if(streaming){const step=stepMatchCombatStream(state);expect(step.terminal).toBeNull();state=step.state;}
+      else {const step=must(runSharedMatchCommand(pool,state,{type:'step'}));pool=step.pool;state=step.state;}
+    }
+    const authority=captureAugmentHistoryAuthority(state);
+    const finish=(initial:MatchState)=>{
+      let current=initial,latest=pool;const events:import('../src/simulation/match-types').MatchEvent[]=[];
+      for(let guard=0;current.phase==='combat';guard++){
+        expect(guard).toBeLessThan(1000);
+        if(streaming){
+          const step=stepMatchCombatStream(current);events.push(...step.events);current=step.state;
+          if(step.terminal){
+            current=accepted(revealMatchCombatStreamTerminal(current,step.terminal));
+            const settled=must(runSharedMatchCommand(latest,current,{type:'settleCombatStream',terminal:step.terminal}));
+            current=settled.state;latest=settled.pool;
+          }
+        }else{
+          const step=must(runSharedMatchCommand(latest,current,{type:'step'}));current=step.state;latest=step.pool;events.push(...step.events);
+        }
+      }
+      return {state:current,pool:latest,events};
+    };
+    const finished=finish(state),rows=requireAugmentFacts(finished.state,'deaths',10),deaths=rows.flatMap(f=>f.deaths);
+    expect(deaths.filter(d=>d.team==='player').length).toBeGreaterThan(0);
+    expect(rows.at(-1)!.completeThroughTick).toBe(finished.state.combat!.tick);
+    expect(deaths.map(d=>[d.unitId,d.eventSeq])).toEqual(finished.events.filter(e=>e.type==='death').map(e=>[e.unitId,e.eventSeq]));
+    expect(deaths.every(d=>d.ownerSeatId===(d.team==='player'?'s0':null))).toBe(true);
+    expect(new Set(deaths.map(d=>`${d.combatId}:${d.eventSeq}`)).size).toBe(deaths.length);
+    const finalAuthority=captureAugmentHistoryAuthority(finished.state);
+    for(const entry of ['object','JSON'] as const){
+      const input=(s:MatchState)=>entry==='object'?s:JSON.stringify(s);
+      expect(finish(restoreSharedOrbSnapshot(pool,input(state),authority))).toEqual(finished);
+      expect(restoreSharedOrbSnapshot(finished.pool,input(finished.state),finalAuthority)).toEqual(finished.state);
+      for(const owner of ['solo','s1',null]){
+        const bad:any=structuredClone(finished.state);
+        bad.augmentHistory.facts.find((f:any)=>f.kind==='deaths'&&f.round===10&&f.deaths.some((d:any)=>d.team==='player')).deaths.find((d:any)=>d.team==='player').ownerSeatId=owner;
+        expect(()=>restoreSharedOrbSnapshot(finished.pool,input(bad),finalAuthority)).toThrow('death owner');
+        expect(()=>restoreSharedOrbSnapshot(finished.pool,input(bad),captureAugmentHistoryAuthority(bad))).toThrow('death owner');
+      }
+      const disguised:any=structuredClone(finished.state);
+      const death=disguised.augmentHistory.facts.find((f:any)=>f.kind==='deaths'&&f.round===10&&f.deaths.some((d:any)=>d.team==='player')).deaths.find((d:any)=>d.team==='player');
+      Object.assign(death,{team:'enemy',ownerSeatId:null});
+      expect(()=>restoreSharedOrbSnapshot(finished.pool,input(disguised),finalAuthority)).toThrow('server facts/state mismatch');
+    }
+  });
+  it('publishes real room PvE death rows for the actual seat with an independent restore authority',()=>{
+    runUntil(room,clock,s=>s.round===10&&s.phase==='settlement');
+    expect(room.state.fault).toBeNull();
+    const match=room.state.seats.find(s=>s.seatId==='s0')!.match;
+    const rows=requireAugmentFacts(match,'deaths',10),deaths=rows.flatMap(f=>f.deaths);
+    expect(rows.every(f=>f.seatId==='s0')).toBe(true);
+    expect(deaths.some(d=>d.team==='player')).toBe(true);
+    expect(deaths.every(d=>d.ownerSeatId===(d.team==='player'?'s0':null))).toBe(true);
+    expect(rows.at(-1)!.completeThroughTick).toBe(match.combat!.tick);
+    expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(match),room.augmentHistoryAuthority('s0'))).toEqual(match);
   });
 });
 
@@ -162,16 +317,23 @@ it('supports multiple distinct carousel receipts per seat, keeps normal picks si
     let carousel=must(createCarousel(pool,'2-4',{algorithm:'lcg32-v1',state:17})).state;
     carousel=must(advanceCarousel(carousel,carousel.releaseAtMs.s0)).state;pool=carousel.pool;
     const normal=must(pickCarouselForSeat(pool,carousel,match,'s0',0));pool=normal.pool;carousel=normal.carousel;match=normal.state;
+    const normalAuthority=captureAugmentHistoryAuthority(match);
+    onlineTamperMatrix(match,input=>restoreCarouselSeat(carousel,input,normalAuthority));
     const extra=must(grantAdditionalCarouselPick(pool,carousel,match,'s0',1,match.augments[0].choiceId));pool=extra.pool;carousel=extra.carousel;match=extra.state;
     expect(match.carousel!.receipts).toHaveLength(2);expect(new Set(match.carousel!.receipts.map(r=>r.id)).size).toBe(2);
     expect(requireAugmentFacts(match,'carousel',match.round).map(f=>[f.ordinal,f.source])).toEqual([[0,'manual'],[1,'augment']]);
     assertSharedPoolConservation(pool,[match]);
     const authority=captureAugmentHistoryAuthority(match);
     expect(restoreCarouselSeat(carousel,JSON.stringify(match),authority)).toEqual(match);
+    for(const input of [match,JSON.stringify(match)]){
+      expect(()=>restoreCarouselSeat(carousel,input)).toThrow('missing independent server authority');
+      expect(()=>restoreCarouselSeat(carousel,input,{kind:'server-augment-history-authority'})).toThrow('missing independent server authority');
+    }
     expect(pickCarouselForSeat(pool,carousel,match,'s0',2)).toMatchObject({ok:false,reason:'already-picked'});
     const retry=grantAdditionalCarouselPick(pool,carousel,match,'s0',1,match.augments[0].choiceId);expect(retry).toMatchObject({ok:false,reason:'slot-taken'});expect(retry.state).toBe(match);expect(retry.pool).toBe(pool);
     for(const edit of [(s:any)=>s.augmentHistory.facts.pop(),(s:any)=>s.augmentHistory.facts.at(-1).source='manual',(s:any)=>s.augmentHistory.facts.at(-1).ordinal=0]){
-      const bad=structuredClone(match);edit(bad);expect(()=>restoreCarouselSeat(carousel,bad,authority)).toThrow();
+      const bad=structuredClone(match);edit(bad);
+      for(const input of [bad,JSON.stringify(bad)])expect(()=>restoreCarouselSeat(carousel,input,authority)).toThrow();
     }
     validateAugmentHistory(match,authority);
     carousel=must(advanceCarousel(carousel,carousel.deadlineMs)).state;pool=carousel.pool;
@@ -231,6 +393,7 @@ it('records a Forge death, a real Jayce revival and its second death with equipm
     runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],mechanics:[],equipment:[],...patch});
   let s=battle([combatUnit('j','jayce','player',1,4),combatUnit('j:g23-forge','g23-forge','player',2,4,{hp:0}),
     combatUnit('enemy','garen','enemy',2,3)],{rngState:42,combatId:'history-revive',nextEventSeq:0,strategy:{units:[],traits:[]},startEffectsApplied:true});
+  const initial=s;
   const first=stepCombat(s);s=first.state;
   expect(first.events.filter(e=>e.type==='death').map(e=>e.unitId)).toEqual(['j:g23-forge']);
   Object.assign(s.units.find(u=>u.id==='j')!,{mana:100});
@@ -244,6 +407,27 @@ it('records a Forge death, a real Jayce revival and its second death with equipm
   expect(rows.map(d=>d.tick)).toEqual([1,3]);expect(rows.every(d=>!d.ordinaryHero)).toBe(true);
   expect(rows[0].equipment).toEqual([]);expect(rows[1].equipment).toEqual([{definitionId:'chain-vest',slot:0,temporary:false}]);
   expect(first.events.find(e=>e.type==='death')).not.toHaveProperty('equipment');
+  // The same revived unit must retain both deaths when Match binds live and terminal-only samples.
+  const {room}=makeRoom(new DamageResolver(()=>0));room.start();
+  try {
+    const base=room.state.seats[0].match;
+    const owned=historyApi.recordAugmentAcquisition(base,{...base,augments:[{definitionId:'starry-night',choiceId:'revival-probe',acquiredRound:base.round}]});
+    let live=historyApi.recordAugmentTransition(owned,{...owned,combat:initial} as MatchState);
+    for(const step of [first,revived,second]){
+      const events=step.events.filter((e):e is import('../src/simulation/combat-types').LedgerCombatEvent=>e.domain==='combat'&&typeof e.combatId==='string'&&typeof e.eventSeq==='number');
+      expect(events).toHaveLength(step.events.length);
+      live=historyApi.recordAugmentTransition(live,{...live,combat:step.state} as MatchState,events);
+    }
+    const liveRows=requireAugmentFacts(live,'deaths',base.round).flatMap(f=>f.deaths);
+    expect(liveRows).toEqual(rows.map(d=>({...d,ownerSeatId:'s0'})));
+    Object.assign(second.state.units.find(u=>u.id==='enemy')!,{hp:0});
+    const terminal=stepCombat(second.state);expect(terminal.state.status).toBe('finished');
+    const terminalOnly=historyApi.recordAugmentTransition(owned,{...owned,combat:terminal.state} as MatchState);
+    const terminalRows=requireAugmentFacts(terminalOnly,'deaths',base.round).flatMap(f=>f.deaths);
+    expect(terminalRows.filter(d=>d.team==='player')).toEqual(liveRows);
+    expect(terminalRows.filter(d=>d.team==='enemy')).toMatchObject([{unitId:'enemy',ownerSeatId:null}]);
+    expect(terminalRows.map(d=>d.eventSeq)).toEqual([...rows,...augmentDeathsFromEvents(terminal.events)].map(d=>d.eventSeq));
+  } finally {room.dispose();}
 });
 
 it('preserves slotted temporary items and unslotted chest grants independently at death',()=>{
