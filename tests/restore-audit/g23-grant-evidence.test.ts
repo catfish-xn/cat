@@ -11,15 +11,15 @@ import {roundRouteCache} from '../fixtures/round-route-cache';
 let junker:MatchState,academy:MatchState;
 const armoryRoute=roundRouteCache(onRound=>publicPendingArmory(3,onRound));
 const academyRoute=roundRouteCache(onRound=>publicAcademyGrant(onRound));
-// Each case continues the same public route; a name-filtered case can build its missing prefix.
-for(const [name,route,lastRound] of [['armory',armoryRoute,27],['academy',academyRoute,24]] as const){
- // A 300-tick case also bounds the expensive middle-stage cannon battles under load.
- for(let round=1;round<=lastRound;round++)for(const tick of [300,600,900,1200,1201])it(`${name} public evidence route round ${round} through ${tick===1201?'settlement':`tick ${tick}`}`,async()=>{
+describe('grant evidence at public route endpoints',()=>{
+// Ordered, bounded hooks own the prefix, including filtered and shuffled runs.
+for(const [route,lastRound] of [[armoryRoute,27],[academyRoute,24]] as const){
+ // A 300-tick hook also bounds the expensive middle-stage cannon battles under load.
+ for(let round=1;round<=lastRound;round++)for(const tick of [300,600,900,1200,1201])beforeAll(async()=>{
   await route.through(round-1+tick/1201);
  });
- it(`${name} public evidence route completes`,async()=>{await route.finish();});
+ beforeAll(async()=>{await route.finish();});
 }
-describe('grant evidence at public route endpoints',()=>{
 beforeAll(async()=>{
  // Under v22 economy seed 3 reaches the armory through real Rumble purchases.
  const pending=await armoryRoute.finish();
