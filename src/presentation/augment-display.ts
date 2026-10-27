@@ -31,12 +31,15 @@ export const AUGMENT_ZH: Readonly<Record<string, string>> = Object.freeze({
   'built-different': '卓尔不群', 'blistering-strikes': '酷热打击', 'clockwork-accelerator': '发条增速器',
   'lone-hero': '孤胆英雄', 'climb-the-ladder-i': '攀登天梯 I', 'climb-the-ladder-ii': '攀登天梯 II',
   'inspiring-epitaph': '激昂墓志铭',
+  mentorship: '羁绊：军事管制', reunion: '羁绊：重新联合', geniuses: '羁绊：天才',
+  menaces: '羁绊：危险人物', 'unlikely-duo': '羁绊：意外搭档', sisters: '羁绊：姐妹',
 });
 
 export const augmentDisplayName = (id: string): string => {
   const name = AUGMENT_ZH[id] ?? AUGMENT_DEFINITIONS[id]?.name;
   if (name !== id) return name ?? '未知强化';
-  return readAugmentText()?.AUGMENT_POOL_TEXT[id]?.name ?? '强化名称加载中…';
+  const data = readAugmentText();
+  return data?.AUGMENT_POOL_TEXT[id]?.name ?? data?.AUGMENT_EXTRA_TEXT[id]?.name ?? '强化名称加载中…';
 };
 
 /** Bundled icon, else one the 3D asset root's ui-assets.json carries (kind `augment`), else null. */
@@ -96,6 +99,7 @@ export const augmentPlayerDescription = (id: string): string | null => {
   const data = readAugmentText();
   if (!data) return augmentTextPlaceholder();
   if (Object.hasOwn(data.AUGMENT_POOL_TEXT, id)) return data.AUGMENT_POOL_TEXT[id].description;
+  if (Object.hasOwn(data.AUGMENT_EXTRA_TEXT, id)) return data.AUGMENT_EXTRA_TEXT[id].description;
   return d11ChoiceDisplay(id)?.description ?? p3Description(id) ?? teamupDescription(id) ?? (AUTHORED_DESCRIPTION.has(id) ? AUGMENT_DEFINITIONS[id]?.description ?? null : null);
 };
 /**

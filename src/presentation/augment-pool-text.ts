@@ -601,3 +601,83 @@ export const AUGMENT_POOL_TEXT: Readonly<Record<string, { readonly name: string;
     "name": "冒险举动"
   }
 };
+
+/** Extra pool batches kept separate so offline historical identity reconstruction stays unchanged. */
+export const AUGMENT_EXTRA_TEXT: Readonly<Record<string, { readonly name: string; readonly description: string }>> = {
+  "long-distance-pals": {
+    "name": "天涯若比邻",
+    "description": "战斗开始时：你相距最远的那2个弈子会形成一个纽带，分享彼此的22%护甲、魔抗、攻击力和法术强度。"
+  },
+  "category-five": {
+    "name": "五级飓风",
+    "description": "获得1个【卢安娜的飓风】。你的【卢安娜的飓风】发射1根额外弩箭，每根弩箭造成85%原伤害。"
+  },
+  "overheal": {
+    "name": "过量治疗",
+    "description": "每第三次攻击都会造成115%额外伤害，并回复相当于50%该伤害的生命值。多余的治疗量会转化为护盾，至多至300。"
+  },
+  "sated-spellweaver": {
+    "name": "满意的织法者",
+    "description": "在施放一个技能后，弈子们获得持续3秒的20%全能吸血。多余的治疗量会转化为护盾，至多至300。"
+  },
+  "caretakers-ally": {
+    "name": "游神的盟友",
+    "description": "即刻获得1个随机的2费英雄。在你每次升级时，再次获得一个相同弈子。\n\n弈子：〔对局动态值〕"
+  },
+  "lategame-specialist": {
+    "name": "后期专家",
+    "description": "在你到达9级时，提供33金币。"
+  },
+  "caretakers-favor": {
+    "name": "游神的眷顾",
+    "description": "在你达到5级、6级、7级和8级时获得1个【基础装备锻造器】。\n\n这个锻造器提供4个选项。"
+  },
+  "birthday-presents": {
+    "name": "生日礼物",
+    "description": "在你每次升级时获得1个2星英雄。这个英雄的费用位阶是你的等级减4(最小值：1费)。"
+  },
+  "caretakers-chosen": {
+    "name": "游神的神选",
+    "description": "随着你的升级，获得更强力的装备。\n4级 - 基础装备锻造器\n6级 - 成装锻造器\n7级 - 从5件光明武器中选出1件"
+  },
+  "called-shot": {
+    "name": "进攻宣告",
+    "description": "将你的连胜数设为+4。获得4金币。"
+  },
+  "crafted-crafting": {
+    "name": "精心打造",
+    "description": "每当你合成一件成装时，获得2次刷新。"
+  },
+  "a-change-of-fate": {
+    "name": "扭转命运",
+    "description": "获得一个【蓝霸符】。在以60金币开始一个回合以及赢下一个玩家对战回合后，获得一个【梅尔】和一个【海克斯科技枪刃】。\n\n这些任务能够以任意顺序完成。"
+  },
+  "clear-mind": {
+    "name": "清晰头脑",
+    "description": "如果在一个玩家对战回合结束时你的备战席没有任何英雄，则获得3经验。"
+  },
+  "cluttered-mind": {
+    "name": "纷乱头脑",
+    "description": "即刻获得4个随机的1费弈子。如果玩家对战回合结束时你的备战席已满，提供3经验。 "
+  },
+  "slammin": {
+    "name": "物尽其用",
+    "description": "获得1件随机的基础装备。每个玩家对战回合结束时，如果你的备战席没有任何装备(消耗品除外)，则获得2经验值。"
+  },
+  "slammin-plus": {
+    "name": "物尽其用+",
+    "description": "即刻获得1件随机的基础装备和10经验值。每个玩家对战回合结束时，如果你的备战席没有任何装备(消耗品除外)，则获得2经验值。"
+  },
+  "patience-is-a-virtue": {
+    "name": "耐心是一种美德",
+    "description": "每回合，如果你在上一回合未购买任何弈子，则会获得2次免费刷新。"
+  },
+  "invested-plus": {
+    "name": "投资+",
+    "description": "获得26金币。在每个回合开始时，在50金币之上，每拥有10金币就会获得1次商店刷新(最多80金币)。"
+  },
+  "invested-plus-plus": {
+    "name": "投资++",
+    "description": "获得45金币。在每个回合开始时，在50金币之上，每拥有10金币就会获得1次商店刷新(最多80金币)。"
+  }
+};
