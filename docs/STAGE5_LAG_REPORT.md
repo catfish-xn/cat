@@ -1,6 +1,6 @@
 # 第 5 阶段后卡顿测量（2026-10-27）
 
-基线：`codex/stage5-lag`，HEAD `30690fe3717d1b267c3966f1e001ae75cf9d2475`。工作区起初干净；未提交、未写 Git 元数据。最终唯一产品修改是 `src/simulation/combat-summary.ts` 的离场单位空值处理，另加回归测试及合同说明。没有改玩法、时钟步长、资源、RNG、内容版本或 digest，没有删断言或提高测试时限。
+原报告基线：`codex/stage5-lag`，HEAD `30690fe3717d1b267c3966f1e001ae75cf9d2475`。原轮工作区起初干净；未提交、未写 Git 元数据，唯一产品修改是 `src/simulation/combat-summary.ts` 的离场单位空值处理，另加回归测试及合同说明。后续 `codex/stage5-floating-text` 的飘字实现和复测另见下文“飘字优化前后复测”。两轮均没有改玩法、时钟步长、资源、RNG、内容版本或 digest，没有删断言或提高测试时限。
 
 ## 结论
 
@@ -213,22 +213,88 @@
 | 优先级 | 具体改动 / 状态 | 预期收益及依据 | 风险 / 验证要求 |
 | --- | --- | --- | --- |
 | P0 | 汇总缺项使用 false（已实施） | 消除 5-1 tick 293 的确定性异常；恢复播放。不是 FPS 优化 | 低；18 个相关测试、类型检查及同一在线回放已通过 |
-| P1 | 飘字 textContent 内容未变则不写；随后分批读尺寸/写位置（Claude） | 单行诊断 A/B：5-1 飘字累计 -15.4%，帧 p95 -10%；批次改造收益待测 | 低至中；验证单位定位、缩放、过期移除及在线/回放；不承诺 60 FPS |
+| P1 | 飘字文字/样式缓存、节点池、尺寸读写分批（本轮用户明确授权 Codex 实施） | 原单行诊断：5-1 飘字累计 -15.4%，帧 p95 -10%；完整实现实测见“飘字优化前后复测” | 低至中；录制序列 DOM/坐标等价验证及真实在线回放；不承诺 60 FPS |
 | P2 | 只优化 copyCombatUnitForTick 内有所有权证明的动态分支复制（Codex） | 该函数 self 约 4.15%，所有 structuredClone 另占 4.46%；若将该函数自身耗时减半，对整局约 2% 收益；clone 和 GC 的额外收益待分支归因，未实测 | 中高；不能误共享可变数组/记录，完整终态、事件、RNG 与恢复结果须字节等价；不能消除全部冻结/GC 尾峰 |
 | P3 | nextSharedRound 同源可恢复任务，Room.advanceRound 分片后一次发布（Codex + Claude） | 目标将常见 58 ms、峰值 132 ms 的换轮阻塞拆到约 20 ms + 一个不可抢占单元；不减少总 CPU，原生长单元仍可能超预算 | 高；共享池原子性、唯一收据、超时、发布顺序及断线恢复必须不变；先确认尾峰具体工作单元 |
 
 下面列出建议所涉及的全部直接生产调用点及在线链路。测试引用不算产品调用点；“受影响”不表示必须修改所有调用方。
 
 1. **已修复的汇总缺项**：修改 `src/simulation/combat-summary.ts:summarizeBattle`。唯一直接生产调用是 `src/presentation/battle-ranking.ts:summarize`（约第 60 行）；上层 `rankBattle`、`rankLiveBattle`、`unitBattleStats`。实际消费者为 `src/rendering/online/battle-summary.ts:live/show`（62/69）、`src/rendering/online/online-application.ts:flushOutcome`（344）、`src/rendering/BoardScene.ts:syncUnitCard/inspectData`（1179/1208）；`rankLiveBattle` 的完成分支以及 `unitBattleStats` 的本场/历史聚合也调用 `rankBattle`（67/127/131）。`src/server-entry/index.ts` 为公共导出；在线触发链为 `OnlineApplication.frame → syncSummary → BattleSummaryPanel.live → rankLiveBattle → summarizeBattle`。只改汇总、回归、合同，以上 UI 文件未改。
-2. **飘字文字缓存及读写批次**：修改点为 `src/stats/combat-feedback-renderer.ts:createCombatFeedbackRenderer` 返回的 `render`，约第 46–69 行。唯一工厂调用在 `BoardScene.create`（297）；全部 render 调用在 `BoardScene.renderReplayFeedback`（1101）、`BoardScene.renderFeedback` 的 3D 分支（1125）和 2D 分支（1128）。前者由 `BoardScene.update` 的 replay 模式分支调用，后者由同一个 update 每帧调用（1132 起）。在线事件源是 `RemoteSession.advanceDisplay → BoardScene.showEvents → feedback.push`；在线 3D 已有 `quietBoard()` 早退，不应声称该修复会加速当前在线 3D。该文件属于 Claude 界面职责，本次只用测试响应做 A/B，未改产品文件。
+2. **飘字文字缓存及读写批次**：唯一工厂调用在 `BoardScene.create`（297）；全部 render 调用在 `BoardScene.renderReplayFeedback`（1101）、`BoardScene.renderFeedback` 的 3D 分支（1124）和 2D 分支（1128）。前者由 `BoardScene.update` 的 replay 模式分支调用，后者由同一个 update 每帧调用（1132 起）。在线事件源是 `RemoteSession.advanceDisplay → BoardScene.showEvents → feedback.push`；在线 3D 已有 `quietBoard()` 早退，不应声称该修复会加速当前在线 3D。原报告只用测试响应做 A/B；本轮获用户明确授权后修改共享飘字文件及调用方的矩形读取，完整清单见下文。
 3. **战斗动态复制热点**：候选仅修改 `src/simulation/combat-static.ts:copyCombatUnitForTick` 内的动态分支；暂不改 `immutableTickRecord/sharedCombatDeclarations` 的通用认证约定，唯一直接 `copyCombatUnitForTick` 调用在 `src/simulation/combat-s13.ts:advanceS13Tick`（159）。应先针对有所有权证明的动态分支做窄范围复制，而非删冻/删字段或把外部输入当作已认证数据。通用入口 `stepCombat → advanceCombatTick → advanceS13Tick`。在线 PvP 为 `Room.advanceStreams → CombatStream.advancePvp → BattleReplayTask.advanceTick/advance → stepCombat`（`two-sided-battle.ts` 317/325）；PvE 为 `CombatStream.advancePve → stepMatchCombatStream → stepCombat`。旧 resolver、`startCombatReplay`、恢复冷重演、离线 Match 也共享此入口，必须跑完整状态/事件字节对比。无需直接改各 UI 调用方。
 4. **换轮事务可恢复切片**：候选新增 `shared-pool.ts` 的 `nextSharedRound` 同源 generator，保留原同步入口；修改 `Room.advanceRound` 的调度接线，保持整个池和席位结果一次发布。当前唯一直接生产调用 `src/server/room/room.ts:1796`；唯一 `advanceRound` 调用是 `Room.onDeadline` 的 settlement 分支（1884）。`nextSharedRound` 目前直接调用内部 `refreshBatch(pool, states, expectedRound, true)`（348）。若提取该内部实现，另一直接调用 `refreshSharedShops`（344）也必须继续走同源同步路径；后者唯一生产调用是 `Room` 构造函数（409）。必须同步覆盖 `applyTimeouts('settlement')` 与发布前的 `openingViewFault/publishOpeningResolution`，不能把半个共享池公开。在线路径 `RealClock → roomClock/WriteQueue → onDeadline → advanceRound → nextSharedRound`，本地房间也复用 Room。需要改 server 的部分交由 Claude，新增契约与确定性测试由 Codex 配合。
 
 没有建议删完整账本、少算战斗 tick、跳过校验、放宽守恒或降低画面信息正确性。单纯把 20 ms 预算调小不能消除一个不可抢占工作单元或 GPU/布局停顿。
 
-## 复现与交付
+## 飘字优化前后复测（2026-10-27）
 
-所有生成物位于 gitignored `artifacts/stage5-lag/`；没有新增模型、贴图、录制夹具或 profile 到跟踪目录。四个可复用测量脚本为 `stage5-lag-server.ts`、`stage5-lag-browser.cjs`、`stage5-lag-browser-probe.ts`、`stage5-lag-analyze.cjs`。脚本没有依赖 Git 写权限。
+本轮分支 `codex/stage5-floating-text`，起点 `014476f5e91551dbc9d6b7ebb1eeb0eedb9dc6c6`（已含召唤物离场修复）。修改前重新测量，再在同一工作区修改产品；没有把原报告跨次运行的数字当作本轮对照。`.git` 只读，未提交。用户本轮明确授权 2D/3D 客户端修改；产品仅改下列两个文件，没有改服务器或规则。
+
+### 实现及全部生产调用点
+
+- `src/stats/combat-feedback-renderer.ts:12`：缓存请求的 CSS 字符串，值相同不赋值，避免 CSSOM 对小数像素的舍入导致误判；`:74` 文字相同不写 `textContent`。
+- `src/stats/combat-feedback-renderer.ts:26`：最多 24 个 span 的分离节点池；过期、每单位三条及全局 24 条淘汰都回收，重用前清理旧文字、隐藏状态和位置。保留原 DOM 顺序，`reset` 后没有活动节点，`dispose` 释放池引用。
+- `src/stats/combat-feedback-renderer.ts:65`：先批量准备变化的文字/可测状态，`:79` 一次读取容器宽高，再集中读取所有 label 的 `offsetWidth`，`:84` 起只计算和写位置。新文字需要一次批量布局边界，**不宣称完全没有同步布局**；尺寸循环和位置循环内没有读写交错。每帧仍重新测量字体宽度，避免缩放、字体加载或 resize 后缓存尺寸失真。`:83` 将碰撞检查反复展开的 anchors 数组改为每帧一次，迭代顺序及判断式不变。
+- `src/rendering/BoardScene.ts:1113` / `:1127`：先读 feedback host 的矩形，只有 2D 分支再读 Phaser canvas；3D 覆盖层不再读取被遮住的 2D canvas。所有锚点矩形读取均在 `feedback.render` 写位置前完成，没有新增逐单位 DOM 写入。
+- **唯一工厂调用**：`src/rendering/BoardScene.ts:297`（未改接线）。**全部 render 调用**：`:1101` 回放，`:1124` 3D 覆盖层，`:1128` 2D 面板；后两者所在的 `renderFeedback` 修改了上述读取位置，调用参数及计算式未改。回放的 canvas/host 也是先集中读取再调用共享渲染器。
+- **联机 2D**：`WsGameClient → OnlineApplication → RemoteSession.advanceDisplay → BoardScene.showEvents:1352 → feedback.push`，`BoardScene.update:1147 → renderFeedback:1128 →` 同一个优化后的渲染器。**联机 3D**：`quietBoard:1110` / `:1112` 保持早退，`:1352` 也保持不 push 伤害飘字；3D 事件仍走 `publishCombatEvents →` Three 覆盖层/动画与战斗面板，没有开启原先关闭的数字。离线 3D 经 `boardFeedScreenBox → :1124` 使用同一个优化后的渲染器。`src/rendering/three-mode/placeholder-renderer.ts:1123` 的投影实现无需修改。
+
+原报告没有另一项同时评级为“低风险、高收益”的客户端候选。P1 的文字、样式、批次及池已完成；P2 是中高风险的规则复制，P3 是高风险的服务器原子事务，保留后续任务。未为了降低成本改变 850 ms 生命周期、lane、避让顺序、透明度、文字内容或显示数量。
+
+### 等价性与验证
+
+`tests/fixtures/stage5-feedback-before.ts:1` 固定本轮起点的旧实现作为独立 oracle；`stage5-feedback-sequence.json` 是原 seed 42 / 5-1 前 100 tick 的 205 条伤害/治疗/状态事实（纯测试数据，无美术资源）。`tests/stage5-feedback.test.ts:44` 逐帧对照文字、隐藏状态、样式和顺序，覆盖 2D/3D 锚点、resize、消失单位、遮挡、同 tick 合并、护盾/治疗/真实伤害、负 age、849.999/850 ms 边界、输入不变、池复用与 dispose。`:83` 仪器化 DOM 验证几何读取连续、容器尺寸各读一次、相同帧文字/样式零赋值，连续十次饱和/重置共只创建 24 个 span。
+
+真实 Chromium 的 `scripts/stage5-feedback-browser.cjs:20` 对原报告**完整两份录制**在每 tick 的 0 / 16.7 / 49.9 ms 比较旧/新 DOM、CSS 序列化、computed style 和 `getBoundingClientRect`，包含 resize、Three 投影经 board-feed 的锚点、重置复用及过期。2-5 有 **2,144** 次比较，5-1 有 **3,014** 次比较，共 **5,158/5,158 通过**，覆盖终态 tick 355 / 500，录制事件与状态不变。`:96` 起另调用生产 `BoardScene.renderFeedback`，每回合检查在线 2D、离线 3D 覆盖层及在线 3D 早退，共 **6/6 通过**；确认 3D 不再读 2D canvas，且在线 3D 没有启用数字。结果保存在 `artifacts/stage5-lag/floating-after/feedback-equivalence.json`。
+
+相关 Vitest **6 文件、35/35 通过**（`--maxWorkers=4`）：新增飘字测试、stage5-summary-removal、stats-panel-incremental、rendering3d-overhead、rendering3d-mode、combat-replay-display-fields；`npm run typecheck`、`npm run build` 均通过（保留现有大 chunk 提示，未放宽限制）。没有删除断言或提高任何时限；未跑全套长验收。
+
+### 同录制浏览器结果
+
+沿用未修改的 `stage5-lag-browser.cjs`、probe 与 analyze；先 `floating-before`，再 `floating-after`，每种视图/回合各一次独立 context，**一个浏览器负载串行运行**，性能窗口内没有并行跑测试/构建。Node 22.23.4、Chrome 156.0.8078.47、1440×900 / DPR 1；相同 CDP profile/trace、span、MutationObserver 探针。准备 8 s，战斗 2-5 为 18.75 s、5-1 为 25 s，真实 3D 素材来自原报告同一路径，预热 15 s，12/12 与 17/17 初批模型均加载。GPU 仍为 SwiftShader；不是硬件 GPU 验收。
+
+录制直接复用原报告工作区的文件，before/after 字节相同。SHA-256：2-5 `5728fe49ab6204cef5b331e61afb378658894602d3ec7c2db2583ea18797482d`；5-1 `e15b74a598f26e93a8ed1edba96eda35d75d5221a93368680ad68ba35043afe9`。
+
+下表均为**战斗窗**，箭头为本轮修改前 → 修改后；耗时单位 ms，p95 为 nearest-rank。飘字 span 包括调用方矩形读取，组件计时不能与 layout 相加。
+
+| 视图 / 回合 | rAF 帧 n | 帧 p50 | 帧 p95（变化） | renderFeedback p95 | 飘字累计 ms（变化） |
+| --- | --- | --- | --- | --- | --- |
+| 2D / 2-5 | 294 → 413 | 66.6 → 50.0 | **83.4 → 66.6（−20.1%）** | 46.6 → 10.9 | **7188.2 → 2756.3（−61.7%）** |
+| 2D / 5-1 | 254 → 400 | 83.4 → 66.6 | **166.6 → 83.3（−50.0%）** | 99.9 → 13.7 | **11846.1 → 4210.9（−64.5%）** |
+| 真实素材 3D / 2-5 | 112 → 110 | 166.6 → 166.7 | 183.4 → 200.0（+9.1%） | 0.0 → 0.0 | 0.3 → 0.1（早退，非收益证据） |
+| 真实素材 3D / 5-1 | 138 → 139 | 183.3 → 183.2 | 200.1 → 200.1（0.0%） | 0.0 → 0.0 | 0.4 → 0.6（早退，非收益证据） |
+
+主渲染线程的全窗 timeline 与 DOM 探针（包含其他 UI）：
+
+| 视图 / 回合 | Layout 次数 | Layout ms | UpdateLayoutTree ms | DOM mutation 记录数 | MinorGC + MajorGC ms |
+| --- | --- | --- | --- | --- | --- |
+| 2D / 2-5 | 2200 → 988 | 2169.5 → 694.2 | 5751.9 → 3328.2 | 14733 → 15852 | 131.8 → 151.3 |
+| 2D / 5-1 | 3107 → 1189 | 2668.0 → 1163.3 | 10128.8 → 4938.9 | 24999 → 31115 | 162.8 → 195.3 |
+| 真实素材 3D / 2-5 | 78 → 76 | 55.6 → 55.0 | 432.8 → 414.9 | 6524 → 6414 | 40.3 → 25.4 |
+| 真实素材 3D / 5-1 | 105 → 107 | 76.0 → 73.2 | 582.3 → 585.4 | 12698 → 12720 | 56.3 → 59.4 |
+
+2D 的 Layout 次数减少 **55.1% / 61.7%**，布局加样式总时间减少 **49.2% / 52.3%**。帧数增加，因此全 UI mutation/GC 总量没有同步下降；mutation 每 rAF 约 50.1 → 38.4、98.4 → 77.8，不能把总记录数增加当作重复文字写入增加，也不能宣称 GC 总时间改善。2D 两轮末尾 tick 均为 355 / 495；真实素材 3D 的 2-5 均为 355，5-1 为 492 → 486。所有样本无 pageerror；5-1 的 25 s 窗口受显示缓冲及软件渲染帧率影响，没有保证播放至终态，完整序列的等价性由独立组件测试验证。
+
+**3D 没有可归因的帧率提升**：在线路径原本就没有飘字，2-5 的 p95 反而高一个约 16.7 ms 的调度间隔；5-1 p95 相同。共享机器、每格一次、软件 GPU 与素材上传波动均限制外推。全部样本仍只有已知模拟 `/healthz` requestfailed；这不是生产公网/背压验收。2D 优化后仍远未到 60 FPS，不将单次样本作为保证。
+
+产物索引：[before summary](../artifacts/stage5-lag/floating-before/summary.json)、[after summary](../artifacts/stage5-lag/floating-after/summary.json)、[DOM 等价结果](../artifacts/stage5-lag/floating-after/feedback-equivalence.json)、[2D 5-1 优化后火焰图](../artifacts/stage5-lag/floating-after/client-2d-5-1-combat-1-assets.flame.svg)。均为本地 gitignored 产物。
+
+```bash
+export PATH=$HOME/.local/bin:$PATH
+# before 在修改产品前执行；两目录预先放入原报告相同的 fixture-42-{2-5,5-1}.json。
+STAGE5_OUT=artifacts/stage5-lag/floating-before STAGE5_ASSETS=/home/aiapps/workspcae/cat-cx-vfx4/assets3d-local/trial STAGE5_REPEATS=1 node scripts/stage5-lag-browser.cjs
+# 应用本轮产品修改后，串行执行相同测量。
+STAGE5_OUT=artifacts/stage5-lag/floating-after STAGE5_ASSETS=/home/aiapps/workspcae/cat-cx-vfx4/assets3d-local/trial STAGE5_REPEATS=1 node scripts/stage5-lag-browser.cjs
+node scripts/stage5-lag-analyze.cjs artifacts/stage5-lag/floating-before
+node scripts/stage5-lag-analyze.cjs artifacts/stage5-lag/floating-after
+node scripts/stage5-feedback-browser.cjs
+npm test -- tests/stage5-feedback.test.ts tests/stage5-summary-removal.test.ts tests/stats-panel-incremental.test.ts tests/rendering3d-overhead.test.ts tests/rendering3d-mode.test.ts tests/combat-replay-display-fields.test.ts --maxWorkers=4
+npm run build
+```
+
+## 复现与交付（原报告）
+
+所有生成物位于 gitignored `artifacts/stage5-lag/`；原轮没有新增录制夹具，本轮新增的紧凑事件测试夹具见上文；没有新增模型、贴图或 profile 到跟踪目录。四个可复用测量脚本为 `stage5-lag-server.ts`、`stage5-lag-browser.cjs`、`stage5-lag-browser-probe.ts`、`stage5-lag-analyze.cjs`。脚本没有依赖 Git 写权限。
 
 ```bash
 export PATH=$HOME/.local/bin:$PATH
