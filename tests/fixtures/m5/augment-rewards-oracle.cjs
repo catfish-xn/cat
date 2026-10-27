@@ -13,6 +13,7 @@ const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
+ 'hard-commit':[Q('emblem')],
  'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],
@@ -94,6 +95,14 @@ function rewardPlan(s,env){
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
   const facts=battles.filter(f=>f.round>=a.acquiredRound);
+  if(a.definitionId==='hard-commit'){
+   const roster=require('./hard-commit-roster.cjs')[start[0].definitionId];assert(roster,'independent emblem roster');
+   for(let round=a.acquiredRound;round<=s.round;round++){
+    const row=env.ROUNDS[round-1];if(!row||round!==a.acquiredRound&&row.sub!==1)continue;
+    const target=Math.min(row.stage,5),costs=[...Array.from({length:target},(_,i)=>target-i),...Array.from({length:5-target},(_,i)=>target+i+1)];
+    const cost=costs.find(c=>roster[c-1].length);if(cost)levelsOut.push(...expand(s,owner(a,['hard-commit',round],round),[['F',roster[cost-1],1]],env));
+   }
+  }
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
