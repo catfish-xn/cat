@@ -1,4 +1,5 @@
 import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
+import { drainSurvivorGold } from './augment-pool-batch5-h4-survivor';
 import type { MatchState, MatchEvent } from './match-types';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -34,7 +35,8 @@ export function recordAugmentRoundEntry(s: MatchState): MatchState {
   return appendAugmentFact(s, { kind: 'round-entry', roster: historyRoster(s) });
 }
 export function recordAugmentTable(s: MatchState, stage: 'acquire' | 'entry' | 'settlement', seats: readonly HistorySeat[]): MatchState {
-  return appendAugmentFact(s, { kind: 'table', stage, seats });
+  const recorded = appendAugmentFact(s, { kind: 'table', stage, seats });
+  return recorded.augments.some(a=>a.definitionId==='survivor') ? drainSurvivorGold(recorded) : recorded;
 }
 export function recordAugmentPvpRoster(s: MatchState, battleId: string, seats: readonly HistorySeat[], mirrorOfSeatId: string | null): MatchState {
   if (s.augmentHistory?.facts.some(f => f.kind === 'pvp-roster' && f.battleId === battleId)) return s;
