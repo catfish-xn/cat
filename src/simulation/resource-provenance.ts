@@ -1,3 +1,4 @@
+import { carryGolemStar } from './augment-pool-batch5-g6-stats';
 import { isAnvil } from './content/anvils';
 import { trainerStar, TRAINER_ID } from './content/opening-batch-b';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
@@ -386,7 +387,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const starts = new Set(entries.filter(entry => entry?.kind === 'combat-growth-committed')
     .map(entry => (entry as Extract<ResourceProvenanceEntry, { kind: 'combat-growth-committed' }>).combatStartProvenancePrefixLength));
   const unitPrefixes = new Map<number, ReadonlyMap<string, ProvenanceUnit>>();
-  const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit,...(unit.definitionId===TRAINER_ID?{starLevel:trainerStar(getCatalogRoundByOrdinal(context.throughRoundOrdinal).stage)}:{}) })).sort(compareIds),
+  const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit,...(unit.definitionId==='carry-golem'?{starLevel:carryGolemStar(context.throughRoundOrdinal,context.scheduleReceipts.find(r=>r.kind==='augment'&&r.definitionId==='im-the-carry-now')?.round??context.throughRoundOrdinal)}:unit.definitionId===TRAINER_ID?{starLevel:trainerStar(getCatalogRoundByOrdinal(context.throughRoundOrdinal).stage)}:{}) })).sort(compareIds),
     items: [...items.values()].map(item => ({ ...item })).sort(compareIds), persistentGrowth: growth.map(entry => ({ ...entry })), nextUnitSerial, nextItemSerial });
   let result = projection();
   const deferredCarouselIds = new Set<string>(), preparationReceipts = new Set<string>(), claimedCarouselIds = new Set<string>();

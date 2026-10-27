@@ -29,7 +29,7 @@ export function startV20Traits(ctx:AbilityContext):void {
   for(const {u,m,value} of samples){const before=ad(u),granted=Math.floor(value*2500/10000);u.v20Traits={...u.v20Traits,mentorshipAdSample:value,mentorshipGranted:granted};ctx.events.push({type:'statChanged',tick:0,unitId:u.id,source:asSource(m.source),stat:'attackDamage',before,after:ad(u)});}
   for(const u of ctx.units)if(u.definitionId==='powder'){
     const m=teamup(u,'menaces'),silco=m&&ctx.units.find(t=>t.id===m.targetId);
-    if(silco)u.v20Traits={...u.v20Traits,silcoSample:{star:silco.starLevel,abilityPower:ap(silco,0),damage:amount(silco,0,{ap:variable(silco,'MinionDamage')}),
+    if(silco)u.v20Traits={...u.v20Traits,silcoSample:{star:silco.starLevel as 1|2|3,abilityPower:ap(silco,0),damage:amount(silco,0,{ap:variable(silco,'MinionDamage')}),
       attacks:variable(silco,'MinionNumAttacks'),durationTicks:Math.round(variable(silco,'MinionDuration')*20)},detonations:[]};
   }
 }

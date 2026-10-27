@@ -152,10 +152,10 @@ batch3Offers.silver.push('caretakers-ally','lategame-specialist','patience-is-a-
 batch3Offers.gold.push('contested','scoreboard-scrapper');
 batch3Offers.gold.push('no-scout-no-pivot','cooking-pot');
 batch3Offers.gold.push('two-much-value');
-batch3Offers.silver.push('survivor','diversified-portfolio-plus','diversified-portfolio','called-shot','crafted-crafting','table-scraps','young-and-wild-and-free');batch3Offers.prismatic.push('dual-purpose','a-change-of-fate');
+batch3Offers.silver.push('survivor','diversified-portfolio-plus','diversified-portfolio','called-shot','crafted-crafting','table-scraps','young-and-wild-and-free');batch3Offers.prismatic.push('dual-purpose','a-change-of-fate','im-the-carry-now');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
-assert.equal(AUGMENTS.length,245,'independent full augment catalog size');
-assert.equal(new Set(AUGMENTS).size,245,'independent catalog has no duplicates');
+assert.equal(AUGMENTS.length,246,'independent full augment catalog size');
+assert.equal(new Set(AUGMENTS).size,246,'independent catalog has no duplicates');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).
@@ -474,7 +474,7 @@ function heldResources(state){
  return {units:[d.held.unit],items:d.held.items};
 }
 // v22 Trainer Golem is an opening structure whose star follows the stage (audited by opening-encounters-trainer-golems), not a card.
-const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'&&u.definitionId!=='trainer-golem'),...heldResources(state).units];
+const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'&&!['trainer-golem','carry-golem'].includes(u.definitionId)),...heldResources(state).units];
 const ownedItems=state=>[...state.items,...heldResources(state).items];
 // CHEM_BARON_FIX: independent standard 14.24b PvP values and archive map22 source-order weights.
 // One whole bundle per 14.24b UI evidence; no production content/planner/RNG imports.
@@ -624,6 +624,7 @@ class Ledger {
    assert(a&&['support-mining','support-mining-plus'].includes(a.definitionId),'independent dummy retirement owner');
    assert.equal(units.get(e.unitId)?.definitionId,'training-dummy');units.delete(e.unitId);this.cards--;
   }
+  if(command?.type==='select'&&before.pendingChoice?.kind==='augment'&&command.definitionId==='im-the-carry-now')serial++;
   assert.equal(after.nextUnitSerial,serial,'unit serial accounting');
   for(const event of events.filter(e=>e.type==='unitUpgraded')){assert.equal(event.consumedIds.length,2);assert.equal(new Set([event.survivorId,...event.consumedIds]).size,3);for(const id of [event.survivorId,...event.consumedIds])assert.deepEqual(units.get(id),{definitionId:event.definitionId,starLevel:event.fromStar},'upgrade consumes actual candidate lineage');assert.equal(event.toStar,event.fromStar+1);for(const id of event.consumedIds)units.delete(id);units.set(event.survivorId,{definitionId:event.definitionId,starLevel:event.toStar});}
   assert.deepEqual(new Map(ownedUnits(after).map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}])),units,'actual player unit lineage');

@@ -1,3 +1,5 @@
+import { carryGolemBaseStats } from './augment-pool-batch5-g6-stats';
+import { CARRY_GOLEM_ID } from './content/augment-pool-batch5-g6';
 import { isAnvil } from './content/anvils';
 import { TRAINER_ID, TRAINER_HEALTH, TRAINER_ATTACK_CENTI } from './content/opening-batch-b';
 import { STAR_HEALTH_PERCENT, STAR_ATTACK_PERCENT, SIX_COST_STAR_PERCENT } from './content/unit-star-scaling';
@@ -13,6 +15,8 @@ export function getUnitStats(definitionId: string, starLevel: StarLevel): Resolv
 /** Content input seam for future catalogs; never installs a definition globally. */
 export function resolveUnitStats(definition: UnitDefinition, starLevel: StarLevel): ResolvedUnitStats {
   validateNeutralInputs(definition);
+  if (definition.id === CARRY_GOLEM_ID) return carryGolemBaseStats(starLevel);
+  if (starLevel === 4) throw new RangeError(`Invalid star level: ${starLevel}`);
   if (!Object.hasOwn(STAR_HEALTH_PERCENT, starLevel)) throw new RangeError(`Invalid star level: ${starLevel}`);
   const fixed = definition.summon?.fixedStarStats;
   const healthPercent = fixed ? 100 : (definition.cost === 6 ? SIX_COST_STAR_PERCENT : STAR_HEALTH_PERCENT)[starLevel];
@@ -33,6 +37,7 @@ export function resolveUnitStats(definition: UnitDefinition, starLevel: StarLeve
 
 export function getUnitSellPrice<T extends Pick<Unit,'definitionId'|'starLevel'>>(unit: T): number {
   if (!Object.hasOwn(UNIT_DEFINITIONS, unit.definitionId)) throw new RangeError(`Unknown unit definition: ${unit.definitionId}`);
+  if (unit.definitionId === CARRY_GOLEM_ID) return 0;
   if (!Object.hasOwn(STAR_HEALTH_PERCENT, unit.starLevel)) throw new RangeError(`Invalid star level: ${unit.starLevel}`);
   if (UNIT_DEFINITIONS[unit.definitionId].unitKind === 'neutral') return 0; // Display-only: sell command rejects enemy identity.
   if(isAnvil(unit.definitionId))return 0;

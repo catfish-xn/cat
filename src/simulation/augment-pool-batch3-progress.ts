@@ -261,7 +261,7 @@ export function drainBatch3Forming(initial:MatchState):MatchState {
    state={...state,items:returned.items,anomalyBinding:state.anomalyBinding?.unitId===unit.id?null:state.anomalyBinding,
     persistentGrowth:state.persistentGrowth.filter(g=>g.unitId!==unit.id),
     preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.id!==unit.id)},
-    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'unit-removed',unitId:unit.id,receiptId,definitionId:unit.definitionId,starLevel:unit.starLevel})};
+    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'unit-removed',unitId:unit.id,receiptId,definitionId:unit.definitionId,starLevel:unit.starLevel as 1|2|3})};
   }
   state={...state,augmentProgress:{...state.augmentProgress,forming:formingTotals(state)}};
  }

@@ -1,6 +1,7 @@
 import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
 import { AUGMENT_BATCH5_H6 } from './content/augment-pool-batch5-h6';
+import { validateCarryGolem } from './augment-pool-batch5-g6';
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
 import { advanceAugmentPreparationTime, type AugmentHistoryAuthority } from './augment-history';
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
@@ -55,6 +56,7 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
   preflightAugmentHistory(state);
+  validateCarryGolem(state);
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
   validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces

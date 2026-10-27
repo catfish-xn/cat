@@ -182,7 +182,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
 const admitted=new Set(['augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
- 'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6',
+ 'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-g6',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel']);
 // Project only the counters needed by these rewards from the finished combat, not reward receipts.
@@ -418,6 +418,7 @@ function validateRewardsCore(before,after,command,events,base){
 }
 // Inventory is a complete transition, including commands with no reward receipt.
 function validateRewards(before,after,command,events,base){
+ require('./augment-pool-batch5-g6-oracle.cjs').validateTransition(before,after,command,events);
  const result=validateRewardsCore(before,after,command,events,base);
  // Hand-written counter vectors may omit the inventory entirely.
  if(before.consumables===undefined&&after.consumables===undefined)return result;
