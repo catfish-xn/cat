@@ -46,6 +46,12 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
   it('keeps every frame, terminal, ledger and record byte-identical on the B9 fixture', () => {
     const record = fixture(), originalBytes = JSON.stringify(record), expected = reference(record);
     expect(record.endTick).toBe(741); expect(record.events).toHaveLength(7240);
+    // Independent pre-change 1cbbd076 output: pin all 742 native frame byte
+    // hashes, not just a reference that calls the same optimized step function.
+    expect(bytesHash([...expected.hashes])).toBe('dfeda8cffdfd74d8447d5b61a97f1ed4bda16c43759da8002efaa23a621c5016');
+    expect(bytesHash(record)).toBe('c3f8d44e2c43e0d0555458e3a0d33b67dfa876bb426decd76ee3f46a293e3273');
+    expect(bytesHash(record.events)).toBe('e606b1330024408902536171577467594f60720c5c8dcd60570a0e7d0be79bb6');
+    expect(bytesHash(expected.terminal)).toBe('f265ef15caf7868410328d7e10bdb4b9b7659d5b4742b1408f9e743ccdb59a79');
     // An external JSON record is cold on each constructor, like browser fixtures.
     const imported = JSON.parse(originalBytes) as BattleRecord;
     const playback = new PlaybackSession(imported);

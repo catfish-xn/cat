@@ -42,17 +42,53 @@ export function shareValidatedCombatDeclarations(candidate: CombatState, expecte
 
 // These records are only read or replaced by the combat pipeline. Arrays that
 // receive push/filter updates belong to the new tick; their entries can share.
-const tickRecords = new Set(['cell', 'maxHpBasis', 'spellCrit']);
+const tickRecords = new Set(['cell', 'maxHpBasis', 'spellCrit', 's13P2Opening']);
 const tickLists = new Set(['statuses', 'shieldLayers', 'tasks', 'effectRuntime', 'combatItemGrants']);
 // Records detached here stay out of the process-wide certification tables: a
 // replay creates thousands of them, and growing those weak tables while a large
 // save is loaded slows every later garbage collection.
 const tickOwned = new WeakSet<object>();
+// Descriptor-only speculation never invokes an accessor. Exotic graphs retain
+// native structuredClone behavior, including cycles, aliases and built-ins.
+const nativeTickClone = Symbol('native tick clone');
+function cloneTickRecord<T extends object>(value: T): T {
+  const copies = new Map<object, object>();
+  const visiting = new Set<object>();
+  const clone = (input: unknown): unknown => {
+    if (input === null || typeof input !== 'object') {
+      if (typeof input === 'function' || typeof input === 'symbol') throw nativeTickClone;
+      return input;
+    }
+    // tickOwned also contains native fallback roots (e.g. Date), whose internal
+    // slots are still mutable despite Object.freeze. Only certified JSON may be
+    // borrowed as a nested child of a newly detached record.
+    if (isImmutableJson(input)) return input;
+    if (visiting.has(input)) throw nativeTickClone;
+    const previous = copies.get(input);
+    if (previous) return previous;
+    const array = Array.isArray(input), prototype = Object.getPrototypeOf(input);
+    if (prototype !== (array ? Array.prototype : Object.prototype) && prototype !== null) throw nativeTickClone;
+    const result: Record<string, unknown> | unknown[] = array ? new Array((input as unknown[]).length) : {};
+    copies.set(input, result);
+    visiting.add(input);
+    for (const key of Object.keys(input)) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, key)!;
+      if (!('value' in descriptor)) throw nativeTickClone;
+      const child = clone(descriptor.value);
+      if (key === '__proto__') Object.defineProperty(result, key, { value: child, enumerable: true, writable: true, configurable: true });
+      else (result as Record<string, unknown>)[key] = child;
+    }
+    visiting.delete(input);
+    return Object.freeze(result);
+  };
+  try { return clone(value) as T; }
+  catch (error) { if (error !== nativeTickClone) throw error; return freezeTransientContent(structuredClone(value)); }
+}
 function immutableTickRecord<T extends object>(value: T): T {
   // Never freeze a caller's mutable checkpoint. Detach it once, then reuse the
   // deeply immutable record on subsequent ticks, including nested receipt data.
   if (tickOwned.has(value) || isImmutableJson(value)) return value;
-  const owned = freezeTransientContent(structuredClone(value));
+  const owned = cloneTickRecord(value);
   tickOwned.add(owned);
   return owned;
 }
@@ -68,7 +104,7 @@ export function copyCombatUnitForTick(unit: CombatUnit): CombatUnit {
   // These are existing own data properties of the detached spread. Assign
   // directly instead of allocating a computed-key wrapper for every field.
   const writable = copy as unknown as Record<string, unknown>;
-  Object.assign(copy, shared);
+  for (const key of fields) if (Object.hasOwn(shared, key) && copy[key] !== shared[key]) writable[key] = shared[key];
   if (omitDefinitions) writable.mechanismDefinitions = undefined;
   if (omitState) writable.mechanismState = undefined;
   if (omitLedger) writable.triggerLedger = undefined;
@@ -90,8 +126,11 @@ export function copyCombatUnitForTick(unit: CombatUnit): CombatUnit {
   }
   // Mechanism definitions already follow the resolver's copy-on-write contract;
   // preserve the original reference without freezing a mutable caller input.
-  freezeCombatDeclarations(copy);
-  Object.assign(copy, shared);
+  for (const key of fields) {
+    if (Object.hasOwn(shared, key)) { if (copy[key] !== shared[key]) writable[key] = shared[key]; continue; }
+    const value = copy[key];
+    if (value && typeof value === 'object') writable[key] = shareGeneratedDeclaration(value);
+  }
   // Re-read conditions and values just like the original native-copy overrides;
   // accessors may return different values after the nested clone has run.
   if (unit.mechanismDefinitions) writable.mechanismDefinitions = unit.mechanismDefinitions;
