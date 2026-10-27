@@ -1472,3 +1472,15 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 `buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPolicy,refreshShop?:(leveled:MatchState)=>MatchState):MatchCommandResult` 是领域内部接线入口。共享事务传入真实有限池生成回调；失败仍返回原state与原reason。单人 `buyXp` 使用同一实现，直接对共享双重目的调用 `buyXp` 仍拒绝 `invalid-mechanic-state`。
 
 `buySharedXp(pool:SharedPoolState,state:MatchState):SharedPoolResult` 只转发 `runSharedMatchCommand(pool,state,{type:'buyXp'})`，不存在第二套返金/刷新逻辑；房间所有 `buyXp` 直接使用后者。共享事务保留订阅取得和超时取得的即时开店包装。其他签名、失败reason、外层schema、客户端命令和网络封套不变；内容身份按指定脚本统一重算，历史epoch尚未重录。
+
+### Batch 5 S3a：库存转换（P，2026-10-27）
+
+B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内容在 `content/augment-pool-batch5-s3a.ts`，规则在 `augment-pool-batch5-s3a*.ts`。来源和项目边界见 `S13_RULES_GAP.md` 的 P-B5-S3A。基础装备自助餐仅 2-1 可选；潘朵拉三个节点可选；精致古董遵守 14.24 的三个禁选标签，效果已实现但生产选项仍关闭。
+
+内部纯接口 `batch5InventoryPlan(state: MatchState): InventoryPlan` 从原始物品收据、按序装备/合成/消耗品/合星事实及自然轮号派生转换和锻造器权益。`projectBatch5Items(items, plan, prefix, round, afterPrefix?, afterRound?)` 只应用指定历史区间的删除/换型；`drainBatch5Inventory(state): MatchState` 支付可放入备战席的锻造器并更新库存；`validateBatch5Inventory(state, plan?)` 对非法收据、序号、出生覆盖和转换权益抛出 `RangeError`。上述函数均为规则内部接口，服务器继续只调用 Match/shared-pool 公共命令。
+
+无需新命令或保存字段。选择仍走 `selectChoice`/在线 `choose`，领取仍走 `claimOrb`，开锻造器仍走 `openAnvil`（或出售锻造器）及原四选一选择；失败枚举、原 state 返回和失败不耗 RNG 的语义不变。`nextRound`、联机 `applyRoundSettlement`、选秀发放及成功操作统一接入规则；`src/server/` 无需修改。锻造器满席时保留可推导的待发权益；战斗锁定和选秀轮不创建备战席单位，之后有空位即发，原组件/成装不能继续使用。原物品出生收据不删除，现有 mechanic unit/anvil choice 收据认证新锻造器与选出物品。
+
+精致古董按每一次装备操作后的库存连续性计龄，故同轮装备后卖出也清零；取得前已在库存的成装从取得轮开始计龄。普通组件移动/拆卸不是新组件；重铸新实例是新组件。潘朵拉只对取得后的自然轮入口、入轮前已有的库存普通组件/普通配方成装抽样，允许抽中原物品；保持实例 ID、类别及物品序号，按 `seed xor FNV1a32(JSON([source, seat, choice, round, item]))` 后一个 `lcg32-v1` 字抽取有序池，不推进任何 live RNG。普通重掷不触发基础装备自助餐；两个原有互斥强化仍按既有源表过滤。
+
+单人 `restoreMatch(JSON)`、`restoreMatch(object)`、`serializeMatch(candidate)` 以及在线 `restoreSharedOrbSnapshot(pool, input)` 均重放库存规则。共享入口另外核对所有物品出生收据的覆盖及串号，不把 PvP 的服务器结算收据冒充单人战斗 growth commit。历史战斗装备认证沿用 `battle-record-validation.ts` 调用的 `validateHistoricalEquipment`，不新增 epoch 或复录 golden。

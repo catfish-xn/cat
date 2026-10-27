@@ -253,9 +253,9 @@ it('cannot rewrite historical battle counters to mint a reward after an unrelate
   expect(()=>validateRewards(before,receipts(after,[{...gold('augment-pool-batch3',[0,0],8,4),roundId:'2-1'}]),{type:'reroll'},[],env)).toThrow(/battle counters append-only/);
 });
 
-it('contains exactly 242 independently tiered unique augment identities',()=>{
+it('contains exactly 245 independently tiered unique augment identities',()=>{
   const pools=(['silver','gold','prismatic'] as const).map(tier=>augmentPool(tier,[]));
-  const all=pools.flat();expect(all).toHaveLength(242);expect(new Set(all).size).toBe(242);
+  const all=pools.flat();expect(all).toHaveLength(245);expect(new Set(all).size).toBe(245);
   const groups={silver:['patience-is-a-virtue'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal'],prismatic:['invested-plus','invested-plus-plus']};
   for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);
 });

@@ -1,5 +1,6 @@
 import { AUGMENT_BATCH5_B5A } from './augment-pool-batch5-b5a';
 import { AUGMENT_BATCH5_S1B } from './augment-pool-batch5-s1b';
+import { AUGMENT_BATCH5_S3A, BATCH5_S3A_POLICY } from './augment-pool-batch5-s3a';
 import { AUGMENT_SHOP } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S1A } from './augment-pool-batch5-s1a';
 import { AUGMENT_BATCH5 } from './augment-pool-batch5';
@@ -42,10 +43,11 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 export const RULES_GAP_MANIFEST = freezeContent({
   tacticianItems:{source:TACTICIAN_ITEM_SOURCE,gold:'independent-item-collector-stream-10-percent-one-gold',population:'permanent-acquisition-and-crafted-receipts'},
   // Offer stages are replay input: augment offers re-derive from these bans at restore (P, 14.24 stage tags).
-  augmentStageBans:{version:'augment-stage-bans-14.24-tags-v1',bans:AUGMENT_STAGE_BANS,reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2'},
+  augmentStageBans:{version:'augment-stage-bans-14.24-tags-fine-vintage-override-v2',bans:AUGMENT_STAGE_BANS,override:'P-FINE-VINTAGE-STAGE-2026-10-27',reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2'},
   augmentPoolBatch5B5a:{version:'augment-pool-batch5-b5a-v1',content:AUGMENT_BATCH5_B5A,convention:'P-B5-50-51-55-2026-10-27'},
   augmentPoolBatch5S1a:{version:'augment-pool-batch5-s1a-v1',content:AUGMENT_BATCH5_S1A,convention:'P-B5-S1A-2026-10-27'},
   augmentPoolBatch5S1b:{version:'augment-pool-batch5-s1b-v1',content:AUGMENT_BATCH5_S1B,convention:'P-B5-03-04-2026-10-27'},
+  augmentPoolBatch5S3a:{version:'augment-pool-batch5-s3a-v1',content:AUGMENT_BATCH5_S3A,policy:BATCH5_S3A_POLICY,convention:'P-B5-S3A-2026-10-27'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch4:{version:'augment-pool-batch4-levels-v23-candidate',content:AUGMENT_BATCH4,blocked:AUGMENT_BATCH4_BLOCKED,timing:'reached-thresholds-on-acquisition-later-levels-on-authoritative-transition',sampling:'existing-gift-stream-radiant-five-without-replacement',birthdayCost:'max-1-level-minus-4'},
   augmentPoolBatch4B4xp:{version:'augment-pool-batch4-b4xp-v23-candidate',content:AUGMENT_BATCH4_B4XP,timing:'pvp-end-before-settlement-rewards-and-deferred-upgrades',authority:'completed-battles-replay'},

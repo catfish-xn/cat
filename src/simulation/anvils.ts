@@ -1,3 +1,4 @@
+import { batch5AnvilSpecification, BATCH5_S3A_SOURCE } from './augment-pool-batch5-s3a';
 import { batch1AnvilSpecification } from './augment-pool-grants';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { isAnvil } from './content/anvils';
@@ -40,7 +41,8 @@ function specification(state:MatchState,unitId:string) {
   const r=state.seatMechanics?.receipts.find(r=>r.kind==='unit'&&r.unitId===unitId);
   if(!r||r.kind!=='unit'||!isAnvil(r.definitionId))throw new RangeError('Invalid anvil birth');
   let offers:readonly string[]|undefined;
-  if(r.source==='augment-pool-batch1'){
+  if(r.source===BATCH5_S3A_SOURCE){const spec=batch5AnvilSpecification(state,r.receiptId);if(spec?.definitionId===r.definitionId)offers=spec.offers;}
+  else if(r.source==='augment-pool-batch1'){
     const spec=batch1AnvilSpecification(state,r.receiptId);if(spec?.definitionId===r.definitionId)offers=spec.offers;
   }else if(r.source==='opening-encounter')offers=openingForgeOffers(state,r.receiptId);
   else if(r.source==='opening-encounter-batch-a'){

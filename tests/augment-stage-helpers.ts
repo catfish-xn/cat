@@ -1,9 +1,9 @@
 import { expect } from 'vitest';
-import { createMatch, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { createMatch, nextRound, rerollAugment, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { generateChoices } from '../src/simulation/choices';
-import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
-import { accepted, fieldBench, reachRound, resolveM5Choices } from './match-helpers';
+import { augmentCandidates, drawAugmentCard, resolveAugmentTier } from '../src/simulation/augment-offers';
+import { accepted, fieldBench, reachRound, reachRoundFielded, resolveM5Choices } from './match-helpers';
 
 /** 14.24 stage tags (augment-stage-bans.ts): the augment rounds a card can be offered at. */
 export function offeredAt(id: string, node: '2-1' | '3-2' | '4-2'): boolean {
@@ -140,4 +140,24 @@ export function offerFor(id: string): MatchState {
 export function acquireAugment(id: string): MatchState {
   const state = offerFor(id), choice = state.pendingChoice!;
   return accepted(selectChoice(state, choice.choiceId, choice.generation, id));
+}
+
+/** Bounded feature route, including the three existing public slot rerolls. No scan beyond 0..100. */
+export function boundedFirstNodeOffer(id:string,fielded=false):MatchState {
+ const filter={node:'2-1',fieldedTraits:[],blocked:[]};
+ for(let seed=0;seed<=100;seed++){
+  const initial=createMatch(seed),tier=resolveAugmentTier(initial,'round:2-1:augment');
+  const generated=generateChoices(augmentCandidates(tier,[],[],null,filter),initial.choiceRngState);
+  let offers=generated.offers,rng=generated.choiceRngState;const seen=[...offers];
+  for(let rolls=0;rolls<=3;rolls++){
+   if(offers.includes(id)){
+    let state=fielded?reachRoundFielded('2-1',seed):reachRound('2-1',false,seed);
+    for(let slot=0;slot<rolls;slot++){const c=state.pendingChoice!;state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));}
+    expect(state.pendingChoice!.offers).toContain(id);return state;
+   }
+   if(rolls===3)break;
+   const draw=drawAugmentCard(augmentCandidates(tier,[],seen,null,filter),rng);rng=draw.choiceRngState;seen.push(draw.definitionId);offers=[...offers];offers[rolls]=draw.definitionId;
+  }
+ }
+ throw new Error(`No bounded first-node route for ${id}; candidate=${augmentCandidates('silver',[],[],null,filter).includes(id)}, pool=${augmentCandidates('silver',[],[],null,filter).length}`);
 }

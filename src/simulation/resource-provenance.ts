@@ -1,3 +1,4 @@
+import { projectBatch5Items, type InventoryPlan } from './augment-pool-batch5-s3a';
 import { isAnvil } from './content/anvils';
 import { trainerStar, TRAINER_ID } from './content/opening-batch-b';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
@@ -80,6 +81,7 @@ export interface ProvenanceCombatSettlement {
   readonly roundId: string; readonly combatId: string; readonly settlementId: string;
 }
 export interface ResourceProvenanceContext {
+  readonly batch5Inventory?:InventoryPlan;
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
   readonly g23RadiantRound?:number;
   readonly carouselReceipts?:readonly import('./carousel-types').CarouselReceipt[];
@@ -386,8 +388,9 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const starts = new Set(entries.filter(entry => entry?.kind === 'combat-growth-committed')
     .map(entry => (entry as Extract<ResourceProvenanceEntry, { kind: 'combat-growth-committed' }>).combatStartProvenancePrefixLength));
   const unitPrefixes = new Map<number, ReadonlyMap<string, ProvenanceUnit>>();
+  let inventoryPrefix=-1,inventoryRound=0;
   const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit,...(unit.definitionId===TRAINER_ID?{starLevel:trainerStar(getCatalogRoundByOrdinal(context.throughRoundOrdinal).stage)}:{}) })).sort(compareIds),
-    items: [...items.values()].map(item => ({ ...item })).sort(compareIds), persistentGrowth: growth.map(entry => ({ ...entry })), nextUnitSerial, nextItemSerial });
+    items: projectBatch5Items([...items.values()],context.batch5Inventory??{conversions:[],anvils:[]},prefixLength,context.throughRoundOrdinal,inventoryPrefix,inventoryRound).map(item => ({ ...item })).sort(compareIds), persistentGrowth: growth.map(entry => ({ ...entry })), nextUnitSerial, nextItemSerial });
   let result = projection();
   const deferredCarouselIds = new Set<string>(), preparationReceipts = new Set<string>(), claimedCarouselIds = new Set<string>();
   const finishAcquisition = () => {
@@ -406,6 +409,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     requireValue(entry.sequence === index, 'sequence');
     const round = getCatalogRoundById(entry.roundId);
     requireValue(round.ordinal >= lastOrdinal && round.ordinal <= context.throughRoundOrdinal, 'round order/boundary');
+    if(context.batch5Inventory){const projected=projectBatch5Items([...items.values()],context.batch5Inventory,index,round.ordinal,inventoryPrefix,inventoryRound);inventoryPrefix=index;inventoryRound=round.ordinal;items.clear();for(const item of projected)items.set(item.id,item);}
     lastOrdinal = round.ordinal;
     if (starts.has(index)) unitPrefixes.set(index, new Map([...units].filter(([id])=>!absent.has(id))));
     if (entry.kind !== 'unit-upgraded') finishAcquisition();

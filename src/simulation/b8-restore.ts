@@ -1,3 +1,5 @@
+import { getMultiplayerRoundById } from './multiplayer-round';
+import { batch5InventoryPlan, projectBatch5Items, validateBatch5Inventory } from './augment-pool-batch5-s3a';
 import { soloPveLoot } from './shop-orbs';
 import { formingTotals, expectedMagicRoll } from './augment-pool-batch3-progress';
 import { isAnvil } from './content/anvils';
@@ -87,6 +89,8 @@ function replayEquipment(items: readonly ItemInstance[], preparation: GameState,
 /** Carry exact equipment bindings through the ordered resource ledger.
  * Before the first battle, start empty and rebuild units/items from validated births. */
 export function validateHistoricalEquipment(previous: MatchState | null, next: MatchState): void {
+  const inventoryPlan=batch5InventoryPlan(next);
+  let inventoryPrefix=previous?.resourceProvenance.entries.length??-1,inventoryRound=previous?.round??0;
   let items: readonly ItemInstance[] = previous?d14OwnedItems(previous):[], serial = previous?.nextItemSerial ?? 1;
   let preparation = previous?.preparation ?? {...next.preparation, units:[]};
   const births = validateResourceReceipts({scheduleReceipts:next.scheduleReceipts,
@@ -108,6 +112,8 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
     }
   };
   for (const fact of next.resourceProvenance.entries.slice(previous?.resourceProvenance.entries.length ?? 0)) {
+    items=projectBatch5Items(items,inventoryPlan,fact.sequence,getMultiplayerRoundById(fact.roundId).ordinal,inventoryPrefix,inventoryRound);
+    inventoryPrefix=fact.sequence;inventoryRound=getMultiplayerRoundById(fact.roundId).ordinal;
     checkOpening(fact.sequence);
     if(fact.kind==='item-combined')check(fact.event.consumedIds.every(id=>!absentItems.has(id)),'D14 hidden combine');
     if(fact.kind==='consumable-used')check(fact.record.affectedItems.every(i=>!absentItems.has(i.id)),'D14 hidden consumable');
@@ -185,6 +191,7 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
       case 'combat-growth-committed': break;
     }
   }
+  items=projectBatch5Items(items,inventoryPlan,next.resourceProvenance.entries.length,next.round,inventoryPrefix,inventoryRound);
   checkOpening(next.resourceProvenance.entries.length);
   check(equipmentContinuation(items, d14OwnedItems(next)) && serial === next.nextItemSerial, 'historical equipment continuation');
 }
@@ -214,7 +221,9 @@ function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBas
   const combat = state.combat!;
   const receipts = [...combat.equipmentReceipts ?? [], ...combat.pendingEquipment ?? []];
   let cursor = 0, items = basis.inputs.items, serial = basis.nextItemSerial, inputs = basis.inputs;
+  const inventoryPlan=batch5InventoryPlan(state);let inventoryPrefix=basis.provenancePrefixLength;
   for (const fact of state.resourceProvenance.entries.slice(basis.provenancePrefixLength)) {
+    items=projectBatch5Items(items,inventoryPlan,fact.sequence,state.round,inventoryPrefix,state.round);inventoryPrefix=fact.sequence;
     if (fact.kind === 'combat-growth-committed') break;
     const before = items;
     if (fact.kind === 'item-equipped') items = replayEquipment(items, basis.inputs.preparation, serial, fact).items;
@@ -374,9 +383,10 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   validateG23Restoration(state,parsedJsonInput);
   const opening = state.resourceProvenance.entries[0];
   check(opening?.kind === 'unit-acquired' && opening.source.kind === 'opening' && opening.source.seatId === (state.sharedPool?.seatId ?? 'solo') && (state.sharedPool || opening.source.seed === state.seed), 'opening stream identity');
-  const context: ResourceProvenanceContext = { g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
+  const context: ResourceProvenanceContext = { batch5Inventory:batch5InventoryPlan(state), g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
+  const inventoryPlan=batch5InventoryPlan(state);validateBatch5Inventory(state,inventoryPlan);
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
   validateG23GrantEvidence(state,context,parsedJsonInput);
   validateAnomalyAcquisition(state,context,parsedJsonInput);
@@ -388,7 +398,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   // for ordinary saves with completed battles and no externally supplied replay.
   const hasAcademyEvidence = ((state.seatMechanics?.hidden.grantEvidence ?? []) as readonly G23GrantEvidence[])
     .some(evidence => evidence.receiptId.startsWith('g23:academy:'));
-  if (state.d14 || hasAcademyEvidence || !state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
+  if (inventoryPlan.conversions.length || state.d14 || hasAcademyEvidence || !state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
   if (state.combat === null) { check(state.combatInputBasis === null, 'inactive input basis'); return {basis:null,saleGold:0}; }
   const entries = state.resourceProvenance.entries, combat = state.combat;
   const commits = entries.filter(entry => entry.kind === 'combat-growth-committed' && entry.combatId === combat.combatId);
@@ -418,12 +428,15 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
     const { items: originalItems, temporaryEquipment: _frozenChildren, ...frozenInputs } = basis.inputs;
     check(equal(live, frozenInputs), 'running input mutation');
     let items = originalItems, serial = basis.nextItemSerial;
+    let inventoryPrefix=prefixLength;
     for (const fact of entries.slice(prefixLength)) {
+      items=projectBatch5Items(items,inventoryPlan,fact.sequence,state.round,inventoryPrefix,state.round);inventoryPrefix=fact.sequence;
       check((fact.kind==='g23-item-converted'||fact.kind === 'item-equipped'||fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
       if(fact.kind==='g23-item-converted'){items=replayG23Conversion(items,fact);continue;}
       const plan = fact.kind==='item-equipped'?replayEquipment(items,state.preparation,serial,fact):fact.kind==='consumable-used'?replayConsumableItems(items,serial,fact.record,state.preparation):replayCombination(items, state.preparation, serial, fact);
       items = plan.items; serial = plan.nextItemSerial;
     }
+    items=projectBatch5Items(items,inventoryPlan,entries.length,state.round,inventoryPrefix,state.round);
     check(equipmentContinuation(items, state.items) && serial === state.nextItemSerial, 'running equipment projection');
     return {basis,saleGold:0};
   }
@@ -452,7 +465,10 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   const take = (fact: ResourceFact) => {
     check(equal(entries[cursor],{...fact,sequence:cursor,roundId:state.roundDefinitionId}), 'ordered resource transaction'); cursor++;
   };
+  const inventoryPlan=batch5InventoryPlan(state);
+  let inventoryPrefix=basis.provenancePrefixLength;
   const combinations = () => {
+    items=projectBatch5Items(items,inventoryPlan,cursor,state.round,inventoryPrefix,state.round);inventoryPrefix=cursor;
     while (entries[cursor]?.kind==='item-equipped'||entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
       const tool=entries[cursor];
       if(tool.kind==='item-equipped'){
@@ -611,6 +627,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     for (const slot of direct) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
   }
   check(mechanicCursor === mechanicBirths.length, 'mechanic birth coverage');
+  items=projectBatch5Items(items,inventoryPlan,cursor,state.round,inventoryPrefix,state.round);inventoryPrefix=cursor;
   check(equal(sorted(preparation.units),sorted(state.preparation.units)) && equipmentContinuation(items,state.items)
     && equal(binding,state.anomalyBinding) && equal(basis.inputs.augments,state.augments), 'finished resource projection');
   check(nextUnit === state.nextUnitSerial && nextItem === state.nextItemSerial, 'finished serial projection');
