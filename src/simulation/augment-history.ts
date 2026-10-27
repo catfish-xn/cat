@@ -169,7 +169,8 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
   if (after.combat && (deaths.length || before.combat?.tick !== after.combat.tick || !before.combat))
     next = appendAugmentFact(next, { kind: 'deaths', battleId: after.combat.combatId!, completeThroughTick: after.combat.tick,
-      deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null })) });
+      deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null,
+        ...(d.lootExplosion?{lootExplosion:{...d.lootExplosion,killerSeatId:d.team==='enemy'?historySeatId(after):null}}:{}) })) });
   // Solo PvP has no opposing player's HP account. Unknown is explicit, never fabricated as zero.
   if (!after.multiplayer && after.roundResults.length > before.roundResults.length && after.m8.round.kind === 'pvp')
     next = appendAugmentFact(next, { kind: 'player-damage', battleId: after.combat!.combatId!, opponentSeatId: null, mirror: false, hpBefore: null, hpAfterDamage: null, actualDamage: null });

@@ -149,13 +149,13 @@ const batch3Offers={silver:['team-building','latent-forge','eye-for-an-eye','eye
 batch3Offers.silver.push('kingslayer','risky-moves');batch3Offers.gold.push('patient-study','epoch','epoch-plus');batch3Offers.prismatic.push('level-up','shopping-spree','upward-mobility');
 // Batch 4 (14.24 tiers): level rewards, B4XP bench XP, B4reroll free rerolls, B4Combat combat-start effects.
 batch3Offers.silver.push('caretakers-ally','lategame-specialist','patience-is-a-virtue');batch3Offers.gold.push('caretakers-favor','clear-mind','cluttered-mind','slammin','slammin-plus','long-distance-pals','category-five','overheal','sated-spellweaver');batch3Offers.prismatic.push('birthday-presents','caretakers-chosen','invested-plus','invested-plus-plus');
-batch3Offers.gold.push('contested','scoreboard-scrapper');
+batch3Offers.gold.push('contested','scoreboard-scrapper','loot-explosion');
 batch3Offers.gold.push('no-scout-no-pivot','cooking-pot');
 batch3Offers.gold.push('two-much-value');
 batch3Offers.silver.push('survivor','diversified-portfolio-plus','diversified-portfolio','called-shot','crafted-crafting','table-scraps','young-and-wild-and-free');batch3Offers.prismatic.push('dual-purpose','a-change-of-fate');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
-assert.equal(AUGMENTS.length,245,'independent full augment catalog size');
-assert.equal(new Set(AUGMENTS).size,245,'independent catalog has no duplicates');
+assert.equal(AUGMENTS.length,246,'independent full augment catalog size');
+assert.equal(new Set(AUGMENTS).size,246,'independent catalog has no duplicates');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).
@@ -209,7 +209,7 @@ EXCLUSIVE_GROUPS.push(['firesale','patience-is-a-virtue'],['rigged-shop-plus','s
  ['sated-spellweaver','wealthy-rehab-i'],['sated-spellweaver','wealthy-rehab-ii'],
  ['invested-plus','invested-plus-plus']);
 for(const id of ['invested-plus','invested-plus-plus'])for(const other of ['raining-gold','raining-gold-plus','hedge-fund','going-long'])EXCLUSIVE_GROUPS.push([id,other]);
-const TEAMUP_TRAITS={sisters:['enforcer','rebel','pit-fighter','ambusher'],mentorship:['enforcer','conqueror','quickstriker','sniper'],
+const TEAMUP_TRAITS={'loot-explosion':['ambusher'],sisters:['enforcer','rebel','pit-fighter','ambusher'],mentorship:['enforcer','conqueror','quickstriker','sniper'],
  reunion:['enforcer','pit-fighter','ambusher','firelight','scrap'],geniuses:['academy','firelight','ambusher','scrap','visionary'],
  menaces:['family','dominator','ambusher','scrap'],'unlikely-duo':['rebel','chem-baron','pit-fighter','ambusher']};
 // 14.24 batch1 AssociatedTraits/MutuallyExclusiveItems (research source columns).
@@ -221,6 +221,7 @@ const batch3Rules=require('../../augment-pool-batch3-oracle-data.cjs');
 Object.assign(TEAMUP_TRAITS,batch3Rules.traits);
 EXCLUSIVE_GROUPS.push(...batch3Rules.exclusive);
 EXCLUSIVE_GROUPS.push(['built-different','diversified-portfolio','diversified-portfolio-plus']);
+EXCLUSIVE_GROUPS.push(['built-different','loot-explosion']);
 function excludedByOwned(id,owned){return owned.some(a=>a.definitionId!==id&&EXCLUSIVE_GROUPS.some(g=>g.includes(id)&&g.includes(a.definitionId)));}
 function traitAllowed(id,node,traits){return !['round:3-2:augment','round:4-2:augment'].includes(node)||!TEAMUP_TRAITS[id]||TEAMUP_TRAITS[id].some(t=>traits.includes(t));}
 // 14.24 stage tags (item_tags_raw {d02ae323}/{d12ae4b6}/{d22ae649} = not at 2-1/3-2/4-2, P inference), written out by id

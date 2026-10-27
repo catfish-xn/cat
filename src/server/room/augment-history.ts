@@ -5,6 +5,25 @@ import { appendAugmentFact, recordAugmentTable, recordAugmentPvpRoster, recordAu
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput } from './types';
 
+function executedDeaths(battle: Extract<BattleResult,{kind:'two-sided'}>['battle']) {
+  const deaths=augmentDeathsFromEvents(battle.events).map(d=>{
+    const mapped=battle.mapping.find(m=>m.kind==='unit'&&m.combatId===d.unitId);
+    const killer=d.lootExplosion;
+    const killerMapped=killer?battle.mapping.find(m=>m.kind==='unit'&&m.combatId===killer.killerUnitId):undefined;
+    return {...d,ownerSeatId:d.team==='player'?battle.a.seatId:battle.b.seatId,originalUnitId:mapped?.originalId??d.unitId,
+      ...(killer?{lootExplosion:{...killer,killerSeatId:d.team==='enemy'?battle.a.seatId:battle.b.seatId,originalKillerUnitId:killerMapped?.originalId??killer.killerUnitId}}:{})};
+  });
+  if(deaths.length!==battle.events.filter(e=>e.type==='death').length)throw new RangeError('Invalid augment history: missing executed death samples');
+  return deaths;
+}
+/** B5-69 needs executed deaths inside the shared settlement transaction, before rewards. */
+export function recordRoomBattleDeaths(match:MatchState,results:readonly BattleResult[]):MatchState {
+  if(!match.augments.some(a=>a.definitionId==='loot-explosion'))return match;
+  const result=results.find((r):r is Extract<BattleResult,{kind:'two-sided'}>=>r.kind==='two-sided'&&r.participants.includes(match.multiplayer!.seatId));
+  if(!result)return match;
+  return appendAugmentFact(match,{kind:'deaths',battleId:result.battleId,completeThroughTick:result.battle.terminal.tick,deaths:executedDeaths(result.battle)});
+}
+
 export function tableFacts(seats: readonly SeatState[], matches?: ReadonlyMap<string, {readonly match: MatchState}>): readonly HistorySeat[] {
   const order = [...seats].filter(s => s.alive).sort((a,b) => b.hp-a.hp ||
     (b.match.roundResults.at(-1)?.hpBefore ?? b.hp) - (a.match.roundResults.at(-1)?.hpBefore ?? a.hp) || a.index-b.index);
@@ -38,11 +57,8 @@ export function recordRoomBattleFacts(seats: readonly SettledSeat[], results: re
     const result = results.find(r => r.kind === 'two-sided' ? r.participants.includes(seat.seatId) : r.outcomes.some(s => s.seatId === seat.seatId));
     if (!result || result.kind !== 'two-sided') return seat; // PvE samples are recorded by the Match commands.
     const battle = result.battle;
-    const deaths = augmentDeathsFromEvents(battle.events).map(d => { const mapped = battle.mapping.find(m => m.kind === 'unit' && m.combatId === d.unitId);
-      return { ...d, ownerSeatId: d.team === 'player' ? battle.a.seatId : battle.b.seatId, originalUnitId: mapped?.originalId ?? d.unitId }; });
-    // A resolver supplying a terminal reconstructed outside the rules runner must replay it first.
-    if (deaths.length !== battle.events.filter(e => e.type === 'death').length) throw new RangeError('Invalid augment history: missing executed death samples');
-    match = appendAugmentFact(match, { kind: 'deaths', battleId: result.battleId, completeThroughTick: battle.terminal.tick, deaths });
+    if(!match.augmentHistory!.facts.some(f=>f.kind==='deaths'&&f.battleId===result.battleId))
+      match = appendAugmentFact(match, { kind: 'deaths', battleId: result.battleId, completeThroughTick: battle.terminal.tick, deaths:executedDeaths(battle) });
     const opponentId = battle.a.seatId === seat.seatId ? battle.b.seatId : battle.a.seatId;
     const opponent = seats.find(s => s.seatId === opponentId);
     const record = opponent?.match.roundResults.find(r => r.round === match.round);

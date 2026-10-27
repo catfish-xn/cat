@@ -1,5 +1,7 @@
 # 强化历史证据设计与实现（方案 A）
 
+B5-69接入（P，2026-10-27）：`loot-explosion` 登记为deaths持有者；真实死亡观察增加可选 `lootExplosion{ killerUnitId, originalKillerUnitId, killerSeatId, critChanceBps }`。击杀包产生时采样、真实death落地时归档，沿既有WeakMap传递，战斗事件和回放字节无新增字段。联机在共享结算前以已验证执行结果记录死亡，结算后玩家伤害仍按原时序记录；没有B5-69的席位保持原时序。任何历史读取使用 `requireAugmentFacts`，联机恢复仍绑定独立authority。规则和奖励见 `augment-pool-batch5-g7.ts` 与 `MATCH_CONTRACT.md`；不是从候选收据补造历史。
+
 基线：`codex/v25-augment-history`，`ee2b019cc8d60fb11679d9ce8c54338f5ea4ea57`，来自 `claude/v24-integration`（PR #456）。本任务只提供历史基础设施，不新增任何强化定义、报价、奖励公式或现有内容数值，不提交 Git。
 
 ## 保存边界与版本

@@ -1,3 +1,16 @@
+## 2026-10-27 B5-69 战利品爆炸（P-B5-69，数值待最终确认）
+
+新增黄金强化 `loot-explosion`（`TFT13_Augment_Ambusher`）。取得时发卡蜜尔、爆爆各1，联机英雄使用既有共享奖励法球。规则、权重、档位映射和11%基础值以 [P-B5-69](S13_RULES_GAP.md#p-b5-69p2026-10-27战利品爆炸用户纠正版) 为准，三节点不新增禁选。没有新增网络命令、战斗事件或外层版本；精确内容摘要随本次脚本重算，历史epoch不重录。
+
+| 内部领域入口（`augment-pool-batch5-g7.ts`） | 输入、输出与拒绝 |
+| --- | --- |
+| `rollLootExplosion(stage:number, critChanceBps:number, draw:()=>number): LootExplosionDrop \| null` | 阶段2–8、0–10000整数暴击率、合法32位字；返回基础档、最终档、价值暴击标记和金币/物品奖励，未掉落返回null；越界抛 `Invalid augment history: loot explosion stage/crit chance/random word`。只用指定子流。 |
+| `lootExplosionRewardPlan(state:MatchState)` | 从持有者与 `requireAugmentFacts(state,'deaths',round)` 推导已结算非供给战斗的奖励（现有PvE野怪不满足英雄资格）；每个死亡事件、每个奖励槽拥有唯一receiptId。缺完整死亡边界、重复death eventSeq、错战斗ID抛 `Invalid augment history: ...`；不从候选收据推导奖励。 |
+| `drainLootExplosionRewards(state:MatchState):MatchState` | 结算期调用既有 `grantMechanicGold/Item`；已发收据保持原对象，禁止补发遗漏的旧轮奖励；在 `applyRoundSettlement` 内失败仍返回原state及 `invalid-receipt`，无事件、资源、RNG消耗。 |
+| `validateLootExplosionRewards(state:MatchState):void` | 按独立死亡历史重新规划，逐项核对数量、唯一身份、来源、轮次、金币/装备和item-acquired来源；伪造、缺失、孤儿或冲突收据抛 `Invalid augment history: loot explosion ...`。联机恢复仍须另外提供独立服务器authority。 |
+
+服务器 `recordRoomBattleDeaths(match,results)` 只映射实际执行的双边死亡/击杀席位与原始实例ID，在共享 `settleRound` 事务前写入已验证的历史API；战后 `recordRoomBattleFacts` 不重复写此批死亡。金币/装备仍只在领域模块计算。`sampleAugmentDeath` 的第三个可选参数只承接击杀现场观察，既有事件JSON不增加字段。Match单人路径保持可执行；验收以联机为目标。
+
 ## 2026-10-27 v24 纪元身份
 
 当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。

@@ -1,4 +1,4 @@
-import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomSettlementTable, tableFacts } from './augment-history';
+import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomBattleDeaths, recordRoomSettlementTable, tableFacts } from './augment-history';
 import { captureAugmentHistoryAuthority, prepareAugmentAcquisition, advanceAugmentPreparationTime, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
 /**
  * Eight-seat room state machine (pipeline B, work orders B1–B7). Pure TypeScript: no network,
@@ -720,7 +720,8 @@ export class Room {
       if (job.kind === 'receipt') {
         yield;
         const base = seat.hp;
-        const applied = runSharedMatchCommand(pool, seat.match, { type: 'settleRound', receipt: job.receipt });
+        const observed = recordRoomBattleDeaths(seat.match,results);
+        const applied = runSharedMatchCommand(pool, observed, { type: 'settleRound', receipt: job.receipt });
         if (!applied.ok) return { ok: false, detail: `seat ${seat.seatId}: ${applied.reason}` };
         // HP must match the room's damage unless exactly one Mel save from this battle explains a lethal rescue.
         const raw = Math.max(0, base - job.damage), saves = applied.events.filter(event => event.type === 'playerSaved');
