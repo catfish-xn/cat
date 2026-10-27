@@ -1,5 +1,6 @@
 import { firstNodeSeed } from './augment-stage-helpers';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
+import { CONTENT_DIGEST, LOOT_REPLAY_DIGEST } from '../src/simulation/content/identity-constants';
 import * as historyApi from '../src/simulation/augment-history';
 import { validateAugmentHistory } from '../src/simulation/augment-history-restore';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -25,6 +26,8 @@ vi.mock('../src/simulation/augment-history-owners', async importOriginal => {
   const actual = await importOriginal<typeof import('../src/simulation/augment-history-owners')>();
   return {...actual,augmentNeedsHistory:(id:string)=>actual.augmentNeedsHistory(id)||id==='starry-night'||fixture.allOwners};
 });
+// Preserve the immutable baseline assertion while normalizing only the deliberately updated content identities.
+const baselineBytes=(text:string)=>text.replaceAll(CONTENT_DIGEST,'fnv1a32-utf16:db662e0b').replaceAll(LOOT_REPLAY_DIGEST,'fnv1a32-utf16:18c876b2');
 let acquired: MatchState, advanced: MatchState;
 const baselineIdentity=(text:string)=>text.replaceAll('s13-g2-3-v25-online-rules','s13-g2-3-v24-online-rules')
   .replaceAll('s13-14.24b-g2-3-v25-online-rules','s13-14.24b-g2-3-v24-online-rules')
@@ -41,11 +44,11 @@ beforeAll(() => {
   advanced = accepted(nextRound(s, s.round));
 });
 
-it('keeps four no-owner saves byte-identical to HEAD ee2b019c (independent baseline SHA-256)', () => {
+it('keeps four no-owner saves identical to HEAD ee2b019c after identity normalization (independent baseline SHA-256)', () => {
   let s = createMatch(42); const hashes: string[] = [];
   const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text);
     // Compare the unchanged no-owner payload to the original epoch after normalizing the intentionally changed identities.
-    hashes.push(createHash('sha256').update(baselineIdentity(text)).digest('hex')); };
+    hashes.push(createHash('sha256').update(baselineIdentity(baselineBytes(text))).digest('hex')); };
   check(); const u = s.preparation.units.find(u => u.team === 'player')!;
   s = accepted(deployMatchUnit(s, u.id, {kind:'bench',slot:0})); check();
   s = resolveM5Choices(accepted(startMatchCombat(s))); check();
@@ -402,12 +405,12 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { battle, unit } from './combat-helpers';
 
-it('keeps a real battle ledger and terminal save byte-identical to the independent baseline',()=>{
+it('keeps the real battle ledger and terminal save identical to the independent baseline after identity normalization',()=>{
   const started=startMatchCombat(createMatch(42));if(!started.ok)throw new Error(started.reason);let s=started.state;const events=[...started.events];
   while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
   expect(s.combat!.tick).toBe(164);expect(events).toHaveLength(113);
   expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324');
-  expect(createHash('sha256').update(baselineIdentity(serializeMatch(s))).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
+  expect(createHash('sha256').update(baselineIdentity(baselineBytes(serializeMatch(s)))).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
 });
 it('records a Forge death, a real Jayce revival and its second death with equipment at each death',()=>{
   const combatUnit=(id:string,definitionId:string,team:'player'|'enemy',col:number,row:number,patch:Partial<CombatUnit>={})=>unit(id,team,col,row,{

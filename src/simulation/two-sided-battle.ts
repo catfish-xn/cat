@@ -61,6 +61,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
     augments:s.augments.map(augment=>({...augment,choiceId:map('augment',augment.choiceId)})),
     anomalyBinding:s.anomalyBinding ? {...s.anomalyBinding,unitId:map('unit',s.anomalyBinding.unitId),choiceId:map('anomaly',s.anomalyBinding.choiceId)} : null,
     persistentGrowth:s.persistentGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)})), augmentProgress:s.augmentProgress,
+    ...(s.augmentHistoryGrowth?{augmentHistoryGrowth:s.augmentHistoryGrowth.map(growth=>({...growth,unitId:map('unit',growth.unitId)}))}:{}),
   };
   let compiled: StrategySnapshot;
   try { compiled = yield* buildStrategySnapshotSteps(inputs, undefined, undefined, undefined, confiscated ? ['player'] : []); }

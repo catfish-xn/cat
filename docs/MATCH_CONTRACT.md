@@ -1484,3 +1484,11 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 缺节统一拒绝：`Invalid augment history: missing augment-history-v1; history-dependent augment saves cannot be authenticated`；缺联机权威对象为 `missing independent server authority`，其它错误使用同一前缀。无自动迁移。`requireAugmentFacts(state,kind,round)` 没有记录即抛错；带完整 tick 边界的 `deaths:[]` 才代表零死亡。
 
 后续强化只调用领域内部的 `recordAugmentGrowth`/`readAugmentGrowth`、`recordAugmentPlayerHealth`、`readPreviousAugmentBattle`、`requireAugmentFacts`、`advanceAugmentPreparationTime`、`appendAugmentFact` 或 `grantAdditionalCarouselPick`。这些接口不向客户端开放，不自行决定受益人/数值/随机选择。普通选秀仍一席一次；附加授予要求正常领取已完成、独占剩余槽、明确持有来源，ID 为 `<carouselId>:<seatId>:extra:<1..8>`，按现有保留/领取/held/返池流程守恒。失败沿用 CarouselFailure、返回原状态。具体函数签名及成功/失败语义以设计文档接口表和导出 TypeScript 类型为准。
+
+### Batch 5 H3：历史成长和单位锁（P，2026-10-27）
+
+开放 `no-scout-no-pivot` 与 `cooking-pot`，均为黄金强化，仅在 2-1 提供；以上基础设施段中“不开放任何强化”和“digest 不变”仅描述当时的基础设施提交。前者在真实 PvP 冻结本人棋盘普通英雄，结算每名参战者永久获得 20 平面生命、150 Bps 攻击力和 150 centi 法强，按合星血缘继承；之后不可出售或因布阵交换回备战席，拒绝理由为已有 `unit-not-sellable`，失败返回原 state、无事件和消耗。场内换格、装备及自动合星仍合法。
+
+后者取得时按标准奖励收据给一个 `frying-pan`；取得后的每个自然轮入口，以 `round-entry` 的棋盘普通英雄和原始 `frying-pan`/`spatula` 为准，每名携带者向最近的另一棋盘英雄给 50 平面永久生命，六角距离相等按单位 ID 排序，多个携带者可叠加；单名携带者多件不倍增，没有目标则无成长，备战席不参与六角距离。无额外 AP。入口在上轮收入之后、本轮被动经验、商店、选秀和奖励之前；唯一成长收据使重复执行幂等。
+
+`readAugmentFacts<K>(state,kind)` 返回脱离原对象的该类历史事实，缺历史节报 `Invalid augment history:`；`requireAugmentFacts` 仍按轮查询并在缺行时拒绝。`recordAugmentGrowth`/`readAugmentGrowth` 继续负责有来源的整数成长及合星继承。单人战斗输入和服务器私有双边快照条件携带已认证成长；离线恢复对照开战前历史，联机席位恢复依然要求独立服务器 authority。房间复用既有冻结名单与结算调用，无新增网络命令或服务器自行计算规则；外层协议版本不变，内容身份已重新计算，历史 epoch 未重录。

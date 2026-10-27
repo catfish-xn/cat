@@ -1,3 +1,4 @@
+import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import type { MatchState, MatchEvent } from './match-types';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -56,6 +57,10 @@ export function recordAugmentGrowth(s: MatchState, choiceId: string, receiptId: 
   return appendAugmentFact(s, { kind: 'growth', choiceId, receiptId, deltas });
 }
 /** No implicit zero for an absent history or absent round boundary. */
+export function readAugmentFacts<K extends AugmentFactData['kind']>(s: MatchState, kind: K): readonly Extract<AugmentHistoryFact, {kind: K}>[] {
+  historyCheck(s.augmentHistory, 'missing augment-history-v1; history-dependent augment saves cannot be authenticated');
+  return structuredClone(s.augmentHistory.facts.filter(f => f.kind === kind)) as Extract<AugmentHistoryFact, {kind: K}>[];
+}
 export function requireAugmentFacts<K extends AugmentFactData['kind']>(s: MatchState, kind: K, round: number): readonly Extract<AugmentHistoryFact, {kind: K}>[] {
   historyCheck(s.augmentHistory, 'missing augment-history-v1; history-dependent augment saves cannot be authenticated');
   const rows = s.augmentHistory.facts.filter(f => f.kind === kind && f.round === round) as Extract<AugmentHistoryFact, {kind: K}>[];
@@ -161,6 +166,8 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   // Solo PvP has no opposing player's HP account. Unknown is explicit, never fabricated as zero.
   if (!after.multiplayer && after.roundResults.length > before.roundResults.length && after.m8.round.kind === 'pvp')
     next = appendAugmentFact(next, { kind: 'player-damage', battleId: after.combat!.combatId!, opponentSeatId: null, mirror: false, hpBefore: null, hpAfterDamage: null, actualDamage: null });
+  if (!after.multiplayer && after.roundResults.length > before.roundResults.length && after.m8.round.kind === 'pvp' && after.combat)
+    next = settleNoScoutGrowth(next, after.combat.combatId!);
   return next;
 }
 /** Wrap only outer public commands. Failed/no-op commands keep their exact original identity and no evidence. */

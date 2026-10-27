@@ -220,6 +220,9 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
         {kind:'statPercentBps',stat:'attackDamage',bps:rose.stars*sion.starAttackBps},{kind:'statFlat',stat:'armor',amount:resists},{kind:'statFlat',stat:'magicResist',amount:resists},
         {kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));
     }
+    const historyGrowth = state.augmentHistoryGrowth?.find(entry => entry.unitId === unit.id);
+    const historyOwner = state.augments.find(a=>a.definitionId==='no-scout-no-pivot' || a.definitionId==='cooking-pot');
+    if (historyGrowth && historyOwner) sources.push(...makeSourcedEffects(unit.id,'augment',historyOwner.definitionId,historyOwner.choiceId+':growth',[{kind:'statFlat',stat:'maxHp',amount:historyGrowth.healthFlat},{kind:'statPercentBps',stat:'maxHp',bps:historyGrowth.healthBps},{kind:'statPercentBps',stat:'attackDamage',bps:historyGrowth.attackDamageBps},{kind:'mechanic',mechanic:'fractionalFlat',values:{armorCenti:0,magicResistCenti:0,abilityPowerCenti:historyGrowth.abilityPowerCenti}}]));
     const growth = state.persistentGrowth.find(entry => entry.unitId === unit.id);
     if (growth) sources.push(...makeSourcedEffects(unit.id, 'ability', 'tristana-ability', `persistent:${unit.id}`, [{ kind: 'statPercentBps', stat: 'attackDamage', bps: growth.attackDamageBps }]));
     const anomaly=state.anomalyBinding?.unitId===unit.id?state.anomalyBinding.definitionId:null;
