@@ -1,12 +1,16 @@
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { runUntil, claimAllOrbs, TIMINGS, SEATS } from './helpers';
 import { Room, ROOM_TIMING_DEFAULTS } from '../../src/server/room/room';
 import { ManualClock } from '../../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { assertSharedPoolConservation, restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
+import { CAROUSEL_RULES_BINDING } from '../../src/server/room/carousel';
+import { restoreCarouselSeat } from '../../src/simulation/carousel';
 import { COST, batch5TransformPlan as batch5Transforms } from '../fixtures/m5/oracle.g2.cjs';
 import { rewardPlan } from '../fixtures/m5/augment-rewards-oracle.cjs';
 import type { MatchState } from '../../src/simulation/match-types';
+import type { CarouselReceipt } from '../../src/simulation/carousel-types';
+import type { ResourceProvenanceEntry } from '../../src/simulation/resource-provenance';
 
 const clock=new ManualClock(),room=new Room(SEATS.map(s=>({...s,kind:'human'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,seed:6,roomId:'test-room',clock,resolver:new TwoSidedBattleResolver()});
 const mine=()=>room.state.seats[0].match;
@@ -70,4 +74,142 @@ it('the transformed army fights and advances without repeating its acquisition e
  runUntil(room,clock,s=>s.roundId==='3-3'&&s.phase==='preparation');expect(room.state.fault).toBeNull();
  expect(mine().resourceProvenance.entries.filter(e=>e.kind==='unit-transformed')).toEqual(facts);
  const authority=room.augmentHistoryAuthority('s0');expect(restoreSharedOrbSnapshot(room.state.pool,JSON.stringify(mine()),authority)).toEqual(mine());
+});
+
+describe('carousel ancestry after Recombobulator',()=>{
+ const localClock=new ManualClock(),localRoom=new Room(SEATS.map(s=>({...s,kind:'human'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,seed:9,roomId:'test-room',clock:localClock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
+ const state=()=>localRoom.state.seats[0].match;
+ let receipt:CarouselReceipt,mergedId:string,transformed:Extract<ResourceProvenanceEntry,{kind:'unit-transformed'}>;
+ beforeAll(()=>localRoom.start());
+ for(const round of ['1-3','1-4','2-1','2-2','2-3'])beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId===round&&s.phase==='preparation'));
+ beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId==='2-4'&&s.phase==='carousel'));
+ beforeAll(()=>{
+  const opened=localRoom.state.carousel!;
+  localClock.advance(Math.max(0,opened.startedAt+opened.state.releaseAtMs.s0-localClock.now()));
+  const carousel=localRoom.state.carousel!.state;
+  const slot=carousel.slots.find(x=>x.pickedBy===null&&COST[x.definitionId]<5&&state().preparation.units.filter(u=>u.definitionId===x.definitionId&&u.starLevel===1).length<2);
+  expect(slot).toBeDefined();
+  expect(localRoom.handle('s0',{type:'carousel-pick',carouselId:carousel.id,revision:carousel.revision,slot:slot!.slot})).toMatchObject({ok:true});
+  receipt=state().carousel!.receipts.find(r=>r.carouselId===carousel.id)!;
+ });
+ beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId==='2-5'&&s.phase==='preparation'));
+ beforeAll(()=>{
+  // The 2-4 pick joins an existing board copy; buying the third copy consumes the pick's ID.
+  expect(state().preparation.units.some(u=>u.id===receipt.unitId)).toBe(true);
+  expect(state().preparation.units.some(u=>u.id!==receipt.unitId&&u.definitionId===receipt.definitionId&&u.location.kind==='board')).toBe(true);
+  const slot=state().shop.slots.findIndex(o=>o.status==='available'&&o.definitionId===receipt.definitionId);
+  expect(slot).toBeGreaterThanOrEqual(0);
+  expect(localRoom.handle('s0',{type:'buy',slot,generation:state().shop.generation})).toMatchObject({ok:true});
+  const merge=state().resourceProvenance.entries.find(e=>e.kind==='unit-upgraded'&&e.event.consumedIds.includes(receipt.unitId!));
+  expect(merge).toBeDefined();
+  if(!merge||merge.kind!=='unit-upgraded')throw Error('missing carousel merge');
+  mergedId=merge.event.survivorId;
+  expect(state().preparation.units.find(u=>u.id===mergedId)).toMatchObject({definitionId:receipt.definitionId,starLevel:2});
+ });
+ for(const round of ['2-6','2-7','3-1','3-2'])beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId===round&&s.phase==='preparation'));
+ beforeAll(()=>{
+  for(let i=0;i<3&&!state().pendingChoice!.offers.includes('recombobulator');i++){
+   const c=state().pendingChoice!;
+   expect(localRoom.handle('s0',{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:i})).toMatchObject({ok:true});
+  }
+  const choice=state().pendingChoice!;expect(choice.offers).toContain('recombobulator');
+  expect(localRoom.handle('s0',{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'recombobulator'})).toMatchObject({ok:true});
+  const fact=state().resourceProvenance.entries.find(e=>e.kind==='unit-transformed'&&e.unitId===mergedId&&e.roundId==='3-2');
+  expect(fact).toMatchObject({kind:'unit-transformed',from:receipt.definitionId,starLevel:2});
+  if(!fact||fact.kind!=='unit-transformed')throw Error('missing carousel transformation');
+  transformed=fact;
+  expect(transformed.to).not.toBe(receipt.definitionId);
+ });
+ beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId==='3-3'&&s.phase==='preparation'));
+ beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId==='3-4'&&s.phase==='carousel'));
+ afterAll(()=>localRoom.dispose());
+ it('restores the original carousel receipt after its merged survivor transforms',()=>{
+  const saved=state(),current=localRoom.state.carousel!.state,authority=localRoom.augmentHistoryAuthority('s0');
+  expect(saved.carousel!.receipts.find(r=>r.id===receipt.id)).toEqual(receipt);
+  expect(saved.preparation.units.find(u=>u.id===receipt.unitId)).toBeUndefined();
+  expect(saved.preparation.units.find(u=>u.id===mergedId)).toMatchObject({definitionId:transformed.to,starLevel:2});
+  expect(current.pool.holdings.find(h=>h.seatId==='s0'&&h.sources.includes(receipt.holdingSource))).toMatchObject({unitId:mergedId,definitionId:transformed.to});
+  for(const input of [saved,JSON.stringify(saved)])expect(restoreCarouselSeat(current,input,authority)).toEqual(saved);
+  expect(()=>restoreCarouselSeat(current,saved)).toThrow('independent server authority');
+ });
+ it('rejects forged transformations, merge ancestry and current identities',()=>{
+  const saved=state(),current=localRoom.state.carousel!.state,authority=localRoom.augmentHistoryAuthority('s0');
+  const mutations=[
+   (s:any)=>{s.resourceProvenance.entries.find((e:any)=>e.kind==='unit-transformed'&&e.unitId===mergedId).to='mel';},
+   (s:any)=>{s.resourceProvenance.entries.find((e:any)=>e.kind==='unit-transformed'&&e.unitId===mergedId).from='mel';},
+   (s:any)=>{s.resourceProvenance.entries.find((e:any)=>e.kind==='unit-transformed'&&e.unitId===mergedId).starLevel=1;},
+   (s:any)=>{s.resourceProvenance.entries=s.resourceProvenance.entries.filter((e:any)=>!(e.kind==='unit-transformed'&&e.unitId===mergedId));},
+   (s:any)=>{s.resourceProvenance.entries.find((e:any)=>e.kind==='unit-upgraded'&&e.event.survivorId===mergedId).event.survivorId=receipt.unitId;},
+   (s:any)=>{s.preparation.units.find((u:any)=>u.id===mergedId).definitionId='mel';},
+  ];
+  for(const mutate of mutations){const bad=structuredClone(saved);mutate(bad);for(const input of [bad,JSON.stringify(bad)])expect(()=>restoreCarouselSeat(current,input,authority)).toThrow();}
+ });
+});
+
+describe('carousel unit transformed before merging',()=>{
+ const localClock=new ManualClock(),localRoom=new Room(SEATS.map(s=>({...s,kind:'human'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,seed:9,roomId:'test-room',clock:localClock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
+ const state=()=>localRoom.state.seats[0].match;
+ let receipt:CarouselReceipt,transformed:Extract<ResourceProvenanceEntry,{kind:'unit-transformed'}>,mergedId:string;
+ beforeAll(()=>localRoom.start());
+ for(const round of ['1-3','1-4','2-1','2-2','2-3'])beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId===round&&s.phase==='preparation'));
+ beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId==='2-4'&&s.phase==='carousel'));
+ beforeAll(()=>{
+  const opened=localRoom.state.carousel!;
+  localClock.advance(Math.max(0,opened.startedAt+opened.state.releaseAtMs.s0-localClock.now()));
+  const carousel=localRoom.state.carousel!.state;
+  const slot=carousel.slots.find(x=>x.pickedBy===null&&COST[x.definitionId]<5&&state().preparation.units.filter(u=>u.definitionId===x.definitionId&&u.starLevel===1).length<2);
+  expect(slot).toBeDefined();
+  expect(localRoom.handle('s0',{type:'carousel-pick',carouselId:carousel.id,revision:carousel.revision,slot:slot!.slot})).toMatchObject({ok:true});
+  receipt=state().carousel!.receipts.find(r=>r.carouselId===carousel.id)!;
+ });
+ beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId==='2-5'&&s.phase==='preparation'));
+ beforeAll(()=>{
+  const occupied=state().preparation.units.find(u=>u.team==='player'&&u.location.kind==='board')!;
+  expect(localRoom.handle('s0',{type:'deploy',unitId:receipt.unitId!,target:occupied.location})).toMatchObject({ok:true});
+ });
+ for(const round of ['2-6','2-7','3-1','3-2'])beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId===round&&s.phase==='preparation'));
+ beforeAll(()=>{
+  for(let i=0;i<3&&!state().pendingChoice!.offers.includes('recombobulator');i++){
+   const c=state().pendingChoice!;
+   expect(localRoom.handle('s0',{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:i})).toMatchObject({ok:true});
+  }
+  const choice=state().pendingChoice!;expect(choice.offers).toContain('recombobulator');
+  expect(localRoom.handle('s0',{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'recombobulator'})).toMatchObject({ok:true});
+  const fact=state().resourceProvenance.entries.find(e=>e.kind==='unit-transformed'&&e.unitId===receipt.unitId);
+  expect(fact).toMatchObject({from:receipt.definitionId,starLevel:1});
+  if(!fact||fact.kind!=='unit-transformed')throw Error('missing carousel transformation');
+  transformed=fact;
+  expect(transformed.to).not.toBe(receipt.definitionId);
+ });
+ beforeAll(()=>{
+  // Put the first bought copy on the board so the transformed carousel ID is consumed by the triple.
+  let moved=false,merge:Extract<ResourceProvenanceEntry,{kind:'unit-upgraded'}>|undefined;
+  while(state().gold>=2+COST[transformed.to]&&!merge){
+   const before=state(),slot=before.shop.slots.findIndex(o=>o.status==='available'&&o.definitionId===transformed.to);
+   if(slot<0){expect(localRoom.handle('s0',{type:'reroll'})).toMatchObject({ok:true});continue;}
+   const boughtId=`unit-${before.nextUnitSerial}`;
+   expect(localRoom.handle('s0',{type:'buy',slot,generation:before.shop.generation})).toMatchObject({ok:true});
+   merge=state().resourceProvenance.entries.find((e):e is Extract<ResourceProvenanceEntry,{kind:'unit-upgraded'}>=>e.kind==='unit-upgraded'&&e.event.consumedIds.includes(receipt.unitId!));
+   if(!moved&&!merge){
+    const original=state().preparation.units.find(u=>u.id===receipt.unitId)!;
+    expect(localRoom.handle('s0',{type:'deploy',unitId:boughtId,target:original.location})).toMatchObject({ok:true});
+    moved=true;
+   }
+  }
+  expect(merge).toBeDefined();
+  if(!merge)throw Error('missing post-transform carousel merge');
+  mergedId=merge.event.survivorId;
+  expect(state().preparation.units.find(u=>u.id===mergedId)).toMatchObject({definitionId:transformed.to,starLevel:2});
+ });
+ beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId==='3-3'&&s.phase==='preparation'));
+ beforeAll(()=>runUntil(localRoom,localClock,s=>s.roundId==='3-4'&&s.phase==='carousel'));
+ afterAll(()=>localRoom.dispose());
+ it('restores the original receipt after the transformed copy is consumed in a merge',()=>{
+  const saved=state(),carousel=localRoom.state.carousel!.state,authority=localRoom.augmentHistoryAuthority('s0');
+  expect(saved.carousel!.receipts.find(r=>r.id===receipt.id)).toEqual(receipt);
+  expect(saved.preparation.units.find(u=>u.id===receipt.unitId)).toBeUndefined();
+  expect(saved.preparation.units.find(u=>u.id===mergedId)).toMatchObject({definitionId:transformed.to,starLevel:2});
+  expect(carousel.pool.holdings.find(h=>h.seatId==='s0'&&h.sources.includes(receipt.holdingSource))).toMatchObject({unitId:mergedId,definitionId:transformed.to});
+  for(const input of [saved,JSON.stringify(saved)])expect(restoreCarouselSeat(carousel,input,authority)).toEqual(saved);
+ });
 });
