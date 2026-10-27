@@ -5,12 +5,15 @@ import type { EffectLibrary } from '../src/rendering/three-mode/effect-library';
 import type { CombatReplay, CombatReplayTick, CombatViewEvent, CombatViewState, DisplayCombatEvent } from '../src/presentation/combat-display';
 import type { ModelLease, UnitActionState, UnitAnimationMixer } from '../src/rendering3d';
 import type { GameClient } from '../src/rendering/online/protocol';
-import { RemoteSession } from '../src/rendering/online/remote-session';
+import { RemoteSession, REPLAY_OPENING_MS } from '../src/rendering/online/remote-session';
 import { createMatch, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { BattleHistory, PlaybackSession } from '../src/replay';
 import { toDisplayEvents } from '../src/presentation/combat-display';
 import type { LedgerCombatEvent } from '../src/simulation/combat-types';
 import { readyMatch } from './match-helpers';
+import { syntheticSystem } from './vfx-ltk-synthetic';
+import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
+import type { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 
 describe('real 3D renderer catch-up and effect cleanup', () => {
   let core: typeof import('../src/rendering3d'), three: typeof import('three');
@@ -19,7 +22,8 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   let loads: MockInstance<EffectLibrary['load']>, consumes: MockInstance<UnitActionState['consume']>;
   let textureDisposed: ReturnType<typeof vi.fn<() => void>>;
   type DebugPiece = { root: import('three').Object3D; state: UnitActionState; mixer: UnitAnimationMixer; lease: ModelLease; disposed: boolean };
-  const debug = () => (window as unknown as { __render3d: { pieces: Map<string, DebugPiece> } }).__render3d;
+  const debug = () => (window as unknown as { __render3d: { pieces: Map<string, DebugPiece>; scene: import('three').Scene;
+    ltk: ReturnType<typeof createLtkRuntime> } }).__render3d;
   const frame: BoardFrame = { rows: 4, columns: 4, hexRadius: 34, origin: { x: 50, y: 50 }, bench: [], dragging: null, fighting: true,
     pieces: [{ id: 'a', definitionId: 'toy', team: 'player', starLevel: 1, x: 150, y: 130, alive: true, visible: true }] };
   const attack = (tick: number): CombatViewEvent => ({ type: 'attack', tick, eventSeq: tick, attackerId: 'a', targetId: 'a' });
@@ -36,7 +40,9 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-    const manifest = { schemaVersion: 1, models: { toy: { path: 'toy.glb' } }, effects: { flash: { path: 'flash.json' } }, actionEffects: { toy: { attack: ['flash'], cast: ['flash'] } } };
+    const manifest = { schemaVersion: 1, models: Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { path: `${id}.glb` }])),
+      effects: { flash: { path: 'flash.json' } },
+      actionEffects: Object.fromEntries(['toy', 'vander', 'kogmaw'].map(id => [id, { attack: ['flash'], cast: ['flash'] }])) };
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       if (url.endsWith('manifest.json')) return Response.json(manifest);
       if (url.endsWith('precache.json')) return Response.json({ schemaVersion: 1, files: [] });
@@ -46,10 +52,17 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.doMock('three', async original => ({ ...await original<typeof import('three')>(), WebGLRenderer: class {
       domElement = { className: '', style: {}, addEventListener() {}, removeEventListener() {}, remove() {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
       setPixelRatio() {} setSize() {} render() {} dispose() {} forceContextLoss() {} initTexture() {} async compileAsync() {}
+      getRenderTarget() { return null; } setRenderTarget() {}
     } }));
     three = await import('three'); core = await import('../src/rendering3d');
+    const start: TimelineCue = { system: 'start', event: 'cast-start', delay: 0, duration: 1 };
+    const hit: TimelineCue = { system: 'hit', event: 'hit', delay: .1, duration: 1 };
+    const flight: TimelineCue = { system: 'flight', event: 'projectile', delay: .05, duration: .3, travelSeconds: .3 };
+    const ltkIndex = { version: 1, systems: { start: 'start.json', hit: 'hit.json', flight: 'flight.json' },
+      assets: { 'synthetic.tex': 'texture.png' }, skills: { vander: [start, hit], kogmaw: [start, flight, hit] } };
     vi.doMock('../src/rendering/three-mode/asset-reader', () => ({ createAssetReader: () => ({
-      readJson: async () => ({ schemaVersion: 2, limits: { maxParticles: 5, maxDuration: 1 }, emitters: [{ kind: 'quad', texture: 'shared.png', emission: { mode: 'burst', count: 1 }, lifetime: 1 }] }),
+      readJson: async (url: string) => url.includes('/vfx-ltk/') ? url.endsWith('/index.json') ? ltkIndex : syntheticSystem()
+        : ({ schemaVersion: 2, limits: { maxParticles: 5, maxDuration: 1 }, emitters: [{ kind: 'quad', texture: 'shared.png', emission: { mode: 'burst', count: 1 }, lifetime: 1 }] }),
       readTexture: async () => { const texture = new three.Texture(); texture.addEventListener('dispose', textureDisposed); return texture; },
       readModel: async () => { const scene = new three.Group(); scene.add(new three.Mesh(new three.BoxGeometry(20, 40, 20), new three.MeshBasicMaterial())); return { scene, animations: ['idle', 'attack', 'cast', 'death'].map(name => new three.AnimationClip(name, 1, [])) }; },
       dispose() {},
@@ -65,6 +78,41 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   afterEach(() => {
     mounted?.dispose(); mounted = undefined; vi.restoreAllMocks(); vi.unstubAllGlobals();
     vi.doUnmock('three'); vi.doUnmock('../src/rendering/three-mode/asset-reader'); vi.resetModules();
+  });
+
+  it.each([
+    { champion: 'vander', targets: ['a'], converted: true },
+    { champion: 'vander', targets: [], converted: false },
+    { champion: 'kogmaw', targets: ['a'], converted: false },
+  ])('online replay keeps self targets and uses whole-action fallback: $champion / $targets', async ({ champion, targets, converted }) => {
+    // Synthetic legacy IDs have no champion-specific skill-feel trimming entries.
+    vi.stubGlobal('location', { search: '?debug3d&skillfx=off' });
+    const board = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm(champion); await flush();
+    listener.frame(board); loads.mockClear();
+    const initial = { combatId: 'self-cast', tick: 0, maxTicks: 20, status: 'running', result: null, board: { rows: 4, columns: 4 },
+      units: [{ id: 'a', definitionId: champion, team: 'player', starLevel: 1, hp: 100, maxHp: 100, mana: 0, maxMana: 100,
+        alive: true, shield: 0, targetId: null, cell: { col: 0, row: 0 }, attackRange: 1 }] } as CombatViewState;
+    const event = { ...cast(1), targetIds: targets } as CombatViewEvent;
+    const replay: CombatReplay = { initial, ticks: [{ tick: 1, events: [event] }], terminal: { ...initial, tick: 1 } };
+    const before = structuredClone(replay), client = { send: vi.fn() } as unknown as GameClient;
+    const session = new RemoteSession(client, createMatch(), () => 0); session.receiveReplay(replay);
+    const authoritative = session.state;
+    const events = session.advanceDisplay(REPLAY_OPENING_MS); // Advance the opening transition using synthetic time.
+    expect(events).toContainEqual(event);
+    listener.events!(events);
+    expect(debug().ltk.queued).toBe(converted ? 2 : 0);
+    await advance(16); await advance(100);
+    if (converted) {
+      expect(loads).not.toHaveBeenCalled();
+      expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual(['start', 'hit']);
+    } else {
+      expect(loads).toHaveBeenCalledExactlyOnceWith('flash', 1, undefined);
+      expect(debug().ltk.active).toBe(0); expect(debug().ltk.queued).toBe(0);
+      expect(debug().scene.children.filter(o => o.name === 'ltk-vfx')).toEqual([]);
+    }
+    expect(session.displayLog).toContainEqual(event); expect(session.state).toBe(authoritative);
+    expect(client.send).not.toHaveBeenCalled(); expect(replay).toEqual(before);
   });
 
   it('a cast begun after 1.2 seconds hidden starts at its own time on the first visible frame', async () => {

@@ -117,6 +117,9 @@ export class BoardScene extends Phaser.Scene {
   /** ?render=3d gestures (boardControls): the unit the 3D pointer is over, and the drag it owns. */
   private hover3d: string | null = null;
   /** ?render=3d: any team's piece under the pointer (enemies too), only for the description card. */
+  private descriptionGeneration = 0;
+  private sceneDescription = false;
+  private sceneUnitDescription = false;
   private look3d: string | null = null;
   private gesture3d: Gesture | null = null;
   private strategyPanel: StrategyPanel | null = null;
@@ -288,7 +291,7 @@ export class BoardScene extends Phaser.Scene {
     this.inspect = installUnitInspect((point, target) => this.inspectAt(point, target), id => this.inspectData(id), () => Boolean(this.draggingId));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.inspect?.dispose(); this.inspect = undefined; });
     const withdrawControls = provideBoardControls(this.boardControls());
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.hover3d = null; this.look3d = null; this.gesture3d = null; this.loadoutTip3d?.remove(); this.loadoutTip3d = null; });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { withdrawControls(); this.descriptionGeneration++; this.hover3d = null; this.look3d = null; this.gesture3d = null; this.loadoutTip3d?.remove(); this.loadoutTip3d = null; });
     this.sync();
     this.statsPanel = createStatsPanel(document.getElementById('stats-root')!, id => {
       if (this.application?.debug().mode === 'replay') { this.application.selectReplayUnit(id); return; }
@@ -648,6 +651,19 @@ export class BoardScene extends Phaser.Scene {
     return {
       hover: id => { this.hover3d = id; },
       look: id => { this.look3d = id; },
+      describe: (target, box) => {
+        this.sceneDescription = target !== null; this.sceneUnitDescription = target?.kind === 'unit';
+        const ticket = ++this.descriptionGeneration;
+        this.look3d = null; this.unitCardOpen = false;
+        if (!target) { unitHoverCard().hide(); return; }
+        void import('../presentation/unit-panel').then(module => {
+          if (ticket !== this.descriptionGeneration || !boardFeedActive()) return;
+          module.showSceneDescription(target?.kind === 'unit' && this.inspect?.pinned ? null : target, box,
+            target?.kind === 'unit' ? this.inspectData(target.id) : null,
+            target?.kind === 'orb' ? this.orbDock?.shownOrb(target.id) : undefined,
+            { inBattle: this.orbsInBattle(), locked: document.body.dataset.onlineSpectating === 'true' || this.onlineEnded() });
+        });
+      },
       claimOrb: id => this.orbDock?.click(id),
       select: id => {
         const unit = this.displayedUnit(id);
@@ -1110,8 +1126,7 @@ export class BoardScene extends Phaser.Scene {
   private quietBoard(): boolean { return this.online && boardFeedActive(); }
   private renderFeedback() {
     if (this.quietBoard()) return;
-    const canvas = this.game.canvas.getBoundingClientRect(), host = document.getElementById('feedback-root')!.getBoundingClientRect();
-    const scale = canvas.width / this.scale.gameSize.width;
+    const host = document.getElementById('feedback-root')!.getBoundingClientRect();
     if (boardFeedActive()) {
       // ?render=3d: anchor floats to each model as the 3D layer projects it; the 2D canvas and its fx labels are covered.
       const anchors = new Map<string, { x: number; y: number; radius: number }>();
@@ -1125,6 +1140,7 @@ export class BoardScene extends Phaser.Scene {
       this.feedback?.render(performance.now(), anchors);
       return;
     }
+    const canvas = this.game.canvas.getBoundingClientRect(), scale = canvas.width / this.scale.gameSize.width;
     this.feedback?.render(performance.now(), new Map([...this.tokens].filter(([, token]) => token.visible).map(([id,token]) => [id,
       { x: canvas.left - host.left + token.x * scale, y: canvas.top - host.top + token.y * scale, radius: 27 * scale }])),
       this.fx.labelRects().map(rect => ({ x: canvas.left - host.left + rect.x * scale, y: canvas.top - host.top + rect.y * scale, w: rect.w * scale, h: rect.h * scale })));
@@ -1163,6 +1179,7 @@ export class BoardScene extends Phaser.Scene {
    * token; never while dragging. The card is shared with the DOM anchors and closed here only when this scene opened it.
    */
   private syncUnitCard() {
+    if (this.sceneDescription) { if (this.sceneUnitDescription && this.inspect?.pinned) unitHoverCard().hide(); return; }
     // The pinned inspect panel replaces the hover card while it is open (TFT shows one or the other).
     const look = boardFeedActive() && this.look3d && this.tokens.get(this.look3d)?.visible ? this.look3d : undefined;
     const id = this.draggingId || this.touchInspect || this.inspect?.pinned ? undefined : this.hoveredId() ?? look;
@@ -1180,8 +1197,9 @@ export class BoardScene extends Phaser.Scene {
     const view = this.views.get(id!), gear = view ? gearText(view.equipped, view.extras, itemDisplayName) : '';
     // v16: a promoted Ultimate Hero shows 4★ and the rules' D14 lines of my own unit (none in a battle replay).
     const star = displayStarLevel(this.session.state, unit), notes = unit.team === 'player' ? d14UnitNotes(this.session.state, unit.id) : [];
-    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}`,
-      () => unitCardBody(unit.definitionId, star, battle, gear, notes)!);
+    const itemStacks = this.session.combatView?.units.find(entry => entry.id === id)?.itemStacks;
+    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}:${JSON.stringify(itemStacks)}`,
+      () => unitCardBody(unit.definitionId, star, battle, gear, notes, itemStacks)!);
     this.unitCardOpen = true;
   }
   private inspect?: ReturnType<typeof installUnitInspect>;

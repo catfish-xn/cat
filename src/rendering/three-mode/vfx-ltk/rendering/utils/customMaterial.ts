@@ -1,0 +1,86 @@
+/*! @license GPL-3.0-or-later
+ * Derived from ltk-manager (GPL-3.0-or-later).
+ * Source: src/modules/workshop/bin/vfx/rendering/utils/customMaterial.ts
+ * Port/adaptation: catfish-xn/cat, 2026-10-26. See NOTICE.md and LICENSE.
+ */
+import {
+  AddEquation,
+  BackSide,
+  type BlendingDstFactor,
+  type BlendingSrcFactor,
+  CustomBlending,
+  DoubleSide,
+  DstColorFactor,
+  FrontSide,
+  NoBlending,
+  OneFactor,
+  OneMinusDstColorFactor,
+  OneMinusSrcAlphaFactor,
+  OneMinusSrcColorFactor,
+  type ShaderMaterial,
+  SrcAlphaFactor,
+  SrcColorFactor,
+  ZeroFactor,
+} from "three";
+
+import type { MaterialPreview, RenderState, Wrap } from "../../bindings";
+
+import { CUSTOM_FRAGMENT } from "../shaders/custom";
+
+const FACTORS: Record<RenderState["srcFactor"], BlendingSrcFactor & BlendingDstFactor> = {
+  zero: ZeroFactor,
+  one: OneFactor,
+  srcColor: SrcColorFactor,
+  oneMinusSrcColor: OneMinusSrcColorFactor,
+  dstColor: DstColorFactor,
+  oneMinusDstColor: OneMinusDstColorFactor,
+  srcAlpha: SrcAlphaFactor,
+  oneMinusSrcAlpha: OneMinusSrcAlphaFactor,
+};
+
+const ADDRESS: Record<Wrap, number> = { repeat: 0, clamp: 1, mirror: 2, border: 3 };
+
+/**
+ * Returns `material` with the static material approximation of `preview` on its vertex program.
+ *
+ * Returns `material` unchanged if `preview` is missing. A `ground` material is never
+ * transparent, so it draws before the character.
+ */
+export function customMaterial(
+  material: ShaderMaterial,
+  preview: MaterialPreview | null | undefined,
+  ground: boolean,
+): ShaderMaterial {
+  if (preview == null || preview.missing) {
+    return material;
+  }
+
+  const state = preview.renderState;
+  const wrap = preview.base?.wrap ?? ["repeat", "repeat"];
+
+  material.fragmentShader = CUSTOM_FRAGMENT;
+  material.defines = {
+    ...material.defines,
+    CUSTOM_TEXTURE: Number(preview.base !== null && material.uniforms.map.value !== null),
+    CUSTOM_PREMULTIPLIED: Number(state.premultiplied),
+  };
+  Object.assign(material.uniforms, {
+    materialTint: { value: [...(preview.tint ?? [1, 1, 1]), preview.opacity ?? 1] },
+    materialRepeat: { value: preview.uvRepeat ?? [1, 1] },
+    materialAddress: { value: [ADDRESS[wrap[0]], ADDRESS[wrap[1]]] },
+    alphaRef: { value: preview.alphaTest ?? 0 },
+  });
+
+  material.blending = state.blending === "opaque" ? NoBlending : CustomBlending;
+  material.blendSrc = FACTORS[state.srcFactor];
+  material.blendDst = FACTORS[state.dstFactor];
+  material.blendEquation = AddEquation;
+  material.blendSrcAlpha = null;
+  material.blendDstAlpha = null;
+  material.transparent = state.blending !== "opaque" && !ground;
+  material.depthTest = state.depthTest;
+  material.depthWrite = state.depthWrite;
+  material.side = state.doubleSided ? DoubleSide : state.inverted ? BackSide : FrontSide;
+
+  return material;
+}

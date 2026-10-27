@@ -1,3 +1,6 @@
+import { unitHoverCard } from './hover-card';
+import { ORB_TIER_TEXT } from './orb-loot';
+import { orbCardBody } from '../rendering/online/orb-dock';
 /** Lazy inspect UI. All numbers are content/display projections; no planning bonus rules live here. */
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { getUnitStats } from '../simulation/unit-stats';
@@ -9,9 +12,9 @@ import { abilityText, fillAbilityTemplate } from './ability-text';
 import { fourStarBaseStats } from './d14-display';
 import { heroTraitTagsWithIds } from './hero-identity';
 import { s13IconHtml } from './s13-assets';
-import { itemMarkHtml } from './item-codex';
+import { catalogEntry, itemCardBody, itemMarkHtml } from './item-codex';
 import { itemDisplayName } from './g23-display';
-import { unitCardBody, roleSection, battleLine } from './unit-card';
+import { unitCardBody, roleSection, battleLine, itemStackLine, abilityLabel } from './unit-card';
 import { loadTooltipText, readTooltipText } from './tooltip-text-loader';
 import { PANEL_STYLE } from './unit-panel-style';
 
@@ -72,7 +75,7 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
   for (let slot = 0; slot < 3; slot++) {
     const cell = node('span', '', 'inspect-item'); cell.tabIndex = 0; cell.dataset.slot = String(slot); items.append(cell);
   }
-  body.append(items, node('div', '', 'inspect-stats-label'));
+  body.append(items, itemStackLine(data.combat?.itemStacks), node('div', '', 'inspect-stats-label'));
   const grid = node('dl', '', 'unit-card-stats');
   for (const [key, label] of Object.entries({ attack: '攻击力', ap: '法术强度', armor: '护甲', mr: '魔抗', speed: '攻击速度', crit: '暴击几率', critDamage: '暴击伤害', range: '射程' })) {
     const value = node('dd'); value.dataset.value = key; grid.append(node('dt', label), value);
@@ -81,7 +84,7 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
   const stats = data.starLevel === 4 ? fourStarBaseStats(data.definitionId) : null;
   const base = stats ?? getUnitStats(data.definitionId, def.unitKind === 'neutral' ? 1 : Math.min(3, data.starLevel) as StarLevel);
   const ability = node('div', '', 'unit-card-ability');
-  ability.append(node('div', `技能 · ${abilityText(data.definitionId, data.starLevel)?.name ?? '无主动技能'} · 法力 ${base.initialMana}/${base.maxMana}`, 'unit-card-label'), abilityRanks(data.definitionId, data.starLevel));
+  ability.append(abilityLabel(data.definitionId, `技能 · ${abilityText(data.definitionId, data.starLevel)?.name ?? '无主动技能'} · 法力 ${base.initialMana}/${base.maxMana}`), abilityRanks(data.definitionId, data.starLevel));
   body.append(ability);
   const role = roleSection(data.definitionId); if (role) body.append(role);
   body.append(node('div', '', 'inspect-notes'), battleLine(data.battle ?? { battle: null, match: null }));
@@ -123,6 +126,7 @@ export function updateUnitPanel(body: HTMLElement, data: UnitPanelData): void {
   battleLine(data.battle ?? { battle: null, match: null }, battle);
   battle.hidden = !data.battle || !(data.battle.battle || data.battle.match);
   const ids = data.items ?? [];
+  itemStackLine(live?.itemStacks, body.querySelector<HTMLElement>('[data-debug="unit-card:item-stacks"]')!);
   body.querySelectorAll<HTMLElement>('[data-slot]').forEach((cell, slot) => {
     const id = ids[slot] ?? ''; if (cell.dataset.item === id) return;
     cell.dataset.item = id; cell.title = id ? itemDisplayName(id) : '空装备栏'; cell.setAttribute('aria-label', cell.title);
@@ -165,3 +169,26 @@ export class UnitPanel {
   dispose(): void { this.close(); document.removeEventListener('keydown', this.escape); this.root.remove(); }
 }
 export async function createUnitPanel(): Promise<UnitPanel> { await loadTooltipText(); return new UnitPanel(); }
+
+/** The optional 3D scene reports only identities and projected boxes; DOM cards stay on this side. */
+export function showSceneDescription(target: import('../rendering/board-feed').BoardDescription | null,
+  box: import('./hover-card').HoverBox | undefined, unit: UnitPanelData | null,
+  orb: import('../simulation/m8/ui-contracts').UnclaimedOrbView | undefined,
+  context: import('../rendering/online/orb-dock').OrbDockContext): void {
+  const card = unitHoverCard();
+  if (!target || !box) { card.hide(); return; }
+  let body: HTMLElement | null = null;
+  if (target.kind === 'unit' || target.kind === 'carousel') {
+    const data = target.kind === 'carousel' ? target.unit : unit;
+    if (data) body = unitCardBody(data.definitionId, data.starLevel, null,
+      (data.items ?? []).map(item => itemDisplayName(typeof item === 'string' ? item : item.id)).join('、'));
+  } else if (target.kind === 'item') {
+    const entry = catalogEntry(target.id); if (entry) body = itemCardBody(entry);
+  } else if (target.kind === 'orb') {
+    if (orb) body = orbCardBody(orb, context, false);
+  } else {
+    body = node('div', `未领取的法球 ${target.count} 个：${target.tiers.map(tier => ORB_TIER_TEXT[tier as keyof typeof ORB_TIER_TEXT] ?? tier).join('、')}`);
+  }
+  if (body) card.showAt(box, JSON.stringify([target, unit, orb, context]), () => body!);
+  else card.hide();
+}

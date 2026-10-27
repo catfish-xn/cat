@@ -122,16 +122,16 @@ describe('SR-B8-02 resumable pure tasks', () => {
     expect(invalidTask.advance(1)).toBeNull();
     expect(() => invalidTask.advance(1201)).toThrow('replay-divergence');
   }); }
-  if (mode === 'fast') { it('defers early and trailing animation divergence until the terminal slice', () => {
+  if (mode === 'fast') { it.each(['early', 'trailing'] as const)('defers %s animation divergence until the terminal slice', kind => {
     const source = controlBattle();
     const damage = source.events.find(event => event.type === 'packetDamage')!;
     expect(damage.type).toBe('packetDamage');
     if (damage.type !== 'packetDamage') throw new Error('missing damage fixture');
-    for (const events of [
-      source.events.map(event => event === damage
-        ? { ...event, outcome: { ...event.outcome, hpDamage: event.outcome.hpDamage + 1 } } : event),
-      [...source.events, damage],
-    ]) {
+    const events = kind === 'early'
+      ? source.events.map(event => event === damage
+        ? { ...event, outcome: { ...event.outcome, hpDamage: event.outcome.hpDamage + 1 } } : event)
+      : [...source.events, damage];
+    {
       const task = startCombatReplay({ ...source, events });
       for (let tick = 1; tick < source.terminal.tick; tick++) expect(task.advance(1)).toBeNull();
       expect(() => task.advance(1)).toThrow('replay-divergence');

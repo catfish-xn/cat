@@ -138,3 +138,15 @@ describe('3D assets (no real asset files)', () => {
     } finally { fetchMock.mockRestore(); }
   });
 });
+
+it('disposes a settled template synchronously after its last released lease', async () => {
+  const geometry = new BoxGeometry(), texture = new Texture(), material = new MeshStandardMaterial({ map: texture }), scene = new Group();
+  scene.add(new Mesh(geometry, material));
+  const gd = vi.spyOn(geometry, 'dispose'), td = vi.spyOn(texture, 'dispose');
+  const cache = new ModelCache(manifest, '', async () => ({ scene, animations: [] }));
+  const lease = await cache.load('unit'); lease.release();
+  expect(td).not.toHaveBeenCalled(); cache.dispose();
+  expect(gd).toHaveBeenCalledTimes(1); expect(td).toHaveBeenCalledTimes(1);
+  await Promise.resolve(); cache.dispose();
+  expect(gd).toHaveBeenCalledTimes(1); expect(td).toHaveBeenCalledTimes(1);
+});

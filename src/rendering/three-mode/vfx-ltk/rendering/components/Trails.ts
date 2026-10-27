@@ -1,0 +1,197 @@
+/*! @license GPL-3.0-or-later
+ * Derived from ltk-manager (GPL-3.0-or-later).
+ * Source: src/modules/workshop/bin/vfx/rendering/components/Trails.tsx
+ * Port/adaptation: catfish-xn/cat, 2026-10-26. See NOTICE.md and LICENSE.
+ */
+// Bare Three.js adaptation: R3F lifecycle replaced; original particle writers retained.
+import { trailFacesTheCamera } from "../utils/drawKind";
+import { drawLifetime, makePair, showPair } from "../lifetime";
+import { Vector3 } from "three";
+
+import { AXIS_SIGN } from "../../space";
+
+import { TRAIL_MODE } from "../../engine/model/enums";
+import type { EmitterModel } from "../../engine/model/model";
+import { smoothingReachAt } from "../../engine/model/quality";
+import type { Point } from "../../engine/model/rig";
+import {
+  age01,
+  appearance,
+  drawnPlace,
+  drawnPlaceInto,
+  erosionDrive,
+  frameOf,
+  particleBasisInto,
+  type Source,
+} from "../../engine/simulation/particleRead";
+import { AXIS, axisInto } from "../../engine/utils/basis";
+import type { EmitterSamplers } from "../hooks/useVfxTextures";
+import { fragmentTests, premultiplyInto } from "../utils/blend";
+import { colorLookupInto } from "../utils/colorLookup";
+import { bucketRange, bucketsOf, renderStamp } from "../utils/emitterBuckets";
+import { ribbonMaterial } from "../utils/materials";
+import { sourcesScrollInto } from "../utils/palette";
+import {
+  commitRibbon,
+  type Cursor,
+  packUv,
+  ribbonBuffers,
+  strand,
+  UV_STRIDE,
+  writeTrail,
+} from "../utils/ribbon";
+import { type LayerDraws, layersOf } from "../utils/uniforms";
+import { uvDraw, uvTransformInto } from "../utils/uvTransform";
+
+/** How many points one strand holds, which caps its share of its pool. */
+const TRAIL_POINTS = 1024;
+
+/** How many vertices one emitter's strands share across every source, four of the longest. */
+const TRAIL_VERTICES = TRAIL_POINTS * 2 * 4;
+
+/** Scratch the frame reuses, so a draw allocates nothing per particle. */
+const DRAWN = { scale: new Float32Array(3), color: new Float32Array(4) };
+const UV_DRAWN = uvDraw();
+const BASIS = new Float32Array(9);
+const STRAND = strand(TRAIL_POINTS);
+const ORDER = new Int32Array(TRAIL_POINTS);
+const CURSOR: Cursor = { vertex: 0, index: 0 };
+const PLACED = drawnPlace();
+const LOOKING = new Vector3();
+const VIEW: [number, number, number] = [0, 0, 0];
+
+/** The ramp and the soft fade a ribbon's shader compiles, and neither the rim nor the reflection. */
+const DRAWS: LayerDraws = { ramp: true, sheen: false, fade: true };
+
+export interface TrailsProps {
+  emitter: EmitterModel;
+  /** Every system whose pool holds this emitter's particles, each strung as a strand of its own. */
+  sources: readonly Source[];
+  samplers: EmitterSamplers;
+  /** Where the emitter falls in the system's draw order, from `drawRanks`. */
+  rank: number;
+  hidden: boolean;
+}
+
+/**
+ * One emitter's particles, strung along one ribbon in the order they were born.
+ *
+ * Each particle is a point: its position, `scale0.x` as the half-width, its colour, its
+ * birth tiling and the odometer at its birth. A camera trail expands across the view and
+ * its tangent, and an arbitrary one along each particle's own `+X`, so it stands however
+ * the particle was turned.
+ *
+ * With the game's shaders on, the ribbon draws through the translated `quad` or `distortion`
+ * pair once it is ready, and through the hand-written material until then.
+ */
+export function createTrails({ emitter, sources, samplers, rank, hidden }: TrailsProps) {
+  const { memo, cleanup, eachFrame, finish } = drawLifetime();
+  const trail = emitter.trail;
+  const buffers = memo(() => ribbonBuffers(TRAIL_VERTICES), []);
+  const material = memo(
+    () =>
+      ribbonMaterial(
+        emitter.blendMode,
+        samplers.base,
+        emitter.depthBias,
+        layersOf(emitter, samplers, DRAWS),
+        fragmentTests(emitter),
+      ),
+    [emitter, samplers],
+  );
+
+  cleanup(
+    () => () => {
+      buffers.geometry.dispose();
+      buffers.edgeGeometry.dispose();
+    },
+    [buffers],
+  );
+
+  const pair = makePair(material);
+
+  const drawn = !hidden && !emitter.disabled && trail !== null;
+  const facesEye = trailFacesTheCamera(emitter);
+
+  eachFrame((state) => {
+    if (!drawn || trail === null) {
+      buffers.geometry.setDrawRange(0, 0);
+      buffers.edgeGeometry.setDrawRange(0, 0);
+      showPair(pair, false);
+      return;
+    }
+
+    const scroll = material.uniforms.paletteScroll.value as number[];
+    sourcesScrollInto(emitter, sources, scroll);
+    state.camera.getWorldDirection(LOOKING);
+    VIEW[0] = LOOKING.x * AXIS_SIGN[0];
+    VIEW[1] = LOOKING.y * AXIS_SIGN[1];
+    VIEW[2] = LOOKING.z * AXIS_SIGN[2];
+
+    CURSOR.vertex = 0;
+    CURSOR.index = 0;
+    for (const source of sources) {
+      strandInto(source, emitter, renderStamp(state.gl));
+      writeTrail(
+        STRAND,
+        {
+          view: facesEye ? (VIEW as Point) : null,
+          wake: trail.mode === TRAIL_MODE.wake,
+          smoothing: trail.smoothing,
+          reach: smoothingReachAt(emitter.effectsQuality),
+          cutoff: trail.cutoff,
+          layers: { base: emitter.uv, mult: emitter.multUv },
+        },
+        buffers.arrays,
+        CURSOR,
+      );
+    }
+    commitRibbon(buffers, CURSOR);
+    showPair(pair, CURSOR.index > 0);
+  });
+
+  return finish(pair, buffers.geometry, material, rank);
+}
+
+/** One source's particles of `emitter` as a strand, into `STRAND`, in the order they were born. */
+function strandInto(source: Source, emitter: EmitterModel, stamp: number): void {
+  const pool = source.pool;
+  const frame = frameOf(source, emitter);
+  const time = frame.now;
+  let held = 0;
+  const buckets = bucketsOf(pool, stamp);
+  const [first, last] = bucketRange(buckets, emitter.index);
+  for (let listed = first; listed < last && held < TRAIL_POINTS; listed += 1) {
+    const at = buckets.order[listed];
+    ORDER[held] = at;
+    held += 1;
+  }
+  ORDER.subarray(0, held).sort((left, right) => pool.serial[left] - pool.serial[right]);
+
+  STRAND.count = held;
+  for (let slot = 0; slot < held; slot += 1) {
+    const at = ORDER[slot];
+    appearance(pool, at, emitter, time, DRAWN);
+    premultiplyInto(emitter, DRAWN.color);
+    drawnPlaceInto(pool, at, frame, PLACED);
+    STRAND.position.set(PLACED.place, slot * 3);
+    STRAND.width[slot] = DRAWN.scale[0];
+    STRAND.color.set(DRAWN.color, slot * 4);
+    STRAND.tiling.set(pool.tiling.subarray(at * 2, at * 2 + 2), slot * 2);
+    STRAND.odometer[slot] = pool.odometer[at];
+    STRAND.erode[slot] = erosionDrive(pool, at, emitter, time);
+
+    particleBasisInto(pool, at, emitter, frame, BASIS);
+    axisInto(BASIS, AXIS.x, STRAND.side, slot * 3);
+
+    const age = time - pool.birthTime[at];
+    const through = age01(pool, at, time);
+    uvTransformInto(pool, at, emitter.uv, 0, age, through, time, UV_DRAWN);
+    packUv(UV_DRAWN, STRAND.uv, slot * UV_STRIDE);
+    if (emitter.multUv !== null) {
+      uvTransformInto(pool, at, emitter.multUv, 1, age, through, time, UV_DRAWN);
+      packUv(UV_DRAWN, STRAND.multUv, slot * UV_STRIDE);
+    }
+    colorLookupInto(emitter, pool, at, through, STRAND.lookup, slot * 2);
+  }
+}

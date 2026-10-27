@@ -1,0 +1,110 @@
+/*! @license GPL-3.0-or-later
+ * Derived from ltk-manager (GPL-3.0-or-later).
+ * Source: src/modules/workshop/bin/vfx/rendering/shaders/ribbon.ts
+ * Port/adaptation: catfish-xn/cat, 2026-10-26. See NOTICE.md and LICENSE.
+ */
+import { CAST, COLOR, ERODE, FETCH, PICK, SOFT, WARP, WIRE } from "./quad";
+
+export const RIBBON_VERTEX = /* glsl */ `
+attribute vec2 alphaUv;
+attribute vec2 cell;
+attribute vec4 tint;
+attribute vec2 lookup;
+attribute float erode;
+attribute vec2 multUv;
+attribute vec2 multCell;
+
+varying vec2 vUv;
+varying vec2 vAlphaUv;
+varying vec2 vCell;
+varying vec4 vColor;
+varying vec2 vLookup;
+varying float vErode;
+varying vec2 vMultUv;
+varying vec2 vMultCell;
+
+void main() {
+  vUv = uv;
+  vAlphaUv = alphaUv;
+  vCell = cell;
+  vColor = tint;
+  vLookup = lookup;
+  vErode = erode;
+  vMultUv = multUv;
+  vMultCell = multCell;
+  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+}
+`;
+
+export const RIBBON_FRAGMENT = /* glsl */ `
+${WIRE}
+${PICK}
+uniform sampler2D map;
+uniform float alphaRef;
+uniform int address;
+uniform vec2 cellSize;
+
+uniform sampler2D mapMult;
+uniform vec2 cellMult;
+uniform int addressMult;
+
+varying vec2 vUv;
+varying vec2 vAlphaUv;
+varying vec2 vCell;
+varying vec4 vColor;
+varying vec2 vLookup;
+varying vec2 vMultUv;
+varying vec2 vMultCell;
+
+${FETCH}
+${COLOR}
+${ERODE}
+${CAST}
+${WARP}
+${SOFT}
+
+void main() {
+#ifdef WIREFRAME
+  gl_FragColor = wireColor;
+  return;
+#endif
+  vec4 texel = vec4(1.0);
+#ifdef HAS_MAP
+  texel = fetch(map, vUv, vec4(0.0, 0.0, vCell), cellSize, address);
+#if LOCK_ALPHA == 1
+  texel.a = fetch(map, vAlphaUv, vec4(0.0), vec2(1.0), address).a;
+#endif
+#endif
+#ifdef PICK
+  if (texel.a < PICK_ALPHA) discard;
+  gl_FragColor = pickId;
+  return;
+#endif
+#ifdef SHADOW
+  cast(texel.a, vColor.a, vLookup, eroding(vCell + vUv * cellSize));
+  return;
+#endif
+#ifdef SLICE
+  vec4 slice = sliced(texel, vLookup, vColor);
+  if (slice.a < alphaRef) discard;
+  gl_FragColor = slice;
+  return;
+#endif
+#ifdef RAMP_AT_MULT
+  texel = colored(texel, vMultCell + vMultUv * cellMult);
+#else
+  texel = colored(texel, vLookup);
+#endif
+#ifdef HAS_MAP_MULT
+  texel *= fetch(mapMult, vMultUv, vec4(0.0, 0.0, vMultCell), cellMult, addressMult);
+#endif
+  texel.a *= eroding(vCell + vUv * cellSize);
+  vec4 lit = softened(texel * vColor);
+  if (lit.a < alphaRef) discard;
+#ifdef DISTORTS
+  gl_FragColor = warped(vUv, lit.a);
+#else
+  gl_FragColor = lit;
+#endif
+}
+`;

@@ -11,13 +11,27 @@ export function summarizeGroup(group: StatusGroup, tick: number, includeFinalPul
   for (const contribution of group.contributions) if (isEffective(contribution, tick, includeFinalPulse) && (!best
     || contribution.application.magnitudeBps > best.application.magnitudeBps
     || contribution.application.magnitudeBps === best.application.magnitudeBps && compareCodePoints(contribution.key, best.key) < 0)) best = contribution;
-  return { ...group, effectiveSourceKey: best?.key ?? null, effectiveMagnitudeBps: best?.application.magnitudeBps ?? 0 };
+  const effectiveSourceKey = best?.key ?? null, effectiveMagnitudeBps = best?.application.magnitudeBps ?? 0;
+  // Groups/contributions are immutable values. Still examine every contribution
+  // at this tick, but keep the value if its derived summary did not change.
+  return group.effectiveSourceKey === effectiveSourceKey && Object.is(group.effectiveMagnitudeBps, effectiveMagnitudeBps)
+    ? group : { ...group, effectiveSourceKey, effectiveMagnitudeBps };
 }
 export function effectiveStatuses(groups: readonly StatusGroup[], tick: number, includeFinalPulse = false): StatusGroup[] {
   return groups.map(g => summarizeGroup(g, tick, includeFinalPulse)).filter(g => g.effectiveSourceKey !== null);
 }
+/** A kind-only query need not allocate summaries for unrelated status groups. */
+export function hasEffectiveStatus(groups: readonly StatusGroup[], kind: StatusKind, tick: number): boolean {
+  for (const group of groups) if (group.kind === kind && summarizeGroup(group, tick).effectiveSourceKey !== null) return true;
+  return false;
+}
 export function statusMagnitude(groups: readonly StatusGroup[], kind: StatusKind, tick: number): number {
-  return Math.max(0, ...effectiveStatuses(groups, tick).filter(g => g.kind === kind).map(g => g.effectiveMagnitudeBps));
+  let magnitude = 0;
+  for (const group of groups) if (group.kind === kind) {
+    const summary = summarizeGroup(group, tick);
+    if (summary.effectiveSourceKey !== null) magnitude = Math.max(magnitude, summary.effectiveMagnitudeBps);
+  }
+  return magnitude;
 }
 export function validateStatusApplication(app: StatusApplication): void {
   if (!['stun','burn','wound','sunder','shred','damage-reduction','control-immunity','untargetable','damage-prevention','stat-buff','stat-debuff'].includes(app.kind)
@@ -72,12 +86,16 @@ export function applyStatusContribution(groups: readonly StatusGroup[], identity
 export function removeStatusContributions(groups: readonly StatusGroup[], remove: (c: StatusContribution) => boolean, reason: StatusEndReason, tick: number): { groups: StatusGroup[]; ended: EndedStatus[] } {
   const ended: EndedStatus[] = [], remaining: StatusGroup[] = [];
   for (const group of groups) {
-    const contributions = group.contributions.filter(c => {
-      if (!remove(c)) return true;
+    let contributions: StatusContribution[] | undefined;
+    for (let index = 0; index < group.contributions.length; index++) {
+      const c = group.contributions[index];
+      if (!remove(c)) { contributions?.push(c); continue; }
+      contributions ??= group.contributions.slice(0, index);
       const effects = !c.endRewardConsumed && c.application.onEnd?.reasons.includes(reason) ? c.application.onEnd.effects : [];
-      ended.push({ contribution: { ...c, endRewardConsumed: true }, reason, effects }); return false;
-    });
-    if (contributions.length) remaining.push(summarizeGroup({ ...group, contributions }, tick));
+      ended.push({ contribution: { ...c, endRewardConsumed: true }, reason, effects });
+    }
+    if (contributions ? contributions.length : group.contributions.length)
+      remaining.push(summarizeGroup(contributions ? { ...group, contributions } : group, tick));
   }
   return { groups: remaining, ended };
 }

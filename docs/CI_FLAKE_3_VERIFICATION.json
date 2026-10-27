@@ -1,0 +1,767 @@
+{
+  "baseline": "30690fe3717d1b267c3966f1e001ae75cf9d2475",
+  "branch": "codex/ci-flake-3",
+  "maxWorkers": 4,
+  "shuffleSeed": 27102026,
+  "files": [
+    "tests/assets3d-fx-pilot.test.ts",
+    "tests/assets3d-merge.test.ts",
+    "tests/augment-text-identity.test.ts",
+    "tests/b8-resumable-battle.test.ts",
+    "tests/chest-bracer-integration-trial.test.ts",
+    "tests/g2-3-identity.test.ts",
+    "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+    "tests/g5-combat-summary.test.ts",
+    "tests/m5-route.test.ts",
+    "tests/m8-b8-equipment-fixture.test.ts",
+    "tests/m8-b8-live-capacity.test.ts",
+    "tests/r3r4-oracle.test.ts",
+    "tests/rendering3d-preload-mount.test.ts",
+    "tests/restore-audit/bounds-preflight.test.ts",
+    "tests/restore-audit/g23-grant-evidence.test.ts",
+    "tests/server/bot-driver.test.ts",
+    "tests/server/net/combat-stream-wire.test.ts",
+    "tests/server/net/watch.test.ts",
+    "tests/server/projection-wire.test.ts"
+  ],
+  "sourceSha256": {
+    "tests/assets3d-fx-pilot.test.ts": "2fcf99f30ef96b76b4fee64ea319b7c02c0c68c0584eeeae8414deb855b337f9",
+    "tests/assets3d-merge.test.ts": "388f395d2c219ccb1b29b93596263e5e5ce4ba243bfb60f08fc54b1a4b04d678",
+    "tests/augment-text-identity.test.ts": "cd618ec29101736226f51448294b1a4f7b1058221e53dfe17a880f17a38234c1",
+    "tests/b8-resumable-battle-helper.ts": "e4f0f6a9fcf52a74a2a9e6376517ee60578396d7f45e774d1d45662d91b699ce",
+    "tests/chest-bracer-integration-trial.test.ts": "a8ab0482dfc81257ab0d65e6bb56e655c7ca8a89be2a58a328a2f25270d8ac4b",
+    "tests/g2-3-identity.test.ts": "1b9e01481d6c8e71778c3a3f94ab16d894ce63c56ea75d96dcca1784582f7e6a",
+    "tests/g2-3-lesser-shimmer-duplicator.test.ts": "3cd0dde6c926f4b7c9ef53f1733c1e098994c1301a87633ffe12131dff4e75c7",
+    "tests/g5-combat-summary.test.ts": "da999941d7cfcfa751bf870456f891f13cbd0a1dc81961d55c62a3ca3fb99005",
+    "tests/m5-route.test.ts": "82acf1eb0e0bb5dfbcb1af75bfaef88b865cf2c3f83eb81647769e8a10d003e0",
+    "tests/m8-b8-equipment-fixture.test.ts": "eb15f28caa598724ad34d10f7c59afb2fd35a2a7850142c83d60069edc5dbfda",
+    "tests/m8-b8-live-capacity.test.ts": "b4ec38b8218b8802f5f0296891564d9c390f7d8980ed87541b81995da3ec51d5",
+    "tests/presentation/hover-card-pin.test.ts": "a477642b29a4e3c76d7e9f689a850981bb43863bf3bb3c9b48a2584bff4444da",
+    "tests/r3r4-oracle.test.ts": "ed7e0e46a31342a1ac0a93a49f646b60311c605ba49d921849305b146d11853b",
+    "tests/rendering3d-preload-mount.test.ts": "53884de42b04d904ddce32f32512cebb8aa1283b830cb28b62699c0779768779",
+    "tests/restore-audit/bounds-preflight.test.ts": "72fa7bd029b63a1b81a22f566b76957ceab6e382a152a8efd8a2604117c3b7ab",
+    "tests/restore-audit/g23-grant-evidence.test.ts": "4724df97c085cef435cabdf1ea86a987dacb73db54e8b986e4e6c7463a080709",
+    "tests/server/bot-driver-helper.ts": "a72f3b0d3e8f1cfc8b284e074904c6d7dac054023afb2cdced2533022b1426b3",
+    "tests/server/net/combat-stream-wire.test.ts": "09195886422e84ad43e05f9c06b08a1137842570be68c93d9dd976c88df5c7c8",
+    "tests/server/net/watch.test.ts": "2af13ce74aea2c476019e7aea32cf3c91d230c51a62918ce64119ee431af7f02",
+    "tests/server/projection-wire.test.ts": "09c797e15d78f672c9bcce19152860a7f8ad469a135f46c1677c2813eaaf8812"
+  },
+  "browserVerification": {
+    "status": "not run",
+    "file": "tests/presentation/hover-card-pin.test.ts",
+    "reason": "CODEX_BROWSER_CLIENT / PLAYWRIGHT_WS_ENDPOINT absent; AGENTS browser bridge forbids local launch"
+  },
+  "config": "import original from '/home/aiapps/workspcae/cat-cx-flake3/vitest.config';\n// This focused run selects only Node tests. Preserve projects, setup, isolation,\n// sequencing and budgets, replacing only the unconditional browser global setup.\nexport default { ...original, test: { ...original.test, projects: original.test!.projects!.map((project: any) => ({ ...project, test: { ...project.test, globalSetup: ['/tmp/ci-flake-3-cache-setup.mjs'] } })) } };\n",
+  "globalSetup": "import {mkdtempSync,rmSync} from 'node:fs';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nexport default function setup(){const directory=mkdtempSync(join(tmpdir(),'g4-fixtures-'));process.env.G4_FIXTURE_CACHE=directory;\nreturn ()=>{delete process.env.G4_FIXTURE_CACHE;rmSync(directory,{recursive:true,force:true});};}\n",
+  "runs": [
+    {
+      "name": "run1",
+      "report": "/tmp/ci-flake-3-run1.json",
+      "reportSha256": "e9a96f9ba7766229427599990b8f7eb38f6802198977a505ae9d64331f866e41",
+      "success": true,
+      "tests": 248,
+      "passed": 248,
+      "failed": 0,
+      "pending": 0,
+      "files": [
+        {
+          "file": "tests/assets3d-fx-pilot.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 627.11
+        },
+        {
+          "file": "tests/assets3d-merge.test.ts",
+          "status": "passed",
+          "tests": 7,
+          "maxTestMs": 85.61
+        },
+        {
+          "file": "tests/augment-text-identity.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "maxTestMs": 167.05
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "status": "passed",
+          "tests": 16,
+          "maxTestMs": 2734.89
+        },
+        {
+          "file": "tests/chest-bracer-integration-trial.test.ts",
+          "status": "passed",
+          "tests": 19,
+          "maxTestMs": 1565.84
+        },
+        {
+          "file": "tests/g2-3-identity.test.ts",
+          "status": "passed",
+          "tests": 14,
+          "maxTestMs": 1224.75
+        },
+        {
+          "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+          "status": "passed",
+          "tests": 63,
+          "maxTestMs": 3800.04
+        },
+        {
+          "file": "tests/g5-combat-summary.test.ts",
+          "status": "passed",
+          "tests": 12,
+          "maxTestMs": 1384.27
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "status": "passed",
+          "tests": 8,
+          "maxTestMs": 488.79
+        },
+        {
+          "file": "tests/m8-b8-equipment-fixture.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "maxTestMs": 78.74
+        },
+        {
+          "file": "tests/m8-b8-live-capacity.test.ts",
+          "status": "passed",
+          "tests": 6,
+          "maxTestMs": 1139.63
+        },
+        {
+          "file": "tests/r3r4-oracle.test.ts",
+          "status": "passed",
+          "tests": 23,
+          "maxTestMs": 651.5
+        },
+        {
+          "file": "tests/rendering3d-preload-mount.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "maxTestMs": 108.18
+        },
+        {
+          "file": "tests/restore-audit/bounds-preflight.test.ts",
+          "status": "passed",
+          "tests": 18,
+          "maxTestMs": 3911.33
+        },
+        {
+          "file": "tests/restore-audit/g23-grant-evidence.test.ts",
+          "status": "passed",
+          "tests": 15,
+          "maxTestMs": 387.32
+        },
+        {
+          "file": "tests/server/bot-driver.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 4179.04
+        },
+        {
+          "file": "tests/server/projection-wire.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 22760.39
+        },
+        {
+          "file": "tests/server/net/combat-stream-wire.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "maxTestMs": 1179.6
+        },
+        {
+          "file": "tests/server/net/watch.test.ts",
+          "status": "passed",
+          "tests": 8,
+          "maxTestMs": 11204.34
+        }
+      ],
+      "note": "Three files received type-only fixes during this run; count run2, run3 and post-typecheck as their three ordinary passes."
+    },
+    {
+      "name": "run2",
+      "report": "/tmp/ci-flake-3-run2.json",
+      "reportSha256": "2963cb48117fdae992c35688c8569d9f3a5fab22314bef8aa1d34046d6fa4913",
+      "success": true,
+      "tests": 248,
+      "passed": 248,
+      "failed": 0,
+      "pending": 0,
+      "files": [
+        {
+          "file": "tests/assets3d-fx-pilot.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 517.39
+        },
+        {
+          "file": "tests/assets3d-merge.test.ts",
+          "status": "passed",
+          "tests": 7,
+          "maxTestMs": 126.99
+        },
+        {
+          "file": "tests/augment-text-identity.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "maxTestMs": 209.55
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "status": "passed",
+          "tests": 16,
+          "maxTestMs": 2510.66
+        },
+        {
+          "file": "tests/chest-bracer-integration-trial.test.ts",
+          "status": "passed",
+          "tests": 19,
+          "maxTestMs": 1286.1
+        },
+        {
+          "file": "tests/g2-3-identity.test.ts",
+          "status": "passed",
+          "tests": 14,
+          "maxTestMs": 1038.3
+        },
+        {
+          "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+          "status": "passed",
+          "tests": 63,
+          "maxTestMs": 3620.89
+        },
+        {
+          "file": "tests/g5-combat-summary.test.ts",
+          "status": "passed",
+          "tests": 12,
+          "maxTestMs": 1362.1
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "status": "passed",
+          "tests": 8,
+          "maxTestMs": 481.79
+        },
+        {
+          "file": "tests/m8-b8-equipment-fixture.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "maxTestMs": 73.05
+        },
+        {
+          "file": "tests/m8-b8-live-capacity.test.ts",
+          "status": "passed",
+          "tests": 6,
+          "maxTestMs": 1165.8
+        },
+        {
+          "file": "tests/r3r4-oracle.test.ts",
+          "status": "passed",
+          "tests": 23,
+          "maxTestMs": 645.28
+        },
+        {
+          "file": "tests/rendering3d-preload-mount.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "maxTestMs": 132.65
+        },
+        {
+          "file": "tests/restore-audit/bounds-preflight.test.ts",
+          "status": "passed",
+          "tests": 18,
+          "maxTestMs": 3430.03
+        },
+        {
+          "file": "tests/restore-audit/g23-grant-evidence.test.ts",
+          "status": "passed",
+          "tests": 15,
+          "maxTestMs": 390.72
+        },
+        {
+          "file": "tests/server/bot-driver.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 4243.43
+        },
+        {
+          "file": "tests/server/projection-wire.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 21750.41
+        },
+        {
+          "file": "tests/server/net/combat-stream-wire.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "maxTestMs": 1026.89
+        },
+        {
+          "file": "tests/server/net/watch.test.ts",
+          "status": "passed",
+          "tests": 8,
+          "maxTestMs": 10966.95
+        }
+      ]
+    },
+    {
+      "name": "run3",
+      "report": "/tmp/ci-flake-3-run3.json",
+      "reportSha256": "3070999ea84888644a53a298045d2a1003efbc8e0ebe3cd3b6f80df01e4dbcc4",
+      "success": true,
+      "tests": 248,
+      "passed": 248,
+      "failed": 0,
+      "pending": 0,
+      "files": [
+        {
+          "file": "tests/assets3d-fx-pilot.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 584.26
+        },
+        {
+          "file": "tests/assets3d-merge.test.ts",
+          "status": "passed",
+          "tests": 7,
+          "maxTestMs": 205.86
+        },
+        {
+          "file": "tests/augment-text-identity.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "maxTestMs": 231.57
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "status": "passed",
+          "tests": 16,
+          "maxTestMs": 2664.69
+        },
+        {
+          "file": "tests/chest-bracer-integration-trial.test.ts",
+          "status": "passed",
+          "tests": 19,
+          "maxTestMs": 1382.54
+        },
+        {
+          "file": "tests/g2-3-identity.test.ts",
+          "status": "passed",
+          "tests": 14,
+          "maxTestMs": 1094.07
+        },
+        {
+          "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+          "status": "passed",
+          "tests": 63,
+          "maxTestMs": 3450.06
+        },
+        {
+          "file": "tests/g5-combat-summary.test.ts",
+          "status": "passed",
+          "tests": 12,
+          "maxTestMs": 1444.62
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "status": "passed",
+          "tests": 8,
+          "maxTestMs": 505.86
+        },
+        {
+          "file": "tests/m8-b8-equipment-fixture.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "maxTestMs": 82.47
+        },
+        {
+          "file": "tests/m8-b8-live-capacity.test.ts",
+          "status": "passed",
+          "tests": 6,
+          "maxTestMs": 1188.39
+        },
+        {
+          "file": "tests/r3r4-oracle.test.ts",
+          "status": "passed",
+          "tests": 23,
+          "maxTestMs": 534.18
+        },
+        {
+          "file": "tests/rendering3d-preload-mount.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "maxTestMs": 134.61
+        },
+        {
+          "file": "tests/restore-audit/bounds-preflight.test.ts",
+          "status": "passed",
+          "tests": 18,
+          "maxTestMs": 3385.65
+        },
+        {
+          "file": "tests/restore-audit/g23-grant-evidence.test.ts",
+          "status": "passed",
+          "tests": 15,
+          "maxTestMs": 383.98
+        },
+        {
+          "file": "tests/server/bot-driver.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 4238.7
+        },
+        {
+          "file": "tests/server/projection-wire.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 21292.59
+        },
+        {
+          "file": "tests/server/net/combat-stream-wire.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "maxTestMs": 1232.97
+        },
+        {
+          "file": "tests/server/net/watch.test.ts",
+          "status": "passed",
+          "tests": 8,
+          "maxTestMs": 10768.39
+        }
+      ]
+    },
+    {
+      "name": "shuffle",
+      "report": "/tmp/ci-flake-3-shuffle.json",
+      "reportSha256": "dd14558a641284f57f397253feb4ed085a20751aad3fa7b469ebdc9d57c73c81",
+      "success": true,
+      "tests": 248,
+      "passed": 248,
+      "failed": 0,
+      "pending": 0,
+      "files": [
+        {
+          "file": "tests/assets3d-fx-pilot.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 527.99
+        },
+        {
+          "file": "tests/assets3d-merge.test.ts",
+          "status": "passed",
+          "tests": 7,
+          "maxTestMs": 92.55
+        },
+        {
+          "file": "tests/augment-text-identity.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "maxTestMs": 264.02
+        },
+        {
+          "file": "tests/b8-resumable-battle.test.ts",
+          "status": "passed",
+          "tests": 16,
+          "maxTestMs": 2842.74
+        },
+        {
+          "file": "tests/chest-bracer-integration-trial.test.ts",
+          "status": "passed",
+          "tests": 19,
+          "maxTestMs": 1250.67
+        },
+        {
+          "file": "tests/g2-3-identity.test.ts",
+          "status": "passed",
+          "tests": 14,
+          "maxTestMs": 1178.62
+        },
+        {
+          "file": "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+          "status": "passed",
+          "tests": 63,
+          "maxTestMs": 3432.12
+        },
+        {
+          "file": "tests/g5-combat-summary.test.ts",
+          "status": "passed",
+          "tests": 12,
+          "maxTestMs": 1443.49
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "status": "passed",
+          "tests": 8,
+          "maxTestMs": 503.65
+        },
+        {
+          "file": "tests/m8-b8-equipment-fixture.test.ts",
+          "status": "passed",
+          "tests": 4,
+          "maxTestMs": 84.88
+        },
+        {
+          "file": "tests/m8-b8-live-capacity.test.ts",
+          "status": "passed",
+          "tests": 6,
+          "maxTestMs": 1173.77
+        },
+        {
+          "file": "tests/r3r4-oracle.test.ts",
+          "status": "passed",
+          "tests": 23,
+          "maxTestMs": 608.03
+        },
+        {
+          "file": "tests/rendering3d-preload-mount.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "maxTestMs": 115.67
+        },
+        {
+          "file": "tests/restore-audit/bounds-preflight.test.ts",
+          "status": "passed",
+          "tests": 18,
+          "maxTestMs": 3770.75
+        },
+        {
+          "file": "tests/restore-audit/g23-grant-evidence.test.ts",
+          "status": "passed",
+          "tests": 15,
+          "maxTestMs": 369.8
+        },
+        {
+          "file": "tests/server/bot-driver.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 4788.13
+        },
+        {
+          "file": "tests/server/projection-wire.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 20811.05
+        },
+        {
+          "file": "tests/server/net/combat-stream-wire.test.ts",
+          "status": "passed",
+          "tests": 2,
+          "maxTestMs": 1198.59
+        },
+        {
+          "file": "tests/server/net/watch.test.ts",
+          "status": "passed",
+          "tests": 8,
+          "maxTestMs": 9974.87
+        }
+      ]
+    },
+    {
+      "name": "post-typecheck",
+      "report": "/tmp/ci-flake-3-post-typecheck.json",
+      "reportSha256": "d25f7647d8fefd6f9e1724786b8377338b194da6244a64c1a761b4679afdfa61",
+      "success": true,
+      "tests": 32,
+      "passed": 32,
+      "failed": 0,
+      "pending": 0,
+      "files": [
+        {
+          "file": "tests/restore-audit/g23-grant-evidence.test.ts",
+          "status": "passed",
+          "tests": 15,
+          "maxTestMs": 433.85
+        },
+        {
+          "file": "tests/server/projection-wire.test.ts",
+          "status": "passed",
+          "tests": 9,
+          "maxTestMs": 23452.34
+        },
+        {
+          "file": "tests/server/net/watch.test.ts",
+          "status": "passed",
+          "tests": 8,
+          "maxTestMs": 12897.28
+        }
+      ]
+    }
+  ],
+  "typecheck": {
+    "command": "npx tsc --noEmit",
+    "passed": true
+  },
+  "diffCheck": {
+    "command": "git diff --check",
+    "passed": true
+  },
+  "nodeOnlySetupReason": "No browser bridge environment is available. Temporary config imports the repository config and changes only globalSetup to its filesystem-cache portion; all selected files are Node tests. Worker setup, sequencing, isolation and timeout/gate settings are preserved.",
+  "command": [
+    "node",
+    "node_modules/vitest/vitest.mjs",
+    "run",
+    "--config",
+    "/tmp/ci-flake-3.vitest.config.ts",
+    "--project",
+    "fast",
+    "--maxWorkers=4",
+    "tests/assets3d-fx-pilot.test.ts",
+    "tests/assets3d-merge.test.ts",
+    "tests/augment-text-identity.test.ts",
+    "tests/b8-resumable-battle.test.ts",
+    "tests/chest-bracer-integration-trial.test.ts",
+    "tests/g2-3-identity.test.ts",
+    "tests/g2-3-lesser-shimmer-duplicator.test.ts",
+    "tests/g5-combat-summary.test.ts",
+    "tests/m5-route.test.ts",
+    "tests/m8-b8-equipment-fixture.test.ts",
+    "tests/m8-b8-live-capacity.test.ts",
+    "tests/r3r4-oracle.test.ts",
+    "tests/rendering3d-preload-mount.test.ts",
+    "tests/restore-audit/bounds-preflight.test.ts",
+    "tests/restore-audit/g23-grant-evidence.test.ts",
+    "tests/server/bot-driver.test.ts",
+    "tests/server/net/combat-stream-wire.test.ts",
+    "tests/server/net/watch.test.ts",
+    "tests/server/projection-wire.test.ts",
+    "--reporter=json",
+    "--outputFile=<report.json>"
+  ],
+  "shuffleArgs": [
+    "--sequence.shuffle",
+    "--sequence.seed=27102026"
+  ],
+  "ciInput": {
+    "runs": 60,
+    "failedRunsRetrieved": 20,
+    "failedRunLogsSha256": {
+      "40201455615": "5816efd2e4cec77f860be3abd0da78405621fea7b3417291be84cc7bf867ef58",
+      "40204177652": "9494883b00ee92e16a776f3eb7c1659748cc377364e6261a0af9ecd921308ed7",
+      "40247535876": "a31b70be367044f0cef54b8945ad656563b6ce30ea40eb3e48cb1ca52b63e2d0",
+      "40250575955": "45e8a93455e0ecbedc180ff8d223d692bd1ec3950d4fcca99400ea4fcebc78a7",
+      "40265101186": "66330a1d700dcee102a478fe6b215389c0164b6696de30e70086a2dcf90307d1",
+      "40273860316": "cd6f19bb5cbba0d10039b6fc38d6f7bf4e7e65d4777d294553e911c59f06d51b",
+      "40275151065": "69fbaab8b74e7039fc0f4e72c2c92c34c6e6915d207043e6df0805e9e012366f",
+      "40278578969": "cce94719c860ef59b4a54e8b4dd663365e67b23da8a8e5aec63d065689f79bc6",
+      "40280902936": "ee0d3e38e93d922db06ae387cf48f44c0f2a30a808cf3c8902a664c03323720f",
+      "40300554316": "5cd18c1d1b36c31d824edecef97fda0a748e819ec9523a3d76d14a96d3188b23",
+      "40300744972": "4904d404b7bfd18d6bf45909ceb25c5eebd9c59046777bd2a9a026e45a6b8b67",
+      "40309559592": "c3b16c2917a871dee4ed20bb5ee457118960fd1ed7412c1a747ab744440fa81a",
+      "40309576855": "58679585268f535929436ddef1290f6f446aa92c4d44556d9915bb76ef6f8e4a",
+      "40319700585": "de437302d6da37e3e633ec500880ab38d17813f3ad26d0647346e5ce42396ddd",
+      "40333158027": "92c3e96a2ad63dfd779c265af98700bedef7f186184c8ef67ee69f008a18907a",
+      "40338320749": "8a9497fd3028aab9fe2fe4f48223e9ac966ac115524d0a49fb86e3ccb542f30e",
+      "40358311136": "9ce146ef3828a72f82fd4e9ed35451896a117f2485b32e66ad4238259937ea25",
+      "40358694142": "8d25f7330877a5c684f7b910889366f4b3fcf231264b10472ca0f2f9a0f10d35",
+      "40363907498": "586f72f2cc824bcd846540f2ad6bf490a82740a574f5a59408d09bdd4305fcd6",
+      "40367565043": "ad407512ff8026e95bf99520d07f375a41b5d9ba9fb924a425b2d5ce46d56509"
+    },
+    "passedRun": 40358311257
+  },
+  "wallSeconds": {
+    "run1": 172.59,
+    "run2": 174.47,
+    "run3": 174.8,
+    "shuffle": 174.48
+  },
+  "finalVersionOrdinaryPasses": {
+    "tests/assets3d-fx-pilot.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/assets3d-merge.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/augment-text-identity.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/b8-resumable-battle.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/chest-bracer-integration-trial.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/g2-3-identity.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/g2-3-lesser-shimmer-duplicator.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/g5-combat-summary.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/m5-route.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/m8-b8-equipment-fixture.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/m8-b8-live-capacity.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/r3r4-oracle.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/rendering3d-preload-mount.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/restore-audit/bounds-preflight.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/restore-audit/g23-grant-evidence.test.ts": [
+      "run2",
+      "run3",
+      "post-typecheck"
+    ],
+    "tests/server/bot-driver.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/server/net/combat-stream-wire.test.ts": [
+      "run1",
+      "run2",
+      "run3"
+    ],
+    "tests/server/net/watch.test.ts": [
+      "run2",
+      "run3",
+      "post-typecheck"
+    ],
+    "tests/server/projection-wire.test.ts": [
+      "run2",
+      "run3",
+      "post-typecheck"
+    ]
+  }
+}

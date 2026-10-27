@@ -89,10 +89,11 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     expect(() => serializeMatch(candidate)).toThrow('uncompiled mechanism definitions');
   });
 
-  it.each(checkpointCases)('%s @%i: JSON/object restore preserves the entire state and uninterrupted continuation', (_label, tick) => {
+  it.each(checkpointCases.flatMap(([label,tick]) => (['JSON','object'] as const).map(entry => ({label,tick,entry}))))('$label @$tick: $entry restore preserves the entire state and uninterrupted continuation', ({tick,entry}) => {
     const { state, eventOffset } = checkpoints.get(tick)!;
     const saved = serializeMatch(state);
-    for (const input of [saved, structuredClone(state)]) {
+    const input = entry === 'JSON' ? saved : structuredClone(state);
+    {
       const restored = restoreMatch(input);
       expect(restored).toEqual(state);
       expect(serializeMatch(restored)).toBe(saved);

@@ -1,3 +1,4 @@
+import { attachHoverCards, HoverCard, type HoverCardOptions } from './hover-card';
 import { onTooltipTextChanged } from './tooltip-text-loader';
 /**
  * M8 U3 (static part): item codex, recipe table and description popover.
@@ -89,7 +90,7 @@ function recipeFor(a: string, b: string): Entry | undefined {
 }
 
 /** Popover body for one definition. */
-function describe(entry: Entry): HTMLElement {
+export function itemCardBody(entry: Entry): HTMLElement {
   const body = el('div', '', 'item-pop-body');
   const head = el('div', '', 'item-pop-head'); head.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.id, 36));
   const title = el('div'); title.append(nameNode(entry), ...tagNodes(entry));
@@ -116,65 +117,14 @@ function describe(entry: Entry): HTMLElement {
  * A scroll keeps a still-focused, still-visible keyboard anchor (native Tab scrolls the
  * focused item into view) and only closes hover anchors. Never intercepts pointers.
  */
-export function attachItemPopover(scope: HTMLElement, id = 'item-popover'): () => void {
-  const pop = el('div', '', 'item-popover'); pop.setAttribute('role', 'tooltip'); pop.id = id; pop.hidden = true; pop.dataset.debugItemPopover = 'true';
-  document.body.append(pop);
-  let anchor: HTMLElement | null = null, via: 'hover' | 'focus' = 'hover';
-  const usable = (node: HTMLElement) => {
-    if (!node.isConnected || !scope.contains(node)) return false;
-    const rect = node.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
-  };
-  const watcher = new MutationObserver(() => { if (anchor && !usable(anchor)) hide(); });
-  function hide(): void {
-    watcher.disconnect();
-    if (anchor) anchor.removeAttribute('aria-describedby');
-    anchor = null; pop.hidden = true; pop.replaceChildren(); delete pop.dataset.itemDef;
-  }
-  function place(target: HTMLElement): void {
-    const rect = target.getBoundingClientRect(), width = Math.min(320, window.innerWidth - 16);
-    pop.style.width = `${width}px`;
-    const beside = rect.left - width - 10 >= 8;
-    const left = Math.max(8, Math.min(window.innerWidth - width - 8, beside ? rect.left - width - 10 : rect.left));
-    const height = pop.offsetHeight;
-    const top = beside ? Math.max(8, Math.min(window.innerHeight - height - 8, rect.top))
-      : (rect.bottom + 8 + height <= window.innerHeight ? rect.bottom + 8 : Math.max(8, rect.top - height - 8));
-    pop.style.left = `${left}px`; pop.style.top = `${top}px`;
-  }
-  function show(target: HTMLElement, how: 'hover' | 'focus'): void {
-    const entry = catalogEntry(target.dataset.itemDef ?? ''); if (!entry) { hide(); return; }
-    if (anchor === target && !pop.hidden) { via = how; place(target); return; }
-    hide(); anchor = target; via = how; target.setAttribute('aria-describedby', pop.id);
-    pop.replaceChildren(describe(entry)); pop.dataset.itemDef = entry.id; pop.hidden = false;
-    place(target);
-    watcher.observe(scope, { childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'hidden', 'class', 'style'] });
-  }
-  const unsubscribe = onTooltipTextChanged(() => {
-    if (anchor && usable(anchor)) { const target = anchor, how = via; hide(); show(target, how); }
-  });
-  const target = (event: Event) => (event.target instanceof Element ? event.target.closest<HTMLElement>('[data-item-def]') : null);
-  const over = (event: PointerEvent) => { if (event.pointerType === 'mouse') { const t = target(event); if (t && scope.contains(t)) show(t, 'hover'); } };
-  const out = (event: PointerEvent) => {
-    const t = target(event);
-    if (t && t === anchor && via === 'hover' && !(event.relatedTarget instanceof Node && t.contains(event.relatedTarget))) hide();
-  };
-  const focus = (event: FocusEvent) => { const t = target(event); if (t) show(t, 'focus'); else hide(); };
-  const blur = (event: FocusEvent) => { if (target(event) === anchor && !(event.relatedTarget instanceof Node && anchor?.contains(event.relatedTarget))) hide(); };
-  const key = (event: KeyboardEvent) => { if (event.key === 'Escape' && !pop.hidden) hide(); };
-  const scrolled = () => {
-    if (!anchor) return;
-    const focused = document.activeElement instanceof Node && anchor.contains(document.activeElement);
-    if (via === 'focus' && focused && usable(anchor)) place(anchor); else hide();
-  };
-  scope.addEventListener('pointerover', over); scope.addEventListener('pointerout', out);
-  scope.addEventListener('focusin', focus); scope.addEventListener('focusout', blur);
-  scope.addEventListener('pointerdown', hide); document.addEventListener('keydown', key); window.addEventListener('scroll', scrolled, true);
-  return () => {
-    scope.removeEventListener('pointerover', over); scope.removeEventListener('pointerout', out);
-    scope.removeEventListener('focusin', focus); scope.removeEventListener('focusout', blur);
-    scope.removeEventListener('pointerdown', hide); document.removeEventListener('keydown', key); window.removeEventListener('scroll', scrolled, true);
-    unsubscribe(); hide(); pop.remove();
-  };
+export function attachItemPopover(scope: HTMLElement, id = 'item-popover', options: HoverCardOptions = {}): () => void {
+  const card = new HoverCard(id, 'hover:item');
+  card.root.classList.add('item-popover'); card.root.dataset.debugItemPopover = 'true';
+  const detach = attachHoverCards(scope, card, '[data-item-def]', target => {
+    const entry = catalogEntry(target.dataset.itemDef ?? '');
+    return entry ? { key: entry.id, build: () => { card.root.dataset.itemDef = entry.id; return itemCardBody(entry); } } : null;
+  }, options);
+  return () => { detach(); card.dispose(); };
 }
 
 /**

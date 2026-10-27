@@ -39,7 +39,7 @@ let body: Node;
 afterEach(() => vi.unstubAllGlobals());
 function setup() {
   body = new Node();
-  const doc = Object.assign(new Node(), { body, createElement: () => new Node(), activeElement: null });
+  const doc = Object.assign(new Node(), { body, createElement: () => new Node(), getElementById: () => null, activeElement: null });
   vi.stubGlobal('document', doc); vi.stubGlobal('Element', Node); vi.stubGlobal('Node', Node);
   vi.stubGlobal('window', Object.assign(new Node(), { innerWidth: 1440, innerHeight: 900 }));
   vi.stubGlobal('MutationObserver', class { observe() {} disconnect() {} });

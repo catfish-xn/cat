@@ -1,15 +1,14 @@
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { advanceItemMatchRoute, itemMatch } from './fixtures/m8-b4-match';
 import { stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 
 describe('B8 public equipment fixture provenance', () => {
-  // The public acquisition routes (to 2-5 and 3-5) play one round per case, so no case replays a whole route under
-  // CI load; the provenance cases below use the cached result (a filtered case plays the route itself).
-  for (const [label, id, last] of [['Bloodthirster', 'bloodthirster', 8], ['Hand of Justice', 'hand-of-justice', 15],
-    ['double Bloodthirster', ['bloodthirster', 'bloodthirster'], 15]] as const) {
-    for (let round = 1; round <= last; round++) it(`public ${label} acquisition plays round ${round}`, () => {
+  // Ordered hooks acquire one real round at a time before every consumer, also with -t or shuffle.
+  for (const [id, last] of [['bloodthirster', 8], ['hand-of-justice', 15],
+    [['bloodthirster', 'bloodthirster'], 15]] as const) {
+    for (let round = 1; round <= last; round++) beforeAll(() => {
       // Another file in the run may already have published the finished acquisition.
       const acquired = advanceItemMatchRoute(id, round);
       if (round === last) expect(acquired).toBe(true);

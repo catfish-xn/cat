@@ -1,5 +1,5 @@
 import type { CombatUnit } from '../combat-types';
-import { effectiveStatuses } from '../m8/status';
+import { hasEffectiveStatus } from '../m8/status';
 export const isAttackProxy = (unit: Pick<CombatUnit, 'anomalySummon'|'definitionId'>): boolean =>
   unit.definitionId==='v20-silco-minion' || unit.anomalySummon?.kind === 'wolf' || unit.anomalySummon?.kind === 'mini';
 
@@ -19,5 +19,5 @@ export function isAbsent(unit: CombatUnit, tick: number): boolean {
 export function isSelectable(unit: CombatUnit, tick: number): boolean {
   return isPresent(unit, tick) && !isAttackProxy(unit)
     && (unit.anomalyState?.invisibleUntilTick ?? 0) <= tick
-    && !effectiveStatuses(unit.mechanismState?.statuses ?? [], tick).some(g => g.kind === 'untargetable');
+    && !hasEffectiveStatus(unit.mechanismState?.statuses ?? [], 'untargetable', tick);
 }

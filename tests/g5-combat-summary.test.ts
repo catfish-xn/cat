@@ -107,15 +107,16 @@ describe('SR-G5-01 healing attribution and authoritative battle summary', () => 
     expect(projected[0]).not.toHaveProperty('contributions');
     expect(JSON.stringify(projected)).not.toMatch(/sourceKind|definitionId|effectIndex|requested|overheal/);
   });
-  it('source tampering, altered shares, missing or duplicated heal still fail replay-divergence', () => {
+  it.each(['source', 'amount', 'missing', 'duplicate'] as const)('%s heal tampering still fails replay-divergence', kind => {
     const battle = fixtures.get('pvp-42')!;
     const heal = battle.events.find(e=>e.type==='heal' && e.eventSeq>=(battle.initial.nextEventSeq??0));
     if (!heal || heal.type !== 'heal') throw new Error('Expected a real heal');
     const changedSource = {...heal,outcome:{...heal.outcome,shares:heal.outcome.shares.map((s,i)=>i===0?{...s,source:{...s.source,ownerId:'forged'}}:s)}};
     const changedAmount = {...heal,outcome:{...heal.outcome,shares:heal.outcome.shares.map((s,i)=>i===0?{...s,actual:s.actual+1}:s)}};
-    for (const changed of [changedSource,changedAmount]) expect(()=>toCombatReplay({...battle,events:battle.events.map(e=>e===heal?changed:e)})).toThrow('replay-divergence');
-    expect(()=>toCombatReplay({...battle,events:battle.events.filter(e=>e!==heal)})).toThrow('replay-divergence');
-    expect(()=>toCombatReplay({...battle,events:[...battle.events,heal]})).toThrow('replay-divergence');
+    const events = kind === 'missing' ? battle.events.filter(e=>e!==heal)
+      : kind === 'duplicate' ? [...battle.events,heal]
+      : battle.events.map(e=>e===heal?(kind==='source'?changedSource:changedAmount):e);
+    expect(()=>toCombatReplay({...battle,events})).toThrow('replay-divergence');
   });
   it('tick-zero empty battle has no rows', () => {
     const base = catalogPreparation('2-1',8), state = {...base,preparation:{...base.preparation,units:[]}};
