@@ -29,7 +29,7 @@ export function firstNodeSeed(id: string, limit = 101, from = 0): number {
  * Final Polish uses one public slot reroll. Other entries retain their earlier fixture scope.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
-export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[] }>> = {
+export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
   "all-that-shimmers-plus":{node:'3-2',seed:18},
   "roll-the-dice":{node:'3-2',seed:7},
   "diversified-portfolio-plus":{node:'3-2',seed:1},
@@ -39,6 +39,9 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "glorious-evolution":{node:'4-2',seed:47,fielded:true},
   'moonlight':{node:'4-2',seed:19,fielded:true,rerolls:[0]},
   'greater-moonlight':{node:'4-2',seed:16,fielded:true},
+  "forward-thinking":{node:'3-2',seed:8,fielded:true,rerollSlots:[0,1,2]},
+  "mirrored-monetization":{node:'4-2',seed:9,fielded:true,rerollSlots:[0,1,2]},
+  "dhampyr":{node:'3-2',seed:3,rerollSlots:[0,1,2]},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -142,6 +145,10 @@ export function offerFor(id: string): MatchState {
   let state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
   const slots = typeof at.rerolls === 'number' ? Array.from({length:at.rerolls},(_,slot)=>slot) : at.rerolls ?? [];
   for (const slot of slots) { const choice=state.pendingChoice!; state=accepted(rerollAugment(state,choice.choiceId,choice.generation,slot)); }
+  for (const slot of at.rerollSlots ?? []) {
+    const choice=state.pendingChoice!;if(choice.offers.includes(id))break;
+    state=accepted(rerollAugment(state,choice.choiceId,choice.generation,slot));
+  }
   expect(state.roundDefinitionId).toBe(at.node);
   expect(state.pendingChoice?.kind).toBe('augment');
   expect(state.pendingChoice?.offers, `${id} at ${at.node} seed ${at.seed}`).toContain(id);

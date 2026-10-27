@@ -3,6 +3,7 @@ import { drainContestedGold } from './augment-pool-batch5-h6';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { batch5S6cSettlementHealth, drainBatch5S6cGold } from './augment-pool-batch5-s6c';
 import { MAX_SUPPORTED_PLAYER_HP } from './augment-pool-batch5-h7-health';
+import { drainBatch5H8Gold } from './augment-pool-batch5-h8';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -185,6 +186,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     if(!r.g23Facts&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||a.definitionId==='a-change-of-fate')){
       const gifted=drainBatch1Gifts(settled,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(settled,gifted));settled=gifted;
     }
+    settled=drainBatch5H8Gold(settled);
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
     settled=applyLevelUpHealth(state,commitOpeningEncounterHealth(settled,hookEvents));
     if (state.m8.round.kind === 'pvp') settled = settleNoScoutGrowth(settled,r.battleId);

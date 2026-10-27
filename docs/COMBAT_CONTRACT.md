@@ -2,6 +2,10 @@
 
 B5-42 从 `augment-history-v1` 的死亡现场装备判定资格，复活后的独立 death event 另判定；不改战斗 tick、事件封套或回放事实。B5-43 仅使用双方已结算的实际玩家 HP 扣减。B5-44 扩展玩家生命上限后，Spirit Link／Comeback Story 按真实缺失生命计算，输入和恢复按拥有条目验证上限。当前版本及接口见 [MATCH_CONTRACT](MATCH_CONTRACT.md) 和 [H7 合同](AUGMENT_BATCH5_H7_DELIVERY.md)；未重录 epoch。
 
+## 2026-10-27 v25-h8：吸血与死亡收据
+
+吸血生机编译为既有 `wealthyRehab` 全能吸血机制，数值1200 Bps，使用同一伤害／治疗流水线，保留来源与完整 heal 事件；不新增战斗字段。恶意货币化使用 augment-history 的真实死亡旁路样本，按 eventSeq 计次，复活再死独立计数，正式英雄身份来自死亡现场。两项玩家层奖励在战后处理，不回写战斗回放；具体事务、来源与认证见 [MATCH_CONTRACT v25-h8](MATCH_CONTRACT.md#2026-10-27-v25-h8三项历史依赖强化)。
+
 ## 2026-10-25 v23 当前战斗与恢复合同（历史）
 
 本节以发布基线 `2b434e28` 至候选 `0797f3fe` 的实际实现为准，优先于下文保留的历史版本／WIP 说明；Match、经验、资源发放、历史门槛和单人按需包见 [MATCH_CONTRACT 的 v23 节](MATCH_CONTRACT.md#2026-10-25-v23-当前合同索引基线-2b434e28--0797f3fe)。当前 schema/save/replay/command＝**12/8/8/7**，rules/content＝`s13-g2-3-v23-online-rules` / `s13-14.24b-g2-3-v23-online-rules`，NET5、50 ms、lcg32-v1；精确摘要必须一致，旧身份拒绝，无迁移。本次文档更新不改变这些版本，epoch 重录／验收由独立任务负责。[src/simulation/m8/version.ts:3](../src/simulation/m8/version.ts#L3)。

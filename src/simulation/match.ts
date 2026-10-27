@@ -6,6 +6,7 @@ import { augmentExtraRerolls, canRerollAugmentSlot } from './augment-pool-batch5
 import { atWhatCostGrant, skipsFutureAugment } from './augment-pool-batch5-s1b';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import type { HistorySeat } from './augment-history-types';
+import { applyBatch5H8Acquisition } from './augment-pool-batch5-h8';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
 import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost, drawSoloAugmentShop, planFiresale, stealFiresaleUnit, subscriptionAcquired, subscriptionStageStart } from './shop-augments';
@@ -986,6 +987,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   const beforeHistoryAcquisition = selected;
   if (choice.kind === 'augment') selected = recordAugmentAcquisition(state, selected);
+  if (choice.kind === 'augment') selected = applyBatch5H8Acquisition(selected, definitionId);
   selected = applyLevelUpHealth(state, selected);
   if (choice.kind === 'augment') selected = applyAcquisitionHealthLoss(selected, selected.augments.at(-1)!);
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }, ...mechanicGrantEvents(beforeHistoryAcquisition,selected)];

@@ -1,6 +1,6 @@
 /** Server orchestration only: freeze authoritative table/roster/settlement observations.
  * No rewards, growth amounts, player damage formula or random draws live here. */
-import { drainBatch5H7Gold, appendAugmentFact, recordAugmentTable, recordAugmentSettlementTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
+import { drainBatch5H7Gold, applyDhampyrSettlement, drainBatch5H8Deaths, appendAugmentFact, recordAugmentTable, recordAugmentSettlementTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
   type HistorySeat } from '../../server-entry';
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput } from './types';
@@ -51,7 +51,15 @@ export function recordRoomBattleFacts(seats: readonly SettledSeat[], results: re
     match = appendAugmentFact(match, { kind: 'player-damage', battleId: result.battleId, opponentSeatId: opponentId,
       mirror, hpBefore: mirror ? null : record!.hpBefore, hpAfterDamage: mirror ? null : record!.hpAfter, actualDamage: mirror ? 0 : record!.hpLost });
     const rewarded = drainBatch5H7Gold(match);
-    return { ...seat, match: rewarded.state, events: [...seat.events, ...rewarded.events] };
+    match = rewarded.state;
+    const beforePayout=match;
+    match=drainBatch5H8Deaths(match);
+    const prior=new Set((beforePayout.seatMechanics?.receipts??[]).map(r=>r.receiptId));
+    const receipts=(match.seatMechanics?.receipts??[]).filter(r=>!prior.has(r.receiptId));
+    const payoutEvents:MatchEvent[]=receipts.map((receipt,index)=>({type:'mechanicGranted',receipt,domain:'match',eventSeq:match.nextMatchEventSeq+index}));
+    if(payoutEvents.length)match={...match,nextMatchEventSeq:match.nextMatchEventSeq+payoutEvents.length};
+    match = applyDhampyrSettlement(match);
+    return { ...seat, match, hpAfter: match.playerHp, events:[...seat.events,...rewarded.events,...payoutEvents] };
   });
 }
 export function recordRoomSettlementTable(seats: readonly SeatState[]): readonly SeatState[] {

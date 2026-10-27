@@ -1,6 +1,5 @@
 import { firstNodeSeed } from './augment-stage-helpers';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
-import { CONTENT_DIGEST, LOOT_REPLAY_DIGEST } from '../src/simulation/content/identity-constants';
 import * as historyApi from '../src/simulation/augment-history';
 import { validateAugmentHistory } from '../src/simulation/augment-history-restore';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -18,6 +17,7 @@ import { CAROUSEL_RULES_BINDING } from '../src/server/room/carousel';
 import { createCarousel, advanceCarousel, pickCarouselForSeat, grantAdditionalCarouselPick, restoreCarouselSeat } from '../src/simulation/carousel';
 import { supplySeats, must } from './p7-carousel-helper';
 import { assertSharedPoolConservation } from '../src/simulation/shared-pool';
+import { CONTENT_DIGEST, LOOT_REPLAY_DIGEST } from '../src/simulation/content/identity-constants';
 
 // Infrastructure fixture: real existing offers/commands, with only the history capability mocked.
 // No new augment definition/effect is installed, no production content/offer pool is changed.

@@ -1,3 +1,15 @@
+## 2026-10-27 v25-h8：三项历史依赖强化
+
+本分支新增 B5-45/46/47，原分支 rules/content 为 `s13-g2-3-v25-h8-rules` / `s13-14.24b-g2-3-v25-h8-rules`，schema/save/replay/command 保持 **12/8/8/7**，NET=5。三项均已开放；旧身份不迁移，epoch 不重录。P 约定与全部内部接口见 [历史设计的 B5-45／46／47 调用约定](AUGMENT_HISTORY_DESIGN.md#b5-454647-调用约定2026-10-27)。
+
+| 强化／节点 | 权威事务与事实 |
+| --- | --- |
+| 前瞻思维／黄金3-2 | choose 冻结 `acquire.goldBefore` 后仅一次清零；第6次真实 PvP 结算（含取得轮）凭 `pvp-roster` 与 RoundResult 给本金+70；本金不生息，后续收入照常，choiceId 收据防重 |
+| 恶意货币化／黄金4-2 | choose 给2金；取得轮起3个自然轮的 `deaths` 中正式敌方英雄每次死亡给2金，复活再死另计，排除召唤物；战后一次支付，供给轮也消耗期限 |
+| 吸血生机／黄金3-2 | 单位12%全能吸血；双方结算后用 `player-damage.actualDamage` 的20%向下取整治疗存活持有者，封顶当前最大HP，`player-health` 收据防重；镜像不治疗，不能挽回淘汰 |
+
+无新客户端命令。房间沿 `Room.handle → runSharedMatchCommand` 选择，`Room.planSteps → recordRoomBattleFacts` 只记录事实、调用 simulation 并同步 HP/事件，全部奖励公式在新的 `augment-pool-batch5-h8*.ts` 中。三种离线入口沿命令重演；联机恢复必须持有独立 `AugmentHistoryAuthority`，不能用候选JSON自证。单人未知敌方玩家HP保持 null，吸血生机不据此虚构玩家治疗。
+
 ## 2026-10-27 v25 H7 历史强化
 
 B5-42／43／44 已开放；函数签名、失败原因和全部接线见 [H7 交付合同](AUGMENT_BATCH5_H7_DELIVERY.md)。使用 `augment-history-v1` 认证死亡、实际玩家扣血、生命与选秀收据。最大生命由 Titanic Titan 已认证拥有条目派生为 120，后续治疗及战斗输入采用新上限。rules/content 升为 `s13-g2-3-v25-online-rules`／`s13-14.24b-g2-3-v25-online-rules`；schema/save/replay/command 仍为 12/8/8/7，规则网络 5、WebSocket 封套 6。无新客户端命令，未重录 epoch；旧身份拒绝续玩。

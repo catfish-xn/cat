@@ -226,7 +226,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
 const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
- 'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7',
+ 'augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel',...h4.sources]);
 // Project only the counters needed by these rewards from the finished combat, not reward receipts.
@@ -399,7 +399,23 @@ function validateRewardsCore(before,after,command,events,base){
   const amount=2*Math.floor(count/2),receiptId=JSON.stringify(['augment-pool-batch5-h6',contested.choiceId,before.round]);
   if(amount&&!claimed.has(receiptId))dueGold.push({receiptId,source:'augment-pool-batch5-h6',kind:'gold',amount,round:before.round});
  }
- const actualGold=appended.filter(r=>['augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
+ // Independent H8 amounts from frozen acquisition/roster/death history, not the reward receipt.
+ for(const a of augments){
+  if(a.definitionId==='forward-thinking'){
+   const acquired=after.augmentHistory?.facts.find(f=>f.kind==='acquire'&&f.choiceId===a.choiceId);
+   const completed=after.roundResults.filter(r=>r.roundKind==='pvp'&&r.round>=a.acquiredRound),due=completed[5];
+   for(const r of completed)assert(after.augmentHistory?.facts.some(f=>f.kind==='pvp-roster'&&f.round===r.round),'independent Forward Thinking roster evidence');
+   const receiptId=JSON.stringify(['augment-batch5-h8-forward-thinking',a.choiceId]);
+   if(due&&!claimed.has(receiptId)){assert(acquired);dueGold.push({receiptId,source:'augment-batch5-h8-forward-thinking',kind:'gold',amount:acquired.goldBefore+70,round:due.round});}
+  }
+  if(a.definitionId==='mirrored-monetization')for(const r of after.roundResults.filter(r=>r.round>=a.acquiredRound&&r.round<a.acquiredRound+3&&r.roundKind!=='supply')){
+   const rows=(after.augmentHistory?.facts??[]).filter(f=>f.kind==='deaths'&&f.round===r.round);assert(rows.length,'independent Monetization death evidence');
+   const deaths=rows.flatMap(f=>f.deaths).filter(d=>d.ordinaryHero&&(after.multiplayer&&r.roundKind==='pvp'?d.ownerSeatId!==after.multiplayer.seatId:d.team==='enemy'));
+   const receiptId=JSON.stringify(['augment-batch5-h8-monetization',a.choiceId,r.round]);
+   if(deaths.length&&!claimed.has(receiptId))dueGold.push({receiptId,source:'augment-batch5-h8-monetization',kind:'gold',amount:deaths.length*2,round:r.round});
+  }
+ }
+ const actualGold=appended.filter(r=>['augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
  const goldKey=r=>({receiptId:r.receiptId,source:r.source,kind:r.kind,amount:r.amount,round:r.round});
  const sorted=xs=>xs.map(goldKey).sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
  assert.deepEqual(sorted(actualGold),sorted(dueGold),'independent due augment gold receipts (count, identity, amount, round)');

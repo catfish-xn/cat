@@ -16,6 +16,8 @@ import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
 import { gloriousEvolutionRewardPlan } from './augment-pool-batch5-s8b';
 import { hardCommitRewardPlan } from './augment-pool-batch5-s8c';
 import { validateBatch5H7Gold } from './augment-pool-batch5-h7';
+import { validateBatch5H8Deaths } from './augment-pool-batch5-h8-deaths';
+import { validateBatch5H8Gold } from './augment-pool-batch5-h8';
 import { validateShopAugments } from './shop-augments';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
 import { batch5RewardPlan, validateBatch5Gold } from './augment-pool-batch5-progress';
@@ -73,6 +75,8 @@ export function validateBatch1Gifts(state:MatchState):void {
  validateAcademicGifts(state);
  validateBatch5S6cGold(state);
  validateBatch5H7Gold(state);
+ validateBatch5H8Gold(state);
+ validateBatch5H8Deaths(state);
  validateBatch5Gold(state);
  validateBatch4Gold(state);
  validateBatch2Gold(state);

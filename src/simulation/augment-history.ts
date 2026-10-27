@@ -2,6 +2,8 @@ import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import { drainSurvivorGold } from './augment-pool-batch5-h4-survivor';
 import { grantScoreboardEntry } from './augment-pool-batch5-h6-scoreboard';
 import { drainBatch5H7Gold } from './augment-pool-batch5-h7';
+import { drainBatch5H8Deaths } from './augment-pool-batch5-h8-deaths';
+import { drainBatch5H8Gold } from './augment-pool-batch5-h8';
 import type { MatchState, MatchEvent } from './match-types';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -78,6 +80,12 @@ export function findAugmentFacts<K extends AugmentFactData['kind']>(s: MatchStat
 export function requireAugmentFacts<K extends AugmentFactData['kind']>(s: MatchState, kind: K, round: number): readonly Extract<AugmentHistoryFact, {kind: K}>[] {
   const rows = findAugmentFacts(s, kind, round);
   historyCheck(rows.length > 0, `missing ${kind} for round ${round}`); return rows;
+}
+/** Health receipts are sparse: no row means no health change, not missing combat evidence.
+ * The enclosing section is still mandatory and authenticated by the normal restore boundary. */
+export function readAugmentPlayerHealth(s: MatchState): readonly Extract<AugmentHistoryFact, {kind: 'player-health'}>[] {
+  historyCheck(s.augmentHistory, 'missing player health history');
+  return structuredClone(s.augmentHistory.facts.filter(f => f.kind === 'player-health'));
 }
 export function readAugmentGrowth(s: MatchState, unitId: string, provenancePrefixLength = s.resourceProvenance.entries.length): AugmentGrowth {
   historyCheck(Number.isSafeInteger(provenancePrefixLength)&&provenancePrefixLength>=0&&provenancePrefixLength<=s.resourceProvenance.entries.length, 'growth provenance prefix');
@@ -201,6 +209,14 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
   if (!after || after === before || !('augments' in after)) return result;
   const rewarded = drainBatch5H7Gold(recordAugmentTransition(before, after, envelope.events));
   let next = rewarded.state;
+  if (next.roundResults.length > before.roundResults.length) {
+    if (!next.multiplayer) next = drainBatch5H8Gold(next);
+    if (!next.multiplayer || next.m8.round.kind === 'pve') next = drainBatch5H8Deaths(next);
+  }
+  const priorReceipts=new Set((rewarded.state.seatMechanics?.receipts??[]).map(r=>r.receiptId));
+  const newReceipts=(next.seatMechanics?.receipts??[]).filter(r=>!priorReceipts.has(r.receiptId));
+  const payoutEvents:MatchEvent[]=newReceipts.map((receipt,index)=>({type:'mechanicGranted',receipt,domain:'match',eventSeq:next.nextMatchEventSeq+index}));
+  if(payoutEvents.length)next={...next,nextMatchEventSeq:next.nextMatchEventSeq+payoutEvents.length};
   if (!before.multiplayer && before.openingEncounter.mode !== 'shared-deferred') {
     const stored = before.augmentHistory?.proof;
     let trace: Trace = traces.get(before) ?? { ...(stored?.kind === 'solo' ? stored : {origin:before,commands:[]}), previousBattle:{status:'unavailable'} };
@@ -218,7 +234,8 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
     traces.set(next, { ...proof, previousBattle: !before.combat && after.combat ? {status:'recorded',round:before.round,roundId:before.roundDefinitionId,battleId:after.combat.combatId!,roster:historyRoster(before)} : trace.previousBattle });
   }
   preparationTimes.set(next,{round:next.round,elapsedMs:next.round===before.round?Math.max(preparationElapsed(before),preparationElapsed(after)):0});
-  return (envelope.state ? { ...envelope, state: next, ...(rewarded.events.length ? { events: [...(envelope.events ?? []), ...rewarded.events] } : {}) } : next) as T;
+  const extraEvents = [...rewarded.events, ...payoutEvents];
+  return (envelope.state ? { ...envelope, state: next, ...(extraEvents.length ? { events: [...(envelope.events ?? []), ...extraEvents] } : {}) } : next) as T;
 }
 
 // A server restore takes a separately held authority, never a field from the candidate save.
