@@ -112,6 +112,12 @@ it('rejects unknown sources, including unknown names sharing the old wildcard pr
   for(const source of ['augment-pool-invented','opening-invented','made-up','forge','armory','radiant-conversion'])
     expect(()=>validateRewards(before,receipts(after,[gold(source,[],123)]),null,done,env)).toThrow(/unknown mechanic reward source/);
 });
+it('keeps rejecting forged kinds on gold-only and gift-only sources', () => {
+  const {before,after}=vector('wealthy-rehab-i');
+  const item={...gold('augment-pool-batch3',[0,0],8),kind:'item',definitionId:'rod',itemId:'item-1'};
+  const giftGold=gold('augment-pool-batch1',[],123);
+  for(const receipt of [item,giftGold])expect(()=>validateRewards(before,receipts(after,[receipt]),null,done,env)).toThrow(/independent due/);
+});
 it('requires exactly the independently drawn birthday hero and star level', () => {
   const {before}=vector('birthday-presents');before.phase='preparation';before.level=4;before.xp=6;
   const after={...before,level:5,xp:0},a=before.augments[0];
@@ -278,14 +284,14 @@ it('cannot rewrite historical battle counters to mint a reward after an unrelate
   expect(()=>validateRewards(before,receipts(after,[{...gold('augment-pool-batch3',[0,0],8,4),roundId:'2-1'}]),{type:'reroll'},[],env)).toThrow(/battle counters append-only/);
 });
 
-it('contains exactly 305 independently tiered identities, with two restricted to shared carousel',()=>{
+it('contains exactly 306 independently tiered identities, with two restricted to shared carousel',()=>{
   const pools=(['silver','gold','prismatic'] as const).map(tier=>augmentPool(tier,[]));
-  const all=pools.flat();expect(all).toHaveLength(303);expect(new Set(all).size).toBe(303);
+  const all=pools.flat();expect(all).toHaveLength(304);expect(new Set(all).size).toBe(304);
   // Independently transcribed integrated catalog, including Shop Glitch and the two H9 identities and the R1/R2/R3/R4 identities.
   const shared=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true));
-  expect(shared).toHaveLength(305);expect(new Set(shared).size).toBe(305);
+  expect(shared).toHaveLength(306);expect(new Set(shared).size).toBe(306);
   expect(shared.filter(id=>!all.includes(id)).sort()).toEqual(['table-scraps','young-and-wild-and-free']);
-  const groups={silver:['patience-is-a-virtue','mad-chemist','recombobulator','pandoras-bench','survivor','diversified-portfolio','diversified-portfolio-plus'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal','forbidden-magic','a-golden-find','cloning-facility','rebel-resurgence','aerial-warfare','natural-selection','voidcaller'],prismatic:['invested-plus','invested-plus-plus','hall-of-mirrors','lucky-gloves','lucky-gloves-plus','ghost-of-friends-past','void-swarm']};
+  const groups={silver:['patience-is-a-virtue','mad-chemist','recombobulator','pandoras-bench','survivor','diversified-portfolio','diversified-portfolio-plus'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal','forbidden-magic','a-golden-find','cloning-facility','rebel-resurgence','aerial-warfare','natural-selection','voidcaller','loot-explosion'],prismatic:['invested-plus','invested-plus-plus','hall-of-mirrors','lucky-gloves','lucky-gloves-plus','ghost-of-friends-past','void-swarm']};
   for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);
 });
 it('retains batch-4 stage bans and all exclusions against the current pool in both directions',()=>{

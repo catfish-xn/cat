@@ -164,7 +164,7 @@ it('reports missing research as an error rather than claiming an empty audit pas
   const { status, result } = f.run(); expect(status).toBe(1); expect(result.errors[0].code).toBe('SOURCE_MISSING');
 });
 
-// Characterize findings, not a waiver: the CLI must report the three remaining defects and the Table Scraps source-label difference.
+// Characterize findings, not a waiver: the CLI must report the three remaining defects, the Table Scraps source-label difference and the intentional user overrides.
 // Synthetic tests above always run on CI without the external research bundle.
 it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14.24-map22.bin.json')))('audits the actual 14.24 archive and reports the exact unresolved discrepancies', () => {
   const root = mkdtempSync(join(tmpdir(), 'stage-bans-archive-')); dirs.push(root);
@@ -183,6 +183,7 @@ it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14
   expect(r.errors.map((e: {apiName:string})=>e.apiName)).not.toContain('TFT13_Augment_AGoldenFind');
   expect(r.errors.find((e: { apiName: string }) => e.apiName === 'TFT_Augment_TableScraps').actual).toEqual(['3-2', '4-2']);
   expect(JSON.parse(r.canonical.shipped)).toMatchObject({ TFT13_Augment_Academy: ['4-2'], TFT13_Augment_Cabal: ['2-1', '4-2'] });
+  expect(r.overrides).toContainEqual({apiName:'TFT13_Augment_Ambusher',source:[],expected:['4-2'],decision:'P-LOOT-EXPLOSION-STAGE'});
   expect(r.knownCases.every((c: { ok: boolean }) => c.ok)).toBe(true);
   expect(r.crossVersionDifferences.map((d: { apiName: string }) => d.apiName).sort()).toEqual([
     'TFT13_Augment_AnotherAnomaly', 'TFT9_Augment_PandorasRadiantBox', 'TFT9_Augment_YoungAndWildAndFree', 'TFT_Augment_GlassCannonI', 'TFT_Augment_GlassCannonII', 'TFT_Augment_ShopGlitch', 'TFT_Augment_TableScraps', 'TFT_Augment_TwoMuchValue',

@@ -25,6 +25,7 @@ import { AUGMENT_BATCH5_H10 } from './augment-pool-batch5-h10';
 import { AUGMENT_BATCH5_H11 } from './augment-pool-batch5-h11';
 import { AUGMENT_BATCH5_H12 } from './augment-pool-batch5-h12';
 import { AUGMENT_BATCH5_H9 } from './augment-pool-batch5-h9';
+import { AUGMENT_BATCH5_G7, LOOT_EXPLOSION_RULES } from './augment-pool-batch5-g7';
 import { AUGMENT_SHOP } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S1A } from './augment-pool-batch5-s1a';
 import { AUGMENT_BATCH5_S3B } from './augment-pool-batch5-s3b';
@@ -75,7 +76,7 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 export const RULES_GAP_MANIFEST = freezeContent({
   tacticianItems:{source:TACTICIAN_ITEM_SOURCE,gold:'independent-item-collector-stream-10-percent-one-gold',population:'permanent-acquisition-and-crafted-receipts'},
   // Offer stages are replay input: augment offers re-derive from these bans at restore (P, 14.24 stage tags).
-  augmentStageBans:{version:'augment-stage-bans-14.24-tags-fine-vintage-override-v2',bans:AUGMENT_STAGE_BANS,override:'P-FINE-VINTAGE-STAGE-2026-10-27',reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2'},
+  augmentStageBans:{version:'augment-stage-bans-14.24-tags-user-override-v3',bans:AUGMENT_STAGE_BANS,override:'P-FINE-VINTAGE-STAGE-2026-10-27;P-LOOT-EXPLOSION-STAGE-2026-10-27',reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2;ambusher-user-override-2026-10-27'},
   augmentPoolBatch5B5a:{version:'augment-pool-batch5-b5a-v1',content:AUGMENT_BATCH5_B5A,convention:'P-B5-50-51-55-2026-10-27'},
   augmentPoolBatch5S1a:{version:'augment-pool-batch5-s1a-v1',content:AUGMENT_BATCH5_S1A,convention:'P-B5-S1A-2026-10-27'},
   augmentPoolBatch5S1b:{version:'augment-pool-batch5-s1b-v1',content:AUGMENT_BATCH5_S1B,convention:'P-B5-03-04-2026-10-27'},
@@ -114,6 +115,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
     sampling:'sorted-existing-category-pools;uniform-with-replacement;unchanged-allowed;fnv1a32-seat-choice-round-item-lcg32-v1',
     salvage:'sale-returned-permanent-recipe-items-only;four-settled-pvp-including-acquisition-round;one-component'},
   augmentPoolBatch5H9:{version:'augment-pool-batch5-h9-v25',content:AUGMENT_BATCH5_H9,convention:'P-B5-56-58-2026-10-27',gold:'original-anomaly-owner-kills-cross-battle-every-three-two-gold-post-settlement',history:'augment-history-v1',cabal:'sorted-full-black-rose-catalog-uniform-three-with-replacement-per-participant-victim-once-per-battle-next-battle-sion-150bps-10hp'},
+  augmentPoolBatch5G7:{version:'augment-pool-batch5-g7-v1',content:AUGMENT_BATCH5_G7,rules:LOOT_EXPLOSION_RULES,convention:'P-B5-69-2026-10-27'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch5H5:{version:'augment-pool-batch5-h5-v1',content:AUGMENT_BATCH5_H5,convention:'P-B5-35-36-H5-2026-10-27',
     selection:'carousel-rng-after-xor-42533535-seat-index-choice-id-fnv-lcg32-rejection-v1',

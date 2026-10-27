@@ -15,12 +15,12 @@ const takedowns = new WeakMap<object, readonly AugmentTakedownActor[]>();
 const killers = new WeakMap<object, CombatOrigin | null>();
 export interface AugmentDeathAttribution { readonly combatId: string; readonly eventSeq: number; readonly killer: CombatOrigin | null; readonly takedowns?: readonly AugmentTakedownActor[] }
 const attributionHistories = new WeakMap<CombatState, readonly AugmentDeathAttribution[]>();
-export function sampleAugmentDeath<E extends CombatEvent>(event: E, unit: CombatUnit, killer?: CombatOrigin | null, actors?: readonly AugmentTakedownActor[]): E {
+export function sampleAugmentDeath<E extends CombatEvent>(event: E, unit: CombatUnit, killer?: CombatOrigin | null, actors?: readonly AugmentTakedownActor[], lootExplosion?: AugmentDeath['lootExplosion']): E {
   if (actors !== undefined) takedowns.set(event, structuredClone(actors));
   if (killer !== undefined) killers.set(event, killer ? structuredClone(killer) : null);
   samples.set(event, { tick: event.tick, unitId: unit.id, definitionId: unit.definitionId, team: unit.team, ownerSeatId: unit.team === 'player' ? 'solo' : null, originalUnitId: unit.id,
     ordinaryHero: isAugmentOrdinaryHero(unit),
-    ...(unit.form ? { form: unit.form } : {}), ...((unit.rebelCopy || unit.itemSummon) && UNIT_DEFINITIONS[unit.definitionId] && !UNIT_DEFINITIONS[unit.definitionId].summon && unit.unitKind !== 'neutral' ? { championCopy: true as const } : {}), equipment: structuredClone(unit.equipment ?? []), combatItemGrants: structuredClone(unit.combatItemGrants ?? []) });
+    ...(unit.form ? { form: unit.form } : {}), ...((unit.rebelCopy || unit.itemSummon) && UNIT_DEFINITIONS[unit.definitionId] && !UNIT_DEFINITIONS[unit.definitionId].summon && unit.unitKind !== 'neutral' ? { championCopy: true as const } : {}), equipment: structuredClone(unit.equipment ?? []), combatItemGrants: structuredClone(unit.combatItemGrants ?? []), ...(lootExplosion?{lootExplosion:{...lootExplosion}}:{}) });
   return event;
 }
 export function carryAugmentDeathSample<E extends CombatEvent>(before: CombatEvent, after: E): E {

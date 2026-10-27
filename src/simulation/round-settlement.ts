@@ -4,6 +4,7 @@ import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { batch5S6cSettlementHealth, drainBatch5S6cGold } from './augment-pool-batch5-s6c';
 import { MAX_SUPPORTED_PLAYER_HP } from './augment-pool-batch5-h7-health';
 import { drainBatch5H8Gold } from './augment-pool-batch5-h8';
+import { drainLootExplosionRewards } from './augment-pool-batch5-g7';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -182,6 +183,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const hookEvents:MatchEvent[]=[];
     // Kingslayer pays from the receipt itself, so a settlement without battle facts still gets its gold.
     let settled=drainSettlementGold(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy,hookEvents):next);
+    settled=drainLootExplosionRewards(settled);
     const contested=drainContestedGold(settled);hookEvents.push(...mechanicGrantEvents(settled,contested));settled=contested;
     if(!r.g23Facts&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||a.definitionId==='a-change-of-fate'||a.definitionId==='void-swarm')){
       const gifted=drainBatch1Gifts(settled,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(settled,gifted));settled=gifted;

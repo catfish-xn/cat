@@ -24,6 +24,7 @@ import { AUGMENT_BATCH5_H10_DEFINITIONS } from './augment-pool-batch5-h10';
 import { AUGMENT_BATCH5_H11_DEFINITIONS } from './augment-pool-batch5-h11';
 import { AUGMENT_BATCH5_H12_DEFINITIONS } from './augment-pool-batch5-h12';
 import { AUGMENT_BATCH5_H9_DEFINITIONS } from './augment-pool-batch5-h9';
+import { AUGMENT_BATCH5_G7_DEFINITIONS } from './augment-pool-batch5-g7';
 import { AUGMENT_SHOP_DEFINITIONS } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S3B_DEFINITIONS } from './augment-pool-batch5-s3b';
 import { AUGMENT_BATCH5_S6C_DEFINITIONS } from './augment-pool-batch5-s6c';
@@ -92,6 +93,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   ...AUGMENT_BATCH5_G4_DEFINITIONS,
   ...AUGMENT_BATCH5_G5_DEFINITIONS,
   ...AUGMENT_BATCH5_G6_DEFINITIONS,
+  ...AUGMENT_BATCH5_G7_DEFINITIONS,
   ...AUGMENT_BATCH4_B4XP_DEFINITIONS,
   ...AUGMENT_BATCH4_B4REROLL_DEFINITIONS,
   ...V20_TEAMUP_AUGMENTS,

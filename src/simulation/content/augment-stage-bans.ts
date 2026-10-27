@@ -100,6 +100,8 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT11_Augment_RainingGold":['3-2','4-2'],
   "TFT11_Augment_RainingGoldPlus":['2-1','4-2'],
   "TFT11_Augment_WanderingTrainerGold":['3-2','4-2'],
+  // User rule (2026-10-27) overrides the unrestricted 14.24 source tags.
+  "TFT13_Augment_Ambusher":['4-2'],
   "TFT13_Augment_Artillerist":['3-2','4-2'],
   "TFT13_Augment_ArtilleristPlus":['2-1','4-2'],
   "TFT13_Augment_CabalCrest":['2-1'],

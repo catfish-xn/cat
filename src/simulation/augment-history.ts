@@ -220,11 +220,16 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   const captureKiller = next.augments.some(a => a.definitionId === 'a-golden-find');
   const captureTakedowns = next.augments.some(a => a.definitionId === 'forbidden-magic');
   const currentDeaths = augmentDeathsFromEvents(events, captureKiller, captureTakedowns);
-  const recorded = new Set(after.combat?.status === 'finished' ? next.augmentHistory!.facts.flatMap(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId ? f.deaths.map(d => d.eventSeq) : []) : []);
+  const deathRows = next.augmentHistory!.facts.filter(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId);
+  const recorded = new Set(after.combat?.status === 'finished' ? deathRows.flatMap(f => f.kind === 'deaths' ? f.deaths.map(d => d.eventSeq) : []) : []);
   const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat, captureKiller, captureTakedowns), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
-  if (after.combat && (deaths.length || before.combat?.tick !== after.combat.tick || !before.combat))
+  const boundaryRecorded = deathRows.some(f => f.kind === 'deaths' && f.completeThroughTick === after.combat?.tick);
+  // Settlement may already hold the finished CombatState (including tick 0).
+  // Its explicit terminal boundary must exist before rewards, even without any deaths.
+  if (after.combat && (deaths.length || !boundaryRecorded && (before.combat?.tick !== after.combat.tick || !before.combat || after.combat.status === 'finished')))
     next = appendAugmentFact(next, { kind: 'deaths', battleId: after.combat.combatId!, completeThroughTick: after.combat.tick,
-      deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null })) });
+      deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null,
+        ...(d.lootExplosion?{lootExplosion:{...d.lootExplosion,killerSeatId:d.team==='enemy'?historySeatId(after):null}}:{}) })) });
   if(after.roundResults.length>before.roundResults.length&&after.combat?.status==='finished')next=recordR2PortableBattle(next,after.combat,'player');
   // Solo PvP has no opposing player's HP account. Unknown is explicit, never fabricated as zero.
   if (!after.multiplayer && after.roundResults.length > before.roundResults.length && after.m8.round.kind === 'pvp')

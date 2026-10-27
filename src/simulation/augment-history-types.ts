@@ -19,6 +19,8 @@ export interface AugmentDeath {
   readonly championCopy?: true;
   /** Frozen form at this actual death; absent for champions without a form. */
   readonly form?: import('./seat-mechanics/types').UnitForm;
+  /** B5-69: actual last-hit observation; absent for ineligible kills. Never a reward receipt. */
+  readonly lootExplosion?: {readonly killerUnitId:string;readonly originalKillerUnitId:string;readonly killerSeatId:string|null;readonly critChanceBps:number};
   readonly combatId: string; readonly eventSeq: number; readonly tick: number; readonly unitId: string;
   readonly definitionId: string; readonly team: 'player' | 'enemy'; readonly ownerSeatId: string | null; readonly originalUnitId: string; readonly ordinaryHero: boolean;
   readonly equipment: readonly { readonly definitionId: string; readonly slot: number; readonly temporary: boolean }[];

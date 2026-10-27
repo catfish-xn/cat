@@ -26,6 +26,7 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'voidcaller': ['acquire'],
   'expected-unexpectedness': ['acquire'],
   'prismatic-pipeline': ['orb-opened'],
+  'loot-explosion': ['deaths'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],

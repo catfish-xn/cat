@@ -18,6 +18,8 @@ export function hallOpening(input: import('../../../src/simulation/combat-input'
     id: string; definitionId: string; starLevel: number; cell: { col: number; row: number }; maxHp: number;
   }[];
 export function hallDamage(amount: number): number;
+export function lootExplosionPlan(state: unknown): { gifts: Gift[]; gold: Gold[] };
+export function validateLootExplosionReceipts(state: unknown): void;
 export function validateRewards(before: unknown, after: unknown, command: unknown, events: readonly unknown[], environment: unknown): {
   gold: Map<string, Gold>; gifts: Map<string, Gift>; price: number;
 };

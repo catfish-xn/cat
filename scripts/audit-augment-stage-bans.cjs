@@ -8,7 +8,9 @@ const STAGES = ['2-1', '3-2', '4-2'];
 // P 2026-10-25: preserve the documented inference, not a decoded Riot identifier.
 const TAGS = ['{d02ae323}', '{d12ae4b6}', '{d22ae649}'];
 // P-FINE-VINTAGE-STAGE (user decision 2026-10-27): retain source checks, override production expectation only.
-const OVERRIDES = { TFT11_Augment_FineVintage: { source: STAGES, expected: ['3-2', '4-2'], decision: 'P-FINE-VINTAGE-STAGE' } };
+// P-LOOT-EXPLOSION-STAGE (user decision 2026-10-27): Loot Explosion is offered at 2-1 and 3-2 only; the source carries no stage tags.
+const OVERRIDES = { TFT11_Augment_FineVintage: { source: STAGES, expected: ['3-2', '4-2'], decision: 'P-FINE-VINTAGE-STAGE' },
+  TFT13_Augment_Ambusher: { source: [], expected: ['4-2'], decision: 'P-LOOT-EXPLOSION-STAGE' } };
 const DEFAULT_DATA = '/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 const DEFAULT_CROSS = '/home/aiapps/workspace/augment-crossversion-research-2026-10-24';
 const KNOWN = {

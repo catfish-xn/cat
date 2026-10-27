@@ -1,3 +1,5 @@
+import { AUGMENT_BATCH5_G4 } from '../src/simulation/content/augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G7 } from '../src/simulation/content/augment-pool-batch5-g7';
 import { appendResourceProvenance } from '../src/simulation/resource-provenance';
 import { acquireAugment, fieldedLegCases, fieldedRoute, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
@@ -28,8 +30,10 @@ it('takes exactly the 25 remaining batch-2 classification entries (Sniper migrat
  expect(Object.values(AUGMENT_BATCH2).map(x=>x.apiName)).toEqual([...names.map(x=>'TFT13_Augment_'+x),'TFT13_TeamupAugment_Betrayal','TFT13_TeamupAugment_BloodBrothers']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH2)){
   expect(row.source.patch).toBe('14.24');expect(row.source.archive).toContain('augments-14.24.json');
-  if((!row.enabled && id !== 'academic-research' && id !== 'forbidden-magic' && !Object.hasOwn(AUGMENT_BATCH5_G2,id) && !Object.hasOwn(AUGMENT_BATCH5_G3,id)) || Object.hasOwn(AUGMENT_BATCH2_BLOCKED,id)){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(row.apiName);}
+  if((!row.enabled && id !== 'academic-research' && id !== 'forbidden-magic' && !Object.hasOwn(AUGMENT_BATCH5_G2,id) && !Object.hasOwn(AUGMENT_BATCH5_G3,id) && !Object.hasOwn(AUGMENT_BATCH5_G7,id) && id !== 'visionary-voidlings') || Object.hasOwn(AUGMENT_BATCH2_BLOCKED,id)){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(Object.values(AUGMENT_POOL_API_NAMES)).not.toContain(row.apiName);}
   if(id === 'academic-research') { expect(AUGMENT_DEFINITIONS[id]).toBeDefined(); expect(Object.values(AUGMENT_POOL_API_NAMES)).toContain(row.apiName); }
+  // G4 implements this gap under the id 'voidcaller'; the archived batch-2 row keeps the same API name.
+  if(id==='visionary-voidlings'){expect(AUGMENT_DEFINITIONS[id]).toBeUndefined();expect(AUGMENT_BATCH5_G4.voidcaller.apiName).toBe(row.apiName);expect(AUGMENT_POOL_API_NAMES['voidcaller']).toBe(row.apiName);}
   if(id==='rebel-resurgence'){expect(AUGMENT_DEFINITIONS[id]?.name).toBe('爆蓝之城');expect(AUGMENT_POOL_API_NAMES[id]).toBe(row.apiName);}
  }
  expect(AUGMENT_DEFINITIONS['forbidden-magic'].id).toBe('forbidden-magic');

@@ -617,6 +617,4 @@ export function batch2Values(id:string):Readonly<Record<string,number>> {return 
  * selection-augment-fields.json and the matching map22 node; unknown hashes are
  * preserved as raw values, never guessed into a missing formula or unit stat. */
 export const AUGMENT_BATCH2_BLOCKED=freezeContent({
-  "loot-explosion": "R[132]：缺暴击率→掉落概率公式、战利品奖励表/权重及战利品暴击的倍率/递归上限；不是只有一个待填掉落率。",
-  "visionary-voidlings": "R[208]：275法力、最多5只、阶段2–6生命400/450/500/550/600齐；缺虚灵基础AD/攻速/双抗/射程/技能与出生位置/无空格政策，不能只造一个有HP但其余数值自定的单位。"
 });

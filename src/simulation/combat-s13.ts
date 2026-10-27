@@ -7,6 +7,7 @@ import { settleGhostFriendsDeaths, observeBatch5RevivalDeaths } from './augment-
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import { castB5Voidcaller, spawnB5Voidlings, type B5VoidlingBirth } from './augment-pool-batch5-g4';
 import { sampleAugmentDeath } from './augment-death-samples';
+import { lootExplosionKillSample } from './augment-pool-batch5-g7-combat';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
 import { isOpeningCrab, crabMove, crabJump } from './combat-opening-crabs';
@@ -183,6 +184,7 @@ function rollPlannedPackets(ctx: AbilityContext, unit: S13Unit, firstPacket: num
 /** S13 development resolver; standalone M3/M4 battles keep their original rules. */
 export function advanceS13Tick(state: CombatState): CombatStep {
   const tick = state.tick + 1, events: CombatEvent[] = [];
+  const lootExplosionKills = new Map<string, NonNullable<ReturnType<typeof lootExplosionKillSample>>>();
   const units: S13Unit[] = state.units.map(unit => {
     const copy = copyCombatUnitForTick(unit);
     return Object.assign(copy, {
@@ -533,6 +535,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
           outcomes: [...old?.outcomes ?? [], outcome], hpAmount: (old?.hpAmount ?? 0) + actual, heal: old?.heal ?? packet.onPositiveHpDamageHeal });
       }
       if (outcome.killingPacket) {
+        const lootSample=lootExplosionKillSample(owner,target,state.strategy);
+        if(lootSample)lootExplosionKills.set(target.id,lootSample);
         batch2Kill(ctx,owner,target,()=>actionSeq++);
         g23RumbleDeath(ctx,target,actionSeq++,defenses(target,true,tick,units)+defenses(target,false,tick,units));
         killed.set(target.id, packet.source); events.push({ type: 'kill', tick, unitId: target.id, source: packet.source });
@@ -789,7 +793,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       if (unit.deferredItemDamage) unit.deferredItemDamage=[];
       unit.tasks = unit.tasks.filter(t => !t.cancellable && (t.attachedDot || t.kind === 'tristanaBounce'));
       events.push(sampleAugmentDeath({ type: 'death', tick, unitId: unit.id }, unit, killed.get(unit.id) ?? null,
-        tracksCabalTakedowns(units)?sampleCabalTakedowns(units,unit.id,[...(killed.has(unit.id)?[killed.get(unit.id)!.ownerId]:[]),...(damageContributors[unit.id]??[])]):undefined));
+        tracksCabalTakedowns(units)?sampleCabalTakedowns(units,unit.id,[...(killed.has(unit.id)?[killed.get(unit.id)!.ownerId]:[]),...(damageContributors[unit.id]??[])]):undefined, lootExplosionKills.get(unit.id)));
     }
     // Keep depleted protective layers only until their independent end task has consumed absorption.
     unit.shieldLayers = unit.shieldLayers.filter(layer => layer.remaining > 0 || unit.tasks.some(t => t.shieldEndKey === layer.key));

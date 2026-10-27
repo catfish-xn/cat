@@ -5,7 +5,8 @@ import { grantCarryGolem, growCarryGolem } from './augment-pool-batch5-g6';
 import { grantCookingPotGrowth, noScoutLockedUnits } from './augment-pool-batch5-h3';
 import { drainPortfolioGold } from './augment-pool-batch5-h4';
 import { drainContestedGold } from './augment-pool-batch5-h6';
-import { initializeAugmentTrace, traceHistoryCommand, recordAugmentRoundEntry, recordAugmentAcquisition, recordAugmentPvpRoster, recordAugmentTable, historyRoster } from './augment-history';
+import { drainLootExplosionRewards } from './augment-pool-batch5-g7';
+import { initializeAugmentTrace, traceHistoryCommand, recordAugmentTransition, recordAugmentRoundEntry, recordAugmentAcquisition, recordAugmentPvpRoster, recordAugmentTable, historyRoster } from './augment-history';
 import { augmentExtraRerolls, canRerollAugmentSlot } from './augment-pool-batch5-s1a';
 import { atWhatCostGrant, skipsFutureAugment } from './augment-pool-batch5-s1b';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
@@ -500,7 +501,10 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       levelBefore: state.level, levelAfter: plan.progression.level, xpBefore: state.xp, xpAfter: plan.progression.xp,
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
-  let committed=combat?grantPveRemover(commitG23Settlement(settled,facts!,unitLootPolicy,hookEvents)):settled;
+  // Record the complete terminal deaths boundary, including tick-0 deaths:[], before planning any rewards.
+  const observed=combat&&state.augments.some(a=>a.definitionId==='loot-explosion')?recordAugmentTransition(state,settled):settled;
+  let committed=combat?grantPveRemover(commitG23Settlement(observed,facts!,unitLootPolicy,hookEvents)):observed;
+  committed=drainLootExplosionRewards(committed);
   const contested=drainContestedGold(committed);hookEvents.push(...mechanicGrantEvents(committed,contested));committed=contested;
   if(!combat&&state.augments.some(a=>AUGMENT_BATCH4[a.definitionId])){
     const gifted=drainP2Gifts(committed,unitLootPolicy);hookEvents.push(...mechanicGrantEvents(committed,gifted));committed=gifted;

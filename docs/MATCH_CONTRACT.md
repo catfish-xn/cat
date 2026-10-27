@@ -57,6 +57,20 @@ B5-42／43／44 已开放；函数签名、失败原因和全部接线见 [H7 �
 ## 2026-10-27 v25 B5-56／B5-58
 
 规则／内容为 `s13-g2-3-v25-online-rules`／`s13-14.24b-g2-3-v25-online-rules`；schema/save/replay/command 保持 12/8/8/7，网络规则协议 5。金色收获（4-2）与禁忌魔法（3-2、黑玫棋盘）按 P-B5-56／58 开放。唯一历史证据为按持有者写入的 `augment-history-v1`：开战异常绑定、真实致死来源、实际参与者与玩家级赛恩成长。每三杀发二金和每三次参与击杀 +150 AD 基点／10 生命均由规则层战后唯一收据执行，成长从下一战生效。无新增玩家命令，旧身份拒绝续玩，未重录 epoch。接口、失败语义与全部接线点以 [强化历史合同](AUGMENT_HISTORY_DESIGN.md) 的 B5-56／B5-58 节为准。
+## 2026-10-27 B5-69 战利品爆炸（P-B5-69，数值待最终确认）
+
+新增黄金强化 `loot-explosion`（`TFT13_Augment_Ambusher`）。取得时发卡蜜尔、爆爆各1，联机英雄使用既有共享奖励法球。规则、权重、档位映射和11%基础值以 [P-B5-69](S13_RULES_GAP.md#p-b5-69p2026-10-27战利品爆炸用户纠正版) 为准，按用户决定在 **2-1／3-2 开放、4-2 禁出**；3-2 保留伏击专家阵容过滤。没有新增网络命令、战斗事件或外层版本；精确内容摘要随本次脚本重算，历史epoch不重录。
+
+| 内部领域入口（`augment-pool-batch5-g7.ts`） | 输入、输出与拒绝 |
+| --- | --- |
+| `rollLootExplosion(stage:number, critChanceBps:number, draw:()=>number): LootExplosionDrop \| null` | 阶段2–8、0–10000整数暴击率、合法32位字；返回基础档、最终档、价值暴击标记和金币/物品奖励，未掉落返回null；越界抛 `Invalid augment history: loot explosion stage/crit chance/random word`。只用指定子流。 |
+| `lootExplosionRewardPlan(state:MatchState)` | 从持有者与 `requireAugmentFacts(state,'deaths',round)` 推导已结算非供给战斗的奖励（现有PvE野怪不满足英雄资格）；每个死亡事件、每个奖励槽拥有唯一receiptId。缺完整死亡边界、重复death eventSeq、错战斗ID抛 `Invalid augment history: ...`；不从候选收据推导奖励。 |
+| `drainLootExplosionRewards(state:MatchState):MatchState` | 结算期调用既有 `grantMechanicGold/Item`；已发收据保持原对象，禁止补发遗漏的旧轮奖励；在 `applyRoundSettlement` 内失败仍返回原state及 `invalid-receipt`，无事件、资源、RNG消耗。 |
+| `validateLootExplosionRewards(state:MatchState):void` | 按独立死亡历史重新规划，逐项核对数量、唯一身份、来源、轮次、金币/装备和item-acquired来源；伪造、缺失、孤儿或冲突收据抛 `Invalid augment history: loot explosion ...`。联机恢复仍须另外提供独立服务器authority。 |
+
+服务器 `recordRoomBattleDeaths(match,results)` 只映射实际执行的双边死亡/击杀席位与原始实例ID，在共享 `settleRound` 事务前写入已验证的历史API；战后 `recordRoomBattleFacts` 不重复写此批死亡。金币/装备仍只在领域模块计算。`sampleAugmentDeath` 的第三个可选参数只承接击杀现场观察，既有事件JSON不增加字段。Match单人路径保持可执行；验收以联机为目标。
+
+审查修复：Match 在发奖前记录与终局 tick 相等的完整 `deaths` 边界；空阵容 tick 0 的 `deaths:[]` 同样必须显式保存，不能把缺行当作零死亡。已有边界和死亡 eventSeq 不重复记录。`restoreSharedOrbSnapshot(pool,input,authority?)` 依据可信 pool 的 pending／rewards 内初始赠礼命名空间判断相关历史认证要求：候选删除拥有者、历史或赠礼收据，仍须独立服务器 authority；缺失抛 `Invalid augment history: missing independent server authority`，状态不符抛 `server facts/state mismatch`。初始 gift 的 source 或 `receiptId` 命名空间命中 `augment-pool-batch1` 时，始终运行拥有者／来源／礼物计划校验，孤儿或伪装来源抛 `Invalid augment batch1 gift authority`。恢复保持只读，不补发资源。回归与通用 Oracle 覆盖见 [G7 审查修复报告](V25_G7_REVIEW_FIXES.md)。
 
 ## 2026-10-27 v24 纪元身份
 

@@ -43,6 +43,7 @@ const initial={
  'quality-over-quantity':[C('magnetic-remover',2)], 'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  'hard-commit':[Q('emblem')],
  'glorious-evolution':[I('adaptive-helm')],
+ 'loot-explosion':[U('camille'),U('powder')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],
  'one-two-five':[Q('component'),R(5)],'band-of-thieves-i':[I('thiefs-gloves')],
@@ -249,9 +250,45 @@ function rewardPlan(s,env){
    if(levels.gold&&s.level>=levels.gold[0])addGold('augment-pool-batch4',a,['level',levels.gold[0]],levels.gold[1],levelRound(levels.gold[0]));
   }
  }
- return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut],gold:[...gold,...h4.goldPlan(s)]};
+ const explosion=lootExplosionPlan(s);
+ return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut,...explosion.gifts],gold:[...gold,...h4.goldPlan(s),...explosion.gold]};
 }
-module.exports={rewardPlan,expand,salt,pick,word,outcome,initial};
+// P-B5-69 (2026-10-27): independent integer weights and reward mapping, not production receipts.
+function lootExplosionPlan(s) {
+ const gifts=[],gold=[],a=s.augments.find(a=>a.definitionId==='loot-explosion');if(!a)return {gifts,gold};
+ for(const r of s.roundResults.filter(r=>r.round>=a.acquiredRound&&r.roundKind!=='supply')) {
+  const rows=s.augmentHistory?.facts.filter(f=>f.kind==='deaths'&&f.round===r.round)??[];
+  assert(rows.some(f=>f.completeThroughTick===r.combatTicks),'independent loot explosion complete deaths');
+  const stage=Number(r.roundId.split('-')[0]),weights=stage===2?[80,20]:stage===3?[30,60,5,5]:stage===4?[30,35,25,5,5]:[15,30,35,13,5,2];
+  const seen=new Set();
+  for(const d of rows.flatMap(f=>f.deaths).sort((a,b)=>a.eventSeq-b.eventSeq)) {
+   assert(!seen.has(d.eventSeq),'independent loot explosion unique death');seen.add(d.eventSeq);
+   const k=d.lootExplosion,seat=s.multiplayer?.seatId??'solo';
+   if(!k||!d.ordinaryHero||k.killerSeatId!==seat||d.ownerSeatId===seat)continue;
+   assert(Number.isInteger(k.critChanceBps)&&k.critChanceBps>=0&&k.critChanceBps<=10000);
+   const ns=['augment-pool-batch5-g7',seat,a.choiceId,r.round,d.combatId,d.eventSeq];
+   let rng=salt(s.seed,ns);const draw=()=>rng=word(rng);
+   if(BigInt(draw())*10000n>=BigInt(Math.min(10000,1100+k.critChanceBps))*MOD)continue;
+   let ticket=pick(draw(),weights.reduce((a,b)=>a+b,0)),tier=1;
+   for(const w of weights){if(ticket<w)break;ticket-=w;tier++;}
+   if(BigInt(draw())*10000n<BigInt(k.critChanceBps)*MOD)tier=Math.min(6,tier+1);
+   const receiptId=i=>JSON.stringify([...ns,i]);
+   if(tier<=3)gold.push({receiptId:receiptId(0),source:ns[0],kind:'gold',amount:tier,round:r.round});
+   else {
+    const pool=data.pools[tier===6?'completed':'component'];
+    for(let i=0;i<(tier===5?2:1);i++)gifts.push({receiptId:receiptId(i),source:ns[0],kind:'item',definitionId:pool[pick(draw(),pool.length)],starLevel:1,acquiredRound:r.round});
+   }
+  }
+ }
+ return {gifts,gold};
+}
+function validateLootExplosionReceipts(s) {
+ const plan=lootExplosionPlan(s),expected=[...plan.gold,...plan.gifts].map(r=>({receiptId:r.receiptId,source:r.source,round:r.round??r.acquiredRound,kind:r.kind,...(r.kind==='gold'?{amount:r.amount}:{definitionId:r.definitionId})}));
+ const actual=(s.seatMechanics?.receipts??[]).filter(r=>r.source==='augment-pool-batch5-g7'||r.receiptId.startsWith('["augment-pool-batch5-g7",')).map(r=>({receiptId:r.receiptId,source:r.source,round:r.round,kind:r.kind,...(r.kind==='gold'?{amount:r.amount}:{definitionId:r.definitionId})}));
+ const sort=rs=>rs.sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
+ assert.deepEqual(sort(actual),sort(expected),'independent Loot Explosion receipts');
+}
+module.exports={rewardPlan,expand,salt,pick,word,outcome,initial,lootExplosionPlan,validateLootExplosionReceipts};
 // P-B5-74, independent board arithmetic and literal ratios. Opening owner stats are
 // observed combat facts; no production copy declarations or reward receipts are read.
 function r3Opening(input,opening){
@@ -293,7 +330,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
 const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-batch5-r1','augment-pool-batch5-r2','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
- 'augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch5-g5','augment-pool-batch5-g6',
+ 'augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch5-g5','augment-pool-batch5-g6','augment-pool-batch5-g7',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel',...h4.sources]);
 // Project only the counters needed by these rewards from the finished combat, not reward receipts.
@@ -515,7 +552,9 @@ function validateRewardsCore(before,after,command,events,base){
    if(deaths.length&&!claimed.has(receiptId))dueGold.push({receiptId,source:'augment-batch5-h8-monetization',kind:'gold',amount:deaths.length*2,round:r.round});
   }
  }
- const actualGold=appended.filter(r=>['augment-pool-batch5-g5','augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
+ // Loot Explosion shares one source across gold and equipment; gold-only sources
+ // still enter their validator even if a counterexample forges their kind.
+ const actualGold=appended.filter(r=>r.source==='augment-pool-batch5-g7'?r.kind==='gold':['augment-pool-batch5-g5','augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
  const goldKey=r=>({receiptId:r.receiptId,source:r.source,kind:r.kind,amount:r.amount,round:r.round});
  const sorted=xs=>xs.map(goldKey).sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
  assert.deepEqual(sorted(actualGold),sorted(dueGold),'independent due augment gold receipts (count, identity, amount, round)');
@@ -527,7 +566,7 @@ function validateRewardsCore(before,after,command,events,base){
  }
 
  const pending=plan.gifts.filter(p=>!claimed.has(p.receiptId));
- const actual=appended.filter(r=>r.source==='augment-pool-batch1'),expected=new Map(pending.map(g=>[g.receiptId,g]));
+ const actual=appended.filter(r=>r.source==='augment-pool-batch1'||r.source==='augment-pool-batch5-g7'&&r.kind!=='gold'),expected=new Map(pending.map(g=>[g.receiptId,g]));
  for(const r of actual){const g=expected.get(r.receiptId);assert(g,'independent due augment gift identity '+r.receiptId);expected.delete(r.receiptId);
   assert.equal(r.kind,g.kind);assert.equal(r.definitionId,g.definitionId,'independent gift draw');assert.equal(r.starLevel??1,g.starLevel,'independent gift stars');
   assert(r.round>=g.acquiredRound&&r.round<=ctx.round,'independent gift timing');assert.equal(r.round,ctx.round,'independent gift grant round');assert.equal(r.roundId,base.ROUNDS[r.round-1]?.roundId);

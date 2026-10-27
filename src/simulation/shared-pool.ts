@@ -7,6 +7,7 @@ import { validateMatchEquipment } from './temporary-equipment';
 import { AUGMENT_BATCH5_G2 } from './content/augment-pool-batch5-g2';
 import { AUGMENT_BATCH5_G4 } from './content/augment-pool-batch5-g4';
 import { AUGMENT_BATCH5_G5 } from './content/augment-pool-batch5-g5';
+import { validateLootExplosionRewards } from './augment-pool-batch5-g7';
 import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
 import { AUGMENT_BATCH5_H6 } from './content/augment-pool-batch5-h6';
@@ -31,6 +32,8 @@ import { AUGMENT_BATCH5_S6C } from './content/augment-pool-batch5-s6c';
 import { BATCH5_S6C_SOURCE } from './augment-pool-batch5-s6c';
 import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
 import { AUGMENT_BATCH5_S8C } from './content/augment-pool-batch5-s8c';
+import { validateAugmentAuthority } from './augment-history';
+import { augmentNeedsHistory } from './augment-history-owners';
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
 import type { ShopDrawCause } from './shop-history-types';
 import { AUGMENT_BATCH5_S8A } from './content/augment-pool-batch5-s8a';
@@ -78,6 +81,23 @@ import { PoolError, requirePool, safe, sourceKey, draftPool, releaseShop, return
 export { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, assertSharedPoolConservation };
 export type * from './shared-pool-types';
 
+/** Read the gift owner from a trusted pool reservation/receipt, not the candidate seat's owners or receipts. */
+function rewardNeedsAugmentHistory(dropId:string):boolean {
+  try {
+    const drop:unknown=JSON.parse(dropId);
+    if(!Array.isArray(drop))return false;
+    let receiptId:unknown;
+    if(drop[0]==='mechanic')receiptId=drop[1];
+    else {
+      const orb:unknown=typeof drop[0]==='string'?JSON.parse(drop[0]):null;
+      if(!Array.isArray(orb)||orb[0]!=='orb'||orb[2]!=='mechanic')return false;
+      receiptId=orb[3];
+    }
+    const gift:unknown=typeof receiptId==='string'?JSON.parse(receiptId):null;
+    return Array.isArray(gift)&&gift[0]===AUGMENT_GIFT_SOURCE&&typeof gift[2]==='string'&&augmentNeedsHistory(gift[2]);
+  } catch { return false; }
+}
+
 /** Restore only against the matching authoritative pool snapshot; offline restoreMatch remains offline-only. */
 export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,authority?:AugmentHistoryAuthority):MatchState {
   const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
@@ -85,13 +105,18 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
   preflightAugmentHistory(state);
   validateCarryGolem(state);
-  canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
-  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
+  canonicalContent(state); assertSharedPoolConservation(pool,[state]);
+  // Claimed, sold, forfeited and pending gifts leave independent server evidence.
+  // Removing the candidate's augment/history/receipt must never downgrade this trust requirement.
+  if([...pool.pending,...pool.rewards].some(r=>r.seatId===state.sharedPool!.seatId&&rewardNeedsAugmentHistory(r.dropId)))
+    validateAugmentAuthority(state,authority,true);
+  validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
+  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateLootExplosionRewards(state);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
   validateMadChemistOnlineSave(pool, state, authority);
   if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)) || state.equipmentState.rolls.some(r=>r.lucky))validateMatchEquipment(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
-  if(state.augments.some(a=>Object.hasOwn(AUGMENT_BATCH5_G5,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G2,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)||AUGMENT_BATCH5_R6[a.definitionId]||AUGMENT_BATCH5_H12[a.definitionId]||AUGMENT_BATCH5_H10[a.definitionId]||AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H8,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S3D,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8B,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8C,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId)||AUGMENT_BATCH5_S8A[a.definitionId as keyof typeof AUGMENT_BATCH5_S8A])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
+  if(state.augments.some(a=>a.definitionId==='loot-explosion'||Object.hasOwn(AUGMENT_BATCH5_G5,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G2,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_G1,a.definitionId)||AUGMENT_BATCH5_R6[a.definitionId]||AUGMENT_BATCH5_H12[a.definitionId]||AUGMENT_BATCH5_H10[a.definitionId]||AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H8,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S3D,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8B,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8C,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId)||AUGMENT_BATCH5_S8A[a.definitionId as keyof typeof AUGMENT_BATCH5_S8A])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
     r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')||r.source==='augment-pool-batch5-g5'||r.receiptId.includes('expected-unexpectedness')||r.receiptId.includes('prismatic-pipeline')||Object.keys(AUGMENT_BATCH5_G4).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_G2).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_H12).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_H10).some(id=>r.receiptId.includes(id))||r.source==='augment-batch5-h8-forward-thinking'||r.source==='augment-batch5-h8-monetization'||Object.keys(AUGMENT_BATCH5_H8).some(id=>r.receiptId.includes(id))||r.receiptId.includes('hard-commit')||r.source===BATCH5_S6C_SOURCE||r.receiptId.startsWith(`["${BATCH5_S6C_SOURCE}",`)||Object.keys(AUGMENT_BATCH5_S8B).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S8A).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S3D).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5-h6'||r.receiptId.startsWith('["augment-pool-batch5-h6",')||r.source.startsWith('augment-pool-batch5-h4')||Object.keys(AUGMENT_BATCH5_H3).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   if(state.augments.some(a=>AUGMENT_BATCH5_S3A[a.definitionId])||state.seatMechanics?.receipts.some(r=>r.source===BATCH5_S3A_SOURCE||r.receiptId.includes(BATCH5_S3A_SOURCE)||Object.keys(AUGMENT_BATCH5_S3A).some(id=>r.receiptId.includes(id)))){
     validateBatch1Gifts(state);validateBatch5Inventory(state,batch5InventoryPlan(state));validateHistoricalEquipment(null,state);validateAnvils(state);
