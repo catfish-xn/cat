@@ -1,9 +1,4 @@
-import { expect,it,afterAll,vi } from 'vitest';
-// Exercise disabled source content through real room commands under a test-only offer policy.
-vi.mock('../../src/simulation/content/augment-stage-bans',async importOriginal=>{
- const actual=await importOriginal<typeof import('../../src/simulation/content/augment-stage-bans')>();
- return {...actual,AUGMENT_STAGE_BANS:{...actual.AUGMENT_STAGE_BANS,TFT11_Augment_FineVintage:['3-2','4-2']}};
-});
+import { expect,it,afterAll } from 'vitest';
 import { makeRoom,runUntil,claimAllOrbs,answerOpenChoices } from './helpers';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { batch5InventoryPlan,BATCH5_S3A_SOURCE } from '../../src/simulation/augment-pool-batch5-s3a';

@@ -29,6 +29,7 @@ it.skipIf(!existsSync(RESEARCH_FILE)).each(Object.keys(AUGMENT_BATCH5_S3A))('%s 
  const row=AUGMENT_BATCH5_S3A[id],source=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((r:any)=>r.apiName===row.apiName);
  expect(row.name).toBe(source.name_zh_cn);expect(row.source.values).toEqual(source.effects);expect(source.tier).toBe(1);
 });
-it('Fine Vintage retains all three source stage bans in production',()=>{
- for(const node of ['2-1','3-2','4-2'])expect(augmentOfferAllowed('fine-vintage',[],{node,fieldedTraits:[],blocked:[]})).toBe(false);
+it('Fine Vintage is eligible only at 2-1',()=>{
+ expect(augmentOfferAllowed('fine-vintage',[],{node:'2-1',fieldedTraits:[],blocked:[]})).toBe(true);
+ for(const node of ['3-2','4-2'])expect(augmentOfferAllowed('fine-vintage',[],{node,fieldedTraits:[],blocked:[]})).toBe(false);
 });
