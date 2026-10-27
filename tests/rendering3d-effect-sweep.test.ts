@@ -111,3 +111,13 @@ describe('effect library idle resource sweep', () => {
     expect(outcome).toBe('effect-library-closed');
   });
 });
+
+it('releases settled fallback GPU resources synchronously before the renderer can reset its allocation records', async () => {
+  const { library } = fixture(), effect = await library.load('a', 2);
+  const geometry = particle(effect).geometry, texture = particle(effect).material.uniforms.map.value as Texture;
+  const gd = vi.spyOn(geometry, 'dispose'), td = vi.spyOn(texture, 'dispose');
+  effect.dispose(); library.dispose();
+  expect(gd).toHaveBeenCalledTimes(1); expect(td).toHaveBeenCalledTimes(1);
+  await flush(); library.dispose();
+  expect(gd).toHaveBeenCalledTimes(1); expect(td).toHaveBeenCalledTimes(1);
+});

@@ -1,0 +1,210 @@
+/*! @license GPL-3.0-or-later
+ * Derived from ltk-manager (GPL-3.0-or-later).
+ * Source: src/modules/workshop/bin/vfx/rendering/utils/uvTransform.ts
+ * Port/adaptation: catfish-xn/cat, 2026-10-26. See NOTICE.md and LICENSE.
+ */
+/**
+ * One particle's UV transform, as the numbers a layer's sampler reads.
+ *
+ * The formulas: a birth ramp the age climbs, clamped or wrapped on its own, then the
+ * integrated scroll on top, and the rotation the same way in degrees. The angle and the
+ * two scales reach the shader rather than the 2x3 matrix itself, because the shader is
+ * what builds a basis out of them either way. A flip is the layer's own and lands after
+ * the transform, in the sampler's hands, and the emitter's own scroll after the flip.
+ */
+
+import { ADDRESS_MODE, type AddressMode } from "../../engine/model/enums";
+import type { EmitterModel, UvLayer } from "../../engine/model/model";
+import { flexChannel, type Pool, UV, uvAt } from "../../engine/simulation/pool";
+import { integratedInto, sampleCurveInto } from "../../engine/utils/sampleCurve";
+
+/** What one layer hands its sampler for one particle. */
+export interface UvDraw {
+  /** The angle the cell turns through, in radians. */
+  turn: number;
+  /** The scale about the centre. */
+  scaleU: number;
+  scaleV: number;
+  /** The whole scroll, in cells. */
+  offsetU: number;
+  offsetV: number;
+  /** Where the particle's own cell starts, in texture space. */
+  cellU: number;
+  cellV: number;
+}
+
+/** Scratch a caller reuses, so a frame allocates nothing per particle. */
+export function uvDraw(): UvDraw {
+  return { turn: 0, scaleU: 1, scaleV: 1, offsetU: 0, offsetV: 0, cellU: 0, cellV: 0 };
+}
+
+/** How far `uvScrollClamp` lets the birth ramp run, in cells either way. */
+const RAMP_REACH = 1;
+
+const DEGREE = Math.PI / 180;
+
+/** Scratch one integrated rate is read into. */
+const INTEGRATED = new Float32Array(2);
+
+/* Scratch buffers for the scale and rotation curves, so a particle allocates nothing. */
+const SCALE = new Float32Array(2);
+const ROTATION = new Float32Array(1);
+
+/**
+ * One layer's transform for the particle at `index`, into `out`.
+ *
+ * `age` is the particle's, because its ramps and its book play on its own life. The two
+ * integrated rates are their integrals over the age fraction times the lifetime, and a
+ * particle that never expires takes none. `now` is the system's own clock, which
+ * `emitterUvScrollRate` runs on: a quad adds it after the flips, and `emitterScroll` is
+ * false for a mesh, on which no reader of it is known.
+ */
+export function uvTransformInto(
+  pool: Pool,
+  index: number,
+  layer: UvLayer,
+  which: number,
+  age: number,
+  age01: number,
+  now: number,
+  out: UvDraw,
+  emitterScroll = true,
+): void {
+  const slot = uvAt(index, which);
+
+  /* A channel that the curve does not write defaults to a scale of 1 and a turn of 0. */
+  SCALE.fill(1);
+  sampleCurveInto(layer.scale, age01, SCALE, 0);
+  ROTATION[0] = 0;
+  sampleCurveInto(layer.rotation, age01, ROTATION, 0);
+
+  const lifetime = pool.lifetime[index];
+  const lived = Number.isFinite(lifetime) ? lifetime : 0;
+
+  INTEGRATED.fill(0);
+  integratedInto(layer.rotateRate, age01, 1, INTEGRATED, 0);
+  const turned = ROTATION[0] + age * pool.uv[slot + UV.birthRotate] + INTEGRATED[0] * lived;
+  out.turn = turned * DEGREE;
+  out.scaleU = SCALE[0];
+  out.scaleV = SCALE[1];
+
+  INTEGRATED.fill(0);
+  integratedInto(layer.scrollRate, age01, 1, INTEGRATED, 0);
+  /* `flexBirthUVOffset` reads its channel each frame, so a channel set mid-run moves it. */
+  const flexed = flexChannel(pool.flex, pool.uv[slot + UV.flexChannel]);
+  const rampU =
+    pool.uv[slot + UV.birthOffsetX] +
+    age * pool.uv[slot + UV.birthScrollX] +
+    flexed * pool.uv[slot + UV.flexOffsetX];
+  const rampV =
+    pool.uv[slot + UV.birthOffsetY] +
+    age * pool.uv[slot + UV.birthScrollY] +
+    flexed * pool.uv[slot + UV.flexOffsetY];
+  /* The shader mirrors the whole offset under a flip, so a term that lands after the flip
+     goes in reversed. */
+  const panU = emitterScroll ? layer.emitterScrollRate[0] * now * (layer.flipU ? -1 : 1) : 0;
+  const panV = emitterScroll ? layer.emitterScrollRate[1] * now * (layer.flipV ? -1 : 1) : 0;
+  out.offsetU = periodic(
+    ramp(rampU, layer.scrollClamp) + INTEGRATED[0] * lived + panU,
+    layer.addressMode,
+  );
+  out.offsetV = periodic(
+    ramp(rampV, layer.scrollClamp) + INTEGRATED[1] * lived + panV,
+    layer.addressMode,
+  );
+
+  const book = layer.book;
+  const columns = Math.max(Math.round(book.divisions[0]), 1);
+  const rows = Math.max(Math.round(book.divisions[1]), 1);
+  const frames = Math.max(Math.round(book.frames), 1);
+
+  /* A rate at or under zero plays nothing. The run wraps before `startFrame` is added, so
+     it cycles from that frame onward rather than back to the grid's first cell. Past the
+     grid the sampler wraps. */
+  const rate = pool.uv[slot + UV.frameRate];
+  const played = wrap(pool.uv[slot + UV.phase] + (rate > 0 ? age * rate : 0), frames);
+  const cell = wrap(Math.trunc(book.start + played), columns * rows);
+
+  out.cellU = (cell % columns) / columns;
+  out.cellV = Math.floor(cell / columns) / rows;
+}
+
+/**
+ * The birth ramp held within reach when the layer clamps, and its fraction otherwise.
+ *
+ * The fraction keeps the ramp's sign, as the engine's `modff` returns it. Under clamp, border
+ * and mirror, a negative offset samples differently from the same offset plus one cell.
+ */
+function ramp(value: number, clamped: boolean): number {
+  if (clamped) return Math.min(Math.max(value, -RAMP_REACH), RAMP_REACH);
+  return value % 1;
+}
+
+/** `value` brought inside `[0, span)`, which a negative one still lands in. */
+function wrap(value: number, span: number): number {
+  return ((value % span) + span) % span;
+}
+
+/**
+ * A scroll brought back by the period its address mode repeats over.
+ *
+ * `emitterUvScrollRate * now` grows without bound, and a float32 attribute in the
+ * thousands has a resolution of a texel, so the fold the sampler would do is done here at
+ * full precision. A clamp or a border keeps the raw scroll, which is what carries the
+ * texture past its edge.
+ */
+function periodic(offset: number, mode: AddressMode): number {
+  if (mode === ADDRESS_MODE.wrap) return wrap(offset, 1);
+  if (mode === ADDRESS_MODE.mirror) return wrap(offset, 2);
+  return offset;
+}
+
+/** The layer at `which`, and null where the emitter carries no second one. */
+export function layerOf(emitter: EmitterModel, which: number): UvLayer | null {
+  return which === 0 ? emitter.uv : emitter.multUv;
+}
+
+/** How wide and how tall one cell is, which is what the shader lands a wrapped uv in. */
+export function cellSize(layer: UvLayer): [number, number] {
+  return [
+    1 / Math.max(Math.round(layer.book.divisions[0]), 1),
+    1 / Math.max(Math.round(layer.book.divisions[1]), 1),
+  ];
+}
+
+/**
+ * `draw` over `layer` placed in the particle's cell, as the rows of the engine's
+ * `vParticleUVTransform` into `out` from `at`: `u` is row 0 against `(u, v, 1)` and `v` is
+ * row 1, each padded to four floats. It is the quad fragment's `layerUv` and the cell, and
+ * so affine.
+ */
+export function uvRowsInto(
+  draw: UvDraw,
+  layer: UvLayer,
+  out: Float32Array | number[],
+  at = 0,
+): void {
+  const [width, height] = cellSize(layer);
+  const [centerU, centerV] = layer.center;
+  const cos = Math.cos(draw.turn);
+  const sin = Math.sin(draw.turn);
+  const mirrorU = layer.flipU ? -1 : 1;
+  const mirrorV = layer.flipV ? -1 : 1;
+
+  /* The turn and the scale about the centre, then the scroll, as `(u, v) -> A (u, v) + b`. */
+  const uu = draw.scaleU * cos;
+  const uv = -draw.scaleV * sin;
+  const vu = draw.scaleU * sin;
+  const vv = draw.scaleV * cos;
+  const bu = centerU + draw.offsetU - uu * centerU - uv * centerV;
+  const bv = centerV + draw.offsetV - vu * centerU - vv * centerV;
+
+  out[at] = uu * mirrorU * width;
+  out[at + 1] = uv * mirrorU * width;
+  out[at + 2] = draw.cellU + (layer.flipU ? 1 - bu : bu) * width;
+  out[at + 3] = 0;
+  out[at + 4] = vu * mirrorV * height;
+  out[at + 5] = vv * mirrorV * height;
+  out[at + 6] = draw.cellV + (layer.flipV ? 1 - bv : bv) * height;
+  out[at + 7] = 0;
+}

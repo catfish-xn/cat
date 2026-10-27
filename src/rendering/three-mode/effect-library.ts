@@ -38,6 +38,7 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
   const reads = { json: 0, texture: 0, mesh: 0 };
   const json = new Map<string, Promise<unknown>>(), textures = new Map<string, Promise<Texture>>(), meshes = new Map<string, Promise<BufferGeometry>>();
   let closed = false;
+  const settled = new Map<unknown, () => void>();
   // After dispose nothing new is read, and a read still in flight is disposed when it lands (an effect that was loading
   // at the time then fails and plays nothing).
   const once = <T>(cache: Map<string, Promise<T>>, url: string, read: () => Promise<T>, release?: (value: T) => void): Promise<T> => {
@@ -46,6 +47,7 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
     if (!value) {
       value = read().then(result => {
         if (closed) { release?.(result); throw new Error('effect-library-closed'); }
+        if (release) settled.set(result, () => release(result));
         return result;
       });
       cache.set(url, value); value.catch(() => {});
@@ -94,8 +96,9 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
         if (use.refs > 0 || at - use.last < idleMs) continue;
         uses.delete(url);
         const texture = textures.get(url), mesh = meshes.get(url);
-        if (texture) void texture.then(value => value.dispose(), () => {});
-        if (mesh) void mesh.then(value => value.dispose(), () => {});
+        const release = (value: unknown) => { settled.get(value)?.(); settled.delete(value); };
+        if (texture) void texture.then(release, () => {});
+        if (mesh) void mesh.then(release, () => {});
         if (texture || mesh || json.has(url)) gone++;
         textures.delete(url); meshes.delete(url); json.delete(url);
       }
@@ -104,8 +107,9 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
     dispose() {
       if (closed) return;
       closed = true; pool.dispose();
-      for (const texture of textures.values()) void texture.then(value => value.dispose(), () => {});
-      for (const mesh of meshes.values()) void mesh.then(value => value.dispose(), () => {});
+      // The renderer may be disposed immediately after this call; its texture
+      // allocation records must still exist when the dispose events are sent.
+      for (const release of settled.values()) release(); settled.clear();
       json.clear(); textures.clear(); meshes.clear(); uses.clear();
     },
   };
