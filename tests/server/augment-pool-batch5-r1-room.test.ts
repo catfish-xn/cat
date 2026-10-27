@@ -19,6 +19,51 @@ import { canonicalContent } from '../../src/simulation/content';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/g2-3-item-registry';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
 import { tombRaiderPlan } from '../fixtures/m5/oracle.g2.cjs';
+import { captureAugmentHistoryAuthority } from '../../src/simulation/augment-history';
+import { readG23Progress, writeG23Progress } from '../../src/simulation/g2-3-state';
+import { replayG23Economy } from '../../src/simulation/g2-3-match-progress';
+import { applyG23Radiant } from '../../src/simulation/g2-3-radiant';
+import { g23RadiantDefinitionId } from '../../src/simulation/g2-3-rewards';
+import { appendResourceProvenance } from '../../src/simulation/resource-provenance';
+import type { G23BattleFacts, G23EconomyReceipt } from '../../src/simulation/g2-3-economy';
+import type { MatchState } from '../../src/simulation/match-types';
+
+/** Controlled historical PvP facts reach chest 15 in 4-3; the real economy replay and
+ * radiant hook create the conversion. The room's reward, equipment and carousel are real. */
+function radiantSnapshot(state: MatchState): MatchState {
+  const progress = readG23Progress(state)!;
+  const last = state.multiplayer!.receipts.find(r => r.roundId === '4-3')!;
+  const prior = state.multiplayer!.receipts.filter(r => r.round < last.round).slice(0, 2);
+  expect(prior).toHaveLength(2);
+  const selected = [...prior, last];
+  const facts = (receipt: typeof last, count: number): G23BattleFacts => ({
+    battleId: receipt.battleId, round: receipt.round, roundKind: 'pvp', result: receipt.result,
+    conquerorTier: 9, conquestTakedowns: Array.from({ length: count }, (_, i) => `${receipt.battleId}-enemy-${i}`),
+    chemBaronTier: 0, alliedDeaths: 0, rumbleStar: 0, highRollerGold: 0,
+  });
+  const records = (lastCount: number): G23EconomyReceipt[] => {
+    const replacements = selected.map((receipt, index) => ({ kind: 'battle' as const,
+      facts: facts(receipt, index === 2 ? lastCount : 30), gold: 0, bundles: [] }));
+    const kept = progress.economyReceipts.filter(r => r.kind !== 'battle' || !selected.some(s => s.round === r.facts.round));
+    expect(kept.every(r => r.kind === 'battle')).toBe(true);
+    return [...kept, ...replacements].sort((a, b) =>
+      (a.kind === 'battle' ? a.facts.round : a.round) - (b.kind === 'battle' ? b.facts.round : b.round));
+  };
+  const beforeLast = replayG23Economy(state.seed, records(0));
+  const missing = Math.ceil((1500 - beforeLast.conquest.stacks) / 20);
+  expect(missing).toBeGreaterThan(0); expect(missing).toBeLessThanOrEqual(30);
+  const replayed = replayG23Economy(state.seed, records(missing));
+  expect(replayed.conquest.receipts.find(r => r.chestTiers.includes(15))?.battleId).toBe(last.battleId);
+  const multiplayer = { ...state.multiplayer!, receipts: state.multiplayer!.receipts.map(receipt => {
+    const action = replayed.economyReceipts.find(r => r.kind === 'battle' && r.facts.battleId === receipt.battleId);
+    return action?.kind === 'battle' ? { ...receipt, g23Facts: action.facts } : receipt;
+  }) };
+  // The reward was equipped during 4-3, and no later resource fact may precede
+  // this settlement conversion in the reconstructed stream.
+  expect(state.resourceProvenance.entries.every(f => f.roundId !== '4-4')).toBe(true);
+  const converted = applyG23Radiant(writeG23Progress({ ...state, multiplayer, roundDefinitionId: '4-3' }, replayed));
+  return { ...converted, roundDefinitionId: state.roundDefinitionId };
+}
 
 /** Controlled PvP outcomes still go through the actual shared settlement command and Room rank/release commit.
  * PvE uses the real combat runner; no production observation or reward is seeded. */
@@ -49,12 +94,13 @@ class RankedEliminationResolver implements BattleResolver {
   }
 }
 
-describe.each([{ id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2 },
-  { id: 'tomb-raider-2', seed: 0, opportunities: 4, grants: 3 }])('$id actual Room publication, choice and authority', ({ id, seed, opportunities, grants }) => {
+describe.each([{ id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2, carousel: false },
+  { id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2, carousel: true },
+  { id: 'tomb-raider-2', seed: 0, opportunities: 4, grants: 3, carousel: true }])('$id actual Room publication, choice and authority (carousel: $carousel)', ({ id, seed, opportunities, grants, carousel }) => {
   const clock = new ManualClock(), resolver = new RankedEliminationResolver();
   const room = new Room(Array.from({ length: 8 }, (_, index) => ({ seatId: `s${index}`, name: `玩家${index}`, kind: 'human' as const })),
     { ...ROOM_TIMING_DEFAULTS, ...TIMINGS, seed, roomId: `tomb-room-${id}`, clock, resolver, pvpMode: 'placeholder',
-      ...(id === 'tomb-raider-2' ? { carousel: CAROUSEL_RULES_BINDING } : {}) });
+      ...(carousel ? { carousel: CAROUSEL_RULES_BINDING } : {}) });
   let ownerId = '', victims: readonly SeatState[] = [];
   const mine = () => room.state.seats.find(s => s.seatId === ownerId)!;
   beforeAll(() => room.start());
@@ -172,8 +218,84 @@ describe.each([{ id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2 },
     expect(restoreSharedOrbSnapshot(room.state.pool, canonicalContent(mine().match), authority)).toEqual(mine().match);
   });
 
+  if (carousel) it('equips a tomb reward before the controlled Conqueror conversion', () => {
+    reach('4-3'); answer();
+    const state = mine().match, receipt = state.seatMechanics!.receipts.find(r =>
+      r.source === TOMB_RAIDER_SOURCE && r.kind === 'choice' && g23RadiantDefinitionId(r.optionId));
+    expect(receipt?.kind).toBe('choice');
+    if (!receipt || receipt.kind !== 'choice' || !receipt.itemId) throw new Error('missing convertible reward');
+    const unit = state.preparation.units.find(u => u.team === 'player' && !UNIT_DEFINITIONS[u.definitionId].summon
+      && !state.items.some(i => i.location.kind === 'unit' && i.location.unitId === u.id && i.location.slot === 0));
+    expect(unit).toBeDefined(); if (!unit) throw new Error('missing equipment slot');
+    expect(room.handle(ownerId, { type: 'equip', itemId: receipt.itemId, unitId: unit.id, slot: 0 })).toMatchObject({ ok: true });
+  });
+
+  let radiantState: MatchState;
+  let reward: { itemId: string; optionId: string; radiantId: string };
+  if (carousel) it('reaches the shared carousel after equipping the reward', () => { reach('4-4'); });
+  if (carousel) it('constructs a converted reward from the ordered Conqueror history', () => {
+    const prior = mine().match.seatMechanics!.receipts.find(r => r.source === TOMB_RAIDER_SOURCE && r.kind === 'choice'
+      && mine().match.items.some(i => i.id === r.itemId && i.location.kind === 'unit'));
+    if (!prior || prior.kind !== 'choice' || !prior.itemId) throw new Error('missing equipped reward');
+    radiantState = radiantSnapshot(mine().match);
+    const converted = radiantState.items.find(i => i.id === prior.itemId)!;
+    reward = { itemId: prior.itemId, optionId: prior.optionId, radiantId: converted.definitionId };
+    expect(converted.definitionId).toBe(g23RadiantDefinitionId(prior.optionId));
+    const fact = radiantState.resourceProvenance.entries.find(f => f.kind === 'g23-item-converted' && f.itemId === prior.itemId);
+    expect(fact).toMatchObject({ from: prior.optionId, to: converted.definitionId, roundId: '4-3', receiptId: 'g23:conqueror:15' });
+  });
+
+  const edits: { name: string; edit: (s: any) => void }[] = [
+    { name: 'missing conversion', edit: s => { s.resourceProvenance.entries = s.resourceProvenance.entries.filter((f: any) => f.kind !== 'g23-item-converted' || f.itemId !== reward.itemId); } },
+    { name: 'wrong source definition', edit: s => { s.resourceProvenance.entries.find((f: any) => f.kind === 'g23-item-converted' && f.itemId === reward.itemId).from = reward.optionId === 'warmog' ? 'shojin' : 'warmog'; } },
+    { name: 'wrong chest receipt', edit: s => { s.resourceProvenance.entries.find((f: any) => f.kind === 'g23-item-converted' && f.itemId === reward.itemId).receiptId = 'g23:conqueror:14'; } },
+    { name: 'wrong sequence', edit: s => { s.resourceProvenance.entries.find((f: any) => f.kind === 'g23-item-converted' && f.itemId === reward.itemId).sequence++; } },
+    { name: 'wrong round', edit: s => { s.resourceProvenance.entries.find((f: any) => f.kind === 'g23-item-converted' && f.itemId === reward.itemId).roundId = '1-2'; } },
+    { name: 'wrong item identity', edit: s => { s.resourceProvenance.entries.find((f: any) => f.kind === 'g23-item-converted' && f.itemId === reward.itemId).itemId = 'forged-item'; } },
+    { name: 'conversion before birth', edit: s => { const entries = s.resourceProvenance.entries;
+      const from = entries.findIndex((f: any) => f.kind === 'g23-item-converted' && f.itemId === reward.itemId);
+      const birth = entries.findIndex((f: any) => f.kind === 'item-acquired' && f.itemId === reward.itemId);
+      entries.splice(birth, 0, entries.splice(from, 1)[0]); entries.forEach((f: any, i: number) => { f.sequence = i; }); } },
+    { name: 'conversion after consumption', edit: s => { const entries = s.resourceProvenance.entries;
+      const index = entries.findIndex((f: any) => f.kind === 'g23-item-converted' && f.itemId === reward.itemId);
+      entries.splice(index, 0, { kind: 'item-combined', roundId: '4-3', sequence: index,
+        event: { type: 'itemCombined', consumedIds: [reward.itemId, 'other-item'], itemId: 'item-forged', definitionId: 'warmog' } });
+      entries.forEach((f: any, i: number) => { f.sequence = i; }); } },
+    { name: 'wrong target mapping', edit: s => { const f = s.resourceProvenance.entries.find((f: any) => f.kind === 'g23-item-converted' && f.itemId === reward.itemId);
+      f.to = f.to === 'TFT5_Item_WarmogsArmorRadiant' ? 'TFT5_Item_SpearOfShojinRadiant' : 'TFT5_Item_WarmogsArmorRadiant';
+      s.items.find((i: any) => i.id === reward.itemId).definitionId = f.to; } },
+    { name: 'forged unlock', edit: s => { s.seatMechanics.seat.radiantConversion = false; } },
+  ];
+  const boundaries = [
+    { name: 'shared-orb', restore: (input: unknown, auth: ReturnType<typeof captureAugmentHistoryAuthority>) => restoreSharedOrbSnapshot(room.state.pool, input, auth) },
+    { name: 'carousel', restore: (input: unknown, auth: ReturnType<typeof captureAugmentHistoryAuthority>) => restoreCarouselSeat(room.state.carousel!.state, input, auth) },
+  ];
+  if (carousel) for (const { name, restore } of boundaries) {
+    it(`${name} restores the legal radiant conversion`, () => {
+      const authority = captureAugmentHistoryAuthority(radiantState);
+      for (const input of [radiantState, JSON.stringify(radiantState), canonicalContent(radiantState)])
+        expect(restore(input, authority)).toEqual(radiantState);
+    });
+    for (const { name: forgery, edit } of edits) it(`${name} rejects ${forgery}`, () => {
+      const bad = structuredClone(radiantState); edit(bad);
+      const authority = captureAugmentHistoryAuthority(bad);
+      for (const input of [bad, JSON.stringify(bad), canonicalContent(bad)])
+        expect(() => restore(input, authority)).toThrow('Invalid tomb raider authority');
+    });
+    it(`${name} rejects a correct mapping without the chest-15 unlock`, () => {
+      const noUnlock: MatchState = structuredClone(mine().match);
+      const fakeItem = noUnlock.items.find(i => i.id === reward.itemId)!;
+      const fake = { ...noUnlock, items: noUnlock.items.map(i => i.id === reward.itemId
+        ? { ...i, definitionId: reward.radiantId } : i),
+      resourceProvenance: appendResourceProvenance(noUnlock.resourceProvenance, noUnlock.roundDefinitionId,
+        { kind: 'g23-item-converted', itemId: fakeItem.id, from: reward.optionId, to: reward.radiantId, receiptId: 'g23:conqueror:15' }) };
+      const authority = captureAugmentHistoryAuthority(fake);
+      for (const input of [fake, JSON.stringify(fake), canonicalContent(fake)])
+        expect(() => restore(input, authority)).toThrow('Invalid tomb raider authority');
+    });
+  }
+
   if (id === 'tomb-raider-2') it('round trips its earned items and history through the real shared-carousel restore boundary', () => {
-    reach('4-3'); reach('4-4');
     expect(room.state.phase).toBe('carousel');
     const carousel = room.state.carousel!.state, state = mine().match, authority = room.augmentHistoryAuthority(ownerId);
     for (const input of [state, JSON.stringify(state), canonicalContent(state)]) expect(restoreCarouselSeat(carousel, input, authority)).toEqual(state);
