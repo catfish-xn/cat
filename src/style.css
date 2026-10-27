@@ -1166,6 +1166,8 @@ body[data-online] .shop-dock .shop-choice[data-choice-source="armory"] .shop-cho
 body[data-online] .shop-dock .shop-choice-bar { grid-area: top; justify-self: start; align-self: center; flex-wrap: nowrap; min-width: 0; max-width: 100%; margin: 0 !important;
   overflow: hidden; font-size: 11px !important; white-space: nowrap; }
 body[data-online] .shop-dock .shop-odds:has(.shop-choice-toggle) { flex-wrap: nowrap; }
+body[data-online] .shop-dock .shop-odds:has(.shop-choice-toggle) > :not(.shop-choice-toggle) { min-width: 0; overflow: hidden; }
+body[data-online] .shop-dock .shop-odds .shop-choice-toggle { flex: none; white-space: nowrap; }
 /* 3D centres the gold chip on the top row: the bar stays left of it; the long parts shrink first, the toggle never does. */
 body[data-online]:has(.render3d-layer) .shop-dock .shop-choice-bar { max-width: 42%; }
 .shop-dock .shop-choice-bar > :is(.market-meta, .choice-timeout) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -1590,6 +1592,9 @@ body[data-online] .shop-dock:has([data-armory="anvil"]) { grid-template-rows: 44
 body[data-online] .shop-dock[data-anvil-choice] .shop-choice-toggle { min-width: 44px; min-height: 44px; }
 body[data-online] .shop-dock [data-armory="anvil"] .shop-choice-bar { max-width: 100%; overflow: visible; }
 body[data-online] .shop-dock [data-armory="anvil"] .choice-timeout { display: none; }
+/* Keep the gold capsule clear of the anvil bar without disabling its income tooltip. */
+body[data-online]:has(> .render3d-layer) .shop-dock:has([data-armory="anvil"]) .hud-gold { right: 8px; }
+
 
 /* Choice rows must reserve their actual height in the board grid, including the fixed 3D dock. */
 body[data-online]:has(.shop-choice[data-choice-source="armory"]) { --online-dock-h: clamp(168px, 19.5dvh, 220px); }
@@ -1603,6 +1608,12 @@ body[data-online]:has(> .render3d-layer) #panels-root > * { pointer-events: auto
     grid-template-areas: "level level gold gold" "top top top top" "cards cards cards cards";
     grid-template-rows: 24px 44px minmax(96px, 1fr);
   }
+  /* While the anvil is pending, the normal shop also needs full-height gold and return controls. */
+  body[data-online]:has(.shop-dock[data-anvil-choice]) { --online-dock-h: 260px; }
+  body[data-online] .shop-dock[data-anvil-choice]:not(:has([data-armory="anvil"])) { grid-template-rows: 44px 44px 96px 44px; }
+  /* The gold tooltip has a 44px touch target; give that target its own row. */
+  body[data-online]:has(.shop-choice[data-armory="anvil"]) { --online-dock-h: 267px; }
+  body[data-online] .shop-dock:has([data-armory="anvil"]) { grid-template-rows: 44px 44px minmax(96px, 1fr); }
   body[data-online] .shop-dock:has([data-armory="anvil"]) .touch-shop { grid-row: 3 / -1; }
   body[data-online] .shop-dock:has([data-armory="anvil"]) .hud-pop { display: none; }
   body[data-online]:has(> .render3d-layer) > .render3d-layer .render3d-bar { width: calc(100vw - 96px); max-width: calc(100vw - 96px); }

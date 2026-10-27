@@ -73,17 +73,17 @@ try {
           if (message.type === 'receipt' && commands.some(command => command.commandId === message.commandId)) receipts.push(message);
         });
       });
-      const activate = async selector => {
+      const activate = async (selector, centre = false) => {
         const button = page.locator(selector);
         await button.scrollIntoViewIfNeeded();
-        // Record a real exposed hit point: existing floating gold can cover a choice toggle's centre.
-        const position = await button.evaluate(node => {
+        // Some board controls need an exposed point; shop regression actions explicitly use their centre.
+        const position = await button.evaluate((node, centre) => {
           const b = node.getBoundingClientRect();
-          for (const y of [0.5, 0.8, 0.2]) for (const x of [0.5, 0.2, 0.8]) {
+          for (const y of (centre ? [0.5] : [0.5, 0.8, 0.2])) for (const x of (centre ? [0.5] : [0.5, 0.2, 0.8])) {
             if (node.contains(document.elementFromPoint(b.x + b.width * x, b.y + b.height * y))) return { x: b.width * x, y: b.height * y };
           }
           return null;
-        });
+        }, centre);
         assert.ok(position, `${tag}: ${selector} has an exposed hit target`);
         activations.push({ selector, position, input: viewport.width === 390 ? 'touch' : 'mouse' });
         if (viewport.width === 390) await button.tap({ position }); else await button.click({ position });
@@ -109,6 +109,19 @@ try {
       results.push(sample);
       const check = (flow, name, pass, detail) => sample.checks.push({ flow, name, pass: Boolean(pass), ...(detail === undefined ? {} : { detail }) });
       const shot = async name => { const path = join(out, `${tag}-${name}.png`); await page.screenshot({ path }); sample.screenshots.push(path); };
+      // Test the centre and interior of each visible control, including children inside the button.
+      const checkShopHitTargets = async (phase, selector, expectedCount) => {
+        const hits = await page.locator(selector).evaluateAll(nodes => nodes.map(node => {
+          const b = node.getBoundingClientRect();
+          return { id: node.dataset.debug ?? node.textContent.trim(), width: b.width, height: b.height,
+            points: [[0.5, 0.5], [0.2, 0.2], [0.8, 0.2], [0.2, 0.8], [0.8, 0.8]].map(([x, y]) => {
+              const hit = document.elementFromPoint(b.x + b.width * x, b.y + b.height * y);
+              return { x, y, correct: hit?.closest('button') === node, target: hit?.outerHTML.slice(0, 300) ?? null };
+            }) };
+        }));
+        check('shop-hit', `${phase}: all control centres and interior points hit their buttons`, hits.length === expectedCount && hits.every(hit => hit.width > 0 && hit.height > 0 && hit.points.every(point => point.correct)), hits);
+        assert.ok(hits.length === expectedCount && hits.every(hit => hit.width > 0 && hit.height > 0 && hit.points.every(point => point.correct)), `${tag}: ${phase} shop hit targets: ${JSON.stringify(hits)}`);
+      };
       await shot('start');
       console.log('START', tag, game.room.state.seats.map(s => ({ id: s.seatId, kind: s.kind, controller: s.controller })), await page.locator('.opening-card').count());
       if (mode === '3d') {
@@ -192,12 +205,23 @@ try {
       check('anvil', 'timer above cards', sample.anvil.clock === '剩余 30 秒' && sample.anvil.clockRect.y + sample.anvil.clockRect.height <= ac[0].y + 1);
       check('anvil', 'XP/reroll/lock/sell hidden', sample.anvil.hidden.every(b => !b.visible));
       if (assetRoot) check('assets', 'original shop-bar icon decoded', sample.anvil.icon?.src.includes('/anvils/icons/TFT_ArmoryKeyComponent.png') && sample.anvil.icon.width > 0);
+      await checkShopHitTargets('anvil choice', '[data-armory="anvil"] .shop-card, [data-debug="shop-choice-away"]', 5);
+      const goldClear = await page.evaluate(() => {
+        const gold = document.querySelector('.shop-dock .hud-gold'), button = document.querySelector('[data-debug="shop-choice-away"]');
+        const g = gold.getBoundingClientRect(), b = button.getBoundingClientRect();
+        return { visible: !!gold.getClientRects().length && getComputedStyle(gold).visibility === 'visible',
+          hit: gold.contains(document.elementFromPoint(g.x + g.width / 2, g.y + g.height / 2)),
+          separate: g.right <= b.left || b.right <= g.left || g.bottom <= b.top || b.bottom <= g.top,
+          gold: { x: g.x, y: g.y, width: g.width, height: g.height }, button: { x: b.x, y: b.y, width: b.width, height: b.height } };
+      });
+      check('shop-hit', 'gold display visible and clear of view-shop button', goldClear.visible && goldClear.hit && goldClear.separate, goldClear);
+      assert.ok(goldClear.visible && goldClear.hit && goldClear.separate, `${tag}: gold overlaps view-shop: ${JSON.stringify(goldClear)}`);
       await shot('anvil-open');
       // Regression V: pending anvil survives view-shop; normal controls must regain separate grid cells.
       const beforeShopActions = myMatch(), choiceBeforeShop = beforeShopActions.pendingChoice;
       seedSeat(room, match => ({ ...match, gold: 50 }));
       await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.gold === 50);
-      await activate('[data-debug="shop-choice-away"]');
+      await activate('[data-debug="shop-choice-away"]', true);
       const controlIds = ['mobile:buy-xp', 'mobile:reroll', 'mobile:sell', 'shop-lock'];
       sample.anvil.shopView = await page.evaluate(ids => {
         const dock = document.querySelector('#shop-dock'), style = getComputedStyle(dock);
@@ -210,27 +234,28 @@ try {
           }) };
       }, controlIds);
       const shopView = sample.anvil.shopView;
-      check('anvil-shop', 'normal shop grid and population restored while choice pending', shopView.areas === normalGrid.areas && shopView.rows === normalGrid.rows && shopView.populationVisible);
+      check('anvil-shop', 'normal shop grid and population restored while choice pending', shopView.areas === normalGrid.areas && shopView.rows === (viewport.width === 390 ? '44px 44px 96px 44px' : normalGrid.rows) && shopView.populationVisible);
       const controlsSeparate = shopView.controls.every((a, i, boxes) => boxes.slice(i + 1).every(b =>
         a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y));
       check('anvil-shop', 'four controls have non-overlapping bounding boxes and correct hit targets', controlsSeparate && shopView.controls.every(b =>
         b.width >= 44 && b.height >= 44 && b.x >= 0 && b.y >= 0 && b.x + b.width <= viewport.width + 1 && b.y + b.height <= viewport.height + 1 && b.target === b.id), shopView.controls);
+      await checkShopHitTargets('view shop', '.shop-dock .shop-card, .shop-dock [data-debug="mobile:buy-xp"], .shop-dock [data-debug="mobile:reroll"], .shop-dock [data-debug="mobile:sell"], .shop-dock [data-debug="shop-lock"], .shop-dock [data-debug="shop-choice-back"]', 10);
       await shot('anvil-view-shop');
       assert.ok(controlsSeparate, `${tag}: shop controls overlap: ${JSON.stringify(shopView.controls)}`);
       // Only affordability is seeded; all four actual DOM taps/clicks go through the online client and server.
       const xpBefore = { level: myMatch().level, xp: myMatch().xp, gold: myMatch().gold };
-      await activate('[data-debug="mobile:buy-xp"]');
+      await activate('[data-debug="mobile:buy-xp"]', true);
       await page.waitForFunction(before => {
         const state = window.__CAT_DEBUG__.read().state;
         return state.level !== before.level || state.xp !== before.xp;
       }, xpBefore);
       check('anvil-shop', 'XP tap confirmed by server', myMatch().gold < xpBefore.gold && (myMatch().level !== xpBefore.level || myMatch().xp > xpBefore.xp));
       const generation = myMatch().shop.generation;
-      await activate('[data-debug="mobile:reroll"]');
+      await activate('[data-debug="mobile:reroll"]', true);
       await page.waitForFunction(before => window.__CAT_DEBUG__.read().state.shop.generation > before, generation);
       check('anvil-shop', 'reroll tap confirmed by server', myMatch().shop.generation > generation);
       const locked = myMatch().shop.locked;
-      await activate('[data-debug="shop-lock"]');
+      await activate('[data-debug="shop-lock"]', true);
       await page.waitForFunction(before => window.__CAT_DEBUG__.read().state.shop.locked !== before, locked);
       check('anvil-shop', 'lock tap confirmed by server', myMatch().shop.locked === !locked);
       const unitIds = myMatch().preparation.units.map(u => u.id);
@@ -241,10 +266,10 @@ try {
       const bought = myMatch().preparation.units.find(u => !unitIds.includes(u.id));
       // Select the newly purchased sale target without moving the board camera or answering the pending choice.
       await page.evaluate(id => { window.__reviewScene.selectedId = id; }, bought.id);
-      await activate('[data-debug="mobile:sell"]');
+      await activate('[data-debug="mobile:sell"]', true);
       await page.waitForFunction(id => !window.__CAT_DEBUG__.read().state.preparation.units.some(u => u.id === id), bought.id);
       check('anvil-shop', 'sell tap confirmed by server', !myMatch().preparation.units.some(u => u.id === bought.id));
-      await activate('[data-debug="shop-choice-back"]');
+      await activate('[data-debug="shop-choice-back"]', true);
       const backCards = page.locator('[data-armory="anvil"] .shop-card');
       await backCards.first().waitFor();
       assert.deepEqual(myMatch().pendingChoice, choiceBeforeShop);
