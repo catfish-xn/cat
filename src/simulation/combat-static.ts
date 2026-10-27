@@ -1,5 +1,6 @@
 import { equalOrderedJson, isImmutableJson, shareGeneratedDeclaration, shareParsedDeclaration } from './immutable-json';
 import { freezeContent, freezeTransientContent } from './content/freeze';
+import { clonePlainData } from './plain-clone';
 import type { CombatState, CombatUnit } from './combat-types';
 
 const fields = ['ability', 'sources', 'triggers', 'mechanics', 'itemPrograms', 'companionDefinitions', 'attackCone', 'mechanismDefinitions'] as const;
@@ -108,20 +109,24 @@ export function copyCombatUnitForTick(unit: CombatUnit): CombatUnit {
   if (omitDefinitions) writable.mechanismDefinitions = undefined;
   if (omitState) writable.mechanismState = undefined;
   if (omitLedger) writable.triggerLedger = undefined;
-  for (const key of Object.keys(copy) as (keyof CombatUnit)[]) {
-    const value = copy[key];
+  // The detached spread holds only data properties, so one native pass over
+  // its values replaces a megamorphic keyed read per field.
+  const keys = Object.keys(copy) as (keyof CombatUnit)[], values = Object.values(copy);
+  for (let index = 0; index < keys.length; index++) {
+    const value = values[index];
     if (value === null || typeof value !== 'object') {
       // Preserve the native detach boundary's rejection of non-cloneable values,
       // including a getter that returns a function on its first (only) read.
       if (typeof value === 'function' || typeof value === 'symbol') structuredClone(value);
       continue;
     }
-    if (Object.hasOwn(shared, key) || key === 'startingCell') continue;
+    const key = keys[index];
+    if (key === 'startingCell' || Object.hasOwn(shared, key)) continue;
     let next: unknown;
     if (key === 'runtime') next = { ...value };
     else if (tickRecords.has(key)) next = immutableTickRecord(value);
     else if (tickLists.has(key) && Array.isArray(value)) next = value.map(entry => immutableTickRecord(entry));
-    else next = cloneWritable(value);
+    else next = clonePlainData(value);
     writable[key] = next;
   }
   // Mechanism definitions already follow the resolver's copy-on-write contract;
@@ -137,33 +142,4 @@ export function copyCombatUnitForTick(unit: CombatUnit): CombatUnit {
   if (unit.mechanismState) writable.mechanismState = unit.mechanismState;
   if (unit.triggerLedger) writable.triggerLedger = unit.triggerLedger;
   return copy;
-}
-
-// Detach ordinary runtime data without a native serialization round-trip.
-// Descriptor reads are speculative only: accessors and built-ins take the
-// unchanged native boundary, and aliases/cycles keep one copy per input node.
-function cloneWritable<T>(value: T): T {
-  const copies = new Map<object, object>();
-  const clone = (input: unknown): unknown => {
-    if (input === null || typeof input !== 'object') {
-      if (typeof input === 'function' || typeof input === 'symbol') throw nativeTickClone;
-      return input;
-    }
-    const previous = copies.get(input);
-    if (previous) return previous;
-    const array = Array.isArray(input), prototype = Object.getPrototypeOf(input);
-    if (prototype !== (array ? Array.prototype : Object.prototype) && prototype !== null) throw nativeTickClone;
-    const result: Record<string, unknown> | unknown[] = array ? new Array((input as unknown[]).length) : {};
-    copies.set(input, result);
-    for (const key of Object.keys(input)) {
-      const descriptor = Object.getOwnPropertyDescriptor(input, key)!;
-      if (!('value' in descriptor)) throw nativeTickClone;
-      const child = clone(descriptor.value);
-      if (key === '__proto__') Object.defineProperty(result, key, { value: child, enumerable: true, writable: true, configurable: true });
-      else (result as Record<string, unknown>)[key] = child;
-    }
-    return result;
-  };
-  try { return clone(value) as T; }
-  catch (error) { if (error !== nativeTickClone) throw error; return structuredClone(value); }
 }

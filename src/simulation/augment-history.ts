@@ -8,6 +8,7 @@ import { completeTraitTrackerCommand } from './augment-pool-batch5-h10-tracker';
 import { maxCapOfferNeedsHistory } from './augment-pool-batch5-h12-progression';
 import { settleBatch5H9History } from './augment-pool-batch5-h9';
 import type { MatchState, MatchEvent } from './match-types';
+import { clonePlainData } from './plain-clone';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
 import { augmentNeedsHistory, AUGMENT_HISTORY_OWNERS } from './augment-history-owners';
@@ -28,12 +29,12 @@ export const historySeatId = (s: MatchState): string => s.multiplayer?.seatId ??
 export const needsAugmentHistory = (s: MatchState): boolean => s.augments.some(a => augmentNeedsHistory(a.definitionId)) || maxCapOfferNeedsHistory(s);
 export const needsAugmentPreparationClock = (s: MatchState): boolean => s.augments.some(a => AUGMENT_HISTORY_OWNERS[a.definitionId]?.includes('preparation-time'));
 export function historyRoster(s: Pick<MatchState, 'preparation' | 'items'>): HistoryRoster {
-  return structuredClone({ units: s.preparation.units.filter(u => u.team === 'player'), items: s.items });
+  return clonePlainData({ units: s.preparation.units.filter(u => u.team === 'player'), items: s.items });
 }
 export function appendAugmentFact(s: MatchState, fact: AugmentFactData): MatchState {
   if (!s.augmentHistory) { historyCheck(!needsAugmentHistory(s), 'missing augment-history-v1; history-dependent augment saves cannot be authenticated'); return s; }
   historyCheck(s.augmentHistory.facts.length < LIMIT.facts && s.round <= LIMIT.rounds, 'recording bounds');
-  const row: AugmentHistoryFact = { ...structuredClone(fact), sequence: s.augmentHistory.facts.length,
+  const row: AugmentHistoryFact = { ...clonePlainData(fact), sequence: s.augmentHistory.facts.length,
     seatId: historySeatId(s), round: s.round, roundId: getMultiplayerRoundByOrdinal(s.round).roundId,
     resourcePrefix: s.resourceProvenance.entries.length };
   return { ...s, augmentHistory: { ...s.augmentHistory, facts: [...s.augmentHistory.facts, row] } };
