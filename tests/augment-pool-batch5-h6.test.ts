@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { contestedAmount } from '../src/simulation/augment-pool-batch5-h6';
 import { AUGMENT_BATCH5_H6 } from '../src/simulation/content/augment-pool-batch5-h6';
-import { offeredAt } from './augment-stage-helpers';
+import { offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import { reachRound, accepted, resolveM5Choices } from './match-helpers';
 import { selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -13,7 +13,7 @@ it.skipIf(!existsSync(RESEARCH_FILE))('archive values and stage tags',()=>{
  expect(['2-1','3-2','4-2'].map(n=>offeredAt('contested',n as '2-1'|'3-2'|'4-2'))).toEqual([false,true,false]);
 });
 it('selects via real 3-2 offer, freezes a solo PvP roster, and authenticates three restore entries',()=>{
- let s=reachRound('3-2',false,52);
+ let s=reachRound('3-2',false,STAGE_SEEDS.contested.seed);
  expect(s.pendingChoice?.offers).toContain('contested');
  const c=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,'contested'));
  s=resolveM5Choices(s);s=accepted(startMatchCombat(s));
@@ -31,7 +31,7 @@ it('settlement pays once per two other live players from the frozen roster, igno
  const {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION}=await import('../src/simulation/round-settlement');
  const {recordAugmentPvpRoster,historyRoster,prepareAugmentAcquisition,captureAugmentHistoryAuthority}=await import('../src/simulation/augment-history');
  const {validateAugmentHistory}=await import('../src/simulation/augment-history-restore');
- let s=reachRound('3-2',false,52);
+ let s=reachRound('3-2',false,STAGE_SEEDS.contested.seed);
  const enabled=enableMultiplayerSettlement(s,'s0');expect(enabled.ok).toBe(true);if(!enabled.ok)throw new Error(enabled.reason);s=enabled.state;
  prepareAugmentAcquisition(s,{status:'none'},0,[{...historyRoster(s),seatId:'s0',index:0,hp:s.playerHp,alive:true,rank:1,eliminatedRound:null}]);
  const c=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,'contested'));s=resolveM5Choices(s);

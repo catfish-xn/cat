@@ -8,7 +8,8 @@ import { snapshotForBattle } from '../../src/simulation/two-sided-snapshot';
 import { compileBattle } from '../../src/simulation/two-sided-battle';
 
 describe('scoreboard real room',()=>{
- const {room,clock}=makeRoom(new TwoSidedBattleResolver());let seatId='';
+ // First integrated-pool seed offering Scoreboard to s0 within three rerolls.
+ const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:49});let seatId='';
  afterAll(()=>room.dispose());
  for(const round of ['1-2','1-3','1-4','2-1']) it(`reaches ${round} through the room`,()=>{
   if(round==='1-2')room.start();

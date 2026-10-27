@@ -3,7 +3,7 @@ import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, buyXp, deployMatchUnit, getDeploymentCap, type MatchState } from '../src/simulation/match';
+import { nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, buyXp, rerollShop, deployMatchUnit, getDeploymentCap, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { AUGMENT_BATCH5_H4 } from '../src/simulation/content/augment-pool-batch5-h4';
 import { offeredAt } from './augment-stage-helpers';
@@ -32,10 +32,18 @@ let rewarded:MatchState;
 it('B5-33 pays its first recurring gold from an actual three-trait board',()=>{
  let s=reachRound('3-2',false,17),c=s.pendingChoice!;
  s=accepted(selectChoice(s,c.choiceId,c.generation,id));s=resolveM5Choices(s);
- for(const slot of s.shop.slots){if(slot.status!=='available'||s.gold<2||s.preparation.units.some(u=>u.team==='player'&&u.definitionId===slot.definitionId))continue;
-  const r=buyUnit(s,s.shop.slots.indexOf(slot),s.shop.generation);if(r.ok)s=r.state;}
+ // The merged first augment changes the gifted heroes. Build the same three-trait
+ // witness with paid public shop commands instead of relying on incidental gifts.
+ const roster=['irelia','rell','draven','vex','morgana'];
+ const owns=(id:string)=>s.preparation.units.some(u=>u.team==='player'&&u.definitionId===id);
+ for(let refresh=0;refresh<=20&&!roster.every(owns);refresh++){
+  for(const [index,slot] of s.shop.slots.entries())if(slot.status==='available'&&roster.includes(slot.definitionId)&&!owns(slot.definitionId))
+   s=accepted(buyUnit(s,index,s.shop.generation));
+  if(!roster.every(owns)&&refresh<20)s=accepted(rerollShop(s));
+ }
+ expect(roster.every(owns)).toBe(true);
  while(s.gold>=4&&getDeploymentCap(s)<5){const r=buyXp(s);if(!r.ok)break;s=r.state;}
- for(const u of s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench')){
+ for(const u of s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&roster.includes(u.definitionId))){
   if(s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length>=getDeploymentCap(s))break;
   for(let col=0;col<7;col++){if(s.preparation.units.some(v=>v.team==='player'&&v.location.kind==='board'&&v.location.cell.col===col&&v.location.cell.row===4))continue;
    const r=deployMatchUnit(s,u.id,{kind:'board',cell:{col,row:4}});if(r.ok){s=r.state;break;}}

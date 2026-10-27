@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -9,6 +9,17 @@ const research = '/home/aiapps/workspace/augments-research-2026-10-23/data/augme
 const crossversion = '/home/aiapps/workspace/augment-crossversion-research-2026-10-24';
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
+
+// Capture the real CLI through files: sandboxed Node may forbid the sockets used
+// by spawnSync's default pipes. Preserve the exit, stderr and stdout assertions.
+function runAudit(args: string[], root: string) {
+  const stdout = join(root, 'stdout.txt'), stderr = join(root, 'stderr.txt');
+  const out = openSync(stdout, 'w'), err = openSync(stderr, 'w');
+  try {
+    const result = spawnSync(process.execPath, [script, ...args], { stdio: ['ignore', out, err] });
+    return { ...result, stdout: readFileSync(stdout, 'utf8'), stderr: readFileSync(stderr, 'utf8') };
+  } finally { closeSync(out); closeSync(err); }
+}
 
 // Handwritten mini-source and expected vectors. No game/production imports.
 const cases = [
@@ -48,7 +59,7 @@ function fixture() {
   put('research/report.zh-CN.md', '| 黑色玫瑰之徽 | 不再于 2-1 提供。 |\n| 黑色玫瑰之冕 | 重新启用，但不于 2-1 提供。 |');
   function run() {
     const out = join(root, 'report.txt');
-    const p = spawnSync(process.execPath, [script, '--root', root, '--data', join(root, 'research/data/augments-14.24.json'), '--crossversion', join(root, 'cross'), '-o', out], { encoding: 'utf8' });
+    const p = runAudit(['--root', root, '--data', join(root, 'research/data/augments-14.24.json'), '--crossversion', join(root, 'cross'), '-o', out], root);
     expect(p.error).toBeUndefined(); expect(p.stderr).toBe('');
     return { status: p.status, result: JSON.parse(p.stdout), report: readFileSync(out, 'utf8') };
   }
@@ -127,11 +138,12 @@ it('reports missing research as an error rather than claiming an empty audit pas
 // Characterize findings, not a waiver: the CLI must exit 1 for the five defects.
 // Synthetic tests above always run on CI without the external research bundle.
 it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14.24-map22.bin.json')))('audits the actual 14.24 archive and reports the exact unresolved discrepancies', () => {
-  const p = spawnSync(process.execPath, [script], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
+  const root = mkdtempSync(join(tmpdir(), 'stage-bans-archive-')); dirs.push(root);
+  const p = runAudit([], root);
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
-  // Pool apiNames include both the existing Batch 5 augments and H6; retain all discrepancy assertions.
-  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 209, shippedRows: 162, regeneratedRows: 167, unrestricted: 69, errors: 5, crossVersionDifferences: 8 });
+  // Integrated H1/H3/H4/H5/H6 inventory (including disabled Shop Glitch); retain all discrepancy assertions.
+  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 218, shippedRows: 171, regeneratedRows: 176, unrestricted: 69, errors: 5, crossVersionDifferences: 8 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
     ['TABLE_MISMATCH', 'TFT13_Augment_Academy', ['4-2']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Cabal', ['2-1', '4-2']],

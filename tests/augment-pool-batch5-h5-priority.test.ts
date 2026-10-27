@@ -31,7 +31,7 @@ it('offers priority only at its allowed shared-carousel nodes',()=>{
 });
 const clock=new ManualClock();
 const room=new Room(SEATS,{
-  ...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h5-priority',seed:46,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING,
+  ...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h5-priority',seed:8,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING,
 });
 let selected:MatchState;
 beforeAll(()=>{room.start();runUntil(room,clock,s=>s.round===4&&s.phase==='preparation');});

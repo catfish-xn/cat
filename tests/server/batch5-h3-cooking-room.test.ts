@@ -6,13 +6,14 @@ import { snapshotForBattle } from '../../src/simulation/two-sided-snapshot';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:3});
+// First integrated-pool seed offering the card to s2 within two rerolls.
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:5});
 const mine=()=>room.state.seats.find(s=>s.seatId==='s2')!.match;
 let target:string;
 beforeAll(()=>room.start());
 for(const round of ['1-3','1-4','2-1'])beforeAll(()=>{runUntil(room,clock,s=>s.roundId===round&&s.phase==='preparation');});
 beforeAll(()=>{
- for(let slot=0;slot<2;slot++){const c=mine().pendingChoice!;expect(room.handle('s2',{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:slot})).toMatchObject({ok:true});}
+ for(let slot=0;slot<2&&!mine().pendingChoice!.offers.includes('cooking-pot');slot++){const c=mine().pendingChoice!;expect(room.handle('s2',{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:slot})).toMatchObject({ok:true});}
  const c=mine().pendingChoice!;expect(c.offers).toContain('cooking-pot');
  expect(room.handle('s2',{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'cooking-pot'})).toMatchObject({ok:true});
  const pan=mine().items.find(i=>i.definitionId==='frying-pan'&&i.location.kind==='inventory');expect(pan).toBeDefined();
