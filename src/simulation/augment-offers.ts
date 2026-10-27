@@ -1,4 +1,5 @@
 import { augmentExtraRerolls, canRerollAugmentSlot, promoteNextAugmentTier } from './augment-pool-batch5-s1a';
+import { skipsFutureAugment } from './augment-pool-batch5-s1b';
 import { WARWICK_EXCLUDED_AUGMENTS } from './content/opening-batch-b';
 import { openingEncounterId } from './opening-encounter';
 import { AUGMENT_DEFINITIONS } from './content/augments';
@@ -179,6 +180,7 @@ export function validateAugmentOfferHistory(state: MatchState): void {
     if (node.kind !== 'augment') continue;
     const selected = state.augments.find(a => a.choiceId === node.id);
     const pending = state.pendingChoice?.kind === 'augment' && state.pendingChoice.choiceId === node.id ? state.pendingChoice : null;
+    if (skipsFutureAugment({augments:owned}, round)) { check(!selected && !pending); continue; }
     if (!selected && !pending) continue;
     const record = state.augmentOffers[index++];
     const tier = resolveAugmentTier({...state, augments: owned}, node.id);

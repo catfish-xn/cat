@@ -1,3 +1,4 @@
+import { atWhatCostGrant } from './augment-pool-batch5-s1b';
 import { getRoundSchedule, FINAL_ROUND } from './round-schedule';
 import { foldResourceProvenance } from './resource-provenance';
 import { readG23Progress } from './g2-3-state';
@@ -20,7 +21,7 @@ import { AUGMENT_DEFINITIONS } from './content/augments';
 import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
 import { SHOP_CATALOG, MATCH_RULES } from './match-rules';
 
-const shopOwner=(id:string)=>Boolean(AUGMENT_SHOP[id])||id==='dual-purpose';
+const shopOwner=(id:string)=>Boolean(AUGMENT_SHOP[id])||id==='dual-purpose'||id==='reroll-transfer'||id==='at-what-cost';
 const point=(s:MatchState):ShopHistoryPoint=>({round:s.round,level:s.level,xp:s.xp,resourcePrefix:s.resourceProvenance.entries.length,owners:s.augments.map(a=>a.choiceId),gold:s.gold,mechanicPrefix:s.seatMechanics?.receipts.length??0,lootPrefix:s.m8.loot.receipts.length,schedulePrefix:s.scheduleReceipts.length,economyPrefix:s.roundResults.length});
 const append=(s:MatchState,e:ShopHistoryEntry):MatchState=>s.shopHistory?{...s,shopHistory:{...s.shopHistory,entries:[...s.shopHistory.entries,e]}}:s;
 export function recordShopAcquisition(before:MatchState,after:MatchState):MatchState {
@@ -149,7 +150,7 @@ export function validateShopHistory(state:MatchState):void {
  for(const e of h.entries){
   check(e&&typeof e==='object','entry');checkPoint(e.point,state);check(e.point.resourcePrefix>=prefix,'resource order');prefix=e.point.resourcePrefix;
   // Crafted Crafting credits exist only after their real combination, including within the same round.
-  cursor={...cursor,resourceProvenance:{...state.resourceProvenance,entries:state.resourceProvenance.entries.slice(0,prefix)}};
+  cursor={...cursor,scheduleReceipts:state.scheduleReceipts.slice(0,e.point.schedulePrefix),resourceProvenance:{...state.resourceProvenance,entries:state.resourceProvenance.entries.slice(0,prefix)}};
   sync(e.point);
   const expectedOwners=e.kind==='acquire'?[...cursor.augments.map(a=>a.choiceId),e.choiceId]:cursor.augments.map(a=>a.choiceId);
   check(same(e.point.owners,expectedOwners),'ownership chronology');
@@ -160,7 +161,7 @@ export function validateShopHistory(state:MatchState):void {
   if(e.kind==='acquire'){
    keys(e,['kind','point','choiceId']);const a=state.augments.find(a=>a.choiceId===e.choiceId)!;
    check(a&&a.acquiredRound===cursor.round&&!cursor.augments.some(x=>x.choiceId===a.choiceId),'acquisition');
-   const xp=grantXp(cursor.level,cursor.xp,choiceAcquisitionXp(AUGMENT_DEFINITIONS[a.definitionId])+outcomeAcquisitionXp(cursor,a));
+   const xp=grantXp(cursor.level,cursor.xp,choiceAcquisitionXp(AUGMENT_DEFINITIONS[a.definitionId])+outcomeAcquisitionXp(cursor,a)+(a.definitionId==='at-what-cost'?atWhatCostGrant(cursor.level,cursor.xp):0));
    check(xp.level===e.point.level&&xp.xp===e.point.xp,'acquisition XP');
    cursor={...cursor,...xp,augments:[...cursor.augments,a]};needSubscription=AUGMENT_SHOP[a.definitionId]?.rule==='subscription';
   }else if(e.kind==='round'){
