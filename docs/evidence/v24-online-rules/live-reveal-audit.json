@@ -14,7 +14,7 @@
     "scripts/record-v24-online-rules-transfer.cjs": "a1b6ad98e288bffe2ff546c6d31465912daeb80a23badab9b565ac504ff5accf",
     "scripts/v24-online-rules-fixture-audit.cjs": "d34a438e6c22947c2f79282d9dbb7f0d3488b09a18ebf919d19cec4d093c076d",
     "scripts/verify-m8-herald-fixtures.cjs": "bd3b1d9efdd862b8d86efd198d422bde79db1d6368c417e2f60bddefe29a6cc0",
-    "scripts/verify-v24-online-rules-epoch.cjs": "66d52c41456d6681955ec9b99c1312815722ec1729d5f286ba77c387b8fe1f07",
+    "scripts/verify-v24-online-rules-epoch.cjs": "6ebfabac21d07042e91c6df5e0ffbfa39e00360f8b9b94c295097cd5279bc17d",
     "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
     "src/simulation/ability-display.ts": "81a8e08ceca7d670fc21d630b129fe98e19c84160303e11b30e47156aba7bc63",
     "src/simulation/ability-types.ts": "ddffe56e06983345d2bd677466f232bada82236f4fc0fbe837c9ea0f39fe16c5",

@@ -3,6 +3,7 @@
  * The step list is read from the serial script itself, so the two can never drift apart.
  * This file's name must not contain "v24-online-rules": those scripts are hashed into the evidence. */
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),os=require('node:os'),{spawn}=require('node:child_process');
+const {createEpochReport}=require('./v24-epoch-report.cjs');
 process.env.GIT_OPTIONAL_LOCKS='0';
 const serial='scripts/verify-v24-online-rules-epoch.cjs';
 const usage='Usage: verify-v24-epoch-parallel.cjs [--write] [--jobs=N]';
@@ -29,21 +30,17 @@ if(names.length!==Object.keys(writeDeps).length||names.some(n=>!writeDeps[n]))th
 // Check mode writes nothing that another step reads, so every step is independent.
 const deps=Object.fromEntries(names.map(n=>[n,write?writeDeps[n]:[]]));
 const directory='artifacts/v24-online-rules-recording';fs.mkdirSync(directory,{recursive:true});
-const evidence='docs/evidence/v24-online-rules/epoch-verification.json';
+const finishReport=createEpochReport({base,write,directory,totalSteps:steps.length});
 const results=new Map(),running=new Set(),started=performance.now();let failed=false;
-const save=()=>{
- // Same file and shape as the serial runner; steps stay in serial order.
- const done=names.filter(n=>results.has(n)).map(n=>results.get(n));
- fs.mkdirSync(path.dirname(evidence),{recursive:true});
- fs.writeFileSync(evidence,JSON.stringify({baseCommit:base,steps:done,complete:done.length===steps.length&&done.every(r=>r.exitCode===0)},null,2)+'\n');
-};
 const launch=([name,...args])=>new Promise(resolve=>{
  console.log(JSON.stringify({phase:'start',name,args}));
  const start=performance.now(),log=path.join(directory,name+'.log'),fd=fs.openSync(log,'w');
+ let finished=false;
  const finish=(exitCode,signal,error)=>{
+  if(finished)return;finished=true;
   fs.closeSync(fd);
   results.set(name,{name,args,exitCode,signal,elapsedMs:Math.round(performance.now()-start),log,...(error?{error:String(error)}:{})});
-  save();console.log(JSON.stringify(results.get(name)));resolve();
+  console.log(JSON.stringify(results.get(name)));resolve();
  };
  const child=spawn(process.execPath,args,{stdio:['ignore',fd,fd]});
  child.on('error',error=>finish(null,null,error));
@@ -63,8 +60,8 @@ const launch=([name,...args])=>new Promise(resolve=>{
   if(!waiters.size)break;
   await Promise.race(waiters);
  }
- save();
- const ok=results.size===steps.length&&[...results.values()].every(r=>r.exitCode===0);
+ // Finalize once, after all running children settle, in serial step order.
+ const ok=finishReport(names.filter(n=>results.has(n)).map(n=>results.get(n)));
  console.log(JSON.stringify({phase:'done',mode:write?'write':'check',jobs,complete:ok,wallMs:Math.round(performance.now()-started)}));
  if(!ok)process.exitCode=1;
 })();

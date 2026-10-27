@@ -1,5 +1,6 @@
 /* Run the recording/verification steps sequentially, offline, without Git writes. */
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
+const {createEpochReport}=require('./v24-epoch-report.cjs');
 process.env.GIT_OPTIONAL_LOCKS='0';
 const base='c71854917e9995e5e2d0ec7dc3a023c813a936ac',arg='--baseline-commit='+base;
 const write=process.argv.includes('--write');
@@ -23,14 +24,14 @@ const steps=[
  ['compare-digests','scripts/compare-v24-online-rules-digests.cjs',...check],
 ];
 const directory='artifacts/v24-online-rules-recording';fs.mkdirSync(directory,{recursive:true});
+const finishReport=createEpochReport({base,write,directory,totalSteps:steps.length});
 const results=[];
 for(const [name,...args] of steps){
  console.log(JSON.stringify({phase:'start',name,args}));
  const start=performance.now(),log=path.join(directory,name+'.log'),fd=fs.openSync(log,'w');
  let run;try{run=spawnSync(process.execPath,args,{stdio:['ignore',fd,fd]});}finally{fs.closeSync(fd);}
  results.push({name,args,exitCode:run.status,signal:run.signal,elapsedMs:Math.round(performance.now()-start),log,...(run.error?{error:String(run.error)}:{})});
- fs.mkdirSync('docs/evidence/v24-online-rules',{recursive:true});
- fs.writeFileSync('docs/evidence/v24-online-rules/epoch-verification.json',JSON.stringify({baseCommit:base,steps:results,complete:results.length===steps.length&&results.every(r=>r.exitCode===0)},null,2)+'\n');
  console.log(JSON.stringify(results.at(-1)));
  if(run.status!==0){process.exitCode=1;break;}
 }
+if(!finishReport(results))process.exitCode=1;
