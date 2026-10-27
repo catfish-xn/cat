@@ -1,3 +1,4 @@
+import { batch5S6cSettlementHealth, drainBatch5S6cGold } from './augment-pool-batch5-s6c';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -181,6 +182,9 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     }
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
     settled=applyLevelUpHealth(state,commitOpeningEncounterHealth(settled,hookEvents));
+    settled={...settled,playerHp:batch5S6cSettlementHealth(settled,r.round,settled.playerHp)};
+    const beforeS6cGold=settled;settled=drainBatch5S6cGold(settled);
+    hookEvents.push(...mechanicGrantEvents(beforeS6cGold,settled));
     const merged = resolveDeferredUpgrades(settled);
     const d14State=pruneForgePositions(reconcileD14(merged.state,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
