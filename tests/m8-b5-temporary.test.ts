@@ -36,7 +36,7 @@ function mechanismInventory(level: number): MatchState {
 }
 const pair = (state: MatchState) => state.temporaryEquipment.map(i => i.definitionId);
 const otherRng = (state: MatchState) => [state.rngState, state.choiceRngState, state.rewardRngState, state.battleSeedRngState];
-// Seed42 takes Dominator Crest (one unequipped emblem), then Clockwork (unchanged opening HP/armor) Accelerator.
+// Seed 42 keeps Watcher Crest (one unequipped emblem), then Piercing Lotus I; neither changes opening HP/armor.
 // The two scheduled gloves are item-2/item-3, so their parent is item-4; HP/armor and roll vectors are unchanged.
 const TG = 'item-4';
 

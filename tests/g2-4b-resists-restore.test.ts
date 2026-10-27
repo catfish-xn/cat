@@ -94,8 +94,8 @@ function transfer(state: any) {
 }
 it('public equipped live shield restores unchanged and continues identically', () => {
   const state = atTick(60), text = JSON.stringify(state);
-  // Seed 42 now selects Dominator Crest: the live 70% resistance shield is exactly 133.
-  expect(state.augments.map(a=>a.definitionId)).toEqual(['dominator-crest']);
+  // v24 seed 42 selects Watcher Crest (the gifted bench unit activates no trait): the live 70% resistance shield is exactly 133.
+  expect(state.augments.map(a=>a.definitionId)).toEqual(['watcher-crest']);
   expect(active(state).layer).toMatchObject({ granted: 133, remaining: 133 });
   for (const input of [state, text]) {
     const restored = restoreMatch(input);

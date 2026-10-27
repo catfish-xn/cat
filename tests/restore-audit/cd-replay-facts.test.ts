@@ -230,16 +230,20 @@ it('G-C03 rejects Tristana growth that remains within the cast-count upper bound
   }, 'combat runtime binding facts');
 });
 it.each(['one-thousand-cuts', 'eagle-eye'])('G-C08 binds real %s history', async anomalyDefinitionId => {
-  // v19's expanded gold pool changes the paid route's economy. Reserve enough
-  // gold to actually select Eagle Eye rather than silently accepting a fallback.
-  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 2, anomalyDefinitionId, // eagle-eye route seed 2 (was 1) after the global 14.24 stage bans
+  // v24: first route seed from 1 acquiring this anomaly and a full-replay
+  // augment (Wealthy Rehab II). This keeps the original counter forgery on the
+  // Mirror-labelled dynamic replay path; an ordinary route stops at G23 instead.
+  // Reserve enough gold to actually select Eagle Eye, without a fallback.
+  const prep = await configuredPrefix('4-7', { build: 'cannon', seed: 3, anomalyDefinitionId,
     ...(anomalyDefinitionId==='eagle-eye'?{goldReserveByRound:{'4-5':80}}:{}) });
   expect(prep.anomalyBinding?.definitionId).toBe(anomalyDefinitionId);
+  expect(prep.augments.map(a => a.definitionId)).toContain('wealthy-rehab-ii');
   const id = prep.anomalyBinding!.unitId;
   const legal = until(accepted(startMatchCombat(prep)), s => {
     const g = s.combat!.units.find(u => u.id === id)!.g23;
     return anomalyDefinitionId === 'eagle-eye' ? (g?.stationaryTicks ?? 0) > 1 : Object.values(g?.cuts ?? {}).some(n => n > 0);
   });
+  expect(legal.combat!.strategy!.units.some(u => u.mechanics?.some(m => m.mechanic === 'wealthyRehab'))).toBe(true);
   reject(legal, s => {
     const g = s.combat!.units.find(u => u.id === id)!.g23!;
     if (anomalyDefinitionId === 'eagle-eye') g.stationaryTicks--;

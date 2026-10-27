@@ -1,3 +1,4 @@
+import { soloPveLoot } from './shop-orbs';
 import { formingTotals, expectedMagicRoll } from './augment-pool-batch3-progress';
 import { isAnvil } from './content/anvils';
 import { openingRewardOrbs } from './opening-batch-rewards';
@@ -267,7 +268,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
     if(unresolved.length) check(state.phase==='choice'&&equal(state.pendingChoice,makeLootPendingChoice(unresolved[0])),'first multiplayer loot choice');
     return unresolved.length>0;
   }
-  const loot = state.m8.loot;
+  const loot = soloPveLoot(state);
   keys(loot, ['layoutBinding','frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters',...(loot.queuedOrbClaims?['queuedOrbClaims']:[])]);
   if(loot.queuedOrbClaims){check(Array.isArray(loot.queuedOrbClaims)&&new Set(loot.queuedOrbClaims).size===loot.queuedOrbClaims.length&&(!loot.queuedOrbClaims.length||state.phase==='combat'&&state.combat?.status==='running'),'family claim queue');for(const id of loot.queuedOrbClaims)check([...familyOrbs(state),...openingRewardOrbs(state)].some(o=>o.orbId===id),'family queued identity');}
   check(loot.layoutBinding.mode==='solo'&&loot.layoutBinding.layout.seed===state.seed&&loot.layoutBinding.layout.throughRoundOrdinal===state.round,'solo layout binding');
@@ -564,7 +565,17 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       if(fact?.kind==='unit-acquired'&&fact.source.kind==='loot'){
         const receiptId=fact.source.receiptId;
         const slot=direct.find(s=>s.payload.kind==='forge'&&lootReceiptId(s.dropId)===receiptId) as FrozenDirectDrop|undefined;
-        check(slot&&expectedProgress.get(slot.dropId)==='revealed'&&grant(slot),'deferred anvil claim');expectedProgress.set(slot.dropId,'granted');
+        if(slot){check(expectedProgress.get(slot.dropId)==='revealed'&&grant(slot),'deferred anvil claim');expectedProgress.set(slot.dropId,'granted');}
+        else {
+          const orb=state.m8.loot.rewardOrbs?.find(o=>o.source==='mechanic'&&o.entries.some(e=>lootReceiptId(e.dropId)===receiptId));
+          const drop=orb?.entries[0],receipt=drop&&receipts.get(drop.dropId);
+          check(drop?.payload.kind==='unit'&&receipt&&receipt.grantedUnitIds.length===1,'shop orb claim');
+          const plan=planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},drop.payload.definitionId,
+            {kind:'loot',receiptId},cursor,false,drop.payload.starLevel??1);
+          check(plan.ok&&receipt.grantedUnitIds[0]===plan.unitId,'shop orb unit transaction');
+          for(const value of plan.facts)take(value);
+          preparation=plan.preparation;items=plan.items;binding=plan.anomalyBinding;nextUnit=plan.nextUnitSerial;
+        }
       }else if(fact?.kind==='anvil-opened'){
         check(preparation.units.some(u=>u.id===fact.unitId&&isAnvil(u.definitionId)),'anvil consumption');
         preparation={...preparation,units:preparation.units.filter(u=>u.id!==fact.unitId)};

@@ -253,9 +253,9 @@ it('cannot rewrite historical battle counters to mint a reward after an unrelate
   expect(()=>validateRewards(before,receipts(after,[{...gold('augment-pool-batch3',[0,0],8,4),roundId:'2-1'}]),{type:'reroll'},[],env)).toThrow(/battle counters append-only/);
 });
 
-it('contains exactly 224 independently tiered unique augment identities',()=>{
+it('contains exactly 235 independently tiered unique augment identities',()=>{
   const pools=(['silver','gold','prismatic'] as const).map(tier=>augmentPool(tier,[]));
-  const all=pools.flat();expect(all).toHaveLength(224);expect(new Set(all).size).toBe(224);
+  const all=pools.flat();expect(all).toHaveLength(235);expect(new Set(all).size).toBe(235);
   const groups={silver:['patience-is-a-virtue'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal'],prismatic:['invested-plus','invested-plus-plus']};
   for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);
 });
@@ -368,15 +368,17 @@ it('independently binds Spoils counters to opening ownership and all ordinary Pv
   expect(()=>validateRewards({...live,combat:{strategy:finished.combat.strategy}},erased,null,done,env)).toThrow(/independent batch2 counter/);
 });
 
-// Stop the genuine seed-48 public route immediately after its offered Heroic Grab Bag.
+// First public 2-1 Heroic Grab Bag offer with no prior lesser duplicator: seed 80.
+// Seed 4 already earns one from its opening, so it does not satisfy this vector's two-tool premise.
 // Keep the pre-command independent ledger so co-forged balances exercise Ledger.apply.
 import * as matchApi from '../src/simulation/match';
 import { run } from '../scripts/generate-m5-route.cjs';
 const heroicCase: {before:any;after:any;command:any;events:any;ledger:any}[]=[];
-const routeLedger=new Ledger(createMatch(48));
+const HEROIC_SEED=80;
+const routeLedger=new Ledger(createMatch(HEROIC_SEED));
 const stopHeroic=Symbol('heroic selection reached');
 try {
-  await run(matchApi,{seed:48,build:'cannon',augmentPriorities:['heroic-grab-bag'],onStep(before,result,command){
+  await run(matchApi,{seed:HEROIC_SEED,build:'cannon',augmentPriorities:['heroic-grab-bag'],onStep(before,result,command){
     if(!('events' in result))throw Error(result.reason);
     if(command?.type==='select'&&command.definitionId==='heroic-grab-bag'){
       heroicCase.push({before,after:result.state,command,events:result.events,ledger:routeLedger});throw stopHeroic;
@@ -385,7 +387,7 @@ try {
   }});
 } catch(error) {if(error!==stopHeroic)throw error;}
 const forkLedger=(ledger:any)=>Object.assign(Object.create(Ledger.prototype),structuredClone(ledger));
-it('rejects seed-48 omitted acquisition receipt and gold together, and binds the complete due schedule set',()=>{
+it(`rejects seed-${HEROIC_SEED} omitted acquisition receipt and gold together, and binds the complete due schedule set`,()=>{
   expect(heroicCase).toHaveLength(1);
   const {before,after,command,events,ledger}=heroicCase[0];
   const suffix=after.scheduleReceipts.slice(before.scheduleReceipts.length);
@@ -401,7 +403,7 @@ it('rejects seed-48 omitted acquisition receipt and gold together, and binds the
   const duplicate={...after,scheduleReceipts:[...after.scheduleReceipts,suffix[0]]};
   expect(()=>forkLedger(ledger).apply(before,duplicate,command,events)).toThrow();
 });
-it('rejects seed-48 missing duplicators while keeping reward receipts, wrong IDs, definitions and serials',()=>{
+it(`rejects seed-${HEROIC_SEED} missing duplicators while keeping reward receipts, wrong IDs, definitions and serials`,()=>{
   const {before,after,command,events,ledger}=heroicCase[0];
   expect(after.consumables.filter((c:any)=>c.definitionId==='TFT_Consumable_ChampionDuplicator_III')).toHaveLength(2);
   for(const patch of [

@@ -286,3 +286,23 @@ describe('T2 true two-sided combat', () => {
     expect(getUnitStats('maddie',3).attack).toBe(112);
   });
 });
+
+it.each([
+  ['manaflow-i', 'extraAttackMana', 2], ['manaflow-ii', 'extraAttackMana', 4],
+  ['glass-cannon-i', 'glassCannon', 1200], ['glass-cannon-ii', 'glassCannon', 2000],
+] as const)('%s compiles each online side in its own back-two rows', (augmentId, mechanic, value) => {
+  const units = [hero('lux', 'unit-1', 1, 0, 6), hero('maddie', 'unit-2', 1, 1, 5)];
+  const extra: Partial<MatchState> = { nextUnitSerial: 3, augments: [{ definitionId: augmentId, choiceId: 'choice', acquiredRound: 4 }] };
+  const battle = input(snap(units, 'A', extra), snap(units, 'B', extra));
+  const combat = startTwoSidedCombat(battle);
+  for (const seatId of ['A', 'B']) {
+    const back = combat.units.find(u => u.id === local(battle, seatId, 'unit-1'))!;
+    const front = combat.units.find(u => u.id === local(battle, seatId, 'unit-2'))!;
+    expect(back.cell.row).toBe(seatId === 'A' ? 6 : 1);
+    expect(back.mechanics?.find(m => m.mechanic === mechanic)?.values[kindKey(mechanic)]).toBe(value);
+    expect(front.mechanics?.some(m => m.mechanic === mechanic)).toBe(false);
+    expect(back.hp).toBe(mechanic === 'glassCannon' ? Math.floor(back.maxHp * 0.8) : back.maxHp);
+    expect(front.hp).toBe(front.maxHp);
+  }
+});
+function kindKey(mechanic: string): string { return mechanic === 'glassCannon' ? 'damageAmpBps' : 'amount'; }

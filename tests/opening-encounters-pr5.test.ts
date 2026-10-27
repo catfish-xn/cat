@@ -14,7 +14,7 @@ import { validateConsumableState, previewUseConsumable } from '../src/simulation
 import { accepted, freeze, reachRound as originalReachRound, resolveM5Choices as originalResolveChoices, emptyBoard } from './match-helpers';
 
 // These empty-board opening controls do not exercise post-battle bench XP.
-const excludedAugments=['clear-mind','cluttered-mind','slammin','slammin-plus','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii'];
+const excludedAugments=['clear-mind','cluttered-mind','slammin','slammin-plus','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','golemify'];
 const resolveM5Choices=(state:MatchState)=>originalResolveChoices(state,[],excludedAugments);
 const reachRound=(id:string,resolve=true,seed=42)=>originalReachRound(id,resolve,seed,[],excludedAugments);
 

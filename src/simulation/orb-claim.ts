@@ -1,3 +1,4 @@
+import { soloShopOrb } from './shop-orbs';
 import { openingAnvilOrbs, g23AnvilOrbs, grantAnvilUnit } from './anvils';
 import { openingRewardOrbs, claimOpeningReward, isOpeningRewardOrb } from './opening-batch-rewards';
 import { openingRewardOrbs as batchBRewardOrbs, claimOpeningReward as claimBatchBReward } from './opening-batch-b-rewards';
@@ -40,9 +41,10 @@ export function enqueueRewardOrb(state: MatchState, receiptId: string, definitio
 /** Match owns stamping and equipment commits. Shared pool policy is transaction-local. */
 export function planOrbClaim(state: MatchState, orbId: string, expectedRound: number, policy?:UnitLootPolicy): MultiplayerCommandResult {
   const fail=(reason:Extract<MultiplayerCommandResult,{ok:false}>['reason']):MultiplayerCommandResult=>({ok:false,state,reason});
-  if (!state.multiplayer&&!orbId.startsWith('g23-anvil:')&&!orbId.startsWith('opening-anvil:')&&!allClaimableOrbPlans(state).some(o=>o.orbId===orbId&&o.entries.some(e=>e.payload.kind==='forge'))&&!orbId.startsWith('family:orb:')&&!isOpeningRewardOrb(orbId)&&!orbId.startsWith('opening-batch-b/')) return fail('multiplayer-required');
+  if (!state.multiplayer&&!soloShopOrb(state,orbId)&&!orbId.startsWith('g23-anvil:')&&!orbId.startsWith('opening-anvil:')&&!allClaimableOrbPlans(state).some(o=>o.orbId===orbId&&o.entries.some(e=>e.payload.kind==='forge'))&&!orbId.startsWith('family:orb:')&&!isOpeningRewardOrb(orbId)&&!orbId.startsWith('opening-batch-b/')) return fail('multiplayer-required');
   if (state.multiplayer?.status==='eliminated') return fail('seat-eliminated');
   if (state.round!==expectedRound) return fail('stale-round');
+  if(soloShopOrb(state,orbId)&&state.phase==='combat')return fail('wrong-phase');
   if (!ORB_CLAIM_PHASES.includes(state.phase) || state.pendingChoice?.payload?.source === 'masterwork-upgrade') return fail('wrong-phase');
   if(orbId.startsWith('g23-anvil:')){
     const orb=g23AnvilOrbs(state).find(o=>o.orbId===orbId);if(!orb)return fail('unknown-orb');
@@ -85,6 +87,7 @@ export function planOrbClaim(state: MatchState, orbId: string, expectedRound: nu
   if (isCombatRosterLocked(state)) return {ok:true,events:[],state:{...state,m8:{...state.m8,loot:{...state.m8.loot,
     queuedOrbClaims:[...state.m8.loot.queuedOrbClaims??[],orbId]}}}};
   const result=grantDirectLoot(state,false,policy,[...orb.entries].sort((a,b)=>a.entryOrdinal-b.entryOrdinal));
+  if(soloShopOrb(state,orbId)&&result.state.m8.loot.direct.some(d=>orb.entries.some(e=>e.dropId===d.dropId)&&d.status==='pending-capacity'))return {ok:true,state,events:[]};
   return {ok:true,state:result.state,events:result.events};
 }
 

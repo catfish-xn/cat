@@ -32,7 +32,7 @@ describe('B4 catalogue and IF-POOL',()=>{
   }
  });
  it('eight API sorted candidates;old selection emits exactly one ScheduleReceipt,zero RNG',()=>{
-  const before=reachRound('2-4',false,20,['trade-sector']);expect(before.augments.map(a=>a.definitionId)).toEqual(['trade-sector']);expect(before.items.filter(i=>i.definitionId==='gloves')).toHaveLength(0);expect(before.pendingChoice?.offers).toEqual(COMPONENT_POOL.map(x=>x.definitionId));validateComponentCandidates(before.pendingChoice!.offers);
+  const before=reachRound('2-4',false,3,['trade-sector']);expect(before.augments.map(a=>a.definitionId)).toEqual(['trade-sector']);expect(before.items.filter(i=>i.definitionId==='gloves')).toHaveLength(0);expect(before.pendingChoice?.offers).toEqual(COMPONENT_POOL.map(x=>x.definitionId));validateComponentCandidates(before.pendingChoice!.offers);
   expect(restoreMatch(serializeMatch(before))).toEqual(before);
   const r=selectChoice(before,before.pendingChoice!.choiceId,0,'gloves');if(!r.ok)throw new Error(r.reason);
   expect(r.state.scheduleReceipts).toHaveLength(before.scheduleReceipts.length+1);expect(r.state.items.filter(i=>i.definitionId==='gloves')).toHaveLength(1);expect(r.state.choiceRngState).toBe(before.choiceRngState);

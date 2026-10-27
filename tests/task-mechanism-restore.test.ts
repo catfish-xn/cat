@@ -68,13 +68,14 @@ function expectRestoredTicks(checkpoints: readonly MatchState[]) {
 }
 
 it.each([
-  // 224 augments: seed 59 publicly picks Long Distance Pals and yields a summon-only kill; seed 175 keeps the assist control.
-  { contribution: false, seed: 59, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 294, targetId: 'enemy-r8-4' },
-  { contribution: true, seed: 175, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 226, targetId: 'enemy-r4-1' },
+  // v24: public Watcher/Sentinel Crests leave this Black Rose board without an active crest trait.
+  // Seeds 5/1 retain real Sion attacks with no/yes prior Morgana contribution and a live curse task.
+  { contribution: false, seed: 5, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
+  { contribution: true, seed: 1, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 225, targetId: 'enemy-r4-1' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => {
   // Public augment acquisition stays intact; the assertions below require a real summon kill and the exact contribution flag.
-  let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
-  if(!contribution)expect(state.augments.map(a=>a.definitionId)).toEqual(['long-distance-pals']);
+  let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'sentinel-crest' : 'watcher-crest'] });
+  expect(state.augments.map(a=>a.definitionId)).toEqual([contribution ? 'sentinel-crest' : 'watcher-crest']);
   for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
     // New augment gifts can fill the reserve; sell an unused bench champion before the boundary grant.
     if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length===state.preparation.benchSize){
@@ -134,8 +135,9 @@ it.each([
   for (const checkpoint of [initial, after]) {
     const bad = structuredClone(checkpoint), summon = bad.combat!.units.find(u => u.id === summonId)!;
     Object.assign(summon.runtime!, { buddyTriggered: !summon.runtime!.buddyTriggered });
-    // Seed 59's relationship augment authenticates the full runtime before the narrower Sion guard.
-    const reason=contribution?'Invalid Match save: Sion binding facts':'Invalid authoritative Mirror forge replay';
+    // The v24 crest controls have no relationship replay override: the dedicated Sion
+    // binding check now rejects both directions of the same forged runtime flag.
+    const reason='Invalid Match save: Sion binding facts';
     expect(() => serializeMatch(bad)).toThrow(reason);
     for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow(reason);
   }
@@ -292,8 +294,8 @@ it('restores a living Bulky Buddies holder after its Forge buddy dies and Jayce 
   const { publicEquipmentPreparation: prepare } = await import('./fixtures/b8-public-equipment');
   // v15 seed 53 offered Bulky Buddies I at 2-1. Under the v22 augment tier table seed 22 is the first
   // public route (with card rerolls) whose Forge dies and is revived beside a living holder.
-  // Global 14.24 stage bans: seed 100 is now the first such route (22 no longer reaches Bulky Buddies I).
-  let state = prepare(['rod'], { seed: 100, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
+  // v24 pool: seed 78 offers Bulky Buddies I and preserves the Forge death/revival boundary.
+  let state = prepare(['rod'], { seed: 78, augmentPriorities: ['bulky-buddies-i'], rerollForAugment: true });
   expect(state.augments.some(a => a.definitionId === 'bulky-buddies-i')).toBe(true);
   for (const [definitionId, copies] of [['jayce', 3], ['irelia', 2]] as const)
     for (let i = 0; i < copies; i++) state = accepted(grantMechanicUnit(state, { receiptId: `revive-${definitionId}-${i}`, source: 'test', definitionId }));

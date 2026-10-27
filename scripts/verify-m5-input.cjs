@@ -130,9 +130,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       }
       await quiet();
     }
-    async function reset() {
-      await chooseAll(); await click('mobile:new-match'); await startFixed42();
-      assert.deepEqual(await state(), structuredClone(api.createMatch(42))); await chooseAll();
+    async function reset(seed = 42) {
+      await chooseAll(); await click('mobile:new-match'); await startFixed42(seed);
+      assert.deepEqual(await state(), structuredClone(api.createMatch(seed))); await chooseAll();
       return state();
     }
     async function fundedReset() {
@@ -142,10 +142,10 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       return prepared;
     }
     async function itemReset() {
-      // Seed 42's 2-1 gold offer (224-card pool) is Guardbreaker Spirit / Built Different / Dominator Crest; no per-slot
-      // reroll reaches Crown Guarded. Select Guardbreaker Spirit explicitly: its real gloves are item-1. The real 2-4
+      // v24 seed 18 offers Guardbreaker Spirit and no opening items. Select it explicitly:
+      // its real gloves are item-1. The real 2-4
       // supply component is item-2, the item used by the native item-input tests.
-      await reset(); const prepared = await prepareB6Opening(page, '2-5', { augment: 'guardbreaker-spirit' });
+      await reset(18); const prepared = await prepareB6Opening(page, '2-5', { augment: 'guardbreaker-spirit' });
       assert.deepEqual(prepared.augments.map(augment => augment.definitionId), ['guardbreaker-spirit']);
       assert.deepEqual(prepared.items.map(item => [item.id, item.location.kind]), [['item-1', 'inventory'], ['item-2', 'inventory']]);
       assert.equal(prepared.items[0].definitionId, 'gloves', 'the 2-1 Guardbreaker Spirit augment grants item-1');

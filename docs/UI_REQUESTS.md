@@ -1255,3 +1255,22 @@ PR8另接server-entry新增readMasterworkOptions/相关类型重导出、网络�
 ### 2026-10-25 B4Combat → Claude：新增四条强化展示
 
 规则已注册 `long-distance-pals`（天涯若比邻）、`category-five`（五级飓风）、`overheal`（过量治疗）、`sated-spellweaver`（满意的织法者），均 gold。完整原始中英文说明在 `scripts/augment-content-archive.ts` 的 `B4COMBAT_NOTES`；运行时只返回 ID 与既有事件/属性。请按既有 `augment-pool-text` 映射补展示文本；不新增规则计算。验收：选项显示对应中文名/原说明，战斗读取已有属性、治疗与护盾事件。规则侧本任务不修改界面文件。
+
+
+### 2026-10-25 Shop port → Claude：v24 商店强化数据契约
+
+新增 firesale、rigged-shop-plus（silver）；reinfourcement、starry-night、starry-night-plus（gold）；dual-purpose、prismatic-ticket、subscription-service（prismatic）。原始中英文名称、说明、14.24 数值见 `src/simulation/content/augment-pool-shop.ts`。耐心和两档投资沿用 batch-4 内容。本次未修改界面文件，请补展示文本。
+
+available 商店格新增可选 `starLevel:2`，表示2星英雄、原费×3的报价和3张卡池副本；缺省1星。UI读取报价星级及金币余额，不扣费或自行升级。订阅服务末格为既有 `{status:'purchased',empty:true}`。`seatMechanics.seat['shop-augments']` 中 credits/rolls/rigAnchor/reinforced 仅供权威校验，免费刷新余额继续读取既有 freeRerolls 投影。验收：2星1/2费购买花3/6金币且入席2星，订阅商店4个不同4费且末格空，双重目的首次每轮购买经验有一次2金币 mechanicGranted 收据、重复购买不再发金币，实际刷新依权威投影更新。
+
+星夜当前概率可调用规则层只读选择器 `starryChanceBps({level,augments}):number`，返回 Bps；未持有返回0。UI不要自行维护等级概率表或解析源哈希字段。
+
+## B5-DUAL-PURPOSE-XP（2026-10-25，Codex → Claude，v24 规则已接）
+
+**已完成（2026-10-26，Review K）：**本次用户授权 Codex 修复服务器接线，`applySeatCommand` 已使用共享事务。真实八席房间公开选取／准备期和结算期买经验／卡池守恒／恢复及篡改回归见 `tests/server/batch5-dual-purpose-room.test.ts`；结算期12→10及跨轮回归见 `tests/augment-pool-batch5-settlement.test.ts`。以下为原请求，已不待 Claude 接线。
+
+- `src/server/room/room.ts` 的 `applySeatCommand` 中 `buyXp` 分支需从 `plain(buyXp(state))` 换为 `runSharedMatchCommand(pool,state,{type:'buyXp'})`。协议不变；规则侧事务负责扣费、经验、首次回金、共享池释放旧商店并生成新预留以及奖励单位。禁止服务器自己刷新商店或扣池。
+- 普通 `buyXp` 对持有双重目的的共享席返回原 state、`invalid-mechanic-state`，避免普通路径把新商店与旧预留一起发布；其他普通调用保持原行为。
+- 验收：持有双重目的时，成功买经验刷新共享商店且守恒；同轮仅首笔回2金币；免费刷新额度不消耗；锁定保留；失败池/state 原引用不变。原任务未修改服务器，本次 Review K 的用户授权覆盖此一处接线。
+
+**2026-10-27 合并更新：**双重目的唯一内容行迁到 `src/simulation/content/augment-pool-batch5.ts`，显示名称/说明保留。权威行为为每次成功买经验强制刷新、保留锁定开关，实际刷新也触发棱彩门票；房间入口已统一共享事务。原八项商店数据需求继续有效，无新增界面接线请求。

@@ -183,7 +183,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
         sources.push(...makeSourcedEffects(unit.id, 'augment', augment.definitionId, augment.choiceId, definition.effects.flatMap<Effect>(effect => compileAugmentEffect(effect,state,unit,augment,boardUnits,traits)).flatMap<Effect>(effect => {
           if (effect.kind !== 'mechanic') return [effect];
           if (effect.mechanic === 'investment') return state.augments.find(a=>catalog.augments[a.definitionId]?.effects.some(e=>e.kind==='mechanic'&&e.mechanic==='investment'))?.choiceId === augment.choiceId ? [{ kind: 'statFlat' as const, stat: 'maxHp' as const, amount: state.augmentProgress.investmentHp }] : [];
-          if (effect.values.backRowOnly && unit.location.kind === 'board' && unit.location.cell.row !== state.preparation.board.deploymentZones.player.lastRow) return [];
+          if (effect.values.backRowOnly && unit.location.kind === 'board' && unit.location.cell.row < state.preparation.board.deploymentZones.player.lastRow - 1) return [];
           if (effect.mechanic === 'bulkyBuddies') {
             const adjacent = boardUnits.filter(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);
             return adjacent.length === 1 ? [{ kind: 'statFlat' as const, stat: 'maxHp' as const, amount: effect.values.health }, effect] : [];

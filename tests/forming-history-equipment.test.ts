@@ -6,8 +6,8 @@ import { validateHistoricalEquipment } from '../src/simulation/b8-restore';
 import { pausableRoute } from './fixtures/t13-loot-public';
 const { run } = createRequire(import.meta.url)('../scripts/generate-m5-route.cjs');
 
-// Seed 2199's public cannon route (tests/m6-application-failures.cjs) takes Golemify at 3-2 while two completed
-// items are equipped: the forming removal returns them to the inventory like a sale, and the saved-history check
+// v24 seed 4's public cannon route rerolls the 3-2 cards to Golemify while
+// completed items are equipped: the forming removal returns them to the inventory like a sale, and the saved-history check
 // (battle-record-validation checkHistoryCarry) must carry that return instead of keeping the old bindings.
 describe('forming removal in the historical equipment fold', () => {
   const captured = new Error('captured');
@@ -15,13 +15,13 @@ describe('forming removal in the historical equipment fold', () => {
   // The public route plays one battle per case; the 3-2 capture ends it.
   const through = pausableRoute(async onRound => {
     try {
-      await run(api, { build: 'cannon', seed: 2199, onRound(state: MatchState) { if (state.roundDefinitionId === '3-1') settled = state; return onRound(state); },
+      await run(api, { build: 'cannon', seed: 4, augmentRerollPriorities: { '3-2': ['golemify'] }, onRound(state: MatchState) { if (state.roundDefinitionId === '3-1') settled = state; return onRound(state); },
         onStep(before: MatchState, _result: unknown, command: { type: string } | undefined) {
           if (command && before.roundDefinitionId === '3-2' && before.phase === 'preparation') { formed = before; throw captured; }
         } });
     } catch (error) { if (error !== captured) throw error; }
   });
-  for (let round = 1; round <= 11; round++) it(`plays the public seed-2199 route through round ${round}`, async () => { await through(round); });
+  for (let round = 1; round <= 11; round++) it(`plays the public seed-4 route through round ${round}`, async () => { await through(round); });
   it('Golemify returns equipped items to the inventory and the 3-1 -> 3-2 history continues', async () => {
     await through(Infinity);
     expect(settled && formed).toBeTruthy();

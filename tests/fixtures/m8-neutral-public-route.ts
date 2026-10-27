@@ -1,11 +1,11 @@
-import ionicRaw from './v23-online-rules-herald-raw/ionic-spark.json?raw';
-import evenshroudRaw from './v23-online-rules-herald-raw/evenshroud.json?raw';
-import dualRaw from './v23-online-rules-herald-raw/ionic-spark--evenshroud.json?raw';
-import quicksilverRaw from './v23-online-rules-herald-raw/quicksilver.json?raw';
-import edgeRaw from './v23-online-rules-herald-raw/edge-of-night.json?raw';
+import ionicRaw from './v24-online-rules-herald-raw/ionic-spark.json?raw';
+import evenshroudRaw from './v24-online-rules-herald-raw/evenshroud.json?raw';
+import dualRaw from './v24-online-rules-herald-raw/ionic-spark--evenshroud.json?raw';
+import quicksilverRaw from './v24-online-rules-herald-raw/quicksilver.json?raw';
+import edgeRaw from './v24-online-rules-herald-raw/edge-of-night.json?raw';
 import * as api from '../../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
-import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v23-online-rules-herald-support/generate';
+import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v24-online-rules-herald-support/generate';
 import { run } from '../../scripts/generate-m5-route.cjs';
 
 // v23: seed 42 draws the Golden Gala opening under the fmix32 selection, and v22's seed 2192 now draws Loot
@@ -27,15 +27,17 @@ if (route.final.phase !== 'gameOver' || route.final.roundDefinitionId !== '6-7' 
   throw new Error('Public neutral fixture did not complete the actual 33-battle route');
 
 // Consumers that exercise the authored minion/monster encounters take prefixes from this second
-// command-only route; seed 7298 has no opening encounter under the v23 fmix32 selection (v22 used 7296;
-// 1-2 is Irelia against minions-a-v1).
-const AUTHORED_ENCOUNTER_SEED = 7298;
+// command-only route; v24 seed 7301 is the first from 7296 with no opening
+// encounter whose sniper route still completes 6-7 (1-2 is Irelia against minions-a-v1).
+const AUTHORED_ENCOUNTER_SEED = 7301;
 const authoredPreparations = new Map<string, api.MatchState>();
-await run(api, { build: 'sniper', seed: AUTHORED_ENCOUNTER_SEED, onStep(before, result, command) {
+const authoredRoute = await run(api, { build: 'sniper', seed: AUTHORED_ENCOUNTER_SEED, onStep(before, result, command) {
   if (command?.type === 'start' || command?.type === 'continue' && before.m8.round.kind === 'supply')
     authoredPreparations.set(before.roundDefinitionId, before);
   if (result.state.phase === 'preparation') authoredPreparations.set(result.state.roundDefinitionId, result.state);
 } });
+if (authoredRoute.final.phase !== 'gameOver' || authoredRoute.final.roundDefinitionId !== '6-7' || authoredRoute.final.outcome !== 'victory')
+  throw new Error('Public authored fixture did not complete the actual 33-battle route');
 
 /** A restored prefix of the crab-free route, for authored PvE encounter checks. */
 export function publicAuthoredPreparation(roundId: string): api.MatchState {

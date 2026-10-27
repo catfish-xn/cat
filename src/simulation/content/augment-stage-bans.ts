@@ -9,6 +9,14 @@ import { freezeContent } from './freeze';
  * Watcher Growth carries all three and is therefore never offered at an augment round.
  */
 export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = freezeContent({
+  "TFT_Augment_FiresalePlus":["2-1", "4-2"],
+  "TFT_Augment_RiggedShopPlus":["2-1", "4-2"],
+  "TFT11_Augment_Reinfourcement":["2-1", "3-2"],
+  "TFT_Augment_DualPurpose":["3-2", "4-2"],
+  "TFT6_Augment_GachaAddict":["4-2"],
+  "TFT_Augment_SubscriptionService":["3-2", "4-2"],
+  "TFT_Augment_StarryNight":["3-2", "4-2"],
+  "TFT_Augment_StarryNightPlus":["2-1", "4-2"],
   "TFT9_Augment_BardPlaybook1":["3-2", "4-2"],
   "TFT7_Augment_LategameSpecialist":["4-2", "2-1"],
   "TFT9_Augment_BardPlaybook2":["3-2", "4-2"],
@@ -159,4 +167,7 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   "TFT_Augment_WealthyRehab2":['2-1'],
   "TFT_Augment_WorthTheWaitGold":['3-2','4-2'],
   "TFT_Augment_WorthTheWaitPrismatic":['3-2','4-2'],
+  TFT_Augment_CalledShot:['3-2','4-2'],
+  TFT_Augment_CraftedCrafting:['3-2','4-2'],
+  TFT13_Augment_Grant6Cost_MissMage:['2-1','3-2'],
 });

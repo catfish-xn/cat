@@ -10,8 +10,8 @@ import { readLootView } from '../../src/simulation/match';
 import type { BattleInput, RoomState } from '../../src/server/room/types';
 
 interface Checkpoint { time: number; seed: number; state: RoomState; expected: { initialHash: string; firstHash: string } }
-// Recorded from public Room progression by scripts/record-v23-online-rules-battle-start.cjs
-// at integrated 3394f104; recorder checks sliced versus synchronous tick0/1 bytes.
+// Recorded from public Room progression by scripts/record-v24-online-rules-battle-start.cjs
+// at the v24 integration baseline; recorder checks sliced versus synchronous tick0/1 bytes.
 const checkpoints = (JSON.parse(readFileSync(new URL('./fixtures/battle-start.json', import.meta.url), 'utf8')) as { checkpoints: Checkpoint[] }).checkpoints;
 type Seam = { current: RoomState; streams: Map<string, CombatStream>; frozenInputs: BattleInput[];
   freezeAndResolve(): void; openStreamSteps(): Generator<void, void, void>; clearTimer(): void };
@@ -65,7 +65,7 @@ describe('battle opening slices', () => {
     expect(counts[0]).toBeGreaterThan(0); expect(counts[1]).toBe(counts[0]);
   });
 
-  it.each([3, 9, 23])('round %i: tick0/1 hashes equal the v23-online-rules synchronous baseline', round => {
+  it.each([3, 9, 23])('round %i: tick0/1 hashes equal the v24-online-rules synchronous baseline', round => {
     const { room, clock, cp } = fixture(round);
     const publications: number[] = [];
     room.subscribe(state => { if (state.phase === 'battle') publications.push(seam(room).streams.size); });
@@ -104,7 +104,7 @@ describe('battle opening slices', () => {
       const { room, clock } = fixture(9);
       const results: unknown[] = [], order: string[] = [];
       try {
-        // The re-recorded human has zero gold and a bench anvil. Fund the FIFO commands with public sales.
+        // The v24 human has zero gold. Fund the FIFO commands with public sales.
         for(const unit of room.state.seats[0]!.match.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'))
           expect(room.handle('seat-1',{type:'sell',unitId:unit.id})).toMatchObject({ok:true});
         seam(room).freezeAndResolve();
@@ -116,7 +116,7 @@ describe('battle opening slices', () => {
         if (!queued) finishOpening(room, clock);
         const seatId = 'seat-1';
         const match = () => room.state.seats.find(s => s.seatId === seatId)!.match;
-        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available' && s.definitionId === 'amumu'), generation: match().shop.generation }));
+        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available' && s.definitionId === 'violet'), generation: match().shop.generation }));
         execute('sell', () => room.handle(seatId, { type: 'sell', unitId: match().preparation.units.find(u => u.location.kind === 'bench' && !u.definitionId.startsWith('TFT_ArmoryKey'))!.id }));
         execute('reroll', () => room.handle(seatId, { type: 'reroll' }));
         const orb = readLootView(frozen.seats[0]!.match).unclaimedOrbs![0]!;
@@ -189,7 +189,7 @@ describe('battle opening slices', () => {
     });
     try {
       expect(room.state.seats.filter(s => s.alive).map(s => s.match.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length))
-        .toEqual([8, 8, 8, 8, 7, 8, 8]); // v23 recording (battle-start.json checkpoint round 23)
+        .toEqual([7, 8, 8, 7, 8, 8, 8]); // v24 recording (battle-start.json checkpoint round 23)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;

@@ -13,7 +13,7 @@ import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
-import anchor from './fixtures/v23-online-rules-transfer-route.json';
+import anchor from './fixtures/v24-online-rules-transfer-route.json';
 const {survivor:SURVIVOR,donor:DONOR,tg:TG}=anchor;
 /** Live battle observed exactly as the application records it (one SessionChange per committed step). */
 function recorded(prepared: MatchState) {
@@ -38,6 +38,7 @@ describe('B10 temporary equipment replay rebuild', async () => {
   const { record, ticks, terminal } = recorded(prepared);
 
   it('records the temporary children in the battle context and rebuilds the identical terminal', () => {
+    expect(prepared.contentDigest, 'v23 transfer anchor requires re-recording for this content epoch').toBe(anchor.contentDigest);
     // M8B rules: Thief's Gloves rolls two temporary children for its holder each combat round (m8-b8-live-transfer).
     expect(prepared.temporaryEquipment.map(({ parentItemInstanceId, holderId, roundId }) => ({ parentItemInstanceId, holderId, roundId })))
       .toEqual([{ parentItemInstanceId: TG, holderId: DONOR, roundId: '4-7' }, { parentItemInstanceId: TG, holderId: DONOR, roundId: '4-7' }]);

@@ -6,9 +6,12 @@ import { restoreMatch, serializeMatch } from '../../src/simulation/serialization
 
 // Public-command reproduction from review A. No injected resources or combat inputs.
 function checkpoint(): MatchState {
-  // Pool integration shifted review A's seed-1 offer; seed 6 offers Corrosion directly.
-  let state = reachRound('3-2', false, 6);
+  // v24 shop pool: first seed from 0 whose public empty-board route offers
+  // Corrosion directly at 3-2 and retains the ten contributions/live 40/81 checkpoints.
+  let state = reachRound('3-2', false, 79);
   const choice = state.pendingChoice!;
+  expect(state.roundDefinitionId).toBe('3-2');
+  expect(choice.kind).toBe('augment');
   expect(choice.offers).toContain('corrosion');
   state = accepted(selectChoice(state, choice.choiceId, choice.generation, 'corrosion'));
   const unit = state.preparation.units.find(u => u.team === 'player')!;

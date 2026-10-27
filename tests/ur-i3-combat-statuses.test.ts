@@ -15,7 +15,7 @@ import { applyStatusContribution } from '../src/simulation/m8/status';
 import type { CombatActivity, StatusApplication, StatusGroup } from '../src/simulation/m8/contracts';
 import { battle, freeze, unit } from './combat-helpers';
 import { modifier, source } from './fixtures/m8-contract-cases';
-import currentIdentity from './v23-online-rules-content-baseline.json';
+import currentIdentity from './v24-online-rules-content-baseline.json';
 
 const sha = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 function synthetic(): CombatState {

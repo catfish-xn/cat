@@ -5,7 +5,10 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 // from 2192 whose cannon route reaches every sampled phase and ends its final battle at tick 117. The page's fixed starts use the same seed.
 // v23 224-card pool: seed 2199's final battle now ends at tick 120 (no periodic-save window); seed 2325 has no opening
 // encounter, reaches every sampled phase and ends its final battle at tick 107 (2307, the first such seed from 2192, ends at 119).
-const ROUTE_SEED=2325;
+// v24: 2325 ends at 127; 2307 is the first no-opening seed from 2192
+// whose complete cannon route samples every required phase and ends inside (80,120).
+const ROUTE_SEED=2307;
+assert.equal(require('./fixtures/m5/oracle.g2.cjs').openingEncounter(ROUTE_SEED),'none');
 const {execFileSync}=require('node:child_process'),{randomUUID}=require('node:crypto'),{chromium}=require('playwright');
 const {sourceFingerprint}=require('../scripts/m5-evidence.cjs');
 (async()=>{

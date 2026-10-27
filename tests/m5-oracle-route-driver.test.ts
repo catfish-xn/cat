@@ -6,8 +6,9 @@ import { ANVIL_IDS } from './fixtures/m5/oracle.g2.cjs';
 // One ordinary oracle-audited route, collected once as the existing replay files do.
 // No funded state, injected reward, skipped command, or enlarged test/hook timeout.
 const sold=new Set<string>(),anvilDeploys:string[]=[];
-// The 224-card pool offers Caretaker's Favor at seed 30 (seed 25 now offers Prizefighter).
-const route=await run(api,{seed:30,build:'sniper',onStep(before,_result,command){
+// First default-priority sniper route on the 232-card pool that selects Caretaker's Favor,
+// grants all four level anvils and finishes without deploying them: seed 8475.
+const route=await run(api,{seed:8475,build:'sniper',onStep(before,_result,command){
   if(command?.type==='sell')sold.add(command.id as string);
   if(command?.type==='deploy'){
     const unit=before.preparation.units.find(u=>u.id===command.id);

@@ -231,6 +231,11 @@ function checkHistoryCarry(previous: MatchState | null, next: MatchState): void 
   check(equalContent(after.slice(0, before.length), before), '历史经济收据前缀不一致');
   check(after.slice(before.length).every(action => action.kind !== 'battle'&&action.kind!=='mel-save'), '缺少历史证据：未验证的战斗经济收据');
   if (!previous) { validateHistoricalEquipment(null, next); return; }
+  if(previous.shopHistory){
+    check(next.shopHistory?.version===previous.shopHistory.version
+      &&equalContent(next.shopHistory.initial,previous.shopHistory.initial)
+      &&equalContent(next.shopHistory.entries.slice(0,previous.shopHistory.entries.length),previous.shopHistory.entries),'历史商店证据前缀不一致');
+  }
   const resources = previous.resourceProvenance.entries;
   check(equalContent(next.resourceProvenance.entries.slice(0, resources.length), resources), '历史获得或合成记录不一致');
   const rolls = previous.equipmentState.rolls;

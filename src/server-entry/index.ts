@@ -39,7 +39,7 @@ export type { PlayerBattleSnapshot, BattleIdentity, BattleIdMapping, BattleInput
 export { applyRoundSettlement, enableMultiplayerSettlement, ROUND_SETTLEMENT_VERSION } from '../simulation/round-settlement';
 export type { RoundSettlementReceipt, MultiplayerProgress, MultiplayerCommandResult, MultiplayerFailure } from '../simulation/round-settlement';
 
-export { createSharedPool, initializeSharedSeat, generateSharedShop, buySharedUnit, rerollSharedShop,
+export { createSharedPool, initializeSharedSeat, generateSharedShop, buySharedUnit, buySharedXp, rerollSharedShop,
   setSharedShopLock, sellSharedUnit, releaseSeatOnElimination, refreshSharedShops, nextSharedRound,
   runSharedMatchCommand, restoreSharedOrbSnapshot, assertSharedPoolConservation, SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST } from '../simulation/shared-pool';
 export type { SharedPoolState, SharedPoolBinding, SharedPoolResult, SharedPoolBatchResult, SharedPoolFailure,

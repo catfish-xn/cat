@@ -248,9 +248,9 @@ function acquire(id: string): MatchState {
   throw Error(`No public ${id} offer`);
 }
 function* acquireBetrayal(): Generator<void, MatchState> {
-  // Seed 4, re-scanned through real commands on the 224-card pool. Betrayal is 3-2-only and
+  // Seed 10, re-scanned through real commands on the v24 235-card pool. Betrayal is 3-2-only and
   // trait-tailored; field both partners BEFORE opening that node's offer.
-  let s = clear(reachRound('2-1', true, 4));
+  let s = clear(reachRound('2-1', true, 10));
   s = add(s, 'maddie', 0, 4); s = add(s, 'ambessa', 3, 7);
   while (s.roundDefinitionId !== '3-2') {
     s = resolveM5Choices(s);

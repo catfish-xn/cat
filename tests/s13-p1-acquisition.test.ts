@@ -1,15 +1,16 @@
 import { offerFor, offeredAt } from './augment-stage-helpers';
 import {expect,it} from 'vitest';
 import {reachRound,accepted,emptyBoard,resolveM5Choices} from './match-helpers';
-import {selectChoice,equipItem,useConsumable,startMatchCombat,nextRound} from '../src/simulation/match';
+import {createMatch,selectChoice,equipItem,useConsumable,startMatchCombat,nextRound} from '../src/simulation/match';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {augmentForgeOffers,grantAugmentAcquisition} from '../src/simulation/augment-acquisition';
-// Fixed public first-node seeds: the first non-Trainer-Golem seed whose 2-1 offer shows each card under the
-// v23 151-offer pool and fmix32 openings (re-chosen from v22's 6/5/323), re-chosen again after the batch-3/XP merge
-// (was 83/238). The 14.24 stage tags keep Blinding Speed off 2-1: it is taken at its first 3-2 offer (augment-stage-helpers).
-const acquisitionSeeds:Record<string,number>={'portable-forge':9,'radiant-relics':45};
+// v24 shop pool: first non-Trainer-Golem seed from 0 whose public 2-1 offer holds each card.
+// Blinding Speed remains a 3-2 card and follows augment-stage-helpers' first allowed round.
+const acquisitionSeeds:Record<string,number>={'portable-forge':17,'radiant-relics':68};
 function select(id:string){
+ if(offeredAt(id,'2-1'))expect(createMatch(acquisitionSeeds[id]).preparation.units.some(u=>u.definitionId==='trainer-golem')).toBe(false);
  const s=offeredAt(id,'2-1')?reachRound('2-1',false,acquisitionSeeds[id]):offerFor(id),c=s.pendingChoice!;
+ expect(s.roundDefinitionId).toBe(offeredAt(id,'2-1')?'2-1':'3-2');
  expect(c.offers).toContain(id);
  return accepted(selectChoice(s,c.choiceId,c.generation,id));
 }

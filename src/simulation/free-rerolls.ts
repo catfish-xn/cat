@@ -1,3 +1,5 @@
+import { shopAugmentFreeRerolls } from './shop-augments';
+import { batch5RerollsGranted } from './augment-pool-batch5-progress';
 import { batch4RerollsGranted } from './augment-pool-batch4-b4reroll-progress';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import type { MatchState } from './match-types';
@@ -13,7 +15,7 @@ interface FreeRerollRecord {readonly used:number}
 
 /** Credits accumulate and never expire. `perRound` counts every round ordinal from the acquisition round inclusive. */
 export function freeRerollsGranted(state:MatchState):number {
- return batch4RerollsGranted(state)+batch3XpFreeRerolls(state)+state.augments.reduce((sum,a)=>{
+ return batch5RerollsGranted(state)+shopAugmentFreeRerolls(state)+batch4RerollsGranted(state)+batch3XpFreeRerolls(state)+state.augments.reduce((sum,a)=>{
   const row=AUGMENT_BATCH3[a.definitionId],f=row?.freeRerolls;if(!f)return sum+outcomeFreeRerolls(state,a);
   return sum+(f.now?batch3Count(row,f.now):0)+(f.perRound?f.perRound*Math.max(0,state.round-a.acquiredRound+1):0);
  },0);
@@ -35,9 +37,19 @@ export function validateFreeRerolls(state:MatchState):void {
  const record=state.seatMechanics?.seat[FREE_REROLL_KEY];
  const spends=state.resourceProvenance.entries.filter(e=>e.kind==='free-reroll');
  if(spends.some(e=>(e as {generation:number}).generation>=state.shop.generation))throw new RangeError('Invalid free shop reroll ledger');
- for(const [index,spend] of spends.entries())if(index+1>freeRerollsGranted({...state,round:getMultiplayerRoundById(spend.roundId).ordinal}))throw new RangeError('Invalid historical free shop reroll credit');
+ for(const [index,spend] of spends.entries()){
+  const atRound={...state,round:getMultiplayerRoundById(spend.roundId).ordinal};
+  const credits=freeRerollsGranted(atRound)-batch5RerollsGranted(atRound)+batch5RerollsGranted({...atRound,resourceProvenance:{...state.resourceProvenance,entries:state.resourceProvenance.entries.slice(0,spend.sequence)}});
+  if(index+1>credits)throw new RangeError('Invalid historical free shop reroll credit');
+ }
  if(record===undefined){if(spends.length)throw new RangeError('Invalid free shop reroll ledger');return;}
  const r=record as unknown as FreeRerollRecord;
  if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).join(',')!=='used'||!Number.isSafeInteger(r.used)||r.used<1||r.used>freeRerollsGranted(state)||r.used!==spends.length)
   throw new RangeError('Invalid free shop reroll ledger');
+}
+
+/** Stable allocation order for auditing an individual spend. Credits are identified by owner and ordinal;
+ * Ticket's next hit is unavailable until AFTER the triggering reroll. */
+export function freeRerollGrants(state:MatchState):readonly {choiceId:string;count:number}[] {
+ return state.augments.map(a=>({choiceId:a.choiceId,count:freeRerollsGranted({...state,augments:[a]})}));
 }

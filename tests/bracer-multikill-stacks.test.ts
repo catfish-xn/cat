@@ -9,6 +9,7 @@ import { publicEquipmentPreparation as acquireEquipment } from './fixtures/b8-pu
 import { freezeContent } from '../src/simulation/content/freeze';
 import { BRACER } from './fixtures/explorer-bracer-public';
 import { createMatch } from '../src/simulation/match';
+import { resolveM5Choices } from './match-helpers';
 import { createCombatWithEvents, stepCombat, type CombatState } from '../src/simulation/combat';
 import { MAX_COMBAT_TICKS, type CombatUnit, type LedgerCombatEvent } from '../src/simulation/combat-types';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
@@ -45,10 +46,11 @@ function expectContinuation(from: MatchState, copies: MatchState[]) {
 }
 // v19 Sisters shifts seed 3151248's gold offers to Spirit Link. Public card
 // rerolls recover the inert front-row Glass Cannon II control without changing any combat assertions.
-// Seed 5 still offers Manaflow I for the contribution=false board.
 // v22 augment tier table: seed 3151248 no longer reaches Glass Cannon II, so each
 // public fixture names a seed whose card rerolls still recover it.
-const frontRowRod = (seed: number) => {let s=acquireEquipment(['rod'],{seed,augmentPriorities:['glass-cannon-ii'],rerollForAugment:true});for(const u of s.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))s=accepted(sellUnit(s,u.id));if(!s.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))s=accepted(grantMechanicUnit(s,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));return s;};
+// v24 seed 28 instead selects Caretaker's Chosen; selling its unused anvil opens
+// a forge choice, which must be resolved publicly before the next sale.
+const frontRowRod = (seed: number) => {let s=acquireEquipment(['rod'],{seed,augmentPriorities:['glass-cannon-ii'],rerollForAugment:true});for(const u of s.preparation.units.filter(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId)))s=resolveM5Choices(accepted(sellUnit(s,u.id)));if(!s.preparation.units.some(u=>u.team==='player'&&u.definitionId==='lux'))s=accepted(grantMechanicUnit(s,{receiptId:'fixture:base-lux',source:'test',definitionId:'lux'}));return s;};
 let initial: MatchState, before: MatchState, after: MatchState, doubleKill: MatchEvent[];
 let luxFixture: { initial: MatchState; before: MatchState; after: MatchState; doubleKill: MatchEvent[] };
 beforeAll(() => {
@@ -440,15 +442,16 @@ describe('dead-holder public combat fixture', () => {
 });
 
 describe.each([
-  // 224 augments: seed 59 publicly picks Long Distance Pals and yields a summon-only kill; seed 175 keeps the assist control.
-  { contribution: false, seed: 59, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 294, targetId: 'enemy-r8-4' },
-  { contribution: true, seed: 175, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 226, targetId: 'enemy-r4-1' },
+  // v24: public Watcher/Sentinel Crests leave this Black Rose board without an active crest trait.
+  // Seeds 5/1 retain real Sion attacks with no/yes prior Morgana contribution and a live curse task.
+  { contribution: false, seed: 5, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
+  { contribution: true, seed: 1, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 225, targetId: 'enemy-r4-1' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   let fixture: { state: MatchState; start: MatchCommandResult; before: MatchState; ownerId: string };
   beforeAll(() => {
     // Keep the selected public route and require the exact Sion/holder contribution facts.
-    let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'manaflow-ii' : 'manaflow-i'] });
-    if(!contribution)expect(state.augments.map(a=>a.definitionId)).toEqual(['long-distance-pals']);
+    let state = acquireEquipment(['rod'], { seed, augmentPriorities: [contribution ? 'sentinel-crest' : 'watcher-crest'] });
+    expect(state.augments.map(a=>a.definitionId)).toEqual([contribution ? 'sentinel-crest' : 'watcher-crest']);
     for (const [i, definitionId] of ['morgana', 'cassiopeia', 'vladimir'].entries()) {
       // New augment gifts can fill the reserve; sell an unused bench champion before the boundary grant.
       if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length===state.preparation.benchSize){

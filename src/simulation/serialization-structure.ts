@@ -1,3 +1,5 @@
+import { validateShopHistory } from './shop-history';
+import { batch5Streak } from './augment-pool-batch5-progress';
 import { withG23RestoreReuse, registerG23RestoreOwner } from './g23-restore-reuse';
 import { batch4B4xpRecordedExtra, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
 import { formingTotals, expectedMagicRoll, outcomeAcquisitionXp } from './augment-pool-batch3-progress';
@@ -184,6 +186,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
     if (slot.status === 'available') definitionId(slot.definitionId, M5_UNIT_DEFINITIONS, 'shop definition');
+    if (slot.status === 'available' && Object.hasOwn(slot, 'starLevel')) requireValue(slot.starLevel === 2 && M5_UNIT_DEFINITIONS[slot.definitionId].cost <= 2, 'shop star');
   }
   record(raw.equipmentState); record(raw.equipmentState.equipment); list(raw.equipmentState.rolls); list(raw.temporaryEquipment);
   list(raw.augments); requireValue(state.augments.length <= 3, 'augment count'); const augmentIds = new Set<string>();
@@ -260,7 +263,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   for (let round = 1; round <= state.round; round++) for (const event of getRoundSchedule(round)) {
     if (state.pendingChoice?.eventId === event.id) stopped = true;
     if (round === state.round && event.kind === 'anomaly' && !receipts.has(event.id) && state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')) {
-      requireValue(state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost <= state.gold), 'anomaly recruitment affordability');
+      requireValue(state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost * (slot.starLevel === 2 ? 3 : 1) <= state.gold), 'anomaly recruitment affordability');
       stopped = true;
     }
     if ((event.timing ?? 'before') === 'after' && state.roundResults.length < round || state.outcome !== null && round === state.round && event.timing === 'after') continue;
@@ -276,6 +279,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     record(result); integer(result.mechanicReceiptPrefixLength); requireValue(result.mechanicReceiptPrefixLength!<=(state.seatMechanics?.receipts.length??0), 'mechanic receipt prefix'); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === openingHpBeforeRound(state, result.roundId, i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
+    streak=batch5Streak(state,result.round,streak);
     requireValue(same(result.streakBefore, streak), 'history streak before');
     requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,result.round),result.levelBefore,result.xpBefore,xpPurchaseAmount(state.augments,result.round)), 'history XP preparation chain');
     let expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
@@ -291,6 +295,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     experienceAfter=totalExperience(result.levelAfter,result.xpAfter);
     requireValue(result.combatTicks <= MAX_COMBAT_TICKS && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
   }
+  if(!settled)streak=batch5Streak(state,state.round,streak);
   requireValue(same(state.streak, streak), 'current streak');
   requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
   requireValue(state.phase === 'gameOver' ? state.outcome === (roundDefinition.isFinal && state.playerHp > 0 && state.roundResults.at(-1)?.result === 'playerWin' ? 'victory' : 'defeat') : state.outcome === null, 'outcome');
@@ -308,6 +313,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial,state.nextUnitSerial);
   validateMatchEquipment(state);
+  validateShopHistory(state);
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string', typeof input === 'string');
   if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
   // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.

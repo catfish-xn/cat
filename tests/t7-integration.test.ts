@@ -16,9 +16,9 @@ function executePool(pool:api.SharedPoolState,state:api.MatchState,a:ClientComma
   }
 }
 describe('T7 public-command traversal',()=>{
-  it('twenty consecutive real rounds from seed 42 accept every intention, with no synthetic gold, HP or choices',()=>{
-    // Seed 42 keeps the full augment/component/forge traversal under the 224-card pool.
-    let state=api.createMatch(42),rng=1,steps=0,commands=0,ticks=0;
+  it('twenty consecutive real rounds from seed 3 accept every intention, with no synthetic gold, HP or choices',()=>{
+    // v24 seed 3 reaches all three real choice kinds, including forge, within twenty rounds.
+    let state=api.createMatch(3),rng=1,steps=0,commands=0,ticks=0;
     const actions=new Set<string>(),choices=new Set<string>();
     for(let budget=0;state.roundResults.length<20;budget++) {
       expect(budget).toBeLessThan(40000);expect(state.phase).not.toBe('gameOver');

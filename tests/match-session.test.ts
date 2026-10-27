@@ -178,7 +178,7 @@ describe('match session commands and fixed clock', () => {
   });
 
   it('preserves the purchased player roster and unique results for five rounds', () => {
-    // Seed 7226 + the offered Slammin component gift preserves the purchased roster (no augment unit gifts).
+    // v24 seed 7226 offers Starry Night: it grants no units and this route makes no later purchases.
     const session = new MatchSession(reachRound('1-3',true,7226));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
@@ -196,12 +196,12 @@ describe('match session commands and fixed clock', () => {
       if (session.phase === 'choice') {
         const pending = session.state, before = structuredClone(pending);
         rejected(session, session.continue(round), 'wrong-phase', pending);expect(pending).toEqual(before);
-        resolveSessionChoices(session,['slammin']);
+        resolveSessionChoices(session,['starry-night']);
       }
       expect(session.phase).toBe('settlement');
       expect(session.continue(round).ok).toBe(true);
-      resolveSessionChoices(session,['slammin']);
-      if(session.state.augments.length)expect(session.state.augments.map(a=>a.definitionId)).toEqual(['slammin']);
+      resolveSessionChoices(session,['starry-night']);
+      if(session.state.augments.length)expect(session.state.augments.map(a=>a.definitionId)).toEqual(['starry-night']);
       const next = session.state; rejected(session, session.continue(round), next.phase === 'settlement' ? 'stale-round' : 'wrong-phase', next);
       expect(players(session.state)).toEqual(expectedRoster); expect(session.combat).toBeNull();expect(session.state.nextUnitSerial).toBe(3);
     }

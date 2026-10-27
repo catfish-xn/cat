@@ -39,7 +39,9 @@ it.each(fieldedLegCases('pair-of-fours'))('Pair of Fours fielded 4-2 route (seed
 });
 it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restores strictly, and continues the same seeded combat',id=>{
   // 14.24 stage tags: a card not offered at 2-1 is taken at its first offering round instead.
-  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):id==='calculated-enhancement'?reachRound('3-2',false,60):offerFor(id);
+  // Calculated Enhancement uses the first offering empty-board seed whose
+  // unchanged opening forgery reaches the P2 validator rather than full replay.
+  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):id==='calculated-enhancement'?reachRound('3-2',false,89):offerFor(id);
   const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
   s=accepted(selectChoice(s,c.choiceId,c.generation,id));
   // Release one real reserve slot after selection to exercise the same escrowed Pair of Fours gift.
@@ -114,13 +116,9 @@ it('later gift triple revisits a previously blocked gift in the same drain',()=>
 });
 
 it('public Crown + Trifecta acquisition serializes and restores both entrances with historical shields',()=>{
-  // v20-traits adds five gold cards. Deterministic search found this unchanged
-  // Crown -> Trifecta -> Kog'Maw scenario at attempt 16003, beyond the old 10000 budget.
-  // v23 batch 2: independent offer/gift seed search retains Crown → Trifecta → Kog'Maw at 7329.
-  // v23 batch 3 (nineteen more cards): the same sequential search finds the chain at 12900.
-  // Global 14.24 stage bans (pool after batch 3): the same sequential search finds the chain at 7806.
-  // 224-card pool: the same Crown → Trifecta → Kog'Maw search finds seed 207.
-  const seed=207;
+  // v24: first seed from 0 retaining the public Crown → Trifecta → Kog'Maw
+  // chain. Both offers and the actual gift remain asserted below.
+  const seed=130;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){
@@ -141,10 +139,10 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
 });
 
-it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('3-2 seed 291 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
-  // 14.24 stage tags put Trifecta II at 3-2/4-2: 3-2 seed 291 (320 before the v23 integration merge) is the first that
-  // publicly offers it with Nami; the stat/shield assertions remain unchanged.
-  let s=reachRound('3-2',false,291),c=s.pendingChoice!;expect(c.offers).toContain('trifecta-ii');
+it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('3-2 seed 726 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
+  // v24: first seed from 0 whose unchanged 3-2 route offers Trifecta II with
+  // Nami as its first hero gift; the stat/shield assertions remain unchanged.
+  let s=reachRound('3-2',false,726),c=s.pendingChoice!;expect(c.offers).toContain('trifecta-ii');
   s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
   const gift=p2GiftPlan(s).find(g=>g.kind==='unit')!,birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.receiptId===gift.receiptId)!;
   if(birth.kind!=='unit'||!birth.unitId)throw Error('missing Nami receipt');

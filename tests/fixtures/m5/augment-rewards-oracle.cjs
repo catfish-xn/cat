@@ -13,7 +13,7 @@ const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
- 'category-five':[I('runaans-hurricane')],
+ 'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],
  'one-two-five':[Q('component'),R(5)],'band-of-thieves-i':[I('thiefs-gloves')],
@@ -79,6 +79,14 @@ function expand(s,a,specs,env){return specs.flatMap((spec,index)=>{
  });
 });}
 const owner=(a,part,round=a.acquiredRound)=>({...a,choiceId:JSON.stringify([a.choiceId,...part]),acquiredRound:round});
+// Batch 5: independent literal 14.24 tasks; P-B5 pre-entry bank and no retroactive entry.
+function b5Entry(s,round){
+ const p=s.roundResults.find(r=>r.round===round-1);assert(p,'independent fate entry history');
+ let bank=p.goldAfter;
+ for(const r of (s.seatMechanics?.receipts??[]).slice(p.mechanicReceiptPrefixLength))if(r.round===p.round)bank+=r.kind==='gold'?r.amount:r.kind==='unit'?r.gold:r.kind==='choice'?-r.price:0;
+ for(const e of s.resourceProvenance.entries)if(e.kind==='unit-sold'&&e.context==='settlement-capacity'&&e.roundId===p.roundId)bank+=e.goldGranted;
+ return bank;
+}
 function rewardPlan(s,env){
  const gifts=[],batch2=[],batch3=[],forms=[],levelsOut=[],gold=[],battles=s.seatMechanics?.hidden?.progress?.economyReceipts.filter(r=>r.kind==='battle').map(r=>r.facts)??[];
  const addGold=(source,a,parts,amount,round)=>{if(amount)gold.push({receiptId:JSON.stringify([source,a.choiceId,...parts]),source,kind:'gold',amount,round});};
@@ -86,6 +94,14 @@ function rewardPlan(s,env){
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
   const facts=battles.filter(f=>f.round>=a.acquiredRound);
+  if(a.definitionId==='a-change-of-fate'){
+   let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
+   const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
+   if(bank!==undefined&&win!==undefined){const due=Math.max(bank,win),hero=nonSupply(due);
+    levelsOut.push(...expand(s,owner(a,['batch5-fate','item'],due),[I('gunblade')],env));
+    if(hero<=s.round)levelsOut.push(...expand(s,owner(a,['batch5-fate','unit'],hero),[U('mel')],env));
+   }
+  }
   const counts=b2.rewards[a.definitionId];
   if(counts){let total=0,paid=0;for(const f of facts){total+=f.batch2?.find(x=>x.definitionId===a.definitionId)?.count??0;
    const due=Math.min(counts.max??Infinity,Math.floor(total/counts.every));
@@ -163,8 +179,8 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
  return tables[weights.findIndex(w=>{if(ticket<w)return true;ticket-=w;return false;})];},
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
-const admitted=new Set(['s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
- 'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4',
+const admitted=new Set(['augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
+ 'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel']);
 // Project only the counters needed by these rewards from the finished combat, not reward receipts.
@@ -252,6 +268,9 @@ function validateRewardsCore(before,after,command,events,base){
  const markers=facts.filter(f=>f.kind==='form-swapper-selected');
  assert.equal(markers.length,select&&command.definitionId==='why-not-both'?1:0,'independent form-swapper selection marker');
  for(const marker of markers){assert.equal(marker.roundId,before.roundDefinitionId);assert.equal(marker.choiceId,before.pendingChoice.choiceId);assert.equal(marker.sequence,history.length);}
+ const dualMarkers=facts.filter(f=>f.kind==='dual-purpose-selected');
+ assert.equal(dualMarkers.length,select&&command.definitionId==='dual-purpose'?1:0,'independent Dual Purpose selection marker');
+ if(dualMarkers.length)assert.deepEqual(dualMarkers[0],{kind:'dual-purpose-selected',sequence:history.length,roundId:before.roundDefinitionId,choiceId:before.pendingChoice.choiceId,level:before.level,xp:before.xp},'independent Dual Purpose acquisition XP');
 
  const oldFacts=before.seatMechanics?.hidden.progress?.economyReceipts??[],newFacts=after.seatMechanics?.hidden.progress?.economyReceipts??[];
  if(oldFacts!==newFacts)assert.deepEqual(newFacts.slice(0,oldFacts.length),oldFacts,'reward battle counters append-only');
@@ -276,13 +295,43 @@ function validateRewardsCore(before,after,command,events,base){
   assert.equal(r.price,price,'independent mechanic choice price');
  }else if(command?.type==='select'&&['forge','blackMarket','armory'].includes(before.pendingChoice?.kind))assert.fail('missing mechanic choice receipt');
  for(const r of appended)if(r.receiptId.startsWith('[\"augment-pool-batch'))assert.equal(r.source,JSON.parse(r.receiptId)[0],'reward source/namespace binding');
+ const shopGold=new Map(),shopGifts=new Map();
+ const shopId=(rule,a,n)=>JSON.stringify(['augment-pool-shop',rule,a.choiceId,n]);
+ for(const a of augments){
+  if(a.definitionId==='subscription-service'&&entry&&after.round>a.acquiredRound&&base.ROUNDS[after.round-1].sub===1)shopGold.set(shopId('subscription',a,after.round),{amount:6});
+  if(a.definitionId==='firesale'&&entry&&after.round>a.acquiredRound){
+   const {shopTransition}=require('./oracle.g2.cjs'),offer=shopTransition(before,command).stolen;
+   if(offer)shopGifts.set(shopId('firesale',a,after.round),{definitionId:offer.definitionId,starLevel:offer.starLevel??1});
+  }
+  if(a.definitionId==='reinfourcement'&&command?.type==='buy'&&base.COST[before.shop.slots[command.slot].definitionId]===4&&!prior.some(r=>r.receiptId===shopId('reinfourcement',a,0)))for(let i=0;i<2;i++)shopGifts.set(shopId('reinfourcement',a,i),{definitionId:before.shop.slots[command.slot].definitionId,starLevel:1});
+ }
+ const shopActual=appended.filter(r=>r.source==='augment-pool-shop');
+ assert.deepEqual(shopActual.map(r=>r.receiptId).sort(),[...shopGold.keys(),...shopGifts.keys()].sort(),'independent due shop rewards');
+ for(const r of shopActual){
+  assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,r)),'shop reward requires actual grant event');
+  assert.equal(r.round,after.round);assert.equal(r.roundId,after.roundDefinitionId);
+  const expected=shopGold.get(r.receiptId)??shopGifts.get(r.receiptId);
+  if(shopGold.has(r.receiptId)){assert.equal(r.kind,'gold');assert.equal(r.amount,expected.amount);}
+  else {assert.equal(r.kind,'unit');assert.equal(r.definitionId,expected.definitionId);assert.equal(r.starLevel??1,expected.starLevel);if(r.resolution==='orb'){
+   const orbId=JSON.stringify(['orb',after.roundDefinitionId,'mechanic',r.receiptId,0]),dropId=JSON.stringify([orbId,0]);
+   assert.equal(r.orbId,orbId);assert.deepEqual(after.m8.loot.rewardOrbs.find(o=>o.orbId===orbId),{orbId,roundId:after.roundDefinitionId,tier:'gray',source:'mechanic',entries:[{orbId,entryOrdinal:0,dropId,roundId:after.roundDefinitionId,encounterId:'mechanic',sourceUnitId:r.receiptId,slotOrdinal:0,status:'planned',receiptId:null,revealCondition:'source-killed',payload:{kind:'unit',definitionId:expected.definitionId,quantity:1,starLevel:expected.starLevel}}]},'shop gift orb payload derived from the command');
+  }assert.equal(r.gold,r.resolution==='gold'?base.COST[expected.definitionId]*3**(expected.starLevel-1):0);}
+ }
  const activeDrain=command!=null||terminal;
  if(!activeDrain){assert.equal(appended.filter(r=>r.source.startsWith('augment-pool-')).length,0,'no reward without a draining command');return {gold:new Map(),gifts:new Map(),price};}
  const ctx={...after,seed:before.seed,augments,level:progression.level,xp:progression.xp,multiplayer:before.multiplayer?{...after.multiplayer,seatId:before.multiplayer.seatId}:undefined,
   seatMechanics:{...after.seatMechanics,seat:{...after.seatMechanics?.seat,'augment-acquisition-levels':levels},receipts:[...prior,...choiceReceipts]}};
  const env=environment(before,base),plan=rewardPlan(ctx,env),claimed=new Set(prior.map(r=>r.receiptId));
  const dueGold=plan.gold.filter(p=>!claimed.has(p.receiptId));
- const actualGold=appended.filter(r=>['augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-kingslayer','augment-risky-moves'].includes(r.source));
+ const dual=before.augments.find(a=>a.definitionId==='dual-purpose');
+ if(dual&&command?.type==='buyXp'){
+  const purchase=facts.filter(f=>f.kind==='dual-purpose-xp-purchased');
+  assert.equal(purchase.length,1,'one Dual Purpose fact per successful owned purchase');
+  assert.deepEqual(purchase[0],{kind:'dual-purpose-xp-purchased',sequence:history.length,roundId:before.roundDefinitionId,levelBefore:before.level,xpBefore:before.xp,generation:before.shop.generation+1,settled:before.roundResults.some(r=>r.round===before.round)},'independent purchase evidence');
+  const receiptId=JSON.stringify(['augment-pool-batch5',dual.choiceId,before.round]);
+  if(!claimed.has(receiptId))dueGold.push({receiptId,source:'augment-pool-batch5',kind:'gold',amount:2,round:before.round});
+ }else assert.equal(facts.filter(f=>f.kind==='dual-purpose-xp-purchased').length,0,'no Dual Purpose fact without purchase');
+ const actualGold=appended.filter(r=>['augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves'].includes(r.source));
  const goldKey=r=>({receiptId:r.receiptId,source:r.source,kind:r.kind,amount:r.amount,round:r.round});
  const sorted=xs=>xs.map(goldKey).sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
  assert.deepEqual(sorted(actualGold),sorted(dueGold),'independent due augment gold receipts (count, identity, amount, round)');
@@ -290,7 +339,7 @@ function validateRewardsCore(before,after,command,events,base){
  const locked=Boolean(before.multiplayer&&(before.multiplayer.combatRosterLocked||before.phase==='combat'&&!terminal));
  if(locked||before.phase==='combat'&&!terminal){
   assert.equal(appended.filter(r=>['augment-pool-batch1','augment-pool-batch3-dummy'].includes(r.source)).length,0,'locked roster defers unit and item rewards');
-  return {gold:new Map(dueGold.map(g=>[g.receiptId,g])),gifts:new Map(),price};
+  return {gold:new Map([...dueGold.map(g=>[g.receiptId,g]),...shopGold]),gifts:new Map([...shopGifts]),price};
  }
 
  const pending=plan.gifts.filter(p=>!claimed.has(p.receiptId));
@@ -346,14 +395,14 @@ function validateRewardsCore(before,after,command,events,base){
   if(candidate){const occupied=new Set(working.filter(u=>u.location?.kind==='bench').map(u=>u.location.slot)),slot=Array.from({length:9},(_,i)=>i).find(i=>!occupied.has(i));if(slot===undefined)return false;candidate.location={kind:'bench',slot};}
   roster.splice(0,roster.length,...working);return true;
  }
- if(command?.type==='buy')assert(birth({definitionId:before.shop.slots[command.slot].definitionId,starLevel:1}),'independent purchased birth capacity');
+ if(command?.type==='buy')assert(birth({definitionId:before.shop.slots[command.slot].definitionId,starLevel:before.shop.slots[command.slot].starLevel??1}),'independent purchased birth capacity');
  // Include non-augment direct births already independently checked by the outer loot/P2 ledger.
  for(const r of appended.filter(r=>r.kind==='unit'&&r.source!=='augment-pool-batch1'&&r.resolution==='held'))birth({definitionId:r.definitionId,starLevel:r.starLevel??1});
  for(const r of base.lootReceipts??[])if(['unit','forge'].includes(r.payload.kind)&&r.grantedUnitIds.length)assert(birth({definitionId:r.payload.definitionId,starLevel:r.payload.starLevel??1}),'independent loot birth capacity');
  const required=new Set(pending.filter(g=>g.kind!=='unit').map(g=>g.receiptId));let progress;
  do{progress=false;for(const g of pending.filter(g=>g.kind==='unit'&&!required.has(g.receiptId)))if(before.multiplayer&&base.COST[g.definitionId]||birth(g)){required.add(g.receiptId);progress=true;}}while(progress);
  for(const g of pending)assert.equal(actual.some(r=>r.receiptId===g.receiptId),required.has(g.receiptId),'independent '+g.kind+' receipt existence '+g.receiptId);
- return {gold:new Map(dueGold.map(g=>[g.receiptId,g])),gifts:new Map(pending.map(g=>[g.receiptId,g])),price};
+ return {gold:new Map([...dueGold.map(g=>[g.receiptId,g]),...shopGold]),gifts:new Map([...pending.map(g=>[g.receiptId,g]),...shopGifts]),price};
 }
 // Inventory is a complete transition, including commands with no reward receipt.
 function validateRewards(before,after,command,events,base){

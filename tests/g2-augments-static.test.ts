@@ -1,3 +1,5 @@
+import { AUGMENT_BATCH5 } from '../src/simulation/content/augment-pool-batch5';
+import { AUGMENT_SHOP } from '../src/simulation/content/augment-pool-shop';
 import { AUGMENT_BATCH4_B4COMBAT } from '../src/simulation/content/augment-pool-batch4-b4combat';
 import { AUGMENT_BATCH4_B4REROLL } from '../src/simulation/content/augment-pool-batch4-b4reroll';
 import { AUGMENT_BATCH4_B4XP } from '../src/simulation/content/augment-pool-batch4-b4xp';
@@ -86,7 +88,7 @@ const expected: Record<string, Effect[]> = {
   'inspiring-epitaph': [mech('inspiringEpitaph', { shieldMaxHpBps: 2000, attackSpeedBps: 1000 })],
 };
 describe('G2, P1 and S13 P2 augments: independent exact source parameters', () => {
-  it('contains exactly the thirty existing, six P1, fourteen P2, seven P3, three D11, one v19 Sisters five v20 relationship augments and admitted batch-4 source rows', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(AUGMENT_BATCH1),...Object.keys(AUGMENT_BATCH2_ENABLED),...Object.keys(AUGMENT_BATCH3),...Object.keys(AUGMENT_BATCH3_XP),...Object.keys(AUGMENT_BATCH4),...Object.keys(AUGMENT_BATCH4_B4XP),...Object.keys(AUGMENT_BATCH4_B4REROLL),...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(expected),'mentorship','reunion','geniuses','menaces','unlikely-duo','sisters','defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
+  it('contains exactly the existing, P1/P2/P3, D11, v19/v20, batch-4, batch-5 and v24 shop source rows', () => expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual([...Object.keys(AUGMENT_BATCH1),...Object.keys(AUGMENT_BATCH2_ENABLED),...Object.keys(AUGMENT_BATCH3),...Object.keys(AUGMENT_BATCH3_XP),...Object.keys(AUGMENT_BATCH4),...Object.keys(AUGMENT_BATCH4_B4XP),...Object.keys(AUGMENT_BATCH4_B4REROLL),...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP),...Object.keys(AUGMENT_BATCH5),...Object.keys(expected),'mentorship','reunion','geniuses','menaces','unlikely-duo','sisters','defense-call','high-voltage','piercing-lotus-i','piercing-lotus-ii','pyromaniac','thorn-plated-armor','unleash-the-beast'].sort()));
   it.each(Object.keys(expected))('%s keeps exact normalized source values', id => expect(AUGMENT_DEFINITIONS[id].effects).toEqual(expected[id]));
 });
 
@@ -100,10 +102,11 @@ describe('G2 static augment selectors and hand-calculated totals', () => {
     expect(resolved(id, twoNeighbors).stats.health).toBe(500);
     expect(resolved(id).stats.health).toBe(500);
   });
-  it('manaflow II and glass cannon II are restricted to the last row by the real snapshot', () => {
+  it('manaflow II and glass cannon II select the back two rows by the real snapshot', () => {
     for (const [id, mechanic] of [['manaflow-ii', 'extraAttackMana'], ['glass-cannon-ii', 'glassCannon']] as const) {
       expect(resolved(id, fixture([unit('lux', 'lux', 0, 7)])).mechanics?.some(m => m.mechanic === mechanic)).toBe(true);
-      expect(resolved(id, fixture([unit('lux', 'lux', 0, 6)])).mechanics?.some(m => m.mechanic === mechanic)).toBe(false);
+      expect(resolved(id, fixture([unit('lux', 'lux', 0, 6)])).mechanics?.some(m => m.mechanic === mechanic)).toBe(true);
+      expect(resolved(id, fixture([unit('lux', 'lux', 0, 5)])).mechanics?.some(m => m.mechanic === mechanic)).toBe(false);
     }
   });
   it.each([['mentorship-i', 150, 1200], ['mentorship-ii', 220, 1800]] as const)('%s only requires one higher-cost neighbor', (id, health, as) => {
