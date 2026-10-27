@@ -13,11 +13,12 @@ vi.setConfig({ testTimeout: 20_000 });
 const items=['TFT_Item_Artifact_SuspiciousTrenchCoat','TFT7_Item_ShimmerscaleGamblersBlade','TFT4_Item_OrnnTheCollector'];
 function prepare(seed:number){
  let state=reachRound('2-1',false,seed);
- // Automata Crest grants a bench champion/emblem; lone Darius activates no Automata trait or augment combat bonus.
- const choice=state.pendingChoice!;expect(choice.offers).toContain('automata-crest');
- state=accepted(selectChoice(state,choice.choiceId,choice.generation,'automata-crest'));
- expect(state.augments.map(a=>a.definitionId)).toEqual(['automata-crest']);
+ // v24 seed 307 offers Superstars II; the lone one-star Darius gets no two-star bonus.
+ const choice=state.pendingChoice!;expect(choice.offers).toContain('superstars-ii');
+ state=accepted(selectChoice(state,choice.choiceId,choice.generation,'superstars-ii'));
+ expect(state.augments.map(a=>a.definitionId)).toEqual(['superstars-ii']);
  const owner=state.preparation.units.find(u=>u.team==='player')!;
+ expect(owner.definitionId).toBe('darius');expect(owner.starLevel).toBe(1);
  state=accepted(deployMatchUnit(state,owner.id,{kind:'board',cell:{col:3,row:4}}));
  expect(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').map(u=>u.id)).toEqual([owner.id]);
  for(const [slot,definitionId] of items.entries()){
@@ -28,7 +29,7 @@ function prepare(seed:number){
 }
 
 it('real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts',()=>{
- // Seed 307 keeps the exact independent Gambler/Collector receipt vector with the publicly offered Automata Crest.
+ // Seed 307 keeps the exact independent Gambler/Collector receipt vector with the publicly offered, inactive Superstars II.
  const {state,ownerId}=prepare(307);
  const equippedItems=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===ownerId);
  const gamblerId=equippedItems.find(i=>i.definitionId===items[1])!.id;

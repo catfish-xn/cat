@@ -13,3 +13,17 @@ check from the separately recorded v23 content epoch.
 
 The regression requires exact serialized byte equality and restores the frozen
 JSON with independently recorded battle history before comparing subsequent rounds.
+
+## v24 content identity
+
+`pre-spoils-v24-seed42.json` repeats the same public seed-42 opening with the
+unchanged working-tree source at `8aa8c627` and **only** the settlement module
+replaced by `git show 808d16ae:src/simulation/g2-3-settlement.ts` at bundle time.
+The exporter checks `restoreMatch(serializeMatch(state))` before writing; no
+digest is patched. The original v23 baseline above remains untouched.
+
+A structural comparison against `pre-spoils-seed42.json` has exactly five differences:
+`rulesVersion`, `contentVersion`, `contentDigest`, `combatInputBasis.contentDigest`,
+and `m8.loot.frozen.replayDigest`. All combat, reward, receipt, RNG and roster data
+are identical. The current settlement implementation must still match the new
+pre-Spoils bytes exactly and continue both following rounds with full history.

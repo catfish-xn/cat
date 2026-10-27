@@ -130,7 +130,7 @@ it('Spoils historical authentication cannot be bypassed by deleting the kill cou
 // Frozen pre-fb3prog settlement bytes under current content; see fixture provenance.
 // Keep this independent baseline rather than synthesizing it with the new settlement code.
 it.each([1,2])('pre-Spoils baseline bytes restore and continue round %i with full history',targetRound=>{
- const baseline=readFileSync(new URL('./fixtures/compat/pre-spoils-seed42.json',import.meta.url),'utf8');
+ const baseline=readFileSync(new URL('./fixtures/compat/pre-spoils-v24-seed42.json',import.meta.url),'utf8');
  const history=new BattleHistory('spoils-compatibility');
  let s=fieldBench(resolveM5Choices(createMatch(42)));
  s=accepted(recordCommand(history,s,startMatchCombat(s)));

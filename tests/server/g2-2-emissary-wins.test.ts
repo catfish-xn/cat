@@ -21,12 +21,13 @@ class RecordingResolver implements BattleResolver {
  * The seat's frozen state with its board replaced by one 1-star Ambessa (Emissary 1) and no equipment. She stands on the back
  * row: v15's per-card rerolls changed the 2-1 offers, and 阵容 (lineup) adds armor and MR per ally on the front two rows,
  * which is not what is measured here. v22: the 2-1 augment offers changed too (tier table, trait filter), so a seat can
- * hold a stat augment such as Crownguard Spirit (+armor); augments are cleared for the same reason as items.
+ * hold a stat augment such as Crownguard Spirit (+armor); augments and their dependent progress are cleared for the same reason as items.
+ * v24 can select a progress-bearing augment: keeping its progress after removing the card is an invalid snapshot.
  */
 function asAmbessa(seat: BattleSeatInput): BattleSeatInput {
   const units = seat.state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board');
   const only = { ...units[0]!, definitionId: 'ambessa', starLevel: 1 as const, location: { kind: 'board' as const, cell: { col: 3, row: 7 } } };
-  return { ...seat, state: { ...seat.state, preparation: { ...seat.state.preparation, units: [only] }, items: [], augments: [], temporaryEquipment: [], anomalyBinding: null, persistentGrowth: [] } };
+  return { ...seat, state: { ...seat.state, preparation: { ...seat.state.preparation, units: [only] }, items: [], augments: [], augmentProgress: { pumpingRounds: 0, investmentHp: 0 }, temporaryEquipment: [], anomalyBinding: null, persistentGrowth: [] } };
 }
 
 let pvp: BattleInput[] = [];

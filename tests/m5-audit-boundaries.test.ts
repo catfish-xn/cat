@@ -119,8 +119,9 @@ describe('M5 audit: dynamic restore and truthful strategy descriptions', () => {
     expect(text).toContain('全队收益'); expect(text).toContain('职业成员额外收益');
     expect(text).toContain('职业成员最终合计'); expect(text.split('职业成员最终合计')[1]).toContain(`+${total}`);
   });
-  it.each(['manaflow-i', 'glass-cannon-i'])('%s descriptions consistently say last row', id => {
+  it.each(['manaflow-i', 'glass-cannon-i'])('%s descriptions consistently say back two rows', id => {
     const text = AUGMENT_DEFINITIONS[id].effects.map(describeEffect).join('；');
-    expect(text).toContain('最后一排'); expect(text).not.toContain('后两排');
+    // v24 corrected these effects to the source's back-two-row condition.
+    expect(text).toContain('后两排'); expect(text).not.toContain('最后一排');
   });
 });
