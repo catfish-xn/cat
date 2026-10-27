@@ -60,32 +60,51 @@ function pipelineBonuses(s) {
    receiptId: JSON.stringify(['augment-pool-batch5-g5', a.choiceId, 'pipeline-bonus', f.orbId]) };
  });
 }
-/** Authenticate the new history trigger from the actual claim + raw-table payloads, never a reward receipt. */
+/** Authenticate openings from the claim or the pre-settlement FIFO and raw tables, never a reward receipt. */
 function validatePipelineClaim(before, after, command, events) {
  const prior = before.augmentHistory?.facts ?? [], next = after.augmentHistory?.facts ?? [];
+ assert.deepEqual(next.slice(0, prior.length), prior, 'augment history facts append-only');
  const openings = next.slice(prior.length).filter(f => f.kind === 'orb-opened');
  const a = before.augments.find(a => a.definitionId === 'prismatic-pipeline');
- if (!a || command?.type !== 'claimOrb') { assert.equal(openings.length, 0, 'no pipeline opening without an owned claim'); return; }
+ if (!a) { assert.equal(openings.length, 0, 'no pipeline opening without its owner'); return; }
+ // PvE has a combat phase; PvP retains preparation with the server roster lock.
+ // A queued intent only drains when this round really settles, not on another combat command.
+ const settlement = (before.phase === 'combat' || before.multiplayer?.combatRosterLocked === true)
+  && after.phase !== 'combat' && after.round === before.round
+  && !before.roundResults.some(r => r.round === before.round) && after.roundResults.some(r => r.round === before.round)
+  && events.some(e => e.type === 'roundSettled' && e.round === before.round);
+ const queued = settlement ? before.m8.loot.queuedOrbClaims ?? [] : [];
+ assert.equal(new Set(queued).size, queued.length, 'queued claims must be unique');
+ if (queued.length) assert.deepEqual(after.m8.loot.queuedOrbClaims ?? [], [], 'settlement drains the claim queue');
+ const ids = settlement ? queued : command?.type === 'claimOrb' ? [command.orbId] : [];
+ if (!ids.length) { assert.equal(openings.length, 0, 'no pipeline opening without an owned claim or queued settlement'); return; }
  const natural = require('../orb-combo-oracle.cjs').lootPlan(before.seed, before.round, before.augmentTierSeed).rounds.flatMap(r => r.orbs);
- const orb = [...natural, ...pipelineOrbs(before)].find(o => o.orbId === command.orbId);
- const complete = s => orb?.entries.every(e => s.m8.loot.direct.some(d => d.dropId === e.dropId && d.status === 'granted'));
- const due = orb?.tier === 'prismatic' && !complete(before) && complete(after);
- assert.equal(openings.length, due ? 1 : 0, 'one pipeline history trigger per completed prismatic claim');
- if (orb) for (const r of after.m8.loot.receipts.slice(before.m8.loot.receipts.length)) {
-  const e = orb.entries.find(e => e.dropId === r.dropId);
-  assert(e, 'claim can only grant entries of the independently planned orb');
-  assert.deepEqual(r.payload, e.payload, 'independent partial or complete orb payload');
+ const plans = [...natural, ...pipelineOrbs(before)];
+ const orbs = ids.map(id => plans.find(o => o.orbId === id)).filter(Boolean);
+ const complete = (s, orb) => orb.entries.every(e => s.m8.loot.direct.some(d => d.dropId === e.dropId && d.status === 'granted'));
+ const due = orbs.filter(orb => orb.tier === 'prismatic' && !complete(before, orb) && complete(after, orb));
+ assert.deepEqual(openings.map(f => f.orbId), due.map(orb => orb.orbId), 'one pipeline history trigger per completed prismatic claim in FIFO order');
+ for (const r of after.m8.loot.receipts.slice(before.m8.loot.receipts.length)) {
+  const e = orbs.flatMap(orb => orb.entries).find(e => e.dropId === r.dropId);
+  if (!settlement && orbs.length) assert(e, 'claim can only grant entries of the independently planned orb');
+  if (e) assert.deepEqual(r.payload, e.payload, 'independent partial or complete orb payload');
  }
- if (!due) return;
- const f = openings[0];
- assert.equal(f.choiceId, a.choiceId); assert.equal(f.orbId, orb.orbId); assert.equal(f.tier, 'prismatic');
- assert.equal(f.round, before.round); assert.equal(f.roundId, before.roundDefinitionId); assert.equal(f.seatId, before.multiplayer?.seatId ?? 'solo');
- assert(f.resourcePrefix >= before.resourceProvenance.entries.length && f.resourcePrefix <= after.resourceProvenance.entries.length);
- for (const e of orb.entries) {
-  const receipt = after.m8.loot.receipts.find(r => r.dropId === e.dropId);
-  assert(receipt, 'opened pipeline base entry needs a claim');
-  assert.deepEqual(receipt.payload, e.payload, 'pipeline base payload independently sampled');
-  if (!before.m8.loot.receipts.some(r => r.dropId === e.dropId)) assert(events.some(ev => ev.type === 'lootGranted' && ev.receipt.dropId === e.dropId));
+ for (const [i, orb] of due.entries()) {
+  const f = openings[i];
+  assert(!prior.some(old => old.kind === 'orb-opened' && old.orbId === orb.orbId), 'pipeline orb cannot open twice');
+  assert.equal(f.choiceId, a.choiceId); assert.equal(f.orbId, orb.orbId); assert.equal(f.tier, 'prismatic');
+  assert.equal(f.round, before.round); assert.equal(f.roundId, before.roundDefinitionId); assert.equal(f.seatId, before.multiplayer?.seatId ?? 'solo');
+  assert(f.resourcePrefix >= before.resourceProvenance.entries.length && f.resourcePrefix <= after.resourceProvenance.entries.length);
+  for (const e of orb.entries) {
+   const receipt = after.m8.loot.receipts.find(r => r.dropId === e.dropId);
+   assert(receipt, 'opened pipeline base entry needs a claim');
+   assert.deepEqual(receipt.payload, e.payload, 'pipeline base payload independently sampled');
+   if (!before.m8.loot.receipts.some(r => r.dropId === e.dropId)) {
+    const granted = events.find(ev => ev.type === 'lootGranted' && ev.receipt.dropId === e.dropId);
+    assert(granted, 'opened pipeline base entry needs a loot event');
+    assert.deepEqual(granted.receipt, receipt, 'loot event must match the independently checked receipt');
+   }
+  }
  }
 }
 module.exports = { draws, expectedRolls, pipelineOrbs, pipelineBonuses, validatePipelineClaim };
