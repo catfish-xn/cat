@@ -20,7 +20,7 @@ import { AUGMENT_DEFINITIONS } from './content/augments';
 import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
 import { SHOP_CATALOG, MATCH_RULES } from './match-rules';
 
-const shopOwner=(id:string)=>Boolean(AUGMENT_SHOP[id])||id==='dual-purpose';
+const shopOwner=(id:string)=>Boolean(AUGMENT_SHOP[id])||id==='dual-purpose'||id==='shop-glitch';
 const point=(s:MatchState):ShopHistoryPoint=>({round:s.round,level:s.level,xp:s.xp,resourcePrefix:s.resourceProvenance.entries.length,owners:s.augments.map(a=>a.choiceId),gold:s.gold,mechanicPrefix:s.seatMechanics?.receipts.length??0,lootPrefix:s.m8.loot.receipts.length,schedulePrefix:s.scheduleReceipts.length,economyPrefix:s.roundResults.length});
 const append=(s:MatchState,e:ShopHistoryEntry):MatchState=>s.shopHistory?{...s,shopHistory:{...s.shopHistory,entries:[...s.shopHistory.entries,e]}}:s;
 export function recordShopAcquisition(before:MatchState,after:MatchState):MatchState {
@@ -183,7 +183,8 @@ export function validateShopHistory(state:MatchState):void {
    keys(e,['kind','point','locked']);check(typeof e.locked==='boolean'&&e.locked!==Boolean(cursor.shop.locked),'lock');cursor={...cursor,shop:{...cursor.shop,locked:e.locked}};
   }else if(e.kind==='draw'){
    keys(e,['kind','point','cause','shop','rngState','credit','goldCost','starry',...(e.stock?['stock']:[])]);
-   check(['natural','subscription','reroll','dual-purpose'].includes(e.cause),'draw cause');
+   check(['natural','subscription','reroll','dual-purpose','shop-glitch'].includes(e.cause),'draw cause');
+   if(e.cause==='shop-glitch')check(cursor.augments.some(a=>a.definitionId==='shop-glitch')&&!cursor.shop.locked,'Shop Glitch owner/lock');
    if(e.cause==='natural'){check(needNatural||cursor.shop.generation===0,'natural refresh');needNatural=false;}
    else if(e.cause==='subscription'){check(needSubscription,'subscription refresh');needSubscription=false;}
    else {check(!needNatural,'missing natural refresh');if(e.cause==='dual-purpose')check(needDual&&lastWasXp,'XP refresh');}
@@ -192,7 +193,7 @@ export function validateShopHistory(state:MatchState):void {
    check(cursor.gold>=e.goldCost,'reroll bank');cursor={...cursor,gold:cursor.gold-e.goldCost};
    if(credit){used.set(credit.choiceId,credit.ordinal+1);const fact=state.resourceProvenance.entries[prefix];
     check(fact?.kind==='free-reroll'&&fact.generation===cursor.shop.generation&&getMultiplayerRoundById(fact.roundId).ordinal===cursor.round,'free spend');spends.add(prefix);}
-   if(e.cause==='reroll'||e.cause==='dual-purpose')cursor=recordShopReroll(cursor);
+   if(e.cause==='reroll'||e.cause==='dual-purpose'||e.cause==='shop-glitch')cursor=recordShopReroll(cursor);
    needDual=false;
    check(Boolean(e.stock)===Boolean(state.sharedPool),'pool context');
    if(e.stock){keys(e.stock,SHOP_CATALOG);check(Object.values(e.stock).every(n=>int(n)&&n<=100),'pool stock');}

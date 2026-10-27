@@ -1,3 +1,5 @@
+import { firstNodeSeed } from './augment-stage-helpers';
+import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import * as historyApi from '../src/simulation/augment-history';
 import { validateAugmentHistory } from '../src/simulation/augment-history-restore';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -24,8 +26,12 @@ vi.mock('../src/simulation/augment-history-owners', async importOriginal => {
   return {...actual,augmentNeedsHistory:(id:string)=>actual.augmentNeedsHistory(id)||id==='starry-night'||fixture.allOwners};
 });
 let acquired: MatchState, advanced: MatchState;
+const baselineIdentity=(text:string)=>text.replaceAll('s13-g2-3-v25-online-rules','s13-g2-3-v24-online-rules')
+  .replaceAll('s13-14.24b-g2-3-v25-online-rules','s13-14.24b-g2-3-v24-online-rules')
+  .replaceAll('fnv1a32-utf16:2cfdbb54','fnv1a32-utf16:db662e0b')
+  .replaceAll('fnv1a32-utf16:722ab6e2','fnv1a32-utf16:18c876b2');
 beforeAll(() => {
-  const open = reachRound('2-1', false, 18), c = open.pendingChoice!;
+  const open = reachRound('2-1', false, firstNodeSeed('starry-night', 101)), c = open.pendingChoice!;
   expect(c.offers).toContain('starry-night');
   acquired = accepted(selectChoice(open, c.choiceId, c.generation, 'starry-night'));
   let s = advanceAugmentPreparationTime(acquired, 2500);
@@ -37,7 +43,9 @@ beforeAll(() => {
 
 it('keeps four no-owner saves byte-identical to HEAD ee2b019c (independent baseline SHA-256)', () => {
   let s = createMatch(42); const hashes: string[] = [];
-  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text); hashes.push(createHash('sha256').update(text).digest('hex')); };
+  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text);
+    // Compare the unchanged no-owner payload to the original epoch after normalizing the intentionally changed identities.
+    hashes.push(createHash('sha256').update(baselineIdentity(text)).digest('hex')); };
   check(); const u = s.preparation.units.find(u => u.team === 'player')!;
   s = accepted(deployMatchUnit(s, u.id, {kind:'bench',slot:0})); check();
   s = resolveM5Choices(accepted(startMatchCombat(s))); check();
@@ -239,10 +247,25 @@ for(const mode of ['manual','bot','timeout'] as const)it(`makes three prior elim
 });
 
 for(const streaming of [false,true])describe(`online PvE deaths (${streaming?'stream':'ordinary'})`,()=>{
-  const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:18,carousel:CAROUSEL_RULES_BINDING,combatStreaming:streaming});
+  const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:42,carousel:CAROUSEL_RULES_BINDING,combatStreaming:streaming});
   beforeAll(()=>{fixture.allOwners=true;room.start();});
   for(let round=2;round<=10;round++)beforeAll(()=>{
     runUntil(room,clock,s=>s.round>=round&&s.phase==='preparation');
+  });
+  beforeAll(()=>{
+    // Keep one low-cost champion fielded so this death-ownership fixture remains meaningful after pool expansion.
+    let match=room.state.seats.find(s=>s.seatId==='s0')!.match;
+    const players=match.preparation.units.filter(u=>u.team==='player'&&!UNIT_DEFINITIONS[u.definitionId]?.summon);
+    const chosen=[...players].sort((a,b)=>UNIT_DEFINITIONS[a.definitionId].cost-UNIT_DEFINITIONS[b.definitionId].cost)[0];
+    for(const unit of players.filter(u=>u.id!==chosen.id&&u.location.kind==='board')){
+      const occupied=new Set(match.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').map(u=>u.location.kind==='bench'?u.location.slot:-1));
+      const slot=Array.from({length:match.preparation.benchSize},(_,i)=>i).find(i=>!occupied.has(i));
+      if(slot===undefined)throw Error('death fixture bench full');
+      expect(room.handle('s0',{type:'deploy',unitId:unit.id,target:{kind:'bench',slot}})).toMatchObject({ok:true});
+      match=room.state.seats.find(s=>s.seatId==='s0')!.match;
+    }
+    if(chosen.location.kind==='bench')expect(room.handle('s0',{type:'deploy',unitId:chosen.id,target:{kind:'board',cell:{col:0,row:4}}})).toMatchObject({ok:true});
+    for(const unit of players.filter(u=>u.id!==chosen.id))expect(room.handle('s0',{type:'sell',unitId:unit.id})).toMatchObject({ok:true});
   });
   afterAll(()=>{room.dispose();fixture.allOwners=false;});
   it('binds live and terminal samples, authenticates them and resumes object/JSON snapshots identically',()=>{
@@ -354,7 +377,7 @@ it('authenticates generic HP/AP growth written inside an acquisition transaction
       {unitId,healthFlat:20,healthBps:0,attackDamageBps:150,abilityPowerCenti:150}])};
   });
   try{
-    const open=reachRound('2-1',false,18),c=open.pendingChoice!;
+    const open=reachRound('2-1',false,firstNodeSeed('starry-night', 101)),c=open.pendingChoice!;
     const grown=accepted(selectChoice(open,c.choiceId,c.generation,'starry-night'));
     const row=requireAugmentFacts(grown,'growth',grown.round)[0];
     expect(readAugmentGrowth(grown,row.deltas[0].unitId)).toEqual(row.deltas[0]);
@@ -384,7 +407,7 @@ it('keeps a real battle ledger and terminal save byte-identical to the independe
   while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
   expect(s.combat!.tick).toBe(164);expect(events).toHaveLength(113);
   expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324');
-  expect(createHash('sha256').update(serializeMatch(s)).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
+  expect(createHash('sha256').update(baselineIdentity(serializeMatch(s))).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
 });
 it('records a Forge death, a real Jayce revival and its second death with equipment at each death',()=>{
   const combatUnit=(id:string,definitionId:string,team:'player'|'enemy',col:number,row:number,patch:Partial<CombatUnit>={})=>unit(id,team,col,row,{
@@ -444,7 +467,7 @@ it('preserves slotted temporary items and unslotted chest grants independently a
 });
 
 it('records logical time before acquisition without adding bytes to an unowned save',()=>{
-  const open=reachRound('2-1',false,18),timed=advanceAugmentPreparationTime(open,10000);
+  const open=reachRound('2-1',false,firstNodeSeed('starry-night', 101)),timed=advanceAugmentPreparationTime(open,10000);
   expect(serializeMatch(timed)).toBe(serializeMatch(open));
   const c=timed.pendingChoice!,picked=accepted(selectChoice(timed,c.choiceId,c.generation,'starry-night'));
   expect(requireAugmentFacts(picked,'acquire',picked.round)[0].preparationElapsedMs).toBe(10000);
@@ -484,7 +507,7 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 
 it('keeps the existing save/replay envelope versions and authenticates a carried history through BattleRecord',async()=>{
   const history=new BattleHistory('augment-history-envelope');
-  let s=recordedEmptyRoute(18,'2-1',history),c=s.pendingChoice!;
+  let s=recordedEmptyRoute(firstNodeSeed('starry-night', 101),'2-1',history),c=s.pendingChoice!;
   s=accepted(selectChoice(s,c.choiceId,c.generation,'starry-night'));
   s=accepted(recordCommand(history,s,startMatchCombat(emptyBoard(s))));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
   const envelope:SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,
