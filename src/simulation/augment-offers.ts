@@ -31,6 +31,7 @@ export interface AugmentOfferFilter {
   readonly node: string | null;
   readonly fieldedTraits: readonly string[];
   readonly blocked: readonly string[];
+  readonly sharedCarousel?: boolean;
 }
 
 /** One match-level draw: FNV-1a UTF-16 stream name, seed xor namespace, one private LCG word.
@@ -94,6 +95,7 @@ export function isTraitTailoredNode(node: string | null): boolean {
 }
 /** Own-augment exclusions always apply; node, trait and cross-player rules apply when the offer's filter is given. */
 export function augmentOfferAllowed(id: string, owned: readonly OwnedAugment[], filter?: AugmentOfferFilter): boolean {
+  if ((id === 'table-scraps' || id === 'young-and-wild-and-free') && !filter?.sharedCarousel) return false;
   const api = augmentApiName(id);
   if (owned.some(a => mutuallyExclusive(api, augmentApiName(a.definitionId)))) return false;
   if (!filter) return true;
@@ -135,8 +137,8 @@ export function externalAugmentBlocks(selfSeatId: string, states: readonly Match
   return Object.keys(AUGMENT_DEFINITIONS).filter(id => blocked.has(augmentApiName(id))).sort();
 }
 /** The filter of a recorded node for its draw `drawIndex` (0 = initial three). */
-export function recordedOfferFilter(record: AugmentOfferRecord, drawIndex: number): AugmentOfferFilter {
-  return { node: augmentNodeOf(record.choiceId), fieldedTraits: record.fieldedTraits, blocked: record.externalBlocks[drawIndex] ?? [] };
+export function recordedOfferFilter(record: AugmentOfferRecord, drawIndex: number, sharedCarousel = false): AugmentOfferFilter {
+  return { node: augmentNodeOf(record.choiceId), fieldedTraits: record.fieldedTraits, blocked: record.externalBlocks[drawIndex] ?? [], sharedCarousel };
 }
 
 /** One LCG word, sorted IDs, modulo selection. Caller validates nonempty before drawing. */
@@ -152,7 +154,7 @@ export function augmentOptionViews(state: MatchState) {
   if (choice?.kind !== 'augment') return [];
   const record = state.augmentOffers.find(candidate => candidate.choiceId === choice.choiceId);
   const candidates = augmentCandidates(resolveAugmentTier(state, choice.choiceId), state.augments, [...state.removedAugmentIds, ...choice.offers],openingEncounterId(state),
-    record ? recordedOfferFilter(record, record.externalBlocks.length - 1) : undefined);
+    record ? recordedOfferFilter(record, record.externalBlocks.length - 1, !!state.carousel && !!state.multiplayer && state.openingEncounter.mode === 'shared') : undefined);
   return choice.offers.map((definitionId, optionIndex) => ({ definitionId, optionIndex,
     rerollAvailable: state.phase === 'choice' && choice.step === 'offer' && !isCombatRosterLocked(state)
       && state.multiplayer?.status !== 'eliminated'
@@ -189,13 +191,13 @@ export function validateAugmentOfferHistory(state: MatchState): void {
       && (isTraitTailoredNode(augmentNodeOf(node.id)) || record.fieldedTraits.length === 0));
     check(Array.isArray(record.externalBlocks) && record.externalBlocks.length === record.rerollCount + 1
       && record.externalBlocks.every(list => sortedUnique(list) && list.every((id: string) => blockable.includes(id))));
-    const initial = generateChoices(augmentCandidates(tier, owned, removed,openingEncounterId(state), recordedOfferFilter(record, 0)), rng);
+    const initial = generateChoices(augmentCandidates(tier, owned, removed,openingEncounterId(state), recordedOfferFilter(record, 0, !!state.carousel && !!state.multiplayer && state.openingEncounter.mode === 'shared')), rng);
     const offers = [...initial.offers], rerolledSlots = [false, false, false];
     removed.push(...offers);
     rng = initial.choiceRngState;
     record.rerolledIndices.forEach((slot, rerollIndex) => {
       check(Number.isSafeInteger(slot) && slot >= 0 && slot < 3);
-      const draw = drawAugmentCard(augmentCandidates(tier, owned, [...removed, ...offers],openingEncounterId(state), recordedOfferFilter(record, rerollIndex + 1)), rng);
+      const draw = drawAugmentCard(augmentCandidates(tier, owned, [...removed, ...offers],openingEncounterId(state), recordedOfferFilter(record, rerollIndex + 1, !!state.carousel && !!state.multiplayer && state.openingEncounter.mode === 'shared')), rng);
       offers[slot] = draw.definitionId; removed.push(draw.definitionId);
       rng = draw.choiceRngState; rerolledSlots[slot] = true;
     });

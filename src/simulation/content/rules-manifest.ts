@@ -1,5 +1,6 @@
 import { AUGMENT_SHOP } from './augment-pool-shop';
 import { AUGMENT_BATCH5 } from './augment-pool-batch5';
+import { AUGMENT_BATCH5_H5 } from './augment-pool-batch5-h5';
 import { AUGMENT_BATCH4, AUGMENT_BATCH4_BLOCKED } from './augment-pool-batch4';
 import { AUGMENT_BATCH4_B4XP } from './augment-pool-batch4-b4xp';
 import { AUGMENT_BATCH4_B4REROLL } from './augment-pool-batch4-b4reroll';
@@ -41,6 +42,9 @@ export const RULES_GAP_MANIFEST = freezeContent({
   // Offer stages are replay input: augment offers re-derive from these bans at restore (P, 14.24 stage tags).
   augmentStageBans:{version:'augment-stage-bans-14.24-tags-v1',bans:AUGMENT_STAGE_BANS,reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
+  augmentPoolBatch5H5:{version:'augment-pool-batch5-h5-v1',content:AUGMENT_BATCH5_H5,convention:'P-B5-35-36-H5-2026-10-27',
+    selection:'carousel-rng-after-xor-42533535-seat-index-choice-id-fnv-lcg32-rejection-v1',
+    priority:'shared-carousel-arrival-end-logical-zero',events:'additional-pick-then-grant-stamped-match-events'},
   augmentPoolBatch4:{version:'augment-pool-batch4-levels-v23-candidate',content:AUGMENT_BATCH4,blocked:AUGMENT_BATCH4_BLOCKED,timing:'reached-thresholds-on-acquisition-later-levels-on-authoritative-transition',sampling:'existing-gift-stream-radiant-five-without-replacement',birthdayCost:'max-1-level-minus-4'},
   augmentPoolBatch4B4xp:{version:'augment-pool-batch4-b4xp-v23-candidate',content:AUGMENT_BATCH4_B4XP,timing:'pvp-end-before-settlement-rewards-and-deferred-upgrades',authority:'completed-battles-replay'},
   augmentPoolBatch4B4reroll:{version:'augment-pool-batch4-b4reroll-v23',content:AUGMENT_BATCH4_B4REROLL,timing:'next-entry-after-income-before-entry-grants',credits:'carry-over',patience:'previous-round-shop-purchases-including-combat',invested:'floor-clamp-gold-50-80-divide-10'},
