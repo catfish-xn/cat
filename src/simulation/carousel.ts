@@ -522,7 +522,7 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     }
     for (const fact of match.resourceProvenance.entries) if ((fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'carousel' && !ids.has(fact.source.receiptId)) throw Error('receipt-mismatch');
     validateAugmentHistory(match, authority);
-  validateMadChemistOnlineSave(match, authority);
+    validateMadChemistOnlineSave(carousel.pool, match, authority);
     return match;
 }
 

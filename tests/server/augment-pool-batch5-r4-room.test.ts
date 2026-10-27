@@ -6,7 +6,8 @@ import { nextRandom } from '../../src/simulation/rng';
 import { bindSharedOpeningEncounter, createOpeningEncounter, openingEncounterId } from '../../src/simulation/opening-encounter';
 import { generateChoices } from '../../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier } from '../../src/simulation/augment-offers';
-import { restoreSharedOrbSnapshot, assertSharedPoolConservation, setSharedShopLock } from '../../src/simulation/shared-pool';
+import { restoreSharedOrbSnapshot, assertSharedPoolConservation, setSharedShopLock, buySharedUnit, rerollSharedShop, sellSharedUnit } from '../../src/simulation/shared-pool';
+import { captureAugmentHistoryAuthority } from '../../src/simulation/augment-history';
 import { restoreCarouselSeat } from '../../src/simulation/carousel';
 import { CAROUSEL_RULES_BINDING } from '../../src/server/room/carousel';
 import { canonicalContent } from '../../src/simulation/content';
@@ -31,14 +32,41 @@ function route() {
   throw Error('No B5-67 room offer in seeds 0..100');
 }
 
+/** Erase every candidate-owned acquisition marker together, keeping the real pooled Singed. */
+function stripAcquisition(match: MatchState): MatchState {
+  const bad = structuredClone(match) as any;
+  const orbs = bad.m8.loot.rewardOrbs.filter((o: any) => o.entries.some((e: any) => e.sourceUnitId.includes('mad-chemist')));
+  const drops = new Set(orbs.flatMap((o: any) => o.entries.map((e: any) => e.dropId)));
+  bad.augments = [];
+  bad.augmentOffers = [];
+  bad.removedAugmentIds = [];
+  bad.scheduleReceipts = bad.scheduleReceipts.filter((r: any) => r.kind !== 'augment');
+  bad.choiceRngState = createCarouselMatch(match.seed).choiceRngState;
+  bad.seatMechanics.receipts = bad.seatMechanics.receipts.filter((r: any) => !r.receiptId.includes('mad-chemist'));
+  bad.m8.loot.rewardOrbs = bad.m8.loot.rewardOrbs.filter((o: any) => !orbs.includes(o));
+  bad.m8.loot.direct = bad.m8.loot.direct.filter((d: any) => !drops.has(d.dropId));
+  bad.m8.loot.receipts = bad.m8.loot.receipts.filter((r: any) => !drops.has(r.dropId));
+  bad.gold++;
+  return bad;
+}
+
 describe('B5-67 real online room commands and authenticated saves',()=>{
   const found=route(), {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:found.seed,carousel:CAROUSEL_RULES_BINDING}), seatId=found.seatId;
   const seat=()=>room.state.seats.find(s=>s.seatId===seatId)!;
   afterAll(()=>room.dispose());
   let acquired: MatchState;
-  it('starts the real eight-seat room',()=>{room.start();expect(room.state.seats).toHaveLength(8);});
+  it('starts the real eight-seat room',()=>{expect(found).toEqual({seed:46,seatId:'s2'});room.start();expect(room.state.seats).toHaveLength(8);});
   for(const roundId of ['1-3','1-4','2-1'])it(`reaches ${roundId}`,()=>{
     expect(runUntilClaiming(room,clock,s=>s.roundId===roundId&&s.phase==='preparation').roundId).toBe(roundId);
+  });
+  it('shared restore always validates a supplied authority even before acquiring B5-67', () => {
+    const match = seat().match, authority = room.augmentHistoryAuthority(seatId);
+    const restore = (input: unknown, handle = authority) => restoreSharedOrbSnapshot(room.state.pool, input, handle);
+    expect(match.augments).toEqual([]); expect(match.augmentHistory).toBeUndefined();
+    for (const input of [match, canonicalContent(match)]) expect(restore(input)).toEqual(match);
+    const bad = { ...match, gold: match.gold + 1 };
+    for (const input of [bad, canonicalContent(bad)]) expect(() => restore(input)).toThrow('server facts/state mismatch');
+    expect(() => restore(match, JSON.parse(JSON.stringify(authority)))).toThrow('missing independent server authority');
   });
   it('chooses the offered card, grants exactly the independent Singed reward, claims and deploys it',()=>{
     const choice=seat().match.pendingChoice!;expect(choice.offers).toContain('mad-chemist');
@@ -61,6 +89,18 @@ describe('B5-67 real online room commands and authenticated saves',()=>{
     expect(canonicalContent(room.state)).toBe(before);
     expect(seat().match.seatMechanics!.receipts.filter(r=>r.receiptId===expected[0].receiptId)).toHaveLength(1);
   });
+  const rejectErasure = (entry: 'shared' | 'carousel', withAuthority: boolean) => {
+    const match = seat().match, bad = stripAcquisition(match), authority = withAuthority ? room.augmentHistoryAuthority(seatId) : undefined;
+    expect(bad.preparation.units).toEqual(match.preparation.units);
+    expect(bad.augments).toEqual([]); expect(bad.seatMechanics!.receipts.some(r => r.receiptId.includes('mad-chemist'))).toBe(false);
+    expect(room.state.pool.rewards.some(r => r.seatId === seatId && r.dropId.includes('mad-chemist'))).toBe(true);
+    // The forged candidate still satisfies the independent inventory conservation check.
+    assertSharedPoolConservation(room.state.pool, [bad]);
+    for (const input of [bad, canonicalContent(bad)]) expect(() => entry === 'shared'
+      ? restoreSharedOrbSnapshot(room.state.pool, input, authority) : restoreCarouselSeat(room.state.carousel!.state, input, authority))
+      .toThrow(withAuthority ? 'server facts/state mismatch' : 'missing independent server authority');
+  };
+  it.each([false, true])('shared restore rejects combined acquisition erasure with authority=%s', withAuthority => rejectErasure('shared', withAuthority));
   it('round-trips object and canonical JSON without history placeholders; rejects owner/reward/roster and authority tampering',()=>{
     const match=seat().match, authority=room.augmentHistoryAuthority(seatId), text=canonicalContent(match);
     expect(match.augmentHistory).toBeUndefined();
@@ -81,6 +121,34 @@ describe('B5-67 real online room commands and authenticated saves',()=>{
     ];
     for(const mutate of mutations){const bad=JSON.parse(text);mutate(bad);expect(()=>restoreSharedOrbSnapshot(room.state.pool,bad,authority)).toThrow();expect(()=>restoreSharedOrbSnapshot(room.state.pool,canonicalContent(bad),authority)).toThrow();}
     expect(()=>restoreSharedOrbSnapshot(room.state.pool,match,room.augmentHistoryAuthority(seatId=== 's0'?'s1':'s0'))).toThrow();
+  });
+  it('keeps the rewarded copy through a real three-copy upgrade and returns all copies exactly once on sale', () => {
+    // Isolate the domain transactions from the live room clock; only the fixture bankroll changes.
+    let pool = room.state.pool, match = { ...seat().match, gold: 10000 };
+    const reward = pool.rewards.find(r => r.seatId === seatId && r.dropId.includes('mad-chemist'))!;
+    for (let bought = 0, rolls = 0; bought < 2; ) {
+      const slot = match.shop.slots.findIndex(s => s.status === 'available' && s.definitionId === 'singed');
+      if (slot < 0) { expect(++rolls).toBeLessThan(100); }
+      const result = slot < 0 ? rerollSharedShop(pool, match, match.shop.generation) : buySharedUnit(pool, match, slot, match.shop.generation);
+      expect(result.ok).toBe(true); if (!result.ok) throw Error(result.reason);
+      pool = result.pool; match = result.state;
+      if (slot >= 0) bought++;
+      assertSharedPoolConservation(pool, [match]);
+    }
+    const upgraded = match.preparation.units.filter(u => u.team === 'player' && u.definitionId === 'singed');
+    expect(upgraded).toHaveLength(1); expect(upgraded[0].starLevel).toBe(2);
+    expect(pool.holdings.find(h => h.seatId === seatId && h.unitId === upgraded[0].id)!.sources).toHaveLength(3);
+    const available = pool.available.singed, gold = match.gold;
+    const sold = sellSharedUnit(pool, match, upgraded[0].id);
+    expect(sold.ok).toBe(true); if (!sold.ok) throw Error(sold.reason);
+    expect(sold.pool.available.singed).toBe(available + 3); expect(sold.state.gold).toBe(gold + 3);
+    expect(sold.pool.rewards).toContainEqual(reward); assertSharedPoolConservation(sold.pool, [sold.state]);
+    expect(sellSharedUnit(sold.pool, sold.state, upgraded[0].id)).toMatchObject({ ok: false, reason: 'unknown-unit', pool: sold.pool, state: sold.state });
+    const authority = captureAugmentHistoryAuthority(sold.state);
+    expect(restoreSharedOrbSnapshot(sold.pool, canonicalContent(sold.state), authority)).toEqual(sold.state);
+    const bad = stripAcquisition(sold.state);
+    expect(() => restoreSharedOrbSnapshot(sold.pool, bad)).toThrow('missing independent server authority');
+    expect(() => restoreSharedOrbSnapshot(sold.pool, bad, authority)).toThrow('server facts/state mismatch');
   });
   it('executes the actual PvP battle, with poison packets and no strengthened Singed attacks on either side',()=>{
     answerOpenChoices(room);
@@ -114,5 +182,14 @@ describe('B5-67 real online room commands and authenticated saves',()=>{
       const bad=structuredClone(match);mutation(bad);
       expect(()=>restoreCarouselSeat(carousel,bad,authority)).toThrow();expect(()=>restoreCarouselSeat(carousel,JSON.stringify(bad),authority)).toThrow();
     }
+  });
+  it.each([false, true])('carousel restore rejects combined acquisition erasure with authority=%s', withAuthority => rejectErasure('carousel', withAuthority));
+  it('carousel restore always validates a supplied authority for a seat without B5-67 or augment history', () => {
+    const match = room.state.seats.find(s => !s.match.augmentHistory && !s.match.augments.some(a => a.definitionId === 'mad-chemist'))!.match;
+    const authority = room.augmentHistoryAuthority(match.sharedPool!.seatId), carousel = room.state.carousel!.state;
+    for (const input of [match, canonicalContent(match)]) expect(restoreCarouselSeat(carousel, input, authority)).toEqual(match);
+    const bad = { ...match, gold: match.gold + 1 };
+    for (const input of [bad, canonicalContent(bad)]) expect(() => restoreCarouselSeat(carousel, input, authority)).toThrow('server facts/state mismatch');
+    expect(() => restoreCarouselSeat(carousel, match, JSON.parse(JSON.stringify(authority)))).toThrow('missing independent server authority');
   });
 });

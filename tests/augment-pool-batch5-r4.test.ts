@@ -4,11 +4,16 @@ import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { augmentCandidates, augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
-import { createCombatWithEvents, stepCombat, type CombatState } from '../src/simulation/combat';
+import { createCombatWithEvents, stepCombat, type CombatState, type CombatEvent } from '../src/simulation/combat';
 import { advanceMadChemist, leaveMadChemistCloud, madChemistMoveInterval, madChemistVamp, moveMadChemist } from '../src/simulation/augment-pool-batch5-r4';
 import { isMadChemist } from '../src/simulation/augment-pool-batch5-r4';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
-import type { S13Unit } from '../src/simulation/combat-s13-state';
+import { origin, type S13Unit } from '../src/simulation/combat-s13-state';
+import { applyStatusContribution } from '../src/simulation/m8/status';
+import { effectIdentity } from '../src/simulation/m8/identity';
+import { asSource } from '../src/simulation/m8/s13-definitions';
+import { executeMechanismEffect } from '../src/simulation/m8/s13-mechanisms';
+import { wearing } from './fixtures/m8-b4-items';
 import { augmentPool, madChemistExpected } from './fixtures/m5/oracle.g2.cjs';
 import { augmentDraw } from './fixtures/m5/oracle.g2.cjs';
 import { resolveAugmentTier } from '../src/simulation/augment-offers';
@@ -107,6 +112,70 @@ it('refreshes a cell and a single poison, preserves pulse phase, and never hits 
   expect(seq).toBe(1); expect(p.madChemist!.poisons[0].expiresAtTick).toBe(165);
   expect(ctx.packets.every(p => p.targetId === 'enemy')).toBe(true);
   expect(ctx.packets.map(p => p.raw)).toEqual([14,14,14,14,14,14]);
+});
+
+it.each(['invisible', 'untargetable'] as const)('poisons an %s enemy on a cloud while pursuing only selectable enemies', hidden => {
+  const ctx = context(fixture()), p = ctx.units.find(u => u.id === 'p')!, target = ctx.units.find(u => u.id === 'enemy')!;
+  const visible = { ...structuredClone(target), id: 'visible', cell: { col: 4, row: 4 } };
+  ctx.units.push(visible, { ...structuredClone(target), id: 'absent', itemBanish: { ownerId: 'p', itemInstanceId: 'zephyr', untilTick: 200 } });
+  if (hidden === 'invisible') target.anomalyState = { invisibleUntilTick: 200 };
+  else target.mechanismState = { ...target.mechanismState!, statuses: applyStatusContribution([], effectIdentity('b5-67-hidden', asSource(origin(target)), target.id), {
+    kind: 'untargetable', magnitudeBps: 10000, duration: { kind: 'ticks', ticks: 200 }, activation: 'immediate',
+    stackPolicy: { kind: 'independent-instances' }, removable: false, polarity: 'beneficial', damageFilter: null, onEnd: null,
+  }, 0).groups };
+  expect(moveMadChemist(ctx, p, new Set(ctx.units.map(u => `${u.cell.col}:${u.cell.row}`)))![0]).toEqual(visible.cell);
+  p.alive = false; p.hp = 0;
+  p.madChemist = { manaRemainder: 0, buffUntilTick: 0, clouds: [{ cell: target.cell, expiresAtTick: 2 }], poisons: [] };
+  advanceMadChemist(ctx, p, () => 0);
+  expect(p.madChemist.poisons.map(poison => poison.targetId)).toEqual(['enemy']);
+  for (let tick = 2; tick <= 11; tick++) { ctx.tick = tick; advanceMadChemist(ctx, p, () => 0); }
+  expect(ctx.packets).toHaveLength(1);
+  expect(ctx.packets[0]).toMatchObject({ targetId: 'enemy', raw: 14, delivery: 'ability-periodic' });
+});
+
+it('Edge of Night cleanses the attached poison at tick 11, so it cannot damage again after prevention expires', () => {
+  const initial = fixture(), holder = wearing('edge-of-night', { hp: 600, maxMana: 0, cooldownTicks: 1000, moveCooldownTicks: 1000 });
+  const chemist = { ...initial.units.find(u => u.id === 'p')!, id: 'chemist', team: 'enemy' as const, moveCooldownTicks: 1000,
+    madChemist: { manaRemainder: 0, buffUntilTick: 0, clouds: [{ cell: holder.cell, expiresAtTick: 2 }], poisons: [] } };
+  let combat: CombatState = { ...initial, units: [chemist, holder] }, afterCleanse: CombatState | undefined;
+  const events: CombatEvent[] = [];
+  for (let tick = 1; tick <= 41; tick++) {
+    const result = stepCombat(combat); combat = result.state; events.push(...result.events);
+    if (tick === 10) expect(combat.units.find(u => u.id === 'chemist')!.madChemist!.poisons).toHaveLength(1);
+    if (tick === 11) {
+      expect(result.events.some(e => e.type === 'statusChanged' && e.reason === 'applied'
+        && e.group.kind === 'damage-prevention' && e.group.contributions.some(c => c.source.definitionId === 'edge-of-night'))).toBe(true);
+      expect(combat.units.find(u => u.id === 'chemist')!.madChemist!.clouds.some(c => c.cell.col === holder.cell.col && c.cell.row === holder.cell.row)).toBe(false);
+      afterCleanse = combat;
+    }
+  }
+  const hits = events.filter(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'chemist');
+  expect(hits.filter(e => e.type === 'packetDamage' && e.outcome.hpDamage > 0).map(e => e.tick)).toEqual([11]);
+  expect(hits.map(e => e.tick)).toEqual([11]);
+  expect(afterCleanse!.units.find(u => u.id === 'chemist')!.madChemist!.poisons).toEqual([]);
+  expect(combat.units.find(u => u.id === 'p')!.hp).toBe(586);
+});
+
+it('cleanses poison from a dead source without clearing other targets or clouds; later contact starts a fresh pulse phase', () => {
+  const ctx = context(fixture()), p = ctx.units.find(u => u.id === 'p')!, target = ctx.units.find(u => u.id === 'enemy')!;
+  const other = { ...structuredClone(target), id: 'other', cell: { col: 4, row: 3 } };
+  ctx.units.push(other); p.alive = false; p.hp = 0;
+  leaveMadChemistCloud(p, [target.cell, other.cell], 1);
+  let seq = 0; advanceMadChemist(ctx, p, () => seq++);
+  expect(p.madChemist!.poisons.map(poison => poison.targetId)).toEqual(['enemy', 'other']);
+  const clouds = structuredClone(p.madChemist!.clouds), cell = target.cell;
+  ctx.tick = 2;
+  executeMechanismEffect(ctx, target, asSource(origin(target)), target, { kind: 'cleanse', remove: 'removable-hostile-control-dot-debuff', retarget: true }, 2, 0);
+  expect(p.madChemist!.poisons.map(poison => poison.targetId)).toEqual(['other']);
+  expect(p.madChemist!.clouds).toEqual(clouds);
+  target.cell = { col: 0, row: 0 };
+  for (let tick = 3; tick <= 11; tick++) { ctx.tick = tick; advanceMadChemist(ctx, p, () => seq++); }
+  expect(ctx.packets.map(packet => packet.targetId)).toEqual(['other']);
+  target.cell = cell; ctx.tick = 12; ctx.packets = []; advanceMadChemist(ctx, p, () => seq++);
+  expect(p.madChemist!.poisons.find(poison => poison.targetId === target.id)).toMatchObject({ nextTick: 22, ordinal: 0 });
+  for (let tick = 13; tick <= 22; tick++) { ctx.tick = tick; advanceMadChemist(ctx, p, () => seq++); }
+  expect(ctx.packets.filter(packet => packet.targetId === target.id)).toMatchObject([{ raw: 14, ordinal: 0 }]);
+  expect(seq).toBe(3);
 });
 
 it.each([0,10000,100000])('regenerates exactly 10 × current AS with %i bonus bps; fractional ticks and lock do not create catch-up mana', bonus => {

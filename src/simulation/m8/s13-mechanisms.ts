@@ -200,6 +200,10 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       target.statuses = target.statuses.filter(s => !(s.contributionKeys?.some(k => keys.has(k)) || !s.contributionKeys && hostile.has(s.source.ownerId) && (s.kind === 'stun' || s.kind === 'armorReduction' || s.kind === 'resistanceFlat' && s.amount < 0)));
       for (const unit of ctx.units) {
         unit.tasks = unit.tasks.filter(t => !(t.attachedDot && t.targetId === target.id && hostile.has(t.source.ownerId)));
+        // B5-67 uses a refreshable attached DoT rather than CombatTask entries.
+        // Cleanse only this target's hostile attachment; clouds may contact it again next tick.
+        if (unit.madChemist && hostile.has(unit.id)) unit.madChemist = { ...unit.madChemist,
+          poisons: unit.madChemist.poisons.filter(p => p.targetId !== target.id) };
       }
       target.mechanismState = { ...target.mechanismState!, periodicTasks: cancelAttachedBurns(target.mechanismState!.periodicTasks, result.ended.map(e => e.contribution)) };
       ctx.events.push(...endedStatusEvents(ctx.tick, target.id, result.ended, 'cleansed'));

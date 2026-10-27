@@ -5,7 +5,7 @@ import type { Unit } from './unit-types';
 import type { HexCell } from './board';
 import { getNeighbors, hexDistance, sameCell } from './board';
 import type { AbilityContext } from './combat-s13-abilities';
-import { ap, attackSpeedBonus, byDistance, enemies, origin, statusModifiers, type S13Unit } from './combat-s13-state';
+import { ap, areaEnemies, attackSpeedBonus, byDistance, enemies, origin, statusModifiers, type S13Unit } from './combat-s13-state';
 import { asSource } from './m8/s13-definitions';
 import type { VampRate } from './m8/heal';
 import { overtimeMoveBonusBps } from './combat-overtime';
@@ -107,7 +107,7 @@ export function advanceMadChemist(ctx: AbilityContext, unit: S13Unit, nextSeq: (
   }
   const clouds = r.clouds.filter(c => c.expiresAtTick > ctx.tick);
   let poisons = r.poisons.filter(p => p.expiresAtTick >= ctx.tick && ctx.units.some(u => u.id === p.targetId && u.alive && u.hp > 0));
-  for (const target of enemies(unit, ctx.units)) {
+  for (const target of areaEnemies(unit, ctx.units)) {
     if (!clouds.some(c => sameCell(c.cell, target.cell))) continue;
     const found = poisons.findIndex(p => p.targetId === target.id), existing = poisons[found];
     if (existing) poisons[found] = { ...existing, expiresAtTick: ctx.tick + SPELL.damageDurationTicks };
