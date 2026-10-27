@@ -2,6 +2,7 @@ import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import { drainContestedGold } from './augment-pool-batch5-h6';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { batch5S6cSettlementHealth, drainBatch5S6cGold } from './augment-pool-batch5-s6c';
+import { MAX_SUPPORTED_PLAYER_HP } from './augment-pool-batch5-h7-health';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -154,7 +155,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
       'baseDamage','opposingSurvivors','growth','combatTicks','combatEventCount'];
     if(r.g23Facts)fields.push('g23Facts');
     if(r.opponentHp!==undefined)fields.push('opponentHp');
-    if((r.opponentHp!==undefined)!==needsOpponentHp(state.augments,r.round)||r.opponentHp!==undefined&&(!integer(r.opponentHp)||r.opponentHp>100)) return fail(state,'invalid-receipt');
+    if((r.opponentHp!==undefined)!==needsOpponentHp(state.augments,r.round)||r.opponentHp!==undefined&&(!integer(r.opponentHp)||r.opponentHp>MAX_SUPPORTED_PLAYER_HP)) return fail(state,'invalid-receipt');
     if (Object.keys(r).length !== fields.length || Object.keys(r).some(key => !fields.includes(key))) return fail(state,'invalid-receipt');
     const saved=melCanSave(state,r.g23Facts,Math.max(0,state.playerHp-r.damage)),hpAfter=saved?1:Math.max(0,state.playerHp-r.damage);
     const record: RoundResult = {

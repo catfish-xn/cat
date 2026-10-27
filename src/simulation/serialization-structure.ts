@@ -1,3 +1,4 @@
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
 import { carryRestoredAugmentTrace } from './augment-history';
 import { atWhatCostHistoricalXp, skipsFutureAugment } from './augment-pool-batch5-s1b';
@@ -164,7 +165,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);
   for (const name of ['gold', 'xp', 'playerHp', 'nextMatchEventSeq']) integer(raw[name]);
   integer(raw.round, 1);
-  requireValue((raw.playerHp as number) <= 100, 'level/HP bounds');
+  requireValue((raw.playerHp as number) <= maximumPlayerHp(Array.isArray(raw.augments) ? raw.augments as MatchState['augments'] : []), 'level/HP bounds');
   requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
   const state = raw as unknown as MatchState;
   if(parsedImmutable)registerG23RestoreOwner(state);

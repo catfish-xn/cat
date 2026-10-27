@@ -4,8 +4,8 @@ import type { M8Version } from './contracts';
 export const MULTIPLAYER_NET_PROTOCOL_VERSION = 5;
 export const MULTIPLAYER_LOOT_CONTRACT_VERSION = 'multiplayer-orb-claim-v2';
 
-/** v25-online-rules: batch-5 history-backed augments. Conditional shop-history-v1
- * authenticates affected saves per MATCH_CONTRACT A2/A4/A5; no new replay facts or commands.
+/** v25-online-rules: batch-5 history-backed augments, including B5-42/43/44.
+ * Conditional shop-history-v1 and augment-history-v1 authenticate affected saves; no new replay facts or commands.
  * Schema/save/replay/command remain 12/8/8/7; older identities are rejected. */
 export const M8_VERSION = {
   schemaVersion: 12, rulesVersion: 's13-g2-3-v25-online-rules', contentVersion: 's13-14.24b-g2-3-v25-online-rules',

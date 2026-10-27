@@ -1,3 +1,4 @@
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { readAugmentIncome } from './augment-income';
 import type { OwnedAugment } from './strategy-types';
 import { ECONOMY_RULES, MATCH_RULES, STAGE_PLAYER_DAMAGE, selectPlayerBaseDamage } from './match-rules';
@@ -61,7 +62,7 @@ export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
   if (!['win', 'loss', null].includes(streak.kind) || (streak.kind === null) !== (streak.count === 0)) {
     throw new RangeError('Invalid streak');
   }
-  if (hp > MATCH_RULES.initialHp || (roundKind === 'supply' && enemySurvivors !== 0)) throw new RangeError('Invalid round resources');
+  if (hp > maximumPlayerHp(input.augments ?? []) || (roundKind === 'supply' && enemySurvivors !== 0)) throw new RangeError('Invalid round resources');
 
   const isPvp = roundKind === 'pvp';
   const won = result === 'playerWin';

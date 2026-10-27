@@ -6,6 +6,7 @@ import { AUGMENT_BATCH5_B5A } from './augment-pool-batch5-b5a';
 import { AUGMENT_BATCH5_S1B } from './augment-pool-batch5-s1b';
 import { AUGMENT_BATCH5_S3A, BATCH5_S3A_POLICY } from './augment-pool-batch5-s3a';
 import { AUGMENT_BATCH5_S3D } from './augment-pool-batch5-s3d';
+import { AUGMENT_BATCH5_H7 } from './augment-pool-batch5-h7';
 import { AUGMENT_SHOP } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S1A } from './augment-pool-batch5-s1a';
 import { AUGMENT_BATCH5_S3B } from './augment-pool-batch5-s3b';
@@ -71,6 +72,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch5S8b:{version:'augment-pool-batch5-s8b-v25',content:AUGMENT_BATCH5_S8B,convention:'P-B5-64-2026-10-27'},
   augmentPoolBatch5S8c:{version:'augment-pool-batch5-s8c-v1',content:AUGMENT_BATCH5_S8C,convention:'P-B5-65-2026-10-27'},
   augmentPoolBatch5S11a:{version:'augment-pool-batch5-s11a-v1',content:AUGMENT_BATCH5_S11A,convention:'P-B5-75-77-2026-10-27'},
+  augmentPoolBatch5H7:{version:'augment-pool-batch5-h7-v25',content:AUGMENT_BATCH5_H7,convention:'P-B5-H7-2026-10-27',deathRandom:'fnv1a32-utf16-source-seat-choice-combat-event-xor-seed-lcg32-word-less-than-2^31'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch5H5:{version:'augment-pool-batch5-h5-v1',content:AUGMENT_BATCH5_H5,convention:'P-B5-35-36-H5-2026-10-27',
     selection:'carousel-rng-after-xor-42533535-seat-index-choice-id-fnv-lcg32-rejection-v1',

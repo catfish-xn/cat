@@ -15,6 +15,7 @@ import { pilferRewardPlan } from './augment-pool-batch5-s8a';
 import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
 import { gloriousEvolutionRewardPlan } from './augment-pool-batch5-s8b';
 import { hardCommitRewardPlan } from './augment-pool-batch5-s8c';
+import { validateBatch5H7Gold } from './augment-pool-batch5-h7';
 import { validateShopAugments } from './shop-augments';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
 import { batch5RewardPlan, validateBatch5Gold } from './augment-pool-batch5-progress';
@@ -71,6 +72,7 @@ export function validateBatch1Gifts(state:MatchState):void {
  validateContestedGold(state);
  validateAcademicGifts(state);
  validateBatch5S6cGold(state);
+ validateBatch5H7Gold(state);
  validateBatch5Gold(state);
  validateBatch4Gold(state);
  validateBatch2Gold(state);

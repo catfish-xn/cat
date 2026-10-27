@@ -1,4 +1,6 @@
+export { maximumPlayerHp } from '../simulation/augment-pool-batch5-h7-health';
 /** Pure rule boundary for Node callers. No scheduler, transport or browser adapters. */
+export { drainBatch5H7Gold } from '../simulation/augment-pool-batch5-h7';
 export {
   openAnvil, grantAnvilUnit, anvilDisplay, ANVIL_POLICY, createMatch, deployMatchUnit, autoDeployToCap, lockMatchCombatRoster, buyUnit, sellUnit, setShopLock, rerollShop, buyXp,
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem, useConsumable, previewUseConsumable,

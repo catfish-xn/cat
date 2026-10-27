@@ -1,4 +1,5 @@
 const {buffetPlan}=require('./augment-inventory-oracle.cjs');
+const {h7Gold}=require('./augment-h7-oracle.cjs');
 /* Independent reward ledger. Only test data and raw archive inputs; no production modules.
  * Specs use tuples: U fixed unit, I fixed item, C consumable, R random hero,
  * Q random item, A all heroes. All counts/thresholds are literal source transcriptions.
@@ -225,7 +226,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
 const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
- 'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6',
+ 'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel',...h4.sources]);
 // Project only the counters needed by these rewards from the finished combat, not reward receipts.
@@ -373,12 +374,12 @@ function validateRewardsCore(before,after,command,events,base){
    assert.equal(r.orbId,orbId);assert.deepEqual(after.m8.loot.rewardOrbs.find(o=>o.orbId===orbId),{orbId,roundId:after.roundDefinitionId,tier:'gray',source:'mechanic',entries:[{orbId,entryOrdinal:0,dropId,roundId:after.roundDefinitionId,encounterId:'mechanic',sourceUnitId:r.receiptId,slotOrdinal:0,status:'planned',receiptId:null,revealCondition:'source-killed',payload:{kind:'unit',definitionId:expected.definitionId,quantity:1,starLevel:expected.starLevel}}]},'shop gift orb payload derived from the command');
   }assert.equal(r.gold,r.resolution==='gold'?base.COST[expected.definitionId]*3**(expected.starLevel-1):0);}
  }
- const activeDrain=command!=null||terminal;
+ const activeDrain=command!=null||terminal||h7Gold(after).some(r=>!prior.some(p=>p.receiptId===r.receiptId));
  if(!activeDrain){assert.equal(appended.filter(r=>r.source.startsWith('augment-pool-')).length,0,'no reward without a draining command');return {gold:new Map(),gifts:new Map(),price};}
  const ctx={...after,seed:before.seed,augments,level:progression.level,xp:progression.xp,multiplayer:before.multiplayer?{...after.multiplayer,seatId:before.multiplayer.seatId}:undefined,
   seatMechanics:{...after.seatMechanics,seat:{...after.seatMechanics?.seat,'augment-acquisition-levels':levels},receipts:[...prior,...choiceReceipts]}};
  const env=environment(before,base),plan=rewardPlan(ctx,env),claimed=new Set(prior.map(r=>r.receiptId));
- const dueGold=plan.gold.filter(p=>!claimed.has(p.receiptId));
+ const dueGold=plan.gold.concat(h7Gold(after)).filter(p=>!claimed.has(p.receiptId));
  const dual=before.augments.find(a=>a.definitionId==='dual-purpose');
  if(dual&&command?.type==='buyXp'){
   const purchase=facts.filter(f=>f.kind==='dual-purpose-xp-purchased');
@@ -398,7 +399,7 @@ function validateRewardsCore(before,after,command,events,base){
   const amount=2*Math.floor(count/2),receiptId=JSON.stringify(['augment-pool-batch5-h6',contested.choiceId,before.round]);
   if(amount&&!claimed.has(receiptId))dueGold.push({receiptId,source:'augment-pool-batch5-h6',kind:'gold',amount,round:before.round});
  }
- const actualGold=appended.filter(r=>['augment-pool-batch5-h6','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
+ const actualGold=appended.filter(r=>['augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
  const goldKey=r=>({receiptId:r.receiptId,source:r.source,kind:r.kind,amount:r.amount,round:r.round});
  const sorted=xs=>xs.map(goldKey).sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
  assert.deepEqual(sorted(actualGold),sorted(dueGold),'independent due augment gold receipts (count, identity, amount, round)');

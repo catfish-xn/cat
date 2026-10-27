@@ -1,6 +1,7 @@
 import { qualityProjection, qualityHealth } from './augment-pool-batch5-s3d';
 import { d14UnitBase } from './d14-anomalies/projection';
 import { moonlightSelection } from './augment-pool-batch5-s11a';
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { drainSetup } from './setup-work';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
@@ -127,7 +128,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     return owner&&effect?.kind==='mechanic'?[{item,owner,effect}]:[];
   });
   const d11=new Map(state.augments.filter(a=>Object.hasOwn(D11_FILL_TIERS,a.definitionId)).map(a=>[a.choiceId,
-    compileD11Augment(a.definitionId as D11AugmentId,boardUnits,state.playerHp??100,d11OpeningSeed(state.g23?.seed??0,state.round,a.choiceId))]));
+    compileD11Augment(a.definitionId as D11AugmentId,boardUnits,state.playerHp??100,d11OpeningSeed(state.g23?.seed??0,state.round,a.choiceId),maximumPlayerHp(state.augments,state.round))]));
   yield;
   const compileUnit = (unit: typeof boardUnits[number]) => {
     // P (2026-10-24): a placed Hextech Forge carries its Jayce's saved cell, so the combat constructor lays it out the same way.
@@ -241,7 +242,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     const anomaly=state.anomalyBinding?.unitId===unit.id?state.anomalyBinding.definitionId:null;
     const bonus=anomaly==='freestyling'?Math.round(traits.filter(t=>t.team===unit.team&&t.tier>0&&lookup(catalog.traits,t.traitId).tiers[0].threshold>1).length*450)
       :anomaly==='force-of-friendship'?boardUnits.filter(x=>x.team===unit.team).reduce((n,x)=>n+((state.d14Combat?.unitId===x.id&&state.d14Combat.phase==='promoted')?400:x.starLevel===3?800:x.starLevel*100),0)
-      :anomaly==='comeback-story'?Math.floor((100-(state.playerHp??100))/10)*500:0;
+      :anomaly==='comeback-story'?Math.floor((maximumPlayerHp(state.augments,state.round)-(state.playerHp??100))/10)*500:0;
     if(bonus&&state.anomalyBinding)sources.push(...makeSourcedEffects(unit.id,'anomaly',anomaly!,state.anomalyBinding.choiceId+':scaling',[{kind:'mechanic',mechanic:'damageAmp',values:{bps:bonus}}]));
     if(unit.definitionId==='mel'&&state.g23?.mel?.savedBattleId)sources.push(...makeSourcedEffects(unit.id,'trait','banished-mage',unit.id,[{kind:'mechanic',mechanic:'damageAmp',values:{bps:1000}}]));
     const base = unit.location.kind==='board'?g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row):getUnitStats(unit.definitionId,unit.starLevel);
