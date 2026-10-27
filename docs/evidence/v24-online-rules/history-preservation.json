@@ -1,7 +1,7 @@
 {
   "epoch": "v24-online-rules",
-  "baseCommit": "c71854917e9995e5e2d0ec7dc3a023c813a936ac",
-  "historicalFiles": 511,
+  "baseCommit": "8dc912aa6324f93726f0ce9f6fd1e336441f7ff6",
+  "historicalFiles": 510,
   "byteIdentical": true,
   "protectedManifestByteIdentical": true,
   "files": {
@@ -547,7 +547,7 @@
     },
     "docs/evidence/v23-online-rules/battle-start-audit.json": {
       "bytes": 52103,
-      "sha256": "066dff0056b4a83810929f3b91741fb87f8bfcb9905d40780f1d66809f9e5096"
+      "sha256": "afe7b0ce3a12aa7486b7b0fc74faf7faaaef2ca11cc2371025dc667c6b7427d3"
     },
     "docs/evidence/v23-online-rules/chest-trial-audit.json": {
       "bytes": 897,
@@ -558,16 +558,16 @@
       "sha256": "a72f27ce4381b25b983bcb0c3958bf302854a15c8b061ca3a3d9768d2c04ccb5"
     },
     "docs/evidence/v23-online-rules/consumer-byte-audit.json": {
-      "bytes": 99280,
-      "sha256": "7d1d5d8e913ea471b37babd21e04dfc8ff7899d4a4568f69ec8a93d8282ba37a"
+      "bytes": 108649,
+      "sha256": "20130b8815f6e7f0a48a4118f327eb08936b598902aa9a3afde29560946931a9"
     },
     "docs/evidence/v23-online-rules/digest-comparison.json": {
       "bytes": 338,
       "sha256": "18460ecbd6f44902db30c8fc9f21f0ad872553e414532557614e3b2c5af79f26"
     },
     "docs/evidence/v23-online-rules/epoch-verification.json": {
-      "bytes": 4608,
-      "sha256": "8bf5d025f3b57dc45bd7b31013e7dbadb9c9556160f23951d92e32fc49cb66fe"
+      "bytes": 4609,
+      "sha256": "a3624435368eda96a6855e789f4e8c054a5e38923c20e4be4bb3a4eec4c64c60"
     },
     "docs/evidence/v23-online-rules/history-preservation.json": {
       "bytes": 80223,
@@ -575,19 +575,15 @@
     },
     "docs/evidence/v23-online-rules/input-fixture-audit.json": {
       "bytes": 54685,
-      "sha256": "95e33f13d9fb3cea39e1ea512702cef3f59483fbe050301fff94df27525fafe0"
+      "sha256": "28b70b8bda5d638f9b9942f3597a36e4d0980937264a56df970401400900d55f"
     },
     "docs/evidence/v23-online-rules/live-reveal-audit.json": {
       "bytes": 64074,
-      "sha256": "2732cc0c1bd71533709d5d878ad74911a7faf3caa1f08efd7ac191ad774caf72"
+      "sha256": "099ed2d77077ac7dadb9b53b70d02db9ac2fdf9d2be931c784c89119164ac9df"
     },
     "docs/evidence/v23-online-rules/release-audit.json": {
       "bytes": 231483,
-      "sha256": "4d47557172b7c031038e521e07a69d8199d4c7e3a2a5490713f3ee081aca992f"
-    },
-    "docs/evidence/v24-batch5-review-k/identity-failures.json": {
-      "bytes": 4414,
-      "sha256": "e6578e8cf180f00463b7c88723db1bebf7a33ad409b84092cd1cb46471c1c1f4"
+      "sha256": "f50404fbeb12f9c840663fad76db7c7b502617c50b0a61e9d246e9a976c17997"
     },
     "scripts/audit-v22-online-rules-adaptations.cjs": {
       "bytes": 1504,
@@ -910,8 +906,8 @@
       "sha256": "13075fa4df545981a069ccaab99a15358a362a86ce6324673654a7bc9d2161ec"
     },
     "scripts/v17-rageblade-route.cjs": {
-      "bytes": 2094,
-      "sha256": "c16948258816db9d54028682d9ac9f99c4ed8c08af0e9531828bd3122b0ce061"
+      "bytes": 1716,
+      "sha256": "5fbef3baf281be66d4946930cd1dd5d7770ff0a383177419f3a40d4a9cdd6c6c"
     },
     "scripts/v18-fixture-audit.cjs": {
       "bytes": 3165,
@@ -1967,7 +1963,7 @@
     },
     "tests/fixtures/v23-online-rules-herald-raw/manifest.json": {
       "bytes": 47625,
-      "sha256": "a6307b973c79e63b69260772c83490aaa6ace1791017570c9dbe6c12c8443c76"
+      "sha256": "a1b7a6a6054df3c6b06ee30ad485c772827337b4b554f50b01f27f710afdb9ba"
     },
     "tests/fixtures/v23-online-rules-herald-raw/quicksilver.json": {
       "bytes": 184517,

@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
 const {createEpochReport}=require('./v24-epoch-report.cjs');
 process.env.GIT_OPTIONAL_LOCKS='0';
-const base='c71854917e9995e5e2d0ec7dc3a023c813a936ac',arg='--baseline-commit='+base;
+const base='8dc912aa6324f93726f0ce9f6fd1e336441f7ff6',arg='--baseline-commit='+base;
 const write=process.argv.includes('--write');
 if(process.argv.slice(2).some(x=>x!=='--write'))throw Error('Usage: verify-v24-online-rules-epoch.cjs [--write]');
 const check=write?[]:['--check'];

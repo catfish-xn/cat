@@ -1,7 +1,9 @@
 /* Independent live-combat epoch. Previous evidence, raw archives and archive mirrors stay immutable. */
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {readProcessOutput:execFileSync}=require('./offline-process-output.cjs'),{createHash}=require('node:crypto');
-const BASELINE='c71854917e9995e5e2d0ec7dc3a023c813a936ac';
+// Final multiplayer parent of integration merge 39c034a2 (PR #453), including
+// the legitimate v23 audit refreshes in #447/#449/#452. Preserve those bytes.
+const BASELINE='8dc912aa6324f93726f0ce9f6fd1e336441f7ff6';
 const git=(...args)=>execFileSync('git',args,{maxBuffer:128*1024*1024,env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}});
 const sha=b=>createHash('sha256').update(b).digest('hex');
 exports.baselineCommit=()=>{

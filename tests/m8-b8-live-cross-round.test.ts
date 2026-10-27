@@ -1,4 +1,4 @@
-import ragebladeRoute from '../scripts/v17-rageblade-route.cjs';
+import ragebladeRoute from '../scripts/v24-online-rules-rageblade-route.cjs';
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
