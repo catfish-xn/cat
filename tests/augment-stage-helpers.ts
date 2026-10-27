@@ -29,6 +29,7 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
   "diversified-portfolio-plus":{node:'3-2',seed:17},
+  'contested':{node:'3-2',seed:18},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},

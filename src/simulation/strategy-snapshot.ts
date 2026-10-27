@@ -223,6 +223,13 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     const historyGrowth = state.augmentHistoryGrowth?.find(entry => entry.unitId === unit.id);
     const historyOwner = state.augments.find(a=>a.definitionId==='no-scout-no-pivot' || a.definitionId==='cooking-pot');
     if (historyGrowth && historyOwner) sources.push(...makeSourcedEffects(unit.id,'augment',historyOwner.definitionId,historyOwner.choiceId+':growth',[{kind:'statFlat',stat:'maxHp',amount:historyGrowth.healthFlat},{kind:'statPercentBps',stat:'maxHp',bps:historyGrowth.healthBps},{kind:'statPercentBps',stat:'attackDamage',bps:historyGrowth.attackDamageBps},{kind:'mechanic',mechanic:'fractionalFlat',values:{armorCenti:0,magicResistCenti:0,abilityPowerCenti:historyGrowth.abilityPowerCenti}}]));
+    const h6 = state.h6Growth?.find(g=>g.unitId===unit.id);
+    const scoreboard=state.augments.find(a=>a.definitionId==='scoreboard-scrapper');
+    if(h6&&scoreboard) sources.push(...makeSourcedEffects(unit.id,'augment','scoreboard-scrapper',scoreboard.choiceId+':growth',[
+      {kind:'statFlat',stat:'maxHp',amount:h6.healthFlat}, {kind:'statPercentBps',stat:'maxHp',bps:h6.healthBps},
+      {kind:'statPercentBps',stat:'attackDamage',bps:h6.attackDamageBps},
+      {kind:'mechanic',mechanic:'fractionalFlat',values:{armorCenti:0,magicResistCenti:0,abilityPowerCenti:h6.abilityPowerCenti}},
+    ]));
     const growth = state.persistentGrowth.find(entry => entry.unitId === unit.id);
     if (growth) sources.push(...makeSourcedEffects(unit.id, 'ability', 'tristana-ability', `persistent:${unit.id}`, [{ kind: 'statPercentBps', stat: 'attackDamage', bps: growth.attackDamageBps }]));
     const anomaly=state.anomalyBinding?.unitId===unit.id?state.anomalyBinding.definitionId:null;

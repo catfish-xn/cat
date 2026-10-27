@@ -1,4 +1,5 @@
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
+import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { drainSetup } from './setup-work';
 import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
@@ -99,6 +100,14 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       requireSnapshot(c.phase!=='returned'||round.ordinal>=b!.boundRound+3);
       requireSnapshot(Object.keys(c).length===3);
     }
+    if(s.h6Growth!==undefined){
+      requireSnapshot(augmentIds.has('scoreboard-scrapper') && Array.isArray(s.h6Growth) && s.h6Growth.length===s.units.length);
+      const ids=new Set<string>();
+      for(const g of s.h6Growth){record(g);id(g.unitId);requireSnapshot(units.has(g.unitId)&&!ids.has(g.unitId));ids.add(g.unitId);
+        for(const k of ['healthFlat','healthBps','attackDamageBps','abilityPowerCenti'] as const)integer(g[k]);
+        requireSnapshot(Object.keys(g).length===5);
+      }
+    } else requireSnapshot(!augmentIds.has('scoreboard-scrapper'));
     const growthIds = new Set<string>();
     for (const growth of s.persistentGrowth) {
       record(growth); integer(growth.attackDamageBps, 1);
@@ -127,6 +136,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       && ((augmentIds.has('investment-strategy-i') || augmentIds.has('investment-strategy-ii')) || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
+      ...(s.h6Growth?{h6Growth:s.h6Growth.map(g=>({...g}))}:{}),
       ...(s.d14Combat?{d14Combat:structuredClone(s.d14Combat)}:{}),
       ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),
       ...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),...(s.playerHp===undefined?{}:{playerHp:s.playerHp}),...(s.g23===undefined?{}:{g23:structuredClone(s.g23)}),
@@ -175,7 +185,9 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
   // A placed Hextech Forge travels with its deployed Jayce (keyed by the Jayce), a Voidspawn with its equipped portal.
   const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>units.some(u=>u.id===id&&u.definitionId==='jayce')||state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   const d14Combat=d14Certificate(state);
+  const h6Growth=scoreboardCombatGrowth(state,units.map(u=>u.id));
   return yield* restorePlayerBattleSnapshotSteps({
+    ...(h6Growth?{h6Growth}:{}),
     ...(d14Combat&&ids.has(d14Combat.unitId)?{d14Combat}:{}),
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
     ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),

@@ -368,13 +368,13 @@ it('independently binds Spoils counters to opening ownership and all ordinary Pv
   expect(()=>validateRewards({...live,combat:{strategy:finished.combat.strategy}},erased,null,done,env)).toThrow(/independent batch2 counter/);
 });
 
-// Public 2-1 Heroic Grab Bag offer with no prior lesser duplicator, after Batch 5 H3 pool expansion.
+// Public 2-1 Heroic Grab Bag offer with no prior lesser duplicator, after the combined Batch 5 pool expansion.
 // Seed 4 already earns one from its opening, so it does not satisfy this vector's two-tool premise.
 // Keep the pre-command independent ledger so co-forged balances exercise Ledger.apply.
 import * as matchApi from '../src/simulation/match';
 import { run } from '../scripts/generate-m5-route.cjs';
 const heroicCase: {before:any;after:any;command:any;events:any;ledger:any}[]=[];
-const HEROIC_SEED=5;
+const HEROIC_SEED=27;
 const routeLedger=new Ledger(createMatch(HEROIC_SEED));
 const stopHeroic=Symbol('heroic selection reached');
 try {
