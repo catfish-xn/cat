@@ -3,6 +3,7 @@
  * docs/MATCH_CONTRACT.md. Independently implemented; never imports tested code. */
 const assert = require('node:assert/strict');
 const {validateRewards}=require('./augment-rewards-oracle.cjs');
+const {angerDefinition}=require('./augment-r2-oracle.cjs');
 const {battleGold}=require('./battle-gold-oracle.cjs');
 const {concreteMarketItems}=require('./black-market-oracle.cjs');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
@@ -647,7 +648,7 @@ class Ledger {
   for(const receipt of schedule)for(const id of receipt.itemIds)assert.equal(id,`item-${itemSerial++}`,'schedule item serial');
   const mechanic=appended(before.seatMechanics?.receipts??[],after.seatMechanics?.receipts??[],'receiptId','mechanic receipts');
   const acquired=mechanic.filter(r=>r.kind==='item'||r.kind==='choice'&&r.itemId!==null);
-  for(const r of acquired){assert.equal(r.itemId,`item-${itemSerial++}`,'mechanic item serial');const actual=after.items.find(i=>i.id===r.itemId);assert(actual,'mechanic item exists');assert.equal(actual.definitionId,r.kind==='item'?r.definitionId:r.optionId,'mechanic item definition');}
+  for(const r of acquired){assert.equal(r.itemId,`item-${itemSerial++}`,'mechanic item serial');const actual=after.items.find(i=>i.id===r.itemId);assert(actual,'mechanic item exists');assert.equal(actual.definitionId,angerDefinition(r.kind==='item'?r.definitionId:r.optionId,after.augments),'mechanic item definition');}
   if(command?.type==='select'&&command.definitionId==='blinding-speed')assert.deepEqual(acquired.map(r=>r.definitionId),['red-buff','rageblade','bow'],'source-fixed augment items');
   if(command?.type==='select'&&command.definitionId==='dual-wielding'){assert.equal(acquired.length,2,'source two role items');assert.equal(new Set(acquired.map(r=>r.definitionId)).size,2,'project no-repeat role draws');assert(acquired.every(r=>r.source==='s13-anomaly-acquisition'));}
   if(before.pendingChoice?.kind==='forge'&&before.pendingChoice.payload?.source==='s13-augment-acquisition'){assert.equal(acquired.length,1,'one forge item');assert.equal(acquired[0].optionId,command?.definitionId);assert(before.pendingChoice.offers.includes(acquired[0].optionId));}

@@ -5,7 +5,7 @@
  */
 const assert=require('node:assert/strict');
 const {isDeepStrictEqual}=require('node:util');
-const {portableGrant,validateAngerChoice}=require('./augment-r2-oracle.cjs');
+const {portableGrant,validateAngerChoice,validateAngerTransitions}=require('./augment-r2-oracle.cjs');
 const b2=require('../../augment-pool-batch2-oracle-data.cjs');
 const b3=require('../../augment-pool-batch3-oracle-data.cjs');
 const b4=require('../../augment-pool-batch4-oracle-data.cjs');
@@ -423,6 +423,7 @@ function validateRewardsCore(before,after,command,events,base){
 // Inventory is a complete transition, including commands with no reward receipt.
 function validateRewards(before,after,command,events,base){
  const result=validateRewardsCore(before,after,command,events,base);
+ validateAngerTransitions(before,after,command,result,base.lootReceipts);
  // Hand-written counter vectors may omit the inventory entirely.
  if(before.consumables===undefined&&after.consumables===undefined)return result;
  const inventory=[...before.consumables];let serial=before.nextConsumableSerial;

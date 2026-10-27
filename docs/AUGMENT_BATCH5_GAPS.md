@@ -734,7 +734,7 @@
 - 已有原文／字段：`A[77].apiName=TFT13_Augment_AnotherAnomaly`，`description_zh_cn`：“在阶段4-6的【异常突变】回合后，获得一件装备，可用于将所选【异常突变】效果复制到携带装备的弈子身上。” `effects={}`；原始map22定位为 `A[77].map22_node={60ad6ef3}`，对应 `data/map22-augment-item-nodes.json.nodes["{60ad6ef3}"].constants`（无constants则不以空对象推测隐藏值）。
 - 原计划缺口／本次细化：复制装备类别/槽位/能否拆卸/叠加，和原异常已绑定者/复制体/英雄专属异常交互；4-6后确切发奖入口及异常状态复制时点。
 - 本地补查结果：已补 M["Maps/Shipping/Map22/Items/TFT13_AnotherAnomaly_Item"].constants.{df085b93}：Health=250、AD≈0.20、AP=25，mIsUnique=true并自互斥；中英字符串 entries.tft_item_description_anotheranomaly 只说持有者获得你的异常。不是消耗型重复选异常的证据。X报告提到后期13.8禁用，不能倒推14.24禁用；未找到复制兼容矩阵。
-- 分类与后续：**已实现并开放**。P-B5-81（2026-10-27）：仅4-2出池，4-6选完即发唯一装备，复制定义不复制累计状态，卸下失效、禁止原持有者装备，排除六项指定异常；复制品的独立击杀记录使用强化历史 API。接线与验收见 [Batch5 R2](AUGMENT_BATCH5_R2.md)。
+- 分类与后续：**已实现并开放**。P-B5-81（2026-10-27）：仅4-2出池，4-6选完即发唯一装备，复制定义不复制累计状态，卸下后在后续装备投影中失效、已开战快照沿用既有边界，禁止原持有者装备，排除六项指定异常；复制品的独立击杀记录使用强化历史 API。接线与验收见 [Batch5 R2](AUGMENT_BATCH5_R2.md)。
 
 #### B5-82 意料之中的意外（需要外部研究）
 

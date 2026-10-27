@@ -29,7 +29,7 @@ export function startR2PortableCopies(ctx:AbilityContext):void {
   for(const unit of pending)for(const module of S13_ANOMALIES){
     const source=unit.mechanics?.find(m=>m.mechanic==='s13Anomaly'&&m.source.definitionId===module.definition.id
       &&m.source.parentItemInstanceId&&unit.pendingEquipmentSources!.includes(m.source.parentItemInstanceId))?.source;
-    if(!source)continue;
+    if(!source||!unit.alive||unit.hp<=0)continue;
     module.start?.(ctx,unit,source);
     if(unit.anomalyState?.absentUntilTick!==undefined)unit.anomalyState.absentUntilTick+=ctx.tick;
   }
