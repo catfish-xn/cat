@@ -4,6 +4,7 @@ import { ECONOMY_RULES } from '../simulation/match-rules';
 import { anvilInfo, anvilSellHint } from '../presentation/anvil-display';
 import { combatEquipmentDisplay, combatItemStackBadges } from '../presentation/battle-equipment';
 import { freeRerollsAvailable } from '../simulation/free-rerolls';
+import { readFreeRerollsAvailable } from './online/seat-view-adapter';
 import { xpPurchaseAmount, xpPurchaseCost } from '../simulation/augment-xp';
 import { createMelSaveFeedback } from './mel-save-feedback';
 import Phaser from 'phaser';
@@ -1034,8 +1035,8 @@ export class BoardScene extends Phaser.Scene {
     const canContinue = readLootView(match).canContinue;
     this.continueButton.setData('round', match.round).setAlpha(canContinue ? 1 : 0.4);
     if (canContinue) this.continueButton.setInteractive({ useHandCursor: true }); else this.continueButton.disableInteractive();
-    const freeRerolls = freeRerollsAvailable(match);
-    this.rerollButton.setText(freeRerolls > 0 ? `D · 免费刷新 · 剩 ${freeRerolls} 次` : `D · 刷新 · ${MATCH_RULES.rerollCost} 金币`).setAlpha(operable ? 1 : 0.4);
+    const freeRerolls = this.online ? readFreeRerollsAvailable(match) : freeRerollsAvailable(match);
+    this.rerollButton.setText(freeRerolls === null ? 'D · 刷新' : freeRerolls > 0 ? `D · 免费刷新 · 剩 ${freeRerolls} 次` : `D · 刷新 · ${MATCH_RULES.rerollCost} 金币`).setAlpha(operable ? 1 : 0.4);
     this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${xpPurchaseCost(match.augments, match.round)} 金币 → ${xpPurchaseAmount(match.augments, match.round)} 经验`).setAlpha(operable && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {
       const offer = match.shop.slots[slot], button = this.shopButtons[slot];

@@ -49,6 +49,7 @@ export { decideBotAction, claimBotPreparationOrbs, BOT_POLICY_VERSION, BOT_MAX_S
 export type { BotContext, BotDecision } from '../simulation/bot';
 
 export { toPrivateSeatView } from '../simulation/private-seat-view';
+export { freeRerollsAvailable } from '../simulation/free-rerolls';
 export type { PrivateSeatView, ConsumableTargetView } from '../simulation/private-seat-view';
 export { createCombatReplayRecorder, toCombatViewState, toCombatViewEvents, startCombatReplay, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
 export type { CombatReplayRecorder, CombatViewState, CombatViewUnit, CombatViewStatus, CombatAnimationEvent, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayTask, CombatReplayInput } from '../simulation/combat-replay-view';

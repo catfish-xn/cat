@@ -1492,6 +1492,14 @@ ifWin 假设 playerWin，ifLoss 假设 enemyWin；PvP 平局经济与失败相�
 
 Claude 负责接入私有席位投影及经济提示，界面不得重写开局/目录/加时和 streak 公式。本包不增加 toPrivateSeatView 字段，不改 wire 版本、digest 或玩法。
 
+### 14.5 v25 H1 可用免费刷新次数私有投影（2026-10-27）
+
+`server-entry` 新增导出 `freeRerollsAvailable(state: MatchState): number`，只接受权威席位状态，原样调用领域查询。返回所有来源累计授予次数减去已消费次数，不推进回合、不消费次数、金币或 RNG。无新增业务失败枚举；所需历史缺失等非法状态仍抛出领域异常（如 `missing augment-history-v1`），不降级为零。
+
+`toSeatPrivateView(match, choiceDeadline?)` 的 `SeatStateView` 新增必填白名单字段 `freeRerollsAvailable: number`，所有阶段均取同一权威状态的查询结果。仅发给本席，公共 `PlayerView` / `SeatPublic` 不携带；`augmentHistory`、事实与证明仍不下发。初始、增量、重连、拒绝后的状态同步共用此入口，缓存按不可变 MatchState 更新。
+
+客户端 `toDisplayMatch` 保留字段，`readFreeRerollsAvailable(state: MatchState): number | null` 只读取投影中的非负安全整数。在线 `BoardScene.syncHud` 使用该读取函数；私有状态尚未到达或字段缺失/非法时返回 null，按钮只显示“D · 刷新”，不推算费用、不调用领域历史查询。单人原有读取不变。协议版本维持 1；客户端与服务器应一起交付本次字段变更，规则、内容版本与 digest 不变。
+
 ## 15 T10：战斗运营与准备截止自动上场（2026-10-13）
 
 本节按用户本次确认的 TFT 行为定稿，覆盖 §9 的旧 preparation-only 限制、§11.3 的“运行中拒绝修改席位”和 §12.4 的 PvP 直接结算接法。只允许更新本席当前运营资产，绝不改写已冻结的本场战斗输入。Codex 交付 simulation、纯 Node 导出、测试和合同；`src/server/room/room.ts` 阶段闸门、截止调用及服务器并发编排由 Claude 接入，本次不修改 `src/server/` 或 `src/rendering/`。
