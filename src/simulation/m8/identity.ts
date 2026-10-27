@@ -1,8 +1,9 @@
+import { encodePrimitiveTuple } from '../primitive-tuple';
 import type { EffectIdentity, EffectKeyTuple, Source } from './contracts';
 import { integer, safeNumber } from './stats';
 export const compareCodePoints = (a: string, b: string): number => a < b ? -1 : a > b ? 1 : 0;
 export const sourceTuple = (s: Source): readonly unknown[] => [s.ownerId, s.sourceKind, s.definitionId, s.instanceId, s.effectIndex, s.parentItemInstanceId];
-export const canonicalSource = (s: Source): string => JSON.stringify(sourceTuple(s));
+export const canonicalSource = (s: Source): string => encodePrimitiveTuple(sourceTuple(s));
 export function effectIdentity(combatId: string, source: Source, targetId: string, applicationId = 'source'): EffectIdentity {
   const tuple: EffectKeyTuple = [combatId, source.ownerId, source.sourceKind, source.definitionId, source.instanceId, source.effectIndex, source.parentItemInstanceId, targetId, applicationId];
   return { key: JSON.stringify(tuple), source, targetId };

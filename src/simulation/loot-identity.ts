@@ -1,3 +1,4 @@
+import { encodePrimitiveTuple } from './primitive-tuple';
 import { compareCodePoints } from './m8/identity';
 import type { DropIdentity } from './m8/contracts';
 
@@ -14,7 +15,7 @@ export function lootEntryId(orbId:string,entryOrdinal:number):string {
   if (!Number.isSafeInteger(entryOrdinal)||entryOrdinal<0) throw new RangeError('Invalid orb entry');
   return JSON.stringify([orbId,entryOrdinal]);
 }
-export const lootReceiptId = (dropId:string):string => JSON.stringify([dropId,'grant']);
+export const lootReceiptId = (dropId:string):string => encodePrimitiveTuple([dropId,'grant']);
 export const lootChoiceId = (dropId:string):string => JSON.stringify(['m8b-loot-choice',dropId]);
 /** Freeze and direct award order. Numeric slot order is NOT canonical tuple text order. */
 export function compareLootFreezeSlots(a:{readonly sourceUnitId:string;readonly slotOrdinal:number;readonly entryOrdinal?:number},b:{readonly sourceUnitId:string;readonly slotOrdinal:number;readonly entryOrdinal?:number}):number {

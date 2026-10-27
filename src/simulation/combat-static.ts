@@ -1,5 +1,6 @@
 import { equalOrderedJson, isImmutableJson, shareGeneratedDeclaration, shareParsedDeclaration } from './immutable-json';
 import { freezeContent, freezeTransientContent } from './content/freeze';
+import { clonePlainData } from './plain-clone';
 import type { CombatState, CombatUnit } from './combat-types';
 
 const fields = ['ability', 'sources', 'triggers', 'mechanics', 'itemPrograms', 'companionDefinitions', 'attackCone', 'mechanismDefinitions'] as const;
@@ -108,20 +109,24 @@ export function copyCombatUnitForTick(unit: CombatUnit): CombatUnit {
   if (omitDefinitions) writable.mechanismDefinitions = undefined;
   if (omitState) writable.mechanismState = undefined;
   if (omitLedger) writable.triggerLedger = undefined;
-  for (const key of Object.keys(copy) as (keyof CombatUnit)[]) {
-    const value = copy[key];
+  // The detached spread holds only data properties, so one native pass over
+  // its values replaces a megamorphic keyed read per field.
+  const keys = Object.keys(copy) as (keyof CombatUnit)[], values = Object.values(copy);
+  for (let index = 0; index < keys.length; index++) {
+    const value = values[index];
     if (value === null || typeof value !== 'object') {
       // Preserve the native detach boundary's rejection of non-cloneable values,
       // including a getter that returns a function on its first (only) read.
       if (typeof value === 'function' || typeof value === 'symbol') structuredClone(value);
       continue;
     }
-    if (Object.hasOwn(shared, key) || key === 'startingCell') continue;
+    const key = keys[index];
+    if (key === 'startingCell' || Object.hasOwn(shared, key)) continue;
     let next: unknown;
     if (key === 'runtime') next = { ...value };
     else if (tickRecords.has(key)) next = immutableTickRecord(value);
     else if (tickLists.has(key) && Array.isArray(value)) next = value.map(entry => immutableTickRecord(entry));
-    else next = structuredClone(value);
+    else next = clonePlainData(value);
     writable[key] = next;
   }
   // Mechanism definitions already follow the resolver's copy-on-write contract;
