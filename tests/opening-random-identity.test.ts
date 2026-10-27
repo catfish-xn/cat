@@ -19,7 +19,7 @@ const bytes = (p: string) => {
 const sha = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const load = (p: string) => JSON.parse(bytes(p).toString());
 const baseline = () => load('tests/g2-4b-content-baseline.json');
-const currentBaseline = () => load('tests/v23-online-rules-content-baseline.json');
+const currentBaseline = () => load('tests/v24-online-rules-content-baseline.json');
 const g23 = () => load('tests/g2-3-content-baseline.json');
 
 it('preserves the historical opening-random to G2-3 identity chain', () => {
@@ -673,15 +673,10 @@ it('preserves v22-online-rules and its v21-opening-encounters byte evidence', ()
   }
 });
 
-it('binds v23-online-rules to fresh public rules and preserved v22-online-rules byte evidence', () => {
-  expect(bytes('scripts/verify-m8-herald-fixtures.cjs').toString()).toContain("const CURRENT = '../tests/fixtures/record-v23-online-rules-herald.cjs';");
+it('preserves v23-online-rules and its v22-online-rules byte evidence', () => {
   expect(load('tests/fixtures/v23-online-rules-herald-raw/manifest.json').generationVersion).toBe('v23-online-rules-herald-public-commands-v1');
-  const recorded = currentBaseline(), previous = load('tests/v22-online-rules-content-baseline.json'), fresh = createMatch(42);
+  const recorded = load('tests/v23-online-rules-content-baseline.json'), previous = load('tests/v22-online-rules-content-baseline.json');
   expect(recorded.parentEpoch).toBe('v22-online-rules');
-  for (const key of ['contentDigest', 'rulesVersion', 'contentVersion', 'schemaVersion'] as const)
-    expect(fresh[key]).toBe(recorded[key]);
-  expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
-  expect(LOOT_REPLAY_DIGEST).toBe(recorded.lootReplayDigest);
   // v23-online-rules has its own identity; retained v22-online-rules evidence remains byte-for-byte unchanged.
   expect(recorded.contentDigest).not.toBe(previous.contentDigest);
   expect(recorded.rulesVersion).toBe('s13-g2-3-v23-online-rules');
@@ -724,9 +719,60 @@ it('binds v23-online-rules to fresh public rules and preserved v22-online-rules 
   }
 });
 
+it('binds v24-online-rules to fresh public rules and preserved v23-online-rules byte evidence', () => {
+  expect(bytes('scripts/verify-m8-herald-fixtures.cjs').toString()).toContain("const CURRENT = '../tests/fixtures/record-v24-online-rules-herald.cjs';");
+  expect(load('tests/fixtures/v24-online-rules-herald-raw/manifest.json').generationVersion).toBe('v24-online-rules-herald-public-commands-v1');
+  const recorded = currentBaseline(), previous = load('tests/v23-online-rules-content-baseline.json'), fresh = createMatch(42);
+  expect(recorded.parentEpoch).toBe('v23-online-rules');
+  for (const key of ['contentDigest', 'rulesVersion', 'contentVersion', 'schemaVersion'] as const)
+    expect(fresh[key]).toBe(recorded[key]);
+  expect(CONTENT_DIGEST).toBe(recorded.contentDigest);
+  expect(LOOT_REPLAY_DIGEST).toBe(recorded.lootReplayDigest);
+  // v24-online-rules has its own identity; retained v23-online-rules evidence remains byte-for-byte unchanged.
+  expect(recorded.contentDigest).not.toBe(previous.contentDigest);
+  expect(recorded.rulesVersion).toBe('s13-g2-3-v24-online-rules');
+  expect(recorded.contentVersion).toBe('s13-14.24b-g2-3-v24-online-rules');
+  expect(recorded.rulesVersion).not.toBe(previous.rulesVersion);
+  expect(recorded.contentVersion).not.toBe(previous.contentVersion);
+  expect(recorded.previousContentDigest).toBe(previous.contentDigest);
+  expect(recorded.previousLootReplayDigest).toBe(previous.lootReplayDigest);
+  const audit = load('docs/evidence/v24-online-rules/release-audit.json');
+  expect(audit.baseline).toEqual(recorded);
+  expect(audit.baseCommit).toMatch(/^[0-9a-f]{40}$/);
+  expect(sha(bytes('tests/fixtures/m5/full-match-golden.v23-online-rules.json'))).toBe(audit.previousGoldenSha256);
+  expect(sha(bytes('tests/fixtures/m5/full-match-golden.v24-online-rules.json'))).toBe(audit.candidateSha256);
+  const historicalAudit = load('docs/evidence/v23-online-rules/release-audit.json');
+  expect(audit.previousGoldenSha256).toBe(historicalAudit.candidateSha256);
+  for (const build of ['cannon', 'sniper']) {
+    const oldBytes = bytes(`tests/fixtures/v23-online-rules-recorded-states/${build}.json.gz`);
+    const currentBytes = bytes(`tests/fixtures/v24-online-rules-recorded-states/${build}.json.gz`);
+    const evidence = audit.builds[build].recording;
+    expect(sha(oldBytes)).toBe(evidence.previousGzipSha256);
+    expect(sha(oldBytes)).toBe(historicalAudit.builds[build].recording.gzipSha256);
+    expect(sha(currentBytes)).toBe(evidence.gzipSha256);
+    expect(evidence.byteEvidence.previousBytes).toBe(oldBytes.length);
+    expect(evidence.byteEvidence.currentBytes).toBe(currentBytes.length);
+    expect(evidence.textAndObjectRestoreBytesEqual).toBe(true);
+    const old = JSON.parse(gunzipSync(oldBytes).toString()).states;
+    expect(old).toHaveLength(67);
+    for (const state of [old[0], old.at(-1)]) {
+      expect(() => restoreMatch(state)).toThrow();
+      expect(() => restoreMatch(JSON.stringify(state))).toThrow();
+    }
+  }
+  const inputs = load('docs/evidence/v24-online-rules/input-fixture-audit.json');
+  expect(inputs.baseCommit).toBe(audit.baseCommit);
+  expect(inputs.contentDigest).toBe(recorded.contentDigest);
+  for (const [path, raw] of Object.entries(inputs.files)) {
+    const evidence = raw as {previousSha256: string; currentSha256: string};
+    expect(sha(bytes(path))).toBe(evidence.currentSha256);
+    expect(sha(bytes(path.replace('v24-online-rules-', 'v23-online-rules-')))).toBe(evidence.previousSha256);
+  }
+});
+
 it('rejects each old release identity without migration shortcuts', () => {
   const fresh = createMatch(42);
-  for (const epoch of ['v22-online-rules','v21-opening-encounters','v20-black-market','v20-live-combat']) {
+  for (const epoch of ['v23-online-rules','v22-online-rules','v21-opening-encounters','v20-black-market','v20-live-combat']) {
   const parent = load(`tests/${epoch}-content-baseline.json`);
   for (const key of ['contentDigest', 'rulesVersion', 'contentVersion'] as const) expect(parent[key]).not.toBe(fresh[key]);
   // v23 keeps schema 12 from v22 (and v22 from v21) by design; every identity field that differs must reject on its own.
@@ -757,7 +803,7 @@ it('rejects each old release identity without migration shortcuts', () => {
 });
 for (const build of ['cannon', 'sniper']) {
   const old = JSON.parse(gunzipSync(bytes(`tests/fixtures/opening-random-recorded-states/${build}.json.gz`)).toString()).states;
-  const current = JSON.parse(gunzipSync(bytes(`tests/fixtures/v23-online-rules-recorded-states/${build}.json.gz`)).toString()).states;
+  const current = JSON.parse(gunzipSync(bytes(`tests/fixtures/v24-online-rules-recorded-states/${build}.json.gz`)).toString()).states;
   it(`${build}: preserves all 67 raw checkpoints and rejects old first/final states`,()=>{
     expect(old).toHaveLength(67);expect(current).toHaveLength(67);
     for (const state of [old[0], old.at(-1)]) expect(() => restoreMatch(state)).toThrow();

@@ -1,9 +1,10 @@
 import * as api from '../../src/simulation/match';
 import { accepted, configuredPrefix } from './t13-loot-public';
 
-// Seed 2125 retains the no-opening, one-carrier partial-defeat vectors under
-// v24: Loris kills r00 at 456; Zyra kills r01 at 212 with the current public choices.
-export const PARTIAL_REVEAL_SEEDS = {loris:2125,zyra:2125} as const;
+// Seed 2004 is the first from 2000 satisfying each independent drop shape and
+// public route: no opening, two-star holder, defeat with only r00 (Loris) or r01
+// (Zyra) killed; Loris earns one item and one unit, Zyra one item.
+export const PARTIAL_REVEAL_SEEDS = {loris:2004,zyra:2004} as const;
 
 // Shared by tests/m8-b8-live-reveal.test.ts and scripts/record-g2-4b-live-reveal.cjs so both use one route.
 // A command-only route recreates the original eight two-star holders and four-item

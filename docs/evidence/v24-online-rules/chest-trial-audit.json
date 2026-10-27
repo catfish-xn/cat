@@ -1,0 +1,13 @@
+{
+  "epoch": "v24-online-rules",
+  "reason": "seed554 Prismatic Prelude replaced Manaflow I and the v23 stage bans keep Manaflow I out of 2-1; search silver 2-1 seeds with the default pick, preserving Archangel grant, two bracer stacks, three pulses, death and full continuation assertions",
+  "sourceDigests": {
+    "scripts/record-chest-trial-v24.cjs": "80dba43b76c200c929f86cbf6a480f580b43525ffdefe097572db12d3cd7483b",
+    "tests/fixtures/v24-online-rules-chest-trial.ts": "892873e050247d4148c92e51e05e57ace44312df1e0a6aa11c73d6a87a019f29",
+    "tests/fixtures/b8-public-equipment.ts": "5d79e2974bb31b9b5e0800e91940bcbc0e39a2563f8f15a8c6a032d693065e8d",
+    "tests/fixtures/m5/oracle.g2.cjs": "3bc32dd1092e8711a2b93a110eb4933a7f5f3df3eddb91fd5aaa540141f49580"
+  },
+  "fixtureBytes": 53535,
+  "fixtureSha256": "c73ba5fdf451f94cca4577581c61abfde5eb2942b1e322cf6be25a1558c8d4ac",
+  "seed": 585
+}

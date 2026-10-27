@@ -1,3 +1,4 @@
+import {openingEncounter} from './fixtures/m5/oracle.g2.cjs';
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
@@ -65,6 +66,9 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
     expect(api.stepMatch(state)).toEqual({ state, events: [] });
     if (roundId === '6-7') {
       expect(state.phase).toBe('gameOver');
+      expect(state.seed).toBe(2423);
+      expect(openingEncounter(state.seed)).toBe('none');
+      expect(independentLootPlan(state.seed,38).rounds.at(-1)!.encounterPlan.encounterId).toBe('rift-herald-v1');
       // Seed 2423 (v23: the public Herald route's crab-free seed with no opening encounter under fmix32; 42 now
       // draws golden-gala and 2192 loot-subscription) after the independent additive bonus stream: both literal-table
       // BigInt oracles (epic-loot-oracle.cjs and m5/oracle.g2.cjs) give this order.

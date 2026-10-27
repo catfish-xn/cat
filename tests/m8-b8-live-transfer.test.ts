@@ -8,7 +8,7 @@ import { accepted, battle, transferPreparation, players, plan } from './fixtures
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
-import anchor from './fixtures/v23-online-rules-transfer-route.json';
+import anchor from './fixtures/v24-online-rules-transfer-route.json';
 const {survivor:SURVIVOR,donor:DONOR,reward:REWARD,tg:TG}=anchor;
 const prepared=await transferPreparation();
 // These IDs/provenance counts are an archived epoch anchor. Diagnose the epoch
@@ -111,11 +111,12 @@ const corruptions: readonly [string, (state: MutableMatch) => void, string][] = 
   ['current anomaly silently removed', state => { state.anomalyBinding = null; }, 'Invalid B8 Match: finished resource projection'],
   ['current child moved back to consumed donor', state => { state.temporaryEquipment.forEach(child => { child.holderId = DONOR; }); },
     'Invalid current temporary equipment projection'],
+  // The v24 public route owns Mirror Forge, which authenticates the finished combat first.
   ['original finished Combat star rewritten', state => { state.combat!.units.find(unit => unit.id === DONOR)!.starLevel = 2; },
-    'Invalid Match save: combat unit identity'],
+    'Invalid authoritative Mirror forge replay'],
   ['original finished Combat child source parent rewritten', state => {
     state.combat!.units.find(unit => unit.id === DONOR)!.sources!.find(effect => effect.source.parentItemInstanceId === TG)!.source.parentItemInstanceId = 'item-3';
-  }, 'Invalid Match save: resolved effect source/trigger'],
+  }, 'Invalid authoritative Mirror forge replay'],
   ['reward receipt rewritten to survivor', state => {
     state.m8.loot.receipts.find(receipt => receipt.grantedUnitIds.includes(REWARD))!.grantedUnitIds = [SURVIVOR];
   }, 'Invalid resource provenance: receipt birth binding'],

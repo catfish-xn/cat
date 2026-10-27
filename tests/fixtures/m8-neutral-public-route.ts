@@ -1,11 +1,11 @@
-import ionicRaw from './v23-online-rules-herald-raw/ionic-spark.json?raw';
-import evenshroudRaw from './v23-online-rules-herald-raw/evenshroud.json?raw';
-import dualRaw from './v23-online-rules-herald-raw/ionic-spark--evenshroud.json?raw';
-import quicksilverRaw from './v23-online-rules-herald-raw/quicksilver.json?raw';
-import edgeRaw from './v23-online-rules-herald-raw/edge-of-night.json?raw';
+import ionicRaw from './v24-online-rules-herald-raw/ionic-spark.json?raw';
+import evenshroudRaw from './v24-online-rules-herald-raw/evenshroud.json?raw';
+import dualRaw from './v24-online-rules-herald-raw/ionic-spark--evenshroud.json?raw';
+import quicksilverRaw from './v24-online-rules-herald-raw/quicksilver.json?raw';
+import edgeRaw from './v24-online-rules-herald-raw/edge-of-night.json?raw';
 import * as api from '../../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
-import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v23-online-rules-herald-support/generate';
+import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './v24-online-rules-herald-support/generate';
 import { run } from '../../scripts/generate-m5-route.cjs';
 
 // v23: seed 42 draws the Golden Gala opening under the fmix32 selection, and v22's seed 2192 now draws Loot
