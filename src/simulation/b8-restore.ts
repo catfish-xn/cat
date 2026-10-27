@@ -53,6 +53,7 @@ import { planCombine, planEquip } from './inventory';
 import type { ItemInstance } from './strategy-types';
 import type { GameState } from './game';
 import { validateMultiplayerOrbLedger } from './orb-restore';
+import { openingEncounterId } from './opening-encounter';
 export { validateMultiplayerOrbLedger } from './orb-restore';
 
 function check(condition: unknown, message: string): asserts condition {
@@ -406,7 +407,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   const opening = state.resourceProvenance.entries[0];
   check(opening?.kind === 'unit-acquired' && opening.source.kind === 'opening' && opening.source.seatId === (state.sharedPool?.seatId ?? 'solo') && (state.sharedPool || opening.source.seed === state.seed), 'opening stream identity');
   const context: ResourceProvenanceContext = { pilferRewards:pilferRewardPlan(state),augmentHistory:state.augmentHistory, s3bState:state, batch5Inventory:batch5InventoryPlan(state), g23:readG23Progress(state),g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
-    throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
+    throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply' && !(state.multiplayer && result.roundKind === 'pvp'))
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
   const inventoryPlan=batch5InventoryPlan(state);validateBatch5Inventory(state,inventoryPlan);
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
@@ -420,11 +421,11 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   // for ordinary saves with completed battles and no externally supplied replay.
   const hasAcademyEvidence = ((state.seatMechanics?.hidden.grantEvidence ?? []) as readonly G23GrantEvidence[])
     .some(evidence => evidence.receiptId.startsWith('g23:academy:'));
-  if (inventoryPlan.conversions.length || hasS3bInventory(state) || state.d14 || hasAcademyEvidence || !state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
+  if (state.multiplayer || inventoryPlan.conversions.length || hasS3bInventory(state) || state.d14 || hasAcademyEvidence || !state.roundResults.some(result => result.roundKind !== 'supply')) validateHistoricalEquipment(null, state);
   if (state.combat === null) { check(state.combatInputBasis === null, 'inactive input basis'); return {basis:null,saleGold:0}; }
   const entries = state.resourceProvenance.entries, combat = state.combat;
   const commits = entries.filter(entry => entry.kind === 'combat-growth-committed' && entry.combatId === combat.combatId);
-  check(combat.status === 'finished' ? commits.length === 1 : commits.length === 0, 'current growth commit count');
+  check(combat.status === 'finished' && !state.pendingCombatTerminal ? commits.length === 1 : commits.length === 0, 'current growth commit count');
   const commit = commits[0];
   check(!commit || commit.kind === 'combat-growth-committed', 'growth commit');
   const candidate = state.combatInputBasis;
@@ -435,8 +436,14 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
+  const shared = state.sharedPool && state.multiplayer ? { openingId: openingEncounterId(state), twoSidedRounds: state.multiplayer.receipts.map(receipt => {
+    const result = state.roundResults[receipt.round - 1];
+    check(receipt.seatId === state.sharedPool!.seatId && receipt.round < state.round && result?.roundKind === 'pvp'
+      && result.roundId === receipt.roundId && result.settlementId === receipt.settlementId, 'shared battle seed history');
+    return receipt.round;
+  }) } : undefined;
   const openingResources=parsedJsonInput&&prefixLength===entries.length?current:foldResourceProvenance(state.resourceProvenance,{...context,prefixLength},parsedJsonInput);
-  const basis = restoreCombatInput(state.combatInputBasis,{augmentCopyKills:r2CopyKills(state,openingResources.items),cabalGrowth:readCabalGrowth(state),sniperOpening:readSniperOpening(state),h6Growth:scoreboardCombatGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),{provenancePrefixLength:prefixLength,definitions:Object.fromEntries(candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId]))}),augmentHistoryGrowth:combatHistoryGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),true),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{...(shared?{shared}:{}),augmentCopyKills:r2CopyKills(state,openingResources.items),cabalGrowth:readCabalGrowth(state),sniperOpening:readSniperOpening(state),h6Growth:scoreboardCombatGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),{provenancePrefixLength:prefixLength,definitions:Object.fromEntries(candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId]))}),augmentHistoryGrowth:combatHistoryGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),true),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
@@ -446,7 +453,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
     && !basis.inputs.items.some(item => item.id === roll.parentItemInstanceId && item.location.kind === 'unit')), 'post-freeze equipment rolls');
   check(state.battleSeedRngState === basis.battleSeed, 'battle seed cursor');
   validateBattleEquipmentHistory(state, basis);
-  if (combat.status === 'running') {
+  if (combat.status === 'running' || state.pendingCombatTerminal) {
     const { items: _items, temporaryEquipment: _children, ...live } = readCombatStrategyInputs(state);
     const { items: originalItems, temporaryEquipment: _frozenChildren, ...frozenInputs } = basis.inputs;
     check(equal(live, frozenInputs), 'running input mutation');
@@ -463,12 +470,16 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
     check(equipmentContinuation(items, state.items) && serial === state.nextItemSerial, 'running equipment projection');
     return {basis,saleGold:0};
   }
-  const deltas = combat.units.filter(unit => unit.team === 'player' && !unit.itemSummon && (unit.runtime?.permanentAdBps ?? 0) > 0)
+  const deltas = combat.units.filter(unit => unit.team === 'player' && !unit.itemSummon && !unit.r3Mirror && (unit.runtime?.permanentAdBps ?? 0) > 0)
     .map(unit => ({sourceUnitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps}));
   for(const split of combat.trenchSplits??[])if(split.permanentAdBps>0&&basis.inputs.preparation.units.some(u=>u.id===split.ownerId&&u.team==='player'))
     deltas.push({sourceUnitId:split.ownerId,attackDamageBps:split.permanentAdBps});
   deltas.sort((a,b) => a.sourceUnitId < b.sourceUnitId ? -1 : 1);
   check(commit && equal(commit.sourceDeltas,deltas), 'original combat growth deltas');
+  // Shared orb claims have their own ordered ledger and may occur after economy.
+  // The resource fold and equipment history above authenticate their continuation;
+  // replayCurrentSuffix below retains the solo-only immediate terminal grant order.
+  if (state.multiplayer) return {basis,saleGold:0};
   return {basis,saleGold:replayCurrentSuffix(state,basis)};
 }
 

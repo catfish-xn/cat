@@ -20,6 +20,7 @@ import { advanceP3, p3Attack, p3Cast, p3Roll, p3BurnRaw, p3Reflect, p3Damage, p3
 import { p3Values } from './s13-p3-programs';
 import {splitTrenchHolders} from './combat-g2-4b-trench';
 import {splitExperimentClones} from './combat-experiment-clone';
+import { hallOfMirrorsDamage, hallOfMirrorsExecution } from './augment-pool-batch5-r3-mirrors';
 import { castAnomaly, tickAnomalies, takedownAnomalies, deathAnomalies, attackAnomaly } from './anomalies/runtime';
 import { isAttackProxy, scheduleAnomalyAttacks, removeBoundAnomalySummons, recordAnomalyProxyHit } from './anomalies/summons';
 import { isAbsent, occupiesCell } from './anomalies/availability';
@@ -556,7 +557,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         if(remaining>0&&BigInt(remaining)*10000n<BigInt(target.maxHp)*BigInt(Math.round(variable(owner,'Spell3_ExecutePercentage')*10000))){
           const execution:S13Packet={...packet,sevikaChomp:undefined,raw:remaining,damageType:'true',ordinal:1000+packet.ordinal,critEligibility:'never',critical:false};
           const request=damageRequest(execution,ctx.combatId!,tick);
-          const executed=allocateDamage(request.context,{raw:remaining,prevented:0,mitigated:remaining,critical:false},remaining,[]);
+          const executed=allocateDamage(request.context,hallOfMirrorsExecution(owner,remaining),remaining,[]);
           commitOutcome(target,{...executed,shields:target.shieldLayers},execution);
         }
         if(virtualHp.get(target.id)===0){owner.tasks.push({key:JSON.stringify([owner.id,packet.actionSeq,'g23Chomp',packet.ordinal]),kind:'g23Chomp',source:packet.source,
@@ -568,7 +569,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         &&absorbed+actual>0&&remaining>0&&owner.team!==target.team&&BigInt(remaining)*10000n<BigInt(target.maxHp)*BigInt(V19_MECHANICS.chainblade.executeBps)){
         const execution:S13Packet={source:blade.source,targetId:target.id,raw:remaining,damageType:'true',actionSeq:actionSeq++,ordinal:0,delivery:'equipment-proc',critEligibility:'never',critical:false,area:false,triggeringCastActionSeq:null};
         const request=damageRequest(execution,ctx.combatId!,tick);
-        const executed=allocateDamage(request.context,{raw:remaining,prevented:0,mitigated:remaining,critical:false},remaining,[]);
+        const executed=allocateDamage(request.context,hallOfMirrorsExecution(owner,remaining),remaining,[]);
         commitOutcome(target,{...executed,shields:target.shieldLayers},execution);
         ctx.heals.push({source:blade.source,targetId:owner.id,amount:V19_MECHANICS.chainblade.heal});
         if(chainbladeGoldTarget(owner,target))awardItemGold(owner,blade,'perfected-chainblade',itemGoldReceipts?.filter(r=>r.ownerId===owner.id&&r.kind==='perfected-chainblade').length??0);
@@ -579,7 +580,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         &&absorbed+actual>0&&remaining>0&&BigInt(remaining)*100n<BigInt(target.maxHp)*BigInt(batch2Values('noxian-guillotine').BaseExecuteThreshold)){
         const execution:S13Packet={source:guillotine.source,targetId:target.id,raw:remaining,damageType:'true',actionSeq:actionSeq++,ordinal:0,delivery:'equipment-proc',critEligibility:'never',critical:false,area:false,triggeringCastActionSeq:null};
         const request=damageRequest(execution,ctx.combatId!,tick);
-        commitOutcome(target,{...allocateDamage(request.context,{raw:remaining,prevented:0,mitigated:remaining,critical:false},remaining,[]),shields:target.shieldLayers},execution);
+        commitOutcome(target,{...allocateDamage(request.context,hallOfMirrorsExecution(owner,remaining),remaining,[]),shields:target.shieldLayers},execution);
         batch2ExecuteReward(ctx,owner!);return;
       }
       if(collector&&!context.redirected&&['basic-attack','ability-direct','ability-periodic','attack-extra'].includes(context.delivery)
@@ -587,7 +588,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         const execution:S13Packet={source:collector.source,targetId:target.id,raw:remaining,damageType:'true',actionSeq:actionSeq++,ordinal:0,
           delivery:'equipment-proc',critEligibility:'never',critical:false,area:false,triggeringCastActionSeq:null};
         const request=damageRequest(execution,ctx.combatId!,tick);
-        const executed=allocateDamage(request.context,{raw:remaining,prevented:0,mitigated:remaining,critical:false},remaining,[]);
+        const executed=allocateDamage(request.context,hallOfMirrorsExecution(owner,remaining),remaining,[]);
         // Execution bypasses shields and Defiance; death cleanup removes layers.
         commitOutcome(target,{...executed,shields:target.shieldLayers},execution);
         if(collector.mechanic==='g24Collector')awardItemGold(owner!,collector,'collector',itemGoldReceipts?.filter(r=>r.itemInstanceId===collector.source.instanceId&&r.ownerId===owner!.id&&r.kind==='collector').length??0);
@@ -608,11 +609,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const sample = damageSample(packet, target, owner, tick, units, virtualHp.get(target.id)!);
       const basePrepared = prepareDamage(request, sample);
       // One target multiplier after existing amplification/mitigation, before shields/redirect. Never double-scale inherited packets.
-      const prepared = roseAmpV19(owner,target)&&!packet.inherited ? {...basePrepared,beforeMitigation:Math.floor(basePrepared.beforeMitigation*10800/10000),mitigated:Math.floor(basePrepared.mitigated*10800/10000)} : basePrepared;
+      const prepared = hallOfMirrorsDamage(owner,packet,roseAmpV19(owner,target)&&!packet.inherited ? {...basePrepared,beforeMitigation:Math.floor(basePrepared.beforeMitigation*10800/10000),mitigated:Math.floor(basePrepared.mitigated*10800/10000)} : basePrepared);
       if ((virtualHp.get(target.id) ?? 0) > 0 && !sample.prevention) p3Reflect(ctx, target, packet, prepared.blockedByMitigation);
       if (packet.periodic && (sample.prevention || sample.burnCap !== undefined && prepared.mitigated >= sample.burnCap)) clearPeriodicAccount(ctx, packet.periodic, target.id);
       if(packet.devour){
-        if(!sample.prevention&&(virtualHp.get(target.id)??0)>0){const hp=virtualHp.get(target.id)!;const execution=allocateDamage(request.context,{...prepared,raw:hp,mitigated:hp,critical:false},hp,[]);commitOutcome(target,{...execution,shields:target.shieldLayers},packet);}continue;
+        if(!sample.prevention&&(virtualHp.get(target.id)??0)>0){const hp=virtualHp.get(target.id)!;const execution=allocateDamage(request.context,hallOfMirrorsExecution(owner,hp),hp,[]);commitOutcome(target,{...execution,shields:target.shieldLayers},packet);}continue;
       }
       const protector = units.filter(u => u.alive && u.id !== target.id && u.team === target.team && hexDistance(u.cell, target.cell) <= 1
         && active(u, tick, 'redirect').length > 0).sort(compareIds)[0];

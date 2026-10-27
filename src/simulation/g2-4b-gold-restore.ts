@@ -1,4 +1,5 @@
 import { overtimeStacks } from './combat-overtime';
+import { isR3Copy } from './augment-pool-batch5-r3';
 import { MAX_COMBAT_TICKS } from './combat-types';
 import { installBattleEquipmentBatch, validateBattleEquipmentLog } from './battle-equipment';
 import {createCombatWithEvents,stepCombat} from './combat';
@@ -28,6 +29,11 @@ export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBas
  * Trench also replaces the roster, so this runs before static-roster checks.
  * Every call reconstructs independently from the validated frozen basis. */
 export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot,parsedJsonInput=false,shareDeclarations=false):boolean {
+  // No candidate-only marker may turn on a damage multiplier or summon HP policy.
+  if (candidate.units.some(u => u.r3Mirror !== undefined && !strategy.units.some(s => s.unitId === u.id && s.r3Mirror)))
+    throw new RangeError('Unexpected R3 mirror origin');
+  if (candidate.units.some(u => isR3Copy(u.itemSummon) && !strategy.units.some(s => s.unitId === u.id && isR3Copy(s.itemSummon))))
+    throw new RangeError('Unexpected R3 copy origin');
   if (candidate.equipmentReceipts !== undefined || candidate.pendingEquipment !== undefined) {
     validateBattleEquipmentLog(candidate.equipmentReceipts?.map(r => r.input) ?? [], candidate.equipmentReceipts ?? [], candidate.tick);
     validateBattleEquipmentLog(candidate.pendingEquipment?.map(r => r.input) ?? [], candidate.pendingEquipment ?? [], candidate.tick + 1);
@@ -55,6 +61,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   // Experiment copies change the roster mid-combat like Trench: authenticate by full cold replay.
   const trench=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'));
   const mirrorForge=strategy.units.some(u=>u.itemSummon?.kind==='mirror'&&u.itemSummon.unit.definitionId==='jayce');
+  const r3 = !!strategy.r3Original?.length || strategy.units.some(u => isR3Copy(u.itemSummon));
   const anomaly=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='s13Anomaly'));
   const d11=strategy.units.some(u=>u.mechanics?.some(m=>m.mechanic==='d11Anomaly'));
   const v20=strategy.units.some(u=>u.mechanics?.some(m=>['quickstriker','firelight','v20Teamup'].includes(m.mechanic)));
@@ -68,7 +75,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   // the entire trajectory rather than allowing duplicate keys in status.ts.
   // Select from the trusted strategy, never from candidate contribution fields.
   const ignite = strategy.units.some(u => u.ability.kind === 's13' && ['powder', 'rumble'].includes(u.ability.championId));
-  if(!batch2&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11&&!v19&&!v20&&!overtime&&!ignite){
+  if(!batch2&&!zephyr&&!trench&&!mirrorForge&&!r3&&!anomaly&&!d11&&!v19&&!v20&&!overtime&&!ignite){
     if(candidate.units.some(u=>u.batch2!==undefined))throw new RangeError('Unexpected batch2 runtime');
     if(candidate.units.some(u=>u.v20Traits!==undefined))throw new RangeError('Unexpected V20 runtime');
     if(candidate.units.some(u=>u.v19!==undefined||u.sixCost!==undefined||u.familyReunion!==undefined))throw new RangeError('Unexpected V19 runtime');
@@ -84,7 +91,7 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
   // Preserve the existing cold-replay contract for roster/absence/anomaly paths.
   // Ordinary v19/v20, overtime and ignite combats reuse input-bound independent evidence.
   let matches:boolean;
-  if((batch2||v19||v20||overtime||ignite)&&!zephyr&&!trench&&!mirrorForge&&!anomaly&&!d11){
+  if((batch2||v19||v20||overtime||ignite)&&!zephyr&&!trench&&!mirrorForge&&!r3&&!anomaly&&!d11){
     const replay=createRestoreCombatReplay(basis,strategy,candidate.tick,parsedJsonInput);
     matches=parsedJsonInput?replay.matchesValidatedAtSaveTick(candidate,shareDeclarations)
       :canonicalContent(replay.stateAtSaveTick())===canonicalContent(candidate);

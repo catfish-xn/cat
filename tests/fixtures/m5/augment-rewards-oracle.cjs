@@ -233,6 +233,38 @@ function rewardPlan(s,env){
  return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut],gold:[...gold,...h4.goldPlan(s)]};
 }
 module.exports={rewardPlan,expand,salt,pick,word,outcome,initial};
+// P-B5-74, independent board arithmetic and literal ratios. Opening owner stats are
+// observed combat facts; no production copy declarations or reward receipts are read.
+function r3Opening(input,opening){
+ const a=input.augments.find(a=>a.definitionId==='cloning-facility');if(!a)return [];
+ const zone=input.preparation.board.deploymentZones.player,origin={col:3,row:zone.lastRow-1};
+ const board=input.preparation.units.filter(u=>u.location.kind==='board');
+ const owner=board.find(u=>u.team==='player'&&u.location.cell.col===3&&u.location.cell.row===origin.row);
+ if(!owner)return [];
+ const occupied=new Set(board.map(u=>JSON.stringify(u.location.cell))),free=[];
+ const distance=c=>{const q=c.col-Math.floor(c.row/2)-origin.col+Math.floor(origin.row/2),r=c.row-origin.row;return (Math.abs(q)+Math.abs(r)+Math.abs(q+r))/2;};
+ for(let row=zone.firstRow;row<=zone.lastRow;row++)for(let col=0;col<input.preparation.board.columns;col++){
+  const cell={col,row};if(!occupied.has(JSON.stringify(cell)))free.push(cell);
+ }
+ free.sort((a,b)=>distance(a)-distance(b)||a.row-b.row||a.col-b.col);if(!free.length)return [];
+ const stats=opening.find(u=>u.id===owner.id);assert(stats,'independent original opening unit');
+ return [{id:JSON.stringify(['b5-r3','cloning-facility',a.choiceId,owner.id]),ownerId:owner.id,definitionId:owner.definitionId,
+  starLevel:owner.starLevel,cell:free[0],maxHp:Number(BigInt(stats.maxHp)*7n/10n),maxMana:Number((BigInt(stats.maxMana)*6n+4n)/5n)}];
+}
+module.exports.r3Opening=r3Opening;
+// P-B5-78: choose by physical column distance (left wins ties), preserve each
+// original position's observed opening HP; center definition/star are sampled once.
+function hallOpening(input,original){
+ if(!input.augments.some(a=>a.definitionId==='hall-of-mirrors'))return [];
+ const row=input.preparation.board.deploymentZones.player.firstRow;
+ const front=input.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&u.location.cell.row===row)
+  .sort((a,b)=>Math.abs(a.location.cell.col-3)-Math.abs(b.location.cell.col-3)||a.location.cell.col-b.location.cell.col);
+ if(!front.length)return [];
+ const center=front[0];return front.map(u=>({id:u.id,definitionId:center.definitionId,starLevel:center.starLevel,
+  cell:u.location.cell,maxHp:original.find(x=>x.id===u.id).maxHp}));
+}
+module.exports.hallOpening=hallOpening;
+module.exports.hallDamage=n=>Number(BigInt(n)*6000n/10000n);
 const data=require('../../augment-reward-pools-oracle-data.cjs');
 function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...(s.seatMechanics?.seat.academy?.sponsored??[])].sort()},
  spoils(s,a,tier){const tables=data.spoils[tier],rng=salt(s.seed,['augment-pool-batch3','spoils',s.multiplayer?.seatId??'solo',a.choiceId,a.definitionId]);return tables[pick(word(rng),tables.length)];},

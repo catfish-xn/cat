@@ -29,7 +29,7 @@ export function initializeMirrorHealth(units:readonly CombatUnit[],events:Combat
 
 /** Combat-only provenance, derived by the strategy compiler. Never an asset. */
 export interface ItemSummonOrigin {
-  readonly kind:'mirror'|'voidspawn'|'trench'|'experiment';
+  readonly kind:'mirror'|'voidspawn'|'trench'|'experiment'|'cloning-facility';
   readonly spawnedAtTick?:number;
   readonly copyOrdinal?:number;
   readonly ownerId:string;
@@ -76,7 +76,7 @@ export function appendMirrorSummons(preparation:GameState,strategy:StrategySnaps
       ...(itemPrograms?.length?{itemPrograms}:{}),
       mechanics:[...resolved.mechanics??[],...holder.mechanics!.filter(m=>m.source.sourceKind==='ability').map(m=>({...m,source:{...m.source,ownerId:id}}))]});
   }
-  return {units:[...strategy.units,...clones],traits:strategy.traits.map(t=>({...t,
+  return {...strategy,units:[...strategy.units,...clones],traits:strategy.traits.map(t=>({...t,
     targetUnitIds:[...t.targetUnitIds,...clones.filter(c=>t.targetUnitIds.includes(c.itemSummon!.ownerId)).map(c=>c.unitId)]}))};
 }
 
