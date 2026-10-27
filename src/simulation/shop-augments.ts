@@ -1,3 +1,5 @@
+import { drawSubscriptionSlots } from './augment-pool-batch5-h12-subscription';
+export { enterShopAugmentRound, subscriptionAcquired, subscriptionStageStart, drawSubscriptionSlots } from './augment-pool-batch5-h12-subscription';
 import { recordShopDraw, recordShopFiresale } from './shop-history';
 import type { ShopDrawCause } from './shop-history-types';
 import { generateShop } from './shop';
@@ -8,10 +10,10 @@ import type { UnitLootPolicy } from './loot-runtime';
 import type { CostTier } from './unit-types';
 import { AUGMENT_SHOP, shopAugmentValue, type ShopAugmentRule } from './content/augment-pool-shop';
 import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
-import { grantMechanicGold, grantMechanicUnit } from './seat-mechanics/grants';
+import { grantMechanicUnit } from './seat-mechanics/grants';
 import { getMultiplayerRoundById, getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { isCombatRosterLocked } from './operation-policy';
-import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
+import { SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
 import { nextRandom } from './rng';
 import { UNIT_DEFINITIONS } from './units';
 
@@ -30,7 +32,7 @@ interface ShopAugmentRecord {
 }
 const RECORD_KEYS=['credits','rolls','rigAnchor','reinforced'];
 /** Literal counts from the 14.24 descriptions that have no source field. */
-const REINFORCED_COST=4, SUBSCRIPTION_SIZE=4;
+const REINFORCED_COST=4;
 
 const owned=(state:Pick<MatchState,'augments'>,rule:ShopAugmentRule)=>state.augments.filter(a=>AUGMENT_SHOP[a.definitionId]?.rule===rule);
 const record=(state:Pick<MatchState,'seatMechanics'>)=>readSeatMechanic(state,SHOP_AUGMENT_KEY) as unknown as ShopAugmentRecord|undefined;
@@ -68,16 +70,6 @@ export function recordShopReroll(state:MatchState):MatchState {
 
 /* ---------------- round entry ---------------- */
 
-/** Round entry, after income and scheduled gifts: Subscription Service gold. */
-export function enterShopAugmentRound(initial:MatchState):MatchState {
- let state=initial;const round=state.round;
- for(const a of owned(state,'subscription'))if(a.acquiredRound<round&&isStageStart(round)){
-  const result=grantMechanicGold(state,{receiptId:receiptId('subscription',a,round),source:SHOP_AUGMENT_SOURCE,amount:shopAugmentValue(a.definitionId,'GoldPerStage')});
-  if(!result.ok)throw new RangeError(`Shop augment stage gold: ${result.reason}`);state=result.state;
- }
- return state;
-}
-
 /* ---------------- shop generation ---------------- */
 
 /** Price of a shop offer: a 2-star offer is three copies. */
@@ -107,29 +99,6 @@ export function planRiggedShop(state:MatchState,generation:number):{readonly sta
  const next=record(state)?.rigAnchor===undefined?write(state,{rigAnchor:anchor}):state;
  return (generation-anchor)%shopAugmentValue(a.definitionId,'Numrolls')===0?{state:next,tier:3}:{state:next};
 }
-/** Subscription Service opens on acquisition and at every stage start after it. */
-export function subscriptionAcquired(before:MatchState,after:MatchState):boolean {
- return owned(after,'subscription').some(a=>!before.augments.some(b=>b.choiceId===a.choiceId));
-}
-export function subscriptionStageStart(state:MatchState,round:number):boolean {
- return owned(state,'subscription').some(a=>a.acquiredRound<round)&&isStageStart(round);
-}
-/** Subscription Service shop: SUBSCRIPTION_SIZE distinct ChampionTier champions weighted by available copies, the rest empty.
- * `take` reserves one copy; the caller owns the pool ledger. Draws use the seat's shop RNG like a normal refresh. */
-export function drawSubscriptionSlots(state:MatchState,available:Readonly<Record<string,number>>,take:(definitionId:string,slot:number)=>void):{readonly slots:ShopSlot[];readonly rngState:number;readonly rngDraws:number} {
- const a=owned(state,'subscription')[0]!,tier=shopAugmentValue(a.definitionId,'ChampionTier') as CostTier;
- const slots:ShopSlot[]=[],picked=new Set<string>();let rngState=state.rngState,rngDraws=0;
- for(let slot=0;slot<MATCH_RULES.shopSize;slot++){
-  const catalog=SHOP_CATALOG_BY_COST[tier].filter(id=>!picked.has(id)&&available[id]>0),total=catalog.reduce((n,id)=>n+available[id],0);
-  if(slot>=SUBSCRIPTION_SIZE||!total){slots.push({status:'purchased',empty:true});continue;}
-  const draw=nextRandom(rngState);rngState=draw.state;rngDraws++;
-  let copy=Math.floor(draw.word*total/4294967296);
-  const definitionId=catalog.find(id=>{if(copy<available[id])return true;copy-=available[id];return false;})!;
-  picked.add(definitionId);take(definitionId,slot);slots.push({status:'available',definitionId});
- }
- return {slots,rngState,rngDraws};
-}
-
 /* ---------------- unit grants ---------------- */
 
 /** Grant while the roster is editable; a full bench or a locked online roster retains the gift in an existing mechanic orb. */

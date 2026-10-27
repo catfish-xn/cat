@@ -23,6 +23,7 @@ const initial={
  'salvage-bin':[Q('completed')],
  'academic-research':[Q('component'),U('lux'),U('ezreal')],
  'snipers-nest':[U('zeri')],
+ 'head-start':[R(1,4,2)],'max-cap':[I('TFT_Item_TacticiansScepter')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
  'cooking-pot':[I('frying-pan')],

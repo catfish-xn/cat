@@ -49,7 +49,7 @@ beforeAll(() => {
 
 it('keeps four no-owner saves identical to HEAD ee2b019c after identity normalization (independent baseline SHA-256)', () => {
   let s = createMatch(42); const hashes: string[] = [];
-  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text);
+  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text); expect(s.contentDigest).toBe(CONTENT_DIGEST);
     // Compare the unchanged no-owner payload to the original epoch after normalizing the intentionally changed identities.
     hashes.push(createHash('sha256').update(baselineIdentity(baselineBytes(text))).digest('hex')); };
   check(); const u = s.preparation.units.find(u => u.team === 'player')!;

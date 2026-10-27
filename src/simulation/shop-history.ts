@@ -1,5 +1,6 @@
 import { atWhatCostGrant } from './augment-pool-batch5-s1b';
 import { batch5InventoryPlan } from './augment-pool-batch5-s3a';
+import { augmentLevelCap, grantMatchXp } from './augment-pool-batch5-h12-progression';
 import { getRoundSchedule, FINAL_ROUND } from './round-schedule';
 import { foldResourceProvenance } from './resource-provenance';
 import { readG23Progress } from './g2-3-state';
@@ -128,7 +129,7 @@ export function validateShopHistory(state:MatchState):void {
   // Solo selection precedes all trading at this node. Anchor its bank/XP to the preceding
   // independently checked settlement, rather than allowing a candidate to fund invented rerolls.
   const previous=state.roundResults.find(r=>r.round===initialPoint.round-1);check(previous,'initial settlement');
-  const xp=grantXp(previous.levelAfter,previous.xpAfter,readAugmentIncome(cursor.augments).roundXp+batch3EntryXp(cursor.augments,state.roundResults,initialPoint.round));
+  const xp=grantXp(previous.levelAfter,previous.xpAfter,readAugmentIncome(cursor.augments).roundXp+batch3EntryXp(cursor.augments,state.roundResults,initialPoint.round),augmentLevelCap(cursor.augments));
   check(xp.level===cursor.level&&xp.xp===cursor.xp,'initial XP');
   const receipts=(state.seatMechanics?.receipts??[]).slice(previous.mechanicReceiptPrefixLength,initialPoint.mechanicPrefix);
   const receiptGold=receipts.reduce((n,r)=>n+(r.kind==='gold'?r.amount:r.kind==='unit'?r.gold:r.kind==='choice'?-r.price:0),0);
@@ -162,19 +163,20 @@ export function validateShopHistory(state:MatchState):void {
   if(e.kind==='acquire'){
    keys(e,['kind','point','choiceId']);const a=state.augments.find(a=>a.choiceId===e.choiceId)!;
    check(a&&a.acquiredRound===cursor.round&&!cursor.augments.some(x=>x.choiceId===a.choiceId),'acquisition');
-   const xp=grantXp(cursor.level,cursor.xp,choiceAcquisitionXp(AUGMENT_DEFINITIONS[a.definitionId])+outcomeAcquisitionXp(cursor,a)+(a.definitionId==='at-what-cost'?atWhatCostGrant(cursor.level,cursor.xp):0));
+   let xp=grantMatchXp(cursor,choiceAcquisitionXp(AUGMENT_DEFINITIONS[a.definitionId])+outcomeAcquisitionXp(cursor,a)+(a.definitionId==='at-what-cost'?atWhatCostGrant(cursor.level,cursor.xp):0));
+   if(a.definitionId==='max-cap'&&xp.level===7)xp={...xp,xp:0};
    check(xp.level===e.point.level&&xp.xp===e.point.xp,'acquisition XP');
    cursor={...cursor,...xp,augments:[...cursor.augments,a]};needSubscription=AUGMENT_SHOP[a.definitionId]?.rule==='subscription';
   }else if(e.kind==='round'){
    keys(e,['kind','point']);check(!needNatural&&e.point.round===cursor.round+1,'round entry');
    const previous=state.roundResults.find(r=>r.round===cursor.round);check(previous,'round settlement');
-   const xp=grantXp(cursor.level,cursor.xp,readAugmentIncome(cursor.augments).roundXp+batch3EntryXp(cursor.augments,state.roundResults,e.point.round));
+   const xp=grantMatchXp(cursor,readAugmentIncome(cursor.augments).roundXp+batch3EntryXp(cursor.augments,state.roundResults,e.point.round));
    check(xp.level===e.point.level&&xp.xp===e.point.xp,'round XP');
    cursor={...cursor,round:e.point.round,...xp};needSubscription=cursor.augments.some(a=>AUGMENT_SHOP[a.definitionId]?.rule==='subscription')&&getMultiplayerRoundByOrdinal(cursor.round).subround===1;
    needNatural=!needSubscription&&(!cursor.shop.locked||anomalyRecovery(state,cursor,e.point));
   }else if(e.kind==='xp'){
-   keys(e,['kind','point','goldCost']);check(cursor.level<10&&e.goldCost===xpPurchaseCost(cursor.augments,cursor.round),'XP cost');
-   check(cursor.gold>=e.goldCost,'XP bank');cursor={...cursor,gold:cursor.gold-e.goldCost,...grantXp(cursor.level,cursor.xp,xpPurchaseAmount(cursor.augments,cursor.round))};
+   keys(e,['kind','point','goldCost']);check(cursor.level<augmentLevelCap(cursor.augments)&&e.goldCost===xpPurchaseCost(cursor.augments,cursor.round),'XP cost');
+   check(cursor.gold>=e.goldCost,'XP bank');cursor={...cursor,gold:cursor.gold-e.goldCost,...grantMatchXp(cursor,xpPurchaseAmount(cursor.augments,cursor.round))};
    needDual=cursor.augments.some(a=>a.definitionId==='dual-purpose');
   }else if(e.kind==='release'){
    keys(e,['kind','point']);check(state.multiplayer?.status==='eliminated'&&state.playerHp===0&&e===h.entries.at(-1),'seat release');needNatural=false;

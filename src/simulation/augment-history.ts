@@ -5,6 +5,7 @@ import { drainBatch5H7Gold } from './augment-pool-batch5-h7';
 import { drainBatch5H8Deaths } from './augment-pool-batch5-h8-deaths';
 import { drainBatch5H8Gold } from './augment-pool-batch5-h8';
 import { completeTraitTrackerCommand } from './augment-pool-batch5-h10-tracker';
+import { maxCapOfferNeedsHistory } from './augment-pool-batch5-h12-progression';
 import type { MatchState, MatchEvent } from './match-types';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -23,7 +24,7 @@ export function historyCheck(ok: unknown, reason: string): asserts ok {
 }
 const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
 export const historySeatId = (s: MatchState): string => s.multiplayer?.seatId ?? 'solo';
-export const needsAugmentHistory = (s: MatchState): boolean => s.augments.some(a => augmentNeedsHistory(a.definitionId));
+export const needsAugmentHistory = (s: MatchState): boolean => s.augments.some(a => augmentNeedsHistory(a.definitionId)) || maxCapOfferNeedsHistory(s);
 export const needsAugmentPreparationClock = (s: MatchState): boolean => s.augments.some(a => AUGMENT_HISTORY_OWNERS[a.definitionId]?.includes('preparation-time'));
 export function historyRoster(s: Pick<MatchState, 'preparation' | 'items'>): HistoryRoster {
   return structuredClone({ units: s.preparation.units.filter(u => u.team === 'player'), items: s.items });
@@ -170,6 +171,14 @@ export function recordAugmentAcquisition(before: MatchState, after: MatchState):
   // The effect may need prior eliminations immediately, before the room publishes this choice.
   if (acquired.length && context) next = recordAugmentTable(next, 'acquire', context.seats);
   return next;
+}
+/** Offer eligibility is a history consumer before an owner exists. Only the 4-2 prismatic node activates it.
+ * Same v1 proof, origin, replay and independent server authority; no self-authenticating level field in offer records. */
+export function recordAugmentOfferLevel(before:MatchState,after:MatchState):MatchState {
+ const c=after.pendingChoice;
+ if(c?.choiceId!=='round:4-2:augment'||c.augmentTier!=='prismatic')return after;
+ const next=recordAugmentAcquisition(before,after);
+ return appendAugmentFact(next,{kind:'offer-level',choiceId:c.choiceId,generation:c.generation,level:before.level,xp:before.xp});
 }
 export function recordAugmentTransition(before: MatchState, after: MatchState, events: readonly MatchEvent[] = []): MatchState {
   if (after === before) return after;

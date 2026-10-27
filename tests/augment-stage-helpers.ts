@@ -5,6 +5,9 @@ import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, drawAugmentCard, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { accepted, fieldBench, reachRound, reachRoundFielded, resolveM5Choices } from './match-helpers';
 
+/** H12's public 4-2 route: ordinary fights, empty formations for 3-1/4-1, checkpoint at 4-1. */
+export const H12_MAX_CAP_SEED = 94;
+
 /** 14.24 stage tags (augment-stage-bans.ts): the augment rounds a card can be offered at. */
 export function offeredAt(id: string, node: '2-1' | '3-2' | '4-2'): boolean {
   return !((AUGMENT_OFFER_RULES.nodeBans as Readonly<Record<string, readonly string[]>>)[AUGMENT_POOL_API_NAMES[id]] ?? []).includes(node);

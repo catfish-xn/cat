@@ -1,3 +1,4 @@
+import { recordAugmentAcquisition } from '../src/simulation/augment-history';
 import { AUGMENT_BATCH5 } from '../src/simulation/content/augment-pool-batch5';
 import { BATCH5_SOURCE } from '../src/simulation/augment-pool-batch5-progress';
 import { shopOwner } from './fixtures/shop-history-match';
@@ -30,7 +31,7 @@ import { applySeatCommand } from '../src/server/room/room';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accept, batch, room, conserved, fight } from './tp-helpers';
 
-const owning=(s:MatchState,definitionId:string,acquiredRound=s.round):MatchState=>({...s,augments:[...s.augments,{definitionId,choiceId:'test-'+definitionId,acquiredRound}]});
+const owning=(s:MatchState,definitionId:string,acquiredRound=s.round):MatchState=>recordAugmentAcquisition(s,{...s,augments:[...s.augments,{definitionId,choiceId:'test-'+definitionId,acquiredRound}]});
 const record=(s:MatchState)=>readSeatMechanic(s,SHOP_AUGMENT_KEY) as unknown as {credits:number;rolls?:number;rigAnchor?:number;reinforced?:number}|undefined;
 const costOf=(s:MatchState)=>s.shop.slots.map(x=>x.status==='available'?UNIT_DEFINITIONS[x.definitionId].cost:0);
 

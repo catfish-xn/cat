@@ -201,3 +201,12 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 | `augment-pool-batch2-health.ts / batch2HpAfterSettlement` | 使用 applyRecordedDhampyrHealing(state, round, hp): number，供既有恢复与房间 HP 账本复算 |
 
 三项均已加入 definitions、tiers、API 名称、rules manifest、validate-content、stage bans 和独立 m5 oracle；黄金档，提供节点分别为3-2、4-2、3-2。研究原始值测试按本机档案是否存在决定是否运行；候选池／真实命令／房间／认证测试始终运行。旧 epoch 未重录，历史无持有者字节测试仅归一化版本名与 content/loot 身份，其原始 SHA-256 和战斗账本断言保持不变。
+## H12 历史消费者与报价证据扩展（2026-10-27）
+
+B5-80 `head-start` 使用 `requireAugmentFacts(...,'acquire',...)` 的正式阵容、取得自然轮与 choiceId，批量出售和三轮禁用均不从当前阵容倒推。B5-84 `max-cap` 登记 acquire；双重目的的有序购买认证以该 acquire.resourcePrefix 区分同一准备期取得上限之前、之后的购买，取得前合法七级经验不会倒算成违规。B5-86 `subscription-service` 登记 acquire/round-entry；取得与后续阶段首轮的资格直接查询这些事实，保留独立 shop-history-v1 的商店库存、购买、刷新重演，未再复制一套历史状态。
+
+新增事实 `{kind:'offer-level',choiceId,generation,level,xp}`，仍在 `augment-history-v1` 内，继承统一 sequence/seatId/round/roundId/resourcePrefix。`recordAugmentOfferLevel(before:MatchState,after:MatchState):MatchState` 仅由 4-2 棱彩报价及成功重抽调用：初次 generation=0、后续1～3，读取当次真实等级/经验；其它节点原样返回。报价就需要条件证据，故这个节点即使最大规模被过滤或未选中，也激活同一版本节。`needsAugmentHistory` 同时识别该报价记录；无相关持有者且没到该报价的存档不加字段。并未把候选的可篡改等级字段当作证明。
+
+`recordedOfferFilter(record,drawIndex,state?)` 的恢复调用通过 requireAugmentFacts 读取恰好一个同 generation 的报价等级，重建当时的候选池；现场重抽使用当前等级，选取事务再次拒绝已升至八级的旧报价（invalid-choice），超时选择跳过失效项。单人继续从合法起点重演全部公共命令，联机继续逐字段比较独立服务器 authority；缺节、删改报价事实或缺 generation 均拒绝。原有外层 schema/save/replay/command 和网络封套不变，不迁移缺证旧档、不重录 epoch。
+
+调用点：`match.ts / enterScheduledEvents, execute_rerollAugment` 记录报价等级；`augment-offers.ts / augmentOfferAllowed, augmentOptionViews, validateAugmentOfferHistory` 过滤、投影与验证；`augment-history.ts / needsAugmentHistory, recordAugmentOfferLevel`、types/owners/restore 扩展事实及预检。房间沿现有 `Room.handle/apply/applyTimeouts/onChoiceDeadline → runSharedMatchCommand` 和 `nextSharedRound` 调用，不新增服务器状态或网络命令。对象、JSON、序列化离线恢复，以及对象/JSON/canonicalContent 联机恢复均有篡改测试；联机恢复始终要求权威句柄，`serializeMatch` 本来只支持离线存档。

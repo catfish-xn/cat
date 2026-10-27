@@ -9,10 +9,10 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { deepStrictEqual } from 'node:assert/strict';
-import { buyUnit, buyXp, combineItems, createMatch, nextRound, openAnvil, rerollShop, selectChoice, setShopLock, startMatchCombat, type MatchState } from '../src/simulation/match';
+import { buyUnit, buyXp, combineItems, createMatch, nextRound, openAnvil, rerollAugment, rerollShop, selectChoice, setShopLock, startMatchCombat, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { grantMechanicGold } from '../src/simulation/seat-mechanics/grants';
-import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
+import { accepted, emptyBoard, reachRoundFielded, resolveM5Choices } from './match-helpers';
 import { validateShopHistory } from '../src/simulation/shop-history';
 import { SHOP_AUGMENT_KEY } from '../src/simulation/shop-augments';
 import { readSeatMechanic, writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
@@ -120,7 +120,7 @@ it.each([
  [14,'dual-purpose','2-1'],[160,'subscription-service','2-1'],[9,'rigged-shop-plus','3-2'],
  [8,'starry-night-plus','3-2'],[95,'firesale','3-2'],
 ] as const)('real %s %s at %s authenticates XP, lock, reroll and round continuation',(seed,id,node)=>{
- let state=rich(shopOwner(seed,id,node));validateShopHistory(state);
+ let state=shopOwner(seed,id,node);if(id!=='subscription-service')state=rich(state);validateShopHistory(state);
  state=accepted(buyXp(state));validateShopHistory(state);
  state=accepted(setShopLock(state,true,state.shop.generation));
  state=accepted(buyXp(state));validateShopHistory(state);
@@ -187,7 +187,15 @@ it('the unchanged WebSocket command grammar carries shop commands and rejects cl
 
 
 it('Crafted Crafting cannot lend a later same-round combination credit to an earlier shop-history refresh',()=>{
- const open=reachRound('3-2',false,1064,['crafted-crafting']),choice=open.pendingChoice!;
+ let open=reachRoundFielded('2-1',8);
+ for(const slot of [0,1]){const c=open.pendingChoice!;open=accepted(rerollAugment(open,c.choiceId,c.generation,slot));}
+ expect(open.pendingChoice!.offers).toContain('crafted-crafting');
+ while(open.roundDefinitionId!=='3-2'){
+  open=resolveM5Choices(open,['crafted-crafting']);
+  if(open.phase==='preparation')open=resolveM5Choices(accepted(startMatchCombat(emptyBoard(open))));
+  open=accepted(nextRound(open,open.round));
+ }
+ const choice=open.pendingChoice!;
  expect(open.augments.some(a=>a.definitionId==='crafted-crafting')).toBe(true);
  expect(choice.offers).toContain('starry-night-plus');
  let state=rich(accepted(selectChoice(open,choice.choiceId,choice.generation,'starry-night-plus')));

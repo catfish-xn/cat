@@ -40,6 +40,8 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   'TFT_Augment_Dhampyr':['2-1','4-2'],
   'TFT_Augment_MirroredMonetization':['2-1','3-2'],
   'TFT_Augment_ForwardThinking':['2-1','4-2'],
+  "TFT_Augment_MaxCap":["2-1", "3-2"],
+  "TFT_Augment_HeadStart":["3-2", "4-2"],
   "TFT_Augment_FiresalePlus":["2-1", "4-2"],
   "TFT_Augment_RiggedShopPlus":["2-1", "4-2"],
   "TFT11_Augment_Reinfourcement":["2-1", "3-2"],
