@@ -70,3 +70,5 @@ export function benchXp(state: unknown): number;
 export function shopWord(state: Pick<MatchState, 'seed' | 'multiplayer'>, parts: readonly (string | number)[]): bigint;
 export function shopForState(state: MatchState, round?: number, subscription?: boolean): { rngState: number; shop: MatchState['shop'] };
 export function shopTransition(state: MatchState, command: unknown): { rngState: number; shop: MatchState['shop']; stolen?: {definitionId: string; starLevel?:2; slot: number} };
+export function tombRaiderPlan(state: MatchState): readonly { readonly choiceId: string; readonly seatId: string; readonly round: number; readonly offers: readonly string[] }[];
+export function validateTombRaiderTransition(before: MatchState, after: MatchState, command: unknown, events: readonly unknown[]): void;

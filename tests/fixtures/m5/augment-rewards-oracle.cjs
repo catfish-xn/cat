@@ -181,7 +181,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
  return tables[weights.findIndex(w=>{if(ticket<w)return true;ticket-=w;return false;})];},
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
-const admitted=new Set(['augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
+const admitted=new Set(['augment-pool-batch5-r1','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
  'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel']);
@@ -224,6 +224,7 @@ function validateBattleCounters(before,after,f,base){
  assert.deepEqual(f.batch2??[],expected,'independent batch2 counter existence and values');
 }
 function validateRewardsCore(before,after,command,events,base){
+ validateTombRaiderTransition(before,after,command,events,base);
  assert.equal(after.seed,before.seed,'immutable reward seed');
  assert.equal(after.augmentTierSeed,before.augmentTierSeed,'immutable opening seed');
  assert.equal(after.multiplayer?.seatId,before.multiplayer?.seatId,'immutable reward seat');
@@ -447,3 +448,64 @@ function validateRewards(before,after,command,events,base){
  return result;
 }
 module.exports.validateRewards=validateRewards;
+
+// P-B5-39/40, 2026-10-27. Read raw history observations and an independent completed-item transcription.
+// Production reward receipts never choose the opportunities, cap, candidates or awarded definition.
+function tombRaiderPlan(state,base){
+ if(!state.multiplayer)return [];
+ const result=[],completed=new Set(data.pools.completed),facts=state.augmentHistory?.facts??[];
+ for(const owner of state.augments.filter(a=>['tomb-raider-1','tomb-raider-2'].includes(a.definitionId))){
+  const acquired=facts.find(f=>f.kind==='acquire'&&f.choiceId===owner.choiceId);
+  assert(acquired,'independent tomb acquisition');
+  const tables=facts.filter(f=>f.kind==='table'&&f.sequence>acquired.sequence);
+  const initial=tables.find(f=>f.stage==='acquire');assert(initial,'independent tomb acquisition table');
+  const live=new Set(initial.seats.filter(s=>s.alive&&s.seatId!==initial.seatId).map(s=>s.seatId));
+  let eliminated=0;
+  for(const table of tables.filter(t=>t.sequence>initial.sequence&&t.stage!=='acquire')){
+   const self=table.seats.find(s=>s.seatId===table.seatId);assert(self,'independent tomb self');
+   const dead=table.seats.filter(s=>live.has(s.seatId)&&!s.alive).sort((a,b)=>b.rank-a.rank);
+   for(const seat of dead){
+    live.delete(seat.seatId);if(!self.alive)continue;
+    eliminated++;if(owner.definitionId==='tomb-raider-1'&&eliminated>3)continue;
+    const heroIds=new Set(seat.units.filter(u=>u.team==='player'&&base.COST[u.definitionId]
+      &&['board','bench'].includes(u.location.kind)).map(u=>u.id));
+    const offers=seat.items.filter(i=>i.location.kind==='unit'&&heroIds.has(i.location.unitId)&&completed.has(i.definitionId)).map(i=>i.definitionId);
+    result.push({choiceId:JSON.stringify(['augment-pool-batch5-r1',owner.choiceId,seat.seatId]),seatId:seat.seatId,round:table.round,offers});
+   }
+  }
+ }
+ return result;
+}
+function validateTombRaiderTransition(before,after,command,events,base){
+ const source='augment-pool-batch5-r1',plan=tombRaiderPlan(before,base),prior=before.seatMechanics?.receipts??[];
+ const due=plan.find(p=>p.offers.length&&!prior.some(r=>r.receiptId===p.choiceId));
+ const c=before.pendingChoice,choosing=c?.payload?.source===source&&['select','timeoutChoice'].includes(command?.type);
+ const granted=(after.seatMechanics?.receipts??[]).slice(prior.length).filter(r=>r.source===source||r.receiptId.startsWith('["'+source+'",'));
+ assert.equal(granted.length,choosing?1:0,'independent tomb due choice count');
+ if(choosing){
+  assert(due,'independent tomb opportunity');
+  assert.equal(command.choiceId,due.choiceId);assert.equal(command.generation,0);
+  const expectedChoice={kind:'forge',step:'offer',choiceId:due.choiceId,eventId:due.choiceId,generation:0,offers:due.offers,
+   targetId:null,rerollCount:0,returnPhase:c.returnPhase,payload:{kind:'forge',source,timeoutOption:due.offers[0]}};
+  assert.deepEqual(c,expectedChoice,'independent tomb full candidate list and order');
+  const timedOut=command.type==='timeoutChoice',optionId=timedOut?due.offers[0]:command.definitionId;
+  assert(due.offers.includes(optionId),'independent tomb chosen equipment');
+  const itemId='item-'+before.nextItemSerial;
+  assert.deepEqual(granted[0],{kind:'choice',receiptId:due.choiceId,round:before.round,roundId:before.roundDefinitionId,
+   source,choiceKind:'forge',optionId,skipped:false,price:0,itemId,timedOut},'independent tomb item receipt');
+  assert.deepEqual(after.items.filter(i=>i.id===itemId),[{id:itemId,definitionId:optionId,location:{kind:'inventory'}}],'independent tomb exactly one item');
+  assert.equal(after.nextItemSerial,before.nextItemSerial+1,'independent tomb single item serial');
+  assert.equal(after.gold,before.gold,'independent tomb free choice');
+  assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,granted[0])),'independent tomb grant event');
+ }
+ const next=after.pendingChoice;
+ if(next?.payload?.source===source){
+  const receipts=after.seatMechanics?.receipts??[],pending=tombRaiderPlan(after,base).find(p=>p.offers.length&&!receipts.some(r=>r.receiptId===p.choiceId));
+  assert(pending,'independent tomb pending opportunity');assert.equal(next.choiceId,pending.choiceId);
+  assert.deepEqual(next.offers,pending.offers,'independent tomb next complete candidate list');
+ }
+ for(const key of ['choiceRngState','rewardRngState','battleSeedRngState','rngState'])
+  if(choosing)assert.equal(after[key],before[key],'independent tomb RNG conservation '+key);
+}
+module.exports.tombRaiderPlan=tombRaiderPlan;
+module.exports.validateTombRaiderTransition=validateTombRaiderTransition;

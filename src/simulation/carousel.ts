@@ -1,5 +1,6 @@
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
+import { validateTombRaider } from './augment-pool-batch5-r1';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
 import { placeCarouselUnit, resolveCarouselPreparation } from './carousel-units';
 import { canonicalContent, CONTENT_DIGEST } from './content';
@@ -521,6 +522,7 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     }
     for (const fact of match.resourceProvenance.entries) if ((fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'carousel' && !ids.has(fact.source.receiptId)) throw Error('receipt-mismatch');
     validateAugmentHistory(match, authority);
+    validateTombRaider(match);
     return match;
 }
 

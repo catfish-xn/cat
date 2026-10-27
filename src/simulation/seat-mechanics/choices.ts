@@ -26,7 +26,8 @@ const count = (value: unknown): value is number => Number.isSafeInteger(value) &
 export function validateMechanicChoiceSpec(kind: MechanicChoiceKind, offers: readonly string[], payload: MechanicChoicePayload): void {
   const fail = (message: string): never => { throw new RangeError(`Invalid mechanic choice: ${message}`); };
   if (!payload || payload.kind !== kind || !nonempty(payload.source)) fail('payload kind/source');
-  if (!Array.isArray(offers) || !offers.length || !offers.every(nonempty) || new Set(offers).size !== offers.length
+  if (!Array.isArray(offers) || !offers.length || !offers.every(nonempty)
+    || new Set(offers).size !== offers.length && !(kind === 'forge' && payload.source === 'augment-pool-batch5-r1')
     || offers.includes(CHOICE_SKIP_OPTION)) fail('offers');
   if (kind !== 'armory' && !(payload.kind==='blackMarket'&&payload.grantItem===false) && !offers.every(id => Object.hasOwn(ITEM_DEFINITIONS, id))) fail('item offers');
   const skippable = payload.kind === 'blackMarket' && payload.skippable;

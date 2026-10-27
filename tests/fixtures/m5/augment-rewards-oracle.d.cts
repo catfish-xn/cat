@@ -7,6 +7,8 @@ export interface Gold {
   receiptId: string; source: string; kind: 'gold'; amount: number; round: number;
 }
 export function rewardPlan(state: unknown, environment: unknown): { gifts: Gift[]; gold: Gold[] };
+export function tombRaiderPlan(state: unknown, environment: unknown): readonly { choiceId: string; seatId: string; round: number; offers: readonly string[] }[];
+export function validateTombRaiderTransition(before: unknown, after: unknown, command: unknown, events: readonly unknown[], environment: unknown): void;
 export function validateRewards(before: unknown, after: unknown, command: unknown, events: readonly unknown[], environment: unknown): {
   gold: Map<string, Gold>; gifts: Map<string, Gift>; price: number;
 };
