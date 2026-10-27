@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { selectChoice, nextRound, type MatchState } from '../src/simulation/match';
+import { selectChoice, nextRound } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, reachRound } from './match-helpers';
 import type { MatchState } from '../src/simulation/match-types';

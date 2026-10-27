@@ -10,7 +10,7 @@ import { resolveRoundEconomy } from '../src/simulation/round-economy';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { validateBatch5S6cGold } from '../src/simulation/augment-pool-batch5-s6c';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
-import { firstNodeSeed } from './augment-stage-helpers';
+import { firstNodeSeed, offerFor } from './augment-stage-helpers';
 import { emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
 import { augmentPool, augmentGold } from './fixtures/m5/oracle.g2.cjs';
 
@@ -89,14 +89,14 @@ it('B5-49 exact offer node, tier and mutual exclusion',()=>{
  for(const [a,b] of [[id,plus],[plus,id]])expect(augmentOfferAllowed(a,[{definitionId:b,choiceId:'held',acquiredRound:1}],{node:a===id?'2-1':'3-2',fieldedTraits:[],blocked:[]})).toBe(false);
 });
 it('B5-49 public 3-2 selection pays 15 once and offline snapshots authenticate it',()=>{
- const open=reachRound('3-2',false,0),choice=open.pendingChoice!;expect(choice.offers).toContain(plus);
+ const open=offerFor(plus),choice=open.pendingChoice!;expect(choice.offers).toContain(plus);
  const s=accepted(selectChoice(open,choice.choiceId,choice.generation,plus));expect(s.gold-open.gold).toBe(15);expect(augmentGold(plus,'3-2')).toBe(15);trip(s);
  const finished=accepted(startMatchCombat(emptyBoard(resolveM5Choices(s))));trip(finished);reject(finished,x=>{x.gold++;});
  reject(s,x=>{x.scheduleReceipts.find((r:any)=>r.definitionId===plus).gold++;});
  const again=selectChoice(s,choice.choiceId,choice.generation,plus);expect(again.ok).toBe(false);expect(again.state).toBe(s);
 });
 it('B5-49 authentic multiplayer PvP pays recurring 2 HP and 1 gold only for survivors',()=>{
- const open=reachRound('3-2',false,0),choice=open.pendingChoice!;
+ const open=offerFor(plus),choice=open.pendingChoice!;
  let s=resolveM5Choices(accepted(selectChoice(open,choice.choiceId,choice.generation,plus)));
  s=accepted(enableMultiplayerSettlement(s,'seat'));const r=receipt(s),settled=accepted(applyRoundSettlement(s,r));
  expect(settled.playerHp).toBe(Math.min(100,s.playerHp-r.damage+2));

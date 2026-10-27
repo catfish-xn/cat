@@ -13,7 +13,7 @@ describe('W4, P1 and S13 P2 public choice and acquisition receipt',()=>{
   const ids=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[])).sort(),pool=[...ids];
   expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(ids);let rng=BigInt(seed);
   for(let i=0;i<3;i++){rng=(rng*1664525n+1013904223n)%4294967296n;const j=i+Number(rng)% (pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
-  expect(ids).toHaveLength(239); // v24 pool (235) plus S6C (2), S8A (1), and S8B (1)
+  expect(ids).toHaveLength(242); // v24 (235) + S6C (2) + S8A/S8B/S8C (3) + S11A (2)
   expect(generateChoices(ids,seed)).toEqual({offers:pool.slice(0,3),choiceRngState:Number(rng)});
  });
  // Only cards offered at 2-1 (14.24 stage tags, augment-stage-bans.ts) can be selected there.
@@ -39,9 +39,9 @@ it.each(Object.keys(AUGMENT_DEFINITIONS).filter(id=>!Object.hasOwn(AUGMENT_BATCH
   expect(()=>restoreMatch(forged)).toThrow();
   if(after.pendingChoice){const blocked=startMatchCombat(after);expect(blocked.ok).toBe(false);expect(blocked.state).toBe(after);}
   let preparation=resolveM5Choices(after);
-  // Blood Brothers authenticates settled partner facts. Keep this acquisition case in a live battle.
-  if(id==='blood-brothers'){const hero=preparation.preparation.units.find(u=>u.team==='player')!;preparation=accepted(deployMatchUnit(preparation,hero.id,{kind:'board',cell:{col:3,row:4}}));}
-  const started=accepted(startMatchCombat(preparation));if(id==='blood-brothers')expect(started.phase).toBe('combat');expect(restoreMatch(serializeMatch(started))).toEqual(started);
+  // Blood Brothers and Pilfer authenticate settled combat facts. Keep acquisition checks in a live battle.
+  if(id==='blood-brothers'||id==='pilfer'){const hero=preparation.preparation.units.find(u=>u.team==='player')!;preparation=accepted(deployMatchUnit(preparation,hero.id,{kind:'board',cell:{col:3,row:4}}));}
+  const started=accepted(startMatchCombat(preparation));if(id==='blood-brothers'||id==='pilfer')expect(started.phase).toBe('combat');expect(restoreMatch(serializeMatch(started))).toEqual(started);
   let live=started;for(let i=0;i<3&&live.phase==='combat';i++)live=stepMatch(live).state;
   expect(restoreMatch(serializeMatch(live))).toEqual(live);
  });

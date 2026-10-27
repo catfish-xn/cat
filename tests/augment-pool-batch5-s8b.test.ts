@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { AUGMENT_BATCH5_S8B } from '../src/simulation/content/augment-pool-batch5-s8b';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
-import { createMatch, selectChoice, rerollAugment, sellUnit, startMatchCombat, stepMatch, nextRound, type MatchState, type MatchEvent } from '../src/simulation/match';
+import { createMatch, selectChoice, sellUnit, startMatchCombat, stepMatch, nextRound, type MatchState, type MatchEvent } from '../src/simulation/match';
 import { gloriousEvolutionRewardPlan, gloriousEvolutionProgress } from '../src/simulation/augment-pool-batch5-s8b';
 import { grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
@@ -11,6 +11,7 @@ import { ownBattleRecord, deepFreeze, recordVersion, replayBattleRecord } from '
 import { digestContent } from '../src/simulation/content';
 import type { BattleRecord } from '../src/m6/contracts';
 import { enableMultiplayerSettlement } from '../src/simulation/round-settlement';
+import { STAGE_SEEDS } from './augment-stage-helpers';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
 import { rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs';
 import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from './fixtures/m5/oracle.g2.cjs';
@@ -24,9 +25,9 @@ it('only the 4-2 node permits Glorious Evolution',()=>{
  for(const node of ['2-1','3-2','4-2']) expect(augmentOfferAllowed(id,[],{node,fieldedTraits:[],blocked:[]})).toBe(node==='4-2');
 });
 
-// Seed 20, with one public reroll, offers this 4-2 card. Split the real route into
+// The integrated-pool seed offers this 4-2 card. Split the real route into
 // rounds so ordinary Vitest limits apply to each battle, and retain replay evidence.
-let route=createMatch(20); const battles:BattleRecord[]=[];
+let route=createMatch(STAGE_SEEDS[id].seed); const battles:BattleRecord[]=[];
 function fight(context:MatchState):MatchState {
  const start=startMatchCombat(context);let s=accepted(start);const initial=s.combat!,events:MatchEvent[]=[...(start.ok?start.events:[])];
  while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
@@ -39,7 +40,7 @@ for(const stop of ['1-2','1-3','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','
 });
 let selected:MatchState, offered:MatchState;
 it('selects the real offered augment and grants exactly one Adaptive Helm',()=>{
- let c=route.pendingChoice!;route=accepted(rerollAugment(route,c.choiceId,c.generation,0));c=route.pendingChoice!;
+ const c=route.pendingChoice!;
  expect(c.offers).toContain(id);offered=route;
  selected=resolveM5Choices(accepted(selectChoice(route,c.choiceId,c.generation,id)));
  expect(selected.items.filter(i=>i.definitionId==='adaptive-helm').length-route.items.filter(i=>i.definitionId==='adaptive-helm').length).toBe(1);

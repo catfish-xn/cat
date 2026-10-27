@@ -28,11 +28,11 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: readonly number[] }>> = {
-  "tiniest-titan-plus":{node:'3-2',seed:0},
-  // Seed 20 requires the existing free reroll of slot 0 at 4-2.
-  "glorious-evolution":{node:'4-2',seed:20,fielded:true,rerolls:[0]},
+  "tiniest-titan-plus":{node:'3-2',seed:7},
+  // v25 integration C (242 cards): re-searched through the same public fielded route.
+  "glorious-evolution":{node:'4-2',seed:27,fielded:true},
   'moonlight':{node:'4-2',seed:9,fielded:true},
-  'greater-moonlight':{node:'4-2',seed:20,fielded:true,rerolls:[0]},
+  'greater-moonlight':{node:'4-2',seed:8,fielded:true},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -61,7 +61,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "eye-for-an-eye-plus":{node:'3-2',seed:17},
   "final-polish":{node:'4-2',seed:2,fielded:true},
   "find-your-center":{node:'3-2',seed:56},
-  "geniuses":{node:'4-2',seed:16,fielded:true},
+  "geniuses":{node:'4-2',seed:38,fielded:true},
   "golemify":{node:'3-2',seed:18},
   "item-collector-i":{node:'3-2',seed:25},
   "item-collector-ii":{node:'3-2',seed:3},
