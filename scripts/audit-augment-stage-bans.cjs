@@ -19,7 +19,8 @@ const KNOWN = {
 };
 const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const bans = tags => STAGES.filter((_, i) => tags.includes(TAGS[i]));
-const canonical = table => JSON.stringify(Object.fromEntries(Object.keys(table).sort().map(k => [k, STAGES.filter(s => table[k].includes(s))])));
+// An explicit empty row and an omitted row both mean no stage restriction.
+const canonical = table => JSON.stringify(Object.fromEntries(Object.keys(table).filter(k => table[k].length).sort().map(k => [k, STAGES.filter(s => table[k].includes(s))])));
 function tokens(text) {
   const result = [];
   const re = /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[A-Za-z_$][\w$]*|-?\d+(?:\.\d+)?|[^\s]/g;
@@ -88,7 +89,7 @@ function audit(options = {}) {
     if (start < 0) throw Error('missing freezeContent object');
     shipped = literal(ts, start + 2);
     for (const [apiName, nodes] of Object.entries(shipped)) {
-      if (!Array.isArray(nodes) || !nodes.length || nodes.some(n => !STAGES.includes(n)) || new Set(nodes).size !== nodes.length) {
+      if (!Array.isArray(nodes) || nodes.some(n => !STAGES.includes(n)) || new Set(nodes).size !== nodes.length) {
         error('INVALID_TABLE_ROW', { apiName, nodes });
       }
     }

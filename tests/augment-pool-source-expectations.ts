@@ -69,7 +69,7 @@ for(const [id,api,item,crestIndex,units,crownIndex,rewards] of emblems){
  BATCH1_SOURCE.push(r(`${id}-crown`,crownIndex,`TFT13_Augment_${api}Crown`,'prismatic',id==='scrap'?{NumComponents:2}:{},[emblem,...rewards]));
 }
 export const BATCH2_SOURCE:SourceExpectation[]=[
- r('academic-research',70,'TFT13_Augment_Academy','gold',{NumItems:1,NumOptions:2},['ri:component:1','u:lux','u:ezreal'],0,0,0,false,'build -> 2 options: sponsored + built item'),
+ r('academic-research',70,'TFT13_Augment_Academy','gold',{NumItems:1,NumOptions:2},['ri:component:1','u:lux','u:ezreal'],0,0,0,true,'P-B5-S3B: build -> 2 options: sponsored + built item'),
  r('loot-explosion',132,'TFT13_Augment_Ambusher','gold',{'{51972fee}':2,'{a59e2760}':.5,'{c209103c}':0.10999999940395355,'{ca332ec1}':.5,'{d89481f4}':1.75},['u:camille','u:powder'],0,0,0,false,'kill -> unknown loot table'),
  r('rocket-collection',162,'TFT13_Augment_Artillerist','gold',{IncreasedRocketDamage:0.15000000596046448,MaxItems:2,RocketDamageThreshold:75},['u:tristana','u:urgot'],0,0,0,true,'75 rockets -> collector; max 2'),
  r('rocket-collection-plus',163,'TFT13_Augment_ArtilleristPlus','gold',{IncreasedRocketDamage:0.15000000596046448,MaxItems:2,RocketDamageThreshold:65},['u:tristana','u:urgot'],0,0,0,true,'65 rockets -> collector; max 2'),

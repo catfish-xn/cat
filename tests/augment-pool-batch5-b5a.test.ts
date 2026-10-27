@@ -7,13 +7,13 @@ import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { selectChoice, equipItem, type MatchState } from '../src/simulation/match';
 import { accepted, reachRound } from './match-helpers';
-import { firstNodeSeed, offerFor } from './augment-stage-helpers';
+import { firstNodeSeed, offerFor, STAGE_SEEDS } from './augment-stage-helpers';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
 import { augmentPool, augmentGold } from './fixtures/m5/oracle.g2.cjs';
 
 const ids=['all-that-shimmers','all-that-shimmers-plus'] as const;
 it('the public 3-2 route offers the plus version',()=>{
- const state=reachRound('3-2',false,49);
+ const state=reachRound('3-2',false,STAGE_SEEDS['all-that-shimmers-plus'].seed);
  expect(state.pendingChoice?.offers).toContain('all-that-shimmers-plus');
 });
 it.skipIf(!existsSync(RESEARCH_FILE)).each(ids)('%s matches archived source numbers',id=>{

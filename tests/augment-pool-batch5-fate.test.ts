@@ -1,7 +1,7 @@
 import { grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
 import { equipItem, deployMatchUnit } from '../src/simulation/match';
 import { expect, it } from 'vitest';
-import { createMatch, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState, type MatchEvent } from '../src/simulation/match';
+import { createMatch, nextRound, rerollAugment, selectChoice, startMatchCombat, stepMatch, type MatchState, type MatchEvent } from '../src/simulation/match';
 import { enableMultiplayerSettlement, applyRoundSettlement, ROUND_SETTLEMENT_VERSION, type RoundSettlementReceipt } from '../src/simulation/round-settlement';
 import { batch5FateRound, batch5RewardPlan } from '../src/simulation/augment-pool-batch5-progress';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
@@ -12,8 +12,8 @@ import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
 import { rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs';
 import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from './fixtures/m5/oracle.g2.cjs';
 
-// First default fielded route from seed 0 whose original 4-2 offer contains Fate on the 228-card pool.
-let route=createMatch(29);const battles:BattleRecord[]=[];
+// Merged 250-card pool: seed 16 reaches Fate after two public rerolls, retaining enough HP for the loss-first case.
+let route=createMatch(16);const battles:BattleRecord[]=[];
 function fight(context:MatchState,archive:BattleRecord[]=battles):MatchState {
  const started=startMatchCombat(context);let s=accepted(started);const initial=s.combat!,events:MatchEvent[]=[...(started.ok?started.events:[])];
  while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
@@ -27,7 +27,9 @@ for(const stop of ['1-2','1-3','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','
 });
 let selected:MatchState;
 it('Fate selects its actual offered card and grants exactly Blue Buff, with no retroactive entry/victory credit',()=>{
+ for(let slot=0;slot<2;slot++){const c=route.pendingChoice!;route=accepted(rerollAugment(route,c.choiceId,c.generation,slot));}
  const c=route.pendingChoice!;expect(c.offers).toContain('a-change-of-fate');selected=resolveM5Choices(accepted(selectChoice(route,c.choiceId,c.generation,'a-change-of-fate')));
+ expect(selected.playerHp).toBeGreaterThan(8);
  expect(selected.items.filter(i=>i.definitionId==='blue-buff').length-route.items.filter(i=>i.definitionId==='blue-buff').length).toBe(1);
  expect(batch5FateRound(selected,selected.augments.at(-1)!)).toBeUndefined();expect(batch5RewardPlan(selected)).toEqual([]);
  const plan=rewardPlan(selected,{CATALOG,COST,ROUNDS,xp,entryXp,benchXp});expect(plan.gifts.filter(g=>g.definitionId==='blue-buff')).toHaveLength(1);expect(plan.gifts.filter(g=>g.definitionId==='mel')).toHaveLength(0);

@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -9,6 +9,17 @@ const research = '/home/aiapps/workspace/augments-research-2026-10-23/data/augme
 const crossversion = '/home/aiapps/workspace/augment-crossversion-research-2026-10-24';
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
+
+// File-backed stdio keeps the real CLI assertions usable when sandbox pipe reads return EPERM.
+function runCli(args: string[]) {
+  const root = mkdtempSync(join(tmpdir(), 'stage-bans-cli-')); dirs.push(root);
+  const stdout = join(root, 'stdout'), stderr = join(root, 'stderr');
+  const out = openSync(stdout, 'w'), err = openSync(stderr, 'w');
+  try {
+    const result = spawnSync(process.execPath, [script, ...args], { stdio: ['ignore', out, err] });
+    return { ...result, stdout: readFileSync(stdout, 'utf8'), stderr: readFileSync(stderr, 'utf8') };
+  } finally { closeSync(out); closeSync(err); }
+}
 
 // Handwritten mini-source and expected vectors. No game/production imports.
 const cases = [
@@ -49,7 +60,7 @@ function fixture() {
   put('research/report.zh-CN.md', '| 黑色玫瑰之徽 | 不再于 2-1 提供。 |\n| 黑色玫瑰之冕 | 重新启用，但不于 2-1 提供。 |');
   function run() {
     const out = join(root, 'report.txt');
-    const p = spawnSync(process.execPath, [script, '--root', root, '--data', join(root, 'research/data/augments-14.24.json'), '--crossversion', join(root, 'cross'), '-o', out], { encoding: 'utf8' });
+    const p = runCli(['--root', root, '--data', join(root, 'research/data/augments-14.24.json'), '--crossversion', join(root, 'cross'), '-o', out]);
     expect(p.error).toBeUndefined(); expect(p.stderr).toBe('');
     return { status: p.status, result: JSON.parse(p.stdout), report: readFileSync(out, 'utf8') };
   }
@@ -74,6 +85,18 @@ it('runs the independent CLI, compares canonical bytes, and explicitly accounts 
   const reordered = f.run(); expect(reordered.status).toBe(0); expect(reordered.result.canonical.equal).toBe(true);
 });
 
+
+it('normalizes explicit unrestricted rows while still rejecting a missing required ban', () => {
+  const f = fixture();
+  f.table.TFT_Augment_Free = []; f.saveTable();
+  const unrestricted = f.run();
+  expect(unrestricted.status).toBe(0); expect(unrestricted.result.canonical.equal).toBe(true);
+  expect(unrestricted.result.coverage).toContainEqual(expect.objectContaining({ apiName: 'TFT_Augment_Free', status: 'explicitly-unrestricted' }));
+  f.table.TFT11_Augment_Epoch = []; f.saveTable();
+  const missing = f.run();
+  expect(missing.status).toBe(1);
+  expect(missing.result.errors).toContainEqual(expect.objectContaining({ code: 'TABLE_MISMATCH', apiName: 'TFT11_Augment_Epoch', expected: ['3-2', '4-2'] }));
+});
 
 it('rejects a wrong override table or a change in its underlying source tags', () => {
   const f = fixture();
@@ -141,16 +164,15 @@ it('reports missing research as an error rather than claiming an empty audit pas
   const { status, result } = f.run(); expect(status).toBe(1); expect(result.errors[0].code).toBe('SOURCE_MISSING');
 });
 
-// Characterize findings, not a waiver: the CLI must exit 1 for the five defects.
+// Characterize findings, not a waiver: the CLI must exit 1 for the four remaining defects.
 // Synthetic tests above always run on CI without the external research bundle.
 it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14.24-map22.bin.json')))('audits the actual 14.24 archive and reports the exact unresolved discrepancies', () => {
-  const p = spawnSync(process.execPath, [script], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
+  const p = runCli([]);
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
-  // Merged inventory totals; retain existing discrepancy assertions pending the S3B audit-table incompatibility.
-  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 221, shippedRows: 174, regeneratedRows: 177, unrestricted: 71, errors: 5, crossVersionDifferences: 8 });
+  // S3B supplies Academy's missing 4-2 ban; the other four pre-existing discrepancies remain explicit.
+  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 221, shippedRows: 174, regeneratedRows: 177, unrestricted: 71, errors: 4, crossVersionDifferences: 8 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
-    ['TABLE_MISMATCH', 'TFT13_Augment_Academy', ['4-2']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Cabal', ['2-1', '4-2']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Experiment', ['2-1']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Formswapper', ['2-1']],

@@ -44,7 +44,9 @@ it('B5-13 replacement is due for new grants, never for existing inventory',()=>{
 });
 
 it('B5-13 full bench preserves a converted component entitlement across restore and pays once after a sale',()=>{
- let s=choose('component-buffet');
+ const open=boundedFirstNodeOffer('component-buffet',true),choice=open.pendingChoice!;
+ // Earn the opening loot in combat, then bench the roster before filling all nine slots.
+ let s=emptyBoard(resolveM5Choices(accepted(selectChoice(open,choice.choiceId,choice.generation,'component-buffet'))));
  for(let tries=0;s.preparation.units.filter(u=>u.location.kind==='bench').length<s.preparation.benchSize&&tries<30;tries++){
   const slot=s.shop.slots.findIndex(x=>x.status==='available');
   s=slot<0?accepted(rerollShop(s)):accepted(buyUnit(s,slot,s.shop.generation));

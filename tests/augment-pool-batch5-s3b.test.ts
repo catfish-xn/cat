@@ -29,7 +29,7 @@ import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { combineItems, equipItem, selectChoice, sellUnit, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { accepted, reachRoundFielded } from './match-helpers';
-import { batch5S3bSeed } from './augment-stage-helpers';
+import { batch5S3bSeed, boundedFirstNodeOffer } from './augment-stage-helpers';
 import { academicGiftPlan } from '../src/simulation/augment-pool-batch5-s3b';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 
@@ -100,7 +100,7 @@ it('Pandora II is allowed at all three nodes and excludes Slammin in both direct
  expect(augmentOfferAllowed('slammin',[{definitionId:'pandoras-items-ii',choiceId:'test',acquiredRound:4}],{node:'2-1',fieldedTraits:[],blocked:[]})).toBe(false);
 });
 it('Pandora II grants two components, rerolls only inventory at the next entry, keeps RNG and restores all three entries',()=>{
- const open=reachRoundFielded('2-1',batch5S3bSeed('pandoras-items-ii')),c=open.pendingChoice!;
+ const open=boundedFirstNodeOffer('pandoras-items-ii',true),c=open.pendingChoice!;
  let s=accepted(selectChoice(open,c.choiceId,c.generation,'pandoras-items-ii'));expect(s.items.length-open.items.length).toBe(2);trip(s);
  const holder=s.preparation.units.find(u=>u.team==='player')!,part=s.items.find(i=>i.location.kind==='inventory')!;
  s=accepted(equipItem(s,part.id,holder.id,0));s=resolveM5Choices(accepted(startMatchCombat(emptyBoard(s))));expect(s.phase).toBe('settlement');
@@ -206,7 +206,7 @@ it('Salvage Bin splits permanent Thief’s Gloves but never pays for its tempora
 });
 
 it('Pandora retains authenticated historical Thief’s Gloves rolls after rerolling the returned inventory parent',()=>{
- const open=reachRoundFielded('2-1',batch5S3bSeed('pandoras-items-ii')),c=open.pendingChoice!;
+ const open=boundedFirstNodeOffer('pandoras-items-ii',true),c=open.pendingChoice!;
  let s=accepted(selectChoice(open,c.choiceId,c.generation,'pandoras-items-ii'));
  s=accepted(grantMechanicItem(s,{source:'test',receiptId:'s3b-pandora-thiefs',definitionId:'thiefs-gloves'}));const item=s.items.at(-1)!;
  const u=s.preparation.units.find(u=>u.team==='player')!;s=accepted(equipItem(s,item.id,u.id,0));expect(s.temporaryEquipment.filter(i=>i.holderId===u.id)).toHaveLength(2);

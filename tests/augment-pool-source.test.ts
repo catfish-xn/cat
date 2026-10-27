@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 import { BATCH1_SOURCE, BATCH2_SOURCE, BATCH1_BLOCKED_SOURCE, BATCH1_RECLASSIFIED_SOURCE, RESEARCH_FILE } from './augment-pool-source-expectations';
 import { AUGMENT_BATCH1, AUGMENT_BATCH1_BLOCKED } from '../src/simulation/content/augment-pool-batch1';
 import { AUGMENT_BATCH2 } from '../src/simulation/content/augment-pool-batch2';
+import { AUGMENT_BATCH5_S3B } from '../src/simulation/content/augment-pool-batch5-s3b';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content';
@@ -27,7 +28,7 @@ it('covers both tables completely with independent indexed expectations',()=>{
  expect(new Set([...BATCH1_SOURCE,...BATCH2_SOURCE].map(x=>x.recordIndex)).size).toBe(93);
 });
 it.each([...BATCH1_SOURCE,...BATCH2_SOURCE])('$id matches research record [$recordIndex]: identity, raw constants and reward plan',e=>{
- const row=AUGMENT_BATCH1[e.id]??AUGMENT_BATCH2[e.id];
+ const row=AUGMENT_BATCH5_S3B[e.id]??AUGMENT_BATCH1[e.id]??AUGMENT_BATCH2[e.id];
  expect(row.apiName).toBe(e.apiName);expect(row.tier).toBe(e.tier);expect(row.source.values).toEqual(e.values);
  if(!e.enabled){
   expect(AUGMENT_BATCH2[e.id].enabled).toBe(false);expect(row.gifts).toEqual([]);

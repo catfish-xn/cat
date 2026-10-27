@@ -8,7 +8,6 @@ import { grantXp } from '../src/simulation/progression';
 import { createMatch, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
-import { firstNodeSeed } from './augment-stage-helpers';
 
 it.skipIf(!existsSync(RESEARCH_FILE))('At What Cost source values',()=>{
  const row=AUGMENT_BATCH5_S1B['at-what-cost'];const source=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((x:any)=>x.apiName===row.apiName);
@@ -20,7 +19,7 @@ it('offers only at 2-1 and keeps levels at and above six',()=>{
 });
 let state:MatchState;
 for(const stop of ['1-2','1-3','2-1'])it(`public route to ${stop}`,()=>{
- state ??= createMatch(firstNodeSeed('at-what-cost',101));
+ state ??= createMatch(123); // First direct offer on the merged 250-card pool; no runtime seed scan.
  while(state.roundDefinitionId!==stop){state=resolveM5Choices(state);if(state.phase==='preparation'){state=accepted(startMatchCombat(fieldBench(state)));while(state.phase==='combat')state=stepMatch(state).state;}state=resolveM5Choices(state);state=accepted(nextRound(state,state.round));}
 });
 it('real selection reaches level six plus four XP and authenticates the acquisition',()=>{

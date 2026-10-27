@@ -9,7 +9,7 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { deepStrictEqual } from 'node:assert/strict';
-import { buyUnit, buyXp, combineItems, createMatch, nextRound, rerollShop, selectChoice, setShopLock, startMatchCombat, type MatchState } from '../src/simulation/match';
+import { buyUnit, buyXp, combineItems, createMatch, nextRound, openAnvil, rerollShop, selectChoice, setShopLock, startMatchCombat, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { grantMechanicGold } from '../src/simulation/seat-mechanics/grants';
 import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
@@ -27,9 +27,9 @@ import { shopOwner } from './fixtures/shop-history-match';
 // Detached saves are the only values modified in the attack matrix.
 type Json=any;
 let ticket:MatchState,starry:MatchState,bought:MatchState;
-beforeAll(()=>{ticket=shopOwner(255,'prismatic-ticket');});
+beforeAll(()=>{ticket=shopOwner(0,'prismatic-ticket');});
 beforeAll(()=>{
- starry=rich(shopOwner(18,'starry-night'));
+ starry=rich(shopOwner(95,'starry-night'));
  expect(starry).toBeDefined();
  for(let i=0;i<40&&!starry.shop.slots.some(s=>s.status==='available'&&s.starLevel===2);i++)starry=accepted(rerollShop(starry));
  const slot=starry.shop.slots.findIndex(s=>s.status==='available'&&s.starLevel===2);expect(slot).toBeGreaterThanOrEqual(0);
@@ -117,8 +117,8 @@ describe('online room',()=>{
 });
 
 it.each([
- [0,'dual-purpose','2-1'],[105,'subscription-service','2-1'],[63,'rigged-shop-plus','3-2'],
- [23,'starry-night-plus','3-2'],[63,'firesale','3-2'],
+ [14,'dual-purpose','2-1'],[160,'subscription-service','2-1'],[9,'rigged-shop-plus','3-2'],
+ [8,'starry-night-plus','3-2'],[95,'firesale','3-2'],
 ] as const)('real %s %s at %s authenticates XP, lock, reroll and round continuation',(seed,id,node)=>{
  let state=rich(shopOwner(seed,id,node));validateShopHistory(state);
  state=accepted(buyXp(state));validateShopHistory(state);
@@ -132,7 +132,7 @@ it.each([
 });
 it('M6 envelope round-trips the versioned history and carries authenticated prefixes across a recorded battle',async()=>{
  const history=new BattleHistory('shop-history-persistence');
- let state=recordedEmptyRoute(18,'2-1',history),c=state.pendingChoice!;
+ let state=recordedEmptyRoute(95,'2-1',history),c=state.pendingChoice!;
  state=rich(accepted(selectChoice(state,c.choiceId,c.generation,'starry-night')));
  state=accepted(rerollShop(state));state=emptyBoard(state);
  state=accepted(recordCommand(history,state,startMatchCombat(state)));state=resolveM5Choices(state);
@@ -145,8 +145,8 @@ it('M6 envelope round-trips the versioned history and carries authenticated pref
 });
 
 it('online finite-pool Starry Night purchases authenticate both shared restore entries and room dispatch continuation',()=>{
- let pool=createSharedPool('shop-history-online',18,{seatCount:1});
- let result=sharedAccept(initializeSharedSeat(pool,createMatch(18,{mode:'shared-deferred'}),'audit',0));pool=result.pool;
+ let pool=createSharedPool('shop-history-online',95,{seatCount:1});
+ let result=sharedAccept(initializeSharedSeat(pool,createMatch(95,{mode:'shared-deferred'}),'audit',0));pool=result.pool;
  result=sharedAccept(generateSharedShop(pool,result.state,0));let state=result.state;pool=result.pool;
  for(let round=1;round<=3;round++){
   for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board')){
@@ -187,10 +187,14 @@ it('the unchanged WebSocket command grammar carries shop commands and rejects cl
 
 
 it('Crafted Crafting cannot lend a later same-round combination credit to an earlier shop-history refresh',()=>{
- const open=reachRound('3-2',false,648,['crafted-crafting']),choice=open.pendingChoice!;
+ const open=reachRound('3-2',false,1064,['crafted-crafting']),choice=open.pendingChoice!;
  expect(open.augments.some(a=>a.definitionId==='crafted-crafting')).toBe(true);
  expect(choice.offers).toContain('starry-night-plus');
  let state=rich(accepted(selectChoice(open,choice.choiceId,choice.generation,'starry-night-plus')));
+ // This opening grants genuine component anvils; claim a second component before testing the later craft credit.
+ const anvil=state.preparation.units.find(u=>u.definitionId==='TFT_ArmoryKeyComponent');expect(anvil).toBeDefined();
+ state=accepted(openAnvil(state,anvil!.id));const component=state.pendingChoice!;
+ state=accepted(selectChoice(state,component.choiceId,component.generation,component.offers[0]));
  while(freeRerollsAvailable(state)>0)state=accepted(rerollShop(state));
  const paid=state;state=accepted(rerollShop(state));expect(state.gold).toBe(paid.gold-2);
  validateShopHistory(state);

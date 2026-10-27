@@ -3,7 +3,7 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { makeRoom,runUntilClaiming } from './helpers';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:42,assertPoolConservation:true});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:9,assertPoolConservation:true});
 afterAll(()=>room.dispose());
 let picker:string,picked:string;
 it('starts the shared room',()=>{room.start();expect(room.state.fault).toBeNull();});

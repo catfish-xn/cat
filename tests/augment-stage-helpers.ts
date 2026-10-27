@@ -25,11 +25,13 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * (fmix32 openings, Blood Brothers, Form Swapper) merged with the batch-3/XP/stage-ban line.
  * Call to Chaos was re-searched after batch 4 level rewards expanded the pool to 213 (seed 74, same fielded route).
  * Re-searched after the v24 shop / batch-5 merge (235 cards, P 2026-10-27), retaining the same routes and first-seed rule.
+ * v25 integration B refreshes the exercised B5A/Raining Gold+/Final Polish routes for 250 cards;
+ * Final Polish uses one public slot reroll. Other entries retain their earlier fixture scope.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
-export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
-  "all-that-shimmers-plus":{node:'3-2',seed:49},
-  "roll-the-dice":{node:'3-2',seed:7},
+export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number }>> = {
+  "all-that-shimmers-plus":{node:'3-2',seed:52},
+  "roll-the-dice":{node:'3-2',seed:60},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -56,7 +58,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "duo-queue":{node:'4-2',seed:78,fielded:true},
   "epoch-plus":{node:'3-2',seed:10},
   "eye-for-an-eye-plus":{node:'3-2',seed:17},
-  "final-polish":{node:'4-2',seed:6,fielded:true},
+  "final-polish":{node:'4-2',seed:35,fielded:true,rerolls:1},
   "find-your-center":{node:'3-2',seed:56},
   "geniuses":{node:'4-2',seed:16,fielded:true},
   "golemify":{node:'3-2',seed:18},
@@ -79,7 +81,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "piercing-lotus-ii":{node:'3-2',seed:0},
   "placebo-plus":{node:'3-2',seed:24},
   "radiant-refactor":{node:'3-2',seed:13},
-  "raining-gold-plus":{node:'3-2',seed:23},
+  "raining-gold-plus":{node:'3-2',seed:30},
   "reunion":{node:'4-2',seed:21,fielded:true},
   "rocket-collection-plus":{node:'3-2',seed:155,fielded:true},
   "rolling-for-days-i":{node:'3-2',seed:9},
@@ -130,7 +132,11 @@ export function offerFor(id: string): MatchState {
   if (offeredAt(id, '2-1')) return reachRound('2-1', false, firstNodeSeed(id));
   const at = STAGE_SEEDS[id];
   if (!at) throw new Error(`No stage seed for ${id}; re-run the stage seed search`);
-  const state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
+  let state = at.fielded ? fieldedRoute(at.seed, at.node) : reachRound(at.node, false, at.seed);
+  for (let slot = 0; slot < (at.rerolls ?? 0); slot++) {
+    const choice = state.pendingChoice!;
+    state = accepted(rerollAugment(state, choice.choiceId, choice.generation, slot));
+  }
   expect(state.roundDefinitionId).toBe(at.node);
   expect(state.pendingChoice?.kind).toBe('augment');
   expect(state.pendingChoice?.offers, `${id} at ${at.node} seed ${at.seed}`).toContain(id);

@@ -8,7 +8,6 @@ import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { createMatch, nextRound, rerollAugment, rerollShop, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, emptyBoard, resolveM5Choices } from './match-helpers';
-import { firstNodeSeed } from './augment-stage-helpers';
 
 it.skipIf(!existsSync(RESEARCH_FILE))('Reroll Transfer source values',()=>{
  const row=AUGMENT_BATCH5_S1B['reroll-transfer'];const source=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((x:any)=>x.apiName===row.apiName);
@@ -32,7 +31,7 @@ it('counts only closed later choices, including every remaining-budget value and
 });
 let state:MatchState;
 for(const stop of ['1-2','1-3','2-1'])it(`public route to ${stop}`,()=>{
- state ??= createMatch(firstNodeSeed('reroll-transfer',101));
+ state ??= createMatch(101); // First direct offer on the merged 250-card pool; no runtime seed scan.
  while(state.roundDefinitionId!==stop){state=resolveM5Choices(state);if(state.phase==='preparation'){state=accepted(startMatchCombat(emptyBoard(state)));while(state.phase==='combat')state=stepMatch(state).state;}state=resolveM5Choices(state);state=accepted(nextRound(state,state.round));}
 });
 it('acquisition gives 3 gold and excludes its own node',()=>{
