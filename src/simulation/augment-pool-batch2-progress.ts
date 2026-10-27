@@ -1,3 +1,4 @@
+import { SHOP_CATALOG } from './match-rules';
 import type { CombatState } from './combat-types';
 import type { Team } from './board';
 import type { MatchState } from './match-types';
@@ -10,7 +11,7 @@ import { grantMechanicGold } from './seat-mechanics/grants';
 export type Batch2BattleFacts=readonly {readonly definitionId:string;readonly count:number}[];
 const counterIds=['rocket-collection','rocket-collection-plus','enforce','welcome-to-the-playground','scrap-recycling','betrayal','blood-brothers','blood-brothers-deaths'];
 export function validateBatch2Facts(f:Batch2BattleFacts):void {
- if(!Array.isArray(f)||new Set(f.map(x=>x.definitionId)).size!==f.length||f.some(x=>!x||Object.keys(x).sort().join(',')!=='count,definitionId'||(!counterIds.includes(x.definitionId)&&x.definitionId!=='spoils-of-war')||!Number.isSafeInteger(x.count)||x.count<0||x.count>100000||['betrayal','welcome-to-the-playground'].includes(x.definitionId)&&x.count>1)||f.some(x=>x.definitionId==='blood-brothers')!==f.some(x=>x.definitionId==='blood-brothers-deaths'))throw new RangeError('Invalid batch2 battle facts');
+ if(!Array.isArray(f)||new Set(f.map(x=>x.definitionId)).size!==f.length||f.some(x=>!x||Object.keys(x).sort().join(',')!=='count,definitionId'||(!counterIds.includes(x.definitionId)&&x.definitionId!=='spoils-of-war'&&x.definitionId!=='pilfer')||!Number.isSafeInteger(x.count)||x.count<0||x.count>100000||x.definitionId==='pilfer'&&x.count>SHOP_CATALOG.length||['betrayal','welcome-to-the-playground'].includes(x.definitionId)&&x.count>1)||f.some(x=>x.definitionId==='blood-brothers')!==f.some(x=>x.definitionId==='blood-brothers-deaths'))throw new RangeError('Invalid batch2 battle facts');
 }
 /** Facts are projected from the authoritative combat, including inactive trait members and permanent emblems. */
 export function batch2BattleFacts(combat:CombatState,team:Team):Batch2BattleFacts|undefined {
