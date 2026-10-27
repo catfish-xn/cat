@@ -21,5 +21,3 @@ export const AUGMENT_BATCH5_R3_DEFINITIONS: Readonly<Record<string, ChoiceDefini
     effects: [{ kind: 'mechanic', mechanic: 'acquisitionBundle', values: { enabled: 1 } }] }])));
 export const AUGMENT_BATCH5_R3_TIERS = freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH5_R3).map(([id,row]) => [id,row.tier])));
 export const AUGMENT_BATCH5_R3_API_NAMES = freezeContent(Object.fromEntries(Object.entries(AUGMENT_BATCH5_R3).map(([id,row]) => [id,row.apiName])));
-/** User 2026-10-27 explicitly requests enabling both cards. Preserve raw Hall stage tags in augment-stage-bans. */
-export const AUGMENT_BATCH5_R3_NODE_BANS = freezeContent({ TFT_Augment_HallOfMirrors: [] as readonly string[] });

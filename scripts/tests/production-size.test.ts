@@ -105,9 +105,9 @@ describe('production representation preserves runtime semantics', () => {
     expect(after).toBe(before);
     const parsed = JSON.parse(after);
     // Current content identities (src/simulation/content/identity-constants.ts;
-    // v25 R3: integration A + Cloning Facility/Hall of Mirrors, 2026-10-27).
-    expect(parsed.content).toBe('fnv1a32-utf16:881e65ce');
-    expect(parsed.loot).toBe('fnv1a32-utf16:c06a5651');
+    // v25 R3: Hall of Mirrors stage bans restored, 2026-10-27).
+    expect(parsed.content).toBe('fnv1a32-utf16:22b2f0bd');
+    expect(parsed.loot).toBe('fnv1a32-utf16:14663030');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
 });

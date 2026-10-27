@@ -1,10 +1,11 @@
 import { expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
-import { createMatch, deployMatchUnit, rerollAugment, selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
+import { type MatchState, createMatch, deployMatchUnit, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { readCombatStrategyInputs, type CombatStrategyInputs } from '../src/simulation/combat-input';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createCombatWithEvents, stepCombat, type CombatState } from '../src/simulation/combat';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { validateDynamicCombat } from '../src/simulation/g2-4b-gold-restore';
 import { augmentCandidates, augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { AUGMENT_BATCH5_R3 } from '../src/simulation/content/augment-pool-batch5-r3';
 import { AUGMENT_STAGE_BANS } from '../src/simulation/content/augment-stage-bans';
@@ -14,7 +15,7 @@ import { compileBattle, restoreBattleInput, startTwoSidedCombat, resolveTwoSided
 import type { Unit } from '../src/simulation/unit-types';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 import { hallOpening, hallDamage, rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs';
-import { accepted, reachRound } from './match-helpers';
+import { accepted, reachRound, resolveM5Choices } from './match-helpers';
 
 const archive = '/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 it.skipIf(!existsSync(archive))('B5-78 transcribes the independent 14.24 numbers and tier', () => {
@@ -22,22 +23,21 @@ it.skipIf(!existsSync(archive))('B5-78 transcribes the independent 14.24 numbers
   expect(row.effects).toEqual(AUGMENT_BATCH5_R3['hall-of-mirrors'].source.values); expect(row.tier).toBe(3);
 });
 
-it('B5-78 is explicitly open at all three nodes, retaining the raw archived disabled tags as evidence', () => {
+it('B5-78 is banned at all three nodes by the archived tags, including reroll candidates', () => {
   expect(AUGMENT_STAGE_BANS.TFT_Augment_HallOfMirrors).toEqual(['2-1', '3-2', '4-2']);
   for (const node of ['2-1', '3-2', '4-2']) {
     const filter = { node, fieldedTraits: [], blocked: [] };
-    expect(augmentOfferAllowed('hall-of-mirrors', [], filter)).toBe(true);
-    expect(augmentCandidates('prismatic', [], [], null, filter)).toContain('hall-of-mirrors');
-    expect(augmentPool('prismatic', [], [], `round:${node}:augment`)).toContain('hall-of-mirrors');
+    expect(augmentOfferAllowed('hall-of-mirrors', [], filter)).toBe(false);
+    expect(augmentCandidates('prismatic', [], [], null, filter)).not.toContain('hall-of-mirrors');
+    expect(augmentPool('prismatic', [], [], `round:${node}:augment`)).not.toContain('hall-of-mirrors');
     expect(augmentCandidates('gold', [], [], null, filter)).not.toContain('hall-of-mirrors');
   }
 });
 
-function acquireHall() {
-  let s = reachRound('2-1', false, 38);
-  for (const optionIndex of [0, 1]) { const c = s.pendingChoice!; s = accepted(rerollAugment(s, c.choiceId, c.generation, optionIndex)); }
-  expect(s.pendingChoice!.offers).toContain('hall-of-mirrors');
-  return accepted(selectChoice(s, s.pendingChoice!.choiceId, s.pendingChoice!.generation, 'hall-of-mirrors'));
+// Controlled holder: the card is unavailable at every natural augment node.
+function acquireHall(): MatchState {
+  const s = resolveM5Choices(reachRound('2-1', false, 38));
+  return { ...s, augments: [...s.augments, { definitionId: 'hall-of-mirrors', choiceId: 'fixture-hall', acquiredRound: s.round }] };
 }
 const hero = (id: string, definitionId: string, col: number, row = 4, starLevel: 1 | 2 | 3 = 1): Unit =>
   ({ id, definitionId, starLevel, team: 'player', location: { kind: 'board', cell: { col, row } } });
@@ -118,24 +118,34 @@ it('applies one 40% multiplier to attacks, spells, equipment and burn including 
   expect(observed).toBe(true);
 });
 
-it('real choice and deployment commands survive object/JSON/serialized round trips and reject altered HP, target, damage marker and baseline', () => {
+it('controlled holder exercises combat and tamper rejection; authentic baseline survives all round trips', () => {
   let s = acquireHall(); const owner = s.preparation.units.find(u => u.team === 'player')!;
   s = accepted(deployMatchUnit(s, owner.id, { kind: 'board', cell: { col: 3, row: 4 } }));
   const before = s; s = accepted(startMatchCombat(s));
   expect(s.combat!.units.filter(u => u.r3Mirror)).toHaveLength(1);
   expect(s.preparation).toEqual(before.preparation); expect(s.items).toEqual(before.items);
-  expect(rewardPlan(s, {})).toEqual({ gifts: [], gold: [] });
+  expect(rewardPlan({ ...s, augments: s.augments.filter(a => a.definitionId === 'hall-of-mirrors') }, {})).toEqual({ gifts: [], gold: [] });
   for (let i = 0; i < 3 && s.phase === 'combat'; i++) s = stepMatch(s).state;
-  for (const input of [s, JSON.stringify(s), serializeMatch(s)]) {
-    const restored = restoreMatch(input); expect(restored).toEqual(s); expect(stepMatch(restored)).toEqual(stepMatch(s));
+  // A fabricated owner cannot pass acquisition/offer authentication. Verify the same
+  // round trips on the authentic baseline, and reject the controlled holder.
+  let baseline = accepted(startMatchCombat({ ...before, augments: before.augments.filter(a => a.definitionId !== 'hall-of-mirrors') }));
+  for (let i = 0; i < 3 && baseline.phase === 'combat'; i++) baseline = stepMatch(baseline).state;
+  for (const input of [baseline, JSON.stringify(baseline), serializeMatch(baseline)]) {
+    const restored = restoreMatch(input); expect(restored).toEqual(baseline); expect(stepMatch(restored)).toEqual(stepMatch(baseline));
   }
+  for (const input of [s, JSON.stringify(s)]) expect(() => restoreMatch(input)).toThrow();
+  expect(() => serializeMatch(s)).toThrow();
+  // Cold replay checks the controlled combat independently of acquisition authentication.
+  expect(validateDynamicCombat(s.combat!, s.combatInputBasis!, s.combat!.strategy!)).toBe(true);
   for (const mutate of [
     (x: any) => { x.combat.units.find((u: any) => u.r3Mirror).maxHp++; },
     (x: any) => { x.combat.units.find((u: any) => u.r3Mirror).r3Mirror.sourceUnitId = 'forged'; },
     (x: any) => { delete x.combat.units.find((u: any) => u.r3Mirror).r3Mirror; },
     (x: any) => { x.combat.strategy.r3Original[0].strategy.units[0].stats.health++; },
     (x: any) => { x.combat.units.find((u: any) => u.r3Mirror).itemSummonOpeningMaxHp++; },
-  ]) { const bad = structuredClone(s); mutate(bad); expect(() => restoreMatch(bad)).toThrow(); expect(() => restoreMatch(JSON.stringify(bad))).toThrow(); }
+  ]) { const bad = structuredClone(s); mutate(bad);
+    expect(() => validateDynamicCombat(bad.combat!, s.combatInputBasis!, s.combat!.strategy!)).toThrow();
+    expect(() => restoreMatch(bad)).toThrow(); expect(() => restoreMatch(JSON.stringify(bad))).toThrow(); }
 });
 
 it('both online sides transform in local front rows, restore compiled inputs, settle without copy growth, and reject derived-field tampering', () => {

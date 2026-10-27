@@ -4,7 +4,7 @@ import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { snapshotForBattle } from '../src/simulation/two-sided-snapshot';
 import { compileBattle, startTwoSidedBattle, proposeSettlement } from '../src/simulation/two-sided-battle';
 
-// These synthetic armies isolate battle-time equipment; each card's acquisition is tested through real offers separately.
+// Synthetic holders isolate battle-time equipment; Hall is banned at all three natural nodes.
 it.each(['cloning-facility', 'hall-of-mirrors'])('%s preserves opening copies when their formal owners receive equipment on either online side', id => {
   const base = createMatch(42), round = getCatalogRoundById('2-1');
   const state: MatchState = { ...base, round: round.ordinal, roundDefinitionId: round.roundId, m8: { ...base.m8, round },
