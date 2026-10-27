@@ -97,3 +97,6 @@ export function starrySharedShop(state: MatchState, stock: Readonly<Record<strin
 };
 
 export function batch5TransformPlan(before: MatchState, augmentId: string, stock: Readonly<Record<string,number>>): ReturnType<typeof import('./augment-rewards-oracle.cjs').batch5Transforms>;
+
+export { ghostFriendsGrowth } from './augment-rewards-oracle.cjs';
+export { rebelCopyStats, rebelCopyDeaths } from './augment-rewards-oracle.cjs';

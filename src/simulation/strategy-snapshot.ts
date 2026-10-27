@@ -260,6 +260,11 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
         {kind:'statPercentBps',stat:'attackDamage',bps:rose.stars*sion.starAttackBps},{kind:'statFlat',stat:'armor',amount:resists},{kind:'statFlat',stat:'magicResist',amount:resists},
         {kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));
     }
+    const ghostOwner = state.augments.find(a => a.definitionId === 'ghost-of-friends-past');
+    const ghost = state.ghostFriendsGrowth;
+    if (ghostOwner && ghost && unit.team === 'player') sources.push(...makeSourcedEffects(unit.id,'augment',ghostOwner.definitionId,ghostOwner.choiceId+':growth',[
+      {kind:'statFlat',stat:'maxHp',amount:ghost.healthFlat}, {kind:'statPercentBps',stat:'attackDamage',bps:ghost.attackDamageBps}, {kind:'statFlat',stat:'abilityPower',amount:ghost.abilityPower},
+    ]));
     const historyGrowth = state.augmentHistoryGrowth?.find(entry => entry.unitId === unit.id);
     const historyOwner = state.augments.find(a=>a.definitionId==='no-scout-no-pivot' || a.definitionId==='cooking-pot');
     if (historyGrowth && historyOwner) sources.push(...makeSourcedEffects(unit.id,'augment',historyOwner.definitionId,historyOwner.choiceId+':growth',[{kind:'statFlat',stat:'maxHp',amount:historyGrowth.healthFlat},{kind:'statPercentBps',stat:'maxHp',bps:historyGrowth.healthBps},{kind:'statPercentBps',stat:'attackDamage',bps:historyGrowth.attackDamageBps},{kind:'mechanic',mechanic:'fractionalFlat',values:{armorCenti:0,magicResistCenti:0,abilityPowerCenti:historyGrowth.abilityPowerCenti}}]));

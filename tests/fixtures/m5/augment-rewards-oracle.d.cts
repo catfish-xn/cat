@@ -27,3 +27,11 @@ export function batch5Transforms(before: import('../../../src/simulation/match-t
   exchanges: {unitId:string;from:string;to:string;starLevel:number}[];
   upgrades: {survivorId:string;consumedIds:string[];definitionId:string;fromStar:number;toStar:number}[];
 };
+
+export interface GhostFriendsGrowth { healthFlat: number; attackDamageBps: number; abilityPower: number }
+export function ghostFriendsGrowth(state: unknown): GhostFriendsGrowth | undefined;
+export function ghostFriendsDeathReward(death: unknown): GhostFriendsGrowth;
+export function rebelCopyStats(base: {health:number;attack:number}, star: number): {starLevel:number;maxHp:number;attackDamage:number};
+export function rebelCopyDeaths(events: readonly unknown[], originals: readonly unknown[]): readonly {ownerId:string;team:string;ordinal:number}[];
+
+export function validateGhostCombatInputs(state: unknown): void;

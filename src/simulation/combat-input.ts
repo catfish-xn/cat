@@ -1,6 +1,7 @@
 import { portableAnomalyId } from './content/augment-pool-batch5-r2';
 import { r2FrozenCopyKills, type AugmentCopyKills } from './augment-pool-batch5-r2-history';
 import { equipmentRollFor } from './augment-pool-batch5-g1-equipment';
+import { ghostFriendsGrowth } from './augment-pool-batch5-g2';
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
@@ -35,7 +36,7 @@ export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'items' | 'temporaryEquipment'
   | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number }
   /** Online two-sided only: the frozen snapshot's priorPvpWins; solo inputs never set it and read roundResults. */
-  & { readonly augmentCopyKills?:readonly AugmentCopyKills[]; readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[] }
+  & { readonly ghostFriendsGrowth?: import('./augment-pool-batch5-g2').GhostFriendsGrowth; readonly augmentCopyKills?:readonly AugmentCopyKills[]; readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[] }
   & { readonly cabalGrowth?: CabalGrowth; readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[]; readonly sniperOpening?: Readonly<Record<string, number>>; readonly d14Combat?:D14CombatCertificate; readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
 export interface CombatInputBasis {
   readonly mechanicReceiptPrefixLength:number;
@@ -57,6 +58,7 @@ export interface CombatInputAuthority {
     /** Authenticated shared encounter and externally settled PvP rounds do not use the seat's PvE RNG. */
   readonly shared?: { readonly openingId: import('./opening-encounter').OpeningEncounterId | null; readonly twoSidedRounds: readonly number[] };
   readonly augmentCopyKills?:readonly AugmentCopyKills[]; readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[];
+  readonly ghostFriendsGrowth?: import('./augment-pool-batch5-g2').GhostFriendsGrowth;
   readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[];
   readonly sniperOpening?: Readonly<Record<string, number>>;
   readonly cabalGrowth?: CabalGrowth;
@@ -86,12 +88,13 @@ export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase
   const g23='seatMechanics' in state?readG23Progress(state):('g23' in state?state.g23:undefined);
   const visibleExperimentCells='seatMechanics' in state&&state.seatMechanics&&!state.seatMechanics.hidden.progress?state.seatMechanics.seat.experimentCells as readonly import('./board').HexCell[]:('visibleExperimentCells' in state?state.visibleExperimentCells:undefined);
   const sniperOpening = 'seatMechanics' in state ? readSniperOpening(state) : ('sniperOpening' in state ? state.sniperOpening : undefined);
+  const ghost = 'resourceProvenance' in state ? ghostFriendsGrowth(state as import('./match-types').MatchState) : state.ghostFriendsGrowth;
   const h6Growth='resourceProvenance' in state ? scoreboardCombatGrowth(state as import('./match-types').MatchState,preparation.units.filter(u=>u.team==='player').map(u=>u.id)) : ('h6Growth' in state?state.h6Growth:undefined);
   const d14='d14' in state?d14Certificate(state as MatchBase):'d14Combat' in state?state.d14Combat:undefined;
   const absent='d14' in state&&state.d14&&'held' in state.d14&&state.d14.held;
   const historyGrowth = 'resourceProvenance' in state && 'augmentHistory' in state ? combatHistoryGrowth(state as import('./match-types').MatchState,preparation.units.filter(u=>u.team==='player').map(u=>u.id),!!('combatInputBasis' in state && state.combatInputBasis)) : ('augmentHistoryGrowth' in state ? state.augmentHistoryGrowth : undefined);
   const copyKills='resourceProvenance' in state?r2FrozenCopyKills(state as import('./match-types').MatchState):('augmentCopyKills' in state?state.augmentCopyKills:undefined);
-  return { ...(copyKills?.length?{augmentCopyKills:copyKills}:{}),...(cabalGrowth?{cabalGrowth}:{}), ...(sniperOpening ? { sniperOpening } : {}), ...(h6Growth?{h6Growth}:{}),...(historyGrowth?.length?{augmentHistoryGrowth:historyGrowth}:{}),...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
+  return { ...(ghost?{ghostFriendsGrowth:ghost}:{}),...(copyKills?.length?{augmentCopyKills:copyKills}:{}),...(cabalGrowth?{cabalGrowth}:{}), ...(sniperOpening ? { sniperOpening } : {}), ...(h6Growth?{h6Growth}:{}),...(historyGrowth?.length?{augmentHistoryGrowth:historyGrowth}:{}),...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
     ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
@@ -120,6 +123,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     && basis.combatId === `round-${authority.round}` && basis.roundId === round.roundId
     && basis.contentDigest === authority.contentDigest && input.round === authority.round);
   integer(basis.mechanicReceiptPrefixLength);
+  requireBasis(equal(input.ghostFriendsGrowth??null,authority.ghostFriendsGrowth??null));
   requireBasis(equal(input.h6Growth??null,authority.h6Growth??null));
   requireBasis(equal(input.sniperOpening ?? null, authority.sniperOpening ?? null));
   requireBasis(equal(input.cabalGrowth??null,authority.cabalGrowth??null));

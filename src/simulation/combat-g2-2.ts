@@ -1,3 +1,4 @@
+import { recordBatch5RebelPulse } from './augment-pool-batch5-g2-rebel';
 import { isAttackProxy } from './anomalies/availability';
 import { dashAmbessaChain } from './combat-ambessa-dash';
 /** G2-2 finite skill execution. All counters, zones and marks live in Combat JSON. */
@@ -166,6 +167,7 @@ export function advanceG22Traits(ctx:AbilityContext):void {
       // Mark every member before any max-HP effect changes the shared trigger sample.
       const members=team.filter(x=>x.alive&&x.hp>0&&x.mechanics?.some(y=>y.mechanic==='rebel'));
       for(const x of members)g22(x).rebelTriggered=true;
+      recordBatch5RebelPulse(team, members, ctx.tick);
       for(const x of members){
         const src=x.mechanics!.find(y=>y.mechanic==='rebel')!.source;
         change(ctx,x,x,src,'attackDamage',m.values.adApBps,'bps');change(ctx,x,x,src,'abilityPower',m.values.adApBps/100);

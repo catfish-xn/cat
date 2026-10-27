@@ -54,6 +54,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
   const inputs: CombatStrategyInputs = {
     ...(s.cabalGrowth?{cabalGrowth:s.cabalGrowth}:{}),
     round:getMultiplayerRoundById(s.roundId).ordinal, preparation,
+    ...(s.ghostFriendsGrowth?{ghostFriendsGrowth:s.ghostFriendsGrowth}:{}),
     ...(s.h6Growth?{h6Growth:s.h6Growth.map(g=>({...g,unitId:map('unit',g.unitId)}))}:{}),
     ...(s.d14Combat?{d14Combat:{...s.d14Combat,unitId:map('unit',s.d14Combat.unitId)}}:{}),
     ...(s.sniperOpening ? { sniperOpening: Object.fromEntries(Object.entries(s.sniperOpening).map(([id, bps]) => [map('unit', id), bps])) } : {}),
@@ -195,15 +196,15 @@ function validateDynamicResult(result:BattleResult):void {
   try { validateBattleEquipmentLog(result.inputLog, result.terminal.equipmentReceipts, result.terminal.tick); }
   catch { throw new BattleValidationError('battle-input-invalid'); }
   if (result.initial.equipmentReceipts || result.initial.pendingEquipment || result.terminal.pendingEquipment
-    || result.terminal.units.some(u => u.equipment && !result.initial.strategy?.units.find(s => s.unitId === u.id)?.augmentEquipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
+    || result.terminal.units.some(u => u.equipment && (!u.rebelCopy || u.equipment.length > 0) && !result.initial.strategy?.units.find(s => s.unitId === u.id)?.augmentEquipment) && !result.inputLog?.length) throw new BattleValidationError('battle-input-invalid');
   validateD11BankSamples(result.bankSamples,result.terminal.tick);
-  const enabled=!!result.bankSamples?.length || !!result.inputLog?.length || !!result.initial.strategy?.r3Original?.length || result.initial.strategy?.units.some(u=>isR3Copy(u.itemSummon)||u.mechanics?.some(m=>m.mechanic==='scavenger'||m.mechanic==='sponging'||m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
+  const enabled=!!result.bankSamples?.length || !!result.inputLog?.length || !!result.initial.strategy?.r3Original?.length || result.initial.strategy?.units.some(u=>isR3Copy(u.itemSummon)||u.mechanics?.some(m=>m.mechanic==='ghostFriends'||m.mechanic==='rebelResurgence'||m.mechanic==='scavenger'||m.mechanic==='sponging'||m.mechanic==='g24Trench'||m.mechanic==='g23ExperimentClone'||m.mechanic==='s13Anomaly'||m.mechanic==='d11Anomaly'));
   if(result.bankSamples?.some(s=>s.team==='enemy'&&result.mirrorOfSeatId!==null))throw new BattleValidationError('invalid-result');
   if(!enabled){
-    if(result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');
+    if(result.terminal.batch5RebelSummons!==undefined||result.terminal.units.some(u=>u.rebelCopy||u.ghostFriends)||result.terminal.trenchSplits!==undefined||result.terminal.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new BattleValidationError('invalid-result');
     return;
   }
-  if(result.initial.tick!==0||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment')
+  if(result.initial.tick!==0||result.initial.batch5RebelSummons!==undefined||result.initial.units.some(u=>u.rebelCopy)||result.initial.trenchSplits!==undefined||result.initial.units.some(u=>u.itemSummon?.kind==='trench'||u.itemSummon?.kind==='experiment')
     ||!Number.isSafeInteger(result.terminal.tick)||result.terminal.tick<0||result.terminal.tick>MAX_COMBAT_TICKS)throw new BattleValidationError('invalid-result');
   let expected=structuredClone(result.initial);
   let bankCursor=0;

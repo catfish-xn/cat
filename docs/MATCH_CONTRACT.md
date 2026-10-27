@@ -1673,3 +1673,10 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 | `validateLuckyGlovesEquipment(state,pool): void` | 从原始装备种子独立重放普通/推荐抽样，校验角色、持有来源、两个结果、抽数和游标；篡改抛 `Invalid Lucky Gloves equipment authority`。 |
 
 `EquipmentRoundRoll.poolVersion`增加`lucky-gloves-v1`，仅该分支带`lucky:{choiceId,holderId,definitionId,role,radiant}`选择上下文；不新增顶层保存节。旧普通roll字节不变，普通roll和推荐roll可同轮共存；战斗冻结与战中装备重建按对应上下文选取。`temporaryEquipment`沿原槽位、身份、撤销协议，临时装备不能变永久库存。两项登记为`augment-history-v1`持有者，通过通用API保留取得/位置/阵容事实；联机三种输入形式均调用 `restoreSharedOrbSnapshot(pool,input,independentAuthority?)`，缺节或缺独立authority拒绝，不推测恢复。服务器已有通用编排直接生效，本任务未改`src/server/`。
+## Batch 5 G2 联机接口（P，2026-10-27）
+
+`src/simulation/augment-pool-batch5-g2.ts` 导出 `ghostFriendsGrowth(state: MatchState): GhostFriendsGrowth | undefined`；`GhostFriendsGrowth={healthFlat:number,attackDamageBps:number,abilityPower:number}`，均为非负整数。未持有老友幽魂返回 undefined；持有者缺强化历史按现有 API 抛 `Invalid augment history: missing augment-history-v1`，不得补零。永久值仅从当前席位已完成前序自然轮的真实死亡事实推导，战斗输入冻结为 `ghostFriendsGrowth`，不接受客户端提交成长。形态及英雄复制体证据见 AUGMENT_HISTORY_DESIGN。
+
+报价／选择沿用现有命令，不新增 wire failure：老友幽魂为棱彩且仅 2-1，爆蓝之城为黄金、无额外阶段禁令，3-2／4-2 沿用蓝发羁绊筛选。爆蓝之城通过既有强化奖励法球各授予一个阿卡丽、艾瑞莉娅，重复选择保持失败原子性；战斗复制体不进入资源谱系、正式棋盘或共享卡池。服务器继续只编排 `snapshotForBattle`、双边战斗和原有死亡采样，无新服务器规则或计时器。
+
+两条 G2 均为 deaths 历史持有者，恢复继续使用独立服务器 authority 认证整份 Match，并核对原有资源／奖励；外部双边结果按冻结输入冷重演核对完整数值、复制体、额度和事件。错误沿用 Match 验证错误及 `BattleValidationError('invalid-result'|'battle-input-invalid')`，不新增客户端失败枚举。内容身份重算，现有 schema/save/replay/command 和 epoch 均不重录。

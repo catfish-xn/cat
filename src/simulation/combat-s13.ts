@@ -2,6 +2,8 @@ import { settleH11Deaths } from './augment-pool-batch5-h11';
 import { tracksCabalTakedowns, sampleCabalTakedowns } from './augment-pool-batch5-h9-cabal';
 import { startR2PortableCopies } from './augment-pool-batch5-r2-combat';
 import { advanceMadChemist, isMadChemist, leaveMadChemistCloud, madChemistMoveInterval, moveMadChemist } from './augment-pool-batch5-r4';
+import { summonRebelCopies } from './augment-pool-batch5-g2-rebel';
+import { settleGhostFriendsDeaths, observeBatch5RevivalDeaths } from './augment-pool-batch5-g2-combat';
 import { sampleAugmentDeath } from './augment-death-samples';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -758,7 +760,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   settleMana();
   const trenchMembership=splitTrenchHolders(ctx,state,trenchEligible);
-  deathAnomalies(ctx);
+  observeBatch5RevivalDeaths(ctx, () => deathAnomalies(ctx));
   deathG23Sion(ctx);
   settleSixCostDeaths(ctx,killed);
   if(hasBanish){
@@ -792,6 +794,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if(m.values.timerTicks===0&&events.some(e=>e.type==='death'&&e.unitId===unit.id))awardItemGold(unit,m,'tactician-shield',itemGoldReceipts?.filter(r=>r.ownerId===unit.id&&r.itemInstanceId===m.source.instanceId&&r.kind==='tactician-shield').length??0);
   }
   settleH11Deaths(ctx, state);
+  const batch5Deaths = events.filter(e => e.type === 'death');
+  settleGhostFriendsDeaths({...ctx,units:fullRoster}, batch5Deaths.flatMap(e => e.type === 'death' ? units.filter(u => u.id === e.unitId) : []));
   settleFamilyReunionDeaths(ctx, fullRoster);
   batch2Tick(ctx);
   settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive), state.strategy?.traits);
@@ -801,6 +805,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const deaths = units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive && u.unitKind === 'neutral' && u.encounterId && u.monsterFamily).map(u => ({ combatId: ctx.combatId!, tick, deadUnitId: u.id, team: u.team, encounterId: u.encounterId!, monsterFamily: u.monsterFamily!, eventId: JSON.stringify([ctx.combatId, tick, (state.nextEventSeq ?? 0) + events.findIndex(e => e.type === 'death' && e.unitId === u.id)]) }));
     companionState = registerDeaths(companionState, deaths, units.filter(u => u.alive).map(u => u.id));
   }
+  const batch5RebelSummons = summonRebelCopies(ctx,state,fullRoster,batch5Deaths);
   splitExperimentClones(ctx,state,fullRoster);
   const eliminated = eliminationResult(fullRoster), result = eliminated ?? (tick >= state.maxTicks ? 'draw' : null);
   if (result) { cleanupMechanisms(ctx, true); for (const unit of units) { unit.statuses = []; unit.shieldLayers = []; syncShield(unit); unit.tasks = []; } }
@@ -819,5 +824,5 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const order=new Map(state.units.map((u,i)=>[u.id,i]));
     fullRoster.sort((a,b)=>(order.get(a.id)??state.units.length)-(order.get(b.id)??state.units.length));
   }
-  return stampCombatStep({ ...state,...trenchMembership, ...(anomalyRemoved.length?{removedUnitIds:[...trenchMembership.removedUnitIds??state.removedUnitIds??[],...anomalyRemoved]}:{}), ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
+  return stampCombatStep({ ...state,...trenchMembership, ...(batch5RebelSummons?{batch5RebelSummons}:{}), ...(anomalyRemoved.length?{removedUnitIds:[...trenchMembership.removedUnitIds??state.removedUnitIds??[],...anomalyRemoved]}:{}), ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }

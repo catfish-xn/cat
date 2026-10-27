@@ -30,6 +30,7 @@ const initial={
  'salvage-bin-plus':[Q('completed')],
  'mad-chemist':[U('singed')],
  'recombobulator':[C('magnetic-remover',2)],
+ 'rebel-resurgence':[U('akali'),U('irelia')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
  'lucky-gloves':[I('gloves',2)],
@@ -673,3 +674,53 @@ function batch5Transforms(before, augmentId, stock, costs) {
  return {units,available,exchanges,upgrades};
 }
 module.exports.batch5Transforms=batch5Transforms;
+// B5-63: independent literal role buckets and event identity, never reward receipts.
+const ghostTanks=new Set('amumu blitzcrank drmundo elise garen illaoi irelia leona loris nunu rell renni scar sett singed steb swain trundle vander vladimir'.split(' '));
+const ghostAD=new Set('ambessa caitlyn camille corki darius draven ezreal gangplank jayce jinx maddie nocturne sevika smeech tristana twitch urgot vi violet zeri warwick'.split(' '));
+const ghostAP=new Set('akali cassiopeia ekko heimerdinger kogmaw leblanc lux malzahar mordekaiser morgana nami powder renata rumble silco twistedfate vex ziggs zoe zyra mel viktor'.split(' '));
+function ghostFriendsDeathReward(d){
+ const out={healthFlat:0,attackDamageBps:0,abilityPower:0};if(!d.ordinaryHero&&!d.championCopy)return out;
+ if(d.form==='ranged'&&['elise','swain'].includes(d.definitionId))out.abilityPower=1;
+ else if(ghostTanks.has(d.definitionId))out.healthFlat=5;
+ else if(ghostAD.has(d.definitionId))out.attackDamageBps=80;
+ else if(ghostAP.has(d.definitionId))out.abilityPower=1;
+ else out.healthFlat=5;
+ return out;
+}
+function ghostFriendsGrowth(s){
+ const a=s.augments.find(a=>a.definitionId==='ghost-of-friends-past');if(!a)return undefined;
+ assert(s.augmentHistory,'independent ghost death history');
+ const out={healthFlat:0,attackDamageBps:0,abilityPower:0},seen=new Set();
+ for(const f of s.augmentHistory.facts)if(f.kind==='deaths'&&f.round>=a.acquiredRound&&f.round<s.round)for(const d of f.deaths){
+  const id=JSON.stringify([d.combatId,d.eventSeq]);if(seen.has(id))continue;seen.add(id);
+  if(d.ownerSeatId!==(s.multiplayer?.seatId??'solo'))continue;
+  const delta=ghostFriendsDeathReward(d);for(const k of Object.keys(out))out[k]+=delta[k];
+ }
+ return out;
+}
+module.exports.ghostFriendsGrowth=ghostFriendsGrowth;
+module.exports.ghostFriendsDeathReward=ghostFriendsDeathReward;
+
+// B5-70: fresh lower-star source attributes, then the flat HP deduction and explicit floor.
+// No production clone bodies, augment receipts or resolver outputs enter this calculation.
+function rebelCopyStats(base,star){
+ const lower=Math.max(1,star-1),health=[0,100,180,324][lower],attack=[0,100,150,225][lower];
+ return {starLevel:lower,maxHp:Math.max(100,Math.floor(base.health*health/100)-400),attackDamage:Math.floor(base.attack*attack/100)};
+}
+function rebelCopyDeaths(events,originals){
+ const seen={player:0,enemy:0},out=[];
+ for(const e of events){
+  if(e.type!=='death')continue;
+  const u=originals.find(u=>u.id===e.unitId);if(!u||!u.traits.includes('rebel')||u.summon||u.copy)continue;
+  if(seen[u.team]<5)out.push({ownerId:u.id,team:u.team,ordinal:seen[u.team]++});
+ }
+ return out;
+}
+module.exports.rebelCopyStats=rebelCopyStats;
+module.exports.rebelCopyDeaths=rebelCopyDeaths;
+
+function validateGhostCombatInputs(s){
+ const expected=ghostFriendsGrowth(s);
+ if(s.combatInputBasis)assert.deepEqual(s.combatInputBasis.inputs.ghostFriendsGrowth,expected,'independent Ghost Friends frozen growth');
+}
+module.exports.validateGhostCombatInputs=validateGhostCombatInputs;
