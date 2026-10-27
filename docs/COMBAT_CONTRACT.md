@@ -1,3 +1,7 @@
+## 2026-10-27 H11 临时成装（候选；不重录 epoch）
+
+开放拾荒者／白蹭，分别在真实死亡清理后和tick0开场执行。永久装备由历史roster API冻结，死亡使用 `augment-history-v1` 同源采样；临时成装复用现有装备载荷、事件和收据，完整重演认证，下一轮不进入永久物品账本。无新命令或wire类型；内部函数签名、失败原因及完整联机调用点见 [H11合同补充](AUGMENT_BATCH5_H11.md)。本次内容摘要重算，旧摘要拒绝；用户要求保留历史epoch录制。
+
 ## 2026-10-25 v23 当前战斗与恢复合同
 
 本节以发布基线 `2b434e28` 至候选 `0797f3fe` 的实际实现为准，优先于下文保留的历史版本／WIP 说明；Match、经验、资源发放、历史门槛和单人按需包见 [MATCH_CONTRACT 的 v23 节](MATCH_CONTRACT.md#2026-10-25-v23-当前合同索引基线-2b434e28--0797f3fe)。当前 schema/save/replay/command＝**12/8/8/7**，rules/content＝`s13-g2-3-v23-online-rules` / `s13-14.24b-g2-3-v23-online-rules`，NET5、50 ms、lcg32-v1；精确摘要必须一致，旧身份拒绝，无迁移。本次文档更新不改变这些版本，epoch 重录／验收由独立任务负责。[src/simulation/m8/version.ts:3](../src/simulation/m8/version.ts#L3)。

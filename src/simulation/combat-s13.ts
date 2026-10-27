@@ -1,3 +1,4 @@
+import { settleH11Deaths } from './augment-pool-batch5-h11';
 import { sampleAugmentDeath } from './augment-death-samples';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -775,6 +776,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if(m.values.timerTicks>0&&tick===m.values.timerTicks&&unit.alive&&unit.hp>0)awardItemGold(unit,m,'tactician-cape',0);
     if(m.values.timerTicks===0&&events.some(e=>e.type==='death'&&e.unitId===unit.id))awardItemGold(unit,m,'tactician-shield',itemGoldReceipts?.filter(r=>r.ownerId===unit.id&&r.itemInstanceId===m.source.instanceId&&r.kind==='tactician-shield').length??0);
   }
+  settleH11Deaths(ctx, state);
   settleFamilyReunionDeaths(ctx, fullRoster);
   batch2Tick(ctx);
   settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive), state.strategy?.traits);

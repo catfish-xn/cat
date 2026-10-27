@@ -130,8 +130,9 @@ it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14
   const p = spawnSync(process.execPath, [script], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
-  // 207 pool apiNames after batch-4 and the seven shop augments and four batch-5 augments; still exactly the five defects.
-  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 207, shippedRows: 160, regeneratedRows: 165, unrestricted: 69, errors: 5, crossVersionDifferences: 8 });
+  // H11 adds two pool apiNames: unrestricted Scavenger and 2-1-banned Sponging;
+  // the five previously characterized defects are unchanged.
+  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 209, shippedRows: 161, regeneratedRows: 166, unrestricted: 70, errors: 5, crossVersionDifferences: 8 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
     ['TABLE_MISMATCH', 'TFT13_Augment_Academy', ['4-2']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Cabal', ['2-1', '4-2']],

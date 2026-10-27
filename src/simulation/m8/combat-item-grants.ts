@@ -1,3 +1,4 @@
+import { validateH11Grant } from '../augment-pool-batch5-h11-validation';
 /** G2-4b Unstable Treasure Chest executor and its restore receipt. A grant appends one record to the receiver; the item's
  * program comes from the frozen pool (combat-item-programs.ts) and joins the receiver's compiled mechanisms, so every later
  * tick, save and restore treats it exactly like an item compiled at combat start. Conventions G24-CHEST-01…04. */
@@ -25,7 +26,13 @@ const maxHpOf = (basis: NonNullable<CombatUnit['maxHpBasis']>, unit: CombatUnit)
 export function grantCombatItem(ctx: AbilityContext, chest: Source, target: S13Unit, seq: number): void {
   const word = ctx.draw(); integer(word);
   if (word > 0xffffffff) throw new RangeError('Invalid combat random word');
-  const payload = G24_CHEST_POOL[word % G24_CHEST_POOL.length], key = canonicalSource(chest);
+  grantCombatItemDefinition(ctx, chest, target, seq, G24_CHEST_POOL[word % G24_CHEST_POOL.length].definitionId);
+}
+
+/** Internal rule transaction; the caller owns item selection and eligibility. */
+export function grantCombatItemDefinition(ctx: AbilityContext, chest: Source, target: S13Unit, seq: number, definitionId: string): void {
+  const payload = G24_CHEST_PAYLOADS[definitionId], key = canonicalSource(chest);
+  if (!payload) throw new RangeError('Invalid combat item payload');
   const ordinal = ctx.units.reduce((n, u) => n + (u.combatItemGrants ?? []).filter(g => canonicalSource(g.chest) === key).length, 0);
   const grant: CombatItemGrant = { chest: { ...chest }, ordinal, definitionId: payload.definitionId, grantedAtTick: ctx.tick };
   target.combatItemGrants = [...target.combatItemGrants ?? [], grant];
@@ -86,11 +93,12 @@ function checkCombatItemGrants(units: readonly CombatUnit[], tick: number, compi
     for (const grant of grants as unknown[]) {
       if (!isRecord(grant, 'chest,definitionId,grantedAtTick,ordinal')) return fail('combat item grant shape');
       const chest = grant.chest;
-      if (!isRecord(chest, 'definitionId,effectIndex,instanceId,ownerId,parentItemInstanceId,sourceKind') || chest.sourceKind !== 'item' || chest.parentItemInstanceId !== null
+      if (!isRecord(chest, 'definitionId,effectIndex,instanceId,ownerId,parentItemInstanceId,sourceKind') || !['item', 'augment'].includes(chest.sourceKind as string) || chest.parentItemInstanceId !== null
         || typeof chest.ownerId !== 'string' || typeof chest.definitionId !== 'string' || typeof chest.instanceId !== 'string' || !isInt(chest.effectIndex)) return fail('combat item chest source');
-      if (!isInt(grant.ordinal) || !isInt(grant.grantedAtTick, 1) || (grant.grantedAtTick as number) > tick
+      if (!isInt(grant.ordinal) || !isInt(grant.grantedAtTick, chest.sourceKind === 'augment' && chest.definitionId === 'sponging' ? 0 : 1) || (grant.grantedAtTick as number) > tick
         || typeof grant.definitionId !== 'string' || !Object.hasOwn(G24_CHEST_PAYLOADS, grant.definitionId)) fail('combat item grant item/tick');
       const valid = grant as unknown as CombatItemGrant;
+      if (valid.chest.sourceKind === 'augment') { validateH11Grant(units, receiver, valid); continue; }
       const holder = units.find(u => u.id === valid.chest.ownerId);
       if (!holder || holder.alive || holder.team !== receiver.team || holder.id === receiver.id) return fail('combat item chest holder');
       const triggers: unknown = compiledEventTriggers(holder), runtimes: unknown = holder.triggerLedger?.runtimes;

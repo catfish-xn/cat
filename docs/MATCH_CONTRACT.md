@@ -1,3 +1,7 @@
+## 2026-10-27 H11 强化接入（候选）
+
+`scavenger`（黄金，2-1／3-2／4-2）和 `sponging`（棱彩，3-2／4-2）经已有 `selectChoice`／共享池choose开放；无新Match或服务器命令。两项均需 `augment-history-v1`，缺失不迁移；联机恢复仍要求独立服务器authority。精确内容摘要由本分支重算，不修改历史epoch。数值、约定、内部API及所有接线点见 [H11实现与验收](AUGMENT_BATCH5_H11.md)。
+
 ## 2026-10-27 v24 纪元身份
 
 当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。

@@ -15,6 +15,7 @@ import { CAROUSEL_RULES_BINDING } from '../src/server/room/carousel';
 import { createCarousel, advanceCarousel, pickCarouselForSeat, grantAdditionalCarouselPick, restoreCarouselSeat } from '../src/simulation/carousel';
 import { supplySeats, must } from './p7-carousel-helper';
 import { assertSharedPoolConservation } from '../src/simulation/shared-pool';
+import { firstNodeSeed } from './augment-stage-helpers';
 
 // Infrastructure fixture: real existing offers/commands, with only the history capability mocked.
 // No new augment definition/effect is installed, no production content/offer pool is changed.
@@ -23,9 +24,10 @@ vi.mock('../src/simulation/augment-history-owners', async importOriginal => {
   const actual = await importOriginal<typeof import('../src/simulation/augment-history-owners')>();
   return {...actual,augmentNeedsHistory:(id:string)=>actual.augmentNeedsHistory(id)||id==='starry-night'||fixture.allOwners};
 });
+const historySeed = firstNodeSeed('starry-night', 101);
 let acquired: MatchState, advanced: MatchState;
 beforeAll(() => {
-  const open = reachRound('2-1', false, 18), c = open.pendingChoice!;
+  const open = reachRound('2-1', false, historySeed), c = open.pendingChoice!;
   expect(c.offers).toContain('starry-night');
   acquired = accepted(selectChoice(open, c.choiceId, c.generation, 'starry-night'));
   let s = advanceAugmentPreparationTime(acquired, 2500);
@@ -35,9 +37,23 @@ beforeAll(() => {
   advanced = accepted(nextRound(s, s.round));
 });
 
-it('keeps four no-owner saves byte-identical to HEAD ee2b019c (independent baseline SHA-256)', () => {
+// New admitted content changes only content/loot identities in these pre-augment checkpoints.
+// Keep the independent baseline hashes, normalize just that known version field;
+// all remaining state/event bytes must still match, without re-recording an epoch.
+function baselineIdentity(text: string): string {
+  return canonicalContent(JSON.parse(text, (key, value) => {
+    if (key === 'replayDigest') {
+      expect(value).toBe(LOOT_REPLAY_DIGEST);
+      return 'fnv1a32-utf16:18c876b2';
+    }
+    if (key !== 'contentDigest') return value;
+    expect(value).toBe(CONTENT_DIGEST);
+    return 'fnv1a32-utf16:db662e0b';
+  }));
+}
+it('keeps four no-owner saves byte-identical to HEAD ee2b019c except the admitted content identity (independent baseline SHA-256)', () => {
   let s = createMatch(42); const hashes: string[] = [];
-  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text); hashes.push(createHash('sha256').update(text).digest('hex')); };
+  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text); hashes.push(createHash('sha256').update(baselineIdentity(text)).digest('hex')); };
   check(); const u = s.preparation.units.find(u => u.team === 'player')!;
   s = accepted(deployMatchUnit(s, u.id, {kind:'bench',slot:0})); check();
   s = resolveM5Choices(accepted(startMatchCombat(s))); check();
@@ -354,7 +370,7 @@ it('authenticates generic HP/AP growth written inside an acquisition transaction
       {unitId,healthFlat:20,healthBps:0,attackDamageBps:150,abilityPowerCenti:150}])};
   });
   try{
-    const open=reachRound('2-1',false,18),c=open.pendingChoice!;
+    const open=reachRound('2-1',false,historySeed),c=open.pendingChoice!;
     const grown=accepted(selectChoice(open,c.choiceId,c.generation,'starry-night'));
     const row=requireAugmentFacts(grown,'growth',grown.round)[0];
     expect(readAugmentGrowth(grown,row.deltas[0].unitId)).toEqual(row.deltas[0]);
@@ -371,7 +387,8 @@ it('authenticates generic HP/AP growth written inside an acquisition transaction
   }finally{hook.mockRestore();}
 });
 
-import { canonicalContent } from '../src/simulation/content';
+import { canonicalContent, CONTENT_DIGEST } from '../src/simulation/content';
+import { LOOT_REPLAY_DIGEST } from '../src/simulation/loot-freeze';
 import { stepMatch } from '../src/simulation/match';
 import { augmentDeathsFromEvents, sampleAugmentDeath } from '../src/simulation/augment-death-samples';
 import { stepCombat, type CombatUnit } from '../src/simulation/combat';
@@ -379,12 +396,12 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { battle, unit } from './combat-helpers';
 
-it('keeps a real battle ledger and terminal save byte-identical to the independent baseline',()=>{
+it('keeps a real battle ledger and terminal save byte-identical to the independent baseline except the admitted content identity',()=>{
   const started=startMatchCombat(createMatch(42));if(!started.ok)throw new Error(started.reason);let s=started.state;const events=[...started.events];
   while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
   expect(s.combat!.tick).toBe(164);expect(events).toHaveLength(113);
   expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324');
-  expect(createHash('sha256').update(serializeMatch(s)).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
+  expect(createHash('sha256').update(baselineIdentity(serializeMatch(s))).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
 });
 it('records a Forge death, a real Jayce revival and its second death with equipment at each death',()=>{
   const combatUnit=(id:string,definitionId:string,team:'player'|'enemy',col:number,row:number,patch:Partial<CombatUnit>={})=>unit(id,team,col,row,{
@@ -444,7 +461,7 @@ it('preserves slotted temporary items and unslotted chest grants independently a
 });
 
 it('records logical time before acquisition without adding bytes to an unowned save',()=>{
-  const open=reachRound('2-1',false,18),timed=advanceAugmentPreparationTime(open,10000);
+  const open=reachRound('2-1',false,historySeed),timed=advanceAugmentPreparationTime(open,10000);
   expect(serializeMatch(timed)).toBe(serializeMatch(open));
   const c=timed.pendingChoice!,picked=accepted(selectChoice(timed,c.choiceId,c.generation,'starry-night'));
   expect(requireAugmentFacts(picked,'acquire',picked.round)[0].preparationElapsedMs).toBe(10000);
@@ -484,7 +501,7 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 
 it('keeps the existing save/replay envelope versions and authenticates a carried history through BattleRecord',async()=>{
   const history=new BattleHistory('augment-history-envelope');
-  let s=recordedEmptyRoute(18,'2-1',history),c=s.pendingChoice!;
+  let s=recordedEmptyRoute(historySeed,'2-1',history),c=s.pendingChoice!;
   s=accepted(selectChoice(s,c.choiceId,c.generation,'starry-night'));
   s=accepted(recordCommand(history,s,startMatchCombat(emptyBoard(s))));s=resolveM5Choices(s);s=accepted(nextRound(s,s.round));
   const envelope:SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,

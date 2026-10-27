@@ -229,7 +229,7 @@ export function createCombatReplayRecorder(initialState: CombatState,
 export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   validateBattleEquipmentLog(input.inputLog, input.terminal.equipmentReceipts, input.terminal.tick);
   if (input.initial.equipmentReceipts || input.initial.pendingEquipment || input.terminal.pendingEquipment
-    || input.terminal.units.some(u => u.equipment) && !input.inputLog?.length) throw new RangeError('battle-input-invalid');
+    || input.terminal.units.some(u => u.equipment && !input.initial.strategy?.units.find(s => s.unitId === u.id)?.augmentEquipment) && !input.inputLog?.length) throw new RangeError('battle-input-invalid');
   const freezeReplay = createScopedContentFreezer();
   const battle = structuredClone(input);
   battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));
