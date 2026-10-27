@@ -88,3 +88,8 @@ export function tombRaiderPlan(state: MatchState): readonly { readonly choiceId:
 export function validateTombRaiderTransition(before: MatchState, after: MatchState, command: unknown, events: readonly unknown[]): void;
 
 export function madChemistExpected(star: number, abilityPower: number, attackSpeedBps: number, ticks?: number): { total: number; pulses: number[]; mana: number };
+
+export function starryChanceBps(level: number): number;
+export function starrySharedShop(state: MatchState, stock: Readonly<Record<string, number>>): {
+  rngState: number; shop: MatchState['shop']; available: Record<string, number>;
+};

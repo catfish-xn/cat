@@ -1,6 +1,7 @@
 import { atWhatCostGrant } from './augment-pool-batch5-s1b';
 import { batch5InventoryPlan } from './augment-pool-batch5-s3a';
 import { augmentLevelCap, grantMatchXp } from './augment-pool-batch5-h12-progression';
+import { validateBatch5R5ShopAcquisition } from './augment-pool-batch5-r5';
 import { getRoundSchedule, FINAL_ROUND } from './round-schedule';
 import { foldResourceProvenance } from './resource-provenance';
 import { pilferRewardPlan } from './augment-pool-batch5-s8a';
@@ -100,6 +101,7 @@ function checkPoint(p:ShopHistoryPoint,state:MatchState):void {
 /** Replays the shop subdomain. Summaries and purchase provenance are outputs, never sources of Ticket or star decisions.
  * Like the existing unsigned resource/battle logs, this proves rule consistency, not authorship of a file. */
 export function validateShopHistory(state:MatchState):void {
+ validateBatch5R5ShopAcquisition(state);
  const held=state.augments.some(a=>shopOwner(a.definitionId)),h=state.shopHistory;
  const shopPurchases=state.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&e.source.kind==='shop');
  if(!h){

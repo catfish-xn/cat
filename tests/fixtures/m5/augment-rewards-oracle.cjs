@@ -336,6 +336,13 @@ function validateRewardsCore(before,after,command,events,base){
  }
  const select=command?.type==='select'&&before.pendingChoice?.kind==='augment';
  if(select){const c=before.pendingChoice;assert.equal(before.phase,'choice');assert.equal(command.choiceId,c.choiceId);assert.equal(command.generation,c.generation);assert(c.offers.includes(command.definitionId),'acquired augment was actually offered');assert(events.some(e=>e.type==='choiceSelected'&&e.choiceId===c.choiceId&&e.definitionId===command.definitionId),'augment reward needs selection event');}
+ // B5-08/09: derive acquisition effect from the requested, actually offered card,
+ // then compare both cash and the unique schedule receipt. Never use receipt.gold as the answer.
+ if(select&&['starry-night','starry-night-plus'].includes(command.definitionId)){
+  const amount=command.definitionId==='starry-night'?6:8,c=before.pendingChoice;
+  assert.equal(after.gold,before.gold+amount,'independent Starry Night acquisition gold');
+  assert.deepEqual(after.scheduleReceipts,[...before.scheduleReceipts,{eventId:c.eventId,round:before.round,kind:'augment',itemIds:[],gold:amount,unitId:null,definitionId:command.definitionId}],'independent Starry Night acquisition receipt');
+ }
  const augments=select?[...before.augments,{choiceId:before.pendingChoice.choiceId,definitionId:command.definitionId,acquiredRound:before.round}]:before.augments;
  assert.deepEqual(after.augments,augments,'independent owned augment transition');
  h4.validateTransition(before,after,command,events,base);

@@ -1634,3 +1634,11 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 `restoreSharedOrbSnapshot(pool,input,authority?) → MatchState` 与 `restoreCarouselSeat(carousel,input,authority?) → MatchState` 保留签名。独立服务器共享池（选秀入口使用 `carousel.pool`）中的本席 B5-67 待发奖励或已结算奖励收据要求现有独立 `AugmentHistoryAuthority`；该要求不随候选档删除强化、选择记录、奖励收据或法球而消失，奖励合星、卖出、折金或放弃后仍成立。候选仍带 B5-67 强化/奖励/战斗标记时也要求认证。句柄由 `Room.augmentHistoryAuthority(seatId)` 从服务器私有席位捕获，不能从候选 JSON 自签；只要提供句柄，无论是否持有本卡或历史节，都必须认证完整席位。缺失/伪造句柄报 `Invalid augment history: missing independent server authority`，任何完整席位差异报 `Invalid augment history: server facts/state mismatch`；额外复核既有奖励计划。B5-67 无跨回合历史事实，不新增空 `augmentHistory` 节。离线战斗恢复按已认证输入完整重演并比较毒云/毒伤/回蓝/移动状态；离线入口仍拒绝多人文件。无服务器编排或接口接线变化。
 
 展示数据沿现有 `d11ChoiceDisplay(definitionId)` / `d11PrivateDisplay(state)` 提供公开的中文名称、描述和白银级别，内容取自 R4 定义；既有界面无需新增规则计算，不改表现目录。
+### B5-R5：星夜与星夜+（2026-10-27）
+
+- 内容位于 `content/augment-pool-batch5-r5.ts`，通过 `AUGMENT_SHOP` 的既有 definitions/tier/API-name 聚合注册，避免重复候选。普通版获取6金且仅2-1提供；+版获取8金且仅3-2提供；彼此互斥。阶段标签不变。
+- `starryChanceBps(state: Pick<MatchState,'augments'|'level'>): number`：返回整数基点；未持有返回0；等级1–10分别为0/0/1800/2000/2200/2500/3000/5000/8000/10000。两版及1/2费同率。
+- `starryUpgrade(state: Pick<MatchState,'augments'|'level'|'seed'|'multiplayer'>, generation: number, slot: number, definitionId: string): boolean`：对有效领域输入纯计算，不修改状态或主RNG；3费及以上返回false。调用方仍须检查是否能预留3份共享库存。既有 `shop-augments.ts` 保留兼容导出。
+- `generateSharedShop` / `rerollSharedShop` / 自然换轮沿用共享池事务：命中且至少3份库存则生成二星报价、一次预留3份，否则保留一星；刷新/淘汰退回所有未买份额，锁店自然换轮保留预留。`buySharedUnit` 支付3倍基础费用，将3份来源转为自有持有份额，不二次扣池；既有合星按一星等价份额守恒，9份可合三星。失败沿用 `stale-shop`、`insufficient-gold`、`bench-full`、`purchased-slot`、`empty-slot` 等原枚举，原state/pool引用、事件和RNG不变。
+- `validateBatch5R5ShopAcquisition(state: MatchState): void`：`shop-history.ts` 恢复入口调用；按内容核对唯一获取收据及金币、选择身份、回合，错误抛 `RangeError('Invalid Starry Night acquisition')`。其余抽取/星级/库存/购买由现有 `shop-history-v1` 重演；不新建事实格式，缺历史不推测迁移。有其它历史强化的联机档仍须使用 `Room.augmentHistoryAuthority(seatId)` 与既有恢复API。
+- 服务器调用链复用 `Room.handle` → `applySeatCommand` → 共享池领域入口，无 `src/server` 改动；规则身份纳入 `rules-manifest.ts` 的 `augmentPoolBatch5R5` 和重算digest，外层schema/save/replay/command及历史epoch不变。证据状态与明确约定见 `S13_RULES_GAP.md` 的 P-B5-08/09。
