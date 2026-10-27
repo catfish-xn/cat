@@ -270,6 +270,7 @@ function excludedByOwned(id,owned){return owned.some(a=>a.definitionId!==id&&EXC
 function traitAllowed(id,node,traits){return !['round:3-2:augment','round:4-2:augment'].includes(node)||!TEAMUP_TRAITS[id]||TEAMUP_TRAITS[id].some(t=>traits.includes(t));}
 // 14.24 stage tags (item_tags_raw {d02ae323}/{d12ae4b6}/{d22ae649} = not at 2-1/3-2/4-2, P inference), written out by id
 // Independent research stage bans; Fine Vintage and Table Scraps follow their user-decided stage overrides.
+EXCLUSIVE_GROUPS.push(...require('../../augment-pool-batch5-offer-oracle-data.cjs'));
 EXCLUSIVE_GROUPS.push(['max-cap','level-up']);
 AUGMENT_POOLS.prismatic.push('expected-unexpectedness','prismatic-pipeline');
 // User rule (2026-10-27): Loot Explosion is offered at 2-1 and 3-2 only, independently specified rather than derived from the source tags.

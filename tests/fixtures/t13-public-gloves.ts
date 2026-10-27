@@ -19,8 +19,8 @@ const accepted = (result: MatchCommandResult): MatchState => {
 };
 const cached = new Map<string, MatchState>();
 // Keep TG-only routes free of replay-history cards and unintended gifts/XP.
-// Seed 42 keeps one unequipped Watcher emblem and combat-only later choices; opening HP/armor and item births stay fixed.
-const extraItemChoices = new Set(['high-voltage','pyromaniac','thorn-plated-armor','unleash-the-beast','portable-forge','radiant-relics','blinding-speed',
+// Seed 42 keeps one unequipped Sorcerer emblem and combat-only later choices; opening HP/armor and item births stay fixed.
+const extraItemChoices = new Set(['blood-brothers','high-voltage','pyromaniac','thorn-plated-armor','unleash-the-beast','portable-forge','radiant-relics','blinding-speed',
   // v22 tiers offer team-ups (two partner units) and Investment Strategy (max-HP growth) on this route;
   // both would change the bench and the independent holder stats, so keep them out as well.
   ...TEAMUP_IDS,'investment-strategy-i','investment-strategy-ii',
@@ -28,7 +28,9 @@ const extraItemChoices = new Set(['high-voltage','pyromaniac','thorn-plated-armo
   // combat mechanics; keep the TG-only route free of them too.
   ...Object.keys(AUGMENT_BATCH3),...Object.keys(AUGMENT_BATCH3_XP),
   ...Object.keys(AUGMENT_BATCH4),...Object.keys(AUGMENT_BATCH4_B4XP),...Object.keys(AUGMENT_BATCH4_B4REROLL),
-  ...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP),...Object.keys(AUGMENT_BATCH5_G1)]);
+  ...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP),...Object.keys(AUGMENT_BATCH5_G1),
+  // v25 adds history, inventory and combat effects; keep this TG-only route isolated.
+  ...["a-golden-find","academic-research","aerial-warfare","all-that-shimmers","all-that-shimmers-plus","anger-issues","another-anomaly","artifactory","at-what-cost","beggars-can-be-choosers","cloning-facility","component-buffet","contested","cooking-pot","dhampyr","diversified-portfolio","diversified-portfolio-plus","expected-unexpectedness","fine-vintage","forbidden-magic","forward-thinking","ghost-of-friends-past","glorious-evolution","good-for-something","greater-moonlight","hall-of-mirrors","hard-commit","head-start","im-the-carry-now","loot-explosion","lucky-gloves","lucky-gloves-plus","lunch-money","mad-chemist","max-cap","mirrored-monetization","moonlight","natural-selection","no-scout-no-pivot","pandoras-bench","pandoras-items","pandoras-items-ii","pandoras-items-iii","pilfer","power-up","prismatic-pipeline","quality-over-quantity","rebel-resurgence","recombobulator","replication","reroll-transfer","roll-the-dice","salvage-bin","salvage-bin-plus","scavenger","scoreboard-scrapper","shop-glitch","snipers-nest","sponging","survivor","table-scraps","tiniest-titan","tiniest-titan-plus","titanic-titan","tomb-raider-1","tomb-raider-2","trait-tracker","two-much-value","void-swarm","voidcaller","young-and-wild-and-free"]]);
 /** T13's five supply choices remain guaranteed. Concede with an empty board to
  * obtain two gloves at 2-4/3-4 without depending on random PvE content. The level-9
  * control fights the opening to retain enough HP for 4-2. All battles, income,
@@ -46,19 +48,21 @@ export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
       const choice = state.pendingChoice!;
       if (choice.kind === 'anomaly') throw Error('TG fixture must finish before the anomaly');
       if (seed === 42 && state.roundDefinitionId === '2-1' && choice.generation === 0) {
-        if (!choice.offers.includes('watcher-crest')) throw Error('TG seed42 must offer Watcher Crest');
+        if (!choice.offers.includes('sorcerer-crest')) throw Error('TG seed42 must offer Sorcerer Crest');
         // Preserve the emblem while advancing the choice stream to a later
         // combat-only card. All resource births still use public commands.
-        state = accepted(rerollAugment(state, choice.choiceId, choice.generation, 0));
+        state = accepted(rerollAugment(state, choice.choiceId, choice.generation, 1));
         continue;
       }
       const id = choice.kind === 'component' ? 'gloves'
-        : (seed===42?['watcher-crest','dominator-crest','manaflow-i','manaflow-ii','glass-cannon-ii','clockwork-accelerator','inspiring-epitaph','mentorship-ii','backup','trade-sector','superstars-ii','raining-gold','raining-gold-plus','heroic-grab-bag','team-building','rolling-for-days-i',
+        : (seed===42?['sorcerer-crest','watcher-crest','dominator-crest','manaflow-i','manaflow-ii','glass-cannon-ii','clockwork-accelerator','inspiring-epitaph','mentorship-ii','backup','trade-sector','superstars-ii','raining-gold','raining-gold-plus','heroic-grab-bag','team-building','rolling-for-days-i',
           // Later choices may change attack speed/damage (as Clockwork did),
           // while preserving the independent opening HP/armor and item births.
           ...(state.roundDefinitionId==='2-1'?[]:['pumping-up-i','pumping-up-ii','pumping-up-iii','bronze-for-life-i','bronze-for-life-ii','lone-hero','blistering-strikes','piercing-lotus-i']),...(state.roundDefinitionId==='4-2'?['noble-sacrifice']:[])]:['manaflow-i', 'pumping-up-i', 'backup', 'bulky-buddies-i', 'prismatic-ticket']).find(id => choice.offers.includes(id))
           ?? (seed===42?undefined:choice.offers.find(id => !(id in S13_P2_SOURCE) && !extraItemChoices.has(id)))
-          ?? (seed===42?undefined:choice.offers.find(id => !(id in P2_ITEM_GRANTS) && !extraItemChoices.has(id)));
+          ?? (seed===42?undefined:choice.offers.find(id => !(id in P2_ITEM_GRANTS) && !extraItemChoices.has(id)))
+          // If all free rerolls are exhausted, allow an inventory grant or combat-only augment.
+          ?? (seed===42||choice.rerolledSlots?.some(used=>!used)?undefined:['guardbreaker-spirit','not-today','crown-guarded','high-voltage','dhampyr'].find(id=>choice.offers.includes(id)));
       if (!id && !choice.rerolledSlots?.some(used=>!used)) throw Error(`No inert TG augment at ${state.roundDefinitionId}, seed ${seed}: ${choice.offers.join(',')}`);
       if (!id) { state = accepted(rerollAugment(state, choice.choiceId, choice.generation,
         choice.rerolledSlots?.findIndex(used => !used))); continue; }

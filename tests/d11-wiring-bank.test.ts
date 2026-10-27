@@ -4,8 +4,7 @@ import { snapshotForBattle } from '../src/simulation/two-sided-snapshot';
 import { compileBattle, startTwoSidedBattle, proposeSettlement } from '../src/simulation/two-sided-battle';
 import { toCombatReplay, startCombatReplay } from '../src/simulation/combat-replay-view';
 import legacyIdentity from './v24-online-rules-content-baseline.json';
-// Active v25 identity; preserve the recorded v24 epoch unchanged.
-const currentIdentity={contentDigest:'fnv1a32-utf16:5c13176a'};
+import currentIdentity from './v25-online-rules-content-baseline.json';
 
 function input(){
   const base=reachRound('2-1'),units=[{id:'unit-1',definitionId:'lux',team:'player' as const,starLevel:3 as const,location:{kind:'board' as const,cell:{col:0,row:4}}}];

@@ -72,11 +72,11 @@ B5-42／43／44 已开放；函数签名、失败原因和全部接线见 [H7 �
 
 审查修复：Match 在发奖前记录与终局 tick 相等的完整 `deaths` 边界；空阵容 tick 0 的 `deaths:[]` 同样必须显式保存，不能把缺行当作零死亡。已有边界和死亡 eventSeq 不重复记录。`restoreSharedOrbSnapshot(pool,input,authority?)` 依据可信 pool 的 pending／rewards 内初始赠礼命名空间判断相关历史认证要求：候选删除拥有者、历史或赠礼收据，仍须独立服务器 authority；缺失抛 `Invalid augment history: missing independent server authority`，状态不符抛 `server facts/state mismatch`。初始 gift 的 source 或 `receiptId` 命名空间命中 `augment-pool-batch1` 时，始终运行拥有者／来源／礼物计划校验，孤儿或伪装来源抛 `Invalid augment batch1 gift authority`。恢复保持只读，不补发资源。回归与通用 Oracle 覆盖见 [G7 审查修复报告](V25_G7_REVIEW_FIXES.md)。
 
-## 2026-10-27 v24 纪元身份
+## 2026-10-27 v24 纪元身份（历史记录）
 
-当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。
+当时 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。
 
-## 2026-10-25 v23 当前合同索引（基线 2b434e28 → 0797f3fe）（历史记录；身份以 v24 节为准）
+## 2026-10-25 v23 当前合同索引（基线 2b434e28 → 0797f3fe）（历史记录；当前身份以 v25 节为准）
 
 本节描述 `codex/v23-contract` 的实际行为，优先于下文保留的 v17–v22“当前／候选／待录制”身份说明；历史章节与既有接口结构保留。文档口径见 [P-CONTRACT-V23](S13_RULES_GAP.md#p-contract-v23p2026-10-25契约覆盖关系)。本次仅更新合同，不修改玩法、保存格式或录制。当时规则／内容身份为 `s13-g2-3-v23-online-rules` / `s13-14.24b-g2-3-v23-online-rules`，schema/save/replay/command＝**12/8/8/7**，NET＝**5**，`lcg32-v1`、50 ms/tick；精确内容摘要仍须与本分支生成常量相等，不能凭相同版本名接纳旧摘要。v23 epoch fixtures 正由独立任务重录，本节不宣布录制已验收。[src/simulation/m8/version.ts:3](../src/simulation/m8/version.ts#L3)、[src/simulation/content/identity-constants.ts:3](../src/simulation/content/identity-constants.ts#L3)。战斗事实、控制、位移、召唤及恢复细节见 [COMBAT_CONTRACT 的 v23 节](COMBAT_CONTRACT.md#2026-10-25-v23-当前战斗与恢复合同)。
 

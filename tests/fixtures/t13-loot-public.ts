@@ -73,11 +73,11 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
   if(!prefix)throw Error(`Missing configured prefix ${roundId}`);return prefix;
 }
 export async function transferPreparation({equipGloves=true}={}) {
-  // Keep seed 4 and two paid copies. Its independent v17 box oracle yields
+  // Seed 4 rerolls for a non-unit-gifting first augment, preserving two paid copies. Its independent v17 box oracle yields
   // Tristana at 4-7 (no Ezreal/remover), so target that real reward for transfer.
   // Equip the original glove recipe here; the offline variant freezes a vest
   // on the donor and equips the gloves during combat without inventing a remover.
-  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',equipItems:false,goldReserves:{'4-5':40},copyLimits:{tristana:2,corki:1},fieldCopies:['tristana'],
+  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',augmentRerollPriorities:{'2-1':['pumping-up-i','manaflow-i','backup','bronze-for-life-i','bulky-buddies-i','placebo','lineup','little-buddies','bulky-buddies-ii','blistering-strikes']},equipItems:false,goldReserves:{'4-5':40},copyLimits:{tristana:2,corki:1},fieldCopies:['tristana'],
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'tristana',copy:0}},
     reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'tristana',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
     goldReserveByRound:{'4-5':19,'4-7':0}});

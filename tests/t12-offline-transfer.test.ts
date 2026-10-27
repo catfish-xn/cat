@@ -1,7 +1,8 @@
 import {expect,it} from 'vitest';
 import {equipItem,startMatchCombat,stepMatch,serializeMatch,restoreMatch} from '../src/server-entry';
-import anchor from './fixtures/v24-online-rules-transfer-route.json';
+import anchor from './fixtures/v25-online-rules-transfer-route.json';
 import {accepted,transferPreparation} from './fixtures/t13-loot-public';
+import {validateB8Resources} from '../src/simulation/b8-restore';
 it('T12 offline loot upgrade migrates latest equipment and restores overflow of a frozen donor item',async()=>{
   let state=await transferPreparation({equipGloves:false});
   // Same authenticated v20 seed-4 route pinned by m8-b8-live-transfer.
@@ -19,7 +20,10 @@ it('T12 offline loot upgrade migrates latest equipment and restores overflow of 
   const forged=structuredClone(state);
   Object.assign(forged.items.find(i=>i.definitionId==='thiefs-gloves')!,{location:{kind:'inventory'}});
   Object.assign(forged,{temporaryEquipment:[]});
-  expect(()=>restoreMatch(forged)).toThrow(/finished resource projection/);
+  // The v25 augment-history gate rejects this first; independently retain the
+  // original finished-projection assertion on the same forged state.
+  expect(()=>validateB8Resources(forged)).toThrow(/finished resource projection/);
+  expect(()=>restoreMatch(forged)).toThrow(/Invalid augment history: replayed facts\/state mismatch/);
 // Random-opening public acquisition + every-tick resumption takes about 9s alone;
 // allow the same four-worker contention budget as other full public routes.
 }, 60000);

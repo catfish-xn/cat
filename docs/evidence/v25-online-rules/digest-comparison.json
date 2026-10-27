@@ -1,0 +1,12 @@
+{
+  "before": {
+    "contentDigest": "fnv1a32-utf16:1b86447c",
+    "lootReplayDigest": "fnv1a32-utf16:18c876b2",
+    "rulesManifestDigest": "fnv1a32-utf16:9655d783"
+  },
+  "after": {
+    "contentDigest": "fnv1a32-utf16:229d9f7e",
+    "lootReplayDigest": "fnv1a32-utf16:55f72339",
+    "rulesManifestDigest": "fnv1a32-utf16:6afe04cd"
+  }
+}

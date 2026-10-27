@@ -36,7 +36,7 @@ function mechanismInventory(level: number): MatchState {
 }
 const pair = (state: MatchState) => state.temporaryEquipment.map(i => i.definitionId);
 const otherRng = (state: MatchState) => [state.rngState, state.choiceRngState, state.rewardRngState, state.battleSeedRngState];
-// Seed 42 keeps Watcher Crest (one unequipped emblem), then Piercing Lotus I; neither changes opening HP/armor.
+// Seed 42 keeps Sorcerer Crest (one unequipped emblem); its exact public choices are checked by the fixture.
 // The two scheduled gloves are item-2/item-3, so their parent is item-4; HP/armor and roll vectors are unchanged.
 const TG = 'item-4';
 
@@ -263,7 +263,10 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
   it.each(Array.from({ length: TG_ROUND_GROUPS }, (_, group) => group))(
     'TG route group %i binds its eligible children through real Match snapshots and restore', group => {
       const routes = plannedTemporaryRoutes()[group];
-      const actual = routes.map(route => bindRealRoute(route.matchSeed, route.children));
+      const actual = routes.map(route => {
+        try { return bindRealRoute(route.matchSeed, route.children); }
+        catch (error) { throw new Error(`TG public route seed ${route.matchSeed}`, { cause: error }); }
+      });
       // Coverage is what the public routes actually bound, not the plan.
       expect(actual.map(result => result.bound)).toEqual(routes.map(route => route.children));
       // Keep the corruption branch non-vacuous: the one crownguard route really grants a temporary shield.

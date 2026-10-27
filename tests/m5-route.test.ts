@@ -8,6 +8,7 @@ import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import assertGolden from './fixtures/m5/assert-golden.cjs';
 import { run } from '../scripts/generate-m5-route.cjs';
+import { routeOptions } from '../scripts/v25-online-rules-route.cjs';
 import { roundRouteCache } from './fixtures/round-route-cache';
 
 // Every consuming describe owns its setup. Hooks run even with -t and are not
@@ -17,7 +18,7 @@ function routeFixture(build:string,seed=42){
  let result:Awaited<ReturnType<typeof run>>|undefined;
  const progress=roundRouteCache(async onRound=>{
   // The existing driver implements these callbacks; its older declaration only lists onStep.
-  const options={build,seed,onRound,onBattleProgress:onRound};
+  const options={build,seed,...routeOptions(build,seed),onRound,onBattleProgress:onRound};
   result=await run(api,options);return result.final;
  });
  for(let round=1;round<=FINAL_ROUND;round++)for(const tick of [300,600,900,1200,1201])beforeAll(async()=>{

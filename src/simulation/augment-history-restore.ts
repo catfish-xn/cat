@@ -18,7 +18,18 @@ export function preflightAugmentHistory(s: MatchState): void {
   historyCheck(h && typeof h === 'object' && !Array.isArray(h), 'section shape');
   historyCheck(needsAugmentHistory(s), 'history without owner');
   historyCheck(same(Object.keys(h).sort(), ['facts','proof','seatId','version']) && h.version === AUGMENT_HISTORY_VERSION && h.seatId === historySeatId(s), 'version/seat/fields');
+  if (typeof s.round === 'number' && !Number.isFinite(s.round)) throw new TypeError('Content must be finite plain JSON data');
   historyCheck(Array.isArray(h.facts) && h.facts.length <= LIMIT.facts && s.round <= LIMIT.rounds, 'fact bounds');
+  // Bound arbitrary nested payloads before canonicalization/replay, including an adversarial object entry.
+  let bytes = 0, nodes = 0; const stack: [unknown,number][] = [[h,0]];
+  while (stack.length) {
+    const [v,d] = stack.pop()!;
+    historyCheck(++nodes <= 1000000 && d < 64, 'payload bounds');
+    if (typeof v === 'number' && !Number.isFinite(v)) throw new TypeError('Content must be finite plain JSON data');
+    if (typeof v === 'string') bytes += v.length * 2;
+    else if (v && typeof v === 'object') for (const [k,x] of Object.entries(v)) { bytes += k.length * 2 + 8; stack.push([x,d+1]); }
+    historyCheck(bytes <= LIMIT.bytes, 'payload bytes');
+  }
   let round = 0, prefix = 0;
   const attributedBattles = new Set<string>();
   for (const [i,f] of h.facts.entries()) {
@@ -60,15 +71,6 @@ export function preflightAugmentHistory(s: MatchState): void {
   }
   historyCheck(h.facts[0]?.kind === 'acquire' || h.facts[0]?.kind === 'offer-level', 'acquisition boundary');
   historyCheck(h.proof && (h.proof.kind === 'solo' || h.proof.kind === 'server'), 'proof kind');
-  // Bound arbitrary nested payloads before canonicalization/replay, including an adversarial object entry.
-  let bytes = 0, nodes = 0; const stack: [unknown,number][] = [[h,0]];
-  while (stack.length) {
-    const [v,d] = stack.pop()!;
-    historyCheck(++nodes <= 1000000 && d < 64, 'payload bounds');
-    if (typeof v === 'string') bytes += v.length * 2;
-    else if (v && typeof v === 'object') for (const [k,x] of Object.entries(v)) { bytes += k.length * 2 + 8; stack.push([x,d+1]); }
-    historyCheck(bytes <= LIMIT.bytes, 'payload bytes');
-  }
 }
 export function validateAugmentHistory(s: MatchState, authority?: AugmentHistoryAuthority): void {
   preflightAugmentHistory(s); const h = s.augmentHistory;
