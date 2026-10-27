@@ -10,6 +10,21 @@ import { assertSharedPoolConservation, restoreSharedOrbSnapshot } from '../../sr
 import { canonicalContent } from '../../src/simulation/content';
 import { proposeSettlement } from '../../src/simulation/two-sided-battle';
 import { rewardPlan, aerialWarfareExpected } from '../fixtures/m5/augment-rewards-oracle.cjs';
+import { drainBatch1Gifts } from '../../src/simulation/augment-pool-grants';
+import { validateMultiplayerOrbLedger } from '../../src/simulation/orb-restore';
+import { lootEntryId, lootOrbId, lootReceiptId } from '../../src/simulation/loot-identity';
+import type { MatchState } from '../../src/simulation/match-types';
+import type { SharedPoolState } from '../../src/simulation/shared-pool-types';
+
+/** Rewrite the whole linked identity, including claimed loot/provenance, so the orb ledger stays consistent. */
+function renameGift(state: MatchState, receiptId: string, nextReceiptId: string): MatchState {
+  const receipt = state.seatMechanics!.receipts.find(r => r.receiptId === receiptId)!;
+  if (receipt.kind !== 'unit' || receipt.resolution !== 'orb') throw new Error('missing G3 orb receipt');
+  const orbId = receipt.orbId!, nextOrbId = lootOrbId(receipt.roundId, 'mechanic', nextReceiptId, 0);
+  const dropId = lootEntryId(orbId, 0), nextDropId = lootEntryId(nextOrbId, 0);
+  const replacements = new Map([[receiptId, nextReceiptId], [orbId, nextOrbId], [dropId, nextDropId], [lootReceiptId(dropId), lootReceiptId(nextDropId)]]);
+  return JSON.parse(JSON.stringify(state), (_key, value: unknown) => typeof value === 'string' ? replacements.get(value) ?? value : value) as MatchState;
+}
 
 let found: { seed: number; seatId: string } | undefined;
 for (let seed = 0; seed <= 100 && !found; seed++) {
@@ -25,6 +40,8 @@ for (let seed = 0; seed <= 100 && !found; seed++) {
 if (!found) throw new Error('no aerial room seed in 0..100');
 const { seed, seatId } = found, { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed });
 const own = () => room.state.seats.find(s => s.seatId === seatId)!.match;
+let beforeSelection: MatchState, afterSelection: MatchState;
+let selectionPool: SharedPoolState;
 afterAll(() => room.dispose());
 it('starts a real online room', () => { room.start(); });
 for (const round of ['1-3', '1-4', '2-1']) it(`reaches ${round} through room commands`, () => {
@@ -34,6 +51,9 @@ it('selects the offered card, claims Scar/Zeri once from shared-pool orbs, deplo
   const before = own(), choice = before.pendingChoice!;
   expect(choice.offers).toContain('aerial-warfare');
   expect(room.handle(seatId, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: 'aerial-warfare' })).toMatchObject({ ok: true });
+  afterSelection = own();
+  selectionPool = room.state.pool;
+  beforeSelection = { ...before, sharedPool: afterSelection.sharedPool };
   const expected = rewardPlan(own(), {}).gifts.filter(g => g.definitionId === 'scar' || g.definitionId === 'zeri');
   expect(expected.map(g => g.definitionId)).toEqual(['scar', 'zeri']);
   const receipts = own().seatMechanics!.receipts.filter(r => r.source === 'augment-pool-batch1');
@@ -51,6 +71,40 @@ it('selects the offered card, claims Scar/Zeri once from shared-pool orbs, deplo
     expect(restoreSharedOrbSnapshot(room.state.pool, encode(own()))).toEqual(own());
     const bad: any = structuredClone(own()); bad.seatMechanics.receipts.find((r: any) => r.receiptId === expected[0].receiptId).definitionId = 'warwick';
     expect(() => restoreSharedOrbSnapshot(room.state.pool, encode(bad))).toThrow();
+  }
+});
+it('rejects a jointly renamed G3 gift/orb/claim identity for an aerial-only holder and cannot reissue the gift after restore', () => {
+  expect(own().augments.map(a => a.definitionId)).toEqual(['aerial-warfare']);
+  const receipts = own().seatMechanics!.receipts.filter(r => r.source === 'augment-pool-batch1');
+  expect(receipts).toHaveLength(2);
+  const receiptId = receipts[0].receiptId, tuple = JSON.parse(receiptId); tuple[3] = 99;
+  const bad = renameGift(own(), receiptId, JSON.stringify(tuple));
+  expect(bad.seatMechanics!.receipts.some(r => r.receiptId === receiptId)).toBe(false);
+  // The regression must reach gift authentication, rather than fail on a broken cross-reference.
+  expect(() => validateMultiplayerOrbLedger(bad)).not.toThrow();
+  expect(() => assertSharedPoolConservation(room.state.pool, [bad])).not.toThrow();
+  for (const encode of [(s: unknown) => s, (s: unknown) => JSON.stringify(s), (s: unknown) => canonicalContent(s)]) {
+    const restored = restoreSharedOrbSnapshot(room.state.pool, encode(own()));
+    expect(drainBatch1Gifts(restored)).toBe(restored);
+    expect(restored.seatMechanics!.receipts.filter(r => r.source === 'augment-pool-batch1')).toHaveLength(2);
+    expect(() => restoreSharedOrbSnapshot(room.state.pool, encode(bad))).toThrow('Invalid augment batch1 gift authority');
+  }
+});
+it('authenticates orphan G3 gift receipts by either source or namespace even with no owning augment', () => {
+  const orphan: MatchState = { ...beforeSelection,
+    seatMechanics: { ...beforeSelection.seatMechanics!, receipts: afterSelection.seatMechanics!.receipts },
+    m8: { ...beforeSelection.m8, loot: { ...beforeSelection.m8.loot, rewardOrbs: afterSelection.m8.loot.rewardOrbs, direct: afterSelection.m8.loot.direct } } };
+  expect(orphan.augments).toEqual([]);
+  const gift = orphan.seatMechanics!.receipts.find(r => r.source === 'augment-pool-batch1')!;
+  const namespaceOnly: MatchState = { ...orphan, seatMechanics: { ...orphan.seatMechanics!, receipts: orphan.seatMechanics!.receipts.map(r => r.source === 'augment-pool-batch1' ? { ...r, source: 'test' } : r) } };
+  const sourceOnly = renameGift(orphan, gift.receiptId, 'orphan-g3-gift');
+  for (const state of [orphan, namespaceOnly, sourceOnly]) {
+    expect(() => validateMultiplayerOrbLedger(state)).not.toThrow();
+    expect(() => assertSharedPoolConservation(selectionPool, [state])).not.toThrow();
+    for (const encode of [(s: unknown) => s, (s: unknown) => JSON.stringify(s), (s: unknown) => canonicalContent(s)]) {
+      expect(restoreSharedOrbSnapshot(selectionPool, encode(beforeSelection))).toEqual(beforeSelection);
+      expect(() => restoreSharedOrbSnapshot(selectionPool, encode(state))).toThrow('Invalid augment batch1 gift authority');
+    }
   }
 });
 it('real online battle counts actual movement and scheduled dashes, authenticates the round trip and rejects forged stacks', () => {

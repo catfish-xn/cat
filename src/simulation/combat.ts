@@ -47,9 +47,12 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
 }
 function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): Generator<void, CombatStep, void> {
   const forgeCells=strategy?.units.some(u=>u.summonCell)?Object.fromEntries(strategy.units.flatMap(u=>u.summonCell?[[u.unitId.slice(0,-':g23-forge'.length),u.summonCell]]:[])):undefined;
+  // Freeze summon identities/placement from the same formal army as the strategy compiler.
+  // A sacrificed Black Rose may still name Sion; excluding it first would request a second, uncompiled Sion.
+  preparationState=projectG23Summons(preparationState,strategy?.traits,forgeCells);
   const participants = excludeMutationSacrifice(preparationState.units, strategy);
   if (participants !== preparationState.units) preparationState = { ...preparationState, units: participants };
-  preparationState=projectItemSummons(projectG23Summons(preparationState,strategy?.traits,forgeCells),strategy);
+  preparationState=projectItemSummons(preparationState,strategy);
   const createUnit = (unit: GameState['units'][number]): CombatUnit[] => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);

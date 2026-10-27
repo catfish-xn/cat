@@ -26,6 +26,7 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Call to Chaos was re-searched after batch 4 level rewards expanded the pool to 213 (seed 74, same fielded route).
  * Re-searched after the v24 shop / batch-5 merge (235 cards, P 2026-10-27), retaining the same routes and first-seed rule.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
+ * G3 pool expansion: betrayal was re-searched through public fielded routes in 0..100; first offer is seed 34.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
   "diversified-portfolio-plus":{node:'3-2',seed:17},
@@ -33,7 +34,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
-  "betrayal":{node:'3-2',seed:27,fielded:true},
+  "betrayal":{node:'3-2',seed:34,fielded:true},
   "big-grab-bag":{node:'3-2',seed:26},
   "black-rose-crest":{node:'3-2',seed:74,fielded:true},
   "black-rose-crown":{node:'3-2',seed:106,fielded:true},
