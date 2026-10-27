@@ -1500,3 +1500,14 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
 - `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
 - 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。
+
+
+## B5-67 炼金术士（v25，2026-10-27）
+
+`mad-chemist` / `TFT13_Augment_SingedCarry` 为 2-1 白银强化；3-2/4-2 禁止，沿用 AssociatedTraits 与互斥表。`selectChoice`、联机 `runSharedMatchCommand(...,{type:'choose',...})` 共用既有 `batch1GiftPlan → drainBatch1Gifts`，选择事务只授予一次一星辛吉德；在线使用共享卡池奖励法球，`claimOrb` 领取后可正常部署、合星。失败、重试和重复旧 choice 不发第二份奖励，不新增公共命令或 wire reason。
+
+开战编译只给本方最强的一个棋盘辛吉德附加 `madChemist`（星级降序、正式装备数降序、实例 ID 升序），不从当前余额推测历史。其运行状态仅在 `CombatUnit.madChemist?: MadChemistRuntime`：整数回蓝余数、技能到期 tick、唯一格毒云和同源目标毒伤。完整结构见 `augment-pool-batch5-r4.ts`；数值和离散语义见 COMBAT_CONTRACT 与 S13_RULES_GAP P-B5-67。
+
+`restoreSharedOrbSnapshot(pool,input,authority?) → MatchState` 与 `restoreCarouselSeat(carousel,input,authority?) → MatchState` 保留签名。B5-67 持有者及带其奖励/战斗标记的在线文件要求现有独立 `AugmentHistoryAuthority`：由 `Room.augmentHistoryAuthority(seatId)` 从服务器私有席位捕获，不能从候选 JSON 自签。缺失/伪造句柄报 `Invalid augment history: missing independent server authority`，任何完整席位差异报 `Invalid augment history: server facts/state mismatch`；额外复核既有奖励计划。B5-67 无跨回合历史事实，不新增空 `augmentHistory` 节。离线战斗恢复按已认证输入完整重演并比较毒云/毒伤/回蓝/移动状态；离线入口仍拒绝多人文件。无服务器编排或接口接线变化。
+
+展示数据沿现有 `d11ChoiceDisplay(definitionId)` / `d11PrivateDisplay(state)` 提供公开的中文名称、描述和白银级别，内容取自 R4 定义；既有界面无需新增规则计算，不改表现目录。

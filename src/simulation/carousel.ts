@@ -1,3 +1,4 @@
+import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
@@ -521,6 +522,7 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     }
     for (const fact of match.resourceProvenance.entries) if ((fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'carousel' && !ids.has(fact.source.receiptId)) throw Error('receipt-mismatch');
     validateAugmentHistory(match, authority);
+  validateMadChemistOnlineSave(match, authority);
     return match;
 }
 

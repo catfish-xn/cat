@@ -1,3 +1,4 @@
+import { advanceMadChemist, isMadChemist, leaveMadChemistCloud, madChemistMoveInterval, moveMadChemist } from './augment-pool-batch5-r4';
 import { sampleAugmentDeath } from './augment-death-samples';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -306,8 +307,15 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const occupied = new Set(units.filter(u => occupiesCell(u, tick)).map(u => key(u.cell))), reserved = new Set<string>();
   ctx.movementReservations = reserved;
+  const chemistPaths = new Map<string, readonly HexCell[]>();
   const intents = units.map(unit => {
+    if (isMadChemist(unit) && unit.alive && unit.hp > 0) leaveMadChemistCloud(unit, [unit.cell], tick);
     if (!canMove(unit, tick)) return undefined;
+    if (isMadChemist(unit)) {
+      const path = moveMadChemist(ctx, unit, occupied);
+      if (path) chemistPaths.set(unit.id, path);
+      return path?.at(-1);
+    }
     if(isOpeningCrab(unit))return crabMove(ctx,unit,occupied);
     if (unit.mechanics?.some(m=>m.mechanic==='quickstriker')?unit.moveCooldownTicks>5||(unit.v20Traits?.moveTenths??0)<10:unit.moveCooldownTicks>0) return undefined;
     const target = p2Target(unit,units,tick);
@@ -318,7 +326,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const destination = intents[n]; if (!destination || reserved.has(key(destination))) return;
     reserved.add(key(destination)); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination });
     if(unit.mechanics?.some(m=>m.mechanic==='quickstriker'))unit.v20Traits={...unit.v20Traits,moveTenths:unit.v20Traits!.moveTenths!-10};
-    unit.cell = destination; unit.moveCooldownTicks = movementIntervalTicks(unit.definitionId==='warwick'&&Boolean(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>=tick), tick);
+    if (isMadChemist(unit)) leaveMadChemistCloud(unit, chemistPaths.get(unit.id)!, tick);
+    unit.cell = destination; unit.moveCooldownTicks = isMadChemist(unit) ? madChemistMoveInterval(unit, tick) : movementIntervalTicks(unit.definitionId==='warwick'&&Boolean(unit.sixCost?.permanentFrenzy||(unit.sixCost?.frenzyUntil??0)>=tick), tick);
   });
   refreshMechanismAuras(ctx);
   if (openingState) {
@@ -342,7 +351,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const firstPacket = ctx.packets.length;
       if(isAttackProxy(unit))continue;
       let guaranteedAttackSeq: number | undefined;
-      const target = unit.hp>0?p2Target(unit,units,tick):undefined;
+      const target = unit.hp>0?(isMadChemist(unit)?byDistance(unit,enemies(unit,units))[0]:p2Target(unit,units,tick)):undefined;
       if (unit.alive && unit.targetId !== (target?.id ?? null)) events.push({ type: 'targetChanged', tick, unitId: unit.id, before: unit.targetId, after: target?.id ?? null });
       const previousTarget = unit.targetId;
       unit.targetId = unit.alive ? target?.id ?? null : null;
@@ -350,10 +359,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const due = unit.tasks.filter(t => t.executeAtTick <= tick || (t.shieldEndKey !== undefined && unit.shieldLayers.find(s => s.key === t.shieldEndKey)?.remaining === 0));
       unit.tasks = unit.tasks.filter(t => !due.includes(t));
       for (const task of due) if ((!task.cancellable || (unit.alive && unit.hp>0 && !blocked.has(unit.id))) && (unit.alive&&unit.hp>0 || task.attachedDot || task.kind === 'tristanaBounce')) executeTask(ctx, unit, task);
+      advanceMadChemist(ctx, unit, () => actionSeq++);
       if(isOpeningCrab(unit)){if(unit.alive&&!blocked.has(unit.id))crabJump(ctx,unit,()=>actionSeq++);rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq);continue;}
       if (unit.definitionId==='g23-forge'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.anomalySummon?.kind==='crab'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq); continue; }
       const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
-      const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie','warwick','viktor','mel'].includes(champion(unit));
+      const selfCast = isMadChemist(unit) || ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie','warwick','viktor','mel'].includes(champion(unit));
       const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
       if ((unit.g23?.ascension?.untilTick??0)<tick && !['neutral', 'amumu', 'zeri'].includes(champion(unit)) && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (hexDistance(unit.cell,target.cell)<=range(unit,false) || selfCast)) {
         const seq = actionSeq++, beforeCount = events.length;
@@ -379,7 +389,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         hooks(unit, 'onCast', seq);
         p3Cast(ctx, unit, target, seq, cost.actualManaSpent);
         emitMechanismSignal(ctx, { event: 'cast-completed', tick, actionSeq: seq, actorId: unit.id, targetId: target.id, cast: receipt });
-      } else if (inRange && unit.cooldownTicks === 0) {
+      } else if (!isMadChemist(unit) && inRange && unit.cooldownTicks === 0) {
         const seq = actionSeq++, neutral = champion(unit) === 'neutral';
         let attackTarget = target;
         if (unit.mechanics?.some(m=>m.mechanic==='g24Fishbones')) {

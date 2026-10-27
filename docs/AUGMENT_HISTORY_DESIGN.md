@@ -142,3 +142,8 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 ## Batch 5 H3 接入（2026-10-27）
 
 新增只读 `readAugmentFacts(state, kind)`：返回该类型全部事实的独立副本，缺少历史节仍报错；指定轮仍使用 `requireAugmentFacts`。B5-31 从 PvP 阵容读取本人出战英雄，结算调用 `recordAugmentGrowth` 并沿资源合星血缘继承锁和成长。B5-57 从入轮快照读取棋盘英雄和原始锅铲，使用 `recordAugmentGrowth` 按携带者产生生命成长。战斗输入和双边冻结快照携带已认证历史的累计成长，离线战斗恢复对照历史开战前缀；联机席位保存仍由独立服务器 authority 认证。未向网络开放记录事实的命令。
+
+
+## B5-67 在线恢复接入（2026-10-27）
+
+炼金术士不读取跨回合事实，不登记为 history owner，不生成空历史节。其单席在线保存仍不能独立证明敌方阵容与毒伤轨迹，故 `augment-pool-batch5-r4-restore.ts / validateMadChemistOnlineSave(state,authority?)` 在现有共享池/选秀恢复入口复用 `validateAugmentAuthority(state,authority,true)`，强制独立服务器完整检查点，并校验既有奖励计划。调用者继续使用 `Room.augmentHistoryAuthority(seatId)`；无 `src/server` 改动、无候选自签、无新持久格式。离线战斗的可选 `CombatUnit.madChemist` 则使用现有可信输入全量重演。新增测试覆盖真实八席选取/领取/部署/PvP、真实选秀恢复、对象和JSON往返、恢复后命令一致，以及句柄、奖励、阵容、毒伤与回蓝篡改拒绝。

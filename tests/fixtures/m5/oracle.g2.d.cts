@@ -11,7 +11,7 @@ export type OracleAugmentTier = 'silver' | 'gold' | 'prismatic';
 export function openingEncounter(seed: number): string;
 export function augmentTier(seed: number, node: string): OracleAugmentTier;
 export function augmentPool(tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[], sharedCarousel?: boolean): string[];
-export function augmentDraw(rng: number, tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[]): { offers: string[]; rng: number };
+export function augmentDraw(rng: number, tier: OracleAugmentTier, owned: readonly { readonly definitionId: string }[], excluded?: readonly string[], node?: string | null, traits?: readonly string[], sharedCarousel?: boolean): { offers: string[]; rng: number };
 export function validateAugmentReroll(before: MatchState, result: unknown, command: OracleCommand): void;
 export type EconomyInput = Pick<MatchState, 'round' | 'gold' | 'level' | 'xp' | 'playerHp' | 'streak'> & Partial<Pick<MatchState, 'seed' | 'm8'>>;
 export type EconomyCombat = Pick<CombatState, 'result' | 'tick' | 'nextEventSeq'> & {
@@ -70,3 +70,5 @@ export function benchXp(state: unknown): number;
 export function shopWord(state: Pick<MatchState, 'seed' | 'multiplayer'>, parts: readonly (string | number)[]): bigint;
 export function shopForState(state: MatchState, round?: number, subscription?: boolean): { rngState: number; shop: MatchState['shop'] };
 export function shopTransition(state: MatchState, command: unknown): { rngState: number; shop: MatchState['shop']; stolen?: {definitionId: string; starLevel?:2; slot: number} };
+
+export function madChemistExpected(star: number, abilityPower: number, attackSpeedBps: number, ticks?: number): { total: number; pulses: number[]; mana: number };
