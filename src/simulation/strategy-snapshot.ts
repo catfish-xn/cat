@@ -1,7 +1,8 @@
+import { d14UnitBase } from './d14-anomalies/projection';
+import { moonlightSelection } from './augment-pool-batch5-s11a';
 import { drainSetup } from './setup-work';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
-import { d14UnitBase } from './d14-anomalies/projection';
 import { p3Program, p3ItemProgram } from './s13-p3-programs';
 import { compileD11Augment, d11OpeningSeed, d11PriorKills } from './d11-fill';
 import { D11_FILL_TIERS, type D11AugmentId } from './content/d11-fill';
@@ -103,6 +104,8 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
   const reunion=new Set([...familyReunionParticipants(state,'player'),...familyReunionParticipants(state,'enemy')]);
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const openingStars=new Map(boardUnits.map(u=>[u.id,reunion.has(u.id)?Math.min(4,(state.d14Combat?.unitId===u.id&&state.d14Combat.phase==='promoted'?4:u.starLevel)+(teamups.get('menaces')?.[0]===u.id?0:1)):(state.d14Combat?.unitId===u.id&&state.d14Combat.phase==='promoted'?4:u.starLevel)]));
+  const moonlight=moonlightSelection(boardUnits,state.augments,state.round,state.g23?.seed??0,openingStars);
   const equipment = g22Equipment(state, enemyItems), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items, { seed: state.g23?.seed ?? 0, round: state.round });
   // G2-4b: support items act on their holder's board neighbours, so every holder's items are known before any unit compiles.
   // Same item sources the per-unit loop binds below: player items/temporary equipment, and the round's enemy items.
@@ -232,11 +235,15 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     const promoted=state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='promoted';
     if(state.d14Combat?.unitId===unit.id&&state.d14Combat.phase==='returned')sources.push(...makeSourcedEffects(unit.id,'anomaly','into-the-unknown',state.anomalyBinding!.choiceId+':return',[{kind:'statPercentBps',stat:'attackDamage',bps:5000},{kind:'statFlat',stat:'abilityPower',amount:50}]));
     // Keep the death-linked reunion membership even when Menaces suppresses the extra star.
-    const reunionStar=reunion.has(unit.id)?Math.min(4,(promoted?4:unit.starLevel)+(suppressFamily?0:1)) as 1|2|3|4:undefined;
-    const certified=reunionStar?familyCombatBase(unit,reunionStar):promoted?d14UnitBase(unit,true):null;
+    const frozen = equipmentBasis?.units.find(u => u.unitId === unit.id);
+    const reunionStar=frozen?frozen.familyReunion?.combatStarLevel:reunion.has(unit.id)?Math.min(4,(promoted?4:unit.starLevel)+(suppressFamily?0:1)) as 1|2|3|4:undefined;
+    const frozenBonus=frozen?.sources.find(s=>s.source.sourceKind==='augment'&&['moonlight','greater-moonlight'].includes(s.source.sourceDefinitionId)&&s.source.sourceInstanceId.endsWith(':bonus')&&s.effect.kind==='statPercentBps');
+    const moon=frozen?(frozenBonus?{star:frozen.effectiveStarLevel as 3|4,definitionId:frozenBonus.source.sourceDefinitionId,choiceId:frozenBonus.source.sourceInstanceId.slice(0,-6),adBps:frozenBonus.effect.kind==='statPercentBps'?frozenBonus.effect.bps:0,ap:frozenBonus.source.sourceDefinitionId==='moonlight'?25:5}:undefined):moonlight.get(unit.id);
+    if(moon)sources.push(...makeSourcedEffects(unit.id,'augment',moon.definitionId,moon.choiceId+':bonus',[{kind:'statPercentBps',stat:'attackDamage',bps:moon.adBps},{kind:'statFlat',stat:'abilityPower',amount:moon.ap}]));
+    const combatStar=moon?.star??reunionStar??(promoted?4:undefined);
+    const certified=moon?.star===4?d14UnitBase({...unit,starLevel:3},true):moon?familyCombatBase(unit,moon.star):reunionStar?familyCombatBase(unit,reunionStar):promoted?d14UnitBase(unit,true):null;
     // During battle only item declarations change. Membership, tier effects and all
     // other opening bonuses stay frozen; use the same numerical compiler below.
-    const frozen = equipmentBasis?.units.find(u => u.unitId === unit.id);
     if (frozen) sources.splice(0, sources.length, ...frozen.sources.filter(s => s.source.sourceKind !== 'item' && !(s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation')),
       ...sources.filter(s => s.source.sourceKind === 'item'||s.source.sourceKind==='augment'&&s.source.sourceDefinitionId==='coronation'));
     let resolved = resolveEffects(certified?.base??base, certified?.ability??resolveAbility(base.abilityId, unit.starLevel), sources);
@@ -273,7 +280,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
     const gambler=mechanics.find(m=>m.mechanic==='g24Gambler'),avarice=anomaly==='avarice-incarnate';
     if((gambler||avarice)&&(!Number.isSafeInteger(state.bankGold)||state.bankGold!<0))throw new RangeError('Missing authoritative combat bank');
-    return { unitId: unit.id, ...resolved, ...(reunionStar?{effectiveStarLevel:reunionStar,familyReunion:{originalStarLevel:unit.starLevel,combatStarLevel:reunionStar,unboostedStarLevel:promoted?4 as const:unit.starLevel}}:promoted?{effectiveStarLevel:4 as const}:{}), ...(itemSummon?{itemSummon}:{}),...(summonCell?{summonCell:{col:summonCell.col,row:summonCell.row}}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
+    return { unitId: unit.id, ...resolved, ...(reunionStar?{effectiveStarLevel:combatStar!,familyReunion:frozen?.familyReunion??{originalStarLevel:unit.starLevel,combatStarLevel:combatStar!,unboostedStarLevel:moon?.star??(promoted?4 as const:unit.starLevel)}}:combatStar?{effectiveStarLevel:combatStar}:{}), ...(itemSummon?{itemSummon}:{}),...(summonCell?{summonCell:{col:summonCell.col,row:summonCell.row}}:{}),mechanics,...(gambler||avarice?{openingItemBankGold:avarice?state.bankGold!:Math.min(gambler!.values.goldLimit,state.bankGold!)}:{}), ...(itemPrograms.length ? {itemPrograms} : {}) };
   };
   const units: ReturnType<typeof compileUnit>[] = [];
   for (const unit of boardUnits) { units.push(compileUnit(unit)); yield; }

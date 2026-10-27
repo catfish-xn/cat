@@ -1,7 +1,6 @@
 import { drainSetup } from './setup-work';
 import { installBattleEquipmentBatch } from './battle-equipment';
 import { familyCombatBase } from './family-reunion';
-import { d14UnitBase } from './d14-anomalies/projection';
 import {projectEffectiveMembership,type TraitProjectionContext} from './traits/effective-membership';
 import {createG23Forge} from './combat-g2-3-summons';
 import {projectItemSummons,initializeMirrorHealth} from './g2-4b-summons';
@@ -73,7 +72,7 @@ function* snapshotCombatSteps(preparationState: GameState, strategy?: StrategySn
       ...(ability.kind === 's13' ? { attackDamageBase: resolved?.attackDamageBase ?? stats.attack, attackDamagePercentBps: resolved?.attackDamagePercentBps ?? 0,
         baseAttackSpeedBps: stats.baseAttackSpeedBps ?? Math.floor(200000 / stats.attackIntervalTicks),
         attackSpeedBonusBps: stats.attackSpeedBonusBps ?? 0,
-        maxHpBasis: { base: resolved?.familyReunion?familyCombatBase(unit,resolved.familyReunion.combatStarLevel).base.health:resolved?.effectiveStarLevel===4?d14UnitBase(unit,true).base.health:g23FormStats(unit.definitionId, unit.starLevel,unit.team,formCell.row).health,
+        maxHpBasis: { base: resolved?.familyReunion?familyCombatBase(unit,resolved.familyReunion.combatStarLevel).base.health:resolved?.effectiveStarLevel?familyCombatBase(unit,resolved.effectiveStarLevel).base.health:g23FormStats(unit.definitionId, unit.starLevel,unit.team,formCell.row).health,
           flat: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
           bps: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 },
         mechanics: structuredClone(resolved?.mechanics ?? []), shieldLayers: [], statuses: [], tasks: [],
