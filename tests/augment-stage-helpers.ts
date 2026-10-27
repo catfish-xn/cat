@@ -161,3 +161,5 @@ export function boundedFirstNodeOffer(id:string,fielded=false):MatchState {
  }
  throw new Error(`No bounded first-node route for ${id}; candidate=${augmentCandidates('silver',[],[],null,filter).includes(id)}, pool=${augmentCandidates('silver',[],[],null,filter).length}`);
 }
+/** Batch5 S3B task budget: the only permitted seed scan is inclusive 0..100. */
+export const batch5S3bSeed=(id:string):number=>firstNodeSeed(id,101);

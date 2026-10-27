@@ -1,5 +1,6 @@
 import { batch5InventoryPlan, validateBatch5Inventory, BATCH5_S3A_SOURCE } from './augment-pool-batch5-s3a';
 import { AUGMENT_BATCH5_S3A } from './content/augment-pool-batch5-s3a';
+import { hasS3bInventory } from './augment-pool-batch5-s3b-restore';
 import { validateHistoricalEquipment } from './b8-restore';
 import { validateAnvils } from './anvils';
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
@@ -60,6 +61,9 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown):Mat
     r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   if(state.augments.some(a=>AUGMENT_BATCH5_S3A[a.definitionId])||state.seatMechanics?.receipts.some(r=>r.source===BATCH5_S3A_SOURCE||r.receiptId.includes(BATCH5_S3A_SOURCE)||Object.keys(AUGMENT_BATCH5_S3A).some(id=>r.receiptId.includes(id)))){
     validateBatch1Gifts(state);validateBatch5Inventory(state,batch5InventoryPlan(state));validateHistoricalEquipment(null,state);validateAnvils(state);
+  }
+  if(hasS3bInventory(state)){
+    validateBatch1Gifts(state);validateAnvils(state);validateHistoricalEquipment(null,state);
   }
   return state;
 }

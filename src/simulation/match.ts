@@ -8,6 +8,10 @@ import { batch5Streak, drainBatch5Gold } from './augment-pool-batch5-progress';
 import { drainBatch4Gold } from './augment-pool-batch4-progress';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
+import { salvageSale } from './augment-pool-batch5-s3b-salvage';
+import { pandoraRoundEntry } from './augment-pool-batch5-s3b-conversions';
+import { convertAcademicCraft } from './augment-pool-batch5-s3b';
+import { drainBatch1Gifts } from './augment-pool-grants';
 import { planOpenAnvil } from './anvils';
 export { grantAnvilUnit } from './anvils';
 export { anvilDisplay, ANVIL_POLICY } from './content/anvils';
@@ -362,7 +366,8 @@ export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Uni
     resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
       {kind:'unit-sold',unitId,context:capacity?'settlement-capacity':'preparation',goldGranted}),
     preparation:{...state.preparation,units:state.preparation.units.filter(unit=>unit.id!==unitId)} };
-  const events: MatchEvent[] = [...returned.events,...(removesBinding?[{type:'anomalyRemoved' as const,unitId}]:[])];
+  const returnedState=sold; sold=salvageSale(state,sold,unitId);
+  const events: MatchEvent[] = [...mechanicGrantEvents(returnedState,sold),...returned.events,...(removesBinding?[{type:'anomalyRemoved' as const,unitId}]:[])];
   if (capacity) { const granted = grantDirectLoot(sold,false,unitLootPolicy); sold=granted.state; events.push(...granted.events); }
   if(sold.phase!=='combat'&&!isCombatRosterLocked(sold)){const drained=drainG23Rewards(sold,unitLootPolicy,events);events.push(...mechanicGrantEvents(sold,drained));sold=drained;}
   return acceptEquipment(sold,events);
@@ -608,6 +613,7 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
     return fail(state, 'augment-pool-too-small');
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
+  state=pandoraRoundEntry(state,round,definition.roundId);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
   const entryLevel = state.level;
   const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,round));
@@ -657,6 +663,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
+    state=pandoraRoundEntry(state,definition.ordinal,definition.roundId);
     const entryLevel=state.level;
     const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};
@@ -692,8 +699,11 @@ export function combineItems(state: MatchState, aId: string, bId: string): Match
   if (!preview.allowed) return fail(state, preview.reason);
   const plan = planCombine(state.items, state.nextItemSerial, aId, bId);
   const timing = state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {};
-  return plan.ok ? accept({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
-    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,plan.events.filter((event):event is Extract<import('./strategy-types').StrategyEvent,{type:'itemCombined'}>=>event.type==='itemCombined').map(event=>({kind:'item-combined' as const,event,...timing}))) }, plan.events) : fail(state, plan.reason);
+  if(!plan.ok)return fail(state,plan.reason);
+  const crafted=convertAcademicCraft({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
+    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,plan.events.filter((event):event is Extract<import('./strategy-types').StrategyEvent,{type:'itemCombined'}>=>event.type==='itemCombined').map(event=>({kind:'item-combined' as const,event,...timing}))) });
+  const gifted=crafted.items===plan.items||state.phase==='combat'||isCombatRosterLocked(state)?crafted:drainBatch1Gifts(crafted);
+  return accept(gifted,[...plan.events,...mechanicGrantEvents(crafted,gifted)]);
 }
 export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number, options?: { readonly deferBattleEquipment?: boolean }): MatchCommandResult {
   const preview = previewEquip(state, itemId, unitId, slot);
@@ -702,11 +712,13 @@ export function equipItem(state: MatchState, itemId: string, unitId: string, slo
   if (!plan.ok) return fail(state, plan.reason);
   const combined = plan.events.filter((event): event is Extract<import('./strategy-types').StrategyEvent, {type:'itemCombined'}> => event.type === 'itemCombined');
   const timing = state.phase === 'combat' && state.combat ? {tick:state.combat.tick} : {};
-  const accepted = acceptEquipment({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
+  const crafted = convertAcademicCraft({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
     resourceProvenance: combined.length ? appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId,
       combined.map(event => ({ kind: 'item-combined' as const, event, ...timing })))
       : appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, {kind:'item-equipped',itemId,unitId,slot:plan.events.find(event => event.type === 'itemEquipped')!.slot,...timing}),
-  }, plan.events);
+  });
+  const gifted=crafted.items===plan.items||state.phase==='combat'||isCombatRosterLocked(state)?crafted:drainBatch1Gifts(crafted);
+  const accepted = acceptEquipment(gifted,[...plan.events,...mechanicGrantEvents(crafted,gifted)]);
   if (accepted.ok && !(options?.deferBattleEquipment && state.multiplayer) && state.phase === 'combat' && state.combat?.status === 'running' && state.combatInputBasis
     && !(state.multiplayer && state.m8.round.kind === 'pvp')
     && state.preparation.units.some(u => u.id === unitId && u.location.kind === 'board')) {

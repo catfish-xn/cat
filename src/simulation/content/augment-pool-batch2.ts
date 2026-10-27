@@ -633,7 +633,6 @@ export function batch2Values(id:string):Readonly<Record<string,number>> {return 
  * selection-augment-fields.json and the matching map22 node; unknown hashes are
  * preserved as raw values, never guessed into a missing formula or unit stat. */
 export const AUGMENT_BATCH2_BLOCKED=freezeContent({
-  "academic-research": "R[70]：源值 NumOptions=2、NumItems=1 齐；缺赞助装备在三件 sponsor 中的选项抽样/权重及“所合成装备本身已是赞助装”时的去重与补位规则。现有通用四选锻造器不能冒充本项二选定制锻造器。",
   "loot-explosion": "R[132]：缺暴击率→掉落概率公式、战利品奖励表/权重及战利品暴击的倍率/递归上限；不是只有一个待填掉落率。",
   "forbidden-magic": "R[115]：三名黑玫瑰弈子的具体候选/费用/抽样权重未给出；还缺跨战 Sion takedown→永久成长的独立认证接线。现有 g23-sion 已存在，不能沿用旧分类“没有 Sion”的过时原因。",
   "natural-selection": "R[188]：只有 Health=0.12；缺新增牺牲实验格的位置/选取规则、无合法格/空格处理，以及牺牲来源加成的传播目标规则。",

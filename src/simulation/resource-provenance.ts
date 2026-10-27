@@ -1,4 +1,6 @@
 import { projectBatch5Items, type InventoryPlan } from './augment-pool-batch5-s3a';
+import { isS3bConversion, validS3bConversion } from './augment-pool-batch5-s3b-conversions';
+import { academicCraft } from './augment-pool-batch5-s3b';
 import { isAnvil } from './content/anvils';
 import { trainerStar, TRAINER_ID } from './content/opening-batch-b';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
@@ -82,6 +84,7 @@ export interface ProvenanceCombatSettlement {
 }
 export interface ResourceProvenanceContext {
   readonly batch5Inventory?:InventoryPlan;
+  readonly s3bState?: Pick<import('./match-types').MatchState,'augments'|'resourceProvenance'|'seed'>;
   readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
   readonly g23RadiantRound?:number;
   readonly carouselReceipts?:readonly import('./carousel-types').CarouselReceipt[];
@@ -564,7 +567,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       const definitionId = takeBirth(key, 'item', entry.itemId, entry.roundId);
       items.set(entry.itemId, { id: entry.itemId, definitionId }); nextItemSerial++;
     } else if(entry.kind==='g23-item-converted'){
-      keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
+      keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(isS3bConversion(entry)?!!context.s3bState&&items.get(entry.itemId)?.definitionId===entry.from&&validS3bConversion(context.s3bState,entry,entry.roundId):context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
     } else if (entry.kind === 'item-equipped') {
       keys(entry, [...common, 'itemId', 'unitId', 'slot', ...(Object.hasOwn(entry, 'tick') ? ['tick'] : [])]); integer(entry.slot);
       if (Object.hasOwn(entry, 'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'equipment tick'); }
@@ -583,7 +586,9 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         && recipe?.kind === 'completed' && recipe.recipe && (recipe.recipe[0] === a.definitionId && recipe.recipe[1] === b.definitionId
           || recipe.recipe[0] === b.definitionId && recipe.recipe[1] === a.definitionId), 'combination recipe/ownership');
       requireValue(event.itemId === `item-${nextItemSerial}`, 'combined item serial'); integer(nextItemSerial + 1, 1);
-      event.consumedIds.forEach(id => items.delete(id)); items.set(event.itemId, { id: event.itemId, definitionId: event.definitionId }); nextItemSerial++;
+      event.consumedIds.forEach(id => items.delete(id));
+      if(!context.s3bState||!academicCraft(context.s3bState,entry))items.set(event.itemId, { id: event.itemId, definitionId: event.definitionId });
+      nextItemSerial++;
     } else if(entry.kind==='consumable-used') {
       keys(entry,[...common,'record',...(Object.hasOwn(entry,'tick') ? ['tick'] : [])]);
       if (Object.hasOwn(entry,'tick')) { integer(entry.tick); requireValue(entry.tick! < MAX_COMBAT_TICKS, 'consumable tick'); }

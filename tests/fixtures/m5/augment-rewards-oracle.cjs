@@ -6,6 +6,7 @@ const {buffetPlan}=require('./augment-inventory-oracle.cjs');
  */
 const assert=require('node:assert/strict');
 const {isDeepStrictEqual}=require('node:util');
+const s3b=require('./augment-batch5-s3b-oracle.cjs');
 const b2=require('../../augment-pool-batch2-oracle-data.cjs');
 const b3=require('../../augment-pool-batch3-oracle-data.cjs');
 const b4=require('../../augment-pool-batch4-oracle-data.cjs');
@@ -15,6 +16,9 @@ const lesser='TFT_Consumable_ChampionDuplicator_III';
 const initial={
  'pandoras-items':[Q('component')],
  'component-buffet':[Q('component')],
+ 'pandoras-items-ii':[Q('component',2)],
+ 'salvage-bin':[Q('completed')],
+ 'academic-research':[Q('component'),U('lux'),U('ezreal')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
@@ -98,6 +102,14 @@ function rewardPlan(s,env){
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
   const facts=battles.filter(f=>f.round>=a.acquiredRound);
+  if(a.definitionId==='academic-research'){
+   const anchor=s.resourceProvenance.entries.find(e=>e.kind==='item-acquired'&&e.source.kind==='mechanic'&&e.source.receiptId===JSON.stringify(['augment-pool-batch1',a.choiceId,a.definitionId,0,0]));
+   for(const e of s.resourceProvenance.entries)if(e.kind==='item-combined'&&anchor&&e.sequence>anchor.sequence&&env.pools.completed.includes(e.event.definitionId))gifts.push({receiptId:JSON.stringify(['augment-pool-batch1',a.choiceId,a.definitionId,'craft',e.sequence]),source:'augment-pool-batch1',kind:'unit',definitionId:'TFT_ArmoryKeyCompleted',starLevel:1,acquiredRound:a.acquiredRound});
+  }
+  if(a.definitionId==='salvage-bin'){
+   const seventh=s.roundResults.filter(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp')[6];
+   if(seventh)gifts.push(...expand(s,{...a,choiceId:JSON.stringify([a.choiceId,'salvage',7]),acquiredRound:seventh.round},[Q('component')],env));
+  }
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
@@ -183,7 +195,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
  return tables[weights.findIndex(w=>{if(ticket<w)return true;ticket-=w;return false;})];},
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
-const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
+const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
  'augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel']);
@@ -418,6 +430,8 @@ function validateRewardsCore(before,after,command,events,base){
 // Inventory is a complete transition, including commands with no reward receipt.
 function validateRewards(before,after,command,events,base){
  const result=validateRewardsCore(before,after,command,events,base);
+ s3b.validatePandora(before,after,command);
+ for(const [id,gift] of s3b.validateSalvage(before,after,command,events))result.gifts.set(id,gift);
  // Hand-written counter vectors may omit the inventory entirely.
  if(before.consumables===undefined&&after.consumables===undefined)return result;
  const inventory=[...before.consumables];let serial=before.nextConsumableSerial;
