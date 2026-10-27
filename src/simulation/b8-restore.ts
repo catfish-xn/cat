@@ -1,3 +1,4 @@
+import { readCabalGrowth } from './augment-pool-batch5-h9-cabal';
 import { soloPveLoot } from './shop-orbs';
 import { formingTotals, expectedMagicRoll } from './augment-pool-batch3-progress';
 import { isAnvil } from './content/anvils';
@@ -403,7 +404,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{cabalGrowth:readCabalGrowth(state),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.

@@ -104,9 +104,9 @@ describe('production representation preserves runtime semantics', () => {
     const before = execute(original), after = execute(compact);
     expect(after).toBe(before);
     const parsed = JSON.parse(after);
-    // Current content identities (src/simulation/content/identity-constants.ts; P 2026-10-25 Lesser Shimmer Duplicator consumable, merged with the augment XP / batch-3 / stage-ban / batch-4 levels, B4XP, B4reroll, B4Combat and v24 shop / batch-5 integration (P 2026-10-27)).
-    expect(parsed.content).toBe('fnv1a32-utf16:db662e0b');
-    expect(parsed.loot).toBe('fnv1a32-utf16:18c876b2');
+    // Current content identities (src/simulation/content/identity-constants.ts; P 2026-10-25 Lesser Shimmer Duplicator consumable, merged with the augment XP / batch-3 / stage-ban / batch-4 levels, B4XP, B4reroll, B4Combat and v25 B5-56 / B5-58 history integration (P 2026-10-27)).
+    expect(parsed.content).toBe('fnv1a32-utf16:5dd52c60');
+    expect(parsed.loot).toBe('fnv1a32-utf16:85985e18');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
 });

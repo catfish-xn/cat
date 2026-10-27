@@ -1,3 +1,4 @@
+import { settleBatch5H9History } from './augment-pool-batch5-h9';
 import type { MatchState, MatchEvent } from './match-types';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -34,7 +35,9 @@ export function recordAugmentTable(s: MatchState, stage: 'acquire' | 'entry' | '
 }
 export function recordAugmentPvpRoster(s: MatchState, battleId: string, seats: readonly HistorySeat[], mirrorOfSeatId: string | null): MatchState {
   if (s.augmentHistory?.facts.some(f => f.kind === 'pvp-roster' && f.battleId === battleId)) return s;
-  return appendAugmentFact(s, { kind: 'pvp-roster', battleId, seats, mirrorOfSeatId });
+  const recorded = appendAugmentFact(s, { kind: 'pvp-roster', battleId, seats, mirrorOfSeatId });
+  return s.augments.some(a => a.definitionId === 'a-golden-find') && !recorded.augmentHistory?.facts.some(f => f.kind === 'combat-binding' && f.battleId === battleId)
+    ? appendAugmentFact(recorded, { kind: 'combat-binding', battleId, binding: s.anomalyBinding }) : recorded;
 }
 /** Internal domain hook, called in the same successful transaction as the future augment's effect.
  * It records integer amounts; it does not select recipients or invent a growth formula. */
@@ -129,13 +132,19 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   if (after === before) return after;
   let next = recordAugmentAcquisition(before, after);
   if (!next.augmentHistory) return next;
-  if (!same(historyRoster(before), historyRoster(after)) && !same(next.augmentHistory!.facts.filter(f => f.kind === 'positions').at(-1)?.roster ?? null, historyRoster(after))) next = appendAugmentFact(next, { kind: 'positions', roster: historyRoster(after) });
-  if (!before.combat && after.combat) next = appendAugmentFact(next, {kind:'combat-roster',battleId:after.combat.combatId!,roster:historyRoster(before)});
+  if ((before.preparation !== after.preparation || before.items !== after.items) && !same(historyRoster(before), historyRoster(after)) && !same(next.augmentHistory!.facts.filter(f => f.kind === 'positions').at(-1)?.roster ?? null, historyRoster(after))) next = appendAugmentFact(next, { kind: 'positions', roster: historyRoster(after) });
+  if (!before.combat && after.combat) {
+    next = appendAugmentFact(next, {kind:'combat-roster',battleId:after.combat.combatId!,roster:historyRoster(before)});
+    if (next.augments.some(a => a.definitionId === 'a-golden-find') && (!after.multiplayer || after.m8.round.kind !== 'pvp'))
+      next = appendAugmentFact(next, {kind:'combat-binding',battleId:after.combat.combatId!,binding:before.anomalyBinding});
+  }
   if (!before.combat && after.combat && after.m8.round.kind === 'pvp' && !after.multiplayer)
     next = recordAugmentPvpRoster(next, after.combat.combatId!, [{ ...historyRoster(before), seatId: 'solo', index: 0, hp: before.playerHp, alive: true, rank: 1, eliminatedRound: null }], null);
-  const currentDeaths = augmentDeathsFromEvents(events);
-  const recorded = new Set(next.augmentHistory!.facts.flatMap(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId ? f.deaths.map(d => d.eventSeq) : []));
-  const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
+  const captureKiller = next.augments.some(a => a.definitionId === 'a-golden-find');
+  const captureTakedowns = next.augments.some(a => a.definitionId === 'forbidden-magic');
+  const currentDeaths = augmentDeathsFromEvents(events, captureKiller, captureTakedowns);
+  const recorded = new Set(after.combat?.status === 'finished' ? next.augmentHistory!.facts.flatMap(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId ? f.deaths.map(d => d.eventSeq) : []) : []);
+  const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat, captureKiller, captureTakedowns), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
   if (after.combat && (deaths.length || before.combat?.tick !== after.combat.tick || !before.combat))
     next = appendAugmentFact(next, { kind: 'deaths', battleId: after.combat.combatId!, completeThroughTick: after.combat.tick,
       deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null })) });
@@ -154,6 +163,10 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
   const after = envelope.state ?? result as unknown as MatchState;
   if (!after || after === before || !('augments' in after)) return result;
   let next = recordAugmentTransition(before, after, envelope.events);
+  let effectEvents: readonly MatchEvent[] = [];
+  if (next.roundResults.length > before.roundResults.length && (!next.multiplayer || next.m8.round.kind !== 'pvp')) {
+    const settled = settleBatch5H9History(next); next = settled.state; effectEvents = settled.events;
+  }
   if (!before.multiplayer && before.openingEncounter.mode !== 'shared-deferred') {
     const stored = before.augmentHistory?.proof;
     let trace: Trace = traces.get(before) ?? { ...(stored?.kind === 'solo' ? stored : {origin:before,commands:[]}), previousBattle:{status:'unavailable'} };
@@ -171,7 +184,7 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
     traces.set(next, { ...proof, previousBattle: !before.combat && after.combat ? {status:'recorded',round:before.round,roundId:before.roundDefinitionId,battleId:after.combat.combatId!,roster:historyRoster(before)} : trace.previousBattle });
   }
   preparationTimes.set(next,{round:next.round,elapsedMs:next.round===before.round?Math.max(preparationElapsed(before),preparationElapsed(after)):0});
-  return (envelope.state ? { ...envelope, state: next } : next) as T;
+  return (envelope.state ? { ...envelope, state: next, ...(effectEvents.length ? {events: [...(envelope.events ?? []), ...effectEvents]} : {}) } : next) as T;
 }
 
 // A server restore takes a separately held authority, never a field from the candidate save.

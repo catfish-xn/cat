@@ -28,6 +28,7 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
+  "a-golden-find":{node:'4-2',seed:19,fielded:true},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
@@ -139,3 +140,9 @@ export function acquireAugment(id: string): MatchState {
   const state = offerFor(id), choice = state.pendingChoice!;
   return accepted(selectChoice(state, choice.choiceId, choice.generation, id));
 }
+
+/** Fixed real-room routes for history augments; no seed scan in regression tests. */
+export const HISTORY_AUGMENT_ROOM_ROUTES = {
+  'a-golden-find': { seed: 9, seatId: 's0', node: '4-2' },
+  'forbidden-magic': { seed: 14, seatId: 's2', node: '3-2' },
+} as const;

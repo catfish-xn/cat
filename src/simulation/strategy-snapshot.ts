@@ -1,3 +1,4 @@
+import { cabalEffects } from './augment-pool-batch5-h9-cabal';
 import { drainSetup } from './setup-work';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
@@ -171,6 +172,10 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {
+        if(augment.definitionId==='forbidden-magic'){
+          if(!state.cabalGrowth)throw new RangeError('Invalid augment history: missing cabal combat growth');
+          sources.push(...makeSourcedEffects(unit.id,'augment',augment.definitionId,augment.choiceId,cabalEffects(unit,traits,state.cabalGrowth)));continue;
+        }
         const definition = lookup(catalog.augments, augment.definitionId);
         const grant=d11.get(augment.choiceId)?.grants.find(g=>g.unitId===unit.id);
         if(grant){

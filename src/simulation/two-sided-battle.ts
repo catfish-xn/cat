@@ -51,6 +51,7 @@ function* compileSideSteps(s: PlayerBattleSnapshot, team: Team, confiscated = fa
   // effects use the owner's preparation coordinates before B is mirrored to the upper half.
   const preparation = { board:structuredClone(DEFAULT_BOARD), benchSize:9, units:s.units.map(unit => ({...unit,id:map('unit',unit.id)})) };
   const inputs: CombatStrategyInputs = {
+    ...(s.cabalGrowth?{cabalGrowth:s.cabalGrowth}:{}),
     round:getMultiplayerRoundById(s.roundId).ordinal, preparation,
     ...(s.d14Combat?{d14Combat:{...s.d14Combat,unitId:map('unit',s.d14Combat.unitId)}}:{}),
     ...(s.itemSummonPositions?{itemSummonPositions:Object.fromEntries(Object.entries(s.itemSummonPositions).map(([id,cell])=>[map(id.startsWith('unit-')?'unit':'item',id),cell]))}:{}),...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),playerHp:s.playerHp,g23:s.g23,priorPvpWins:s.priorPvpWins??0,

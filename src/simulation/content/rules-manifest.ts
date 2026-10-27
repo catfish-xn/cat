@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_H9 } from './augment-pool-batch5-h9';
 import { AUGMENT_SHOP } from './augment-pool-shop';
 import { AUGMENT_BATCH5 } from './augment-pool-batch5';
 import { AUGMENT_BATCH4, AUGMENT_BATCH4_BLOCKED } from './augment-pool-batch4';
@@ -40,6 +41,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   tacticianItems:{source:TACTICIAN_ITEM_SOURCE,gold:'independent-item-collector-stream-10-percent-one-gold',population:'permanent-acquisition-and-crafted-receipts'},
   // Offer stages are replay input: augment offers re-derive from these bans at restore (P, 14.24 stage tags).
   augmentStageBans:{version:'augment-stage-bans-14.24-tags-v1',bans:AUGMENT_STAGE_BANS,reading:'d02ae323-d12ae4b6-d22ae649-not-at-2-1-3-2-4-2'},
+  augmentPoolBatch5H9:{version:'augment-pool-batch5-h9-v25',content:AUGMENT_BATCH5_H9,convention:'P-B5-56-58-2026-10-27',gold:'original-anomaly-owner-kills-cross-battle-every-three-two-gold-post-settlement',history:'augment-history-v1',cabal:'sorted-full-black-rose-catalog-uniform-three-with-replacement-per-participant-victim-once-per-battle-next-battle-sion-150bps-10hp'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch4:{version:'augment-pool-batch4-levels-v23-candidate',content:AUGMENT_BATCH4,blocked:AUGMENT_BATCH4_BLOCKED,timing:'reached-thresholds-on-acquisition-later-levels-on-authoritative-transition',sampling:'existing-gift-stream-radiant-five-without-replacement',birthdayCost:'max-1-level-minus-4'},
   augmentPoolBatch4B4xp:{version:'augment-pool-batch4-b4xp-v23-candidate',content:AUGMENT_BATCH4_B4XP,timing:'pvp-end-before-settlement-rewards-and-deferred-upgrades',authority:'completed-battles-replay'},

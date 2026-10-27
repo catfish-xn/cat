@@ -124,21 +124,22 @@ it('reports missing research as an error rather than claiming an empty audit pas
   const { status, result } = f.run(); expect(status).toBe(1); expect(result.errors[0].code).toBe('SOURCE_MISSING');
 });
 
-// Characterize findings, not a waiver: the CLI must exit 1 for the five defects.
+// Characterize findings, not a waiver: the CLI must exit 1 for the four remaining defects.
 // Synthetic tests above always run on CI without the external research bundle.
 it.skipIf(!existsSync(research) || !existsSync(join(crossversion, 'raw/common/14.24-map22.bin.json')))('audits the actual 14.24 archive and reports the exact unresolved discrepancies', () => {
   const p = spawnSync(process.execPath, [script], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
   expect(p.error).toBeUndefined(); expect(p.stderr).toBe(''); expect(p.status).toBe(1);
   const r = JSON.parse(p.stdout);
-  // 207 pool apiNames after batch-4 and the seven shop augments and four batch-5 augments; still exactly the five defects.
-  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 207, shippedRows: 160, regeneratedRows: 165, unrestricted: 69, errors: 5, crossVersionDifferences: 8 });
+  // B5-56 adds one pool identity; B5-58 resolves Cabal, leaving four unrelated defects.
+  expect(r.summary).toMatchObject({ sourceRows: 312, poolAugments: 208, shippedRows: 162, regeneratedRows: 166, unrestricted: 69, errors: 4, crossVersionDifferences: 8 });
   expect(r.errors.map((e: { code: string; apiName: string; expected: string[] }) => [e.code, e.apiName, e.expected])).toEqual([
     ['TABLE_MISMATCH', 'TFT13_Augment_Academy', ['4-2']],
-    ['TABLE_MISMATCH', 'TFT13_Augment_Cabal', ['2-1', '4-2']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Experiment', ['2-1']],
     ['TABLE_MISMATCH', 'TFT13_Augment_Formswapper', ['2-1']],
     ['TABLE_MISMATCH', 'TFT13_TeamupAugment_BloodBrothers', ['2-1', '4-2']],
   ]);
+  expect(r.errors.map((e: {apiName:string})=>e.apiName)).not.toContain('TFT13_Augment_Cabal');
+  expect(r.errors.map((e: {apiName:string})=>e.apiName)).not.toContain('TFT13_Augment_AGoldenFind');
   expect(r.knownCases.every((c: { ok: boolean }) => c.ok)).toBe(true);
   expect(r.crossVersionDifferences.map((d: { apiName: string }) => d.apiName).sort()).toEqual([
     'TFT13_Augment_AnotherAnomaly', 'TFT9_Augment_PandorasRadiantBox', 'TFT9_Augment_YoungAndWildAndFree', 'TFT_Augment_GlassCannonI', 'TFT_Augment_GlassCannonII', 'TFT_Augment_ShopGlitch', 'TFT_Augment_TableScraps', 'TFT_Augment_TwoMuchValue',
