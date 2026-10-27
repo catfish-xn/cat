@@ -1,6 +1,6 @@
 ## 2026-10-27 B5-69 战利品爆炸（P-B5-69，数值待最终确认）
 
-新增黄金强化 `loot-explosion`（`TFT13_Augment_Ambusher`）。取得时发卡蜜尔、爆爆各1，联机英雄使用既有共享奖励法球。规则、权重、档位映射和11%基础值以 [P-B5-69](S13_RULES_GAP.md#p-b5-69p2026-10-27战利品爆炸用户纠正版) 为准，三节点不新增禁选。没有新增网络命令、战斗事件或外层版本；精确内容摘要随本次脚本重算，历史epoch不重录。
+新增黄金强化 `loot-explosion`（`TFT13_Augment_Ambusher`）。取得时发卡蜜尔、爆爆各1，联机英雄使用既有共享奖励法球。规则、权重、档位映射和11%基础值以 [P-B5-69](S13_RULES_GAP.md#p-b5-69p2026-10-27战利品爆炸用户纠正版) 为准，按用户决定在 **2-1／3-2 开放、4-2 禁出**；3-2 保留伏击专家阵容过滤。没有新增网络命令、战斗事件或外层版本；精确内容摘要随本次脚本重算，历史epoch不重录。
 
 | 内部领域入口（`augment-pool-batch5-g7.ts`） | 输入、输出与拒绝 |
 | --- | --- |
@@ -10,6 +10,8 @@
 | `validateLootExplosionRewards(state:MatchState):void` | 按独立死亡历史重新规划，逐项核对数量、唯一身份、来源、轮次、金币/装备和item-acquired来源；伪造、缺失、孤儿或冲突收据抛 `Invalid augment history: loot explosion ...`。联机恢复仍须另外提供独立服务器authority。 |
 
 服务器 `recordRoomBattleDeaths(match,results)` 只映射实际执行的双边死亡/击杀席位与原始实例ID，在共享 `settleRound` 事务前写入已验证的历史API；战后 `recordRoomBattleFacts` 不重复写此批死亡。金币/装备仍只在领域模块计算。`sampleAugmentDeath` 的第三个可选参数只承接击杀现场观察，既有事件JSON不增加字段。Match单人路径保持可执行；验收以联机为目标。
+
+审查修复：Match 在发奖前记录与终局 tick 相等的完整 `deaths` 边界；空阵容 tick 0 的 `deaths:[]` 同样必须显式保存，不能把缺行当作零死亡。已有边界和死亡 eventSeq 不重复记录。`restoreSharedOrbSnapshot(pool,input,authority?)` 依据可信 pool 的 pending／rewards 内初始赠礼命名空间判断相关历史认证要求：候选删除拥有者、历史或赠礼收据，仍须独立服务器 authority；缺失抛 `Invalid augment history: missing independent server authority`，状态不符抛 `server facts/state mismatch`。初始 gift 的 source 或 `receiptId` 命名空间命中 `augment-pool-batch1` 时，始终运行拥有者／来源／礼物计划校验，孤儿或伪装来源抛 `Invalid augment batch1 gift authority`。恢复保持只读，不补发资源。回归与通用 Oracle 覆盖见 [G7 审查修复报告](V25_G7_REVIEW_FIXES.md)。
 
 ## 2026-10-27 v24 纪元身份
 

@@ -469,6 +469,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       levelBefore: state.level, levelAfter: plan.progression.level, xpBefore: state.xp, xpAfter: plan.progression.xp,
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
+  // Record the complete terminal deaths boundary, including tick-0 deaths:[], before planning any rewards.
   const observed=combat&&state.augments.some(a=>a.definitionId==='loot-explosion')?recordAugmentTransition(state,settled):settled;
   let committed=combat?grantPveRemover(commitG23Settlement(observed,facts!,unitLootPolicy,hookEvents)):observed;
   committed=drainLootExplosionRewards(committed);

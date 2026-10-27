@@ -3,7 +3,9 @@ import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
 import { AUGMENT_BATCH5_H6 } from './content/augment-pool-batch5-h6';
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
-import { advanceAugmentPreparationTime, type AugmentHistoryAuthority } from './augment-history';
+import { advanceAugmentPreparationTime, validateAugmentAuthority, type AugmentHistoryAuthority } from './augment-history';
+import { augmentNeedsHistory } from './augment-history-owners';
+import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
 import type { ShopDrawCause } from './shop-history-types';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
@@ -50,18 +52,40 @@ import { PoolError, requirePool, safe, sourceKey, draftPool, releaseShop, return
 export { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, assertSharedPoolConservation };
 export type * from './shared-pool-types';
 
+/** Read the gift owner from a trusted pool reservation/receipt, not the candidate seat's owners or receipts. */
+function rewardNeedsAugmentHistory(dropId:string):boolean {
+  try {
+    const drop:unknown=JSON.parse(dropId);
+    if(!Array.isArray(drop))return false;
+    let receiptId:unknown;
+    if(drop[0]==='mechanic')receiptId=drop[1];
+    else {
+      const orb:unknown=typeof drop[0]==='string'?JSON.parse(drop[0]):null;
+      if(!Array.isArray(orb)||orb[0]!=='orb'||orb[2]!=='mechanic')return false;
+      receiptId=orb[3];
+    }
+    const gift:unknown=typeof receiptId==='string'?JSON.parse(receiptId):null;
+    return Array.isArray(gift)&&gift[0]===AUGMENT_GIFT_SOURCE&&typeof gift[2]==='string'&&augmentNeedsHistory(gift[2]);
+  } catch { return false; }
+}
+
 /** Restore only against the matching authoritative pool snapshot; offline restoreMatch remains offline-only. */
 export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,authority?:AugmentHistoryAuthority):MatchState {
   const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
   preflightAugmentHistory(state);
-  canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
+  canonicalContent(state); assertSharedPoolConservation(pool,[state]);
+  // Claimed, sold, forfeited and pending gifts leave independent server evidence.
+  // Removing the candidate's augment/history/receipt must never downgrade this trust requirement.
+  if([...pool.pending,...pool.rewards].some(r=>r.seatId===state.sharedPool!.seatId&&rewardNeedsAugmentHistory(r.dropId)))
+    validateAugmentAuthority(state,authority,true);
+  validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
   validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateLootExplosionRewards(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
   if(state.augments.some(a=>a.definitionId==='loot-explosion'||AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId))||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
-    r.source==='augment-pool-batch5-h6'||r.receiptId.startsWith('["augment-pool-batch5-h6",')||r.source.startsWith('augment-pool-batch5-h4')||Object.keys(AUGMENT_BATCH5_H3).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
+    r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')||r.source==='augment-pool-batch5-h6'||r.receiptId.startsWith('["augment-pool-batch5-h6",')||r.source.startsWith('augment-pool-batch5-h4')||Object.keys(AUGMENT_BATCH5_H3).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   return state;
 }
 

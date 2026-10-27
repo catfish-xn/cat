@@ -380,7 +380,9 @@ function validateRewardsCore(before,after,command,events,base){
   const amount=2*Math.floor(count/2),receiptId=JSON.stringify(['augment-pool-batch5-h6',contested.choiceId,before.round]);
   if(amount&&!claimed.has(receiptId))dueGold.push({receiptId,source:'augment-pool-batch5-h6',kind:'gold',amount,round:before.round});
  }
- const actualGold=appended.filter(r=>['augment-pool-batch5-g7','augment-pool-batch5-h6','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves'].includes(r.source));
+ // Loot Explosion shares one source across gold and equipment; gold-only sources
+ // still enter their validator even if a counterexample forges their kind.
+ const actualGold=appended.filter(r=>r.source==='augment-pool-batch5-g7'?r.kind==='gold':['augment-pool-batch5-h6','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves'].includes(r.source));
  const goldKey=r=>({receiptId:r.receiptId,source:r.source,kind:r.kind,amount:r.amount,round:r.round});
  const sorted=xs=>xs.map(goldKey).sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
  assert.deepEqual(sorted(actualGold),sorted(dueGold),'independent due augment gold receipts (count, identity, amount, round)');
@@ -392,7 +394,7 @@ function validateRewardsCore(before,after,command,events,base){
  }
 
  const pending=plan.gifts.filter(p=>!claimed.has(p.receiptId));
- const actual=appended.filter(r=>['augment-pool-batch1','augment-pool-batch5-g7'].includes(r.source)),expected=new Map(pending.map(g=>[g.receiptId,g]));
+ const actual=appended.filter(r=>r.source==='augment-pool-batch1'||r.source==='augment-pool-batch5-g7'&&r.kind!=='gold'),expected=new Map(pending.map(g=>[g.receiptId,g]));
  for(const r of actual){const g=expected.get(r.receiptId);assert(g,'independent due augment gift identity '+r.receiptId);expected.delete(r.receiptId);
   assert.equal(r.kind,g.kind);assert.equal(r.definitionId,g.definitionId,'independent gift draw');assert.equal(r.starLevel??1,g.starLevel,'independent gift stars');
   assert(r.round>=g.acquiredRound&&r.round<=ctx.round,'independent gift timing');assert.equal(r.round,ctx.round,'independent gift grant round');assert.equal(r.roundId,base.ROUNDS[r.round-1]?.roundId);

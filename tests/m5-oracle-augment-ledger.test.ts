@@ -87,6 +87,12 @@ it('rejects unknown sources, including unknown names sharing the old wildcard pr
   for(const source of ['augment-pool-invented','opening-invented','made-up','forge','armory','radiant-conversion'])
     expect(()=>validateRewards(before,receipts(after,[gold(source,[],123)]),null,done,env)).toThrow(/unknown mechanic reward source/);
 });
+it('keeps rejecting forged kinds on gold-only and gift-only sources', () => {
+  const {before,after}=vector('wealthy-rehab-i');
+  const item={...gold('augment-pool-batch3',[0,0],8),kind:'item',definitionId:'rod',itemId:'item-1'};
+  const giftGold=gold('augment-pool-batch1',[],123);
+  for(const receipt of [item,giftGold])expect(()=>validateRewards(before,receipts(after,[receipt]),null,done,env)).toThrow(/independent due/);
+});
 it('requires exactly the independently drawn birthday hero and star level', () => {
   const {before}=vector('birthday-presents');before.phase='preparation';before.level=4;before.xp=6;
   const after={...before,level:5,xp:0},a=before.augments[0];

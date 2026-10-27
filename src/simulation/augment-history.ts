@@ -165,9 +165,13 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   if (!before.combat && after.combat && after.m8.round.kind === 'pvp' && !after.multiplayer)
     next = recordAugmentPvpRoster(next, after.combat.combatId!, [{ ...historyRoster(before), seatId: 'solo', index: 0, hp: before.playerHp, alive: true, rank: 1, eliminatedRound: null }], null);
   const currentDeaths = augmentDeathsFromEvents(events);
-  const recorded = new Set(next.augmentHistory!.facts.flatMap(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId ? f.deaths.map(d => d.eventSeq) : []));
+  const deathRows = next.augmentHistory!.facts.filter(f => f.kind === 'deaths' && f.battleId === after.combat?.combatId);
+  const recorded = new Set(deathRows.flatMap(f => f.kind === 'deaths' ? f.deaths.map(d => d.eventSeq) : []));
   const deaths = after.combat?.status === 'finished' ? [...readAugmentCombatDeaths(after.combat), ...currentDeaths].filter((d,i,rows) => !recorded.has(d.eventSeq) && rows.findIndex(x => x.eventSeq === d.eventSeq) === i) : currentDeaths;
-  if (after.combat && (deaths.length || before.combat?.tick !== after.combat.tick || !before.combat))
+  const boundaryRecorded = deathRows.some(f => f.kind === 'deaths' && f.completeThroughTick === after.combat?.tick);
+  // Settlement may already hold the finished CombatState (including tick 0).
+  // Its explicit terminal boundary must exist before rewards, even without any deaths.
+  if (after.combat && (deaths.length || !boundaryRecorded && (before.combat?.tick !== after.combat.tick || !before.combat || after.combat.status === 'finished')))
     next = appendAugmentFact(next, { kind: 'deaths', battleId: after.combat.combatId!, completeThroughTick: after.combat.tick,
       deaths: deaths.map(d => ({ ...d, ownerSeatId: d.team === 'player' ? historySeatId(after) : null,
         ...(d.lootExplosion?{lootExplosion:{...d.lootExplosion,killerSeatId:d.team==='enemy'?historySeatId(after):null}}:{}) })) });
