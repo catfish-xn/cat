@@ -1,3 +1,4 @@
+import { grantCookingPotGrowth, noScoutLockedUnits } from './augment-pool-batch5-h3';
 import { initializeAugmentTrace, traceHistoryCommand, recordAugmentRoundEntry, recordAugmentAcquisition } from './augment-history';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
@@ -263,6 +264,8 @@ export function validateMatchDeployment(state: MatchState, unitId: string, targe
     || state.preparation.units.some(unit => unit.id === unitId && unit.location.kind === 'board'))) return 'wrong-phase';
   const planned = deployUnit(state.preparation, unitId, target);
   if (!planned.ok) return planned.reason;
+  const locked = noScoutLockedUnits(state);
+  if (planned.state.units.some(unit => locked.has(unit.id) && unit.location.kind === 'bench')) return 'unit-not-sellable';
   // Check the final formation: swapping at the cap does not add a deployed unit.
   return getPlayerDeploymentCount(planned.state) > getDeploymentCap(state) ? 'population-cap' : undefined;
 }
@@ -348,7 +351,7 @@ function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Un
   const unit = state.preparation.units.find(unit => unit.id === unitId);
   if (!unit) return fail(state, 'unknown-unit');
   if (unit.team !== 'player') return fail(state, 'enemy-unit');
-  if (!isSellableUnit(unit.definitionId)) return fail(state, 'unit-not-sellable');
+  if (!isSellableUnit(unit.definitionId) || noScoutLockedUnits(state).has(unitId)) return fail(state, 'unit-not-sellable');
   if(unit.definitionId==='rumble'&&state.pendingChoice?.kind==='armory'&&state.pendingChoice.choiceId.startsWith('g23:junker:'))return fail(state,'wrong-phase');
   if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
   const returned = returnUnitItems(state.items, unitId), removesBinding = state.anomalyBinding?.unitId === unitId;
@@ -605,7 +608,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   state = payPreviousRoundIncome(state);
   const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
-  state = recordAugmentRoundEntry({...state, round});
+  state = grantCookingPotGrowth(recordAugmentRoundEntry({...state, round}));
   const entryLevel = state.level;
   const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,round));
   state={...state,level:progression.level,xp:progression.xp};
@@ -654,7 +657,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
-    state = recordAugmentRoundEntry({...state, round: definition.ordinal});
+    state = grantCookingPotGrowth(recordAugmentRoundEntry({...state, round: definition.ordinal}));
     const entryLevel=state.level;
     const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};

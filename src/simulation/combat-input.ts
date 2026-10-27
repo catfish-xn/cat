@@ -1,3 +1,4 @@
+import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { createOpeningEncounter } from './opening-encounter';
 import { d14Certificate, type D14CombatCertificate } from './d14-runtime';
 import { investmentGrowth } from './augment-income';
@@ -27,6 +28,7 @@ export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'items' | 'temporaryEquipment'
   | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number }
   /** Online two-sided only: the frozen snapshot's priorPvpWins; solo inputs never set it and read roundResults. */
+  & { readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[] }
   & { readonly d14Combat?:D14CombatCertificate; readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
 export interface CombatInputBasis {
   readonly mechanicReceiptPrefixLength:number;
@@ -45,6 +47,7 @@ export interface CombatResourcePrefix {
   readonly nextUnitSerial: number; readonly nextItemSerial: number;
 }
 export interface CombatInputAuthority {
+  readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[];
   readonly d14Combat?:D14CombatCertificate;
   readonly heldUnitIds?:readonly string[];readonly heldItemIds?:readonly string[];
   readonly epicCrownsBeforeCombat?:NonNullable<import('./g2-3-match-progress').G23MatchProgress['epicCrowns']>;
@@ -71,7 +74,8 @@ export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase
   const visibleExperimentCells='seatMechanics' in state&&state.seatMechanics&&!state.seatMechanics.hidden.progress?state.seatMechanics.seat.experimentCells as readonly import('./board').HexCell[]:('visibleExperimentCells' in state?state.visibleExperimentCells:undefined);
   const d14='d14' in state?d14Certificate(state as MatchBase):'d14Combat' in state?state.d14Combat:undefined;
   const absent='d14' in state&&state.d14&&'held' in state.d14&&state.d14.held;
-  return { ...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
+  const historyGrowth = 'resourceProvenance' in state && 'augmentHistory' in state ? combatHistoryGrowth(state as import('./match-types').MatchState,preparation.units.filter(u=>u.team==='player').map(u=>u.id),!!('combatInputBasis' in state && state.combatInputBasis)) : ('augmentHistoryGrowth' in state ? state.augmentHistoryGrowth : undefined);
+  return { ...(historyGrowth?.length?{augmentHistoryGrowth:historyGrowth}:{}),...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
     ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
@@ -147,6 +151,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
       && receipts.some(receipt => receipt.kind === 'anomaly' && receipt.eventId === binding.choiceId
         && receipt.definitionId === binding.definitionId && receipt.round === binding.boundRound));
   }
+  requireBasis(equal(input.augmentHistoryGrowth ?? [],authority.augmentHistoryGrowth ?? []));
   requireBasis(Array.isArray(input.persistentGrowth) && equal(input.persistentGrowth, authority.resources.persistentGrowth.filter(g=>!authority.heldUnitIds?.includes(g.unitId))));
   const growthIds = new Set<string>();
   for (const growth of input.persistentGrowth) {

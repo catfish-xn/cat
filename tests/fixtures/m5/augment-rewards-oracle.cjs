@@ -13,6 +13,7 @@ const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
+ 'cooking-pot':[I('frying-pan')],
  'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],

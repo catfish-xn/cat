@@ -1,3 +1,4 @@
+import { settleNoScoutGrowth } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { drainBatch1Gifts } from './augment-pool-grants';
 import { batch4B4xpSettlementXp, withBatch4B4xp } from './augment-pool-batch4-b4xp-progress';
@@ -181,6 +182,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     }
     if(saved)settled=commitMelSave(settled,r.battleId,hookEvents);
     settled=applyLevelUpHealth(state,commitOpeningEncounterHealth(settled,hookEvents));
+    if (state.m8.round.kind === 'pvp') settled = settleNoScoutGrowth(settled,r.battleId);
     const merged = resolveDeferredUpgrades(settled);
     const d14State=pruneForgePositions(reconcileD14(merged.state,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);

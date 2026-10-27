@@ -138,3 +138,7 @@ v1 明确拒绝超过256自然轮、65536 facts、16384命令条、230400重演�
 验证：`npm test -- --configLoader runner --maxWorkers=4` 指定 augment-history、server/projection、server/combat-stream、server/augment-preparation-room、server/anvil-choice-deadline、server/bot-driver、server/round-commit、tp-shared-pool、p7-carousel，共 9 文件 155 项通过、1 项受限（anvil-choice-deadline 的 WebSocket 重连用例：沙盒 `listen EPERM 127.0.0.1`）。其中 augment-history 的 77 项全部通过；末次补充 death owner／authority 联合篡改后，普通和流式两个定向用例再次通过。`npm run typecheck`、`npm run build -- --configLoader runner`、`git diff --check` 通过。
 
 反证：在 `/tmp` 独立解包只读 HEAD `4fbb08f3`，仅复制新增测试，以相同 Vitest 参数筛选获取时序和 PvE 归属；5 个用例全部复现失败（手选／机器人／超时三项无法完成选择，普通／流式两项死亡 owner 不等于 s0）。工作区修复未回滚、Git 未写入。
+
+## Batch 5 H3 接入（2026-10-27）
+
+新增只读 `readAugmentFacts(state, kind)`：返回该类型全部事实的独立副本，缺少历史节仍报错；指定轮仍使用 `requireAugmentFacts`。B5-31 从 PvP 阵容读取本人出战英雄，结算调用 `recordAugmentGrowth` 并沿资源合星血缘继承锁和成长。B5-57 从入轮快照读取棋盘英雄和原始锅铲，使用 `recordAugmentGrowth` 按携带者产生生命成长。战斗输入和双边冻结快照携带已认证历史的累计成长，离线战斗恢复对照历史开战前缀；联机席位保存仍由独立服务器 authority 认证。未向网络开放记录事实的命令。

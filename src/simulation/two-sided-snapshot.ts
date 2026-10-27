@@ -1,3 +1,4 @@
+import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { drainSetup } from './setup-work';
 import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
@@ -104,6 +105,13 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       requireSnapshot(units.get(growth.unitId)?.definitionId === 'tristana' && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
       growthIds.add(growth.unitId);
     }
+    if (s.augmentHistoryGrowth) {
+      const seen = new Set<string>(); list(s.augmentHistoryGrowth);
+      for (const g of s.augmentHistoryGrowth) { record(g); id(g.unitId); requireSnapshot(units.has(g.unitId) && !seen.has(g.unitId)); seen.add(g.unitId);
+        for (const v of [g.healthFlat,g.healthBps,g.attackDamageBps,g.abilityPowerCenti]) integer(v);
+        requireSnapshot(Object.keys(g).sort().join(',') === 'abilityPowerCenti,attackDamageBps,healthBps,healthFlat,unitId'); }
+      requireSnapshot(s.augmentHistoryGrowth.length>0);
+    }
     record(s.augmentProgress); integer(s.augmentProgress.pumpingRounds); integer(s.augmentProgress.investmentHp);
     requireSnapshot(Object.keys(s.augmentProgress).every(k => ['pumpingRounds','investmentHp','forming','magicRoll'].includes(k)));
     if (s.augmentProgress.magicRoll !== undefined) { const d = s.augmentProgress.magicRoll; requireSnapshot(augmentIds.has('magic-roll') && Array.isArray(d) && d.length === 3 && d.every(n => Number.isSafeInteger(n) && n >= 1 && n <= 6)); }
@@ -134,6 +142,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       anomalyBinding: s.anomalyBinding === null ? null : { definitionId:s.anomalyBinding.definitionId,
         unitId:s.anomalyBinding.unitId, choiceId:s.anomalyBinding.choiceId, boundRound:s.anomalyBinding.boundRound },
       persistentGrowth: s.persistentGrowth.map(g => ({unitId:g.unitId,attackDamageBps:g.attackDamageBps})),
+      ...(s.augmentHistoryGrowth ? {augmentHistoryGrowth:s.augmentHistoryGrowth.map(g=>({...g}))} : {}),
       augmentProgress: { pumpingRounds:s.augmentProgress.pumpingRounds, investmentHp:s.augmentProgress.investmentHp,
         ...(s.augmentProgress.magicRoll === undefined ? {} : { magicRoll: [s.augmentProgress.magicRoll[0], s.augmentProgress.magicRoll[1], s.augmentProgress.magicRoll[2]] as const }),
         ...(s.augmentProgress.forming === undefined ? {} : { forming: Object.fromEntries(Object.entries(s.augmentProgress.forming).map(([k, t]) => [k, { health:t!.health, attack:t!.attack }])) }) },
@@ -175,5 +184,6 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),
     augments: state.augments, anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId) ? state.anomalyBinding : null,
     persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)), augmentProgress: state.augmentProgress,
+    ...((growth=>growth.length?{augmentHistoryGrowth:growth}:{})(combatHistoryGrowth(state,[...ids]))),
   });
 }
