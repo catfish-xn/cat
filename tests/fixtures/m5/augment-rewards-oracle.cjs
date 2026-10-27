@@ -13,7 +13,7 @@ const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
- 'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
+ 'glorious-evolution':[I('adaptive-helm')],'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
  'branching-out':[Q('emblem'),C('reforger')], 'item-grab-bag-i':[Q('completed')],
  'one-two-five':[Q('component'),R(5)],'band-of-thieves-i':[I('thiefs-gloves')],
@@ -94,6 +94,16 @@ function rewardPlan(s,env){
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
   const facts=battles.filter(f=>f.round>=a.acquiredRound);
+  if(a.definitionId==='glorious-evolution'){
+   const helm=start[0],marker=s.resourceProvenance.entries.find(e=>e.kind==='item-acquired'&&e.source.kind==='mechanic'&&e.source.receiptId===helm.receiptId);
+   let count=0,due;
+   for(const e of s.resourceProvenance.entries){if(!marker||e.sequence<=marker.sequence)continue;
+    const upgrades=e.kind==='unit-upgraded'||e.kind==='unit-upgraded-after-combat'?[e.event]:e.kind==='carousel-unit-claimed'||e.kind==='carousel-preparation-settled'?e.upgrades:[];
+    for(const u of upgrades){count+=u.toStar-u.fromStar;if(count>=9){due=env.ROUNDS.findIndex(r=>r.roundId===e.roundId)+1;break;}}if(due)break;
+   }
+   if(due){levelsOut.push(...expand(s,owner(a,['glorious-evolution','item'],due),[I('jeweled-gauntlet')],env));const hero=nonSupply(due);
+    if(hero<=s.round)levelsOut.push(...expand(s,owner(a,['glorious-evolution','unit'],hero),[U('viktor')],env));}
+  }
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;

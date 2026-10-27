@@ -186,10 +186,11 @@ export function applyRoundSettlement(state: MatchState, input: unknown,unitLootP
     const beforeS6cGold=settled;settled=drainBatch5S6cGold(settled);
     hookEvents.push(...mechanicGrantEvents(beforeS6cGold,settled));
     const merged = resolveDeferredUpgrades(settled);
-    const d14State=pruneForgePositions(reconcileD14(merged.state,hookEvents));
+    const rewarded=merged.state.augments.some(a=>a.definitionId==='glorious-evolution') ? drainBatch1Gifts(merged.state,unitLootPolicy) : merged.state;
+    const d14State=pruneForgePositions(reconcileD14(rewarded,hookEvents));
     const forfeited=hpAfter===0?forfeitUnclaimedOrbs(d14State):settleQueuedOrbClaims(d14State,unitLootPolicy);
     const opened=openG23Choice(forfeited.state);
-    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,merged.state),...forfeited.events,...opened.events];
+    const extra=[...hookEvents,...merged.events,...mechanicGrantEvents(state,rewarded),...forfeited.events,...opened.events];
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
       ...extra.map((event,index) => ('tick' in event?event:{...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
     return {ok:true,state:{...opened.state,nextMatchEventSeq:next.nextMatchEventSeq+extra.length},events};

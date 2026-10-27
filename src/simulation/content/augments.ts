@@ -1,4 +1,5 @@
 import { AUGMENT_BATCH5_S6C_DEFINITIONS } from './augment-pool-batch5-s6c';
+import { AUGMENT_BATCH5_S8B_DEFINITIONS } from './augment-pool-batch5-s8b';
 import { AUGMENT_SHOP_DEFINITIONS } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S8A_DEFINITIONS } from './augment-pool-batch5-s8a';
 import { AUGMENT_BATCH5_DEFINITIONS } from './augment-pool-batch5';
@@ -28,6 +29,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   ...AUGMENT_BATCH5_DEFINITIONS,
   ...AUGMENT_BATCH5_S6C_DEFINITIONS,
   ...AUGMENT_BATCH5_S8A_DEFINITIONS,
+  ...AUGMENT_BATCH5_S8B_DEFINITIONS,
   ...AUGMENT_BATCH4_B4XP_DEFINITIONS,
   ...AUGMENT_BATCH4_B4REROLL_DEFINITIONS,
   ...V20_TEAMUP_AUGMENTS,
