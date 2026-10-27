@@ -19,6 +19,7 @@ import { SHOP_CATALOG } from './match-rules';
 import { UNIT_DEFINITIONS } from './units';
 import { planUnitAcquisition } from './unit-acquisition';
 import { grantMechanicUnit } from './seat-mechanics/grants';
+import { CARRY_GOLEM_ID } from './content/augment-pool-batch5-g6';
 export type * from './consumable-types';
 const equal=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
 /** Lesser Shimmer Duplicator: the copied hero must carry the tool's trait (Chem-Baron). */
@@ -35,6 +36,7 @@ export function reforgeCandidates(definitionId:string):readonly {readonly defini
 }
 /** Only permanent ordinary craftable completed items have a masterwork target. */
 export function masterworkCandidates(state: Readonly<MatchState>, unitId: string): readonly ItemInstance[] {
+  if (state.preparation.units.some(u => u.id === unitId && u.definitionId === CARRY_GOLEM_ID)) return [];
   return state.items.filter(i => i.location.kind === 'unit' && i.location.unitId === unitId
     && ORDINARY_ITEMS[i.definitionId]?.kind === 'completed' && ORDINARY_ITEMS[i.definitionId]?.recipe
     && !!g23RadiantDefinitionId(i.definitionId) && !isTemporaryItemId(state, i.id))
@@ -48,7 +50,7 @@ export function previewUseConsumable(state:Readonly<MatchState>,consumableId:str
   if(!definition)throw new RangeError('Invalid consumable definition');
   if(!target||target.kind!=='unit')return {ok:false,reason:'invalid-consumable-target'};
   const unit=state.preparation.units.find(u=>u.id===target.unitId);
-  if(unit&&(unit.definitionId==='trainer-golem'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.definitionId==='tower-dummy'||unit.definitionId==='augment-golem'||isAnvil(unit.definitionId)))return {ok:false,reason:'invalid-consumable-target'};
+  if(unit&&(unit.definitionId==='carry-golem'||unit.definitionId==='trainer-golem'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.definitionId==='tower-dummy'||unit.definitionId==='augment-golem'||isAnvil(unit.definitionId)))return {ok:false,reason:'invalid-consumable-target'};
   if(!unit)return {ok:false,reason:'unknown-unit'};
   if(unit.team!=='player')return {ok:false,reason:'invalid-consumable-target'};
   if (definition.effect !== 'masterwork-upgrade' && target.itemId !== undefined) return {ok:false,reason:'invalid-consumable-target'};

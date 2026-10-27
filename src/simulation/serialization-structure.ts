@@ -1,5 +1,6 @@
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
+import { validateCarryGolem } from './augment-pool-batch5-g6';
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
 import { carryRestoredAugmentTrace } from './augment-history';
 import { atWhatCostHistoricalXp, skipsFutureAugment } from './augment-pool-batch5-s1b';
@@ -179,6 +180,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
   requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
   mechanicCheck(() => validateG23RewardSources(state), 'G23 reward authority');
+  mechanicCheck(() => validateCarryGolem(state), 'carry golem authority');
   let teamSizeBonus = 0;
   try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
   const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);

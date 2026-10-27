@@ -1710,3 +1710,11 @@ G4 出生修订 `augment-pool-batch5-g4-v25-spawn-1`：内部 `castB5Voidcaller(
 | `drainBatch5G5Gold(state: MatchState): MatchState` | 由已确定计划调用 `grantMechanicGold`，同键不重发；内部非法授权抛 RangeError。`validateBatch5G5Rewards(state): void` 检查完整金币计划、唯一性、金额、回合、礼物覆盖和历史，篡改抛 RangeError。 |
 
 `claimOrb` 失败原因继续使用原枚举 `stale-round / unknown-orb / already-claimed / wrong-phase / shared-pool-required / seat-eliminated / invalid-loot`，失败返回原状态和原池，无事件与随机消耗。额外球未杀载体时不可领取；部分领取返回原有成功语义并保留未领条目，全部领取后才产生一次管道历史事实和加奖。金币收据 namespace 为 `augment-pool-batch5-g5`；物品／英雄／工具沿用独立礼物计划的 `augment-pool-batch1` namespace。全部数值、证据级别和主表保留项见 S13_RULES_GAP 的 P-B5-82／P-B5-85。
+### B5-G6：我成C位了（P-B5-83，2026-10-27）
+
+- 正常报价保留14.24阶段禁表：本卡无2-1/3-2/4-2禁令。公共命令仍是 `selectChoice`，无新增客户端命令、失败枚举或服务器专用奖励公式；房间现有共享选择/入轮路径直接调用领域规则，无 `src/server` 修改。
+- `augment-pool-batch5-g6.ts` 内部生命周期：`grantCarryGolem(state: MatchState): {state: MatchState; events: readonly MatchEvent[]}` 在取得事务中固定授予一次免费棋盘魔像及三件装备；重复调用返回原对象和空事件。没有可用出生格、无效装备内容为内部 `RangeError`；合法匹配的部署区有空位。`growCarryGolem(state: MatchState): MatchState` 接正常入轮与联机加时，按取得轮与当前轮推导星级，同阶段重复调用不写状态。
+- `augment-pool-batch5-g6-stats.ts`：`carryGolemGrowth(round: number, acquiredRound: number): number` 返回经过的阶段数；`carryGolemStar(round, acquiredRound): StarLevel` 返回1～4；`carryGolemEffects(round: number, owner: OwnedAugment, unit: Unit): Effect[]` 只对carry-golem产生475×阶段数平面生命和2000×阶段数AD基点；`carryGolemBaseStats(starLevel: StarLevel): ResolvedUnitStats` 读取原型星级面板。非法轮/星级抛 `RangeError`，其它单位返回空效果。2-1取得的2/3/4/5+阶段星级为1/2/3/4，晚取得从1星起、不追认之前阶段；加时仍第6阶段。
+- `validateCarryGolem(state: MatchState): void` 在离线与共享恢复入口执行：核对持有者、唯一单位、推导星级、四张获取收据、固定装备位置与7条连续资源来源事实；魔像坐标必须为默认棋盘己方部署区内无重叠的整数格。从资源流起点独立累计装备获取、合成、消耗品替换产生的分配，核对每次连续序号及最终 `nextItemSerial`，不依赖收据或当前装备ID反推起始值。无持有者的残留单位/收据同样拒绝。对象、JSON、规范文本及传入房间 authority 的恢复均检查；失败为 `RangeError('Invalid carry golem authority')`，沿各恢复入口原有错误封装；不修补缺失凭证。
+- 存活伤害沿用训练师魔像政策：附赠魔像不进入 `countsG23SurvivorDamage` 的伤害人数，10英雄加魔像全存活时 `opposingSurvivors=10`，正常进入 `applyRoundSettlement`，不修改伤害上限。`applyG23Radiant(state, newItemIds?)` 的全量与后续新增装备转换均跳过魔像固定套装；消耗品拒绝原子保留state与空事件，精工候选查询返回空列表。普通英雄的同款装备仍正常转换。
+- 正式 `StarLevel` 类型可表达4，但 `getUnitStats`、`resolveAbility` 和资源结构检查仅允许carry-golem的正式四星，普通英雄仍一至三星；既有战斗临时四星规则不变。无新增历史事实或保存节，内容身份脚本重算，旧epoch不重录。研究状态及取整/装备/人口政策详见 `S13_RULES_GAP.md` P-B5-83。

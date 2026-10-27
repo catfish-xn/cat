@@ -3,6 +3,7 @@ import { isS3bConversion, validS3bConversion } from './augment-pool-batch5-s3b-c
 import { academicCraft } from './augment-pool-batch5-s3b';
 import { canonicalContent } from './content';
 import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
+import { carryGolemStar } from './augment-pool-batch5-g6-stats';
 import { isAnvil } from './content/anvils';
 import { trainerStar, TRAINER_ID } from './content/opening-batch-b';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
@@ -401,7 +402,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     .map(entry => (entry as Extract<ResourceProvenanceEntry, { kind: 'combat-growth-committed' }>).combatStartProvenancePrefixLength));
   const unitPrefixes = new Map<number, ReadonlyMap<string, ProvenanceUnit>>();
   let inventoryPrefix=-1,inventoryRound=0;
-  const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit,...(unit.definitionId===TRAINER_ID?{starLevel:trainerStar(getCatalogRoundByOrdinal(context.throughRoundOrdinal).stage)}:{}) })).sort(compareIds),
+  const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit,...(unit.definitionId==='carry-golem'?{starLevel:carryGolemStar(context.throughRoundOrdinal,context.scheduleReceipts.find(r=>r.kind==='augment'&&r.definitionId==='im-the-carry-now')?.round??context.throughRoundOrdinal)}:unit.definitionId===TRAINER_ID?{starLevel:trainerStar(getCatalogRoundByOrdinal(context.throughRoundOrdinal).stage)}:{}) })).sort(compareIds),
     items: projectBatch5Items([...items.values()],context.batch5Inventory??{conversions:[],anvils:[]},prefixLength,context.throughRoundOrdinal,inventoryPrefix,inventoryRound).map(item => ({ ...item })).sort(compareIds), persistentGrowth: growth.map(entry => ({ ...entry })), nextUnitSerial, nextItemSerial });
   let result = projection();
   const deferredCarouselIds = new Set<string>(), preparationReceipts = new Set<string>(), claimedCarouselIds = new Set<string>();

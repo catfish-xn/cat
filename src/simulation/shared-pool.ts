@@ -16,6 +16,7 @@ import { AUGMENT_BATCH5_H10 } from './content/augment-pool-batch5-h10';
 import { headStartShopDisabled } from './augment-pool-batch5-h12';
 import { AUGMENT_BATCH5_G3 } from './content/augment-pool-batch5-g3';
 import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
+import { validateCarryGolem } from './augment-pool-batch5-g6';
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
 import { validateSharedR3Combat } from './augment-pool-batch5-r3-restore';
 import { advanceAugmentPreparationTime, type AugmentHistoryAuthority } from './augment-history';
@@ -83,6 +84,7 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   requirePool(state.rulesVersion===M8_VERSION.rulesVersion&&state.contentVersion===M8_VERSION.contentVersion
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
   preflightAugmentHistory(state);
+  validateCarryGolem(state);
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
   validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
   validateMadChemistOnlineSave(pool, state, authority);

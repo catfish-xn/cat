@@ -1,6 +1,7 @@
 import { aerialWarfareBonus } from './augment-pool-batch5-g3';
 import { batch2Bonus, batch2Mechanic } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
+import { CARRY_GOLEM, CARRY_GOLEM_ID } from './content/augment-pool-batch5-g6';
 import { TRAINER_ATTACK_CENTI, TRAINER_ID } from './content/opening-batch-b';
 import { STAR_ATTACK_PERCENT } from './content/unit-star-scaling';
 import { overtimeBonusBps } from './combat-overtime';
@@ -99,7 +100,7 @@ export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind'
   return (unit.statuses ?? []).filter(s => s.kind === kind && s.startsAtTick <= tick && s.expiresAtTick > tick);
 }
 export function ap(unit: S13Unit, tick: number, units:readonly CombatUnit[]=[]): number {
-  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat+aerialWarfareBonus(unit,'ap')+(unit.ghostFriends?.abilityPower??0)+batch2Bonus(unit,'ap')+(unit.definitionId==='viktor'?Math.max(0,ad(unit,true)-STAR_ATTACK_PERCENT[unit.starLevel])+Math.floor(Math.max(0,attackSpeedBonus(unit,tick,units))/100)+(unit.sixCost?.convertedMana??0):0)+p2Bonus(unit,'abilityPower')),
+  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat+aerialWarfareBonus(unit,'ap')+(unit.ghostFriends?.abilityPower??0)+batch2Bonus(unit,'ap')+(unit.definitionId==='viktor'?Math.max(0,ad(unit,true)-STAR_ATTACK_PERCENT[Math.min(3,unit.starLevel) as 1|2|3])+Math.floor(Math.max(0,attackSpeedBonus(unit,tick,units))/100)+(unit.sixCost?.convertedMana??0):0)+p2Bonus(unit,'abilityPower')),
     ...active(unit, tick, 'abilityPower').filter(s => !s.contributionKeys).map(s => constantModifier('abilityPower', s.amount)), ...statusModifiers(unit, 'abilityPower', tick)], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='magic-expert')?14000:10000)/10000);
 }
@@ -110,9 +111,9 @@ function badLuckAdBps(unit: S13Unit): number {
   return m ? Math.floor(spellCrit(unit).chanceBps * m.values.ratioBps / 10000) : 0;
 }
 export function ad(unit: S13Unit, raw=false): number {
-  if(unit.definitionId==='viktor'&&!raw)return STAR_ATTACK_PERCENT[unit.starLevel];
+  if(unit.definitionId==='viktor'&&!raw)return STAR_ATTACK_PERCENT[Math.min(3,unit.starLevel) as 1|2|3];
   const result = resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
-    [constantModifier('attackDamage', (unit.attackDamagePercentBps ?? 0)+aerialWarfareBonus(unit,'adBps')+(unit.ghostFriends?.attackDamageBps??0)+batch2Bonus(unit,'adBps')+p2Bonus(unit,'attackDamageBps')+badLuckAdBps(unit), 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined },unit.definitionId===TRAINER_ID?TRAINER_ATTACK_CENTI[unit.starLevel-1]%100:0);
+    [constantModifier('attackDamage', (unit.attackDamagePercentBps ?? 0)+aerialWarfareBonus(unit,'adBps')+(unit.ghostFriends?.attackDamageBps??0)+batch2Bonus(unit,'adBps')+p2Bonus(unit,'attackDamageBps')+badLuckAdBps(unit), 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined },unit.definitionId===CARRY_GOLEM_ID?CARRY_GOLEM.attackCenti[unit.starLevel-1]%100:unit.definitionId===TRAINER_ID?TRAINER_ATTACK_CENTI[unit.starLevel-1]%100:0);
   return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000)+(unit.mechanismState?.statuses?modifierIndex.get(unit.mechanismState.statuses)?.fixedAd??0:0)+(unit.anomalyState?.consumed?.attackDamage??0)+p2Bonus(unit,'attackDamageFlat')+(unit.v20Traits?.mentorshipGranted??0);
 }
 export function range(unit: S13Unit, firelightWindow = true): number {

@@ -1,6 +1,7 @@
 import { r2AnomalyAllowed, grantPortableAnomaly } from './augment-pool-batch5-r2-anomaly';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { transformPandorasBench, transformRecombobulator } from './augment-pool-batch5-r6';
+import { grantCarryGolem, growCarryGolem } from './augment-pool-batch5-g6';
 import { grantCookingPotGrowth, noScoutLockedUnits } from './augment-pool-batch5-h3';
 import { drainPortfolioGold } from './augment-pool-batch5-h4';
 import { drainContestedGold } from './augment-pool-batch5-h6';
@@ -661,7 +662,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   const refresh = state.shop.locked && !subscriptionStageStart(state,round) && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : drawSoloAugmentShop({...state,round},sixCostShopContext(state),subscriptionStageStart(state,round));
   const carousel = resolveCarouselPreparation({ ...state, ...refresh, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] } });
-  let prepared = growTrainerGolem(enterOpeningCrabs(carousel.state));
+  let prepared = growCarryGolem(growTrainerGolem(enterOpeningCrabs(carousel.state)));
   const portfolio = drainPortfolioGold(prepared), portfolioEvents = stampMatchEvents(portfolio, mechanicGrantEvents(prepared,portfolio));
   prepared = portfolioEvents.state;
   const openingEvents: MatchEvent[] = [...transformed.events, ...portfolioEvents.events];
@@ -717,7 +718,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
       m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
       preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } });
     if(!applied.ok)return multiplayerFail(initial,applied.reason);
-    const entry=drainPortfolioGold(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state)));
+    const entry=growCarryGolem(drainPortfolioGold(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state))));
     const gifted=entry.augments.some(a=>(a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='hard-commit'||a.definitionId==='lucky-gloves'))?drainP2Gifts(entry):entry;
     const drained=enterShopAugmentRound(gifted),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
     return accepted.ok?{...accepted,events:[...transformed.events,...applied.events,...accepted.events]}:accepted;
@@ -1028,6 +1029,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
   }
   if(choice.kind==='anomaly'){selected=acquireD14(selected);const granted=grantAnomalyAcquisition(selected);selected=granted.state;events.push(...granted.events);const portable=grantPortableAnomaly(selected);selected=portable.state;events.push(...portable.events);}
   if(choice.kind==='augment'){const granted=grantAugmentAcquisition(selected,selected.augments.at(-1)!);selected=granted.state;events.push(...granted.events);const portable=grantPortableAnomaly(selected);selected=portable.state;events.push(...portable.events);}
+  if(choice.kind==='augment'){const granted=grantCarryGolem(selected);selected=granted.state;events.push(...granted.events);}
   if(choice.kind==='augment')selected=recordShopAcquisition(state,selected);
   if(!selected.sharedPool&&subscriptionAcquired(state,selected))selected=drawSoloAugmentShop(selected,sixCostShopContext(selected),true);
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');

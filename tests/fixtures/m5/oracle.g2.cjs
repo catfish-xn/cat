@@ -175,7 +175,7 @@ batch3Offers.silver.push('mad-chemist');
 batch3Offers.silver.push('recombobulator','pandoras-bench');
 batch3Offers.prismatic.push('lucky-gloves','lucky-gloves-plus');
 batch3Offers.gold.push('aerial-warfare','natural-selection');
-batch3Offers.silver.push('survivor','diversified-portfolio-plus','diversified-portfolio','called-shot','crafted-crafting','table-scraps','young-and-wild-and-free');batch3Offers.prismatic.push('dual-purpose','a-change-of-fate');
+batch3Offers.silver.push('survivor','diversified-portfolio-plus','diversified-portfolio','called-shot','crafted-crafting','table-scraps','young-and-wild-and-free');batch3Offers.prismatic.push('dual-purpose','a-change-of-fate','im-the-carry-now');
 batch3Offers.gold.push('moonlight','pilfer');batch3Offers.prismatic.push('greater-moonlight','tiniest-titan','tiniest-titan-plus','glorious-evolution','hard-commit');
 batch3Offers.gold.push('forward-thinking','mirrored-monetization','dhampyr');
 batch3Offers.gold.push('scavenger');batch3Offers.prismatic.push('sponging');
@@ -183,8 +183,8 @@ batch3Offers.prismatic.push('artifactory','pandoras-items-iii');
 batch3Offers.gold.push('salvage-bin-plus','a-golden-find','forbidden-magic');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
 AUGMENT_POOLS.gold.push('snipers-nest','trait-tracker'); AUGMENTS.push('snipers-nest','trait-tracker'); AUGMENTS.sort();
-assert.equal(AUGMENTS.length,300,'independent full augment catalog size');
-assert.equal(new Set(AUGMENTS).size,300,'independent catalog has no duplicates');
+assert.equal(AUGMENTS.length,301,'independent full augment catalog size');
+assert.equal(new Set(AUGMENTS).size,301,'independent catalog has no duplicates');
 AUGMENT_POOLS.prismatic.push('max-cap');AUGMENT_POOLS.silver.push('head-start');AUGMENTS.push('max-cap','head-start');AUGMENTS.sort();
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
@@ -529,7 +529,7 @@ function heldResources(state){
  return {units:[d.held.unit],items:d.held.items};
 }
 // v22 Trainer Golem is an opening structure whose star follows the stage (audited by opening-encounters-trainer-golems), not a card.
-const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'&&u.definitionId!=='trainer-golem'),...heldResources(state).units];
+const ownedUnits=state=>[...state.preparation.units.filter(u=>u.team==='player'&&!['trainer-golem','carry-golem'].includes(u.definitionId)),...heldResources(state).units];
 const ownedItems=state=>[...state.items,...heldResources(state).items];
 // CHEM_BARON_FIX: independent standard 14.24b PvP values and archive map22 source-order weights.
 // One whole bundle per 14.24b UI evidence; no production content/planner/RNG imports.
@@ -688,6 +688,7 @@ class Ledger {
    assert(a&&['support-mining','support-mining-plus'].includes(a.definitionId),'independent dummy retirement owner');
    assert.equal(units.get(e.unitId)?.definitionId,'training-dummy');units.delete(e.unitId);this.cards--;
   }
+  if(command?.type==='select'&&before.pendingChoice?.kind==='augment'&&command.definitionId==='im-the-carry-now')serial++;
   assert.equal(after.nextUnitSerial,serial,'unit serial accounting');
   for(const event of events.filter(e=>e.type==='unitUpgraded')){assert.equal(event.consumedIds.length,2);assert.equal(new Set([event.survivorId,...event.consumedIds]).size,3);for(const id of [event.survivorId,...event.consumedIds])assert.deepEqual(units.get(id),{definitionId:event.definitionId,starLevel:event.fromStar},'upgrade consumes actual candidate lineage');assert.equal(event.toStar,event.fromStar+1);for(const id of event.consumedIds)units.delete(id);units.set(event.survivorId,{definitionId:event.definitionId,starLevel:event.toStar});}
   assert.deepEqual(new Map(ownedUnits(after).map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}])),units,'actual player unit lineage');
