@@ -1,3 +1,4 @@
+import { augmentExtraRerolls, canRerollAugmentSlot } from './augment-pool-batch5-s1a';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
 import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost, drawSoloAugmentShop, planFiresale, stealFiresaleUnit, subscriptionAcquired, subscriptionStageStart } from './shop-augments';
@@ -194,7 +195,7 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
     } else if (event.kind === 'component') offers = [...COMPONENT_IDS];
     const pendingChoice = { kind: event.kind, step: event.kind === 'anomaly' ? 'target' as const : 'offer' as const,
       choiceId: event.id, eventId: event.id, generation: 0, offers, targetId: null, rerollCount: 0,
-      ...(event.kind === 'augment' ? {augmentTier: resolveAugmentTier(state, event.id), rerollsRemaining: 3, rerolledSlots: [false, false, false]} : {}),
+      ...(event.kind === 'augment' ? {augmentTier: resolveAugmentTier(state, event.id), rerollsRemaining: 3 + augmentExtraRerolls(state.augments, event.id), rerolledSlots: [false, false, false]} : {}),
       returnPhase: timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' as const : 'preparation' as const };
     state = { ...state, augmentOffers: event.kind === 'augment'
       ? [...state.augmentOffers, {choiceId:event.id,tier:resolveAugmentTier(state,event.id),rerollCount:0,rerolledIndices:[],fieldedTraits:filter!.fieldedTraits,externalBlocks:[filter!.blocked]}] : state.augmentOffers,
@@ -744,17 +745,17 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
   return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }
-/** One free reroll per slot; missing legacy slot arguments fail closed until UI/server wiring. */
+/** Base slot rerolls and any shared extra uses; missing slot arguments fail closed. */
 export function rerollAugment(state: MatchState, choiceId: string, generation: number, optionIndex?: number, augmentBlocked: readonly string[] = []): MatchCommandResult {
   const choice = state.pendingChoice;
   if (state.phase !== 'choice' || choice?.kind !== 'augment' || choice.step !== 'offer'
     || isCombatRosterLocked(state) || state.multiplayer?.status === 'eliminated') return fail(state, 'wrong-phase');
   if (choice.choiceId !== choiceId || choice.generation !== generation) return fail(state, 'stale-choice');
   if (optionIndex === undefined || !Number.isSafeInteger(optionIndex) || optionIndex < 0 || optionIndex >= choice.offers.length) return fail(state, 'invalid-slot');
-  if (choice.rerolledSlots?.[optionIndex] !== false) return fail(state, 'augment-rerolls-exhausted');
   const tier = resolveAugmentTier(state, choiceId);
   const record = state.augmentOffers.find(candidate => candidate.choiceId === choiceId);
   if (!record) return fail(state, 'stale-choice');
+  if (!canRerollAugmentSlot(state.augments, choiceId, record.rerolledIndices, optionIndex)) return fail(state, 'augment-rerolls-exhausted');
   const blocked = [...augmentBlocked].sort();
   const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers],openingEncounterId(state), {...recordedOfferFilter(record, 0), blocked});
   if (!candidates.length) return fail(state, 'augment-pool-too-small');
@@ -763,7 +764,7 @@ export function rerollAugment(state: MatchState, choiceId: string, generation: n
   const offers = [...choice.offers], rerolledSlots = [...choice.rerolledSlots!];
   offers[optionIndex] = draw.definitionId; rerolledSlots[optionIndex] = true;
   const pendingChoice = {...choice, offers, augmentTier:tier, generation:generation+1,
-    rerollCount, rerollsRemaining:3-rerollCount, rerolledSlots};
+    rerollCount, rerollsRemaining:3+augmentExtraRerolls(state.augments, choiceId)-rerollCount, rerolledSlots};
   return accept({...state, choiceRngState:draw.choiceRngState, pendingChoice,
     removedAugmentIds:[...state.removedAugmentIds,draw.definitionId],
     augmentOffers:state.augmentOffers.map(entry => entry.choiceId === choiceId
