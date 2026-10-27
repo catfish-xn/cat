@@ -1,4 +1,8 @@
-## 2026-10-27 v24 纪元身份
+## 2026-10-27 v25 H7 历史强化
+
+B5-42／43／44 已开放；函数签名、失败原因和全部接线见 [H7 交付合同](AUGMENT_BATCH5_H7_DELIVERY.md)。使用 `augment-history-v1` 认证死亡、实际玩家扣血、生命与选秀收据。最大生命由 Titanic Titan 已认证拥有条目派生为 120，后续治疗及战斗输入采用新上限。rules/content 升为 `s13-g2-3-v25-online-rules`／`s13-14.24b-g2-3-v25-online-rules`；schema/save/replay/command 仍为 12/8/8/7，规则网络 5、WebSocket 封套 6。无新客户端命令，未重录 epoch；旧身份拒绝续玩。
+
+## 2026-10-27 v24 纪元身份（历史）
 
 当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。
 

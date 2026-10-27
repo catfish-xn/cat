@@ -1,3 +1,4 @@
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { drainSetup } from './setup-work';
 import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
@@ -49,7 +50,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     const s = value as unknown as PlayerBattleSnapshot;
     if(s.itemSummonPositions)validateItemSummonPositions(s.itemSummonPositions);
     if(s.bankGold!==undefined)integer(s.bankGold);
-    if(s.playerHp!==undefined){integer(s.playerHp);requireSnapshot(s.playerHp<=100);}
+    if(s.playerHp!==undefined){integer(s.playerHp);requireSnapshot(s.playerHp<=maximumPlayerHp(s.augments,getMultiplayerRoundById(s.roundId).ordinal));}
     if(s.g23)yield* validateG23ProgressSteps(s.g23,s.g23.seed,getMultiplayerRoundById(s.roundId).ordinal);
     if(s.priorPvpWins!==undefined){integer(s.priorPvpWins,1);requireSnapshot(s.priorPvpWins<=priorPvpRoundLimit(getMultiplayerRoundById(s.roundId).ordinal));}
     id(s.seatId); id(s.roundId); integer(s.level, 1);

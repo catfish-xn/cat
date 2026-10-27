@@ -1,3 +1,4 @@
+import { validateBatch5H7Gold } from './augment-pool-batch5-h7';
 import { validateShopAugments } from './shop-augments';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
 import { batch5RewardPlan, validateBatch5Gold } from './augment-pool-batch5-progress';
@@ -49,6 +50,7 @@ export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
   ?{definitionId:gift.definitionId,offers:augmentAnvilOffers(state.seed,receiptId,gift.definitionId)}:undefined;
 }
 export function validateBatch1Gifts(state:MatchState):void {
+ validateBatch5H7Gold(state);
  validateBatch5Gold(state);
  validateBatch4Gold(state);
  validateBatch2Gold(state);

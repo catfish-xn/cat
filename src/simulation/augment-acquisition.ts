@@ -1,3 +1,4 @@
+import { acquireTitanicTitan } from './augment-pool-batch5-h7-health';
 import {openG23Choice} from './g2-3-runtime';
 import { G24_FORGE_POOLS } from './content/g2-4-forges';
 import type { MatchState, MatchEvent } from './match-types';
@@ -29,7 +30,7 @@ export function augmentForgeOffers(seed:number,a:OwnedAugment): readonly string[
 }
 /** Acquisition transaction shared by all supported item augments; fixed receipt identity makes repeat inert. */
 export function grantAugmentAcquisition(initial:MatchState,a:OwnedAugment):{state:MatchState;events:MatchEvent[]} {
-  let state=initial;const events:MatchEvent[]=[],p=augmentAcquisition(a);
+  let state=acquireTitanicTitan(initial,a);const events:MatchEvent[]=[],p=augmentAcquisition(a);
   for(const [i,definitionId] of p.items.entries()){
     const receiptId=`${prefix(a)}:item:${i}`;
     if(state.seatMechanics?.receipts.some(r=>r.receiptId===receiptId))continue;

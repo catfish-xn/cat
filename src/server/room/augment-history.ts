@@ -1,6 +1,6 @@
 /** Server orchestration only: freeze authoritative table/roster/settlement observations.
  * No rewards, growth amounts, player damage formula or random draws live here. */
-import { appendAugmentFact, recordAugmentTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
+import { drainBatch5H7Gold, appendAugmentFact, recordAugmentTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
   type HistorySeat } from '../../server-entry';
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput } from './types';
@@ -50,7 +50,8 @@ export function recordRoomBattleFacts(seats: readonly SettledSeat[], results: re
     if (!mirror && !record) throw new RangeError('Invalid augment history: missing opponent damage settlement');
     match = appendAugmentFact(match, { kind: 'player-damage', battleId: result.battleId, opponentSeatId: opponentId,
       mirror, hpBefore: mirror ? null : record!.hpBefore, hpAfterDamage: mirror ? null : record!.hpAfter, actualDamage: mirror ? 0 : record!.hpLost });
-    return { ...seat, match };
+    const rewarded = drainBatch5H7Gold(match);
+    return { ...seat, match: rewarded.state, events: [...seat.events, ...rewarded.events] };
   });
 }
 export function recordRoomSettlementTable(seats: readonly SeatState[]): readonly SeatState[] {

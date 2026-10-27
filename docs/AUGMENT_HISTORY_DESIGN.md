@@ -57,6 +57,7 @@
 - `prepareAugmentAcquisition(state: MatchState, previousBattle: PreviousAugmentBattle, elapsedMs: number, seats: readonly HistorySeat[]): void`：房间在手选/机器人/超时选取前注入自身私有上一战、时钟及完整全桌上下文，复制后仅写 WeakMap；`recordAugmentAcquisition` 在专属获取效果前把 acquire 和 table 写入同一成功事务。全桌须为 1～8 个唯一席位且包含当前席位，错误为 `Invalid augment history: server acquisition table`；时钟或多人身份错误仍为 `server acquisition context`。取得效果执行期间即可读取此前淘汰席，不能延迟到发布后才提供。非房间调用不可把候选档当可信上下文；失败选择不写持久事实、不改变资源或 RNG。
 - `recordAugmentRoundEntry(state): MatchState`、`recordAugmentTransition(before,after,events?): MatchState`：只记录成功事务；失败保持原 state，不发事件、不用 RNG。
 - `requireAugmentFacts(state,kind,round)`：返回指定族的脱离对象副本；没有该轮记录即抛 `missing <kind> for round <n>`。空 `deaths:[]` 是有完整性边界的零，缺失一整行不是零。
+- `findAugmentFacts(state,kind,round)`（H7，2026-10-27）：仅查询可选收据或尚在进行的战斗边界，返回脱离副本；缺历史节仍拒绝，空查询不能证明完成战斗为零。已完成战斗继续用 `requireAugmentFacts`。不新增保存字段／版本或改变原认证。
 - `readPreviousAugmentBattle(state,choiceId)`：读取取得前上一战证据；不把 unavailable 当 none。
 - `recordAugmentGrowth(state,choiceId,receiptId,deltas)`：只允许持有来源、普通英雄、非负安全整数；同收据同内容返回原对象，冲突报错。`readAugmentGrowth(state,unitId)` 沿资源账本合星血缘累计，不接管 Tristana 旧 AD 账本。此任务只提供持久成长证据和读取器；最终战斗面板应用属于实际强化任务。
 - `recordAugmentPlayerHealth(state,change)`：领域事务完成后记录真实 HP/最大 HP 前后值，绑定持有来源与唯一收据，当前 HP 必须等于 hpAfter；不执行治疗、不决定上限。重复收据同内容幂等，冲突拒绝。

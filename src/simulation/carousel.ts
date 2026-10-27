@@ -1,3 +1,4 @@
+import { maximumPlayerHp, titanicTitanChoiceId, h7CarouselRelease, h7CarouselParticipantValid } from './augment-pool-batch5-h7-health';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
@@ -63,9 +64,11 @@ export function prepareCarouselParticipants(pool: SharedPoolState, states: reado
     const participants: CarouselParticipant[] = [];
     for (const entry of states) {
         const seat = active.find(s => s.seatId === entry.seatId), s = entry.state;
-        if (!s || !seat || !integer(s.playerHp, 1) || s.playerHp > 100 || s.sharedPool?.poolId !== pool.poolId || s.sharedPool.seatId !== entry.seatId || s.sharedPool.revision !== seat.revision || s.multiplayer?.status !== 'active' || s.multiplayer.seatId !== entry.seatId)
+        if (!s || !seat || !integer(s.playerHp, 1) || s.playerHp > maximumPlayerHp(s.augments) || s.sharedPool?.poolId !== pool.poolId || s.sharedPool.seatId !== entry.seatId || s.sharedPool.revision !== seat.revision || s.multiplayer?.status !== 'active' || s.multiplayer.seatId !== entry.seatId)
             return { ok: false, pool, reason: 'invalid-participants' };
-        participants.push({ seatId: seat.seatId, seatIndex: seat.seatIndex, hp: s.playerHp });
+        let choiceId: string | undefined;
+        try { choiceId = titanicTitanChoiceId(s); } catch { return {ok:false,pool,reason:'invalid-participants'}; }
+        participants.push({ seatId: seat.seatId, seatIndex: seat.seatIndex, hp: s.playerHp, ...(choiceId ? {titanicTitanChoiceId:choiceId} : {}) });
     }
     participants.sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex);
     return { ok: true, pool: { ...pool, carouselParticipants: participants } };
@@ -126,14 +129,14 @@ export function createCarousel(pool: SharedPoolState, roundId: CarouselRoundId, 
     if (roundId === '1-1' ? pool.naturalRound !== 0 : pool.naturalRound !== getCatalogRoundById(roundId).ordinal)
         return fail('invalid-round');
     const participants = pool.carouselParticipants, active = pool.seats.filter(s => !s.released);
-    if (pool.seats.length !== pool.seatCount || !participants.length || participants.length !== active.length || new Set(participants.map(p => p.seatId)).size !== participants.length || participants.some(p => !integer(p.hp, 1) || p.hp > 100 || !active.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)))
+    if (pool.seats.length !== pool.seatCount || !participants.length || participants.length !== active.length || new Set(participants.map(p => p.seatId)).size !== participants.length || participants.some(p => !integer(p.hp, 1) || !h7CarouselParticipantValid(p) || !active.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)))
         return fail('invalid-participants');
     if (Object.values(pool.available).reduce((a, b) => a + b, 0) < 9)
         return fail('pool-exhausted');
     const id = `${pool.poolId}:carousel:${roundId}`, { available, slots, wordState } = drawSlots(pool.available, roundId, rng.state, id);
-    const ordered = [...participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), releaseOrder = ordered.map(p => p.seatId), times = schedule(roundId);
+    const ordered = [...participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), times = schedule(roundId), release = h7CarouselRelease(ordered,times.firstBatchMs,times.batchIntervalMs);
     const nextPool: SharedPoolState = { ...pool, available, revision: pool.revision + 1, carouselRounds: [...pool.carouselRounds, roundId], carouselReservations: [...pool.carouselReservations, ...slots.map(s => ({ carouselId: id, reservationId: s.reservationId, slot: s.slot, definitionId: s.definitionId, seatId: null }))] };
-    const state: CarouselState = { version: 'carousel-v1', id, roundId, pool: nextPool, initialAvailable: { ...pool.available }, participants: ordered, status: 'open', revision: 0, elapsedMs: 0, slots, releaseOrder, releaseAtMs: Object.fromEntries(releaseOrder.map((s, i) => [s, times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs])), deadlineMs: times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs, rngBefore: { ...rng }, rngAfter: { algorithm: 'lcg32-v1', state: wordState }, receipts: [] };
+    const state: CarouselState = { version: 'carousel-v1', id, roundId, pool: nextPool, initialAvailable: { ...pool.available }, participants: ordered, status: 'open', revision: 0, elapsedMs: 0, slots, ...release, deadlineMs: times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs, rngBefore: { ...rng }, rngAfter: { algorithm: 'lcg32-v1', state: wordState }, receipts: [] };
     assertSharedPoolConservation(nextPool);
     return { ok: true, state, events: [{ type: 'carousel-created', carouselId: id, roundId }] };
 }
@@ -142,8 +145,8 @@ export function validateCarousel(state: CarouselState): void {
     assertSharedPoolConservation(state.pool);
     if (state.version !== 'carousel-v1' || !validRound(state.roundId) || state.id !== `${state.pool.poolId}:carousel:${state.roundId}` || !state.pool.carouselRounds.includes(state.roundId) || !integer(state.revision) || !integer(state.elapsedMs) || !['open', 'closed'].includes(state.status) || state.slots.length !== 9)
         throw Error('invalid-carousel');
-    const ordered = [...state.participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), times = schedule(state.roundId);
-    if (!ordered.length || ordered.length > 8 || !equal(state.releaseOrder, ordered.map(s => s.seatId)) || new Set(state.releaseOrder).size !== ordered.length || ordered.some(p => !integer(p.hp, 1) || p.hp > 100 || !state.pool.seats.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)) || !equal(state.releaseAtMs, Object.fromEntries(ordered.map((s, i) => [s.seatId, times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs]))) || state.deadlineMs !== times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs)
+    const ordered = [...state.participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), times = schedule(state.roundId), release = h7CarouselRelease(ordered,times.firstBatchMs,times.batchIntervalMs);
+    if (!ordered.length || ordered.length > 8 || !equal(state.participants,state.pool.carouselParticipants) || !equal(state.releaseOrder, release.releaseOrder) || new Set(state.releaseOrder).size !== ordered.length || ordered.some(p => !integer(p.hp, 1) || !h7CarouselParticipantValid(p) || !state.pool.seats.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)) || !equal(state.releaseAtMs, release.releaseAtMs) || state.deadlineMs !== times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs)
         throw Error('invalid-carousel');
     let seed = state.rngBefore.state;
     validateSeed(seed);
@@ -499,6 +502,9 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     }
     for (const fact of match.resourceProvenance.entries) if ((fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'carousel' && !ids.has(fact.source.receiptId)) throw Error('receipt-mismatch');
     validateAugmentHistory(match, authority);
+    const participant = carousel.participants.find(p=>p.seatId===match.multiplayer?.seatId);
+    if (participant && participant.titanicTitanChoiceId !== titanicTitanChoiceId(match)) throw Error('invalid-participants');
+    for (const f of match.augmentHistory?.facts ?? []) if(f.kind==='carousel' && f.receipt.carouselId===carousel.id && f.releaseAtMs!==carousel.releaseAtMs[f.seatId]) throw Error('invalid-carousel');
     return match;
 }
 

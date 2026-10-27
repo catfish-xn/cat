@@ -485,9 +485,12 @@ describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a lat
   it('a seat eliminated after a carousel, still holding that pick, returns its holdings to the pool', () => {
     expect(death).not.toBeNull();
     const { state: atDeath, afterCarousel } = death!;
-    // 224-card pool: s0 dies at 5-6, two fights after 5-4; retain the exact death/holding vector.
-    expect(atDeath.roundId).toBe('5-6');
-    expect(death!.fightsSinceCarousel).toBe(2);
+    // v25's 238-card offer pool changes seed 24's automatic choices: s0 dies one fight after 6-4.
+    // Retain exact route assertions and independently check that the settlement really spent its remaining HP.
+    expect(atDeath.roundId).toBe('6-5');
+    expect(death!.fightsSinceCarousel).toBe(1);
+    const lethal=atDeath.seats.find(candidate=>candidate.seatId==='s0')!.match.roundResults.at(-1)!;
+    expect(lethal.hpBefore).toBeGreaterThan(0);expect(lethal.hpAfter).toBe(0);expect(lethal.hpLost).toBe(lethal.hpBefore);
     const was = beforeDeath.seats.find(candidate => candidate.seatId === 's0')!.match;
     // One granted receipt per carousel opened so far, the latest from the carousel just before the death.
     expect(was.carousel!.receipts.map(receipt => receipt.carouselId.split(':').at(-1))).toEqual(opened.slice(0, opened.indexOf(afterCarousel) + 1));

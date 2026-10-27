@@ -1,3 +1,4 @@
+import { validateBatch5H7Gold } from './augment-pool-batch5-h7';
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
 import type { AugmentHistoryAuthority } from './augment-history';
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
@@ -52,7 +53,7 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
     &&state.contentDigest===CONTENT_DIGEST&&state.schemaVersion===M8_VERSION.schemaVersion,'invalid-seat-state');
   preflightAugmentHistory(state);
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
-  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);
+  validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateBatch5H7Gold(state);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
   if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>

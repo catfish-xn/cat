@@ -26,10 +26,10 @@ export interface D11UnitGrant { readonly unitId:string; readonly effects:readonl
 /** Compile before resolveEffects, bind each returned program to the augment's
  * own source. Only Trifecta consumes the explicitly supplied opening stream.
  * Spirit Link samples player HP at combat start, as existing strategy inputs do. */
-export function compileD11Augment(id:D11AugmentId, board:readonly Unit[], playerHp:number, openingRngState:number):
+export function compileD11Augment(id:D11AugmentId, board:readonly Unit[], playerHp:number, openingRngState:number, maxPlayerHp=100):
   { readonly grants:readonly D11UnitGrant[]; readonly rngState:number; readonly rngDraws:number } {
-  integer(playerHp); integer(openingRngState);
-  if (playerHp > 100 || openingRngState > 0xffffffff || new Set(board.map(u=>u.id)).size !== board.length)
+  integer(playerHp); integer(openingRngState); integer(maxPlayerHp);
+  if (playerHp > maxPlayerHp || openingRngState > 0xffffffff || new Set(board.map(u=>u.id)).size !== board.length)
     throw new RangeError('Invalid D11 opening');
   const allies = board.filter(u=>u.team==='player' && u.location.kind==='board').sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
   let rngState=openingRngState, rngDraws=0;
@@ -56,7 +56,7 @@ export function compileD11Augment(id:D11AugmentId, board:readonly Unit[], player
     const v=D11_FILL_SOURCE['spirit-link'].values;
     // Raw gives 0.5 percentage points for every full ten missing HP. Integer
     // groups and start-of-combat sampling are explicit integration conventions.
-    const bps=Math.round(v.BaseRegenBonus*10000)+Math.floor((100-playerHp)/10)*Math.round(v.RegenPerMissingHP*100);
+    const bps=Math.round(v.BaseRegenBonus*10000)+Math.floor((maxPlayerHp-playerHp)/10)*Math.round(v.RegenPerMissingHP*100);
     return {unitId:u.id,effects:[],program:{periodic:[periodic(v.RegenPeriod*20,[{kind:'heal',amount:amount({maxHpBps:bps})}])]}};
   });
   return {grants,rngState,rngDraws};

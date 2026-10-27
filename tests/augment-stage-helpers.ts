@@ -10,7 +10,7 @@ export function offeredAt(id: string, node: '2-1' | '3-2' | '4-2'): boolean {
   return !((AUGMENT_OFFER_RULES.nodeBans as Readonly<Record<string, readonly string[]>>)[AUGMENT_POOL_API_NAMES[id]] ?? []).includes(node);
 }
 /** First seed whose public 2-1 offer holds `id`, by the cheap first-node draw; bounded, never spins. */
-export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
+export function firstNodeSeed(id: string, limit = 101, from = 0): number {
   if (!offeredAt(id, '2-1')) throw new Error(`${id} is not offered at 2-1 (14.24 stage tags); use acquireAugment`);
   for (let seed = from; seed < from + limit; seed++) {
     const state = createMatch(seed);

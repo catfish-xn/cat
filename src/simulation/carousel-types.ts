@@ -8,6 +8,8 @@ export interface CarouselParticipant {
     readonly seatId: string;
     readonly seatIndex: number;
     readonly hp: number;
+    /** Server-prepared, authenticated acquisition; absent for ordinary participants. */
+    readonly titanicTitanChoiceId?: string;
 }
 export interface CarouselReservation {
     readonly carouselId: string;

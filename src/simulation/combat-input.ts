@@ -1,3 +1,4 @@
+import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
 import { createOpeningEncounter } from './opening-encounter';
 import { d14Certificate, type D14CombatCertificate } from './d14-runtime';
 import { investmentGrowth } from './augment-income';
@@ -103,7 +104,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   requireBasis(equal(input.itemSummonPositions??null,authority.itemSummonPositions??null));
   if(input.itemSummonPositions)validateItemSummonPositions(input.itemSummonPositions,authority.resources.nextItemSerial,authority.resources.nextUnitSerial);
   if(input.bankGold!==undefined){integer(input.bankGold);requireBasis(input.bankGold===authority.bankGold);}
-  if(input.playerHp!==undefined){integer(input.playerHp);requireBasis(input.playerHp<=100&&input.playerHp===authority.playerHp);}
+  if(input.playerHp!==undefined){integer(input.playerHp);requireBasis(input.playerHp<=maximumPlayerHp(input.augments,input.round)&&input.playerHp===authority.playerHp);}
   if(authority.g23){
     requireBasis(input.g23);validateG23Progress(input.g23,authority.seed,authority.round);
     requireBasis(equal(input.g23.economyReceipts,authority.g23.economyReceipts.slice(0,input.g23.economyReceipts.length)));
