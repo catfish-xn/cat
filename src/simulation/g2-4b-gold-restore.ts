@@ -29,6 +29,11 @@ export function validateMirrorOpening(candidate:CombatState,basis:CombatInputBas
  * Trench also replaces the roster, so this runs before static-roster checks.
  * Every call reconstructs independently from the validated frozen basis. */
 export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBasis,strategy:StrategySnapshot,parsedJsonInput=false,shareDeclarations=false):boolean {
+  // No candidate-only marker may turn on a damage multiplier or summon HP policy.
+  if (candidate.units.some(u => u.r3Mirror !== undefined && !strategy.units.some(s => s.unitId === u.id && s.r3Mirror)))
+    throw new RangeError('Unexpected R3 mirror origin');
+  if (candidate.units.some(u => isR3Copy(u.itemSummon) && !strategy.units.some(s => s.unitId === u.id && isR3Copy(s.itemSummon))))
+    throw new RangeError('Unexpected R3 copy origin');
   if (candidate.equipmentReceipts !== undefined || candidate.pendingEquipment !== undefined) {
     validateBattleEquipmentLog(candidate.equipmentReceipts?.map(r => r.input) ?? [], candidate.equipmentReceipts ?? [], candidate.tick);
     validateBattleEquipmentLog(candidate.pendingEquipment?.map(r => r.input) ?? [], candidate.pendingEquipment ?? [], candidate.tick + 1);

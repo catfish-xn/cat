@@ -5,6 +5,11 @@ import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { canonicalContent } from '../../src/simulation/content';
 import { snapshotForBattle } from '../../src/simulation/two-sided-snapshot';
 import { compileBattle, startTwoSidedCombat } from '../../src/simulation/two-sided-battle';
+import { stepCombat } from '../../src/simulation/combat';
+import { buildStrategySnapshot } from '../../src/simulation/strategy-snapshot';
+import { createCombatWithEvents } from '../../src/simulation/combat';
+import type { CombatState } from '../../src/simulation/combat-types';
+import type { MatchState } from '../../src/simulation/match-types';
 
 const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 9 });
 let holder: string;
@@ -44,4 +49,51 @@ it('B5-74 resolves through the actual room resolver and settles without persisti
   expect(match.preparation.units.map(u => u.id).sort()).toEqual(before.preparation.units.map(u => u.id).sort());
   expect(match.preparation.units.some(u => u.id.includes('b5-r3'))).toBe(false);
   expect(restoreSharedOrbSnapshot(room.state.pool, canonicalContent(match))).toEqual(match);
+});
+for (const round of ['2-2', '2-3', '2-4', '2-5', '2-6', '2-7']) it(`B5-74 room reaches ${round}`, () => {
+  expect(runUntil(room, clock, s => s.roundId === round && s.phase === (round === '2-4' ? 'settlement' : 'preparation')).roundId).toBe(round);
+});
+it('authenticates the real eight-seat 2-7 PvE combat from its opening input in all three save forms', () => {
+  runUntil(room, clock, s => s.roundId === '2-7' && s.phase === 'battle');
+  const match = room.state.seats.find(s => s.seatId === holder)!.match;
+  expect(room.state.seats).toHaveLength(8);
+  expect(match.combatInputBasis).not.toBeNull();
+  expect(match.combat!.units.filter(u => u.itemSummon?.kind === 'cloning-facility')).toHaveLength(1);
+  let progressed: CombatState = match.combat!;
+  for (let tick = 0; tick < 10 && progressed.status === 'running'; tick++) progressed = stepCombat(progressed).state;
+  expect(progressed.tick).toBeGreaterThan(0);
+  for (const encode of [(x: unknown) => x, JSON.stringify, canonicalContent]) {
+    const restored = restoreSharedOrbSnapshot(room.state.pool, encode(match));
+    expect(restored).toEqual(match);
+    expect(stepCombat(restored.combat!)).toEqual(stepCombat(match.combat!));
+    const later = { ...match, combat: progressed } as MatchState;
+    expect(restoreSharedOrbSnapshot(room.state.pool, encode(later))).toEqual(later);
+    const alteredLater = structuredClone(later);
+    const laterCopy = alteredLater.combat!.units.find(u => u.itemSummon?.kind === 'cloning-facility')!;
+    Object.assign(laterCopy, { maxHp: laterCopy.maxHp + 1 });
+    expect(() => restoreSharedOrbSnapshot(room.state.pool, encode(alteredLater))).toThrow();
+    for (const mutate of [
+      (x: any) => { x.combat.units.find((u: any) => u.itemSummon?.kind === 'cloning-facility').maxHp++; },
+      (x: any) => { x.combat.units.find((u: any) => u.itemSummon?.kind === 'cloning-facility').itemSummon.healthBps = 10000; },
+      (x: any) => {
+        x.combat.units.find((u: any) => u.itemSummon?.kind === 'cloning-facility').itemSummon.healthBps = 10000;
+        x.combat.strategy.units.find((u: any) => u.itemSummon?.kind === 'cloning-facility').itemSummon.healthBps = 10000;
+      },
+      (x: any) => { delete x.combat.units.find((u: any) => u.itemSummon?.kind === 'cloning-facility').itemSummon; },
+      (x: any) => {
+        const enemy = x.combat.units.find((u: any) => u.team === 'enemy');
+        enemy.r3Mirror = { choiceId: 'forged', sourceUnitId: enemy.id,
+          unit: x.combatInputBasis.inputs.preparation.units.find((u: any) => u.id === enemy.id) };
+      },
+      (x: any) => {
+        // A self-consistent compiled answer is still not proof of owning this augment.
+        x.combatInputBasis.inputs.augments.push({ definitionId: 'hall-of-mirrors', choiceId: 'forged', acquiredRound: x.round });
+        const basis = x.combatInputBasis;
+        x.combat = createCombatWithEvents(basis.inputs.preparation, buildStrategySnapshot(basis.inputs), basis.combatId, basis.battleSeed).state;
+      },
+    ]) {
+      const bad: MatchState = structuredClone(match); mutate(bad);
+      expect(() => restoreSharedOrbSnapshot(room.state.pool, encode(bad))).toThrow();
+    }
+  }
 });

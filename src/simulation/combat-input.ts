@@ -48,6 +48,8 @@ export interface CombatResourcePrefix {
   readonly nextUnitSerial: number; readonly nextItemSerial: number;
 }
 export interface CombatInputAuthority {
+  /** Authenticated shared encounter and externally settled PvP rounds do not use the seat's PvE RNG. */
+  readonly shared?: { readonly openingId: import('./opening-encounter').OpeningEncounterId | null; readonly twoSidedRounds: readonly number[] };
   readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[];
   readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[];
   readonly d14Combat?:D14CombatCertificate;
@@ -130,7 +132,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   let battleSeed = (authority.seed ^ 0x9e3779b9) >>> 0;
   for (const entry of ROUND_CATALOG) {
     if (entry.ordinal > authority.round) break;
-    if (entry.kind !== 'supply') battleSeed = nextRandom(battleSeed).word;
+    if (entry.kind !== 'supply' && !authority.shared?.twoSidedRounds.includes(entry.ordinal)) battleSeed = nextRandom(battleSeed).word;
   }
   requireBasis(basis.battleSeed === battleSeed);
   integer(basis.provenancePrefixLength); integer(basis.equipmentRollPrefixLength);
@@ -139,7 +141,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     && basis.equipmentRollPrefixLength === authority.equipmentRollPrefixLength
     && basis.equipmentRollPrefixLength <= authority.equipmentRolls.length
     && basis.nextUnitSerial === authority.resources.nextUnitSerial && basis.nextItemSerial === authority.resources.nextItemSerial);
-  const units = validateInputAssets(input, {...basis, teamSizeBonus: crownTeamSizeBonus(input.g23)}, readRoundEnemyProjection(authority.round,createOpeningEncounter(authority.seed).selection.encounterId).units, inputValidation);
+  const units = validateInputAssets(input, {...basis, teamSizeBonus: crownTeamSizeBonus(input.g23)}, readRoundEnemyProjection(authority.round,authority.shared?.openingId ?? createOpeningEncounter(authority.seed).selection.encounterId).units, inputValidation);
   requireBasis(equal(input.d14Combat??null,authority.d14Combat??null));
   const players = input.preparation.units.filter(unit => unit.team === 'player');
   requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units.filter(u=>!authority.heldUnitIds?.includes(u.id)).map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})))));
