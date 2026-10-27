@@ -136,7 +136,7 @@ describe('stage5 floating text equivalence and DOM work', () => {
     const resets = vi.spyOn(renderer, 'reset');
     scene.showEvents([damage(1, 'a', 10)]); scene.renderFeedback();
     expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['−10']);
-    const stop = subscribeBoardFeed({ events() {} } as BoardFeedListener);
+    const stop = subscribeBoardFeed({ events() {} } as unknown as BoardFeedListener);
     try {
       scene.renderFeedback();
       expect(snapshot(h)[0].children).toEqual([]);
