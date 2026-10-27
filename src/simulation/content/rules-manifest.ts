@@ -8,6 +8,7 @@ import { AUGMENT_BATCH5_G1, LUCKY_GLOVES_POLICY, LUCKY_GLOVES_CHAMPION_ROLES, LU
 import { AUGMENT_BATCH5_G2, GHOST_FRIENDS_ROLES, REBEL_COPY_RULES } from './augment-pool-batch5-g2';
 import { AUGMENT_BATCH5_G3 } from './augment-pool-batch5-g3';
 import { AUGMENT_BATCH5_G4, B5_G4_VOID_POLICY, B5_G4_SUMMON_UNITS } from './augment-pool-batch5-g4';
+import { AUGMENT_BATCH5_G5, EXPECTED_UNEXPECTEDNESS_REWARDS, PRISMATIC_PIPELINE_REWARDS } from './augment-pool-batch5-g5';
 import { AUGMENT_BATCH5_H1 } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3 } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H4_SOURCE } from './augment-pool-batch5-h4';
@@ -94,6 +95,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch5R1:{version:'augment-pool-batch5-r1-v25',content:AUGMENT_BATCH5_R1,convention:'P-B5-39-40-2026-10-27'},
   augmentPoolBatch5G2:{version:'augment-pool-batch5-g2-v1',content:AUGMENT_BATCH5_G2,roles:GHOST_FRIENDS_ROLES,rebelCopies:REBEL_COPY_RULES,convention:'P-B5-63-70-G2-2026-10-27'},
   augmentPoolBatch5G3:{version:'augment-pool-batch5-g3-v1',content:AUGMENT_BATCH5_G3,convention:'P-B5-68-71-G3-2026-10-27',mutation:'own-back-row-2-column-4-combat-exclusion-no-death-equipment-retained-extra-donation-tier7-doubled',movement:'all-movement-events-hex-distance-additive-99-hexes-per-combat-dashes-uncapped'},
+  augmentPoolBatch5G5:{version:'augment-pool-batch5-g5-v1',content:AUGMENT_BATCH5_G5,dice:EXPECTED_UNEXPECTEDNESS_REWARDS,pipeline:PRISMATIC_PIPELINE_REWARDS,history:'augment-history-v1/acquire+orb-opened/independent-server-authority',convention:'P-B5-82-85-2026-10-27',random:'fnv1a32-source-seat-choice-stage/lcg32-rejection-high-buckets'},
   augmentPoolBatch5H6:{version:'augment-pool-batch5-h6-v1',content:AUGMENT_BATCH5_H6,convention:'P-B5-37-38-2026-10-27'},
   augmentPoolBatch5S6c:{version:'augment-pool-batch5-s6c-v25',content:AUGMENT_BATCH5_S6C,convention:'P-B5-48-49-2026-10-27'},
   augmentPoolBatch5S8a:{version:'augment-pool-batch5-s8a-v1',content:AUGMENT_BATCH5_S8A,convention:'P-B5-59-2026-10-27',victim:'first-formal-shop-hero-death',grant:'next-natural-round'},

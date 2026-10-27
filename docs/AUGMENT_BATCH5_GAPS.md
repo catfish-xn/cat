@@ -747,13 +747,13 @@
 - 本地补查结果：已补 M["Maps/Shipping/Map22/Items/TFT13_AnotherAnomaly_Item"].constants.{df085b93}：Health=250、AD≈0.20、AP=25，mIsUnique=true并自互斥；中英字符串 entries.tft_item_description_anotheranomaly 只说持有者获得你的异常。不是消耗型重复选异常的证据。X报告提到后期13.8禁用，不能倒推14.24禁用；未找到复制兼容矩阵。
 - 分类与后续：**已实现并开放**。P-B5-81（2026-10-27）：仅4-2出池，4-6选完即发唯一装备，复制定义不复制累计状态，卸下后在后续装备投影中失效、已开战快照沿用既有边界，禁止原持有者装备，排除六项指定异常；复制品的独立击杀记录使用强化历史 API。接线与验收见 [Batch5 R2](AUGMENT_BATCH5_R2.md)。
 
-#### B5-82 意料之中的意外（需要外部研究）
+#### B5-82 意料之中的意外（已按用户批准约定实现）
 
 - 身份：`TFT_Augment_ExpectedUnexpectedness`。
 - 已有原文／字段：`A[246].apiName=TFT_Augment_ExpectedUnexpectedness`，`description_zh_cn`：“现在以及下2个阶段开始时，投掷3个骰子。根据总点数获得各种奖励。” `effects={"NumStages":2.0,"{03e061af}":7.0,"{dae07608}":20.0,"{fcb8577b}":15.0}`；原始map22定位为 `A[246].map22_node={47cf345f}`，对应 `data/map22-augment-item-nodes.json.nodes["{47cf345f}"].constants`（无constants则不以空对象推测隐藏值）。
 - 原计划缺口／本次细化：骰子面数/独立公平性、总点数→奖励完整表、阶段差异/概率、随机英雄/物品内部抽样，阶段内具体触发次序。
 - 本地补查结果：A.effects NumStages=2，匿名{03e061af}=7、{dae07608}=20、{fcb8577b}=15；V.data/claims-index.json A7确认只有“现在及后续2阶段”三次触发，没有奖励映射；X.excerpts/rewards/tactics-s14-factual-arrays.json是S14，不能补S13。V的MagicRoll六条文本与蛋表也不是本项骰点表。未找到14.24完整映射。
-- 分类与后续：**需要外部研究**。外研：找14.24b Expected Unexpectedness三次触发各自骰子分布、骰点到奖励表及数量；明确是否与Magic Roll共享表，再核实阶段内时点。禁止用S14表或自行公平3d6替代。
+- 分类与后续：**已实现（P-B5-82，2026-10-27 用户批准）**。按 Gemini 正文首列奖励使用阶段 2／3／4 三张表：2-1 当时、3-1、4-1 触发，3d6 三同头奖，非三同按 4–8／9–11／12–15／16–17；经济档 7 次免费刷新／15 金／20 金。GPT 已证实文本与字段、同期个案为社区推测；混入 S14 的完整映射按**约定**，不是目标版本已证实。完整奖励、抽样、时序见 `docs/S13_RULES_GAP.md` P-B5-82。保留 3-2／4-2 阶段禁用；独立 oracle 重算奖励，联机真实命令、房间与存档篡改测试覆盖。
 
 #### B5-83 我成C位了（需要外部研究）
 
@@ -771,13 +771,13 @@
 - 本地补查结果：A.description 明确最大7级、60金和1金锅锅冠冕，effects AugmentGold=60、NumItems=1；未找到已超7级分支。
 - 分类与后续：**需要项目约定**。**P-B5-84（P，2026-10-25，用户提案）**：提案：仅在当前等级≤7时提供该强化，所有更高等级上限项互斥；获得后上限7，溢出XP沿现有封顶处理，不降级/退经验。不得仅依互斥表假定玩家不可能早升8。
 
-#### B5-85 棱彩管道（需要外部研究）
+#### B5-85 棱彩管道（已按用户批准约定实现）
 
 - 身份：`TFT_Augment_PrismaticPipeline`。
 - 已有原文／字段：`A[276].apiName=TFT_Augment_PrismaticPipeline`，`description_zh_cn`：“下个非玩家对战回合将额外掉落一个棱彩法球，里面装满了丰厚的战利品。所有的棱彩法球都将带来更多战利品！” `effects={"NumRounds":1.0}`；原始map22定位为 `A[276].map22_node={515ca22f}`，对应 `data/map22-augment-item-nodes.json.nodes["{515ca22f}"].constants`（无constants则不以空对象推测隐藏值）。
 - 原计划缺口／本次细化：额外棱彩球底表与调用绑定、所有来源球是否加奖、Early/Late分界、生成/领取时抽取时点、缺省权重与14.24b覆盖。
 - 本地补查结果：已补 V.data/a5-pipeline-bonus.json：Early={b7040c44}、Late={761d6a09}；Early明示8金权重1，Late明示约34%16金/33%两COMPONENT_NOSPAT/33%两FiveCostUnit+6金。data/a5-ultra-orb-candidates.json定位UltraGradePlusBonusDistribution={ca212807}及UltraBoxPlusA–J，但未证明管道调用。X.excerpts/rewards/patch-facts.json证实14.24移除金球加奖，不能启用残留GoldBonus。V.data/claims-index.json A5与X.unknowns question=4仍缺分界/调用。
-- 分类与后续：**需要外部研究**。外研：找14.24b管道法球生成与领取脚本，绑定底表和Early/Late比较式、加奖适用来源；核实缺省权重的实际处理。不能用“价值降低约30%”反推精确奖励或以OrbUpgradeStage=2直接定分界。
+- 分类与后续：**已实现（P-B5-85，2026-10-27 用户批准）**。2-1 取得固定 Early 每球＋8 金，3-2 取得固定 Late：34%＋16 金／33%＋2 散件／33%＋2 个 5 费与 6 金；下一 PvE 增加一球，之后自己完全打开的所有棱彩球均加奖，金球不加。已发现现成标准主表 `ORB_BOXES.ultraPlus`，按批准的条件复用，不覆盖旧表的六费／杰作升级裁剪。静态字段及金球移除为**已证实**，分界线索为**社区推测**，调用与完整生命周期按**约定**，见 `docs/S13_RULES_GAP.md` P-B5-85。保留 4-2 禁用，使用历史 API 的 `orb-opened` 与独立服务器 authority；独立 oracle、真实早晚期房间、自然球／额外球／分次领取及篡改测试覆盖。
 
 #### B5-86 订阅服务（需要项目约定）
 

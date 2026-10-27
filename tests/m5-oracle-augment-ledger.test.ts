@@ -52,6 +52,31 @@ const done=[{type:'combatFinished'}];
 function receipts<T extends { seatMechanics: { receipts: unknown[] } }>(state: T, values: unknown[]) {
   return {...state,seatMechanics:{...state.seatMechanics,receipts:[...state.seatMechanics.receipts,...values]}};
 }
+it.each([
+  ['overheal', 4, 7, 2, 4, 9, 2],
+  ['clear-mind', 4, 7, 5, 5, 2, 5],
+  ['clear-mind', 10, 0, 5, 10, 0, 0],
+] as const)('derives locked PvP XP for %s at level %i without trusting the settlement record', (id, level, xpBefore, requested, levelAfter, xpAfter, awarded) => {
+  const {before: rawBefore, after: rawAfter} = vector(id);
+  const before: any = {...rawBefore, phase:'preparation', level, xp:xpBefore, items:[],
+    preparation:{units:[],benchSize:9}, multiplayer:{seatId:'s0',combatRosterLocked:true}};
+  const record = {round:before.round,roundId:before.roundDefinitionId,roundKind:'pvp',result:'enemyWin',
+    levelBefore:level,xpBefore,xpRequested:requested,xpAwarded:awarded,levelAfter,xpAfter};
+  const after: any = {...rawAfter, level:levelAfter,xp:xpAfter,preparation:before.preparation,items:[],
+    multiplayer:{seatId:'s0'},roundResults:[record]};
+  const events = [{type:'roundSettled',round:before.round}];
+  const check = (state: any, ev = events) => validateRewards(before,state,null,ev,env);
+  expect(()=>check(after)).not.toThrow();
+  const extra = xp(level,xpBefore,requested+1);
+  if(level<10){
+    const forged = {...after,level:extra.level,xp:extra.xp,roundResults:[{...record,
+      xpRequested:requested+1,xpAwarded:extra.xpApplied,levelAfter:extra.level,xpAfter:extra.xp}]};
+    expect(()=>check(forged)).toThrow(/independent XP state/);
+  }
+  expect(()=>check({...after,roundResults:[{...record,xpRequested:requested+1}]})).toThrow(/independent locked PvP settlement XP/);
+  expect(()=>check(after,[])).toThrow(/needs one settlement event/);
+  expect(()=>check({...after,roundResults:[]})).toThrow(/one locked PvP settlement/);
+});
 it('rejects the review counterexample: fabricated +123 gold without command/event', () => {
   const before=createMatch(29);
   const after={...before,gold:before.gold+123,seatMechanics:{...before.seatMechanics!,receipts:[...before.seatMechanics!.receipts,gold('augment-pool-batch3',[0,0],123) as never]}};
@@ -253,12 +278,12 @@ it('cannot rewrite historical battle counters to mint a reward after an unrelate
   expect(()=>validateRewards(before,receipts(after,[{...gold('augment-pool-batch3',[0,0],8,4),roundId:'2-1'}]),{type:'reroll'},[],env)).toThrow(/battle counters append-only/);
 });
 
-it('contains exactly 302 independently tiered identities, with two restricted to shared carousel',()=>{
+it('contains exactly 304 independently tiered identities, with two restricted to shared carousel',()=>{
   const pools=(['silver','gold','prismatic'] as const).map(tier=>augmentPool(tier,[]));
-  const all=pools.flat();expect(all).toHaveLength(300);expect(new Set(all).size).toBe(300);
+  const all=pools.flat();expect(all).toHaveLength(302);expect(new Set(all).size).toBe(302);
   // Independently transcribed integrated catalog, including Shop Glitch and the two H9 identities and the R1/R2/R3/R4 identities.
   const shared=(['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true));
-  expect(shared).toHaveLength(302);expect(new Set(shared).size).toBe(302);
+  expect(shared).toHaveLength(304);expect(new Set(shared).size).toBe(304);
   expect(shared.filter(id=>!all.includes(id)).sort()).toEqual(['table-scraps','young-and-wild-and-free']);
   const groups={silver:['patience-is-a-virtue','mad-chemist','recombobulator','pandoras-bench','survivor','diversified-portfolio','diversified-portfolio-plus'],gold:['clear-mind','cluttered-mind','slammin','slammin-plus','category-five','long-distance-pals','sated-spellweaver','overheal','forbidden-magic','a-golden-find','cloning-facility','rebel-resurgence','aerial-warfare','natural-selection','voidcaller'],prismatic:['invested-plus','invested-plus-plus','hall-of-mirrors','lucky-gloves','lucky-gloves-plus','ghost-of-friends-past','void-swarm']};
   for(const [tier,ids]of Object.entries(groups))for(const id of ids)expect(augmentPool(tier as 'silver'|'gold'|'prismatic',[])).toContain(id);

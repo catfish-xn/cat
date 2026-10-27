@@ -14,6 +14,7 @@ const b2=require('../../augment-pool-batch2-oracle-data.cjs');
 const b3=require('../../augment-pool-batch3-oracle-data.cjs');
 const b4=require('../../augment-pool-batch4-oracle-data.cjs');
 const h4=require('./h4-rewards-oracle.cjs');
+const {expectedRolls,pipelineBonuses,validatePipelineClaim}=require('./augment-batch5-g5-oracle.cjs');
 const U=(id,n=1,star=1)=>['U',id,n,star],I=(id,n=1)=>['I',id,n],C=(id,n=1)=>['C',id,n],R=(cost,n=1,star=1,distinct=false)=>['R',cost,n,star,distinct],Q=(pool,n=1,identical=false)=>['Q',pool,n,identical];
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
@@ -119,6 +120,10 @@ function b5Entry(s,round){
 function rewardPlan(s,env){
  const gifts=[],batch2=[],batch3=[],forms=[],levelsOut=[],gold=[],battles=s.seatMechanics?.hidden?.progress?.economyReceipts.filter(r=>r.kind==='battle').map(r=>r.facts)??[];
  const addGold=(source,a,parts,amount,round)=>{if(amount)gold.push({receiptId:JSON.stringify([source,a.choiceId,...parts]),source,kind:'gold',amount,round});};
+ for(const r of [...expectedRolls(s),...pipelineBonuses(s)]){
+  levelsOut.push(...expand(s,r.owner,r.gifts,env));
+  if(r.gold)gold.push({receiptId:r.receiptId,source:'augment-pool-batch5-g5',kind:'gold',amount:r.gold,round:r.round});
+ }
  const nonSupply=r=>{while(env.ROUNDS[r-1]?.kind==='supply')r++;return r;};
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
@@ -288,7 +293,7 @@ function environment(s,base){return {...base,pools:{...data.pools,sponsored:[...
 };}
 // No prefix admission: a fabricated augment-pool-anything must never enter the ledger.
 const admitted=new Set(['augment-pool-batch5-s3a','augment-pool-batch5-s3b','augment-pool-batch5-r1','augment-pool-batch5-r2','augment-pool-shop','s13-augments-p2','d11-fill','g24-item-gold','conqueror-chest','high-roller','tacticians-crown',
- 'augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7',
+ 'augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-kingslayer','augment-risky-moves','augment-pool-batch1','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch5-g5',
  'augment-pool-batch3-dummy','opening-encounter-batch-a','opening-batch-b','conqueror','pve-remover','academy','black-market','junker-king',
  's13-augment-acquisition','s13-anomaly-acquisition','anvil-unit','opening-encounter','opening-encounter-monkey','consumable-copy','family','masterwork-upgrade','mel',...h4.sources]);
 // Project only the counters needed by these rewards from the finished combat, not reward receipts.
@@ -333,6 +338,7 @@ function validateBattleCounters(before,after,f,base){
 }
 function validateRewardsCore(before,after,command,events,base){
  validateTombRaiderTransition(before,after,command,events,base);
+ validatePipelineClaim(before,after,command,events);
  assert.equal(after.seed,before.seed,'immutable reward seed');
  assert.equal(after.augmentTierSeed,before.augmentTierSeed,'immutable opening seed');
  assert.equal(after.multiplayer?.seatId,before.multiplayer?.seatId,'immutable reward seat');
@@ -360,7 +366,20 @@ function validateRewardsCore(before,after,command,events,base){
  assert.deepEqual(after.augments,augments,'independent owned augment transition');
  h4.validateTransition(before,after,command,events,base);
  validateH6Transition(before,after,command,base);
- const terminal=after.phase!=='combat'&&(before.phase==='combat'||command?.type==='start');
+ // Online PvP keeps the seat in preparation while its frozen roster fights. The
+ // resolver commits the round directly; it does not emit a local combatFinished.
+ const lockedPvp=before.phase==='preparation'&&before.multiplayer?.combatRosterLocked===true;
+ const pvpSettlement=lockedPvp&&after.multiplayer?.combatRosterLocked!==true;
+ if(pvpSettlement){
+  assert.equal(after.round,before.round,'locked PvP settlement round');
+  assert(['settlement','choice','gameOver'].includes(after.phase),'locked PvP settlement phase');
+  assert.equal(base.ROUNDS[before.round-1]?.kind,'pvp','locked roster settlement must be PvP');
+  assert.deepEqual(after.roundResults.slice(0,before.roundResults.length),before.roundResults,'settlement history append-only');
+  assert.equal(after.roundResults.length,before.roundResults.length+1,'one locked PvP settlement');
+  assert.equal(after.roundResults.at(-1).round,before.round,'locked PvP settlement identity');
+  assert.equal(events.filter(e=>e.type==='roundSettled'&&e.round===before.round).length,1,'locked PvP needs one settlement event');
+ }
+ const terminal=pvpSettlement||after.phase!=='combat'&&(before.phase==='combat'||command?.type==='start');
  if(command==null&&!terminal)assert.equal(appended.length,0,'no mechanic reward without command/combat settlement');
  const entry=command?.type==='continue';
  assert.equal(after.round,before.round+(entry?1:0),'independent round entry');
@@ -374,6 +393,11 @@ function validateRewardsCore(before,after,command,events,base){
   if(command.definitionId==='call-to-chaos'&&outcome(before,augments.at(-1))==='xp')xpGain+=64;}
  const progression=base.xp(before.level,before.xp,xpGain);
  assert.deepEqual([after.level,after.xp],[progression.level,progression.xp],'independent XP state before reward thresholds');
+ if(pvpSettlement){
+  const r=after.roundResults.at(-1);
+  assert.deepEqual([r.levelBefore,r.xpBefore,r.xpRequested,r.xpAwarded,r.levelAfter,r.xpAfter],
+   [before.level,before.xp,xpGain,progression.xpApplied,progression.level,progression.xp],'independent locked PvP settlement XP');
+ }
  const priorLevels=before.seatMechanics?.seat['augment-acquisition-levels']??{};
  const tracked=['shopping-spree','upward-mobility','risky-moves',...Object.keys(b4)];
  const levels=select&&tracked.includes(command.definitionId)?{...priorLevels,[before.pendingChoice.choiceId]:progression.level}:priorLevels;
@@ -399,7 +423,10 @@ function validateRewardsCore(before,after,command,events,base){
  if(oldFacts!==newFacts)assert.deepEqual(newFacts.slice(0,oldFacts.length),oldFacts,'reward battle counters append-only');
  const battleSuffix=newFacts.slice(oldFacts.length).filter(r=>r.kind==='battle');
  assert.equal(battleSuffix.length,terminal?1:0,'reward counters need an actual completed combat');
- if(terminal){assert(events.some(e=>e.type==='combatFinished'),'reward counter needs terminal combat event');assert.equal(battleSuffix[0].facts.round,before.round);validateBattleCounters(before,after,battleSuffix[0].facts,base);}
+ if(terminal){
+  if(!pvpSettlement)assert(events.some(e=>e.type==='combatFinished'),'reward counter needs terminal combat event');
+  assert.equal(battleSuffix[0].facts.round,before.round);validateBattleCounters(before,after,battleSuffix[0].facts,base);
+ }
  // Reward receipts never select the owner, threshold, random outcome, gift identity or amount.
  // Prior receipts are only the exactly-once set and pre-existing dummy identities.
  const choiceReceipts=appended.filter(r=>r.kind==='choice');
@@ -488,12 +515,12 @@ function validateRewardsCore(before,after,command,events,base){
    if(deaths.length&&!claimed.has(receiptId))dueGold.push({receiptId,source:'augment-batch5-h8-monetization',kind:'gold',amount:deaths.length*2,round:r.round});
   }
  }
- const actualGold=appended.filter(r=>['augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
+ const actualGold=appended.filter(r=>['augment-pool-batch5-g5','augment-batch5-h8-forward-thinking','augment-batch5-h8-monetization','augment-pool-batch5-h6','augment-pool-batch5-h7','augment-pool-batch2','augment-pool-batch3','augment-pool-batch4','augment-pool-batch5','augment-kingslayer','augment-risky-moves',...h4.sources].includes(r.source));
  const goldKey=r=>({receiptId:r.receiptId,source:r.source,kind:r.kind,amount:r.amount,round:r.round});
  const sorted=xs=>xs.map(goldKey).sort((a,b)=>a.receiptId.localeCompare(b.receiptId));
  assert.deepEqual(sorted(actualGold),sorted(dueGold),'independent due augment gold receipts (count, identity, amount, round)');
  for(const r of actualGold)assert.equal(r.roundId,base.ROUNDS[r.round-1]?.roundId);
- const locked=Boolean(before.multiplayer&&(before.multiplayer.combatRosterLocked||before.phase==='combat'&&!terminal));
+ const locked=Boolean(before.multiplayer&&!terminal&&(before.multiplayer.combatRosterLocked||before.phase==='combat'));
  if(locked||before.phase==='combat'&&!terminal){
   assert.equal(appended.filter(r=>['augment-pool-batch1','augment-pool-batch3-dummy'].includes(r.source)).length,0,'locked roster defers unit and item rewards');
   return {gold:new Map([...dueGold.map(g=>[g.receiptId,g]),...shopGold]),gifts:new Map([...shopGifts]),price};
@@ -572,14 +599,72 @@ function validateRewards(before,after,command,events,base){
  if(before.consumables===undefined&&after.consumables===undefined)return result;
  const inventory=[...before.consumables];let serial=before.nextConsumableSerial;
  const add=(definitionId,id)=>{const expected=`consumable-${serial++}`;assert.equal(id,expected,'independent consumable grant ID');inventory.push({consumableId:expected,definitionId});};
- for(const r of base.lootReceipts??[]){
-  const ids=r.grantedConsumableIds??[];assert.equal(ids.length,r.payload.kind==='consumable'?1:0,'independent loot consumable count');
-  if(r.payload.kind==='consumable')add(r.payload.definitionId,ids[0]);
+ const loot=base.lootReceipts??[],mechanics=(after.seatMechanics?.receipts??[]).slice(before.seatMechanics?.receipts.length??0).filter(r=>r.kind==='consumable');
+ const settlement=before.phase==='combat'&&after.phase!=='combat'&&before.round===after.round
+  &&!before.roundResults.some(r=>r.round===before.round)&&after.roundResults.some(r=>r.round===before.round)
+  &&events.some(e=>e.type==='roundSettled'&&e.round===before.round);
+ // 14.23 fixed PvE remover: exactly one for a survivor, independently of box contents.
+ if(settlement&&base.ROUNDS[before.round-1]?.kind==='pve'){
+  assert(['playerWin','enemyWin','draw'].includes(after.combat?.result),'fixed PvE remover needs finished combat');
+  const survived=before.playerHp>(after.combat.result==='playerWin'?0:3); // Independent PvE loss/draw damage is 3 HP.
+  assert.equal(after.playerHp>0,survived,'independent PvE surviving status');
+  const remover=mechanics.filter(r=>r.source==='pve-remover'||r.receiptId.startsWith('pve-remover:'));
+  assert.equal(remover.length,survived?1:0,'independent fixed PvE remover count');
+  for(const r of remover){
+   assert.equal(r.source,'pve-remover');assert.equal(r.receiptId,`pve-remover:${before.roundDefinitionId}`);
+   assert.equal(r.round,before.round);assert.equal(r.roundId,before.roundDefinitionId);assert.equal(r.definitionId,'magnetic-remover','independent fixed PvE remover definition');
+   assert(events.some(e=>e.type==='mechanicGranted'&&isDeepStrictEqual(e.receipt,r)),'fixed PvE remover needs its grant event');
+  }
  }
- for(const r of (after.seatMechanics?.receipts??[]).slice(before.seatMechanics?.receipts.length??0))if(r.kind==='consumable'){
+ const addLoot=r=>{
+  if(r.resolution==='forfeited'&&queue.includes(orbOf(r))){
+   assert(after.playerHp===0||after.phase==='gameOver','queued forfeit requires a terminal seat');
+   assert(after.m8.loot.direct.some(d=>d.dropId===r.dropId&&d.status==='forfeited'),'queued forfeit needs forfeited loot state');
+   assert(events.some(e=>e.type==='lootForfeited'&&e.dropId===r.dropId),'queued forfeit needs its event');
+  }
+  const ids=r.grantedConsumableIds??[],granted=r.payload.kind==='consumable'&&r.resolution!=='forfeited';
+  assert.equal(ids.length,granted?1:0,'independent loot consumable count');
+  if(granted)add(r.payload.definitionId,ids[0]);
+ };
+ const addMechanic=r=>{
   const g=result.gifts.get(r.receiptId);
   if(r.source==='augment-pool-batch1')assert(g&&g.kind==='consumable','independent consumable reward plan');
   add(g?.definitionId??r.definitionId,r.consumableId);
+ };
+ // Auto-loot occurs before PvE hooks; a pre-existing combat queue drains after
+ // roundSettled, in FIFO order, with mechanic grants between individual orbs.
+ const queue=(settlement||before.multiplayer?.combatRosterLocked===true&&after.multiplayer?.combatRosterLocked!==true)
+  ?before.m8?.loot.queuedOrbClaims??[]:[];
+ const orbOf=r=>{try{return JSON.parse(r.dropId)[0];}catch{return null;}};
+ const queuedLoot=loot.filter(r=>r.resolution!=='forfeited'&&queue.includes(orbOf(r)));
+ if(queuedLoot.length){
+  assert.equal(new Set(queue).size,queue.length,'independent consumable queue uniqueness');
+  const boundary=events.findIndex(e=>e.type==='roundSettled'&&e.round===before.round);
+  assert(boundary>=0,'queued consumables need settlement');
+  const pre=events.slice(0,boundary),post=events.slice(boundary+1);
+  const isGrant=(e,r)=>e.type==='mechanicGranted'&&e.receipt.receiptId===r.receiptId;
+  const late=mechanics.filter(r=>!pre.some(e=>isGrant(e,r))&&post.some(e=>isGrant(e,r)));
+  for(const r of mechanics.filter(r=>r.source==='pve-remover'))assert(pre.some(e=>isGrant(e,r))&&!late.includes(r),'fixed PvE remover precedes queued loot');
+  for(const r of loot.filter(r=>r.resolution==='forfeited'||!queue.includes(orbOf(r))))addLoot(r);
+  for(const r of mechanics.filter(r=>!late.includes(r)))addMechanic(r);
+  let lastQueue=-1,lastEntry=-1;const seenLoot=new Set(),seenMechanics=new Set();
+  for(const e of post){
+   if(e.type==='lootGranted'){
+    const r=queuedLoot.find(r=>r.dropId===e.receipt.dropId);if(!r)continue;
+    assert.deepEqual(e.receipt,r,'queued loot grant event matches receipt');assert(!seenLoot.has(r.dropId),'queued loot grant event unique');seenLoot.add(r.dropId);
+    const [id,entry]=JSON.parse(r.dropId),index=queue.indexOf(id);
+    assert(Number.isInteger(entry)&&index>=lastQueue&&(index!==lastQueue||entry>lastEntry),'queued loot follows FIFO and entry order');
+    lastEntry=entry;lastQueue=index;addLoot(r);
+   }else if(e.type==='mechanicGranted'){
+    const r=late.find(r=>r.receiptId===e.receipt.receiptId);if(!r||seenMechanics.has(r.receiptId))continue;
+    assert.deepEqual(e.receipt,r,'queued mechanic grant event matches receipt');seenMechanics.add(r.receiptId);addMechanic(r);
+   }
+  }
+  assert.equal(seenLoot.size,queuedLoot.length,'all queued loot needs grant events');
+  assert.equal(seenMechanics.size,late.length,'all queued mechanics need grant events');
+ }else{
+  for(const r of loot)addLoot(r);
+  for(const r of mechanics)addMechanic(r);
  }
  let used=null;
  if(command?.type==='useConsumable'){

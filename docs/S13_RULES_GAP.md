@@ -53,6 +53,33 @@ GPT研究 `s13-augment-b5-research-2026-10-27/package/research/report_data.json`
 证据：本地GPT研究 `s13-augment-b5-research-2026-10-27/package/research/report_data.json` 的 B5-72 对运行时AD、聚合、上限解释和7+阶段仍记“未找到”；Gemini研究 `s13-augment-b5-gemini-research-2026-10-27/GEMINI_REPORT.txt` 的 B5-72 将聚合／结转、累计上限、600封顶称为已证实，但属于原文／社区解释。本项目以用户2026-10-27批准的**P约定**裁定，不把冲突研究提升为已锁定原服事实。来源：[14.24英文客户端](https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json)、[同期社区讨论](https://www.reddit.com/r/TeamfightTactics/comments/1hfqsn4/this_augment_combo_is_actually_insane/)。
 
 实现位于 `content/augment-pool-batch5-g4.ts` 与 `augment-pool-batch5-g4.ts`；先知资格从冻结有效羁绊成员编译（含纹章，不要求激活2先知），不由战中面板猜测。`CombatState.voidcaller` 只保存每队余数和累计出生数，从可信开战输入完整重演认证。获取沿用 `augment-history-v1` 的 acquire 和独立服务器authority，不另建历史；赠棋沿用共享卡池奖励法球。候选遵循14.24现有节点禁用与后两次羁绊过滤。
+## 2026-10-27 B5-85 棱彩管道（P）
+
+**P-B5-85（P，2026-10-27，用户批准推荐约定）**：仅 2-1／3-2 棱彩节点开放，保留 4-2 禁用。选择节点固定整局的加奖表：2-1 取得用 Early，每次加 **8 金**；3-2 取得用 Late，每次按 **34%：16 金／33%：2 个随机非铲锅散件／33%：2 个随机 5 费＋6 金** 加奖。不是到后续阶段自动把 Early 升为 Late。额外球在下一场 PvE（2-7 或 3-7）的准备入口确定内容，挂在按 ID 排序的第一个中立怪上，在其自然法球槽之后新增一个槽；使用独立球 ID 子流，不改全桌自然掉球布局、商店或战斗 RNG。杀死载体才获得领取资格；不影响原掉落。英雄奖励沿用共享有限卡池的待领取奖励球，领取时保留原有空池折金和容量处理。
+
+**主表条件已经满足**：项目原有 `src/simulation/content/loot.ts` 的 `ORB_BOXES.ultraPlus` 就是标准棱彩主表（9 行、权重总和 100），额外球直接调用 `sampleOrbBox` 使用它；不另建或覆盖 Gemini 九项表。保留原项目裁剪：该旧表的成装／24 金行不包含杰作升级，`six-cost-omitted` 行只有神器锻造器和拆卸器；本任务不扩展通用球表的六费或杰作升级内容。
+
+用户批准“之后自己开的所有棱彩球都加奖”，因此通用 `claimOrb` 成功路径不按球来源筛选；自然球和强化额外球都覆盖，未来其它棱彩来源也使用同一入口。金球、未获得资格、排队、部分领取、失败、弃置均不加奖。直到最后一个条目实际领取完成，才通过 `appendAugmentFact` 写入一次 `orb-opened`，再执行独立重算的金币／物品奖励。取得前已开的球不补发；取得前持有但取得后才完全打开的球可加奖。战斗中点球只排队，结算时统一执行。奖励事实和唯一收据分别防止重发，在线恢复必须使用独立服务器 authority；不接受候选档自带证明。按本任务只面向联机的范围，保留单人流程可执行，不为单人新增额外球生命周期。
+
+研究状态：GPT B5-85 把 14.24 移除金球加奖、Early 明示 8 金和 Late 明示 0.34／0.33／0.33 对应奖励的静态字段列为**已证实**，未找到 Early/Late 运行绑定及完整主表调用。Gemini 依据补丁和社区比较给出 2-1／3-2 分界，社区对比按**社区推测**的证据层级保留；选择节点固定加奖表、复用既有标准表、所有来源、确定内容／领取时点及载体规则统一按用户批准的**约定**处理，不把原配置残留 GoldBonus 重新启用。
+
+依据：`/home/aiapps/workspace/s13-augment-b5-research-2026-10-27/package/research/report_data.json` 的 B5-85；`/home/aiapps/workspace/s13-augment-b5-gemini-research-2026-10-27/GEMINI_REPORT.txt` 的 B5-85；研究引用的 [14.24 补丁](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes) 与 [社区对比](https://www.reddit.com/r/CompetitiveTFT/comments/1j5ic25/prismatic_pipeline_augment_discussion_93/)。
+
+## 2026-10-27 B5-82 意料之中的意外（P）
+
+**P-B5-82（P，2026-10-27，用户批准推荐约定）**：仅在 2-1 的棱彩节点开放；取得当时、3-1、4-1 各掷三颗独立六面骰，依次读取阶段 2、3、4 表。三颗相同先进入头奖，不按总点数降档；其余按 4–8／9–11／12–15／16–17 分档。奖励在取得事务或阶段首轮入口（上一轮收入已付、普通入轮准备完成后，操作解锁前）执行，收据只发一次，免费刷新可累计。沿用 acquire 历史持有者登记以认证完整在线存档，恢复必须提供独立服务器 authority；不靠候选金币或自带摘要自证。每颗骰子由来源／种子／席位／choiceId／表阶段绑定的显式 lcg32-v1 子流抽取，使用等宽高位分桶与拒绝抽样，不消费商店／战斗 RNG；英雄、装备内抽沿用 P-AG1，锻造器沿用 P-AG2。
+
+| 档位 | 阶段 2 | 阶段 3 | 阶段 4 |
+| --- | --- | --- | --- |
+| 4–8 | 7 次免费刷新 | 15 金 | 20 金 |
+| 9–11 | 2 个随机 4 费 | 10 金＋4 个次级英雄复制器 | 3 个随机 5 费 |
+| 12–15 | 2 金＋成装锻造器＋3 个重铸器 | 2 金＋神器锻造器 | 2 金＋辅助装锻造器 |
+| 16–17 | 2 金＋杰作升级 | 2 金＋3 个随机散件 | 2 金＋1 件随机成装＋2 个随机散件 |
+| 三骰相同 | 5 金＋金铲铲冠冕 | 5 金＋2 个随机纹章 | 5 金＋2 个随机 5 费＋英雄复制器 |
+
+研究状态：14.24 `A[246]` 的 `NumStages=2` 和匿名 7／15／20 字段及“现在和下两个阶段”文本为**已证实**；GPT 报告把同期“18 点出金币和大复制器”的无画面回述列为**社区推测**，完整表、面数及绑定仍未找到。Gemini 的表混有 S14 来源，虽然报告标为已证实，本项目的完整表、3d6、分档、时点和匿名字段映射统一按用户批准的**约定**处理，不声称恢复了 S13 服务端脚本。采用 Gemini 正文首列方案，括号中的其它奖励不混入。精确枚举 216 组合为 54／78／69／9／6（Gemini 写 68 是算术差异，按用户批准的区间为 69）。
+
+依据：`/home/aiapps/workspace/s13-augment-b5-research-2026-10-27/package/research/report_data.json` 的 B5-82；`/home/aiapps/workspace/s13-augment-b5-gemini-research-2026-10-27/GEMINI_REPORT.txt` 的 B5-82；其中 [S13 社区记录](https://www.reddit.com/r/CompetitiveTFT/comments/1h9s13u/expected_unexpectedness_partial_loot_table/) 仅作社区线索，[S14 表](https://lolchess.gg/rewards/set14/expected-unexpectedness?hl=en) 仅作本次约定依据。
 
 ## 2026-10-27 B5-07 与 B5-10（P）
 

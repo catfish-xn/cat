@@ -7,6 +7,8 @@ import { AUGMENT_BATCH5_G2 } from './content/augment-pool-batch5-g2';
 import { AUGMENT_BATCH5_G3 } from './content/augment-pool-batch5-g3';
 import { b5VoidSwarmGiftPlan } from './augment-pool-batch5-g4-swarm';
 import { AUGMENT_BATCH5_G4 } from './content/augment-pool-batch5-g4';
+import { preparePipelineOrbs } from './augment-pool-batch5-g5-pipeline';
+import { batch5G5GiftPlan, drainBatch5G5Gold, validateBatch5G5Rewards } from './augment-pool-batch5-g5';
 import { AUGMENT_BATCH5_H1 } from './content/augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
 import { validateSurvivorGold } from './augment-pool-batch5-h4-survivor';
@@ -57,13 +59,13 @@ import { UNIT_DEFINITIONS } from './units';
 
 /** Derive pending grants from authenticated owned augments, never from a client-supplied reward or receipt. */
 export function batch1GiftPlan(state:MatchState) {
- return state.augments.flatMap(a=>planAugmentGifts(state,a,((AUGMENT_BATCH5_G4 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G3 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G2 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_R6[a.definitionId]??AUGMENT_BATCH5_R4[a.definitionId as keyof typeof AUGMENT_BATCH5_R4]??AUGMENT_BATCH5_H13[a.definitionId]??AUGMENT_BATCH5_H12[a.definitionId]??AUGMENT_BATCH5_H1[a.definitionId as keyof typeof AUGMENT_BATCH5_H1]??(AUGMENT_BATCH5_H3 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G1 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_B5A[a.definitionId as keyof typeof AUGMENT_BATCH5_B5A]??AUGMENT_BATCH5_S3A[a.definitionId]??AUGMENT_BATCH5_S3B[a.definitionId]??(AUGMENT_BATCH5_S3D as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_S8B as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_H10[a.definitionId]??AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(cabalGiftPlan(state),trackerGiftPlan(state),academicGiftPlan(state),salvageRewardPlan(state),h13SalvageRewardPlan(state),batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state),replicationGiftPlan(state),pilferRewardPlan(state),gloriousEvolutionRewardPlan(state),hardCommitRewardPlan(state),luckyGlovesRewardPlan(state),b5VoidSwarmGiftPlan(state));
+ return state.augments.flatMap(a=>planAugmentGifts(state,a,((AUGMENT_BATCH5_G4 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G3 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G2 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_R6[a.definitionId]??AUGMENT_BATCH5_R4[a.definitionId as keyof typeof AUGMENT_BATCH5_R4]??AUGMENT_BATCH5_H13[a.definitionId]??AUGMENT_BATCH5_H12[a.definitionId]??AUGMENT_BATCH5_H1[a.definitionId as keyof typeof AUGMENT_BATCH5_H1]??(AUGMENT_BATCH5_H3 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_G1 as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_B5A[a.definitionId as keyof typeof AUGMENT_BATCH5_B5A]??AUGMENT_BATCH5_S3A[a.definitionId]??AUGMENT_BATCH5_S3B[a.definitionId]??(AUGMENT_BATCH5_S3D as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??(AUGMENT_BATCH5_S8B as Readonly<Record<string,{gifts:readonly import('./augment-gift-plan').AugmentGiftSpec[]}>>)[a.definitionId]??AUGMENT_BATCH5_H10[a.definitionId]??AUGMENT_BATCH5[a.definitionId]??AUGMENT_BATCH1[a.definitionId]??AUGMENT_BATCH2_ENABLED[a.definitionId]??AUGMENT_BATCH3[a.definitionId]??AUGMENT_BATCH4_B4XP[a.definitionId]??AUGMENT_BATCH4_B4COMBAT[a.definitionId])?.gifts??[])).concat(cabalGiftPlan(state),trackerGiftPlan(state),academicGiftPlan(state),salvageRewardPlan(state),h13SalvageRewardPlan(state),batch2RewardPlan(state),batch3RewardPlan(state),formSwapperGiftPlan(state),batch4RewardPlan(state),batch5RewardPlan(state),replicationGiftPlan(state),pilferRewardPlan(state),gloriousEvolutionRewardPlan(state),hardCommitRewardPlan(state),luckyGlovesRewardPlan(state),b5VoidSwarmGiftPlan(state),batch5G5GiftPlan(state));
 }
 /** Offline heroes/anvils retain capacity escrow; online heroes use the existing shared-pool reward orbs.
  * Anvils are summons and stay outside the pool. Revisit blocked gifts after triples free a slot. */
 export function drainBatch1Gifts(initial:MatchState,policy?:UnitLootPolicy):MatchState {
  // Dummify/Golemify first: their removal frees the bench for the dummy or golem they grant.
- let state=drainBatch3Forming(recordH13Settlements(initial)),progressed:boolean;
+ let state=drainBatch5G5Gold(preparePipelineOrbs(drainBatch3Forming(recordH13Settlements(initial)))),progressed:boolean;
  do {
   progressed=false;
   for(const gift of batch1GiftPlan(state)){
@@ -85,6 +87,7 @@ export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
 }
 export function validateBatch1Gifts(state:MatchState):void {
  validateTombRaider(state);
+ validateBatch5G5Rewards(state);
  validateSurvivorGold(state);
  validatePortfolioGold(state);
  validateContestedGold(state);

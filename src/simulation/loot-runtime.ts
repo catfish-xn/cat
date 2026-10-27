@@ -1,4 +1,5 @@
 import { applyAngerIssues } from './augment-pool-batch5-r2';
+import { pipelineExtraOrbs } from './augment-pool-batch5-g5-pipeline';
 import { openingCrabCarrier } from './opening-crabs';
 import { claimGeneratedJson } from './immutable-json';
 import { createOrbLayout, freezeOrbLayoutThroughRound, type LootInitialization, type OrbLayoutLedger, type LootLayoutBinding } from './orb-layout';
@@ -21,7 +22,12 @@ import { planUnitAcquisition } from './unit-acquisition';
 import { getUnitSellPrice } from './unit-stats';
 
 const counterKey = (roundId: string) => JSON.stringify([LOOT_POLICY_VERSION, roundId, 'components-granted']);
-const currentPlan = (state: MatchState) => state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === state.roundDefinitionId);
+const currentPlan = (state: MatchState) => {
+  const plan = state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === state.roundDefinitionId);
+  const extra = pipelineExtraOrbs(state).filter(o => o.roundId === state.roundDefinitionId);
+  return plan && extra.length ? { ...plan, orbs: [...plan.orbs, ...extra],
+    encounterPlan: { ...plan.encounterPlan, drops: [...plan.encounterPlan.drops, ...extra.flatMap(o => o.entries)] } } : plan;
+};
 const withLoot = (state: MatchState, loot: MatchLootState): MatchState => ({ ...state, m8: claimGeneratedJson({ ...state.m8, loot }) });
 
 /** Preparation owns the sole frozen plan and RNG; runtime progress only references its IDs. */

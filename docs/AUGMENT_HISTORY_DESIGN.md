@@ -271,3 +271,8 @@ R6 验证：两卡22项专项测试及相关卡池、双边战斗、消耗品、
 ## B5-G2 死亡事实扩展（2026-10-27）
 
 B5-63／B5-70 均登记为 `deaths` 历史持有者，联机恢复要求房间独立 authority；B5-63 使用现有 `deaths` API 推导永久值；`AugmentDeath.form?` 保存真实死亡时已经冻结的双形态，`championCopy?:true` 区分英雄复制体与非英雄召唤物。原 `ordinaryHero` 的过滤语义保持不变，现有消费者不被扩大；英雄复制体可由新消费者显式纳入。“最后机会”这类先复活后清理的流程，在G2持有者场次会补齐复活前首次死亡采样；原有复活事件保留，复活后再次死亡仍按新eventSeq记录。两字段只在适用的真实样本中出现，由原本的单人命令重演或独立服务器 authority 认证，不接受客户端自报死亡。协议与历史节版本仍沿用现有版本；内容变化通过 rules manifest 和内容身份区分，不重录旧 epoch。
+## 2026-10-27 B5-82／B5-85 集成（G5）
+
+`expected-unexpectedness` 使用现有 `acquire` 持有者登记，确保联机存档整体金币与奖励状态也必须匹配独立服务器 authority；骰子结果仍独立重算，不从历史收据读金额。`prismatic-pipeline` 登记为 `orb-opened` 历史持有者。沿用 `augment-history-v1`，增加事实 `{kind:'orb-opened',choiceId,orbId,tier:'prismatic'}`，其连续 sequence、席位、自然轮、roundId、resourcePrefix 由现有 `appendAugmentFact` 填写。仅在通用开球命令把最后一项实际授予后写入，领取前已持有来源才有效；排队、部分领取、弃置、失败和重复均不写。规则通过 `readAugmentFacts(state,'orb-opened')` 读取，不能从当前金币或 receipt.claimedRoundId 推测同轮取得前后顺序。
+
+金币及礼物均由事实中的 orbId、来源 choiceId、取得节点、席位和种子重算；事实不携带奖励金额或抽样结果。在线仍由 `Room.augmentHistoryAuthority` 的独立品牌句柄认证完整候选状态；缺历史／缺 authority／改事实拒绝，不自签名、不迁移补零。无需新增客户端命令、协议或 epoch 录制。

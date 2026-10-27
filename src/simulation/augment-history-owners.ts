@@ -24,6 +24,8 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'ghost-of-friends-past': ['deaths'], 'rebel-resurgence': ['deaths'],
   'void-swarm': ['pvp-roster'],
   'voidcaller': ['acquire'],
+  'expected-unexpectedness': ['acquire'],
+  'prismatic-pipeline': ['orb-opened'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],
