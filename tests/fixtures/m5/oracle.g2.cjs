@@ -6,9 +6,12 @@ const assert = require('node:assert/strict');
 const {validateRewards}=require('./augment-rewards-oracle.cjs');
 const {battleGold}=require('./battle-gold-oracle.cjs');
 const {concreteMarketItems}=require('./black-market-oracle.cjs');
+const h3=require('./h3-growth-oracle.cjs');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
 CATALOG.push(['mel','viktor','warwick']); // Approved v19 six-cost identities; raw historical recordings stay immutable.
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
+const createH3Ledger=initial=>h3.createH3Ledger(initial,[...CATALOG.flat(),'elise-ranged','gangplank-ranged','jayce-ranged','swain-ranged']);
+const {checkH3Growth,h3GrowthForUnit}=h3;
 const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10],10:[5,10,20,40,25]};
 const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:68,9:68};
 // Literal W4 + S13 P2 pools independently transcribed from the retained raw source.
@@ -535,10 +538,11 @@ function validateChemTransition(before,after){
  if(after.pendingChoice?.kind==='blackMarket')assert.deepEqual(after.pendingChoice.offers,chem.offer.optionIds,'pending choice offers complete bundles');
 }
 class Ledger {
- constructor(initial){this.gold=0;this.pending={gold:0,investmentHp:0};
+ constructor(initial){this.gold=0;this.pending={gold:0,investmentHp:0};this.h3=createH3Ledger(initial);
   // v22 openings can start with extra cards; conservation starts from the actual opening roster (Trainer Golem excluded).
   this.cards=ownedUnits(initial).reduce((n,u)=>n+3**(u.starLevel-1),0);assert(this.cards>=1,'opening unit');this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){
+  const h3=checkH3Growth(this.h3,before,after,command);
   validateChemTransition(before,after);
   validatePandoraEntry(before,after,assert);
   const inventoryConversions=buffetPlan(after);
@@ -688,7 +692,7 @@ class Ledger {
    }
   }
   assert.deepEqual(after.augmentProgress,growth,'once-only independent augment growth');
-  this.combinations+=events.filter(e=>e.type==='itemCombined').length;this.check(after,true);
+  this.combinations+=events.filter(e=>e.type==='itemCombined').length;this.check(after,true);this.h3=h3;
  }
  check(state,lootChecked=false){if(!lootChecked)validateLoot(state);assert.equal(state.gold,this.gold,'independent gold ledger R'+state.round+' sim='+state.gold+' ledger='+this.gold+' '+state.roundDefinitionId+' '+state.phase+' '+JSON.stringify(state.m8?.round?.kind));const units=ownedUnits(state),items=ownedItems(state);assert.equal(units.reduce((n,u)=>n+3**(u.starLevel-1),0),this.cards,'card-equivalent conservation');assert.equal(new Set(items.map(i=>i.id)).size,items.length,'unique item IDs');
   const academic=require('./augment-batch5-s3b-oracle.cjs').academicConsumed(state);
@@ -696,6 +700,7 @@ class Ledger {
   assert.equal(items.length,grants-this.combinations-buffetPlan(state).consumed.size-academic,'component/completed-item conservation');assert.equal(new Set(state.scheduleReceipts.map(r=>r.eventId)).size,state.scheduleReceipts.length,'receipt identity');assert.equal(state.nextItemSerial,1+grants+this.combinations,'item serial accounting');}
 }
 module.exports={benchXp,entryXp,freeRerollCredits,augmentGold,ANVIL_IDS,blackMarket,validateChemTransition,ANOMALIES,ROUNDS,roundOrdinal,CATALOG,COST,ODDS,XP,SELL,COMPONENTS,word,shop,xp,settlement,investment,lootIndex,lootPlan,validateLoot,validateLootTransition,Ledger,openingEncounter,augmentTier,augmentPool,augmentDraw,validateAugmentReroll};
+Object.assign(module.exports,{createH3Ledger,checkH3Growth,h3GrowthForUnit});
 
 // Shop stream implemented with bigint arithmetic; no runtime RNG/content imports.
 function shopWord(state,parts){
