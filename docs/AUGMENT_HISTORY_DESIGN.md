@@ -61,7 +61,7 @@
 - `recordAugmentGrowth(state,choiceId,receiptId,deltas)`：只允许持有来源、普通英雄、非负安全整数；同收据同内容返回原对象，冲突报错。`readAugmentGrowth(state,unitId)` 沿资源账本合星血缘累计，不接管 Tristana 旧 AD 账本。此任务只提供持久成长证据和读取器；最终战斗面板应用属于实际强化任务。
 - `recordAugmentPlayerHealth(state,change)`：领域事务完成后记录真实 HP/最大 HP 前后值，绑定持有来源与唯一收据，当前 HP 必须等于 hpAfter；不执行治疗、不决定上限。重复收据同内容幂等，冲突拒绝。
 - `appendAugmentFact(state,fact)`：内部领域扩展入口，不向网络开放。未来 player-health 等事实必须在可重演的真实领域事务内产生，不能把此函数当认证器。
-- `advanceAugmentPreparationTime(state,elapsedMs): MatchState`：仅 preparation 或返回 preparation 的选择阶段；累计毫秒0～600000、单调，重复同值无动作，倒退/越界/错阶段抛错。单人驱动可直接调用并进入重演证据；房间只对 Shop Glitch 持有者在命令前、冻结前和50ms计时回调采样注入。取得事实记录选择时的准备期偏移，未来刷新效果从该偏移计算；不实现免费刷新本身。暂停时调用方不推进逻辑时钟；战斗/选秀时钟不能冒充它。
+- `advanceAugmentPreparationTime(state,elapsedMs): MatchState`：仅 preparation 或返回 preparation 的选择阶段；累计毫秒0～600000、单调，重复同值无动作，倒退/越界/错阶段抛错。单人驱动可直接调用并进入重演证据；B5-07 从取得时的准备期偏移计算刷新，后续 PvE 轮从零计时。房间只对存活且需要准备期时钟的席位，在命令前、冻结前和对齐本轮准备期入口的50ms回调采样，经 `advanceSharedAugmentPreparationTime(pool,state,elapsedMs)` 同时更新卡池、商店与时钟证据；禁止对共享席位直接调用单人刷新路径。各席按房间席序暂存，全部成功才一次发布 pool/poolRevision/seats；任一失败舍弃该批暂存并进入房间故障。暂停时调用方不推进逻辑时钟；战斗/选秀时钟不能冒充它。
 - `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)`：未来奖励路由指定剩余槽，要求全部正常领取已结束且真实持有来源；复用保留/授予/卡池守恒与满席 held 流程，不负责抽签或选择获奖者。正常领取仍一人一次。额外 ID 为 `<carouselId>:<seatId>:extra:<1..8>`，来源、序号写在同一个 augmentHistory 节中，没有第二个版本节。关闭后已归还的剩余卡先重新保留再授予；失败返回原 pool/carousel/state，无 RNG 消耗。
 - `recordAugmentTable`、`recordAugmentPvpRoster`：房间冻结和结算调用的规则接口，不供客户端提交事实。
 

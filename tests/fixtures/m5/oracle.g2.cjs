@@ -149,11 +149,11 @@ const batch3Offers={silver:['team-building','latent-forge','eye-for-an-eye','eye
 batch3Offers.silver.push('kingslayer','risky-moves');batch3Offers.gold.push('patient-study','epoch','epoch-plus');batch3Offers.prismatic.push('level-up','shopping-spree','upward-mobility');
 // Batch 4 (14.24 tiers): level rewards, B4XP bench XP, B4reroll free rerolls, B4Combat combat-start effects.
 batch3Offers.silver.push('caretakers-ally','lategame-specialist','patience-is-a-virtue');batch3Offers.gold.push('caretakers-favor','clear-mind','cluttered-mind','slammin','slammin-plus','long-distance-pals','category-five','overheal','sated-spellweaver');batch3Offers.prismatic.push('birthday-presents','caretakers-chosen','invested-plus','invested-plus-plus');
-batch3Offers.gold.push('two-much-value');
+batch3Offers.gold.push('shop-glitch','two-much-value');
 batch3Offers.silver.push('called-shot','crafted-crafting');batch3Offers.prismatic.push('dual-purpose','a-change-of-fate');
 for(const tier of ['silver','gold','prismatic']){AUGMENT_POOLS[tier].push(...batch2Offers[tier],...batch3Offers[tier]);AUGMENTS.push(...batch2Offers[tier],...batch3Offers[tier]);}AUGMENTS.sort();
-assert.equal(AUGMENTS.length,236,'independent full augment catalog size');
-assert.equal(new Set(AUGMENTS).size,236,'independent catalog has no duplicates');
+assert.equal(AUGMENTS.length,237,'independent full augment catalog size');
+assert.equal(new Set(AUGMENTS).size,237,'independent catalog has no duplicates');
 assert.deepEqual(Object.values(AUGMENT_POOLS).flat().sort(),AUGMENTS,'independent tier catalog coverage');
 // PR9: independent literal opening table from approved PR1/PR2 (16 entries,
 // original cumulative weights including disabled entries; never renormalize).
@@ -720,3 +720,46 @@ function shopTransition(before,command){
  return next;
 }
 module.exports.shopWord=shopWord;module.exports.shopForState=shopForState;module.exports.shopTransition=shopTransition;
+
+// P-B5-07, 2026-10-27: enumerate the twelve boundaries from caller-owned clock observations.
+// No production clock facts, shop history or reward receipts determine the expected refresh count.
+function shopGlitchCount(state, previousMs, elapsedMs, acquiredAt=0) {
+ if (!state.augments.some(a=>a.definitionId==='shop-glitch') || state.shop.locked ||
+     !['preparation','choice'].includes(state.phase) || ROUNDS[state.round-1]?.kind!=='pve') return 0;
+ return Array.from({length:12},(_,i)=>acquiredAt+(i+1)*2500)
+  .filter(at=>previousMs<at&&at<=elapsedMs).length;
+}
+function shopGlitchSolo(state, previousMs, elapsedMs, acquiredAt=0) {
+ let next={shop:state.shop,rngState:state.rngState};
+ for(let i=0;i<shopGlitchCount(state,previousMs,elapsedMs,acquiredAt);i++)next=shopForState({...state,...next});
+ return next;
+}
+// Independent finite-copy draw for early PvE test routes; fail closed outside that scope.
+function shopGlitchShared(pool,state,previousMs,elapsedMs,acquiredAt=0) {
+ assert(state.round<=10 && state.augments.every(a=>a.definitionId==='shop-glitch'), 'early Shop Glitch oracle scope');
+ const available={...pool.available};let reservations=structuredClone(pool.shops);
+ let rng=state.rngState,shop=state.shop;
+ const seatId=state.sharedPool.seatId;
+ const pick=(entries)=>{
+  rng=word(rng);const total=entries.reduce((sum,[,weight])=>sum+weight,0);
+  const roll=Number(BigInt(rng)*BigInt(total)/4294967296n);
+  let cumulative=0;return entries.find(([,weight])=>(cumulative+=weight)>roll)[0];
+ };
+ for(let n=0;n<shopGlitchCount(state,previousMs,elapsedMs,acquiredAt);n++){
+  for(const r of reservations.filter(r=>r.seatId===seatId))available[r.definitionId]+=r.starLevel===2?3:1;
+  reservations=reservations.filter(r=>r.seatId!==seatId);
+  const generation=shop.generation+1,slots=[];
+  for(let slot=0;slot<5;slot++){
+   const tiers=[1,2,3,4,5].filter(t=>ODDS[state.level][t-1]>0&&CATALOG[t].some(id=>available[id]>0));
+   if(!tiers.length){slots.push({status:'purchased',empty:true});continue;}
+   const tier=pick(tiers.map(t=>[t,ODDS[state.level][t-1]]));
+   const id=pick(CATALOG[tier].map(id=>[id,available[id]]));available[id]--;
+   slots.push({status:'available',definitionId:id});reservations.push({seatId,generation,slot,definitionId:id});
+  }
+  shop={generation,locked:false,slots};
+ }
+ return {shop,rngState:rng,available,shops:reservations};
+}
+module.exports.shopGlitchCount=shopGlitchCount;
+module.exports.shopGlitchSolo=shopGlitchSolo;
+module.exports.shopGlitchShared=shopGlitchShared;

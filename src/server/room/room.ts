@@ -1,5 +1,6 @@
 import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomSettlementTable, tableFacts } from './augment-history';
-import { captureAugmentHistoryAuthority, prepareAugmentAcquisition, advanceAugmentPreparationTime, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
+import { captureAugmentHistoryAuthority, prepareAugmentAcquisition, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
+import { advanceSharedAugmentPreparationTime } from '../../simulation/shared-pool';
 /**
  * Eight-seat room state machine (pipeline B, work orders B1–B7). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
@@ -533,7 +534,7 @@ export class Room {
   }
 
   private apply(seat: SeatState, command: SeatCommand): RoomCommandResult {
-    this.advanceAugmentClock();
+    if (!this.advanceAugmentClock()) return { ok: false, reason: 'room-phase', state: seat.match };
     seat = this.current.seats.find(s => s.seatId === seat.seatId)!;
     this.prepareAugmentAcquisition(seat);
     const seatId = seat.seatId;
@@ -1179,7 +1180,7 @@ export class Room {
    * the complete tick-zero state is published; the legacy resolver retains its frozen-phase refusals.
    */
   private freezeAndResolve(): void {
-    this.advanceAugmentClock();
+    if (!this.advanceAugmentClock()) return;
     this.setPhase('frozen', null);
     if (!this.applyTimeouts('preparation')) return;
     // §15.4: deploy every human seat up to its cap, freeze every input on the deployed states, then lock the live seats.
@@ -1939,17 +1940,28 @@ export class Room {
     const published = this.current.seats.find(candidate => candidate.seatId === seatId);
     return published?.match === match || !!match.augmentHistory && this.current.pool === pool && published?.seatRevision === revision;
   }
-  private advanceAugmentClock(): void {
-    if (this.current.phase !== 'preparation') return;
-    const elapsed = Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt;
-    let changed = false;
-    const seats = this.current.seats.map(seat => {
-      if (!seat.alive || !seat.match.augmentHistory || !needsAugmentPreparationClock(seat.match)) return seat;
-      const match = advanceAugmentPreparationTime(seat.match, elapsed);
-      if (match === seat.match) return seat;
-      changed = true; return { ...seat, match, seatRevision: seat.seatRevision + 1 };
-    });
-    if (changed) this.replace({ ...this.current, seats });
+  private advanceAugmentClock(): boolean {
+    if (this.disposed || this.current.phase !== 'preparation') return true;
+    const now = this.options.clock.now();
+    // A delayed callback cannot turn time after the preparation deadline into preparation time.
+    const sampledAt = this.current.deadlineAt === null ? now : Math.min(now, this.current.deadlineAt);
+    const elapsed = Math.floor(sampledAt) - this.augmentPreparationStartedAt;
+    let pool = this.current.pool, changed = false;
+    const seats: SeatState[] = [];
+    // Stage in seat order against the latest draft pool; publish all shops and their reservations together.
+    for (const seat of this.current.seats) {
+      if (!seat.alive || !seat.match.augmentHistory || !needsAugmentPreparationClock(seat.match)) { seats.push(seat); continue; }
+      const result = advanceSharedAugmentPreparationTime(pool, seat.match, elapsed);
+      if (!result.ok) {
+        this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: `augment-clock:${result.reason}` });
+        return false;
+      }
+      pool = result.pool;
+      if (result.state === seat.match) { seats.push(seat); continue; }
+      changed = true; seats.push({ ...seat, match: result.state, seatRevision: seat.seatRevision + 1 });
+    }
+    if (changed) this.replace({ ...this.current, pool, poolRevision: pool.revision, seats });
+    return true;
   }
   private prepareAugmentAcquisition(seat: SeatState): void {
     if (!seat.match.multiplayer || seat.match.pendingChoice?.kind !== 'augment') return;
@@ -1957,10 +1969,18 @@ export class Room {
       Math.max(0, Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt), tableFacts(this.current.seats));
   }
   private scheduleAugmentClock(): void {
-    if (this.augmentHistoryTimer !== null) { this.options.clock.cancel(this.augmentHistoryTimer); this.augmentHistoryTimer = null; }
-    if (this.disposed || this.current.phase !== 'preparation' || !this.current.seats.some(s => s.alive && s.match.augmentHistory && needsAugmentPreparationClock(s.match))) return;
-    this.augmentHistoryTimer = this.options.clock.schedule(this.options.clock.now() + 50, () => {
+    if (this.disposed || this.current.phase !== 'preparation' || !this.current.seats.some(s => s.alive && s.match.augmentHistory && needsAugmentPreparationClock(s.match))) {
+      if (this.augmentHistoryTimer !== null) { this.options.clock.cancel(this.augmentHistoryTimer); this.augmentHistoryTimer = null; }
+      return;
+    }
+    // A connection or command publication at the due instant must retain the queued sample.
+    if (this.augmentHistoryTimer !== null) return;
+    // Keep sampling aligned with preparation entry: intervening publications cannot postpone a boundary.
+    const next = this.augmentPreparationStartedAt + (Math.floor((this.options.clock.now() - this.augmentPreparationStartedAt) / 50) + 1) * 50;
+    this.augmentHistoryTimer = this.options.clock.schedule(next, () => {
       this.augmentHistoryTimer = null; this.advanceAugmentClock();
+      // A command may already have sampled this instant, leaving no changed state to publish.
+      this.scheduleAugmentClock();
     });
   }
   /** For server persistence/reconnect verification; never accept this handle from a client. */
@@ -1976,7 +1996,10 @@ export class Room {
     const published = { ...this.withChoiceDeadlines(recordRoomPublication(this.current, synced)), roomRevision: this.current.roomRevision + 1 };
     // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
-    if (published.phase === 'preparation' && (this.current.phase !== 'preparation' || this.current.round !== published.round)) this.augmentPreparationStartedAt = Math.floor(this.options.clock.now());
+    if (published.phase === 'preparation' && (this.current.phase !== 'preparation' || this.current.round !== published.round)) {
+      this.augmentPreparationStartedAt = Math.floor(this.options.clock.now());
+      if (this.augmentHistoryTimer !== null) { this.options.clock.cancel(this.augmentHistoryTimer); this.augmentHistoryTimer = null; }
+    }
     this.current = published;
     this.scheduleAugmentClock();
     for (const listener of this.listeners) listener(this.current);

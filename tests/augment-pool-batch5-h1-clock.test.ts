@@ -35,10 +35,11 @@ import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
 import { firstNodeSeed } from './augment-stage-helpers';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
+import { augmentPool, shopGlitchSolo } from './fixtures/m5/oracle.g2.cjs';
 
-it('keeps Shop Glitch out of the offer pool while the room clock integration is pending',()=>{
-  expect(AUGMENT_BATCH5_H1['shop-glitch'].enabled).toBe(false);
-  expect(AUGMENT_DEFINITIONS['shop-glitch']).toBeUndefined();
+it('enables Shop Glitch with the shared room clock transaction',()=>{
+  expect(AUGMENT_BATCH5_H1['shop-glitch'].enabled).toBe(true);
+  expect(AUGMENT_DEFINITIONS['shop-glitch']).toBeDefined();
 });
 it.skipIf(!existsSync(RESEARCH_FILE))('retains the exact Shop Glitch source values',()=>{
   const source=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((r:any)=>r.apiName==='TFT_Augment_ShopGlitch');
@@ -46,7 +47,7 @@ it.skipIf(!existsSync(RESEARCH_FILE))('retains the exact Shop Glitch source valu
   expect(source.tier).toBe(2);
 });
 
-describe.skip('waiting for authorized room clock integration',()=>{
+describe('Shop Glitch public commands and restore',()=>{
 it.skipIf(!existsSync(RESEARCH_FILE))('registers the 14.24 source and both allowed offer nodes', () => {
   const row = AUGMENT_BATCH5_H1['shop-glitch'];
   const source = JSON.parse(readFileSync(RESEARCH_FILE, 'utf8')).find((r: any) => r.apiName === row.apiName);
@@ -56,6 +57,7 @@ it.skipIf(!existsSync(RESEARCH_FILE))('registers the 14.24 source and both allow
     const allowed = node !== '4-2';
     expect(augmentOfferAllowed('shop-glitch', [], { node, fieldedTraits: [], blocked: [] })).toBe(allowed);
     expect(augmentCandidates('gold', [], [], null, { node, fieldedTraits: [], blocked: [] }).includes('shop-glitch')).toBe(allowed);
+    expect(augmentPool('gold', [], [], `round:${node}:augment`)).toEqual(augmentCandidates('gold', [], [], null, { node, fieldedTraits: [], blocked: [] }).sort());
   }
 });
 let route: MatchState;
@@ -81,9 +83,13 @@ for (const target of ['2-2','2-3','2-4','2-5','2-6','2-7']) it(`reaches ${target
 it('refreshes for free on elapsed boundaries, skips locked times and authenticates restores', () => {
   let s=route, generation=s.shop.generation, gold=s.gold;
   s=advanceAugmentPreparationTime(s,2499);expect(s.shop.generation).toBe(generation);
+  const first=shopGlitchSolo(s,2499,2500);
   s=advanceAugmentPreparationTime(s,2500);expect(s.shop.generation).toBe(++generation);expect(s.gold).toBe(gold);
+  expect(s.shop).toEqual(first.shop);expect(s.rngState).toBe(first.rngState);
   s=accepted(setShopLock(s,true,s.shop.generation));s=advanceAugmentPreparationTime(s,5000);expect(s.shop.generation).toBe(generation);
-  s=accepted(setShopLock(s,false,s.shop.generation));s=advanceAugmentPreparationTime(s,7500);expect(s.shop.generation).toBe(++generation);
+  s=accepted(setShopLock(s,false,s.shop.generation));const next=shopGlitchSolo(s,5000,7500);
+  s=advanceAugmentPreparationTime(s,7500);expect(s.shop.generation).toBe(++generation);
+  expect(s.shop).toEqual(next.shop);expect(s.rngState).toBe(next.rngState);
   const serialized=serializeMatch(s);
   expect(restoreMatch(s)).toEqual(s);expect(restoreMatch(JSON.stringify(s))).toEqual(s);expect(restoreMatch(serialized)).toEqual(s);
   for (const mutate of [(x:any)=>{x.augmentHistory.facts.findLast((f:any)=>f.kind==='preparation-time').elapsedMs++;},
