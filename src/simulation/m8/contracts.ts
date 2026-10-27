@@ -400,7 +400,9 @@ export interface EquipmentRoundRoll {
   readonly parentItemInstanceId: string;
   readonly roundId: string;
   readonly playerLevelSnapshot: number;
-  readonly poolVersion: 'tg-01-v1';
+  readonly poolVersion: 'tg-01-v1' | 'lucky-gloves-v1';
+  /** Lucky Gloves adds immutable per-holder/form rolls; ordinary parent/round receipts remain unchanged. */
+  readonly lucky?: { readonly choiceId:string; readonly holderId:string; readonly definitionId:string; readonly role:string; readonly radiant:boolean };
   readonly children: readonly [string, string];
   readonly rngDrawStart: number;
   readonly rngDrawEnd: number;

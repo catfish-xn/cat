@@ -1656,3 +1656,20 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 | 卡池失败枚举 | 无完整候选是成功事务中的单位不变，不补金、不降星；不增加wire reason。共享事务仍返回既有 `invalid-pool`／`invalid-seat-state` 等失败并保留原pool/state。 |
 
 `src/server/` 无改动：`Room.apply` 的 choose／timeoutChoice、入轮的 `nextSharedRound`、独立 `augmentHistoryAuthority` 继续调用现有公共规则入口；服务器不计算费用、库存或变形。战斗快照仅在持有上述变形强化时允许普通英雄继承原Tristana永久AD；新增成长来源仍只能由既有Tristana战斗事件认证。两个卡片测试的变形、星级库存和合星预期由独立M5 oracle根据变形前阵容、真实库存与种子推导，不读取生产收据作为预期；工具数量另用独立礼物计划核验。
+
+## Batch 5 G1：幸运手套 / 幸运手套+（P，2026-10-27）
+
+现有公共命令 `selectChoice(state,choiceId,generation,definitionId,unitLootPolicy?)`、`combineItems(state,aId,bId)`、`equipItem(state,itemId,unitId,slot,options?)`、`deployMatchUnit`、`useConsumable` 与自然入轮完成全部执行；网络命令和失败原因不变，失败保持原state、无事件/资源/RNG变化。B5-53仅2-1可选，给2拳套并在取得轮+5入口给1拳套；B5-54禁2-1，立即给3拳套，无延迟；二者互斥。数值/证据/选装约定见 `S13_RULES_GAP.md` P-B5-53/54。
+
+新增规则内部接口（均在 `augment-pool-batch5-g1*.ts`，不新增服务器命令）：
+
+| 签名 | 输入/输出与拒绝 |
+| --- | --- |
+| `luckyGlovesRewardPlan(state: MatchState): AugmentGift[]` | 从已取得来源和自然轮推导唯一延迟礼物；未到期或+版返回空数组，不读取收到的收据推测应得数值。 |
+| `luckyGlovesSelection(state: Pick<MatchState,'augments'\|'preparation'>, parent: ItemInstance): EquipmentRoundRoll['lucky']` | 读取当前合法持有者及形态；无该强化/普通英雄则undefined，不伪造英雄角色。 |
+| `selectLuckyGlovesPair(role: string, radiant: boolean, draw: () => number): readonly [string,string]` | 推荐池8选2，拒绝采样等权、无放回；光明逐件映射。非法角色/池/映射抛RangeError。 |
+| `equipmentRollFor(rolls,roundId,parent,context): EquipmentRoundRoll \| undefined` | 从不可变roll中取对应英雄/形态/父装备的缓存；冻结战斗使用自身冻结阵容与roll前缀。 |
+| `generateLuckyGlovesRolls(state,requests,pool): EquipmentState` | 校验已有账本，按父装备ID排序追加缺少的缓存；复用不耗RNG，无额外墙钟。 |
+| `validateLuckyGlovesEquipment(state,pool): void` | 从原始装备种子独立重放普通/推荐抽样，校验角色、持有来源、两个结果、抽数和游标；篡改抛 `Invalid Lucky Gloves equipment authority`。 |
+
+`EquipmentRoundRoll.poolVersion`增加`lucky-gloves-v1`，仅该分支带`lucky:{choiceId,holderId,definitionId,role,radiant}`选择上下文；不新增顶层保存节。旧普通roll字节不变，普通roll和推荐roll可同轮共存；战斗冻结与战中装备重建按对应上下文选取。`temporaryEquipment`沿原槽位、身份、撤销协议，临时装备不能变永久库存。两项登记为`augment-history-v1`持有者，通过通用API保留取得/位置/阵容事实；联机三种输入形式均调用 `restoreSharedOrbSnapshot(pool,input,independentAuthority?)`，缺节或缺独立authority拒绝，不推测恢复。服务器已有通用编排直接生效，本任务未改`src/server/`。

@@ -19,6 +19,8 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'anger-issues': ['acquire', 'positions'],
   'recombobulator': ['acquire', 'positions'],
   'pandoras-bench': ['round-entry', 'positions'],
+  'lucky-gloves': ['acquire','positions','combat-roster','pvp-roster'],
+  'lucky-gloves-plus': ['acquire','positions','combat-roster','pvp-roster'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],

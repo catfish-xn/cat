@@ -1,6 +1,7 @@
 import { portableAnomalyId } from './content/augment-pool-batch5-r2';
 import { r2CopyKills } from './augment-pool-batch5-r2-history';
 import { replayAngerConversion } from './augment-pool-batch5-r2';
+import { equipmentRollFor } from './augment-pool-batch5-g1-equipment';
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { pilferRewardPlan } from './augment-pool-batch5-s8a';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
@@ -280,8 +281,7 @@ function validateBattleEquipmentHistory(state: MatchState, basis: CombatInputBas
     if ((converted?.kind === 'anger-item-converted'||converted?.kind === 'g23-item-converted') && converted.itemId === equippedId) {
       items = replayG23Conversion(items, converted); through++;
     }
-    const temporaryEquipment = items.flatMap(item => item.location.kind === 'unit' ? state.equipmentState.rolls
-      .filter(r => r.parentItemInstanceId === item.id && r.roundId === basis.roundId)
+    const temporaryEquipment = items.flatMap(item => item.location.kind === 'unit' ? [equipmentRollFor(state.equipmentState.rolls,basis.roundId,item,{...state,preparation:basis.inputs.preparation})].filter((r): r is NonNullable<typeof r> => !!r)
       .flatMap(r => projectTemporaryEquipment(r, item.location.kind === 'unit' ? item.location.unitId : '')) : []);
     const source = { ...state, items, temporaryEquipment,
       gold: combatBankGold(state),

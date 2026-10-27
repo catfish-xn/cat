@@ -32,6 +32,8 @@ const initial={
  'recombobulator':[C('magnetic-remover',2)],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
+ 'lucky-gloves':[I('gloves',2)],
+ 'lucky-gloves-plus':[I('gloves',3)],
  'cooking-pot':[I('frying-pan')],
  'quality-over-quantity':[C('magnetic-remover',2)], 'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  'hard-commit':[Q('emblem')],
@@ -157,6 +159,7 @@ function rewardPlan(s,env){
    }
   }
   if(a.definitionId==='salvage-bin-plus'){const due=s.roundResults.filter(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp')[3];if(due)gifts.push(...expand(s,owner(a,['h13-four-pvp'],due.round),[Q('component')],env));}
+  if(a.definitionId==='lucky-gloves'&&s.round>=a.acquiredRound+5)levelsOut.push(...expand(s,owner(a,['lucky-gloves-delayed'],a.acquiredRound+5),[I('gloves')],env));
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
@@ -555,6 +558,7 @@ function validateRewards(before,after,command,events,base){
  s3b.validatePandora(before,after,command);
  for(const [id,gift] of s3b.validateSalvage(before,after,command,events))result.gifts.set(id,gift);
  validateAngerTransitions(before,after,command,result,base.lootReceipts);
+ require('./lucky-gloves-oracle.cjs').validateTransition(before,after,command);
  // Hand-written counter vectors may omit the inventory entirely.
  if(before.consumables===undefined&&after.consumables===undefined)return result;
  const inventory=[...before.consumables];let serial=before.nextConsumableSerial;
