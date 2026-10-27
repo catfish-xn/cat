@@ -221,13 +221,15 @@ function seatLegend(kind: SeatKind, index: number): LittleLegendId {
  * the caller). Each step is the shared-pool wrapper of a public command (§12.4: a first offer or a claim may
  * award a unit); a refusal is reported, never forced or worked around.
  */
-export function resolveSeatTimeouts(match: MatchState, pool: SharedPoolState, stage: TimeoutStage): TimeoutOutcome {
+export function resolveSeatTimeouts(match: MatchState, pool: SharedPoolState, stage: TimeoutStage, prepareAcquisition?: (state: MatchState) => void): TimeoutOutcome {
   let current = match, latest = pool;
   const events: MatchEvent[] = [];
   let lootClaimed = false;
   for (let step = 0; step < MAX_TIMEOUT_STEPS; step++) {
     if (current.phase === 'choice' && current.pendingChoice) {
       const pending = current.pendingChoice;
+      // Each augment timeout needs the server table on this state, including one opened by an earlier step.
+      if (pending.kind === 'augment') prepareAcquisition?.(current);
       const result = runSharedMatchCommand(latest, current, { type: 'timeoutChoice', round: current.round, choiceId: pending.choiceId, generation: pending.generation });
       if (!result.ok) return { ok: false, pool: latest, state: current, reason: `forfeit:${result.reason}` };
       current = result.state; latest = result.pool; events.push(...result.events); continue;
@@ -1174,7 +1176,7 @@ export class Room {
   private applyTimeouts(stage: TimeoutStage): boolean {
     for (const seat of this.aliveSeats()) {
       this.prepareAugmentAcquisition(seat);
-      const outcome = resolveSeatTimeouts(seat.match, this.current.pool, stage);
+      const outcome = resolveSeatTimeouts(seat.match, this.current.pool, stage, state => this.prepareAugmentAcquisition({ ...seat, match: state }));
       if (outcome.state !== seat.match && !this.commitSeat(seat.seatId, outcome.state, outcome.pool)) return false;
       if (!outcome.ok) { this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: outcome.reason }); return false; }
     }
@@ -2012,7 +2014,15 @@ export class Room {
     if (this.disposed) return;
     const synced = this.syncedSeatHp(next);
     if (typeof synced === 'string') return this.fail({ kind: 'invalid-results', detail: synced });
-    const published = { ...this.withChoiceDeadlines(recordRoomPublication(this.current, synced)), roomRevision: this.current.roomRevision + 1 };
+    let recorded: RoomState;
+    try { recorded = recordRoomPublication(this.current, synced); }
+    catch (error) {
+      // A committed tomb-raider seat with no acquisition table must fault the room.
+      // replace is re-entered by fail(); that publication keeps the same seats and does not throw again.
+      if (!(error instanceof RangeError) || error.message !== 'Invalid tomb raider acquisition table' || this.current.phase === 'ended') throw error;
+      return this.fail({ kind: 'invalid-results', detail: error.message });
+    }
+    const published = { ...this.withChoiceDeadlines(recorded), roomRevision: this.current.roomRevision + 1 };
     // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
     if (published.phase === 'preparation' && (this.current.phase !== 'preparation' || this.current.round !== published.round)) {

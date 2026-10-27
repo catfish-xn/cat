@@ -102,4 +102,4 @@ export { readAugmentPlayerHealth } from '../simulation/augment-history';
 
 export { settleBatch5H9History } from '../simulation/augment-pool-batch5-h9';
 
-export { hasTombRaider, recordTombRaiderEliminations, publishTombRaiderChoice } from '../simulation/augment-pool-batch5-r1';
+export { hasTombRaider, recordTombRaiderEliminations, publishTombRaiderChoice, tombRaiderOpportunities } from '../simulation/augment-pool-batch5-r1';

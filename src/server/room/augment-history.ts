@@ -1,7 +1,7 @@
 /** Server orchestration only: freeze authoritative table/roster/settlement observations.
  * No rewards, growth amounts, player damage formula or random draws live here. */
 import { drainBatch5H7Gold, applyDhampyrSettlement, drainBatch5H8Deaths, appendAugmentFact, recordAugmentTable, recordAugmentSettlementTable, settleBatch5H9History, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
-  hasTombRaider, recordTombRaiderEliminations, publishTombRaiderChoice, recordR2PortableBattle, type HistorySeat } from '../../server-entry';
+  hasTombRaider, recordTombRaiderEliminations, publishTombRaiderChoice, tombRaiderOpportunities, recordR2PortableBattle, type HistorySeat } from '../../server-entry';
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput, RankEntry } from './types';
 
@@ -38,6 +38,10 @@ export function recordRoomPublication(before: RoomState, next: RoomState): RoomS
     let match = recordAugmentTransition(previous.match, seat.match);
     // Acquisition facts already belong to the choice transaction, before its effects execute.
     if (match.augmentHistory && previous.match.round !== match.round) match = recordAugmentTable(match, 'entry', table);
+    // Official publication must not skip rewards when the acquisition baseline is missing.
+    // Bot dry-runs never reach here; they still skip a missing table inside pendingOpportunity.
+    if (hasTombRaider(match)) for (const owner of match.augments)
+      if (owner.definitionId === 'tomb-raider-1' || owner.definitionId === 'tomb-raider-2') tombRaiderOpportunities(match, owner.choiceId);
     const opened = publishTombRaiderChoice(match); match = opened.state;
     if (match === seat.match) return seat; changed = true;
     return { ...seat, match, ...(opened.events.length ? { serverEvents: { seatRevision: seat.seatRevision,
