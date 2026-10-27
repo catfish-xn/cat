@@ -1,5 +1,5 @@
 import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomSettlementTable, tableFacts } from './augment-history';
-import { captureAugmentHistoryAuthority, prepareAugmentAcquisition, advanceAugmentPreparationTime, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
+import { completeTraitTrackerCommand, captureAugmentHistoryAuthority, prepareAugmentAcquisition, advanceAugmentPreparationTime, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
 /**
  * Eight-seat room state machine (pipeline B, work orders B1–B7). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
@@ -526,7 +526,7 @@ export class Room {
     const claimed = claimBotPreparationOrbs(this.current.pool, seat.match);
     if (!claimed.ok) return { ok: false, reason: claimed.reason, state: seat.match };
     if (claimed.state === seat.match) return { ok: true, state: seat.match, events: [], seatRevision: seat.seatRevision, roomRevision: this.current.roomRevision };
-    const result = this.withPendingResolved({ pool: claimed.pool, state: claimed.state, events: claimed.events });
+    const result = this.completeAugmentCommand('claimOrb', this.withPendingResolved({ pool: claimed.pool, state: claimed.state, events: claimed.events }));
     const seatRevision = seat.seatRevision + 1;
     if (!this.commitSeat(seatId, result.state, result.pool)) return { ok: false, reason: 'room-phase', state: seat.match };
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
@@ -575,7 +575,7 @@ export class Room {
     const operated = live?.events.length ? { ...applied, events: [...live.events, ...applied.events] } : applied;
     // P7-1: a command that may have freed a bench slot or a board place (sell, deploy, buyXp, …) lets the rules move held
     // carousel units in, in the same publication.
-    const result = this.withPendingResolved(operated);
+    const result = this.completeAugmentCommand(command.type, this.withPendingResolved(operated));
     const seatRevision = seat.seatRevision + 1;
     if (!this.commitSeat(seatId, result.state, result.pool)) return { ok: false, reason: 'room-phase', state: seat.match };
     if (phase === 'battle' && result.state.gold !== seat.match.gold) this.sampleLiveBank(seatId, result.state.gold);
@@ -1115,6 +1115,11 @@ export class Room {
       this.replace({ ...this.current, pool: resolved.pool, poolRevision: resolved.pool.revision,
         seats: this.current.seats.map(candidate => candidate.seatId === seat.seatId ? { ...candidate, match: resolved.state, seatRevision, serverEvents: { seatRevision, events: resolved.events } } : candidate) });
     }
+  }
+  /** Complete the rules transaction after shared commands and held-carousel placement, before publication. */
+  private completeAugmentCommand<T extends { readonly state: MatchState; readonly events: readonly MatchEvent[] }>(name: string, result: T): T {
+    const completed = completeTraitTrackerCommand(name, result.state);
+    return completed.state === result.state ? result : { ...result, state: completed.state, events: [...result.events, ...completed.events] };
   }
   /**
    * §21.6: in preparation, units in the holding slot are moved to the bench or the board (and merged) by the rules'

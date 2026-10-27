@@ -5,6 +5,7 @@ import { batch5InventoryPlan, projectBatch5Items, validateBatch5Inventory } from
 import { s3bInventoryReplay, hasS3bInventory } from './augment-pool-batch5-s3b-restore';
 import { isS3bConversion } from './augment-pool-batch5-s3b-conversions';
 import { academicItems, academicCraft } from './augment-pool-batch5-s3b';
+import { readSniperOpening } from './augment-pool-batch5-h10-sniper';
 import { soloPveLoot } from './shop-orbs';
 import { formingTotals, expectedMagicRoll } from './augment-pool-batch3-progress';
 import { isAnvil } from './content/anvils';
@@ -420,7 +421,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false, 
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{h6Growth:scoreboardCombatGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),{provenancePrefixLength:prefixLength,definitions:Object.fromEntries(candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId]))}),augmentHistoryGrowth:combatHistoryGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),true),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{sniperOpening:readSniperOpening(state),h6Growth:scoreboardCombatGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),{provenancePrefixLength:prefixLength,definitions:Object.fromEntries(candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId]))}),augmentHistoryGrowth:combatHistoryGrowth(state,candidate.inputs.preparation.units.filter(u=>u.team==='player').map(u=>u.id),true),...(formingTotals(state)?{forming:formingTotals(state)}:{}),...(expectedMagicRoll(state)?{magicRoll:expectedMagicRoll(state)}:{}),...d14HeldAtPrefix(state,prefixLength),d14Combat:d14CertificateAtCombat(state),itemSummonPositions:readItemSummonPositions(state),bankGold:combatBankGold(state),g23:readG23Progress(state),epicCrownsBeforeCombat:epicCrownsAtResourcePrefix(state,prefixLength),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.

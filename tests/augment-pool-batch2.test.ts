@@ -21,8 +21,8 @@ import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { validateEffect } from '../src/simulation/validate-content';
 import { cloneEffect } from '../src/simulation/effects';
 
-const names=['Academy','Ambusher','Artillerist','ArtilleristPlus','Automata','Bruiser','Cabal','Chembaron','Conqueror','Dominator','Enforcer','Experiment','Family','Firelight','Formswapper','PitFighter','Quickstriker','Rebel','Scrap','Sentinel','Sniper','Sorcerer','Visionary','Watcher'];
-it('takes exactly the 26 batch-2 classification entries, with no disabled offers',()=>{
+const names=['Academy','Ambusher','Artillerist','ArtilleristPlus','Automata','Bruiser','Cabal','Chembaron','Conqueror','Dominator','Enforcer','Experiment','Family','Firelight','Formswapper','PitFighter','Quickstriker','Rebel','Scrap','Sentinel','Sorcerer','Visionary','Watcher'];
+it('takes exactly the 25 remaining batch-2 classification entries (Sniper migrated to H10), with no disabled offers',()=>{
  expect(Object.values(AUGMENT_BATCH2).map(x=>x.apiName)).toEqual([...names.map(x=>'TFT13_Augment_'+x),'TFT13_TeamupAugment_Betrayal','TFT13_TeamupAugment_BloodBrothers']);
  for(const [id,row] of Object.entries(AUGMENT_BATCH2)){
   expect(row.source.patch).toBe('14.24');expect(row.source.archive).toContain('augments-14.24.json');

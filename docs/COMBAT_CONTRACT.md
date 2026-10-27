@@ -6,7 +6,13 @@ B5-42 从 `augment-history-v1` 的死亡现场装备判定资格，复活后的�
 
 吸血生机编译为既有 `wealthyRehab` 全能吸血机制，数值1200 Bps，使用同一伤害／治疗流水线，保留来源与完整 heal 事件；不新增战斗字段。恶意货币化使用 augment-history 的真实死亡旁路样本，按 eventSeq 计次，复活再死独立计数，正式英雄身份来自死亡现场。两项玩家层奖励在战后处理，不回写战斗回放；具体事务、来源与认证见 [MATCH_CONTRACT v25-h8](MATCH_CONTRACT.md#2026-10-27-v25-h8三项历史依赖强化)。
 
-## 2026-10-25 v23 当前战斗与恢复合同（历史）
+## 2026-10-27 B5-60 狙神之巢（H10）
+
+P-B5-60：取得后每个实际参战的狙神（含正式装备纹章）首次以某格开战即获得 800 Bps，连续相同开战格每战 +800，封顶 3200；换开战格或离场后重上回到 800，合星继承主实例，出售重买清零。PvE/PvP 均计，供给轮／未参战不加层，准备期移格再移回不改变开战格。
+
+`augment-pool-batch5-h10-sniper.ts` 只读已认证历史，`readCombatStrategyInputs` 和 `snapshotForBattleSteps` 冻结可选 `sniperOpening`；`compileSideSteps` 按各席单位命名空间映射，`buildStrategySnapshotSteps` 为相应玩家单位绑定已有 `damageAmp` mechanic。战斗沿用整数增伤及伤害流水线，没有新 tick 逻辑。每场只算一次，同轮开战后的 positions 不改写冻结输入；`restoreCombatInput` 以历史重推值精确认证，双边 snapshot 校验拥有者、单位 ID 和 800/1600/2400/3200 范围。结构化双边 snapshot 不是客户端历史认证接口，联机保存仍需独立服务器 authority。
+
+## 2026-10-25 v23 当前战斗与恢复合同
 
 本节以发布基线 `2b434e28` 至候选 `0797f3fe` 的实际实现为准，优先于下文保留的历史版本／WIP 说明；Match、经验、资源发放、历史门槛和单人按需包见 [MATCH_CONTRACT 的 v23 节](MATCH_CONTRACT.md#2026-10-25-v23-当前合同索引基线-2b434e28--0797f3fe)。当前 schema/save/replay/command＝**12/8/8/7**，rules/content＝`s13-g2-3-v23-online-rules` / `s13-14.24b-g2-3-v23-online-rules`，NET5、50 ms、lcg32-v1；精确摘要必须一致，旧身份拒绝，无迁移。本次文档更新不改变这些版本，epoch 重录／验收由独立任务负责。[src/simulation/m8/version.ts:3](../src/simulation/m8/version.ts#L3)。
 

@@ -18,7 +18,18 @@ B5-42／43／44 已开放；函数签名、失败原因和全部接线见 [H7 �
 
 学术研究、潘朵拉的装备 II、打捞桶已接入现有命令和保存封套；具体数值、内部签名、触发边界、失败与恢复认证见 [S3B合同](AUGMENT_BATCH5_S3B_CONTRACT.md)。`src/server` 无改动，schema/save/replay/command 仍为12/8/8/7。
 
-## 2026-10-27 v24 纪元身份（历史）
+## 2026-10-27 B5-60 / B5-61（H10）
+
+按 [P-B5-60/61](S13_RULES_GAP.md) 开放黄金狙神之巢（2-1/3-2/4-2，后两节点需狙神成员）和羁绊追踪者（仅 3-2，沿用源互斥表）。没有新 wire 命令或失败枚举；原命令失败保留原 state/pool、无事件和 RNG 消耗。
+
+- `readSniperOpening(state: Pick<MatchBase,'augments'|'augmentHistory'|'round'|'preparation'|'items'>): Readonly<Record<string,number>> | undefined`：无持有者返回 undefined；持有时按已认证历史生成实例 ID → 开战增伤 Bps，首次 800，最高 3200。缺历史／取得证据抛 `RangeError('Invalid augment history: ...')`。取得的泽丽通过原 `batch1GiftPlan`、联机奖励法球及共享池领取，满席保持原待领行为。
+- `trackerActiveTraits(roster: HistoryRoster): readonly string[]`：正式棋盘原生／装备纹章羁绊，按同名英雄去重；单层 1 门槛的唯一羁绊排除，使者计入。
+- `completeTraitTrackerCommand(name: string,state: MatchState): {state:MatchState;events:readonly MatchEvent[]}`：仅由成功公共命令／房间派发调用；未持有、不在准备期、已锁阵容、自然入轮／自动布阵／战斗／时钟入口、未达 8 或已完成均返回原对象与空事件。首次达标记录 `trait-activation` 后从 22 纹章等权无放回发 6 件，返回连续编号的六条 mechanicGranted 事件。无新网络参数；内部不合法历史／发奖错误统一 `Invalid augment history:`。
+- `trackerGiftPlan(state:MatchState): AugmentGift[]`：未完成返回空；完成后按首次事实和独立 LCG 子流重推六份唯一收据，不按已持有纹章过滤。重试和恢复不重发。`Room.apply / claimBotOrbs → completeAugmentCommand` 经 `src/server-entry/index.ts` 调同一规则覆盖共享刷新／经验等入口，服务器仅合并结果与事件。
+
+历史与存档认证见 [AUGMENT_HISTORY_DESIGN](AUGMENT_HISTORY_DESIGN.md#2026-10-27-h10-使用与扩展)。object、JSON、序列化文本均经同一恢复检查；联机文本用 canonicalContent，restoreSharedOrbSnapshot 仍要求独立 authority，离线 serializeMatch/restoreMatch 仍拒绝联机档。
+
+## 2026-10-27 v24 纪元身份
 
 当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。
 

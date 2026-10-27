@@ -42,6 +42,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   "forward-thinking":{node:'3-2',seed:8,fielded:true,rerollSlots:[0,1,2]},
   "mirrored-monetization":{node:'4-2',seed:9,fielded:true,rerollSlots:[0,1,2]},
   "dhampyr":{node:'3-2',seed:3,rerollSlots:[0,1,2]},
+  "trait-tracker":{node:'3-2',seed:39},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},

@@ -92,6 +92,7 @@ export type { OpeningRoundResolution } from '../simulation/shared-pool-types';
 export { appendAugmentFact, prepareAugmentAcquisition, bindAugmentPreviousBattle, recordAugmentTable, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, needsAugmentHistory, needsAugmentPreparationClock, captureAugmentHistoryAuthority, advanceAugmentPreparationTime, type AugmentHistoryAuthority } from '../simulation/augment-history';
 export { readAugmentCombatDeaths, augmentDeathsFromEvents } from '../simulation/augment-death-samples';
 export type { HistorySeat, PreviousAugmentBattle } from '../simulation/augment-history-types';
+export { completeTraitTrackerCommand } from '../simulation/augment-pool-batch5-h10-tracker';
 export { grantAdditionalCarouselPick } from '../simulation/carousel';
 export { applyDhampyrSettlement } from '../simulation/augment-pool-batch5-h8-health';
 export { drainBatch5H8Deaths } from '../simulation/augment-pool-batch5-h8-deaths';

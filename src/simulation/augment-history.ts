@@ -4,6 +4,7 @@ import { grantScoreboardEntry } from './augment-pool-batch5-h6-scoreboard';
 import { drainBatch5H7Gold } from './augment-pool-batch5-h7';
 import { drainBatch5H8Deaths } from './augment-pool-batch5-h8-deaths';
 import { drainBatch5H8Gold } from './augment-pool-batch5-h8';
+import { completeTraitTrackerCommand } from './augment-pool-batch5-h10-tracker';
 import type { MatchState, MatchEvent } from './match-types';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -207,7 +208,8 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
   if (envelope.ok === false) return result;
   const after = envelope.state ?? result as unknown as MatchState;
   if (!after || after === before || !('augments' in after)) return result;
-  const rewarded = drainBatch5H7Gold(recordAugmentTransition(before, after, envelope.events));
+  const tracker = completeTraitTrackerCommand(name, after);
+  const rewarded = drainBatch5H7Gold(recordAugmentTransition(before, tracker.state, [...(envelope.events ?? []), ...tracker.events]));
   let next = rewarded.state;
   if (next.roundResults.length > before.roundResults.length) {
     if (!next.multiplayer) next = drainBatch5H8Gold(next);
@@ -234,7 +236,7 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
     traces.set(next, { ...proof, previousBattle: !before.combat && after.combat ? {status:'recorded',round:before.round,roundId:before.roundDefinitionId,battleId:after.combat.combatId!,roster:historyRoster(before)} : trace.previousBattle });
   }
   preparationTimes.set(next,{round:next.round,elapsedMs:next.round===before.round?Math.max(preparationElapsed(before),preparationElapsed(after)):0});
-  const extraEvents = [...rewarded.events, ...payoutEvents];
+  const extraEvents = [...tracker.events, ...rewarded.events, ...payoutEvents];
   return (envelope.state ? { ...envelope, state: next, ...(extraEvents.length ? { events: [...(envelope.events ?? []), ...extraEvents] } : {}) } : next) as T;
 }
 

@@ -22,6 +22,7 @@ const initial={
  'pandoras-items-ii':[Q('component',2)],
  'salvage-bin':[Q('completed')],
  'academic-research':[Q('component'),U('lux'),U('ezreal')],
+ 'snipers-nest':[U('zeri')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
  'cooking-pot':[I('frying-pan')],
@@ -137,6 +138,15 @@ function rewardPlan(s,env){
     const row=env.ROUNDS[round-1];if(!row||round!==a.acquiredRound&&row.sub!==1)continue;
     const target=Math.min(row.stage,5),costs=[...Array.from({length:target},(_,i)=>target-i),...Array.from({length:5-target},(_,i)=>target+i+1)];
     const cost=costs.find(c=>roster[c-1].length);if(cost)levelsOut.push(...expand(s,owner(a,['hard-commit',round],round),[['F',roster[cost-1],1]],env));
+   }
+  }
+  if(a.definitionId==='trait-tracker'){
+   const fact=s.augmentHistory?.facts.find(f=>f.kind==='trait-activation'&&f.choiceId===a.choiceId);
+   if(fact){
+    const pool=families.map(([,api])=>`TFT13_Item_${api}EmblemItem`).sort();
+    let rng=salt(s.seed,['batch5-h10-tracker',s.multiplayer?.seatId??'solo',a.choiceId]);
+    for(let i=0;i<6;i++){rng=word(rng);const j=i+pick(rng,pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
+    gifts.push(...expand(s,owner(a,['trait-tracker'],fact.round),pool.slice(0,6).map(id=>I(id)),env));
    }
   }
   if(a.definitionId==='a-change-of-fate'){
