@@ -19,6 +19,7 @@ import { appendResourceProvenance } from './resource-provenance';
 import { createCarouselMatch, finishCarouselSupply } from './match';
 import type { MatchEvent } from './match-types';
 import { draftPool, returnHolding, reconcileHoldings } from './shared-pool-ledger';
+import { carouselPriorityChoice, tableScrapsPick } from './augment-pool-batch5-h5';
 import type { SharedPoolResult, SharedPoolEvent } from './shared-pool-types';
 export type * from './carousel-types';
 export { CAROUSEL_RULES, CAROUSEL_COST_ODDS };
@@ -65,7 +66,10 @@ export function prepareCarouselParticipants(pool: SharedPoolState, states: reado
         const seat = active.find(s => s.seatId === entry.seatId), s = entry.state;
         if (!s || !seat || !integer(s.playerHp, 1) || s.playerHp > 100 || s.sharedPool?.poolId !== pool.poolId || s.sharedPool.seatId !== entry.seatId || s.sharedPool.revision !== seat.revision || s.multiplayer?.status !== 'active' || s.multiplayer.seatId !== entry.seatId)
             return { ok: false, pool, reason: 'invalid-participants' };
-        participants.push({ seatId: seat.seatId, seatIndex: seat.seatIndex, hp: s.playerHp });
+        let priorityChoiceId: string | null;
+        try { priorityChoiceId = carouselPriorityChoice(s); }
+        catch { return { ok: false, pool, reason: 'invalid-participants' }; }
+        participants.push({ seatId: seat.seatId, seatIndex: seat.seatIndex, hp: s.playerHp, ...(priorityChoiceId ? {priorityChoiceId} : {}) });
     }
     participants.sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex);
     return { ok: true, pool: { ...pool, carouselParticipants: participants } };
@@ -132,8 +136,8 @@ export function createCarousel(pool: SharedPoolState, roundId: CarouselRoundId, 
         return fail('pool-exhausted');
     const id = `${pool.poolId}:carousel:${roundId}`, { available, slots, wordState } = drawSlots(pool.available, roundId, rng.state, id);
     const ordered = [...participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), releaseOrder = ordered.map(p => p.seatId), times = schedule(roundId);
-    const nextPool: SharedPoolState = { ...pool, available, revision: pool.revision + 1, carouselRounds: [...pool.carouselRounds, roundId], carouselReservations: [...pool.carouselReservations, ...slots.map(s => ({ carouselId: id, reservationId: s.reservationId, slot: s.slot, definitionId: s.definitionId, seatId: null }))] };
-    const state: CarouselState = { version: 'carousel-v1', id, roundId, pool: nextPool, initialAvailable: { ...pool.available }, participants: ordered, status: 'open', revision: 0, elapsedMs: 0, slots, releaseOrder, releaseAtMs: Object.fromEntries(releaseOrder.map((s, i) => [s, times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs])), deadlineMs: times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs, rngBefore: { ...rng }, rngAfter: { algorithm: 'lcg32-v1', state: wordState }, receipts: [] };
+    const nextPool: SharedPoolState = { ...pool, available, carouselParticipants: ordered, revision: pool.revision + 1, carouselRounds: [...pool.carouselRounds, roundId], carouselReservations: [...pool.carouselReservations, ...slots.map(s => ({ carouselId: id, reservationId: s.reservationId, slot: s.slot, definitionId: s.definitionId, seatId: null }))] };
+    const state: CarouselState = { version: 'carousel-v1', id, roundId, pool: nextPool, initialAvailable: { ...pool.available }, participants: ordered, status: 'open', revision: 0, elapsedMs: 0, slots, releaseOrder, releaseAtMs: Object.fromEntries(ordered.map((s, i) => [s.seatId, s.priorityChoiceId ? 0 : times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs])), deadlineMs: times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs, rngBefore: { ...rng }, rngAfter: { algorithm: 'lcg32-v1', state: wordState }, receipts: [] };
     assertSharedPoolConservation(nextPool);
     return { ok: true, state, events: [{ type: 'carousel-created', carouselId: id, roundId }] };
 }
@@ -143,7 +147,7 @@ export function validateCarousel(state: CarouselState): void {
     if (state.version !== 'carousel-v1' || !validRound(state.roundId) || state.id !== `${state.pool.poolId}:carousel:${state.roundId}` || !state.pool.carouselRounds.includes(state.roundId) || !integer(state.revision) || !integer(state.elapsedMs) || !['open', 'closed'].includes(state.status) || state.slots.length !== 9)
         throw Error('invalid-carousel');
     const ordered = [...state.participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), times = schedule(state.roundId);
-    if (!ordered.length || ordered.length > 8 || !equal(state.releaseOrder, ordered.map(s => s.seatId)) || new Set(state.releaseOrder).size !== ordered.length || ordered.some(p => !integer(p.hp, 1) || p.hp > 100 || !state.pool.seats.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)) || !equal(state.releaseAtMs, Object.fromEntries(ordered.map((s, i) => [s.seatId, times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs]))) || state.deadlineMs !== times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs)
+    if (!ordered.length || ordered.length > 8 || !equal(state.participants, state.pool.carouselParticipants) || !equal(state.releaseOrder, ordered.map(s => s.seatId)) || new Set(state.releaseOrder).size !== ordered.length || ordered.some(p => !integer(p.hp, 1) || p.hp > 100 || p.priorityChoiceId !== undefined && (typeof p.priorityChoiceId !== 'string' || !p.priorityChoiceId.length) || !state.pool.seats.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)) || !equal(state.releaseAtMs, Object.fromEntries(ordered.map((s, i) => [s.seatId, s.priorityChoiceId ? 0 : times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs]))) || state.deadlineMs !== times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs)
         throw Error('invalid-carousel');
     let seed = state.rngBefore.state;
     validateSeed(seed);
@@ -308,6 +312,10 @@ export function pickCarouselForSeat(pool: SharedPoolState, carousel: CarouselSta
     const bad = (reason: CarouselFailure) => ({ ok: false as const, pool, carousel, state: match, reason, events: [] as readonly (MatchEvent | CarouselEvent)[] });
     if (!equal(pool, carousel.pool))
         return bad('stale-pool');
+    try {
+        if ((carousel.participants.find(p => p.seatId === seatId)?.priorityChoiceId ?? null) !== carouselPriorityChoice(match))
+            return bad('invalid-match');
+    } catch { return bad('invalid-match'); }
     const picked = pickFromCarousel(carousel, seatId, slot);
     if (!picked.ok)
         return bad(picked.reason);
@@ -340,12 +348,26 @@ export function completeCarouselForSeat(state: CarouselState, match: MatchState,
         return bad('receipt-mismatch');
     if (state.roundId === '1-1' || match.roundResults.some(r => r.roundId === state.roundId))
         return { ok: true as const, state, match, events: [] as readonly MatchEvent[] };
-    const result = finishCarouselSupply(match);
+    let completedState = state, completedMatch = match;
+    const augmentEvents: MatchEvent[] = [];
+    try {
+        const plan = tableScrapsPick(match, state);
+        if (plan) {
+            const additional = grantAdditionalCarouselPick(state.pool, state, match, seatId, plan.slot, plan.choiceId);
+            if (!additional.ok) return bad(additional.reason);
+            completedState = additional.carousel;
+            completedMatch = additional.state;
+            augmentEvents.push(...additional.events.filter((event): event is MatchEvent => 'domain' in event));
+        }
+    } catch {
+        return bad('invalid-match');
+    }
+    const result = finishCarouselSupply(completedMatch);
     if (!result.ok)
         return bad('invalid-match');
-    const seat = state.pool.seats.find(s => s.seatId === seatId)!;
-    const pool = { ...state.pool, revision: state.pool.revision + 1, seats: state.pool.seats.map(s => s === seat ? { ...s, revision: s.revision + 1 } : s) };
-    return { ok: true as const, state: { ...state, pool, revision: state.revision + 1 }, match: { ...result.state, sharedPool: { ...result.state.sharedPool!, revision: seat.revision + 1 } }, events: result.events };
+    const seat = completedState.pool.seats.find(s => s.seatId === seatId)!;
+    const pool = { ...completedState.pool, revision: completedState.pool.revision + 1, seats: completedState.pool.seats.map(s => s === seat ? { ...s, revision: s.revision + 1 } : s) };
+    return { ok: true as const, state: { ...completedState, pool, revision: completedState.revision + 1 }, match: { ...result.state, sharedPool: { ...result.state.sharedPool!, revision: seat.revision + 1 } }, events: [...augmentEvents, ...result.events] };
 }
 /** Move previously owned queued units when a legal place/merge exists; never draws or buys. */
 export function resolvePendingCarouselUnits(pool: SharedPoolState, match: MatchState): SharedPoolResult {
@@ -531,9 +553,11 @@ export function grantAdditionalCarouselPick(pool: SharedPoolState, carousel: Car
         : pool.carouselReservations.map(r => r.reservationId === s.reservationId ? reservation : r) };
     const reserved: CarouselState = { ...carousel, pool: reservedPool, revision: carousel.revision+1,
       receipts: [...carousel.receipts, receipt], slots: carousel.slots.map(x => x.slot === slot ? { ...x, pickedBy: seatId } : x) };
-    const granted = grantCarouselPick(reserved, match, seatId, id, 'augment', choiceId);
+    if (!Number.isSafeInteger(match.nextMatchEventSeq) || match.nextMatchEventSeq >= Number.MAX_SAFE_INTEGER - 1) return bad('invalid-match');
+    const numbered = { ...match, nextMatchEventSeq: match.nextMatchEventSeq + 1 };
+    const granted = grantCarouselPick(reserved, numbered, seatId, id, 'augment', choiceId);
     if (!granted.ok) return bad(granted.reason);
     return { ok: true, pool: granted.state.pool, carousel: granted.state, state: granted.match,
-      events: [{type:'carousel-picked', receipt}, ...granted.events] };
+      events: [{type:'carousel-picked', receipt, domain:'match' as const, eventSeq:match.nextMatchEventSeq}, ...granted.events] };
   } catch { return bad('invalid-match'); }
 }

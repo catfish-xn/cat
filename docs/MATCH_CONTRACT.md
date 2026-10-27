@@ -1492,3 +1492,11 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 后者取得时按标准奖励收据给一个 `frying-pan`；取得后的每个自然轮入口，以 `round-entry` 的棋盘普通英雄和原始 `frying-pan`/`spatula` 为准，每名携带者向最近的另一棋盘英雄给 50 平面永久生命，六角距离相等按单位 ID 排序，多个携带者可叠加；单名携带者多件不倍增，没有目标则无成长，备战席不参与六角距离。无额外 AP。入口在上轮收入之后、本轮被动经验、商店、选秀和奖励之前；唯一成长收据使重复执行幂等。
 
 `readAugmentFacts<K>(state,kind)` 返回脱离原对象的该类历史事实，缺历史节报 `Invalid augment history:`；`requireAugmentFacts` 仍按轮查询并在缺行时拒绝。`recordAugmentGrowth`/`readAugmentGrowth` 继续负责有来源的整数成长及合星继承。单人战斗输入和服务器私有双边快照条件携带已认证成长；离线恢复对照开战前历史，联机席位恢复依然要求独立服务器 authority。房间复用既有冻结名单与结算调用，无新增网络命令或服务器自行计算规则；外层协议版本不变，内容身份已重新计算，历史 epoch 未重录。
+
+### B5-H5：共享选秀强化（P，2026-10-27）
+
+`table-scraps` 取得时给 1 金；从取得后的前四次共享选秀，每次正常选取全部结束后按固定席位顺序从仍剩余的槽等权无放回取一，空槽不足不补造也不顺延。现有 14.24 三个阶段标签均禁止它出现在候选。`young-and-wild-and-free` 取得时给 2 金；共享选秀阶段的逻辑时间从 arrival 结束计起，持有者从 0 ms 可领取，同一槽仍由原子领取事务独占。两者不在单人或无共享选秀的联机模式报价。历史事实均使用 `augment-history-v1`，没有新增客户端命令。
+
+- `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
+- `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
+- 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。

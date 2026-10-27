@@ -171,7 +171,7 @@ function affordableOffer(state: MatchState, gold = state.gold): boolean {
 /** v22: the candidate filter of an augment node opening now (trait snapshot only where the node is tailored). */
 function openingOfferFilter(state: MatchState, choiceId: string, blocked: readonly string[]): AugmentOfferFilter {
   const node = augmentNodeOf(choiceId);
-  return { node, fieldedTraits: isTraitTailoredNode(node) ? fieldedTraitSnapshot(state) : [], blocked: [...blocked].sort() };
+  return { node, fieldedTraits: isTraitTailoredNode(node) ? fieldedTraitSnapshot(state) : [], blocked: [...blocked].sort(), sharedCarousel: !!state.carousel && !!state.multiplayer && state.openingEncounter.mode === 'shared' };
 }
 /** `augmentBlocked`: ids other live seats block (externalAugmentBlocks), supplied by the all-seat round advance. */
 function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 'before', augmentBlocked: readonly string[] = []): { state: MatchState; events: MatchEvent[] } {
@@ -765,7 +765,7 @@ function execute_rerollAugment(state: MatchState, choiceId: string, generation: 
   const record = state.augmentOffers.find(candidate => candidate.choiceId === choiceId);
   if (!record) return fail(state, 'stale-choice');
   const blocked = [...augmentBlocked].sort();
-  const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers],openingEncounterId(state), {...recordedOfferFilter(record, 0), blocked});
+  const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers],openingEncounterId(state), {...recordedOfferFilter(record, 0, !!state.carousel && !!state.multiplayer && state.openingEncounter.mode === 'shared'), blocked});
   if (!candidates.length) return fail(state, 'augment-pool-too-small');
   const draw = drawAugmentCard(candidates, state.choiceRngState);
   const rerollCount = choice.rerollCount + 1;
