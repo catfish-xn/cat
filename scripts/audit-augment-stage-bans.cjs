@@ -226,7 +226,7 @@ function audit(options = {}) {
       const expected = bans(r.item_tags_raw), actual = STAGES.filter((_, i) => !t.picks[i]);
       if (!equal(expected, actual)) {
         const later = facts.filter(f => f.api_name === r.apiName && /13\.[0-9]/.test(f.source_version || '') && ((STAGES.includes(f.stage) && f.offered_at_this_stage_after_change === false && actual.includes(f.stage) && !expected.includes(f.stage)) || (f.change_type === 'disable_augment' && actual.length === 3)));
-        result.crossVersionDifferences.push({ apiName: r.apiName, expected14_24: expected, archiveBans: actual, inPool: pool.has(r.apiName), laterOfficialFacts: later.map(f => f.id), conclusion: later.length ? 'later-patch-same-direction; exact archive patch unconfirmed' : 'unexplained; do not override 14.24' });
+        result.crossVersionDifferences.push({ apiName: r.apiName, expected14_24: expected, archiveBans: actual, inPool: pool.has(r.apiName), laterOfficialFacts: later.map(f => f.id), conclusion: r.apiName === 'TFT_Augment_TableScraps' ? 'user override 2026-10-27: offered at 2-1' : later.length ? 'later-patch-same-direction; exact archive patch unconfirmed' : 'unexplained; do not override 14.24' });
       }
     }
   }
@@ -271,17 +271,17 @@ function audit(options = {}) {
   return result;
 }
 function report(r) {
-  const lines = ['【完成】独立离线阶段禁用审计（P，2026-10-25）；不修改生产表、规则或存档。', `统计：${JSON.stringify(r.summary || {})}`, ''];
+  const lines = ['【完成】独立离线阶段禁用审计；比较 14.24 标签与现行规则，含 U 2026-10-27 餐桌剩菜覆盖。', `统计：${JSON.stringify(r.summary || {})}`, ''];
   lines.push(`规范化字节一致：${r.canonical?.equal ?? false}；范围外研究记录：${r.outOfScope?.length ?? 0}。`, '', '已知案例（独立预期）：');
   for (const c of r.knownCases) lines.push(`- ${JSON.stringify(c)}`);
-  lines.push('', '【未完成】禁用表修订按任务仅列提案，未应用：');
+  lines.push('', '【未完成】与 14.24 标签的差异（含用户已决定的覆盖）：');
   for (const e of r.errors) lines.push(`- ${e.code}: ${JSON.stringify(e)}`);
   if (!r.errors.length) lines.push('- 无。');
-  lines.push('', '【需要我决定】无需补充决定；建议待规则修改获授权后按 expected 修表。', '', '【风险】标签读法仍为 P；14.24 目录快照不自动证明 14.24b 服务端热修。跨版本差异不得直接用于覆盖 14.24：');
+  lines.push('', '【需要我决定】餐桌剩菜已按用户决定覆盖；其余差异按独立审计列出。', '', '【风险】标签读法仍为 P；14.24 目录快照不自动证明 14.24b 服务端热修。跨版本差异不得自行用于覆盖 14.24；餐桌剩菜的例外来自用户决定：');
   for (const d of [...r.crossVersionDifferences, ...(r.communityDifferences || [])]) lines.push(`- ${JSON.stringify(d)}`);
   for (const d of r.patchTextChecks || []) lines.push(`- 14.24补丁转述校验 ${JSON.stringify(d)}`);
   for (const w of r.warnings) lines.push(`- ${JSON.stringify(w)}`);
-  lines.push('', '【下一步】修表后重跑 node scripts/audit-augment-stage-bans.cjs；退出码 1 表示审计发现错误，2 表示执行失败。', '', '证据文件（SHA-256）：');
+  lines.push('', '【下一步】其他差异经确认后再修表；重跑 node scripts/audit-augment-stage-bans.cjs，退出码 1 表示存在标签差异，2 表示执行失败。', '', '证据文件（SHA-256）：');
   for (const s of r.sources) lines.push(`- ${s.file}: ${s.sha256}`);
   lines.push('', '逐项池覆盖（零基 source recordIndex；无阶段标签才明确列为 unrestricted）：');
   for (const c of r.coverage) lines.push(`- ${JSON.stringify(c)}`);
