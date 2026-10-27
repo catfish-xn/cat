@@ -1203,8 +1203,9 @@ export class BoardScene extends Phaser.Scene {
     const view = this.views.get(id!), gear = view ? gearText(view.equipped, view.extras, itemDisplayName) : '';
     // v16: a promoted Ultimate Hero shows 4★ and the rules' D14 lines of my own unit (none in a battle replay).
     const star = displayStarLevel(this.session.state, unit), notes = unit.team === 'player' ? d14UnitNotes(this.session.state, unit.id) : [];
-    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}`,
-      () => unitCardBody(unit.definitionId, star, battle, gear, notes)!);
+    const itemStacks = this.session.combatView?.units.find(entry => entry.id === id)?.itemStacks;
+    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}:${JSON.stringify(itemStacks)}`,
+      () => unitCardBody(unit.definitionId, star, battle, gear, notes, itemStacks)!);
     this.unitCardOpen = true;
   }
   private inspect?: ReturnType<typeof installUnitInspect>;

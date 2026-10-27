@@ -287,6 +287,10 @@ export class UnitView {
    * need the local engine state (`runtime`, offline); the online view carries no statuses and shows only the shield icon.
    */
   drawCombat(unit: DisplayUnit, runtime: CombatState | null): void {
+    // PvE/legacy replay frames can carry counters without a replacement loadout.
+    if (JSON.stringify(this.itemStacks) !== JSON.stringify(unit.itemStacks)) {
+      this.itemStacks = unit.itemStacks; this.renderKey = ''; this.drawItems();
+    }
     const alive = unit.alive, width = 52, left = -26;
     const hpRatio = unit.hp / unit.maxHp;
     this.hp.clear().setVisible(alive);

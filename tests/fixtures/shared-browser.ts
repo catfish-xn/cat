@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { inject } from 'vitest';
 import { chromium, type Browser } from 'playwright';
+import { createRequire } from 'node:module';
 
 declare module 'vitest' {
   export interface ProvidedContext { playwrightEndpoint?: string }
@@ -15,6 +16,7 @@ export const BROWSER_OPTIONS = { headless: true, ...(existsSync('/usr/bin/google
  * when no server is available (e.g. a sandbox that cannot listen on localhost).
  */
 export async function testBrowser(): Promise<Browser> {
+  if (process.env.CODEX_BROWSER_CLIENT) return createRequire(import.meta.url)(process.env.CODEX_BROWSER_CLIENT).connect();
   // A supplied sandbox browser is authoritative: do not launch Chrome if connecting fails.
   if (process.env.PLAYWRIGHT_WS_ENDPOINT) return chromium.connect(process.env.PLAYWRIGHT_WS_ENDPOINT);
   const endpoint = inject('playwrightEndpoint');

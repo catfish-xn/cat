@@ -16,6 +16,7 @@ import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { itemDisplayName } from './g23-display';
 import { itemMarkHtml } from './item-codex';
 import { readTooltipText } from './tooltip-text-loader';
+import type { CombatViewUnit } from './combat-display';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -94,6 +95,14 @@ export function battleLine(stats: UnitBattleStats, line: HTMLElement = el('p', '
   return line;
 }
 
+/** Authoritative per-item counters, including duplicate items; no client counter or cap calculation. */
+export function itemStackLine(stacks: CombatViewUnit['itemStacks'], line: HTMLElement = el('p', '', 'unit-card-text')): HTMLElement {
+  line.dataset.debug = 'unit-card:item-stacks';
+  line.textContent = (stacks ?? []).map(row => `${itemDisplayName(row.definitionId)} · 层数 ${row.stacks}/${row.maxStacks}`).join('；');
+  line.hidden = !stacks?.length;
+  return line;
+}
+
 /**
  * Card body for a unit definition at a star level; `null` when the definition is unknown to the content. `battle` (online)
  * adds the G5 battle stats line when the unit or its kind has fought this match; `gear` (board pieces) lists what it carries.
@@ -114,7 +123,7 @@ function anvilCardBody(definitionId: string, anvil: AnvilInfo): HTMLElement {
   return body;
 }
 
-export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = '', notes: readonly string[] = []): HTMLElement | null {
+export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = '', notes: readonly string[] = [], itemStacks?: CombatViewUnit['itemStacks']): HTMLElement | null {
   const anvil = anvilInfo(definitionId);
   if (anvil) return anvilCardBody(definitionId, anvil);
   const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
@@ -152,6 +161,7 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
   }
   body.append(grid);
   if (gear) { const line = el('p', `已装备：${gear}`, 'unit-card-text'); line.dataset.debug = 'unit-card:gear'; body.append(line); }
+  if (itemStacks?.length) body.append(itemStackLine(itemStacks));
   if (battle && (battle.battle || battle.match)) body.append(battleLine(battle));
   return body;
 }
