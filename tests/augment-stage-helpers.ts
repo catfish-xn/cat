@@ -139,3 +139,6 @@ export function acquireAugment(id: string): MatchState {
   const state = offerFor(id), choice = state.pendingChoice!;
   return accepted(selectChoice(state, choice.choiceId, choice.generation, id));
 }
+
+/** Batch5 S3B task budget: the only permitted seed scan is inclusive 0..100. */
+export const batch5S3bSeed=(id:string):number=>firstNodeSeed(id,101);

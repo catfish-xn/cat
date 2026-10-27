@@ -4,6 +4,7 @@ import type { MatchState } from './match-types';
 
 /** Historical counters, including zero counts, require independent battle replay. */
 export function needsCrownHistory(state: MatchState): boolean {
+  if(!state.multiplayer&&state.augments.some(a=>a.definitionId==='salvage-bin'&&state.roundResults.some(r=>r.roundKind==='pvp'&&r.round>=a.acquiredRound&&r.round<state.round)))return true;
   // Acquisition + settled rounds also bind the requirement when both rows are deleted.
   if (state.augments.some(augment => augment.definitionId === 'blood-brothers'
     && state.roundResults.some(result => result.roundKind !== 'supply' && result.round >= augment.acquiredRound))) return true;

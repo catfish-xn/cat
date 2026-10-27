@@ -1,3 +1,7 @@
+## 2026-10-27 Batch5 S3B
+
+学术研究、潘朵拉的装备 II、打捞桶已接入现有命令和保存封套；具体数值、内部签名、触发边界、失败与恢复认证见 [S3B合同](AUGMENT_BATCH5_S3B_CONTRACT.md)。`src/server` 无改动，schema/save/replay/command 仍为12/8/8/7。
+
 ## 2026-10-27 v24 纪元身份
 
 当前 rules/content 为 `s13-g2-3-v24-online-rules` / `s13-14.24b-g2-3-v24-online-rules`，schema/save/replay/command 仍为 **12/8/8/7**，规则联机协议 5、WebSocket 封套 6。商店强化的 `shop-history-v1` 为按需认证证据，依 A2/A4/A5：未触发不产生空字段，相关旧档缺证据则拒绝，不猜测迁移；不改变外层保存封套。此批没有新增战斗回放事实或公共命令，故 replay 与 command 不升。身份及 digest 精确匹配；v23 和更早证据只读保留，不能用于新身份续玩。

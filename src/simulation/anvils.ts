@@ -1,3 +1,4 @@
+import { academicAnvilOffers } from './augment-pool-batch5-s3b';
 import { batch1AnvilSpecification } from './augment-pool-grants';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { isAnvil } from './content/anvils';
@@ -52,7 +53,7 @@ function specification(state:MatchState,unitId:string) {
     if(p)for(const b of p.rewards)for(const a of g23RewardAtoms(b,p.seed,!!state.multiplayer))
       if(r.receiptId.startsWith(`${a.id}:copy:`)&&a.forgeDefinitionId===r.definitionId)offers=a.options;
   }
-  if(!offers||offers.length!==(r.definitionId==='TFT_ArmoryKeyRadiant'?5:4))throw new RangeError('Invalid anvil source');
+  if(!offers||offers.length!==(academicAnvilOffers(state,r.receiptId)?2:r.definitionId==='TFT_ArmoryKeyRadiant'?5:4))throw new RangeError('Invalid anvil source');
   return {definitionId:r.definitionId,offers};
 }
 export function planOpenAnvil(state:MatchState,unitId:string):MatchCommandResult {
