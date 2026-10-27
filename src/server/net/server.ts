@@ -434,8 +434,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     return own;
   }
   /**
-   * D11 live bank: a battle's live run produced frames that differ from the replay its seats were pushed. Each seat that
-   * holds that replay gets the changed records (side B mirrored, as its replay was); only public view frames leave.
+   * D11 live bank: replace the predicted future with the live prefix after an accepted bank change. Each seat that
+   * holds that replay gets the revised records (side B mirrored, as its replay was); only public view frames leave.
    */
   function pushLive(opened: Room, battleId: string): void {
     const state = opened.state, frames = opened.liveFrames(battleId);

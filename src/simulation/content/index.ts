@@ -56,16 +56,17 @@ export function* canonicalContentSteps(value: unknown): Generator<void, string, 
   if (synchronousRestoreEncoding) return canonicalSync(value, false);
   return yield* canonicalSteps(value, { remaining: 64, retainFrozen: false });
 }
-function canonicalLeaf(value: unknown): string | undefined {
+function canonicalLeaf(value: unknown, readFrozen = true): string | undefined {
   if (value === null) return 'null';
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (typeof value === 'string') return JSON.stringify(value);
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  if (value !== null && typeof value === 'object') return (frozenCanonical ??= new WeakMap()).get(value);
+  if (readFrozen && value !== null && typeof value === 'object') return (frozenCanonical ??= new WeakMap()).get(value);
   return undefined;
 }
 function* canonicalSteps(value: unknown, budget: { remaining: number; retainFrozen: boolean }): Generator<void, string, void> {
-  const leaf = canonicalLeaf(value);
+  // Cooperative slice counts are observable by the room's command queue. A warmed text cache must not skip work.
+  const leaf = canonicalLeaf(value, budget.retainFrozen);
   if (leaf !== undefined) return leaf;
   if (--budget.remaining === 0) { budget.remaining = 64; yield; }
   if (Array.isArray(value)) {
@@ -76,7 +77,7 @@ function* canonicalSteps(value: unknown, budget: { remaining: number; retainFroz
     const length = value.length, parts = new Array<string>(length);
     for (let i = 0; i < length; i++) if (i in value) {
       const child: unknown = value[i];
-      parts[i] = canonicalLeaf(child) ?? (yield* canonicalSteps(child, budget));
+      parts[i] = canonicalLeaf(child, budget.retainFrozen) ?? (yield* canonicalSteps(child, budget));
     }
     const text = `[${parts.join(',')}]`;
     return !budget.retainFrozen || !Object.isFrozen(value) ? text : rememberFrozen(value, text, Array.from({ length: value.length }, (_, i) => String(i)));
@@ -87,7 +88,7 @@ function* canonicalSteps(value: unknown, budget: { remaining: number; retainFroz
       const parts: string[] = [];
       for (const key of keys) {
         const quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
-        parts.push(`${quoted}:${canonicalLeaf(child) ?? (yield* canonicalSteps(child, budget))}`);
+        parts.push(`${quoted}:${canonicalLeaf(child, budget.retainFrozen) ?? (yield* canonicalSteps(child, budget))}`);
       }
       const text = `{${parts.join(',')}}`;
       return budget.retainFrozen ? rememberFrozen(value, text, keys) : text;
@@ -99,10 +100,10 @@ function* canonicalSteps(value: unknown, budget: { remaining: number; retainFroz
         scalars[key] = child; continue;
       }
       const parts = keys.slice(0, i).map(key => `${quoteKey(key)}:${canonicalContent(scalars[key])}`);
-      parts.push(`${quoteKey(key)}:${canonicalLeaf(child) ?? (yield* canonicalSteps(child, budget))}`);
+      parts.push(`${quoteKey(key)}:${canonicalLeaf(child, budget.retainFrozen) ?? (yield* canonicalSteps(child, budget))}`);
       for (let rest = i + 1; rest < keys.length; rest++) {
         const key = keys[rest], quoted = quoteKey(key), child = (value as Record<string, unknown>)[key];
-        parts.push(`${quoted}:${canonicalLeaf(child) ?? (yield* canonicalSteps(child, budget))}`);
+        parts.push(`${quoted}:${canonicalLeaf(child, budget.retainFrozen) ?? (yield* canonicalSteps(child, budget))}`);
       }
       const text = `{${parts.join(',')}}`;
       return budget.retainFrozen ? rememberFrozen(value, text, keys) : text;

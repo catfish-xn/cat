@@ -8,15 +8,16 @@ export function isFrozenContent(value: unknown): value is object {
 /** Content is immutable data. Runtime snapshots receive their own copies. */
 export function freezeContent<T>(value: T): T {
   if (value === null || typeof value !== 'object' || frozenContent.has(value)) return value;
-  return drainSetup(freezeContentSteps(value));
+  return drainSetup(freezeSteps(value, { remaining: 64, skipFrozen: true }));
 }
 /** Pause only between owned JSON nodes; never certify an unfinished subtree. */
 export function* freezeContentSteps<T>(value: T): Generator<void, T, void> {
-  return yield* freezeSteps(value, { remaining: 64 });
+  // Keep the same cooperative boundaries on cold and warm data; prior matches must not change room scheduling.
+  return yield* freezeSteps(value, { remaining: 64, skipFrozen: false });
 }
-function* freezeSteps<T>(value: T, budget: { remaining: number }): Generator<void, T, void> {
+function* freezeSteps<T>(value: T, budget: { remaining: number; skipFrozen: boolean }): Generator<void, T, void> {
   if (value !== null && typeof value === 'object') {
-    if (frozenContent.has(value)) return value;
+    if (budget.skipFrozen && frozenContent.has(value)) return value;
     if (--budget.remaining === 0) { budget.remaining = 64; yield; }
     for (const child of Object.values(value)) {
       if (child !== null && typeof child === 'object') yield* freezeSteps(child, budget);
