@@ -84,3 +84,5 @@ export function shopGlitchShared(pool: import('../../../src/simulation/shared-po
   shop: MatchState['shop']; rngState: number; available: Record<string, number>;
   shops: import('../../../src/simulation/shared-pool-types').SharedPoolState['shops'];
 };
+export function tombRaiderPlan(state: MatchState): readonly { readonly choiceId: string; readonly seatId: string; readonly round: number; readonly offers: readonly string[] }[];
+export function validateTombRaiderTransition(before: MatchState, after: MatchState, command: unknown, events: readonly unknown[]): void;

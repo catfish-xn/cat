@@ -1,6 +1,7 @@
 import { maximumPlayerHp, titanicTitanChoiceId, h7CarouselRelease, h7CarouselParticipantValid } from './augment-pool-batch5-h7-health';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
+import { validateTombRaider } from './augment-pool-batch5-r1';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { drainBatch1Gifts } from './augment-pool-grants';
@@ -539,6 +540,7 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     const participant = carousel.participants.find(p=>p.seatId===match.multiplayer?.seatId);
     if (participant && participant.titanicTitanChoiceId !== titanicTitanChoiceId(match)) throw Error('invalid-participants');
     for (const f of match.augmentHistory?.facts ?? []) if(f.kind==='carousel' && f.receipt.carouselId===carousel.id && f.releaseAtMs!==carousel.releaseAtMs[f.seatId]) throw Error('invalid-carousel');
+    validateTombRaider(match);
     return match;
 }
 

@@ -1608,3 +1608,14 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 | `tests/augment-stage-helpers.ts`；`tests/fixtures/m5/oracle.g2.cjs`、`augment-rewards-oracle.cjs` | 固定有界路线种子；独立候选/互斥/阶段/出售返金/礼物/上限XP校验 |
 | `tests/augment-pool-batch5-h12-*.test.ts`、`tests/server/h12-subscription.test.ts`；相关 shop/history 测试 | 真实命令、房间、池守恒、三入口恢复/篡改；旧固定种子夹具改合法重抽，保留断言与超时 |
 | `content/identity-constants.ts`、`scripts/tests/production-size.test.ts` | 最后用指定脚本同步完整内容摘要，历史epoch不动 |
+### v25：盗墓者 I／II（B5-39／40，P，2026-10-27）
+
+`tomb-raider-1`（黄金，原始 `NumDead=3`）与 `tomb-raider-2`（棱彩，原始 `NumDead=9`）只在4-2报价，沿原始互斥关系双向排除。I处理取得后的接下来3名淘汰者，空候选也占一名；II处理取得后的每名淘汰者，9不作为上限。两者都不追溯取得前淘汰者，也不向同时已被淘汰的持有者发奖励。候选只来自淘汰席正式棋盘／备战席普通英雄持有的普通成装；背包、临时装备、纹章、光明、神器、辅助装、召唤物及选秀暂存英雄不参与。同回合按名次从低到高，各件全部展示，包括同名副本，不抽样、不消耗 RNG。证据等级和用户约定见 `S13_RULES_GAP.md` P-B5-39／40。
+
+- `hasTombRaider(state: MatchState): boolean`：服务器可查询是否需要这组结算编排，不自行判候选或次数。
+- `recordTombRaiderEliminations(state: MatchState, table: readonly HistorySeat[]): MatchStep`：仅服务器权威结算调用，排名确定后、共享池资源回收前传入整桌正式快照；复用 `recordAugmentTable(state,'settlement',table)`，按 `acquire` 后的全桌历史推导机会并打开第一项。无持有者返回原状态和空事件；同轮同表重试不重发，冲突表抛 `Invalid tomb raider settlement conflict`。打开事件在同一事务中取得连续 match eventSeq，房间按原 seatRevision 发布，不接受客户端上传表。
+- `publishTombRaiderChoice(state: MatchState): MatchStep`：服务器在已有 `table/entry` 发布后调用，使入轮淘汰也进入同一队列；补给／共享选秀期间沿用现有选择限制，保留历史机会，在后续可打开选择时处理。
+- `openTombRaiderChoice(state: MatchState): MatchStep`：Match成功命令的通用接受点调用；已有选择优先，完成一项后立即打开下一名。沿用 `PendingChoice.kind='forge'`，`payload.source='augment-pool-batch5-r1'`，`offers` 为全量装备定义ID；该来源允许同名副本重复展示。唯一 choiceId／receiptId 为 `JSON.stringify(['augment-pool-batch5-r1', ownerChoiceId, eliminatedSeatId])`。每项使用既有 `selectChoice`／网络 `choose` 或 `forfeitPendingChoice`／超时命令；授予1件永久库存装备、1条 mechanic item-acquired 来源和1张 choice 收据，默认超时选首项。失效ID／代次、非法候选沿用 `stale-choice`／`invalid-choice`，失败保持原 state／pool 引用，不发事件、不用资源或 RNG。
+- `validateTombRaider(state: MatchState): void`：从历史重建全部合法机会、顺序、候选、收据身份和装备出生来源，错项抛 `Invalid tomb raider authority`。已接入普通恢复、`restoreSharedOrbSnapshot`、`restoreCarouselSeat`；多人对象、JSON与规范文本恢复均仍要求 `captureAugmentHistoryAuthority`／`Room.augmentHistoryAuthority` 的独立品牌句柄，缺节、伪造权威、修改历史／候选／装备／收据全部拒绝。
+
+规则与内容位于 `augment-pool-batch5-r1*.ts` 和同名 content 文件。`src/server/room/augment-history.ts` 只冻结／传递全桌和发布事件，`room.ts` 只增加回收前一次调用；没有新增网络命令、真实时钟或服务器奖励公式。独立 M5 oracle 按原始全桌事实、独立英雄费用表和普通成装转录重建预期，不以生产奖励收据决定资格或奖品。单人取得不产生淘汰奖励且保持可运行；沿用同版12/8/8/7格式，重算内容与loot身份，不重录epoch。

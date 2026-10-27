@@ -1,4 +1,4 @@
-import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomSettlementTable, tableFacts } from './augment-history';
+import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomSettlementTable, recordRoomEliminations, tableFacts } from './augment-history';
 import { completeTraitTrackerCommand, captureAugmentHistoryAuthority, prepareAugmentAcquisition, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
 import { advanceSharedAugmentPreparationTime } from '../../simulation/shared-pool';
 import { nextShopGlitchPreparationTime } from '../../simulation/augment-pool-batch5-h1';
@@ -782,6 +782,7 @@ export class Room {
       .sort((a, b) => b.hpAfter - a.hpAfter || b.hpBefore - a.hpBefore || index(a) - index(b));
     let rank = alive.length;
     const eliminated: RankEntry[] = dying.map(seat => ({ seatId: seat.seatId, rank: rank-- }));
+    seats = [...recordRoomEliminations(state, seats, eliminated)];
     // §12.4: after this round's ranking and before the next natural refresh, every seat the rules eliminated returns its
     // shop, holdings and pending rewards to the pool once. A repeated release is refused by the rules and ignored. A
     // seat only the room zeroed (a test placeholder outcome the rules never settled) is not eliminated by the rules and

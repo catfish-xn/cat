@@ -1,6 +1,7 @@
 import { AUGMENT_BATCH5_H1 } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3 } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H4_SOURCE } from './augment-pool-batch5-h4';
+import { AUGMENT_BATCH5_R1 } from './augment-pool-batch5-r1';
 import { AUGMENT_BATCH5_H6 } from './augment-pool-batch5-h6';
 import { AUGMENT_BATCH5_B5A } from './augment-pool-batch5-b5a';
 import { AUGMENT_BATCH5_S1B } from './augment-pool-batch5-s1b';
@@ -72,6 +73,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch5H1:{version:'augment-pool-batch5-h1-v25',content:AUGMENT_BATCH5_H1,convention:'P-B5-07-and-10-2026-10-27'},
   augmentPoolBatch5H3:{version:'augment-pool-batch5-h3-v1',content:AUGMENT_BATCH5_H3,convention:'P-B5-2026-10-27'},
   augmentPoolBatch5H4:{version:'augment-pool-batch5-h4-v1',content:AUGMENT_BATCH5_H4,source:AUGMENT_BATCH5_H4_SOURCE,convention:'P-B5-2026-10-27'},
+  augmentPoolBatch5R1:{version:'augment-pool-batch5-r1-v25',content:AUGMENT_BATCH5_R1,convention:'P-B5-39-40-2026-10-27'},
   augmentPoolBatch5H6:{version:'augment-pool-batch5-h6-v1',content:AUGMENT_BATCH5_H6,convention:'P-B5-37-38-2026-10-27'},
   augmentPoolBatch5S6c:{version:'augment-pool-batch5-s6c-v25',content:AUGMENT_BATCH5_S6C,convention:'P-B5-48-49-2026-10-27'},
   augmentPoolBatch5S8a:{version:'augment-pool-batch5-s8a-v1',content:AUGMENT_BATCH5_S8A,convention:'P-B5-59-2026-10-27',victim:'first-formal-shop-hero-death',grant:'next-natural-round'},

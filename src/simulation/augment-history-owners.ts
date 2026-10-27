@@ -13,6 +13,8 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'salvage-bin-plus': ['augment-item-transform', 'settled-combat'],
   'forbidden-magic': ['deaths', 'summon-growth'],
   'a-golden-find': ['combat-roster', 'combat-binding', 'deaths'],
+  'tomb-raider-1': ['table'],
+  'tomb-raider-2': ['table'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],

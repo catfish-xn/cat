@@ -1,9 +1,9 @@
 /** Server orchestration only: freeze authoritative table/roster/settlement observations.
  * No rewards, growth amounts, player damage formula or random draws live here. */
 import { drainBatch5H7Gold, applyDhampyrSettlement, drainBatch5H8Deaths, appendAugmentFact, recordAugmentTable, recordAugmentSettlementTable, settleBatch5H9History, recordAugmentPvpRoster, recordAugmentTransition, historyRoster, augmentDeathsFromEvents,
-  type HistorySeat } from '../../server-entry';
+  hasTombRaider, recordTombRaiderEliminations, publishTombRaiderChoice, type HistorySeat } from '../../server-entry';
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
-import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput } from './types';
+import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput, RankEntry } from './types';
 
 export function tableFacts(seats: readonly SeatState[], matches?: ReadonlyMap<string, {readonly match: MatchState}>): readonly HistorySeat[] {
   const order = [...seats].filter(s => s.alive).sort((a,b) => b.hp-a.hp ||
@@ -19,9 +19,28 @@ export function recordRoomPublication(before: RoomState, next: RoomState): RoomS
     let match = recordAugmentTransition(previous.match, seat.match);
     // Acquisition facts already belong to the choice transaction, before its effects execute.
     if (match.augmentHistory && previous.match.round !== match.round) match = recordAugmentTable(match, 'entry', table);
-    if (match === seat.match) return seat; changed = true; return { ...seat, match };
+    const opened = publishTombRaiderChoice(match); match = opened.state;
+    if (match === seat.match) return seat; changed = true;
+    return { ...seat, match, ...(opened.events.length ? { serverEvents: { seatRevision: seat.seatRevision,
+      events: [...(seat.serverEvents?.events ?? []), ...opened.events] } } : {}) };
   });
   return changed ? { ...next, seats } : next;
+}
+
+/** Capture the rules' settled, ranked rosters before shared-pool resource release. */
+export function recordRoomEliminations(room: RoomState, settled: readonly SettledSeat[], eliminated: readonly RankEntry[]): readonly SettledSeat[] {
+  if (!settled.some(s => hasTombRaider(s.match))) return settled;
+  const outcomes = new Map(settled.map(s => [s.seatId, s]));
+  const ranks = new Map(eliminated.map(s => [s.seatId, s.rank]));
+  const table = tableFacts(room.seats.map(seat => {
+    const outcome = outcomes.get(seat.seatId);
+    return outcome ? { ...seat, match: outcome.match, hp: outcome.hpAfter, alive: outcome.hpAfter > 0,
+      rank: ranks.get(seat.seatId) ?? seat.rank, eliminatedRound: outcome.hpAfter > 0 ? null : room.round } : seat;
+  }));
+  return settled.map(seat => {
+    const result = recordTombRaiderEliminations(seat.match, table);
+    return result.state === seat.match ? seat : { ...seat, match: result.state, events: [...seat.events, ...result.events] };
+  });
 }
 export function recordRoomPvpRosters(room: RoomState, deployed: ReadonlyMap<string, {readonly match: MatchState; readonly events: readonly MatchEvent[]}>, inputs: readonly BattleInput[]) {
   if (room.roundKind !== 'pvp' || !room.seats.some(s => s.match.augmentHistory)) return deployed;

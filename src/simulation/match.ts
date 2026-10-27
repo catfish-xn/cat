@@ -23,6 +23,7 @@ import { salvageSale } from './augment-pool-batch5-s3b-salvage';
 import { pandoraRoundEntry } from './augment-pool-batch5-s3b-conversions';
 import { convertAcademicCraft } from './augment-pool-batch5-s3b';
 import { drainBatch1Gifts } from './augment-pool-grants';
+import { openTombRaiderChoice } from './augment-pool-batch5-r1';
 import { planOpenAnvil } from './anvils';
 export { grantAnvilUnit } from './anvils';
 export { anvilDisplay, ANVIL_POLICY } from './content/anvils';
@@ -137,6 +138,7 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   const opened=openG23Choice(updateG23Cells(state));state=opened.state;events=[...events,...opened.events];
   const forge=openAugmentForge(state);state=forge.state;events=[...events,...forge.events];
+  const tomb = openTombRaiderChoice(state); state = tomb.state; events = [...events, ...tomb.events];
   return { ok: true, ...stampMatchEvents(state, events) };
 };
 function stampMatchEvents(state: MatchState, events: readonly MatchEvent[]): MatchStep {

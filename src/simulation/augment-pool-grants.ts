@@ -1,3 +1,4 @@
+import { validateTombRaider } from './augment-pool-batch5-r1';
 import { AUGMENT_BATCH5_H1 } from './content/augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
 import { validateSurvivorGold } from './augment-pool-batch5-h4-survivor';
@@ -75,6 +76,7 @@ export function batch1AnvilSpecification(state:MatchState,receiptId:string) {
   ?{definitionId:gift.definitionId,offers:academicAnvilOffers(state,receiptId)??augmentAnvilOffers(state.seed,receiptId,gift.definitionId)}:undefined;
 }
 export function validateBatch1Gifts(state:MatchState):void {
+ validateTombRaider(state);
  validateSurvivorGold(state);
  validatePortfolioGold(state);
  validateContestedGold(state);
