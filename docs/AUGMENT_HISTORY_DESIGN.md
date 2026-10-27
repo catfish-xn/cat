@@ -2,6 +2,34 @@
 
 基线：`codex/v25-augment-history`，`ee2b019cc8d60fb11679d9ce8c54338f5ea4ea57`，来自 `claude/v24-integration`（PR #456）。本任务只提供历史基础设施，不新增任何强化定义、报价、奖励公式或现有内容数值，不提交 Git。
 
+## 2026-10-27 H10 使用与扩展
+
+B5-60 狙神之巢读取 `acquire/positions/round-entry/combat-roster/pvp-roster`，由开战格与实例身份推导 800～3200 Bps，不另存累计计数。`readSniperOpening` 是 Match 到战斗输入的唯一推导入口；`CombatStrategyInputs`、`PlayerBattleSnapshot` 的可选 `sniperOpening` 仅携带冻结结果，后者按双边命名空间映射单位 ID。当前轮开战后的阵容记录只影响下一轮，恢复仍认证原开战结果。
+
+B5-61 羁绊追踪者在同一个 `augment-history-v1` 内新增事实 `{kind:'trait-activation',choiceId,roster}`，继承 sequence/seatId/round/roundId/resourcePrefix；每个持有 choiceId 仅一次。事实在首次达标的成功准备期命令内、发奖前记录正式阵容，不保存客户端计数或抽奖结果。奖励计划从该事实和固定 seed/seat/choice 子流重推，复用六份原机制物品收据。单人按命令重演事实和奖励；联机完整候选与独立服务器 authority 比较，缺失／添加／改写事实或收据均拒绝。外层版本不变，内容 digest 由身份脚本更新；未重录 epoch。
+
+联机 `Room.apply / claimBotOrbs → completeAugmentCommand` 经 `server-entry` 调用 `completeTraitTrackerCommand(name,state)`，在共享刷新、经验、选秀暂存落位及机器人法球领取完成后、发布前补齐不经过普通 Match 包装器的路径；只对成功命令执行，服务器不计算羁绊、随机或奖励。普通 Match 包装器也调用同一幂等规则。截止自动布阵、开战／战中／结算、自然入轮和准备计时不能触发；下一次合法准备期操作才检查。历史保持服务器私有，不进入玩家投影。
+
+### H10 接线清单
+
+| 文件／调用点 | 用途 |
+| --- | --- |
+| `content/augment-pool-batch5-h10.ts`；`augment-pool-batch5-h10-sniper.ts`；`augment-pool-batch5-h10-tracker.ts` | 两项数值、赠礼、历史推导、冻结值结构校验与一次性奖励规则 |
+| `augment-history-owners.ts`；`augment-history-types.ts` | 两持有者登记；增加同版本 `trait-activation` 事实 |
+| `augment-history.ts / traceHistoryCommand` | 成功外层命令追加 tracker 结果、连续事件与事实，仍由原 proof 重演 |
+| `augment-pool-grants.ts / batch1GiftPlan → drainBatch1Gifts / validateBatch1Gifts` | 泽丽礼物与 tracker 六份计划纳入原奖励、资源和收据验证 |
+| `combat-input.ts / readCombatStrategyInputs, restoreCombatInput`；`b8-restore.ts / validateB8Resources` | 狙神值冻结／按历史重推认证 |
+| `two-sided-types.ts / PlayerBattleSnapshot`；`two-sided-snapshot.ts / snapshotForBattleSteps, restorePlayerBattleSnapshotSteps` | 私有冻结值字段及拥有者、英雄资格、整数层数校验 |
+| `two-sided-battle.ts / compileSideSteps`；`strategy-snapshot.ts / buildStrategySnapshotSteps` | A/B 双边 ID 映射与原 damageAmp 来源绑定 |
+| `shared-pool.ts / restoreSharedOrbSnapshot` | 两持有者及孤立 H10 收据进入原 gift validator，完整历史仍使用独立 authority |
+| `src/server-entry/index.ts`；`src/server/room/room.ts / Room.apply, claimBotOrbs, completeAugmentCommand` | 导出并编排规则完成钩子；在暂存选秀落位之后发布；人／机器人／接管共用，不新增 wire 命令 |
+| `content/{augments,augment-policy,augment-offer-rules,augment-stage-bans,rules-manifest}.ts`；`validate-content.ts` | 注册、黄金档、来源报价规则、tracker 3-2 限制、约定身份与计数 |
+| `content/augment-pool-batch2.ts`；`scripts/augment-content-archive.ts` | 狙神从旧禁用库存迁出，英文档案保留在 H10；不降低旧档案集合检查 |
+| `tests/fixtures/m5/{oracle.g2,augment-rewards-oracle}.cjs`；`tests/augment-stage-helpers.ts` | 独立报价／互斥／礼物与纹章抽样表、固定 3-2 种子 |
+| `content/identity-constants.ts`；`scripts/tests/production-size.test.ts` | 重算并同步完整 content/loot 摘要，未改 epoch |
+
+除 `src/`、`scripts/`、`tests/` 开头的路径外，本表路径相对 `src/simulation/`。B5-60 复用既有 `src/server/room/augment-history.ts` 冻结名单及 `two-sided-resolver/CombatStream` 路径，这些文件没有修改。联机 object/JSON/canonical serialized 三种输入均要求真实 `Room.augmentHistoryAuthority`，伪造同形句柄拒绝。
+
 ## 保存边界与版本
 
 唯一新增的持久字段为 `MatchState.augmentHistory?: AugmentHistory`，内部版本严格为 `augment-history-v1`。只有 `augment-history-owners.ts` 登记的持有者才写入；登记的 ID 是后续任务的集成约定，不是开放候选池。未持有者既不写空数组，也不写版本占位。以基线程序独立生成的四个 SHA-256 检查点验证原始保存字节不变，另验证旧档恢复再保存不变。
@@ -17,6 +45,7 @@
 | 事实 | 记录时点与含义 | 需求 |
 | --- | --- | --- |
 | `acquire` | 选择事务中，获得拥有条目后、执行专属获取效果前；冻结选择前金币/玩家 HP、正式单位/装备、choiceId、逻辑准备时间及上一场真实开战阵容的可用性 | B5-10、26/29/30、45；本金不会从战后余额倒算 |
+| `trait-activation` | B5-61 首次准备期成功命令达标、发奖前；choiceId 与正式阵容快照，只写一次 | B5-61；沿同一节重演／服务器权威认证 |
 | `round-entry` | 下一自然轮入口：上一轮收入已付，新的被动经验、商店、选秀放置和本轮奖励之前；完整正式棋盘和备战席 | B5-32/33、38、57；多次 Continue 不能重复 |
 | `positions` | 成功公共命令或房间原子发布改变正式单位/装备后；覆盖手动部署、购买/合星、售出、装备、选秀后放置 | B5-26/29/30、37 |
 | `combat-roster` | 单人真实开战时，包含 PvE 和 PvP；取得时还携带之前一场的冻结快照 | B5-10 的“上一对战”不局限 PvP |

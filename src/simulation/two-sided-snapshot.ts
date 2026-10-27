@@ -1,3 +1,4 @@
+import { readSniperOpening, validSniperOpeningSnapshot } from './augment-pool-batch5-h10-sniper';
 import { drainSetup } from './setup-work';
 import { d14Certificate, eligibleD14Target } from './d14-runtime';
 import {readItemSummonPositions,validateItemSummonPositions} from './g2-4b-voidspawn';
@@ -84,6 +85,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
         && !augmentIds.has(augment.definitionId) && !choices.has(augment.choiceId));
       augmentIds.add(augment.definitionId); choices.add(augment.choiceId);
     }
+    requireSnapshot(validSniperOpeningSnapshot(s.augments, { units: s.units, items: s.items }, s.sniperOpening));
     if (s.anomalyBinding !== null) {
       record(s.anomalyBinding); const binding = s.anomalyBinding; id(binding.choiceId); integer(binding.boundRound, 1);
       requireSnapshot(binding.boundRound <= round.ordinal && units.has(binding.unitId) && Object.hasOwn(ANOMALY_DEFINITIONS, binding.definitionId));
@@ -119,6 +121,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
       && ((augmentIds.has('investment-strategy-i') || augmentIds.has('investment-strategy-ii')) || s.augmentProgress.investmentHp === 0));
     // Reject extra/private fields, including fields nested in unit and item descriptors.
     const clean: PlayerBattleSnapshot = {
+      ...(s.sniperOpening ? { sniperOpening: structuredClone(s.sniperOpening) } : {}),
       ...(s.d14Combat?{d14Combat:structuredClone(s.d14Combat)}:{}),
       ...(s.itemSummonPositions?{itemSummonPositions:structuredClone(s.itemSummonPositions)}:{}),
       ...(s.bankGold===undefined?{}:{bankGold:s.bankGold}),...(s.playerHp===undefined?{}:{playerHp:s.playerHp}),...(s.g23===undefined?{}:{g23:structuredClone(s.g23)}),
@@ -166,7 +169,9 @@ export function* snapshotForBattleSteps(state: MatchState, seatId: string): Gene
   // A placed Hextech Forge travels with its deployed Jayce (keyed by the Jayce), a Voidspawn with its equipped portal.
   const itemSummonPositions=Object.fromEntries(Object.entries(readItemSummonPositions(state)??{}).filter(([id])=>units.some(u=>u.id===id&&u.definitionId==='jayce')||state.items.some(i=>i.id===id&&i.location.kind==='unit'&&ids.has(i.location.unitId))));
   const d14Combat=d14Certificate(state);
+  const sniperOpening = readSniperOpening(state);
   return yield* restorePlayerBattleSnapshotSteps({
+    ...(sniperOpening ? { sniperOpening } : {}),
     ...(d14Combat&&ids.has(d14Combat.unitId)?{d14Combat}:{}),
     ...(Object.keys(itemSummonPositions).length?{itemSummonPositions}:{}),
     ...(state.anomalyBinding?.definitionId==='avarice-incarnate'||state.items.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')||state.temporaryEquipment.some(i=>i.definitionId==='TFT7_Item_ShimmerscaleGamblersBlade')?{bankGold:state.gold}:{}),

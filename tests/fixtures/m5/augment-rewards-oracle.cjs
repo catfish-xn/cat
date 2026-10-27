@@ -12,6 +12,7 @@ const U=(id,n=1,star=1)=>['U',id,n,star],I=(id,n=1)=>['I',id,n],C=(id,n=1)=>['C'
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
+ 'snipers-nest':[U('zeri')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'category-five':[I('runaans-hurricane')],'a-change-of-fate':[I('blue-buff')],
  coronation:[I('TFT_Item_ForceOfNature')], 'tacticians-kitchen':[I('TFT_Item_TacticiansRing'),Q('emblem')],
@@ -94,6 +95,15 @@ function rewardPlan(s,env){
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
   const facts=battles.filter(f=>f.round>=a.acquiredRound);
+  if(a.definitionId==='trait-tracker'){
+   const fact=s.augmentHistory?.facts.find(f=>f.kind==='trait-activation'&&f.choiceId===a.choiceId);
+   if(fact){
+    const pool=families.map(([,api])=>`TFT13_Item_${api}EmblemItem`).sort();
+    let rng=salt(s.seed,['batch5-h10-tracker',s.multiplayer?.seatId??'solo',a.choiceId]);
+    for(let i=0;i<6;i++){rng=word(rng);const j=i+pick(rng,pool.length-i);[pool[i],pool[j]]=[pool[j],pool[i]];}
+    gifts.push(...expand(s,owner(a,['trait-tracker'],fact.round),pool.slice(0,6).map(id=>I(id)),env));
+   }
+  }
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;

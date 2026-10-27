@@ -172,6 +172,13 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
       }
       for (const augment of state.augments) {
         const definition = lookup(catalog.augments, augment.definitionId);
+        if (augment.definitionId === 'snipers-nest') {
+          if (!state.sniperOpening) throw new RangeError('Missing authoritative sniper opening');
+          const bps = state.sniperOpening[unit.id];
+          if (bps) sources.push(...makeSourcedEffects(unit.id, 'augment', augment.definitionId, augment.choiceId,
+            [{ kind: 'mechanic', mechanic: 'damageAmp', values: { bps } }]));
+          continue;
+        }
         const grant=d11.get(augment.choiceId)?.grants.find(g=>g.unitId===unit.id);
         if(grant){
           sources.push(...makeSourcedEffects(unit.id,'augment',augment.definitionId,augment.choiceId,grant.effects));

@@ -6,7 +6,7 @@ interface TraitAugmentContent {
  readonly traits:readonly string[];readonly source:{readonly patch:string;readonly archive:string;readonly values:Readonly<Record<string,number|null>>};
  readonly gifts:readonly AugmentGiftSpec[];readonly enabled:boolean;
 }
-/** The exact 26 classification.json class-B / batch-2 records. Disabled rows are evidence inventory only, never offers. */
+/** 25 remaining class-B / batch-2 records; Sniper migrated to batch5-h10. Disabled rows remain evidence inventory only. */
 export const AUGMENT_BATCH2:Readonly<Record<string,TraitAugmentContent>>=freezeContent({
   "academic-research": {
     "apiName": "TFT13_Augment_Academy",
@@ -470,23 +470,6 @@ export const AUGMENT_BATCH2:Readonly<Record<string,TraitAugmentContent>>=freezeC
     ],
     "enabled": true
   },
-  "snipers-nest": {
-    "apiName": "TFT13_Augment_Sniper",
-    "tier": "gold",
-    "traits": [
-      "sniper"
-    ],
-    "source": {
-      "patch": "14.24",
-      "archive": "augments-research-2026-10-23/data/augments-14.24.json",
-      "values": {
-        "DamageAmp": 8.0,
-        "MaxAmp": 32.0
-      }
-    },
-    "gifts": [],
-    "enabled": false
-  },
   "sorcerer-explosion": {
     "apiName": "TFT13_Augment_Sorcerer",
     "tier": "gold",
@@ -639,6 +622,5 @@ export const AUGMENT_BATCH2_BLOCKED=freezeContent({
   "natural-selection": "R[188]：只有 Health=0.12；缺新增牺牲实验格的位置/选取规则、无合法格/空格处理，以及牺牲来源加成的传播目标规则。",
   "aerial-warfare": "R[73]：9%AD/9AP 与 Bonus=3 齐；缺“每格另外3%”作用于基础值还是累积值的精确定义，以及该战移动格数是否含普通移动/冲刺/传送、冲刺过程如何计格。",
   "rebel-resurgence": "R[144]：5名/减400HP齐；缺一星死亡后的目标星级（原文低一星）、最低生命下限及召唤复制继承装备/永久成长/强化、是否能再触发复制的完整口径。",
-  "snipers-nest": "R[178]：每次8%、上限32%齐；缺首战是否即有一层、换格/备战席/离场/重新购买时的层数重置规则及合星继承规则。",
   "visionary-voidlings": "R[208]：275法力、最多5只、阶段2–6生命400/450/500/550/600齐；缺虚灵基础AD/攻速/双抗/射程/技能与出生位置/无空格政策，不能只造一个有HP但其余数值自定的单位。"
 });

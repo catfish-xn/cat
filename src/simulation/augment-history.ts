@@ -1,3 +1,4 @@
+import { completeTraitTrackerCommand } from './augment-pool-batch5-h10-tracker';
 import type { MatchState, MatchEvent } from './match-types';
 import type { AugmentFactData, AugmentHistoryFact, AugmentGrowth, HistoryCommand, HistoryRoster, HistorySeat, PreviousAugmentBattle } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -153,7 +154,8 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
   if (envelope.ok === false) return result;
   const after = envelope.state ?? result as unknown as MatchState;
   if (!after || after === before || !('augments' in after)) return result;
-  let next = recordAugmentTransition(before, after, envelope.events);
+  const tracker = completeTraitTrackerCommand(name, after);
+  let next = recordAugmentTransition(before, tracker.state, [...envelope.events ?? [], ...tracker.events]);
   if (!before.multiplayer && before.openingEncounter.mode !== 'shared-deferred') {
     const stored = before.augmentHistory?.proof;
     let trace: Trace = traces.get(before) ?? { ...(stored?.kind === 'solo' ? stored : {origin:before,commands:[]}), previousBattle:{status:'unavailable'} };
@@ -171,7 +173,7 @@ export function traceHistoryCommand<T>(name: string, args: readonly unknown[], r
     traces.set(next, { ...proof, previousBattle: !before.combat && after.combat ? {status:'recorded',round:before.round,roundId:before.roundDefinitionId,battleId:after.combat.combatId!,roster:historyRoster(before)} : trace.previousBattle });
   }
   preparationTimes.set(next,{round:next.round,elapsedMs:next.round===before.round?Math.max(preparationElapsed(before),preparationElapsed(after)):0});
-  return (envelope.state ? { ...envelope, state: next } : next) as T;
+  return (envelope.state ? { ...envelope, state: next, ...(tracker.events.length ? { events: [...envelope.events ?? [], ...tracker.events] } : {}) } : next) as T;
 }
 
 // A server restore takes a separately held authority, never a field from the candidate save.

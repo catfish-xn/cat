@@ -28,6 +28,7 @@ export function firstNodeSeed(id: string, limit = 20000, from = 0): number {
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true }>> = {
+  "trait-tracker":{node:'3-2',seed:39},
   "backup":{node:'3-2',seed:9},
   "bad-luck-protection":{node:'3-2',seed:8},
   "belt-overflow":{node:'3-2',seed:21},
