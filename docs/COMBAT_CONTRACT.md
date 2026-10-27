@@ -371,3 +371,12 @@ PvP 快照/编译/任务入口由 `server-entry` 一并导出。内部 JSON 校�
 ### Batch 4 B4Combat（P，2026-10-25）
 
 四条机制与推断边界见 [P-B4COMBAT](S13_RULES_GAP.md#p-b4combatp2026-10-25batch-4-四条战斗强化)。只增加声明与既有战斗事件，不增加存档字段/事件类型/公共命令/失败 reason；全程服务器权威，前端不得另算属性、弩箭、吸血或护盾。`augment-pool-batch4-b4combat.ts` 内部入口 `openingB4Combat(ctx):void`、`castB4Combat(ctx,unit,seq):void`、`attackB4Combat(ctx,unit,target,seq):void`、`damageB4Combat(ctx,owner,packet,dealt):void`、`overhealB4Combat(ctx,target,outcome):void` 使用冻结来源及既有状态；`b4Vamp(unit,tick):VampRate[]` 只返回当前窗口贡献，`categoryFiveTrigger(unit,definition):TriggerDefinition` 只派生飓风声明。恢复仍从可信 combatInputBasis 重放，对象/JSON/序列化入口不接受候选自报贡献。
+
+
+## Batch 5 G4 虚灵（P，2026-10-27）
+
+`augment-pool-batch5-g4.ts` 内部入口 `castB5Voidcaller(ctx,caster,spent,counters,pending):void` 只接成功施法实际扣蓝；冻结有效先知成员（含纹章，无需激活2档）共享每队池，每275扣除阈值、结转余数；每战累计成功出生最多5只，死亡不返名额，满格不召唤且该阈值已消费。`spawnB5Voidlings(ctx,state,pending):void` 在原演员规划动作后发布既有unitSpawned事件，新生儿下一tick行动。生命2–6+为400/450/500/550/600，AD60、AS0.8、双抗30、近战无技能；不进入永久资源或卡池，不计玩家伤害。
+
+`augment-pool-batch5-g4-swarm.ts / b5PortalEffects(state,itemId,effects):readonly Effect[]` 只给持有本强化的已装备、未被执法没收传送门编译开战声明；`startB5VoidSwarm(ctx,state):void` 在完整双方开战阵容就绪后按持有者前方最近空格生成，HP1000/1500/2000/2500/3000、AD80/80/115/150/180（2–6+），基础AS0.8／双抗30／射程1，无空格跳过。2格开战嘲讽为目标锁（最近召唤物、同距ID），目标失效即释放；`b5VoidSwarmTarget(unit,units,tick)` 供既有目标入口调用；不编造持续秒数。`b5VoidSwarmVamp(unit):VampRate[]` 通过原伤害／治疗管线给大小虚灵4000Bps全能吸血，AS额外4000Bps，小虚灵不继承大型数表／嘲讽，普通英雄不获这两项加成。无本强化的旧传送门继续原规则。
+
+可选 `CombatState.voidcaller` 为每队 `{team,remainder,summoned}` 数组；`CombatUnit.voidSwarmTaunt?:string` 为开战锁定目标。可信strategy包含voidcaller／voidSwarm／b5VoidPortal时，恢复从可信开战输入完整重演到保存tick，比较全部单位、属性、计数、目标锁、事件序号及RNG；删除字段／虚构合法范围内数值／少一个出生同样拒绝，无该来源却添字段亦拒绝。没有新增战斗事件类型、tick长度或随机词；失败仍为既有恢复异常及规则入口失败语义。保存／协议纪元不重录；本任务末统一重算content／loot identities。

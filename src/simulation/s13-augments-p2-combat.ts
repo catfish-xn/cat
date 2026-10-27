@@ -1,3 +1,4 @@
+import { b5VoidSwarmTarget } from './augment-pool-batch5-g4-swarm';
 import { batch2Target } from './augment-pool-batch2-combat';
 import { isSelectable } from './anomalies/availability';
 /** Frozen opening facts. Random choices share Combat's lcg32 stream after existing opening consumers.
@@ -75,6 +76,7 @@ export function p2Stoneskin(u: CombatUnit,tick:number):number {
   const v=p2Values('stoneskin');return p2HasAnomaly(u,'stoneskin')?Math.max(0,v.BonusArmorMR-Math.floor(tick/20)*v.ArmorMRLossPerSecond):0;
 }
 export function p2Target(u:S13Unit,units:readonly S13Unit[],tick:number):S13Unit|undefined {
+  const taunted=b5VoidSwarmTarget(u,units,tick);if(taunted)return taunted;
   const forced=batch2Target(u,units);if(forced)return forced;
   const cull=p2HasAnomaly(u,'cull-the-weak');
   const candidates:S13Unit[]=[];

@@ -1,3 +1,4 @@
+import { b5PortalEffects } from './augment-pool-batch5-g4-swarm';
 import { drainSetup } from './setup-work';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { familyReunionParticipants, familyCombatBase } from './family-reunion';
@@ -162,12 +163,12 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
       for (const item of state.items) {
         if (item.location.kind !== 'unit' || item.location.unitId !== unit.id) continue;
         const definition = p2ItemDefinition(lookup(catalog.items, conversions.get(item.id) ?? item.definitionId),state);
-        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, itemEffects(definition)));
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, b5PortalEffects(state,definition.id,itemEffects(definition))));
         bindItem(definition, item.id);
       }
       for (const child of state.temporaryEquipment.filter(item => item.holderId === unit.id)) {
         const definition = p2ItemDefinition(lookup(catalog.items, conversions.get(child.temporaryId) ?? child.definitionId),state);
-        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, itemEffects(definition), child.parentItemInstanceId));
+        sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, child.temporaryId, b5PortalEffects(state,definition.id,itemEffects(definition)), child.parentItemInstanceId));
         bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {

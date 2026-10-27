@@ -12,6 +12,7 @@ const U=(id,n=1,star=1)=>['U',id,n,star],I=(id,n=1)=>['I',id,n],C=(id,n=1)=>['C'
 const lesser='TFT_Consumable_ChampionDuplicator_III';
 // Source descriptions (including counts absent from effects), existing P-AG conventions.
 const initial={
+ 'voidcaller':[U('rell'),U('morgana')],'void-swarm':[I('TFT5_Item_ZzRotPortalRadiant')],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
  'cooking-pot':[I('frying-pan')],
@@ -96,6 +97,11 @@ function rewardPlan(s,env){
  for(const a of s.augments){
   const start=expand(s,a,initial[a.definitionId]??[],env);gifts.push(...start);
   const facts=battles.filter(f=>f.round>=a.acquiredRound);
+  if(a.definitionId==='void-swarm'){
+   const completed=s.roundResults.filter(r=>r.roundKind==='pvp'&&r.round>=a.acquiredRound);
+   completed.forEach((r,i)=>{assert.equal(s.augmentHistory.facts.filter(f=>f.kind==='pvp-roster'&&f.round===r.round).length,1,'independent Void Swarm combat boundary');
+    if((i+1)%11===0)levelsOut.push(...expand(s,{...a,choiceId:JSON.stringify([a.choiceId,'b5-void-swarm',(i+1)/11]),acquiredRound:r.round},[I('TFT5_Item_ZzRotPortalRadiant')],env));});
+  }
   if(a.definitionId==='a-change-of-fate'){
    let bank;for(let r=a.acquiredRound+1;r<=s.round;r++)if(b5Entry(s,r)>=60){bank=r;break;}
    const win=s.roundResults.find(r=>r.round>=a.acquiredRound&&r.roundKind==='pvp'&&r.result==='playerWin')?.round;
@@ -197,7 +203,7 @@ function validateBattleCounters(before,after,f,base){
  const dummies=team.filter(u=>['training-dummy','forming-dummy','tower-dummy'].includes(u.definitionId));
  const deaths=[...(combat.openingDeaths??[])].sort((a,b)=>a.eventSeq-b.eventSeq);
  if(dummies.length)assert.deepEqual(f.batch3Dummy,{deaths:dummies.filter(u=>!u.alive).map(u=>u.id).sort(),first:deaths.find(d=>team.some(u=>u.id===d.unitId))?.unitId??null,gold:dummies.reduce((n,u)=>n+(u.batch2?.dummyGold??0),0)},'independent dummy counters');
- const survivors=team.filter(u=>u.alive&&!u.itemSummon&&!u.anomalySummon&&!['trainer-golem','g23-sion','g23-forge','g23-barrel','v20-silco-minion'].includes(u.definitionId));
+ const survivors=team.filter(u=>u.alive&&!u.itemSummon&&!u.anomalySummon&&!['b5-voidling','trainer-golem','g23-sion','g23-forge','g23-barrel','v20-silco-minion'].includes(u.definitionId));
  const damage=f.roundKind==='pvp'&&combat.result==='playerWin'?[2,5,8,10,12][base.ROUNDS[before.round-1].stage-2]+survivors.length:0;
  assert.equal(f.batch3DamageDealt??0,damage,'independent damage counter');
  const opening=new Set(before.combatInputBasis?.inputs.preparation.units.filter(u=>u.location.kind==='board').map(u=>u.id)??before.preparation.units.filter(u=>u.location.kind==='board').map(u=>u.id));

@@ -1,3 +1,4 @@
+import { castB5Voidcaller, spawnB5Voidlings, type B5VoidlingBirth } from './augment-pool-batch5-g4';
 import { sampleAugmentDeath } from './augment-death-samples';
 import { batch2Attack, batch2Incoming, batch2Kill, batch2Mechanic, batch2ExecuteReward, batch2Bonus, batch2Tick, batch2Cast } from './augment-pool-batch2-combat';
 import { batch2Values } from './content/augment-pool-batch2';
@@ -188,6 +189,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const suspendBanished=()=>{for(let i=units.length-1;i>=0;i--)if(isAbsent(units[i],tick))units.splice(i,1);};
   if(hasBanish&&state.tick>0)suspendBanished();
   let rngState = state.rngState ?? 0, rngDraws = state.rngDraws ?? 0, actionSeq = state.nextActionSeq ?? 0;
+  const voidcaller = state.voidcaller?.map(c=>({...c})) ?? [], voidlings: B5VoidlingBirth[] = [];
   let itemRandomStreams = state.itemRandomStreams;
   let itemGoldReceipts=state.itemGoldReceipts;
   const ctx: AbilityContext = { manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
@@ -369,6 +371,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         (ctx.castReceipts ??= []).push(receipt);
         // replay2: the receipt is finalized at the end of this tick (same-tick refunds, M8_RULES G08).
         events.splice(beforeCount, 0, { type: 'cast', tick, receipt });
+        castB5Voidcaller(ctx,unit,receipt.actualManaSpent,voidcaller,voidlings);
         v19DominatorCast(ctx,unit,receipt.actualManaSpent);
         castV20Teamups(ctx,unit,target,seq);
         batch2Cast(ctx,unit);
@@ -409,6 +412,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     }
   }
   planActions();
+  spawnB5Voidlings(ctx,state,voidlings);
   scheduleAnomalyAttacks(ctx,()=>actionSeq++);
   // Coin/Jackpot is earned by the cast before this tick's damage samples.
   if(hasD11Bank)for(const team of ['player','enemy'] as const){
@@ -802,5 +806,5 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const order=new Map(state.units.map((u,i)=>[u.id,i]));
     fullRoster.sort((a,b)=>(order.get(a.id)??state.units.length)-(order.get(b.id)??state.units.length));
   }
-  return stampCombatStep({ ...state,...trenchMembership, ...(anomalyRemoved.length?{removedUnitIds:[...trenchMembership.removedUnitIds??state.removedUnitIds??[],...anomalyRemoved]}:{}), ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
+  return stampCombatStep({ ...state,...trenchMembership, ...(voidcaller.length?{voidcaller}:{}), ...(anomalyRemoved.length?{removedUnitIds:[...trenchMembership.removedUnitIds??state.removedUnitIds??[],...anomalyRemoved]}:{}), ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }

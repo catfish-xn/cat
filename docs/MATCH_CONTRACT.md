@@ -1500,3 +1500,10 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 - `prepareCarouselParticipants(pool, states)` 从持有者的 `acquire` 历史核对提前放行资格并冻结 `CarouselParticipant.priorityChoiceId?: string`；缺少取得事实返回原 pool 和 `invalid-participants`。`createCarousel`、`validateCarousel` 按冻结席位计算并校验 `releaseAtMs`，`pickCarouselForSeat` 再核对对应 Match 的取得事实，不符返回原 pool、carousel、state、空事件和 `invalid-match`。不持有者沿用原有放行时间。
 - `tableScrapsPick(state, carousel): {choiceId:string;slot:number}|null` 在关闭的共享选秀规划一个剩余槽；它读取每次正常领取的历史，并由 `completeCarouselForSeat` 调用现有 `grantAdditionalCarouselPick(pool,carousel,match,seatId,slot,choiceId)` 原子授予单位和装备。`completeCarouselForSeat` 已由房间按固定席位顺序调用；非法历史或额外授予失败返回原状态及现有 `CarouselFailure`，不引入新网络原因。额外领取的 `carousel-picked` 与 `carouselGranted` 按顺序写入带连续序号的 match 事件；空槽不足和四次后无额外授予。
 - 在线单席恢复仍须独立服务器权威句柄；`restoreCarouselSeat`、`restoreSharedOrbSnapshot` 检查历史和状态。`restoreMatch`／`serializeMatch` 的离线边界仍不接受多人档，在线对象、JSON 及规范序列化文本由上述两联机入口恢复。
+
+
+## Batch 5 G4：B5-72／73（P，2026-10-27）
+
+内部赠物入口继续为 `batch1GiftPlan(state:MatchState):AugmentGift[]`、`drainBatch1Gifts(state,policy?):MatchState`，新增规则计划 `b5VoidSwarmGiftPlan(state:MatchState):AugmentGift[]`。B5-72取得时赠芮尔、莫甘娜各1名；在线沿已有有限共享卡池奖励法球，满席继续沿已有领取／held策略。B5-73取得时赠传送门，此后从取得当轮起每11个已结算PvP再赠1个；读取 `roundResults` 并由 `requireAugmentFacts` 认证每个 `pvp-roster`，不计PvE／选秀。阈值收据绑定原choiceId及第几次11战，原资源／赠物校验器重算应发结果。
+
+两张卡使用现有 `augment-history-v1`：voidcaller登记acquire，void-swarm登记pvp-roster；事实全部通过已有API记录，联机恢复须由 `Room.augmentHistoryAuthority(seatId)` 提供独立authority。没有新增网络命令、wire失败reason、第二套保存版本或服务器规则；源文件 `augment-pool-batch5-g4*.ts`。缺历史／缺PvP边界／无独立authority沿历史合同拒绝；赠物仍沿原失败枚举和失败原state／无事件／无资源及RNG消耗规则。候选：B5-72三节点、后两次按冻结先知成员过滤；B5-73仅2-1，保留原14.24禁用语义。数值证据和运行约定见S13_RULES_GAP的P-B5-72、P-B5-73。

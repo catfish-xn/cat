@@ -9,7 +9,7 @@ export const isG23Summon=(unit:{readonly definitionId:string})=>unit.definitionI
 /** Forge and the reserved barrel identity are skill bodies, never an army's last fighter. */
 export const isG23NonCombatant=(unit:{readonly definitionId:string})=>unit.definitionId==='g23-forge'||unit.definitionId==='g23-barrel'||unit.definitionId==='v20-silco-minion';
 /** 约定值: only surviving roster units add player damage; combat summons never add it. */
-export const countsG23SurvivorDamage=(unit:{readonly definitionId:string;readonly alive:boolean;readonly itemSummon?:unknown;readonly anomalySummon?:unknown})=>unit.alive&&unit.definitionId!=='trainer-golem'&&!unit.itemSummon&&!unit.anomalySummon&&!isG23Summon(unit)&&!isG23NonCombatant(unit);
+export const countsG23SurvivorDamage=(unit:{readonly definitionId:string;readonly alive:boolean;readonly itemSummon?:unknown;readonly anomalySummon?:unknown})=>unit.alive&&unit.definitionId!=='b5-voidling'&&unit.definitionId!=='trainer-golem'&&!unit.itemSummon&&!unit.anomalySummon&&!isG23Summon(unit)&&!isG23NonCombatant(unit);
 /** Placed forge id of a Jayce (one forge per Jayce; the forge's own definition is `g23-forge`). */
 export const g23ForgeId=(jayceId:string)=>jayceId+':g23-forge';
 /** Reserved combat-only identities never enter assets, the shop or the shared pool.

@@ -37,6 +37,8 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  /** B5-73 opening target lock; authenticated by the full combat replay. */
+  readonly voidSwarmTaunt?: string;
   readonly batch2?:import('./augment-pool-batch2-combat').Batch2CombatRuntime;
   /** New declarations whose one-time installation hooks run at the next tick. */
   pendingEquipmentSources?: readonly string[];
@@ -100,6 +102,7 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly voidcaller?: readonly import('./augment-pool-batch5-g4').B5VoidcallerCounter[];
   readonly openingDeaths?:readonly {readonly unitId:string;readonly eventSeq:number}[];
   /** Private authenticated installations; never included in display projections. */
   readonly equipmentReceipts?: readonly import('./battle-equipment').BattleEquipmentReceipt[];
