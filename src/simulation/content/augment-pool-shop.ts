@@ -1,3 +1,4 @@
+import { AUGMENT_BATCH5_H12 } from './augment-pool-batch5-h12';
 import { freezeContent } from './freeze';
 import type { ChoiceDefinition } from '../strategy-types';
 
@@ -78,23 +79,7 @@ export const AUGMENT_SHOP:Readonly<Record<string,ShopAugmentContent>>=freezeCont
   },
   "rule": "ticket"
  },
- "subscription-service": {
-  "apiName": "TFT_Augment_SubscriptionService",
-  "name": "订阅服务",
-  "tier": "prismatic",
-  "description": "现在，并且在每个阶段开始时，开启一个由4个独特4费弈子组成的商店，并获得6金币。",
-  "source": {
-   "patch": "14.24",
-   "archive": "augments-research-2026-10-23/data/augments-14.24.json",
-   "values": {
-    "ChampionTier": 4.0,
-    "GoldPerStage": 6.0
-   },
-   "description_en_us": "Now, and at the start of each Stage, open a Shop of 4 unique 4-cost champions and gain 6 gold."
-  },
-  "rule": "subscription",
-  "gold": "GoldPerStage"
- },
+ 'subscription-service': {...AUGMENT_BATCH5_H12['subscription-service'],rule:'subscription',gold:'GoldPerStage'},
  "starry-night": {
   "apiName": "TFT_Augment_StarryNight",
   "name": "星夜",

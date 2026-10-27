@@ -1,3 +1,4 @@
+import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
 import { carryRestoredAugmentTrace } from './augment-history';
 import { validateShopHistory } from './shop-history';
@@ -123,14 +124,14 @@ function totalExperience(level:number,xp:number):number {
   grantXp(level,xp,0); // Validate normalized values before using them as indices.
   return xp+Object.entries(XP_TO_NEXT_LEVEL).filter(([from])=>Number(from)<level).reduce((sum,[,amount])=>sum+amount,0);
 }
-function validPreparationExperience(before:number,level:number,xp:number,purchase:number=MATCH_RULES.xpPurchaseAmount):boolean {
-  const after=totalExperience(level,xp),cap=totalExperience(MATCH_RULES.maxLevel,0);
+function validPreparationExperience(before:number,level:number,xp:number,purchase:number=MATCH_RULES.xpPurchaseAmount,maxLevel:number=MATCH_RULES.maxLevel):boolean {
+  const after=totalExperience(level,xp),cap=totalExperience(maxLevel,0);
   return after>=before && (after===cap || (after-before)%purchase===0);
 }
 /** Experience on entering `round` and taking its augment, before any purchase; also fixes recorded acquisition levels
  * (offline purchases wait for the round's augment choice). */
 function preparationExperience(state:MatchState,after:number,round:number):number {
-  const before=Math.min(totalExperience(MATCH_RULES.maxLevel,0),after+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<round)).roundXp
+  const before=Math.min(totalExperience(augmentLevelCap(state.augments,round),0),after+readAugmentIncome(state.augments.filter(a=>a.acquiredRound<round)).roundXp
     +batch3EntryXp(state.augments,state.roundResults,round)+augmentAcquisitionXpAtRound(state.augments,round)
     +state.augments.filter(a=>a.acquiredRound===round).reduce((n,a)=>n+outcomeAcquisitionXp(state,a),0));
   const levels=acquisitionLevels(state);
@@ -184,7 +185,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
-  requireValue(state.level === MATCH_RULES.maxLevel ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
+  requireValue(state.level<=augmentLevelCap(state.augments) && (state.level === augmentLevelCap(state.augments) ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level]), 'current XP');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
@@ -284,11 +285,11 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
     requireValue(result.hpBefore === openingHpBeforeRound(state, result.roundId, i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     streak=batch5Streak(state,result.round,streak);
     requireValue(same(result.streakBefore, streak), 'history streak before');
-    requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,result.round),result.levelBefore,result.xpBefore,xpPurchaseAmount(state.augments,result.round)), 'history XP preparation chain');
+    requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,result.round),result.levelBefore,result.xpBefore,xpPurchaseAmount(state.augments,result.round),augmentLevelCap(state.augments,result.round)), 'history XP preparation chain');
     let expected = planCatalogRoundEconomy({ augments:state.augments.filter(a=>a.acquiredRound<=result.round), roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
-    expected=withBatch4B4xp({level:result.levelBefore,xp:result.xpBefore},expected,batch4B4xpRecordedExtra(state,result,expected.progression.xpRequested));
+    expected=withBatch4B4xp({level:result.levelBefore,xp:result.xpBefore,augments:state.augments.filter(a=>a.acquiredRound<=result.round)},expected,batch4B4xpRecordedExtra(state,result,expected.progression.xpRequested));
     requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === expected.progression.xpRequested, 'history XP');
     const progress=readG23Progress(state),save=progress?.economyReceipts.find(r=>r.kind==='mel-save'&&r.round===result.round);
     const rescued=!!save&&expected.hpAfter===0&&result.roundKind==='pvp';
@@ -312,7 +313,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
   requireValue(state.playerHp === (settled ? batch2HpAfterSettlement(state,state.round,state.roundResults.at(-1)!.hpAfter) : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
-  if (!settled) requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,state.round),state.level,state.xp,xpPurchaseAmount(state.augments,state.round)), 'current XP preparation chain');
+  if (!settled) requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,state.round),state.level,state.xp,xpPurchaseAmount(state.augments,state.round),augmentLevelCap(state.augments)), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   if(readItemSummonPositions(state))validateItemSummonPositions(readItemSummonPositions(state),state.nextItemSerial,state.nextUnitSerial);
   validateMatchEquipment(state);

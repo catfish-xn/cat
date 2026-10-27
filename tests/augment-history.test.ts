@@ -1,3 +1,5 @@
+import { LOOT_REPLAY_DIGEST } from '../src/simulation/loot-freeze';
+import { CONTENT_DIGEST } from '../src/simulation/content';
 import * as historyApi from '../src/simulation/augment-history';
 import { validateAugmentHistory } from '../src/simulation/augment-history-restore';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -35,9 +37,12 @@ beforeAll(() => {
   advanced = accepted(nextRound(s, s.round));
 });
 
-it('keeps four no-owner saves byte-identical to HEAD ee2b019c (independent baseline SHA-256)', () => {
+// Preserve the archived byte assertions; only explicit content/loot identity strings (including nested freezes) differ.
+const baselineIdentities=(text:string)=>text.replaceAll(CONTENT_DIGEST,'fnv1a32-utf16:db662e0b').replaceAll(LOOT_REPLAY_DIGEST,'fnv1a32-utf16:18c876b2');
+
+it('keeps four no-owner saves byte-identical to HEAD ee2b019c apart from the explicit content identity (independent baseline SHA-256)', () => {
   let s = createMatch(42); const hashes: string[] = [];
-  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text); hashes.push(createHash('sha256').update(text).digest('hex')); };
+  const check = () => { const text = serializeMatch(s); expect(text).not.toContain('augmentHistory'); expect(serializeMatch(restoreMatch(text))).toBe(text); expect(s.contentDigest).toBe(CONTENT_DIGEST); hashes.push(createHash('sha256').update(baselineIdentities(text)).digest('hex')); };
   check(); const u = s.preparation.units.find(u => u.team === 'player')!;
   s = accepted(deployMatchUnit(s, u.id, {kind:'bench',slot:0})); check();
   s = resolveM5Choices(accepted(startMatchCombat(s))); check();
@@ -384,7 +389,7 @@ it('keeps a real battle ledger and terminal save byte-identical to the independe
   while(s.phase==='combat'){const step=stepMatch(s);s=step.state;events.push(...step.events);}
   expect(s.combat!.tick).toBe(164);expect(events).toHaveLength(113);
   expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324');
-  expect(createHash('sha256').update(serializeMatch(s)).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
+  expect(createHash('sha256').update(baselineIdentities(serializeMatch(s))).digest('hex')).toBe('99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431');
 });
 it('records a Forge death, a real Jayce revival and its second death with equipment at each death',()=>{
   const combatUnit=(id:string,definitionId:string,team:'player'|'enemy',col:number,row:number,patch:Partial<CombatUnit>={})=>unit(id,team,col,row,{

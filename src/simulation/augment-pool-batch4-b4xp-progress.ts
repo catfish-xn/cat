@@ -1,3 +1,4 @@
+import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
 import { AUGMENT_BATCH4_B4XP } from './content/augment-pool-batch4-b4xp';
 import type { MatchState, RoundResult } from './match-types';
 import type { RoundEconomyPlan } from './economy';
@@ -17,8 +18,8 @@ export function batch4B4xpSettlementXp(state:MatchState):number {
  },0);
 }
 /** One atomic settlement progression, including ordinary XP and the augment entitlement (cap handled once). */
-export function withBatch4B4xp(state:Pick<MatchState,'level'|'xp'>,plan:RoundEconomyPlan,extra:number):RoundEconomyPlan {
- return extra?{...plan,progression:grantXp(state.level,state.xp,plan.progression.xpRequested+extra)}:plan;
+export function withBatch4B4xp(state:Pick<MatchState,'level'|'xp'>&Partial<Pick<MatchState,'augments'>>,plan:RoundEconomyPlan,extra:number):RoundEconomyPlan {
+ return extra?{...plan,progression:grantXp(state.level,state.xp,plan.progression.xpRequested+extra,augmentLevelCap(state.augments??[]))}:plan;
 }
 /** Structural preflight only: an archived settlement may request exactly a subset of its owned condition rewards.
  * Full restore must replay battles to establish which conditions actually held; the candidate is never its own proof.

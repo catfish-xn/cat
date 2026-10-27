@@ -23,13 +23,14 @@ export function preflightAugmentHistory(s: MatchState): void {
     round = f.round; prefix = f.resourcePrefix;
     if ('roster' in f) historyCheck(f.roster && Array.isArray(f.roster.units) && f.roster.units.length <= LIMIT.units && Array.isArray(f.roster.items) && f.roster.items.length <= 1024, 'roster bounds');
     if ('seats' in f) historyCheck(Array.isArray(f.seats) && f.seats.length > 0 && f.seats.length <= LIMIT.seats && new Set(f.seats.map((x: HistorySeat) => x.seatId)).size === f.seats.length && f.seats.every((x:HistorySeat) => Array.isArray(x.units) && x.units.length <= LIMIT.units && Array.isArray(x.items) && x.items.length <= 1024 && Number.isSafeInteger(x.rank) && x.rank >= 1 && x.rank <= LIMIT.seats), 'table bounds');
+    if (f.kind === 'offer-level') historyCheck(f.choiceId==='round:4-2:augment' && Number.isSafeInteger(f.generation) && f.generation>=0 && f.generation<=3 && Number.isSafeInteger(f.level) && f.level>=1 && f.level<=10 && Number.isSafeInteger(f.xp) && f.xp>=0, 'offer level');
     if (f.kind === 'deaths') {
       historyCheck(Array.isArray(f.deaths) && f.deaths.length <= LIMIT.deaths, 'death bounds');
       if (!s.multiplayer || getMultiplayerRoundByOrdinal(f.round).kind === 'pve')
         historyCheck(f.deaths.every((d: AugmentDeath) => d && (d.team === 'player' || d.team === 'enemy') && d.ownerSeatId === (d.team === 'player' ? h.seatId : null)), 'death owner');
     }
   }
-  historyCheck(h.facts[0]?.kind === 'acquire', 'acquisition boundary');
+  historyCheck(h.facts[0]?.kind === 'acquire' || h.facts[0]?.kind === 'offer-level', 'acquisition boundary');
   historyCheck(h.proof && (h.proof.kind === 'solo' || h.proof.kind === 'server'), 'proof kind');
   // Bound arbitrary nested payloads before canonicalization/replay, including an adversarial object entry.
   let bytes = 0, nodes = 0; const stack: [unknown,number][] = [[h,0]];

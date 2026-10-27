@@ -1,3 +1,5 @@
+import { requireAugmentFacts } from './augment-history';
+import { augmentLevelCap } from './augment-pool-batch5-h12-progression';
 import { planCombatStreak } from './economy';
 import type { MatchState } from './match-types';
 import type { OwnedAugment } from './strategy-types';
@@ -27,7 +29,7 @@ export function batch5XpPurchases(state:MatchState,round:number):number {
 function validateXpPurchases(state:MatchState):void {
  const fail=()=>{throw new RangeError('Invalid batch5 XP authority');};
  const checkedXp=(level:number,xp:number)=>{grantXp(level,xp,0);return totalXp(level,xp);};
- const cap=totalXp(MATCH_RULES.maxLevel,0),owner=state.augments.find(a=>a.definitionId==='dual-purpose');
+ let cap=totalXp(MATCH_RULES.maxLevel,0);const owner=state.augments.find(a=>a.definitionId==='dual-purpose');
  const facts=state.resourceProvenance.entries.filter(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased');
  if(!owner){if(facts.length)fail();return;}
  const markers=facts.filter(e=>e.kind==='dual-purpose-selected');
@@ -36,6 +38,12 @@ function validateXpPurchases(state:MatchState):void {
  if(marker.choiceId!==owner.choiceId||getMultiplayerRoundById(marker.roundId).ordinal!==owner.acquiredRound
    ||!state.scheduleReceipts.some(r=>r.kind==='augment'&&r.eventId===owner.choiceId&&r.definitionId==='dual-purpose'&&r.round===owner.acquiredRound))fail();
  const purchases=facts.filter(e=>e.kind==='dual-purpose-xp-purchased');
+ const capOwner=state.augments.find(a=>a.definitionId==='max-cap');
+ const capAcquisition=capOwner?requireAugmentFacts(state,'acquire',capOwner.acquiredRound).find(f=>f.choiceId===capOwner.choiceId):undefined;
+ if(capOwner&&!capAcquisition)fail();
+ // Online XP purchases while the 4-2 offer is still pending precede the cap's acquisition.
+ const purchaseCap=(round:number,sequence:number)=>augmentLevelCap(state.augments,
+  capAcquisition?.round===round&&sequence<capAcquisition.resourcePrefix?round-1:round);
  let generation=0,sequence=marker.sequence,lastRound=owner.acquiredRound;
  for(const e of facts){
   const keys=e.kind==='dual-purpose-selected'?['kind','sequence','roundId','choiceId','level','xp']:['kind','sequence','roundId','levelBefore','xpBefore','generation','settled'];
@@ -46,7 +54,7 @@ function validateXpPurchases(state:MatchState):void {
   const round=getMultiplayerRoundById(e.roundId).ordinal;
   if(e.sequence<=sequence||round<lastRound||round>state.round||typeof e.settled!=='boolean'
     ||!Number.isSafeInteger(e.generation)||e.generation<=generation||e.generation>state.shop.generation)fail();
-  if(checkedXp(e.levelBefore,e.xpBefore)>=cap)fail();
+  if(checkedXp(e.levelBefore,e.xpBefore)>=totalXp(purchaseCap(round,e.sequence),0))fail();
   generation=e.generation;sequence=e.sequence;lastRound=round;
  }
  const acquisitionXp=(round:number)=>augmentAcquisitionXpAtRound(state.augments,round)
@@ -58,17 +66,20 @@ function validateXpPurchases(state:MatchState):void {
  // Online purchases before the pick are legal, but do not trigger an augment not yet owned.
  if(cursor<baseline||(cursor!==cap&&(cursor-baseline)%xpPurchaseAmount(state.augments,owner.acquiredRound)!==0))fail();
  for(let round=owner.acquiredRound;round<=state.round;round++){
+  cap=totalXp(augmentLevelCap(state.augments,round-1),0);cursor=Math.min(cursor,cap);
   const result=state.roundResults.find(r=>r.round===round),rows=purchases.filter(e=>getMultiplayerRoundById(e.roundId).ordinal===round);
   let acquired=0;
   if(round>owner.acquiredRound){cursor=Math.min(cap,cursor+entryXp(round));acquired=acquisitionXp(round);}
   const before=rows.filter(e=>!e.settled),after=rows.filter(e=>e.settled),amount=xpPurchaseAmount(state.augments,round);
   if(after.length&&(!result||before.some(e=>e.sequence>after[0].sequence)))fail();
   for(const e of before){
+   cap=totalXp(purchaseCap(round,e.sequence),0);cursor=Math.min(cursor,cap);
    const xp=checkedXp(e.levelBefore,e.xpBefore);
    // A later augment's acquisition XP can arrive between online commands while its choice stays open.
    if(xp<cursor||xp>Math.min(cap,cursor+acquired))fail();
    acquired-=xp-cursor;cursor=Math.min(cap,xp+amount);
   }
+  cap=totalXp(augmentLevelCap(state.augments,round),0);
   cursor=Math.min(cap,cursor+acquired);
   if(result){
    if(cursor!==checkedXp(result.levelBefore,result.xpBefore))fail();
@@ -78,7 +89,7 @@ function validateXpPurchases(state:MatchState):void {
    // Ordinary XP is rule-derived; conditional bench/item XP must match an owned reward subset.
    // Offline restoration additionally replays those historical conditions through the existing batch4 path.
    batch4B4xpRecordedExtra(state,result,economy.progression.xpRequested);
-   const settled=grantXp(result.levelBefore,result.xpBefore,result.xpRequested);
+   const settled=grantXp(result.levelBefore,result.xpBefore,result.xpRequested,augmentLevelCap(state.augments,round));
    if(settled.level!==result.levelAfter||settled.xp!==result.xpAfter||settled.xpApplied!==result.xpAwarded)fail();
    cursor=checkedXp(result.levelAfter,result.xpAfter);
    for(const e of after){if(checkedXp(e.levelBefore,e.xpBefore)!==cursor)fail();cursor=Math.min(cap,cursor+amount);}

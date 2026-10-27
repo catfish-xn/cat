@@ -1,6 +1,9 @@
+import { augmentLevelCap, grantMatchXp, h12SelectionAllowed } from './augment-pool-batch5-h12-progression';
+import { recordAugmentOfferLevel } from './augment-history';
 import { initializeAugmentTrace, traceHistoryCommand, recordAugmentRoundEntry, recordAugmentAcquisition } from './augment-history';
 import { recordShopAcquisition, recordShopRound, recordShopXp, recordShopLock, recordShopBuy, recordShopAnomalyReroll } from './shop-history';
 import { soloShopOrb } from './shop-orbs';
+import { applyHeadStart, headStartShopDisabled, sellPreparedUnit } from './augment-pool-batch5-h12';
 import { applyReinfourcement, enterShopAugmentRound, recordShopReroll, shopOfferCost, drawSoloAugmentShop, planFiresale, stealFiresaleUnit, subscriptionAcquired, subscriptionStageStart } from './shop-augments';
 import { batch5Streak, drainBatch5Gold } from './augment-pool-batch5-progress';
 import { drainBatch4Gold } from './augment-pool-batch4-progress';
@@ -83,13 +86,11 @@ import { getCatalogRoundByOrdinal, getNextCatalogRound } from './round-selectors
 import { shareGeneratedJson } from './immutable-json';
 import { COMPONENT_IDS } from './content/g2-3-item-registry';
 import { generateShop } from './shop';
-import { grantXp } from './progression';
-import { getUnitSellPrice } from './unit-stats';
 import { P3_AUGMENT_ITEMS } from './content/s13-p3';
 import { planUnitAcquisition } from './unit-acquisition';
 import { createRoundEnemies } from './round-enemies';
 import { validateContent } from './validate-content';
-import { planCombine, planEquip, returnUnitItems } from './inventory';
+import { planCombine, planEquip } from './inventory';
 import { previewCombine, previewEquip } from './item-selectors';
 import { initializeStreams } from './m8/equipment';
 import { planTemporaryEquipment } from './temporary-equipment';
@@ -169,7 +170,7 @@ function affordableOffer(state: MatchState, gold = state.gold): boolean {
 /** v22: the candidate filter of an augment node opening now (trait snapshot only where the node is tailored). */
 function openingOfferFilter(state: MatchState, choiceId: string, blocked: readonly string[]): AugmentOfferFilter {
   const node = augmentNodeOf(choiceId);
-  return { node, fieldedTraits: isTraitTailoredNode(node) ? fieldedTraitSnapshot(state) : [], blocked: [...blocked].sort() };
+  return { node, level:state.level, fieldedTraits: isTraitTailoredNode(node) ? fieldedTraitSnapshot(state) : [], blocked: [...blocked].sort() };
 }
 /** `augmentBlocked`: ids other live seats block (externalAugmentBlocks), supplied by the all-seat round advance. */
 function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 'before', augmentBlocked: readonly string[] = []): { state: MatchState; events: MatchEvent[] } {
@@ -197,10 +198,12 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
       choiceId: event.id, eventId: event.id, generation: 0, offers, targetId: null, rerollCount: 0,
       ...(event.kind === 'augment' ? {augmentTier: resolveAugmentTier(state, event.id), rerollsRemaining: 3, rerolledSlots: [false, false, false]} : {}),
       returnPhase: timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' as const : 'preparation' as const };
+    const beforeOffer=state;
     state = { ...state, augmentOffers: event.kind === 'augment'
       ? [...state.augmentOffers, {choiceId:event.id,tier:resolveAugmentTier(state,event.id),rerollCount:0,rerolledIndices:[],fieldedTraits:filter!.fieldedTraits,externalBlocks:[filter!.blocked]}] : state.augmentOffers,
       // v22: a shown card is never offered to this seat again, chosen or not.
       removedAugmentIds: event.kind === 'augment' ? [...state.removedAugmentIds, ...offers] : state.removedAugmentIds, choiceRngState, phase: 'choice', combat: timing === 'after' ? state.combat : null, pendingChoice } as MatchState;
+    if(event.kind==='augment')state=recordAugmentOfferLevel(beforeOffer,state);
     events.push({ type: 'choiceOpened', choice: pendingChoice });
     return { state, events };
   }
@@ -317,6 +320,7 @@ function execute_autoDeployToCap(state: MatchState): MatchCommandResult {
   return { ok: true, state: next, events };
 }
 function execute_buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
+  if (headStartShopDisabled(state)) return fail(state, 'wrong-phase');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
@@ -351,14 +355,7 @@ function execute_sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Un
   if (!isSellableUnit(unit.definitionId)) return fail(state, 'unit-not-sellable');
   if(unit.definitionId==='rumble'&&state.pendingChoice?.kind==='armory'&&state.pendingChoice.choiceId.startsWith('g23:junker:'))return fail(state,'wrong-phase');
   if (state.multiplayer && (!isBoardEditablePhase(state) || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
-  const returned = returnUnitItems(state.items, unitId), removesBinding = state.anomalyBinding?.unitId === unitId;
-  const goldGranted = getUnitSellPrice(unit);
-  let sold: MatchState = { ...state, items: returned.items, anomalyBinding: removesBinding ? null : state.anomalyBinding,
-    persistentGrowth:state.persistentGrowth.filter(growth=>growth.unitId!==unitId),gold:state.gold+goldGranted,
-    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
-      {kind:'unit-sold',unitId,context:capacity?'settlement-capacity':'preparation',goldGranted}),
-    preparation:{...state.preparation,units:state.preparation.units.filter(unit=>unit.id!==unitId)} };
-  const events: MatchEvent[] = [...returned.events,...(removesBinding?[{type:'anomalyRemoved' as const,unitId}]:[])];
+  let { state: sold, events } = sellPreparedUnit(state, unit, capacity);
   if (capacity) { const granted = grantDirectLoot(sold,false,unitLootPolicy); sold=granted.state; events.push(...granted.events); }
   if(sold.phase!=='combat'&&!isCombatRosterLocked(sold)){const drained=drainG23Rewards(sold,unitLootPolicy,events);events.push(...mechanicGrantEvents(sold,drained));sold=drained;}
   return acceptEquipment(sold,events);
@@ -371,6 +368,7 @@ function execute_setShopLock(state: MatchState, locked: boolean, expectedGenerat
   return accept(recordShopLock(state,{ ...state, shop: { ...state.shop, locked } }));
 }
 function execute_rerollShop(state: MatchState): MatchCommandResult {
+  if (headStartShopDisabled(state)) return fail(state, 'wrong-phase');
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   const spent = spendFreeReroll(state), cost = spent.free ? 0 : MATCH_RULES.rerollCost;
   if (state.gold < cost) return fail(state, 'insufficient-gold');
@@ -386,11 +384,11 @@ function execute_buyXp(state: MatchState, unitLootPolicy?: UnitLootPolicy): Matc
 /** Shared-pool transactions supply their authoritative shop generator; direct shared Dual Purpose is refused. */
 export function buyXpWithShopRefresh(state:MatchState,unitLootPolicy?:UnitLootPolicy,refreshShop?:(leveled:MatchState)=>MatchState):MatchCommandResult {
   if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
-  if (state.level >= MATCH_RULES.maxLevel) return fail(state, 'max-level');
+  if (state.level >= augmentLevelCap(state.augments)) return fail(state, 'max-level');
   const cost = xpPurchaseCost(state.augments, state.round);
   if (state.gold < cost) return fail(state, 'insufficient-gold');
   if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - cost)) return fail(state, 'insufficient-gold');
-  const progression = grantXp(state.level, state.xp, xpPurchaseAmount(state.augments, state.round));
+  const progression = grantMatchXp(state, xpPurchaseAmount(state.augments, state.round));
   let leveled=applyLevelUpHealth(state, { ...state, gold: state.gold - cost, level: progression.level, xp: progression.xp });
   leveled=recordShopXp(state,leveled);
   const dual=state.augments.some(a=>a.definitionId==='dual-purpose');
@@ -607,7 +605,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   // Round-start XP is granted only after the previous round has settled; retries fail above.
   state = recordAugmentRoundEntry({...state, round});
   const entryLevel = state.level;
-  const progression = grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,round));
+  const progression = grantMatchXp(state,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,round));
   state={...state,level:progression.level,xp:progression.xp};
   state=recordShopRound({...state,round});
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
@@ -656,7 +654,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
     state = recordAugmentRoundEntry({...state, round: definition.ordinal});
     const entryLevel=state.level;
-    const progression=grantXp(state.level,state.xp,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
+    const progression=grantMatchXp(state,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};
     state=recordShopRound({...state,round:definition.ordinal});
     const refresh = state.shop.locked && !subscriptionStageStart(state,definition.ordinal) ? { shop: state.shop, rngState: state.rngState }
@@ -759,7 +757,7 @@ function execute_rerollAugment(state: MatchState, choiceId: string, generation: 
   const record = state.augmentOffers.find(candidate => candidate.choiceId === choiceId);
   if (!record) return fail(state, 'stale-choice');
   const blocked = [...augmentBlocked].sort();
-  const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers],openingEncounterId(state), {...recordedOfferFilter(record, 0), blocked});
+  const candidates = augmentCandidates(tier, state.augments, [...state.removedAugmentIds, ...choice.offers],openingEncounterId(state), {...recordedOfferFilter(record, 0, state), level:state.level, blocked});
   if (!candidates.length) return fail(state, 'augment-pool-too-small');
   const draw = drawAugmentCard(candidates, state.choiceRngState);
   const rerollCount = choice.rerollCount + 1;
@@ -767,10 +765,10 @@ function execute_rerollAugment(state: MatchState, choiceId: string, generation: 
   offers[optionIndex] = draw.definitionId; rerolledSlots[optionIndex] = true;
   const pendingChoice = {...choice, offers, augmentTier:tier, generation:generation+1,
     rerollCount, rerollsRemaining:3-rerollCount, rerolledSlots};
-  return accept({...state, choiceRngState:draw.choiceRngState, pendingChoice,
+  return accept(recordAugmentOfferLevel(state,{...state, choiceRngState:draw.choiceRngState, pendingChoice,
     removedAugmentIds:[...state.removedAugmentIds,draw.definitionId],
     augmentOffers:state.augmentOffers.map(entry => entry.choiceId === choiceId
-      ? {...entry,rerollCount,rerolledIndices:[...entry.rerolledIndices,optionIndex],externalBlocks:[...entry.externalBlocks,blocked]} : entry)},
+      ? {...entry,rerollCount,rerolledIndices:[...entry.rerolledIndices,optionIndex],externalBlocks:[...entry.externalBlocks,blocked]} : entry)}),
     [{type:'choiceOpened',choice:pendingChoice}]);
 }
 function execute_rerollAnomaly(state: MatchState, choiceId: string, generation: number): MatchCommandResult {
@@ -837,7 +835,7 @@ function execute_forfeitPendingChoice(state: MatchState, expectedRound: number,
     }
     const pending=current.pendingChoice!;
     if (!pending.offers.length) return multiplayerFail(state,'invalid-choice');
-    const selected=selectChoice(current,pending.choiceId,pending.generation,pending.offers[0],unitLootPolicy);
+    const selected=selectChoice(current,pending.choiceId,pending.generation,(pending.kind==='augment'?pending.offers.find(id=>h12SelectionAllowed(current,id)):pending.offers[0])!,unitLootPolicy);
     if (!selected.ok) return multiplayerFail(state,selected.reason);
     if (!Number.isSafeInteger(selected.state.gold)) return multiplayerFail(state,'invalid-choice');
     // Existing choice commands already stamp their events; append only the new timeout marker.
@@ -929,6 +927,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
   if (!getRoundSchedule(state.round).some(event=>event.id===choice.eventId && event.kind===choice.kind)) return fail(state,'invalid-choice');
   if(choice.kind==='anomaly'&&!eligibleD14Target(state.preparation.units.find(u=>u.id===choice.targetId),definitionId))return fail(state,'invalid-target');
   if (choice.kind === 'anomaly' && !state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
+  if(choice.kind==='augment'&&!h12SelectionAllowed(state,definitionId))return fail(state,'invalid-choice');
   const grantDefinition = choice.kind === 'component' ? definitionId : choice.kind === 'augment' ? P3_AUGMENT_ITEMS[definitionId] : undefined;
   const granted = grantDefinition ? planPermanentItemGrant(state, { definitionId: grantDefinition, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
   if (granted && !granted.ok) return fail(state, 'invalid-choice');
@@ -936,7 +935,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
   const acquisitionGold = choice.kind === 'augment' || choice.kind === 'anomaly' ? choiceAcquisitionGold((choice.kind === 'augment'?AUGMENT_DEFINITIONS:ANOMALY_DEFINITIONS)[definitionId], state.round) : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
-  const acquisitionProgress = grantXp(state.level,state.xp,choice.kind==='augment'?choiceAcquisitionXp(AUGMENT_DEFINITIONS[definitionId])+outcomeAcquisitionXp(state,{definitionId,choiceId,acquiredRound:state.round}):0);
+  const acquisitionProgress = grantMatchXp(state,choice.kind==='augment'?choiceAcquisitionXp(AUGMENT_DEFINITIONS[definitionId])+outcomeAcquisitionXp(state,{definitionId,choiceId,acquiredRound:state.round}):0);
   let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold, level:acquisitionProgress.level, xp:acquisitionProgress.xp,
     scheduleReceipts: [...state.scheduleReceipts, receipt],
     resourceProvenance:itemId?appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'item-acquired',itemId,source:{kind:'schedule',eventId:choice.eventId}}):state.resourceProvenance,
@@ -944,11 +943,13 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
     nextItemSerial: granted?.ok ? granted.state.nextItemSerial : state.nextItemSerial,
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
+  if(choice.kind==='augment'&&definitionId==='max-cap'&&selected.level===7)selected={...selected,xp:0};
   if (choice.kind === 'augment') selected = recordAugmentAcquisition(state, selected);
   selected = applyLevelUpHealth(state, selected);
   if (choice.kind === 'augment') selected = applyAcquisitionHealthLoss(selected, selected.augments.at(-1)!);
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
   if(choice.kind==='augment'){
+    if(definitionId==='head-start'){const sold=applyHeadStart(selected);selected=sold.state;events.push(...sold.events);}
     if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
     if(definitionId==='called-shot')selected={...selected,streak:batch5Streak(selected,selected.round,selected.streak)};
     selected=recordAcquisitionLevel(selected,selected.augments.at(-1)!);

@@ -1484,3 +1484,34 @@ LootPayload 新增 {kind:'forge',definitionId:'TFT_ArmoryKeyCompleted'|'TFT_Armo
 缺节统一拒绝：`Invalid augment history: missing augment-history-v1; history-dependent augment saves cannot be authenticated`；缺联机权威对象为 `missing independent server authority`，其它错误使用同一前缀。无自动迁移。`requireAugmentFacts(state,kind,round)` 没有记录即抛错；带完整 tick 边界的 `deaths:[]` 才代表零死亡。
 
 后续强化只调用领域内部的 `recordAugmentGrowth`/`readAugmentGrowth`、`recordAugmentPlayerHealth`、`readPreviousAugmentBattle`、`requireAugmentFacts`、`advanceAugmentPreparationTime`、`appendAugmentFact` 或 `grantAdditionalCarouselPick`。这些接口不向客户端开放，不自行决定受益人/数值/随机选择。普通选秀仍一席一次；附加授予要求正常领取已完成、独占剩余槽、明确持有来源，ID 为 `<carouselId>:<seatId>:extra:<1..8>`，按现有保留/领取/held/返池流程守恒。失败沿用 CarouselFailure、返回原状态。具体函数签名及成功/失败语义以设计文档接口表和导出 TypeScript 类型为准。
+
+## 2026-10-27 Batch 5 H12（P-B5-80/84/86）
+
+`head-start`（白银，仅 2-1）：选择事务先通过 `requireAugmentFacts(state,'acquire',acquiredRound)` 读取冻结阵容，按普通出售的价格、装备归还、异常解绑、永久成长删除和 `unit-sold` 账本批量出售，再发四份随机二星一费。沿用普通出售资格：不可出售的召唤物与锻造器不冒充英雄出售。随机按既有礼物子流有放回；联机使用原有待领取奖励球和共享池守恒。取得轮及随后两自然轮，`buyUnit` / `buySharedUnit` / `rerollShop` / `rerollSharedShop` 返回原 state（共享入口也返回原 pool）、`wrong-phase`，不消耗金币、刷新次数或 RNG；自然刷新、锁店、买经验、收入和非商店奖励继续。第四轮恢复商店资格，仍受该轮普通阶段操作限制。
+
+新增内部规则接口：`applyHeadStart(state: MatchState): {state: MatchState; events: MatchEvent[]}`（只在选择事务调用）；`headStartShopDisabled(state: MatchState): boolean`（缺取得历史抛 `Invalid augment history`）；`sellPreparedUnit(state: MatchState, unit: Unit, capacity?: boolean)` 是普通出售和批量出售共用的已验证事务，不是客户端命令。没有新增网络命令或失败枚举。服务器调用路径仍为 `Room.handle/apply → buySharedUnit/rerollSharedShop/runSharedMatchCommand → Match`，手选与超时共用 `selectChoice`；`src/server` 无需修改。
+
+`max-cap`（棱彩，仅 4-2）：当前等级≤7且未持有 Level Up 才提供，两者双向互斥；选择事务再次校验，旧报价已因买经验升至8级时返回原状态与 invalid-choice。取得支付60金币、授予1个 `TFT_Item_TacticiansScepter`（金锅锅冠冕，队伍+1）；七级时清除剩余经验，不降级、不退经验。`augmentLevelCap(augments:readonly OwnedAugment[],round?:number):number` 返回该历史轮的等级上限；`grantMatchXp(state:Pick<MatchState,'augments'|'level'|'xp'>,amount:number):ProgressionResult` 统一购买、选择奖励及入轮经验，普通/条件战后经验也传同一上限。七级买经验返回 max-level，失败无扣费、无刷新、无RNG。`h12OfferAllowed(id,owned,level?)` / `h12SelectionAllowed(state,id)` 为内部过滤，不是网络命令。报价等级证据及触发前购买认证见 AUGMENT_HISTORY_DESIGN.md 的 H12 节。
+
+`subscription-service`（棱彩，仅 2-1）：取得时立即支付6金币并用4个不同四费替换普通商店（第五槽空）；后续每阶段首轮再替换一次并支付6金币。按4金币正常购买，刷新按原有费用/免费额度离开特殊店，锁店开关保留但不能阻止下一阶段强刷；无足够不同库存时余槽为空，不扩充有限池、不免费发英雄。`subscriptionAcquired(before,after):boolean`、`subscriptionStageStart(state,round):boolean` 使用 acquire/round-entry 事实；`drawSubscriptionSlots(state,available,take):{slots,rngState,rngDraws}` 对每个非空槽使用一次现有LCG抽取并经 take 保留1张；`enterShopAugmentRound(state):MatchState` 在阶段入口复用唯一金币收据，重复正确收据返回原对象，冲突收据抛错。订阅源数据与规则迁入 H12 文件，`content/augment-pool-shop.ts` 引用同一内容行，`shop-augments.ts` 保留转导出以兼容原调用者。
+
+### H12 全部实际改动的接线点
+
+| 路径／函数 | 改动 |
+|---|---|
+| `content/augment-pool-batch5-h12.ts`；`augment-pool-batch5-h12.ts`、`-progression.ts`、`-subscription.ts` | 三项源数值、出售/禁店、上限/过滤、阶段订阅规则 |
+| `content/augments.ts`、`augment-policy.ts`、`augment-offer-rules.ts`、`augment-stage-bans.ts`、`rules-manifest.ts`、`validate-content.ts` | 定义/品级/API身份/阶段限制/规则身份/数量校验；`content/augment-pool-shop.ts` 引用订阅同一行 |
+| `augment-pool-grants.ts / batch1GiftPlan` | 四个二星一费与金锅锅冠冕接已有礼物、法球、唯一收据路线 |
+| `match.ts / execute_selectChoice, execute_sellUnit, execute_buyUnit, execute_rerollShop` | 选择前校验，冻结阵容出售及返装备，共用普通出售事务，禁店失败原样返回 |
+| `match.ts / buyXpWithShopRefresh, execute_nextRound, execute_advanceMultiplayerRound, execute_forfeitPendingChoice` | 统一上限；超时跳过八级失效的最大规模报价；原订阅取得/入轮接线复用 |
+| `match.ts / enterScheduledEvents, execute_rerollAugment`；`augment-offers.ts / opening/filter/view/history` | 实时等级过滤、记录每次报价等级、恢复逐次重建 |
+| `progression.ts / grantXp`；`economy.ts / planRoundEconomy`；`augment-pool-batch4-b4xp-progress.ts / withBatch4B4xp` | 参数化等级上限，普通与条件结算XP一起封顶 |
+| `augment-pool-batch5-progress.ts / validateXpPurchases` | 双重目的购买序列和结算恢复按取得前后上限认证，历史通过 requireAugmentFacts 读取 |
+| `serialization-structure.ts / validPreparationExperience, preparationExperience, restoreMatchWithinCall`；`shop-history.ts / validateShopHistory` | 当前/历史XP、获得封顶及商店购买链同步校验 |
+| `shared-pool.ts / buySharedUnit, rerollSharedShop` | 联机禁买/禁手刷；既有 runSharedMatchCommand/drawSubscriptionShop/refreshBatch 复用迁入 H12 的订阅接口 |
+| `shop-augments.ts` | 订阅实现迁出并转导出，保留其它商店规则 |
+| `augment-history-types.ts`、`augment-history-owners.ts`、`augment-history.ts`、`augment-history-restore.ts` | H12持有者、offer-level、条件激活、预检及既有重演/独立权威认证 |
+| `src/server/`（无源码改动） | `room/room.ts / applySeatCommand, Room.handle/apply/applyTimeouts/onChoiceDeadline` 经原公共领域命令处理 choose/buy/reroll/buyXp/shopLock；入轮经 nextSharedRound；augmentHistoryAuthority 复用原接口。服务器不计算奖励，无新增命令/定时器 |
+| `tests/augment-stage-helpers.ts`；`tests/fixtures/m5/oracle.g2.cjs`、`augment-rewards-oracle.cjs` | 固定有界路线种子；独立候选/互斥/阶段/出售返金/礼物/上限XP校验 |
+| `tests/augment-pool-batch5-h12-*.test.ts`、`tests/server/h12-subscription.test.ts`；相关 shop/history 测试 | 真实命令、房间、池守恒、三入口恢复/篡改；旧固定种子夹具改合法重抽，保留断言与超时 |
+| `content/identity-constants.ts`、`scripts/tests/production-size.test.ts` | 最后用指定脚本同步完整内容摘要，历史epoch不动 |

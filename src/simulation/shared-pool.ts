@@ -1,3 +1,4 @@
+import { headStartShopDisabled } from './augment-pool-batch5-h12';
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
 import type { AugmentHistoryAuthority } from './augment-history';
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
@@ -208,7 +209,7 @@ export function generateSharedShop(pool:SharedPoolState,state:MatchState,expecte
 }
 export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(_draft,policy)=>{
-    requirePool(canOperateMatch(state),'wrong-phase');
+    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     requirePool(Number.isInteger(slot)&&slot>=0&&slot<MATCH_RULES.shopSize,'invalid-slot');
     requirePool(!('empty' in state.shop.slots[slot] && state.shop.slots[slot].empty),'empty-slot');
@@ -217,7 +218,7 @@ export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,
 }
 export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(draft,_policy,events)=>{
-    requirePool(canOperateMatch(state),'wrong-phase');
+    requirePool(canOperateMatch(state)&&!headStartShopDisabled(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     const spent=spendFreeReroll(state),cost=spent.free?0:MATCH_RULES.rerollCost;
     requirePool(state.gold>=cost,'insufficient-gold');
