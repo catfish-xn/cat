@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Room, ROOM_TIMING_DEFAULTS } from '../../src/server/room/room';
+import { recordRoomPublication } from '../../src/server/room/augment-history';
 import { ManualClock } from '../../src/server/room/clock';
 import { CAROUSEL_RULES_BINDING } from '../../src/server/room/carousel';
 import { toSeatPrivateView } from '../../src/server/room/projection';
@@ -15,6 +16,7 @@ import { needsOpponentHp } from '../../src/simulation/augment-settlement-gold';
 import { choiceTimeoutOption } from '../../src/simulation/seat-mechanics/choices';
 import { augmentNeedsHistory } from '../../src/simulation/augment-history-owners';
 import { tombRaiderOpportunities, TOMB_RAIDER_SOURCE } from '../../src/simulation/augment-pool-batch5-r1';
+import { decideBotAction } from '../../src/simulation/bot';
 import { canonicalContent } from '../../src/simulation/content';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/g2-3-item-registry';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
@@ -144,6 +146,11 @@ describe.each([{ id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2, caro
     expect(owner, JSON.stringify(room.state.seats.map(s => ({ seat: s.seatId, choice: s.match.pendingChoice })))).toBeDefined();
     if (!owner) throw new Error(`no ${id} room offer`); ownerId = owner.seatId;
     const c = owner.match.pendingChoice!;
+    // Bot legality dry-runs selectChoice before the room attaches the acquisition table.
+    const preview: MatchState = { ...owner.match, pendingChoice: { ...c, offers: [id, ...c.offers.filter(offer => offer !== id)] } };
+    expect(decideBotAction(preview, { difficulty: 'basic', stepsTaken: 0, maxSteps: 8,
+      self: { seatId: owner.seatId, hp: preview.playerHp, round: preview.round } }, 1).action)
+      .toMatchObject({ type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: id });
     expect(room.handle(ownerId, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: id })).toMatchObject({ ok: true });
     answer();
     victims = room.state.seats.filter(s => s.seatId !== ownerId).sort((a, b) => b.index - a.index).slice(0, 4);
@@ -186,6 +193,19 @@ describe.each([{ id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2, caro
     if (frozen.kind === 'table') expect(frozen.seats.find(s => s.seatId === victims[1].seatId)?.items.some(i => i.location.kind === 'unit')).toBe(true);
   });
 
+  it('restores the open room choice and continues with the same grant', () => {
+    const live = mine().match, choice = live.pendingChoice!;
+    expect(choice.payload?.source).toBe(TOMB_RAIDER_SOURCE);
+    expect(tombRaiderOpportunities(live, live.augments.find(a => a.definitionId === id)!.choiceId).some(o => o.candidates.length === 0)).toBe(true);
+    const restored = restoreSharedOrbSnapshot(room.state.pool, canonicalContent(live), room.augmentHistoryAuthority(ownerId));
+    const command = { type: 'choose' as const, choiceId: choice.choiceId, generation: choice.generation, definitionId: choice.offers[0] };
+    const fromLive = runSharedMatchCommand(room.state.pool, live, command);
+    const fromRestored = runSharedMatchCommand(room.state.pool, restored, command);
+    expect(fromLive.ok).toBe(true);
+    expect(fromRestored).toEqual(fromLive);
+    expect(mine().match.pendingChoice?.choiceId).toBe(choice.choiceId);
+  });
+
   it('authenticates the open room choice and rejects history or candidate tampering', () => {
     const state = mine().match, authority = room.augmentHistoryAuthority(ownerId);
     for (const form of ['object', 'json', 'canonical']) {
@@ -199,6 +219,18 @@ describe.each([{ id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2, caro
         expect(() => restoreSharedOrbSnapshot(room.state.pool, form === 'object' ? bad : form === 'json' ? JSON.stringify(bad) : canonicalContent(bad), authority)).toThrow();
       }
     }
+  });
+
+  it('rejects a multiplayer restore after the acquisition table is removed', () => {
+    const state = mine().match;
+    expect(state.augmentHistory?.facts.some(f => f.kind === 'table' && f.stage === 'acquire')).toBe(true);
+    const cloned = structuredClone(state);
+    const kept = cloned.augmentHistory!.facts.filter(f => !(f.kind === 'table' && f.stage === 'acquire'));
+    expect(kept).toHaveLength(cloned.augmentHistory!.facts.length - 1);
+    const bad: MatchState = { ...cloned, augmentHistory: { ...cloned.augmentHistory!, facts: kept.map((fact, sequence) => ({ ...fact, sequence })) } };
+    const authority = captureAugmentHistoryAuthority(bad);
+    for (const input of [bad, JSON.stringify(bad), canonicalContent(bad)])
+      expect(() => restoreSharedOrbSnapshot(room.state.pool, input, authority)).toThrow('Invalid tomb raider acquisition table');
   });
 
   it('chooses every nonempty opportunity through Room and grants each exactly once', () => {
@@ -302,6 +334,108 @@ describe.each([{ id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2, caro
     const bad: any = structuredClone(state);
     bad.seatMechanics.receipts.find((r: any) => r.source === TOMB_RAIDER_SOURCE).optionId = 'TFT4_Item_OrnnInfinityForce';
     for (const input of [bad, JSON.stringify(bad), canonicalContent(bad)]) expect(() => restoreCarouselSeat(carousel, input, authority)).toThrow();
+    expect(room.state.fault).toBeNull();
+  });
+});
+
+describe('tomb raider bot seat grants one receipt after one elimination', () => {
+  const clock = new ManualClock(), resolver = new RankedEliminationResolver();
+  const room = new Room(Array.from({ length: 8 }, (_, index) => ({ seatId: `s${index}`, name: `机器人${index}`, kind: 'bot' as const })),
+    { ...ROOM_TIMING_DEFAULTS, ...TIMINGS, seed: 1, roomId: 'tomb-bot-room', clock, resolver, pvpMode: 'placeholder' });
+  let ownerId = '';
+  const mine = () => room.state.seats.find(s => s.seatId === ownerId)!;
+  const components = ['sword', 'vest', 'belt', 'rod', 'cloak', 'bow', 'gloves', 'tear'];
+  beforeAll(() => room.start());
+  afterAll(() => room.dispose());
+  function claim() {
+    if (room.state.phase !== 'preparation') return;
+    for (const seat of room.state.seats) {
+      const current = room.state.seats.find(s => s.seatId === seat.seatId)!;
+      if (!current.alive || current.match.phase !== 'preparation') continue;
+      expect(room.claimBotOrbs(current.seatId, current.controlEpoch), current.seatId).toMatchObject({ ok: true });
+    }
+  }
+  function answer() {
+    for (const seat of room.state.seats) for (let n = 0; n < 16; n++) {
+      const current = room.state.seats.find(s => s.seatId === seat.seatId)!;
+      const c = current.match.pendingChoice;
+      if (!c) break;
+      const option = c.kind === 'augment'
+        ? c.offers.find(offer => !augmentNeedsHistory(offer) && !['dummify', 'golemify'].includes(offer)) ?? c.offers[0]
+        : choiceTimeoutOption(c)!;
+      expect(room.handleBot(current.seatId, current.controlEpoch, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: option })).toMatchObject({ ok: true });
+    }
+  }
+  function reach(round: string) {
+    for (let fired = 0; fired < 5000; fired++) {
+      claim();
+      if (room.state.roundId === round && ['preparation', 'choice', 'carousel'].includes(room.state.phase)) return;
+      if (room.state.fault || room.state.phase === 'ended') break;
+      if (room.state.phase === 'preparation') answer();
+      if (!clock.runNext()) break;
+    }
+    throw new Error(`did not reach ${round}: ${room.state.roundId}/${room.state.phase}, ${JSON.stringify(room.state.fault)}`);
+  }
+  for (const round of ['1-3', '1-4', '2-1', '2-2', '2-3', '2-4', '2-5', '2-6', '2-7',
+    '3-1', '3-2', '3-3', '3-4', '3-5', '3-6', '3-7', '4-1', '4-2']) it(`reaches ${round} through the bot room`, () => {
+    reach(round); expect(room.state.fault).toBeNull();
+  });
+
+  it('selects the tomb choice once after one elimination and keeps a single receipt', () => {
+    for (const seat of room.state.seats) {
+      if (room.state.seats.some(s => s.match.pendingChoice?.offers.includes('tomb-raider-1'))) break;
+      for (let slot = 0; slot < 3; slot++) {
+        const current = room.state.seats.find(s => s.seatId === seat.seatId)!;
+        const c = current.match.pendingChoice!;
+        expect(room.handleBot(current.seatId, current.controlEpoch, { type: 'rerollAugment', choiceId: c.choiceId, generation: c.generation, optionIndex: slot })).toMatchObject({ ok: true });
+        if (room.state.seats.some(s => s.match.pendingChoice?.offers.includes('tomb-raider-1'))) break;
+      }
+    }
+    const owner = room.state.seats.find(s => s.match.pendingChoice?.offers.includes('tomb-raider-1'));
+    expect(owner).toBeDefined();
+    if (!owner) throw new Error('no tomb-raider-1 bot offer');
+    ownerId = owner.seatId;
+    const offered = owner.match.pendingChoice!;
+    expect(room.handleBot(ownerId, owner.controlEpoch, { type: 'choose', choiceId: offered.choiceId, generation: offered.generation, definitionId: 'tomb-raider-1' })).toMatchObject({ ok: true });
+    answer();
+    expect(mine().match.augmentHistory?.facts.some(f => f.kind === 'table' && f.stage === 'acquire' && f.seats.length === 8)).toBe(true);
+    const victim = room.state.seats.find(s => s.seatId !== ownerId && s.match.items.filter(i => i.location.kind === 'inventory' && components.includes(i.definitionId)).length >= 2);
+    expect(victim).toBeDefined();
+    if (!victim) throw new Error('no equipped elimination candidate');
+    const seat = () => room.state.seats.find(s => s.seatId === victim.seatId)!;
+    const held = seat().match.items.filter(i => i.location.kind === 'inventory' && components.includes(i.definitionId));
+    const previousIds = new Set(seat().match.items.map(i => i.id));
+    expect(room.handleBot(victim.seatId, seat().controlEpoch, { type: 'combine', a: held[0].id, b: held[1].id })).toMatchObject({ ok: true });
+    const completed = seat().match.items.filter(i => !previousIds.has(i.id) && i.location.kind === 'inventory' && ITEM_DEFINITIONS[i.definitionId].kind === 'completed');
+    expect(completed.length).toBeGreaterThan(0);
+    const unit = seat().match.preparation.units.find(u => u.team === 'player' && !UNIT_DEFINITIONS[u.definitionId].summon
+      && UNIT_DEFINITIONS[u.definitionId].unitKind !== 'neutral')!;
+    expect(room.handleBot(victim.seatId, seat().controlEpoch, { type: 'equip', itemId: completed[0].id, unitId: unit.id, slot: 0 })).toMatchObject({ ok: true });
+    const holder = room as unknown as { current: RoomState };
+    holder.current = { ...holder.current, seats: holder.current.seats.map(s => s.seatId === victim.seatId
+      ? { ...s, hp: 1, match: { ...s.match, playerHp: 1 }, seatRevision: s.seatRevision + 1 } : s) };
+    resolver.losers.add(victim.seatId);
+    runUntil(room, clock, s => s.roundId === '4-2' && s.phase === 'choice'
+      && mine().match.pendingChoice?.payload?.source === TOMB_RAIDER_SOURCE);
+    expect(room.state.fault).toBeNull();
+    const live = mine(), choice = live.match.pendingChoice!;
+    expect(choice.offers.length).toBeGreaterThan(0);
+    const decision = decideBotAction(live.match, { difficulty: 'basic', stepsTaken: 0, maxSteps: 8,
+      self: { seatId: ownerId, hp: live.match.playerHp, round: live.match.round } }, 1);
+    expect(decision.action).toMatchObject({ type: 'choose', choiceId: choice.choiceId, generation: choice.generation });
+    if (decision.action === 'done' || decision.action.type !== 'choose') throw new Error('bot did not select the tomb choice');
+    expect(choice.offers).toContain(decision.action.definitionId);
+    expect(room.handleBot(ownerId, live.controlEpoch, { type: 'choose', choiceId: decision.action.choiceId, generation: decision.action.generation, definitionId: decision.action.definitionId })).toMatchObject({ ok: true });
+    expect(room.state.fault).toBeNull();
+    const receipts = mine().match.seatMechanics?.receipts.filter(r => r.source === TOMB_RAIDER_SOURCE) ?? [];
+    expect(receipts).toHaveLength(1);
+    expect(receipts[0]).toMatchObject({ optionId: decision.action.definitionId });
+    expect(mine().match.pendingChoice).toBeNull();
+    const before = room.state, committed = mine().match;
+    const facts = committed.augmentHistory!.facts.filter(f => !(f.kind === 'table' && f.stage === 'acquire'))
+      .map((fact, sequence) => ({ ...fact, sequence }));
+    const stripped = { ...mine(), match: { ...committed, augmentHistory: { ...committed.augmentHistory!, facts } } };
+    expect(() => recordRoomPublication(before, { ...before, seats: before.seats.map(s => s.seatId === ownerId ? stripped : s) })).toThrow('Invalid tomb raider acquisition table');
     expect(room.state.fault).toBeNull();
   });
 });
