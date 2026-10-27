@@ -1,5 +1,6 @@
 import { AUGMENT_BATCH5_S6C_API_NAMES } from './augment-pool-batch5-s6c';
 import { AUGMENT_BATCH5_S8B_API_NAMES } from './augment-pool-batch5-s8b';
+import { AUGMENT_BATCH5_S8C_API_NAMES } from './augment-pool-batch5-s8c';
 import { AUGMENT_SHOP_API_NAMES } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S8A_API_NAMES } from './augment-pool-batch5-s8a';
 import { AUGMENT_BATCH5_API_NAMES } from './augment-pool-batch5';
@@ -32,6 +33,7 @@ export const AUGMENT_POOL_API_NAMES: Readonly<Record<string, string>> = freezeCo
   ...AUGMENT_BATCH5_S6C_API_NAMES,
   ...AUGMENT_BATCH5_S8A_API_NAMES,
   ...AUGMENT_BATCH5_S8B_API_NAMES,
+  ...AUGMENT_BATCH5_S8C_API_NAMES,
   ...AUGMENT_BATCH4_B4XP_API_NAMES,
   ...AUGMENT_BATCH4_B4REROLL_API_NAMES,
   sisters:'TFT13_TeamupAugment_Sisters', mentorship:'TFT13_TeamupAugment_Mentorship', reunion:'TFT13_TeamupAugment_Reunion',

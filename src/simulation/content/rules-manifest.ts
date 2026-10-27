@@ -1,5 +1,6 @@
 import { AUGMENT_BATCH5_S6C } from './augment-pool-batch5-s6c';
 import { AUGMENT_BATCH5_S8B } from './augment-pool-batch5-s8b';
+import { AUGMENT_BATCH5_S8C } from './augment-pool-batch5-s8c';
 import { AUGMENT_SHOP } from './augment-pool-shop';
 import { AUGMENT_BATCH5_S8A } from './augment-pool-batch5-s8a';
 import { AUGMENT_BATCH5 } from './augment-pool-batch5';
@@ -46,6 +47,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch5S6c:{version:'augment-pool-batch5-s6c-v25',content:AUGMENT_BATCH5_S6C,convention:'P-B5-48-49-2026-10-27'},
   augmentPoolBatch5S8a:{version:'augment-pool-batch5-s8a-v1',content:AUGMENT_BATCH5_S8A,convention:'P-B5-59-2026-10-27',victim:'first-formal-shop-hero-death',grant:'next-natural-round'},
   augmentPoolBatch5S8b:{version:'augment-pool-batch5-s8b-v25',content:AUGMENT_BATCH5_S8B,convention:'P-B5-64-2026-10-27'},
+  augmentPoolBatch5S8c:{version:'augment-pool-batch5-s8c-v1',content:AUGMENT_BATCH5_S8C,convention:'P-B5-65-2026-10-27'},
   augmentPoolBatch5:{version:'augment-pool-batch5-v24',content:AUGMENT_BATCH5,convention:'P-B5-2026-10-25'},
   augmentPoolBatch4:{version:'augment-pool-batch4-levels-v23-candidate',content:AUGMENT_BATCH4,blocked:AUGMENT_BATCH4_BLOCKED,timing:'reached-thresholds-on-acquisition-later-levels-on-authoritative-transition',sampling:'existing-gift-stream-radiant-five-without-replacement',birthdayCost:'max-1-level-minus-4'},
   augmentPoolBatch4B4xp:{version:'augment-pool-batch4-b4xp-v23-candidate',content:AUGMENT_BATCH4_B4XP,timing:'pvp-end-before-settlement-rewards-and-deferred-upgrades',authority:'completed-battles-replay'},
