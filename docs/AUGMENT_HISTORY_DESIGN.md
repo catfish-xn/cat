@@ -263,3 +263,8 @@ B5-80 `head-start` 使用 `requireAugmentFacts(...,'acquire',...)` 的正式阵�
 ## B5-67 在线恢复接入（2026-10-27）
 
 炼金术士不读取跨回合事实，不登记为 history owner，不生成空历史节。其单席在线保存仍不能独立证明敌方阵容与毒伤轨迹，故规则内部 `augment-pool-batch5-r4-restore.ts / validateMadChemistOnlineSave(pool,state,authority?)` 从独立服务器 `pool.pending/rewards` 核对本席固定 2-1 奖励身份；即使候选组合删除强化、选择记录、奖励收据和法球，仍复用 `validateAugmentAuthority(state,authority,true)` 强制独立服务器完整检查点，并校验既有奖励计划。候选残留的本卡标记也要求认证；所有已提供句柄一律认证完整状态，不能因本卡或历史节缺失而跳过。选秀入口传入 `carousel.pool`，两个公开恢复入口签名不变。调用者继续使用 `Room.augmentHistoryAuthority(seatId)`；无 `src/server` 改动、无候选自签、无新持久格式。离线战斗的可选 `CombatUnit.madChemist` 则使用现有可信输入全量重演。新增测试覆盖真实八席选取/领取/部署/PvP、真实选秀恢复、对象和JSON往返、恢复后命令一致，以及句柄、组合删除、奖励、阵容、毒伤与回蓝篡改拒绝。
+## Batch 5 R6 接入（2026-10-27）
+
+`pandoras-bench` 登记 round-entry/positions，`recombobulator` 登记 acquire/positions。规则只经 `requireAugmentFacts` / `readAugmentFacts` 读取取得前阵容和自然轮入口，不复制另一份历史节；保持实例ID，已有成长API与资源合星血缘继续工作。`preflightAugmentHistory` 增加两卡变形来源及完整批次检查，涵盖共享法球、选秀和离线三个恢复入口；联机最终状态仍须匹配独立服务器authority。资源有序账本新增 unit-transformed 与 augment-transform-completed，后者覆盖空批次，不新增网络命令或封套版本。
+
+R6 验证：两卡22项专项测试及相关卡池、双边战斗、消耗品、强化历史／报价、身份／体积回归，共12文件182项通过；全部 `--maxWorkers=3`，未跑全套、未放宽断言或超时。类型检查及生产构建通过。content=`fnv1a32-utf16:d473c202`，loot=`fnv1a32-utf16:c50b81d2`；旧epoch未重录。具体调用签名与失败边界见 `MATCH_CONTRACT.md` 的 Batch 5 R6 节，逐卡结果见根目录 `-o`。

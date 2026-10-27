@@ -29,6 +29,7 @@ const initial={
  'artifactory':[U('TFT_ArmoryKeyOrnn'),C('magnetic-remover',2)],
  'salvage-bin-plus':[Q('completed')],
  'mad-chemist':[U('singed')],
+ 'recombobulator':[C('magnetic-remover',2)],
  'cluttered-mind':[R(1,4)],slammin:[Q('component')],'slammin-plus':[Q('component')],
  'two-much-value':[R(2,2)],
  'cooking-pot':[I('frying-pan')],
@@ -643,3 +644,28 @@ function validateTombRaiderTransition(before,after,command,events,base){
 }
 module.exports.tombRaiderPlan=tombRaiderPlan;
 module.exports.validateTombRaiderTransition=validateTombRaiderTransition;
+// B5-27/28: independent pre-transaction prediction, never read production transform receipts.
+// cost map comes from oracle.g2's hand-transcribed catalog, not the live content registry.
+function batch5Transforms(before, augmentId, stock, costs) {
+ const a=before.augments.find(x=>x.definitionId===augmentId), available={...stock};
+ const order=u=>u.location.kind==='board'?[0,u.location.cell.row,u.location.cell.col,u.id]:[1,u.location.slot,0,u.id];
+ const compare=(a,b)=>{const x=order(a),y=order(b);for(let i=0;i<4;i++){if(x[i]<y[i])return -1;if(x[i]>y[i])return 1;}return 0;};
+ const targets=before.preparation.units.filter(u=>u.team==='player'&&costs[u.definitionId]&&(augmentId==='pandoras-bench'?u.location.kind==='bench'&&u.location.slot>=before.preparation.benchSize-3:u.location.kind==='board'&&costs[u.definitionId]<=5)).sort(compare);
+ let rng=salt(before.seed,['augment-pool-batch5-r6',before.multiplayer.seatId,a.choiceId,before.round]);
+ let units=structuredClone(before.preparation.units);const exchanges=[];
+ for(const u of targets){
+  const copies=[1,3,9][u.starLevel-1],ids=Object.keys(costs).filter(id=>costs[id]===(augmentId==='pandoras-bench'?costs[u.definitionId]:Math.min(5,costs[u.definitionId]+1))&&available[id]>=copies).sort();
+  if(!ids.length)continue;
+  rng=word(rng);const to=ids[pick(rng,ids.length)];available[u.definitionId]+=copies;available[to]-=copies;
+  units.find(x=>x.id===u.id).definitionId=to;exchanges.push({unitId:u.id,from:u.definitionId,to,starLevel:u.starLevel});
+ }
+ const upgrades=[];
+ for(const id of [...new Set(units.filter(u=>u.team==='player').map(u=>u.definitionId))].sort())for(const star of [1,2]){
+  for(;;){const group=units.filter(u=>u.team==='player'&&u.definitionId===id&&u.starLevel===star).sort(compare);if(group.length<3)break;
+   const [keep,...others]=group.slice(0,3),consumed=others.map(u=>u.id);keep.starLevel++;units=units.filter(u=>!consumed.includes(u.id));
+   upgrades.push({survivorId:keep.id,consumedIds:consumed.sort(),definitionId:id,fromStar:star,toStar:star+1});
+  }
+ }
+ return {units,available,exchanges,upgrades};
+}
+module.exports.batch5Transforms=batch5Transforms;

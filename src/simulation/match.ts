@@ -1,5 +1,6 @@
 import { r2AnomalyAllowed, grantPortableAnomaly } from './augment-pool-batch5-r2-anomaly';
 import { applyAngerIssues } from './augment-pool-batch5-r2';
+import { transformPandorasBench, transformRecombobulator } from './augment-pool-batch5-r6';
 import { grantCookingPotGrowth, noScoutLockedUnits } from './augment-pool-batch5-h3';
 import { drainPortfolioGold } from './augment-pool-batch5-h4';
 import { drainContestedGold } from './augment-pool-batch5-h6';
@@ -629,7 +630,7 @@ export function finishCarouselSupply(state:MatchState):MatchCommandResult {
   const settled=settleRound(state,null);
   return accept({...settled,phase:'settlement',combat:null},[{type:'roundSettled',round:state.round}]);
 }
-function execute_nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger, augmentBlocked: readonly string[] = []): MatchCommandResult {
+function execute_nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger, augmentBlocked: readonly string[] = [], transformStock?: Readonly<Record<string, number>>): MatchCommandResult {
   const initial = state;
   if (state.multiplayer?.status === 'eliminated') return fail(state,'wrong-phase');
   if (state.phase !== 'settlement') return fail(state, 'wrong-phase');
@@ -646,6 +647,9 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   state=pandoraRoundEntry(state,round,definition.roundId);
   // Round-start XP is granted only after the previous round has settled; retries fail above.
   state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round})));
+  const transformPlan = transformPandorasBench(state, transformStock);
+  const transformed = stampMatchEvents(transformPlan.state, transformPlan.events);
+  state = transformed.state;
   if(!state.multiplayer&&state.augments.some(a=>a.definitionId==='scoreboard-scrapper'))
     state=recordAugmentTable(state,'entry',[{...historyRoster(state),seatId:'solo',index:0,hp:state.playerHp,alive:true,rank:1,eliminatedRound:null}]);
   const entryLevel = state.level;
@@ -660,7 +664,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
   let prepared = growTrainerGolem(enterOpeningCrabs(carousel.state));
   const portfolio = drainPortfolioGold(prepared), portfolioEvents = stampMatchEvents(portfolio, mechanicGrantEvents(prepared,portfolio));
   prepared = portfolioEvents.state;
-  const openingEvents: MatchEvent[] = [...portfolioEvents.events];
+  const openingEvents: MatchEvent[] = [...transformed.events, ...portfolioEvents.events];
   const applied=applyOpeningRoundEntry(prepared);
   if(!applied.ok)return fail(initial,applied.reason);
   // Entry level-ups heal after the opening encounter's damage (P), never a player it eliminated.
@@ -679,7 +683,7 @@ function execute_nextRound(state: MatchState, expectedRound: number, layout?:Orb
 }
 
 /** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */
-function execute_advanceMultiplayerRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger, augmentBlocked: readonly string[] = []): MultiplayerCommandResult {
+function execute_advanceMultiplayerRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger, augmentBlocked: readonly string[] = [], transformStock?: Readonly<Record<string, number>>): MultiplayerCommandResult {
   const initial=state;
   if (!state.multiplayer) return multiplayerFail(state, 'multiplayer-required');
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state, 'seat-eliminated');
@@ -692,7 +696,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
   try {
     const current = getMultiplayerRoundByOrdinal(state.round);
     if (current.roundId !== state.roundDefinitionId || current.roundId !== state.m8.round.roundId) return multiplayerFail(state, 'stale-round');
-    if (state.round < FINAL_ROUND) return nextRound(state, expectedRound, layout, augmentBlocked);
+    if (state.round < FINAL_ROUND) return nextRound(state, expectedRound, layout, augmentBlocked, transformStock);
     state = payPreviousRoundIncome(state);
     const definition = getMultiplayerRoundByOrdinal(state.round + 1);
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
@@ -700,6 +704,9 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
         encounterId: null, contentStatus: 'not-pve', enemies: [] } };
     state=pandoraRoundEntry(state,definition.ordinal,definition.roundId);
     state = grantCookingPotGrowth(enterH13ItemRound(recordAugmentRoundEntry({...state, round: definition.ordinal})));
+    const transformPlan = transformPandorasBench(state, transformStock);
+    const transformed = stampMatchEvents(transformPlan.state, transformPlan.events);
+    state = transformed.state;
     const entryLevel=state.level;
     const progression=grantMatchXp(state,readAugmentIncome(state.augments).roundXp+batch3EntryXp(state.augments,state.roundResults,definition.ordinal));
     state={...state,level:progression.level,xp:progression.xp};
@@ -713,7 +720,7 @@ function execute_advanceMultiplayerRound(state: MatchState, expectedRound: numbe
     const entry=drainPortfolioGold(drainBatch3RoundEntry(applyLevelUpHealth({level:entryLevel},applied.state)));
     const gifted=entry.augments.some(a=>(a.definitionId==='a-change-of-fate'||a.definitionId==='replication'||a.definitionId==='pilfer'||a.definitionId==='hard-commit'))?drainP2Gifts(entry):entry;
     const drained=enterShopAugmentRound(gifted),accepted=acceptEquipment(drained,mechanicGrantEvents(applied.state,drained));
-    return accepted.ok?{...accepted,events:[...applied.events,...accepted.events]}:accepted;
+    return accepted.ok?{...accepted,events:[...transformed.events,...applied.events,...accepted.events]}:accepted;
   } catch { return multiplayerFail(initial, 'invalid-round'); }
 }
 
@@ -1005,6 +1012,7 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }, ...mechanicGrantEvents(beforeHistoryAcquisition,selected)];
   if(choice.kind==='augment'){
     if(definitionId==='head-start'){const sold=applyHeadStart(selected);selected=sold.state;events.push(...sold.events);}
+    if (definitionId === 'recombobulator') { const transformed = transformRecombobulator(selected, unitLootPolicy); selected = transformed.state; events.push(...transformed.events); }
     if(definitionId==='why-not-both')selected={...selected,resourceProvenance:appendResourceProvenance(selected.resourceProvenance,selected.roundDefinitionId,{kind:'form-swapper-selected',choiceId})};
     if(definitionId==='called-shot')selected={...selected,streak:batch5Streak(selected,selected.round,selected.streak)};
     selected=recordAcquisitionLevel(selected,selected.augments.at(-1)!);

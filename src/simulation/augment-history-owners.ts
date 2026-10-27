@@ -17,6 +17,8 @@ export const AUGMENT_HISTORY_OWNERS: Readonly<Record<string, readonly string[]>>
   'tomb-raider-2': ['table'],
   'another-anomaly': ['acquire', 'positions', 'anomaly-copy-kills'],
   'anger-issues': ['acquire', 'positions'],
+  'recombobulator': ['acquire', 'positions'],
+  'pandoras-bench': ['round-entry', 'positions'],
   'shop-glitch': ['preparation-time'],
   'two-much-value': ['acquire', 'combat-roster'],
   'over-encumbered': ['positions'],

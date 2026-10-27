@@ -1,3 +1,4 @@
+import { bindBatch5R6Stock } from './augment-pool-batch5-r6';
 import { validateOpeningEncounterContext, validateOpeningEncounterState } from './opening-encounter';
 import { d14OwnedUnits } from './d14-runtime';
 import {findMechanicReceipt} from './seat-mechanics/state';
@@ -185,6 +186,11 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
         const receipt:PoolRewardReceipt={...p,resolution:'held',gold:0};pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
       }
       pool.holdings.push({seatId,unitId:fact.unitId,definitionId,sources:sources??[source]});
+    } else if (fact.kind === 'unit-transformed') {
+      const held = pool.holdings.find(h => h.seatId === seatId && h.unitId === fact.unitId), copies = 3 ** (fact.starLevel - 1);
+      requirePool(held && held.definitionId === fact.from && held.sources.length === copies && pool.available[fact.to] >= copies, 'invalid-seat-state');
+      pool.available[fact.from] += copies; pool.available[fact.to] -= copies;
+      pool.holdings = pool.holdings.map(h => h === held ? { ...h, definitionId: fact.to } : h);
     } else if(fact.kind==='unit-upgraded'||fact.kind==='unit-upgraded-after-combat') {
       const e=fact.event;if(UNIT_DEFINITIONS[e.definitionId]?.summon)continue;const ids=[e.survivorId,...e.consumedIds];
       const parts=ids.map(id=>pool.holdings.find(h=>h.seatId===seatId&&h.unitId===id));
@@ -204,7 +210,7 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
   }
 }
 export function rewardPolicy(pool:PoolDraft,state:MatchState,events:SharedPoolEvent[]):UnitLootPolicy {
-  return (drop,capacitySold)=>{
+  return bindBatch5R6Stock((drop,capacitySold)=>{
     requirePool(drop.payload.kind==='unit'&&drop.payload.quantity===1,'invalid-loot');
     const seatId=state.sharedPool!.seatId,definitionId=drop.payload.definitionId;
     const starLevel=drop.payload.starLevel??1,copies=3**(starLevel-1);
@@ -223,5 +229,5 @@ export function rewardPolicy(pool:PoolDraft,state:MatchState,events:SharedPoolEv
     const gold=UNIT_DEFINITIONS[definitionId].cost,receipt:PoolRewardReceipt={...p,resolution:'gold',gold};
     pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
     return {kind:'gold',quantity:gold,resolution:'gold'};
-  };
+  }, pool.available);
 }

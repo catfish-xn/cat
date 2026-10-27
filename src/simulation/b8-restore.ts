@@ -166,6 +166,9 @@ export function validateHistoricalEquipment(previous: MatchState | null, next: M
           ? {...item,location:{kind:'inventory'}} : item);
         preparation = {...preparation,units:preparation.units.filter(unit => unit.id !== fact.unitId)};
         break;
+      case 'unit-transformed':
+        preparation = {...preparation, units:preparation.units.map(unit => unit.id === fact.unitId ? {...unit,definitionId:fact.to} : unit)};
+        break;
       case 'unit-removed':
         // Dummify/Golemify forming removals (they record definitionId) return the unit's items to the inventory like
         // a sale (drainBatch3Forming); a retired Support Mining dummy keeps its historical bindings.

@@ -93,3 +93,5 @@ export function starryChanceBps(level: number): number;
 export function starrySharedShop(state: MatchState, stock: Readonly<Record<string, number>>): {
   rngState: number; shop: MatchState['shop']; available: Record<string, number>;
 };
+
+export function batch5TransformPlan(before: MatchState, augmentId: string, stock: Readonly<Record<string,number>>): ReturnType<typeof import('./augment-rewards-oracle.cjs').batch5Transforms>;

@@ -43,6 +43,8 @@ export type ItemAcquisitionSource =
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
   | import('./augment-history-types').AugmentItemTransform
+  | { readonly kind: 'unit-transformed'; readonly choiceId: string; readonly unitId: string; readonly from: string; readonly to: string; readonly starLevel: StarLevel }
+  | { readonly kind: 'augment-transform-completed'; readonly choiceId: string }
   | {readonly kind:'dual-purpose-selected';readonly choiceId:string;readonly level:number;readonly xp:number}
   | {readonly kind:'dual-purpose-xp-purchased';readonly levelBefore:number;readonly xpBefore:number;readonly generation:number;readonly settled:boolean}
   | {readonly kind:'form-swapper-selected';readonly choiceId:string}
@@ -439,7 +441,19 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
           && commit.combatStartProvenancePrefixLength < index, 'mechanic reward combat prefix');
       }
     }
-    if(entry.kind==='dual-purpose-selected'){
+    if (entry.kind === 'unit-transformed' || entry.kind === 'augment-transform-completed') {
+      keys(entry, [...common, 'choiceId', ...(entry.kind === 'unit-transformed' ? ['unitId','from','to','starLevel'] : [])]);
+      const receipt = context.scheduleReceipts.find(r => r.eventId === entry.choiceId && r.kind === 'augment');
+      const recombobulator = receipt?.definitionId === 'recombobulator';
+      requireValue(receipt && (recombobulator ? receipt.round === round.ordinal : receipt.definitionId === 'pandoras-bench' && receipt.round < round.ordinal), 'transform owner/round');
+      requireValue(!entries.slice(0,index).some(e => e.kind === 'augment-transform-completed' && e.choiceId === entry.choiceId && e.roundId === entry.roundId), 'duplicate transform batch');
+      if (entry.kind === 'unit-transformed') {
+        const unit = units.get(entry.unitId);
+        requireValue(unit && !absent.has(entry.unitId) && unit.definitionId === entry.from && unit.starLevel === entry.starLevel
+          && SHOP_CATALOG.includes(entry.to) && (recombobulator ? UNIT_DEFINITIONS[entry.from].cost <= 5 && Math.min(5,UNIT_DEFINITIONS[entry.from].cost+1) === UNIT_DEFINITIONS[entry.to].cost : UNIT_DEFINITIONS[entry.from].cost === UNIT_DEFINITIONS[entry.to].cost), 'transform ownership/tier');
+        units.set(entry.unitId, { ...unit!, definitionId: entry.to });
+      }
+    } else if(entry.kind==='dual-purpose-selected'){
       keys(entry,[...common,'choiceId','level','xp']);integer(entry.level,1);integer(entry.xp);
       requireValue(context.scheduleReceipts.some(r=>r.eventId===entry.choiceId&&r.definitionId==='dual-purpose'&&r.round===round.ordinal),'dual purpose selection');
     } else if(entry.kind==='dual-purpose-xp-purchased'){

@@ -1,6 +1,7 @@
 import { AUGMENT_BATCH5_H12 } from './content/augment-pool-batch5-h12';
 import { validateTombRaider } from './augment-pool-batch5-r1';
 import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
+import { AUGMENT_BATCH5_R6 } from './content/augment-pool-batch5-r6';
 import { AUGMENT_BATCH5_H3 } from './content/augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
 import { AUGMENT_BATCH5_H6 } from './content/augment-pool-batch5-h6';
@@ -80,7 +81,7 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   validateMadChemistOnlineSave(pool, state, authority);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
-  if(state.augments.some(a=>AUGMENT_BATCH5_H12[a.definitionId]||AUGMENT_BATCH5_H10[a.definitionId]||AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H8,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S3D,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8B,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8C,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId)||AUGMENT_BATCH5_S8A[a.definitionId as keyof typeof AUGMENT_BATCH5_S8A])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
+  if(state.augments.some(a=>AUGMENT_BATCH5_R6[a.definitionId]||AUGMENT_BATCH5_H12[a.definitionId]||AUGMENT_BATCH5_H10[a.definitionId]||AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H8,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H3,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H4,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_H6,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S3D,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8B,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S8C,a.definitionId)||Object.hasOwn(AUGMENT_BATCH5_S6C,a.definitionId)||AUGMENT_BATCH5_S8A[a.definitionId as keyof typeof AUGMENT_BATCH5_S8A])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
     Object.keys(AUGMENT_BATCH5_H12).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_H10).some(id=>r.receiptId.includes(id))||r.source==='augment-batch5-h8-forward-thinking'||r.source==='augment-batch5-h8-monetization'||Object.keys(AUGMENT_BATCH5_H8).some(id=>r.receiptId.includes(id))||r.receiptId.includes('hard-commit')||r.source===BATCH5_S6C_SOURCE||r.receiptId.startsWith(`["${BATCH5_S6C_SOURCE}",`)||Object.keys(AUGMENT_BATCH5_S8B).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S8A).some(id=>r.receiptId.includes(id))||Object.keys(AUGMENT_BATCH5_S3D).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5-h6'||r.receiptId.startsWith('["augment-pool-batch5-h6",')||r.source.startsWith('augment-pool-batch5-h4')||Object.keys(AUGMENT_BATCH5_H3).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   if(state.augments.some(a=>AUGMENT_BATCH5_S3A[a.definitionId])||state.seatMechanics?.receipts.some(r=>r.source===BATCH5_S3A_SOURCE||r.receiptId.includes(BATCH5_S3A_SOURCE)||Object.keys(AUGMENT_BATCH5_S3A).some(id=>r.receiptId.includes(id)))){
     validateBatch1Gifts(state);validateBatch5Inventory(state,batch5InventoryPlan(state));validateHistoricalEquipment(null,state);validateAnvils(state);
@@ -369,7 +370,7 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
       if(!advance) {requirePool(state.phase==='preparation'||state.phase==='choice','wrong-phase');return state;}
       const {sharedPool, ...unbound}=state;
       const blocked=externalAugmentBlocks(state.sharedPool!.seatId,[...opened,...states.slice(index)]);
-      const result=advanceMultiplayerRound(unbound,round,draft.orbLayout,blocked);if(!result.ok)throw new PoolError(result.reason);
+      const result=advanceMultiplayerRound(unbound,round,draft.orbLayout,blocked,draft.available);if(!result.ok)throw new PoolError(result.reason);
       reconcileHoldings(draft,state,result.state,poolEvents);
       events.push({seatId:state.sharedPool!.seatId,events:result.events});
       // Discard only the unobserved infinite-shop proposal; keep schedule/equipment/loot progression.

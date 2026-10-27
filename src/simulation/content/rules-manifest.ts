@@ -3,6 +3,7 @@ import { AUGMENT_BATCH5_R2, ANGER_RAGEBLADE, PORTABLE_ANOMALY_EXCLUDED } from '.
 import { AUGMENT_BATCH5_R3 } from './augment-pool-batch5-r3';
 import { AUGMENT_BATCH5_R4 } from './augment-pool-batch5-r4';
 import { AUGMENT_BATCH5_R5, BATCH5_R5_STARRY_POLICY } from './augment-pool-batch5-r5';
+import { AUGMENT_BATCH5_R6 } from './augment-pool-batch5-r6';
 import { AUGMENT_BATCH5_H1 } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3 } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4, AUGMENT_BATCH5_H4_SOURCE } from './augment-pool-batch5-h4';
@@ -80,6 +81,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
     copies:'combat-only-counted-members-nearest-empty-row-col-ties',cloning:'second-row-from-back-fourth-column-opening-hp-7000bps-mana-ceil-12000bps',
     mirrors:'front-row-fourth-column-nearest-left-tie-simultaneous-including-center-original-opening-hp-no-items-anomaly-growth-all-outgoing-damage-times-6000bps-once'},
   augmentPoolBatch5R4:{version:'augment-pool-batch5-r4-v25-r1',content:AUGMENT_BATCH5_R4,convention:'P-B5-67-2026-10-27',trail:'one-traversed-cell-present-enemies-contact-refresh-single-cleansable-dot-first-pulse-after-10-ticks-total-split-with-remainder',movement:'nearest-id-ties-pass-through-contact-free-landing-base-550-grid-5-ticks',mana:'per-tick-fixed-point-current-AS-cast-lock-no-catchup'},
+  augmentPoolBatch5R6:{version:'augment-pool-batch5-r6-v1',content:AUGMENT_BATCH5_R6,convention:'P-B5-27-28-R6-2026-10-27',selection:'sorted-eligible-definitions-uniform-before-return',copies:[1,3,9],merge:'after-batch'},
   augmentPoolBatch5H1:{version:'augment-pool-batch5-h1-v25',content:AUGMENT_BATCH5_H1,convention:'P-B5-07-and-10-2026-10-27'},
   augmentPoolBatch5H3:{version:'augment-pool-batch5-h3-v1',content:AUGMENT_BATCH5_H3,convention:'P-B5-2026-10-27'},
   augmentPoolBatch5H4:{version:'augment-pool-batch5-h4-v1',content:AUGMENT_BATCH5_H4,source:AUGMENT_BATCH5_H4_SOURCE,convention:'P-B5-2026-10-27'},

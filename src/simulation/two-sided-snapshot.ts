@@ -1,5 +1,6 @@
 import { portableAnomalyId } from './content/augment-pool-batch5-r2';
 import { r2CopyKills } from './augment-pool-batch5-r2-history';
+import { UNIT_DEFINITIONS } from './units';
 import { combatHistoryGrowth } from './augment-pool-batch5-h3';
 import { scoreboardCombatGrowth } from './augment-pool-batch5-h6-scoreboard';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
@@ -121,7 +122,8 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     const growthIds = new Set<string>();
     for (const growth of s.persistentGrowth) {
       record(growth); integer(growth.attackDamageBps, 1);
-      requireSnapshot(units.get(growth.unitId)?.definitionId === 'tristana' && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
+      requireSnapshot(units.has(growth.unitId) && !UNIT_DEFINITIONS[units.get(growth.unitId)!.definitionId]?.summon
+        && (units.get(growth.unitId)!.definitionId === 'tristana' || augmentIds.has('pandoras-bench') || augmentIds.has('recombobulator')) && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
       growthIds.add(growth.unitId);
     }
     if(s.augmentCopyKills){list(s.augmentCopyKills);const seen=new Set<string>();for(const g of s.augmentCopyKills){record(g);id(g.itemId);integer(g.count,1);requireSnapshot(s.items.some(i=>i.id===g.itemId)&&!seen.has(g.itemId)&&Object.keys(g).sort().join(',')==='count,itemId');seen.add(g.itemId);}requireSnapshot(s.augmentCopyKills.length>0);}

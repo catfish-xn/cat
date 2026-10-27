@@ -2,6 +2,7 @@ import { AUGMENT_BATCH5_R1_DEFINITIONS } from './augment-pool-batch5-r1';
 import { AUGMENT_BATCH5_R2_DEFINITIONS } from './augment-pool-batch5-r2';
 import { AUGMENT_BATCH5_R3_DEFINITIONS } from './augment-pool-batch5-r3';
 import { AUGMENT_BATCH5_R4_DEFINITIONS } from './augment-pool-batch5-r4';
+import { AUGMENT_BATCH5_R6_DEFINITIONS } from './augment-pool-batch5-r6';
 import { AUGMENT_BATCH5_H1_DEFINITIONS } from './augment-pool-batch5-h1';
 import { AUGMENT_BATCH5_H3_DEFINITIONS } from './augment-pool-batch5-h3';
 import { AUGMENT_BATCH5_H4_DEFINITIONS } from './augment-pool-batch5-h4';
@@ -54,6 +55,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
   ...AUGMENT_BATCH5_DEFINITIONS,
   ...AUGMENT_BATCH5_H1_DEFINITIONS,
   ...AUGMENT_BATCH5_H3_DEFINITIONS,
+  ...AUGMENT_BATCH5_R6_DEFINITIONS,
   ...AUGMENT_BATCH5_H4_DEFINITIONS,
   ...AUGMENT_BATCH5_H5_DEFINITIONS,
   ...AUGMENT_BATCH5_H6_DEFINITIONS,

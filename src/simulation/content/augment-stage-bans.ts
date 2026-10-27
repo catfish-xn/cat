@@ -16,6 +16,7 @@ export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = f
   TFT_Augment_OopsAllRageblades:['2-1'],
   // 14.24 tags; the user confirmed all three bans for P-B5-78 on 2026-10-27.
   TFT_Augment_HallOfMirrors: ['2-1','3-2','4-2'],
+  'TFT6_Augment_Recombobulator':['2-1'],
   "TFT_Augment_NoScoutNoPivot":["3-2", "4-2"],
   "TFT_Augment_CookingPot":["3-2", "4-2"],
   "TFT_Augment_Survivor":["3-2","4-2"],
