@@ -45,11 +45,9 @@ export class LivePvpTrack {
   private finished: TwoSidedBattleResult | null = null;
   /** Every frame of the live run so far, by tick (tick 0 is the shared opening). */
   private readonly frames: CombatReplayTick[];
-  private sampled = false;
-  private diverged: number | null = null;
+  private streamFrom: number | null = null;
 
-  /** `frozenReplay`: the frozen battle's replay from side A's view, the one the seats were pushed. */
-  constructor(readonly envelope: BattleInput, readonly frozen: TwoSidedBattleResult, private readonly frozenReplay: CombatReplay) {
+  constructor(readonly envelope: BattleInput) {
     const live = startLiveTask(envelope);
     this.task = live.task;
     this.readers = new Set(readBattleLiveGoldReaders(live.input).filter(reader => reader.readsLiveGold).map(reader => reader.seatId));
@@ -64,9 +62,9 @@ export class LivePvpTrack {
   get adopted(): TwoSidedBattleResult | null {
     return this.finished && this.finished.battle.bankSamples?.length ? this.finished : null;
   }
-  /** Side A's frames from the first one that differs from the frozen replay, as far as the live run got; null while none differs. */
+  /** Side A's authoritative frames after the first accepted bank change; null before a change is applied. */
   get liveFrames(): { readonly fromTick: number; readonly ticks: readonly CombatReplayTick[] } | null {
-    return this.diverged === null ? null : { fromTick: this.diverged, ticks: this.frames.slice(this.diverged) };
+    return this.streamFrom === null ? null : { fromTick: this.streamFrom, ticks: this.frames.slice(this.streamFrom) };
   }
 
   /** Queues `gold` for `seatId` at `tick` (never before the live run or an earlier sample). Ignored once the run finished. */
@@ -76,31 +74,28 @@ export class LivePvpTrack {
     this.queue.push({ tick: Math.max(tick, this.current, last), seatId, gold });
   }
 
-  /** Steps toward `target` (at most `maxTicks` steps), one rules tick and frame at a time. True when a new differing frame came. */
+  /** Steps toward `target` (at most `maxTicks` steps), one rules tick and frame at a time. True when a new live frame came. */
   advance(target: number, maxTicks: number): boolean {
-    const before = this.frames.length, wasDiverged = this.diverged !== null;
+    const before = this.frames.length;
     for (let steps = 0; !this.finished && this.current < target && steps < maxTicks; steps++) {
       this.applyDue();
       const step = guardedBattle(this.battleId, () => this.task.advanceTick());
       this.current++;
-      if (step.frame) this.record(step.frame);
+      if (step.frame) this.frames.push(step.frame);
       if (step.result) this.finished = twoSidedResult(this.envelope, step.result, this.task);
       else if (this.current >= this.envelope.maxSteps) throw new BattleResolveError(this.battleId, 'battle-validation:step-limit-exceeded');
     }
-    return this.diverged !== null && (!wasDiverged || this.frames.length > before);
-  }
-
-  private record(frame: CombatReplayTick): void {
-    this.frames.push(frame);
-    if (!this.sampled || this.diverged !== null) return;
-    const frozen = this.frozenReplay.ticks[frame.tick];
-    if (!frozen || JSON.stringify(frozen) !== JSON.stringify(frame)) this.diverged = frame.tick;
+    return this.streamFrom !== null && this.frames.length > before;
   }
 
   private applyDue(): void {
     while (this.queue.length && this.queue[0]!.tick <= this.current) {
       const next = this.queue.shift()!;
-      if (guardedBattle(this.battleId, () => this.task.sampleBankGold(next.seatId, next.gold))) this.sampled = true;
+      if (guardedBattle(this.battleId, () => this.task.sampleBankGold(next.seatId, next.gold))) {
+        // The frozen future used the old bank. Publish the live prefix immediately, even if rounding,
+        // shields or no further attacks make its public frames equal to the prediction.
+        this.streamFrom ??= this.current + 1;
+      }
     }
   }
 }

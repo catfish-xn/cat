@@ -1,6 +1,7 @@
 import { recordRoomPublication, recordRoomPvpRosters, recordRoomBattleFacts, recordRoomSettlementTable, tableFacts } from './augment-history';
 import { completeTraitTrackerCommand, captureAugmentHistoryAuthority, prepareAugmentAcquisition, needsAugmentPreparationClock, historyRoster, type PreviousAugmentBattle, type AugmentHistoryAuthority } from '../../server-entry';
 import { advanceSharedAugmentPreparationTime } from '../../simulation/shared-pool';
+import { nextShopGlitchPreparationTime } from '../../simulation/augment-pool-batch5-h1';
 /**
  * Eight-seat room state machine (pipeline B, work orders B1–B7). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
@@ -30,7 +31,6 @@ import {
 } from '../../server-entry';
 import { CombatStream, type CombatStreamView } from './combat-stream';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
-import { toCombatReplayFor } from './projection';
 import { readOpeningEncounterView } from '../../server-entry';
 import type { CombatReplayTick } from '../../server-entry';
 import { LIVE_BANK_LEAD_TICKS, LivePveTrack, LivePvpTrack, withOutcome, type LiveCatchUp } from './live-bank';
@@ -358,6 +358,7 @@ export class Room {
   private disposed = false;
   private augmentHistoryTimer: ClockHandle | null = null;
   private augmentPreparationStartedAt = 0;
+  private augmentPreparationObserved = false;
   private readonly previousAugmentBattles = new Map<string, PreviousAugmentBattle>();
   private extensions = 0;
   /** Clock time the current battle phase began (tick 0 of every battle's playback); null outside it. */
@@ -431,11 +432,11 @@ export class Room {
   /** One notification after every battle has sealed the boundary; never once per source or slice. */
   subscribeStreams(listener: () => void): () => void { this.streamListeners.add(listener); return () => { this.streamListeners.delete(listener); }; }
   /**
-   * D11 live bank: called when a two-sided battle of the current round got new live frames that differ from its frozen
-   * replay (read them with `liveFrames`). The finished live battle itself is published in `state.battles` as usual.
+   * D11 live bank: called when a two-sided battle got new authoritative frames after an accepted bank change
+   * (read them with `liveFrames`). The finished live battle itself is published in `state.battles` as usual.
    */
   subscribeLive(listener: (battleId: string) => void): () => void { this.liveListeners.add(listener); return () => { this.liveListeners.delete(listener); }; }
-  /** Side A's live frames of a battle from the first tick that differs from its frozen replay; null when there are none. */
+  /** Side A's live frames from the tick after the first accepted bank change; null before that change. */
   liveFrames(battleId: string): { readonly fromTick: number; readonly ticks: readonly CombatReplayTick[] } | null {
     return this.livePvp.get(battleId)?.liveFrames ?? null;
   }
@@ -1527,7 +1528,7 @@ export class Room {
       // A battle the playback already finished cannot change any more.
       if (!envelope || target > battle.battle.terminal.tick) return;
       try {
-        track = new LivePvpTrack(envelope, battle, toCombatReplayFor(this.current, battle.battle.a.seatId)!.replay);
+        track = new LivePvpTrack(envelope);
       } catch (error) { return this.failLive(battle.battleId, error); }
       // The rules' readers: no seat of this battle reads its gold (no avarice-incarnate on its board, a mirror's copy).
       if (!battle.participants.some(participant => track!.reads(participant))) { this.liveIgnored.add(battle.battleId); return; }
@@ -1980,10 +1981,21 @@ export class Room {
     }
     // A connection or command publication at the due instant must retain the queued sample.
     if (this.augmentHistoryTimer !== null) return;
-    // Keep sampling aligned with preparation entry: intervening publications cannot postpone a boundary.
-    const next = this.augmentPreparationStartedAt + (Math.floor((this.options.clock.now() - this.augmentPreparationStartedAt) / 50) + 1) * 50;
+    const elapsed = Math.floor(this.options.clock.now()) - this.augmentPreparationStartedAt;
+    // Retain the first preparation observation, then sample only while the domain has a future boundary.
+    // Polling every 50 ms even in PvP creates history/publication churn and starves bounded clock drivers.
+    const boundary = this.augmentPreparationObserved
+      ? Math.min(...this.current.seats.filter(s => s.alive && s.match.augmentHistory)
+        .map(s => nextShopGlitchPreparationTime(s.match, elapsed) ?? Infinity))
+      : elapsed + 50;
+    if (!Number.isFinite(boundary)) return;
+    // Keep the existing short sampling cadence and same-instant command ordering during active PvE time.
+    const nextElapsed = Math.min(boundary, (Math.floor(elapsed / 50) + 1) * 50);
+    const next = this.augmentPreparationStartedAt + nextElapsed;
+    // The phase deadline samples its own boundary before freezing, even when delivered late.
+    if (this.current.deadlineAt !== null && next >= this.current.deadlineAt) return;
     this.augmentHistoryTimer = this.options.clock.schedule(next, () => {
-      this.augmentHistoryTimer = null; this.advanceAugmentClock();
+      this.augmentHistoryTimer = null; this.augmentPreparationObserved = true; this.advanceAugmentClock();
       // A command may already have sampled this instant, leaving no changed state to publish.
       this.scheduleAugmentClock();
     });
@@ -2003,6 +2015,7 @@ export class Room {
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
     if (published.phase === 'preparation' && (this.current.phase !== 'preparation' || this.current.round !== published.round)) {
       this.augmentPreparationStartedAt = Math.floor(this.options.clock.now());
+      this.augmentPreparationObserved = false;
       if (this.augmentHistoryTimer !== null) { this.options.clock.cancel(this.augmentHistoryTimer); this.augmentHistoryTimer = null; }
     }
     this.current = published;
