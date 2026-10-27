@@ -1,8 +1,9 @@
 import { validateAugmentHistory, preflightAugmentHistory } from './augment-history-restore';
-import type { AugmentHistoryAuthority } from './augment-history';
+import { advanceAugmentPreparationTime, type AugmentHistoryAuthority } from './augment-history';
 import { recordShopDraw, recordShopRelease, validateShopHistory } from './shop-history';
 import type { ShopDrawCause } from './shop-history-types';
 import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
+import { AUGMENT_BATCH5_H1 } from './content/augment-pool-batch5-h1';
 import { buyXpWithShopRefresh } from './match';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
 import { validateBatch1Gifts } from './augment-pool-grants';
@@ -55,7 +56,7 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);
   // New level rewards use the same acquisition/gift/gold authority as offline restore. Also inspect receipt namespaces
   // so deleting the owner cannot turn a forged Batch4 receipt into an unvalidated generic mechanic receipt.
-  if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId])||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
+  if(state.augments.some(a=>AUGMENT_BATCH4[a.definitionId]||AUGMENT_BATCH5[a.definitionId]||Object.hasOwn(AUGMENT_BATCH5_H1,a.definitionId))||state.resourceProvenance.entries.some(e=>e.kind==='dual-purpose-selected'||e.kind==='dual-purpose-xp-purchased')||(state.seatMechanics?.receipts??[]).some(r=>
     r.source==='augment-pool-batch5'||Object.keys(AUGMENT_BATCH5).some(id=>r.receiptId.includes(id))||r.source==='augment-pool-batch4'||Object.keys(AUGMENT_BATCH4).some(id=>r.receiptId.includes(id))))validateBatch1Gifts(state);
   return state;
 }
@@ -225,6 +226,16 @@ export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedG
     const next=drawShop(draft,recordShopReroll(spent.state),events,'reroll',state);
     requirePool(next.shop.slots.some(s=>s.status==='available'),'pool-empty');
     return {ok:true,...stamp({...next,gold:state.gold-cost})};
+  });
+}
+/** Advance the preparation clock and replace each due shop within one pool transaction. */
+export function advanceSharedAugmentPreparationTime(pool:SharedPoolState,state:MatchState,elapsedMs:number):SharedPoolResult {
+  return transact(pool,state,(draft,_policy,events)=>{
+    const next=advanceAugmentPreparationTime(state,elapsedMs,current=>{
+      releaseShop(draft,current.sharedPool!.seatId);
+      return drawShop(draft,current,events,'shop-glitch',current);
+    });
+    return {ok:true,...stamp(next)};
   });
 }
 /** Compatibility entry: every XP purchase uses the same shared transaction. */

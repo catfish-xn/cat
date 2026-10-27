@@ -7,6 +7,9 @@ import { canonicalContent } from './content';
 import { UNIT_DEFINITIONS } from './units';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { augmentDeathsFromEvents, readAugmentCombatDeaths } from './augment-death-samples';
+import { shopGlitchRefreshes } from './augment-pool-batch5-h1';
+import { drawSoloAugmentShop, recordShopReroll } from './shop-augments';
+import { sixCostShopContext } from './six-cost-shop';
 
 export function historyCheck(ok: unknown, reason: string): asserts ok {
   if (!ok) throw new RangeError(`Invalid augment history: ${reason}`);
@@ -71,7 +74,7 @@ export function readAugmentGrowth(s: MatchState, unitId: string): AugmentGrowth 
 }
 
 // Preparation clocks are not combat ticks or wall time. The caller supplies a monotone, integer logical elapsed time.
-export function advanceAugmentPreparationTime(s: MatchState, elapsedMs: number): MatchState {
+export function advanceAugmentPreparationTime(s: MatchState, elapsedMs: number, sharedRefresh?: (state: MatchState) => MatchState): MatchState {
   return traceHistoryCommand('advanceAugmentPreparationTime', [s, elapsedMs], () => {
     historyCheck(s.phase === 'preparation' || s.phase === 'choice' && s.pendingChoice?.returnPhase === 'preparation', 'preparation clock phase');
     historyCheck(Number.isSafeInteger(elapsedMs) && elapsedMs >= 0 && elapsedMs <= LIMIT.preparationMs, 'preparation clock bounds');
@@ -79,7 +82,16 @@ export function advanceAugmentPreparationTime(s: MatchState, elapsedMs: number):
     const previous = last?.kind === 'preparation-time' ? last.elapsedMs : preparationElapsed(s);
     historyCheck(elapsedMs >= previous, 'preparation clock regression');
     if(elapsedMs===previous)return s;
-    const next = s.augmentHistory ? appendAugmentFact(s,{kind:'preparation-time',elapsedMs}) : {...s};
+    const refreshes = shopGlitchRefreshes(s, previous, elapsedMs);
+    historyCheck(!s.sharedPool || !refreshes || sharedRefresh, 'shared shop refresh requires pool transaction');
+    let next: MatchState = s;
+    for (let i = 0; i < refreshes; i++) {
+      const before: MatchState = next;
+      const rolled = recordShopReroll(before);
+      next = sharedRefresh ? sharedRefresh(rolled)
+        : drawSoloAugmentShop(rolled, sixCostShopContext(rolled), false, 'shop-glitch', before);
+    }
+    next = next.augmentHistory ? appendAugmentFact(next,{kind:'preparation-time',elapsedMs}) : {...next};
     preparationTimes.set(next,{round:s.round,elapsedMs}); return next;
   });
 }
@@ -130,7 +142,14 @@ export function recordAugmentTransition(before: MatchState, after: MatchState, e
   let next = recordAugmentAcquisition(before, after);
   if (!next.augmentHistory) return next;
   if (!same(historyRoster(before), historyRoster(after)) && !same(next.augmentHistory!.facts.filter(f => f.kind === 'positions').at(-1)?.roster ?? null, historyRoster(after))) next = appendAugmentFact(next, { kind: 'positions', roster: historyRoster(after) });
-  if (!before.combat && after.combat) next = appendAugmentFact(next, {kind:'combat-roster',battleId:after.combat.combatId!,roster:historyRoster(before)});
+  // Streaming PvE can finish at tick zero without exposing a CombatState until settlement.
+  // The frozen input basis, not a later editable board, is the authoritative opening roster.
+  if (!before.combatInputBasis && after.combatInputBasis) {
+    const basis = after.combatInputBasis.inputs;
+    const battleId = after.combat?.combatId ?? after.pendingCombatTerminal?.combatId ?? `round-${after.round}`;
+    if (!next.augmentHistory?.facts.some(f=>f.kind==='combat-roster'&&f.battleId===battleId))
+      next = appendAugmentFact(next, {kind:'combat-roster',battleId,roster:historyRoster({...after,preparation:basis.preparation,items:basis.items})});
+  }
   if (!before.combat && after.combat && after.m8.round.kind === 'pvp' && !after.multiplayer)
     next = recordAugmentPvpRoster(next, after.combat.combatId!, [{ ...historyRoster(before), seatId: 'solo', index: 0, hp: before.playerHp, alive: true, rank: 1, eliminatedRound: null }], null);
   const currentDeaths = augmentDeathsFromEvents(events);
