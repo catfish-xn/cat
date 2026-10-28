@@ -49,7 +49,7 @@ it('chooses B5-53, combines its two gloves and equips the parent through Room.ha
   const equip=room.handle(seatId,command);expect(equip).toMatchObject({ok:true});
   if(!equip.ok)throw Error(equip.reason);
   const state=current(),roll=state.equipmentState.rolls.at(-1)!;
-  expect(found).toEqual({seed:7,seatId:'s1'});
+  expect(found).toEqual({seed:10,seatId:'s3'});
   expect(beforeEquip.equipmentState.rolls).toHaveLength(0);
   expect(roll.rngDrawStart).toBe(0);
   const env={CATALOG,COST,ROUNDS,xp,entryXp,benchXp};

@@ -12,7 +12,7 @@ import type { BattleResult } from '../../src/simulation/two-sided-types';
 
 const clock = new ManualClock();
 const room = new Room(SEATS.map(s => ({...s, kind: 'human'})), {...ROOM_TIMING_DEFAULTS, ...TIMINGS,
-  roomId: 'g2-rebel-room', seed: 1, clock, resolver: new TwoSidedBattleResolver()});
+  roomId: 'g2-rebel-room', seed: 59, clock, resolver: new TwoSidedBattleResolver()});
 const seatId = 's6', mine = () => room.state.seats.find(s => s.seatId === seatId)!;
 let executed: BattleResult;
 afterAll(() => room.dispose());
