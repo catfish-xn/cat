@@ -4,7 +4,7 @@ import { UNIT_DEFINITIONS } from './units';
 import { grantMechanicGold } from './seat-mechanics/grants';
 import { AUGMENT_BATCH5_H6 } from './content/augment-pool-batch5-h6';
 
-const SOURCE = 'augment-pool-batch5-h6';
+export const SOURCE = 'augment-pool-batch5-h6';
 /** Count players once, at the actual frozen PvP boundary. */
 export function contestedAmount(state:MatchState, round:number):number {
  const rows=requireAugmentFacts(state,'pvp-roster',round);
@@ -25,9 +25,4 @@ export function drainContestedGold(state:MatchState):MatchState {
  if(state.seatMechanics?.receipts.some(r=>r.receiptId===receiptId))return state;
  const result=grantMechanicGold(state,{receiptId,source:SOURCE,amount});if(!result.ok)throw new RangeError(result.reason);return result.state;
 }
-export function validateContestedGold(state:MatchState):void {
- const owner=state.augments.find(a=>a.definitionId==='contested');
- const expected=owner?state.roundResults.filter(r=>r.roundKind==='pvp'&&r.round>=owner.acquiredRound).map(r=>({round:r.round,amount:contestedAmount(state,r.round),receiptId:JSON.stringify([SOURCE,owner.choiceId,r.round])})).filter(p=>p.amount>0):[];
- const actual=(state.seatMechanics?.receipts??[]).filter(r=>r.source===SOURCE||r.receiptId.startsWith(`["${SOURCE}",`));
- if(actual.length!==expected.length || actual.some(r=>!expected.some(p=>p.receiptId===r.receiptId&&p.round===r.round&&r.kind==='gold'&&r.amount===p.amount&&r.source===SOURCE)))throw new RangeError('Invalid contested gold authority');
-}
+

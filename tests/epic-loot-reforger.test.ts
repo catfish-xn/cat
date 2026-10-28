@@ -20,7 +20,8 @@ import {CONSUMABLE_DEFINITIONS,REFORGE_POOLS} from '../src/simulation/content/co
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 import {appendMechanicReceipt,grantMechanicItem,grantMechanicUnit} from '../src/simulation/seat-mechanics';
 import {G24_FORGE_POOLS} from '../src/simulation/content/g2-4-forges';
-import {epicForgeOffers,openEpicForge,EPIC_REWARD_NAMES,validateEpicForges,settleTerminalEpicForges} from '../src/simulation/epic-forges';
+import { epicForgeOffers, openEpicForge, EPIC_REWARD_NAMES, settleTerminalEpicForges } from '../src/simulation/epic-forges';
+import { validateAnvils as validateEpicForges } from '../src/simulation/restore-checks/anvils-check';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {publicAuthoredPreparation} from './fixtures/m8-neutral-public-route';
 import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';

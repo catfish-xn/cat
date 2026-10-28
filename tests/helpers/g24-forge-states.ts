@@ -1,7 +1,7 @@
 import {createMatch,forfeitPendingChoice,startMatchCombat,stepMatch,nextRound,claimOrDiscardLoot,claimOrb,buyXp,deployMatchUnit,sellUnit,type MatchState} from '../../src/simulation/match';
 import {readLootView} from '../../src/simulation/loot-view';
 import {isAnvil} from '../../src/simulation/content/anvils';
-import {validateAnvils} from '../../src/simulation/anvils';
+import { validateAnvils } from '../../src/simulation/restore-checks/anvils-check';
 import {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION} from '../../src/simulation/round-settlement';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
 import {validateG23Restoration} from '../../src/simulation/g2-3-restore';

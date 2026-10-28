@@ -79,7 +79,7 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
       expect(allPaths.has(chunk.fileName), 'solo functionality must remain reachable on demand').toBe(true);
     }
     const soloModules = soloChunks.flatMap(chunk => chunk.moduleIds).map(normalize);
-    for (const module of ['src/m6/application.ts', 'src/simulation/serialization-structure.ts', 'src/simulation/b8-restore.ts']) {
+    for (const module of ['src/m6/application.ts', 'src/simulation/serialization-structure.ts', 'src/simulation/b8-restore.ts', 'src/simulation/restore-checks/fold-provenance.ts', 'src/simulation/restore-checks/shop-history-check.ts']) {
       expect(soloModules.some(id => id.endsWith(`/${module}`)), module).toBe(true);
     }
     console.info('solo JS gzip-9:', soloChunks.reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0));
@@ -109,6 +109,7 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
       .filter(([tag]) => attribute(tag, 'rel')?.toLowerCase().split(/\s+/).includes('modulepreload'))
       .map(([tag]) => attribute(tag, 'href')).filter((href): href is string => href !== undefined);
     expect([...preloads, ...scriptEntries].filter(href => outputPath(href).startsWith('assets/solo/')), 'HTML must not preload solo code').toEqual([]);
+    expect([...preloads, ...scriptEntries].filter(href => outputPath(href).startsWith('assets/restore/')), 'HTML must not preload restore checks').toEqual([]);
     const threeDNames = new Set(threeDChunks.map(chunk => chunk.fileName));
     expect.soft(preloads.filter(href => threeDNames.has(outputPath(href))), 'HTML must not preload 3D chunks').toEqual([]);
 

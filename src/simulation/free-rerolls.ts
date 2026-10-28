@@ -5,7 +5,6 @@ import { batch5H9FreeRerolls } from './augment-pool-batch5-h9';
 import { shopAugmentFreeRerolls } from './shop-augments';
 import { batch5RerollsGranted } from './augment-pool-batch5-progress';
 import { batch4RerollsGranted } from './augment-pool-batch4-b4reroll-progress';
-import { getMultiplayerRoundById } from './multiplayer-round';
 import type { MatchState } from './match-types';
 import { AUGMENT_BATCH3, batch3Count } from './content/augment-pool-batch3';
 import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
@@ -15,7 +14,7 @@ import { appendResourceProvenance } from './resource-provenance';
 
 /** Owner-visible spend counter; credits themselves are always re-derived from owned augments and the round. */
 export const FREE_REROLL_KEY='free-shop-rerolls';
-interface FreeRerollRecord {readonly used:number}
+export interface FreeRerollRecord {readonly used:number}
 
 /** Credits accumulate and never expire. `perRound` counts every round ordinal from the acquisition round inclusive. */
 export function freeRerollsGranted(state:MatchState):number {
@@ -37,20 +36,7 @@ export function spendFreeReroll(state:MatchState):{readonly state:MatchState;rea
  const spent={...state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'free-reroll',generation:state.shop.generation})};
  return {state:writeSeatMechanic(spent,FREE_REROLL_KEY,{used:freeRerollsUsed(state)+1} satisfies FreeRerollRecord),free:true};
 }
-export function validateFreeRerolls(state:MatchState):void {
- const record=state.seatMechanics?.seat[FREE_REROLL_KEY];
- const spends=state.resourceProvenance.entries.filter(e=>e.kind==='free-reroll');
- if(spends.some(e=>(e as {generation:number}).generation>=state.shop.generation))throw new RangeError('Invalid free shop reroll ledger');
- for(const [index,spend] of spends.entries()){
-  const atRound={...state,round:getMultiplayerRoundById(spend.roundId).ordinal};
-  const credits=freeRerollsGranted(atRound)-batch5RerollsGranted(atRound)+batch5RerollsGranted({...atRound,resourceProvenance:{...state.resourceProvenance,entries:state.resourceProvenance.entries.slice(0,spend.sequence)}});
-  if(index+1>credits)throw new RangeError('Invalid historical free shop reroll credit');
- }
- if(record===undefined){if(spends.length)throw new RangeError('Invalid free shop reroll ledger');return;}
- const r=record as unknown as FreeRerollRecord;
- if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).join(',')!=='used'||!Number.isSafeInteger(r.used)||r.used<1||r.used>freeRerollsGranted(state)||r.used!==spends.length)
-  throw new RangeError('Invalid free shop reroll ledger');
-}
+
 
 /** Stable allocation order for auditing an individual spend. Credits are identified by owner and ordinal;
  * Ticket's next hit is unavailable until AFTER the triggering reroll. */

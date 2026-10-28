@@ -12,7 +12,8 @@ import { generateChoices } from '../src/simulation/choices';
 import { createMatch, buyXp, selectChoice, openAnvil, nextRound, startMatchCombat, sellUnit } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { acquisitionLevels, AUGMENT_ACQUISITION_LEVEL_KEY } from '../src/simulation/augment-xp';
-import { batch4RewardPlan, drainBatch4Gold, validateBatch4Gold, batch4LevelRound } from '../src/simulation/augment-pool-batch4-progress';
+import { batch4RewardPlan, drainBatch4Gold, batch4LevelRound } from '../src/simulation/augment-pool-batch4-progress';
+import { validateBatch4Gold } from '../src/simulation/restore-checks/batch4-gold-check';
 import { drainBatch1Gifts } from '../src/simulation/augment-pool-grants';
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
@@ -143,7 +144,7 @@ it('multiple levels in one transition produce every crossed reward and authentic
 it('online XP during the roster lock defers hero rewards; unlock queues one initial hero plus every crossed level once',async()=>{
  const { enableMultiplayerSettlement }=await import('../src/simulation/round-settlement');
  const { recordAcquisitionLevel }=await import('../src/simulation/augment-xp');
- const { validateBatch1Gifts }=await import('../src/simulation/augment-pool-grants');
+ const { validateBatch1Gifts }=await import('../src/simulation/restore-checks/batch1-gifts-check');
  const enabled=enableMultiplayerSettlement(createMatch(42),'A');if(!enabled.ok)throw new Error(enabled.reason);const base=enabled.state;
  const a={definitionId:'caretakers-ally',choiceId:'lock-ally',acquiredRound:base.round};
  let s=recordAcquisitionLevel({...base,augments:[a],gold:20,multiplayer:{...base.multiplayer!,combatRosterLocked:true}},a);
@@ -168,7 +169,7 @@ it('shared snapshot restore rejects an orphan Batch4 gold receipt even without i
 it('multiplayer settlement without optional battle facts grants a crossed level through the same reward ledger',async()=>{
  const {applyRoundSettlement,ROUND_SETTLEMENT_VERSION}=await import('../src/simulation/round-settlement');
  const {XP_TO_NEXT_LEVEL}=await import('../src/simulation/match-rules');
- const {validateBatch1Gifts}=await import('../src/simulation/augment-pool-grants');
+ const {validateBatch1Gifts}=await import('../src/simulation/restore-checks/batch1-gifts-check');
  const base=pick('caretakers-ally');
  const s:MatchState={...base,xp:XP_TO_NEXT_LEVEL[base.level]-2,multiplayer:{version:ROUND_SETTLEMENT_VERSION,seatId:'solo',status:'active',receipts:[],forfeitedChoices:[]}};
  const result=applyRoundSettlement(s,{version:ROUND_SETTLEMENT_VERSION,settlementId:`${s.round}:solo`,battleId:`battle:${s.round}`,seatId:'solo',round:s.round,roundId:s.roundDefinitionId,

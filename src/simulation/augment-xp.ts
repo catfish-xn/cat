@@ -11,9 +11,9 @@ import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
 
 /** Owner-visible acquisition levels, `{choiceId: level}`, of the augments that count later level-ups. */
 export const AUGMENT_ACQUISITION_LEVEL_KEY='augment-acquisition-levels';
-type AcquisitionLevels=Readonly<Record<string,number>>;
+export type AcquisitionLevels=Readonly<Record<string,number>>;
 const stageStart=(round:number)=>getMultiplayerRoundByOrdinal(round).subround===1;
-const countsLevels=(a:OwnedAugment)=>{const row=AUGMENT_BATCH3_XP[a.definitionId];return !!AUGMENT_BATCH4[a.definitionId]||row?.levelUpRerolls!==undefined||row?.levelUpHealth!==undefined||row?.acquisitionHealthLoss!==undefined;};
+export const countsLevels=(a:OwnedAugment)=>{const row=AUGMENT_BATCH3_XP[a.definitionId];return !!AUGMENT_BATCH4[a.definitionId]||row?.levelUpRerolls!==undefined||row?.levelUpHealth!==undefined||row?.acquisitionHealthLoss!==undefined;};
 
 /** XP granted on entering `round`, beside the passive round XP. Derived only from owned augments and settled history:
  * Epoch at each stage start after acquisition; Patient Study for the previous round's player combat if it was fought
@@ -102,13 +102,4 @@ export function preparationHealthLoss(state:MatchState,round:number):{readonly l
 export function levelAtExperience(total:number):number {
  return grantXp(1,0,total).level;
 }
-/** Shape and bounds; the offline chain additionally checks each value against its acquisition round entry. */
-export function validateAcquisitionLevels(state:MatchState):void {
- const raw=state.seatMechanics?.seat[AUGMENT_ACQUISITION_LEVEL_KEY],owners=state.augments.filter(countsLevels);
- if(raw===undefined&&!owners.length)return;
- const fail=()=>{throw new RangeError('Invalid augment acquisition levels');};
- if(!raw||typeof raw!=='object'||Array.isArray(raw))fail();
- const levels=raw as AcquisitionLevels;
- if(Object.keys(levels).sort().join('\n')!==owners.map(a=>a.choiceId).sort().join('\n'))fail();
- for(const a of owners){const level=levels[a.choiceId];if(!Number.isSafeInteger(level)||level<1||level>state.level)fail();}
-}
+

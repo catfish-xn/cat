@@ -4,7 +4,8 @@ import { previewCombine, previewEquip, readUnitEquipment } from '../src/simulati
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { MatchState } from '../src/simulation/match-types';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
-import { planTemporaryEquipment, validateMatchEquipment, TEMPORARY_EQUIPMENT_POOL } from '../src/simulation/temporary-equipment';
+import { planTemporaryEquipment, TEMPORARY_EQUIPMENT_POOL } from '../src/simulation/temporary-equipment';
+import { validateMatchEquipment } from '../src/simulation/restore-checks/match-equipment-check';
 import { generateRoundRolls, initializeStreams } from '../src/simulation/m8/equipment';
 import { accepted, emptyBoard, freeze } from './match-helpers';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';

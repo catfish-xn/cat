@@ -10,7 +10,8 @@ import { G23_RADIANT_MAPPING } from '../src/simulation/content/g2-3-special-item
 import { ITEM_DEFINITIONS } from '../src/simulation/content/g2-3-item-registry';
 import { grantMechanicItem } from '../src/simulation/seat-mechanics/grants';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import { validateConsumableState, previewUseConsumable } from '../src/simulation/consumables';
+import { previewUseConsumable } from '../src/simulation/consumables';
+import { validateConsumableState } from '../src/simulation/restore-checks/consumable-state-check';
 import { accepted, freeze, reachRound as originalReachRound, resolveM5Choices as originalResolveChoices, emptyBoard } from './match-helpers';
 
 // These empty-board opening controls do not exercise post-battle bench XP.

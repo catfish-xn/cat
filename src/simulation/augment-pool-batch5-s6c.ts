@@ -16,7 +16,7 @@ export function batch5S6cSettlementHealth(state:MatchState,round:number,hp:numbe
  const amount=owners(state,round).reduce((n,a)=>n+rows[a.definitionId].source.values.Heal,0);
  return hp>0&&amount>0?Math.min(maximumPlayerHp(state.augments,round),hp+amount):hp;
 }
-function goldPlan(state:MatchState) {
+export function goldPlan(state:MatchState) {
  return state.roundResults.flatMap(r=>owners(state,r.round).map(a=>({receiptId:JSON.stringify([BATCH5_S6C_SOURCE,a.choiceId,r.round]),
   source:BATCH5_S6C_SOURCE,round:r.round,roundId:r.roundId,amount:rows[a.definitionId].source.values.Gold})));
 }
@@ -28,8 +28,4 @@ export function drainBatch5S6cGold(initial:MatchState):MatchState {
  }
  return state;
 }
-export function validateBatch5S6cGold(state:MatchState):void {
- const expected=goldPlan(state),actual=(state.seatMechanics?.receipts??[]).filter(r=>r.source===BATCH5_S6C_SOURCE||r.receiptId.startsWith(`["${BATCH5_S6C_SOURCE}",`));
- if(actual.length!==expected.length||new Set(actual.map(r=>r.receiptId)).size!==actual.length)throw new RangeError('Invalid S6C gold authority');
- for(const r of actual){const p=expected.find(p=>p.receiptId===r.receiptId);if(!p||r.kind!=='gold'||r.source!==p.source||r.round!==p.round||r.roundId!==p.roundId||r.amount!==p.amount)throw new RangeError('Invalid S6C gold authority');}
-}
+

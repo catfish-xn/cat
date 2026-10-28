@@ -11,8 +11,10 @@ import { readG23Progress, writeG23Progress } from '../src/simulation/g2-3-state'
 import { advanceG23Economy, type G23BattleFacts } from '../src/simulation/g2-3-economy';
 import { AUGMENT_BATCH3, AUGMENT_BATCH3_NODE_BANS } from '../src/simulation/content/augment-pool-batch3';
 import { AUGMENT_OFFER_RULES } from '../src/simulation/content/augment-offer-rules';
-import { batch3RewardPlan, drainBatch3Gold, validateBatch3Gold, pickLootTable, lootSpecs } from '../src/simulation/augment-pool-batch3-progress';
-import { batch1GiftPlan, drainBatch1Gifts, validateBatch1Gifts, batch1AnvilSpecification } from '../src/simulation/augment-pool-grants';
+import { batch3RewardPlan, drainBatch3Gold, pickLootTable, lootSpecs } from '../src/simulation/augment-pool-batch3-progress';
+import { validateBatch3Gold } from '../src/simulation/restore-checks/batch3-progress-check';
+import { batch1GiftPlan, drainBatch1Gifts, batch1AnvilSpecification } from '../src/simulation/augment-pool-grants';
+import { validateBatch1Gifts } from '../src/simulation/restore-checks/batch1-gifts-check';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
@@ -37,7 +39,8 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { generateSharedShop, rerollSharedShop, buySharedUnit } from '../src/server-entry';
 import { draftPool, reconcileHoldings, assertSharedPoolConservation } from '../src/simulation/shared-pool-ledger';
 import { getUnitStats } from '../src/simulation/unit-stats';
-import { freeRerollsAvailable, freeRerollsGranted, validateFreeRerolls, spendFreeReroll, FREE_REROLL_KEY } from '../src/simulation/free-rerolls';
+import { freeRerollsAvailable, freeRerollsGranted, spendFreeReroll, FREE_REROLL_KEY } from '../src/simulation/free-rerolls';
+import { validateFreeRerolls } from '../src/simulation/restore-checks/free-rerolls-check';
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { ad, spellCrit, amount as amountAt } from '../src/simulation/combat-s13-state';
