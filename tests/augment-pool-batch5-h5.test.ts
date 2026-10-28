@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { afterAll, beforeAll, expect, it } from 'vitest';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { AUGMENT_BATCH5_H5 } from '../src/simulation/content/augment-pool-batch5-h5';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
 
@@ -42,11 +43,13 @@ it('offers Table Scraps only at 2-1 with shared carousel', () => {
 });
 const clock = new ManualClock();
 const room = new Room(SEATS, {...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h5-table',seed:124,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
+let restoreOffers: (() => void) | undefined;
+beforeAll(() => { restoreOffers = installB1Offers(['table-scraps']); });
 beforeAll(() => { room.start(); runUntil(room,clock,s=>s.roundId==='2-1' && s.phase==='preparation'); });
 beforeAll(() => {
   for (const seatId of ['s1','s6']) {
     const seat=room.state.seats.find(s=>s.seatId===seatId)!, choice=seat.match.pendingChoice!;
-    expect(choice.offers).toContain('table-scraps');
+    expect(choice.offers).toContain('table-scraps'); // installB1Offers fixture self-check; no 0..100 room seed offers both seats
     expect(room.handle(seatId,{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'table-scraps'})).toMatchObject({ok:true});
     const selected=room.state.seats.find(s=>s.seatId===seatId)!.match;
     expect(selected.gold).toBe(seat.match.gold+1);
@@ -54,7 +57,7 @@ beforeAll(() => {
   }
 });
 beforeAll(() => { runUntil(room,clock,s=>s.phase==='carousel' && s.roundId==='2-4'); });
-afterAll(() => room.dispose());
+afterAll(() => { restoreOffers?.(); room.dispose(); });
 it('shares remaining slots without replacement in fixed seat order through carousel transactions', () => {
   const states = room.state.seats.map(s=>s.match);
   let carousel = room.state.carousel!.state;
@@ -96,6 +99,9 @@ it('shares remaining slots without replacement in fixed seat order through carou
   const repeat = must(completeCarouselForSeat(carousel, states[1], 's1'));
   expect(repeat.match).toBe(states[1]);
   expect(repeat.events).toEqual([]);
+  // Manual carousel proof updates room snapshots so the follow-up live-room receipt check sees the same closed 2-4 carousel.
+  for (let i = 0; i < room.state.seats.length; i++) (room.state.seats[i] as { match: MatchState }).match = states[i];
+  (room.state as { carousel: NonNullable<typeof room.state.carousel> }).carousel = { ...room.state.carousel!, state: carousel };
 });
 
 it('grants the extra slot in the live room after normal picks', () => {

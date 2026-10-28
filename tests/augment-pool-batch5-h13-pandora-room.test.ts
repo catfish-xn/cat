@@ -1,14 +1,16 @@
 import {beforeAll,afterAll,it,expect} from 'vitest';
+import {installB1Offers} from './fixtures/b1-scripted-offers';
 import {makeRoom,runUntil,claimAllOrbs} from './server/helpers';
 import {TwoSidedBattleResolver} from '../src/server/room/two-sided-resolver';
 import {restoreSharedOrbSnapshot} from '../src/simulation/shared-pool';
 import {requireAugmentFacts} from '../src/simulation/augment-history';
 import {ITEM_DEFINITIONS} from '../src/simulation/content/g2-3-item-registry';
 const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:76});
-let seatId:string;
+let seatId:string, restoreOffers: (() => void) | undefined;
 const match=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
+beforeAll(()=>{ restoreOffers=installB1Offers(['pandoras-items-iii']); });
 beforeAll(()=>room.start());for(const round of [2,3,4])beforeAll(()=>{runUntil(room,clock,s=>s.round===round&&s.phase==='preparation');});
-afterAll(()=>room.dispose());
+afterAll(()=>{ restoreOffers?.(); room.dispose(); });
 it('B5-23 room acquires a real offer and directly grants radiant; public claim/combine prepares reroll inputs',()=>{
  for(const seat of room.state.seats){
   for(let slot=-1;slot<3;slot++){
