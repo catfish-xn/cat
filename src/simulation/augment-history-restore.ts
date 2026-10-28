@@ -16,7 +16,11 @@ interface ReplayEvidence {
   readonly origin: string;
   readonly commands: readonly { readonly name: string; readonly args: string; readonly count: number }[];
   readonly state: MatchState;
+  // Retained graph, commands and the trace roster, in UTF-16 bytes. Short node
+  // texts are not included; those are charged once per origin.
   readonly bytes: number;
+  // ASCII characters of every short node text. One byte each.
+  readonly frozenBytes: number;
 }
 // Restore-only evidence, never candidate admission or live command results.
 // Exact origin/argument encodings bind each prefix; a compressed step run may
@@ -107,18 +111,33 @@ function traceRosterChars(state: MatchState): number {
   }
   return max;
 }
+// Short node texts of one origin are charged once, at the largest total. Each
+// later prefix only adds the increment, and those increments sum to that maximum.
+// The strings are ASCII, so a character is one byte, not a UTF-16 code unit.
+function chargedReplayBytes(entries: readonly Pick<ReplayEvidence, 'origin' | 'bytes' | 'frozenBytes'>[]): number {
+  let graph = 0;
+  const frozen = new Map<string, number>();
+  for (const entry of entries) {
+    graph += entry.bytes;
+    const prior = frozen.get(entry.origin) ?? 0;
+    if (entry.frozenBytes > prior) frozen.set(entry.origin, entry.frozenBytes);
+  }
+  for (const value of frozen.values()) graph += value;
+  return graph;
+}
 function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState, stateText: string): void {
-  // UTF-16 bytes. stateText proxies the retained graph. Frozen reads then keep
-  // every short node text, and the trace keeps a roster outside that graph.
-  // Charging both can only shrink what this 8 MiB cap admits.
-  const bytes = 2 * (origin.length + canonicalContent(commands).length + stateText.length + frozenTextUnits(stateText) + traceRosterChars(state));
-  if (bytes > MAX_REPLAY_BYTES) return;
+  // stateText proxies the retained graph. The trace roster sits outside it.
+  // Both are UTF-16. Short node texts are charged separately, once per origin.
+  const frozenBytes = frozenTextUnits(stateText);
+  const bytes = 2 * (origin.length + canonicalContent(commands).length + stateText.length + traceRosterChars(state));
+  if (bytes + frozenBytes > MAX_REPLAY_BYTES) return;
   const previous = replays.findIndex(e => e.origin === origin && same(e.commands, commands));
   if (previous >= 0) replays.splice(previous, 1);
-  while (replays.length >= MAX_REPLAYS || replays.reduce((n, e) => n + e.bytes, bytes) > MAX_REPLAY_BYTES) replays.shift();
+  const candidate = { origin, bytes, frozenBytes };
+  while (replays.length >= MAX_REPLAYS || chargedReplayBytes([...replays, candidate]) > MAX_REPLAY_BYTES) replays.shift();
   // No private expected state or trace payload can be mutated through a later
   // restored command's proof. Pure commands can resume these frozen prefixes.
-  replays.push({origin,commands,state:freezeContent(state),bytes});
+  replays.push({origin,commands,state:freezeContent(state),bytes,frozenBytes});
 }
 
 export function preflightAugmentHistory(s: MatchState): void {
