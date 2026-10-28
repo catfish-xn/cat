@@ -10,12 +10,93 @@ import { starryChanceBps } from './shop-augments';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { pumpingUpRounds } from './augment-effects';
 import { outcomeReward, outcomeAcquisitionXp, outcomeFreeRerolls } from './augment-pool-batch3-progress';
+import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
+import type { TraitProjectionSource } from './traits/effective-membership';
+import { deriveTraits } from './trait-snapshot';
+import { TRAIT_DEFINITIONS } from './content/traits';
+import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
+import { AUGMENT_BATCH5_H8 } from './content/augment-pool-batch5-h8';
+import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
+import { ghostFriendsGrowth } from './augment-pool-batch5-g2';
 
 export type DynamicValue = number | { readonly unit: string } | { readonly outcome: string;
  readonly gifts?: readonly { readonly kind: 'unit'|'item'|'consumable'; readonly definitionId: string; readonly starLevel?: number }[];
  readonly gold?: number; readonly xp?: number; readonly rerolls?: number; readonly health?: number } | null;
 export interface AugmentDynamicValue { readonly values?: readonly DynamicValue[]; readonly attackSpeedBps?: number; readonly damageAmpBps?: number; readonly durabilityBps?: number }
 export type AugmentDynamicValues = Readonly<Record<string, AugmentDynamicValue>>;
+
+type Owned = MatchState['augments'][number];
+
+/** Current-round trait gold from the frozen round-entry roster. Missing or ambiguous evidence stays unknown. */
+function portfolioBonus(state: MatchState, owner: Owned, id: 'diversified-portfolio' | 'diversified-portfolio-plus'): number | null {
+ if (state.round <= owner.acquiredRound) return null;
+ const entries = state.augmentHistory?.facts.filter(f => f.kind === 'round-entry' && f.round === state.round) ?? [];
+ if (entries.length !== 1 || entries[0].kind !== 'round-entry') return null;
+ const roster = entries[0].roster;
+ const frozen: MatchState = { ...state, preparation: { ...state.preparation, units: roster.units }, items: roster.items,
+  augments: state.augments.filter(a => a.acquiredRound < state.round) };
+ const sources: TraitProjectionSource[] = v20MembershipSources(frozen, bindV20Teamups(frozen));
+ const sisters = frozen.augments.find(a => a.definitionId === 'sisters');
+ const partners = roster.units.filter(u => u.team === 'player' && u.location.kind === 'board' && (u.definitionId === 'jinx' || u.definitionId === 'vi'));
+ if (sisters && new Set(partners.map(u => u.definitionId)).size === 2) for (const unit of partners)
+  sources.push({ kind: 'add-trait', sourceId: sisters.choiceId + ':sisters:' + unit.id, unitId: unit.id, traitId: 'sisters', activeFromRound: state.round, expiresBeforeRound: state.round + 1 });
+ const traits = deriveTraits(frozen.preparation, 'player', TRAIT_DEFINITIONS, { round: state.round, sources }, roster.items);
+ const count = traits.filter(t => {
+  const definition = TRAIT_DEFINITIONS[t.traitId];
+  return !!definition && t.tier > 0 && !(definition.tiers.length === 1 && definition.tiers[0].threshold === 1);
+ }).length;
+ const { TraitsActive, GoldRate } = AUGMENT_BATCH5_H4[id].values;
+ return Math.floor(count / TraitsActive) * GoldRate;
+}
+
+/** Upgrade steps after the acquisition helm. Stops at the content cap and never looks up a round id. */
+function gloriousCount(state: MatchState, owner: Owned): number {
+ const gift = planAugmentGifts(state, owner, AUGMENT_BATCH5_S8B['glorious-evolution'].gifts)[0];
+ const marker = gift && state.resourceProvenance.entries.find(e => e.kind === 'item-acquired' && e.source.kind === 'mechanic' && e.source.receiptId === gift.receiptId);
+ if (!marker) return 0;
+ let count = 0;
+ const cap = AUGMENT_BATCH5_S8B['glorious-evolution'].source.values.NumUpgrades;
+ for (const entry of state.resourceProvenance.entries) {
+  if (entry.sequence <= marker.sequence) continue;
+  const upgrades = entry.kind === 'unit-upgraded' || entry.kind === 'unit-upgraded-after-combat' ? [entry.event]
+   : entry.kind === 'carousel-unit-claimed' || entry.kind === 'carousel-preparation-settled' ? entry.upgrades : [];
+  for (const upgrade of upgrades) {
+   if (!Number.isSafeInteger(upgrade.fromStar) || !Number.isSafeInteger(upgrade.toStar)) continue;
+   count += upgrade.toStar - upgrade.fromStar;
+   if (count >= cap) return cap;
+  }
+ }
+ return count;
+}
+
+/** Settled actual player damage since acquisition. Mirrors, unknown opponents and null damage add nothing. */
+function lunchDamage(state: MatchState, owner: Owned): number | null {
+ const facts = state.augmentHistory?.facts;
+ if (!facts) return null;
+ const seen = new Set<string>();
+ let total = 0;
+ for (const fact of facts) {
+  if (fact.kind !== 'player-damage' || fact.round < owner.acquiredRound) continue;
+  if (seen.has(fact.battleId)) continue;
+  seen.add(fact.battleId);
+  if (fact.mirror || fact.opponentSeatId === null || fact.actualDamage === null) continue;
+  if (!Number.isSafeInteger(fact.actualDamage) || fact.actualDamage < 0) return null;
+  total += fact.actualDamage;
+ }
+ return total;
+}
+
+/** Principal frozen at acquisition plus the content bonus. Absent evidence stays unknown. */
+function forwardGold(state: MatchState, owner: Owned): number | null {
+ const acquired = state.augmentHistory?.facts.find(f => f.kind === 'acquire' && f.choiceId === owner.choiceId && f.definitionId === owner.definitionId && f.round === owner.acquiredRound);
+ if (!acquired || acquired.kind !== 'acquire' || !Number.isSafeInteger(acquired.goldBefore) || acquired.goldBefore < 0) return null;
+ return acquired.goldBefore + AUGMENT_BATCH5_H8['forward-thinking'].source.values.BaseGold;
+}
+
+function ghostValues(state: MatchState): readonly [number, number, number] | readonly [null, null, null] {
+ const growth = ghostFriendsGrowth(state);
+ return growth ? [growth.healthFlat, growth.attackDamageBps / 100, growth.abilityPower] : [null, null, null];
+}
 
 /** Owner-only display projection. Counters are settled battle receipts; the board values describe the next combat. */
 export function augmentDynamicValues(state: MatchState): AugmentDynamicValues {
@@ -71,6 +152,11 @@ export function augmentDynamicValues(state: MatchState): AugmentDynamicValues {
     xp:outcomeAcquisitionXp(state,owner), rerolls:outcomeFreeRerolls(state,owner),
     ...(id === 'magic-roll' && kind === 'health' ? {health:batch3Count(AUGMENT_BATCH3[id],'{3b0ef232}')} : {})}] };
   }
+  else if (id === 'diversified-portfolio' || id === 'diversified-portfolio-plus') result[id] = { values: [owner ? portfolioBonus(state, owner, id) : null] };
+  else if (id === 'glorious-evolution') result[id] = { values: [owner ? gloriousCount(state, owner) : null] };
+  else if (id === 'lunch-money') result[id] = { values: [owner ? lunchDamage(state, owner) : null] };
+  else if (id === 'forward-thinking') result[id] = { values: [owner ? forwardGold(state, owner) : null] };
+  else if (id === 'ghost-of-friends-past') result[id] = { values: owner && state.augmentHistory ? ghostValues(state) : [null, null, null] };
   else if (id === 'forbidden-magic') result[id] = { values: [null] }; // This augment is blocked: no authenticated growth ledger exists.
  }
  return result;
