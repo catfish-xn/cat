@@ -7,7 +7,8 @@ it('transcribes acquisition gold independently, including seed 3044 Scapegoat', 
     expect(augmentGold(id, '2-1')).toBe(amount);
   }
   expect(augmentGold('risky-moves', '2-1')).toBe(0);
-  expect(augmentGold('placebo-plus', '3-2')).toBe(18);
+  // TFT_Augment_PlaceboPlus.effects.Gold=15 in the 14.24 archive (2026-10-28 approval).
+  for(const roundId of ['2-1','3-2','4-2','5-1','6-7','7-1'])expect(augmentGold('placebo-plus', roundId)).toBe(15);
 });
 
 it('pays Patient Study only for a fought player combat and Epoch only at the next stage entry', () => {

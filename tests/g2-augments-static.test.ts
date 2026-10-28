@@ -90,9 +90,9 @@ const expected: Record<string, Effect[]> = {
   'hedge-fund':[mech('acquisitionGold',{amount:25}),mech('incomePolicy',{interestDisabled:0,interestCap:10,roundXp:0})],
   'investment-strategy-ii':[mech('acquisitionGold',{amount:5}),mech('incomePolicy',{interestDisabled:0,interestCap:7,roundXp:0}),mech('investment',{healthPerInterest:9})],
   ...Object.fromEntries(['crown-guarded','not-today','all-for-one-ii','belt-overflow','calculated-enhancement','crownguard-spirit','flurry-of-blows','guardbreaker-spirit','pair-of-fours','immovable-object','shojin-spirit','sword-overflow','trifecta-ii','wand-overflow'].map(id=>[id,[mech('s13P2Augment',{enabled:1})]])),
-  // v22 approved placebo stage gold: 8/11/15 (Placebo+ 15/18/22) by acquisition stage.
+  // Ordinary Placebo keeps user-approved 8/11/15; Placebo+ uses archive Gold=15 (14.24).
   'placebo': [speed(100), mech('acquisitionGold', { amount: 8, stage3Amount: 11, stage4Amount: 15 })],
-  'placebo-plus': [speed(100), mech('acquisitionGold', { amount: 15, stage3Amount: 18, stage4Amount: 22 })],
+  'placebo-plus': [speed(100), mech('acquisitionGold', { amount: 15 })],
   'manaflow-i': [mech('extraAttackMana', { amount: 2, backRowOnly: 1 })],
   'manaflow-ii': [mech('extraAttackMana', { amount: 4, backRowOnly: 1 })],
   'glass-cannon-i': [mech('glassCannon', { startingHealthBps: 8000, damageAmpBps: 1200, backRowOnly: 1 })],
@@ -114,7 +114,7 @@ const expected: Record<string, Effect[]> = {
   'backup': [mech('backup', { minimum: 4, attackSpeedBps: 1000 })],
   'lineup': [mech('lineup', { resistCentiPerUnit: 250 })],
   'find-your-center': [mech('findCenter', { healthBps: 1500, damageAmpBps: 1500 })],
-  'built-different': [mech('builtDifferent', { health2: 300, health3: 400, health4: 500, health5: 600, speed2: 4500, speed3: 5500, speed4: 6500, speed5: 7500 })],
+  'built-different': [mech('builtDifferent', { health2: 240, health3: 330, health4: 420, health5: 530, speed2: 4500, speed3: 5000, speed4: 5500, speed5: 6000 })],
   'blistering-strikes': [mech('blisteringStrikes', { durationTicks: 100, burnBpsPerSecond: 100, woundBps: 3300 })],
   'clockwork-accelerator': [mech('clockworkAccelerator', { attackSpeedBps: 1000, periodTicks: 60 })],
   'lone-hero': [mech('loneHero', { attackSpeedBps: 14000, durabilityBps: 3500 })],
@@ -190,13 +190,13 @@ describe('G2 static augment selectors and hand-calculated totals', () => {
   it.each(['lux', 'akali', 'blitzcrank', 'test-six-cost'])('little buddies never buffs cost 1/2/3/6 target %s', name => {
     expect(compiled('little-buddies', fixture([unit(name), unit('lux', 'low', 5, 6)]))).toEqual([]);
   });
-  it.each([[1, 300, 4500], [4, 300, 4500], [11, 400, 5500], [18, 500, 6500], [25, 600, 7500], [32, 600, 7500]] as const)('built different round %i uses the B-patch stage ladder', (round, hp, as) => {
+  it.each([[1, 240, 4500], [4, 240, 4500], [11, 330, 5000], [18, 420, 5500], [25, 530, 6000], [32, 530, 6000]] as const)('built different round %i uses the exact 14.24 HP1..4 / AS1..4 stage ladder', (round, hp, as) => {
     expect(compiled('built-different', { ...fixture(), round })).toEqual([flat('maxHp', hp), speed(as)]);
   });
   it('built different rejects any active member trait but ignores unrelated and inactive traits', () => {
     const state = { ...fixture(), round: 4 };
     expect(compiled('built-different', state, unit(), [trait('sorcerer', 2, ['lux'])])).toEqual([]);
-    expect(compiled('built-different', state, unit(), [trait('sorcerer', 0, ['lux']), trait('sentinel', 2, ['irelia'])])).toEqual([flat('maxHp', 300), speed(4500)]);
+    expect(compiled('built-different', state, unit(), [trait('sorcerer', 0, ['lux']), trait('sentinel', 2, ['irelia'])])).toEqual([flat('maxHp', 240), speed(4500)]);
   });
   it('find center uses the documented player deployment center (3,5)', () => {
     expect(compiled('find-your-center', fixture([unit('lux', 'lux', 3, 5)]))).toEqual([{ kind: 'statPercentBps', stat: 'maxHp', bps: 1500 }, mech('damageAmp', { bps: 1500 })]);
