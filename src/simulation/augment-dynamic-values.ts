@@ -10,13 +10,13 @@ import { starryChanceBps } from './shop-augments';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { pumpingUpRounds } from './augment-effects';
 import { outcomeReward, outcomeAcquisitionXp, outcomeFreeRerolls } from './augment-pool-batch3-progress';
-import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
-import type { TraitProjectionSource } from './traits/effective-membership';
-import { deriveTraits } from './trait-snapshot';
-import { TRAIT_DEFINITIONS } from './content/traits';
-import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
+import { portfolioRoundGold } from './augment-pool-batch5-h4';
+import { lunchMoneyDamage } from './augment-pool-batch5-h7';
+import { forwardThinkingReceiptId } from './augment-pool-batch5-h8';
+import { gloriousEvolutionCapRoundId, gloriousEvolutionProgress } from './augment-pool-batch5-s8b';
 import { AUGMENT_BATCH5_H8 } from './content/augment-pool-batch5-h8';
 import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
+import { ROUND_CATALOG } from './content/round-catalog';
 import { ghostFriendsGrowth } from './augment-pool-batch5-g2';
 
 export type DynamicValue = number | { readonly unit: string } | { readonly outcome: string;
@@ -27,67 +27,44 @@ export type AugmentDynamicValues = Readonly<Record<string, AugmentDynamicValue>>
 
 type Owned = MatchState['augments'][number];
 
-/** Current-round trait gold from the frozen round-entry roster. Missing or ambiguous evidence stays unknown. */
-function portfolioBonus(state: MatchState, owner: Owned, id: 'diversified-portfolio' | 'diversified-portfolio-plus'): number | null {
- if (state.round <= owner.acquiredRound) return null;
+/** Current-round trait gold. The acquisition round pays nothing. Missing round-entry stays unknown. */
+function portfolioShown(state: MatchState, owner: Owned): number | null {
+ if (state.round <= owner.acquiredRound) return 0;
  const entries = state.augmentHistory?.facts.filter(f => f.kind === 'round-entry' && f.round === state.round) ?? [];
- if (entries.length !== 1 || entries[0].kind !== 'round-entry') return null;
- const roster = entries[0].roster;
- const frozen: MatchState = { ...state, preparation: { ...state.preparation, units: roster.units }, items: roster.items,
-  augments: state.augments.filter(a => a.acquiredRound < state.round) };
- const sources: TraitProjectionSource[] = v20MembershipSources(frozen, bindV20Teamups(frozen));
- const sisters = frozen.augments.find(a => a.definitionId === 'sisters');
- const partners = roster.units.filter(u => u.team === 'player' && u.location.kind === 'board' && (u.definitionId === 'jinx' || u.definitionId === 'vi'));
- if (sisters && new Set(partners.map(u => u.definitionId)).size === 2) for (const unit of partners)
-  sources.push({ kind: 'add-trait', sourceId: sisters.choiceId + ':sisters:' + unit.id, unitId: unit.id, traitId: 'sisters', activeFromRound: state.round, expiresBeforeRound: state.round + 1 });
- const traits = deriveTraits(frozen.preparation, 'player', TRAIT_DEFINITIONS, { round: state.round, sources }, roster.items);
- const count = traits.filter(t => {
-  const definition = TRAIT_DEFINITIONS[t.traitId];
-  return !!definition && t.tier > 0 && !(definition.tiers.length === 1 && definition.tiers[0].threshold === 1);
- }).length;
- const { TraitsActive, GoldRate } = AUGMENT_BATCH5_H4[id].values;
- return Math.floor(count / TraitsActive) * GoldRate;
+ if (entries.length !== 1) return null;
+ return portfolioRoundGold(state, owner, state.round);
 }
 
-/** Upgrade steps after the acquisition helm. Stops at the content cap and never looks up a round id. */
-function gloriousCount(state: MatchState, owner: Owned): number {
- const gift = planAugmentGifts(state, owner, AUGMENT_BATCH5_S8B['glorious-evolution'].gifts)[0];
- const marker = gift && state.resourceProvenance.entries.find(e => e.kind === 'item-acquired' && e.source.kind === 'mechanic' && e.source.receiptId === gift.receiptId);
- if (!marker) return 0;
- let count = 0;
- const cap = AUGMENT_BATCH5_S8B['glorious-evolution'].source.values.NumUpgrades;
- for (const entry of state.resourceProvenance.entries) {
-  if (entry.sequence <= marker.sequence) continue;
-  const upgrades = entry.kind === 'unit-upgraded' || entry.kind === 'unit-upgraded-after-combat' ? [entry.event]
-   : entry.kind === 'carousel-unit-claimed' || entry.kind === 'carousel-preparation-settled' ? entry.upgrades : [];
-  for (const upgrade of upgrades) {
-   if (!Number.isSafeInteger(upgrade.fromStar) || !Number.isSafeInteger(upgrade.toStar)) continue;
-   count += upgrade.toStar - upgrade.fromStar;
-   if (count >= cap) return cap;
-  }
+/** Catalog and overtime ids accepted by getMultiplayerRoundById. */
+function multiplayerRoundIdResolves(id: string): boolean {
+ if (/^overtime-[1-9][0-9]*$/.test(id)) {
+  const last = ROUND_CATALOG[ROUND_CATALOG.length - 1].ordinal;
+  const ordinal = last + Number(id.slice(9));
+  return Number.isSafeInteger(ordinal) && `overtime-${ordinal - last}` === id;
  }
- return count;
+ return ROUND_CATALOG.some(round => round.roundId === id);
 }
 
-/** Settled actual player damage since acquisition. Mirrors, unknown opponents and null damage add nothing. */
-function lunchDamage(state: MatchState, owner: Owned): number | null {
+/** Upgrade count. No helm returns 0. A cap whose round id would throw is still the cap. */
+function gloriousShown(state: MatchState): number {
+ const capRoundId = gloriousEvolutionCapRoundId(state);
+ if (capRoundId !== undefined && !multiplayerRoundIdResolves(capRoundId))
+  return AUGMENT_BATCH5_S8B['glorious-evolution'].source.values.NumUpgrades;
+ return gloriousEvolutionProgress(state).count;
+}
+
+/** Cumulative actual damage. Absent history, or a PvP round with no damage fact, stays unknown. */
+function lunchShown(state: MatchState, owner: Owned): number | null {
  const facts = state.augmentHistory?.facts;
  if (!facts) return null;
- const seen = new Set<string>();
- let total = 0;
- for (const fact of facts) {
-  if (fact.kind !== 'player-damage' || fact.round < owner.acquiredRound) continue;
-  if (seen.has(fact.battleId)) continue;
-  seen.add(fact.battleId);
-  if (fact.mirror || fact.opponentSeatId === null || fact.actualDamage === null) continue;
-  if (!Number.isSafeInteger(fact.actualDamage) || fact.actualDamage < 0) return null;
-  total += fact.actualDamage;
- }
- return total;
+ for (const result of state.roundResults)
+  if (result.round >= owner.acquiredRound && result.roundKind === 'pvp' && !facts.some(f => f.kind === 'player-damage' && f.round === result.round)) return null;
+ return lunchMoneyDamage(state, owner);
 }
 
-/** Principal frozen at acquisition plus the content bonus. Absent evidence stays unknown. */
-function forwardGold(state: MatchState, owner: Owned): number | null {
+/** Unpaid principal plus 70. A recorded payout receipt shows 0. Absent acquisition evidence stays unknown. */
+function forwardShown(state: MatchState, owner: Owned): number | null {
+ if (state.seatMechanics?.receipts.some(r => r.receiptId === forwardThinkingReceiptId(owner.choiceId))) return 0;
  const acquired = state.augmentHistory?.facts.find(f => f.kind === 'acquire' && f.choiceId === owner.choiceId && f.definitionId === owner.definitionId && f.round === owner.acquiredRound);
  if (!acquired || acquired.kind !== 'acquire' || !Number.isSafeInteger(acquired.goldBefore) || acquired.goldBefore < 0) return null;
  return acquired.goldBefore + AUGMENT_BATCH5_H8['forward-thinking'].source.values.BaseGold;
@@ -152,10 +129,10 @@ export function augmentDynamicValues(state: MatchState): AugmentDynamicValues {
     xp:outcomeAcquisitionXp(state,owner), rerolls:outcomeFreeRerolls(state,owner),
     ...(id === 'magic-roll' && kind === 'health' ? {health:batch3Count(AUGMENT_BATCH3[id],'{3b0ef232}')} : {})}] };
   }
-  else if (id === 'diversified-portfolio' || id === 'diversified-portfolio-plus') result[id] = { values: [owner ? portfolioBonus(state, owner, id) : null] };
-  else if (id === 'glorious-evolution') result[id] = { values: [owner ? gloriousCount(state, owner) : null] };
-  else if (id === 'lunch-money') result[id] = { values: [owner ? lunchDamage(state, owner) : null] };
-  else if (id === 'forward-thinking') result[id] = { values: [owner ? forwardGold(state, owner) : null] };
+  else if (id === 'diversified-portfolio' || id === 'diversified-portfolio-plus') result[id] = { values: [owner ? portfolioShown(state, owner) : null] };
+  else if (id === 'glorious-evolution') result[id] = { values: [owner ? gloriousShown(state) : null] };
+  else if (id === 'lunch-money') result[id] = { values: [owner ? lunchShown(state, owner) : null] };
+  else if (id === 'forward-thinking') result[id] = { values: [owner ? forwardShown(state, owner) : null] };
   else if (id === 'ghost-of-friends-past') result[id] = { values: owner && state.augmentHistory ? ghostValues(state) : [null, null, null] };
   else if (id === 'forbidden-magic') result[id] = { values: [null] }; // This augment is blocked: no authenticated growth ledger exists.
  }

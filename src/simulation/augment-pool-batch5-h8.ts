@@ -4,6 +4,9 @@ import { AUGMENT_BATCH5_H8 } from './content/augment-pool-batch5-h8';
 import { grantMechanicGold } from './seat-mechanics/grants';
 
 export const SOURCE = 'augment-batch5-h8-forward-thinking';
+export function forwardThinkingReceiptId(choiceId: string): string {
+  return JSON.stringify([SOURCE, choiceId]);
+}
 /** Acquisition evidence was frozen before this one-time withdrawal. Later income remains spendable. */
 export function applyBatch5H8Acquisition(state: MatchState, definitionId: string): MatchState {
   return definitionId === 'forward-thinking' ? { ...state, gold: 0 } : state;
@@ -16,7 +19,7 @@ export function plan(state: MatchState) {
     const completed=state.roundResults.filter(r=>r.roundKind==='pvp'&&r.round>=a.acquiredRound);
     for(const result of completed) requireAugmentFacts(state,'pvp-roster',result.round);
     const due=completed[AUGMENT_BATCH5_H8['forward-thinking'].source.values.rounds-1];
-    return due?[{receiptId:JSON.stringify([SOURCE,a.choiceId]),source:SOURCE,round:due.round,
+    return due?[{receiptId:forwardThinkingReceiptId(a.choiceId),source:SOURCE,round:due.round,
       amount:acquired.goldBefore+AUGMENT_BATCH5_H8['forward-thinking'].source.values.BaseGold}]:[];
   });
 }

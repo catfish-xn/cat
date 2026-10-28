@@ -3,7 +3,9 @@ import { beforeAll, expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
 import { getCatalogRoundByOrdinal } from '../src/simulation/round-selectors';
 import { portfolioGoldPlan } from '../src/simulation/augment-pool-batch5-h4';
+import { forwardThinkingReceiptId } from '../src/simulation/augment-pool-batch5-h8';
 import { gloriousEvolutionProgress } from '../src/simulation/augment-pool-batch5-s8b';
+import { SEAT_MECHANICS_VERSION } from '../src/simulation/seat-mechanics/types';
 import { ghostFriendsGrowth } from '../src/simulation/augment-pool-batch5-g2';
 import type { MatchState } from '../src/simulation/match-types';
 import type { AugmentHistory, AugmentHistoryFact } from '../src/simulation/augment-history-types';
@@ -26,6 +28,7 @@ const roster = (ids: readonly string[]) => ({
   items: [],
 });
 const described = (state: MatchState, id: string) => augmentPlayerDescription(id, toSeatPrivateView(state).augmentDynamicValues[id]);
+const pvp = (round: number) => ({ round, roundKind: 'pvp' as const, incomeBreakdown: { base: 0, win: 0, interest: 0, streak: 0 } }) as MatchState['roundResults'][number];
 
 it('diversified-portfolio shows the frozen round-entry gold bonus', () => {
   const units = ['irelia', 'illaoi', 'vex', 'renata'];
@@ -74,7 +77,7 @@ it('lunch-money shows cumulative actual damage and counts a mirror as zero', () 
     kind: 'player-damage' as const, sequence: 0, seatId: 'solo', round: 2, roundId: '1-2', resourcePrefix: 0,
     battleId, opponentSeatId: mirror ? 'enemy' : 'enemy', mirror, hpBefore: 77, hpAfterDamage: 57, actualDamage, ...extra,
   });
-  const state = { ...atRound(), augments: [own('lunch-money')], augmentHistory: history([
+  const state = { ...atRound(), roundResults: [pvp(2)], augments: [own('lunch-money')], augmentHistory: history([
     damage('real', 8), damage('mirror', 20, true), damage('rest', 5), damage('real', 100),
     { ...damage('unknown', null), opponentSeatId: null },
   ]) };
@@ -130,7 +133,7 @@ it('ghost-of-friends-past shows own settled growth and divides attack damage by 
 });
 
 it('scouting another seat gets no dynamic values', () => {
-  const state = { ...atRound(), augments: IDS.map(id => own(id, id)), augmentHistory: history([{
+  const state = { ...atRound(), roundResults: [pvp(2)], augments: IDS.map(id => own(id, id)), augmentHistory: history([{
     kind: 'player-damage', sequence: 0, seatId: 'solo', round: 2, roundId: '1-2', resourcePrefix: 0,
     battleId: 'real', opponentSeatId: 'enemy', mirror: false, hpBefore: 77, hpAfterDamage: 69, actualDamage: 8,
   }]) };
@@ -146,4 +149,37 @@ it('scouting another seat gets no dynamic values', () => {
   for (const id of augments) expect(augmentPlayerDescription(id), id).toContain('未确定');
   const offered = { ...atRound(), pendingChoice: { kind: 'augment', offers: [...IDS] } as unknown as MatchState['pendingChoice'] };
   for (const id of IDS) expect(described(offered, id), id).toContain('未确定');
+});
+
+it('diversified-portfolio shows 0 on the round it was acquired', () => {
+  const state = { ...atRound(2), augments: [own('diversified-portfolio', 'diversified-portfolio', 2)], augmentHistory: history([{
+    kind: 'round-entry', sequence: 0, seatId: 'solo', round: 2, roundId: '1-2', resourcePrefix: 0,
+    roster: roster(['irelia', 'illaoi', 'vex', 'renata']),
+  }]) };
+  expect(portfolioGoldPlan(state)).toEqual([]);
+  const text = described(state, 'diversified-portfolio');
+  expect(text).toContain('金币加成：0');
+  expect(text).not.toContain('未确定');
+});
+
+it('glorious-evolution shows 0 when the helm marker is absent', () => {
+  const state = { ...atRound(), augments: [own('glorious-evolution', 'helm')] };
+  expect(gloriousEvolutionProgress(state).count).toBe(0);
+  const text = described(state, 'glorious-evolution');
+  expect(text).toContain('(当前：0)');
+  expect(text).not.toContain('未确定');
+});
+
+it('forward-thinking shows 0 after the payout receipt', () => {
+  const owner = own('forward-thinking', 'think');
+  const state = { ...atRound(), augments: [owner], augmentHistory: history([{
+    kind: 'acquire', sequence: 0, seatId: 'solo', round: 1, roundId: '1-1', resourcePrefix: 0, choiceId: 'think',
+    definitionId: 'forward-thinking', goldBefore: 31, hpBefore: 100, roster: roster([]), previousBattle: { status: 'none' }, preparationElapsedMs: 0,
+  }]), seatMechanics: { version: SEAT_MECHANICS_VERSION, seat: {}, hidden: {}, receipts: [{
+    receiptId: forwardThinkingReceiptId('think'), round: 6, roundId: '3-2', source: 'augment-batch5-h8-forward-thinking', kind: 'gold' as const, amount: 101,
+  }] } };
+  const text = described(state, 'forward-thinking');
+  expect(text).toContain('即将收到的金币：0');
+  expect(text).not.toContain('未确定');
+  expect(text).not.toContain('101');
 });
