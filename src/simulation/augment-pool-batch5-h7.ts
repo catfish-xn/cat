@@ -12,26 +12,41 @@ function deathWins(seed: number, seat: string, choice: string, battle: string, e
   for (let i = 0; i < identity.length; i++) hash = Math.imul(hash ^ identity.charCodeAt(i), 16777619) >>> 0;
   return nextRandom((seed ^ hash) >>> 0).word < AUGMENT_BATCH5_H7['good-for-something'].source.values.DropChance * 0x100000000;
 }
+interface LunchHit { readonly battleId: string; readonly round: number; readonly actualDamage: number }
+/** Counted player-damage hits. Mirrors, unknown opponents and null damage add nothing. */
+function lunchMoneyHits(state: MatchState, owner: MatchState['augments'][number]): readonly LunchHit[] {
+  const hits: LunchHit[] = [];
+  for (const result of state.roundResults.filter(r => r.round >= owner.acquiredRound && r.roundKind === 'pvp')) {
+    const facts = requireAugmentFacts(state, 'player-damage', result.round);
+    const seen = new Set<string>();
+    for (const f of facts) {
+      if (seen.has(f.battleId)) continue;
+      seen.add(f.battleId);
+      // Solo generated opponents have no player HP account. Unknown is NOT a damage value.
+      if (f.mirror || f.opponentSeatId === null || f.actualDamage === null) continue;
+      hits.push({ battleId: f.battleId, round: result.round, actualDamage: f.actualDamage });
+    }
+  }
+  return hits;
+}
+/** Cumulative actual player damage since acquisition. Same hits the gold plan pays on. */
+export function lunchMoneyDamage(state: MatchState, owner: MatchState['augments'][number]): number {
+  let total = 0;
+  for (const hit of lunchMoneyHits(state, owner)) total += hit.actualDamage;
+  return total;
+}
 export function batch5H7GoldPlan(state: MatchState) {
   const plan: { receiptId: string; source: string; round: number; amount: number }[] = [];
   for (const a of state.augments) {
     if (a.definitionId === 'lunch-money') {
       const { Damage, Gold } = AUGMENT_BATCH5_H7['lunch-money'].source.values;
       let total = 0;
-      for (const result of state.roundResults.filter(r => r.round >= a.acquiredRound && r.roundKind === 'pvp')) {
-        const facts = requireAugmentFacts(state, 'player-damage', result.round);
-        const seen = new Set<string>();
-        for (const f of facts) {
-          if (seen.has(f.battleId)) continue;
-          seen.add(f.battleId);
-          // Solo generated opponents have no player HP account. Unknown is NOT a damage value.
-          if (f.mirror || f.opponentSeatId === null || f.actualDamage === null) continue;
-          const before = total;
-          total += f.actualDamage;
-          const amount = (Math.floor(total / Damage) - Math.floor(before / Damage)) * Gold;
-          if (amount) plan.push({ receiptId: JSON.stringify([BATCH5_H7_SOURCE, a.choiceId, f.battleId]),
-            source: BATCH5_H7_SOURCE, round: result.round, amount });
-        }
+      for (const hit of lunchMoneyHits(state, a)) {
+        const before = total;
+        total += hit.actualDamage;
+        const amount = (Math.floor(total / Damage) - Math.floor(before / Damage)) * Gold;
+        if (amount) plan.push({ receiptId: JSON.stringify([BATCH5_H7_SOURCE, a.choiceId, hit.battleId]),
+          source: BATCH5_H7_SOURCE, round: hit.round, amount });
       }
       continue;
     }
