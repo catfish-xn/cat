@@ -6,7 +6,7 @@ import type { ChoiceDefinition } from '../strategy-types';
 /** Shop-rule augments (classification.json batch 3, G2): shop generation, purchases, rerolls and round-start economy facts.
  * Every number is the 14.24 zh_cn/en_us source value; the runtime is src/simulation/shop-augments.ts and each project reading
  * is a P entry in docs/S13_RULES_GAP.md. Shop Glitch (real-time refresh timer) and Two Much Value (no fielded-units battle
- * fact) are not in this table. Starry Night rows are imported from batch5-r5; its 2026-10-27 approved policy
+ * fact) are not in this table. Starry Night rows are imported from batch5-r5; its 2026-10-28 approved policy
  * owns the level mapping. Historical evidence and recordings remain unchanged. */
 export type ShopAugmentRule='starry'|'firesale'|'rigged'|'reinfourcement'|'ticket'|'subscription';
 export interface ShopAugmentContent {

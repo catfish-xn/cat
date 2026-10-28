@@ -1651,7 +1651,7 @@ B5-13 `component-buffet`、B5-15 `fine-vintage`、B5-16 `pandoras-items` 的内�
 ### B5-R5：星夜与星夜+（2026-10-27）
 
 - 内容位于 `content/augment-pool-batch5-r5.ts`，通过 `AUGMENT_SHOP` 的既有 definitions/tier/API-name 聚合注册，避免重复候选。普通版获取6金且仅2-1提供；+版获取8金且仅3-2提供；彼此互斥。阶段标签不变。
-- `starryChanceBps(state: Pick<MatchState,'augments'|'level'>): number`：返回整数基点；未持有返回0；等级1–10分别为0/0/1800/2000/2200/2500/3000/5000/8000/10000。两版及1/2费同率。
+- `starryChanceBps(state: Pick<MatchState,'augments'|'level'>): number`：返回整数基点；未持有返回0；等级1–10分别为1800/1800/1800/2000/2200/2500/3000/5000/8000/10000（用户2026-10-28决定1/2级恢复v24的18%，覆盖2026-10-27的0%约定）。两版及1/2费同率。
 - `starryUpgrade(state: Pick<MatchState,'augments'|'level'|'seed'|'multiplayer'>, generation: number, slot: number, definitionId: string): boolean`：对有效领域输入纯计算，不修改状态或主RNG；3费及以上返回false。调用方仍须检查是否能预留3份共享库存。既有 `shop-augments.ts` 保留兼容导出。
 - `generateSharedShop` / `rerollSharedShop` / 自然换轮沿用共享池事务：命中且至少3份库存则生成二星报价、一次预留3份，否则保留一星；刷新/淘汰退回所有未买份额，锁店自然换轮保留预留。`buySharedUnit` 支付3倍基础费用，将3份来源转为自有持有份额，不二次扣池；既有合星按一星等价份额守恒，9份可合三星。失败沿用 `stale-shop`、`insufficient-gold`、`bench-full`、`purchased-slot`、`empty-slot` 等原枚举，原state/pool引用、事件和RNG不变。
 - `validateBatch5R5ShopAcquisition(state: MatchState): void`：`shop-history.ts` 恢复入口调用；按内容核对唯一获取收据及金币、选择身份、回合，错误抛 `RangeError('Invalid Starry Night acquisition')`。其余抽取/星级/库存/购买由现有 `shop-history-v1` 重演；不新建事实格式，缺历史不推测迁移。有其它历史强化的联机档仍须使用 `Room.augmentHistoryAuthority(seatId)` 与既有恢复API。
