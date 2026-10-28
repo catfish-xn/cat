@@ -86,9 +86,9 @@ it('retains descriptions for known project-specific rules and missing dynamic va
   const ally = { values: [{ unit: 'zeri' }] };
   expect(augmentPlayerDescription('caretakers-ally', ally)).toBe(allyTemplate.replace('〔对局动态值〕', '泽丽'));
   expect(augmentCardSections('caretakers-ally', ally).body).toBe(allyTemplate.replace('〔对局动态值〕', '泽丽'));
-  for (const id of ['built-different', 'placebo-plus']) {
-    expect(augmentPlayerDescription(id), id).toBeNull();
-  }
+  // These formerly missing cards now use the official archive prose; rules stay unchanged.
+  expect(augmentPlayerDescription('built-different')).toBe('你的弈子们只要不具有任何已激活的羁绊，就会获得240-530生命值和45-60%攻击速度（基于当前阶段）。');
+  expect(augmentPlayerDescription('placebo-plus')).toBe('获得15金币。你的弈子们获得1%攻击速度。');
 });
 
 it.skipIf(!existsSync(RESEARCH_FILE))('matches the audited descriptions to the independent 14.24 archive', async () => {
