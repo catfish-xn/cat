@@ -1,4 +1,5 @@
 import * as api from '../../src/simulation/match';
+import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
 import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
 import type { MatchState, MatchCommandResult, MatchEvent } from '../../src/simulation/match';
 import { createRequire } from 'node:module';
@@ -65,14 +66,15 @@ export function fillBench(input:MatchState,excluded:readonly string[]=[]):MatchS
   }
   return s;
 }
-export async function configuredPrefix(roundId:string, options:Record<string,unknown>):Promise<MatchState> {
+export async function configuredPrefix(roundId:string, options:Record<string,unknown>, checkpointRound?:string):Promise<MatchState> {
   const captured=new Error('captured configured preparation');let prefix:MatchState|undefined;
-  try {await run(api,{...options,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
+  const routeApi=checkpointRound ? {...api,startMatchCombat(s:MatchState){return api.startMatchCombat(s.roundDefinitionId===checkpointRound ? restoreMatch(serializeMatch(s)) : s);}} : api;
+  try {await run(routeApi,{...options,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
     if(command?.type==='start'&&before.roundDefinitionId===roundId){prefix=before;throw captured;}
   }});}catch(e){if(e!==captured)throw e;}
   if(!prefix)throw Error(`Missing configured prefix ${roundId}`);return prefix;
 }
-export async function transferPreparation({equipGloves=true}={}) {
+export async function transferPreparation({equipGloves=true,checkpointRound,onProgress}:{equipGloves?:boolean;checkpointRound?:string;onProgress?:(state:MatchState)=>Promise<void>}={}) {
   // Seed 4 rerolls for a non-unit-gifting first augment, preserving two paid copies. Its independent v17 box oracle yields
   // Tristana at 4-7 (no Ezreal/remover), so target that real reward for transfer.
   // Equip the original glove recipe here; the offline variant freezes a vest
@@ -80,7 +82,7 @@ export async function transferPreparation({equipGloves=true}={}) {
   let s=await configuredPrefix('4-7',{seed:4,build:'cannon',augmentRerollPriorities:{'2-1':['pumping-up-i','manaflow-i','backup','bronze-for-life-i','bulky-buddies-i','placebo','lineup','little-buddies','bulky-buddies-ii','blistering-strikes']},equipItems:false,goldReserves:{'4-5':40},copyLimits:{tristana:2,corki:1},fieldCopies:['tristana'],
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'tristana',copy:0}},
     reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'tristana',anomalyTargetCopy:0,anomalyDefinitionId:'slime-time',
-    goldReserveByRound:{'4-5':19,'4-7':0}});
+    goldReserveByRound:{'4-5':19,'4-7':0},onRound:onProgress,onBattleProgress:onProgress},checkpointRound);
   // Preserve the donor-transfer scenario under the expanded shop: position, not ID, selects the survivor.
   const pair=players(s).filter(u=>u.definitionId==='tristana'),donor=pair.find(u=>s.anomalyBinding?.unitId===u.id)!,survivor=pair.find(u=>u.id!==donor.id)!;
   if(equipGloves)s=accepted(api.equipItem(s,s.items.find(i=>i.definitionId==='thiefs-gloves')!.id,donor.id,0));
