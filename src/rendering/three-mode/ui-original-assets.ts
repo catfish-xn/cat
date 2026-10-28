@@ -64,32 +64,56 @@ const browserPlatform: UiPlatform = {
 };
 
 /** Reads may share AssetPreloader's cache. Files outside precache are checked here too, so stale bytes never get a skin. */
-async function checkedBlob(read: (path: string) => Promise<Blob>, path: string, file: UiFile): Promise<Blob> {
+async function checkedBlob(read: (path: string) => Promise<Blob>, path: string, file: UiFile, hashUnavailable: () => void): Promise<Blob> {
   const blob = await read(path);
   if (blob.size !== file.bytes) throw new Error('byte-length');
   if (globalThis.crypto?.subtle) {
     const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()));
     if (Array.from(digest, n => n.toString(16).padStart(2, '0')).join('') !== file.sha256) throw new Error('sha256');
-  }
+  } else hashUnavailable();
   return blob;
 }
+
+const UI_READ_TIMEOUT_MS = 10_000;
 
 /** root is the same configured HTTP asset root as the models; no root means no request and no style change. */
 export function startOriginalUi(root: string | null, read?: (path: string) => Promise<Blob>, platform: UiPlatform = browserPlatform): OriginalUi {
   const sprites = new Map<string, ReadyUiSprite>(), fonts = new Map<string, string>(), listeners = new Set<() => void>();
   const issues: string[] = [], releases: (() => void)[] = [];
-  let closed = false, style: ReturnType<UiPlatform['style']> | undefined;
+  const reads = new Set<AbortController>();
+  let closed = false, updatePending = false, style: ReturnType<UiPlatform['style']> | undefined;
   const font = (role: 'title' | 'body') => fonts.get(role) ?? 'system-ui';
   const update = () => {
-    if (closed) return;
-    style ??= platform.style(); style.set(originalHudRules(sprites, fonts));
-    for (const listener of listeners) listener();
+    if (closed || updatePending) return;
+    updatePending = true;
+    queueMicrotask(() => {
+      updatePending = false;
+      if (closed) return;
+      style ??= platform.style(); style.set(originalHudRules(sprites, fonts));
+      for (const listener of listeners) listener();
+    });
   };
   const report = (id: string, error: unknown) => { if (!closed) issues.push(`${id}:${error instanceof Error ? error.message : 'unavailable'}`); };
+  const hashUnavailable = () => { if (!closed && !issues.includes('sha256-unavailable')) issues.push('sha256-unavailable'); };
   const readPath = read ?? (async path => {
-    const response = await fetch(assetUrl(root!, path), { cache: 'no-cache' });
-    if (!response.ok) throw new Error(`http-${response.status}`);
-    return response.blob();
+    if (closed) throw new Error('ui-disposed');
+    const controller = new AbortController(); reads.add(controller);
+    let onAbort!: () => void;
+    const aborted = new Promise<never>((_resolve, reject) => {
+      onAbort = () => reject(controller.signal.reason);
+      controller.signal.addEventListener('abort', onAbort, { once: true });
+    });
+    // Bound both headers and the complete body; settle even if a fetch implementation ignores abort.
+    const timer = setTimeout(() => controller.abort(new Error('read-timeout')), UI_READ_TIMEOUT_MS);
+    try {
+      return await Promise.race([aborted, (async () => {
+        const response = await fetch(assetUrl(root!, path), { cache: 'no-cache', signal: controller.signal });
+        if (!response.ok) throw new Error(`http-${response.status}`);
+        return response.blob();
+      })()]);
+    } finally {
+      clearTimeout(timer); controller.signal.removeEventListener('abort', onAbort); reads.delete(controller);
+    }
   });
   const ready = (async () => {
     if (!root || (platform === browserPlatform && (typeof document === 'undefined' || !document.head))) return;
@@ -104,33 +128,36 @@ export function startOriginalUi(root: string | null, read?: (path: string) => Pr
         let image = images.get(sprite.texture);
         if (!image) {
           const texture = manifest.textures.get(sprite.texture)!;
-          image = checkedBlob(readPath, `ui/${texture.path}`, texture).then(blob => platform.image(blob, texture));
+          image = checkedBlob(readPath, `ui/${texture.path}`, texture, hashUnavailable).then(blob => platform.image(blob, texture));
           images.set(sprite.texture, image);
         }
         const atlas = await image; if (closed) return;
         const ready = await platform.crop(atlas.source, sprite.rect, sprite.slice);
         if (closed) { ready.dispose(); return; }
-        sprites.set(id, ready); update();
+        sprites.set(id, ready);
       } catch (error) { report(id, error); }
     });
     const fontJobs = manifest.fonts.map(async entry => {
       try {
-        const blob = await checkedBlob(readPath, `ui/${entry.path}`, entry); if (closed) return;
+        const blob = await checkedBlob(readPath, `ui/${entry.path}`, entry, hashUnavailable); if (closed) return;
         const lease = platform.font(`${assetUrl(root, `ui/${entry.path}`)}|${entry.sha256}|${entry.role}|${entry.weight}`, blob, entry);
         releases.push(() => lease.dispose());
         const family = await lease.ready; if (closed) return;
-        fonts.set(entry.role, family); update();
+        fonts.set(entry.role, family);
       } catch (error) { report(entry.path, error); }
     });
     const imagesDone = Promise.all(jobs).finally(async () => {
       for (const image of images.values()) { try { (await image).dispose(); } catch { /* failed decode */ } }
     });
     await Promise.all([imagesDone, ...fontJobs]);
+    // Publish the complete set once, including successful siblings when another asset failed.
+    if (sprites.size || fonts.size) update();
   })().catch(error => report('ui', error));
   return { ready, issues, sprite: id => sprites.get(id), font,
     subscribe(listener) { if (closed) return () => {}; listeners.add(listener); return () => { listeners.delete(listener); }; },
     dispose() {
       if (closed) return; closed = true; listeners.clear(); style?.dispose();
+      for (const controller of reads) controller.abort(new Error('ui-disposed'));
       for (const sprite of sprites.values()) sprite.dispose(); sprites.clear(); fonts.clear();
       releases.splice(0).forEach(release => release());
     } };

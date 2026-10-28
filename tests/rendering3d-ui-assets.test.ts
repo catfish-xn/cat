@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHash, webcrypto } from 'node:crypto';
 import { readUiManifest } from '../src/rendering3d/ui-assets';
-import { startOriginalUi, type UiPlatform } from '../src/rendering/three-mode/ui-original-assets';
+import { startOriginalUi, type ReadyUiSprite, type UiPlatform } from '../src/rendering/three-mode/ui-original-assets';
+import { originalHudRules } from '../src/rendering/three-mode/hud-style';
 
 const data = 'synthetic-ui';
 const file = { path: 'textures/test.png', bytes: data.length, sha256: createHash('sha256').update(data).digest('hex') };
@@ -22,7 +23,7 @@ function platform() {
   return { p, imageDispose, spriteDispose, fontDispose, css };
 }
 const read = (m: unknown = manifest()) => vi.fn(async (path: string) => new Blob([path.endsWith('manifest.json') ? JSON.stringify(m) : data]));
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('optional 3D UI sidecar', () => {
   it('rejects unsafe paths and rectangles individually, without losing valid siblings or Latin fonts', () => {
@@ -63,6 +64,7 @@ describe('optional 3D UI sidecar', () => {
     expect(rules).not.toContain('.hud-gold{'); // an unavailable element keeps its entire original style
     expect(rules).not.toContain('.seat-bar'); // no hidden player bar is revealed
     expect(ui.issues).toContain('hud.gold:region-unverified'); expect(notify).toHaveBeenCalled();
+    expect(css.set).toHaveBeenCalledTimes(1); expect(notify).toHaveBeenCalledTimes(1);
     ui.dispose(); ui.dispose(); expect(css.dispose).toHaveBeenCalledTimes(1); expect(spriteDispose).toHaveBeenCalledTimes(2);
     expect(fontDispose).toHaveBeenCalledTimes(1); expect(ui.sprite('hud.panel')).toBeUndefined();
   });
@@ -90,6 +92,111 @@ describe('optional 3D UI sidecar', () => {
     const ui = startOriginalUi('https://assets.test/', async path => new Blob([path.endsWith('.json') ? JSON.stringify(m) : data.toUpperCase()]), p);
     await ui.ready; expect(p.image).not.toHaveBeenCalled(); expect(p.font).not.toHaveBeenCalled();
     expect(ui.issues.some(issue => issue.endsWith(':sha256'))).toBe(true); ui.dispose();
+  });
+
+  it('reports unavailable SHA-256 once per mount while retaining byte checks and usable assets', async () => {
+    vi.stubGlobal('crypto', { subtle: undefined });
+    const { p } = platform(), ui = startOriginalUi('https://assets.test/', read(), p);
+    await ui.ready;
+    expect(ui.issues.filter(issue => issue === 'sha256-unavailable')).toHaveLength(1);
+    expect(p.image).toHaveBeenCalledTimes(1); expect(p.font).toHaveBeenCalledTimes(1);
+    expect(ui.sprite('hud.panel')).toBeDefined(); ui.dispose();
+    const stale = platform();
+    const bad = startOriginalUi('https://assets.test/', async path => new Blob([path.endsWith('.json') ? JSON.stringify(manifest()) : 'bad']), stale.p);
+    await bad.ready;
+    expect(stale.p.image).not.toHaveBeenCalled(); expect(stale.p.font).not.toHaveBeenCalled();
+    expect(bad.issues.some(issue => issue.endsWith(':byte-length'))).toBe(true); bad.dispose();
+  });
+
+  it('clears native read deadlines after success and publishes the complete skin once', async () => {
+    vi.useFakeTimers(); vi.stubGlobal('crypto', undefined);
+    const signals: AbortSignal[] = [];
+    const fetch = vi.fn(async (url: string, init: RequestInit) => {
+      signals.push(init.signal as AbortSignal);
+      return { ok: true, blob: async () => new Blob([url.endsWith('.json') ? JSON.stringify(manifest()) : data]) };
+    });
+    vi.stubGlobal('fetch', fetch);
+    const { p, css } = platform(), ui = startOriginalUi('https://assets.test/root/', undefined, p), notify = vi.fn();
+    ui.subscribe(notify);
+    await vi.advanceTimersByTimeAsync(0); await ui.ready;
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+      'https://assets.test/root/ui/manifest.json', 'https://assets.test/root/ui/textures/test.png', 'https://assets.test/root/ui/fonts/title.otf',
+    ]);
+    expect(fetch.mock.calls.every(([, init]) => init.cache === 'no-cache')).toBe(true);
+    expect(css.set).toHaveBeenCalledTimes(1); expect(notify).toHaveBeenCalledTimes(1);
+    expect(css.set.mock.calls[0][0]).toContain('Render3dBeaufort,system-ui,sans-serif');
+    expect(ui.sprite('hud.panel')).toBeDefined(); expect(ui.sprite('health.hp-player')).toBeDefined();
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(signals.every(signal => !signal.aborted)).toBe(true); ui.dispose();
+  });
+
+  it.each([
+    ['manifest.json', 'headers'], ['manifest.json', 'body'],
+    ['test.png', 'headers'], ['test.png', 'body'],
+    ['title.otf', 'headers'], ['title.otf', 'body'],
+  ])('settles ready and aborts a native %s read stalled at %s after 10 seconds', async (target, stage) => {
+    vi.useFakeTimers(); vi.stubGlobal('crypto', undefined);
+    let signal!: AbortSignal;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      if (url.endsWith(target)) {
+        signal = init.signal as AbortSignal;
+        if (stage === 'headers') return new Promise(() => {}); // Deliberately ignores abort.
+        return { ok: true, blob: () => new Promise(() => {}) };
+      }
+      return { ok: true, blob: async () => new Blob([url.endsWith('.json') ? JSON.stringify(manifest()) : data]) };
+    }));
+    const { p } = platform(), ui = startOriginalUi('https://assets.test/', undefined, p);
+    let settled = false; void ui.ready.then(() => { settled = true; });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(signal.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(9_999); expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1); await expect(ui.ready).resolves.toBeUndefined();
+    expect(settled).toBe(true); expect(signal.aborted).toBe(true);
+    expect(ui.issues.some(issue => issue.endsWith(':read-timeout'))).toBe(true);
+    expect(vi.getTimerCount()).toBe(0); ui.dispose();
+  });
+
+  it.each(['manifest', 'assets'])('aborts pending native %s reads on dispose and settles ready without waiting for fetch', async stage => {
+    vi.useFakeTimers(); vi.stubGlobal('crypto', undefined);
+    const pending: AbortSignal[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      if (stage === 'assets' && url.endsWith('.json')) return { ok: true, blob: async () => new Blob([JSON.stringify(manifest())]) };
+      pending.push(init.signal as AbortSignal);
+      return { ok: true, blob: () => new Promise(() => {}) };
+    }));
+    const { p, css } = platform(), ui = startOriginalUi('https://assets.test/', undefined, p), notify = vi.fn();
+    ui.subscribe(notify); await vi.advanceTimersByTimeAsync(0);
+    expect(pending).toHaveLength(stage === 'assets' ? 2 : 1);
+    expect(pending.every(signal => !signal.aborted)).toBe(true);
+    ui.dispose(); ui.dispose(); await expect(ui.ready).resolves.toBeUndefined();
+    expect(pending.every(signal => signal.aborted)).toBe(true);
+    expect(vi.getTimerCount()).toBe(0); expect(ui.issues).not.toContain('ui:ui-disposed');
+    expect(p.image).not.toHaveBeenCalled(); expect(p.font).not.toHaveBeenCalled();
+    expect(css.set).not.toHaveBeenCalled(); expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('drops a queued skin update if disposed before its microtask runs', async () => {
+    let flush!: () => void;
+    vi.stubGlobal('queueMicrotask', (callback: () => void) => { flush = callback; });
+    const { p, css } = platform(), ui = startOriginalUi('https://assets.test/', read(), p), notify = vi.fn();
+    ui.subscribe(notify); await ui.ready;
+    expect(flush).toBeTypeOf('function'); expect(css.set).not.toHaveBeenCalled();
+    ui.dispose(); flush(); expect(css.set).not.toHaveBeenCalled(); expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('clips XP against the full track, gives gold a separate fixed icon, and enables sliced borders', () => {
+    const sprite = { source: {} as CanvasImageSource, url: 'blob:synthetic', width: 64, height: 8, dispose() {} };
+    const rules = originalHudRules(new Map<string, ReadyUiSprite>([
+      ['hud.panel', { ...sprite, slice: [2, 3, 2, 3] as const }], ['hud.xp-fill', sprite], ['hud.gold-icon', sprite],
+    ]), new Map());
+    expect(rules).toContain('border-style:solid;border-image-source:');
+    expect(rules).toContain('.hud-xp-bar{container-type:inline-size;}');
+    expect(rules).toContain('.hud-xp-fill{border-image:none;background:url("blob:synthetic") left center / 100cqw 100% no-repeat;');
+    expect(rules).toContain('body[data-online]:has(.render3d-layer) .shop-dock .hud-gold .hud-label{');
+    expect(rules).toContain('width:auto;height:auto;overflow:visible;color:inherit;background:none;');
+    expect(rules).toContain('.hud-label::before{content:"";display:inline-block;flex:0 0 13px;width:13px;height:13px;background:url("blob:synthetic") center / contain no-repeat;}');
+    expect(rules).not.toContain(';color:transparent;'); expect(rules).not.toContain('content:none');
   });
 
   it('does not install a font or image arriving after dispose, and frees the late crop', async () => {

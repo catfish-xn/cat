@@ -63,10 +63,12 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const label = wantedCanvas?.getContext('2d');
   if (label?.fillText) { label.fillStyle = '#291b0a'; label.fillRect(0, 0, 128, 40); label.fillStyle = '#ffd84d'; label.font = 'bold 30px sans-serif'; label.textAlign = 'center'; label.fillText('通缉', 64, 31); wantedTexture!.needsUpdate = true; }
   const badgeTextures: CanvasTexture[] = [];
+  const badgeDrawers: (() => void)[] = [];
   const badges = new Group(); badges.name = 'render3d-item-stacks'; object.add(badges);
   const clearItems = () => {
     for (const sprite of [...icons.children, ...badges.children] as Sprite[]) sprite.material.dispose();
     icons.clear(); badges.clear(); badgeTextures.splice(0).forEach(texture => texture.dispose());
+    badgeDrawers.length = 0;
   };
   let barKey = '', itemKey = '', disposed = false, flashing = false;
   let shownItems: NonNullable<BoardPiece['items']> = [], itemFont = ctx.font?.() ?? 'sans-serif';
@@ -110,7 +112,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     if (disposed) return;
     if (shown) drawBar(shown.team, shown.meters);
     const font = ctx.font?.() ?? 'sans-serif';
-    if (font !== itemFont) { itemFont = font; if (shownItems.length) placeItems(shownItems); }
+    if (font !== itemFont) { itemFont = font; for (const draw of badgeDrawers) draw(); }
   });
 
   const placeItems = (items: NonNullable<BoardPiece['items']>) => {
@@ -126,12 +128,17 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
         const badgeCanvas = typeof document === 'undefined' ? null : document.createElement('canvas');
         if (badgeCanvas) { badgeCanvas.width = 64; badgeCanvas.height = 40; }
         const g = badgeCanvas?.getContext('2d');
-        if (g?.fillText) {
-          g.fillStyle = '#091219'; g.fillRect(0, 0, 64, 40); g.fillStyle = full ? '#ffd84d' : '#ffffff';
-          g.font = `bold 30px ${itemFont}`; g.textAlign = 'center'; g.fillText(`${item.stacks}${full ? '满' : ''}`, 32, 31);
-        }
         const map = badgeCanvas ? new CanvasTexture(badgeCanvas) : null;
         if (map) { map.colorSpace = SRGBColorSpace; map.minFilter = LinearFilter; map.generateMipmaps = false; badgeTextures.push(map); }
+        if (g?.fillText && map) {
+          const draw = () => {
+            g.clearRect(0, 0, 64, 40);
+            g.fillStyle = '#091219'; g.fillRect(0, 0, 64, 40); g.fillStyle = full ? '#ffd84d' : '#ffffff';
+            g.font = `bold 30px ${itemFont}`; g.textAlign = 'center'; g.fillText(`${item.stacks}${full ? '满' : ''}`, 32, 31);
+            map.needsUpdate = true;
+          };
+          badgeDrawers.push(draw); draw();
+        }
         const badge = new Sprite(new SpriteMaterial({ map, depthTest: false, depthWrite: false, transparent: true, toneMapped: false }));
         badge.name = `render3d-item-stack-${index}`; badge.userData = { stacks: item.stacks, maxStacks: item.maxStacks, full };
         badge.scale.set(10, 6.25, 1); badge.position.set(sprite.position.x + 3, 3, 0); badge.renderOrder = RENDER_ORDER + 1; badges.add(badge);

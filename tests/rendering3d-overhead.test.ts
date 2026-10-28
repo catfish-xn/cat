@@ -92,4 +92,33 @@ describe('3D overhead meters and items', () => {
     expect(labels.at(-1)).toEqual({ text: '2', font: `bold 30px ${font}` });
     const count = labels.length; update(); expect(labels).toHaveLength(count); overhead.dispose();
   });
+
+  it('redraws only badge canvases on font readiness, retaining sprites, materials and an in-flight icon', async () => {
+    const createElement = vi.fn(() => {
+      const { canvas } = fakeCanvas(); Object.assign(canvas.getContext(), { fillText() {} }); return canvas;
+    });
+    vi.stubGlobal('document', { createElement });
+    let font = 'sans-serif', update = () => {}, finish!: (icon: Texture) => void;
+    const itemTexture = vi.fn(() => new Promise<Texture>(resolve => { finish = resolve; }));
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture, font: () => font,
+      ui: { sprite: () => undefined, subscribe(listener) { update = listener; return () => {}; } } });
+    overhead.set('player', undefined, [{ id: 'stack', icon: 'pending.png', stacks: 2, maxStacks: 3 }, { id: 'plain', icon: null }]);
+    const row = overhead.object.getObjectByName('render3d-overhead-items')!, icons = [...row.children];
+    const badge = overhead.object.getObjectByName('render3d-item-stack-0') as Sprite, map = badge.material.map!;
+    const material = (icons[0] as Sprite).material, version = map.version, canvasCount = createElement.mock.calls.length;
+    const dropMaterial = vi.spyOn(material, 'dispose'), dropMap = vi.spyOn(map, 'dispose');
+    const dropBadge = vi.spyOn(badge.material, 'dispose');
+    font = 'Render3dBeaufort, sans-serif'; update();
+    expect(row.children[0]).toBe(icons[0]); expect(row.children[1]).toBe(icons[1]);
+    expect((icons[0] as Sprite).material).toBe(material);
+    expect(overhead.object.getObjectByName('render3d-item-stack-0')).toBe(badge);
+    expect(badge.material.map).toBe(map); expect(map.version).toBeGreaterThan(version);
+    expect(createElement).toHaveBeenCalledTimes(canvasCount); expect(itemTexture).toHaveBeenCalledTimes(1);
+    expect(dropMaterial).not.toHaveBeenCalled(); expect(dropBadge).not.toHaveBeenCalled(); expect(dropMap).not.toHaveBeenCalled();
+    const icon = new Texture(); finish(icon);
+    await vi.waitFor(() => expect(material.map).toBe(icon));
+    const painted = map.version; update(); expect(map.version).toBe(painted);
+    overhead.dispose();
+    expect(dropMaterial).toHaveBeenCalledTimes(1); expect(dropBadge).toHaveBeenCalledTimes(1); expect(dropMap).toHaveBeenCalledTimes(1);
+  });
 });

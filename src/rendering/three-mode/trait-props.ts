@@ -97,24 +97,26 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const chest: Prop = { root: chestRoot, body: chestBody, stand: chestStand, lease: null, motion: chestMotion, mixer: null, loading: false, disposed: false };
 
   /** A count billboard outside a prop's moving body, so the total stays readable during a payout or a bob. */
-  interface CountLabel { text: string; font: string; view: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null; show(text: string): void; place(y: number): void; dispose(): void }
+  interface CountLabel { text: string; font: string; failed: boolean; view: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null; show(text: string): void; place(y: number): void; dispose(): void }
   const countLabel = (root: Group, name: string, color: string, height: () => number): CountLabel => {
     const entry: CountLabel = {
-      text: '', font: '', view: null,
+      text: '', font: '', failed: false, view: null,
       show(text) {
         const font = ctx.font?.() ?? 'sans-serif', changed = entry.text !== text || entry.font !== font;
         entry.font = font;
         entry.text = text; // Also available in headless tests without a document/canvas.
+        if (entry.failed) return;
         if (!entry.view) {
           const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
-          if (!canvas?.getContext('2d')) return;
+          if (!canvas?.getContext('2d')) { entry.failed = true; return; }
           canvas.width = 192; canvas.height = 80;
           const texture = new CanvasTexture(canvas);
           const sprite = new Sprite(new SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, transparent: true }));
           sprite.name = name; sprite.scale.set(48, 20, 1); sprite.renderOrder = 1003;
           root.add(sprite); entry.view = { canvas, texture, sprite };
         } else if (!changed) return;
-        const draw = entry.view.canvas.getContext('2d')!;
+        const draw = entry.view.canvas.getContext('2d');
+        if (!draw) { entry.failed = true; entry.dispose(); return; }
         draw.clearRect(0, 0, 192, 80);
         draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill();
         draw.fillStyle = color; draw.font = `bold 48px ${font}`; draw.textAlign = 'center'; draw.textBaseline = 'middle';
@@ -122,7 +124,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
         entry.view.sprite.position.y = height();
       },
       place(y) { if (entry.view) entry.view.sprite.position.y = y; },
-      dispose() { entry.view?.texture.dispose(); entry.view?.sprite.material.dispose(); entry.view = null; },
+      dispose() { entry.failed = true; entry.view?.sprite.removeFromParent(); entry.view?.texture.dispose(); entry.view?.sprite.material.dispose(); entry.view = null; },
     };
     return entry;
   };

@@ -1,8 +1,8 @@
-import type { ReadyUiSprite } from './ui-original-assets';
 /**
  * Online HUD styles that only apply with the 3D layer mounted (item column, augment pick); installed by mountRenderer3d so
  * the 2D entry does not carry them. The page-wide 3D layout stays in style.css.
  */
+import type { ReadyUiSprite } from './ui-original-assets';
 const STYLE = `
 /* 3D owns the world-plane shock. The shared DOM receipt supplies a screen-space gold curtain and label. */
 body:has(.render3d-layer) .mel-save-feedback .mel-save-shield { display: none; }
@@ -75,11 +75,20 @@ export function originalHudRules(sprites: ReadonlyMap<string, ReadyUiSprite>, fo
   for (const [id, selector] of Object.entries(HUD_TARGETS)) {
     const sprite = sprites.get(id); if (!sprite) continue;
     const url = `url(${JSON.stringify(sprite.url)})`;
+    if (id === 'hud.gold-icon') {
+      const label = `${UI_SCOPE} ${selector},body[data-online]:has(.render3d-layer) ${selector}`;
+      rules.push(`${label}{display:inline-flex;align-items:center;gap:4px;width:auto;height:auto;overflow:visible;color:inherit;background:none;border-image:none;border-radius:0;box-shadow:none;}`);
+      rules.push(`${UI_SCOPE} ${selector}::before{content:"";display:inline-block;flex:0 0 13px;width:13px;height:13px;background:${url} center / contain no-repeat;}`);
+      continue;
+    }
+    if (id === 'hud.xp-fill' && !sprite.slice) {
+      // cqw measures the full track, so the existing percentage width clips the source from its left edge.
+      rules.push(`${UI_SCOPE} .shop-dock .hud-xp-bar{container-type:inline-size;}`);
+    }
     const image = sprite.slice
-      ? `border-image-source:${url};border-image-slice:${sprite.slice.join(' ')} fill;border-image-width:${sprite.slice.map(v => `${v}px`).join(' ')};border-image-repeat:stretch;background:none;`
-      : `border-image:none;background:${url} center / 100% 100% no-repeat;`;
+      ? `border-style:solid;border-image-source:${url};border-image-slice:${sprite.slice.join(' ')} fill;border-image-width:${sprite.slice.map(v => `${v}px`).join(' ')};border-image-repeat:stretch;background:none;`
+      : `border-image:none;background:${url} ${id === 'hud.xp-fill' ? 'left center / 100cqw' : 'center / 100%'} 100% no-repeat;`;
     rules.push(`${UI_SCOPE} ${selector}{${image}border-color:transparent;border-radius:0;box-shadow:none;}`);
-    if (id === 'hud.gold-icon') rules.push(`${UI_SCOPE} ${selector}{color:transparent;} ${UI_SCOPE} ${selector}::before{content:none;}`);
   }
   // Override only after a face loaded. Each character outside the Latin range uses the same fallback as before.
   if (fonts.has('body')) rules.push(`${UI_SCOPE} :is(.shop-dock,.online-countdown,#online-sidebar,#panels-root,.hover-card,.choice-overlay,.unit-panel,.render3d-layer),${UI_SCOPE} :is(button,input,select){font-family:Render3dSpiegel,system-ui,sans-serif;}`);
