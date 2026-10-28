@@ -184,11 +184,14 @@ export function withOutcome(result: PlaceholderBattleResult, outcome: BattleSeat
   return { ...result, outcomes: result.outcomes.map(candidate => candidate.seatId === outcome.seatId ? outcome : candidate) };
 }
 
-/** Frames of `next` from the first tick that differs from `previous`; null when they are the same replay. */
+/** Replacement suffix of `next`; prefix-only/terminal-only revisions include its last tick. Null for identical replays. */
 export function replayTail(previous: CombatReplay, next: CombatReplay): { readonly fromTick: number; readonly ticks: CombatReplay['ticks']; readonly terminal: CombatReplay['terminal'] } | null {
   let index = 0;
   const shorter = Math.min(previous.ticks.length, next.ticks.length);
   while (index < shorter && JSON.stringify(previous.ticks[index]) === JSON.stringify(next.ticks[index])) index++;
   if (index === previous.ticks.length && index === next.ticks.length && JSON.stringify(previous.terminal) === JSON.stringify(next.terminal)) return null;
+  // An unchanged live prefix can still discard the predicted future (or revise only the terminal).
+  // Carry its last authoritative tick so own and watched tails stay nonempty and splice to exactly `next`.
+  if (index === next.ticks.length && index > 0) index--;
   return { fromTick: index, ticks: next.ticks.slice(index), terminal: next.terminal };
 }
