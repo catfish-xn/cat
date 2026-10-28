@@ -1,4 +1,3 @@
-import { offerFor } from './augment-stage-helpers';
 import {existsSync,readFileSync} from 'node:fs';
 import {it,expect,beforeAll} from 'vitest';
 import {AUGMENT_BATCH5_H13} from '../src/simulation/content/augment-pool-batch5-h13';
@@ -6,8 +5,8 @@ import {RESEARCH_FILE} from './augment-pool-source-expectations';
 import {AUGMENT_TIERS} from '../src/simulation/content/augment-policy';
 import {augmentOfferAllowed} from '../src/simulation/augment-offers';
 import {augmentPool} from './fixtures/m5/oracle.g2.cjs';
-import {selectChoice,combineItems,startMatchCombat,nextRound,openAnvil,type MatchState} from '../src/simulation/match';
-import {accepted,resolveM5Choices,emptyBoard} from './match-helpers';
+import {selectChoice,combineItems,startMatchCombat,nextRound,openAnvil,rerollAugment,type MatchState} from '../src/simulation/match';
+import {accepted,resolveM5Choices,emptyBoard,reachRound} from './match-helpers';
 import {requireAugmentFacts} from '../src/simulation/augment-history';
 import {enterH13ItemRound,h13RoundItemPool} from '../src/simulation/augment-pool-batch5-h13-entry';
 import {G24_FORGE_POOLS} from '../src/simulation/content/g2-4-forges';
@@ -17,8 +16,13 @@ import {ITEM_DEFINITIONS as ALL_ITEMS} from '../src/simulation/content/g2-3-item
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 let acquired:MatchState,ready:MatchState,advanced:MatchState;
 beforeAll(()=>{
- // Seed 47 has the real 3-2 offer; selecting a quiet first augment yields ordinary components through public choices.
- const open=offerFor('artifactory'),c=open.pendingChoice!;expect(c.offers).toContain('artifactory');
+ // Seed 57 (0..100): public 3-2 route with rerolls 0/1/2 offers artifactory after batch-5 pool expansion.
+ let open=reachRound('3-2',false,57);
+ for (const slot of [0,1,2]) {
+  const c=open.pendingChoice!; if (c.offers.includes('artifactory')) break;
+  open=accepted(rerollAugment(open,c.choiceId,c.generation,slot));
+ }
+ const c=open.pendingChoice!;expect(c.offers).toContain('artifactory');
  acquired=accepted(selectChoice(open,c.choiceId,c.generation,'artifactory'));ready=acquired;
 });
 it.skipIf(!existsSync(RESEARCH_FILE))('B5-22 retains source counts and unused Health=50',()=>{

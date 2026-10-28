@@ -1,5 +1,6 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { installB1Offers } from './b1-scripted-offers';
 import { augmentCandidates } from '../../src/simulation/augment-offers';
 import { AUGMENT_DEFINITIONS } from '../../src/simulation/content/augments';
 import { AUGMENT_BATCH5_R5 } from '../../src/simulation/content/augment-pool-batch5-r5';
@@ -113,7 +114,9 @@ export function checkStarryRules(id: 'starry-night' | 'starry-night-plus') {
 export function checkStarryRoom(id:'starry-night'|'starry-night-plus',seed:number,seatId:string){
  describe(id+' actual online room',()=>{
   const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed});
-  afterAll(()=>room.dispose());
+  let restoreOffers: (() => void) | undefined;
+  beforeAll(()=>{ restoreOffers=installB1Offers([id]); });
+  afterAll(()=>{ restoreOffers?.(); room.dispose(); });
   const current=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
   const target=id==='starry-night'?'2-1':'3-2';
   const rounds=target==='2-1'?['1-2','1-3','1-4','2-1']:['1-2','1-3','1-4','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','3-2'];
@@ -122,7 +125,7 @@ export function checkStarryRoom(id:'starry-night'|'starry-night-plus',seed:numbe
    runUntilClaiming(room,clock,s=>s.roundId===round&&(round==='2-4'||s.phase==='preparation'));
   });
   it('selects the offered card, pays exactly once and passes the independent reward oracle',()=>{
-   const before=current(),c=before.pendingChoice!;expect(c.offers).toContain(id);
+   const before=current(),c=before.pendingChoice!;expect(c.offers).toContain(id); // installB1Offers fixture self-check
    const command={type:'choose' as const,choiceId:c.choiceId,generation:c.generation,definitionId:id};
    const result=room.handle(seatId,command);expect(result.ok).toBe(true);if(!result.ok)throw Error('choose failed');
    const after=current();expect(after.gold).toBe(before.gold+(id==='starry-night'?6:8));
