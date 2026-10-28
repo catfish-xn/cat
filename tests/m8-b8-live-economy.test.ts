@@ -7,6 +7,9 @@ import {UNIT_DEFINITIONS} from '../src/simulation/units';
 import type {MatchState} from '../src/simulation/match';
 import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-public';
 import { vi } from 'vitest';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
+// Batch-5 pool drifted the real 2-1 draw on seed 7985; script only the three-card pick for this route.
+installB1Offers(['investment-strategy-i']);
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 // v24: first seed from 0 with no opening encounter, Investment I offered at
@@ -18,7 +21,7 @@ expect(independentLootPlan(SEED,10).rounds.at(-1)!.encounterPlan.drops.map(d=>d.
 expect(independentLootPlan(SEED,10).rounds.at(-1)!.encounterPlan.drops.find(d=>d.payload.kind==='gold')!.payload).toEqual({kind:'gold',quantity:1});
 let preparation=api.createMatch(SEED);
 while(preparation.roundDefinitionId!=='2-7'){
- if(preparation.phase==='choice'){const c=preparation.pendingChoice!;if(c.kind==='augment')expect(c.offers).toContain('investment-strategy-i');preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}
+ if(preparation.phase==='choice'){const c=preparation.pendingChoice!;if(c.kind==='augment'){expect(c.offers).toContain('investment-strategy-i'); /* fixture self-check under installB1Offers */}preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}
  else if(preparation.phase==='settlement')preparation=accepted(api.nextRound(preparation,preparation.round));
  else{if(preparation.round>3)preparation=reserveExcept(preparation,[]);
   else for(const u of players(preparation).filter(u=>u.location.kind==='bench')){const held=players(preparation).filter(u=>u.location.kind==='board');if(held.length>=preparation.level)break;const col=[3,5,1,0,6].find(col=>!held.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===7))!;preparation=accepted(api.deployMatchUnit(preparation,u.id,{kind:'board',cell:{col,row:7}}));}

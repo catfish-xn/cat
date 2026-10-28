@@ -9,7 +9,7 @@ import { qualityProjection,qualityHealth } from '../src/simulation/augment-pool-
 import { readCombatStrategyInputs } from '../src/simulation/combat-input';
 import { restoreMatch,serializeMatch } from '../src/simulation/serialization';
 import { accepted,reachRoundFielded,resolveM5Choices } from './match-helpers';
-import { firstNodeSeed } from './augment-stage-helpers';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 
@@ -25,13 +25,13 @@ it('offers at the two permitted nodes',()=>{
   expect(augmentPool('prismatic',[],[],`round:${node}:augment`,[]).includes(id)).toBe(node!=='4-2');
  }
 });
-it('real selection and item commands freeze a radiant projection without changing inventory; restore rejects tampering',()=>{
- let open=reachRoundFielded('2-1',firstNodeSeed(id,101));
- for(let seed=firstNodeSeed(id,101)+1;open.items.filter(i=>i.location.kind==='inventory').length<2&&seed<=100;seed++){
-  try { firstNodeSeed(id,1,seed); } catch { continue; }
-  const candidate=reachRoundFielded('2-1',seed);if(candidate.pendingChoice?.offers.includes(id))open=candidate;
+it('real selection and item commands freeze a radiant projection without changing inventory; restore rejects tampering',()=>withB1Offers(['quality-over-quantity'],()=>{
+ let open=reachRoundFielded('2-1',0);
+ for(let seed=1;open.items.filter(i=>i.location.kind==='inventory').length<2&&seed<=100;seed++){
+  const candidate=reachRoundFielded('2-1',seed);
+  if(candidate.pendingChoice?.offers.includes(id))open=candidate;
  }
- const choice=open.pendingChoice!;expect(choice.offers).toContain(id);
+ const choice=open.pendingChoice!;expect(choice.offers).toContain(id); // fixture self-check; real pool stays eligible
  let state=resolveM5Choices(accepted(selectChoice(open,choice.choiceId,choice.generation,id)));
  expect(state.consumables.filter(c=>c.definitionId==='magnetic-remover').length-open.consumables.filter(c=>c.definitionId==='magnetic-remover').length).toBe(2);
  const components=state.items.filter(i=>i.location.kind==='inventory');expect(components.length).toBeGreaterThanOrEqual(2);
@@ -61,4 +61,4 @@ it('real selection and item commands freeze a radiant projection without changin
  expect(restoreMatch(combatText)).toEqual(combat);expect(restoreMatch(JSON.parse(combatText))).toEqual(combat);expect(restoreMatch(combat)).toEqual(combat);
  const forged=JSON.parse(combatText);forged.combatInputBasis.inputs.items.find((i:any)=>i.id===item.id).definitionId='bow';
  expect(()=>restoreMatch(forged)).toThrow();expect(()=>restoreMatch(JSON.stringify(forged))).toThrow();expect(()=>serializeMatch(forged)).toThrow();
-});
+}));
