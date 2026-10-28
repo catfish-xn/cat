@@ -5,6 +5,22 @@ import {accepted,readyMatch,resolveM5Choices} from './match-helpers';
 import {finishPublicEquipmentBattle,publicEquipmentPreparation,resolvePublicEquipmentChoices} from './fixtures/b8-public-equipment';
 import type {MatchState} from '../src/simulation/match-types';
 import {shop as independentShop} from './fixtures/m5/oracle.g2.cjs';
+import {historyFreeAugments} from './fixtures/history-free-augments';
+// Keep the paid seed-24 route; real rerolls avoid history-dependent augments
+// so forged growth reaches the existing current-resource-fold rejection.
+const equipmentOptions={seed:24,augmentPriorities:historyFreeAugments,rerollForAugment:true};
+function resolveGrowthChoices(input:MatchState):MatchState {
+ let state=input;
+ while(state.pendingChoice?.kind==='augment'){
+  const c=state.pendingChoice;
+  const id=historyFreeAugments.find(id=>c.offers.includes(id));
+  if(id){state=accepted(api.selectChoice(state,c.choiceId,c.generation,id));continue;}
+  const slot=c.rerolledSlots?.findIndex(used=>!used)??-1;
+  expect(slot).toBeGreaterThanOrEqual(0);
+  state=accepted(api.rerollAugment(state,c.choiceId,c.generation,slot));
+ }
+ return resolvePublicEquipmentChoices(state);
+}
 
 /** Built once per file; the first case to use it also runs its assertions. */
 function once<T>(build:()=>T):()=>T{let value:T|undefined;return ()=>value??=build();}
@@ -15,7 +31,7 @@ function once<T>(build:()=>T):()=>T{let value:T|undefined;return ()=>value??=bui
 // Seed 24 (was 9): after the xp/batch-3 merge the seed-9 route's new augment picks lose the 4-6 battle (gameOver);
 // a scan of seeds 0-159 with this unchanged route found seed 24 reaching 4-7 with the most HP left (46).
 beforeAll(() => {
- const shared=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:24});
+ const shared=publicEquipmentPreparation(['sword','rod','sword','sword'],equipmentOptions);
  expect(shared.seed).toBe(24);
 },30_000);
 
@@ -45,7 +61,7 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
  const fundingSetup=once(()=>{
   // Nine paid Tristana cards from the public seed24 acquisition route (seed9 before the xp/batch-3 merge, seed22 before v22)
   // create the same three-star kill/growth control without relabelling the opening Irelia.
-  let state=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:24});
+  let state=publicEquipmentPreparation(['sword','rod','sword','sword'],equipmentOptions);
   // Keep the naturally acquired army alive while earning purchase income. The
   // same two recipe items return with their IDs when their original holder sells.
   const equipment:string[]=[];
@@ -98,7 +114,7 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
    if(state.pendingChoice?.kind==='anomaly'){
     state=resolveM5Choices(state);expect(state.anomalyBinding).not.toBeNull();
     expect(state.preparation.units.find(u=>u.id===state.anomalyBinding!.unitId)!.definitionId).not.toBe('tristana');
-   }else state=resolvePublicEquipmentChoices(state);
+   }else state=resolveGrowthChoices(state);
   }
   route.state=state;return route;
  }
@@ -131,6 +147,7 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   for(let budget=0;state.roundDefinitionId!=='4-7';budget++){
    expect(budget).toBeLessThan(16);
    if(state.phase==='choice'){
+    if(state.pendingChoice?.kind==='augment'){state=resolveGrowthChoices(state);continue;}
     const c=state.pendingChoice!;
     state=c.step==='target'?accepted(api.selectAnomalyTarget(state,c.choiceId,c.generation,unitId))
      :accepted(api.selectChoice(state,c.choiceId,c.generation,c.offers[0]));
@@ -164,6 +181,7 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   expect(live.persistentGrowth).toEqual([{unitId,attackDamageBps:priorGrowth+125*growthEvents}]);
   expect(live.roundResults).toHaveLength(initial.roundResults.length+1);
   const restored=restoreMatch(JSON.stringify(live));expect(restored).toEqual(live);
+  expect(live.augmentHistory).toBeUndefined();
   const forged=JSON.parse(JSON.stringify(live));forged.persistentGrowth[0].attackDamageBps+=125;
   expect(()=>restoreMatch(forged)).toThrow(/current resource fold/);
   const duplicate=api.stepMatch(restored);expect(duplicate.state).toBe(restored);expect(duplicate.events).toEqual([]);
