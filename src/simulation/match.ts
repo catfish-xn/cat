@@ -557,7 +557,9 @@ function execute_startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPo
   const draw = nextRandom(state.battleSeedRngState);
   const combatInputBasis=freezeCombatInput(state,draw.word,state.resourceProvenance.entries.length);
   const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
-  const combatStart = !state.multiplayer && state.m8.round.kind === 'pvp' && state.augments.some(a=>a.definitionId==='contested')
+  // Tick-zero concessions settle before the outer command trace can record the roster.
+  const combatStart = !state.multiplayer && state.m8.round.kind === 'pvp' && started.state.status !== 'running'
+    && state.augments.some(a=>a.definitionId==='contested'||a.definitionId==='void-swarm')
     ? recordAugmentPvpRoster(state, started.state.combatId!, [{...historyRoster(state),seatId:'solo',index:0,hp:state.playerHp,alive:true,rank:1,eliminatedRound:null}], null) : state;
   const next = withCombat({ ...combatStart, combatInputBasis,battleSeedRngState: draw.state }, started.state, unitLootPolicy);
   return accept(next.state, [...toLedgerEvents(started.events), ...next.events]);

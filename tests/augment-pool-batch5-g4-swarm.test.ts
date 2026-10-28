@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { expect, it } from 'vitest';
 import { AUGMENT_BATCH5_G4 } from '../src/simulation/content/augment-pool-batch5-g4';
 import { augmentCandidates } from '../src/simulation/augment-offers';
@@ -16,6 +17,48 @@ import type { MatchState } from '../src/simulation/match-types';
 import { voidFixture } from './augment-pool-batch5-g4-helpers';
 import { augmentPool, voidSwarmPortals, ROUNDS } from './fixtures/m5/oracle.g2.cjs';
 import { rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs';
+import { deployMatchUnit, startMatchCombat } from '../src/simulation/match';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
+
+function publicVoidSwarm() {
+  // Real first-node draw in the authorized 0..100 range; no scripted offers.
+  const open=reachRound('2-1',false,53);
+  expect(open.pendingChoice!.offers).toContain('void-swarm');
+  return resolveM5Choices(open,['void-swarm']);
+}
+
+it('B5-73 solo running combat preserves the exact pre-fix history order and save bytes', () => {
+  let state=publicVoidSwarm();
+  const hero=state.preparation.units.find(u=>u.team==='player')!;
+  state=accepted(deployMatchUnit(state,hero.id,{kind:'board',cell:{col:3,row:4}}));
+  const started=accepted(startMatchCombat(state));
+  expect(started.phase).toBe('combat');
+  expect(started.combat).toMatchObject({status:'running',tick:0});
+  expect(started.augmentHistory!.facts.slice(state.augmentHistory!.facts.length)
+    .map(f=>({kind:f.kind,sequence:f.sequence}))).toEqual([
+      {kind:'combat-roster',sequence:3},{kind:'pvp-roster',sequence:4},{kind:'deaths',sequence:5},
+    ]);
+  // Independently exported with 97068956's unmodified match.ts and these same
+  // public commands. Hash the entire serialization, including history sequences.
+  const save=serializeMatch(started);
+  expect(createHash('sha256').update(save).digest('hex'))
+    .toBe('ea42cda1eeab49ebc9c4e012b17214218092cf55d5653adb6b41ebc6f4e760bc');
+  expect(restoreMatch(save)).toEqual(started);
+});
+
+it('B5-73 solo tick-zero concession records one PvP roster before settlement and restores', () => {
+  const state=emptyBoard(publicVoidSwarm());
+  const settled=accepted(startMatchCombat(state));
+  expect(settled.phase).toBe('settlement');
+  expect(settled.combat).toMatchObject({status:'finished',tick:0});
+  const rosters=settled.augmentHistory!.facts.filter(f=>f.kind==='pvp-roster'&&f.round===state.round);
+  expect(rosters).toHaveLength(1);
+  expect(rosters[0]).toMatchObject({battleId:'round-4',seats:[{units:state.preparation.units.filter(u=>u.team==='player')}]});
+  expect(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board')).toEqual([]);
+  expect(settled.roundResults.filter(r=>r.round===state.round)).toHaveLength(1);
+  expect(restoreMatch(serializeMatch(settled))).toEqual(settled);
+});
 
 const ARCHIVE = '/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 it.skipIf(!existsSync(ARCHIVE))('B5-73 uses the standard 14.24 values rather than Hyper Roll or S14', () => {

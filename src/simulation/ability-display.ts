@@ -12,6 +12,7 @@ import { ABILITY_DISPLAY_SOURCE } from './ability-display-source';
 import { getUnitStats } from './unit-stats';
 import type { StarLevel } from './unit-types';
 import { d14UnitBase } from './d14-anomalies/projection';
+import { D14_FOURTH_ABILITY } from './d14-anomalies/fourth-ability';
 
 export interface AbilityDisplayStats {
   readonly abilityPower?: number;
@@ -54,9 +55,12 @@ function displayValues(definitionId: string, starLevel: StarLevel,
   const ad = stats.attackDamage ?? base.attack, ap = stats.abilityPower ?? 100;
   if (![ad, ap].every(n => Number.isSafeInteger(n) && n >= 0 && n <= 1_000_000))
     throw new RangeError('Display AD/AP must be integers in [0, 1000000]');
-  const values: Record<string, number> = projection?.ability.kind === 's13'
-    ? Object.fromEntries(Object.entries(projection.ability.variables).map(([key, value]) => [key, value / 10000]))
+  // Certified rank-4 metadata includes tooltip-only fields absent from combat
+  // (e.g. Zyra's Experiment branch). Never fall back to rank-3 coefficients.
+  const values: Record<string, number> = promoted ? { ...D14_FOURTH_ABILITY[definitionId] }
     : Object.fromEntries(Object.entries(source.variables).map(([k, v]) => [k, v[starLevel - 1]]));
+  if (projection?.ability.kind === 's13') Object.assign(values,
+    Object.fromEntries(Object.entries(projection.ability.variables).map(([key, value]) => [key, value / 10000])));
   const v = (key: string): number => {
     if (!Object.hasOwn(values, key)) throw new RangeError(`Missing display source variable: ${definitionId}/${key}`);
     return values[key];

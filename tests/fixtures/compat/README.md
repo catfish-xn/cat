@@ -27,3 +27,19 @@ A structural comparison against `pre-spoils-seed42.json` has exactly five differ
 and `m8.loot.frozen.replayDigest`. All combat, reward, receipt, RNG and roster data
 are identical. The current settlement implementation must still match the new
 pre-Spoils bytes exactly and continue both following rounds with full history.
+
+## v25 content identity
+
+`pre-spoils-v25-seed42.json` uses checkout `97068956` with the same isolated
+pre-Spoils settlement module from `808d16ae`. Reproduce into a **new** file with:
+
+```sh
+git show 808d16ae:src/simulation/g2-3-settlement.ts | node scripts/export-pre-spoils-compat.cjs /tmp/pre-spoils-v25.json
+```
+
+The exporter verifies its own serialize/restore, then checks that every gameplay
+field equals the retained v24 fixture. Exactly the same five identity fields
+listed above differ; no digest is patched and neither earlier fixture is changed.
+The regression still requires exact serialized byte equality and continued replay
+of both following rounds. This is a settlement compatibility fixture, not epoch
+evidence or an old-identity save migration.
