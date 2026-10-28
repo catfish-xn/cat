@@ -65,7 +65,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'big-grab-bag':{node:'3-2',seed:12,rerolls:[0]},
   'blazing-soul-i':{node:'3-2',seed:4},
   'blazing-soul-ii':{node:'3-2',seed:0,rerolls:[0]},
-  'blinding-speed':{node:'3-2',seed:0,rerolls:[0,1]},
+  'blinding-speed':{node:'3-2',seed:47},
   'bronze-for-life-i':{node:'3-2',seed:30},
   'bronze-for-life-ii':{node:'3-2',seed:16},
   'bulky-buddies-ii':{node:'3-2',seed:52,rerolls:[0,1]},

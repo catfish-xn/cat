@@ -1,6 +1,5 @@
 import { hash } from '../scripts/m4-evidence.cjs';
 import { describe, expect, it } from 'vitest';
-import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { MAX_BATTLE_RECORDS } from '../src/m6/limits';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
@@ -41,15 +40,12 @@ describe('B6 gate preparation and explicit dependency metadata',()=>{
     expect(state.phase).toBe('choice');expect(state.pendingChoice.kind).toBe('augment');expect(state.gold).toBe(11);
   });
   it('obtains one actual 2-4 supply component and reaches the next legal equipment phase',async()=>{
-    const restore=installB1Offers(['superstars-ii']);
-    try{
-    const state=await prepareB6Opening(pageAdapter(307),'2-5');
-    // v25 pool: scripted 2-1 draw for Superstars II; seed 307 route unchanged (was natural offer).
+    const state=await prepareB6Opening(pageAdapter(1),'2-5',{augment:'superstars-ii'});
+    // v25 seed 1: Superstars II grants no equipment; the real 2-4 sword remains the only item.
     expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');
     expect(state.augments.map(augment=>augment.definitionId)).toEqual(['superstars-ii']);
     expect(state.items.map(item=>item.definitionId)).toEqual(['sword']);
     expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([[state.items[0].id]]);
-    }finally{restore();}
   });
   it('selects a named real 2-1 augment: seed 18 Guardbreaker Spirit gloves are item-1 and the 2-4 sword item-2 (verify-m5-input itemReset)',async()=>{
     const state=await prepareB6Opening(pageAdapter(18),'2-5',{augment:'guardbreaker-spirit'});

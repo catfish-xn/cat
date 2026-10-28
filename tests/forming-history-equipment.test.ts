@@ -6,8 +6,9 @@ import { validateHistoricalEquipment } from '../src/simulation/b8-restore';
 import { pausableRoute } from './fixtures/t13-loot-public';
 const { run } = createRequire(import.meta.url)('../scripts/generate-m5-route.cjs');
 
-// v25 pool: seed 14 public cannon route still rerolls 3-2 to Golemify (seed 4/18 no longer do).
-// completed items are equipped: the forming removal returns them to the inventory like a sale, and the saved-history check
+// v24 seed 4's public cannon route used augmentRerollPriorities to take Golemify at 3-2 while completed items were equipped.
+// v25 pool: seed 14 keeps that fold; seed 4 no longer reaches Golemify on the same route.
+// The forming removal returns equipped items to the inventory like a sale, and the saved-history check
 // (battle-record-validation checkHistoryCarry) must carry that return instead of keeping the old bindings.
 describe('forming removal in the historical equipment fold', () => {
   const captured = new Error('captured');

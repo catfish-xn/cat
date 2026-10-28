@@ -1,8 +1,7 @@
 import { firstNodeSeed, offerFor, offeredAt } from './augment-stage-helpers';
-import { withB1Offers } from './fixtures/b1-scripted-offers';
 import {expect,it} from 'vitest';
 import {reachRound,accepted,emptyBoard,resolveM5Choices} from './match-helpers';
-import {createMatch,selectChoice,equipItem,useConsumable,startMatchCombat,nextRound,rerollAugment} from '../src/simulation/match';
+import {createMatch,selectChoice,equipItem,useConsumable,startMatchCombat,nextRound} from '../src/simulation/match';
 import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {augmentForgeOffers,grantAugmentAcquisition} from '../src/simulation/augment-acquisition';
 // v24 shop pool: first non-Trainer-Golem seed from 0 whose public 2-1 offer holds each card.
@@ -15,16 +14,8 @@ function select(id:string){
  expect(c.offers).toContain(id);
  return accepted(selectChoice(s,c.choiceId,c.generation,id));
 }
-it('Blinding Speed grants exactly red buff, rageblade, bow and removable-tool once, all restorable',()=>withB1Offers(['blinding-speed'],()=>{
- // v25 pool: no 0..100 public 3-2 reroute; script the draw only (toContain is fixture self-check).
- let state=reachRound('3-2',false,0);
- for (const slot of [0, 1, 2] as const) {
-  if (state.pendingChoice!.offers.includes('blinding-speed')) break;
-  const c=state.pendingChoice!;
-  state=accepted(rerollAugment(state,c.choiceId,c.generation,slot));
- }
- expect(state.pendingChoice!.offers).toContain('blinding-speed');
- state=accepted(selectChoice(state,state.pendingChoice!.choiceId,state.pendingChoice!.generation,'blinding-speed'));
+it('Blinding Speed grants exactly red buff, rageblade, bow and removable-tool once, all restorable',()=>{
+ let state=select('blinding-speed');
  const receipts=state.seatMechanics!.receipts.filter(r=>r.source==='s13-augment-acquisition');
  expect(receipts).toHaveLength(4);
  expect(receipts.filter(r=>r.kind==='item').map(r=>'definitionId'in r?r.definitionId:'')).toEqual(['red-buff','rageblade','bow']);
@@ -39,7 +30,7 @@ it('Blinding Speed grants exactly red buff, rageblade, bow and removable-tool on
  state=accepted(useConsumable(state,tool.consumableId,{kind:'unit',unitId:'unit-1'}));
  expect(state.items.find(i=>i.id===item.id)?.location.kind).toBe('inventory');
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
-}));
+});
 it.each([['portable-forge',4,'artifact',0],['radiant-relics',5,'radiant',1]] as const)('%s offers exact choice size and survives pending/selected saves', (id,count,_kind,tools)=>{
  let state=select(id);const c=state.pendingChoice!,a=state.augments.at(-1)!;
  expect(c.kind).toBe('forge');expect(c.offers).toHaveLength(count);expect(new Set(c.offers).size).toBe(count);

@@ -179,7 +179,7 @@ describe('match session commands and fixed clock', () => {
   });
 
   it('preserves the purchased player roster and unique results for five rounds', () => withB1Offers(['starry-night'], () => {
-    // v24 seed 7226 route; v25 pool scripts Starry Night at 2-1 (toContain on offers is fixture self-check).
+    // v24 seed 7226 route; v25 pool scripts Starry Night at 2-1 (augments.toEqual(['starry-night']) is the fixture self-check).
     const session = new MatchSession(reachRound('1-3',true,7226));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
