@@ -7,17 +7,27 @@ import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { goldenFindGoldPlan, GOLDEN_FIND_SOURCE, settleBatch5H9History } from '../src/simulation/augment-pool-batch5-h9';
 import { requireAugmentFacts } from '../src/simulation/augment-history';
-import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
-import { offerFor } from './augment-stage-helpers';
+import { accepted, fieldBench, reachRoundFielded, resolveM5Choices } from './match-helpers';
+import { rerollAugment } from '../src/simulation/match';
 import { augmentPool, freeRerollCredits } from './fixtures/m5/oracle.g2.cjs';
 
 let state: MatchState, acquired: MatchState, paid: MatchState, priorCredits: number;
 let paidSerialized: string;
 let anomalyTarget:string;
 let deployment: MatchState['preparation']['units'];
+/** v25 pool: first fielded 4-2 seed in 0..100 after rerolls 0/1/2 (seed 17); draw scripted when the slot drifts. */
+const H9_GOLDEN_FIND = { seed: 17, rerolls: [0, 1, 2] as const };
+function goldenFindOffer() {
+  let state = reachRoundFielded('4-2', H9_GOLDEN_FIND.seed);
+  for (const slot of H9_GOLDEN_FIND.rerolls) {
+    const choice = state.pendingChoice!;
+    state = accepted(rerollAugment(state, choice.choiceId, choice.generation, slot));
+  }
+  return state;
+}
 beforeAll(() => {
   // A genuine legacy checkpoint bounds the authenticated trace to this acquisition onward.
-  const before=offerFor('a-golden-find');
+  const before = goldenFindOffer();
   const grant=grantMechanicUnit(before,{receiptId:'h9-kill-witness',source:'test',definitionId:'viktor',starLevel:3});
   expect(grant.ok).toBe(true);if(!grant.ok)throw Error(grant.reason);
   const open = restoreMatch(serializeMatch(grant.state)), c = open.pendingChoice!;

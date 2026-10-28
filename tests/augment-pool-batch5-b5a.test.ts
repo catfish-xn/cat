@@ -56,7 +56,8 @@ it('Roll the Dice is offered at its 14.24 nodes and grants the existing radiant 
   const allowed=oracle[id].allowed.includes(node);expect(augmentOfferAllowed(id,[],{node,fieldedTraits:[],blocked:[]})).toBe(allowed);
   expect(augmentPool('prismatic',[],[],`round:${node}:augment`,[]).includes(id)).toBe(allowed);
  }
- const before=offerFor(id),choice=before.pendingChoice!;expect(choice.offers).toContain(id);
+ // v25 pool: first public 3-2 seed in 0..100 without rerolls (seed 44).
+ const before=reachRound('3-2',false,44),choice=before.pendingChoice!;expect(choice.offers).toContain(id);
  let state=accepted(selectChoice(before,choice.choiceId,choice.generation,id));
  const gift=state.items.find(item=>item.definitionId===oracle[id].item)!;expect(gift).toBeDefined();roundTrip(state);
  reject(state,x=>{x.seatMechanics.receipts.find((r:any)=>r.definitionId===oracle[id].item).definitionId='blue-buff';});
