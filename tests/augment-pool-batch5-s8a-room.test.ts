@@ -5,7 +5,8 @@ import { readG23Progress } from '../src/simulation/g2-3-state';
 import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:17});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:182});
+// v25 drift-3: seed 182 offers pilfer at 2-1 for s2 and records a positive pilfer battle count on the public room route.
 afterAll(()=>room.dispose());
 it('room advances to 1-3',()=>{room.start();runUntilClaiming(room,clock,s=>s.roundId==='1-3'&&s.phase==='preparation');});
 it('room advances to 1-4',()=>{runUntilClaiming(room,clock,s=>s.roundId==='1-4'&&s.phase==='preparation');});

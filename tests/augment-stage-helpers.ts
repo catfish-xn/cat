@@ -39,6 +39,8 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = fal
  * v25 integration B refreshes the exercised B5A routes for 250 cards; other entries retain their earlier fixture scope.
  * v25 final integration: non-fielded 3-2 routes re-searched on 285 admitted cards,
  * ascending seeds 0..299, then public slot rerolls 0/1/2, without editing state.
+ * v25 drift-3 (batch-5 pool expansion): coronation, belt-overflow, calculated-enhancement,
+ * sword-overflow, trifecta-ii, wand-overflow, geniuses, pair-of-fours re-searched on the same 0..299 rule.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
@@ -61,7 +63,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'a-golden-find':{node:'4-2',seed:11,fielded:true,rerolls:[0,1,2]},
   'backup':{node:'3-2',seed:1},
   'bad-luck-protection':{node:'3-2',seed:15,rerolls:[0]},
-  'belt-overflow':{node:'3-2',seed:0},
+  'belt-overflow':{node:'3-2',seed:29},
   'big-grab-bag':{node:'3-2',seed:12,rerolls:[0]},
   'blazing-soul-i':{node:'3-2',seed:4},
   'blazing-soul-ii':{node:'3-2',seed:0,rerolls:[0]},
@@ -70,11 +72,11 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'bronze-for-life-ii':{node:'3-2',seed:16},
   'bulky-buddies-ii':{node:'3-2',seed:52,rerolls:[0,1]},
   'bulky-buddies-iii':{node:'3-2',seed:21},
-  'calculated-enhancement':{node:'3-2',seed:0},
+  'calculated-enhancement':{node:'3-2',seed:5},
   "call-to-chaos":{node:'4-2',seed:576,fielded:true},
   'climb-the-ladder-i':{node:'3-2',seed:76},
   'climb-the-ladder-ii':{node:'3-2',seed:15,rerolls:[0,1]},
-  'coronation':{node:'3-2',seed:0},
+  'coronation':{node:'3-2',seed:5,rerolls:2},
   'corrosion':{node:'3-2',seed:25},
   'dark-alley-dealings':{node:'3-2',seed:13,rerolls:[0]},
   'defense-call':{node:'3-2',seed:3,rerolls:[0,1]},
@@ -83,7 +85,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'epoch-plus':{node:'3-2',seed:11},
   'eye-for-an-eye-plus':{node:'3-2',seed:17,rerolls:[0]},
   'find-your-center':{node:'3-2',seed:1,rerolls:[0]},
-  'geniuses':{node:'4-2',seed:12,fielded:true,rerolls:[0,1,2]},
+  'geniuses':{node:'4-2',seed:16,fielded:true,rerolls:3},
   'golemify':{node:'3-2',seed:18,rerolls:[0]},
   'item-collector-i':{node:'3-2',seed:40},
   'item-collector-ii':{node:'3-2',seed:4},
@@ -98,7 +100,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'noble-sacrifice':{node:'3-2',seed:31,rerolls:[0,1,2]},
   'one-buff-two-buff':{node:'3-2',seed:16,rerolls:[0,1]},
   'one-two-five':{node:'4-2',seed:59,fielded:true},
-  'pair-of-fours':{node:'4-2',seed:10,fielded:true},
+  'pair-of-fours':{node:'4-2',seed:25,fielded:true},
   'phreaky-friday-plus':{node:'3-2',seed:44,rerolls:[0,1]},
   'piercing-lotus-i':{node:'3-2',seed:15},
   'piercing-lotus-ii':{node:'3-2',seed:0,rerolls:[0,1,2]},
@@ -109,14 +111,14 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'savage-revenge':{node:'3-2',seed:62,fielded:true,rerolls:[0,1]},
   'sisters':{node:'4-2',seed:3,fielded:true},
   'support-mining-plus':{node:'3-2',seed:1},
-  'sword-overflow':{node:'3-2',seed:16},
+  'sword-overflow':{node:'3-2',seed:16,rerolls:3},
   'teaming-up-i':{node:'3-2',seed:6,rerolls:[0,1,2]},
   'teaming-up-ii':{node:'4-2',seed:60,fielded:true,rerolls:[0,1,2]},
   'the-golden-egg':{node:'4-2',seed:27,fielded:true,rerolls:[0]},
   'trifecta-i':{node:'3-2',seed:39},
-  'trifecta-ii':{node:'3-2',seed:7,rerolls:[0,1]},
+  'trifecta-ii':{node:'3-2',seed:57,rerolls:3},
   'unlikely-duo':{node:'4-2',seed:1,fielded:true,rerolls:[0]},
-  'wand-overflow':{node:'3-2',seed:7},
+  'wand-overflow':{node:'3-2',seed:0},
   'wealthy-rehab-i':{node:'3-2',seed:6},
   'wealthy-rehab-ii':{node:'3-2',seed:18,rerolls:[0,1,2]},
 };

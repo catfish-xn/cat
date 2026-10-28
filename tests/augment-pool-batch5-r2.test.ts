@@ -27,8 +27,9 @@ it('B5-21 is prismatic, offered at 3-2/4-2, with independent pool agreement',()=
 
 const clock=new ManualClock();
 const room=new Room(Array.from({length:8},(_,i)=>({seatId:`s${i}`,name:`s${i}`,kind:'human' as const})),{
- roomId:'test-room',seed:21,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
+ roomId:'test-room',seed:118,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
 });
+// v25 drift-3: seed 118 is the first in 0..500 where s1's public room route offers anger-issues at 3-2.
 const mine=()=>room.state.seats.find(s=>s.seatId==='s1')!.match;
 /** Same legal first-offer/claim route as the bounded seed finder; never changes room state directly. */
 function arrive(roundId:string):void {
