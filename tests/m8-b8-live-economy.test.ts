@@ -1,6 +1,6 @@
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {openingEncounter} from './fixtures/m5/oracle.g2.cjs';
-import {describe,expect,it} from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {UNIT_DEFINITIONS} from '../src/simulation/units';
@@ -9,7 +9,8 @@ import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-pu
 import { vi } from 'vitest';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
 // Batch-5 pool drifted the real 2-1 draw on seed 7985; script only the three-card pick for this route.
-installB1Offers(['investment-strategy-i']);
+const restoreB1Offers=installB1Offers(['investment-strategy-i']);
+afterAll(()=>restoreB1Offers());
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 // v24: first seed from 0 with no opening encounter, Investment I offered at
