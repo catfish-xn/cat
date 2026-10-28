@@ -16,7 +16,8 @@ import { augmentPool, tombRaiderPlan, validateTombRaiderTransition } from './fix
 describe('B5-40 online commands and authenticated saves', () => {
   let pool: SharedPoolState, state: MatchState, table: readonly HistorySeat[], acquired: string;
   const eliminated = new Set<string>();
-  beforeAll(() => { ({ pool, state } = onlineOffer(7)); });
+  // This seed yields the prismatic card in the real 4-2 offer.
+  beforeAll(() => { ({ pool, state } = onlineOffer(66)); });
   function roundTrip() {
     const authority = captureAugmentHistoryAuthority(state);
     for (const input of [state, JSON.stringify(state), canonicalContent(state)])

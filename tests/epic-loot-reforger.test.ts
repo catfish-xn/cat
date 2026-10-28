@@ -195,9 +195,12 @@ describe('v17 epic rewards and unified consumables',()=>{
   // v22: the seed-42 golden route draws the crab opening, whose 6-7 crab has no authored neutral opening plan;
   // take the 6-7 prefix from the crab-free public route instead (Rift Herald keeps its opening state).
   let state=publicAuthoredPreparation('6-7');
+  const anomalyHolder=state.anomalyBinding!.unitId;
   const target=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board'&&!state.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))!;
   // Keep only the aura target fielded so the restore reaches the neutral opening check, not the V19 trait replay.
   for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&u.id!==target.id))state=accepted(sellUnit(state,u.id));
+  expect(anomalyHolder).not.toBe(target.id);expect(state.anomalyBinding).toBeNull();
+  expect(state.shopHistory!.entries.some(e=>e.kind==='anomaly-reroll')).toBe(true);
   state=accepted(grantMechanicItem(state,{receiptId:'test:radiant-opening',source:'test',definitionId:'TFT5_Item_SunfireCapeRadiant'}));
   state=accepted(equipItem(state,state.items.find(i=>i.definitionId==='TFT5_Item_SunfireCapeRadiant')!.id,target.id,0));
   // v22: a lone holder reaches overtime (tick 600), where the full overtime replay authenticates first;
@@ -206,6 +209,9 @@ describe('v17 epic rewards and unified consumables',()=>{
   while(checkpoint.phase==='combat'&&checkpoint.combat!.tick<S13_COMBAT_RULES.overtimeStartTick-1)checkpoint=stepMatch(checkpoint).state;
   expect(checkpoint.combat!.openingState!.initialUnits.length).toBeGreaterThan(0);
   expect(restoreMatch(serializeMatch(checkpoint))).toEqual(checkpoint);
+  const forgedFee=structuredClone(checkpoint),fee=forgedFee.shopHistory!.entries.find(e=>e.kind==='anomaly-reroll')!;
+  Object.assign(fee,{choiceId:'round:6-7:anomaly'});
+  expect(()=>restoreMatch(forgedFee)).toThrow('anomaly fee');
   const corrupt=structuredClone(checkpoint);Object.assign(corrupt.combat!.openingState!.initialUnits[0],{hp:corrupt.combat!.openingState!.initialUnits[0].hp+1});
   expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
   state=battle(state).ended;

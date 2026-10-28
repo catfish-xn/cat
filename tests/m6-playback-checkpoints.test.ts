@@ -10,9 +10,10 @@ import type { MatchState } from '../src/simulation/match-types';
 import type { BattleRecord } from '../src/m6/contracts';
 import { goldenStates } from './fixtures/m8-golden-states.cjs';
 
-// The B9 capacity selector's v24 battle uses real public-route preparation.
-// The re-recorded v24 input yields 717 ticks and 6771 ledger events.
-// Provenance and the four independent byte pins: docs/CI_V24_INTEGRATION_FIX.md.
+// The B9 capacity selector uses v25's recorded public-route preparation.
+// Native stepping yields 684 ticks and 6760 ledger events; its terminal must also
+// equal the previously recorded v25 settlement. The v24 method is documented in
+// docs/CI_V24_INTEGRATION_FIX.md.
 function fixture(): BattleRecord {
   const before = (goldenStates('sniper') as MatchState[]).find(s => s.round === 32 && s.phase === 'preparation') as MatchState;
   const history = new BattleHistory('performance-sniper'), start = startMatchCombat(before);
@@ -46,16 +47,16 @@ function reference(record: BattleRecord) {
 describe('validated playback checkpoints preserve the unoptimized trajectory', () => {
   it('keeps every frame, terminal, ledger and record byte-identical on the B9 fixture', () => {
     const record = fixture(), originalBytes = JSON.stringify(record), expected = reference(record);
-    // This terminal was already recorded at 8aa8c627, independently of this CI repair.
+    // This terminal was already recorded in the v25 public-route fixture.
     const archivedTerminal = (goldenStates('sniper') as MatchState[]).find(s => s.round === 32 && s.phase === 'settlement')!.combat;
     expect(expected.terminal).toEqual(archivedTerminal);
-    expect(record.endTick).toBe(717); expect(record.events).toHaveLength(6771);
-    // Independent native stepping of the 8aa8c627 v24 input: pin all 718 native frame byte
+    expect(record.endTick).toBe(684); expect(record.events).toHaveLength(6760);
+    // Independent native stepping of the v25 input: pin all 685 native frame byte
     // hashes, not just a reference that calls the same optimized step function.
-    expect(bytesHash([...expected.hashes])).toBe('7a5d5c10b63d3041b917ba76cb852411ff230eaa55b7782b5c081b40fe0daa27');
-    expect(bytesHash(record)).toBe('bb5b714ce49b9c30bac9c7bf9fbf6d3d10ab36295b99b4df9ca52f1df9dc4e52');
-    expect(bytesHash(record.events)).toBe('95cf261089c946c5fd015404a59f13746937a912bdd339959796ea7db6957f37');
-    expect(bytesHash(expected.terminal)).toBe('f451ffdfe0243368629c934e866e2f8304a8c417e62633fe33fa6f9328f616de');
+    expect(bytesHash([...expected.hashes])).toBe('cf8c0c9136360c088e39d1259b8fd4bdf44d0940bb482be12c335b9b651a2a6d');
+    expect(bytesHash(record)).toBe('4371559d3bd53b99b3dfd91d6b48b6180a2fd7af90b63cfd86215a21979cec46');
+    expect(bytesHash(record.events)).toBe('c619dab88165e2ee1e3ca6a5e01c2eb0387fdabf69d1d8d79e35588b2345a519');
+    expect(bytesHash(expected.terminal)).toBe('c4c0d27c2df046bd5f9986873249715bfa97950a3238544555efd3e532091d8d');
     // An external JSON record is cold on each constructor, like browser fixtures.
     const imported = JSON.parse(originalBytes) as BattleRecord;
     const playback = new PlaybackSession(imported);

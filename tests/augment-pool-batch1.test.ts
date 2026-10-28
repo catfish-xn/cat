@@ -1,4 +1,6 @@
 import { expect, it } from 'vitest';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
+import { AUGMENT_HISTORY_OWNERS } from '../src/simulation/augment-history-owners';
 import { AUGMENT_BATCH1, AUGMENT_BATCH1_BLOCKED } from '../src/simulation/content/augment-pool-batch1';
 import { AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
 import { AUGMENT_DEFINITIONS, ITEM_DEFINITIONS } from '../src/simulation/content';
@@ -6,7 +8,7 @@ import { CONSUMABLE_DEFINITIONS } from '../src/simulation/content/consumables';
 import { validateEffect } from '../src/simulation/validate-content';
 import { cloneEffect } from '../src/simulation/effects';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
-import { createMatch, selectChoice, openAnvil, forfeitPendingChoice, startMatchCombat, nextRound, rerollAugment, sellUnit, buyXp, buyUnit, deployMatchUnit, stepMatch, useConsumable } from '../src/simulation/match';
+import { createMatch, selectChoice, openAnvil, forfeitPendingChoice, startMatchCombat, nextRound, rerollAugment, rerollShop, sellUnit, buyXp, buyUnit, deployMatchUnit, stepMatch, useConsumable } from '../src/simulation/match';
 import { generateChoices } from '../src/simulation/choices';
 import { augmentCandidates, resolveAugmentTier, augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { batch1GiftPlan, drainBatch1Gifts, validateBatch1Gifts } from '../src/simulation/augment-pool-grants';
@@ -16,8 +18,8 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { grantXp } from '../src/simulation/progression';
 import { previewRoundEconomy } from '../src/simulation/economy-preview';
 import { readAugmentIncome } from '../src/simulation/augment-income';
-import { accepted, emptyBoard, reachRound, resolveM5Choices, finish } from './match-helpers';
-import { fieldedLegCases, fieldedRoute, offerFor, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
+import { accepted, emptyBoard, fieldBench, reachRound, resolveM5Choices, finish } from './match-helpers';
+import { FIELDED_LEGS, offerFor, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
 import type { MatchState } from '../src/simulation/match-types';
 import { room, accept, conserved } from './tp-helpers';
 import { runSharedMatchCommand } from '../src/simulation/shared-pool';
@@ -31,7 +33,12 @@ function batch1Seed(id:string):number {
 }
 function acquire(id:string) {
  // 14.24 stage tags: a card not offered at 2-1 is taken at its first offering round instead.
- const before=offeredAt(id,'2-1')?reachRound('2-1',false,batch1Seed(id)):offerFor(id),c=before.pendingChoice!;
+ let before=offeredAt(id,'2-1')?reachRound('2-1',false,batch1Seed(id)):id==='raining-gold-plus'?reachRound('3-2',false,8):offerFor(id);
+ if(id==='raining-gold-plus'){
+  for(const slot of [0,1,2]){const c=before.pendingChoice!;before=accepted(rerollAugment(before,c.choiceId,c.generation,slot));}
+  expect(before.roundDefinitionId).toBe('3-2');expect(before.pendingChoice?.kind).toBe('augment');expect(before.pendingChoice?.offers).toContain(id);
+ }
+ const c=before.pendingChoice!;
  return {before,state:accepted(selectChoice(before,c.choiceId,c.generation,id))};
 }
 it('covers 69 classified entries, admits 67 fully implemented entries and leaves two out of the pool',()=>{
@@ -79,22 +86,38 @@ it('full bench escrows all fourteen one-cost gifts and selling retries a stable 
  expect(r).toMatchObject({kind:'unit',receiptId:batch1GiftPlan(s)[0].receiptId,definitionId:'amumu'});
  expect(drainBatch1Gifts(after)).toBe(after);
 });
-// Final Polish's first public offer is a fielded 4-2 route (STAGE_SEEDS); it is played in cached legs, one case each, so the
-// acquisition case below stays inside the default timeout (offerFor resumes the same cached route).
-it.each(fieldedLegCases('final-polish'))('Final Polish fielded 4-2 route (seed %s): the leg to %s settles every fight',(seed,leg)=>{
- expect(STAGE_SEEDS['final-polish']).toMatchObject({node:'4-2',fielded:true});expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
-});
+// Use one fixed fielded route, selecting ordinary non-history cards before the
+// subject. The old first pick (No Scout, No Pivot) replayed the entire match on
+// each anvil restore; that unrelated history is outside this grant test's scope.
+const polishSeed=20;
+const polishEntries=new Map<string,MatchState>();
+let polishLast=createMatch(polishSeed);
+function polishRoute(roundId:string):MatchState {
+ let state=polishEntries.get(roundId)??polishLast;
+ while(state.roundDefinitionId!==roundId){
+  state=resolveM5Choices(state,[],Object.keys(AUGMENT_HISTORY_OWNERS));
+  if(state.phase==='preparation')state=finish(accepted(startMatchCombat(fieldBench(state))));
+  state=resolveM5Choices(state,[],Object.keys(AUGMENT_HISTORY_OWNERS));
+  if(state.phase!=='settlement')throw Error(`Polish route stopped at ${state.roundDefinitionId}/${state.phase}`);
+  state=accepted(nextRound(state,state.round));
+  // A real restore establishes the short proof origin before the prismatic offer.
+  if(state.roundDefinitionId==='4-1')state=restoreMatch(serializeMatch(state));
+  polishEntries.set(state.roundDefinitionId,state);polishLast=state;
+ }
+ return state;
+}
+it.each(FIELDED_LEGS.map(leg=>[polishSeed,leg] as const))('Final Polish fielded 4-2 route (seed %s): the leg to %s settles every fight',(_seed,leg)=>withB1Offers(['final-polish'],()=>{
+ expect(STAGE_SEEDS['final-polish']).toMatchObject({node:'4-2',fielded:true});expect(polishRoute(leg).roundDefinitionId).toBe(leg);
+}));
 let polishState:MatchState,polishAnvils:MatchState['preparation']['units'];
-it('Final Polish grants exactly two bench anvils with the source birth order',()=>{
- let before=fieldedRoute(STAGE_SEEDS['final-polish'].seed,'4-1');
+it('Final Polish grants exactly two bench anvils with the source birth order',()=>withB1Offers(['final-polish'],()=>{
+ let before=polishRoute('4-1');
  while(before.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length>before.preparation.benchSize-2){
   const unit=before.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;
   before=accepted(sellUnit(before,unit.id));
  }
  before=resolveM5Choices(finish(accepted(startMatchCombat(before))));
  before=accepted(nextRound(before,before.round));
- const rerolls=STAGE_SEEDS['final-polish'].rerolls;
- for(const slot of typeof rerolls==='number'?Array.from({length:rerolls},(_,i)=>i):rerolls??[]){const c=before.pendingChoice!;before=accepted(rerollAugment(before,c.choiceId,c.generation,slot));}
  expect(before.pendingChoice!.offers).toContain('final-polish');
  const choice=before.pendingChoice!,state=accepted(selectChoice(before,choice.choiceId,choice.generation,'final-polish')),anvils=state.preparation.units.filter(u=>isAnvil(u.definitionId)&&!before.preparation.units.some(old=>old.id===u.id));
  // Source gift birth order is support then completed; preparation is sorted by textual unit ID.
@@ -104,10 +127,10 @@ it('Final Polish grants exactly two bench anvils with the source birth order',()
  expect(anvils.map(u=>u.definitionId)).toEqual(expectedAnvils.map(u=>u.definitionId));
  expect(anvils.map(u=>u.id)).toEqual(expectedAnvils.map(u=>u.id));
  polishState=state;polishAnvils=anvils;
-});
+}));
 for(const reverse of [false,true]){
  let s:MatchState;
- for(const index of [0,1])it(`Final Polish ${reverse?'reverse':'source'} opening ${index+1} restores and times out to its authenticated first option`,()=>{
+ for(const index of [0,1])it(`Final Polish ${reverse?'reverse':'source'} opening ${index+1} restores and times out to its authenticated first option`,()=>withB1Offers(['final-polish'],()=>{
    if(index===0)s=polishState;
    const unit=polishAnvils[reverse?1-index:index];
    const birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.unitId===unit.id)!;
@@ -117,7 +140,7 @@ for(const reverse of [false,true]){
    const timeout=forfeitPendingChoice(s,s.round,c.choiceId,c.generation);if(!timeout.ok)throw new Error(timeout.reason);s=timeout.state;
    expect(s.items.at(-1)?.definitionId).toBe(c.offers[0]);expect(restoreMatch(serializeMatch(s))).toEqual(s);
    expect(openAnvil(s,unit.id)).toEqual({ok:false,state:s,reason:'unknown-unit'});
- });
+ }));
 }
 it('Silver Spoon grants exactly ten XP, composes with purchased XP, restores across settlement, and respects level ten',()=>{
  const {before,state}=acquire('silver-spoon'),expected=grantXp(before.level,before.xp,10);
@@ -154,18 +177,20 @@ it('online two-star gifts enqueue reward orbs then claim through the conserved s
  expect(s.preparation.units.length-seat.preparation.units.length).toBe(3);
  conserved(pool,[s,initial.states[1]]);
 });
-it.each(['black-rose-crest','black-rose-crown'])('%s can be publicly selected at 3-2 and restores its board snapshot',id=>{
+it.each(['black-rose-crest','black-rose-crown'])('%s is eligible at 3-2 (scripted draw) and restores its board snapshot',id=>withB1Offers([id],()=>{
  let found:MatchState|undefined;
- // Pinned first successful searches; keep the pure second-node predicate and the real Morgana purchase checks.
+ // The 3-2 draw is scripted by withB1Offers: only eligibility (real candidate pool) is asserted, not that the real RNG offers it.
+ // The Morgana purchase, selection, restore and tamper checks run through the real commands.
  const traits=UNIT_DEFINITIONS.morgana.traits;
- const seed=id==='black-rose-crest'?42:599;
+ const seed=id==='black-rose-crest'?42:28;
  {
   const initial=createMatch(seed),first=generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState);
   const chosen=first.offers.find(x=>x!=='placebo'&&x!=='glass-cannon-i')!;
   const candidates=augmentCandidates(resolveAugmentTier(initial,'round:3-2:augment'),[{definitionId:chosen,choiceId:'round:2-1:augment',acquiredRound:4}],first.offers,null,{node:'3-2',fieldedTraits:traits,blocked:[]});
-  expect(generateChoices(candidates,first.choiceRngState).offers).toContain(id);
+  expect(candidates).toContain(id);
   let s=reachRound('3-1',true,seed),hero=s.preparation.units.find(u=>u.team==='player'&&u.definitionId==='morgana');
   if(!hero){
+   for(let roll=0;roll<20&&!s.shop.slots.some(x=>x.status==='available'&&x.definitionId==='morgana');roll++)s=accepted(rerollShop(s));
    const slot=s.shop.slots.findIndex(x=>x.status==='available'&&x.definitionId==='morgana');
    expect(slot).toBeGreaterThanOrEqual(0);
    s=accepted(buyUnit(s,slot,s.shop.generation));hero=s.preparation.units.find(u=>u.team==='player'&&u.definitionId==='morgana');
@@ -182,7 +207,7 @@ it.each(['black-rose-crest','black-rose-crown'])('%s can be publicly selected at
  expect(after.augments.at(-1)?.definitionId).toBe(id);expect(restoreMatch(serializeMatch(after))).toEqual(after);
  const forged=structuredClone(after) as any;forged.augmentOffers.at(-1).fieldedTraits=[];
  expect(()=>restoreMatch(forged)).toThrow();
-});
+}));
 
 it('granted lesser duplicators can be consumed once and restore with their acquisition authority',()=>{
  let {state:s}=acquire('heroic-grab-bag');

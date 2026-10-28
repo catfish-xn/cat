@@ -185,7 +185,13 @@ export function validateShopHistory(state:MatchState):void {
    keys(e,['kind','point']);check(state.multiplayer?.status==='eliminated'&&state.playerHp===0&&e===h.entries.at(-1),'seat release');needNatural=false;
    cursor={...cursor,shop:{...cursor.shop,locked:false,slots:cursor.shop.slots.map(()=>({status:'purchased',empty:true}))}};
   }else if(e.kind==='anomaly-reroll'){
-   keys(e,['kind','point','choiceId']);check(cursor.gold>=1&&(state.anomalyBinding?.choiceId===e.choiceId||state.pendingChoice?.kind==='anomaly'&&state.pendingChoice.choiceId===e.choiceId),'anomaly fee');cursor={...cursor,gold:cursor.gold-1};
+   keys(e,['kind','point','choiceId']);
+   // A selected anomaly's holder can subsequently be sold, clearing the live binding.
+   // Authenticate the fee against its scheduled choice and later selection receipt instead.
+   const scheduled=getRoundSchedule(e.point.round).some(event=>event.kind==='anomaly'&&event.id===e.choiceId);
+   const selected=state.scheduleReceipts.slice(e.point.schedulePrefix).some(r=>r.kind==='anomaly'&&r.eventId===e.choiceId&&r.round===e.point.round);
+   const pending=state.round===e.point.round&&state.pendingChoice?.kind==='anomaly'&&state.pendingChoice.choiceId===e.choiceId;
+   check(cursor.gold>=1&&scheduled&&(selected||pending),'anomaly fee');cursor={...cursor,gold:cursor.gold-1};
   }else if(e.kind==='lock'){
    keys(e,['kind','point','locked']);check(typeof e.locked==='boolean'&&e.locked!==Boolean(cursor.shop.locked),'lock');cursor={...cursor,shop:{...cursor.shop,locked:e.locked}};
   }else if(e.kind==='draw'){
