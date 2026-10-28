@@ -121,8 +121,15 @@ describe('B5-83 real online room',()=>{
     const result=useConsumable(state,remover.consumableId,{kind:'unit',unitId:golem.id});expect(result.ok).toBe(false);expect(result.state).toBe(state);
     const moved=deployMatchUnit(state,golem.id,{kind:'board',cell:{col:6,row:7}});
     expect(moved.ok).toBe(true);
-    for(const input of [moved.state,JSON.stringify(moved.state),canonicalContent(moved.state)])
-      expect(restoreSharedOrbSnapshot(room.state.pool,input,room.augmentHistoryAuthority(seatId))).toEqual(moved.state);
+    // A domain-only draft is not the room's checkpoint; its old authority must reject it.
+    const previousAuthority=room.augmentHistoryAuthority(seatId);
+    expect(()=>restoreSharedOrbSnapshot(room.state.pool,moved.state,previousAuthority)).toThrow('server facts/state mismatch');
+    expect(room.handle(seatId,{type:'deploy',unitId:golem.id,target:{kind:'board',cell:{col:6,row:7}}})).toMatchObject({ok:true});
+    const committed=room.state.seats.find(s=>s.seatId===seatId)!.match;
+    expect(committed.preparation).toEqual(moved.state.preparation);
+    const authority=room.augmentHistoryAuthority(seatId);
+    for(const input of [committed,JSON.stringify(committed),canonicalContent(committed)])
+      expect(restoreSharedOrbSnapshot(room.state.pool,input,authority)).toEqual(committed);
   });
   it('freezes its fixed items and rank in the real PvP input and runs a golem cast',()=>{
     runUntilClaiming(room,clock,s=>s.roundId==='2-1'&&s.phase==='settlement',5000);

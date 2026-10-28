@@ -91,7 +91,7 @@ export const RULES_GAP_MANIFEST = freezeContent({
   augmentPoolBatch5R6:{version:'augment-pool-batch5-r6-v1',content:AUGMENT_BATCH5_R6,convention:'P-B5-27-28-R6-2026-10-27',selection:'sorted-eligible-definitions-uniform-before-return',copies:[1,3,9],merge:'after-batch'},
   augmentPoolBatch5G1:{content:AUGMENT_BATCH5_G1,policy:LUCKY_GLOVES_POLICY,roles:LUCKY_GLOVES_CHAMPION_ROLES,rangedRoles:LUCKY_GLOVES_RANGED_ROLES,roleItems:LUCKY_GLOVES_ROLE_ITEMS},
   augmentPoolBatch5G4:{version:'augment-pool-batch5-g4-v25-spawn-1',content:AUGMENT_BATCH5_G4,policy:B5_G4_VOID_POLICY,summons:B5_G4_SUMMON_UNITS,convention:'P-B5-72-73-2026-10-27'},
-  augmentPoolBatch5G6:{version:'augment-pool-batch5-g6-v25-review-1',content:AUGMENT_BATCH5_G6,golem:CARRY_GOLEM_UNIT,growth:CARRY_GOLEM,convention:'P-B5-83-2026-10-27'},
+  augmentPoolBatch5G6:{version:'augment-pool-batch5-g6-v25-review-2',content:AUGMENT_BATCH5_G6,golem:CARRY_GOLEM_UNIT,growth:CARRY_GOLEM,convention:'P-B5-83-2026-10-27',angerIssuesConvention:'P-B5-21/B5-83-2026-10-28'},
   augmentPoolBatch5H1:{version:'augment-pool-batch5-h1-v25',content:AUGMENT_BATCH5_H1,convention:'P-B5-07-and-10-2026-10-27'},
   augmentPoolBatch5H3:{version:'augment-pool-batch5-h3-v1',content:AUGMENT_BATCH5_H3,convention:'P-B5-2026-10-27'},
   augmentPoolBatch5H4:{version:'augment-pool-batch5-h4-v1',content:AUGMENT_BATCH5_H4,source:AUGMENT_BATCH5_H4_SOURCE,convention:'P-B5-2026-10-27'},

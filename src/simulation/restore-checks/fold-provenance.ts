@@ -1,5 +1,6 @@
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
 import { carryGolemStar } from '../augment-pool-batch5-g6-stats';
+import { carryGolemFixedItemIds } from '../augment-pool-batch5-g6-equipment';
 import { projectBatch5Items } from '../augment-pool-batch5-s3a';
 import { academicCraft } from '../augment-pool-batch5-s3b';
 import { isS3bConversion, validS3bConversion } from '../augment-pool-batch5-s3b-conversions';
@@ -60,6 +61,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const prefixLength = context.prefixLength ?? entries.length;
   integer(prefixLength); requireValue(prefixLength <= entries.length, 'prefix bounds');
   const births = validateResourceReceipts(context), usedBirths = new Set<string>();
+  const fixedItemIds = carryGolemFixedItemIds(context.mechanicReceipts);
   const rewardAtoms = new Map(context.g23?.rewards.flatMap(bundle => g23RewardAtoms(bundle,context.g23!.seed).map(atom => [atom.id,atom] as const)));
   const duplicatorClaims = new Map(context.g23?.rewardClaims.flatMap(claim => {
     const atom = rewardAtoms.get(claim.atomId);
@@ -305,7 +307,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     } else if(entry.kind==='anger-item-converted'){
       keys(entry,[...common,'itemId','from','to','receiptId']);
       const owner=context.scheduleReceipts.find(r=>r.kind==='augment'&&r.definitionId==='anger-issues'&&r.eventId===entry.receiptId);
-      requireValue(owner&&owner.round<=round.ordinal&&items.get(entry.itemId)?.definitionId===entry.from&&entry.from!=='rageblade'&&isAngerIssuesConvertibleItem(entry.from)&&entry.to==='rageblade','anger issues conversion');
+      requireValue(!fixedItemIds.has(entry.itemId)&&owner&&owner.round<=round.ordinal&&items.get(entry.itemId)?.definitionId===entry.from&&entry.from!=='rageblade'&&isAngerIssuesConvertibleItem(entry.from)&&entry.to==='rageblade','anger issues conversion');
       items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
     } else if(entry.kind==='g23-item-converted'){
       keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(isS3bConversion(entry)?!!context.s3bState&&items.get(entry.itemId)?.definitionId===entry.from&&validS3bConversion(context.s3bState,entry,entry.roundId):context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
@@ -397,7 +399,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     if (index + 1 === prefixLength) result = projection();
   }
   finishAcquisition();
-  if(context.scheduleReceipts.some(r=>r.kind==='augment'&&r.definitionId==='anger-issues'))requireValue([...items.values()].every(i=>i.definitionId==='rageblade'||!isAngerIssuesConvertibleItem(i.definitionId)),'missing anger issues conversion');
+  if(context.scheduleReceipts.some(r=>r.kind==='augment'&&r.definitionId==='anger-issues'))requireValue([...items.values()].every(i=>fixedItemIds.has(i.id)||i.definitionId==='rageblade'||!isAngerIssuesConvertibleItem(i.definitionId)),'missing anger issues conversion');
   requireValue(usedBirths.size === births.size, 'missing receipt birth');
   {
     requireValue(Array.isArray(context.combatSettlements) && context.combatSettlements.length === commits.size, 'missing combat growth commit');

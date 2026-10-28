@@ -4,8 +4,9 @@ import { appendMechanicReceipt, grantMechanicItem } from './seat-mechanics';
 import type { MatchEvent, MatchState } from './match-types';
 import { carryGolemStar } from './augment-pool-batch5-g6-stats';
 import type { OwnedAugment } from './strategy-types';
+import { CARRY_GOLEM_SOURCE } from './augment-pool-batch5-g6-equipment';
 
-export const CARRY_GOLEM_SOURCE = 'augment-pool-batch5-g6';
+export { CARRY_GOLEM_SOURCE } from './augment-pool-batch5-g6-equipment';
 export const receiptId = (owner: OwnedAugment, part: string) => JSON.stringify([CARRY_GOLEM_SOURCE, owner.choiceId, part]);
 export { carryGolemGrowth, carryGolemStar, carryGolemEffects } from './augment-pool-batch5-g6-stats';
 export function growCarryGolem(state: MatchState): MatchState {

@@ -15,6 +15,10 @@ B5-81 的六项排除为 UltimateHero、CallingCard、IdentityCrisis、IntoTheUn
 
 ## 接口与恢复认证
 
+2026-10-28 用户决定 A（P-B5-21/B5-83）：魔像固定套装豁免狂暴转换，两种取得顺序均适用。永久账本按既有 `augment-pool-batch5-g6` 装备收据来源识别，覆盖尚在库存的发放中间态；战斗输入不带收据，按既有 `carry-golem` 持有者标识识别。恢复保留固定套装、连续来源事实和独立服务器 authority 校验，并拒绝套装转换事实或漏转普通成装。无新增命令或失败枚举；内容清单 G6 修订为 `v25-review-2`，同一 v25 纪元下重算摘要，不重录历史。
+
+内部签名补充：`carryGolemFixedItemIds(receipts?: readonly MechanicReceipt[]): ReadonlySet<string>` 返回专属来源的装备实例 ID；`convertAngerIssuesItems(items: readonly ItemInstance[], fixedItemIds?: ReadonlySet<string>): readonly ItemInstance[]` 保留固定实例，其余沿普通配方分类转换；`r2ItemDefinition(item: ItemDefinition, augments: readonly OwnedAugment[], fixedEquipment?: boolean): ItemDefinition` 在固定套装时保留原定义。三个函数均无副作用、无新增失败原因；完整恢复仍独立认证收据与固定配装，不能用该分类函数替代认证。
+
 | 内部导出 | 签名与约束 |
 | --- | --- |
 | `applyAngerIssues` | `(state: MatchState): MatchState`；追加 `anger-item-converted` 资源事实，保留原奖励收据；无持有者/无变化返回原对象。 |
@@ -47,6 +51,8 @@ B5-81 的六项排除为 UltimateHero、CallingCard、IdentityCrisis、IntoTheUn
 - 独立 oracle：`oracle.g2.cjs` 手工池/阶段/互斥表；`augment-rewards-oracle.cjs` 调用独立 `augment-r2-oracle.cjs`，从选择前装备、实际攻击次数和选择命令推导期望转换/奖励。后续普通配方及原位合成从命令前两个组件推导；锻造选择与机制奖励从所选定义、独立奖励计划推导，认证物品和完整转换事实，删除转换事实也不能抹掉应转换的预期。完整 Ledger 同样按转换后的独立期望验证原始奖励收据，不读取生产实现。
 
 ## 验证
+
+2026-10-28 F1（用户决定 A）：定向11文件315项通过，含原 `batch5-g6-room` 47项、新组合路线51项、R2全套、G6、资源恢复、内容身份及production-size；`tsc --noEmit` 和内容身份 `--check` 通过。新组合按现有逐轮房间测试组织，不调整5秒默认超时；正序seed0，逆序由0..100等级序列查得seed29，逆序选择尚未见过魔像卡的人类席位。脚本化报价的 `toContain` 仅作夹具自检，真实资格、已见禁出、RNG推进与恢复验证保持。内容／loot摘要为 `fnv1a32-utf16:179507ab`／`fnv1a32-utf16:63bddec2`；没有改服务器、放宽原断言或录制历史epoch。
 
 审查 must-fix 定向复验（2026-10-27）：相关13文件240项与 `npm run typecheck` 全部通过。新增 `augment-pool-batch5-r2-review.test.ts` 的11项回归覆盖双持有者的两种原英雄身份、单边/双边开场，A/B双方后装贪财的采样及JSON重放/结算认证，以及后续合成、原位合成、锻造奖励在物品/转换事实被删改时的独立拒绝。按任务要求只跑相关测试和tsc，未跑构建、全量或浏览器验收，未修改 `src/server/` 或执行Git写操作。下段为初次交付的历史验证结果。
 
