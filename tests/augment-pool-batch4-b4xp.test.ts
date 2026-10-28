@@ -2,7 +2,8 @@ import { expect, it } from 'vitest';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
 import { existsSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
-import { createMatch, selectChoice, nextRound, startMatchCombat, stepMatch, buyUnit, rerollShop, lockMatchCombatRoster, equipItem, sellUnit } from '../src/simulation/match';
+import { createMatch, selectChoice, nextRound, startMatchCombat, stepMatch, buyUnit, rerollShop, rerollAugment, lockMatchCombatRoster, equipItem, sellUnit } from '../src/simulation/match';
+import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import type { MatchState, MatchEvent } from '../src/simulation/match-types';
 import type { BattleRecord } from '../src/m6/contracts';
 import { recordVersion } from '../src/simulation/battle-record-validation';
@@ -31,14 +32,21 @@ function fight(context:MatchState,battles:BattleRecord[]):MatchState {
   endTick:terminal.tick,nextEventSeq:terminal.nextEventSeq!,result:terminal.result,stateHash:digestContent(terminal),eventHash:digestContent(ledger)});
  return resolveM5Choices(s);
 }
-function opening(id:string):{state:MatchState;battles:BattleRecord[];before:MatchState} {
- const node=id==='slammin-plus'?'3-2':'2-1',seed=id==='slammin-plus'?PLUS_SEED:firstNodeSeed(id),battles:BattleRecord[]=[];
+function opening(id:string,seedOverride?:number):{state:MatchState;battles:BattleRecord[];before:MatchState} {
+ const node=id==='slammin-plus'?'3-2':'2-1',seed=seedOverride??(id==='slammin-plus'?PLUS_SEED:firstNodeSeed(id,101)),battles:BattleRecord[]=[];
  let s=createMatch(seed);
  while(s.roundDefinitionId!==node){s=resolveM5Choices(s);if(s.phase==='preparation')s=fight(emptyBoard(s),battles);s=accepted(nextRound(s,s.round));}
+ if(id==='slammin-plus')for(const slot of [0,1,2]){const c=s.pendingChoice!;s=accepted(rerollAugment(s,c.choiceId,c.generation,slot));}
  const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
  s=accepted(selectChoice(s,c.choiceId,c.generation,id));return {state:s,battles,before};
 }
-const PLUS_SEED=4; // First public 3-2 offering seed on the v25 integrated pool.
+const PLUS_SEED=19; // Bounded 0..100 search: public 3-2 offer after slot rerolls 0/1/2 on the 306-card pool.
+function clearChampionBench(state:MatchState):MatchState {
+ let s=fieldBench(state);
+ // Anvils are not champions and sellUnit opens their choice instead of selling them.
+ for(const u of s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'&&!UNIT_DEFINITIONS[u.definitionId]?.summon))s=accepted(sellUnit(s,u.id));
+ return s;
+}
 function emptyInventory(state:MatchState):MatchState {
  let s=state;
  for(let tries=0;s.items.some(i=>i.location.kind==='inventory')&&tries<30;tries++){
@@ -93,7 +101,7 @@ for(const [id,xp] of rows){
    // Purchases use real commands; the starting economy is topped up only in this capacity fixture.
    s=fillBench({...s,gold:s.gold+100});
   }else if(id==='clear-mind'){
-   s=fieldBench(s);for(const u of s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'))s=accepted(sellUnit(s,u.id));
+   s=clearChampionBench(s);
   }else {
    expect(s.seatMechanics!.receipts.filter(r=>r.kind==='item'&&r.round===s.round)).toHaveLength(1);
    s=emptyInventory(s);
@@ -126,8 +134,10 @@ it('PvE/supply never pays; max-level capping retains the requested entitlement; 
 });
 it('online settlement uses the latest live bench/inventory and deduplicates atomically without server changes',()=>{
  for(const [id,xp] of rows){
-  let s=opening(id).state;s=accepted(enableMultiplayerSettlement(s,'A') as any);
-  if(id==='clear-mind'){s=fieldBench(s);for(const u of s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench'))s=accepted(sellUnit(s,u.id));}
+  // Seed 63's Warwick opening requires death facts. This receipt-only condition
+  // fixture uses the real seed-95 Scuttle offer; opening death authentication has its own suite.
+  let s=opening(id,id==='slammin'?95:undefined).state;s=accepted(enableMultiplayerSettlement(s,'A') as any);
+  if(id==='clear-mind')s=clearChampionBench(s);
   s=accepted(lockMatchCombatRoster(s));
   if(id==='cluttered-mind')s=fillBench({...s,gold:s.gold+100});
   if(id.startsWith('slammin'))s=emptyInventory(s);
