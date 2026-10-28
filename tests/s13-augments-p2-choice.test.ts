@@ -12,7 +12,7 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { createMatch, selectChoice, deployMatchUnit, startMatchCombat, stepMatch, sellUnit, buyUnit, nextRound, equipItem } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { drainP2Gifts, p2GiftPlan, validateP2Gifts } from '../src/simulation/s13-augments-p2-grants';
-import { accepted, reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
+import { accepted, reachRound, resolveM5Choices, emptyBoard, fieldBench } from './match-helpers';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { rawTopLevelEntries } from './fixtures/raw-bin-entries';
 
@@ -33,16 +33,39 @@ it('all seventeen API identities, names, tiers and coefficients match the retain
 });
 // v23 fmix32 openings: Trainer Golem seeds are skipped (the unbenchable golem blocks reachRound's empty board).
 function seedFor(id:string){for(let seed=0;seed<1000;seed++){const state=createMatch(seed);if(state.preparation.units.some(u=>u.definitionId==='trainer-golem'))continue;if(generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers.includes(id))return seed;}throw Error('seed budget');}
-// Pair of Fours's first public offer is a fielded 4-2 route (STAGE_SEEDS); it is played in cached legs, one case each, so the
-// acquisition case below stays inside the default timeout (offerFor resumes the same cached route).
+let pairOfFoursOfferState: MatchState | undefined;
+/** Reuse the full route when its leg cases ran. A name-filtered acquisition must also be cheap on a cold worker:
+ * fight PvE for loot/HP, concede earlier PvP with public empty-board commands, then field 4-1 for the real 4-2 offer.
+ * No scripted offers or injected state; the full fielded route remains covered by the leg cases below. */
+function pairOfFoursOffer(): MatchState {
+  const { seed, node } = STAGE_SEEDS['pair-of-fours'];
+  let state = pairOfFoursOfferState ?? fieldedRoute(seed, '2-1');
+  while (state.roundDefinitionId !== node) {
+    state = resolveM5Choices(state);
+    if (state.phase === 'preparation') {
+      const field = state.m8.round.kind === 'pve' || state.roundDefinitionId === '4-1';
+      state = accepted(startMatchCombat(field ? fieldBench(state) : emptyBoard(state)));
+      while (state.phase === 'combat') state = stepMatch(state).state;
+    }
+    state = resolveM5Choices(state);
+    expect(state.phase).toBe('settlement');
+    state = accepted(nextRound(state, state.round));
+  }
+  expect(state.roundDefinitionId).toBe(node);
+  expect(state.pendingChoice?.kind).toBe('augment');
+  expect(state.pendingChoice?.offers).toContain('pair-of-fours');
+  return pairOfFoursOfferState = state;
+}
+// Keep every full-route leg assertion, including when the acquisition uses the shorter cold-worker route.
 it.each(fieldedLegCases('pair-of-fours'))('Pair of Fours fielded 4-2 route (seed %s): the leg to %s settles every fight',(seed,leg)=>{
- expect(STAGE_SEEDS['pair-of-fours']).toMatchObject({node:'4-2',fielded:true});expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
+ expect(STAGE_SEEDS['pair-of-fours']).toMatchObject({node:'4-2',fielded:true});const state=fieldedRoute(seed,leg);expect(state.roundDefinitionId).toBe(leg);
+ if(leg===STAGE_SEEDS['pair-of-fours'].node)pairOfFoursOfferState=state;
 });
 it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restores strictly, and continues the same seeded combat',id=>{
   // 14.24 stage tags: a card not offered at 2-1 is taken at its first offering round instead.
   // Calculated Enhancement uses the first offering empty-board seed whose
   // unchanged opening forgery reaches the P2 validator rather than full replay.
-  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):id==='calculated-enhancement'?reachRound('3-2',false,5):offerFor(id);
+  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):id==='calculated-enhancement'?reachRound('3-2',false,5):id==='pair-of-fours'?pairOfFoursOffer():offerFor(id);
   const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
   s=accepted(selectChoice(s,c.choiceId,c.generation,id));
   // Release one real reserve slot after selection to exercise the same escrowed Pair of Fours gift.
