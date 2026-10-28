@@ -76,17 +76,21 @@ export function originalHudRules(sprites: ReadonlyMap<string, ReadyUiSprite>, fo
     const sprite = sprites.get(id); if (!sprite) continue;
     const url = `url(${JSON.stringify(sprite.url)})`;
     if (id === 'hud.gold-icon') {
-      const label = `${UI_SCOPE} ${selector},body[data-online]:has(.render3d-layer) ${selector}`;
+      // Online owns its circular 13px coin and transparent label in style.css.
+      const label = `body:not([data-online]):has(.render3d-layer) ${selector}`;
       rules.push(`${label}{display:inline-flex;align-items:center;gap:4px;width:auto;height:auto;overflow:visible;color:inherit;background:none;border-image:none;border-radius:0;box-shadow:none;}`);
-      rules.push(`${UI_SCOPE} ${selector}::before{content:"";display:inline-block;flex:0 0 13px;width:13px;height:13px;background:${url} center / contain no-repeat;}`);
+      rules.push(`${label}::before{content:"";display:inline-block;flex:0 0 13px;width:13px;height:13px;background:${url} center / contain no-repeat;}`);
       continue;
     }
     if (id === 'hud.xp-fill' && !sprite.slice) {
       // cqw measures the full track, so the existing percentage width clips the source from its left edge.
       rules.push(`${UI_SCOPE} .shop-dock .hud-xp-bar{container-type:inline-size;}`);
     }
+    // Absolute border-image widths paint the panel without changing its existing
+    // border style/width (none/0 offline, solid/1px online) or its content box.
+    const borderStyle = id === 'hud.panel' ? '' : 'border-style:solid;';
     const image = sprite.slice
-      ? `border-style:solid;border-image-source:${url};border-image-slice:${sprite.slice.join(' ')} fill;border-image-width:${sprite.slice.map(v => `${v}px`).join(' ')};border-image-repeat:stretch;background:none;`
+      ? `${borderStyle}border-image-source:${url};border-image-slice:${sprite.slice.join(' ')} fill;border-image-width:${sprite.slice.map(v => `${v}px`).join(' ')};border-image-repeat:stretch;background:none;`
       : `border-image:none;background:${url} ${id === 'hud.xp-fill' ? 'left center / 100cqw' : 'center / 100%'} 100% no-repeat;`;
     rules.push(`${UI_SCOPE} ${selector}{${image}border-color:transparent;border-radius:0;box-shadow:none;}`);
   }

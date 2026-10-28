@@ -185,18 +185,46 @@ describe('optional 3D UI sidecar', () => {
     ui.dispose(); flush(); expect(css.set).not.toHaveBeenCalled(); expect(notify).not.toHaveBeenCalled();
   });
 
-  it('clips XP against the full track, gives gold a separate fixed icon, and enables sliced borders', () => {
+  it('clips XP against the full track, gives offline gold a separate fixed icon, and enables sliced borders', () => {
     const sprite = { source: {} as CanvasImageSource, url: 'blob:synthetic', width: 64, height: 8, dispose() {} };
     const rules = originalHudRules(new Map<string, ReadyUiSprite>([
-      ['hud.panel', { ...sprite, slice: [2, 3, 2, 3] as const }], ['hud.xp-fill', sprite], ['hud.gold-icon', sprite],
+      ['hud.panel', { ...sprite, slice: [2, 3, 2, 3] as const }], ['hud.level', { ...sprite, slice: [1, 1, 1, 1] as const }],
+      ['hud.xp-fill', sprite], ['hud.gold-icon', sprite],
     ]), new Map());
     expect(rules).toContain('border-style:solid;border-image-source:');
     expect(rules).toContain('.hud-xp-bar{container-type:inline-size;}');
     expect(rules).toContain('.hud-xp-fill{border-image:none;background:url("blob:synthetic") left center / 100cqw 100% no-repeat;');
-    expect(rules).toContain('body[data-online]:has(.render3d-layer) .shop-dock .hud-gold .hud-label{');
+    expect(rules).toContain('body:not([data-online]):has(.render3d-layer) .shop-dock .hud-gold .hud-label{');
+    expect(rules).not.toContain('body[data-online]:has(.render3d-layer) .shop-dock .hud-gold .hud-label{');
     expect(rules).toContain('width:auto;height:auto;overflow:visible;color:inherit;background:none;');
     expect(rules).toContain('.hud-label::before{content:"";display:inline-block;flex:0 0 13px;width:13px;height:13px;background:url("blob:synthetic") center / contain no-repeat;}');
     expect(rules).not.toContain(';color:transparent;'); expect(rules).not.toContain('content:none');
+  });
+
+  it('paints the shop nine-slice without changing its existing border or box dimensions', () => {
+    const rules = originalHudRules(new Map<string, ReadyUiSprite>([
+      ['hud.panel', { source: {} as CanvasImageSource, url: 'blob:panel', width: 24, height: 16,
+        slice: [2, 3, 2, 3], dispose() {} }],
+    ]), new Map());
+    const panel = rules.match(/^body:has\(\.render3d-layer\) \.shop-dock\{([^}]+)\}$/)?.[1];
+    expect(panel).toBeDefined();
+    expect(panel).toContain('border-image-source:url("blob:panel");');
+    expect(panel).toContain('border-image-slice:2 3 2 3 fill;');
+    expect(panel).toContain('border-image-width:2px 3px 2px 3px;');
+    // A border-style would turn the offline initial medium border into 3px.
+    // Leave both the offline zero border and the online 1px border untouched.
+    expect(panel).not.toMatch(/(?:^|;)(?:border(?:-(?:style|width|top|right|bottom|left)(?:-(?:style|width))?)?|(?:min-|max-)?(?:width|height)|box-sizing|padding(?:-[a-z]+)?|margin(?:-[a-z]+)?):/);
+  });
+
+  it('leaves online coin styling untouched and limits both offline label and fixed icon to offline mode', () => {
+    const rules = originalHudRules(new Map<string, ReadyUiSprite>([
+      ['hud.gold-icon', { source: {} as CanvasImageSource, url: 'blob:coin', width: 64, height: 8, dispose() {} }],
+    ]), new Map());
+    const selectors = [...rules.matchAll(/([^{}]+)\{[^{}]*\}/g)].map(match => match[1].trim());
+    const label = 'body:not([data-online]):has(.render3d-layer) .shop-dock .hud-gold .hud-label';
+    expect(selectors).toEqual([label, `${label}::before`]);
+    expect(rules).toContain('width:auto;height:auto;overflow:visible;color:inherit;');
+    expect(rules).toContain('flex:0 0 13px;width:13px;height:13px;background:url("blob:coin") center / contain no-repeat;');
   });
 
   it('does not install a font or image arriving after dispose, and frees the late crop', async () => {
