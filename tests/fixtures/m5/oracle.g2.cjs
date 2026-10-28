@@ -13,7 +13,7 @@ const h3=require('./h3-growth-oracle.cjs');
 const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
 CATALOG.push(['mel','viktor','warwick']); // Approved v19 six-cost identities; raw historical recordings stay immutable.
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
-const createH3Ledger=initial=>h3.createH3Ledger(initial,[...CATALOG.flat(),'elise-ranged','gangplank-ranged','jayce-ranged','swain-ranged']);
+const createH3Ledger=(initial,options)=>h3.createH3Ledger(initial,[...CATALOG.flat(),'elise-ranged','gangplank-ranged','jayce-ranged','swain-ranged'],options);
 const {checkH3Growth,h3GrowthForUnit}=h3;
 const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10],10:[5,10,20,40,25]};
 const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:68,9:68};
@@ -576,7 +576,7 @@ function validateChemTransition(before,after){
  if(after.pendingChoice?.kind==='blackMarket')assert.deepEqual(after.pendingChoice.offers,chem.offer.optionIds,'pending choice offers complete bundles');
 }
 class Ledger {
- constructor(initial){this.gold=0;this.pending={gold:0,investmentHp:0};this.h3=createH3Ledger(initial);
+ constructor(initial,{freezeObservations=true}={}){this.gold=0;this.pending={gold:0,investmentHp:0};this.h3=createH3Ledger(initial,{freezeInputs:freezeObservations});
   // v22 openings can start with extra cards; conservation starts from the actual opening roster (Trainer Golem excluded).
   this.cards=ownedUnits(initial).reduce((n,u)=>n+3**(u.starLevel-1),0);assert(this.cards>=1,'opening unit');this.combinations=0;this.costs={purchases:0,sales:0,saleLoss:0,rerolls:0,xp:0,anomaly:0,income:0,rewards:0};this.rows=[];this.receipts=new Set();this.check(initial);}
  apply(before,after,command,events=[]){

@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict');
 const path=require('node:path');
 const {Ledger,COST,shopTransition,xp,entryXp,ROUNDS,roundOrdinal,openingEncounter,ANVIL_IDS}=require('../tests/fixtures/m5/oracle.g2.cjs');
-const {hash}=require('./m4-evidence.cjs');
+const {createRouteHash}=require('./m5-route-hash.cjs');
 const BUILDS={
  cannon:{core:'corki',tank:'loris',units:['irelia','rell','leona','loris','tristana','urgot','ezreal','corki'],carry:['deathblade','shojin','gunblade'],early:'maddie'},
  sniper:{core:'kogmaw',tank:'garen',units:['darius','vander','scar','garen','irelia','loris','maddie','kogmaw'],carry:['rageblade','archangel','gunblade'],early:'lux'},
@@ -22,8 +22,9 @@ async function generateRoute(options={}){
 }
 // Optional onBattleProgress pauses every 150 live ticks; onRound pauses after a complete battle, before any next-round commands (test route caching).
 // Optional round reserves change only public XP/shop spending for fixture routes.
-async function run(api,{build='cannon',seed=42,retainStates=false,onStep,onRound,onBattleProgress,copyLimits={},goldReserves={},fieldCopies=[],supplyChoices=[],anomalyTargetId,anomalyDefinitionId,anomalyTargetDefinitionId,anomalyTargetCopy=0,equipmentTargets={},reservedComponents=[],emptyBoardRounds=[],protectedUnitIds=[],augmentPriorities=[],augmentRerollPriorities={},goldReserveByRound={},equipItems=true}={}){
- const lateCaitlyn=build==='sniper-caitlyn',config=BUILDS[lateCaitlyn?'sniper':build];assert(config);let state=api.createMatch(seed);const initial=structuredClone(state),ledger=new Ledger(state),actions=[],rounds=[],checkpoints=[];let caitlynBattles=0,caitlynCasts=0,ticks=0,formedAt=null,formedBattles=0,boundBattles=0,transitioned=false;const started=Date.now(),tickDurations=[];
+async function run(api,{build='cannon',seed=42,retainStates=false,freezeObservations=true,onStep,onRound,onBattleProgress,copyLimits={},goldReserves={},fieldCopies=[],supplyChoices=[],anomalyTargetId,anomalyDefinitionId,anomalyTargetDefinitionId,anomalyTargetCopy=0,equipmentTargets={},reservedComponents=[],emptyBoardRounds=[],protectedUnitIds=[],augmentPriorities=[],augmentRerollPriorities={},goldReserveByRound={},equipItems=true}={}){
+ const hash=createRouteHash();
+ const lateCaitlyn=build==='sniper-caitlyn',config=BUILDS[lateCaitlyn?'sniper':build];assert(config);let state=api.createMatch(seed);const initial=structuredClone(state),ledger=new Ledger(state,{freezeObservations}),actions=[],rounds=[],checkpoints=[];let caitlynBattles=0,caitlynCasts=0,ticks=0,formedAt=null,formedBattles=0,boundBattles=0,transitioned=false;const started=Date.now(),tickDurations=[];
  const players=()=>state.preparation.units.filter(u=>u.team==='player'&&(COST[u.definitionId]!==undefined||ANVIL_IDS.has(u.definitionId))); /* opening structures (Trainer Golem) stay where the opening put them */
  const best=id=>players().filter(u=>u.definitionId===id).sort((a,b)=>b.starLevel-a.starLevel||a.id.localeCompare(b.id))[0];
  const inventory=()=>state.items.filter(i=>i.location.kind==='inventory');

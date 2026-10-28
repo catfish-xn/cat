@@ -15,7 +15,13 @@ import {run} from '../scripts/generate-m5-route.cjs';
  * Ordinary acquisition and resource conservation live in m5-route.test.ts. */
 async function maximumLoadout():Promise<api.MatchState>{
  let reached:api.MatchState|undefined;
- await run(api,{build:'cannon',seed:42,onStep(before,_result,command){if(command?.type==='start'&&before.round===33)reached=before;}});
+ // Seed 1 has a gold 4-2 offer; seed 42 now activates history authentication,
+ // which rejects the deliberate synthetic roster before its resource-fold guard.
+ // Full seed-42/230 public routes remain covered by m8-b8-oracle.test.ts.
+ // Only the legal round-33 prefix is the fixture; later battles are not observed here.
+ const captured=new Error('captured maximum-loadout preparation');
+ try {await run(api,{build:'cannon',seed:1,onStep(before,_result,command){if(command?.type==='start'&&before.round===33){reached=before;throw captured;}}});}
+ catch(error){if(error!==captured)throw error;}
  if(!reached)throw Error('Normal route did not reach ordinal 33');
  const base:api.MatchState=restoreMatch(JSON.stringify(reached));
  expect(base).toEqual(reached);
@@ -62,7 +68,8 @@ describe('M4 observer safety retained under M5 finite-content capacity',()=>{
   const settled=session.state;expect(session.advance(60000)).toEqual([]);expect(session.state).toBe(settled);expect(session.combatEvents).toEqual(ledger);
   expect(session.continue(33).ok).toBe(true);expect(session.combatEvents).toEqual([]);expect(session.state.round).toBe(34);expect(session.start().ok).toBe(true);session.advance(50);
   expect(session.combatEvents.every(e=>e.combatId==='round-34')).toBe(true);expect(session.combatEvents.map(e=>e.eventSeq)).toEqual(session.combatEvents.map((_,i)=>i));
-  session.newMatch();expect(session.combatEvents).toEqual([]);expect(session.state).toEqual(api.createMatch(42));expect(session.combat).toBeNull();
+  session.newMatch();expect(session.state).toEqual(api.createMatch(fixture.seed));expect(session.combatEvents).toEqual([]);
+  session.newMatch(42);expect(session.combatEvents).toEqual([]);expect(session.state).toEqual(api.createMatch(42));expect(session.combat).toBeNull();
  },120000);
  it('retains actual tick-zero combat events returned from Start commands',()=>{
   let state=api.createMatch(42);while(state.phase==='choice'){const c=state.pendingChoice!,result=api.selectChoice(state,c.choiceId,c.generation,c.offers[0]);if(!result.ok)throw Error(result.reason);state=result.state;}
