@@ -228,7 +228,7 @@ describe('real mountRenderer3d death lifecycle and picking', () => {
 
   it('uses the fallback countdown for a pawn with no model assets', async () => {
     await mount(null); await publish([piece()]);
-    const unit = scene.children.find(object => object instanceof three.Group && object.children.length === 2) as Group;
+    const unit = scene.getObjectByName('render3d-pawn')!.parent as Group;
     await publish([piece({ alive: false })]); advance(1000);
     expect(unit.visible).toBe(true);
     advance(250); expect(unit.visible).toBe(false);
