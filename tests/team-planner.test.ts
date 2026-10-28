@@ -1,6 +1,10 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { SHOP_CATALOG } from '../src/simulation/match-rules';
-import type { Unit } from '../src/simulation/units';
+import { UNIT_DEFINITIONS, type Unit } from '../src/simulation/units';
+import { createGame } from '../src/simulation/game';
+import { nextRandom } from '../src/simulation/rng';
+import { deriveEffectiveTrait, projectEffectiveMembership } from '../src/simulation/traits/effective-membership';
+import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { isPlanned, normalizePlanner, PLANNER_KEY, previewTraits, readPlanner, replacePlan, selectPlan, snapshotPlan, toggleHero, writePlanner } from '../src/presentation/team-planner/model';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -85,4 +89,32 @@ test('emissary preview handles its exact 1/4 activation instead of falsely activ
   for (const [count, tier] of [[1, 1], [2, 0], [3, 0], [4, 4]]) {
     expect(previewTraits(emissaries.slice(0, count)).find(row => row.id === 'emissary')).toMatchObject({ count, tier });
   }
+});
+
+test('seeded random hero combinations agree with domain trait counts and tiers', () => {
+  let rng = 26;
+  const pick = (max: number) => { const next = nextRandom(rng); rng = next.state; return Math.floor(next.word / 0x100000000 * max); };
+  const seen = new Set<string>();
+  for (let sample = 0; sample < 500; sample++) {
+    const ids: string[] = [];
+    const size = pick(11);
+    for (let index = 0; index < size; index++) ids.push(SHOP_CATALOG[pick(SHOP_CATALOG.length)]);
+    // Copies exercise distinct-definition counting; every board stays below the 10-hero plan cap.
+    const units = [...ids, ...ids.slice(0, 2)].map((id, index) => ({ ...unit(id), id: `hero-${index}` }));
+    const projection = projectEffectiveMembership({ ...createGame(), units });
+    const preview = previewTraits(ids);
+    for (const traitId of Object.keys(TRAIT_DEFINITIONS)) {
+      const expected = deriveEffectiveTrait(projection, 'player', traitId);
+      const actual = preview.find(row => row.id === traitId);
+      if (expected.count === 0) expect(actual, `${sample}: ${traitId}`).toBeUndefined();
+      else {
+        expect(actual, `${sample}: ${ids.join(',')} / ${traitId}`).toMatchObject({
+          count: expected.count, tier: expected.tier,
+          thresholds: TRAIT_DEFINITIONS[traitId].tiers.map(tier => tier.threshold),
+        });
+        seen.add(traitId);
+      }
+    }
+  }
+  expect([...seen].sort()).toEqual([...new Set(SHOP_CATALOG.flatMap(id => UNIT_DEFINITIONS[id].traits))].sort());
 });

@@ -24,5 +24,5 @@ export const PLANNER_STYLE = `
 .planner-traits [data-style=gold],.planner-traits [data-style=unique] { color:#f3cc72; } .planner-traits [data-style=prismatic] { color:#a9f5ec; }
 .planner-traits small { margin-left:auto; }
 .shop-card.planned { outline:2px solid #f3cc72; outline-offset:-3px; }
-.planner-mark { position:absolute; right:4px; top:4px; color:#ffe19b; background:#152536; border:1px solid #d7b464; border-radius:3px; padding:1px 4px; font-size:12px; pointer-events:none; }
+.planner-mark { position:absolute; left:4px; top:4px; color:#ffe19b; background:#152536; border:1px solid #d7b464; border-radius:3px; padding:1px 4px; font-size:12px; pointer-events:none; }
 `;

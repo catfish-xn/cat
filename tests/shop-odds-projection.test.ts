@@ -9,6 +9,8 @@ class ShopNode {
   children: (ShopNode | string)[] = [];
   dataset: Record<string, string> = {};
   className = '';
+  type = '';
+  addEventListener() {}
   private text = '';
   set textContent(value: string) { this.text = value; this.children = []; }
   get textContent(): string { return this.text + this.children.map(child => typeof child === 'string' ? child : child.textContent).join(''); }
@@ -32,7 +34,10 @@ function renderOdds(state: DisplayMatch): ShopNode {
     renderShop(state: DisplayMatch, ready: boolean): void;
   };
   panel.renderShop({ ...state, pendingChoice: null, shop: { ...state.shop, slots: [] } }, true);
-  return root.find(node => node.className === 'shop-odds')!;
+  const odds = root.find(node => node.className === 'shop-odds')!;
+  expect(odds.find(node => node.dataset.debug === 'planner:open')).toBeUndefined();
+  expect(root.find(node => node.dataset.debug === 'planner:open')?.className).toBe('shop-planner-open');
+  return odds;
 }
 
 it.each([

@@ -203,6 +203,7 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
   color: #0b151f; background: var(--card-cost); }
 .shop-card.unaffordable .shop-emblem, .shop-card.unaffordable .shop-name { opacity: .55; }
 .shop-odds { color: var(--c-text-muted); }
+.shop-dock + .shop-planner-open { position: absolute; right: max(8px, calc(100% - var(--online-shop-left, 0px) - var(--online-shop-w, 100%))); bottom: calc(var(--online-dock-h) + 8px); z-index: 3; }
 @media (max-width: 420px) { .shop-trait { display: none; } .shop-card { min-height: 78px; } .hud-chip { padding: 4px 5px; } }
 /* A card whose purchase stars up one of my heroes (TFT shop glow); the stars name the resulting level. */
 .shop-card.upgrade, .shop-dock .shop-card.upgrade[data-cost] { border-color: #ffd36a; animation: shop-upgrade-glow 1.6s ease-in-out infinite alternate;

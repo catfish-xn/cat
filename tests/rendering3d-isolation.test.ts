@@ -91,7 +91,10 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     expect(uiChunks.length, 'pure UI data must actually be emitted').toBeGreaterThan(0);
     for (const chunk of uiChunks) {
       expect(staticPaths.has(chunk.fileName), 'UI text must never be eagerly imported').toBe(false);
-      if (!chunk.moduleIds.some(id => /unit-panel(?:-style)?\.ts$|\/team-planner\//.test(normalize(id)))) {
+      if (chunk.moduleIds.some(id => /\/team-planner\//.test(normalize(id)))) {
+        expect(chunk.imports.filter(name => !staticPaths.has(name)),
+          'planner may only import chunks already in the static entry graph').toEqual([]);
+      } else if (!chunk.moduleIds.some(id => /unit-panel(?:-style)?\.ts$/.test(normalize(id)))) {
         expect(chunk.imports, 'UI data must not pull the application or domain back in').toEqual([]);
       }
       expect(allPaths.has(chunk.fileName), 'UI data must be reachable on demand').toBe(true);
@@ -115,6 +118,7 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     }
     const gzip2d = chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
       .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0);
+    console.info('2D JS gzip-9:', gzip2d);
     expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(637_144);
 
     const preloads = [...html.matchAll(/<link\b[^>]*>/gi)]

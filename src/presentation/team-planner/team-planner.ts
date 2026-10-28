@@ -3,7 +3,7 @@ import { UNIT_DEFINITIONS, type Unit } from '../../simulation/units';
 import { getHeroIdentity, heroEmblemSvg } from '../hero-identity';
 import { heroPortraitHtml, s13IconHtml } from '../s13-assets';
 import { traitTierStyle } from '../trait-styles';
-import { previewTraits, readPlanner, replacePlan, selectPlan, snapshotPlan, toggleHero, writePlanner, type PlannerState } from './model';
+import { PLANNER_KEY, previewTraits, readPlanner, replacePlan, selectPlan, snapshotPlan, toggleHero, writePlanner, type PlannerState } from './model';
 import { PLANNER_STYLE } from './style';
 import { highlightShop } from './shop-highlight';
 
@@ -29,16 +29,16 @@ export function openPlanner(host: HTMLElement, readBoard?: () => readonly Unit[]
     const style = el('style', PLANNER_STYLE); document.head.append(style);
     observer = new MutationObserver(() => {
       highlightShop(document, state!);
-      if (dialog?.open && (document.querySelector('.choice-overlay:not([hidden])') || !scope?.isConnected || scope.closest('[hidden], [inert]'))) closePanel?.();
+      if (dialog?.open && (Array.from(document.querySelectorAll<HTMLElement>('.choice-overlay:not([hidden])')).some(node => getComputedStyle(node).display !== 'none') || !scope?.isConnected || scope.closest('[hidden], [inert]'))) closePanel?.();
     });
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'inert', 'data-unit-def'] });
-    window.addEventListener('storage', event => { if (event.key === 'hex.planner.v1' || event.key === null) { state = readPlanner(); highlightShop(document, state); closePanel?.(); } });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'inert', 'class', 'style', 'data-unit-def'] });
+    window.addEventListener('storage', event => { if (event.key === PLANNER_KEY || event.key === null) { state = readPlanner(); highlightShop(document, state); closePanel?.(); } });
   }
   highlightShop(document, state);
   dialog = el('dialog', '', 'team-planner'); dialog.dataset.debug = 'planner:panel'; dialog.setAttribute('aria-label', '阵容规划');
   const root = dialog, previousFocus = document.activeElement as HTMLElement | null;
   const close = () => { root.close(); root.remove(); if (dialog === root) dialog = undefined; closePanel = undefined;
-    if (previousFocus?.isConnected) previousFocus.focus(); else host.querySelector<HTMLElement>('[data-debug="planner:open"]')?.focus();
+    if (previousFocus?.isConnected) previousFocus.focus(); else (host.parentElement ?? host).querySelector<HTMLElement>('[data-debug="planner:open"]')?.focus();
     window.removeEventListener('keydown', key, true);
   };
   // Stop game hotkeys while editing, while preserving native Tab, Enter and Space.
