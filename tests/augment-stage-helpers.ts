@@ -49,7 +49,8 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'tiniest-titan-plus':{node:'3-2',seed:5},
   // v25 integrated catalog: verified public routes; rerolls are existing per-slot commands.
   'glorious-evolution':{node:'4-2',seed:86,fielded:true},
-  'moonlight':{node:'4-2',seed:1,fielded:true},
+  // T5: re-searched public fielded routes in 0..100; seed 63 offers Moonlight after rerolling slot 0.
+  'moonlight':{node:'4-2',seed:63,fielded:true,rerolls:[0]},
   'greater-moonlight':{node:'4-2',seed:16,fielded:true,rerolls:[0,1]},
   'forward-thinking':{node:'3-2',seed:15,fielded:true,rerollSlots:[0,1,2]},
   'mirrored-monetization':{node:'4-2',seed:37,fielded:true,rerolls:[0]},

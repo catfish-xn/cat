@@ -139,9 +139,9 @@ it('registered tier pools support all three card rerolls at all nodes even at th
 it('a depleted same-tier pool refuses atomically instead of repeating or crossing tiers', () => {
   const state = reachRound('2-1',false), c = state.pendingChoice!;
   // Isolated future-content shortage vector; current admitted pools cannot naturally exhaust this way.
-  const owned = augmentCandidates(c.augmentTier!,[],c.offers)
-    .map(definitionId => ({definitionId,choiceId:'prior',acquiredRound:1}));
-  const before = freeze({...state,augments:owned});
+  // Exhaust the shown-card list without inventing owners whose mechanics require acquisition/history.
+  const removedAugmentIds = [...state.removedAugmentIds, ...augmentCandidates(c.augmentTier!,[],c.offers)];
+  const before = freeze({...state,removedAugmentIds});
   const result = rerollAugment(before,c.choiceId,c.generation,0);
   expect(result).toEqual({ok:false,state:before,reason:'augment-pool-too-small'});
   expect(result.state).toBe(before); expect('events' in result).toBe(false);

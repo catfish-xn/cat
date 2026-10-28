@@ -18,6 +18,7 @@ import type { PersistentGrowth } from '../match-types';
 import { selectOpeningUnit } from '../opening-unit';
 import { type BirthReceipt, compareGrowth, type FoldedResourceProvenance, integer, keys, mergeGrowthLedger, nonempty, plainJson, type ProvenanceCombatSettlement, type ProvenanceItem, type ProvenanceUnit, record, requireValue, RESOURCE_PROVENANCE_VERSION, type ResourceProvenanceContext, type ResourceProvenanceEntry, validateResourceReceipts } from '../resource-provenance';
 import { getCatalogRoundById, getCatalogRoundByOrdinal } from '../round-selectors';
+import { receiptId, SHOP_AUGMENT_SOURCE } from '../shop-augments';
 import { getUnitSellPrice } from '../unit-stats';
 import type { UnitUpgradedEvent } from '../unit-types';
 import { UNIT_DEFINITIONS } from '../units';
@@ -177,8 +178,16 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       const source=entry.source;
       const pilferBirth=source.kind==='mechanic'&&context.pilferRewards?.some(gift=>gift.kind==='unit'
         &&gift.receiptId===source.receiptId&&gift.acquiredRound===round.ordinal);
+      // Firesale grants on natural supply entries too. Shop-history replay separately authenticates the slot/RNG;
+      // here bind the birth to its earlier augment selection and the exact held-unit receipt, not any mechanic grant.
+      const firesaleBirth=round.kind==='supply'&&source.kind==='mechanic'&&context.scheduleReceipts.some(owner=>owner.kind==='augment'
+        &&owner.definitionId==='firesale'&&owner.round<round.ordinal
+        &&source.receiptId===receiptId('firesale',{definitionId:owner.definitionId,choiceId:owner.eventId,acquiredRound:owner.round},round.ordinal))
+        &&context.mechanicReceipts?.some(r=>r.kind==='unit'&&r.source===SHOP_AUGMENT_SOURCE
+          &&r.receiptId===source.receiptId&&r.resolution==='held'&&r.unitId===entry.unitId
+          &&r.round===round.ordinal&&r.roundId===entry.roundId);
       requireValue(round.kind !== 'supply'||entry.source.kind==='carousel'||entry.source.kind==='loot'
-        &&explicitOrbReceipt?.resolution==='held'||pilferBirth, 'unit birth in supply');
+        &&explicitOrbReceipt?.resolution==='held'||pilferBirth||firesaleBirth, 'unit birth in supply');
       requireValue(entry.unitId === `unit-${nextUnitSerial}`, 'unit serial'); integer(nextUnitSerial + 1, 1);
       let definitionId: string;
       if (entry.source.kind === 'opening') {
