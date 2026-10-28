@@ -1,7 +1,7 @@
 import type { MatchState } from './match-types';
 import type { ItemInstance } from './strategy-types';
 import type { ResourceFact, ResourceProvenanceEntry } from './resource-provenance';
-import { getCatalogRoundById } from './round-selectors';
+import { getMultiplayerRoundById } from './multiplayer-round';
 import { AUGMENT_BATCH5_S3B } from './content/augment-pool-batch5-s3b';
 import { pandoraConversions, isS3bConversion, validS3bConversion } from './augment-pool-batch5-s3b-conversions';
 import { salvagePlan, S3B_SOURCE } from './augment-pool-batch5-s3b-salvage';
@@ -23,14 +23,14 @@ export function s3bInventoryReplay(next:MatchState,previous:MatchState|null){
  return {
   beforeFact(fact:ResourceProvenanceEntry,items:readonly ItemInstance[],serial:number){
    check(next.resourceProvenance.entries[fact.sequence]===fact,'sequence');
-   enter(getCatalogRoundById(fact.roundId).ordinal,items);
+   enter(getMultiplayerRoundById(fact.roundId).ordinal,items);
    if(pending.length){const {sequence:_sequence,roundId:_roundId,...actual}=fact;check(canonicalContent(actual)===canonicalContent(pending.shift()),'conversion coverage/order');}
    else check(!isS3bConversion(fact),'unexpected conversion');
    if(fact.kind!=='unit-sold')return;
    for(const p of salvagePlan(next,items,fact)){
     const receipt=next.seatMechanics?.receipts.find(r=>r.receiptId===p.receiptId),itemId=`item-${serial++}`;
     check(receipt?.kind==='item'&&receipt.source===S3B_SOURCE&&receipt.definitionId===p.definitionId&&receipt.itemId===itemId
-      &&receipt.roundId===fact.roundId&&receipt.round===getCatalogRoundById(fact.roundId).ordinal,'salvage component receipt');
+      &&receipt.roundId===fact.roundId&&receipt.round===getMultiplayerRoundById(fact.roundId).ordinal,'salvage component receipt');
     receipts.add(p.receiptId);pending.push(p.conversion,{kind:'item-acquired',itemId,source:{kind:'mechanic',receiptId:p.receiptId}});
    }
   },
@@ -47,10 +47,10 @@ export function s3bInventoryReplay(next:MatchState,previous:MatchState|null){
  * a sale can follow a genuine equip during its own round. The full observer
  * above independently authenticates ownership and the conversion boundary. */
 export function s3bHistoricalEquipmentParent(state:MatchState,itemId:string,roundId:string):ItemInstance|undefined {
- const round=getCatalogRoundById(roundId).ordinal;
+ const round=getMultiplayerRoundById(roundId).ordinal;
  const conversion=state.resourceProvenance.entries.find(e=>{
   if(e.kind!=='g23-item-converted'||e.itemId!==itemId||e.from!=='thiefs-gloves'||!isS3bConversion(e)||!validS3bConversion(state,e,e.roundId))return false;
-  const at=getCatalogRoundById(e.roundId).ordinal,kind=JSON.parse(e.receiptId)[2];
+  const at=getMultiplayerRoundById(e.roundId).ordinal,kind=JSON.parse(e.receiptId)[2];
   return kind==='salvage'?at>=round:kind==='pandora'&&at>round;
  });
  return conversion?.kind==='g23-item-converted'?{id:itemId,definitionId:conversion.from,location:{kind:'inventory'}}:undefined;

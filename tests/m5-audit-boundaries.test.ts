@@ -12,11 +12,13 @@ import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { run } from '../scripts/generate-m5-route.cjs';
 import type { MatchState } from '../src/simulation/match-types';
+import { historyFreeRerollPriorities } from './fixtures/history-free-augments';
 let before19: MatchState, anomaly: MatchState;
 
 describe('M5 audit: normal empty-roster recovery and full-range anomaly sampling', () => {
 beforeAll(async () => {
-  const route = await run(api, { build: 'cannon', seed: 42, retainStates: true });
+  // Public rerolls keep recovery saves independent of battle history; seed 25 also avoids prismatic 4-2 Max Cap history.
+  const route = await run(api, { build: 'cannon', seed: 25, retainStates: true, augmentRerollPriorities: historyFreeRerollPriorities });
   before19 = (route.actions.find((a: any) => a.round === getCatalogRoundById('4-5').ordinal && a.command.type === 'start') as any).before;
   anomaly = (route.actions.find((a: any) => a.round === getCatalogRoundById('4-6').ordinal && a.command.type === 'target') as any).before;
 }, 120000);
