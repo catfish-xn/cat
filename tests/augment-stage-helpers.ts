@@ -43,7 +43,7 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = fal
  * sword-overflow, trifecta-ii, wand-overflow, geniuses, pair-of-fours re-searched on the same 0..299 rule.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
-/** P2 Trifecta→Nami review: first 3-2 seed in 0..299 with Nami as first unit gift (B1 draw). STAGE search policy: lines 40-41. */
+/** P2 Trifecta→Nami review: 0..100 内首份礼物只有 loris 和 kogmaw，没有 Nami；256 的首礼是 Nami，但 3-2 候选里没有 trifecta-ii；257 是第一个两条都满足的种子。 */
 export const TRIFECTA_NAMI_REVIEW_SEED = 257 as const;
 
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
@@ -103,7 +103,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'noble-sacrifice':{node:'3-2',seed:31,rerolls:[0,1,2]},
   'one-buff-two-buff':{node:'3-2',seed:16,rerolls:[0,1]},
   'one-two-five':{node:'4-2',seed:59,fielded:true},
-  'pair-of-fours':{node:'4-2',seed:25,fielded:true},
+  'pair-of-fours':{node:'4-2',seed:63,fielded:true},
   'phreaky-friday-plus':{node:'3-2',seed:44,rerolls:[0,1]},
   'piercing-lotus-i':{node:'3-2',seed:15},
   'piercing-lotus-ii':{node:'3-2',seed:0,rerolls:[0,1,2]},

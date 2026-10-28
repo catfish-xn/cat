@@ -33,7 +33,7 @@ const room=new Room(Array.from({length:8},(_,i)=>({seatId:`s${i}`,name:`s${i}`,k
  roomId:'test-room',seed:0,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
 });
 const mine=()=>room.state.seats.find(s=>s.seatId==='s1')!.match;
-/** Same legal first-offer/claim route as the bounded seed finder; never changes room state directly. */
+/** Advances the room through preparation/claims/choices until `roundId` is reached; never mutates match state outside Room.handle. */
 function arrive(roundId:string):void {
  for(let n=0;n<2000;n++){
   if(room.state.roundId===roundId&&(roundId.endsWith('-4')||room.state.phase==='preparation'))return;
