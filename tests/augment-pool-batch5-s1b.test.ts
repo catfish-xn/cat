@@ -31,11 +31,13 @@ it('counts only closed later choices, including every remaining-budget value and
 });
 let state:MatchState;
 for(const stop of ['1-2','1-3','2-1'])it(`public route to ${stop}`,()=>{
- state ??= createMatch(101); // First direct offer on the merged 250-card pool; no runtime seed scan.
+ state ??= createMatch(77); // Integrated-pool direct offer, verified on the public empty-board route; no runtime seed scan.
  while(state.roundDefinitionId!==stop){state=resolveM5Choices(state);if(state.phase==='preparation'){state=accepted(startMatchCombat(emptyBoard(state)));while(state.phase==='combat')state=stepMatch(state).state;}state=resolveM5Choices(state);state=accepted(nextRound(state,state.round));}
 });
 it('acquisition gives 3 gold and excludes its own node',()=>{
- const c=state.pendingChoice!,gold=state.gold;state=accepted(selectChoice(state,c.choiceId,c.generation,'reroll-transfer'));
+ const c=state.pendingChoice!,gold=state.gold;
+ expect(c.offers,`reroll-transfer at ${state.roundDefinitionId}, seed 77`).toContain('reroll-transfer');
+ state=accepted(selectChoice(state,c.choiceId,c.generation,'reroll-transfer'));
  expect(state.gold-gold).toBe(3);expect(rerollTransferCredits(state)).toBe(0);
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
 });

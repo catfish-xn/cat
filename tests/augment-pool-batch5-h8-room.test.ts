@@ -1,3 +1,4 @@
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { SEATS, TIMINGS, runUntil } from './server/helpers';
 import { Room, ROOM_TIMING_DEFAULTS } from '../src/server/room/room';
@@ -12,9 +13,12 @@ import { checkH8CarouselRestore } from './augment-pool-batch5-h8-restore-helpers
 
 const clock=new ManualClock();
 const room=new Room(SEATS.map(s=>({...s,kind:'human' as const})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'h8-forward-room',seed:4,clock,resolver:new TwoSidedBattleResolver(),carousel:CAROUSEL_RULES_BINDING});
-beforeAll(()=>{room.start();});
+let restoreOffers:()=>void;
+// Pool expansion moved the old offer. Script only the eligible draw; selection and restore share this scope.
+// Finding the target below is fixture self-checking, not a claim about the real RNG draw.
+beforeAll(()=>{restoreOffers=installB1Offers(['forward-thinking']);room.start();});
 for(let round=2;round<=12;round++)beforeAll(()=>{runUntil(room,clock,s=>s.round>=round&&s.phase==='preparation');});
-afterAll(()=>room.dispose());
+afterAll(()=>{room.dispose();restoreOffers();});
 let holder = '', principal = 0;
 it('selects Forward Thinking through the room and authenticates its bank',()=>{
  let picked=false;
@@ -35,7 +39,7 @@ it('selects Forward Thinking through the room and authenticates its bank',()=>{
   for(const input of [bad,JSON.stringify(bad)])expect(()=>restoreSharedOrbSnapshot(room.state.pool,input,authority)).toThrow();
   holder=id;principal=gold;picked=true;break;
  }
- expect(picked,JSON.stringify(room.state.seats.map(s=>({id:s.seatId,alive:s.alive,choice:s.match.pendingChoice})))).toBe(true);
+ expect(picked,`forward-thinking at 3-2: ${JSON.stringify(room.state.seats.map(s=>({id:s.seatId,alive:s.alive,offers:s.match.pendingChoice?.offers})))}`).toBe(true);
 });
 
 it.each([12,13,14,15,16,17,18,19])('settles online round %i, retaining later income until the sixth PvP',round=>{
