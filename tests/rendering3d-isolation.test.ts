@@ -102,7 +102,8 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     }
     const gzip2d = chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
       .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0);
-    expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(637_144);
+    // 用户 2026-10-28 批准的 v25 第五批临时上调，瘦身后收回 637,144
+    expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(700_000);
 
     const preloads = [...html.matchAll(/<link\b[^>]*>/gi)]
       .filter(([tag]) => attribute(tag, 'rel')?.toLowerCase().split(/\s+/).includes('modulepreload'))
