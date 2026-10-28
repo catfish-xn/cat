@@ -1,5 +1,6 @@
 import { roomOfferFor } from './server/augment-offer-helpers';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { makeRoom, runUntil, answerOpenChoices, claimAllOrbs } from './server/helpers';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
@@ -12,10 +13,14 @@ describe.each([false,true])('sniper online streaming=%s', combatStreaming=>{
 const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:41,combatStreaming});
 const seat=()=>room.state.seats.find(s=>s.seatId==='s0')!;
 let zeri:string;
+let restoreOffers: (() => void) | undefined;
+beforeAll(() => { restoreOffers = installB1Offers(['snipers-nest']); });
 beforeAll(()=>{room.start();});
 for(const round of [2,3,4])beforeAll(()=>{runUntil(room,clock,s=>s.round===round&&s.phase==='preparation');});
+afterAll(() => { restoreOffers?.(); restoreOffers = undefined; });
 afterAll(()=>room.dispose());
 it('real room choose/claim/deploy freezes sniper damage for both-side compilation and commits history',()=>{
+ // Scripted 2-1 draw (installB1Offers): toContain below is a fixture self-check; candidate pool stays real.
  roomOfferFor(room,'s0','snipers-nest');const c=seat().match.pendingChoice!;expect(c.offers).toContain('snipers-nest');
  expect(room.handle('s0',{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'snipers-nest'})).toMatchObject({ok:true});
  answerOpenChoices(room);claimAllOrbs(room,['s0']);
