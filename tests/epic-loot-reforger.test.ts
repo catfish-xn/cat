@@ -7,7 +7,10 @@ import {variant,copper,silver,LIVE,stream,COMPONENTS,COMPLETED} from './fixtures
 import {lootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {freezeLootThroughRound,LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
 import {EPIC_LOOT} from '../src/simulation/content/loot';
-import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch,openAnvil,sellUnit,startMatchCombat} from '../src/simulation/match';
+import {createMatch,useConsumable,equipItem,getDeploymentCap,selectChoice,stepMatch,openAnvil,sellUnit,startMatchCombat,nextRound,claimOrDiscardLoot,advanceMultiplayerRound,selectAnomalyTarget,rerollAnomaly,forfeitPendingChoice} from '../src/simulation/match';
+import {enableMultiplayerSettlement} from '../src/simulation/round-settlement';
+import {FINAL_ROUND} from '../src/simulation/round-schedule';
+import {validateShopHistory} from '../src/simulation/shop-history';
 import {planConsumable,replayConsumableItems,reforgeCandidates} from '../src/simulation/consumables';
 import {prepareMatchLoot,revealMatchLoot,grantDirectLoot} from '../src/simulation/loot-runtime';
 import {planOrbClaim} from '../src/simulation/orb-claim';
@@ -29,6 +32,7 @@ import {G23_BLACK_MARKETS,G23_CONQUEROR_CHESTS,g23ConquerorReward} from '../src/
 import type {MatchState} from '../src/simulation/match-types';
 import type {ConsumableDefinitionId} from '../src/simulation/consumable-types';
 import {accepted} from './fixtures/r3r4-public';
+import {accepted as onlineAccepted} from './t5r-helpers';
 import {room,syntheticSharedRound,accept,fullBench,conserved} from './tp-helpers';
 import {runSharedMatchCommand,restoreSharedOrbSnapshot} from '../src/simulation/shared-pool';
 function tool(state:MatchState,definitionId:ConsumableDefinitionId):MatchState{
@@ -190,6 +194,50 @@ describe('v17 epic rewards and unified consumables',()=>{
   while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
   expect(state.phase).toBe('settlement');expect(restoreMatch(serializeMatch(state))).toEqual(state);
   expect(stepMatch(state)).toEqual({state,events:[]});expect(new Set(state.m8.loot.receipts.map(r=>r.receiptId)).size).toBe(state.m8.loot.receipts.length);
+ });
+ it('authenticates a paid online anomaly reroll after selling the target and timing out',()=>{
+  let state=publicAuthoredPreparation('4-5');
+  // Board units cannot be sold during an anomaly choice; clear them in the preceding preparation.
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'))state=accepted(sellUnit(state,unit.id));
+  state=battle(state).ended;
+  while(state.phase==='choice'){const choice=state.pendingChoice!;state=accepted(selectChoice(state,choice.choiceId,choice.generation,choice.offers[0]));}
+  state=onlineAccepted(enableMultiplayerSettlement(state,'A'));
+  state=accepted(nextRound(state,state.round));
+  expect(state.shopHistory).toBeDefined();
+  let c=state.pendingChoice!;expect(c.kind).toBe('anomaly');
+  const target=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;expect(target).toBeDefined();
+  state=accepted(selectAnomalyTarget(state,c.choiceId,c.generation,target.id));
+  c=state.pendingChoice!;const gold=state.gold;
+  state=accepted(rerollAnomaly(state,c.choiceId,c.generation));expect(state.gold).toBe(gold-1);
+  expect(state.shopHistory!.entries.some(e=>e.kind==='anomaly-reroll')).toBe(true);
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'))state=accepted(sellUnit(state,unit.id));
+  c=state.pendingChoice!;expect(c).toMatchObject({kind:'anomaly',step:'target',targetId:null});
+  const result=forfeitPendingChoice(state,state.round,c.choiceId,c.generation);
+  expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
+  expect(result.events).toContainEqual(expect.objectContaining({type:'choiceTimedOut',choiceId:c.choiceId,resolution:'empty-anomaly'}));
+  expect(result.state.multiplayer!.forfeitedChoices).toContain(c.choiceId);
+  expect(result.state.scheduleReceipts.some(r=>r.eventId===c.choiceId)).toBe(false);
+  expect(result.state.pendingChoice).toBeNull();
+  validateShopHistory(JSON.parse(JSON.stringify(result.state)));
+  const forged=structuredClone(result.state),fee=forged.shopHistory!.entries.find(e=>e.kind==='anomaly-reroll')!;
+  Object.assign(fee,{choiceId:'round:6-7:anomaly'});
+  Object.assign(forged.multiplayer!,{forfeitedChoices:[...forged.multiplayer!.forfeitedChoices,'round:6-7:anomaly']});
+  expect(()=>validateShopHistory(forged)).toThrow('Invalid shop history: anomaly fee');
+ });
+ it('rejects a forged anomaly fee in online overtime with the anomaly fee error',()=>{
+  let state=onlineAccepted(enableMultiplayerSettlement(publicAuthoredPreparation('6-7'),'A'));
+  state=battle(state).ended;
+  while(state.phase==='choice'){const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers[0]));}
+  state=onlineAccepted(claimOrDiscardLoot(state,state.round));
+  state=onlineAccepted(advanceMultiplayerRound(state,state.round));
+  expect(state.round).toBe(FINAL_ROUND+1);
+  validateShopHistory(state);
+  const forged=structuredClone(state),history=forged.shopHistory!;
+  const point={round:forged.round,level:forged.level,xp:forged.xp,resourcePrefix:forged.resourceProvenance.entries.length,
+   owners:forged.augments.map(a=>a.choiceId),gold:forged.gold,mechanicPrefix:forged.seatMechanics?.receipts.length??0,
+   lootPrefix:forged.m8.loot.receipts.length,schedulePrefix:forged.scheduleReceipts.length,economyPrefix:forged.roundResults.length};
+  Object.assign(history,{entries:[...history.entries,{kind:'anomaly-reroll',point,choiceId:'round:4-6:anomaly'}]});
+  expect(()=>validateShopHistory(forged)).toThrow('Invalid shop history: anomaly fee');
  });
  it('authenticates neutral opening HP after earned radiant health auras and rejects altered frozen HP',()=>{
   // v22: the seed-42 golden route draws the crab opening, whose 6-7 crab has no authored neutral opening plan;
