@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { createRequire } from 'node:module';
 import { createMatch, type MatchState } from '../src/simulation/match';
 import { readAugmentGrowth } from '../src/simulation/augment-history';
 import { applyRoundSettlement } from '../src/simulation/round-settlement';
@@ -17,6 +18,7 @@ const copy = <T>(x:T):Mutable<T> => structuredClone(x) as Mutable<T>;
 type Transition = {before:MatchState;after:MatchState;memory:H3Ledger};
 type Route = {trace:Transition[];final:MatchState;memory:H3Ledger};
 const routes:Record<string,Route>={};
+const originalH3=createRequire(import.meta.url)('./fixtures/m5/h3-growth-oracle-v25-baseline.cjs');
 
 // All observations precede the checked transition. Expected growth never comes
 // from a production planner, history reader, deserializer, or authority token.
@@ -87,6 +89,18 @@ it('Ledger.apply rejects an unsolicited +999999 HP receipt with no command or ev
 });
 
 describe.each(['no-scout-no-pivot','cooking-pot'])('%s independent online growth',id=>{
+  it('matches the original verdict and complete detached ledger at every real room observation',()=>{
+    const {trace}=routes[id];expect(trace.length).toBeGreaterThan(0);
+    const heroes=(trace[0].memory as unknown as {heroes:string[]}).heroes;
+    let original=originalH3.createH3Ledger(trace[0].before,heroes),
+      optimized=createH3Ledger(trace[0].before);
+    for(const t of trace) {
+      original=originalH3.checkH3Growth(original,t.before,t.after);
+      optimized=checkH3Growth(optimized,t.before,t.after);
+      const {references,...detached}=optimized as unknown as {references:unknown;[k:string]:unknown};
+      expect(references).toBeDefined();expect(detached).toEqual(original);
+    }
+  });
   it('accepts the observed room boundaries and matches independently calculated totals',()=>{
     const {final,memory}=routes[id],step=growthStep(id);expect(step).toBeDefined();
     const values=final.preparation.units.filter(u=>u.team==='player').map(u=>h3GrowthForUnit(memory,u.id));
