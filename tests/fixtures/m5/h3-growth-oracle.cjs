@@ -5,6 +5,7 @@
  * acquisition/merge facts. Retain detached checkpoints to catch joint edits.
  */
 const assert = require('node:assert/strict');
+const {observedEqual,observedPrefixEqual,observedArray,freezeObservedNode,freezeObservation}=require('./observed-equal.cjs');
 const IDS = ['no-scout-no-pivot', 'cooking-pot'];
 const owners = s => s.augments.filter(a => IDS.includes(a.definitionId));
 const roster = s => ({units:s.preparation.units.filter(u=>u.team==='player'),items:s.items});
@@ -18,12 +19,30 @@ const receipt = f => ({kind:f.kind,seatId:f.seatId,round:f.round,roundId:f.round
 const checkpoint = s => ({roster:roster(s),round:s.round,roundId:s.roundDefinitionId,phase:s.phase,shop:s.shop,
   locked:!!s.multiplayer?.combatRosterLocked,roundKind:s.m8.round.kind,owners:owners(s),
   facts:facts(s),resources:resources(s),results:s.roundResults,receipts:s.multiplayer?.receipts??[]});
-function prefix(old,next,label) { assert.deepEqual(next.slice(0,old.length),old,`H3 retained ${label}`); return next.slice(old.length); }
+// Reuse only detached ORACLE-owned branches. checkH3Growth has already compared
+// the complete before checkpoint to this independent snapshot before any reuse.
+// Thus an in-place edit of a retained production object still fails that check;
+// a changed branch is cloned recursively, never adopted into the expectation.
+function copyChanged(before,after,observed,freezeInputs) {
+  if(before===after)return observed;
+  if(after===null||typeof after!=='object')return after;
+  if(Array.isArray(after)) {
+    const snapshot=observedArray(after,(value,i)=>copyChanged(before?.[i],value,observed?.[i],freezeInputs),observed);
+    if(freezeInputs&&after.length<=64)freezeObservedNode(after);
+    return snapshot;
+  }
+  const snapshot=freezeObservation(Object.fromEntries(Object.keys(after).map(key=>[key,copyChanged(before?.[key],after[key],observed?.[key],freezeInputs)])),true);
+  if(freezeInputs)freezeObservedNode(after);
+  return snapshot;
+}
+function prefix(old,next,label) { observedPrefixEqual(next,old,`H3 retained ${label}`); return next.slice(old.length); }
 
-function createH3Ledger(initial,heroes) {
+function createH3Ledger(initial,heroes,{freezeInputs=true}={}) {
   assert(!facts(initial).some(f=>f.kind==='growth'||f.kind==='pvp-roster'), 'H3 oracle needs an observed pre-growth origin');
-  return {kind:'h3-oracle-v1',heroes:[...heroes],seatId:initial.multiplayer?.seatId??'solo',
-    observed:copy(checkpoint(initial)),battles:[],merges:[],expected:[]};
+  const actual=checkpoint(initial),observed=copy(actual);
+  if(freezeInputs)freezeObservation(actual);freezeObservation(observed,true);
+  return {kind:'h3-oracle-v1',freezeInputs,heroes:[...heroes],seatId:initial.multiplayer?.seatId??'solo',
+    observed,battles:[],merges:[],expected:[]};
 }
 // Odd-row offset -> doubled axial coordinates. Deliberately independent of board.ts.
 function distance(a,b) {
@@ -91,7 +110,8 @@ function checkedMerges(before,after,suffix) {
   return merges;
 }
 function checkH3Growth(memory,before,after,command) {
-  assert.deepEqual(checkpoint(before),memory.observed,'H3 independent observed checkpoint');
+  const prior=checkpoint(before);
+  observedEqual(prior,memory.observed,'H3 independent observed checkpoint');
   const added=prefix(memory.observed.facts,facts(after),'facts');
   const suffix=prefix(memory.observed.resources,resources(after),'merge facts');
   const settled=prefix(memory.observed.results,after.roundResults,'settlements');
@@ -102,7 +122,7 @@ function checkH3Growth(memory,before,after,command) {
   const ending=s=>s.phase==='settlement'||s.phase==='gameOver'||s.phase==='choice'&&s.pendingChoice?.returnPhase==='settlement';
   if(owners(before).length&&before.round===after.round&&!ending(before)&&ending(after))
     assert.equal(settled.length,1,'H3 required settlement boundary');
-  const next=copy(memory),newOwners=owners(after).filter(a=>!owners(before).some(b=>b.choiceId===a.choiceId));
+  const next={...memory,battles:[...memory.battles],merges:[...memory.merges],expected:[...memory.expected]},newOwners=owners(after).filter(a=>!owners(before).some(b=>b.choiceId===a.choiceId));
   assert.deepEqual(owners(after).filter(a=>!newOwners.includes(a)),owners(before),'H3 retained owners');
   for(const a of newOwners) {
     assert(['select','choose'].includes(command?.type)&&command.definitionId===a.definitionId&&
@@ -149,7 +169,8 @@ function checkH3Growth(memory,before,after,command) {
     add(scout,['no-scout-no-pivot',scout.choiceId,b.battleId],[...counts].sort(([a],[b])=>order(a,b)).map(([id,n])=>({...zero(id),healthFlat:20*n,attackDamageBps:150*n,abilityPowerCenti:150*n})));
   }
   assert.deepEqual(facts(after).filter(f=>f.kind==='growth').map(receipt),next.expected,'H3 independent complete growth receipts');
-  next.merges.push(...merges.map(m=>m.event));next.observed=copy(checkpoint(after));return next;
+  next.merges.push(...merges.map(m=>m.event));const current=checkpoint(after);next.observed=copyChanged(prior,current,memory.observed,memory.freezeInputs);
+  return next;
 }
 function h3GrowthForUnit(memory,unitId) {
   const value=zero(unitId);

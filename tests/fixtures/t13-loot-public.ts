@@ -99,6 +99,7 @@ export async function transferPreparation({equipGloves=true,checkpointRound,onPr
 // deaths no longer name the frozen razorbeak slots. Seed 2253 has no opening encounter and the same
 // 4-7 shape (component, reforger at entry 1, heroes) with the identical 3 HP / 97 lost entry.
 const TERMINAL_SEED=2253;
+export const TERMINAL_EMPTY_BOARD_ROUNDS=['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2'] as const;
 // A route that pauses after each complete battle (generate-m5-route's awaited onRound), so one long public
 // campaign can be played a round per test case. Pausing never changes a command or a state.
 export function pausableRoute(start:(onRound:(state:MatchState)=>Promise<void>)=>Promise<void>) {
@@ -123,7 +124,7 @@ export async function advanceTerminalRoute(round:number,seed=TERMINAL_SEED) {
   if(prefixes.has(key))return;
   let through=terminalRoutes.get(seed);
   if(!through) {
-    const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
+    const losses=new Set(TERMINAL_EMPTY_BOARD_ROUNDS);
     through=pausableRoute(async onRound=>{
       const captured=new Error('terminal capture');let prefix:MatchState|undefined;
       try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:[],onRound});
