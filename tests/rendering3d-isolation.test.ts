@@ -76,6 +76,16 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     expect(staticModuleIds.filter(id => /\/src\/simulation\/restore-checks\//.test(id)),
       'restore-checks must not be in entry static reachable chunks').toEqual([]);
 
+    for (const module of ['augment-dynamic-values.ts', 'private-seat-view.ts']) {
+      expect(staticModuleIds.filter(id => id.endsWith(`/src/simulation/${module}`)),
+        `${module} must not enter the online client's static graph`).toEqual([]);
+    }
+    const dynamicValuesChunks = chunks.filter(chunk => chunk.moduleIds.some(id =>
+      normalize(id).endsWith('/src/simulation/augment-dynamic-values.ts')));
+    expect(dynamicValuesChunks, 'the shared dynamic projection must remain emitted on demand').toHaveLength(1);
+    expect(dynamicValuesChunks[0]!.fileName).toMatch(/^assets\/solo\//);
+    expect(allPaths.has(dynamicValuesChunks[0]!.fileName)).toBe(true);
+
     const soloChunks = chunks.filter(chunk => chunk.fileName.startsWith('assets/solo/'));
     expect(soloChunks.length, 'solo functionality must actually be emitted').toBeGreaterThan(0);
     for (const chunk of soloChunks) {
@@ -106,6 +116,7 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     }
     const gzip2d = chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
       .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0);
+    console.info('2D entry JS gzip-9:', gzip2d);
     expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(637_144);
 
     const preloads = [...html.matchAll(/<link\b[^>]*>/gi)]

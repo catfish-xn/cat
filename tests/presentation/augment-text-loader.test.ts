@@ -37,3 +37,10 @@ it('keeps the lazy team-up wording identical to the archived source tables', asy
   const { V20_OFFICIAL_TRAIT_TEXT } = await import('../../src/simulation/content/v20-trait-text');
   expect((await import('../../src/presentation/tooltip-text-data')).EXTRA_TRAIT_TEXT).toEqual({ ...V19_OFFICIAL_TRAIT_TEXT, ...V20_OFFICIAL_TRAIT_TEXT });
 });
+
+it('loads the same synchronous dynamic projection used by the server with augment text', async () => {
+  const { loadAugmentText, peekAugmentText } = await import('../../src/presentation/augment-text-loader');
+  const { augmentDynamicValues } = await import('../../src/simulation/augment-dynamic-values');
+  await loadAugmentText();
+  expect(peekAugmentText()?.augmentDynamicValues).toBe(augmentDynamicValues);
+});
