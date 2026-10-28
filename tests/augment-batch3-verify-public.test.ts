@@ -57,7 +57,10 @@ function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
  *   offers it there.
  * pick() re-proves the search condition for its seed on every run (the draw and the replayed route must offer the card);
  * re-run the search above if the pool, the openings or the route change.
- * Re-pinned after v25 batch-5 pool expansion (285 admitted cards), same first-seed rule and route validators. */
+ * Re-pinned after v25 batch-5 pool expansion (285 admitted cards), same first-seed rule and route validators,
+ * with two documented exceptions: savage-revenge skips 43 (its route fills the bench, so the two Renni gifts are
+ * held in escrow by design, augment-pool-grants.ts drainBatch1Gifts) and dark-alley-dealings skips 91 (its route
+ * picks slammin at 2-1, whose saves need battle replays to restore, crown-history.ts). */
 const PUBLIC_SEEDS:Readonly<Record<string,number>>={
  'all-out':12,
  'an-exalted-adventure':38,
