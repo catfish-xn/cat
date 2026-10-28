@@ -4,6 +4,7 @@ import { toSeatPrivateView, toPlayerView } from '../src/server/room/projection';
 import { toDisplayMatch } from '../src/rendering/online/seat-view-adapter';
 import { drawMutationCell, isMutationCell, mutationCellForBoard, MUTATION_CELL_COLOR } from '../src/rendering/online/mutation-cell';
 import { DamageResolver, makeRoom } from './server/helpers';
+import { readFileSync } from 'node:fs';
 
 describe('物竞天择 owner-only cell', () => {
   it('projects the coordinate only to its holder, never in public or another private view', () => {
@@ -42,5 +43,11 @@ describe('物竞天择 owner-only cell', () => {
     expect(mutationCellForBoard(toDisplayMatch(toSeatPrivateView(match)), true)).toBeNull();
     // Rendering uses the supplied coordinate, even when it differs from the usual one.
     expect(mutationCellForBoard({ mutationSacrificeCell: { col: 1, row: 4 } }, true)).toEqual({ col: 1, row: 4 });
+  });
+  it('the 3D renderer keeps its local marker color in step with the 2D marker', () => {
+    // The 3D renderer must not import the 2D module (rendering3d-isolation), so its copy is checked here.
+    const source = readFileSync(new URL('../src/rendering/three-mode/placeholder-renderer.ts', import.meta.url), 'utf8');
+    expect(source).toContain(`const MUTATION_CELL_COLOR = '${MUTATION_CELL_COLOR}';`);
+    expect(source).not.toMatch(/from '\.\.\/online\//);
   });
 });
