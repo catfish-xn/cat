@@ -246,7 +246,7 @@ matrix('Experiment genuine split', experiment, [
 function acquire(id: string): MatchState {
   const seed = 35, root = createMatch(seed);
   expect(openingEncounterId(root)).not.toBe('trainer-golems');
-  // Eligibility uses the real augment candidate pool; the recorded route supplies the scripted 2-1 draw.
+  // Real seed and real 2-1 draw (no scripted offers here): predicts the offer from the real candidate pool.
   expect(generateChoices(augmentCandidates(resolveAugmentTier(root, 'round:2-1:augment'), [], [], openingEncounterId(root),
     { node: '2-1', fieldedTraits: [], blocked: [] }), root.choiceRngState).offers).toContain(id);
   const s = id === 'blood-brothers' ? reachBloodRound(seed) : reachRound('2-1', false, seed);
