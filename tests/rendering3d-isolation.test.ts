@@ -97,6 +97,13 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
       expect(allPaths.has(chunk.fileName), 'UI data must be reachable on demand').toBe(true);
       expect(chunk.moduleIds.every(id => /\/src\/presentation\//.test(normalize(id)))).toBe(true);
     }
+    const confiscation = uiChunks.find(chunk => chunk.moduleIds.some(id => id.endsWith('/src/presentation/confiscation-display.ts')));
+    expect(confiscation, 'confiscation display must be in an on-demand UI chunk').toBeDefined();
+    console.info('2D JS gzip-9:', chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
+      .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0));
+    console.info('3D JS gzip-9:', output.filter(item => /^assets\/3d\/[^/]+\.js$/.test(item.fileName))
+      .reduce((sum, item) => sum + gzipSync(item.type === 'chunk' ? item.code : item.source, { level: 9 }).length, 0));
+    console.info('confiscation UI JS gzip-9:', gzipSync(confiscation!.code, { level: 9 }).length);
     const inspect = uiChunks.find(chunk => chunk.moduleIds.some(id => id.endsWith('/unit-panel.ts')));
     expect(inspect, 'inspect panel must be in an on-demand UI chunk').toBeDefined();
     expect(staticPaths.has(inspect!.fileName), 'inspect panel must not enter the static entry graph').toBe(false);

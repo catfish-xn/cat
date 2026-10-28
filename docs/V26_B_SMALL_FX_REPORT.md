@@ -1,88 +1,69 @@
-# v26-B：施法文字、没收占位、选秀计时环
+# v26-B 小件特效：审核修正报告
 
-基准：`claude/v26-small-fx`，`686f3086`（任务指定的 `codex/v25-integration-2` 基准）。2026-10-28。工作区起点干净，未写 `.git`，未提交或合并；本任务不进 integration-2，等 v25 合进 multiplayer 后再合。
+2026-10-28；工作分支 `claude/v26-small-fx`，修正起点 `29b09578255d916ce768040d0889e34e30d5bddb`。工作区起点干净；未写 `.git`，未提交或合并。本报告替代初版体积结论。
 
-沙盒没有 `codex/v25-integration-2` 命名 ref；已核对预置工作分支 HEAD 与任务 brief 标注的基准 `686f3086` 一致，执行端提交前可再核对集成分支是否有新提交。
+**M1 尚未全部完成：2D 已下降 736 B，但相对指定 635,487 B 基线仍净增 109 B。** 不把低于原硬上限等同于满足本次零净增要求。S1、S2、S4、S5 和 S3/S7 的文档修正已完成。
 
-## 交付
+## 逐项改动
 
-- 2D 施法计划删除 `label` 和技能名生成逻辑，保留施法颜色、目标连线和圆环。实际文件是 `src/presentation/fx-plan.ts`。Phaser 与回放 Canvas 原本已只画圆环，本次清除残留字段；测试明确断言 cast 不含 `label`/`text`。
-- 联机 2D/3D 战斗补程序生成的“已没收！”占位章。冻结开战公开阵容，复用 `publicTraitSnapshots` → `enforcerConfiscates` 现有选择器；显示层隐藏被没收的普通装备图标，保留纹章，非英雄不盖章；战斗中穿戴的被没收装备也清除图标并保留占位章。只修改视图，没有新增领域物品、变动装备账本或另算战斗数值。
-- 3D 选秀每个待释放座位补计时圆环。`releaseAtMs`、`elapsedMs`、本地接收时间与相邻释放批次决定圆环剩余比例；帧数、粒子生命周期不决定释放或领取。释放/领取后隐藏，未知截止时间不画。
-- 本地可读素材中存在 `carousel-shareddraft-releasetimerring-6s.json`，但提取文档确认它只有亮点/尾迹。配置的素材 manifest 含此键时，最后六秒附加该素材装饰，程序圆环始终保留；缺素材或加载失败使用纯程序圆环。未复制、提交任何版权素材，所有新增 Three.js 代码只进 `assets/3d/`。
+| 审核项 | 文件:行 | 结果 |
+| --- | --- | --- |
+| M1 展示逻辑按需加载 | `src/presentation/confiscation-display.ts:1`、`:13`、`:75` | 只有 type imports；运行时选择器、单位目录、装备目录和装备展示读取器均由调用方参数对象注入。公开阵容的羁绊投影内联在本模块，不再值导入 opponent-board。 |
+| M1 Phaser 章与战斗接线 | `src/presentation/confiscation-display.ts:84`、`:91`、`:102`；`src/rendering/BoardScene.ts:1343` | 装备过滤、更新及文字章创建均在懒模块。BoardScene 的新增入口为一行调用；单人及未加载时继续原权威装备展示路径。 |
+| M1 懒模块启动 | `src/rendering/online/confiscation-display.ts:4`；`src/rendering/online/online-application.ts:115`、`:159`、`:164`、`:282` | OnlineApplication 构造时开始 import；公开视图与回放捕获按 Promise 回调注册顺序送达，加载前推送不会丢失。加载失败保留原装备、不盖章。 |
+| M1 chunk 路径 | `vite.config.ts:71` | `confiscation-display` 命名进入 `assets/ui/`；没有修改 manualChunks 的 3D 边界。 |
+| M1 单位字段与公共助手 | `src/presentation/unit-view.ts:38`、`:73`、`:132`；`src/rendering/BoardScene.ts:1482`；`src/rendering/online/opponent-board.ts:51` | UnitView 只留章的类型、更新时隐藏和显示容器；BoardFeed 读取章的可见性。移除原 publicTraitSnapshots 导出，原 publicTraits 恢复直接调用领域选择器。 |
+| M1 装备读取接线整理 | `src/rendering/BoardScene.ts:955` | 同一轮 reconcile 内复用已查到的 combatUnit，避免三次相同查找；无装备或账本语义变化。 |
+| S1 选择器异常 | `src/presentation/confiscation-display.ts:54`、`:65` | publicTraitSnapshots 调用包 try/catch；任一侧失败则缓存为空的 victims，按未知处理，不盖章，也不在之后每帧重试抛异常。 |
+| S2 回合内冻结 | `src/presentation/confiscation-display.ts:26` | 收到首个 combat 视图后，同回合后续 combat、settlement、ended 视图都不覆盖它；跨回合清空战斗缓存。 |
+| S4 空战斗 ID | `src/presentation/confiscation-display.ts:33`、`:37` | undefined 和空串都不捕获、不推断，原样返回装备与 extras。 |
+| S5 可没收装备口径 | `src/presentation/confiscation-display.ts:39` | 与 strategy-snapshot.ts:116 附近的 keeps 口径一致：已知纹章保留；不在装备目录中的物品也没收。英雄/非英雄判断不变。 |
+| S3/S7 风险说明 | `docs/S13_RULES_GAP.md:1163` | 明确仅按公开阵容推断；海克斯/法球等羁绊来源及镜像规则不计入，可能漏盖章；单人模式未做。补充首个 combat 视图未必是开战快照。 |
+| 隔离与体积证据 | `tests/rendering3d-isolation.test.ts:100` | 新增懒模块存在性断言及 2D/3D/没收 chunk gzip-9 日志。原 637,144 硬上限、UI imports=[]、模块必须在 presentation、3D 不导入 2D/UI 等断言全部保留。 |
 
-## gzip-9 体积
+没有修改 `src/server/`、`src/simulation/`、任何 3D 模块、规则数值、内容版本或版权素材。
 
-生产构建：`npx vite build --configLoader runner`。各 `.js` 分别 gzip level 9 后求和；2D 只计顶层 `assets/*.js`，3D 只计 `assets/3d/*.js`，与隔离测试、m7 口径一致。
+## 真实生产构建与 gzip-9
 
-| 构建 | 2D 字节 | 3D 字节 |
-| --- | ---: | ---: |
-| 修改前 `686f3086` | 635,487 | 333,961 |
-| 仅移除施法文字字段 | 635,352 | 333,961 |
-| 最终三项 | 636,332 | 334,635 |
-| 最终净变化 | **+845** | **+674** |
+命令：`export PATH=$HOME/.local/bin:$PATH`，然后 `npx vite build --configLoader runner --outDir <新的临时输出目录>`。构建前后分别使用独立目录，避免外部 outDir 保留旧 hash 文件造成重复求和。每个 `.js` 单独 gzip level 9 后求和；2D 仅计顶层 assets，3D 包括 assets/3d 中的 JS chunk 和 Basis 转码器 JS 资源。
 
-移除施法文字单独节省 **135 字节**。相对仅移除文字版，没收展示、接线及最终产物引用变化增加 2D **980 字节**，未新增图片请求或 2D 懒加载包。3D 计时实现没有静态引入任何 2D 模块。
+| 版本 | 2D gzip-9 B | 3D gzip-9 B | 没收懒 chunk B |
+| --- | ---: | ---: | ---: |
+| 原功能基线 `686f3086`（指定/初版实测） | 635,487 | 333,961 | 0 |
+| 本次修正前 `29b09578`（重新实测） | 636,332 | 334,635 | 0 |
+| 本次修正后（真实构建、隔离测试一致） | **635,596** | **334,635** | **1,448** |
+| 相对本次修正前 | **-736** | **0** | +1,448 |
+| 相对原功能基线 | **+109，M1 未达成** | **+674** | +1,448 |
 
-2D **636,332 < 637,144**，距上限 **812 字节**。以签收 M7 `15313a75` 的 424,763 字节（`M8_REMAINING_JS_BUDGET_PLAN.md:26`）计算，倍率 **1.498087 < 1.50**。未调整硬上限、m7 倍率或隔离测试边界。体积 JSON 留在忽略目录 `artifacts/v26-b/`。
+没收 chunk：`assets/ui/confiscation-display-Bh0XBhzk.js`；全部 UI chunk 合计 36,014 B。隔离测试确认该 chunk 的模块全部属于 `src/presentation/`，`imports` 为 `[]`，只经动态路径从入口可达；HTML 不预加载它。3D 仍只依赖 assets/3d/，本次没有增加 3D 字节。
 
-默认 `npm run build` 的 Vite 配置打包器会尝试写共享且只读的 `node_modules/.vite-temp`，因此本机使用 runner；未修改依赖、构建配置或权限。
+剩余 109 B 是生产产物相对基线的实际差额：懒加载引导、参数注入、异步公开视图/回放投递，以及 UnitView/BoardFeed 的少量接线仍须留在入口。没有用逐块边际估算冒充最终差额，也没有把领域依赖塞进 UI chunk 或放宽隔离例外来隐藏字节。曾尝试把共用装备同步接到应用接口并随单人包拆分，但实测更大，未保留该改动。**本次不能签收 M1；还需至少减少 109 B。** 原 637,144 上限及现有隔离检查仍通过。
 
-## 验证
+构建日志、测试日志和体积 JSON 位于忽略目录 `artifacts/v26-audit/`，生成物不提交。
 
-以下 9 个文件共 **65 项通过**：
+## 验证结果
 
-```sh
-npx vitest run --configLoader runner --project fast \
-  tests/m7-fx-plan.test.ts \
-  tests/v26-confiscation-display.test.ts tests/v26-carousel-timer.test.ts \
-  tests/rendering3d-carousel.test.ts tests/rendering3d-overhead.test.ts \
-  tests/unit-view-item-stacks.test.ts tests/rendering3d-budget.test.ts \
-  tests/rendering3d-isolation.test.ts tests/scrap-enforcer-top-tiers.test.ts
-```
+指定六个文件合计 **48 项通过**：
 
-实际分组执行：M7 特效 3 项；新增/相关表现、隔离、预算 53 项；原有执法官/极客规则回归 9 项。生产 Vite 构建成功；全量 `npm run typecheck` 通过。`git diff --check` 通过。
+| 文件 | 通过项数 |
+| --- | ---: |
+| tests/v26-carousel-timer.test.ts | 3 |
+| tests/v26-confiscation-display.test.ts | 12 |
+| tests/m7-fx-plan.test.ts | 3 |
+| tests/rendering3d-carousel.test.ts | 26 |
+| tests/rendering3d-overhead.test.ts | 3 |
+| tests/rendering3d-isolation.test.ts | 1 |
 
-M7 特效测试原先重新生成整局经济路线，两次超过原有 120 秒 hook 限制。改为读取已签收的 v25 cannon seed-42 备战状态，仍以当前规则执行每场战斗的全部 tick、收集完整领域账本。原有映射数量、确定性、数值文字和减弱动态断言保留，新增 cast 无文字断言；未延长超时、改 golden 或跳过战斗，最终约 16 秒通过。
+另跑 `tests/unit-view-item-stacks.test.ts` 1 项、`tests/rendering3d-scout-shop.test.ts` 15 项；总计 **8 文件、64 项通过**。全量 `npm run typecheck`（`tsc --noEmit`）、真实 Vite 生产构建和 `git diff --check` 通过。
 
-新增测试覆盖：双方互相没收、低档不触发、纹章保留、非英雄排除、缺公开数据不猜测、中途装备、冻结阵容与跨轮清理；圆环按时间缩短、相邻释放批次、未知截止、无素材/加载失败、异步资源迟到、退出/重复销毁清理；3D 占位章与通缉标记不重叠。
+新增回归位于 `tests/v26-confiscation-display.test.ts:80`、`:93`、`:111`、`:121`、`:129`、`:151`、`:162`：结算先于回放/首次 gear 读取、两侧选择器分别抛错且不逐帧重试、空战斗 ID、不在目录中的装备、懒加载期间推送顺序、章附着移动 body/死亡隐藏、正常/旧版装备同步、chunk 失败回退。原有断言未删除，未调整任何超时或阈值。
 
-## 截图与人工验收
+Vitest 使用 `--configLoader runner --maxWorkers=2 --project fast`。本轮最终验证分组执行：隔离测试单跑（真实生产构建）；其余 7 文件一组。曾在扩展回归与构建同跑时，一条既有选秀取景用例触发原 5 秒超时；原限时下单独复跑 26/26 通过，最终分组全绿，未改测试。
 
-本任务没有 `CODEX_BROWSER_CLIENT` / `PLAYWRIGHT_WS_ENDPOINT`，按工作区 AGENTS 的浏览器桥接约定，未自行启动 Chrome；**没有冒充实机截图**。浏览器首屏交互倍率尚未实测，上述 m7 结论仅涵盖确定性的 JS 预算与预算脚本回归。
+本机没有浏览器桥接变量，指定用例也无需浏览器。最终复跑使用忽略目录中的 `vitest-no-browser.config.ts`，仅移除未使用的 Chrome 全局启动；原项目 setupFiles、测试配置和所有断言保留，隔离用例仍加载真实 vite.config.ts。未做浏览器实机视觉验收。
 
-执行端需要由 Claude 使用 `codex-browser exec` 新启动浏览器测试任务，连接已有专用 Chrome，按以下步骤验画：
+## 明确风险与未完成
 
-1. 桌面 Chromium 打开联机 2D 对局，施法时只有原圆环/连线，无“施法 · 某某”；回放 Canvas 同样无技能名。截取施法瞬间。
-2. 用现有执法官 10 测试阵容进入 PvP：被没收一侧显示“已没收！”，普通装备图标隐藏、纹章仍在，非英雄不盖章；下一准备期恢复原装备图标，章消失。切换 3D 复查头顶章与通缉标记。双方都有执法官 10 时两侧分别检查。无需改规则数值。
-3. `?mode=online&render=3d` 进入选秀；无素材根时已有完整程序环，环随服务器时间缩短，释放/领取后消失。配置含计时素材的根后检查最后六秒装饰与程序环共存；网络阻断效果请求时仍有完整圆环。退出选秀再进入，确认没有旧环或旧粒子残留。
-4. 浏览器中确认 2D 页面没有请求/预加载 `assets/3d/`；按 CI 的 `scripts/m7-budget.cjs` 对签收基线补测首屏交互预算。
-
-## 改动文件与接线点
-
-已有文件（给同期 UI-1/UI-2 合并时定位）：
-
-| 文件:行 | 改动 |
-| --- | --- |
-| `src/presentation/fx-plan.ts:28` | 施法只生成颜色，移除 label 字段 |
-| `src/presentation/unit-view.ts:75` | 懒创建 2D 占位章，准备/死亡清除 |
-| `src/rendering/BoardScene.ts:1346`、`:1481` | 应用展示装备和占位章，传递到 BoardFeed |
-| `src/rendering/board-feed.ts:31` | 可选 `itemsConfiscated` 展示字段 |
-| `src/rendering/online/online-application.ts:108`、`:152`、`:275` | 持有展示快照、捕获回放初始状态、冻结公开阵容 |
-| `src/rendering/online/opponent-board.ts:51` | 导出现有公开阵容的原始羁绊选择器结果 |
-| `src/rendering/three-mode/carousel-stage.ts:406`、`:569` | 座位计时环生命周期和服务器时间接线 |
-| `src/rendering/three-mode/placeholder-renderer.ts:437`、`:1066` | manifest 可用性和占位章参数两处最小挂接 |
-| `src/rendering/three-mode/unit-overhead.ts:126` | 3D 占位章显示、位置与释放 |
-| `tests/m7-fx-plan.test.ts:1` | 无施法文字断言及同种子夹具准备优化 |
-| `tests/rendering3d-carousel.test.ts:68` | 无素材也有程序计时环 |
-| `tests/rendering3d-overhead.test.ts:20` | 占位章显示/清理与通缉标记间隔 |
-| `docs/S13_RULES_GAP.md:1163` | 更新占位表现交付状态 |
-| `docs/ASSETS3D_CAROUSEL.md:90` | 更新计时环程序化兜底接线约定 |
-
-新文件：`src/rendering/online/confiscation-display.ts:1`、`src/rendering/three-mode/carousel-timer-ring.ts:1`、`src/rendering/three-mode/confiscation-stamp.ts:1`、`tests/v26-confiscation-display.test.ts:1`、`tests/v26-carousel-timer.test.ts:1`、本报告。
-
-## 边界
-
-- 未改 `src/simulation/`、`src/server/`、规则数值、内容版本、素材、打包边界或预算阈值；未扩展单人模式。
-- 观战协议没有对手配对字段；公开阵容不能唯一匹配（例如多个座位同阵容，或特殊召唤改变阵形）时保守不猜测没收来源。正常本席对局使用服务器明确的 `opponentSeatId`。旧服务器缺公开阵容时也不凭通缉标记推测没收。
-- 程序章与程序环已经覆盖缺素材的功能路径；真实 Chromium 观感及可选本地粒子效果仍需上述人工验收。
+- **首个 combat 视图未必是开战快照，可能误/漏盖章。** 同回合冻结只防止之后的结算视图覆盖，不证明首次收到的数据等于真实开局。
+- 推断只看公开阵容及持有的纹章，海克斯/法球等羁绊来源、镜像规则不计入，可能漏盖章。观战配对不唯一时仍不猜测；单人模式未做没收展示。
+- M1 仍差 109 B；建议继续做局部展示入口瘦身，达成零净增后再由执行端提交，不建议放宽预算或隔离条件。

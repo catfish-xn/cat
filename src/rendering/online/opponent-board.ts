@@ -47,13 +47,9 @@ function publicItems(board: PublicBoard): ItemInstance[] {
 export function publicTraitRows(board: PublicBoard, layout: Board): TraitRow[] {
   try { return traitRows(deriveTraits(publicPreparation(board, layout), 'player', undefined, undefined, publicItems(board))); } catch { return []; }
 }
-/** Raw domain selector result, also used by the confiscation presentation. */
-export function publicTraitSnapshots(board: PublicBoard, layout: Board) {
-  return deriveTraits(publicPreparation(board, layout), 'player', undefined, undefined, publicItems(board));
-}
 /** Traits a public board activates; deriveTraits only reads definition ids and board locations. */
 export function publicTraits(board: PublicBoard, layout: Board): { traitId: string; name: string; count: number; tier: number }[] {
-  return publicTraitSnapshots(board, layout).filter(trait => trait.count > 0)
+  return deriveTraits(publicPreparation(board, layout), 'player', undefined, undefined, publicItems(board)).filter(trait => trait.count > 0)
     .map(trait => ({ traitId: trait.traitId, name: traitDisplayName(trait.traitId), count: trait.count, tier: trait.tier }))
     .sort((a, b) => b.tier - a.tier || b.count - a.count || a.name.localeCompare(b.name, 'zh'));
 }
