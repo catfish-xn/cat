@@ -1,7 +1,7 @@
 import { freezeContent } from './freeze';
 import type { ShopAugmentContent } from './augment-pool-shop';
 
-/** 14.24 archive rows. Execution conventions: P-B5-08 / P-B5-09, 2026-10-27. */
+/** 14.24 archive rows. Execution conventions: P-B5-08 / P-B5-09, updated by user decision 2026-10-28. */
 export const AUGMENT_BATCH5_R5 = freezeContent({
  "starry-night": {
   "apiName": "TFT_Augment_StarryNight",
@@ -55,10 +55,10 @@ export const AUGMENT_BATCH5_R5 = freezeContent({
  }
 } satisfies Readonly<Record<string, ShopAugmentContent>>);
 
-/** Levels 1/2: user convention; levels 3–10: S13 community chart + matching 14.24 fields. */
+/** Levels 1/2: 18% per user decision 2026-10-28 (v24 values); levels 3–10: S13 community chart + matching 14.24 fields. */
 export const BATCH5_R5_STARRY_POLICY = freezeContent({
-  version: 'batch5-r5-starry-v1',
-  chanceBpsByLevel: [0, 0, 1800, 2000, 2200, 2500, 3000, 5000, 8000, 10000],
+  version: 'batch5-r5-starry-v2',
+  chanceBpsByLevel: [1800, 1800, 1800, 2000, 2200, 2500, 3000, 5000, 8000, 10000],
   maxCost: 2, copies: 3,
   shortStock: 'keep-one-star',
   stream: 'augment-pool-shop-seat-choice-generation-slot-lcg32',

@@ -852,8 +852,8 @@ module.exports.madChemistExpected = function(star, abilityPower, attackSpeedBps,
  return {total,pulses,mana:Number(BigInt(attackSpeedBps)*10n*BigInt(ticks)/200000n)};
 };
 
-// P-B5-08/09 (2026-10-27), independent integer transcription; no content imports.
-function starryChanceBps(level){return [0,0,1800,2000,2200,2500,3000,5000,8000,10000][level-1];}
+// P-B5-08/09, user 2026-10-28: levels 1/2 restore v24 18%; independent transcription, no content imports.
+function starryChanceBps(level){return [1800,1800,1800,2000,2200,2500,3000,5000,8000,10000][level-1];}
 module.exports.starryChanceBps=starryChanceBps;
 // Finite-pool Starry Night shop oracle, from pre-draw stock (old offers already returned).
 // Deliberately scoped to pre-stage-4 shops, where six-cost replacement is zero.

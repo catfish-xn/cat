@@ -7,7 +7,7 @@ import { UNIT_DEFINITIONS } from './units';
 const owner = (state: Pick<MatchState, 'augments'>) =>
   state.augments.find(a => AUGMENT_SHOP[a.definitionId]?.rule === 'starry');
 
-/** P-B5-08/09: one probability for both eligible costs, zero at levels 1 and 2. */
+/** P-B5-08/09: one probability for both eligible costs; levels 1/2 use 18% (user 2026-10-28). */
 export function starryChanceBps(state: Pick<MatchState, 'augments' | 'level'>): number {
   return owner(state) ? BATCH5_R5_STARRY_POLICY.chanceBpsByLevel[state.level - 1] ?? 0 : 0;
 }

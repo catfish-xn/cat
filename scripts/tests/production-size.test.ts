@@ -105,9 +105,9 @@ describe('production representation preserves runtime semantics', () => {
     expect(after).toBe(before);
     const parsed = JSON.parse(after);
     // Current content identities (src/simulation/content/identity-constants.ts;
-    // v25 integrated content + approved 14.24 augment alignment, 2026-10-28).
-    expect(parsed.content).toBe('fnv1a32-utf16:b5e50d50');
-    expect(parsed.loot).toBe('fnv1a32-utf16:63bddec2');
+    // v25 integrated content + Starry Night levels 1/2 restored to v24 18%, 2026-10-28).
+    expect(parsed.content).toBe('fnv1a32-utf16:f671ab88');
+    expect(parsed.loot).toBe('fnv1a32-utf16:36ebfac2');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
 });

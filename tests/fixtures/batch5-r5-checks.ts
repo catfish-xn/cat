@@ -14,7 +14,7 @@ import { accept, conserved, fullBench, room as poolFixture } from '../tp-helpers
 import * as oracle from './m5/oracle.g2.cjs';
 import { validateRewards } from './m5/augment-rewards-oracle.cjs';
 
-const chances = [0,0,1800,2000,2200,2500,3000,5000,8000,10000];
+const chances = [1800,1800,1800,2000,2200,2500,3000,5000,8000,10000];
 const withOwner = (s: MatchState, id: string, level: number): MatchState => ({...s, level, xp:0, gold:100,
   augments:[{definitionId:id,choiceId:'test-starry',acquiredRound:1}]});
 const returnedStock = (s: MatchState, stock: Readonly<Record<string,number>>) => {
