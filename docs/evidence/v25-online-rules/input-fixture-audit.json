@@ -48,7 +48,7 @@
     "src/simulation/augment-effects.ts": "6ecb6e8857138298e55d54a0599779267d60ff93cb13cd678a24313e3649fb41",
     "src/simulation/augment-gift-plan.ts": "10d0aeaf84227fc0372d707d075ab05614eb72f2b8c76efc4ea54ca0334072e0",
     "src/simulation/augment-history-owners.ts": "6a675ffb8ed6efc0ea05d8ca78c494d6d809eca6ed4c962dbf2e1868b76d0df8",
-    "src/simulation/augment-history-restore.ts": "f97aac48db1593d8ee20f646306094e37c235c411450269945eaf2811f7acce2",
+    "src/simulation/augment-history-restore.ts": "bb59e859b1c5365b3229a6189eaf6f4f853a7e45c65c8dc1af81325840a77a7b",
     "src/simulation/augment-history-types.ts": "024af209b2ac14a0d06e0d0b0f757344697b870bf8f9e5b48ca842d4c80e3d4a",
     "src/simulation/augment-history.ts": "bdc4aa96b150b93352630580480fb6d6f2fb288bf4a7142a2a8fee7bd68d92b8",
     "src/simulation/augment-income.ts": "7725de829f93c380a81738a0ae528bf54039748b975be04c2addc9916a116ef0",
@@ -533,7 +533,7 @@
     "src/simulation/shared-pool.ts": "9a90b9425ba1778d8a9801c55d073a6ce7ce1ea139fbada67ba36b5fa9c1a77a",
     "src/simulation/shop-augments.ts": "ae501127305f2acf4d518748d50d3d4425aacabd54686d2bfa93b53b7d4b42be",
     "src/simulation/shop-history-types.ts": "584c3bbcb3c34f2582c7293cdbc5eee72a256a89f0c52e9c5c1e4a852091c874",
-    "src/simulation/shop-history.ts": "3f5a4d810a85b0a2200134c0197243444cd01a0a3a1bfa0f29e62ee765052085",
+    "src/simulation/shop-history.ts": "1312830bde81a0f2a3b7f845a33e640081b15ba9ebd1ff0014862c62f0c3b52e",
     "src/simulation/shop-orbs.ts": "2be80d513a1276ba3ecd72c0f1b5666d7239c009b9c4339da827c9838d05322b",
     "src/simulation/shop.ts": "40b8c8f379a9cd1d4d7362a07eafc0354d8b838289e2df7e65f14f7d0c7d3031",
     "src/simulation/six-cost-shop.ts": "56df681f640f3fa58e30407668fe20165f832896d949f5b63c7b0f2b680fe722",
@@ -642,7 +642,7 @@
       "previousBytes": 48373,
       "currentBytes": 61860,
       "previousSha256": "2647356330030c2c67c46129d9efa70e290b4665d8787fb4aa49ca6cf63f8e22",
-      "currentSha256": "29ca6e1cd9cbd2655b4c400db5ba1c96d58714fb2945bed2f67e7bf8839e6be0",
+      "currentSha256": "321de2c26f681ac537b19ddb90a0e8520b39fd1e5cd6f2b0f7ebbe2f21dd79c9",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v25-online-rules-herald-raw/trajectory.json": {
