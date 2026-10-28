@@ -1,7 +1,7 @@
 /** Bounded, single-pass 3D polish. Blob contacts avoid shadow maps; only one hovered body gets shells. */
 import {
-  BackSide, DataTexture, Group, HemisphereLight, LinearFilter, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry,
-  RGBAFormat, SkinnedMesh, Vector2, type Object3D, type Scene, type Vector3,
+  BackSide, Color, DataTexture, DoubleSide, Group, HemisphereLight, LinearFilter, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry,
+  RGBAFormat, SkinnedMesh, Vector2, type InstancedMesh, type Object3D, type Scene, type Vector3,
 } from 'three';
 
 export type Quality3d = 'off' | 'low' | 'balanced' | 'high';
@@ -17,6 +17,7 @@ interface LitPiece {
   readonly team: 'player' | 'enemy';
 }
 const TEAM = { player: '#3d8fd1', enemy: '#d1504a' } as const;
+const TEAM_COLORS = { player: new Color(TEAM.player), enemy: new Color(TEAM.enemy) };
 
 export function createPresentationLighting(scene: Scene, quality: Quality3d) {
   const contacts = quality === 'balanced' || quality === 'high';
@@ -49,21 +50,32 @@ export function createPresentationLighting(scene: Scene, quality: Quality3d) {
   };
   outlineMaterial.customProgramCacheKey = () => `team-outline-${quality}`;
   let hovered: LitPiece | null = null, outlinedBody: Object3D | null = null, closed = false;
+  // Capture before effects can attach to bones. A later traversal alone cannot distinguish those from model meshes.
+  const modelMeshes = new WeakMap<Object3D, WeakSet<Mesh>>();
   const shells: Mesh[] = [];
   const clearOutline = () => { for (const shell of shells) shell.removeFromParent(); shells.length = 0; outlinedBody = null; };
   const outline = (piece: LitPiece | null) => {
     if (!contacts || !piece?.alive || !piece.root.visible || !piece.body) { clearOutline(); return; }
-    outlineMaterial.emissive.set(TEAM[piece.team]);
+    outlineMaterial.emissive.copy(TEAM_COLORS[piece.team]);
     if (outlinedBody === piece.body) return;
     clearOutline(); outlinedBody = piece.body;
     const sources: Mesh[] = [];
-    piece.body.traverseVisible(node => { if (node instanceof Mesh && node.geometry.hasAttribute('normal')) sources.push(node); });
+    const owned = modelMeshes.get(piece.body);
+    piece.body.traverseVisible(node => {
+      if (!(node instanceof Mesh) || (node as InstancedMesh).isInstancedMesh || !owned?.has(node) || !node.geometry.hasAttribute('normal')) return;
+      // A solid back-face shell cannot preserve alpha holes or a double-sided surface's silhouette.
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      if (materials.some(material => material.transparent || material.alphaTest > 0 || material.side === DoubleSide)) return;
+      sources.push(node);
+    });
     for (const source of sources) {
       const shell = source instanceof SkinnedMesh ? new SkinnedMesh(source.geometry, outlineMaterial) : new Mesh(source.geometry, outlineMaterial);
       if (shell instanceof SkinnedMesh && source instanceof SkinnedMesh) {
         shell.skeleton = source.skeleton; shell.bindMode = source.bindMode;
         shell.bindMatrix.copy(source.bindMatrix); shell.bindMatrixInverse.copy(source.bindMatrixInverse);
+        shell.boundingBox = source.boundingBox; shell.boundingSphere = source.boundingSphere;
       }
+      shell.frustumCulled = source.frustumCulled;
       shell.morphTargetInfluences = source.morphTargetInfluences; shell.morphTargetDictionary = source.morphTargetDictionary;
       shell.name = 'render3d-hover-outline'; shell.renderOrder = source.renderOrder + 1;
       shell.raycast = () => {}; source.add(shell); shells.push(shell);
@@ -71,8 +83,15 @@ export function createPresentationLighting(scene: Scene, quality: Quality3d) {
   };
   return {
     hemisphere, group,
+    /** Register a fresh model/stand-in before any runtime effects attach; repeated calls never admit new meshes. */
+    registerBody(body: Object3D) {
+      if (closed || modelMeshes.has(body)) return;
+      const meshes = new WeakSet<Mesh>();
+      body.traverse(node => { if (node instanceof Mesh) meshes.add(node); });
+      modelMeshes.set(body, meshes);
+    },
     resize(width: number, height: number) { resolution.set(Math.max(1, width), Math.max(1, height)); },
-    hover(piece: LitPiece | null) { hovered = piece; outline(piece); },
+    hover(piece: LitPiece | null) { if (closed) return; hovered = piece; outline(piece); },
     /** Detach borrowed skeletons/geometry before the owner releases or replaces its body. Keep the hover identity. */
     detachBody(piece: LitPiece) { if (hovered === piece) clearOutline(); },
     update(piece: LitPiece) {

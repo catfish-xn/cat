@@ -720,6 +720,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.mixer?.dispose(); view.mixer = null; view.lease?.release(); view.lease = null; view.modelScale = null; held.delete(view);
     // The team pawn stands in until the model arrives (cache miss while the preload is still running).
     view.body = pawnFor(view.team, view.definitionId); view.root.add(view.body); view.starHeight = PAWN_HEIGHT + STAR_GAP;
+    lighting.registerBody(view.body);
     const definitionId = unitModelId(view.definitionId, isAnvilPiece(view.definitionId));
     if (!loadModel || !definitionId) return;
     void loadModel(definitionId).then(lease => {
@@ -766,6 +767,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Remove the pawn only after fitting succeeded; a malformed model must not leave an empty ring.
       stand?.removeFromParent();
       view.root.add(lease.scene);
+      lighting.registerBody(lease.scene);
       view.mixer = new UnitAnimationMixer(lease.scene, lease.animations, lease.animationNames, lease);
       view.state.setPlaybackResolver((action, index) => view.mixer!.resolvePlayback(action, index, { starLevel: view.starLevel, form: view.form }));
       view.mixer.apply(view.state.output);

@@ -1,6 +1,22 @@
 # v26-A：3D PvP 传送门与灯光描边
 
-基准：`claude/v26-portal-lighting`，HEAD `d8e146ee`（v26 素材准备），父提交 `686f3086` 与本地 `origin/codex/v25-integration-2` 一致。未写 `.git`，未提交、合并；本任务不进入 integration-2。未改规则、数值、simulation、server 或 2D 入口。
+当前审核修正基准：`claude/v26-portal-lighting`，HEAD `70796c5d`（完整提交 `70796c5dc87bc8b8e4598dea2850173f9e383b3b`）。下文原始实现与体积对比仍以 `d8e146ee`（v26 素材准备）为修改前基准。`.git` 只读，本轮仅修改工作区，由执行端提交；未合并，不进入 integration-2。未改规则、数值、simulation、server 或 2D 入口。
+
+## 本轮审核修正
+
+| 文件:行 | 修正与验证 |
+| --- | --- |
+| `src/rendering/three-mode/presentation-lighting.ts:64` | 跳过 transparent、alphaTest > 0、DoubleSide；材质数组中任一材质符合即跳过整个网格。选择跳过，避免实心外壳填满透明/镂空区域，也无需维护逐材质的贴图描边副本。 |
+| `src/rendering/three-mode/presentation-lighting.ts:65`、`:87` | 跳过 isInstancedMesh；仅允许首次登记的模型自带网格，后挂到骨骼下的普通网格特效也不描边。登记幂等，不会把后挂特效补入集合。 |
+| `src/rendering/three-mode/placeholder-renderer.ts:723`、`:770` | 占位体、异步模型刚挂载时登记网格，早于运行时特效挂接；不新增 2D 模块值导入。 |
+| `src/rendering/three-mode/presentation-lighting.ts:76` | 蒙皮外壳借用 source.boundingBox / boundingSphere；frustumCulled 同样取自 source。包围体原地更新可同步到外壳。 |
+| `src/rendering/three-mode/presentation-lighting.ts:20`、`:59` | 预建队伍 Color，悬停帧用 copy，不再解析颜色字符串。 |
+| `src/rendering/three-mode/presentation-lighting.ts:94` | hover 检查 closed，释放后不再挂载使用已释放资源的外壳。 |
+| `tests/rendering3d-presentation-lighting.test.ts:79`、`:91`、`:110` | 分别覆盖上述材质过滤（含材质数组）、实例化/骨骼特效排除、蒙皮包围体与两种裁剪标志；另在 `:126`、`:137` 覆盖颜色与 closed。原有断言保留，未放宽阈值。 |
+
+本轮指定测试：`rendering3d-pvp-portal`、`rendering3d-presentation-lighting`、`rendering3d-portal-lighting-mount`、`rendering3d-death`，**4 文件、42 测试通过**。使用现有 `artifacts/v26-a/vitest-no-browser.config.mjs`（仅跳过会启动 Chromium 的 globalSetup），参数 `--project fast --configLoader runner --cache=false --maxWorkers=2`；本轮不要求浏览器测试。
+
+本轮 `npm run typecheck`（`tsc --noEmit`）与 `git diff --check` 均通过。未写 `.git`，未修改 server / simulation，未引入素材文件；原有未跟踪软链接 `assets3d-local` 保持不变。下文体积与大范围回归数字属于原始实现记录，本轮未重新测量。
 
 ## 文件与行为
 
@@ -14,7 +30,7 @@
 | `tests/rendering3d-portal-lighting-mount.test.ts:17`（新增） | 实际 renderer 与 feed 接线、头顶信息跟随、鼠标悬停、侦察/减少动态效果取消、无资源请求、无领域命令。仅替代 GPU/DOM。 |
 | `tests/rendering3d-death.test.ts:231`（已有） | 旧测试用“两个子节点的 Group”定位棋子，会误取新传送门；改为定位既有 pawn 的父节点，死亡断言不变。 |
 
-**改动的已有文件只有 `placeholder-renderer.ts` 与 `rendering3d-death.test.ts`。** 其余是上表新增文件与本文。未碰同期商店卡、HUD、字体文件。
+**原始实现交付时，改动的已有文件只有 `placeholder-renderer.ts` 与 `rendering3d-death.test.ts`。** 其余是上表新增文件与本文；本轮审核修正范围见前节。未碰同期商店卡、HUD、字体文件。
 
 画面 feed 已把敌方放到远端半场，传送门沿用该视角；没有新增实际主客场判定或切换棋盘规则。首次挂载已经在战斗、重连、切换观战不补播。PvE、隐藏或死亡棋子不入场；阶段退出、侦察、选秀、减少动态效果开启时取消并恢复最新目标位置。
 
