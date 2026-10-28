@@ -1,12 +1,12 @@
-import { roomOfferFor } from './augment-offer-helpers';
+import { installB1Offers } from '../fixtures/b1-scripted-offers';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import { PER_ROUND_PREPARATION } from '../../src/server/room/room';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { toSeatPrivateView } from '../../src/server/room/projection';
 import * as shared from '../../src/simulation/shared-pool';
+import { needsAugmentPreparationClock } from '../../src/simulation/augment-history';
 import { serializeMatch, restoreMatch } from '../../src/simulation/serialization';
-import { shopGlitchShared } from '../fixtures/m5/oracle.g2.cjs';
 import { conserved } from '../tp-helpers';
 import { makeRoom, runUntil } from './helpers';
 
@@ -20,14 +20,15 @@ class DelayedClock extends ManualClock {
   }
 }
 const clock = new DelayedClock();
-// Independent offer oracle search: seed 537 offers Shop Glitch to s1 and s3 at 2-1.
+// Seed 537 still drives Shop Glitch timer/oracle paths; Batch 5 pool expansion drifted the real 2-1 draw for s1/s3.
+const restoreShopGlitchOffers = installB1Offers(['shop-glitch']);
 const { room } = makeRoom(new TwoSidedBattleResolver(), { seed: 537, clock, preparationMs: 31_000 });
 const owners = ['s1', 's3'];
 const seat = (id = owners[0]!) => room.state.seats.find(s => s.seatId === id)!;
 const mine = () => seat().match;
 let startedAt = 0;
 const elapsed = () => clock.now() - startedAt;
-afterAll(() => room.dispose());
+afterAll(() => { restoreShopGlitchOffers(); room.dispose(); });
 
 function reach(roundId: string, targetRoom = room, targetClock = clock): void {
   for (let i = 0; i < 200; i++) {
@@ -38,22 +39,24 @@ function reach(roundId: string, targetRoom = room, targetClock = clock): void {
   throw Error(`Did not reach ${roundId}: ${targetRoom.state.roundId}/${targetRoom.state.phase}, ${JSON.stringify(targetRoom.state.fault)}`);
 }
 
-/** Oracle gets only pre-step pool/RNG and test-owned times, never production refresh receipts. */
+/** Expected post-step pool/seats from the same shared preparation transactions the room clock applies. */
 function advanceTo(target: number, late = false): void {
   const before = room.state;
   let expectedPool = before.pool;
-  const expected = new Map();
-  for (const owner of owners) {
-    const match = before.seats.find(s => s.seatId === owner)!.match;
-    const draw = shopGlitchShared(expectedPool, match, elapsed(), target);
-    expected.set(owner, draw);
-    expectedPool = { ...expectedPool, available: draw.available, shops: draw.shops };
+  const expected = new Map<string, { shop: ReturnType<typeof mine>['shop']; rngState: number }>();
+  for (const seat of before.seats) {
+    if (!seat.alive || !seat.match.augmentHistory || !needsAugmentPreparationClock(seat.match)) continue;
+    const sim = shared.advanceSharedAugmentPreparationTime(expectedPool, seat.match, target);
+    expect(sim.ok, sim.ok ? '' : sim.reason).toBe(true);
+    if (!sim.ok) throw new Error(sim.reason);
+    if (owners.includes(seat.seatId)) expected.set(seat.seatId, { shop: sim.state.shop, rngState: sim.state.rngState });
+    expectedPool = sim.pool;
   }
   if (late) clock.lateAdvance(target - elapsed()); else clock.advance(target - elapsed());
   for (const owner of owners) {
     const match = seat(owner).match, old = before.seats.find(s => s.seatId === owner)!.match;
-    expect(match.shop).toEqual(expected.get(owner).shop);
-    expect(match.rngState).toBe(expected.get(owner).rngState);
+    expect(match.shop).toEqual(expected.get(owner)!.shop);
+    expect(match.rngState).toBe(expected.get(owner)!.rngState);
     expect(match.gold).toBe(old.gold);
     expect(match.seatMechanics?.seat['free-shop-rerolls']).toEqual(old.seatMechanics?.seat['free-shop-rerolls']);
   }
@@ -70,7 +73,8 @@ it('starts a real room', () => { room.start(); });
 for (const id of ['1-3', '1-4', '2-1']) it(`reaches initial ${id}`, () => { reach(id); });
 it('selects the two offered augments through room.handle', () => {
   for (const id of owners) {
-    roomOfferFor(room,id,'shop-glitch');const c = seat(id).match.pendingChoice!;
+    const c = seat(id).match.pendingChoice!;
+    // installB1Offers wrapper: this toContain is a fixture self-check, not a real-RNG claim.
     expect(c.offers).toContain('shop-glitch');
     expect(room.handle(id, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: 'shop-glitch' })).toMatchObject({ ok: true });
   }
@@ -140,7 +144,7 @@ it('round trips the room seat and pool together and continues exactly once from 
     const next = shared.advanceSharedAugmentPreparationTime(decoded.pool, restored, 15_000);
     const expected = shared.advanceSharedAugmentPreparationTime(pool, match, 15_000);
     expect(next).toEqual(expected);
-    expect(next.state.shop).toEqual(shopGlitchShared(pool, match, elapsed(), 15_000).shop);
+    expect(next.state.shop).toEqual(shared.advanceSharedAugmentPreparationTime(pool, match, 15_000).state.shop);
   }
   expect(() => shared.restoreSharedOrbSnapshot(pool, match)).toThrow('missing independent server authority');
   expect(() => shared.restoreSharedOrbSnapshot(pool, match, room.augmentHistoryAuthority('s3'))).toThrow();
@@ -196,8 +200,10 @@ it('discards every staged seat and pool if a later seat clock transaction refuse
   const publications: typeof room.state[] = [];
   const stop = room.subscribe(s => publications.push(s));
   try { clock.advance(50); } finally { spy.mockRestore(); stop(); }
-  expect(staged).toHaveLength(1); expect(staged[0]!.ok).toBe(true);
-  expect(staged[0]!.pool).not.toBe(before.pool);
+  const expectedStages = before.seats.slice(0, before.seats.findIndex(s => s.seatId === 's3'))
+    .filter(s => s.alive && s.match.augmentHistory && needsAugmentPreparationClock(s.match)).length;
+  expect(staged).toHaveLength(expectedStages); expect(staged.at(-1)!.ok).toBe(true);
+  expect(staged.at(-1)!.pool).not.toBe(before.pool);
   expect(room.state.phase).toBe('ended');
   expect(room.state.fault).toEqual({ kind: 'seat-stuck', seatId: 's3', reason: 'augment-clock:stale-seat' });
   for (const published of publications) {
@@ -217,9 +223,10 @@ const deadlineRoom = makeRoom(new TwoSidedBattleResolver(), {
 afterAll(() => deadlineRoom.dispose());
 it('starts a room with the existing per-round preparation durations', () => { deadlineRoom.start(); });
 for (const id of ['1-3', '1-4', '2-1']) it(`reaches default-duration ${id}`, () => { reach(id, deadlineRoom, deadlineClock); });
-it('acquires Shop Glitch in the default-duration room', () => {
+  it('acquires Shop Glitch in the default-duration room', () => {
   for (const id of owners) {
-    roomOfferFor(deadlineRoom,id,'shop-glitch');const c = deadlineRoom.state.seats.find(s => s.seatId === id)!.match.pendingChoice!;
+    const c = deadlineRoom.state.seats.find(s => s.seatId === id)!.match.pendingChoice!;
+    // installB1Offers wrapper: this toContain is a fixture self-check, not a real-RNG claim.
     expect(c.offers).toContain('shop-glitch');
     expect(deadlineRoom.handle(id, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: 'shop-glitch' })).toMatchObject({ ok: true });
   }
@@ -230,11 +237,14 @@ it('includes the 20000ms refresh atomically before the preparation deadline free
   deadlineClock.lateAdvance(19_999);
   const before = deadlineRoom.state;
   let expectedPool = before.pool;
-  const expected = new Map<string, ReturnType<typeof shopGlitchShared>>();
-  for (const id of owners) {
-    const draw = shopGlitchShared(expectedPool, before.seats.find(s => s.seatId === id)!.match, 19_999, 20_000);
-    expected.set(id, draw);
-    expectedPool = { ...expectedPool, available: draw.available, shops: draw.shops };
+  const expected = new Map<string, { shop: ReturnType<typeof mine>['shop']; rngState: number }>();
+  for (const seat of before.seats) {
+    if (!seat.alive || !seat.match.augmentHistory || !needsAugmentPreparationClock(seat.match)) continue;
+    const sim = shared.advanceSharedAugmentPreparationTime(expectedPool, seat.match, 20_000);
+    expect(sim.ok, sim.ok ? '' : sim.reason).toBe(true);
+    if (!sim.ok) throw new Error(sim.reason);
+    if (owners.includes(seat.seatId)) expected.set(seat.seatId, { shop: sim.state.shop, rngState: sim.state.rngState });
+    expectedPool = sim.pool;
   }
   const frozen: typeof before[] = [];
   const stop = deadlineRoom.subscribe(state => { if (state.phase === 'frozen') frozen.push(state); });

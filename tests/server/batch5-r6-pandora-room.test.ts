@@ -1,6 +1,7 @@
 import { CAROUSEL_RULES_BINDING } from '../../src/server/room/carousel';
 import { restoreCarouselSeat } from '../../src/simulation/carousel';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { installB1Offers } from '../fixtures/b1-scripted-offers';
 import { makeRoom, runUntil, answerOpenChoices, claimAllOrbs } from './helpers';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { restoreSharedOrbSnapshot, assertSharedPoolConservation, nextSharedRound } from '../../src/simulation/shared-pool';
@@ -10,12 +11,16 @@ import type { MatchState } from '../../src/simulation/match-types';
 import type { CarouselReceipt } from '../../src/simulation/carousel-types';
 import type { ResourceProvenanceEntry } from '../../src/simulation/resource-provenance';
 
+// Batch 5 pool expansion drifted the real 2-1 draw under carousel binding; script only the three-card pick.
+const restoreB1Offers = installB1Offers(['pandoras-bench']);
+
 const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:8,carousel:CAROUSEL_RULES_BINDING});
 const mine=()=>room.state.seats.find(s=>s.seatId==='s3')!.match;
 let before:MatchState, expected:ReturnType<typeof batch5Transforms>;
 beforeAll(()=>room.start());
 for(const round of ['1-3','1-4','2-1'])beforeAll(()=>runUntil(room,clock,s=>s.roundId===round&&s.phase==='preparation'));
 beforeAll(()=>{
+  // installB1Offers wrapper: this toContain is a fixture self-check, not a real-RNG claim.
   const c=mine().pendingChoice!;expect(c.offers).toContain('pandoras-bench');const gold=mine().gold;
   expect(room.handle('s3',{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'pandoras-bench'})).toMatchObject({ok:true});
   expect(mine().gold).toBe(gold+2);expect(mine().resourceProvenance.entries.filter(e=>e.kind==='unit-transformed')).toEqual([]);
@@ -47,7 +52,7 @@ beforeAll(()=>{
   before=mine();expected=batch5Transforms({...before,round:5},'pandoras-bench',room.state.pool.available);
   runUntil(room,clock,s=>s.roundId==='2-2'&&s.phase==='preparation');
 });
-afterAll(()=>room.dispose());
+afterAll(()=>{ restoreB1Offers(); room.dispose(); });
 it('real Room choose/deploy/equip/round-entry uses the shared pool and all three original slots',()=>{
   const s=mine();expect(room.state.fault).toBeNull();
   expect(expected.exchanges).toHaveLength(3);
