@@ -67,12 +67,26 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     }
     const staticPaths = reachable(false);
     const allPaths = reachable(true);
+    // Path-based accounting is valid only when excluded directories are truly
+    // on demand. This also catches a future new directory outside 3d/solo/ui.
+    expect([...staticPaths.keys()].filter(name => !/^assets\/[^/]+\.js$/.test(name)),
+      'every eagerly loaded JS chunk must count toward the 2D budget').toEqual([]);
     const threeDChunks = chunks.filter(chunk => chunk.moduleIds.some(is3dModule));
     const leaks = [...staticPaths].flatMap(([name, path]) => byName.get(name)!.moduleIds
       .filter(is3dModule).map(module => ({ module: normalize(module), chain: path.join(' ') })));
     expect.soft(leaks, '3D modules reachable from the 2D entry using only static imports').toEqual([]);
 
     const staticModuleIds = [...staticPaths.keys()].flatMap(name => byName.get(name)!.moduleIds).map(normalize);
+    const phaserModules = staticModuleIds.filter(id => id.includes('/node_modules/phaser/src/'));
+    expect(phaserModules.filter(id => /\/(?:physics|sound|gameobjects\/particles|input\/gamepad)\//.test(id)
+      || /\/(?:display\/color\/index|gameobjects\/components\/PathFollower)\.js(?:\?|$)/.test(id)),
+    'unused Phaser subsystems and public utility collections must stay out').toEqual([]);
+    for (const module of ['display/color/Color.js', 'display/color/ValueToColor.js',
+      'renderer/canvas/CanvasRenderer.js', 'input/InputPlugin.js', 'input/touch/TouchManager.js',
+      'loader/filetypes/ImageFile.js', 'tweens/TweenManager.js', 'animations/AnimationManager.js']) {
+      expect(phaserModules.some(id => id.endsWith(`/phaser/src/${module}`)),
+        `required or deliberately retained Phaser module: ${module}`).toBe(true);
+    }
     expect(staticModuleIds.filter(id => /\/src\/simulation\/restore-checks\//.test(id)),
       'restore-checks must not be in entry static reachable chunks').toEqual([]);
 
@@ -111,6 +125,8 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     const preloads = [...html.matchAll(/<link\b[^>]*>/gi)]
       .filter(([tag]) => attribute(tag, 'rel')?.toLowerCase().split(/\s+/).includes('modulepreload'))
       .map(([tag]) => attribute(tag, 'href')).filter((href): href is string => href !== undefined);
+    expect([...preloads, ...scriptEntries].map(outputPath).filter(path => path.endsWith('.js') && !/^assets\/[^/]+\.js$/.test(path)),
+      'HTML must not preload JS excluded by the 2D budget').toEqual([]);
     expect([...preloads, ...scriptEntries].filter(href => outputPath(href).startsWith('assets/solo/')), 'HTML must not preload solo code').toEqual([]);
     const threeDNames = new Set(threeDChunks.map(chunk => chunk.fileName));
     expect.soft(preloads.filter(href => threeDNames.has(outputPath(href))), 'HTML must not preload 3D chunks').toEqual([]);

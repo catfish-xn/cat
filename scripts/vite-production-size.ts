@@ -78,6 +78,7 @@ const PHASER_HASHES: Record<string, string> = {
   'utils/object/GetAdvancedValue.js': 'b9fb0626071305a3815c6e231f33979d47950700675ac24a3c168647bff00281',
   'renderer/webgl/PipelineManager.js': 'b61b5ce35add4b145c55646fb62718442bf1efce2339c82ec2a41a15f083b29c',
   'gameobjects/components/FX.js': '7595258ec8b706d599154b9e87651ca0d5db36ca3fc001dcdf22f289b02fbef3',
+  'gameobjects/components/index.js': '5171d771c6ff8712d67759d834e0e21d8ce85ce763cd3daa61b8b4296876cbff',
 };
 export function trimPhaserRuntime(code: string, module: string): string {
   const expected = PHASER_HASHES[module];
@@ -91,6 +92,12 @@ export function trimPhaserRuntime(code: string, module: string): string {
     // engine consumers use direct leaf imports, which remain untouched.
     return code.replace(/^    (\w+): require\('[^']+'\),?\r?$/gm,
       (line, name: string) => name === 'RandomDataGenerator' ? line : '');
+  }
+  if (module === 'gameobjects/components/index.js') {
+    // Image/Text/Container/Shape import this CommonJS namespace, so Rollup cannot
+    // drop its unused mixins. None of our registered objects follows a Path.
+    // Leave all other exports and their lifecycle behavior intact.
+    return code.replace("    PathFollower: require('./PathFollower'),", '');
   }
   if (module === 'renderer/webgl/PipelineManager.js') {
     // These are Phaser's existing disablePreFX / disablePostFX paths. Keep the
