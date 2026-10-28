@@ -144,7 +144,7 @@ it('restores the copied hero across battles and an equip/remove cycle with full 
 
 let tier14:MatchState|undefined;
 /** Historical receipt vector reaches 1188; the tier14 award itself comes from a real solo battle (5-5).
- * v22: batch-B crabs (scuttle-puddle) field five 4-7 crabs, so seed42 opens tier 10 one round later (5-3, see below);
+ * v22: batch-B crabs (scuttle-puddle) field five 4-7 crabs, so seed 24 opens tier 10 one round later (5-3, see below);
  * the vector now rewrites the 5-3 receipt on top of 648 stacks, and 27 tier-9 takedowns (20 stacks each) keep it
  * below the tier-14 threshold (1200) so the next real battle (+42) still earns tier 14. */
 function tier14Battle():MatchState{
@@ -364,7 +364,7 @@ it('rejects edited automatic birth serials, receipt/ledger order, rounds and def
 // Seed 24 retains the scuttle-puddle trajectory.
 it('the scuttle-puddle seed naturally opens tier10 at 5-3/690 stacks and round-trips the selected artifact in settlement',()=>{
  const state=naturalForgeStates().get(10)!,choice=state.pendingChoice!;
- // v22 batch-B crabs: seed42 rolls scuttle-puddle, whose 4-7 board has five crabs (the sixth carrier shares the
+ // v22 batch-B crabs: seed 24 rolls scuttle-puddle, whose 4-7 board has five crabs (the sixth carrier shares the
  // fifth crab's death), so 4-7 yields one fewer takedown and the 650-stack tier 10 is crossed at 5-3 (648+42).
  expect([state.round,state.roundDefinitionId,readG23Progress(state)!.conquest.stacks]).toEqual([27,'5-3',690]);
  // v22 anvil units: the fixture claimed the tier-10 anvil unit from its orb and opened it by selling it.
