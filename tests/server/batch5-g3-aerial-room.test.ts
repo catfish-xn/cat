@@ -49,6 +49,11 @@ for (const round of ['1-3', '1-4', '2-1']) it(`reaches ${round} through room com
 });
 it('selects the offered card, claims Scar/Zeri once from shared-pool orbs, deploys through real commands', () => {
   const before = own(), choice = before.pendingChoice!;
+  for (const scar of before.preparation.units.filter(u => u.team === 'player' && u.definitionId === 'scar')) {
+    expect(before.m8.loot.receipts).toContainEqual(expect.objectContaining({
+      payload: expect.objectContaining({ kind: 'unit', definitionId: 'scar' }), grantedUnitIds: expect.arrayContaining([scar.id]),
+    }));
+  }
   expect(choice.offers).toContain('aerial-warfare');
   expect(room.handle(seatId, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: 'aerial-warfare' })).toMatchObject({ ok: true });
   afterSelection = own();
@@ -60,7 +65,11 @@ it('selects the offered card, claims Scar/Zeri once from shared-pool orbs, deplo
   for (const gift of expected) expect(receipts).toContainEqual(expect.objectContaining({ receiptId: gift.receiptId, definitionId: gift.definitionId }));
   const count = receipts.length; claimAllOrbs(room, [seatId]); claimAllOrbs(room, [seatId]);
   expect(own().seatMechanics!.receipts.filter(r => r.source === 'augment-pool-batch1')).toHaveLength(count);
-  const ids = ['scar', 'zeri'].map(def => own().preparation.units.find(u => u.team === 'player' && u.definitionId === def)!.id);
+  // Seed 21 already owns a PvE Scar. Deploy only the new gift units; an old copy is not another grant.
+  const priorIds = new Set(before.preparation.units.map(u => u.id));
+  const gifted = own().preparation.units.filter(u => u.team === 'player' && !priorIds.has(u.id));
+  expect(gifted.map(u => u.definitionId).sort()).toEqual(['scar', 'zeri']);
+  const ids = ['scar', 'zeri'].map(def => gifted.find(u => u.definitionId === def)!.id);
   for (const unit of own().preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board' && u.definitionId !== 'trainer-golem' && !ids.includes(u.id))) {
     const slot = Array.from({ length: 9 }, (_, i) => i).find(i => !own().preparation.units.some(u => u.location.kind === 'bench' && u.location.slot === i))!;
     expect(room.handle(seatId, { type: 'deploy', unitId: unit.id, target: { kind: 'bench', slot } })).toMatchObject({ ok: true });
