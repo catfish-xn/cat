@@ -1,4 +1,5 @@
 import { reachRound } from './match-helpers';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import { beforeAll,describe,it,expect } from 'vitest';
 import frozen from '../src/simulation/content/source/s13-14.24b/normalized/items.json';
 import { ITEM_DEFINITIONS,COMPONENT_IDS } from '../src/simulation/content/items';
@@ -31,12 +32,14 @@ describe('B4 catalogue and IF-POOL',()=>{
     .toEqual({ad:fields.AD?.value??0,ap:fields.AP?.value??0,as:fields.AS?.value??0,hp:fields.Health?.value??0,hpBps:fields.PercentMaxHP?.value??fields.BonusPercentHP?.value??0,armor:fields.Armor?.value??0,mr:fields.MagicResist?.value??0,mana:fields.Mana?.value??0,crit:fields.CritChance?.value??0});
   }
  });
- it('eight API sorted candidates;old selection emits exactly one ScheduleReceipt,zero RNG',()=>{
-  const before=reachRound('2-4',false,3,['trade-sector']);expect(before.augments.map(a=>a.definitionId)).toEqual(['trade-sector']);expect(before.items.filter(i=>i.definitionId==='gloves')).toHaveLength(0);expect(before.pendingChoice?.offers).toEqual(COMPONENT_POOL.map(x=>x.definitionId));validateComponentCandidates(before.pendingChoice!.offers);
+ it('eight API sorted candidates;old selection emits exactly one ScheduleReceipt,zero RNG',()=>withB1Offers(['trade-sector'],()=>{
+  // Scripted 2-1 draw only; augments assertion is the subject, not a claim about raw RNG.
+  const before=reachRound('2-4',false,3,['trade-sector']);
+  expect(before.augments.map(a=>a.definitionId)).toEqual(['trade-sector']);expect(before.items.filter(i=>i.definitionId==='gloves')).toHaveLength(0);expect(before.pendingChoice?.offers).toEqual(COMPONENT_POOL.map(x=>x.definitionId));validateComponentCandidates(before.pendingChoice!.offers);
   expect(restoreMatch(serializeMatch(before))).toEqual(before);
   const r=selectChoice(before,before.pendingChoice!.choiceId,0,'gloves');if(!r.ok)throw new Error(r.reason);
   expect(r.state.scheduleReceipts).toHaveLength(before.scheduleReceipts.length+1);expect(r.state.items.filter(i=>i.definitionId==='gloves')).toHaveLength(1);expect(r.state.choiceRngState).toBe(before.choiceRngState);
- });
+ }));
  it('pool rejects missing,duplicate,wrong-kind/identity and candidates',()=>{
   for(const offers of [COMPONENT_IDS.slice(1),[...COMPONENT_IDS.slice(0,7),COMPONENT_IDS[0]],[...COMPONENT_IDS.slice(0,7),'deathblade'],[...COMPONENT_IDS].reverse()])expect(()=>validateComponentCandidates(offers)).toThrow();
   const bad={...ITEM_DEFINITIONS};delete bad.gloves;expect(()=>validateComponentPool(bad)).toThrow();
