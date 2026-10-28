@@ -11,6 +11,7 @@ import { BattleHistory, validateBattleCollection } from '../src/replay';
 import { CompletedBattleHistory } from './fixtures/completed-battle-history';
 import { validateEnvelope } from '../src/persistence/format';
 import type { SaveEnvelope } from '../src/m6/contracts';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import { accepted, emptyBoard } from './match-helpers';
 import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicEquipmentChoices as choices } from './fixtures/b8-public-equipment';
 import { vi } from 'vitest';
@@ -19,12 +20,11 @@ vi.setConfig({ testTimeout: 20_000 });
 
 const AUGMENTS=['fractured-crystals'];
 function start(equipped = true, history?: BattleHistory): MatchState {
-  // xp/batch-3 merge: seed 42's 2-1 offer is now crimson-pact, crownguard-spirit, fractured-crystals and the default
-  // first pick (crimson-pact) leaves this army dead at 4-3. Prefer fractured-crystals (then the route's own 3-2/4-2
-  // picks): it reaches 4-5 at 14 HP (6 unequipped) with the unchanged level history and seed-42 equipment rolls.
-  let state = publicEquipmentPreparation(['gloves', 'gloves'], { history, earliestRound:15, augmentPriorities:AUGMENTS });
+  return withB1Offers(AUGMENTS, () => {
+  // v25 drift-13: seed-42 glove route; script only the 2-1 draw (fractured-crystals no longer in 2-1 rerolls on 42).
+  let state = publicEquipmentPreparation(['gloves', 'gloves'], { history, earliestRound:15, augmentPriorities:AUGMENTS, rerollForAugment:true });
   if(history){
-    const shared=publicEquipmentPreparation(['gloves','gloves'],{earliestRound:15,augmentPriorities:AUGMENTS});
+    const shared=publicEquipmentPreparation(['gloves','gloves'],{earliestRound:15,augmentPriorities:AUGMENTS, rerollForAugment:true});
     expect(shared).toEqual(state); expect(shared).not.toBe(state);
   }
   const gloves = state.items.filter(item => item.definitionId === 'gloves');
@@ -32,6 +32,7 @@ function start(equipped = true, history?: BattleHistory): MatchState {
   state = accepted(combineItems(state, gloves[0].id, gloves[1].id));
   if (equipped) state = accepted(equipItem(state, parent, 'unit-1', 0));
   return emptyBoard(state);
+  });
 }
 function settle(state: MatchState, history?: BattleHistory): MatchState {
   // Real shop purchases keep the historical XP/equipment route alive under G2-3.
@@ -97,8 +98,8 @@ function historicalProgression(equipped = true, history?: BattleHistory): MatchS
     }
     if(state.phase==='preparation')state=emptyBoard(state);
   }
-  // T11: 6 opening XP + 18 * 2 XP = 42; cumulative level-six cost is 40.
-  expect([state.level, state.xp]).toEqual([6, 2]);
+  // T11 base 6 + 18×2 round XP = 40 toward level 6, plus 20 acquisition XP from fractured-crystals on the scripted 2-1 pick (v25 drift-13).
+  expect([state.level, state.xp]).toEqual([6, 12]);
   while (state.level < 7) state = accepted(buyXp(state));
   progressionCache.set(equipped,structuredClone(state));
   return state;
