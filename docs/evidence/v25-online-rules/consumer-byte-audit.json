@@ -1688,9 +1688,9 @@
     "tests/mutation-cell-display.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3033,
+      "currentBytes": 3539,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "5fcfd2069a72ee661d613d2813579aa0953aa6010c6aa63f57c864e5ff358b6f",
+      "currentSha256": "9fd2fd26f16b21fbba4612cec8785c900ce2ec7b7c9b812a37a332b71de8f446",
       "firstDifferentByte": 0
     },
     "tests/opening-random-identity.test.ts": {
