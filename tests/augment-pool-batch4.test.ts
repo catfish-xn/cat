@@ -43,7 +43,7 @@ function reachLater(seed:number):MatchState {
 }
 function pick(id:string):MatchState {
  if(id==='lategame-specialist'){
-  const open=reachLater(6),c=open.pendingChoice!;expect(c.offers).toContain(id);
+  const open=reachLater(24),c=open.pendingChoice!;expect(c.offers).toContain(id); // v25 pool: seed 24 (was 6).
   return accepted(selectChoice(open,c.choiceId,c.generation,id));
  }
  const node='2-1';

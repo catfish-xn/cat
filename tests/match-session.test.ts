@@ -6,6 +6,7 @@ import { MatchSession } from '../src/rendering/match-session';
 import { createCombatWithEvents, type CombatEvent } from '../src/simulation/combat';
 import { createMatch, deployMatchUnit, nextRound, startMatchCombat, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch } from './match-helpers';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import { settlement } from './fixtures/m5/oracle.g2.cjs';
 import { nextRandom } from '../src/simulation/rng';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
@@ -177,8 +178,8 @@ describe('match session commands and fixed clock', () => {
     expect(session.state.roundResults).toHaveLength(2);
   });
 
-  it('preserves the purchased player roster and unique results for five rounds', () => {
-    // v24 seed 7226 offers Starry Night: it grants no units and this route makes no later purchases.
+  it('preserves the purchased player roster and unique results for five rounds', () => withB1Offers(['starry-night'], () => {
+    // v24 seed 7226 route; v25 pool scripts Starry Night at 2-1 (toContain on offers is fixture self-check).
     const session = new MatchSession(reachRound('1-3',true,7226));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
@@ -206,7 +207,7 @@ describe('match session commands and fixed clock', () => {
       expect(players(session.state)).toEqual(expectedRoster); expect(session.combat).toBeNull();expect(session.state.nextUnitSerial).toBe(3);
     }
     expect(session.state.round).toBe(7); expect(session.state.shop.generation).toBe(7);expect(preparationBefore).toEqual(original);
-  });
+  }));
 
   it('F commits synchronously, preserves the shop, and immediately enables another deployment', () => {
     const prepared=accepted(nextRound(accepted(startMatchCombat(emptyBoard(purchasedThreeHeroMatch()))),getCatalogRoundById('2-1').ordinal));
