@@ -33,7 +33,8 @@ function checkRoundTrip(pool: SharedPoolState, state: MatchState) {
 describe('B5-39 online commands and authenticated saves', () => {
   let pool: SharedPoolState, state: MatchState, table: readonly HistorySeat[], acquired: string;
   let awaiting: MatchState, awaitingPool: SharedPoolState;
-  beforeAll(() => { ({ pool, state } = onlineOffer(18)); });
+  // This seed yields the gold card after the two real slot rerolls below.
+  beforeAll(() => { ({ pool, state } = onlineOffer(69)); });
 
   it('is enabled at 4-2 only, with the archived gold tier', () => {
     expect(AUGMENT_DEFINITIONS['tomb-raider-1']).toBeDefined();
