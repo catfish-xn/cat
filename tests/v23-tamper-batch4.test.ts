@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { deepStrictEqual } from 'node:assert/strict';
 import { createMatch, deployMatchUnit, buyXp, buyUnit, sellUnit, rerollShop, selectChoice, equipItem, startMatchCombat, stepMatch, nextRound, type MatchState } from '../src/simulation/match';
 import { grantMechanicGold, grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
@@ -8,6 +8,7 @@ import { BattleHistory } from '../src/replay/history';
 import { recordCommand } from './fixtures/recorded-empty-route';
 import { accepted, emptyBoard, fieldBench, resolveM5Choices } from './match-helpers';
 import { firstNodeSeed } from './augment-stage-helpers';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { AUGMENT_ACQUISITION_LEVEL_KEY } from '../src/simulation/augment-xp';
 import { FREE_REROLL_KEY, freeRerollsAvailable } from '../src/simulation/free-rerolls';
 
@@ -20,9 +21,9 @@ const xp = ['clear-mind', 'cluttered-mind', 'slammin', 'slammin-plus'];
 const rerolls = ['patience-is-a-virtue', 'invested-plus', 'invested-plus-plus'];
 const combat = ['category-five', 'long-distance-pals', 'sated-spellweaver', 'overheal'];
 const late: Record<string, [number, string]> = {
- 'lategame-specialist': [6, '3-2'], 'slammin-plus': [14, '3-2'],
- 'invested-plus': [29, '3-2'], 'invested-plus-plus': [0, '4-2'],
- 'long-distance-pals': [18, '3-2'], 'sated-spellweaver': [36, '3-2'], 'overheal': [11, '3-2'],
+ 'lategame-specialist': [24, '3-2'], 'slammin-plus': [36, '3-2'],
+ 'invested-plus': [16, '3-2'], 'invested-plus-plus': [20, '4-2'],
+ 'long-distance-pals': [49, '3-2'], 'sated-spellweaver': [42, '3-2'], 'overheal': [11, '3-2'],
 };
 const entries = ['JSON', 'object', 'serialized'] as const;
 const read = (s: Json, path: Path): Json => path.reduce((v, k) => v[k], s);
@@ -35,6 +36,11 @@ for (const id of [...levels, ...xp, ...rerolls, ...combat]) describe(id, () => {
  const history = new BattleHistory(`batch4-tamper-${id}`);
  let legitimate: MatchState, saved: string, targets: Path[] = [], roots: Path[] = [], work: Generator<void, MatchState>;
  let serial = 0;
+ let restoreOffers: (() => void) | undefined;
+ if (id === 'overheal') {
+  beforeAll(() => { restoreOffers = installB1Offers(['overheal']); });
+  afterAll(() => { restoreOffers?.(); restoreOffers = undefined; });
+ }
  const request = () => ({ receiptId: `b4-${id}-${++serial}`, source: 'test' });
  const observe = <T extends { state: MatchState }>(s: MatchState, r: T): T => recordCommand(history, s, r);
  function* fight(s: MatchState, fielded: boolean): Generator<void, MatchState> {
@@ -52,7 +58,7 @@ for (const id of [...levels, ...xp, ...rerolls, ...combat]) describe(id, () => {
    s = yield* fight(s, node === '4-2' || id === 'invested-plus');
    s = accepted(nextRound(s, s.round)); yield;
   }
-  const c = s.pendingChoice!; expect(c.offers).toContain(id);
+  const c = s.pendingChoice!; expect(c.offers).toContain(id); // fixture self-check under installB1Offers when scripted
   s = resolveM5Choices(accepted(selectChoice(s, c.choiceId, c.generation, id)));
   if (levels.includes(id)) {
    s = accepted(grantMechanicGold(s, { ...request(), amount: 2000 }));

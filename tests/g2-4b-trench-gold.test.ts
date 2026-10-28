@@ -8,13 +8,14 @@ import {reachRound,accepted} from './match-helpers';
 import {deployMatchUnit,equipItem,startMatchCombat,stepMatch,selectChoice} from '../src/simulation/match';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import { vi } from 'vitest';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 const items=['TFT_Item_Artifact_SuspiciousTrenchCoat','TFT7_Item_ShimmerscaleGamblersBlade','TFT4_Item_OrnnTheCollector'];
 function prepare(seed:number){
+ // Superstars II draw is scripted in the it() wrapper; Gambler/Collector receipts stay on seed 307.
  let state=reachRound('2-1',false,seed);
- // v24 seed 307 offers Superstars II; the lone one-star Darius gets no two-star bonus.
- const choice=state.pendingChoice!;expect(choice.offers).toContain('superstars-ii');
+ const choice=state.pendingChoice!;expect(choice.offers).toContain('superstars-ii'); // fixture self-check
  state=accepted(selectChoice(state,choice.choiceId,choice.generation,'superstars-ii'));
  expect(state.augments.map(a=>a.definitionId)).toEqual(['superstars-ii']);
  const owner=state.preparation.units.find(u=>u.team==='player')!;
@@ -28,7 +29,7 @@ function prepare(seed:number){
  return {state,ownerId:owner.id};
 }
 
-it('real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts',()=>{
+it('real Trench copies inherit the same gold items but earn independent owner-scoped rolls and exactly-once payouts',()=>withB1Offers(['superstars-ii'],()=>{
  // Seed 307 keeps the exact independent Gambler/Collector receipt vector with the publicly offered, inactive Superstars II.
  const {state,ownerId}=prepare(307);
  const equippedItems=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===ownerId);
@@ -92,4 +93,4 @@ it('real Trench copies inherit the same gold items but earn independent owner-sc
  expect(commitG23Settlement(current,facts)).toBe(current);
  expect(commitG23Settlement(restored,facts)).toEqual(current);
  expect(current.seatMechanics!.receipts.filter(r=>r.source==='g24-item-gold')).toHaveLength(5);
-});
+}));
