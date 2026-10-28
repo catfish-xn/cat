@@ -83,7 +83,6 @@ beforeAll(()=>{
  const receipt=command({type:'reroll'});
  expect(receipt.events.filter(e=>e.type==='mechanicGranted')).toHaveLength(6);
 });
-afterAll(()=>room.dispose());
 it('real room commands grant six distinct emblems exactly once and keep the shared pool conserved',()=>{
  const s=seat().match,gifts=trackerGiftPlan(s);expect(gifts).toHaveLength(6);expect(new Set(gifts.map(g=>g.definitionId)).size).toBe(6);
  expect(s.augmentHistory!.facts.filter(f=>f.kind==='trait-activation')).toHaveLength(1);
