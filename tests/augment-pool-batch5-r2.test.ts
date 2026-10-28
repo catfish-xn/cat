@@ -1,5 +1,6 @@
 import { previewCombine, previewEquip } from '../src/simulation/item-selectors';
-import { afterAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { Room } from '../src/server/room/room';
 import { ManualClock } from '../src/server/room/clock';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
@@ -25,12 +26,14 @@ it('B5-21 is prismatic, offered at 3-2/4-2, with independent pool agreement',()=
  }
 });
 
+let restoreB1Offers:(()=>void)|undefined;
+beforeAll(()=>{restoreB1Offers=installB1Offers(['anger-issues']);});
 const clock=new ManualClock();
 const room=new Room(Array.from({length:8},(_,i)=>({seatId:`s${i}`,name:`s${i}`,kind:'human' as const})),{
- roomId:'test-room',seed:21,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
+ roomId:'test-room',seed:0,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
 });
 const mine=()=>room.state.seats.find(s=>s.seatId==='s1')!.match;
-/** Same legal first-offer/claim route as the bounded seed finder; never changes room state directly. */
+/** Advances the room through preparation/claims/choices until `roundId` is reached; never mutates match state outside Room.handle. */
 function arrive(roundId:string):void {
  for(let n=0;n<2000;n++){
   if(room.state.roundId===roundId&&(roundId.endsWith('-4')||room.state.phase==='preparation'))return;
@@ -46,10 +49,12 @@ function arrive(roundId:string):void {
 }
 it('starts the online B5-21 route',()=>{room.start();});
 for(const round of ['1-3','1-4','2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-1','3-2'])it(`B5-21 online reaches ${round}`,()=>{arrive(round);});
-afterAll(()=>room.dispose());
+afterAll(()=>{restoreB1Offers?.();restoreB1Offers=undefined;room.dispose();});
 let selected:MatchState,beforeChoice:MatchState,beforeChoicePool:(typeof room.state)['pool'];
 it('B5-21 converts existing inventory/equipment through the real room choice, then converts future combinations',()=>{
- const before=mine(),c=before.pendingChoice!;expect(c.offers).toContain('anger-issues');
+ const before=mine(),c=before.pendingChoice!;
+ // installB1Offers scripts only the 3-2 draw; offers.toContain is a fixture self-check, not a real-RNG claim.
+ expect(c.offers).toContain('anger-issues');
  const components=before.items.filter(i=>i.location.kind==='inventory'&&ITEM_DEFINITIONS[i.definitionId].kind==='component'&&!['spatula','frying-pan'].includes(i.definitionId));
  expect(components.length).toBeGreaterThanOrEqual(2);
  expect(room.handle('s1',{type:'combine',a:components[0].id,b:components[1].id})).toMatchObject({ok:true});

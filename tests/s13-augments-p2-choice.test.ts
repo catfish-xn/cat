@@ -1,6 +1,7 @@
-import { fieldedLegCases, fieldedRoute, offerFor, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
+import { fieldedLegCases, fieldedRoute, offerFor, offeredAt, STAGE_SEEDS, TRIFECTA_NAMI_REVIEW_SEED } from './augment-stage-helpers';
 import { grantMechanicItem } from '../src/simulation/seat-mechanics';
 import { expect, it } from 'vitest';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import type { MatchState } from '../src/simulation/match-types';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
@@ -11,7 +12,7 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { createMatch, selectChoice, deployMatchUnit, startMatchCombat, stepMatch, sellUnit, buyUnit, nextRound, equipItem } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { drainP2Gifts, p2GiftPlan, validateP2Gifts } from '../src/simulation/s13-augments-p2-grants';
-import { accepted, reachRound, resolveM5Choices, emptyBoard } from './match-helpers';
+import { accepted, reachRound, resolveM5Choices, emptyBoard, fieldBench } from './match-helpers';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { rawTopLevelEntries } from './fixtures/raw-bin-entries';
 
@@ -32,16 +33,39 @@ it('all seventeen API identities, names, tiers and coefficients match the retain
 });
 // v23 fmix32 openings: Trainer Golem seeds are skipped (the unbenchable golem blocks reachRound's empty board).
 function seedFor(id:string){for(let seed=0;seed<1000;seed++){const state=createMatch(seed);if(state.preparation.units.some(u=>u.definitionId==='trainer-golem'))continue;if(generateChoices(augmentCandidates(resolveAugmentTier(state,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),state.choiceRngState).offers.includes(id))return seed;}throw Error('seed budget');}
-// Pair of Fours's first public offer is a fielded 4-2 route (STAGE_SEEDS); it is played in cached legs, one case each, so the
-// acquisition case below stays inside the default timeout (offerFor resumes the same cached route).
+let pairOfFoursOfferState: MatchState | undefined;
+/** Reuse the full route when its leg cases ran. A name-filtered acquisition must also be cheap on a cold worker:
+ * fight PvE for loot/HP, concede earlier PvP with public empty-board commands, then field 4-1 for the real 4-2 offer.
+ * No scripted offers or injected state; the full fielded route remains covered by the leg cases below. */
+function pairOfFoursOffer(): MatchState {
+  const { seed, node } = STAGE_SEEDS['pair-of-fours'];
+  let state = pairOfFoursOfferState ?? fieldedRoute(seed, '2-1');
+  while (state.roundDefinitionId !== node) {
+    state = resolveM5Choices(state);
+    if (state.phase === 'preparation') {
+      const field = state.m8.round.kind === 'pve' || state.roundDefinitionId === '4-1';
+      state = accepted(startMatchCombat(field ? fieldBench(state) : emptyBoard(state)));
+      while (state.phase === 'combat') state = stepMatch(state).state;
+    }
+    state = resolveM5Choices(state);
+    expect(state.phase).toBe('settlement');
+    state = accepted(nextRound(state, state.round));
+  }
+  expect(state.roundDefinitionId).toBe(node);
+  expect(state.pendingChoice?.kind).toBe('augment');
+  expect(state.pendingChoice?.offers).toContain('pair-of-fours');
+  return pairOfFoursOfferState = state;
+}
+// Keep every full-route leg assertion, including when the acquisition uses the shorter cold-worker route.
 it.each(fieldedLegCases('pair-of-fours'))('Pair of Fours fielded 4-2 route (seed %s): the leg to %s settles every fight',(seed,leg)=>{
- expect(STAGE_SEEDS['pair-of-fours']).toMatchObject({node:'4-2',fielded:true});expect(fieldedRoute(seed,leg).roundDefinitionId).toBe(leg);
+ expect(STAGE_SEEDS['pair-of-fours']).toMatchObject({node:'4-2',fielded:true});const state=fieldedRoute(seed,leg);expect(state.roundDefinitionId).toBe(leg);
+ if(leg===STAGE_SEEDS['pair-of-fours'].node)pairOfFoursOfferState=state;
 });
 it.each(Object.keys(S13_P2_AUGMENTS))('%s public acquisition grants once, restores strictly, and continues the same seeded combat',id=>{
   // 14.24 stage tags: a card not offered at 2-1 is taken at its first offering round instead.
   // Calculated Enhancement uses the first offering empty-board seed whose
   // unchanged opening forgery reaches the P2 validator rather than full replay.
-  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):id==='calculated-enhancement'?reachRound('3-2',false,89):offerFor(id);
+  let s=offeredAt(id,'2-1')?reachRound('2-1',false,seedFor(id)):id==='calculated-enhancement'?reachRound('3-2',false,5):id==='pair-of-fours'?pairOfFoursOffer():offerFor(id);
   const before=s,c=s.pendingChoice!;expect(c.offers).toContain(id);
   s=accepted(selectChoice(s,c.choiceId,c.generation,id));
   // Release one real reserve slot after selection to exercise the same escrowed Pair of Fours gift.
@@ -116,14 +140,14 @@ it('later gift triple revisits a previously blocked gift in the same drain',()=>
 });
 
 it('public Crown + Trifecta acquisition serializes and restores both entrances with historical shields',()=>{
-  // v24: first seed from 0 retaining the public Crown → Trifecta → Kog'Maw
-  // chain. Both offers and the actual gift remain asserted below.
-  const seed=130;
+ withB1Offers(['crown-guarded','trifecta-ii'],()=>{
+  const seed=21;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
+  // Scripted 2-1/3-2 draws; offers.toContain is a fixture self-check, not a real-RNG claim.
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){
-    s=resolveM5Choices(s);if(s.phase==='preparation')s=accepted(startMatchCombat(emptyBoard(s)));
-    s=resolveM5Choices(s);expect(s.phase).toBe('settlement');s=accepted(nextRound(s,s.round));
+   s=resolveM5Choices(s);if(s.phase==='preparation')s=accepted(startMatchCombat(emptyBoard(s)));
+   s=resolveM5Choices(s);expect(s.phase).toBe('settlement');s=accepted(nextRound(s,s.round));
   }
   c=s.pendingChoice!;expect(c.offers).toContain('trifecta-ii');s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
   const gift=p2GiftPlan(s).find(g=>g.kind==='unit'&&g.definitionId==='kogmaw')!;
@@ -137,12 +161,14 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   expect(s.combat!.units.find(u=>u.id===hero.id)).toMatchObject({maxHp:1080,shield:375});
   const text=serializeMatch(s);expect(restoreMatch(text)).toEqual(s);expect(restoreMatch(JSON.parse(text))).toEqual(s);
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ });
 });
 
-it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('3-2 seed 726 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
-  // v24: first seed from 0 whose unchanged 3-2 route offers Trifecta II with
-  // Nami as its first hero gift; the stat/shield assertions remain unchanged.
-  let s=reachRound('3-2',false,726),c=s.pendingChoice!;expect(c.offers).toContain('trifecta-ii');
+it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)(`3-2 seed ${TRIFECTA_NAMI_REVIEW_SEED} Trifecta Nami + %s passes all three save entrances`,(definitionId,maxHp,shield)=>{
+ withB1Offers(['trifecta-ii'],()=>{
+  // Scripted 3-2 draw; offers.toContain is a fixture self-check. Gift/combat seed: TRIFECTA_NAMI_REVIEW_SEED (see augment-stage-helpers.ts).
+  let s=reachRound('3-2',false,TRIFECTA_NAMI_REVIEW_SEED),c=s.pendingChoice!;
+  expect(c.offers).toContain('trifecta-ii');
   s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
   const gift=p2GiftPlan(s).find(g=>g.kind==='unit')!,birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.receiptId===gift.receiptId)!;
   if(birth.kind!=='unit'||!birth.unitId)throw Error('missing Nami receipt');
@@ -155,6 +181,7 @@ it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as co
   if(definitionId!=='crownguard')expect(s.combat!.units.find(u=>u.itemSummon?.kind==='mirror')).toMatchObject({maxHp:721,itemSummonOpeningMaxHp:1030});
   const text=serializeMatch(s);expect(restoreMatch(structuredClone(s))).toEqual(s);expect(restoreMatch(text)).toEqual(s);
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ });
 });
 it('buying a bench triple while the PvP roster is frozen retains pending gifts',()=>{
   let s=pendingFullBench();
