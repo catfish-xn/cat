@@ -1069,10 +1069,10 @@
     },
     "tests/b8-late-claim-receipt-order.test.ts": {
       "previousBytes": 11506,
-      "currentBytes": 11504,
+      "currentBytes": 11762,
       "previousSha256": "b7d7f34997b89f6d8dbe921e5929547a97679e4c906349576343de862dd57d17",
-      "currentSha256": "98f425d49d8a665ef3a76a1f91f47034e30455c048ed5a8fa6184a37a197780b",
-      "firstDifferentByte": 862
+      "currentSha256": "d86551bd80896391d2053502be3500618c40677300654f8fa3fa4ce8c200785d",
+      "firstDifferentByte": 9
     },
     "tests/b8-resumable-battle-helper.ts": {
       "previousBytes": 10412,
@@ -1111,10 +1111,10 @@
     },
     "tests/epic-loot-reforger.test.ts": {
       "previousBytes": 25188,
-      "currentBytes": 26175,
+      "currentBytes": 30120,
       "previousSha256": "2ec485e54dee77fe8cb579ab23f31c9c66d247c34b3644348226cb56ad277b62",
-      "currentSha256": "1bb7f1807d48aa4cc50ee34b996f312f3de9ae530ae402faf38c82458c297d6f",
-      "firstDifferentByte": 18945
+      "currentSha256": "8cb2fca023e296fe0baecd146fa5b6d0037c632042c50b439eab3b2afaededb9",
+      "firstDifferentByte": 687
     },
     "tests/experiment-emblem-clone.test.ts": {
       "previousBytes": 11438,
@@ -1395,10 +1395,10 @@
     },
     "tests/fixtures/t13-loot-public.ts": {
       "previousBytes": 9424,
-      "currentBytes": 9657,
+      "currentBytes": 10142,
       "previousSha256": "d2b595a0c9c0f65929958cf88f227f37d2214d99b803b247ebbb508235f67fd0",
-      "currentSha256": "f0a72907675cef36cbc21d8b262f45866cb2a6bd3d3ad3ca42680198fadf100b",
-      "firstDifferentByte": 4602
+      "currentSha256": "8c9a89b315ccbd31f310ad364770f9ada571216acd6bff041d9f19cc864e1b40",
+      "firstDifferentByte": 60
     },
     "tests/fixtures/t13-public-gloves.ts": {
       "previousBytes": 7144,
@@ -1476,7 +1476,7 @@
       "previousBytes": 0,
       "currentBytes": 61860,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "321de2c26f681ac537b19ddb90a0e8520b39fd1e5cd6f2b0f7ebbe2f21dd79c9",
+      "currentSha256": "f7180aabe7601998ecddcf2bb0efa595c6fec5756baaf0a0b38f4dcc152290db",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v25-online-rules-herald-raw/quicksilver.json": {
@@ -1603,16 +1603,16 @@
     },
     "tests/m5-oracle-route-driver.test.ts": {
       "previousBytes": 1729,
-      "currentBytes": 1684,
+      "currentBytes": 1794,
       "previousSha256": "16fa5d26a9869ba369c775b6d0de08b21520e3db141af23bfb8981ba95bc8949",
-      "currentSha256": "7893819ce9209bebe7cd76f893c0bb870f1a3d173fcd41f0db68a8a5b342e7bc",
-      "firstDifferentByte": 428
+      "currentSha256": "015b10c54dc23fe9e2d733f238c13fc8630d3beb36a379f12cda935a54ecfd42",
+      "firstDifferentByte": 424
     },
     "tests/m5-route.test.ts": {
       "previousBytes": 7860,
-      "currentBytes": 7958,
+      "currentBytes": 8129,
       "previousSha256": "82acf1eb0e0bb5dfbcb1af75bfaef88b865cf2c3f83eb81647769e8a10d003e0",
-      "currentSha256": "628135642ebe4f37dfb1632b4a13bc95582075c0b35dc64c2127649770333cec",
+      "currentSha256": "03f26283ae3278f1f29e2b9eab445d64f58b32e5e8d1ed19c62b893b1bd711e4",
       "firstDifferentByte": 645
     },
     "tests/m6-integration-helper.ts": {
@@ -2173,10 +2173,10 @@
     },
     "tests/t12-offline-transfer.test.ts": {
       "previousBytes": 1686,
-      "currentBytes": 2011,
+      "currentBytes": 2811,
       "previousSha256": "c84ed80e20c1bf3dc7b673f71732c5640f1c664a074fee50ebe8de4ad3ec3b9a",
-      "currentSha256": "5c1fe45ed0ec18339e045cd1449785216b8b4c95380474a46bb6054615e913fe",
-      "firstDifferentByte": 169
+      "currentSha256": "30d3fa46d817cae5eedf98cbd630e41a38cefeba48c3b10720696ddf96a46f06",
+      "firstDifferentByte": 8
     },
     "tests/t5r-private-seat-view.test.ts": {
       "previousBytes": 13847,
@@ -2201,9 +2201,9 @@
     },
     "tests/v23-tamper-mechanics.test.ts": {
       "previousBytes": 27447,
-      "currentBytes": 27631,
+      "currentBytes": 27897,
       "previousSha256": "8414f03e18a9ca0a91bc447e59b512e6bbfb9889927cca5eb948ba5f53c2803c",
-      "currentSha256": "cd89defad13c0f4385481d1e038d993c7e1556fa2557986b7067cea62171d331",
+      "currentSha256": "685545323ab12907bd867212d77d04f90b5092e1f476ec3d53b639fb7e056e78",
       "firstDifferentByte": 94
     },
     "tests/v25-online-rules-content-baseline.json": {
