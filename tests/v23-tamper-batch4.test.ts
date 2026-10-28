@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { deepStrictEqual } from 'node:assert/strict';
-import { createMatch, deployMatchUnit, buyXp, buyUnit, sellUnit, rerollShop, selectChoice, equipItem, startMatchCombat, stepMatch, nextRound, type MatchState } from '../src/simulation/match';
+import { createMatch, deployMatchUnit, buyXp, buyUnit, sellUnit, rerollShop, rerollAugment, selectChoice, equipItem, startMatchCombat, stepMatch, nextRound, type MatchState } from '../src/simulation/match';
 import { grantMechanicGold, grantMechanicUnit } from '../src/simulation/seat-mechanics/grants';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { needsCrownHistory } from '../src/simulation/crown-history';
 import { BattleHistory } from '../src/replay/history';
 import { recordCommand } from './fixtures/recorded-empty-route';
 import { accepted, emptyBoard, fieldBench, resolveM5Choices } from './match-helpers';
-import { firstNodeSeed } from './augment-stage-helpers';
+import { firstNodeSeed, fieldedRoute, FIELDED_LEGS } from './augment-stage-helpers';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { AUGMENT_ACQUISITION_LEVEL_KEY } from '../src/simulation/augment-xp';
 import { FREE_REROLL_KEY, freeRerollsAvailable } from '../src/simulation/free-rerolls';
@@ -22,7 +22,7 @@ const rerolls = ['patience-is-a-virtue', 'invested-plus', 'invested-plus-plus'];
 const combat = ['category-five', 'long-distance-pals', 'sated-spellweaver', 'overheal'];
 const late: Record<string, [number, string]> = {
  'lategame-specialist': [24, '3-2'], 'slammin-plus': [36, '3-2'],
- 'invested-plus': [16, '3-2'], 'invested-plus-plus': [20, '4-2'],
+ 'invested-plus': [16, '3-2'], 'invested-plus-plus': [29, '4-2'],
  'long-distance-pals': [49, '3-2'], 'sated-spellweaver': [42, '3-2'], 'overheal': [11, '3-2'],
 };
 const entries = ['JSON', 'object', 'serialized'] as const;
@@ -54,9 +54,22 @@ for (const id of [...levels, ...xp, ...rerolls, ...combat]) describe(id, () => {
  function* build(): Generator<void, MatchState> {
   const [seed, node] = late[id] ?? [firstNodeSeed(id), '2-1'];
   let s = createMatch(seed);
-  while (s.roundDefinitionId !== node) {
-   s = yield* fight(s, node === '4-2' || id === 'invested-plus');
-   s = accepted(nextRound(s, s.round)); yield;
+  if (id === 'invested-plus-plus') {
+   // Offline search bounded to 0..100 (task constraint): seed 29, public slot
+   // rerolls 0/1/2. Earlier picks are visionary-crest/academy-crown, so the
+   // existing fieldedRoute 4-1 checkpoint starts a short history proof instead
+   // of seed 20's no-scout-no-pivot replay from the opening. Keep each cached
+   // leg in its own default-timeout hook; the offer assertion below is real RNG.
+   for (const leg of FIELDED_LEGS) { s = fieldedRoute(seed, leg); yield; }
+   for (const slot of [0, 1, 2]) {
+    const c = s.pendingChoice!;
+    s = accepted(rerollAugment(s, c.choiceId, c.generation, slot));
+   }
+  } else {
+   while (s.roundDefinitionId !== node) {
+    s = yield* fight(s, node === '4-2' || id === 'invested-plus');
+    s = accepted(nextRound(s, s.round)); yield;
+   }
   }
   const c = s.pendingChoice!; expect(c.offers).toContain(id); // fixture self-check under installB1Offers when scripted
   s = resolveM5Choices(accepted(selectChoice(s, c.choiceId, c.generation, id)));
