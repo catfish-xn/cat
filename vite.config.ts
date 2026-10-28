@@ -6,7 +6,7 @@ import { productionSizePlugins } from './scripts/vite-production-size';
 // must become a literal, otherwise every optional branch (WebGL debug, FB
 // Instant, Camera3D, sound) stays truthy and gets bundled.
 const PHASER_FLAGS: Record<string, boolean> = {
-  CANVAS_RENDERER: true, WEBGL_RENDERER: true, WEBGL_DEBUG: false,
+  CANVAS_RENDERER: true, WEBGL_RENDERER: false, WEBGL_DEBUG: false,
   FEATURE_SOUND: false, PLUGIN_CAMERA3D: false, PLUGIN_FBINSTANT: false,
 };
 const PHASER_FLAG_PATTERN = new RegExp(`typeof (${Object.keys(PHASER_FLAGS).join('|')})\\b`, 'g');
