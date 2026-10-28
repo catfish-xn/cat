@@ -13,6 +13,7 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { previewUseConsumable } from '../src/simulation/consumables';
 import { validateConsumableState } from '../src/simulation/restore-checks/consumable-state-check';
 import { accepted, freeze, reachRound as originalReachRound, resolveM5Choices as originalResolveChoices, emptyBoard } from './match-helpers';
+import { augmentNeedsHistory } from '../src/simulation/augment-history-owners';
 
 // These empty-board opening controls do not exercise post-battle bench XP.
 const excludedAugments=['clear-mind','cluttered-mind','slammin','slammin-plus','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','golemify'];
@@ -142,7 +143,15 @@ function sharedBeforeMonkey(outcome: string) {
     for(let i=0;i<states.length;i++){
       let state=states[i];
       const command=(c:import('../src/simulation/shared-pool-types').SharedMatchCommand)=>{const r=runSharedMatchCommand(pool,state,c);if(!r.ok)throw Error(`${round}/${i}/${c.type}:${r.reason}`);pool=r.pool;state=r.state;};
-      while(state.phase==='choice'){const c=state.pendingChoice!;command({type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:c.offers.find(x=>x!=='placebo')??c.offers[0]});}
+      // This domain-only monkey fixture has no independent Room checkpoint.
+      // Keep real offers/commands, but avoid server-history owners (e.g. Head Start)
+      // and Mad Chemist's separate online checkpoint requirement.
+      while(state.phase==='choice'){
+        const c=state.pendingChoice!;
+        const id=c.kind==='augment'?c.offers.find(x=>x!=='placebo'&&x!=='mad-chemist'&&!augmentNeedsHistory(x)):c.offers[0];
+        if(!id)throw Error(`Monkey fixture has no history-free offer: ${c.offers.join(',')}`);
+        command({type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:id});
+      }
       if(state.phase==='preparation'){
         if(state.m8.round.kind==='pvp'){
           const economy=resolveRoundEconomy({roundId:state.roundDefinitionId,result:'playerWin',gold:state.gold,hp:state.playerHp,level:state.level,xp:state.xp,streak:state.streak,enemySurvivors:0,augments:state.augments});
