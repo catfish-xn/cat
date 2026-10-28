@@ -17,10 +17,29 @@ const route = findG5RoomOffer('expected-unexpectedness', s => oracle.expectedRol
 const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: route.seed });
 afterAll(() => room.dispose());
 const mine = () => room.state.seats.find(s => s.seatId === route.seatId)!.match;
+// runNext drains every callback at one clock time, including eight PvE jobs.
+// Keep every real scheduler callback/result and pause only between those jobs.
+function pveCheckpoints(roundId: string) {
+  it(`freezes ${roundId} before resolving the eight PvE seats`, () => {
+    for (let fired = 0; room.state.phase !== 'frozen' && fired < 2_000; fired++)
+      expect(clock.fireNext()).toBe(true);
+    expect(room.state.roundId).toBe(roundId);
+    expect(room.state.phase).toBe('frozen');
+    expect(room.state.fault).toBeNull();
+  });
+  for (let callback = 1; callback <= 8; callback++) it(`advances ${roundId} PvE scheduler callback ${callback}/8`, () => {
+    if (room.state.phase === 'frozen') expect(clock.fireNext()).toBe(true);
+    expect(room.state.roundId).toBe(roundId);
+    expect(room.state.fault).toBeNull();
+  });
+}
 it('starts the room', () => { room.start(); });
-for (const roundId of ['1-3', '1-4', '2-1']) it(`enters ${roundId} through the real room scheduler`, () => {
-  runUntil(room, clock, s => s.roundId === roundId && s.phase === 'preparation');
-});
+for (const [previous, roundId] of [['1-2','1-3'], ['1-3','1-4'], ['1-4','2-1']]) {
+  pveCheckpoints(previous);
+  it(`enters ${roundId} through the real room scheduler`, () => {
+    runUntil(room, clock, s => s.roundId === roundId && s.phase === 'preparation');
+  });
+}
 it('selects B5-82 through a real offered card, grants seven credits and pays no gold for its first reroll', () => {
   for (let slot = 0; slot < route.rerolls; slot++) {
     const c = mine().pendingChoice!;
@@ -42,6 +61,8 @@ it('selects B5-82 through a real offered card, grants seven credits and pays no 
   expect(() => restoreSharedOrbSnapshot(pool, current)).toThrow('missing independent server authority');
 });
 for (const roundId of ['2-2', '2-3', '2-4', '2-5', '2-6', '2-7', '3-1', '3-2', '3-3', '3-4', '3-5', '3-6', '3-7', '4-1']) {
+  if (roundId === '3-1') pveCheckpoints('2-7');
+  if (roundId === '4-1') pveCheckpoints('3-7');
   it(`enters ${roundId}; only 3-1/4-1 add one dice result`, () => {
     runUntil(room, clock, s => s.roundId === roundId && (roundId.endsWith('-4') || s.phase === 'preparation'));
     const s = mine(), expected = oracle.expectedRolls(s);

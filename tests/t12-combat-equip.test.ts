@@ -1,3 +1,4 @@
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import {isSellableUnit} from '../src/simulation/seat-mechanics/forms';
 import { prepareInput, copyInput } from './fixtures/prepared-input';
 import { deepStrictEqual } from 'node:assert';
@@ -137,7 +138,8 @@ for (const roundId of ['3-5', '3-7']) for (const pair of [['sword', 'rod'], ['gl
   beforeAll(() => { atRound(publicInventory(pair).state, roundId); });
 }
 beforeAll(() => { atRound(publicInventory(['sword', 'sword']).state, '3-6'); });
-beforeAll(() => { publicInventory(['thiefs-gloves', 'gloves', 'gloves']); });
+// Seed 11 acquires the same four gloves without an unrelated historical-replay card.
+beforeAll(() => { publicInventory(['thiefs-gloves', 'gloves', 'gloves'], false, 11); });
 function atRound(input: MatchState, roundId: string): MatchState {
   const key = JSON.stringify([input, roundId]);
   let state = roundFixtures.get(key) ?? input;
@@ -421,18 +423,37 @@ describe('T12 supply choice input', () => {
   const ROUTE = ['3-2', '3-3', '3-4', '3-5', '3-6', '3-7', '4-1', '4-2', '4-3', '4-4'];
   let acquired: ReturnType<typeof publicInventory> | undefined, route: MatchState | undefined;
   let supplyInput: { acquired: ReturnType<typeof publicInventory>; state: MatchState } | undefined;
-  beforeAll(() => { acquired = publicInventory(['gloves','gloves'],false,9); });
+  // Equipment behavior fixture: script only later augment cards to combat-only
+  // choices, avoiding unrelated augment-history replay. This makes no natural-RNG
+  // offer claim; draws, eligibility, commands and restore validation remain real.
+  const combatAugments = ['pumping-up-i','pumping-up-ii','pumping-up-iii','bulky-buddies-i','bulky-buddies-ii','bulky-buddies-iii','manaflow-i','manaflow-ii','bronze-for-life-i','bronze-for-life-ii','clockwork-accelerator','blistering-strikes','inspiring-epitaph','lineup','backup'];
+  let restoreOffers: (() => void) | undefined;
+  beforeAll(() => {
+    restoreOffers = installB1Offers(combatAugments);
+    acquired = publicInventory(['gloves','gloves'],false,9);
+  });
+  afterAll(() => { restoreOffers?.(); });
   afterAll(() => { acquired = undefined; route = undefined; supplyInput = undefined; });
+  const choices = (input: MatchState): MatchState => {
+    let state = input;
+    while (state.phase === 'choice') {
+      const c = state.pendingChoice!;
+      const id = c.kind === 'augment' ? combatAugments.find(id => c.offers.includes(id)) : undefined;
+      if (c.kind === 'augment') expect(id, 'scripted combat-only fixture card').toBeDefined();
+      state = id ? accepted(selectChoice(state,c.choiceId,c.generation,id)) : resolvePublicEquipmentChoices(state);
+    }
+    return state;
+  };
   const routeTo = (roundId: string): MatchState => {
     let state = route ?? acquired!.state;
     for (let budget = 0; state.roundDefinitionId !== roundId; budget++) {
       expect(budget).toBeLessThan(ROUTE.length);
-      state=resolvePublicEquipmentChoices(state);
+      state=choices(state);
       if(state.phase==='preparation'){
         for(const [i,u]of state.preparation.units.filter(u=>u.team==='player').sort((a,b)=>b.starLevel-a.starLevel).slice(0,state.level).entries())state=accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col:[1,3,5,0,6,2,4][i],row:7}}));
         state=finishPublicEquipmentBattle(state);
       }
-      state=resolvePublicEquipmentChoices(state);state=accepted(nextRound(state,state.round));
+      state=choices(state);state=accepted(nextRound(state,state.round));
       route = state;
     }
     return state;
@@ -448,7 +469,7 @@ describe('T12 supply choice input', () => {
   });
 });
 it('T12 an existing frozen glove roll and a new parent roll remain independent',()=>{
-  const acquired=publicInventory(['thiefs-gloves','gloves','gloves']);
+  const acquired=publicInventory(['thiefs-gloves','gloves','gloves'], false, 11);
   let state=accepted(deployMatchUnit(acquired.state,'unit-1',board(3)));
   state=accepted(equipItem(state,acquired.itemIds[0],'unit-1',0));
   const start=accepted(startMatchCombat(state)),roll=start.equipmentState.rolls.at(-1);
