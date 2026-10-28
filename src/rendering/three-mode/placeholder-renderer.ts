@@ -38,7 +38,12 @@ import { createTraitProps } from './trait-props';
 import { createGoldMines, GOLD_MINE_MODEL } from './gold-mines';
 import { DEFAULT_BOARD, arenaBench, createBoardArena, type BoardArena } from './board-arena';
 import { createScoutStage } from './scout-stage';
-import { isMutationCell, MUTATION_CELL_COLOR } from '../online/mutation-cell';
+// Kept local on purpose: importing a 2D module from here makes Rollup fold it into the render3d manual chunk,
+// so the 2D entry statically imports all of three.js (rendering3d-isolation). Mirrors ../online/mutation-cell.
+const MUTATION_CELL_COLOR = '#c47cff';
+function isMutationCell(cell: { readonly col: number; readonly row: number }, marker: { readonly col: number; readonly row: number } | null | undefined, ownBoard: boolean): boolean {
+  return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
+}
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, type Envelope } from './model-fit';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
