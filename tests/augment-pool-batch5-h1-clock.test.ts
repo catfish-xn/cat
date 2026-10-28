@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { shopGlitchRefreshes } from '../src/simulation/augment-pool-batch5-h1';
 import { createMatch, type MatchState } from '../src/simulation/match';
 
@@ -33,7 +33,6 @@ import { advanceAugmentPreparationTime } from '../src/simulation/augment-history
 import { rerollAugment, selectChoice, setShopLock, startMatchCombat, stepMatch, nextRound } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
-import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { augmentPool, shopGlitchSolo } from './fixtures/m5/oracle.g2.cjs';
 
@@ -61,11 +60,8 @@ it.skipIf(!existsSync(RESEARCH_FILE))('registers the 14.24 source and both allow
   }
 });
 let route: MatchState;
-let restoreShopGlitchOffers: () => void;
-beforeAll(() => { restoreShopGlitchOffers = installB1Offers(['shop-glitch']); });
-afterAll(() => { restoreShopGlitchOffers(); });
 it('selects Shop Glitch through the real choice command', () => {
-  // v25 batch-5 pool: no public 2-1 seed in 0..100; scripted draw keeps real candidates (fixture self-check below).
+  // v25 batch-5 pool drift: seed 21 (also 42/51) naturally offers shop-glitch at 2-1 with up to three slot rerolls.
   const seed = 21;
   let s = reachRound('2-1', false, seed);
   for (let i = 0; i < 3 && !s.pendingChoice!.offers.includes('shop-glitch'); i++) {

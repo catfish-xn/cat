@@ -1,6 +1,5 @@
 import { beforeAll, afterAll, expect, it } from 'vitest';
 import { makeRoom, runUntil, answerOpenChoices, claimAllOrbs } from './server/helpers';
-import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { G24_CHEST_PAYLOADS } from '../src/simulation/content/g2-4-chest-pool';
@@ -30,9 +29,7 @@ for (let round = 2; round <= 12; round++) beforeAll(() => {
   });
 });
 beforeAll(() => {
-  // Seed 28 / s3: re-searched 0..100 after v25 batch-5 pool drift; sponging draw scripted (toContain = fixture self-check).
-  const restore = installB1Offers(['sponging']);
-  try {
+  // Seed 28 / s3: re-searched 0..100 after v25 batch-5 pool drift; s3’s real 3-2 offer includes sponging.
   for (const seat of [...room.state.seats].sort((a,b)=>Number(b.seatId==='s3')-Number(a.seatId==='s3')).filter(s => s.alive)) {
     for (let slot = 0; slot < 3; slot++) {
       const c = room.state.seats.find(s => s.seatId === seat.seatId)!.match.pendingChoice!;
@@ -59,16 +56,8 @@ beforeAll(() => {
   const donor = current().preparation.units.find(u => u.team === 'player' && u.location.kind === 'board')!;
   expect(donor).toBeDefined();
   for (const [slot,item] of completed().slice(0,3).entries()) expect(room.handle(seatId,{type:'equip',itemId:item.id,unitId:donor.id,slot})).toMatchObject({ok:true});
-  // Human seats keep purchased heroes on the bench until an explicit deploy command.
-  for (const unit of current().preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench').slice(0,3)) {
-    if (current().preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length >= 4) break;
-    const used = new Set(current().preparation.units.flatMap(u => u.team === 'player' && u.location.kind === 'board' ? [`${u.location.cell.col},${u.location.cell.row}`] : []));
-    const cell = Array.from({length:28},(_,i)=>({col:i%7,row:4+Math.floor(i/7)})).find(c => !used.has(`${c.col},${c.row}`))!;
-    expect(room.handle(seatId,{type:'deploy',unitId:unit.id,target:{kind:'board',cell}})).toMatchObject({ok:true});
-  }
-  claimAllOrbs(room,[seatId]);
+  // autoDeployToCap fills the player board before round-12 combat; no manual deploy loop here.
   prepared = {match:current(),pool:room.state.pool,authority:room.augmentHistoryAuthority(seatId)};
-  } finally { restore(); }
 });
 beforeAll(() => { runUntil(room,clock,s => s.round === 12 && s.phase === 'settlement'); });
 afterAll(() => room.dispose());

@@ -5,11 +5,14 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { requireAugmentFacts } from '../src/simulation/augment-history';
 
-// Bounded 0..100 search found seed 5 for PvE item route; sponging draw scripted after v25 batch-5 pool drift.
+// Seed 5: installB1Offers scripts 2-1 heroic-grab-bag and 3-2 sponging; part of the donor gear comes from that grab-bag chain, not pure PvE orbs alone.
 let route = createMatch(5), acquired: MatchState, opening: MatchState, permanent: MatchState['items'];
 let restoreSpongingOffers: () => void;
 const priorities = ['item-grab-bag-i','big-grab-bag','heroic-grab-bag','iron-assets'];
-beforeAll(() => { restoreSpongingOffers = installB1Offers([...priorities, 'sponging']); });
+beforeAll(() => {
+  // Wrapper scripts only the three-card draws (2-1 heroic-grab-bag chain + 3-2 sponging); real candidate pools unchanged.
+  restoreSpongingOffers = installB1Offers([...priorities, 'sponging']);
+});
 afterAll(() => { restoreSpongingOffers(); });
 function choices(s: MatchState) { return resolveM5Choices(s, priorities, ['spoils-of-war-i','spoils-of-war-ii','blood-brothers','caretakers-chosen']); }
 for (let round = 1; round < 12; round++) beforeAll(() => {
@@ -27,7 +30,7 @@ for (let round = 1; round < 12; round++) beforeAll(() => {
 });
 beforeAll(() => {
   for(let slot=0;slot<3&&!route.pendingChoice!.offers.includes('sponging');slot++){const c=route.pendingChoice!;route=accepted(rerollAugment(route,c.choiceId,c.generation,slot));}
-  expect(route.roundDefinitionId).toBe('3-2'); expect(route.pendingChoice!.offers).toContain('sponging'); // fixture self-check under installB1Offers
+  expect(route.roundDefinitionId).toBe('3-2'); expect(route.pendingChoice!.offers).toContain('sponging');
   // Exercise recovery of an ordinary checkpoint BEFORE acquiring history ownership.
   route = restoreMatch(JSON.stringify(route));
   const c = route.pendingChoice!;
