@@ -14,6 +14,7 @@ import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment
 import { generateChoices } from '../src/simulation/choices';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { createMatch } from '../src/simulation/match';
+import { openingEncounterId } from '../src/simulation/opening-encounter';
 import { BattleHistory } from '../src/replay/history';
 import type { BattleRecord } from '../src/m6/contracts';
 import { reachRound, resolveM5Choices } from './match-helpers';
@@ -244,7 +245,9 @@ matrix('Experiment genuine split', experiment, [
 // Seed 35 naturally offers Blood Brothers at 2-1 on the current pool.
 function acquire(id: string): MatchState {
   const seed = 35, root = createMatch(seed);
-  expect(generateChoices(augmentCandidates(resolveAugmentTier(root, 'round:2-1:augment'), [], [], null,
+  expect(openingEncounterId(root)).not.toBe('trainer-golems');
+  // Eligibility uses the real augment candidate pool; the recorded route supplies the scripted 2-1 draw.
+  expect(generateChoices(augmentCandidates(resolveAugmentTier(root, 'round:2-1:augment'), [], [], openingEncounterId(root),
     { node: '2-1', fieldedTraits: [], blocked: [] }), root.choiceRngState).offers).toContain(id);
   const s = id === 'blood-brothers' ? reachBloodRound(seed) : reachRound('2-1', false, seed);
   const c = s.pendingChoice!;
