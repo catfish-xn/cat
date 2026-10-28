@@ -21,11 +21,11 @@ it.skipIf(!existsSync(RESEARCH_FILE))('Malicious Monetization archive numbers',(
 it.each(['2-1','3-2','4-2'])('only offers Monetization at the allowed node %s',node=>{
  expect(augmentCandidates('gold',[],[],null,{node,fieldedTraits:[],blocked:[]}).includes('mirrored-monetization')).toBe(node==='4-2');
 });
-it.each(FIELDED_LEGS)('reaches %s with real commands',leg=>{expect(fieldedRoute(37,leg).roundDefinitionId).toBe(leg);});
+it.each(FIELDED_LEGS)('reaches %s with real commands',leg=>{expect(fieldedRoute(11,leg).roundDefinitionId).toBe(leg);});
 let state:import('../src/simulation/match').MatchState;
 let checkpoint:string;
 it('serializes the 4-2 checkpoint',()=>{
- const grant=grantMechanicUnit(fieldedRoute(37,'4-2'),{receiptId:'h8-kill-witness',source:'test',definitionId:'viktor',starLevel:3});
+ const grant=grantMechanicUnit(fieldedRoute(11,'4-2'),{receiptId:'h8-kill-witness',source:'test',definitionId:'viktor',starLevel:3});
  expect(grant.ok).toBe(true);if(!grant.ok)throw Error(grant.reason);checkpoint=serializeMatch(grant.state);
 });
 it('finds and selects the 4-2 offer',()=>{

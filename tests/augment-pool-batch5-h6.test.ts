@@ -3,18 +3,22 @@ import { expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { contestedAmount } from '../src/simulation/augment-pool-batch5-h6';
 import { AUGMENT_BATCH5_H6 } from '../src/simulation/content/augment-pool-batch5-h6';
-import { offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
+import { offeredAt } from './augment-stage-helpers';
 import { reachRound, accepted, resolveM5Choices } from './match-helpers';
 import { selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
+/** v25 pool drift: first bounded 3-2 seed whose public offers include contested (STAGE_SEEDS still lists 12 for reroll-only routes). */
+const CONTESTED_OFFER_SEED=14;
+/** v25 pool drift: first bounded 2-1 seed whose public offers include scoreboard-scrapper. */
+const SCOREBOARD_OFFER_SEED=11;
 it.skipIf(!existsSync(RESEARCH_FILE))('archive values and stage tags',()=>{
  const row=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((r:any)=>r.apiName==='TFT_Augment_Contested');
  expect(row.effects).toEqual(AUGMENT_BATCH5_H6.contested.source.values);
  expect(['2-1','3-2','4-2'].map(n=>offeredAt('contested',n as '2-1'|'3-2'|'4-2'))).toEqual([false,true,false]);
 });
 it('selects via real 3-2 offer, freezes a solo PvP roster, and authenticates three restore entries',()=>{
- let s=reachRound('3-2',false,STAGE_SEEDS.contested.seed);
+ let s=reachRound('3-2',false,CONTESTED_OFFER_SEED);
  expect(s.pendingChoice?.offers).toContain('contested');
  const c=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,'contested'));
  s=resolveM5Choices(s);s=accepted(startMatchCombat(s));
@@ -32,7 +36,7 @@ it('settlement pays once per two other live players from the frozen roster, igno
  const {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION}=await import('../src/simulation/round-settlement');
  const {recordAugmentPvpRoster,historyRoster,prepareAugmentAcquisition,captureAugmentHistoryAuthority}=await import('../src/simulation/augment-history');
  const {validateAugmentHistory}=await import('../src/simulation/augment-history-restore');
- let s=reachRound('3-2',false,STAGE_SEEDS.contested.seed);
+ let s=reachRound('3-2',false,CONTESTED_OFFER_SEED);
  const enabled=enableMultiplayerSettlement(s,'s0');expect(enabled.ok).toBe(true);if(!enabled.ok)throw new Error(enabled.reason);s=enabled.state;
  prepareAugmentAcquisition(s,{status:'none'},0,[{...historyRoster(s),seatId:'s0',index:0,hp:s.playerHp,alive:true,rank:1,eliminatedRound:null}]);
  const c=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,'contested'));s=resolveM5Choices(s);
@@ -63,7 +67,6 @@ it.skipIf(!existsSync(RESEARCH_FILE))('scoreboard source and offer stages',()=>{
  expect(['2-1','3-2','4-2'].map(n=>offeredAt('scoreboard-scrapper',n as '2-1'|'3-2'|'4-2'))).toEqual([true,false,false]);
 });
 it('scoreboard entry records 150 bps AD and 150 centi AP on every current ordinary hero',async()=>{
- const {firstNodeSeed}=await import('./augment-stage-helpers');
  const {nextRound}=await import('../src/simulation/match');
  const {recordAugmentTable,historyRoster,readAugmentGrowth}=await import('../src/simulation/augment-history');
  const {scoreboardCombatGrowth}=await import('../src/simulation/augment-pool-batch5-h6-scoreboard');
@@ -74,7 +77,7 @@ it('scoreboard entry records 150 bps AD and 150 centi AP on every current ordina
  const {buildStrategySnapshot}=await import('../src/simulation/strategy-snapshot');
  const {readCombatStrategyInputs}=await import('../src/simulation/combat-input');
  const {fieldBench}=await import('./match-helpers');
- const seed=firstNodeSeed('scoreboard-scrapper',101);
+ const seed=SCOREBOARD_OFFER_SEED;
  let s=reachRound('2-1',false,seed);
  const enabled=enableMultiplayerSettlement(s,'s0');expect(enabled.ok).toBe(true);if(!enabled.ok)throw new Error(enabled.reason);s=enabled.state;
  prepareAugmentAcquisition(s,{status:'none'},0,[{...historyRoster(s),seatId:'s0',index:0,hp:s.playerHp,alive:true,rank:5,eliminatedRound:null}]);
@@ -99,10 +102,9 @@ it('scoreboard entry records 150 bps AD and 150 centi AP on every current ordina
  const entry=s.augmentHistory!.facts.find(f=>f.kind==='growth');expect(entry?.kind).toBe('growth');
 });
 it('scoreboard solo entry uses its single-seat rank, applies HP in combat, and rejects tampering at three restore entries',async()=>{
- const {firstNodeSeed}=await import('./augment-stage-helpers');
  const {nextRound}=await import('../src/simulation/match');
  const {fieldBench}=await import('./match-helpers');
- const seed=firstNodeSeed('scoreboard-scrapper',101);
+ const seed=SCOREBOARD_OFFER_SEED;
  let s=reachRound('2-1',false,seed);const c=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,'scoreboard-scrapper'));
  s=resolveM5Choices(s);s=accepted(startMatchCombat(s));while(s.phase==='combat')s=stepMatch(s).state;s=resolveM5Choices(s);
  s=accepted(nextRound(s,s.round));s=resolveM5Choices(s);s=fieldBench(s);s=accepted(startMatchCombat(s));
