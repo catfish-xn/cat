@@ -36,7 +36,6 @@ const clock=new ManualClock();
 const room=new Room(Array.from({length:8},(_,i)=>({seatId:`s${i}`,name:`s${i}`,kind:'human' as const})),{
  roomId:'test-room',seed:21,clock,resolver:new TwoSidedBattleResolver(),preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,
 });
-// v25 drift-3: no seed in 0..100 keeps s4 on a public 4-2 route with another-anomaly after pool expansion; seed 21 verified by room replay.
 const mine=()=>room.state.seats.find(s=>s.seatId==='s4')!.match;
 function arrive(roundId:string):void {
  for(let n=0;n<2000;n++){

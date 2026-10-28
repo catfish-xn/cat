@@ -1,6 +1,7 @@
-import { fieldedLegCases, fieldedRoute, offerFor, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
+import { fieldedLegCases, fieldedRoute, offerFor, offeredAt, STAGE_SEEDS, TRIFECTA_NAMI_REVIEW_SEED } from './augment-stage-helpers';
 import { grantMechanicItem } from '../src/simulation/seat-mechanics';
 import { expect, it } from 'vitest';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import type { MatchState } from '../src/simulation/match-types';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
@@ -116,13 +117,14 @@ it('later gift triple revisits a previously blocked gift in the same drain',()=>
 });
 
 it('public Crown + Trifecta acquisition serializes and restores both entrances with historical shields',()=>{
-  // v25 drift-3: first seed whose unchanged 2-1→3-2 route offers Crown then Trifecta after pool expansion.
-  const seed=1482;
+ withB1Offers(['crown-guarded','trifecta-ii'],()=>{
+  const seed=21;
   let s=reachRound('2-1',false,seed),c=s.pendingChoice!;
+  // Scripted 2-1/3-2 draws; offers.toContain is a fixture self-check, not a real-RNG claim.
   expect(c.offers).toContain('crown-guarded');s=accepted(selectChoice(s,c.choiceId,c.generation,'crown-guarded'));
   while(s.roundDefinitionId!=='3-2'){
-    s=resolveM5Choices(s);if(s.phase==='preparation')s=accepted(startMatchCombat(emptyBoard(s)));
-    s=resolveM5Choices(s);expect(s.phase).toBe('settlement');s=accepted(nextRound(s,s.round));
+   s=resolveM5Choices(s);if(s.phase==='preparation')s=accepted(startMatchCombat(emptyBoard(s)));
+   s=resolveM5Choices(s);expect(s.phase).toBe('settlement');s=accepted(nextRound(s,s.round));
   }
   c=s.pendingChoice!;expect(c.offers).toContain('trifecta-ii');s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
   const gift=p2GiftPlan(s).find(g=>g.kind==='unit'&&g.definitionId==='kogmaw')!;
@@ -136,12 +138,14 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
   expect(s.combat!.units.find(u=>u.id===hero.id)).toMatchObject({maxHp:1080,shield:375});
   const text=serializeMatch(s);expect(restoreMatch(text)).toEqual(s);expect(restoreMatch(JSON.parse(text))).toEqual(s);
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ });
 });
 
-it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)('3-2 seed 425 Trifecta Nami + %s passes all three save entrances',(definitionId,maxHp,shield)=>{
-  // v25 drift-3: first seed from 0 whose unchanged 3-2 route offers Trifecta II with
-  // Nami as its first hero gift; the stat/shield assertions remain unchanged.
-  let s=reachRound('3-2',false,425),c=s.pendingChoice!;expect(c.offers).toContain('trifecta-ii');
+it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)(`3-2 seed ${TRIFECTA_NAMI_REVIEW_SEED} Trifecta Nami + %s passes all three save entrances`,(definitionId,maxHp,shield)=>{
+ withB1Offers(['trifecta-ii'],()=>{
+  // Scripted 3-2 draw; offers.toContain is a fixture self-check. Gift/combat seed: TRIFECTA_NAMI_REVIEW_SEED (0..299 STAGE search, augment-stage-helpers.ts:40-41).
+  let s=reachRound('3-2',false,TRIFECTA_NAMI_REVIEW_SEED),c=s.pendingChoice!;
+  expect(c.offers).toContain('trifecta-ii');
   s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
   const gift=p2GiftPlan(s).find(g=>g.kind==='unit')!,birth=s.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.receiptId===gift.receiptId)!;
   if(birth.kind!=='unit'||!birth.unitId)throw Error('missing Nami receipt');
@@ -154,6 +158,7 @@ it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as co
   if(definitionId!=='crownguard')expect(s.combat!.units.find(u=>u.itemSummon?.kind==='mirror')).toMatchObject({maxHp:721,itemSummonOpeningMaxHp:1030});
   const text=serializeMatch(s);expect(restoreMatch(structuredClone(s))).toEqual(s);expect(restoreMatch(text)).toEqual(s);
   s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ });
 });
 it('buying a bench triple while the PvP roster is frozen retains pending gifts',()=>{
   let s=pendingFullBench();

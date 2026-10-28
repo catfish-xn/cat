@@ -1,18 +1,21 @@
-import { afterAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { makeRoom, runUntilClaiming } from './server/helpers';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { readG23Progress } from '../src/simulation/g2-3-state';
 import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:182});
-// v25 drift-3: seed 182 offers pilfer at 2-1 for s2 and records a positive pilfer battle count on the public room route.
-afterAll(()=>room.dispose());
+let restoreB1Offers:(()=>void)|undefined;
+beforeAll(()=>{restoreB1Offers=installB1Offers(['pilfer']);});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:17});
+afterAll(()=>{restoreB1Offers?.();restoreB1Offers=undefined;room.dispose();});
 it('room advances to 1-3',()=>{room.start();runUntilClaiming(room,clock,s=>s.roundId==='1-3'&&s.phase==='preparation');});
 it('room advances to 1-4',()=>{runUntilClaiming(room,clock,s=>s.roundId==='1-4'&&s.phase==='preparation');});
 it('room chooses the actual 2-1 Pilfer offer',()=>{
  runUntilClaiming(room,clock,s=>s.roundId==='2-1'&&s.phase==='preparation');
  const choice=room.state.seats.find(s=>s.seatId==='s2')!.match.pendingChoice!;
+ // installB1Offers scripts only the 2-1 draw; offers.toContain is a fixture self-check, not a real-RNG claim.
  expect(choice.offers).toContain('pilfer');
  expect(room.handle('s2',{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'pilfer'})).toMatchObject({ok:true});
 });

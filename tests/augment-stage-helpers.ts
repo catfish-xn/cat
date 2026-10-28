@@ -43,6 +43,9 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = fal
  * sword-overflow, trifecta-ii, wand-overflow, geniuses, pair-of-fours re-searched on the same 0..299 rule.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
  */
+/** P2 Trifecta→Nami review: first 3-2 seed in 0..299 with Nami as first unit gift (B1 draw). STAGE search policy: lines 40-41. */
+export const TRIFECTA_NAMI_REVIEW_SEED = 257 as const;
+
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
   'all-that-shimmers-plus':{node:'3-2',seed:3},
   'roll-the-dice':{node:'3-2',seed:7,rerolls:[0]},
