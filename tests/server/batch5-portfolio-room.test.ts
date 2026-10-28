@@ -12,8 +12,8 @@ import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from '../fixtures/m5/orac
 const SOURCE='augment-pool-batch5-h4';
 const env={CATALOG,COST,ROUNDS,xp,entryXp,benchXp};
 describe.each([
-  {id:'diversified-portfolio',seed:55,seatId:'s2',acquire:4,build:9,initial:1},
-  {id:'diversified-portfolio-plus',seed:1,seatId:'s3',acquire:12,build:12,initial:4},
+  {id:'diversified-portfolio',seed:78,seatId:'s2',acquire:4,build:9,initial:1},
+  {id:'diversified-portfolio-plus',seed:6,seatId:'s3',acquire:12,build:12,initial:4},
 ])('$id through a real eight-seat room',({id,seed,seatId,acquire,build,initial})=>{
   const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed});
   const seat=()=>room.state.seats.find(s=>s.seatId===seatId)!;

@@ -16,13 +16,15 @@ G7（B5-69）的 Camille、Powder 初始赠礼沿用共享收据 ID：
 
 独立补测发现 **`restoreCarouselSeat` 确实接受上述伪造状态**：真实房间在 2-1 选择 G7，保留两颗未领取赠礼法球，通过公共命令卖空军队，再进入 2-4 选秀；替换强化、删除历史、增加金币后，原实现恢复成功。该入口没有共享池恢复入口已有的 batch1 赠礼校验，也未复用按可信卡池赠礼收据要求独立服务端凭据的逻辑。
 
-修复把原有 batch1 收据验证抽成内部函数，把已有的可信池赠礼命名空间识别迁入 `src/simulation/restore-checks/batch1-gifts-check.ts`，由 `validateOnlineBatch1GiftAuthority(pool,state,authority): void` 组合校验，两个联机席位恢复入口均调用。单人仍调用原 `validateBatch1Gifts`，验证语义不变。未改发奖、金币、随机数、战斗规则、版本或 digest。
+合并 G3/G7 后，保留 G3 导出的 `validateBatch1GiftReceipts(state): void`，把可信池赠礼命名空间识别迁入 `src/simulation/restore-checks/batch1-gifts-check.ts`，导出 `trustedPoolGiftRequiresAuthority(pool,state): boolean`。`restoreSharedOrbSnapshot` 在卡池守恒检查后，仅在可信池证据要求 history 时提前调用 `validateAugmentAuthority(state,authority,true)`；收据仍走原带门控的 `validateBatch1Gifts`。`restoreCarouselSeat` 在 `validateAugmentHistory` 后调用 `validateOnlineBatch1GiftAuthority(pool,state,authority): void`，先无条件调用 authority 校验（required 参数来自可信池），再检查赠礼收据，删除末尾重复检查。单人仍调用原 `validateBatch1Gifts`，验证语义不变。未改发奖、金币、随机数、战斗规则、版本或 digest。
+
+合并回归根因：此前 shared-pool 提前无条件调用组合函数，候选缺少 shopHistory 时先抛 `server facts/state mismatch`，遮蔽原有 `legacy shop augment saves cannot be authenticated`。恢复上述门控与顺序后，保留原测试断言验证；选秀入口的组合函数仍无条件调用 authority 校验，避免 G7 带合法独立凭据的伪造状态被提前归为 batch1 收据错误。
 
 ## 恢复入口与调用点清单
 
 | 入口或调用点 | 输入与处理 | G7 边界 |
 | --- | --- | --- |
-| `src/simulation/shared-pool.ts`：`restoreSharedOrbSnapshot(pool: SharedPoolState, input: unknown, authority?: AugmentHistoryAuthority): MatchState` | object 用 structuredClone；JSON 字符串和 canonicalContent 字符串用 JSON.parse；先检查版本、卡池守恒，再调用共用赠礼校验并继续现有恢复检查 | 三种形式均执行同一校验；可信池必须独立于候选存档 |
+| `src/simulation/shared-pool.ts`：`restoreSharedOrbSnapshot(pool: SharedPoolState, input: unknown, authority?: AugmentHistoryAuthority): MatchState` | object 用 structuredClone；JSON 字符串和 canonicalContent 字符串用 JSON.parse；先检查版本、卡池守恒，再按可信池赠礼证据门控提前 authority 检查；收据继续走原有带门控的 validateBatch1Gifts | 三种形式均执行同一校验；可信池必须独立于候选存档 |
 | `src/simulation/carousel.ts`：`restoreCarouselSeat(carousel: CarouselState, input: unknown, authority?: AugmentHistoryAuthority): MatchState` | object/JSON/canonical 字符串统一解析；验证 carousel、卡池和历史后调用共用赠礼校验，再验证选秀出生 | 同样拒绝孤儿命名空间；已领取/出售后，池中凭据仍要求独立 authority，即使候选删除了赠礼收据 |
 | `src/simulation/carousel.ts`：`restoreCarousel(input: unknown): CarouselState` | 只恢复选秀及其池，调用 validateCarousel；不含 Match/强化/金币状态 | 恢复席位时仍须调用 restoreCarouselSeat；只恢复 carousel 不构成席位恢复，也不能认证不可信池 |
 | `src/server-entry/index.ts`：第 47、71 行重导出 | 重导出上述函数，无另一套恢复实现 | 无旁路；本次共用校验是内部模块导出，不增加网络命令 |
@@ -44,7 +46,7 @@ G7（B5-69）的 Camille、Powder 初始赠礼沿用共享收据 ID：
 
 新增 `tests/server/augment-pool-batch5-g7-carousel-restore.test.ts`：分回合测试真实房间，沿用默认超时；覆盖选秀及席位 object/JSON/canonical 三种输入、合法恢复、赠礼未领取、领取后出售、source 改写、历史/强化/收据联合擦除、无凭据与合法独立凭据两种失败方式，并确认失败不修改房间、席位或池引用。修复前在轮盘入口明确复现“不抛错”；未改超时、预算、断言门槛或录制夹具。
 
-最终验证（Vitest 均使用 `npm test -- --configLoader runner --maxWorkers=3`）：
+G7 单独修复时的验证记录（合并验证另列于下；Vitest 均使用 `npm test -- --configLoader runner --maxWorkers=3`）：
 
 | 批次 | 测试文件 | 结果 |
 | --- | --- | --- |
@@ -55,3 +57,21 @@ G7（B5-69）的 Camille、Powder 初始赠礼沿用共享收据 ID：
 | 差异检查 | `git diff --check` | 通过 |
 
 共 16 个测试文件、643 个用例通过；没有保留的种子漂移失败。未跑全仓库或浏览器验收。本次修改的 src 文件仅 `src/simulation/shared-pool.ts`、`src/simulation/carousel.ts`、`src/simulation/restore-checks/batch1-gifts-check.ts`。无规则/数值、src/server、超时/预算、版本/digest、docs/evidence 或录制夹具修改；改动留工作区交执行端提交。
+
+
+## G3/G7 冲突合成验证（2026-10-28）
+
+本轮实际起点为 `claude/sol-cat-cx-v25int3` 的 `0b40db569d4bdd7805881df53431324f596e9520`，已有合并中的工作区与 `batch1-gifts-check.ts` 冲突。本轮只清除文件冲突并修改工作区；未执行 Git 写操作，索引中的 unmerged 状态留给执行端标记解决。
+
+验证命令：`npm run typecheck`；`npm test -- --configLoader runner --maxWorkers=3` 后接下表全部 10 个文件，均在 `PATH=$HOME/.local/bin:$PATH` 下执行。
+
+| 范围 | 测试文件（均在 tests/ 下） | 结果 |
+| --- | --- | --- |
+| 商店历史回归 | `shop-history.test.ts` | 通过，保留第 117 行缺失 shopHistory 的原错误断言 |
+| G3 恢复、空中作业、突变 | `server/batch5-g3-restore-room.test.ts`、`server/batch5-g3-aerial-room.test.ts`、`server/batch5-g3-mutation-room.test.ts` | 全部通过，原断言未改 |
+| G7 审查与选秀恢复 | `server/augment-pool-batch5-g7-review.test.ts`、`server/augment-pool-batch5-g7-carousel-restore.test.ts` | 全部通过，原断言未改 |
+| grep 恢复入口所得关联文件 | `p7-carousel.test.ts`、`p7-1-carousel-rules.test.ts`、`augment-history.test.ts`、`loot-orb-claim.test.ts` | 全部通过，覆盖 restoreCarouselSeat / restoreSharedOrbSnapshot |
+| 合计 | 10 个文件 | **294/294 通过**，Vitest 退出码 0，耗时 60.65 秒；未遇到 listen EPERM |
+| 类型检查 | `tsc --noEmit` | 通过，退出码 0 |
+
+本轮未修改测试、断言、超时、门槛、预算、规则、数值、版本、digest、`src/server/`、`docs/evidence/` 或录制夹具。修改的 src 文件仅 `src/simulation/restore-checks/batch1-gifts-check.ts`、`src/simulation/shared-pool.ts`、`src/simulation/carousel.ts`；另更新本文档。未跑全仓库或浏览器验收。

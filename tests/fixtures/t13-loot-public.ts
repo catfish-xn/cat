@@ -45,11 +45,11 @@ export function battle(prepared: MatchState) {
   return {prepared,started,revealed,beforeFinal,ended,events,revealPrefix,startEvents:start.events};
 }
 const prefixes=new Map<string,MatchState>();
-export async function publicPrefix(roundId:string,seed=42,build='cannon',augmentPriorities:readonly string[]=[]):Promise<MatchState> {
-  const key=JSON.stringify([roundId,seed,build,augmentPriorities]);
+export async function publicPrefix(roundId:string,seed=42,build='cannon',augmentPriorities:readonly string[]=[],augmentRerollPriorities:Readonly<Record<string,readonly string[]>>={}):Promise<MatchState> {
+  const key=JSON.stringify([roundId,seed,build,augmentPriorities,augmentRerollPriorities]);
   if(!prefixes.has(key)) {
     const captured=new Error('captured');let prefix:MatchState|undefined;
-    try {await run(api,{build,seed,augmentPriorities,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
+    try {await run(api,{build,seed,augmentPriorities,augmentRerollPriorities,onStep(before:MatchState,_result:unknown,command:{type:string}|undefined){
       if(before.roundDefinitionId===roundId && (command?.type==='start'||before.phase==='choice')) {prefix=before;throw captured;}
     }});}catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error(`Missing public prefix ${key}`);prefixes.set(key,prefix);

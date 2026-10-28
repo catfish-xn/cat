@@ -8,6 +8,7 @@ import { shimmerFamily, shimmerItemLines } from '../../src/presentation/special-
 import { genericOffer, readChoiceExtras } from '../../src/presentation/choice-fallback';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/g2-3-item-registry';
 import { readItemCatalog } from '../../src/simulation/item-catalog';
+import { S13_P3_SOURCE } from '../../src/simulation/content/s13-p3-source';
 
 const shimmerIds = Object.keys(ITEM_DEFINITIONS).filter(id => id.startsWith('TFT13_Crime_'));
 
@@ -34,6 +35,8 @@ describe('reward-only items in the item catalogue', () => {
     const [stats, effect] = shimmerItemLines('TFT13_Crime_Silver_FleshRipper')!;
     expect(stats).toMatch(/^攻击力 \+\d+% · 暴击率 \+\d+%$/);
     expect(effect).toMatch(/^生命降到 \d+% 以下时/);
+    expect(itemDescriptions('TFT13_AnotherAnomaly_Item:the-finisher')).toContain(
+      `该弈子的普攻和技能会处决生命值为${S13_P3_SOURCE['the-finisher'].values.ExecutePercent * 100}%及以下的敌方英雄。`);
   });
   it('shows a black market offer with its icon and player text instead of the registry note', () => {
     const id = 'TFT13_Crime_Gold_ShimmerBloom', offer = genericOffer(id, readChoiceExtras({ kind: 'blackMarket', offers: [id] }));

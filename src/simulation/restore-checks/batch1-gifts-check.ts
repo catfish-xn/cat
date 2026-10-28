@@ -53,8 +53,10 @@ export function validateBatch1Gifts(state:MatchState):void {
  validateBatch1GiftReceipts(state);
 }
 
-/** A batch1 namespace remains a gift claim even if its source or augment owner is rewritten. */
-function validateBatch1GiftReceipts(state:MatchState):void {
+/** Gift identity/contents alone: also required while a seat is in the carousel,
+ * before normal preparation/economy restoration can run. Inspect receipts even
+ * without an owner so deleting the augment cannot bypass this admission. */
+export function validateBatch1GiftReceipts(state:MatchState):void {
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
  for(const r of receipts)if(r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')){
@@ -86,11 +88,13 @@ function rewardNeedsAugmentHistory(dropId:string):boolean {
   } catch { return false; }
 }
 
-/** Both multiplayer seat restore entries must authenticate the same initial-gift claims.
- * Claimed, sold, forfeited and pending gifts retain independent pool evidence even if
- * the candidate erases its owner, history and receipts. Never derive authority from input. */
+/** Trusted pool evidence requires authority even if the candidate erases its gift claims. */
+export function trustedPoolGiftRequiresAuthority(pool:SharedPoolState,state:MatchState):boolean {
+ return [...pool.pending,...pool.rewards].some(r=>r.seatId===state.sharedPool!.seatId&&rewardNeedsAugmentHistory(r.dropId));
+}
+
+/** Carousel restore authenticates history before inspecting initial-gift receipts. */
 export function validateOnlineBatch1GiftAuthority(pool:SharedPoolState,state:MatchState,authority?:AugmentHistoryAuthority):void {
- const required=[...pool.pending,...pool.rewards].some(r=>r.seatId===state.sharedPool!.seatId&&rewardNeedsAugmentHistory(r.dropId));
- validateAugmentAuthority(state,authority,required);
+ validateAugmentAuthority(state,authority,trustedPoolGiftRequiresAuthority(pool,state));
  validateBatch1GiftReceipts(state);
 }

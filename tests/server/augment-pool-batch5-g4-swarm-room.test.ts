@@ -6,7 +6,7 @@ import { canonicalContent } from '../../src/simulation/content';
 import { requireAugmentFacts } from '../../src/simulation/augment-history';
 import { voidSwarmPortals } from '../fixtures/m5/oracle.g2.cjs';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:57});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:7});
 const seatId='s3',mine=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
 const portals=()=>mine().seatMechanics?.receipts.filter(r=>r.kind==='item'&&r.definitionId==='TFT5_Item_ZzRotPortalRadiant')??[];
 afterAll(()=>room.dispose());

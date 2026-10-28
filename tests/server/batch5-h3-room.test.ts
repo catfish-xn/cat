@@ -6,8 +6,8 @@ import { readAugmentGrowth } from '../../src/simulation/augment-history';
 import { snapshotForBattle } from '../../src/simulation/two-sided-snapshot';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 
-// First integrated-pool seed with the original s3/no-reroll acquisition route.
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:15});
+// First integrated-pool seed with the original s3/no-reroll acquisition route (seed 5).
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:5});
 const mine=()=>room.state.seats.find(s=>s.seatId==='s3')!;
 let fighterId:string;
 beforeAll(()=>room.start());

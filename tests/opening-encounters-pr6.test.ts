@@ -247,7 +247,9 @@ describe('PR6 Mel threshold observation (reward enabled by batch A)',()=>{
       previous=state;
       if(state.phase==='choice') {
         const c=state.pendingChoice!;
-        const id=c.offers.find(id=>!['clear-mind','cluttered-mind','slammin','slammin-plus','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii'].includes(id))!;
+        // Mel's threshold receipt is the subject here; Pilfer needs a separate battles archive,
+        // while Anger Issues adds unrelated exact-command history to this empty-board loss route.
+        const id=c.offers.find(id=>!['clear-mind','cluttered-mind','slammin','slammin-plus','spoils-of-war-i','spoils-of-war-ii','spoils-of-war-iii','pilfer','anger-issues'].includes(id))!;
         expect(id).toBeDefined();state=accepted(selectChoice(state,c.choiceId,c.generation,id));
       } else if(state.phase==='preparation') state=accepted(startMatchCombat(state));
       else if(state.phase==='combat') state=stepMatch(state).state;

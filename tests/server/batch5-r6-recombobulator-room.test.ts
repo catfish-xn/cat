@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { installB1Offers } from '../fixtures/b1-scripted-offers';
 import { runUntil, claimAllOrbs, TIMINGS, SEATS } from './helpers';
 import { Room, ROOM_TIMING_DEFAULTS } from '../../src/server/room/room';
 import { ManualClock } from '../../src/server/room/clock';
@@ -11,6 +12,10 @@ import { rewardPlan } from '../fixtures/m5/augment-rewards-oracle.cjs';
 import type { MatchState } from '../../src/simulation/match-types';
 import type { CarouselReceipt } from '../../src/simulation/carousel-types';
 import type { ResourceProvenanceEntry } from '../../src/simulation/resource-provenance';
+
+// Batch 5 pool expansion drifted the real 3-2 draw; script only the three-card pick, keep eligibility and reroll RNG.
+const restoreB1Offers = installB1Offers(['recombobulator']);
+afterAll(() => restoreB1Offers());
 
 const clock=new ManualClock(),room=new Room(SEATS.map(s=>({...s,kind:'human'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,seed:6,roomId:'test-room',clock,resolver:new TwoSidedBattleResolver()});
 const mine=()=>room.state.seats[0].match;
@@ -28,7 +33,8 @@ beforeAll(()=>{
 });
 beforeAll(()=>runUntil(room,clock,s=>s.roundId==='3-2'&&s.phase==='preparation'));
 beforeAll(()=>{
-  const c=mine().pendingChoice!;expect(c.offers).toContain('recombobulator');before=mine();
+  const c=mine().pendingChoice!;expect(c.offers).toContain('recombobulator'); // fixture self-check: scripted draw when absent from real RNG
+  before=mine();
   const preview={...before,augments:[...before.augments,{definitionId:'recombobulator',choiceId:c.choiceId,acquiredRound:before.round}]};
   expected=batch5Transforms(preview,'recombobulator',room.state.pool.available);
   const poolBefore=room.state.pool;
@@ -112,7 +118,7 @@ describe('carousel ancestry after Recombobulator',()=>{
    const c=state().pendingChoice!;
    expect(localRoom.handle('s0',{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:i})).toMatchObject({ok:true});
   }
-  const choice=state().pendingChoice!;expect(choice.offers).toContain('recombobulator');
+  const choice=state().pendingChoice!;expect(choice.offers).toContain('recombobulator'); // fixture self-check under installB1Offers
   expect(localRoom.handle('s0',{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'recombobulator'})).toMatchObject({ok:true});
   const fact=state().resourceProvenance.entries.find(e=>e.kind==='unit-transformed'&&e.unitId===mergedId&&e.roundId==='3-2');
   expect(fact).toMatchObject({kind:'unit-transformed',from:receipt.definitionId,starLevel:2});
@@ -173,7 +179,7 @@ describe('carousel unit transformed before merging',()=>{
    const c=state().pendingChoice!;
    expect(localRoom.handle('s0',{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:i})).toMatchObject({ok:true});
   }
-  const choice=state().pendingChoice!;expect(choice.offers).toContain('recombobulator');
+  const choice=state().pendingChoice!;expect(choice.offers).toContain('recombobulator'); // fixture self-check under installB1Offers
   expect(localRoom.handle('s0',{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'recombobulator'})).toMatchObject({ok:true});
   const fact=state().resourceProvenance.entries.find(e=>e.kind==='unit-transformed'&&e.unitId===receipt.unitId);
   expect(fact).toMatchObject({from:receipt.definitionId,starLevel:1});

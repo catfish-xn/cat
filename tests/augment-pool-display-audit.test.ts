@@ -21,7 +21,8 @@ it.skipIf(!existsSync(RESEARCH_FILE))('shows the official 14.24 Chinese name for
     expect(source?.name_zh_cn, `${id}: missing official name for ${api}`).toBeTruthy();
     expect(augmentDisplayName(id), `${id} (${api})`).toBe(source?.name_zh_cn);
     if (Object.hasOwn(AUGMENT_EXTRA_TEXT, id)) {
-      expect(augmentPlayerDescription(id), `${id} description`).toBe(source?.description_zh_cn);
+      expect(AUGMENT_EXTRA_TEXT[id].description, `${id} template`).toBe(source?.description_zh_cn);
+      expect(augmentPlayerDescription(id), `${id} description`).toBe(source?.description_zh_cn.replace(/〔对局动态值〕/g, '未确定'));
     }
   }
 });
@@ -78,7 +79,14 @@ it('retains descriptions for known project-specific rules and missing dynamic va
   expect(augmentPlayerDescription('glass-cannon-ii')).toBe('在后排开始战斗的弈子，在战斗开始时的生命值为80%，但会获得20%的伤害增幅。');
   expect(augmentPlayerDescription('bulky-buddies-i')).toBe('开战时恰与一个友军相邻的单位获得100生命；该邻居死亡时，获得10%最大生命的10秒盾。');
   expect(augmentPlayerDescription('mentorship')).toContain('魔改执行：');
-  for (const id of ['starry-night', 'built-different', 'placebo-plus', 'bronze-for-life-i']) {
+  expect(augmentPlayerDescription('starry-night')).toBe('你商店中的1费和2费弈子有几率成为2星。获得6金币。\n\n当前几率：未确定%\n几率随玩家等级提升。');
+  expect(augmentPlayerDescription('bronze-for-life-i')).toBe('每个当前铜级羁绊全队3%增伤；不是所有最低阈值。');
+  const allyTemplate = AUGMENT_EXTRA_TEXT['caretakers-ally'].description;
+  expect(augmentPlayerDescription('caretakers-ally')).toBe(allyTemplate.replace('〔对局动态值〕', '未确定'));
+  const ally = { values: [{ unit: 'zeri' }] };
+  expect(augmentPlayerDescription('caretakers-ally', ally)).toBe(allyTemplate.replace('〔对局动态值〕', '泽丽'));
+  expect(augmentCardSections('caretakers-ally', ally).body).toBe(allyTemplate.replace('〔对局动态值〕', '泽丽'));
+  for (const id of ['built-different', 'placebo-plus']) {
     expect(augmentPlayerDescription(id), id).toBeNull();
   }
 });

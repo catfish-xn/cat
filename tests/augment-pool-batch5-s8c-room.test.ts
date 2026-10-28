@@ -5,7 +5,7 @@ import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { hardCommitRewardPlan } from '../src/simulation/augment-pool-batch5-s8c';
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:28});
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:0});
 afterAll(()=>room.dispose());
 const seat=()=>room.state.seats.find(s=>s.seatId==='s1')!;
 it('room starts',()=>{room.start();});

@@ -4,7 +4,7 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import { restoreSharedOrbSnapshot, assertSharedPoolConservation } from '../../src/simulation/shared-pool';
 import { canonicalContent } from '../../src/simulation/content';
 
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 26 });
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 65 });
 const seatId = 's2', mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
 afterAll(() => room.dispose());
 it('B5-72 starts a real eight-seat room', () => { room.start(); });

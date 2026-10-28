@@ -6,9 +6,9 @@ import { enableMultiplayerSettlement } from '../src/simulation/round-settlement'
 import { accepted } from './t10-helpers';
 import { catalogPreparation } from './t5r-helpers';
 
-it('keeps v24 235 augments (including six shop-rule and five batch-5 augments) and the same complete 56-anomaly pool in both modes', () => {
+it('keeps 306 augments after batch-5 expansion and the same complete 56-anomaly pool in both modes', () => {
   const all = Object.keys(ANOMALY_DEFINITIONS).sort();
-  expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(235); // v23 224 + six shop-rule + five batch-5 cards; anomaly admission is unchanged.
+  expect(Object.keys(AUGMENT_DEFINITIONS)).toHaveLength(306); // Fifth-batch pool expansion; matches the independent full catalog (including carousel-only cards).
   expect(all).toHaveLength(56);
   expect(anomalyCandidates(false).sort()).toEqual(all);
   expect(anomalyCandidates(true).sort()).toEqual(all);

@@ -5,7 +5,7 @@ import { conserved } from '../tp-helpers';
 import { makeRoom, runUntil } from './helpers';
 
 // No socket or wall clock: exercise the same bounded timer driver as the whole-match routes.
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 158, preparationMs: 31_000 });
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 26, preparationMs: 31_000 });
 const owner = () => room.state.seats.find(s => s.seatId === 's1')!;
 afterAll(() => room.dispose());
 

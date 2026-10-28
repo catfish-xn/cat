@@ -1,6 +1,7 @@
 import { G23_HERO_IDS as G2_HERO_IDS } from './fixtures/g2-3-roster';
 import { describe, expect, it } from 'vitest';
 import { G24_VOIDSPAWN_ABILITIES } from '../src/simulation/content/g2-4b-voidspawn';
+import { B5_G4_SUMMON_UNITS } from '../src/simulation/content/augment-pool-batch5-g4';
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { abilityPlans, type Champion } from './fixtures/m8-ability-plans';
 import type { AbilityPlan, ActionTask } from '../src/simulation/m8/contracts';
@@ -11,8 +12,11 @@ const tasks = (p: AbilityPlan): readonly ActionTask[] => p.operations.flatMap(op
 const encoded = (name: Champion) => JSON.stringify(abilityPlans[name]);
 
 describe('all existing champion mechanisms remain representable (data contracts only)', () => {
-  it('covers the nineteen historical plan contracts and expanded 70-entry ability roster exactly', () => {
-    expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual([...G2_HERO_IDS,'elise-ranged','swain-ranged','gangplank-ranged','jayce-ranged','g23-sion','g23-forge','g24-voidspawn','s13-crab','s13-wolf','s13-mini','training-dummy','tower-dummy'].map(id => `${id}-ability`).sort());
+  it('covers the nineteen historical plan contracts and expanded ability roster exactly', () => {
+    expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual([
+      ...[...G2_HERO_IDS,'elise-ranged','swain-ranged','gangplank-ranged','jayce-ranged','g23-sion','g23-forge','g24-voidspawn','s13-crab','s13-wolf','s13-mini','training-dummy','tower-dummy'].map(id => `${id}-ability`),
+      ...Object.values(B5_G4_SUMMON_UNITS).map(unit => unit.abilityId),
+    ].sort());
     expect(Object.keys(G24_VOIDSPAWN_ABILITIES)).toEqual(['g24-voidspawn-ability']);
     expect(S13_ABILITY_DATA['g24-voidspawn-ability']).toEqual(G24_VOIDSPAWN_ABILITIES['g24-voidspawn-ability']);
     expect(Object.keys(abilityPlans)).toHaveLength(19);

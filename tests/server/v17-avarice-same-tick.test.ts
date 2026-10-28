@@ -32,6 +32,9 @@ describe('v17 avarice: consecutive gold changes at one tick', () => {
     expect(room.handle(seatA, { type: 'shopLock', locked: !seat.match.shop.locked, generation: seat.match.shop.generation })).toMatchObject({ ok: true });
     expect(seatOf(room.state, seatA).match.gold).toBe(seat.match.gold);
     golds.push(spendGold(room, seatA));
+    // The current pool gives this holder 30-AD Vex: 20 -> 18 gold (25% -> 24% amp)
+    // rounds to the same damage. Spend further at this same tick so the final sample is observable.
+    while (seatOf(room.state, seatA).match.gold > 4) golds.push(spendGold(room, seatA));
     golds.push(...earnGold(room, seatA));
     expect(golds.length).toBeGreaterThanOrEqual(4);
     runUntil(room, clock, state => state.roundName === '4-6' && state.phase !== 'battle');
