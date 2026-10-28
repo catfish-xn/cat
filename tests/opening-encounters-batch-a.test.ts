@@ -22,6 +22,9 @@ import { createSharedPool, initializeSharedSeat, refreshSharedShops, nextSharedR
 import { resolveRoundEconomy } from '../src/simulation/round-economy';
 import { syntheticSharedRound } from './tp-helpers';
 import { accepted, reachRound, resolveM5Choices, emptyBoard, freeze } from './match-helpers';
+import { BattleHistory } from '../src/replay/history';
+import type { LedgerCombatEvent } from '../src/simulation/combat-types';
+import { captureAugmentHistoryAuthority } from '../src/simulation/augment-history';
 
 const melSeeds=new Map<number,number>(),goldSeeds=new Map<number,number>(),lootSeeds=new Map<number,number>();
 let viktorSeed=0;
@@ -283,9 +286,12 @@ it('boot is only a resolved presentation event: no resources, no pity, no legacy
 it('real shared lifecycle continues gold subscriptions through 6-7 into overtime 8 and restores',()=>{
   const {pool,states}=sharedThrough(goldSeeds.get(0)!,46);
   for(const s of states){
+    // Capture the trusted command result before serializing the candidate; online history requires a separate server checkpoint.
+    const authority=captureAugmentHistoryAuthority(s);
     expect(s.roundDefinitionId).toBe('overtime-8');
     expect(s.openingEncounter.mode==='shared'&&s.openingEncounter.receipts.map(r=>r.nodeId)).toEqual(['2-1','3-1','4-1','5-1','6-1','overtime-1','overtime-8']);
-    expect(restoreSharedOrbSnapshot(pool,JSON.stringify(s))).toEqual(s);
+    expect(restoreSharedOrbSnapshot(pool,JSON.stringify(s),authority)).toEqual(s);
+    expect(()=>restoreSharedOrbSnapshot(pool,JSON.stringify({...s,gold:s.gold+1}),authority)).toThrow('server facts/state mismatch');
   }
 },30000);
 it('shared two-star gift with fewer than three copies falls back to existing cost gold',()=>{
@@ -353,21 +359,26 @@ it('item subscription survives strict save before/after pickup and refuses repea
 });
 it.each(['gold','loot','mel'] as const)('%s command replay around reward boundary preserves complete state and event ledger',kind=>{
   const seed=kind==='gold'?goldSeeds.get(3)!:kind==='loot'?lootSeeds.get(3)!:melSeeds.get(2)!;
+  // Mel crosses after real battles; retain their complete ledgers for any history-dependent augment on this route.
+  const history=new BattleHistory(`batch-a-${kind}`);
+  const roundTrip=(s:MatchState)=>restoreMatch(serializeMatch(s,history.completedRecords),history.completedRecords);
   let state=createMatch(seed),observed=false;
   for(let i=0;i<32&&!observed;i++){
     state=resolveM5Choices(state);
     if(state.phase==='preparation'){
-      const before=emptyBoard(state),copy=restoreMatch(serializeMatch(before));
+      const before=emptyBoard(state),copy=roundTrip(before);
       const a=startMatchCombat(before),b=startMatchCombat(copy);expect(b).toEqual(a);
       if(!a.ok)throw Error(a.reason);state=a.state;
+      history.observe({before,after:state,events:a.events.filter((e):e is LedgerCombatEvent=>e.domain==='combat'),reason:'command'});
       observed=a.events.some(e=>e.type==='openingRewardResolved');
     }
     if(observed)break;
     state=resolveM5Choices(state);
     if(state.phase!=='settlement')throw Error('unexpected terminal');
-    const copy=restoreMatch(serializeMatch(state)),a=nextRound(state,state.round),b=nextRound(copy,copy.round);
+    const copy=roundTrip(state),a=nextRound(state,state.round),b=nextRound(copy,copy.round);
     expect(b).toEqual(a);if(!a.ok)throw Error(a.reason);state=a.state;
     observed=a.events.some(e=>e.type==='openingRewardResolved');
   }
-  expect(observed).toBe(true);expect(restoreMatch(serializeMatch(state))).toEqual(state);
+  expect(observed).toBe(true);expect(roundTrip(state)).toEqual(state);
+  expect(history.completedRecords).toHaveLength(state.roundResults.filter(r=>r.result!=='supply').length);
 });
