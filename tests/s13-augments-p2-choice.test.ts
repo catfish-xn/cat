@@ -143,7 +143,7 @@ it('public Crown + Trifecta acquisition serializes and restores both entrances w
 
 it.each([['crownguard',1130,200],['TFT9_Item_OrnnTrickstersGlass',1030,0]] as const)(`3-2 seed ${TRIFECTA_NAMI_REVIEW_SEED} Trifecta Nami + %s passes all three save entrances`,(definitionId,maxHp,shield)=>{
  withB1Offers(['trifecta-ii'],()=>{
-  // Scripted 3-2 draw; offers.toContain is a fixture self-check. Gift/combat seed: TRIFECTA_NAMI_REVIEW_SEED (0..299 STAGE search, augment-stage-helpers.ts:40-41).
+  // Scripted 3-2 draw; offers.toContain is a fixture self-check. Gift/combat seed: TRIFECTA_NAMI_REVIEW_SEED (see augment-stage-helpers.ts).
   let s=reachRound('3-2',false,TRIFECTA_NAMI_REVIEW_SEED),c=s.pendingChoice!;
   expect(c.offers).toContain('trifecta-ii');
   s=accepted(selectChoice(s,c.choiceId,c.generation,'trifecta-ii'));
