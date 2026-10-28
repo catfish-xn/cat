@@ -172,7 +172,7 @@ function acquire(id:string){
  }
  throw Error('missing seed '+id);
 }
-// Trait-tailored 3-2 cards are acquired on a fielded route (STAGE_SEEDS); it is played in cached legs, one case each,
+// Trait-tailored 3-2 cards are acquired on a fielded route (STAGE_SEEDS or PINNED_FIELDED_SEED); it is played in cached legs, one case each,
 // so each selection case below stays inside the default timeout (acquireAugment resumes the same cached route).
 const PINNED_FIELDED_SEED:Readonly<Record<string,number>>={'betrayal':52,'rocket-collection-plus':8};
 const FIELDED_SELECTIONS=['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED)].filter(id=>!offeredAt(id,'2-1')&&(STAGE_SEEDS[id]?.fielded||id in PINNED_FIELDED_SEED));

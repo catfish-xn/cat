@@ -107,6 +107,7 @@ function polishRoute(roundId:string):MatchState {
  return state;
 }
 it.each(FIELDED_LEGS.map(leg=>[polishSeed,leg] as const))('Final Polish fielded 4-2 route (seed %s): the leg to %s settles every fight',(_seed,leg)=>withB1Offers(['final-polish'],()=>{
+ expect(offeredAt('final-polish','2-1')).toBe(false);
  expect(polishRoute(leg).roundDefinitionId).toBe(leg);
 }));
 let polishState:MatchState,polishAnvils:MatchState['preparation']['units'];
@@ -118,6 +119,7 @@ it('Final Polish grants exactly two bench anvils with the source birth order',()
  }
  before=resolveM5Choices(finish(accepted(startMatchCombat(before))));
  before=accepted(nextRound(before,before.round));
+ expect(before.roundDefinitionId).toBe('4-2');
  expect(before.pendingChoice!.offers).toContain('final-polish');
  const choice=before.pendingChoice!,state=accepted(selectChoice(before,choice.choiceId,choice.generation,'final-polish')),anvils=state.preparation.units.filter(u=>isAnvil(u.definitionId)&&!before.preparation.units.some(old=>old.id===u.id));
  // Source gift birth order is support then completed; preparation is sorted by textual unit ID.
