@@ -1,4 +1,3 @@
-import { offerFor } from './augment-stage-helpers';
 import { canonicalContent } from '../src/simulation/content';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -10,15 +9,22 @@ import { historyRoster } from '../src/simulation/augment-history';
 import { AUGMENT_BATCH5_H10 } from '../src/simulation/content/augment-pool-batch5-h10';
 import { augmentCandidates } from '../src/simulation/augment-offers';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
-import { accepted, resolveM5Choices, finish } from './match-helpers';
+import { accepted, resolveM5Choices, finish, reachRound } from './match-helpers';
 import type { HistoryRoster } from '../src/simulation/augment-history-types';
+
+/** v25 batch-5 pool drift: seed 73 at 3-2 (re-searched 0..100). */
+function offerTraitTracker(): MatchState {
+ let state=reachRound('3-2',false,73);
+ expect(state.pendingChoice!.offers).toContain('trait-tracker');
+ return state;
+}
 const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 const { rewardPlan } = createRequire(import.meta.url)('./fixtures/m5/augment-rewards-oracle.cjs');
 const TARGET=['draven','gangplank','maddie','nami','steb','swain','trundle'];
 let acquired:MatchState, state:MatchState, triggered:MatchState, beforeTrigger:MatchState;
 let rewardEvents:readonly unknown[];
 beforeAll(()=>{
- const s=offerFor('trait-tracker'),c=s.pendingChoice!;expect(c.offers).toContain('trait-tracker');
+ const s=offerTraitTracker(),c=s.pendingChoice!;expect(c.offers).toContain('trait-tracker');
  acquired=state=accepted(selectChoice(s,c.choiceId,c.generation,'trait-tracker'));
 });
 function prepare(s:MatchState,allowTrigger=true):MatchState {

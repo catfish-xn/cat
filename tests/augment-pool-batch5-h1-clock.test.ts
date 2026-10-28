@@ -33,7 +33,6 @@ import { advanceAugmentPreparationTime } from '../src/simulation/augment-history
 import { rerollAugment, selectChoice, setShopLock, startMatchCombat, stepMatch, nextRound } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
-import { firstNodeSeed } from './augment-stage-helpers';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { augmentPool, shopGlitchSolo } from './fixtures/m5/oracle.g2.cjs';
 
@@ -62,12 +61,13 @@ it.skipIf(!existsSync(RESEARCH_FILE))('registers the 14.24 source and both allow
 });
 let route: MatchState;
 it('selects Shop Glitch through the real choice command', () => {
-  const seed = firstNodeSeed('shop-glitch', 101);
+  // v25 batch-5 pool drift: seed 21 (also 42/51) naturally offers shop-glitch at 2-1 with up to three slot rerolls.
+  const seed = 21;
   let s = reachRound('2-1', false, seed);
-  for (let i=0; i<3 && !s.pendingChoice!.offers.includes('shop-glitch'); i++) {
-    const c=s.pendingChoice!; s=accepted(rerollAugment(s,c.choiceId,c.generation,i));
+  for (let i = 0; i < 3 && !s.pendingChoice!.offers.includes('shop-glitch'); i++) {
+    const c = s.pendingChoice!; s = accepted(rerollAugment(s, c.choiceId, c.generation, i));
   }
-  const c=s.pendingChoice!; expect(c.offers).toContain('shop-glitch');
+  const c = s.pendingChoice!; expect(c.offers).toContain('shop-glitch');
   route=resolveM5Choices(accepted(selectChoice(s,c.choiceId,c.generation,'shop-glitch')));
   expect(route.augmentHistory).toBeDefined();
 });
