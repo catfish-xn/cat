@@ -212,6 +212,12 @@ describe('v17 epic rewards and unified consumables',()=>{
   const forgedFee=structuredClone(checkpoint),fee=forgedFee.shopHistory!.entries.find(e=>e.kind==='anomaly-reroll')!;
   Object.assign(fee,{choiceId:'round:6-7:anomaly'});
   expect(()=>restoreMatch(forgedFee)).toThrow('anomaly fee');
+  const forgedAfterReceipt=structuredClone(checkpoint),afterFee=forgedAfterReceipt.shopHistory!.entries.find(e=>e.kind==='anomaly-reroll')!;
+  const receiptIdx=forgedAfterReceipt.scheduleReceipts.findIndex(r=>r.kind==='anomaly'&&r.eventId===afterFee.choiceId&&r.round===afterFee.point.round);
+  expect(receiptIdx).toBeGreaterThanOrEqual(0);
+  expect(afterFee.point.schedulePrefix).toBe(receiptIdx);
+  Object.assign(afterFee.point,{schedulePrefix:receiptIdx+1});
+  expect(()=>restoreMatch(forgedAfterReceipt)).toThrow('anomaly fee');
   const corrupt=structuredClone(checkpoint);Object.assign(corrupt.combat!.openingState!.initialUnits[0],{hp:corrupt.combat!.openingState!.initialUnits[0].hp+1});
   expect(()=>restoreMatch(corrupt)).toThrow('neutral opening plan/consumption');
   state=battle(state).ended;

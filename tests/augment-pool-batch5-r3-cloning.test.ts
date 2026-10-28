@@ -12,9 +12,10 @@ import { r3Opening, rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs'
 import { accepted, reachRound } from './match-helpers';
 
 export function acquireCloning(): MatchState {
-  let s = reachRound('2-1', false, 18);
+  let s = reachRound('2-1', false, 12);
   const c = s.pendingChoice!;
   s = accepted(rerollAugment(s, c.choiceId, c.generation, 0));
+  s = accepted(rerollAugment(s, c.choiceId, s.pendingChoice!.generation, 1));
   expect(s.pendingChoice!.offers).toContain('cloning-facility');
   return accepted(selectChoice(s, c.choiceId, s.pendingChoice!.generation, 'cloning-facility'));
 }
