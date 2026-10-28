@@ -438,4 +438,16 @@ describe('tomb raider bot seat grants one receipt after one elimination', () => 
     expect(() => recordRoomPublication(before, { ...before, seats: before.seats.map(s => s.seatId === ownerId ? stripped : s) })).toThrow('Invalid tomb raider acquisition table');
     expect(room.state.fault).toBeNull();
   });
+
+  it('faults the room (invalid-results) when replace publication lacks the tomb acquisition table', () => {
+    expect(mine().match.seatMechanics?.receipts.filter(r => r.source === TOMB_RAIDER_SOURCE)).toHaveLength(1);
+    const before = room.state, committed = mine().match;
+    const facts = committed.augmentHistory!.facts.filter(f => !(f.kind === 'table' && f.stage === 'acquire'))
+      .map((fact, sequence) => ({ ...fact, sequence }));
+    const stripped = { ...mine(), match: { ...committed, augmentHistory: { ...committed.augmentHistory!, facts } } };
+    const holder = room as unknown as { current: RoomState; replace(next: RoomState): void };
+    holder.replace({ ...before, seats: before.seats.map(s => s.seatId === ownerId ? stripped : s) });
+    expect(room.state.phase).toBe('ended');
+    expect(room.state.fault).toEqual({ kind: 'invalid-results', detail: 'Invalid tomb raider acquisition table' });
+  });
 });
