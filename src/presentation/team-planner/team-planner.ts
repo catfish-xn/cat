@@ -18,26 +18,40 @@ let dialog: HTMLDialogElement | undefined;
 let observer: MutationObserver | undefined;
 let closePanel: (() => void) | undefined;
 let scope: HTMLElement | undefined;
+let shopRoot: HTMLElement | null;
+
+function observeShop(): void {
+  observer!.disconnect();
+  if (shopRoot) observer!.observe(shopRoot, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-unit-def'] });
+}
+
+/** Also used by the idle startup import, without opening a modal. */
+export function enableShopHighlights(): void {
+  if (state) return;
+  state = readPlanner();
+  shopRoot = document.querySelector<HTMLElement>('.shop-dock') ?? document.querySelector<HTMLElement>('#strategy-root');
+  const style = el('style', PLANNER_STYLE); document.head.append(style);
+  observer = new MutationObserver(records => {
+    if (records.some(record => shopRoot?.contains(record.target)
+      && (record.type === 'childList' || record.attributeName === 'data-unit-def'))) highlightShop(shopRoot!, state!);
+    if (dialog?.open && (Array.from(document.querySelectorAll<HTMLElement>('.choice-overlay:not([hidden])')).some(node => getComputedStyle(node).display !== 'none') || !scope?.isConnected || scope.closest('[hidden], [inert]'))) closePanel?.();
+  });
+  observeShop();
+  window.addEventListener('storage', event => { if (event.key === PLANNER_KEY || event.key === null) { state = readPlanner(); highlightShop(shopRoot ?? document, state); closePanel?.(); } });
+  highlightShop(shopRoot ?? document, state);
+}
 
 /** The opener passes only its own roster. Nothing is written to Match, server, saves or replay. */
 export function openPlanner(host: HTMLElement, readBoard?: () => readonly Unit[]): void {
   if (!host.isConnected || host.closest('[hidden], [inert]')) return;
   closePanel?.();
   scope = host;
-  if (!state) {
-    state = readPlanner();
-    const style = el('style', PLANNER_STYLE); document.head.append(style);
-    observer = new MutationObserver(() => {
-      highlightShop(document, state!);
-      if (dialog?.open && (Array.from(document.querySelectorAll<HTMLElement>('.choice-overlay:not([hidden])')).some(node => getComputedStyle(node).display !== 'none') || !scope?.isConnected || scope.closest('[hidden], [inert]'))) closePanel?.();
-    });
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'inert', 'class', 'style', 'data-unit-def'] });
-    window.addEventListener('storage', event => { if (event.key === PLANNER_KEY || event.key === null) { state = readPlanner(); highlightShop(document, state); closePanel?.(); } });
-  }
-  highlightShop(document, state);
+  enableShopHighlights();
+  observer!.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'inert', 'class', 'style', 'data-unit-def'] });
   dialog = el('dialog', '', 'team-planner'); dialog.dataset.debug = 'planner:panel'; dialog.setAttribute('aria-label', '阵容规划');
   const root = dialog, previousFocus = document.activeElement as HTMLElement | null;
   const close = () => { root.close(); root.remove(); if (dialog === root) dialog = undefined; closePanel = undefined;
+    observeShop();
     if (previousFocus?.isConnected) previousFocus.focus(); else (host.parentElement ?? host).querySelector<HTMLElement>('[data-debug="planner:open"]')?.focus();
     window.removeEventListener('keydown', key, true);
   };
@@ -48,7 +62,7 @@ export function openPlanner(host: HTMLElement, readBoard?: () => readonly Unit[]
   };
   closePanel = close;
   root.addEventListener('cancel', event => { event.preventDefault(); close(); });
-  const change = (next: PlannerState) => { state = next; writePlanner(next); draw(); highlightShop(document, next); };
+  const change = (next: PlannerState) => { state = next; writePlanner(next); draw(); highlightShop(shopRoot ?? document, next); };
   const heroButton = (id: string, action: () => void) => {
     const name = getHeroIdentity(id).name, node = button('', action); node.className = 'planner-hero'; node.dataset.hero = id;
     node.insertAdjacentHTML('afterbegin', heroPortraitHtml(id, 36, heroEmblemSvg(id, 36))); node.append(el('span', name));

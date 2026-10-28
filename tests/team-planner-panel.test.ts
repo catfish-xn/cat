@@ -94,3 +94,18 @@ test('only planner storage updates (or clear) close the panel and reload the sel
   dom.data.clear(); storage(null); expect(panel()).toBeNull(); open();
   expect(panel()!.querySelector('[data-action="plan-0"]')!.getAttribute('aria-pressed')).toBe('true');
 });
+
+test('closing the panel stops body class/style observation and keeps only shop repaint observation', () => {
+  // Initialization normally sees the persistent shop dock on the first rendered frame.
+  // This suite uses the single-player strategy root as that persistent mount.
+  const root = dom.make('section'); root.id = 'strategy-root'; dom.document.body.append(root);
+  open();
+  expect(dom.observers[0].target).toBe(dom.document.body);
+  expect(dom.observers[0].options?.attributeFilter).toEqual(expect.arrayContaining(['class', 'style']));
+  closeButton().click();
+  expect(dom.observers[0].target).toBe(root);
+  expect(dom.observers[0].options).toEqual({ childList: true, subtree: true, attributes: true, attributeFilter: ['data-unit-def'] });
+  const styles = vi.spyOn(globalThis, 'getComputedStyle');
+  dom.flush([{ type: 'attributes', attributeName: 'style', target: dom.document.body } as unknown as MutationRecord]);
+  expect(styles).not.toHaveBeenCalled();
+});

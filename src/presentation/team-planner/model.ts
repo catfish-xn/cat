@@ -3,7 +3,8 @@ import { UNIT_DEFINITIONS } from '../../simulation/units';
 import { TRAIT_DEFINITIONS } from '../../simulation/content/traits';
 import type { Unit } from '../../simulation/units';
 
-export const PLANNER_KEY = 'hex.planner.v1';
+import { PLANNER_KEY } from '../team-planner-loader';
+export { PLANNER_KEY };
 export interface PlannerState { readonly active: number; readonly plans: readonly (readonly string[])[] }
 const catalog = new Set(SHOP_CATALOG);
 const validPlan = (value: unknown): string[] => Array.isArray(value)

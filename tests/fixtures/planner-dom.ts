@@ -40,6 +40,7 @@ export function plannerDom() {
       if (selector.endsWith(':not([hidden])')) return !this.hidden && this.matches(selector.replace(':not([hidden])', ''));
       if (selector.endsWith(':not(:disabled)')) return !this.disabled && this.matches(selector.replace(':not(:disabled)', ''));
       if (selector.startsWith('.')) return this.classList.contains(selector.slice(1));
+      if (selector.startsWith('#')) return this.id === selector.slice(1);
       const attr = /^\[data-([\w-]+)="([^"]+)"\]$/.exec(selector);
       if (attr) return this.dataset[attr[1].replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())] === attr[2];
       return this.tagName === selector;
@@ -64,16 +65,17 @@ export function plannerDom() {
     }
   }
   const window = new WindowTarget();
-  const observers: { callback: () => void; options?: MutationObserverInit }[] = [];
+  const observers: { callback: (records: MutationRecord[]) => void; target?: unknown; options?: MutationObserverInit }[] = [];
   class Observer {
     record: typeof observers[number];
-    constructor(callback: () => void) { this.record = { callback }; observers.push(this.record); }
-    observe(_target: unknown, options: MutationObserverInit) { this.record.options = options; }
+    constructor(callback: (records: MutationRecord[]) => void) { this.record = { callback }; observers.push(this.record); }
+    observe(target: unknown, options: MutationObserverInit) { this.record.target = target; this.record.options = options; }
+    disconnect() { this.record.target = undefined; this.record.options = undefined; }
   }
   const data = new Map<string, string>();
   vi.stubGlobal('document', document); vi.stubGlobal('window', window); vi.stubGlobal('MutationObserver', Observer);
   vi.stubGlobal('getComputedStyle', (node: PlannerNode) => ({ display: node.style.display || 'block' }));
   vi.stubGlobal('localStorage', { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => data.set(key, value) });
   const make = (tag: string, className = '') => { const node = new PlannerNode(tag); node.className = className; return node; };
-  return { document, window, data, make, observers, flush: () => observers.forEach(observer => observer.callback()) };
+  return { document, window, data, make, observers, flush: (records: MutationRecord[] = []) => observers.filter(observer => observer.target).forEach(observer => observer.callback(records)) };
 }
