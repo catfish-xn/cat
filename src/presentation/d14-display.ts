@@ -3,13 +3,13 @@
  * view's `d14Display` online (plus each promoted unit's `effectiveStarLevel`), the same seat view of the state offline. Phase,
  * remaining settlements, star levels, sell gold and pool copies are the rules' numbers; nothing is counted here.
  */
-import { toPrivateSeatView, type PrivateSeatView } from '../simulation/private-seat-view';
+import { d14PrivateDisplay } from '../simulation/private-seat-display';
 import { d14UnitBase } from '../simulation/d14-anomalies/projection';
 import type { MatchState } from '../simulation/match-types';
 import { D14_POLICY } from '../simulation/content/d14-anomalies';
 import { displayUnitName } from '../rendering/display-names';
 
-export type D14Display = NonNullable<PrivateSeatView['d14Display']>;
+export type D14Display = NonNullable<ReturnType<typeof d14PrivateDisplay>>;
 /** Offline: the rules' own seat view of the state, built once per state object (only after a D14 anomaly is chosen). */
 const offline = new WeakMap<MatchState, D14Display | null>();
 
@@ -18,7 +18,7 @@ export function readD14Display(state: MatchState): D14Display | null {
   const sent = (state as { readonly d14Display?: D14Display }).d14Display;
   if (sent && typeof sent.unitId === 'string') return sent;
   if (!state.d14) return null;
-  if (!offline.has(state)) offline.set(state, toPrivateSeatView(state).d14Display ?? null);
+  if (!offline.has(state)) offline.set(state, d14PrivateDisplay(state) ?? null);
   return offline.get(state)!;
 }
 

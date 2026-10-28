@@ -29,4 +29,9 @@ export function createAugmentTextLoader<TextData>(importData: () => Promise<Text
   return { peekAugmentText, loadAugmentText, readAugmentText, augmentTextPlaceholder, onAugmentTextChanged };
 }
 export const { peekAugmentText, loadAugmentText, readAugmentText, augmentTextPlaceholder, onAugmentTextChanged } =
-  createAugmentTextLoader(() => import('./augment-text-data'));
+  // Keep text-only UI chunks independent of the domain. The companion projection
+  // is loaded by the same request and shares the server's synchronous implementation.
+  createAugmentTextLoader(async () => {
+    const [text, dynamic] = await Promise.all([import('./augment-text-data'), import('../simulation/augment-dynamic-values')]);
+    return { ...text, augmentDynamicValues: dynamic.augmentDynamicValues };
+  });

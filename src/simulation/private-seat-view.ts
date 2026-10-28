@@ -1,4 +1,3 @@
-import { anvilDisplay } from './content/anvils';
 import { readMasterworkOptions } from './masterwork-choice';
 import { readOpeningEncounterView, readOpeningMelProgress, readOpeningForgeProgress } from './opening-encounter';
 import { getUnitSellPrice } from './unit-stats';
@@ -12,7 +11,6 @@ import { previewUseConsumable } from './consumables';
 import type { ConsumableTarget, ConsumableFailure } from './consumable-types';
 import { freezeContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
-import { getUnitForm } from './seat-mechanics/forms';
 import { seatMechanicsView } from './seat-mechanics/state';
 import type { MechanicChoicePayload } from './seat-mechanics/types';
 import { augmentOptionViews } from './augment-offers';
@@ -20,33 +18,7 @@ import { familyReunionView } from './family-reunion';
 import { sixCostOddsBps, sixCostShopContext } from './six-cost-shop';
 import { augmentDynamicValues } from './augment-dynamic-values';
 import { readG23MechanismState } from './g2-3-view';
-
-function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
-  // G2-3 form swappers only: the form the unit would take if combat started now (seat-mechanics/forms.ts).
-  const form = getUnitForm(unit);
-  return { ...pick(unit, ['id', 'definitionId', 'team', 'starLevel']), ...(anvilDisplay(unit.definitionId)?{anvil:anvilDisplay(unit.definitionId)}:{}),
-    location: unit.location.kind === 'bench' ? pick(unit.location, ['kind', 'slot'])
-      : { kind: 'board' as const, cell: cellView(unit.location.cell) }, ...(form ? { form } : {}) };
-}
-
-function itemView(item: MatchState['items'][number]) {
-  return { ...pick(item, ['id', 'definitionId']), location: item.location.kind === 'inventory'
-    ? { kind: 'inventory' as const } : pick(item.location, ['kind', 'unitId', 'slot']) };
-}
-
-function heldUnitView(unit: MatchState['preparation']['units'][number]) {
-  // Held units keep the original Unit field set; form is a live preparation hint.
-  const {form:_form,...view}=preparationUnitView(unit);
-  return view;
-}
-
-function d14PrivateDisplay(state:MatchState){
-  const d=state.d14;if(!d)return undefined;
-  return {anomalyId:d.anomalyId,choiceId:d.choiceId,unitId:d.unitId,phase:d.phase,dueOrdinal:d.atOrdinal+D14_POLICY.numRounds,
-    remainingSettlements:Math.max(0,d.atOrdinal+D14_POLICY.numRounds-state.roundResults.length),effectiveStarLevel:d.phase==='promoted'?4:(state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel),
-    physicalStarLevel:state.preparation.units.find(u=>u.id===d.unitId)?.starLevel??d.originalUnit.starLevel,...(d.anomalyId==='ultimate-hero'?{sellGold:getUnitSellPrice({definitionId:d.originalUnit.definitionId,starLevel:3}),poolCopies:D14_POLICY.ultimateShares}:{}),
-    ...(d.held?{heldUnit:heldUnitView(d.held.unit),heldItems:d.held.items.map(itemView)}:{})};
-}
+import { preparationUnitView, itemView, d14PrivateDisplay } from './private-seat-display';
 
 /** Current-round display summary, deliberately separate from the private m8.loot authority. */
 function revealedLootView(state: MatchState) {
