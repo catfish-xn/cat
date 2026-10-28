@@ -1451,6 +1451,10 @@ export class StrategyPanel {
     });
     // TFT's odds line: one cost-coloured figure per cost; the "Lv.N 概率" label and 费 names are for the 2D panel (3D hides them).
     const odds = element('p', '', 'shop-odds'); odds.title = `Lv.${state.level} 各费用棋子出现概率`; odds.append(element('span', `Lv.${state.level} 概率 `, 'odds-label'));
+    const planner = this.button('planner:open', '阵容规划', () => {
+      import('../presentation/team-planner/team-planner').then(module => module.openPlanner(this.shopDock ?? this.root, () => this.actions.state().preparation.units))
+        .catch(() => this.actions.status('阵容规划加载失败，请重试'));
+    }); planner.className = 'shop-choice-toggle'; odds.append(planner);
     getShopOdds(state.level).forEach((value, index) => { if (index) odds.append(element('span', ' · ', 'odds-sep')); const cost = element('span', '', 'odds-cost'); cost.dataset.cost = String(index + 1);
       cost.append(element('span', `${index + 1}费 `, 'odds-name'), `${value}%`); odds.append(cost); });
     // v19: the six-cost chance per slot once the rules unlock it (the seat view's figure; nothing when the server sent none; not part of the 1–5 split).

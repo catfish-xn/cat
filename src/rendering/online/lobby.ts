@@ -36,6 +36,10 @@ export class Lobby {
     this.looksButton = this.button('online:looks', '外观 · 小小英雄', () => this.openPicker());
     this.looksButton.classList.add('lobby-looks');
     form.append(this.name, this.joinButton, this.leaveButton, this.looksButton); card.append(form);
+    const planner = this.button('planner:open', '阵容规划', () => {
+      import('../../presentation/team-planner/team-planner').then(module => module.openPlanner(planner))
+        .catch(() => { this.error.textContent = '阵容规划加载失败，请重试'; this.error.hidden = false; });
+    }); form.append(planner);
     this.count = element('p', '', 'lobby-count'); card.append(this.count);
     this.list = element('ol', '', 'lobby-queue'); this.list.setAttribute('aria-label', '队列'); card.append(this.list);
     this.error = element('p', '', 'lobby-error'); this.error.setAttribute('role', 'alert'); card.append(this.error);
