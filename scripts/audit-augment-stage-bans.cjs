@@ -112,9 +112,12 @@ function audit(options = {}) {
     if (!pool.has(apiName)) pool.set(apiName, []);
     pool.get(apiName).push({ file: path.relative(root, file), line, enabled });
   }
-  // Inspect lexical property names, including disabled inventory rows. Comments
-  // and unrelated apiName mentions cannot create fake coverage.
-  for (const fileName of fs.readdirSync(content).filter(f => /^augment-pool.*\.ts$/.test(f)).sort()) {
+  // Inspect augment inventory modules, including disabled rows. Companion
+  // *-items.ts modules define equipment (ItemDefinition), not augments; classify
+  // by module role, never by an individual apiName. Do not exclude mixed modules
+  // merely because they import ItemDefinition alongside augment definitions.
+  // Comments and unrelated apiName mentions cannot create fake coverage.
+  for (const fileName of fs.readdirSync(content).filter(f => /^augment-pool.*\.ts$/.test(f) && !/-items\.ts$/.test(f)).sort()) {
     const file = path.join(content, fileName), ts = tokens(fs.readFileSync(file, 'utf8'));
     let count = 0;
     for (let i = 0; i < ts.length; i++) {
