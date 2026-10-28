@@ -72,6 +72,10 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
       .filter(is3dModule).map(module => ({ module: normalize(module), chain: path.join(' ') })));
     expect.soft(leaks, '3D modules reachable from the 2D entry using only static imports').toEqual([]);
 
+    const staticModuleIds = [...staticPaths.keys()].flatMap(name => byName.get(name)!.moduleIds).map(normalize);
+    expect(staticModuleIds.filter(id => /\/src\/simulation\/restore-checks\//.test(id)),
+      'restore-checks must not be in entry static reachable chunks').toEqual([]);
+
     const soloChunks = chunks.filter(chunk => chunk.fileName.startsWith('assets/solo/'));
     expect(soloChunks.length, 'solo functionality must actually be emitted').toBeGreaterThan(0);
     for (const chunk of soloChunks) {
@@ -102,14 +106,13 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     }
     const gzip2d = chunks.filter(chunk => /^assets\/[^/]+\.js$/.test(chunk.fileName))
       .reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0);
-    // 用户 2026-10-28 批准的 v25 第五批临时上调，瘦身后收回 637,144
-    expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(700_000);
+    // v25 临时上限，当前实测 665,354，目标收回到 637,144
+    expect(gzip2d, 'unchanged production JS hard limit').toBeLessThan(670_000);
 
     const preloads = [...html.matchAll(/<link\b[^>]*>/gi)]
       .filter(([tag]) => attribute(tag, 'rel')?.toLowerCase().split(/\s+/).includes('modulepreload'))
       .map(([tag]) => attribute(tag, 'href')).filter((href): href is string => href !== undefined);
     expect([...preloads, ...scriptEntries].filter(href => outputPath(href).startsWith('assets/solo/')), 'HTML must not preload solo code').toEqual([]);
-    expect([...preloads, ...scriptEntries].filter(href => outputPath(href).startsWith('assets/restore/')), 'HTML must not preload restore checks').toEqual([]);
     const threeDNames = new Set(threeDChunks.map(chunk => chunk.fileName));
     expect.soft(preloads.filter(href => threeDNames.has(outputPath(href))), 'HTML must not preload 3D chunks').toEqual([]);
 
