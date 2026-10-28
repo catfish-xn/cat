@@ -54,8 +54,64 @@ function replayPrefix(origin: string, commands: ReplayEvidence['commands'], fact
   }
   return best;
 }
-function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState): void {
-  const bytes = 2 * (origin.length + canonicalContent(commands).length + canonicalContent(state).length);
+// Code units of every object/array value whose canonical text is under 2048.
+// rememberFrozen retains exactly those strings after the graph is frozen.
+function frozenTextUnits(text: string): number {
+  let total = 0; const stack: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') { i++; while (i < text.length) { if (text[i] === '\\') { i += 2; continue; } if (text[i] === '"') break; i++; } continue; }
+    if (c === '{' || c === '[') { stack.push(i); continue; }
+    if (c === '}' || c === ']') { const start = stack.pop(); if (start !== undefined) { const len = i - start + 1; if (len < 2048) total += len; } }
+  }
+  return total;
+}
+function quotedChars(text: string): number {
+  let n = 2;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    // JSON.stringify short-escapes the five controls and quote/backslash; other controls use \u00XX.
+    n += c === 34 || c === 92 || c === 8 || c === 9 || c === 10 || c === 12 || c === 13 ? 2 : c < 32 ? 6 : 1;
+  }
+  return n;
+}
+// Canonical length without building the string. Key order does not change it.
+function jsonChars(value: unknown): number {
+  const seen = new WeakSet<object>();
+  const walk = (v: unknown): number => {
+    if (v === null) return 4;
+    if (typeof v === 'string') return quotedChars(v);
+    if (typeof v === 'boolean') return v ? 4 : 5;
+    if (typeof v === 'number') return Number.isFinite(v) ? String(v).length : 0;
+    if (typeof v !== 'object') return 0;
+    if (seen.has(v)) return 0;
+    seen.add(v);
+    if (Array.isArray(v)) {
+      let n = 2;
+      for (let i = 0; i < v.length; i++) n += (i ? 1 : 0) + walk(v[i]);
+      return n;
+    }
+    const keys = Object.keys(v); let n = 2;
+    for (let i = 0; i < keys.length; i++) n += (i ? 1 : 0) + quotedChars(keys[i]) + 1 + walk((v as Record<string, unknown>)[keys[i]]);
+    return n;
+  };
+  return walk(value);
+}
+// The trace shares proof.origin and proof.commands with the state. It also
+// keeps one previous-battle roster clone that no state field points at.
+function traceRosterChars(state: MatchState): number {
+  let max = jsonChars({ units: state.preparation.units.filter(unit => unit.team === 'player'), items: state.items });
+  for (const fact of state.augmentHistory?.facts ?? []) if ('roster' in fact && fact.roster) {
+    const chars = jsonChars(fact.roster);
+    if (chars > max) max = chars;
+  }
+  return max;
+}
+function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState, stateText: string): void {
+  // UTF-16 bytes. stateText proxies the retained graph. Frozen reads then keep
+  // every short node text, and the trace keeps a roster outside that graph.
+  // Charging both can only shrink what this 8 MiB cap admits.
+  const bytes = 2 * (origin.length + canonicalContent(commands).length + stateText.length + frozenTextUnits(stateText) + traceRosterChars(state));
   if (bytes > MAX_REPLAY_BYTES) return;
   const previous = replays.findIndex(e => e.origin === origin && same(e.commands, commands));
   if (previous >= 0) replays.splice(previous, 1);
@@ -166,8 +222,9 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
       historyCheck(next !== replay, 'replay no-op'); replay = next;
     }
   }
-  historyCheck(same(replay, s), 'replayed facts/state mismatch');
-  if (cacheable) rememberReplay(origin, encoded, replay);
+  const replayText = canonicalContent(replay);
+  historyCheck(replayText === canonicalContent(s), 'replayed facts/state mismatch');
+  if (cacheable) rememberReplay(origin, encoded, replay, replayText);
   carryRestoredAugmentTrace(replay,s);
 }
 export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime']);
