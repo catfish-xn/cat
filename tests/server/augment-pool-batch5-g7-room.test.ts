@@ -9,7 +9,8 @@ import { augmentCandidates, resolveAugmentTier } from '../../src/simulation/augm
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { canonicalContent } from '../../src/simulation/content';
 import { requireAugmentFacts } from '../../src/simulation/augment-history';
-import { drainLootExplosionRewards, lootExplosionRewardPlan, validateLootExplosionRewards } from '../../src/simulation/augment-pool-batch5-g7';
+import { drainLootExplosionRewards, lootExplosionRewardPlan } from '../../src/simulation/augment-pool-batch5-g7';
+import { validateLootExplosionRewards } from '../../src/simulation/restore-checks/loot-explosion-check';
 import { lootExplosionPlan, validateLootExplosionReceipts } from '../fixtures/m5/augment-rewards-oracle.cjs';
 import type { MatchState } from '../../src/simulation/match-types';
 

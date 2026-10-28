@@ -1,4 +1,4 @@
-import { validateBatch5R6Transforms } from './augment-pool-batch5-r6';
+import { validateBatch5R6Transforms } from './restore-checks/batch5-r6-check';
 import type { MatchState } from './match-types';
 import { preflightH13Fact } from './augment-pool-batch5-h13-history';
 import type { AugmentDeath, AugmentTakedownActor, AugmentHistoryFact, HistorySeat } from './augment-history-types';

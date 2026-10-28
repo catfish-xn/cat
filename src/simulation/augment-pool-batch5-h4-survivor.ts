@@ -1,7 +1,7 @@
 import type { MatchState } from './match-types';
 import { grantMechanicGold } from './seat-mechanics/grants';
 import { AUGMENT_BATCH5_H4 } from './content/augment-pool-batch5-h4';
-const SOURCE='augment-pool-batch5-h4-survivor';
+export const SOURCE='augment-pool-batch5-h4-survivor';
 export function survivorGoldPlan(state:MatchState) {
   const a=state.augments.find(a=>a.definitionId==='survivor');
   if(!a)return [];
@@ -21,8 +21,4 @@ export function drainSurvivorGold(state:MatchState):MatchState {
   }
   return state;
 }
-export function validateSurvivorGold(state:MatchState):void {
- const plan=survivorGoldPlan(state),actual=(state.seatMechanics?.receipts??[]).filter(r=>r.source===SOURCE||r.receiptId.startsWith(`["${SOURCE}",`));
- if(actual.length!==plan.length||new Set(actual.map(r=>r.receiptId)).size!==actual.length)throw new RangeError('Invalid survivor gold authority');
- for(const r of actual){const p=plan.find(p=>p.receiptId===r.receiptId);if(!p||r.kind!=='gold'||r.source!==p.source||r.round!==p.round||r.amount!==p.amount)throw new RangeError('Invalid survivor gold authority');}
-}
+

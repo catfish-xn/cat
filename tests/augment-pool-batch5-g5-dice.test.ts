@@ -9,7 +9,8 @@ import { augmentPool, CATALOG, ROUNDS, freeRerollCredits } from './fixtures/m5/o
 import { rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs';
 import { fullBench } from './tp-helpers';
 import { recordAugmentAcquisition } from '../src/simulation/augment-history';
-import { drainBatch1Gifts, validateBatch1Gifts } from '../src/simulation/augment-pool-grants';
+import { drainBatch1Gifts } from '../src/simulation/augment-pool-grants';
+import { validateBatch1Gifts } from '../src/simulation/restore-checks/batch1-gifts-check';
 
 const require = createRequire(import.meta.url);
 const independent = require('./fixtures/m5/augment-batch5-g5-oracle.cjs');

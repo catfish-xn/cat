@@ -3,7 +3,7 @@ import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
-import { validateTombRaider } from './augment-pool-batch5-r1';
+import { validateTombRaider } from './restore-checks/tomb-raider-check';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { drainBatch1Gifts } from './augment-pool-grants';

@@ -21,7 +21,7 @@ import { batch3EntryXp, xpPurchaseAmount, xpPurchaseCost, applyLevelUpHealth, ba
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { getMultiplayerRoundByOrdinal } from '../src/simulation/multiplayer-round';
 import { writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
-import { validateBatch1Gifts } from '../src/simulation/augment-pool-grants';
+import { validateBatch1Gifts } from '../src/simulation/restore-checks/batch1-gifts-check';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { XP_TO_NEXT_LEVEL } from '../src/simulation/match-rules';
 import { grantXp } from '../src/simulation/progression';

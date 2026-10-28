@@ -6,7 +6,7 @@ import { deriveTraits } from './trait-snapshot';
 import { TRAIT_DEFINITIONS } from './content/traits';
 import { grantMechanicGold } from './seat-mechanics/grants';
 
-const SOURCE = 'augment-pool-batch5-h4';
+export const SOURCE = 'augment-pool-batch5-h4';
 /** The entry fact is captured after payment of the previous round's frozen income. */
 export function portfolioGoldPlan(state: MatchState) {
   return state.augments.filter(a => a.definitionId === 'diversified-portfolio' || a.definitionId === 'diversified-portfolio-plus').flatMap(a => {
@@ -36,8 +36,4 @@ export function drainPortfolioGold(state:MatchState):MatchState {
   }
   return state;
 }
-export function validatePortfolioGold(state:MatchState):void {
-  const plan=portfolioGoldPlan(state),actual=(state.seatMechanics?.receipts??[]).filter(r=>r.source===SOURCE||r.receiptId.startsWith(`["${SOURCE}",`));
-  if(actual.length!==plan.length||new Set(actual.map(r=>r.receiptId)).size!==actual.length) throw new RangeError('Invalid portfolio gold authority');
-  for(const r of actual){const p=plan.find(p=>p.receiptId===r.receiptId);if(!p||r.kind!=='gold'||r.source!==p.source||r.round!==p.round||r.amount!==p.amount)throw new RangeError('Invalid portfolio gold authority');}
-}
+

@@ -8,7 +8,8 @@ import { applyRoundSettlement, enableMultiplayerSettlement, ROUND_SETTLEMENT_VER
 import { deferredRoundIncome } from '../src/simulation/deferred-income';
 import { resolveRoundEconomy } from '../src/simulation/round-economy';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import { batch5S6cSettlementHealth, validateBatch5S6cGold } from '../src/simulation/augment-pool-batch5-s6c';
+import { batch5S6cSettlementHealth } from '../src/simulation/augment-pool-batch5-s6c';
+import { validateBatch5S6cGold } from '../src/simulation/restore-checks/batch5-s6c-check';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
 import { firstNodeSeed, offerFor } from './augment-stage-helpers';
 import { emptyBoard, reachRound, resolveM5Choices } from './match-helpers';

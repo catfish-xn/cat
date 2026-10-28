@@ -3,7 +3,6 @@ import { historyCheck, historySeatId, requireAugmentFacts } from './augment-hist
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { nextRandom } from './rng';
 import { grantMechanicGold, grantMechanicItem } from './seat-mechanics/grants';
-import { canonicalContent } from './content';
 import { LOOT_EXPLOSION_BASE_DROP_CHANCE, LOOT_EXPLOSION_LOOT_VALUES, LOOT_EXPLOSION_RULES } from './content/augment-pool-batch5-g7';
 
 export const LOOT_EXPLOSION_SOURCE = 'augment-pool-batch5-g7';
@@ -60,13 +59,4 @@ export function drainLootExplosionRewards(state:MatchState):MatchState {
   }
   return state;
 }
-export function validateLootExplosionRewards(state:MatchState):void {
-  const expected=lootExplosionRewardPlan(state),actual=(state.seatMechanics?.receipts??[]).filter(r=>r.source===LOOT_EXPLOSION_SOURCE || r.receiptId.startsWith(`["${LOOT_EXPLOSION_SOURCE}",`));
-  historyCheck(actual.length===expected.length && new Set(actual.map(r=>r.receiptId)).size===actual.length,'loot explosion reward count');
-  for(const receipt of actual) {
-    const p=expected.find(p=>p.receiptId===receipt.receiptId);
-    historyCheck(p && receipt.source===p.source && receipt.round===p.round && receipt.roundId===getMultiplayerRoundByOrdinal(p.round).roundId,'loot explosion reward identity');
-    historyCheck(receipt.kind===p.reward.kind && (receipt.kind==='gold' ? p.reward.kind==='gold'&&receipt.amount===p.reward.amount : receipt.kind==='item'&&p.reward.kind==='item'&&receipt.definitionId===p.reward.definitionId),'loot explosion reward value');
-    if(receipt.kind==='item')historyCheck(state.resourceProvenance.entries.some(e=>e.kind==='item-acquired' && e.itemId===receipt.itemId && canonicalContent(e.source)===canonicalContent({kind:'mechanic',receiptId:receipt.receiptId})),'loot explosion item provenance');
-  }
-}
+

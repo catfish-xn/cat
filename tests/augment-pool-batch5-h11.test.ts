@@ -15,7 +15,7 @@ import { sampleAugmentDeath } from '../src/simulation/augment-death-samples';
 import type { S13Unit } from '../src/simulation/combat-s13-state';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { G24_CHEST_POOL } from '../src/simulation/content/g2-4-chest-pool';
-import { validateCombatItemGrants } from '../src/simulation/m8/combat-item-grants';
+import { validateCombatItemGrants } from '../src/simulation/restore-checks/combat-item-grants-check';
 import { readAugmentFirstHeroDeaths } from '../src/simulation/augment-death-samples';
 
 export const grantRows = (s: MatchState) => s.combat!.units.flatMap(u => (u.combatItemGrants ?? []).map(g => ({ unitId: u.id, ...g })));

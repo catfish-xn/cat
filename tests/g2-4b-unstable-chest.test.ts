@@ -11,7 +11,7 @@ import { validateMechanisms } from '../src/simulation/m8/restore';
 import { abilityPowerCandidates, attackDamageCandidates } from '../src/simulation/m8/item-restore';
 import { mechanic, variable } from '../src/simulation/combat-s13-state';
 import { compileItemCrit, validateItemProgram } from '../src/simulation/m8/item-program';
-import { validateCombatItemGrants } from '../src/simulation/m8/combat-item-grants';
+import { validateCombatItemGrants } from '../src/simulation/restore-checks/combat-item-grants-check';
 import { grantedItemPrograms } from '../src/simulation/m8/combat-item-programs';
 import { restoreMatch, validateM5Runtime } from '../src/simulation/serialization';
 import { canonicalContent } from '../src/simulation/content';

@@ -1,6 +1,5 @@
 import type { MatchState, MatchEvent } from './match-types';
 import { findAugmentFacts, historySeatId, requireAugmentFacts } from './augment-history';
-import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { AUGMENT_BATCH5_H7 } from './content/augment-pool-batch5-h7';
 import { nextRandom } from './rng';
 import { grantMechanicGold } from './seat-mechanics/grants';
@@ -69,12 +68,4 @@ export function drainBatch5H7Gold(initial: MatchState): { state: MatchState; eve
   }
   return { state, events };
 }
-export function validateBatch5H7Gold(state: MatchState): void {
-  const expected = batch5H7GoldPlan(state);
-  const actual = (state.seatMechanics?.receipts ?? []).filter(r => r.source === BATCH5_H7_SOURCE || r.receiptId.startsWith(`["${BATCH5_H7_SOURCE}",`));
-  if (actual.length !== expected.length || new Set(actual.map(r => r.receiptId)).size !== expected.length || actual.some(r => {
-    const p = expected.find(p => p.receiptId === r.receiptId);
-    return !p || r.source !== p.source || r.kind !== 'gold' || r.amount !== p.amount || r.round !== p.round ||
-      r.roundId !== getMultiplayerRoundByOrdinal(p.round).roundId;
-  })) throw new RangeError('Invalid batch5 h7 gold authority');
-}
+

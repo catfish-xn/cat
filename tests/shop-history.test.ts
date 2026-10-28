@@ -14,7 +14,7 @@ import { buyUnit, buyXp, combineItems, createMatch, nextRound, openAnvil, reroll
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { grantMechanicGold } from '../src/simulation/seat-mechanics/grants';
 import { accepted, emptyBoard, reachRoundFielded, resolveM5Choices } from './match-helpers';
-import { validateShopHistory } from '../src/simulation/shop-history';
+import { validateShopHistory } from '../src/simulation/restore-checks/shop-history-check';
 import { SHOP_AUGMENT_KEY } from '../src/simulation/shop-augments';
 import { readSeatMechanic, writeSeatMechanic } from '../src/simulation/seat-mechanics/state';
 import { createSharedPool, initializeSharedSeat, generateSharedShop, runSharedMatchCommand, nextSharedRound, restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';

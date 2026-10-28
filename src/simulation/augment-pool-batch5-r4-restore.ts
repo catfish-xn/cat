@@ -1,7 +1,7 @@
 import type { MatchState } from './match-types';
 import type { SharedPoolState } from './shared-pool-types';
 import { validateAugmentAuthority, type AugmentHistoryAuthority } from './augment-history';
-import { validateBatch1Gifts } from './augment-pool-grants';
+import { validateBatch1Gifts } from './restore-checks/batch1-gifts-check';
 import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
 import { lootEntryId, lootOrbId } from './loot-identity';
 

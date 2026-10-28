@@ -5,7 +5,8 @@ import { AUGMENT_BATCH5_G6, CARRY_GOLEM } from '../src/simulation/content/augmen
 import { augmentCandidates } from '../src/simulation/augment-offers';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { carryGolemEffects, carryGolemStar, growCarryGolem, validateCarryGolem } from '../src/simulation/augment-pool-batch5-g6';
+import { carryGolemEffects, carryGolemStar, growCarryGolem } from '../src/simulation/augment-pool-batch5-g6';
+import { validateCarryGolem } from '../src/simulation/restore-checks/carry-golem-check';
 import { createMatch, selectChoice, startMatchCombat, stepMatch, useConsumable, combineItems, equipItem } from '../src/simulation/match';
 import { getMultiplayerRoundById } from '../src/simulation/multiplayer-round';
 import { validateContent } from '../src/simulation/validate-content';

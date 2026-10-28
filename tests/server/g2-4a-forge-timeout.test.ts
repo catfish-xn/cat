@@ -15,8 +15,9 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import { seatPushEvents, toPlayerView, toSeatPrivateView } from '../../src/server/room/projection';
 import type { MatchState } from '../../src/simulation/match-types';
 import { runSharedMatchCommand } from '../../src/simulation/shared-pool';
-import { readG23Progress, validateG23MechanicLinks } from '../../src/simulation/g2-3-state';
-import { validateAnvils } from '../../src/simulation/anvils';
+import { readG23Progress } from '../../src/simulation/g2-3-state';
+import { validateG23MechanicLinks } from '../../src/simulation/restore-checks/g23-state-check';
+import { validateAnvils } from '../../src/simulation/restore-checks/anvils-check';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/g2-3-item-registry';
 import { readChoiceExtras } from '../../src/presentation/choice-fallback';
 import { makeRoom, runUntil } from './helpers';

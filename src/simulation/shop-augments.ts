@@ -13,7 +13,6 @@ import type { CostTier } from './unit-types';
 import { AUGMENT_SHOP, shopAugmentValue, type ShopAugmentRule } from './content/augment-pool-shop';
 import { readSeatMechanic, writeSeatMechanic } from './seat-mechanics/state';
 import { grantMechanicUnit } from './seat-mechanics/grants';
-import { getMultiplayerRoundById, getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { isCombatRosterLocked } from './operation-policy';
 import { SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
 import { nextRandom } from './rng';
@@ -23,7 +22,7 @@ import { UNIT_DEFINITIONS } from './units';
  * restore re-derives them from the seed and reroll count. */
 export const SHOP_AUGMENT_KEY='shop-augments';
 export const SHOP_AUGMENT_SOURCE='augment-pool-shop';
-interface ShopAugmentRecord {
+export interface ShopAugmentRecord {
  readonly credits:number;
  /** Prismatic Ticket: shop rerolls made while owned. */
  readonly rolls?:number;
@@ -32,33 +31,30 @@ interface ShopAugmentRecord {
  /** ReinFOURcement: provenance sequence of the 4-cost purchase that was upgraded. */
  readonly reinforced?:number;
 }
-const RECORD_KEYS=['credits','rolls','rigAnchor','reinforced'];
-/** Literal counts from the 14.24 descriptions that have no source field. */
-const REINFORCED_COST=4;
 
-const owned=(state:Pick<MatchState,'augments'>,rule:ShopAugmentRule)=>state.augments.filter(a=>AUGMENT_SHOP[a.definitionId]?.rule===rule);
+/** Literal counts from the 14.24 descriptions that have no source field. */
+export const REINFORCED_COST=4;
+
+export const owned=(state:Pick<MatchState,'augments'>,rule:ShopAugmentRule)=>state.augments.filter(a=>AUGMENT_SHOP[a.definitionId]?.rule===rule);
 const record=(state:Pick<MatchState,'seatMechanics'>)=>readSeatMechanic(state,SHOP_AUGMENT_KEY) as unknown as ShopAugmentRecord|undefined;
 function write(state:MatchState,patch:Partial<ShopAugmentRecord>):MatchState {
  const next={credits:0,...record(state),...patch};
  return writeSeatMechanic(state,SHOP_AUGMENT_KEY,JSON.parse(JSON.stringify(next)));
 }
-const receiptId=(rule:ShopAugmentRule,a:OwnedAugment,n:number)=>JSON.stringify([SHOP_AUGMENT_SOURCE,rule,a.choiceId,n]);
+export const receiptId=(rule:ShopAugmentRule,a:OwnedAugment,n:number)=>JSON.stringify([SHOP_AUGMENT_SOURCE,rule,a.choiceId,n]);
 /** Seat/choice-bound draw; never advances live RNG, so retries and restore see the same word. */
 function word(state:Pick<MatchState,'seed'|'multiplayer'>,parts:readonly (string|number)[]):number {
  const namespace=JSON.stringify([SHOP_AUGMENT_SOURCE,state.multiplayer?.seatId??'solo',...parts]);
  let hash=0x811c9dc5;for(let i=0;i<namespace.length;i++)hash=Math.imul(hash^namespace.charCodeAt(i),0x01000193)>>>0;
  return nextRandom((state.seed^hash)>>>0).word;
 }
-const isStageStart=(round:number)=>getMultiplayerRoundByOrdinal(round).subround===1;
+
 
 /* ---------------- free reroll credits ---------------- */
 
-const ticketHit=(state:Pick<MatchState,'seed'|'multiplayer'>,a:OwnedAugment,roll:number)=>
+export const ticketHit=(state:Pick<MatchState,'seed'|'multiplayer'>,a:OwnedAugment,roll:number)=>
  Math.floor(word(state,['ticket',a.choiceId,roll])*10000/4294967296)<shopAugmentValue(a.definitionId,'RerollPercent')*100;
-function ticketCredits(state:Pick<MatchState,'seed'|'multiplayer'|'augments'>,rolls:number):number {
- const a=owned(state,'ticket')[0];if(!a)return 0;
- let n=0;for(let i=0;i<rolls;i++)if(ticketHit(state,a,i))n++;return n;
-}
+
 /** Every free shop reroll credit from this table: Rigged Shop+'s Rerolls on acquisition plus the recorded credits. */
 export function shopAugmentFreeRerolls(state:Pick<MatchState,'augments'|'seatMechanics'>):number {
  return owned(state,'rigged').reduce((n,a)=>n+shopAugmentValue(a.definitionId,'Rerolls'),0)+(owned(state,'ticket').length?(record(state)?.credits??0):0);
@@ -125,46 +121,7 @@ export function applyReinfourcement(before:MatchState,after:MatchState,policy?:U
  }
  return {state,events};
 }
-/* ---------------- restore ---------------- */
 
-export function validateShopAugments(state:MatchState):void {
- const fail=(why:string)=>{throw new RangeError(`Invalid shop augment authority: ${why}`);};
- const raw=state.seatMechanics?.seat[SHOP_AUGMENT_KEY] as Record<string,unknown>|undefined;
- const int=(n:unknown,min=0):n is number=>Number.isSafeInteger(n)&&(n as number)>=min;
- if(raw!==undefined){
-  if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).some(k=>!RECORD_KEYS.includes(k))||!int(raw.credits))fail('record');
- }
- const r=(raw??{credits:0}) as unknown as ShopAugmentRecord;
- const ticket=owned(state,'ticket')[0],rigged=owned(state,'rigged')[0],reinforce=owned(state,'reinfourcement')[0];
- if(owned(state,'ticket').length>1)fail('duplicate');
- if(r.rolls!==undefined&&(!ticket||!int(r.rolls,1)||r.rolls>state.shop.generation))fail('rolls');
- if(r.rigAnchor!==undefined&&(!rigged||!int(r.rigAnchor,1)||r.rigAnchor>state.shop.generation))fail('rig anchor');
- if(r.credits!==ticketCredits(state,r.rolls??0))fail('credits');
- // ReinFOURcement: the marked purchase is the first such purchase after acquisition; its two copies are receipted.
- let reinforced:string|undefined;
- if(r.reinforced!==undefined){
-  const fact=state.resourceProvenance.entries[r.reinforced as number];
-  if(!reinforce||!int(r.reinforced)||fact?.kind!=='unit-acquired'||fact.source.kind!=='shop'||UNIT_DEFINITIONS[fact.source.definitionId]?.cost!==REINFORCED_COST
-   ||getMultiplayerRoundById(fact.roundId).ordinal<reinforce.acquiredRound)fail('reinforced');
-  reinforced=(fact as {source:{definitionId:string}}).source.definitionId;
- }else if(reinforce&&state.multiplayer&&state.resourceProvenance.entries.some(e=>e.kind==='unit-acquired'&&e.source.kind==='shop'&&UNIT_DEFINITIONS[e.source.definitionId]?.cost===REINFORCED_COST&&getMultiplayerRoundById(e.roundId).ordinal>reinforce.acquiredRound))fail('missing reinforced');
- const receipts=state.seatMechanics?.receipts??[];
- for(const receipt of receipts){
-  if(receipt.source!==SHOP_AUGMENT_SOURCE&&!receipt.receiptId.startsWith(`["${SHOP_AUGMENT_SOURCE}",`))continue;
-  let parts:unknown;try{parts=JSON.parse(receipt.receiptId);}catch{fail('receipt id');}
-  const [source,rule,choiceId,n]=parts as [string,ShopAugmentRule,string,number];
-  const a=state.augments.find(a=>a.choiceId===choiceId&&AUGMENT_SHOP[a.definitionId]?.rule===rule);
-  if(receipt.source!==SHOP_AUGMENT_SOURCE||source!==SHOP_AUGMENT_SOURCE||!Array.isArray(parts)||parts.length!==4||!a||!int(n))fail('receipt');
-  const own=a!;
-  if(rule==='subscription'){if(receipt.kind!=='gold'||receipt.amount!==shopAugmentValue(own.definitionId,'GoldPerStage')||receipt.round!==n||n<=own.acquiredRound||n>state.round||!isStageStart(n))fail('subscription gold');}
-  else if(rule==='firesale'){if(receipt.kind!=='unit'||![1,2].includes(receipt.starLevel??1)||receipt.starLevel===2&&UNIT_DEFINITIONS[receipt.definitionId]?.cost>2||!SHOP_CATALOG.includes(receipt.definitionId)||receipt.round!==n||n<=own.acquiredRound||n>state.round)fail('firesale');}
-  else if(rule==='reinfourcement'){if(receipt.kind!=='unit'||(receipt.starLevel??1)!==1||n>1||receipt.definitionId!==reinforced)fail('reinfourcement');}
-  else fail('receipt rule');
- }
- for(const a of owned(state,'subscription'))for(let round=a.acquiredRound+1;round<=state.round;round++)
-  if(isStageStart(round)&&!receipts.some(x=>x.receiptId===receiptId('subscription',a,round)))fail('missing subscription gold');
- if(reinforce&&reinforced!==undefined&&[0,1].some(c=>!receipts.some(x=>x.receiptId===receiptId('reinfourcement',reinforce,c))))fail('missing reinfourcement copy');
-}
 
 /** Infinite-pool shop uses the same cadence and independent upgrade stream as shared seats. */
 export function drawSoloAugmentShop(initial:MatchState,context:SixCostShopContext,subscription=false,cause:ShopDrawCause=subscription?'subscription':'natural',before=initial,audit=true):MatchState {

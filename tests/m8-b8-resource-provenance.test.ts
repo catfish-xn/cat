@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { LootReceipt } from '../src/simulation/m8/contracts';
 import type { PersistentGrowth } from '../src/simulation/match-types';
-import {
-  appendResourceProvenance, foldResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSION,
-  type CombatGrowthDelta, type ProvenanceCombatSettlement, type ResourceFact, type ResourceProvenance,
-  type ResourceProvenanceContext,
-} from '../src/simulation/resource-provenance';
+import { appendResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSION, type CombatGrowthDelta, type ProvenanceCombatSettlement, type ResourceFact, type ResourceProvenance, type ResourceProvenanceContext } from '../src/simulation/resource-provenance';
+import { foldResourceProvenance } from '../src/simulation/restore-checks/fold-provenance';
 import type { ScheduleReceipt } from '../src/simulation/strategy-types';
 import type { UnitUpgradedEvent } from '../src/simulation/unit-types';
 import { vi } from 'vitest';
