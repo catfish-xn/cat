@@ -3,6 +3,7 @@ import { buyUnit, deployMatchUnit, selectChoice, startMatchCombat, stepMatch, ty
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { validateStatusGroups } from '../src/simulation/m8/status';
 import { accepted, reachRound } from './match-helpers';
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 
 function start(seed: number, requireBlistering = false): MatchState {
   let s = reachRound('2-1', false, seed);
@@ -40,8 +41,9 @@ function checkpoint(seed: number, requireBlistering = false): MatchState {
   throw new Error(`Seed ${seed} did not reach Powder ignite`);
 }
 
-// The v24 pool offers Blistering with a real Powder shop at seed 273.
+// The v25 pool no longer naturally offers Blistering at seed 273; Powder shop route unchanged. Script only the 2-1 draw for 273.
 it.each([16, 648, 273])('real-command ignite restores exactly and continues with identical events/RNG/receipts (seed %i)', seed => {
+  const run = () => {
   const s = checkpoint(seed, seed === 273);
   const groups = igniteGroups(s);
   const keys = groups.flatMap(g => g.contributions.filter(c => c.source.definitionId === 'powder-ability').map(c => c.key));
@@ -58,9 +60,13 @@ it.each([16, 648, 273])('real-command ignite restores exactly and continues with
     original = next.state; restored = resumed.state;
   }
   expect(restoreMatch(serializeMatch(original))).toEqual(original);
+  };
+  if (seed === 273) withB1Offers(['blistering-strikes'], run);
+  else run();
 });
 
 it('rejects every changed ignite contribution, projection and attached burn clock on both restore entry paths', () => {
+  withB1Offers(['blistering-strikes'], () => {
   const s = checkpoint(273, true);
   const saved = serializeMatch(s);
   const mutations: ((raw: any, unit: any, burn: any, wound: any) => void)[] = [
@@ -99,6 +105,7 @@ it('rejects every changed ignite contribution, projection and attached burn cloc
   }
   // Rejections must not poison independently reconstructed evidence.
   expect(restoreMatch(saved)).toEqual(s);
+  });
 });
 
 import { createMatch } from '../src/simulation/match';

@@ -3,7 +3,7 @@ import { expect, it } from 'vitest';
 import { AUGMENT_BATCH5_S6C } from '../src/simulation/content/augment-pool-batch5-s6c';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
-import { advanceMultiplayerRound, selectChoice, startMatchCombat, type MatchState } from '../src/simulation/match';
+import { advanceMultiplayerRound, selectChoice, startMatchCombat, rerollAugment, type MatchState } from '../src/simulation/match';
 import { applyRoundSettlement, enableMultiplayerSettlement, ROUND_SETTLEMENT_VERSION } from '../src/simulation/round-settlement';
 import { deferredRoundIncome } from '../src/simulation/deferred-income';
 import { resolveRoundEconomy } from '../src/simulation/round-economy';
@@ -11,7 +11,7 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { batch5S6cSettlementHealth } from '../src/simulation/augment-pool-batch5-s6c';
 import { validateBatch5S6cGold } from '../src/simulation/restore-checks/batch5-s6c-check';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
-import { firstNodeSeed, offerFor } from './augment-stage-helpers';
+import { firstNodeSeed } from './augment-stage-helpers';
 import { emptyBoard, reachRound, resolveM5Choices } from './match-helpers';
 import { augmentPool, augmentGold } from './fixtures/m5/oracle.g2.cjs';
 
@@ -77,6 +77,13 @@ it('B5-48 ignores offline opponent and lethal PvP; healing never revives',()=>{
 });
 
 const plus='tiniest-titan-plus';
+function openPlus(): MatchState {
+ // v25 batch-5 pool: seed 0 reaches 3-2; slot-0 reroll is the bounded public route to tiniest-titan-plus.
+ let state=reachRound('3-2',false,0),choice=state.pendingChoice!;
+ if(!choice.offers.includes(plus))state=accepted(rerollAugment(state,choice.choiceId,choice.generation,0));
+ expect(state.pendingChoice!.offers).toContain(plus);
+ return state;
+}
 it.skipIf(!existsSync(RESEARCH_FILE))('B5-49 preserves independent 14.24 values and descriptions',()=>{
  const row=AUGMENT_BATCH5_S6C[plus],source=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((r:any)=>r.apiName===row.apiName);
  expect(row.source.values).toEqual(source.effects);expect(row.description).toBe(source.description_zh_cn);expect(row.source.description_en_us).toBe(source.description_en_us);
@@ -90,14 +97,14 @@ it('B5-49 exact offer node, tier and mutual exclusion',()=>{
  for(const [a,b] of [[id,plus],[plus,id]])expect(augmentOfferAllowed(a,[{definitionId:b,choiceId:'held',acquiredRound:1}],{node:a===id?'2-1':'3-2',fieldedTraits:[],blocked:[]})).toBe(false);
 });
 it('B5-49 public 3-2 selection pays 15 once and offline snapshots authenticate it',()=>{
- const open=offerFor(plus),choice=open.pendingChoice!;expect(choice.offers).toContain(plus);
+ const open=openPlus(),choice=open.pendingChoice!;
  const s=accepted(selectChoice(open,choice.choiceId,choice.generation,plus));expect(s.gold-open.gold).toBe(15);expect(augmentGold(plus,'3-2')).toBe(15);trip(s);
  const finished=accepted(startMatchCombat(emptyBoard(resolveM5Choices(s))));trip(finished);reject(finished,x=>{x.gold++;});
  reject(s,x=>{x.scheduleReceipts.find((r:any)=>r.definitionId===plus).gold++;});
  const again=selectChoice(s,choice.choiceId,choice.generation,plus);expect(again.ok).toBe(false);expect(again.state).toBe(s);
 });
 it('B5-49 authentic multiplayer PvP pays recurring 2 HP and 1 gold only for survivors',()=>{
- const open=offerFor(plus),choice=open.pendingChoice!;
+ const open=openPlus(),choice=open.pendingChoice!;
  let s=resolveM5Choices(accepted(selectChoice(open,choice.choiceId,choice.generation,plus)));
  s=accepted(enableMultiplayerSettlement(s,'seat'));const r=receipt(s),settled=accepted(applyRoundSettlement(s,r));
  expect(settled.playerHp).toBe(Math.min(100,s.playerHp-r.damage+2));
