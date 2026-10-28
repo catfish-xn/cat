@@ -1,4 +1,7 @@
-// 存档恢复专用校验，供单人和联机恢复入口使用；实时对局命令不调用。
+// 存档恢复专用校验；单人和联机恢复共用，实时对局命令不引用这里。
+import { validateAugmentAuthority, type AugmentHistoryAuthority } from '../augment-history';
+import { augmentNeedsHistory } from '../augment-history-owners';
+import type { SharedPoolState } from '../shared-pool-types';
 import { AUGMENT_GIFT_SOURCE } from '../augment-gift-plan';
 import { batch1GiftPlan } from '../augment-pool-grants';
 import { isAnvil } from '../content/anvils';
@@ -66,4 +69,32 @@ export function validateBatch1GiftReceipts(state:MatchState):void {
   }
  }
  for(const gift of gifts)if(gift.kind!=='unit'&&!receipts.some(r=>r.receiptId===gift.receiptId))fail();
+}
+
+/** Read the gift owner from a trusted pool reservation/receipt, not the candidate seat's owners or receipts. */
+function rewardNeedsAugmentHistory(dropId:string):boolean {
+  try {
+    const drop:unknown=JSON.parse(dropId);
+    if(!Array.isArray(drop))return false;
+    let receiptId:unknown;
+    if(drop[0]==='mechanic')receiptId=drop[1];
+    else {
+      const orb:unknown=typeof drop[0]==='string'?JSON.parse(drop[0]):null;
+      if(!Array.isArray(orb)||orb[0]!=='orb'||orb[2]!=='mechanic')return false;
+      receiptId=orb[3];
+    }
+    const gift:unknown=typeof receiptId==='string'?JSON.parse(receiptId):null;
+    return Array.isArray(gift)&&gift[0]===AUGMENT_GIFT_SOURCE&&typeof gift[2]==='string'&&augmentNeedsHistory(gift[2]);
+  } catch { return false; }
+}
+
+/** Trusted pool evidence requires authority even if the candidate erases its gift claims. */
+export function trustedPoolGiftRequiresAuthority(pool:SharedPoolState,state:MatchState):boolean {
+ return [...pool.pending,...pool.rewards].some(r=>r.seatId===state.sharedPool!.seatId&&rewardNeedsAugmentHistory(r.dropId));
+}
+
+/** Carousel restore authenticates history before inspecting initial-gift receipts. */
+export function validateOnlineBatch1GiftAuthority(pool:SharedPoolState,state:MatchState,authority?:AugmentHistoryAuthority):void {
+ validateAugmentAuthority(state,authority,trustedPoolGiftRequiresAuthority(pool,state));
+ validateBatch1GiftReceipts(state);
 }
