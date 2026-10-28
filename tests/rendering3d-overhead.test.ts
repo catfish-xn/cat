@@ -53,4 +53,43 @@ describe('3D overhead meters and items', () => {
     expect(dispose).toHaveBeenCalled(); expect(icon.source).toBeDefined(); // the shared icon stays with its owner
     expect(overhead.object.children).toHaveLength(0);
   });
+
+  it('redraws unchanged meters when a reviewed skin arrives, preserving ratios, ticks, shield and flash', () => {
+    const { canvas, rects } = fakeCanvas(), drawImage = vi.fn();
+    Object.assign(canvas.getContext(), { drawImage });
+    vi.stubGlobal('document', { createElement: vi.fn(() => fakeCanvas().canvas).mockReturnValueOnce(canvas) });
+    let ready = false, update = () => {};
+    const unsubscribe = vi.fn(), source = {} as CanvasImageSource;
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null,
+      ui: { sprite: id => ready && id !== 'health.mana-full' ? { source, url: 'blob:test', width: 80, height: 8, dispose() {} } : undefined,
+        subscribe(listener) { update = listener; return unsubscribe; } } });
+    overhead.set('player', { hp: 300, maxHp: 600, mana: 25, maxMana: 50, shield: 60 }, undefined);
+    expect(drawImage).not.toHaveBeenCalled(); ready = true; update();
+    // HP/shield/mana take the same destination widths as their original color fills, with proportional source crops.
+    expect(drawImage.mock.calls[0]).toEqual([source, 0, 0, 128, 26]); // opaque frame backing must not cover the values
+    expect(drawImage.mock.calls[1]).toEqual([source, 0, 0, 40, 8, 2, 2, 62, 12]);
+    expect(drawImage.mock.calls[2]).toEqual([source, 0, 0, 8, 8, 64, 2, 12.4, 12]);
+    expect(drawImage.mock.calls[3]).toEqual([source, 0, 0, 40, 8, 2, 19, 62, 5]);
+    expect(rects).toContainEqual({ fill: 'rgba(9, 18, 25, 0.6)', x: 64, w: 2 });
+    overhead.flashMana(true); expect(rects).toContainEqual({ fill: '#ffffff', x: 2, w: 124 });
+    overhead.dispose(); expect(unsubscribe).toHaveBeenCalledTimes(1);
+    const calls = drawImage.mock.calls.length; update(); expect(drawImage).toHaveBeenCalledTimes(calls);
+  });
+
+  it('repaints item stack numerals on font readiness while retaining the displayed stack count', () => {
+    const labels: { text: string; font: string }[] = [];
+    vi.stubGlobal('document', { createElement: () => {
+      const { canvas } = fakeCanvas(), g = Object.assign(canvas.getContext(), { font: '',
+        fillText(text: string) { labels.push({ text, font: g.font }); } });
+      return canvas;
+    } });
+    let font = 'sans-serif', update = () => {};
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null, font: () => font,
+      ui: { sprite: () => undefined, subscribe(listener) { update = listener; return () => {}; } } });
+    overhead.set('player', undefined, [{ id: 'synthetic-stack', icon: null, stacks: 2, maxStacks: 3 }]);
+    expect(labels.at(-1)).toEqual({ text: '2', font: 'bold 30px sans-serif' });
+    font = 'Render3dBeaufort, sans-serif'; update();
+    expect(labels.at(-1)).toEqual({ text: '2', font: `bold 30px ${font}` });
+    const count = labels.length; update(); expect(labels).toHaveLength(count); overhead.dispose();
+  });
 });

@@ -22,6 +22,22 @@ function setup(overrides: Partial<TraitPropsContext> = {}) {
 }
 
 describe('3D trait props: Conqueror chest and Shimmer flask', () => {
+  it('repaints existing counter text when the UI font loads, without a new board frame or repeated glyph draws', () => {
+    const drawn: { text: string; font: string }[] = [];
+    vi.stubGlobal('document', { createElement: () => {
+      const g = { font: '', clearRect() {}, beginPath() {}, roundRect() {}, fill() {},
+        fillText(text: string) { drawn.push({ text, font: g.font }); } };
+      return { width: 0, height: 0, getContext: () => g };
+    } });
+    let font = 'sans-serif';
+    const { props } = setup({ font: () => font });
+    props.frame(frame({ conquest: conquest(5, 0), shimmer: shimmer(20) }));
+    expect(drawn).toEqual([{ text: '5/10', font: 'bold 48px sans-serif' }, { text: '20/100', font: 'bold 48px sans-serif' }]);
+    font = 'Render3dBeaufort, sans-serif'; props.update(0);
+    expect(drawn.slice(2)).toEqual([{ text: '5/10', font: `bold 48px ${font}` }, { text: '20/100', font: `bold 48px ${font}` }]);
+    props.update(0.1); expect(drawn).toHaveLength(4); expect(props.debug().bursts).toBe(0); props.dispose();
+  });
+
   it('stays hidden without counters, with the banner right of the board and the flask left, off every cell', () => {
     const { scene, props } = setup();
     const board = frame();

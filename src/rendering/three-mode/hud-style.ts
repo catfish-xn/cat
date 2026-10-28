@@ -1,3 +1,4 @@
+import type { ReadyUiSprite } from './ui-original-assets';
 /**
  * Online HUD styles that only apply with the 3D layer mounted (item column, augment pick); installed by mountRenderer3d so
  * the 2D entry does not carry them. The page-wide 3D layout stays in style.css.
@@ -56,4 +57,32 @@ export function installHudStyle(): void {
   if (typeof document === 'undefined' || typeof document.querySelector !== 'function' || !document.head || document.querySelector('style[data-owner="render3d-hud"]')) return;
   const style = document.createElement('style'); style.dataset.owner = 'render3d-hud'; style.textContent = STYLE;
   document.head.append(style);
+}
+
+const UI_SCOPE = 'body:has(.render3d-layer)';
+/** CSS selectors use existing DOM hooks; widths, values, visibility and controls stay with their current owners. */
+const HUD_TARGETS: Readonly<Record<string, string>> = {
+  'hud.panel': '.shop-dock',
+  'hud.level': '.shop-dock .hud-level',
+  'hud.gold': '.shop-dock .hud-gold',
+  'hud.gold-icon': '.shop-dock .hud-gold .hud-label',
+  'hud.xp-track': '.shop-dock .hud-xp-bar',
+  'hud.xp-fill': '.shop-dock .hud-xp-fill',
+  'hud.timer': '#online-countdown.online-countdown',
+};
+export function originalHudRules(sprites: ReadonlyMap<string, ReadyUiSprite>, fonts: ReadonlyMap<string, string>): string {
+  const rules: string[] = [];
+  for (const [id, selector] of Object.entries(HUD_TARGETS)) {
+    const sprite = sprites.get(id); if (!sprite) continue;
+    const url = `url(${JSON.stringify(sprite.url)})`;
+    const image = sprite.slice
+      ? `border-image-source:${url};border-image-slice:${sprite.slice.join(' ')} fill;border-image-width:${sprite.slice.map(v => `${v}px`).join(' ')};border-image-repeat:stretch;background:none;`
+      : `border-image:none;background:${url} center / 100% 100% no-repeat;`;
+    rules.push(`${UI_SCOPE} ${selector}{${image}border-color:transparent;border-radius:0;box-shadow:none;}`);
+    if (id === 'hud.gold-icon') rules.push(`${UI_SCOPE} ${selector}{color:transparent;} ${UI_SCOPE} ${selector}::before{content:none;}`);
+  }
+  // Override only after a face loaded. Each character outside the Latin range uses the same fallback as before.
+  if (fonts.has('body')) rules.push(`${UI_SCOPE} :is(.shop-dock,.online-countdown,#online-sidebar,#panels-root,.hover-card,.choice-overlay,.unit-panel,.render3d-layer),${UI_SCOPE} :is(button,input,select){font-family:Render3dSpiegel,system-ui,sans-serif;}`);
+  if (fonts.has('title')) rules.push(`${UI_SCOPE} :is(.hud-level,.hud-gold,.seat-hp,.countdown-round,.online-timer,h2,h3){font-family:Render3dBeaufort,system-ui,sans-serif;}`);
+  return rules.join('\n');
 }

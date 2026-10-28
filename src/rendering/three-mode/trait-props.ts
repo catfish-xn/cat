@@ -36,6 +36,7 @@ const OPEN_HOLD_SECONDS = 1.6, POP_SECONDS = 0.5, FILL_RATE = 1.6, BUBBLES = 6;
 const GOLD = '#e5b64a', SHIMMER = '#c25bff';
 
 export interface TraitPropsContext {
+  readonly font?: () => string;
   readonly scene: Scene;
   readonly camera: Camera;
   readonly effectScale: number;
@@ -96,12 +97,13 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const chest: Prop = { root: chestRoot, body: chestBody, stand: chestStand, lease: null, motion: chestMotion, mixer: null, loading: false, disposed: false };
 
   /** A count billboard outside a prop's moving body, so the total stays readable during a payout or a bob. */
-  interface CountLabel { text: string; view: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null; show(text: string): void; place(y: number): void; dispose(): void }
+  interface CountLabel { text: string; font: string; view: { canvas: HTMLCanvasElement; texture: CanvasTexture; sprite: Sprite } | null; show(text: string): void; place(y: number): void; dispose(): void }
   const countLabel = (root: Group, name: string, color: string, height: () => number): CountLabel => {
     const entry: CountLabel = {
-      text: '', view: null,
+      text: '', font: '', view: null,
       show(text) {
-        const changed = entry.text !== text;
+        const font = ctx.font?.() ?? 'sans-serif', changed = entry.text !== text || entry.font !== font;
+        entry.font = font;
         entry.text = text; // Also available in headless tests without a document/canvas.
         if (!entry.view) {
           const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
@@ -115,7 +117,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
         const draw = entry.view.canvas.getContext('2d')!;
         draw.clearRect(0, 0, 192, 80);
         draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill();
-        draw.fillStyle = color; draw.font = 'bold 48px sans-serif'; draw.textAlign = 'center'; draw.textBaseline = 'middle';
+        draw.fillStyle = color; draw.font = `bold 48px ${font}`; draw.textAlign = 'center'; draw.textBaseline = 'middle';
         draw.fillText(text, 96, 42, 174); entry.view.texture.needsUpdate = true;
         entry.view.sprite.position.y = height();
       },
@@ -255,6 +257,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
   const update = (seconds: number) => {
     clock += seconds;
     if (chestRoot.visible) {
+      chestLabel.show(chestLabel.text);
       openHold = Math.max(0, openHold - seconds);
       // Brighter toward the next chest, a slow breath once it is close; full while a chest is paying out.
       const breath = glow > 0.75 ? 0.15 * Math.sin(clock * 4) : 0, shine = openHold > 0 ? 1 : glow * 0.85 + breath;
@@ -270,6 +273,7 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
       }
     }
     if (flaskRoot.visible) {
+      flaskLabel.show(flaskLabel.text);
       fill += (fillTarget - fill) * Math.min(1, seconds * FILL_RATE);
       level.scale.y = Math.max(0.001, fill * (LIQUID_TOP - LIQUID_BOTTOM));
       liquid.emissiveIntensity = offer ? 0.9 + 0.4 * Math.sin(clock * 6) : 0.5;

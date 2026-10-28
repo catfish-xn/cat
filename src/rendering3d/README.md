@@ -1,5 +1,44 @@
 # 独立 3D 核心（D8）
 
+## v26 UI-2 可选 HUD sidecar
+
+`three-mode/ui-original-assets.ts` 在 3D 挂载后异步读取同一素材根的 `ui/manifest.json`。
+资源根继续来自 `?assets3d=<HTTP URL>` / `VITE_ASSETS3D_BASE`；不改 2D 入口或共享组件。
+有模型 preloader 时复用其 `read(path)`；UI 不在 precache 时按需读取，不额外预下载整张素材清单。
+即使模型清单缺失，独立 UI sidecar 仍可加载；没有资源根时零请求。
+
+`ui-assets.ts` 的 `readUiManifest(unknown): UiManifest` 接受 schema 1、固定来源版本，
+每项分别校验：`textures[id] = {path,bytes,sha256,width,height}`；
+`sprites[semanticId] = {texture,rect:[x,y,w,h],slice?:[top,right,bottom,left]}`。
+纹理路径相对 `ui/`，区域必须在图内，九宫格中部须非空；只消费清单明确提供的区域。
+坐标、切图、原版数据和原版字体不入库。矩形存在表示执行端已经按源定义或原图完成核验，不能用猜测坐标填清单。
+
+语义键与用途：
+
+| 键 | 用途 |
+| --- | --- |
+| `hud.panel` | 商店外框 |
+| `hud.level` / `hud.gold` / `hud.gold-icon` | 等级框、金币框及金币图标 |
+| `hud.xp-track` / `hud.xp-fill` | 经验槽及填充（宽度仍由现有 DOM 控制） |
+| `hud.timer` | 阶段计时器外框（倒计时及进度线不变） |
+| `health.frame` | 棋子头顶血/蓝条组合外框及空条底色，先于数值填充绘制 |
+| `health.hp-player` / `health.hp-enemy` | 双方 HP 填充 |
+| `health.mana` / `health.mana-full` / `health.shield` | 蓝条、满蓝、护盾填充 |
+
+字体读取提取清单中带 `sourcePath` 的 Beaufort bold/regular、Spiegel regular OTF，
+`FontFace` 从缓存字节生成的 blob 地址加载，限定 Latin Unicode 范围；中文继续使用现有系统字体。
+不需要把 `coverageVerified:false` 改成 true，也不声称英文 OTF 覆盖中文。
+选秀倒计时、装备层数及羁绊道具计数字牌在字体 ready 后按原显示数据重绘，不等待新数值。
+样式只在对应图片解码/字体加载成功后安装；缺区域、404、路径/尺寸/哈希/解码错误均按项保留现有样式。
+`OriginalUi.issues` 是诊断字符串，不作为游戏状态；读取/解码失败转为诊断而不 reject `ready`，不阻止开局。
+销毁撤销专属 style、图片 blob URL 及字体租约；字体按 FontFaceSet/根/内容哈希引用计数，迟到结果不能重装。
+
+人工验收：用 `?render=3d&assets3d=<根地址>&debug3d` 进入，等待
+`await window.__render3d.ui.ready`，读取 `window.__render3d.ui.issues`；核对字体与数字、
+等级/金币/经验/计时器、双方血蓝及护盾、施法闪烁和 300 HP 刻度。
+分别移除单张图/字体、返回 2D、重复挂卸，确认原有控件、焦点和文字仍正常。
+浏览器截图只用已配置的 codex-browser 连接；无连接变量时由执行端通过 `codex-browser exec` 新开测试。
+
 本目录只提供可选的 3D 基础模块，不接入 2D 入口、不修改战斗规则。宿主使用
 `await import('./rendering3d')` 建立异步 chunk；纯动作逻辑也可单独从
 `animation-state.ts` 导入，它没有 three、Phaser、DOM 或模拟层运行时依赖。

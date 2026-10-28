@@ -91,6 +91,8 @@ const COUNTDOWN_SIZE = 32;
 const COLOR = { me: '#7fd8cf', seat: '#e3a08f', takable: '#68ddd0', pending: '#e6bc76', hover: '#ffd782', lock: '#b4a1f5', item: '#c9d4da' } as const;
 
 export interface CarouselStageContext {
+  /** Loaded UI face stack; an unchanged countdown is repainted when it becomes ready. */
+  readonly font?: () => string;
   /** A champion's height and width cap (board units), as on the board; a legend stands half a champion. */
   readonly championHeight: number;
   readonly championWidth: number;
@@ -170,7 +172,7 @@ interface SeatView extends Body {
   /** The unit it took, trailing on the tether. */
   carry: UnitView | null;
   readonly tether: Mesh;
-  countdown: { sprite: Sprite; texture: CanvasTexture; canvas: HTMLCanvasElement; text: string } | null;
+  countdown: { sprite: Sprite; texture: CanvasTexture; canvas: HTMLCanvasElement; text: string; font: string } | null;
 }
 /** A bounded effect rebuilt while wanted, or its stand-in mesh. */
 /** `parent`: carry the effect with a moving object (a unit on the turning ring); `point` is then local to it. */
@@ -417,7 +419,8 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   /** "N" seconds over a held legend's head; no canvas (tests, a worker) draws none. */
   const showCountdown = (view: SeatView, text: string) => {
     if (!text) { dropCountdown(view); return; }
-    if (view.countdown?.text === text) return;
+    const font = ctx.font?.() ?? 'sans-serif';
+    if (view.countdown?.text === text && view.countdown.font === font) return;
     if (!view.countdown) {
       const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
       if (!canvas?.getContext('2d')) return;
@@ -427,14 +430,14 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
       sprite.name = 'render3d-carousel-countdown'; sprite.scale.setScalar(COUNTDOWN_SIZE); sprite.renderOrder = 1002;
       sprite.position.y = legendHeight + COUNTDOWN_SIZE;
       view.root.add(sprite);
-      view.countdown = { sprite, texture, canvas, text: '' };
+      view.countdown = { sprite, texture, canvas, text: '', font: '' };
     }
     const draw = view.countdown.canvas.getContext('2d')!;
     draw.clearRect(0, 0, 64, 64);
     draw.fillStyle = 'rgba(10, 16, 24, .72)'; draw.beginPath(); draw.arc(32, 32, 30, 0, Math.PI * 2); draw.fill();
-    draw.fillStyle = view.me ? COLOR.me : '#e6e0f8'; draw.font = 'bold 34px sans-serif'; draw.textAlign = 'center'; draw.textBaseline = 'middle';
+    draw.fillStyle = view.me ? COLOR.me : '#e6e0f8'; draw.font = `bold 34px ${font}`; draw.textAlign = 'center'; draw.textBaseline = 'middle';
     draw.fillText(text, 32, 34);
-    view.countdown.texture.needsUpdate = true; view.countdown.text = text;
+    view.countdown.texture.needsUpdate = true; view.countdown.text = text; view.countdown.font = font;
   };
 
   // --- effects ---------------------------------------------------------------------------------------------------
