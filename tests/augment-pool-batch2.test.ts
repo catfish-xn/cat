@@ -172,10 +172,11 @@ function acquire(id:string){
  }
  throw Error('missing seed '+id);
 }
-// Trait-tailored 3-2 cards are acquired on a fielded route (STAGE_SEEDS); it is played in cached legs, one case each,
+// Trait-tailored 3-2 cards are acquired on a fielded route (STAGE_SEEDS or PINNED_FIELDED_SEED); it is played in cached legs, one case each,
 // so each selection case below stays inside the default timeout (acquireAugment resumes the same cached route).
-const FIELDED_SELECTIONS=['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED)].filter(id=>!offeredAt(id,'2-1')&&STAGE_SEEDS[id]?.fielded);
-it.each(FIELDED_SELECTIONS.flatMap(id=>(['betrayal','rocket-collection-plus'].includes(id)?FIELDED_LEGS.slice(0,FIELDED_LEGS.indexOf('3-2')+1).map(leg=>[id==='betrayal'?52:8,leg] as const):fieldedLegCases(id)).map(([seed,leg])=>[id,seed,leg] as const)))('%s fielded route (seed %s): the leg to %s settles every fight',(_id,seed,leg)=>withB1Offers(_id==='rocket-collection-plus'?[_id]:[],()=>{
+const PINNED_FIELDED_SEED:Readonly<Record<string,number>>={'betrayal':52,'rocket-collection-plus':8};
+const FIELDED_SELECTIONS=['branching-out',...Object.keys(AUGMENT_BATCH2_ENABLED)].filter(id=>!offeredAt(id,'2-1')&&(STAGE_SEEDS[id]?.fielded||id in PINNED_FIELDED_SEED));
+it.each(FIELDED_SELECTIONS.flatMap(id=>(id in PINNED_FIELDED_SEED?FIELDED_LEGS.slice(0,FIELDED_LEGS.indexOf('3-2')+1).map(leg=>[PINNED_FIELDED_SEED[id],leg] as const):fieldedLegCases(id)).map(([seed,leg])=>[id,seed,leg] as const)))('%s fielded route (seed %s): the leg to %s settles every fight',(_id,seed,leg)=>withB1Offers(_id==='rocket-collection-plus'?[_id]:[],()=>{
  expect((_id==='rocket-collection-plus'?rocketRoute(leg):fieldedRoute(seed,leg)).roundDefinitionId).toBe(leg);
 }));
 // Watcher Growth carries all three 14.24 stage tags (S13 archive agrees): never offered, so no public selection.

@@ -1,5 +1,5 @@
 import { recordCommand, recordedEmptyRoute } from './fixtures/recorded-empty-route';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { deepStrictEqual } from 'node:assert/strict';
 import { readLootView, buyXp, deployMatchUnit, equipItem, nextRound, rerollAugment, selectChoice, sellUnit,
   startMatchCombat, stepMatch, useConsumable, type MatchState } from '../src/simulation/match';
@@ -12,7 +12,7 @@ import { readRoundEnemyProjection } from '../src/simulation/round-enemies';
 import { readG23Progress } from '../src/simulation/g2-3-state';
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
-import * as choices from '../src/simulation/choices';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { createMatch } from '../src/simulation/match';
 import { BattleHistory } from '../src/replay/history';
 import type { BattleRecord } from '../src/m6/contracts';
@@ -76,17 +76,10 @@ function matrix(name: string, build: () => MatchState | Generator<void, MatchSta
     let saved: string, legitimate: MatchState, battles: readonly BattleRecord[] | undefined, work: Generator<void, MatchState> | undefined;
     // Betrayal's scripted draw remains in place for restore's offer-history checks.
     // Eligibility and RNG advancement remain real; an offer check is a fixture self-check.
-    let sampler: ReturnType<typeof vi.spyOn> | undefined;
+    let restoreOffers: (() => void) | undefined;
     if (name.toLowerCase().startsWith('betrayal')) {
-      beforeAll(() => {
-        const generate = choices.generateChoices;
-        sampler = vi.spyOn(choices, 'generateChoices').mockImplementation((ids, rng) => {
-          const drawn = generate(ids, rng);
-          return ids.includes('betrayal') && !drawn.offers.includes('betrayal')
-            ? { ...drawn, offers: ['betrayal', ...drawn.offers.slice(1)] } : drawn;
-        });
-      });
-      afterAll(() => sampler?.mockRestore());
+      beforeAll(() => { restoreOffers = installB1Offers(['betrayal']); });
+      afterAll(() => { restoreOffers?.(); restoreOffers = undefined; });
     }
     beforeAll(() => {
       const result = build();
