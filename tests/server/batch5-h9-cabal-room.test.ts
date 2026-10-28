@@ -2,6 +2,7 @@ import {HISTORY_AUGMENT_ROOM_ROUTES} from '../augment-stage-helpers';
 import {roomOfferFor} from './augment-offer-helpers';
 import {getDeploymentCap} from '../../src/simulation/match';
 import {afterAll,beforeAll,describe,expect,it} from 'vitest';
+import { installB1Offers } from '../fixtures/b1-scripted-offers';
 import {Room,ROOM_TIMING_DEFAULTS} from '../../src/server/room/room';
 import {ManualClock} from '../../src/server/room/clock';
 import {TwoSidedBattleResolver} from '../../src/server/room/two-sided-resolver';
@@ -46,14 +47,18 @@ function fieldBlackRose(id:string,count:number):void {
  expect(new Set(current().preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&CABAL_HEROES.includes(u.definitionId)).map(u=>u.definitionId)).size).toBeGreaterThanOrEqual(count);
 }
 let acquired:MatchState,paid:MatchState,authority:AugmentHistoryAuthority,pool:SharedPoolState;
+let restoreOffers: (() => void) | undefined;
+beforeAll(() => { restoreOffers = installB1Offers(['forbidden-magic']); });
 beforeAll(()=>room.start());
 for(const round of [2,3,4,5,6,8,9,10,11])beforeAll(()=>runUntil(room,clock,s=>s.round===round&&s.phase==='preparation'));
+afterAll(() => { restoreOffers?.(); restoreOffers = undefined; });
 afterAll(()=>room.dispose());
 it('fields real shop Black Rose heroes before the tailored 3-2 offer',()=>{
  for(const seat of room.state.seats)fieldBlackRose(seat.seatId,1);
 });
 it('chooses Cabal through the room, queues three exact gifts and claims them without minting shared-pool copies',()=>{
  runUntil(room,clock,s=>s.round===12&&s.phase==='preparation');
+ // Scripted 3-2 draw (installB1Offers): toContain below is a fixture self-check; candidate pool stays real.
  roomOfferFor(room,seatId,'forbidden-magic');const c=mine().pendingChoice!;expect(c.offers).toContain('forbidden-magic');
  expect(room.handle(seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'forbidden-magic'})).toMatchObject({ok:true});
  acquired=mine();const gifts=cabalGiftPlan(acquired);expect(gifts).toHaveLength(3);

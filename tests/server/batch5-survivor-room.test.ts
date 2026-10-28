@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { installB1Offers } from '../fixtures/b1-scripted-offers';
 import { recordAugmentSettlementTable, restoreSharedOrbSnapshot } from '../../src/server-entry';
 import { recordRoomSettlementTable, tableFacts } from '../../src/server/room/augment-history';
 import { seatPushEvents, toCombatReplayFor } from '../../src/server/room/projection';
@@ -36,7 +37,9 @@ describe.each([
   let lastRevision = -1;
   let payoutPlan: RoundSettlement | undefined;
   let disconnected = false;
+  let restoreOffers: (() => void) | undefined;
   beforeAll(() => {
+    restoreOffers = installB1Offers(['survivor']);
     room.subscribe(state => {
       const seat = state.seats.find(s => s.seatId === 's7')!;
       if (seat.seatRevision === lastRevision) return;
@@ -48,6 +51,7 @@ describe.each([
     });
     room.start();
   });
+  afterAll(() => { restoreOffers?.(); restoreOffers = undefined; });
   afterAll(() => room.dispose());
   function command(seat: SeatState, value: SeatCommand) {
     const result = seat.controller === 'bot' ? room.handleBot(seat.seatId, seat.controlEpoch, value) : room.handle(seat.seatId, value);
@@ -71,6 +75,7 @@ describe.each([
         }
         if (round === 4 && !holder().match.augments.some(a => a.definitionId === 'survivor')) {
           const seat = holder(), choice = seat.match.pendingChoice!;
+          // Scripted 2-1 draw (installB1Offers): toContain below is a fixture self-check; candidate pool stays real.
           expect(choice.offers).toContain('survivor');
           command(seat, { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: 'survivor' });
           expect(holder().match.gold).toBe(seat.match.gold);

@@ -1,5 +1,4 @@
 import { roomOfferFor } from './augment-offer-helpers';
-import {HISTORY_AUGMENT_ROOM_ROUTES} from '../augment-stage-helpers';
 import {afterAll,beforeAll,describe,expect,it} from 'vitest';
 import {Room,ROOM_TIMING_DEFAULTS} from '../../src/server/room/room';
 import {ManualClock} from '../../src/server/room/clock';
@@ -13,10 +12,12 @@ import {goldenFindGoldPlan,GOLDEN_FIND_SOURCE} from '../../src/simulation/augmen
 import {getDeploymentCap} from '../../src/simulation/match';
 import {isAnvil} from '../../src/simulation/content/anvils';
 import {ITEM_DEFINITIONS} from '../../src/simulation/content/items';
+/** First seed in 0..100 whose Room reaches 4-2 and offers a-golden-find via public rerolls (batch-5 pool drift; HISTORY seed 3 no longer qualifies). */
+const GOLDEN_FIND_ROOM_SEED = 37;
 for(const streaming of [false,true])describe(`a-golden-find streaming=${streaming}`,()=>{
 const clock=new ManualClock();
 const room=new Room(Array.from({length:8},(_,i)=>({seatId:`s${i}`,name:`s${i}`,kind:'human' as const})),
- {...ROOM_TIMING_DEFAULTS,combatStreaming:streaming,preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,roomId:'h9',seed:HISTORY_AUGMENT_ROOM_ROUTES['a-golden-find'].seed,clock,resolver:new TwoSidedBattleResolver()});
+ {...ROOM_TIMING_DEFAULTS,combatStreaming:streaming,preparationMs:1000,choiceMs:500,settlementMs:200,battleTailMs:100,maxSettlementExtensions:2,roomId:'h9',seed:GOLDEN_FIND_ROOM_SEED,clock,resolver:new TwoSidedBattleResolver()});
 let anomalyTarget='unit-1';
 const mine=()=>room.state.seats[0].match;
 function deployHeroes():void{
