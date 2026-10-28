@@ -33,8 +33,6 @@ import { AUGMENT_BATCH5_S6C } from './content/augment-pool-batch5-s6c';
 import { BATCH5_S6C_SOURCE } from './augment-pool-batch5-s6c';
 import { AUGMENT_BATCH5_S8B } from './content/augment-pool-batch5-s8b';
 import { AUGMENT_BATCH5_S8C } from './content/augment-pool-batch5-s8c';
-import { validateAugmentAuthority } from './augment-history';
-import { augmentNeedsHistory } from './augment-history-owners';
 import { recordShopDraw, recordShopRelease } from './shop-history';
 import { validateShopHistory } from './restore-checks/shop-history-check';
 import type { ShopDrawCause } from './shop-history-types';
@@ -43,7 +41,7 @@ import { AUGMENT_BATCH5 } from './content/augment-pool-batch5';
 import { AUGMENT_BATCH5_H1 } from './content/augment-pool-batch5-h1';
 import { buyXpWithShopRefresh } from './match';
 import { AUGMENT_BATCH4 } from './content/augment-pool-batch4';
-import { validateBatch1Gifts } from './restore-checks/batch1-gifts-check';
+import { validateBatch1Gifts, validateOnlineBatch1GiftAuthority } from './restore-checks/batch1-gifts-check';
 import { validateAugmentOfferHistory } from './restore-checks/augment-offer-history-check';
 import { spendFreeReroll } from './free-rerolls';
 import { planRiggedShop, drawSubscriptionSlots, subscriptionAcquired, subscriptionStageStart, planFiresale, stealFiresaleUnit, recordShopReroll, starryUpgrade } from './shop-augments';
@@ -83,23 +81,6 @@ import { PoolError, requirePool, safe, sourceKey, draftPool, releaseShop, return
 export { SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST, assertSharedPoolConservation };
 export type * from './shared-pool-types';
 
-/** Read the gift owner from a trusted pool reservation/receipt, not the candidate seat's owners or receipts. */
-function rewardNeedsAugmentHistory(dropId:string):boolean {
-  try {
-    const drop:unknown=JSON.parse(dropId);
-    if(!Array.isArray(drop))return false;
-    let receiptId:unknown;
-    if(drop[0]==='mechanic')receiptId=drop[1];
-    else {
-      const orb:unknown=typeof drop[0]==='string'?JSON.parse(drop[0]):null;
-      if(!Array.isArray(orb)||orb[0]!=='orb'||orb[2]!=='mechanic')return false;
-      receiptId=orb[3];
-    }
-    const gift:unknown=typeof receiptId==='string'?JSON.parse(receiptId):null;
-    return Array.isArray(gift)&&gift[0]===AUGMENT_GIFT_SOURCE&&typeof gift[2]==='string'&&augmentNeedsHistory(gift[2]);
-  } catch { return false; }
-}
-
 /** Restore only against the matching authoritative pool snapshot; offline restoreMatch remains offline-only. */
 export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,authority?:AugmentHistoryAuthority):MatchState {
   const state=(typeof input==='string'?JSON.parse(input):structuredClone(input)) as MatchState;
@@ -108,10 +89,7 @@ export function restoreSharedOrbSnapshot(pool:SharedPoolState,input:unknown,auth
   preflightAugmentHistory(state);
   validateCarryGolem(state);
   canonicalContent(state); assertSharedPoolConservation(pool,[state]);
-  // Claimed, sold, forfeited and pending gifts leave independent server evidence.
-  // Removing the candidate's augment/history/receipt must never downgrade this trust requirement.
-  if([...pool.pending,...pool.rewards].some(r=>r.seatId===state.sharedPool!.seatId&&rewardNeedsAugmentHistory(r.dropId)))
-    validateAugmentAuthority(state,authority,true);
+  validateOnlineBatch1GiftAuthority(pool,state,authority);
   validateMultiplayerOrbLedger(state);validateConsumableState(state);validateEpicForges(state);validateAugmentOfferHistory(state);
   validateShopAugments(state);validateShopHistory(state);validateAugmentHistory(state,authority);validateLootExplosionRewards(state);validateBatch5H7Gold(state);validateTombRaider(state);validateSharedR3Combat(state);
   validateMadChemistOnlineSave(pool, state, authority);

@@ -1,10 +1,11 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { canonicalContent } from '../../src/simulation/content';
 import { requireAugmentFacts } from '../../src/simulation/augment-history';
 import { drainLootExplosionRewards } from '../../src/simulation/augment-pool-batch5-g7';
 import { validateLootExplosionRewards } from '../../src/simulation/restore-checks/loot-explosion-check';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
+import { installB1Offers } from '../fixtures/b1-scripted-offers';
 import type { MatchState } from '../../src/simulation/match-types';
 import { answerOpenChoices, claimAllOrbs, makeRoom, runUntil, runUntilClaiming } from './helpers';
 
@@ -17,25 +18,36 @@ function disguise(state: MatchState): MatchState {
 }
 
 for (const streaming of [false, true]) for (const army of ['empty', 'wiped'] as const) describe(`B5-69 review: ${streaming ? 'stream' : 'ordinary'} PvE, ${army} army`, () => {
-  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 19, combatStreaming: streaming });
-  const own = () => room.state.seats.find(s => s.seatId === 's0')!.match;
+  // Seed 65, seat s3, retains Crownguard Spirit; script only Loot Explosion's draw, keeping candidate eligibility and RNG advancement.
+  // Keep the same scope during restore, whose offer-history validator replays the draw.
+  let restoreOffers: () => void;
+  beforeEach(() => { restoreOffers = installB1Offers([ID]); });
+  afterEach(() => restoreOffers());
+  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 65, combatStreaming: streaming });
+  const own = () => room.state.seats.find(s => s.seatId === 's3')!.match;
   afterAll(() => room.dispose());
 
-  it('starts the real seed-19 room', () => { room.start(); });
+  it('starts the seed-65 room with a scripted Loot Explosion draw', () => { room.start(); });
   for (const roundId of ['1-3', '1-4', '2-1']) it(`reaches ${roundId}`, () => {
     runUntilClaiming(room, clock, s => s.roundId === roundId && (roundId === '2-4' || s.phase === 'preparation'));
   });
-  it('selects the real Loot Explosion offer with Crownguard Spirit in the same generation', () => {
+  it('selects the scripted Loot Explosion offer with Crownguard Spirit in the same generation', () => {
     const choice = own().pendingChoice!;
+    // Fixture self-check under installB1Offers, not evidence of a real-RNG Loot Explosion draw.
     expect(choice.offers).toContain(ID);
     expect(choice.offers).toContain('crownguard-spirit');
-    expect(room.handle('s0', { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: ID })).toMatchObject({ ok: true });
+    expect(room.handle('s3', { type: 'choose', choiceId: choice.choiceId, generation: choice.generation, definitionId: ID })).toMatchObject({ ok: true });
     expect(own().seatMechanics!.receipts.filter(r => r.source === SOURCE)).toHaveLength(0);
   });
 
   if (!streaming && army === 'empty') it.each(forms)('rejects orphan initial gift namespaces before claiming, via %s', form => {
     const original = own(), pool = room.state.pool;
-    expect(restoreSharedOrbSnapshot(pool, encode(original, form), room.augmentHistoryAuthority('s0'))).toEqual(original);
+    // Fail explicitly if setup ever drifts again: the forgery must retain real initial gift claims.
+    expect(original.seatMechanics!.receipts.filter(r => r.receiptId.includes(ID))).toMatchObject([
+      { source: 'augment-pool-batch1', kind: 'unit', definitionId: 'camille', resolution: 'orb' },
+      { source: 'augment-pool-batch1', kind: 'unit', definitionId: 'powder', resolution: 'orb' },
+    ]);
+    expect(restoreSharedOrbSnapshot(pool, encode(original, form), room.augmentHistoryAuthority('s3'))).toEqual(original);
     // No combat reward exists yet; both original gift receipts use the shared batch1 namespace.
     for (const rewriteSource of [false, true]) {
       const disguised = disguise(original);
@@ -47,15 +59,15 @@ for (const streaming of [false, true]) for (const army of ['empty', 'wiped'] as 
   });
 
   it('claims both original champions through public room commands', () => {
-    claimAllOrbs(room, ['s0']);
+    claimAllOrbs(room, ['s3']);
     expect(own().preparation.units.some(u => u.definitionId === 'camille')).toBe(true);
     expect(own().preparation.units.some(u => u.definitionId === 'powder')).toBe(true);
     answerOpenChoices(room);
   });
 
   if (!streaming && army === 'empty') it.each(forms)('requires authority from trusted pool gift evidence after claiming, via %s', form => {
-    const original = own(), pool = room.state.pool, authority = room.augmentHistoryAuthority('s0');
-    expect(pool.rewards.filter(r => r.seatId === 's0' && r.dropId.includes(ID))).toHaveLength(2);
+    const original = own(), pool = room.state.pool, authority = room.augmentHistoryAuthority('s3');
+    expect(pool.rewards.filter(r => r.seatId === 's3' && r.dropId.includes(ID))).toHaveLength(2);
     expect(restoreSharedOrbSnapshot(pool, encode(original, form), authority)).toEqual(original);
     for (const eraseReceipts of [false, true]) {
       const disguised = disguise(original);
@@ -73,13 +85,13 @@ for (const streaming of [false, true]) for (const army of ['empty', 'wiped'] as 
   it(`sells ${army === 'empty' ? 'the entire army' : 'every champion except one unequipped Powder'} before 2-7`, () => {
     const keep = army === 'wiped' ? own().preparation.units.find(u => u.team === 'player' && u.definitionId === 'powder')!.id : null;
     for (const unit of own().preparation.units.filter(u => u.team === 'player' && u.id !== keep))
-      expect(room.handle('s0', { type: 'sell', unitId: unit.id })).toMatchObject({ ok: true });
-    if (keep) expect(room.handle('s0', { type: 'deploy', unitId: keep, target: { kind: 'board', cell: { col: 0, row: 4 } } })).toMatchObject({ ok: true });
+      expect(room.handle('s3', { type: 'sell', unitId: unit.id })).toMatchObject({ ok: true });
+    if (keep) expect(room.handle('s3', { type: 'deploy', unitId: keep, target: { kind: 'board', cell: { col: 0, row: 4 } } })).toMatchObject({ ok: true });
     expect(own().preparation.units.filter(u => u.team === 'player')).toHaveLength(keep ? 1 : 0);
   });
   if (!streaming && army === 'empty') it.each(forms)('retains trusted gift evidence after selling both heroes, via %s', form => {
-    const original = own(), pool = room.state.pool, authority = room.augmentHistoryAuthority('s0');
-    expect(pool.rewards.filter(r => r.seatId === 's0' && r.dropId.includes(ID))).toHaveLength(2);
+    const original = own(), pool = room.state.pool, authority = room.augmentHistoryAuthority('s3');
+    expect(pool.rewards.filter(r => r.seatId === 's3' && r.dropId.includes(ID))).toHaveLength(2);
     expect(restoreSharedOrbSnapshot(pool, encode(original, form), authority)).toEqual(original);
     const bad = disguise(original);
     expect(() => restoreSharedOrbSnapshot(pool, encode(bad, form))).toThrow(/missing independent server authority/);
@@ -98,13 +110,13 @@ for (const streaming of [false, true]) for (const army of ['empty', 'wiped'] as 
       expect(rows.some(f => f.completeThroughTick === 0 && f.deaths.length === 0)).toBe(true);
     } else {
       expect(result.combatTicks).toBeGreaterThan(0);
-      expect(deaths.filter(d => d.team === 'player')).toMatchObject([{ definitionId: 'powder', ownerSeatId: 's0' }]);
+      expect(deaths.filter(d => d.team === 'player')).toMatchObject([{ definitionId: 'powder', ownerSeatId: 's3' }]);
       expect(new Set(deaths.map(d => d.eventSeq)).size).toBe(deaths.length);
     }
     expect(state.seatMechanics!.receipts.filter(r => r.source === SOURCE && r.round === 10)).toHaveLength(0);
     expect(() => validateLootExplosionRewards(state)).not.toThrow();
     expect(drainLootExplosionRewards(state)).toBe(state);
-    for (const form of forms) expect(restoreSharedOrbSnapshot(room.state.pool, encode(state, form), room.augmentHistoryAuthority('s0'))).toEqual(state);
+    for (const form of forms) expect(restoreSharedOrbSnapshot(room.state.pool, encode(state, form), room.augmentHistoryAuthority('s3'))).toEqual(state);
   });
   it('continues into 3-1 without issuing any old reward again', () => {
     const receipts = own().seatMechanics!.receipts.filter(r => r.source === SOURCE);

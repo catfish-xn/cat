@@ -1,4 +1,7 @@
-// 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
+// 存档恢复专用校验；单人和联机恢复共用，实时对局命令不引用这里。
+import { validateAugmentAuthority, type AugmentHistoryAuthority } from '../augment-history';
+import { augmentNeedsHistory } from '../augment-history-owners';
+import type { SharedPoolState } from '../shared-pool-types';
 import { AUGMENT_GIFT_SOURCE } from '../augment-gift-plan';
 import { batch1GiftPlan } from '../augment-pool-grants';
 import { isAnvil } from '../content/anvils';
@@ -47,6 +50,11 @@ export function validateBatch1Gifts(state:MatchState):void {
  validateShopAugments(state);
  validateFreeRerolls(state);
  validateBatch3Dummies(state);
+ validateBatch1GiftReceipts(state);
+}
+
+/** A batch1 namespace remains a gift claim even if its source or augment owner is rewritten. */
+function validateBatch1GiftReceipts(state:MatchState):void {
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
  for(const r of receipts)if(r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')){
@@ -59,4 +67,30 @@ export function validateBatch1Gifts(state:MatchState):void {
   }
  }
  for(const gift of gifts)if(gift.kind!=='unit'&&!receipts.some(r=>r.receiptId===gift.receiptId))fail();
+}
+
+/** Read the gift owner from a trusted pool reservation/receipt, not the candidate seat's owners or receipts. */
+function rewardNeedsAugmentHistory(dropId:string):boolean {
+  try {
+    const drop:unknown=JSON.parse(dropId);
+    if(!Array.isArray(drop))return false;
+    let receiptId:unknown;
+    if(drop[0]==='mechanic')receiptId=drop[1];
+    else {
+      const orb:unknown=typeof drop[0]==='string'?JSON.parse(drop[0]):null;
+      if(!Array.isArray(orb)||orb[0]!=='orb'||orb[2]!=='mechanic')return false;
+      receiptId=orb[3];
+    }
+    const gift:unknown=typeof receiptId==='string'?JSON.parse(receiptId):null;
+    return Array.isArray(gift)&&gift[0]===AUGMENT_GIFT_SOURCE&&typeof gift[2]==='string'&&augmentNeedsHistory(gift[2]);
+  } catch { return false; }
+}
+
+/** Both multiplayer seat restore entries must authenticate the same initial-gift claims.
+ * Claimed, sold, forfeited and pending gifts retain independent pool evidence even if
+ * the candidate erases its owner, history and receipts. Never derive authority from input. */
+export function validateOnlineBatch1GiftAuthority(pool:SharedPoolState,state:MatchState,authority?:AugmentHistoryAuthority):void {
+ const required=[...pool.pending,...pool.rewards].some(r=>r.seatId===state.sharedPool!.seatId&&rewardNeedsAugmentHistory(r.dropId));
+ validateAugmentAuthority(state,authority,required);
+ validateBatch1GiftReceipts(state);
 }

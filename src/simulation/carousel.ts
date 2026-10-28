@@ -3,6 +3,7 @@ import { applyAngerIssues } from './augment-pool-batch5-r2';
 import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
+import { validateOnlineBatch1GiftAuthority } from './restore-checks/batch1-gifts-check';
 import { validateTombRaider } from './restore-checks/tomb-raider-check';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
@@ -547,6 +548,7 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     if (!metadata || !Array.isArray(metadata.receipts) || !Array.isArray(metadata.pendingUnits) || !Array.isArray(metadata.heldCarouselUnits) || !equal(metadata.pendingUnits,metadata.heldCarouselUnits) || !Array.isArray(metadata.preparationReceipts) || metadata.openingPending!==undefined)  throw Error('invalid-match');
     // A transformation is evidence only after its independent server checkpoint is authenticated.
     validateAugmentHistory(match, authority);
+    validateOnlineBatch1GiftAuthority(carousel.pool, match, authority);
     const ids = new Set<string>();
     for (const receipt of metadata.receipts) {
         const pooled = carousel.pool.carouselReceipts.find(r => r.id === receipt.id);
