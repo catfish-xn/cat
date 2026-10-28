@@ -1,4 +1,4 @@
-// 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
+// 存档恢复专用校验，供单人和联机恢复入口使用；实时对局命令不调用。
 import { AUGMENT_GIFT_SOURCE } from '../augment-gift-plan';
 import { batch1GiftPlan } from '../augment-pool-grants';
 import { isAnvil } from '../content/anvils';
@@ -47,6 +47,13 @@ export function validateBatch1Gifts(state:MatchState):void {
  validateShopAugments(state);
  validateFreeRerolls(state);
  validateBatch3Dummies(state);
+ validateBatch1GiftReceipts(state);
+}
+
+/** Gift identity/contents alone: also required while a seat is in the carousel,
+ * before normal preparation/economy restoration can run. Inspect receipts even
+ * without an owner so deleting the augment cannot bypass this admission. */
+export function validateBatch1GiftReceipts(state:MatchState):void {
  const gifts=batch1GiftPlan(state),receipts=state.seatMechanics?.receipts??[];
  const fail=()=>{throw new RangeError('Invalid augment batch1 gift authority');};
  for(const r of receipts)if(r.source===AUGMENT_GIFT_SOURCE||r.receiptId.startsWith('["augment-pool-batch1",')){

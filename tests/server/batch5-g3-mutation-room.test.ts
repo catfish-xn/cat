@@ -120,9 +120,15 @@ it('excludes the donor from real online combat without a death, preserves its it
   expect(match(seatId).preparation.units.some(u => u.id === donorId)).toBe(true);
   expect(match(seatId).items.filter(i => i.location.kind === 'unit' && i.location.unitId === donorId)).toEqual(donorItems);
   expect(proposeSettlement(JSON.parse(JSON.stringify(battle)))).toEqual(result.proposals);
-  const forged = structuredClone(battle) as any;
+  // structuredClone(battle) preserves shared initial/terminal mechanics: mutating one would also
+  // forge the trusted replay baseline. A serialized battle has independent copies at that boundary.
+  const forged = JSON.parse(JSON.stringify(battle));
+  const initialText = canonicalContent(forged.initial);
   forged.terminal.units.find((u: any) => u.mechanics?.some((m: any) => m.mechanic === 'g23Experiment')).mechanics.find((m: any) => m.mechanic === 'g23Experiment').values.zyra++;
-  expect(() => proposeSettlement(forged)).toThrow();
+  expect(canonicalContent(forged.initial)).toBe(initialText);
+  for (const input of [forged, JSON.parse(JSON.stringify(forged)), JSON.parse(canonicalContent(forged))]) {
+    expect(() => proposeSettlement(input)).toThrow('invalid-result');
+  }
 });
 it('returns the sacrificed unit with its equipment on the next online preparation and round-trips the save', () => {
   runUntilClaiming(room, clock, s => s.roundId === '3-3' && s.phase === 'preparation');

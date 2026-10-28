@@ -4,6 +4,7 @@ import { validateMadChemistOnlineSave } from './augment-pool-batch5-r4-restore';
 import { augmentNeedsHistory } from './augment-history-owners';
 import { validateAugmentHistory } from './augment-history-restore';
 import { validateTombRaider } from './restore-checks/tomb-raider-check';
+import { validateBatch1GiftReceipts } from './restore-checks/batch1-gifts-check';
 import { appendAugmentFact, historyRoster, type AugmentHistoryAuthority } from './augment-history';
 import { drainBatch5Inventory } from './augment-pool-batch5-s3a';
 import { drainBatch1Gifts } from './augment-pool-grants';
@@ -576,6 +577,7 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown, aut
     for (const f of match.augmentHistory?.facts ?? []) if(f.kind==='carousel' && f.receipt.carouselId===carousel.id && f.releaseAtMs!==carousel.releaseAtMs[f.seatId]) throw Error('invalid-carousel');
     validateTombRaider(match);
     validateMadChemistOnlineSave(carousel.pool, match, authority);
+    validateBatch1GiftReceipts(match);
     return match;
 }
 
