@@ -16,7 +16,11 @@ interface ReplayEvidence {
   readonly origin: string;
   readonly commands: readonly { readonly name: string; readonly args: string; readonly count: number }[];
   readonly state: MatchState;
+  // Retained graph, commands and the trace roster, in UTF-16 bytes. Short node
+  // texts are not included; those are charged once per origin.
   readonly bytes: number;
+  // ASCII characters of every short node text. One byte each.
+  readonly frozenBytes: number;
 }
 // Restore-only evidence, never candidate admission or live command results.
 // Exact origin/argument encodings bind each prefix; a compressed step run may
@@ -54,15 +58,86 @@ function replayPrefix(origin: string, commands: ReplayEvidence['commands'], fact
   }
   return best;
 }
-function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState): void {
-  const bytes = 2 * (origin.length + canonicalContent(commands).length + canonicalContent(state).length);
-  if (bytes > MAX_REPLAY_BYTES) return;
+// Code units of every object/array value whose canonical text is under 2048.
+// rememberFrozen retains exactly those strings after the graph is frozen.
+function frozenTextUnits(text: string): number {
+  let total = 0; const stack: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') { i++; while (i < text.length) { if (text[i] === '\\') { i += 2; continue; } if (text[i] === '"') break; i++; } continue; }
+    if (c === '{' || c === '[') { stack.push(i); continue; }
+    if (c === '}' || c === ']') { const start = stack.pop(); if (start !== undefined) { const len = i - start + 1; if (len < 2048) total += len; } }
+  }
+  return total;
+}
+function quotedChars(text: string): number {
+  let n = 2;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    // JSON.stringify short-escapes the five controls and quote/backslash; other controls use \u00XX.
+    n += c === 34 || c === 92 || c === 8 || c === 9 || c === 10 || c === 12 || c === 13 ? 2 : c < 32 ? 6 : 1;
+  }
+  return n;
+}
+// Canonical length without building the string. Key order does not change it.
+function jsonChars(value: unknown): number {
+  const seen = new WeakSet<object>();
+  const walk = (v: unknown): number => {
+    if (v === null) return 4;
+    if (typeof v === 'string') return quotedChars(v);
+    if (typeof v === 'boolean') return v ? 4 : 5;
+    if (typeof v === 'number') return Number.isFinite(v) ? String(v).length : 0;
+    if (typeof v !== 'object') return 0;
+    if (seen.has(v)) return 0;
+    seen.add(v);
+    if (Array.isArray(v)) {
+      let n = 2;
+      for (let i = 0; i < v.length; i++) n += (i ? 1 : 0) + walk(v[i]);
+      return n;
+    }
+    const keys = Object.keys(v); let n = 2;
+    for (let i = 0; i < keys.length; i++) n += (i ? 1 : 0) + quotedChars(keys[i]) + 1 + walk((v as Record<string, unknown>)[keys[i]]);
+    return n;
+  };
+  return walk(value);
+}
+// The trace shares proof.origin and proof.commands with the state. It also
+// keeps one previous-battle roster clone that no state field points at.
+function traceRosterChars(state: MatchState): number {
+  let max = jsonChars({ units: state.preparation.units.filter(unit => unit.team === 'player'), items: state.items });
+  for (const fact of state.augmentHistory?.facts ?? []) if ('roster' in fact && fact.roster) {
+    const chars = jsonChars(fact.roster);
+    if (chars > max) max = chars;
+  }
+  return max;
+}
+// Short node texts of one origin are charged once, at the largest total. Each
+// later prefix only adds the increment, and those increments sum to that maximum.
+// The strings are ASCII, so a character is one byte, not a UTF-16 code unit.
+function chargedReplayBytes(entries: readonly Pick<ReplayEvidence, 'origin' | 'bytes' | 'frozenBytes'>[]): number {
+  let graph = 0;
+  const frozen = new Map<string, number>();
+  for (const entry of entries) {
+    graph += entry.bytes;
+    const prior = frozen.get(entry.origin) ?? 0;
+    if (entry.frozenBytes > prior) frozen.set(entry.origin, entry.frozenBytes);
+  }
+  for (const value of frozen.values()) graph += value;
+  return graph;
+}
+function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState, stateText: string): void {
+  // stateText proxies the retained graph. The trace roster sits outside it.
+  // Both are UTF-16. Short node texts are charged separately, once per origin.
+  const frozenBytes = frozenTextUnits(stateText);
+  const bytes = 2 * (origin.length + canonicalContent(commands).length + stateText.length + traceRosterChars(state));
+  if (bytes + frozenBytes > MAX_REPLAY_BYTES) return;
   const previous = replays.findIndex(e => e.origin === origin && same(e.commands, commands));
   if (previous >= 0) replays.splice(previous, 1);
-  while (replays.length >= MAX_REPLAYS || replays.reduce((n, e) => n + e.bytes, bytes) > MAX_REPLAY_BYTES) replays.shift();
+  const candidate = { origin, bytes, frozenBytes };
+  while (replays.length >= MAX_REPLAYS || chargedReplayBytes([...replays, candidate]) > MAX_REPLAY_BYTES) replays.shift();
   // No private expected state or trace payload can be mutated through a later
   // restored command's proof. Pure commands can resume these frozen prefixes.
-  replays.push({origin,commands,state:freezeContent(state),bytes});
+  replays.push({origin,commands,state:freezeContent(state),bytes,frozenBytes});
 }
 
 export function preflightAugmentHistory(s: MatchState): void {
@@ -166,8 +241,9 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
       historyCheck(next !== replay, 'replay no-op'); replay = next;
     }
   }
-  historyCheck(same(replay, s), 'replayed facts/state mismatch');
-  if (cacheable) rememberReplay(origin, encoded, replay);
+  const replayText = canonicalContent(replay);
+  historyCheck(replayText === canonicalContent(s), 'replayed facts/state mismatch');
+  if (cacheable) rememberReplay(origin, encoded, replay, replayText);
   carryRestoredAugmentTrace(replay,s);
 }
 export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime']);
