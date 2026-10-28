@@ -1,4 +1,5 @@
 import { ANGER_RAGEBLADE, isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
+import { carryGolemFixedItemIds } from './augment-pool-batch5-g6-equipment';
 import { appendResourceProvenance } from './resource-provenance';
 import type { MatchState } from './match-types';
 import type { ItemDefinition, ItemInstance, OwnedAugment } from './strategy-types';
@@ -11,8 +12,9 @@ export { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
  * authenticate this transition as part of the same resource transaction. */
 export function convertAngerIssuesItems(
   items: readonly import('./strategy-types').ItemInstance[],
+  fixedItemIds: ReadonlySet<string> = new Set(),
 ): readonly import('./strategy-types').ItemInstance[] {
-  return items.map(item => isAngerIssuesConvertibleItem(item.definitionId) && item.definitionId !== 'rageblade'
+  return items.map(item => !fixedItemIds.has(item.id) && isAngerIssuesConvertibleItem(item.definitionId) && item.definitionId !== 'rageblade'
     ? { ...item, definitionId: 'rageblade' } : item);
 }
 
@@ -20,14 +22,15 @@ export function convertAngerIssuesItems(
 export function applyAngerIssues(state:MatchState):MatchState {
   const owner=state.augments.find(a=>a.definitionId==='anger-issues');
   if(!owner)return state;
-  const converted=state.items.filter(i=>i.definitionId!=='rageblade'&&isAngerIssuesConvertibleItem(i.definitionId));
+  const fixedItemIds=carryGolemFixedItemIds(state.seatMechanics?.receipts);
+  const converted=state.items.filter(i=>!fixedItemIds.has(i.id)&&i.definitionId!=='rageblade'&&isAngerIssuesConvertibleItem(i.definitionId));
   if(!converted.length)return state;
-  return {...state,items:convertAngerIssuesItems(state.items),resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
+  return {...state,items:convertAngerIssuesItems(state.items,fixedItemIds),resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
     converted.map(i=>({kind:'anger-item-converted' as const,itemId:i.id,from:i.definitionId,to:'rageblade',receiptId:owner.choiceId})))};
 }
 
-export function r2ItemDefinition(item:ItemDefinition,augments:readonly OwnedAugment[]):ItemDefinition {
-  return isAngerIssuesConvertibleItem(item.id)&&augments.some(a=>a.definitionId==='anger-issues')?ANGER_RAGEBLADE:item;
+export function r2ItemDefinition(item:ItemDefinition,augments:readonly OwnedAugment[],fixedEquipment=false):ItemDefinition {
+  return !fixedEquipment&&isAngerIssuesConvertibleItem(item.id)&&augments.some(a=>a.definitionId==='anger-issues')?ANGER_RAGEBLADE:item;
 }
 
 export function replayAngerConversion(items:readonly ItemInstance[],fact:{itemId:string;from:string;to:string}):readonly ItemInstance[] {

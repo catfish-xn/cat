@@ -7,6 +7,7 @@ import { cabalEffects } from './augment-pool-batch5-h9-cabal';
 import { portableBinding } from './augment-pool-batch5-r2-anomaly';
 import { isAngerIssuesConvertibleItem } from './content/augment-pool-batch5-r2';
 import { r2ItemDefinition } from './augment-pool-batch5-r2';
+import { CARRY_GOLEM_ID } from './content/augment-pool-batch5-g6';
 import { mutationEquipmentProjection } from './augment-pool-batch5-g3-mutation';
 import { b5PortalEffects } from './augment-pool-batch5-g4-swarm';
 import { drainSetup } from './setup-work';
@@ -131,7 +132,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
   const moonlight=moonlightSelection(boardUnits,state.augments,state.round,state.g23?.seed??0,openingStars);
   const equipment = g22Equipment(state, enemyItems), conversions = scrapConversions(boardUnits, traits, equipment, catalog.items, { seed: state.g23?.seed ?? 0, round: state.round });
   if(state.augments.some(a=>a.definitionId==='anger-issues'))for(const item of equipment){
-    if(boardUnits.some(u=>u.id===item.unitId&&u.team==='player')&&isAngerIssuesConvertibleItem(conversions.get(item.id)??item.definitionId))conversions.set(item.id,'rageblade');
+    if(boardUnits.some(u=>u.id===item.unitId&&u.team==='player'&&u.definitionId!==CARRY_GOLEM_ID)&&isAngerIssuesConvertibleItem(conversions.get(item.id)??item.definitionId))conversions.set(item.id,'rageblade');
   }
   // G2-4b: support items act on their holder's board neighbours, so every holder's items are known before any unit compiles.
   // Same item sources the per-unit loop binds below: player items/temporary equipment, and the round's enemy items.
@@ -193,7 +194,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     if (unit.team === 'player') {
       for (const item of state.items) {
         if (item.location.kind !== 'unit' || item.location.unitId !== unit.id) continue;
-        const definition = r2ItemDefinition(p2ItemDefinition(lookup(catalog.items, conversions.get(item.id) ?? item.definitionId),state),state.augments);
+        const definition = r2ItemDefinition(p2ItemDefinition(lookup(catalog.items, conversions.get(item.id) ?? item.definitionId),state),state.augments,unit.definitionId===CARRY_GOLEM_ID);
         sources.push(...makeSourcedEffects(unit.id, 'item', definition.id, item.id, b5PortalEffects(state,definition.id,itemEffects(definition))));
         bindItem(definition, item.id);
       }
