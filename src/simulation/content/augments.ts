@@ -300,10 +300,11 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
       }
     ]
   },
+  // 14.24 archive TFT_Augment_PlaceboPlus.effects Gold=15, AttackSpeed=0.01.
   "placebo-plus": {
     "id": "placebo-plus",
     "name": "Placebo+",
-    "description": "获得时按阶段一次性获得金币：2阶段15、3阶段18、4阶段及以后22；全队获得1%攻速。",
+    "description": "获得15金币。你的弈子们获得1%攻击速度。",
     "effects": [
       {
         "kind": "attackSpeedBps",
@@ -313,9 +314,7 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
         "kind": "mechanic",
         "mechanic": "acquisitionGold",
         "values": {
-          "amount": 15,
-          "stage3Amount": 18,
-          "stage4Amount": 22
+          "amount": 15
         }
       }
     ]
@@ -473,23 +472,24 @@ export const AUGMENT_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
       }
     ]
   },
+  // 14.24 archive TFT6_Augment_Traitless2.effects HP1..4 / AS1..4; see docs/AUGMENT_14_24_ALIGNMENT.md.
   "built-different": {
     "id": "built-different",
     "name": "Built Different",
-    "description": "无任何激活羁绊的单位；B补丁stage2/3/4/5+为300/400/500/600HP和45/55/65/75%AS。",
+    "description": "你的弈子们只要不具有任何已激活的羁绊，就会获得240-530生命值和45-60%攻击速度（基于当前阶段）。",
     "effects": [
       {
         "kind": "mechanic",
         "mechanic": "builtDifferent",
         "values": {
-          "health2": 300,
-          "health3": 400,
-          "health4": 500,
-          "health5": 600,
+          "health2": 240,
+          "health3": 330,
+          "health4": 420,
+          "health5": 530,
           "speed2": 4500,
-          "speed3": 5500,
-          "speed4": 6500,
-          "speed5": 7500
+          "speed3": 5000,
+          "speed4": 5500,
+          "speed5": 6000
         }
       }
     ]

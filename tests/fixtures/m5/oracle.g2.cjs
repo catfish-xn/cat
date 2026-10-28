@@ -27,8 +27,10 @@ const AUGMENT_GOLD={'pandoras-bench':2,'max-cap':60,'mirrored-monetization':2,'t
  'one-two-five':2,'iron-assets':4,'heroic-grab-bag':9,'raining-gold':8,'raining-gold-plus':18,'big-grab-bag':2,'build-a-bud':8,
  // 14.24 archive: Scapegoat InitialGold, trainer Gold, Trade Sector Gold; XP batch Gold.
  'scapegoat':4,'wandering-trainer-i':1,'wandering-trainer-ii':6,'trade-sector':1,'shopping-spree':4,'kingslayer':1,'invested-plus':26,'invested-plus-plus':45};
-// User P 10-23: Placebo pays once by acquisition stage 8/11/15 (stage 2/3/4+); Placebo+ 15/18/22.
-const STAGED_AUGMENT_GOLD={'placebo':[8,11,15],'placebo-plus':[15,18,22]};
+// User P 10-23: ordinary Placebo keeps acquisition-stage 8/11/15 (stage 2/3/4+).
+// Placebo+ is fixed AUGMENT_GOLD=15: augments-14.24.json, TFT_Augment_PlaceboPlus.effects.Gold,
+// read-only research archive retrieved 2026-10-23; user approved 14.24 alignment 2026-10-28.
+const STAGED_AUGMENT_GOLD={'placebo':[8,11,15]};
 function augmentGold(id,roundId){const staged=STAGED_AUGMENT_GOLD[id];if(!staged)return AUGMENT_GOLD[id]??0;return staged[Math.min(2,Math.max(0,Number(roundId.split('-')[0])-2))];}
 // Independent 14.24 XP/free-reroll arithmetic; literal values from augments-14.24.json.
 function augmentStream(state,a,path){
