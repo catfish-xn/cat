@@ -187,11 +187,12 @@ export function validateShopHistory(state:MatchState):void {
   }else if(e.kind==='anomaly-reroll'){
    keys(e,['kind','point','choiceId']);
    // A selected anomaly's holder can subsequently be sold, clearing the live binding.
-   // Authenticate the fee against its scheduled choice and later selection receipt instead.
-   const scheduled=getRoundSchedule(e.point.round).some(event=>event.kind==='anomaly'&&event.id===e.choiceId);
+   // Authenticate the fee against its scheduled choice and later selection, pending choice, or online forfeit.
+   const scheduled=e.point.round<=FINAL_ROUND&&getRoundSchedule(e.point.round).some(event=>event.kind==='anomaly'&&event.id===e.choiceId);
    const selected=state.scheduleReceipts.slice(e.point.schedulePrefix).some(r=>r.kind==='anomaly'&&r.eventId===e.choiceId&&r.round===e.point.round);
    const pending=state.round===e.point.round&&state.pendingChoice?.kind==='anomaly'&&state.pendingChoice.choiceId===e.choiceId;
-   check(cursor.gold>=1&&scheduled&&(selected||pending),'anomaly fee');cursor={...cursor,gold:cursor.gold-1};
+   const forfeited=state.multiplayer?.forfeitedChoices.includes(e.choiceId);
+   check(cursor.gold>=1&&scheduled&&(selected||pending||forfeited),'anomaly fee');cursor={...cursor,gold:cursor.gold-1};
   }else if(e.kind==='lock'){
    keys(e,['kind','point','locked']);check(typeof e.locked==='boolean'&&e.locked!==Boolean(cursor.shop.locked),'lock');cursor={...cursor,shop:{...cursor.shop,locked:e.locked}};
   }else if(e.kind==='draw'){
