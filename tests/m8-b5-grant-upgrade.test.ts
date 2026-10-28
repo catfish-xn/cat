@@ -131,7 +131,8 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     [['sword', 'thiefs-gloves']], [['sword', 'rod', 'vest', 'cloak'], 3],
   ] as const) beforeAll(() => { publicInventory(definitions, true, seed); });
   it('chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling', () => {
-    const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves']);
+    // Seed 11 keeps the real double-TG purchases off the default Spoils history route.
+    const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves'], false, 11);
     const chain = publicRecursivePurchase(inventory.state), [retained, returned] = inventory.itemIds;
     // Upgrade transfers consumed holders in code-point ID order. Public purchases
     // cross unit-9, so unit-10 precedes unit-7; derive that order from their IDs.
