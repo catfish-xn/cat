@@ -1,6 +1,7 @@
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { validateMechanisms } from '../src/simulation/m8/restore';
 import { validateResistsShields } from '../src/simulation/m8/resists-shield-restore';
-import { expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it } from 'vitest';
 import { selectChoice, rerollAugment, buyUnit, startMatchCombat, nextRound, stepMatch, equipItem, deployMatchUnit, type MatchState } from '../src/simulation/match';
 import { grantMechanicItem, grantMechanicUnit } from '../src/simulation/seat-mechanics';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -10,6 +11,11 @@ import { accepted, reachRound, resolveM5Choices, battle } from './match-helpers'
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
+
+// Keep scripted draw and restore-history validation in the same scope.
+let restoreOffers: () => void;
+beforeEach(() => { restoreOffers = installB1Offers(['watcher-crest']); });
+afterEach(() => restoreOffers());
 
 const crest = 'TFT_Item_Artifact_LightshieldCrest';
 // v22: seed 5 now carries opening-reward Powder/Silco on the bench (unit-2/unit-3), so the shared
@@ -34,7 +40,7 @@ function threeHeroMatch(): MatchState {
 // (an emblem plus a bench champion, no combat mechanic of its own), else a quiet economy card, instead of the first card.
 function crestPick(seed: number): MatchState {
   const quiet = ['big-grab-bag', 'heroic-grab-bag', 'raining-gold', 'raining-gold-plus', 'iron-assets','item-grab-bag-i','team-building','rolling-for-days-i','trade-sector','what-doesnt-kill-you','spoils-of-war-i','spoils-of-war-ii','latent-forge','prizefighter','crown-guarded','not-today'];
-  const wanted = (offers: readonly string[]) => offers.find(id => quiet.includes(id)) ?? offers.find(id => id.endsWith('-crest'));
+  const wanted = (offers: readonly string[]) => (seed === 42 && offers.includes('watcher-crest') ? 'watcher-crest' : undefined) ?? offers.find(id => quiet.includes(id)) ?? offers.find(id => id.endsWith('-crest'));
   let open = reachRound('2-1', false, seed);
   // Public free rerolls (one per slot) until a wanted card shows, so later pool growth cannot strand the fixture.
   for (let slot = 0; slot < 3 && !wanted(open.pendingChoice!.offers); slot++) {
@@ -94,7 +100,8 @@ function transfer(state: any) {
 }
 it('public equipped live shield restores unchanged and continues identically', () => {
   const state = atTick(60), text = JSON.stringify(state);
-  // v24 seed 42 selects Watcher Crest (the gifted bench unit activates no trait): the live 70% resistance shield is exactly 133.
+  // Scripted Watcher Crest is a fixture self-check. Its bench gift activates no trait;
+  // the live 70% resistance shield remains exactly 133.
   expect(state.augments.map(a=>a.definitionId)).toEqual(['watcher-crest']);
   expect(active(state).layer).toMatchObject({ granted: 133, remaining: 133 });
   for (const input of [state, text]) {
@@ -246,7 +253,11 @@ it('restores crest shields after a chest grants the holder dual resists, and rej
   // Public commands only: crest is equipped at combat start; under v22 seed 78 (same Irelia +
   // Maddie board; v15 used seed 27, whose chest now rolls Bramble Vest) naturally grants
   // Gargoyle at tick 169, before the next crest pulse at tick 180.
-  let state = reachRound('2-1', true, 78);
+  // v25: publicly reroll slot 0 to Placebo; Iron Assets now grants an extra unit.
+  let open = reachRound('2-1', false, 78);
+  const c = open.pendingChoice!;
+  open = accepted(rerollAugment(open, c.choiceId, c.generation, 0));
+  let state = resolveM5Choices(open, ['placebo']);
   state = accepted(grantMechanicUnit(state, { receiptId: 'chest-crest-holder', source: 'test', definitionId: 'maddie' }));
   const players = state.preparation.units.filter(u => u.team === 'player');
   const receiver = players[0].id, chestHolder = players[1].id;

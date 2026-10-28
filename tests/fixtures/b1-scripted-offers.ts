@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import { setB1OfferCacheKey } from './b1-offer-cache-key';
 import * as choices from '../../src/simulation/choices';
 
 /** B1 behavior fixtures control only the three-card draw, never eligibility or commands.
@@ -21,7 +22,8 @@ export function installB1Offers(priorities: readonly string[]): () => void {
     if (!target || drawn.offers.includes(target)) return drawn;
     return { ...drawn, offers: [target, ...drawn.offers.slice(1)] };
   });
-  return () => sampler.mockRestore();
+  setB1OfferCacheKey(priorities);
+  return () => { sampler.mockRestore(); setB1OfferCacheKey([]); };
 }
 
 /** Runs `run` under a single installB1Offers scope; do not call from inside another withB1Offers/installB1Offers. */

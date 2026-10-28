@@ -105,9 +105,15 @@ describe('independent B8 oracle checks authentic command transitions', () => {
   },120000);
 
   it('counts a real reward candidate even when immediately consumed by its upgrade', () => {
-    const transition = timeline.find(t => t.after.roundDefinitionId==='3-7' && t.events.some(e => e.type === 'unitUpgraded'))!;
+    // v25 buys can upgrade Leona during 3-7 preparation before any loot is earned.
+    // Bind this control to the actual Tristana reward and upgrade in the same transition.
+    const transition = timeline.find(t => t.after.roundDefinitionId==='3-7'
+      && t.events.some(e => e.type === 'unitUpgraded' && e.definitionId === 'tristana')
+      && t.events.some(e => e.type === 'lootGranted' && e.receipt.payload.kind === 'unit'
+        && e.receipt.payload.definitionId === 'tristana'))!;
     expect(transition).toBeDefined();
     const receipt = transition.after.m8.loot.receipts.find(r => r.payload.kind === 'unit' && r.payload.definitionId === 'tristana')!;
+    expect(receipt).toBeDefined();
     const reward=`unit-${transition.before.nextUnitSerial}`;
     const oldCopies=transition.before.preparation.units.filter(u=>u.definitionId==='tristana'&&u.starLevel===1).map(u=>u.id).sort();
     expect(oldCopies).toHaveLength(2);

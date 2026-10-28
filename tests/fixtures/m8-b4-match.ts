@@ -1,3 +1,4 @@
+import { b1OfferCacheKey } from './b1-offer-cache-key';
 import { freezeContent } from '../../src/simulation/content/freeze';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import {
@@ -13,9 +14,10 @@ function accepted(result: MatchCommandResult): MatchState {
 // Independent v17 seed 206 selects Irelia and drops Lux as unit-3; all ingredients use real drops/supplies.
 // Baseline random rewards genuinely draw Maddie and Lux; no roster or raw state is patched.
 import { publicEquipmentPreparation as acquire, advancePublicEquipmentPreparation } from './b8-public-equipment';
-// Preserve seed206's independent loot/holder vector. The v24 rerolls take
-// Crimson Pact; its Chem-Baron holder stays benched in these equipment combats.
-const EQUIPMENT_ROUTE={seed:206,earliestRound:8,augmentPriorities:['mentorship-ii','inspiring-epitaph','clockwork-accelerator'],rerollForAugment:true};
+// Preserve seed206's independent loot/holder vector. Name Crimson Pact first
+// so the scripted B8 control selects its original card; other routes retain
+// their previous fallback priorities. Its Chem-Baron holder stays benched.
+const EQUIPMENT_ROUTE={seed:206,earliestRound:8,augmentPriorities:['crimson-pact','mentorship-ii','inspiring-epitaph','clockwork-accelerator'],rerollForAugment:true};
 // Keep the original component births; neither chosen card grants items or changes an isolated holder.
 const DOUBLE_BLOODTHIRSTER_ROUTE={ seed: 76672, earliestRound:15, augmentPriorities: ['pumping-up-iii', 'bronze-for-life-ii'], rerollForAugment: true };
 const equipmentPreparation=(components:readonly string[])=>acquire(components,EQUIPMENT_ROUTE);
@@ -47,7 +49,7 @@ const compiledItems = new Map<string, MatchState>();
  */
 export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): MatchState {
   const requested = typeof id === 'string' ? [id] : [...id];
-  const key = JSON.stringify([requested, unitId]), cached = compiledItems.get(key);
+  const key = JSON.stringify([requested, unitId, b1OfferCacheKey()]), cached = compiledItems.get(key);
   if (cached) {
     const copy = structuredClone(cached);
     freezeContent(copy.m8); freezeContent(copy.resourceProvenance);

@@ -181,10 +181,11 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
   requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
   mechanicCheck(() => validateG23RewardSources(state), 'G23 reward authority');
-  mechanicCheck(() => validateCarryGolem(state), 'carry golem authority');
   let teamSizeBonus = 0;
   try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
   const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial, teamSizeBonus }, enemyProjection.units, inputValidation);
+  // Validate asset containers before mechanic validators traverse their unit arrays.
+  mechanicCheck(() => validateCarryGolem(state), 'carry golem authority');
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
   requireValue(same(state.m8.round, roundDefinition), 'm8 round identity');
   requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');

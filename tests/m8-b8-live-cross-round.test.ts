@@ -1,6 +1,8 @@
+import { resolveM5Choices } from './match-helpers';
+import { installB1Offers, withB1Offers } from './fixtures/b1-scripted-offers';
 import ragebladeRoute from '../scripts/v24-online-rules-rageblade-route.cjs';
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import type { MatchEvent, MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -42,13 +44,18 @@ const lootItem = (state: MatchState, definitionId: string) => state.m8.loot.rece
 /* T13 seed 14349: independent literal-table oracle gives Amumu opening, baseline random Irelia/Lux, rod,
  * gloves and bow. Cross-round components are random earned drops, not PvE picks. */
 const choiceViews: { roundId: string; kind: string; choiceId: string; view: ReturnType<typeof api.readLootView> }[] = [];
-const openingState = createOpening();
+let openingState: MatchState;
 function createOpening(): MatchState {
   const current=ragebladeRoute.prefix(api,(before:MatchState,_after:MatchState,_pick:string)=>{const choice=before.pendingChoice!;choiceViews.push({roundId:before.roundDefinitionId,kind:choice.kind,choiceId:choice.choiceId,view:api.readLootView(before)});},['superstars-ii']);
   return current;
 }
 
-describe('B8 loot carried across rounds: combine, equip, fight and sell', () => {
+describe('B8 loot carried across rounds: combine, equip, fight and sell', () => withB1Offers(['superstars-ii'], () => {
+  // Script only draws, including during restore; equality below is a fixture self-check.
+  let restoreOffers: () => void;
+  beforeEach(() => { restoreOffers = installB1Offers(['superstars-ii']); });
+  afterEach(() => restoreOffers());
+  openingState = createOpening();
   const opening = openingState;
   it('arrives at 2-1 with the frozen opening rewards and only current-round loot in the view', () => {
     expect([opening.level,opening.xp]).toEqual([5,0]);
@@ -75,7 +82,8 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
   const fielded = accepted(api.deployMatchUnit(equipped, lux.id, { kind: 'board', cell: { col: 3, row: 7 } }));
   const battle = fight(fielded);
   const nextPreparation = accepted(api.nextRound(battle.state, battle.state.round));
-  const salePreparation=nextPreparation.phase==='choice'?accepted(api.selectChoice(nextPreparation,nextPreparation.pendingChoice!.choiceId,nextPreparation.pendingChoice!.generation,nextPreparation.pendingChoice!.offers[0])):nextPreparation;
+  // A v25 augment can open a follow-up forge; resolve every real choice before selling.
+  const salePreparation = resolveM5Choices(nextPreparation);
   const sold = api.sellUnit(salePreparation, lux.id);
 
   it('names only real loot picks as pending-choice; the 2-1 augment and 2-4 supply picks are not', () => {
@@ -130,4 +138,4 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
     // A consumed loot component cannot reappear in inventory.
     reject(after, 'Invalid B8 Match: current resource fold', raw => { raw.items.push({ id: bow.grantedItemIds[0], definitionId: 'bow', location: { kind: 'inventory' } }); });
   });
-});
+}));
