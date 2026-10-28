@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { H12_MAX_CAP_SEED } from './augment-stage-helpers';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { AUGMENT_BATCH5_H12 } from '../src/simulation/content/augment-pool-batch5-h12';
 import { augmentCandidates, augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { AUGMENT_TIERS } from '../src/simulation/content/augment-policy';
@@ -39,6 +40,10 @@ function smallEmptyBoard(state:MatchState):MatchState {
 }
 describe('B5-84 real solo trajectory',()=>{
  let prior:MatchState,state:MatchState,open:MatchState,chosen:MatchState,capped:MatchState;
+ let restoreOffers:()=>void;
+ beforeAll(()=>{restoreOffers=installB1Offers(['max-cap']);});
+ afterAll(()=>restoreOffers());
+ // The target is injected only into its real eligible 4-2 pool; offer containment below is fixture self-checking, not an RNG claim.
  beforeAll(()=>{state=createMatch(H12_MAX_CAP_SEED);});
  // Bounded route, split at natural checkpoints; do not raise any timeout.
  for(const target of ['2-1','2-4','3-1','3-2','3-5','4-1','4-2'])beforeAll(()=>{

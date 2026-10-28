@@ -1,4 +1,5 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { installB1Offers } from '../fixtures/b1-scripted-offers';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { makeRoom, runUntilClaiming } from './helpers';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
@@ -9,9 +10,11 @@ import { compileBattle } from '../../src/simulation/two-sided-battle';
 import { validateScoreboardCombat } from '../fixtures/m5/oracle.g2.cjs';
 
 describe('scoreboard real room',()=>{
- // First integrated-pool seed offering Scoreboard to s0 within three rerolls.
+ // Script only the eligible three-card draw; all room commands, rank and growth checks stay real.
  const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:49});let seatId='';
- afterAll(()=>room.dispose());
+ let restoreOffers:()=>void;
+ beforeAll(()=>{restoreOffers=installB1Offers(['scoreboard-scrapper']);});
+ afterAll(()=>{room.dispose();restoreOffers();});
  for(const round of ['1-2','1-3','1-4','2-1']) it(`reaches ${round} through the room`,()=>{
   if(round==='1-2')room.start();
   expect(runUntilClaiming(room,clock,s=>s.roundId===round&&s.phase==='preparation',5000).roundId).toBe(round);
@@ -22,7 +25,7 @@ describe('scoreboard real room',()=>{
    expect(room.handle(id,{type:'rerollAugment',choiceId:c.choiceId,generation:c.generation,optionIndex:slot})).toMatchObject({ok:true});
   }
   const seat=room.state.seats.find(s=>s.match.pendingChoice?.offers.includes('scoreboard-scrapper'));
-  expect(seat).toBeDefined();if(!seat)throw new Error('no offer');seatId=seat.seatId;
+  expect(seat,'scoreboard-scrapper at 2-1 (scripted eligible draw)').toBeDefined();if(!seat)throw new Error('no offer');seatId=seat.seatId;
   const c=seat.match.pendingChoice!;expect(room.handle(seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'scoreboard-scrapper'})).toMatchObject({ok:true});
  });
  it('enters the following round with the authenticated rank',()=>{

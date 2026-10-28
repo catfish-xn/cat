@@ -8,8 +8,9 @@ import { restoreCarouselSeat } from '../src/simulation/carousel';
 import { requireAugmentFacts } from '../src/simulation/augment-history';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 
+// Integrated-pool public routes: Salvage Bin+ at seed 11, Pandora III at seed 6; no runtime seed scan.
 for (const [id, seed, at, supply] of [
-  ['salvage-bin-plus', 4, 12, 14], ['artifactory', 0, 12, 14], ['pandoras-items-iii', 76, 4, 7],
+  ['salvage-bin-plus', 11, 12, 14], ['artifactory', 0, 12, 14], ['pandoras-items-iii', 6, 4, 7],
 ] as const) describe(`${id} with the production carousel binding`, () => {
   const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed, carousel: CAROUSEL_RULES_BINDING });
   let seatId: string;
@@ -32,7 +33,7 @@ for (const [id, seed, at, supply] of [
       }
       if (seatId) break;
     }
-    expect(seatId).toBeDefined();
+    expect(seatId, `${id} must be offered by round ${at}, seed ${seed}, after at most three slot rerolls per seat`).toBeDefined();
     const c = match().pendingChoice!;
     expect(room.handle(seatId, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: id }).ok).toBe(true);
     claimAllOrbs(room, [seatId]);

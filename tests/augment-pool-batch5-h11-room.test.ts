@@ -1,3 +1,4 @@
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { beforeAll, afterAll, expect, it } from 'vitest';
 import { makeRoom, runUntil, answerOpenChoices } from './server/helpers';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
@@ -10,11 +11,13 @@ import { startCombatReplay } from '../src/simulation/combat-replay-view';
 
 const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 19, combatStreaming: true });
 let seatId: string;
-beforeAll(() => room.start());
+let restoreOffers:()=>void;
+// Script the eligible offer only; containment is a fixture self-check, not a real-RNG claim.
+beforeAll(() => {restoreOffers=installB1Offers(['scavenger']);room.start();});
 for (const round of [2, 3, 4]) beforeAll(() => { runUntil(room, clock, s => s.round === round && s.phase === 'preparation'); });
 beforeAll(() => {
   const seat = room.state.seats.find(s => s.match.pendingChoice?.offers.includes('scavenger'));
-  expect(seat, JSON.stringify(room.state.seats.map(s => [s.seatId, s.match.pendingChoice?.offers]))).toBeDefined();
+  expect(seat, `scavenger at 2-1 (scripted eligible draw): ${JSON.stringify(room.state.seats.map(s => [s.seatId, s.match.pendingChoice?.offers]))}`).toBeDefined();
   seatId = seat!.seatId;
   const c = seat!.match.pendingChoice!;
   expect(room.handle(seatId, { type: 'choose', choiceId: c.choiceId, generation: c.generation, definitionId: 'scavenger' })).toMatchObject({ ok: true });
@@ -25,7 +28,7 @@ beforeAll(() => {
   }
 });
 beforeAll(() => { runUntil(room, clock, s => s.round === 4 && s.phase === 'settlement'); });
-afterAll(() => room.dispose());
+afterAll(() => {room.dispose();restoreOffers();});
 it('B5-76 real room choice → shared pool purchase → two-sided combat grants and authenticated deaths', () => {
   expect(room.state.fault).toBeNull();
   const result = room.state.battles.find(r => r.kind === 'two-sided' && r.participants.includes(seatId));
