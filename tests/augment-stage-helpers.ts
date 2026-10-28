@@ -53,7 +53,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'glorious-evolution':{node:'4-2',seed:86,fielded:true},
   'moonlight':{node:'4-2',seed:1,fielded:true},
   'greater-moonlight':{node:'4-2',seed:16,fielded:true,rerolls:[0,1]},
-  'forward-thinking':{node:'3-2',seed:27,fielded:true},
+  'forward-thinking':{node:'3-2',seed:15,fielded:true,rerollSlots:[0,1,2]},
   'mirrored-monetization':{node:'4-2',seed:37,fielded:true,rerolls:[0]},
   'dhampyr':{node:'3-2',seed:14},
   'trait-tracker':{node:'3-2',seed:20,rerolls:[0,1]},

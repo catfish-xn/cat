@@ -403,17 +403,17 @@ it('independently binds Spoils counters to opening ownership and all ordinary Pv
   expect(()=>validateRewards({...live,combat:{strategy:finished.combat.strategy}},erased,null,done,env)).toThrow(/independent batch2 counter/);
 });
 
-// Independent augmentDraw search for a 2-1 Heroic Grab Bag offer in the integrated pool.
+// A real 2-1 Heroic Grab Bag offer reached with public rerolls in the integrated pool.
 // The actual route must still have no prior lesser duplicator, preserving the two-tool premise.
 // Keep the pre-command independent ledger so co-forged balances exercise Ledger.apply.
 import * as matchApi from '../src/simulation/match';
 import { run } from '../scripts/generate-m5-route.cjs';
 const heroicCase: {before:any;after:any;command:any;events:any;ledger:any}[]=[];
-const HEROIC_SEED=37;
+const HEROIC_SEED=12;
 const routeLedger=new Ledger(createMatch(HEROIC_SEED));
 const stopHeroic=Symbol('heroic selection reached');
 try {
-  await run(matchApi,{seed:HEROIC_SEED,build:'cannon',augmentPriorities:['heroic-grab-bag'],onStep(before,result,command){
+  await run(matchApi,{seed:HEROIC_SEED,build:'cannon',augmentPriorities:['heroic-grab-bag'],augmentRerollPriorities:{'2-1':['heroic-grab-bag']},onStep(before,result,command){
     if(!('events' in result))throw Error(result.reason);
     if(command?.type==='select'&&command.definitionId==='heroic-grab-bag'){
       heroicCase.push({before,after:result.state,command,events:result.events,ledger:routeLedger});throw stopHeroic;
