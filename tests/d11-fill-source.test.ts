@@ -48,10 +48,13 @@ it('de-duplicates by API identity across aliases, including previously implement
   }
   for(const name of ['TFT13_GoopBuff_HardenedMind','TFT13_GoopBuff_MagicMind','TFT13_GoopBuff_SharpenedMind','TFT13_GoopBuff_AllForOne'])expect(existing.has(name)).toBe(true);
 });
-it('registers the D11 pack with v20 totals from the independent catalog and retains all 14.24b overrides and the current digest identity',()=>{
+it('registers the D11 pack with the complete independent catalog and retains all 14.24b overrides and the current digest identity',()=>{
   expect(D11_FILL_ACTIVATION).toBe('wired-v15');
   expect(Object.keys(D11_FILL_DEFINITIONS)).toHaveLength(5);
-  expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual((['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[])).sort());expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(56);
+  // The full catalog includes table-scraps and young-and-wild-and-free, which require sharedCarousel.
+  const fullPool = [...new Set((['silver','gold','prismatic'] as const).flatMap(tier=>augmentPool(tier,[],[],null,[],true)))].sort();
+  expect(fullPool).toHaveLength(306); // Fifth-batch expansion, independently enumerated with carousel admission enabled.
+  expect(Object.keys(AUGMENT_DEFINITIONS).sort()).toEqual(fullPool);expect(Object.keys(ANOMALY_DEFINITIONS)).toHaveLength(56);
   expect(createMatch().contentDigest).toBe(CONTENT_DIGEST);
   expect(AUGMENT_DEFINITIONS['built-different'].effects).toContainEqual({kind:'mechanic',mechanic:'builtDifferent',values:{health2:300,health3:400,health4:500,health5:600,speed2:4500,speed3:5500,speed4:6500,speed5:7500}});
 });

@@ -1,4 +1,5 @@
 import { BATCH3_SUMMON_ABILITIES } from './content/batch3-summons';
+import { B5_G4_SUMMON_ABILITIES } from './content/augment-pool-batch5-g4';
 import { SIX_COST_ABILITIES } from './content/v19-six-cost';
 import { S13_ANOMALY_SUMMON_ABILITIES } from './content/s13-anomaly-summons';
 import { G24_VOIDSPAWN_ABILITIES } from './content/g2-4b-voidspawn';
@@ -17,6 +18,7 @@ export interface AbilityDisplayStats {
   readonly attackDamage?: number;
 }
 function sourceFor(id: string): {readonly name:string;readonly variables:Readonly<Record<string,readonly number[]>>} {
+  if(Object.hasOwn(B5_G4_SUMMON_ABILITIES,id+'-ability'))return B5_G4_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(SIX_COST_ABILITIES,id+'-ability'))return SIX_COST_ABILITIES[id+'-ability'];
   if(Object.hasOwn(S13_ANOMALY_SUMMON_ABILITIES,id+'-ability'))return S13_ANOMALY_SUMMON_ABILITIES[id+'-ability'];
   if(Object.hasOwn(G24_VOIDSPAWN_ABILITIES,id+'-ability'))return G24_VOIDSPAWN_ABILITIES[id+'-ability'];
