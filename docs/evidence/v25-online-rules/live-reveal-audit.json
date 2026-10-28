@@ -524,7 +524,7 @@
     "src/simulation/restore-checks/consumable-state-check.ts": "bed4a4376661c5b33d28909041b9ca87039543a4736c8b6ff682c34ed08c1a23",
     "src/simulation/restore-checks/contested-gold-check.ts": "ef19c11577ab9c303de427ca0a58bd0c71ee28568cb08480d82df54dfb63a0ae",
     "src/simulation/restore-checks/d14-check.ts": "6c8199fdc80902c245f29b0104a2698531e8312dddfd7ddc4c6d4ab687465d63",
-    "src/simulation/restore-checks/fold-provenance.ts": "073df19d48671c436fde2641424e6b5ee735e163ef9756feae75286c87128934",
+    "src/simulation/restore-checks/fold-provenance.ts": "69027831bc1edf6dfcc8eedfb57648a695e36196fe9fc4451f129e10112a4830",
     "src/simulation/restore-checks/form-swapper-check.ts": "a63e9ec70125e3b960281b6edaafcb9db46550b966b4d69768debdd1bc3bc547",
     "src/simulation/restore-checks/free-rerolls-check.ts": "59ec1f8823a5c7f31b7fd3d1a45fe65f9f481ab7e1c1060269738d0ac77d83b7",
     "src/simulation/restore-checks/g23-grant-check.ts": "b6e857ed0da04f23150d80e3c2028915c93723f0df80644ae16affb16011e27f",
