@@ -1,5 +1,6 @@
 import { contains, projectedBox, spritePick, type ScreenArea } from './description-pick';
 import type { BoardDescription, BoardScreenBox } from '../board-feed';
+import { CAROUSEL_TIMER_EFFECT, createCarouselTimerRing } from './carousel-timer-ring';
 /**
  * The online 选秀 drawn in 3D (docs/ASSETS3D_CAROUSEL.md 界面接线需求): its own scene and camera, shown by the renderer
  * instead of the board while board-feed carries a BoardCarousel. The platform pieces load as one group at the shared
@@ -15,7 +16,7 @@ import type { BoardDescription, BoardScreenBox } from '../board-feed';
  * a unit click is still the panel's pick at once. A unit leaves the ring only when the view names the seat that took it:
  * the unit follows that legend on a tether as it moves freely. A held seat
  * counts down over its head and its chains break at release; the stage opens with a short push-in.
- * Missing models or effects draw stand-ins; the timer ring is not drawn (its extracted effect is incomplete).
+ * Missing models or effects draw stand-ins; a procedural release timer remains readable with incomplete effects.
  */
 import {
   AmbientLight, Box3, CanvasTexture, Color, CylinderGeometry, DoubleSide, DirectionalLight, Group, Mesh, MeshStandardMaterial,
@@ -104,6 +105,7 @@ export interface CarouselStageContext {
   /** The board's animation envelope for an official-scale model (model-fit.ts): width cap and idle feet; undefined if none. */
   readonly envelope?: (id: string, lease: ModelLease) => Envelope | undefined;
   readonly loadEffect: ((id: string, maxDuration: number) => Promise<ParticleEffect>) | null;
+  readonly hasEffect?: (id: string) => boolean;
   /** The default little legend's model; a seat whose own legend (`little-legend-<legend>`) the manifest lacks shows it. */
   readonly legendModel: string;
   readonly starColor: (level: number) => string;
@@ -160,6 +162,7 @@ interface UnitView extends Body {
   takenBy: string | null;
 }
 interface SeatView extends Body {
+  readonly timer: ReturnType<typeof createCarouselTimerRing>;
   readonly seatId: string; readonly me: boolean; readonly anchor: Vector3; lock: Loop | null; indicator: Loop | null;
   /** Held until this logical ms (the view's release time); `locked` is the last state drawn, to catch the release. */
   releaseAtMs: number; locked: boolean;
@@ -400,8 +403,11 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
     seats.add(root);
     const tether = new Mesh(geometry.tether, me ? materials.tether.me : materials.tether.seat); tether.name = 'render3d-carousel-tether'; tether.visible = false;
     taken.add(tether);
+    const timer = createCarouselTimerRing(0.72 * cell, ctx.sourceScale,
+      ctx.hasEffect?.(CAROUSEL_TIMER_EFFECT) && ctx.loadEffect ? ctx.loadEffect : undefined);
+    scene.add(timer.object);
     const view: SeatView = { seatId, me, anchor, root, lease: null, mixer: null, state: new Stride(), disposed: false, lock: null, indicator: null,
-      releaseAtMs: Infinity, locked: false, chase: null, goal: null, speed: 0, path: null, carry: null, tether, countdown: null };
+      releaseAtMs: Infinity, locked: false, chase: null, goal: null, speed: 0, path: null, carry: null, tether, countdown: null, timer };
     // A legend that cannot be drawn (refused, placeholder) falls back to the default model before the stand-in.
     attach(view, legendOf(legend), legendHeight, undefined, ctx.loadModel ? id => loadLegendLease(model => ctx.hasModel(model) ? ctx.loadModel!(model) : Promise.reject(new Error('unknown-model')), id, ctx.legendModel) : null);
     return view;
@@ -412,6 +418,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   };
   const dropSeat = (view: SeatView) => {
     releaseBody(view); endLoop(view.lock); endLoop(view.indicator); dropCountdown(view);
+    view.timer.dispose();
     view.root.removeFromParent(); view.tether.removeFromParent();
   };
   /** "N" seconds over a held legend's head; no canvas (tests, a worker) draws none. */
@@ -559,7 +566,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
    * Held seats by the view's release times: the restraint (its stand-in a ring at the feet) and the seconds left over the
    * head; at release the chains break once (stand-in pop) and, for me, the first-draft wall fades and the callout flashes.
    */
-  const syncLocks = (first: boolean) => {
+  const syncLocks = (first: boolean, seconds = 0) => {
     if (!current) return;
     const elapsed = elapsedNow();
     let held = false;
@@ -573,6 +580,9 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
         if (!first && entry.locked) { pop(entry.root.position.clone().setY(entry.root.position.y + 1), COLOR.lock); if (entry.me) ctx.onReleased?.(); }
       }
       entry.locked = locked;
+      const previous = Math.max(0, ...current.seats.map(s => s.releaseAtMs).filter(ms => ms < entry.releaseAtMs && Number.isFinite(ms)));
+      entry.timer.object.position.copy(entry.anchor); entry.timer.object.position.y += 2;
+      entry.timer.update(locked ? entry.releaseAtMs - elapsed : 0, entry.releaseAtMs - previous, seconds, camera);
       if (entry.me) held = locked;
       showCountdown(entry, locked && Number.isFinite(entry.releaseAtMs) ? String(Math.max(1, Math.ceil((entry.releaseAtMs - elapsed) / 1000))) : '');
     }
@@ -738,7 +748,7 @@ export function createCarouselStage(ctx: CarouselStageContext): CarouselStage {
   const update = (seconds: number) => {
     if (!current) return;
     units.rotation.y = orbitAngle();
-    syncLocks(false);
+    syncLocks(false, seconds);
     if (intro > 0) intro = Math.max(0, intro - seconds);
     frameCamera(); // cheap unless the projection changed since the last fit
     for (const seat of seatViews.values()) moveSeat(seat, seconds);

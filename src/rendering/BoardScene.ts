@@ -1343,11 +1343,15 @@ export class BoardScene extends Phaser.Scene {
     for (const unit of view.units) {
       const drawn = this.views.get(unit.id);
       if (!drawn) continue;
-      // No loadout in this frame (offline/legacy): keep the drawn unit, so a settlement upgrade is not overwritten by the battle's copy.
-      if (unit.equipment === undefined) continue;
-      const gear = combatEquipmentDisplay(unit.equipment, [], NO_GEAR_EXTRAS);
+      const opening = combatEquipmentDisplay(unit.equipment, drawn.equipped, drawn.extras);
+      const gear = this.application instanceof OnlineApplication
+        ? this.application.confiscation.gear(view.combatId, unit.id, opening.equipped, opening.extras)
+        : { ...opening, confiscated: false };
+      // Legacy frames keep their opening identity; the stamp is only a presentation of known confiscation.
+      if (unit.equipment === undefined && !gear.confiscated) { drawn.showConfiscation(false); continue; }
       drawn.update({ ...unit, location: { kind: 'board', cell: unit.cell } } as Unit,
         gear.equipped, [], gear.extras, unit.effectiveStarLevel ?? unit.starLevel, unit.itemStacks);
+      drawn.showConfiscation(gear.confiscated && unit.alive);
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
@@ -1474,14 +1478,14 @@ export class BoardScene extends Phaser.Scene {
     return Object.fromEntries(this.orbRefusals);
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
-  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted'> {
+  private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted' | 'itemsConfiscated'> {
     const view = this.views.get(id);
     if (!view) return {};
     const hp = view.meter('hp'), mana = view.meter('mana');
     const combatUnit = this.session.combatView?.units.find(unit => unit.id === id);
     const ids = [...view.equipped, ...view.extras.temporary];
     const badges = combatItemStackBadges(ids, combatUnit?.alive ? combatUnit.itemStacks : undefined);
-    return { ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
+    return { ...(view.itemsConfiscated ? { itemsConfiscated: true } : {}), ...(combatUnit?.alive && combatUnit.enforcerWanted ? { enforcerWanted: true } : {}), ...(view.hp.visible ? { meters: { hp: hp.value, maxHp: hp.maxValue, mana: mana.value, maxMana: mana.maxValue, shield: view.shield.visible ? view.meter('shield').value : 0 } } : {}),
       // 窃贼手套: the round's stolen items follow the worn ones, as the original shows them over the unit.
       ...(view.equipped.length || view.extras.temporary.length
         ? { items: ids.map((item, index) => ({ id: item, icon: s13AssetUrl('item', item), ...badges[index] })) } : {}) };

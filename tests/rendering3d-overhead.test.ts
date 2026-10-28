@@ -12,6 +12,17 @@ function fakeCanvas() {
 describe('3D overhead meters and items', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('shows the confiscation stamp above retained emblem icons and clears it outside combat', () => {
+    const overhead = createUnitOverhead({ colors: () => DEFAULT_METER_COLORS, itemTexture: async () => null });
+    const meters = { hp: 1, maxHp: 1, mana: 0, maxMana: 0, shield: 0 };
+    overhead.set('player', meters, [{ id: 'emblem', icon: null }], true, true);
+    const stamp = overhead.object.getObjectByName('render3d-confiscated-items')!;
+    const wanted = overhead.object.getObjectByName('render3d-enforcer-wanted')!;
+    expect(stamp.visible).toBe(true); expect(wanted.position.y).toBeGreaterThan(stamp.position.y);
+    overhead.set('player', undefined, undefined, false, true);
+    expect(stamp.visible).toBe(false); expect(overhead.drawn).toBe(false); overhead.dispose();
+  });
+
   it('draws HP in team color with a shield segment and mana, and redraws only when the values change', () => {
     const { rects, canvas } = fakeCanvas();
     vi.stubGlobal('document', { createElement: () => canvas });

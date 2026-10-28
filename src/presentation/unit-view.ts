@@ -70,6 +70,15 @@ export class UnitView {
   private readonly costBadge: Phaser.GameObjects.Arc;
   private readonly costText: Phaser.GameObjects.Text;
   private readonly items: Phaser.GameObjects.Graphics;
+  private confiscationTag?: Phaser.GameObjects.Text;
+  get itemsConfiscated(): boolean { return this.confiscationTag?.visible ?? false; }
+  showConfiscation(on: boolean): void {
+    if (on && !this.confiscationTag) {
+      this.confiscationTag = this.scene.add.text(0, 53, '已没收！', { fontSize: '11px', color: '#ffd84d', backgroundColor: '#291b0a', resolution: 2 }).setOrigin(0.5);
+      this.body.add(this.confiscationTag);
+    }
+    this.confiscationTag?.setVisible(on);
+  }
   /** C18: corner tag for items worn now that enter the next battle, not the one shown (hidden when none). */
   private readonly pendingTag: Phaser.GameObjects.Text;
   private portrait: Phaser.GameObjects.Image | null = null;
@@ -128,6 +137,7 @@ export class UnitView {
    * `star` is the star level drawn (v16: 4 for a promoted Ultimate Hero, physically 3★).
    */
   update(unit: Unit, equipped: readonly string[], pending: readonly string[] = [], extras: GearExtras = NO_GEAR_EXTRAS, star: number = unit.starLevel, itemStacks?: CombatViewUnit['itemStacks']): void {
+    this.showConfiscation(false);
     const key = `${unit.definitionId}|${star}|${equipped.join(',')}|${pending.join(',')}|${unit.team}|${extras.reserved}|${extras.temporary.join(',')}|${JSON.stringify(itemStacks)}`;
     if (key === this.renderKey) return;
     this.renderKey = key; this.lastDrawn = { unit, star };

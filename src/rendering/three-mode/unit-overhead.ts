@@ -7,6 +7,7 @@ import type { Camera } from 'three';
  */
 import { CanvasTexture, Group, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial, type Texture } from 'three';
 import type { BoardMeters, BoardPiece } from '../board-feed';
+import { createConfiscationStamp } from './confiscation-stamp';
 
 export interface MeterColors { readonly hp: string; readonly hpEnemy: string; readonly mana: string; readonly manaFull: string; readonly shield: string }
 export const DEFAULT_METER_COLORS: MeterColors = { hp: '#5fd68a', hpEnemy: '#f08080', mana: '#449cfa', manaFull: '#bde5ff', shield: '#e8f4ff' };
@@ -22,7 +23,7 @@ export interface UnitOverhead {
   /** Scene child: the host moves it to the piece's head each frame. Its origin is the bar's bottom edge. */
   readonly object: Group;
   /** Meters show while `meters` is given; items whenever the piece wears any. */
-  set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items'], enforcerWanted?: boolean): void;
+  set(team: BoardPiece['team'], meters: BoardMeters | undefined, items: BoardPiece['items'], enforcerWanted?: boolean, itemsConfiscated?: boolean): void;
   /** A cast's charge: the mana bar shows full and bright until it is switched off, then the meters as they are. */
   flashMana(on: boolean): void;
   /** True when something is drawn (the host skips placing an empty one). */
@@ -49,6 +50,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   object.add(bar);
   const icons = new Group(); icons.name = 'render3d-overhead-items';
   object.add(icons);
+  const confiscation = createConfiscationStamp(); object.add(confiscation.sprite);
   const wantedCanvas = typeof document === 'undefined' ? null : document.createElement('canvas');
   if (wantedCanvas) { wantedCanvas.width = 128; wantedCanvas.height = 40; }
   const wantedTexture = wantedCanvas ? new CanvasTexture(wantedCanvas) : null;
@@ -120,8 +122,8 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   return {
     object,
     itemAt: (client, camera, area) => object.visible ? spritePick(icons.children as Sprite[], client, camera, area) : undefined,
-    get drawn() { return bar.visible || wanted.visible || icons.children.length > 0; },
-    set(team, meters, items, enforcerWanted = false) {
+    get drawn() { return bar.visible || wanted.visible || confiscation.sprite.visible || icons.children.length > 0; },
+    set(team, meters, items, enforcerWanted = false, itemsConfiscated = false) {
       if (disposed) return;
       const nextBar = meters ? `${team}:${meters.hp}/${meters.maxHp}:${meters.mana}/${meters.maxMana}:${meters.shield}` : '';
       shown = meters ? { team, meters } : null;
@@ -132,7 +134,9 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       icons.position.y = bar.visible ? BAR_HEIGHT + ITEM_GAP : 0;
       badges.position.y = icons.position.y;
       wanted.visible = enforcerWanted && Boolean(meters);
-      wanted.position.y = icons.position.y + (icons.children.length ? ITEM_SIZE + ITEM_GAP : 0) + 8;
+      confiscation.sprite.visible = itemsConfiscated && Boolean(meters);
+      confiscation.sprite.position.y = icons.position.y + (icons.children.length ? ITEM_SIZE + ITEM_GAP : 0) + 8;
+      wanted.position.y = confiscation.sprite.position.y + (confiscation.sprite.visible ? 18 : 0);
     },
     flashMana(on) {
       if (disposed || flashing === on) return;
@@ -144,6 +148,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       disposed = true;
       clearItems(); object.removeFromParent(); object.clear();
       barMaterial.dispose(); texture?.dispose(); wantedMaterial.dispose(); wantedTexture?.dispose();
+      confiscation.dispose();
     },
   };
 }
