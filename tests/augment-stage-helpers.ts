@@ -7,6 +7,7 @@ import { accepted, fieldBench, reachRound, reachRoundFielded, resolveM5Choices }
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { needsAugmentHistory } from '../src/simulation/augment-history';
 import { needsCrownHistory } from '../src/simulation/crown-history';
+import { b1OfferCacheKey } from './fixtures/b1-offer-cache-key';
 
 /** H12's public fielded 4-2 route, with a validated checkpoint at 4-1. */
 export const H12_MAX_CAP_SEED = 16;
@@ -139,12 +140,14 @@ export function fieldedLegCases(id: string): (readonly [number, string])[] {
   if (!at?.fielded) throw new Error(`${id} has no fielded stage route`);
   return FIELDED_LEGS.slice(0, FIELDED_LEGS.indexOf(at.node) + 1).map(leg => [at.seed, leg] as const);
 }
-const fieldedRoutes = new Map<number, { entries: Map<string, MatchState>; last: MatchState }>();
+const fieldedRoutes = new Map<string, { entries: Map<string, MatchState>; last: MatchState }>();
 /** Test-only: rebuild fielded routes after scripted-offer installs change generateChoices. */
 export function resetFieldedRouteCache(): void { fieldedRoutes.clear(); }
 export function fieldedRoute(seed: number, roundId: string): MatchState {
-  let route = fieldedRoutes.get(seed);
-  if (!route) fieldedRoutes.set(seed, route = { entries: new Map(), last: createMatch(seed) });
+  // The draw policy is an input even when the explicit seed/node are unchanged.
+  const key = JSON.stringify([seed, b1OfferCacheKey()]);
+  let route = fieldedRoutes.get(key);
+  if (!route) fieldedRoutes.set(key, route = { entries: new Map(), last: createMatch(seed) });
   route.entries.set(route.last.roundDefinitionId, route.last);
   let state = route.entries.get(roundId) ?? route.last;
   while (state.roundDefinitionId !== roundId) {
