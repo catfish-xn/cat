@@ -37,6 +37,14 @@
       "currentSha256": "8525b70a85861c190d3143eb90ed5d8088b0d26c57cbf41a8684a4103b698b95",
       "firstDifferentByte": 0
     },
+    "tests/augment-description-coverage.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5414,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1b2bdab209a654f973776f0c84b6cf91c8601239bc5fca454cda33f23f3d80ec",
+      "firstDifferentByte": 0
+    },
     "tests/augment-dynamic-round-boundary.test.ts": {
       "previousBytes": 1382,
       "currentBytes": 1430,
@@ -1097,9 +1105,9 @@
     },
     "tests/augment-pool-display-audit.test.ts": {
       "previousBytes": 7899,
-      "currentBytes": 8822,
+      "currentBytes": 9108,
       "previousSha256": "27cc86636b7b73378cae59cebe7b01ad74af4ad8579086f6d8e55794d974e24b",
-      "currentSha256": "335d777317df78ba4334fa586e520a57a5b1255ab65393cf6205e0dbf073f7ff",
+      "currentSha256": "95405d55c26cd4c9645d144cafb0822c0a32b1509c9b09b9f2796314734aff3d",
       "firstDifferentByte": 1546
     },
     "tests/augment-pool-formswapper.test.ts": {
@@ -2009,6 +2017,13 @@
       "previousSha256": "bc6d615cb845ff2457ce76af7bc5167f948812eb61743e6915636b81af95e1fc",
       "currentSha256": "f1283a48fb4e6c9c9051007502fab6dc515bf71570d980e501574362ba8f353e",
       "firstDifferentByte": 8
+    },
+    "tests/m8-b8-live-capacity.test.ts": {
+      "previousBytes": 10557,
+      "currentBytes": 12692,
+      "previousSha256": "27d35581822558639aab3c83c15dcccdfb017300d8e93f5c85afd3f9a4070a85",
+      "currentSha256": "44fe089c28d8fdcb338ba585cf215313c01a07f2d58452d71f2a8699a0bb13f3",
+      "firstDifferentByte": 449
     },
     "tests/m8-b8-live-cross-round.test.ts": {
       "previousBytes": 9545,
