@@ -7,7 +7,10 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 // encounter, reaches every sampled phase and ends its final battle at tick 107 (2307, the first such seed from 2192, ends at 119).
 // v24: 2325 ends at 127; 2307 is the first no-opening seed from 2192
 // whose complete cannon route samples every required phase and ends inside (80,120).
-const ROUTE_SEED=2307;
+// v25: 2307's final battle now ends at tick 122 (the periodic save at 120 would also fire).
+// 2326 is the first no-opening seed from 2192 whose complete cannon route still samples
+// every required phase and ends inside (80,120). Actual end tick 116, from generate-m5-route.
+const ROUTE_SEED=2326;
 assert.equal(require('./fixtures/m5/oracle.g2.cjs').openingEncounter(ROUTE_SEED),'none');
 const {execFileSync}=require('node:child_process'),{randomUUID}=require('node:crypto'),{chromium}=require('playwright');
 const {sourceFingerprint}=require('../scripts/m5-evidence.cjs');
