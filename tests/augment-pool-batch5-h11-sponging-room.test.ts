@@ -1,5 +1,6 @@
 import { beforeAll, afterAll, expect, it } from 'vitest';
 import { makeRoom, runUntil, answerOpenChoices, claimAllOrbs } from './server/helpers';
+import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { G24_CHEST_PAYLOADS } from '../src/simulation/content/g2-4-chest-pool';
@@ -12,7 +13,7 @@ import type { MatchState } from '../src/simulation/match';
 import type { SharedPoolState } from '../src/simulation/shared-pool';
 import type { AugmentHistoryAuthority } from '../src/simulation/augment-history';
 
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 0, combatStreaming: true });
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 28, combatStreaming: true });
 let seatId: string;
 let prepared: { match: MatchState; pool: SharedPoolState; authority: AugmentHistoryAuthority };
 beforeAll(() => room.start());
@@ -29,8 +30,10 @@ for (let round = 2; round <= 12; round++) beforeAll(() => {
   });
 });
 beforeAll(() => {
-  // Seed 0 / s7 has the three-item donor vector; s6's expanded-pool offer has only two.
-  for (const seat of [...room.state.seats].sort((a,b)=>Number(b.seatId==='s7')-Number(a.seatId==='s7')).filter(s => s.alive)) {
+  // Seed 28 / s3: re-searched 0..100 after v25 batch-5 pool drift; sponging draw scripted (toContain = fixture self-check).
+  const restore = installB1Offers(['sponging']);
+  try {
+  for (const seat of [...room.state.seats].sort((a,b)=>Number(b.seatId==='s3')-Number(a.seatId==='s3')).filter(s => s.alive)) {
     for (let slot = 0; slot < 3; slot++) {
       const c = room.state.seats.find(s => s.seatId === seat.seatId)!.match.pendingChoice!;
       if (c.offers.includes('sponging')) { seatId = seat.seatId; break; }
@@ -42,6 +45,7 @@ beforeAll(() => {
   expect(seatId,JSON.stringify(room.state.seats.map(s => [s.seatId,s.match.pendingChoice?.offers]))).toBeDefined();
   const current = () => room.state.seats.find(s => s.seatId === seatId)!.match;
   const c = current().pendingChoice!;
+  expect(c.offers).toContain('sponging');
   expect(room.handle(seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'sponging'})).toMatchObject({ok:true});
   answerOpenChoices(room); claimAllOrbs(room,[seatId]); answerOpenChoices(room,[seatId]);
   const completed = () => current().items.filter(i => i.location.kind === 'inventory' && Object.hasOwn(G24_CHEST_PAYLOADS,i.definitionId));
@@ -57,11 +61,14 @@ beforeAll(() => {
   for (const [slot,item] of completed().slice(0,3).entries()) expect(room.handle(seatId,{type:'equip',itemId:item.id,unitId:donor.id,slot})).toMatchObject({ok:true});
   // Human seats keep purchased heroes on the bench until an explicit deploy command.
   for (const unit of current().preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench').slice(0,3)) {
+    if (current().preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length >= 4) break;
     const used = new Set(current().preparation.units.flatMap(u => u.team === 'player' && u.location.kind === 'board' ? [`${u.location.cell.col},${u.location.cell.row}`] : []));
     const cell = Array.from({length:28},(_,i)=>({col:i%7,row:4+Math.floor(i/7)})).find(c => !used.has(`${c.col},${c.row}`))!;
     expect(room.handle(seatId,{type:'deploy',unitId:unit.id,target:{kind:'board',cell}})).toMatchObject({ok:true});
   }
+  claimAllOrbs(room,[seatId]);
   prepared = {match:current(),pool:room.state.pool,authority:room.augmentHistoryAuthority(seatId)};
+  } finally { restore(); }
 });
 beforeAll(() => { runUntil(room,clock,s => s.round === 12 && s.phase === 'settlement'); });
 afterAll(() => room.dispose());
