@@ -12,7 +12,7 @@ import { UNIT_DEFINITIONS } from '../../src/simulation/units';
 import { canonicalContent } from '../../src/simulation/content';
 
 const clock = new ManualClock();
-const room = new Room(SEATS.map(s=>({...s,kind:'human'})), {...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'g2-ghost-room',seed:6,clock,resolver:new TwoSidedBattleResolver()});
+const room = new Room(SEATS.map(s=>({...s,kind:'human'})), {...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'g2-ghost-room',seed:28,clock,resolver:new TwoSidedBattleResolver()});
 const mine = () => room.state.seats.find(s => s.seatId === 's0')!;
 afterAll(() => room.dispose());
 
