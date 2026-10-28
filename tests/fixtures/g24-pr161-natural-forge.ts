@@ -1,26 +1,15 @@
 import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
-import {sellUnit,createMatch,buyXp,deployMatchUnit,startMatchCombat,stepMatch,nextRound,selectChoice,selectAnomalyTarget,claimOrb,type MatchState} from '../../src/simulation/match';
-import {readLootView} from '../../src/simulation/loot-view';
+import {sellUnit,createMatch,buyXp,deployMatchUnit,startMatchCombat,stepMatch,nextRound,selectChoice,selectAnomalyTarget,type MatchState} from '../../src/simulation/match';
 import {grantMechanicGold,grantMechanicUnit} from '../../src/simulation/seat-mechanics';
 import {readG23Progress} from '../../src/simulation/g2-3-state';
 import {P2_ITEM_GRANTS} from '../../src/simulation/content/s13-augments-p2';
 import {isAnvil} from '../../src/simulation/content/anvils';
 import {augmentNeedsHistory} from '../../src/simulation/augment-history-owners';
+import {accepted} from '../match-helpers';
+import {openConquerorAnvil} from './g24-forge-anvil';
 
-export const accepted=<T extends {ok:boolean;state:MatchState}>(result:T):MatchState=>{
- if(!result.ok)throw Error('Fixture command refused: '+('reason' in result?result.reason:'unknown')+' at '+result.state.roundDefinitionId+'/'+result.state.phase);return result.state;
-};
-/** v22 anvil units (docs/ANVIL_UNITS.md): Conqueror forges no longer pop up. Claim every waiting G2-3 anvil orb onto
- * the bench and open the first Conqueror anvil by selling it (sell = openAnvil). Returns null when none is waiting. */
-export function openConquerorAnvil(input:MatchState):{state:MatchState;receiptId:string}|null{
- let state=input;
- for(const orb of readLootView(state).unclaimedOrbs??[])if(orb.orbId.startsWith('g23-anvil:'))state=accepted(claimOrb(state,orb.orbId,state.round));
- for(const unit of state.preparation.units.filter(u=>u.team==='player'&&isAnvil(u.definitionId))){
-  const birth=state.seatMechanics!.receipts.find(r=>r.kind==='unit'&&r.unitId===unit.id);
-  if(birth?.receiptId.startsWith('g23:conqueror:'))return {state:accepted(sellUnit(state,unit.id)),receiptId:birth.receiptId};
- }
- return null;
-}
+export {openConquerorAnvil};
+
 /** Seed 24 keeps scuttle-puddle's tier-10 trajectory while avoiding the 4-2
  * prismatic offer's unrelated full-history requirement for the PR161 vectors. */
 export const NATURAL_FORGE_SEED=24;
@@ -74,4 +63,3 @@ export function naturalForgeStates():Map<number,MatchState>{
  }
  throw Error('Natural forge fixture budget');
 }
-

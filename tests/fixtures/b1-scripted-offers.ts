@@ -7,14 +7,20 @@ import * as choices from '../../src/simulation/choices';
  * restores only inside this wrapper; outside it production rejects it (Invalid augment offer history).
  * Any offers.toContain(target) inside the wrapper is a fixture self-check, not a real-RNG claim.
  */
-export function withB1Offers<T>(priorities: readonly string[], run: () => T): T {
-  if (!priorities.length) return run();
+/** Install scripted augment draws for nested hooks; call the returned function to restore. */
+export function installB1Offers(priorities: readonly string[]): () => void {
+  if (!priorities.length) return () => {};
   const generate = choices.generateChoices;
   const sampler = vi.spyOn(choices, 'generateChoices').mockImplementation((ids, rng) => {
     const drawn = generate(ids, rng);
     const target = priorities.find(id => ids.includes(id));
     if (!target || drawn.offers.includes(target)) return drawn;
-    return {...drawn, offers: [target, ...drawn.offers.slice(1)]};
+    return { ...drawn, offers: [target, ...drawn.offers.slice(1)] };
   });
-  try { return run(); } finally { sampler.mockRestore(); }
+  return () => sampler.mockRestore();
+}
+
+export function withB1Offers<T>(priorities: readonly string[], run: () => T): T {
+  const restore = installB1Offers(priorities);
+  try { return run(); } finally { restore(); }
 }

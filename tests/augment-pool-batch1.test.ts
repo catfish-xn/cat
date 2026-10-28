@@ -19,7 +19,7 @@ import { grantXp } from '../src/simulation/progression';
 import { previewRoundEconomy } from '../src/simulation/economy-preview';
 import { readAugmentIncome } from '../src/simulation/augment-income';
 import { accepted, emptyBoard, fieldBench, reachRound, resolveM5Choices, finish } from './match-helpers';
-import { FIELDED_LEGS, offerFor, offeredAt, STAGE_SEEDS } from './augment-stage-helpers';
+import { FIELDED_LEGS, offerFor, offeredAt } from './augment-stage-helpers';
 import type { MatchState } from '../src/simulation/match-types';
 import { room, accept, conserved } from './tp-helpers';
 import { runSharedMatchCommand } from '../src/simulation/shared-pool';
@@ -107,7 +107,7 @@ function polishRoute(roundId:string):MatchState {
  return state;
 }
 it.each(FIELDED_LEGS.map(leg=>[polishSeed,leg] as const))('Final Polish fielded 4-2 route (seed %s): the leg to %s settles every fight',(_seed,leg)=>withB1Offers(['final-polish'],()=>{
- expect(STAGE_SEEDS['final-polish']).toMatchObject({node:'4-2',fielded:true});expect(polishRoute(leg).roundDefinitionId).toBe(leg);
+ expect(polishRoute(leg).roundDefinitionId).toBe(leg);
 }));
 let polishState:MatchState,polishAnvils:MatchState['preparation']['units'];
 it('Final Polish grants exactly two bench anvils with the source birth order',()=>withB1Offers(['final-polish'],()=>{

@@ -8,7 +8,7 @@ import { P2_ITEM_GRANTS } from '../src/simulation/content/s13-augments-p2';
 import { isAnvil } from '../src/simulation/content/anvils';
 import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { lootEntryId } from '../src/simulation/loot-identity';
-import { accepted, openConquerorAnvil } from './fixtures/g24-natural-forge';
+import { accepted, openConquerorAnvil } from './fixtures/g24-forge-anvil';
 
 /*
  * B8 receipt order with retained orbs (merge 473f2e2b): receipts follow their transaction round, which is the

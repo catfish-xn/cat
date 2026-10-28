@@ -36,12 +36,10 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = fal
  * (fmix32 openings, Blood Brothers, Form Swapper) merged with the batch-3/XP/stage-ban line.
  * Call to Chaos was re-searched after batch 4 level rewards expanded the pool to 213 (seed 74, same fielded route).
  * Re-searched after the v24 shop / batch-5 merge (235 cards, P 2026-10-27), retaining the same routes and first-seed rule.
- * v25 integration B refreshes the exercised B5A/Raining Gold+/Final Polish routes for 250 cards;
- * Final Polish uses one public slot reroll. Other entries retain their earlier fixture scope.
+ * v25 integration B refreshes the exercised B5A routes for 250 cards; other entries retain their earlier fixture scope.
  * v25 final integration: non-fielded 3-2 routes re-searched on 285 admitted cards,
  * ascending seeds 0..299, then public slot rerolls 0/1/2, without editing state.
  * Call to Chaos additionally requires the XP outcome exercised by its suite.
- * G3 pool expansion: betrayal was re-searched through public fielded routes in 0..100; first offer is seed 34.
  */
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
   'all-that-shimmers-plus':{node:'3-2',seed:3},
@@ -64,10 +62,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'backup':{node:'3-2',seed:1},
   'bad-luck-protection':{node:'3-2',seed:15,rerolls:[0]},
   'belt-overflow':{node:'3-2',seed:0},
-  'betrayal':{node:'3-2',seed:27,fielded:true,rerolls:[0,1]},
   'big-grab-bag':{node:'3-2',seed:12,rerolls:[0]},
-  'black-rose-crest':{node:'3-2',seed:147,fielded:true},
-  'black-rose-crown':{node:'3-2',seed:28,fielded:true},
   'blazing-soul-i':{node:'3-2',seed:4},
   'blazing-soul-ii':{node:'3-2',seed:0,rerolls:[0]},
   'blinding-speed':{node:'3-2',seed:0,rerolls:[0,1]},
@@ -87,7 +82,6 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'duo-queue':{node:'4-2',seed:24,fielded:true,rerolls:[0,1,2]},
   'epoch-plus':{node:'3-2',seed:11},
   'eye-for-an-eye-plus':{node:'3-2',seed:17,rerolls:[0]},
-  'final-polish':{node:'4-2',seed:54,fielded:true,rerolls:[0,1]},
   'find-your-center':{node:'3-2',seed:1,rerolls:[0]},
   'geniuses':{node:'4-2',seed:12,fielded:true,rerolls:[0,1,2]},
   'golemify':{node:'3-2',seed:18,rerolls:[0]},
@@ -110,9 +104,7 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'piercing-lotus-ii':{node:'3-2',seed:0,rerolls:[0,1,2]},
   'placebo-plus':{node:'3-2',seed:56,rerolls:[0,1,2]},
   'radiant-refactor':{node:'3-2',seed:21,rerolls:[0,1,2]},
-  'raining-gold-plus':{node:'3-2',seed:51},
   'reunion':{node:'4-2',seed:21,fielded:true,rerolls:[0,1,2]},
-  'rocket-collection-plus':{node:'3-2',seed:300,fielded:true},
   'rolling-for-days-i':{node:'3-2',seed:17,rerolls:[0,1]},
   'savage-revenge':{node:'3-2',seed:62,fielded:true,rerolls:[0,1]},
   'sisters':{node:'4-2',seed:3,fielded:true},
