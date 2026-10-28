@@ -1,3 +1,4 @@
+import { withB1Offers } from './fixtures/b1-scripted-offers';
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { NET_PROTOCOL_VERSION, parseClientMessage } from '../src/server/net/messages';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
@@ -9,7 +10,7 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { deepStrictEqual } from 'node:assert/strict';
-import { buyUnit, buyXp, combineItems, createMatch, nextRound, openAnvil, rerollAugment, rerollShop, selectChoice, setShopLock, startMatchCombat, type MatchState } from '../src/simulation/match';
+import { buyUnit, buyXp, combineItems, createMatch, nextRound, openAnvil, rerollShop, selectChoice, setShopLock, startMatchCombat, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { grantMechanicGold } from '../src/simulation/seat-mechanics/grants';
 import { accepted, emptyBoard, reachRoundFielded, resolveM5Choices } from './match-helpers';
@@ -24,13 +25,14 @@ const entries=['JSON','object','serialized'] as const;
 const restore=(s:MatchState,entry:typeof entries[number])=>entry==='JSON'?restoreMatch(JSON.stringify(s)):entry==='object'?restoreMatch(s):restoreMatch(serializeMatch(s));
 const rich=(s:MatchState)=>accepted(grantMechanicGold(s,{receiptId:'shop-history-test-gold',source:'test',amount:200}));
 import { shopOwner } from './fixtures/shop-history-match';
-import { firstNodeSeed } from './augment-stage-helpers';
+import { boundedFirstNodeOffer, firstNodeSeed } from './augment-stage-helpers';
 // Detached saves are the only values modified in the attack matrix.
 type Json=any;
 let ticket:MatchState,starry:MatchState,bought:MatchState;
 beforeAll(()=>{ticket=shopOwner(0,'prismatic-ticket');});
 beforeAll(()=>{
- starry=rich(shopOwner(95,'starry-night'));
+ const open=boundedFirstNodeOffer('starry-night'),choice=open.pendingChoice!;
+ starry=rich(accepted(selectChoice(open,choice.choiceId,choice.generation,'starry-night')));
  expect(starry).toBeDefined();
  for(let i=0;i<40&&!starry.shop.slots.some(s=>s.status==='available'&&s.starLevel===2);i++)starry=accepted(rerollShop(starry));
  const slot=starry.shop.slots.findIndex(s=>s.status==='available'&&s.starLevel===2);expect(slot).toBeGreaterThanOrEqual(0);
@@ -109,9 +111,10 @@ describe('online room',()=>{
  expect(room.handle(seat!.seatId,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:id}).ok).toBe(true);
  for(const type of ['reroll','buyXp'] as const){const result=room.handle(seat!.seatId,{type});expect(result.ok).toBe(true);}
  const state=room.state.seats.find(s=>s.seatId===seat!.seatId)!.match,pool=room.state.pool;
- expect(restoreSharedOrbSnapshot(pool,JSON.stringify(state))).toEqual(state);
- deepStrictEqual(applySeatCommand(pool,restoreSharedOrbSnapshot(pool,state),{type:'reroll'}),applySeatCommand(pool,state,{type:'reroll'}));
- const old:Json=structuredClone(state);delete old.shopHistory;expect(()=>restoreSharedOrbSnapshot(pool,old)).toThrow('legacy shop augment saves cannot be authenticated');
+ const authority=room.augmentHistoryAuthority(seat!.seatId);
+ expect(restoreSharedOrbSnapshot(pool,JSON.stringify(state),authority)).toEqual(state);
+ deepStrictEqual(applySeatCommand(pool,restoreSharedOrbSnapshot(pool,state,authority),{type:'reroll'}),applySeatCommand(pool,state,{type:'reroll'}));
+ const old:Json=structuredClone(state);delete old.shopHistory;expect(()=>restoreSharedOrbSnapshot(pool,old,authority)).toThrow('legacy shop augment saves cannot be authenticated');
  room.dispose();
 });
 
@@ -146,8 +149,9 @@ it('M6 envelope round-trips the versioned history and carries authenticated pref
 });
 
 it('online finite-pool Starry Night purchases authenticate both shared restore entries and room dispatch continuation',()=>{
- let pool=createSharedPool('shop-history-online',34,{seatCount:1});
- let result=sharedAccept(initializeSharedSeat(pool,createMatch(34,{mode:'shared-deferred'}),'audit',0));pool=result.pool;
+ const seed=starry.seed;
+ let pool=createSharedPool('shop-history-online',seed,{seatCount:1});
+ let result=sharedAccept(initializeSharedSeat(pool,createMatch(seed,{mode:'shared-deferred'}),'audit',0));pool=result.pool;
  result=sharedAccept(generateSharedShop(pool,result.state,0));let state=result.state;pool=result.pool;
  for(let round=1;round<=3;round++){
   for(const u of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board')){
@@ -156,6 +160,10 @@ it('online finite-pool Starry Night purchases authenticate both shared restore e
   result=sharedAccept(runSharedMatchCommand(pool,state,{type:'startCombat'}));state=result.state;pool=result.pool;expect(state.phase).not.toBe('combat');
   result=sharedAccept(runSharedMatchCommand(pool,state,{type:'claimLoot',round}));state=result.state;pool=result.pool;
   const advanced=nextSharedRound(pool,[state],round);expect(advanced.ok).toBe(true);if(!advanced.ok)throw Error(advanced.reason);pool=advanced.pool;state=advanced.states[0];
+ }
+ for(let slot=0;slot<3&&!state.pendingChoice!.offers.includes('starry-night');slot++){
+  const choice=state.pendingChoice!,r=applySeatCommand(pool,state,{type:'rerollAugment',choiceId:choice.choiceId,generation:choice.generation,optionIndex:slot});
+  expect(r.ok).toBe(true);pool=r.pool;state=r.state;
  }
  const c=state.pendingChoice!;expect(c.offers).toContain('starry-night');
  let picked=applySeatCommand(pool,state,{type:'choose',choiceId:c.choiceId,generation:c.generation,definitionId:'starry-night'});expect(picked.ok).toBe(true);pool=picked.pool;state=rich(picked.state);
@@ -187,9 +195,9 @@ it('the unchanged WebSocket command grammar carries shop commands and rejects cl
 });
 
 
-it('Crafted Crafting cannot lend a later same-round combination credit to an earlier shop-history refresh',()=>{
+it('Crafted Crafting cannot lend a later same-round combination credit to an earlier shop-history refresh',()=>withB1Offers(['crafted-crafting','starry-night-plus'],()=>{
  let open=reachRoundFielded('2-1',1212);
- for(const slot of [0,1]){const c=open.pendingChoice!;open=accepted(rerollAugment(open,c.choiceId,c.generation,slot));}
+ // Scripted draw (withB1Offers): this toContain is a fixture self-check; the subject is same-round combination credit.
  expect(open.pendingChoice!.offers).toContain('crafted-crafting');
  while(open.roundDefinitionId!=='3-2'){
   open=resolveM5Choices(open,['crafted-crafting']);
@@ -197,10 +205,9 @@ it('Crafted Crafting cannot lend a later same-round combination credit to an ear
   open=accepted(nextRound(open,open.round));
  }
  expect(open.augments.some(a=>a.definitionId==='crafted-crafting')).toBe(true);
- for(const slot of [0,1]){const c=open.pendingChoice!;open=accepted(rerollAugment(open,c.choiceId,c.generation,slot));}
  const actual=open.pendingChoice!;expect(actual.offers).toContain('starry-night-plus');
  let state=rich(accepted(selectChoice(open,actual.choiceId,actual.generation,'starry-night-plus')));
- // This opening grants genuine component anvils; claim a second component before testing the later craft credit.
+ // Keep the original opening's genuine component anvils; only the augment draws are scripted.
  const anvil=state.preparation.units.find(u=>u.definitionId==='TFT_ArmoryKeyComponent');expect(anvil).toBeDefined();
  state=accepted(openAnvil(state,anvil!.id));const component=state.pendingChoice!;
  state=accepted(selectChoice(state,component.choiceId,component.generation,component.offers[0]));
@@ -217,4 +224,4 @@ it('Crafted Crafting cannot lend a later same-round combination credit to an ear
  const forged=structuredClone(state) as any;
  forged.resourceProvenance.entries=forged.resourceProvenance.entries.filter((e:any)=>e.kind!=='item-combined');
  for(const entry of entries)expect(()=>restore(forged,entry)).toThrow();
-});
+}));
