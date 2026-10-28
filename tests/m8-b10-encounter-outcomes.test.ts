@@ -13,6 +13,8 @@ import { EMPTY_MECHANISMS } from '../src/simulation/m8/runtime-types';
 import { planCatalogRoundEconomy } from '../src/simulation/opening-economy';
 import { accepted } from './match-helpers';
 import { publicNeutralPreparation, publicAuthoredPreparation } from './fixtures/m8-neutral-public-route';
+// The v25 Herald route seed (tests/fixtures/m8-neutral-public-route.ts, re-picked with the v25 epoch).
+const HERALD_ROUTE_SEED = 65;
 import { MAX_COMBAT_TICKS } from '../src/simulation/combat-types';
 import { unit } from './combat-helpers';
 import { vi } from 'vitest';
@@ -66,13 +68,12 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
     expect(api.stepMatch(state)).toEqual({ state, events: [] });
     if (roundId === '6-7') {
       expect(state.phase).toBe('gameOver');
-      expect(state.seed).toBe(2423);
+      expect(state.seed).toBe(HERALD_ROUTE_SEED);
       expect(openingEncounter(state.seed)).toBe('none');
       expect(independentLootPlan(state.seed,38).rounds.at(-1)!.encounterPlan.encounterId).toBe('rift-herald-v1');
-      // Seed 2423 (v23: the public Herald route's crab-free seed with no opening encounter under fmix32; 42 now
-      // draws golden-gala and 2192 loot-subscription) after the independent additive bonus stream: both literal-table
-      // BigInt oracles (epic-loot-oracle.cjs and m5/oracle.g2.cjs) give this order.
-      expect(receipts.map(r => r.payload)).toEqual(independentLootPlan(2423,38).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
+      // Use the fixture's current command-only route seed (v25: 65); payloads and their order
+      // still come from the independent literal-table BigInt loot oracle, never the runtime plan.
+      expect(receipts.map(r => r.payload)).toEqual(independentLootPlan(HERALD_ROUTE_SEED,38).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
     }
   });
 });
