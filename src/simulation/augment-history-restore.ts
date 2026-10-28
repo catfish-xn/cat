@@ -1,7 +1,7 @@
 import { validateBatch5R6Transforms } from './augment-pool-batch5-r6';
 import type { MatchState } from './match-types';
 import { preflightH13Fact } from './augment-pool-batch5-h13-history';
-import type { AugmentDeath, AugmentTakedownActor, HistorySeat } from './augment-history-types';
+import type { AugmentDeath, AugmentTakedownActor, AugmentHistoryFact, HistorySeat } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
 import { canonicalContent } from './content';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
@@ -9,7 +9,61 @@ import { historyCheck, needsAugmentHistory, historySeatId, validateAugmentAuthor
   advanceAugmentPreparationTime, carryRestoredAugmentTrace, type AugmentHistoryAuthority } from './augment-history';
 import * as commands from './match';
 import { validateMatchStructure } from './serialization-structure';
+import { freezeContent } from './content/freeze';
 const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
+
+interface ReplayEvidence {
+  readonly origin: string;
+  readonly commands: readonly { readonly name: string; readonly args: string; readonly count: number }[];
+  readonly state: MatchState;
+  readonly bytes: number;
+}
+// Restore-only evidence, never candidate admission or live command results.
+// Exact origin/argument encodings bind each prefix; a compressed step run may
+// grow, but a changed argument, branch or shortened run cannot reuse that suffix.
+const replays: ReplayEvidence[] = [];
+const MAX_REPLAYS = 8, MAX_REPLAY_BYTES = 8 * 1024 * 1024;
+function containsNegativeZero(values: readonly unknown[]): boolean {
+  const stack = [...values];
+  while (stack.length) {
+    const value = stack.pop();
+    if (Object.is(value, -0)) return true;
+    if (value && typeof value === 'object') for (const child of Object.values(value)) stack.push(child);
+  }
+  return false;
+}
+function replayPrefix(origin: string, commands: ReplayEvidence['commands'], facts: readonly AugmentHistoryFact[]): ReplayEvidence | undefined {
+  let best: ReplayEvidence | undefined, bestSteps = -1;
+  for (const entry of replays) {
+    if (entry.origin !== origin || entry.commands.length > commands.length) continue;
+    let steps = 0;
+    const matches = entry.commands.every((c, i) => {
+      const next = commands[i];
+      steps += c.count;
+      return c.name === next.name && c.args === next.args && (i === entry.commands.length - 1 && c.name === 'stepMatch'
+        ? c.count <= next.count : c.count === next.count);
+    });
+    if (!matches) continue;
+    const priorFacts = entry.state.augmentHistory?.facts ?? [];
+    // A candidate may only extend the independently generated fact prefix. At
+    // an identical command boundary all facts must match, including absence.
+    // A miss always reconstructs from an earlier prefix or the validated origin.
+    const exact = entry.commands.length === commands.length && entry.commands.at(-1)?.count === commands.at(-1)?.count;
+    if ((exact && priorFacts.length !== facts.length) || !same(priorFacts, facts.slice(0, priorFacts.length))) continue;
+    if (steps > bestSteps) { best = entry; bestSteps = steps; }
+  }
+  return best;
+}
+function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState): void {
+  const bytes = 2 * (origin.length + canonicalContent(commands).length + canonicalContent(state).length);
+  if (bytes > MAX_REPLAY_BYTES) return;
+  const previous = replays.findIndex(e => e.origin === origin && same(e.commands, commands));
+  if (previous >= 0) replays.splice(previous, 1);
+  while (replays.length >= MAX_REPLAYS || replays.reduce((n, e) => n + e.bytes, bytes) > MAX_REPLAY_BYTES) replays.shift();
+  // No private expected state or trace payload can be mutated through a later
+  // restored command's proof. Pure commands can resume these frozen prefixes.
+  replays.push({origin,commands,state:freezeContent(state),bytes});
+}
 
 export function preflightAugmentHistory(s: MatchState): void {
   validateBatch5R6Transforms(s);
@@ -89,15 +143,31 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
     historyCheck(c && same(Object.keys(c).sort(), ['args','count','name']) && SOLO_COMMANDS.has(c.name) && Array.isArray(c.args) && c.args.length <= 5 && Number.isSafeInteger(c.count) && c.count > 0 && (c.count === 1 || c.name === 'stepMatch'), 'command shape');
     steps += c.count; historyCheck(steps <= LIMIT.steps, 'step bounds');
   }
-  let replay = initializeAugmentTrace(validateMatchStructure(proof.origin));
-  for (const c of proof.commands) for (let i = 0; i < c.count; i++) {
-    const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
-    const result = fn(replay, ...c.args.map((a: unknown) => a === null ? undefined : a)) as { ok?: boolean; state?: MatchState };
-    historyCheck(result && result.ok !== false, `replay command ${c.name}`);
-    const next = result.state ?? result as unknown as MatchState;
-    historyCheck(next !== replay, 'replay no-op'); replay = next;
+  const origin = canonicalContent(proof.origin);
+  const encoded = proof.commands.map(c => ({name:c.name,args:canonicalContent(c.args),count:c.count}));
+  // Canonical JSON collapses -0 to 0, so such proofs must use cold replay.
+  const cacheable = !containsNegativeZero([proof.origin, ...proof.commands.map(c => c.args)]);
+  const prefix = cacheable ? replayPrefix(origin, encoded, h.facts) : undefined;
+  // A hit skips validateMatchStructure(proof.origin) and resumes commands from
+  // frozen evidence. This is correct only while all SOLO_COMMANDS are pure
+  // functions that never mutate their inputs in place.
+  let replay = prefix?.state ?? initializeAugmentTrace(validateMatchStructure(proof.origin));
+  for (const [index,c] of proof.commands.entries()) {
+    const skipped = prefix?.commands[index]?.count ?? 0;
+    if (skipped === c.count) continue;
+    // A command may retain a location/target object. Private evidence must not
+    // retain or freeze any object owned by the candidate save.
+    const args = structuredClone(c.args).map((a: unknown) => a === null ? undefined : a);
+    for (let i = skipped; i < c.count; i++) {
+      const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
+      const result = fn(replay, ...args) as { ok?: boolean; state?: MatchState };
+      historyCheck(result && result.ok !== false, `replay command ${c.name}`);
+      const next = result.state ?? result as unknown as MatchState;
+      historyCheck(next !== replay, 'replay no-op'); replay = next;
+    }
   }
   historyCheck(same(replay, s), 'replayed facts/state mismatch');
+  if (cacheable) rememberReplay(origin, encoded, replay);
   carryRestoredAugmentTrace(replay,s);
 }
 export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime']);

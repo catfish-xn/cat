@@ -170,7 +170,13 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(result.state.m8.loot.receipts.slice(before.m8.loot.receipts.length).map(r=>[r.dropId,r.payload])).toEqual(expected.map(d=>[d.dropId,d.payload]));
     expect(result.state.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===1010)).toBe(false);
     expect(clone(result.state)).toEqual(result.state);
-    const bad=JSON.parse(serializeMatch(result.state));bad.m8.loot.earnedEvidence.at(-1).death.eventSeq=1010;
+    const lastEvidence=result.state.m8.loot.earnedEvidence.at(-1)!;
+    const source=expected.find(d=>d.dropId===lastEvidence.dropId)!.sourceUnitId;
+    expect(result.state.m8.loot.earnedEvidence.filter(e=>expected.some(d=>d.dropId===e.dropId&&d.sourceUnitId===source))).toHaveLength(3);
+    const bad=JSON.parse(serializeMatch(result.state));
+    // Keep the forged identity inside the completed combat's event range so the
+    // same-source consistency check, rather than the history bound, rejects it.
+    bad.m8.loot.earnedEvidence.at(-1).death.eventSeq--;
     expect(()=>restoreMatch(bad)).toThrow('source death conflict');
   });
 
