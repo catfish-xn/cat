@@ -437,5 +437,11 @@ describe('tomb raider bot seat grants one receipt after one elimination', () => 
     const stripped = { ...mine(), match: { ...committed, augmentHistory: { ...committed.augmentHistory!, facts } } };
     expect(() => recordRoomPublication(before, { ...before, seats: before.seats.map(s => s.seatId === ownerId ? stripped : s) })).toThrow('Invalid tomb raider acquisition table');
     expect(room.state.fault).toBeNull();
+    // Internal publication only: a missing-table seat must fault the room; this does not claim a public command can reach that state.
+    const publisher = room as unknown as { replace(next: RoomState): void };
+    publisher.replace({ ...before, seats: before.seats.map(s => s.seatId === ownerId ? stripped : s) });
+    expect(room.state.phase).toBe('ended');
+    expect(room.state.fault).toEqual({ kind: 'invalid-results', detail: 'Invalid tomb raider acquisition table' });
+    expect(mine().match.augmentHistory?.facts.some(f => f.kind === 'table' && f.stage === 'acquire')).toBe(true);
   });
 });
