@@ -5,9 +5,9 @@
     "scripts/record-chest-trial-v25.cjs": "02b498e412629266c0796794227d5fb98eb46f2e3d1420a344439bba1dd9d9e2",
     "tests/fixtures/v25-online-rules-chest-trial.ts": "892873e050247d4148c92e51e05e57ace44312df1e0a6aa11c73d6a87a019f29",
     "tests/fixtures/b8-public-equipment.ts": "f16636be18edd9f68f85526e231324bc21f698cf2d462c2d355d288aeb2ea0d1",
-    "tests/fixtures/m5/oracle.g2.cjs": "4e74e937b6311f14e48acbe415b38325619627b3295dbd9537cf422a1df10dee"
+    "tests/fixtures/m5/oracle.g2.cjs": "09242fcaee9152ad2e38df3fd13e293bee26782bacddd0071b8c9fb2cd1b924a"
   },
   "fixtureBytes": 53535,
-  "fixtureSha256": "7e737a5e0bd5e34a468dd391cec42240e2a78b2baa595e5876246f410a00eab8",
+  "fixtureSha256": "fef60001409db1daaabd136f817ae75b28142de828e79474153e787770c0fca3",
   "seed": 585
 }
