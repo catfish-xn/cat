@@ -15,7 +15,7 @@ import {g23RewardAtoms} from '../src/simulation/g2-3-rewards';
 import {drainG23Rewards} from '../src/simulation/g2-3-runtime';
 import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import {grantMechanicGold,grantMechanicItem,grantMechanicUnit,openMechanicChoice} from '../src/simulation/seat-mechanics';
-import {accepted,naturalForgeStates,naturalTier4Preparation,openConquerorAnvil,NATURAL_FORGE_SEED} from './fixtures/g24-natural-forge';
+import {accepted,naturalForgeStates,naturalTier4Preparation,openConquerorAnvil,NATURAL_FORGE_SEED} from './fixtures/g24-pr161-natural-forge';
 import {anvilChoiceId} from '../src/simulation/anvils';
 import {isAnvil} from '../src/simulation/content/anvils';
 import {finishPublicEquipmentBattle} from './fixtures/b8-public-equipment';
@@ -35,8 +35,8 @@ function nextDuplicatorPreparation(input:MatchState):MatchState{
   if(state.phase==='preparation')return state;
   if(state.phase==='choice'){
    const c=state.pendingChoice!;
-   // Family Crown's new unit gifts fill the tier-4 duplicator's reserve; use the item-only offered card.
-   const pick=c.kind==='augment'&&state.seed===27566&&state.roundDefinitionId==='2-1'?'immovable-object':c.offers[0];
+   // The current pool offers Pumping Up III without reserve-filling unit gifts.
+   const pick=c.kind==='augment'&&state.seed===27566&&state.roundDefinitionId==='2-1'?'pumping-up-iii':c.offers[0];
    expect(c.offers).toContain(pick);state=accepted(selectChoice(state,c.choiceId,c.generation,pick));
   }else if(state.phase==='settlement'){while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const extra:MatchState['preparation']['units'][number]=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&isSellableUnit(u.definitionId)&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,extra.id));}state=accepted(nextRound(state,state.round));}
   else throw Error(`Unexpected duplicator fixture phase ${state.phase}`);
@@ -270,12 +270,12 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
  expect(four.seatMechanics!.receipts.filter(r=>r.receiptId.startsWith('g23:conqueror:4:'))).toEqual([
   expect.objectContaining({kind:'unit',resolution:'held'}),expect.objectContaining({kind:'unit',resolution:'held'}),
  ]);
- // Trade Sector at 2-1 grants no crest/component gift; the unchanged later route now births crown item-26.
+ // The seed 24 route births the crown as item-26.
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:12:atom:0:copy:0')).toMatchObject({kind:'item',itemId:'item-26',definitionId:'TFT_Item_ForceOfNature'});
  expect(states[1].seatMechanics!.receipts.find(r=>r.receiptId==='g23:conqueror:14:atom:0:copy:0')).toMatchObject({
   // The support trial grants four earlier items; birth must still use the exact frozen serial.
-  // v23: seed 20's tier-14 radiant roll is Ionic Spark (seed 42/v22: Archangel's Staff).
-  kind:'item',itemId:`item-${states[1].combatInputBasis!.nextItemSerial}`,definitionId:'TFT5_Item_IonicSparkRadiant',
+  // Seed 24's tier-14 radiant roll is Hand of Justice.
+  kind:'item',itemId:`item-${states[1].combatInputBasis!.nextItemSerial}`,definitionId:'TFT5_Item_HandOfJusticeRadiant',
  });
  for(const state of states){
   const before=JSON.stringify(state),save=serializeMatch(state);
@@ -288,15 +288,12 @@ it('restores automatic heroes/duplicator at tier4 and radiant item at tier14, pe
 
 it('rejects a duplicator receipt and matching hero forged to an unowned option at tier4',()=>{
  const state=naturalForgeStates().get(4)!;
- // v23: the natural forge route moved from seed 42 to NATURAL_FORGE_SEED 20 (same scuttle-puddle opening).
+ // Seed 24 keeps the scuttle-puddle opening without the unrelated prismatic offer-history replay.
  expect([state.seed,state.round,state.roundDefinitionId]).toEqual([NATURAL_FORGE_SEED,6,'2-3']);
  const receiptId='g23:conqueror:4:atom:1:copy:0';
  const receipt=state.seatMechanics!.receipts.find(r=>r.receiptId===receiptId);
- // v22 augment tier table: seed42's 2-1 node is gold, so the fixture takes Portable Forge instead of All For One I,
- // whose two filler heroes no longer take unit-66/67.
- // v23: seed 20's augments and duplicator roll give Irelia (seed 42/v22: Swain, unit-68); after the batch-3/XP merge the
- // 2-1 Trade Sector grants no Rell, so Irelia is unit-64.
- expect(receipt).toMatchObject({kind:'unit',definitionId:'irelia',unitId:'unit-64'});
+ // Seed 24's genuine duplicator roll copies Scar into unit-64.
+ expect(receipt).toMatchObject({kind:'unit',definitionId:'scar',unitId:'unit-64'});
  expect(state.preparation.units.some(u=>u.definitionId==='zeri')).toBe(false);
  const progress=readG23Progress(state)!,bundle=progress.rewards.find(b=>b.id==='g23:conqueror:4')!;
  const atom=g23RewardAtoms(bundle,state.seed).find(a=>a.kind==='duplicator')!;
@@ -364,7 +361,7 @@ it('rejects edited automatic birth serials, receipt/ledger order, rounds and def
  }
 },60000);
 
-// v23: NATURAL_FORGE_SEED (20) carries v22 seed 42's scuttle-puddle opening and trajectory.
+// Seed 24 retains the scuttle-puddle trajectory.
 it('the scuttle-puddle seed naturally opens tier10 at 5-3/690 stacks and round-trips the selected artifact in settlement',()=>{
  const state=naturalForgeStates().get(10)!,choice=state.pendingChoice!;
  // v22 batch-B crabs: seed42 rolls scuttle-puddle, whose 4-7 board has five crabs (the sixth carrier shares the
@@ -372,7 +369,7 @@ it('the scuttle-puddle seed naturally opens tier10 at 5-3/690 stacks and round-t
  expect([state.round,state.roundDefinitionId,readG23Progress(state)!.conquest.stacks]).toEqual([27,'5-3',690]);
  // v22 anvil units: the fixture claimed the tier-10 anvil unit from its orb and opened it by selling it.
  expect(choice).toMatchObject({kind:'forge',payload:{kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:choice.offers[0]}});
- // Pick a non-timeout offer; the 29-artifact pool (v11) changed the natural seed42 offers.
+ // Pick a non-timeout offer from the natural artifact pool.
  const pick=choice.offers[1];
  const picked=accepted(selectChoice(state,choice.choiceId,choice.generation,pick));
  expect(picked.phase).toBe('settlement');
