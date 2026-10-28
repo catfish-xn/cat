@@ -1,10 +1,10 @@
+import { needsAugmentHistory } from '../src/simulation/augment-history';
 import { isSellableUnit } from '../src/simulation/seat-mechanics/forms';
 import { describe, expect, it } from 'vitest';
 import { sellUnit, createMatch, buyXp, deployMatchUnit, startMatchCombat, stepMatch, nextRound, selectChoice, selectAnomalyTarget, claimOrb, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readLootView } from '../src/simulation/loot-view';
 import { grantMechanicGold, grantMechanicUnit } from '../src/simulation/seat-mechanics';
-import { P2_ITEM_GRANTS } from '../src/simulation/content/s13-augments-p2';
 import { isAnvil } from '../src/simulation/content/anvils';
 import { SHOP_CATALOG } from '../src/simulation/match-rules';
 import { lootEntryId } from '../src/simulation/loot-identity';
@@ -14,13 +14,13 @@ import { accepted, openConquerorAnvil } from './fixtures/g24-forge-anvil';
  * B8 receipt order with retained orbs (merge 473f2e2b): receipts follow their transaction round, which is the
  * claim round (claimedRoundId) for an orb claimed later, never earlier than the orb's own round.
  *
- * Route (seed 20, scuttle-puddle opening, the natural-forge recruit): six 3-star heroes from public mechanic
+ * Route (seed 21, the natural-forge recruit): six 3-star heroes from public mechanic
  * grants at 1-1, every later preparation sells the spare bench. At 4-7 and 5-7 the bench is filled to capacity
  * before combat, so each round's PvE forge entry stays revealed and unclaimed (the 4-7 orb's component entry is
  * still granted at 4-7). The 4-7 forge is claimed at 6-1 and the 5-7 forge at 6-2, giving two late receipts with
  * claimedRoundId 6-1 then 6-2.
  */
-const SEED = 20, BOARD = ['darius', 'draven', 'rell', 'swain', 'ambessa', 'mordekaiser'], FULL_BENCH_ROUNDS = ['4-7', '5-7'];
+const SEED = 21, BOARD = ['darius', 'draven', 'rell', 'swain', 'ambessa', 'mordekaiser'], FULL_BENCH_ROUNDS = ['4-7', '5-7'];
 const bench = (state: MatchState) => state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench');
 const forgeOrb = (state: MatchState, roundId: string) => readLootView(state).unclaimedOrbs?.find(o => o.orbId.startsWith(JSON.stringify(['orb', roundId]).slice(0, -1) + ',') && o.entries.some(e => e.kind === 'forge'));
 
@@ -40,6 +40,8 @@ function prepare(input: MatchState): MatchState {
   let state = input;
   for (const u of bench(state).filter(u => u.id !== 'unit-1' && !isAnvil(u.definitionId) && isSellableUnit(u.definitionId))) state = accepted(sellUnit(state, u.id));
   if (FULL_BENCH_ROUNDS.includes(state.roundDefinitionId)) {
+    // Direct fixture grants are not recorded in solo augment-command proofs.
+    expect(needsAugmentHistory(state)).toBe(false);
     const fillers = SHOP_CATALOG.filter(d => !BOARD.includes(d));
     for (let i = 0; bench(state).length < state.preparation.benchSize; i++)
       state = accepted(grantMechanicUnit(state, { receiptId: `fixture:filler:${state.roundDefinitionId}:${i}`, source: 'fixture', definitionId: fillers[i] }));
@@ -53,7 +55,9 @@ function advanceTo(input: MatchState, target: string): MatchState {
     if (state.phase === 'choice') {
       let c = state.pendingChoice!;
       if (c.kind === 'anomaly' && c.step === 'target') { state = accepted(selectAnomalyTarget(state, c.choiceId, c.generation, state.preparation.units.find(u => u.team === 'player')!.id)); c = state.pendingChoice!; }
-      const id = c.kind === 'augment' ? ['trade-sector'].find(id => c.offers.includes(id)) ?? c.offers.find(id => !(id in P2_ITEM_GRANTS)) ?? c.offers[0] : c.offers[0];
+      // Natural offers for seed 21; these choices avoid history-dependent mechanics.
+      const id = c.kind === 'augment' ? ({ '2-1': 'inspiring-epitaph', '3-2': 'bronze-for-life-ii', '4-2': 'clockwork-accelerator' } as Record<string, string>)[state.roundDefinitionId] : c.offers[0];
+      expect(c.offers).toContain(id);
       state = accepted(selectChoice(state, c.choiceId, c.generation, id)); continue;
     }
     if (state.phase === 'combat') { state = stepMatch(state).state; continue; }
@@ -91,7 +95,7 @@ function stage(target: Stage): MatchState {
 }
 const lateReceipts = (state: MatchState) => state.m8.loot.receipts.filter(r => r.claimedRoundId !== undefined);
 
-describe('B8 late-claimed retained orb receipts (seed 20)', () => {
+describe('B8 late-claimed retained orb receipts (seed 21)', () => {
   it.each(STAGES)('public route reaches %s', target => {
     const state = stage(target);
     expect([state.roundDefinitionId, state.phase]).toEqual([target, 'preparation']);
