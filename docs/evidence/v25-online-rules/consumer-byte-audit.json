@@ -1476,7 +1476,7 @@
       "previousBytes": 0,
       "currentBytes": 61860,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f7180aabe7601998ecddcf2bb0efa595c6fec5756baaf0a0b38f4dcc152290db",
+      "currentSha256": "aa96cd0df365c18aef5083afd61db455c41dcb13d1265c91f280dc3758ce8a4b",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v25-online-rules-herald-raw/quicksilver.json": {

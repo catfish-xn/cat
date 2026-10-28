@@ -48,7 +48,7 @@
     "src/simulation/augment-effects.ts": "6ecb6e8857138298e55d54a0599779267d60ff93cb13cd678a24313e3649fb41",
     "src/simulation/augment-gift-plan.ts": "10d0aeaf84227fc0372d707d075ab05614eb72f2b8c76efc4ea54ca0334072e0",
     "src/simulation/augment-history-owners.ts": "6a675ffb8ed6efc0ea05d8ca78c494d6d809eca6ed4c962dbf2e1868b76d0df8",
-    "src/simulation/augment-history-restore.ts": "bb59e859b1c5365b3229a6189eaf6f4f853a7e45c65c8dc1af81325840a77a7b",
+    "src/simulation/augment-history-restore.ts": "8353ab560b24be7a2cbf930ddaaebe15a44e44833fd6d7b2c4a9c81aa839c4fe",
     "src/simulation/augment-history-types.ts": "024af209b2ac14a0d06e0d0b0f757344697b870bf8f9e5b48ca842d4c80e3d4a",
     "src/simulation/augment-history.ts": "bdc4aa96b150b93352630580480fb6d6f2fb288bf4a7142a2a8fee7bd68d92b8",
     "src/simulation/augment-income.ts": "7725de829f93c380a81738a0ae528bf54039748b975be04c2addc9916a116ef0",
@@ -642,7 +642,7 @@
       "previousBytes": 48373,
       "currentBytes": 61860,
       "previousSha256": "2647356330030c2c67c46129d9efa70e290b4665d8787fb4aa49ca6cf63f8e22",
-      "currentSha256": "f7180aabe7601998ecddcf2bb0efa595c6fec5756baaf0a0b38f4dcc152290db",
+      "currentSha256": "aa96cd0df365c18aef5083afd61db455c41dcb13d1265c91f280dc3758ce8a4b",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v25-online-rules-herald-raw/trajectory.json": {
