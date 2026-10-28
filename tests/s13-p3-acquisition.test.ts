@@ -10,6 +10,8 @@ import { firstNodeSeed } from './augment-stage-helpers';
 import { accepted, reachRound } from './match-helpers';
 import { openingEncounterId } from '../src/simulation/opening-encounter';
 import * as matchApi from '../src/simulation/match';
+// Prefer combat-only augments; every offer and all paid rerolls remain natural.
+const combatAugments = ['pumping-up-iii','bulky-buddies-iii','pumping-up-ii','bulky-buddies-ii','manaflow-ii','pumping-up-i','bulky-buddies-i','manaflow-i'];
 const anomalyPrefixes = new Map<number, Promise<ReturnType<typeof matchApi.createMatch>>>();
 function publicAnomalyPrefix(seed = 42) {
   const cached = anomalyPrefixes.get(seed);
@@ -18,7 +20,7 @@ function publicAnomalyPrefix(seed = 42) {
     let prefix: ReturnType<typeof matchApi.createMatch> | undefined;
     const stop = new Error('Captured public 4-5 preparation prefix');
     try {
-      await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(matchApi, { build: 'sniper', seed, augmentPriorities: ['flurry-of-blows'],
+      await createRequire(import.meta.url)('../scripts/generate-m5-route.cjs').run(matchApi, { build: 'sniper', seed, augmentPriorities: combatAugments,
         onStep(_before: unknown, result: {state: ReturnType<typeof matchApi.createMatch>}) {
           if(result.state.roundDefinitionId==='4-5'&&result.state.phase==='preparation') {prefix=result.state;throw stop;}
         } });
@@ -28,12 +30,10 @@ function publicAnomalyPrefix(seed = 42) {
   anomalyPrefixes.set(seed, prefixPromise);
   return prefixPromise;
 }
-// The existing public-neutral fixture also builds its public route at module setup.
-// Test bodies retain Vitest's unchanged 5s limit (the raw-data check below: 10 s, temporary); no workload or assertion is skipped.
 const publicPrefix = await publicAnomalyPrefix();
-// Keep five routes on seed 42; seed 44 publicly affords both nothing-wasted
-// and dragonsoul within the existing 100-reroll budget in the expanded pool.
-const nothingWastedPrefix = await publicAnomalyPrefix(44);
+// Seed 40 reaches dragonsoul/nothing-wasted within 100 paid rerolls without
+// seed 44's unrelated Scoreboard Scrapper command-history replay.
+const nothingWastedPrefix = await publicAnomalyPrefix(40);
 
 it('independently checks every new coefficient and Chinese label against compressed raw, with no archive writes', () => {
   const raw = (name: string) => JSON.parse(gunzipSync(readFileSync(new URL('../src/simulation/content/source/s13-14.24b/raw/' + name + '.gz', import.meta.url))).toString());
@@ -75,7 +75,7 @@ it.each(Object.entries(P3_AUGMENT_ITEMS))('%s grants exactly one %s using the ex
   const combat = accepted(startMatchCombat(after)); expect(restoreMatch(serializeMatch(combat))).toEqual(combat);
   const next = stepMatch(combat).state; expect(restoreMatch(serializeMatch(next))).toEqual(next);
 });
-it.each(['the-finisher','touch-of-frost','fireball','dragonsoul','nothing-wasted','thornskin','knockout'])('%s is publicly selectable and strictly restores after entering and advancing combat',async id=>{
+it.each(['the-finisher','touch-of-frost','fireball','dragonsoul','nothing-wasted','thornskin','knockout'])('%s is publicly selectable and strictly restores after entering and advancing combat',id=>{
   let s=id==='nothing-wasted'||id==='dragonsoul'?nothingWastedPrefix:publicPrefix;
   const target=s.preparation.units.find(u=>u.team==='player')!;
   // Pay for rerolls with real sales from the acquired army, retaining the bound target.
