@@ -9,7 +9,8 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { familyCombatBase } from '../src/simulation/family-reunion';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
-import { offerFor } from './augment-stage-helpers';
+import { fieldedRoute } from './augment-stage-helpers';
+import { rerollAugment } from '../src/simulation/match';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 
 it.skipIf(!existsSync(RESEARCH_FILE))('Greater Moonlight preserves the 14.24 archive numbers',()=>{
@@ -37,7 +38,10 @@ it('Greater Moonlight samples only fielded eligible one-cost champions and exclu
 });
 let combat:MatchState, promotedId:string;
 beforeAll(()=>{
- let s=offerFor('greater-moonlight'), c=s.pendingChoice!;expect(c.offers).toContain('greater-moonlight');
+ // v25 catalog: fielded 4-2 seed 6 (replacing STAGE_SEEDS 16) with the same public slot rerolls.
+ let s=fieldedRoute(6,'4-2');
+ for(let slot=0;slot<3&&!s.pendingChoice!.offers.includes('greater-moonlight');slot++){const c=s.pendingChoice!;s=accepted(rerollAugment(s,c.choiceId,c.generation,slot));}
+ const c=s.pendingChoice!;expect(c.offers).toContain('greater-moonlight');
  s=resolveM5Choices(accepted(selectChoice(s,c.choiceId,c.generation,'greater-moonlight')));s=fieldBench(s);
  const originals=s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&u.starLevel<=3);
  expect(originals.length).toBeGreaterThan(0);

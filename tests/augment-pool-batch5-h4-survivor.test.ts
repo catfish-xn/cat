@@ -4,18 +4,20 @@ import { AUGMENT_BATCH5_H4 } from '../src/simulation/content/augment-pool-batch5
 import { restoreSharedOrbSnapshot } from '../src/simulation/shared-pool';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
 import { recordRoomSettlementTable } from '../src/server/room/augment-history';
-import { offeredAt, firstNodeSeed } from './augment-stage-helpers';
+import { offeredAt } from './augment-stage-helpers';
 import { reachRound, accepted } from './match-helpers';
 import { selectChoice } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { makeRoom, runUntil } from './server/helpers';
+import { installB1Offers, withB1Offers } from './fixtures/b1-scripted-offers';
+import { roomOfferFor } from './server/augment-offer-helpers';
 const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
 it.skipIf(!existsSync(RESEARCH_FILE))('B5-34 source numbers',()=>{
  const row=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((r:any)=>r.apiName===AUGMENT_BATCH5_H4.survivor.apiName);
  expect(row.effects).toEqual(AUGMENT_BATCH5_H4.survivor.values);
 });
 it('B5-34 offer nodes',()=>expect(['2-1','3-2','4-2'].filter(n=>offeredAt('survivor',n as '2-1'|'3-2'|'4-2'))).toEqual(['2-1']));
-it('B5-34 awards previously eliminated seats in the real room acquisition',()=>{
+it('B5-34 awards previously eliminated seats in the real room acquisition',()=>withB1Offers(['survivor'],()=>{
  const inner=new TwoSidedBattleResolver();
  const {room,clock}=makeRoom({resolveBattle(input,pool){
   const seat=input.seats[0];
@@ -25,7 +27,9 @@ it('B5-34 awards previously eliminated seats in the real room acquisition',()=>{
  }},{seed:8});
  try {
   room.start();runUntil(room,clock,s=>s.round===4&&s.phase==='preparation');
-  const seat=room.state.seats.find(s=>s.seatId==='s7')!,choice=seat.match.pendingChoice!;expect(choice.offers).toContain('survivor');
+  roomOfferFor(room,'s7','survivor');const seat=room.state.seats.find(s=>s.seatId==='s7')!,choice=seat.match.pendingChoice!;
+  // Scripted draw (withB1Offers): this toContain is a fixture self-check; eligibility and room settlement are still real.
+  expect(choice.offers).toContain('survivor');
   expect(room.handleBot('s7',seat.controlEpoch,{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'survivor'})).toMatchObject({ok:true});
   const picked=room.state.seats.find(s=>s.seatId==='s7')!.match;expect(picked.gold).toBe(seat.match.gold+60);
   expect(picked.seatMechanics!.receipts.filter(r=>r.source==='augment-pool-batch5-h4-survivor')).toMatchObject([{kind:'gold',amount:60}]);
@@ -37,9 +41,11 @@ it('B5-34 awards previously eliminated seats in the real room acquisition',()=>{
    expect(()=>restoreSharedOrbSnapshot(room.state.pool,input(bad),authority)).toThrow();
   }
  } finally{room.dispose();}
-});
-it('B5-34 solo selection round trips and rejects tampering in all offline restore entries',()=>{
- const open=reachRound('2-1',false,firstNodeSeed('survivor',101)),c=open.pendingChoice!;
+}));
+it('B5-34 solo selection round trips and rejects tampering in all offline restore entries',()=>withB1Offers(['survivor'],()=>{
+ // No public 2-1 route lands survivor within seeds 0..100 after the v25 pool expansion; keep the real candidate pool and script only the draw.
+ const open=reachRound('2-1',false,8),c=open.pendingChoice!;
+ expect(c.offers).toContain('survivor');
  const picked=accepted(selectChoice(open,c.choiceId,c.generation,'survivor'));
  expect(picked.gold).toBe(open.gold);
  for(const format of ['object','json','serialized'] as const){
@@ -48,13 +54,15 @@ it('B5-34 solo selection round trips and rejects tampering in all offline restor
   const bad:any=structuredClone(picked);bad.augmentHistory.facts[0].goldBefore++;
   expect(()=>restoreMatch(input(bad))).toThrow();
  }
-});
+}));
 describe('B5-34 simultaneous elimination publication',()=>{
  const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:8});
- beforeAll(()=>{room.start();runUntil(room,clock,s=>s.round===4&&s.phase==='preparation');});
- afterAll(()=>room.dispose());
+ let restoreOffers:()=>void;
+ beforeAll(()=>{restoreOffers=installB1Offers(['survivor']);room.start();runUntil(room,clock,s=>s.round===4&&s.phase==='preparation');});
+ afterAll(()=>{room.dispose();restoreOffers();});
  it('selects survivor through the real bot command without paying early',()=>{
-  const seat=room.state.seats.find(s=>s.seatId==='s7')!,choice=seat.match.pendingChoice!;expect(choice.offers).toContain('survivor');
+  roomOfferFor(room,'s7','survivor');const seat=room.state.seats.find(s=>s.seatId==='s7')!,choice=seat.match.pendingChoice!;
+  expect(choice.offers).toContain('survivor');
   expect(room.handleBot('s7',seat.controlEpoch,{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'survivor'})).toMatchObject({ok:true});
   const picked=room.state.seats.find(s=>s.seatId==='s7')!.match;expect(picked.gold).toBe(seat.match.gold);
  });

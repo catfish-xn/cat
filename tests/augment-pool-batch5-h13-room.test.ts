@@ -6,7 +6,8 @@ import {restoreSharedOrbSnapshot,assertSharedPoolConservation} from '../src/simu
 import {salvageRecipe} from '../src/simulation/augment-pool-batch5-h13-salvage';
 import {requireAugmentFacts} from '../src/simulation/augment-history';
 import {drainBatch1Gifts} from '../src/simulation/augment-pool-grants';
-const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:15});
+// v25 catalog (285 cards): seed 30 is the first bounded room route where s0 can acquire salvage-bin-plus at 3-2 via public rerolls.
+const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:30});
 const seatId='s0',match=()=>room.state.seats.find(s=>s.seatId===seatId)!.match;
 beforeAll(()=>room.start());
 for(let round=2;round<=12;round++)beforeAll(()=>{runUntil(room,clock,s=>s.round===round&&(s.phase==='preparation'||s.roundKind==='supply'));});
