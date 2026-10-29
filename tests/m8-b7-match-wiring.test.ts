@@ -90,7 +90,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
       for(const u of view!.units) expect(u.stats.maxHp).toBeGreaterThan(0);
     }
     // v22 cleaned the encounter text; a crab-free 1-2 is the fixed ordinary PvE note, never a special pool.
-    expect(readEncounterPreview(prepared('1-2'))!.rulesNote).toBe('固定普通PvE；项目首版参数，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。');
+    expect(readEncounterPreview(prepared('1-2'))!.rulesNote).toBe('固定普通PvE；项目首版参数，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。失败或平局：基础0+每只存活野怪1，最少扣1生命；召唤物及非战斗单位不计。');
     expect(readEncounterPreview(prepared('2-1'))!.encounterId).toBe('pvp:2-1');
   });
   it('keeps neutral registration out of all hero acquisition, traits, equipment and PvP templates',()=>{

@@ -16,7 +16,7 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     expect(first.preparation).not.toBe(createMatch().preparation);
     expect(first.preparation.units.every(unit=>unit.starLevel===1)).toBe(true);
   });
-  it('concedes an empty deployment at tick zero once, with stage-one base income and fixed PvE failure damage', () => {
+  it('concedes an empty deployment at tick zero once, with stage-one base income and survivor-based PvE failure damage', () => {
     const state=freeze(emptyBoard()),before=structuredClone(state),result=startMatchCombat(state);
     expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
     // B8 forfeits unearned loot; v20-black-market still grants the fixed remover to a surviving loser.
@@ -32,12 +32,12 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:ids.map(dropId=>({dropId,status:'forfeited',receiptId:null}))});
     expect(result.state.preparation).toEqual(state.preparation);
     expect(result.state.nextUnitSerial).toBe(2);expect(result.state.nextItemSerial).toBe(1);expect(result.state.items).toEqual([]);
-    expect(result.state).toMatchObject({phase:'settlement',playerHp:97,gold:0,level:2,xp:0});
+    expect(result.state).toMatchObject({phase:'settlement',playerHp:98,gold:0,level:2,xp:0});
     // Approved deferred income: no spendable base gold at settlement; pay exactly once on preparation entry.
     expect(result.state.roundResults[0]).toMatchObject({goldAfter:2,incomeBreakdown:{base:2,win:0,interest:0,streak:0}});
     const continued=accepted(nextRound(result.state,result.state.round));
     expect(continued.gold).toBe(2);expect(stepMatch(continued).state.gold).toBe(2);
-    expect(result.state.roundResults).toHaveLength(1);expect(result.state.roundResults[0]).toMatchObject({result:'enemyWin',combatTicks:0,combatEventCount:1,playerDamage:3});
+    expect(result.state.roundResults).toHaveLength(1);expect(result.state.roundResults[0]).toMatchObject({result:'enemyWin',combatTicks:0,combatEventCount:1,baseDamage:0,survivingEnemyCount:2,playerDamage:2});
     expect(stepMatch(result.state)).toEqual({state:result.state,events:[]});expect(stepMatch(result.state).state).toBe(result.state);expect(state.playerHp).toBe(100);expect(state).toEqual(before);
   });
   it('rejects stale shop and missing enemies atomically', () => {

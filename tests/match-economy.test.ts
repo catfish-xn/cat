@@ -198,7 +198,7 @@ describe('M5 atomic economy and independent ledger', () => {
     let state = ledger(economyEmptyBoard(), { type: 'deploy', id: 'unit-1', target: { kind: 'board', cell: { col: 0, row: 4 } } });
     state = ledger(state, { type: 'sell', id: 'unit-1' });
     const result = accepted(startMatchCombat(freeze(state)));
-    expect(result).toMatchObject({ phase: 'settlement', playerHp: 97, gold: state.gold, xp: 2 });
+    expect(result).toMatchObject({ phase: 'settlement', playerHp: 98, gold: state.gold, xp: 2 });
     expect(result.combat).toMatchObject({ tick: 0, result: 'enemyWin' });
     expect(accepted(nextRound(result,result.round)).gold).toBe(state.gold+2);
   });
