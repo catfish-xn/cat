@@ -74,7 +74,25 @@ export async function planUi({ source, paths, sourceManifest, locale = 'zh_CN', 
   for (const path of paths.values()) if (seedPath(path, locale)) {
     const key = canonicalUiPath(path); if (!seeds.has(key)) seeds.set(key, []); seeds.get(key).push(path);
   }
-  const names = ['DATA/FINAL/UI.wad.client', `DATA/FINAL/UI.${locale}.wad.client`, 'DATA/FINAL/Maps/Shipping/Map22.wad.client'];
+  const primary = ['DATA/FINAL/UI.wad.client', `DATA/FINAL/UI.${locale}.wad.client`, 'DATA/FINAL/Maps/Shipping/Map22.wad.client'];
+  // UI names are also shared through Global/DATA/Bootstrap. Only these plausible
+  // containers may add missing index blocks to a download stage. Every other
+  // locally readable WAD is searched offline, without requesting its missing blocks.
+  const candidates = ['Bootstrap.windows', 'DATA', 'DATA2', 'Global', `Localized/Global.${locale}`,
+    'Maps/Shipping/Common', 'TFTCommon', 'TFTSet13'].map(n => `DATA/FINAL/${n}.wad.client`);
+  const names = [...primary, ...candidates.filter(n => source.manifest.files.some(f => f.name.toLowerCase() === n.toLowerCase()))];
+  const localIndexSearch = [];
+  for (const file of source.manifest.files) {
+    if (!/\.wad\.client$/i.test(file.name) || names.includes(file.name)) continue;
+    try {
+      const index = await source.index(file);
+      localIndexSearch.push({ name: file.name, status: 'readable', entries: index.entries.length });
+      names.push(file.name);
+    } catch (e) {
+      if (!e.message.startsWith('missing-local-chunk:')) throw e;
+      localIndexSearch.push({ name: file.name, status: 'not-local', reason: e.message });
+    }
+  }
   const archives = [];
   for (const name of names) {
     const file = source.manifest.files.find(f => f.name.toLowerCase() === name.toLowerCase());
@@ -157,7 +175,7 @@ export async function planUi({ source, paths, sourceManifest, locale = 'zh_CN', 
   return { schemaVersion: 1, kind: 'ui-fetch-plan', sourceVersion: VERSION, sourceManifest, locale,
     policy: 'Frozen stage allowlist. Verified local blocks/WAD ranges are reused read-only. No whole-WAD download, gap ranges, implicit fetch, guessed shop portraits or font locale claims.',
     complete: wads.every(w => w.stage === 'entries') && missing.length === 0 && discovery.every(d => d.status === 'resolved') && [...targets.values()].every(t => t.status === 'local'),
-    wads, targets: [...targets.values()], references, discovery, chunks,
+    wads, localIndexSearch, targets: [...targets.values()], references, discovery, chunks,
     totals: { targets: targets.size, selectedEntries: wads.reduce((s, w) => s + w.entries.length, 0), chunks: chunks.length,
       localChunks: chunks.length - missing.length, missingChunks: missing.length, downloadBytes: missing.reduce((n, c) => n + c.size, 0) },
     limitations: ['Unknown WAD indexes and unread source references have no invented byte estimate. Re-plan after each fetched stage.',

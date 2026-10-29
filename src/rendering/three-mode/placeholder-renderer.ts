@@ -21,13 +21,14 @@ import { installHudStyle } from './hud-style';
 import { installShopOriginalSkin } from './shop-original-skin';
 import { startOriginalUi } from './ui-original-assets';
 import { startAugmentStripSkin } from './augment-strip-skin';
+import { createOriginalStarMark } from './original-stars';
 import {
   AmbientLight, LoopRepeat, Box3, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Frustum, Group, Matrix4, Mesh, MeshStandardMaterial,
   PerspectiveCamera, Plane, Sphere, Raycaster, RingGeometry, SRGBColorSpace, Scene, SphereGeometry, Sprite, SpriteMaterial, TextureLoader, Vector2, Vector3, WebGLRenderer,
   type Object3D, type Texture,
 } from 'three';
 import {
-  ModelCache, UnitActionState, UnitAnimationMixer, readParticleMesh, assetUrl, createActionEffectResolver, createStarMark, hexCenter,
+  ModelCache, UnitActionState, UnitAnimationMixer, readParticleMesh, assetUrl, createActionEffectResolver, hexCenter,
   type AnimationEvent, type HexGrid, type ModelLease, type ParticleEffect, type StarMark,
 } from '../../rendering3d';
 import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece, BoardScreenBox } from '../board-feed';
@@ -455,7 +456,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return effects.load(id, maxDuration);
   } : null;
   const stage = createCarouselStage({ championHeight: MODEL_HEIGHT, championWidth: MODEL_WIDTH, sourceScale: FX_SCALE, legendModel: LEGEND_MODEL,
-    font: canvasFont,
+    font: canvasFont, ui: originalUi,
     loadModel, hasModel: id => !!models.cache && Object.hasOwn(models.cache.manifest.models, id),
     unitScale: id => readUnitScale(models.cache?.manifest.models, id), envelope: (id, lease) => envelopeOf(id, lease),
     loadEffect, hasEffect: id => !!models.cache?.manifest.effects?.[id], starColor: level => starColorFor(level), costColor: cost => costColorFor?.(cost) ?? '#9aa4ae', onReleased: () => flashCallout('可以选了') });
@@ -481,7 +482,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const withdrawPicker = models.cache ? offerLegendPicker(feed, models.cache) : () => {};
   // 铁血征服者 chest and 微光 flask on the left of my half (trait-props.ts), from my own counters only.
   const traitProps = createTraitProps({ scene, camera, effectScale: FX_SCALE, own, loadEffect,
-    font: canvasFont,
+    font: canvasFont, ui: originalUi,
     loadModel: loadModel ? id => Object.hasOwn(models.cache!.manifest.models, id) ? loadModel(id) : Promise.reject(new Error('unknown-model')) : null });
   const boardGroup = new Group(), boardBox = new Box3();
   // Look from the player's side with a TFT-like tilt; back off until board and bench fit both ways.
@@ -845,7 +846,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (piece.neutral || piece.definitionId === 'g23-forge' || isAnvilPiece(piece.definitionId)) { view.stars?.dispose(); view.stars = null; return; }
     const level = starUps.level(piece.id, piece.effectiveStarLevel ?? piece.starLevel);
     if (view.stars) { view.stars.setLevel(level); return; }
-    view.stars = createStarMark({ effectiveStarLevel: level, colorFor: starColorFor });
+    view.stars = createOriginalStarMark({ effectiveStarLevel: level, colorFor: starColorFor, ui: originalUi });
     view.stars.object.scale.setScalar(STAR_SIZE); scene.add(view.stars.object);
   };
   const createPiece = (piece: BoardPiece, model: UnitModelChoice): PieceView => {

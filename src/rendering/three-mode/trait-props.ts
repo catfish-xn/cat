@@ -15,6 +15,7 @@ import {
 } from 'three';
 import type { ModelLease, ParticleEffect } from '../../rendering3d';
 import type { BoardFrame, BoardMechanics } from '../board-feed';
+import type { OriginalUi } from './ui-original-assets';
 
 /**
  * Same text as conqueror-flag.ts's conquestLabel (stacks / next chest, the total once all are open). Kept local: a
@@ -36,6 +37,7 @@ const OPEN_HOLD_SECONDS = 1.6, POP_SECONDS = 0.5, FILL_RATE = 1.6, BUBBLES = 6;
 const GOLD = '#e5b64a', SHIMMER = '#c25bff';
 
 export interface TraitPropsContext {
+  readonly ui?: Pick<OriginalUi, 'sprite' | 'subscribe'>;
   readonly font?: () => string;
   readonly scene: Scene;
   readonly camera: Camera;
@@ -102,8 +104,9 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
     const entry: CountLabel = {
       text: '', font: '', failed: false, view: null,
       show(text) {
-        const font = ctx.font?.() ?? 'sans-serif', changed = entry.text !== text || entry.font !== font;
-        entry.font = font;
+        const font = ctx.font?.() ?? 'sans-serif', skin = ctx.ui?.sprite('world.label'), paintKey = `${font}|${skin?.url ?? ''}`;
+        const changed = entry.text !== text || entry.font !== paintKey;
+        entry.font = paintKey;
         entry.text = text; // Also available in headless tests without a document/canvas.
         if (entry.failed) return;
         if (!entry.view) {
@@ -118,7 +121,8 @@ export function createTraitProps(ctx: TraitPropsContext): TraitProps {
         const draw = entry.view.canvas.getContext('2d');
         if (!draw) { entry.failed = true; entry.dispose(); return; }
         draw.clearRect(0, 0, 192, 80);
-        draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill();
+        if (skin && typeof draw.drawImage === 'function') draw.drawImage(skin.source, 0, 0, 192, 80);
+        else { draw.fillStyle = 'rgba(10, 16, 24, .92)'; draw.beginPath(); draw.roundRect(2, 2, 188, 76, 18); draw.fill(); }
         draw.fillStyle = color; draw.font = `bold 48px ${font}`; draw.textAlign = 'center'; draw.textBaseline = 'middle';
         draw.fillText(text, 96, 42, 174); entry.view.texture.needsUpdate = true;
         entry.view.sprite.position.y = height();

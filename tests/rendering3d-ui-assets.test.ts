@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHash, webcrypto } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { readUiManifest } from '../src/rendering3d/ui-assets';
 import { startOriginalUi, type ReadyUiSprite, type UiPlatform } from '../src/rendering/three-mode/ui-original-assets';
 import { originalHudRules } from '../src/rendering/three-mode/hud-style';
@@ -264,5 +265,38 @@ describe('optional 3D UI sidecar', () => {
     const ui = startOriginalUi('https://assets.test/', read(m));
     await vi.waitFor(() => expect(finish).toBeTypeOf('function')); ui.dispose(); finish(); await ui.ready;
     expect(add).not.toHaveBeenCalled(); expect(remove).toHaveBeenCalledTimes(1); expect(revoke).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Chinese and punctuation out of all three Latin faces and preserves the existing Chinese fallback stack', async () => {
+    const styles: { textContent: string; dataset: object; remove(): void }[] = [];
+    vi.stubGlobal('document', { fonts: { add() {}, delete() {} }, head: { append() {} },
+      createElement: () => { const style = { textContent: '', dataset: {}, remove() {} }; styles.push(style); return style; } });
+    const construct = vi.fn();
+    vi.stubGlobal('FontFace', class { constructor(...args: unknown[]) { construct(...args); } async load() { return this; } });
+    const names = ['beaufortforlol-bold.otf', 'beaufortforlol-regular.otf', 'spiegel-regular.otf'];
+    const m = { ...manifest(), sprites: {}, fonts: Object.fromEntries(names.map(name => [name,
+      { ...file, path: `fonts/${name}`, sourcePath: `assets/ux/fonts/${name}`, coverageVerified: false }])) };
+    const ui = startOriginalUi('https://assets.test/', read(m));
+    try {
+      await ui.ready;
+      expect(construct).toHaveBeenCalledTimes(3);
+      expect(construct.mock.calls.map(([family, , desc]) => [family, desc.weight]).sort()).toEqual([
+        ['Render3dBeaufort', '400'], ['Render3dBeaufort', '700'], ['Render3dSpiegel', '400'],
+      ]);
+      const chinese = [...'金币等级经验人口刷新出售锁定阶段战斗羁绊装备强化淘汰排名帮助全屏音效匹配，。'];
+      for (const [, , desc] of construct.mock.calls) {
+        const range = /^U\+([\dA-F]+)-([\dA-F]+)$/i.exec(desc.unicodeRange);
+        expect(range).not.toBeNull();
+        const [first, last] = range!.slice(1).map(n => parseInt(n, 16));
+        const covered = (code: number) => code >= first && code <= last;
+        expect([...'Gold 123'].every(c => covered(c.codePointAt(0)!))).toBe(true);
+        expect([...chinese.map(c => c.codePointAt(0)!), 0x3400, 0x9fff, 0x20000].some(covered)).toBe(false);
+      }
+      const baseline = readFileSync(new URL('../src/style.css', import.meta.url), 'utf8');
+      const fallback = /^:root\s*\{[^}]*font-family:\s*([^;]+);/.exec(baseline)![1].replace(/\s+/g, '');
+      const stacks = styles.flatMap(s => [...s.textContent.matchAll(/font-family:([^;]+);/g)].map(m => m[1].split(',')));
+      expect(stacks.map(s => s[0]).sort()).toEqual(['Render3dBeaufort', 'Render3dSpiegel']);
+      for (const stack of stacks) expect(stack.slice(1).join(',')).toBe(fallback);
+    } finally { ui.dispose(); }
   });
 });

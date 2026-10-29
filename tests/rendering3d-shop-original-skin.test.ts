@@ -37,6 +37,16 @@ beforeEach(() => {
 afterEach(() => { skin?.dispose(); skin = undefined; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('3D shop skin on the existing DOM', () => {
+  it('uses reviewed pressed and disabled frames independently and restores their inline properties', async () => {
+    const raw = manifest(); Object.assign(raw.sprites['shop.card.1'].states, { pressed: 'pressed', disabled: 'disabled' });
+    Object.assign(raw.sprites, { pressed: { texture: 't', rect: [2, 0, 16, 16] }, disabled: { texture: 't', rect: [4, 0, 16, 16] } });
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => raw } as Response);
+    skin = installShopOriginalSkin('https://assets.test/', async () => blob, decode); await flush();
+    expect(cards[0].style.getPropertyValue('--shop-original-pressed')).toContain('blob:frame-2');
+    expect(cards[0].style.getPropertyValue('--shop-original-disabled')).toContain('blob:frame-4');
+    expect(styles[0].textContent).toContain(':not(:disabled):active::before'); expect(styles[0].textContent).toContain(':disabled::before');
+    skin.dispose(); expect(cards[0].properties.size).toBe(0); expect(cards[0].textContent).toBe('购买英雄，1 金币');
+  });
   it('does nothing with no root or a non-browser document', () => {
     skin = installShopOriginalSkin(null); expect(fetch).not.toHaveBeenCalled(); expect(styles).toEqual([]);
     vi.stubGlobal('document', {}); installShopOriginalSkin('https://assets.test/'); expect(fetch).not.toHaveBeenCalled();
