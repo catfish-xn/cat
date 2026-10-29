@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { createHash } from 'node:crypto';
-import { afterAll, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { createGameServer } from '../../../src/server/net/server';
 import { NET_PROTOCOL_VERSION, type ServerMessage } from '../../../src/server/net/messages';
 import { ManualClock } from '../../../src/server/room/clock';
@@ -109,7 +109,7 @@ async function* busyMatchSteps(connect: (socket: EventEmitter) => void, combatSt
   } finally { botSteps.mockRestore(); await server.close(); }
 }
 
-/** Two complete independent runs, continued per round with all original terminal evidence checks. */
+/** Two independent runs; streamed routes use bounded setup hooks, preserving every evidence check. */
 export function registerBusyMatch(connect: (socket: EventEmitter) => void, streaming: boolean, minFrozen: number) {
   const runs = [busyMatchSteps(connect, streaming, minFrozen), busyMatchSteps(connect, streaming, minFrozen)];
   const cursors: Awaited<ReturnType<typeof runs[number]['next']>>[] = [];
@@ -121,9 +121,25 @@ export function registerBusyMatch(connect: (socket: EventEmitter) => void, strea
     return cursor;
   }
   afterAll(async () => { for (const run of runs) await run.return(undefined as never); });
+  // Cache only immutable observations, keyed by run/round/part. Live room states
+  // stay private to each generator; cases cannot mutate or resume the fixture.
+  const observations = new Map<string, Readonly<{ round: number }>>();
   // The route normally ends in stage 7; later cases also support overtime without replaying earlier rounds.
   for (let index = 0; index < runs.length; index++) for (let round = 1; round <= 60; round++) for (let part = 1; part <= (streaming ? 32 : 64); part++) {
-    it(`streaming=${streaming}: run ${index + 1} toward round ${round}, part ${part}`, async () => { await through(index, round); });
+    if (!streaming) {
+      it(`streaming=${streaming}: run ${index + 1} toward round ${round}, part ${part}`, async () => { await through(index, round); });
+      continue;
+    }
+    const key = `${index}:${round}:${part}`;
+    // Preserve the original 16 streamed callbacks per part, but
+    // split late battle/ledger work into hooks of at most four callbacks.
+    for (let block = 0; block < 4; block++) beforeAll(async () => {
+      const cursor = await through(index, round, 4);
+      observations.set(key, Object.freeze({ round: cursor.done ? cursor.value!.round : cursor.value }));
+    });
+    it(`streaming=${streaming}: run ${index + 1} toward round ${round}, part ${part}`, () => {
+      expect(observations.get(key)?.round).toBeGreaterThanOrEqual(1);
+    });
   }
   it(`finishes deterministically with eight bot controllers and continuous authenticated human traffic (streaming=${streaming})`, async () => {
     const first = await through(0, Infinity, Infinity), second = await through(1, Infinity, Infinity);

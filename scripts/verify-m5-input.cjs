@@ -218,9 +218,23 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         for (let guard = 0; guard < 20 && !next; guard++) {
           const current = await state();
           if (current.phase === 'choice') { assert.equal(current.m8.round.roundId, '2-4', 'next real pick after the 2-1 burst'); next = current; }
-          else if (current.phase === 'preparation') { await delay(450); await click('start-combat'); }
+          else if (current.phase === 'preparation' || current.phase === 'settlement') {
+            // An empty board settles synchronously: Continue can follow Start
+            // inside the panel's separate 400 ms lifecycle guard, even after the
+            // choice dismissal shield is gone. Use the existing deliberate-click
+            // pause for both actions, then require progress from this one click.
+            await delay(450);
+            const command = current.phase === 'preparation' ? 'start-combat' : 'continue';
+            const transition = { method, command, before: { phase: current.phase, round: current.round } };
+            (report.nextPickTransitions ??= []).push(transition);
+            await click(command);
+            await page.waitForFunction(({ phase, round }) => {
+              const next = window.__CAT_DEBUG__.read().state;
+              return next.phase !== phase && next.round === round + (phase === 'settlement' ? 1 : 0);
+            }, transition.before, { timeout: 10000 });
+            const after = await state(); transition.after = { phase: after.phase, round: after.round };
+          }
           else if (current.phase === 'combat') await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
-          else if (current.phase === 'settlement') await click('continue');
           else throw new Error(`Next-pick route ended at ${current.phase}`);
         }
         assert(next, 'reached the 2-4 pick');
